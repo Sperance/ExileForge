@@ -144,7 +144,8 @@ import kotlinx.serialization.json.*
             else Text("Цена ${doc.text("price")}", fontSize = 12.sp)
             (doc["modifiers"] as? JsonArray)?.take(6)?.forEach { raw ->
                 val mod = raw.jsonObject
-                Text("${mod.text("value")} · ${mod.text("type").replace("PREFIX_ADD_", "").replace("SUFFIX_ADD_", "")}  [T${mod.text("tier")} ]", color = Rune, fontSize = 12.sp)
+                val values = (mod["values"] as? JsonArray).orEmpty().joinToString(" / ") { (it as? JsonObject)?.text("value").orEmpty() }
+                Text("$values · ${mod.text("definitionId")} · ${mod.text("source")} [T${mod.text("tier")}]", color = Rune, fontSize = 12.sp)
             }
             if (doc.text("description").isNotBlank()) Text(doc.text("description"), color = Muted, fontFamily = FontFamily.Serif, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(doc.entityId, color = Muted.copy(alpha = .65f), fontFamily = FontFamily.Monospace, fontSize = 10.sp)
@@ -190,11 +191,13 @@ import kotlinx.serialization.json.*
             itemsIndexed(s.modifiers) { index, mod ->
                 OutlinedCard(border = BorderStroke(1.dp, Rune.copy(alpha = .35f))) {
                     Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Choice("Модификатор ${index + 1}", mod.type, modifierTypes, !s.busy) { vm.modifier(index, mod.copy(type = it)) }
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            OutlinedTextField(mod.value, { vm.modifier(index, mod.copy(value = it)) }, label = { Text("Значение") }, enabled = !s.busy, singleLine = true, modifier = Modifier.weight(1f))
-                            OutlinedTextField(mod.tier, { vm.modifier(index, mod.copy(tier = it)) }, label = { Text("Tier") }, enabled = !s.busy, singleLine = true, modifier = Modifier.width(72.dp))
-                            IconButton(enabled = !s.busy, onClick = { vm.removeModifier(index) }) { Icon(Icons.Outlined.DeleteOutline, "Удалить модификатор") }
+                        Text("Модификатор ${index + 1}", color = Rune)
+                        OutlinedTextField(mod.json, { vm.modifier(index, mod.copy(json = it)) },
+                            label = { Text("Модификатор (JSON)") }, enabled = !s.busy,
+                            supportingText = { Text("definitionId, values: [{value: число}], tier, source, tags. Можно задать несколько значений и любые теги.") },
+                            modifier = Modifier.fillMaxWidth(), minLines = 6)
+                        IconButton(enabled = !s.busy, onClick = { vm.removeModifier(index) }) {
+                            Icon(Icons.Outlined.DeleteOutline, "Удалить модификатор")
                         }
                     }
                 }
@@ -257,7 +260,7 @@ import kotlinx.serialization.json.*
         OutlinedButton(enabled = !s.busy, onClick = vm::health, modifier = Modifier.fillMaxWidth()) { Text("Проверить /system/health") }
         InfoCard("Состояние сервера", s.health)
         InfoCard("Локальная разработка", "Эмулятор: http://10.0.2.2:8080/\nТелефон: IP компьютера в вашей Wi-Fi сети. HTTP разрешён в debug-сборке; release использует HTTPS.")
-        InfoCard("Контракт сервера", "master · ed33cab6f215\nПредметы и экипировка. Модификаторы сохраняются через PUT; серверного маршрута случайного крафта пока нет.")
+        InfoCard("Контракт сервера", "master · ${SERVER_COMMIT.take(12)}\nПредметы и экипировка. Модификаторы сохраняются через PUT; серверного маршрута случайного крафта пока нет.")
     }
 }
 @Composable private fun Choice(label: String, value: String, options: List<String>, enabled: Boolean, onChange: (String) -> Unit) {

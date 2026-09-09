@@ -9,7 +9,9 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.*
 
-data class ModifierDraft(val type: String = modifierTypes.first(), val value: String = "1.0", val tier: String = "1")
+data class ModifierDraft(val json: String = WireJson.encodeToString(JsonObject.serializer(), starterModifier())) {
+    fun document(): JsonObject = WireJson.parseToJsonElement(json).jsonObject.also(::validateModifier)
+}
 data class ForgeState(
     val tab: Int = 0, val catalog: Catalog = Catalog.EQUIPMENT,
     val server: String = "http://10.0.2.2:8080/", val serverDraft: String = "http://10.0.2.2:8080/",
@@ -97,7 +99,7 @@ class ForgeViewModel(private val store: ServerStore, private val journal: Reques
         val fields = document.filterKeys { it != "modifiers" && (it !in protectedFields || it == "type") }
             .mapValues { (_, v) -> if (v is JsonPrimitive && v != JsonNull) v.content else v.toString() }
         val modifiers = (document["modifiers"] as? JsonArray).orEmpty().map {
-            val obj = it.jsonObject; ModifierDraft(obj.text("type"), obj.text("value"), obj.text("tier"))
+            ModifierDraft(WireJson.encodeToString(JsonObject.serializer(), it.jsonObject))
         }
         mutable.update { it.copy(original = original, editorOpen = true, fields = fields, modifiers = modifiers, tab = 1) }
     }
@@ -121,12 +123,8 @@ class ForgeViewModel(private val store: ServerStore, private val journal: Reques
             }
         }
         if (state.value.catalog == Catalog.EQUIPMENT) {
-            put("modifiers", buildJsonArray {
-                state.value.modifiers.forEach { mod -> add(buildJsonObject {
-                    put("type", mod.type)
-                    put("value", mod.value.toDoubleOrNull()?.takeIf { it.isFinite() } ?: error("Проверьте значение модификатора"))
-                    put("tier", mod.tier.toIntOrNull() ?: error("Tier должен быть целым числом"))
-                }) }
+            put("modifiers", if (state.value.modifiers.isEmpty() && state.value.original?.get("modifiers") == JsonNull) JsonNull else buildJsonArray {
+                state.value.modifiers.forEach { mod -> add(mod.document()) }
             })
         }
     }

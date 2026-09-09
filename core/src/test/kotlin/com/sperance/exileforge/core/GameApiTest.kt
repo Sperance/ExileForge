@@ -27,6 +27,20 @@ class GameApiTest {
         assertEquals("features.data.equipment.equipment_data.Weapon", sent.text("type"))
         assertEquals(10.0, sent.getValue("damage_min").jsonPrimitive.double)
     }
+    @Test fun `put preserves nested modifier values tags and definitions`(): Unit = runBlocking {
+        val modifier = JsonObject(starterModifier() + mapOf(
+            "values" to WireJson.parseToJsonElement("""[{"value":10.0},{"value":20.0}]"""),
+            "tags" to buildJsonArray { add("fire"); add("custom") }
+        ))
+        val changes = buildJsonObject {
+            put("modifiers", JsonArray(listOf(modifier)))
+            put("modifierDefinitions", JsonArray(listOf(starterDefinition())))
+        }
+        val response = JsonObject(changes + ("_id" to JsonPrimitive(id)))
+        ok(response.toString())
+        assertEquals(response, api.update(Catalog.EQUIPMENT, id, changes))
+        assertEquals(changes, WireJson.parseToJsonElement(server.takeRequest().body.readUtf8()))
+    }
     @Test fun `get uses query id and handles null data`(): Unit = runBlocking {
         ok("null")
         assertNull(api.get(Catalog.ITEMS, id))
@@ -74,7 +88,7 @@ class GameApiTest {
     }
     @Test fun `bad modifier tier is rejected`() {
         val doc = JsonObject(template(Catalog.EQUIPMENT) + ("modifiers" to buildJsonArray {
-            add(buildJsonObject { put("type", "PREFIX_ADD_HEALTH"); put("value", 1.0); put("tier", 9) })
+            add(buildJsonObject { starterModifier().forEach { (key, value) -> put(key, value) }; put("tier", 0) })
         }))
         assertFailsWith<IllegalArgumentException> { validate(doc, Catalog.EQUIPMENT) }
     }

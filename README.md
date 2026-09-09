@@ -1,13 +1,21 @@
+# Обновление совместимости
+
+Клиент адаптирован к ktor-bestgame `5fb037f3ba6a60f5e45da9da35832e2165339432`. Новый формат модификаторов, полные определения с эффектами и условиями, обновлённые карточки и JSON-редактор кузницы. Kotlin JVM, Compose и serialization используют 2.4.20; сборка рассчитана на JDK 17.
+
+Актуальные примеры: [API_CONTRACT.md](docs/API_CONTRACT.md). Статус проверки текущих изменений: [VALIDATION.md](docs/VALIDATION.md). APK в корне и прежние результаты тестов относятся к предыдущей версии; [новый APK 1.1.0](https://github.com/Sperance/ExileForge/actions/runs/34332742008/artifacts/10096546106) собран в GitHub Actions.
+
+---
+
 # Exile Forge — Android Compose клиент для ktor-bestgame
 
 Самостоятельный Android-проект для ручной проверки предметов и экипировки. Оригинальное тёмное фэнтезийное оформление: угольный фон, золотые рамки, цвет редкости, рунические модификаторы. Ресурсы Path of Exile не используются.
 
-Основан на [Sperance/ktor-bestgame, commit ed33cab6f215d7d0d7ff48aec025f842c98796ac](https://github.com/Sperance/ktor-bestgame/tree/ed33cab6f215d7d0d7ff48aec025f842c98796ac). Адрес GitHub — исходники сервера, а не адрес работающего API.
+Основан на [Sperance/ktor-bestgame, commit 5fb037f3ba6a60f5e45da9da35832e2165339432](https://github.com/Sperance/ktor-bestgame/tree/5fb037f3ba6a60f5e45da9da35832e2165339432). Адрес GitHub — исходники сервера, а не адрес работающего API.
 
 ## Запуск
 
-1. Откройте папку `ExileForge` в Android Studio, поддерживающей AGP 8.11.1 (Narwhal 2025.1.1 или новее).
-2. Выберите Gradle JDK 17. Установите Android SDK Platform 35 и Build Tools 35.0.0. Дождитесь Gradle Sync.
+1. Откройте папку `ExileForge` в Android Studio, поддерживающей AGP 9.4.0.
+2. Выберите Gradle JDK 17. Установите Android SDK Platform 37. Дождитесь Gradle Sync.
 3. Запустите конфигурацию `app` на Android 8.0+ (API 26+).
 4. Внизу откройте **Сервер**, введите корневой URL работающего сервера **без `/api/v1`**, нажмите **Сохранить и подключиться**.
 5. Откройте **Предметы**, выберите каталог и обновите список.
@@ -19,7 +27,7 @@ HTTP разрешён только в debug manifest. Release требует HTT
 ## Нижнее меню
 
 - **Предметы**: страницы по 20 записей, поиск по имени/ID на текущей странице, точный GET по ID, создание, обновление списка. Каталоги `items` и `equipment`.
-- **Кузница**: создание Weapon/Armor/Accessory или Items, изменение полей, редактор модификаторов (тип, значение, tier), добавление и удаление модификаторов. Удаление целого предмета с подтверждением. Служебные поля и тип существующей экипировки не редактируются.
+- **Кузница**: создание Weapon/Armor/Accessory или Items, изменение полей, редактор модификаторов (definitionId, values, tier, source, tags), добавление и удаление модификаторов. Удаление целого предмета с подтверждением. Служебные поля и тип существующей экипировки не редактируются.
 - **Проверки**: запускаемый пользователем реальный CRUD-сценарий; получение count; журнал последних 60 запросов с телом запроса, ответом, HTTP-статусом и длительностью. Нажмите запись журнала для раскрытия.
 - **Сервер**: сохранение адреса и `/system/health`.
 
@@ -29,7 +37,7 @@ HTTP разрешён только в debug manifest. Release требует HTT
 
 У `Items` нет поля `modifiers`. Модификаторы доступны у `Equipment`: `Weapon`, `Armor`, `Accessory`.
 
-Редактор поддерживает все 10 текущих значений `EnumModifierDefinitions`: PREFIX/SUFFIX для STRENGTH, HEALTH, ARMOR, MANA, AGILITY. Можно добавлять, менять и удалять записи. Списки `modifierDefinitions` и `modifierDefinitionsStock` редактируются как JSON-массивы серверных enum-имён.
+Редактор принимает произвольные definitionId, несколько values, source и tags. Можно добавлять, менять и удалять записи. Списки `modifierDefinitions` и `modifierDefinitionsStock` редактируются как JSON-массивы полных определений с effects, conditions, tiers и expressions. Новый модификатор содержит пример life; для существующего предмета задайте ID подходящего определения.
 
 Кнопка **Сохранить на сервере** отправляет изменённые поля через существующий PUT. Это инструмент редактирования данных, а не игровая реализация валют и случайного крафта. В указанном коммите отдельного HTTP-маршрута reroll/craft нет; приложение не имитирует серверный бросок модификаторов.
 
@@ -67,9 +75,9 @@ Debug APK: `app/build/outputs/apk/debug/app-debug.apk`.
 - Unit-тесты проверяют реальный HTTP-контракт через MockWebServer: POST-массив, discriminator, PUT-объект, query ID, пагинацию, HTTP/business ошибки, HTML-ответ, валидацию и поля, запрещённые для обновления.
 - Тесты сценария проверяют весь цикл, сохранность существующих объектов и очистку при ошибке записи/потерянном ответе POST.
 - Compose instrumentation-тест проверяет отображение карточки и открытие по нажатию.
-- GitHub Actions собирает APK, запускает JVM-тесты и lint. Workflow лежит в архиве; публикация в GitHub не выполнялась.
+- GitHub Actions собирает APK, запускает JVM-тесты и lint. Workflow находится в `.github/workflows/android.yml`.
 
 Фактические результаты проверки этой поставки: `docs/VALIDATION.md`.
 Подробный HTTP-контракт и примеры: `docs/API_CONTRACT.md`.
 
-Совместимость Gradle 8.13 и JDK 17 с AGP 8.11: [официальная документация Android](https://developer.android.com/build/releases/agp-8-11-0-release-notes).
+Версия Android Gradle Plugin: [официальная документация AGP 9.4](https://developer.android.com/build/releases/agp-9-4-0-release-notes).

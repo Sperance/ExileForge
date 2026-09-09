@@ -41,6 +41,16 @@ class GameApiTest {
         assertEquals(response, api.update(Catalog.EQUIPMENT, id, changes))
         assertEquals(changes, WireJson.parseToJsonElement(server.takeRequest().body.readUtf8()))
     }
+    @Test fun `character uses singular route and preserves partial updates`(): Unit = runBlocking {
+        val changes = buildJsonObject { put("level", 20); put("money", 100L); put("params", JsonArray(listOf(starterModifier()))) }
+        ok(JsonObject(changes + ("_id" to JsonPrimitive(id))).toString())
+        api.update(Catalog.CHARACTERS, id, changes)
+        val request = server.takeRequest()
+        assertEquals("/api/v1/character?id=$id", request.path)
+        assertEquals(changes, WireJson.parseToJsonElement(request.body.readUtf8()))
+        ok("null"); api.get(Catalog.CHARACTERS, id)
+        assertEquals("/api/v1/character?id=$id", server.takeRequest().path)
+    }
     @Test fun `get uses query id and handles null data`(): Unit = runBlocking {
         ok("null")
         assertNull(api.get(Catalog.ITEMS, id))

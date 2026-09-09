@@ -72,7 +72,7 @@ import kotlinx.serialization.json.*
             }
         }
     }
-    if (confirmDelete) AlertDialog(onDismissRequest = { confirmDelete = false }, title = { Text("Удалить предмет?") },
+    if (confirmDelete) AlertDialog(onDismissRequest = { confirmDelete = false }, title = { Text("Удалить запись?") },
         text = { Text("${s.original?.text("name")}\n${s.original?.entityId}\nУдаление на сервере необратимо.") },
         confirmButton = { TextButton(enabled = !s.busy, onClick = { confirmDelete = false; vm.delete() }) { Text("Удалить", color = MaterialTheme.colorScheme.error) } },
         dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Отмена") } })
@@ -91,8 +91,8 @@ import kotlinx.serialization.json.*
 @Composable private fun CatalogScreen(s: ForgeState, vm: ForgeViewModel) {
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
-            Text("Хранилище", style = MaterialTheme.typography.headlineLarge)
-            Text("${s.total} предметов · страница ${s.page + 1} / ${maxOf(1, s.totalPages)}", color = Muted)
+            Text(if(s.catalog == Catalog.CHARACTERS) "Персонажи" else "Хранилище", style = MaterialTheme.typography.headlineLarge)
+            Text("${s.total} записей · страница ${s.page + 1} / ${maxOf(1, s.totalPages)}", color = Muted)
             CatalogSwitch(s, vm)
             if (s.editorOpen) Text("В кузнице открыт предмет. Закройте редактор для смены каталога.", color = Muted, fontSize = 12.sp)
         }
@@ -110,6 +110,9 @@ import kotlinx.serialization.json.*
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(enabled = !s.busy && !s.editorOpen, onClick = { vm.create() }) { Icon(Icons.Outlined.Add, null); Text("Создать") }
                 OutlinedButton(enabled = !s.busy, onClick = { vm.refresh() }) { Text("Обновить") }
+            }
+            if(s.catalog == Catalog.EQUIPMENT) Row {
+                OutlinedButton(enabled = !s.busy && !s.editorOpen, onClick = vm::randomItem) { Text("Получить случайный предмет") }
             }
         }
         val visible = s.items.filter { it.text("name").contains(s.query, true) || it.entityId.contains(s.query, true) }
@@ -141,8 +144,9 @@ import kotlinx.serialization.json.*
             }
             HorizontalDivider(color = color.copy(alpha = .2f))
             if (doc["itemLevel"] != null) Text("Уровень ${doc.text("itemLevel")}  ·  Цена ${doc.text("price")}", fontSize = 12.sp)
+            else if(doc["userId"] != null) Text("Уровень ${doc.text("level")} · Опыт ${doc.text("experience")} · Деньги ${doc.text("money")}", fontSize = 12.sp)
             else Text("Цена ${doc.text("price")}", fontSize = 12.sp)
-            (doc["modifiers"] as? JsonArray)?.take(6)?.forEach { raw ->
+            ((doc["modifiers"] ?: doc["params"]) as? JsonArray)?.take(6)?.forEach { raw ->
                 val mod = raw.jsonObject
                 val values = (mod["values"] as? JsonArray).orEmpty().joinToString(" / ") { (it as? JsonObject)?.text("value").orEmpty() }
                 Text("$values · ${mod.text("definitionId")} · ${mod.text("source")} [T${mod.text("tier")}]", color = Rune, fontSize = 12.sp)
@@ -155,57 +159,43 @@ import kotlinx.serialization.json.*
 @Composable private fun EditorScreen(s: ForgeState, vm: ForgeViewModel, onDelete: () -> Unit, onClose: () -> Unit) {
     if (!s.editorOpen) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Text("Кузница", style = MaterialTheme.typography.headlineLarge)
-            InfoCard("Создайте своё наследие", "Выберите предмет в хранилище или создайте новый. Здесь можно изменять свойства и модификаторы.")
+            Text("Кузница и персонажи", style = MaterialTheme.typography.headlineLarge)
+            InfoCard("Редактор", "Выберите предмет или персонажа в каталоге. Характеристики, модификаторы и условия настраиваются через формы.")
             CatalogSwitch(s, vm)
-            if (s.catalog == Catalog.ITEMS) Button(enabled = !s.busy, onClick = { vm.create() }) { Text("Создать предмет") }
+            if (s.catalog != Catalog.EQUIPMENT) Button(enabled = !s.busy, onClick = { vm.create() }) { Text(if(s.catalog == Catalog.CHARACTERS) "Создать персонажа" else "Создать предмет") }
             else EquipmentKind.entries.forEach { kind ->
                 OutlinedButton(enabled = !s.busy, onClick = { vm.create(kind) }, modifier = Modifier.fillMaxWidth()) {
                     Text(when(kind) { EquipmentKind.Weapon -> "Создать оружие"; EquipmentKind.Armor -> "Создать броню"; EquipmentKind.Accessory -> "Создать аксессуар" })
                 }
             }
+            OutlinedButton(enabled = !s.busy, onClick = vm::randomItem) { Text("Получить случайный предмет") }
         }
         return
     }
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(if (s.original == null) "Новый предмет" else "Кузница", style = MaterialTheme.typography.headlineLarge, modifier = Modifier.weight(1f))
-                IconButton(enabled = !s.busy, onClick = onClose) { Icon(Icons.Outlined.Close, "Закрыть редактор") }
-            }
-            s.original?.let { SelectionContainer { Text(it.entityId, color = Muted, fontFamily = FontFamily.Monospace) } }
-        }
-        items(s.fields.keys.filter { it != "type" }.toList(), key = { it }) { key ->
-            val options = when(key) { "rarity" -> rarities; "slot" -> slots; "weaponType" -> weapons; else -> null }
-            if (options != null) Choice(fieldLabel(key), s.fields[key].orEmpty(), options, !s.busy) { vm.field(key, it) }
-            else OutlinedTextField(s.fields[key].orEmpty(), { vm.field(key, it) }, label = { Text(fieldLabel(key)) }, enabled = !s.busy,
-                modifier = Modifier.fillMaxWidth(), minLines = if (key == "description") 2 else 1,
-                singleLine = key !in listOf("description", "modifierDefinitions", "modifierDefinitionsStock"))
-        }
-        if (s.catalog == Catalog.EQUIPMENT) {
+    key(s.catalog, s.original?.entityId) {
+        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
-                HorizontalDivider(color = Gold.copy(alpha = .3f))
-                Text("Модификаторы", style = MaterialTheme.typography.titleLarge, color = Gold)
-                Text("Изменения сохраняются вместе с предметом.", color = Muted, fontSize = 12.sp)
-            }
-            itemsIndexed(s.modifiers) { index, mod ->
-                OutlinedCard(border = BorderStroke(1.dp, Rune.copy(alpha = .35f))) {
-                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Модификатор ${index + 1}", color = Rune)
-                        OutlinedTextField(mod.json, { vm.modifier(index, mod.copy(json = it)) },
-                            label = { Text("Модификатор (JSON)") }, enabled = !s.busy,
-                            supportingText = { Text("definitionId, values: [{value: число}], tier, source, tags. Можно задать несколько значений и любые теги.") },
-                            modifier = Modifier.fillMaxWidth(), minLines = 6)
-                        IconButton(enabled = !s.busy, onClick = { vm.removeModifier(index) }) {
-                            Icon(Icons.Outlined.DeleteOutline, "Удалить модификатор")
-                        }
-                    }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(if(s.catalog == Catalog.CHARACTERS) "Персонаж" else "Кузница", style = MaterialTheme.typography.headlineLarge, modifier = Modifier.weight(1f))
+                    IconButton(enabled = !s.busy, onClick = onClose) { Icon(Icons.Outlined.Close, "Закрыть редактор") }
                 }
+                s.original?.let { SelectionContainer { Text(it.entityId, color = Muted) } }
+                if(s.catalog == Catalog.CHARACTERS && s.original == null) Text("Нужен ID существующего пользователя. Сервер проверит лимит персонажей.", color = Muted)
             }
-            item { OutlinedButton(enabled = !s.busy, onClick = vm::addModifier, modifier = Modifier.fillMaxWidth()) { Text("Добавить модификатор") } }
+            if(s.catalog != Catalog.ITEMS) item {
+                OutlinedButton(enabled = !s.busy, onClick = vm::loadDefinitions) { Text("Обновить список модификаторов с сервера") }
+            }
+            item {
+                ObjectForm(formSchema(s.catalog), s.draft, s.definitions, !s.busy,
+                    locked = if(s.catalog == Catalog.CHARACTERS && s.original != null) setOf("userId") else emptySet(), onChange = vm::edit)
+            }
+            if(s.catalog == Catalog.EQUIPMENT) item {
+                OutlinedButton(enabled = !s.busy, onClick = vm::reroll, modifier = Modifier.fillMaxWidth()) { Text("Сгенерировать модификаторы по настройкам") }
+                Text("Используются выбранные определения, редкость, уровень и диапазоны. Сохранение выполняется отдельно.", color = Muted)
+            }
+            item { Button(enabled = !s.busy, onClick = vm::save, modifier = Modifier.fillMaxWidth()) { Text("Сохранить на сервере") } }
+            if(s.original != null) item { TextButton(enabled = !s.busy, onClick = onDelete, modifier = Modifier.fillMaxWidth()) { Text("Удалить", color = MaterialTheme.colorScheme.error) } }
         }
-        item { Button(enabled = !s.busy, onClick = vm::save, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Outlined.Save, null); Spacer(Modifier.width(8.dp)); Text("Сохранить на сервере") } }
-        if (s.original != null) item { TextButton(enabled = !s.busy, onClick = onDelete, modifier = Modifier.fillMaxWidth()) { Text("Удалить предмет", color = MaterialTheme.colorScheme.error) } }
     }
 }
 @Composable private fun ChecksScreen(s: ForgeState, vm: ForgeViewModel, logs: List<RequestLog>) {
@@ -214,10 +204,11 @@ import kotlinx.serialization.json.*
         item {
             Text("Испытания", style = MaterialTheme.typography.headlineLarge)
             CatalogSwitch(s, vm)
+            if(s.catalog == Catalog.CHARACTERS) Text("Автосценарий доступен для предметов. Персонажа можно изменить через каталог и редактор.", color = Muted)
             InfoCard("Полный цикл CRUD", "Создать → получить → изменить${if (s.catalog == Catalog.EQUIPMENT) " → модифицировать" else ""} → удалить. После записей выполняется проверочный GET.")
         }
         item {
-            Button(enabled = !s.busy, onClick = { confirmRun = true }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Outlined.PlayArrow, null); Text("Запустить проверку") }
+            Button(enabled = !s.busy && s.catalog != Catalog.CHARACTERS, onClick = { confirmRun = true }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Outlined.PlayArrow, null); Text("Запустить проверку") }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(enabled = !s.busy, onClick = vm::count) { Text("Проверить count") }
                 TextButton(onClick = vm::clearLogs) { Text("Очистить журнал") }
@@ -260,7 +251,7 @@ import kotlinx.serialization.json.*
         OutlinedButton(enabled = !s.busy, onClick = vm::health, modifier = Modifier.fillMaxWidth()) { Text("Проверить /system/health") }
         InfoCard("Состояние сервера", s.health)
         InfoCard("Локальная разработка", "Эмулятор: http://10.0.2.2:8080/\nТелефон: IP компьютера в вашей Wi-Fi сети. HTTP разрешён в debug-сборке; release использует HTTPS.")
-        InfoCard("Контракт сервера", "master · ${SERVER_COMMIT.take(12)}\nПредметы и экипировка. Модификаторы сохраняются через PUT; серверного маршрута случайного крафта пока нет.")
+        InfoCard("Контракт сервера", "master · ${SERVER_COMMIT.take(12)}\nПредметы, экипировка и персонажи. Генерация черновика по диапазонам выполняется в приложении; сохранение — через API сервера.")
     }
 }
 @Composable private fun Choice(label: String, value: String, options: List<String>, enabled: Boolean, onChange: (String) -> Unit) {

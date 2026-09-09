@@ -2,7 +2,7 @@
 
 Клиент адаптирован к ktor-bestgame `5fb037f3ba6a60f5e45da9da35832e2165339432`. Новый формат модификаторов, полные определения с эффектами и условиями, обновлённые карточки и JSON-редактор кузницы. Kotlin JVM, Compose и serialization используют 2.4.20; сборка рассчитана на JDK 17.
 
-Актуальные примеры: [API_CONTRACT.md](docs/API_CONTRACT.md). Статус проверки текущих изменений: [VALIDATION.md](docs/VALIDATION.md). APK в корне и прежние результаты тестов относятся к предыдущей версии; новый APK нужно брать из успешной сборки Actions.
+Актуальные примеры: [API_CONTRACT.md](docs/API_CONTRACT.md). Статус проверки текущих изменений: [VALIDATION.md](docs/VALIDATION.md). APK в корне и прежние результаты тестов относятся к предыдущей версии; [новый APK 1.1.0](https://github.com/Sperance/ExileForge/actions/runs/34332742008/artifacts/10096546106) собран в GitHub Actions.
 
 ---
 

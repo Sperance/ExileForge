@@ -5,7 +5,10 @@
 - Контракт сопоставлен с исходниками маршрутов, моделей и репозиториев сервера.
 - Добавлены проверки нового формата, вложенных определений и передачи JSON через HTTP. CRUD-сценарий расширен до добавления, изменения и удаления модификаторов.
 - `git diff --check` пройден.
-- Локальная сборка пока не подтверждена: окружение потребовало загрузки Gradle и JDK; разрешение зависимостей проверяется. Актуальный результат сборки следует смотреть в Actions для ветки исправления.
+- Локально `:core:test`: 23 теста, 0 failures, 0 errors, 0 skipped (15 HTTP/contract + 5 modifier contract + 3 CRUD scenario). Gradle 9.7.1, JDK 17.
+- [GitHub Actions, run 34332742008](https://github.com/Sperance/ExileForge/actions/runs/34332742008): **BUILD SUCCESSFUL** для коммита `a2df7259c614fcabae13db1edb7f6eca7a5d9244`.
+- `:core:test`, `:app:lintDebug`, `:app:assembleDebug`, `:app:assembleDebugAndroidTest` завершились успешно. Instrumentation-тест скомпилирован, но не запускался на устройстве.
+- [Новый debug APK 1.1.0 (versionCode 2)](https://github.com/Sperance/ExileForge/actions/runs/34332742008/artifacts/10096546106).
 - Работа с запущенным Ktor/MongoDB и запуск на Android-устройстве не проверены: адрес API не предоставлен.
 - APK в корне репозитория и `test-results.json` — предыдущие артефакты, они не содержат это исправление. Новый APK получается из успешной сборки текущего коммита.
 

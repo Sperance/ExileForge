@@ -1,0 +1,14 @@
+[
+  {
+    "name": "com.sperance.exileforge.core.GameApiTest",
+    "tests": "14",
+    "failures": "0",
+    "errors": "0"
+  },
+  {
+    "name": "com.sperance.exileforge.core.CrudScenarioTest",
+    "tests": "3",
+    "failures": "0",
+    "errors": "0"
+  }
+]

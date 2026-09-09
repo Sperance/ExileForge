@@ -28,7 +28,7 @@ class CrudScenario(private val repository: ItemRepository) {
             check(repository.get(catalog, id)?.text("description") == "CRUD verification complete") { "Изменение не сохранилось" }
             report(CheckResult("Изменение + повторный GET", true, "Описание совпало"))
             if (catalog == Catalog.EQUIPMENT) {
-                val mods = buildJsonArray { add(starterModifier()) } }
+                val mods = buildJsonArray { add(starterModifier()) }
                 repository.update(catalog, id, buildJsonObject { put("modifiers", mods) })
                 check(repository.get(catalog, id)?.get("modifiers") == mods) { "Модификаторы не совпали" }
                 report(CheckResult("Добавление модификатора + GET", true, "life: 42, tier 1"))

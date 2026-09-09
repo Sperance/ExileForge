@@ -45,6 +45,7 @@ private fun summary(value: JsonElement): String = when(value) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         schemaFields(schema, document).forEach { field ->
             key(field.key) {
+                val fieldSpec = field.spec
                 val value = document[field.key] ?: defaultValue(field.spec, field.default)
                 val editable = enabled && field.key !in locked
                 if(field.nullable) {
@@ -70,7 +71,7 @@ private fun summary(value: JsonElement): String = when(value) {
                             }
                             FormInput(field.label, field.spec, value, available, editable) { onChange(document.changed(field.key, it)) }
                         }
-                        field.spec is InputSpec.Union -> Spinner(field.label, document.text("type"), field.spec.variants, editable) { onChange(defaultObject(schema, it)) }
+                        fieldSpec is InputSpec.Union -> Spinner(field.label, document.text("type"), fieldSpec.variants, editable) { onChange(defaultObject(schema, it)) }
                         else -> FormInput(field.label, field.spec, value, available, editable) { replacement ->
                             onChange(if(schema == "equipment" && field.key == "modifiers") attachSelectedDefinitions(document, replacement, available) else document.changed(field.key, replacement))
                         }

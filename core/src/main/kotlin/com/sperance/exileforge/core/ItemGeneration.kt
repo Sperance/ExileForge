@@ -5,8 +5,19 @@ import kotlin.math.round
 import kotlinx.serialization.json.*
 
 val presetDefinitions: List<JsonObject> = statSuggestions.map { stat ->
-    JsonObject(starterDefinition() + mapOf("id" to JsonPrimitive(stat), "name" to JsonPrimitive(stat), "effects" to buildJsonArray {
-        add(buildJsonObject { put("type", "stat"); put("stat", stat); put("operation", "FLAT"); put("value", buildJsonObject { put("type", "modifier_value"); put("index", 0) }) })
+    val effect = buildJsonObject {
+        put("type", "stat")
+        put("stat", stat)
+        put("operation", "FLAT")
+        put("value", buildJsonObject {
+            put("type", "modifier_value")
+            put("index", 0)
+        })
+    }
+    JsonObject(starterDefinition() + mapOf(
+        "id" to JsonPrimitive(stat),
+        "name" to JsonPrimitive(stat),
+        "effects" to JsonArray(listOf(effect))
     ))
 }
 fun definitionsOf(document: JsonObject): List<JsonObject> = listOf("modifierDefinitions", "modifierDefinitionsStock")

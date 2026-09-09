@@ -1,4 +1,4 @@
-plugins { kotlin("jvm"); `java-library` }
+plugins { kotlin("jvm"); `java-library`; id("org.jetbrains.kotlin.plugin.serialization") }
 
 dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
@@ -8,3 +8,5 @@ dependencies {
     testImplementation("com.squareup.okhttp3:mockwebserver:5.5.0")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
 }
+
+kotlin { jvmToolchain(17) }

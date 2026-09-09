@@ -27,7 +27,7 @@ class CrudScenarioTest {
         repo.documents["existing"] = buildJsonObject { put("_id", "existing") }
         val reports = mutableListOf<CheckResult>()
         CrudScenario(repo).run(Catalog.EQUIPMENT, reports::add)
-        assertEquals(5, reports.size); assertTrue(reports.all { it.passed })
+        assertEquals(7, reports.size); assertTrue(reports.all { it.passed })
         assertEquals(setOf("existing"), repo.documents.keys)
         assertEquals(1, repo.deleted.size)
     }

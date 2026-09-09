@@ -28,10 +28,18 @@ class CrudScenario(private val repository: ItemRepository) {
             check(repository.get(catalog, id)?.text("description") == "CRUD verification complete") { "Изменение не сохранилось" }
             report(CheckResult("Изменение + повторный GET", true, "Описание совпало"))
             if (catalog == Catalog.EQUIPMENT) {
-                val mods = buildJsonArray { add(buildJsonObject { put("type", "PREFIX_ADD_HEALTH"); put("value", 42.0); put("tier", 2) }) }
+                val mods = buildJsonArray { add(starterModifier()) } }
                 repository.update(catalog, id, buildJsonObject { put("modifiers", mods) })
                 check(repository.get(catalog, id)?.get("modifiers") == mods) { "Модификаторы не совпали" }
-                report(CheckResult("Модификация + повторный GET", true, "+42 здоровья, tier 2"))
+                report(CheckResult("Добавление модификатора + GET", true, "life: 42, tier 1"))
+                val changed = buildJsonArray { add(starterModifier(73.0)) }
+                repository.update(catalog, id, buildJsonObject { put("modifiers", changed) })
+                check(repository.get(catalog, id)?.get("modifiers") == changed) { "Изменение модификатора не сохранилось" }
+                report(CheckResult("Изменение модификатора + GET", true, "life: 73"))
+                val empty = JsonArray(emptyList())
+                repository.update(catalog, id, buildJsonObject { put("modifiers", empty) })
+                check(repository.get(catalog, id)?.get("modifiers") == empty) { "Модификаторы не удалены" }
+                report(CheckResult("Удаление модификаторов + GET", true, "modifiers = []"))
             }
             repository.delete(catalog, id)
             check(repository.get(catalog, id) == null) { "Предмет остался после DELETE" }

@@ -13,8 +13,17 @@ enum class EquipmentKind { Weapon, Armor, Accessory }
 val rarities = listOf("COMMON", "UNCOMMON", "RARE", "EPIC", "LEGENDARY", "MYTHICAL")
 val slots = listOf("HELMET", "BODY", "GLOVES", "RING", "BOOTS", "WINGS", "BELT", "WEAPON_1H", "WEAPON_2H", "QUIVER", "SHIELD", "AMULET")
 val weapons = listOf("SWORD", "LONGSWORD", "BOW", "WAND", "AXE", "DOUBLEAXE", "DOUBLESWORD", "BLADE")
-val modifierTypes = listOf("PREFIX", "SUFFIX").flatMap { source ->
-    listOf("STRENGTH", "HEALTH", "ARMOR", "MANA", "AGILITY").map { "${source}_ADD_$it" }
+val modifierSources = ModifierSource.entries.map { it.name }
+const val SERVER_COMMIT = "5fb037f3ba6a60f5e45da9da35832e2165339432"
+fun starterDefinition(): JsonObject = WireJson.parseToJsonElement("""{
+    "id":"life", "name":"Maximum life", "source":"PREFIX", "scope":"ITEM", "affixType":"PREFIX",
+    "tiers":[{"tier":1,"minItemLevel":1,"weight":100,"values":[{"min":1.0,"max":100.0}]}],
+    "effects":[{"type":"stat","stat":"life","operation":"FLAT","value":{"type":"modifier_value","index":0}}]
+}""").jsonObject
+fun starterModifier(value: Double = 42.0): JsonObject = buildJsonObject {
+    put("definitionId", "life"); put("tier", 1); put("source", "PREFIX")
+    put("values", buildJsonArray { add(buildJsonObject { put("value", value) }) })
+    put("tags", JsonArray(emptyList()))
 }
 fun template(catalog: Catalog, kind: EquipmentKind = EquipmentKind.Weapon): JsonObject = buildJsonObject {
     put("name", if (catalog == Catalog.ITEMS) "Осколок древних" else "Наследие изгнанника")
@@ -27,7 +36,7 @@ fun template(catalog: Catalog, kind: EquipmentKind = EquipmentKind.Weapon): Json
         put("slot", when (kind) { EquipmentKind.Weapon -> "WEAPON_1H"; EquipmentKind.Armor -> "BODY"; EquipmentKind.Accessory -> "RING" })
         put("rarity", "RARE"); put("itemLevel", 30)
         put("modifiers", JsonArray(emptyList()))
-        put("modifierDefinitions", JsonArray(modifierTypes.map(::JsonPrimitive)))
+        put("modifierDefinitions", JsonArray(listOf(starterDefinition())))
         put("modifierDefinitionsStock", JsonArray(emptyList()))
         when (kind) {
             EquipmentKind.Weapon -> { put("weaponType", "SWORD"); put("damage_min", 10.0); put("damage_max", 20.0); put("attackSpeed", 1.2); put("durability", 100) }
@@ -66,13 +75,24 @@ fun validate(document: JsonObject, catalog: Catalog) {
         require(mods == null || mods == JsonNull || mods is JsonArray) { "modifiers должен быть массивом" }
         (mods as? JsonArray)?.forEach { element ->
             val mod = element as? JsonObject ?: error("Модификатор должен быть объектом")
-            require(mod.text("type") in modifierTypes) { "Неизвестный модификатор" }
-            require(mod.text("value").toDoubleOrNull()?.isFinite() == true) { "Некорректное значение модификатора" }
-            require(mod.text("tier").toIntOrNull() in 1..8) { "Tier должен быть от 1 до 8" }
+            validateModifier(mod)
         }
         listOf("modifierDefinitions", "modifierDefinitionsStock").forEach { key ->
             val values = document[key]
-            require(values == null || values == JsonNull || values is JsonArray && values.all { (it as? JsonPrimitive)?.content in modifierTypes }) { "Некорректный список $key" }
+            require(values == null || values == JsonNull || values is JsonArray) { "$key должен быть массивом объектов" }
+            (values as? JsonArray)?.forEach { element ->
+                val definition = element as? JsonObject ?: throw IllegalArgumentException("$key: ожидается объект определения")
+                val parsed = WireJson.decodeFromJsonElement(ModifierDefinition.serializer(), definition)
+                require(parsed.id.isNotBlank() && parsed.name.isNotBlank()) { "Укажите id и name определения" }
+            }
         }
     }
+}
+
+fun validateModifier(document: JsonObject) {
+    require("type" !in document && "value" !in document) { "Старый формат модификатора: нужны definitionId и values" }
+    val modifier = WireJson.decodeFromJsonElement(Modifier.serializer(), document)
+    require(modifier.definitionId.isNotBlank()) { "Введите definitionId" }
+    require(modifier.tier > 0) { "Tier должен быть больше 0" }
+    require(modifier.values.all { it.value.isFinite() }) { "Значения должны быть конечными числами" }
 }

@@ -2,7 +2,13 @@
 
 Добавлены 7 тестов: все варианты форм эффектов/условий/выражений, поля и числовые границы персонажа, генерация, связь выбранных модификаторов с определениями и HTTP-контракт `/api/v1/character`.
 
-Сборка и тесты текущего изменения проверяются в GitHub Actions ветки `main`. Результаты ниже относятся к предыдущей версии. На устройстве и против работающего пользовательского сервера тесты не запускались.
+[GitHub Actions: BUILD SUCCESSFUL](https://github.com/Sperance/ExileForge/actions/runs/34400501968), проверенный коммит `e8c89b44683b533076f3ff998339fbe0402064a1`.
+
+- 30 JVM-тестов пройдены: 16 HTTP/contract, 5 modifier contract, 3 CRUD scenario, 6 editor/generation.
+- `:app:lintDebug`, `:app:assembleDebug`, `:app:assembleDebugAndroidTest` — успешно.
+- [APK 1.2.0, versionCode 3](https://github.com/Sperance/ExileForge/actions/runs/34400501968/artifacts/10123319583).
+- На Android-устройстве и против работающего пользовательского сервера тесты не запускались. Instrumentation-тест собран, но не исполнялся.
+- Следующий коммит меняет только документацию. Результаты ниже относятся к предыдущей версии.
 
 ---
 

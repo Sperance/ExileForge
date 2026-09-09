@@ -7,7 +7,7 @@ fun JsonObject.text(key: String): String = (get(key) as? JsonPrimitive)?.content
 val JsonObject.entityId: String get() = text("_id")
 val protectedFields = setOf("_id", "id", "version", "deleted", "createdAt", "updatedAt", "type")
 enum class Catalog(val path: String, val title: String) {
-    ITEMS("items", "Предметы"), EQUIPMENT("equipment", "Экипировка")
+    ITEMS("items", "Предметы"), EQUIPMENT("equipment", "Экипировка"), CHARACTERS("character", "Персонажи")
 }
 enum class EquipmentKind { Weapon, Armor, Accessory }
 val rarities = listOf("COMMON", "UNCOMMON", "RARE", "EPIC", "LEGENDARY", "MYTHICAL")
@@ -25,7 +25,7 @@ fun starterModifier(value: Double = 42.0): JsonObject = buildJsonObject {
     put("values", buildJsonArray { add(buildJsonObject { put("value", value) }) })
     put("tags", JsonArray(emptyList()))
 }
-fun template(catalog: Catalog, kind: EquipmentKind = EquipmentKind.Weapon): JsonObject = buildJsonObject {
+fun template(catalog: Catalog, kind: EquipmentKind = EquipmentKind.Weapon): JsonObject = if (catalog == Catalog.CHARACTERS) defaultObject("character") else buildJsonObject {
     put("name", if (catalog == Catalog.ITEMS) "Осколок древних" else "Наследие изгнанника")
     put("description", "Тестовый предмет Exile Forge")
     put("image", JsonNull)
@@ -52,6 +52,8 @@ fun diff(original: JsonObject, edited: JsonObject): JsonObject = JsonObject(
 )
 fun validate(document: JsonObject, catalog: Catalog) {
     require(document.text("name").isNotBlank()) { "Введите название" }
+    validateForm(formSchema(catalog), document)
+    if (catalog == Catalog.CHARACTERS) { validateCharacter(document); return }
     if (catalog == Catalog.ITEMS) {
         require(document.text("category").isNotBlank()) { "Введите категорию" }
         require(document.text("subCategory").isNotBlank()) { "Введите подкатегорию" }

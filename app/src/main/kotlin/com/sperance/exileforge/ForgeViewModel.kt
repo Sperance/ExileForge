@@ -9,9 +9,6 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.*
 
-data class ModifierDraft(val json: String = WireJson.encodeToString(JsonObject.serializer(), starterModifier())) {
-    fun document(): JsonObject = WireJson.parseToJsonElement(json).jsonObject.also(::validateModifier)
-}
 data class ForgeState(
     val tab: Int = 0, val catalog: Catalog = Catalog.EQUIPMENT,
     val server: String = "http://10.0.2.2:8080/", val serverDraft: String = "http://10.0.2.2:8080/",
@@ -19,7 +16,7 @@ data class ForgeState(
     val items: List<JsonObject> = emptyList(), val page: Int = 0, val totalPages: Int = 0, val total: Long = 0,
     val query: String = "", val lookupId: String = "",
     val original: JsonObject? = null, val editorOpen: Boolean = false,
-    val fields: Map<String, String> = emptyMap(), val modifiers: List<ModifierDraft> = emptyList(),
+    val draft: JsonObject = JsonObject(emptyMap()), val definitions: List<JsonObject> = presetDefinitions,
     val checks: List<CheckResult> = emptyList(), val health: String = "Соединение ещё не проверено"
 )
 class ForgeViewModel(private val store: ServerStore, private val journal: RequestJournal) : ViewModel() {
@@ -74,7 +71,7 @@ class ForgeViewModel(private val store: ServerStore, private val journal: Reques
         store.save(server)
         api = GameApi(server, journal)
         journal.clear()
-        mutable.update { it.copy(server = server, serverDraft = server, items = emptyList(), original = null, editorOpen = false, page = 0, total = 0, totalPages = 0, checks = emptyList(), health = "Проверка соединения…") }
+        mutable.update { it.copy(server = server, serverDraft = server, items = emptyList(), original = null, editorOpen = false, page = 0, total = 0, totalPages = 0, checks = emptyList(), definitions = presetDefinitions, health = "Проверка соединения…") }
         val health = api.health()
         mutable.update { it.copy(health = health.toString(), message = "Сервер доступен") }
         loadPage(0)
@@ -96,45 +93,49 @@ class ForgeViewModel(private val store: ServerStore, private val journal: Reques
         setEditor(template(state.value.catalog, kind), null)
     }
     private fun setEditor(document: JsonObject, original: JsonObject?) {
-        val fields = document.filterKeys { it != "modifiers" && (it !in protectedFields || it == "type") }
-            .mapValues { (_, v) -> if (v is JsonPrimitive && v != JsonNull) v.content else v.toString() }
-        val modifiers = (document["modifiers"] as? JsonArray).orEmpty().map {
-            ModifierDraft(WireJson.encodeToString(JsonObject.serializer(), it.jsonObject))
-        }
-        mutable.update { it.copy(original = original, editorOpen = true, fields = fields, modifiers = modifiers, tab = 1) }
+        mutable.update { it.copy(original = original, editorOpen = true, draft = document, tab = 1,
+            definitions = (definitionsOf(document) + it.definitions).distinctBy { definition -> definition.text("id") }) }
     }
-    fun closeEditor() { if (!state.value.busy) mutable.update { it.copy(editorOpen = false, original = null, fields = emptyMap(), modifiers = emptyList()) } }
-    fun field(key: String, value: String) { if (!state.value.busy) mutable.update { it.copy(fields = it.fields + (key to value)) } }
-    fun addModifier() { if (!state.value.busy) mutable.update { it.copy(modifiers = it.modifiers + ModifierDraft()) } }
-    fun modifier(index: Int, value: ModifierDraft) { if (!state.value.busy) mutable.update { it.copy(modifiers = it.modifiers.toMutableList().apply { set(index, value) }) } }
-    fun removeModifier(index: Int) { if (!state.value.busy) mutable.update { it.copy(modifiers = it.modifiers.filterIndexed { i, _ -> i != index }) } }
-    private fun edited(): JsonObject = buildJsonObject {
-        state.value.fields.forEach { (key, value) ->
-            when (key) {
-                "price", "itemLevel", "defense", "durability", "damage_min", "damage_max", "attackSpeed" -> {
-                    val element = WireJson.parseToJsonElement(value)
-                    require(element is JsonPrimitive && !element.isString && element.doubleOrNull?.isFinite() == true) { "Некорректное число: $key" }
-                    if (key in listOf("damage_min", "damage_max", "attackSpeed")) put(key, element.double)
-                    else put(key, element.longOrNull ?: error("$key: требуется целое число"))
-                }
-                "modifierDefinitions", "modifierDefinitionsStock" -> put(key, WireJson.parseToJsonElement(value))
-                "image" -> put(key, if (value == "null" || value.isBlank()) JsonNull else JsonPrimitive(value))
-                else -> put(key, value)
-            }
-        }
-        if (state.value.catalog == Catalog.EQUIPMENT) {
-            put("modifiers", if (state.value.modifiers.isEmpty() && state.value.original?.get("modifiers") == JsonNull) JsonNull else buildJsonArray {
-                state.value.modifiers.forEach { mod -> add(mod.document()) }
-            })
-        }
+    fun closeEditor() { if (!state.value.busy) mutable.update { it.copy(editorOpen = false, original = null, draft = JsonObject(emptyMap())) } }
+    fun edit(document: JsonObject) { if (!state.value.busy) mutable.update { it.copy(draft = document) } }
+    private suspend fun equipmentCatalog(): List<JsonObject> {
+        val result = mutableListOf<JsonObject>()
+        var page = 0
+        do {
+            val response = api.page(Catalog.EQUIPMENT, page)
+            result += response.items
+            page++
+        } while(page < response.totalPages)
+        return result
+    }
+    fun loadDefinitions() = task {
+        val definitions = equipmentCatalog().flatMap(::definitionsOf)
+        mutable.update { it.copy(definitions = (definitionsOf(it.draft) + definitions + presetDefinitions).distinctBy { d -> d.text("id") }, message = "Список модификаторов обновлён") }
+    }
+    fun randomItem() = task {
+        check(!state.value.editorOpen) { "Сначала закройте редактор" }
+        val bases = equipmentCatalog()
+        val base = bases.randomOrNull() ?: template(Catalog.EQUIPMENT)
+        val document = ItemGenerator().generate(base)
+        mutable.update { it.copy(catalog = Catalog.EQUIPMENT, items = emptyList(), page = 0, total = 0, totalPages = 0) }
+        setEditor(document, null)
+        mutable.update { it.copy(message = "Случайный предмет готов. Нажмите «Сохранить», чтобы добавить его на сервер.") }
+    }
+    fun reroll() {
+        if (state.value.busy || state.value.catalog != Catalog.EQUIPMENT) return
+        try {
+            val generated = ItemGenerator().generate(state.value.draft)
+            mutable.update { it.copy(draft = JsonObject(it.draft + ("modifiers" to generated.getValue("modifiers"))), message = "Модификаторы сгенерированы по выбранным диапазонам") }
+        } catch (e: Exception) { mutable.update { it.copy(message = e.message) } }
     }
     fun save() = task {
-        val document = edited()
+        val document = state.value.draft
         val catalog = state.value.catalog
         validate(document, catalog)
         val original = state.value.original
-        val saved = if (original == null) api.create(catalog, document) else {
+        val saved = if (original == null) api.create(catalog, JsonObject(document.filterKeys { it !in protectedFields || it == "type" })) else {
             val changes = diff(original, document)
+            require(catalog != Catalog.CHARACTERS || "userId" !in changes) { "Владельца существующего персонажа менять нельзя" }
             require(changes.isNotEmpty()) { "Нет изменений для сохранения" }
             val latest = api.get(catalog, original.entityId) ?: error("Предмет уже удалён")
             require(changes.keys.all { original[it] == latest[it] }) { "Изменяемые поля обновлены другим клиентом. Откройте предмет заново." }
@@ -154,6 +155,7 @@ class ForgeViewModel(private val store: ServerStore, private val journal: Reques
         catch (_: Exception) { mutable.update { it.copy(message = "Удалено. Обновите список вручную.") } }
     }
     fun runChecks() = task {
+        require(state.value.catalog != Catalog.CHARACTERS) { "CRUD-сценарий предназначен для предметов" }
         mutable.update { it.copy(checks = emptyList()) }
         CrudScenario(api).run(state.value.catalog) { result -> mutable.update { it.copy(checks = it.checks + result) } }
     }

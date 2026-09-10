@@ -41,7 +41,7 @@ private fun summary(value: JsonElement): String = when(value) {
 }
 
 @Composable fun ObjectForm(schema: String, document: JsonObject, definitions: List<JsonObject>, enabled: Boolean, locked: Set<String> = emptySet(), onChange: (JsonObject) -> Unit) {
-    val available = (definitionsOf(document) + definitions).distinctBy { it.text("id") }
+    val available = (definitionsOf(document) + definitions).distinctBy { it.text("id") + ":" + it.text("revision").ifBlank { "1" } }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         schemaFields(schema, document).forEach { field ->
             key(field.key) {
@@ -56,15 +56,15 @@ private fun summary(value: JsonElement): String = when(value) {
                 }
                 if(value != JsonNull || !field.nullable) {
                     when {
-                        schema == "modifier" && field.key == "definitionId" -> {
-                            Spinner(field.label, document.text(field.key), available.associate { it.text("id") to "${it.text("name")} (${it.text("id")})" } + (document.text(field.key) to document.text(field.key)), editable) { selected ->
-                                val definition = available.firstOrNull { it.text("id") == selected }
-                                onChange(if(definition == null) document.changed(field.key, JsonPrimitive(selected)) else JsonObject(document + modifierFromDefinition(definition)))
+                        (schema == "modifier" || schema == "reference") && field.key == "definitionId" -> {
+                            Spinner(field.label, referenceKey(document, if(schema == "reference") "revision" else "definitionRevision"), available.associate { definitionKey(it) to "${it.text("name")} · v${it.text("revision").ifBlank { "1" }} (${it.text("id")})" }, editable) { selected ->
+                                val definition = available.firstOrNull { definitionKey(it) == selected }
+                                onChange(if(definition == null) document.changed(field.key, JsonPrimitive(selected)) else if(schema == "reference") definitionReference(definition) else JsonObject(document + modifierFromDefinition(definition)))
                             }
                             TextFieldInput("Свой идентификатор", value, editable) { onChange(document.changed(field.key, it)) }
                         }
                         schema == "modifier" && field.key == "tier" -> {
-                            val definition = available.firstOrNull { it.text("id") == document.text("definitionId") }
+                            val definition = available.firstOrNull { definitionKey(it) == referenceKey(document, "definitionRevision") }
                             val tiers = (definition?.get("tiers") as? JsonArray).orEmpty().map { it.jsonObject.text("tier") }
                             if(tiers.isNotEmpty()) Spinner("Выбрать tier", document.text("tier"), tiers.associateWith { "T$it" }, editable) { tier ->
                                 onChange(JsonObject(document + modifierFromDefinition(definition!!, tier.toInt())))
@@ -121,10 +121,10 @@ private fun summary(value: JsonElement): String = when(value) {
                             }
                         }
                         val objectSchema = (spec.element as? InputSpec.Object)?.schema
-                        if(objectSchema == "definition" || objectSchema == "modifier") {
-                            Spinner("Добавить из списка", "", definitions.associate { it.text("id") to "${it.text("name")} (${it.text("id")})" }, enabled) { id ->
-                                val definition = definitions.first { it.text("id") == id }
-                                val added = if(objectSchema == "definition") JsonObject(definition.filterKeys { it != "_id" }) else modifierFromDefinition(definition)
+                        if(objectSchema == "reference" || objectSchema == "modifier") {
+                            Spinner("Добавить из списка", "", definitions.filter { it.text("enabled") != "false" }.associate { definitionKey(it) to "${it.text("name")} · v${it.text("revision").ifBlank { "1" }} (${it.text("id")})" }, enabled) { id ->
+                                val definition = definitions.first { definitionKey(it) == id }
+                                val added = if(objectSchema == "reference") definitionReference(definition) else modifierFromDefinition(definition)
                                 onChange(JsonArray(values + added))
                             }
                         }

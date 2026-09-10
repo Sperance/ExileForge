@@ -34,7 +34,7 @@ class GameApiTest {
         ))
         val changes = buildJsonObject {
             put("modifiers", JsonArray(listOf(modifier)))
-            put("modifierDefinitions", JsonArray(listOf(starterDefinition())))
+            put("modifierDefinitionRefs", JsonArray(listOf(definitionReference(starterDefinition()))))
         }
         val response = JsonObject(changes + ("_id" to JsonPrimitive(id)))
         ok(response.toString())

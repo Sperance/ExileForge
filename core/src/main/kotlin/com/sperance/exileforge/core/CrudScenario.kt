@@ -8,7 +8,7 @@ import kotlinx.serialization.json.*
 
 data class CheckResult(val label: String, val passed: Boolean, val detail: String)
 /** Each run owns one preallocated ID. Never deletes a preexisting entity. */
-class CrudScenario(private val repository: ItemRepository) {
+class CrudScenario(private val repository: ItemRepository, private val testModifier: JsonObject = starterModifier()) {
     suspend fun run(catalog: Catalog, report: (CheckResult) -> Unit) {
         val id = UUID.randomUUID().toString().replace("-", "").take(24)
         var ownsId = false
@@ -28,14 +28,14 @@ class CrudScenario(private val repository: ItemRepository) {
             check(repository.get(catalog, id)?.text("description") == "CRUD verification complete") { "Изменение не сохранилось" }
             report(CheckResult("Изменение + повторный GET", true, "Описание совпало"))
             if (catalog == Catalog.EQUIPMENT) {
-                val mods = buildJsonArray { add(starterModifier()) }
+                val mods = buildJsonArray { add(testModifier) }
                 repository.update(catalog, id, buildJsonObject { put("modifiers", mods) })
                 check(repository.get(catalog, id)?.get("modifiers") == mods) { "Модификаторы не совпали" }
-                report(CheckResult("Добавление модификатора + GET", true, "life: 42, tier 1"))
-                val changed = buildJsonArray { add(starterModifier(73.0)) }
+                report(CheckResult("Добавление модификатора + GET", true, "Модификатор совпал"))
+                val changed = buildJsonArray { add(JsonObject(testModifier + ("values" to buildJsonArray { add(buildJsonObject { put("value", 73.0) }) }))) }
                 repository.update(catalog, id, buildJsonObject { put("modifiers", changed) })
                 check(repository.get(catalog, id)?.get("modifiers") == changed) { "Изменение модификатора не сохранилось" }
-                report(CheckResult("Изменение модификатора + GET", true, "life: 73"))
+                report(CheckResult("Изменение модификатора + GET", true, "Значение совпало"))
                 val empty = JsonArray(emptyList())
                 repository.update(catalog, id, buildJsonObject { put("modifiers", empty) })
                 check(repository.get(catalog, id)?.get("modifiers") == empty) { "Модификаторы не удалены" }

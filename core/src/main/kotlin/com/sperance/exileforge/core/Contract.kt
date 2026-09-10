@@ -14,7 +14,7 @@ val rarities = listOf("COMMON", "UNCOMMON", "RARE", "EPIC", "LEGENDARY", "MYTHIC
 val slots = listOf("HELMET", "BODY", "GLOVES", "RING", "BOOTS", "WINGS", "BELT", "WEAPON_1H", "WEAPON_2H", "QUIVER", "SHIELD", "AMULET")
 val weapons = listOf("SWORD", "LONGSWORD", "BOW", "WAND", "AXE", "DOUBLEAXE", "DOUBLESWORD", "BLADE")
 val modifierSources = ModifierSource.entries.map { it.name }
-const val SERVER_COMMIT = "5fb037f3ba6a60f5e45da9da35832e2165339432"
+const val SERVER_COMMIT = "34ca93a099d1eb2f56f5ab53114c27bf1b005f49"
 fun starterDefinition(): JsonObject = WireJson.parseToJsonElement("""{
     "id":"life", "name":"Maximum life", "source":"PREFIX", "scope":"ITEM", "affixType":"PREFIX",
     "tiers":[{"tier":1,"minItemLevel":1,"weight":100,"values":[{"min":1.0,"max":100.0}]}],
@@ -36,8 +36,8 @@ fun template(catalog: Catalog, kind: EquipmentKind = EquipmentKind.Weapon): Json
         put("slot", when (kind) { EquipmentKind.Weapon -> "WEAPON_1H"; EquipmentKind.Armor -> "BODY"; EquipmentKind.Accessory -> "RING" })
         put("rarity", "RARE"); put("itemLevel", 30)
         put("modifiers", JsonArray(emptyList()))
-        put("modifierDefinitions", JsonArray(listOf(starterDefinition())))
-        put("modifierDefinitionsStock", JsonArray(emptyList()))
+        put("modifierDefinitionRefs", JsonArray(emptyList()))
+        put("stockModifierDefinitionRefs", JsonArray(emptyList()))
         when (kind) {
             EquipmentKind.Weapon -> { put("weaponType", "SWORD"); put("damage_min", 10.0); put("damage_max", 20.0); put("attackSpeed", 1.2); put("durability", 100) }
             EquipmentKind.Armor -> put("defense", 50)
@@ -98,3 +98,20 @@ fun validateModifier(document: JsonObject) {
     require(modifier.tier > 0) { "Tier должен быть больше 0" }
     require(modifier.values.all { it.value.isFinite() }) { "Значения должны быть конечными числами" }
 }
+
+fun validateReferenceWrite(document: JsonObject) {
+    listOf("modifierDefinitions", "modifierDefinitionsStock").forEach { key ->
+        require(document[key] == null || document[key] == JsonNull || document[key] == JsonArray(emptyList())) { "Определения хранятся отдельно. Обновите сервер и загрузите предмет повторно." }
+    }
+    listOf("modifierDefinitionRefs", "stockModifierDefinitionRefs").forEach { key ->
+        document[key]?.let { value ->
+            require(value is JsonArray) { "$key: требуется список ссылок" }
+            value.forEach { raw ->
+                val ref = raw.jsonObject
+                require(ref.text("definitionId").isNotBlank() && (ref["revision"] as? JsonPrimitive)?.intOrNull?.let { it > 0 } == true) { "Выберите определение и положительную версию" }
+            }
+        }
+    }
+}
+fun definitionKey(definition: JsonObject) = definition.text("id") + "@" + definition.text("revision").ifBlank { "1" }
+fun referenceKey(reference: JsonObject, revisionField: String = "revision") = reference.text("definitionId") + "@" + reference.text(revisionField).ifBlank { "1" }

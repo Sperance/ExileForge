@@ -15,7 +15,8 @@ data class Modifier(
 
     val source: ModifierSource,
 
-    val tags: Set<ModifierTag> = emptySet()
+    val tags: Set<ModifierTag> = emptySet(),
+    val definitionRevision: Int = 1
 ) {
 
     val value: Double
@@ -53,6 +54,8 @@ data class ModifierDefinition(
 
     val stackable: Boolean = false,
 
+    val revision: Int = 1,
+    val enabled: Boolean = true,
     val _id: String? = null
 )
 

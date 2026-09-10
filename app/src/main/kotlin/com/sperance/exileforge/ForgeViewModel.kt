@@ -16,9 +16,15 @@ data class ForgeState(
     val items: List<JsonObject> = emptyList(), val page: Int = 0, val totalPages: Int = 0, val total: Long = 0,
     val query: String = "", val lookupId: String = "",
     val original: JsonObject? = null, val editorOpen: Boolean = false,
-    val draft: JsonObject = JsonObject(emptyMap()), val definitions: List<JsonObject> = presetDefinitions,
+    val draft: JsonObject = JsonObject(emptyMap()), val definitions: List<JsonObject> = emptyList(),
+    val definitionQuery: String = "", val definitionPage: Int = 0, val definitionTotal: Int = 0,
+    val signedIn: Boolean = false, val characterId: String = "", val inventory: List<JsonObject> = emptyList(),
+    val inventoryVersion: Long? = null, val currencies: List<JsonObject> = emptyList(),
+    val selectedEquipment: String = "", val selectedCurrency: String = "",
+    val pending: PendingInventoryAction? = null,
     val checks: List<CheckResult> = emptyList(), val health: String = "Соединение ещё не проверено"
 )
+data class PendingInventoryAction(val characterId: String, val operation: String, val payload: JsonObject)
 class ForgeViewModel(private val store: ServerStore, private val journal: RequestJournal) : ViewModel() {
     private val mutable = MutableStateFlow(ForgeState())
     val state = mutable.asStateFlow()
@@ -29,6 +35,11 @@ class ForgeViewModel(private val store: ServerStore, private val journal: Reques
             try {
                 val server = store.server.first()
                 api = GameApi(server, journal)
+                val restored = store.pending.first()?.let { raw ->
+                    val saved = WireJson.parseToJsonElement(raw).jsonObject
+                    PendingInventoryAction(saved.text("characterId"), saved.text("operation"), saved.getValue("payload").jsonObject)
+                }
+                mutable.update { it.copy(pending = restored, characterId = restored?.characterId.orEmpty()) }
                 mutable.update { it.copy(server = server, serverDraft = server, busy = false) }
                 refresh()
             } catch (e: CancellationException) { throw e }
@@ -67,11 +78,12 @@ class ForgeViewModel(private val store: ServerStore, private val journal: Reques
     }
     fun refresh(page: Int = state.value.page) = task { loadPage(page) }
     fun connect() = task {
+        check(state.value.pending == null) { "Сначала подтвердите результат ожидающего запроса" }
         val server = normalizeServer(state.value.serverDraft)
         store.save(server)
         api = GameApi(server, journal)
         journal.clear()
-        mutable.update { it.copy(server = server, serverDraft = server, items = emptyList(), original = null, editorOpen = false, page = 0, total = 0, totalPages = 0, checks = emptyList(), definitions = presetDefinitions, health = "Проверка соединения…") }
+        mutable.update { it.copy(server = server, serverDraft = server, items = emptyList(), original = null, editorOpen = false, page = 0, total = 0, totalPages = 0, checks = emptyList(), definitions = emptyList(), signedIn = false, inventory = emptyList(), inventoryVersion = null, pending = null, characterId = "", currencies = emptyList(), health = "Проверка соединения…") }
         val health = api.health()
         mutable.update { it.copy(health = health.toString(), message = "Сервер доступен") }
         loadPage(0)
@@ -86,7 +98,9 @@ class ForgeViewModel(private val store: ServerStore, private val journal: Reques
     }
     fun open(id: String) = task {
         val doc = api.get(state.value.catalog, id) ?: error("Предмет не найден")
+        val pinned = pinnedDefinitions(doc)
         setEditor(doc, doc)
+        mutable.update { it.copy(definitions = (pinned + it.definitions).distinctBy(::definitionKey)) }
     }
     fun create(kind: EquipmentKind = EquipmentKind.Weapon) {
         if (state.value.busy) return
@@ -94,39 +108,92 @@ class ForgeViewModel(private val store: ServerStore, private val journal: Reques
     }
     private fun setEditor(document: JsonObject, original: JsonObject?) {
         mutable.update { it.copy(original = original, editorOpen = true, draft = document, tab = 1,
-            definitions = (definitionsOf(document) + it.definitions).distinctBy { definition -> definition.text("id") }) }
+            definitions = it.definitions) }
     }
     fun closeEditor() { if (!state.value.busy) mutable.update { it.copy(editorOpen = false, original = null, draft = JsonObject(emptyMap())) } }
     fun edit(document: JsonObject) { if (!state.value.busy) mutable.update { it.copy(draft = document) } }
-    private suspend fun equipmentCatalog(): List<JsonObject> {
-        val result = mutableListOf<JsonObject>()
-        var page = 0
-        do {
-            val response = api.page(Catalog.EQUIPMENT, page)
-            result += response.items
-            page++
-        } while(page < response.totalPages)
-        return result
+    private suspend fun pinnedDefinitions(document: JsonObject): List<JsonObject> {
+        val refs = listOf("modifierDefinitionRefs", "stockModifierDefinitionRefs").flatMap { (document[it] as? JsonArray).orEmpty() }.map { it.jsonObject }
+        val rolls = listOf("modifiers", "params").flatMap { (document[it] as? JsonArray).orEmpty() }.map { raw ->
+            val mod = raw.jsonObject
+            buildJsonObject { put("definitionId", mod.text("definitionId")); put("revision", mod.text("definitionRevision").toIntOrNull() ?: 1) }
+        }
+        return (refs + rolls).distinctBy { referenceKey(it) }.map { api.definition(it.text("definitionId"), it.text("revision").toIntOrNull() ?: 1) }
     }
-    fun loadDefinitions() = task {
-        val definitions = equipmentCatalog().flatMap(::definitionsOf)
-        mutable.update { it.copy(definitions = (definitionsOf(it.draft) + definitions + presetDefinitions).distinctBy { d -> d.text("id") }, message = "Список модификаторов обновлён") }
+    fun publishDefinition(document: JsonObject, expectedRevision: Int) = task {
+        validateForm("definition", document)
+        val saved = api.publishDefinition(document, expectedRevision)
+        mutable.update { it.copy(definitions = (listOf(saved) + it.definitions).distinctBy(::definitionKey), message = "Опубликовано ${saved.text("id")} v${saved.text("revision")}") }
     }
-    fun randomItem() = task {
-        check(!state.value.editorOpen) { "Сначала закройте редактор" }
-        val bases = equipmentCatalog()
-        val base = bases.randomOrNull() ?: template(Catalog.EQUIPMENT)
-        val document = ItemGenerator().generate(base)
-        mutable.update { it.copy(catalog = Catalog.EQUIPMENT, items = emptyList(), page = 0, total = 0, totalPages = 0) }
-        setEditor(document, null)
-        mutable.update { it.copy(message = "Случайный предмет готов. Нажмите «Сохранить», чтобы добавить его на сервер.") }
+    fun definitionQuery(value: String) { mutable.update { it.copy(definitionQuery = value) } }
+    fun loadDefinitions(page: Int = 0) = task {
+        val result = api.definitions(state.value.definitionQuery.trim(), page)
+        val definitions = (pinnedDefinitions(state.value.draft) + result.getValue("items").jsonArray.map { it.jsonObject }).distinctBy(::definitionKey)
+        mutable.update { it.copy(definitions = definitions, definitionPage = page, definitionTotal = result.getValue("total").jsonPrimitive.int) }
     }
-    fun reroll() {
-        if (state.value.busy || state.value.catalog != Catalog.EQUIPMENT) return
-        try {
-            val generated = ItemGenerator().generate(state.value.draft)
-            mutable.update { it.copy(draft = JsonObject(it.draft + ("modifiers" to generated.getValue("modifiers"))), message = "Модификаторы сгенерированы по выбранным диапазонам") }
-        } catch (e: Exception) { mutable.update { it.copy(message = e.message) } }
+    fun login(login: String, password: String) = task {
+        mutable.update { it.copy(signedIn = false, inventoryVersion = null, inventory = emptyList()) }
+        api.login(login, password)
+        mutable.update { it.copy(signedIn = true, message = "Вход выполнен") }
+    }
+    fun logout() {
+        if(state.value.busy) return
+        api.logout()
+        mutable.update { it.copy(signedIn = false, inventory = emptyList(), inventoryVersion = null, ) }
+    }
+    fun characterId(value: String) {
+        if(state.value.busy || state.value.pending != null) return
+        mutable.update { it.copy(characterId = value, inventory = emptyList(), inventoryVersion = null, selectedEquipment = "") }
+    }
+    fun selectEquipment(value: String) { if(!state.value.busy) mutable.update { it.copy(selectedEquipment = value) } }
+    fun selectCurrency(value: String) { if(!state.value.busy) mutable.update { it.copy(selectedCurrency = value) } }
+    private suspend fun readInventory() {
+        val result = api.inventory(state.value.characterId.trim())
+        val equipment = result.getValue("equipment").jsonArray.map { it.jsonObject }
+        mutable.update { it.copy(inventory = equipment, inventoryVersion = result.getValue("version").jsonPrimitive.long,
+            selectedEquipment = it.selectedEquipment.takeIf { selected -> equipment.any { e -> e.text("uuid") == selected } } ?: equipment.firstOrNull()?.text("uuid").orEmpty()) }
+    }
+    fun loadInventory() = task {
+        readInventory()
+        val currencies = api.currencies()
+        mutable.update { it.copy(currencies = currencies, selectedCurrency = it.selectedCurrency.ifBlank { currencies.firstOrNull()?.text("id").orEmpty() }) }
+    }
+    fun randomItem() { if(state.value.busy || state.value.editorOpen) return; mutable.update { it.copy(tab = 1, editorOpen = false, original = null) } }
+    fun inventoryAction(operation: String) = task {
+        check(state.value.pending == null) { "Сначала разрешите результат предыдущей операции" }
+        val state = state.value
+        val version = requireNotNull(state.inventoryVersion) { "Загрузите инвентарь" }
+        val payload = buildJsonObject {
+            put("requestId", java.util.UUID.randomUUID().toString()); put("expectedVersion", version)
+            if(operation == "craft") {
+                require(state.selectedEquipment.isNotBlank() && state.selectedCurrency.isNotBlank()) { "Выберите экипировку и сферу" }
+                put("equipmentUuid", state.selectedEquipment); put("currency", state.selectedCurrency)
+            }
+        }
+        val pending = PendingInventoryAction(state.characterId.trim(), operation, payload)
+        store.savePending(buildJsonObject { put("characterId", pending.characterId); put("operation", operation); put("payload", payload) }.toString())
+        mutable.update { it.copy(pending = pending) }
+        executePending()
+    }
+    fun retryInventoryAction() = task { executePending() }
+    private suspend fun executePending() {
+        val pending = requireNotNull(state.value.pending)
+        val result = try { api.mutateInventory(pending.characterId, pending.operation, pending.payload) }
+        catch(e: ApiFailure) {
+            // Only explicit client rejections are definitive. Network/5xx can hide a committed write.
+            if(e.status in listOf(400, 409, 422)) {
+                store.savePending(null)
+                mutable.update { it.copy(pending = null, inventoryVersion = null) }
+            }
+            throw e
+        }
+        val equipment = result.getValue("equipment").jsonObject
+        store.savePending(null)
+        mutable.update { it.copy(pending = null, inventoryVersion = result.getValue("characterVersion").jsonPrimitive.long,
+            inventory = it.inventory.filterNot { item -> item.text("uuid") == equipment.text("uuid") } + equipment,
+            selectedEquipment = equipment.text("uuid"), message = "Операция выполнена" + (result["currencyRemaining"]?.let { amount -> ". Осталось сфер: $amount" } ?: "")) }
+        try { readInventory() } catch(e: CancellationException) { throw e }
+        catch(_: Exception) { mutable.update { it.copy(inventoryVersion = null, message = "Операция выполнена. Обновите инвентарь перед следующей.") } }
     }
     fun save() = task {
         val document = state.value.draft
@@ -157,7 +224,11 @@ class ForgeViewModel(private val store: ServerStore, private val journal: Reques
     fun runChecks() = task {
         require(state.value.catalog != Catalog.CHARACTERS) { "CRUD-сценарий предназначен для предметов" }
         mutable.update { it.copy(checks = emptyList()) }
-        CrudScenario(api).run(state.value.catalog) { result -> mutable.update { it.copy(checks = it.checks + result) } }
+        val modifier = if(state.value.catalog == Catalog.EQUIPMENT) {
+            val definitions = api.definitions("", 0).getValue("items").jsonArray
+            modifierFromDefinition(definitions.firstOrNull()?.jsonObject ?: error("Каталог модификаторов пуст. Запустите Seeder сервера"))
+        } else starterModifier()
+        CrudScenario(api, modifier).run(state.value.catalog) { result -> mutable.update { it.copy(checks = it.checks + result) } }
     }
     class Factory(private val app: ForgeApplication) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {

@@ -55,7 +55,7 @@ class EditorAndGenerationTest {
         val document = JsonObject(template(Catalog.EQUIPMENT) + ("modifierDefinitions" to JsonArray(emptyList())))
         val selected = JsonArray(listOf(starterModifier()))
         val changed = attachSelectedDefinitions(document, selected, listOf(starterDefinition()))
-        assertEquals(1, changed.getValue("modifierDefinitions").jsonArray.size)
+        assertEquals(1, changed.getValue("modifierDefinitionRefs").jsonArray.size)
         assertEquals(changed, attachSelectedDefinitions(changed, selected, listOf(starterDefinition())))
     }
     @Test fun `modifier spinner fills multi-value tier source and tags`() {

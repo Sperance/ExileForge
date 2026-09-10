@@ -160,6 +160,7 @@ import kotlinx.serialization.json.*
     if (!s.editorOpen) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text("Кузница и персонажи", style = MaterialTheme.typography.headlineLarge)
+            InventoryForge(s, vm)
             InfoCard("Редактор", "Выберите предмет или персонажа в каталоге. Характеристики, модификаторы и условия настраиваются через формы.")
             CatalogSwitch(s, vm)
             if (s.catalog != Catalog.EQUIPMENT) Button(enabled = !s.busy, onClick = { vm.create() }) { Text(if(s.catalog == Catalog.CHARACTERS) "Создать персонажа" else "Создать предмет") }
@@ -183,15 +184,18 @@ import kotlinx.serialization.json.*
                 if(s.catalog == Catalog.CHARACTERS && s.original == null) Text("Нужен ID существующего пользователя. Сервер проверит лимит персонажей.", color = Muted)
             }
             if(s.catalog != Catalog.ITEMS) item {
-                OutlinedButton(enabled = !s.busy, onClick = vm::loadDefinitions) { Text("Обновить список модификаторов с сервера") }
+                OutlinedTextField(s.definitionQuery, vm::definitionQuery, label = { Text("Поиск модификаторов на сервере") }, enabled = !s.busy)
+                OutlinedButton(enabled = !s.busy, onClick = { vm.loadDefinitions() }) { Text("Найти модификаторы") }
+                DefinitionPublisher(s, vm)
+                Text("Найдено: ${s.definitionTotal} · страница ${s.definitionPage + 1}")
+                Row {
+                    TextButton(enabled = !s.busy && s.definitionPage > 0, onClick = { vm.loadDefinitions(s.definitionPage - 1) }) { Text("Назад") }
+                    TextButton(enabled = !s.busy && (s.definitionPage + 1) * 50 < s.definitionTotal, onClick = { vm.loadDefinitions(s.definitionPage + 1) }) { Text("Далее") }
+                }
             }
             item {
                 ObjectForm(formSchema(s.catalog), s.draft, s.definitions, !s.busy,
-                    locked = if(s.catalog == Catalog.CHARACTERS && s.original != null) setOf("userId") else emptySet(), onChange = vm::edit)
-            }
-            if(s.catalog == Catalog.EQUIPMENT) item {
-                OutlinedButton(enabled = !s.busy, onClick = vm::reroll, modifier = Modifier.fillMaxWidth()) { Text("Сгенерировать модификаторы по настройкам") }
-                Text("Используются выбранные определения, редкость, уровень и диапазоны. Сохранение выполняется отдельно.", color = Muted)
+                    locked = if(s.catalog == Catalog.CHARACTERS && s.original != null) setOf("userId", "equipments", "items") else emptySet(), onChange = vm::edit)
             }
             item { Button(enabled = !s.busy, onClick = vm::save, modifier = Modifier.fillMaxWidth()) { Text("Сохранить на сервере") } }
             if(s.original != null) item { TextButton(enabled = !s.busy, onClick = onDelete, modifier = Modifier.fillMaxWidth()) { Text("Удалить", color = MaterialTheme.colorScheme.error) } }
@@ -245,6 +249,7 @@ import kotlinx.serialization.json.*
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text("Врата мира", style = MaterialTheme.typography.headlineLarge)
         Text("Подключение к ktor-bestgame", color = Muted)
+        LoginForm(s, vm)
         OutlinedTextField(s.serverDraft, vm::serverDraft, enabled = !s.busy, label = { Text("Адрес сервера") }, supportingText = { Text("Без /api/v1: https://example.com/") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
         Button(enabled = !s.busy && !s.editorOpen, onClick = vm::connect, modifier = Modifier.fillMaxWidth()) { Text("Сохранить и подключиться") }
         if (s.editorOpen) Text("Перед сменой сервера закройте редактор в кузнице.", color = Muted)

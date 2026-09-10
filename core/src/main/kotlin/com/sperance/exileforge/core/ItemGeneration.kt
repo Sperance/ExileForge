@@ -26,12 +26,12 @@ fun modifierFromDefinition(definition: JsonObject, tierNumber: Int? = null): Jso
     val d = WireJson.decodeFromJsonElement(ModifierDefinition.serializer(), definition)
     val tier = d.tiers.firstOrNull { it.tier == tierNumber } ?: d.tiers.firstOrNull()
     return buildJsonObject {
-        put("definitionId", d.id); put("tier", tier?.tier ?: 1); put("source", d.source.name)
+        put("definitionRevision", d.revision); put("definitionId", d.id); put("tier", tier?.tier ?: 1); put("source", d.source.name)
         put("values", buildJsonArray { (tier?.values ?: listOf(ValueRange(1.0, 1.0))).forEach { add(buildJsonObject { put("value", it.min) }) } })
         put("tags", JsonArray(d.tags.map { JsonPrimitive(it.value) }))
     }
 }
-/** Mirrors the current server's rarity counts, tier eligibility and weights without allocating a weighted list. */
+/** Legacy offline simulator; PoE inventory generation is server-authoritative. */
 class ItemGenerator(private val random: Random = Random.Default) {
     private fun <T> pick(values: List<T>, weight: (T) -> Double): T? {
         if(values.isEmpty()) return null
@@ -70,10 +70,13 @@ class ItemGenerator(private val random: Random = Random.Default) {
     }
 }
 
+fun definitionReference(definition: JsonObject): JsonObject = buildJsonObject {
+    put("definitionId", definition.text("id")); put("revision", definition.text("revision").toIntOrNull() ?: 1)
+}
 fun attachSelectedDefinitions(document: JsonObject, modifiers: JsonElement, available: List<JsonObject>): JsonObject {
-    val ids = (modifiers as? JsonArray).orEmpty().map { it.jsonObject.text("definitionId") }.toSet()
-    val existing = definitionsOf(document).map { it.text("id") }.toSet()
-    val missing = available.filter { it.text("id") in ids && it.text("id") !in existing }.distinctBy { it.text("id") }
-    val changed = document + ("modifiers" to modifiers)
-    return if(missing.isEmpty()) JsonObject(changed) else JsonObject(changed + ("modifierDefinitions" to JsonArray((document["modifierDefinitions"] as? JsonArray).orEmpty() + missing)))
+    val refs = (document["modifierDefinitionRefs"] as? JsonArray).orEmpty() + (modifiers as? JsonArray).orEmpty().map {
+        val mod = it.jsonObject
+        buildJsonObject { put("definitionId", mod.text("definitionId")); put("revision", mod.text("definitionRevision").toIntOrNull() ?: 1) }
+    }
+    return JsonObject(document + mapOf("modifiers" to modifiers, "modifierDefinitionRefs" to JsonArray(refs.distinct())))
 }

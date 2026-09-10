@@ -1,8 +1,35 @@
 package com.sperance.exileforge.core
 
-import kotlinx.serialization.json.*
+import com.sperance.exileforge.core.contract.WireJson
+import com.sperance.exileforge.core.contract.diff
+import com.sperance.exileforge.core.contract.starterDefinition
+import com.sperance.exileforge.core.contract.starterModifier
+import com.sperance.exileforge.core.contract.template
+import com.sperance.exileforge.core.contract.text
+import com.sperance.exileforge.core.contract.validate
+import com.sperance.exileforge.core.contract.validateModifier
+import com.sperance.exileforge.core.editor.conditionVariants
+import com.sperance.exileforge.core.editor.defaultObject
+import com.sperance.exileforge.core.editor.effectVariants
+import com.sperance.exileforge.core.editor.expressionVariants
+import com.sperance.exileforge.core.editor.validateForm
+import com.sperance.exileforge.core.generation.ItemGenerator
+import com.sperance.exileforge.core.generation.attachSelectedDefinitions
+import com.sperance.exileforge.core.generation.modifierFromDefinition
+import com.sperance.exileforge.core.model.Catalog
+import com.sperance.exileforge.core.model.modifier.AffixType
+import com.sperance.exileforge.core.model.modifier.ModifierCondition
+import com.sperance.exileforge.core.model.modifier.ModifierDefinition
+import com.sperance.exileforge.core.model.modifier.ModifierEffect
+import com.sperance.exileforge.core.model.modifier.ModifierSource
+import com.sperance.exileforge.core.model.modifier.ModifierTag
+import com.sperance.exileforge.core.model.modifier.ModifierTier
+import com.sperance.exileforge.core.model.modifier.ValueExpression
+import com.sperance.exileforge.core.model.modifier.ValueRange
+import com.sperance.exileforge.ui.forms.changed
 import kotlin.random.Random
 import kotlin.test.*
+import kotlinx.serialization.json.*
 import org.junit.Test
 
 class EditorAndGenerationTest {

@@ -1,4 +1,4 @@
-package com.sperance.exileforge.ui
+package com.sperance.exileforge.ui.theme
 
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -7,6 +7,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.sperance.exileforge.ui.theme.ForgeTheme
 
 val Gold = Color(0xFFC7A66D)
 val Ink = Color(0xFF100F12)

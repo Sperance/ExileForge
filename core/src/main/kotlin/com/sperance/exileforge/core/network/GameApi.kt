@@ -1,38 +1,24 @@
-package com.sperance.exileforge.core
+package com.sperance.exileforge.core.network
 
-import java.io.IOException
+import com.sperance.exileforge.core.contract.WireJson
+import com.sperance.exileforge.core.contract.protectedFields
+import com.sperance.exileforge.core.contract.requireId
+import com.sperance.exileforge.core.contract.text
+import com.sperance.exileforge.core.contract.validate
+import com.sperance.exileforge.core.contract.validateReferenceWrite
+import com.sperance.exileforge.core.model.Catalog
+import com.sperance.exileforge.core.model.EntitySource
 import java.util.concurrent.TimeUnit
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.*
 import okhttp3.*
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 
-class ApiFailure(val status: Int?, val code: String?, message: String) : IOException(message)
-data class RequestLog(val method: String, val path: String, val status: Int?, val elapsedMs: Long, val request: String, val response: String, val ok: Boolean)
-class RequestJournal {
-    private val mutable = MutableStateFlow<List<RequestLog>>(emptyList())
-    val entries = mutable.asStateFlow()
-    fun add(entry: RequestLog) { mutable.update { (listOf(entry) + it).take(60) } }
-    fun clear() { mutable.value = emptyList() }
-}
-data class ItemPage(val items: List<JsonObject>, val page: Int, val totalPages: Int, val totalItems: Long)
-interface ItemRepository {
-    suspend fun page(catalog: Catalog, page: Int): ItemPage
-    suspend fun get(catalog: Catalog, id: String): JsonObject?
-    suspend fun create(catalog: Catalog, document: JsonObject): JsonObject
-    suspend fun update(catalog: Catalog, id: String, changes: JsonObject): JsonObject
-    suspend fun delete(catalog: Catalog, id: String)
-}
 fun normalizeServer(value: String): String {
     val url = value.trim().toHttpUrlOrNull() ?: error("Введите URL с http:// или https://")
     require(url.username.isEmpty() && url.password.isEmpty() && url.query == null && url.fragment == null) { "URL не должен содержать пароль, query или fragment" }
@@ -53,6 +39,12 @@ class GameApi(
         token = result.text("token").also { require(it.isNotBlank()) }
     }
     fun logout() { token = null }
+    suspend fun referencePage(source: EntitySource, page: Int): ItemPage {
+        require(page >= 0)
+        val body = request("GET", "api/v1/${source.path}/paged", mapOf("page" to "$page", "size" to "50")).jsonObject
+        return ItemPage(body.getValue("items").jsonArray.map { it.jsonObject }, body.getValue("page").jsonPrimitive.int,
+            body.getValue("totalPages").jsonPrimitive.int, body.getValue("totalItems").jsonPrimitive.long)
+    }
     suspend fun definitions(query: String, page: Int): JsonObject = request("GET", "api/v1/poe/modifier-definitions", mapOf("q" to query, "page" to "$page", "size" to "50")).jsonObject
     suspend fun definition(id: String, revision: Int): JsonObject = request("GET", "api/v1/poe/modifier-definition", mapOf("id" to id, "revision" to "$revision")).jsonObject
     suspend fun publishDefinition(definition: JsonObject, expectedRevision: Int): JsonObject = request("POST", "api/v1/poe/modifier-definitions", body = buildJsonObject {
@@ -130,28 +122,4 @@ class GameApi(
                 (System.nanoTime() - start) / 1_000_000, if(sensitive) "[скрыто]" else bodyText.take(12_000), if(sensitive) "[скрыто]" else responseText, success))
         }
     }
-}
-private data class HttpPayload(val status: Int, val body: String)
-/** Consume and close the body on OkHttp's worker, keeping cancellation wired through the full read. */
-private suspend fun Call.awaitPayload(): HttpPayload = suspendCancellableCoroutine { continuation ->
-    continuation.invokeOnCancellation { cancel() }
-    enqueue(object : Callback {
-        override fun onFailure(call: Call, e: IOException) {
-            if (!continuation.isCancelled) continuation.resumeWithException(e)
-        }
-        override fun onResponse(call: Call, response: Response) {
-            try {
-                val payload = response.use {
-                    val source = it.body?.source() ?: throw ApiFailure(it.code, null, "Пустой ответ сервера")
-                    val limit = 2L * 1024 * 1024
-                    source.request(limit + 1)
-                    if (source.buffer.size > limit) throw ApiFailure(it.code, null, "Ответ слишком большой")
-                    HttpPayload(it.code, source.readUtf8())
-                }
-                if (!continuation.isCancelled) continuation.resume(payload)
-            } catch (e: Exception) {
-                if (!continuation.isCancelled) continuation.resumeWithException(e)
-            }
-        }
-    })
 }

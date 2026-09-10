@@ -1,11 +1,23 @@
 package com.sperance.exileforge.core
 
+import com.sperance.exileforge.core.contract.WireJson
+import com.sperance.exileforge.core.contract.definitionKey
+import com.sperance.exileforge.core.contract.starterDefinition
+import com.sperance.exileforge.core.contract.template
+import com.sperance.exileforge.core.contract.text
+import com.sperance.exileforge.core.contract.validateReferenceWrite
+import com.sperance.exileforge.core.generation.attachSelectedDefinitions
+import com.sperance.exileforge.core.generation.modifierFromDefinition
+import com.sperance.exileforge.core.model.Catalog
+import com.sperance.exileforge.core.network.ApiFailure
+import com.sperance.exileforge.core.network.GameApi
+import com.sperance.exileforge.core.network.RequestJournal
+import kotlin.test.*
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.*
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.Test
-import kotlin.test.*
 
 class PoeApiTest {
     private val id = "0123456789abcdef01234567"

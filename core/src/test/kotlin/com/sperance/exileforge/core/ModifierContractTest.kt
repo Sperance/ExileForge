@@ -1,5 +1,16 @@
 package com.sperance.exileforge.core
 
+import com.sperance.exileforge.core.contract.WireJson
+import com.sperance.exileforge.core.contract.starterDefinition
+import com.sperance.exileforge.core.contract.starterModifier
+import com.sperance.exileforge.core.contract.template
+import com.sperance.exileforge.core.contract.validate
+import com.sperance.exileforge.core.contract.validateModifier
+import com.sperance.exileforge.core.model.Catalog
+import com.sperance.exileforge.core.model.modifier.Modifier
+import com.sperance.exileforge.core.model.modifier.ModifierCondition
+import com.sperance.exileforge.core.model.modifier.ModifierDefinition
+import com.sperance.exileforge.core.model.modifier.ModifierEffect
 import kotlin.test.*
 import kotlinx.serialization.json.*
 import org.junit.Test

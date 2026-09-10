@@ -1,15 +1,22 @@
-package com.sperance.exileforge.core
+package com.sperance.exileforge.core.contract
 
+import com.sperance.exileforge.core.editor.defaultObject
+import com.sperance.exileforge.core.editor.formSchema
+import com.sperance.exileforge.core.editor.validateForm
+import com.sperance.exileforge.core.model.Catalog
+import com.sperance.exileforge.core.model.EquipmentKind
+import com.sperance.exileforge.core.model.modifier.Modifier
+import com.sperance.exileforge.core.model.modifier.ModifierDefinition
+import com.sperance.exileforge.core.model.modifier.ModifierSource
+import com.sperance.exileforge.ui.forms.changed
 import kotlinx.serialization.json.*
 
 val WireJson = Json { prettyPrint = true; ignoreUnknownKeys = true }
 fun JsonObject.text(key: String): String = (get(key) as? JsonPrimitive)?.contentOrNull.orEmpty()
 val JsonObject.entityId: String get() = text("_id")
 val protectedFields = setOf("_id", "id", "version", "deleted", "createdAt", "updatedAt", "type")
-enum class Catalog(val path: String, val title: String) {
-    ITEMS("items", "Предметы"), EQUIPMENT("equipment", "Экипировка"), CHARACTERS("character", "Персонажи")
-}
-enum class EquipmentKind { Weapon, Armor, Accessory }
+
+
 val rarities = listOf("COMMON", "UNCOMMON", "RARE", "EPIC", "LEGENDARY", "MYTHICAL")
 val slots = listOf("HELMET", "BODY", "GLOVES", "RING", "BOOTS", "WINGS", "BELT", "WEAPON_1H", "WEAPON_2H", "QUIVER", "SHIELD", "AMULET")
 val weapons = listOf("SWORD", "LONGSWORD", "BOW", "WAND", "AXE", "DOUBLEAXE", "DOUBLESWORD", "BLADE")

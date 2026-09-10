@@ -1,4 +1,4 @@
-package com.sperance.exileforge.core
+package com.sperance.exileforge.core.contract
 
 import kotlinx.serialization.json.*
 

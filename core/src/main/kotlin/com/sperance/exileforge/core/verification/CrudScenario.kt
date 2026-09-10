@@ -1,12 +1,18 @@
-package com.sperance.exileforge.core
+package com.sperance.exileforge.core.verification
 
+import com.sperance.exileforge.core.contract.entityId
+import com.sperance.exileforge.core.contract.starterModifier
+import com.sperance.exileforge.core.contract.template
+import com.sperance.exileforge.core.contract.text
+import com.sperance.exileforge.core.model.Catalog
+import com.sperance.exileforge.core.network.ItemRepository
+import com.sperance.exileforge.ui.forms.changed
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.*
 
-data class CheckResult(val label: String, val passed: Boolean, val detail: String)
 /** Each run owns one preallocated ID. Never deletes a preexisting entity. */
 class CrudScenario(private val repository: ItemRepository, private val testModifier: JsonObject = starterModifier()) {
     suspend fun run(catalog: Catalog, report: (CheckResult) -> Unit) {

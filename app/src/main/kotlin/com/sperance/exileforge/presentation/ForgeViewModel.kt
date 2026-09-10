@@ -1,30 +1,37 @@
-package com.sperance.exileforge
+package com.sperance.exileforge.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.sperance.exileforge.core.*
+import com.sperance.exileforge.ForgeApplication
+import com.sperance.exileforge.core.contract.WireJson
+import com.sperance.exileforge.core.contract.definitionKey
+import com.sperance.exileforge.core.contract.diff
+import com.sperance.exileforge.core.contract.entityId
+import com.sperance.exileforge.core.contract.protectedFields
+import com.sperance.exileforge.core.contract.referenceKey
+import com.sperance.exileforge.core.contract.starterModifier
+import com.sperance.exileforge.core.contract.template
+import com.sperance.exileforge.core.contract.text
+import com.sperance.exileforge.core.contract.validate
+import com.sperance.exileforge.core.editor.validateForm
+import com.sperance.exileforge.core.generation.modifierFromDefinition
+import com.sperance.exileforge.core.model.Catalog
+import com.sperance.exileforge.core.model.EntitySource
+import com.sperance.exileforge.core.model.EquipmentKind
+import com.sperance.exileforge.core.network.ApiFailure
+import com.sperance.exileforge.core.network.GameApi
+import com.sperance.exileforge.core.network.RequestJournal
+import com.sperance.exileforge.core.network.normalizeServer
+import com.sperance.exileforge.core.verification.CrudScenario
+import com.sperance.exileforge.data.settings.ServerStore
+import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.PendingInventoryAction
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.*
 
-data class ForgeState(
-    val tab: Int = 0, val catalog: Catalog = Catalog.EQUIPMENT,
-    val server: String = "http://10.0.2.2:8080/", val serverDraft: String = "http://10.0.2.2:8080/",
-    val busy: Boolean = true, val message: String? = null, val error: Boolean = false,
-    val items: List<JsonObject> = emptyList(), val page: Int = 0, val totalPages: Int = 0, val total: Long = 0,
-    val query: String = "", val lookupId: String = "",
-    val original: JsonObject? = null, val editorOpen: Boolean = false,
-    val draft: JsonObject = JsonObject(emptyMap()), val definitions: List<JsonObject> = emptyList(),
-    val definitionQuery: String = "", val definitionPage: Int = 0, val definitionTotal: Int = 0,
-    val signedIn: Boolean = false, val characterId: String = "", val inventory: List<JsonObject> = emptyList(),
-    val inventoryVersion: Long? = null, val currencies: List<JsonObject> = emptyList(),
-    val selectedEquipment: String = "", val selectedCurrency: String = "",
-    val pending: PendingInventoryAction? = null,
-    val checks: List<CheckResult> = emptyList(), val health: String = "Соединение ещё не проверено"
-)
-data class PendingInventoryAction(val characterId: String, val operation: String, val payload: JsonObject)
 class ForgeViewModel(private val store: ServerStore, private val journal: RequestJournal) : ViewModel() {
     private val mutable = MutableStateFlow(ForgeState())
     val state = mutable.asStateFlow()
@@ -51,7 +58,7 @@ class ForgeViewModel(private val store: ServerStore, private val journal: Reques
     }
     fun tab(tab: Int) { mutable.update { it.copy(tab = tab) } }
     fun query(value: String) { mutable.update { it.copy(query = value) } }
-    fun lookup(value: String) { mutable.update { it.copy(lookupId = value) } }
+    suspend fun referencePage(source: EntitySource, page: Int) = api.referencePage(source, page)
     fun serverDraft(value: String) { if (!state.value.busy) mutable.update { it.copy(serverDraft = value) } }
     fun dismissMessage() { mutable.update { it.copy(message = null) } }
     fun clearLogs() = journal.clear()

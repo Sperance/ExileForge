@@ -1,18 +1,23 @@
-package com.sperance.exileforge.core
+package com.sperance.exileforge.core.editor
 
+import com.sperance.exileforge.core.contract.modifierSources
+import com.sperance.exileforge.core.contract.rarities
+import com.sperance.exileforge.core.contract.requireId
+import com.sperance.exileforge.core.contract.slots
+import com.sperance.exileforge.core.contract.text
+import com.sperance.exileforge.core.contract.weapons
+import com.sperance.exileforge.core.model.Catalog
+import com.sperance.exileforge.core.model.EntitySource
+import com.sperance.exileforge.core.model.character.battleStats
+import com.sperance.exileforge.core.model.character.boolStats
+import com.sperance.exileforge.core.model.character.professionStats
+import com.sperance.exileforge.core.model.character.stockStats
+import com.sperance.exileforge.core.model.modifier.ModifierOperation
+import com.sperance.exileforge.core.model.modifier.ModifierScope
 import kotlinx.serialization.json.*
 
 /** UI metadata for the server wire contract; documents retain fields unknown to this client. */
-sealed interface InputSpec {
-    data class Text(val suggestions: List<String> = emptyList()) : InputSpec
-    data class Number(val integer: Boolean = false, val min: Double? = null, val max: Double? = null) : InputSpec
-    data object Flag : InputSpec
-    data class Select(val options: List<String>) : InputSpec
-    data class Object(val schema: String) : InputSpec
-    data class ListOf(val element: InputSpec) : InputSpec
-    data class Union(val variants: Map<String, String>) : InputSpec
-}
-data class FormField(val key: String, val label: String, val spec: InputSpec, val default: JsonElement, val nullable: Boolean = false)
+private fun reference(key: String, label: String, source: EntitySource) = FormField(key, label, InputSpec.Reference(source), JsonPrimitive(""))
 private fun text(key: String, label: String, default: String = "", options: List<String> = emptyList()) = FormField(key, label, InputSpec.Text(options), JsonPrimitive(default))
 private fun num(key: String, label: String, default: Number = 0, integer: Boolean = false, min: Double? = null, max: Double? = null) = FormField(key, label, InputSpec.Number(integer, min, max), JsonPrimitive(default))
 private fun choice(key: String, label: String, options: List<String>, default: String = options.first()) = FormField(key, label, InputSpec.Select(options), JsonPrimitive(default))
@@ -76,13 +81,13 @@ fun schemaFields(schema: String, document: JsonObject = JsonObject(emptyMap())):
             addAll(listOf(list("modifiers", "Модификаторы", InputSpec.Object("modifier")).copy(nullable = true), list("modifierDefinitionRefs", "Доступные модификаторы", InputSpec.Object("reference")), list("stockModifierDefinitionRefs", "Встроенные модификаторы", InputSpec.Object("reference"))))
         }
     }
-    "character" -> listOf(text("name", "Имя"), text("description", "Описание"), text("userId", "Владелец (ID пользователя)"), num("level", "Уровень", 1, true, 1.0, 32767.0), num("experience", "Опыт", 0.0, min = 0.0), num("money", "Деньги", 0, true, 0.0), list("params", "Модификаторы персонажа", InputSpec.Object("modifier")), list("equipments", "Экипировка", InputSpec.Object("characterEquipment")), list("items", "Предметы в инвентаре", InputSpec.Object("characterItem")), list("professionSkills", "Профессии", InputSpec.Object("professionSkill")), list("stockSkills", "Характеристики", InputSpec.Object("stockSkill")), list("battleSkills", "Боевые навыки", InputSpec.Object("battleSkill")), list("boolSkills", "Состояния", InputSpec.Object("boolSkill")), list("recipeAccess", "Доступные рецепты (ID)", InputSpec.Text()), list("gainedRedemptionCodes", "Полученные промокоды", InputSpec.Object("redemption")))
-    "characterEquipment" -> listOf(text("equipmentId", "Предмет экипировки (ID)"), text("uuid", "ID экземпляра", newEntityId()), list("params", "Модификаторы экземпляра", InputSpec.Object("modifier")))
-    "characterItem" -> listOf(text("itemId", "Предмет (ID)"), num("amount", "Количество", 1, true, 0.0))
+    "character" -> listOf(text("name", "Имя"), text("description", "Описание"), reference("userId", "Владелец", EntitySource.USER), num("level", "Уровень", 1, true, 1.0, 32767.0), num("experience", "Опыт", 0.0, min = 0.0), num("money", "Деньги", 0, true, 0.0), list("params", "Модификаторы персонажа", InputSpec.Object("modifier")), list("equipments", "Экипировка", InputSpec.Object("characterEquipment")), list("items", "Предметы в инвентаре", InputSpec.Object("characterItem")), list("professionSkills", "Профессии", InputSpec.Object("professionSkill")), list("stockSkills", "Характеристики", InputSpec.Object("stockSkill")), list("battleSkills", "Боевые навыки", InputSpec.Object("battleSkill")), list("boolSkills", "Состояния", InputSpec.Object("boolSkill")), list("recipeAccess", "Доступные рецепты", InputSpec.Reference(EntitySource.RECIPE)), list("gainedRedemptionCodes", "Полученные промокоды", InputSpec.Object("redemption")))
+    "characterEquipment" -> listOf(reference("equipmentId", "Предмет экипировки", EntitySource.EQUIPMENT), text("uuid", "ID экземпляра", newEntityId()), list("params", "Модификаторы экземпляра", InputSpec.Object("modifier")))
+    "characterItem" -> listOf(reference("itemId", "Предмет", EntitySource.ITEM), num("amount", "Количество", 1, true, 0.0))
     "professionSkill", "battleSkill" -> listOf(choice("stat", "Навык", if(schema == "professionSkill") professionStats else battleStats), num("level", "Уровень", 0, true, 0.0, 127.0), num("experience", "Опыт", 0.0, min = 0.0))
     "stockSkill" -> listOf(choice("stat", "Характеристика", stockStats), num("value", "Значение", 0, true, Int.MIN_VALUE.toDouble(), Int.MAX_VALUE.toDouble()))
     "boolSkill" -> listOf(choice("stat", "Состояние", boolStats), flag("value", "Активно").copy(nullable = true, default = JsonNull))
-    "redemption" -> listOf(text("redemptionCodeId", "ID промокода"), text("dateGained", "Дата получения (ГГГГ-ММ-ДДTчч:мм:сс)", "2026-01-01T00:00:00"))
+    "redemption" -> listOf(reference("redemptionCodeId", "Промокод", EntitySource.REDEMPTION), text("dateGained", "Дата получения (ГГГГ-ММ-ДДTчч:мм:сс)", "2026-01-01T00:00:00"))
     else -> error("Неизвестная форма: $schema")
 }
 
@@ -107,6 +112,7 @@ fun validateForm(schema: String, document: JsonObject) {
                     val n = p?.doubleOrNull
                     require(p != null && !p.isString && n != null && n.isFinite() && (!spec.integer || p.longOrNull != null) && (spec.min == null || n >= spec.min) && (spec.max == null || n <= spec.max)) { "${field.label}: некорректное число" }
                 }
+                is InputSpec.Reference -> requireId(element.jsonPrimitive.content)
                 is InputSpec.Text -> require(element is JsonPrimitive && element.isString) { "${field.label}: требуется текст" }
                 InputSpec.Flag -> require(element is JsonPrimitive && !element.isString && element.booleanOrNull != null) { "${field.label}: требуется да/нет" }
                 is InputSpec.Select -> require(element is JsonPrimitive && element.content in spec.options) { "${field.label}: выберите значение" }

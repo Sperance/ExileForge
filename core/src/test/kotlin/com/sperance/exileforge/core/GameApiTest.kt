@@ -1,8 +1,22 @@
 package com.sperance.exileforge.core
 
+import com.sperance.exileforge.core.contract.WireJson
+import com.sperance.exileforge.core.contract.diff
+import com.sperance.exileforge.core.contract.entityId
+import com.sperance.exileforge.core.contract.starterDefinition
+import com.sperance.exileforge.core.contract.starterModifier
+import com.sperance.exileforge.core.contract.template
+import com.sperance.exileforge.core.contract.text
+import com.sperance.exileforge.core.contract.validate
+import com.sperance.exileforge.core.generation.definitionReference
+import com.sperance.exileforge.core.model.Catalog
+import com.sperance.exileforge.core.model.EquipmentKind
+import com.sperance.exileforge.core.network.ApiFailure
+import com.sperance.exileforge.core.network.GameApi
+import com.sperance.exileforge.core.network.normalizeServer
+import java.util.concurrent.TimeUnit
 import kotlin.test.*
 import kotlinx.coroutines.*
-import java.util.concurrent.TimeUnit
 import kotlinx.serialization.json.*
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer

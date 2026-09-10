@@ -1,37 +1,18 @@
-package com.sperance.exileforge.core
+package com.sperance.exileforge.core.generation
 
-import kotlin.random.Random
+import com.sperance.exileforge.core.contract.WireJson
+import com.sperance.exileforge.core.contract.protectedFields
+import com.sperance.exileforge.core.contract.text
+import com.sperance.exileforge.core.contract.validate
+import com.sperance.exileforge.core.model.Catalog
+import com.sperance.exileforge.core.model.modifier.AffixType
+import com.sperance.exileforge.core.model.modifier.Modifier
+import com.sperance.exileforge.core.model.modifier.ModifierDefinition
+import com.sperance.exileforge.core.model.modifier.ModifierValue
 import kotlin.math.round
+import kotlin.random.Random
 import kotlinx.serialization.json.*
 
-val presetDefinitions: List<JsonObject> = statSuggestions.map { stat ->
-    val effect = buildJsonObject {
-        put("type", "stat")
-        put("stat", stat)
-        put("operation", "FLAT")
-        put("value", buildJsonObject {
-            put("type", "modifier_value")
-            put("index", 0)
-        })
-    }
-    JsonObject(starterDefinition() + mapOf(
-        "id" to JsonPrimitive(stat),
-        "name" to JsonPrimitive(stat),
-        "effects" to JsonArray(listOf(effect))
-    ))
-}
-fun definitionsOf(document: JsonObject): List<JsonObject> = listOf("modifierDefinitions", "modifierDefinitionsStock")
-    .flatMap { (document[it] as? JsonArray).orEmpty() }.mapNotNull { it as? JsonObject }
-fun modifierFromDefinition(definition: JsonObject, tierNumber: Int? = null): JsonObject {
-    val d = WireJson.decodeFromJsonElement(ModifierDefinition.serializer(), definition)
-    val tier = d.tiers.firstOrNull { it.tier == tierNumber } ?: d.tiers.firstOrNull()
-    return buildJsonObject {
-        put("definitionRevision", d.revision); put("definitionId", d.id); put("tier", tier?.tier ?: 1); put("source", d.source.name)
-        put("values", buildJsonArray { (tier?.values ?: listOf(ValueRange(1.0, 1.0))).forEach { add(buildJsonObject { put("value", it.min) }) } })
-        put("tags", JsonArray(d.tags.map { JsonPrimitive(it.value) }))
-    }
-}
-/** Legacy offline simulator; PoE inventory generation is server-authoritative. */
 class ItemGenerator(private val random: Random = Random.Default) {
     private fun <T> pick(values: List<T>, weight: (T) -> Double): T? {
         if(values.isEmpty()) return null
@@ -68,15 +49,4 @@ class ItemGenerator(private val random: Random = Random.Default) {
             add(buildJsonObject { put("definitionId", mod.definitionId); put("tier", mod.tier); put("source", mod.source.name); put("tags", JsonArray(mod.tags.map { JsonPrimitive(it.value) })); put("values", buildJsonArray { mod.values.forEach { add(buildJsonObject { put("value", it.value) }) } }) })
         } }))
     }
-}
-
-fun definitionReference(definition: JsonObject): JsonObject = buildJsonObject {
-    put("definitionId", definition.text("id")); put("revision", definition.text("revision").toIntOrNull() ?: 1)
-}
-fun attachSelectedDefinitions(document: JsonObject, modifiers: JsonElement, available: List<JsonObject>): JsonObject {
-    val refs = (document["modifierDefinitionRefs"] as? JsonArray).orEmpty() + (modifiers as? JsonArray).orEmpty().map {
-        val mod = it.jsonObject
-        buildJsonObject { put("definitionId", mod.text("definitionId")); put("revision", mod.text("definitionRevision").toIntOrNull() ?: 1) }
-    }
-    return JsonObject(document + mapOf("modifiers" to modifiers, "modifierDefinitionRefs" to JsonArray(refs.distinct())))
 }

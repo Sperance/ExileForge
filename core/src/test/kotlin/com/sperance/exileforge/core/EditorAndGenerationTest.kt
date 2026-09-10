@@ -26,7 +26,6 @@ import com.sperance.exileforge.core.model.modifier.ModifierTag
 import com.sperance.exileforge.core.model.modifier.ModifierTier
 import com.sperance.exileforge.core.model.modifier.ValueExpression
 import com.sperance.exileforge.core.model.modifier.ValueRange
-import com.sperance.exileforge.ui.forms.changed
 import kotlin.random.Random
 import kotlin.test.*
 import kotlinx.serialization.json.*

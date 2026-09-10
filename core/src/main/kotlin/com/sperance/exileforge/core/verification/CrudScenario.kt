@@ -6,7 +6,6 @@ import com.sperance.exileforge.core.contract.template
 import com.sperance.exileforge.core.contract.text
 import com.sperance.exileforge.core.model.Catalog
 import com.sperance.exileforge.core.network.ItemRepository
-import com.sperance.exileforge.ui.forms.changed
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable

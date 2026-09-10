@@ -8,7 +8,6 @@ import com.sperance.exileforge.core.model.EquipmentKind
 import com.sperance.exileforge.core.model.modifier.Modifier
 import com.sperance.exileforge.core.model.modifier.ModifierDefinition
 import com.sperance.exileforge.core.model.modifier.ModifierSource
-import com.sperance.exileforge.ui.forms.changed
 import kotlinx.serialization.json.*
 
 val WireJson = Json { prettyPrint = true; ignoreUnknownKeys = true }

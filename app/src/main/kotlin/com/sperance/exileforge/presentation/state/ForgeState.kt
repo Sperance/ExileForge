@@ -15,6 +15,7 @@ data class ForgeState(
     val draft: JsonObject = JsonObject(emptyMap()), val definitions: List<JsonObject> = emptyList(),
     val definitionQuery: String = "", val definitionPage: Int = 0, val definitionTotal: Int = 0,
     val signedIn: Boolean = false, val characterId: String = "", val inventory: List<JsonObject> = emptyList(),
+    val inventoryBases: Map<String, JsonObject> = emptyMap(), val inventoryDefinitions: List<JsonObject> = emptyList(),
     val inventoryVersion: Long? = null, val currencies: List<JsonObject> = emptyList(),
     val selectedEquipment: String = "", val selectedCurrency: String = "",
     val pending: PendingInventoryAction? = null,

@@ -17,6 +17,8 @@ import com.sperance.exileforge.core.generation.definitionReference
 import com.sperance.exileforge.core.generation.definitionsOf
 import com.sperance.exileforge.core.generation.modifierFromDefinition
 import com.sperance.exileforge.ui.components.Spinner
+import com.sperance.exileforge.ui.icons.propertyIcon
+import com.sperance.exileforge.ui.theme.Gold
 import kotlinx.serialization.json.*
 
 @Composable fun ObjectForm(schema: String, document: JsonObject, definitions: List<JsonObject>, enabled: Boolean, locked: Set<String> = emptySet(), onChange: (JsonObject) -> Unit) {
@@ -27,6 +29,10 @@ import kotlinx.serialization.json.*
                 val fieldSpec = field.spec
                 val value = document[field.key] ?: defaultValue(field.spec, field.default)
                 val editable = enabled && field.key !in locked && field.key != "uuid"
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(propertyIcon(field.key), null, tint = Gold, modifier = Modifier.size(18.dp))
+                    Text(field.label, style = MaterialTheme.typography.labelLarge)
+                }
                 if(field.nullable) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text(field.label, modifier = Modifier.weight(1f))

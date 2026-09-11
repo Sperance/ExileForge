@@ -19,3 +19,25 @@ jobs:
         with:
           name: exile-forge-debug
           path: app/build/outputs/apk/debug/*.apk
+      - name: Enable emulator acceleration
+        run: sudo chmod 666 /dev/kvm
+      - name: Run UI checks on Android
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          script: |
+            ./gradlew :app:connectedDebugAndroidTest
+            adb pull /sdcard/Android/data/com.sperance.exileforge/files/design design-preview
+      - name: Upload UI reports and preview
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: exile-forge-ui
+          path: |
+            app/build/reports/androidTests
+            design-preview
+      - name: Preview image in verification log
+        run: python3 -c "import base64,pathlib; print('DESIGN_IMAGE_START'); print(base64.b64encode(pathlib.Path('design-preview/arsenal.jpg').read_bytes()).decode()); print('DESIGN_IMAGE_END')"

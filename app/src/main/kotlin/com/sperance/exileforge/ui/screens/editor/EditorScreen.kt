@@ -21,6 +21,7 @@ import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.CatalogSwitch
 import com.sperance.exileforge.ui.components.InfoCard
+import com.sperance.exileforge.ui.components.ItemCard
 import com.sperance.exileforge.ui.forms.ObjectForm
 import com.sperance.exileforge.ui.screens.inventory.InventoryForge
 import com.sperance.exileforge.ui.theme.Muted
@@ -30,7 +31,7 @@ import kotlinx.serialization.json.*
     if (!s.editorOpen) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text("Кузница и персонажи", style = MaterialTheme.typography.headlineLarge)
-            InventoryForge(s, vm)
+            InfoCard("Мастерская", "Настройте свойства предмета или создайте новую базу. Экипировка персонажа и сферы доступны во вкладке «Герой».")
             InfoCard("Редактор", "Выберите предмет или персонажа в каталоге. Характеристики, модификаторы и условия настраиваются через формы.")
             CatalogSwitch(s, vm)
             if (s.catalog != Catalog.EQUIPMENT) Button(enabled = !s.busy, onClick = { vm.create() }) { Text(if(s.catalog == Catalog.CHARACTERS) "Создать персонажа" else "Создать предмет") }
@@ -50,7 +51,8 @@ import kotlinx.serialization.json.*
                     Text(if(s.catalog == Catalog.CHARACTERS) "Персонаж" else "Кузница", style = MaterialTheme.typography.headlineLarge, modifier = Modifier.weight(1f))
                     IconButton(enabled = !s.busy, onClick = onClose) { Icon(Icons.Outlined.Close, "Закрыть редактор") }
                 }
-                s.original?.let { SelectionContainer { Text(it.entityId, color = Muted) } }
+                if(s.catalog != Catalog.CHARACTERS) ItemCard(s.draft, enabled = false, detailed = true, definitions = s.definitions, actionLabel = "Предпросмотр")
+                if(s.catalog == Catalog.CHARACTERS && s.original != null) OutlinedButton(enabled = !s.busy, onClick = { vm.showCharacterInventory(s.original.entityId) }) { Text("Просмотреть экипировку") }
                 if(s.catalog == Catalog.CHARACTERS && s.original == null) Text("Выберите существующего пользователя из списка. Сервер проверит лимит персонажей.", color = Muted)
             }
             if(s.catalog != Catalog.ITEMS) item {

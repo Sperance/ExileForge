@@ -30,6 +30,11 @@ import com.sperance.exileforge.presentation.state.PendingInventoryAction
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.serialization.json.*
 
 class ForgeViewModel(private val store: ServerStore, private val journal: RequestJournal) : ViewModel() {
@@ -37,6 +42,7 @@ class ForgeViewModel(private val store: ServerStore, private val journal: Reques
     val state = mutable.asStateFlow()
     val logs = journal.entries
     private lateinit var api: GameApi
+    private var metadataJob: Job? = null
     init {
         viewModelScope.launch {
             try {
@@ -85,12 +91,13 @@ class ForgeViewModel(private val store: ServerStore, private val journal: Reques
     }
     fun refresh(page: Int = state.value.page) = task { loadPage(page) }
     fun connect() = task {
+        metadataJob?.cancel()
         check(state.value.pending == null) { "Сначала подтвердите результат ожидающего запроса" }
         val server = normalizeServer(state.value.serverDraft)
         store.save(server)
         api = GameApi(server, journal)
         journal.clear()
-        mutable.update { it.copy(server = server, serverDraft = server, items = emptyList(), original = null, editorOpen = false, page = 0, total = 0, totalPages = 0, checks = emptyList(), definitions = emptyList(), signedIn = false, inventory = emptyList(), inventoryVersion = null, pending = null, characterId = "", currencies = emptyList(), health = "Проверка соединения…") }
+        mutable.update { it.copy(server = server, serverDraft = server, items = emptyList(), original = null, editorOpen = false, page = 0, total = 0, totalPages = 0, checks = emptyList(), definitions = emptyList(), inventoryBases = emptyMap(), inventoryDefinitions = emptyList(), signedIn = false, inventory = emptyList(), inventoryVersion = null, pending = null, characterId = "", currencies = emptyList(), health = "Проверка соединения…") }
         val health = api.health()
         mutable.update { it.copy(health = health.toString(), message = "Сервер доступен") }
         loadPage(0)
@@ -152,20 +159,58 @@ class ForgeViewModel(private val store: ServerStore, private val journal: Reques
         if(state.value.busy || state.value.pending != null) return
         mutable.update { it.copy(characterId = value, inventory = emptyList(), inventoryVersion = null, selectedEquipment = "") }
     }
-    fun selectEquipment(value: String) { if(!state.value.busy) mutable.update { it.copy(selectedEquipment = value) } }
+    fun selectEquipment(value: String) = task {
+        mutable.update { it.copy(selectedEquipment = value) }
+        val item = state.value.inventory.firstOrNull { it.text("uuid") == value } ?: return@task
+        val definitions = pinnedDefinitions(buildJsonObject { put("params", item["params"] ?: JsonArray(emptyList())) })
+        mutable.update { it.copy(inventoryDefinitions = (it.inventoryDefinitions + definitions).distinctBy(::definitionKey)) }
+    }
+    fun showCharacterInventory(id: String) = task {
+        check(state.value.pending == null || state.value.characterId == id) { "Сначала подтвердите предыдущую операцию" }
+        mutable.update { it.copy(tab = 4, characterId = id, inventory = emptyList(), inventoryVersion = null) }
+        readInventory()
+        val currencies = api.currencies()
+        mutable.update { it.copy(currencies = currencies, selectedCurrency = currencies.firstOrNull()?.text("id").orEmpty()) }
+    }
+    fun editInventoryBase(id: String) = task {
+        check(!state.value.editorOpen || state.value.original?.let { diff(it, state.value.draft).isEmpty() } == true) { "Сохраните или закройте текущий черновик" }
+        val doc = api.get(Catalog.EQUIPMENT, id) ?: error("База предмета не найдена")
+        val definitions = pinnedDefinitions(doc)
+        mutable.update { it.copy(catalog = Catalog.EQUIPMENT, items = emptyList(), total = 0, page = 0, totalPages = 0, definitions = definitions) }
+        setEditor(doc, doc)
+    }
+    private fun loadInventoryMetadata() {
+        metadataJob?.cancel()
+        val snapshot = state.value
+        val currentApi = api
+        metadataJob = viewModelScope.launch {
+            val limit = Semaphore(4)
+            snapshot.inventory.map { it.text("equipmentId") }.distinct().filter { it !in snapshot.inventoryBases }.map { id ->
+                async {
+                    limit.withPermit {
+                        try {
+                            val base = currentApi.get(Catalog.EQUIPMENT, id) ?: return@withPermit
+                            mutable.update { if(it.server == snapshot.server && it.characterId == snapshot.characterId) it.copy(inventoryBases = it.inventoryBases + (id to base)) else it }
+                        } catch(e: CancellationException) { throw e } catch(_: Exception) { /* Fallback emblem/name stays available; refresh retries metadata. */ }
+                    }
+                }
+            }.awaitAll()
+        }
+    }
     fun selectCurrency(value: String) { if(!state.value.busy) mutable.update { it.copy(selectedCurrency = value) } }
     private suspend fun readInventory() {
         val result = api.inventory(state.value.characterId.trim())
         val equipment = result.getValue("equipment").jsonArray.map { it.jsonObject }
         mutable.update { it.copy(inventory = equipment, inventoryVersion = result.getValue("version").jsonPrimitive.long,
             selectedEquipment = it.selectedEquipment.takeIf { selected -> equipment.any { e -> e.text("uuid") == selected } } ?: equipment.firstOrNull()?.text("uuid").orEmpty()) }
+        loadInventoryMetadata()
     }
     fun loadInventory() = task {
         readInventory()
         val currencies = api.currencies()
         mutable.update { it.copy(currencies = currencies, selectedCurrency = it.selectedCurrency.ifBlank { currencies.firstOrNull()?.text("id").orEmpty() }) }
     }
-    fun randomItem() { if(state.value.busy || state.value.editorOpen) return; mutable.update { it.copy(tab = 1, editorOpen = false, original = null) } }
+    fun randomItem() { if(state.value.busy || state.value.editorOpen) return; mutable.update { it.copy(tab = 4) } }
     fun inventoryAction(operation: String) = task {
         check(state.value.pending == null) { "Сначала разрешите результат предыдущей операции" }
         val state = state.value
@@ -215,6 +260,7 @@ class ForgeViewModel(private val store: ServerStore, private val journal: Reques
             require(changes.keys.all { original[it] == latest[it] }) { "Изменяемые поля обновлены другим клиентом. Откройте предмет заново." }
             api.update(catalog, original.entityId, changes)
         }
+        if(catalog == Catalog.EQUIPMENT) mutable.update { it.copy(inventoryBases = it.inventoryBases + (saved.entityId to saved)) }
         setEditor(saved, saved)
         mutable.update { it.copy(message = "Сохранено: ${saved.entityId}") }
         // List refresh failure must not imply that the successful mutation failed.

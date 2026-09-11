@@ -4,6 +4,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
+import com.sperance.exileforge.ui.icons.ItemEmblem
+import com.sperance.exileforge.core.display.itemVisualKind
+import com.sperance.exileforge.ui.theme.Gold
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -54,13 +57,14 @@ val LocalEntityPageLoader = staticCompositionLocalOf<suspend (EntitySource, Int)
             LazyColumn(Modifier.fillMaxWidth().heightIn(max = 320.dp)) {
                 items(records.filter { title(it).contains(query, true) || it.entityId.contains(query, true) }, key = { it.entityId }) { record ->
                     TextButton(enabled = enabled, onClick = { onChange(record.entityId); expanded = false }, modifier = Modifier.fillMaxWidth()) {
-                        Text("${title(record)} · ${record.entityId.takeLast(6)}")
+                        ItemEmblem(itemVisualKind(record), Gold, Modifier.size(48.dp))
+                        Text("${title(record)} · ${record.entityId.takeLast(6)}", modifier = Modifier.weight(1f).padding(start = 12.dp))
                     }
                 }
             }
             if(!loading && failure == null && records.isEmpty()) Text("Записей пока нет")
             if(failure != null) TextButton(onClick = { retry++ }, enabled = !loading) { Text("Повторить") }
-            else if(page + 1 < totalPages) TextButton(onClick = { page++ }, enabled = !loading) { Text("Загрузить ещё") }
+            else if(page + 1 < totalPages) TextButton(onClick = { loading = true; page++ }, enabled = !loading) { Text("Загрузить ещё") }
         }
     }, confirmButton = { TextButton(onClick = { expanded = false }) { Text("Закрыть") } })
 }

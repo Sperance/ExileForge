@@ -23,6 +23,7 @@ import com.sperance.exileforge.ui.screens.catalog.CatalogScreen
 import com.sperance.exileforge.ui.screens.checks.ChecksScreen
 import com.sperance.exileforge.ui.screens.editor.EditorScreen
 import com.sperance.exileforge.ui.screens.server.ServerScreen
+import com.sperance.exileforge.ui.screens.inventory.InventoryForge
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.Ink
 import com.sperance.exileforge.ui.theme.Muted
@@ -44,8 +45,8 @@ import kotlinx.serialization.json.*
         snackbarHost = { SnackbarHost(snackbar) },
         bottomBar = {
             NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 0.dp) {
-                val labels = listOf("Предметы", "Кузница", "Проверки", "Сервер")
-                val icons = listOf(Icons.Outlined.Inventory2, Icons.Outlined.Build, Icons.AutoMirrored.Outlined.FactCheck, Icons.Outlined.Dns)
+                val labels = listOf("Каталог", "Редактор", "Проверки", "Сервер", "Герой")
+                val icons = listOf(Icons.Outlined.Inventory2, Icons.Outlined.Build, Icons.AutoMirrored.Outlined.FactCheck, Icons.Outlined.Dns, Icons.Outlined.PersonOutline)
                 labels.forEachIndexed { index, label ->
                     NavigationBarItem(selected = s.tab == index, onClick = { vm.tab(index) },
                         icon = { Icon(icons[index], contentDescription = null) }, label = { Text(label, fontSize = 11.sp) })
@@ -60,7 +61,7 @@ import kotlinx.serialization.json.*
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text("EXILE FORGE", style = MaterialTheme.typography.titleLarge, color = Gold)
-                    Text("МАСТЕРСКАЯ ПРЕДМЕТОВ", fontSize = 9.sp, letterSpacing = 2.sp, color = Muted)
+                    Text("АРСЕНАЛ ИЗГНАННИКА", fontSize = 9.sp, letterSpacing = 2.sp, color = Muted)
                 }
                 Text("API v1", style = MaterialTheme.typography.labelSmall, color = Muted)
             }
@@ -70,6 +71,7 @@ import kotlinx.serialization.json.*
                 1 -> EditorScreen(s, vm, onDelete = { confirmDelete = true }, onClose = { confirmDiscard = true })
                 2 -> ChecksScreen(s, vm, logs)
                 3 -> ServerScreen(s, vm)
+                4 -> InventoryForge(s, vm)
             }
         }
     }

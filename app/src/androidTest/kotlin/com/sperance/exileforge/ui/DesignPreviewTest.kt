@@ -22,7 +22,14 @@ class DesignPreviewTest {
     @Test fun cardsDisplayIconsPropertiesAndActions() {
         fun item(name: String, slot: String, stat: String, value: Int) = buildJsonObject {
             put("name", name); put("slot", slot); put("rarity", "RARE"); put("itemLevel", 85); put("quality", 20)
-            put("modifiers", buildJsonArray { add(buildJsonObject { put("definitionId", stat); put("values", buildJsonArray { add(buildJsonObject { put("value", value) }) }) })
+            put("modifiers", buildJsonArray {
+                add(buildJsonObject {
+                    put("definitionId", stat)
+                    put("values", buildJsonArray {
+                        add(buildJsonObject { put("value", value) })
+                    })
+                })
+            })
         }
         compose.setContent { ForgeTheme {
             Column(Modifier.fillMaxSize().background(Ink).padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {

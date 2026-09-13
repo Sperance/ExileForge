@@ -24,7 +24,7 @@ import kotlinx.serialization.json.*
     val color = rarityColor(doc.text("rarity"))
     OutlinedCard(onClick = onClick, enabled = enabled, border = BorderStroke(if(selected) 2.dp else 1.dp, if(selected) Gold else color.copy(alpha = .36f)),
         shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+        colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface, disabledContainerColor = MaterialTheme.colorScheme.surface, disabledContentColor = MaterialTheme.colorScheme.onSurface)) {
         Column(Modifier.background(Brush.linearGradient(listOf(color.copy(alpha=.07f), MaterialTheme.colorScheme.surface))).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 ItemEmblem(itemVisualKind(doc), color)

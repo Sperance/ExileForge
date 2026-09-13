@@ -29,7 +29,10 @@ jobs:
           profile: pixel_2
           disable-animations: true
           script: |
-            ./gradlew :app:connectedDebugAndroidTest
+            adb install -r app/build/outputs/apk/debug/app-debug.apk
+            adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+            adb shell am instrument -w com.sperance.exileforge.test/androidx.test.runner.AndroidJUnitRunner | tee ui-results.txt
+            python3 -c "import pathlib,re; text=pathlib.Path('ui-results.txt').read_text(); assert re.search(r'OK \(\d+ tests?\)', text), text"
             adb pull /sdcard/Android/data/com.sperance.exileforge/files/design design-preview
       - name: Upload UI reports and preview
         if: always()
@@ -37,7 +40,7 @@ jobs:
         with:
           name: exile-forge-ui
           path: |
-            app/build/reports/androidTests
+            ui-results.txt
             design-preview
       - name: Preview image in verification log
         run: python3 -c "import base64,pathlib; print('DESIGN_IMAGE_START'); print(base64.b64encode(pathlib.Path('design-preview/arsenal.jpg').read_bytes()).decode()); print('DESIGN_IMAGE_END')"

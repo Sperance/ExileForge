@@ -58,6 +58,12 @@ import kotlinx.serialization.json.*
                 definitions = s.inventoryDefinitions, actionLabel = "Свойства и крафт") { detailId = id; vm.selectEquipment(id) }
         }
     }
+    // Mirror returns a new UUID. Keep the visible detail and the next craft target identical.
+    LaunchedEffect(s.selectedEquipment) {
+        if(detailId != null && s.inventory.any { it.text("uuid") == s.selectedEquipment }) {
+            detailId = s.selectedEquipment
+        }
+    }
     val instance = s.inventory.firstOrNull { it.text("uuid") == detailId }
     if(instance != null) ModalBottomSheet(onDismissRequest = { detailId = null }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.9f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {

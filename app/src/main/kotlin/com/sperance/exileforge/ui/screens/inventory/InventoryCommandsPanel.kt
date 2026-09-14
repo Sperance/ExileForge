@@ -74,7 +74,22 @@ import kotlinx.serialization.json.*
         if(!supported) Text("Сервер пока выполняет только мгновенные рецепты без требований навыков.", color = Muted)
         inputs.forEachIndexed { index, input ->
             val row = input.jsonObject
-            EntitySpinner("Ингредиент ${index + 1} · ${row.text("amount")} × ${row.text("category").ifBlank { row.text("subCategory") }}", ingredients[index].orEmpty(), EntitySource.ITEM, enabled && supported, { ingredients = ingredients + (index to it) })
+            val loader = LocalEntityPageLoader.current
+            key(recipeId, index, refresh) {
+                CompositionLocalProvider(LocalEntityPageLoader provides { source, page ->
+                    val result = loader(source, page)
+                    result.copy(items = result.items.filter { item ->
+                        val selectorMatches = when {
+                            row.text("itemId").isNotBlank() -> item.entityId == row.text("itemId")
+                            row.text("category").isNotBlank() -> item.text("category") == row.text("category")
+                            else -> item.text("subCategory") == row.text("subCategory")
+                        }
+                        selectorMatches && s.equipmentView?.items.orEmpty().any { it.itemId == item.entityId && it.amount > 0 }
+                    })
+                }) {
+                    EntitySpinner("Ингредиент ${index + 1} · ${row.text("amount")} за применение", ingredients[index].orEmpty(), EntitySource.ITEM, enabled && supported, { ingredients = ingredients + (index to it) })
+                }
+            }
         }
         OutlinedTextField(amount, { amount = it }, label = { Text("Число применений, 1–100") }, singleLine = true)
         Button(enabled = enabled && supported && !loading && amount.toLongOrNull()?.let { it in 1L..100L } == true && inputs.indices.all { !ingredients[it].isNullOrBlank() }, onClick = {

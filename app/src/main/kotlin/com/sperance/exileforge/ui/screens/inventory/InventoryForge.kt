@@ -42,7 +42,7 @@ import kotlinx.serialization.json.*
                     Button(enabled = !s.busy && s.isAdmin && s.ownsCharacter && s.inventoryVersion != null && s.pending == null, onClick = { vm.inventoryAction("drop") }) { Icon(Icons.Outlined.AutoAwesome, null); Text("Новый дроп") }
                 }
                 Text("Тестовый дроп доступен администратору для своего персонажа.", color = Muted, style = MaterialTheme.typography.bodySmall)
-                CharacterEquipmentPanel(s, vm)
+                CharacterEquipmentPanel(s, vm::unequip)
                 InventoryCommandsPanel(s, vm)
                 OutlinedTextField(query, { query = it }, label = { Text("Найти предмет в арсенале") }, leadingIcon = { Icon(Icons.Outlined.Search, null) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

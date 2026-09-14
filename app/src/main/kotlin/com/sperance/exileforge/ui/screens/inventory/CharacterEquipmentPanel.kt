@@ -8,17 +8,17 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.contract.text
 import com.sperance.exileforge.core.display.inventoryDocument
 import com.sperance.exileforge.core.model.command.EquipmentSlot
-import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.theme.*
 import java.util.Locale
 
-@Composable fun CharacterEquipmentPanel(s: ForgeState, vm: ForgeViewModel) {
+@Composable fun CharacterEquipmentPanel(s: ForgeState, onUnequip: (EquipmentSlot) -> Unit) {
     val view = s.equipmentView ?: return
     var statsExpanded by remember { mutableStateOf(false) }
     var slotsExpanded by remember { mutableStateOf(true) }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if(s.inventoryVersion == null) Text("Данные могут быть устаревшими. Обновите экипировку перед следующей операцией.", color = MaterialTheme.colorScheme.error)
         TextButton(onClick = { slotsExpanded = !slotsExpanded }) { Text("Надето: ${view.equipped.size} · ${if(slotsExpanded) "свернуть" else "показать"}") }
         if(slotsExpanded) EquipmentSlot.entries.forEach { slot ->
             val instance = view.inventory.firstOrNull { it.text("uuid") == view.equipped[slot] }
@@ -27,13 +27,13 @@ import java.util.Locale
                     Text(slot.title, color = Gold, style = MaterialTheme.typography.labelLarge)
                     Text(instance?.let { inventoryDocument(it, s.inventoryBases[it.text("equipmentId")]).text("name") } ?: "Пусто", color = Muted)
                 }
-                if(instance != null) OutlinedButton(enabled = !s.busy && s.pending == null && s.inventoryVersion != null, onClick = { vm.unequip(slot) }) { Text("Снять") }
+                if(instance != null) OutlinedButton(enabled = !s.busy && s.pending == null && s.inventoryVersion != null, onClick = { onUnequip(slot) }) { Text("Снять") }
             }
         }
         TextButton(onClick = { statsExpanded = !statsExpanded }) { Text("Характеристики · ${if(statsExpanded) "свернуть" else "показать"}") }
         if(statsExpanded) {
             view.stats.values.forEach { (key, value) ->
-                PropertyRow(statTitle(key), String.format(Locale.ROOT, "%.2f", value))
+                PropertyRow(statTitle(key), String.format(Locale.ROOT, "%.2f", value), key)
             }
             view.stats.weapons.forEach { (slot, weapon) ->
                 InfoCard(slot.title, "Урон: %.1f–%.1f\nАтак/с: %.2f · DPS: %.1f\nКрит: %.1f%% · Точность: %.0f".format(Locale.ROOT, weapon.minimumPhysical, weapon.maximumPhysical, weapon.attacksPerSecond, weapon.dps, weapon.criticalChance, weapon.accuracy))

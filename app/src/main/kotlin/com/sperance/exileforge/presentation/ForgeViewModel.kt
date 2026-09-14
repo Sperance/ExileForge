@@ -46,11 +46,21 @@ class ForgeViewModel(private val store: ServerStore, private val journal: Reques
     val logs = journal.entries
     private lateinit var api: GameApi
     private var metadataJob: Job? = null
+    private fun newApi(server: String): GameApi {
+        lateinit var created: GameApi
+        created = GameApi(server, journal, onUnauthorized = {
+            if(::api.isInitialized && api === created) {
+                clearSession()
+                mutable.update { it.copy(message = "Сессия истекла. Войдите снова.") }
+            }
+        })
+        return created
+    }
     init {
         viewModelScope.launch {
             try {
                 val server = store.server.first()
-                api = GameApi(server, journal)
+                api = newApi(server)
                 val restored = store.pending.first()?.let { raw ->
                     val saved = WireJson.parseToJsonElement(raw).jsonObject
                     PendingInventoryAction(saved.text("characterId"), saved.text("operation"), saved.getValue("payload").jsonObject)
@@ -60,7 +70,7 @@ class ForgeViewModel(private val store: ServerStore, private val journal: Reques
                 mutable.update { it.copy(message = "Войдите в аккаунт для загрузки каталога") }
             } catch (e: CancellationException) { throw e }
             catch (e: Exception) {
-                api = GameApi("http://10.0.2.2:8080/", journal)
+                api = newApi("http://10.0.2.2:8080/")
                 mutable.update { it.copy(busy = false, error = true, message = e.message) }
             }
         }
@@ -83,7 +93,6 @@ class ForgeViewModel(private val store: ServerStore, private val journal: Reques
             try { block() }
             catch (e: CancellationException) { throw e }
             catch (e: Exception) {
-                if(e is ApiFailure && e.status == 401) clearSession()
                 if(e is ApiFailure && e.status == 409) mutable.update { it.copy(conflict = true, inventoryVersion = null) }
                 val prefix = if(e is ApiFailure && e.status == 409) "Запись изменена. Черновик сохранён; обновите данные и проверьте изменения. " else if (e is ApiFailure) "HTTP ${e.status ?: "—"} ${e.code.orEmpty()}: " else ""
                 mutable.update { it.copy(error = true, message = prefix + (e.message ?: "Ошибка запроса")) }
@@ -101,7 +110,7 @@ class ForgeViewModel(private val store: ServerStore, private val journal: Reques
         val server = normalizeServer(state.value.serverDraft)
         store.save(server)
         clearSession()
-        api = GameApi(server, journal)
+        api = newApi(server)
         journal.clear()
         mutable.update { it.copy(server = server, serverDraft = server, items = emptyList(), original = null, editorOpen = false, page = 0, total = 0, totalPages = 0, checks = emptyList(), definitions = emptyList(), inventoryBases = emptyMap(), inventoryDefinitions = emptyList(), signedIn = false, inventory = emptyList(), inventoryVersion = null, pending = null, characterId = "", currencies = emptyList(), health = "Проверка соединения…") }
         val health = api.health()

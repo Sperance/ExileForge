@@ -8,7 +8,9 @@ import com.sperance.exileforge.core.network.*
 import kotlinx.coroutines.*
 import kotlinx.serialization.json.*
 import okhttp3.mockwebserver.*
-import org.junit.*
+import org.junit.Test
+import org.junit.Before
+import org.junit.After
 import kotlin.test.*
 import java.util.concurrent.TimeUnit
 
@@ -116,6 +118,33 @@ class GameApiTest {
         assertFailsWith<IllegalArgumentException> { api.delete(Catalog.ITEMS, "wrong", 0) }
         assertFailsWith<IllegalArgumentException> { api.delete(Catalog.ITEMS, id, -1) }
         assertEquals(1, server.requestCount)
+    }
+    @Test fun `profile is fetched with JWT subject and server role`() = runBlocking {
+        val payload = java.util.Base64.getUrlEncoder().withoutPadding().encodeToString("""{"sub":"$id","role":"ADMIN"}""".toByteArray())
+        ok("""{"token":"header.$payload.signature"}"""); api.login("user", "password"); server.takeRequest()
+        ok("""{"id":"$id","version":3,"name":"Hero","login":"user","role":"USER"}""")
+        val profile = api.currentUser()
+        assertEquals("USER", profile.role)
+        assertEquals("/game/api/v1/user?id=$id", server.takeRequest().path)
+    }
+    @Test fun `instance snapshot wins over edited catalog template`() {
+        val instance = buildJsonObject { put("uuid", id); put("baseSnapshot", buildJsonObject { put("name", "Original"); put("slot", "RING") }) }
+        val catalog = buildJsonObject { put("name", "Changed"); put("slot", "HELMET") }
+        val doc = com.sperance.exileforge.core.display.inventoryDocument(instance, catalog)
+        assertEquals("Original", doc.text("name")); assertEquals("RING", doc.text("slot"))
+    }
+    @Test fun `recipe and grants retain command versions and identities`() = runBlocking {
+        val view = """{"characterVersion":8,"equipped":{},"inventory":[],"items":[],"stats":{"version":8,"values":{}}}"""
+        ok(view); api.useRecipe(id, UseRecipeCommand(7, id, 12, listOf(id), 2))
+        val recipe = server.takeRequest(); val sent = WireJson.parseToJsonElement(recipe.body.readUtf8()).jsonObject
+        assertEquals("/game/api/v1/character/$id/useRecipe", recipe.path)
+        assertEquals(12, sent.getValue("recipeVersion").jsonPrimitive.int); assertEquals(2, sent.getValue("amount").jsonPrimitive.int)
+        ok(view); api.grant(id, GrantEquipmentCommand(8, id))
+        assertEquals("/game/api/v1/character/inventory/itemToInventory?characterId=$id", server.takeRequest().path)
+        ok(view); api.adjustItems(id, AdjustItemsCommand(9, listOf(ItemStack(id, -2))))
+        assertEquals("/game/api/v1/character/inventory/addItem?characterId=$id", server.takeRequest().path)
+        ok(view); api.redeem(id, RedeemCommand(10, "reward"))
+        assertEquals("/game/api/v1/character/$id/redeem", server.takeRequest().path)
     }
     @Test fun `templates and slots match contract`() {
         validate(template(Catalog.ITEMS), Catalog.ITEMS)

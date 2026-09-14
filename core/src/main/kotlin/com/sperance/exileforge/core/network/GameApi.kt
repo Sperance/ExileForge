@@ -31,7 +31,8 @@ class GameApi(
     private val client: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(10, TimeUnit.SECONDS).readTimeout(20, TimeUnit.SECONDS)
         .callTimeout(30, TimeUnit.SECONDS).retryOnConnectionFailure(false)
-        .followRedirects(false).followSslRedirects(false).build()
+        .followRedirects(false).followSslRedirects(false).build(),
+    private val onUnauthorized: () -> Unit = {}
 ) : ItemRepository {
     private var token: String? = null
     suspend fun login(login: String, password: String) {
@@ -128,7 +129,7 @@ class GameApi(
         try {
             val payload = client.newCall(request).awaitPayload()
             status = payload.status
-            if (status == 401 && authenticated) logout()
+            if (status == 401 && authenticated) { logout(); onUnauthorized() }
             val raw = payload.body
             responseText = raw.take(12_000)
             val envelope = try { withContext(Dispatchers.Default) { WireJson.parseToJsonElement(raw).jsonObject } }

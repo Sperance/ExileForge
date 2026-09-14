@@ -41,6 +41,19 @@ class GameApi(
         token = result.text("token").also { require(it.isNotBlank()) }
     }
     fun logout() { token = null }
+    suspend fun combatCatalog(): com.sperance.exileforge.core.model.combat.CombatCatalog =
+        WireJson.decodeFromJsonElement(request("GET", "api/v1/combat/catalog", authenticated = true))
+    suspend fun battle(id: String): com.sperance.exileforge.core.model.combat.BattleView {
+        requireId(id); return WireJson.decodeFromJsonElement(request("GET", "api/v1/combat/characters/$id", authenticated = true))
+    }
+    suspend fun startBattle(id: String, command: com.sperance.exileforge.core.model.combat.StartBattleCommand): com.sperance.exileforge.core.model.combat.BattleView =
+        combatCommand(id, "start", WireJson.encodeToJsonElement(command))
+    suspend fun actBattle(id: String, command: com.sperance.exileforge.core.model.combat.BattleActionCommand): com.sperance.exileforge.core.model.combat.BattleView =
+        combatCommand(id, "act", WireJson.encodeToJsonElement(command))
+    suspend fun combatCommand(id: String, operation: String, command: JsonElement): com.sperance.exileforge.core.model.combat.BattleView {
+        requireId(id); require(operation in setOf("start", "act"))
+        return WireJson.decodeFromJsonElement(request("POST", "api/v1/combat/characters/$id/$operation", body = command, authenticated = true))
+    }
     suspend fun capabilities(): ApiCapabilities = WireJson.decodeFromJsonElement(request("GET", "api/v1/poe/capabilities"))
     suspend fun currentUser(): UserProfile {
         val jwt = requireNotNull(token) { "Войдите в аккаунт" }

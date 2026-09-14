@@ -46,8 +46,8 @@ import kotlinx.serialization.json.*
         snackbarHost = { SnackbarHost(snackbar) },
         bottomBar = {
             NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 0.dp) {
-                val destinations = if(s.adminTools) listOf(0 to "Каталог", 1 to "Редактор", 2 to "Проверки", 4 to "Герой", 3 to "Аккаунт") else listOf(0 to "Персонажи", 4 to "Герой", 5 to "Кузница", 3 to "Аккаунт")
-                val icons = mapOf(0 to Icons.Outlined.Inventory2, 1 to Icons.Outlined.Build, 2 to Icons.AutoMirrored.Outlined.FactCheck, 3 to Icons.Outlined.Dns, 4 to Icons.Outlined.PersonOutline, 5 to Icons.Outlined.Build)
+                val destinations = if(s.adminTools) listOf(0 to "Каталог", 1 to "Редактор", 2 to "Проверки", 4 to "Герой", 3 to "Аккаунт") else listOf(0 to "Персонажи", 4 to "Герой", 5 to "Кузница", 6 to "Поход", 3 to "Аккаунт")
+                val icons = mapOf(0 to Icons.Outlined.Inventory2, 1 to Icons.Outlined.Build, 2 to Icons.AutoMirrored.Outlined.FactCheck, 3 to Icons.Outlined.Dns, 4 to Icons.Outlined.PersonOutline, 5 to Icons.Outlined.Build, 6 to Icons.Outlined.Shield)
                 destinations.forEach { (index, label) ->
                     NavigationBarItem(selected = s.tab == index, onClick = { vm.tab(index) }, icon = { Icon(icons.getValue(index), null) }, label = { Text(label, fontSize = 11.sp) })
                 }
@@ -73,6 +73,7 @@ import kotlinx.serialization.json.*
                 3 -> ServerScreen(s, vm)
                 4 -> InventoryForge(s, vm)
                 5 -> InventoryForge(s, vm, forgeOnly = true)
+                6 -> com.sperance.exileforge.ui.screens.combat.CombatScreen(s, vm)
             }
         }
     }

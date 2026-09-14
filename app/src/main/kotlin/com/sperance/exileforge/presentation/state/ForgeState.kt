@@ -8,7 +8,14 @@ import kotlinx.serialization.json.*
 
 enum class AppMode { PLAYER, ADMIN }
 
+@kotlinx.serialization.Serializable
+data class PendingBattleWrite(val characterId: String, val operation: String, val command: JsonElement)
+
 data class ForgeState(
+    val combatCatalog: com.sperance.exileforge.core.model.combat.CombatCatalog? = null,
+    val battleView: com.sperance.exileforge.core.model.combat.BattleView? = null,
+    val battleCharacterId: String = "",
+    val battlePending: PendingBattleWrite? = null,
     val mode: AppMode = AppMode.PLAYER,
     val filter: com.sperance.exileforge.core.model.CatalogFilter = com.sperance.exileforge.core.model.CatalogFilter(),
     val hero: com.sperance.exileforge.core.model.hero.CharacterSummary? = null,

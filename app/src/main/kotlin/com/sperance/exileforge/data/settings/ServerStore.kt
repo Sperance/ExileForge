@@ -15,6 +15,13 @@ class ServerStore(private val context: Context) {
     suspend fun savePending(value: String?) { context.settings.edit { if(value == null) it.remove(pendingKey) else it[pendingKey] = value } }
     suspend fun filters(server: String, catalog: String): String? = context.settings.data.first()[stringPreferencesKey("filters:$server:$catalog")]
     suspend fun saveFilters(server: String, catalog: String, value: String) { context.settings.edit { it[stringPreferencesKey("filters:$server:$catalog")] = value } }
+    suspend fun combatPending(scope: String): String? = context.settings.data.first()[stringPreferencesKey("combat:$scope")]
+    suspend fun saveCombatPending(scope: String, value: String?) {
+        context.settings.edit { prefs ->
+            val key = stringPreferencesKey("combat:$scope")
+            if (value == null) prefs.remove(key) else prefs[key] = value
+        }
+    }
     val server = context.settings.data.map { it[key] ?: "http://10.1.10.198:8080/" }
     suspend fun save(value: String) { context.settings.edit { it[key] = value } }
 }

@@ -2,6 +2,7 @@ package com.sperance.exileforge.core
 
 import com.sperance.exileforge.core.contract.*
 import com.sperance.exileforge.core.model.*
+import com.sperance.exileforge.core.model.combat.*
 import com.sperance.exileforge.core.model.command.*
 import com.sperance.exileforge.core.network.*
 import kotlinx.coroutines.runBlocking
@@ -52,7 +53,28 @@ class ServerIntegrationTest {
         val own = player.create(Catalog.CHARACTERS, buildJsonObject { put("name", "Player-$name") })
         assertEquals(setOf(own.entityId), player.page(Catalog.CHARACTERS, 0).items.map { it.entityId }.toSet())
         assertEquals(403, assertFailsWith<ApiFailure> { player.grant(own.entityId, GrantEquipmentCommand(0, ring.entityId)) }.status)
-        player.delete(Catalog.CHARACTERS, own.entityId, own.entityVersion)
+        assertEquals(3, player.combatCatalog().zones.size)
+        assertEquals(404, assertFailsWith<ApiFailure> { player.battle(id) }.status)
+        val start = StartBattleCommand(own.entityVersion, java.util.UUID.randomUUID().toString(), "coast")
+        var combat = player.startBattle(own.entityId, start)
+        assertEquals(combat, player.startBattle(own.entityId, start))
+        assertEquals(player.equipment(own.entityId).stats.values.getValue("maximum_life"), combat.battle!!.hero.maxLife)
+        while(combat.battle!!.status == BattleStatus.ACTIVE) {
+            val b = combat.battle!!
+            val action = if(b.hero.life < b.hero.maxLife * .65 && b.potions > 0) BattleAction.POTION
+                else if(b.hero.mana >= 8) BattleAction.POWER else BattleAction.ATTACK
+            val turn = BattleActionCommand(combat.characterVersion, java.util.UUID.randomUUID().toString(), b.id, action)
+            combat = player.actBattle(own.entityId, turn)
+            assertEquals(combat, player.actBattle(own.entityId, turn))
+            assertEquals(409, assertFailsWith<ApiFailure> {
+                player.actBattle(own.entityId, turn.copy(requestId = java.util.UUID.randomUUID().toString()))
+            }.status)
+        }
+        assertEquals(BattleStatus.VICTORY, combat.battle!!.status)
+        assertTrue(combat.battle!!.rewards.any { it.name == "Опыт" && it.amount > 0 })
+        assertTrue(player.character(own.entityId).experience > 0)
+        assertEquals(combat, player.battle(own.entityId))
+        player.delete(Catalog.CHARACTERS, own.entityId, combat.characterVersion)
         api.delete(Catalog.CHARACTERS, id, crafted.characterVersion)
         assertNull(api.get(Catalog.CHARACTERS, id))
     }

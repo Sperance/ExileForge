@@ -1,8 +1,12 @@
-# ExileForge 1.7.0
+# ExileForge 1.8.0
 
-Android Compose client for **ktor-bestgame 0.10.0**, API revision 3.
-Server: `refactor/compact-rpg-architecture`, commit `e8a53c25f0a1171dffbef3eec145f9583aad6f37`.
+Android Compose client for **ktor-bestgame 0.11.0**, API revision 3.
+Server: `refactor/compact-rpg-architecture`, commit `b22ce9a80ab959a0992e50cbd6d93e00e6e5ef7b`.
 Client development branch: `master`.
+
+## Поход и бой
+
+Выбор зон, обычные мобы и боссы, пошаговые действия по характеристикам, журнал и таблицы лута. Победа автоматически выдаёт опыт, золото, предметы и сферы. Потерянный ответ восстанавливается повтором сохранённой команды. [Правила и управление](docs/COMBAT.md).
 
 ## Connect
 
@@ -39,9 +43,9 @@ JDK 17, Android SDK 37, Gradle wrapper:
 GitHub Actions also runs Compose checks on an API 35 emulator. APKs and UI reports are attached to each successful workflow run.
 The original fantasy cards, property/item icons, bottom navigation, reference pickers and server-side modifier search remain available.
 
-## Workbench release — 1.7.0 / server 0.10.0
+## Workbench release — 1.8.0 / server 0.11.0
 
-This release requires **API revision 3**. Deploy the server from `refactor/compact-rpg-architecture` at `e8a53c25f0a1171dffbef3eec145f9583aad6f37` before updating the app.
+This release requires **API revision 3**. Deploy the server from `refactor/compact-rpg-architecture` at `b22ce9a80ab959a0992e50cbd6d93e00e6e5ef7b` before updating the app.
 
 - Login starts in **Player** mode. Players have Characters, Hero, Forge and Account. An administrator can switch to the administration workspace with catalog editors and diagnostic checks. Switching modes is disabled while an editor has an open draft.
 - Hero shows the character summary, icon-based equipment slots, inventory cards and server stats. Comparing an item calls the read-only server endpoint; confirming equips with the same character version. Slot compatibility and requirements are checked on the server.

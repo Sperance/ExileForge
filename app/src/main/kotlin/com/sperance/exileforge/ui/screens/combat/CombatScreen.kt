@@ -65,13 +65,7 @@ import com.sperance.exileforge.ui.theme.Muted
                 if(battle.unsupportedStats.isNotEmpty()) Text("Не участвуют в расчёте: " + battle.unsupportedStats.joinToString(), style = MaterialTheme.typography.bodySmall)
             }
             if(active) item {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Button(enabled = controls, onClick = { vm.battleAction(BattleAction.ATTACK) }) { Text("Удар") }
-                    Button(enabled = controls && battle.hero.mana >= 8, onClick = { vm.battleAction(BattleAction.POWER) }) { Text("Мощный · 8 MP") }
-                    OutlinedButton(enabled = controls, onClick = { vm.battleAction(BattleAction.GUARD) }) { Text("Защита · +6 MP") }
-                    OutlinedButton(enabled = controls && battle.potions > 0, onClick = { vm.battleAction(BattleAction.POTION) }) { Text("Флакон · +40% HP") }
-                    TextButton(enabled = controls, onClick = { confirmFlee = true }) { Text("Отступить") }
-                }
+                BattleActions(battle, controls, vm::battleAction) { confirmFlee = true }
                 Text("Защита снижает входящий урон на 65%. Флакон и защита тратят ход.", color = Muted, style = MaterialTheme.typography.bodySmall)
             }
             if(!active) item {

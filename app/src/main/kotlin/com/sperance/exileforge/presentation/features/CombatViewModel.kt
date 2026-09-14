@@ -19,6 +19,7 @@ class CombatViewModel(private val runtime: ForgeRuntime) {
             check(id.isNotBlank() && state.value.signedIn) { "Выберите персонажа и войдите в аккаунт" }
             val saved = store.combatPending(scope(id))?.let { WireJson.decodeFromString<PendingBattleWrite>(it) }
             mutable.update { it.copy(battlePending = saved, battleView = null, battleCharacterId = "") }
+            check(api.capabilities().combat) { "Для походов обновите ktor-bestgame до 0.11.0" }
             val catalog = api.combatCatalog()
             val view = api.battle(id)
             val hero = api.character(id)
@@ -52,7 +53,8 @@ class CombatViewModel(private val runtime: ForgeRuntime) {
                 val result = api.combatCommand(pending.characterId, pending.operation, pending.command)
                 store.saveCombatPending(key, null)
                 mutable.update { it.copy(battlePending = null, battleView = result, battleCharacterId = pending.characterId,
-                    inventoryVersion = null, equipmentView = null, comparison = null, craftOptions = null) }
+                    inventoryVersion = null, equipmentView = null, comparison = null, craftOptions = null,
+                    hero = it.hero?.takeIf { hero -> hero.id == pending.characterId }?.copy(version = result.characterVersion, level = result.characterLevel, experience = result.experience, money = result.gold)) }
             } catch(e: ApiFailure) {
                 if(e.status?.let { it in 400..499 && it != 401 } == true) {
                     store.saveCombatPending(key, null)

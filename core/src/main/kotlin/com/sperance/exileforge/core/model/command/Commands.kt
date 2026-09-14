@@ -32,7 +32,7 @@ import kotlinx.serialization.json.JsonObject
 @Serializable data class CalculatedStats(val version: Long, val values: Map<String, Double>, val weapons: Map<EquipmentSlot, WeaponStats> = emptyMap(), val unsupported: List<String> = emptyList())
 @Serializable data class EquipmentView(val characterVersion: Long, val equipped: Map<EquipmentSlot, String>, val inventory: List<com.sperance.exileforge.core.model.hero.EquipmentInstance>, val items: List<ItemStack>, val stats: CalculatedStats)
 @Serializable data class UserProfile(val id: String, val version: Long, val name: String, val login: String, val role: String, val countCharacters: Int = 0)
-@Serializable data class ApiCapabilities(val combat: Boolean = false, val apiRevision: Int = 0, val versionedCrud: Boolean = false, val characterCommands: Boolean = false, val profile: String = "", val equipmentComparison: Boolean = false, val catalogSearch: Boolean = false, val craftOptions: Boolean = false) {
+@Serializable data class ApiCapabilities(val apiRevision: Int = 0, val versionedCrud: Boolean = false, val characterCommands: Boolean = false, val profile: String = "", val equipmentComparison: Boolean = false, val catalogSearch: Boolean = false, val craftOptions: Boolean = false, val combat: Boolean = false) {
     fun requireWorkbench() { requireCompatible(); require(apiRevision >= 3 && equipmentComparison && catalogSearch && craftOptions) { "Обновите сервер до API revision 3 (0.10.0)" } }
     fun requireCompatible() { require(apiRevision >= 2 && versionedCrud && characterCommands) { "Нужен ktor-bestgame 0.9.0 с командами персонажа и контролем версий" } }
 }

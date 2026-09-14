@@ -20,7 +20,7 @@ val rarities = listOf("COMMON", "UNCOMMON", "RARE", "EPIC", "LEGENDARY", "MYTHIC
 val slots = listOf("HELMET", "BODY", "GLOVES", "RING", "BOOTS", "WINGS", "BELT", "WEAPON_1H", "WEAPON_2H", "QUIVER", "SHIELD", "AMULET")
 val weapons = listOf("SWORD", "LONGSWORD", "BOW", "WAND", "AXE", "DOUBLEAXE", "DOUBLESWORD", "BLADE")
 val modifierSources = ModifierSource.entries.map { it.name }
-const val SERVER_COMMIT = "e8a53c25f0a1171dffbef3eec145f9583aad6f37"
+const val SERVER_COMMIT = "b22ce9a80ab959a0992e50cbd6d93e00e6e5ef7b"
 fun starterDefinition(): JsonObject = WireJson.parseToJsonElement("""{
     "id":"life", "name":"Maximum life", "source":"PREFIX", "scope":"ITEM", "affixType":"PREFIX",
     "tiers":[{"tier":1,"minItemLevel":1,"weight":100,"values":[{"min":1.0,"max":100.0}]}],

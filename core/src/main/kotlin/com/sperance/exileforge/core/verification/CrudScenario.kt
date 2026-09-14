@@ -1,67 +1,54 @@
 package com.sperance.exileforge.core.verification
 
-import com.sperance.exileforge.core.contract.entityId
-import com.sperance.exileforge.core.contract.starterModifier
-import com.sperance.exileforge.core.contract.template
-import com.sperance.exileforge.core.contract.text
+import com.sperance.exileforge.core.contract.*
 import com.sperance.exileforge.core.model.Catalog
 import com.sperance.exileforge.core.network.ItemRepository
-import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.*
 
-/** Each run owns one preallocated ID. Never deletes a preexisting entity. */
+/** Only a confirmed server-generated ID belongs to this run. Cleanup retains its last known version. */
 class CrudScenario(private val repository: ItemRepository, private val testModifier: JsonObject = starterModifier()) {
     suspend fun run(catalog: Catalog, report: (CheckResult) -> Unit) {
-        val id = UUID.randomUUID().toString().replace("-", "").take(24)
-        var ownsId = false
+        require(catalog != Catalog.CHARACTERS)
+        val name = "EF-test-${java.util.UUID.randomUUID()}"
+        var owned: JsonObject? = null
         try {
-            check(repository.get(catalog, id) == null) { "ID уже занят" }
-            val initial = JsonObject(template(catalog) + mapOf("_id" to JsonPrimitive(id), "name" to JsonPrimitive("EF-test-$id")))
-            // Set ownership before POST so ambiguous write failures also attempt cleanup.
-            ownsId = true
-            val created = repository.create(catalog, initial)
-            check(created.entityId == id) { "Сервер вернул другой ID" }
+            val initial = JsonObject(template(catalog) + ("name" to JsonPrimitive(name)))
+            owned = repository.create(catalog, initial)
+            val id = owned.entityId
             report(CheckResult("Создание", true, id))
-            val loaded = repository.get(catalog, id)
-            check(loaded?.text("name") == initial.text("name")) { "Название после GET не совпало" }
+            check(repository.get(catalog, id)?.text("name") == name)
             report(CheckResult("Получение по ID", true, id))
-            val changes = buildJsonObject { put("description", "CRUD verification complete") }
-            repository.update(catalog, id, changes)
-            check(repository.get(catalog, id)?.text("description") == "CRUD verification complete") { "Изменение не сохранилось" }
-            report(CheckResult("Изменение + повторный GET", true, "Описание совпало"))
+            suspend fun update(changes: JsonObject, label: String) {
+                owned = repository.update(catalog, id, changes, requireNotNull(owned).entityVersion)
+                val loaded = repository.get(catalog, id) ?: error("Запись исчезла")
+                check(changes.all { (key, value) -> loaded[key] == value })
+                check(loaded.entityVersion == requireNotNull(owned).entityVersion)
+                report(CheckResult(label, true, "Свойства и версия подтверждены"))
+            }
+            update(buildJsonObject { put("description", "CRUD verification complete") }, "Изменение + GET")
             if (catalog == Catalog.EQUIPMENT) {
-                val mods = buildJsonArray { add(testModifier) }
-                repository.update(catalog, id, buildJsonObject { put("modifiers", mods) })
-                check(repository.get(catalog, id)?.get("modifiers") == mods) { "Модификаторы не совпали" }
-                report(CheckResult("Добавление модификатора + GET", true, "Модификатор совпал"))
-                val changed = buildJsonArray { add(JsonObject(testModifier + ("values" to buildJsonArray { add(buildJsonObject { put("value", 73.0) }) }))) }
-                repository.update(catalog, id, buildJsonObject { put("modifiers", changed) })
-                check(repository.get(catalog, id)?.get("modifiers") == changed) { "Изменение модификатора не сохранилось" }
-                report(CheckResult("Изменение модификатора + GET", true, "Значение совпало"))
-                val empty = JsonArray(emptyList())
-                repository.update(catalog, id, buildJsonObject { put("modifiers", empty) })
-                check(repository.get(catalog, id)?.get("modifiers") == empty) { "Модификаторы не удалены" }
-                report(CheckResult("Удаление модификаторов + GET", true, "modifiers = []"))
+                val refs = buildJsonArray { add(buildJsonObject { put("definitionId", testModifier.text("definitionId")); put("revision", testModifier.text("definitionRevision").toIntOrNull() ?: 1) }) }
+                update(buildJsonObject { put("modifierDefinitionRefs", refs) }, "Выбор модификатора + GET")
+                update(buildJsonObject { put("modifierDefinitionRefs", JsonArray(emptyList())) }, "Удаление ссылки + GET")
             }
-            repository.delete(catalog, id)
-            check(repository.get(catalog, id) == null) { "Предмет остался после DELETE" }
-            ownsId = false
-            report(CheckResult("Удаление + повторный GET", true, "data = null"))
+            repository.delete(catalog, id, requireNotNull(owned).entityVersion)
+            owned = null
+            check(repository.get(catalog, id) == null)
+            report(CheckResult("Удаление + GET", true, "Запись недоступна"))
         } catch (e: CancellationException) { throw e }
-        catch (e: Exception) { report(CheckResult("Сценарий остановлен", false, e.message.orEmpty())) }
-        finally {
-            if (ownsId) withContext(NonCancellable) {
+        catch (e: Exception) {
+            report(CheckResult("Сценарий остановлен", false, e.message.orEmpty() + if(owned == null) ". При потере ответа POST проверьте вручную запись $name; повторное создание автоматически не выполняется." else ""))
+        } finally {
+            owned?.let { document -> withContext(NonCancellable) {
                 try {
-                    if (repository.get(catalog, id) != null) repository.delete(catalog, id)
-                    check(repository.get(catalog, id) == null)
-                    report(CheckResult("Очистка", true, "Тестовый предмет удалён"))
-                } catch (e: Exception) {
-                    report(CheckResult("Очистка не подтверждена", false, "Проверьте вручную ${catalog.path}, ID $id: ${e.message}"))
-                }
-            }
+                    repository.delete(catalog, document.entityId, document.entityVersion)
+                    check(repository.get(catalog, document.entityId) == null)
+                    report(CheckResult("Очистка", true, "Тестовая запись удалена"))
+                } catch (e: Exception) { report(CheckResult("Очистка не подтверждена", false, "Проверьте ${document.entityId}: ${e.message}")) }
+            } }
         }
     }
 }

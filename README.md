@@ -1,55 +1,40 @@
-# Exile Forge 1.5 — каталог MongoDB и серверная кузница
+# ExileForge 1.6.0
 
-Android Compose клиент для [ktor-bestgame](https://github.com/Sperance/ktor-bestgame/tree/feature/poe-catalog-crafting), контракт `34ca93a099d1eb2f56f5ab53114c27bf1b005f49`. Изменения клиента находятся в `master`. Для этой версии нужен сервер из ветки `feature/poe-catalog-crafting` с выполненным Seeder и миграцией ссылок.
+Android Compose client for **ktor-bestgame 0.9.0**, API revision 2.
+Server: `refactor/compact-rpg-architecture`, commit `5d477ffd42f65ad1fe5e056602b670181ffae516`.
+Client development branch: `master`.
 
-## Новый интерфейс
+## Connect
 
-- «Герой» — отдельный арсенал: адаптивная сетка карточек, поиск по имени, фильтр слотов, подробности в нижней панели.
-- 15 встроенных векторных эмблем для оружия, брони, аксессуаров, валюты и персонажей. Иконки работают без сети и не зависят от изображения базы.
-- Свойства и поля форм снабжены смысловыми иконками; неизвестные пользовательские свойства получают универсальный символ.
-- Карточки показывают редкость, реальные значения экземпляра, качество, свойства и ограничения крафта. Метаданные баз загружаются в фоне с ограничением параллелизма.
-- Крафт изменяет экземпляр. «Редактировать базу предмета» открывает общий шаблон; его сохранение не переписывает выпавшие значения.
-- Поиск в выборе вариантов, отметка текущего значения, иконки записей и предпросмотр предмета в редакторе.
+1. Start the updated server and its MongoDB replica set.
+2. In **Сервер**, save the server root URL (without `/api/v1`). Emulator: `http://10.0.2.2:8080/`; physical device: the computer's LAN address.
+3. Log in with an existing account. An administrator creates accounts on the server. The application checks API capabilities before login.
+4. In **Каталог**, select characters and create your character. The server assigns the authenticated owner automatically.
+5. In **Герой**, select a character and refresh the arsenal. Administrators can grant equipment/currency through searchable selectors or request a random drop for their own character.
 
-## Структура
+Debug allows HTTP for local development. Release requires HTTPS. Tokens stay in memory; passwords and token responses are excluded from the request journal. Password changes require login again.
 
-- `core/network` — API, HTTP-ответы, журнал и интерфейс репозитория.
-- `core/model` — типы каталогов, источники связанных записей, модели персонажа и модификаторов (отдельный файл на тип).
-- `core/editor` — типы полей и схемы форм; `contract` — сериализация и проверки; `generation` — помощники выбора и legacy-симулятор; `verification` — CRUD-сценарий.
-- `app/data/settings` — DataStore; `presentation` — ViewModel; `presentation/state` — состояние и незавершённая операция.
-- `app/ui/screens` — каталог, редактор, инвентарь, сервер и проверки; `ui/components` — общие компоненты; `ui/forms` — вложенные формы; `ui/theme` — оформление.
+## What changed for API 0.9
 
-Все ссылки MongoDB выбираются по названию через `EntitySpinner`: пользователь, персонаж, предмет, экипировка, рецепт, промокод. Диалог загружает страницы по 50 записей; поиск фильтрует загруженные записи, кнопка «Загрузить ещё» расширяет список. Короткий суффикс ID помогает различать одинаковые названия. Полный ID передаётся в API автоматически. UUID нового экземпляра создаётся автоматически; существующий UUID доступен только для чтения. Символьный ID **нового** определения модификатора задаётся автором; это не ссылка MongoDB.
+- Catalog, selectors, CRUD and character commands send Bearer authentication. UI permissions come from the current server profile.
+- POST uses server-generated IDs. Character creation/editing exposes name and description only; owner, inventory, money and stats are server controlled.
+- PUT sends `{expectedVersion, changes}`; DELETE sends `{expectedVersion}`. Versions remain Kotlin Long, including values above JavaScript's safe integer range.
+- A 409 preserves the editor draft and requires explicit reload confirmation. No mutation silently retries with a newer version. A 401 clears the session and private UI state.
+- Equipment templates select immutable modifier definitions and revisions. Rolled instance modifiers are changed using server crafting commands, not arbitrary template JSON.
+- The Hero tab uses EquipmentView: instance snapshots, equipped slots, item stacks and server-calculated stats. Rings have separate slots. The server validates level/attribute requirements and hand compatibility.
+- The Hero tab supports equip, unequip, redemption, instantaneous recipes, administrator grants and stack adjustments. IDs are selected by searchable pickers.
+- Recipes with time or skill requirements remain unavailable until implemented by the server. Refresh a recipe after use to obtain its new version.
+- All displayed stats come from the server; unsupported effects are listed explicitly. This client does not implement a second combat calculator.
+- Craft/drop retain the same requestId after an ambiguous network error. Other commands require refresh after uncertain outcomes; do not automatically repeat them.
+- CRUD checks are administrator-only and clean up only a confirmed server-generated ID with its known version. If the POST response is lost, the journal/report identifies the unique test name for manual review.
 
-## Возможности
+## Build and verification
 
-- CRUD предметов, шаблонов экипировки и редактор персонажей.
-- Поиск модификаторов в отдельном серверном каталоге: страницы по 50 записей, выбор через выпадающий список, точные версии существующих ссылок.
-- Шаблоны отправляют `modifierDefinitionRefs` и `stockModifierDefinitionRefs`. Вложенные определения в новые записи не отправляются.
-- Пользовательские определения: формы эффектов, условий, выражений, диапазонов и весов; создание и публикация новой версии администратором. Исходные raw-правила PoE обслуживаются серверным импортом.
-- Серверное выпадение предмета в инвентарь собственного персонажа (администратор).
-- Применение поддерживаемых сервером сфер к выбранному экземпляру. Сервер проверяет владельца, версию, доступность сферы и правила крафта.
-- При потере ответа повторяется исходный `requestId`. Незавершённый запрос сохраняется локально до перезапуска приложения. Автоматического повторного списания нет.
-- Пароль не сохраняется, JWT хранится только в памяти, данные входа скрыты в журнале. После перезапуска необходимо войти снова.
+JDK 17, Android SDK 37, Gradle wrapper:
 
-## Запуск
-
-1. Android Studio, JDK 17, Android SDK 37. Минимальная версия устройства — Android 8.0.
-2. Во вкладке «Сервер» укажите URL работающего Ktor без `/api/v1`, затем подключитесь. Для эмулятора обычно `http://10.0.2.2:8080/`.
-3. Войдите с логином и паролем существующего пользователя сервера.
-4. Во вкладке «Герой» выберите своего персонажа в Spinner и загрузите инвентарь. Выберите экземпляр и сферу либо запросите тестовое выпадение. Сферы должны находиться в инвентаре персонажа.
-5. Для настройки шаблона откройте его через каталог. Найдите модификатор на сервере, раскройте нужный список и выберите определение. Изменения шаблона сохраняются отдельно.
-
-HTTP разрешён только debug-сборке. Release требует HTTPS. JWT сервер выдаёт на один час. Неопределённый результат операции блокирует смену сервера и новую операцию до подтверждения исходного запроса. После 401 войдите заново; для повтора нужен тот же пользователь.
-
-Редактор существующего персонажа сохраняет неизвестные поля и отправляет частичный PUT. Инвентарь доступен только для просмотра в этой форме; выпадение и крафт выполняются отдельно. Legacy CRUD сервера не имеет атомарной защиты от конфликтов полей, предварительный GET не заменяет CAS. Сферический крафт использует `expectedVersion` и серверную транзакцию.
-
-## Проверка
-
-```sh
-bash gradlew :core:test :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest
+```bash
+./gradlew :core:test :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest
 ```
 
-[GitHub Actions](https://github.com/Sperance/ExileForge/actions) публикует debug APK. Старые APK в репозитории относятся к предыдущим версиям. UI-тесты выполняются на Android-эмуляторе в CI, снимок карточек и отчёты доступны в артефакте `exile-forge-ui`. Проверка против вашего работающего сервера выполняется отдельно.
-
-[API-контракт 1.3](docs/API_CONTRACT.md). [Ограничения серверных механик](https://github.com/Sperance/ktor-bestgame/blob/feature/poe-catalog-crafting/docs/POE.md).
+GitHub Actions also runs Compose checks on an API 35 emulator. APKs and UI reports are attached to each successful workflow run.
+The original fantasy cards, property/item icons, bottom navigation, reference pickers and server-side modifier search remain available.

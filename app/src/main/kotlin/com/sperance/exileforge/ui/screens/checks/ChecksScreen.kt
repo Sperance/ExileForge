@@ -31,7 +31,7 @@ import kotlinx.serialization.json.*
             InfoCard("Полный цикл CRUD", "Создать → получить → изменить${if (s.catalog == Catalog.EQUIPMENT) " → модифицировать" else ""} → удалить. После записей выполняется проверочный GET.")
         }
         item {
-            Button(enabled = !s.busy && s.catalog != Catalog.CHARACTERS, onClick = { confirmRun = true }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Outlined.PlayArrow, null); Text("Запустить проверку") }
+            Button(enabled = !s.busy && s.isAdmin && s.catalog != Catalog.CHARACTERS, onClick = { confirmRun = true }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Outlined.PlayArrow, null); Text("Запустить проверку") }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(enabled = !s.busy, onClick = vm::count) { Text("Проверить count") }
                 TextButton(onClick = vm::clearLogs) { Text("Очистить журнал") }

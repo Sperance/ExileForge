@@ -15,7 +15,6 @@ import kotlin.test.*
 class ReferencePickerTest {
     @Test fun `every Mongo relationship has a typed picker`() {
         val fields = mapOf(
-            "character" to mapOf("userId" to EntitySource.USER),
             "characterEquipment" to mapOf("equipmentId" to EntitySource.EQUIPMENT),
             "characterItem" to mapOf("itemId" to EntitySource.ITEM),
             "redemption" to mapOf("redemptionCodeId" to EntitySource.REDEMPTION)
@@ -23,7 +22,7 @@ class ReferencePickerTest {
         fields.forEach { (schema, references) -> references.forEach { (key, source) ->
             assertEquals(InputSpec.Reference(source), schemaFields(schema).single { it.key == key }.spec)
         } }
-        assertEquals(InputSpec.ListOf(InputSpec.Reference(EntitySource.RECIPE)), schemaFields("character").single { it.key == "recipeAccess" }.spec)
+        assertEquals(setOf("name", "description"), schemaFields("character").map { it.key }.toSet())
     }
     @Test fun `reference values retain IDs and reject invalid selections`() {
         validateForm("characterItem", buildJsonObject { put("itemId", "0123456789abcdef01234567"); put("amount", 1) })
@@ -32,6 +31,8 @@ class ReferencePickerTest {
     @Test fun `each picker uses correct collection and server pagination`() = runBlocking {
         MockWebServer().use { server ->
             server.start(); val api = GameApi(server.url("/game/").toString())
+            server.enqueue(MockResponse().setBody("""{"success":true,"data":{"token":"token"}}"""))
+            api.login("user", "password"); server.takeRequest()
             EntitySource.entries.forEach { source ->
                 server.enqueue(MockResponse().setBody("""{"success":true,"data":{"items":[{"_id":"0123456789abcdef01234567","name":"Visible name"}],"page":2,"totalPages":4,"totalItems":180}}"""))
                 val result = api.referencePage(source, 2)

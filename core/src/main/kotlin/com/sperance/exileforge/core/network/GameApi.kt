@@ -6,6 +6,7 @@ import com.sperance.exileforge.core.contract.requireId
 import com.sperance.exileforge.core.contract.text
 import com.sperance.exileforge.core.contract.validate
 import com.sperance.exileforge.core.contract.validateReferenceWrite
+import com.sperance.exileforge.core.model.command.*
 import com.sperance.exileforge.core.model.Catalog
 import com.sperance.exileforge.core.model.EntitySource
 import java.util.concurrent.TimeUnit
@@ -39,9 +40,32 @@ class GameApi(
         token = result.text("token").also { require(it.isNotBlank()) }
     }
     fun logout() { token = null }
+    suspend fun capabilities(): ApiCapabilities = WireJson.decodeFromJsonElement(request("GET", "api/v1/poe/capabilities"))
+    suspend fun currentUser(): UserProfile {
+        val jwt = requireNotNull(token) { "Войдите в аккаунт" }
+        val claims = WireJson.parseToJsonElement(String(java.util.Base64.getUrlDecoder().decode(jwt.split('.')[1]), Charsets.UTF_8)).jsonObject
+        val id = claims.text("sub"); requireId(id)
+        // The JWT subject is only a lookup key. Permissions come from the authenticated response.
+        return WireJson.decodeFromJsonElement(request("GET", "api/v1/user", mapOf("id" to id), authenticated = true))
+    }
+    suspend fun equipment(id: String): EquipmentView { requireId(id); return WireJson.decodeFromJsonElement(request("GET", "api/v1/character/$id/equipment", authenticated = true)) }
+    suspend fun equip(id: String, command: EquipCommand): EquipmentView = characterCommand(id, "equip", WireJson.encodeToJsonElement(command))
+    suspend fun unequip(id: String, command: UnequipCommand): EquipmentView = characterCommand(id, "unequip", WireJson.encodeToJsonElement(command))
+    suspend fun redeem(id: String, command: RedeemCommand): EquipmentView = characterCommand(id, "redeem", WireJson.encodeToJsonElement(command))
+    suspend fun useRecipe(id: String, command: UseRecipeCommand): EquipmentView = characterCommand(id, "useRecipe", WireJson.encodeToJsonElement(command))
+    private suspend fun characterCommand(id: String, operation: String, body: JsonElement): EquipmentView {
+        requireId(id); return WireJson.decodeFromJsonElement(request("POST", "api/v1/character/$id/$operation", body = body, authenticated = true))
+    }
+    suspend fun grant(id: String, command: GrantEquipmentCommand): EquipmentView { requireId(id); return WireJson.decodeFromJsonElement(request("POST", "api/v1/character/inventory/itemToInventory", mapOf("characterId" to id), WireJson.encodeToJsonElement(command), authenticated = true)) }
+    suspend fun adjustItems(id: String, command: AdjustItemsCommand): EquipmentView { requireId(id); return WireJson.decodeFromJsonElement(request("POST", "api/v1/character/inventory/addItem", mapOf("characterId" to id), WireJson.encodeToJsonElement(command), authenticated = true)) }
+    suspend fun recipe(id: String): JsonObject { requireId(id); return request("GET", "api/v1/recipe", mapOf("id" to id), authenticated = true).jsonObject }
+    suspend fun changePassword(command: ChangePasswordCommand) {
+        request("POST", "api/v1/user/changePassword", body = WireJson.encodeToJsonElement(command), authenticated = true, sensitive = true)
+        logout()
+    }
     suspend fun referencePage(source: EntitySource, page: Int): ItemPage {
         require(page >= 0)
-        val body = request("GET", "api/v1/${source.path}/paged", mapOf("page" to "$page", "size" to "50")).jsonObject
+        val body = request("GET", "api/v1/${source.path}/paged", mapOf("page" to "$page", "size" to "50"), authenticated = true).jsonObject
         return ItemPage(body.getValue("items").jsonArray.map { it.jsonObject }, body.getValue("page").jsonPrimitive.int,
             body.getValue("totalPages").jsonPrimitive.int, body.getValue("totalItems").jsonPrimitive.long)
     }
@@ -60,32 +84,36 @@ class GameApi(
     private fun route(catalog: Catalog) = "api/v1/${catalog.path}"
     override suspend fun page(catalog: Catalog, page: Int): ItemPage {
         require(page >= 0)
-        val body = request("GET", "${route(catalog)}/paged", mapOf("page" to "$page", "size" to "20")).jsonObject
+        val body = request("GET", "${route(catalog)}/paged", mapOf("page" to "$page", "size" to "20"), authenticated = true).jsonObject
         return ItemPage(body.getValue("items").jsonArray.map { it.jsonObject }, body.getValue("page").jsonPrimitive.int,
             body.getValue("totalPages").jsonPrimitive.int, body.getValue("totalItems").jsonPrimitive.long)
     }
     override suspend fun get(catalog: Catalog, id: String): JsonObject? {
         requireId(id)
-        return request("GET", route(catalog), mapOf("id" to id)).let { if (it == JsonNull) null else it.jsonObject }
+        return try { request("GET", route(catalog), mapOf("id" to id), authenticated = true).let { if (it == JsonNull) null else it.jsonObject } }
+        catch (e: ApiFailure) { if(e.status == 404) null else throw e }
     }
     override suspend fun create(catalog: Catalog, document: JsonObject): JsonObject {
+        require(document.keys.all { it in com.sperance.exileforge.core.contract.editableFields(catalog) || it == "type" }) { "Поле не разрешено при создании" }
         validate(document, catalog)
         if(catalog == Catalog.EQUIPMENT) validateReferenceWrite(document)
-        return request("POST", route(catalog), body = JsonArray(listOf(document))).jsonArray.single().jsonObject
+        return request("POST", route(catalog), body = JsonArray(listOf(document)), authenticated = true).jsonArray.single().jsonObject
     }
-    override suspend fun update(catalog: Catalog, id: String, changes: JsonObject): JsonObject {
+    override suspend fun update(catalog: Catalog, id: String, changes: JsonObject, expectedVersion: Long): JsonObject {
+        require(expectedVersion >= 0)
         requireId(id)
         if(catalog == Catalog.EQUIPMENT) validateReferenceWrite(changes)
+        require(changes.keys.all { it in com.sperance.exileforge.core.contract.editableFields(catalog) }) { "Свойство управляется сервером и недоступно для редактирования" }
         require(changes.isNotEmpty()) { "Нет изменений" }
         require(changes.keys.none { it in protectedFields }) { "Нельзя изменять служебные поля" }
-        return request("PUT", route(catalog), mapOf("id" to id), changes).let {
+        return request("PUT", route(catalog), mapOf("id" to id), WireJson.encodeToJsonElement(UpdateCommand(expectedVersion, changes)), authenticated = true).let {
             if (it == JsonNull) throw ApiFailure(200, null, "Сервер не вернул изменённый предмет")
             it.jsonObject
         }
     }
-    override suspend fun delete(catalog: Catalog, id: String) { requireId(id); request("DELETE", route(catalog), mapOf("id" to id)) }
+    override suspend fun delete(catalog: Catalog, id: String, expectedVersion: Long) { requireId(id); require(expectedVersion >= 0); request("DELETE", route(catalog), mapOf("id" to id), WireJson.encodeToJsonElement(DeleteCommand(expectedVersion)), authenticated = true) }
     suspend fun health(): JsonElement = request("GET", "system/health")
-    suspend fun count(catalog: Catalog): JsonElement = request("GET", "${route(catalog)}/count")
+    suspend fun count(catalog: Catalog): JsonElement = request("GET", "${route(catalog)}/count", authenticated = true)
     private suspend fun request(method: String, path: String, query: Map<String, String> = emptyMap(), body: JsonElement? = null, authenticated: Boolean = false, sensitive: Boolean = false): JsonElement {
         if (authenticated) require(!token.isNullOrBlank()) { "Войдите во вкладке «Сервер»" }
         val url = base.newBuilder().addPathSegments(path).apply { query.forEach { (k,v) -> addQueryParameter(k,v) } }.build()
@@ -100,6 +128,7 @@ class GameApi(
         try {
             val payload = client.newCall(request).awaitPayload()
             status = payload.status
+            if (status == 401 && authenticated) logout()
             val raw = payload.body
             responseText = raw.take(12_000)
             val envelope = try { withContext(Dispatchers.Default) { WireJson.parseToJsonElement(raw).jsonObject } }

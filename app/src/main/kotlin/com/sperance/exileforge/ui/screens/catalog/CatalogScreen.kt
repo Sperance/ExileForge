@@ -40,11 +40,11 @@ import kotlinx.serialization.json.*
                 Catalog.CHARACTERS -> EntitySource.CHARACTER
                 Catalog.EQUIPMENT -> EntitySource.EQUIPMENT
                 Catalog.ITEMS -> EntitySource.ITEM
-            }, !s.busy && !s.editorOpen, vm::open)
+            }, !s.busy && !s.editorOpen && s.signedIn, vm::open)
         }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(enabled = !s.busy && !s.editorOpen, onClick = { vm.create() }) { Icon(Icons.Outlined.Add, null); Text("Создать") }
+                Button(enabled = !s.busy && !s.editorOpen && s.canEdit, onClick = { vm.create() }) { Icon(Icons.Outlined.Add, null); Text("Создать") }
                 OutlinedButton(enabled = !s.busy, onClick = { vm.refresh() }) { Text("Обновить") }
             }
             if(s.catalog == Catalog.EQUIPMENT) Row {

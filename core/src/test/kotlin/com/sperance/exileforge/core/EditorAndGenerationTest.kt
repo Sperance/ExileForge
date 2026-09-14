@@ -49,14 +49,10 @@ class EditorAndGenerationTest {
             WireJson.decodeFromJsonElement(ValueExpression.serializer(), value)
         }
     }
-    @Test fun `character has all editable collections and enforces server number widths`() {
-        val character = JsonObject(template(Catalog.CHARACTERS) + mapOf("name" to JsonPrimitive("Test"), "userId" to JsonPrimitive("0123456789abcdef01234567")))
+    @Test fun `character form contains only permitted editable fields`() {
+        val character = JsonObject(template(Catalog.CHARACTERS) + ("name" to JsonPrimitive("Test")))
         validate(character, Catalog.CHARACTERS)
-        assertTrue(character.keys.containsAll(listOf("params", "equipments", "items", "professionSkills", "stockSkills", "battleSkills", "boolSkills", "recipeAccess", "gainedRedemptionCodes")))
-        assertFails { validate(JsonObject(character + ("level" to JsonPrimitive(32768))), Catalog.CHARACTERS) }
-        assertFails { validate(JsonObject(character + ("money" to JsonPrimitive("12.5"))), Catalog.CHARACTERS) }
-        val edited = JsonObject(character + mapOf("level" to JsonPrimitive(2), "version" to JsonPrimitive(99)))
-        assertEquals(setOf("level"), diff(character, edited).keys)
+        assertEquals(setOf("name", "description"), character.keys)
     }
     @Test fun `generation respects eligibility nonstacking and fixed value ranges`() {
         val definition = ModifierDefinition("test", "Test", ModifierSource.PREFIX, affixType = AffixType.PREFIX,

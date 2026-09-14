@@ -12,7 +12,16 @@ import kotlinx.serialization.json.*
     var login by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     if(s.signedIn) {
-        Text("Сессия активна")
+        Text("${s.profile?.name.orEmpty()} · ${if(s.isAdmin) "Администратор" else "Игрок"}")
+        var change by remember { mutableStateOf(false) }
+        var oldPassword by remember { mutableStateOf("") }
+        var newPassword by remember { mutableStateOf("") }
+        TextButton(onClick = { change = !change; oldPassword = ""; newPassword = "" }) { Text("Изменить пароль") }
+        if(change) {
+            OutlinedTextField(oldPassword, { oldPassword = it }, label = { Text("Текущий пароль") }, visualTransformation = PasswordVisualTransformation(), singleLine = true)
+            OutlinedTextField(newPassword, { newPassword = it }, label = { Text("Новый пароль, 12–128 символов") }, visualTransformation = PasswordVisualTransformation(), singleLine = true)
+            Button(enabled = !s.busy && oldPassword.isNotEmpty() && newPassword.length in 12..128, onClick = { vm.changePassword(oldPassword, newPassword); oldPassword = ""; newPassword = ""; change = false }) { Text("Сменить пароль") }
+        }
         OutlinedButton(enabled = !s.busy, onClick = vm::logout) { Text("Выйти") }
     } else {
         OutlinedTextField(login, { login = it }, enabled = !s.busy, label = { Text("Логин") }, singleLine = true)

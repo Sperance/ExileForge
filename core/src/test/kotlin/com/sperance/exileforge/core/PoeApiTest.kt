@@ -94,8 +94,8 @@ class PoeApiTest {
     @Test fun `equipment rejects inline definitions and malformed references before network`() = runBlocking {
         MockWebServer().use { server ->
             server.start(); val api = GameApi(server.url("/").toString())
-            assertFailsWith<IllegalArgumentException> { api.update(Catalog.EQUIPMENT, id, buildJsonObject { put("modifierDefinitions", JsonArray(listOf(starterDefinition()))) }) }
-            assertFailsWith<IllegalArgumentException> { api.update(Catalog.EQUIPMENT, id, buildJsonObject { put("modifierDefinitionRefs", JsonNull) }) }
+            assertFailsWith<IllegalArgumentException> { api.update(Catalog.EQUIPMENT, id, buildJsonObject { put("modifierDefinitions", JsonArray(listOf(starterDefinition()))) }, 0) }
+            assertFailsWith<IllegalArgumentException> { api.update(Catalog.EQUIPMENT, id, buildJsonObject { put("modifierDefinitionRefs", JsonNull) }, 0) }
             assertEquals(0, server.requestCount)
         }
     }

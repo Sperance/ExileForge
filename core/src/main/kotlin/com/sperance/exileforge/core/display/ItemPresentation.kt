@@ -31,10 +31,11 @@ fun rarityTitle(value: String) = when(value) {
 }
 /** Display projection only. Never send this combined document back to a template endpoint. */
 fun inventoryDocument(instance: JsonObject, base: JsonObject?): JsonObject {
+    val resolvedBase = instance["baseSnapshot"] as? JsonObject ?: base
     val poe = instance["poe"] as? JsonObject
-    return JsonObject(base.orEmpty() + mapOf(
+    return JsonObject(resolvedBase.orEmpty() + mapOf(
         "_id" to (instance["uuid"] ?: JsonPrimitive("")),
-        "name" to (base?.get("name") ?: JsonPrimitive(displayName(poe?.text("baseId").orEmpty()).takeIf { it != "Без названия" } ?: "Предмет экипировки")),
+        "name" to (resolvedBase?.get("name") ?: JsonPrimitive(displayName(poe?.text("baseId").orEmpty()).takeIf { it != "Без названия" } ?: "Предмет экипировки")),
         "modifiers" to (instance["params"] ?: JsonArray(emptyList()))
     ) + (poe?.filterKeys { it in setOf("rarity", "itemLevel", "quality", "corrupted", "mirrored", "implicits", "explicits") }.orEmpty()))
 }

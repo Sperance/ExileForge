@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.contract.text
 import com.sperance.exileforge.core.display.*
+import com.sperance.exileforge.core.model.command.EquipmentSlot
 import com.sperance.exileforge.core.model.EntitySource
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
@@ -38,9 +39,11 @@ import kotlinx.serialization.json.*
                 if(!s.signedIn) InfoCard("Войдите в аккаунт", "Во вкладке «Сервер» войдите, чтобы посмотреть снаряжение своего персонажа и применять сферы.")
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(enabled = !s.busy && s.signedIn && s.characterId.isNotBlank(), onClick = vm::loadInventory) { Icon(Icons.Outlined.Refresh, null); Text("Обновить") }
-                    Button(enabled = !s.busy && s.signedIn && s.inventoryVersion != null && s.pending == null, onClick = { vm.inventoryAction("drop") }) { Icon(Icons.Outlined.AutoAwesome, null); Text("Новый дроп") }
+                    Button(enabled = !s.busy && s.isAdmin && s.ownsCharacter && s.inventoryVersion != null && s.pending == null, onClick = { vm.inventoryAction("drop") }) { Icon(Icons.Outlined.AutoAwesome, null); Text("Новый дроп") }
                 }
                 Text("Тестовый дроп доступен администратору для своего персонажа.", color = Muted, style = MaterialTheme.typography.bodySmall)
+                CharacterEquipmentPanel(s, vm)
+                InventoryCommandsPanel(s, vm)
                 OutlinedTextField(query, { query = it }, label = { Text("Найти предмет в арсенале") }, leadingIcon = { Icon(Icons.Outlined.Search, null) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     item { FilterChip(selected = slot.isBlank(), onClick = { slot = "" }, label = { Text("Все") }) }
@@ -55,7 +58,7 @@ import kotlinx.serialization.json.*
         items(visible, key = { it.text("uuid") }) { instance ->
             val id = instance.text("uuid")
             ItemCard(documents.getValue(id), enabled = !s.busy, selected = id == s.selectedEquipment,
-                definitions = s.inventoryDefinitions, actionLabel = "Свойства и крафт") { detailId = id; vm.selectEquipment(id) }
+                definitions = s.inventoryDefinitions, actionLabel = if(id in s.equipmentView?.equipped.orEmpty().values) "Надето · свойства" else "Надеть · свойства") { detailId = id; vm.selectEquipment(id) }
         }
     }
     // Mirror returns a new UUID. Keep the visible detail and the next craft target identical.
@@ -69,15 +72,22 @@ import kotlinx.serialization.json.*
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.9f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item { ItemCard(documents.getValue(instance.text("uuid")), enabled = false, detailed = true, definitions = s.inventoryDefinitions, actionLabel = "Экземпляр · ${instance.text("uuid").takeLast(6)}") }
             item {
+                val available = EquipmentSlot.forItem(documents.getValue(instance.text("uuid")).text("slot"))
+                var chosen by remember(instance.text("uuid")) { mutableStateOf(available.firstOrNull()?.name.orEmpty()) }
+                Spinner("Надеть в слот", chosen, available.associate { it.name to it.title }, !s.busy, { chosen = it })
+                Button(enabled = !s.busy && s.signedIn && s.pending == null && s.inventoryVersion != null && chosen.isNotBlank(), onClick = { vm.equip(instance.text("uuid"), EquipmentSlot.valueOf(chosen)) }) { Text("Надеть") }
+                Text("Требования уровня, характеристик и совместимость рук проверит сервер.", color = Muted)
+            }
+            item {
                 Text("Крафт экземпляра", style = MaterialTheme.typography.titleLarge, color = Gold)
                 Spinner("Сфера", s.selectedCurrency, s.currencies.associate { it.text("id") to it.text("name") }, !s.busy, vm::selectCurrency)
-                Button(modifier = Modifier.fillMaxWidth(), enabled = !s.busy && s.signedIn && instance["poe"] is JsonObject && s.selectedCurrency.isNotBlank() && s.inventoryVersion != null && s.pending == null,
+                Button(modifier = Modifier.fillMaxWidth(), enabled = !s.busy && s.ownsCharacter && instance["poe"] is JsonObject && s.selectedCurrency.isNotBlank() && s.inventoryVersion != null && s.pending == null,
                     onClick = { confirmCurrency = true }) { Icon(Icons.Outlined.Build, null); Text("Применить сферу") }
                 if(instance["poe"] !is JsonObject) Text("Этот экземпляр ещё не переведён в формат PoE.", color = Muted)
             }
             item {
                 HorizontalDivider()
-                OutlinedButton(modifier = Modifier.fillMaxWidth(), enabled = !s.busy, onClick = { vm.editInventoryBase(instance.text("equipmentId")); detailId = null }) { Icon(Icons.Outlined.Edit, null); Text("Редактировать базу предмета") }
+                OutlinedButton(modifier = Modifier.fillMaxWidth(), enabled = !s.busy && s.isAdmin, onClick = { vm.editInventoryBase(instance.text("equipmentId")); detailId = null }) { Icon(Icons.Outlined.Edit, null); Text("Редактировать базу предмета") }
                 Text("База — общий шаблон. Выпавшие значения этого экземпляра изменяются через крафт.", color = Muted, style = MaterialTheme.typography.bodySmall)
             }
         }

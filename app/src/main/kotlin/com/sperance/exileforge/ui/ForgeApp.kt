@@ -40,7 +40,7 @@ import kotlinx.serialization.json.*
     }
     BackHandler(s.editorOpen && !s.busy) { confirmDiscard = true }
     CompositionLocalProvider(LocalEntityPageLoader provides vm::referencePage) {
-    key(s.server) {
+    key(s.server, s.sessionEpoch) {
     Scaffold(
         snackbarHost = { SnackbarHost(snackbar) },
         bottomBar = {
@@ -63,7 +63,7 @@ import kotlinx.serialization.json.*
                     Text("EXILE FORGE", style = MaterialTheme.typography.titleLarge, color = Gold)
                     Text("АРСЕНАЛ ИЗГНАННИКА", fontSize = 9.sp, letterSpacing = 2.sp, color = Muted)
                 }
-                Text("API v1", style = MaterialTheme.typography.labelSmall, color = Muted)
+                Text("API 0.9", style = MaterialTheme.typography.labelSmall, color = Muted)
             }
             if (s.busy) LinearProgressIndicator(Modifier.fillMaxWidth()) else HorizontalDivider(color = Gold.copy(alpha = .25f))
             when (s.tab) {
@@ -76,7 +76,7 @@ import kotlinx.serialization.json.*
         }
     }
     if (confirmDelete) AlertDialog(onDismissRequest = { confirmDelete = false }, title = { Text("Удалить запись?") },
-        text = { Text("${s.original?.text("name")}\n${s.original?.entityId}\nУдаление на сервере необратимо.") },
+        text = { Text("${s.original?.text("name")}\n${s.original?.entityId}\nЗапись будет скрыта на сервере.") },
         confirmButton = { TextButton(enabled = !s.busy, onClick = { confirmDelete = false; vm.delete() }) { Text("Удалить", color = MaterialTheme.colorScheme.error) } },
         dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Отмена") } })
     if (confirmDiscard) AlertDialog(onDismissRequest = { confirmDiscard = false }, title = { Text("Закрыть редактор?") },

@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core
 
+import com.sperance.exileforge.core.contract.entityVersion
 import com.sperance.exileforge.core.contract.entityId
 import com.sperance.exileforge.core.model.Catalog
 import com.sperance.exileforge.core.network.ItemPage
@@ -18,22 +19,24 @@ class CrudScenarioTest {
         override suspend fun page(catalog: Catalog, page: Int) = ItemPage(documents.values.toList(), page, 1, documents.size.toLong())
         override suspend fun get(catalog: Catalog, id: String) = documents[id]
         override suspend fun create(catalog: Catalog, document: JsonObject): JsonObject {
-            documents[document.entityId] = document
+            val stored = JsonObject(document + mapOf("_id" to JsonPrimitive("0123456789abcdef01234567"), "version" to JsonPrimitive(0)))
+            documents[stored.entityId] = stored
             if (ambiguousCreate) error("Connection lost after server write")
-            return document
+            return stored
         }
-        override suspend fun update(catalog: Catalog, id: String, changes: JsonObject): JsonObject {
+        override suspend fun update(catalog: Catalog, id: String, changes: JsonObject, expectedVersion: Long): JsonObject {
             if (failUpdate) error("Write failed")
-            return JsonObject(documents.getValue(id) + changes).also { documents[id] = it }
+            check(documents.getValue(id).entityVersion == expectedVersion)
+            return JsonObject(documents.getValue(id) + changes + ("version" to JsonPrimitive(expectedVersion + 1))).also { documents[id] = it }
         }
-        override suspend fun delete(catalog: Catalog, id: String) { documents.remove(id); deleted += id }
+        override suspend fun delete(catalog: Catalog, id: String, expectedVersion: Long) { check(documents.getValue(id).entityVersion == expectedVersion); documents.remove(id); deleted += id }
     }
     @Test fun `scenario verifies all equipment operations and keeps existing items`(): Unit = runBlocking {
         val repo = FakeRepository()
         repo.documents["existing"] = buildJsonObject { put("_id", "existing") }
         val reports = mutableListOf<CheckResult>()
         CrudScenario(repo).run(Catalog.EQUIPMENT, reports::add)
-        assertEquals(7, reports.size); assertTrue(reports.all { it.passed })
+        assertEquals(6, reports.size); assertTrue(reports.all { it.passed })
         assertEquals(setOf("existing"), repo.documents.keys)
         assertEquals(1, repo.deleted.size)
     }
@@ -44,11 +47,11 @@ class CrudScenarioTest {
         assertTrue(reports.any { !it.passed }); assertTrue(repo.documents.isEmpty())
         assertEquals("Очистка", reports.last().label)
     }
-    @Test fun `lost create response still cleans preallocated id`(): Unit = runBlocking {
+    @Test fun `lost create response never guesses an identity for deletion`(): Unit = runBlocking {
         val repo = FakeRepository(ambiguousCreate = true)
         val reports = mutableListOf<CheckResult>()
         CrudScenario(repo).run(Catalog.ITEMS, reports::add)
-        assertTrue(repo.documents.isEmpty()); assertEquals(1, repo.deleted.size)
-        assertTrue(reports.last().passed)
+        assertEquals(1, repo.documents.size); assertTrue(repo.deleted.isEmpty())
+        assertFalse(reports.last().passed)
     }
 }

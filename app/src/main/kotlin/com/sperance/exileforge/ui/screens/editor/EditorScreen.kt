@@ -34,9 +34,9 @@ import kotlinx.serialization.json.*
             InfoCard("Мастерская", "Настройте свойства предмета или создайте новую базу. Экипировка персонажа и сферы доступны во вкладке «Герой».")
             InfoCard("Редактор", "Выберите предмет или персонажа в каталоге. Характеристики, модификаторы и условия настраиваются через формы.")
             CatalogSwitch(s, vm)
-            if (s.catalog != Catalog.EQUIPMENT) Button(enabled = !s.busy, onClick = { vm.create() }) { Text(if(s.catalog == Catalog.CHARACTERS) "Создать персонажа" else "Создать предмет") }
+            if (s.catalog != Catalog.EQUIPMENT) Button(enabled = !s.busy && s.canEdit, onClick = { vm.create() }) { Text(if(s.catalog == Catalog.CHARACTERS) "Создать персонажа" else "Создать предмет") }
             else EquipmentKind.entries.forEach { kind ->
-                OutlinedButton(enabled = !s.busy, onClick = { vm.create(kind) }, modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(enabled = !s.busy && s.canEdit, onClick = { vm.create(kind) }, modifier = Modifier.fillMaxWidth()) {
                     Text(when(kind) { EquipmentKind.Weapon -> "Создать оружие"; EquipmentKind.Armor -> "Создать броню"; EquipmentKind.Accessory -> "Создать аксессуар" })
                 }
             }
@@ -53,9 +53,9 @@ import kotlinx.serialization.json.*
                 }
                 if(s.catalog != Catalog.CHARACTERS) ItemCard(s.draft, enabled = false, detailed = true, definitions = s.definitions, actionLabel = "Предпросмотр")
                 if(s.catalog == Catalog.CHARACTERS && s.original != null) OutlinedButton(enabled = !s.busy, onClick = { vm.showCharacterInventory(s.original.entityId) }) { Text("Просмотреть экипировку") }
-                if(s.catalog == Catalog.CHARACTERS && s.original == null) Text("Выберите существующего пользователя из списка. Сервер проверит лимит персонажей.", color = Muted)
+                if(s.catalog == Catalog.CHARACTERS && s.original == null) Text("Владельцем станет текущий пользователь. Сервер проверит лимит персонажей.", color = Muted)
             }
-            if(s.catalog != Catalog.ITEMS) item {
+            if(s.catalog == Catalog.EQUIPMENT && s.isAdmin) item {
                 OutlinedTextField(s.definitionQuery, vm::definitionQuery, label = { Text("Поиск модификаторов на сервере") }, enabled = !s.busy)
                 OutlinedButton(enabled = !s.busy, onClick = { vm.loadDefinitions() }) { Text("Найти модификаторы") }
                 DefinitionPublisher(s, vm)
@@ -66,11 +66,17 @@ import kotlinx.serialization.json.*
                 }
             }
             item {
-                ObjectForm(formSchema(s.catalog), s.draft, s.definitions, !s.busy,
+                ObjectForm(formSchema(s.catalog), s.draft, s.definitions, !s.busy && s.canEdit,
                     locked = if(s.catalog == Catalog.CHARACTERS && s.original != null) setOf("userId", "equipments", "items") else emptySet(), onChange = vm::edit)
             }
-            item { Button(enabled = !s.busy, onClick = vm::save, modifier = Modifier.fillMaxWidth()) { Text("Сохранить на сервере") } }
-            if(s.original != null) item { TextButton(enabled = !s.busy, onClick = onDelete, modifier = Modifier.fillMaxWidth()) { Text("Удалить", color = MaterialTheme.colorScheme.error) } }
+            if(s.conflict) item {
+                InfoCard("Конфликт версии", "Черновик сохранён. Загрузка актуальной записи заменит его данными сервера.")
+                var confirmReload by remember { mutableStateOf(false) }
+                OutlinedButton(onClick = { confirmReload = true }) { Text("Загрузить актуальную запись") }
+                if(confirmReload) AlertDialog(onDismissRequest = { confirmReload = false }, title = { Text("Заменить черновик?") }, text = { Text("Несохранённые изменения будут потеряны.") }, confirmButton = { TextButton(onClick = { confirmReload = false; vm.reloadEditor() }) { Text("Загрузить") } }, dismissButton = { TextButton(onClick = { confirmReload = false }) { Text("Отмена") } })
+            }
+            item { Button(enabled = !s.busy && s.canEdit && !s.conflict, onClick = vm::save, modifier = Modifier.fillMaxWidth()) { Text("Сохранить на сервере") } }
+            if(s.original != null && s.canEdit) item { TextButton(enabled = !s.busy && !s.conflict, onClick = onDelete, modifier = Modifier.fillMaxWidth()) { Text("Удалить", color = MaterialTheme.colorScheme.error) } }
         }
     }
 }

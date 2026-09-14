@@ -12,7 +12,7 @@ import kotlinx.serialization.json.*
 
 val WireJson = Json { prettyPrint = true; ignoreUnknownKeys = true }
 fun JsonObject.text(key: String): String = (get(key) as? JsonPrimitive)?.contentOrNull.orEmpty()
-val JsonObject.entityId: String get() = text("_id")
+val JsonObject.entityId: String get() = text("_id").ifBlank { text("id") }
 val protectedFields = setOf("_id", "id", "version", "deleted", "createdAt", "updatedAt", "type")
 
 
@@ -20,7 +20,7 @@ val rarities = listOf("COMMON", "UNCOMMON", "RARE", "EPIC", "LEGENDARY", "MYTHIC
 val slots = listOf("HELMET", "BODY", "GLOVES", "RING", "BOOTS", "WINGS", "BELT", "WEAPON_1H", "WEAPON_2H", "QUIVER", "SHIELD", "AMULET")
 val weapons = listOf("SWORD", "LONGSWORD", "BOW", "WAND", "AXE", "DOUBLEAXE", "DOUBLESWORD", "BLADE")
 val modifierSources = ModifierSource.entries.map { it.name }
-const val SERVER_COMMIT = "34ca93a099d1eb2f56f5ab53114c27bf1b005f49"
+const val SERVER_COMMIT = "5d477ffd42f65ad1fe5e056602b670181ffae516"
 fun starterDefinition(): JsonObject = WireJson.parseToJsonElement("""{
     "id":"life", "name":"Maximum life", "source":"PREFIX", "scope":"ITEM", "affixType":"PREFIX",
     "tiers":[{"tier":1,"minItemLevel":1,"weight":100,"values":[{"min":1.0,"max":100.0}]}],
@@ -41,7 +41,6 @@ fun template(catalog: Catalog, kind: EquipmentKind = EquipmentKind.Weapon): Json
         put("type", "features.data.equipment.equipment_data.${kind.name}")
         put("slot", when (kind) { EquipmentKind.Weapon -> "WEAPON_1H"; EquipmentKind.Armor -> "BODY"; EquipmentKind.Accessory -> "RING" })
         put("rarity", "RARE"); put("itemLevel", 30)
-        put("modifiers", JsonArray(emptyList()))
         put("modifierDefinitionRefs", JsonArray(emptyList()))
         put("stockModifierDefinitionRefs", JsonArray(emptyList()))
         when (kind) {
@@ -59,7 +58,7 @@ fun diff(original: JsonObject, edited: JsonObject): JsonObject = JsonObject(
 fun validate(document: JsonObject, catalog: Catalog) {
     require(document.text("name").isNotBlank()) { "Введите название" }
     validateForm(formSchema(catalog), document)
-    if (catalog == Catalog.CHARACTERS) { validateCharacter(document); return }
+    if (catalog == Catalog.CHARACTERS) return
     if (catalog == Catalog.ITEMS) {
         require(document.text("category").isNotBlank()) { "Введите категорию" }
         require(document.text("subCategory").isNotBlank()) { "Введите подкатегорию" }
@@ -121,3 +120,11 @@ fun validateReferenceWrite(document: JsonObject) {
 }
 fun definitionKey(definition: JsonObject) = definition.text("id") + "@" + definition.text("revision").ifBlank { "1" }
 fun referenceKey(reference: JsonObject, revisionField: String = "revision") = reference.text("definitionId") + "@" + reference.text(revisionField).ifBlank { "1" }
+
+val JsonObject.entityVersion: Long get() = get("version")?.jsonPrimitive?.longOrNull?.takeIf { it >= 0 } ?: error("Сервер не вернул версию записи. Обновите данные.")
+
+fun editableFields(catalog: Catalog): Set<String> = when(catalog) {
+    Catalog.CHARACTERS -> setOf("name", "description")
+    Catalog.ITEMS -> setOf("name", "description", "image", "category", "subCategory", "price")
+    Catalog.EQUIPMENT -> setOf("name", "description", "image", "slot", "rarity", "itemLevel", "weaponType", "damage_min", "damage_max", "attackSpeed", "durability", "defense", "price", "modifierDefinitionRefs", "stockModifierDefinitionRefs")
+}

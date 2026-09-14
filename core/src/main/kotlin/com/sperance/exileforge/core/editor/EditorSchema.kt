@@ -78,10 +78,10 @@ fun schemaFields(schema: String, document: JsonObject = JsonObject(emptyMap())):
                 "Armor" -> listOf(num("defense", "Защита", 1, true, 0.0))
                 else -> emptyList()
             })
-            addAll(listOf(list("modifiers", "Модификаторы", InputSpec.Object("modifier")).copy(nullable = true), list("modifierDefinitionRefs", "Доступные модификаторы", InputSpec.Object("reference")), list("stockModifierDefinitionRefs", "Встроенные модификаторы", InputSpec.Object("reference"))))
+            addAll(listOf(list("modifierDefinitionRefs", "Доступные модификаторы", InputSpec.Object("reference")), list("stockModifierDefinitionRefs", "Встроенные модификаторы", InputSpec.Object("reference"))))
         }
     }
-    "character" -> listOf(text("name", "Имя"), text("description", "Описание"), reference("userId", "Владелец", EntitySource.USER), num("level", "Уровень", 1, true, 1.0, 32767.0), num("experience", "Опыт", 0.0, min = 0.0), num("money", "Деньги", 0, true, 0.0), list("params", "Модификаторы персонажа", InputSpec.Object("modifier")), list("equipments", "Экипировка", InputSpec.Object("characterEquipment")), list("items", "Предметы в инвентаре", InputSpec.Object("characterItem")), list("professionSkills", "Профессии", InputSpec.Object("professionSkill")), list("stockSkills", "Характеристики", InputSpec.Object("stockSkill")), list("battleSkills", "Боевые навыки", InputSpec.Object("battleSkill")), list("boolSkills", "Состояния", InputSpec.Object("boolSkill")), list("recipeAccess", "Доступные рецепты", InputSpec.Reference(EntitySource.RECIPE)), list("gainedRedemptionCodes", "Полученные промокоды", InputSpec.Object("redemption")))
+    "character" -> listOf(text("name", "Имя"), text("description", "Описание"))
     "characterEquipment" -> listOf(reference("equipmentId", "Предмет экипировки", EntitySource.EQUIPMENT), text("uuid", "ID экземпляра", newEntityId()), list("params", "Модификаторы экземпляра", InputSpec.Object("modifier")))
     "characterItem" -> listOf(reference("itemId", "Предмет", EntitySource.ITEM), num("amount", "Количество", 1, true, 0.0))
     "professionSkill", "battleSkill" -> listOf(choice("stat", "Навык", if(schema == "professionSkill") professionStats else battleStats), num("level", "Уровень", 0, true, 0.0, 127.0), num("experience", "Опыт", 0.0, min = 0.0))

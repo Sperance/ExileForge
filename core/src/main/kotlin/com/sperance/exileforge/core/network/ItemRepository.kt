@@ -9,6 +9,6 @@ interface ItemRepository {
     suspend fun page(catalog: Catalog, page: Int): ItemPage
     suspend fun get(catalog: Catalog, id: String): JsonObject?
     suspend fun create(catalog: Catalog, document: JsonObject): JsonObject
-    suspend fun update(catalog: Catalog, id: String, changes: JsonObject): JsonObject
-    suspend fun delete(catalog: Catalog, id: String)
+    suspend fun update(catalog: Catalog, id: String, changes: JsonObject, expectedVersion: Long): JsonObject
+    suspend fun delete(catalog: Catalog, id: String, expectedVersion: Long)
 }

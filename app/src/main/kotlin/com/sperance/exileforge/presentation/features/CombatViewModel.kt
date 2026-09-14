@@ -26,14 +26,14 @@ class CombatViewModel(private val runtime: ForgeRuntime) {
             mutable.update { it.copy(combatCatalog = catalog, battleView = view, battleCharacterId = id, hero = hero) }
         }
     }
-    fun start(zoneId: String, boss: Boolean) = with(runtime) {
+    fun start(zoneId: String, boss: Boolean): Unit = with(runtime) {
         val s = state.value
         if(s.busy || s.battlePending != null || s.battleCharacterId != s.characterId) return
         val view = s.battleView ?: return
         submit(PendingBattleWrite(s.characterId, "start", WireJson.encodeToJsonElement(
             StartBattleCommand(view.characterVersion, UUID.randomUUID().toString(), zoneId, boss))))
     }
-    fun act(action: BattleAction) = with(runtime) {
+    fun act(action: BattleAction): Unit = with(runtime) {
         val s = state.value
         if(s.busy || s.battlePending != null || s.battleCharacterId != s.characterId) return
         val view = s.battleView ?: return

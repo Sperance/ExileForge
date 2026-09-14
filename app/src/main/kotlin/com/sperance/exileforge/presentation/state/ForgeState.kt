@@ -12,6 +12,10 @@ enum class AppMode { PLAYER, ADMIN }
 data class PendingBattleWrite(val characterId: String, val operation: String, val command: JsonElement)
 
 data class ForgeState(
+    val passiveTree: com.sperance.exileforge.core.model.passives.PassiveTree? = null,
+    val passiveState: com.sperance.exileforge.core.model.passives.PassiveState? = null,
+    val passiveCharacterId: String = "",
+    val passivePending: PendingPassiveWrite? = null,
     val combatCatalog: com.sperance.exileforge.core.model.combat.CombatCatalog? = null,
     val battleView: com.sperance.exileforge.core.model.combat.BattleView? = null,
     val battleCharacterId: String = "",

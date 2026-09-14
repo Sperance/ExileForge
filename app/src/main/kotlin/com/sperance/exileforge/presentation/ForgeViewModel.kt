@@ -19,6 +19,9 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() 
     private val runtime = ForgeRuntime(store, journal)
     val state = runtime.state
     val logs = runtime.logs
+    fun loadPassives() = runtime.passiveViewModel.load()
+    fun changePassive(action: com.sperance.exileforge.core.model.passives.PassiveAction, nodeId: String? = null) = runtime.passiveViewModel.change(action, nodeId)
+    fun retryPassive() = runtime.passiveViewModel.retry()
     fun loadCombat() = runtime.combatViewModel.load()
     fun startBattle(zoneId: String, boss: Boolean) = runtime.combatViewModel.start(zoneId, boss)
     fun battleAction(action: com.sperance.exileforge.core.model.combat.BattleAction) = runtime.combatViewModel.act(action)

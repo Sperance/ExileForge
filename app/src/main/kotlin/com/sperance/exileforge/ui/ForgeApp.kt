@@ -74,6 +74,7 @@ import kotlinx.serialization.json.*
                 4 -> InventoryForge(s, vm)
                 5 -> InventoryForge(s, vm, forgeOnly = true)
                 6 -> com.sperance.exileforge.ui.screens.combat.CombatScreen(s, vm)
+                7 -> com.sperance.exileforge.ui.screens.passives.PassiveScreen(s, vm)
             }
         }
     }

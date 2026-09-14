@@ -41,6 +41,14 @@ class GameApi(
         token = result.text("token").also { require(it.isNotBlank()) }
     }
     fun logout() { token = null }
+    suspend fun passiveTree(revision: Int = 1): com.sperance.exileforge.core.model.passives.PassiveTree =
+        WireJson.decodeFromJsonElement(request("GET", "api/v1/passives/tree", mapOf("revision" to "$revision"), authenticated = true))
+    suspend fun passiveState(id: String): com.sperance.exileforge.core.model.passives.PassiveState {
+        requireId(id); return WireJson.decodeFromJsonElement(request("GET", "api/v1/passives/characters/$id", authenticated = true))
+    }
+    suspend fun changePassives(id: String, command: com.sperance.exileforge.core.model.passives.PassiveCommand): com.sperance.exileforge.core.model.passives.PassiveState {
+        requireId(id); return WireJson.decodeFromJsonElement(request("POST", "api/v1/passives/characters/$id", body = WireJson.encodeToJsonElement(command), authenticated = true))
+    }
     suspend fun combatCatalog(): com.sperance.exileforge.core.model.combat.CombatCatalog =
         WireJson.decodeFromJsonElement(request("GET", "api/v1/combat/catalog", authenticated = true))
     suspend fun battle(id: String): com.sperance.exileforge.core.model.combat.BattleView {

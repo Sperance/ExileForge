@@ -31,6 +31,7 @@ import com.sperance.exileforge.ui.theme.Muted
         item {
             Text("Поход", style = MaterialTheme.typography.headlineLarge, color = Gold)
             Text("Пошаговые сражения · добыча · боссы", color = Muted)
+            TextButton(enabled = !s.busy && s.signedIn, onClick = { vm.tab(7) }) { Text("Древо навыков") }
             EntitySpinner("Персонаж", s.characterId, EntitySource.CHARACTER, !s.busy && s.pending == null, vm::characterId)
             OutlinedButton(enabled = s.signedIn && !s.busy && s.characterId.isNotBlank(), onClick = vm::loadCombat) { Text("Загрузить / продолжить бой") }
             if(!s.signedIn) Text("Войдите во вкладке «Аккаунт».")

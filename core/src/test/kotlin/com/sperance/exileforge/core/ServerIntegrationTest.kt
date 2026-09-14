@@ -3,6 +3,7 @@ package com.sperance.exileforge.core
 import com.sperance.exileforge.core.contract.*
 import com.sperance.exileforge.core.model.*
 import com.sperance.exileforge.core.model.combat.*
+import com.sperance.exileforge.core.model.passives.*
 import com.sperance.exileforge.core.model.command.*
 import com.sperance.exileforge.core.network.*
 import kotlinx.coroutines.runBlocking
@@ -74,7 +75,41 @@ class ServerIntegrationTest {
         assertTrue(combat.battle!!.rewards.any { it.name == "Опыт" && it.amount > 0 })
         assertTrue(player.character(own.entityId).experience > 0)
         assertEquals(combat, player.battle(own.entityId))
-        player.delete(Catalog.CHARACTERS, own.entityId, combat.characterVersion)
+        // Earn the first level through actual gameplay, not a privileged stat mutation.
+        repeat(3) { index ->
+            combat = player.startBattle(own.entityId, StartBattleCommand(combat.characterVersion, java.util.UUID.randomUUID().toString(), "coast", index == 2))
+            while(combat.battle!!.status == BattleStatus.ACTIVE) {
+                val b = combat.battle!!
+                val action = if(b.hero.life < b.hero.maxLife * .65 && b.potions > 0) BattleAction.POTION
+                    else if(b.hero.mana >= 8) BattleAction.POWER else BattleAction.ATTACK
+                combat = player.actBattle(own.entityId, BattleActionCommand(combat.characterVersion, java.util.UUID.randomUUID().toString(), b.id, action))
+            }
+            assertEquals(BattleStatus.VICTORY, combat.battle!!.status)
+        }
+        assertTrue(player.capabilities().passiveTree)
+        assertEquals(115, player.passiveTree().nodes.size)
+        assertEquals(404, assertFailsWith<ApiFailure> { player.passiveState(id) }.status)
+        var skills = player.passiveState(own.entityId)
+        assertTrue(skills.availablePoints >= 1)
+        val beforeLife = skills.stats.values.getValue("maximum_life")
+        val allocate = PassiveCommand(skills.characterVersion, skills.treeRevision, java.util.UUID.randomUUID().toString(), PassiveAction.ALLOCATE, "origin")
+        skills = player.changePassives(own.entityId, allocate)
+        assertEquals(beforeLife + 5, skills.stats.values.getValue("maximum_life"))
+        assertEquals(skills, player.changePassives(own.entityId, allocate))
+        assertEquals(skills, player.passiveState(own.entityId))
+        assertEquals(409, assertFailsWith<ApiFailure> { player.changePassives(own.entityId, allocate.copy(requestId = java.util.UUID.randomUUID().toString())) }.status)
+        assertTrue(api.passiveState(id).allocated.isEmpty())
+        assertEquals(skills.stats, player.equipment(own.entityId).stats)
+        combat = player.startBattle(own.entityId, StartBattleCommand(skills.characterVersion, java.util.UUID.randomUUID().toString(), "coast"))
+        assertEquals(skills.stats.values.getValue("maximum_life"), combat.battle!!.hero.maxLife)
+        val locked = player.passiveState(own.entityId)
+        assertNotNull(locked.lockedReason)
+        assertEquals(400, assertFailsWith<ApiFailure> { player.changePassives(own.entityId, PassiveCommand(locked.characterVersion, locked.treeRevision, java.util.UUID.randomUUID().toString(), PassiveAction.RESET)) }.status)
+        combat = player.actBattle(own.entityId, BattleActionCommand(combat.characterVersion, java.util.UUID.randomUUID().toString(), combat.battle!!.id, BattleAction.FLEE))
+        skills = player.changePassives(own.entityId, PassiveCommand(combat.characterVersion, skills.treeRevision, java.util.UUID.randomUUID().toString(), PassiveAction.RESET))
+        assertTrue(skills.allocated.isEmpty())
+        assertEquals(beforeLife, skills.stats.values.getValue("maximum_life"))
+        player.delete(Catalog.CHARACTERS, own.entityId, skills.characterVersion)
         api.delete(Catalog.CHARACTERS, id, crafted.characterVersion)
         assertNull(api.get(Catalog.CHARACTERS, id))
     }

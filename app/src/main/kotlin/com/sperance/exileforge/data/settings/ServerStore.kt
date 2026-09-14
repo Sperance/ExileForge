@@ -22,6 +22,13 @@ class ServerStore(private val context: Context) {
             if (value == null) prefs.remove(key) else prefs[key] = value
         }
     }
+    suspend fun passivePending(scope: String): String? = context.settings.data.first()[stringPreferencesKey("passives:$scope")]
+    suspend fun savePassivePending(scope: String, value: String?) {
+        context.settings.edit { prefs ->
+            val key = stringPreferencesKey("passives:$scope")
+            if (value == null) prefs.remove(key) else prefs[key] = value
+        }
+    }
     val server = context.settings.data.map { it[key] ?: "http://10.1.10.198:8080/" }
     suspend fun save(value: String) { context.settings.edit { it[key] = value } }
 }

@@ -30,6 +30,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
     val editorViewModel = com.sperance.exileforge.presentation.features.EditorViewModel(this)
     val heroViewModel = com.sperance.exileforge.presentation.features.HeroViewModel(this)
     val sessionViewModel = com.sperance.exileforge.presentation.features.SessionViewModel(this)
+    val passiveViewModel = com.sperance.exileforge.presentation.features.PassiveViewModel(this)
     val combatViewModel = com.sperance.exileforge.presentation.features.CombatViewModel(this)
     val checksViewModel = com.sperance.exileforge.presentation.features.ChecksViewModel(this)
     fun newApi(server: String): GameApi {
@@ -97,7 +98,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
     }
     fun clearSession() {
         metadataJob?.cancel(); api.logout(); journal.clear()
-        mutable.update { it.copy(combatCatalog = null, battleView = null, battlePending = null, battleCharacterId = "", signedIn = false, profile = null, sessionEpoch = it.sessionEpoch + 1, items = emptyList(), total = 0, page = 0, totalPages = 0,
+        mutable.update { it.copy(passiveTree = null, passiveState = null, passivePending = null, passiveCharacterId = "", combatCatalog = null, battleView = null, battlePending = null, battleCharacterId = "", signedIn = false, profile = null, sessionEpoch = it.sessionEpoch + 1, items = emptyList(), total = 0, page = 0, totalPages = 0,
             original = null, draft = JsonObject(emptyMap()), editorOpen = false, inventory = emptyList(), inventoryVersion = null, equipmentView = null,
             inventoryBases = emptyMap(), inventoryDefinitions = emptyList(), characterOwner = "", characterId = it.pending?.characterId.orEmpty(),
             selectedEquipment = "", selectedCurrency = "", currencies = emptyList(), checks = emptyList(), tab = 3, conflict = false, mode = AppMode.PLAYER, hero = null, comparison = null, craftOptions = null, craftBefore = null, craftAfter = null, mergeReview = null, mergeRemote = null, failure = null) }

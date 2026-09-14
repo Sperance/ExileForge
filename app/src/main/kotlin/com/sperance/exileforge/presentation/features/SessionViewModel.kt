@@ -62,7 +62,7 @@ task {
  if(!state.value.busy) clearSession()
     } }
     fun changePassword(current: String, replacement: String) { with(runtime) {
-task {
+task(writing = true) {
         require(replacement.length in 12..128) { "Новый пароль: от 12 до 128 символов" }
         val profile = api.currentUser()
         api.changePassword(ChangePasswordCommand(profile.version, current, replacement))

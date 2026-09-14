@@ -115,7 +115,7 @@ task(writing = true) {
     }
     } }
     fun retryInventoryAction() { with(runtime) {
-task { executePending() }
+task(writing = true) { executePending() }
     } }
     private fun loadInventoryMetadata() { with(runtime) {
 metadataJob?.cancel()

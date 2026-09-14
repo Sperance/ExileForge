@@ -1,5 +1,9 @@
 package com.sperance.exileforge.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.ui.theme.Ink
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Column
@@ -25,7 +29,7 @@ class EquipmentPanelTest {
         val instance = buildJsonObject { put("uuid", "ring-instance"); put("baseSnapshot", buildJsonObject { put("name", "Кольцо героя"); put("slot", "RING") }) }
         val view = EquipmentView(3, mapOf(EquipmentSlot.RING_LEFT to "ring-instance"), listOf(com.sperance.exileforge.core.contract.WireJson.decodeFromJsonElement<com.sperance.exileforge.core.model.hero.EquipmentInstance>(JsonObject(instance + ("equipmentId" to JsonPrimitive("base"))))), emptyList(), CalculatedStats(3, mapOf("maximum_life" to 88.0)))
         var removed: EquipmentSlot? = null
-        compose.setContent { ForgeTheme { Column(Modifier.verticalScroll(rememberScrollState())) {
+        compose.setContent { ForgeTheme { Column(Modifier.background(Ink).verticalScroll(rememberScrollState()).padding(12.dp)) {
             CharacterEquipmentPanel(ForgeState(busy = false, signedIn = true, equipmentView = view, inventoryVersion = 3, hero = com.sperance.exileforge.core.model.hero.CharacterSummary("hero", "owner", "Изгнанник", 3, 10)), { removed = it })
         } } }
         val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()

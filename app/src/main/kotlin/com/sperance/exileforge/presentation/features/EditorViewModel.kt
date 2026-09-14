@@ -34,7 +34,7 @@ class EditorViewModel(private val runtime: ForgeRuntime) {
  if (!state.value.busy) mutable.update { it.copy(draft = document) }
     } }
     fun publishDefinition(document: JsonObject, expectedRevision: Int) { with(runtime) {
-task {
+task(writing = true) {
         validateForm("definition", document)
         val saved = api.publishDefinition(document, expectedRevision)
         mutable.update { it.copy(definitions = (listOf(saved) + it.definitions).distinctBy(::definitionKey), message = "Опубликовано ${saved.text("id")} v${saved.text("revision")}") }

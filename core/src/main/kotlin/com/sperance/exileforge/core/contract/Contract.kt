@@ -20,7 +20,7 @@ val rarities = listOf("COMMON", "UNCOMMON", "RARE", "EPIC", "LEGENDARY", "MYTHIC
 val slots = listOf("HELMET", "BODY", "GLOVES", "RING", "BOOTS", "WINGS", "BELT", "WEAPON_1H", "WEAPON_2H", "QUIVER", "SHIELD", "AMULET")
 val weapons = listOf("SWORD", "LONGSWORD", "BOW", "WAND", "AXE", "DOUBLEAXE", "DOUBLESWORD", "BLADE")
 val modifierSources = ModifierSource.entries.map { it.name }
-const val SERVER_COMMIT = "5d477ffd42f65ad1fe5e056602b670181ffae516"
+const val SERVER_COMMIT = "e8a53c25f0a1171dffbef3eec145f9583aad6f37"
 fun starterDefinition(): JsonObject = WireJson.parseToJsonElement("""{
     "id":"life", "name":"Maximum life", "source":"PREFIX", "scope":"ITEM", "affixType":"PREFIX",
     "tiers":[{"tier":1,"minItemLevel":1,"weight":100,"values":[{"min":1.0,"max":100.0}]}],
@@ -128,3 +128,5 @@ fun editableFields(catalog: Catalog): Set<String> = when(catalog) {
     Catalog.ITEMS -> setOf("name", "description", "image", "category", "subCategory", "price")
     Catalog.EQUIPMENT -> setOf("name", "description", "image", "slot", "rarity", "itemLevel", "weaponType", "damage_min", "damage_max", "attackSpeed", "durability", "defense", "price", "modifierDefinitionRefs", "stockModifierDefinitionRefs")
 }
+
+fun com.sperance.exileforge.core.model.hero.EquipmentInstance.text(key: String): String = document().text(key)

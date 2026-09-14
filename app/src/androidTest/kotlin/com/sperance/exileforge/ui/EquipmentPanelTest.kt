@@ -19,7 +19,7 @@ class EquipmentPanelTest {
     @get:Rule val compose = createComposeRule()
     @Test fun equippedSlotsShowSnapshotAndEmitExactSlot() {
         val instance = buildJsonObject { put("uuid", "ring-instance"); put("baseSnapshot", buildJsonObject { put("name", "Кольцо героя"); put("slot", "RING") }) }
-        val view = EquipmentView(3, mapOf(EquipmentSlot.RING_LEFT to "ring-instance"), listOf(instance), emptyList(), CalculatedStats(3, mapOf("maximum_life" to 88.0)))
+        val view = EquipmentView(3, mapOf(EquipmentSlot.RING_LEFT to "ring-instance"), listOf(com.sperance.exileforge.core.contract.WireJson.decodeFromJsonElement<com.sperance.exileforge.core.model.hero.EquipmentInstance>(JsonObject(instance + ("equipmentId" to JsonPrimitive("base"))))), emptyList(), CalculatedStats(3, mapOf("maximum_life" to 88.0)))
         var removed: EquipmentSlot? = null
         compose.setContent { ForgeTheme { Column(Modifier.verticalScroll(rememberScrollState())) {
             CharacterEquipmentPanel(ForgeState(busy = false, signedIn = true, equipmentView = view, inventoryVersion = 3), { removed = it })

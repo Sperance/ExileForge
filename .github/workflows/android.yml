@@ -44,3 +44,53 @@ jobs:
             design-preview
       - name: Preview image in verification log
         run: python3 -c "import base64,pathlib; print('DESIGN_IMAGE_START'); print(base64.b64encode(pathlib.Path('design-preview/arsenal.jpg').read_bytes()).decode()); print('DESIGN_IMAGE_END')"
+  client-server:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: Sperance/ktor-bestgame
+          ref: e8a53c25f0a1171dffbef3eec145f9583aad6f37
+          path: backend
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - run: bash gradlew installDist
+        working-directory: backend
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Start isolated MongoDB
+        run: |
+          docker run -d --name client-mongo -p 27017:27017 mongo:8 --replSet rs0 --bind_ip_all
+          for attempt in $(seq 1 30); do
+            if docker exec client-mongo mongosh --quiet --eval 'db.adminCommand({ping:1}).ok' >/dev/null 2>&1; then break; fi
+            sleep 1
+          done
+          docker exec client-mongo mongosh --quiet --eval 'rs.initiate({_id:"rs0",members:[{_id:0,host:"localhost:27017"}]})'
+          for attempt in $(seq 1 30); do
+            if docker exec client-mongo mongosh --quiet --eval 'if (!db.hello().isWritablePrimary) quit(1)' >/dev/null 2>&1; then exit 0; fi
+            sleep 1
+          done
+          exit 1
+      - name: Verify actual client and server contract
+        run: python3 scripts/client_server_test.py
+        env:
+          MONGO_URI: mongodb://localhost:27017/?replicaSet=rs0
+          MONGO_DB: exileforge_client_integration
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: client-server-reports
+          path: |
+            core/build/reports/tests
+            core/build/test-results
+            build/client-server.log

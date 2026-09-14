@@ -30,7 +30,7 @@ import kotlinx.serialization.json.*
         Button(enabled = enabled && code.isNotBlank(), onClick = { vm.redeem(code) }) { Text("Получить награду") }
         HorizontalDivider()
         RecipeCommandForm(s, vm, enabled)
-        if(s.isAdmin) {
+        if(s.adminTools) {
             HorizontalDivider()
             Text("Администрирование инвентаря")
             var equipmentId by remember(s.characterId) { mutableStateOf("") }
@@ -76,8 +76,8 @@ import kotlinx.serialization.json.*
             val row = input.jsonObject
             val loader = LocalEntityPageLoader.current
             key(recipeId, index, refresh) {
-                CompositionLocalProvider(LocalEntityPageLoader provides { source, page ->
-                    val result = loader(source, page)
+                CompositionLocalProvider(LocalEntityPageLoader provides { source, page, query ->
+                    val result = loader(source, page, query)
                     result.copy(items = result.items.filter { item ->
                         val selectorMatches = when {
                             row.text("itemId").isNotBlank() -> item.entityId == row.text("itemId")

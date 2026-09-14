@@ -21,7 +21,7 @@ class EntitySpinnerTest {
         var selected = ""
         compose.setContent {
             ForgeTheme {
-                CompositionLocalProvider(LocalEntityPageLoader provides { _, page ->
+                CompositionLocalProvider(LocalEntityPageLoader provides { _, page, _ ->
                     ItemPage(if(page == 0) emptyList() else listOf(buildJsonObject { put("_id", id); put("name", "Изгнанник") }), page, 2, 1)
                 }) {
                     EntitySpinner("Персонаж", selected, EntitySource.CHARACTER) { selected = it }

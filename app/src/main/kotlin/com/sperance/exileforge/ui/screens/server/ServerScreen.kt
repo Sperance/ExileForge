@@ -25,6 +25,6 @@ import kotlinx.serialization.json.*
         OutlinedButton(enabled = !s.busy, onClick = vm::health, modifier = Modifier.fillMaxWidth()) { Text("Проверить /system/health") }
         InfoCard("Состояние сервера", s.health)
         InfoCard("Локальная разработка", "Эмулятор: http://10.0.2.2:8080/\nТелефон: IP компьютера в вашей Wi-Fi сети. HTTP разрешён в debug-сборке; release использует HTTPS.")
-        InfoCard("Контракт сервера", "0.9.0 · refactor/compact-rpg-architecture · ${SERVER_COMMIT.take(12)}\nПредметы, экипировка и персонажи. Выпадение и крафт выполняются сервером.")
+        InfoCard("Контракт сервера", "0.10.0 · refactor/compact-rpg-architecture · ${SERVER_COMMIT.take(12)}\nПредметы, экипировка и персонажи. Выпадение и крафт выполняются сервером.")
     }
 }

@@ -6,7 +6,20 @@ import com.sperance.exileforge.core.verification.CheckResult
 import kotlinx.coroutines.flow.*
 import kotlinx.serialization.json.*
 
+enum class AppMode { PLAYER, ADMIN }
+
 data class ForgeState(
+    val mode: AppMode = AppMode.PLAYER,
+    val filter: com.sperance.exileforge.core.model.CatalogFilter = com.sperance.exileforge.core.model.CatalogFilter(),
+    val hero: com.sperance.exileforge.core.model.hero.CharacterSummary? = null,
+    val comparison: com.sperance.exileforge.core.model.hero.EquipmentComparison? = null,
+    val compareUuid: String = "", val compareSlot: EquipmentSlot? = null,
+    val craftOptions: com.sperance.exileforge.core.model.hero.CraftOptions? = null,
+    val craftBefore: JsonObject? = null, val craftAfter: JsonObject? = null,
+    val mergeReview: com.sperance.exileforge.core.editor.conflict.MergeReview? = null,
+    val mergeRemote: JsonObject? = null,
+    val failure: com.sperance.exileforge.core.network.FailureState? = null,
+
     val profile: UserProfile? = null, val sessionEpoch: Int = 0, val conflict: Boolean = false,
     val equipmentView: EquipmentView? = null, val characterOwner: String = "",
     val tab: Int = 3, val catalog: Catalog = Catalog.EQUIPMENT,
@@ -25,6 +38,7 @@ data class ForgeState(
     val checks: List<CheckResult> = emptyList(), val health: String = "Соединение ещё не проверено"
 ) {
     val isAdmin: Boolean get() = signedIn && profile?.role == "ADMIN"
-    val canEdit: Boolean get() = signedIn && (catalog == Catalog.CHARACTERS || isAdmin)
+    val adminTools: Boolean get() = isAdmin && mode == AppMode.ADMIN
+    val canEdit: Boolean get() = signedIn && (catalog == Catalog.CHARACTERS || adminTools)
     val ownsCharacter: Boolean get() = signedIn && profile?.id == characterOwner
 }

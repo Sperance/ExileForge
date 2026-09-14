@@ -49,3 +49,5 @@ fun modifierValues(mod: JsonObject): String = (mod["values"] as? JsonArray).orEm
     val n = (value as? JsonPrimitive)?.doubleOrNull
     if(n != null && n.isFinite() && n == n.toLong().toDouble()) n.toLong().toString() else (value as? JsonPrimitive)?.content.orEmpty()
 }
+
+fun inventoryDocument(instance: com.sperance.exileforge.core.model.hero.EquipmentInstance, base: JsonObject?): JsonObject = inventoryDocument(instance.document(), base)

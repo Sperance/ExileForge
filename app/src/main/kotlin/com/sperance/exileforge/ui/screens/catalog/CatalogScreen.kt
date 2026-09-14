@@ -28,12 +28,16 @@ import kotlinx.serialization.json.*
         item {
             Text(if(s.catalog == Catalog.CHARACTERS) "Персонажи" else "Хранилище", style = MaterialTheme.typography.headlineLarge)
             Text("${s.total} записей · страница ${s.page + 1} / ${maxOf(1, s.totalPages)}", color = Muted)
-            CatalogSwitch(s, vm)
+            if(s.adminTools) CatalogSwitch(s, vm)
             if (s.editorOpen) Text("В кузнице открыт предмет. Закройте редактор для смены каталога.", color = Muted, fontSize = 12.sp)
         }
         item {
-            OutlinedTextField(s.query, vm::query, label = { Text("Поиск на текущей странице") },
+            OutlinedTextField(s.query, vm::query, label = { Text("Поиск по всему каталогу") },
                 leadingIcon = { Icon(Icons.Outlined.Search, null) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+        }
+        item {
+            if(s.catalog == Catalog.EQUIPMENT) CatalogFilters(s, vm)
+            Button(enabled = !s.busy && s.signedIn, onClick = vm::applyFilters) { Text("Найти") }
         }
         item {
             EntitySpinner("Открыть запись", "", when(s.catalog) {
@@ -51,7 +55,7 @@ import kotlinx.serialization.json.*
                 OutlinedButton(enabled = !s.busy && !s.editorOpen, onClick = vm::randomItem) { Text("Получить случайный предмет") }
             }
         }
-        val visible = s.items.filter { it.text("name").contains(s.query, true) || it.entityId.contains(s.query, true) }
+        val visible = s.items
         if (visible.isEmpty()) item { InfoCard(if (s.busy) "Загрузка…" else "Предметов нет", "Обновите список, измените поиск или создайте новый предмет.") }
         items(visible, key = { it.entityId }) { doc -> ItemCard(doc, enabled = !s.busy && !s.editorOpen) { vm.open(doc.entityId) } }
         item {

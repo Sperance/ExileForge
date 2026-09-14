@@ -49,6 +49,21 @@ class GameApi(
         // The JWT subject is only a lookup key. Permissions come from the authenticated response.
         return WireJson.decodeFromJsonElement(request("GET", "api/v1/user", mapOf("id" to id), authenticated = true))
     }
+    suspend fun character(id: String): com.sperance.exileforge.core.model.hero.CharacterSummary {
+        val document = get(Catalog.CHARACTERS, id) ?: error("Персонаж недоступен")
+        return WireJson.decodeFromJsonElement(document)
+    }
+    suspend fun compareEquipment(id: String, command: EquipCommand): com.sperance.exileforge.core.model.hero.EquipmentComparison {
+        requireId(id); return WireJson.decodeFromJsonElement(request("POST", "api/v1/character/$id/compareEquipment", body = WireJson.encodeToJsonElement(command), authenticated = true))
+    }
+    suspend fun craftOptions(id: String, uuid: String): com.sperance.exileforge.core.model.hero.CraftOptions {
+        requireId(id); return WireJson.decodeFromJsonElement(request("GET", "api/v1/character/$id/craftOptions", mapOf("equipmentUuid" to uuid), authenticated = true))
+    }
+    suspend fun search(catalog: Catalog, page: Int, filter: com.sperance.exileforge.core.model.CatalogFilter): ItemPage {
+        require(page >= 0)
+        val result = request("GET", "${route(catalog)}/paged", filter.parameters() + mapOf("page" to "$page", "size" to "20"), authenticated = true).jsonObject
+        return ItemPage(result.getValue("items").jsonArray.map { it.jsonObject }, result.getValue("page").jsonPrimitive.int, result.getValue("totalPages").jsonPrimitive.int, result.getValue("totalItems").jsonPrimitive.long)
+    }
     suspend fun equipment(id: String): EquipmentView { requireId(id); return WireJson.decodeFromJsonElement(request("GET", "api/v1/character/$id/equipment", authenticated = true)) }
     suspend fun equip(id: String, command: EquipCommand): EquipmentView = characterCommand(id, "equip", WireJson.encodeToJsonElement(command))
     suspend fun unequip(id: String, command: UnequipCommand): EquipmentView = characterCommand(id, "unequip", WireJson.encodeToJsonElement(command))
@@ -59,14 +74,14 @@ class GameApi(
     }
     suspend fun grant(id: String, command: GrantEquipmentCommand): EquipmentView { requireId(id); return WireJson.decodeFromJsonElement(request("POST", "api/v1/character/inventory/itemToInventory", mapOf("characterId" to id), WireJson.encodeToJsonElement(command), authenticated = true)) }
     suspend fun adjustItems(id: String, command: AdjustItemsCommand): EquipmentView { requireId(id); return WireJson.decodeFromJsonElement(request("POST", "api/v1/character/inventory/addItem", mapOf("characterId" to id), WireJson.encodeToJsonElement(command), authenticated = true)) }
-    suspend fun recipe(id: String): JsonObject { requireId(id); return request("GET", "api/v1/recipe", mapOf("id" to id), authenticated = true).jsonObject }
+    suspend fun recipe(id: String): com.sperance.exileforge.core.model.hero.RecipeDocument { requireId(id); return WireJson.decodeFromJsonElement(request("GET", "api/v1/recipe", mapOf("id" to id), authenticated = true)) }
     suspend fun changePassword(command: ChangePasswordCommand) {
         request("POST", "api/v1/user/changePassword", body = WireJson.encodeToJsonElement(command), authenticated = true, sensitive = true)
         logout()
     }
-    suspend fun referencePage(source: EntitySource, page: Int): ItemPage {
+    suspend fun referencePage(source: EntitySource, page: Int, query: String = ""): ItemPage {
         require(page >= 0)
-        val body = request("GET", "api/v1/${source.path}/paged", mapOf("page" to "$page", "size" to "50"), authenticated = true).jsonObject
+        val body = request("GET", "api/v1/${source.path}/paged", mapOf("page" to "$page", "size" to "50").let { if(query.isBlank()) it else it + ("q" to query) }, authenticated = true).jsonObject
         return ItemPage(body.getValue("items").jsonArray.map { it.jsonObject }, body.getValue("page").jsonPrimitive.int,
             body.getValue("totalPages").jsonPrimitive.int, body.getValue("totalItems").jsonPrimitive.long)
     }

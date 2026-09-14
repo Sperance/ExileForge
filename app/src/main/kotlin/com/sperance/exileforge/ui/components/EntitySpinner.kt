@@ -17,8 +17,8 @@ import com.sperance.exileforge.core.network.ItemPage
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.JsonObject
 
-val LocalEntityPageLoader = staticCompositionLocalOf<suspend (EntitySource, Int) -> ItemPage> {
-    { _, _ -> error("Entity page loader is not provided") }
+val LocalEntityPageLoader = staticCompositionLocalOf<suspend (EntitySource, Int, String) -> ItemPage> {
+    { _, _, _ -> error("Entity page loader is not provided") }
 }
 
 /** Reusable paged selector. Only the selected identifier leaves this component. */
@@ -38,11 +38,12 @@ val LocalEntityPageLoader = staticCompositionLocalOf<suspend (EntitySource, Int)
     OutlinedButton(enabled = enabled, onClick = { records = emptyList(); page = 0; totalPages = 1; query = ""; expanded = true }, modifier = Modifier.fillMaxWidth()) {
         Text("$label: ${selected?.let(::title) ?: if(value.isBlank()) "Выбрать" else "Выбрано · ${value.takeLast(6)}"} ▾")
     }
-    LaunchedEffect(expanded, page, retry, source) {
+    LaunchedEffect(expanded, page, retry, source, query) {
         if(!expanded) return@LaunchedEffect
         loading = true; failure = null
         try {
-            val result = loader(source, page)
+            kotlinx.coroutines.delay(300)
+            val result = loader(source, page, query)
             records = (if(page == 0) result.items else records + result.items).distinctBy { it.entityId }
             totalPages = result.totalPages
         } catch(e: CancellationException) { throw e }
@@ -51,11 +52,11 @@ val LocalEntityPageLoader = staticCompositionLocalOf<suspend (EntitySource, Int)
     }
     if(expanded) AlertDialog(onDismissRequest = { expanded = false }, title = { Text(label) }, text = {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(query, { query = it }, label = { Text("Поиск по загруженным записям") }, singleLine = true)
+            OutlinedTextField(query, { query = it; page = 0; records = emptyList() }, label = { Text("Поиск по всему каталогу") }, singleLine = true)
             if(loading) LinearProgressIndicator(Modifier.fillMaxWidth())
             failure?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             LazyColumn(Modifier.fillMaxWidth().heightIn(max = 320.dp)) {
-                items(records.filter { title(it).contains(query, true) || it.entityId.contains(query, true) }, key = { it.entityId }) { record ->
+                items(records, key = { it.entityId }) { record ->
                     TextButton(enabled = enabled, onClick = { onChange(record.entityId); expanded = false }, modifier = Modifier.fillMaxWidth()) {
                         ItemEmblem(itemVisualKind(record), Gold, Modifier.size(48.dp))
                         Text("${title(record)} · ${record.entityId.takeLast(6)}", modifier = Modifier.weight(1f).padding(start = 12.dp))

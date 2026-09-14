@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.contract.entityId
 import com.sperance.exileforge.core.contract.text
+import com.sperance.exileforge.presentation.state.AppMode
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.ui.components.LocalEntityPageLoader
 import com.sperance.exileforge.ui.screens.catalog.CatalogScreen
@@ -45,11 +46,10 @@ import kotlinx.serialization.json.*
         snackbarHost = { SnackbarHost(snackbar) },
         bottomBar = {
             NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 0.dp) {
-                val labels = listOf("Каталог", "Редактор", "Проверки", "Сервер", "Герой")
-                val icons = listOf(Icons.Outlined.Inventory2, Icons.Outlined.Build, Icons.AutoMirrored.Outlined.FactCheck, Icons.Outlined.Dns, Icons.Outlined.PersonOutline)
-                labels.forEachIndexed { index, label ->
-                    NavigationBarItem(selected = s.tab == index, onClick = { vm.tab(index) },
-                        icon = { Icon(icons[index], contentDescription = null) }, label = { Text(label, fontSize = 11.sp) })
+                val destinations = if(s.adminTools) listOf(0 to "Каталог", 1 to "Редактор", 2 to "Проверки", 4 to "Герой", 3 to "Аккаунт") else listOf(0 to "Персонажи", 4 to "Герой", 5 to "Кузница", 3 to "Аккаунт")
+                val icons = mapOf(0 to Icons.Outlined.Inventory2, 1 to Icons.Outlined.Build, 2 to Icons.AutoMirrored.Outlined.FactCheck, 3 to Icons.Outlined.Dns, 4 to Icons.Outlined.PersonOutline, 5 to Icons.Outlined.Build)
+                destinations.forEach { (index, label) ->
+                    NavigationBarItem(selected = s.tab == index, onClick = { vm.tab(index) }, icon = { Icon(icons.getValue(index), null) }, label = { Text(label, fontSize = 11.sp) })
                 }
             }
         }
@@ -63,7 +63,7 @@ import kotlinx.serialization.json.*
                     Text("EXILE FORGE", style = MaterialTheme.typography.titleLarge, color = Gold)
                     Text("АРСЕНАЛ ИЗГНАННИКА", fontSize = 9.sp, letterSpacing = 2.sp, color = Muted)
                 }
-                Text("API 0.9", style = MaterialTheme.typography.labelSmall, color = Muted)
+                if(s.isAdmin) TextButton(enabled = !s.busy && !s.editorOpen, onClick = { vm.mode(if(s.adminTools) AppMode.PLAYER else AppMode.ADMIN) }) { Text(if(s.adminTools) "Админ" else "Игрок") }
             }
             if (s.busy) LinearProgressIndicator(Modifier.fillMaxWidth()) else HorizontalDivider(color = Gold.copy(alpha = .25f))
             when (s.tab) {
@@ -72,6 +72,7 @@ import kotlinx.serialization.json.*
                 2 -> ChecksScreen(s, vm, logs)
                 3 -> ServerScreen(s, vm)
                 4 -> InventoryForge(s, vm)
+                5 -> InventoryForge(s, vm, forgeOnly = true)
             }
         }
     }

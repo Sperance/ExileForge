@@ -3,6 +3,7 @@ package com.sperance.exileforge.ui
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performClick
 import com.sperance.exileforge.core.model.EntitySource
 import com.sperance.exileforge.core.network.ItemPage
@@ -30,8 +31,10 @@ class EntitySpinnerTest {
         }
         compose.onNodeWithText("Персонаж: Выбрать ▾").performClick()
         compose.waitForIdle()
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Загрузить ещё").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Загрузить ещё").performClick()
         compose.waitForIdle()
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Изгнанник · 234567").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Изгнанник · 234567").performClick()
         compose.runOnIdle { assertEquals(id, selected) }
     }

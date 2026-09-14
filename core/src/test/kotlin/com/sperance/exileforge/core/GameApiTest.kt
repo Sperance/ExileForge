@@ -19,14 +19,14 @@ class GameApiTest {
     private lateinit var api: GameApi
     private val id = "0123456789abcdef01234567"
     private val journal = RequestJournal()
-    @Before fun before() = runBlocking {
+    @Before fun before(): Unit = runBlocking {
         server = MockWebServer(); server.start(); api = GameApi(server.url("/game/").toString(), journal)
         ok("""{"token":"private-token"}"""); api.login("name", "private-password"); server.takeRequest(); Unit
     }
     @After fun after() { server.shutdown() }
     private fun ok(data: String) { server.enqueue(MockResponse().setBody("""{"success":true,"data":$data}""")) }
     private fun failure(status: Int) { server.enqueue(MockResponse().setResponseCode(status).setBody("""{"success":false,"error":{"errorCode":"REJECTED","message":"Rejected"}}""")) }
-    @Test fun `create uses server identity and auth`() = runBlocking {
+    @Test fun `create uses server identity and auth`(): Unit = runBlocking {
         val doc = template(Catalog.EQUIPMENT)
         ok("[${JsonObject(doc + mapOf("_id" to JsonPrimitive(id), "version" to JsonPrimitive(0)))}]")
         assertEquals(id, api.create(Catalog.EQUIPMENT, doc).entityId)
@@ -36,7 +36,7 @@ class GameApiTest {
         assertEquals("features.data.equipment.equipment_data.Weapon", sent.text("type"))
         assertFalse("_id" in sent); assertFalse("modifiers" in sent)
     }
-    @Test fun `update and delete preserve exact client version`() = runBlocking {
+    @Test fun `update and delete preserve exact client version`(): Unit = runBlocking {
         val version = 9007199254740993L
         val changes = buildJsonObject { put("name", "Changed") }
         ok("""{"_id":"$id","version":9007199254740994}""")
@@ -51,23 +51,23 @@ class GameApiTest {
         assertEquals("DELETE", delete.method)
         assertEquals(version + 1, WireJson.parseToJsonElement(delete.body.readUtf8()).jsonObject.getValue("expectedVersion").jsonPrimitive.long)
     }
-    @Test fun `404 is absent but denied and other errors are preserved`() = runBlocking {
+    @Test fun `404 is absent but denied and other errors are preserved`(): Unit = runBlocking {
         failure(404); assertNull(api.get(Catalog.ITEMS, id)); server.takeRequest()
         for(status in listOf(403, 409, 429, 500)) {
             failure(status); assertEquals(status, assertFailsWith<ApiFailure> { api.get(Catalog.ITEMS, id) }.status); server.takeRequest()
         }
     }
-    @Test fun `unauthorized response revokes token and does not retry`() = runBlocking {
+    @Test fun `unauthorized response revokes token and does not retry`(): Unit = runBlocking {
         failure(401); assertEquals(401, assertFailsWith<ApiFailure> { api.page(Catalog.ITEMS, 0) }.status)
         assertFailsWith<IllegalArgumentException> { api.page(Catalog.ITEMS, 0) }
         assertEquals(2, server.requestCount)
     }
-    @Test fun `stale mutation is never automatically resubmitted`() = runBlocking {
+    @Test fun `stale mutation is never automatically resubmitted`(): Unit = runBlocking {
         failure(409)
         assertFailsWith<ApiFailure> { api.update(Catalog.CHARACTERS, id, buildJsonObject { put("name", "Hero") }, 4) }
         assertEquals(2, server.requestCount)
     }
-    @Test fun `character cannot assign owner inventory money or stats`() = runBlocking {
+    @Test fun `character cannot assign owner inventory money or stats`(): Unit = runBlocking {
         for(key in listOf("userId", "money", "level", "items", "params", "role", "version")) {
             assertFailsWith<IllegalArgumentException> { api.update(Catalog.CHARACTERS, id, buildJsonObject { put(key, "bad") }, 0) }
         }
@@ -76,7 +76,7 @@ class GameApiTest {
         ok("[${JsonObject(doc + ("_id" to JsonPrimitive(id)))}]"); api.create(Catalog.CHARACTERS, doc)
         assertEquals(setOf("name", "description"), WireJson.parseToJsonElement(server.takeRequest().body.readUtf8()).jsonArray.single().jsonObject.keys)
     }
-    @Test fun `equipment commands use instance UUID and return server stats`() = runBlocking {
+    @Test fun `equipment commands use instance UUID and return server stats`(): Unit = runBlocking {
         val view = """{"characterVersion":5,"equipped":{"RING_LEFT":"$id"},"inventory":[],"items":[{"itemId":"$id","amount":8}],"stats":{"version":5,"values":{"maximum_life":88.0},"weapons":{},"unsupported":["custom"]}}"""
         ok(view); val result = api.equip(id, EquipCommand(4, id, EquipmentSlot.RING_LEFT))
         assertEquals(88.0, result.stats.values["maximum_life"])
@@ -90,36 +90,36 @@ class GameApiTest {
         assertFailsWith<IllegalArgumentException> { ApiCapabilities().requireCompatible() }
         ApiCapabilities(2, true, true).requireCompatible()
     }
-    @Test fun `password change is redacted and clears session`() = runBlocking {
+    @Test fun `password change is redacted and clears session`(): Unit = runBlocking {
         ok("{}"); api.changePassword(ChangePasswordCommand(8, "private-old-password", "private-new-password"))
         assertEquals("/game/api/v1/user/changePassword", server.takeRequest().path)
         assertFalse(journal.entries.value.toString().contains("private-"))
         assertFailsWith<IllegalArgumentException> { api.page(Catalog.ITEMS, 0) }
     }
-    @Test fun `catalog pagination uses bearer and zero based page`() = runBlocking {
+    @Test fun `catalog pagination uses bearer and zero based page`(): Unit = runBlocking {
         ok("""{"items":[],"page":0,"totalPages":0,"totalItems":0}""")
         assertEquals(0, api.page(Catalog.ITEMS, 0).page)
         val request = server.takeRequest(); assertEquals("/game/api/v1/items/paged?page=0&size=20", request.path)
         assertEquals("Bearer private-token", request.getHeader("Authorization"))
     }
-    @Test fun `malformed server response remains a useful protocol error`() = runBlocking {
+    @Test fun `malformed server response remains a useful protocol error`(): Unit = runBlocking {
         server.enqueue(MockResponse().setResponseCode(502).setBody("<html>Error</html>"))
         val e = assertFailsWith<ApiFailure> { api.get(Catalog.ITEMS, id) }
         assertEquals(502, e.status); assertTrue(e.message!!.contains("JSON"))
     }
-    @Test fun `cancel response body promptly`() = runBlocking {
+    @Test fun `cancel response body promptly`(): Unit = runBlocking {
         server.enqueue(MockResponse().setBody("""{"success":true,"data":null}""").setBodyDelay(3, TimeUnit.SECONDS))
         val job = async(start = CoroutineStart.UNDISPATCHED) { api.get(Catalog.ITEMS, id) }
         assertNotNull(server.takeRequest(2, TimeUnit.SECONDS))
         withTimeout(1_000) { job.cancelAndJoin() }
         assertTrue(job.isCancelled)
     }
-    @Test fun `invalid identity and versions never reach network`() = runBlocking {
+    @Test fun `invalid identity and versions never reach network`(): Unit = runBlocking {
         assertFailsWith<IllegalArgumentException> { api.delete(Catalog.ITEMS, "wrong", 0) }
         assertFailsWith<IllegalArgumentException> { api.delete(Catalog.ITEMS, id, -1) }
         assertEquals(1, server.requestCount)
     }
-    @Test fun `profile is fetched with JWT subject and server role`() = runBlocking {
+    @Test fun `profile is fetched with JWT subject and server role`(): Unit = runBlocking {
         val payload = java.util.Base64.getUrlEncoder().withoutPadding().encodeToString("""{"sub":"$id","role":"ADMIN"}""".toByteArray())
         ok("""{"token":"header.$payload.signature"}"""); api.login("user", "password"); server.takeRequest()
         ok("""{"id":"$id","version":3,"name":"Hero","login":"user","role":"USER"}""")
@@ -133,7 +133,7 @@ class GameApiTest {
         val doc = com.sperance.exileforge.core.display.inventoryDocument(instance, catalog)
         assertEquals("Original", doc.text("name")); assertEquals("RING", doc.text("slot"))
     }
-    @Test fun `recipe and grants retain command versions and identities`() = runBlocking {
+    @Test fun `recipe and grants retain command versions and identities`(): Unit = runBlocking {
         val view = """{"characterVersion":8,"equipped":{},"inventory":[],"items":[],"stats":{"version":8,"values":{}}}"""
         ok(view); api.useRecipe(id, UseRecipeCommand(7, id, 12, listOf(id), 2))
         val recipe = server.takeRequest(); val sent = WireJson.parseToJsonElement(recipe.body.readUtf8()).jsonObject

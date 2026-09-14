@@ -163,7 +163,8 @@ class ForgeViewModel(private val store: ServerStore, private val journal: Reques
         metadataJob?.cancel(); api.logout(); journal.clear()
         mutable.update { it.copy(signedIn = false, profile = null, sessionEpoch = it.sessionEpoch + 1, items = emptyList(), total = 0, page = 0, totalPages = 0,
             original = null, draft = JsonObject(emptyMap()), editorOpen = false, inventory = emptyList(), inventoryVersion = null, equipmentView = null,
-            inventoryBases = emptyMap(), inventoryDefinitions = emptyList(), characterOwner = "", selectedEquipment = "", tab = 3, conflict = false) }
+            inventoryBases = emptyMap(), inventoryDefinitions = emptyList(), characterOwner = "", characterId = it.pending?.characterId.orEmpty(),
+            selectedEquipment = "", selectedCurrency = "", currencies = emptyList(), checks = emptyList(), tab = 3, conflict = false) }
     }
     fun login(login: String, password: String) = task {
         clearSession()

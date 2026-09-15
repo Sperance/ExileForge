@@ -8,6 +8,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.contract.text
@@ -59,7 +60,7 @@ import java.util.Locale
                 val doc = instance?.let { inventoryDocument(it, s.inventoryBases[it.equipmentId]) } ?: buildJsonObject { put("slot", when(slot) { EquipmentSlot.RING_LEFT, EquipmentSlot.RING_RIGHT -> "RING"; EquipmentSlot.MAIN_HAND -> "WEAPON_1H"; EquipmentSlot.OFF_HAND -> "SHIELD"; else -> slot.name }) }
                 val shape = CutCornerShape(8.dp)
                 Column(Modifier.widthIn(min = 96.dp, max = 120.dp)
-                    .background(if(instance == null) Panel else panelBrush(Gold), shape)
+                    .background(if(instance == null) SolidColor(Panel) else panelBrush(Gold), shape)
                     .border(1.dp, if(instance == null) Bronze.copy(alpha = .4f) else Gold.copy(alpha = .55f), shape)
                     .padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(slot.title(s.lang), style = MaterialTheme.typography.labelSmall, color = Gold, textAlign = TextAlign.Center)

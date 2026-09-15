@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.sperance.exileforge.core.i18n.Lang
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.first
 
@@ -31,4 +32,7 @@ class ServerStore(private val context: Context) {
     }
     val server = context.settings.data.map { it[key] ?: "http://10.1.10.198:8080/" }
     suspend fun save(value: String) { context.settings.edit { it[key] = value } }
+    private val languageKey = stringPreferencesKey("language")
+    val language = context.settings.data.map { Lang.of(it[languageKey]) }
+    suspend fun saveLanguage(value: Lang) { context.settings.edit { it[languageKey] = value.code } }
 }

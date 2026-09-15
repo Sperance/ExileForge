@@ -2,6 +2,7 @@ package com.sperance.exileforge.core.editor.conflict
 
 import com.sperance.exileforge.core.contract.protectedFields
 import kotlinx.serialization.json.*
+import com.sperance.exileforge.core.i18n.tr
 
 data class FieldConflict(val field: String, val original: JsonElement?, val local: JsonElement?, val remote: JsonElement?)
 data class MergeReview(val merged: JsonObject, val conflicts: List<FieldConflict>)
@@ -19,7 +20,7 @@ object ThreeWayMerge {
         return MergeReview(JsonObject(merged), conflicts)
     }
     fun resolve(review: MergeReview, keepLocal: Map<String, Boolean>): JsonObject {
-        require(review.conflicts.all { it.field in keepLocal }) { "Выберите значение для каждого конфликта" }
+        require(review.conflicts.all { it.field in keepLocal }) { tr("Выберите значение для каждого конфликта", "Choose a value for every conflict") }
         val fields = review.merged.toMutableMap()
         review.conflicts.forEach { c -> (if(keepLocal.getValue(c.field)) c.local else c.remote)?.let { fields[c.field] = it } ?: fields.remove(c.field) }
         return JsonObject(fields)

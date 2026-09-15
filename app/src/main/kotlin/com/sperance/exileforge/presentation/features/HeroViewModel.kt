@@ -18,6 +18,7 @@ import kotlinx.coroutines.sync.withPermit
 import kotlinx.serialization.json.*
 
 import com.sperance.exileforge.presentation.ForgeRuntime
+import com.sperance.exileforge.core.i18n.tr
 
 class HeroViewModel(private val runtime: ForgeRuntime) {
     private val state get() = runtime.state
@@ -39,7 +40,7 @@ task {
     } }
     fun showCharacterInventory(id: String) { with(runtime) {
 task {
-        check(state.value.pending == null || state.value.characterId == id) { "Сначала подтвердите предыдущую операцию" }
+        check(state.value.pending == null || state.value.characterId == id) { tr("Сначала подтвердите предыдущую операцию", "Confirm the previous operation first") }
         mutable.update { it.copy(passiveState = null, passiveTree = null, passivePending = null, passiveCharacterId = "", battleView = null, battlePending = null, battleCharacterId = "", tab = 4, characterId = id, equipmentView = null, characterOwner = "", inventory = emptyList(), inventoryVersion = null) }
         readInventory()
         val currencies = api.currencies()
@@ -95,15 +96,15 @@ task {
     } }
     fun inventoryAction(operation: String) { with(runtime) {
 task(writing = true) {
-        check(state.value.pending == null) { "Сначала разрешите результат предыдущей операции" }
+        check(state.value.pending == null) { tr("Сначала разрешите результат предыдущей операции", "Resolve the result of the previous operation first") }
         val state = state.value
-        check(state.ownsCharacter) { "Сферы и дроп доступны только владельцу персонажа" }
-        if(operation == "drop") check(state.isAdmin) { "Дроп доступен администратору" }
-        val version = requireNotNull(state.inventoryVersion) { "Загрузите инвентарь" }
+        check(state.ownsCharacter) { tr("Сферы и дроп доступны только владельцу персонажа", "Orbs and drops are available to the character's owner only") }
+        if(operation == "drop") check(state.isAdmin) { tr("Дроп доступен администратору", "Drops are available to administrators") }
+        val version = requireNotNull(state.inventoryVersion) { tr("Загрузите инвентарь", "Load the inventory") }
         val payload = buildJsonObject {
             put("requestId", java.util.UUID.randomUUID().toString()); put("expectedVersion", version)
             if(operation == "craft") {
-                require(state.selectedEquipment.isNotBlank() && state.selectedCurrency.isNotBlank()) { "Выберите экипировку и сферу" }
+                require(state.selectedEquipment.isNotBlank() && state.selectedCurrency.isNotBlank()) { tr("Выберите экипировку и сферу", "Choose an item and an orb") }
                 put("equipmentUuid", state.selectedEquipment); put("currency", state.selectedCurrency)
             }
         }
@@ -158,17 +159,17 @@ val id = state.value.characterId.trim()
 
     private fun characterCommand(block: suspend (String, Long) -> EquipmentView) { with(runtime) {
 task(writing = true) {
-        check(state.value.pending == null) { "Сначала подтвердите предыдущую операцию" }
-        val version = requireNotNull(state.value.inventoryVersion) { "Обновите экипировку" }
-        try { applyEquipmentView(block(state.value.characterId, version)); mutable.update { it.copy(message = "Изменения сохранены") } }
+        check(state.value.pending == null) { tr("Сначала подтвердите предыдущую операцию", "Confirm the previous operation first") }
+        val version = requireNotNull(state.value.inventoryVersion) { tr("Обновите экипировку", "Refresh the equipment") }
+        try { applyEquipmentView(block(state.value.characterId, version)); mutable.update { it.copy(message = tr("Изменения сохранены", "Changes saved")) } }
         catch(e: Exception) { mutable.update { it.copy(inventoryVersion = null) }; throw e }
     }
     } }
 
     private suspend fun executePending() { with(runtime) {
 val pending = requireNotNull(state.value.pending)
-        val character = api.get(Catalog.CHARACTERS, pending.characterId) ?: error("Персонаж недоступен")
-        check(character.text("userId") == state.value.profile?.id) { "Войдите в аккаунт владельца ожидающей операции" }
+        val character = api.get(Catalog.CHARACTERS, pending.characterId) ?: error(tr("Персонаж недоступен", "The character is unavailable"))
+        check(character.text("userId") == state.value.profile?.id) { tr("Войдите в аккаунт владельца ожидающей операции", "Sign in as the owner of the pending operation") }
         val result = try { api.mutateInventory(pending.characterId, pending.operation, pending.payload) }
         catch(e: ApiFailure) {
             // Only explicit client rejections are definitive. Network/5xx can hide a committed write.
@@ -182,9 +183,9 @@ val pending = requireNotNull(state.value.pending)
         store.savePending(null)
         mutable.update { it.copy(pending = null, craftAfter = if(pending.operation == "craft") equipment else it.craftAfter, inventoryVersion = result.getValue("characterVersion").jsonPrimitive.long,
             inventory = it.inventory.filterNot { item -> item.text("uuid") == equipment.text("uuid") } + equipment,
-            selectedEquipment = equipment.text("uuid"), message = "Операция выполнена" + (result["currencyRemaining"]?.let { amount -> ". Осталось сфер: $amount" } ?: "")) }
+            selectedEquipment = equipment.text("uuid"), message = tr("Операция выполнена", "Operation complete") + (result["currencyRemaining"]?.let { amount -> tr(". Осталось сфер: $amount", ". Orbs left: $amount") } ?: "")) }
         try { readInventory() } catch(e: CancellationException) { throw e }
-        catch(_: Exception) { mutable.update { it.copy(inventoryVersion = null, message = "Операция выполнена. Обновите инвентарь перед следующей.") } }
+        catch(_: Exception) { mutable.update { it.copy(inventoryVersion = null, message = tr("Операция выполнена. Обновите инвентарь перед следующей.", "Operation complete. Refresh the inventory before the next one.")) } }
 
     } }
 

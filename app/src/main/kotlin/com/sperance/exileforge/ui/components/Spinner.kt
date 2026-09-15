@@ -9,34 +9,43 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.i18n.tr
 import com.sperance.exileforge.ui.icons.propertyIcon
 import com.sperance.exileforge.ui.theme.Gold
+import com.sperance.exileforge.ui.theme.Muted
 
 @Composable fun Spinner(label: String, value: String, options: Map<String, String>, enabled: Boolean = true, onChange: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     var search by remember { mutableStateOf("") }
     OutlinedButton(onClick = { search = ""; expanded = true }, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
-        Icon(propertyIcon(label), null, modifier = Modifier.size(20.dp))
+        Icon(propertyIcon(label), null, modifier = Modifier.size(20.dp), tint = Gold)
         Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
-            Text(label, style = MaterialTheme.typography.labelSmall)
-            Text(options[value] ?: value.ifBlank { "Выбрать" }, style = MaterialTheme.typography.bodyMedium)
+            Text(label.uppercase(), style = MaterialTheme.typography.labelSmall, color = Muted)
+            Text(options[value] ?: value.ifBlank { tr("Выбрать", "Choose") }, style = MaterialTheme.typography.bodyMedium)
         }
-        Icon(Icons.Outlined.ExpandMore, null)
+        Icon(Icons.Outlined.ExpandMore, null, tint = Gold)
     }
-    if(expanded) AlertDialog(onDismissRequest = { expanded = false }, title = { Text(label) }, text = {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(search, { search = it }, label = { Text("Найти вариант") }, leadingIcon = { Icon(Icons.Outlined.Search, null) }, singleLine = true)
-            val filtered = options.filter { (key, title) -> key.contains(search, true) || title.contains(search, true) }.toList()
-            if(filtered.isEmpty()) Text("Нет подходящих вариантов")
-            LazyColumn(Modifier.fillMaxWidth().heightIn(max = 400.dp)) {
-                items(filtered, key = { it.first }) { (key, title) ->
-                    TextButton(enabled = enabled, onClick = { expanded = false; onChange(key) }, modifier = Modifier.fillMaxWidth()) {
-                        Icon(propertyIcon(key), null, tint = Gold, modifier = Modifier.size(22.dp))
-                        Text(title, modifier = Modifier.weight(1f).padding(horizontal = 12.dp))
-                        if(key == value) Icon(Icons.Outlined.CheckCircle, "Выбрано", tint = Gold)
-                    }
+    if(expanded) ForgeDialog(label, onDismiss = { expanded = false }) {
+        OutlinedTextField(search, { search = it }, label = { Text(tr("Найти вариант", "Find an option")) }, leadingIcon = { Icon(Icons.Outlined.Search, null) }, singleLine = true)
+        val filtered = options.filter { (key, title) -> key.contains(search, true) || title.contains(search, true) }.toList()
+        if(filtered.isEmpty()) Text(tr("Нет подходящих вариантов", "No matching options"), color = Muted)
+        LazyColumn(Modifier.fillMaxWidth().heightIn(max = 400.dp)) {
+            items(filtered, key = { it.first }) { (key, title) ->
+                TextButton(enabled = enabled, onClick = { expanded = false; onChange(key) }, modifier = Modifier.fillMaxWidth()) {
+                    Icon(propertyIcon(key), null, tint = Gold, modifier = Modifier.size(22.dp))
+                    Text(title, modifier = Modifier.weight(1f).padding(horizontal = 12.dp))
+                    if(key == value) Icon(Icons.Outlined.CheckCircle, tr("Выбрано", "Selected"), tint = Gold)
                 }
             }
         }
-    }, confirmButton = { TextButton(onClick = { expanded = false }) { Text("Закрыть") } })
+    }
+}
+
+/** Every picker opens in the same stone-framed dialog. */
+@Composable internal fun ForgeDialog(title: String, onDismiss: () -> Unit, body: @Composable ColumnScope.() -> Unit) {
+    AlertDialog(onDismissRequest = onDismiss, containerColor = MaterialTheme.colorScheme.surface,
+        titleContentColor = Gold, shape = MaterialTheme.shapes.medium,
+        title = { Text(title.uppercase(), style = MaterialTheme.typography.titleMedium) },
+        text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp), content = body) },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(tr("Закрыть", "Close")) } })
 }

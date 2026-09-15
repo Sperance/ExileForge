@@ -3,58 +3,73 @@ package com.sperance.exileforge.ui.components
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.contract.text
 import com.sperance.exileforge.core.display.*
+import com.sperance.exileforge.core.i18n.tr
 import com.sperance.exileforge.ui.icons.ItemEmblem
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.serialization.json.*
 
+/** Path of Exile item frame: rarity border, engraved name band, then rolled properties. */
 @Composable fun ItemCard(doc: JsonObject, enabled: Boolean = true, selected: Boolean = false,
-    detailed: Boolean = false, definitions: List<JsonObject> = emptyList(), actionLabel: String = "Открыть", onClick: () -> Unit = {}) {
+    detailed: Boolean = false, definitions: List<JsonObject> = emptyList(), actionLabel: String = tr("Открыть", "Open"), onClick: () -> Unit = {}) {
     val color = rarityColor(doc.text("rarity"))
-    OutlinedCard(onClick = onClick, enabled = enabled, border = BorderStroke(if(selected) 2.dp else 1.dp, if(selected) Gold else color.copy(alpha = .36f)),
-        shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface, disabledContainerColor = MaterialTheme.colorScheme.surface, disabledContentColor = MaterialTheme.colorScheme.onSurface)) {
-        Column(Modifier.background(Brush.linearGradient(listOf(color.copy(alpha=.07f), MaterialTheme.colorScheme.surface))).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                ItemEmblem(itemVisualKind(doc), color)
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                    Text(doc.text("rarity").takeIf { it.isNotBlank() }?.let(::rarityTitle) ?: if(doc["userId"] != null) "ПЕРСОНАЖ" else "ПРЕДМЕТ", color = color, style = MaterialTheme.typography.labelSmall)
-                    Text(doc.text("name").ifBlank { "Предмет экипировки" }, style = MaterialTheme.typography.titleMedium, maxLines = if(detailed) 5 else 2, overflow = TextOverflow.Ellipsis)
-                    Text(doc.text("slot").takeIf { it.isNotBlank() }?.let(::slotTitle) ?: doc.text("category"), color = Muted, style = MaterialTheme.typography.bodySmall)
+    val shape = CutCornerShape(topStart = 14.dp, topEnd = 4.dp, bottomEnd = 14.dp, bottomStart = 4.dp)
+    OutlinedCard(onClick = onClick, enabled = enabled, border = BorderStroke(if(selected) 2.dp else 1.dp, if(selected) GoldBright else color.copy(alpha = .45f)),
+        shape = shape, modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.outlinedCardColors(containerColor = Panel, disabledContainerColor = Panel, disabledContentColor = MaterialTheme.colorScheme.onSurface)) {
+        Column(Modifier.background(Brush.verticalGradient(listOf(color.copy(alpha = .12f), Panel, Abyss)))) {
+            // Name band: the plate an item's title sits on in the stash tooltip.
+            Column(Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(color.copy(alpha = .22f), Color.Transparent)))
+                .drawBehind { drawLine(color.copy(alpha = .45f), Offset(0f, size.height), Offset(size.width, size.height), 1f) }
+                .padding(horizontal = 16.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(doc.text("rarity").takeIf { it.isNotBlank() }?.let(::rarityTitle)?.uppercase()
+                    ?: if(doc["userId"] != null) tr("ПЕРСОНАЖ", "CHARACTER") else tr("ПРЕДМЕТ", "ITEM"), color = color, style = MaterialTheme.typography.labelSmall)
+                Text(doc.text("name").ifBlank { tr("Предмет экипировки", "Equipment item") }, style = MaterialTheme.typography.titleMedium,
+                    color = color, maxLines = if(detailed) 5 else 2, overflow = TextOverflow.Ellipsis)
+            }
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    ItemEmblem(itemVisualKind(doc), color, Modifier.size(64.dp))
+                    Text(doc.text("slot").takeIf { it.isNotBlank() }?.let(::slotTitle) ?: doc.text("category"),
+                        color = Muted, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+                    if(selected) Icon(Icons.Outlined.CheckCircle, tr("Выбран", "Selected"), tint = GoldBright, modifier = Modifier.size(22.dp))
                 }
-                if(selected) Icon(Icons.Outlined.CheckCircle, "Выбран", tint = Gold, modifier = Modifier.size(22.dp))
-            }
-            HorizontalDivider(color = color.copy(alpha = .2f))
-            if(doc["itemLevel"] != null) PropertyRow("Уровень предмета", doc.text("itemLevel"), "level")
-            if(doc["level"] != null) PropertyRow("Уровень персонажа", doc.text("level"), "level")
-            if(doc["damage_min"] != null) PropertyRow("Урон", "${doc.text("damage_min")}–${doc.text("damage_max")}", "damage")
-            if(doc["defense"] != null) PropertyRow("Защита", doc.text("defense"), "defense")
-            if(doc["quality"] != null && (detailed || doc.text("quality") != "0")) PropertyRow("Качество", "${doc.text("quality")}%", "quality")
-            if(doc["price"] != null) PropertyRow("Цена", doc.text("price"), "price")
-            if(doc["userId"] != null) PropertyRow("Экипировка", (doc["equipments"] as? JsonArray).orEmpty().size.toString(), "equipment")
-            val mods = (doc["modifiers"] as? JsonArray) ?: (doc["params"] as? JsonArray) ?: JsonArray(emptyList())
-            mods.take(if(detailed) mods.size else 3).forEach { raw ->
-                val mod = raw as? JsonObject ?: return@forEach
-                PropertyRow(modifierTitle(mod, definitions), modifierValues(mod), mod.text("definitionId"))
-            }
-            if(!detailed && mods.size > 3) Text("Ещё ${mods.size - 3} свойств", color = Rune, style = MaterialTheme.typography.labelMedium)
-            if(doc.text("corrupted") == "true") PropertyRow("Осквернён", "Да", "corruption")
-            if(doc.text("mirrored") == "true") PropertyRow("Зеркальная копия", "Да", "mirror")
-            if(detailed && doc.text("description").isNotBlank()) Text(doc.text("description"), color = Muted, style = MaterialTheme.typography.bodyMedium)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-                Text(actionLabel, color = color, style = MaterialTheme.typography.labelLarge)
-                Icon(Icons.Outlined.ChevronRight, null, tint = color)
+                OrnateDivider(color.copy(alpha = .7f))
+                if(doc["itemLevel"] != null) PropertyRow(tr("Уровень предмета", "Item level"), doc.text("itemLevel"), "level")
+                if(doc["level"] != null) PropertyRow(tr("Уровень персонажа", "Character level"), doc.text("level"), "level")
+                if(doc["damage_min"] != null) PropertyRow(tr("Урон", "Damage"), "${doc.text("damage_min")}–${doc.text("damage_max")}", "damage")
+                if(doc["defense"] != null) PropertyRow(tr("Защита", "Defence"), doc.text("defense"), "defense")
+                if(doc["quality"] != null && (detailed || doc.text("quality") != "0")) PropertyRow(tr("Качество", "Quality"), "${doc.text("quality")}%", "quality")
+                if(doc["price"] != null) PropertyRow(tr("Цена", "Price"), doc.text("price"), "price")
+                if(doc["userId"] != null) PropertyRow(tr("Экипировка", "Equipment"), (doc["equipments"] as? JsonArray).orEmpty().size.toString(), "equipment")
+                val mods = (doc["modifiers"] as? JsonArray) ?: (doc["params"] as? JsonArray) ?: JsonArray(emptyList())
+                mods.take(if(detailed) mods.size else 3).forEach { raw ->
+                    val mod = raw as? JsonObject ?: return@forEach
+                    PropertyRow(modifierTitle(mod, definitions), modifierValues(mod), mod.text("definitionId"))
+                }
+                if(!detailed && mods.size > 3) Text(tr("Ещё ${mods.size - 3} свойств", "${mods.size - 3} more properties"), color = Rune, style = MaterialTheme.typography.labelMedium)
+                if(doc.text("corrupted") == "true") PropertyRow(tr("Осквернён", "Corrupted"), tr("Да", "Yes"), "corruption")
+                if(doc.text("mirrored") == "true") PropertyRow(tr("Зеркальная копия", "Mirrored"), tr("Да", "Yes"), "mirror")
+                if(detailed && doc.text("description").isNotBlank()) Text(doc.text("description"), color = Muted, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Start)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+                    Text(actionLabel.uppercase(), color = color, style = MaterialTheme.typography.labelLarge)
+                    Icon(Icons.Outlined.ChevronRight, null, tint = color)
+                }
             }
         }
     }

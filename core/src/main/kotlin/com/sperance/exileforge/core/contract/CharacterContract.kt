@@ -1,6 +1,7 @@
 package com.sperance.exileforge.core.contract
 
 import kotlinx.serialization.json.*
+import com.sperance.exileforge.core.i18n.tr
 
 fun validateCharacter(doc: JsonObject) {
     requireId(doc.text("userId"))
@@ -18,6 +19,6 @@ fun validateCharacter(doc: JsonObject) {
     }
     listOf("professionSkills", "stockSkills", "battleSkills", "boolSkills").forEach { field ->
         val stats = (doc[field] as? JsonArray).orEmpty().map { it.jsonObject.text("stat") }
-        require(stats.distinct().size == stats.size) { "$field: характеристика указана несколько раз" }
+        require(stats.distinct().size == stats.size) { tr("$field: характеристика указана несколько раз", "$field: the stat is listed more than once") }
     }
 }

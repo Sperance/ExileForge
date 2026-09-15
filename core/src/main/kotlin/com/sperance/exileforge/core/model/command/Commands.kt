@@ -1,5 +1,9 @@
 package com.sperance.exileforge.core.model.command
 
+import com.sperance.exileforge.core.i18n.Lang
+import com.sperance.exileforge.core.i18n.pick
+import com.sperance.exileforge.core.i18n.tr
+import com.sperance.exileforge.core.i18n.uiLanguage
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
 
@@ -14,9 +18,11 @@ import kotlinx.serialization.json.JsonObject
 @Serializable data class RedeemCommand(val expectedVersion: Long, val code: String)
 @Serializable data class UseRecipeCommand(val expectedVersion: Long, val recipeId: String, val recipeVersion: Long, val ingredientIds: List<String>, val amount: Long = 1)
 @Serializable data class ChangePasswordCommand(val expectedVersion: Long, val currentPassword: String, val newPassword: String)
-@Serializable enum class EquipmentSlot(val title: String) {
-    HELMET("Шлем"), BODY("Броня"), GLOVES("Перчатки"), BOOTS("Сапоги"), BELT("Пояс"), AMULET("Амулет"),
-    RING_LEFT("Левое кольцо"), RING_RIGHT("Правое кольцо"), MAIN_HAND("Основная рука"), OFF_HAND("Вторая рука"), WINGS("Крылья");
+@Serializable enum class EquipmentSlot(private val ru: String, private val en: String) {
+    HELMET("Шлем", "Helmet"), BODY("Броня", "Body armour"), GLOVES("Перчатки", "Gloves"), BOOTS("Сапоги", "Boots"),
+    BELT("Пояс", "Belt"), AMULET("Амулет", "Amulet"), RING_LEFT("Левое кольцо", "Left ring"), RING_RIGHT("Правое кольцо", "Right ring"),
+    MAIN_HAND("Основная рука", "Main hand"), OFF_HAND("Вторая рука", "Off hand"), WINGS("Крылья", "Wings");
+    fun title(lang: Lang = uiLanguage) = lang.pick(ru, en)
     companion object {
         fun forItem(slot: String): List<EquipmentSlot> = when (slot) {
             "RING" -> listOf(RING_LEFT, RING_RIGHT)
@@ -33,6 +39,6 @@ import kotlinx.serialization.json.JsonObject
 @Serializable data class EquipmentView(val characterVersion: Long, val equipped: Map<EquipmentSlot, String>, val inventory: List<com.sperance.exileforge.core.model.hero.EquipmentInstance>, val items: List<ItemStack>, val stats: CalculatedStats)
 @Serializable data class UserProfile(val id: String, val version: Long, val name: String, val login: String, val role: String, val countCharacters: Int = 0)
 @Serializable data class ApiCapabilities(val apiRevision: Int = 0, val versionedCrud: Boolean = false, val characterCommands: Boolean = false, val profile: String = "", val equipmentComparison: Boolean = false, val catalogSearch: Boolean = false, val craftOptions: Boolean = false, val combat: Boolean = false, val passiveTree: Boolean = false) {
-    fun requireWorkbench() { requireCompatible(); require(apiRevision >= 3 && equipmentComparison && catalogSearch && craftOptions) { "Обновите сервер до API revision 3 (0.10.0)" } }
-    fun requireCompatible() { require(apiRevision >= 2 && versionedCrud && characterCommands) { "Нужен ktor-bestgame 0.9.0 с командами персонажа и контролем версий" } }
+    fun requireWorkbench() { requireCompatible(); require(apiRevision >= 3 && equipmentComparison && catalogSearch && craftOptions) { tr("Обновите сервер до API revision 3 (0.10.0)", "Update the server to API revision 3 (0.10.0)") } }
+    fun requireCompatible() { require(apiRevision >= 2 && versionedCrud && characterCommands) { tr("Нужен ktor-bestgame 0.9.0 с командами персонажа и контролем версий", "ktor-bestgame 0.9.0 with character commands and version control is required") } }
 }

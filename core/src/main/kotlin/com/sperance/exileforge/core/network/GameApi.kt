@@ -19,10 +19,11 @@ import okhttp3.*
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
+import com.sperance.exileforge.core.i18n.tr
 
 fun normalizeServer(value: String): String {
-    val url = value.trim().toHttpUrlOrNull() ?: error("Введите URL с http:// или https://")
-    require(url.username.isEmpty() && url.password.isEmpty() && url.query == null && url.fragment == null) { "URL не должен содержать пароль, query или fragment" }
+    val url = value.trim().toHttpUrlOrNull() ?: error(tr("Введите URL с http:// или https://", "Enter a URL starting with http:// or https://"))
+    require(url.username.isEmpty() && url.password.isEmpty() && url.query == null && url.fragment == null) { tr("URL не должен содержать пароль, query или fragment", "The URL must not contain a password, query or fragment") }
     return url.toString().trimEnd('/') + "/"
 }
 class GameApi(
@@ -64,14 +65,14 @@ class GameApi(
     }
     suspend fun capabilities(): ApiCapabilities = WireJson.decodeFromJsonElement(request("GET", "api/v1/poe/capabilities"))
     suspend fun currentUser(): UserProfile {
-        val jwt = requireNotNull(token) { "Войдите в аккаунт" }
+        val jwt = requireNotNull(token) { tr("Войдите в аккаунт", "Sign in to your account") }
         val claims = WireJson.parseToJsonElement(String(java.util.Base64.getUrlDecoder().decode(jwt.split('.')[1]), Charsets.UTF_8)).jsonObject
         val id = claims.text("sub"); requireId(id)
         // The JWT subject is only a lookup key. Permissions come from the authenticated response.
         return WireJson.decodeFromJsonElement(request("GET", "api/v1/user", mapOf("id" to id), authenticated = true))
     }
     suspend fun character(id: String): com.sperance.exileforge.core.model.hero.CharacterSummary {
-        val document = get(Catalog.CHARACTERS, id) ?: error("Персонаж недоступен")
+        val document = get(Catalog.CHARACTERS, id) ?: error(tr("Персонаж недоступен", "The character is unavailable"))
         return WireJson.decodeFromJsonElement(document)
     }
     suspend fun compareEquipment(id: String, command: EquipCommand): com.sperance.exileforge.core.model.hero.EquipmentComparison {
@@ -131,7 +132,7 @@ class GameApi(
         catch (e: ApiFailure) { if(e.status == 404) null else throw e }
     }
     override suspend fun create(catalog: Catalog, document: JsonObject): JsonObject {
-        require(document.keys.all { it in com.sperance.exileforge.core.contract.editableFields(catalog) || it == "type" }) { "Поле не разрешено при создании" }
+        require(document.keys.all { it in com.sperance.exileforge.core.contract.editableFields(catalog) || it == "type" }) { tr("Поле не разрешено при создании", "This field is not allowed on create") }
         validate(document, catalog)
         if(catalog == Catalog.EQUIPMENT) validateReferenceWrite(document)
         return request("POST", route(catalog), body = JsonArray(listOf(document)), authenticated = true).jsonArray.single().jsonObject
@@ -140,11 +141,11 @@ class GameApi(
         require(expectedVersion >= 0)
         requireId(id)
         if(catalog == Catalog.EQUIPMENT) validateReferenceWrite(changes)
-        require(changes.keys.all { it in com.sperance.exileforge.core.contract.editableFields(catalog) }) { "Свойство управляется сервером и недоступно для редактирования" }
-        require(changes.isNotEmpty()) { "Нет изменений" }
-        require(changes.keys.none { it in protectedFields }) { "Нельзя изменять служебные поля" }
+        require(changes.keys.all { it in com.sperance.exileforge.core.contract.editableFields(catalog) }) { tr("Свойство управляется сервером и недоступно для редактирования", "The property is server-owned and cannot be edited") }
+        require(changes.isNotEmpty()) { tr("Нет изменений", "No changes") }
+        require(changes.keys.none { it in protectedFields }) { tr("Нельзя изменять служебные поля", "Service fields cannot be changed") }
         return request("PUT", route(catalog), mapOf("id" to id), WireJson.encodeToJsonElement(UpdateCommand(expectedVersion, changes)), authenticated = true).let {
-            if (it == JsonNull) throw ApiFailure(200, null, "Сервер не вернул изменённый предмет")
+            if (it == JsonNull) throw ApiFailure(200, null, tr("Сервер не вернул изменённый предмет", "The server returned no updated item"))
             it.jsonObject
         }
     }
@@ -152,7 +153,7 @@ class GameApi(
     suspend fun health(): JsonElement = request("GET", "system/health")
     suspend fun count(catalog: Catalog): JsonElement = request("GET", "${route(catalog)}/count", authenticated = true)
     private suspend fun request(method: String, path: String, query: Map<String, String> = emptyMap(), body: JsonElement? = null, authenticated: Boolean = false, sensitive: Boolean = false): JsonElement {
-        if (authenticated) require(!token.isNullOrBlank()) { "Войдите во вкладке «Сервер»" }
+        if (authenticated) require(!token.isNullOrBlank()) { tr("Войдите во вкладке «Сервер»", "Sign in on the Account tab") }
         val url = base.newBuilder().addPathSegments(path).apply { query.forEach { (k,v) -> addQueryParameter(k,v) } }.build()
         val bodyText = body?.toString().orEmpty()
         val request = Request.Builder().url(url).header("Accept", "application/json")
@@ -170,22 +171,22 @@ class GameApi(
             responseText = raw.take(12_000)
             val envelope = try { withContext(Dispatchers.Default) { WireJson.parseToJsonElement(raw).jsonObject } }
                 catch (e: CancellationException) { throw e }
-                catch (_: Exception) { throw ApiFailure(status, null, if(status == 401) "Сессия истекла. Войдите снова" else if(status == 403) "Недостаточно прав" else "HTTP $status: пустой или некорректный JSON ответ сервера") }
+                catch (_: Exception) { throw ApiFailure(status, null, if(status == 401) tr("Сессия истекла. Войдите снова", "The session has expired. Sign in again") else if(status == 403) tr("Недостаточно прав", "Not enough permissions") else tr("HTTP $status: пустой или некорректный JSON ответ сервера", "HTTP $status: empty or malformed JSON response")) }
             if (status !in 200..299 || (envelope["success"] as? JsonPrimitive)?.booleanOrNull != true) {
                 val error = envelope["error"] as? JsonObject
-                throw ApiFailure(status, error?.text("errorCode"), error?.text("message")?.takeIf { it.isNotBlank() } ?: "HTTP $status: операция отклонена")
+                throw ApiFailure(status, error?.text("errorCode"), error?.text("message")?.takeIf { it.isNotBlank() } ?: tr("HTTP $status: операция отклонена", "HTTP $status: the operation was rejected"))
             }
             success = true
             return envelope["data"] ?: JsonNull
         } catch (e: CancellationException) {
-            responseText = "Запрос отменён. Результат записи следует проверить на сервере."; throw e
+            responseText = tr("Запрос отменён. Результат записи следует проверить на сервере.", "The request was cancelled. Verify the write on the server."); throw e
         } catch (e: Exception) {
             if (e is ApiFailure) status = e.status
             if (responseText.isBlank()) responseText = e.message.orEmpty()
             throw e
         } finally {
             journal.add(RequestLog(method, url.encodedPath + (url.encodedQuery?.let { "?$it" } ?: ""), status,
-                (System.nanoTime() - start) / 1_000_000, if(sensitive) "[скрыто]" else bodyText.take(12_000), if(sensitive) "[скрыто]" else responseText, success))
+                (System.nanoTime() - start) / 1_000_000, if(sensitive) tr("[скрыто]", "[hidden]") else bodyText.take(12_000), if(sensitive) tr("[скрыто]", "[hidden]") else responseText, success))
         }
     }
 }

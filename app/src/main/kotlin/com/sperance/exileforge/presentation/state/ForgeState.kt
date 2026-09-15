@@ -12,6 +12,7 @@ enum class AppMode { PLAYER, ADMIN }
 data class PendingBattleWrite(val characterId: String, val operation: String, val command: JsonElement)
 
 data class ForgeState(
+    val lang: com.sperance.exileforge.core.i18n.Lang = com.sperance.exileforge.core.i18n.uiLanguage,
     val passiveTree: com.sperance.exileforge.core.model.passives.PassiveTree? = null,
     val passiveState: com.sperance.exileforge.core.model.passives.PassiveState? = null,
     val passiveCharacterId: String = "",
@@ -46,7 +47,7 @@ data class ForgeState(
     val inventoryVersion: Long? = null, val currencies: List<JsonObject> = emptyList(),
     val selectedEquipment: String = "", val selectedCurrency: String = "",
     val pending: PendingInventoryAction? = null,
-    val checks: List<CheckResult> = emptyList(), val health: String = "Соединение ещё не проверено"
+    val checks: List<CheckResult> = emptyList(), val health: String = com.sperance.exileforge.core.i18n.tr("Соединение ещё не проверено", "The connection has not been checked yet")
 ) {
     val isAdmin: Boolean get() = signedIn && profile?.role == "ADMIN"
     val adminTools: Boolean get() = isAdmin && mode == AppMode.ADMIN

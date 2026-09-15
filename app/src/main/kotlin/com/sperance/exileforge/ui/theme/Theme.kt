@@ -1,38 +1,71 @@
 package com.sperance.exileforge.ui.theme
 
+import androidx.compose.foundation.shape.CutCornerShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-val Gold = Color(0xFFE2BD7A)
-val Ink = Color(0xFF0B1219)
-val Muted = Color(0xFF98A7B8)
-val Rune = Color(0xFF9CC9DE)
+/** Wraith-lit stone and tarnished gold: the palette of an exile's stash. */
+val Ink = Color(0xFF07090C)
+val Abyss = Color(0xFF0B0E13)
+val Panel = Color(0xFF14181F)
+val PanelRaised = Color(0xFF1C222B)
+val Gold = Color(0xFFC8AA6E)
+val GoldBright = Color(0xFFF0E2C0)
+val Bronze = Color(0xFF6B5836)
+val Parchment = Color(0xFFE4DCCF)
+val Muted = Color(0xFF8E8676)
+val Rune = Color(0xFF7FA9C8)
+val LifeRed = Color(0xFFB03A3A)
+val ManaBlue = Color(0xFF3B6FA8)
+val ShieldCyan = Color(0xFF63B7C4)
+val Blood = Color(0xFF8A2E2E)
+
+/** Item frames follow Path of Exile rarity colours; unknown values stay bone white. */
+fun rarityColor(value: String) = when (value) {
+    "UNCOMMON", "MAGIC" -> Color(0xFF8888FF)
+    "RARE" -> Color(0xFFFFFF77)
+    "EPIC" -> Color(0xFFBC8ED9)
+    "LEGENDARY", "UNIQUE" -> Color(0xFFAF6025)
+    "MYTHICAL" -> Color(0xFFE05A4E)
+    else -> Color(0xFFC8C8C8)
+}
+
+/** Stone plate behind every panel: a lit top edge fading into the void. */
+fun panelBrush(accent: Color = Gold) = Brush.verticalGradient(
+    listOf(accent.copy(alpha = .10f), PanelRaised, Panel)
+)
+fun voidBrush() = Brush.verticalGradient(listOf(Abyss, Ink, Color(0xFF0A0D12)))
+
 @Composable fun ForgeTheme(content: @Composable () -> Unit) {
     MaterialTheme(
-        colorScheme = darkColorScheme(primary = Gold, onPrimary = Ink, secondary = Rune,
-            background = Ink, surface = Color(0xFF131E28), surfaceVariant = Color(0xFF1C2B38),
-            onSurface = Color(0xFFE4DCCF), onBackground = Color(0xFFE4DCCF),
-            outline = Color(0xFF364655), error = Color(0xFFE89A91)),
+        colorScheme = darkColorScheme(primary = Gold, onPrimary = Ink, secondary = Rune, onSecondary = Ink,
+            secondaryContainer = PanelRaised, onSecondaryContainer = Parchment, tertiary = GoldBright,
+            background = Ink, surface = Panel, surfaceVariant = PanelRaised, surfaceContainerHighest = PanelRaised,
+            onSurface = Parchment, onSurfaceVariant = Muted, onBackground = Parchment,
+            outline = Bronze, outlineVariant = Color(0xFF2A3038), error = Color(0xFFE07B6F), onError = Ink),
+        shapes = Shapes(
+            extraSmall = CutCornerShape(3.dp), small = CutCornerShape(4.dp), medium = CutCornerShape(6.dp),
+            large = RoundedCornerShape(4.dp), extraLarge = RoundedCornerShape(6.dp)
+        ),
         typography = Typography(
-            headlineLarge = TextStyle(fontFamily = FontFamily.Serif, fontSize = 30.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
-            titleLarge = TextStyle(fontFamily = FontFamily.Serif, fontSize = 22.sp, fontWeight = FontWeight.Medium),
-            titleMedium = TextStyle(fontFamily = FontFamily.Serif, fontSize = 18.sp, fontWeight = FontWeight.Medium)
+            headlineLarge = TextStyle(fontFamily = FontFamily.Serif, fontSize = 28.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp),
+            headlineSmall = TextStyle(fontFamily = FontFamily.Serif, fontSize = 21.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
+            titleLarge = TextStyle(fontFamily = FontFamily.Serif, fontSize = 20.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp),
+            titleMedium = TextStyle(fontFamily = FontFamily.Serif, fontSize = 17.sp, fontWeight = FontWeight.Medium, letterSpacing = .5.sp),
+            labelSmall = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp),
+            labelMedium = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 12.sp, letterSpacing = .8.sp),
+            labelLarge = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 13.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp)
         ), content = {
             CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onBackground, content = content)
         }
     )
-}
-fun rarityColor(value: String) = when (value) {
-    "UNCOMMON", "MAGIC" -> Color(0xFF8BADE2)
-    "RARE" -> Color(0xFFE0C878)
-    "EPIC" -> Color(0xFFBC8ED9)
-    "LEGENDARY", "UNIQUE" -> Color(0xFFDD985B)
-    "MYTHICAL" -> Color(0xFFE37676)
-    else -> Color(0xFFC6C1BA)
 }

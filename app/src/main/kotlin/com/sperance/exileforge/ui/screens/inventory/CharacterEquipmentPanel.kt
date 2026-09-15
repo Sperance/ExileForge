@@ -1,13 +1,20 @@
 package com.sperance.exileforge.ui.screens.inventory
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.contract.text
 import com.sperance.exileforge.core.display.inventoryDocument
 import com.sperance.exileforge.core.display.itemVisualKind
+import com.sperance.exileforge.core.i18n.tr
+import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.ItemEmblem
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -22,52 +29,75 @@ import java.util.Locale
     val view = s.equipmentView ?: return
     var statsExpanded by remember { mutableStateOf(false) }
     var slotsExpanded by remember { mutableStateOf(true) }
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         s.hero?.let { hero ->
-            Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
-                Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ItemEmblem(com.sperance.exileforge.core.display.ItemVisualKind.CHARACTER, Gold)
-                    Column { Text(hero.name, style = MaterialTheme.typography.headlineSmall); Text("Уровень ${hero.level} · Опыт ${hero.experience}"); Text("Золото: ${hero.money}") }
-                }
-            }
-        }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-            listOf("maximum_life" to "HP", "maximum_mana" to "MP", "energy_shield" to "Щит").forEach { (key, title) ->
-                Column { Text(title, color = Gold); Text("%.0f".format(Locale.ROOT, view.stats.values[key] ?: 0.0), style = MaterialTheme.typography.titleLarge) }
-            }
-        }
-        if(s.inventoryVersion == null) Text("Данные могут быть устаревшими. Обновите экипировку перед следующей операцией.", color = MaterialTheme.colorScheme.error)
-        TextButton(onClick = { slotsExpanded = !slotsExpanded }) { Text("Надето: ${view.equipped.size} · ${if(slotsExpanded) "свернуть" else "показать"}") }
-        if(slotsExpanded) FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp), maxItemsInEachRow = 3) {
-            EquipmentSlot.entries.forEach { slot ->
-                val instance = view.inventory.firstOrNull { it.uuid == view.equipped[slot] }
-                val doc = instance?.let { inventoryDocument(it, s.inventoryBases[it.equipmentId]) } ?: buildJsonObject { put("slot", when(slot) { EquipmentSlot.RING_LEFT, EquipmentSlot.RING_RIGHT -> "RING"; EquipmentSlot.MAIN_HAND -> "WEAPON_1H"; EquipmentSlot.OFF_HAND -> "SHIELD"; else -> slot.name }) }
-                Card(Modifier.widthIn(min = 96.dp, max = 120.dp), colors = CardDefaults.cardColors(containerColor = if(instance == null) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.secondaryContainer)) {
-                    Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(slot.title, style = MaterialTheme.typography.labelMedium, color = Gold)
-                        ItemEmblem(itemVisualKind(doc), if(instance == null) Muted else Gold, Modifier.size(48.dp))
-                        Text(if(instance == null) "Пусто" else doc.text("name"), style = MaterialTheme.typography.bodySmall)
-                        if(instance != null) TextButton(enabled = !s.busy && s.pending == null && s.inventoryVersion != null, onClick = { onUnequip(slot) }) { Text("Снять") }
+            ForgePanel {
+                Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    ItemEmblem(com.sperance.exileforge.core.display.ItemVisualKind.CHARACTER, Gold, Modifier.size(64.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Text(hero.name, style = MaterialTheme.typography.headlineSmall, color = GoldBright)
+                        Text(tr("Уровень ${hero.level} · Опыт ${hero.experience}", "Level ${hero.level} · Experience ${hero.experience}"), color = Muted, style = MaterialTheme.typography.labelMedium)
+                        Text(tr("Золото: ${hero.money}", "Gold: ${hero.money}"), color = Gold, style = MaterialTheme.typography.labelLarge)
                     }
                 }
             }
         }
-        TextButton(onClick = { statsExpanded = !statsExpanded }) { Text("Характеристики · ${if(statsExpanded) "свернуть" else "показать"}") }
+        // Life, mana and shield globes, exactly as the server calculated them.
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+            listOf(Triple("maximum_life", "HP", LifeRed), Triple("maximum_mana", "MP", ManaBlue),
+                Triple("energy_shield", tr("Щит", "ES"), ShieldCyan)).forEach { (key, title, color) ->
+                StatGlobe(title, "%.0f".format(Locale.ROOT, view.stats.values[key] ?: 0.0), 1f, color)
+            }
+        }
+        if(s.inventoryVersion == null) Text(tr("Данные могут быть устаревшими. Обновите экипировку перед следующей операцией.", "The data may be stale. Refresh the equipment before the next operation."), color = MaterialTheme.colorScheme.error)
+        TextButton(onClick = { slotsExpanded = !slotsExpanded }) {
+            Text(tr("Надето: ${view.equipped.size} · ${if(slotsExpanded) "свернуть" else "показать"}", "Equipped: ${view.equipped.size} · ${if(slotsExpanded) "hide" else "show"}"))
+        }
+        if(slotsExpanded) FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp), maxItemsInEachRow = 3) {
+            EquipmentSlot.entries.forEach { slot ->
+                val instance = view.inventory.firstOrNull { it.uuid == view.equipped[slot] }
+                val doc = instance?.let { inventoryDocument(it, s.inventoryBases[it.equipmentId]) } ?: buildJsonObject { put("slot", when(slot) { EquipmentSlot.RING_LEFT, EquipmentSlot.RING_RIGHT -> "RING"; EquipmentSlot.MAIN_HAND -> "WEAPON_1H"; EquipmentSlot.OFF_HAND -> "SHIELD"; else -> slot.name }) }
+                val shape = CutCornerShape(8.dp)
+                Column(Modifier.widthIn(min = 96.dp, max = 120.dp)
+                    .background(if(instance == null) Panel else panelBrush(Gold), shape)
+                    .border(1.dp, if(instance == null) Bronze.copy(alpha = .4f) else Gold.copy(alpha = .55f), shape)
+                    .padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(slot.title(s.lang), style = MaterialTheme.typography.labelSmall, color = Gold, textAlign = TextAlign.Center)
+                    ItemEmblem(itemVisualKind(doc), if(instance == null) Muted else GoldBright, Modifier.size(48.dp))
+                    Text(if(instance == null) tr("Пусто", "Empty") else doc.text("name"), style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
+                    if(instance != null) TextButton(enabled = !s.busy && s.pending == null && s.inventoryVersion != null, onClick = { onUnequip(slot) }) { Text(tr("Снять", "Unequip")) }
+                }
+            }
+        }
+        TextButton(onClick = { statsExpanded = !statsExpanded }) {
+            Text(tr("Характеристики · ${if(statsExpanded) "свернуть" else "показать"}", "Stats · ${if(statsExpanded) "hide" else "show"}"))
+        }
         if(statsExpanded) {
-            view.stats.values.forEach { (key, value) ->
-                PropertyRow(statTitle(key), String.format(Locale.ROOT, "%.2f", value), key)
+            ForgePanel(accent = Rune) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(ForgeGlyphs.Sigil, null, tint = Rune, modifier = Modifier.size(16.dp))
+                    Engraved(tr("Расчёт сервера", "Server calculation"), Rune)
+                }
+                view.stats.values.forEach { (key, value) ->
+                    PropertyRow(statTitle(key), String.format(Locale.ROOT, "%.2f", value), key)
+                }
             }
             view.stats.weapons.forEach { (slot, weapon) ->
-                InfoCard(slot.title, "Урон: %.1f–%.1f\nАтак/с: %.2f · DPS: %.1f\nКрит: %.1f%% · Точность: %.0f".format(Locale.ROOT, weapon.minimumPhysical, weapon.maximumPhysical, weapon.attacksPerSecond, weapon.dps, weapon.criticalChance, weapon.accuracy))
+                InfoCard(slot.title(s.lang), tr("Урон: %.1f–%.1f\nАтак/с: %.2f · DPS: %.1f\nКрит: %.1f%% · Точность: %.0f", "Damage: %.1f–%.1f\nAttacks/s: %.2f · DPS: %.1f\nCrit: %.1f%% · Accuracy: %.0f")
+                    .format(Locale.ROOT, weapon.minimumPhysical, weapon.maximumPhysical, weapon.attacksPerSecond, weapon.dps, weapon.criticalChance, weapon.accuracy))
             }
-            if(view.stats.unsupported.isNotEmpty()) InfoCard("Не учтено расчётом", view.stats.unsupported.joinToString("\n"))
+            if(view.stats.unsupported.isNotEmpty()) InfoCard(tr("Не учтено расчётом", "Not covered by the calculation"), view.stats.unsupported.joinToString("\n"))
         }
     }
 }
-private fun statTitle(key: String): String = when(key) {
-    "maximum_life" -> "Здоровье"; "maximum_mana" -> "Мана"; "strength" -> "Сила"; "dexterity" -> "Ловкость"; "intelligence" -> "Интеллект"
-    "armour" -> "Броня"; "evasion" -> "Уклонение"; "energy_shield" -> "Энергетический щит"; "accuracy" -> "Точность"
-    "life_regeneration" -> "Регенерация здоровья / с"; "mana_regeneration" -> "Регенерация маны / с"; "movement_speed" -> "Множитель скорости движения"
-    "fire_resistance" -> "Сопротивление огню, %"; "cold_resistance" -> "Сопротивление холоду, %"; "lightning_resistance" -> "Сопротивление молнии, %"; "chaos_resistance" -> "Сопротивление хаосу, %"
+internal fun statTitle(key: String): String = when(key) {
+    "maximum_life" -> tr("Здоровье", "Life"); "maximum_mana" -> tr("Мана", "Mana")
+    "strength" -> tr("Сила", "Strength"); "dexterity" -> tr("Ловкость", "Dexterity"); "intelligence" -> tr("Интеллект", "Intelligence")
+    "armour" -> tr("Броня", "Armour"); "evasion" -> tr("Уклонение", "Evasion"); "energy_shield" -> tr("Энергетический щит", "Energy shield")
+    "accuracy" -> tr("Точность", "Accuracy")
+    "life_regeneration" -> tr("Регенерация здоровья / с", "Life regeneration / s"); "mana_regeneration" -> tr("Регенерация маны / с", "Mana regeneration / s")
+    "movement_speed" -> tr("Множитель скорости движения", "Movement speed multiplier")
+    "fire_resistance" -> tr("Сопротивление огню, %", "Fire resistance, %"); "cold_resistance" -> tr("Сопротивление холоду, %", "Cold resistance, %")
+    "lightning_resistance" -> tr("Сопротивление молнии, %", "Lightning resistance, %"); "chaos_resistance" -> tr("Сопротивление хаосу, %", "Chaos resistance, %")
     else -> key.replace('_', ' ')
 }

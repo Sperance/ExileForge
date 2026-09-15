@@ -6,16 +6,17 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.i18n.tr
 import com.sperance.exileforge.core.model.EntitySource
 import com.sperance.exileforge.core.model.combat.*
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
-import com.sperance.exileforge.ui.components.EntitySpinner
-import com.sperance.exileforge.ui.components.Spinner
-import com.sperance.exileforge.ui.theme.Gold
-import com.sperance.exileforge.ui.theme.Muted
+import com.sperance.exileforge.ui.components.*
+import com.sperance.exileforge.ui.icons.ForgeGlyphs
+import com.sperance.exileforge.ui.theme.*
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable fun CombatScreen(s: ForgeState, vm: ForgeViewModel) {
@@ -29,87 +30,97 @@ import com.sperance.exileforge.ui.theme.Muted
     val zone = s.combatCatalog?.zones?.firstOrNull { it.id == zoneId }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
-            Text("Поход", style = MaterialTheme.typography.headlineLarge, color = Gold)
-            Text("Пошаговые сражения · добыча · боссы", color = Muted)
-            TextButton(enabled = !s.busy && s.signedIn, onClick = { vm.tab(7) }) { Text("Древо навыков") }
-            EntitySpinner("Персонаж", s.characterId, EntitySource.CHARACTER, !s.busy && s.pending == null, vm::characterId)
-            OutlinedButton(enabled = s.signedIn && !s.busy && s.characterId.isNotBlank(), onClick = vm::loadCombat) { Text("Загрузить / продолжить бой") }
-            if(!s.signedIn) Text("Войдите во вкладке «Аккаунт».")
+            ScreenHeader(tr("Поход", "Expedition"), tr("Пошаговые сражения · добыча · боссы", "Turn-based battles · loot · bosses"), ForgeGlyphs.Swords)
+            TextButton(enabled = !s.busy && s.signedIn, onClick = { vm.tab(7) }) { Text(tr("Древо навыков", "Passive tree")) }
+            EntitySpinner(tr("Персонаж", "Character"), s.characterId, EntitySource.CHARACTER, !s.busy && s.pending == null, vm::characterId)
+            OutlinedButton(enabled = s.signedIn && !s.busy && s.characterId.isNotBlank(), onClick = vm::loadCombat, modifier = Modifier.fillMaxWidth()) { Text(tr("Загрузить / продолжить бой", "Load / resume the battle")) }
+            if(!s.signedIn) Text(tr("Войдите во вкладке «Аккаунт».", "Sign in on the Account tab."))
             if(s.battlePending != null) {
-                Text("Ответ на действие не подтверждён. Повтор отправит тот же запрос без повторной награды.", color = Gold)
-                Button(enabled = !s.busy && s.signedIn, onClick = vm::retryBattle) { Text("Подтвердить действие") }
+                Text(tr("Ответ на действие не подтверждён. Повтор отправит тот же запрос без повторной награды.", "The action was not confirmed. A retry sends the identical request without a second reward."), color = Gold)
+                Button(enabled = !s.busy && s.signedIn, onClick = vm::retryBattle) { Text(tr("Подтвердить действие", "Confirm the action")) }
             }
         }
         if(ready && !active) item {
-            Spinner("Зона", zoneId, s.combatCatalog?.zones.orEmpty().associate { it.id to "${it.name} · ур. ${it.level}" }, controls, { zoneId = it })
-            zone?.let { z ->
-                Text(z.description)
-                Text("Противники: " + z.monsters.joinToString { it.name }, color = Muted)
-                val kills = s.battleView?.zoneKills?.get(z.id) ?: 0
-                Text("Босс: ${z.boss.name} · победы ${minOf(kills, z.killsForBoss)}/${z.killsForBoss}", color = Gold)
-                val allowed = controls && (s.hero?.level?.toInt() ?: 0) >= z.level
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(enabled = allowed, onClick = { vm.startBattle(z.id, false) }) { Text("Искать противника") }
-                    OutlinedButton(enabled = allowed && kills >= z.killsForBoss, onClick = { vm.startBattle(z.id, true) }) { Text("Вызвать босса") }
+            ForgePanel {
+                Engraved(tr("Зоны", "Zones"))
+                Spinner(tr("Зона", "Zone"), zoneId, s.combatCatalog?.zones.orEmpty().associate { it.id to tr("${it.name} · ур. ${it.level}", "${it.name} · lvl ${it.level}") }, controls, { zoneId = it })
+                zone?.let { z ->
+                    Text(z.description)
+                    Text(tr("Противники: ", "Enemies: ") + z.monsters.joinToString { it.name }, color = Muted)
+                    val kills = s.battleView?.zoneKills?.get(z.id) ?: 0
+                    Text(tr("Босс: ${z.boss.name} · победы ${minOf(kills, z.killsForBoss)}/${z.killsForBoss}", "Boss: ${z.boss.name} · kills ${minOf(kills, z.killsForBoss)}/${z.killsForBoss}"), color = Gold)
+                    val allowed = controls && (s.hero?.level?.toInt() ?: 0) >= z.level
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(enabled = allowed, onClick = { vm.startBattle(z.id, false) }) { Text(tr("Искать противника", "Seek an enemy")) }
+                        OutlinedButton(enabled = allowed && kills >= z.killsForBoss, onClick = { vm.startBattle(z.id, true) }) { Icon(ForgeGlyphs.Skull, null, Modifier.size(16.dp)); Spacer(Modifier.width(6.dp)); Text(tr("Вызвать босса", "Summon the boss")) }
+                    }
+                    if(!allowed && controls) Text(tr("Нужен персонаж уровня ${z.level}.", "A character of level ${z.level} is required."))
                 }
-                if(!allowed && controls) Text("Нужен персонаж уровня ${z.level}.")
+                Text(tr("В начале боя здоровье и флаконы восстанавливаются. Экипировка фиксируется на весь бой.", "Life and flasks are restored when a battle starts. Equipment is locked for its duration."), color = Muted, style = MaterialTheme.typography.bodySmall)
             }
-            Text("В начале боя здоровье и флаконы восстанавливаются. Экипировка фиксируется на весь бой.", color = Muted, style = MaterialTheme.typography.bodySmall)
         }
         if(battle != null) {
             item {
-                Text(if(battle.monster.boss) "БОСС · ${battle.monster.name}" else battle.monster.name, style = MaterialTheme.typography.titleLarge, color = Gold)
+                Text(if(battle.monster.boss) tr("БОСС", "BOSS") + " · ${battle.monster.name}" else battle.monster.name, style = MaterialTheme.typography.titleLarge, color = if(battle.monster.boss) Blood else Gold)
+                OrnateDivider(if(battle.monster.boss) Blood else Gold)
                 CombatantCard(battle.enemy, false)
                 Spacer(Modifier.height(8.dp))
                 CombatantCard(battle.hero, true)
-                Text("Ход ${battle.turn}/80 · флаконы ${battle.potions}/2", color = Muted)
-                if(battle.unsupportedStats.isNotEmpty()) Text("Не участвуют в расчёте: " + battle.unsupportedStats.joinToString(), style = MaterialTheme.typography.bodySmall)
+                Text(tr("Ход ${battle.turn}/80 · флаконы ${battle.potions}/2", "Turn ${battle.turn}/80 · flasks ${battle.potions}/2"), color = Muted)
+                if(battle.unsupportedStats.isNotEmpty()) Text(tr("Не участвуют в расчёте: ", "Not used in the calculation: ") + battle.unsupportedStats.joinToString(), style = MaterialTheme.typography.bodySmall)
             }
             if(active) item {
                 BattleActions(battle, controls, vm::battleAction) { confirmFlee = true }
-                Text("Защита снижает входящий урон на 65%. Флакон и защита тратят ход.", color = Muted, style = MaterialTheme.typography.bodySmall)
+                Text(tr("Защита снижает входящий урон на 65%. Флакон и защита тратят ход.", "Guard reduces incoming damage by 65%. Flask and guard both cost a turn."), color = Muted, style = MaterialTheme.typography.bodySmall)
             }
             if(!active) item {
-                Text(when(battle.status) { BattleStatus.VICTORY -> "Победа — награды уже в инвентаре"; BattleStatus.DEFEAT -> "Поражение — возвращение в лагерь"; else -> "Отступление без наград" }, color = Gold)
-                battle.rewards.forEach { Text("+ ${it.amount} · ${it.name}") }
-                OutlinedButton(onClick = { vm.tab(4); vm.loadInventory() }, enabled = !s.busy) { Text("Открыть арсенал") }
+                Text(when(battle.status) {
+                    BattleStatus.VICTORY -> tr("Победа — награды уже в инвентаре", "Victory — the rewards are already in your stash")
+                    BattleStatus.DEFEAT -> tr("Поражение — возвращение в лагерь", "Defeat — back to camp")
+                    else -> tr("Отступление без наград", "Retreat without rewards")
+                }, color = Gold, style = MaterialTheme.typography.titleMedium)
+                battle.rewards.forEach { PropertyRow(it.name, "+${it.amount}", it.name) }
+                OutlinedButton(onClick = { vm.tab(4); vm.loadInventory() }, enabled = !s.busy) { Text(tr("Открыть арсенал", "Open the stash")) }
             }
-            item { Text("Журнал боя", style = MaterialTheme.typography.titleMedium) }
-            items(battle.log.asReversed()) { line -> Card(Modifier.fillMaxWidth()) { Text(line, Modifier.padding(10.dp)) } }
+            item { Text(tr("Журнал боя", "Battle log").uppercase(), style = MaterialTheme.typography.titleMedium, color = Gold) }
+            items(battle.log.asReversed()) { line -> ForgePanel { Text(line, style = MaterialTheme.typography.bodyMedium) } }
         }
         if(s.combatCatalog != null) {
-            item { TextButton(onClick = { showLoot = !showLoot }) { Text(if(showLoot) "Скрыть таблицы лута" else "Показать таблицы лута") } }
+            item { TextButton(onClick = { showLoot = !showLoot }) { Text(if(showLoot) tr("Скрыть таблицы лута", "Hide the loot tables") else tr("Показать таблицы лута", "Show the loot tables")) } }
             if(showLoot) items(s.combatCatalog.lootTables) { table ->
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(12.dp)) {
-                        Text("${table.id} · бросков: ${table.rolls}", color = Gold)
-                        val total = table.entries.sumOf { it.weight }.toDouble()
-                        table.entries.forEach { entry -> Text("${lootName(entry.kind)} ×${entry.amount} · ${"%.1f".format(entry.weight / total * 100)}% за бросок") }
-                    }
+                ForgePanel {
+                    Text(tr("${table.id} · бросков: ${table.rolls}", "${table.id} · rolls: ${table.rolls}"), color = Gold, style = MaterialTheme.typography.labelLarge)
+                    val total = table.entries.sumOf { it.weight }.toDouble()
+                    table.entries.forEach { entry -> PropertyRow("${lootName(entry.kind)} ×${entry.amount}", tr("${"%.1f".format(entry.weight / total * 100)}% за бросок", "${"%.1f".format(entry.weight / total * 100)}% per roll"), entry.kind) }
                 }
             }
         }
     }
-    if(confirmFlee) AlertDialog(onDismissRequest = { confirmFlee = false }, title = { Text("Отступить?") },
-        text = { Text("Бой завершится без опыта, золота и добычи.") },
-        confirmButton = { TextButton(enabled = controls, onClick = { confirmFlee = false; vm.battleAction(BattleAction.FLEE) }) { Text("Отступить") } },
-        dismissButton = { TextButton(onClick = { confirmFlee = false }) { Text("Остаться") } })
+    if(confirmFlee) AlertDialog(onDismissRequest = { confirmFlee = false }, containerColor = Panel, titleContentColor = Gold,
+        title = { Text(tr("Отступить?", "Retreat?")) },
+        text = { Text(tr("Бой завершится без опыта, золота и добычи.", "The battle ends with no experience, gold or loot.")) },
+        confirmButton = { TextButton(enabled = controls, onClick = { confirmFlee = false; vm.battleAction(BattleAction.FLEE) }) { Text(tr("Отступить", "Retreat")) } },
+        dismissButton = { TextButton(onClick = { confirmFlee = false }) { Text(tr("Остаться", "Stay")) } })
 }
 
+/** Combatant plate: name, life bar and the numbers the server rolled with. */
 @Composable internal fun CombatantCard(unit: Combatant, player: Boolean) {
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(unit.name, style = MaterialTheme.typography.titleMedium)
-            Text("HP ${unit.life.toInt()} / ${unit.maxLife.toInt()}", color = Gold)
-            LinearProgressIndicator(progress = { (unit.life / unit.maxLife.coerceAtLeast(1.0)).toFloat().coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
-            if(player) Text("MP ${unit.mana.toInt()} / ${unit.maxMana.toInt()} · щит ${unit.shield.toInt()}")
-            Text("Урон ${unit.damage.toInt()} · броня ${unit.armour.toInt()} · уклонение ${unit.evasion.toInt()}", color = Muted, style = MaterialTheme.typography.bodySmall)
+    val accent = if(player) Gold else Blood
+    ForgePanel(accent = accent) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Icon(if(player) ForgeGlyphs.Exile else ForgeGlyphs.Skull, null, tint = accent, modifier = Modifier.size(20.dp))
+            Text(unit.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            Text("HP ${unit.life.toInt()} / ${unit.maxLife.toInt()}", color = GoldBright, style = MaterialTheme.typography.labelLarge)
         }
+        LinearProgressIndicator(progress = { (unit.life / unit.maxLife.coerceAtLeast(1.0)).toFloat().coerceIn(0f, 1f) },
+            modifier = Modifier.fillMaxWidth().height(10.dp), color = LifeRed, trackColor = Abyss)
+        if(player) Text("MP ${unit.mana.toInt()} / ${unit.maxMana.toInt()} · " + tr("щит", "shield") + " ${unit.shield.toInt()}", color = ManaBlue, style = MaterialTheme.typography.labelMedium)
+        Text(tr("Урон ${unit.damage.toInt()} · броня ${unit.armour.toInt()} · уклонение ${unit.evasion.toInt()}", "Damage ${unit.damage.toInt()} · armour ${unit.armour.toInt()} · evasion ${unit.evasion.toInt()}"), color = Muted, style = MaterialTheme.typography.bodySmall)
     }
 }
 private fun lootName(kind: String) = when(kind) {
-    "NONE" -> "Без предмета"; "NORMAL" -> "Обычный предмет"; "MAGIC" -> "Магический предмет"
-    "RARE" -> "Редкий предмет"; "UNIQUE" -> "Уникальный (или редкий, если нет подходящей базы)"
-    "TRANSMUTATION" -> "Сфера превращения"; "ALTERATION" -> "Сфера перемен"
-    "ALCHEMY" -> "Сфера алхимии"; "CHAOS" -> "Сфера хаоса"; else -> kind
+    "NONE" -> tr("Без предмета", "No item"); "NORMAL" -> tr("Обычный предмет", "Normal item"); "MAGIC" -> tr("Магический предмет", "Magic item")
+    "RARE" -> tr("Редкий предмет", "Rare item"); "UNIQUE" -> tr("Уникальный (или редкий, если нет подходящей базы)", "Unique (or rare when no base fits)")
+    "TRANSMUTATION" -> tr("Сфера превращения", "Orb of Transmutation"); "ALTERATION" -> tr("Сфера перемен", "Orb of Alteration")
+    "ALCHEMY" -> tr("Сфера алхимии", "Orb of Alchemy"); "CHAOS" -> tr("Сфера хаоса", "Chaos Orb"); else -> kind
 }

@@ -17,6 +17,7 @@ import com.sperance.exileforge.ui.components.EntitySpinner
 import com.sperance.exileforge.ui.components.Spinner
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.Rune
+import com.sperance.exileforge.core.i18n.tr
 import kotlinx.serialization.json.*
 
 @Composable internal fun FormInput(label: String, spec: InputSpec, value: JsonElement, definitions: List<JsonObject>, enabled: Boolean, onChange: (JsonElement) -> Unit) {
@@ -24,7 +25,7 @@ import kotlinx.serialization.json.*
         is InputSpec.Reference -> EntitySpinner(label, (value as? JsonPrimitive)?.content.orEmpty(), spec.source, enabled) { onChange(JsonPrimitive(it)) }
         is InputSpec.Text -> {
             if(spec.suggestions.isNotEmpty()) Spinner(label, (value as? JsonPrimitive)?.content.orEmpty(), spec.suggestions.associateWith { it }, enabled) { onChange(JsonPrimitive(it)) }
-            TextFieldInput(if(spec.suggestions.isEmpty()) label else "Своё значение", value, enabled, onChange)
+            TextFieldInput(if(spec.suggestions.isEmpty()) label else tr("Своё значение", "Custom value"), value, enabled, onChange)
         }
         is InputSpec.Number -> NumberInput(label, spec, value, enabled, onChange)
         InputSpec.Flag -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -51,12 +52,12 @@ import kotlinx.serialization.json.*
                         values.forEachIndexed { index, element ->
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 FormInput("${index + 1}", spec.element, element, definitions, enabled) { replacement -> onChange(JsonArray(values.toMutableList().apply { set(index, replacement) })) }
-                                TextButton(enabled = enabled, onClick = { onChange(JsonArray(values.filterIndexed { i, _ -> i != index })) }) { Text("Удалить ${index + 1}") }
+                                TextButton(enabled = enabled, onClick = { onChange(JsonArray(values.filterIndexed { i, _ -> i != index })) }) { Text(tr("Удалить ${index + 1}", "Remove ${index + 1}")) }
                             }
                         }
                         val objectSchema = (spec.element as? InputSpec.Object)?.schema
                         if(objectSchema == "reference" || objectSchema == "modifier") {
-                            Spinner("Добавить из списка", "", definitions.filter { it.text("enabled") != "false" }.associate { definitionKey(it) to "${it.text("name")} · v${it.text("revision").ifBlank { "1" }} (${it.text("id")})" }, enabled) { id ->
+                            Spinner(tr("Добавить из списка", "Add from the list"), "", definitions.filter { it.text("enabled") != "false" }.associate { definitionKey(it) to "${it.text("name")} · v${it.text("revision").ifBlank { "1" }} (${it.text("id")})" }, enabled) { id ->
                                 val definition = definitions.first { definitionKey(it) == id }
                                 val added = if(objectSchema == "reference") definitionReference(definition) else modifierFromDefinition(definition)
                                 onChange(JsonArray(values + added))
@@ -65,7 +66,7 @@ import kotlinx.serialization.json.*
                         OutlinedButton(enabled = enabled, onClick = {
                             val added = if(objectSchema == "definition") defaultObject("definition").changed("id", JsonPrimitive("custom_${newEntityId().take(8)}")) else inputDefault(spec.element)
                             onChange(JsonArray(values + added))
-                        }) { Text(if(objectSchema == "definition") "Своё определение" else "Добавить") }
+                        }) { Text(if(objectSchema == "definition") tr("Своё определение", "Custom definition") else tr("Добавить", "Add")) }
                     }
                 }
             }

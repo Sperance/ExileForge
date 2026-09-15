@@ -1,5 +1,7 @@
 package com.sperance.exileforge.core.network
 
+import com.sperance.exileforge.core.i18n.tr
+
 sealed interface FailureState {
     data object Offline : FailureState
     data object SessionExpired : FailureState
@@ -14,7 +16,7 @@ sealed interface FailureState {
             error is ApiFailure && error.status == 409 -> Conflict
             writing && (error is java.io.IOException || error is ApiFailure && (error.status ?: 500) >= 500) -> UncertainWrite
             error is java.io.IOException -> Offline
-            else -> Rejected(error.message ?: "Не удалось выполнить запрос")
+            else -> Rejected(error.message ?: tr("Не удалось выполнить запрос", "The request could not be completed"))
         }
     }
 }

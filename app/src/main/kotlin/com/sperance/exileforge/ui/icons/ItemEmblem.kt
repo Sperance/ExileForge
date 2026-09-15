@@ -3,7 +3,7 @@ package com.sperance.exileforge.ui.icons
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -15,21 +15,30 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.ItemVisualKind
+import com.sperance.exileforge.core.i18n.tr
 
 /** Original vector emblems, bundled and available offline for every item category. */
 @Composable fun ItemEmblem(kind: ItemVisualKind, tint: Color, modifier: Modifier = Modifier) {
-    Canvas(modifier.size(72.dp).clip(RoundedCornerShape(18.dp))
-        .background(Brush.radialGradient(listOf(tint.copy(alpha = .22f), Color(0xFF111B23))))
-        .semantics { contentDescription = "Иконка: ${kind.name}" }) {
+    val description = tr("Иконка", "Icon") + ": ${kind.name}"
+    Canvas(modifier.size(72.dp).clip(CutCornerShape(10.dp))
+        .background(Brush.radialGradient(listOf(tint.copy(alpha = .20f), Color(0xFF0C1015)), radius = 120f))
+        .semantics { contentDescription = description }) {
         scale(size.width / 80f, size.height / 80f, pivot = Offset.Zero) {
             fun line(x: Float, y: Float, xx: Float, yy: Float, width: Float = 2.5f) = drawLine(tint, Offset(x,y), Offset(xx,yy), width, StrokeCap.Round)
             fun shape(vararg points: Pair<Float, Float>) {
                 val p = Path().apply { moveTo(points[0].first, points[0].second); points.drop(1).forEach { lineTo(it.first,it.second) }; close() }
                 drawPath(p, tint.copy(alpha = .15f)); drawPath(p, tint, style = Stroke(2.5f, join = StrokeJoin.Round))
             }
-            drawCircle(tint.copy(alpha = .13f), 31f, Offset(40f,40f), style = Stroke(1f))
+            // Struck-metal socket: a bevelled ring with four rivets, as on a stash tab.
+            drawCircle(tint.copy(alpha = .13f), 33f, Offset(40f, 40f), style = Stroke(1f))
+            drawCircle(tint.copy(alpha = .07f), 37f, Offset(40f, 40f), style = Stroke(1f))
+            listOf(8f to 8f, 72f to 8f, 8f to 72f, 72f to 72f).forEach { (x, y) -> drawCircle(tint.copy(alpha = .35f), 2f, Offset(x, y)) }
             when(kind) {
                 ItemVisualKind.SWORD -> { shape(53f to 16f, 62f to 18f, 60f to 27f, 34f to 53f, 27f to 46f); line(24f,42f,38f,56f); line(29f,51f,19f,62f,5f) }
+                ItemVisualKind.AXE -> { line(26f,62f,52f,22f,4f); shape(44f to 12f, 63f to 20f, 58f to 38f, 47f to 30f); line(21f,58f,29f,66f,5f) }
+                ItemVisualKind.MACE -> { line(24f,62f,48f,28f,4f); shape(42f to 12f, 58f to 14f, 64f to 28f, 52f to 38f, 40f to 30f); line(46f,17f,58f,30f,1.5f); line(56f,17f,48f,33f,1.5f) }
+                ItemVisualKind.DAGGER -> { shape(52f to 14f, 60f to 20f, 36f to 50f, 30f to 44f); line(26f,40f,38f,52f); line(30f,50f,22f,60f,4f) }
+                ItemVisualKind.WAND -> { line(24f,62f,50f,28f,4f); shape(46f to 14f, 60f to 18f, 58f to 32f, 45f to 32f); drawCircle(tint, 4f, Offset(52f, 23f)) }
                 ItemVisualKind.BOW -> { val p=Path().apply { moveTo(25f,14f); quadraticTo(73f,40f,25f,66f) }; drawPath(p,tint,style=Stroke(3f)); line(25f,14f,25f,66f,1.5f); line(17f,40f,63f,40f); line(57f,34f,63f,40f); line(57f,46f,63f,40f) }
                 ItemVisualKind.STAFF -> { line(27f,64f,49f,24f,4f); shape(45f to 13f,58f to 15f,59f to 27f,47f to 33f,39f to 25f) }
                 ItemVisualKind.HELMET -> { shape(20f to 58f,20f to 34f,30f to 20f,50f to 20f,60f to 34f,60f to 58f,47f to 52f,40f to 61f,33f to 52f); line(40f,23f,40f,48f); line(27f,39f,35f,42f); line(45f,42f,53f,39f) }
@@ -41,6 +50,10 @@ import com.sperance.exileforge.core.display.ItemVisualKind
                 ItemVisualKind.BELT -> { shape(15f to 30f,65f to 30f,65f to 52f,15f to 52f);shape(30f to 26f,50f to 26f,50f to 56f,30f to 56f);line(40f,41f,57f,41f) }
                 ItemVisualKind.SHIELD -> { shape(40f to 15f,61f to 24f,57f to 49f,40f to 66f,23f to 49f,19f to 24f);line(40f,22f,40f,56f);line(28f,34f,52f,34f) }
                 ItemVisualKind.WINGS -> { shape(37f to 59f,16f to 34f,17f to 16f,35f to 33f);shape(43f to 59f,64f to 34f,63f to 16f,45f to 33f) }
+                ItemVisualKind.FLASK -> { shape(32f to 12f,48f to 12f,48f to 28f,58f to 46f,58f to 68f,22f to 68f,22f to 46f,32f to 28f); line(22f,46f,58f,46f); line(30f,55f,50f,55f,1.5f) }
+                ItemVisualKind.GEM -> { shape(40f to 10f,64f to 32f,52f to 68f,28f to 68f,16f to 32f); line(16f,32f,64f,32f,1.5f); line(40f,10f,28f,32f,1.5f); line(40f,10f,52f,32f,1.5f); line(28f,32f,40f,68f,1.5f); line(52f,32f,40f,68f,1.5f) }
+                ItemVisualKind.MAP -> { shape(14f to 20f,32f to 14f,48f to 24f,66f to 17f,66f to 60f,48f to 66f,32f to 56f,14f to 62f); line(32f,14f,32f,56f,1.5f); line(48f,24f,48f,66f,1.5f) }
+                ItemVisualKind.SCROLL -> { shape(22f to 12f,58f to 12f,58f to 68f,22f to 68f); line(22f,22f,58f,22f); line(22f,58f,58f,58f); line(31f,34f,49f,34f,1.5f); line(31f,44f,49f,44f,1.5f) }
                 ItemVisualKind.CHARACTER -> { drawCircle(tint,11f,Offset(40f,28f),style=Stroke(3f)); val p=Path().apply { moveTo(20f,63f); cubicTo(20f,35f,60f,35f,60f,63f) };drawPath(p,tint,style=Stroke(3f)) }
                 ItemVisualKind.CURRENCY -> { drawCircle(tint,22f,Offset(40f,40f),style=Stroke(3f));drawCircle(tint.copy(alpha=.5f),16f,Offset(40f,40f),style=Stroke(1f));shape(40f to 26f,49f to 40f,40f to 54f,31f to 40f) }
                 ItemVisualKind.ITEM -> { shape(40f to 16f,59f to 30f,52f to 58f,28f to 58f,21f to 30f);line(21f,30f,59f,30f);line(40f,16f,32f,30f);line(32f,30f,40f,59f) }

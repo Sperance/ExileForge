@@ -12,6 +12,9 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: android-actions/setup-android@v3
+        with:
+          # The obsolete 'tools' package is gone from the SDK repository; sdkmanager fails on it.
+          packages: 'platform-tools'
       - uses: gradle/actions/setup-gradle@v4
       - run: chmod +x gradlew
       - run: ./gradlew :core:test :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest
@@ -72,6 +75,9 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: android-actions/setup-android@v3
+        with:
+          # The obsolete 'tools' package is gone from the SDK repository; sdkmanager fails on it.
+          packages: 'platform-tools'
       - name: Start isolated MongoDB
         run: |
           docker run -d --name client-mongo -p 27017:27017 mongo:8 --replSet rs0 --bind_ip_all

@@ -9,16 +9,17 @@ import kotlinx.coroutines.flow.update
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString
 import java.util.UUID
+import com.sperance.exileforge.core.i18n.tr
 
 class PassiveViewModel(private val runtime: ForgeRuntime) {
     private fun scope(id: String): String = with(runtime.state.value) { "$server:${requireNotNull(profile).id}:$id" }
     fun load() = with(runtime) {
         task {
             val id = state.value.characterId
-            check(state.value.signedIn && id.isNotBlank()) { "Войдите в аккаунт и выберите персонажа" }
+            check(state.value.signedIn && id.isNotBlank()) { tr("Войдите в аккаунт и выберите персонажа", "Sign in and choose a character") }
             val pending = store.passivePending(scope(id))?.let { WireJson.decodeFromString<PendingPassiveWrite>(it) }
             mutable.update { it.copy(passivePending = pending, passiveState = null, passiveTree = null, passiveCharacterId = "") }
-            check(api.capabilities().passiveTree) { "Для дерева навыков обновите сервер до 0.12.0" }
+            check(api.capabilities().passiveTree) { tr("Для дерева навыков обновите сервер до 0.12.0", "Update the server to 0.12.0 for the passive tree") }
             val result = api.passiveState(id)
             val tree = api.passiveTree(result.treeRevision)
             mutable.update { it.copy(passiveState = result, passiveTree = tree, passiveCharacterId = id) }

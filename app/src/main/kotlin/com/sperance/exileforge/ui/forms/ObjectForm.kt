@@ -19,6 +19,7 @@ import com.sperance.exileforge.core.generation.modifierFromDefinition
 import com.sperance.exileforge.ui.components.Spinner
 import com.sperance.exileforge.ui.icons.propertyIcon
 import com.sperance.exileforge.ui.theme.Gold
+import com.sperance.exileforge.core.i18n.tr
 import kotlinx.serialization.json.*
 
 @Composable fun ObjectForm(schema: String, document: JsonObject, definitions: List<JsonObject>, enabled: Boolean, locked: Set<String> = emptySet(), onChange: (JsonObject) -> Unit) {
@@ -51,7 +52,7 @@ import kotlinx.serialization.json.*
                         schema == "modifier" && field.key == "tier" -> {
                             val definition = available.firstOrNull { definitionKey(it) == referenceKey(document, "definitionRevision") }
                             val tiers = (definition?.get("tiers") as? JsonArray).orEmpty().map { it.jsonObject.text("tier") }
-                            if(tiers.isNotEmpty()) Spinner("Выбрать tier", document.text("tier"), tiers.associateWith { "T$it" }, editable) { tier ->
+                            if(tiers.isNotEmpty()) Spinner(tr("Выбрать tier", "Choose a tier"), document.text("tier"), tiers.associateWith { "T$it" }, editable) { tier ->
                                 onChange(JsonObject(document + modifierFromDefinition(definition!!, tier.toInt())))
                             }
                             FormInput(field.label, field.spec, value, available, editable) { onChange(document.changed(field.key, it)) }

@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import com.sperance.exileforge.ui.icons.ItemEmblem
 import com.sperance.exileforge.core.display.itemVisualKind
+import com.sperance.exileforge.core.i18n.tr
 import com.sperance.exileforge.ui.theme.Gold
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -33,10 +34,10 @@ val LocalEntityPageLoader = staticCompositionLocalOf<suspend (EntitySource, Int,
     var failure by remember(source) { mutableStateOf<String?>(null) }
     var retry by remember(source) { mutableIntStateOf(0) }
     fun title(record: JsonObject): String = listOf("name", "login", "code").firstNotNullOfOrNull { record.text(it).takeIf(String::isNotBlank) }
-        ?: "Запись"
+        ?: tr("Запись", "Record")
     val selected = records.firstOrNull { it.entityId == value }
     OutlinedButton(enabled = enabled, onClick = { records = emptyList(); page = 0; totalPages = 1; query = ""; expanded = true }, modifier = Modifier.fillMaxWidth()) {
-        Text("$label: ${selected?.let(::title) ?: if(value.isBlank()) "Выбрать" else "Выбрано · ${value.takeLast(6)}"} ▾")
+        Text("$label: ${selected?.let(::title) ?: if(value.isBlank()) tr("Выбрать", "Choose") else tr("Выбрано", "Selected") + " · ${value.takeLast(6)}"} ▾")
     }
     LaunchedEffect(expanded, page, retry, source, query) {
         if(!expanded) return@LaunchedEffect
@@ -47,25 +48,23 @@ val LocalEntityPageLoader = staticCompositionLocalOf<suspend (EntitySource, Int,
             records = (if(page == 0) result.items else records + result.items).distinctBy { it.entityId }
             totalPages = result.totalPages
         } catch(e: CancellationException) { throw e }
-        catch(e: Exception) { failure = e.message ?: "Не удалось загрузить список" }
+        catch(e: Exception) { failure = e.message ?: tr("Не удалось загрузить список", "The list could not be loaded") }
         finally { loading = false }
     }
-    if(expanded) AlertDialog(onDismissRequest = { expanded = false }, title = { Text(label) }, text = {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(query, { query = it; page = 0; records = emptyList() }, label = { Text("Поиск по всему каталогу") }, singleLine = true)
-            if(loading) LinearProgressIndicator(Modifier.fillMaxWidth())
-            failure?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            LazyColumn(Modifier.fillMaxWidth().heightIn(max = 320.dp)) {
-                items(records, key = { it.entityId }) { record ->
-                    TextButton(enabled = enabled, onClick = { onChange(record.entityId); expanded = false }, modifier = Modifier.fillMaxWidth()) {
-                        ItemEmblem(itemVisualKind(record), Gold, Modifier.size(48.dp))
-                        Text("${title(record)} · ${record.entityId.takeLast(6)}", modifier = Modifier.weight(1f).padding(start = 12.dp))
-                    }
+    if(expanded) ForgeDialog(label, onDismiss = { expanded = false }) {
+        OutlinedTextField(query, { query = it; page = 0; records = emptyList() }, label = { Text(tr("Поиск по всему каталогу", "Search the whole catalogue")) }, singleLine = true)
+        if(loading) LinearProgressIndicator(Modifier.fillMaxWidth())
+        failure?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        LazyColumn(Modifier.fillMaxWidth().heightIn(max = 320.dp)) {
+            items(records, key = { it.entityId }) { record ->
+                TextButton(enabled = enabled, onClick = { onChange(record.entityId); expanded = false }, modifier = Modifier.fillMaxWidth()) {
+                    ItemEmblem(itemVisualKind(record), Gold, Modifier.size(44.dp))
+                    Text("${title(record)} · ${record.entityId.takeLast(6)}", modifier = Modifier.weight(1f).padding(start = 12.dp))
                 }
             }
-            if(!loading && failure == null && records.isEmpty()) Text("Записей пока нет")
-            if(failure != null) TextButton(onClick = { retry++ }, enabled = !loading) { Text("Повторить") }
-            else if(page + 1 < totalPages) TextButton(onClick = { loading = true; page++ }, enabled = !loading) { Text("Загрузить ещё") }
         }
-    }, confirmButton = { TextButton(onClick = { expanded = false }) { Text("Закрыть") } })
+        if(!loading && failure == null && records.isEmpty()) Text(tr("Записей пока нет", "No records yet"))
+        if(failure != null) TextButton(onClick = { retry++ }, enabled = !loading) { Text(tr("Повторить", "Retry")) }
+        else if(page + 1 < totalPages) TextButton(onClick = { loading = true; page++ }, enabled = !loading) { Text(tr("Загрузить ещё", "Load more")) }
+    }
 }

@@ -17,6 +17,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
+import com.sperance.exileforge.core.i18n.tr
 import kotlinx.serialization.json.*
 
 class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
@@ -38,7 +39,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
         created = GameApi(server, journal, onUnauthorized = {
             if(::api.isInitialized && api === created) {
                 clearSession()
-                mutable.update { it.copy(message = "Сессия истекла. Войдите снова.") }
+                mutable.update { it.copy(message = tr("Сессия истекла. Войдите снова.", "The session has expired. Sign in again.")) }
             }
         })
         return created
@@ -46,6 +47,9 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
     init {
         scope.launch {
             try {
+                val language = store.language.first()
+                com.sperance.exileforge.core.i18n.uiLanguage = language
+                mutable.update { it.copy(lang = language) }
                 val server = store.server.first()
                 api = newApi(server)
                 val restored = store.pending.first()?.let { raw ->
@@ -54,13 +58,21 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
                 }
                 mutable.update { it.copy(pending = restored, characterId = restored?.characterId.orEmpty()) }
                 mutable.update { it.copy(server = server, serverDraft = server, busy = false) }
-                mutable.update { it.copy(message = "Войдите в аккаунт для загрузки каталога") }
+                mutable.update { it.copy(message = tr("Войдите в аккаунт для загрузки каталога", "Sign in to load the catalogue")) }
             } catch (e: CancellationException) { throw e }
             catch (e: Exception) {
                 api = newApi("http://10.0.2.2:8080/")
                 mutable.update { it.copy(busy = false, error = true, message = e.message) }
             }
         }
+    }
+    /** Language is global: core validation messages and Compose both read it, so switch them together. */
+    fun language(lang: com.sperance.exileforge.core.i18n.Lang) {
+        if(state.value.lang == lang) return
+        val untested = tr("Соединение ещё не проверено", "The connection has not been checked yet")
+        com.sperance.exileforge.core.i18n.uiLanguage = lang
+        mutable.update { it.copy(lang = lang, health = if(it.health == untested) tr("Соединение ещё не проверено", "The connection has not been checked yet") else it.health) }
+        scope.launch { store.saveLanguage(lang) }
     }
     fun tab(tab: Int) { if(!state.value.adminTools && tab == 2) return; mutable.update { it.copy(tab = tab) } }
     suspend fun referencePage(source: EntitySource, page: Int, query: String) = api.referencePage(source, page, query)
@@ -75,8 +87,8 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
                 if(e is ApiFailure && e.status == 409) mutable.update { it.copy(conflict = true, inventoryVersion = null) }
                 val problem = FailureState.from(e, writing)
                 mutable.update { it.copy(failure = problem) }
-                val prefix = if(e is ApiFailure && e.status == 409) "Запись изменена. Черновик сохранён; обновите данные и проверьте изменения. " else if (e is ApiFailure) "HTTP ${e.status ?: "—"} ${e.code.orEmpty()}: " else ""
-                mutable.update { it.copy(error = true, message = if(problem == FailureState.UncertainWrite) "Ответ потерян. Запись могла сохраниться: обновите данные перед повтором." else if(problem == FailureState.Offline) "Нет соединения. Проверьте сеть и повторите загрузку." else prefix + (e.message ?: "Ошибка запроса")) }
+                val prefix = if(e is ApiFailure && e.status == 409) tr("Запись изменена. Черновик сохранён; обновите данные и проверьте изменения. ", "The record changed. Your draft is kept; refresh the data and review the changes. ") else if (e is ApiFailure) "HTTP ${e.status ?: "—"} ${e.code.orEmpty()}: " else ""
+                mutable.update { it.copy(error = true, message = if(problem == FailureState.UncertainWrite) tr("Ответ потерян. Запись могла сохраниться: обновите данные перед повтором.", "The response was lost. The write may have been applied: refresh before retrying.") else if(problem == FailureState.Offline) tr("Нет соединения. Проверьте сеть и повторите загрузку.", "No connection. Check the network and load again.") else prefix + (e.message ?: tr("Ошибка запроса", "Request failed"))) }
             } finally { mutable.update { it.copy(busy = false) } }
         }
     }

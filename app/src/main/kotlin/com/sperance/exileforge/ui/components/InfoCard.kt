@@ -1,21 +1,24 @@
 package com.sperance.exileforge.ui.components
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.ui.icons.propertyIcon
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.Muted
-import kotlinx.serialization.json.*
 
+/** Parchment note pinned to the stash wall; turns blood-red when it reports a failure. */
 @Composable internal fun InfoCard(title: String, body: String, failure: Boolean = false) {
-    OutlinedCard(modifier = Modifier.fillMaxWidth(), border = BorderStroke(1.dp, if (failure) MaterialTheme.colorScheme.error else Gold.copy(alpha = .3f))) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(title, color = if (failure) MaterialTheme.colorScheme.error else Gold, style = MaterialTheme.typography.titleMedium)
-            SelectionContainer { Text(body, color = Muted, style = MaterialTheme.typography.bodySmall) }
+    val accent = if (failure) MaterialTheme.colorScheme.error else Gold
+    ForgePanel(accent = accent) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(propertyIcon(title), null, tint = accent, modifier = Modifier.size(18.dp))
+            Text(title, color = accent, style = MaterialTheme.typography.titleMedium)
         }
+        SelectionContainer { Text(body, color = Muted, style = MaterialTheme.typography.bodySmall) }
     }
 }

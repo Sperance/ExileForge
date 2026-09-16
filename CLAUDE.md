@@ -4,7 +4,7 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 1.9.0, `versionCode` 10) for the
+ExileForge is an **Android Compose client** (version 1.10.0, `versionCode` 11) for the
 **ktor-bestgame** RPG server (0.12.0, **API revision 3**), pinned in
 `core/.../contract/Contract.kt` as `SERVER_COMMIT = 24ed09b867fc559504333d8ee6e3b03e133ecfb6`
 on the server branch `refactor/compact-rpg-architecture`.
@@ -26,6 +26,7 @@ core/                                   Pure JVM library (java-library + kotlin-
   model/         Catalog, EntitySource, CatalogFilter, EquipmentKind
                  command/Commands.kt    Serializable commands, EquipmentSlot, CalculatedStats, EquipmentView, ApiCapabilities
                  hero/, combat/, passives/, modifier/, character/
+  i18n/          Loc.kt                 Lang (RU/EN), `tr(ru, en)` and the global `uiLanguage`
   editor/        EditorSchema.kt        Declarative form schemas (FormField/InputSpec) used by the admin editor
                  conflict/ThreeWayMerge.kt
   generation/    ItemGenerator, ModifierSelection, PresetDefinitions
@@ -37,9 +38,10 @@ app/                                    Android application (minSdk 26, compile/
                  ForgeViewModel.kt      Lifecycle owner and thin facade delegating to feature models
                  features/              Catalog, Editor, Hero, Session, Passive, Combat, Checks view models
                  state/ForgeState.kt    One immutable state object for the whole app
-  ui/            ForgeApp.kt            Scaffold, bottom navigation, tab dispatch
+  ui/            ForgeApp.kt            Scaffold, banner with RU/EN switch, bottom navigation, tab dispatch
                  screens/               catalog, editor, inventory (Hero/Forge), combat, passives, checks, server
-                 components/, forms/, icons/, theme/
+                 components/            ItemCard, PropertyRow, InfoCard, spinners and Ornament.kt (ForgePanel/ScreenHeader/OrnateDivider/StatGlobe)
+                 forms/, icons/ (ForgeGlyphs vector set, ItemEmblem), theme/
   data/settings/ServerStore.kt          DataStore Preferences: base URL, saved filters, pending commands
 docs/                                   Russian reference docs (API_CONTRACT, COMBAT, PASSIVES, VALIDATION)
 scripts/client_server_test.py           Boots the real backend + MongoDB and runs ServerIntegrationTest
@@ -141,7 +143,12 @@ These are enforced by tests and are the point of the client's design:
 
 - **Language split:** code, comments, commit messages and test names are English; every
   user-facing string (including `require`/`check` messages, which surface in snackbars) is
-  **Russian**. Keep that split when adding code.
+  **bilingual**: write it as `tr("русский текст", "English text")` from `core/i18n/Loc.kt`.
+  `tr` reads the global `uiLanguage`, which defaults to **RU**, so tests that assert Russian
+  keep passing. Compose refreshes because `ForgeApp` keys the whole tree on `s.lang`; helpers
+  that take an explicit language (`slotTitle`, `rarityTitle`, `Catalog.title`,
+  `EquipmentSlot.title`) default to `uiLanguage`. Never add a user-facing literal in one
+  language only.
 - **Style:** dense, low-ceremony Kotlin — one-line bodies, `when` expression tables, few
   comments. Comments exist only where a rule is non-obvious (idempotency, atomic arrays,
   display-only projections). Match the surrounding density instead of expanding it.
@@ -153,8 +160,11 @@ These are enforced by tests and are the point of the client's design:
 - Compose screens are `@Composable fun Screen(s: ForgeState, vm: ForgeViewModel)`; they read
   state and call `vm::action`. Enable/disable controls with `!s.busy` plus the relevant
   ownership/pending guard, as in `CombatScreen`'s `controls` value.
-- Theme: dark only, gold/ink palette in `ui/theme/Theme.kt`; use `rarityColor`/`ItemEmblem`
-  rather than new ad-hoc colors or network images (icons are offline vectors).
+- Theme: dark only, Path of Exile palette in `ui/theme/Theme.kt` (Ink/Abyss/Panel stone,
+  Gold/Bronze frames, PoE rarity colours, cut-corner shapes). Build screens from
+  `ScreenHeader`, `ForgePanel`, `OrnateDivider`, `Engraved`, `StatGlobe` and `PropertyRow`
+  instead of ad-hoc cards, and use `rarityColor`/`ItemEmblem`/`ForgeGlyphs` rather than new
+  ad-hoc colors or network images (all icons are offline vectors).
 - Commit messages follow Conventional Commits: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`
   (docs-only commits often append `[skip ci]`).
 

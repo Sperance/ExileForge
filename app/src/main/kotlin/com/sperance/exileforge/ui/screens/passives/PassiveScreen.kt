@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.passives
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -9,13 +10,14 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.i18n.tr
 import com.sperance.exileforge.core.model.EntitySource
 import com.sperance.exileforge.core.model.passives.*
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
-import com.sperance.exileforge.ui.components.EntitySpinner
-import com.sperance.exileforge.ui.theme.Gold
-import com.sperance.exileforge.ui.theme.Muted
+import com.sperance.exileforge.ui.components.*
+import com.sperance.exileforge.ui.icons.ForgeGlyphs
+import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.launch
 
 @Composable fun PassiveScreen(s: ForgeState, vm: ForgeViewModel) {
@@ -33,25 +35,30 @@ import kotlinx.coroutines.launch
     }
     LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
-            Text("Древо навыков", style = MaterialTheme.typography.headlineLarge, color = Gold)
-            Text("Общее дерево · личный путь каждого героя", color = Muted)
-            EntitySpinner("Персонаж", s.characterId, EntitySource.CHARACTER, !s.busy && s.pending == null, vm::characterId)
+            ScreenHeader(tr("Древо навыков", "Passive tree"), tr("Общее дерево · личный путь каждого героя", "One tree · a personal path for every hero"), ForgeGlyphs.Constellation)
+            EntitySpinner(tr("Персонаж", "Character"), s.characterId, EntitySource.CHARACTER, !s.busy && s.pending == null, vm::characterId)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(enabled = s.signedIn && !s.busy && s.characterId.isNotBlank(), onClick = vm::loadPassives) { Text("Обновить дерево") }
-                TextButton(enabled = !s.busy, onClick = { vm.tab(4) }) { Text("К герою") }
+                OutlinedButton(enabled = s.signedIn && !s.busy && s.characterId.isNotBlank(), onClick = vm::loadPassives) { Text(tr("Обновить дерево", "Refresh the tree")) }
+                TextButton(enabled = !s.busy, onClick = { vm.tab(4) }) { Text(tr("К герою", "Back to the hero")) }
             }
-            if(!s.signedIn) Text("Войдите во вкладке «Аккаунт».")
+            if(!s.signedIn) Text(tr("Войдите во вкладке «Аккаунт».", "Sign in on the Account tab."))
             if(s.passivePending != null) {
-                Text("Ответ не подтверждён. Исходное действие сохранено.", color = Gold)
-                Button(enabled = !s.busy && s.signedIn, onClick = vm::retryPassive) { Text("Подтвердить действие") }
+                Text(tr("Ответ не подтверждён. Исходное действие сохранено.", "The response was not confirmed. The original action is stored."), color = Gold)
+                Button(enabled = !s.busy && s.signedIn, onClick = vm::retryPassive) { Text(tr("Подтвердить действие", "Confirm the action")) }
             }
         }
         if(tree != null && state != null) {
             item {
-                Text(tree.name, style = MaterialTheme.typography.titleLarge)
-                Text("Свободно ${state.availablePoints} · потрачено ${state.spentPoints} / ${state.totalPoints}", color = Gold)
-                Text("Жесты: двигайте и масштабируйте. Узлы также доступны в списке ниже.", style = MaterialTheme.typography.bodySmall)
-                state.lockedReason?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                ForgePanel {
+                    Text(tree.name, style = MaterialTheme.typography.titleLarge, color = GoldBright)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                        StatGlobe(tr("Свободно", "Free"), state.availablePoints.toString(), 1f, Rune)
+                        StatGlobe(tr("Потрачено", "Spent"), "${state.spentPoints} / ${state.totalPoints}",
+                            if(state.totalPoints > 0) state.spentPoints.toFloat() / state.totalPoints else 0f, Gold)
+                    }
+                    Text(tr("Жесты: двигайте и масштабируйте. Узлы также доступны в списке ниже.", "Gestures: drag and pinch. The nodes are also listed below."), style = MaterialTheme.typography.bodySmall, color = Muted)
+                    state.lockedReason?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                }
             }
             item { PassiveGraph(tree, state.allocated, state.allocatable, selected) { selected = it } }
             item {
@@ -62,30 +69,34 @@ import kotlinx.coroutines.launch
                 }
             }
             item {
-                OutlinedButton(enabled = !blocked && state.allocated.isNotEmpty() && state.lockedReason == null, onClick = { confirm = PassiveAction.RESET to null }) { Text("Сбросить все навыки") }
-                Text("Сброс бесплатный. Если уменьшатся нужные предметам характеристики, сначала снимите эти предметы.", color = Muted, style = MaterialTheme.typography.bodySmall)
-                OutlinedTextField(query, { query = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Найти узел или характеристику") }, singleLine = true)
-                FilterChip(onlyAvailable, onClick = { onlyAvailable = !onlyAvailable }, label = { Text("Только доступные") })
+                OutlinedButton(enabled = !blocked && state.allocated.isNotEmpty() && state.lockedReason == null, onClick = { confirm = PassiveAction.RESET to null }) { Text(tr("Сбросить все навыки", "Refund every node")) }
+                Text(tr("Сброс бесплатный. Если уменьшатся нужные предметам характеристики, сначала снимите эти предметы.", "Refunding is free. If stats required by your gear drop, unequip those items first."), color = Muted, style = MaterialTheme.typography.bodySmall)
+                OutlinedTextField(query, { query = it }, modifier = Modifier.fillMaxWidth(), label = { Text(tr("Найти узел или характеристику", "Find a node or a stat")) }, singleLine = true)
+                FilterChip(onlyAvailable, onClick = { onlyAvailable = !onlyAvailable }, label = { Text(tr("Только доступные", "Available only")) })
             }
             val visible = tree.nodes.filter { node ->
                 (!onlyAvailable || node.id in state.allocatable) && (query.isBlank() || node.name.contains(query, true) || node.effects.any { passiveStatName(it.stat).contains(query, true) })
             }
-            if(visible.isEmpty()) item { Text("Подходящих узлов нет.") }
+            if(visible.isEmpty()) item { Text(tr("Подходящих узлов нет.", "No matching nodes.")) }
             items(visible, key = { it.id }) { node ->
-                Card(onClick = { selected = node.id; scope.launch { list.animateScrollToItem(3) } }, modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(12.dp)) {
-                        Text(node.name, color = if(node.id in state.allocated) Gold else MaterialTheme.colorScheme.onSurface)
-                        Text("${passiveKind(node.kind)} · ${if(node.id in state.allocated) "изучен" else if(node.id in state.allocatable) "доступен" else "закрыт"}", style = MaterialTheme.typography.labelMedium)
-                        node.effects.forEach { Text(passiveEffectText(it), style = MaterialTheme.typography.bodySmall) }
-                    }
+                val allocated = node.id in state.allocated
+                ForgePanel(Modifier.clickable { selected = node.id; scope.launch { list.animateScrollToItem(3) } }, accent = if(allocated) Gold else Muted) {
+                    Text(node.name, color = if(allocated) GoldBright else MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleMedium)
+                    Text("${passiveKind(node.kind)} · " + when {
+                        allocated -> tr("изучен", "allocated")
+                        node.id in state.allocatable -> tr("доступен", "available")
+                        else -> tr("закрыт", "locked")
+                    }, style = MaterialTheme.typography.labelMedium, color = Muted)
+                    node.effects.forEach { Text(passiveEffectText(it), style = MaterialTheme.typography.bodySmall) }
                 }
             }
         }
     }
     confirm?.let { (action, nodeId) ->
-        AlertDialog(onDismissRequest = { confirm = null }, title = { Text(if(action == PassiveAction.RESET) "Сбросить всё дерево?" else "Снять навык?") },
-            text = { Text("Очки вернутся герою. Сервер проверит связность дерева и требования экипировки.") },
-            confirmButton = { TextButton(enabled = !blocked, onClick = { confirm = null; vm.changePassive(action, nodeId) }) { Text("Подтвердить") } },
-            dismissButton = { TextButton(onClick = { confirm = null }) { Text("Отмена") } })
+        AlertDialog(onDismissRequest = { confirm = null }, containerColor = Panel, titleContentColor = Gold,
+            title = { Text(if(action == PassiveAction.RESET) tr("Сбросить всё дерево?", "Refund the whole tree?") else tr("Снять навык?", "Refund the node?")) },
+            text = { Text(tr("Очки вернутся герою. Сервер проверит связность дерева и требования экипировки.", "The points return to the hero. The server checks tree connectivity and gear requirements.")) },
+            confirmButton = { TextButton(enabled = !blocked, onClick = { confirm = null; vm.changePassive(action, nodeId) }) { Text(tr("Подтвердить", "Confirm")) } },
+            dismissButton = { TextButton(onClick = { confirm = null }) { Text(tr("Отмена", "Cancel")) } })
     }
 }

@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.serialization.json.*
 
 import com.sperance.exileforge.presentation.ForgeRuntime
+import com.sperance.exileforge.core.i18n.tr
 
 class CatalogViewModel(private val runtime: ForgeRuntime) {
     private val state get() = runtime.state
@@ -35,17 +36,17 @@ task {
     }
     } }
     fun refresh(page: Int = state.value.page) { with(runtime) {
-task { if(state.value.signedIn) loadPage(page) else mutable.update { it.copy(tab = 3, message = "Войдите в аккаунт") } }
+task { if(state.value.signedIn) loadPage(page) else mutable.update { it.copy(tab = 3, message = tr("Войдите в аккаунт", "Sign in to your account")) } }
     } }
     fun count() { with(runtime) {
 task {
         val result = api.count(state.value.catalog)
-        mutable.update { it.copy(message = "Количество: $result") }
+        mutable.update { it.copy(message = tr("Количество: $result", "Count: $result")) }
     }
     } }
     fun open(id: String) { with(runtime) {
 task {
-        val doc = api.get(state.value.catalog, id) ?: error("Предмет не найден")
+        val doc = api.get(state.value.catalog, id) ?: error(tr("Предмет не найден", "The item was not found"))
         val pinned = pinnedDefinitions(doc)
         setEditor(doc, doc)
         mutable.update { it.copy(definitions = (pinned + it.definitions).distinctBy(::definitionKey)) }

@@ -1,8 +1,18 @@
-# ExileForge 1.9.0
+# ExileForge 1.10.0
 
 Android Compose client for **ktor-bestgame 0.12.0**, API revision 3.
 Server: `refactor/compact-rpg-architecture`, commit `24ed09b867fc559504333d8ee6e3b03e133ecfb6`.
 Client development branch: `master`.
+
+## Язык интерфейса · Interface language
+
+Каждый элемент интерфейса доступен на русском и английском. Переключатель `RU / EN` стоит в шапке приложения и во вкладке «Аккаунт»; выбор сохраняется в DataStore и применяется ко всем экранам, подсказкам, сообщениям об ошибках и проверкам контракта. Русский остаётся языком по умолчанию.
+
+Every label, hint, error and contract-validation message exists in Russian and English. The `RU / EN` switch sits in the app banner and on the Account tab; the choice is stored in DataStore and applies to the whole interface. Russian stays the default.
+
+## Оформление
+
+Тёмная тема в духе Path of Exile: чернёный камень, бронзовые рамки с косыми углами, гравированные заголовки с ромбовидным разделителем, рамки предметов в цветах редкости PoE (обычный, магический, редкий, уникальный) и сферы здоровья, маны и щита. Добавлен набор собственных векторных иконок (наковальня, скрещённые клинки, сфера, самоцвет, флакон, шлем, щит, тайник, свиток, портал, созвездие, череп, сигил, изгнанник, атлас, том, факел, весы, цепь, знамя) и новые эмблемы предметов: топор, булава, кинжал, жезл, флакон, самоцвет, карта, свиток. Сетевые изображения по-прежнему не используются.
 
 ## Древо навыков
 
@@ -47,10 +57,11 @@ JDK 17, Android SDK 37, Gradle wrapper:
 GitHub Actions also runs Compose checks on an API 35 emulator. APKs and UI reports are attached to each successful workflow run.
 The original fantasy cards, property/item icons, bottom navigation, reference pickers and server-side modifier search remain available.
 
-## Workbench release — 1.9.0 / server 0.12.0
+## Workbench release — 1.10.0 / server 0.12.0
 
 This release requires **API revision 3**. Deploy the server from `refactor/compact-rpg-architecture` at `24ed09b867fc559504333d8ee6e3b03e133ecfb6` before updating the app.
 
+- The interface ships in Russian and English. `RU / EN` in the banner switches every label, snackbar and validation message at once, including the ones raised inside `:core`.
 - Login starts in **Player** mode. Players have Characters, Hero, Forge and Account. An administrator can switch to the administration workspace with catalog editors and diagnostic checks. Switching modes is disabled while an editor has an open draft.
 - Hero shows the character summary, icon-based equipment slots, inventory cards and server stats. Comparing an item calls the read-only server endpoint; confirming equips with the same character version. Slot compatibility and requirements are checked on the server.
 - Forge shows currency counts, eligibility and rejection reasons. The engine's eligibility check does not predict random rolls or guarantee a later transaction: current ownership/version and equipped-item requirements are checked again during crafting. Before/after cards show the last completed craft.

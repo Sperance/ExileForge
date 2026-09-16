@@ -10,16 +10,17 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.encodeToJsonElement
 import java.util.UUID
+import com.sperance.exileforge.core.i18n.tr
 
 class CombatViewModel(private val runtime: ForgeRuntime) {
     private fun scope(id: String): String = with(runtime.state.value) { "$server:${requireNotNull(profile).id}:$id" }
     fun load() = with(runtime) {
         task {
             val id = state.value.characterId
-            check(id.isNotBlank() && state.value.signedIn) { "Выберите персонажа и войдите в аккаунт" }
+            check(id.isNotBlank() && state.value.signedIn) { tr("Выберите персонажа и войдите в аккаунт", "Choose a character and sign in") }
             val saved = store.combatPending(scope(id))?.let { WireJson.decodeFromString<PendingBattleWrite>(it) }
             mutable.update { it.copy(battlePending = saved, battleView = null, battleCharacterId = "") }
-            check(api.capabilities().combat) { "Для походов обновите ktor-bestgame до 0.11.0" }
+            check(api.capabilities().combat) { tr("Для походов обновите ktor-bestgame до 0.11.0", "Update ktor-bestgame to 0.11.0 for expeditions") }
             val catalog = api.combatCatalog()
             val view = api.battle(id)
             val hero = api.character(id)

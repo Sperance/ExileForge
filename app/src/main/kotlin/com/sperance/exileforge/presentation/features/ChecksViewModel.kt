@@ -9,17 +9,18 @@ import kotlinx.coroutines.flow.*
 import kotlinx.serialization.json.*
 
 import com.sperance.exileforge.presentation.ForgeRuntime
+import com.sperance.exileforge.core.i18n.tr
 
 class ChecksViewModel(private val runtime: ForgeRuntime) {
     private val state get() = runtime.state
     fun runChecks() { with(runtime) {
 task {
-        check(state.value.isAdmin) { "Проверки записи доступны администратору" }
-        require(state.value.catalog != Catalog.CHARACTERS) { "CRUD-сценарий предназначен для предметов" }
+        check(state.value.isAdmin) { tr("Проверки записи доступны администратору", "Write checks are available to administrators") }
+        require(state.value.catalog != Catalog.CHARACTERS) { tr("CRUD-сценарий предназначен для предметов", "The CRUD scenario is meant for items") }
         mutable.update { it.copy(checks = emptyList()) }
         val modifier = if(state.value.catalog == Catalog.EQUIPMENT) {
             val definitions = api.definitions("", 0).getValue("items").jsonArray
-            modifierFromDefinition(definitions.firstOrNull()?.jsonObject ?: error("Каталог модификаторов пуст. Запустите Seeder сервера"))
+            modifierFromDefinition(definitions.firstOrNull()?.jsonObject ?: error(tr("Каталог модификаторов пуст. Запустите Seeder сервера", "The modifier catalogue is empty. Run the server seeder")))
         } else starterModifier()
         CrudScenario(api, modifier).run(state.value.catalog) { result -> mutable.update { it.copy(checks = it.checks + result) } }
     }

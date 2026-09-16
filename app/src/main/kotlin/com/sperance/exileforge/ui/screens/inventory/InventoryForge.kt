@@ -13,11 +13,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.contract.text
 import com.sperance.exileforge.core.display.*
+import com.sperance.exileforge.core.i18n.tr
 import com.sperance.exileforge.core.model.command.EquipmentSlot
 import com.sperance.exileforge.core.model.EntitySource
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.*
+import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.serialization.json.*
 
@@ -33,33 +35,39 @@ import kotlinx.serialization.json.*
         horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item(span = { GridItemSpan(maxLineSpan) }) {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(if(forgeOnly) "Кузница" else "Арсенал героя", style = MaterialTheme.typography.headlineLarge)
-                Text("${s.inventory.size} предметов · снаряжение в инвентаре", color = Muted)
-                EntitySpinner("Персонаж", s.characterId, EntitySource.CHARACTER, !s.busy && s.pending == null, vm::characterId)
-                if(!s.signedIn) InfoCard("Войдите в аккаунт", "Во вкладке «Сервер» войдите, чтобы посмотреть снаряжение своего персонажа и применять сферы.")
+                ScreenHeader(if(forgeOnly) tr("Кузница", "Forge") else tr("Арсенал героя", "Hero's arsenal"),
+                    tr("${s.inventory.size} предметов · снаряжение в инвентаре", "${s.inventory.size} items in the stash"),
+                    if(forgeOnly) ForgeGlyphs.Anvil else ForgeGlyphs.Stash)
+                EntitySpinner(tr("Персонаж", "Character"), s.characterId, EntitySource.CHARACTER, !s.busy && s.pending == null, vm::characterId)
+                if(!s.signedIn) InfoCard(tr("Войдите в аккаунт", "Sign in"), tr("Во вкладке «Сервер» войдите, чтобы посмотреть снаряжение своего персонажа и применять сферы.", "Sign in on the Account tab to see your character's gear and use orbs."))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(enabled = !s.busy && s.signedIn && s.characterId.isNotBlank(), onClick = vm::loadInventory) { Icon(Icons.Outlined.Refresh, null); Text("Обновить") }
-                    Button(enabled = !s.busy && s.adminTools && s.ownsCharacter && s.inventoryVersion != null && s.pending == null, onClick = { vm.inventoryAction("drop") }) { Icon(Icons.Outlined.AutoAwesome, null); Text("Новый дроп") }
+                    OutlinedButton(enabled = !s.busy && s.signedIn && s.characterId.isNotBlank(), onClick = vm::loadInventory) { Icon(Icons.Outlined.Refresh, null); Text(tr("Обновить", "Refresh")) }
+                    Button(enabled = !s.busy && s.adminTools && s.ownsCharacter && s.inventoryVersion != null && s.pending == null, onClick = { vm.inventoryAction("drop") }) { Icon(Icons.Outlined.AutoAwesome, null); Text(tr("Новый дроп", "New drop")) }
                 }
-                Text("Тестовый дроп доступен администратору для своего персонажа.", color = Muted, style = MaterialTheme.typography.bodySmall)
-                if(!forgeOnly) OutlinedButton(enabled = !s.busy && s.signedIn, onClick = { vm.tab(7) }) { Text("Древо навыков") }
-                if(!forgeOnly) OutlinedButton(enabled = !s.busy && s.signedIn, onClick = { vm.tab(6) }) { Text("В поход") }
+                Text(tr("Тестовый дроп доступен администратору для своего персонажа.", "Test drops are available to an administrator on their own character."), color = Muted, style = MaterialTheme.typography.bodySmall)
+                if(!forgeOnly) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(enabled = !s.busy && s.signedIn, onClick = { vm.tab(7) }) { Icon(ForgeGlyphs.Constellation, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text(tr("Древо навыков", "Passive tree")) }
+                    OutlinedButton(enabled = !s.busy && s.signedIn, onClick = { vm.tab(6) }) { Icon(ForgeGlyphs.Swords, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text(tr("В поход", "March out")) }
+                }
                 if(!forgeOnly) { CharacterEquipmentPanel(s, vm::unequip); InventoryCommandsPanel(s, vm) }
-                OutlinedTextField(query, { query = it }, label = { Text("Найти предмет в арсенале") }, leadingIcon = { Icon(Icons.Outlined.Search, null) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(query, { query = it }, label = { Text(tr("Найти предмет в арсенале", "Find an item in the stash")) }, leadingIcon = { Icon(Icons.Outlined.Search, null) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    item { FilterChip(selected = slot.isBlank(), onClick = { slot = "" }, label = { Text("Все") }) }
-                    items(slots) { key -> FilterChip(selected = slot == key, onClick = { slot = key }, label = { Text(slotTitle(key)) }) }
+                    item { FilterChip(selected = slot.isBlank(), onClick = { slot = "" }, label = { Text(tr("Все", "All")) }) }
+                    items(slots) { key -> FilterChip(selected = slot == key, onClick = { slot = key }, label = { Text(slotTitle(key, s.lang)) }) }
                 }
-                if(s.pending != null) InfoCard("Ожидает подтверждения", "Повторите исходный запрос, чтобы узнать результат без повторного списания.")
-                if(s.pending != null) OutlinedButton(enabled = !s.busy && s.signedIn, onClick = vm::retryInventoryAction) { Text("Подтвердить результат") }
+                if(s.pending != null) InfoCard(tr("Ожидает подтверждения", "Awaiting confirmation"), tr("Повторите исходный запрос, чтобы узнать результат без повторного списания.", "Repeat the original request to learn the result without spending twice."))
+                if(s.pending != null) OutlinedButton(enabled = !s.busy && s.signedIn, onClick = vm::retryInventoryAction) { Text(tr("Подтвердить результат", "Confirm the result")) }
             }
         }
         val visible = s.inventory.filter { instance -> documents[instance.text("uuid")]?.let { (slot.isBlank() || it.text("slot") == slot) && it.text("name").contains(query, true) } == true }
-        if(visible.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }) { InfoCard(if(s.inventoryVersion == null) "Арсенал ещё не загружен" else "Ничего не найдено", "Выберите персонажа, загрузите экипировку или измените фильтры.") }
+        if(visible.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }) {
+            InfoCard(if(s.inventoryVersion == null) tr("Арсенал ещё не загружен", "The stash is not loaded yet") else tr("Ничего не найдено", "Nothing found"),
+                tr("Выберите персонажа, загрузите экипировку или измените фильтры.", "Choose a character, load the equipment or change the filters."))
+        }
         items(visible, key = { it.text("uuid") }) { instance ->
             val id = instance.text("uuid")
             ItemCard(documents.getValue(id), enabled = !s.busy, selected = id == s.selectedEquipment,
-                definitions = s.inventoryDefinitions, actionLabel = if(id in s.equipmentView?.equipped.orEmpty().values) "Надето · свойства" else "Надеть · свойства") { detailId = id; vm.selectEquipment(id) }
+                definitions = s.inventoryDefinitions, actionLabel = if(id in s.equipmentView?.equipped.orEmpty().values) tr("Надето · свойства", "Equipped · properties") else tr("Надеть · свойства", "Equip · properties")) { detailId = id; vm.selectEquipment(id) }
         }
     }
     // Mirror returns a new UUID. Keep the visible detail and the next craft target identical.
@@ -69,34 +77,41 @@ import kotlinx.serialization.json.*
         }
     }
     val instance = s.inventory.firstOrNull { it.text("uuid") == detailId }
-    if(instance != null) ModalBottomSheet(onDismissRequest = { detailId = null }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    if(instance != null) ModalBottomSheet(onDismissRequest = { detailId = null }, containerColor = Panel, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.9f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            item { ItemCard(documents.getValue(instance.text("uuid")), enabled = false, detailed = true, definitions = s.inventoryDefinitions, actionLabel = "Экземпляр · ${instance.text("uuid").takeLast(6)}") }
+            item { ItemCard(documents.getValue(instance.text("uuid")), enabled = false, detailed = true, definitions = s.inventoryDefinitions, actionLabel = tr("Экземпляр", "Instance") + " · ${instance.text("uuid").takeLast(6)}") }
             item {
                 val available = EquipmentSlot.forItem(documents.getValue(instance.text("uuid")).text("slot"))
                 var chosen by remember(instance.text("uuid")) { mutableStateOf(available.firstOrNull()?.name.orEmpty()) }
-                Spinner("Надеть в слот", chosen, available.associate { it.name to it.title }, !s.busy, { chosen = it })
-                Button(enabled = !s.busy && s.signedIn && s.pending == null && s.inventoryVersion != null && chosen.isNotBlank(), onClick = { detailId = null; vm.compareEquipment(instance.text("uuid"), EquipmentSlot.valueOf(chosen)) }) { Text("Сравнить и надеть") }
-                Text("Требования уровня, характеристик и совместимость рук проверит сервер.", color = Muted)
+                ForgePanel {
+                    Engraved(tr("Надеть", "Equip"))
+                    Spinner(tr("Надеть в слот", "Equip into slot"), chosen, available.associate { it.name to it.title(s.lang) }, !s.busy, { chosen = it })
+                    Button(enabled = !s.busy && s.signedIn && s.pending == null && s.inventoryVersion != null && chosen.isNotBlank(), modifier = Modifier.fillMaxWidth(),
+                        onClick = { detailId = null; vm.compareEquipment(instance.text("uuid"), EquipmentSlot.valueOf(chosen)) }) { Icon(ForgeGlyphs.Scales, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text(tr("Сравнить и надеть", "Compare and equip")) }
+                    Text(tr("Требования уровня, характеристик и совместимость рук проверит сервер.", "Level, stat and hand requirements are checked by the server."), color = Muted, style = MaterialTheme.typography.bodySmall)
+                }
             }
             item {
                 CraftDetails(s)
-                Text("Крафт экземпляра", style = MaterialTheme.typography.titleLarge, color = Gold)
-                Spinner("Сфера", s.selectedCurrency, s.currencies.associate { it.text("id") to it.text("name") }, !s.busy, vm::selectCurrency)
-                Button(modifier = Modifier.fillMaxWidth(), enabled = !s.busy && s.ownsCharacter && instance["poe"] is JsonObject && s.selectedCurrency.isNotBlank() && s.inventoryVersion != null && s.pending == null && s.craftOptions?.let { options -> options.characterVersion == s.inventoryVersion && options.options.any { it.currency == s.selectedCurrency && it.available } } == true,
-                    onClick = { confirmCurrency = true }) { Icon(Icons.Outlined.Build, null); Text("Применить сферу") }
-                if(instance["poe"] !is JsonObject) Text("Этот экземпляр ещё не переведён в формат PoE.", color = Muted)
+                ForgePanel {
+                    Engraved(tr("Крафт экземпляра", "Craft this instance"))
+                    Spinner(tr("Сфера", "Orb"), s.selectedCurrency, s.currencies.associate { it.text("id") to it.text("name") }, !s.busy, vm::selectCurrency)
+                    Button(modifier = Modifier.fillMaxWidth(), enabled = !s.busy && s.ownsCharacter && instance["poe"] is JsonObject && s.selectedCurrency.isNotBlank() && s.inventoryVersion != null && s.pending == null && s.craftOptions?.let { options -> options.characterVersion == s.inventoryVersion && options.options.any { it.currency == s.selectedCurrency && it.available } } == true,
+                        onClick = { confirmCurrency = true }) { Icon(ForgeGlyphs.Orb, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text(tr("Применить сферу", "Use the orb")) }
+                    if(instance["poe"] !is JsonObject) Text(tr("Этот экземпляр ещё не переведён в формат PoE.", "This instance has not been converted to the PoE format yet."), color = Muted)
+                }
             }
             item {
-                HorizontalDivider()
-                OutlinedButton(modifier = Modifier.fillMaxWidth(), enabled = !s.busy && s.adminTools, onClick = { vm.editInventoryBase(instance.text("equipmentId")); detailId = null }) { Icon(Icons.Outlined.Edit, null); Text("Редактировать базу предмета") }
-                Text("База — общий шаблон. Выпавшие значения этого экземпляра изменяются через крафт.", color = Muted, style = MaterialTheme.typography.bodySmall)
+                OrnateDivider()
+                OutlinedButton(modifier = Modifier.fillMaxWidth(), enabled = !s.busy && s.adminTools, onClick = { vm.editInventoryBase(instance.text("equipmentId")); detailId = null }) { Icon(Icons.Outlined.Edit, null); Text(tr("Редактировать базу предмета", "Edit the item base")) }
+                Text(tr("База — общий шаблон. Выпавшие значения этого экземпляра изменяются через крафт.", "The base is a shared template. Rolled values of this instance change only through crafting."), color = Muted, style = MaterialTheme.typography.bodySmall)
             }
         }
     }
     EquipmentComparisonSheet(s, vm)
-    if(confirmCurrency) AlertDialog(onDismissRequest = { confirmCurrency = false }, title = { Text("Применить сферу?") },
-        text = { Text("${s.currencies.firstOrNull { it.text("id") == s.selectedCurrency }?.text("name") ?: s.selectedCurrency}\nБудет потрачена одна сфера. Свойства выбранного экземпляра могут измениться или удалиться.") },
-        confirmButton = { TextButton(onClick = { confirmCurrency = false; vm.inventoryAction("craft") }) { Text("Применить") } },
-        dismissButton = { TextButton(onClick = { confirmCurrency = false }) { Text("Отмена") } })
+    if(confirmCurrency) AlertDialog(onDismissRequest = { confirmCurrency = false }, containerColor = Panel, titleContentColor = Gold,
+        title = { Text(tr("Применить сферу?", "Use the orb?")) },
+        text = { Text("${s.currencies.firstOrNull { it.text("id") == s.selectedCurrency }?.text("name") ?: s.selectedCurrency}\n" + tr("Будет потрачена одна сфера. Свойства выбранного экземпляра могут измениться или удалиться.", "One orb will be spent. The properties of the chosen instance may change or disappear.")) },
+        confirmButton = { TextButton(onClick = { confirmCurrency = false; vm.inventoryAction("craft") }) { Text(tr("Применить", "Use")) } },
+        dismissButton = { TextButton(onClick = { confirmCurrency = false }) { Text(tr("Отмена", "Cancel")) } })
 }

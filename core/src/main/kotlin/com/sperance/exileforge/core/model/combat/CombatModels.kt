@@ -14,11 +14,14 @@ import kotlinx.serialization.Serializable
 @Serializable data class Monster(
     val id: String, val name: String, val life: Double, val damage: Double,
     val armour: Double = 0.0, val evasion: Double = 0.0, val element: String = "physical",
-    val lootTableId: String, val experience: Int, val gold: Int, val boss: Boolean = false
+    val lootTableId: String, val experience: Int, val gold: Int, val boss: Boolean = false,
+    /** Icon of the server set: attached when the response is built, never stored. */
+    val icon: String? = null
 )
 @Serializable data class Zone(
     val id: String, val name: String, val description: String, val level: Int,
-    val monsters: List<Monster>, val boss: Monster, val killsForBoss: Int = 3
+    val monsters: List<Monster>, val boss: Monster, val killsForBoss: Int = 3,
+    val icon: String? = null
 )
 @Serializable data class LootEntry(val kind: String, val weight: Int, val amount: Int = 1)
 @Serializable data class LootTable(val id: String, val rolls: Int, val entries: List<LootEntry>)

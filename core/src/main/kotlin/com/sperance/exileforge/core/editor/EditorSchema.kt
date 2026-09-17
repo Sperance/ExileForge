@@ -70,6 +70,8 @@ fun schemaFields(schema: String, document: JsonObject = JsonObject(emptyMap())):
     }
     "equipment", "items" -> buildList {
         addAll(listOf(text("name", tr("Название", "Name"), tr("Новый предмет", "New item")), text("description", tr("Описание", "Description")), text("image", tr("Изображение (URL)", "Image (URL)")).copy(nullable = true, default = JsonNull)))
+        // Suggestions come from the loaded manifest: an id outside the server set is rejected with 400.
+        add(text("icon", tr("Иконка набора", "Set icon"), options = com.sperance.exileforge.core.display.icons.iconSuggestions).copy(nullable = true, default = JsonNull))
         if(schema == "items") {
             addAll(listOf(text("category", tr("Категория", "Category"), "Currency"), text("subCategory", tr("Подкатегория", "Sub-category"), "Shard"), num("price", tr("Цена", "Price"), 0, true, 0.0)))
         } else {

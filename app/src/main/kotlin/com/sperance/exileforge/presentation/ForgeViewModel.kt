@@ -74,6 +74,7 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() 
     fun login(login: String, password: String) = runtime.sessionViewModel.login(login, password)
     fun logout() = runtime.sessionViewModel.logout()
     fun changePassword(current: String, replacement: String) = runtime.sessionViewModel.changePassword(current, replacement)
+    fun reloadIcons() = runtime.iconViewModel.load(force = true)
     fun runChecks() = runtime.checksViewModel.runChecks()
     fun clearLogs() = runtime.checksViewModel.clearLogs()
     override fun onCleared() { runtime.close() }

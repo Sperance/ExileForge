@@ -38,7 +38,10 @@ import kotlinx.serialization.json.JsonObject
 @Serializable data class CalculatedStats(val version: Long, val values: Map<String, Double>, val weapons: Map<EquipmentSlot, WeaponStats> = emptyMap(), val unsupported: List<String> = emptyList())
 @Serializable data class EquipmentView(val characterVersion: Long, val equipped: Map<EquipmentSlot, String>, val inventory: List<com.sperance.exileforge.core.model.hero.EquipmentInstance>, val items: List<ItemStack>, val stats: CalculatedStats)
 @Serializable data class UserProfile(val id: String, val version: Long, val name: String, val login: String, val role: String, val countCharacters: Int = 0)
-@Serializable data class ApiCapabilities(val apiRevision: Int = 0, val versionedCrud: Boolean = false, val characterCommands: Boolean = false, val profile: String = "", val equipmentComparison: Boolean = false, val catalogSearch: Boolean = false, val craftOptions: Boolean = false, val combat: Boolean = false, val passiveTree: Boolean = false) {
+@Serializable data class ApiCapabilities(val apiRevision: Int = 0, val versionedCrud: Boolean = false, val characterCommands: Boolean = false, val profile: String = "", val equipmentComparison: Boolean = false, val catalogSearch: Boolean = false, val craftOptions: Boolean = false, val combat: Boolean = false, val passiveTree: Boolean = false,
+    val icons: Boolean = false, val iconSet: String = "", val iconSetRevision: Int = 0, val iconSetVersion: String = "", val iconCount: Int = 0, val iconsEndpoint: String = "") {
     fun requireWorkbench() { requireCompatible(); require(apiRevision >= 3 && equipmentComparison && catalogSearch && craftOptions) { tr("Обновите сервер до API revision 3 (0.10.0)", "Update the server to API revision 3 (0.10.0)") } }
     fun requireCompatible() { require(apiRevision >= 2 && versionedCrud && characterCommands) { tr("Нужен ktor-bestgame 0.9.0 с командами персонажа и контролем версий", "ktor-bestgame 0.9.0 with character commands and version control is required") } }
+    /** Icons are additive: an older server simply leaves the client on its bundled emblems. */
+    fun hasIcons() = icons && apiRevision >= 4 && iconSetVersion.isNotBlank()
 }

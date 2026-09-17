@@ -1,7 +1,7 @@
-# ExileForge 1.10.0
+# ExileForge 1.11.0
 
-Android Compose client for **ktor-bestgame 0.12.0**, API revision 3.
-Server: `refactor/compact-rpg-architecture`, commit `24ed09b867fc559504333d8ee6e3b03e133ecfb6`.
+Android Compose client for **ktor-bestgame 0.13.0**, API revision 4.
+Server: `master`, commit `f0d88446254b1f3d3ff1a06a6e609471ba99f97e`.
 Client development branch: `master`.
 
 ## Язык интерфейса · Interface language
@@ -12,7 +12,11 @@ Every label, hint, error and contract-validation message exists in Russian and E
 
 ## Оформление
 
-Тёмная тема в духе Path of Exile: чернёный камень, бронзовые рамки с косыми углами, гравированные заголовки с ромбовидным разделителем, рамки предметов в цветах редкости PoE (обычный, магический, редкий, уникальный) и сферы здоровья, маны и щита. Добавлен набор собственных векторных иконок (наковальня, скрещённые клинки, сфера, самоцвет, флакон, шлем, щит, тайник, свиток, портал, созвездие, череп, сигил, изгнанник, атлас, том, факел, весы, цепь, знамя) и новые эмблемы предметов: топор, булава, кинжал, жезл, флакон, самоцвет, карта, свиток. Сетевые изображения по-прежнему не используются.
+Тёмная тема в духе Path of Exile: чернёный камень, бронзовые рамки с косыми углами, гравированные заголовки с ромбовидным разделителем, рамки предметов в цветах редкости PoE (обычный, магический, редкий, уникальный) и сферы здоровья, маны и щита. Собственный набор векторных глифов (наковальня, скрещённые клинки, сфера, самоцвет, флакон, шлем, щит, тайник, свиток, портал, созвездие, череп, сигил, изгнанник, атлас, том, факел, весы, цепь, знамя) остаётся для элементов самого приложения.
+
+## Иконки предметов и сущностей
+
+Картинки игровых сущностей теперь рисует сервер: набор `forge-vector` приходит одним спрайтом и покрывает оружие, броню, украшения, сферы, характеристики, аффиксы, редкости, узлы дерева и бой. Клиент разбирает SVG сам и рисует его на Canvas — растровых и сетевых изображений по-прежнему нет. Набор кэшируется по `iconSetVersion`, обновляется условным запросом и полностью необязателен: сервер без набора оставляет приложение на встроенных эмблемах. [Подробности](docs/ICONS.md).
 
 ## Древо навыков
 
@@ -57,9 +61,13 @@ JDK 17, Android SDK 37, Gradle wrapper:
 GitHub Actions also runs Compose checks on an API 35 emulator. APKs and UI reports are attached to each successful workflow run.
 The original fantasy cards, property/item icons, bottom navigation, reference pickers and server-side modifier search remain available.
 
-## Workbench release — 1.10.0 / server 0.12.0
+## Workbench release — 1.11.0 / server 0.13.0
 
-This release requires **API revision 3**. Deploy the server from `refactor/compact-rpg-architecture` at `24ed09b867fc559504333d8ee6e3b03e133ecfb6` before updating the app.
+This release targets **API revision 4**. Deploy the server from `master` at `f0d88446254b1f3d3ff1a06a6e609471ba99f97e` before updating the app.
+
+- Icons for items, equipment, currency, stats, passive nodes, zones and monsters come from the server set. The client reads `icon` from every response, falls back to the published binding tables for documents written before the set existed, and keeps its own emblems only for servers that ship no icons.
+- The whole set arrives as one public sprite, is stored per server against `iconSetVersion`, and is refreshed with a conditional request. Account changes never drop it; switching servers does.
+- Administrators can set `icon` on equipment and items. The editor offers the ids of the loaded set and refuses anything outside it before a request is built.
 
 - The interface ships in Russian and English. `RU / EN` in the banner switches every label, snackbar and validation message at once, including the ones raised inside `:core`.
 - Login starts in **Player** mode. Players have Characters, Hero, Forge and Account. An administrator can switch to the administration workspace with catalog editors and diagnostic checks. Switching modes is disabled while an editor has an open draft.

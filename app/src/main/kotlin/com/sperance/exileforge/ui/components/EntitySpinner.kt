@@ -4,8 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
-import com.sperance.exileforge.ui.icons.ItemEmblem
-import com.sperance.exileforge.core.display.itemVisualKind
+import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.core.i18n.tr
 import com.sperance.exileforge.ui.theme.Gold
 import androidx.compose.runtime.*
@@ -58,7 +57,7 @@ val LocalEntityPageLoader = staticCompositionLocalOf<suspend (EntitySource, Int,
         LazyColumn(Modifier.fillMaxWidth().heightIn(max = 320.dp)) {
             items(records, key = { it.entityId }) { record ->
                 TextButton(enabled = enabled, onClick = { onChange(record.entityId); expanded = false }, modifier = Modifier.fillMaxWidth()) {
-                    ItemEmblem(itemVisualKind(record), Gold, Modifier.size(44.dp))
+                    ItemIcon(record, Gold, Modifier.size(44.dp))
                     Text("${title(record)} · ${record.entityId.takeLast(6)}", modifier = Modifier.weight(1f).padding(start = 12.dp))
                 }
             }

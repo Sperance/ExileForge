@@ -20,6 +20,8 @@ import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
+import com.sperance.exileforge.ui.icons.ForgeIcon
+import com.sperance.exileforge.ui.icons.LocalForgeIcons
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.serialization.json.*
 
@@ -95,7 +97,13 @@ import kotlinx.serialization.json.*
                 CraftDetails(s)
                 ForgePanel {
                     Engraved(tr("Крафт экземпляра", "Craft this instance"))
-                    Spinner(tr("Сфера", "Orb"), s.selectedCurrency, s.currencies.associate { it.text("id") to it.text("name") }, !s.busy, vm::selectCurrency)
+                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        // The orb's own icon: the currency list carries it, the tables answer for older servers.
+                        val orb = s.currencies.firstOrNull { it.text("id") == s.selectedCurrency }
+                        ForgeIcon(orb?.text("icon")?.ifBlank { null } ?: LocalForgeIcons.current.forCurrency(s.selectedCurrency),
+                            Modifier.size(44.dp), description = orb?.text("name"))
+                        Box(Modifier.weight(1f)) { Spinner(tr("Сфера", "Orb"), s.selectedCurrency, s.currencies.associate { it.text("id") to it.text("name") }, !s.busy, vm::selectCurrency) }
+                    }
                     Button(modifier = Modifier.fillMaxWidth(), enabled = !s.busy && s.ownsCharacter && instance["poe"] is JsonObject && s.selectedCurrency.isNotBlank() && s.inventoryVersion != null && s.pending == null && s.craftOptions?.let { options -> options.characterVersion == s.inventoryVersion && options.options.any { it.currency == s.selectedCurrency && it.available } } == true,
                         onClick = { confirmCurrency = true }) { Icon(ForgeGlyphs.Orb, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text(tr("Применить сферу", "Use the orb")) }
                     if(instance["poe"] !is JsonObject) Text(tr("Этот экземпляр ещё не переведён в формат PoE.", "This instance has not been converted to the PoE format yet."), color = Muted)

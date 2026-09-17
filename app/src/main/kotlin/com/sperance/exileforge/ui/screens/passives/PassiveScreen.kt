@@ -17,6 +17,8 @@ import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
+import com.sperance.exileforge.ui.icons.ForgeIcon
+import com.sperance.exileforge.ui.icons.LocalForgeIcons
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.launch
 
@@ -81,12 +83,17 @@ import kotlinx.coroutines.launch
             items(visible, key = { it.id }) { node ->
                 val allocated = node.id in state.allocated
                 ForgePanel(Modifier.clickable { selected = node.id; scope.launch { list.animateScrollToItem(3) } }, accent = if(allocated) Gold else Muted) {
-                    Text(node.name, color = if(allocated) GoldBright else MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleMedium)
-                    Text("${passiveKind(node.kind)} · " + when {
-                        allocated -> tr("изучен", "allocated")
-                        node.id in state.allocatable -> tr("доступен", "available")
-                        else -> tr("закрыт", "locked")
-                    }, style = MaterialTheme.typography.labelMedium, color = Muted)
+                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        ForgeIcon(LocalForgeIcons.current.forNode(node), Modifier.size(34.dp), description = node.name)
+                        Column {
+                            Text(node.name, color = if(allocated) GoldBright else MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleMedium)
+                            Text("${passiveKind(node.kind)} · " + when {
+                                allocated -> tr("изучен", "allocated")
+                                node.id in state.allocatable -> tr("доступен", "available")
+                                else -> tr("закрыт", "locked")
+                            }, style = MaterialTheme.typography.labelMedium, color = Muted)
+                        }
+                    }
                     node.effects.forEach { Text(passiveEffectText(it), style = MaterialTheme.typography.bodySmall) }
                 }
             }

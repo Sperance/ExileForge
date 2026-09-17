@@ -14,6 +14,7 @@ import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
+import com.sperance.exileforge.ui.icons.ForgeIcon
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.Muted
 import kotlinx.serialization.json.*
@@ -47,7 +48,21 @@ import kotlinx.serialization.json.*
             tr("Эмулятор: http://10.0.2.2:8080/\nТелефон: IP компьютера в вашей Wi-Fi сети. HTTP разрешён в debug-сборке; release использует HTTPS.",
                "Emulator: http://10.0.2.2:8080/\nPhone: your computer's IP on the same Wi-Fi. Cleartext HTTP is debug-only; release builds require HTTPS."))
         InfoCard(tr("Контракт сервера", "Server contract"),
-            "0.12.0 · refactor/compact-rpg-architecture · ${SERVER_COMMIT.take(12)}\n" +
+            "0.13.0 · master · ${SERVER_COMMIT.take(12)}\n" +
             tr("Предметы, экипировка и персонажи. Выпадение и крафт выполняются сервером.", "Items, equipment and characters. Drops and crafting are resolved by the server."))
+        ForgePanel {
+            Engraved(tr("Иконки сервера", "Server icons"))
+            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                ForgeIcon("ui-catalog", Modifier.size(48.dp)) {
+                    Icon(ForgeGlyphs.Sigil, null, tint = Muted, modifier = Modifier.size(24.dp))
+                }
+                Text(if(s.icons.ready) tr("Набор ${s.icons.manifest?.set}: ${s.icons.drawings.size} иконок · версия ${s.icons.version.take(12)}",
+                        "Set ${s.icons.manifest?.set}: ${s.icons.drawings.size} icons · version ${s.icons.version.take(12)}")
+                    else tr("Набор не загружен: используются встроенные эмблемы.", "The set is not loaded: bundled emblems are used."),
+                    color = if(s.icons.ready) Gold else Muted, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+            }
+            OutlinedButton(enabled = !s.busy, onClick = vm::reloadIcons, modifier = Modifier.fillMaxWidth()) { Text(tr("Обновить набор иконок", "Refresh the icon set")) }
+            Text(tr("Картинки рисует сервер и отдаёт одним спрайтом; клиент хранит их до смены версии набора.", "The server draws the pictures and serves them as one sprite; the client keeps them until the set version changes."), color = Muted, style = MaterialTheme.typography.bodySmall)
+        }
     }
 }

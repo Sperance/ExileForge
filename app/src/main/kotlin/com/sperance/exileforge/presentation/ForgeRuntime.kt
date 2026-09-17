@@ -27,6 +27,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
     val logs = journal.entries
     lateinit var api: GameApi
     var metadataJob: Job? = null
+    var iconJob: Job? = null
     val catalogViewModel = com.sperance.exileforge.presentation.features.CatalogViewModel(this)
     val editorViewModel = com.sperance.exileforge.presentation.features.EditorViewModel(this)
     val heroViewModel = com.sperance.exileforge.presentation.features.HeroViewModel(this)
@@ -34,6 +35,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
     val passiveViewModel = com.sperance.exileforge.presentation.features.PassiveViewModel(this)
     val combatViewModel = com.sperance.exileforge.presentation.features.CombatViewModel(this)
     val checksViewModel = com.sperance.exileforge.presentation.features.ChecksViewModel(this)
+    val iconViewModel = com.sperance.exileforge.presentation.features.IconViewModel(this)
     fun newApi(server: String): GameApi {
         lateinit var created: GameApi
         created = GameApi(server, journal, onUnauthorized = {
@@ -59,6 +61,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
                 mutable.update { it.copy(pending = restored, characterId = restored?.characterId.orEmpty()) }
                 mutable.update { it.copy(server = server, serverDraft = server, busy = false) }
                 mutable.update { it.copy(message = tr("Войдите в аккаунт для загрузки каталога", "Sign in to load the catalogue")) }
+                iconViewModel.load()
             } catch (e: CancellationException) { throw e }
             catch (e: Exception) {
                 api = newApi("http://10.0.2.2:8080/")

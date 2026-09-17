@@ -22,6 +22,8 @@ data class ForgeState(
     val battleView: com.sperance.exileforge.core.model.combat.BattleView? = null,
     val battleCharacterId: String = "",
     val battlePending: PendingBattleWrite? = null,
+    /** The action that produced [battleView], so the arena knows which turn to play out. */
+    val battleAction: com.sperance.exileforge.core.model.combat.BattleAction? = null,
     val mode: AppMode = AppMode.PLAYER,
     val filter: com.sperance.exileforge.core.model.CatalogFilter = com.sperance.exileforge.core.model.CatalogFilter(),
     val hero: com.sperance.exileforge.core.model.hero.CharacterSummary? = null,

@@ -25,7 +25,7 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
     fun characterId(value: String) { with(runtime) {
 
         if(state.value.busy || state.value.pending != null) return
-        mutable.update { it.copy(passiveState = null, passiveTree = null, passivePending = null, passiveCharacterId = "", battleView = null, battlePending = null, battleCharacterId = "", characterId = value, hero = null, comparison = null, craftOptions = null, craftBefore = null, craftAfter = null, equipmentView = null, characterOwner = "", inventory = emptyList(), inventoryVersion = null, selectedEquipment = "") }
+        mutable.update { it.copy(passiveState = null, passiveTree = null, passivePending = null, passiveCharacterId = "", battleView = null, battlePending = null, battleCharacterId = "", battleAction = null, characterId = value, hero = null, comparison = null, craftOptions = null, craftBefore = null, craftAfter = null, equipmentView = null, characterOwner = "", inventory = emptyList(), inventoryVersion = null, selectedEquipment = "") }
 
     } }
     fun selectEquipment(value: String) { with(runtime) {
@@ -41,7 +41,7 @@ task {
     fun showCharacterInventory(id: String) { with(runtime) {
 task {
         check(state.value.pending == null || state.value.characterId == id) { tr("Сначала подтвердите предыдущую операцию", "Confirm the previous operation first") }
-        mutable.update { it.copy(passiveState = null, passiveTree = null, passivePending = null, passiveCharacterId = "", battleView = null, battlePending = null, battleCharacterId = "", tab = 4, characterId = id, equipmentView = null, characterOwner = "", inventory = emptyList(), inventoryVersion = null) }
+        mutable.update { it.copy(passiveState = null, passiveTree = null, passivePending = null, passiveCharacterId = "", battleView = null, battlePending = null, battleCharacterId = "", battleAction = null, tab = 4, characterId = id, equipmentView = null, characterOwner = "", inventory = emptyList(), inventoryVersion = null) }
         readInventory()
         val currencies = api.currencies()
         mutable.update { it.copy(currencies = currencies, selectedCurrency = currencies.firstOrNull()?.text("id").orEmpty()) }

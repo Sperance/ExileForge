@@ -1,6 +1,8 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
+    // @Serializable records of this module (pending commands, the icon cache) need generated serializers.
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 android {
     namespace = "com.sperance.exileforge"

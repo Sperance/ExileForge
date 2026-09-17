@@ -35,13 +35,13 @@ class IconViewModel(private val runtime: ForgeRuntime) {
             val server = state.value.server
             try {
                 val reported = capabilities ?: api.capabilities()
-                if(!reported.hasIcons()) { apply(server, IconSet()); return@launch }
+                if(!reported.hasIcons()) { publish(server, IconSet()); return@launch }
                 if(!force && state.value.icons.ready && state.value.icons.version == reported.iconSetVersion) return@launch
                 val cached = store.icons(server)?.let { runCatching { CacheJson.decodeFromString(CachedIcons.serializer(), it) }.getOrNull() }
                     ?.takeIf { it.version == reported.iconSetVersion }
                 val set = cached?.takeIf { !force }
                     ?: download(reported.iconSetVersion, cached).also { store.saveIcons(server, CacheJson.encodeToString(CachedIcons.serializer(), it)) }
-                apply(server, IconSet(set.manifest, set.bindings, withContext(Dispatchers.Default) { parseSvgSprite(set.sprite) }))
+                publish(server, IconSet(set.manifest, set.bindings, withContext(Dispatchers.Default) { parseSvgSprite(set.sprite) }))
             } catch (e: CancellationException) { throw e }
             catch (_: Exception) { /* Icons are decoration: keep whatever is already on screen. */ }
         }
@@ -55,7 +55,7 @@ class IconViewModel(private val runtime: ForgeRuntime) {
     }
 
     /** The server may have changed while the set was downloading; a stale answer is dropped. */
-    private fun apply(server: String, icons: IconSet) { with(runtime) {
+    private fun publish(server: String, icons: IconSet) { with(runtime) {
         if(state.value.server != server) return
         iconSuggestions = icons.manifest?.icons.orEmpty().map { it.id }
         mutable.update { it.copy(icons = icons) }

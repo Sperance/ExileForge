@@ -53,6 +53,8 @@ jobs:
         run: python3 -c "import base64,pathlib; print('PASSIVE_IMAGE_START'); print(base64.b64encode(pathlib.Path('design-preview/passives.jpg').read_bytes()).decode()); print('PASSIVE_IMAGE_END')"
       - name: Server icon preview in verification log
         run: python3 -c "import base64,pathlib; print('ICONS_IMAGE_START'); print(base64.b64encode(pathlib.Path('design-preview/icons.jpg').read_bytes()).decode()); print('ICONS_IMAGE_END')"
+      - name: Battle arena preview in verification log
+        run: python3 -c "import base64,pathlib; print('ARENA_IMAGE_START'); print(base64.b64encode(pathlib.Path('design-preview/arena.jpg').read_bytes()).decode()); print('ARENA_IMAGE_END')"
   client-server:
     runs-on: ubuntu-latest
     timeout-minutes: 25

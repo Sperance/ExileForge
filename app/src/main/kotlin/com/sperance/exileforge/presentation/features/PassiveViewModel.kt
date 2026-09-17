@@ -43,7 +43,7 @@ class PassiveViewModel(private val runtime: ForgeRuntime) {
                 val result = api.changePassives(pending.characterId, pending.command)
                 store.savePassivePending(key, null)
                 mutable.update { it.copy(passivePending = null, passiveState = result, passiveCharacterId = pending.characterId,
-                    inventoryVersion = null, equipmentView = null, comparison = null, craftOptions = null, battleView = null, battleCharacterId = "") }
+                    inventoryVersion = null, equipmentView = null, comparison = null, craftOptions = null, battleView = null, battleCharacterId = "", battleAction = null) }
             } catch(e: ApiFailure) {
                 if(e.status?.let { it in 400..499 && it != 401 } == true) {
                     store.savePassivePending(key, null)

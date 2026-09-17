@@ -38,28 +38,56 @@ val LocalForgeIcons = staticCompositionLocalOf { IconSet() }
  */
 @Composable fun ForgeIcon(id: String?, modifier: Modifier = Modifier, framed: Boolean = true, tint: Color? = null,
     description: String? = null, fallback: @Composable () -> Unit = {}) {
-    val icons = LocalForgeIcons.current
-    val icon = icons.drawing(id)
-    if(icon == null) fallback()
-    else {
-        val shapes = remember(icons.version, icon.id, framed) {
-            icon.shapes(framed).mapNotNull { shape -> runCatching { PathParser().parsePathString(shape.data).toPath() }.getOrNull()?.let { it to shape } }
-        }
-        Canvas(modifier.semantics { if(description != null) contentDescription = description }) {
-            val factor = size.minDimension / icon.viewBox
-            withTransform({
-                translate((size.width - icon.viewBox * factor) / 2f, (size.height - icon.viewBox * factor) / 2f)
-                scale(factor, factor, Offset.Zero)
-            }) {
-                shapes.forEach { (path, shape) -> drawShape(path, shape, icon, tint) }
-            }
-        }
+    val art = rememberServerArt(id, framed)
+    if(art == null) fallback()
+    else Canvas(modifier.semantics { if(description != null) contentDescription = description }) {
+        drawServerArt(art, Offset(size.width / 2, size.height / 2), size.minDimension, tint = tint)
     }
 }
 
-private fun DrawScope.drawShape(path: Path, shape: SvgShape, icon: SvgIcon, tint: Color?) {
-    shape.fill?.let { drawPath(path, brush(it, icon, tint)) }
-    shape.stroke?.let { drawPath(path, brush(it, icon, tint), style = Stroke(shape.strokeWidth, cap = StrokeCap.Round, join = StrokeJoin.Round)) }
+/**
+ * The server's drawing with its path data already parsed.
+ *
+ * Parsing is the expensive part of an icon, so it is done once per id and reused by every frame that
+ * draws it — a stage that redraws a pack of mobs sixty times a second cannot re-parse their art.
+ */
+class ServerArt internal constructor(internal val icon: SvgIcon, internal val shapes: List<Pair<Path, SvgShape>>)
+
+/** Parsed art of the loaded set, or null when the set has no drawing and the caller must fall back. */
+@Composable fun rememberServerArt(id: String?, framed: Boolean = true): ServerArt? {
+    val icons = LocalForgeIcons.current
+    val icon = icons.drawing(id)
+    return remember(icons.version, icon?.id, framed) { icon?.let { serverArt(it, framed) } }
+}
+
+/** Parses one drawing outside composition, for callers that cache the art themselves. */
+fun serverArt(icons: IconSet, id: String?, framed: Boolean = true): ServerArt? =
+    icons.drawing(id)?.let { serverArt(it, framed) }
+
+private fun serverArt(icon: SvgIcon, framed: Boolean) = ServerArt(icon, icon.shapes(framed).mapNotNull { shape ->
+    runCatching { PathParser().parsePathString(shape.data).toPath() }.getOrNull()?.let { it to shape }
+})
+
+/**
+ * Draws parsed server art centred on [center] inside a [side]×[side] square.
+ *
+ * Lets a canvas of its own — the battle arena — place the same pictures the icon widgets use, at any
+ * size and transparency, without a second copy of the SVG reader.
+ */
+fun DrawScope.drawServerArt(art: ServerArt, center: Offset, side: Float, alpha: Float = 1f, tint: Color? = null) {
+    if(side <= 0f || alpha <= 0f) return
+    val factor = side / art.icon.viewBox
+    withTransform({
+        translate(center.x - side / 2f, center.y - side / 2f)
+        scale(factor, factor, Offset.Zero)
+    }) {
+        art.shapes.forEach { (path, shape) -> drawShape(path, shape, art.icon, tint, alpha) }
+    }
+}
+
+private fun DrawScope.drawShape(path: Path, shape: SvgShape, icon: SvgIcon, tint: Color?, alpha: Float = 1f) {
+    shape.fill?.let { drawPath(path, brush(it, icon, tint), alpha = alpha) }
+    shape.stroke?.let { drawPath(path, brush(it, icon, tint), alpha = alpha, style = Stroke(shape.strokeWidth, cap = StrokeCap.Round, join = StrokeJoin.Round)) }
 }
 
 /** Gradients keep the coordinates the server drew with; the canvas transform scales them along. */

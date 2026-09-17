@@ -18,12 +18,20 @@ import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.ForgeIcon
 import com.sperance.exileforge.ui.icons.LocalForgeIcons
+import com.sperance.exileforge.ui.screens.combat.arena.ArenaBoard
 import com.sperance.exileforge.ui.theme.*
 
+/**
+ * The expedition screen: pick a zone in the camp, then fight it out on the 2D stage.
+ *
+ * The screen owns navigation and the reference tables; the fight itself is [ArenaBoard]. Actions are
+ * unchanged durable commands — the arena is how the server's answer is shown, not a second ruleset.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable fun CombatScreen(s: ForgeState, vm: ForgeViewModel) {
     var zoneId by rememberSaveable(s.characterId) { mutableStateOf("coast") }
     var showLoot by rememberSaveable { mutableStateOf(false) }
+    var showLog by rememberSaveable { mutableStateOf(false) }
     var confirmFlee by remember { mutableStateOf(false) }
     val ready = s.battleCharacterId == s.characterId && s.battleView != null
     val battle = if(ready) s.battleView?.battle else null
@@ -33,7 +41,7 @@ import com.sperance.exileforge.ui.theme.*
     val icons = LocalForgeIcons.current
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
-            ScreenHeader(tr("Поход", "Expedition"), tr("Пошаговые сражения · добыча · боссы", "Turn-based battles · loot · bosses"), ForgeGlyphs.Swords)
+            ScreenHeader(tr("Поход", "Expedition"), tr("Арена · мобы зоны · добыча · боссы", "Arena · zone mobs · loot · bosses"), ForgeGlyphs.Swords)
             TextButton(enabled = !s.busy && s.signedIn, onClick = { vm.tab(7) }) { Text(tr("Древо навыков", "Passive tree")) }
             EntitySpinner(tr("Персонаж", "Character"), s.characterId, EntitySource.CHARACTER, !s.busy && s.pending == null, vm::characterId)
             OutlinedButton(enabled = s.signedIn && !s.busy && s.characterId.isNotBlank(), onClick = vm::loadCombat, modifier = Modifier.fillMaxWidth()) { Text(tr("Загрузить / продолжить бой", "Load / resume the battle")) }
@@ -43,6 +51,7 @@ import com.sperance.exileforge.ui.theme.*
                 Button(enabled = !s.busy && s.signedIn, onClick = vm::retryBattle) { Text(tr("Подтвердить действие", "Confirm the action")) }
             }
         }
+        if(battle != null) item { ArenaBoard(s, battle, vm) { confirmFlee = true } }
         if(ready && !active) item {
             ForgePanel {
                 Engraved(tr("Зоны", "Zones"))
@@ -72,37 +81,9 @@ import com.sperance.exileforge.ui.theme.*
                 Text(tr("В начале боя здоровье и флаконы восстанавливаются. Экипировка фиксируется на весь бой.", "Life and flasks are restored when a battle starts. Equipment is locked for its duration."), color = Muted, style = MaterialTheme.typography.bodySmall)
             }
         }
-        if(battle != null) {
-            item {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    ForgeIcon(icons.forMonster(battle.monster), Modifier.size(44.dp), description = battle.monster.name)
-                    Text(if(battle.monster.boss) tr("БОСС", "BOSS") + " · ${battle.monster.name}" else battle.monster.name, style = MaterialTheme.typography.titleLarge, color = if(battle.monster.boss) Blood else Gold)
-                }
-                OrnateDivider(if(battle.monster.boss) Blood else Gold)
-                CombatantCard(battle.enemy, false)
-                Spacer(Modifier.height(8.dp))
-                CombatantCard(battle.hero, true)
-                Text(tr("Ход ${battle.turn}/80 · флаконы ${battle.potions}/2", "Turn ${battle.turn}/80 · flasks ${battle.potions}/2"), color = Muted)
-                if(battle.unsupportedStats.isNotEmpty()) Text(tr("Не участвуют в расчёте: ", "Not used in the calculation: ") + battle.unsupportedStats.joinToString(), style = MaterialTheme.typography.bodySmall)
-            }
-            if(active) item {
-                BattleActions(battle, controls, vm::battleAction) { confirmFlee = true }
-                Text(tr("Защита снижает входящий урон на 65%. Флакон и защита тратят ход.", "Guard reduces incoming damage by 65%. Flask and guard both cost a turn."), color = Muted, style = MaterialTheme.typography.bodySmall)
-            }
-            if(!active) item {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    ForgeIcon(icons.forBattleStatus(battle.status.name), Modifier.size(48.dp))
-                    Text(when(battle.status) {
-                        BattleStatus.VICTORY -> tr("Победа — награды уже в инвентаре", "Victory — the rewards are already in your stash")
-                        BattleStatus.DEFEAT -> tr("Поражение — возвращение в лагерь", "Defeat — back to camp")
-                        else -> tr("Отступление без наград", "Retreat without rewards")
-                    }, color = Gold, style = MaterialTheme.typography.titleMedium)
-                }
-                battle.rewards.forEach { PropertyRow(it.name, "+${it.amount}", it.name) }
-                OutlinedButton(onClick = { vm.tab(4); vm.loadInventory() }, enabled = !s.busy) { Text(tr("Открыть арсенал", "Open the stash")) }
-            }
-            item { Text(tr("Журнал боя", "Battle log").uppercase(), style = MaterialTheme.typography.titleMedium, color = Gold) }
-            items(battle.log.asReversed()) { line -> ForgePanel { Text(line, style = MaterialTheme.typography.bodyMedium) } }
+        if(battle != null && battle.log.isNotEmpty()) {
+            item { TextButton(onClick = { showLog = !showLog }) { Text(if(showLog) tr("Скрыть журнал боя", "Hide the battle log") else tr("Журнал боя · ${battle.log.size}", "Battle log · ${battle.log.size}")) } }
+            if(showLog) items(battle.log.asReversed()) { line -> ForgePanel { Text(line, style = MaterialTheme.typography.bodyMedium) } }
         }
         if(s.combatCatalog != null) {
             item { TextButton(onClick = { showLoot = !showLoot }) { Text(if(showLoot) tr("Скрыть таблицы лута", "Hide the loot tables") else tr("Показать таблицы лута", "Show the loot tables")) } }
@@ -122,21 +103,6 @@ import com.sperance.exileforge.ui.theme.*
         dismissButton = { TextButton(onClick = { confirmFlee = false }) { Text(tr("Остаться", "Stay")) } })
 }
 
-/** Combatant plate: name, life bar and the numbers the server rolled with. */
-@Composable internal fun CombatantCard(unit: Combatant, player: Boolean) {
-    val accent = if(player) Gold else Blood
-    ForgePanel(accent = accent) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Icon(if(player) ForgeGlyphs.Exile else ForgeGlyphs.Skull, null, tint = accent, modifier = Modifier.size(20.dp))
-            Text(unit.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-            Text("HP ${unit.life.toInt()} / ${unit.maxLife.toInt()}", color = GoldBright, style = MaterialTheme.typography.labelLarge)
-        }
-        LinearProgressIndicator(progress = { (unit.life / unit.maxLife.coerceAtLeast(1.0)).toFloat().coerceIn(0f, 1f) },
-            modifier = Modifier.fillMaxWidth().height(10.dp), color = LifeRed, trackColor = Abyss)
-        if(player) Text("MP ${unit.mana.toInt()} / ${unit.maxMana.toInt()} · " + tr("щит", "shield") + " ${unit.shield.toInt()}", color = ManaBlue, style = MaterialTheme.typography.labelMedium)
-        Text(tr("Урон ${unit.damage.toInt()} · броня ${unit.armour.toInt()} · уклонение ${unit.evasion.toInt()}", "Damage ${unit.damage.toInt()} · armour ${unit.armour.toInt()} · evasion ${unit.evasion.toInt()}"), color = Muted, style = MaterialTheme.typography.bodySmall)
-    }
-}
 private fun lootName(kind: String) = when(kind) {
     "NONE" -> tr("Без предмета", "No item"); "NORMAL" -> tr("Обычный предмет", "Normal item"); "MAGIC" -> tr("Магический предмет", "Magic item")
     "RARE" -> tr("Редкий предмет", "Rare item"); "UNIQUE" -> tr("Уникальный (или редкий, если нет подходящей базы)", "Unique (or rare when no base fits)")

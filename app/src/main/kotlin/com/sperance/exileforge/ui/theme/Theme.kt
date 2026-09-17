@@ -28,6 +28,10 @@ val LifeRed = Color(0xFFB03A3A)
 val ManaBlue = Color(0xFF3B6FA8)
 val ShieldCyan = Color(0xFF63B7C4)
 val Blood = Color(0xFF8A2E2E)
+/** Regeneration and flasks in the battle arena; the only green the palette allows. */
+val Vital = Color(0xFF5E9E5A)
+/** Fire and other burning damage on the arena stage. */
+val Ember = Color(0xFFD9642E)
 
 /** Item frames follow Path of Exile rarity colours; unknown values stay bone white. */
 fun rarityColor(value: String) = when (value) {

@@ -16,7 +16,6 @@ class ReferencePickerTest {
     @Test fun `every Mongo relationship has a typed picker`() {
         val fields = mapOf(
             "characterEquipment" to mapOf("equipmentId" to EntitySource.EQUIPMENT),
-            "characterItem" to mapOf("itemId" to EntitySource.ITEM),
             "redemption" to mapOf("redemptionCodeId" to EntitySource.REDEMPTION)
         )
         fields.forEach { (schema, references) -> references.forEach { (key, source) ->
@@ -25,8 +24,8 @@ class ReferencePickerTest {
         assertEquals(setOf("name", "description"), schemaFields("character").map { it.key }.toSet())
     }
     @Test fun `reference values retain IDs and reject invalid selections`() {
-        validateForm("characterItem", buildJsonObject { put("itemId", "0123456789abcdef01234567"); put("amount", 1) })
-        assertFailsWith<IllegalArgumentException> { validateForm("characterItem", buildJsonObject { put("itemId", "Item name"); put("amount", 1) }) }
+        validateForm("characterEquipment", buildJsonObject { put("equipmentId", "0123456789abcdef01234567"); put("uuid", "0123456789abcdef01234567") })
+        assertFailsWith<IllegalArgumentException> { validateForm("characterEquipment", buildJsonObject { put("equipmentId", "Equipment name"); put("uuid", "0123456789abcdef01234567") }) }
     }
     @Test fun `each picker uses correct collection and server pagination`() = runBlocking {
         MockWebServer().use { server ->

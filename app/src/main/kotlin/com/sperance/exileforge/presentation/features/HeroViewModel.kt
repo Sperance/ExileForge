@@ -25,7 +25,7 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
     fun characterId(value: String) { with(runtime) {
 
         if(state.value.busy || state.value.pending != null) return
-        mutable.update { it.copy(passiveState = null, passiveTree = null, passivePending = null, passiveCharacterId = "", battleView = null, battlePending = null, battleCharacterId = "", battleAction = null, characterId = value, hero = null, comparison = null, craftOptions = null, craftBefore = null, craftAfter = null, equipmentView = null, characterOwner = "", inventory = emptyList(), inventoryVersion = null, selectedEquipment = "") }
+        mutable.update { it.copy(passiveState = null, passiveTree = null, passivePending = null, passiveCharacterId = "", battleView = null, battlePending = null, battleCharacterId = "", battleAction = null, characterId = value, hero = null, comparison = null, craftOptions = null, craftBefore = null, craftAfter = null, equipmentView = null, characterOwner = "", inventory = emptyList(), inventoryVersion = null, inventoryNext = null, inventoryTotal = 0, itemTotals = emptyMap(), selectedEquipment = "") }
 
     } }
     fun selectEquipment(value: String) { with(runtime) {
@@ -41,7 +41,7 @@ task {
     fun showCharacterInventory(id: String) { with(runtime) {
 task {
         check(state.value.pending == null || state.value.characterId == id) { tr("Сначала подтвердите предыдущую операцию", "Confirm the previous operation first") }
-        mutable.update { it.copy(passiveState = null, passiveTree = null, passivePending = null, passiveCharacterId = "", battleView = null, battlePending = null, battleCharacterId = "", battleAction = null, tab = 4, characterId = id, equipmentView = null, characterOwner = "", inventory = emptyList(), inventoryVersion = null) }
+        mutable.update { it.copy(passiveState = null, passiveTree = null, passivePending = null, passiveCharacterId = "", battleView = null, battlePending = null, battleCharacterId = "", battleAction = null, tab = 4, characterId = id, equipmentView = null, characterOwner = "", inventory = emptyList(), inventoryVersion = null, inventoryNext = null, inventoryTotal = 0, itemTotals = emptyMap()) }
         readInventory()
         val currencies = api.currencies()
         mutable.update { it.copy(currencies = currencies, selectedCurrency = currencies.firstOrNull()?.text("id").orEmpty()) }
@@ -76,13 +76,13 @@ characterCommand { id, version -> api.unequip(id, UnequipCommand(version, slot))
 characterCommand { id, version -> check(state.value.isAdmin); api.grant(id, GrantEquipmentCommand(version, equipmentId)) }
     } }
     fun adjustItems(itemId: String, amount: Long) { with(runtime) {
-characterCommand { id, version -> check(state.value.isAdmin); require(amount != 0L); api.adjustItems(id, AdjustItemsCommand(version, listOf(ItemStack(itemId, amount)))) }
+characterCommand(bag = true) { id, version -> check(state.value.isAdmin); api.adjustItems(id, AdjustItemsCommand(version, listOf(ItemStack(itemId, amount)))) }
     } }
     fun redeem(code: String) { with(runtime) {
-characterCommand { id, version -> api.redeem(id, RedeemCommand(version, code.trim())) }
+characterCommand(bag = true) { id, version -> api.redeem(id, RedeemCommand(version, code.trim())) }
     } }
     fun useRecipe(recipe: JsonObject, ingredients: List<String>, amount: Long) { with(runtime) {
-characterCommand { id, version -> api.useRecipe(id, UseRecipeCommand(version, recipe.entityId, recipe.entityVersion, ingredients, amount)) }
+characterCommand(bag = true) { id, version -> api.useRecipe(id, UseRecipeCommand(version, recipe.entityId, recipe.entityVersion, ingredients, amount)) }
     } }
     fun loadInventory() { with(runtime) {
 task {
@@ -138,12 +138,32 @@ metadataJob?.cancel()
 
     } }
 
+    // Equipped items always arrive in full; the rest of the stash is one cursor page of an unbounded list.
     private fun applyEquipmentView(result: EquipmentView) { with(runtime) {
-mutable.update { it.copy(equipmentView = result, comparison = null, craftOptions = null, inventory = result.inventory.map { item -> item.document() }, inventoryVersion = result.characterVersion, conflict = false,
-            inventoryBases = it.inventoryBases + result.inventory.mapNotNull { item -> (item["baseSnapshot"] as? JsonObject)?.let { base -> item.text("equipmentId") to base } },
-            selectedEquipment = it.selectedEquipment.takeIf { id -> result.inventory.any { e -> e.text("uuid") == id } } ?: result.inventory.firstOrNull()?.text("uuid").orEmpty()) }
+val instances = (result.equippedItems + result.inventory.items).distinctBy { it.uuid }.map { it.document() }
+        mutable.update { it.copy(equipmentView = result, comparison = null, craftOptions = null, inventory = instances, inventoryVersion = result.characterVersion, conflict = false,
+            inventoryNext = result.inventory.next, inventoryTotal = result.inventory.total, inventoryBases = it.inventoryBases + bases(instances),
+            selectedEquipment = it.selectedEquipment.takeIf { id -> instances.any { e -> e.text("uuid") == id } } ?: instances.firstOrNull()?.text("uuid").orEmpty()) }
         loadInventoryMetadata()
 
+    } }
+    private fun bases(instances: List<JsonObject>) = instances.mapNotNull { item -> (item["baseSnapshot"] as? JsonObject)?.let { base -> item.text("equipmentId") to base } }
+    fun loadMoreInventory() { with(runtime) {
+task {
+        val after = state.value.inventoryNext ?: return@task
+        val result = api.equipment(state.value.characterId.trim(), after = after)
+        // A newer version means the page no longer matches what is already shown: start over from it.
+        if(result.characterVersion != state.value.inventoryVersion) return@task applyEquipmentView(result)
+        val added = result.inventory.items.map { it.document() }
+        mutable.update { it.copy(inventory = (it.inventory + added).distinctBy { doc -> doc.text("uuid") },
+            inventoryNext = result.inventory.next, inventoryTotal = result.inventory.total, inventoryBases = it.inventoryBases + bases(added)) }
+        loadInventoryMetadata()
+    }
+    } }
+    /** Without stacks an amount exists only as a count of documents, so the server recomputes it on request. */
+    private suspend fun refreshItemTotals(id: String) { with(runtime) {
+val totals = api.itemTotals(id)
+        mutable.update { if(it.characterId.trim() == id) it.copy(itemTotals = totals) else it }
     } }
 
     private suspend fun readInventory() { with(runtime) {
@@ -152,16 +172,19 @@ val id = state.value.characterId.trim()
         val result = api.equipment(id)
         mutable.update { it.copy(characterOwner = character.userId, hero = character) }
         applyEquipmentView(result)
+        refreshItemTotals(id)
         val selected = state.value.selectedEquipment
         if(selected.isNotBlank()) { val options = api.craftOptions(id, selected); mutable.update { it.copy(craftOptions = options) } }
 
     } }
 
-    private fun characterCommand(block: suspend (String, Long) -> EquipmentView) { with(runtime) {
+    /** [bag] marks the commands that can change owned units, whose totals only a fresh count can tell. */
+    private fun characterCommand(bag: Boolean = false, block: suspend (String, Long) -> EquipmentView) { with(runtime) {
 task(writing = true) {
         check(state.value.pending == null) { tr("Сначала подтвердите предыдущую операцию", "Confirm the previous operation first") }
         val version = requireNotNull(state.value.inventoryVersion) { tr("Обновите экипировку", "Refresh the equipment") }
-        try { applyEquipmentView(block(state.value.characterId, version)); mutable.update { it.copy(message = tr("Изменения сохранены", "Changes saved")) } }
+        val id = state.value.characterId
+        try { applyEquipmentView(block(id, version)); if(bag) refreshItemTotals(id.trim()); mutable.update { it.copy(message = tr("Изменения сохранены", "Changes saved")) } }
         catch(e: Exception) { mutable.update { it.copy(inventoryVersion = null) }; throw e }
     }
     } }

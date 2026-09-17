@@ -59,7 +59,7 @@ import java.util.Locale
         }
         if(slotsExpanded) FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp), maxItemsInEachRow = 3) {
             EquipmentSlot.entries.forEach { slot ->
-                val instance = view.inventory.firstOrNull { it.uuid == view.equipped[slot] }
+                val instance = view.equippedItems.firstOrNull { it.uuid == view.equipped[slot] }
                 val doc = instance?.let { inventoryDocument(it, s.inventoryBases[it.equipmentId]) } ?: buildJsonObject { put("slot", when(slot) { EquipmentSlot.RING_LEFT, EquipmentSlot.RING_RIGHT -> "RING"; EquipmentSlot.MAIN_HAND -> "WEAPON_1H"; EquipmentSlot.OFF_HAND -> "SHIELD"; else -> slot.name }) }
                 val shape = CutCornerShape(8.dp)
                 Column(Modifier.widthIn(min = 96.dp, max = 120.dp)

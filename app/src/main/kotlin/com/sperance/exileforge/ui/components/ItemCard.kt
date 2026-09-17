@@ -56,7 +56,7 @@ import kotlinx.serialization.json.*
                 if(doc["defense"] != null) PropertyRow(tr("Защита", "Defence"), doc.text("defense"), "defense")
                 if(doc["quality"] != null && (detailed || doc.text("quality") != "0")) PropertyRow(tr("Качество", "Quality"), "${doc.text("quality")}%", "quality")
                 if(doc["price"] != null) PropertyRow(tr("Цена", "Price"), doc.text("price"), "price")
-                if(doc["userId"] != null) PropertyRow(tr("Экипировка", "Equipment"), (doc["equipments"] as? JsonArray).orEmpty().size.toString(), "equipment")
+                if(doc["userId"] != null) PropertyRow(tr("Надето", "Equipped"), (doc["equipped"] as? JsonObject).orEmpty().size.toString(), "equipment")
                 val mods = (doc["modifiers"] as? JsonArray) ?: (doc["params"] as? JsonArray) ?: JsonArray(emptyList())
                 mods.take(if(detailed) mods.size else 3).forEach { raw ->
                     val mod = raw as? JsonObject ?: return@forEach

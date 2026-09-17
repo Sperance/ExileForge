@@ -27,7 +27,9 @@ class EquipmentPanelTest {
     @get:Rule val compose = createComposeRule()
     @Test fun equippedSlotsShowSnapshotAndEmitExactSlot() {
         val instance = buildJsonObject { put("uuid", "ring-instance"); put("baseSnapshot", buildJsonObject { put("name", "Кольцо героя"); put("slot", "RING") }) }
-        val view = EquipmentView(3, mapOf(EquipmentSlot.RING_LEFT to "ring-instance"), listOf(com.sperance.exileforge.core.contract.WireJson.decodeFromJsonElement<com.sperance.exileforge.core.model.hero.EquipmentInstance>(JsonObject(instance + ("equipmentId" to JsonPrimitive("base"))))), emptyList(), CalculatedStats(3, mapOf("maximum_life" to 88.0)))
+        // Equipped items arrive in full even when the paged stash is empty on this page.
+        val equipped = listOf(com.sperance.exileforge.core.contract.WireJson.decodeFromJsonElement<com.sperance.exileforge.core.model.hero.EquipmentInstance>(JsonObject(instance + ("equipmentId" to JsonPrimitive("base")))))
+        val view = EquipmentView(3, mapOf(EquipmentSlot.RING_LEFT to "ring-instance"), equipped, InventoryPage(size = 50, total = 1), OwnedItemsPage(size = 50), CalculatedStats(3, mapOf("maximum_life" to 88.0)))
         var removed: EquipmentSlot? = null
         compose.setContent { ForgeTheme { Column(Modifier.background(Ink).verticalScroll(rememberScrollState()).padding(12.dp)) {
             CharacterEquipmentPanel(ForgeState(busy = false, signedIn = true, equipmentView = view, inventoryVersion = 3, hero = com.sperance.exileforge.core.model.hero.CharacterSummary("hero", "owner", "Изгнанник", 3, 10)), { removed = it })

@@ -1,7 +1,7 @@
 # ExileForge 1.11.0
 
 Android Compose client for **ktor-bestgame 0.13.0**, API revision 4.
-Server: `master`, commit `f0d88446254b1f3d3ff1a06a6e609471ba99f97e`.
+Server: `master`, commit `5d4015ad138088142902d822a8d67580424be404`.
 Client development branch: `master`.
 
 ## Язык интерфейса · Interface language
@@ -63,11 +63,12 @@ The original fantasy cards, property/item icons, bottom navigation, reference pi
 
 ## Workbench release — 1.11.0 / server 0.13.0
 
-This release targets **API revision 4**. Deploy the server from `master` at `f0d88446254b1f3d3ff1a06a6e609471ba99f97e` before updating the app.
+This release targets **API revision 4**. Deploy the server from `master` at `5d4015ad138088142902d822a8d67580424be404` before updating the app.
 
 - Icons for items, equipment, currency, stats, passive nodes, zones and monsters come from the server set. The client reads `icon` from every response, falls back to the published binding tables for documents written before the set existed, and keeps its own emblems only for servers that ship no icons.
 - The whole set arrives as one public sprite, is stored per server against `iconSetVersion`, and is refreshed with a conditional request. Account changes never drop it; switching servers does.
 - Administrators can set `icon` on equipment and items. The editor offers the ids of the loaded set and refuses anything outside it before a request is built.
+- The stash has no length limit and items no longer stack. Equipment and owned units live in their own server collections, so Hero and Forge read the inventory one cursor page at a time and load more on demand, while equipped items always arrive in full. Item counts are computed by the server on request; one administration command still moves at most 10 000 units.
 
 - The interface ships in Russian and English. `RU / EN` in the banner switches every label, snackbar and validation message at once, including the ones raised inside `:core`.
 - Login starts in **Player** mode. Players have Characters, Hero, Forge and Account. An administrator can switch to the administration workspace with catalog editors and diagnostic checks. Switching modes is disabled while an editor has an open draft.

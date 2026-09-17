@@ -48,6 +48,10 @@ data class ForgeState(
     val signedIn: Boolean = false, val characterId: String = "", val inventory: List<JsonObject> = emptyList(),
     val inventoryBases: Map<String, JsonObject> = emptyMap(), val inventoryDefinitions: List<JsonObject> = emptyList(),
     val inventoryVersion: Long? = null, val currencies: List<JsonObject> = emptyList(),
+    /** Cursor of the next inventory page and the server's total; `null` means everything is loaded. */
+    val inventoryNext: String? = null, val inventoryTotal: Long = 0,
+    /** Units per item type, counted by the server: there are no stacks to read an amount from. */
+    val itemTotals: Map<String, Long> = emptyMap(),
     val selectedEquipment: String = "", val selectedCurrency: String = "",
     val pending: PendingInventoryAction? = null,
     val checks: List<CheckResult> = emptyList(), val health: String = com.sperance.exileforge.core.i18n.tr("Соединение ещё не проверено", "The connection has not been checked yet")

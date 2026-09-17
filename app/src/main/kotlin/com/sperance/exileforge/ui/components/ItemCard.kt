@@ -20,7 +20,7 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.contract.text
 import com.sperance.exileforge.core.display.*
 import com.sperance.exileforge.core.i18n.tr
-import com.sperance.exileforge.ui.icons.ItemEmblem
+import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.serialization.json.*
 
@@ -44,7 +44,7 @@ import kotlinx.serialization.json.*
             }
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    ItemEmblem(itemVisualKind(doc), color, Modifier.size(64.dp))
+                    ItemIcon(doc, color, Modifier.size(64.dp))
                     Text(doc.text("slot").takeIf { it.isNotBlank() }?.let(::slotTitle) ?: doc.text("category"),
                         color = Muted, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
                     if(selected) Icon(Icons.Outlined.CheckCircle, tr("Выбран", "Selected"), tint = GoldBright, modifier = Modifier.size(22.dp))

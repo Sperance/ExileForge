@@ -21,7 +21,7 @@ val rarities = listOf("COMMON", "UNCOMMON", "RARE", "EPIC", "LEGENDARY", "MYTHIC
 val slots = listOf("HELMET", "BODY", "GLOVES", "RING", "BOOTS", "WINGS", "BELT", "WEAPON_1H", "WEAPON_2H", "QUIVER", "SHIELD", "AMULET")
 val weapons = listOf("SWORD", "LONGSWORD", "BOW", "WAND", "AXE", "DOUBLEAXE", "DOUBLESWORD", "BLADE")
 val modifierSources = ModifierSource.entries.map { it.name }
-const val SERVER_COMMIT = "24ed09b867fc559504333d8ee6e3b03e133ecfb6"
+const val SERVER_COMMIT = "f0d88446254b1f3d3ff1a06a6e609471ba99f97e"
 fun starterDefinition(): JsonObject = WireJson.parseToJsonElement("""{
     "id":"life", "name":"Maximum life", "source":"PREFIX", "scope":"ITEM", "affixType":"PREFIX",
     "tiers":[{"tier":1,"minItemLevel":1,"weight":100,"values":[{"min":1.0,"max":100.0}]}],
@@ -60,6 +60,7 @@ fun validate(document: JsonObject, catalog: Catalog) {
     require(document.text("name").isNotBlank()) { tr("Введите название", "Enter a name") }
     validateForm(formSchema(catalog), document)
     if (catalog == Catalog.CHARACTERS) return
+    validateIcon(document)
     if (catalog == Catalog.ITEMS) {
         require(document.text("category").isNotBlank()) { tr("Введите категорию", "Enter a category") }
         require(document.text("subCategory").isNotBlank()) { tr("Введите подкатегорию", "Enter a sub-category") }
@@ -97,6 +98,16 @@ fun validate(document: JsonObject, catalog: Catalog) {
     }
 }
 
+/** The icon is a reference into the server set, never a free string or a foreign URL. */
+fun validateIcon(document: JsonObject) {
+    val icon = document["icon"]
+    if (icon == null || icon == JsonNull) return
+    val id = (icon as? JsonPrimitive)?.takeIf { it.isString }?.content ?: error(tr("Иконка: требуется идентификатор набора", "Icon: a set identifier is required"))
+    require(Regex("[a-z0-9-]{3,48}").matches(id)) { tr("Иконка: идентификатор из строчных букв, цифр и дефисов", "Icon: lower-case letters, digits and hyphens only") }
+    val known = com.sperance.exileforge.core.display.icons.iconSuggestions
+    require(known.isEmpty() || id in known) { tr("Иконки «$id» нет в наборе сервера", "The server set has no icon \"$id\"") }
+}
+
 fun validateModifier(document: JsonObject) {
     require("type" !in document && "value" !in document) { tr("Старый формат модификатора: нужны definitionId и values", "Legacy modifier format: definitionId and values are required") }
     val modifier = WireJson.decodeFromJsonElement(Modifier.serializer(), document)
@@ -126,8 +137,8 @@ val JsonObject.entityVersion: Long get() = get("version")?.jsonPrimitive?.longOr
 
 fun editableFields(catalog: Catalog): Set<String> = when(catalog) {
     Catalog.CHARACTERS -> setOf("name", "description")
-    Catalog.ITEMS -> setOf("name", "description", "image", "category", "subCategory", "price")
-    Catalog.EQUIPMENT -> setOf("name", "description", "image", "slot", "rarity", "itemLevel", "weaponType", "damage_min", "damage_max", "attackSpeed", "durability", "defense", "price", "modifierDefinitionRefs", "stockModifierDefinitionRefs")
+    Catalog.ITEMS -> setOf("name", "description", "image", "icon", "category", "subCategory", "price")
+    Catalog.EQUIPMENT -> setOf("name", "description", "image", "icon", "slot", "rarity", "itemLevel", "weaponType", "damage_min", "damage_max", "attackSpeed", "durability", "defense", "price", "modifierDefinitionRefs", "stockModifierDefinitionRefs")
 }
 
 fun com.sperance.exileforge.core.model.hero.EquipmentInstance.text(key: String): String = document().text(key)

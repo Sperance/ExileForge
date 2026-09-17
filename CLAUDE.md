@@ -4,10 +4,10 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 1.10.0, `versionCode` 11) for the
-**ktor-bestgame** RPG server (0.12.0, **API revision 3**), pinned in
-`core/.../contract/Contract.kt` as `SERVER_COMMIT = 24ed09b867fc559504333d8ee6e3b03e133ecfb6`
-on the server branch `refactor/compact-rpg-architecture`.
+ExileForge is an **Android Compose client** (version 1.11.0, `versionCode` 12) for the
+**ktor-bestgame** RPG server (0.13.0, **API revision 4**), pinned in
+`core/.../contract/Contract.kt` as `SERVER_COMMIT = f0d88446254b1f3d3ff1a06a6e609471ba99f97e`
+on the server branch `master`.
 
 The client is deliberately **thin**: the server owns items, stats, crafting, combat and the
 passive tree. This client renders server state, sends commands, and never recomputes game
@@ -31,6 +31,8 @@ core/                                   Pure JVM library (java-library + kotlin-
                  conflict/ThreeWayMerge.kt
   generation/    ItemGenerator, ModifierSelection, PresetDefinitions
   display/       ItemPresentation.kt    Display-only projections and Russian titles
+                 svg/SvgIcon.kt         Reader for the server's SVG subset (paths, circles, gradients)
+                 icons/IconSet.kt       The loaded icon set and the rules that pick an icon
   verification/  CrudScenario.kt        Admin-only self-check run from the Checks screen
 app/                                    Android application (minSdk 26, compile/target SDK 37)
   MainActivity.kt, ForgeApplication.kt  Entry points; Application owns RequestJournal + ServerStore
@@ -41,9 +43,9 @@ app/                                    Android application (minSdk 26, compile/
   ui/            ForgeApp.kt            Scaffold, banner with RU/EN switch, bottom navigation, tab dispatch
                  screens/               catalog, editor, inventory (Hero/Forge), combat, passives, checks, server
                  components/            ItemCard, PropertyRow, InfoCard, spinners and Ornament.kt (ForgePanel/ScreenHeader/OrnateDivider/StatGlobe)
-                 forms/, icons/ (ForgeGlyphs vector set, ItemEmblem), theme/
+                 forms/, icons/ (ForgeGlyphs vector set, ItemEmblem, ServerIcon renderer), theme/
   data/settings/ServerStore.kt          DataStore Preferences: base URL, saved filters, pending commands
-docs/                                   Russian reference docs (API_CONTRACT, COMBAT, PASSIVES, VALIDATION)
+docs/                                   Russian reference docs (API_CONTRACT, COMBAT, PASSIVES, VALIDATION, ICONS)
 scripts/client_server_test.py           Boots the real backend + MongoDB and runs ServerIntegrationTest
 .github/workflows/android.yml           `build` job (unit/lint/APK/emulator UI) and `client-server` job
 ```
@@ -138,6 +140,10 @@ These are enforced by tests and are the point of the client's design:
    `inventoryDocument` is a display-only projection and must never be posted back.
 10. **Release builds require HTTPS** (`usesCleartextTraffic=false`); only the debug manifest
     permits cleartext for local servers.
+11. **Icons belong to the server.** Every entity carries an `icon` id; the client renders that set,
+    resolves a missing one through `/api/v1/icons/bindings`, and never invents artwork for a game
+    entity. The set is public, fetched once as a sprite, cached per server against `iconSetVersion`
+    and refreshed with `If-None-Match`.
 
 ## Conventions
 
@@ -163,8 +169,10 @@ These are enforced by tests and are the point of the client's design:
 - Theme: dark only, Path of Exile palette in `ui/theme/Theme.kt` (Ink/Abyss/Panel stone,
   Gold/Bronze frames, PoE rarity colours, cut-corner shapes). Build screens from
   `ScreenHeader`, `ForgePanel`, `OrnateDivider`, `Engraved`, `StatGlobe` and `PropertyRow`
-  instead of ad-hoc cards, and use `rarityColor`/`ItemEmblem`/`ForgeGlyphs` rather than new
-  ad-hoc colors or network images (all icons are offline vectors).
+  instead of ad-hoc cards, and use `rarityColor` rather than new ad-hoc colors. Game entities are
+  drawn with `ForgeIcon`/`ItemIcon`/`PropertyIcon` from the server set, always with the bundled
+  `ItemEmblem`/`ForgeGlyphs` vector as the fallback; app chrome keeps `ForgeGlyphs`. No raster or
+  network images: the server's SVG is parsed in `:core` and drawn on a Compose `Canvas`.
 - Commit messages follow Conventional Commits: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`
   (docs-only commits often append `[skip ci]`).
 
@@ -191,9 +199,14 @@ the record only on success or an explicit 4xx rejection, and clear visible state
 
 `README.md` and `docs/*.md` are Russian, versioned against the server, and referenced by the app.
 When behavior changes, update the matching doc: `docs/API_CONTRACT.md` (routes and payloads),
-`docs/COMBAT.md`, `docs/PASSIVES.md`, `docs/VALIDATION.md` (what CI verifies). If the pinned
+`docs/COMBAT.md`, `docs/PASSIVES.md`, `docs/ICONS.md` (the server icon set), `docs/VALIDATION.md`
+(what CI verifies). If the pinned
 server commit or API revision changes, update `SERVER_COMMIT`, `ApiCapabilities.require*`, the
 README header and the `client-server` job's checkout ref together.
+
+**Adding an icon call site:** read the id from the payload (`doc.text("icon")`) or ask `IconSet`, pass
+it to `ForgeIcon`, and give it a bundled fallback — an older server and a cold cache both draw nothing
+otherwise.
 
 `ExileForge-debug.apk` at the repo root is a committed build artifact; CI publishes fresh APKs as
 workflow artifacts. Don't regenerate it as part of ordinary changes.

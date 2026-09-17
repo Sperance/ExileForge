@@ -13,6 +13,7 @@ data class PendingBattleWrite(val characterId: String, val operation: String, va
 
 data class ForgeState(
     val lang: com.sperance.exileforge.core.i18n.Lang = com.sperance.exileforge.core.i18n.uiLanguage,
+    val icons: com.sperance.exileforge.core.display.icons.IconSet = com.sperance.exileforge.core.display.icons.IconSet(),
     val passiveTree: com.sperance.exileforge.core.model.passives.PassiveTree? = null,
     val passiveState: com.sperance.exileforge.core.model.passives.PassiveState? = null,
     val passiveCharacterId: String = "",

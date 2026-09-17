@@ -16,6 +16,8 @@ import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
+import com.sperance.exileforge.ui.icons.ForgeIcon
+import com.sperance.exileforge.ui.icons.LocalForgeIcons
 import com.sperance.exileforge.ui.theme.*
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -28,6 +30,7 @@ import com.sperance.exileforge.ui.theme.*
     val active = battle?.status == BattleStatus.ACTIVE
     val controls = ready && s.signedIn && !s.busy && s.battlePending == null
     val zone = s.combatCatalog?.zones?.firstOrNull { it.id == zoneId }
+    val icons = LocalForgeIcons.current
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             ScreenHeader(tr("Поход", "Expedition"), tr("Пошаговые сражения · добыча · боссы", "Turn-based battles · loot · bosses"), ForgeGlyphs.Swords)
@@ -45,8 +48,18 @@ import com.sperance.exileforge.ui.theme.*
                 Engraved(tr("Зоны", "Zones"))
                 Spinner(tr("Зона", "Zone"), zoneId, s.combatCatalog?.zones.orEmpty().associate { it.id to tr("${it.name} · ур. ${it.level}", "${it.name} · lvl ${it.level}") }, controls, { zoneId = it })
                 zone?.let { z ->
-                    Text(z.description)
-                    Text(tr("Противники: ", "Enemies: ") + z.monsters.joinToString { it.name }, color = Muted)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        ForgeIcon(z.icon ?: "combat-zone", Modifier.size(48.dp), description = z.name)
+                        Text(z.description, modifier = Modifier.weight(1f))
+                    }
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        z.monsters.forEach { monster ->
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                ForgeIcon(icons.forMonster(monster), Modifier.size(28.dp), description = monster.name)
+                                Text(monster.name, color = Muted, style = MaterialTheme.typography.labelMedium)
+                            }
+                        }
+                    }
                     val kills = s.battleView?.zoneKills?.get(z.id) ?: 0
                     Text(tr("Босс: ${z.boss.name} · победы ${minOf(kills, z.killsForBoss)}/${z.killsForBoss}", "Boss: ${z.boss.name} · kills ${minOf(kills, z.killsForBoss)}/${z.killsForBoss}"), color = Gold)
                     val allowed = controls && (s.hero?.level?.toInt() ?: 0) >= z.level
@@ -61,7 +74,10 @@ import com.sperance.exileforge.ui.theme.*
         }
         if(battle != null) {
             item {
-                Text(if(battle.monster.boss) tr("БОСС", "BOSS") + " · ${battle.monster.name}" else battle.monster.name, style = MaterialTheme.typography.titleLarge, color = if(battle.monster.boss) Blood else Gold)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    ForgeIcon(icons.forMonster(battle.monster), Modifier.size(44.dp), description = battle.monster.name)
+                    Text(if(battle.monster.boss) tr("БОСС", "BOSS") + " · ${battle.monster.name}" else battle.monster.name, style = MaterialTheme.typography.titleLarge, color = if(battle.monster.boss) Blood else Gold)
+                }
                 OrnateDivider(if(battle.monster.boss) Blood else Gold)
                 CombatantCard(battle.enemy, false)
                 Spacer(Modifier.height(8.dp))
@@ -74,11 +90,14 @@ import com.sperance.exileforge.ui.theme.*
                 Text(tr("Защита снижает входящий урон на 65%. Флакон и защита тратят ход.", "Guard reduces incoming damage by 65%. Flask and guard both cost a turn."), color = Muted, style = MaterialTheme.typography.bodySmall)
             }
             if(!active) item {
-                Text(when(battle.status) {
-                    BattleStatus.VICTORY -> tr("Победа — награды уже в инвентаре", "Victory — the rewards are already in your stash")
-                    BattleStatus.DEFEAT -> tr("Поражение — возвращение в лагерь", "Defeat — back to camp")
-                    else -> tr("Отступление без наград", "Retreat without rewards")
-                }, color = Gold, style = MaterialTheme.typography.titleMedium)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    ForgeIcon(icons.forBattleStatus(battle.status.name), Modifier.size(48.dp))
+                    Text(when(battle.status) {
+                        BattleStatus.VICTORY -> tr("Победа — награды уже в инвентаре", "Victory — the rewards are already in your stash")
+                        BattleStatus.DEFEAT -> tr("Поражение — возвращение в лагерь", "Defeat — back to camp")
+                        else -> tr("Отступление без наград", "Retreat without rewards")
+                    }, color = Gold, style = MaterialTheme.typography.titleMedium)
+                }
                 battle.rewards.forEach { PropertyRow(it.name, "+${it.amount}", it.name) }
                 OutlinedButton(onClick = { vm.tab(4); vm.loadInventory() }, enabled = !s.busy) { Text(tr("Открыть арсенал", "Open the stash")) }
             }

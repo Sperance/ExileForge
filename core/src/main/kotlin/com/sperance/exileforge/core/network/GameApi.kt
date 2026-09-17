@@ -64,6 +64,17 @@ class GameApi(
         return WireJson.decodeFromJsonElement(request("POST", "api/v1/combat/characters/$id/$operation", body = command, authenticated = true))
     }
     suspend fun capabilities(): ApiCapabilities = WireJson.decodeFromJsonElement(request("GET", "api/v1/poe/capabilities"))
+    /** Icon routes are public: they carry no player data and a client shows them before login. */
+    suspend fun icons(category: String = "", query: String = ""): com.sperance.exileforge.core.model.icons.IconManifest =
+        WireJson.decodeFromJsonElement(request("GET", "api/v1/icons", buildMap { if(category.isNotBlank()) put("category", category); if(query.isNotBlank()) put("q", query) }))
+    suspend fun iconBindings(): com.sperance.exileforge.core.model.icons.IconBindingTables =
+        WireJson.decodeFromJsonElement(request("GET", "api/v1/icons/bindings"))
+    /** The whole set in one request; `etag` makes the next start conditional instead of repeated. */
+    suspend fun iconSprite(etag: String = ""): IconPayload = svg("api/v1/icons/sprite.svg", etag)
+    suspend fun iconSvg(id: String, plain: Boolean = false, etag: String = ""): IconPayload {
+        require(Regex("[a-z0-9-]{3,48}").matches(id)) { tr("Неизвестный идентификатор иконки", "Unknown icon id") }
+        return svg("api/v1/icons/$id.svg", etag, if(plain) mapOf("variant" to "plain") else emptyMap())
+    }
     suspend fun currentUser(): UserProfile {
         val jwt = requireNotNull(token) { tr("Войдите в аккаунт", "Sign in to your account") }
         val claims = WireJson.parseToJsonElement(String(java.util.Base64.getUrlDecoder().decode(jwt.split('.')[1]), Charsets.UTF_8)).jsonObject
@@ -152,6 +163,26 @@ class GameApi(
     override suspend fun delete(catalog: Catalog, id: String, expectedVersion: Long) { requireId(id); require(expectedVersion >= 0); request("DELETE", route(catalog), mapOf("id" to id), WireJson.encodeToJsonElement(DeleteCommand(expectedVersion)), authenticated = true) }
     suspend fun health(): JsonElement = request("GET", "system/health")
     suspend fun count(catalog: Catalog): JsonElement = request("GET", "${route(catalog)}/count", authenticated = true)
+    /**
+     * Icon pictures are not the JSON envelope: the body is SVG and 304 is a valid, empty answer.
+     * The caller keeps the ETag and sends it back, so an unchanged set costs one conditional request.
+     */
+    private suspend fun svg(path: String, etag: String, query: Map<String, String> = emptyMap()): IconPayload {
+        val url = base.newBuilder().addPathSegments(path).apply { query.forEach { (k, v) -> addQueryParameter(k, v) } }.build()
+        val request = Request.Builder().url(url).header("Accept", "image/svg+xml")
+            .apply { if(etag.isNotBlank()) header("If-None-Match", etag) }.get().build()
+        val start = System.nanoTime()
+        var payload: HttpPayload? = null
+        try {
+            payload = client.newCall(request).awaitPayload()
+            val status = payload.status
+            if(status != 200 && status != 304) throw ApiFailure(status, null, tr("HTTP $status: иконки недоступны", "HTTP $status: icons are unavailable"))
+            return IconPayload(status, payload.etag.ifBlank { etag }, if(status == 304) "" else payload.body)
+        } finally {
+            journal.add(RequestLog("GET", url.encodedPath + (url.encodedQuery?.let { "?$it" } ?: ""), payload?.status,
+                (System.nanoTime() - start) / 1_000_000, "", tr("[рисунок, ${payload?.body?.length ?: 0} байт]", "[drawing, ${payload?.body?.length ?: 0} bytes]"), payload?.status in setOf(200, 304)))
+        }
+    }
     private suspend fun request(method: String, path: String, query: Map<String, String> = emptyMap(), body: JsonElement? = null, authenticated: Boolean = false, sensitive: Boolean = false): JsonElement {
         if (authenticated) require(!token.isNullOrBlank()) { tr("Войдите во вкладке «Сервер»", "Sign in on the Account tab") }
         val url = base.newBuilder().addPathSegments(path).apply { query.forEach { (k,v) -> addQueryParameter(k,v) } }.build()

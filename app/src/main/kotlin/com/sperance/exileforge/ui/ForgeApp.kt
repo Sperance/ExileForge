@@ -29,6 +29,7 @@ import com.sperance.exileforge.ui.components.LocalEntityPageLoader
 import com.sperance.exileforge.ui.components.OrnateDivider
 import com.sperance.exileforge.ui.components.voidBackdrop
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
+import com.sperance.exileforge.ui.icons.LocalForgeIcons
 import com.sperance.exileforge.ui.screens.catalog.CatalogScreen
 import com.sperance.exileforge.ui.screens.checks.ChecksScreen
 import com.sperance.exileforge.ui.screens.editor.EditorScreen
@@ -47,7 +48,7 @@ import kotlinx.serialization.json.*
         s.message?.let { snackbar.showSnackbar(it, withDismissAction = true); vm.dismissMessage() }
     }
     BackHandler(s.editorOpen && !s.busy) { confirmDiscard = true }
-    CompositionLocalProvider(LocalEntityPageLoader provides vm::referencePage) {
+    CompositionLocalProvider(LocalEntityPageLoader provides vm::referencePage, LocalForgeIcons provides s.icons) {
     // Language is part of the key: every cached label is rebuilt in the chosen tongue.
     key(s.server, s.sessionEpoch, s.lang) {
     Scaffold(

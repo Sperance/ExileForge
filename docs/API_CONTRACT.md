@@ -1,6 +1,6 @@
-# Контракт Exile Forge 1.3
+# Контракт Exile Forge 1.11
 
-Сервер: `feature/poe-catalog-crafting`, коммит `34ca93a099d1eb2f56f5ab53114c27bf1b005f49`.
+Сервер: `master`, коммит `f0d88446254b1f3d3ff1a06a6e609471ba99f97e` (0.13.0, API revision 4).
 Успех: `{"success":true,"data":...}`. Ошибка может быть ApiMongoResponse либо пустым HTTP 4xx/5xx; статус сохраняется клиентом.
 
 | Операция | Запрос |
@@ -10,11 +10,15 @@
 | Точная версия | `GET /api/v1/poe/modifier-definition?id=...&revision=1` |
 | Публикация ADMIN | `POST /api/v1/poe/modifier-definitions`, `{definition,expectedRevision}` |
 | Инвентарь владельца | `GET /api/v1/poe/characters/{id}/inventory` → `{version,equipment}` |
-| Сферы | `GET /api/v1/poe/currencies` → `[{id,name,itemId}]` |
+| Сферы | `GET /api/v1/poe/currencies` → `[{id,name,itemId,icon}]` |
 | Тестовое выпадение ADMIN | `POST /api/v1/poe/characters/{id}/drop`, `{requestId,expectedVersion}` |
 | Крафт | `POST /api/v1/poe/characters/{id}/craft`, `{requestId,expectedVersion,equipmentUuid,currency}` |
+| Возможности | `GET /api/v1/poe/capabilities` → `{apiRevision:4,…,icons,iconSet,iconSetRevision,iconSetVersion,iconCount}` |
+| Набор иконок | `GET /api/v1/icons`, `/api/v1/icons/bindings`, `/api/v1/icons/sprite.svg`, `/api/v1/icons/{id}.svg?variant=plain` |
 
-Защищённые операции отправляют `Authorization: Bearer <token>`. JWT не добавляется к публичному каталогу и legacy CRUD. В журнале вход полностью скрыт.
+Защищённые операции отправляют `Authorization: Bearer <token>`. JWT не добавляется к публичному каталогу, маршрутам иконок и legacy CRUD. В журнале вход полностью скрыт, а SVG записывается размером, а не телом.
+
+Иконки отдаются как `image/svg+xml` с `ETag` и `Cache-Control: public, max-age=604800, immutable`; `If-None-Match` даёт `304`. Каталог, определения модификаторов, сферы, экипировка, предметы, узлы дерева, зоны и монстры содержат поле `icon` — идентификатор набора, а не ссылку на чужой хост. У документов, записанных до появления набора, поля нет: иконка выбирается по таблицам `/api/v1/icons/bindings`. `icon` разрешён к записи в equipment и items; неизвестный идентификатор отклоняется с `400`. [Подробности](ICONS.md).
 
 Пример ссылок шаблона:
 ```json

@@ -10,6 +10,8 @@ import com.sperance.exileforge.core.model.passives.*
 import com.sperance.exileforge.ui.components.ForgePanel
 import com.sperance.exileforge.ui.components.OrnateDivider
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
+import com.sperance.exileforge.ui.icons.ForgeIcon
+import com.sperance.exileforge.ui.icons.LocalForgeIcons
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.GoldBright
 import com.sperance.exileforge.ui.theme.Muted
@@ -18,7 +20,9 @@ import com.sperance.exileforge.ui.theme.Muted
     val learned = node.id in state.allocated
     ForgePanel(accent = if(learned) Gold else Muted) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Icon(ForgeGlyphs.Constellation, null, tint = if(learned) GoldBright else Muted, modifier = Modifier.size(22.dp))
+            ForgeIcon(LocalForgeIcons.current.forNode(node), Modifier.size(34.dp), description = node.name) {
+                Icon(ForgeGlyphs.Constellation, null, tint = if(learned) GoldBright else Muted, modifier = Modifier.size(22.dp))
+            }
             Text(node.name, style = MaterialTheme.typography.titleLarge, color = if(learned) GoldBright else Gold)
         }
         Text(tr("${passiveKind(node.kind)} · ${node.cost} очк.", "${passiveKind(node.kind)} · ${node.cost} pts"), color = Muted, style = MaterialTheme.typography.labelMedium)

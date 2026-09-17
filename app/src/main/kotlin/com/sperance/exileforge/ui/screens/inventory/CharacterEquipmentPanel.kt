@@ -13,10 +13,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.contract.text
 import com.sperance.exileforge.core.display.inventoryDocument
-import com.sperance.exileforge.core.display.itemVisualKind
 import com.sperance.exileforge.core.i18n.tr
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
+import com.sperance.exileforge.ui.icons.ForgeIcon
 import com.sperance.exileforge.ui.icons.ItemEmblem
+import com.sperance.exileforge.ui.icons.ItemIcon
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import com.sperance.exileforge.core.model.command.EquipmentSlot
@@ -34,7 +35,9 @@ import java.util.Locale
         s.hero?.let { hero ->
             ForgePanel {
                 Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    ItemEmblem(com.sperance.exileforge.core.display.ItemVisualKind.CHARACTER, Gold, Modifier.size(64.dp))
+                    ForgeIcon("ui-character", Modifier.size(64.dp), description = hero.name) {
+                        ItemEmblem(com.sperance.exileforge.core.display.ItemVisualKind.CHARACTER, Gold, Modifier.size(64.dp))
+                    }
                     Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                         Text(hero.name, style = MaterialTheme.typography.headlineSmall, color = GoldBright)
                         Text(tr("Уровень ${hero.level} · Опыт ${hero.experience}", "Level ${hero.level} · Experience ${hero.experience}"), color = Muted, style = MaterialTheme.typography.labelMedium)
@@ -64,7 +67,8 @@ import java.util.Locale
                     .border(1.dp, if(instance == null) Bronze.copy(alpha = .4f) else Gold.copy(alpha = .55f), shape)
                     .padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(slot.title(s.lang), style = MaterialTheme.typography.labelSmall, color = Gold, textAlign = TextAlign.Center)
-                    ItemEmblem(itemVisualKind(doc), if(instance == null) Muted else GoldBright, Modifier.size(48.dp))
+                    // An empty slot still has an icon: the binding tables answer for the slot itself, muted.
+                    ItemIcon(doc, GoldBright, Modifier.size(48.dp), tint = Muted.takeIf { instance == null })
                     Text(if(instance == null) tr("Пусто", "Empty") else doc.text("name"), style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
                     if(instance != null) TextButton(enabled = !s.busy && s.pending == null && s.inventoryVersion != null, onClick = { onUnequip(slot) }) { Text(tr("Снять", "Unequip")) }
                 }

@@ -36,9 +36,10 @@ task {
         clearSession()
         api = newApi(server)
         journal.clear()
-        mutable.update { it.copy(server = server, serverDraft = server, items = emptyList(), original = null, editorOpen = false, page = 0, total = 0, totalPages = 0, checks = emptyList(), definitions = emptyList(), inventoryBases = emptyMap(), inventoryDefinitions = emptyList(), signedIn = false, inventory = emptyList(), inventoryVersion = null, pending = null, characterId = "", currencies = emptyList(), health = tr("Проверка соединения…", "Checking the connection…")) }
+        mutable.update { it.copy(server = server, serverDraft = server, items = emptyList(), original = null, editorOpen = false, page = 0, total = 0, totalPages = 0, checks = emptyList(), definitions = emptyList(), inventoryBases = emptyMap(), inventoryDefinitions = emptyList(), signedIn = false, inventory = emptyList(), inventoryVersion = null, pending = null, characterId = "", currencies = emptyList(), icons = com.sperance.exileforge.core.display.icons.IconSet(), health = tr("Проверка соединения…", "Checking the connection…")) }
         val health = api.health()
         mutable.update { it.copy(health = health.toString(), message = tr("Сервер доступен", "The server is reachable")) }
+        iconViewModel.load()
     }
     } }
     fun health() { with(runtime) {
@@ -50,7 +51,9 @@ task {
     fun login(login: String, password: String) { with(runtime) {
 task {
         clearSession()
-        api.capabilities().requireWorkbench()
+        val capabilities = api.capabilities()
+        capabilities.requireWorkbench()
+        iconViewModel.load(capabilities)
         api.login(login, password)
         val profile = try { api.currentUser() } catch(e: Exception) { api.logout(); throw e }
         mutable.update { it.copy(signedIn = true, profile = profile, mode = AppMode.PLAYER, catalog = Catalog.CHARACTERS, message = tr("Вход выполнен", "Signed in"), tab = 0) }

@@ -18,30 +18,46 @@ import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.ForgeIcon
 import com.sperance.exileforge.ui.icons.LocalForgeIcons
-import com.sperance.exileforge.ui.screens.combat.arena.ArenaBoard
+import com.sperance.exileforge.ui.screens.combat.world.WorldBoard
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * The expedition screen: pick a zone in the camp, then fight it out on the 2D stage.
+ * The expedition: pick a zone in the camp, then walk the zone and fight it out on the isometric floor.
  *
- * The screen owns navigation and the reference tables; the fight itself is [ArenaBoard]. Actions are
- * unchanged durable commands — the arena is how the server's answer is shown, not a second ruleset.
+ * The camp owns navigation and the reference tables; the fight itself is [WorldBoard]. Every blow is
+ * the same durable command it always was — the floor is how the server's answer is shown and when the
+ * client decides to ask for one, never a second ruleset.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable fun CombatScreen(s: ForgeState, vm: ForgeViewModel) {
-    var zoneId by rememberSaveable(s.characterId) { mutableStateOf("coast") }
-    var showLoot by rememberSaveable { mutableStateOf(false) }
-    var showLog by rememberSaveable { mutableStateOf(false) }
+    var camp by rememberSaveable(s.characterId) { mutableStateOf(false) }
     var confirmFlee by remember { mutableStateOf(false) }
     val ready = s.battleCharacterId == s.characterId && s.battleView != null
     val battle = if(ready) s.battleView?.battle else null
-    val active = battle?.status == BattleStatus.ACTIVE
+    val controls = ready && s.signedIn && !s.busy && s.battlePending == null
+    // A settled battle stays on the floor until the exile walks back to camp: the loot is still there.
+    if(battle != null && (battle.status == BattleStatus.ACTIVE || !camp))
+        WorldBoard(s, battle, vm, onCamp = { camp = true }, onFlee = { confirmFlee = true })
+    else CampScreen(s, vm, battle) { camp = false }
+    if(confirmFlee) AlertDialog(onDismissRequest = { confirmFlee = false }, containerColor = Panel, titleContentColor = Gold,
+        title = { Text(tr("Отступить?", "Retreat?")) },
+        text = { Text(tr("Бой завершится без опыта, золота и добычи.", "The battle ends with no experience, gold or loot.")) },
+        confirmButton = { TextButton(enabled = controls, onClick = { confirmFlee = false; vm.battleAction(BattleAction.FLEE) }) { Text(tr("Отступить", "Retreat")) } },
+        dismissButton = { TextButton(onClick = { confirmFlee = false }) { Text(tr("Остаться", "Stay")) } })
+}
+
+/** The camp: the character, the zones, the reference tables and the way back onto the floor. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable private fun CampScreen(s: ForgeState, vm: ForgeViewModel, battle: Battle?, onFight: () -> Unit) {
+    var zoneId by rememberSaveable(s.characterId) { mutableStateOf("coast") }
+    var showLoot by rememberSaveable { mutableStateOf(false) }
+    var showLog by rememberSaveable { mutableStateOf(false) }
+    val ready = s.battleCharacterId == s.characterId && s.battleView != null
     val controls = ready && s.signedIn && !s.busy && s.battlePending == null
     val zone = s.combatCatalog?.zones?.firstOrNull { it.id == zoneId }
     val icons = LocalForgeIcons.current
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
-            ScreenHeader(tr("Поход", "Expedition"), tr("Арена · мобы зоны · добыча · боссы", "Arena · zone mobs · loot · bosses"), ForgeGlyphs.Swords)
+            ScreenHeader(tr("Поход", "Expedition"), tr("Изометрия · свайп · авто-бой · добыча", "Isometric · swipe · auto attack · loot"), ForgeGlyphs.Swords)
             TextButton(enabled = !s.busy && s.signedIn, onClick = { vm.tab(7) }) { Text(tr("Древо навыков", "Passive tree")) }
             EntitySpinner(tr("Персонаж", "Character"), s.characterId, EntitySource.CHARACTER, !s.busy && s.pending == null, vm::characterId)
             OutlinedButton(enabled = s.signedIn && !s.busy && s.characterId.isNotBlank(), onClick = vm::loadCombat, modifier = Modifier.fillMaxWidth()) { Text(tr("Загрузить / продолжить бой", "Load / resume the battle")) }
@@ -50,9 +66,9 @@ import com.sperance.exileforge.ui.theme.*
                 Text(tr("Ответ на действие не подтверждён. Повтор отправит тот же запрос без повторной награды.", "The action was not confirmed. A retry sends the identical request without a second reward."), color = Gold)
                 Button(enabled = !s.busy && s.signedIn, onClick = vm::retryBattle) { Text(tr("Подтвердить действие", "Confirm the action")) }
             }
+            if(battle != null) OutlinedButton(onClick = onFight, modifier = Modifier.fillMaxWidth()) { Text(tr("Вернуться на поле боя", "Back to the battlefield")) }
         }
-        if(battle != null) item { ArenaBoard(s, battle, vm) { confirmFlee = true } }
-        if(ready && !active) item {
+        item {
             ForgePanel {
                 Engraved(tr("Зоны", "Zones"))
                 Spinner(tr("Зона", "Zone"), zoneId, s.combatCatalog?.zones.orEmpty().associate { it.id to tr("${it.name} · ур. ${it.level}", "${it.name} · lvl ${it.level}") }, controls, { zoneId = it })
@@ -73,11 +89,12 @@ import com.sperance.exileforge.ui.theme.*
                     Text(tr("Босс: ${z.boss.name} · победы ${minOf(kills, z.killsForBoss)}/${z.killsForBoss}", "Boss: ${z.boss.name} · kills ${minOf(kills, z.killsForBoss)}/${z.killsForBoss}"), color = Gold)
                     val allowed = controls && (s.hero?.level?.toInt() ?: 0) >= z.level
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(enabled = allowed, onClick = { vm.startBattle(z.id, false) }) { Text(tr("Искать противника", "Seek an enemy")) }
-                        OutlinedButton(enabled = allowed && kills >= z.killsForBoss, onClick = { vm.startBattle(z.id, true) }) { Icon(ForgeGlyphs.Skull, null, Modifier.size(16.dp)); Spacer(Modifier.width(6.dp)); Text(tr("Вызвать босса", "Summon the boss")) }
+                        Button(enabled = allowed, onClick = { onFight(); vm.startBattle(z.id, false) }) { Text(tr("Искать противника", "Seek an enemy")) }
+                        OutlinedButton(enabled = allowed && kills >= z.killsForBoss, onClick = { onFight(); vm.startBattle(z.id, true) }) { Icon(ForgeGlyphs.Skull, null, Modifier.size(16.dp)); Spacer(Modifier.width(6.dp)); Text(tr("Вызвать босса", "Summon the boss")) }
                     }
                     if(!allowed && controls) Text(tr("Нужен персонаж уровня ${z.level}.", "A character of level ${z.level} is required."))
                 }
+                Text(tr("Ходите свайпом, бейте автоматически: герой сам бьёт того, до кого дотянулся, и сам пьёт флакон.", "Swipe to walk and let the blows land: the exile strikes whatever is in reach and drinks when it must."), color = Muted, style = MaterialTheme.typography.bodySmall)
                 Text(tr("В начале боя здоровье и флаконы восстанавливаются. Экипировка фиксируется на весь бой.", "Life and flasks are restored when a battle starts. Equipment is locked for its duration."), color = Muted, style = MaterialTheme.typography.bodySmall)
             }
         }
@@ -96,11 +113,6 @@ import com.sperance.exileforge.ui.theme.*
             }
         }
     }
-    if(confirmFlee) AlertDialog(onDismissRequest = { confirmFlee = false }, containerColor = Panel, titleContentColor = Gold,
-        title = { Text(tr("Отступить?", "Retreat?")) },
-        text = { Text(tr("Бой завершится без опыта, золота и добычи.", "The battle ends with no experience, gold or loot.")) },
-        confirmButton = { TextButton(enabled = controls, onClick = { confirmFlee = false; vm.battleAction(BattleAction.FLEE) }) { Text(tr("Отступить", "Retreat")) } },
-        dismissButton = { TextButton(onClick = { confirmFlee = false }) { Text(tr("Остаться", "Stay")) } })
 }
 
 private fun lootName(kind: String) = when(kind) {

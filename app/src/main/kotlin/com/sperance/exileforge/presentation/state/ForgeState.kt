@@ -22,8 +22,15 @@ data class ForgeState(
     val battleView: com.sperance.exileforge.core.model.combat.BattleView? = null,
     val battleCharacterId: String = "",
     val battlePending: PendingBattleWrite? = null,
-    /** The action that produced [battleView], so the arena knows which turn to play out. */
+    /** The action that produced [battleView], so the world knows which turn to play out. */
     val battleAction: com.sperance.exileforge.core.model.combat.BattleAction? = null,
+    /**
+     * Items the server granted as loot, read back by uuid so a drop can show its rarity and rolls.
+     *
+     * Display only: the rewards reached the stash when the server answered, and nothing here grants,
+     * re-rolls or removes one.
+     */
+    val battleLoot: Map<String, com.sperance.exileforge.core.model.hero.EquipmentInstance> = emptyMap(),
     val mode: AppMode = AppMode.PLAYER,
     val filter: com.sperance.exileforge.core.model.CatalogFilter = com.sperance.exileforge.core.model.CatalogFilter(),
     val hero: com.sperance.exileforge.core.model.hero.CharacterSummary? = null,

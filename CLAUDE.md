@@ -26,6 +26,8 @@ core/                                   Pure JVM library (java-library + kotlin-
   model/         Catalog, EntitySource, CatalogFilter, EquipmentKind
                  command/Commands.kt    Serializable commands, EquipmentSlot, CalculatedStats, EquipmentView, ApiCapabilities
                  hero/, combat/, passives/, modifier/, character/
+                 combat/world/          Isometric battlefield engine: Vec2/IsoCamera, Battlefield, WorldActor,
+                                        BattleDelta (snapshot diff), WorldScript, AutoPilot, WorldSimulation
   i18n/          Loc.kt                 Lang (RU/EN), `tr(ru, en)` and the global `uiLanguage`
   editor/        EditorSchema.kt        Declarative form schemas (FormField/InputSpec) used by the admin editor
                  conflict/ThreeWayMerge.kt
@@ -41,7 +43,7 @@ app/                                    Android application (minSdk 26, compile/
                  features/              Catalog, Editor, Hero, Session, Passive, Combat, Checks view models
                  state/ForgeState.kt    One immutable state object for the whole app
   ui/            ForgeApp.kt            Scaffold, banner with RU/EN switch, bottom navigation, tab dispatch
-                 screens/               catalog, editor, inventory (Hero/Forge), combat, passives, checks, server
+                 screens/               catalog, editor, inventory (Hero/Forge), combat (+combat/world), passives, checks, server
                  components/            ItemCard, PropertyRow, InfoCard, spinners and Ornament.kt (ForgePanel/ScreenHeader/OrnateDivider/StatGlobe)
                  forms/, icons/ (ForgeGlyphs vector set, ItemEmblem, ServerIcon renderer), theme/
   data/settings/ServerStore.kt          DataStore Preferences: base URL, saved filters, pending commands
@@ -73,9 +75,10 @@ rely on CI and keep changes reviewable by reading, rather than claiming a local 
 - `ServerIntegrationTest` is **opt-in**: it is skipped (`assumeTrue`) unless `EF_LIVE_URL` is
   set. The `client-server` CI job builds the pinned backend, starts an isolated MongoDB replica
   set and runs it through `scripts/client_server_test.py`.
-- `DesignPreviewTest`, `EquipmentPanelTest` and `PassiveTreeTest` capture screenshots into the
-  app's external files dir (`design/arsenal.jpg`, `hero.jpg`, `passives.jpg`); CI pulls them and
-  base64-prints them into the log. Do not remove those captures — the workflow fails without the files.
+- `DesignPreviewTest`, `EquipmentPanelTest`, `PassiveTreeTest`, `ServerIconTest` and `WorldViewTest`
+  capture screenshots into the app's external files dir (`design/arsenal.jpg`, `hero.jpg`,
+  `passives.jpg`, `icons.jpg`, `arena.jpg`); CI pulls them and base64-prints them into the log.
+  Do not remove those captures — the workflow fails without the files.
 
 ## Architecture and state
 
@@ -114,7 +117,11 @@ These are enforced by tests and are the point of the client's design:
 
 1. **The server is authoritative.** Never compute damage, stats, loot chance or passive bonuses
    locally. Unsupported effects are listed explicitly (`CalculatedStats.unsupported`,
-   `Battle.unsupportedStats`) rather than approximated.
+   `Battle.unsupportedStats`) rather than approximated. The isometric battlefield is bound by the
+   same rule: walking, collision and the camera are kinematics, and a position decides only **when**
+   `WorldSimulation.takeAction` offers the next `BattleAction` — `AutoPilot` picks which durable
+   command leaves the client, never what it is worth. Ground loot is a picture of a reward the
+   server already granted.
 2. **Identity comes from the server.** POST sends documents without `_id`; `requireId` demands
    24 hex chars before any request is built.
 3. **Optimistic concurrency everywhere.** PUT sends `{expectedVersion, changes}`, DELETE sends

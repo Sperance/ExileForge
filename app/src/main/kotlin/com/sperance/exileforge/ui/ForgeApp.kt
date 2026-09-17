@@ -81,7 +81,8 @@ import kotlinx.serialization.json.*
                 3 -> ServerScreen(s, vm)
                 4 -> InventoryForge(s, vm)
                 5 -> InventoryForge(s, vm, forgeOnly = true)
-                6 -> com.sperance.exileforge.ui.screens.combat.CombatScreen(s, vm)
+                // The expedition draws a floor under a camera, so it takes the height the column has left.
+                6 -> Box(Modifier.weight(1f)) { com.sperance.exileforge.ui.screens.combat.CombatScreen(s, vm) }
                 7 -> com.sperance.exileforge.ui.screens.passives.PassiveScreen(s, vm)
             }
         }

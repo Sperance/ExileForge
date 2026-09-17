@@ -7,6 +7,11 @@ import com.sperance.exileforge.core.i18n.uiLanguage
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
 
+/** Server page bounds; the client never asks for a page the server would reject. */
+const val INVENTORY_PAGE_SIZE = 50
+const val MAX_INVENTORY_PAGE_SIZE = 200
+const val MAX_ITEM_UNITS = 10_000L
+
 @Serializable data class UpdateCommand(val expectedVersion: Long, val changes: JsonObject)
 @Serializable data class DeleteCommand(val expectedVersion: Long)
 @Serializable data class CreateCharacterCommand(val name: String, val description: String = "")
@@ -14,7 +19,13 @@ import kotlinx.serialization.json.JsonObject
 @Serializable data class UnequipCommand(val expectedVersion: Long, val slot: EquipmentSlot)
 @Serializable data class GrantEquipmentCommand(val expectedVersion: Long, val equipmentId: String)
 @Serializable data class ItemStack(val itemId: String, val amount: Long)
-@Serializable data class AdjustItemsCommand(val expectedVersion: Long, val items: List<ItemStack>)
+/** Units are documents, not a stack counter: one command creates or destroys at most [MAX_ITEM_UNITS] of them. */
+@Serializable data class AdjustItemsCommand(val expectedVersion: Long, val items: List<ItemStack>) {
+    init {
+        require(items.isNotEmpty() && items.none { it.amount == 0L }) { tr("Укажите ненулевое количество", "Enter a non-zero amount") }
+        require(items.sumOf { kotlin.math.abs(it.amount) } <= MAX_ITEM_UNITS) { tr("За одну команду — не больше $MAX_ITEM_UNITS единиц", "One command handles at most $MAX_ITEM_UNITS units") }
+    }
+}
 @Serializable data class RedeemCommand(val expectedVersion: Long, val code: String)
 @Serializable data class UseRecipeCommand(val expectedVersion: Long, val recipeId: String, val recipeVersion: Long, val ingredientIds: List<String>, val amount: Long = 1)
 @Serializable data class ChangePasswordCommand(val expectedVersion: Long, val currentPassword: String, val newPassword: String)
@@ -36,7 +47,15 @@ import kotlinx.serialization.json.JsonObject
 @Serializable data class WeaponStats(val minimumPhysical: Double, val maximumPhysical: Double, val attacksPerSecond: Double,
     val criticalChance: Double, val accuracy: Double, val averageHit: Double, val dps: Double)
 @Serializable data class CalculatedStats(val version: Long, val values: Map<String, Double>, val weapons: Map<EquipmentSlot, WeaponStats> = emptyMap(), val unsupported: List<String> = emptyList())
-@Serializable data class EquipmentView(val characterVersion: Long, val equipped: Map<EquipmentSlot, String>, val inventory: List<com.sperance.exileforge.core.model.hero.EquipmentInstance>, val items: List<ItemStack>, val stats: CalculatedStats)
+/** Cursor page: [next] goes back as the `after` parameter, `null` means the list ended. */
+@Serializable data class InventoryPage(val items: List<com.sperance.exileforge.core.model.hero.EquipmentInstance> = emptyList(), val size: Int = 0, val total: Long = 0, val next: String? = null)
+/** One owned unit. There is no `amount`: the server stores a thousand orbs as a thousand records. */
+@Serializable data class OwnedItem(val id: String, val itemId: String)
+@Serializable data class OwnedItemsPage(val items: List<OwnedItem> = emptyList(), val size: Int = 0, val total: Long = 0, val next: String? = null)
+/** The inventory is unbounded, so it arrives one page at a time; equipped items always come in full. */
+@Serializable data class EquipmentView(val characterVersion: Long, val equipped: Map<EquipmentSlot, String>,
+    val equippedItems: List<com.sperance.exileforge.core.model.hero.EquipmentInstance> = emptyList(),
+    val inventory: InventoryPage = InventoryPage(), val items: OwnedItemsPage = OwnedItemsPage(), val stats: CalculatedStats)
 @Serializable data class UserProfile(val id: String, val version: Long, val name: String, val login: String, val role: String, val countCharacters: Int = 0)
 @Serializable data class ApiCapabilities(val apiRevision: Int = 0, val versionedCrud: Boolean = false, val characterCommands: Boolean = false, val profile: String = "", val equipmentComparison: Boolean = false, val catalogSearch: Boolean = false, val craftOptions: Boolean = false, val combat: Boolean = false, val passiveTree: Boolean = false,
     val icons: Boolean = false, val iconSet: String = "", val iconSetRevision: Int = 0, val iconSetVersion: String = "", val iconCount: Int = 0, val iconsEndpoint: String = "") {

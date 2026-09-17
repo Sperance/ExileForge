@@ -6,12 +6,8 @@ import com.sperance.exileforge.core.i18n.tr
 fun validateCharacter(doc: JsonObject) {
     requireId(doc.text("userId"))
     (doc["params"] as? JsonArray).orEmpty().forEach { validateModifier(it.jsonObject) }
-    (doc["equipments"] as? JsonArray).orEmpty().forEach {
-        val equipment = it.jsonObject
-        requireId(equipment.text("equipmentId")); requireId(equipment.text("uuid"))
-        (equipment["params"] as? JsonArray).orEmpty().forEach { mod -> validateModifier(mod.jsonObject) }
-    }
-    (doc["items"] as? JsonArray).orEmpty().forEach { requireId(it.jsonObject.text("itemId")) }
+    // Equipment and owned units live in their own collections: the character document carries neither.
+    (doc["equipped"] as? JsonObject).orEmpty().values.forEach { requireId(it.jsonPrimitive.content) }
     (doc["recipeAccess"] as? JsonArray).orEmpty().forEach { requireId(it.jsonPrimitive.content) }
     (doc["gainedRedemptionCodes"] as? JsonArray).orEmpty().forEach {
         requireId(it.jsonObject.text("redemptionCodeId"))

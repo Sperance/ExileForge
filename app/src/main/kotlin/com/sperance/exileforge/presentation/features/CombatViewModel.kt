@@ -65,7 +65,7 @@ class CombatViewModel(private val runtime: ForgeRuntime) {
                 store.saveCombatPending(key, null)
                 mutable.update { it.copy(battlePending = null, battleView = result, battleCharacterId = pending.characterId,
                     battleAction = actionOf(pending),
-                    inventoryVersion = null, equipmentView = null, comparison = null, craftOptions = null,
+                    inventoryVersion = null, inventoryNext = null, inventoryTotal = 0, itemTotals = emptyMap(), equipmentView = null, comparison = null, craftOptions = null,
                     hero = it.hero?.takeIf { hero -> hero.id == pending.characterId }?.copy(version = result.characterVersion, level = result.characterLevel, experience = result.experience, money = result.gold)) }
             } catch(e: ApiFailure) {
                 if(e.status?.let { it in 400..499 && it != 401 } == true) {

@@ -97,7 +97,22 @@ class GameApi(
         val result = request("GET", "${route(catalog)}/paged", filter.parameters() + mapOf("page" to "$page", "size" to "20"), authenticated = true).jsonObject
         return ItemPage(result.getValue("items").jsonArray.map { it.jsonObject }, result.getValue("page").jsonPrimitive.int, result.getValue("totalPages").jsonPrimitive.int, result.getValue("totalItems").jsonPrimitive.long)
     }
-    suspend fun equipment(id: String): EquipmentView { requireId(id); return WireJson.decodeFromJsonElement(request("GET", "api/v1/character/$id/equipment", authenticated = true)) }
+    /** The inventory is unbounded, so it is read by cursor: [after] is the uuid the previous page ended with. */
+    suspend fun equipment(id: String, size: Int = INVENTORY_PAGE_SIZE, after: String? = null): EquipmentView {
+        requireId(id); return WireJson.decodeFromJsonElement(request("GET", "api/v1/character/$id/equipment", pageParameters(size, after), authenticated = true))
+    }
+    /** Owned units without stacks: `{id,itemId}` per unit, so the page is the only way to walk them. */
+    suspend fun items(id: String, size: Int = INVENTORY_PAGE_SIZE, after: String? = null): OwnedItemsPage {
+        requireId(id); return WireJson.decodeFromJsonElement(request("GET", "api/v1/character/$id/items", pageParameters(size, after), authenticated = true))
+    }
+    /** How many units of each type the character owns; the server counts documents, it stores no amount. */
+    suspend fun itemTotals(id: String): Map<String, Long> {
+        requireId(id); return WireJson.decodeFromJsonElement(request("GET", "api/v1/character/$id/itemTotals", authenticated = true))
+    }
+    private fun pageParameters(size: Int, after: String?): Map<String, String> {
+        require(size in 1..MAX_INVENTORY_PAGE_SIZE) { tr("Размер страницы инвентаря — от 1 до $MAX_INVENTORY_PAGE_SIZE", "The inventory page size must be between 1 and $MAX_INVENTORY_PAGE_SIZE") }
+        return buildMap { put("size", "$size"); after?.let { requireId(it); put("after", it) } }
+    }
     suspend fun equip(id: String, command: EquipCommand): EquipmentView = characterCommand(id, "equip", WireJson.encodeToJsonElement(command))
     suspend fun unequip(id: String, command: UnequipCommand): EquipmentView = characterCommand(id, "unequip", WireJson.encodeToJsonElement(command))
     suspend fun redeem(id: String, command: RedeemCommand): EquipmentView = characterCommand(id, "redeem", WireJson.encodeToJsonElement(command))
@@ -123,7 +138,9 @@ class GameApi(
     suspend fun publishDefinition(definition: JsonObject, expectedRevision: Int): JsonObject = request("POST", "api/v1/poe/modifier-definitions", body = buildJsonObject {
         put("definition", definition); put("expectedRevision", expectedRevision)
     }, authenticated = true).jsonObject
-    suspend fun inventory(id: String): JsonObject { requireId(id); return request("GET", "api/v1/poe/characters/$id/inventory", authenticated = true).jsonObject }
+    suspend fun inventory(id: String, size: Int = INVENTORY_PAGE_SIZE, after: String? = null): JsonObject {
+        requireId(id); return request("GET", "api/v1/poe/characters/$id/inventory", pageParameters(size, after), authenticated = true).jsonObject
+    }
     suspend fun currencies(): List<JsonObject> = request("GET", "api/v1/poe/currencies").jsonArray.map { it.jsonObject }
     suspend fun mutateInventory(id: String, operation: String, payload: JsonObject): JsonObject {
         requireId(id); require(operation in setOf("drop", "craft"))

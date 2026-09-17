@@ -8,6 +8,7 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.contract.*
 import com.sperance.exileforge.core.i18n.tr
 import com.sperance.exileforge.core.model.EntitySource
+import com.sperance.exileforge.core.model.command.MAX_ITEM_UNITS
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.*
@@ -25,9 +26,11 @@ import kotlinx.serialization.json.*
     if(!expanded) return
     ForgePanel {
         Engraved(tr("Сумка", "Bag"))
-        s.equipmentView.items.forEach { stack ->
-            val currency = s.currencies.firstOrNull { it.text("itemId") == stack.itemId }
-            PropertyRow(currency?.text("name") ?: tr("Предмет", "Item") + " …${stack.itemId.takeLast(6)}", stack.amount.toString(), "currency")
+        // Stacks are gone: the amount is a count of unit documents the server recomputed for us.
+        if(s.itemTotals.isEmpty()) Text(tr("Сумка пуста", "The bag is empty"), color = Muted)
+        s.itemTotals.forEach { (itemId, amount) ->
+            val currency = s.currencies.firstOrNull { it.text("itemId") == itemId }
+            PropertyRow(currency?.text("name") ?: tr("Предмет", "Item") + " …${itemId.takeLast(6)}", amount.toString(), "currency")
         }
         var code by remember(s.characterId) { mutableStateOf("") }
         OutlinedTextField(code, { code = it.take(100) }, label = { Text(tr("Промокод", "Promo code")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
@@ -44,8 +47,8 @@ import kotlinx.serialization.json.*
             var amount by remember(s.characterId) { mutableStateOf("1") }
             EntitySpinner(tr("Предмет или сфера", "Item or orb"), itemId, EntitySource.ITEM, enabled, { itemId = it })
             OutlinedTextField(amount, { amount = it }, label = { Text(tr("Добавить / списать количество", "Add / remove amount")) },
-                supportingText = { Text(tr("Отрицательное число списывает предметы", "A negative number removes items")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
-            Button(enabled = enabled && itemId.isNotBlank() && amount.toLongOrNull()?.let { it != 0L && it in -1_000_000_000L..1_000_000_000L } == true,
+                supportingText = { Text(tr("Отрицательное число списывает предметы. Каждая единица — отдельная запись, за команду не больше $MAX_ITEM_UNITS.", "A negative number removes items. Every unit is a separate record, at most $MAX_ITEM_UNITS per command.")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            Button(enabled = enabled && itemId.isNotBlank() && amount.toLongOrNull()?.let { it != 0L && it in -MAX_ITEM_UNITS..MAX_ITEM_UNITS } == true,
                 onClick = { vm.adjustItems(itemId, amount.toLong()) }) { Text(tr("Изменить количество", "Change the amount")) }
         }
     }
@@ -89,7 +92,7 @@ import kotlinx.serialization.json.*
                             row.text("category").isNotBlank() -> item.text("category") == row.text("category")
                             else -> item.text("subCategory") == row.text("subCategory")
                         }
-                        selectorMatches && s.equipmentView?.items.orEmpty().any { it.itemId == item.entityId && it.amount > 0 }
+                        selectorMatches && (s.itemTotals[item.entityId] ?: 0L) > 0
                     })
                 }) {
                     EntitySpinner(tr("Ингредиент ${index + 1} · ${row.text("amount")} за применение", "Ingredient ${index + 1} · ${row.text("amount")} per use"), ingredients[index].orEmpty(), EntitySource.ITEM, enabled && supported, { ingredients = ingredients + (index to it) })

@@ -77,7 +77,7 @@ import kotlinx.serialization.json.*
             }
             item {
                 ObjectForm(formSchema(s.catalog), s.draft, s.definitions, !s.busy && s.canEdit && s.mergeReview == null,
-                    locked = if(s.catalog == Catalog.CHARACTERS && s.original != null) setOf("userId", "equipments", "items") else emptySet(), onChange = vm::edit)
+                    locked = if(s.catalog == Catalog.CHARACTERS && s.original != null) setOf("userId") else emptySet(), onChange = vm::edit)
             }
             if(s.conflict) item { com.sperance.exileforge.ui.screens.editor.conflict.ConflictReview(s, vm) }
             item { Button(enabled = !s.busy && s.canEdit && !s.conflict, onClick = vm::save, modifier = Modifier.fillMaxWidth()) { Text(tr("Сохранить на сервере", "Save on the server")) } }

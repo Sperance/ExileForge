@@ -43,7 +43,7 @@ class PoeApiTest {
             api.login("user", "private-password")
             assertNull(server.takeRequest().getHeader("Authorization"))
             assertFalse(journal.entries.value.toString().contains("private-"))
-            server.ok("""{"version":3,"equipment":[]}""")
+            server.ok("""{"version":3,"equipment":[],"size":50,"total":0}""")
             api.inventory(id)
             assertEquals("Bearer private-token", server.takeRequest().getHeader("Authorization"))
             server.ok("[]"); api.currencies()

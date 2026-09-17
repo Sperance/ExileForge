@@ -38,7 +38,7 @@ import kotlinx.serialization.json.*
         item(span = { GridItemSpan(maxLineSpan) }) {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 ScreenHeader(if(forgeOnly) tr("Кузница", "Forge") else tr("Арсенал героя", "Hero's arsenal"),
-                    tr("${s.inventory.size} предметов · снаряжение в инвентаре", "${s.inventory.size} items in the stash"),
+                    tr("Загружено ${s.inventory.size} из ${s.inventoryTotal} · снаряжение в инвентаре", "${s.inventory.size} of ${s.inventoryTotal} loaded from the stash"),
                     if(forgeOnly) ForgeGlyphs.Anvil else ForgeGlyphs.Stash)
                 EntitySpinner(tr("Персонаж", "Character"), s.characterId, EntitySource.CHARACTER, !s.busy && s.pending == null, vm::characterId)
                 if(!s.signedIn) InfoCard(tr("Войдите в аккаунт", "Sign in"), tr("Во вкладке «Сервер» войдите, чтобы посмотреть снаряжение своего персонажа и применять сферы.", "Sign in on the Account tab to see your character's gear and use orbs."))
@@ -57,6 +57,10 @@ import kotlinx.serialization.json.*
                     item { FilterChip(selected = slot.isBlank(), onClick = { slot = "" }, label = { Text(tr("Все", "All")) }) }
                     items(slots) { key -> FilterChip(selected = slot == key, onClick = { slot = key }, label = { Text(slotTitle(key, s.lang)) }) }
                 }
+                // The stash is unbounded, so the server hands it out one cursor page at a time.
+                if(s.inventoryNext != null) OutlinedButton(enabled = !s.busy && s.signedIn, onClick = vm::loadMoreInventory, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Outlined.ExpandMore, null); Text(tr("Загрузить ещё предметы", "Load more items"))
+                }
                 if(s.pending != null) InfoCard(tr("Ожидает подтверждения", "Awaiting confirmation"), tr("Повторите исходный запрос, чтобы узнать результат без повторного списания.", "Repeat the original request to learn the result without spending twice."))
                 if(s.pending != null) OutlinedButton(enabled = !s.busy && s.signedIn, onClick = vm::retryInventoryAction) { Text(tr("Подтвердить результат", "Confirm the result")) }
             }
@@ -64,7 +68,8 @@ import kotlinx.serialization.json.*
         val visible = s.inventory.filter { instance -> documents[instance.text("uuid")]?.let { (slot.isBlank() || it.text("slot") == slot) && it.text("name").contains(query, true) } == true }
         if(visible.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }) {
             InfoCard(if(s.inventoryVersion == null) tr("Арсенал ещё не загружен", "The stash is not loaded yet") else tr("Ничего не найдено", "Nothing found"),
-                tr("Выберите персонажа, загрузите экипировку или измените фильтры.", "Choose a character, load the equipment or change the filters."))
+                if(s.inventoryNext != null) tr("Поиск идёт по загруженным страницам. Догрузите инвентарь или измените фильтры.", "The search covers the loaded pages. Load more of the stash or change the filters.")
+                else tr("Выберите персонажа, загрузите экипировку или измените фильтры.", "Choose a character, load the equipment or change the filters."))
         }
         items(visible, key = { it.text("uuid") }) { instance ->
             val id = instance.text("uuid")

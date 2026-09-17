@@ -114,7 +114,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
     fun clearSession() {
         metadataJob?.cancel(); api.logout(); journal.clear()
         mutable.update { it.copy(passiveTree = null, passiveState = null, passivePending = null, passiveCharacterId = "", combatCatalog = null, battleView = null, battlePending = null, battleCharacterId = "", battleAction = null, signedIn = false, profile = null, sessionEpoch = it.sessionEpoch + 1, items = emptyList(), total = 0, page = 0, totalPages = 0,
-            original = null, draft = JsonObject(emptyMap()), editorOpen = false, inventory = emptyList(), inventoryVersion = null, equipmentView = null,
+            original = null, draft = JsonObject(emptyMap()), editorOpen = false, inventory = emptyList(), inventoryVersion = null, inventoryNext = null, inventoryTotal = 0, itemTotals = emptyMap(), equipmentView = null,
             inventoryBases = emptyMap(), inventoryDefinitions = emptyList(), characterOwner = "", characterId = it.pending?.characterId.orEmpty(),
             selectedEquipment = "", selectedCurrency = "", currencies = emptyList(), checks = emptyList(), tab = 3, conflict = false, mode = AppMode.PLAYER, hero = null, comparison = null, craftOptions = null, craftBefore = null, craftAfter = null, mergeReview = null, mergeRemote = null, failure = null) }
     }

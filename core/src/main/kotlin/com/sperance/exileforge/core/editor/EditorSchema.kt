@@ -86,7 +86,6 @@ fun schemaFields(schema: String, document: JsonObject = JsonObject(emptyMap())):
     }
     "character" -> listOf(text("name", tr("Имя", "Name")), text("description", tr("Описание", "Description")))
     "characterEquipment" -> listOf(reference("equipmentId", tr("Предмет экипировки", "Equipment item"), EntitySource.EQUIPMENT), text("uuid", tr("ID экземпляра", "Instance id"), newEntityId()), list("params", tr("Модификаторы экземпляра", "Instance modifiers"), InputSpec.Object("modifier")))
-    "characterItem" -> listOf(reference("itemId", tr("Предмет", "Item"), EntitySource.ITEM), num("amount", tr("Количество", "Amount"), 1, true, 0.0))
     "professionSkill", "battleSkill" -> listOf(choice("stat", tr("Навык", "Skill"), if(schema == "professionSkill") professionStats else battleStats), num("level", tr("Уровень", "Level"), 0, true, 0.0, 127.0), num("experience", tr("Опыт", "Experience"), 0.0, min = 0.0))
     "stockSkill" -> listOf(choice("stat", tr("Характеристика", "Stat"), stockStats), num("value", tr("Значение", "Value"), 0, true, Int.MIN_VALUE.toDouble(), Int.MAX_VALUE.toDouble()))
     "boolSkill" -> listOf(choice("stat", tr("Состояние", "State"), boolStats), flag("value", tr("Активно", "Active")).copy(nullable = true, default = JsonNull))

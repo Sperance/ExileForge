@@ -68,7 +68,7 @@ class GameApiTest {
         assertEquals(2, server.requestCount)
     }
     @Test fun `character cannot assign owner inventory money or stats`(): Unit = runBlocking {
-        for(key in listOf("userId", "money", "level", "items", "params", "role", "version")) {
+        for(key in listOf("userId", "money", "level", "equipped", "params", "role", "version")) {
             assertFailsWith<IllegalArgumentException> { api.update(Catalog.CHARACTERS, id, buildJsonObject { put(key, "bad") }, 0) }
         }
         assertEquals(1, server.requestCount)
@@ -77,7 +77,7 @@ class GameApiTest {
         assertEquals(setOf("name", "description"), WireJson.parseToJsonElement(server.takeRequest().body.readUtf8()).jsonArray.single().jsonObject.keys)
     }
     @Test fun `equipment commands use instance UUID and return server stats`(): Unit = runBlocking {
-        val view = """{"characterVersion":5,"equipped":{"RING_LEFT":"$id"},"inventory":[],"items":[{"itemId":"$id","amount":8}],"stats":{"version":5,"values":{"maximum_life":88.0},"weapons":{},"unsupported":["custom"]}}"""
+        val view = """{"characterVersion":5,"equipped":{"RING_LEFT":"$id"},"equippedItems":[],"inventory":{"items":[],"size":50,"total":0},"items":{"items":[],"size":50,"total":8},"stats":{"version":5,"values":{"maximum_life":88.0},"weapons":{},"unsupported":["custom"]}}"""
         ok(view); val result = api.equip(id, EquipCommand(4, id, EquipmentSlot.RING_LEFT))
         assertEquals(88.0, result.stats.values["maximum_life"])
         assertEquals(listOf("custom"), result.stats.unsupported)
@@ -134,7 +134,7 @@ class GameApiTest {
         assertEquals("Original", doc.text("name")); assertEquals("RING", doc.text("slot"))
     }
     @Test fun `recipe and grants retain command versions and identities`(): Unit = runBlocking {
-        val view = """{"characterVersion":8,"equipped":{},"inventory":[],"items":[],"stats":{"version":8,"values":{}}}"""
+        val view = """{"characterVersion":8,"equipped":{},"equippedItems":[],"inventory":{"items":[],"size":50,"total":0},"items":{"items":[],"size":50,"total":0},"stats":{"version":8,"values":{}}}"""
         ok(view); api.useRecipe(id, UseRecipeCommand(7, id, 12, listOf(id), 2))
         val recipe = server.takeRequest(); val sent = WireJson.parseToJsonElement(recipe.body.readUtf8()).jsonObject
         assertEquals("/game/api/v1/character/$id/useRecipe", recipe.path)
@@ -145,6 +145,30 @@ class GameApiTest {
         assertEquals("/game/api/v1/character/inventory/addItem?characterId=$id", server.takeRequest().path)
         ok(view); api.redeem(id, RedeemCommand(10, "reward"))
         assertEquals("/game/api/v1/character/$id/redeem", server.takeRequest().path)
+    }
+    @Test fun `the unbounded inventory is read by cursor and counted by the server`(): Unit = runBlocking {
+        val page = """{"characterVersion":8,"equipped":{"RING_LEFT":"$id"},"equippedItems":[{"uuid":"$id","equipmentId":"$id"}],"inventory":{"items":[],"size":50,"total":1200,"next":"$id"},"items":{"items":[{"id":"$id","itemId":"$id"}],"size":50,"total":7},"stats":{"version":8,"values":{}}}"""
+        ok(page)
+        val first = api.equipment(id)
+        assertEquals("/game/api/v1/character/$id/equipment?size=50", server.takeRequest().path)
+        assertEquals(1200L, first.inventory.total); assertEquals(id, first.inventory.next)
+        assertEquals(id, first.equippedItems.single().uuid)
+        ok(page); api.equipment(id, size = 200, after = id)
+        assertEquals("/game/api/v1/character/$id/equipment?size=200&after=$id", server.takeRequest().path)
+        ok("""{"items":[{"id":"$id","itemId":"$id"}],"size":50,"total":7}""")
+        assertEquals(7L, api.items(id).total)
+        assertEquals("/game/api/v1/character/$id/items?size=50", server.takeRequest().path)
+        // Without stacks an amount exists only as a server-side count of unit documents.
+        ok("""{"$id":1000}""")
+        assertEquals(1000L, api.itemTotals(id).getValue(id))
+        assertEquals("/game/api/v1/character/$id/itemTotals", server.takeRequest().path)
+        // Bounds the server would reject never leave the client.
+        val sent = server.requestCount
+        assertFailsWith<IllegalArgumentException> { api.equipment(id, size = 201) }
+        assertFailsWith<IllegalArgumentException> { api.equipment(id, after = "not-an-id") }
+        assertFailsWith<IllegalArgumentException> { AdjustItemsCommand(1, listOf(ItemStack(id, 10_001))) }
+        assertFailsWith<IllegalArgumentException> { AdjustItemsCommand(1, listOf(ItemStack(id, 0))) }
+        assertEquals(sent, server.requestCount)
     }
     @Test fun `templates and slots match contract`() {
         validate(template(Catalog.ITEMS), Catalog.ITEMS)

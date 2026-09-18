@@ -26,8 +26,9 @@ core/                                   Pure JVM library (java-library + kotlin-
   model/         Catalog, EntitySource, CatalogFilter, EquipmentKind
                  command/Commands.kt    Serializable commands, EquipmentSlot, CalculatedStats, EquipmentView, ApiCapabilities
                  hero/, combat/, passives/, modifier/, character/
-                 combat/world/          Isometric battlefield engine: Vec2/IsoCamera, Battlefield, WorldActor,
-                                        BattleDelta (snapshot diff), WorldScript, AutoPilot, WorldSimulation
+                 combat/world/          Isometric engine: Vec2/IsoCamera, Battlefield (tile grid + the three
+                                        procedural map generators), WorldActor (+Route), BattleDelta (snapshot
+                                        diff), WorldScript, AutoPilot/WorldMode/WorldIntent, WorldSimulation
   i18n/          Loc.kt                 Lang (RU/EN), `tr(ru, en)` and the global `uiLanguage`
   editor/        EditorSchema.kt        Declarative form schemas (FormField/InputSpec) used by the admin editor
                  conflict/ThreeWayMerge.kt
@@ -118,9 +119,11 @@ These are enforced by tests and are the point of the client's design:
 1. **The server is authoritative.** Never compute damage, stats, loot chance or passive bonuses
    locally. Unsupported effects are listed explicitly (`CalculatedStats.unsupported`,
    `Battle.unsupportedStats`) rather than approximated. The isometric battlefield is bound by the
-   same rule: walking, collision and the camera are kinematics, and a position decides only **when**
-   `WorldSimulation.takeAction` offers the next `BattleAction` — `AutoPilot` picks which durable
-   command leaves the client, never what it is worth. Ground loot is a picture of a reward the
+   same rule: walking, collision, routing and the camera are kinematics, and a position decides only
+   **when** `WorldSimulation.takeIntent` offers the next command — a swing, a new encounter on contact
+   with a roaming monster, or the boss when the exile stands on the summoning circle. `AutoPilot` picks
+   which durable command leaves the client, never what it is worth, and `WorldRules` mirrors the
+   server's own counters rather than inventing a permission. Ground loot is a picture of a reward the
    server already granted.
 2. **Identity comes from the server.** POST sends documents without `_id`; `requireId` demands
    24 hex chars before any request is built.

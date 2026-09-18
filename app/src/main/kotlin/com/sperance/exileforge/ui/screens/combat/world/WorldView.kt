@@ -33,6 +33,7 @@ import com.sperance.exileforge.ui.theme.*
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
+import kotlin.math.floor
 import kotlin.math.sin
 
 /** Where the thumb went down and where it is now; the floating stick is drawn between the two. */
@@ -59,8 +60,11 @@ private class WorldGlyphs(val mob: Painter, val boss: Painter, val hero: Painter
 /** Text styles measured on the canvas, captured once because there is no layout pass in a draw scope. */
 private class WorldLabels(val name: TextStyle, val number: TextStyle, val banner: TextStyle)
 
+/** One path reused for every block face, so a wall of thirty tiles allocates nothing per frame. */
+private class Scratch { val path = Path() }
+
 /**
- * The expedition drawn as an isometric floor with the camera tied to the hero.
+ * The expedition drawn as an isometric map with the camera tied to the exile.
  *
  * Everything on it comes out of [WorldSimulation], which only ever holds numbers the server sent: the
  * bars are the server's life, the floating numbers are the life it took off, and the piles on the floor
@@ -71,6 +75,7 @@ private class WorldLabels(val name: TextStyle, val number: TextStyle, val banner
     stick: () -> StickState?, modifier: Modifier = Modifier) {
     val icons = LocalForgeIcons.current
     val cache = remember(icons.version) { ArtCache(icons) }
+    val scratch = remember { Scratch() }
     val measurer = rememberTextMeasurer()
     val glyphs = WorldGlyphs(rememberVectorPainter(ForgeGlyphs.Skull), rememberVectorPainter(ForgeGlyphs.Sigil),
         rememberVectorPainter(ForgeGlyphs.Exile), rememberVectorPainter(ForgeGlyphs.Gem),
@@ -81,31 +86,39 @@ private class WorldLabels(val name: TextStyle, val number: TextStyle, val banner
         MaterialTheme.typography.headlineSmall)
     Canvas(modifier) {
         val now = clock()
+        val map = world.map
         val camera = IsoCamera(world.focus, Vec2(size.width, size.height), tile)
         val kick = Offset(sin(now * .09f) * world.shake * 7f, cos(now * .117f) * world.shake * 5f)
-        // Painter's order: whatever stands further down the floor hides what is behind it.
-        val standing = ArrayList<Pair<Float, DrawScope.() -> Unit>>(48)
-        fun stand(at: Vec2, draw: DrawScope.() -> Unit) { standing += camera.depth(at) to draw }
-        world.field.props.forEach { piece -> if(piece.blocking) stand(piece.position) { scenery(camera, piece, now) } }
-        world.loot.forEach { pile -> stand(pile.position) { dropPile(camera, pile, cache, glyphs, now) } }
-        world.mobs.forEach { mob ->
-            if(!mob.gone) stand(mob.position) {
-                body(camera, mob, cache.art(mob.icon), if(mob.boss) glyphs.boss else glyphs.mob,
-                    elementTint(mob.element), measurer, labels.name)
-            }
-        }
-        world.hero?.takeIf { !it.gone }?.let { exile ->
-            stand(exile.position) { body(camera, exile, cache.art(exile.icon), glyphs.hero, Gold, measurer, labels.name) }
-        }
-        standing.sortBy { it.first }
         drawRect(voidBrush())
         withTransform({ translate(kick.x, kick.y) }) {
-            battleground(camera, world.field, now)
+            val window = window(camera, map)
+            ground(camera, map, window, now)
             world.corpses.forEach { remains ->
                 figure(cache.art(remains.icon), if(remains.boss) glyphs.boss else glyphs.mob, Muted,
-                    camera.toScreen(remains.position).offset, tile.x * .48f, remains.fade * .45f)
+                    camera.toScreen(remains.position).offset, tile.x * .5f, remains.fade * .45f)
             }
-            standing.forEach { it.second(this) }
+            altar(camera, map, world.rules.boss, now)
+            // Terrain and bodies share one painter's order, walked diagonal by diagonal: everything on
+            // the same band is drawn together, so a body behind a wall is hidden by it.
+            for(band in window.left + window.top..window.right + window.bottom) {
+                for(tx in window.left..window.right) {
+                    val ty = band - tx
+                    if(ty < window.top || ty > window.bottom) continue
+                    val terrain = map.terrain(tx, ty)
+                    if(terrain == Terrain.WALL || terrain == Terrain.PILLAR)
+                        block(camera, scratch, tx, ty, map, terrain)
+                }
+                map.decor.forEach { if(camera.depth(it.position).toBand() == band) scenery(camera, it, now) }
+                world.loot.forEach { if(camera.depth(it.position).toBand() == band) dropPile(camera, it, cache, glyphs, now) }
+                world.mobs.forEach {
+                    if(!it.gone && camera.depth(it.position).toBand() == band)
+                        body(camera, it, cache.art(it.icon), if(it.boss) glyphs.boss else glyphs.mob,
+                            elementTint(it.element), measurer, labels.name, now)
+                }
+                world.hero?.takeIf { !it.gone && camera.depth(it.position).toBand() == band }?.let {
+                    body(camera, it, cache.art(it.icon), glyphs.hero, Gold, measurer, labels.name, now)
+                }
+            }
             world.sparks.forEach { sparkle(camera, it) }
             world.motes.forEach { mote(camera, it, cache, glyphs) }
             world.numbers.forEach { floater(camera, it, measurer, labels.number) }
@@ -117,96 +130,138 @@ private class WorldLabels(val name: TextStyle, val number: TextStyle, val banner
 }
 
 private val Vec2.offset: Offset get() = Offset(x, y)
+private fun Float.toBand() = floor(this).toInt()
 
-/**
- * The ground: a ledge of rock, the lit floor of the zone, its tile lattice and the wall around it.
- *
- * One polygon and a few dozen lines rather than a diamond per tile — a floor is mostly texture, and a
- * thousand paths a frame would cost more than the whole fight does.
- */
-private fun DrawScope.battleground(camera: IsoCamera, field: Battlefield, now: Long) {
-    ledge(camera, field, -1.6f, Ink)
-    ledge(camera, field, -.7f, Color(0xFF101720))
-    val plate = ledge(camera, field, 0f, null)
-    val middle = camera.toScreen(field.centre).offset
-    drawPath(plate, Brush.radialGradient(listOf(PanelRaised, Panel, Abyss), middle, size.maxDimension * .72f))
-    for(step in 0..field.width.toInt()) tileLine(camera, Vec2(step.toFloat(), 0f), Vec2(step.toFloat(), field.height))
-    for(step in 0..field.height.toInt()) tileLine(camera, Vec2(0f, step.toFloat()), Vec2(field.width, step.toFloat()))
-    drawPath(plate, Bronze.copy(alpha = .55f), style = Stroke(3f))
-    field.props.filter { !it.blocking }.forEach { bones(camera, it) }
-    // A slow pulse over the stone, so a still frame never looks like a frozen one.
-    drawPath(plate, Gold.copy(alpha = .03f + .02f * sin(now * .0011f)))
+/** The rectangle of tiles the screen can possibly show, so nothing off-camera is ever drawn. */
+private class Window(val left: Int, val top: Int, val right: Int, val bottom: Int)
+
+private fun DrawScope.window(camera: IsoCamera, map: Battlefield): Window {
+    val corners = listOf(Vec2(0f, 0f), Vec2(size.width, 0f), Vec2(0f, size.height), Vec2(size.width, size.height))
+        .map { camera.toWorld(it) }
+    // A tall body is drawn from a tile below the one it stands on, so the window is grown by two.
+    return Window(
+        (corners.minOf { it.x } - 2f).toBand().coerceIn(0, map.width - 1),
+        (corners.minOf { it.y } - 2f).toBand().coerceIn(0, map.height - 1),
+        (corners.maxOf { it.x } + 2f).toBand().coerceIn(0, map.width - 1),
+        (corners.maxOf { it.y } + 2f).toBand().coerceIn(0, map.height - 1))
 }
 
-/** The field outline, optionally grown by [inset] tiles to read as the rock the floor is cut into. */
-private fun DrawScope.ledge(camera: IsoCamera, field: Battlefield, inset: Float, fill: Color?): Path {
-    val corners = listOf(Vec2(inset, inset), Vec2(field.width - inset, inset),
-        Vec2(field.width - inset, field.height - inset), Vec2(inset, field.height - inset))
+/**
+ * The floor: one lit plate for the whole zone, its tile lattice, then the tiles that are not plain.
+ *
+ * A diamond per tile would be nine hundred paths a frame; the ground is mostly texture, so only water
+ * and shingle are actually drawn and the rest is one polygon.
+ */
+private fun DrawScope.ground(camera: IsoCamera, map: Battlefield, window: Window, now: Long) {
+    val plate = Path()
+    val corners = listOf(Vec2(0f, 0f), Vec2(map.width.toFloat(), 0f),
+        Vec2(map.width.toFloat(), map.height.toFloat()), Vec2(0f, map.height.toFloat()))
         .map { camera.toScreen(it).offset }
-    val path = Path().apply {
-        moveTo(corners[0].x, corners[0].y)
-        corners.drop(1).forEach { lineTo(it.x, it.y) }
-        close()
+    plate.moveTo(corners[0].x, corners[0].y)
+    corners.drop(1).forEach { plate.lineTo(it.x, it.y) }
+    plate.close()
+    drawPath(plate, Brush.radialGradient(listOf(PanelRaised, Panel, Abyss),
+        camera.toScreen(map.centre).offset, size.maxDimension * .8f))
+    for(step in 0..map.width) tileLine(camera, Vec2(step.toFloat(), 0f), Vec2(step.toFloat(), map.height.toFloat()))
+    for(step in 0..map.height) tileLine(camera, Vec2(0f, step.toFloat()), Vec2(map.width.toFloat(), step.toFloat()))
+    val diamond = Path()
+    for(ty in window.top..window.bottom) for(tx in window.left..window.right) when(map.terrain(tx, ty)) {
+        Terrain.RUBBLE -> tileFace(camera, diamond, tx, ty, 0f, Color(0xFF1A1F27))
+        Terrain.WATER -> {
+            tileFace(camera, diamond, tx, ty, 0f, Color(0xFF10242F))
+            tileFace(camera, diamond, tx, ty, 0f, ShieldCyan.copy(alpha = .10f + .05f * sin(now * .0016f + tx + ty)))
+        }
+        else -> Unit
     }
-    fill?.let { drawPath(path, it) }
-    return path
+    drawPath(plate, Bronze.copy(alpha = .45f), style = Stroke(3f))
 }
 
 private fun DrawScope.tileLine(camera: IsoCamera, from: Vec2, to: Vec2) {
-    drawLine(Bronze.copy(alpha = .13f), camera.toScreen(from).offset, camera.toScreen(to).offset, 1f)
+    drawLine(Bronze.copy(alpha = .10f), camera.toScreen(from).offset, camera.toScreen(to).offset, 1f)
 }
 
-/** Stones, pillars and braziers: the cover a swipe has to walk around. */
-private fun DrawScope.scenery(camera: IsoCamera, piece: Prop, now: Long) {
+/** The diamond of one tile, optionally lifted, drawn into a path that is reused every time. */
+private fun DrawScope.tileFace(camera: IsoCamera, path: Path, tx: Int, ty: Int, lift: Float, colour: Color) {
+    val north = camera.toScreen(Vec2(tx.toFloat(), ty.toFloat())).offset
+    val east = camera.toScreen(Vec2(tx + 1f, ty.toFloat())).offset
+    val south = camera.toScreen(Vec2(tx + 1f, ty + 1f)).offset
+    val west = camera.toScreen(Vec2(tx.toFloat(), ty + 1f)).offset
+    path.rewind()
+    path.moveTo(north.x, north.y - lift); path.lineTo(east.x, east.y - lift)
+    path.lineTo(south.x, south.y - lift); path.lineTo(west.x, west.y - lift); path.close()
+    drawPath(path, colour)
+}
+
+/** A wall or a column as a solid block; faces buried in the next block are not drawn at all. */
+private fun DrawScope.block(camera: IsoCamera, scratch: Scratch, tx: Int, ty: Int, map: Battlefield, terrain: Terrain) {
+    val tall = terrain == Terrain.PILLAR
+    val lift = camera.tile.y * if(tall) 2.6f else 1.5f
+    val east = camera.toScreen(Vec2(tx + 1f, ty.toFloat())).offset
+    val south = camera.toScreen(Vec2(tx + 1f, ty + 1f)).offset
+    val west = camera.toScreen(Vec2(tx.toFloat(), ty + 1f)).offset
+    if(!solid(map, tx + 1, ty)) face(scratch.path, south, east, lift, Color(0xFF232A34))
+    if(!solid(map, tx, ty + 1)) face(scratch.path, west, south, lift, Color(0xFF151A22))
+    tileFace(camera, scratch.path, tx, ty, lift, if(tall) Color(0xFF39424F) else Color(0xFF2E3644))
+    if(tall) drawLine(Bronze.copy(alpha = .30f), west - Offset(0f, lift), south - Offset(0f, lift), 1.4f)
+}
+
+private fun solid(map: Battlefield, x: Int, y: Int) =
+    map.terrain(x, y).let { it == Terrain.WALL || it == Terrain.PILLAR }
+
+/** One upright side of a block, between two ground corners. */
+private fun DrawScope.face(path: Path, from: Offset, to: Offset, lift: Float, colour: Color) {
+    path.rewind()
+    path.moveTo(from.x, from.y); path.lineTo(to.x, to.y)
+    path.lineTo(to.x, to.y - lift); path.lineTo(from.x, from.y - lift); path.close()
+    drawPath(path, colour)
+}
+
+/** The summoning circle: dead stone until the zone's kill count opens it, then it burns. */
+private fun DrawScope.altar(camera: IsoCamera, map: Battlefield, armed: Boolean, now: Long) {
+    val centre = camera.toScreen(map.altar).offset
+    val span = camera.tile.x * .9f
+    val pulse = if(armed) .55f + .45f * sin(now * .004f) else .16f
+    val tint = if(armed) GoldBright else Bronze
+    drawOval(tint.copy(alpha = .16f * pulse),
+        topLeft = Offset(centre.x - span / 2f, centre.y - span / 4f), size = Size(span, span / 2f))
+    drawOval(tint.copy(alpha = .75f * pulse), topLeft = Offset(centre.x - span / 2f, centre.y - span / 4f),
+        size = Size(span, span / 2f), style = Stroke(2f))
+    drawOval(tint.copy(alpha = .50f * pulse), topLeft = Offset(centre.x - span / 3f, centre.y - span / 6f),
+        size = Size(span / 1.5f, span / 3f), style = Stroke(1.4f))
+    if(armed) drawCircle(GoldBright.copy(alpha = .22f * pulse), span * .30f, centre - Offset(0f, span * .22f))
+}
+
+/** Braziers, bones and driftwood: what a place looks like once something has lived and died in it. */
+private fun DrawScope.scenery(camera: IsoCamera, piece: Decor, now: Long) {
     val base = camera.toScreen(piece.position).offset
-    val span = camera.tile.x * piece.radius
+    val span = camera.tile.x * .3f
     when(piece.kind) {
-        PropKind.ROCK -> {
-            shadowPool(base, span * 1.6f, .7f)
-            val top = base - Offset(0f, span * .62f)
-            drawPath(Path().apply {
-                moveTo(base.x - span, base.y); lineTo(top.x - span * .5f, top.y)
-                lineTo(top.x + span * .4f, top.y - span * .2f); lineTo(base.x + span, base.y); close()
-            }, Brush.verticalGradient(listOf(PanelRaised, Color(0xFF12171E)), top.y - span, base.y))
-            drawLine(Bronze.copy(alpha = .28f), Offset(top.x - span * .5f, top.y), Offset(top.x + span * .4f, top.y - span * .2f), 1.4f)
+        DecorKind.BRAZIER -> {
+            val flame = span * (1.1f + .2f * sin(now * .006f + piece.position.x))
+            drawCircle(Ember.copy(alpha = .14f), flame * 2.2f, base - Offset(0f, span))
+            drawRect(Color(0xFF181D25), Offset(base.x - span * .5f, base.y - span * .8f), Size(span, span * .8f))
+            drawCircle(Ember, flame * .5f, base - Offset(0f, span * 1.2f))
+            drawCircle(GoldBright.copy(alpha = .85f), flame * .24f, base - Offset(0f, span * 1.45f))
         }
-        PropKind.PILLAR -> {
-            shadowPool(base, span * 1.7f, .8f)
-            val height = span * 3.4f
-            drawRect(Brush.horizontalGradient(listOf(Color(0xFF151A22), PanelRaised, Color(0xFF0E131A)),
-                startX = base.x - span * .52f, endX = base.x + span * .52f),
-                topLeft = Offset(base.x - span * .52f, base.y - height), size = Size(span * 1.04f, height))
-            drawRect(Bronze.copy(alpha = .40f), Offset(base.x - span * .66f, base.y - height - span * .22f),
-                Size(span * 1.32f, span * .22f))
+        DecorKind.BONES -> {
+            drawLine(Muted.copy(alpha = .30f), base - Offset(span, span * .3f), base + Offset(span, span * .3f), 2f)
+            drawLine(Muted.copy(alpha = .22f), base - Offset(span * .5f, -span * .4f), base + Offset(span * .6f, -span * .3f), 1.6f)
         }
-        PropKind.BRAZIER -> {
-            shadowPool(base, span * 1.4f, .6f)
-            val flame = span * (1.1f + .18f * sin(now * .006f + piece.position.x))
-            drawCircle(Ember.copy(alpha = .16f), flame * 1.8f, base - Offset(0f, span))
-            drawCircle(Ember, flame * .42f, base - Offset(0f, span * 1.1f))
-            drawCircle(GoldBright.copy(alpha = .8f), flame * .2f, base - Offset(0f, span * 1.25f))
-            drawRect(Color(0xFF181D25), Offset(base.x - span * .5f, base.y - span * .5f), Size(span, span * .5f))
+        DecorKind.DRIFTWOOD -> {
+            drawLine(Bronze.copy(alpha = .55f), base - Offset(span * 1.2f, 0f), base + Offset(span * 1.2f, span * .3f), 3f)
+            drawLine(Bronze.copy(alpha = .35f), base - Offset(span * .4f, span * .3f), base + Offset(span * .8f, -span * .1f), 2f)
         }
-        PropKind.BONES -> Unit
     }
 }
 
-/** Bones lie flat on the floor: scenery of a place that has eaten other exiles. */
-private fun DrawScope.bones(camera: IsoCamera, piece: Prop) {
-    val base = camera.toScreen(piece.position).offset
-    val span = camera.tile.x * piece.radius
-    drawLine(Muted.copy(alpha = .22f), base - Offset(span, span * .3f), base + Offset(span, span * .3f), 2f)
-    drawLine(Muted.copy(alpha = .16f), base - Offset(span * .5f, -span * .4f), base + Offset(span * .6f, -span * .3f), 1.6f)
-}
-
 /**
- * One body: its pose offset, hit flash, picture, a life bar and its name.
+ * One body: the ring it stands in, its pose offset, hit flash, picture, a life bar and its name.
  *
  * The bar is [WorldActor.lifeRatio] — the server's life over the server's maximum — never a number
  * this screen kept for itself.
  */
 private fun DrawScope.body(camera: IsoCamera, actor: WorldActor, art: ServerArt?, glyph: Painter,
-    accent: Color, measurer: TextMeasurer, style: TextStyle) {
+    accent: Color, measurer: TextMeasurer, style: TextStyle, now: Long) {
     val progress = actor.poseProgress
     val lunge = when(actor.pose) {
         WorldPose.WINDUP -> -.16f * progress
@@ -220,11 +275,18 @@ private fun DrawScope.body(camera: IsoCamera, actor: WorldActor, art: ServerArt?
         else -> 1f
     }
     val grow = if(actor.pose == WorldPose.SPAWN) .62f + .38f * progress else 1f
-    val stride = if(actor.walking) abs(sin(actor.bob * 9f)) * 3.5f else sin(actor.bob * 2.1f) * 2.2f
+    val stride = if(actor.walking) abs(sin(actor.bob * 9f)) * 4f else sin(actor.bob * 2.1f) * 2.4f
     val feet = camera.toScreen(actor.position + actor.heading * lunge).offset
-    val span = camera.tile.x * (if(actor.boss) .92f else .62f) * grow
+    val span = camera.tile.x * (if(actor.boss) 1.05f else .78f) * grow
     val centre = feet - Offset(0f, span * .48f + stride)
-    shadowPool(feet, span * 1.25f, alpha)
+    // A ring on the ground says who is in this fight: the exile, and the mob the server put opposite.
+    val ring = when {
+        actor.side == WorldSide.HERO -> Gold
+        actor.engaged -> LifeRed
+        else -> Color.Transparent
+    }
+    shadowPool(feet, span * 1.15f, alpha)
+    if(ring != Color.Transparent) footRing(feet, camera.tile.x * .62f, ring, alpha, now)
     when(actor.pose) {
         WorldPose.GUARD -> ward(centre, span, progress)
         WorldPose.CAST -> sigilRing(centre, span, accent, progress)
@@ -234,12 +296,22 @@ private fun DrawScope.body(camera: IsoCamera, actor: WorldActor, art: ServerArt?
     if(actor.shield > 0.0) drawCircle(ShieldCyan.copy(alpha = .28f * alpha), span * .58f, centre, style = Stroke(1.6f))
     // The picture is mirrored when the body faces west, so a walk reads as a walk and not a moonwalk.
     figure(art, glyph, accent, centre, span, alpha, flip = actor.heading.x - actor.heading.y < 0f)
-    if(actor.flash > 0f) drawCircle(Color.White.copy(alpha = .34f * actor.flash * alpha), span * .44f, centre)
-    val barTop = centre.y - span * .68f
-    lifeBar(Offset(centre.x - span * .46f, barTop), span * .92f, actor.lifeRatio,
+    if(actor.flash > 0f) drawCircle(Color.White.copy(alpha = .40f * actor.flash * alpha), span * .44f, centre)
+    val barTop = centre.y - span * .62f
+    lifeBar(Offset(centre.x - span * .40f, barTop), span * .80f, actor.lifeRatio,
         if(actor.side == WorldSide.HERO) Gold else accent, alpha)
-    label(measurer, actor.name, Offset(centre.x, barTop - 11f), style,
-        (if(actor.boss) Blood else Parchment).copy(alpha = alpha * if(actor.ambient) .55f else 1f))
+    if(actor.side == WorldSide.HERO || actor.engaged || actor.boss)
+        label(measurer, actor.name, Offset(centre.x, barTop - 11f), style,
+            (if(actor.boss) Blood else Parchment).copy(alpha = alpha), shadowed = true)
+}
+
+/** The lit ellipse a fighter stands in, so the eye finds them on a floor full of stone. */
+private fun DrawScope.footRing(feet: Offset, span: Float, tint: Color, alpha: Float, now: Long) {
+    val pulse = .65f + .35f * sin(now * .005f)
+    drawOval(tint.copy(alpha = .40f * alpha * pulse),
+        topLeft = Offset(feet.x - span / 2f, feet.y - span / 4f), size = Size(span, span / 2f), style = Stroke(2.2f))
+    drawOval(tint.copy(alpha = .10f * alpha),
+        topLeft = Offset(feet.x - span / 2f, feet.y - span / 4f), size = Size(span, span / 2f))
 }
 
 /**
@@ -266,7 +338,7 @@ private fun DrawScope.ward(centre: Offset, span: Float, progress: Float) {
     drawCircle(Bronze.copy(alpha = .70f * (1f - progress * .4f)), span * .62f, centre, style = Stroke(3f))
 }
 
-/** The heavy strike: a rune ring that opens as the mana the server spent leaves the hero. */
+/** The heavy strike: a rune ring that opens as the mana the server spent leaves the exile. */
 private fun DrawScope.sigilRing(centre: Offset, span: Float, accent: Color, progress: Float) {
     drawCircle(accent.copy(alpha = .40f * (1f - progress)), span * (.42f + .36f * progress), centre, style = Stroke(2f))
     drawCircle(ManaBlue.copy(alpha = .26f * (1f - progress)), span * (.24f + .24f * progress), centre, style = Stroke(1.4f))
@@ -290,23 +362,23 @@ private fun DrawScope.sparkle(camera: IsoCamera, spark: Spark) {
     drawCircle(tintOf(spark.tint).copy(alpha = 1f - spark.progress), 2.8f * (1f - spark.progress) + .6f, head)
 }
 
-/** A reward on the floor: a beam in its rarity colour that the hero collects by walking over it. */
+/** A reward on the floor: a beam in its rarity colour that the exile collects by walking over it. */
 private fun DrawScope.dropPile(camera: IsoCamera, pile: GroundLoot, cache: ArtCache, glyphs: WorldGlyphs, now: Long) {
     val base = camera.toScreen(pile.position).offset
     val tint = lootTint(pile)
     val pulse = .70f + .30f * sin(now * .004f + pile.position.x)
-    val height = camera.tile.y * 2.6f
-    drawRect(Brush.verticalGradient(listOf(Color.Transparent, tint.copy(alpha = .34f * pulse)),
+    val height = camera.tile.y * 3f
+    drawRect(Brush.verticalGradient(listOf(Color.Transparent, tint.copy(alpha = .38f * pulse)),
         startY = base.y - height, endY = base.y),
-        topLeft = Offset(base.x - camera.tile.x * .07f, base.y - height), size = Size(camera.tile.x * .14f, height))
-    drawOval(tint.copy(alpha = .26f * pulse),
+        topLeft = Offset(base.x - camera.tile.x * .08f, base.y - height), size = Size(camera.tile.x * .16f, height))
+    drawOval(tint.copy(alpha = .30f * pulse),
         topLeft = Offset(base.x - camera.tile.x * .3f, base.y - camera.tile.y * .18f),
         size = Size(camera.tile.x * .6f, camera.tile.y * .36f))
-    figure(cache.art(pile.icon), lootGlyph(pile.kind, glyphs), tint, base - Offset(0f, camera.tile.y * .5f),
-        camera.tile.x * .34f, 1f)
+    figure(cache.art(pile.icon), lootGlyph(pile.kind, glyphs), tint, base - Offset(0f, camera.tile.y * .6f),
+        camera.tile.x * .38f, 1f)
 }
 
-/** A claimed drop flying to the hero's pack. */
+/** A claimed drop flying to the exile's pack. */
 private fun DrawScope.mote(camera: IsoCamera, mote: LootMote, cache: ArtCache, glyphs: WorldGlyphs) {
     val alpha = 1f - mote.progress * mote.progress
     val centre = camera.toScreen(mote.position).offset - Offset(0f, camera.tile.y * (.5f + mote.progress))
@@ -334,16 +406,16 @@ internal fun lootTint(pile: GroundLoot) = when {
 private fun DrawScope.floater(camera: IsoCamera, number: DamageNumber, measurer: TextMeasurer, style: TextStyle) {
     val alpha = (1f - number.progress * number.progress).coerceIn(0f, 1f)
     val scale = if(number.crit) 1.35f + .25f * (1f - number.progress) else 1f
-    val centre = camera.toScreen(number.origin).offset - Offset(0f, camera.tile.y * .9f + number.progress * size.height * .13f)
+    val centre = camera.toScreen(number.origin).offset - Offset(0f, camera.tile.y * 1.1f + number.progress * size.height * .13f)
     label(measurer, number.text, centre, style.copy(fontSize = style.fontSize * scale),
         tintOf(number.tint).copy(alpha = alpha), shadowed = true)
 }
 
-/** The torch the exile carries: the dark closes in everywhere the hero is not. */
+/** The torch the exile carries: the dark closes in, but never so far that the fight is lost in it. */
 private fun DrawScope.torchlight(camera: IsoCamera, hero: WorldActor?) {
     val light = camera.toScreen(hero?.position ?: camera.focus).offset
-    drawRect(Brush.radialGradient(listOf(Color.Transparent, Ink.copy(alpha = .34f), Ink.copy(alpha = .88f)),
-        center = light, radius = size.minDimension * .92f))
+    drawRect(Brush.radialGradient(listOf(Color.Transparent, Ink.copy(alpha = .16f), Ink.copy(alpha = .62f)),
+        center = light, radius = size.minDimension * 1.05f))
 }
 
 /** Victory, defeat, a retreat, or the name of whatever just walked in. */
@@ -354,7 +426,7 @@ private fun DrawScope.callBanner(banner: Banner, measurer: TextMeasurer, style: 
         else -> 1f
     }.coerceIn(0f, 1f)
     val accent = if(banner.boss) Blood else Gold
-    val middle = size.height * .17f
+    val middle = size.height * .22f
     drawRect(Brush.horizontalGradient(listOf(Color.Transparent, Ink.copy(alpha = .78f * alpha), Color.Transparent)),
         topLeft = Offset(0f, middle - 20f), size = Size(size.width, 40f))
     label(measurer, banner.text.uppercase(), Offset(size.width / 2f, middle), style, accent.copy(alpha = alpha))

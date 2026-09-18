@@ -29,7 +29,8 @@ import kotlinx.serialization.Serializable
     val effects: List<ModifierEffect> = emptyList(),
     val source: ModifierSource = ModifierSource.PREFIX,
     val name: String? = null,
-    val tags: List<String> = emptyList(),
+    // The server writes every nullable field, null included, so an absent tag list arrives as null.
+    val tags: List<String>? = null,
 ) {
     val composite: Boolean get() = effects.size > 1
     val title: String get() = name?.takeIf { it.isNotBlank() } ?: code

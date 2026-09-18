@@ -109,8 +109,10 @@ fun validateModifier(document: JsonObject) {
 }
 
 /**
- * The server derives the version itself on PUT and DELETE, but the client still refuses to write a
- * document it never read a version from — that is the signal the record was fetched, not invented.
+ * The version of a versioned record.
+ *
+ * Only `user`, `character` and `characterequipment` are VersionedEntity on this server; items,
+ * equipment, recipes, codes and modifier documents carry no version, so never ask them for one.
  */
 val JsonObject.entityVersion: Long get() = get("version")?.jsonPrimitive?.longOrNull?.takeIf { it >= 0 }
     ?: error(tr("Сервер не вернул версию записи. Обновите данные.", "The server returned no record version. Refresh the data."))

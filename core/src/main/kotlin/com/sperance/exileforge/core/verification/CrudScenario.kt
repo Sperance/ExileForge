@@ -25,9 +25,9 @@ class CrudScenario(private val repository: ItemRepository, private val modifierI
             suspend fun update(changes: JsonObject, label: String) {
                 owned = repository.update(catalog, id, changes)
                 val loaded = repository.get(catalog, id) ?: error(tr("Запись исчезла", "The record disappeared"))
+                // Items and equipment are StockEntity on this server: they carry no version at all.
                 check(changes.all { (key, value) -> loaded[key] == value })
-                check(loaded.entityVersion > 0)
-                report(CheckResult(label, true, tr("Свойства и версия подтверждены", "Fields and version confirmed")))
+                report(CheckResult(label, true, tr("Свойства подтверждены чтением", "Fields confirmed by a read")))
             }
             update(buildJsonObject { put("description", "CRUD verification complete") }, tr("Изменение + GET", "Update + GET"))
             if (catalog == Catalog.EQUIPMENT && modifierId.isNotBlank()) {

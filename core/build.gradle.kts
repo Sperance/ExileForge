@@ -10,3 +10,11 @@ dependencies {
 }
 
 kotlin { jvmToolchain(17) }
+
+// A failing test in CI is read from the log, not from a report nobody can open: print the stack.
+tasks.withType<Test>().configureEach {
+    testLogging {
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+        showStackTraces = true
+    }
+}

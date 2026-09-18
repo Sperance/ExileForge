@@ -26,8 +26,9 @@ class ServerIntegrationTest {
         val definitions = api.modifierDefinitions()
         assertTrue(definitions.isNotEmpty())
         assertTrue(definitions.any { it.composite })
-        val tiers = api.modifierTiers(definitions.first { it.effects.isNotEmpty() }.id)
-        assertTrue(tiers.isNotEmpty() && tiers.all { it.values.isNotEmpty() })
+        val described = definitions.firstOrNull { it.effects.isNotEmpty() } ?: fail("no definition carries an effect: $definitions")
+        val tiers = api.modifierTiers(described.id)
+        assertTrue(tiers.isNotEmpty() && tiers.all { it.values.isNotEmpty() }, "tiers of ${described.code}: $tiers")
 
         val name = "EF-integration-${java.util.UUID.randomUUID()}"
         val character = api.create(Catalog.CHARACTERS, buildJsonObject { put("userId", admin.id); put("name", name); put("description", "Integration fixture") })
@@ -47,8 +48,8 @@ class ServerIntegrationTest {
             assertTrue(instance.params.all { it.modifierId in definitions.map { definition -> definition.id } })
             // One value per effect of the description: a composite modifier rolls all of them at once.
             instance.params.forEach { rolled ->
-                val definition = definitions.single { it.id == rolled.modifierId }
-                assertEquals(definition.effects.size, rolled.values.size)
+                val definition = definitions.firstOrNull { it.id == rolled.modifierId } ?: fail("rolled $rolled names no known definition")
+                assertEquals(definition.effects.size, rolled.values.size, "${definition.code} rolled ${rolled.values}")
             }
             assertFalse(instance.equipped)
 
@@ -61,16 +62,19 @@ class ServerIntegrationTest {
             assertEquals(stats, api.stats(id))
             assertFalse(api.unequip(id, instance.id).equipped)
 
-            val item = api.referencePage(com.sperance.exileforge.core.model.EntitySource.ITEM, 0).items.first()
+            val items = api.referencePage(com.sperance.exileforge.core.model.EntitySource.ITEM, 0)
+            val item = items.items.firstOrNull() ?: fail("the items collection is empty: $items")
             assertEquals("Success", api.adjustItems(id, listOf(ItemStack(item.entityId, 5))))
-            assertEquals(5L, api.bag(id).single { it.itemId == item.entityId }.amount)
+            val bag = api.bag(id)
+            assertEquals(5L, (bag.firstOrNull { it.itemId == item.entityId } ?: fail("${item.entityId} is not in the bag: $bag")).amount)
             assertEquals("Success", api.adjustItems(id, listOf(ItemStack(item.entityId, -5))))
             assertTrue(api.bag(id).none { it.itemId == item.entityId })
 
             // A template is editable; an instance's rolls are not reachable from the catalogue at all.
             val edited = api.update(Catalog.EQUIPMENT, template.entityId, buildJsonObject { put("description", "Integration description") })
             assertEquals("Integration description", edited.text("description"))
-            assertTrue(edited.entityVersion > template.entityVersion)
+            // An equipment template is a StockEntity: the server keeps no version on it.
+            assertFalse("version" in edited, "equipment gained a version: $edited")
             assertFailsWith<IllegalArgumentException> { api.update(Catalog.EQUIPMENT, template.entityId, buildJsonObject { put("params", JsonArray(emptyList())) }) }
 
             val player = GameApi(url)

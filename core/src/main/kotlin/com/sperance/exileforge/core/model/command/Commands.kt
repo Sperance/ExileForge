@@ -35,8 +35,14 @@ const val MAX_ITEM_AMOUNT = 100_000_000_000L
     val countCharacters: Int = 0,
 )
 
-/** One entry of `GET /system/routes`: how the client learns what this server can do. */
-@Serializable data class RouteInfo(val path: String, val method: String)
+/**
+ * One entry of `GET /system/routes`: how the client learns what this server can do.
+ *
+ * The method arrives as the Ktor selector prints it — `(GET)` — so it is normalised to letters.
+ */
+@Serializable data class RouteInfo(val path: String, val method: String) {
+    val verb: String get() = method.uppercase().filter { it.isLetter() }
+}
 
 /**
  * What the connected server supports, read from its own route table rather than guessed.
@@ -64,6 +70,6 @@ data class ApiCapabilities(val routes: Set<String>) {
         }
     }
     companion object {
-        fun of(routes: List<RouteInfo>) = ApiCapabilities(routes.mapTo(mutableSetOf()) { "${it.method.uppercase()} ${it.path}" })
+        fun of(routes: List<RouteInfo>) = ApiCapabilities(routes.mapTo(mutableSetOf()) { "${it.verb} ${it.path}" })
     }
 }

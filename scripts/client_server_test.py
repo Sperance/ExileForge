@@ -37,7 +37,8 @@ with (root / 'build/client-server.log').open('w') as log:
             if process.poll() is not None:
                 raise RuntimeError('Backend exited; inspect client-server.log')
             try:
-                routes = {route['method'] + ' ' + route['path'] for route in request('/system/routes')}
+                # Ktor prints the selector, so the method arrives as "(GET)".
+                routes = {''.join(c for c in route['method'] if c.isalpha()) + ' ' + route['path'] for route in request('/system/routes')}
                 assert 'GET /api/v1/character/inventory/stats' in routes, sorted(routes)
                 break
             except (urllib.error.URLError, TimeoutError, KeyError):

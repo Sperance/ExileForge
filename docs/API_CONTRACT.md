@@ -12,7 +12,7 @@
 | Вход | `GET /api/v1/user/login?login=&password=` → `UserResponse` |
 | Текущий пользователь | `GET /api/v1/user?id=` |
 | Смена пароля | `GET /api/v1/user/changePassword?id=&password=&new_password=` |
-| Возможности | `GET /system/routes` → `[{path,method}]` |
+| Возможности | `GET /system/routes` → `[{path,method}]`, метод печатается селектором Ktor как `(GET)` |
 | Здоровье | `GET /system/health` |
 
 Роль берётся из ответа (`role: USER | MODERATOR | ADMIN`), а не из клиентского состояния. `ApiCapabilities` строится из таблицы маршрутов сервера: перед входом клиент проверяет, что нужные ему пути существуют, и называет отсутствующие.

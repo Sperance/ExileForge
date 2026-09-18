@@ -157,11 +157,13 @@ class GameApiTest {
         val routes = listOf("GET" to "/api/v1/user/login", "GET" to "/api/v1/equipment/paged", "GET" to "/api/v1/character/inventory/equipments",
             "GET" to "/api/v1/character/inventory/stats", "POST" to "/api/v1/character/inventory/itemToInventory",
             "POST" to "/api/v1/characterequipment/equip", "GET" to "/api/v1/modifierdefinition")
-        ok(JsonArray(routes.map { buildJsonObject { put("path", it.second); put("method", it.first) } }).toString())
+        // The server prints the Ktor selector, so a method arrives as "(GET)".
+        ok(JsonArray(routes.map { buildJsonObject { put("path", it.second); put("method", "(${it.first})") } }).toString())
         val capabilities = api.capabilities()
         capabilities.requireWorkbench()
+        assertTrue(capabilities.has("GET", "/api/v1/user/login"))
         assertEquals("/game/system/routes", server.takeRequest().path)
-        assertFailsWith<IllegalArgumentException> { ApiCapabilities.of(listOf(RouteInfo("/api/v1/user/login", "GET"))).requireWorkbench() }
+        assertFailsWith<IllegalArgumentException> { ApiCapabilities.of(listOf(RouteInfo("/api/v1/user/login", "(GET)"))).requireWorkbench() }
     }
 
     @Test fun `404 is absent, other errors are preserved`(): Unit = runBlocking {

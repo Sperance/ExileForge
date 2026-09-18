@@ -130,8 +130,10 @@ These are enforced by tests and are the point of the client's design:
    What lands on a copy, in which tier and with which value, is rolled by the server in
    `itemToInventory`. `validateModifierPool` rejects rolled `params` in a template write, and
    `inventoryDocument` is a display-only projection that must never be posted back.
-9. **Search is display, not gameplay.** The server pages but does not filter, so a filtered search
-   reads the collection once and narrows it on fields the server already wrote. Nothing is computed.
+9. **Lists are read whole and paged here.** The server's `/paged` route passes `page` as the limit
+   and `size` as the offset, so it answers an empty list; it also offers no filter. The client reads
+   `GET /api/v1/{collection}` and slices it, comparing only fields the server already wrote —
+   filtering is display, never a game calculation. Move paging back once the server swaps them.
 10. **Release builds require HTTPS** (`usesCleartextTraffic=false`); only the debug manifest
     permits cleartext for local servers. This matters more than usual: the password travels as a
     query parameter, because that is the route the server exposes.

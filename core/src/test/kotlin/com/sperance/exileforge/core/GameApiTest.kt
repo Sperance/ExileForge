@@ -84,10 +84,20 @@ class GameApiTest {
         assertEquals(2, server.requestCount)
     }
 
-    @Test fun `unfiltered browsing is paged by the server`(): Unit = runBlocking {
-        ok("""{"items":[],"page":1,"pageSize":20,"totalItems":40,"totalPages":2}""")
-        assertEquals(1, api.page(Catalog.ITEMS, 1).page)
-        assertEquals("/game/api/v1/items/paged?page=1&size=20", server.takeRequest().path)
+    @Test fun `a list is paged on the client, because the server's page route answers with nothing`(): Unit = runBlocking {
+        // /paged passes `page` as the limit and `size` as the offset, so page 0 returns an empty list.
+        val records = (1..25).map { buildJsonObject { put("_id", id); put("name", "Item $it") } }
+        ok(JsonArray(records).toString())
+        val second = api.page(Catalog.ITEMS, 1)
+        assertEquals("/game/api/v1/items", server.takeRequest().path)
+        assertEquals(1, second.page)
+        assertEquals(2, second.totalPages)
+        assertEquals(25L, second.totalItems)
+        assertEquals(5, second.items.size)
+        assertEquals("Item 21", second.items.first().text("name"))
+        val sent = server.requestCount
+        assertFailsWith<IllegalArgumentException> { api.page(Catalog.ITEMS, -1) }
+        assertEquals(sent, server.requestCount)
     }
 
     @Test fun `a filtered search narrows the collection the server cannot filter`(): Unit = runBlocking {

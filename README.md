@@ -44,7 +44,7 @@ Debug allows HTTP for local development; release requires HTTPS. **This server h
 - **Equipment is a pool of references.** A template carries `modifierIds`; which of them land on a copy, in which tier and with which value, is rolled by the server when the instance is created.
 - **Inventory is its own collection.** One item in a character's bag is one `CharacterEquipment` document with its own rolls; the slot comes from the template, so equipping takes an instance id and nothing else.
 - **Stats come from the server.** `GET /api/v1/character/inventory/stats` returns the summed sheet; the client prints it and implements no second calculator.
-- **Search is a display concern.** The server pages but does not filter, so a filtered search reads the collection once and narrows it on the client. Nothing game-related is computed.
+- **Lists are paged on the client.** The server's `/paged` route swaps its limit and offset, so it answers with nothing; it also offers no filter. The client reads the collection and slices it, comparing only fields the server already wrote. Nothing game-related is computed.
 - **Removed with the features the server no longer has:** passive tree, combat and the battle arena, orbs and crafting, the server icon set, JWT, cursor-paged inventory and three-way conflict review.
 
 ## Build and verification

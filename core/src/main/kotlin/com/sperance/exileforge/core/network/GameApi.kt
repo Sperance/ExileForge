@@ -89,38 +89,40 @@ class GameApi(
 
     private fun route(catalog: Catalog) = "api/v1/${catalog.path}"
 
-    /** The whole collection. Used only where the server offers no narrower route. */
+    /**
+     * The whole collection.
+     *
+     * This is how every list is read. The server's own `/paged` route hands `page` to the repository
+     * as the limit and `size` as the offset, so `page=0` asks Mongo for `limit(0).skip(size)` and
+     * answers with nothing at all — it cannot be used until the server swaps them back. Reading the
+     * collection is safe here because these collections are small and server-seeded.
+     */
     private suspend fun all(path: String): List<JsonObject> =
         request("GET", path, authenticated = true).jsonArray.map { it.jsonObject }
 
-    private suspend fun paged(path: String, page: Int, size: Int): ItemPage {
-        require(page >= 0 && size in 1..200)
-        val body = request("GET", "$path/paged", mapOf("page" to "$page", "size" to "$size"), authenticated = true).jsonObject
-        return ItemPage(body.getValue("items").jsonArray.map { it.jsonObject }, body.getValue("page").jsonPrimitive.int,
-            body.getValue("totalPages").jsonPrimitive.int, body.getValue("totalItems").jsonPrimitive.long)
-    }
-
-    override suspend fun page(catalog: Catalog, page: Int): ItemPage = paged(route(catalog), page, CATALOG_PAGE_SIZE)
+    override suspend fun page(catalog: Catalog, page: Int): ItemPage { requirePage(page); return slice(all(route(catalog)), page, CATALOG_PAGE_SIZE) }
 
     /**
-     * The server pages but does not filter, so a filtered search reads the collection once and
-     * narrows it here. Nothing is recomputed: only fields the server wrote are compared.
+     * A filtered search narrows the collection on the client: the server offers no filter at all.
+     * Nothing is recomputed — only fields the server already wrote are compared.
      */
     suspend fun search(catalog: Catalog, page: Int, filter: CatalogFilter): ItemPage {
-        if (filter.isEmpty) return page(catalog, page)
+        requirePage(page)
         return slice(all(route(catalog)).filter(filter::matches), page, CATALOG_PAGE_SIZE)
     }
 
     suspend fun referencePage(source: EntitySource, page: Int, query: String = ""): ItemPage {
-        if (query.isBlank()) return paged("api/v1/${source.path}", page, REFERENCE_PAGE_SIZE)
-        val matching = all("api/v1/${source.path}").filter { document ->
+        requirePage(page)
+        val records = all("api/v1/${source.path}")
+        val matching = if (query.isBlank()) records else records.filter { document ->
             listOf("name", "login", "code", "category", "subCategory").any { document.text(it).contains(query.trim(), true) }
         }
         return slice(matching, page, REFERENCE_PAGE_SIZE)
     }
 
+    private fun requirePage(page: Int) = require(page >= 0) { tr("Номер страницы не может быть отрицательным", "A page number cannot be negative") }
+
     private fun slice(items: List<JsonObject>, page: Int, size: Int): ItemPage {
-        require(page >= 0)
         val pages = (items.size + size - 1) / size
         return ItemPage(items.drop(page * size).take(size), page, pages, items.size.toLong())
     }

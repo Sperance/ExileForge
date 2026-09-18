@@ -33,14 +33,16 @@ class ReferencePickerTest {
         assertFailsWith<IllegalArgumentException> { validateForm("equipment", buildJsonObject { put("modifierIds", buildJsonArray { add("Maximum life") }) }) }
     }
 
-    @Test fun `each picker uses its own collection and the server's pagination`() = runBlocking {
+    @Test fun `each picker reads its own collection and pages it here`() = runBlocking {
         MockWebServer().use { server ->
             server.start(); val api = signedIn(server)
+            val records = JsonArray((1..120).map { buildJsonObject { put("_id", id); put("name", "Record $it") } })
             EntitySource.entries.forEach { source ->
-                server.enqueue(MockResponse().setBody("""{"success":true,"data":{"items":[{"_id":"$id","name":"Visible name"}],"page":2,"pageSize":50,"totalPages":4,"totalItems":180}}"""))
+                server.enqueue(MockResponse().setBody("""{"success":true,"data":$records}"""))
                 val result = api.referencePage(source, 2)
-                assertEquals(2, result.page); assertEquals(4, result.totalPages); assertEquals(180L, result.totalItems)
-                assertEquals("/game/api/v1/${source.path}/paged?page=2&size=50", server.takeRequest().path)
+                assertEquals(2, result.page); assertEquals(3, result.totalPages); assertEquals(120L, result.totalItems)
+                assertEquals(20, result.items.size)
+                assertEquals("/game/api/v1/${source.path}", server.takeRequest().path)
             }
         }
     }

@@ -4,48 +4,45 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 1.11.0, `versionCode` 12) for the
-**ktor-bestgame** RPG server (0.13.0, **API revision 4**), pinned in
-`core/.../contract/Contract.kt` as `SERVER_COMMIT = f0d88446254b1f3d3ff1a06a6e609471ba99f97e`
-on the server branch `master`.
+ExileForge is an **Android Compose client** (version 2.0.0, `versionCode` 13) for the
+**ktor-bestgame** RPG server (0.9.0), pinned in
+`core/.../contract/Contract.kt` as `SERVER_COMMIT = e8e9ae824dda7484622462da892c636c6369be6b`
+on the server branch `claude/tender-pasteur-a36kj2`.
 
-The client is deliberately **thin**: the server owns items, stats, crafting, combat and the
-passive tree. This client renders server state, sends commands, and never recomputes game
-numbers locally.
+The client is deliberately **thin**: the server owns items, stats, modifier rolls and inventory.
+This client renders server state, sends commands, and never recomputes game numbers locally.
 
 ## Repository layout
 
 ```
 build.gradle.kts, settings.gradle.kts   Gradle 9.7.1, AGP 9.4.0, Kotlin 2.4.20, modules :app and :core
 core/                                   Pure JVM library (java-library + kotlin-jvm, toolchain 17)
-  contract/      Contract.kt            Wire JSON, validation, editable/protected fields, templates, requireId
+  contract/      Contract.kt            Wire JSON, validation, editable/creation fields, templates, requireId
                  CharacterContract.kt   Character document validation
   network/       GameApi.kt             The single HTTP client (OkHttp) for every server route
                  ItemRepository.kt      CRUD interface implemented by GameApi (lets tests fake it)
                  ApiFailure/FailureState/RequestJournal/RequestLog/ItemPage/HttpPayload
   model/         Catalog, EntitySource, CatalogFilter, EquipmentKind
-                 command/Commands.kt    Serializable commands, EquipmentSlot, CalculatedStats, EquipmentView, ApiCapabilities
-                 hero/, combat/, passives/, modifier/, character/
+                 command/Commands.kt    UserProfile, ItemStack, UseRecipeCommand, RouteInfo, ApiCapabilities
+                 hero/HeroModels.kt     CharacterSummary, EquipmentInstance, CharacterItem, Recipe*, HeroView
+                 modifier/Modifiers.kt  ModifierDefinition, ModifierTier, Modifier, effects and sources
+                 character/CharacterStats.kt  The server's stat enum names
   i18n/          Loc.kt                 Lang (RU/EN), `tr(ru, en)` and the global `uiLanguage`
-  editor/        EditorSchema.kt        Declarative form schemas (FormField/InputSpec) used by the admin editor
-                 conflict/ThreeWayMerge.kt
-  generation/    ItemGenerator, ModifierSelection, PresetDefinitions
-  display/       ItemPresentation.kt    Display-only projections and Russian titles
-                 svg/SvgIcon.kt         Reader for the server's SVG subset (paths, circles, gradients)
-                 icons/IconSet.kt       The loaded icon set and the rules that pick an icon
+  editor/        EditorSchema.kt        Declarative form schemas (FormField/InputSpec) used by the editor
+  display/       ItemPresentation.kt    Display-only projections and bilingual titles
   verification/  CrudScenario.kt        Admin-only self-check run from the Checks screen
 app/                                    Android application (minSdk 26, compile/target SDK 37)
   MainActivity.kt, ForgeApplication.kt  Entry points; Application owns RequestJournal + ServerStore
   presentation/  ForgeRuntime.kt        Shared coroutine scope, GameApi instance, MutableStateFlow<ForgeState>
                  ForgeViewModel.kt      Lifecycle owner and thin facade delegating to feature models
-                 features/              Catalog, Editor, Hero, Session, Passive, Combat, Checks view models
+                 features/              Catalog, Editor, Hero, Session, Checks view models
                  state/ForgeState.kt    One immutable state object for the whole app
   ui/            ForgeApp.kt            Scaffold, banner with RU/EN switch, bottom navigation, tab dispatch
-                 screens/               catalog, editor, inventory (Hero/Forge), combat, passives, checks, server
-                 components/            ItemCard, PropertyRow, InfoCard, spinners and Ornament.kt (ForgePanel/ScreenHeader/OrnateDivider/StatGlobe)
-                 forms/, icons/ (ForgeGlyphs vector set, ItemEmblem, ServerIcon renderer), theme/
-  data/settings/ServerStore.kt          DataStore Preferences: base URL, saved filters, pending commands
-docs/                                   Russian reference docs (API_CONTRACT, COMBAT, PASSIVES, VALIDATION, ICONS)
+                 screens/               catalog, editor, hero, checks, server
+                 components/            ItemCard, PropertyRow, InfoCard, spinners and Ornament.kt
+                 forms/, icons/ (ForgeGlyphs vector set, ItemEmblem, ItemIcon/PropertyIcon), theme/
+  data/settings/ServerStore.kt          DataStore Preferences: base URL, saved filters, language
+docs/                                   Russian reference docs (API_CONTRACT, VALIDATION)
 scripts/client_server_test.py           Boots the real backend + MongoDB and runs ServerIntegrationTest
 .github/workflows/android.yml           `build` job (unit/lint/APK/emulator UI) and `client-server` job
 ```
@@ -55,17 +52,18 @@ compiled by unit tests without an Android SDK. Put anything reusable and UI-inde
 
 ## Build and verification
 
-Requires **JDK 17** (Gradle toolchain) and **Android SDK 37** for `:app` tasks.
-`gradlew` is committed without the executable bit, so invoke it as `bash gradlew` (CI does
-`chmod +x gradlew` first).
+Requires **JDK 17** (Gradle toolchain, pinned in `gradle/gradle-daemon-jvm.properties`) and
+**Android SDK 37** for `:app` tasks. `gradlew` is committed without the executable bit, so invoke it
+as `bash gradlew` (CI does `chmod +x gradlew` first).
 
 ```bash
 bash gradlew :core:test :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest
 ```
 
 Note: a bare container without a JDK 17 toolchain or Android SDK (as in cloud sessions) cannot
-run these — the Gradle toolchain download fails and `:app` tasks need the SDK. In that case
-rely on CI and keep changes reviewable by reading, rather than claiming a local build passed.
+run the `:app` tasks — `dl.google.com` is usually unreachable there. `:core` can still be compiled
+and tested locally by temporarily pointing the daemon JVM criteria at the available JDK; revert that
+change before committing. Otherwise rely on CI and keep changes reviewable by reading.
 
 - `:core:test` — JUnit + `kotlin-test` + **MockWebServer**; no device or SDK needed.
 - `:app:connectedAndroidTest` equivalents run in CI on an **API 35 emulator** via
@@ -73,25 +71,25 @@ rely on CI and keep changes reviewable by reading, rather than claiming a local 
 - `ServerIntegrationTest` is **opt-in**: it is skipped (`assumeTrue`) unless `EF_LIVE_URL` is
   set. The `client-server` CI job builds the pinned backend, starts an isolated MongoDB replica
   set and runs it through `scripts/client_server_test.py`.
-- `DesignPreviewTest`, `EquipmentPanelTest` and `PassiveTreeTest` capture screenshots into the
-  app's external files dir (`design/arsenal.jpg`, `hero.jpg`, `passives.jpg`); CI pulls them and
-  base64-prints them into the log. Do not remove those captures — the workflow fails without the files.
+- `DesignPreviewTest` and `HeroPanelTest` capture screenshots into the app's external files dir
+  (`design/arsenal.jpg`, `hero.jpg`); CI pulls them and base64-prints them into the log. Do not
+  remove those captures — the workflow fails without the files.
 
 ## Architecture and state
 
 **One state object.** `ForgeState` (a single `data class`) holds everything: session, catalog
-page, editor draft, hero/inventory, combat, passives, failures. Derived permissions are computed
-properties on it: `isAdmin`, `adminTools`, `canEdit`, `ownsCharacter`.
+page, editor draft, hero, checks, failures. Derived permissions are computed properties on it:
+`isAdmin`, `adminTools`, `canEdit`, `ownsCharacter`.
 
 **ForgeRuntime** owns the `SupervisorJob` scope, the `MutableStateFlow<ForgeState>`, the current
-`GameApi`, and instantiates the seven feature view models. It also provides shared helpers:
+`GameApi`, and instantiates the five feature view models. It also provides shared helpers:
 
 - `task(writing = false) { ... }` — the standard action wrapper. It refuses to start while
   `busy`, clears previous message/error/failure, runs the block on the runtime scope, maps
-  exceptions to `FailureState` + a Russian user message, and always clears `busy`. **Every
+  exceptions to `FailureState` + a bilingual user message, and always clears `busy`. **Every
   user-triggered server call goes through `task`.** Pass `writing = true` for mutations so that
   IO/5xx failures are classified as `UncertainWrite` rather than `Offline`.
-- `loadPage`, `setEditor`, `pinnedDefinitions`, `clearSession`, `newApi`.
+- `loadPage`, `setEditor`, `ensureDefinitions`, `recipeDocument`, `clearSession`, `newApi`.
 
 **Feature view models** (`presentation/features/*`) hold no state of their own; they read
 `runtime.state.value` and `mutable.update { it.copy(...) }`. They are written as
@@ -103,47 +101,42 @@ delegate here, because screens receive `ForgeViewModel`.
 
 **Navigation** is an `Int` tab in state, dispatched by a `when` in `ForgeApp`:
 `0` catalog/characters, `1` editor, `2` checks (admin only — `ForgeRuntime.tab` blocks it
-otherwise), `3` account/server, `4` hero, `5` forge (`InventoryForge(forgeOnly = true)`),
-`6` combat, `7` passive tree (not in the bottom bar; reached from Hero/Combat).
-`ForgeApp` re-`key`s the whole tree on `server` and `sessionEpoch`, so a logout or server change
-discards per-screen Compose state.
+otherwise), `3` account/server, `4` hero.
+`ForgeApp` re-`key`s the whole tree on `server`, `sessionEpoch` and `lang`, so a logout, a server
+change or a language switch discards per-screen Compose state.
 
 ## Server contract rules (do not violate)
 
 These are enforced by tests and are the point of the client's design:
 
-1. **The server is authoritative.** Never compute damage, stats, loot chance or passive bonuses
-   locally. Unsupported effects are listed explicitly (`CalculatedStats.unsupported`,
-   `Battle.unsupportedStats`) rather than approximated.
-2. **Identity comes from the server.** POST sends documents without `_id`; `requireId` demands
-   24 hex chars before any request is built.
-3. **Optimistic concurrency everywhere.** PUT sends `{expectedVersion, changes}`, DELETE sends
-   `{expectedVersion}`; versions are Kotlin `Long` and must survive values above JavaScript's
-   safe-integer range. A mutation is **never** silently retried with a fresher version.
-4. **409 opens conflict review.** The draft is preserved, `conflict = true`, and
-   `ThreeWayMerge.review` transfers disjoint changes while overlapping fields require an explicit
-   choice. Arrays (modifiers) are atomic — never merged element-wise.
-5. **401 clears the session.** `GameApi(onUnauthorized = ...)` → `clearSession()`, which drops
-   the token, journal and all account-specific UI state, and bumps `sessionEpoch`.
-6. **Uncertain writes are surfaced, not retried.** `FailureState.UncertainWrite` (IO error or
-   5xx on a write) tells the user to refresh. The exception: craft/drop, combat actions and
-   passive changes carry a stable `requestId` and are persisted to DataStore **before** sending,
-   so "Подтвердить действие" replays the identical payload. Pending keys are scoped
-   `"$server:$profileId:$characterId"` so switching account or character never replays someone
-   else's command. Only explicit client rejections (400/403/404/409/422) clear the pending record.
-7. **Capabilities gate features.** `ApiCapabilities.requireWorkbench()` before login;
-   `capabilities().combat` and `.passiveTree` are checked before those screens load.
-8. **Secrets never reach the journal.** `request(sensitive = true)` for login and password
-   change; bodies are stored as `[скрыто]`. Tokens live in memory only.
-9. **Template vs. instance.** Rolled instance modifiers are changed only through server crafting
-   commands; `validateReferenceWrite` rejects inline definitions in equipment writes.
-   `inventoryDocument` is a display-only projection and must never be posted back.
+1. **The server is authoritative.** Never compute damage, stats, prices or modifier rolls locally.
+   `GET /api/v1/character/inventory/stats` is the character sheet; the client prints it.
+2. **Identity comes from the server.** POST sends a JSON array of documents without `_id`;
+   `requireId` demands 24 hex chars before any request is built.
+3. **The server owns versioning.** PUT sends only the changed fields and DELETE sends no body —
+   the server reads the stored document, checks its own `version` and rejects a racing write. A
+   mutation is **never** silently retried, and a rejection is surfaced with its message.
+4. **There is no token.** `GET /api/v1/user/login` answers with the account document, which is the
+   whole session and lives in memory only. `logout()` drops it; `authenticated = true` requires it.
+   A 401 still clears the session through `GameApi(onUnauthorized = ...)` → `clearSession()`.
+5. **Uncertain writes are surfaced, not retried.** `FailureState.UncertainWrite` (IO error or 5xx
+   on a write) tells the user to refresh. There is no durable replay: this server has no
+   `requestId`, so a repeat would create a second instance.
+6. **Capabilities gate features.** `ApiCapabilities` is built from the server's own `/system/routes`
+   table, and `requireWorkbench()` runs before login so a stale server is named, not guessed at.
+7. **Secrets never reach the journal.** `request(sensitive = true)` for login and password change;
+   the query string and body are stored as `[скрыто]`. The account document lives in memory only.
+8. **Template vs. instance.** A template carries `modifierIds` — a pool of `ModifierDefinition` ids.
+   What lands on a copy, in which tier and with which value, is rolled by the server in
+   `itemToInventory`. `validateModifierPool` rejects rolled `params` in a template write, and
+   `inventoryDocument` is a display-only projection that must never be posted back.
+9. **Search is display, not gameplay.** The server pages but does not filter, so a filtered search
+   reads the collection once and narrows it on fields the server already wrote. Nothing is computed.
 10. **Release builds require HTTPS** (`usesCleartextTraffic=false`); only the debug manifest
-    permits cleartext for local servers.
-11. **Icons belong to the server.** Every entity carries an `icon` id; the client renders that set,
-    resolves a missing one through `/api/v1/icons/bindings`, and never invents artwork for a game
-    entity. The set is public, fetched once as a sprite, cached per server against `iconSetVersion`
-    and refreshed with `If-None-Match`.
+    permits cleartext for local servers. This matters more than usual: the password travels as a
+    query parameter, because that is the route the server exposes.
+11. **No network or raster images.** Entities carry at most an `image` URL, which the client stores
+    but never fetches. Every picture is a bundled vector (`ItemEmblem`, `ForgeGlyphs`).
 
 ## Conventions
 
@@ -152,61 +145,51 @@ These are enforced by tests and are the point of the client's design:
   **bilingual**: write it as `tr("русский текст", "English text")` from `core/i18n/Loc.kt`.
   `tr` reads the global `uiLanguage`, which defaults to **RU**, so tests that assert Russian
   keep passing. Compose refreshes because `ForgeApp` keys the whole tree on `s.lang`; helpers
-  that take an explicit language (`slotTitle`, `rarityTitle`, `Catalog.title`,
-  `EquipmentSlot.title`) default to `uiLanguage`. Never add a user-facing literal in one
-  language only.
+  that take an explicit language (`slotTitle`, `rarityTitle`, `weaponTitle`, `statTitle`,
+  `Catalog.title`) default to `uiLanguage`. Never add a user-facing literal in one language only.
 - **Style:** dense, low-ceremony Kotlin — one-line bodies, `when` expression tables, few
-  comments. Comments exist only where a rule is non-obvious (idempotency, atomic arrays,
-  display-only projections). Match the surrounding density instead of expanding it.
+  comments. Comments exist only where a rule is non-obvious (who rolls, what is display-only,
+  why a POST carries an empty body). Match the surrounding density instead of expanding it.
 - Validation is done with `require`/`check` at the boundary, before any network call.
 - Serialization goes through the shared `WireJson` (`prettyPrint`, `ignoreUnknownKeys`);
   unknown server fields are preserved in documents rather than dropped.
-- Typed models (`@Serializable data class`) for read models; raw `JsonObject` only at the admin
+- Typed models (`@Serializable data class`) for read models; raw `JsonObject` only at the
   editor's form boundary and for catalogs whose shape is server-defined.
 - Compose screens are `@Composable fun Screen(s: ForgeState, vm: ForgeViewModel)`; they read
   state and call `vm::action`. Enable/disable controls with `!s.busy` plus the relevant
-  ownership/pending guard, as in `CombatScreen`'s `controls` value.
+  ownership guard, as in `AdminGrantPanel`'s `enabled` value.
 - Theme: dark only, Path of Exile palette in `ui/theme/Theme.kt` (Ink/Abyss/Panel stone,
-  Gold/Bronze frames, PoE rarity colours, cut-corner shapes). Build screens from
-  `ScreenHeader`, `ForgePanel`, `OrnateDivider`, `Engraved`, `StatGlobe` and `PropertyRow`
-  instead of ad-hoc cards, and use `rarityColor` rather than new ad-hoc colors. Game entities are
-  drawn with `ForgeIcon`/`ItemIcon`/`PropertyIcon` from the server set, always with the bundled
-  `ItemEmblem`/`ForgeGlyphs` vector as the fallback; app chrome keeps `ForgeGlyphs`. No raster or
-  network images: the server's SVG is parsed in `:core` and drawn on a Compose `Canvas`.
+  Gold/Bronze frames, rarity colours matching the server enum, cut-corner shapes). Build screens
+  from `ScreenHeader`, `ForgePanel`, `OrnateDivider`, `Engraved`, `StatGlobe` and `PropertyRow`
+  instead of ad-hoc cards, and use `rarityColor` rather than new ad-hoc colors.
 - Commit messages follow Conventional Commits: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`
   (docs-only commits often append `[skip ci]`).
 
 ## Common tasks
 
 **Adding a server route:** add the typed model under `core/model/...`, add one `suspend fun` on
-`GameApi` (reuse the private `request(...)`, pass `authenticated = true`), cover it with a
-MockWebServer test asserting path, bearer header and exact body, then expose it through a
+`GameApi` (reuse the private `request(...)`, pass `authenticated = true` when it needs an account),
+cover it with a MockWebServer test asserting path, query and exact body, then expose it through a
 feature view model + a `ForgeViewModel` delegate.
 
 **Adding a screen:** create `ui/screens/<feature>/`, add the tab index to the `when` in
 `ForgeApp` and to the `destinations`/`icons` maps if it belongs in the bottom bar, and guard
 admin-only tabs in `ForgeRuntime.tab`.
 
-**Adding a durable command:** follow `CombatViewModel.submit` — persist to `ServerStore` under a
-`server:user:character` key before sending, keep the `requestId` stable across retries, clear
-the record only on success or an explicit 4xx rejection, and clear visible state in
-`clearSession`/`characterId` so account and hero switches cannot leak it.
-
 **Adding an editor field:** extend `schemaFields` in `EditorSchema.kt` and, if it is writable,
-`editableFields` in `Contract.kt`; the form UI is generated from the schema.
+`editableFields` (or `creationFields`) in `Contract.kt`; the form UI is generated from the schema.
+
+**Reading the server:** the backend is a separate repository. Clone it and read
+`base/route/BaseRoute.kt` for the shared CRUD shape, then the `*Route.kt` of the feature — the
+route segment is the entity's class name, lower-cased.
 
 ## Docs to keep in sync
 
-`README.md` and `docs/*.md` are Russian, versioned against the server, and referenced by the app.
-When behavior changes, update the matching doc: `docs/API_CONTRACT.md` (routes and payloads),
-`docs/COMBAT.md`, `docs/PASSIVES.md`, `docs/ICONS.md` (the server icon set), `docs/VALIDATION.md`
-(what CI verifies). If the pinned
-server commit or API revision changes, update `SERVER_COMMIT`, `ApiCapabilities.require*`, the
-README header and the `client-server` job's checkout ref together.
-
-**Adding an icon call site:** read the id from the payload (`doc.text("icon")`) or ask `IconSet`, pass
-it to `ForgeIcon`, and give it a bundled fallback — an older server and a cold cache both draw nothing
-otherwise.
+`README.md` and `docs/*.md` are Russian (README is bilingual), versioned against the server, and
+referenced by the app. When behavior changes, update the matching doc: `docs/API_CONTRACT.md`
+(routes and payloads) and `docs/VALIDATION.md` (what CI verifies). If the pinned server commit
+changes, update `SERVER_COMMIT`, `SERVER_BRANCH`, `SERVER_VERSION`, `ApiCapabilities.requireWorkbench`,
+the README header and the `client-server` job's checkout ref together.
 
 `ExileForge-debug.apk` at the repo root is a committed build artifact; CI publishes fresh APKs as
 workflow artifacts. Don't regenerate it as part of ordinary changes.

@@ -20,15 +20,11 @@ import java.io.File
 class DesignPreviewTest {
     @get:Rule val compose = createComposeRule()
     @Test fun cardsDisplayIconsPropertiesAndActions() {
-        fun item(name: String, slot: String, stat: String, value: Int) = buildJsonObject {
-            put("name", name); put("slot", slot); put("rarity", "RARE"); put("itemLevel", 85); put("quality", 20)
-            put("modifiers", buildJsonArray {
-                add(buildJsonObject {
-                    put("definitionId", stat)
-                    put("values", buildJsonArray {
-                        add(buildJsonObject { put("value", value) })
-                    })
-                })
+        // An inventory instance as the hero screen projects it: the template's fields plus its rolls.
+        fun item(name: String, slot: String, modifierId: String, value: Int) = buildJsonObject {
+            put("name", name); put("slot", slot); put("rarity", "RARE"); put("itemLevel", 85)
+            put("params", buildJsonArray {
+                add(buildJsonObject { put("modifierId", modifierId); put("tier", 1); put("values", buildJsonArray { add(value) }) })
             })
         }
         compose.setContent { ForgeTheme {
@@ -36,8 +32,8 @@ class DesignPreviewTest {
                 Text("EXILE FORGE", color = Gold, style = MaterialTheme.typography.labelLarge)
                 Text("Арсенал героя", style = MaterialTheme.typography.headlineLarge)
                 Text("Снаряжение, которое меняет игру", color = Muted)
-                ItemCard(item("Печать изгнанника", "RING", "MaximumLife", 72), selected = true, actionLabel = "Свойства и крафт")
-                ItemCard(item("Поступь пепла", "BOOTS", "FireResistance", 38), actionLabel = "Свойства и крафт")
+                ItemCard(item("Печать изгнанника", "RING", "MaximumLife", 72), selected = true, actionLabel = "Свойства")
+                ItemCard(item("Поступь пепла", "BOOTS", "FireResistance", 38), actionLabel = "Свойства")
             }
         } }
         compose.onNodeWithText("Печать изгнанника").assertIsDisplayed()

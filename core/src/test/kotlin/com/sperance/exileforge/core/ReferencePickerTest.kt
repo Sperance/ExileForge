@@ -5,46 +5,62 @@ import com.sperance.exileforge.core.editor.schemaFields
 import com.sperance.exileforge.core.editor.validateForm
 import com.sperance.exileforge.core.model.EntitySource
 import com.sperance.exileforge.core.network.GameApi
+import kotlin.test.*
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.*
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.Test
-import kotlin.test.*
 
 class ReferencePickerTest {
-    @Test fun `every Mongo relationship has a typed picker`() {
-        val fields = mapOf(
-            "characterEquipment" to mapOf("equipmentId" to EntitySource.EQUIPMENT),
-            "redemption" to mapOf("redemptionCodeId" to EntitySource.REDEMPTION)
-        )
-        fields.forEach { (schema, references) -> references.forEach { (key, source) ->
-            assertEquals(InputSpec.Reference(source), schemaFields(schema).single { it.key == key }.spec)
-        } }
-        assertEquals(setOf("name", "description"), schemaFields("character").map { it.key }.toSet())
+    private val id = "0123456789abcdef01234567"
+
+    private suspend fun signedIn(server: MockWebServer): GameApi {
+        val api = GameApi(server.url("/game/").toString())
+        server.enqueue(MockResponse().setBody("""{"success":true,"data":{"id":"$id","name":"Admin","login":"admin","role":"ADMIN","isActive":true}}"""))
+        api.login("admin", "password"); server.takeRequest()
+        return api
     }
-    @Test fun `reference values retain IDs and reject invalid selections`() {
-        validateForm("characterEquipment", buildJsonObject { put("equipmentId", "0123456789abcdef01234567"); put("uuid", "0123456789abcdef01234567") })
-        assertFailsWith<IllegalArgumentException> { validateForm("characterEquipment", buildJsonObject { put("equipmentId", "Equipment name"); put("uuid", "0123456789abcdef01234567") }) }
+
+    @Test fun `the modifier pool is a typed picker into its own collection`() {
+        val pool = schemaFields("equipment").single { it.key == "modifierIds" }.spec
+        assertEquals(InputSpec.ListOf(InputSpec.Reference(EntitySource.MODIFIER)), pool)
+        assertEquals(setOf("name", "description", "stockSkills", "professionSkills", "battleSkills", "boolSkills"), schemaFields("character").map { it.key }.toSet())
     }
-    @Test fun `each picker uses correct collection and server pagination`() = runBlocking {
+
+    @Test fun `reference values retain identifiers and reject names`() {
+        validateForm("equipment", buildJsonObject { put("modifierIds", buildJsonArray { add(id) }) })
+        assertFailsWith<IllegalArgumentException> { validateForm("equipment", buildJsonObject { put("modifierIds", buildJsonArray { add("Maximum life") }) }) }
+    }
+
+    @Test fun `each picker uses its own collection and the server's pagination`() = runBlocking {
         MockWebServer().use { server ->
-            server.start(); val api = GameApi(server.url("/game/").toString())
-            server.enqueue(MockResponse().setBody("""{"success":true,"data":{"token":"token"}}"""))
-            api.login("user", "password"); server.takeRequest()
+            server.start(); val api = signedIn(server)
             EntitySource.entries.forEach { source ->
-                server.enqueue(MockResponse().setBody("""{"success":true,"data":{"items":[{"_id":"0123456789abcdef01234567","name":"Visible name"}],"page":2,"totalPages":4,"totalItems":180}}"""))
+                server.enqueue(MockResponse().setBody("""{"success":true,"data":{"items":[{"_id":"$id","name":"Visible name"}],"page":2,"pageSize":50,"totalPages":4,"totalItems":180}}"""))
                 val result = api.referencePage(source, 2)
                 assertEquals(2, result.page); assertEquals(4, result.totalPages); assertEquals(180L, result.totalItems)
                 assertEquals("/game/api/v1/${source.path}/paged?page=2&size=50", server.takeRequest().path)
             }
         }
     }
-    @Test fun `invalid page never sends a request`() = runBlocking {
+
+    @Test fun `a search reads the collection the server cannot narrow`() = runBlocking {
         MockWebServer().use { server ->
-            server.start(); val api = GameApi(server.url("/").toString())
+            server.start(); val api = signedIn(server)
+            val records = JsonArray(listOf("Iron Ring", "Coral Ring", "Iron Helm").map { name -> buildJsonObject { put("_id", id); put("name", name) } })
+            server.enqueue(MockResponse().setBody("""{"success":true,"data":$records}"""))
+            val result = api.referencePage(EntitySource.EQUIPMENT, 0, "iron")
+            assertEquals("/game/api/v1/equipment", server.takeRequest().path)
+            assertEquals(2L, result.totalItems)
+        }
+    }
+
+    @Test fun `an invalid page never sends a request`() = runBlocking {
+        MockWebServer().use { server ->
+            server.start(); val api = signedIn(server)
             assertFailsWith<IllegalArgumentException> { api.referencePage(EntitySource.CHARACTER, -1) }
-            assertEquals(0, server.requestCount)
+            assertEquals(1, server.requestCount)
         }
     }
 }

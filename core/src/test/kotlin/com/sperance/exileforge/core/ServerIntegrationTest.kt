@@ -1,16 +1,15 @@
 package com.sperance.exileforge.core
 
 import com.sperance.exileforge.core.contract.*
-import com.sperance.exileforge.core.model.*
-import com.sperance.exileforge.core.model.combat.*
-import com.sperance.exileforge.core.model.passives.*
-import com.sperance.exileforge.core.model.command.*
+import com.sperance.exileforge.core.model.Catalog
+import com.sperance.exileforge.core.model.CatalogFilter
+import com.sperance.exileforge.core.model.command.ItemStack
 import com.sperance.exileforge.core.network.*
+import kotlin.test.*
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.*
-import org.junit.Test
 import org.junit.Assume.assumeTrue
-import kotlin.test.*
+import org.junit.Test
 
 /** Opt-in: CI launches a real backend and MongoDB replica set; no transport mocks. */
 class ServerIntegrationTest {
@@ -18,125 +17,68 @@ class ServerIntegrationTest {
         val url = System.getenv("EF_LIVE_URL")
         assumeTrue("Enabled only by the isolated client/server job", !url.isNullOrBlank())
         val api = GameApi(requireNotNull(url))
-        val capabilities = api.capabilities()
-        capabilities.requireWorkbench()
-        // Icons are public: the whole set, its bindings and a conditional refresh, all before login.
-        assertTrue(capabilities.hasIcons())
-        val manifest = api.icons()
-        assertEquals(capabilities.iconSetVersion, manifest.version)
-        assertEquals(capabilities.iconCount, manifest.icons.size)
-        val sprite = api.iconSprite()
-        val drawings = com.sperance.exileforge.core.display.svg.parseSvgSprite(sprite.svg)
-        assertEquals(manifest.icons.map { it.id }.toSet(), drawings.keys)
-        assertTrue(drawings.values.all { it.art.isNotEmpty() && it.frame.isNotEmpty() })
-        assertTrue(api.iconSprite(sprite.etag).unchanged)
-        val icons = com.sperance.exileforge.core.display.icons.IconSet(manifest, api.iconBindings(), drawings)
-        assertTrue(icons.ready)
-        assertNotNull(icons.drawing(icons.fallback))
-        val plain = assertNotNull(com.sperance.exileforge.core.display.svg.parseSvgIcon(api.iconSvg("ui-unknown", plain = true).svg, "ui-unknown"))
-        assertTrue(plain.frame.isEmpty() && plain.art.isNotEmpty())
-        assertEquals(404, assertFailsWith<ApiFailure> { api.iconSvg("no-such-icon") }.status)
-        api.login("admin", requireNotNull(System.getenv("EF_ADMIN_PASSWORD")))
-        assertEquals("ADMIN", api.currentUser().role)
+        api.capabilities().requireWorkbench()
+        val admin = api.login("admin", requireNotNull(System.getenv("EF_ADMIN_PASSWORD")))
+        assertEquals("ADMIN", admin.role)
+        assertEquals(admin.id, assertNotNull(api.currentUser()).id)
+
+        // The seeded modifier catalogue is what every rolled value on an instance points back at.
+        val definitions = api.modifierDefinitions()
+        assertTrue(definitions.isNotEmpty())
+        assertTrue(definitions.any { it.composite })
+        val tiers = api.modifierTiers(definitions.first { it.effects.isNotEmpty() }.id)
+        assertTrue(tiers.isNotEmpty() && tiers.all { it.values.isNotEmpty() })
+
         val name = "EF-integration-${java.util.UUID.randomUUID()}"
-        val character = api.create(Catalog.CHARACTERS, buildJsonObject { put("name", name); put("description", "Integration fixture") })
+        val character = api.create(Catalog.CHARACTERS, buildJsonObject { put("userId", admin.id); put("name", name); put("description", "Integration fixture") })
         val id = character.entityId
-        assertEquals(name, api.character(id).name)
-        assertEquals(1, api.search(Catalog.CHARACTERS, 0, CatalogFilter(query = name)).items.size)
-        val ring = api.search(Catalog.EQUIPMENT, 0, CatalogFilter(query = "Coral Ring", slot = "RING")).items.single()
-        // Every entity the server ships resolves to a drawing the client already holds.
-        assertNotNull(icons.drawing(icons.forDocument(ring)))
-        assertEquals(ring.text("icon"), icons.forDocument(ring))
-        val initial = api.grant(id, GrantEquipmentCommand(0, ring.entityId))
-        val instance = initial.inventory.items.single()
-        val preview = api.compareEquipment(id, EquipCommand(initial.characterVersion, instance.uuid, EquipmentSlot.RING_LEFT))
-        assertTrue(preview.allowed)
-        assertTrue(requireNotNull(preview.after).values.getValue("maximum_life") > preview.before.values.getValue("maximum_life"))
-        assertEquals(initial, api.equipment(id))
-        assertFalse(api.compareEquipment(id, EquipCommand(initial.characterVersion, instance.uuid, EquipmentSlot.HELMET)).allowed)
-        val equipped = api.equip(id, EquipCommand(initial.characterVersion, instance.uuid, EquipmentSlot.RING_LEFT))
-        assertEquals(preview.after!!.values, equipped.stats.values)
-        assertEquals(409, assertFailsWith<ApiFailure> { api.unequip(id, UnequipCommand(initial.characterVersion, EquipmentSlot.RING_LEFT)) }.status)
-        val currency = api.currencies().single { it.text("id") == "TRANSMUTATION" }
-        val funded = api.adjustItems(id, AdjustItemsCommand(equipped.characterVersion, listOf(ItemStack(currency.text("itemId"), 2))))
-        assertTrue(api.craftOptions(id, instance.uuid).options.single { it.currency == "TRANSMUTATION" }.available)
-        val request = buildJsonObject { put("requestId", java.util.UUID.randomUUID().toString()); put("expectedVersion", funded.characterVersion); put("equipmentUuid", instance.uuid); put("currency", "TRANSMUTATION") }
-        val result = api.mutateInventory(id, "craft", request)
-        assertEquals(result, api.mutateInventory(id, "craft", request))
-        val crafted = api.equipment(id)
-        assertEquals("MAGIC", crafted.inventory.items.single().poe?.rarity)
-        // No stacks: the leftover orb is a single unit document the server counted.
-        assertEquals(1L, api.itemTotals(id).getValue(currency.text("itemId")))
-        assertEquals(1L, api.items(id).total)
-        assertFalse(api.craftOptions(id, instance.uuid).options.single { it.currency == "TRANSMUTATION" }.available)
-        val player = GameApi(url)
-        player.login(requireNotNull(System.getenv("EF_PLAYER_LOGIN")), requireNotNull(System.getenv("EF_PLAYER_PASSWORD")))
-        assertEquals("USER", player.currentUser().role)
-        assertNull(player.get(Catalog.CHARACTERS, id))
-        val own = player.create(Catalog.CHARACTERS, buildJsonObject { put("name", "Player-$name") })
-        assertEquals(setOf(own.entityId), player.page(Catalog.CHARACTERS, 0).items.map { it.entityId }.toSet())
-        assertEquals(403, assertFailsWith<ApiFailure> { player.grant(own.entityId, GrantEquipmentCommand(0, ring.entityId)) }.status)
-        val zones = player.combatCatalog().zones
-        assertEquals(3, zones.size)
-        assertTrue(zones.all { zone -> zone.icon != null && (zone.monsters + zone.boss).all { icons.drawing(icons.forMonster(it)) != null } })
-        assertEquals(404, assertFailsWith<ApiFailure> { player.battle(id) }.status)
-        val start = StartBattleCommand(own.entityVersion, java.util.UUID.randomUUID().toString(), "coast")
-        var combat = player.startBattle(own.entityId, start)
-        assertEquals(combat, player.startBattle(own.entityId, start))
-        assertEquals(player.equipment(own.entityId).stats.values.getValue("maximum_life"), combat.battle!!.hero.maxLife)
-        while(combat.battle!!.status == BattleStatus.ACTIVE) {
-            val b = combat.battle!!
-            val action = if(b.hero.life < b.hero.maxLife * .65 && b.potions > 0) BattleAction.POTION
-                else if(b.hero.mana >= 8) BattleAction.POWER else BattleAction.ATTACK
-            val turn = BattleActionCommand(combat.characterVersion, java.util.UUID.randomUUID().toString(), b.id, action)
-            combat = player.actBattle(own.entityId, turn)
-            assertEquals(combat, player.actBattle(own.entityId, turn))
-            assertEquals(409, assertFailsWith<ApiFailure> {
-                player.actBattle(own.entityId, turn.copy(requestId = java.util.UUID.randomUUID().toString()))
-            }.status)
-        }
-        assertEquals(BattleStatus.VICTORY, combat.battle!!.status)
-        assertTrue(combat.battle!!.rewards.any { it.name == "Опыт" && it.amount > 0 })
-        assertTrue(player.character(own.entityId).experience > 0)
-        assertEquals(combat, player.battle(own.entityId))
-        // Earn the first level through actual gameplay, not a privileged stat mutation.
-        repeat(3) { index ->
-            combat = player.startBattle(own.entityId, StartBattleCommand(combat.characterVersion, java.util.UUID.randomUUID().toString(), "coast", index == 2))
-            while(combat.battle!!.status == BattleStatus.ACTIVE) {
-                val b = combat.battle!!
-                val action = if(b.hero.life < b.hero.maxLife * .65 && b.potions > 0) BattleAction.POTION
-                    else if(b.hero.mana >= 8) BattleAction.POWER else BattleAction.ATTACK
-                combat = player.actBattle(own.entityId, BattleActionCommand(combat.characterVersion, java.util.UUID.randomUUID().toString(), b.id, action))
+        try {
+            assertEquals(name, api.character(id).name)
+            assertEquals(1, api.search(Catalog.CHARACTERS, 0, CatalogFilter(query = name)).items.size)
+            assertTrue(api.inventory(id).isEmpty())
+
+            // A random grant of a chosen rarity and category: the client names a base, the server rolls it.
+            val template = api.randomTemplate("RARE", "HELMET")
+            assertEquals("HELMET", template.text("slot"))
+            assertEquals("RARE", template.text("rarity"))
+            val instance = api.grant(id, template.entityId)
+            assertEquals(template.entityId, instance.equipmentId)
+            assertTrue(instance.params.isNotEmpty(), "the server rolled no modifiers")
+            assertTrue(instance.params.all { it.modifierId in definitions.map { definition -> definition.id } })
+            // One value per effect of the description: a composite modifier rolls all of them at once.
+            instance.params.forEach { rolled ->
+                val definition = definitions.single { it.id == rolled.modifierId }
+                assertEquals(definition.effects.size, rolled.values.size)
             }
-            assertEquals(BattleStatus.VICTORY, combat.battle!!.status)
+            assertFalse(instance.equipped)
+
+            val worn = api.equip(id, instance.id)
+            assertEquals("HELMET", worn.equippedSlot)
+            assertEquals(listOf(instance.id), api.inventory(id).filter { it.equipped }.map { it.id })
+            // Wearing the item is what changes the character sheet; the client recomputes nothing.
+            val stats = api.stats(id)
+            assertTrue(stats.isNotEmpty())
+            assertEquals(stats, api.stats(id))
+            assertFalse(api.unequip(id, instance.id).equipped)
+
+            val item = api.referencePage(com.sperance.exileforge.core.model.EntitySource.ITEM, 0).items.first()
+            assertEquals("Success", api.adjustItems(id, listOf(ItemStack(item.entityId, 5))))
+            assertEquals(5L, api.bag(id).single { it.itemId == item.entityId }.amount)
+            assertEquals("Success", api.adjustItems(id, listOf(ItemStack(item.entityId, -5))))
+            assertTrue(api.bag(id).none { it.itemId == item.entityId })
+
+            // A template is editable; an instance's rolls are not reachable from the catalogue at all.
+            val edited = api.update(Catalog.EQUIPMENT, template.entityId, buildJsonObject { put("description", "Integration description") })
+            assertEquals("Integration description", edited.text("description"))
+            assertTrue(edited.entityVersion > template.entityVersion)
+            assertFailsWith<IllegalArgumentException> { api.update(Catalog.EQUIPMENT, template.entityId, buildJsonObject { put("params", JsonArray(emptyList())) }) }
+
+            val player = GameApi(url)
+            player.login(requireNotNull(System.getenv("EF_PLAYER_LOGIN")), requireNotNull(System.getenv("EF_PLAYER_PASSWORD")))
+            assertEquals("USER", assertNotNull(player.currentUser()).role)
+        } finally {
+            api.delete(Catalog.CHARACTERS, id)
+            assertNull(api.get(Catalog.CHARACTERS, id))
         }
-        assertTrue(player.capabilities().passiveTree)
-        val nodes = player.passiveTree().nodes
-        assertEquals(115, nodes.size)
-        assertTrue(nodes.all { it.icon != null && icons.drawing(icons.forNode(it)) != null })
-        assertEquals(404, assertFailsWith<ApiFailure> { player.passiveState(id) }.status)
-        var skills = player.passiveState(own.entityId)
-        assertTrue(skills.availablePoints >= 1)
-        val beforeLife = skills.stats.values.getValue("maximum_life")
-        val allocate = PassiveCommand(skills.characterVersion, skills.treeRevision, java.util.UUID.randomUUID().toString(), PassiveAction.ALLOCATE, "origin")
-        skills = player.changePassives(own.entityId, allocate)
-        assertEquals(beforeLife + 5, skills.stats.values.getValue("maximum_life"))
-        assertEquals(skills, player.changePassives(own.entityId, allocate))
-        assertEquals(skills, player.passiveState(own.entityId))
-        assertEquals(409, assertFailsWith<ApiFailure> { player.changePassives(own.entityId, allocate.copy(requestId = java.util.UUID.randomUUID().toString())) }.status)
-        assertTrue(api.passiveState(id).allocated.isEmpty())
-        assertEquals(skills.stats, player.equipment(own.entityId).stats)
-        combat = player.startBattle(own.entityId, StartBattleCommand(skills.characterVersion, java.util.UUID.randomUUID().toString(), "coast"))
-        assertEquals(skills.stats.values.getValue("maximum_life"), combat.battle!!.hero.maxLife)
-        val locked = player.passiveState(own.entityId)
-        assertNotNull(locked.lockedReason)
-        assertEquals(400, assertFailsWith<ApiFailure> { player.changePassives(own.entityId, PassiveCommand(locked.characterVersion, locked.treeRevision, java.util.UUID.randomUUID().toString(), PassiveAction.RESET)) }.status)
-        combat = player.actBattle(own.entityId, BattleActionCommand(combat.characterVersion, java.util.UUID.randomUUID().toString(), combat.battle!!.id, BattleAction.FLEE))
-        skills = player.changePassives(own.entityId, PassiveCommand(combat.characterVersion, skills.treeRevision, java.util.UUID.randomUUID().toString(), PassiveAction.RESET))
-        assertTrue(skills.allocated.isEmpty())
-        assertEquals(beforeLife, skills.stats.values.getValue("maximum_life"))
-        player.delete(Catalog.CHARACTERS, own.entityId, skills.characterVersion)
-        api.delete(Catalog.CHARACTERS, id, crafted.characterVersion)
-        assertNull(api.get(Catalog.CHARACTERS, id))
     }
 }

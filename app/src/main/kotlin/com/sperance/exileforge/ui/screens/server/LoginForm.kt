@@ -27,8 +27,8 @@ import kotlinx.serialization.json.*
         TextButton(onClick = { change = !change; oldPassword = ""; newPassword = "" }) { Text(tr("Изменить пароль", "Change password")) }
         if(change) {
             OutlinedTextField(oldPassword, { oldPassword = it }, label = { Text(tr("Текущий пароль", "Current password")) }, visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(newPassword, { newPassword = it }, label = { Text(tr("Новый пароль, 12–128 символов", "New password, 12–128 characters")) }, visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth())
-            Button(enabled = !s.busy && oldPassword.isNotEmpty() && newPassword.length in 12..128, onClick = { vm.changePassword(oldPassword, newPassword); oldPassword = ""; newPassword = ""; change = false }) { Text(tr("Сменить пароль", "Change password")) }
+            OutlinedTextField(newPassword, { newPassword = it }, label = { Text(tr("Новый пароль, 6–64 символа, цифра и заглавная", "New password, 6–64 characters, a digit and a capital")) }, visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth())
+            Button(enabled = !s.busy && oldPassword.isNotEmpty() && newPassword.length in 6..64, onClick = { vm.changePassword(oldPassword, newPassword); oldPassword = ""; newPassword = ""; change = false }) { Text(tr("Сменить пароль", "Change password")) }
         }
         OutlinedButton(enabled = !s.busy, onClick = vm::logout) { Text(tr("Выйти", "Sign out")) }
     } else {

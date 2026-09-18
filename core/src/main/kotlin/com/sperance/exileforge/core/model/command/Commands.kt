@@ -1,66 +1,69 @@
 package com.sperance.exileforge.core.model.command
 
-import com.sperance.exileforge.core.i18n.Lang
-import com.sperance.exileforge.core.i18n.pick
 import com.sperance.exileforge.core.i18n.tr
-import com.sperance.exileforge.core.i18n.uiLanguage
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonObject
 
 /** Server page bounds; the client never asks for a page the server would reject. */
-const val INVENTORY_PAGE_SIZE = 50
-const val MAX_INVENTORY_PAGE_SIZE = 200
-const val MAX_ITEM_UNITS = 10_000L
+const val CATALOG_PAGE_SIZE = 20
+const val REFERENCE_PAGE_SIZE = 50
+const val MAX_ITEM_AMOUNT = 100_000_000_000L
 
-@Serializable data class UpdateCommand(val expectedVersion: Long, val changes: JsonObject)
-@Serializable data class DeleteCommand(val expectedVersion: Long)
-@Serializable data class CreateCharacterCommand(val name: String, val description: String = "")
-@Serializable data class EquipCommand(val expectedVersion: Long, val equipmentUuid: String, val slot: EquipmentSlot)
-@Serializable data class UnequipCommand(val expectedVersion: Long, val slot: EquipmentSlot)
-@Serializable data class GrantEquipmentCommand(val expectedVersion: Long, val equipmentId: String)
-@Serializable data class ItemStack(val itemId: String, val amount: Long)
-/** Units are documents, not a stack counter: one command creates or destroys at most [MAX_ITEM_UNITS] of them. */
-@Serializable data class AdjustItemsCommand(val expectedVersion: Long, val items: List<ItemStack>) {
+@Serializable data class CreateCharacterCommand(val userId: String, val name: String, val description: String = "")
+
+/** One bag change. A negative amount removes units; the server refuses to go below zero. */
+@Serializable data class ItemStack(val itemId: String, val amount: Long) {
     init {
-        require(items.isNotEmpty() && items.none { it.amount == 0L }) { tr("Укажите ненулевое количество", "Enter a non-zero amount") }
-        require(items.sumOf { kotlin.math.abs(it.amount) } <= MAX_ITEM_UNITS) { tr("За одну команду — не больше $MAX_ITEM_UNITS единиц", "One command handles at most $MAX_ITEM_UNITS units") }
+        require(amount != 0L) { tr("Укажите ненулевое количество", "Enter a non-zero amount") }
+        require(kotlin.math.abs(amount) <= MAX_ITEM_AMOUNT) { tr("Не больше $MAX_ITEM_AMOUNT единиц за раз", "At most $MAX_ITEM_AMOUNT units at a time") }
     }
 }
-@Serializable data class RedeemCommand(val expectedVersion: Long, val code: String)
-@Serializable data class UseRecipeCommand(val expectedVersion: Long, val recipeId: String, val recipeVersion: Long, val ingredientIds: List<String>, val amount: Long = 1)
-@Serializable data class ChangePasswordCommand(val expectedVersion: Long, val currentPassword: String, val newPassword: String)
-@Serializable enum class EquipmentSlot(private val ru: String, private val en: String) {
-    HELMET("Шлем", "Helmet"), BODY("Броня", "Body armour"), GLOVES("Перчатки", "Gloves"), BOOTS("Сапоги", "Boots"),
-    BELT("Пояс", "Belt"), AMULET("Амулет", "Amulet"), RING_LEFT("Левое кольцо", "Left ring"), RING_RIGHT("Правое кольцо", "Right ring"),
-    MAIN_HAND("Основная рука", "Main hand"), OFF_HAND("Вторая рука", "Off hand"), WINGS("Крылья", "Wings");
-    fun title(lang: Lang = uiLanguage) = lang.pick(ru, en)
-    companion object {
-        fun forItem(slot: String): List<EquipmentSlot> = when (slot) {
-            "RING" -> listOf(RING_LEFT, RING_RIGHT)
-            "WEAPON_1H" -> listOf(MAIN_HAND, OFF_HAND)
-            "WEAPON_2H" -> listOf(MAIN_HAND)
-            "SHIELD", "QUIVER" -> listOf(OFF_HAND)
-            else -> entries.filter { it.name == slot }
+
+/** Body of `POST /api/v1/recipe/useRecipe`. The field name is the server's, typo included. */
+@Serializable data class UseRecipeCommand(val ingridientsId: List<String>, val amount: Long = 1) {
+    init { require(amount in 1..100) { tr("Число применений — от 1 до 100", "The number of uses must be between 1 and 100") } }
+}
+
+/** The signed-in account. This server has no token: the login response is the whole session. */
+@Serializable data class UserProfile(
+    val id: String,
+    val version: Long = 0,
+    val name: String = "",
+    val login: String = "",
+    val email: String = "",
+    val role: String = "USER",
+    val isActive: Boolean = true,
+    val countCharacters: Int = 0,
+)
+
+/** One entry of `GET /system/routes`: how the client learns what this server can do. */
+@Serializable data class RouteInfo(val path: String, val method: String)
+
+/**
+ * What the connected server supports, read from its own route table rather than guessed.
+ *
+ * The server publishes every registered route, so a missing feature is a missing path and the
+ * client can say which one instead of failing later inside a screen.
+ */
+data class ApiCapabilities(val routes: Set<String>) {
+    fun has(method: String, path: String) = "$method $path" in routes
+    /** Everything the catalogue, editor and hero screens call. Missing any of it means a stale server. */
+    fun requireWorkbench() {
+        val required = listOf(
+            "GET" to "/api/v1/user/login",
+            "GET" to "/api/v1/equipment/paged",
+            "GET" to "/api/v1/character/inventory/equipments",
+            "GET" to "/api/v1/character/inventory/stats",
+            "POST" to "/api/v1/character/inventory/itemToInventory",
+            "POST" to "/api/v1/characterequipment/equip",
+            "GET" to "/api/v1/modifierdefinition",
+        )
+        val missing = required.filterNot { (method, path) -> has(method, path) }
+        require(missing.isEmpty()) {
+            tr("Сервер не поддерживает ${missing.joinToString { "${it.first} ${it.second}" }}. Обновите ktor-bestgame.",
+               "The server does not serve ${missing.joinToString { "${it.first} ${it.second}" }}. Update ktor-bestgame.")
         }
     }
-}
-@Serializable data class WeaponStats(val minimumPhysical: Double, val maximumPhysical: Double, val attacksPerSecond: Double,
-    val criticalChance: Double, val accuracy: Double, val averageHit: Double, val dps: Double)
-@Serializable data class CalculatedStats(val version: Long, val values: Map<String, Double>, val weapons: Map<EquipmentSlot, WeaponStats> = emptyMap(), val unsupported: List<String> = emptyList())
-/** Cursor page: [next] goes back as the `after` parameter, `null` means the list ended. */
-@Serializable data class InventoryPage(val items: List<com.sperance.exileforge.core.model.hero.EquipmentInstance> = emptyList(), val size: Int = 0, val total: Long = 0, val next: String? = null)
-/** One owned unit. There is no `amount`: the server stores a thousand orbs as a thousand records. */
-@Serializable data class OwnedItem(val id: String, val itemId: String)
-@Serializable data class OwnedItemsPage(val items: List<OwnedItem> = emptyList(), val size: Int = 0, val total: Long = 0, val next: String? = null)
-/** The inventory is unbounded, so it arrives one page at a time; equipped items always come in full. */
-@Serializable data class EquipmentView(val characterVersion: Long, val equipped: Map<EquipmentSlot, String>,
-    val equippedItems: List<com.sperance.exileforge.core.model.hero.EquipmentInstance> = emptyList(),
-    val inventory: InventoryPage = InventoryPage(), val items: OwnedItemsPage = OwnedItemsPage(), val stats: CalculatedStats)
-@Serializable data class UserProfile(val id: String, val version: Long, val name: String, val login: String, val role: String, val countCharacters: Int = 0)
-@Serializable data class ApiCapabilities(val apiRevision: Int = 0, val versionedCrud: Boolean = false, val characterCommands: Boolean = false, val profile: String = "", val equipmentComparison: Boolean = false, val catalogSearch: Boolean = false, val craftOptions: Boolean = false, val combat: Boolean = false, val passiveTree: Boolean = false,
-    val icons: Boolean = false, val iconSet: String = "", val iconSetRevision: Int = 0, val iconSetVersion: String = "", val iconCount: Int = 0, val iconsEndpoint: String = "") {
-    fun requireWorkbench() { requireCompatible(); require(apiRevision >= 3 && equipmentComparison && catalogSearch && craftOptions) { tr("Обновите сервер до API revision 3 (0.10.0)", "Update the server to API revision 3 (0.10.0)") } }
-    fun requireCompatible() { require(apiRevision >= 2 && versionedCrud && characterCommands) { tr("Нужен ktor-bestgame 0.9.0 с командами персонажа и контролем версий", "ktor-bestgame 0.9.0 with character commands and version control is required") } }
-    /** Icons are additive: an older server simply leaves the client on its bundled emblems. */
-    fun hasIcons() = icons && apiRevision >= 4 && iconSetVersion.isNotBlank()
+    companion object {
+        fun of(routes: List<RouteInfo>) = ApiCapabilities(routes.mapTo(mutableSetOf()) { "${it.method.uppercase()} ${it.path}" })
+    }
 }

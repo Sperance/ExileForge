@@ -1,24 +1,23 @@
 package com.sperance.exileforge.presentation
 
-import com.sperance.exileforge.core.model.command.*
-import com.sperance.exileforge.presentation.state.AppMode
-import com.sperance.exileforge.core.network.FailureState
-import com.sperance.exileforge.core.contract.WireJson
-import com.sperance.exileforge.core.contract.referenceKey
-import com.sperance.exileforge.core.contract.text
+import com.sperance.exileforge.core.i18n.Lang
+import com.sperance.exileforge.core.i18n.tr
+import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.model.EntitySource
 import com.sperance.exileforge.core.network.ApiFailure
+import com.sperance.exileforge.core.network.FailureState
 import com.sperance.exileforge.core.network.GameApi
 import com.sperance.exileforge.core.network.RequestJournal
 import com.sperance.exileforge.data.settings.ServerStore
+import com.sperance.exileforge.presentation.features.*
+import com.sperance.exileforge.presentation.state.AppMode
 import com.sperance.exileforge.presentation.state.ForgeState
-import com.sperance.exileforge.presentation.state.PendingInventoryAction
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.Job
-import com.sperance.exileforge.core.i18n.tr
-import kotlinx.serialization.json.*
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
 
 class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
     val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Main.immediate)
@@ -27,41 +26,32 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
     val logs = journal.entries
     lateinit var api: GameApi
     var metadataJob: Job? = null
-    var iconJob: Job? = null
-    val catalogViewModel = com.sperance.exileforge.presentation.features.CatalogViewModel(this)
-    val editorViewModel = com.sperance.exileforge.presentation.features.EditorViewModel(this)
-    val heroViewModel = com.sperance.exileforge.presentation.features.HeroViewModel(this)
-    val sessionViewModel = com.sperance.exileforge.presentation.features.SessionViewModel(this)
-    val passiveViewModel = com.sperance.exileforge.presentation.features.PassiveViewModel(this)
-    val combatViewModel = com.sperance.exileforge.presentation.features.CombatViewModel(this)
-    val checksViewModel = com.sperance.exileforge.presentation.features.ChecksViewModel(this)
-    val iconViewModel = com.sperance.exileforge.presentation.features.IconViewModel(this)
+    val catalogViewModel = CatalogViewModel(this)
+    val editorViewModel = EditorViewModel(this)
+    val heroViewModel = HeroViewModel(this)
+    val sessionViewModel = SessionViewModel(this)
+    val checksViewModel = ChecksViewModel(this)
+
     fun newApi(server: String): GameApi {
         lateinit var created: GameApi
         created = GameApi(server, journal, onUnauthorized = {
-            if(::api.isInitialized && api === created) {
+            if (::api.isInitialized && api === created) {
                 clearSession()
                 mutable.update { it.copy(message = tr("Сессия истекла. Войдите снова.", "The session has expired. Sign in again.")) }
             }
         })
         return created
     }
+
     init {
         scope.launch {
             try {
                 val language = store.language.first()
-                com.sperance.exileforge.core.i18n.uiLanguage = language
-                mutable.update { it.copy(lang = language) }
+                uiLanguage = language
                 val server = store.server.first()
                 api = newApi(server)
-                val restored = store.pending.first()?.let { raw ->
-                    val saved = WireJson.parseToJsonElement(raw).jsonObject
-                    PendingInventoryAction(saved.text("characterId"), saved.text("operation"), saved.getValue("payload").jsonObject)
-                }
-                mutable.update { it.copy(pending = restored, characterId = restored?.characterId.orEmpty()) }
-                mutable.update { it.copy(server = server, serverDraft = server, busy = false) }
-                mutable.update { it.copy(message = tr("Войдите в аккаунт для загрузки каталога", "Sign in to load the catalogue")) }
-                iconViewModel.load()
+                mutable.update { it.copy(lang = language, server = server, serverDraft = server, busy = false,
+                    message = tr("Войдите в аккаунт для загрузки каталога", "Sign in to load the catalogue")) }
             } catch (e: CancellationException) { throw e }
             catch (e: Exception) {
                 api = newApi("http://10.0.2.2:8080/")
@@ -69,17 +59,30 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
             }
         }
     }
+
     /** Language is global: core validation messages and Compose both read it, so switch them together. */
-    fun language(lang: com.sperance.exileforge.core.i18n.Lang) {
-        if(state.value.lang == lang) return
+    fun language(lang: Lang) {
+        if (state.value.lang == lang) return
         val untested = tr("Соединение ещё не проверено", "The connection has not been checked yet")
-        com.sperance.exileforge.core.i18n.uiLanguage = lang
-        mutable.update { it.copy(lang = lang, health = if(it.health == untested) tr("Соединение ещё не проверено", "The connection has not been checked yet") else it.health) }
+        uiLanguage = lang
+        mutable.update { it.copy(lang = lang, health = if (it.health == untested) tr("Соединение ещё не проверено", "The connection has not been checked yet") else it.health) }
         scope.launch { store.saveLanguage(lang) }
     }
-    fun tab(tab: Int) { if(!state.value.adminTools && tab == 2) return; mutable.update { it.copy(tab = tab) } }
+
+    /** The Checks tab runs writes against the server; it belongs to an administrator alone. */
+    fun tab(tab: Int) { if (!state.value.adminTools && tab == 2) return; mutable.update { it.copy(tab = tab) } }
     suspend fun referencePage(source: EntitySource, page: Int, query: String) = api.referencePage(source, page, query)
+    /** The recipe form reads one document directly; it is never edited, only spent. */
+    suspend fun recipeDocument(id: String): JsonObject =
+        com.sperance.exileforge.core.contract.WireJson.encodeToJsonElement(com.sperance.exileforge.core.model.hero.RecipeDocument.serializer(), api.recipe(id)).jsonObject
     fun dismissMessage() { mutable.update { it.copy(message = null) } }
+
+    /**
+     * The standard action wrapper: one server call at a time, failures mapped to a message.
+     *
+     * [writing] marks a mutation, so an IO error or a 5xx becomes [FailureState.UncertainWrite]
+     * instead of "offline": the write may have landed and only a refresh can tell.
+     */
     fun task(writing: Boolean = false, block: suspend () -> Unit) {
         if (state.value.busy) return
         mutable.update { it.copy(busy = true, message = null, error = false, failure = null) }
@@ -87,37 +90,40 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
             try { block() }
             catch (e: CancellationException) { throw e }
             catch (e: Exception) {
-                if(e is ApiFailure && e.status == 409) mutable.update { it.copy(conflict = true, inventoryVersion = null) }
                 val problem = FailureState.from(e, writing)
-                mutable.update { it.copy(failure = problem) }
-                val prefix = if(e is ApiFailure && e.status == 409) tr("Запись изменена. Черновик сохранён; обновите данные и проверьте изменения. ", "The record changed. Your draft is kept; refresh the data and review the changes. ") else if (e is ApiFailure) "HTTP ${e.status ?: "—"} ${e.code.orEmpty()}: " else ""
-                mutable.update { it.copy(error = true, message = if(problem == FailureState.UncertainWrite) tr("Ответ потерян. Запись могла сохраниться: обновите данные перед повтором.", "The response was lost. The write may have been applied: refresh before retrying.") else if(problem == FailureState.Offline) tr("Нет соединения. Проверьте сеть и повторите загрузку.", "No connection. Check the network and load again.") else prefix + (e.message ?: tr("Ошибка запроса", "Request failed"))) }
+                val prefix = if (e is ApiFailure) "HTTP ${e.status ?: "—"} ${e.code.orEmpty()}: " else ""
+                mutable.update { it.copy(failure = problem, error = true, message = when (problem) {
+                    FailureState.UncertainWrite -> tr("Ответ потерян. Запись могла сохраниться: обновите данные перед повтором.", "The response was lost. The write may have been applied: refresh before retrying.")
+                    FailureState.Offline -> tr("Нет соединения. Проверьте сеть и повторите загрузку.", "No connection. Check the network and load again.")
+                    else -> prefix + (e.message ?: tr("Ошибка запроса", "Request failed"))
+                }) }
             } finally { mutable.update { it.copy(busy = false) } }
         }
     }
+
     suspend fun loadPage(page: Int) {
         val result = api.search(state.value.catalog, page, state.value.filter.copy(query = state.value.query))
         mutable.update { it.copy(items = result.items, page = result.page, total = result.totalItems, totalPages = result.totalPages) }
     }
+
     fun setEditor(document: JsonObject, original: JsonObject?) {
-        mutable.update { it.copy(conflict = false, mergeReview = null, mergeRemote = null, original = original, editorOpen = true, draft = document, tab = 1,
-            definitions = it.definitions) }
+        mutable.update { it.copy(original = original, editorOpen = true, draft = document, tab = 1) }
     }
-    suspend fun pinnedDefinitions(document: JsonObject): List<JsonObject> {
-        val refs = listOf("modifierDefinitionRefs", "stockModifierDefinitionRefs").flatMap { (document[it] as? JsonArray).orEmpty() }.map { it.jsonObject }
-        val rolls = listOf("modifiers", "params").flatMap { (document[it] as? JsonArray).orEmpty() }.map { raw ->
-            val mod = raw.jsonObject
-            buildJsonObject { put("definitionId", mod.text("definitionId")); put("revision", mod.text("definitionRevision").toIntOrNull() ?: 1) }
-        }
-        return (refs + rolls).distinctBy { referenceKey(it) }.map { api.definition(it.text("definitionId"), it.text("revision").toIntOrNull() ?: 1) }
+
+    /** The modifier catalogue is small and shared; one read per session names every rolled value. */
+    suspend fun ensureDefinitions() {
+        if (state.value.definitions.isNotEmpty()) return
+        mutable.update { it.copy(definitions = api.modifierDefinitions()) }
     }
+
     fun clearSession() {
         metadataJob?.cancel(); api.logout(); journal.clear()
-        mutable.update { it.copy(passiveTree = null, passiveState = null, passivePending = null, passiveCharacterId = "", combatCatalog = null, battleView = null, battlePending = null, battleCharacterId = "", battleAction = null, signedIn = false, profile = null, sessionEpoch = it.sessionEpoch + 1, items = emptyList(), total = 0, page = 0, totalPages = 0,
-            original = null, draft = JsonObject(emptyMap()), editorOpen = false, inventory = emptyList(), inventoryVersion = null, inventoryNext = null, inventoryTotal = 0, itemTotals = emptyMap(), equipmentView = null,
-            inventoryBases = emptyMap(), inventoryDefinitions = emptyList(), characterOwner = "", characterId = it.pending?.characterId.orEmpty(),
-            selectedEquipment = "", selectedCurrency = "", currencies = emptyList(), checks = emptyList(), tab = 3, conflict = false, mode = AppMode.PLAYER, hero = null, comparison = null, craftOptions = null, craftBefore = null, craftAfter = null, mergeReview = null, mergeRemote = null, failure = null) }
+        mutable.update { it.copy(signedIn = false, profile = null, sessionEpoch = it.sessionEpoch + 1,
+            items = emptyList(), total = 0, page = 0, totalPages = 0, definitions = emptyList(),
+            original = null, draft = JsonObject(emptyMap()), editorOpen = false,
+            characterId = "", characterOwner = "", hero = null, inventoryBases = emptyMap(), selectedEquipment = "",
+            checks = emptyList(), tab = 3, mode = AppMode.PLAYER, failure = null) }
     }
-    suspend fun recipe(id: String) = api.recipe(id).document()
-    fun close() { scope.coroutineContext[kotlinx.coroutines.Job]?.cancel() }
+
+    fun close() { scope.coroutineContext[Job]?.cancel() }
 }

@@ -1,8 +1,7 @@
-# ExileForge 1.11.0
+# ExileForge 2.0.0
 
-Android Compose client for **ktor-bestgame 0.13.0**, API revision 4.
-Server: `master`, commit `5d4015ad138088142902d822a8d67580424be404`.
-Client development branch: `master`.
+Android Compose client for **ktor-bestgame 0.9.0**.
+Server: branch `claude/tender-pasteur-a36kj2`, commit `e8e9ae824dda7484622462da892c636c6369be6b`.
 
 ## Язык интерфейса · Interface language
 
@@ -12,43 +11,41 @@ Every label, hint, error and contract-validation message exists in Russian and E
 
 ## Оформление
 
-Тёмная тема в духе Path of Exile: чернёный камень, бронзовые рамки с косыми углами, гравированные заголовки с ромбовидным разделителем, рамки предметов в цветах редкости PoE (обычный, магический, редкий, уникальный) и сферы здоровья, маны и щита. Собственный набор векторных глифов (наковальня, скрещённые клинки, сфера, самоцвет, флакон, шлем, щит, тайник, свиток, портал, созвездие, череп, сигил, изгнанник, атлас, том, факел, весы, цепь, знамя) остаётся для элементов самого приложения.
+Тёмная тема в духе Path of Exile: чернёный камень, бронзовые рамки с косыми углами, гравированные заголовки с ромбовидным разделителем, рамки предметов в цветах редкости и сферы здоровья, маны и щита. Картинки игровых сущностей рисует сам клиент: набор векторных эмблем покрывает оружие, броню, украшения и расходники, а глифы приложения — навигацию и свойства. Растровых и сетевых изображений нет.
 
-## Иконки предметов и сущностей
+## Экраны
 
-Картинки игровых сущностей теперь рисует сервер: набор `forge-vector` приходит одним спрайтом и покрывает оружие, броню, украшения, сферы, характеристики, аффиксы, редкости, узлы дерева и бой. Клиент разбирает SVG сам и рисует его на Canvas — растровых и сетевых изображений по-прежнему нет. Набор кэшируется по `iconSetVersion`, обновляется условным запросом и полностью необязателен: сервер без набора оставляет приложение на встроенных эмблемах. [Подробности](docs/ICONS.md).
+- **Персонажи / Каталог** — поиск и постраничный просмотр персонажей, экипировки и предметов. Фильтры по слоту, редкости, типу оружия, уровню и модификатору в пуле.
+- **Герой** — сводка персонажа, надетые слоты, характеристики сервера, инвентарь и сумка, промокоды и рецепты.
+- **Редактор** — шаблоны экипировки и предметов, персонажи и их базовые характеристики.
+- **Проверки** (администратор) — CRUD-сценарий и журнал запросов.
+- **Аккаунт** — сервер, вход, смена пароля и язык.
 
-## Древо навыков
+## Получить предмет с рандомными роллами
 
-[Общее дерево и личные навыки героя](docs/PASSIVES.md): 115 узлов, связи, крупные и ключевые навыки, масштабирование, поиск, изучение и безопасный сброс. Вход из «Герой» и «Поход».
+Администратор на вкладке «Герой» выбирает редкость и категорию (слот) и жмёт **«Получить предмет с рандомными роллами»**. Клиент берёт случайный шаблон с такой редкостью и слотом и просит сервер создать его экземпляр. Всё остальное — дело сервера: он выбирает префиксы и суффиксы в количестве, которое задаёт редкость, добавляет постоянные источники (implicit, enchant, corruption, unique), роллит тир каждого модификатора и значение внутри его диапазона. Клиент не роллит ничего и не предсказывает результат.
 
-## Поход и бой
-
-Бой идёт на двухмерной арене: герой, противник сервера и остальные мобы зоны на сцене, шаги удара, вылетающие числа, трупы и уплывающая к герою добыча. Выбор зон, обычные мобы и боссы, журнал и таблицы лута под сценой. Победа автоматически выдаёт опыт, золото, предметы и сферы. Считает по-прежнему только сервер: каждое число на сцене — разница двух его снимков боя, а не расчёт клиента. Потерянный ответ восстанавливается повтором сохранённой команды, и арена не проигрывает его дважды. [Правила и управление](docs/COMBAT.md).
+Рядом остаются выдача конкретного шаблона по справочнику и изменение количества простых предметов в сумке.
 
 ## Connect
 
-1. Start the updated server and its MongoDB replica set.
-2. In **Сервер**, save the server root URL (without `/api/v1`). Emulator: `http://10.0.2.2:8080/`; physical device: the computer's LAN address.
-3. Log in with an existing account. An administrator creates accounts on the server. The application checks API capabilities before login.
-4. In **Каталог**, select characters and create your character. The server assigns the authenticated owner automatically.
-5. In **Герой**, select a character and refresh the arsenal. Administrators can grant equipment/currency through searchable selectors or request a random drop for their own character.
+1. Start the server and its MongoDB replica set (the backend pins `mongodb://localhost:27017`, database `mongobase`).
+2. In **Аккаунт**, save the server root URL (without `/api/v1`). Emulator: `http://10.0.2.2:8080/`; physical device: the computer's LAN address.
+3. Log in with an existing account. The application reads `/system/routes` and refuses a server that is missing a route it needs.
+4. In **Каталог**, create your character. The current account becomes the owner; the server enforces the per-account limit.
+5. In **Герой**, select a character and refresh it.
 
-Debug allows HTTP for local development. Release requires HTTPS. Tokens stay in memory; passwords and token responses are excluded from the request journal. Password changes require login again.
+Debug allows HTTP for local development; release requires HTTPS. **This server has no token**: the login response is the session and lives in memory only. The password travels as a query parameter, so HTTPS is not optional outside a local network. Login and password changes are recorded as `[скрыто]` in the request journal.
 
-## What changed for API 0.9
+## What changed for server 0.9.0
 
-- Catalog, selectors, CRUD and character commands send Bearer authentication. UI permissions come from the current server profile.
-- POST uses server-generated IDs. Character creation/editing exposes name and description only; owner, inventory, money and stats are server controlled.
-- PUT sends `{expectedVersion, changes}`; DELETE sends `{expectedVersion}`. Versions remain Kotlin Long, including values above JavaScript's safe integer range.
-- A 409 preserves the editor draft and opens explicit conflict review. No mutation silently retries with a newer version. A 401 clears the session and private UI state.
-- Equipment templates select immutable modifier definitions and revisions. Rolled instance modifiers are changed using server crafting commands, not arbitrary template JSON.
-- The Hero tab uses EquipmentView: instance snapshots, equipped slots, item stacks and server-calculated stats. Rings have separate slots. The server validates level/attribute requirements and hand compatibility.
-- The Hero tab supports equip, unequip, redemption, instantaneous recipes, administrator grants and stack adjustments. IDs are selected by searchable pickers.
-- Recipes with time or skill requirements remain unavailable until implemented by the server. Refresh a recipe after use to obtain its new version.
-- All displayed stats come from the server; unsupported effects are listed explicitly. This client does not implement a second combat calculator.
-- Craft/drop retain the same requestId after an ambiguous network error. Other commands require refresh after uncertain outcomes; do not automatically repeat them.
-- CRUD checks are administrator-only and clean up only a confirmed server-generated ID with its known version. If the POST response is lost, the journal/report identifies the unique test name for manual review.
+- **No token.** `GET /api/v1/user/login` answers with the account document; the client keeps it in memory and drops it on sign-out. Permissions come from the server's `role`.
+- **No client version on writes.** `PUT` sends the changed fields and `DELETE` sends nothing: the server reads the stored document and rejects a racing write itself. A rejected write is reported, never retried silently.
+- **Equipment is a pool of references.** A template carries `modifierIds`; which of them land on a copy, in which tier and with which value, is rolled by the server when the instance is created.
+- **Inventory is its own collection.** One item in a character's bag is one `CharacterEquipment` document with its own rolls; the slot comes from the template, so equipping takes an instance id and nothing else.
+- **Stats come from the server.** `GET /api/v1/character/inventory/stats` returns the summed sheet; the client prints it and implements no second calculator.
+- **Search is a display concern.** The server pages but does not filter, so a filtered search reads the collection once and narrows it on the client. Nothing game-related is computed.
+- **Removed with the features the server no longer has:** passive tree, combat and the battle arena, orbs and crafting, the server icon set, JWT, cursor-paged inventory and three-way conflict review.
 
 ## Build and verification
 
@@ -58,25 +55,4 @@ JDK 17, Android SDK 37, Gradle wrapper:
 ./gradlew :core:test :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest
 ```
 
-GitHub Actions also runs Compose checks on an API 35 emulator. APKs and UI reports are attached to each successful workflow run.
-The original fantasy cards, property/item icons, bottom navigation, reference pickers and server-side modifier search remain available.
-
-## Workbench release — 1.11.0 / server 0.13.0
-
-This release targets **API revision 4**. Deploy the server from `master` at `5d4015ad138088142902d822a8d67580424be404` before updating the app.
-
-- Icons for items, equipment, currency, stats, passive nodes, zones and monsters come from the server set. The client reads `icon` from every response, falls back to the published binding tables for documents written before the set existed, and keeps its own emblems only for servers that ship no icons.
-- The whole set arrives as one public sprite, is stored per server against `iconSetVersion`, and is refreshed with a conditional request. Account changes never drop it; switching servers does.
-- Administrators can set `icon` on equipment and items. The editor offers the ids of the loaded set and refuses anything outside it before a request is built.
-- The stash has no length limit and items no longer stack. Equipment and owned units live in their own server collections, so Hero and Forge read the inventory one cursor page at a time and load more on demand, while equipped items always arrive in full. Item counts are computed by the server on request; one administration command still moves at most 10 000 units.
-
-- The interface ships in Russian and English. `RU / EN` in the banner switches every label, snackbar and validation message at once, including the ones raised inside `:core`.
-- Login starts in **Player** mode. Players have Characters, Hero, Forge and Account. An administrator can switch to the administration workspace with catalog editors and diagnostic checks. Switching modes is disabled while an editor has an open draft.
-- Hero shows the character summary, icon-based equipment slots, inventory cards and server stats. Comparing an item calls the read-only server endpoint; confirming equips with the same character version. Slot compatibility and requirements are checked on the server.
-- Forge shows currency counts, eligibility and rejection reasons. The engine's eligibility check does not predict random rolls or guarantee a later transaction: current ownership/version and equipped-item requirements are checked again during crafting. Before/after cards show the last completed craft.
-- Catalog search and pickers search server-side before pagination. Filters support slot, rarity, item-level bounds, basic numeric equipment properties and modifier definition references. Filters are stored per server/catalog and restored when reopening that catalog. This is not a search over computed character stats or every raw PoE stat.
-- On 409 the editor offers three-way review. Disjoint changes transfer automatically; overlapping fields require an explicit choice. Modifier arrays remain atomic. The merged result remains a draft until the user saves; a second concurrent edit still returns 409.
-- `ForgeViewModel` is a lifecycle facade. Catalog, editor, hero, session and checks actions live in `presentation/features`; `ForgeRuntime` owns the shared coroutine lifetime, transport and cross-screen coordination. Read models for characters, instances, PoE rolls, recipes, comparisons and currency eligibility are typed. Arbitrary admin template/definition editors retain JSON only at their form boundary.
-- Shared `FailureState` distinguishes offline reads, uncertain writes, expired sessions, forbidden operations and version conflicts. Uncertain writes never retry with a fresh version automatically.
-
-The `client-server` CI job builds the pinned backend, starts it with an isolated MongoDB replica set and exercises the actual Kotlin GameApi. Credentials are generated per run. The default unit job skips this opt-in live test; the dedicated job runs it with the server.
+GitHub Actions also runs Compose checks on an API 35 emulator. The `client-server` job builds the pinned backend, starts it against an isolated MongoDB replica set and exercises the real `GameApi`. APKs and UI reports are attached to each successful workflow run.

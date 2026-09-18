@@ -20,16 +20,18 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.contract.text
 import com.sperance.exileforge.core.display.*
 import com.sperance.exileforge.core.i18n.tr
+import com.sperance.exileforge.core.model.modifier.ModifierDefinition
 import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.serialization.json.*
 
 /** Path of Exile item frame: rarity border, engraved name band, then rolled properties. */
 @Composable fun ItemCard(doc: JsonObject, enabled: Boolean = true, selected: Boolean = false,
-    detailed: Boolean = false, definitions: List<JsonObject> = emptyList(), actionLabel: String = tr("Открыть", "Open"), onClick: () -> Unit = {}) {
+    detailed: Boolean = false, definitions: List<ModifierDefinition> = emptyList(),
+    actionLabel: String = tr("Открыть", "Open"), onClick: () -> Unit = {}) {
     val color = rarityColor(doc.text("rarity"))
     val shape = CutCornerShape(topStart = 14.dp, topEnd = 4.dp, bottomEnd = 14.dp, bottomStart = 4.dp)
-    OutlinedCard(onClick = onClick, enabled = enabled, border = BorderStroke(if(selected) 2.dp else 1.dp, if(selected) GoldBright else color.copy(alpha = .45f)),
+    OutlinedCard(onClick = onClick, enabled = enabled, border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) GoldBright else color.copy(alpha = .45f)),
         shape = shape, modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.outlinedCardColors(containerColor = Panel, disabledContainerColor = Panel, disabledContentColor = MaterialTheme.colorScheme.onSurface)) {
         Column(Modifier.background(Brush.verticalGradient(listOf(color.copy(alpha = .12f), Panel, Abyss)))) {
@@ -38,34 +40,35 @@ import kotlinx.serialization.json.*
                 .drawBehind { drawLine(color.copy(alpha = .45f), Offset(0f, size.height), Offset(size.width, size.height), 1f) }
                 .padding(horizontal = 16.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(doc.text("rarity").takeIf { it.isNotBlank() }?.let(::rarityTitle)?.uppercase()
-                    ?: if(doc["userId"] != null) tr("ПЕРСОНАЖ", "CHARACTER") else tr("ПРЕДМЕТ", "ITEM"), color = color, style = MaterialTheme.typography.labelSmall)
+                    ?: if (doc["userId"] != null) tr("ПЕРСОНАЖ", "CHARACTER") else tr("ПРЕДМЕТ", "ITEM"), color = color, style = MaterialTheme.typography.labelSmall)
                 Text(doc.text("name").ifBlank { tr("Предмет экипировки", "Equipment item") }, style = MaterialTheme.typography.titleMedium,
-                    color = color, maxLines = if(detailed) 5 else 2, overflow = TextOverflow.Ellipsis)
+                    color = color, maxLines = if (detailed) 5 else 2, overflow = TextOverflow.Ellipsis)
             }
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                     ItemIcon(doc, color, Modifier.size(64.dp))
                     Text(doc.text("slot").takeIf { it.isNotBlank() }?.let(::slotTitle) ?: doc.text("category"),
                         color = Muted, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
-                    if(selected) Icon(Icons.Outlined.CheckCircle, tr("Выбран", "Selected"), tint = GoldBright, modifier = Modifier.size(22.dp))
+                    if (selected) Icon(Icons.Outlined.CheckCircle, tr("Выбран", "Selected"), tint = GoldBright, modifier = Modifier.size(22.dp))
                 }
                 OrnateDivider(color.copy(alpha = .7f))
-                if(doc["itemLevel"] != null) PropertyRow(tr("Уровень предмета", "Item level"), doc.text("itemLevel"), "level")
-                if(doc["level"] != null) PropertyRow(tr("Уровень персонажа", "Character level"), doc.text("level"), "level")
-                if(doc["damage_min"] != null) PropertyRow(tr("Урон", "Damage"), "${doc.text("damage_min")}–${doc.text("damage_max")}", "damage")
-                if(doc["defense"] != null) PropertyRow(tr("Защита", "Defence"), doc.text("defense"), "defense")
-                if(doc["quality"] != null && (detailed || doc.text("quality") != "0")) PropertyRow(tr("Качество", "Quality"), "${doc.text("quality")}%", "quality")
-                if(doc["price"] != null) PropertyRow(tr("Цена", "Price"), doc.text("price"), "price")
-                if(doc["userId"] != null) PropertyRow(tr("Надето", "Equipped"), (doc["equipped"] as? JsonObject).orEmpty().size.toString(), "equipment")
-                val mods = (doc["modifiers"] as? JsonArray) ?: (doc["params"] as? JsonArray) ?: JsonArray(emptyList())
-                mods.take(if(detailed) mods.size else 3).forEach { raw ->
-                    val mod = raw as? JsonObject ?: return@forEach
-                    PropertyRow(modifierTitle(mod, definitions), modifierValues(mod), mod.text("definitionId"))
+                if (doc["itemLevel"] != null) PropertyRow(tr("Уровень предмета", "Item level"), doc.text("itemLevel"), "level")
+                if (doc["level"] != null) PropertyRow(tr("Уровень персонажа", "Character level"), doc.text("level"), "level")
+                if (doc["weaponType"] != null) PropertyRow(tr("Тип оружия", "Weapon type"), weaponTitle(doc.text("weaponType")), "weapon")
+                if (doc["damage_min"] != null) PropertyRow(tr("Урон", "Damage"), "${doc.text("damage_min")}–${doc.text("damage_max")}", "damage")
+                if (doc["attackSpeed"] != null) PropertyRow(tr("Скорость атаки", "Attack speed"), doc.text("attackSpeed"), "speed")
+                if (doc["defense"] != null) PropertyRow(tr("Защита", "Defence"), doc.text("defense"), "defense")
+                if (doc["price"] != null) PropertyRow(tr("Цена", "Price"), doc.text("price"), "price")
+                if (doc["money"] != null) PropertyRow(tr("Золото", "Gold"), doc.text("money"), "money")
+                // A template advertises the size of its pool; an instance shows what was actually rolled.
+                (doc["modifierIds"] as? JsonArray)?.let { PropertyRow(tr("Модификаторов в пуле", "Modifiers in the pool"), it.size.toString(), "modifier") }
+                val rolled = (doc["params"] as? JsonArray).orEmpty()
+                rolled.take(if (detailed) rolled.size else 3).forEach { raw ->
+                    val modifier = raw as? JsonObject ?: return@forEach
+                    PropertyRow(modifierTitle(modifier, definitions), modifierValues(modifier, definitions), modifier.text("modifierId"))
                 }
-                if(!detailed && mods.size > 3) Text(tr("Ещё ${mods.size - 3} свойств", "${mods.size - 3} more properties"), color = Rune, style = MaterialTheme.typography.labelMedium)
-                if(doc.text("corrupted") == "true") PropertyRow(tr("Осквернён", "Corrupted"), tr("Да", "Yes"), "corruption")
-                if(doc.text("mirrored") == "true") PropertyRow(tr("Зеркальная копия", "Mirrored"), tr("Да", "Yes"), "mirror")
-                if(detailed && doc.text("description").isNotBlank()) Text(doc.text("description"), color = Muted, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Start)
+                if (!detailed && rolled.size > 3) Text(tr("Ещё ${rolled.size - 3} свойств", "${rolled.size - 3} more properties"), color = Rune, style = MaterialTheme.typography.labelMedium)
+                if (detailed && doc.text("description").isNotBlank()) Text(doc.text("description"), color = Muted, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Start)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
                     Text(actionLabel.uppercase(), color = color, style = MaterialTheme.typography.labelLarge)
                     Icon(Icons.Outlined.ChevronRight, null, tint = color)

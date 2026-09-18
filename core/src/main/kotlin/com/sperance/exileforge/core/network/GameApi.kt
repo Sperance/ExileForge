@@ -1,31 +1,47 @@
 package com.sperance.exileforge.core.network
 
 import com.sperance.exileforge.core.contract.WireJson
+import com.sperance.exileforge.core.contract.creationFields
+import com.sperance.exileforge.core.contract.editableFields
+import com.sperance.exileforge.core.contract.entityId
 import com.sperance.exileforge.core.contract.protectedFields
 import com.sperance.exileforge.core.contract.requireId
 import com.sperance.exileforge.core.contract.text
 import com.sperance.exileforge.core.contract.validate
-import com.sperance.exileforge.core.contract.validateReferenceWrite
-import com.sperance.exileforge.core.model.command.*
+import com.sperance.exileforge.core.contract.validateModifierPool
+import com.sperance.exileforge.core.i18n.tr
 import com.sperance.exileforge.core.model.Catalog
+import com.sperance.exileforge.core.model.CatalogFilter
 import com.sperance.exileforge.core.model.EntitySource
+import com.sperance.exileforge.core.model.command.*
+import com.sperance.exileforge.core.model.hero.*
+import com.sperance.exileforge.core.model.modifier.ModifierDefinition
+import com.sperance.exileforge.core.model.modifier.ModifierTier
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.*
 import okhttp3.*
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
-import com.sperance.exileforge.core.i18n.tr
+
+private val JsonMedia = "application/json; charset=utf-8".toMediaType()
 
 fun normalizeServer(value: String): String {
     val url = value.trim().toHttpUrlOrNull() ?: error(tr("Введите URL с http:// или https://", "Enter a URL starting with http:// or https://"))
     require(url.username.isEmpty() && url.password.isEmpty() && url.query == null && url.fragment == null) { tr("URL не должен содержать пароль, query или fragment", "The URL must not contain a password, query or fragment") }
     return url.toString().trimEnd('/') + "/"
 }
+
+/**
+ * The single HTTP client for every ktor-bestgame route.
+ *
+ * This server issues no token: `GET /api/v1/user/login` answers with the account document and the
+ * client keeps it in memory for the rest of the session. [account] is therefore the whole session —
+ * it is what `authenticated = true` requires and what [logout] drops.
+ */
 class GameApi(
     server: String,
     private val journal: RequestJournal = RequestJournal(),
@@ -35,178 +51,213 @@ class GameApi(
         .followRedirects(false).followSslRedirects(false).build(),
     private val onUnauthorized: () -> Unit = {}
 ) : ItemRepository {
-    private var token: String? = null
-    suspend fun login(login: String, password: String) {
-        token = null
-        val result = request("POST", "api/v1/poe/token", body = buildJsonObject { put("login", login); put("password", password) }, sensitive = true).jsonObject
-        token = result.text("token").also { require(it.isNotBlank()) }
+    private val base = normalizeServer(server).toHttpUrlOrNull()!!
+    private var account: UserProfile? = null
+
+    // ==================== session ====================
+
+    /** Credentials travel as query parameters because that is the route the server exposes. */
+    suspend fun login(login: String, password: String): UserProfile {
+        account = null
+        require(login.isNotBlank() && password.isNotEmpty()) { tr("Введите логин и пароль", "Enter a login and a password") }
+        val profile: UserProfile = WireJson.decodeFromJsonElement(request("GET", "api/v1/user/login", mapOf("login" to login, "password" to password), sensitive = true))
+        requireId(profile.id)
+        require(profile.isActive) { tr("Учётная запись отключена", "The account is disabled") }
+        account = profile
+        return profile
     }
-    fun logout() { token = null }
-    suspend fun passiveTree(revision: Int = 1): com.sperance.exileforge.core.model.passives.PassiveTree =
-        WireJson.decodeFromJsonElement(request("GET", "api/v1/passives/tree", mapOf("revision" to "$revision"), authenticated = true))
-    suspend fun passiveState(id: String): com.sperance.exileforge.core.model.passives.PassiveState {
-        requireId(id); return WireJson.decodeFromJsonElement(request("GET", "api/v1/passives/characters/$id", authenticated = true))
+    fun logout() { account = null }
+    fun currentUser(): UserProfile? = account
+    /** Re-reads the signed-in account, so a role or character count change is picked up. */
+    suspend fun refreshUser(): UserProfile {
+        val id = requireNotNull(account) { tr("Войдите в аккаунт", "Sign in to your account") }.id
+        val profile: UserProfile = WireJson.decodeFromJsonElement(request("GET", "api/v1/user", mapOf("id" to id), authenticated = true))
+        account = profile
+        return profile
     }
-    suspend fun changePassives(id: String, command: com.sperance.exileforge.core.model.passives.PassiveCommand): com.sperance.exileforge.core.model.passives.PassiveState {
-        requireId(id); return WireJson.decodeFromJsonElement(request("POST", "api/v1/passives/characters/$id", body = WireJson.encodeToJsonElement(command), authenticated = true))
-    }
-    suspend fun combatCatalog(): com.sperance.exileforge.core.model.combat.CombatCatalog =
-        WireJson.decodeFromJsonElement(request("GET", "api/v1/combat/catalog", authenticated = true))
-    suspend fun battle(id: String): com.sperance.exileforge.core.model.combat.BattleView {
-        requireId(id); return WireJson.decodeFromJsonElement(request("GET", "api/v1/combat/characters/$id", authenticated = true))
-    }
-    suspend fun startBattle(id: String, command: com.sperance.exileforge.core.model.combat.StartBattleCommand): com.sperance.exileforge.core.model.combat.BattleView =
-        combatCommand(id, "start", WireJson.encodeToJsonElement(command))
-    suspend fun actBattle(id: String, command: com.sperance.exileforge.core.model.combat.BattleActionCommand): com.sperance.exileforge.core.model.combat.BattleView =
-        combatCommand(id, "act", WireJson.encodeToJsonElement(command))
-    suspend fun combatCommand(id: String, operation: String, command: JsonElement): com.sperance.exileforge.core.model.combat.BattleView {
-        requireId(id); require(operation in setOf("start", "act"))
-        return WireJson.decodeFromJsonElement(request("POST", "api/v1/combat/characters/$id/$operation", body = command, authenticated = true))
-    }
-    suspend fun capabilities(): ApiCapabilities = WireJson.decodeFromJsonElement(request("GET", "api/v1/poe/capabilities"))
-    /** Icon routes are public: they carry no player data and a client shows them before login. */
-    suspend fun icons(category: String = "", query: String = ""): com.sperance.exileforge.core.model.icons.IconManifest =
-        WireJson.decodeFromJsonElement(request("GET", "api/v1/icons", buildMap { if(category.isNotBlank()) put("category", category); if(query.isNotBlank()) put("q", query) }))
-    suspend fun iconBindings(): com.sperance.exileforge.core.model.icons.IconBindingTables =
-        WireJson.decodeFromJsonElement(request("GET", "api/v1/icons/bindings"))
-    /** The whole set in one request; `etag` makes the next start conditional instead of repeated. */
-    suspend fun iconSprite(etag: String = ""): IconPayload = svg("api/v1/icons/sprite.svg", etag)
-    suspend fun iconSvg(id: String, plain: Boolean = false, etag: String = ""): IconPayload {
-        require(Regex("[a-z0-9-]{3,48}").matches(id)) { tr("Неизвестный идентификатор иконки", "Unknown icon id") }
-        return svg("api/v1/icons/$id.svg", etag, if(plain) mapOf("variant" to "plain") else emptyMap())
-    }
-    suspend fun currentUser(): UserProfile {
-        val jwt = requireNotNull(token) { tr("Войдите в аккаунт", "Sign in to your account") }
-        val claims = WireJson.parseToJsonElement(String(java.util.Base64.getUrlDecoder().decode(jwt.split('.')[1]), Charsets.UTF_8)).jsonObject
-        val id = claims.text("sub"); requireId(id)
-        // The JWT subject is only a lookup key. Permissions come from the authenticated response.
-        return WireJson.decodeFromJsonElement(request("GET", "api/v1/user", mapOf("id" to id), authenticated = true))
-    }
-    suspend fun character(id: String): com.sperance.exileforge.core.model.hero.CharacterSummary {
-        val document = get(Catalog.CHARACTERS, id) ?: error(tr("Персонаж недоступен", "The character is unavailable"))
-        return WireJson.decodeFromJsonElement(document)
-    }
-    suspend fun compareEquipment(id: String, command: EquipCommand): com.sperance.exileforge.core.model.hero.EquipmentComparison {
-        requireId(id); return WireJson.decodeFromJsonElement(request("POST", "api/v1/character/$id/compareEquipment", body = WireJson.encodeToJsonElement(command), authenticated = true))
-    }
-    suspend fun craftOptions(id: String, uuid: String): com.sperance.exileforge.core.model.hero.CraftOptions {
-        requireId(id); return WireJson.decodeFromJsonElement(request("GET", "api/v1/character/$id/craftOptions", mapOf("equipmentUuid" to uuid), authenticated = true))
-    }
-    suspend fun search(catalog: Catalog, page: Int, filter: com.sperance.exileforge.core.model.CatalogFilter): ItemPage {
-        require(page >= 0)
-        val result = request("GET", "${route(catalog)}/paged", filter.parameters() + mapOf("page" to "$page", "size" to "20"), authenticated = true).jsonObject
-        return ItemPage(result.getValue("items").jsonArray.map { it.jsonObject }, result.getValue("page").jsonPrimitive.int, result.getValue("totalPages").jsonPrimitive.int, result.getValue("totalItems").jsonPrimitive.long)
-    }
-    /** The inventory is unbounded, so it is read by cursor: [after] is the uuid the previous page ended with. */
-    suspend fun equipment(id: String, size: Int = INVENTORY_PAGE_SIZE, after: String? = null): EquipmentView {
-        requireId(id); return WireJson.decodeFromJsonElement(request("GET", "api/v1/character/$id/equipment", pageParameters(size, after), authenticated = true))
-    }
-    /** Owned units without stacks: `{id,itemId}` per unit, so the page is the only way to walk them. */
-    suspend fun items(id: String, size: Int = INVENTORY_PAGE_SIZE, after: String? = null): OwnedItemsPage {
-        requireId(id); return WireJson.decodeFromJsonElement(request("GET", "api/v1/character/$id/items", pageParameters(size, after), authenticated = true))
-    }
-    /** How many units of each type the character owns; the server counts documents, it stores no amount. */
-    suspend fun itemTotals(id: String): Map<String, Long> {
-        requireId(id); return WireJson.decodeFromJsonElement(request("GET", "api/v1/character/$id/itemTotals", authenticated = true))
-    }
-    private fun pageParameters(size: Int, after: String?): Map<String, String> {
-        require(size in 1..MAX_INVENTORY_PAGE_SIZE) { tr("Размер страницы инвентаря — от 1 до $MAX_INVENTORY_PAGE_SIZE", "The inventory page size must be between 1 and $MAX_INVENTORY_PAGE_SIZE") }
-        return buildMap { put("size", "$size"); after?.let { requireId(it); put("after", it) } }
-    }
-    suspend fun equip(id: String, command: EquipCommand): EquipmentView = characterCommand(id, "equip", WireJson.encodeToJsonElement(command))
-    suspend fun unequip(id: String, command: UnequipCommand): EquipmentView = characterCommand(id, "unequip", WireJson.encodeToJsonElement(command))
-    suspend fun redeem(id: String, command: RedeemCommand): EquipmentView = characterCommand(id, "redeem", WireJson.encodeToJsonElement(command))
-    suspend fun useRecipe(id: String, command: UseRecipeCommand): EquipmentView = characterCommand(id, "useRecipe", WireJson.encodeToJsonElement(command))
-    private suspend fun characterCommand(id: String, operation: String, body: JsonElement): EquipmentView {
-        requireId(id); return WireJson.decodeFromJsonElement(request("POST", "api/v1/character/$id/$operation", body = body, authenticated = true))
-    }
-    suspend fun grant(id: String, command: GrantEquipmentCommand): EquipmentView { requireId(id); return WireJson.decodeFromJsonElement(request("POST", "api/v1/character/inventory/itemToInventory", mapOf("characterId" to id), WireJson.encodeToJsonElement(command), authenticated = true)) }
-    suspend fun adjustItems(id: String, command: AdjustItemsCommand): EquipmentView { requireId(id); return WireJson.decodeFromJsonElement(request("POST", "api/v1/character/inventory/addItem", mapOf("characterId" to id), WireJson.encodeToJsonElement(command), authenticated = true)) }
-    suspend fun recipe(id: String): com.sperance.exileforge.core.model.hero.RecipeDocument { requireId(id); return WireJson.decodeFromJsonElement(request("GET", "api/v1/recipe", mapOf("id" to id), authenticated = true)) }
-    suspend fun changePassword(command: ChangePasswordCommand) {
-        request("POST", "api/v1/user/changePassword", body = WireJson.encodeToJsonElement(command), authenticated = true, sensitive = true)
+    suspend fun changePassword(current: String, replacement: String) {
+        val id = requireNotNull(account) { tr("Войдите в аккаунт", "Sign in to your account") }.id
+        request("GET", "api/v1/user/changePassword", mapOf("id" to id, "password" to current, "new_password" to replacement), authenticated = true, sensitive = true)
         logout()
     }
-    suspend fun referencePage(source: EntitySource, page: Int, query: String = ""): ItemPage {
-        require(page >= 0)
-        val body = request("GET", "api/v1/${source.path}/paged", mapOf("page" to "$page", "size" to "50").let { if(query.isBlank()) it else it + ("q" to query) }, authenticated = true).jsonObject
-        return ItemPage(body.getValue("items").jsonArray.map { it.jsonObject }, body.getValue("page").jsonPrimitive.int,
-            body.getValue("totalPages").jsonPrimitive.int, body.getValue("totalItems").jsonPrimitive.long)
-    }
-    suspend fun definitions(query: String, page: Int): JsonObject = request("GET", "api/v1/poe/modifier-definitions", mapOf("q" to query, "page" to "$page", "size" to "50")).jsonObject
-    suspend fun definition(id: String, revision: Int): JsonObject = request("GET", "api/v1/poe/modifier-definition", mapOf("id" to id, "revision" to "$revision")).jsonObject
-    suspend fun publishDefinition(definition: JsonObject, expectedRevision: Int): JsonObject = request("POST", "api/v1/poe/modifier-definitions", body = buildJsonObject {
-        put("definition", definition); put("expectedRevision", expectedRevision)
-    }, authenticated = true).jsonObject
-    suspend fun inventory(id: String, size: Int = INVENTORY_PAGE_SIZE, after: String? = null): JsonObject {
-        requireId(id); return request("GET", "api/v1/poe/characters/$id/inventory", pageParameters(size, after), authenticated = true).jsonObject
-    }
-    suspend fun currencies(): List<JsonObject> = request("GET", "api/v1/poe/currencies").jsonArray.map { it.jsonObject }
-    suspend fun mutateInventory(id: String, operation: String, payload: JsonObject): JsonObject {
-        requireId(id); require(operation in setOf("drop", "craft"))
-        return request("POST", "api/v1/poe/characters/$id/$operation", body = payload, authenticated = true).jsonObject
-    }
-    private val base = normalizeServer(server).toHttpUrlOrNull()!!
+
+    suspend fun capabilities(): ApiCapabilities =
+        ApiCapabilities.of(WireJson.decodeFromJsonElement(kotlinx.serialization.builtins.ListSerializer(RouteInfo.serializer()), request("GET", "system/routes")))
+    suspend fun health(): JsonElement = request("GET", "system/health")
+
+    // ==================== catalogues ====================
+
     private fun route(catalog: Catalog) = "api/v1/${catalog.path}"
-    override suspend fun page(catalog: Catalog, page: Int): ItemPage {
-        require(page >= 0)
-        val body = request("GET", "${route(catalog)}/paged", mapOf("page" to "$page", "size" to "20"), authenticated = true).jsonObject
+
+    /** The whole collection. Used only where the server offers no narrower route. */
+    private suspend fun all(path: String): List<JsonObject> =
+        request("GET", path, authenticated = true).jsonArray.map { it.jsonObject }
+
+    private suspend fun paged(path: String, page: Int, size: Int): ItemPage {
+        require(page >= 0 && size in 1..200)
+        val body = request("GET", "$path/paged", mapOf("page" to "$page", "size" to "$size"), authenticated = true).jsonObject
         return ItemPage(body.getValue("items").jsonArray.map { it.jsonObject }, body.getValue("page").jsonPrimitive.int,
             body.getValue("totalPages").jsonPrimitive.int, body.getValue("totalItems").jsonPrimitive.long)
     }
+
+    override suspend fun page(catalog: Catalog, page: Int): ItemPage = paged(route(catalog), page, CATALOG_PAGE_SIZE)
+
+    /**
+     * The server pages but does not filter, so a filtered search reads the collection once and
+     * narrows it here. Nothing is recomputed: only fields the server wrote are compared.
+     */
+    suspend fun search(catalog: Catalog, page: Int, filter: CatalogFilter): ItemPage {
+        if (filter.isEmpty) return page(catalog, page)
+        return slice(all(route(catalog)).filter(filter::matches), page, CATALOG_PAGE_SIZE)
+    }
+
+    suspend fun referencePage(source: EntitySource, page: Int, query: String = ""): ItemPage {
+        if (query.isBlank()) return paged("api/v1/${source.path}", page, REFERENCE_PAGE_SIZE)
+        val matching = all("api/v1/${source.path}").filter { document ->
+            listOf("name", "login", "code", "category", "subCategory").any { document.text(it).contains(query.trim(), true) }
+        }
+        return slice(matching, page, REFERENCE_PAGE_SIZE)
+    }
+
+    private fun slice(items: List<JsonObject>, page: Int, size: Int): ItemPage {
+        require(page >= 0)
+        val pages = (items.size + size - 1) / size
+        return ItemPage(items.drop(page * size).take(size), page, pages, items.size.toLong())
+    }
+
     override suspend fun get(catalog: Catalog, id: String): JsonObject? {
         requireId(id)
         return try { request("GET", route(catalog), mapOf("id" to id), authenticated = true).let { if (it == JsonNull) null else it.jsonObject } }
-        catch (e: ApiFailure) { if(e.status == 404) null else throw e }
+        catch (e: ApiFailure) { if (e.status == 404) null else throw e }
     }
+
+    /** POST takes an array of documents and answers with the created ones, identity included. */
     override suspend fun create(catalog: Catalog, document: JsonObject): JsonObject {
-        require(document.keys.all { it in com.sperance.exileforge.core.contract.editableFields(catalog) || it == "type" }) { tr("Поле не разрешено при создании", "This field is not allowed on create") }
+        val allowed = editableFields(catalog) + creationFields(catalog)
+        require(document.keys.all { it in allowed }) { tr("Поле не разрешено при создании", "This field is not allowed on create") }
         validate(document, catalog)
-        if(catalog == Catalog.EQUIPMENT) validateReferenceWrite(document)
         return request("POST", route(catalog), body = JsonArray(listOf(document)), authenticated = true).jsonArray.single().jsonObject
     }
-    override suspend fun update(catalog: Catalog, id: String, changes: JsonObject, expectedVersion: Long): JsonObject {
-        require(expectedVersion >= 0)
+
+    /**
+     * PUT carries the changed fields only. The server reads the stored document, checks its own
+     * version and rejects a racing write with an error — the client never retries one silently.
+     */
+    override suspend fun update(catalog: Catalog, id: String, changes: JsonObject): JsonObject {
         requireId(id)
-        if(catalog == Catalog.EQUIPMENT) validateReferenceWrite(changes)
-        require(changes.keys.all { it in com.sperance.exileforge.core.contract.editableFields(catalog) }) { tr("Свойство управляется сервером и недоступно для редактирования", "The property is server-owned and cannot be edited") }
         require(changes.isNotEmpty()) { tr("Нет изменений", "No changes") }
         require(changes.keys.none { it in protectedFields }) { tr("Нельзя изменять служебные поля", "Service fields cannot be changed") }
-        return request("PUT", route(catalog), mapOf("id" to id), WireJson.encodeToJsonElement(UpdateCommand(expectedVersion, changes)), authenticated = true).let {
+        require(changes.keys.all { it in editableFields(catalog) }) { tr("Свойство управляется сервером и недоступно для редактирования", "The property is server-owned and cannot be edited") }
+        if (catalog == Catalog.EQUIPMENT) validateModifierPool(changes)
+        return request("PUT", route(catalog), mapOf("id" to id), changes, authenticated = true).let {
             if (it == JsonNull) throw ApiFailure(200, null, tr("Сервер не вернул изменённый предмет", "The server returned no updated item"))
             it.jsonObject
         }
     }
-    override suspend fun delete(catalog: Catalog, id: String, expectedVersion: Long) { requireId(id); require(expectedVersion >= 0); request("DELETE", route(catalog), mapOf("id" to id), WireJson.encodeToJsonElement(DeleteCommand(expectedVersion)), authenticated = true) }
-    suspend fun health(): JsonElement = request("GET", "system/health")
-    suspend fun count(catalog: Catalog): JsonElement = request("GET", "${route(catalog)}/count", authenticated = true)
+
+    override suspend fun delete(catalog: Catalog, id: String) { requireId(id); request("DELETE", route(catalog), mapOf("id" to id), authenticated = true) }
+
     /**
-     * Icon pictures are not the JSON envelope: the body is SVG and 304 is a valid, empty answer.
-     * The caller keeps the ETag and sends it back, so an unchanged set costs one conditional request.
+     * One equipment template of the chosen rarity and category, drawn at random.
+     *
+     * Choosing which base to ask for is an input, not a calculation: which modifiers land on the
+     * instance, in which tier and with which values, is decided by the server when it is created.
      */
-    private suspend fun svg(path: String, etag: String, query: Map<String, String> = emptyMap()): IconPayload {
-        val url = base.newBuilder().addPathSegments(path).apply { query.forEach { (k, v) -> addQueryParameter(k, v) } }.build()
-        val request = Request.Builder().url(url).header("Accept", "image/svg+xml")
-            .apply { if(etag.isNotBlank()) header("If-None-Match", etag) }.get().build()
-        val start = System.nanoTime()
-        var payload: HttpPayload? = null
-        try {
-            payload = client.newCall(request).awaitPayload()
-            val status = payload.status
-            if(status != 200 && status != 304) throw ApiFailure(status, null, tr("HTTP $status: иконки недоступны", "HTTP $status: icons are unavailable"))
-            return IconPayload(status, payload.etag.ifBlank { etag }, if(status == 304) "" else payload.body)
-        } finally {
-            journal.add(RequestLog("GET", url.encodedPath + (url.encodedQuery?.let { "?$it" } ?: ""), payload?.status,
-                (System.nanoTime() - start) / 1_000_000, "", tr("[рисунок, ${payload?.body?.length ?: 0} байт]", "[drawing, ${payload?.body?.length ?: 0} bytes]"), payload?.status in setOf(200, 304)))
+    suspend fun randomTemplate(rarity: String = "", slot: String = "", random: kotlin.random.Random = kotlin.random.Random): JsonObject {
+        require(rarity.isBlank() || rarity in com.sperance.exileforge.core.contract.rarities) { tr("Неизвестная редкость", "Unknown rarity") }
+        require(slot.isBlank() || slot in com.sperance.exileforge.core.contract.slots) { tr("Неизвестная категория", "Unknown category") }
+        val matching = all(route(Catalog.EQUIPMENT)).filter {
+            (rarity.isBlank() || it.text("rarity") == rarity) && (slot.isBlank() || it.text("slot") == slot)
         }
+        require(matching.isNotEmpty()) { tr("Нет шаблонов с такой редкостью и категорией", "No templates match that rarity and category") }
+        return matching[random.nextInt(matching.size)]
     }
+    suspend fun count(catalog: Catalog): JsonElement = request("GET", "${route(catalog)}/count", authenticated = true)
+
+    // ==================== modifiers ====================
+
+    /** Descriptions are a small, shared catalogue: the whole set is read once and kept in state. */
+    suspend fun modifierDefinitions(): List<ModifierDefinition> =
+        WireJson.decodeFromJsonElement(kotlinx.serialization.builtins.ListSerializer(ModifierDefinition.serializer()), request("GET", "api/v1/modifierdefinition", authenticated = true))
+    suspend fun modifierTiers(modifierId: String): List<ModifierTier> {
+        requireId(modifierId)
+        return WireJson.decodeFromJsonElement(kotlinx.serialization.builtins.ListSerializer(ModifierTier.serializer()), request("GET", "api/v1/modifiertier/byModifier", mapOf("modifierId" to modifierId), authenticated = true))
+    }
+
+    // ==================== character ====================
+
+    suspend fun character(id: String): CharacterSummary {
+        val document = get(Catalog.CHARACTERS, id) ?: error(tr("Персонаж недоступен", "The character is unavailable"))
+        return WireJson.decodeFromJsonElement(document)
+    }
+    suspend fun inventory(characterId: String): List<EquipmentInstance> =
+        instances("api/v1/character/inventory/equipments", characterId)
+    suspend fun stats(characterId: String): Map<String, Double> {
+        requireId(characterId)
+        return WireJson.decodeFromJsonElement(request("GET", "api/v1/character/inventory/stats", mapOf("characterId" to characterId), authenticated = true))
+    }
+    suspend fun bag(characterId: String): List<CharacterItem> {
+        requireId(characterId)
+        return WireJson.decodeFromJsonElement(kotlinx.serialization.builtins.ListSerializer(CharacterItem.serializer()), request("GET", "api/v1/character/inventory/items", mapOf("characterId" to characterId), authenticated = true))
+    }
+    /** Adds or removes stacking items; a negative amount removes them. Answers with a status word. */
+    suspend fun adjustItems(characterId: String, items: List<ItemStack>): String {
+        requireId(characterId)
+        require(items.isNotEmpty()) { tr("Список предметов пуст", "The item list is empty") }
+        val body = JsonArray(items.map { buildJsonObject { put("itemId", it.itemId); put("amount", it.amount) } })
+        return request("POST", "api/v1/character/inventory/addItem", mapOf("characterId" to characterId), body, authenticated = true).jsonPrimitive.content
+    }
+
+    /**
+     * Creates one instance of a template in the character's inventory.
+     *
+     * The rolls belong to the server: it picks prefixes and suffixes in the count the rarity allows
+     * and a tier inside each. The client only names the template.
+     */
+    suspend fun grant(characterId: String, equipmentId: String): EquipmentInstance {
+        requireId(characterId); requireId(equipmentId)
+        return WireJson.decodeFromJsonElement(request("POST", "api/v1/character/inventory/itemToInventory",
+            mapOf("characterId" to characterId, "equipmentId" to equipmentId), authenticated = true))
+    }
+
+    suspend fun equip(characterId: String, inventoryId: String): EquipmentInstance = wear("equip", characterId, inventoryId)
+    suspend fun unequip(characterId: String, inventoryId: String): EquipmentInstance = wear("unequip", characterId, inventoryId)
+    private suspend fun wear(operation: String, characterId: String, inventoryId: String): EquipmentInstance {
+        requireId(characterId); requireId(inventoryId)
+        return WireJson.decodeFromJsonElement(request("POST", "api/v1/characterequipment/$operation",
+            mapOf("characterId" to characterId, "inventoryId" to inventoryId), authenticated = true))
+    }
+    private suspend fun instances(path: String, characterId: String): List<EquipmentInstance> {
+        requireId(characterId)
+        return WireJson.decodeFromJsonElement(kotlinx.serialization.builtins.ListSerializer(EquipmentInstance.serializer()),
+            request("GET", path, mapOf("characterId" to characterId), authenticated = true))
+    }
+
+    // ==================== recipes and codes ====================
+
+    suspend fun recipe(id: String): RecipeDocument { requireId(id); return WireJson.decodeFromJsonElement(request("GET", "api/v1/recipe", mapOf("id" to id), authenticated = true)) }
+    suspend fun useRecipe(characterId: String, recipeId: String, command: UseRecipeCommand): JsonElement {
+        requireId(characterId); requireId(recipeId)
+        command.ingridientsId.forEach(::requireId)
+        return request("POST", "api/v1/recipe/useRecipe", mapOf("characterId" to characterId, "recipeId" to recipeId), WireJson.encodeToJsonElement(command), authenticated = true)
+    }
+    suspend fun redeem(characterId: String, code: String): JsonElement {
+        requireId(characterId)
+        require(code.isNotBlank()) { tr("Введите промокод", "Enter a promo code") }
+        return request("POST", "api/v1/redemptioncodes/useRedeptionCode", mapOf("characterId" to characterId, "redemptionCode" to code.trim()), authenticated = true)
+    }
+
+    // ==================== transport ====================
+
     private suspend fun request(method: String, path: String, query: Map<String, String> = emptyMap(), body: JsonElement? = null, authenticated: Boolean = false, sensitive: Boolean = false): JsonElement {
-        if (authenticated) require(!token.isNullOrBlank()) { tr("Войдите во вкладке «Сервер»", "Sign in on the Account tab") }
-        val url = base.newBuilder().addPathSegments(path).apply { query.forEach { (k,v) -> addQueryParameter(k,v) } }.build()
+        if (authenticated) require(account != null) { tr("Войдите во вкладке «Аккаунт»", "Sign in on the Account tab") }
+        val url = base.newBuilder().addPathSegments(path).apply { query.forEach { (k, v) -> addQueryParameter(k, v) } }.build()
         val bodyText = body?.toString().orEmpty()
-        val request = Request.Builder().url(url).header("Accept", "application/json")
-            .apply { if (authenticated) header("Authorization", "Bearer $token") }
-            .method(method, body?.toString()?.toRequestBody("application/json; charset=utf-8".toMediaType())).build()
+        // Several server commands are POSTs carrying their arguments in the query string; OkHttp
+        // still demands a body for those methods, so an empty one stands in for "no payload".
+        val payload = body?.toString()?.toRequestBody(JsonMedia)
+            ?: if (method in setOf("POST", "PUT", "PATCH")) "".toRequestBody(JsonMedia) else null
+        val request = Request.Builder().url(url).header("Accept", "application/json").method(method, payload).build()
         val start = System.nanoTime()
         var status: Int? = null
         var responseText = ""
@@ -219,7 +270,7 @@ class GameApi(
             responseText = raw.take(12_000)
             val envelope = try { withContext(Dispatchers.Default) { WireJson.parseToJsonElement(raw).jsonObject } }
                 catch (e: CancellationException) { throw e }
-                catch (_: Exception) { throw ApiFailure(status, null, if(status == 401) tr("Сессия истекла. Войдите снова", "The session has expired. Sign in again") else if(status == 403) tr("Недостаточно прав", "Not enough permissions") else tr("HTTP $status: пустой или некорректный JSON ответ сервера", "HTTP $status: empty or malformed JSON response")) }
+                catch (_: Exception) { throw ApiFailure(status, null, if (status == 401) tr("Сессия истекла. Войдите снова", "The session has expired. Sign in again") else if (status == 403) tr("Недостаточно прав", "Not enough permissions") else tr("HTTP $status: пустой или некорректный JSON ответ сервера", "HTTP $status: empty or malformed JSON response")) }
             if (status !in 200..299 || (envelope["success"] as? JsonPrimitive)?.booleanOrNull != true) {
                 val error = envelope["error"] as? JsonObject
                 throw ApiFailure(status, error?.text("errorCode"), error?.text("message")?.takeIf { it.isNotBlank() } ?: tr("HTTP $status: операция отклонена", "HTTP $status: the operation was rejected"))
@@ -233,8 +284,8 @@ class GameApi(
             if (responseText.isBlank()) responseText = e.message.orEmpty()
             throw e
         } finally {
-            journal.add(RequestLog(method, url.encodedPath + (url.encodedQuery?.let { "?$it" } ?: ""), status,
-                (System.nanoTime() - start) / 1_000_000, if(sensitive) tr("[скрыто]", "[hidden]") else bodyText.take(12_000), if(sensitive) tr("[скрыто]", "[hidden]") else responseText, success))
+            journal.add(RequestLog(method, url.encodedPath + (url.encodedQuery?.let { "?${if (sensitive) tr("[скрыто]", "[hidden]") else it}" } ?: ""), status,
+                (System.nanoTime() - start) / 1_000_000, if (sensitive) tr("[скрыто]", "[hidden]") else bodyText.take(12_000), if (sensitive) tr("[скрыто]", "[hidden]") else responseText, success))
         }
     }
 }

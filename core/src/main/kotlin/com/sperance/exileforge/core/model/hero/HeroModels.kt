@@ -1,24 +1,66 @@
 package com.sperance.exileforge.core.model.hero
 
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.json.*
 import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.model.modifier.Modifier
-import com.sperance.exileforge.core.model.command.*
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.*
 
-@Serializable data class EquipmentInstance(val uuid: String, val equipmentId: String, val params: List<Modifier> = emptyList(), val poe: PoeState? = null, val baseSnapshot: JsonObject? = null) {
+/** Character document of the `character` collection, read-only for everything the server owns. */
+@Serializable data class CharacterSummary(
+    @SerialName("_id") val id: String,
+    val userId: String,
+    val name: String,
+    val description: String = "",
+    val version: Long = 0,
+    val level: Int = 1,
+    val experience: Double = 0.0,
+    val money: Long = 0,
+    val params: List<Modifier> = emptyList(),
+    val items: List<String> = emptyList(),
+    val recipeAccess: List<String> = emptyList(),
+)
+
+/**
+ * One instance of an item in a character's inventory (collection `CharacterEquipment`).
+ *
+ * The template ([com.sperance.exileforge.core.model.Catalog.EQUIPMENT]) is shared by every copy;
+ * only [params] and [equippedSlot] belong to this one. `equippedSlot == null` means "in the stash".
+ */
+@Serializable data class EquipmentInstance(
+    @SerialName("_id") val id: String,
+    val characterId: String = "",
+    val equipmentId: String = "",
+    val params: List<Modifier> = emptyList(),
+    val equippedSlot: String? = null,
+    val version: Long = 0,
+) {
+    val equipped: Boolean get() = equippedSlot != null
     fun document(): JsonObject = WireJson.encodeToJsonElement(this).jsonObject
-    operator fun get(key: String): JsonElement? = document()[key]
 }
-@Serializable data class PoeState(val baseId: String, val itemLevel: Int, val rarity: String, val quality: Int = 0, val corrupted: Boolean = false, val mirrored: Boolean = false, val implicits: List<PoeRoll> = emptyList(), val explicits: List<PoeRoll> = emptyList())
-@Serializable data class PoeRoll(val id: String, val values: List<Int>, val revision: Int = 1, val fractured: Boolean = false)
-@Serializable data class CharacterSummary(@SerialName("_id") val id: String, val userId: String, val name: String, val version: Long, val level: Int = 1, val experience: Double = 0.0, val money: Long = 0)
-@Serializable data class RecipeDocument(@SerialName("_id") val id: String, val version: Long, val name: String, val arrayIn: List<RecipeInput> = emptyList(), val arrayOut: List<RecipeOutput> = emptyList(), val timeWork: Double = 1.0, val requirement: List<JsonObject>? = null, val needOpenRecipe: Boolean = false) {
-    fun document(): JsonObject = WireJson.encodeToJsonElement(this).jsonObject
+
+/** A stacking item in the bag. The server stores it as the flat string "itemId:amount". */
+@Serializable data class CharacterItem(val itemId: String, val amount: Long)
+
+@Serializable data class RecipeDocument(
+    @SerialName("_id") val id: String,
+    val name: String,
+    val arrayIn: List<RecipeInput> = emptyList(),
+    val arrayOut: List<RecipeOutput> = emptyList(),
+    val requirement: List<JsonObject>? = null,
+    val timeWork: Double = 1.0,
+    val needOpenRecipe: Boolean = false,
+    val globalUses: Long = 0,
+)
+@Serializable data class RecipeInput(val itemId: String? = null, val category: String? = null, val subCategory: String? = null, val amount: Double = 1.0)
+@Serializable data class RecipeOutput(val itemId: String, val amount: Double = 1.0, val chance: Double = 1.0)
+
+/** Everything one hero screen needs, assembled from the four character routes the server offers. */
+data class HeroView(
+    val character: CharacterSummary,
+    val inventory: List<EquipmentInstance> = emptyList(),
+    val stats: Map<String, Double> = emptyMap(),
+    val bag: List<CharacterItem> = emptyList(),
+) {
+    val equipped: Map<String, EquipmentInstance> get() = inventory.filter { it.equipped }.associateBy { it.equippedSlot!! }
 }
-@Serializable data class RecipeInput(val itemId: String? = null, val category: String? = null, val subCategory: String? = null, val amount: Double)
-@Serializable data class RecipeOutput(val itemId: String, val amount: Double, val chance: Double = 1.0)
-@Serializable data class EquipmentComparison(val characterVersion: Long, val allowed: Boolean, val reason: String? = null, val before: CalculatedStats, val after: CalculatedStats? = null)
-@Serializable data class CraftOption(val currency: String, val name: String, val itemId: String, val amount: Long, val available: Boolean, val reason: String? = null)
-@Serializable data class CraftOptions(val characterVersion: Long, val options: List<CraftOption>)

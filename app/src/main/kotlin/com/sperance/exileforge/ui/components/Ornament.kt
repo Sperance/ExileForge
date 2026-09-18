@@ -62,9 +62,10 @@ import com.sperance.exileforge.ui.theme.*
 
 /** Life / mana globe: a filled orb with a glass highlight, read straight from server stats. */
 @Composable fun StatGlobe(label: String, value: String, ratio: Float, color: Color, modifier: Modifier = Modifier,
-    size: androidx.compose.ui.unit.Dp = 64.dp) {
+    // Never `size`: inside the draw scope below that name belongs to the canvas being painted.
+    diameter: androidx.compose.ui.unit.Dp = 64.dp) {
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Canvas(Modifier.size(size)) {
+        Canvas(Modifier.size(diameter)) {
             val radius = size.minDimension / 2 - 2f
             val center = Offset(size.width / 2, size.height / 2)
             drawCircle(Color(0xFF0A0D12), radius, center)

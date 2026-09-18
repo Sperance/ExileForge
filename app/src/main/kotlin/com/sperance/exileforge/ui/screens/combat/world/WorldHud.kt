@@ -82,10 +82,10 @@ import com.sperance.exileforge.ui.theme.*
         verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             StatGlobe(tr("Здоровье", "Life"), "${battle.hero.life.toInt()}/${battle.hero.maxLife.toInt()}",
-                (battle.hero.life / battle.hero.maxLife.coerceAtLeast(1.0)).toFloat(), LifeRed, size = 46.dp)
+                (battle.hero.life / battle.hero.maxLife.coerceAtLeast(1.0)).toFloat(), LifeRed, diameter = 46.dp)
             if(battle.hero.maxMana > 0.0) StatGlobe(tr("Мана", "Mana"),
                 "${battle.hero.mana.toInt()}/${battle.hero.maxMana.toInt()}",
-                (battle.hero.mana / battle.hero.maxMana.coerceAtLeast(1.0)).toFloat(), ManaBlue, size = 46.dp)
+                (battle.hero.mana / battle.hero.maxMana.coerceAtLeast(1.0)).toFloat(), ManaBlue, diameter = 46.dp)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 FlaskRow(battle.potions)
                 ModeSwitch(mode, onMode)

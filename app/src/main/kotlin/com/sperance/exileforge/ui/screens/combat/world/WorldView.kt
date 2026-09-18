@@ -186,7 +186,7 @@ private fun DrawScope.tileFace(camera: IsoCamera, path: Path, tx: Int, ty: Int, 
     val east = camera.toScreen(Vec2(tx + 1f, ty.toFloat())).offset
     val south = camera.toScreen(Vec2(tx + 1f, ty + 1f)).offset
     val west = camera.toScreen(Vec2(tx.toFloat(), ty + 1f)).offset
-    path.rewind()
+    path.reset()
     path.moveTo(north.x, north.y - lift); path.lineTo(east.x, east.y - lift)
     path.lineTo(south.x, south.y - lift); path.lineTo(west.x, west.y - lift); path.close()
     drawPath(path, colour)
@@ -210,7 +210,7 @@ private fun solid(map: Battlefield, x: Int, y: Int) =
 
 /** One upright side of a block, between two ground corners. */
 private fun DrawScope.face(path: Path, from: Offset, to: Offset, lift: Float, colour: Color) {
-    path.rewind()
+    path.reset()
     path.moveTo(from.x, from.y); path.lineTo(to.x, to.y)
     path.lineTo(to.x, to.y - lift); path.lineTo(from.x, from.y - lift); path.close()
     drawPath(path, colour)

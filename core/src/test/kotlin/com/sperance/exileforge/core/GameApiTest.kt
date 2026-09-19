@@ -197,7 +197,10 @@ class GameApiTest {
         assertTrue(transportDetail(blocked).contains("открытый HTTP"), transportDetail(blocked))
         assertTrue(transportDetail(java.net.ConnectException("Failed to connect to /10.0.2.2:8080")).contains("10.0.2.2:8080"))
         assertTrue(transportDetail(java.net.UnknownHostException("example.invalid")).contains("example.invalid"))
-        assertTrue(transportDetail(java.net.SocketTimeoutException("timeout")).contains("timeout"))
+        // A dead handshake and a silent server share an exception but not a remedy.
+        val handshake = java.net.SocketTimeoutException("failed to connect to /10.0.2.2 (port 8080) from /10.0.2.16 (port 36470) after 10000ms")
+        assertTrue(transportDetail(handshake).contains("файрвол"), transportDetail(handshake))
+        assertTrue(transportDetail(java.net.SocketTimeoutException("timeout")).contains("не ответил вовремя"))
         // A failure with no message still says which one it was.
         assertEquals("EOFException", transportDetail(java.io.EOFException()))
     }

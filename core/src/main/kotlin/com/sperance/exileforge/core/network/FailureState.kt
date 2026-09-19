@@ -46,8 +46,13 @@ fun transportDetail(error: Throwable): String = when {
            "cleartext HTTP is blocked by the app's network policy. Install the debug build or use HTTPS")
     error is java.net.UnknownHostException ->
         tr("имя хоста не разрешается: ${error.message}", "the host name does not resolve: ${error.message}")
+    // OkHttp raises the same exception for a dead handshake and a silent server; only the text tells
+    // them apart, and they point at opposite things: a dropped SYN is a firewall, not a slow server.
+    error is java.net.SocketTimeoutException && error.message?.startsWith("failed to connect") == true ->
+        tr("соединение не установилось, пакеты не дошли — проверьте файрвол или пробросьте порт через «adb reverse»: ${error.message}",
+           "the handshake never completed, the packets went nowhere — check the firewall or forward the port with \"adb reverse\": ${error.message}")
     error is java.net.SocketTimeoutException ->
-        tr("сервер не ответил вовремя: ${error.message}", "the server did not answer in time: ${error.message}")
+        tr("сервер принял соединение, но не ответил вовремя: ${error.message}", "the server accepted the connection but did not answer in time: ${error.message}")
     error is java.net.ConnectException ->
         tr("порт не принимает соединение: ${error.message}", "the port refused the connection: ${error.message}")
     else -> error.message ?: error::class.java.simpleName

@@ -31,6 +31,19 @@ Every label, hint, error and contract-validation message exists in Russian and E
 
 1. Start the server and its MongoDB replica set (the backend pins `mongodb://localhost:27017`, database `mongobase`).
 2. In **Аккаунт**, save the server root URL (without `/api/v1`). Emulator: `http://10.0.2.2:8080/`; physical device: the computer's LAN address.
+   `10.0.2.2` is the emulator's alias for the host loopback, so it reaches a server bound to `127.0.0.1`
+   — unless a firewall drops the packets, which shows up as a ten-second timeout rather than a refusal.
+   The way round that is an adb port forward, which needs no firewall rule because it rides the adb
+   channel. Start the emulator first, then forward, then use `http://127.0.0.1:8080/` in the app:
+
+   ```bash
+   adb reverse tcp:8080 tcp:8080   # adb lives in <SDK>/platform-tools
+   adb reverse --list              # confirms: (reverse) tcp:8080 tcp:8080
+   ```
+
+   **The forward does not survive a restart** of the emulator or the adb server — repeat it after each
+   one. A vanished forward reads as "порт не принимает соединение" in the app, instantly rather than
+   after a timeout: nothing is listening on the emulator's own loopback any more.
 3. Log in with an existing account. The application reads `/system/routes` and refuses a server that is missing a route it needs.
 4. In **Каталог**, create your character. The current account becomes the owner; the server enforces the per-account limit.
 5. In **Герой**, select a character and refresh it.

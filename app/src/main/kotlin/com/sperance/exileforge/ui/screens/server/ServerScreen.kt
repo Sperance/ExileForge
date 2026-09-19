@@ -13,12 +13,14 @@ import com.sperance.exileforge.core.contract.SERVER_VERSION
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.tr
 import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.core.network.RequestLog
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
+import com.sperance.exileforge.ui.screens.checks.LogCard
 import com.sperance.exileforge.ui.theme.Muted
 
-@Composable internal fun ServerScreen(s: ForgeState, vm: ForgeViewModel) {
+@Composable internal fun ServerScreen(s: ForgeState, vm: ForgeViewModel, logs: List<RequestLog> = emptyList()) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         ScreenHeader(tr("Врата мира", "Gateway"), tr("Подключение к ktor-bestgame", "Connection to ktor-bestgame"), ForgeGlyphs.Portal)
         ForgePanel {
@@ -53,5 +55,30 @@ import com.sperance.exileforge.ui.theme.Muted
         InfoCard(tr("Вход", "Sign-in"),
             tr("Сервер не выдаёт токен: логин отвечает документом учётной записи, который живёт только в памяти приложения. Пароль уходит параметром запроса — используйте HTTPS.",
                "The server issues no token: a login answers with the account document, which lives in memory only. The password travels as a query parameter — use HTTPS."))
+        RequestJournalPanel(vm, logs)
+    }
+}
+
+/**
+ * The request journal, right where a connection is set up.
+ *
+ * The Checks tab needs an administrator, which is exactly what you do not have when the connection
+ * itself is broken, so every failed attempt is readable here: method, path, status and both bodies.
+ */
+@Composable private fun RequestJournalPanel(vm: ForgeViewModel, logs: List<RequestLog>) {
+    var expanded by remember { mutableStateOf(false) }
+    ForgePanel {
+        Engraved(tr("Журнал запросов", "Request journal"))
+        Text(tr("Записей: ${logs.size}. Здесь виден точный адрес, статус и ответ сервера — журнал доступен и без входа.",
+                "${logs.size} entries. The exact address, status and server answer are here, sign-in or not."),
+            color = Muted, style = MaterialTheme.typography.bodySmall)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TextButton(onClick = { expanded = !expanded }) { Text(if (expanded) tr("Свернуть", "Hide") else tr("Показать", "Show")) }
+            TextButton(enabled = logs.isNotEmpty(), onClick = vm::clearLogs) { Text(tr("Очистить", "Clear")) }
+        }
+        if (expanded) {
+            if (logs.isEmpty()) Text(tr("Здесь появятся запросы и ответы сервера.", "Requests and server responses will appear here."), color = Muted)
+            logs.take(12).forEach { LogCard(it) }
+        }
     }
 }

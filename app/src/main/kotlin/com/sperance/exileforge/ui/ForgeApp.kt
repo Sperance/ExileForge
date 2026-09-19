@@ -76,7 +76,7 @@ import com.sperance.exileforge.ui.theme.*
                 0 -> CatalogScreen(s, vm)
                 1 -> EditorScreen(s, vm, onDelete = { confirmDelete = true }, onClose = { confirmDiscard = true })
                 2 -> ChecksScreen(s, vm, logs)
-                3 -> ServerScreen(s, vm)
+                3 -> ServerScreen(s, vm, logs)
                 4 -> HeroScreen(s, vm)
             }
         }

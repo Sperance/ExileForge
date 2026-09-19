@@ -176,6 +176,21 @@ class GameApiTest {
         assertFailsWith<IllegalArgumentException> { ApiCapabilities.of(listOf(RouteInfo("/api/v1/user/login", "(GET)"))).requireWorkbench() }
     }
 
+    @Test fun `a server answer is never reported as a lost connection`() {
+        // ApiFailure extends IOException; classifying it as Offline would hide what the server said.
+        val rejected = FailureState.from(ApiFailure(404, "SP_001", "Not find endpoint /system/health"), writing = false)
+        assertEquals(FailureState.Rejected("Not find endpoint /system/health"), rejected)
+        assertEquals(FailureState.SessionExpired, FailureState.from(ApiFailure(401, null, "no"), writing = false))
+        assertEquals(FailureState.Forbidden, FailureState.from(ApiFailure(403, null, "no"), writing = false))
+        assertEquals(FailureState.Conflict, FailureState.from(ApiFailure(409, null, "no"), writing = false))
+        assertEquals(FailureState.Rejected("no"), FailureState.from(ApiFailure(500, null, "no"), writing = false))
+        assertEquals(FailureState.UncertainWrite, FailureState.from(ApiFailure(500, null, "no"), writing = true))
+        assertEquals(FailureState.Rejected("no"), FailureState.from(ApiFailure(400, null, "no"), writing = true))
+        // Only a transport failure is an absent connection.
+        assertEquals(FailureState.Offline, FailureState.from(java.net.ConnectException("refused"), writing = false))
+        assertEquals(FailureState.UncertainWrite, FailureState.from(java.net.ConnectException("refused"), writing = true))
+    }
+
     @Test fun `404 is absent, other errors are preserved`(): Unit = runBlocking {
         failure(404); assertNull(api.get(Catalog.ITEMS, id)); server.takeRequest()
         for (status in listOf(400, 403, 429, 500)) {

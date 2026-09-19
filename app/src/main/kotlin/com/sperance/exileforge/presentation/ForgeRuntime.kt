@@ -6,6 +6,7 @@ import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.model.EntitySource
 import com.sperance.exileforge.core.network.ApiFailure
 import com.sperance.exileforge.core.network.FailureState
+import com.sperance.exileforge.core.network.transportDetail
 import com.sperance.exileforge.core.network.GameApi
 import com.sperance.exileforge.core.network.RequestJournal
 import com.sperance.exileforge.data.settings.ServerStore
@@ -94,7 +95,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
                 val prefix = if (e is ApiFailure) "HTTP ${e.status ?: "—"} ${e.code.orEmpty()}: " else ""
                 mutable.update { it.copy(failure = problem, error = true, message = when (problem) {
                     FailureState.UncertainWrite -> tr("Ответ потерян. Запись могла сохраниться: обновите данные перед повтором.", "The response was lost. The write may have been applied: refresh before retrying.")
-                    FailureState.Offline -> tr("Нет соединения. Проверьте сеть и повторите загрузку.", "No connection. Check the network and load again.")
+                    FailureState.Offline -> tr("Нет соединения: ", "No connection: ") + transportDetail(e)
                     else -> prefix + (e.message ?: tr("Ошибка запроса", "Request failed"))
                 }) }
             } finally { mutable.update { it.copy(busy = false) } }

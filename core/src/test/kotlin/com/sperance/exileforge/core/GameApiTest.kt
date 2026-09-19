@@ -191,6 +191,17 @@ class GameApiTest {
         assertEquals(FailureState.UncertainWrite, FailureState.from(java.net.ConnectException("refused"), writing = true))
     }
 
+    @Test fun `a transport failure names itself instead of blaming the network`() {
+        // Android's cleartext block is the one that looks exactly like "no connection" but is config.
+        val blocked = java.net.UnknownServiceException("CLEARTEXT communication to 10.0.2.2 not permitted by network security policy")
+        assertTrue(transportDetail(blocked).contains("открытый HTTP"), transportDetail(blocked))
+        assertTrue(transportDetail(java.net.ConnectException("Failed to connect to /10.0.2.2:8080")).contains("10.0.2.2:8080"))
+        assertTrue(transportDetail(java.net.UnknownHostException("example.invalid")).contains("example.invalid"))
+        assertTrue(transportDetail(java.net.SocketTimeoutException("timeout")).contains("timeout"))
+        // A failure with no message still says which one it was.
+        assertEquals("EOFException", transportDetail(java.io.EOFException()))
+    }
+
     @Test fun `404 is absent, other errors are preserved`(): Unit = runBlocking {
         failure(404); assertNull(api.get(Catalog.ITEMS, id)); server.takeRequest()
         for (status in listOf(400, 403, 429, 500)) {

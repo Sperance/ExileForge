@@ -31,3 +31,24 @@ sealed interface FailureState {
         }
     }
 }
+
+/**
+ * What a transport failure actually was.
+ *
+ * "No connection" sends the reader to look at their Wi-Fi, and that is almost never where the
+ * problem is on a developer machine: the exception already names it — a blocked cleartext socket,
+ * a refused port, a name that does not resolve — so it is shown instead of being swallowed.
+ */
+fun transportDetail(error: Throwable): String = when {
+    // Android blocks plain HTTP unless the manifest allows it; only the debug build does.
+    error is java.net.UnknownServiceException || error.message?.contains("CLEARTEXT", ignoreCase = true) == true ->
+        tr("открытый HTTP запрещён политикой сети приложения. Установите debug-сборку или используйте HTTPS",
+           "cleartext HTTP is blocked by the app's network policy. Install the debug build or use HTTPS")
+    error is java.net.UnknownHostException ->
+        tr("имя хоста не разрешается: ${error.message}", "the host name does not resolve: ${error.message}")
+    error is java.net.SocketTimeoutException ->
+        tr("сервер не ответил вовремя: ${error.message}", "the server did not answer in time: ${error.message}")
+    error is java.net.ConnectException ->
+        tr("порт не принимает соединение: ${error.message}", "the port refused the connection: ${error.message}")
+    else -> error.message ?: error::class.java.simpleName
+}

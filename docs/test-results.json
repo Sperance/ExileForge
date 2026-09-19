@@ -13,7 +13,7 @@
   },
   {
     "name": "com.sperance.exileforge.core.GameApiTest",
-    "tests": "20",
+    "tests": "21",
     "failures": "0",
     "errors": "0"
   },

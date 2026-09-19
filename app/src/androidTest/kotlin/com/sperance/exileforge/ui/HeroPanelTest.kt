@@ -17,7 +17,9 @@ import com.sperance.exileforge.core.model.hero.EquipmentInstance
 import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.core.model.modifier.Modifier as RolledModifier
 import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.core.model.currency.CurrencyItem
 import com.sperance.exileforge.ui.screens.hero.HeroEquipmentPanel
+import com.sperance.exileforge.ui.screens.hero.OrbPanel
 import com.sperance.exileforge.ui.theme.ForgeTheme
 import com.sperance.exileforge.ui.theme.Ink
 import java.io.File
@@ -52,5 +54,27 @@ class HeroPanelTest {
         compose.onNodeWithText("Характеристики · показать").performClick()
         compose.onNodeWithText("Здоровье").assertIsDisplayed()
         compose.onNodeWithText("88.0").assertIsDisplayed()
+    }
+
+    /** The orb panel hands back the pair the server needs and says what the copy currently is. */
+    @Test fun applyingAnOrbEmitsTheInstanceAndTheOrbItself() {
+        val instance = EquipmentInstance("ring-instance", "hero", "ring-base", rarity = "UNCOMMON")
+        val base = buildJsonObject { put("_id", "ring-base"); put("name", "Кольцо героя"); put("slot", "RING"); put("rarity", "COMMON") }
+        val chaos = CurrencyItem("chaos-orb", "Chaos Orb", "CHAOS_ORB", "Перекатывает аффиксы редкого предмета", 300)
+        val hero = HeroView(CharacterSummary("hero", "owner", "Изгнанник"), listOf(instance),
+            bag = listOf(com.sperance.exileforge.core.model.hero.CharacterItem("chaos-orb", 7)))
+        var applied: Pair<String, String>? = null
+        compose.setContent { ForgeTheme { Column(Modifier.background(Ink).verticalScroll(rememberScrollState()).padding(12.dp)) {
+            OrbPanel(ForgeState(busy = false, signedIn = true, hero = hero, characterOwner = "owner",
+                profile = com.sperance.exileforge.core.model.command.UserProfile("owner"),
+                inventoryBases = mapOf("ring-base" to base), orbs = listOf(chaos), selectedOrb = "chaos-orb"),
+                "ring-instance", {}, { item, orb -> applied = item to orb })
+        } } }
+        // The count the character owns rides along with the orb's own translated name.
+        compose.onNodeWithText("Сфера хаоса · 7").performScrollTo().assertIsDisplayed()
+        // The copy's own rarity is shown, not the COMMON its template drops as.
+        compose.onNodeWithText("Необычный").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Применить сферу").performScrollTo().performClick()
+        compose.runOnIdle { assertEquals("ring-instance" to "chaos-orb", applied) }
     }
 }

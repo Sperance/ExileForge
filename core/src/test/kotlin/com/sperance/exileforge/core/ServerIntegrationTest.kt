@@ -4,6 +4,7 @@ import com.sperance.exileforge.core.contract.*
 import com.sperance.exileforge.core.model.Catalog
 import com.sperance.exileforge.core.model.CatalogFilter
 import com.sperance.exileforge.core.model.command.ItemStack
+import com.sperance.exileforge.core.model.currency.CurrencyOrb
 import com.sperance.exileforge.core.network.*
 import kotlin.test.*
 import kotlinx.coroutines.runBlocking
@@ -61,6 +62,24 @@ class ServerIntegrationTest {
             assertTrue(stats.isNotEmpty())
             assertEquals(stats, api.stats(id))
             assertFalse(api.unequip(id, instance.id).equipped)
+
+            // Currency is the same collection as every other item, told apart by its category alone.
+            val orbs = api.currencyOrbs()
+            assertTrue(orbs.isNotEmpty(), "the server seeded no currency")
+            assertTrue(orbs.all { it.orb != null }, "unknown orbs: ${orbs.filter { it.orb == null }.map { it.subCategory }}")
+            val chaos = orbs.firstOrNull { it.orb == CurrencyOrb.CHAOS_ORB } ?: fail("no Chaos Orb among ${orbs.map { it.name }}")
+
+            // The orb is spent from the bag, so it is handed over first; the rerolls are the server's.
+            assertEquals("Success", api.adjustItems(id, listOf(ItemStack(chaos.id, 1))))
+            val rerolled = api.applyOrb(id, instance.id, chaos.id)
+            assertTrue(rerolled.message.isNotBlank(), "the server said nothing about what the orb did")
+            assertEquals(instance.id, rerolled.item.id)
+            assertEquals("RARE", rerolled.item.rarity, "a Chaos Orb must leave the rarity alone: ${rerolled.message}")
+            assertNull(rerolled.created, "only a mirror creates a second item")
+            assertTrue(api.bag(id).none { it.itemId == chaos.id }, "the orb was not spent")
+            // A refusal costs nothing: with no orb left the server rejects the call and keeps the item.
+            assertFailsWith<ApiFailure> { api.applyOrb(id, instance.id, chaos.id) }
+            assertEquals(rerolled.item.params, api.inventory(id).single { it.id == instance.id }.params)
 
             val items = api.referencePage(com.sperance.exileforge.core.model.EntitySource.ITEM, 0)
             val item = items.items.firstOrNull() ?: fail("the items collection is empty: $items")

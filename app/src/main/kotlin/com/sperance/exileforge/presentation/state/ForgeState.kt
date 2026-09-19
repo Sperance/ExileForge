@@ -6,6 +6,7 @@ import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.model.Catalog
 import com.sperance.exileforge.core.model.CatalogFilter
 import com.sperance.exileforge.core.model.command.UserProfile
+import com.sperance.exileforge.core.model.currency.CurrencyItem
 import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.core.model.modifier.ModifierDefinition
 import com.sperance.exileforge.core.network.FailureState
@@ -37,6 +38,8 @@ data class ForgeState(
     val selectedEquipment: String = "",
     /** What the admin's random grant asks the server for. Blank means "any". */
     val grantRarity: String = "", val grantSlot: String = "",
+    /** The currency catalogue, read once per session; `selectedOrb` is the `items` id of one orb. */
+    val orbs: List<CurrencyItem> = emptyList(), val selectedOrb: String = "",
 
     val checks: List<CheckResult> = emptyList(),
     val health: String = tr("Соединение ещё не проверено", "The connection has not been checked yet"),

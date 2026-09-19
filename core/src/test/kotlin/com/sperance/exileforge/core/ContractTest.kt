@@ -4,6 +4,8 @@ import com.sperance.exileforge.core.contract.*
 import com.sperance.exileforge.core.model.Catalog
 import com.sperance.exileforge.core.model.CatalogFilter
 import com.sperance.exileforge.core.model.EquipmentKind
+import com.sperance.exileforge.core.i18n.Lang
+import com.sperance.exileforge.core.model.currency.*
 import com.sperance.exileforge.core.model.modifier.*
 import kotlin.test.*
 import kotlinx.serialization.json.*
@@ -81,6 +83,22 @@ class ContractTest {
         assertFalse(CatalogFilter(maxLevel = "39").matches(bow))
         assertFalse(CatalogFilter(modifierId = "other").matches(bow))
         assertFalse(CatalogFilter(query = "sword").matches(bow))
+    }
+
+    @Test fun `the orb table matches the currency the server seeds`() {
+        // EnumCurrencyOrb on the server; a sub-category outside it is served under its document name.
+        assertEquals(setOf("ORB_OF_TRANSMUTATION", "ORB_OF_AUGMENTATION", "ORB_OF_ALTERATION", "ORB_OF_ALCHEMY", "REGAL_ORB",
+            "CHAOS_ORB", "EXALTED_ORB", "DIVINE_ORB", "ORB_OF_ANNULMENT", "ORB_OF_SCOURING", "BLESSED_ORB", "VAAL_ORB",
+            "ORB_OF_CHANCE", "MIRROR_OF_KALANDRA"), CurrencyOrb.entries.map { it.name }.toSet())
+        assertEquals(CurrencyOrb.VAAL_ORB, CurrencyOrb.of("VAAL_ORB"))
+        assertNull(CurrencyOrb.of("ORB_OF_FUSING"))
+        assertEquals("Божественная сфера", CurrencyOrb.DIVINE_ORB.title(Lang.RU))
+        assertEquals("Divine Orb", CurrencyOrb.DIVINE_ORB.title(Lang.EN))
+        assertTrue(CurrencyOrb.entries.all { it.rule(Lang.RU).isNotBlank() && it.rule(Lang.EN).isNotBlank() })
+        // An unknown orb still has a name and a description, both the server's own.
+        val unknown = CurrencyItem(id, "Orb of Fusing", "ORB_OF_FUSING", "Links the sockets", 5)
+        assertNull(unknown.orb)
+        assertEquals("Orb of Fusing", unknown.title(Lang.EN))
     }
 
     @Test fun `identity is 24 hexadecimal characters`() {

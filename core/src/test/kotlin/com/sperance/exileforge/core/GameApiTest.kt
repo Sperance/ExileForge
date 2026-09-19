@@ -5,6 +5,7 @@ import com.sperance.exileforge.core.model.Catalog
 import com.sperance.exileforge.core.model.CatalogFilter
 import com.sperance.exileforge.core.model.EquipmentKind
 import com.sperance.exileforge.core.model.command.*
+import com.sperance.exileforge.core.model.currency.CurrencyOrb
 import com.sperance.exileforge.core.network.*
 import java.util.concurrent.TimeUnit
 import kotlin.random.Random
@@ -148,6 +149,37 @@ class GameApiTest {
         assertEquals("/game/api/v1/characterequipment/unequip?characterId=$other&inventoryId=$id", server.takeRequest().path)
     }
 
+    @Test fun `orbs are the currency category of the shared items collection`(): Unit = runBlocking {
+        val catalogue = JsonArray(listOf(
+            buildJsonObject { put("_id", id); put("name", "Chaos Orb"); put("category", "CURRENCY"); put("subCategory", "CHAOS_ORB"); put("price", 300) },
+            buildJsonObject { put("_id", other); put("name", "Orb of Transmutation"); put("category", "CURRENCY"); put("subCategory", "ORB_OF_TRANSMUTATION"); put("price", 10) },
+            buildJsonObject { put("_id", id); put("name", "Shard"); put("category", "STONE_STOCK"); put("subCategory", "STONE"); put("price", 1) }))
+        ok(catalogue.toString())
+        val orbs = api.currencyOrbs()
+        assertEquals("/game/api/v1/items", server.takeRequest().path)
+        // Only the currency category, cheapest first, and each document named by its sub-category.
+        assertEquals(listOf("Orb of Transmutation", "Chaos Orb"), orbs.map { it.name })
+        assertEquals(CurrencyOrb.CHAOS_ORB, orbs.last().orb)
+        assertEquals("Сфера хаоса", orbs.last().title())
+    }
+
+    @Test fun `applying an orb names the pair and prints what the server did`(): Unit = runBlocking {
+        val rerolled = """{"_id":"$id","characterId":"$other","equipmentId":"$other","rarity":"RARE","corrupted":false,
+            "params":[{"modifierId":"$id","tierId":"$other","tier":2,"values":[7.0]}]}"""
+        ok("""{"message":"Helm rerolled into 4 new affixes","item":$rerolled}""")
+        val outcome = api.applyOrb(other, id, other)
+        assertEquals("/game/api/v1/characterequipment/applyOrb?characterId=$other&inventoryId=$id&orbItemId=$other", server.takeRequest().path)
+        assertEquals("Helm rerolled into 4 new affixes", outcome.message)
+        assertEquals("RARE", outcome.item.rarity)
+        assertFalse(outcome.item.corrupted)
+        // A mirror is the one orb that answers with a second document, and the copy is locked.
+        ok("""{"message":"Helm was mirrored","item":$rerolled,"created":{"_id":"$other","characterId":"$other","equipmentId":"$other","rarity":"RARE","corrupted":true,"params":[]}}""")
+        val copy = assertNotNull(api.applyOrb(other, id, other).created)
+        assertEquals(other, copy.id)
+        assertTrue(copy.corrupted)
+        server.takeRequest()
+    }
+
     @Test fun `stats and the bag come from the server as they are`(): Unit = runBlocking {
         ok("""{"STOCK_HEALTH":188.4,"STOCK_ARMOR":40.0}""")
         assertEquals(188.4, api.stats(id).getValue("STOCK_HEALTH"))
@@ -166,7 +198,8 @@ class GameApiTest {
     @Test fun `capabilities are read from the server's own route table`(): Unit = runBlocking {
         val routes = listOf("GET" to "/api/v1/user/login", "GET" to "/api/v1/equipment/paged", "GET" to "/api/v1/character/inventory/equipments",
             "GET" to "/api/v1/character/inventory/stats", "POST" to "/api/v1/character/inventory/itemToInventory",
-            "POST" to "/api/v1/characterequipment/equip", "GET" to "/api/v1/modifierdefinition")
+            "POST" to "/api/v1/characterequipment/equip", "POST" to "/api/v1/characterequipment/applyOrb",
+            "GET" to "/api/v1/modifierdefinition")
         // The server prints the Ktor selector, so a method arrives as "(GET)".
         ok(JsonArray(routes.map { buildJsonObject { put("path", it.second); put("method", "(${it.first})") } }).toString())
         val capabilities = api.capabilities()
@@ -250,6 +283,7 @@ class GameApiTest {
         assertFailsWith<IllegalArgumentException> { api.delete(Catalog.ITEMS, "wrong") }
         assertFailsWith<IllegalArgumentException> { api.grant("wrong", id) }
         assertFailsWith<IllegalArgumentException> { api.equip(id, "wrong") }
+        assertFailsWith<IllegalArgumentException> { api.applyOrb(id, id, "wrong") }
         assertFailsWith<IllegalArgumentException> { api.stats("wrong") }
         assertEquals(1, server.requestCount)
     }

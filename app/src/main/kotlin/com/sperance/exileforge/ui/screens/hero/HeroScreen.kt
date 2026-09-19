@@ -85,6 +85,10 @@ import com.sperance.exileforge.ui.theme.*
             }
             item {
                 OrnateDivider()
+                ForgePanel { OrbPanel(s, instance.id, vm::selectOrb, vm::applyOrb) }
+            }
+            item {
+                OrnateDivider()
                 OutlinedButton(modifier = Modifier.fillMaxWidth(), enabled = !s.busy && s.adminTools,
                     onClick = { vm.editInventoryBase(instance.equipmentId); detailId = null }) { Icon(Icons.Outlined.Edit, null); Text(tr("Редактировать базу предмета", "Edit the item base")) }
                 Text(tr("База — общий шаблон. Выпавшие значения этого экземпляра принадлежат ему одному.", "The base is a shared template. The rolled values belong to this copy alone."), color = Muted, style = MaterialTheme.typography.bodySmall)

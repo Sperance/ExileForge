@@ -5,8 +5,8 @@ Guidance for AI assistants working in this repository.
 ## What this project is
 
 ExileForge is an **Android Compose client** (version 2.0.0, `versionCode` 13) for the
-**ktor-bestgame** RPG server (0.9.0), pinned in
-`core/.../contract/Contract.kt` as `SERVER_COMMIT = e8e9ae824dda7484622462da892c636c6369be6b`
+**ktor-bestgame** RPG server (0.9.1), pinned in
+`core/.../contract/Contract.kt` as `SERVER_COMMIT = 64b3577822e0f4b5d710ca8b9d4e250e65269359`
 on the server branch `claude/tender-pasteur-a36kj2`.
 
 The client is deliberately **thin**: the server owns items, stats, modifier rolls and inventory.
@@ -24,8 +24,9 @@ core/                                   Pure JVM library (java-library + kotlin-
                  ApiFailure/FailureState/RequestJournal/RequestLog/ItemPage/HttpPayload
   model/         Catalog, EntitySource, CatalogFilter, EquipmentKind
                  command/Commands.kt    UserProfile, ItemStack, UseRecipeCommand, RouteInfo, ApiCapabilities
-                 hero/HeroModels.kt     CharacterSummary, EquipmentInstance, CharacterItem, Recipe*, HeroView
+                 hero/HeroModels.kt     CharacterSummary, EquipmentInstance, OrbOutcome, CharacterItem, Recipe*, HeroView
                  modifier/Modifiers.kt  ModifierDefinition, ModifierTier, Modifier, effects and sources
+                 currency/Orbs.kt       CurrencyItem, CurrencyOrb and the CURRENCY category
                  character/CharacterStats.kt  The server's stat enum names
   i18n/          Loc.kt                 Lang (RU/EN), `tr(ru, en)` and the global `uiLanguage`
   editor/        EditorSchema.kt        Declarative form schemas (FormField/InputSpec) used by the editor
@@ -130,14 +131,20 @@ These are enforced by tests and are the point of the client's design:
    What lands on a copy, in which tier and with which value, is rolled by the server in
    `itemToInventory`. `validateModifierPool` rejects rolled `params` in a template write, and
    `inventoryDocument` is a display-only projection that must never be posted back.
-9. **Lists are read whole and paged here.** The server's `/paged` route passes `page` as the limit
-   and `size` as the offset, so it answers an empty list; it also offers no filter. The client reads
-   `GET /api/v1/{collection}` and slices it, comparing only fields the server already wrote —
-   filtering is display, never a game calculation. Move paging back once the server swaps them.
-10. **Release builds require HTTPS** (`usesCleartextTraffic=false`); only the debug manifest
+9. **Lists are read whole and paged here.** The server's `/paged` route passes `page` straight to
+   the repository as the offset instead of `page * size`, so every page but the first is off by all
+   but one record; it also offers no filter. The client reads `GET /api/v1/{collection}` and slices
+   it, comparing only fields the server already wrote — filtering is display, never a game
+   calculation. Move paging back once the server fixes the offset.
+10. **Orbs are the server's rules.** A currency orb is an `items` document of category `CURRENCY`;
+    `POST /api/v1/characterequipment/applyOrb` spends one and answers with the item plus a sentence
+    saying what happened. The client sends the pair and prints that sentence — it never decides what
+    an orb did, and `CurrencyOrb` is a translation table, not a rule table. `rarity` and `corrupted`
+    belong to the instance, so the instance wins over its template in `inventoryDocument`.
+11. **Release builds require HTTPS** (`usesCleartextTraffic=false`); only the debug manifest
     permits cleartext for local servers. This matters more than usual: the password travels as a
     query parameter, because that is the route the server exposes.
-11. **No network or raster images.** Entities carry at most an `image` URL, which the client stores
+12. **No network or raster images.** Entities carry at most an `image` URL, which the client stores
     but never fetches. Every picture is a bundled vector (`ItemEmblem`, `ForgeGlyphs`).
 
 ## Conventions

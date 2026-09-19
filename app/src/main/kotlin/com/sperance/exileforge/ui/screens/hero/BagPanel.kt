@@ -27,7 +27,11 @@ import kotlinx.serialization.json.JsonObject
     ForgePanel {
         Engraved(tr("Сумка", "Bag"))
         if (hero.bag.isEmpty()) Text(tr("Сумка пуста", "The bag is empty"), color = Muted)
-        hero.bag.forEach { item -> PropertyRow(tr("Предмет", "Item") + " …${item.itemId.takeLast(6)}", item.amount.toString(), "item") }
+        // Currency is named from the catalogue the hero screen already read; anything else is an id.
+        hero.bag.forEach { item ->
+            val orb = s.orbs.firstOrNull { it.id == item.itemId }
+            PropertyRow(orb?.title(s.lang) ?: (tr("Предмет", "Item") + " …${item.itemId.takeLast(6)}"), item.amount.toString(), "item")
+        }
 
         OrnateDivider()
         Engraved(tr("Промокод", "Promo code"))

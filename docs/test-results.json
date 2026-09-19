@@ -1,7 +1,7 @@
 [
   {
     "name": "com.sperance.exileforge.core.ContractTest",
-    "tests": "8",
+    "tests": "9",
     "failures": "0",
     "errors": "0"
   },
@@ -13,13 +13,13 @@
   },
   {
     "name": "com.sperance.exileforge.core.GameApiTest",
-    "tests": "21",
+    "tests": "23",
     "failures": "0",
     "errors": "0"
   },
   {
     "name": "com.sperance.exileforge.core.ItemPresentationTest",
-    "tests": "4",
+    "tests": "5",
     "failures": "0",
     "errors": "0"
   },

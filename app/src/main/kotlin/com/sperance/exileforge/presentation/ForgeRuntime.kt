@@ -117,10 +117,18 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
         mutable.update { it.copy(definitions = api.modifierDefinitions()) }
     }
 
+    /** The orbs the server seeded. The catalogue is fixed for a session, so one read covers it. */
+    suspend fun ensureOrbs() {
+        if (state.value.orbs.isNotEmpty()) return
+        val orbs = api.currencyOrbs()
+        mutable.update { it.copy(orbs = orbs, selectedOrb = it.selectedOrb.ifBlank { orbs.firstOrNull()?.id.orEmpty() }) }
+    }
+
     fun clearSession() {
         metadataJob?.cancel(); api.logout(); journal.clear()
         mutable.update { it.copy(signedIn = false, profile = null, sessionEpoch = it.sessionEpoch + 1,
             items = emptyList(), total = 0, page = 0, totalPages = 0, definitions = emptyList(),
+            orbs = emptyList(), selectedOrb = "",
             original = null, draft = JsonObject(emptyMap()), editorOpen = false,
             characterId = "", characterOwner = "", hero = null, inventoryBases = emptyMap(), selectedEquipment = "",
             checks = emptyList(), tab = 3, mode = AppMode.PLAYER, failure = null) }

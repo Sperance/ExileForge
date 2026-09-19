@@ -14,6 +14,8 @@ import com.sperance.exileforge.core.model.Catalog
 import com.sperance.exileforge.core.model.CatalogFilter
 import com.sperance.exileforge.core.model.EntitySource
 import com.sperance.exileforge.core.model.command.*
+import com.sperance.exileforge.core.model.currency.CURRENCY_CATEGORY
+import com.sperance.exileforge.core.model.currency.CurrencyItem
 import com.sperance.exileforge.core.model.hero.*
 import com.sperance.exileforge.core.model.modifier.ModifierDefinition
 import com.sperance.exileforge.core.model.modifier.ModifierTier
@@ -92,10 +94,10 @@ class GameApi(
     /**
      * The whole collection.
      *
-     * This is how every list is read. The server's own `/paged` route hands `page` to the repository
-     * as the limit and `size` as the offset, so `page=0` asks Mongo for `limit(0).skip(size)` and
-     * answers with nothing at all — it cannot be used until the server swaps them back. Reading the
-     * collection is safe here because these collections are small and server-seeded.
+     * This is how every list is read. The server's `/paged` route still hands `page` straight to the
+     * repository as the offset instead of `page * size`, so every page but the first is off by all
+     * but one record — 0.9.1 swapped the arguments of `findLimited`, not the arithmetic above it.
+     * Reading the collection is safe here because these collections are small and server-seeded.
      */
     private suspend fun all(path: String): List<JsonObject> =
         request("GET", path, authenticated = true).jsonArray.map { it.jsonObject }
@@ -233,6 +235,32 @@ class GameApi(
         requireId(characterId)
         return WireJson.decodeFromJsonElement(kotlinx.serialization.builtins.ListSerializer(EquipmentInstance.serializer()),
             request("GET", path, mapOf("characterId" to characterId), authenticated = true))
+    }
+
+    // ==================== currency ====================
+
+    /**
+     * Every currency orb the server serves, read out of the shared `items` collection.
+     *
+     * An orb is an ordinary stacking item filed under one category, so the catalogue is whatever the
+     * server seeded: the client filters by that category and never carries a list of its own.
+     */
+    suspend fun currencyOrbs(): List<CurrencyItem> =
+        all("api/v1/${Catalog.ITEMS.path}").filter { it.text("category") == CURRENCY_CATEGORY }
+            .map { WireJson.decodeFromJsonElement(CurrencyItem.serializer(), it) }
+            .sortedBy { it.price }
+
+    /**
+     * Spends one orb of the character's on one item of their inventory.
+     *
+     * What the orb does is entirely the server's: it checks the rarity the orb demands, rolls new
+     * affixes, tiers and values, and answers with the item as it now stands plus a sentence saying
+     * what happened. The orb is debited in the same transaction, so a refusal costs nothing.
+     */
+    suspend fun applyOrb(characterId: String, inventoryId: String, orbItemId: String): OrbOutcome {
+        requireId(characterId); requireId(inventoryId); requireId(orbItemId)
+        return WireJson.decodeFromJsonElement(request("POST", "api/v1/characterequipment/applyOrb",
+            mapOf("characterId" to characterId, "inventoryId" to inventoryId, "orbItemId" to orbItemId), authenticated = true))
     }
 
     // ==================== recipes and codes ====================

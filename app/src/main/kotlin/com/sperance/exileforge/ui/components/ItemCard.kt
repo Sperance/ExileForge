@@ -60,6 +60,9 @@ import kotlinx.serialization.json.*
                 if (doc["defense"] != null) PropertyRow(tr("Защита", "Defence"), doc.text("defense"), "defense")
                 if (doc["price"] != null) PropertyRow(tr("Цена", "Price"), doc.text("price"), "price")
                 if (doc["money"] != null) PropertyRow(tr("Золото", "Gold"), doc.text("money"), "money")
+                // Corruption is the one state that closes an item: no orb touches it again.
+                if ((doc["corrupted"] as? JsonPrimitive)?.booleanOrNull == true)
+                    PropertyRow(tr("Состояние", "State"), tr("Порченый", "Corrupted"), "corrupted")
                 // A template advertises the size of its pool; an instance shows what was actually rolled.
                 (doc["modifierIds"] as? JsonArray)?.let { PropertyRow(tr("Модификаторов в пуле", "Modifiers in the pool"), it.size.toString(), "modifier") }
                 val rolled = (doc["params"] as? JsonArray).orEmpty()

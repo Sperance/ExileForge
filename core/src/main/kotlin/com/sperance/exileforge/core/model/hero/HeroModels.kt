@@ -25,19 +25,38 @@ import kotlinx.serialization.json.*
  * One instance of an item in a character's inventory (collection `CharacterEquipment`).
  *
  * The template ([com.sperance.exileforge.core.model.Catalog.EQUIPMENT]) is shared by every copy;
- * only [params] and [equippedSlot] belong to this one. `equippedSlot == null` means "in the stash".
+ * [params], [rarity], [corrupted] and [equippedSlot] belong to this one. `equippedSlot == null`
+ * means "in the stash".
+ *
+ * [rarity] starts as the template's and is then the orbs' to change: the template only decides what
+ * the item drops as. [corrupted] is final — the server refuses every further orb on such an item.
  */
 @Serializable data class EquipmentInstance(
     @SerialName("_id") val id: String,
     val characterId: String = "",
     val equipmentId: String = "",
     val params: List<Modifier> = emptyList(),
+    val rarity: String = "COMMON",
+    val corrupted: Boolean = false,
     val equippedSlot: String? = null,
     val version: Long = 0,
 ) {
     val equipped: Boolean get() = equippedSlot != null
     fun document(): JsonObject = WireJson.encodeToJsonElement(this).jsonObject
 }
+
+/**
+ * What `POST /api/v1/characterequipment/applyOrb` answered.
+ *
+ * [message] is the server's own account of what the orb did — the client prints it rather than
+ * inferring the outcome, because only the server knows what it rolled. [created] is the copy a
+ * Mirror of Kalandra made; every other orb leaves it null.
+ */
+@Serializable data class OrbOutcome(
+    val message: String = "",
+    val item: EquipmentInstance,
+    val created: EquipmentInstance? = null,
+)
 
 /** A stacking item in the bag. The server stores it as the flat string "itemId:amount". */
 @Serializable data class CharacterItem(val itemId: String, val amount: Long)

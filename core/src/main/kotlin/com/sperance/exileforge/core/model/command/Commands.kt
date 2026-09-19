@@ -61,6 +61,7 @@ data class ApiCapabilities(val routes: Set<String>) {
             "GET" to "/api/v1/character/inventory/stats",
             "POST" to "/api/v1/character/inventory/itemToInventory",
             "POST" to "/api/v1/characterequipment/equip",
+            "POST" to "/api/v1/characterequipment/applyOrb",
             "GET" to "/api/v1/modifierdefinition",
         )
         val missing = required.filterNot { (method, path) -> has(method, path) }

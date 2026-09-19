@@ -1,7 +1,7 @@
 # ExileForge 2.0.0
 
-Android Compose client for **ktor-bestgame 0.9.0**.
-Server: branch `claude/tender-pasteur-a36kj2`, commit `e8e9ae824dda7484622462da892c636c6369be6b`.
+Android Compose client for **ktor-bestgame 0.9.1**.
+Server: branch `claude/tender-pasteur-a36kj2`, commit `64b3577822e0f4b5d710ca8b9d4e250e65269359`.
 
 ## Язык интерфейса · Interface language
 
@@ -16,7 +16,7 @@ Every label, hint, error and contract-validation message exists in Russian and E
 ## Экраны
 
 - **Персонажи / Каталог** — поиск и постраничный просмотр персонажей, экипировки и предметов. Фильтры по слоту, редкости, типу оружия, уровню и модификатору в пуле.
-- **Герой** — сводка персонажа, надетые слоты, характеристики сервера, инвентарь и сумка, промокоды и рецепты.
+- **Герой** — сводка персонажа, надетые слоты, характеристики сервера, инвентарь и сумка, применение валютных сфер, промокоды и рецепты.
 - **Редактор** — шаблоны экипировки и предметов, персонажи и их базовые характеристики.
 - **Проверки** (администратор) — CRUD-сценарий и журнал запросов.
 - **Аккаунт** — сервер, вход, смена пароля и язык.
@@ -26,6 +26,16 @@ Every label, hint, error and contract-validation message exists in Russian and E
 Администратор на вкладке «Герой» выбирает редкость и категорию (слот) и жмёт **«Получить предмет с рандомными роллами»**. Клиент берёт случайный шаблон с такой редкостью и слотом и просит сервер создать его экземпляр. Всё остальное — дело сервера: он выбирает префиксы и суффиксы в количестве, которое задаёт редкость, добавляет постоянные источники (implicit, enchant, corruption, unique), роллит тир каждого модификатора и значение внутри его диапазона. Клиент не роллит ничего и не предсказывает результат.
 
 Рядом остаются выдача конкретного шаблона по справочнику и изменение количества простых предметов в сумке.
+
+## Сферы
+
+Сервер 0.9.1 вернул валютные сферы POE, и клиент использует их все четырнадцать: превращения, улучшения, изменения, алхимии, царскую, хаоса, высшую, божественную, аннулирования, очищения, священную, ваал, удачи и Зеркало Каландры. Сфера — обычный предмет сумки из категории `CURRENCY`; клиент читает каталог из коллекции `items` и показывает рядом с каждой сферой то количество, которым персонаж владеет.
+
+Применить сферу можно на вкладке «Герой»: откройте предмет в арсенале, выберите сферу и нажмите **«Применить сферу»**. Что сфера делает, решает только сервер — какая редкость ей нужна, сколько аффиксов она роллит и что оставляет нетронутым. Клиент отправляет пару «предмет + сфера» и печатает ответ сервера дословно, включая отказ. Сфера списывается из сумки в той же транзакции, поэтому неудачная проверка её не съедает.
+
+Редкость с этой версии принадлежит копии предмета, а не шаблону: шаблон задаёт лишь то, с чем предмет падает. Порченый предмет (`Сфера ваал`, копия из Зеркала) помечен в карточке — сервер больше не примет на него ни одной сферы, и кнопка выключена.
+
+Администратору доступна та же выдача в разделе **«Сферы на предметах»**: там предмет выбирается списком, а не открытием карточки, и рядом стоит кнопка «Выдать 10 таких сфер», чтобы проверить правило на живом сервере, не фармя валюту.
 
 ## Connect
 
@@ -57,8 +67,9 @@ Debug allows HTTP for local development; release requires HTTPS. **This server h
 - **Equipment is a pool of references.** A template carries `modifierIds`; which of them land on a copy, in which tier and with which value, is rolled by the server when the instance is created.
 - **Inventory is its own collection.** One item in a character's bag is one `CharacterEquipment` document with its own rolls; the slot comes from the template, so equipping takes an instance id and nothing else.
 - **Stats come from the server.** `GET /api/v1/character/inventory/stats` returns the summed sheet; the client prints it and implements no second calculator.
-- **Lists are paged on the client.** The server's `/paged` route swaps its limit and offset, so it answers with nothing; it also offers no filter. The client reads the collection and slices it, comparing only fields the server already wrote. Nothing game-related is computed.
-- **Removed with the features the server no longer has:** passive tree, combat and the battle arena, orbs and crafting, the server icon set, JWT, cursor-paged inventory and three-way conflict review.
+- **Lists are paged on the client.** The server's `/paged` route hands the page number to Mongo as the offset instead of `page * size`, so every page but the first is off by all but one record; it also offers no filter. The client reads the collection and slices it, comparing only fields the server already wrote. Nothing game-related is computed.
+- **Currency orbs are back (0.9.1).** They live in the `items` collection under the `CURRENCY` category and are applied through `POST /api/v1/characterequipment/applyOrb`. The rarity and the corruption flag now belong to the copy, not to the template.
+- **Removed with the features the server no longer has:** passive tree, combat and the battle arena, the crafting bench, the server icon set, JWT, cursor-paged inventory and three-way conflict review.
 
 ## Build and verification
 

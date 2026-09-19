@@ -5,6 +5,7 @@ import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.pick
 import com.sperance.exileforge.core.i18n.tr
 import com.sperance.exileforge.core.i18n.uiLanguage
+import com.sperance.exileforge.core.model.currency.CURRENCY_CATEGORY
 import com.sperance.exileforge.core.model.modifier.ModifierDefinition
 import kotlinx.serialization.json.*
 
@@ -24,7 +25,7 @@ fun itemVisualKind(doc: JsonObject): ItemVisualKind = when {
         else -> when {
             doc.text("subCategory") == "STONE" -> ItemVisualKind.GEM
             doc.text("category") == "CONSUMABLE" -> ItemVisualKind.FLASK
-            doc.text("category").endsWith("_STOCK") -> ItemVisualKind.CURRENCY
+            doc.text("category") == CURRENCY_CATEGORY || doc.text("category").endsWith("_STOCK") -> ItemVisualKind.CURRENCY
             else -> ItemVisualKind.ITEM
         }
     }
@@ -61,13 +62,16 @@ fun weaponTitle(value: String, lang: Lang = uiLanguage) = when (value) {
 /**
  * Display projection of one inventory instance over its template.
  *
+ * The instance is laid over the template, so its own `rarity` wins: the template only says what the
+ * item dropped as, and the orbs move the copy up and down that ladder afterwards.
+ *
  * Never post this combined document back: the template belongs to the `equipment` collection and
  * `params` belongs to the instance.
  */
 fun inventoryDocument(instance: JsonObject, base: JsonObject?): JsonObject = JsonObject(
     base.orEmpty()
         + mapOf("name" to (base?.get("name") ?: JsonPrimitive(tr("Предмет экипировки", "Equipment item"))))
-        + instance.filterKeys { it in setOf("_id", "equipmentId", "params", "equippedSlot") }
+        + instance.filterKeys { it in setOf("_id", "equipmentId", "params", "equippedSlot", "rarity", "corrupted") }
 )
 
 fun inventoryDocument(instance: com.sperance.exileforge.core.model.hero.EquipmentInstance, base: JsonObject?): JsonObject =

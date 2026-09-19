@@ -63,6 +63,19 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
         api.adjustItems(id, listOf(ItemStack(itemId, amount)))
     } } }
 
+    fun selectOrb(value: String) { with(runtime) { if (!state.value.busy) mutable.update { it.copy(selectedOrb = value) } } }
+
+    /**
+     * Spends one orb on one item of the inventory.
+     *
+     * Whether the orb applies at all, what it rerolls and what it leaves alone is the server's rule;
+     * the client only names the pair and prints the sentence that comes back.
+     */
+    fun applyOrb(inventoryId: String, orbItemId: String) { with(runtime) { characterCommand { id ->
+        val outcome = api.applyOrb(id, inventoryId, orbItemId)
+        mutable.update { it.copy(selectedEquipment = outcome.created?.id ?: outcome.item.id, message = outcome.message) }
+    } } }
+
     fun redeem(code: String) { with(runtime) { characterCommand { id -> api.redeem(id, code) } } }
 
     fun useRecipe(recipeId: String, ingredients: List<String>, amount: Long) { with(runtime) { characterCommand { id ->
@@ -86,6 +99,7 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
         val id = state.value.characterId.trim()
         check(id.isNotBlank()) { tr("Выберите персонажа", "Choose a character") }
         ensureDefinitions()
+        ensureOrbs()
         val character = api.character(id)
         val view = HeroView(character, api.inventory(id), api.stats(id), api.bag(id))
         mutable.update { it.copy(hero = view, characterOwner = character.userId,

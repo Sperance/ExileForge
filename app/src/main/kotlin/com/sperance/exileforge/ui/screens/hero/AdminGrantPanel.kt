@@ -51,6 +51,13 @@ import com.sperance.exileforge.ui.theme.Muted
         Button(enabled = enabled && equipmentId.isNotBlank(), onClick = { vm.grant(equipmentId) }) { Text(tr("Выдать выбранный предмет", "Grant the chosen item")) }
 
         OrnateDivider()
+        Engraved(tr("Сферы на предметах", "Orbs on items"))
+        Text(tr("Любая сфера сервера на любом предмете инвентаря — для проверки правил на живом сервере.",
+                "Any of the server's orbs on any item of the inventory — for trying the rules against a live server."),
+            color = Muted, style = MaterialTheme.typography.bodySmall)
+        AdminOrbPanel(s, vm)
+
+        OrnateDivider()
         Engraved(tr("Простые предметы", "Stacking items"))
         var itemId by remember(s.characterId) { mutableStateOf("") }
         var amount by remember(s.characterId) { mutableStateOf("1") }

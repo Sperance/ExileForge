@@ -147,7 +147,9 @@ import kotlinx.serialization.json.putJsonArray
     }
     val allocated = node.code in taken
     ForgePanel(accent = nodeColour(node, true)) {
-        Engraved(node.name.ifBlank { node.code }, nodeColour(node, true))
+        // The node's name is this panel's title, so it keeps its own casing rather than being
+        // shouted as an Engraved caption the way a section heading is.
+        Text(node.name.ifBlank { node.code }, color = nodeColour(node, true), style = MaterialTheme.typography.titleMedium)
         PropertyRow(tr("Вид узла", "Node type"), nodeTypeTitle(node.type.name, s.lang), "node")
         PropertyRow(tr("Стоимость", "Cost"), node.cost.toString(), "level")
         PropertyRow(tr("Состояние", "State"), if (allocated) tr("Взят", "Taken") else tr("Не взят", "Not taken"), "node")

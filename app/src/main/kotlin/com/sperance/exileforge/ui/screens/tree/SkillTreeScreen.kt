@@ -30,6 +30,7 @@ import com.sperance.exileforge.ui.theme.*
 import kotlin.math.max
 import kotlin.math.min
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
@@ -174,7 +175,7 @@ import kotlinx.serialization.json.putJsonArray
 /** A fixed modifier as the display helpers expect it: they read documents, not typed models. */
 private fun modifierDocument(modifierId: String, values: List<Double>): JsonObject = buildJsonObject {
     put("modifierId", modifierId)
-    putJsonArray("values") { values.forEach { add(it) } }
+    putJsonArray("values") { values.forEach { add(JsonPrimitive(it)) } }
 }
 
 private fun nodeColour(node: SkillTreeNode, selected: Boolean): Color = when {

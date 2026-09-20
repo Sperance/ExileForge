@@ -158,7 +158,10 @@ These are enforced by tests and are the point of the client's design:
 13. **An item has no stat fields.** Armour, damage and attack speed are fixed modifiers in
     `baseParams` (values, no tier); `durability` is the only number left as a field. Requirements
     (`requiredLevel`, `requiredStrength`, `requiredDexterity`, `requiredIntelligence`) are printed,
-    never enforced here.
+    never enforced here — the server checks them twice and the two checks are different rules:
+    `equip` refuses an item out of reach outright (`CH_013`), while one already worn keeps its slot
+    and only stops counting, landing in the sheet's `inactive`. Never disable a control on a
+    requirement the client worked out itself; send the command and show the refusal.
 14. **Release builds require HTTPS** (`usesCleartextTraffic=false`); only the debug manifest
     permits cleartext for local servers. This matters more than usual: the password travels as a
     query parameter, because that is the route the server exposes.

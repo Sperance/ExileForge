@@ -80,7 +80,9 @@ import com.sperance.exileforge.ui.theme.*
                         Icon(ForgeGlyphs.Helm, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp))
                         Text(if (instance.equipped) tr("Снять предмет", "Take the item off") else tr("Надеть предмет", "Put the item on"))
                     }
-                    Text(tr("Предмет, уже занимающий слот, сервер снимет сам.", "The server takes off whatever already occupies the slot."), color = Muted, style = MaterialTheme.typography.bodySmall)
+                    Text(tr("Предмет, уже занимающий слот, сервер снимет сам. Если требования предмета не выполнены, надеть его сервер не даст.",
+                            "The server takes off whatever already occupies the slot. If the item's requirements are not met, the server refuses to put it on."),
+                        color = Muted, style = MaterialTheme.typography.bodySmall)
                 }
             }
             item {

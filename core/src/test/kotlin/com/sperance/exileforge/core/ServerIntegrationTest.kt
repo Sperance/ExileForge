@@ -5,6 +5,7 @@ import com.sperance.exileforge.core.model.Catalog
 import com.sperance.exileforge.core.model.CatalogFilter
 import com.sperance.exileforge.core.model.command.ItemStack
 import com.sperance.exileforge.core.model.currency.CurrencyOrb
+import com.sperance.exileforge.core.model.hero.CharacterSheet
 import com.sperance.exileforge.core.model.skilltree.SkillNodeType
 import com.sperance.exileforge.core.network.*
 import kotlin.test.*
@@ -15,6 +16,22 @@ import org.junit.Test
 
 /** Opt-in: CI launches a real backend and MongoDB replica set; no transport mocks. */
 class ServerIntegrationTest {
+
+    /**
+     * How far a template's requirements are out of the character's reach, by the sheet the server
+     * just sent. Zero means wearable.
+     *
+     * This is a fixture choice, not a rule: the server decides who may wear what, and the test only
+     * needs a base it will accept and one it will refuse.
+     */
+    private fun demand(template: JsonObject, sheet: CharacterSheet): Int {
+        fun short(key: String, have: Double) = ((template.text(key).toIntOrNull() ?: 0) - have.toInt()).coerceAtLeast(0)
+        return short("requiredLevel", sheet.level.toDouble()) +
+            short("requiredStrength", sheet.stats["STOCK_STRENGTH"] ?: 0.0) +
+            short("requiredDexterity", sheet.stats["STOCK_AGILITY"] ?: 0.0) +
+            short("requiredIntelligence", sheet.stats["STOCK_INTELLECT"] ?: 0.0)
+    }
+
     @Test fun realServerClientContract(): Unit = runBlocking {
         val url = System.getenv("EF_LIVE_URL")
         assumeTrue("Enabled only by the isolated client/server job", !url.isNullOrBlank())
@@ -71,19 +88,35 @@ class ServerIntegrationTest {
             }
             assertFalse(instance.equipped)
 
-            val worn = api.equip(id, instance.id)
+            // Points come from levels, so the character is levelled before wearing or spending anything.
+            assertTrue(api.addExperience(id, levels.last().experience).level > 1)
+            val base = api.stats(id)
+            assertTrue(base.stats.isNotEmpty(), "the server returned no stats")
+            assertEquals(character.text("_id"), base.characterId)
+
+            // Requirements are checked twice by the server, and the two checks are not the same rule:
+            // an item out of reach cannot be put on at all, while one already worn merely stops
+            // counting. The wearable base is chosen here from what the sheet already says.
+            val helmets = api.search(Catalog.EQUIPMENT, 0, CatalogFilter(slot = "HELMET")).items
+            assertTrue(helmets.isNotEmpty(), "no helmet templates to wear")
+            val wearable = helmets.minByOrNull { demand(it, base) } ?: fail("no helmet templates")
+            val wornInstance = api.grant(id, wearable.entityId)
+            val worn = api.equip(id, wornInstance.id)
             assertEquals("HELMET", worn.equippedSlot)
-            assertEquals(listOf(instance.id), api.inventory(id).filter { it.equipped }.map { it.id })
+            assertEquals(listOf(wornInstance.id), api.inventory(id).filter { it.equipped }.map { it.id })
             // Wearing the item is what changes the character sheet; the client recomputes nothing.
             val sheet = api.stats(id)
-            assertTrue(sheet.stats.isNotEmpty(), "the server returned no stats")
             assertEquals(sheet, api.stats(id))
-            assertEquals(character.text("_id"), sheet.characterId)
-            // The server names the items it counted and the ones whose requirements are not met.
-            assertTrue(instance.id in sheet.active || sheet.inactive.any { it.inventoryId == instance.id },
-                "the worn item is in neither list: $sheet")
-            sheet.inactive.forEach { refused -> assertTrue(refused.reasons.isNotEmpty(), "refused without a reason: $refused") }
-            assertFalse(api.unequip(id, instance.id).equipped)
+            assertEquals(listOf(wornInstance.id), sheet.active, "the worn item was not counted: $sheet")
+            assertTrue(sheet.inactive.isEmpty(), "nothing should be refused here: ${sheet.inactive}")
+
+            // The other half of the rule: a base the sheet cannot reach is refused outright.
+            helmets.maxByOrNull { demand(it, base) }?.takeIf { demand(it, base) > 0 }?.let { heavy ->
+                val granted = api.grant(id, heavy.entityId)
+                val refused = assertFailsWith<ApiFailure> { api.equip(id, granted.id) }
+                assertTrue(refused.message.orEmpty().contains(heavy.text("name")), "refusal names no item: ${refused.message}")
+            }
+            assertFalse(api.unequip(id, wornInstance.id).equipped)
 
             // Currency is the same collection as every other item, told apart by its category alone.
             val orbs = api.currencyOrbs()
@@ -120,8 +153,6 @@ class ServerIntegrationTest {
 
             // The tree: the start node first, then a neighbour of it, then back again.
             assertTrue(api.characterTree(id).nodes.isEmpty())
-            // Points come from levels, so the character is levelled first and the server re-reads it.
-            assertTrue(api.addExperience(id, levels.last().experience).level > 1)
             val started = api.allocateNode(id, start.code)
             assertEquals(setOf(start.code), started.takenCodes)
             assertTrue(started.total > 0, "a levelled character has no skill points: $started")

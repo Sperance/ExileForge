@@ -6,6 +6,7 @@ import com.sperance.exileforge.core.model.CatalogFilter
 import com.sperance.exileforge.core.model.EquipmentKind
 import com.sperance.exileforge.core.model.command.*
 import com.sperance.exileforge.core.model.currency.CurrencyOrb
+import com.sperance.exileforge.core.model.skilltree.SkillNodeType
 import com.sperance.exileforge.core.network.*
 import java.util.concurrent.TimeUnit
 import kotlin.random.Random
@@ -181,8 +182,14 @@ class GameApiTest {
     }
 
     @Test fun `stats and the bag come from the server as they are`(): Unit = runBlocking {
-        ok("""{"STOCK_HEALTH":188.4,"STOCK_ARMOR":40.0}""")
-        assertEquals(188.4, api.stats(id).getValue("STOCK_HEALTH"))
+        // The sheet reports the numbers and the server's verdict on every worn item alongside them.
+        ok("""{"characterId":"$id","level":12,"stats":{"STOCK_HEALTH":188.4,"STOCK_ARMOR":40.0},"active":["$other"],
+            "inactive":[{"inventoryId":"$id","name":"Iron Skullcap","reasons":["strength: need 30, have 14"]}]}""")
+        val sheet = api.stats(id)
+        assertEquals(188.4, sheet.stats.getValue("STOCK_HEALTH"))
+        assertEquals(12, sheet.level)
+        assertEquals(listOf(other), sheet.active)
+        assertEquals("strength: need 30, have 14", sheet.inactive.single().reasons.single())
         assertEquals("/game/api/v1/character/inventory/stats?characterId=$id", server.takeRequest().path)
         ok("""[{"itemId":"chaos_orb","amount":50}]""")
         assertEquals(50L, api.bag(id).single().amount)
@@ -195,11 +202,69 @@ class GameApiTest {
         assertFailsWith<IllegalArgumentException> { ItemStack("chaos_orb", 0) }
     }
 
+    @Test fun `the world's reference tables are read whole and once`(): Unit = runBlocking {
+        ok("""[{"_id":"$id","code":"MARAUDER","name":"Marauder","startNodeCode":"STR_START",
+            "baseStats":[{"stat":"STOCK_STRENGTH","value":32.0}],"perLevelStats":[{"stat":"STOCK_HEALTH","value":12.0}],
+            "params":[{"modifierId":"$other","values":[1.0]}],"description":"Сила"}]""")
+        val marauder = api.characterClasses().single()
+        assertEquals("/game/api/v1/characterclass", server.takeRequest().path)
+        assertEquals("Marauder", marauder.title)
+        assertEquals(32.0, marauder.baseStats.single().value)
+        // A class conversion is fixed by the reference table, so it carries no tier at all.
+        assertFalse(marauder.params.single().rolled)
+
+        ok("""[{"_id":"$other","level":3,"experience":300.0,"skillPoints":2},{"_id":"$id","level":1,"experience":0.0}]""")
+        val levels = api.experienceLevels()
+        assertEquals("/game/api/v1/experiencelevel", server.takeRequest().path)
+        assertEquals(listOf(1, 3), levels.map { it.level })
+        assertEquals(2, levels.last().skillPoints)
+    }
+
+    @Test fun `the skill tree is one graph and every command answers with the whole state`(): Unit = runBlocking {
+        ok("""[{"_id":"$id","code":"STR_START","name":"Marauder","type":"START","cost":0,"positionX":-40,"positionY":0,
+            "connections":["STR_LIFE_1"],"params":[{"modifierId":"$other","values":[10.0]}]}]""")
+        val node = api.skillTree().single()
+        assertEquals("/game/api/v1/skilltreenode", server.takeRequest().path)
+        assertEquals(SkillNodeType.START, node.type)
+        assertEquals(listOf("STR_LIFE_1"), node.connections)
+        assertFalse(node.params.single().rolled)
+
+        val state = """{"characterId":"$id","total":5,"spent":1,"available":4,
+            "nodes":[{"_id":"$other","characterId":"$id","nodeCode":"STR_START","name":"Marauder","type":"START","cost":0,"params":[]}]}"""
+        ok(state)
+        assertEquals(setOf("STR_START"), api.characterTree(id).takenCodes)
+        assertEquals("/game/api/v1/characterskillnode/byCharacter?characterId=$id", server.takeRequest().path)
+        ok(state)
+        assertEquals(4, api.allocateNode(id, "STR_LIFE_1").available)
+        assertEquals("/game/api/v1/characterskillnode/allocate?characterId=$id&nodeCode=STR_LIFE_1", server.takeRequest().path)
+        ok(state); api.refundNode(id, "STR_LIFE_1")
+        assertEquals("/game/api/v1/characterskillnode/refund?characterId=$id&nodeCode=STR_LIFE_1", server.takeRequest().path)
+        ok(state); api.resetTree(id)
+        assertEquals("/game/api/v1/characterskillnode/reset?characterId=$id", server.takeRequest().path)
+        // A node is named by its code, never by an id, and a blank one never reaches the network.
+        val sent = server.requestCount
+        assertFailsWith<IllegalArgumentException> { api.allocateNode(id, " ") }
+        assertEquals(sent, server.requestCount)
+    }
+
+    @Test fun `experience is granted and the level comes back from the server`(): Unit = runBlocking {
+        ok("""{"_id":"$id","userId":"$other","name":"Изгнанник","classId":"$id","level":7,"experience":1200.0}""")
+        assertEquals(7, api.addExperience(id, 1200.0).level)
+        assertEquals("/game/api/v1/character/inventory/experience?characterId=$id&amount=1200.0", server.takeRequest().path)
+        val sent = server.requestCount
+        // Taking experience away is not a route this server has; the level only ever rises.
+        assertFailsWith<IllegalArgumentException> { api.addExperience(id, -5.0) }
+        assertFailsWith<IllegalArgumentException> { api.addExperience(id, 0.0) }
+        assertEquals(sent, server.requestCount)
+    }
+
     @Test fun `capabilities are read from the server's own route table`(): Unit = runBlocking {
         val routes = listOf("GET" to "/api/v1/user/login", "GET" to "/api/v1/equipment/paged", "GET" to "/api/v1/character/inventory/equipments",
             "GET" to "/api/v1/character/inventory/stats", "POST" to "/api/v1/character/inventory/itemToInventory",
             "POST" to "/api/v1/characterequipment/equip", "POST" to "/api/v1/characterequipment/applyOrb",
-            "GET" to "/api/v1/modifierdefinition")
+            "GET" to "/api/v1/modifierdefinition", "GET" to "/api/v1/characterclass", "GET" to "/api/v1/experiencelevel",
+            "GET" to "/api/v1/skilltreenode", "GET" to "/api/v1/characterskillnode/byCharacter",
+            "POST" to "/api/v1/characterskillnode/allocate")
         // The server prints the Ktor selector, so a method arrives as "(GET)".
         ok(JsonArray(routes.map { buildJsonObject { put("path", it.second); put("method", "(${it.first})") } }).toString())
         val capabilities = api.capabilities()
@@ -284,6 +349,9 @@ class GameApiTest {
         assertFailsWith<IllegalArgumentException> { api.grant("wrong", id) }
         assertFailsWith<IllegalArgumentException> { api.equip(id, "wrong") }
         assertFailsWith<IllegalArgumentException> { api.applyOrb(id, id, "wrong") }
+        assertFailsWith<IllegalArgumentException> { api.characterTree("wrong") }
+        assertFailsWith<IllegalArgumentException> { api.allocateNode("wrong", "STR_START") }
+        assertFailsWith<IllegalArgumentException> { api.addExperience("wrong", 10.0) }
         assertFailsWith<IllegalArgumentException> { api.stats("wrong") }
         assertEquals(1, server.requestCount)
     }

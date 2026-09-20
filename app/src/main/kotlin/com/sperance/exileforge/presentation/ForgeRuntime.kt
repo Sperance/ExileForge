@@ -117,6 +117,19 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
         mutable.update { it.copy(definitions = api.modifierDefinitions()) }
     }
 
+    /**
+     * The world's reference tables: the classes and the shared skill tree.
+     *
+     * Both are seeded and fixed for a session, and the tree is one graph rather than a page, so a
+     * single read backs the character form and the tree screen alike.
+     */
+    suspend fun ensureProgression() {
+        if (state.value.classes.isNotEmpty() && state.value.treeNodes.isNotEmpty()) return
+        val classes = api.characterClasses()
+        val nodes = api.skillTree()
+        mutable.update { it.copy(classes = classes, treeNodes = nodes, draftClass = it.draftClass.ifBlank { classes.firstOrNull()?.id.orEmpty() }) }
+    }
+
     /** The orbs the server seeded. The catalogue is fixed for a session, so one read covers it. */
     suspend fun ensureOrbs() {
         if (state.value.orbs.isNotEmpty()) return
@@ -129,6 +142,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
         mutable.update { it.copy(signedIn = false, profile = null, sessionEpoch = it.sessionEpoch + 1,
             items = emptyList(), total = 0, page = 0, totalPages = 0, definitions = emptyList(),
             orbs = emptyList(), selectedOrb = "",
+            classes = emptyList(), treeNodes = emptyList(), draftClass = "", selectedNode = "",
             original = null, draft = JsonObject(emptyMap()), editorOpen = false,
             characterId = "", characterOwner = "", hero = null, inventoryBases = emptyMap(), selectedEquipment = "",
             checks = emptyList(), tab = 3, mode = AppMode.PLAYER, failure = null) }

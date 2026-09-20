@@ -17,13 +17,24 @@ import kotlinx.serialization.json.*
 class EditorViewModel(private val runtime: ForgeRuntime) {
     private val state get() = runtime.state
 
+    fun draftClass(value: String) { with(runtime) { if (!state.value.busy) mutable.update { it.copy(draftClass = value) } } }
+
+    /**
+     * A blank draft.
+     *
+     * A new character carries two fields the form never shows: the owner, who is whoever is signed
+     * in, and the class, which decides the whole stat base and cannot be changed afterwards. The
+     * classes are read here because the form needs them before it can offer a choice.
+     */
     fun create(kind: EquipmentKind = EquipmentKind.Weapon) { with(runtime) {
         if (state.value.busy || !state.value.canEdit) return
-        val blank = template(state.value.catalog, kind)
-        // A new character belongs to whoever is signed in; the server checks the per-account limit.
-        val seeded = if (state.value.catalog == Catalog.CHARACTERS)
-            JsonObject(blank + ("userId" to JsonPrimitive(state.value.profile?.id.orEmpty()))) else blank
-        setEditor(seeded, null)
+        if (state.value.catalog != Catalog.CHARACTERS) { setEditor(template(state.value.catalog, kind), null); return }
+        task {
+            ensureProgression()
+            setEditor(JsonObject(template(Catalog.CHARACTERS) + mapOf(
+                "userId" to JsonPrimitive(state.value.profile?.id.orEmpty()),
+                "classId" to JsonPrimitive(state.value.draftClass))), null)
+        }
     } }
 
     fun closeEditor() { with(runtime) { if (!state.value.busy) mutable.update { it.copy(editorOpen = false, original = null, draft = JsonObject(emptyMap())) } } }

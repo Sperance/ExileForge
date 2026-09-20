@@ -5,8 +5,8 @@ Guidance for AI assistants working in this repository.
 ## What this project is
 
 ExileForge is an **Android Compose client** (version 2.0.0, `versionCode` 13) for the
-**ktor-bestgame** RPG server (0.9.1), pinned in
-`core/.../contract/Contract.kt` as `SERVER_COMMIT = 64b3577822e0f4b5d710ca8b9d4e250e65269359`
+**ktor-bestgame** RPG server (0.10.0), pinned in
+`core/.../contract/Contract.kt` as `SERVER_COMMIT = cf83ee100e6c6d62348aff1a5dc2ace4a8c3ebca`
 on the server branch `claude/tender-pasteur-a36kj2`.
 
 The client is deliberately **thin**: the server owns items, stats, modifier rolls and inventory.
@@ -24,9 +24,11 @@ core/                                   Pure JVM library (java-library + kotlin-
                  ApiFailure/FailureState/RequestJournal/RequestLog/ItemPage/HttpPayload
   model/         Catalog, EntitySource, CatalogFilter, EquipmentKind
                  command/Commands.kt    UserProfile, ItemStack, UseRecipeCommand, RouteInfo, ApiCapabilities
-                 hero/HeroModels.kt     CharacterSummary, EquipmentInstance, OrbOutcome, CharacterItem, Recipe*, HeroView
+                 hero/HeroModels.kt     CharacterSummary, CharacterSheet, EquipmentInstance, OrbOutcome, Recipe*, HeroView
                  modifier/Modifiers.kt  ModifierDefinition, ModifierTier, Modifier, effects and sources
                  currency/Orbs.kt       CurrencyItem, CurrencyOrb and the CURRENCY category
+                 progression/Progression.kt   CharacterClass, ExperienceLevel, StatValue
+                 skilltree/SkillTree.kt CharacterSkillNode, SkillTreeNode, SkillTreeState, SkillNodeType
                  character/CharacterStats.kt  The server's stat enum names
   i18n/          Loc.kt                 Lang (RU/EN), `tr(ru, en)` and the global `uiLanguage`
   editor/        EditorSchema.kt        Declarative form schemas (FormField/InputSpec) used by the editor
@@ -39,7 +41,7 @@ app/                                    Android application (minSdk 26, compile/
                  features/              Catalog, Editor, Hero, Session, Checks view models
                  state/ForgeState.kt    One immutable state object for the whole app
   ui/            ForgeApp.kt            Scaffold, banner with RU/EN switch, bottom navigation, tab dispatch
-                 screens/               catalog, editor, hero, checks, server
+                 screens/               catalog, editor, hero, tree, checks, server
                  components/            ItemCard, PropertyRow, InfoCard, spinners and Ornament.kt
                  forms/, icons/ (ForgeGlyphs vector set, ItemEmblem, ItemIcon/PropertyIcon), theme/
   data/settings/ServerStore.kt          DataStore Preferences: base URL, saved filters, language
@@ -102,7 +104,7 @@ delegate here, because screens receive `ForgeViewModel`.
 
 **Navigation** is an `Int` tab in state, dispatched by a `when` in `ForgeApp`:
 `0` catalog/characters, `1` editor, `2` checks (admin only — `ForgeRuntime.tab` blocks it
-otherwise), `3` account/server, `4` hero.
+otherwise), `3` account/server, `4` hero, `5` skill tree.
 `ForgeApp` re-`key`s the whole tree on `server`, `sessionEpoch` and `lang`, so a logout, a server
 change or a language switch discards per-screen Compose state.
 
@@ -111,7 +113,10 @@ change or a language switch discards per-screen Compose state.
 These are enforced by tests and are the point of the client's design:
 
 1. **The server is authoritative.** Never compute damage, stats, prices or modifier rolls locally.
-   `GET /api/v1/character/inventory/stats` is the character sheet; the client prints it.
+   `GET /api/v1/character/inventory/stats` is the character sheet; the client prints it. Since
+   0.10.0 it answers a `CharacterSheet` object: the numbers, the level, and the server's verdict on
+   every worn item (`active` / `inactive` with the requirement each one misses). A requirement is
+   never re-checked here, and an attribute conversion (`perStat`/`perAmount`) is never resolved here.
 2. **Identity comes from the server.** POST sends a JSON array of documents without `_id`;
    `requireId` demands 24 hex chars before any request is built.
 3. **The server owns versioning.** PUT sends only the changed fields and DELETE sends no body —
@@ -141,10 +146,23 @@ These are enforced by tests and are the point of the client's design:
     saying what happened. The client sends the pair and prints that sentence — it never decides what
     an orb did, and `CurrencyOrb` is a translation table, not a rule table. `rarity` and `corrupted`
     belong to the instance, so the instance wins over its template in `inventoryDocument`.
-11. **Release builds require HTTPS** (`usesCleartextTraffic=false`); only the debug manifest
+11. **A class is the base, and it is chosen once.** A character carries `classId`, not stats:
+    `CharacterClass` holds the level-1 base, the per-level growth and the attribute conversions.
+    It is a creation field with no update route — moving a character between classes would rewrite
+    their history — so it is offered in the editor only while `original == null`.
+12. **The tree is the server's graph.** `skilltreenode` is the shared seeded tree and
+    `characterskillnode` is what one character took, snapshotted at allocation. Allocate, refund and
+    reset each answer with the whole `SkillTreeState`; adjacency, cost, the point balance and
+    whether a refund would detach the rest are all checked server-side. The screen draws the seeded
+    coordinates and sends one node code.
+13. **An item has no stat fields.** Armour, damage and attack speed are fixed modifiers in
+    `baseParams` (values, no tier); `durability` is the only number left as a field. Requirements
+    (`requiredLevel`, `requiredStrength`, `requiredDexterity`, `requiredIntelligence`) are printed,
+    never enforced here.
+14. **Release builds require HTTPS** (`usesCleartextTraffic=false`); only the debug manifest
     permits cleartext for local servers. This matters more than usual: the password travels as a
     query parameter, because that is the route the server exposes.
-12. **No network or raster images.** Entities carry at most an `image` URL, which the client stores
+15. **No network or raster images.** Entities carry at most an `image` URL, which the client stores
     but never fetches. Every picture is a bundled vector (`ItemEmblem`, `ForgeGlyphs`).
 
 ## Conventions

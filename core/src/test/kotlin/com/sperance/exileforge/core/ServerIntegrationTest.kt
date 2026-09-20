@@ -5,6 +5,7 @@ import com.sperance.exileforge.core.model.Catalog
 import com.sperance.exileforge.core.model.CatalogFilter
 import com.sperance.exileforge.core.model.command.ItemStack
 import com.sperance.exileforge.core.model.currency.CurrencyOrb
+import com.sperance.exileforge.core.model.skilltree.SkillNodeType
 import com.sperance.exileforge.core.network.*
 import kotlin.test.*
 import kotlinx.coroutines.runBlocking
@@ -31,8 +32,24 @@ class ServerIntegrationTest {
         val tiers = api.modifierTiers(described.id)
         assertTrue(tiers.isNotEmpty() && tiers.all { it.values.isNotEmpty() }, "tiers of ${described.code}: $tiers")
 
+        // A character is nothing without a class: it carries the whole stat base and the tree's root.
+        val classes = api.characterClasses()
+        val chosenClass = classes.firstOrNull() ?: fail("the server seeded no character classes")
+        assertTrue(chosenClass.baseStats.isNotEmpty(), "${chosenClass.code} has no base: $chosenClass")
+        assertTrue(chosenClass.startNodeCode.isNotBlank(), "${chosenClass.code} names no start node")
+        assertTrue(chosenClass.params.none { it.rolled }, "a class conversion must not be rolled: ${chosenClass.params}")
+        val levels = api.experienceLevels()
+        assertTrue(levels.isNotEmpty() && levels.first().level == 1, "progression table: $levels")
+
+        val tree = api.skillTree()
+        assertTrue(tree.isNotEmpty(), "the server seeded no skill tree")
+        val start = tree.firstOrNull { it.code == chosenClass.startNodeCode } ?: fail("${chosenClass.startNodeCode} is not in the tree")
+        assertEquals(SkillNodeType.START, start.type)
+
         val name = "EF-integration-${java.util.UUID.randomUUID()}"
-        val character = api.create(Catalog.CHARACTERS, buildJsonObject { put("userId", admin.id); put("name", name); put("description", "Integration fixture") })
+        val character = api.create(Catalog.CHARACTERS, buildJsonObject {
+            put("userId", admin.id); put("name", name); put("description", "Integration fixture"); put("classId", chosenClass.id)
+        })
         val id = character.entityId
         try {
             assertEquals(name, api.character(id).name)
@@ -58,9 +75,14 @@ class ServerIntegrationTest {
             assertEquals("HELMET", worn.equippedSlot)
             assertEquals(listOf(instance.id), api.inventory(id).filter { it.equipped }.map { it.id })
             // Wearing the item is what changes the character sheet; the client recomputes nothing.
-            val stats = api.stats(id)
-            assertTrue(stats.isNotEmpty())
-            assertEquals(stats, api.stats(id))
+            val sheet = api.stats(id)
+            assertTrue(sheet.stats.isNotEmpty(), "the server returned no stats")
+            assertEquals(sheet, api.stats(id))
+            assertEquals(character.text("_id"), sheet.characterId)
+            // The server names the items it counted and the ones whose requirements are not met.
+            assertTrue(instance.id in sheet.active || sheet.inactive.any { it.inventoryId == instance.id },
+                "the worn item is in neither list: $sheet")
+            sheet.inactive.forEach { refused -> assertTrue(refused.reasons.isNotEmpty(), "refused without a reason: $refused") }
             assertFalse(api.unequip(id, instance.id).equipped)
 
             // Currency is the same collection as every other item, told apart by its category alone.
@@ -95,6 +117,26 @@ class ServerIntegrationTest {
             // An equipment template is a StockEntity: the server keeps no version on it.
             assertFalse("version" in edited, "equipment gained a version: $edited")
             assertFailsWith<IllegalArgumentException> { api.update(Catalog.EQUIPMENT, template.entityId, buildJsonObject { put("params", JsonArray(emptyList())) }) }
+
+            // The tree: the start node first, then a neighbour of it, then back again.
+            assertTrue(api.characterTree(id).nodes.isEmpty())
+            // Points come from levels, so the character is levelled first and the server re-reads it.
+            assertTrue(api.addExperience(id, levels.last().experience).level > 1)
+            val started = api.allocateNode(id, start.code)
+            assertEquals(setOf(start.code), started.takenCodes)
+            assertTrue(started.total > 0, "a levelled character has no skill points: $started")
+            assertEquals(started.spent, started.nodes.sumOf { node -> node.cost })
+
+            val neighbour = tree.firstOrNull { it.code in start.connections } ?: fail("${start.code} has no neighbour")
+            val grown = api.allocateNode(id, neighbour.code)
+            assertEquals(setOf(start.code, neighbour.code), grown.takenCodes)
+            assertEquals(started.available - neighbour.cost, grown.available)
+            // A node's bonuses are a snapshot taken when it was allocated, and they are never rolled.
+            assertTrue(grown.nodes.flatMap { node -> node.params }.none { param -> param.rolled })
+            // The start node is the tree's root: only a full reset gives it back.
+            assertFailsWith<ApiFailure> { api.refundNode(id, start.code) }
+            assertEquals(setOf(start.code), api.refundNode(id, neighbour.code).takenCodes)
+            assertEquals(0, api.resetTree(id).spent)
 
             val player = GameApi(url)
             player.login(requireNotNull(System.getenv("EF_PLAYER_LOGIN")), requireNotNull(System.getenv("EF_PLAYER_PASSWORD")))

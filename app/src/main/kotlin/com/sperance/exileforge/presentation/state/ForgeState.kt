@@ -9,6 +9,8 @@ import com.sperance.exileforge.core.model.command.UserProfile
 import com.sperance.exileforge.core.model.currency.CurrencyItem
 import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.core.model.modifier.ModifierDefinition
+import com.sperance.exileforge.core.model.progression.CharacterClass
+import com.sperance.exileforge.core.model.skilltree.SkillTreeNode
 import com.sperance.exileforge.core.network.FailureState
 import com.sperance.exileforge.core.verification.CheckResult
 import kotlinx.serialization.json.JsonObject
@@ -40,11 +42,17 @@ data class ForgeState(
     val grantRarity: String = "", val grantSlot: String = "",
     /** The currency catalogue, read once per session; `selectedOrb` is the `items` id of one orb. */
     val orbs: List<CurrencyItem> = emptyList(), val selectedOrb: String = "",
+    /** The world's reference tables, read once per session: classes and the shared skill tree. */
+    val classes: List<CharacterClass> = emptyList(), val treeNodes: List<SkillTreeNode> = emptyList(),
+    /** The class a new character is being created with, and the tree node under the cursor. */
+    val draftClass: String = "", val selectedNode: String = "",
 
     val checks: List<CheckResult> = emptyList(),
     val health: String = tr("Соединение ещё не проверено", "The connection has not been checked yet"),
 ) {
     val isAdmin: Boolean get() = signedIn && profile?.role == "ADMIN"
+    /** The class the shown hero belongs to; the server owns the base it hands out. */
+    val heroClass: CharacterClass? get() = hero?.let { view -> classes.firstOrNull { it.id == view.character.classId } }
     val adminTools: Boolean get() = isAdmin && mode == AppMode.ADMIN
     val canEdit: Boolean get() = signedIn && (catalog == Catalog.CHARACTERS || adminTools)
     val ownsCharacter: Boolean get() = signedIn && profile?.id == characterOwner

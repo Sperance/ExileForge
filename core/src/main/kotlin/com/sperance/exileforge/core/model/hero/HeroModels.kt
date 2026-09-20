@@ -2,11 +2,18 @@ package com.sperance.exileforge.core.model.hero
 
 import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.model.modifier.Modifier
+import com.sperance.exileforge.core.model.progression.CharacterClass
+import com.sperance.exileforge.core.model.skilltree.SkillTreeState
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
 
-/** Character document of the `character` collection, read-only for everything the server owns. */
+/**
+ * Character document of the `character` collection, read-only for everything the server owns.
+ *
+ * Since 0.10.0 the base stats are not here: the character references a [CharacterClass] by
+ * [classId] and the server takes the base from it at the character's level.
+ */
 @Serializable data class CharacterSummary(
     @SerialName("_id") val id: String,
     val userId: String,
@@ -16,9 +23,32 @@ import kotlinx.serialization.json.*
     val level: Int = 1,
     val experience: Double = 0.0,
     val money: Long = 0,
-    val params: List<Modifier> = emptyList(),
+    val classId: String = "",
     val items: List<String> = emptyList(),
     val recipeAccess: List<String> = emptyList(),
+)
+
+/** An equipped item whose requirements the character does not meet, with the server's reasons. */
+@Serializable data class InactiveEquipment(
+    val inventoryId: String = "",
+    val name: String = "",
+    val reasons: List<String> = emptyList(),
+)
+
+/**
+ * The character sheet, as `GET /api/v1/character/inventory/stats` now answers it.
+ *
+ * It is no longer a flat map: the server reports which equipped items it actually counted and
+ * which it refused, because an item whose requirements stopped being met stays in its slot and
+ * simply stops working. Both lists are the server's verdict — the client never re-checks a
+ * requirement, it prints the reasons that came back.
+ */
+@Serializable data class CharacterSheet(
+    val characterId: String = "",
+    val level: Int = 1,
+    val stats: Map<String, Double> = emptyMap(),
+    val active: List<String> = emptyList(),
+    val inactive: List<InactiveEquipment> = emptyList(),
 )
 
 /**
@@ -74,12 +104,16 @@ import kotlinx.serialization.json.*
 @Serializable data class RecipeInput(val itemId: String? = null, val category: String? = null, val subCategory: String? = null, val amount: Double = 1.0)
 @Serializable data class RecipeOutput(val itemId: String, val amount: Double = 1.0, val chance: Double = 1.0)
 
-/** Everything one hero screen needs, assembled from the four character routes the server offers. */
+/** Everything one hero screen needs, assembled from the character routes the server offers. */
 data class HeroView(
     val character: CharacterSummary,
     val inventory: List<EquipmentInstance> = emptyList(),
-    val stats: Map<String, Double> = emptyMap(),
+    val sheet: CharacterSheet = CharacterSheet(),
     val bag: List<CharacterItem> = emptyList(),
+    val tree: SkillTreeState = SkillTreeState(),
 ) {
     val equipped: Map<String, EquipmentInstance> get() = inventory.filter { it.equipped }.associateBy { it.equippedSlot!! }
+    val stats: Map<String, Double> get() = sheet.stats
+    /** Reasons an equipped item is not counted, keyed by instance id; empty means it works. */
+    val inactive: Map<String, List<String>> get() = sheet.inactive.associate { it.inventoryId to it.reasons }
 }

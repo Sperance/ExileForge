@@ -63,6 +63,11 @@ data class ApiCapabilities(val routes: Set<String>) {
             "POST" to "/api/v1/characterequipment/equip",
             "POST" to "/api/v1/characterequipment/applyOrb",
             "GET" to "/api/v1/modifierdefinition",
+            "GET" to "/api/v1/characterclass",
+            "GET" to "/api/v1/experiencelevel",
+            "GET" to "/api/v1/skilltreenode",
+            "GET" to "/api/v1/characterskillnode/byCharacter",
+            "POST" to "/api/v1/characterskillnode/allocate",
         )
         val missing = required.filterNot { (method, path) -> has(method, path) }
         require(missing.isEmpty()) {

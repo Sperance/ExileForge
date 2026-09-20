@@ -18,11 +18,12 @@ val protectedFields = setOf("_id", "id", "version", "deleted", "createdAt", "upd
 val rarities = listOf("COMMON", "UNCOMMON", "RARE", "EPIC", "UNIQUE", "MYTHICAL")
 val slots = listOf("HELMET", "BODY", "GLOVES", "RING", "BOOTS", "WINGS", "BELT", "WEAPON_1H", "WEAPON_2H", "QUIVER", "SHIELD", "AMULET")
 val weapons = listOf("SWORD", "LONGSWORD", "BOW", "WAND", "AXE", "DOUBLEAXE", "DOUBLESWORD", "BLADE")
-val modifierSources = listOf("IMPLICIT", "PREFIX", "SUFFIX", "UNIQUE", "ENCHANTMENT", "CORRUPTION")
+val modifierSources = listOf("IMPLICIT", "PREFIX", "SUFFIX", "UNIQUE", "ENCHANTMENT", "CORRUPTION", "PASSIVE")
+val skillNodeTypes = listOf("START", "SMALL", "NOTABLE", "KEYSTONE")
 val modifierOperations = listOf("ADD", "INCREASED", "MORE", "SET")
-const val SERVER_COMMIT = "64b3577822e0f4b5d710ca8b9d4e250e65269359"
+const val SERVER_COMMIT = "cf83ee100e6c6d62348aff1a5dc2ace4a8c3ebca"
 const val SERVER_BRANCH = "claude/tender-pasteur-a36kj2"
-const val SERVER_VERSION = "0.9.1"
+const val SERVER_VERSION = "0.10.0"
 
 fun template(catalog: Catalog, kind: EquipmentKind = EquipmentKind.Weapon): JsonObject = when (catalog) {
     Catalog.CHARACTERS -> defaultObject("character")
@@ -39,11 +40,11 @@ fun template(catalog: Catalog, kind: EquipmentKind = EquipmentKind.Weapon): Json
         put("slot", when (kind) { EquipmentKind.Weapon -> "WEAPON_1H"; EquipmentKind.Armor -> "BODY"; EquipmentKind.Accessory -> "RING" })
         put("rarity", "RARE"); put("itemLevel", 30)
         put("modifierIds", JsonArray(emptyList()))
-        when (kind) {
-            EquipmentKind.Weapon -> { put("weaponType", "SWORD"); put("damage_min", 10.0); put("damage_max", 20.0); put("attackSpeed", 1.2); put("durability", 100) }
-            EquipmentKind.Armor -> put("defense", 50)
-            EquipmentKind.Accessory -> Unit
-        }
+        // Armour, damage and attack speed are implicit modifiers since 0.10.0: the item has no
+        // stat fields of its own, so its base is a list of fixed modifiers like any other source.
+        put("baseParams", JsonArray(emptyList()))
+        put("requiredLevel", 1); put("requiredStrength", 0); put("requiredDexterity", 0); put("requiredIntelligence", 0)
+        if (kind == EquipmentKind.Weapon) { put("weaponType", "SWORD"); put("durability", 100) }
     }
 }
 
@@ -73,19 +74,48 @@ private fun validateEquipment(document: JsonObject) {
     require(document.text("slot") in slots) { tr("Неизвестный слот", "Unknown slot") }
     require((document["itemLevel"] as? JsonPrimitive)?.intOrNull?.let { it >= 1 } == true) { tr("Уровень должен быть целым числом от 1", "The level must be a whole number of 1 or more") }
     val kind = requireNotNull(EquipmentKind.of(document.text("type"))) { tr("Неизвестный тип экипировки", "Unknown equipment type") }
-    when (kind) {
-        EquipmentKind.Weapon -> {
-            require(document.text("weaponType") in weapons) { tr("Неизвестный тип оружия", "Unknown weapon type") }
-            val min = document.text("damage_min").toDoubleOrNull()
-            val max = document.text("damage_max").toDoubleOrNull()
-            require(min != null && max != null && min.isFinite() && max.isFinite() && min >= 0 && max >= min) { tr("Проверьте диапазон урона", "Check the damage range") }
-            require(document.text("attackSpeed").toDoubleOrNull()?.let { it.isFinite() && it > 0 } == true) { tr("Скорость атаки должна быть больше 0", "Attack speed must be greater than 0") }
-            require(document.text("durability").toIntOrNull()?.let { it >= 0 } == true) { tr("Прочность должна быть целой и неотрицательной", "Durability must be a non-negative whole number") }
-        }
-        EquipmentKind.Armor -> require(document.text("defense").toIntOrNull()?.let { it >= 0 } == true) { tr("Защита должна быть целой и неотрицательной", "Defence must be a non-negative whole number") }
-        EquipmentKind.Accessory -> Unit
+    // Durability is the last number an item still keeps for itself; it is no character stat.
+    if (kind == EquipmentKind.Weapon) {
+        require(document.text("weaponType") in weapons) { tr("Неизвестный тип оружия", "Unknown weapon type") }
+        require(document.text("durability").toIntOrNull()?.let { it >= 0 } == true) { tr("Прочность должна быть целой и неотрицательной", "Durability must be a non-negative whole number") }
     }
+    validateRequirements(document)
+    validateBaseParams(document)
     validateModifierPool(document)
+}
+
+/** What a character must reach to wear the item. The server decides whether they do. */
+private fun validateRequirements(document: JsonObject) {
+    require(document["requiredLevel"] == null || document.text("requiredLevel").toIntOrNull()?.let { it >= 1 } == true) {
+        tr("Требуемый уровень — целое число от 1", "The required level is a whole number of 1 or more")
+    }
+    listOf("requiredStrength" to tr("силы", "strength"), "requiredDexterity" to tr("ловкости", "dexterity"),
+           "requiredIntelligence" to tr("интеллекта", "intelligence")).forEach { (key, name) ->
+        require(document[key] == null || document.text(key).toIntOrNull()?.let { it >= 0 } == true) {
+            tr("Требование $name — целое неотрицательное число", "The $name requirement is a non-negative whole number")
+        }
+    }
+}
+
+/**
+ * The item's own base, written as fixed modifiers.
+ *
+ * Nothing here is rolled — a base type's armour is not random in PoE either — so a base modifier
+ * carries values and no tier. The values themselves belong to the server's definitions; the client
+ * only refuses a reference it could not have come from.
+ */
+fun validateBaseParams(document: JsonObject) {
+    val base = document["baseParams"] ?: return
+    require(base is JsonArray) { tr("baseParams: требуется список модификаторов", "baseParams: a list of modifiers is required") }
+    base.forEach { raw ->
+        val modifier = requireNotNull(raw as? JsonObject) { tr("baseParams: требуется объект модификатора", "baseParams: a modifier object is required") }
+        requireId(modifier.text("modifierId"))
+        val values = modifier["values"] as? JsonArray
+        require(values != null && values.isNotEmpty() && values.all { (it as? JsonPrimitive)?.doubleOrNull?.isFinite() == true }) {
+            tr("baseParams: значения должны быть конечными числами", "baseParams: values must be finite numbers")
+        }
+        require(modifier.text("tierId").isBlank()) { tr("База предмета не роллится и тира не имеет", "An item's base is not rolled and carries no tier") }
+    }
 }
 
 /**
@@ -101,10 +131,18 @@ fun validateModifierPool(document: JsonObject) {
     require("params" !in document) { tr("Зароленные модификаторы принадлежат экземпляру, а не шаблону", "Rolled modifiers belong to an instance, not to a template") }
 }
 
+/**
+ * An applied modifier, rolled or fixed.
+ *
+ * A rolled one names the tier it came from; a fixed one — a tree node's bonus, a class conversion,
+ * an item's base — has none at all, and demanding a tier of it would reject what the server wrote.
+ */
 fun validateModifier(document: JsonObject) {
     val modifier = WireJson.decodeFromJsonElement(Modifier.serializer(), document)
     requireId(modifier.modifierId)
-    require(modifier.tier > 0) { tr("Tier должен быть больше 0", "Tier must be greater than 0") }
+    require(if (modifier.rolled) modifier.tier > 0 else modifier.tier == 0) {
+        tr("Зароленный модификатор указывает тир, фиксированный — нет", "A rolled modifier names its tier, a fixed one does not")
+    }
     require(modifier.values.all { it.isFinite() }) { tr("Значения должны быть конечными числами", "Values must be finite numbers") }
 }
 
@@ -120,12 +158,18 @@ val JsonObject.entityVersion: Long get() = get("version")?.jsonPrimitive?.longOr
 fun editableFields(catalog: Catalog): Set<String> = when (catalog) {
     Catalog.CHARACTERS -> setOf("name", "description")
     Catalog.ITEMS -> setOf("name", "description", "image", "category", "subCategory", "price")
-    Catalog.EQUIPMENT -> setOf("name", "description", "image", "slot", "rarity", "itemLevel", "weaponType", "damage_min", "damage_max", "attackSpeed", "durability", "defense", "modifierIds")
+    Catalog.EQUIPMENT -> setOf("name", "description", "image", "slot", "rarity", "itemLevel", "weaponType", "durability",
+        "modifierIds", "baseParams", "requiredLevel", "requiredStrength", "requiredDexterity", "requiredIntelligence")
 }
 
-/** Fields only accepted when the record is created; afterwards they are the server's. */
+/**
+ * Fields only accepted when the record is created; afterwards they are the server's.
+ *
+ * A character's class is one of them: the base it hands out is read at every calculation, so moving
+ * a character to another class would silently rewrite their history. The server has no route for it.
+ */
 fun creationFields(catalog: Catalog): Set<String> = when (catalog) {
-    Catalog.CHARACTERS -> setOf("userId")
+    Catalog.CHARACTERS -> setOf("userId", "classId")
     Catalog.EQUIPMENT -> setOf("type")
     Catalog.ITEMS -> emptySet()
 }

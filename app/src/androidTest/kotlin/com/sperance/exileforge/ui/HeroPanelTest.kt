@@ -12,7 +12,14 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
+import com.sperance.exileforge.core.model.hero.CharacterSheet
 import com.sperance.exileforge.core.model.hero.CharacterSummary
+import com.sperance.exileforge.core.model.hero.InactiveEquipment
+import com.sperance.exileforge.core.model.progression.CharacterClass
+import com.sperance.exileforge.core.model.skilltree.CharacterSkillNode
+import com.sperance.exileforge.core.model.skilltree.SkillNodeType
+import com.sperance.exileforge.core.model.skilltree.SkillTreeNode
+import com.sperance.exileforge.core.model.skilltree.SkillTreeState
 import com.sperance.exileforge.core.model.hero.EquipmentInstance
 import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.core.model.modifier.Modifier as RolledModifier
@@ -20,6 +27,7 @@ import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.core.model.currency.CurrencyItem
 import com.sperance.exileforge.ui.screens.hero.HeroEquipmentPanel
 import com.sperance.exileforge.ui.screens.hero.OrbPanel
+import com.sperance.exileforge.ui.screens.tree.SkillTreePanel
 import com.sperance.exileforge.ui.theme.ForgeTheme
 import com.sperance.exileforge.ui.theme.Ink
 import java.io.File
@@ -34,10 +42,10 @@ class HeroPanelTest {
     /** The equipped slot shows its template's name and hands back the instance id, not the slot. */
     @Test fun equippedSlotShowsItsTemplateAndEmitsTheInstanceId() {
         val instance = EquipmentInstance("ring-instance", "hero", "ring-base",
-            listOf(RolledModifier("life-modifier", "tier-1", 1, listOf(42.0))), equippedSlot = "RING")
+            listOf(RolledModifier("life-modifier", listOf(42.0), "tier-1", 1)), equippedSlot = "RING")
         val base = buildJsonObject { put("_id", "ring-base"); put("name", "Кольцо героя"); put("slot", "RING"); put("rarity", "RARE") }
         val hero = HeroView(CharacterSummary("hero", "owner", "Изгнанник", version = 3, level = 10),
-            listOf(instance), mapOf("STOCK_HEALTH" to 88.0, "STOCK_ARMOR" to 40.0))
+            listOf(instance), CharacterSheet("hero", 10, mapOf("STOCK_HEALTH" to 88.0, "STOCK_ARMOR" to 40.0), listOf("ring-instance")))
         var removed: String? = null
         compose.setContent { ForgeTheme { Column(Modifier.background(Ink).verticalScroll(rememberScrollState()).padding(12.dp)) {
             HeroEquipmentPanel(ForgeState(busy = false, signedIn = true, hero = hero, characterOwner = "owner",
@@ -54,6 +62,52 @@ class HeroPanelTest {
         compose.onNodeWithText("Характеристики · показать").performClick()
         compose.onNodeWithText("Здоровье").assertIsDisplayed()
         compose.onNodeWithText("88.0").assertIsDisplayed()
+    }
+
+    /**
+     * An equipped item the server refused keeps its slot and says why.
+     *
+     * The reasons are the server's own strings; the panel translates the requirement's name and
+     * leaves both numbers exactly as they arrived.
+     */
+    @Test fun anItemWhoseRequirementsAreNotMetKeepsItsSlotAndSaysWhy() {
+        val instance = EquipmentInstance("helm-instance", "hero", "helm-base", equippedSlot = "HELMET")
+        val base = buildJsonObject { put("_id", "helm-base"); put("name", "Железный шлем"); put("slot", "HELMET"); put("rarity", "COMMON") }
+        val hero = HeroView(CharacterSummary("hero", "owner", "Изгнанник", level = 3, classId = "marauder"), listOf(instance),
+            CharacterSheet("hero", 3, mapOf("STOCK_HEALTH" to 60.0), emptyList(),
+                listOf(InactiveEquipment("helm-instance", "Железный шлем", listOf("strength: need 30, have 14")))))
+        compose.setContent { ForgeTheme { Column(Modifier.background(Ink).verticalScroll(rememberScrollState()).padding(12.dp)) {
+            HeroEquipmentPanel(ForgeState(busy = false, signedIn = true, hero = hero, characterOwner = "owner",
+                profile = com.sperance.exileforge.core.model.command.UserProfile("owner"),
+                classes = listOf(CharacterClass("marauder", "MARAUDER", "Marauder", "STR_START")),
+                inventoryBases = mapOf("helm-base" to base)), {})
+        } } }
+        compose.onNodeWithText("Marauder").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Не работает").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Сила: нужно 30, есть 14").performScrollTo().assertIsDisplayed()
+    }
+
+    /** The tree draws the server's graph and sends back the node code the player tapped. */
+    @Test fun theTreeShowsTheChosenNodeAndItsTwoCommands() {
+        val start = SkillTreeNode("start-id", "STR_START", "Мародёр", SkillNodeType.START, cost = 0,
+            connections = listOf("STR_LIFE_1"), positionX = -40, positionY = 0)
+        val life = SkillTreeNode("life-id", "STR_LIFE_1", "Крепость", SkillNodeType.NOTABLE, cost = 1,
+            connections = listOf("STR_START"), positionX = -20, positionY = 10, description = "Больше здоровья")
+        val hero = HeroView(CharacterSummary("hero", "owner", "Изгнанник", level = 5), emptyList(),
+            tree = SkillTreeState("hero", total = 4, spent = 0, available = 4,
+                nodes = listOf(CharacterSkillNode("taken", "hero", "STR_START", emptyList(), "Мародёр", SkillNodeType.START, 0))))
+        var allocated: String? = null
+        compose.setContent { ForgeTheme { Column(Modifier.background(Ink).verticalScroll(rememberScrollState()).padding(12.dp)) {
+            SkillTreePanel(ForgeState(busy = false, signedIn = true, hero = hero, characterOwner = "owner",
+                profile = com.sperance.exileforge.core.model.command.UserProfile("owner"),
+                treeNodes = listOf(start, life), selectedNode = "STR_LIFE_1"),
+                onSelect = {}, onAllocate = { allocated = it }, onRefund = {}, onReset = {})
+        } } }
+        compose.onNodeWithText("Крепость").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Нотабль").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Доступно").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Взять узел").performScrollTo().performClick()
+        compose.runOnIdle { assertEquals("STR_LIFE_1", allocated) }
     }
 
     /** The orb panel hands back the pair the server needs and says what the copy currently is. */

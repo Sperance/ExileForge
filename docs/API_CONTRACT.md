@@ -1,6 +1,6 @@
 # Контракт Exile Forge 2.0
 
-Сервер: ветка `claude/tender-pasteur-a36kj2`, коммит `64b3577822e0f4b5d710ca8b9d4e250e65269359` (ktor-bestgame 0.9.1).
+Сервер: ветка `claude/tender-pasteur-a36kj2`, коммит `cf83ee100e6c6d62348aff1a5dc2ace4a8c3ebca` (ktor-bestgame 0.10.0).
 Успех: `{"success":true,"data":...}`. Ошибка: `{"success":false,"error":{"message","errorClass","errorMethod","errorCode"}}`; HTTP-статус сохраняется клиентом.
 
 ## Сессия
@@ -19,7 +19,7 @@
 
 ## Коллекции
 
-Каждая сущность обслуживается одинаковым набором маршрутов, имя сегмента — имя класса сервера в нижнем регистре: `user`, `character`, `characterequipment`, `items`, `equipment`, `recipe`, `redemptioncodes`, `modifierdefinition`, `modifiertier`.
+Каждая сущность обслуживается одинаковым набором маршрутов, имя сегмента — имя класса сервера в нижнем регистре: `user`, `character`, `characterequipment`, `items`, `equipment`, `recipe`, `redemptioncodes`, `modifierdefinition`, `modifiertier`, `characterclass`, `experiencelevel`, `skilltreenode`, `characterskillnode`.
 
 | Операция | Запрос |
 |---|---|
@@ -47,6 +47,10 @@
 
 Редкости: `COMMON, UNCOMMON, RARE, EPIC, UNIQUE, MYTHICAL`. Слоты: `HELMET, BODY, GLOVES, RING, BOOTS, WINGS, BELT, WEAPON_1H, WEAPON_2H, QUIVER, SHIELD, AMULET`. Цену считает сервер в конструкторе — клиент её не пишет.
 
+С 0.10.0 у предмета нет собственных числовых полей под характеристики: `damage_min`, `damage_max`, `attackSpeed` у оружия и `defense` у брони убраны. Броня, урон и скорость атаки задаются готовыми модификаторами в `baseParams` — с фиксированными значениями и без тира, потому что база базового типа не роллится. Единственное число, оставшееся полем предмета, — `durability` у оружия: это не характеристика персонажа.
+
+Требования `requiredLevel`, `requiredStrength`, `requiredDexterity`, `requiredIntelligence` решают, работает ли надетый предмет. Проверяет их сервер при расчёте характеристик; клиент их только печатает.
+
 `modifierIds` — это **пул ссылок**, а не выпавшие значения. Что попадёт на экземпляр, решает сервер: PREFIX и SUFFIX роллятся в количестве, которое задаёт редкость, а IMPLICIT, ENCHANTMENT, CORRUPTION и UNIQUE попадают на каждую копию.
 
 ## Инвентарь персонажа
@@ -59,7 +63,8 @@
 |---|---|
 | Весь инвентарь | `GET /api/v1/character/inventory/equipments?characterId=` |
 | Только надетое | `GET /api/v1/character/inventory/equipped?characterId=` |
-| Характеристики | `GET /api/v1/character/inventory/stats?characterId=` → `{"STOCK_HEALTH":188.4,…}` |
+| Характеристики | `GET /api/v1/character/inventory/stats?characterId=` → `CharacterStats` (см. ниже) |
+| Начислить опыт | `POST /api/v1/character/inventory/experience?characterId=&amount=` → документ персонажа |
 | Простые предметы | `GET /api/v1/character/inventory/items?characterId=` → `[{itemId,amount}]` |
 | Изменить сумку | `POST /api/v1/character/inventory/addItem?characterId=`, тело `[{itemId,amount}]` |
 | **Выдать предмет с роллами** | `POST /api/v1/character/inventory/itemToInventory?characterId=&equipmentId=` |
@@ -71,7 +76,53 @@
 
 Часть команд — POST с аргументами в строке запроса и без тела; клиент отправляет пустое тело, потому что этого требует HTTP-клиент, а не сервер.
 
-Характеристики сводит сервер по формуле `(база + Σ ADD) · (1 + Σ INCREASED/100) · Π (1 + MORE/100)`, где базу дают `stockSkills` персонажа. Клиент печатает пришедшие числа и ничего не пересчитывает.
+## Класс, уровни и расчёт характеристик
+
+`stockSkills` и `params` у персонажа убраны. Вместо них персонаж ссылается на класс полем `classId` — обязательным при создании и неизменяемым потом: базу класса читают при каждом расчёте, и перенос персонажа в другой класс молча переписал бы его историю. Маршрута для такой правки у сервера нет.
+
+```json
+// characterclass
+{"_id":"…","code":"MARAUDER","name":"Marauder","startNodeCode":"STR_START",
+ "baseStats":[{"stat":"STOCK_STRENGTH","value":32.0}],
+ "perLevelStats":[{"stat":"STOCK_HEALTH","value":12.0}],
+ "params":[{"modifierId":"…","values":[1.0]}]}
+// experiencelevel
+{"_id":"…","level":3,"experience":300.0,"skillPoints":2}
+```
+
+Ответ `stats`:
+
+```json
+{"characterId":"…","level":12,"stats":{"STOCK_HEALTH":188.4,…},
+ "active":["<CharacterEquipment._id>"],
+ "inactive":[{"inventoryId":"…","name":"Iron Skullcap","reasons":["strength: need 30, have 14"]}]}
+```
+
+Считается в два прохода: сначала база класса на уровне персонажа плюс дерево навыков, затем экипировка в порядке слотов — каждый следующий предмет проверяется по характеристикам, которые уже дали база, дерево и признанные рабочими предметы. Предмет, чьи требования не выполнены, остаётся в слоте, но не работает и попадает в `inactive` со своей причиной. Клиент печатает и числа, и причины; ни того, ни другого он не вычисляет.
+
+У эффекта модификатора появились `perStat` и `perAmount`: это конверсия вида «+1 к здоровью за каждые 2 Силы». Неполный шаг не засчитывается. Порядок статов на сервере запрещает циклы конверсий — клиент на это не опирается. Флаг `isLocal` у описания говорит, что модификатор сворачивается внутри своего предмета, а наружу отдаёт результат.
+
+## Дерево навыков
+
+Общее дерево — справочник `skilltreenode`, прокачка персонажа — коллекция `characterskillnode`.
+
+```json
+// skilltreenode
+{"_id":"…","code":"STR_LIFE_1","name":"Крепость","type":"NOTABLE","cost":1,
+ "connections":["STR_START"],"positionX":-20,"positionY":10,
+ "params":[{"modifierId":"…","values":[10.0]}]}
+```
+
+Виды узлов: `START, SMALL, NOTABLE, KEYSTONE`. Связи двусторонние и записаны в обоих концах. Координаты нужны только для отрисовки.
+
+| Операция | Запрос |
+|---|---|
+| Дерево персонажа | `GET /api/v1/characterskillnode/byCharacter?characterId=` → `CharacterSkillTreeState` |
+| Взять узел | `POST /api/v1/characterskillnode/allocate?characterId=&nodeCode=` |
+| Вернуть узел | `POST /api/v1/characterskillnode/refund?characterId=&nodeCode=` |
+| Сбросить дерево | `POST /api/v1/characterskillnode/reset?characterId=` |
+
+Все четыре отвечают состоянием целиком: `{characterId, total, spent, available, nodes}`. Очки даёт таблица уровней. Начинают со стартового узла своего класса, дальше берут только соседей уже взятых; вернуть узел можно, только если остальное дерево не повиснет, а стартовый — лишь полным сбросом. Бонусы узла записываются персонажу снимком, поэтому перебалансировка дерева не трогает уже прокачанных. Все эти правила проверяет сервер; клиент называет код узла и показывает отказ.
 
 ## Валютные сферы
 
@@ -113,4 +164,8 @@
 
 ## Чего у этого сервера нет
 
-Дерева навыков, боя, крафта на верстаке, серверного набора иконок, JWT, поиска и фильтров на сервере, курсорной постраничной выдачи инвентаря. Соответствующие экраны и модели из клиента удалены, а не заглушены. Сферы в 0.9.1 вернулись и реализованы целиком.
+Боя, крафта на верстаке, серверного набора иконок, JWT, поиска и фильтров на сервере, курсорной постраничной выдачи инвентаря. Соответствующие экраны и модели из клиента удалены, а не заглушены. Сферы вернулись в 0.9.1, дерево навыков — в 0.9.2; и то и другое реализовано целиком.
+
+## Совместимость
+
+`SchemaMigrator` сервера роняет коллекции, формат которых изменился несовместимо: на 0.10.0 это `Character` (убраны `stockSkills` и `params`, добавлен `classId`), `CharacterEquipment` (база стала модификаторами, у `Modifier` появились конверсии) и `CharacterSkillNode`. Персонажей и их инвентарь после обновления сервера придётся создать заново.

@@ -99,6 +99,34 @@ fun modifierValues(modifier: JsonObject, definitions: List<ModifierDefinition> =
  * Title of a server stat enum. Names outside this table keep their humanised identifier, which is
  * language-neutral and still readable — the server owns the list and it grows without the client.
  */
+/** Title of a skill-tree node's grade, as the server sorts them. */
+fun nodeTypeTitle(type: String, lang: Lang = uiLanguage) = when (type) {
+    "START" -> lang.pick("Старт", "Start"); "SMALL" -> lang.pick("Малый", "Small")
+    "NOTABLE" -> lang.pick("Нотабль", "Notable"); "KEYSTONE" -> lang.pick("Кейстоун", "Keystone")
+    else -> displayName(type, lang)
+}
+
+/**
+ * Why the server refused to count an equipped item.
+ *
+ * The reasons arrive as the server writes them — "strength: need 30, have 14" — so the requirement
+ * name is translated and the two numbers are printed untouched.
+ */
+fun requirementReason(reason: String, lang: Lang = uiLanguage): String {
+    val name = reason.substringBefore(':').trim()
+    val rest = reason.substringAfter(':', "").trim()
+    val title = when (name) {
+        "level" -> lang.pick("Уровень", "Level"); "strength" -> lang.pick("Сила", "Strength")
+        "dexterity" -> lang.pick("Ловкость", "Dexterity"); "intelligence" -> lang.pick("Интеллект", "Intelligence")
+        else -> displayName(name, lang)
+    }
+    if (rest.isBlank()) return title
+    val need = Regex("need\\s+(-?\\d+)").find(rest)?.groupValues?.get(1)
+    val have = Regex("have\\s+(-?\\d+)").find(rest)?.groupValues?.get(1)
+    return if (need == null || have == null) "$title: $rest"
+        else "$title: " + lang.pick("нужно $need, есть $have", "need $need, have $have")
+}
+
 fun statTitle(stat: String, lang: Lang = uiLanguage): String = when (stat) {
     "STOCK_HEALTH" -> lang.pick("Здоровье", "Life"); "STOCK_MANA" -> lang.pick("Мана", "Mana")
     "STOCK_ENERGY" -> lang.pick("Энергия", "Energy"); "STOCK_ENERGY_SHIELD" -> lang.pick("Энергощит", "Energy shield")
@@ -118,6 +146,12 @@ fun statTitle(stat: String, lang: Lang = uiLanguage): String = when (stat) {
     "STOCK_RESIST_ALL" -> lang.pick("Все сопротивления, %", "All resistances, %")
     "STOCK_HEALTH_REGEN" -> lang.pick("Реген здоровья", "Life regeneration"); "STOCK_MANA_REGEN" -> lang.pick("Реген маны", "Mana regeneration")
     "STOCK_RARITY" -> lang.pick("Редкость добычи, %", "Item rarity, %"); "STOCK_QUANTITY" -> lang.pick("Количество добычи, %", "Item quantity, %")
+    "STOCK_STUN_THRESHOLD" -> lang.pick("Порог оглушения", "Stun threshold"); "STOCK_ENERGY_REGEN" -> lang.pick("Реген энергии", "Energy regeneration")
+    "STOCK_CRITICAL_VAMPIRE" -> lang.pick("Вампиризм крита", "Critical leech")
+    "STOCK_LEECH_PHYSICAL" -> lang.pick("Вампиризм физический", "Physical leech"); "STOCK_LEECH_MAGICAL" -> lang.pick("Вампиризм магический", "Magical leech")
+    "STOCK_LEECH_ALL" -> lang.pick("Вампиризм общий", "Total leech"); "STOCK_INVENTORY_SIZE" -> lang.pick("Размер инвентаря", "Inventory size")
+    "STOCK_AURA_EFFECT" -> lang.pick("Эффект аур, %", "Aura effect, %"); "STOCK_CURSE_EFFECT" -> lang.pick("Эффект проклятий, %", "Curse effect, %")
+    "STOCK_CAST_STRENGTH" -> lang.pick("Сила заклинаний", "Cast strength")
     "STOCK_GOLD" -> lang.pick("Золото", "Gold"); "STOCK_EXPERIENCE" -> lang.pick("Опыт", "Experience")
     else -> displayName(stat.substringAfter('_'), lang)
 }

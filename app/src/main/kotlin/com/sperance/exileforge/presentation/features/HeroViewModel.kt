@@ -76,6 +76,28 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
         mutable.update { it.copy(selectedEquipment = outcome.created?.id ?: outcome.item.id, message = outcome.message) }
     } } }
 
+    fun selectNode(code: String) { with(runtime) { if (!state.value.busy) mutable.update { it.copy(selectedNode = code) } } }
+
+    /**
+     * Skill tree: take a node, give it back, or drop the whole tree.
+     *
+     * Every rule is the server's — which node is reachable, what it costs, whether a refund would
+     * leave the rest of the tree hanging in the air — so the client names a node and reports back.
+     */
+    fun allocateNode(code: String) { with(runtime) { characterCommand { id -> treeChanged(api.allocateNode(id, code)) } } }
+    fun refundNode(code: String) { with(runtime) { characterCommand { id -> treeChanged(api.refundNode(id, code)) } } }
+    fun resetTree() { with(runtime) { characterCommand { id -> treeChanged(api.resetTree(id)) } } }
+    private fun treeChanged(state: com.sperance.exileforge.core.model.skilltree.SkillTreeState) { with(runtime) {
+        mutable.update { it.copy(message = tr("Очков осталось: ${state.available} из ${state.total}", "${state.available} of ${state.total} points left")) }
+    } }
+
+    /** Admin only: hand the character experience and let the server decide about the level. */
+    fun addExperience(amount: Double) { with(runtime) { characterCommand { id ->
+        check(state.value.isAdmin) { tr("Начисление опыта доступно администратору", "Granting experience is available to administrators") }
+        val character = api.addExperience(id, amount)
+        mutable.update { it.copy(message = tr("Уровень ${character.level}, опыт ${character.experience}", "Level ${character.level}, experience ${character.experience}")) }
+    } } }
+
     fun redeem(code: String) { with(runtime) { characterCommand { id -> api.redeem(id, code) } } }
 
     fun useRecipe(recipeId: String, ingredients: List<String>, amount: Long) { with(runtime) { characterCommand { id ->
@@ -100,8 +122,9 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
         check(id.isNotBlank()) { tr("Выберите персонажа", "Choose a character") }
         ensureDefinitions()
         ensureOrbs()
+        ensureProgression()
         val character = api.character(id)
-        val view = HeroView(character, api.inventory(id), api.stats(id), api.bag(id))
+        val view = HeroView(character, api.inventory(id), api.stats(id), api.bag(id), api.characterTree(id))
         mutable.update { it.copy(hero = view, characterOwner = character.userId,
             selectedEquipment = it.selectedEquipment.takeIf { chosen -> view.inventory.any { item -> item.id == chosen } }
                 ?: view.inventory.firstOrNull()?.id.orEmpty()) }

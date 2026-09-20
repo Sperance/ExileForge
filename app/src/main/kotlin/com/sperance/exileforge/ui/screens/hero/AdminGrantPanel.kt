@@ -58,6 +58,15 @@ import com.sperance.exileforge.ui.theme.Muted
         AdminOrbPanel(s, vm)
 
         OrnateDivider()
+        Engraved(tr("Опыт", "Experience"))
+        var experience by remember(s.characterId) { mutableStateOf("100") }
+        OutlinedTextField(experience, { experience = it }, label = { Text(tr("Начислить опыта", "Grant experience")) },
+            supportingText = { Text(tr("Уровень и очки дерева пересчитает сервер по своей таблице.", "The server re-reads the level and the tree points from its own table.")) },
+            singleLine = true, modifier = Modifier.fillMaxWidth())
+        Button(enabled = enabled && experience.toDoubleOrNull()?.let { it > 0 && it.isFinite() } == true,
+            onClick = { vm.addExperience(experience.toDouble()) }) { Text(tr("Начислить", "Grant")) }
+
+        OrnateDivider()
         Engraved(tr("Простые предметы", "Stacking items"))
         var itemId by remember(s.characterId) { mutableStateOf("") }
         var amount by remember(s.characterId) { mutableStateOf("1") }

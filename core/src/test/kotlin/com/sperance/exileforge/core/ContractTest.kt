@@ -26,8 +26,8 @@ class ContractTest {
             val document = if (catalog == Catalog.EQUIPMENT) template(catalog, EquipmentKind.Weapon) else template(catalog)
             val fields = com.sperance.exileforge.core.editor.schemaFields(com.sperance.exileforge.core.editor.formSchema(catalog), document).map { it.key }.toSet()
             assertTrue(editableFields(catalog).none { it in protectedFields }, "$catalog exposes a service field")
-            // Weapon-only and armour-only fields appear on their own kind; the rest must be in the form.
-            val always = editableFields(catalog) - setOf("weaponType", "damage_min", "damage_max", "attackSpeed", "durability", "defense")
+            // Weapon-only fields appear on their own kind; the rest must be in the form.
+            val always = editableFields(catalog) - setOf("weaponType", "durability")
             assertTrue(fields.containsAll(always), "$catalog is missing ${always - fields}")
         }
     }
@@ -37,9 +37,12 @@ class ContractTest {
         validate(weapon, Catalog.EQUIPMENT)
         assertFailsWith<IllegalArgumentException> { validate(JsonObject(weapon + ("rarity" to JsonPrimitive("LEGENDARY"))), Catalog.EQUIPMENT) }
         assertFailsWith<IllegalArgumentException> { validate(JsonObject(weapon + ("slot" to JsonPrimitive("POCKET"))), Catalog.EQUIPMENT) }
-        assertFailsWith<IllegalArgumentException> { validate(JsonObject(weapon + ("damage_max" to JsonPrimitive(1.0))), Catalog.EQUIPMENT) }
-        assertFailsWith<IllegalArgumentException> { validate(JsonObject(weapon + ("attackSpeed" to JsonPrimitive(0.0))), Catalog.EQUIPMENT) }
+        assertFailsWith<IllegalArgumentException> { validate(JsonObject(weapon + ("requiredLevel" to JsonPrimitive(0))), Catalog.EQUIPMENT) }
+        assertFailsWith<IllegalArgumentException> { validate(JsonObject(weapon + ("requiredStrength" to JsonPrimitive(-1))), Catalog.EQUIPMENT) }
         assertFailsWith<IllegalArgumentException> { validate(JsonObject(weapon - "type"), Catalog.EQUIPMENT) }
+        // Damage, attack speed and defence are implicit modifiers since 0.10.0, not item fields.
+        assertFalse(listOf("damage_min", "damage_max", "attackSpeed", "defense").any { it in weapon })
+        assertFalse(listOf("damage_min", "damage_max", "attackSpeed", "defense").any { it in editableFields(Catalog.EQUIPMENT) })
         // UNIQUE is a rarity of this server; LEGENDARY is not.
         validate(JsonObject(weapon + ("rarity" to JsonPrimitive("UNIQUE"))), Catalog.EQUIPMENT)
     }
@@ -52,8 +55,8 @@ class ContractTest {
         validate(JsonObject(character + ("items" to buildJsonArray { add("chaos_orb:50") })), Catalog.CHARACTERS)
         assertFailsWith<IllegalArgumentException> { validate(JsonObject(character + ("items" to buildJsonArray { add("chaos_orb") })), Catalog.CHARACTERS) }
         // The same stat may not be listed twice: the server keeps one entry per stat.
-        val twice = buildJsonArray { add(buildJsonObject { put("stat", "STOCK_HEALTH"); put("value", 1) }); add(buildJsonObject { put("stat", "STOCK_HEALTH"); put("value", 2) }) }
-        assertFailsWith<IllegalArgumentException> { validate(JsonObject(character + ("stockSkills" to twice)), Catalog.CHARACTERS) }
+        val twice = buildJsonArray { add(buildJsonObject { put("stat", "PROFESSION_MINER"); put("level", 1) }); add(buildJsonObject { put("stat", "PROFESSION_MINER"); put("level", 2) }) }
+        assertFailsWith<IllegalArgumentException> { validate(JsonObject(character + ("professionSkills" to twice)), Catalog.CHARACTERS) }
     }
 
     @Test fun `a rolled modifier points at a definition and a tier`() {
@@ -83,6 +86,32 @@ class ContractTest {
         assertFalse(CatalogFilter(maxLevel = "39").matches(bow))
         assertFalse(CatalogFilter(modifierId = "other").matches(bow))
         assertFalse(CatalogFilter(query = "sword").matches(bow))
+    }
+
+    @Test fun `an item base is fixed modifiers and never a rolled one`() {
+        val weapon = template(Catalog.EQUIPMENT, EquipmentKind.Weapon)
+        val base = buildJsonArray { add(buildJsonObject { put("modifierId", id); put("values", buildJsonArray { add(12.0) }) }) }
+        validate(JsonObject(weapon + ("baseParams" to base)), Catalog.EQUIPMENT)
+        // A base is not rolled: a tier on it would mean the server had rolled the item's own armour.
+        val rolled = buildJsonArray { add(buildJsonObject { put("modifierId", id); put("tierId", id); put("values", buildJsonArray { add(12.0) }) }) }
+        assertFailsWith<IllegalArgumentException> { validate(JsonObject(weapon + ("baseParams" to rolled)), Catalog.EQUIPMENT) }
+        assertFailsWith<IllegalArgumentException> { validate(JsonObject(weapon + ("baseParams" to buildJsonArray { add(buildJsonObject { put("modifierId", "life") }) })), Catalog.EQUIPMENT) }
+        // The same split applies to an applied modifier: rolled names a tier, fixed does not.
+        validateModifier(buildJsonObject { put("modifierId", id); put("values", buildJsonArray { add(4.0) }) })
+        validateModifier(buildJsonObject { put("modifierId", id); put("tierId", id); put("tier", 2); put("values", buildJsonArray { add(4.0) }) })
+        assertFailsWith<IllegalArgumentException> { validateModifier(buildJsonObject { put("modifierId", id); put("tier", 3); put("values", buildJsonArray { add(4.0) }) }) }
+    }
+
+    @Test fun `a character carries a class and no base stats of its own`() {
+        val character = JsonObject(template(Catalog.CHARACTERS) + mapOf(
+            "userId" to JsonPrimitive(id), "name" to JsonPrimitive("Изгнанник"), "classId" to JsonPrimitive(id)))
+        validate(character, Catalog.CHARACTERS)
+        assertTrue("classId" in creationFields(Catalog.CHARACTERS))
+        // The class is chosen once: the server has no route that moves a character to another one.
+        assertFalse("classId" in editableFields(Catalog.CHARACTERS))
+        assertFailsWith<IllegalArgumentException> { validate(JsonObject(character + ("classId" to JsonPrimitive("marauder"))), Catalog.CHARACTERS) }
+        assertFailsWith<IllegalArgumentException> { validate(JsonObject(character + ("stockSkills" to JsonArray(emptyList()))), Catalog.CHARACTERS) }
+        assertFailsWith<IllegalArgumentException> { validate(JsonObject(character + ("params" to JsonArray(emptyList()))), Catalog.CHARACTERS) }
     }
 
     @Test fun `the orb table matches the currency the server seeds`() {

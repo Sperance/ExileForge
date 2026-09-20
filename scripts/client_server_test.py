@@ -41,6 +41,8 @@ with (root / 'build/client-server.log').open('w') as log:
                 routes = {''.join(c for c in route['method'] if c.isalpha()) + ' ' + route['path'] for route in request('/system/routes')}
                 assert 'GET /api/v1/character/inventory/stats' in routes, sorted(routes)
                 assert 'POST /api/v1/characterequipment/applyOrb' in routes, sorted(routes)
+                assert 'GET /api/v1/characterclass' in routes, sorted(routes)
+                assert 'POST /api/v1/characterskillnode/allocate' in routes, sorted(routes)
                 break
             except (urllib.error.URLError, TimeoutError, KeyError):
                 if time.monotonic() > deadline:

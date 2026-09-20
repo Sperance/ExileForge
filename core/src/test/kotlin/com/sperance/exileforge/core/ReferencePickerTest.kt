@@ -25,7 +25,11 @@ class ReferencePickerTest {
     @Test fun `the modifier pool is a typed picker into its own collection`() {
         val pool = schemaFields("equipment").single { it.key == "modifierIds" }.spec
         assertEquals(InputSpec.ListOf(InputSpec.Reference(EntitySource.MODIFIER)), pool)
-        assertEquals(setOf("name", "description", "stockSkills", "professionSkills", "battleSkills", "boolSkills"), schemaFields("character").map { it.key }.toSet())
+        // The base stats left the character document in 0.10.0: the class carries them now.
+        assertEquals(setOf("name", "description", "professionSkills", "battleSkills", "boolSkills"), schemaFields("character").map { it.key }.toSet())
+        // An item's base is fixed modifiers, so it picks from the same collection as the pool.
+        val base = schemaFields("fixedModifier").single { it.key == "modifierId" }.spec
+        assertEquals(InputSpec.Reference(EntitySource.MODIFIER), base)
     }
 
     @Test fun `reference values retain identifiers and reject names`() {

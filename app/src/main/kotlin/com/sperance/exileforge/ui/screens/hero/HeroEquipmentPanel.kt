@@ -15,6 +15,7 @@ import com.sperance.exileforge.core.contract.slots
 import com.sperance.exileforge.core.contract.text
 import com.sperance.exileforge.core.display.inventoryDocument
 import com.sperance.exileforge.core.display.slotTitle
+import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.tr
 import com.sperance.exileforge.presentation.state.ForgeState
@@ -39,8 +40,11 @@ import kotlinx.serialization.json.put
                 ItemEmblem(com.sperance.exileforge.core.display.ItemVisualKind.CHARACTER, Gold, Modifier.size(64.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text(hero.character.name, style = MaterialTheme.typography.headlineSmall, color = GoldBright)
+                    // The class is the base every percentage is counted from; the server owns it.
+                    Text(s.heroClass?.title.orEmpty().ifBlank { tr("Класс неизвестен", "Unknown class") }, color = Rune, style = MaterialTheme.typography.labelLarge)
                     Text(tr("Уровень ${hero.character.level} · Опыт ${hero.character.experience}", "Level ${hero.character.level} · Experience ${hero.character.experience}"), color = Muted, style = MaterialTheme.typography.labelMedium)
-                    Text(tr("Золото: ${hero.character.money}", "Gold: ${hero.character.money}"), color = Gold, style = MaterialTheme.typography.labelLarge)
+                    Text(tr("Золото: ${hero.character.money} · Очки дерева: ${hero.tree.available}/${hero.tree.total}",
+                            "Gold: ${hero.character.money} · Tree points: ${hero.tree.available}/${hero.tree.total}"), color = Gold, style = MaterialTheme.typography.labelLarge)
                 }
             }
         }
@@ -66,6 +70,11 @@ import kotlinx.serialization.json.put
                     Text(slotTitle(slot, s.lang), style = MaterialTheme.typography.labelSmall, color = Gold, textAlign = TextAlign.Center)
                     ItemIcon(document, GoldBright, Modifier.size(48.dp), tint = Muted.takeIf { instance == null })
                     Text(if (instance == null) tr("Пусто", "Empty") else document.text("name"), style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
+                    // An item whose requirements stopped being met keeps its slot and stops counting.
+                    instance?.let { worn -> hero.inactive[worn.id]?.let { reasons ->
+                        Text(tr("Не работает", "Not working"), color = LifeRed, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
+                        reasons.forEach { Text(requirementReason(it, s.lang), color = LifeRed, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center) }
+                    } }
                     if (instance != null) TextButton(enabled = !s.busy && (s.ownsCharacter || s.isAdmin), onClick = { onUnequip(instance.id) }) { Text(tr("Снять", "Unequip")) }
                 }
             }
@@ -78,6 +87,8 @@ import kotlinx.serialization.json.put
                 Icon(ForgeGlyphs.Sigil, null, tint = Rune, modifier = Modifier.size(16.dp))
                 Engraved(tr("Расчёт сервера", "Server calculation"), Rune)
             }
+            Text(tr("Уровень ${hero.sheet.level} · учтено предметов: ${hero.sheet.active.size}", "Level ${hero.sheet.level} · items counted: ${hero.sheet.active.size}"),
+                color = Muted, style = MaterialTheme.typography.labelMedium)
             if (hero.stats.isEmpty()) Text(tr("Сервер не вернул характеристик", "The server returned no stats"), color = Muted)
             hero.stats.toSortedMap().forEach { (key, value) ->
                 PropertyRow(statTitle(key, s.lang), String.format(Locale.ROOT, "%.1f", value), key)

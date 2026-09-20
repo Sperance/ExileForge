@@ -34,6 +34,7 @@ import com.sperance.exileforge.ui.screens.checks.ChecksScreen
 import com.sperance.exileforge.ui.screens.editor.EditorScreen
 import com.sperance.exileforge.ui.screens.hero.HeroScreen
 import com.sperance.exileforge.ui.screens.server.ServerScreen
+import com.sperance.exileforge.ui.screens.tree.SkillTreeScreen
 import com.sperance.exileforge.ui.theme.*
 
 @Composable fun ForgeApp(vm: ForgeViewModel) {
@@ -56,10 +57,10 @@ import com.sperance.exileforge.ui.theme.*
             NavigationBar(containerColor = Abyss, tonalElevation = 0.dp,
                 modifier = Modifier.drawBehind { drawLine(Gold.copy(alpha = .35f), Offset(0f, 0f), Offset(size.width, 0f), 2f) }) {
                 val destinations = if (s.adminTools)
-                    listOf(0 to tr("Каталог", "Catalogue"), 1 to tr("Редактор", "Editor"), 2 to tr("Проверки", "Checks"), 4 to tr("Герой", "Hero"), 3 to tr("Аккаунт", "Account"))
-                else listOf(0 to tr("Персонажи", "Characters"), 4 to tr("Герой", "Hero"), 3 to tr("Аккаунт", "Account"))
+                    listOf(0 to tr("Каталог", "Catalogue"), 1 to tr("Редактор", "Editor"), 4 to tr("Герой", "Hero"), 5 to tr("Дерево", "Tree"), 2 to tr("Проверки", "Checks"), 3 to tr("Аккаунт", "Account"))
+                else listOf(0 to tr("Персонажи", "Characters"), 4 to tr("Герой", "Hero"), 5 to tr("Дерево", "Tree"), 3 to tr("Аккаунт", "Account"))
                 val icons = mapOf<Int, ImageVector>(0 to ForgeGlyphs.Stash, 1 to ForgeGlyphs.Tome, 2 to ForgeGlyphs.Scroll,
-                    3 to ForgeGlyphs.Portal, 4 to ForgeGlyphs.Helm)
+                    3 to ForgeGlyphs.Portal, 4 to ForgeGlyphs.Helm, 5 to ForgeGlyphs.Constellation)
                 destinations.forEach { (index, label) ->
                     NavigationBarItem(selected = s.tab == index, onClick = { vm.tab(index) },
                         icon = { Icon(icons.getValue(index), null, modifier = Modifier.size(22.dp)) }, label = { Text(label, fontSize = 10.sp) },
@@ -78,6 +79,7 @@ import com.sperance.exileforge.ui.theme.*
                 2 -> ChecksScreen(s, vm, logs)
                 3 -> ServerScreen(s, vm, logs)
                 4 -> HeroScreen(s, vm)
+                5 -> SkillTreeScreen(s, vm)
             }
         }
     }

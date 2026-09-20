@@ -45,40 +45,49 @@ fun schemaFields(schema: String, document: JsonObject = JsonObject(emptyMap())):
             choice("rarity", tr("Редкость", "Rarity"), rarities),
             num("itemLevel", tr("Уровень предмета", "Item level"), 1, true, 1.0),
         ))
-        addAll(when (EquipmentKind.of(document.text("type"))) {
-            EquipmentKind.Weapon -> listOf(
-                choice("weaponType", tr("Тип оружия", "Weapon type"), weapons),
-                num("damage_min", tr("Минимальный урон", "Minimum damage"), 1.0, min = 0.0),
-                num("damage_max", tr("Максимальный урон", "Maximum damage"), 10.0, min = 0.0),
-                num("attackSpeed", tr("Скорость атаки", "Attack speed"), 1.0, min = 0.000001),
-                num("durability", tr("Прочность", "Durability"), 100, true, 0.0))
-            EquipmentKind.Armor -> listOf(num("defense", tr("Защита", "Defence"), 1, true, 0.0))
-            else -> emptyList()
-        })
+        // Durability is the only number an item still keeps as a field of its own.
+        if (EquipmentKind.of(document.text("type")) == EquipmentKind.Weapon) addAll(listOf(
+            choice("weaponType", tr("Тип оружия", "Weapon type"), weapons),
+            num("durability", tr("Прочность", "Durability"), 100, true, 0.0)))
+        addAll(listOf(
+            num("requiredLevel", tr("Требуемый уровень", "Required level"), 1, true, 1.0),
+            num("requiredStrength", tr("Требуется силы", "Strength required"), 0, true, 0.0),
+            num("requiredDexterity", tr("Требуется ловкости", "Dexterity required"), 0, true, 0.0),
+            num("requiredIntelligence", tr("Требуется интеллекта", "Intelligence required"), 0, true, 0.0)))
+        // The base — armour, damage, attack speed — is fixed modifiers rather than stat fields.
+        add(list("baseParams", tr("База предмета", "Item base"), InputSpec.Object("fixedModifier")))
         // The pool is a list of ModifierDefinition ids; what lands on an instance is rolled by the server.
         add(list("modifierIds", tr("Пул модификаторов", "Modifier pool"), InputSpec.Reference(EntitySource.MODIFIER)))
     }
     "character" -> listOf(
         text("name", tr("Имя", "Name")),
         text("description", tr("Описание", "Description")),
-        list("stockSkills", tr("Базовые характеристики", "Base stats"), InputSpec.Object("stockSkill")),
         list("professionSkills", tr("Профессии", "Professions"), InputSpec.Object("professionSkill")),
         list("battleSkills", tr("Боевые навыки", "Battle skills"), InputSpec.Object("battleSkill")),
         list("boolSkills", tr("Состояния", "States"), InputSpec.Object("boolSkill")),
     )
+    /** A modifier with values but no tier: an item's base, a class conversion, a tree node's bonus. */
+    "fixedModifier" -> listOf(
+        reference("modifierId", tr("Модификатор", "Modifier"), EntitySource.MODIFIER),
+        list("values", tr("Значения", "Values"), InputSpec.Number()))
     "professionSkill", "battleSkill" -> listOf(
         choice("stat", tr("Навык", "Skill"), if (schema == "professionSkill") professionStats else battleStats),
         num("level", tr("Уровень", "Level"), 0, true, 0.0, 127.0),
         num("experience", tr("Опыт", "Experience"), 0.0, min = 0.0))
-    "stockSkill" -> listOf(choice("stat", tr("Характеристика", "Stat"), stockStats), num("value", tr("Значение", "Value"), 0, true, Int.MIN_VALUE.toDouble(), Int.MAX_VALUE.toDouble()))
     "boolSkill" -> listOf(choice("stat", tr("Состояние", "State"), boolStats), flag("value", tr("Активно", "Active")).copy(nullable = true, default = JsonNull))
     // Read-only shapes the catalogue renders; they are never posted back.
     "modifierDefinition" -> listOf(
         text("code", tr("Код", "Code")), text("name", tr("Название", "Name")),
         choice("source", tr("Источник", "Source"), modifierSources, "PREFIX"),
+        flag("isLocal", tr("Локальный", "Local")),
         list("effects", tr("Эффекты", "Effects"), InputSpec.Object("modifierEffect")),
         list("tags", tr("Теги", "Tags"), InputSpec.Text(emptyList())))
-    "modifierEffect" -> listOf(text("stat", tr("Характеристика", "Stat"), stockStats.first(), stockStats), choice("operation", tr("Операция", "Operation"), modifierOperations))
+    // An effect with perStat is a conversion: the value is multiplied by the whole steps of a source stat.
+    "modifierEffect" -> listOf(
+        text("stat", tr("Характеристика", "Stat"), stockStats.first(), stockStats),
+        choice("operation", tr("Операция", "Operation"), modifierOperations),
+        text("perStat", tr("За каждые (характеристика)", "Per (stat)"), "", stockStats).copy(nullable = true, default = JsonNull),
+        num("perAmount", tr("Шаг конверсии", "Conversion step"), 1.0, min = 0.000001))
     else -> error(tr("Неизвестная форма: $schema", "Unknown form: $schema"))
 }
 

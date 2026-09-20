@@ -1,7 +1,7 @@
 # ExileForge 2.0.0
 
-Android Compose client for **ktor-bestgame 0.9.1**.
-Server: branch `claude/tender-pasteur-a36kj2`, commit `64b3577822e0f4b5d710ca8b9d4e250e65269359`.
+Android Compose client for **ktor-bestgame 0.10.0**.
+Server: branch `claude/tender-pasteur-a36kj2`, commit `cf83ee100e6c6d62348aff1a5dc2ace4a8c3ebca`.
 
 ## Язык интерфейса · Interface language
 
@@ -16,7 +16,8 @@ Every label, hint, error and contract-validation message exists in Russian and E
 ## Экраны
 
 - **Персонажи / Каталог** — поиск и постраничный просмотр персонажей, экипировки и предметов. Фильтры по слоту, редкости, типу оружия, уровню и модификатору в пуле.
-- **Герой** — сводка персонажа, надетые слоты, характеристики сервера, инвентарь и сумка, применение валютных сфер, промокоды и рецепты.
+- **Герой** — сводка персонажа, класс, надетые слоты, характеристики сервера, инвентарь и сумка, применение валютных сфер, промокоды и рецепты.
+- **Дерево** — дерево навыков: карта узлов, взятие, возврат и полный сброс, баланс очков.
 - **Редактор** — шаблоны экипировки и предметов, персонажи и их базовые характеристики.
 - **Проверки** (администратор) — CRUD-сценарий и журнал запросов.
 - **Аккаунт** — сервер, вход, смена пароля и язык.
@@ -36,6 +37,24 @@ Every label, hint, error and contract-validation message exists in Russian and E
 Редкость с этой версии принадлежит копии предмета, а не шаблону: шаблон задаёт лишь то, с чем предмет падает. Порченый предмет (`Сфера ваал`, копия из Зеркала) помечен в карточке — сервер больше не примет на него ни одной сферы, и кнопка выключена.
 
 Администратору доступна та же выдача в разделе **«Сферы на предметах»**: там предмет выбирается списком, а не открытием карточки, и рядом стоит кнопка «Выдать 10 таких сфер», чтобы проверить правило на живом сервере, не фармя валюту.
+
+## Класс, уровни и требования
+
+С 0.10.0 базу характеристик задаёт **класс персонажа**, а не сам персонаж: `stockSkills` с документа убраны, вместо них ссылка `classId`. Класс выбирается при создании персонажа и больше не меняется — сервер читает его базу при каждом расчёте, и перенос в другой класс переписал бы историю персонажа. Маршрута для такой правки у сервера нет.
+
+Характеристики теперь приходят объектом: числа, уровень и, главное, вердикт сервера по каждому надетому предмету. Предмет, чьи требования (`уровень`, `сила`, `ловкость`, `интеллект`) перестали выполняться, **остаётся в слоте, но не работает** — в панели героя он помечен красным с причиной от сервера. Ни требования, ни характеристики клиент не пересчитывает.
+
+У предметов не осталось числовых полей под характеристики: броня, урон и скорость атаки задаются модификаторами в `baseParams`, с фиксированными значениями и без тира. Прочность оружия — единственное число, оставшееся полем предмета.
+
+Опыт начисляет администратор во вкладке «Герой»; уровень и очки дерева пересчитает сервер по своей таблице.
+
+## Дерево навыков
+
+Дерево вернулось в 0.9.2 и реализовано целиком. Вкладка **«Дерево»** рисует граф по координатам, которые задаёт сервер: карту можно двигать и масштабировать, узел выбирается касанием. У выбранного узла видны вид, стоимость, бонусы и состояние, а дальше — «Взять узел», «Вернуть узел» и полный сброс.
+
+Правила целиком на сервере: начинают со стартового узла своего класса, дальше берут только соседей уже взятых, вернуть узел можно лишь тогда, когда остальное дерево не повиснет, а стартовый — только полным сбросом. Клиент отправляет код узла и показывает отказ дословно. Бонусы узла записываются персонажу снимком, поэтому перебалансировка дерева не затрагивает уже прокачанных.
+
+Очки дают уровни; баланс «всего / потрачено / доступно» считает сервер.
 
 ## Connect
 
@@ -69,7 +88,10 @@ Debug allows HTTP for local development; release requires HTTPS. **This server h
 - **Stats come from the server.** `GET /api/v1/character/inventory/stats` returns the summed sheet; the client prints it and implements no second calculator.
 - **Lists are paged on the client.** The server's `/paged` route hands the page number to Mongo as the offset instead of `page * size`, so every page but the first is off by all but one record; it also offers no filter. The client reads the collection and slices it, comparing only fields the server already wrote. Nothing game-related is computed.
 - **Currency orbs are back (0.9.1).** They live in the `items` collection under the `CURRENCY` category and are applied through `POST /api/v1/characterequipment/applyOrb`. The rarity and the corruption flag now belong to the copy, not to the template.
-- **Removed with the features the server no longer has:** passive tree, combat and the battle arena, the crafting bench, the server icon set, JWT, cursor-paged inventory and three-way conflict review.
+- **The passive tree is back (0.9.2).** A shared seeded graph plus one document per node a character has taken, with allocate, refund and reset. Every rule is checked by the server.
+- **Stats were reworked (0.10.0).** A character references a class instead of carrying base stats; `stats` answers an object naming the equipped items the server counted and the ones whose requirements are not met; an item's base is fixed modifiers rather than damage and defence fields; modifier effects can be attribute conversions.
+- **Removed with the features the server no longer has:** combat and the battle arena, the crafting bench, the server icon set, JWT, cursor-paged inventory and three-way conflict review.
+- **Upgrading the server wipes player data.** Its own migrator drops `Character`, `CharacterEquipment` and `CharacterSkillNode` when their format changes incompatibly, which 0.10.0 does. Characters and their gear are created anew.
 
 ## Build and verification
 

@@ -19,6 +19,10 @@ import com.sperance.exileforge.core.model.currency.CurrencyItem
 import com.sperance.exileforge.core.model.hero.*
 import com.sperance.exileforge.core.model.modifier.ModifierDefinition
 import com.sperance.exileforge.core.model.modifier.ModifierTier
+import com.sperance.exileforge.core.model.progression.CharacterClass
+import com.sperance.exileforge.core.model.progression.ExperienceLevel
+import com.sperance.exileforge.core.model.skilltree.SkillTreeNode
+import com.sperance.exileforge.core.model.skilltree.SkillTreeState
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -188,6 +192,50 @@ class GameApi(
         return WireJson.decodeFromJsonElement(kotlinx.serialization.builtins.ListSerializer(ModifierTier.serializer()), request("GET", "api/v1/modifiertier/byModifier", mapOf("modifierId" to modifierId), authenticated = true))
     }
 
+    // ==================== progression and the skill tree ====================
+
+    /** The classes the world offers. A character references one; its base is never copied here. */
+    suspend fun characterClasses(): List<CharacterClass> =
+        WireJson.decodeFromJsonElement(kotlinx.serialization.builtins.ListSerializer(CharacterClass.serializer()),
+            request("GET", "api/v1/${EntitySource.CHARACTER_CLASS.path}", authenticated = true))
+
+    /** The progression table: when a level is reached and how many skill points it hands over. */
+    suspend fun experienceLevels(): List<ExperienceLevel> =
+        WireJson.decodeFromJsonElement(kotlinx.serialization.builtins.ListSerializer(ExperienceLevel.serializer()),
+            request("GET", "api/v1/${EntitySource.EXPERIENCE_LEVEL.path}", authenticated = true))
+            .sortedBy { it.level }
+
+    /** The whole shared tree. It is one seeded graph, so it is read once and drawn from memory. */
+    suspend fun skillTree(): List<SkillTreeNode> =
+        WireJson.decodeFromJsonElement(kotlinx.serialization.builtins.ListSerializer(SkillTreeNode.serializer()),
+            request("GET", "api/v1/${EntitySource.SKILL_NODE.path}", authenticated = true))
+
+    suspend fun characterTree(characterId: String): SkillTreeState {
+        requireId(characterId)
+        return WireJson.decodeFromJsonElement(request("GET", "api/v1/characterskillnode/byCharacter",
+            mapOf("characterId" to characterId), authenticated = true))
+    }
+
+    /**
+     * Takes, gives back or drops tree nodes; every one of them answers with the whole tree state.
+     *
+     * Which node may be taken, whether a refund would leave the rest hanging and what a node costs
+     * are the server's rules: the client names a node and reports the refusal it gets.
+     */
+    suspend fun allocateNode(characterId: String, nodeCode: String): SkillTreeState = node("allocate", characterId, nodeCode)
+    suspend fun refundNode(characterId: String, nodeCode: String): SkillTreeState = node("refund", characterId, nodeCode)
+    suspend fun resetTree(characterId: String): SkillTreeState {
+        requireId(characterId)
+        return WireJson.decodeFromJsonElement(request("POST", "api/v1/characterskillnode/reset",
+            mapOf("characterId" to characterId), authenticated = true))
+    }
+    private suspend fun node(operation: String, characterId: String, nodeCode: String): SkillTreeState {
+        requireId(characterId)
+        require(nodeCode.isNotBlank()) { tr("Выберите узел дерева", "Choose a node of the tree") }
+        return WireJson.decodeFromJsonElement(request("POST", "api/v1/characterskillnode/$operation",
+            mapOf("characterId" to characterId, "nodeCode" to nodeCode), authenticated = true))
+    }
+
     // ==================== character ====================
 
     suspend fun character(id: String): CharacterSummary {
@@ -196,9 +244,25 @@ class GameApi(
     }
     suspend fun inventory(characterId: String): List<EquipmentInstance> =
         instances("api/v1/character/inventory/equipments", characterId)
-    suspend fun stats(characterId: String): Map<String, Double> {
+    /**
+     * The character sheet.
+     *
+     * Since 0.10.0 this is an object, not a flat map: alongside the numbers the server reports the
+     * equipped items it counted and the ones it refused, with the requirement each of them misses.
+     * An item whose requirements stopped being met keeps its slot and stops working — that verdict
+     * is the server's and arrives here already made.
+     */
+    suspend fun stats(characterId: String): CharacterSheet {
         requireId(characterId)
         return WireJson.decodeFromJsonElement(request("GET", "api/v1/character/inventory/stats", mapOf("characterId" to characterId), authenticated = true))
+    }
+
+    /** Grants experience; the server decides whether that crosses a level threshold. */
+    suspend fun addExperience(characterId: String, amount: Double): CharacterSummary {
+        requireId(characterId)
+        require(amount > 0 && amount.isFinite()) { tr("Опыт должен быть положительным числом", "Experience must be a positive number") }
+        return WireJson.decodeFromJsonElement(request("POST", "api/v1/character/inventory/experience",
+            mapOf("characterId" to characterId, "amount" to amount.toString()), authenticated = true))
     }
     suspend fun bag(characterId: String): List<CharacterItem> {
         requireId(characterId)

@@ -59,6 +59,14 @@ data class ForgeState(
     val deviceId: String = "",
 
     val characterId: String = "", val characterOwner: String = "", val hero: HeroView? = null,
+    /**
+     * When the hero was last read whole, as epoch millis; 0 means "never, or known to be stale".
+     *
+     * Reading the hero is five requests, so it is not done on every glance at a tab. A command
+     * re-reads it because the command changed it; anything that changed it *elsewhere* — a trade,
+     * another device, an administrator — is caught by this stamp going cold.
+     */
+    val heroReadAt: Long = 0,
     /** Templates of the instances on screen, keyed by `equipmentId`; an instance carries only rolls. */
     val inventoryBases: Map<String, JsonObject> = emptyMap(),
     val selectedEquipment: String = "",
@@ -142,3 +150,12 @@ data class ForgeState(
  * the server will reject with `CH_005`. The refusal is still shown if the numbers ever disagree.
  */
 const val MAX_CHARACTERS = 3
+
+/**
+ * Crafting: a tab of its own, reached from the Hero tab rather than from the bottom bar.
+ *
+ * The bar holds five destinations and they are all a player needs at hand; the forge is somewhere
+ * you go on purpose, like the editor and the checks. It is named because a button elsewhere opens
+ * it, and a bare `7` in another file would say nothing about which screen that is.
+ */
+const val TAB_CRAFT = 7

@@ -18,9 +18,12 @@ import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.checks.LogCard
+import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.Muted
+import com.sperance.exileforge.ui.theme.Panel
 
 @Composable internal fun ServerScreen(s: ForgeState, vm: ForgeViewModel, logs: List<RequestLog> = emptyList()) {
+    var promoOpen by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         ScreenHeader(tr("Врата мира", "Gateway"), tr("Подключение к ktor-bestgame", "Connection to ktor-bestgame"), ForgeGlyphs.Portal)
         ForgePanel {
@@ -34,6 +37,11 @@ import com.sperance.exileforge.ui.theme.Muted
                 Text(tr("Сменить персонажа", "Change character"))
             }
             if (s.editorOpen) Text(tr("Сначала закройте редактор.", "Close the editor first."), color = Muted, style = MaterialTheme.typography.bodySmall)
+            // A reward is paid to a character, not to an account, so the code is asked for where
+            // the character being played is already named — and the dialog names them again.
+            OutlinedButton(enabled = !s.busy && s.characterId.isNotBlank(), onClick = { promoOpen = true }, modifier = Modifier.fillMaxWidth()) {
+                Text(tr("Ввести промокод", "Enter a promo code"))
+            }
             LoginForm(s, vm)
         }
         // The editor and the checks left the bottom bar so it fits five destinations for everyone;
@@ -89,6 +97,30 @@ import com.sperance.exileforge.ui.theme.Muted
                "The server issues no token: a login answers with the account document, which lives in memory only. The password travels as a query parameter — use HTTPS."))
         RequestJournalPanel(vm, logs)
     }
+    if (promoOpen) PromoCodeDialog(s, onDismiss = { promoOpen = false }) { code -> promoOpen = false; vm.redeem(code) }
+}
+
+/**
+ * One promo code, for the character currently being played.
+ *
+ * The account may hold three exiles and the server pays the reward to exactly one of them, so the
+ * dialog says which before anything is typed rather than after the goods have landed.
+ */
+@Composable private fun PromoCodeDialog(s: ForgeState, onDismiss: () -> Unit, onRedeem: (String) -> Unit) {
+    var code by remember { mutableStateOf("") }
+    AlertDialog(onDismissRequest = onDismiss, containerColor = Panel, titleContentColor = Gold,
+        title = { Text(tr("Промокод", "Promo code")) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(tr("Награда придёт персонажу: ${s.character?.name.orEmpty()}",
+                        "The reward goes to: ${s.character?.name.orEmpty()}"), color = Muted, style = MaterialTheme.typography.bodySmall)
+                OutlinedTextField(code, { code = it.take(100) }, label = { Text(tr("Код", "Code")) },
+                    singleLine = true, modifier = Modifier.fillMaxWidth())
+            }
+        },
+        confirmButton = { TextButton(enabled = !s.busy && code.isNotBlank(), onClick = { onRedeem(code) }) {
+            Text(tr("Получить награду", "Claim the reward")) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(tr("Отмена", "Cancel")) } })
 }
 
 /**

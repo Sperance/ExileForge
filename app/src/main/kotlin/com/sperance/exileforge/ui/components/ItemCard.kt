@@ -91,8 +91,9 @@ private fun requirements(doc: JsonObject): List<String> = listOf(
                 // Corruption is the one state that closes an item: no orb touches it again.
                 if ((doc["corrupted"] as? JsonPrimitive)?.booleanOrNull == true)
                     PropertyRow(tr("Состояние", "State"), tr("Порченый", "Corrupted"), "corrupted")
-                // A template advertises the size of its pool; an instance shows what was actually rolled.
-                (doc["modifierIds"] as? JsonArray)?.let { PropertyRow(tr("Модификаторов в пуле", "Modifiers in the pool"), it.size.toString(), "modifier") }
+                // The pool is not printed: how many definitions a template may roll from says nothing
+                // about the item in front of you, and the administrator who owns it edits it in the
+                // editor. What a copy actually rolled is below.
                 val rolled = (doc["params"] as? JsonArray).orEmpty()
                 rolled.take(if (detailed) rolled.size else 3).forEach { raw ->
                     val modifier = raw as? JsonObject ?: return@forEach

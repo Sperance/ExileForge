@@ -22,14 +22,16 @@ class CharacterViewModel(private val runtime: ForgeRuntime) {
     /**
      * The account's characters, and where the player lands after reading them.
      *
-     * Nothing to choose between is not a choice: an empty account opens the creation form, and a
-     * single character is entered directly. The menu appears when it has a decision to offer.
+     * [autoEnter] is the whole difference between arriving and coming back. Straight after a
+     * sign-in a single character is not a decision, so the menu is skipped; but the menu is also
+     * where a player goes *to leave* that character, and entering them again there would make the
+     * screen unreachable for anyone who owns exactly one — which is most people.
      */
-    suspend fun readCharacters() { with(runtime) {
+    suspend fun readCharacters(autoEnter: Boolean = false) { with(runtime) {
         val owner = state.value.profile?.id.orEmpty()
         val characters = if (owner.isBlank()) emptyList() else api.charactersOf(owner)
         mutable.update { it.copy(characters = characters, charactersRead = true) }
-        characters.singleOrNull()?.let { only -> entered(only.id) }
+        if (autoEnter) characters.singleOrNull()?.let { only -> entered(only.id) }
     } }
 
     fun refresh() { with(runtime) { task { readCharacters() } } }

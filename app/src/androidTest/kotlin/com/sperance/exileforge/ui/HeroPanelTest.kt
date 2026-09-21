@@ -2,8 +2,7 @@ package com.sperance.exileforge.ui
 
 import android.graphics.Bitmap
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Modifier
@@ -86,10 +85,14 @@ class HeroPanelTest {
         compose.onNodeWithText("Кольцо героя").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Снять").performClick()
         compose.runOnIdle { assertEquals("ring-instance", removed) }
-        compose.onNodeWithText("Надето: 1 · свернуть").performScrollTo().performClick()
-        compose.onNodeWithText("Характеристики · показать").performClick()
+        // Life is a bar with the number on it: the sheet carries a maximum and no current value,
+        // so the bar is always full and the figure is the whole of what it says.
+        compose.onNodeWithText("88").performScrollTo().assertIsDisplayed()
+        // Every stat the server sent is in the sheet the vitals open, with nothing folded inside it.
+        compose.onNodeWithText("Все характеристики: 2 · нажмите").performScrollTo().performClick()
         compose.onNodeWithText("Здоровье").assertIsDisplayed()
         compose.onNodeWithText("88.0").assertIsDisplayed()
+        compose.onNodeWithText("Броня").assertIsDisplayed()
     }
 
     /**
@@ -125,12 +128,16 @@ class HeroPanelTest {
             tree = SkillTreeState("hero", total = 4, spent = 0, available = 4,
                 nodes = listOf(CharacterSkillNode("STR_START", emptyList(), SkillNodeType.START, 0))))
         var allocated: String? = null
-        compose.setContent { ForgeTheme { Column(Modifier.background(Ink).verticalScroll(rememberScrollState()).padding(12.dp)) {
+        compose.setContent { ForgeTheme { Column(Modifier.fillMaxSize().background(Ink).padding(12.dp)) {
             SkillTreePanel(ForgeState(busy = false, signedIn = true, hero = hero, characterOwner = "owner",
                 profile = com.sperance.exileforge.core.model.command.UserProfile("owner"),
                 treeNodes = listOf(start, life), selectedNode = "STR_LIFE_1"),
-                onSelect = {}, onAllocate = { allocated = it }, onRefund = {}, onReset = {}, onQuery = {})
+                onSelect = {}, onAllocate = { allocated = it }, onRefund = {}, onReset = {}, onQuery = {},
+                modifier = Modifier.weight(1f))
         } } }
+        // The map takes the whole panel; the balance and the chosen node open over it.
+        compose.onNodeWithText("Очки: 4 из 4").assertIsDisplayed()
+        compose.onNodeWithText("Подробно").performClick()
         compose.onNodeWithText("Крепость").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Нотабль").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Доступно").performScrollTo().assertIsDisplayed()
@@ -157,12 +164,14 @@ class HeroPanelTest {
                 showcase = AuctionPage(listOf(theirs, mine), 0, 20, 2, 1)),
                 onBuy = { bought = it }, onPage = {})
         } } }
-        compose.onNodeWithText("Железный шлем").performScrollTo().assertIsDisplayed()
         // The price is always counted in orbs, and the orb catalogue gives it a name.
-        compose.onNodeWithText("4 × Сфера хаоса").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("7 × Сфера хаоса").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("4 × Сфера хаоса", substring = true).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("7 × Сфера хаоса", substring = true).performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Ваш лот").performScrollTo().assertIsDisplayed()
-        compose.onAllNodesWithText("Купить").onFirst().performScrollTo().performClick()
+        // Nothing is bought from a line: the rolls are what is being paid for, so the card opens first.
+        compose.onAllNodesWithText("Купить").assertCountEquals(0)
+        compose.onNodeWithText("Железный шлем").performScrollTo().performClick()
+        compose.onNodeWithText("Купить").performClick()
         compose.runOnIdle { assertEquals("lot-1", bought) }
     }
 

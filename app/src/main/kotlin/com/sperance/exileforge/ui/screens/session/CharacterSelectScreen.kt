@@ -38,7 +38,7 @@ import com.sperance.exileforge.ui.theme.*
         snackbarHost = { SnackbarHost(snackbar) { data -> Snackbar(data, containerColor = PanelRaised, contentColor = Parchment, actionColor = Gold, shape = MaterialTheme.shapes.small) } }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).imePadding().voidBackdrop()) {
             if (s.busy) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised) else OrnateDivider(Gold)
-            if (creating) CreatingColumn(s, vm, canCancel = s.characters.isNotEmpty()) { creating = false }
+            if (creating) CreatingColumn(s, vm, onBack = { creating = false }, onSignOut = vm::logout)
             else CharacterMenu(s, onPlay = vm::enterCharacter, onDelete = { pendingDelete = it },
                 onCreate = { creating = true }, onRefresh = vm::refreshCharacters, onLogout = vm::logout)
         }
@@ -95,10 +95,10 @@ import com.sperance.exileforge.ui.theme.*
 }
 
 /** The creation form on its own page: there is nothing to choose between while it is open. */
-@Composable private fun ColumnScope.CreatingColumn(s: ForgeState, vm: ForgeViewModel, canCancel: Boolean, onCancel: () -> Unit) {
+@Composable private fun ColumnScope.CreatingColumn(s: ForgeState, vm: ForgeViewModel, onBack: () -> Unit, onSignOut: () -> Unit) {
     LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { ScreenHeader(tr("Новый изгнанник", "A new exile"), tr("Имя и класс", "A name and a class"), ForgeGlyphs.Exile) }
-        item { CreateCharacterPanel(s, vm, canCancel, onCancel) }
+        item { CreateCharacterPanel(s, vm, canGoBack = s.characters.isNotEmpty(), onBack = onBack, onSignOut = onSignOut) }
     }
 }
 
@@ -122,7 +122,8 @@ import com.sperance.exileforge.ui.theme.*
  * The class is chosen here or nowhere: it is the whole stat base and the root of the tree, and the
  * server has no route that moves a character to another one.
  */
-@Composable private fun CreateCharacterPanel(s: ForgeState, vm: ForgeViewModel, canCancel: Boolean, onCancel: () -> Unit) {
+@Composable private fun CreateCharacterPanel(s: ForgeState, vm: ForgeViewModel, canGoBack: Boolean,
+    onBack: () -> Unit, onSignOut: () -> Unit) {
     var name by rememberSaveable { mutableStateOf("") }
     var classId by rememberSaveable(s.classes.size) { mutableStateOf(s.classes.firstOrNull()?.id.orEmpty()) }
     val chosen = s.classes.firstOrNull { it.id == classId }
@@ -147,8 +148,14 @@ import com.sperance.exileforge.ui.theme.*
         Text(tr("Класс выбирается один раз: он задаёт характеристики и корень дерева, и сменить его сервер не даст.",
                 "The class is chosen once: it sets the stats and the root of the tree, and the server will not move it."),
             color = Muted, style = MaterialTheme.typography.bodySmall)
-        if (canCancel) TextButton(enabled = !s.busy, onClick = onCancel, modifier = Modifier.fillMaxWidth()) {
+        if (canGoBack) TextButton(enabled = !s.busy, onClick = onBack, modifier = Modifier.fillMaxWidth()) {
             Text(tr("Назад к списку", "Back to the list"))
+        }
+        // An account with no characters has no list to go back to, and a device registration is
+        // silent — so without this the first screen a new player sees is also the only one, with
+        // no way to sign in as someone who already has an exile.
+        TextButton(enabled = !s.busy, onClick = onSignOut, modifier = Modifier.fillMaxWidth()) {
+            Text(tr("Войти под другим аккаунтом", "Sign in as somebody else"))
         }
     }
 }

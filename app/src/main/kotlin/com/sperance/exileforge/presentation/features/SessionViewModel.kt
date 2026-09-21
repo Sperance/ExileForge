@@ -82,7 +82,8 @@ class SessionViewModel(private val runtime: ForgeRuntime) {
         // The catalogue is codes without it, and the first attempt may have run before the server was up.
         refreshLocale()
         refreshIcons()
-        runtime.characterViewModel.readCharacters()
+        // The one place a single character is entered without being chosen: arriving is not leaving.
+        runtime.characterViewModel.readCharacters(autoEnter = true)
     } }
 
     /** Signing out is explicit, so the next launch must not sign straight back in. */

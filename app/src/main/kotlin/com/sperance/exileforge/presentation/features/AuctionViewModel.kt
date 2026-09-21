@@ -15,7 +15,9 @@ import kotlinx.coroutines.flow.update
  * Every rule belongs to the server: what a lot costs, who may trade, whether the goods are still
  * there. The client names a lot and prints the refusal. After a trade it re-reads only what the
  * trade actually changed — the bag after a purchase, the inventory after a listing — rather than
- * the whole hero, so a showcase stays usable while a character is being traded from.
+ * the whole hero, so a showcase stays usable while a character is being traded from. What a patch
+ * cannot reach it marks stale instead: the character document itself is left for the Hero tab to
+ * re-read, because a trade moves money the auction never looked at.
  */
 class AuctionViewModel(private val runtime: ForgeRuntime) {
     private val state get() = runtime.state
@@ -87,14 +89,14 @@ class AuctionViewModel(private val runtime: ForgeRuntime) {
     /** The bag alone: a purchase spends orbs and may hand over stacking goods. */
     private suspend fun refreshBag(characterId: String) { with(runtime) {
         val bag = api.bag(characterId)
-        mutable.update { state -> state.copy(hero = state.hero?.copy(bag = bag)) }
+        mutable.update { state -> state.copy(hero = state.hero?.copy(bag = bag), heroReadAt = 0) }
     } }
 
     /** The inventory and the bag: a listing can move either kind of goods. */
     private suspend fun refreshInventory(characterId: String) { with(runtime) {
         val inventory = api.inventory(characterId)
         val bag = api.bag(characterId)
-        mutable.update { state -> state.copy(hero = state.hero?.copy(inventory = inventory, bag = bag)) }
+        mutable.update { state -> state.copy(hero = state.hero?.copy(inventory = inventory, bag = bag), heroReadAt = 0) }
     } }
 
     /**

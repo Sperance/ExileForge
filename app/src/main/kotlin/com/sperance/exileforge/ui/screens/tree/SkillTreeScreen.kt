@@ -4,12 +4,12 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -34,10 +34,14 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 
 @Composable fun SkillTreeScreen(s: ForgeState, vm: ForgeViewModel) {
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    // No scrolling column here: the map owns the height, and everything that used to sit under it
+    // lives in the sheet. A pannable canvas inside a scroll fights the scroll for every drag.
+    Column(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Spacer(Modifier.height(12.dp))
         ScreenHeader(tr("Дерево навыков", "Passive tree"),
             tr("Узлов в дереве: ${s.treeNodes.size}", "${s.treeNodes.size} nodes in the tree"), ForgeGlyphs.Constellation)
-        SkillTreePanel(s, vm::selectNode, vm::allocateNode, vm::refundNode, vm::resetTree, vm::nodeQuery)
+        SkillTreePanel(s, vm::selectNode, vm::allocateNode, vm::refundNode, vm::resetTree, vm::nodeQuery, Modifier.weight(1f))
+        Spacer(Modifier.height(12.dp))
     }
 }
 
@@ -47,43 +51,64 @@ import kotlinx.serialization.json.putJsonArray
  * The graph is the server's: node positions, edges, costs and bonuses all arrive seeded, and which
  * node may be taken next is decided by `allocate` rather than guessed at here. The panel draws what
  * it was given and sends one node code at a time.
+ *
+ * The map takes the whole panel and everything else — the point balance, the search, the chosen
+ * node and its two commands — opens as a sheet over it. A hundred and twenty nodes need the room,
+ * and the details are read one node at a time rather than alongside.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable fun SkillTreePanel(s: ForgeState, onSelect: (String) -> Unit, onAllocate: (String) -> Unit,
-    onRefund: (String) -> Unit, onReset: () -> Unit, onQuery: (String) -> Unit = {}) {
+    onRefund: (String) -> Unit, onReset: () -> Unit, onQuery: (String) -> Unit = {}, modifier: Modifier = Modifier) {
     val hero = s.hero
-    val taken = hero?.tree?.takenCodes.orEmpty()
-    val enabled = !s.busy && s.signedIn && (s.ownsCharacter || s.isAdmin) && hero != null
-    if (hero == null) InfoCard(tr("Герой не загружен", "The hero is not loaded"),
-        tr("Обновите героя во вкладке «Герой».", "Refresh the hero on the Hero tab."))
-    else ForgePanel {
-        Engraved(hero.character.name)
-        PropertyRow(tr("Очков всего", "Points total"), hero.tree.total.toString(), "level")
-        PropertyRow(tr("Потрачено", "Spent"), hero.tree.spent.toString(), "level")
-        PropertyRow(tr("Доступно", "Available"), hero.tree.available.toString(), "level")
-        Text(tr("Очки дают уровни: таблицу прогрессии ведёт сервер.", "Points come from levels: the progression table is the server's."),
-            color = Muted, style = MaterialTheme.typography.bodySmall)
+    var sheetOpen by remember { mutableStateOf(false) }
+    if (hero == null) {
+        InfoCard(tr("Герой не загружен", "The hero is not loaded"),
+            tr("Обновите героя во вкладке «Герой».", "Refresh the hero on the Hero tab."))
+        return
     }
     if (s.treeNodes.isEmpty()) {
         InfoCard(tr("Дерево не загружено", "The tree is not loaded"),
             tr("Сервер не вернул ни одного узла. Обновите героя.", "The server served no nodes. Refresh the hero."))
         return
     }
+    val taken = hero.tree.takenCodes
+    val enabled = !s.busy && s.signedIn && (s.ownsCharacter || s.isAdmin)
     // Which nodes are one step away: neighbours of what is taken, or the class's own start when
     // nothing is taken yet. The server still decides — this only says where to look on 122 nodes.
     val reachable = remember(s.treeNodes, taken) { reachableFrom(s.treeNodes, taken) }
-    TreeSearch(s, onQuery, onSelect)
-    TreeCanvas(s, taken, reachable, onSelect)
-    NodeDetails(s, s.treeNodes.firstOrNull { it.code == s.selectedNode }, taken, enabled, onAllocate, onRefund)
-    if (hero != null) OutlinedButton(enabled = enabled && hero.tree.nodes.isNotEmpty(), onClick = onReset,
-        modifier = Modifier.fillMaxWidth()) { Text(tr("Сбросить дерево полностью", "Reset the whole tree")) }
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(tr("Очки: ${hero.tree.available} из ${hero.tree.total}", "Points: ${hero.tree.available} of ${hero.tree.total}"),
+                color = Gold, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+            TextButton(onClick = { sheetOpen = true }) { Text(tr("Подробно", "Details")) }
+        }
+        TreeCanvas(s, taken, reachable, Modifier.weight(1f)) { code -> onSelect(code); sheetOpen = true }
+        Text(tr("Потяните, чтобы сдвинуть, сведите пальцы для масштаба, коснитесь узла, чтобы выбрать.",
+                "Drag to pan, pinch to zoom, tap a node to select it."), color = Muted, style = MaterialTheme.typography.bodySmall)
+    }
+    if (sheetOpen) ModalBottomSheet(onDismissRequest = { sheetOpen = false }, containerColor = Panel,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.9f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            item {
+                ForgePanel {
+                    Engraved(hero.character.name)
+                    PropertyRow(tr("Очков всего", "Points total"), hero.tree.total.toString(), "level")
+                    PropertyRow(tr("Потрачено", "Spent"), hero.tree.spent.toString(), "level")
+                    PropertyRow(tr("Доступно", "Available"), hero.tree.available.toString(), "level")
+                    Text(tr("Очки дают уровни: таблицу прогрессии ведёт сервер.", "Points come from levels: the progression table is the server's."),
+                        color = Muted, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+            item { TreeSearch(s, onQuery, onSelect) }
+            item { NodeDetails(s, s.treeNodes.firstOrNull { it.code == s.selectedNode }, taken, enabled, onAllocate, onRefund) }
+            item {
+                OutlinedButton(enabled = enabled && hero.tree.nodes.isNotEmpty(), onClick = onReset,
+                    modifier = Modifier.fillMaxWidth()) { Text(tr("Сбросить дерево полностью", "Reset the whole tree")) }
+            }
+        }
+    }
 }
 
-/**
- * The graph, drawn from the coordinates the server seeded.
- *
- * Panning and zooming are the only interaction beyond a tap: the layout is fixed data, so the
- * canvas never moves a node, it only chooses where to look.
- */
 /**
  * Finding a node by name.
  *
@@ -109,19 +134,29 @@ import kotlinx.serialization.json.putJsonArray
     }
 }
 
-@Composable private fun TreeCanvas(s: ForgeState, taken: Set<String>, reachable: Set<String>, onSelect: (String) -> Unit) {
+/**
+ * The graph, drawn from the coordinates the server seeded.
+ *
+ * Panning and zooming are the only interaction beyond a tap: the layout is fixed data, so the
+ * canvas never moves a node, it only chooses where to look. It clips, because a canvas does not:
+ * without that the outer nodes are painted over whatever the map happens to be sitting on. And the
+ * pan is held to the tree's own half-extent, so a stray flick cannot drag the whole graph away and
+ * leave an empty rectangle with no way back but the reset.
+ */
+@Composable private fun TreeCanvas(s: ForgeState, taken: Set<String>, reachable: Set<String>,
+    modifier: Modifier = Modifier, onSelect: (String) -> Unit) {
     val nodes = s.treeNodes
     val byCode = remember(nodes) { nodes.associateBy { it.code } }
     val bounds = remember(nodes) { Bounds.of(nodes) }
     var scale by remember { mutableFloatStateOf(1f) }
     var pan by remember { mutableStateOf(Offset.Zero) }
-    ForgePanel {
-        Engraved(tr("Карта дерева", "Tree map"))
-        Canvas(Modifier.fillMaxWidth().height(360.dp)
+    Box(modifier.fillMaxWidth()) {
+        Canvas(Modifier.fillMaxSize().clipToBounds()
             .pointerInput(nodes) {
                 detectTransformGestures { _, drag, zoom, _ ->
                     scale = (scale * zoom).coerceIn(.4f, 4f)
-                    pan += drag
+                    val limit = panLimit(bounds, size.width.toFloat(), size.height.toFloat(), scale)
+                    pan = Offset((pan.x + drag.x).coerceIn(-limit.x, limit.x), (pan.y + drag.y).coerceIn(-limit.y, limit.y))
                 }
             }
             .pointerInput(nodes, scale, pan) {
@@ -159,9 +194,8 @@ import kotlinx.serialization.json.putJsonArray
                     style = Stroke(if (node.code == s.selectedNode) 3.5f else if (next) 2.5f else 1f))
             }
         }
-        Text(tr("Потяните, чтобы сдвинуть, сведите пальцы для масштаба, коснитесь узла, чтобы выбрать.",
-                "Drag to pan, pinch to zoom, tap a node to select it."), color = Muted, style = MaterialTheme.typography.bodySmall)
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.align(Alignment.BottomStart).padding(8.dp), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             TextButton(onClick = { scale = 1f; pan = Offset.Zero }) { Text(tr("Сбросить вид", "Reset the view")) }
             Text(tr("Взято ${taken.size} · доступно ${reachable.size}", "${taken.size} taken · ${reachable.size} within reach"),
                 color = Muted, style = MaterialTheme.typography.labelMedium)
@@ -232,9 +266,25 @@ private data class Bounds(val minX: Float, val maxX: Float, val minY: Float, val
     }
 }
 
+private const val MARGIN = 28f
+
+/** How many pixels of the seeded graph one pixel of canvas is worth, before the zoom. */
+private fun fitFactor(bounds: Bounds, width: Float, height: Float): Float =
+    min((width - MARGIN * 2) / bounds.spanX, (height - MARGIN * 2) / bounds.spanY)
+
+/**
+ * How far the map may be dragged: the tree's own half-extent on screen.
+ *
+ * At the limit the far edge of the tree has reached the middle of the canvas, so there is always
+ * something drawn to drag back by. Anything looser and a flick leaves an empty rectangle.
+ */
+private fun panLimit(bounds: Bounds, width: Float, height: Float, scale: Float): Offset {
+    val fit = fitFactor(bounds, width, height)
+    return Offset(max(0f, bounds.spanX * fit * scale / 2), max(0f, bounds.spanY * fit * scale / 2))
+}
+
 private fun place(node: SkillTreeNode, bounds: Bounds, width: Float, height: Float, scale: Float, pan: Offset): Offset {
-    val margin = 28f
-    val fit = min((width - margin * 2) / bounds.spanX, (height - margin * 2) / bounds.spanY)
+    val fit = fitFactor(bounds, width, height)
     val x = (node.positionX - bounds.minX) * fit - bounds.spanX * fit / 2
     val y = (node.positionY - bounds.minY) * fit - bounds.spanY * fit / 2
     return Offset(width / 2 + x * scale + pan.x, height / 2 + y * scale + pan.y)

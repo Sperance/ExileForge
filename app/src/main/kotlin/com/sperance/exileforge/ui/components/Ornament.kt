@@ -11,7 +11,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -60,24 +59,21 @@ import com.sperance.exileforge.ui.theme.*
     }
 }
 
-/** Life / mana globe: a filled orb with a glass highlight, read straight from server stats. */
-@Composable fun StatGlobe(label: String, value: String, ratio: Float, color: Color, modifier: Modifier = Modifier) {
-    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Canvas(Modifier.size(64.dp)) {
-            val radius = size.minDimension / 2 - 2f
-            val center = Offset(size.width / 2, size.height / 2)
-            drawCircle(Color(0xFF0A0D12), radius, center)
-            val fill = ratio.coerceIn(0f, 1f)
-            if (fill > 0f) {
-                val top = center.y + radius - radius * 2 * fill
-                drawRect(Brush.verticalGradient(listOf(color.copy(alpha = .95f), color.copy(alpha = .55f)), startY = top, endY = center.y + radius),
-                    topLeft = Offset(center.x - radius, top), size = Size(radius * 2, radius * 2 * fill))
-            }
-            drawCircle(color.copy(alpha = .85f), radius, center, style = Stroke(2f))
-            drawCircle(Color.White.copy(alpha = .10f), radius * .55f, center - Offset(radius * .3f, radius * .35f))
-        }
-        Text(label, color = Muted, style = MaterialTheme.typography.labelSmall)
-        Text(value, color = GoldBright, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
+/**
+ * A vital: life, mana or energy shield, as a bar with its number on it.
+ *
+ * The bar is full because the number *is* the whole of it — the server's sheet carries a maximum
+ * and no current value, there being nothing yet that spends one. Drawing a partly empty bar would
+ * claim a reserve the server never reported, so the fill stays honest and the number does the work.
+ */
+@Composable fun StatBar(label: String, value: String, color: Color, modifier: Modifier = Modifier) {
+    val shape = CutCornerShape(4.dp)
+    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(label, color = Muted, style = MaterialTheme.typography.labelMedium, modifier = Modifier.width(46.dp))
+        Box(Modifier.weight(1f).height(18.dp).background(Color(0xFF0A0D12), shape)
+            .background(Brush.horizontalGradient(listOf(color.copy(alpha = .75f), color.copy(alpha = .35f))), shape)
+            .border(1.dp, color.copy(alpha = .8f), shape))
+        Text(value, color = GoldBright, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.End)
     }
 }
 

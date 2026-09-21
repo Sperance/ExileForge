@@ -27,6 +27,8 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     fun dismissMessage() = runtime.dismissMessage()
     suspend fun referencePage(source: EntitySource, page: Int, query: String) = runtime.referencePage(source, page, query)
     suspend fun recipeDocument(id: String) = runtime.recipeDocument(id)
+    /** The template behind an instance, for a card that has only the instance — an auction lot. */
+    suspend fun equipmentBase(id: String) = runtime.equipmentBase(id)
     fun query(value: String) = runtime.catalogViewModel.query(value)
     fun catalog(value: Catalog) = runtime.catalogViewModel.catalog(value)
     fun filter(value: CatalogFilter) = runtime.catalogViewModel.filter(value)
@@ -44,6 +46,8 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     fun editInventoryBase(id: String) = runtime.editorViewModel.editInventoryBase(id)
     fun selectEquipment(value: String) = runtime.heroViewModel.selectEquipment(value)
     fun loadHero() = runtime.heroViewModel.loadHero()
+    /** Re-reads the hero only if what is on screen has gone cold; every character tab opens with it. */
+    fun ensureHero() = runtime.heroViewModel.ensureHero()
     fun equip(instanceId: String) = runtime.heroViewModel.equip(instanceId)
     fun unequip(instanceId: String) = runtime.heroViewModel.unequip(instanceId)
     fun grant(equipmentId: String) = runtime.heroViewModel.grant(equipmentId)

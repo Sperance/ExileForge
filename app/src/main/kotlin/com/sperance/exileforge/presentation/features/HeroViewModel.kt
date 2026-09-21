@@ -23,6 +23,21 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
 
     fun loadHero() { with(runtime) { task { readHero() } } }
 
+    /**
+     * The hero, if what is on screen has gone cold.
+     *
+     * Reading it whole is five requests, so a tab does not ask for one every time it is opened. A
+     * command already re-reads what it changed; this is for everything that changed the character
+     * somewhere else — a trade, an administrator, the same account on another device — where the
+     * client has no way to be told. [FRESH_FOR] is how long a reading is trusted without asking.
+     */
+    fun ensureHero() { with(runtime) {
+        val now = System.currentTimeMillis()
+        if (state.value.characterId.isBlank()) return
+        if (state.value.hero != null && now - state.value.heroReadAt < FRESH_FOR) return
+        task { readHero() }
+    } }
+
     fun equip(instanceId: String) { with(runtime) { characterCommand { id -> api.equip(id, instanceId) } } }
     fun unequip(instanceId: String) { with(runtime) { characterCommand { id -> api.unequip(id, instanceId) } } }
 
@@ -117,7 +132,7 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
         ensureProgression()
         val character = api.character(id)
         val view = HeroView(character, api.inventory(id), api.stats(id), api.bag(id), api.characterTree(id))
-        mutable.update { it.copy(hero = view, characterOwner = character.userId,
+        mutable.update { it.copy(hero = view, characterOwner = character.userId, heroReadAt = System.currentTimeMillis(),
             selectedEquipment = it.selectedEquipment.takeIf { chosen -> view.inventory.any { item -> item.id == chosen } }
                 ?: view.inventory.firstOrNull()?.id.orEmpty()) }
         loadTemplates()
@@ -147,3 +162,11 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
         }
     } }
 }
+
+/**
+ * How long a reading of the hero is trusted without asking again.
+ *
+ * Long enough that walking between tabs costs nothing, short enough that a purchase made on
+ * another device is not still invisible by the time the player looks for it.
+ */
+private const val FRESH_FOR = 30_000L

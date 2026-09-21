@@ -27,6 +27,7 @@ import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.AppMode
 import com.sperance.exileforge.presentation.state.AppPhase
 import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.TAB_CRAFT
 import com.sperance.exileforge.ui.components.LocalEntityPageLoader
 import com.sperance.exileforge.ui.components.OrnateDivider
 import com.sperance.exileforge.ui.components.voidBackdrop
@@ -37,6 +38,7 @@ import com.sperance.exileforge.ui.screens.session.AuthScreen
 import com.sperance.exileforge.ui.screens.session.CharacterSelectScreen
 import com.sperance.exileforge.ui.screens.catalog.CatalogScreen
 import com.sperance.exileforge.ui.screens.checks.ChecksScreen
+import com.sperance.exileforge.ui.screens.craft.CraftScreen
 import com.sperance.exileforge.ui.screens.editor.EditorScreen
 import com.sperance.exileforge.ui.screens.hero.HeroScreen
 import com.sperance.exileforge.ui.screens.server.ServerScreen
@@ -115,6 +117,9 @@ import com.sperance.exileforge.ui.theme.*
                 4 -> HeroScreen(s, vm)
                 5 -> SkillTreeScreen(s, vm)
                 6 -> AuctionScreen(s, vm)
+                // The forge keeps no place in the bar: it opens from the Hero tab, like the editor
+                // and the checks open from the Account tab, and the bar is the way back out.
+                TAB_CRAFT -> CraftScreen(s, vm)
             }
         }
     }

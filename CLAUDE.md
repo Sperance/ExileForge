@@ -44,7 +44,7 @@ app/                                    Android application (minSdk 26, compile/
                  features/              Catalog, Editor, Hero, Session, Character, Checks, Auction view models
                  state/ForgeState.kt    One immutable state object for the whole app
   ui/            ForgeApp.kt            Scaffold, banner with RU/EN switch, bottom navigation, tab dispatch
-                 screens/               session (auth + character menu), catalog, editor, hero, tree, auction, checks, server
+                 screens/               session (auth + character menu), catalog, editor, hero, tree, craft, auction, checks, server
                  components/            ItemCard, PropertyRow, InfoCard, spinners and Ornament.kt
                  forms/, icons/ (ForgeGlyphs vector set, ItemEmblem, ItemIcon/PropertyIcon, ServerSprite), theme/
   data/settings/ServerStore.kt          DataStore Preferences: base URL, saved filters, language, locale bundles, icon set, device-session flag
@@ -113,10 +113,10 @@ banner and no bottom bar. Only `GAME` builds the scaffold. Nothing below the gat
 
 Inside `GAME` navigation is an `Int` tab in state, dispatched by a `when` in `ForgeApp`:
 `0` catalog/characters, `1` editor, `2` checks (admin only — `ForgeRuntime.tab` blocks it
-otherwise), `3` account/server, `4` hero, `5` skill tree, `6` auction.
-The bottom bar carries five destinations for everyone (`0, 4, 5, 6, 3`); the editor and the checks
-are administrator tools and open from the Account tab, so an admin's bar is no more crowded than a
-player's.
+otherwise), `3` account/server, `4` hero, `5` skill tree, `6` auction, `TAB_CRAFT` (`7`) the forge.
+The bottom bar carries five destinations for everyone (`0, 4, 5, 6, 3`). Everything else is a tab
+reached by a button: the editor and the checks from the Account tab, the forge from the Hero tab.
+The bar stays on those screens and is the way back out of them.
 `ForgeApp` re-`key`s the whole tree on `server`, `sessionEpoch` and `lang`, so a logout, a server
 change or a language switch discards per-screen Compose state.
 
@@ -226,7 +226,19 @@ These are enforced by tests and are the point of the client's design:
     administrator included: `GET /character/byUser` lists the account's characters, at most
     `MAX_CHARACTERS`. The menu enters the game directly when there is exactly one, and opens the
     creation form when there are none — an empty list is not a choice. The server address lives on
-    the sign-in screen because behind the gate there is no way back to it.
+    the sign-in screen because behind the gate there is no way back to it. Entering is not the
+    same as coming back: `readCharacters(autoEnter = true)` is passed exactly once, by the
+    sign-in, because the menu is also where a player goes *to leave* a character — entering the
+    only one again there would make the screen unreachable for anyone who owns one.
+19. **The hero is re-read on a reason, never on a timer and never on request.** Reading it whole
+    is five requests, so nothing asks the player to press anything: a command re-reads it because
+    the command changed it, and everything changed *elsewhere* — a trade, an administrator, the
+    same account on another device — is caught by `heroReadAt` going cold. `ensureHero()` refreshes
+    when a character tab opens and the last reading is older than `FRESH_FOR`; a trade sets the
+    stamp to 0 because the auction patches only the bag and the inventory, never the character
+    document. The manual path is a pull-to-refresh on the stash, not a button competing with the
+    content. This server has no change feed and `version` belongs to the character alone, so a
+    cheap "did anything change" question cannot be asked — the stamp is the answer instead.
 
 ## Conventions
 
@@ -252,8 +264,10 @@ These are enforced by tests and are the point of the client's design:
   ownership guard, as in `AdminGrantPanel`'s `enabled` value.
 - Theme: dark only, Path of Exile palette in `ui/theme/Theme.kt` (Ink/Abyss/Panel stone,
   Gold/Bronze frames, rarity colours matching the server enum, cut-corner shapes). Build screens
-  from `ScreenHeader`, `ForgePanel`, `OrnateDivider`, `Engraved`, `StatGlobe` and `PropertyRow`
-  instead of ad-hoc cards, and use `rarityColor` rather than new ad-hoc colors.
+  from `ScreenHeader`, `ForgePanel`, `OrnateDivider`, `Engraved`, `StatBar`, `SectionHeader`,
+  `ItemRow` and `PropertyRow` instead of ad-hoc cards, and use `rarityColor` rather than new
+  ad-hoc colors. A stash is a list of `ItemRow`s with the full `ItemCard` one tap behind each,
+  because a card is a page about one item and a line is a stash you can read down.
 - Commit messages follow Conventional Commits: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`
   (docs-only commits often append `[skip ci]`).
 

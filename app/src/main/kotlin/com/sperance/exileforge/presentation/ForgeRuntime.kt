@@ -169,6 +169,21 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
     /** The Checks tab runs writes against the server; it belongs to an administrator alone. */
     fun tab(tab: Int) { if (!state.value.adminTools && tab == 2) return; mutable.update { it.copy(tab = tab) } }
     suspend fun referencePage(source: EntitySource, page: Int, query: String) = api.referencePage(source, page, query)
+    /**
+     * One equipment template, through the cache the inventory already fills.
+     *
+     * An auction lot carries the instance but not its template, and armour, damage and every
+     * requirement live in the template — so a lot's card reads one here. It lands in the same map
+     * the stash uses, which is why looking at a lot of an item you already own costs no request.
+     */
+    suspend fun equipmentBase(id: String): JsonObject? {
+        if (id.isBlank()) return null
+        state.value.inventoryBases[id]?.let { return it }
+        val base = api.get(com.sperance.exileforge.core.model.Catalog.EQUIPMENT, id) ?: return null
+        mutable.update { it.copy(inventoryBases = it.inventoryBases + (id to base)) }
+        return base
+    }
+
     /** The recipe form reads one document directly; it is never edited, only spent. */
     suspend fun recipeDocument(id: String): JsonObject =
         com.sperance.exileforge.core.contract.WireJson.encodeToJsonElement(com.sperance.exileforge.core.model.hero.RecipeDocument.serializer(), api.recipe(id)).jsonObject

@@ -236,7 +236,13 @@ These are enforced by tests and are the point of the client's design:
     appending numbers to a label. `messageArgs` from the server are themselves keys, so resolve
     them through the bundle before substituting. The bundle also has an `enum.` section, but the
     client keeps its own tables (`slotTitle`, `rarityTitle`, `statTitle`, `CurrencyOrb`): they
-    take an explicit language and one dictionary is loaded at a time. An error is translated only
+    take an explicit language, while the dictionary answers in whichever one is loaded. One is
+    loaded everywhere but the auction: `serverLocaleEn` holds the English dictionary beside
+    `serverLocale`, because a lot is weighed against a wiki and a trade site and both are English,
+    so a showcase line names its item twice (`AuctionLot.titleEn`, blank when the English is
+    unknown or would only repeat `title`). It is the same object as `serverLocale` when the player
+    already reads English, nothing else reads it, and every other name still comes from
+    `serverLocale` alone. An error is translated only
     when `error.<code>` has no placeholder, because the error envelope carries the finished
     sentence and the code but never the arguments — see `locError`.
 

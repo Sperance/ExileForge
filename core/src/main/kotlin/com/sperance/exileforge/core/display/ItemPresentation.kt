@@ -11,6 +11,21 @@ import com.sperance.exileforge.core.model.currency.CURRENCY_CATEGORY
 import com.sperance.exileforge.core.model.modifier.ModifierDefinition
 import kotlinx.serialization.json.*
 
+/**
+ * What a character must reach before an item counts, shortened for a line.
+ *
+ * A requirement the template did not set is left out rather than printed as zero, and level 1 is
+ * not a requirement at all. The client only prints these — the server checks them, twice and by
+ * two different rules, and a control is never disabled on a reading done here.
+ */
+fun itemRequirements(doc: JsonObject, lang: Lang = uiLanguage): List<String> = listOf(
+    "requiredLevel" to lang.pick("ур.", "lvl"), "requiredStrength" to lang.pick("сил", "str"),
+    "requiredDexterity" to lang.pick("лов", "dex"), "requiredIntelligence" to lang.pick("инт", "int"),
+).mapNotNull { (key, short) ->
+    val value = (doc[key] as? JsonPrimitive)?.intOrNull ?: return@mapNotNull null
+    if (value <= if (key == "requiredLevel") 1 else 0) null else "$value $short"
+}
+
 fun itemVisualKind(doc: JsonObject): ItemVisualKind = when {
     doc["userId"] != null -> ItemVisualKind.CHARACTER
     doc.text("weaponType") == "BOW" || doc.text("slot") == "QUIVER" -> ItemVisualKind.BOW

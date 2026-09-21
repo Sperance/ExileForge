@@ -6,6 +6,8 @@ import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.LocaleBundle
 import com.sperance.exileforge.core.i18n.locError
 import com.sperance.exileforge.core.i18n.serverLocale
+import com.sperance.exileforge.core.i18n.LocaleManifest
+import com.sperance.exileforge.core.i18n.serverLocaleEn
 import com.sperance.exileforge.core.i18n.tr
 import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.contract.entityId
@@ -102,10 +104,24 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
         cached?.let { (hash, document) -> applyLocale(LocaleBundle.parse(language.code, hash, document)) }
         val manifest = api.localeManifest()
         val chosen = manifest.language(language.code) ?: manifest.language(manifest.default) ?: return
-        if (cached != null && cached.first == chosen.hash && chosen.code == language.code) return
-        val document = api.localeDocument(chosen.code)
-        store.saveLocale(server, chosen.code, chosen.hash, document)
-        applyLocale(LocaleBundle.parse(chosen.code, chosen.hash, document))
+        if (cached == null || cached.first != chosen.hash || chosen.code != language.code)
+            applyLocale(bundle(server, manifest, chosen.code) ?: return)
+        // The showcase names a lot in English as well, because that is the language of the wiki and
+        // of every trade site a lot is compared against. This is the only second dictionary the
+        // client holds, and when the player already reads English it is the very same one.
+        serverLocaleEn = if (chosen.code == Lang.EN.code) serverLocale
+            else bundle(server, manifest, Lang.EN.code) ?: LocaleBundle()
+    }
+
+    /** One dictionary, off the store when its fingerprint still matches and off the server when not. */
+    private suspend fun bundle(server: String, manifest: LocaleManifest, code: String): LocaleBundle? {
+        val language = manifest.language(code) ?: return null
+        store.locale(server, code)?.let { (hash, document) ->
+            if (hash == language.hash) return LocaleBundle.parse(code, hash, document)
+        }
+        val document = api.localeDocument(code)
+        store.saveLocale(server, code, language.hash, document)
+        return LocaleBundle.parse(code, language.hash, document)
     }
 
     /**

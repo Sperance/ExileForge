@@ -114,8 +114,24 @@ object LocaleKey {
  */
 @Volatile var serverLocale: LocaleBundle = LocaleBundle()
 
+/**
+ * The English dictionary, held beside the chosen one.
+ *
+ * The auction is the reason it exists: a lot is compared against a wiki and a trade site, and both
+ * of those are English, so a row names its item in both languages. It is deliberately the *only*
+ * second dictionary — everything else looks a name up in [serverLocale] alone, which is why that
+ * one stays the single answer to "what is this called".
+ *
+ * It is the same bundle as [serverLocale] when the player is already reading English, so the two
+ * never diverge and nothing is downloaded twice.
+ */
+@Volatile var serverLocaleEn: LocaleBundle = LocaleBundle()
+
 /** A server string by key. Without a dictionary, or without the key, the key itself comes back. */
 fun loc(key: String): String = serverLocale[key]
+
+/** The English string for a key, or blank — a name that is missing is left out, never faked. */
+fun locEn(key: String): String = if (serverLocaleEn.contains(key)) serverLocaleEn[key] else ""
 
 /** A server string with its arguments filled; the arguments are themselves keys. */
 fun loc(key: String, args: List<String>): String = serverLocale.format(key, args)

@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
 import com.sperance.exileforge.core.i18n.LocaleBundle
 import com.sperance.exileforge.core.i18n.serverLocale
+import com.sperance.exileforge.core.i18n.serverLocaleEn
 import com.sperance.exileforge.core.model.hero.CharacterSheet
 import com.sperance.exileforge.core.model.hero.CharacterSummary
 import com.sperance.exileforge.core.model.hero.InactiveEquipment
@@ -63,9 +64,13 @@ class HeroPanelTest {
         "class.MARAUDER.name": "Мародёр",
         "skilltree.STR_START.name": "Мародёр",
         "skilltree.STR_LIFE_1.name": "Крепость",
-        "skilltree.STR_LIFE_1.description": "Больше здоровья"}""") }
+        "skilltree.STR_LIFE_1.description": "Больше здоровья"}""")
+        // The showcase names a lot in English as well; nothing else reads this second dictionary.
+        serverLocaleEn = LocaleBundle.parse("en", "sha-en", """{
+            "equipment.IRON_HELMET.name": "Iron Helmet",
+            "equipment.MY_HELMET.name": "My Helmet"}""") }
 
-    @After fun forget() { serverLocale = LocaleBundle() }
+    @After fun forget() { serverLocale = LocaleBundle(); serverLocaleEn = LocaleBundle() }
 
     /** The equipped slot shows its template's name and hands back the instance id, not the slot. */
     @Test fun equippedSlotShowsItsTemplateAndEmitsTheInstanceId() {
@@ -164,32 +169,54 @@ class HeroPanelTest {
     }
 
     /**
-     * The showcase prints the lot's own snapshot and refuses only what the seller owns.
+     * A showcase line carries what a trader decides on: both names, what it is, what it rolled, the price.
      *
-     * A seller cannot buy their own lot, and the server says so; the card simply does not offer it.
+     * A stash line can be terse because its owner knows what they own; a showcase line cannot, so
+     * the properties are on it and only the rest waits behind the tap. A seller cannot buy their
+     * own lot, and the server says so — the card simply does not offer it.
      */
     @Test fun theShowcaseNamesThePriceInOrbsAndWillNotSellYouYourOwnLot() {
         val chaos = CurrencyItem("chaos-orb", "CHAOS_ORB", "CHAOS_ORB", 300)
+        // Six properties on one item: the base is two and the rolls are four, so one is over the cap.
+        val base = buildJsonObject {
+            put("_id", "helmet-base"); put("code", "IRON_HELMET"); put("slot", "HELMET")
+            put("requiredLevel", 25); put("requiredStrength", 40)
+            putJsonArray("baseParams") {
+                add(buildJsonObject { put("modifierId", "armour"); putJsonArray("values") { add(12.0) } })
+                add(buildJsonObject { put("modifierId", "evasion"); putJsonArray("values") { add(8.0) } })
+            }
+        }
+        val rolls = listOf("life", "mana", "fire", "cold").map { RolledModifier(it, listOf(7.0), "tier-1", 1) }
+        val instance = EquipmentInstance("helmet-instance", "rival", "helmet-base", rolls, rarity = "RARE")
         val theirs = AuctionLot(id = "lot-1", sellerId = "rival", sellerName = "Соперник", kind = AuctionLotKind.EQUIPMENT,
-            itemCode = "IRON_HELMET", slot = "HELMET", rarity = "RARE", itemLevel = 30, priceOrbId = "chaos-orb", price = 4)
-        // Different prices, so each card's line is its own: the price is per lot, not per showcase.
-        val mine = theirs.copy(id = "lot-2", sellerId = "hero", sellerName = "Изгнанник", itemCode = "MY_HELMET", price = 7)
+            equipment = instance, itemCode = "IRON_HELMET", slot = "HELMET", rarity = "RARE", itemLevel = 30,
+            priceOrbId = "chaos-orb", price = 4)
+        // Different prices, so each line is its own: the price is per lot, not per showcase.
+        val mine = theirs.copy(id = "lot-2", sellerId = "hero", sellerName = "Изгнанник", itemCode = "MY_HELMET",
+            equipment = null, price = 7)
         var bought: String? = null
         compose.setContent { ForgeTheme { Column(Modifier.background(Ink)) {
             ShowcaseList(ForgeState(busy = false, signedIn = true, characterId = "hero", characterOwner = "owner",
                 profile = com.sperance.exileforge.core.model.command.UserProfile("owner"), orbs = listOf(chaos),
                 auctionFilter = AuctionFilter(), showOwnLots = true,
+                inventoryBases = mapOf("helmet-base" to base),
                 showcase = AuctionPage(listOf(theirs, mine), 0, 20, 2, 1)),
                 onBuy = { bought = it }, onPage = {})
         } } }
-        // The price is always counted in orbs, and the orb catalogue gives it a name.
-        compose.onNodeWithText("4 × Сфера хаоса", substring = true).performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("7 × Сфера хаоса", substring = true).performScrollTo().assertIsDisplayed()
-        // The state of a lot rides in front of its price rather than in place of it.
-        compose.onNodeWithText("Ваш лот · 7 × Сфера хаоса").performScrollTo().assertIsDisplayed()
+        // First line: the name, and the English one beside it — a lot is read against an English wiki.
+        compose.onNodeWithText("Железный шлем · Iron Helmet").performScrollTo().assertIsDisplayed()
+        // Second line: what it is, what level it is, and what it asks of a character.
+        compose.onNodeWithText("Шлем · Редкий · ур. 30 · треб. 25 ур., 40 сил").performScrollTo().assertIsDisplayed()
+        // Third line: the base and the rolls as one list, five of them, and the sixth counted.
+        compose.onNodeWithText("ещё 1", substring = true).performScrollTo().assertIsDisplayed()
+        // The price stands on its own line at the bottom, counted in orbs the catalogue names.
+        compose.onNodeWithText("4 × Сфера хаоса").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("7 × Сфера хаоса").performScrollTo().assertIsDisplayed()
+        // The state of a lot sits beside its price, not in place of it.
+        compose.onNodeWithText("Ваш лот").performScrollTo().assertIsDisplayed()
         // Nothing is bought from a line: the rolls are what is being paid for, so the card opens first.
         compose.onAllNodesWithText("Купить").assertCountEquals(0)
-        compose.onNodeWithText("Железный шлем").performScrollTo().performClick()
+        compose.onNodeWithText("Железный шлем · Iron Helmet").performScrollTo().performClick()
         compose.onNodeWithText("Купить").performClick()
         compose.runOnIdle { assertEquals("lot-1", bought) }
     }

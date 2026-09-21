@@ -74,6 +74,24 @@ class ItemPresentationTest {
     }
 
     /**
+     * What an item asks of a character, shortened for a line.
+     *
+     * Level 1 is not a requirement and an unset attribute is not a zero — both are left off rather
+     * than printed as noise. Nothing here is ever enforced: the server checks requirements twice,
+     * by two different rules, and a control is never disabled on a reading done here.
+     */
+    @Test fun `requirements are listed short, and only where the template set them`() {
+        val helmet = buildJsonObject {
+            put("requiredLevel", 25); put("requiredStrength", 40); put("requiredDexterity", 0)
+        }
+        assertEquals(listOf("25 ур.", "40 сил"), itemRequirements(helmet, Lang.RU))
+        assertEquals(listOf("25 lvl", "40 str"), itemRequirements(helmet, Lang.EN))
+        // A level-1 item asks for nothing, and neither does one that set no requirement at all.
+        assertEquals(emptyList(), itemRequirements(buildJsonObject { put("requiredLevel", 1) }, Lang.RU))
+        assertEquals(emptyList(), itemRequirements(buildJsonObject { put("code", "PLAIN") }, Lang.RU))
+    }
+
+    /**
      * Numbers are whole everywhere, as Path of Exile prints them — except where the fraction is
      * the whole point.
      *

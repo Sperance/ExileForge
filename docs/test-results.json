@@ -19,7 +19,7 @@
   },
   {
     "name": "com.sperance.exileforge.core.ItemPresentationTest",
-    "tests": "6",
+    "tests": "7",
     "failures": "0",
     "errors": "0"
   },
@@ -43,7 +43,7 @@
   },
   {
     "name": "com.sperance.exileforge.core.ServerLocaleTest",
-    "tests": "10",
+    "tests": "11",
     "failures": "0",
     "errors": "0"
   }

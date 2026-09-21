@@ -39,15 +39,6 @@ import kotlinx.serialization.json.*
     }
 }
 
-/** What a character must reach before the item works, printed only where the template asks for it. */
-private fun requirements(doc: JsonObject): List<String> = listOf(
-    "requiredLevel" to tr("ур.", "lvl"), "requiredStrength" to tr("сил", "str"),
-    "requiredDexterity" to tr("лов", "dex"), "requiredIntelligence" to tr("инт", "int"),
-).mapNotNull { (key, short) ->
-    val value = (doc[key] as? JsonPrimitive)?.intOrNull ?: return@mapNotNull null
-    if (value <= if (key == "requiredLevel") 1 else 0) null else "$value $short"
-}
-
 /** Path of Exile item frame: rarity border, engraved name band, then rolled properties. */
 @Composable fun ItemCard(doc: JsonObject, enabled: Boolean = true, selected: Boolean = false,
     detailed: Boolean = false, definitions: List<ModifierDefinition> = emptyList(),
@@ -81,7 +72,7 @@ private fun requirements(doc: JsonObject): List<String> = listOf(
                 if (doc["durability"] != null) PropertyRow(tr("Прочность", "Durability"), doc.text("durability"), "durability")
                 if (doc["price"] != null) PropertyRow(tr("Цена", "Price"), doc.text("price"), "price")
                 // Requirements decide whether a worn item counts at all; the server does the checking.
-                requirements(doc).takeIf { it.isNotEmpty() }?.let { PropertyRow(tr("Требования", "Requirements"), it.joinToString(" · "), "level") }
+                itemRequirements(doc).takeIf { it.isNotEmpty() }?.let { PropertyRow(tr("Требования", "Requirements"), it.joinToString(" · "), "level") }
                 // The base — armour, damage, attack speed — is fixed modifiers rather than item fields.
                 (doc["baseParams"] as? JsonArray).orEmpty().forEach { raw ->
                     val modifier = raw as? JsonObject ?: return@forEach

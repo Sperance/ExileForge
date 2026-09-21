@@ -3,6 +3,7 @@ package com.sperance.exileforge.core.model.auction
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.pick
 import com.sperance.exileforge.core.i18n.LocaleKey
+import com.sperance.exileforge.core.i18n.locEn
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.model.hero.EquipmentInstance
@@ -52,9 +53,19 @@ import kotlinx.serialization.Serializable
 ) {
     val onSale: Boolean get() = status == AuctionLotStatus.ACTIVE
     fun belongsTo(characterId: String): Boolean = sellerId == characterId
+    /** Which section of the dictionary this lot's name lives in: equipment, or an `items` row. */
+    private val nameKey: String get() =
+        if (kind == AuctionLotKind.EQUIPMENT) LocaleKey.equipmentName(itemCode) else LocaleKey.itemName(itemCode)
     /** An equipment lot names a template, a stack lot names an `items` document. */
-    val title: String get() = locOr(
-        if (kind == AuctionLotKind.EQUIPMENT) LocaleKey.equipmentName(itemCode) else LocaleKey.itemName(itemCode), itemCode)
+    val title: String get() = locOr(nameKey, itemCode)
+    /**
+     * The same name in English, or blank.
+     *
+     * A trader reads a lot against a wiki and a trade site, and both are English, so the showcase
+     * carries the English name beside the local one. Blank when the dictionary has no English for
+     * it, or when it would only repeat [title] — a name printed twice tells nobody anything.
+     */
+    val titleEn: String get() = locEn(nameKey).takeIf { it.isNotBlank() && it != title }.orEmpty()
 }
 
 /**

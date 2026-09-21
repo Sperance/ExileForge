@@ -16,16 +16,21 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.contract.rarities
 import com.sperance.exileforge.core.contract.slots
 import com.sperance.exileforge.core.display.inventoryDocument
+import com.sperance.exileforge.core.display.itemRequirements
+import com.sperance.exileforge.core.display.modifierText
 import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.display.slotTitle
+import com.sperance.exileforge.core.display.weaponTitle
 import com.sperance.exileforge.core.i18n.tr
 import com.sperance.exileforge.core.model.EntitySource
 import com.sperance.exileforge.core.model.auction.*
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.*
+import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.CancellationException
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
@@ -134,21 +139,74 @@ import kotlinx.serialization.json.put
 }
 
 /**
- * One lot as a line, drawn the way the stash draws its own items.
+ * One lot as a line: everything a trader decides on without opening it.
  *
- * The lot carries the instance with everything it rolled, so the line can show the same icon and
- * the same modifiers a player reads in their own arsenal — which is what they are comparing it
- * against. The price rides on the right, where a stash line carries "Надето"; the seller stays on
- * the card, because a line that also named them would have no room left for the rolls, and the
- * rolls are what a buyer is scanning for.
+ * A stash line can be terse because its owner already knows what they own. A showcase line cannot:
+ * lots differ by what they rolled, so the properties ride on the line, five at most, and the card
+ * behind the tap carries the rest. The name is given in English too, because that is the language
+ * of the wiki and of every trade site the lot will be compared against.
+ *
+ * The price sits on its own line at the bottom, where the eye lands last: it is what everything
+ * above is being weighed against, not one more property among them.
  */
 @Composable private fun LotRow(s: ForgeState, lot: AuctionLot, note: String?, onClick: () -> Unit) {
     val document = lotDocument(s, lot)
-    // The price is always shown: it is what a trader is scanning the list for. A note about the
-    // lot's state rides in front of it rather than in its place.
-    ItemRow(document, definitions = s.definitions, enabled = !s.busy,
-        note = listOfNotNull(note, orbPrice(s, lot)).joinToString(" · ").ifBlank { null },
-        noteColor = if (note == null) Gold else Muted, onClick = onClick)
+    val colour = lot.rarity?.let { rarityColor(it) } ?: Gold
+    val shape = CutCornerShape(topStart = 8.dp, bottomEnd = 8.dp)
+    val properties = lotProperties(s, document)
+    Column(Modifier.fillMaxWidth().background(Panel, shape).border(1.dp, colour.copy(alpha = .40f), shape)
+        .clickable(enabled = !s.busy, onClick = onClick).padding(10.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            // The icon always stands: it is how a row is recognised again after scrolling past it.
+            ItemIcon(document, colour, Modifier.size(40.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(lot.title + lot.titleEn.let { if (it.isBlank()) "" else " · $it" }, color = colour,
+                    style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(lotFacts(s, lot, document), color = Muted, style = MaterialTheme.typography.labelSmall,
+                    maxLines = 2, overflow = TextOverflow.Ellipsis)
+                // Two lines, so five properties can actually be read instead of being clipped at two.
+                if (properties.isNotBlank()) Text(properties, color = Rune,
+                    style = MaterialTheme.typography.labelSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+        }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(orbPrice(s, lot), color = Gold, style = MaterialTheme.typography.labelMedium,
+                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            note?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelSmall) }
+        }
+    }
+}
+
+/** How many properties fit on a line before it stops being a line and turns into a card. */
+private const val LOT_PROPERTIES = 5
+
+/**
+ * The lot's properties, compressed: the base first, then what it rolled, five at most.
+ *
+ * The base lives in the template and the rolls on the instance, but a trader reads them as one
+ * list, so they are printed as one. What does not fit is counted rather than quietly dropped —
+ * "ещё 3" is the difference between a short item and a clipped one.
+ */
+private fun lotProperties(s: ForgeState, document: JsonObject): String {
+    val all = ((document["baseParams"] as? JsonArray).orEmpty() + (document["params"] as? JsonArray).orEmpty())
+        .mapNotNull { (it as? JsonObject)?.let { one -> modifierText(one, s.definitions) } }
+    val shown = all.take(LOT_PROPERTIES).joinToString(" · ")
+    val hidden = all.size - LOT_PROPERTIES
+    return if (hidden > 0) shown + tr(" · ещё $hidden", " · $hidden more") else shown
+}
+
+/** What the lot is: its slot or kind, its rarity, its level, and what it asks of a character. */
+private fun lotFacts(s: ForgeState, lot: AuctionLot, document: JsonObject): String {
+    val kind = lot.slot?.let { slotTitle(it, s.lang) } ?: lotKindTitle(lot.kind, s.lang)
+    val weapon = document.text("weaponType").takeIf { it.isNotBlank() }?.let { weaponTitle(it, s.lang) }
+    val amount = if (lot.kind == AuctionLotKind.ITEM && lot.amount > 1) tr("${lot.amount} шт.", "${lot.amount} pcs") else null
+    val level = if (lot.itemLevel > 0) tr("ур. ${lot.itemLevel}", "lvl ${lot.itemLevel}") else null
+    // Requirements are printed, never enforced here: the server checks them and refuses in its own words.
+    val needs = itemRequirements(document, s.lang).takeIf { it.isNotEmpty() }
+        ?.let { tr("треб. ${it.joinToString(", ")}", "needs ${it.joinToString(", ")}") }
+    return listOfNotNull(kind, weapon, amount, lot.rarity?.let { rarityTitle(it, s.lang) }, level, needs).joinToString(" · ")
 }
 
 /**
@@ -163,6 +221,9 @@ private fun lotDocument(s: ForgeState, lot: AuctionLot): JsonObject {
     val base = instance?.let { s.inventoryBases[it.equipmentId] }
     val own = buildJsonObject {
         put("name", lot.title)
+        // A stack lot carries no instance, so without this it would have neither an icon nor an
+        // English name: both are found by the code, and only the lot itself knows it.
+        if (lot.itemCode.isNotBlank()) put("code", lot.itemCode)
         lot.slot?.let { put("slot", it) }
         lot.rarity?.let { put("rarity", it) }
         if (lot.itemLevel > 0) put("itemLevel", lot.itemLevel)

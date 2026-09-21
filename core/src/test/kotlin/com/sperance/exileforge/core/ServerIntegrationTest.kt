@@ -170,15 +170,17 @@ class ServerIntegrationTest {
 
             val items = api.referencePage(com.sperance.exileforge.core.model.EntitySource.ITEM, 0)
             val item = items.items.firstOrNull() ?: fail("the items collection is empty: $items")
-            assertEquals("Success", api.adjustItems(id, listOf(ItemStack(item.entityId, 5))))
+            assertEquals("system.success", api.adjustItems(id, listOf(ItemStack(item.entityId, 5))))
             val bag = api.bag(id)
             assertEquals(5L, (bag.firstOrNull { it.itemId == item.entityId } ?: fail("${item.entityId} is not in the bag: $bag")).amount)
-            assertEquals("Success", api.adjustItems(id, listOf(ItemStack(item.entityId, -5))))
+            assertEquals("system.success", api.adjustItems(id, listOf(ItemStack(item.entityId, -5))))
             assertTrue(api.bag(id).none { it.itemId == item.entityId })
 
             // A template is editable; an instance's rolls are not reachable from the catalogue at all.
-            val edited = api.update(Catalog.EQUIPMENT, template.entityId, buildJsonObject { put("description", "Integration description") })
-            assertEquals("Integration description", edited.text("description"))
+            // Its words are not editable either: they live in the locale files, not in the document.
+            val edited = api.update(Catalog.EQUIPMENT, template.entityId, buildJsonObject { put("image", "ef-integration") })
+            assertEquals("ef-integration", edited.text("image"))
+            assertFailsWith<IllegalArgumentException> { api.update(Catalog.EQUIPMENT, template.entityId, buildJsonObject { put("description", "by hand") }) }
             // An equipment template is a StockEntity: the server keeps no version on it.
             assertFalse("version" in edited, "equipment gained a version: $edited")
             assertFailsWith<IllegalArgumentException> { api.update(Catalog.EQUIPMENT, template.entityId, buildJsonObject { put("params", JsonArray(emptyList())) }) }
@@ -216,7 +218,9 @@ class ServerIntegrationTest {
                 val listed = api.sellEquipment(id, wornInstance.id, chaos.id, 3)
                 assertEquals(AuctionLotStatus.ACTIVE, listed.status)
                 assertEquals(AuctionLotKind.EQUIPMENT, listed.kind)
-                assertEquals(wearable.text("name"), listed.title)
+                // The lot stores a code, and the name comes back through the same dictionary.
+                assertEquals(equipmentTitle(wearable), listed.title)
+                assertEquals(wearable.text("code"), listed.itemCode)
                 // While it is listed the goods live in the lot, not with the seller.
                 assertTrue(api.inventory(id).none { it.id == wornInstance.id }, "the listed item stayed in the inventory")
                 assertEquals(listOf(listed.id), api.myLots(id).filter { it.onSale }.map { it.id })
@@ -224,12 +228,14 @@ class ServerIntegrationTest {
                 // The showcase is the server's own search, and it hides the seller's own lots.
                 val own = api.auctionSearch(id, AuctionFilter(excludeSellerId = id), 0)
                 assertTrue(own.items.none { it.id == listed.id }, "the seller sees their own lot: $own")
-                val shown = api.auctionSearch(buyer, AuctionFilter(title = listed.title), 0)
+                // A lot has no name to match, so a text search is resolved to codes on the server —
+                // which is why the language the player typed in travels with it.
+                val shown = api.auctionSearch(buyer, AuctionFilter(title = listed.title, lang = serverLocale.language), 0)
                 assertTrue(shown.items.any { it.id == listed.id }, "the lot is not on the showcase: $shown")
                 assertFailsWith<ApiFailure> { api.buyLot(id, listed.id) }
 
                 // Paying: the orbs go to the seller, the goods to the buyer, in one transaction.
-                assertEquals("Success", api.adjustItems(buyer, listOf(ItemStack(chaos.id, 3))))
+                assertEquals("system.success", api.adjustItems(buyer, listOf(ItemStack(chaos.id, 3))))
                 val sold = api.buyLot(buyer, listed.id)
                 assertEquals(AuctionLotStatus.SOLD, sold.status)
                 assertEquals(buyer, sold.buyerId)

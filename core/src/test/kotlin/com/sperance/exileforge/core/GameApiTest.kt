@@ -73,7 +73,7 @@ class GameApiTest {
         assertEquals("PUT", update.method)
         assertEquals("/game/api/v1/items?id=$id", update.path)
         assertEquals(changes, WireJson.parseToJsonElement(update.body.readUtf8()).jsonObject)
-        ok("\"Deleted\""); api.delete(Catalog.ITEMS, id)
+        ok("\"system.deleted\""); api.delete(Catalog.ITEMS, id)
         val delete = server.takeRequest()
         assertEquals("DELETE", delete.method)
         assertEquals("/game/api/v1/items?id=$id", delete.path)
@@ -206,8 +206,9 @@ class GameApiTest {
         ok("""[{"itemId":"chaos_orb","amount":50}]""")
         assertEquals(50L, api.bag(id).single().amount)
         assertEquals("/game/api/v1/character/inventory/items?characterId=$id", server.takeRequest().path)
-        ok("\"Success\"")
-        assertEquals("Success", api.adjustItems(id, listOf(ItemStack("chaos_orb", -2))))
+        ok("\"system.success\"")
+        // The server answers a locale key now, not a word; the client passes it on untouched.
+        assertEquals("system.success", api.adjustItems(id, listOf(ItemStack("chaos_orb", -2))))
         val adjust = server.takeRequest()
         assertEquals("/game/api/v1/character/inventory/addItem?characterId=$id", adjust.path)
         assertEquals(-2, WireJson.parseToJsonElement(adjust.body.readUtf8()).jsonArray.single().jsonObject.getValue("amount").jsonPrimitive.int)
@@ -389,7 +390,7 @@ class GameApiTest {
     }
 
     @Test fun `password change hides both secrets and ends the session`(): Unit = runBlocking {
-        ok("\"Success\""); api.changePassword("private-old", "private-New1")
+        ok("\"system.success\""); api.changePassword("private-old", "private-New1")
         assertEquals("/game/api/v1/user/changePassword", server.takeRequest().path!!.substringBefore('?'))
         assertFalse(journal.entries.value.toString().contains("private-"))
         assertNull(api.currentUser())

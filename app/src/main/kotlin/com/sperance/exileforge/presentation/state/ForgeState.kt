@@ -5,6 +5,9 @@ import com.sperance.exileforge.core.i18n.tr
 import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.model.Catalog
 import com.sperance.exileforge.core.model.CatalogFilter
+import com.sperance.exileforge.core.model.auction.AuctionFilter
+import com.sperance.exileforge.core.model.auction.AuctionLot
+import com.sperance.exileforge.core.model.auction.AuctionPage
 import com.sperance.exileforge.core.model.command.UserProfile
 import com.sperance.exileforge.core.model.currency.CurrencyItem
 import com.sperance.exileforge.core.model.hero.HeroView
@@ -46,11 +49,30 @@ data class ForgeState(
     val classes: List<CharacterClass> = emptyList(), val treeNodes: List<SkillTreeNode> = emptyList(),
     /** The class a new character is being created with, and the tree node under the cursor. */
     val draftClass: String = "", val selectedNode: String = "",
+    /** What the tree search box holds; a match moves the map to that node. */
+    val nodeQuery: String = "",
+
+    /** Which of the auction's own tabs is open: 0 showcase, 1 my lots, 2 sell. */
+    val auctionTab: Int = 0,
+    /** The showcase as the server paged it, and the filter it was asked for. */
+    val showcase: AuctionPage = AuctionPage(), val auctionFilter: AuctionFilter = AuctionFilter(),
+    /** Own lots are dropped from the showcase by default: they cannot be bought anyway. */
+    val showOwnLots: Boolean = false,
+    val myLots: List<AuctionLot> = emptyList(),
+    /**
+     * Why the auction is closed to this character, in the server's own words.
+     *
+     * The level it opens at is the server's constant; the client never carries a copy of it and
+     * learns the gate only by being refused.
+     */
+    val auctionLocked: String? = null,
 
     val checks: List<CheckResult> = emptyList(),
     val health: String = tr("Соединение ещё не проверено", "The connection has not been checked yet"),
 ) {
     val isAdmin: Boolean get() = signedIn && profile?.role == "ADMIN"
+    /** Lots the character may act on: the showcase hides their own unless asked not to. */
+    val ownLots: List<AuctionLot> get() = myLots.filter { it.onSale }
     /** The class the shown hero belongs to; the server owns the base it hands out. */
     val heroClass: CharacterClass? get() = hero?.let { view -> classes.firstOrNull { it.id == view.character.classId } }
     val adminTools: Boolean get() = isAdmin && mode == AppMode.ADMIN

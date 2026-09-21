@@ -28,6 +28,11 @@ import com.sperance.exileforge.core.model.currency.CurrencyItem
 import com.sperance.exileforge.ui.screens.hero.HeroEquipmentPanel
 import com.sperance.exileforge.ui.screens.hero.OrbPanel
 import com.sperance.exileforge.ui.screens.tree.SkillTreePanel
+import com.sperance.exileforge.core.model.auction.AuctionFilter
+import com.sperance.exileforge.core.model.auction.AuctionLot
+import com.sperance.exileforge.core.model.auction.AuctionLotKind
+import com.sperance.exileforge.core.model.auction.AuctionPage
+import com.sperance.exileforge.ui.screens.auction.ShowcaseList
 import com.sperance.exileforge.ui.theme.ForgeTheme
 import com.sperance.exileforge.ui.theme.Ink
 import java.io.File
@@ -95,19 +100,45 @@ class HeroPanelTest {
             connections = listOf("STR_START"), positionX = -20, positionY = 10, description = "Больше здоровья")
         val hero = HeroView(CharacterSummary("hero", "owner", "Изгнанник", level = 5), emptyList(),
             tree = SkillTreeState("hero", total = 4, spent = 0, available = 4,
-                nodes = listOf(CharacterSkillNode("taken", "hero", "STR_START", emptyList(), "Мародёр", SkillNodeType.START, 0))))
+                nodes = listOf(CharacterSkillNode("STR_START", emptyList(), "Мародёр", SkillNodeType.START, 0))))
         var allocated: String? = null
         compose.setContent { ForgeTheme { Column(Modifier.background(Ink).verticalScroll(rememberScrollState()).padding(12.dp)) {
             SkillTreePanel(ForgeState(busy = false, signedIn = true, hero = hero, characterOwner = "owner",
                 profile = com.sperance.exileforge.core.model.command.UserProfile("owner"),
                 treeNodes = listOf(start, life), selectedNode = "STR_LIFE_1"),
-                onSelect = {}, onAllocate = { allocated = it }, onRefund = {}, onReset = {})
+                onSelect = {}, onAllocate = { allocated = it }, onRefund = {}, onReset = {}, onQuery = {})
         } } }
         compose.onNodeWithText("Крепость").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Нотабль").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Доступно").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Взять узел").performScrollTo().performClick()
         compose.runOnIdle { assertEquals("STR_LIFE_1", allocated) }
+    }
+
+    /**
+     * The showcase prints the lot's own snapshot and refuses only what the seller owns.
+     *
+     * A seller cannot buy their own lot, and the server says so; the card simply does not offer it.
+     */
+    @Test fun theShowcaseNamesThePriceInOrbsAndWillNotSellYouYourOwnLot() {
+        val chaos = CurrencyItem("chaos-orb", "Chaos Orb", "CHAOS_ORB", "", 300)
+        val theirs = AuctionLot(id = "lot-1", sellerId = "rival", sellerName = "Соперник", kind = AuctionLotKind.EQUIPMENT,
+            title = "Железный шлем", slot = "HELMET", rarity = "RARE", itemLevel = 30, priceOrbId = "chaos-orb", price = 4)
+        val mine = theirs.copy(id = "lot-2", sellerId = "hero", sellerName = "Изгнанник", title = "Мой шлем")
+        var bought: String? = null
+        compose.setContent { ForgeTheme { Column(Modifier.background(Ink)) {
+            ShowcaseTab(ForgeState(busy = false, signedIn = true, characterId = "hero", characterOwner = "owner",
+                profile = com.sperance.exileforge.core.model.command.UserProfile("owner"), orbs = listOf(chaos),
+                auctionFilter = AuctionFilter(), showOwnLots = true,
+                showcase = AuctionPage(listOf(theirs, mine), 0, 20, 2, 1)),
+                onBuy = { bought = it }, onPage = {})
+        } } }
+        compose.onNodeWithText("Железный шлем").performScrollTo().assertIsDisplayed()
+        // The price is always counted in orbs, and the orb catalogue gives it a name.
+        compose.onNodeWithText("4 × Сфера хаоса").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Ваш лот").performScrollTo().assertIsDisplayed()
+        compose.onAllNodesWithText("Купить").onFirst().performScrollTo().performClick()
+        compose.runOnIdle { assertEquals("lot-1", bought) }
     }
 
     /** The orb panel hands back the pair the server needs and says what the copy currently is. */

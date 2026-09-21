@@ -1,7 +1,7 @@
 # ExileForge 2.0.0
 
-Android Compose client for **ktor-bestgame 0.10.0**.
-Server: branch `claude/tender-pasteur-a36kj2`, commit `cf83ee100e6c6d62348aff1a5dc2ace4a8c3ebca`.
+Android Compose client for **ktor-bestgame 0.13.2**.
+Server: branch `claude/tender-pasteur-a36kj2`, commit `c4df7448d33c9a857a66428ed32bd8cf5b02750f`.
 
 ## Язык интерфейса · Interface language
 
@@ -17,7 +17,10 @@ Every label, hint, error and contract-validation message exists in Russian and E
 
 - **Персонажи / Каталог** — поиск и постраничный просмотр персонажей, экипировки и предметов. Фильтры по слоту, редкости, типу оружия, уровню и модификатору в пуле.
 - **Герой** — сводка персонажа, класс, надетые слоты, характеристики сервера, инвентарь и сумка, применение валютных сфер, промокоды и рецепты.
-- **Дерево** — дерево навыков: карта узлов, взятие, возврат и полный сброс, баланс очков.
+- **Дерево** — дерево навыков: карта узлов, подсветка доступных, поиск по названию, взятие, возврат и полный сброс, баланс очков.
+- **Аукцион** — витрина с серверным поиском, свои лоты и выставление.
+
+Нижняя панель одинакова для всех: Каталог, Герой, Дерево, Аукцион, Аккаунт. «Редактор» и «Проверки» — инструменты администратора и открываются из вкладки «Аккаунт», чтобы не занимать место у игрока.
 - **Редактор** — шаблоны экипировки и предметов, персонажи и их базовые характеристики.
 - **Проверки** (администратор) — CRUD-сценарий и журнал запросов.
 - **Аккаунт** — сервер, вход, смена пароля и язык.
@@ -56,6 +59,20 @@ Every label, hint, error and contract-validation message exists in Russian and E
 
 Очки дают уровни; баланс «всего / потрачено / доступно» считает сервер.
 
+## Аукцион
+
+Торговля между игроками живёт в отдельной вкладке с тремя разделами: **Витрина**, **Мои лоты**, **Выставить**. Вкладка «Герой» торговлю не ведёт — предмет продаётся отсюда.
+
+**Витрина** — единственный список в приложении, который сужает сам сервер: у аукциона есть собственный поиск с фильтром и постраничной выдачей. Название, вид лота и потолок цены видны всегда; слот, редкость, диапазон уровня предмета и продавец — под «ещё фильтры». Все поля фильтра сравниваются со снимком, который лот несёт в себе, поэтому поиск укладывается в один запрос.
+
+Свои лоты из витрины скрыты — купить их всё равно нельзя, — но переключатель «Показывать свои» возвращает их, чтобы сравнить свою цену с чужими.
+
+**Цена назначается только в сферах**: это единственная валюта, в которой сервер торгует. В карточке лота цена читается как «4 × Сфера хаоса».
+
+**Выставить** можно снятую экипировку и содержимое сумки, включая сами сферы. Надетый предмет сервер не примет — пока лот на витрине, товар лежит внутри него, и надеть или продать его второй раз нельзя. Поэтому в списке на продажу показывается только снятое.
+
+Аукцион открывается с уровня, который задаёт сервер, и порог стоит даже на просмотре витрины. Клиент этого числа не хранит: он отправляет запрос и превращает отказ сервера в понятное объяснение — так порог не разойдётся с сервером при первой же правке константы.
+
 ## Connect
 
 1. Start the server and its MongoDB replica set (the backend pins `mongodb://localhost:27017`, database `mongobase`).
@@ -86,12 +103,14 @@ Debug allows HTTP for local development; release requires HTTPS. **This server h
 - **Equipment is a pool of references.** A template carries `modifierIds`; which of them land on a copy, in which tier and with which value, is rolled by the server when the instance is created.
 - **Inventory is its own collection.** One item in a character's bag is one `CharacterEquipment` document with its own rolls; the slot comes from the template, so equipping takes an instance id and nothing else.
 - **Stats come from the server.** `GET /api/v1/character/inventory/stats` returns the summed sheet; the client prints it and implements no second calculator.
-- **Lists are paged on the client.** The server's `/paged` route hands the page number to Mongo as the offset instead of `page * size`, so every page but the first is off by all but one record; it also offers no filter. The client reads the collection and slices it, comparing only fields the server already wrote. Nothing game-related is computed.
+- **Lists are paged on the client, except the auction.** `/paged` was fixed in 0.13.1, but the generic route still offers no filter, and moving the catalogue onto it would cost every catalogue filter. The auction has a search route of its own, so its showcase is filtered and paged by the server.
+- **The player auction (0.13.0).** Lots live in `auctionlot`; while a lot is listed the goods live inside it rather than with the seller. Prices are counted in currency orbs alone.
+- **The tree moved into the character (0.12.1).** `CharacterSkillNode` is no longer a collection: taken nodes are a snapshot inside `Character.skillNodes`, and the routes live under `/api/v1/character/skilltree`.
 - **Currency orbs are back (0.9.1).** They live in the `items` collection under the `CURRENCY` category and are applied through `POST /api/v1/characterequipment/applyOrb`. The rarity and the corruption flag now belong to the copy, not to the template.
 - **The passive tree is back (0.9.2).** A shared seeded graph plus one document per node a character has taken, with allocate, refund and reset. Every rule is checked by the server.
 - **Stats were reworked (0.10.0).** A character references a class instead of carrying base stats; `stats` answers an object naming the equipped items the server counted and the ones whose requirements are not met; an item's base is fixed modifiers rather than damage and defence fields; modifier effects can be attribute conversions.
 - **Removed with the features the server no longer has:** combat and the battle arena, the crafting bench, the server icon set, JWT, cursor-paged inventory and three-way conflict review.
-- **Upgrading the server wipes player data.** Its own migrator drops `Character`, `CharacterEquipment` and `CharacterSkillNode` when their format changes incompatibly, which 0.10.0 does. Characters and their gear are created anew.
+- **Upgrading the server needs a fresh database.** The schema migrator was removed in 0.10.1 and the player-data format has changed several times since, so a database that predates 0.13 is reseeded rather than migrated.
 
 ## Build and verification
 

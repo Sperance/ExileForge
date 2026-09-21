@@ -13,6 +13,7 @@ import com.sperance.exileforge.core.i18n.tr
 import com.sperance.exileforge.core.model.Catalog
 import com.sperance.exileforge.core.model.CatalogFilter
 import com.sperance.exileforge.core.model.EntitySource
+import com.sperance.exileforge.core.model.auction.*
 import com.sperance.exileforge.core.model.command.*
 import com.sperance.exileforge.core.model.currency.CURRENCY_CATEGORY
 import com.sperance.exileforge.core.model.currency.CurrencyItem
@@ -34,6 +35,10 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 
 private val JsonMedia = "application/json; charset=utf-8".toMediaType()
+
+/** Route roots that carry more than one command, kept in one place so a move is one edit. */
+private const val TREE = "api/v1/character/skilltree"
+private const val AUCTION = "api/v1/auctionlot"
 
 fun normalizeServer(value: String): String {
     val url = value.trim().toHttpUrlOrNull() ?: error(tr("Введите URL с http:// или https://", "Enter a URL starting with http:// or https://"))
@@ -210,9 +215,15 @@ class GameApi(
         WireJson.decodeFromJsonElement(kotlinx.serialization.builtins.ListSerializer(SkillTreeNode.serializer()),
             request("GET", "api/v1/${EntitySource.SKILL_NODE.path}", authenticated = true))
 
+    /**
+     * The character's own tree.
+     *
+     * Since 0.12.0 the taken nodes live inside the character document rather than a collection of
+     * their own, so the whole tree travels under `character/skilltree` with the character.
+     */
     suspend fun characterTree(characterId: String): SkillTreeState {
         requireId(characterId)
-        return WireJson.decodeFromJsonElement(request("GET", "api/v1/characterskillnode/byCharacter",
+        return WireJson.decodeFromJsonElement(request("GET", "$TREE/state",
             mapOf("characterId" to characterId), authenticated = true))
     }
 
@@ -226,14 +237,74 @@ class GameApi(
     suspend fun refundNode(characterId: String, nodeCode: String): SkillTreeState = node("refund", characterId, nodeCode)
     suspend fun resetTree(characterId: String): SkillTreeState {
         requireId(characterId)
-        return WireJson.decodeFromJsonElement(request("POST", "api/v1/characterskillnode/reset",
+        return WireJson.decodeFromJsonElement(request("POST", "$TREE/reset",
             mapOf("characterId" to characterId), authenticated = true))
     }
     private suspend fun node(operation: String, characterId: String, nodeCode: String): SkillTreeState {
         requireId(characterId)
         require(nodeCode.isNotBlank()) { tr("Выберите узел дерева", "Choose a node of the tree") }
-        return WireJson.decodeFromJsonElement(request("POST", "api/v1/characterskillnode/$operation",
+        return WireJson.decodeFromJsonElement(request("POST", "$TREE/$operation",
             mapOf("characterId" to characterId, "nodeCode" to nodeCode), authenticated = true))
+    }
+
+    // ==================== auction ====================
+
+    /**
+     * The showcase, narrowed and paged by the server.
+     *
+     * This is the one list the server filters itself: every field the filter compares is a snapshot
+     * the lot carries, so the whole search is a single query. Nothing is narrowed here afterwards.
+     */
+    suspend fun auctionSearch(characterId: String, filter: AuctionFilter, page: Int): AuctionPage {
+        requireId(characterId); requirePage(page)
+        return WireJson.decodeFromJsonElement(request("GET", "$AUCTION/search",
+            mapOf("characterId" to characterId, "page" to page.toString(), "size" to AUCTION_PAGE_SIZE.toString()) + filter.query(),
+            authenticated = true))
+    }
+
+    /** Everything the character ever listed, open and closed alike — the lots are their history. */
+    suspend fun myLots(characterId: String): List<AuctionLot> {
+        requireId(characterId)
+        return WireJson.decodeFromJsonElement(kotlinx.serialization.builtins.ListSerializer(AuctionLot.serializer()),
+            request("GET", "$AUCTION/my", mapOf("characterId" to characterId), authenticated = true))
+    }
+
+    /**
+     * Lists an item. The price is always counted in orbs, so [priceOrbId] must be a `CURRENCY`
+     * document — the server refuses anything else rather than inventing a conversion.
+     *
+     * An equipment instance has to be off the character first: while it is listed the goods live
+     * in the lot, and a worn item cannot be in two places.
+     */
+    suspend fun sellEquipment(characterId: String, inventoryId: String, priceOrbId: String, price: Long): AuctionLot {
+        requireId(inventoryId)
+        return sell("equipment", characterId, priceOrbId, price, mapOf("inventoryId" to inventoryId))
+    }
+    suspend fun sellItem(characterId: String, itemId: String, amount: Long, priceOrbId: String, price: Long): AuctionLot {
+        requireId(itemId)
+        require(amount > 0) { tr("Количество должно быть больше нуля", "The amount must be greater than zero") }
+        return sell("item", characterId, priceOrbId, price, mapOf("itemId" to itemId, "amount" to amount.toString()))
+    }
+    private suspend fun sell(what: String, characterId: String, priceOrbId: String, price: Long, extra: Map<String, String>): AuctionLot {
+        requireId(characterId); requireId(priceOrbId)
+        require(price > 0) { tr("Цена должна быть больше нуля", "The price must be greater than zero") }
+        return WireJson.decodeFromJsonElement(request("POST", "$AUCTION/sell/$what",
+            extra + mapOf("characterId" to characterId, "priceOrbId" to priceOrbId, "price" to price.toString()),
+            authenticated = true))
+    }
+
+    /**
+     * Buys a lot, or takes one back off the showcase.
+     *
+     * Payment, delivery and closing the lot are one server transaction, so a buyer short of orbs
+     * loses neither the orbs nor the goods. The client never checks the balance itself.
+     */
+    suspend fun buyLot(characterId: String, lotId: String): AuctionLot = lot("buy", characterId, lotId)
+    suspend fun cancelLot(characterId: String, lotId: String): AuctionLot = lot("cancel", characterId, lotId)
+    private suspend fun lot(operation: String, characterId: String, lotId: String): AuctionLot {
+        requireId(characterId); requireId(lotId)
+        return WireJson.decodeFromJsonElement(request("POST", "$AUCTION/$operation",
+            mapOf("characterId" to characterId, "lotId" to lotId), authenticated = true))
     }
 
     // ==================== character ====================

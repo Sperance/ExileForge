@@ -8,5 +8,6 @@ package com.sperance.exileforge.core.model
 enum class EntitySource(val path: String) {
     USER("user"), CHARACTER("character"), EQUIPMENT("equipment"), ITEM("items"),
     RECIPE("recipe"), REDEMPTION("redemptioncodes"), MODIFIER("modifierdefinition"), INVENTORY("characterequipment"),
-    CHARACTER_CLASS("characterclass"), SKILL_NODE("skilltreenode"), EXPERIENCE_LEVEL("experiencelevel")
+    CHARACTER_CLASS("characterclass"), SKILL_NODE("skilltreenode"), EXPERIENCE_LEVEL("experiencelevel"),
+    AUCTION("auctionlot")
 }

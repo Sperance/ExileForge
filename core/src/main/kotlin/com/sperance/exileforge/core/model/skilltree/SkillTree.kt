@@ -28,24 +28,25 @@ import kotlinx.serialization.Serializable
 )
 
 /**
- * A node one character has taken (collection `CharacterSkillNode`).
+ * A node one character has taken, embedded in their `Character.skillNodes`.
  *
- * The bonuses are a snapshot taken when the node was allocated, not a reference to the tree: a
- * later rebalance leaves an already-levelled character with what they actually took.
+ * It is a snapshot rather than a reference, so one hero's copy of a node can be tuned without
+ * touching the tree or anyone else. The tree's *shape* is deliberately not copied: adjacency and
+ * coordinates are how the world is built, and the server checks them against the live tree.
+ *
+ * The class's start node sits here from the moment the character is created.
  */
 @Serializable data class CharacterSkillNode(
-    @SerialName("_id") val id: String = "",
-    val characterId: String = "",
-    val nodeCode: String = "",
+    val code: String = "",
     val params: List<Modifier> = emptyList(),
     val name: String = "",
     val type: SkillNodeType = SkillNodeType.SMALL,
     val cost: Int = 1,
-    val version: Long = 0,
+    val description: String? = null,
 )
 
 /**
- * The state of one character's tree, as `GET /api/v1/characterskillnode/byCharacter` reports it.
+ * The state of one character's tree, as `GET /api/v1/character/skilltree/state` reports it.
  *
  * The point balance is the server's: it comes from the progression table and the costs actually
  * paid, and the client prints it rather than adding the costs up itself.
@@ -57,5 +58,23 @@ import kotlinx.serialization.Serializable
     val available: Int = 0,
     val nodes: List<CharacterSkillNode> = emptyList(),
 ) {
-    val takenCodes: Set<String> get() = nodes.mapTo(mutableSetOf()) { it.nodeCode }
+    val takenCodes: Set<String> get() = nodes.mapTo(mutableSetOf()) { it.code }
+}
+
+/**
+ * Nodes one step away from what a character has already taken.
+ *
+ * With nothing taken the only way in is a START node, which is how the server's own rule reads.
+ * This is a reading of the `connections` the server seeded, not a second copy of the rule: the
+ * allocate call still decides, and a node highlighted here can still be refused — for the cost,
+ * for the class it belongs to, or for anything else the server weighs.
+ */
+fun reachableFrom(nodes: List<SkillTreeNode>, taken: Set<String>): Set<String> {
+    if (taken.isEmpty()) return nodes.filter { it.type == SkillNodeType.START }.mapTo(mutableSetOf()) { it.code }
+    val byCode = nodes.associateBy { it.code }
+    val adjacent = mutableSetOf<String>()
+    taken.forEach { code -> byCode[code]?.connections?.let(adjacent::addAll) }
+    // An edge is declared on both ends, but a one-sided one would otherwise stay invisible.
+    nodes.forEach { node -> if (node.connections.any { it in taken }) adjacent.add(node.code) }
+    return adjacent - taken
 }

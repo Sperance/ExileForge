@@ -5,7 +5,9 @@ import com.sperance.exileforge.core.model.Catalog
 import com.sperance.exileforge.core.model.CatalogFilter
 import com.sperance.exileforge.core.model.EquipmentKind
 import com.sperance.exileforge.core.i18n.Lang
+import com.sperance.exileforge.core.model.auction.*
 import com.sperance.exileforge.core.model.currency.*
+import com.sperance.exileforge.core.model.skilltree.*
 import com.sperance.exileforge.core.model.modifier.*
 import kotlin.test.*
 import kotlinx.serialization.json.*
@@ -128,6 +130,40 @@ class ContractTest {
         val unknown = CurrencyItem(id, "Orb of Fusing", "ORB_OF_FUSING", "Links the sockets", 5)
         assertNull(unknown.orb)
         assertEquals("Orb of Fusing", unknown.title(Lang.EN))
+    }
+
+    @Test fun `the reachable nodes are the neighbours of what is taken`() {
+        fun node(code: String, type: SkillNodeType, vararg links: String) =
+            SkillTreeNode(code = code, name = code, type = type, connections = links.toList())
+        val tree = listOf(
+            node("STR_START", SkillNodeType.START, "STR_LIFE_1"),
+            node("INT_START", SkillNodeType.START, "INT_MANA_1"),
+            node("STR_LIFE_1", SkillNodeType.SMALL, "STR_START", "STR_LIFE_2"),
+            // Declared on one end only: the edge still has to be visible from the other.
+            node("STR_LIFE_2", SkillNodeType.NOTABLE),
+            node("INT_MANA_1", SkillNodeType.SMALL, "INT_START"))
+        // Nothing taken: the only way in is a start node, exactly as the server has it.
+        assertEquals(setOf("STR_START", "INT_START"), reachableFrom(tree, emptySet()))
+        assertEquals(setOf("STR_LIFE_1"), reachableFrom(tree, setOf("STR_START")))
+        assertEquals(setOf("STR_LIFE_2"), reachableFrom(tree, setOf("STR_START", "STR_LIFE_1")))
+        // A taken node is never offered again, and an unknown code contributes nothing.
+        assertTrue(reachableFrom(tree, setOf("STR_START", "STR_LIFE_1", "STR_LIFE_2")).none { it in setOf("STR_START", "STR_LIFE_1") })
+        assertEquals(emptySet(), reachableFrom(tree, setOf("NOWHERE")))
+    }
+
+    @Test fun `an auction filter sends only the fields that are set`() {
+        assertTrue(AuctionFilter().isEmpty)
+        assertEquals(emptyMap(), AuctionFilter().query())
+        // A blank enum would be rejected by the server outright, so it never leaves the client.
+        val filter = AuctionFilter(title = "  skull  ", kind = "EQUIPMENT", slot = "", maxPrice = " 40 ")
+        assertEquals(mapOf("title" to "skull", "kind" to "EQUIPMENT", "maxPrice" to "40"), filter.query())
+        assertFalse(filter.isEmpty)
+        assertEquals("Экипировка", lotKindTitle(AuctionLotKind.EQUIPMENT, Lang.RU))
+        assertEquals("Sold", lotStatusTitle(AuctionLotStatus.SOLD, Lang.EN))
+        // A lot knows whose it is; buying one's own is refused by the server, not hidden here.
+        val lot = AuctionLot(id = id, sellerId = id, status = AuctionLotStatus.ACTIVE)
+        assertTrue(lot.onSale && lot.belongsTo(id))
+        assertFalse(AuctionLot(status = AuctionLotStatus.CANCELLED).onSale)
     }
 
     @Test fun `identity is 24 hexadecimal characters`() {

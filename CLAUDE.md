@@ -5,8 +5,8 @@ Guidance for AI assistants working in this repository.
 ## What this project is
 
 ExileForge is an **Android Compose client** (version 2.0.0, `versionCode` 13) for the
-**ktor-bestgame** RPG server (0.10.0), pinned in
-`core/.../contract/Contract.kt` as `SERVER_COMMIT = cf83ee100e6c6d62348aff1a5dc2ace4a8c3ebca`
+**ktor-bestgame** RPG server (0.13.2), pinned in
+`core/.../contract/Contract.kt` as `SERVER_COMMIT = c4df7448d33c9a857a66428ed32bd8cf5b02750f`
 on the server branch `claude/tender-pasteur-a36kj2`.
 
 The client is deliberately **thin**: the server owns items, stats, modifier rolls and inventory.
@@ -28,7 +28,8 @@ core/                                   Pure JVM library (java-library + kotlin-
                  modifier/Modifiers.kt  ModifierDefinition, ModifierTier, Modifier, effects and sources
                  currency/Orbs.kt       CurrencyItem, CurrencyOrb and the CURRENCY category
                  progression/Progression.kt   CharacterClass, ExperienceLevel, StatValue
-                 skilltree/SkillTree.kt CharacterSkillNode, SkillTreeNode, SkillTreeState, SkillNodeType
+                 skilltree/SkillTree.kt CharacterSkillNode, SkillTreeNode, SkillTreeState, reachableFrom
+                 auction/Auction.kt     AuctionLot, AuctionFilter, AuctionPage, lot kinds and states
                  character/CharacterStats.kt  The server's stat enum names
   i18n/          Loc.kt                 Lang (RU/EN), `tr(ru, en)` and the global `uiLanguage`
   editor/        EditorSchema.kt        Declarative form schemas (FormField/InputSpec) used by the editor
@@ -38,10 +39,10 @@ app/                                    Android application (minSdk 26, compile/
   MainActivity.kt, ForgeApplication.kt  Entry points; Application owns RequestJournal + ServerStore
   presentation/  ForgeRuntime.kt        Shared coroutine scope, GameApi instance, MutableStateFlow<ForgeState>
                  ForgeViewModel.kt      Lifecycle owner and thin facade delegating to feature models
-                 features/              Catalog, Editor, Hero, Session, Checks view models
+                 features/              Catalog, Editor, Hero, Session, Checks, Auction view models
                  state/ForgeState.kt    One immutable state object for the whole app
   ui/            ForgeApp.kt            Scaffold, banner with RU/EN switch, bottom navigation, tab dispatch
-                 screens/               catalog, editor, hero, tree, checks, server
+                 screens/               catalog, editor, hero, tree, auction, checks, server
                  components/            ItemCard, PropertyRow, InfoCard, spinners and Ornament.kt
                  forms/, icons/ (ForgeGlyphs vector set, ItemEmblem, ItemIcon/PropertyIcon), theme/
   data/settings/ServerStore.kt          DataStore Preferences: base URL, saved filters, language
@@ -104,7 +105,10 @@ delegate here, because screens receive `ForgeViewModel`.
 
 **Navigation** is an `Int` tab in state, dispatched by a `when` in `ForgeApp`:
 `0` catalog/characters, `1` editor, `2` checks (admin only — `ForgeRuntime.tab` blocks it
-otherwise), `3` account/server, `4` hero, `5` skill tree.
+otherwise), `3` account/server, `4` hero, `5` skill tree, `6` auction.
+The bottom bar carries five destinations for everyone (`0, 4, 5, 6, 3`); the editor and the checks
+are administrator tools and open from the Account tab, so an admin's bar is no more crowded than a
+player's.
 `ForgeApp` re-`key`s the whole tree on `server`, `sessionEpoch` and `lang`, so a logout, a server
 change or a language switch discards per-screen Compose state.
 
@@ -136,11 +140,12 @@ These are enforced by tests and are the point of the client's design:
    What lands on a copy, in which tier and with which value, is rolled by the server in
    `itemToInventory`. `validateModifierPool` rejects rolled `params` in a template write, and
    `inventoryDocument` is a display-only projection that must never be posted back.
-9. **Lists are read whole and paged here.** The server's `/paged` route passes `page` straight to
-   the repository as the offset instead of `page * size`, so every page but the first is off by all
-   but one record; it also offers no filter. The client reads `GET /api/v1/{collection}` and slices
-   it, comparing only fields the server already wrote — filtering is display, never a game
-   calculation. Move paging back once the server fixes the offset.
+9. **Catalogue lists are read whole and paged here; the auction is not.** `/paged` was fixed in
+   0.13.1, but the generic route still takes no filter, so moving the catalogue onto it would cost
+   every catalogue filter. The catalogue reads `GET /api/v1/{collection}` and slices it, comparing
+   only fields the server already wrote — filtering is display, never a game calculation. The
+   auction is the exception: `auctionlot/search` filters and pages server-side, and its results are
+   never narrowed again here.
 10. **Orbs are the server's rules.** A currency orb is an `items` document of category `CURRENCY`;
     `POST /api/v1/characterequipment/applyOrb` spends one and answers with the item plus a sentence
     saying what happened. The client sends the pair and prints that sentence — it never decides what
@@ -150,22 +155,29 @@ These are enforced by tests and are the point of the client's design:
     `CharacterClass` holds the level-1 base, the per-level growth and the attribute conversions.
     It is a creation field with no update route — moving a character between classes would rewrite
     their history — so it is offered in the editor only while `original == null`.
-12. **The tree is the server's graph.** `skilltreenode` is the shared seeded tree and
-    `characterskillnode` is what one character took, snapshotted at allocation. Allocate, refund and
-    reset each answer with the whole `SkillTreeState`; adjacency, cost, the point balance and
-    whether a refund would detach the rest are all checked server-side. The screen draws the seeded
-    coordinates and sends one node code.
-13. **An item has no stat fields.** Armour, damage and attack speed are fixed modifiers in
+12. **The tree is the server's graph.** `skilltreenode` is the shared seeded tree; what one
+    character took is a snapshot inside their own document (`Character.skillNodes`), reached through
+    `/api/v1/character/skilltree/*`. Allocate, refund and reset each answer with the whole
+    `SkillTreeState`; adjacency, cost, the point balance and whether a refund would detach the rest
+    are all checked server-side. The screen draws the seeded coordinates and sends one node code.
+    `reachableFrom` highlights neighbours so 122 nodes stay navigable — it reads `connections`, it
+    does not decide: a highlighted node can still be refused.
+13. **The auction's goods live in the lot.** While a lot is listed the instance has left
+    `CharacterEquipment` and the stack has left the bag, which is why a worn item cannot be listed
+    (`AU_010`). Prices are counted in currency orbs alone (`AU_007`), a seller cannot buy their own
+    lot (`AU_006`), and the level the auction opens at is a server constant the client never copies:
+    it asks, and turns `AU_002` into the screen's explanation.
+14. **An item has no stat fields.** Armour, damage and attack speed are fixed modifiers in
     `baseParams` (values, no tier); `durability` is the only number left as a field. Requirements
     (`requiredLevel`, `requiredStrength`, `requiredDexterity`, `requiredIntelligence`) are printed,
     never enforced here — the server checks them twice and the two checks are different rules:
     `equip` refuses an item out of reach outright (`CH_013`), while one already worn keeps its slot
     and only stops counting, landing in the sheet's `inactive`. Never disable a control on a
     requirement the client worked out itself; send the command and show the refusal.
-14. **Release builds require HTTPS** (`usesCleartextTraffic=false`); only the debug manifest
+15. **Release builds require HTTPS** (`usesCleartextTraffic=false`); only the debug manifest
     permits cleartext for local servers. This matters more than usual: the password travels as a
     query parameter, because that is the route the server exposes.
-15. **No network or raster images.** Entities carry at most an `image` URL, which the client stores
+16. **No network or raster images.** Entities carry at most an `image` URL, which the client stores
     but never fetches. Every picture is a bundled vector (`ItemEmblem`, `ForgeGlyphs`).
 
 ## Conventions

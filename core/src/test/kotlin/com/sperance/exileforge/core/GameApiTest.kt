@@ -6,6 +6,7 @@ import com.sperance.exileforge.core.model.CatalogFilter
 import com.sperance.exileforge.core.model.EquipmentKind
 import com.sperance.exileforge.core.model.command.*
 import com.sperance.exileforge.core.model.currency.CurrencyOrb
+import com.sperance.exileforge.core.model.auction.*
 import com.sperance.exileforge.core.model.skilltree.SkillNodeType
 import com.sperance.exileforge.core.network.*
 import java.util.concurrent.TimeUnit
@@ -230,17 +231,17 @@ class GameApiTest {
         assertFalse(node.params.single().rolled)
 
         val state = """{"characterId":"$id","total":5,"spent":1,"available":4,
-            "nodes":[{"_id":"$other","characterId":"$id","nodeCode":"STR_START","name":"Marauder","type":"START","cost":0,"params":[]}]}"""
+            "nodes":[{"code":"STR_START","name":"Marauder","type":"START","cost":0,"params":[]}]}"""
         ok(state)
         assertEquals(setOf("STR_START"), api.characterTree(id).takenCodes)
-        assertEquals("/game/api/v1/characterskillnode/byCharacter?characterId=$id", server.takeRequest().path)
+        assertEquals("/game/api/v1/character/skilltree/state?characterId=$id", server.takeRequest().path)
         ok(state)
         assertEquals(4, api.allocateNode(id, "STR_LIFE_1").available)
-        assertEquals("/game/api/v1/characterskillnode/allocate?characterId=$id&nodeCode=STR_LIFE_1", server.takeRequest().path)
+        assertEquals("/game/api/v1/character/skilltree/allocate?characterId=$id&nodeCode=STR_LIFE_1", server.takeRequest().path)
         ok(state); api.refundNode(id, "STR_LIFE_1")
-        assertEquals("/game/api/v1/characterskillnode/refund?characterId=$id&nodeCode=STR_LIFE_1", server.takeRequest().path)
+        assertEquals("/game/api/v1/character/skilltree/refund?characterId=$id&nodeCode=STR_LIFE_1", server.takeRequest().path)
         ok(state); api.resetTree(id)
-        assertEquals("/game/api/v1/characterskillnode/reset?characterId=$id", server.takeRequest().path)
+        assertEquals("/game/api/v1/character/skilltree/reset?characterId=$id", server.takeRequest().path)
         // A node is named by its code, never by an id, and a blank one never reaches the network.
         val sent = server.requestCount
         assertFailsWith<IllegalArgumentException> { api.allocateNode(id, " ") }
@@ -258,13 +259,64 @@ class GameApiTest {
         assertEquals(sent, server.requestCount)
     }
 
+    @Test fun `the showcase is narrowed by the server and only the set fields travel`(): Unit = runBlocking {
+        ok("""{"items":[{"_id":"$id","sellerId":"$other","sellerName":"Изгнанник","kind":"EQUIPMENT","title":"Iron Skullcap",
+            "slot":"HELMET","rarity":"RARE","itemLevel":30,"priceOrbId":"$other","price":40,"status":"ACTIVE",
+            "equipment":{"_id":"$other","equipmentId":"$id","rarity":"RARE","params":[]}}],
+            "page":1,"pageSize":20,"totalItems":25,"totalPages":2}""")
+        val filter = AuctionFilter(title = "skull", kind = "EQUIPMENT", maxPrice = "50", excludeSellerId = other)
+        val page = api.auctionSearch(id, filter, 1)
+        val request = server.takeRequest()
+        assertEquals("/game/api/v1/auctionlot/search", request.path!!.substringBefore('?'))
+        // A blank field is "do not filter": an empty enum would be rejected by the server outright.
+        val query = request.requestUrl!!
+        assertEquals(listOf("characterId", "page", "size", "kind", "title", "maxPrice", "excludeSellerId").sorted(), query.queryParameterNames.sorted())
+        assertEquals("1", query.queryParameter("page"))
+        assertEquals(other, query.queryParameter("excludeSellerId"))
+        assertEquals(2, page.totalPages)
+        val lot = page.items.single()
+        assertEquals("Iron Skullcap", lot.title)
+        assertTrue(lot.onSale)
+        assertTrue(lot.belongsTo(other))
+        // The showcase card describes the instance: its rarity may have been changed by an orb.
+        assertEquals("RARE", assertNotNull(lot.equipment).rarity)
+        assertTrue(AuctionFilter().isEmpty)
+    }
+
+    @Test fun `listing, buying and withdrawing name the lot and nothing else`(): Unit = runBlocking {
+        val lot = """{"_id":"$id","sellerId":"$other","kind":"EQUIPMENT","title":"Iron Skullcap","priceOrbId":"$other","price":40,"status":"ACTIVE"}"""
+        ok(lot)
+        assertEquals("Iron Skullcap", api.sellEquipment(other, id, other, 40).title)
+        assertEquals("/game/api/v1/auctionlot/sell/equipment?inventoryId=$id&characterId=$other&priceOrbId=$other&price=40", server.takeRequest().path)
+        ok("""{"_id":"$id","sellerId":"$other","kind":"ITEM","itemId":"$id","amount":5,"title":"Chaos Orb","priceOrbId":"$other","price":2,"status":"ACTIVE"}""")
+        assertEquals(5L, api.sellItem(other, id, 5, other, 2).amount)
+        assertEquals("/game/api/v1/auctionlot/sell/item?itemId=$id&amount=5&characterId=$other&priceOrbId=$other&price=2", server.takeRequest().path)
+        ok("""{"_id":"$id","sellerId":"$other","kind":"EQUIPMENT","title":"Iron Skullcap","status":"SOLD","buyerId":"$id"}""")
+        assertEquals(AuctionLotStatus.SOLD, api.buyLot(id, id).status)
+        assertEquals("/game/api/v1/auctionlot/buy?characterId=$id&lotId=$id", server.takeRequest().path)
+        ok("""{"_id":"$id","sellerId":"$other","kind":"EQUIPMENT","title":"Iron Skullcap","status":"CANCELLED"}""")
+        assertFalse(api.cancelLot(other, id).onSale)
+        assertEquals("/game/api/v1/auctionlot/cancel?characterId=$other&lotId=$id", server.takeRequest().path)
+        ok("""[$lot]""")
+        assertEquals(1, api.myLots(other).size)
+        assertEquals("/game/api/v1/auctionlot/my?characterId=$other", server.takeRequest().path)
+        // A price that buys nothing, or a price not set in orbs, never reaches the network.
+        val sent = server.requestCount
+        assertFailsWith<IllegalArgumentException> { api.sellEquipment(other, id, other, 0) }
+        assertFailsWith<IllegalArgumentException> { api.sellItem(other, id, 0, other, 5) }
+        assertFailsWith<IllegalArgumentException> { api.sellEquipment(other, id, "not-an-orb", 5) }
+        assertFailsWith<IllegalArgumentException> { api.buyLot(id, "wrong") }
+        assertEquals(sent, server.requestCount)
+    }
+
     @Test fun `capabilities are read from the server's own route table`(): Unit = runBlocking {
         val routes = listOf("GET" to "/api/v1/user/login", "GET" to "/api/v1/equipment/paged", "GET" to "/api/v1/character/inventory/equipments",
             "GET" to "/api/v1/character/inventory/stats", "POST" to "/api/v1/character/inventory/itemToInventory",
             "POST" to "/api/v1/characterequipment/equip", "POST" to "/api/v1/characterequipment/applyOrb",
             "GET" to "/api/v1/modifierdefinition", "GET" to "/api/v1/characterclass", "GET" to "/api/v1/experiencelevel",
-            "GET" to "/api/v1/skilltreenode", "GET" to "/api/v1/characterskillnode/byCharacter",
-            "POST" to "/api/v1/characterskillnode/allocate")
+            "GET" to "/api/v1/skilltreenode", "GET" to "/api/v1/character/skilltree/state",
+            "POST" to "/api/v1/character/skilltree/allocate", "GET" to "/api/v1/auctionlot/search",
+            "POST" to "/api/v1/auctionlot/sell/equipment", "POST" to "/api/v1/auctionlot/buy")
         // The server prints the Ktor selector, so a method arrives as "(GET)".
         ok(JsonArray(routes.map { buildJsonObject { put("path", it.second); put("method", "(${it.first})") } }).toString())
         val capabilities = api.capabilities()

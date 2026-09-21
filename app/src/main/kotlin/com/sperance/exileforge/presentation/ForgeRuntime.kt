@@ -32,6 +32,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
     val heroViewModel = HeroViewModel(this)
     val sessionViewModel = SessionViewModel(this)
     val checksViewModel = ChecksViewModel(this)
+    val auctionViewModel = AuctionViewModel(this)
 
     fun newApi(server: String): GameApi {
         lateinit var created: GameApi
@@ -142,7 +143,10 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
         mutable.update { it.copy(signedIn = false, profile = null, sessionEpoch = it.sessionEpoch + 1,
             items = emptyList(), total = 0, page = 0, totalPages = 0, definitions = emptyList(),
             orbs = emptyList(), selectedOrb = "",
-            classes = emptyList(), treeNodes = emptyList(), draftClass = "", selectedNode = "",
+            classes = emptyList(), treeNodes = emptyList(), draftClass = "", selectedNode = "", nodeQuery = "",
+            auctionTab = 0, showcase = com.sperance.exileforge.core.model.auction.AuctionPage(),
+            auctionFilter = com.sperance.exileforge.core.model.auction.AuctionFilter(),
+            showOwnLots = false, myLots = emptyList(), auctionLocked = null,
             original = null, draft = JsonObject(emptyMap()), editorOpen = false,
             characterId = "", characterOwner = "", hero = null, inventoryBases = emptyMap(), selectedEquipment = "",
             checks = emptyList(), tab = 3, mode = AppMode.PLAYER, failure = null) }

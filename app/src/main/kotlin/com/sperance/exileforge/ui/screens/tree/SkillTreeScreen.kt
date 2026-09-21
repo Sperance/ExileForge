@@ -22,6 +22,7 @@ import com.sperance.exileforge.core.i18n.tr
 import com.sperance.exileforge.core.model.EntitySource
 import com.sperance.exileforge.core.model.skilltree.SkillNodeType
 import com.sperance.exileforge.core.model.skilltree.SkillTreeNode
+import com.sperance.exileforge.core.model.skilltree.reachableFrom
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.*
@@ -40,7 +41,7 @@ import kotlinx.serialization.json.putJsonArray
         ScreenHeader(tr("Дерево навыков", "Passive tree"),
             tr("Узлов в дереве: ${s.treeNodes.size}", "${s.treeNodes.size} nodes in the tree"), ForgeGlyphs.Constellation)
         EntitySpinner(tr("Персонаж", "Character"), s.characterId, EntitySource.CHARACTER, !s.busy, vm::characterId)
-        SkillTreePanel(s, vm::selectNode, vm::allocateNode, vm::refundNode, vm::resetTree)
+        SkillTreePanel(s, vm::selectNode, vm::allocateNode, vm::refundNode, vm::resetTree, vm::nodeQuery)
     }
 }
 
@@ -52,7 +53,7 @@ import kotlinx.serialization.json.putJsonArray
  * it was given and sends one node code at a time.
  */
 @Composable fun SkillTreePanel(s: ForgeState, onSelect: (String) -> Unit, onAllocate: (String) -> Unit,
-    onRefund: (String) -> Unit, onReset: () -> Unit) {
+    onRefund: (String) -> Unit, onReset: () -> Unit, onQuery: (String) -> Unit = {}) {
     val hero = s.hero
     val taken = hero?.tree?.takenCodes.orEmpty()
     val enabled = !s.busy && s.signedIn && (s.ownsCharacter || s.isAdmin) && hero != null
@@ -71,7 +72,11 @@ import kotlinx.serialization.json.putJsonArray
             tr("Сервер не вернул ни одного узла. Обновите героя.", "The server served no nodes. Refresh the hero."))
         return
     }
-    TreeCanvas(s, taken, onSelect)
+    // Which nodes are one step away: neighbours of what is taken, or the class's own start when
+    // nothing is taken yet. The server still decides — this only says where to look on 122 nodes.
+    val reachable = remember(s.treeNodes, taken) { reachableFrom(s.treeNodes, taken) }
+    TreeSearch(s, onQuery, onSelect)
+    TreeCanvas(s, taken, reachable, onSelect)
     NodeDetails(s, s.treeNodes.firstOrNull { it.code == s.selectedNode }, taken, enabled, onAllocate, onRefund)
     if (hero != null) OutlinedButton(enabled = enabled && hero.tree.nodes.isNotEmpty(), onClick = onReset,
         modifier = Modifier.fillMaxWidth()) { Text(tr("Сбросить дерево полностью", "Reset the whole tree")) }
@@ -83,7 +88,32 @@ import kotlinx.serialization.json.putJsonArray
  * Panning and zooming are the only interaction beyond a tap: the layout is fixed data, so the
  * canvas never moves a node, it only chooses where to look.
  */
-@Composable private fun TreeCanvas(s: ForgeState, taken: Set<String>, onSelect: (String) -> Unit) {
+/**
+ * Finding a node by name.
+ *
+ * The tree is over a hundred nodes across seven class areas, so panning to one by eye is no longer
+ * realistic. A match selects the node, which is what the map draws a ring around.
+ */
+@Composable private fun TreeSearch(s: ForgeState, onQuery: (String) -> Unit, onSelect: (String) -> Unit) {
+    val matches = remember(s.treeNodes, s.nodeQuery) {
+        if (s.nodeQuery.isBlank()) emptyList()
+        else s.treeNodes.filter { it.name.contains(s.nodeQuery.trim(), true) || it.code.contains(s.nodeQuery.trim(), true) }.take(8)
+    }
+    ForgePanel {
+        Engraved(tr("Найти узел", "Find a node"))
+        OutlinedTextField(s.nodeQuery, onQuery, label = { Text(tr("Название узла", "Node name")) },
+            singleLine = true, modifier = Modifier.fillMaxWidth())
+        if (s.nodeQuery.isNotBlank() && matches.isEmpty()) Text(tr("Ничего не найдено", "Nothing found"), color = Muted)
+        matches.forEach { node ->
+            TextButton(onClick = { onSelect(node.code) }, modifier = Modifier.fillMaxWidth()) {
+                Text("${node.name.ifBlank { node.code }} · ${nodeTypeTitle(node.type.name, s.lang)}",
+                    color = nodeColour(node, node.code == s.selectedNode))
+            }
+        }
+    }
+}
+
+@Composable private fun TreeCanvas(s: ForgeState, taken: Set<String>, reachable: Set<String>, onSelect: (String) -> Unit) {
     val nodes = s.treeNodes
     val byCode = remember(nodes) { nodes.associateBy { it.code } }
     val bounds = remember(nodes) { Bounds.of(nodes) }
@@ -125,15 +155,20 @@ import kotlinx.serialization.json.putJsonArray
             nodes.forEach { node ->
                 val centre = place(node, bounds, width, height, scale, pan)
                 val colour = nodeColour(node, node.code == s.selectedNode)
-                drawCircle(colour.copy(alpha = if (node.code in taken) .85f else .18f), radius(node) * scale, centre)
-                drawCircle(colour, radius(node) * scale, centre, style = Stroke(if (node.code == s.selectedNode) 3.5f else 1.5f))
+                val here = node.code in taken
+                val next = node.code in reachable
+                // Taken is solid, reachable is half-lit and ringed, the rest is barely there.
+                drawCircle(colour.copy(alpha = if (here) .85f else if (next) .45f else .12f), radius(node) * scale, centre)
+                drawCircle(if (next && !here) GoldBright else colour, radius(node) * scale, centre,
+                    style = Stroke(if (node.code == s.selectedNode) 3.5f else if (next) 2.5f else 1f))
             }
         }
         Text(tr("Потяните, чтобы сдвинуть, сведите пальцы для масштаба, коснитесь узла, чтобы выбрать.",
                 "Drag to pan, pinch to zoom, tap a node to select it."), color = Muted, style = MaterialTheme.typography.bodySmall)
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = { scale = 1f; pan = Offset.Zero }) { Text(tr("Сбросить вид", "Reset the view")) }
-            Text(tr("Взято узлов: ${taken.size}", "Nodes taken: ${taken.size}"), color = Muted, style = MaterialTheme.typography.labelMedium)
+            Text(tr("Взято ${taken.size} · доступно ${reachable.size}", "${taken.size} taken · ${reachable.size} within reach"),
+                color = Muted, style = MaterialTheme.typography.labelMedium)
         }
     }
 }

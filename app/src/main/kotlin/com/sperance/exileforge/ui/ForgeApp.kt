@@ -29,6 +29,7 @@ import com.sperance.exileforge.ui.components.LocalEntityPageLoader
 import com.sperance.exileforge.ui.components.OrnateDivider
 import com.sperance.exileforge.ui.components.voidBackdrop
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
+import com.sperance.exileforge.ui.screens.auction.AuctionScreen
 import com.sperance.exileforge.ui.screens.catalog.CatalogScreen
 import com.sperance.exileforge.ui.screens.checks.ChecksScreen
 import com.sperance.exileforge.ui.screens.editor.EditorScreen
@@ -56,11 +57,12 @@ import com.sperance.exileforge.ui.theme.*
         bottomBar = {
             NavigationBar(containerColor = Abyss, tonalElevation = 0.dp,
                 modifier = Modifier.drawBehind { drawLine(Gold.copy(alpha = .35f), Offset(0f, 0f), Offset(size.width, 0f), 2f) }) {
-                val destinations = if (s.adminTools)
-                    listOf(0 to tr("Каталог", "Catalogue"), 1 to tr("Редактор", "Editor"), 4 to tr("Герой", "Hero"), 5 to tr("Дерево", "Tree"), 2 to tr("Проверки", "Checks"), 3 to tr("Аккаунт", "Account"))
-                else listOf(0 to tr("Персонажи", "Characters"), 4 to tr("Герой", "Hero"), 5 to tr("Дерево", "Tree"), 3 to tr("Аккаунт", "Account"))
+                // Five destinations for everyone: the editor and the checks are reached from the
+                // Account tab instead, so an administrator's bar is no more crowded than a player's.
+                val destinations = listOf(0 to tr("Каталог", "Catalogue"), 4 to tr("Герой", "Hero"),
+                    5 to tr("Дерево", "Tree"), 6 to tr("Аукцион", "Auction"), 3 to tr("Аккаунт", "Account"))
                 val icons = mapOf<Int, ImageVector>(0 to ForgeGlyphs.Stash, 1 to ForgeGlyphs.Tome, 2 to ForgeGlyphs.Scroll,
-                    3 to ForgeGlyphs.Portal, 4 to ForgeGlyphs.Helm, 5 to ForgeGlyphs.Constellation)
+                    3 to ForgeGlyphs.Portal, 4 to ForgeGlyphs.Helm, 5 to ForgeGlyphs.Constellation, 6 to ForgeGlyphs.Orb)
                 destinations.forEach { (index, label) ->
                     NavigationBarItem(selected = s.tab == index, onClick = { vm.tab(index) },
                         icon = { Icon(icons.getValue(index), null, modifier = Modifier.size(22.dp)) }, label = { Text(label, fontSize = 10.sp) },
@@ -80,6 +82,7 @@ import com.sperance.exileforge.ui.theme.*
                 3 -> ServerScreen(s, vm, logs)
                 4 -> HeroScreen(s, vm)
                 5 -> SkillTreeScreen(s, vm)
+                6 -> AuctionScreen(s, vm)
             }
         }
     }

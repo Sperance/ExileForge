@@ -77,6 +77,7 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
     } } }
 
     fun selectNode(code: String) { with(runtime) { if (!state.value.busy) mutable.update { it.copy(selectedNode = code) } } }
+    fun nodeQuery(value: String) { with(runtime) { mutable.update { it.copy(nodeQuery = value) } } }
 
     /**
      * Skill tree: take a node, give it back, or drop the whole tree.

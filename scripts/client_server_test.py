@@ -42,7 +42,8 @@ with (root / 'build/client-server.log').open('w') as log:
                 assert 'GET /api/v1/character/inventory/stats' in routes, sorted(routes)
                 assert 'POST /api/v1/characterequipment/applyOrb' in routes, sorted(routes)
                 assert 'GET /api/v1/characterclass' in routes, sorted(routes)
-                assert 'POST /api/v1/characterskillnode/allocate' in routes, sorted(routes)
+                assert 'POST /api/v1/character/skilltree/allocate' in routes, sorted(routes)
+                assert 'POST /api/v1/auctionlot/buy' in routes, sorted(routes)
                 break
             except (urllib.error.URLError, TimeoutError, KeyError):
                 if time.monotonic() > deadline:

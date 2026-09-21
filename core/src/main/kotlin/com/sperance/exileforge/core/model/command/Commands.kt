@@ -6,6 +6,8 @@ import kotlinx.serialization.Serializable
 /** Server page bounds; the client never asks for a page the server would reject. */
 const val CATALOG_PAGE_SIZE = 20
 const val REFERENCE_PAGE_SIZE = 50
+/** The showcase is paged by the server, so this is what the client asks it for. */
+const val AUCTION_PAGE_SIZE = 20
 const val MAX_ITEM_AMOUNT = 100_000_000_000L
 
 @Serializable data class CreateCharacterCommand(val userId: String, val name: String, val description: String = "")
@@ -66,8 +68,11 @@ data class ApiCapabilities(val routes: Set<String>) {
             "GET" to "/api/v1/characterclass",
             "GET" to "/api/v1/experiencelevel",
             "GET" to "/api/v1/skilltreenode",
-            "GET" to "/api/v1/characterskillnode/byCharacter",
-            "POST" to "/api/v1/characterskillnode/allocate",
+            "GET" to "/api/v1/character/skilltree/state",
+            "POST" to "/api/v1/character/skilltree/allocate",
+            "GET" to "/api/v1/auctionlot/search",
+            "POST" to "/api/v1/auctionlot/sell/equipment",
+            "POST" to "/api/v1/auctionlot/buy",
         )
         val missing = required.filterNot { (method, path) -> has(method, path) }
         require(missing.isEmpty()) {

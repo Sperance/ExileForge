@@ -4,6 +4,9 @@ import com.sperance.exileforge.core.contract.*
 import com.sperance.exileforge.core.model.Catalog
 import com.sperance.exileforge.core.model.CatalogFilter
 import com.sperance.exileforge.core.model.command.ItemStack
+import com.sperance.exileforge.core.model.auction.AuctionFilter
+import com.sperance.exileforge.core.model.auction.AuctionLotKind
+import com.sperance.exileforge.core.model.auction.AuctionLotStatus
 import com.sperance.exileforge.core.model.currency.CurrencyOrb
 import com.sperance.exileforge.core.model.hero.CharacterSheet
 import com.sperance.exileforge.core.model.skilltree.SkillNodeType
@@ -168,6 +171,51 @@ class ServerIntegrationTest {
             assertFailsWith<ApiFailure> { api.refundNode(id, start.code) }
             assertEquals(setOf(start.code), api.refundNode(id, neighbour.code).takenCodes)
             assertEquals(0, api.resetTree(id).spent)
+
+            // The auction needs two characters: the server refuses to let one buy its own lot.
+            val buyerName = "EF-buyer-${java.util.UUID.randomUUID()}"
+            val buyer = api.create(Catalog.CHARACTERS, buildJsonObject {
+                put("userId", admin.id); put("name", buyerName); put("description", "Auction buyer"); put("classId", chosenClass.id)
+            }).entityId
+            try {
+                // Both ends have to clear the level the auction opens at; the server names it itself.
+                api.addExperience(buyer, levels.last().experience)
+
+                val listed = api.sellEquipment(id, wornInstance.id, chaos.id, 3)
+                assertEquals(AuctionLotStatus.ACTIVE, listed.status)
+                assertEquals(AuctionLotKind.EQUIPMENT, listed.kind)
+                assertEquals(wearable.text("name"), listed.title)
+                // While it is listed the goods live in the lot, not with the seller.
+                assertTrue(api.inventory(id).none { it.id == wornInstance.id }, "the listed item stayed in the inventory")
+                assertEquals(listOf(listed.id), api.myLots(id).filter { it.onSale }.map { it.id })
+
+                // The showcase is the server's own search, and it hides the seller's own lots.
+                val own = api.auctionSearch(id, AuctionFilter(excludeSellerId = id), 0)
+                assertTrue(own.items.none { it.id == listed.id }, "the seller sees their own lot: $own")
+                val shown = api.auctionSearch(buyer, AuctionFilter(title = listed.title), 0)
+                assertTrue(shown.items.any { it.id == listed.id }, "the lot is not on the showcase: $shown")
+                assertFailsWith<ApiFailure> { api.buyLot(id, listed.id) }
+
+                // Paying: the orbs go to the seller, the goods to the buyer, in one transaction.
+                assertEquals("Success", api.adjustItems(buyer, listOf(ItemStack(chaos.id, 3))))
+                val sold = api.buyLot(buyer, listed.id)
+                assertEquals(AuctionLotStatus.SOLD, sold.status)
+                assertEquals(buyer, sold.buyerId)
+                assertTrue(api.inventory(buyer).any { it.equipmentId == wearable.entityId }, "the buyer never got the item")
+                assertTrue(api.bag(buyer).none { it.itemId == chaos.id }, "the buyer kept the orbs")
+                assertEquals(3L, (api.bag(id).firstOrNull { it.itemId == chaos.id } ?: fail("the seller was not paid")).amount)
+                // A closed lot is history: it never returns to the showcase and cannot be bought twice.
+                assertFailsWith<ApiFailure> { api.buyLot(buyer, listed.id) }
+
+                // Withdrawing returns the goods; a stack lot travels the same way an instance does.
+                val stack = api.sellItem(id, chaos.id, 2, chaos.id, 1)
+                assertEquals(2L, stack.amount)
+                assertEquals(1L, (api.bag(id).firstOrNull { it.itemId == chaos.id } ?: fail("the stack was not debited")).amount)
+                assertFalse(api.cancelLot(id, stack.id).onSale)
+                assertEquals(3L, (api.bag(id).firstOrNull { it.itemId == chaos.id } ?: fail("the stack never came back")).amount)
+            } finally {
+                api.delete(Catalog.CHARACTERS, buyer)
+            }
 
             val player = GameApi(url)
             player.login(requireNotNull(System.getenv("EF_PLAYER_LOGIN")), requireNotNull(System.getenv("EF_PLAYER_PASSWORD")))

@@ -27,6 +27,16 @@ import com.sperance.exileforge.ui.theme.Muted
             Engraved(tr("Изгнанник", "Exile"))
             LoginForm(s, vm)
         }
+        // The editor and the checks left the bottom bar so it fits five destinations for everyone;
+        // they are administrator tools, and this is where an administrator already is.
+        if (s.adminTools) ForgePanel {
+            Engraved(tr("Инструменты администратора", "Administrator tools"))
+            OutlinedButton(enabled = !s.busy, onClick = { vm.tab(1) }, modifier = Modifier.fillMaxWidth()) { Text(tr("Редактор", "Editor")) }
+            OutlinedButton(enabled = !s.busy, onClick = { vm.tab(2) }, modifier = Modifier.fillMaxWidth()) { Text(tr("Проверки", "Checks")) }
+            Text(tr("Эти экраны открываются отсюда: в нижней панели они занимали место у всех.",
+                    "These screens open from here: in the bottom bar they took room from everyone."),
+                color = Muted, style = MaterialTheme.typography.bodySmall)
+        }
         ForgePanel {
             Engraved(tr("Язык интерфейса", "Interface language"))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

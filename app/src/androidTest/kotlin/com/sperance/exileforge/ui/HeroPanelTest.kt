@@ -124,7 +124,8 @@ class HeroPanelTest {
         val chaos = CurrencyItem("chaos-orb", "Chaos Orb", "CHAOS_ORB", "", 300)
         val theirs = AuctionLot(id = "lot-1", sellerId = "rival", sellerName = "Соперник", kind = AuctionLotKind.EQUIPMENT,
             title = "Железный шлем", slot = "HELMET", rarity = "RARE", itemLevel = 30, priceOrbId = "chaos-orb", price = 4)
-        val mine = theirs.copy(id = "lot-2", sellerId = "hero", sellerName = "Изгнанник", title = "Мой шлем")
+        // Different prices, so each card's line is its own: the price is per lot, not per showcase.
+        val mine = theirs.copy(id = "lot-2", sellerId = "hero", sellerName = "Изгнанник", title = "Мой шлем", price = 7)
         var bought: String? = null
         compose.setContent { ForgeTheme { Column(Modifier.background(Ink)) {
             ShowcaseList(ForgeState(busy = false, signedIn = true, characterId = "hero", characterOwner = "owner",
@@ -136,6 +137,7 @@ class HeroPanelTest {
         compose.onNodeWithText("Железный шлем").performScrollTo().assertIsDisplayed()
         // The price is always counted in orbs, and the orb catalogue gives it a name.
         compose.onNodeWithText("4 × Сфера хаоса").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("7 × Сфера хаоса").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Ваш лот").performScrollTo().assertIsDisplayed()
         compose.onAllNodesWithText("Купить").onFirst().performScrollTo().performClick()
         compose.runOnIdle { assertEquals("lot-1", bought) }

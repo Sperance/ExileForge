@@ -15,6 +15,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.contract.rarities
 import com.sperance.exileforge.core.contract.slots
+import com.sperance.exileforge.core.contract.text
 import com.sperance.exileforge.core.display.inventoryDocument
 import com.sperance.exileforge.core.display.itemRequirements
 import com.sperance.exileforge.core.display.modifierText

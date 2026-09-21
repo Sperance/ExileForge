@@ -154,12 +154,11 @@ class ServerIntegrationTest {
             assertFalse("version" in edited, "equipment gained a version: $edited")
             assertFailsWith<IllegalArgumentException> { api.update(Catalog.EQUIPMENT, template.entityId, buildJsonObject { put("params", JsonArray(emptyList())) }) }
 
-            // The tree: the start node first, then a neighbour of it, then back again.
-            assertTrue(api.characterTree(id).nodes.isEmpty())
-            val started = api.allocateNode(id, start.code)
-            assertEquals(setOf(start.code), started.takenCodes)
+            // Since 0.12.0 the class's start node comes with the character, free of charge.
+            val started = api.characterTree(id)
+            assertEquals(setOf(start.code), started.takenCodes, "a new character is not on its class node: $started")
             assertTrue(started.total > 0, "a levelled character has no skill points: $started")
-            assertEquals(started.spent, started.nodes.sumOf { node -> node.cost })
+            assertEquals(started.nodes.sumOf { node -> node.cost }, started.spent)
 
             val neighbour = tree.firstOrNull { it.code in start.connections } ?: fail("${start.code} has no neighbour")
             val grown = api.allocateNode(id, neighbour.code)
@@ -167,10 +166,14 @@ class ServerIntegrationTest {
             assertEquals(started.available - neighbour.cost, grown.available)
             // A node's bonuses are a snapshot taken when it was allocated, and they are never rolled.
             assertTrue(grown.nodes.flatMap { node -> node.params }.none { param -> param.rolled })
-            // The start node is the tree's root: only a full reset gives it back.
+            // Taking what is already taken is refused, and the start node is the tree's root.
+            assertFailsWith<ApiFailure> { api.allocateNode(id, start.code) }
             assertFailsWith<ApiFailure> { api.refundNode(id, start.code) }
             assertEquals(setOf(start.code), api.refundNode(id, neighbour.code).takenCodes)
-            assertEquals(0, api.resetTree(id).spent)
+            // A reset is a respec: it leaves the character standing on its class node, not on nothing.
+            val respec = api.resetTree(id)
+            assertEquals(setOf(start.code), respec.takenCodes, "a reset emptied the tree: $respec")
+            assertEquals(started.available, respec.available)
 
             // The auction needs two characters: the server refuses to let one buy its own lot.
             val buyerName = "EF-buyer-${java.util.UUID.randomUUID()}"

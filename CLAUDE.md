@@ -159,7 +159,8 @@ These are enforced by tests and are the point of the client's design:
     character took is a snapshot inside their own document (`Character.skillNodes`), reached through
     `/api/v1/character/skilltree/*`. Allocate, refund and reset each answer with the whole
     `SkillTreeState`; adjacency, cost, the point balance and whether a refund would detach the rest
-    are all checked server-side. The screen draws the seeded coordinates and sends one node code.
+    are all checked server-side. The class's start node arrives with the character and costs
+    nothing, and a reset is a respec that leaves it in place — a new tree is never empty. The screen draws the seeded coordinates and sends one node code.
     `reachableFrom` highlights neighbours so 122 nodes stay navigable — it reads `connections`, it
     does not decide: a highlighted node can still be refused.
 13. **The auction's goods live in the lot.** While a lot is listed the instance has left

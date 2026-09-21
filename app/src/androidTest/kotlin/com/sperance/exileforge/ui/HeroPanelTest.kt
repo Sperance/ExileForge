@@ -127,7 +127,7 @@ class HeroPanelTest {
         val mine = theirs.copy(id = "lot-2", sellerId = "hero", sellerName = "Изгнанник", title = "Мой шлем")
         var bought: String? = null
         compose.setContent { ForgeTheme { Column(Modifier.background(Ink)) {
-            ShowcaseTab(ForgeState(busy = false, signedIn = true, characterId = "hero", characterOwner = "owner",
+            ShowcaseList(ForgeState(busy = false, signedIn = true, characterId = "hero", characterOwner = "owner",
                 profile = com.sperance.exileforge.core.model.command.UserProfile("owner"), orbs = listOf(chaos),
                 auctionFilter = AuctionFilter(), showOwnLots = true,
                 showcase = AuctionPage(listOf(theirs, mine), 0, 20, 2, 1)),

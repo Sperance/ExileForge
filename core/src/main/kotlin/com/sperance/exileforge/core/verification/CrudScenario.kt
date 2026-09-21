@@ -30,8 +30,14 @@ class CrudScenario(private val repository: ItemRepository, private val modifierI
                 check(changes.all { (key, value) -> loaded[key] == value })
                 report(CheckResult(label, true, tr("Свойства подтверждены чтением", "Fields confirmed by a read")))
             }
-            // `image` is the one editable field both catalogues share now that text has moved out.
-            update(buildJsonObject { put("image", "ef-crud-check") }, tr("Изменение + GET", "Update + GET"))
+            // The two catalogues share no editable field at all, so each writes its most inert one:
+            // a price changes nothing about an item, and a required level is only ever printed.
+            // Rarity and item level are deliberately left alone — they decide affix capacity and
+            // which tiers may roll, so editing them would change what the next copy comes out as.
+            update(when (catalog) {
+                Catalog.ITEMS -> buildJsonObject { put("price", 7L) }
+                else -> buildJsonObject { put("requiredLevel", 7) }
+            }, tr("Изменение + GET", "Update + GET"))
             if (catalog == Catalog.EQUIPMENT && modifierId.isNotBlank()) {
                 update(buildJsonObject { put("modifierIds", buildJsonArray { add(modifierId) }) }, tr("Пул модификаторов + GET", "Modifier pool + GET"))
                 update(buildJsonObject { put("modifierIds", JsonArray(emptyList())) }, tr("Очистка пула + GET", "Pool cleared + GET"))

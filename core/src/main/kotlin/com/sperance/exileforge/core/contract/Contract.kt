@@ -22,21 +22,20 @@ val modifierSources = listOf("IMPLICIT", "PREFIX", "SUFFIX", "UNIQUE", "ENCHANTM
 val skillNodeTypes = listOf("START", "SMALL", "NOTABLE", "KEYSTONE")
 val lotKinds = listOf("EQUIPMENT", "ITEM")
 val modifierOperations = listOf("ADD", "INCREASED", "MORE", "SET")
-const val SERVER_COMMIT = "ea6ad038bd5c9628559c0c4647fd9b08c95baf24"
+const val SERVER_COMMIT = "a7fbe483499c1c660111ede3ff66ddf2afec06d4"
 const val SERVER_BRANCH = "claude/tender-pasteur-a36kj2"
-const val SERVER_VERSION = "0.15.0"
+const val SERVER_VERSION = "0.15.1"
 
 fun template(catalog: Catalog, kind: EquipmentKind = EquipmentKind.Weapon): JsonObject = when (catalog) {
     Catalog.CHARACTERS -> defaultObject("character")
     // No text since 0.14.0: a document carries a code and its words live in the locale bundle.
     Catalog.ITEMS -> buildJsonObject {
         put("code", "EF_TEST_SHARD")
-        put("image", JsonNull); put("category", "STONE_STOCK"); put("subCategory", "STONE"); put("price", 1L)
+        put("category", "STONE_STOCK"); put("subCategory", "STONE"); put("price", 1L)
     }
     Catalog.EQUIPMENT -> buildJsonObject {
         put("type", kind.type)
         put("code", "EF_TEST_LEGACY")
-        put("image", JsonNull)
         put("slot", when (kind) { EquipmentKind.Weapon -> "WEAPON_1H"; EquipmentKind.Armor -> "BODY"; EquipmentKind.Accessory -> "RING" })
         put("rarity", "RARE"); put("itemLevel", 30)
         put("modifierIds", JsonArray(emptyList()))
@@ -173,8 +172,8 @@ val JsonObject.entityVersion: Long get() = get("version")?.jsonPrimitive?.longOr
 
 fun editableFields(catalog: Catalog): Set<String> = when (catalog) {
     Catalog.CHARACTERS -> setOf("name", "description")
-    Catalog.ITEMS -> setOf("image", "category", "subCategory", "price")
-    Catalog.EQUIPMENT -> setOf("image", "slot", "rarity", "itemLevel", "weaponType", "durability",
+    Catalog.ITEMS -> setOf("category", "subCategory", "price")
+    Catalog.EQUIPMENT -> setOf("slot", "rarity", "itemLevel", "weaponType", "durability",
         "modifierIds", "baseParams", "requiredLevel", "requiredStrength", "requiredDexterity", "requiredIntelligence")
 }
 

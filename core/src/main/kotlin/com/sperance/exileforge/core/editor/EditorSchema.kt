@@ -32,7 +32,6 @@ fun schemaFields(schema: String, document: JsonObject = JsonObject(emptyMap())):
     // the server's locale files, so renaming a thing is a translation change, not a write.
     "items" -> listOf(
         text("code", tr("Код", "Code"), "EF_NEW_ITEM"),
-        text("image", tr("Изображение (URL)", "Image (URL)")).copy(nullable = true, default = JsonNull),
         text("category", tr("Категория", "Category"), "STONE_STOCK", itemCategories),
         text("subCategory", tr("Подкатегория", "Sub-category"), "STONE"),
         num("price", tr("Цена", "Price"), 0, true, 0.0),
@@ -40,7 +39,6 @@ fun schemaFields(schema: String, document: JsonObject = JsonObject(emptyMap())):
     "equipment" -> buildList {
         addAll(listOf(
             text("code", tr("Код", "Code"), "EF_NEW_EQUIPMENT"),
-            text("image", tr("Изображение (URL)", "Image (URL)")).copy(nullable = true, default = JsonNull),
             choice("slot", tr("Слот", "Slot"), slots),
             choice("rarity", tr("Редкость", "Rarity"), rarities),
             num("itemLevel", tr("Уровень предмета", "Item level"), 1, true, 1.0),

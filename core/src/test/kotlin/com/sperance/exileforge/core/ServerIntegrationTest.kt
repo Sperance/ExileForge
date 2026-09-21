@@ -219,9 +219,12 @@ class ServerIntegrationTest {
 
             // A template is editable; an instance's rolls are not reachable from the catalogue at all.
             // Its words are not editable either: they live in the locale files, not in the document.
-            val edited = api.update(Catalog.EQUIPMENT, template.entityId, buildJsonObject { put("image", "ef-integration") })
-            assertEquals("ef-integration", edited.text("image"))
+            val edited = api.update(Catalog.EQUIPMENT, template.entityId, buildJsonObject { put("requiredLevel", 7) })
+            assertEquals("7", edited.text("requiredLevel"))
             assertFailsWith<IllegalArgumentException> { api.update(Catalog.EQUIPMENT, template.entityId, buildJsonObject { put("description", "by hand") }) }
+            // `image` was removed in 0.15.1; it is refused before the request is built, like any
+            // field the server does not have. An older client's write is simply ignored instead.
+            assertFailsWith<IllegalArgumentException> { api.update(Catalog.EQUIPMENT, template.entityId, buildJsonObject { put("image", "http://old/url.png") }) }
             // An equipment template is a StockEntity: the server keeps no version on it.
             assertFalse("version" in edited, "equipment gained a version: $edited")
             assertFailsWith<IllegalArgumentException> { api.update(Catalog.EQUIPMENT, template.entityId, buildJsonObject { put("params", JsonArray(emptyList())) }) }

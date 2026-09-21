@@ -5,8 +5,8 @@ Guidance for AI assistants working in this repository.
 ## What this project is
 
 ExileForge is an **Android Compose client** (version 2.1.0, `versionCode` 14) for the
-**ktor-bestgame** RPG server (0.15.0), pinned in
-`core/.../contract/Contract.kt` as `SERVER_COMMIT = ea6ad038bd5c9628559c0c4647fd9b08c95baf24`
+**ktor-bestgame** RPG server (0.15.1), pinned in
+`core/.../contract/Contract.kt` as `SERVER_COMMIT = a7fbe483499c1c660111ede3ff66ddf2afec06d4`
 on the server branch `claude/tender-pasteur-a36kj2`.
 
 The client is deliberately **thin**: the server owns items, stats, modifier rolls and inventory.
@@ -186,9 +186,10 @@ These are enforced by tests and are the point of the client's design:
 15. **Release builds require HTTPS** (`usesCleartextTraffic=false`); only the debug manifest
     permits cleartext for local servers. This matters more than usual: the password travels as a
     query parameter, because that is the route the server exposes.
-16. **No network or raster images; a drawing is outlines, not a picture.** Entities carry at most
-    an `image` URL, which the client stores and never fetches, and no image file is ever
-    downloaded. Since 0.15.0 the *shape* of an icon may still come from the server: `icons/
+16. **No network or raster images; a drawing is outlines, not a picture.** No image file is ever
+    downloaded, and no entity names one: the `image` URL both catalogues used to carry was removed
+    in 0.15.1, because nothing had ever fetched it. The *shape* of an icon does come from the
+    server: `icons/
     index.json` carries a fingerprint the server computes from the file, `icons/icons.json` holds
     the drawings and a `code → drawing` table, and the client paints the path data itself. A
     sprite carries alpha and no colour, so `ItemIcon` and `PropertyIcon` tint it by rarity exactly

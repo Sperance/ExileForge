@@ -15,6 +15,7 @@ import com.sperance.exileforge.core.network.RequestJournal
 import com.sperance.exileforge.data.settings.ServerStore
 import com.sperance.exileforge.presentation.features.*
 import com.sperance.exileforge.presentation.state.AppMode
+import com.sperance.exileforge.presentation.state.AppPhase
 import com.sperance.exileforge.presentation.state.ForgeState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -23,7 +24,7 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 
-class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
+class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val deviceId: String = "") {
     val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Main.immediate)
     val mutable = MutableStateFlow(ForgeState())
     val state = mutable.asStateFlow()
@@ -37,6 +38,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
     val sessionViewModel = SessionViewModel(this)
     val checksViewModel = ChecksViewModel(this)
     val auctionViewModel = AuctionViewModel(this)
+    val characterViewModel = CharacterViewModel(this)
 
     fun newApi(server: String): GameApi {
         lateinit var created: GameApi
@@ -56,9 +58,11 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
                 uiLanguage = language
                 val server = store.server.first()
                 api = newApi(server)
-                mutable.update { it.copy(lang = language, server = server, serverDraft = server, busy = false,
-                    message = tr("Войдите в аккаунт для загрузки каталога", "Sign in to load the catalogue")) }
+                mutable.update { it.copy(lang = language, server = server, serverDraft = server, busy = false, deviceId = deviceId) }
                 refreshLocale()
+                // The session itself cannot be restored — the server issues no token — but it can be
+                // made again without asking, and only for someone who last played on this device.
+                if (store.deviceSession.first()) sessionViewModel.playOnThisDevice(silent = true)
             } catch (e: CancellationException) { throw e }
             catch (e: Exception) {
                 api = newApi("http://10.0.2.2:8080/")
@@ -194,7 +198,8 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
 
     fun clearSession() {
         metadataJob?.cancel(); api.logout(); journal.clear()
-        mutable.update { it.copy(signedIn = false, profile = null, sessionEpoch = it.sessionEpoch + 1,
+        mutable.update { it.copy(phase = AppPhase.AUTH, characters = emptyList(), charactersRead = false,
+            signedIn = false, profile = null, sessionEpoch = it.sessionEpoch + 1,
             items = emptyList(), total = 0, page = 0, totalPages = 0, definitions = emptyList(),
             orbs = emptyList(), selectedOrb = "",
             classes = emptyList(), treeNodes = emptyList(), draftClass = "", selectedNode = "", nodeQuery = "",

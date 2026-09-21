@@ -10,6 +10,7 @@ import com.sperance.exileforge.core.model.auction.AuctionLot
 import com.sperance.exileforge.core.model.auction.AuctionPage
 import com.sperance.exileforge.core.model.command.UserProfile
 import com.sperance.exileforge.core.model.currency.CurrencyItem
+import com.sperance.exileforge.core.model.hero.CharacterSummary
 import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.core.model.modifier.ModifierDefinition
 import com.sperance.exileforge.core.model.progression.CharacterClass
@@ -20,7 +21,17 @@ import kotlinx.serialization.json.JsonObject
 
 enum class AppMode { PLAYER, ADMIN }
 
+/**
+ * Which of the three screens the app is on, above the tabs.
+ *
+ * The tabs only make sense once there is an account *and* a character: every command below them
+ * names a character, so the gate is what lets them stop asking which one. [CHARACTERS] is also
+ * the only way back — a character is swapped by leaving the game, never from inside it.
+ */
+enum class AppPhase { AUTH, CHARACTERS, GAME }
+
 data class ForgeState(
+    val phase: AppPhase = AppPhase.AUTH,
     val lang: Lang = uiLanguage,
     val mode: AppMode = AppMode.PLAYER,
     val failure: FailureState? = null,
@@ -36,6 +47,16 @@ data class ForgeState(
     val original: JsonObject? = null, val editorOpen: Boolean = false, val draft: JsonObject = JsonObject(emptyMap()),
     /** The shared modifier catalogue, read once per session so rolled values can be named. */
     val definitions: List<ModifierDefinition> = emptyList(),
+
+    /**
+     * The account's characters, as the server narrowed them, and whether they have been read yet.
+     *
+     * [charactersRead] is not `characters.isNotEmpty()`: an account with none is a real answer and
+     * the one that opens the creation form, so "no characters" and "not asked yet" must differ.
+     */
+    val characters: List<CharacterSummary> = emptyList(), val charactersRead: Boolean = false,
+    /** The identifier this device registers under; shown so a support log can name the account. */
+    val deviceId: String = "",
 
     val characterId: String = "", val characterOwner: String = "", val hero: HeroView? = null,
     /** Templates of the instances on screen, keyed by `equipmentId`; an instance carries only rolls. */
@@ -81,11 +102,35 @@ data class ForgeState(
     val health: String = tr("Соединение ещё не проверено", "The connection has not been checked yet"),
 ) {
     val isAdmin: Boolean get() = signedIn && profile?.role == "ADMIN"
+    /**
+     * The character every command on every tab acts on; the gate guarantees there is one.
+     *
+     * The loaded hero wins over the menu's snapshot, which was taken before any experience was
+     * earned — otherwise the banner would keep showing the level the player came in on.
+     */
+    val character: CharacterSummary? get() = hero?.character?.takeIf { it.id == characterId }
+        ?: characters.firstOrNull { it.id == characterId }
+    /** The server refuses a fourth, so the button that would ask for one is not offered. */
+    val characterSlotsLeft: Int get() = (MAX_CHARACTERS - characters.size).coerceAtLeast(0)
+    /** An account nobody named: a device registration leaves `name` and `login` empty. */
+    val accountTitle: String get() = profile?.name?.takeIf { it.isNotBlank() }
+        ?: profile?.login?.takeIf { it.isNotBlank() }
+        ?: tr("Гость", "Guest") + " · …${deviceId.takeLast(6)}"
     /** Lots the character may act on: the showcase hides their own unless asked not to. */
     val ownLots: List<AuctionLot> get() = myLots.filter { it.onSale }
     /** The class the shown hero belongs to; the server owns the base it hands out. */
     val heroClass: CharacterClass? get() = hero?.let { view -> classes.firstOrNull { it.id == view.character.classId } }
     val adminTools: Boolean get() = isAdmin && mode == AppMode.ADMIN
-    val canEdit: Boolean get() = signedIn && (catalog == Catalog.CHARACTERS || adminTools)
+    /** The editor is an administrator's tool now that a character is made from the menu. */
+    val canEdit: Boolean get() = signedIn && adminTools
     val ownsCharacter: Boolean get() = signedIn && profile?.id == characterOwner
 }
+
+/**
+ * How many characters one account may hold — the server's `CONST_USER_MAX_CHARACTERS`.
+ *
+ * A copy of a server constant, which the client normally refuses to keep. It earns its place by
+ * being display only: it greys the create button early instead of letting the player fill a form
+ * the server will reject with `CH_005`. The refusal is still shown if the numbers ever disagree.
+ */
+const val MAX_CHARACTERS = 3

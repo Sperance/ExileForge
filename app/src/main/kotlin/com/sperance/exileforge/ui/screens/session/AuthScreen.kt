@@ -1,0 +1,140 @@
+package com.sperance.exileforge.ui.screens.session
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CutCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.i18n.Lang
+import com.sperance.exileforge.core.i18n.tr
+import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.ui.components.ForgePanel
+import com.sperance.exileforge.ui.components.InfoCard
+import com.sperance.exileforge.ui.components.OrnateDivider
+import com.sperance.exileforge.ui.components.voidBackdrop
+import com.sperance.exileforge.ui.icons.ForgeGlyphs
+import com.sperance.exileforge.ui.theme.*
+
+/**
+ * The way in, and the first screen the app ever shows.
+ *
+ * Two doors, side by side: the device's own account, which needs nothing typed, and a login for
+ * whoever has one. The first is the game; the second is how an administrator reaches the tools.
+ *
+ * The server's address lives here too, and that is not a convenience. Everything below this screen
+ * is gated on a session, so a wrong address would otherwise lock the app with no way to correct it.
+ */
+@Composable fun AuthScreen(s: ForgeState, vm: ForgeViewModel, snackbar: SnackbarHostState) {
+    Scaffold(containerColor = Ink,
+        snackbarHost = { SnackbarHost(snackbar) { data -> Snackbar(data, containerColor = PanelRaised, contentColor = Parchment, actionColor = Gold, shape = MaterialTheme.shapes.small) } }) { padding ->
+        Column(Modifier.fillMaxSize().padding(padding).imePadding().voidBackdrop()
+            .verticalScroll(rememberScrollState()).padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { LanguageCorner(s.lang, vm::language) }
+            Spacer(Modifier.height(8.dp))
+            Box(Modifier.size(84.dp).border(1.dp, Gold.copy(alpha = .5f), CutCornerShape(18.dp)), contentAlignment = Alignment.Center) {
+                Icon(ForgeGlyphs.Sigil, null, tint = Gold, modifier = Modifier.size(48.dp))
+            }
+            Text("EXILE FORGE", style = MaterialTheme.typography.headlineMedium, color = GoldBright)
+            Text(tr("АРСЕНАЛ ИЗГНАННИКА", "THE EXILE'S ARSENAL"), style = MaterialTheme.typography.labelSmall, color = Muted)
+            if (s.busy) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised) else OrnateDivider(Gold)
+
+            Button(enabled = !s.busy, onClick = vm::playOnThisDevice, modifier = Modifier.fillMaxWidth().height(56.dp)) {
+                Icon(ForgeGlyphs.Portal, null, Modifier.size(20.dp)); Spacer(Modifier.width(10.dp))
+                Text(tr("Играть", "Play"), style = MaterialTheme.typography.titleMedium)
+            }
+            Text(tr("Учётная запись заводится сама, по этому устройству. Пароля нет и вводить нечего.",
+                    "The account is created by itself, from this device. There is no password to type."),
+                color = Muted, style = MaterialTheme.typography.bodySmall)
+
+            LoginPanel(s, vm)
+            ServerPanel(s, vm)
+
+            if (s.error && s.message != null) InfoCard(tr("Не удалось войти", "Could not sign in"), s.message, failure = true)
+        }
+    }
+}
+
+/** The login half: an administrator's way in, and anyone who was given credentials. */
+@Composable private fun LoginPanel(s: ForgeState, vm: ForgeViewModel) {
+    var open by rememberSaveable { mutableStateOf(false) }
+    var login by rememberSaveable { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    ForgePanel {
+        Row(Modifier.fillMaxWidth().clickable(enabled = !s.busy) { open = !open },
+            verticalAlignment = Alignment.CenterVertically) {
+            Icon(ForgeGlyphs.Exile, null, tint = Gold, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(10.dp))
+            Text(tr("Войти по логину", "Sign in with a login"), modifier = Modifier.weight(1f))
+            Text(if (open) "−" else "+", color = Gold, style = MaterialTheme.typography.titleMedium)
+        }
+        if (open) {
+            OutlinedTextField(login, { login = it }, enabled = !s.busy, label = { Text(tr("Логин", "Login")) },
+                singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(password, { password = it }, enabled = !s.busy, label = { Text(tr("Пароль", "Password")) },
+                singleLine = true, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
+            Button(enabled = !s.busy && login.isNotBlank() && password.isNotEmpty(),
+                onClick = { vm.login(login, password); password = "" }, modifier = Modifier.fillMaxWidth()) {
+                Text(tr("Войти", "Sign in"))
+            }
+            // The password travels as a query parameter, so this is worth saying out loud.
+            Text(tr("Пароль уходит параметром запроса — это форма маршрута сервера. Вне локальной сети нужен HTTPS.",
+                    "The password travels as a query parameter, because that is the route the server exposes. Outside a local network, use HTTPS."),
+                color = Muted, style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+/** The address, reachable before the gate so a wrong one never locks the app. */
+@Composable private fun ServerPanel(s: ForgeState, vm: ForgeViewModel) {
+    var open by rememberSaveable { mutableStateOf(false) }
+    ForgePanel {
+        Row(Modifier.fillMaxWidth().clickable(enabled = !s.busy) { open = !open },
+            verticalAlignment = Alignment.CenterVertically) {
+            Icon(ForgeGlyphs.Portal, null, tint = Gold, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text(tr("Сервер", "Server"))
+                Text(s.server, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1)
+            }
+            Text(if (open) "−" else "+", color = Gold, style = MaterialTheme.typography.titleMedium)
+        }
+        if (open) {
+            OutlinedTextField(s.serverDraft, vm::serverDraft, enabled = !s.busy,
+                label = { Text(tr("Адрес сервера", "Server address")) },
+                supportingText = { Text(tr("Без /api/v1: https://example.com/", "Without /api/v1: https://example.com/")) },
+                singleLine = true, modifier = Modifier.fillMaxWidth())
+            Button(enabled = !s.busy, onClick = vm::connect, modifier = Modifier.fillMaxWidth()) {
+                Text(tr("Сохранить и подключиться", "Save and connect"))
+            }
+            Text(s.health, color = Muted, style = MaterialTheme.typography.bodySmall)
+            // The identifier is not a secret, and naming an account in a support log needs it.
+            Text(tr("Устройство: …${s.deviceId.takeLast(12)}", "Device: …${s.deviceId.takeLast(12)}"),
+                color = Muted, style = MaterialTheme.typography.labelSmall)
+        }
+    }
+}
+
+/** The language switch, which on this screen has no banner to live in. */
+@Composable private fun LanguageCorner(lang: Lang, onLanguage: (Lang) -> Unit) {
+    Row(Modifier.border(1.dp, Gold.copy(alpha = .35f), CutCornerShape(6.dp)), verticalAlignment = Alignment.CenterVertically) {
+        Lang.entries.forEach { option ->
+            val active = option == lang
+            Text(option.short, color = if (active) Ink else Muted, style = MaterialTheme.typography.labelSmall,
+                modifier = Modifier.background(if (active) Gold else Color.Transparent)
+                    .clickable(enabled = !active) { onLanguage(option) }
+                    .padding(horizontal = 9.dp, vertical = 6.dp))
+        }
+    }
+}

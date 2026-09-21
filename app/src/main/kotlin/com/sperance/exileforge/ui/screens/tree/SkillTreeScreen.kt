@@ -17,7 +17,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.nodeTypeTitle
 import com.sperance.exileforge.core.i18n.tr
-import com.sperance.exileforge.core.model.EntitySource
 import com.sperance.exileforge.core.model.skilltree.SkillNodeType
 import com.sperance.exileforge.core.model.skilltree.SkillTreeNode
 import com.sperance.exileforge.core.model.skilltree.reachableFrom
@@ -38,7 +37,6 @@ import kotlinx.serialization.json.putJsonArray
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         ScreenHeader(tr("Дерево навыков", "Passive tree"),
             tr("Узлов в дереве: ${s.treeNodes.size}", "${s.treeNodes.size} nodes in the tree"), ForgeGlyphs.Constellation)
-        EntitySpinner(tr("Персонаж", "Character"), s.characterId, EntitySource.CHARACTER, !s.busy, vm::characterId)
         SkillTreePanel(s, vm::selectNode, vm::allocateNode, vm::refundNode, vm::resetTree, vm::nodeQuery)
     }
 }
@@ -56,7 +54,7 @@ import kotlinx.serialization.json.putJsonArray
     val taken = hero?.tree?.takenCodes.orEmpty()
     val enabled = !s.busy && s.signedIn && (s.ownsCharacter || s.isAdmin) && hero != null
     if (hero == null) InfoCard(tr("Герой не загружен", "The hero is not loaded"),
-        tr("Выберите персонажа и обновите его во вкладке «Герой».", "Choose a character and refresh it on the Hero tab."))
+        tr("Обновите героя во вкладке «Герой».", "Refresh the hero on the Hero tab."))
     else ForgePanel {
         Engraved(hero.character.name)
         PropertyRow(tr("Очков всего", "Points total"), hero.tree.total.toString(), "level")

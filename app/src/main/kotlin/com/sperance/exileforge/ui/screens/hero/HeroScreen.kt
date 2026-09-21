@@ -15,7 +15,6 @@ import com.sperance.exileforge.core.contract.text
 import com.sperance.exileforge.core.display.inventoryDocument
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.i18n.tr
-import com.sperance.exileforge.core.model.EntitySource
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.*
@@ -36,9 +35,8 @@ import com.sperance.exileforge.ui.theme.*
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 ScreenHeader(tr("Арсенал героя", "Hero's arsenal"),
                     tr("Предметов в инвентаре: ${stash.size}", "${stash.size} items in the inventory"), ForgeGlyphs.Stash)
-                EntitySpinner(tr("Персонаж", "Character"), s.characterId, EntitySource.CHARACTER, !s.busy, vm::characterId)
-                if (!s.signedIn) InfoCard(tr("Войдите в аккаунт", "Sign in"), tr("Во вкладке «Аккаунт» войдите, чтобы посмотреть снаряжение своего персонажа.", "Sign in on the Account tab to see your character's gear."))
-                OutlinedButton(enabled = !s.busy && s.signedIn && s.characterId.isNotBlank(), onClick = vm::loadHero, modifier = Modifier.fillMaxWidth()) {
+                // The character is the one chosen in the menu; no screen below the gate picks another.
+                OutlinedButton(enabled = !s.busy, onClick = vm::loadHero, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Outlined.Refresh, null); Spacer(Modifier.width(8.dp)); Text(tr("Обновить героя", "Refresh the hero"))
                 }
                 HeroEquipmentPanel(s, vm::unequip)
@@ -55,7 +53,7 @@ import com.sperance.exileforge.ui.theme.*
         val visible = stash.filter { instance -> documents[instance.id]?.let { (slot.isBlank() || it.text("slot") == slot) && it.text("name").contains(query, true) } == true }
         if (visible.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }) {
             InfoCard(if (s.hero == null) tr("Арсенал ещё не загружен", "The stash is not loaded yet") else tr("Ничего не найдено", "Nothing found"),
-                tr("Выберите персонажа, обновите героя или измените фильтры.", "Choose a character, refresh the hero or change the filters."))
+                tr("Обновите героя или измените фильтры.", "Refresh the hero or change the filters."))
         }
         items(visible, key = { it.id }) { instance ->
             ItemCard(documents.getValue(instance.id), enabled = !s.busy, selected = instance.id == s.selectedEquipment, definitions = s.definitions,

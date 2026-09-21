@@ -7,14 +7,17 @@ import com.sperance.exileforge.core.model.CatalogFilter
 import com.sperance.exileforge.core.network.normalizeServer
 import com.sperance.exileforge.presentation.ForgeRuntime
 import com.sperance.exileforge.presentation.state.AppMode
+import com.sperance.exileforge.presentation.state.AppPhase
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 class SessionViewModel(private val runtime: ForgeRuntime) {
     private val state get() = runtime.state
 
     fun mode(mode: AppMode) { with(runtime) {
         if (state.value.busy || state.value.editorOpen || mode == AppMode.ADMIN && !state.value.isAdmin) return
-        mutable.update { it.copy(mode = mode, catalog = if (mode == AppMode.PLAYER) Catalog.CHARACTERS else Catalog.EQUIPMENT, items = emptyList(), page = 0, tab = 0, filter = CatalogFilter(), query = "") }
+        mutable.update { it.copy(mode = mode, catalog = Catalog.EQUIPMENT, items = emptyList(), page = 0, tab = 0, filter = CatalogFilter(), query = "") }
         task { restoreFilters(); loadPage(0) }
     } }
 
@@ -43,17 +46,49 @@ class SessionViewModel(private val runtime: ForgeRuntime) {
     fun login(login: String, password: String) { with(runtime) { task {
         clearSession()
         api.capabilities().requireWorkbench()
-        val profile = api.login(login, password)
-        mutable.update { it.copy(signedIn = true, profile = profile, mode = AppMode.PLAYER, catalog = Catalog.CHARACTERS,
-            message = tr("Вход выполнен", "Signed in"), tab = 0) }
+        signedIn(api.login(login, password), byDevice = false)
+    } } }
+
+    /**
+     * The account this device owns, registered on the way in if the server has never seen it.
+     *
+     * No credentials are typed and none are stored: the identifier *is* the account, which is why
+     * losing it loses the characters. [silent] is the relaunch path — it must not leave an error
+     * banner over the sign-in screen the player is already looking at.
+     */
+    fun playOnThisDevice(silent: Boolean = false) { with(runtime) { task {
+        clearSession()
+        try {
+            api.capabilities().requireWorkbench()
+            signedIn(api.loginByDevice(state.value.deviceId), byDevice = true)
+        } catch (e: CancellationException) { throw e }
+        catch (e: Exception) { if (!silent) throw e }
+    } } }
+
+    /**
+     * What every sign-in ends with: the account is the session, and the gate opens one step.
+     *
+     * The character is never chosen here. Which characters exist is the next screen's question,
+     * and it is the same question for a player and for an administrator — the editor and the
+     * checks are reached from inside the game, so everyone passes through the menu.
+     */
+    private suspend fun signedIn(profile: com.sperance.exileforge.core.model.command.UserProfile, byDevice: Boolean) { with(runtime) {
+        mutable.update { it.copy(signedIn = true, profile = profile, mode = AppMode.PLAYER, catalog = Catalog.EQUIPMENT,
+            phase = AppPhase.CHARACTERS, message = tr("Вход выполнен", "Signed in"), tab = 0) }
+        store.saveDeviceSession(byDevice)
         restoreFilters()
-        loadPage(0)
         ensureDefinitions()
         // The catalogue is codes without it, and the first attempt may have run before the server was up.
         refreshLocale()
-    } } }
+        runtime.characterViewModel.readCharacters()
+    } }
 
-    fun logout() { with(runtime) { if (!state.value.busy) clearSession() } }
+    /** Signing out is explicit, so the next launch must not sign straight back in. */
+    fun logout() { with(runtime) {
+        if (state.value.busy) return
+        clearSession()
+        scope.launch { store.saveDeviceSession(false) }
+    } }
 
     fun changePassword(current: String, replacement: String) { with(runtime) { task(writing = true) {
         require(replacement.length in 6..64) { tr("Новый пароль: от 6 до 64 символов", "New password: 6 to 64 characters") }

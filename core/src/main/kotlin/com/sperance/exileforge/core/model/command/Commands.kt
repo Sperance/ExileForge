@@ -58,6 +58,10 @@ data class ApiCapabilities(val routes: Set<String>) {
     fun requireWorkbench() {
         val required = listOf(
             "GET" to "/api/v1/user/login",
+            // The player never types anything: the account is found, or made, by device.
+            "GET" to "/api/v1/user/login/byDeviceId",
+            "POST" to "/api/v1/user/byDeviceId",
+            "GET" to "/api/v1/character/byUser",
             "GET" to "/api/v1/equipment/paged",
             "GET" to "/api/v1/character/inventory/equipments",
             "GET" to "/api/v1/character/inventory/stats",

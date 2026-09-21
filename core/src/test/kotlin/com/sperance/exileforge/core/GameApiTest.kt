@@ -42,6 +42,61 @@ class GameApiTest {
     @After fun after() { server.shutdown(); serverLocale = LocaleBundle() }
     private fun ok(data: String) { server.enqueue(MockResponse().setBody("""{"success":true,"data":$data}""")) }
     private fun failure(status: Int) { server.enqueue(MockResponse().setResponseCode(status).setBody("""{"success":false,"error":{"errorCode":"REJECTED","message":"Rejected"}}""")) }
+    private fun refusal(status: Int, code: String, message: String) {
+        server.enqueue(MockResponse().setResponseCode(status).setBody("""{"success":false,"error":{"errorCode":"$code","message":"$message"}}"""))
+    }
+
+    @Test fun `a known device signs straight in and nothing is registered`(): Unit = runBlocking {
+        api.logout()
+        val sent = server.requestCount
+        ok("""{"id":"$other","version":3,"name":"","login":"","role":"USER","isActive":true,"countCharacters":2}""")
+        val profile = api.loginByDevice("device-uuid")
+        assertEquals("/game/api/v1/user/login/byDeviceId?deviceId=device-uuid", server.takeRequest().path)
+        assertEquals(other, profile.id)
+        assertEquals(2, profile.countCharacters)
+        // The account document is the whole session, exactly as a password login leaves it.
+        assertEquals(other, assertNotNull(api.currentUser()).id)
+        // One request: an account that exists is never re-registered.
+        assertEquals(sent + 1, server.requestCount)
+    }
+
+    @Test fun `an unknown device is registered on the spot`(): Unit = runBlocking {
+        api.logout()
+        // US_015 is not an error to report — it is the server saying "this one is new".
+        refusal(404, "US_015", "User with deviceId device-uuid not found")
+        ok("""{"id":"$other","version":0,"name":"","login":"","role":"USER","isActive":true}""")
+        assertEquals(other, api.loginByDevice("device-uuid").id)
+        assertEquals("/game/api/v1/user/login/byDeviceId?deviceId=device-uuid", server.takeRequest().path)
+        val registration = server.takeRequest()
+        assertEquals("POST", registration.method)
+        assertEquals("/game/api/v1/user/byDeviceId?deviceId=device-uuid", registration.path)
+    }
+
+    @Test fun `any other device refusal is reported, not registered around`(): Unit = runBlocking {
+        api.logout()
+        val sent = server.requestCount
+        // A disabled account must not be quietly replaced by a fresh one under the same device.
+        refusal(400, "US_011", "Account is inactive")
+        assertFailsWith<ApiFailure> { api.loginByDevice("device-uuid") }
+        assertEquals(sent + 1, server.requestCount)
+        assertNull(api.currentUser())
+        // A device the client could not identify never reaches the network.
+        assertFailsWith<IllegalArgumentException> { api.loginByDevice("  ") }
+        assertEquals(sent + 1, server.requestCount)
+    }
+
+    @Test fun `the character menu reads one account's characters and no one else's`(): Unit = runBlocking {
+        val sent = server.requestCount
+        ok("""[{"_id":"$id","userId":"$other","name":"Изгнанник","level":7,"classId":"$id"},
+               {"_id":"$other","userId":"$other","name":"Ведьма","level":1,"classId":"$other"}]""")
+        val mine = api.charactersOf(other)
+        assertEquals("/game/api/v1/character/byUser?userId=$other", server.takeRequest().path)
+        assertEquals(listOf("Изгнанник", "Ведьма"), mine.map { it.name })
+        assertEquals(7, mine.first().level)
+        // The id is checked before the request is built, as everywhere else.
+        assertFailsWith<IllegalArgumentException> { api.charactersOf("nope") }
+        assertEquals(sent + 1, server.requestCount)
+    }
 
     @Test fun `login answers with the account itself and never records the password`(): Unit = runBlocking {
         assertEquals("ADMIN", assertNotNull(api.currentUser()).role)
@@ -324,7 +379,9 @@ class GameApiTest {
     }
 
     @Test fun `capabilities are read from the server's own route table`(): Unit = runBlocking {
-        val routes = listOf("GET" to "/api/v1/user/login", "GET" to "/api/v1/equipment/paged", "GET" to "/api/v1/character/inventory/equipments",
+        val routes = listOf("GET" to "/api/v1/user/login", "GET" to "/api/v1/user/login/byDeviceId",
+            "POST" to "/api/v1/user/byDeviceId", "GET" to "/api/v1/character/byUser",
+            "GET" to "/api/v1/equipment/paged", "GET" to "/api/v1/character/inventory/equipments",
             "GET" to "/api/v1/character/inventory/stats", "POST" to "/api/v1/character/inventory/itemToInventory",
             "POST" to "/api/v1/characterequipment/equip", "POST" to "/api/v1/characterequipment/applyOrb",
             "GET" to "/api/v1/modifierdefinition", "GET" to "/api/v1/characterclass", "GET" to "/api/v1/experiencelevel",

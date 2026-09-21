@@ -6,7 +6,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.i18n.tr
-import com.sperance.exileforge.core.model.EntitySource
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.*
@@ -26,11 +25,8 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
         Spacer(Modifier.height(12.dp))
         ScreenHeader(tr("Аукцион", "Auction"),
             tr("Лотов на витрине: ${s.showcase.totalItems}", "${s.showcase.totalItems} lots on the showcase"), ForgeGlyphs.Orb)
-        EntitySpinner(tr("Персонаж", "Character"), s.characterId, EntitySource.CHARACTER, !s.busy, vm::characterId)
-        // Opening the tab with a character chosen is what fills both lists.
-        LaunchedEffect(s.characterId, s.sessionEpoch) { if (s.characterId.isNotBlank() && s.signedIn) vm.loadAuction() }
-        if (!s.signedIn) { InfoCard(tr("Войдите в аккаунт", "Sign in"), tr("Торговать можно только своим персонажем.", "You can only trade with your own character.")); return@Column }
-        if (s.characterId.isBlank()) { InfoCard(tr("Персонаж не выбран", "No character chosen"), tr("Выберите персонажа, чтобы открыть аукцион.", "Choose a character to open the auction.")); return@Column }
+        // Opening the tab is what fills both lists; the character is the one from the menu.
+        LaunchedEffect(s.characterId, s.sessionEpoch) { if (s.characterId.isNotBlank()) vm.loadAuction() }
         s.auctionLocked?.let { locked ->
             InfoCard(tr("Аукцион закрыт", "The auction is closed"), locked, failure = true)
             OutlinedButton(enabled = !s.busy, onClick = vm::loadAuction, modifier = Modifier.fillMaxWidth()) {

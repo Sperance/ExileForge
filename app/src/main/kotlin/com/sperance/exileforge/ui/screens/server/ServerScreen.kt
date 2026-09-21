@@ -25,6 +25,15 @@ import com.sperance.exileforge.ui.theme.Muted
         ScreenHeader(tr("Врата мира", "Gateway"), tr("Подключение к ktor-bestgame", "Connection to ktor-bestgame"), ForgeGlyphs.Portal)
         ForgePanel {
             Engraved(tr("Изгнанник", "Exile"))
+            // A character is swapped by leaving the game, never from inside a tab: every button
+            // below is bound to the one chosen in the menu, and this is the way back to it.
+            s.character?.let { hero ->
+                PropertyRow(tr("Персонаж", "Character"), hero.name + tr(" · ур. ${hero.level}", " · lvl ${hero.level}"), "character")
+            }
+            OutlinedButton(enabled = !s.busy && !s.editorOpen, onClick = vm::leaveGame, modifier = Modifier.fillMaxWidth()) {
+                Text(tr("Сменить персонажа", "Change character"))
+            }
+            if (s.editorOpen) Text(tr("Сначала закройте редактор.", "Close the editor first."), color = Muted, style = MaterialTheme.typography.bodySmall)
             LoginForm(s, vm)
         }
         // The editor and the checks left the bottom bar so it fits five destinations for everyone;

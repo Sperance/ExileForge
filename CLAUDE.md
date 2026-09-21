@@ -4,9 +4,9 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.0.0, `versionCode` 13) for the
-**ktor-bestgame** RPG server (0.14.0), pinned in
-`core/.../contract/Contract.kt` as `SERVER_COMMIT = 3a07a4f8d3e65a1365f088b4ab710e1c609ee257`
+ExileForge is an **Android Compose client** (version 2.1.0, `versionCode` 14) for the
+**ktor-bestgame** RPG server (0.14.1), pinned in
+`core/.../contract/Contract.kt` as `SERVER_COMMIT = f43587ba27e9159048bc638a0c191f0efbe3742d`
 on the server branch `claude/tender-pasteur-a36kj2`.
 
 The client is deliberately **thin**: the server owns items, stats, modifier rolls and inventory.
@@ -38,15 +38,16 @@ core/                                   Pure JVM library (java-library + kotlin-
   verification/  CrudScenario.kt        Admin-only self-check run from the Checks screen
 app/                                    Android application (minSdk 26, compile/target SDK 37)
   MainActivity.kt, ForgeApplication.kt  Entry points; Application owns RequestJournal + ServerStore
-  presentation/  ForgeRuntime.kt        Shared coroutine scope, GameApi instance, MutableStateFlow<ForgeState>
+  presentation/  ForgeRuntime.kt        Shared coroutine scope, GameApi instance, MutableStateFlow<ForgeState>, locale + device sign-in
                  ForgeViewModel.kt      Lifecycle owner and thin facade delegating to feature models
-                 features/              Catalog, Editor, Hero, Session, Checks, Auction view models
+                 features/              Catalog, Editor, Hero, Session, Character, Checks, Auction view models
                  state/ForgeState.kt    One immutable state object for the whole app
   ui/            ForgeApp.kt            Scaffold, banner with RU/EN switch, bottom navigation, tab dispatch
-                 screens/               catalog, editor, hero, tree, auction, checks, server
+                 screens/               session (auth + character menu), catalog, editor, hero, tree, auction, checks, server
                  components/            ItemCard, PropertyRow, InfoCard, spinners and Ornament.kt
                  forms/, icons/ (ForgeGlyphs vector set, ItemEmblem, ItemIcon/PropertyIcon), theme/
-  data/settings/ServerStore.kt          DataStore Preferences: base URL, saved filters, language
+  data/settings/ServerStore.kt          DataStore Preferences: base URL, saved filters, language, locale bundles, device-session flag
+                 DeviceId.kt            UUID v5 over the hardware fingerprint plus ANDROID_ID
 docs/                                   Russian reference docs (API_CONTRACT, VALIDATION)
 scripts/client_server_test.py           Boots the real backend + MongoDB and runs ServerIntegrationTest
 .github/workflows/android.yml           `build` job (unit/lint/APK/emulator UI) and `client-server` job
@@ -104,7 +105,12 @@ page, editor draft, hero, checks, failures. Derived permissions are computed pro
 forwards to a feature model. Add new actions to the feature model **and** expose a one-line
 delegate here, because screens receive `ForgeViewModel`.
 
-**Navigation** is an `Int` tab in state, dispatched by a `when` in `ForgeApp`:
+**Navigation** has two levels. Above the tabs is `AppPhase` (`AUTH` → `CHARACTERS` → `GAME`),
+dispatched first by `ForgeApp`: the sign-in screen and the character menu are full-screen, with no
+banner and no bottom bar. Only `GAME` builds the scaffold. Nothing below the gate writes
+`characterId` — `CharacterViewModel` owns it, so a tab can never move the player onto another hero.
+
+Inside `GAME` navigation is an `Int` tab in state, dispatched by a `when` in `ForgeApp`:
 `0` catalog/characters, `1` editor, `2` checks (admin only — `ForgeRuntime.tab` blocks it
 otherwise), `3` account/server, `4` hero, `5` skill tree, `6` auction.
 The bottom bar carries five destinations for everyone (`0, 4, 5, 6, 3`); the editor and the checks
@@ -196,6 +202,20 @@ These are enforced by tests and are the point of the client's design:
     when `error.<code>` has no placeholder, because the error envelope carries the finished
     sentence and the code but never the arguments — see `locError`.
 
+18. **A session is made, never restored; a character is chosen once per session.** The server
+    issues no token, so a relaunch signs in again — silently by device when `ServerStore`'s
+    `deviceSession` flag says the last session was played that way, and an explicit sign-out
+    clears it. Registration *is* the sign-in: `GET /user/login/byDeviceId` answering `US_015`
+    means "never seen", and that becomes `POST /user/byDeviceId`; any other refusal is reported,
+    never registered around. The identifier is derived in `:app` (`deviceId()`) as a UUID v5 over
+    `MANUFACTURER|MODEL|DEVICE|HARDWARE|ANDROID_ID` — the `Build.*` parts describe the *model*, so
+    `ANDROID_ID` is what actually makes it unique and hardware alone would hand two owners of the
+    same phone one account. After signing in everyone passes through the character menu, an
+    administrator included: `GET /character/byUser` lists the account's characters, at most
+    `MAX_CHARACTERS`. The menu enters the game directly when there is exactly one, and opens the
+    creation form when there are none — an empty list is not a choice. The server address lives on
+    the sign-in screen because behind the gate there is no way back to it.
+
 ## Conventions
 
 - **Language split:** code, comments, commit messages and test names are English; every
@@ -233,8 +253,9 @@ cover it with a MockWebServer test asserting path, query and exact body, then ex
 feature view model + a `ForgeViewModel` delegate.
 
 **Adding a screen:** create `ui/screens/<feature>/`, add the tab index to the `when` in
-`ForgeApp` and to the `destinations`/`icons` maps if it belongs in the bottom bar, and guard
-admin-only tabs in `ForgeRuntime.tab`.
+`GameScaffold` and to the `destinations`/`icons` maps if it belongs in the bottom bar, and guard
+admin-only tabs in `ForgeRuntime.tab`. A screen above the gate goes in the `when (s.phase)` of
+`ForgeApp` instead and builds its own scaffold.
 
 **Adding an editor field:** extend `schemaFields` in `EditorSchema.kt` and, if it is writable,
 `editableFields` (or `creationFields`) in `Contract.kt`; the form UI is generated from the schema.

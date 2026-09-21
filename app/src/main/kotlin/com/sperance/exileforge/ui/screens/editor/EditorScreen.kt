@@ -59,7 +59,6 @@ import kotlinx.serialization.json.JsonPrimitive
                     IconButton(enabled = !s.busy, onClick = onClose) { Icon(Icons.Outlined.Close, tr("Закрыть редактор", "Close the editor")) }
                 }
                 if (s.catalog != Catalog.CHARACTERS) ItemCard(s.draft, enabled = false, detailed = true, definitions = s.definitions, actionLabel = tr("Предпросмотр", "Preview"))
-                if (s.catalog == Catalog.CHARACTERS && s.original != null) OutlinedButton(enabled = !s.busy, onClick = { vm.showCharacterInventory(s.original.entityId) }) { Text(tr("Просмотреть экипировку", "View the equipment")) }
                 if (s.catalog == Catalog.CHARACTERS && s.original == null) {
                     Text(tr("Владельцем станет текущий пользователь. Сервер проверит лимит персонажей.", "The current user becomes the owner. The server checks the character limit."), color = Muted)
                     // The class is the whole stat base and the way into the tree, and the server has

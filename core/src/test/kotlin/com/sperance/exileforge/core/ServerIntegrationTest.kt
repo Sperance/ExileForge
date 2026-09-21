@@ -97,6 +97,27 @@ class ServerIntegrationTest {
             assertEquals(1, api.search(Catalog.CHARACTERS, 0, CatalogFilter(query = name)).items.size)
             assertTrue(api.inventory(id).isEmpty())
 
+            // The character menu reads one account's characters, not the whole collection.
+            val mine = api.charactersOf(admin.id)
+            assertTrue(mine.any { it.id == id }, "the account's own character is missing: ${mine.map { it.name }}")
+            assertTrue(mine.all { it.userId == admin.id }, "someone else's character came back: $mine")
+            assertTrue(mine.size <= 3, "an account cannot hold more than three characters: ${mine.size}")
+            // An unknown account is refused rather than answered with an empty list.
+            assertFailsWith<ApiFailure> { api.charactersOf("0123456789abcdef01234567") }
+
+            // Registration by device, which is the whole sign-up: the first attempt is refused with
+            // US_015 and turns into the POST that creates the account.
+            val guest = GameApi(url)
+            val device = "ef-integration-${java.util.UUID.randomUUID()}"
+            val registered = guest.loginByDevice(device)
+            assertEquals("USER", registered.role, "a device account must not be privileged")
+            assertEquals(0, registered.countCharacters, "a fresh account already has characters")
+            // The second sign-in finds the same account rather than making a second one.
+            assertEquals(registered.id, GameApi(url).loginByDevice(device).id)
+            assertTrue(guest.charactersOf(registered.id).isEmpty(), "a new account starts with no characters")
+            // The account is left behind: a game client has no route that deletes one, and the
+            // client-server job seeds a fresh database for every run anyway.
+
             // A random grant of a chosen rarity and category: the client names a base, the server rolls it.
             val template = api.randomTemplate("RARE", "HELMET")
             assertEquals("HELMET", template.text("slot"))

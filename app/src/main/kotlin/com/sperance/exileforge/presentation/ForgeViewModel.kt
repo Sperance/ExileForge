@@ -14,8 +14,8 @@ import com.sperance.exileforge.presentation.state.AppMode
 import kotlinx.serialization.json.JsonObject
 
 /** Lifecycle owner and compatibility facade; screen actions live in feature models. */
-class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() {
-    private val runtime = ForgeRuntime(store, journal)
+class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: String) : ViewModel() {
+    private val runtime = ForgeRuntime(store, journal, deviceId)
     val state = runtime.state
     val logs = runtime.logs
     fun tab(tab: Int) = runtime.tab(tab)
@@ -40,9 +40,7 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() 
     fun save() = runtime.editorViewModel.save()
     fun delete() = runtime.editorViewModel.delete()
     fun editInventoryBase(id: String) = runtime.editorViewModel.editInventoryBase(id)
-    fun characterId(value: String) = runtime.heroViewModel.characterId(value)
     fun selectEquipment(value: String) = runtime.heroViewModel.selectEquipment(value)
-    fun showCharacterInventory(id: String) = runtime.heroViewModel.showCharacterInventory(id)
     fun loadHero() = runtime.heroViewModel.loadHero()
     fun equip(instanceId: String) = runtime.heroViewModel.equip(instanceId)
     fun unequip(instanceId: String) = runtime.heroViewModel.unequip(instanceId)
@@ -66,6 +64,13 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() 
     fun connect() = runtime.sessionViewModel.connect()
     fun health() = runtime.sessionViewModel.health()
     fun login(login: String, password: String) = runtime.sessionViewModel.login(login, password)
+    fun playOnThisDevice() = runtime.sessionViewModel.playOnThisDevice()
+    fun enterCharacter(id: String) = runtime.characterViewModel.enter(id)
+    fun leaveGame() = runtime.characterViewModel.leaveGame()
+    fun createCharacter(name: String, classId: String) = runtime.characterViewModel.create(name, classId)
+    fun deleteCharacter(id: String) = runtime.characterViewModel.delete(id)
+    fun refreshCharacters() = runtime.characterViewModel.refresh()
+    fun ensureClasses() = runtime.characterViewModel.ensureClasses()
     fun logout() = runtime.sessionViewModel.logout()
     fun changePassword(current: String, replacement: String) = runtime.sessionViewModel.changePassword(current, replacement)
     fun nodeQuery(value: String) = runtime.heroViewModel.nodeQuery(value)
@@ -86,7 +91,7 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() 
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             require(modelClass.isAssignableFrom(ForgeViewModel::class.java))
             @Suppress("UNCHECKED_CAST")
-            return ForgeViewModel(app.serverStore, app.journal) as T
+            return ForgeViewModel(app.serverStore, app.journal, app.deviceId) as T
         }
     }
 }

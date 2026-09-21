@@ -43,6 +43,9 @@ private val JsonMedia = "application/json; charset=utf-8".toMediaType()
 private const val TREE = "api/v1/character/skilltree"
 private const val AUCTION = "api/v1/auctionlot"
 
+/** "No account for this device yet" — the server's way of saying "register it". */
+private const val DEVICE_UNKNOWN = "US_015"
+
 fun normalizeServer(value: String): String {
     val url = value.trim().toHttpUrlOrNull() ?: error(tr("Введите URL с http:// или https://", "Enter a URL starting with http:// or https://"))
     require(url.username.isEmpty() && url.password.isEmpty() && url.query == null && url.fragment == null) { tr("URL не должен содержать пароль, query или fragment", "The URL must not contain a password, query or fragment") }
@@ -80,6 +83,28 @@ class GameApi(
         account = profile
         return profile
     }
+    /**
+     * Sign in with the device's own identifier, and register on the first try.
+     *
+     * The server keeps one account per `device_id` and answers `US_015` when it has never seen
+     * this one, which is the whole registration handshake: a miss becomes a `POST` that creates
+     * the account and answers with it. There is no password in this path at all, so nothing here
+     * is sensitive — the identifier is not a secret, it is a name.
+     */
+    suspend fun loginByDevice(deviceId: String): UserProfile {
+        account = null
+        require(deviceId.isNotBlank()) { tr("Не удалось определить устройство", "The device could not be identified") }
+        val profile = try { device("GET", "api/v1/user/login/byDeviceId", deviceId) }
+            catch (e: ApiFailure) { if (e.code == DEVICE_UNKNOWN) device("POST", "api/v1/user/byDeviceId", deviceId) else throw e }
+        require(profile.isActive) { tr("Учётная запись отключена", "The account is disabled") }
+        account = profile
+        return profile
+    }
+
+    private suspend fun device(method: String, path: String, deviceId: String): UserProfile =
+        WireJson.decodeFromJsonElement<UserProfile>(request(method, path, mapOf("deviceId" to deviceId)))
+            .also { requireId(it.id) }
+
     fun logout() { account = null }
     fun currentUser(): UserProfile? = account
     /** Re-reads the signed-in account, so a role or character count change is picked up. */
@@ -343,6 +368,19 @@ class GameApi(
         val document = get(Catalog.CHARACTERS, id) ?: error(tr("Персонаж недоступен", "The character is unavailable"))
         return WireJson.decodeFromJsonElement(document)
     }
+
+    /**
+     * The characters one account owns — what the character menu offers.
+     *
+     * The server narrows this itself rather than the client reading the whole collection: a player
+     * has at most a handful, and nobody else's characters need to leave the server to show them.
+     */
+    suspend fun charactersOf(userId: String): List<CharacterSummary> {
+        requireId(userId)
+        return request("GET", "api/v1/character/byUser", mapOf("userId" to userId), authenticated = true)
+            .jsonArray.map { WireJson.decodeFromJsonElement(it) }
+    }
+
     suspend fun inventory(characterId: String): List<EquipmentInstance> =
         instances("api/v1/character/inventory/equipments", characterId)
     /**

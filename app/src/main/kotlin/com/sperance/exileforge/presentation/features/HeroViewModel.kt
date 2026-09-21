@@ -19,17 +19,7 @@ import kotlinx.coroutines.sync.withPermit
 class HeroViewModel(private val runtime: ForgeRuntime) {
     private val state get() = runtime.state
 
-    fun characterId(value: String) { with(runtime) {
-        if (state.value.busy) return
-        mutable.update { it.copy(characterId = value, hero = null, characterOwner = "", inventoryBases = emptyMap(), selectedEquipment = "") }
-    } }
-
     fun selectEquipment(value: String) { with(runtime) { if (!state.value.busy) mutable.update { it.copy(selectedEquipment = value) } } }
-
-    fun showCharacterInventory(id: String) { with(runtime) { task {
-        mutable.update { it.copy(tab = 4, characterId = id, hero = null, characterOwner = "", selectedEquipment = "") }
-        readHero()
-    } } }
 
     fun loadHero() { with(runtime) { task { readHero() } } }
 
@@ -119,7 +109,7 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
         mutable.update { it.copy(message = it.message ?: tr("Изменения сохранены", "Changes saved")) }
     } } }
 
-    private suspend fun readHero() { with(runtime) {
+    internal suspend fun readHero() { with(runtime) {
         val id = state.value.characterId.trim()
         check(id.isNotBlank()) { tr("Выберите персонажа", "Choose a character") }
         ensureDefinitions()

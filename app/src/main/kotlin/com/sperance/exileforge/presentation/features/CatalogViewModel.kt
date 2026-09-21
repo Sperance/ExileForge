@@ -13,7 +13,9 @@ class CatalogViewModel(private val runtime: ForgeRuntime) {
     fun query(value: String) { with(runtime) { mutable.update { it.copy(query = value) } } }
 
     fun catalog(value: Catalog) { with(runtime) {
-        if (state.value.busy || state.value.editorOpen || !state.value.adminTools && value != Catalog.CHARACTERS) return
+        // A player's catalogue is the stash and nothing else: their own character is reached
+        // through the menu, and other people's are an administrator's business.
+        if (state.value.busy || state.value.editorOpen || !state.value.adminTools) return
         mutable.update { it.copy(catalog = value, items = emptyList(), page = 0, total = 0, totalPages = 0, query = "") }
         task {
             val saved = store.filters(state.value.server, value.path)?.let { WireJson.decodeFromString(CatalogFilter.serializer(), it) } ?: CatalogFilter()

@@ -19,7 +19,7 @@ import kotlinx.serialization.json.*
     if(s.signedIn) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Icon(ForgeGlyphs.Exile, null, tint = Gold, modifier = Modifier.size(20.dp))
-            Text("${s.profile?.name.orEmpty()} · ${if(s.isAdmin) tr("Администратор", "Administrator") else tr("Игрок", "Player")}")
+            Text("${s.accountTitle} · ${if(s.isAdmin) tr("Администратор", "Administrator") else tr("Игрок", "Player")}")
         }
         var change by remember { mutableStateOf(false) }
         var oldPassword by remember { mutableStateOf("") }

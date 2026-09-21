@@ -25,11 +25,16 @@ import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.tr
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.AppMode
+import com.sperance.exileforge.presentation.state.AppPhase
+import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.LocalEntityPageLoader
 import com.sperance.exileforge.ui.components.OrnateDivider
 import com.sperance.exileforge.ui.components.voidBackdrop
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
+import androidx.compose.ui.text.style.TextOverflow
 import com.sperance.exileforge.ui.screens.auction.AuctionScreen
+import com.sperance.exileforge.ui.screens.session.AuthScreen
+import com.sperance.exileforge.ui.screens.session.CharacterSelectScreen
 import com.sperance.exileforge.ui.screens.catalog.CatalogScreen
 import com.sperance.exileforge.ui.screens.checks.ChecksScreen
 import com.sperance.exileforge.ui.screens.editor.EditorScreen
@@ -53,6 +58,31 @@ import com.sperance.exileforge.ui.theme.*
     // The dictionary arrives after the first frame, so its size joins the key: when the server's
     // names land, every screen that printed a bare code is drawn again.
     key(s.server, s.sessionEpoch, s.lang, s.localeStrings) {
+    // The two screens above the tabs carry no banner and no bottom bar: there is no character to
+    // name in the one and no tab to reach from the other.
+    when (s.phase) {
+        AppPhase.AUTH -> AuthScreen(s, vm, snackbar)
+        AppPhase.CHARACTERS -> CharacterSelectScreen(s, vm, snackbar)
+        AppPhase.GAME -> GameScaffold(s, vm, logs, snackbar,
+            onDeleteRequest = { confirmDelete = true }, onDiscardRequest = { confirmDiscard = true })
+    }
+    if (confirmDelete) AlertDialog(onDismissRequest = { confirmDelete = false }, containerColor = Panel, titleContentColor = Gold,
+        title = { Text(tr("Удалить запись?", "Delete the record?")) },
+        text = { Text("${s.original?.let(::documentTitle)}\n${s.original?.entityId}\n" + tr("Запись будет скрыта на сервере.", "The record will be hidden on the server.")) },
+        confirmButton = { TextButton(enabled = !s.busy, onClick = { confirmDelete = false; vm.delete() }) { Text(tr("Удалить", "Delete"), color = MaterialTheme.colorScheme.error) } },
+        dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(tr("Отмена", "Cancel")) } })
+    if (confirmDiscard) AlertDialog(onDismissRequest = { confirmDiscard = false }, containerColor = Panel, titleContentColor = Gold,
+        title = { Text(tr("Закрыть редактор?", "Close the editor?")) },
+        text = { Text(tr("Несохранённые изменения будут потеряны.", "Unsaved changes will be lost.")) },
+        confirmButton = { TextButton(onClick = { confirmDiscard = false; vm.closeEditor() }) { Text(tr("Закрыть", "Close")) } },
+        dismissButton = { TextButton(onClick = { confirmDiscard = false }) { Text(tr("Продолжить", "Keep editing")) } })
+    }
+    }
+}
+
+/** The game proper: the banner, the five destinations and whichever tab is open. */
+@Composable private fun GameScaffold(s: ForgeState, vm: ForgeViewModel, logs: List<com.sperance.exileforge.core.network.RequestLog>,
+    snackbar: SnackbarHostState, onDeleteRequest: () -> Unit, onDiscardRequest: () -> Unit) {
     Scaffold(
         containerColor = Ink,
         snackbarHost = { SnackbarHost(snackbar) { data -> Snackbar(data, containerColor = PanelRaised, contentColor = Parchment, actionColor = Gold, shape = MaterialTheme.shapes.small) } },
@@ -75,11 +105,11 @@ import com.sperance.exileforge.ui.theme.*
         }
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).imePadding().voidBackdrop()) {
-            ForgeBanner(s.isAdmin, s.adminTools, s.lang, !s.busy && !s.editorOpen, onMode = { vm.mode(if (s.adminTools) AppMode.PLAYER else AppMode.ADMIN) }, onLanguage = vm::language)
+            ForgeBanner(s, !s.busy && !s.editorOpen, onMode = { vm.mode(if (s.adminTools) AppMode.PLAYER else AppMode.ADMIN) }, onLanguage = vm::language)
             if (s.busy) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised) else OrnateDivider(Gold)
             when (s.tab) {
                 0 -> CatalogScreen(s, vm)
-                1 -> EditorScreen(s, vm, onDelete = { confirmDelete = true }, onClose = { confirmDiscard = true })
+                1 -> EditorScreen(s, vm, onDelete = onDeleteRequest, onClose = onDiscardRequest)
                 2 -> ChecksScreen(s, vm, logs)
                 3 -> ServerScreen(s, vm, logs)
                 4 -> HeroScreen(s, vm)
@@ -88,22 +118,15 @@ import com.sperance.exileforge.ui.theme.*
             }
         }
     }
-    if (confirmDelete) AlertDialog(onDismissRequest = { confirmDelete = false }, containerColor = Panel, titleContentColor = Gold,
-        title = { Text(tr("Удалить запись?", "Delete the record?")) },
-        text = { Text("${s.original?.let(::documentTitle)}\n${s.original?.entityId}\n" + tr("Запись будет скрыта на сервере.", "The record will be hidden on the server.")) },
-        confirmButton = { TextButton(enabled = !s.busy, onClick = { confirmDelete = false; vm.delete() }) { Text(tr("Удалить", "Delete"), color = MaterialTheme.colorScheme.error) } },
-        dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(tr("Отмена", "Cancel")) } })
-    if (confirmDiscard) AlertDialog(onDismissRequest = { confirmDiscard = false }, containerColor = Panel, titleContentColor = Gold,
-        title = { Text(tr("Закрыть редактор?", "Close the editor?")) },
-        text = { Text(tr("Несохранённые изменения будут потеряны.", "Unsaved changes will be lost.")) },
-        confirmButton = { TextButton(onClick = { confirmDiscard = false; vm.closeEditor() }) { Text(tr("Закрыть", "Close")) } },
-        dismissButton = { TextButton(onClick = { confirmDiscard = false }) { Text(tr("Продолжить", "Keep editing")) } })
-    }
-    }
 }
 
-/** Title banner: the sigil, the league name, and the two switches an exile keeps at hand. */
-@Composable private fun ForgeBanner(isAdmin: Boolean, adminTools: Boolean, lang: Lang, enabled: Boolean, onMode: () -> Unit, onLanguage: (Lang) -> Unit) {
+/**
+ * Title banner: the sigil, the character being played, and the two switches an exile keeps at hand.
+ *
+ * The subtitle names the character rather than the league, because every button on every tab acts
+ * on that one and nothing on screen would otherwise say which.
+ */
+@Composable private fun ForgeBanner(s: ForgeState, enabled: Boolean, onMode: () -> Unit, onLanguage: (Lang) -> Unit) {
     Row(Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Gold.copy(alpha = .10f), Color.Transparent, Gold.copy(alpha = .06f))))
         .padding(horizontal = 18.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(40.dp).border(1.dp, Gold.copy(alpha = .5f), CutCornerShape(9.dp)), contentAlignment = Alignment.Center) {
@@ -112,10 +135,13 @@ import com.sperance.exileforge.ui.theme.*
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text("EXILE FORGE", style = MaterialTheme.typography.titleLarge, color = GoldBright)
-            Text(tr("АРСЕНАЛ ИЗГНАННИКА", "THE EXILE'S ARSENAL"), style = MaterialTheme.typography.labelSmall, color = Muted)
+            val hero = s.character
+            Text(if (hero == null) tr("АРСЕНАЛ ИЗГНАННИКА", "THE EXILE'S ARSENAL")
+                 else hero.name + (s.heroClass?.let { " · ${it.title}" } ?: "") + tr(" · ур. ${hero.level}", " · lvl ${hero.level}"),
+                style = MaterialTheme.typography.labelSmall, color = Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        LanguageSwitch(lang, onLanguage)
-        if (isAdmin) TextButton(enabled = enabled, onClick = onMode) { Text(if (adminTools) tr("Админ", "Admin") else tr("Игрок", "Player")) }
+        LanguageSwitch(s.lang, onLanguage)
+        if (s.isAdmin) TextButton(enabled = enabled, onClick = onMode) { Text(if (s.adminTools) tr("Админ", "Admin") else tr("Игрок", "Player")) }
     }
 }
 

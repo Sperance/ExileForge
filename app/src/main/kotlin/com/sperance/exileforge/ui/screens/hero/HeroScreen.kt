@@ -74,6 +74,9 @@ import com.sperance.exileforge.ui.theme.*
                         selected = instance.id == s.selectedEquipment,
                         note = when {
                             inactive -> tr("Не работает", "Not working")
+                            // A jewel is worn too, but not anywhere a player can point at on the
+                            // body — saying "equipped" would send them looking through the slots.
+                            instance.socketed -> tr("В гнезде", "In a socket")
                             instance.equipped -> tr("Надето", "Equipped")
                             else -> null
                         },

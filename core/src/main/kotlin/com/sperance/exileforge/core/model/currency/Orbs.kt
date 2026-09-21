@@ -46,7 +46,12 @@ enum class CurrencyOrb(private val ru: String, private val en: String, private v
     ORB_OF_CHANCE("Сфера удачи", "Orb of Chance",
         "Делает из обычного предмета предмет случайной редкости, изредка — уникальный", "Turns a common item into a random rarity, rarely a unique"),
     MIRROR_OF_KALANDRA("Зеркало Каландры", "Mirror of Kalandra",
-        "Создаёт неизменяемую копию предмета", "Creates an unalterable copy of the item");
+        "Создаёт неизменяемую копию предмета", "Creates an unalterable copy of the item"),
+    // The one orb that is never applied to an item: the tree spends it, and applyOrb refuses it
+    // outright (CR_009). It is in the table because it is still an orb in the bag and a price
+    // on the auction, and a bag entry the client cannot name is a bag entry a player cannot read.
+    ORB_OF_REGRET("Сфера сожаления", "Orb of Regret",
+        "Возвращает узел дерева навыков: по одной сфере за узел", "Gives back a passive tree node: one orb per node");
 
     fun title(lang: Lang = uiLanguage): String = lang.pick(ru, en)
     /** What the server's rule for this orb is, shown so a rejection is expected rather than puzzling. */

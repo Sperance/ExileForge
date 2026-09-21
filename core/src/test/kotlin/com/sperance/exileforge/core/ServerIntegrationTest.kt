@@ -241,11 +241,23 @@ class ServerIntegrationTest {
             assertEquals(started.available - neighbour.cost, grown.available)
             // A node's bonuses are a snapshot taken when it was allocated, and they are never rolled.
             assertTrue(grown.nodes.flatMap { node -> node.params }.none { param -> param.rolled })
+            // What the whole tree gives is the server's arithmetic, sent with the state: the client
+            // adds nothing up, so a node with bonuses has to show up here.
+            if (grown.nodes.any { node -> node.params.isNotEmpty() })
+                assertTrue(grown.totals.isNotEmpty(), "the tree gives nothing after a node with bonuses: $grown")
             // Taking what is already taken is refused, and the start node is the tree's root.
             assertFailsWith<ApiFailure> { api.allocateNode(id, start.code) }
             assertFailsWith<ApiFailure> { api.refundNode(id, start.code) }
+            // Since 0.16.0 giving a node back costs an Orb of Regret, so an empty bag is a refusal
+            // and not a free undo.
+            assertFailsWith<ApiFailure> { api.refundNode(id, neighbour.code) }
+            val regret = orbs.firstOrNull { it.orb == CurrencyOrb.ORB_OF_REGRET } ?: fail("no Orb of Regret among ${orbs.map { it.code }}")
+            assertEquals("system.success", api.adjustItems(id, listOf(ItemStack(regret.id, 1))))
             assertEquals(setOf(start.code), api.refundNode(id, neighbour.code).takenCodes)
+            // The orb is spent, not merely checked: a second refund would have to be paid for again.
+            assertTrue(api.bag(id).none { it.itemId == regret.id }, "the orb of regret was not spent")
             // A reset is a respec: it leaves the character standing on its class node, not on nothing.
+            // Nothing is left to give back here, so it costs no orb.
             val respec = api.resetTree(id)
             assertEquals(setOf(start.code), respec.takenCodes, "a reset emptied the tree: $respec")
             assertEquals(started.available, respec.available)

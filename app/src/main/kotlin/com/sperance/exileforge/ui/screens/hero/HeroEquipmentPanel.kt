@@ -38,6 +38,9 @@ import kotlinx.serialization.json.put
     var statsOpen by remember(s.characterId) { mutableStateOf(false) }
     var slotsExpanded by remember(s.characterId) { mutableStateOf(true) }
     val equipped = hero.equipped
+    // A jewel is worn in a socket on the tree, not on the body, so it has no cell in this grid —
+    // the tree draws it where it actually sits.
+    val bodySlots = slots.filterNot { it == "JEWEL" }
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         ForgePanel {
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -69,7 +72,7 @@ import kotlinx.serialization.json.put
             BoxWithConstraints {
                 val perRow = if (maxWidth >= 480.dp) 4 else 3
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp), maxItemsInEachRow = perRow) {
-                    slots.forEach { slot ->
+                    bodySlots.forEach { slot ->
                         val instance = equipped[slot]
                         val document = instance?.let { inventoryDocument(it, s.inventoryBases[it.equipmentId]) } ?: buildJsonObject { put("slot", slot) }
                         val shape = CutCornerShape(8.dp)

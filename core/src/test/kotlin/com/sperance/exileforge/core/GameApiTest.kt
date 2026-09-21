@@ -270,6 +270,50 @@ class GameApiTest {
         assertEquals("/game/api/v1/characterequipment/unequip?characterId=$other&inventoryId=$id", server.takeRequest().path)
     }
 
+    /**
+     * A jewel is worn in a socket on the tree, so the command names the node rather than a slot.
+     *
+     * The slot still says what the item is — the server sets `equippedSlot` to JEWEL — and
+     * `socketCode` says where it sits, because the tree has many sockets and one slot could not
+     * tell them apart.
+     */
+    @Test fun `a jewel is worn in a named socket and taken back out of it`(): Unit = runBlocking {
+        ok("""{"_id":"$id","characterId":"$other","equipmentId":"$other","equippedSlot":"JEWEL","socketCode":"STR_SOCKET_1","params":[]}""")
+        val socketed = api.socketJewel(other, id, "STR_SOCKET_1")
+        assertEquals("STR_SOCKET_1", socketed.socketCode)
+        assertTrue(socketed.socketed)
+        assertEquals("/game/api/v1/characterequipment/socket?characterId=$other&inventoryId=$id&nodeCode=STR_SOCKET_1",
+            server.takeRequest().path)
+
+        ok("""{"_id":"$id","characterId":"$other","equipmentId":"$other","params":[]}""")
+        val free = api.unsocketJewel(other, id)
+        assertFalse(free.socketed)
+        assertFalse(free.equipped)
+        assertEquals("/game/api/v1/characterequipment/unsocket?characterId=$other&inventoryId=$id", server.takeRequest().path)
+
+        // A socket has to be named: without one the command would be meaningless, so it never flies.
+        val sent = server.requestCount
+        assertFailsWith<IllegalArgumentException> { api.socketJewel(other, id, "  ") }
+        assertFailsWith<IllegalArgumentException> { api.socketJewel(other, "not-an-id", "STR_SOCKET_1") }
+        assertEquals(sent, server.requestCount)
+    }
+
+    /**
+     * The catalogue is read whole, because since 0.16.0 it is where an item's base lives.
+     *
+     * An instance carries only what it rolled, so armour, damage and every requirement have to
+     * come from the template — one read of the lot rather than a request per item on screen.
+     */
+    @Test fun `the equipment catalogue is read whole in one request`(): Unit = runBlocking {
+        ok(JsonArray(listOf(
+            buildJsonObject { put("_id", id); put("code", "IRON_HELMET"); put("slot", "HELMET") },
+            buildJsonObject { put("_id", other); put("code", "CRIMSON_JEWEL"); put("slot", "JEWEL") },
+        )).toString())
+        val catalogue = api.equipmentCatalogue()
+        assertEquals(listOf("IRON_HELMET", "CRIMSON_JEWEL"), catalogue.map { it.text("code") })
+        assertEquals("/game/api/v1/equipment", server.takeRequest().path)
+    }
+
     @Test fun `orbs are the currency category of the shared items collection`(): Unit = runBlocking {
         val catalogue = JsonArray(listOf(
             buildJsonObject { put("_id", id); put("code", "CHAOS_ORB"); put("category", "CURRENCY"); put("subCategory", "CHAOS_ORB"); put("price", 300) },

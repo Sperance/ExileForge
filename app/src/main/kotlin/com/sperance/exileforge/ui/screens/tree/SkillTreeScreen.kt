@@ -347,11 +347,15 @@ private fun nodeColour(node: SkillTreeNode, selected: Boolean): Color = when {
     node.type == SkillNodeType.KEYSTONE -> LifeRed
     node.type == SkillNodeType.NOTABLE -> if (selected) GoldBright else Gold
     node.type == SkillNodeType.START -> ShieldCyan
+    // A socket gives nothing itself, so on the map it has to stand for what it can hold rather
+    // than blend into the small nodes around it.
+    node.type == SkillNodeType.JEWEL_SOCKET -> ManaBlue
     else -> Rune
 }
 
 private fun radius(node: SkillTreeNode): Float = when (node.type) {
-    SkillNodeType.KEYSTONE -> 13f; SkillNodeType.NOTABLE -> 10f; SkillNodeType.START -> 12f; SkillNodeType.SMALL -> 6f
+    SkillNodeType.KEYSTONE -> 13f; SkillNodeType.NOTABLE -> 10f; SkillNodeType.START -> 12f
+    SkillNodeType.JEWEL_SOCKET -> 11f; SkillNodeType.SMALL -> 6f
 }
 
 /** Extent of the seeded coordinates, so the whole tree fits whatever canvas it is given. */

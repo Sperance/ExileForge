@@ -75,6 +75,6 @@ class CharacterGateTest {
         compose.setContent { ForgeTheme { Column(Modifier.fillMaxSize().background(Ink)) {
             CharacterMenu(state(), onPlay = {}, onDelete = {}) } } }
         // A device registration leaves `name` and `login` empty; the account is still named.
-        compose.onNodeWithText("Гость · …ffff0001").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Гость · …ff0001").performScrollTo().assertIsDisplayed()
     }
 }

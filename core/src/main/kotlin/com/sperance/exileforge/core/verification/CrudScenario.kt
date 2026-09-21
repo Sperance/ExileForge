@@ -13,14 +13,15 @@ import kotlinx.serialization.json.*
 class CrudScenario(private val repository: ItemRepository, private val modifierId: String = "") {
     suspend fun run(catalog: Catalog, report: (CheckResult) -> Unit) {
         require(catalog != Catalog.CHARACTERS) { tr("CRUD-сценарий предназначен для предметов", "The CRUD scenario is meant for items") }
-        val name = "EF-test-${java.util.UUID.randomUUID()}"
+        // A code, not a name: content has no text of its own since 0.14.0.
+        val code = "EF_TEST_" + java.util.UUID.randomUUID().toString().replace("-", "_").uppercase()
         var owned: JsonObject? = null
         try {
-            val initial = JsonObject(template(catalog) + ("name" to JsonPrimitive(name)))
+            val initial = JsonObject(template(catalog) + ("code" to JsonPrimitive(code)))
             owned = repository.create(catalog, initial)
             val id = owned.entityId
             report(CheckResult(tr("Создание", "Create"), true, id))
-            check(repository.get(catalog, id)?.text("name") == name)
+            check(repository.get(catalog, id)?.text("code") == code)
             report(CheckResult(tr("Получение по ID", "Get by id"), true, id))
             suspend fun update(changes: JsonObject, label: String) {
                 owned = repository.update(catalog, id, changes)
@@ -29,7 +30,8 @@ class CrudScenario(private val repository: ItemRepository, private val modifierI
                 check(changes.all { (key, value) -> loaded[key] == value })
                 report(CheckResult(label, true, tr("Свойства подтверждены чтением", "Fields confirmed by a read")))
             }
-            update(buildJsonObject { put("description", "CRUD verification complete") }, tr("Изменение + GET", "Update + GET"))
+            // `image` is the one editable field both catalogues share now that text has moved out.
+            update(buildJsonObject { put("image", "ef-crud-check") }, tr("Изменение + GET", "Update + GET"))
             if (catalog == Catalog.EQUIPMENT && modifierId.isNotBlank()) {
                 update(buildJsonObject { put("modifierIds", buildJsonArray { add(modifierId) }) }, tr("Пул модификаторов + GET", "Modifier pool + GET"))
                 update(buildJsonObject { put("modifierIds", JsonArray(emptyList())) }, tr("Очистка пула + GET", "Pool cleared + GET"))
@@ -40,7 +42,7 @@ class CrudScenario(private val repository: ItemRepository, private val modifierI
             report(CheckResult(tr("Удаление + GET", "Delete + GET"), true, tr("Запись недоступна", "The record is gone")))
         } catch (e: CancellationException) { throw e }
         catch (e: Exception) {
-            report(CheckResult(tr("Сценарий остановлен", "Scenario stopped"), false, e.message.orEmpty() + if (owned == null) tr(". При потере ответа POST проверьте вручную запись $name; повторное создание автоматически не выполняется.", ". If the POST response was lost, check record $name by hand; it is never re-created automatically.") else ""))
+            report(CheckResult(tr("Сценарий остановлен", "Scenario stopped"), false, e.message.orEmpty() + if (owned == null) tr(". При потере ответа POST проверьте вручную запись $code; повторное создание автоматически не выполняется.", ". If the POST response was lost, check record $code by hand; it is never re-created automatically.") else ""))
         } finally {
             owned?.let { document -> withContext(NonCancellable) {
                 try {

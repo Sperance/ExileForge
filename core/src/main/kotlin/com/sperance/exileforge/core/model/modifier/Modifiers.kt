@@ -1,5 +1,7 @@
 package com.sperance.exileforge.core.model.modifier
 
+import com.sperance.exileforge.core.i18n.LocaleKey
+import com.sperance.exileforge.core.i18n.locOr
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -50,12 +52,18 @@ import kotlinx.serialization.Serializable
      * which of them this is — the folding itself never happens here.
      */
     val isLocal: Boolean = false,
-    val name: String? = null,
     // The server writes every nullable field, null included, so an absent tag list arrives as null.
     val tags: List<String>? = null,
 ) {
     val composite: Boolean get() = effects.size > 1
-    val title: String get() = name?.takeIf { it.isNotBlank() } ?: code
+    /**
+     * The whole sentence the modifier reads as, with a placeholder per effect.
+     *
+     * Since 0.14.0 a definition carries no text at all: `modifier.<code>.name` is a template like
+     * "+{0} to armour", and the rolled values fill it. So this is not a label above a number — it
+     * is the line itself, and [com.sperance.exileforge.core.display.modifierText] completes it.
+     */
+    val template: String get() = locOr(LocaleKey.modifierName(code), code)
 }
 
 /** Value range of one effect inside a tier. */

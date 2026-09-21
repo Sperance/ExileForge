@@ -1,6 +1,8 @@
 package com.sperance.exileforge.core
 
 import com.sperance.exileforge.core.contract.*
+import com.sperance.exileforge.core.i18n.LocaleBundle
+import com.sperance.exileforge.core.i18n.serverLocale
 import com.sperance.exileforge.core.model.Catalog
 import com.sperance.exileforge.core.model.CatalogFilter
 import com.sperance.exileforge.core.model.EquipmentKind
@@ -28,10 +30,16 @@ class GameApiTest {
 
     @Before fun before(): Unit = runBlocking {
         server = MockWebServer(); server.start(); api = GameApi(server.url("/game/").toString(), journal)
+        // The app always has the server's dictionary by the time it reads anything: documents carry
+        // codes since 0.14.0, so without it every assertion below would be about a code.
+        serverLocale = LocaleBundle.parse("ru", "sha", """{
+            "equipment.IRON_SKULLCAP.name": "Iron Skullcap", "item.CHAOS_ORB.name": "Chaos Orb",
+            "class.MARAUDER.name": "Marauder", "class.MARAUDER.description": "Сила",
+            "currency.chaos": "{0}: перекатаны аффиксы, всего {1}"}""")
         ok("""{"id":"$id","version":1,"name":"Admin","login":"admin","role":"ADMIN","isActive":true}""")
         api.login("admin", "private-password"); server.takeRequest(); Unit
     }
-    @After fun after() { server.shutdown() }
+    @After fun after() { server.shutdown(); serverLocale = LocaleBundle() }
     private fun ok(data: String) { server.enqueue(MockResponse().setBody("""{"success":true,"data":$data}""")) }
     private fun failure(status: Int) { server.enqueue(MockResponse().setResponseCode(status).setBody("""{"success":false,"error":{"errorCode":"REJECTED","message":"Rejected"}}""")) }
 
@@ -57,8 +65,9 @@ class GameApiTest {
     }
 
     @Test fun `update sends only the changed fields and delete carries no body`(): Unit = runBlocking {
-        val changes = buildJsonObject { put("name", "Changed") }
-        ok("""{"_id":"$id","version":7,"name":"Changed"}""")
+        // An `items` document has no text to change since 0.14.0; its price is still its own.
+        val changes = buildJsonObject { put("price", 42) }
+        ok("""{"_id":"$id","version":7,"price":42}""")
         assertEquals(7L, api.update(Catalog.ITEMS, id, changes).entityVersion)
         val update = server.takeRequest()
         assertEquals("PUT", update.method)
@@ -153,25 +162,27 @@ class GameApiTest {
 
     @Test fun `orbs are the currency category of the shared items collection`(): Unit = runBlocking {
         val catalogue = JsonArray(listOf(
-            buildJsonObject { put("_id", id); put("name", "Chaos Orb"); put("category", "CURRENCY"); put("subCategory", "CHAOS_ORB"); put("price", 300) },
-            buildJsonObject { put("_id", other); put("name", "Orb of Transmutation"); put("category", "CURRENCY"); put("subCategory", "ORB_OF_TRANSMUTATION"); put("price", 10) },
-            buildJsonObject { put("_id", id); put("name", "Shard"); put("category", "STONE_STOCK"); put("subCategory", "STONE"); put("price", 1) }))
+            buildJsonObject { put("_id", id); put("code", "CHAOS_ORB"); put("category", "CURRENCY"); put("subCategory", "CHAOS_ORB"); put("price", 300) },
+            buildJsonObject { put("_id", other); put("code", "ORB_OF_TRANSMUTATION"); put("category", "CURRENCY"); put("subCategory", "ORB_OF_TRANSMUTATION"); put("price", 10) },
+            buildJsonObject { put("_id", id); put("code", "IRON_SHARD"); put("category", "STONE_STOCK"); put("subCategory", "STONE"); put("price", 1) }))
         ok(catalogue.toString())
         val orbs = api.currencyOrbs()
         assertEquals("/game/api/v1/items", server.takeRequest().path)
-        // Only the currency category, cheapest first, and each document named by its sub-category.
-        assertEquals(listOf("Orb of Transmutation", "Chaos Orb"), orbs.map { it.name })
+        // Only the currency category, cheapest first; a document carries a code and no text at all.
+        assertEquals(listOf("ORB_OF_TRANSMUTATION", "CHAOS_ORB"), orbs.map { it.code })
         assertEquals(CurrencyOrb.CHAOS_ORB, orbs.last().orb)
-        assertEquals("Сфера хаоса", orbs.last().title())
+        // The dictionary wins over the client's own table: the server owns what a thing is called.
+        assertEquals("Chaos Orb", orbs.last().title())
     }
 
     @Test fun `applying an orb names the pair and prints what the server did`(): Unit = runBlocking {
         val rerolled = """{"_id":"$id","characterId":"$other","equipmentId":"$other","rarity":"RARE","corrupted":false,
             "params":[{"modifierId":"$id","tierId":"$other","tier":2,"values":[7.0]}]}"""
-        ok("""{"message":"Helm rerolled into 4 new affixes","item":$rerolled}""")
+        ok("""{"messageKey":"currency.chaos","messageArgs":["equipment.IRON_SKULLCAP.name","4"],"item":$rerolled}""")
         val outcome = api.applyOrb(other, id, other)
         assertEquals("/game/api/v1/characterequipment/applyOrb?characterId=$other&inventoryId=$id&orbItemId=$other", server.takeRequest().path)
-        assertEquals("Helm rerolled into 4 new affixes", outcome.message)
+        // The server sends a key and arguments; the arguments are keys too, so the item is named.
+        assertEquals("Iron Skullcap: перекатаны аффиксы, всего 4", outcome.message)
         assertEquals("RARE", outcome.item.rarity)
         assertFalse(outcome.item.corrupted)
         // A mirror is the one orb that answers with a second document, and the copy is locked.
@@ -185,7 +196,7 @@ class GameApiTest {
     @Test fun `stats and the bag come from the server as they are`(): Unit = runBlocking {
         // The sheet reports the numbers and the server's verdict on every worn item alongside them.
         ok("""{"characterId":"$id","level":12,"stats":{"STOCK_HEALTH":188.4,"STOCK_ARMOR":40.0},"active":["$other"],
-            "inactive":[{"inventoryId":"$id","name":"Iron Skullcap","reasons":["strength: need 30, have 14"]}]}""")
+            "inactive":[{"inventoryId":"$id","code":"IRON_SKULLCAP","reasons":["strength: need 30, have 14"]}]}""")
         val sheet = api.stats(id)
         assertEquals(188.4, sheet.stats.getValue("STOCK_HEALTH"))
         assertEquals(12, sheet.level)
@@ -204,12 +215,14 @@ class GameApiTest {
     }
 
     @Test fun `the world's reference tables are read whole and once`(): Unit = runBlocking {
-        ok("""[{"_id":"$id","code":"MARAUDER","name":"Marauder","startNodeCode":"STR_START",
+        ok("""[{"_id":"$id","code":"MARAUDER","startNodeCode":"STR_START",
             "baseStats":[{"stat":"STOCK_STRENGTH","value":32.0}],"perLevelStats":[{"stat":"STOCK_HEALTH","value":12.0}],
-            "params":[{"modifierId":"$other","values":[1.0]}],"description":"Сила"}]""")
+            "params":[{"modifierId":"$other","values":[1.0]}]}]""")
         val marauder = api.characterClasses().single()
         assertEquals("/game/api/v1/characterclass", server.takeRequest().path)
+        // The class document has no text at all: its name is the dictionary's, under its code.
         assertEquals("Marauder", marauder.title)
+        assertEquals("Сила", marauder.details)
         assertEquals(32.0, marauder.baseStats.single().value)
         // A class conversion is fixed by the reference table, so it carries no tier at all.
         assertFalse(marauder.params.single().rolled)
@@ -222,7 +235,7 @@ class GameApiTest {
     }
 
     @Test fun `the skill tree is one graph and every command answers with the whole state`(): Unit = runBlocking {
-        ok("""[{"_id":"$id","code":"STR_START","name":"Marauder","type":"START","cost":0,"positionX":-40,"positionY":0,
+        ok("""[{"_id":"$id","code":"STR_START","type":"START","cost":0,"positionX":-40,"positionY":0,
             "connections":["STR_LIFE_1"],"params":[{"modifierId":"$other","values":[10.0]}]}]""")
         val node = api.skillTree().single()
         assertEquals("/game/api/v1/skilltreenode", server.takeRequest().path)
@@ -231,7 +244,7 @@ class GameApiTest {
         assertFalse(node.params.single().rolled)
 
         val state = """{"characterId":"$id","total":5,"spent":1,"available":4,
-            "nodes":[{"code":"STR_START","name":"Marauder","type":"START","cost":0,"params":[]}]}"""
+            "nodes":[{"code":"STR_START","type":"START","cost":0,"params":[]}]}"""
         ok(state)
         assertEquals(setOf("STR_START"), api.characterTree(id).takenCodes)
         assertEquals("/game/api/v1/character/skilltree/state?characterId=$id", server.takeRequest().path)
@@ -260,7 +273,7 @@ class GameApiTest {
     }
 
     @Test fun `the showcase is narrowed by the server and only the set fields travel`(): Unit = runBlocking {
-        ok("""{"items":[{"_id":"$id","sellerId":"$other","sellerName":"Изгнанник","kind":"EQUIPMENT","title":"Iron Skullcap",
+        ok("""{"items":[{"_id":"$id","sellerId":"$other","sellerName":"Изгнанник","kind":"EQUIPMENT","itemCode":"IRON_SKULLCAP",
             "slot":"HELMET","rarity":"RARE","itemLevel":30,"priceOrbId":"$other","price":40,"status":"ACTIVE",
             "equipment":{"_id":"$other","equipmentId":"$id","rarity":"RARE","params":[]}}],
             "page":1,"pageSize":20,"totalItems":25,"totalPages":2}""")
@@ -284,17 +297,17 @@ class GameApiTest {
     }
 
     @Test fun `listing, buying and withdrawing name the lot and nothing else`(): Unit = runBlocking {
-        val lot = """{"_id":"$id","sellerId":"$other","kind":"EQUIPMENT","title":"Iron Skullcap","priceOrbId":"$other","price":40,"status":"ACTIVE"}"""
+        val lot = """{"_id":"$id","sellerId":"$other","kind":"EQUIPMENT","itemCode":"IRON_SKULLCAP","priceOrbId":"$other","price":40,"status":"ACTIVE"}"""
         ok(lot)
         assertEquals("Iron Skullcap", api.sellEquipment(other, id, other, 40).title)
         assertEquals("/game/api/v1/auctionlot/sell/equipment?inventoryId=$id&characterId=$other&priceOrbId=$other&price=40", server.takeRequest().path)
-        ok("""{"_id":"$id","sellerId":"$other","kind":"ITEM","itemId":"$id","amount":5,"title":"Chaos Orb","priceOrbId":"$other","price":2,"status":"ACTIVE"}""")
+        ok("""{"_id":"$id","sellerId":"$other","kind":"ITEM","itemId":"$id","amount":5,"itemCode":"CHAOS_ORB","priceOrbId":"$other","price":2,"status":"ACTIVE"}""")
         assertEquals(5L, api.sellItem(other, id, 5, other, 2).amount)
         assertEquals("/game/api/v1/auctionlot/sell/item?itemId=$id&amount=5&characterId=$other&priceOrbId=$other&price=2", server.takeRequest().path)
-        ok("""{"_id":"$id","sellerId":"$other","kind":"EQUIPMENT","title":"Iron Skullcap","status":"SOLD","buyerId":"$id"}""")
+        ok("""{"_id":"$id","sellerId":"$other","kind":"EQUIPMENT","itemCode":"IRON_SKULLCAP","status":"SOLD","buyerId":"$id"}""")
         assertEquals(AuctionLotStatus.SOLD, api.buyLot(id, id).status)
         assertEquals("/game/api/v1/auctionlot/buy?characterId=$id&lotId=$id", server.takeRequest().path)
-        ok("""{"_id":"$id","sellerId":"$other","kind":"EQUIPMENT","title":"Iron Skullcap","status":"CANCELLED"}""")
+        ok("""{"_id":"$id","sellerId":"$other","kind":"EQUIPMENT","itemCode":"IRON_SKULLCAP","status":"CANCELLED"}""")
         assertFalse(api.cancelLot(other, id).onSale)
         assertEquals("/game/api/v1/auctionlot/cancel?characterId=$other&lotId=$id", server.takeRequest().path)
         ok("""[$lot]""")

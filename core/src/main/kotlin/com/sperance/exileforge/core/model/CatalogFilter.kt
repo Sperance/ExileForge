@@ -1,6 +1,7 @@
 package com.sperance.exileforge.core.model
 
 import com.sperance.exileforge.core.contract.text
+import com.sperance.exileforge.core.display.documentTitle
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
 
@@ -19,7 +20,10 @@ import kotlinx.serialization.json.*
 
     fun matches(document: JsonObject): Boolean {
         val level = document.text("itemLevel").toIntOrNull()
-        return (query.isBlank() || listOf("name", "description", "category", "subCategory").any { document.text(it).contains(query.trim(), true) })
+        // Content carries a code, not a name, so the text is matched against what the player is
+        // actually shown — the locale bundle's string — as well as the code and the raw fields.
+        return (query.isBlank() || listOf("name", "code", "category", "subCategory").any { document.text(it).contains(query.trim(), true) }
+                || documentTitle(document).contains(query.trim(), true))
             && (slot.isBlank() || document.text("slot") == slot)
             && (rarity.isBlank() || document.text("rarity") == rarity)
             && (weaponType.isBlank() || document.text("weaponType") == weaponType)

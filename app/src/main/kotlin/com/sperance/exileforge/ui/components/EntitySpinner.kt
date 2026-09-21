@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import com.sperance.exileforge.ui.icons.ItemIcon
+import com.sperance.exileforge.core.display.documentTitle
 import com.sperance.exileforge.core.i18n.tr
 import com.sperance.exileforge.ui.theme.Gold
 import androidx.compose.runtime.*
@@ -32,8 +33,10 @@ val LocalEntityPageLoader = staticCompositionLocalOf<suspend (EntitySource, Int,
     var loading by remember(source) { mutableStateOf(false) }
     var failure by remember(source) { mutableStateOf<String?>(null) }
     var retry by remember(source) { mutableIntStateOf(0) }
-    fun title(record: JsonObject): String = listOf("name", "login", "code").firstNotNullOfOrNull { record.text(it).takeIf(String::isNotBlank) }
-        ?: tr("Запись", "Record")
+    // A character is named by its player and an account by its login; everything else carries a
+    // code, and the server's dictionary is what turns that code back into a name.
+    fun title(record: JsonObject): String = record.text("login").takeIf(String::isNotBlank)
+        ?: documentTitle(record).takeIf(String::isNotBlank) ?: tr("Запись", "Record")
     val selected = records.firstOrNull { it.entityId == value }
     OutlinedButton(enabled = enabled, onClick = { records = emptyList(); page = 0; totalPages = 1; query = ""; expanded = true }, modifier = Modifier.fillMaxWidth()) {
         Text("$label: ${selected?.let(::title) ?: if(value.isBlank()) tr("Выбрать", "Choose") else tr("Выбрано", "Selected") + " · ${value.takeLast(6)}"} ▾")

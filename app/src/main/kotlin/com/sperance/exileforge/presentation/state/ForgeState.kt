@@ -67,6 +67,16 @@ data class ForgeState(
      */
     val auctionLocked: String? = null,
 
+    /**
+     * The server's dictionary for the current language, and how many strings it holds.
+     *
+     * Since 0.14.0 no document carries text: an entity stores a code and the name lives here. The
+     * bundle itself is global (`serverLocale`) because `core` renders from it without a state
+     * object; what is kept here is only what the screens need to report — which language is loaded
+     * and whether it arrived at all.
+     */
+    val localeLanguage: String = "", val localeStrings: Int = 0,
+
     val checks: List<CheckResult> = emptyList(),
     val health: String = tr("Соединение ещё не проверено", "The connection has not been checked yet"),
 ) {

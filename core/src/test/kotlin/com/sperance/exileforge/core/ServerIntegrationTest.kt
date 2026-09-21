@@ -1,6 +1,9 @@
 package com.sperance.exileforge.core
 
 import com.sperance.exileforge.core.contract.*
+import com.sperance.exileforge.core.display.equipmentTitle
+import com.sperance.exileforge.core.i18n.LocaleKey
+import com.sperance.exileforge.core.i18n.serverLocale
 import com.sperance.exileforge.core.model.Catalog
 import com.sperance.exileforge.core.model.CatalogFilter
 import com.sperance.exileforge.core.model.command.ItemStack
@@ -44,6 +47,19 @@ class ServerIntegrationTest {
         assertEquals("ADMIN", admin.role)
         assertEquals(admin.id, assertNotNull(api.currentUser()).id)
 
+        // The dictionary the whole client reads: since 0.14.0 no document carries text, so a
+        // mismatch between the key this client builds and the one the server wrote would show up
+        // nowhere but here — a mocked bundle agrees with itself by construction.
+        val manifest = api.localeManifest()
+        assertTrue(manifest.languages.map { it.code }.containsAll(listOf("ru", "en")), "languages: ${manifest.languages}")
+        for (language in manifest.languages) {
+            val bundle = api.localeBundle(language)
+            assertEquals(language.code, bundle.language)
+            assertTrue(bundle.size > 100, "${language.code} holds only ${bundle.size} strings")
+        }
+        serverLocale = api.localeBundle(assertNotNull(manifest.language("ru")))
+        assertTrue(serverLocale.contains("system.success"), "the server's own success key is missing")
+
         // The seeded modifier catalogue is what every rolled value on an instance points back at.
         val definitions = api.modifierDefinitions()
         assertTrue(definitions.isNotEmpty())
@@ -51,6 +67,9 @@ class ServerIntegrationTest {
         val described = definitions.firstOrNull { it.effects.isNotEmpty() } ?: fail("no definition carries an effect: $definitions")
         val tiers = api.modifierTiers(described.id)
         assertTrue(tiers.isNotEmpty() && tiers.all { it.values.isNotEmpty() }, "tiers of ${described.code}: $tiers")
+        // The key this client builds has to be the key the server wrote, or the template is the code.
+        assertTrue(serverLocale.contains(LocaleKey.modifierName(described.code)), "no text for ${described.code}")
+        assertNotEquals(described.code, described.template)
 
         // A character is nothing without a class: it carries the whole stat base and the tree's root.
         val classes = api.characterClasses()
@@ -58,6 +77,7 @@ class ServerIntegrationTest {
         assertTrue(chosenClass.baseStats.isNotEmpty(), "${chosenClass.code} has no base: $chosenClass")
         assertTrue(chosenClass.startNodeCode.isNotBlank(), "${chosenClass.code} names no start node")
         assertTrue(chosenClass.params.none { it.rolled }, "a class conversion must not be rolled: ${chosenClass.params}")
+        assertNotEquals(chosenClass.code, chosenClass.title, "the class has no name in the dictionary")
         val levels = api.experienceLevels()
         assertTrue(levels.isNotEmpty() && levels.first().level == 1, "progression table: $levels")
 
@@ -65,6 +85,7 @@ class ServerIntegrationTest {
         assertTrue(tree.isNotEmpty(), "the server seeded no skill tree")
         val start = tree.firstOrNull { it.code == chosenClass.startNodeCode } ?: fail("${chosenClass.startNodeCode} is not in the tree")
         assertEquals(SkillNodeType.START, start.type)
+        assertNotEquals(start.code, start.title, "${start.code} has no name in the dictionary")
 
         val name = "EF-integration-${java.util.UUID.randomUUID()}"
         val character = api.create(Catalog.CHARACTERS, buildJsonObject {
@@ -80,6 +101,9 @@ class ServerIntegrationTest {
             val template = api.randomTemplate("RARE", "HELMET")
             assertEquals("HELMET", template.text("slot"))
             assertEquals("RARE", template.text("rarity"))
+            // A template carries a code and no text: its name has to come back from the dictionary.
+            assertTrue("name" !in template, "the server still writes text into a template: $template")
+            assertNotEquals(template.text("code"), equipmentTitle(template), "no name for ${template.text("code")}")
             val instance = api.grant(id, template.entityId)
             assertEquals(template.entityId, instance.equipmentId)
             assertTrue(instance.params.isNotEmpty(), "the server rolled no modifiers")
@@ -125,12 +149,17 @@ class ServerIntegrationTest {
             val orbs = api.currencyOrbs()
             assertTrue(orbs.isNotEmpty(), "the server seeded no currency")
             assertTrue(orbs.all { it.orb != null }, "unknown orbs: ${orbs.filter { it.orb == null }.map { it.subCategory }}")
-            val chaos = orbs.firstOrNull { it.orb == CurrencyOrb.CHAOS_ORB } ?: fail("no Chaos Orb among ${orbs.map { it.name }}")
+            val chaos = orbs.firstOrNull { it.orb == CurrencyOrb.CHAOS_ORB } ?: fail("no Chaos Orb among ${orbs.map { it.code }}")
+            assertNotEquals(chaos.code, chaos.title(), "the orb has no name in the dictionary")
 
             // The orb is spent from the bag, so it is handed over first; the rerolls are the server's.
-            assertEquals("Success", api.adjustItems(id, listOf(ItemStack(chaos.id, 1))))
+            assertEquals("system.success", api.adjustItems(id, listOf(ItemStack(chaos.id, 1))))
             val rerolled = api.applyOrb(id, instance.id, chaos.id)
-            assertTrue(rerolled.message.isNotBlank(), "the server said nothing about what the orb did")
+            // The server sends a key and arguments that are keys themselves: what has to come out
+            // is a sentence naming the item, not the key it was built from.
+            assertTrue(serverLocale.contains(rerolled.messageKey), "no text for ${rerolled.messageKey}")
+            assertNotEquals(rerolled.messageKey, rerolled.message)
+            assertFalse(rerolled.message.contains("{0}"), "an argument was never filled: ${rerolled.message}")
             assertEquals(instance.id, rerolled.item.id)
             assertEquals("RARE", rerolled.item.rarity, "a Chaos Orb must leave the rarity alone: ${rerolled.message}")
             assertNull(rerolled.created, "only a mirror creates a second item")

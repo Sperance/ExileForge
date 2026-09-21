@@ -1,5 +1,6 @@
 package com.sperance.exileforge.presentation.features
 
+import com.sperance.exileforge.core.i18n.locError
 import com.sperance.exileforge.core.i18n.tr
 import com.sperance.exileforge.core.model.auction.AuctionFilter
 import com.sperance.exileforge.core.model.auction.AuctionPage
@@ -27,7 +28,7 @@ class AuctionViewModel(private val runtime: ForgeRuntime) {
     fun loadShowcase(page: Int = 0) { with(runtime) { trade {
         val id = state.value.characterId.trim()
         val filter = state.value.auctionFilter.copy(
-            excludeSellerId = if (state.value.showOwnLots) "" else id)
+            excludeSellerId = if (state.value.showOwnLots) "" else id, lang = state.value.lang.code)
         val showcase = api.auctionSearch(id, filter, page)
         mutable.update { it.copy(showcase = showcase) }
     } } }
@@ -40,7 +41,7 @@ class AuctionViewModel(private val runtime: ForgeRuntime) {
     /** Both lists at once, for opening the tab and for the refresh button. */
     fun loadAuction() { with(runtime) { trade {
         val id = state.value.characterId.trim()
-        val filter = state.value.auctionFilter.copy(excludeSellerId = if (state.value.showOwnLots) "" else id)
+        val filter = state.value.auctionFilter.copy(excludeSellerId = if (state.value.showOwnLots) "" else id, lang = state.value.lang.code)
         val showcase = api.auctionSearch(id, filter, 0)
         val lots = api.myLots(id)
         mutable.update { it.copy(showcase = showcase, myLots = lots) }
@@ -52,7 +53,7 @@ class AuctionViewModel(private val runtime: ForgeRuntime) {
         val lot = api.buyLot(id, lotId)
         mutable.update { it.copy(message = tr("Куплено: ${lot.title}", "Bought: ${lot.title}")) }
         refreshBag(id)
-        val filter = state.value.auctionFilter.copy(excludeSellerId = if (state.value.showOwnLots) "" else id)
+        val filter = state.value.auctionFilter.copy(excludeSellerId = if (state.value.showOwnLots) "" else id, lang = state.value.lang.code)
         mutable.update { it.copy(showcase = api.auctionSearch(id, filter, state.value.showcase.page)) }
     } } }
 
@@ -111,7 +112,7 @@ class AuctionViewModel(private val runtime: ForgeRuntime) {
         catch (e: ApiFailure) {
             // AU_002 alone is the gate; every other auction refusal is an ordinary rejected command.
             if (e.code != LEVEL_GATE) throw e
-            mutable.update { it.copy(auctionLocked = e.message, showcase = AuctionPage(), myLots = emptyList()) }
+            mutable.update { it.copy(auctionLocked = locError(e.code, e.message.orEmpty()), showcase = AuctionPage(), myLots = emptyList()) }
             throw e
         }
     } } }

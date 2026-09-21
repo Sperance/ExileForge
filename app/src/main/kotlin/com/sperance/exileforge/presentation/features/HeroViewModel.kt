@@ -1,7 +1,7 @@
 package com.sperance.exileforge.presentation.features
 
 import com.sperance.exileforge.core.contract.entityId
-import com.sperance.exileforge.core.contract.text
+import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.i18n.tr
 import com.sperance.exileforge.core.model.Catalog
 import com.sperance.exileforge.core.model.command.ItemStack
@@ -55,7 +55,8 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
         check(state.value.isAdmin) { tr("Выдача предметов доступна администратору", "Granting items is available to administrators") }
         val template = api.randomTemplate(state.value.grantRarity, state.value.grantSlot)
         api.grant(id, template.entityId)
-        mutable.update { it.copy(message = tr("Выпало: ${template.text("name")}", "Rolled: ${template.text("name")}")) }
+        val name = equipmentTitle(template)
+        mutable.update { it.copy(message = tr("Выпало: $name", "Rolled: $name")) }
     } } }
 
     fun adjustItems(itemId: String, amount: Long) { with(runtime) { characterCommand { id ->

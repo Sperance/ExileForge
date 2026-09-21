@@ -22,8 +22,22 @@ import com.sperance.exileforge.core.display.*
 import com.sperance.exileforge.core.i18n.tr
 import com.sperance.exileforge.core.model.modifier.ModifierDefinition
 import com.sperance.exileforge.ui.icons.ItemIcon
+import com.sperance.exileforge.ui.icons.propertyIcon
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.serialization.json.*
+
+/**
+ * One modifier, as a whole sentence.
+ *
+ * The server's dictionary holds the phrasing — "+{0} to armour" — and the rolled values fill it,
+ * so there is no label to put on the left of a number any more.
+ */
+@Composable fun ModifierLine(modifier: JsonObject, definitions: List<ModifierDefinition>) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Icon(propertyIcon(modifier.text("modifierId")), null, tint = Rune, modifier = Modifier.size(16.dp))
+        Text(modifierText(modifier, definitions), color = Parchment, style = MaterialTheme.typography.bodyMedium)
+    }
+}
 
 /** What a character must reach before the item works, printed only where the template asks for it. */
 private fun requirements(doc: JsonObject): List<String> = listOf(
@@ -50,7 +64,7 @@ private fun requirements(doc: JsonObject): List<String> = listOf(
                 .padding(horizontal = 16.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(doc.text("rarity").takeIf { it.isNotBlank() }?.let(::rarityTitle)?.uppercase()
                     ?: if (doc["userId"] != null) tr("ПЕРСОНАЖ", "CHARACTER") else tr("ПРЕДМЕТ", "ITEM"), color = color, style = MaterialTheme.typography.labelSmall)
-                Text(doc.text("name").ifBlank { tr("Предмет экипировки", "Equipment item") }, style = MaterialTheme.typography.titleMedium,
+                Text(doc.text("name").ifBlank { documentTitle(doc) }, style = MaterialTheme.typography.titleMedium,
                     color = color, maxLines = if (detailed) 5 else 2, overflow = TextOverflow.Ellipsis)
             }
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -71,7 +85,7 @@ private fun requirements(doc: JsonObject): List<String> = listOf(
                 // The base — armour, damage, attack speed — is fixed modifiers rather than item fields.
                 (doc["baseParams"] as? JsonArray).orEmpty().forEach { raw ->
                     val modifier = raw as? JsonObject ?: return@forEach
-                    PropertyRow(modifierTitle(modifier, definitions), modifierValues(modifier, definitions), modifier.text("modifierId"))
+                    ModifierLine(modifier, definitions)
                 }
                 if (doc["money"] != null) PropertyRow(tr("Золото", "Gold"), doc.text("money"), "money")
                 // Corruption is the one state that closes an item: no orb touches it again.
@@ -82,10 +96,12 @@ private fun requirements(doc: JsonObject): List<String> = listOf(
                 val rolled = (doc["params"] as? JsonArray).orEmpty()
                 rolled.take(if (detailed) rolled.size else 3).forEach { raw ->
                     val modifier = raw as? JsonObject ?: return@forEach
-                    PropertyRow(modifierTitle(modifier, definitions), modifierValues(modifier, definitions), modifier.text("modifierId"))
+                    ModifierLine(modifier, definitions)
                 }
                 if (!detailed && rolled.size > 3) Text(tr("Ещё ${rolled.size - 3} свойств", "${rolled.size - 3} more properties"), color = Rune, style = MaterialTheme.typography.labelMedium)
-                if (detailed && doc.text("description").isNotBlank()) Text(doc.text("description"), color = Muted, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Start)
+                if (detailed) documentDescription(doc).takeIf { it.isNotBlank() }?.let {
+                    Text(it, color = Muted, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Start)
+                }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
                     Text(actionLabel.uppercase(), color = color, style = MaterialTheme.typography.labelLarge)
                     Icon(Icons.Outlined.ChevronRight, null, tint = color)

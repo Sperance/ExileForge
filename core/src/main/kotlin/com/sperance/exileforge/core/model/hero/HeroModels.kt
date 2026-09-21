@@ -1,6 +1,7 @@
 package com.sperance.exileforge.core.model.hero
 
 import com.sperance.exileforge.core.contract.WireJson
+import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.model.modifier.Modifier
 import com.sperance.exileforge.core.model.progression.CharacterClass
 import com.sperance.exileforge.core.model.skilltree.SkillTreeState
@@ -28,10 +29,15 @@ import kotlinx.serialization.json.*
     val recipeAccess: List<String> = emptyList(),
 )
 
-/** An equipped item whose requirements the character does not meet, with the server's reasons. */
+/**
+ * An equipped item whose requirements the character does not meet, with the server's reasons.
+ *
+ * [code] names the template rather than the item: the text has lived in the locale bundle since
+ * 0.14.0, and the panel already has the instance in hand, so this is only the server's verdict.
+ */
 @Serializable data class InactiveEquipment(
     val inventoryId: String = "",
-    val name: String = "",
+    val code: String = "",
     val reasons: List<String> = emptyList(),
 )
 
@@ -78,15 +84,21 @@ import kotlinx.serialization.json.*
 /**
  * What `POST /api/v1/characterequipment/applyOrb` answered.
  *
- * [message] is the server's own account of what the orb did — the client prints it rather than
- * inferring the outcome, because only the server knows what it rolled. [created] is the copy a
- * Mirror of Kalandra made; every other orb leaves it null.
+ * Since 0.14.0 the server sends no sentence, only the key of one and its arguments: the client
+ * assembles the phrase so the word order can differ per language. The arguments are themselves
+ * locale keys — an orb names the item by `equipment.<code>.name`, not by text.
+ *
+ * What happened is still entirely the server's account, because only it knows what it rolled.
+ * [created] is the copy a Mirror of Kalandra made; every other orb leaves it null.
  */
 @Serializable data class OrbOutcome(
-    val message: String = "",
+    val messageKey: String = "",
+    val messageArgs: List<String> = emptyList(),
     val item: EquipmentInstance,
     val created: EquipmentInstance? = null,
-)
+) {
+    val message: String get() = loc(messageKey, messageArgs)
+}
 
 /** A stacking item in the bag. The server stores it as the flat string "itemId:amount". */
 @Serializable data class CharacterItem(val itemId: String, val amount: Long)

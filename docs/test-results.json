@@ -34,5 +34,11 @@
     "tests": "1",
     "failures": "0",
     "errors": "0"
+  },
+  {
+    "name": "com.sperance.exileforge.core.ServerLocaleTest",
+    "tests": "10",
+    "failures": "0",
+    "errors": "0"
   }
 ]

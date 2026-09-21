@@ -70,10 +70,11 @@ class ContractTest {
 
     @Test fun `a composite modifier decodes one value per effect`() {
         val definition = WireJson.decodeFromString(ModifierDefinition.serializer(),
-            """{"_id":"$id","code":"life_and_mana","name":"Life and Mana","source":"PREFIX","tags":["life"],
+            """{"_id":"$id","code":"LIFE_AND_MANA","source":"PREFIX","tags":["life"],
                 "effects":[{"stat":"STOCK_HEALTH","operation":"ADD"},{"stat":"STOCK_MANA","operation":"ADD"}]}""")
         assertTrue(definition.composite)
-        assertEquals("Life and Mana", definition.title)
+        // A definition carries no text since 0.14.0: without the dictionary its code stands in.
+        assertEquals("LIFE_AND_MANA", definition.template)
         assertEquals(listOf(ModifierOperation.ADD, ModifierOperation.ADD), definition.effects.map { it.operation })
         val tier = WireJson.decodeFromString(ModifierTier.serializer(),
             """{"_id":"$id","modifierId":"$id","tier":1,"minItemLevel":84,"weight":100,"values":[{"valueMin":46.0,"valueMax":48.0},{"valueMin":10.0,"valueMax":12.0}]}""")
@@ -126,15 +127,18 @@ class ContractTest {
         assertEquals("Божественная сфера", CurrencyOrb.DIVINE_ORB.title(Lang.RU))
         assertEquals("Divine Orb", CurrencyOrb.DIVINE_ORB.title(Lang.EN))
         assertTrue(CurrencyOrb.entries.all { it.rule(Lang.RU).isNotBlank() && it.rule(Lang.EN).isNotBlank() })
-        // An unknown orb still has a name and a description, both the server's own.
-        val unknown = CurrencyItem(id, "Orb of Fusing", "ORB_OF_FUSING", "Links the sockets", 5)
+        // An orb is a document with a code and no text; without the dictionary the client's own
+        // table names the ones it knows, and an unknown one is shown by its code.
+        val chaos = CurrencyItem(id, "CHAOS_ORB", "CHAOS_ORB", 1)
+        assertEquals("Сфера хаоса", chaos.title(Lang.RU))
+        val unknown = CurrencyItem(id, "ORB_OF_FUSING", "ORB_OF_FUSING", 5)
         assertNull(unknown.orb)
-        assertEquals("Orb of Fusing", unknown.title(Lang.EN))
+        assertEquals("ORB_OF_FUSING", unknown.title(Lang.EN))
     }
 
     @Test fun `the reachable nodes are the neighbours of what is taken`() {
         fun node(code: String, type: SkillNodeType, vararg links: String) =
-            SkillTreeNode(code = code, name = code, type = type, connections = links.toList())
+            SkillTreeNode(code = code, type = type, connections = links.toList())
         val tree = listOf(
             node("STR_START", SkillNodeType.START, "STR_LIFE_1"),
             node("INT_START", SkillNodeType.START, "INT_MANA_1"),

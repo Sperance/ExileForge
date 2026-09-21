@@ -2,6 +2,8 @@ package com.sperance.exileforge.core.model.auction
 
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.pick
+import com.sperance.exileforge.core.i18n.LocaleKey
+import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.model.hero.EquipmentInstance
 import kotlinx.serialization.SerialName
@@ -20,9 +22,12 @@ import kotlinx.serialization.Serializable
  * equipment instance leaves `CharacterEquipment` for the lot, and stacking items are debited from
  * the seller's bag. That is what stops the same item being worn or sold twice.
  *
- * [title], [slot], [rarity] and [itemLevel] are a snapshot taken when the lot was listed, which is
- * what lets the server's filter run as a single query. They describe the *instance*, not its
+ * [itemCode], [slot], [rarity] and [itemLevel] are a snapshot taken when the lot was listed, which
+ * is what lets the server's filter run as a single query. They describe the *instance*, not its
  * template — orbs may have changed its rarity before it was listed.
+ *
+ * The lot stores no name: since 0.14.0 the text lives in the locale bundle under the item's code,
+ * and which section that code belongs to depends on [kind].
  */
 @Serializable data class AuctionLot(
     @SerialName("_id") val id: String = "",
@@ -37,7 +42,7 @@ import kotlinx.serialization.Serializable
     /** The orb the price is set in — a reference to a `CURRENCY` document of `items`. */
     val priceOrbId: String = "",
     val price: Long = 0,
-    val title: String = "",
+    val itemCode: String = "",
     val slot: String? = null,
     val rarity: String? = null,
     val itemLevel: Int = 0,
@@ -47,6 +52,9 @@ import kotlinx.serialization.Serializable
 ) {
     val onSale: Boolean get() = status == AuctionLotStatus.ACTIVE
     fun belongsTo(characterId: String): Boolean = sellerId == characterId
+    /** An equipment lot names a template, a stack lot names an `items` document. */
+    val title: String get() = locOr(
+        if (kind == AuctionLotKind.EQUIPMENT) LocaleKey.equipmentName(itemCode) else LocaleKey.itemName(itemCode), itemCode)
 }
 
 /**
@@ -67,8 +75,16 @@ import kotlinx.serialization.Serializable
     val sellerId: String = "",
     /** Hide one character's own lots; they cannot be bought anyway, so the showcase drops them. */
     val excludeSellerId: String = "",
+    /**
+     * Which dictionary the server resolves [title] against.
+     *
+     * Lots carry codes, not names, so a search by text is turned into a search by code on the
+     * server side — and that needs to know the language the player typed in.
+     */
+    val lang: String = "",
 ) {
-    val isEmpty: Boolean get() = query().isEmpty()
+    /** `lang` alone is not a filter: it only says how to read the text, so it does not count. */
+    val isEmpty: Boolean get() = query().keys.none { it != "lang" }
 
     /** Only the fields actually set reach the query string: the server rejects an unknown enum. */
     fun query(): Map<String, String> = buildMap {
@@ -76,6 +92,8 @@ import kotlinx.serialization.Serializable
         put("minItemLevel", minItemLevel.trim()); put("maxItemLevel", maxItemLevel.trim())
         put("priceOrbId", priceOrbId); put("maxPrice", maxPrice.trim())
         put("sellerId", sellerId); put("excludeSellerId", excludeSellerId)
+        // The language only matters when there is text to resolve.
+        if (title.isNotBlank()) put("lang", lang)
     }.filterValues { it.isNotBlank() }
 }
 

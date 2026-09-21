@@ -12,6 +12,8 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
+import com.sperance.exileforge.core.i18n.LocaleBundle
+import com.sperance.exileforge.core.i18n.serverLocale
 import com.sperance.exileforge.core.model.hero.CharacterSheet
 import com.sperance.exileforge.core.model.hero.CharacterSummary
 import com.sperance.exileforge.core.model.hero.InactiveEquipment
@@ -37,18 +39,39 @@ import com.sperance.exileforge.ui.theme.ForgeTheme
 import com.sperance.exileforge.ui.theme.Ink
 import java.io.File
 import kotlinx.serialization.json.*
+import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
 class HeroPanelTest {
     @get:Rule val compose = createComposeRule()
 
+    /**
+     * The server's dictionary, as the app always has it by the time a screen is drawn.
+     *
+     * Since 0.14.0 no document carries text: a template, a node and a class all store a code, and
+     * every name on these screens is looked up here. A panel drawn without it would print codes.
+     */
+    @Before fun dictionary() { serverLocale = LocaleBundle.parse("ru", "sha", """{
+        "equipment.HERO_RING.name": "Кольцо героя",
+        "equipment.IRON_HELMET.name": "Железный шлем",
+        "equipment.MY_HELMET.name": "Мой шлем",
+        "item.CHAOS_ORB.name": "Сфера хаоса",
+        "item.CHAOS_ORB.description": "Перекатывает аффиксы редкого предмета",
+        "class.MARAUDER.name": "Мародёр",
+        "skilltree.STR_START.name": "Мародёр",
+        "skilltree.STR_LIFE_1.name": "Крепость",
+        "skilltree.STR_LIFE_1.description": "Больше здоровья"}""") }
+
+    @After fun forget() { serverLocale = LocaleBundle() }
+
     /** The equipped slot shows its template's name and hands back the instance id, not the slot. */
     @Test fun equippedSlotShowsItsTemplateAndEmitsTheInstanceId() {
         val instance = EquipmentInstance("ring-instance", "hero", "ring-base",
             listOf(RolledModifier("life-modifier", listOf(42.0), "tier-1", 1)), equippedSlot = "RING")
-        val base = buildJsonObject { put("_id", "ring-base"); put("name", "Кольцо героя"); put("slot", "RING"); put("rarity", "RARE") }
+        val base = buildJsonObject { put("_id", "ring-base"); put("code", "HERO_RING"); put("slot", "RING"); put("rarity", "RARE") }
         val hero = HeroView(CharacterSummary("hero", "owner", "Изгнанник", version = 3, level = 10),
             listOf(instance), CharacterSheet("hero", 10, mapOf("STOCK_HEALTH" to 88.0, "STOCK_ARMOR" to 40.0), listOf("ring-instance")))
         var removed: String? = null
@@ -77,30 +100,30 @@ class HeroPanelTest {
      */
     @Test fun anItemWhoseRequirementsAreNotMetKeepsItsSlotAndSaysWhy() {
         val instance = EquipmentInstance("helm-instance", "hero", "helm-base", equippedSlot = "HELMET")
-        val base = buildJsonObject { put("_id", "helm-base"); put("name", "Железный шлем"); put("slot", "HELMET"); put("rarity", "COMMON") }
+        val base = buildJsonObject { put("_id", "helm-base"); put("code", "IRON_HELMET"); put("slot", "HELMET"); put("rarity", "COMMON") }
         val hero = HeroView(CharacterSummary("hero", "owner", "Изгнанник", level = 3, classId = "marauder"), listOf(instance),
             CharacterSheet("hero", 3, mapOf("STOCK_HEALTH" to 60.0), emptyList(),
-                listOf(InactiveEquipment("helm-instance", "Железный шлем", listOf("strength: need 30, have 14")))))
+                listOf(InactiveEquipment("helm-instance", "IRON_HELMET", listOf("strength: need 30, have 14")))))
         compose.setContent { ForgeTheme { Column(Modifier.background(Ink).verticalScroll(rememberScrollState()).padding(12.dp)) {
             HeroEquipmentPanel(ForgeState(busy = false, signedIn = true, hero = hero, characterOwner = "owner",
                 profile = com.sperance.exileforge.core.model.command.UserProfile("owner"),
-                classes = listOf(CharacterClass("marauder", "MARAUDER", "Marauder", "STR_START")),
+                classes = listOf(CharacterClass("marauder", "MARAUDER", "STR_START")),
                 inventoryBases = mapOf("helm-base" to base)), {})
         } } }
-        compose.onNodeWithText("Marauder").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Мародёр").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Не работает").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Сила: нужно 30, есть 14").performScrollTo().assertIsDisplayed()
     }
 
     /** The tree draws the server's graph and sends back the node code the player tapped. */
     @Test fun theTreeShowsTheChosenNodeAndItsTwoCommands() {
-        val start = SkillTreeNode("start-id", "STR_START", "Мародёр", SkillNodeType.START, cost = 0,
+        val start = SkillTreeNode("start-id", "STR_START", SkillNodeType.START, cost = 0,
             connections = listOf("STR_LIFE_1"), positionX = -40, positionY = 0)
-        val life = SkillTreeNode("life-id", "STR_LIFE_1", "Крепость", SkillNodeType.NOTABLE, cost = 1,
-            connections = listOf("STR_START"), positionX = -20, positionY = 10, description = "Больше здоровья")
+        val life = SkillTreeNode("life-id", "STR_LIFE_1", SkillNodeType.NOTABLE, cost = 1,
+            connections = listOf("STR_START"), positionX = -20, positionY = 10)
         val hero = HeroView(CharacterSummary("hero", "owner", "Изгнанник", level = 5), emptyList(),
             tree = SkillTreeState("hero", total = 4, spent = 0, available = 4,
-                nodes = listOf(CharacterSkillNode("STR_START", emptyList(), "Мародёр", SkillNodeType.START, 0))))
+                nodes = listOf(CharacterSkillNode("STR_START", emptyList(), SkillNodeType.START, 0))))
         var allocated: String? = null
         compose.setContent { ForgeTheme { Column(Modifier.background(Ink).verticalScroll(rememberScrollState()).padding(12.dp)) {
             SkillTreePanel(ForgeState(busy = false, signedIn = true, hero = hero, characterOwner = "owner",
@@ -121,11 +144,11 @@ class HeroPanelTest {
      * A seller cannot buy their own lot, and the server says so; the card simply does not offer it.
      */
     @Test fun theShowcaseNamesThePriceInOrbsAndWillNotSellYouYourOwnLot() {
-        val chaos = CurrencyItem("chaos-orb", "Chaos Orb", "CHAOS_ORB", "", 300)
+        val chaos = CurrencyItem("chaos-orb", "CHAOS_ORB", "CHAOS_ORB", 300)
         val theirs = AuctionLot(id = "lot-1", sellerId = "rival", sellerName = "Соперник", kind = AuctionLotKind.EQUIPMENT,
-            title = "Железный шлем", slot = "HELMET", rarity = "RARE", itemLevel = 30, priceOrbId = "chaos-orb", price = 4)
+            itemCode = "IRON_HELMET", slot = "HELMET", rarity = "RARE", itemLevel = 30, priceOrbId = "chaos-orb", price = 4)
         // Different prices, so each card's line is its own: the price is per lot, not per showcase.
-        val mine = theirs.copy(id = "lot-2", sellerId = "hero", sellerName = "Изгнанник", title = "Мой шлем", price = 7)
+        val mine = theirs.copy(id = "lot-2", sellerId = "hero", sellerName = "Изгнанник", itemCode = "MY_HELMET", price = 7)
         var bought: String? = null
         compose.setContent { ForgeTheme { Column(Modifier.background(Ink)) {
             ShowcaseList(ForgeState(busy = false, signedIn = true, characterId = "hero", characterOwner = "owner",
@@ -146,8 +169,8 @@ class HeroPanelTest {
     /** The orb panel hands back the pair the server needs and says what the copy currently is. */
     @Test fun applyingAnOrbEmitsTheInstanceAndTheOrbItself() {
         val instance = EquipmentInstance("ring-instance", "hero", "ring-base", rarity = "UNCOMMON")
-        val base = buildJsonObject { put("_id", "ring-base"); put("name", "Кольцо героя"); put("slot", "RING"); put("rarity", "COMMON") }
-        val chaos = CurrencyItem("chaos-orb", "Chaos Orb", "CHAOS_ORB", "Перекатывает аффиксы редкого предмета", 300)
+        val base = buildJsonObject { put("_id", "ring-base"); put("code", "HERO_RING"); put("slot", "RING"); put("rarity", "COMMON") }
+        val chaos = CurrencyItem("chaos-orb", "CHAOS_ORB", "CHAOS_ORB", 300)
         val hero = HeroView(CharacterSummary("hero", "owner", "Изгнанник"), listOf(instance),
             bag = listOf(com.sperance.exileforge.core.model.hero.CharacterItem("chaos-orb", 7)))
         var applied: Pair<String, String>? = null

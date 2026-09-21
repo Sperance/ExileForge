@@ -13,14 +13,15 @@ class ItemPresentationTest {
     private val id = "0123456789abcdef01234567"
 
     @Test fun instanceProjectionShowsRolledValuesAndLeavesTheTemplateUntouched() {
-        val base = buildJsonObject { put("_id", "template"); put("name", "Iron Ring"); put("slot", "RING"); put("rarity", "COMMON") }
+        val base = buildJsonObject { put("_id", "template"); put("code", "IRON_RING"); put("slot", "RING"); put("rarity", "COMMON") }
         val instance = buildJsonObject {
             put("_id", "instance"); put("equipmentId", "template"); put("equippedSlot", "RING")
             put("params", buildJsonArray { add(buildJsonObject { put("modifierId", id); put("values", buildJsonArray { add(42.0) }) }) })
         }
         val display = inventoryDocument(instance, base)
         assertEquals("instance", display.text("_id"))
-        assertEquals("Iron Ring", display.text("name"))
+        // A template carries a code; without the dictionary the card names it readably.
+        assertEquals("IRON RING", display.text("name"))
         assertEquals("RING", display.text("slot"))
         assertEquals(1, display.getValue("params").jsonArray.size)
         // The shared template is a different document and keeps its own identity.
@@ -30,7 +31,7 @@ class ItemPresentationTest {
 
     @Test fun theCopysOwnRarityWinsOverTheTemplateItDroppedFrom() {
         // A template says what the item drops as; the orbs then move this copy up or down on its own.
-        val base = buildJsonObject { put("_id", "template"); put("name", "Iron Ring"); put("slot", "RING"); put("rarity", "COMMON") }
+        val base = buildJsonObject { put("_id", "template"); put("code", "IRON_RING"); put("slot", "RING"); put("rarity", "COMMON") }
         val upgraded = buildJsonObject { put("_id", "instance"); put("equipmentId", "template"); put("rarity", "RARE"); put("corrupted", true) }
         val display = inventoryDocument(upgraded, base)
         assertEquals("RARE", display.text("rarity"))
@@ -44,16 +45,18 @@ class ItemPresentationTest {
         assertEquals(ItemVisualKind.ITEM, itemVisualKind(display))
     }
 
-    @Test fun rolledValuesAreNamedByTheirDefinitionsEffects() {
+    @Test fun rolledValuesSurviveAMissingTranslation() {
+        // The sentence itself comes from the server's dictionary (see ServerLocaleTest); what is
+        // pinned here is what a screen shows without one — the numbers, never nothing.
         val definitions = listOf(WireJson.decodeFromString(ModifierDefinition.serializer(),
-            """{"_id":"$id","code":"life_and_mana","name":"Life and Mana","source":"PREFIX",
+            """{"_id":"$id","code":"LIFE_AND_MANA","source":"PREFIX",
                 "effects":[{"stat":"STOCK_HEALTH","operation":"ADD"},{"stat":"STOCK_MANA","operation":"ADD"}]}"""))
         val modifier = buildJsonObject { put("modifierId", id); put("values", buildJsonArray { add(46.0); add(11.5) }) }
-        assertEquals("Life and Mana", modifierTitle(modifier, definitions))
-        assertEquals("46 Здоровье · 11.5 Мана", modifierValues(modifier, definitions))
-        // An unknown description still prints the numbers rather than dropping them.
-        assertEquals("46 · 11.5", modifierValues(modifier, emptyList()))
-        assertEquals("0123456789abcdef01234567", modifierTitle(modifier, emptyList()))
+        assertEquals("46 Здоровье · 11.5 Мана", modifierText(modifier, definitions))
+        // A definition the client has not read still prints what was rolled.
+        assertEquals("46 · 11.5", modifierText(modifier, emptyList()))
+        // Nothing rolled at all: the modifier is named rather than shown as an empty line.
+        assertEquals("LIFE_AND_MANA", modifierText(buildJsonObject { put("modifierId", id) }, definitions))
     }
 
     @Test fun slotsWeaponsAndRaritiesHaveTitlesInBothTongues() {

@@ -1,5 +1,7 @@
 package com.sperance.exileforge.core.model.skilltree
 
+import com.sperance.exileforge.core.i18n.LocaleKey
+import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.model.modifier.Modifier
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -17,15 +19,16 @@ import kotlinx.serialization.Serializable
 @Serializable data class SkillTreeNode(
     @SerialName("_id") val id: String = "",
     val code: String = "",
-    val name: String = "",
     val type: SkillNodeType = SkillNodeType.SMALL,
     val params: List<Modifier> = emptyList(),
     val connections: List<String> = emptyList(),
     val cost: Int = 1,
     val positionX: Int = 0,
     val positionY: Int = 0,
-    val description: String? = null,
-)
+) {
+    val title: String get() = locOr(LocaleKey.skillNodeName(code), code)
+    val details: String get() = locOr(LocaleKey.skillNodeDescription(code), "")
+}
 
 /**
  * A node one character has taken, embedded in their `Character.skillNodes`.
@@ -39,11 +42,11 @@ import kotlinx.serialization.Serializable
 @Serializable data class CharacterSkillNode(
     val code: String = "",
     val params: List<Modifier> = emptyList(),
-    val name: String = "",
     val type: SkillNodeType = SkillNodeType.SMALL,
     val cost: Int = 1,
-    val description: String? = null,
-)
+) {
+    val title: String get() = locOr(LocaleKey.skillNodeName(code), code)
+}
 
 /**
  * The state of one character's tree, as `GET /api/v1/character/skilltree/state` reports it.

@@ -28,9 +28,10 @@ private fun list(key: String, label: String, spec: InputSpec) = FormField(key, l
 val itemCategories = listOf("WOOD_STOCK", "STONE_STOCK", "CONSUMABLE", "MATERIAL", "QUEST")
 
 fun schemaFields(schema: String, document: JsonObject = JsonObject(emptyMap())): List<FormField> = when (schema) {
+    // No name or description here since 0.14.0: a document carries a code and the words live in
+    // the server's locale files, so renaming a thing is a translation change, not a write.
     "items" -> listOf(
-        text("name", tr("Название", "Name"), tr("Новый предмет", "New item")),
-        text("description", tr("Описание", "Description")),
+        text("code", tr("Код", "Code"), "EF_NEW_ITEM"),
         text("image", tr("Изображение (URL)", "Image (URL)")).copy(nullable = true, default = JsonNull),
         text("category", tr("Категория", "Category"), "STONE_STOCK", itemCategories),
         text("subCategory", tr("Подкатегория", "Sub-category"), "STONE"),
@@ -38,8 +39,7 @@ fun schemaFields(schema: String, document: JsonObject = JsonObject(emptyMap())):
     )
     "equipment" -> buildList {
         addAll(listOf(
-            text("name", tr("Название", "Name"), tr("Новый предмет", "New item")),
-            text("description", tr("Описание", "Description")),
+            text("code", tr("Код", "Code"), "EF_NEW_EQUIPMENT"),
             text("image", tr("Изображение (URL)", "Image (URL)")).copy(nullable = true, default = JsonNull),
             choice("slot", tr("Слот", "Slot"), slots),
             choice("rarity", tr("Редкость", "Rarity"), rarities),
@@ -77,7 +77,7 @@ fun schemaFields(schema: String, document: JsonObject = JsonObject(emptyMap())):
     "boolSkill" -> listOf(choice("stat", tr("Состояние", "State"), boolStats), flag("value", tr("Активно", "Active")).copy(nullable = true, default = JsonNull))
     // Read-only shapes the catalogue renders; they are never posted back.
     "modifierDefinition" -> listOf(
-        text("code", tr("Код", "Code")), text("name", tr("Название", "Name")),
+        text("code", tr("Код", "Code")),
         choice("source", tr("Источник", "Source"), modifierSources, "PREFIX"),
         flag("isLocal", tr("Локальный", "Local")),
         list("effects", tr("Эффекты", "Effects"), InputSpec.Object("modifierEffect")),

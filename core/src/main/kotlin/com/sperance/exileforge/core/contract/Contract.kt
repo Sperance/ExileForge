@@ -22,21 +22,20 @@ val modifierSources = listOf("IMPLICIT", "PREFIX", "SUFFIX", "UNIQUE", "ENCHANTM
 val skillNodeTypes = listOf("START", "SMALL", "NOTABLE", "KEYSTONE")
 val lotKinds = listOf("EQUIPMENT", "ITEM")
 val modifierOperations = listOf("ADD", "INCREASED", "MORE", "SET")
-const val SERVER_COMMIT = "c4df7448d33c9a857a66428ed32bd8cf5b02750f"
+const val SERVER_COMMIT = "3a07a4f8d3e65a1365f088b4ab710e1c609ee257"
 const val SERVER_BRANCH = "claude/tender-pasteur-a36kj2"
-const val SERVER_VERSION = "0.13.2"
+const val SERVER_VERSION = "0.14.0"
 
 fun template(catalog: Catalog, kind: EquipmentKind = EquipmentKind.Weapon): JsonObject = when (catalog) {
     Catalog.CHARACTERS -> defaultObject("character")
+    // No text since 0.14.0: a document carries a code and its words live in the locale bundle.
     Catalog.ITEMS -> buildJsonObject {
-        put("name", tr("Осколок древних", "Shard of the Ancients"))
-        put("description", tr("Тестовый предмет Exile Forge", "Exile Forge test item"))
+        put("code", "EF_TEST_SHARD")
         put("image", JsonNull); put("category", "STONE_STOCK"); put("subCategory", "STONE"); put("price", 1L)
     }
     Catalog.EQUIPMENT -> buildJsonObject {
         put("type", kind.type)
-        put("name", tr("Наследие изгнанника", "Exile's Legacy"))
-        put("description", tr("Тестовый предмет Exile Forge", "Exile Forge test item"))
+        put("code", "EF_TEST_LEGACY")
         put("image", JsonNull)
         put("slot", when (kind) { EquipmentKind.Weapon -> "WEAPON_1H"; EquipmentKind.Armor -> "BODY"; EquipmentKind.Accessory -> "RING" })
         put("rarity", "RARE"); put("itemLevel", 30)
@@ -51,13 +50,29 @@ fun template(catalog: Catalog, kind: EquipmentKind = EquipmentKind.Weapon): Json
 
 fun requireId(id: String) { require(Regex("[0-9a-fA-F]{24}").matches(id)) { tr("ID должен содержать 24 шестнадцатеричных символа", "The id must be 24 hexadecimal characters") } }
 
+/**
+ * A content code: the key half of `equipment.<CODE>.name`.
+ *
+ * It has to survive a round trip through a locale key, so the separator of that key is the one
+ * character it cannot contain.
+ */
+fun validateCode(code: String) {
+    require(code.isNotBlank()) { tr("Введите код предмета", "Enter the item's code") }
+    require(Regex("[A-Za-z0-9_]+").matches(code)) {
+        tr("Код: латиница, цифры и подчёркивание", "The code takes Latin letters, digits and underscores")
+    }
+}
+
 /** Only changed mutable fields: never sends the polymorphic discriminator to MongoDB. */
 fun diff(original: JsonObject, edited: JsonObject): JsonObject = JsonObject(
     edited.filter { (key, value) -> key !in protectedFields && original[key] != value }
 )
 
 fun validate(document: JsonObject, catalog: Catalog) {
-    require(document.text("name").isNotBlank()) { tr("Введите название", "Enter a name") }
+    // A character is named by its player, so it keeps a literal name; everything else is content
+    // and carries a code whose text lives in the server's locale bundle.
+    if (catalog == Catalog.CHARACTERS) require(document.text("name").isNotBlank()) { tr("Введите имя", "Enter a name") }
+    else validateCode(document.text("code"))
     validateForm(formSchema(catalog), document)
     when (catalog) {
         Catalog.CHARACTERS -> validateCharacter(document)
@@ -158,8 +173,8 @@ val JsonObject.entityVersion: Long get() = get("version")?.jsonPrimitive?.longOr
 
 fun editableFields(catalog: Catalog): Set<String> = when (catalog) {
     Catalog.CHARACTERS -> setOf("name", "description")
-    Catalog.ITEMS -> setOf("name", "description", "image", "category", "subCategory", "price")
-    Catalog.EQUIPMENT -> setOf("name", "description", "image", "slot", "rarity", "itemLevel", "weaponType", "durability",
+    Catalog.ITEMS -> setOf("image", "category", "subCategory", "price")
+    Catalog.EQUIPMENT -> setOf("image", "slot", "rarity", "itemLevel", "weaponType", "durability",
         "modifierIds", "baseParams", "requiredLevel", "requiredStrength", "requiredDexterity", "requiredIntelligence")
 }
 
@@ -171,6 +186,7 @@ fun editableFields(catalog: Catalog): Set<String> = when (catalog) {
  */
 fun creationFields(catalog: Catalog): Set<String> = when (catalog) {
     Catalog.CHARACTERS -> setOf("userId", "classId")
-    Catalog.EQUIPMENT -> setOf("type")
-    Catalog.ITEMS -> emptySet()
+    // A code names the row in the locale bundle, and renaming it would orphan every translation.
+    Catalog.EQUIPMENT -> setOf("type", "code")
+    Catalog.ITEMS -> setOf("code")
 }

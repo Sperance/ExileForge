@@ -1,7 +1,7 @@
 # ExileForge 2.0.0
 
-Android Compose client for **ktor-bestgame 0.13.2**.
-Server: branch `claude/tender-pasteur-a36kj2`, commit `c4df7448d33c9a857a66428ed32bd8cf5b02750f`.
+Android Compose client for **ktor-bestgame 0.14.0**.
+Server: branch `claude/tender-pasteur-a36kj2`, commit `3a07a4f8d3e65a1365f088b4ab710e1c609ee257`.
 
 ## Язык интерфейса · Interface language
 
@@ -106,11 +106,12 @@ Debug allows HTTP for local development; release requires HTTPS. **This server h
 - **Lists are paged on the client, except the auction.** `/paged` was fixed in 0.13.1, but the generic route still offers no filter, and moving the catalogue onto it would cost every catalogue filter. The auction has a search route of its own, so its showcase is filtered and paged by the server.
 - **The player auction (0.13.0).** Lots live in `auctionlot`; while a lot is listed the goods live inside it rather than with the seller. Prices are counted in currency orbs alone.
 - **The tree moved into the character (0.12.1).** `CharacterSkillNode` is no longer a collection: taken nodes are a snapshot inside `Character.skillNodes`, and the routes live under `/api/v1/character/skilltree`.
+- **The server owns every name (0.14.0).** No document in Mongo carries text any more: equipment, items, modifiers, tree nodes and classes store a **code**, and the strings live in static files — `GET /locale/index.json` lists the languages with a hash each, `GET /locale/{ru,en}.json` is the dictionary, keyed `<section>.<CODE>.<field>`. The client downloads the bundle once per hash, stores it per server and language, and looks every name up through it; without it a screen shows codes rather than blanks. A modifier's text is a **template** with `{0}`, `{1}` per effect, because a composite modifier cannot be assembled by bolting numbers onto a label in every language. An orb's result arrives as a message key plus arguments that are themselves keys. The client keeps its own tables for slots, rarities and stats: those take an explicit language and a dictionary holds one at a time.
 - **Currency orbs are back (0.9.1).** They live in the `items` collection under the `CURRENCY` category and are applied through `POST /api/v1/characterequipment/applyOrb`. The rarity and the corruption flag now belong to the copy, not to the template.
 - **The passive tree is back (0.9.2).** A shared seeded graph plus one document per node a character has taken, with allocate, refund and reset. Every rule is checked by the server.
 - **Stats were reworked (0.10.0).** A character references a class instead of carrying base stats; `stats` answers an object naming the equipped items the server counted and the ones whose requirements are not met; an item's base is fixed modifiers rather than damage and defence fields; modifier effects can be attribute conversions.
 - **Removed with the features the server no longer has:** combat and the battle arena, the crafting bench, the server icon set, JWT, cursor-paged inventory and three-way conflict review.
-- **Upgrading the server needs a fresh database.** The schema migrator was removed in 0.10.1 and the player-data format has changed several times since, so a database that predates 0.13 is reseeded rather than migrated.
+- **Upgrading the server needs a fresh database.** The schema migrator was removed in 0.10.1 and the player-data format has changed several times since, so a database that predates 0.14 is reseeded rather than migrated.
 
 ## Build and verification
 

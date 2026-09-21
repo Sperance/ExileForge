@@ -1,6 +1,9 @@
 package com.sperance.exileforge.presentation
 
 import com.sperance.exileforge.core.i18n.Lang
+import com.sperance.exileforge.core.i18n.LocaleBundle
+import com.sperance.exileforge.core.i18n.locError
+import com.sperance.exileforge.core.i18n.serverLocale
 import com.sperance.exileforge.core.i18n.tr
 import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.model.EntitySource
@@ -27,6 +30,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
     val logs = journal.entries
     lateinit var api: GameApi
     var metadataJob: Job? = null
+    var localeJob: Job? = null
     val catalogViewModel = CatalogViewModel(this)
     val editorViewModel = EditorViewModel(this)
     val heroViewModel = HeroViewModel(this)
@@ -54,6 +58,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
                 api = newApi(server)
                 mutable.update { it.copy(lang = language, server = server, serverDraft = server, busy = false,
                     message = tr("Войдите в аккаунт для загрузки каталога", "Sign in to load the catalogue")) }
+                refreshLocale()
             } catch (e: CancellationException) { throw e }
             catch (e: Exception) {
                 api = newApi("http://10.0.2.2:8080/")
@@ -69,6 +74,52 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
         uiLanguage = lang
         mutable.update { it.copy(lang = lang, health = if (it.health == untested) tr("Соединение ещё не проверено", "The connection has not been checked yet") else it.health) }
         scope.launch { store.saveLanguage(lang) }
+        // The server's half of the language lives in its dictionary, so the two are switched together.
+        refreshLocale(lang)
+    }
+
+    /**
+     * The server's dictionary for one language.
+     *
+     * Since 0.14.0 the documents carry codes and the text is served as a static file, so this is
+     * what turns `equipment.IRON_SKULLCAP.name` back into a name. The stored copy is read first, so
+     * the app starts with names even offline; the manifest's hash then says whether it is still the
+     * dictionary the server is serving, and only a changed hash costs a download.
+     *
+     * A dictionary belongs to a server as well as to a language: two servers may seed different text.
+     */
+    suspend fun loadLocale(language: Lang) {
+        val server = state.value.server
+        val cached = store.locale(server, language.code)
+        cached?.let { (hash, document) -> applyLocale(LocaleBundle.parse(language.code, hash, document)) }
+        val manifest = api.localeManifest()
+        val chosen = manifest.language(language.code) ?: manifest.language(manifest.default) ?: return
+        if (cached != null && cached.first == chosen.hash && chosen.code == language.code) return
+        val document = api.localeDocument(chosen.code)
+        store.saveLocale(server, chosen.code, chosen.hash, document)
+        applyLocale(LocaleBundle.parse(chosen.code, chosen.hash, document))
+    }
+
+    /**
+     * Reading the dictionary is background work and never an error banner.
+     *
+     * A server that will not serve it leaves codes on screen — which is the honest picture, and the
+     * Account tab reports how many strings are loaded — rather than a failure the player cannot act
+     * on before they have even signed in.
+     */
+    fun refreshLocale(language: Lang = state.value.lang) {
+        localeJob?.cancel()
+        localeJob = scope.launch {
+            try { loadLocale(language) }
+            catch (e: CancellationException) { throw e }
+            catch (_: Exception) { }
+        }
+    }
+
+    /** The bundle is global because `core` renders from it; the state only reports what is loaded. */
+    private fun applyLocale(bundle: LocaleBundle) {
+        serverLocale = bundle
+        mutable.update { it.copy(localeLanguage = bundle.language, localeStrings = bundle.size) }
     }
 
     /** The Checks tab runs writes against the server; it belongs to an administrator alone. */
@@ -94,10 +145,13 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
             catch (e: Exception) {
                 val problem = FailureState.from(e, writing)
                 val prefix = if (e is ApiFailure) "HTTP ${e.status ?: "—"} ${e.code.orEmpty()}: " else ""
+                // A refusal the dictionary knows whole is shown in the chosen language; one whose
+                // template needs arguments the envelope never carried keeps the server's sentence.
+                val refusal = if (e is ApiFailure) locError(e.code, e.message.orEmpty()) else e.message.orEmpty()
                 mutable.update { it.copy(failure = problem, error = true, message = when (problem) {
                     FailureState.UncertainWrite -> tr("Ответ потерян. Запись могла сохраниться: обновите данные перед повтором.", "The response was lost. The write may have been applied: refresh before retrying.")
                     FailureState.Offline -> tr("Нет соединения: ", "No connection: ") + transportDetail(e)
-                    else -> prefix + (e.message ?: tr("Ошибка запроса", "Request failed"))
+                    else -> prefix + refusal.ifBlank { tr("Ошибка запроса", "Request failed") }
                 }) }
             } finally { mutable.update { it.copy(busy = false) } }
         }

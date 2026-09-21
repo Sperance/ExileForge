@@ -1,5 +1,7 @@
 package com.sperance.exileforge.core.model.progression
 
+import com.sperance.exileforge.core.i18n.LocaleKey
+import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.model.modifier.Modifier
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -20,14 +22,13 @@ import kotlinx.serialization.Serializable
 @Serializable data class CharacterClass(
     @SerialName("_id") val id: String = "",
     val code: String = "",
-    val name: String = "",
     val startNodeCode: String = "",
     val baseStats: List<StatValue> = emptyList(),
     val perLevelStats: List<StatValue> = emptyList(),
     val params: List<Modifier> = emptyList(),
-    val description: String? = null,
 ) {
-    val title: String get() = name.ifBlank { code }
+    val title: String get() = locOr(LocaleKey.className(code), code)
+    val details: String get() = locOr(LocaleKey.classDescription(code), "")
 }
 
 /**

@@ -9,6 +9,9 @@ import com.sperance.exileforge.core.contract.requireId
 import com.sperance.exileforge.core.contract.text
 import com.sperance.exileforge.core.contract.validate
 import com.sperance.exileforge.core.contract.validateModifierPool
+import com.sperance.exileforge.core.i18n.LocaleBundle
+import com.sperance.exileforge.core.i18n.LocaleLanguage
+import com.sperance.exileforge.core.i18n.LocaleManifest
 import com.sperance.exileforge.core.i18n.tr
 import com.sperance.exileforge.core.model.Catalog
 import com.sperance.exileforge.core.model.CatalogFilter
@@ -247,6 +250,33 @@ class GameApi(
             mapOf("characterId" to characterId, "nodeCode" to nodeCode), authenticated = true))
     }
 
+    // ==================== localisation ====================
+
+    /**
+     * The locale manifest and one dictionary.
+     *
+     * These are static resources, not API routes: they come back as plain JSON with no
+     * `{success, data}` envelope around them, so they are fetched rather than requested. Nor do
+     * they need an account — a language has to be readable before anyone has signed in.
+     */
+    suspend fun localeManifest(): LocaleManifest =
+        WireJson.decodeFromJsonElement(fetch("locale/index.json"))
+
+    /**
+     * One language's dictionary, tagged with the fingerprint the manifest gave it.
+     *
+     * The fingerprint travels with the bundle rather than being looked up again later: that is what
+     * lets a stored dictionary be reused without downloading it to compare.
+     */
+    suspend fun localeBundle(language: LocaleLanguage): LocaleBundle =
+        LocaleBundle.parse(language.code, language.hash, localeDocument(language.code))
+
+    /** The dictionary as it was served, so a caller can store the very text it parsed. */
+    suspend fun localeDocument(code: String): String {
+        require(code.isNotBlank()) { tr("Не указан язык", "No language given") }
+        return fetchText("locale/$code.json")
+    }
+
     // ==================== auction ====================
 
     /**
@@ -413,6 +443,42 @@ class GameApi(
     }
 
     // ==================== transport ====================
+
+    /**
+     * A plain JSON file from the server, outside the API envelope.
+     *
+     * Only the locale files are served this way. It still goes through the journal, because a
+     * missing dictionary is exactly the kind of thing that has to be visible when text turns into
+     * raw keys on screen.
+     */
+    private suspend fun fetch(path: String): JsonElement = WireJson.parseToJsonElement(fetchText(path))
+
+    /** The same file as text, so a dictionary can be stored verbatim and parsed again offline. */
+    private suspend fun fetchText(path: String): String {
+        val url = base.newBuilder().addPathSegments(path).build()
+        val start = System.nanoTime()
+        var status: Int? = null
+        var responseText = ""
+        var success = false
+        try {
+            val payload = client.newCall(Request.Builder().url(url).header("Accept", "application/json").get().build()).awaitPayload()
+            status = payload.status
+            responseText = payload.body.take(2_000)
+            if (status !in 200..299) throw ApiFailure(status, null, tr("HTTP $status: файл не получен", "HTTP $status: the file was not served"))
+            try { withContext(Dispatchers.Default) { WireJson.parseToJsonElement(payload.body) } }
+                catch (e: CancellationException) { throw e }
+                catch (_: Exception) { throw ApiFailure(status, null, tr("Некорректный JSON в $path", "Malformed JSON in $path")) }
+            success = true
+            return payload.body
+        } catch (e: CancellationException) { throw e }
+        catch (e: Exception) {
+            if (e is ApiFailure) status = e.status
+            if (responseText.isBlank()) responseText = e.message.orEmpty()
+            throw e
+        } finally {
+            journal.add(RequestLog("GET", url.encodedPath, status, (System.nanoTime() - start) / 1_000_000, "", responseText.take(400), success))
+        }
+    }
 
     private suspend fun request(method: String, path: String, query: Map<String, String> = emptyMap(), body: JsonElement? = null, authenticated: Boolean = false, sensitive: Boolean = false): JsonElement {
         if (authenticated) require(account != null) { tr("Войдите во вкладке «Аккаунт»", "Sign in on the Account tab") }

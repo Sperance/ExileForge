@@ -69,7 +69,7 @@ import kotlinx.serialization.json.JsonPrimitive
                         vm.draftClass(chosen); vm.edit(JsonObject(s.draft + ("classId" to JsonPrimitive(chosen))))
                     }
                     s.classes.firstOrNull { it.id == s.draft.text("classId") }?.let { chosen ->
-                        Text(chosen.description.orEmpty(), color = Muted, style = MaterialTheme.typography.bodySmall)
+                        Text(chosen.details, color = Muted, style = MaterialTheme.typography.bodySmall)
                         Text(tr("База 1 уровня: ", "Level 1 base: ") + chosen.baseStats.joinToString(" · ") { "${statTitle(it.stat, s.lang)} ${it.value.toInt()}" },
                             color = Muted, style = MaterialTheme.typography.bodySmall)
                     }

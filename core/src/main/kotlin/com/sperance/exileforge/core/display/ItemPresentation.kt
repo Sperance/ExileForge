@@ -3,6 +3,8 @@ package com.sperance.exileforge.core.display
 import com.sperance.exileforge.core.contract.text
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.pick
+import com.sperance.exileforge.core.i18n.LocaleKey
+import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.tr
 import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.model.currency.CURRENCY_CATEGORY
@@ -70,30 +72,84 @@ fun weaponTitle(value: String, lang: Lang = uiLanguage) = when (value) {
  */
 fun inventoryDocument(instance: JsonObject, base: JsonObject?): JsonObject = JsonObject(
     base.orEmpty()
-        + mapOf("name" to (base?.get("name") ?: JsonPrimitive(tr("Предмет экипировки", "Equipment item"))))
+        + mapOf("name" to JsonPrimitive(equipmentTitle(base)))
         + instance.filterKeys { it in setOf("_id", "equipmentId", "params", "equippedSlot", "rarity", "corrupted") }
 )
+
+/**
+ * The name of an equipment template, out of the locale bundle.
+ *
+ * Templates carry only a code since 0.14.0, so a card that has not had its template read yet, or a
+ * code the dictionary does not know, falls back to something readable rather than to a raw key.
+ */
+fun equipmentTitle(template: JsonObject?): String {
+    val code = template?.text("code").orEmpty()
+    if (code.isBlank()) return tr("Предмет экипировки", "Equipment item")
+    return locOr(LocaleKey.equipmentName(code), displayName(code))
+}
+
+/** The name of an `items` document, out of the locale bundle. */
+fun itemTitle(document: JsonObject?): String {
+    val code = document?.text("code").orEmpty()
+    if (code.isBlank()) return tr("Предмет", "Item")
+    return locOr(LocaleKey.itemName(code), displayName(code))
+}
+
+/**
+ * The name of any catalogue document.
+ *
+ * A document that still carries a `name` wrote it itself — a character named by its player, a
+ * recipe named by the server, an inventory projection that already looked its template up. Content
+ * carries a code instead, and which section of the dictionary that code belongs to is decided by
+ * the shape of the document: a slot or a `type` means equipment, anything else is an `items` row.
+ */
+fun documentTitle(document: JsonObject): String = when {
+    document.text("name").isNotBlank() -> document.text("name")
+    document["slot"] != null || document.text("type").isNotBlank() -> equipmentTitle(document)
+    else -> itemTitle(document)
+}
+
+/** The description of any catalogue document, from the same place its name comes from. */
+fun documentDescription(document: JsonObject): String {
+    val code = document.text("code")
+    if (document["userId"] != null || code.isBlank()) return document.text("description")
+    val key = if (document["slot"] != null || document.text("type").isNotBlank())
+        LocaleKey.equipmentDescription(code) else LocaleKey.itemDescription(code)
+    return locOr(key, "")
+}
 
 fun inventoryDocument(instance: com.sperance.exileforge.core.model.hero.EquipmentInstance, base: JsonObject?): JsonObject =
     inventoryDocument(instance.document(), base)
 
-/** The title of a rolled modifier: the description's name, else its stable code. */
-fun modifierTitle(modifier: JsonObject, definitions: List<ModifierDefinition>): String {
-    val id = modifier.text("modifierId")
-    val definition = definitions.firstOrNull { it.id == id }
-    return definition?.title?.takeIf { it.isNotBlank() } ?: displayName(id)
+/**
+ * A rolled modifier as one sentence.
+ *
+ * Since 0.14.0 a modifier's text is a template in the locale bundle — "+{0} to armour" — with one
+ * placeholder per effect, because the words of a composite modifier cannot be reordered in every
+ * language if the numbers are bolted on afterwards. So this is the whole line, not a label.
+ *
+ * Without a dictionary, or for a definition the client has not read, the stats and the numbers are
+ * still printed: a value the server rolled should never vanish because a translation is missing.
+ */
+fun modifierText(modifier: JsonObject, definitions: List<ModifierDefinition> = emptyList()): String {
+    val definition = definitions.firstOrNull { it.id == modifier.text("modifierId") }
+    val values = rolledValues(modifier)
+    val template = definition?.template
+    if (template != null && template != definition.code && values.isNotEmpty())
+        return values.foldIndexed(template) { index, text, value -> text.replace("{$index}", value) }
+    val effects = definition?.effects.orEmpty()
+    return values.mapIndexed { index, value ->
+        effects.getOrNull(index)?.let { "$value ${statTitle(it.stat)}" } ?: value
+    }.joinToString(" · ").ifBlank { definition?.code ?: displayName(modifier.text("modifierId")) }
 }
 
-/** What a rolled modifier changed: one value per effect of its description, in the same order. */
-fun modifierValues(modifier: JsonObject, definitions: List<ModifierDefinition> = emptyList()): String {
-    val effects = definitions.firstOrNull { it.id == modifier.text("modifierId") }?.effects.orEmpty()
-    return (modifier["values"] as? JsonArray).orEmpty().mapIndexed { index, value ->
+/** The rolled numbers, printed without a trailing zero on whole values. */
+private fun rolledValues(modifier: JsonObject): List<String> =
+    (modifier["values"] as? JsonArray).orEmpty().map { value ->
         val number = (value as? JsonPrimitive)?.doubleOrNull
-        val printed = if (number == null) (value as? JsonPrimitive)?.content.orEmpty()
-            else if (number == number.toLong().toDouble()) number.toLong().toString() else number.toString()
-        effects.getOrNull(index)?.let { "$printed ${statTitle(it.stat)}" } ?: printed
-    }.joinToString(" · ")
-}
+        if (number == null) (value as? JsonPrimitive)?.content.orEmpty()
+        else if (number == number.toLong().toDouble()) number.toLong().toString() else number.toString()
+    }
 
 /**
  * Title of a server stat enum. Names outside this table keep their humanised identifier, which is

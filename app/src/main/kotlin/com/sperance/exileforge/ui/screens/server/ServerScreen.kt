@@ -45,6 +45,13 @@ import com.sperance.exileforge.ui.theme.Muted
                 }
             }
             Text(tr("Русский и английский переключаются мгновенно, выбор сохраняется на устройстве.", "Russian and English switch instantly; the choice is stored on this device."), color = Muted, style = MaterialTheme.typography.bodySmall)
+            // Names of things belong to the server since 0.14.0: without its dictionary the screens
+            // print codes, so how much of it arrived is worth saying out loud.
+            if (s.localeStrings > 0) PropertyRow(tr("Словарь сервера", "Server dictionary"),
+                "${s.localeLanguage.uppercase()} · " + tr("строк: ${s.localeStrings}", "${s.localeStrings} strings"), "description")
+            else Text(tr("Словарь сервера не загружен: названия предметов будут показаны кодами.",
+                         "The server dictionary was not loaded: items will be shown by their codes."), color = Muted, style = MaterialTheme.typography.bodySmall)
+            OutlinedButton(enabled = !s.busy, onClick = vm::refreshLocale, modifier = Modifier.fillMaxWidth()) { Text(tr("Перечитать словарь сервера", "Re-read the server dictionary")) }
         }
         ForgePanel {
             Engraved(tr("Сервер", "Server"))

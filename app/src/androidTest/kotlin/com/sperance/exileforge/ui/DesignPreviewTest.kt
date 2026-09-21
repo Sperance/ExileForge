@@ -20,7 +20,8 @@ import java.io.File
 class DesignPreviewTest {
     @get:Rule val compose = createComposeRule()
     @Test fun cardsDisplayIconsPropertiesAndActions() {
-        // An inventory instance as the hero screen projects it: the template's fields plus its rolls.
+        // An inventory instance as the hero screen projects it: `inventoryDocument` writes the
+        // `name` from the dictionary, so the card is fed the same shape it gets in the app.
         fun item(name: String, slot: String, modifierId: String, value: Int) = buildJsonObject {
             put("name", name); put("slot", slot); put("rarity", "RARE"); put("itemLevel", 85)
             put("params", buildJsonArray {

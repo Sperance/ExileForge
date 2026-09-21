@@ -1,6 +1,8 @@
 package com.sperance.exileforge.core.model.currency
 
 import com.sperance.exileforge.core.i18n.Lang
+import com.sperance.exileforge.core.i18n.LocaleKey
+import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.pick
 import com.sperance.exileforge.core.i18n.uiLanguage
 import kotlinx.serialization.SerialName
@@ -61,11 +63,18 @@ enum class CurrencyOrb(private val ru: String, private val en: String, private v
  */
 @Serializable data class CurrencyItem(
     @SerialName("_id") val id: String,
-    val name: String,
+    val code: String = "",
     val subCategory: String = "",
-    val description: String = "",
     val price: Long = 0,
 ) {
     val orb: CurrencyOrb? get() = CurrencyOrb.of(subCategory)
-    fun title(lang: Lang = uiLanguage): String = orb?.title(lang) ?: name
+    /**
+     * The orb's name.
+     *
+     * The server's dictionary is the source since 0.14.0; the enum's own translation is the
+     * fallback for a server whose bundle has not been read yet, and the code is the last resort.
+     */
+    fun title(lang: Lang = uiLanguage): String = locOr(LocaleKey.itemName(code), orb?.title(lang) ?: code)
+    /** What the orb does; the dictionary first, the enum's own rule when it is not there yet. */
+    fun details(lang: Lang = uiLanguage): String = locOr(LocaleKey.itemDescription(code), orb?.rule(lang).orEmpty())
 }

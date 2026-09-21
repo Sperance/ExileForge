@@ -29,7 +29,7 @@ import com.sperance.exileforge.ui.theme.Muted
     OutlinedTextField(f.maxLevel, { vm.filter(f.copy(maxLevel = it)) }, label = { Text(tr("Уровень до", "Level to")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
     TextButton(enabled = !s.busy, onClick = vm::loadDefinitions) { Text(tr("Загрузить модификаторы", "Load modifiers")) }
     Spinner(tr("Модификатор в пуле", "Modifier in the pool"), f.modifierId,
-        mapOf("" to tr("Любой", "Any")) + s.definitions.associate { it.id to it.title }, !s.busy) { vm.filter(f.copy(modifierId = it)) }
+        mapOf("" to tr("Любой", "Any")) + s.definitions.associate { it.id to it.template }, !s.busy) { vm.filter(f.copy(modifierId = it)) }
     Text(tr("Сервер не умеет искать по каталогу, поэтому клиент читает коллекцию и фильтрует её сам.",
             "The server cannot search the catalogue, so the client reads the collection and filters it here."),
         color = Muted, style = MaterialTheme.typography.bodySmall)

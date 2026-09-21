@@ -15,8 +15,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
-import com.sperance.exileforge.core.display.modifierTitle
-import com.sperance.exileforge.core.display.modifierValues
 import com.sperance.exileforge.core.display.nodeTypeTitle
 import com.sperance.exileforge.core.i18n.tr
 import com.sperance.exileforge.core.model.EntitySource
@@ -97,7 +95,7 @@ import kotlinx.serialization.json.putJsonArray
 @Composable private fun TreeSearch(s: ForgeState, onQuery: (String) -> Unit, onSelect: (String) -> Unit) {
     val matches = remember(s.treeNodes, s.nodeQuery) {
         if (s.nodeQuery.isBlank()) emptyList()
-        else s.treeNodes.filter { it.name.contains(s.nodeQuery.trim(), true) || it.code.contains(s.nodeQuery.trim(), true) }.take(8)
+        else s.treeNodes.filter { it.title.contains(s.nodeQuery.trim(), true) || it.code.contains(s.nodeQuery.trim(), true) }.take(8)
     }
     ForgePanel {
         Engraved(tr("Найти узел", "Find a node"))
@@ -106,7 +104,7 @@ import kotlinx.serialization.json.putJsonArray
         if (s.nodeQuery.isNotBlank() && matches.isEmpty()) Text(tr("Ничего не найдено", "Nothing found"), color = Muted)
         matches.forEach { node ->
             TextButton(onClick = { onSelect(node.code) }, modifier = Modifier.fillMaxWidth()) {
-                Text("${node.name.ifBlank { node.code }} · ${nodeTypeTitle(node.type.name, s.lang)}",
+                Text("${node.title} · ${nodeTypeTitle(node.type.name, s.lang)}",
                     color = nodeColour(node, node.code == s.selectedNode))
             }
         }
@@ -184,16 +182,15 @@ import kotlinx.serialization.json.putJsonArray
     ForgePanel(accent = nodeColour(node, true)) {
         // The node's name is this panel's title, so it keeps its own casing rather than being
         // shouted as an Engraved caption the way a section heading is.
-        Text(node.name.ifBlank { node.code }, color = nodeColour(node, true), style = MaterialTheme.typography.titleMedium)
+        Text(node.title, color = nodeColour(node, true), style = MaterialTheme.typography.titleMedium)
         PropertyRow(tr("Вид узла", "Node type"), nodeTypeTitle(node.type.name, s.lang), "node")
         PropertyRow(tr("Стоимость", "Cost"), node.cost.toString(), "level")
         PropertyRow(tr("Состояние", "State"), if (allocated) tr("Взят", "Taken") else tr("Не взят", "Not taken"), "node")
-        node.description?.takeIf { it.isNotBlank() }?.let { Text(it, color = Muted, style = MaterialTheme.typography.bodySmall) }
+        node.details.takeIf { it.isNotBlank() }?.let { Text(it, color = Muted, style = MaterialTheme.typography.bodySmall) }
         OrnateDivider()
         if (node.params.isEmpty()) Text(tr("Бонусов нет", "No bonuses"), color = Muted)
         node.params.forEach { modifier ->
-            val document = modifierDocument(modifier.modifierId, modifier.values)
-            PropertyRow(modifierTitle(document, s.definitions), modifierValues(document, s.definitions), modifier.modifierId)
+            ModifierLine(modifierDocument(modifier.modifierId, modifier.values), s.definitions)
         }
         OrnateDivider()
         if (allocated) OutlinedButton(enabled = enabled && node.type != SkillNodeType.START, onClick = { onRefund(node.code) }, modifier = Modifier.fillMaxWidth()) {

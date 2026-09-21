@@ -5,8 +5,8 @@ Guidance for AI assistants working in this repository.
 ## What this project is
 
 ExileForge is an **Android Compose client** (version 2.0.0, `versionCode` 13) for the
-**ktor-bestgame** RPG server (0.13.2), pinned in
-`core/.../contract/Contract.kt` as `SERVER_COMMIT = c4df7448d33c9a857a66428ed32bd8cf5b02750f`
+**ktor-bestgame** RPG server (0.14.0), pinned in
+`core/.../contract/Contract.kt` as `SERVER_COMMIT = 3a07a4f8d3e65a1365f088b4ab710e1c609ee257`
 on the server branch `claude/tender-pasteur-a36kj2`.
 
 The client is deliberately **thin**: the server owns items, stats, modifier rolls and inventory.
@@ -32,6 +32,7 @@ core/                                   Pure JVM library (java-library + kotlin-
                  auction/Auction.kt     AuctionLot, AuctionFilter, AuctionPage, lot kinds and states
                  character/CharacterStats.kt  The server's stat enum names
   i18n/          Loc.kt                 Lang (RU/EN), `tr(ru, en)` and the global `uiLanguage`
+                 ServerLocale.kt        LocaleManifest/LocaleBundle/LocaleKey, the global `serverLocale`, loc/locOr/locError
   editor/        EditorSchema.kt        Declarative form schemas (FormField/InputSpec) used by the editor
   display/       ItemPresentation.kt    Display-only projections and bilingual titles
   verification/  CrudScenario.kt        Admin-only self-check run from the Checks screen
@@ -180,6 +181,20 @@ These are enforced by tests and are the point of the client's design:
     query parameter, because that is the route the server exposes.
 16. **No network or raster images.** Entities carry at most an `image` URL, which the client stores
     but never fetches. Every picture is a bundled vector (`ItemEmblem`, `ForgeGlyphs`).
+17. **The server owns every name; the client owns its own labels.** Since 0.14.0 no document
+    carries text: equipment, items, modifiers, tree nodes and classes store a `code`, and the
+    strings are static files — `locale/index.json` (languages with a hash each) and
+    `locale/{ru,en}.json`, keyed `<section>.<CODE>.<field>` exactly as `core/i18n/LocaleKey`
+    builds it. Both sides must compute the same key, so never hand-write one. The bundle is
+    global (`serverLocale`), loaded by `ForgeRuntime.loadLocale` per server and language and
+    stored by hash in `ServerStore`; a missing key returns itself so a hole is visible. A
+    modifier's text is a **template** with `{0}`, `{1}` per effect — never assemble a sentence by
+    appending numbers to a label. `messageArgs` from the server are themselves keys, so resolve
+    them through the bundle before substituting. The bundle also has an `enum.` section, but the
+    client keeps its own tables (`slotTitle`, `rarityTitle`, `statTitle`, `CurrencyOrb`): they
+    take an explicit language and one dictionary is loaded at a time. An error is translated only
+    when `error.<code>` has no placeholder, because the error envelope carries the finished
+    sentence and the code but never the arguments — see `locError`.
 
 ## Conventions
 
@@ -190,6 +205,8 @@ These are enforced by tests and are the point of the client's design:
   keep passing. Compose refreshes because `ForgeApp` keys the whole tree on `s.lang`; helpers
   that take an explicit language (`slotTitle`, `rarityTitle`, `weaponTitle`, `statTitle`,
   `Catalog.title`) default to `uiLanguage`. Never add a user-facing literal in one language only.
+  The **name of a thing in the game** is not a client string: it comes from `serverLocale` through
+  `loc`/`locOr` (rule 17), so never write `tr` for one.
 - **Style:** dense, low-ceremony Kotlin — one-line bodies, `when` expression tables, few
   comments. Comments exist only where a rule is non-obvious (who rolls, what is display-only,
   why a POST carries an empty body). Match the surrounding density instead of expanding it.

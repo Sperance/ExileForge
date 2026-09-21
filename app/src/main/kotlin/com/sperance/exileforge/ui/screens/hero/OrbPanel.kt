@@ -37,8 +37,8 @@ import com.sperance.exileforge.ui.theme.Muted
     if (s.orbs.isEmpty()) { Text(tr("Сервер не отдал ни одной сферы", "The server served no orbs"), color = Muted); return }
     Spinner(tr("Сфера", "Orb"), s.selectedOrb,
         s.orbs.associate { it.id to "${it.title(s.lang)} · ${owned[it.id] ?: 0L}" }, enabled, onSelect)
-    // An orb the client has no translation for still explains itself: the server seeded a description.
-    orb?.let { Text(it.orb?.rule(s.lang) ?: it.description, color = Muted, style = MaterialTheme.typography.bodySmall) }
+    // An orb the client has no translation for still explains itself: the server's dictionary has one.
+    orb?.let { Text(it.details(s.lang), color = Muted, style = MaterialTheme.typography.bodySmall) }
     if (instance == null) { Text(tr("Выберите предмет в арсенале", "Choose an item in the stash"), color = Muted); return }
     val document = inventoryDocument(instance, s.inventoryBases[instance.equipmentId])
     PropertyRow(tr("Предмет", "Item"), document.text("name"), "item")

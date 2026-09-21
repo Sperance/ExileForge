@@ -20,7 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.contract.entityId
-import com.sperance.exileforge.core.contract.text
+import com.sperance.exileforge.core.display.documentTitle
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.tr
 import com.sperance.exileforge.presentation.ForgeViewModel
@@ -50,7 +50,9 @@ import com.sperance.exileforge.ui.theme.*
     BackHandler(s.editorOpen && !s.busy) { confirmDiscard = true }
     CompositionLocalProvider(LocalEntityPageLoader provides vm::referencePage) {
     // Language is part of the key: every cached label is rebuilt in the chosen tongue.
-    key(s.server, s.sessionEpoch, s.lang) {
+    // The dictionary arrives after the first frame, so its size joins the key: when the server's
+    // names land, every screen that printed a bare code is drawn again.
+    key(s.server, s.sessionEpoch, s.lang, s.localeStrings) {
     Scaffold(
         containerColor = Ink,
         snackbarHost = { SnackbarHost(snackbar) { data -> Snackbar(data, containerColor = PanelRaised, contentColor = Parchment, actionColor = Gold, shape = MaterialTheme.shapes.small) } },
@@ -88,7 +90,7 @@ import com.sperance.exileforge.ui.theme.*
     }
     if (confirmDelete) AlertDialog(onDismissRequest = { confirmDelete = false }, containerColor = Panel, titleContentColor = Gold,
         title = { Text(tr("Удалить запись?", "Delete the record?")) },
-        text = { Text("${s.original?.text("name")}\n${s.original?.entityId}\n" + tr("Запись будет скрыта на сервере.", "The record will be hidden on the server.")) },
+        text = { Text("${s.original?.let(::documentTitle)}\n${s.original?.entityId}\n" + tr("Запись будет скрыта на сервере.", "The record will be hidden on the server.")) },
         confirmButton = { TextButton(enabled = !s.busy, onClick = { confirmDelete = false; vm.delete() }) { Text(tr("Удалить", "Delete"), color = MaterialTheme.colorScheme.error) } },
         dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(tr("Отмена", "Cancel")) } })
     if (confirmDiscard) AlertDialog(onDismissRequest = { confirmDiscard = false }, containerColor = Panel, titleContentColor = Gold,

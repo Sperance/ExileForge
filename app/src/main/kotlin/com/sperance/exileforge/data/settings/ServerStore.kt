@@ -21,4 +21,25 @@ class ServerStore(private val context: Context) {
     private val languageKey = stringPreferencesKey("language")
     val language = context.settings.data.map { Lang.of(it[languageKey]) }
     suspend fun saveLanguage(value: Lang) { context.settings.edit { it[languageKey] = value.code } }
+
+    /**
+     * The server's dictionary, stored verbatim per server and language.
+     *
+     * It is kept beside the hash the manifest gave it: the stored copy is reused only while the
+     * server still reports that same fingerprint, so a reseeded server is never shown stale names.
+     * Two servers may seed different text, so the base URL is part of the key.
+     */
+    suspend fun locale(server: String, language: String): Pair<String, String>? {
+        val stored = context.settings.data.first()
+        val hash = stored[hashKey(server, language)] ?: return null
+        val document = stored[documentKey(server, language)] ?: return null
+        return hash to document
+    }
+
+    suspend fun saveLocale(server: String, language: String, hash: String, document: String) {
+        context.settings.edit { it[hashKey(server, language)] = hash; it[documentKey(server, language)] = document }
+    }
+
+    private fun hashKey(server: String, language: String) = stringPreferencesKey("locale:$server:$language:hash")
+    private fun documentKey(server: String, language: String) = stringPreferencesKey("locale:$server:$language:body")
 }

@@ -20,6 +20,8 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() 
     val logs = runtime.logs
     fun tab(tab: Int) = runtime.tab(tab)
     fun language(lang: Lang) = runtime.language(lang)
+    /** The server's names live in its dictionary; this re-reads it without touching the session. */
+    fun refreshLocale() = runtime.refreshLocale()
     fun dismissMessage() = runtime.dismissMessage()
     suspend fun referencePage(source: EntitySource, page: Int, query: String) = runtime.referencePage(source, page, query)
     suspend fun recipeDocument(id: String) = runtime.recipeDocument(id)

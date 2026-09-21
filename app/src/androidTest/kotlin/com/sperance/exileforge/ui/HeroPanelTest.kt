@@ -92,7 +92,9 @@ class HeroPanelTest {
         compose.onNodeWithText("Все характеристики: 2 · нажмите").performScrollTo().performClick()
         compose.onNodeWithText("Здоровье").assertIsDisplayed()
         compose.onNodeWithText("88.0").assertIsDisplayed()
-        compose.onNodeWithText("Броня").assertIsDisplayed()
+        // The second stat is checked by its value: "Броня" is also the name of the BODY slot, and
+        // the empty slot is drawn right behind the sheet, so the label matches two nodes.
+        compose.onNodeWithText("40.0").assertIsDisplayed()
     }
 
     /**

@@ -12,6 +12,31 @@ on the server branch `claude/tender-pasteur-a36kj2`.
 The client is deliberately **thin**: the server owns items, stats, modifier rolls and inventory.
 This client renders server state, sends commands, and never recomputes game numbers locally.
 
+## Standing rules (never skip, whatever the task)
+
+These two were set by the owner of the project and outrank convenience. They apply to every
+change, in this repository and in `ktor-bestgame`, whether or not the task mentions them.
+
+1. **Anything with a name is born translated.** Adding an item, a piece of equipment, a class, a
+   currency orb, a tree node, a modifier, an enum value or an error code means adding its strings
+   to **every** language the server currently serves — today `ru` and `en`, and whatever
+   `locale/index.json` lists tomorrow. A code without a name in all of them is an unfinished
+   change, not a change with a follow-up. The keys are `<section>.<CODE>.<field>` exactly as
+   `core/i18n/LocaleKey` and the server's own `LocaleKey` build them, so never hand-write one.
+   The server's `LocalizationTest` is what catches a miss: it checks that every dictionary covers
+   every key the code asks for, that the languages hold identical key sets, that no string is
+   empty, and that a placeholder never disappears in translation. Run it before calling such a
+   change done. Client-side labels are the other half of the same rule: a user-facing literal is
+   always `tr("русский", "English")`, never one language alone.
+
+2. **Every finished change ends with a changelog and a version.** Once the checks have passed and
+   the branches are pushed, report what changed as a list, under a version number, **for the
+   application and for the server separately** — even when only one of them moved, say so. The
+   version numbers are the ones in `app/build.gradle.kts` (`versionName`/`versionCode`) and in the
+   server's `SERVER_VERSION`, and they are bumped as part of the change rather than left for
+   later. This is the last step of the work, not a courtesy: a change that is pushed but not
+   written up is not delivered.
+
 ## Repository layout
 
 ```

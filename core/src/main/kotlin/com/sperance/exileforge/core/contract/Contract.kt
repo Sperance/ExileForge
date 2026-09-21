@@ -47,6 +47,18 @@ fun template(catalog: Catalog, kind: EquipmentKind = EquipmentKind.Weapon): Json
     }
 }
 
+/**
+ * The document that makes a character.
+ *
+ * It is written out rather than taken from [template], because a template is a *form's* seed: it
+ * carries every field the editor draws, and the skill lists among them belong to the server. A
+ * creation may only carry the fields a creation is allowed, so the menu builds exactly those and
+ * lets the server default the rest.
+ */
+fun characterDocument(userId: String, name: String, classId: String): JsonObject = buildJsonObject {
+    put("userId", userId); put("name", name.trim()); put("classId", classId)
+}
+
 fun requireId(id: String) { require(Regex("[0-9a-fA-F]{24}").matches(id)) { tr("ID должен содержать 24 шестнадцатеричных символа", "The id must be 24 hexadecimal characters") } }
 
 /**

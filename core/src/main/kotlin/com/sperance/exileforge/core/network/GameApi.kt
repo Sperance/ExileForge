@@ -176,7 +176,12 @@ class GameApi(
     /** POST takes an array of documents and answers with the created ones, identity included. */
     override suspend fun create(catalog: Catalog, document: JsonObject): JsonObject {
         val allowed = editableFields(catalog) + creationFields(catalog)
-        require(document.keys.all { it in allowed }) { tr("Поле не разрешено при создании", "This field is not allowed on create") }
+        // Naming the offenders: a caller that posts a form's draft raw is the way this goes wrong,
+        // and "one of your fields" leaves the reader to guess which of a dozen it was.
+        val refused = document.keys.filterNot { it in allowed }
+        require(refused.isEmpty()) {
+            tr("Поля не разрешены при создании: ${refused.joinToString()}", "These fields are not allowed on create: ${refused.joinToString()}")
+        }
         validate(document, catalog)
         return request("POST", route(catalog), body = JsonArray(listOf(document)), authenticated = true).jsonArray.single().jsonObject
     }

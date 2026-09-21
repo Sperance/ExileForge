@@ -1,7 +1,7 @@
 package com.sperance.exileforge.presentation.features
 
+import com.sperance.exileforge.core.contract.characterDocument
 import com.sperance.exileforge.core.contract.entityId
-import com.sperance.exileforge.core.contract.template
 import com.sperance.exileforge.core.i18n.tr
 import com.sperance.exileforge.core.model.Catalog
 import com.sperance.exileforge.presentation.ForgeRuntime
@@ -9,7 +9,6 @@ import com.sperance.exileforge.presentation.state.AppPhase
 import com.sperance.exileforge.presentation.state.MAX_CHARACTERS
 import kotlinx.coroutines.flow.update
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * The character menu: the one place a character is chosen, made or given up.
@@ -82,9 +81,7 @@ class CharacterViewModel(private val runtime: ForgeRuntime) {
         check(state.value.characters.size < MAX_CHARACTERS) {
             tr("Больше $MAX_CHARACTERS персонажей аккаунт не держит", "An account holds no more than $MAX_CHARACTERS characters")
         }
-        val document = JsonObject(template(Catalog.CHARACTERS) + mapOf(
-            "userId" to JsonPrimitive(owner), "name" to JsonPrimitive(name.trim()), "classId" to JsonPrimitive(classId)))
-        val created = api.create(Catalog.CHARACTERS, document)
+        val created = api.create(Catalog.CHARACTERS, characterDocument(owner, name, classId))
         mutable.update { it.copy(message = tr("Персонаж создан: ${name.trim()}", "Character created: ${name.trim()}")) }
         readCharacters()
         entered(created.entityId)

@@ -139,6 +139,41 @@ class GameApiTest {
         assertFalse("_id" in sent); assertFalse("version" in sent); assertFalse("price" in sent)
     }
 
+    /**
+     * The character menu's own create, end to end.
+     *
+     * It is tested through the document the menu actually builds rather than a literal one written
+     * here: the menu used to post the editor's form seed, whose skill lists are the server's to
+     * fill, and a hand-written fixture is exactly what let that through CI and out to a player.
+     */
+    @Test fun `the menu creates a character with only the fields a creation may carry`(): Unit = runBlocking {
+        ok("""[{"_id":"$other","version":0,"userId":"$id","name":"Изгнанник","classId":"$id","level":1}]""")
+        val document = characterDocument(id, "  Изгнанник  ", id)
+        assertEquals(other, api.create(Catalog.CHARACTERS, document).entityId)
+        val request = server.takeRequest()
+        assertEquals("/game/api/v1/character", request.path)
+        val sent = WireJson.parseToJsonElement(request.body.readUtf8()).jsonArray.single().jsonObject
+        // The owner, the name trimmed and the class — and nothing else. The level, the bag and
+        // every skill list are the server's from the first moment.
+        assertEquals(setOf("userId", "name", "classId"), sent.keys)
+        assertEquals("Изгнанник", sent.text("name"))
+        assertTrue(document.keys.all { it in creationFields(Catalog.CHARACTERS) + editableFields(Catalog.CHARACTERS) })
+    }
+
+    @Test fun `a character form's draft is refused on create, by the name of every field`(): Unit = runBlocking {
+        // `template` seeds the editor's form, so it carries every field the form draws. The editor
+        // filters before posting; anything else that hands it to `create` is told which fields.
+        val draft = JsonObject(template(Catalog.CHARACTERS) + mapOf(
+            "userId" to JsonPrimitive(id), "name" to JsonPrimitive("Изгнанник"), "classId" to JsonPrimitive(id)))
+        val refused = assertFailsWith<IllegalArgumentException> { api.create(Catalog.CHARACTERS, draft) }
+        listOf("professionSkills", "battleSkills", "boolSkills").forEach {
+            assertTrue(it in draft, "the form still draws $it")
+            assertTrue(it in refused.message.orEmpty(), "the refusal names $it")
+        }
+        // A refusal at the boundary costs no request: nothing half-made reaches the collection.
+        assertEquals(1, server.requestCount)
+    }
+
     @Test fun `update sends only the changed fields and delete carries no body`(): Unit = runBlocking {
         // An `items` document has no text to change since 0.14.0; its price is still its own.
         val changes = buildJsonObject { put("price", 42) }

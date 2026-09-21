@@ -1,6 +1,8 @@
 package com.sperance.exileforge.core
 
 import com.sperance.exileforge.core.contract.*
+import com.sperance.exileforge.core.display.IconBundle
+import com.sperance.exileforge.core.display.IconKey
 import com.sperance.exileforge.core.i18n.LocaleBundle
 import com.sperance.exileforge.core.i18n.serverLocale
 import com.sperance.exileforge.core.model.Catalog
@@ -83,6 +85,24 @@ class GameApiTest {
         // A device the client could not identify never reaches the network.
         assertFailsWith<IllegalArgumentException> { api.loginByDevice("  ") }
         assertEquals(sent + 1, server.requestCount)
+    }
+
+    @Test fun `the icon set is fetched by its fingerprint, outside the envelope`(): Unit = runBlocking {
+        // Static content like the dictionaries: plain JSON, no {success,data}, no account needed.
+        server.enqueue(MockResponse().setBody("""{"hash":"cc20a339","file":"icons.json","sprites":2,"icons":3}"""))
+        val manifest = api.iconManifest()
+        assertEquals("/game/icons/index.json", server.takeRequest().path)
+        assertEquals("cc20a339", manifest.hash)
+        assertEquals(3, manifest.icons)
+
+        server.enqueue(MockResponse().setBody("""{"sprites":{"orb":{"viewBox":24,"paths":[{"d":"M1 1h2v2h-2z","alpha":1.0}]}},
+            "icons":{"item.CHAOS_ORB":"orb"}}"""))
+        val bundle = IconBundle.parse(manifest.hash, api.iconDocument(manifest.file))
+        assertEquals("/game/icons/icons.json", server.takeRequest().path)
+        assertEquals("cc20a339", bundle.hash)
+        assertNotNull(bundle[IconKey.item("CHAOS_ORB")])
+        // The manifest names the file, so a renamed set is still fetched; a blank name is refused.
+        assertFailsWith<IllegalArgumentException> { api.iconDocument("") }
     }
 
     @Test fun `the character menu reads one account's characters and no one else's`(): Unit = runBlocking {

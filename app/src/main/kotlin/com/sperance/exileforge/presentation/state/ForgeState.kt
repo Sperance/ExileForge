@@ -97,6 +97,14 @@ data class ForgeState(
      * and whether it arrived at all.
      */
     val localeLanguage: String = "", val localeStrings: Int = 0,
+    /**
+     * How much of the server's icon set arrived: codes covered and drawings behind them.
+     *
+     * The set is global (`serverIcons`) for the same reason the dictionary is — `core` draws from
+     * it without a state object. These two numbers exist so a missing set is reportable rather
+     * than merely invisible: every hole falls back to a bundled emblem and looks deliberate.
+     */
+    val iconKeys: Int = 0, val iconSprites: Int = 0,
 
     val checks: List<CheckResult> = emptyList(),
     val health: String = tr("Соединение ещё не проверено", "The connection has not been checked yet"),

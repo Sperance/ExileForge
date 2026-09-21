@@ -41,6 +41,26 @@ class ServerStore(private val context: Context) {
     }
 
     /**
+     * The server's icon set, stored verbatim beside the fingerprint it was served with.
+     *
+     * Unlike the dictionary it has no language: a drawing says the same thing in both, so the key
+     * is the server alone. Two servers may still seed different art, which is why it is a key.
+     */
+    suspend fun icons(server: String): Pair<String, String>? {
+        val stored = context.settings.data.first()
+        val hash = stored[iconHashKey(server)] ?: return null
+        val document = stored[iconBodyKey(server)] ?: return null
+        return hash to document
+    }
+
+    suspend fun saveIcons(server: String, hash: String, document: String) {
+        context.settings.edit { it[iconHashKey(server)] = hash; it[iconBodyKey(server)] = document }
+    }
+
+    private fun iconHashKey(server: String) = stringPreferencesKey("icons:$server:hash")
+    private fun iconBodyKey(server: String) = stringPreferencesKey("icons:$server:body")
+
+    /**
      * Whether the last session was played on this device's own account.
      *
      * The server issues no token, so a session cannot be restored — only made again. This is the

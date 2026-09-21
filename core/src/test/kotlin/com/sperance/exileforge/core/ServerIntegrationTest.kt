@@ -1,7 +1,12 @@
 package com.sperance.exileforge.core
 
 import com.sperance.exileforge.core.contract.*
+import com.sperance.exileforge.core.display.IconBundle
+import com.sperance.exileforge.core.display.IconKey
+import com.sperance.exileforge.core.display.documentIcon
 import com.sperance.exileforge.core.display.equipmentTitle
+import com.sperance.exileforge.core.display.icon
+import com.sperance.exileforge.core.display.serverIcons
 import com.sperance.exileforge.core.i18n.LocaleKey
 import com.sperance.exileforge.core.i18n.serverLocale
 import com.sperance.exileforge.core.model.Catalog
@@ -59,6 +64,18 @@ class ServerIntegrationTest {
         }
         serverLocale = api.localeBundle(assertNotNull(manifest.language("ru")))
         assertTrue(serverLocale.contains("system.success"), "the server's own success key is missing")
+
+        // The icon set, which only the live server can prove: the manifest's fingerprint is
+        // computed from the file, so a set edited without touching the manifest is still noticed.
+        val iconManifest = api.iconManifest()
+        assertTrue(iconManifest.hash.isNotBlank(), "the server served no icon fingerprint")
+        val iconBundle = IconBundle.parse(iconManifest.hash, api.iconDocument(iconManifest.file))
+        assertEquals(iconManifest.icons, iconBundle.size, "the manifest and the set disagree on how many codes there are")
+        assertEquals(iconManifest.sprites, iconBundle.spriteCount, "the manifest and the set disagree on how many drawings there are")
+        // Every code in the table has to name a drawing that exists, or `parse` would have dropped
+        // it — which is the quiet failure this whole check is here to catch.
+        assertTrue(iconBundle.size > 100, "only ${iconBundle.size} codes carry an icon")
+        serverIcons = iconBundle
 
         // The seeded modifier catalogue is what every rolled value on an instance points back at.
         val definitions = api.modifierDefinitions()
@@ -125,6 +142,8 @@ class ServerIntegrationTest {
             // A template carries a code and no text: its name has to come back from the dictionary.
             assertTrue("name" !in template, "the server still writes text into a template: $template")
             assertNotEquals(template.text("code"), equipmentTitle(template), "no name for ${template.text("code")}")
+            // The same code that finds the name has to find the drawing.
+            assertNotNull(documentIcon(template), "no icon for ${template.text("code")}")
             val instance = api.grant(id, template.entityId)
             assertEquals(template.entityId, instance.equipmentId)
             assertTrue(instance.params.isNotEmpty(), "the server rolled no modifiers")
@@ -172,6 +191,7 @@ class ServerIntegrationTest {
             assertTrue(orbs.all { it.orb != null }, "unknown orbs: ${orbs.filter { it.orb == null }.map { it.subCategory }}")
             val chaos = orbs.firstOrNull { it.orb == CurrencyOrb.CHAOS_ORB } ?: fail("no Chaos Orb among ${orbs.map { it.code }}")
             assertNotEquals(chaos.code, chaos.title(), "the orb has no name in the dictionary")
+            assertNotNull(icon(IconKey.item(chaos.code)), "no icon for ${chaos.code}")
 
             // The orb is spent from the bag, so it is handed over first; the rerolls are the server's.
             assertEquals("system.success", api.adjustItems(id, listOf(ItemStack(chaos.id, 1))))

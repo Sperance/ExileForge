@@ -33,8 +33,9 @@ class SessionViewModel(private val runtime: ForgeRuntime) {
         mutable.update { it.copy(server = server, serverDraft = server, health = tr("Проверка соединения…", "Checking the connection…")) }
         val health = api.health()
         mutable.update { it.copy(health = health.toString(), message = tr("Сервер доступен", "The server is reachable")) }
-        // A dictionary belongs to its server: the new one names its own things.
+        // A dictionary and an icon set belong to their server: the new one has its own.
         refreshLocale()
+        refreshIcons()
     } } }
 
     fun health() { with(runtime) { task {
@@ -80,6 +81,7 @@ class SessionViewModel(private val runtime: ForgeRuntime) {
         ensureDefinitions()
         // The catalogue is codes without it, and the first attempt may have run before the server was up.
         refreshLocale()
+        refreshIcons()
         runtime.characterViewModel.readCharacters()
     } }
 

@@ -22,6 +22,8 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     fun language(lang: Lang) = runtime.language(lang)
     /** The server's names live in its dictionary; this re-reads it without touching the session. */
     fun refreshLocale() = runtime.refreshLocale()
+    /** The server's drawings live in its icon set; this re-reads it without touching the session. */
+    fun refreshIcons() = runtime.refreshIcons()
     fun dismissMessage() = runtime.dismissMessage()
     suspend fun referencePage(source: EntitySource, page: Int, query: String) = runtime.referencePage(source, page, query)
     suspend fun recipeDocument(id: String) = runtime.recipeDocument(id)

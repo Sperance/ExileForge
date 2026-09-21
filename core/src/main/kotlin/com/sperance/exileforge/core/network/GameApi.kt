@@ -9,6 +9,7 @@ import com.sperance.exileforge.core.contract.requireId
 import com.sperance.exileforge.core.contract.text
 import com.sperance.exileforge.core.contract.validate
 import com.sperance.exileforge.core.contract.validateModifierPool
+import com.sperance.exileforge.core.display.IconManifest
 import com.sperance.exileforge.core.i18n.LocaleBundle
 import com.sperance.exileforge.core.i18n.LocaleLanguage
 import com.sperance.exileforge.core.i18n.LocaleManifest
@@ -300,6 +301,23 @@ class GameApi(
     suspend fun localeDocument(code: String): String {
         require(code.isNotBlank()) { tr("Не указан язык", "No language given") }
         return fetchText("locale/$code.json")
+    }
+
+    // ==================== icons ====================
+
+    /**
+     * The icon manifest and the set itself.
+     *
+     * Static content like the dictionaries: plain JSON, no envelope, no account. The manifest
+     * carries the fingerprint the server computed from the file, so a set that was edited is
+     * always noticed and one that was not is never downloaded twice.
+     */
+    suspend fun iconManifest(): IconManifest = WireJson.decodeFromJsonElement(fetch("icons/index.json"))
+
+    /** The set as it was served, so a caller can store the very text it parsed. */
+    suspend fun iconDocument(file: String): String {
+        require(file.isNotBlank()) { tr("Не указан файл иконок", "No icon file given") }
+        return fetchText("icons/$file")
     }
 
     // ==================== auction ====================

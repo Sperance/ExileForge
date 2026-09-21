@@ -5,8 +5,8 @@ Guidance for AI assistants working in this repository.
 ## What this project is
 
 ExileForge is an **Android Compose client** (version 2.1.0, `versionCode` 14) for the
-**ktor-bestgame** RPG server (0.14.1), pinned in
-`core/.../contract/Contract.kt` as `SERVER_COMMIT = f43587ba27e9159048bc638a0c191f0efbe3742d`
+**ktor-bestgame** RPG server (0.15.0), pinned in
+`core/.../contract/Contract.kt` as `SERVER_COMMIT = ea6ad038bd5c9628559c0c4647fd9b08c95baf24`
 on the server branch `claude/tender-pasteur-a36kj2`.
 
 The client is deliberately **thin**: the server owns items, stats, modifier rolls and inventory.
@@ -35,6 +35,7 @@ core/                                   Pure JVM library (java-library + kotlin-
                  ServerLocale.kt        LocaleManifest/LocaleBundle/LocaleKey, the global `serverLocale`, loc/locOr/locError
   editor/        EditorSchema.kt        Declarative form schemas (FormField/InputSpec) used by the editor
   display/       ItemPresentation.kt    Display-only projections and bilingual titles
+                 ServerIcons.kt         IconManifest/IconBundle/IconKey, the global `serverIcons`
   verification/  CrudScenario.kt        Admin-only self-check run from the Checks screen
 app/                                    Android application (minSdk 26, compile/target SDK 37)
   MainActivity.kt, ForgeApplication.kt  Entry points; Application owns RequestJournal + ServerStore
@@ -45,8 +46,8 @@ app/                                    Android application (minSdk 26, compile/
   ui/            ForgeApp.kt            Scaffold, banner with RU/EN switch, bottom navigation, tab dispatch
                  screens/               session (auth + character menu), catalog, editor, hero, tree, auction, checks, server
                  components/            ItemCard, PropertyRow, InfoCard, spinners and Ornament.kt
-                 forms/, icons/ (ForgeGlyphs vector set, ItemEmblem, ItemIcon/PropertyIcon), theme/
-  data/settings/ServerStore.kt          DataStore Preferences: base URL, saved filters, language, locale bundles, device-session flag
+                 forms/, icons/ (ForgeGlyphs vector set, ItemEmblem, ItemIcon/PropertyIcon, ServerSprite), theme/
+  data/settings/ServerStore.kt          DataStore Preferences: base URL, saved filters, language, locale bundles, icon set, device-session flag
                  DeviceId.kt            UUID v5 over the hardware fingerprint plus ANDROID_ID
 docs/                                   Russian reference docs (API_CONTRACT, VALIDATION)
 scripts/client_server_test.py           Boots the real backend + MongoDB and runs ServerIntegrationTest
@@ -185,8 +186,18 @@ These are enforced by tests and are the point of the client's design:
 15. **Release builds require HTTPS** (`usesCleartextTraffic=false`); only the debug manifest
     permits cleartext for local servers. This matters more than usual: the password travels as a
     query parameter, because that is the route the server exposes.
-16. **No network or raster images.** Entities carry at most an `image` URL, which the client stores
-    but never fetches. Every picture is a bundled vector (`ItemEmblem`, `ForgeGlyphs`).
+16. **No network or raster images; a drawing is outlines, not a picture.** Entities carry at most
+    an `image` URL, which the client stores and never fetches, and no image file is ever
+    downloaded. Since 0.15.0 the *shape* of an icon may still come from the server: `icons/
+    index.json` carries a fingerprint the server computes from the file, `icons/icons.json` holds
+    the drawings and a `code → drawing` table, and the client paints the path data itself. A
+    sprite carries alpha and no colour, so `ItemIcon` and `PropertyIcon` tint it by rarity exactly
+    as they tint the bundled set. Everything the server does not cover — and every sprite whose
+    path data will not parse — falls back to `ItemEmblem`/`ForgeGlyphs`, which is why a missing set
+    is invisible rather than broken and why the Account tab reports how much of it arrived. Keys
+    mirror `LocaleKey`'s sections (`equipment.<CODE>`, `item.<CODE>`, `stat.<STAT>`) so one code
+    answers both what a thing is called and how it is drawn. Modifiers are deliberately out: their
+    text is a template with substitutions and an icon cannot stand in for a sentence.
 17. **The server owns every name; the client owns its own labels.** Since 0.14.0 no document
     carries text: equipment, items, modifiers, tree nodes and classes store a `code`, and the
     strings are static files — `locale/index.json` (languages with a hash each) and

@@ -1,5 +1,7 @@
 package com.sperance.exileforge.presentation
 
+import com.sperance.exileforge.core.display.IconBundle
+import com.sperance.exileforge.core.display.serverIcons
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.LocaleBundle
 import com.sperance.exileforge.core.i18n.locError
@@ -32,6 +34,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
     lateinit var api: GameApi
     var metadataJob: Job? = null
     var localeJob: Job? = null
+    var iconJob: Job? = null
     val catalogViewModel = CatalogViewModel(this)
     val editorViewModel = EditorViewModel(this)
     val heroViewModel = HeroViewModel(this)
@@ -60,6 +63,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
                 api = newApi(server)
                 mutable.update { it.copy(lang = language, server = server, serverDraft = server, busy = false, deviceId = deviceId) }
                 refreshLocale()
+                refreshIcons()
                 // The session itself cannot be restored — the server issues no token — but it can be
                 // made again without asking, and only for someone who last played on this device.
                 if (store.deviceSession.first()) sessionViewModel.playOnThisDevice(silent = true)
@@ -118,6 +122,42 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
             catch (e: CancellationException) { throw e }
             catch (_: Exception) { }
         }
+    }
+
+    /**
+     * The server's icon set.
+     *
+     * The same shape as the dictionary and for the same reason: the file is big, the fingerprint
+     * is small, and the manifest is what says whether the body is worth fetching. It is not keyed
+     * by language — a drawing reads the same in both — so only the server decides which set it is.
+     *
+     * Nothing here is required. A set that never arrives leaves the client's own emblems on screen,
+     * which is what they were for before the server had any.
+     */
+    suspend fun loadIcons() {
+        val server = state.value.server
+        val cached = store.icons(server)
+        cached?.let { (hash, document) -> applyIcons(IconBundle.parse(hash, document)) }
+        val manifest = api.iconManifest()
+        if (manifest.hash.isBlank() || cached?.first == manifest.hash) return
+        val document = api.iconDocument(manifest.file)
+        store.saveIcons(server, manifest.hash, document)
+        applyIcons(IconBundle.parse(manifest.hash, document))
+    }
+
+    /** Reading the icons is background work; a failure leaves the bundled emblems, not a banner. */
+    fun refreshIcons() {
+        iconJob?.cancel()
+        iconJob = scope.launch {
+            try { loadIcons() }
+            catch (e: CancellationException) { throw e }
+            catch (_: Exception) { }
+        }
+    }
+
+    private fun applyIcons(bundle: IconBundle) {
+        serverIcons = bundle
+        mutable.update { it.copy(iconKeys = bundle.size, iconSprites = bundle.spriteCount) }
     }
 
     /** The bundle is global because `core` renders from it; the state only reports what is loaded. */

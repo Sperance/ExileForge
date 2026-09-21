@@ -60,7 +60,13 @@ import com.sperance.exileforge.ui.theme.Muted
                 "${s.localeLanguage.uppercase()} · " + tr("строк: ${s.localeStrings}", "${s.localeStrings} strings"), "description")
             else Text(tr("Словарь сервера не загружен: названия предметов будут показаны кодами.",
                          "The server dictionary was not loaded: items will be shown by their codes."), color = Muted, style = MaterialTheme.typography.bodySmall)
-            OutlinedButton(enabled = !s.busy, onClick = vm::refreshLocale, modifier = Modifier.fillMaxWidth()) { Text(tr("Перечитать словарь сервера", "Re-read the server dictionary")) }
+            // Drawings come from the server too, and a missing set is invisible by design: every
+            // hole falls back to a bundled emblem, so the count is the only way to notice one.
+            if (s.iconKeys > 0) PropertyRow(tr("Иконки сервера", "Server icons"),
+                tr("кодов: ${s.iconKeys}, рисунков: ${s.iconSprites}", "${s.iconKeys} codes, ${s.iconSprites} drawings"), "image")
+            else Text(tr("Набор иконок не загружен: предметы рисуются встроенными эмблемами.",
+                         "The icon set was not loaded: items are drawn with the bundled emblems."), color = Muted, style = MaterialTheme.typography.bodySmall)
+            OutlinedButton(enabled = !s.busy, onClick = { vm.refreshLocale(); vm.refreshIcons() }, modifier = Modifier.fillMaxWidth()) { Text(tr("Перечитать словарь и иконки", "Re-read the dictionary and icons")) }
         }
         ForgePanel {
             Engraved(tr("Сервер", "Server"))

@@ -13,7 +13,7 @@
   },
   {
     "name": "com.sperance.exileforge.core.GameApiTest",
-    "tests": "32",
+    "tests": "33",
     "failures": "0",
     "errors": "0"
   },
@@ -26,6 +26,12 @@
   {
     "name": "com.sperance.exileforge.core.ReferencePickerTest",
     "tests": "5",
+    "failures": "0",
+    "errors": "0"
+  },
+  {
+    "name": "com.sperance.exileforge.core.ServerIconsTest",
+    "tests": "8",
     "failures": "0",
     "errors": "0"
   },

@@ -58,8 +58,9 @@ import com.sperance.exileforge.ui.theme.Muted
             Spinner(tr("Вид лота", "Lot kind"), kind.name,
                 AuctionLotKind.entries.associate { it.name to lotKindTitle(it, s.lang) }, !s.busy) { kind = AuctionLotKind.valueOf(it) }
             if (kind == AuctionLotKind.EQUIPMENT) {
-                if (equipment.isEmpty()) Text(tr("Снятой экипировки нет. Надетый предмет сервер выставить не даст — сначала снимите его во вкладке «Герой».",
-                        "No unequipped items. The server refuses to list a worn one — take it off on the Hero tab first."), color = Muted)
+                // A jewel is worn too, but it comes out of a socket on the tree, not off a slot.
+                if (equipment.isEmpty()) Text(tr("Снятой экипировки нет. Надетый предмет сервер выставить не даст — сначала снимите его во вкладке «Герой», а самоцвет выньте из гнезда во вкладке «Дерево».",
+                        "No unequipped items. The server refuses to list a worn one — take it off on the Hero tab first, or a jewel out of its socket on the Tree tab."), color = Muted)
                 else Spinner(tr("Предмет", "Item"), goods, equipment, !s.busy) { goods = it }
             } else {
                 if (bag.isEmpty()) Text(tr("Сумка пуста", "The bag is empty"), color = Muted)

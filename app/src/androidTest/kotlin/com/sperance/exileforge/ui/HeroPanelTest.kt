@@ -92,10 +92,12 @@ class HeroPanelTest {
         // Every stat the server sent is in the sheet the vitals open, with nothing folded inside it.
         compose.onNodeWithText("Все характеристики: 2 · нажмите").performScrollTo().performClick()
         compose.onNodeWithText("Здоровье").assertIsDisplayed()
-        compose.onNodeWithText("88.0").assertIsDisplayed()
+        // Whole numbers, no dot: the 88.0 the server sent reads "88". It matches twice, because the
+        // bar behind the sheet carries the same figure — the sheet did not round it differently.
+        compose.onAllNodesWithText("88").assertCountEquals(2)
         // The second stat is checked by its value: "Броня" is also the name of the BODY slot, and
         // the empty slot is drawn right behind the sheet, so the label matches two nodes.
-        compose.onNodeWithText("40.0").assertIsDisplayed()
+        compose.onNodeWithText("40").assertIsDisplayed()
     }
 
     /**

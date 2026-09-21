@@ -28,6 +28,8 @@ import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 /** The showcase: the server's own search, so the page and the filter both belong to it. */
 @Composable internal fun ColumnScope.ShowcaseTab(s: ForgeState, vm: ForgeViewModel) {
@@ -131,27 +133,41 @@ import kotlinx.serialization.json.JsonPrimitive
     }
 }
 
-/** One lot as a line: what it is, what it costs, who is selling. The rest is one tap away. */
+/**
+ * One lot as a line, drawn the way the stash draws its own items.
+ *
+ * The lot carries the instance with everything it rolled, so the line can show the same icon and
+ * the same modifiers a player reads in their own arsenal — which is what they are comparing it
+ * against. The price rides on the right, where a stash line carries "Надето"; the seller stays on
+ * the card, because a line that also named them would have no room left for the rolls, and the
+ * rolls are what a buyer is scanning for.
+ */
 @Composable private fun LotRow(s: ForgeState, lot: AuctionLot, note: String?, onClick: () -> Unit) {
-    val colour = lot.rarity?.let { rarityColor(it) } ?: Gold
-    val shape = CutCornerShape(topStart = 8.dp, bottomEnd = 8.dp)
-    Row(Modifier.fillMaxWidth().background(Panel, shape).border(1.dp, colour.copy(alpha = .40f), shape)
-        .clickable(onClick = onClick).padding(10.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(lot.title, color = colour, style = MaterialTheme.typography.titleSmall,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                note?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelSmall) }
-            }
-            Text(lotKindTitle(lot.kind, s.lang) + (lot.slot?.let { " · ${slotTitle(it, s.lang)}" } ?: "") +
-                (lot.rarity?.let { " · ${rarityTitle(it, s.lang)}" } ?: "") +
-                (if (lot.itemLevel > 0) tr(" · ур. ${lot.itemLevel}", " · lvl ${lot.itemLevel}") else ""),
-                color = Muted, style = MaterialTheme.typography.labelSmall)
-            Text(orbPrice(s, lot) + " · " + lot.sellerName.ifBlank { "…${lot.sellerId.takeLast(6)}" },
-                color = Gold, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
+    val document = lotDocument(s, lot)
+    // The price is always shown: it is what a trader is scanning the list for. A note about the
+    // lot's state rides in front of it rather than in its place.
+    ItemRow(document, definitions = s.definitions, enabled = !s.busy,
+        note = listOfNotNull(note, orbPrice(s, lot)).joinToString(" · ").ifBlank { null },
+        noteColor = if (note == null) Gold else Muted, onClick = onClick)
+}
+
+/**
+ * A lot as the display helpers read it: a document.
+ *
+ * An equipment lot already carries its instance, and the template comes from the catalogue the
+ * session read whole. A stack lot has no instance at all, so it gets the little the lot itself
+ * knows — the name and the kind.
+ */
+private fun lotDocument(s: ForgeState, lot: AuctionLot): JsonObject {
+    val instance = lot.equipment
+    val base = instance?.let { s.inventoryBases[it.equipmentId] }
+    val own = buildJsonObject {
+        put("name", lot.title)
+        lot.slot?.let { put("slot", it) }
+        lot.rarity?.let { put("rarity", it) }
+        if (lot.itemLevel > 0) put("itemLevel", lot.itemLevel)
     }
+    return JsonObject((instance?.let { inventoryDocument(it, base) } ?: JsonObject(emptyMap())) + own)
 }
 
 /**

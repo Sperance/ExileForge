@@ -8,6 +8,7 @@ import com.sperance.exileforge.core.i18n.locError
 import com.sperance.exileforge.core.i18n.serverLocale
 import com.sperance.exileforge.core.i18n.tr
 import com.sperance.exileforge.core.i18n.uiLanguage
+import com.sperance.exileforge.core.contract.entityId
 import com.sperance.exileforge.core.model.EntitySource
 import com.sperance.exileforge.core.network.ApiFailure
 import com.sperance.exileforge.core.network.FailureState
@@ -32,7 +33,6 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
     val state = mutable.asStateFlow()
     val logs = journal.entries
     lateinit var api: GameApi
-    var metadataJob: Job? = null
     var localeJob: Job? = null
     var iconJob: Job? = null
     val catalogViewModel = CatalogViewModel(this)
@@ -173,15 +173,14 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
      * One equipment template, through the cache the inventory already fills.
      *
      * An auction lot carries the instance but not its template, and armour, damage and every
-     * requirement live in the template — so a lot's card reads one here. It lands in the same map
-     * the stash uses, which is why looking at a lot of an item you already own costs no request.
+     * requirement live in the template. Since the whole catalogue is read once per session this
+     * costs no request at all — it is a lookup with the read behind it, kept as one call so a
+     * caller never has to remember which came first.
      */
     suspend fun equipmentBase(id: String): JsonObject? {
         if (id.isBlank()) return null
-        state.value.inventoryBases[id]?.let { return it }
-        val base = api.get(com.sperance.exileforge.core.model.Catalog.EQUIPMENT, id) ?: return null
-        mutable.update { it.copy(inventoryBases = it.inventoryBases + (id to base)) }
-        return base
+        ensureEquipment()
+        return state.value.inventoryBases[id]
     }
 
     /** The recipe form reads one document directly; it is never edited, only spent. */
@@ -244,6 +243,21 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
         mutable.update { it.copy(classes = classes, treeNodes = nodes, draftClass = it.draftClass.ifBlank { classes.firstOrNull()?.id.orEmpty() }) }
     }
 
+    /**
+     * The equipment catalogue, read whole once per session.
+     *
+     * Since 0.16.0 an instance carries only what it rolled: armour, damage and every requirement
+     * belong to the template and live in the catalogue in one copy. A card without its template
+     * therefore has nothing to say, so this is a hard requirement like the classes and the tree —
+     * not the background courtesy the per-item fetch used to be. The catalogue is some sixty
+     * documents and the client already reads it whole for the Catalogue tab.
+     */
+    suspend fun ensureEquipment() {
+        if (state.value.inventoryBases.isNotEmpty()) return
+        val templates = api.equipmentCatalogue().associateBy { it.entityId }
+        mutable.update { it.copy(inventoryBases = templates) }
+    }
+
     /** The orbs the server seeded. The catalogue is fixed for a session, so one read covers it. */
     suspend fun ensureOrbs() {
         if (state.value.orbs.isNotEmpty()) return
@@ -252,7 +266,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
     }
 
     fun clearSession() {
-        metadataJob?.cancel(); api.logout(); journal.clear()
+        api.logout(); journal.clear()
         mutable.update { it.copy(phase = AppPhase.AUTH, characters = emptyList(), charactersRead = false,
             signedIn = false, profile = null, sessionEpoch = it.sessionEpoch + 1,
             items = emptyList(), total = 0, page = 0, totalPages = 0, definitions = emptyList(),

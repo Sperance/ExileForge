@@ -4,9 +4,9 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.1.0, `versionCode` 14) for the
-**ktor-bestgame** RPG server (0.15.1), pinned in
-`core/.../contract/Contract.kt` as `SERVER_COMMIT = a7fbe483499c1c660111ede3ff66ddf2afec06d4`
+ExileForge is an **Android Compose client** (version 2.2.0, `versionCode` 15) for the
+**ktor-bestgame** RPG server (0.16.0), pinned in
+`core/.../contract/Contract.kt` as `SERVER_COMMIT = 7271910fb6d71c5afbcbbb450472a03ab702f09e`
 on the server branch `claude/tender-pasteur-a36kj2`.
 
 The client is deliberately **thin**: the server owns items, stats, modifier rolls and inventory.
@@ -144,10 +144,18 @@ These are enforced by tests and are the point of the client's design:
    table, and `requireWorkbench()` runs before login so a stale server is named, not guessed at.
 7. **Secrets never reach the journal.** `request(sensitive = true)` for login and password change;
    the query string and body are stored as `[скрыто]`. The account document lives in memory only.
-8. **Template vs. instance.** A template carries `modifierIds` — a pool of `ModifierDefinition` ids.
-   What lands on a copy, in which tier and with which value, is rolled by the server in
-   `itemToInventory`. `validateModifierPool` rejects rolled `params` in a template write, and
-   `inventoryDocument` is a display-only projection that must never be posted back.
+8. **Template vs. instance: the base is a reference, never a copy.** A template carries
+   `modifierIds` — a pool of `ModifierDefinition` ids — and `baseParams`, the armour, damage and
+   attack speed every copy of it has. What lands on a copy, in which tier and with which value, is
+   rolled by the server in `itemToInventory`. Since 0.16.0 an instance carries **only** what it
+   rolled: the base lives in the catalogue in a single copy and reaches an item through its
+   `equipmentId`, so rebalancing a base reaches every copy already in the world and no card can
+   print a property twice. That makes the catalogue a prerequisite rather than a nicety —
+   `ForgeRuntime.ensureEquipment()` reads `GET /api/v1/equipment` whole, once per session, and
+   `requireWorkbench` names the route so a stale server is reported instead of drawing half an
+   item. `validateModifierPool` rejects rolled `params` in a template write, and
+   `inventoryDocument` is a display-only projection — base first, then the rolls — that must never
+   be posted back.
 9. **Catalogue lists are read whole and paged here; the auction is not.** `/paged` was fixed in
    0.13.1, but the generic route still takes no filter, so moving the catalogue onto it would cost
    every catalogue filter. The catalogue reads `GET /api/v1/{collection}` and slices it, comparing
@@ -168,16 +176,34 @@ These are enforced by tests and are the point of the client's design:
     `/api/v1/character/skilltree/*`. Allocate, refund and reset each answer with the whole
     `SkillTreeState`; adjacency, cost, the point balance and whether a refund would detach the rest
     are all checked server-side. The class's start node arrives with the character and costs
-    nothing, and a reset is a respec that leaves it in place — a new tree is never empty. The screen draws the seeded coordinates and sends one node code.
-    `reachableFrom` highlights neighbours so 122 nodes stay navigable — it reads `connections`, it
-    does not decide: a highlighted node can still be refused.
+    nothing, and a reset is a respec that leaves it in place — a new tree is never empty. The
+    screen draws the seeded coordinates and sends one node code. `reachableFrom` highlights
+    neighbours so 299 nodes stay navigable — it reads `connections`, it does not decide: a
+    highlighted node can still be refused. Since 0.16.0 the graph is a file,
+    `resources/skilltree/tree.json` on the server: seven class areas that meet through their own
+    branches with no shared ring, and `SkillTreeSeeder` only reads it. Giving a node back is no
+    longer free — a refund spends one **Orb of Regret** per node and a full reset one per node
+    returned (`ST_015` when the bag is short) — and a tapped node opens a sheet with what it gives
+    and what it would cost, while «Подробно» prints `SkillTreeState.totals`, which the server sums
+    over the whole allocated tree rather than the client adding modifiers up. A `JEWEL_SOCKET`
+    node holds nothing itself: taking it opens a socket, and a jewel — an ordinary equipment
+    instance of slot `JEWEL` — is put in it by `POST /api/v1/characterequipment/socket` naming the
+    node code, which is why `EquipmentInstance` has `socketCode` beside `equippedSlot`: the slot
+    says what it is, the code says where it is worn. A jewel's modifiers count globally while its
+    socket is taken, and a socket with a jewel still in it refuses to be refunded (`ST_014`)
+    rather than quietly dropping the jewel.
 13. **The auction's goods live in the lot.** While a lot is listed the instance has left
     `CharacterEquipment` and the stack has left the bag, which is why a worn item cannot be listed
     (`AU_010`). Prices are counted in currency orbs alone (`AU_007`), a seller cannot buy their own
     lot (`AU_006`), and the level the auction opens at is a server constant the client never copies:
     it asks, and turns `AU_002` into the screen's explanation.
-14. **An item has no stat fields.** Armour, damage and attack speed are fixed modifiers in
-    `baseParams` (values, no tier); `durability` is the only number left as a field. Requirements
+14. **An item has no stat fields, and no number is printed raw.** Armour, damage and attack speed
+    are fixed modifiers in `baseParams` (values, no tier); `durability` is the only number left as
+    a field. Every `Double` the server sends is counted in full and *displayed* through
+    `statNumber(stat, value)`: whole, without a point, except the five rates where a fraction is
+    the whole point — `STOCK_ATTACK_SPEED`, `STOCK_CAST_SPEED`, `STOCK_CRITICAL_CHANCE`,
+    `STOCK_CRITICAL_MULTIPLIER`, `STOCK_MOVEMENT_SPEED` — which keep two decimals. Rounding is
+    display and never travels back to the server. Requirements
     (`requiredLevel`, `requiredStrength`, `requiredDexterity`, `requiredIntelligence`) are printed,
     never enforced here — the server checks them twice and the two checks are different rules:
     `equip` refuses an item out of reach outright (`CH_013`), while one already worn keeps its slot

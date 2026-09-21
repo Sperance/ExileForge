@@ -16,15 +16,17 @@ val JsonObject.entityId: String get() = text("_id").ifBlank { text("id") }
 val protectedFields = setOf("_id", "id", "version", "deleted", "createdAt", "updatedAt", "type")
 
 val rarities = listOf("COMMON", "UNCOMMON", "RARE", "EPIC", "UNIQUE", "MYTHICAL")
-val slots = listOf("HELMET", "BODY", "GLOVES", "RING", "BOOTS", "WINGS", "BELT", "WEAPON_1H", "WEAPON_2H", "QUIVER", "SHIELD", "AMULET")
+// JEWEL is last on purpose: it is not worn on the body but sits in a socket on the tree,
+// and `CharacterEquipment.socketCode` says which one.
+val slots = listOf("HELMET", "BODY", "GLOVES", "RING", "BOOTS", "WINGS", "BELT", "WEAPON_1H", "WEAPON_2H", "QUIVER", "SHIELD", "AMULET", "JEWEL")
 val weapons = listOf("SWORD", "LONGSWORD", "BOW", "WAND", "AXE", "DOUBLEAXE", "DOUBLESWORD", "BLADE")
 val modifierSources = listOf("IMPLICIT", "PREFIX", "SUFFIX", "UNIQUE", "ENCHANTMENT", "CORRUPTION", "PASSIVE")
-val skillNodeTypes = listOf("START", "SMALL", "NOTABLE", "KEYSTONE")
+val skillNodeTypes = listOf("START", "SMALL", "NOTABLE", "KEYSTONE", "JEWEL_SOCKET")
 val lotKinds = listOf("EQUIPMENT", "ITEM")
 val modifierOperations = listOf("ADD", "INCREASED", "MORE", "SET")
-const val SERVER_COMMIT = "a7fbe483499c1c660111ede3ff66ddf2afec06d4"
+const val SERVER_COMMIT = "7271910fb6d71c5afbcbbb450472a03ab702f09e"
 const val SERVER_BRANCH = "claude/tender-pasteur-a36kj2"
-const val SERVER_VERSION = "0.15.1"
+const val SERVER_VERSION = "0.16.0"
 
 fun template(catalog: Catalog, kind: EquipmentKind = EquipmentKind.Weapon): JsonObject = when (catalog) {
     Catalog.CHARACTERS -> defaultObject("character")

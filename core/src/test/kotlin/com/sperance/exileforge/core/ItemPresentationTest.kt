@@ -52,9 +52,9 @@ class ItemPresentationTest {
             """{"_id":"$id","code":"LIFE_AND_MANA","source":"PREFIX",
                 "effects":[{"stat":"STOCK_HEALTH","operation":"ADD"},{"stat":"STOCK_MANA","operation":"ADD"}]}"""))
         val modifier = buildJsonObject { put("modifierId", id); put("values", buildJsonArray { add(46.0); add(11.5) }) }
-        assertEquals("46 Здоровье · 11.5 Мана", modifierText(modifier, definitions))
+        assertEquals("46 Здоровье · 12 Мана", modifierText(modifier, definitions))
         // A definition the client has not read still prints what was rolled.
-        assertEquals("46 · 11.5", modifierText(modifier, emptyList()))
+        assertEquals("46 · 12", modifierText(modifier, emptyList()))
         // Nothing rolled at all: the modifier is named rather than shown as an empty line.
         assertEquals("LIFE_AND_MANA", modifierText(buildJsonObject { put("modifierId", id) }, definitions))
     }
@@ -71,5 +71,26 @@ class ItemPresentationTest {
         assertEquals("Armour", statTitle("STOCK_ARMOR", Lang.EN))
         // A stat the client does not know keeps its humanised server identifier.
         assertEquals("NEW STAT", statTitle("STOCK_NEW_STAT", Lang.RU))
+    }
+
+    /**
+     * Numbers are whole everywhere, as Path of Exile prints them — except where the fraction is
+     * the whole point.
+     *
+     * Full precision is never lost: the value travels and is stored as the Double the server sent,
+     * and this is only the last step before a string. But armour with a dot in it is noise, while
+     * an attack speed rounded to a whole number stops saying anything at all.
+     */
+    @Test fun `a number is whole unless its fraction is the point`() {
+        assertEquals("48", statNumber("STOCK_ARMOR", 47.6))
+        assertEquals("12", statNumber("STOCK_MANA", 11.5))
+        assertEquals("188", number(188.4))
+        assertEquals("0", number(0.4))
+
+        // Rounding these would destroy them: 1.25 attacks a second is not 1.
+        assertEquals("1.25", statNumber("STOCK_ATTACK_SPEED", 1.25))
+        assertEquals("5.50", statNumber("STOCK_CRITICAL_CHANCE", 5.5))
+        assertEquals("1.50", statNumber("STOCK_CRITICAL_MULTIPLIER", 1.5))
+        preciseStats.forEach { assertTrue(it.startsWith("STOCK_"), "$it is not a server stat") }
     }
 }

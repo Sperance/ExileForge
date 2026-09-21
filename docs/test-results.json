@@ -19,7 +19,7 @@
   },
   {
     "name": "com.sperance.exileforge.core.ItemPresentationTest",
-    "tests": "5",
+    "tests": "6",
     "failures": "0",
     "errors": "0"
   },

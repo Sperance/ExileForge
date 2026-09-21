@@ -7,7 +7,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /** What a node is worth on the tree, as the server grades them. */
-@Serializable enum class SkillNodeType { START, SMALL, NOTABLE, KEYSTONE }
+@Serializable enum class SkillNodeType { START, SMALL, NOTABLE, KEYSTONE, JEWEL_SOCKET }
 
 /**
  * One node of the shared skill tree (collection `SkillTreeNode`).
@@ -60,6 +60,15 @@ import kotlinx.serialization.Serializable
     val spent: Int = 0,
     val available: Int = 0,
     val nodes: List<CharacterSkillNode> = emptyList(),
+
+    /**
+     * What the whole tree gives, one characteristic per entry.
+     *
+     * Counted by the server, not here. Modifiers carry operations and they do not add alike —
+     * two INCREASED add together, two MORE multiply — so summing the taken snapshots on the
+     * client would be wrong exactly where a player is deciding whether a node is worth a point.
+     */
+    val totals: Map<String, Double> = emptyMap(),
 ) {
     val takenCodes: Set<String> get() = nodes.mapTo(mutableSetOf()) { it.code }
 }

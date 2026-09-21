@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.runtime.*
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
@@ -128,21 +129,34 @@ class HeroPanelTest {
             connections = listOf("STR_START"), positionX = -20, positionY = 10)
         val hero = HeroView(CharacterSummary("hero", "owner", "Изгнанник", level = 5), emptyList(),
             tree = SkillTreeState("hero", total = 4, spent = 0, available = 4,
-                nodes = listOf(CharacterSkillNode("STR_START", emptyList(), SkillNodeType.START, 0))))
+                nodes = listOf(CharacterSkillNode("STR_START", emptyList(), SkillNodeType.START, 0)),
+                // The totals are the server's arithmetic, already done: the client only prints them.
+                totals = mapOf("STOCK_HEALTH" to 40.0)))
         var allocated: String? = null
-        compose.setContent { ForgeTheme { Column(Modifier.fillMaxSize().background(Ink).padding(12.dp)) {
-            SkillTreePanel(ForgeState(busy = false, signedIn = true, hero = hero, characterOwner = "owner",
-                profile = com.sperance.exileforge.core.model.command.UserProfile("owner"),
-                treeNodes = listOf(start, life), selectedNode = "STR_LIFE_1"),
-                onSelect = {}, onAllocate = { allocated = it }, onRefund = {}, onReset = {}, onQuery = {},
-                modifier = Modifier.weight(1f))
-        } } }
-        // The map takes the whole panel; the balance and the chosen node open over it.
+        compose.setContent { ForgeTheme {
+            // The search reads the query off the state, as it does in the app, so the test has to
+            // hold one: typing into a screen whose state never moves proves nothing.
+            var state by remember { mutableStateOf(ForgeState(busy = false, signedIn = true, hero = hero,
+                characterOwner = "owner", profile = com.sperance.exileforge.core.model.command.UserProfile("owner"),
+                treeNodes = listOf(start, life), selectedNode = "STR_LIFE_1")) }
+            Column(Modifier.fillMaxSize().background(Ink).padding(12.dp)) {
+                SkillTreePanel(state, onSelect = { state = state.copy(selectedNode = it) },
+                    onAllocate = { allocated = it }, onRefund = {}, onReset = {},
+                    onQuery = { state = state.copy(nodeQuery = it) }, modifier = Modifier.weight(1f))
+            }
+        } }
+        // The map takes the whole panel; the balance is on it and everything else opens over it.
         compose.onNodeWithText("Очки: 4 из 4").assertIsDisplayed()
         compose.onNodeWithText("Подробно").performClick()
-        compose.onNodeWithText("Крепость").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Нотабль").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Доступно").performScrollTo().assertIsDisplayed()
+        // What the whole tree gives is counted by the server and printed whole, no dot.
+        compose.onNodeWithText("Здоровье").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("40").performScrollTo().assertIsDisplayed()
+        // Finding a node opens the node itself: searching and then not being shown it
+        // would be a strange place to stop.
+        compose.onNodeWithText("Название узла").performScrollTo().performTextInput("Креп")
+        compose.onNodeWithText("Крепость · Нотабль").performScrollTo().performClick()
+        compose.onNodeWithText("Нотабль").assertIsDisplayed()
         compose.onNodeWithText("Взять узел").performScrollTo().performClick()
         compose.runOnIdle { assertEquals("STR_LIFE_1", allocated) }
     }
@@ -169,7 +183,8 @@ class HeroPanelTest {
         // The price is always counted in orbs, and the orb catalogue gives it a name.
         compose.onNodeWithText("4 × Сфера хаоса", substring = true).performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("7 × Сфера хаоса", substring = true).performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Ваш лот").performScrollTo().assertIsDisplayed()
+        // The state of a lot rides in front of its price rather than in place of it.
+        compose.onNodeWithText("Ваш лот · 7 × Сфера хаоса").performScrollTo().assertIsDisplayed()
         // Nothing is bought from a line: the rolls are what is being paid for, so the card opens first.
         compose.onAllNodesWithText("Купить").assertCountEquals(0)
         compose.onNodeWithText("Железный шлем").performScrollTo().performClick()

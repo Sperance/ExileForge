@@ -43,6 +43,8 @@ fun slotTitle(slot: String, lang: Lang = uiLanguage) = when (slot) {
     "BELT" -> lang.pick("Пояс", "Belt"); "SHIELD" -> lang.pick("Щит", "Shield")
     "WEAPON_1H" -> lang.pick("Одноручное", "One handed"); "WEAPON_2H" -> lang.pick("Двуручное", "Two handed")
     "QUIVER" -> lang.pick("Колчан", "Quiver"); "WINGS" -> lang.pick("Крылья", "Wings")
+    // A jewel is not worn on the body: its "slot" is a socket on the passive tree.
+    "JEWEL" -> lang.pick("Самоцвет", "Jewel")
     else -> displayName(slot, lang)
 }
 
@@ -73,7 +75,7 @@ fun weaponTitle(value: String, lang: Lang = uiLanguage) = when (value) {
 fun inventoryDocument(instance: JsonObject, base: JsonObject?): JsonObject = JsonObject(
     base.orEmpty()
         + mapOf("name" to JsonPrimitive(equipmentTitle(base)))
-        + instance.filterKeys { it in setOf("_id", "equipmentId", "params", "equippedSlot", "rarity", "corrupted") }
+        + instance.filterKeys { it in setOf("_id", "equipmentId", "params", "equippedSlot", "socketCode", "rarity", "corrupted") }
 )
 
 /**
@@ -133,7 +135,7 @@ fun inventoryDocument(instance: com.sperance.exileforge.core.model.hero.Equipmen
  */
 fun modifierText(modifier: JsonObject, definitions: List<ModifierDefinition> = emptyList()): String {
     val definition = definitions.firstOrNull { it.id == modifier.text("modifierId") }
-    val values = rolledValues(modifier)
+    val values = rolledValues(modifier, definition)
     val template = definition?.template
     if (template != null && template != definition.code && values.isNotEmpty())
         return values.foldIndexed(template) { index, text, value -> text.replace("{$index}", value) }
@@ -143,13 +145,45 @@ fun modifierText(modifier: JsonObject, definitions: List<ModifierDefinition> = e
     }.joinToString(" · ").ifBlank { definition?.code ?: displayName(modifier.text("modifierId")) }
 }
 
-/** The rolled numbers, printed without a trailing zero on whole values. */
-private fun rolledValues(modifier: JsonObject): List<String> =
-    (modifier["values"] as? JsonArray).orEmpty().map { value ->
+/**
+ * The rolled numbers as text, each one printed by the rule of the characteristic it rolled on.
+ *
+ * The effect at the same index names that characteristic, which is why the definition is passed
+ * in: a value is not a number in the abstract, it is armour or an attack speed, and the two are
+ * printed differently.
+ */
+private fun rolledValues(modifier: JsonObject, definition: ModifierDefinition? = null): List<String> =
+    (modifier["values"] as? JsonArray).orEmpty().mapIndexed { index, value ->
         val number = (value as? JsonPrimitive)?.doubleOrNull
         if (number == null) (value as? JsonPrimitive)?.content.orEmpty()
-        else if (number == number.toLong().toDouble()) number.toLong().toString() else number.toString()
+        else statNumber(definition?.effects?.getOrNull(index)?.stat.orEmpty(), number)
     }
+
+/**
+ * Characteristics whose meaning lives in the fraction.
+ *
+ * Everything else is printed whole, as Path of Exile prints it: a dot in front of a player is
+ * noise when the number is armour or life. These five are the exception because rounding them
+ * destroys them — 1.25 attacks per second becomes 1, and a 1.5 critical multiplier becomes 2.
+ */
+val preciseStats = setOf(
+    "STOCK_ATTACK_SPEED", "STOCK_CAST_SPEED", "STOCK_CRITICAL_CHANCE",
+    "STOCK_CRITICAL_MULTIPLIER", "STOCK_MOVEMENT_SPEED",
+)
+
+/**
+ * A server number as every screen prints it.
+ *
+ * The value itself is never rounded — it travels and is stored as the Double the server sent,
+ * and the server counts with all of it. This is the last step before a string, and the only
+ * place in the client that decides how many digits a player sees.
+ */
+fun statNumber(stat: String, value: Double): String =
+    if (stat in preciseStats) String.format(java.util.Locale.ROOT, "%.2f", value)
+    else Math.round(value).toString()
+
+/** The same rule for a number that belongs to no particular characteristic. */
+fun number(value: Double): String = statNumber("", value)
 
 /**
  * Title of a server stat enum. Names outside this table keep their humanised identifier, which is
@@ -159,6 +193,7 @@ private fun rolledValues(modifier: JsonObject): List<String> =
 fun nodeTypeTitle(type: String, lang: Lang = uiLanguage) = when (type) {
     "START" -> lang.pick("Старт", "Start"); "SMALL" -> lang.pick("Малый", "Small")
     "NOTABLE" -> lang.pick("Нотабль", "Notable"); "KEYSTONE" -> lang.pick("Кейстоун", "Keystone")
+    "JEWEL_SOCKET" -> lang.pick("Гнездо", "Socket")
     else -> displayName(type, lang)
 }
 

@@ -10,6 +10,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.display.statNumber
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.tr
 import com.sperance.exileforge.core.model.hero.CharacterSummary
@@ -138,7 +139,7 @@ import com.sperance.exileforge.ui.theme.*
         chosen?.let { option ->
             if (option.details.isNotBlank()) Text(option.details, color = Muted, style = MaterialTheme.typography.bodySmall)
             Text(tr("База 1 уровня: ", "Level 1 base: ") + option.baseStats.joinToString(" · ") {
-                "${statTitle(it.stat, s.lang)} ${it.value.toInt()}" },
+                "${statTitle(it.stat, s.lang)} ${statNumber(it.stat, it.value)}" },
                 color = Muted, style = MaterialTheme.typography.bodySmall)
         }
         Button(enabled = !s.busy && name.isNotBlank() && classId.isNotBlank(),

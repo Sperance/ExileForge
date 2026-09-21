@@ -24,7 +24,6 @@ class SessionViewModel(private val runtime: ForgeRuntime) {
     fun serverDraft(value: String) { with(runtime) { if (!state.value.busy) mutable.update { it.copy(serverDraft = value) } } }
 
     fun connect() { with(runtime) { task {
-        metadataJob?.cancel()
         val server = normalizeServer(state.value.serverDraft)
         store.save(server)
         clearSession()

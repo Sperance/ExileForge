@@ -3,18 +3,11 @@ package com.sperance.exileforge.presentation.features
 import com.sperance.exileforge.core.contract.entityId
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.i18n.tr
-import com.sperance.exileforge.core.model.Catalog
 import com.sperance.exileforge.core.model.command.ItemStack
 import com.sperance.exileforge.core.model.command.UseRecipeCommand
 import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.presentation.ForgeRuntime
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
 
 class HeroViewModel(private val runtime: ForgeRuntime) {
     private val state get() = runtime.state
@@ -107,6 +100,20 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
 
     fun redeem(code: String) { with(runtime) { characterCommand { id -> api.redeem(id, code) } } }
 
+    /**
+     * Puts a jewel into a socket, and takes it back out.
+     *
+     * Which socket exists, whether the character took it and whether it is free are all the
+     * server's to say; the client names the pair and prints the refusal.
+     */
+    fun socketJewel(inventoryId: String, nodeCode: String) { with(runtime) { characterCommand { id ->
+        api.socketJewel(id, inventoryId, nodeCode)
+    } } }
+
+    fun unsocketJewel(inventoryId: String) { with(runtime) { characterCommand { id ->
+        api.unsocketJewel(id, inventoryId)
+    } } }
+
     fun useRecipe(recipeId: String, ingredients: List<String>, amount: Long) { with(runtime) { characterCommand { id ->
         api.useRecipe(id, recipeId, UseRecipeCommand(ingredients, amount))
     } } }
@@ -130,36 +137,14 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
         ensureDefinitions()
         ensureOrbs()
         ensureProgression()
+        // The catalogue is half of every card now that an instance keeps only its rolls,
+        // so it is read before the hero rather than chased afterwards.
+        ensureEquipment()
         val character = api.character(id)
         val view = HeroView(character, api.inventory(id), api.stats(id), api.bag(id), api.characterTree(id))
         mutable.update { it.copy(hero = view, characterOwner = character.userId, heroReadAt = System.currentTimeMillis(),
             selectedEquipment = it.selectedEquipment.takeIf { chosen -> view.inventory.any { item -> item.id == chosen } }
                 ?: view.inventory.firstOrNull()?.id.orEmpty()) }
-        loadTemplates()
-    } }
-
-    /**
-     * An instance stores only its rolls, so the shared template carries the name, slot and picture.
-     * Templates are fetched in the background: a card falls back to its emblem until one arrives.
-     */
-    private fun loadTemplates() { with(runtime) {
-        metadataJob?.cancel()
-        val snapshot = state.value
-        val currentApi = api
-        metadataJob = scope.launch {
-            val limit = Semaphore(4)
-            snapshot.hero?.inventory.orEmpty().map { it.equipmentId }.distinct().filter { it !in snapshot.inventoryBases }.map { id ->
-                async {
-                    limit.withPermit {
-                        try {
-                            val base = currentApi.get(Catalog.EQUIPMENT, id) ?: return@withPermit
-                            mutable.update { if (it.server == snapshot.server && it.characterId == snapshot.characterId) it.copy(inventoryBases = it.inventoryBases + (id to base)) else it }
-                        } catch (e: CancellationException) { throw e }
-                        catch (_: Exception) { /* The emblem and the id stay on screen; a refresh retries. */ }
-                    }
-                }
-            }.awaitAll()
-        }
     } }
 }
 

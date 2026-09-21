@@ -1,7 +1,7 @@
-# ExileForge 2.1.0
+# ExileForge 2.2.0
 
-Android Compose client for **ktor-bestgame 0.15.1**.
-Server: branch `claude/tender-pasteur-a36kj2`, commit `a7fbe483499c1c660111ede3ff66ddf2afec06d4`.
+Android Compose client for **ktor-bestgame 0.16.0**.
+Server: branch `claude/tender-pasteur-a36kj2`, commit `7271910fb6d71c5afbcbbb450472a03ab702f09e`.
 
 ## Язык интерфейса · Interface language
 
@@ -18,10 +18,10 @@ Every label, hint, error and contract-validation message exists in Russian and E
 - **Вход** — «Играть» (учётная запись по устройству, заводится сама), форма логина для администратора, адрес сервера и переключатель языка.
 - **Персонажи** — список своих героев (до трёх), создание с именем и классом, удаление. Единственное место, где выбирается, кем играть.
 - **Каталог** — поиск и постраничный просмотр экипировки и предметов. Фильтры по слоту, редкости, типу оружия, уровню и модификатору в пуле.
-- **Герой** — сводка персонажа, класс, надетые слоты, полоски ХП/маны/щита, инвентарь и сумка раскрываемыми списками строк, применение валютных сфер. Все характеристики сервера открываются шторкой по нажатию на полоски; герой перечитывается сам, вручную — потянуть список вниз.
+- **Герой** — сводка персонажа, класс, надетые слоты, полоски ХП/маны/щита, инвентарь и сумка раскрываемыми списками строк, применение валютных сфер. Надетое разложено по ширине экрана: три ячейки в ряд на телефоне, четыре на широком экране, и ряд растягивается целиком, а не жмётся к левому краю. Все характеристики сервера открываются шторкой по нажатию на полоски; герой перечитывается сам, вручную — потянуть список вниз.
 - **Крафт** — рецепты отдельным экраном; открывается кнопкой из вкладки «Герой».
 - **Дерево** — дерево навыков: карта узлов, подсветка доступных, поиск по названию, взятие, возврат и полный сброс, баланс очков.
-- **Аукцион** — витрина с серверным поиском, свои лоты и выставление. Лот открывается карточкой: экземпляр едет внутри лота вместе с роллами, а шаблон дочитывается при открытии, так что видны и база, и требования. Купить и снять с продажи можно только из карточки.
+- **Аукцион** — витрина с серверным поиском, свои лоты и выставление. Строка лота показывает иконку, название, сжатые свойства и цену; карточка открывает всё остальное — экземпляр едет внутри лота вместе с роллами, а база берётся из справочника, прочитанного в начале сессии. Купить и снять с продажи можно только из карточки.
 
 Нижняя панель одинакова для всех: Каталог, Герой, Дерево, Аукцион, Аккаунт. «Редактор» и «Проверки» — инструменты администратора и открываются из вкладки «Аккаунт», а «Крафт» — из вкладки «Герой», чтобы не занимать место у игрока. Промокод вводится диалогом во вкладке «Аккаунт» и называет персонажа, которому придёт награда. Экраны входа и выбора персонажа панели не имеют: там нечего выбирать, кроме как войти. Смена персонажа — кнопкой во вкладке «Аккаунт».
 - **Редактор** — шаблоны экипировки и предметов, персонажи и их базовые характеристики.
@@ -56,7 +56,13 @@ Every label, hint, error and contract-validation message exists in Russian and E
 
 ## Дерево навыков
 
-Дерево вернулось в 0.9.2 и реализовано целиком. Вкладка **«Дерево»** рисует граф по координатам, которые задаёт сервер: карта занимает всю вкладку, её можно двигать и масштабировать, узел выбирается касанием. Карта обрезана по своим границам и сдвиг ограничен, поэтому дерево не уезжает за пределы области и не теряется. Баланс очков, поиск и карточка узла открываются шторкой снизу. У выбранного узла видны вид, стоимость, бонусы и состояние, а дальше — «Взять узел», «Вернуть узел» и полный сброс.
+Дерево вернулось в 0.9.2 и реализовано целиком. Вкладка **«Дерево»** рисует граф по координатам, которые задаёт сервер: карта занимает всю вкладку, её можно двигать и масштабировать, узел выбирается касанием. Карта обрезана по своим границам и сдвиг ограничен, поэтому дерево не уезжает за пределы области и не теряется.
+
+Касание по узлу открывает **небольшое окно снизу**: что узел даёт, сколько стоит, взят он или доступен, и одна кнопка — «Взять узел» или «Вернуть узел (за сферу)». Оно закрывает лишь край карты, поэтому видно, куда ведёт ветка. Отдельная шторка «Подробно» — это баланс очков, поиск по названию и **сумма всего взятого дерева**; найденный поиском узел открывает то же маленькое окно. Сумму считает сервер и присылает полем `totals` — клиент её только печатает.
+
+С 0.16.0 дерево большое и неровное, как в Path of Exile: **299 узлов** и 423 связи, семь областей классов, которые сходятся собственными ветками. Общего кольца мелких узлов посередине больше нет — оно делало все старты взаимозаменяемыми. Среди узлов есть **гнёзда для самоцветов**: сам по себе такой узел ничего не даёт, но открывает место под самоцвет — обычную экипировку слота `JEWEL`, — чьи модификаторы действуют глобально, пока гнездо взято. Вставить и вынуть самоцвет можно прямо из окна узла; гнездо с самоцветом внутри сервер вернуть откажется — сначала выньте.
+
+Возврат теперь стоит **сферу сожаления**: одну за каждый возвращённый узел, а полный сброс — по сфере за каждый узел, который он вернёт. Не хватает сфер — сервер откажет, и цена написана на самой кнопке.
 
 Правила целиком на сервере: начинают со стартового узла своего класса, дальше берут только соседей уже взятых, вернуть узел можно лишь тогда, когда остальное дерево не повиснет, а стартовый — только полным сбросом. Клиент отправляет код узла и показывает отказ дословно. Бонусы узла записываются персонажу снимком, поэтому перебалансировка дерева не затрагивает уже прокачанных.
 
@@ -69,6 +75,8 @@ Every label, hint, error and contract-validation message exists in Russian and E
 **Витрина** — единственный список в приложении, который сужает сам сервер: у аукциона есть собственный поиск с фильтром и постраничной выдачей. Название, вид лота и потолок цены видны всегда; слот, редкость, диапазон уровня предмета и продавец — под «ещё фильтры». Все поля фильтра сравниваются со снимком, который лот несёт в себе, поэтому поиск укладывается в один запрос.
 
 Свои лоты из витрины скрыты — купить их всё равно нельзя, — но переключатель «Показывать свои» возвращает их, чтобы сравнить свою цену с чужими.
+
+Строка лота на витрине выглядит так же, как строка в арсенале: слева иконка предмета, дальше название в цвете редкости, сжатая строка свойств — что на предмете выролено — и цена. Одного названия для покупателя мало: лоты отличаются именно роллами, и раньше их приходилось открывать по одному.
 
 **Цена назначается только в сферах**: это единственная валюта, в которой сервер торгует. В карточке лота цена читается как «4 × Сфера хаоса».
 
@@ -109,6 +117,9 @@ Debug allows HTTP for local development; release requires HTTPS. **This server h
 - **Lists are paged on the client, except the auction.** `/paged` was fixed in 0.13.1, but the generic route still offers no filter, and moving the catalogue onto it would cost every catalogue filter. The auction has a search route of its own, so its showcase is filtered and paged by the server.
 - **The player auction (0.13.0).** Lots live in `auctionlot`; while a lot is listed the goods live inside it rather than with the seller. Prices are counted in currency orbs alone.
 - **The tree moved into the character (0.12.1).** `CharacterSkillNode` is no longer a collection: taken nodes are a snapshot inside `Character.skillNodes`, and the routes live under `/api/v1/character/skilltree`.
+- **The base of an item lives in the catalogue (0.16.0).** An instance used to be created with a copy of its template's `baseParams`, which meant a card printed `+12 armour` twice — once from the template it was drawn over, once from the copy — and a rebalanced base never reached the items already in the world. Now an instance carries only what it rolled and reaches its base through `equipmentId`. The client reads `GET /api/v1/equipment` whole, once per session, and the route is in `requireWorkbench`: a stale server is named rather than drawing half an item. The equipment, item and currency catalogues moved out of Kotlin into `resources/content/*.json` on the server; uniques stayed in code, because each one generates its own modifier definitions with tier ranges and that is a rule, not data.
+- **A tree worth walking (0.16.0).** 299 nodes and 423 links laid out by hand in `resources/skilltree/tree.json`, seven class areas meeting through their own branches with no shared ring. Jewel sockets are nodes; a jewel is an equipment instance of slot `JEWEL` placed with `POST /api/v1/characterequipment/socket` and counting globally while its socket is taken. Refunding costs an **Orb of Regret** per node, and a socket with a jewel in it is refused rather than silently emptied. The state answers `totals`, the server's own sum over the allocated tree.
+- **Every number is printed whole (client 2.2.0).** Values are counted and stored in full precision, exactly as the server sent them, and rounded only in the last step before a string — except five rates where the fraction is the whole point: attack speed, cast speed, movement speed, critical chance and critical multiplier keep two decimals.
 - **`image` is gone (0.15.1).** Items and equipment carried an image URL that nothing ever fetched — no seeder filled it, no route read it, and the client draws no network images. With icons arriving as outlines there is nothing left for it to mean, so it was removed from the models, the editor form and the editable fields. Existing databases need no migration: the stale key is ignored on read and dropped on the next write.
 - **The server draws too (0.15.0).** Icons follow the dictionary's shape: `GET /icons/index.json` carries a fingerprint the server computes from the file, `GET /icons/icons.json` holds 89 drawings and a table pointing 174 codes at them — 61 equipment templates, 18 items and 95 stats. What travels is path data, not an image: the client paints the outlines itself and tints them by rarity, so no image is ever downloaded and the dark theme still owns the colour. A code the set does not cover, or a drawing whose path data will not parse, falls back to the bundled emblem — which is why a broken sprite costs exactly its own icon. Modifiers are out: their text is a template with substitutions and an icon cannot replace a sentence.
 - **A gate in front of the tabs (client 2.1.0).** The app opens on a sign-in screen: "Play" registers and signs in by a device identifier (`GET /user/login/byDeviceId`, and on `US_015` a `POST /user/byDeviceId`), beside a login form for an administrator and the server address — which has to live here, because behind the gate there is no way back to it. Then the character menu, read with `GET /character/byUser`: list, create, give up, three at most. Below the gate every button acts on the chosen character and none of them picks another; swapping means going back to the menu, from the Account tab.

@@ -75,9 +75,18 @@ import kotlinx.serialization.json.*
     val rarity: String = "COMMON",
     val corrupted: Boolean = false,
     val equippedSlot: String? = null,
+    /**
+     * The code of the tree socket this jewel sits in; null for everything else.
+     *
+     * The slot alone cannot say where a jewel is worn — the tree has many sockets and each can
+     * be filled — so the slot answers what it is and this answers where.
+     */
+    val socketCode: String? = null,
     val version: Long = 0,
 ) {
     val equipped: Boolean get() = equippedSlot != null
+    /** A jewel is "worn" in a socket, and only counts while that socket is taken. */
+    val socketed: Boolean get() = !socketCode.isNullOrBlank()
     fun document(): JsonObject = WireJson.encodeToJsonElement(this).jsonObject
 }
 
@@ -124,7 +133,17 @@ data class HeroView(
     val bag: List<CharacterItem> = emptyList(),
     val tree: SkillTreeState = SkillTreeState(),
 ) {
-    val equipped: Map<String, EquipmentInstance> get() = inventory.filter { it.equipped }.associateBy { it.equippedSlot!! }
+    /**
+     * What is worn on the body, one item per slot.
+     *
+     * Jewels are deliberately out: they all share the slot JEWEL and would collapse into one
+     * entry here, and they are not worn on the body at all — see [jewels].
+     */
+    val equipped: Map<String, EquipmentInstance> get() =
+        inventory.filter { it.equipped && !it.socketed }.associateBy { it.equippedSlot!! }
+    /** Jewels sitting in tree sockets, keyed by the code of the socket each one fills. */
+    val jewels: Map<String, EquipmentInstance> get() =
+        inventory.filter { it.socketed }.associateBy { it.socketCode!! }
     val stats: Map<String, Double> get() = sheet.stats
     /** Reasons an equipped item is not counted, keyed by instance id; empty means it works. */
     val inactive: Map<String, List<String>> get() = sheet.inactive.associate { it.inventoryId to it.reasons }

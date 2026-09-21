@@ -64,6 +64,9 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     fun draftClass(value: String) = runtime.editorViewModel.draftClass(value)
     fun applyOrb(inventoryId: String, orbItemId: String) = runtime.heroViewModel.applyOrb(inventoryId, orbItemId)
     fun redeem(code: String) = runtime.heroViewModel.redeem(code)
+    /** Puts a jewel into a socket on the tree, and takes it back out. */
+    fun socketJewel(inventoryId: String, nodeCode: String) = runtime.heroViewModel.socketJewel(inventoryId, nodeCode)
+    fun unsocketJewel(inventoryId: String) = runtime.heroViewModel.unsocketJewel(inventoryId)
     fun useRecipe(recipeId: String, ingredients: List<String>, amount: Long) = runtime.heroViewModel.useRecipe(recipeId, ingredients, amount)
     fun mode(mode: AppMode) = runtime.sessionViewModel.mode(mode)
     fun serverDraft(value: String) = runtime.sessionViewModel.serverDraft(value)

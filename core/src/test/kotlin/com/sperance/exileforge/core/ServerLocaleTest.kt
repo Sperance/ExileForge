@@ -92,11 +92,11 @@ class ServerLocaleTest {
                 "effects":[{"stat":"STOCK_HEALTH","operation":"ADD"},{"stat":"STOCK_MANA","operation":"ADD"}]}""")
         val rolled = buildJsonObject { put("modifierId", id); put("values", buildJsonArray { add(46.0); add(11.5) }) }
         // Without a dictionary the numbers are still printed: a roll never vanishes with a translation.
-        assertEquals("46 Здоровье · 11.5 Мана", modifierText(rolled, listOf(definition)))
+        assertEquals("46 Здоровье · 12 Мана", modifierText(rolled, listOf(definition)))
         load()
-        assertEquals("+46 к здоровью и +11.5 к мане", modifierText(rolled, listOf(definition)))
+        assertEquals("+46 к здоровью и +12 к мане", modifierText(rolled, listOf(definition)))
         // A definition the client has not read still shows what the server rolled.
-        assertEquals("46 · 11.5", modifierText(rolled, emptyList()))
+        assertEquals("46 · 12", modifierText(rolled, emptyList()))
     }
 
     @Test fun `an entity is named by its code through the dictionary`() {

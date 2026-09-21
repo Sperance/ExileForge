@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.contract.entityId
 import com.sperance.exileforge.core.contract.text
+import com.sperance.exileforge.core.display.statNumber
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.editor.formSchema
 import com.sperance.exileforge.core.i18n.tr
@@ -69,7 +70,7 @@ import kotlinx.serialization.json.JsonPrimitive
                     }
                     s.classes.firstOrNull { it.id == s.draft.text("classId") }?.let { chosen ->
                         Text(chosen.details, color = Muted, style = MaterialTheme.typography.bodySmall)
-                        Text(tr("База 1 уровня: ", "Level 1 base: ") + chosen.baseStats.joinToString(" · ") { "${statTitle(it.stat, s.lang)} ${it.value.toInt()}" },
+                        Text(tr("База 1 уровня: ", "Level 1 base: ") + chosen.baseStats.joinToString(" · ") { "${statTitle(it.stat, s.lang)} ${statNumber(it.stat, it.value)}" },
                             color = Muted, style = MaterialTheme.typography.bodySmall)
                     }
                     if (s.classes.isEmpty()) Text(tr("Сервер не вернул ни одного класса — персонажа создать нельзя.", "The server served no classes — a character cannot be created."), color = MaterialTheme.colorScheme.error)

@@ -452,6 +452,37 @@ class GameApi(
 
     suspend fun equip(characterId: String, inventoryId: String): EquipmentInstance = wear("equip", characterId, inventoryId)
     suspend fun unequip(characterId: String, inventoryId: String): EquipmentInstance = wear("unequip", characterId, inventoryId)
+    /**
+     * Puts a jewel into a socket on the passive tree, and takes it back out.
+     *
+     * A jewel is an ordinary equipment instance, so everything else about it — rolls, rarity, orbs,
+     * the auction — already worked. What differs is where it is worn: the tree has many sockets and
+     * the node's code says which one, so this is not `equip` with a different slot.
+     *
+     * Every rule is the server's: that the node exists, that it is a socket, that the character has
+     * taken it, and that it is free. The client names the pair and prints the refusal.
+     */
+    suspend fun socketJewel(characterId: String, inventoryId: String, nodeCode: String): EquipmentInstance {
+        requireId(characterId); requireId(inventoryId)
+        require(nodeCode.isNotBlank()) { tr("Выберите гнездо", "Choose a socket") }
+        return WireJson.decodeFromJsonElement(request("POST", "api/v1/characterequipment/socket",
+            mapOf("characterId" to characterId, "inventoryId" to inventoryId, "nodeCode" to nodeCode), authenticated = true))
+    }
+
+    suspend fun unsocketJewel(characterId: String, inventoryId: String): EquipmentInstance =
+        wear("unsocket", characterId, inventoryId)
+
+    /**
+     * The whole equipment catalogue, read once per session.
+     *
+     * Since 0.16.0 an instance stores only what it rolled: its base — armour, damage, the
+     * requirements — belongs to the template and lives in the catalogue in one copy. So a template
+     * is no longer a nicety a card waits for, it is half of what the card says, and the client
+     * reads the lot rather than chasing them one at a time.
+     */
+    suspend fun equipmentCatalogue(): List<JsonObject> =
+        request("GET", route(Catalog.EQUIPMENT), authenticated = true).jsonArray.map { it.jsonObject }
+
     private suspend fun wear(operation: String, characterId: String, inventoryId: String): EquipmentInstance {
         requireId(characterId); requireId(inventoryId)
         return WireJson.decodeFromJsonElement(request("POST", "api/v1/characterequipment/$operation",

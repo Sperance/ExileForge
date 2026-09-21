@@ -63,6 +63,9 @@ data class ApiCapabilities(val routes: Set<String>) {
             "POST" to "/api/v1/user/byDeviceId",
             "GET" to "/api/v1/character/byUser",
             "GET" to "/api/v1/equipment/paged",
+            // The base of an item lives in the catalogue alone since 0.16.0, so reading it whole
+            // once per session is not an optimisation any more — a card cannot be drawn without it.
+            "GET" to "/api/v1/equipment",
             "GET" to "/api/v1/character/inventory/equipments",
             "GET" to "/api/v1/character/inventory/stats",
             "POST" to "/api/v1/character/inventory/itemToInventory",
@@ -74,6 +77,8 @@ data class ApiCapabilities(val routes: Set<String>) {
             "GET" to "/api/v1/skilltreenode",
             "GET" to "/api/v1/character/skilltree/state",
             "POST" to "/api/v1/character/skilltree/allocate",
+            "POST" to "/api/v1/characterequipment/socket",
+            "POST" to "/api/v1/characterequipment/unsocket",
             "GET" to "/api/v1/auctionlot/search",
             "POST" to "/api/v1/auctionlot/sell/equipment",
             "POST" to "/api/v1/auctionlot/buy",

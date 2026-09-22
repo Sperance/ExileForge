@@ -15,11 +15,11 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.ItemVisualKind
-import com.sperance.exileforge.core.i18n.tr
+import com.sperance.exileforge.core.i18n.ui
 
 /** Original vector emblems, bundled and available offline for every item category. */
 @Composable fun ItemEmblem(kind: ItemVisualKind, tint: Color, modifier: Modifier = Modifier) {
-    val description = tr("Иконка", "Icon") + ": ${kind.name}"
+    val description = ui("common.icon") + ": ${kind.name}"
     Canvas(modifier.size(72.dp).clip(CutCornerShape(10.dp))
         .background(Brush.radialGradient(listOf(tint.copy(alpha = .20f), Color(0xFF0C1015)), radius = 120f))
         .semantics { contentDescription = description }) {

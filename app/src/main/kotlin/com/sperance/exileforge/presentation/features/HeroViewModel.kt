@@ -2,7 +2,7 @@ package com.sperance.exileforge.presentation.features
 
 import com.sperance.exileforge.core.contract.entityId
 import com.sperance.exileforge.core.display.equipmentTitle
-import com.sperance.exileforge.core.i18n.tr
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.ItemStack
 import com.sperance.exileforge.core.model.command.UseRecipeCommand
 import com.sperance.exileforge.core.model.hero.HeroView
@@ -36,7 +36,7 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
 
     /** Admin only: hand the character a named template, rolled by the server. */
     fun grant(equipmentId: String) { with(runtime) { characterCommand { id ->
-        check(state.value.isAdmin) { tr("Выдача предметов доступна администратору", "Granting items is available to administrators") }
+        check(state.value.isAdmin) { ui("hero.grant_admin_only") }
         api.grant(id, equipmentId)
     } } }
 
@@ -50,15 +50,15 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
      * back from `itemToInventory`.
      */
     fun grantRandom() { with(runtime) { characterCommand { id ->
-        check(state.value.isAdmin) { tr("Выдача предметов доступна администратору", "Granting items is available to administrators") }
+        check(state.value.isAdmin) { ui("hero.grant_admin_only") }
         val template = api.randomTemplate(state.value.grantRarity, state.value.grantSlot)
         api.grant(id, template.entityId)
         val name = equipmentTitle(template)
-        mutable.update { it.copy(message = tr("Выпало: $name", "Rolled: $name")) }
+        mutable.update { it.copy(message = ui("hero.rolled", name)) }
     } } }
 
     fun adjustItems(itemId: String, amount: Long) { with(runtime) { characterCommand { id ->
-        check(state.value.isAdmin) { tr("Изменение сумки доступно администратору", "Changing the bag is available to administrators") }
+        check(state.value.isAdmin) { ui("hero.bag_admin_only") }
         api.adjustItems(id, listOf(ItemStack(itemId, amount)))
     } } }
 
@@ -88,14 +88,14 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
     fun refundNode(code: String) { with(runtime) { characterCommand { id -> treeChanged(api.refundNode(id, code)) } } }
     fun resetTree() { with(runtime) { characterCommand { id -> treeChanged(api.resetTree(id)) } } }
     private fun treeChanged(state: com.sperance.exileforge.core.model.skilltree.SkillTreeState) { with(runtime) {
-        mutable.update { it.copy(message = tr("Очков осталось: ${state.available} из ${state.total}", "${state.available} of ${state.total} points left")) }
+        mutable.update { it.copy(message = ui("hero.points_left", state.available, state.total)) }
     } }
 
     /** Admin only: hand the character experience and let the server decide about the level. */
     fun addExperience(amount: Double) { with(runtime) { characterCommand { id ->
-        check(state.value.isAdmin) { tr("Начисление опыта доступно администратору", "Granting experience is available to administrators") }
+        check(state.value.isAdmin) { ui("hero.xp_admin_only") }
         val character = api.addExperience(id, amount)
-        mutable.update { it.copy(message = tr("Уровень ${character.level}, опыт ${character.experience}", "Level ${character.level}, experience ${character.experience}")) }
+        mutable.update { it.copy(message = ui("hero.level_and_xp", character.level, character.experience)) }
     } } }
 
     fun redeem(code: String) { with(runtime) { characterCommand { id -> api.redeem(id, code) } } }
@@ -124,9 +124,7 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
         val outcome = api.sellForGold(id, inventoryId)
         // What it fetched is the whole point of the command, so it is said rather than left to
         // the generic "saved" — characterCommand keeps a message that is already there.
-        mutable.update { it.copy(message = tr(
-            "Продано за ${outcome.gold} золота · в кошельке ${outcome.money}",
-            "Sold for ${outcome.gold} gold · ${outcome.money} in the purse")) }
+        mutable.update { it.copy(message = ui("hero.sold_for", outcome.gold, outcome.money)) }
     } } }
 
     fun useRecipe(recipeId: String, ingredients: List<String>, amount: Long) { with(runtime) { characterCommand { id ->
@@ -139,16 +137,16 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
      */
     private fun characterCommand(block: suspend (String) -> Unit) { with(runtime) { task(writing = true) {
         val id = state.value.characterId.trim()
-        check(id.isNotBlank()) { tr("Выберите персонажа", "Choose a character") }
-        check(state.value.ownsCharacter || state.value.isAdmin) { tr("Операция доступна владельцу персонажа", "The operation is available to the character's owner") }
+        check(id.isNotBlank()) { ui("auction.choose_character") }
+        check(state.value.ownsCharacter || state.value.isAdmin) { ui("hero.owner_only") }
         block(id)
         readHero()
-        mutable.update { it.copy(message = it.message ?: tr("Изменения сохранены", "Changes saved")) }
+        mutable.update { it.copy(message = it.message ?: ui("hero.changes_saved")) }
     } } }
 
     internal suspend fun readHero() { with(runtime) {
         val id = state.value.characterId.trim()
-        check(id.isNotBlank()) { tr("Выберите персонажа", "Choose a character") }
+        check(id.isNotBlank()) { ui("auction.choose_character") }
         ensureDefinitions()
         ensureOrbs()
         ensureProgression()

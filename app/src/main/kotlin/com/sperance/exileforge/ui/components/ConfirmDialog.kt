@@ -2,7 +2,7 @@ package com.sperance.exileforge.ui.components
 
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import com.sperance.exileforge.core.i18n.tr
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.theme.Muted
 import com.sperance.exileforge.ui.theme.Panel
 
@@ -19,7 +19,7 @@ import com.sperance.exileforge.ui.theme.Panel
 @Composable fun ConfirmDialog(
     title: String,
     text: String,
-    confirm: String = tr("Подтвердить", "Confirm"),
+    confirm: String = ui("common.confirm"),
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
@@ -29,6 +29,6 @@ import com.sperance.exileforge.ui.theme.Panel
         title = { Text(title) },
         text = { Text(text, color = Muted) },
         confirmButton = { TextButton(onClick = { onDismiss(); onConfirm() }) { Text(confirm) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(tr("Отмена", "Cancel")) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(ui("common.cancel")) } },
     )
 }

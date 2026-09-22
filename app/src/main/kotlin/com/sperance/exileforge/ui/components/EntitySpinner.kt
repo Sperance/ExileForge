@@ -6,7 +6,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.core.display.documentTitle
-import com.sperance.exileforge.core.i18n.tr
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.theme.Gold
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -36,10 +36,10 @@ val LocalEntityPageLoader = staticCompositionLocalOf<suspend (EntitySource, Int,
     // A character is named by its player and an account by its login; everything else carries a
     // code, and the server's dictionary is what turns that code back into a name.
     fun title(record: JsonObject): String = record.text("login").takeIf(String::isNotBlank)
-        ?: documentTitle(record).takeIf(String::isNotBlank) ?: tr("Запись", "Record")
+        ?: documentTitle(record).takeIf(String::isNotBlank) ?: ui("common.record")
     val selected = records.firstOrNull { it.entityId == value }
     OutlinedButton(enabled = enabled, onClick = { records = emptyList(); page = 0; totalPages = 1; query = ""; expanded = true }, modifier = Modifier.fillMaxWidth()) {
-        Text("$label: ${selected?.let(::title) ?: if(value.isBlank()) tr("Выбрать", "Choose") else tr("Выбрано", "Selected") + " · ${value.takeLast(6)}"} ▾")
+        Text("$label: ${selected?.let(::title) ?: if(value.isBlank()) ui("common.choose") else ui("common.chosen") + " · ${value.takeLast(6)}"} ▾")
     }
     LaunchedEffect(expanded, page, retry, source, query) {
         if(!expanded) return@LaunchedEffect
@@ -50,11 +50,11 @@ val LocalEntityPageLoader = staticCompositionLocalOf<suspend (EntitySource, Int,
             records = (if(page == 0) result.items else records + result.items).distinctBy { it.entityId }
             totalPages = result.totalPages
         } catch(e: CancellationException) { throw e }
-        catch(e: Exception) { failure = e.message ?: tr("Не удалось загрузить список", "The list could not be loaded") }
+        catch(e: Exception) { failure = e.message ?: ui("common.list_failed") }
         finally { loading = false }
     }
     if(expanded) ForgeDialog(label, onDismiss = { expanded = false }) {
-        OutlinedTextField(query, { query = it; page = 0; records = emptyList() }, label = { Text(tr("Поиск по всему каталогу", "Search the whole catalogue")) }, singleLine = true)
+        OutlinedTextField(query, { query = it; page = 0; records = emptyList() }, label = { Text(ui("common.search_catalog")) }, singleLine = true)
         if(loading) LinearProgressIndicator(Modifier.fillMaxWidth())
         failure?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         LazyColumn(Modifier.fillMaxWidth().heightIn(max = 320.dp)) {
@@ -65,8 +65,8 @@ val LocalEntityPageLoader = staticCompositionLocalOf<suspend (EntitySource, Int,
                 }
             }
         }
-        if(!loading && failure == null && records.isEmpty()) Text(tr("Записей пока нет", "No records yet"))
-        if(failure != null) TextButton(onClick = { retry++ }, enabled = !loading) { Text(tr("Повторить", "Retry")) }
-        else if(page + 1 < totalPages) TextButton(onClick = { loading = true; page++ }, enabled = !loading) { Text(tr("Загрузить ещё", "Load more")) }
+        if(!loading && failure == null && records.isEmpty()) Text(ui("common.no_records"))
+        if(failure != null) TextButton(onClick = { retry++ }, enabled = !loading) { Text(ui("common.retry")) }
+        else if(page + 1 < totalPages) TextButton(onClick = { loading = true; page++ }, enabled = !loading) { Text(ui("common.load_more")) }
     }
 }

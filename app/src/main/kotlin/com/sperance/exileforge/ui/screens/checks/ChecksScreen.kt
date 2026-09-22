@@ -10,7 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.sperance.exileforge.core.i18n.tr
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.Catalog
 import com.sperance.exileforge.core.network.RequestLog
 import com.sperance.exileforge.presentation.ForgeViewModel
@@ -25,19 +25,18 @@ import kotlinx.serialization.json.*
     var confirmRun by rememberSaveable { mutableStateOf(false) }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
-            ScreenHeader(tr("Испытания", "Trials"), tr("Сценарии контракта и журнал запросов", "Contract scenarios and the request journal"), ForgeGlyphs.Scroll)
+            ScreenHeader(ui("checks.title"), ui("checks.subtitle"), ForgeGlyphs.Scroll)
             CatalogSwitch(s, vm)
-            if(s.catalog == Catalog.CHARACTERS) Text(tr("Автосценарий доступен для предметов. Персонажа можно изменить через каталог и редактор.", "The scenario runs on items. Characters are edited through the catalogue and the editor."), color = Muted)
-            InfoCard(tr("Полный цикл CRUD", "Full CRUD cycle"),
-                tr("Создать → получить → изменить${if (s.catalog == Catalog.EQUIPMENT) " → модифицировать" else ""} → удалить. После записей выполняется проверочный GET.",
-                   "Create → get → update${if (s.catalog == Catalog.EQUIPMENT) " → modify" else ""} → delete. Every write is verified with a GET."))
+            if(s.catalog == Catalog.CHARACTERS) Text(ui("checks.items_note"), color = Muted)
+            InfoCard(ui("checks.crud"),
+                ui("checks.crud_note", if (s.catalog == Catalog.EQUIPMENT) ui("checks.modify_step") else ""))
         }
         item {
             ForgePanel {
-                Button(enabled = !s.busy && s.isAdmin && s.catalog != Catalog.CHARACTERS, onClick = { confirmRun = true }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Outlined.PlayArrow, null); Text(tr("Запустить проверку", "Run the check")) }
+                Button(enabled = !s.busy && s.isAdmin && s.catalog != Catalog.CHARACTERS, onClick = { confirmRun = true }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Outlined.PlayArrow, null); Text(ui("checks.run_check")) }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(enabled = !s.busy, onClick = vm::count) { Text(tr("Проверить count", "Check count")) }
-                    TextButton(onClick = vm::clearLogs) { Text(tr("Очистить журнал", "Clear the journal")) }
+                    TextButton(enabled = !s.busy, onClick = vm::count) { Text(ui("checks.check_count")) }
+                    TextButton(onClick = vm::clearLogs) { Text(ui("checks.clear_journal")) }
                 }
             }
         }
@@ -45,16 +44,15 @@ import kotlinx.serialization.json.*
             InfoCard((if (check.passed) "✓ " else "✕ ") + check.label, check.detail, failure = !check.passed)
         }
         item {
-            Text(tr("Журнал запросов", "Request journal").uppercase(), style = MaterialTheme.typography.titleLarge, color = Gold)
+            Text(ui("account.journal").uppercase(), style = MaterialTheme.typography.titleLarge, color = Gold)
             OrnateDivider()
         }
-        if (logs.isEmpty()) item { Text(tr("Здесь появятся запросы и ответы сервера.", "Requests and server responses will appear here."), color = Muted) }
+        if (logs.isEmpty()) item { Text(ui("account.journal_empty"), color = Muted) }
         itemsIndexed(logs) { _, log -> LogCard(log) }
     }
     if (confirmRun) AlertDialog(onDismissRequest = { confirmRun = false }, containerColor = MaterialTheme.colorScheme.surface, titleContentColor = Gold,
-        title = { Text(tr("Запустить CRUD-проверку?", "Run the CRUD check?")) },
-        text = { Text(tr("На сервере ${s.server} будет создан и удалён один тестовый объект в ${s.catalog.path}. Используйте тестовую базу данных.",
-                         "One test object will be created and deleted in ${s.catalog.path} on ${s.server}. Use a test database.")) },
-        confirmButton = { TextButton(onClick = { confirmRun = false; vm.runChecks() }) { Text(tr("Запустить", "Run")) } },
-        dismissButton = { TextButton(onClick = { confirmRun = false }) { Text(tr("Отмена", "Cancel")) } })
+        title = { Text(ui("checks.run_q")) },
+        text = { Text(ui("checks.run_text", s.server, s.catalog.path)) },
+        confirmButton = { TextButton(onClick = { confirmRun = false; vm.runChecks() }) { Text(ui("checks.run_do")) } },
+        dismissButton = { TextButton(onClick = { confirmRun = false }) { Text(ui("common.cancel")) } })
 }

@@ -6,7 +6,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.sperance.exileforge.core.i18n.tr
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.*
@@ -25,8 +25,8 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 @Composable fun AuctionScreen(s: ForgeState, vm: ForgeViewModel) {
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Spacer(Modifier.height(12.dp))
-        ScreenHeader(tr("Аукцион", "Auction"),
-            tr("Лотов на витрине: ${s.showcase.totalItems}", "${s.showcase.totalItems} lots on the showcase"), ForgeGlyphs.Orb)
+        ScreenHeader(ui("nav.auction"),
+            ui("auction.showcase_count", s.showcase.totalItems), ForgeGlyphs.Orb)
         // Opening the tab is what fills both lists; the character is the one from the menu.
         // The hero comes too, and not for the bag: the sheet carries the server's verdict on which
         // templates this character can wear, and that is what marks an unwearable lot.
@@ -34,16 +34,15 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
             if (s.characterId.isNotBlank()) { vm.ensureHero(); vm.loadAuction() }
         }
         s.auctionLocked?.let { locked ->
-            InfoCard(tr("Аукцион закрыт", "The auction is closed"), locked, failure = true)
+            InfoCard(ui("auction.closed"), locked, failure = true)
             OutlinedButton(enabled = !s.busy, onClick = vm::loadAuction, modifier = Modifier.fillMaxWidth()) {
-                Text(tr("Проверить снова", "Check again"))
+                Text(ui("auction.check_again"))
             }
-            Text(tr("Порог называет сервер: клиент не хранит его копию и узнаёт только по отказу.",
-                    "The threshold is the server's: the client keeps no copy and learns it from the refusal."),
+            Text(ui("auction.closed_note"),
                 color = com.sperance.exileforge.ui.theme.Muted, style = MaterialTheme.typography.bodySmall)
             return@Column
         }
-        val tabs = listOf(tr("Витрина", "Showcase"), tr("Мои лоты", "My lots"), tr("Выставить", "Sell"))
+        val tabs = listOf(ui("auction.showcase"), ui("auction.my_lots"), ui("auction.sell_tab"))
         TabRow(selectedTabIndex = s.auctionTab, containerColor = com.sperance.exileforge.ui.theme.Abyss) {
             tabs.forEachIndexed { index, title ->
                 Tab(selected = s.auctionTab == index, enabled = !s.busy, onClick = { vm.auctionTab(index) },

@@ -3,7 +3,7 @@ package com.sperance.exileforge.core.model.currency
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.LocaleKey
 import com.sperance.exileforge.core.i18n.locOr
-import com.sperance.exileforge.core.i18n.pick
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -18,44 +18,18 @@ const val CURRENCY_CATEGORY = "CURRENCY"
  * what it costs is decided by `CurrencyApplier` on the server. An orb the client does not know
  * still appears in the list under its own document name — the enum only adds a translation.
  */
-enum class CurrencyOrb(private val ru: String, private val en: String, private val ruRule: String, private val enRule: String) {
-    ORB_OF_TRANSMUTATION("Сфера превращения", "Orb of Transmutation",
-        "Обычный предмет становится магическим и получает аффиксы", "Upgrades a common item to magic and rolls its affixes"),
-    ORB_OF_AUGMENTATION("Сфера улучшения", "Orb of Augmentation",
-        "Добавляет магическому предмету ещё один аффикс", "Adds one more affix to a magic item"),
-    ORB_OF_ALTERATION("Сфера изменения", "Orb of Alteration",
-        "Перекатывает аффиксы магического предмета", "Rerolls the affixes of a magic item"),
-    ORB_OF_ALCHEMY("Сфера алхимии", "Orb of Alchemy",
-        "Обычный предмет становится редким и получает аффиксы", "Upgrades a common item to rare and rolls its affixes"),
-    REGAL_ORB("Царская сфера", "Regal Orb",
-        "Магический предмет становится редким, сохраняя аффиксы и получая ещё один", "Upgrades a magic item to rare, keeping its affixes and adding one"),
-    CHAOS_ORB("Сфера хаоса", "Chaos Orb",
-        "Перекатывает аффиксы редкого предмета", "Rerolls the affixes of a rare item"),
-    EXALTED_ORB("Высшая сфера", "Exalted Orb",
-        "Добавляет редкому предмету ещё один аффикс", "Adds one more affix to a rare item"),
-    DIVINE_ORB("Божественная сфера", "Divine Orb",
-        "Перекатывает значения аффиксов, сохраняя сами аффиксы и их тиры", "Rerolls affix values, keeping the affixes and their tiers"),
-    ORB_OF_ANNULMENT("Сфера аннулирования", "Orb of Annulment",
-        "Убирает с предмета случайный аффикс", "Removes one random affix"),
-    ORB_OF_SCOURING("Сфера очищения", "Orb of Scouring",
-        "Снимает все аффиксы и возвращает предмет к обычной редкости", "Strips every affix and returns the item to common"),
-    BLESSED_ORB("Священная сфера", "Blessed Orb",
-        "Перекатывает значения implicit-модификаторов", "Rerolls the values of the implicit modifiers"),
-    VAAL_ORB("Сфера ваал", "Vaal Orb",
-        "Портит предмет: вешает модификатор порчи, после чего предмет неизменяем", "Corrupts the item: adds a corruption modifier and locks it forever"),
-    ORB_OF_CHANCE("Сфера удачи", "Orb of Chance",
-        "Делает из обычного предмета предмет случайной редкости, изредка — уникальный", "Turns a common item into a random rarity, rarely a unique"),
-    MIRROR_OF_KALANDRA("Зеркало Каландры", "Mirror of Kalandra",
-        "Создаёт неизменяемую копию предмета", "Creates an unalterable copy of the item"),
+enum class CurrencyOrb {
+    ORB_OF_TRANSMUTATION, ORB_OF_AUGMENTATION, ORB_OF_ALTERATION, ORB_OF_ALCHEMY,
+    REGAL_ORB, CHAOS_ORB, EXALTED_ORB, DIVINE_ORB, ORB_OF_ANNULMENT, ORB_OF_SCOURING,
+    BLESSED_ORB, VAAL_ORB, ORB_OF_CHANCE, MIRROR_OF_KALANDRA,
     // The one orb that is never applied to an item: the tree spends it, and applyOrb refuses it
     // outright (CR_009). It is in the table because it is still an orb in the bag and a price
     // on the auction, and a bag entry the client cannot name is a bag entry a player cannot read.
-    ORB_OF_REGRET("Сфера сожаления", "Orb of Regret",
-        "Возвращает узел дерева навыков: по одной сфере за узел", "Gives back a passive tree node: one orb per node");
+    ORB_OF_REGRET;
 
-    fun title(lang: Lang = uiLanguage): String = lang.pick(ru, en)
+    fun title(lang: Lang = uiLanguage): String = ui(lang, "enum.orb.$name")
     /** What the server's rule for this orb is, shown so a rejection is expected rather than puzzling. */
-    fun rule(lang: Lang = uiLanguage): String = lang.pick(ruRule, enRule)
+    fun rule(lang: Lang = uiLanguage): String = ui(lang, "enum.orb.$name.rule")
 
     companion object { fun of(subCategory: String): CurrencyOrb? = entries.firstOrNull { it.name == subCategory } }
 }

@@ -5,6 +5,12 @@ import com.sperance.exileforge.core.i18n.UiStrings
 import com.sperance.exileforge.core.i18n.plural
 import com.sperance.exileforge.core.i18n.pluralKey
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.model.Catalog
+import com.sperance.exileforge.core.model.EquipmentKind
+import com.sperance.exileforge.core.model.auction.AuctionLotKind
+import com.sperance.exileforge.core.model.auction.AuctionLotStatus
+import com.sperance.exileforge.core.model.character.stockStats
+import com.sperance.exileforge.core.model.currency.CurrencyOrb
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -95,8 +101,10 @@ class UiStringsTest {
             .filter { it.isDirectory }
         assertTrue(sources.isNotEmpty(), "исходники не найдены - тест ничего не проверил")
 
-        // Both shapes: ui("key", ...) and ui(lang, "key", ...)
-        val call = Regex("\\bui\\((?:[A-Za-z][A-Za-z0-9_.]*\\s*,\\s*)?\"([^\"\\\\]+)\"")
+        // Both shapes: ui("key", ...) and ui(lang, "key", ...). A key built with a template -
+        // "enum.slot.$slot" - cannot be checked by reading, so '$' keeps it out; the enums whose
+        // codes it is built from are walked by the test below instead.
+        val call = Regex("\\bui(?:Or)?\\((?:[A-Za-z][A-Za-z0-9_.]*\\s*,\\s*)?\"([^\"\\\\$]+)\"")
         val known = UiStrings.keys(Lang.RU)
         val missing = sources.asSequence()
             .flatMap { it.walkTopDown() }
@@ -106,5 +114,29 @@ class UiStringsTest {
             .toList()
 
         assertTrue(missing.isEmpty(), "нет в словаре: ${missing.take(10)}")
+    }
+
+    /**
+     * Every code the client enumerates is named.
+     *
+     * These are the keys built from a code at runtime, which the source scan above cannot see.
+     * Adding a value to one of these enums without adding its strings is exactly the mistake the
+     * standing rule is about, and this is what catches it.
+     */
+    @Test
+    fun every_code_the_client_enumerates_is_named() {
+        val expected = buildSet {
+            Catalog.entries.forEach { add("enum.catalog.${it.name}") }
+            EquipmentKind.entries.forEach { add("enum.kind.${it.name}") }
+            AuctionLotKind.entries.forEach { add("enum.lot.${it.name}") }
+            AuctionLotStatus.entries.forEach { add("enum.lot_status.${it.name}") }
+            CurrencyOrb.entries.forEach { add("enum.orb.${it.name}"); add("enum.orb.${it.name}.rule") }
+            stockStats.forEach { add("enum.stat.$it") }
+            listOf("requiredLevel", "requiredStrength", "requiredDexterity", "requiredIntelligence")
+                .forEach { add("req.short.$it") }
+        }
+
+        val known = UiStrings.keys(Lang.RU)
+        assertEquals(emptySet(), expected - known, "коды без строк в словаре")
     }
 }

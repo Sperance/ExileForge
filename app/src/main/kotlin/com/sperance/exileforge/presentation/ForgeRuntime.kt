@@ -7,7 +7,7 @@ import com.sperance.exileforge.core.i18n.LocaleBundle
 import com.sperance.exileforge.core.i18n.locError
 import com.sperance.exileforge.core.i18n.serverLocale
 import com.sperance.exileforge.core.i18n.LocaleManifest
-import com.sperance.exileforge.core.i18n.tr
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.contract.entityId
 import com.sperance.exileforge.core.model.EntitySource
@@ -51,7 +51,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
         created = GameApi(server, journal, onUnauthorized = {
             if (::api.isInitialized && api === created) {
                 clearSession()
-                mutable.update { it.copy(message = tr("Сессия истекла. Войдите снова.", "The session has expired. Sign in again.")) }
+                mutable.update { it.copy(message = ui("runtime.session_expired")) }
             }
         })
         return created
@@ -85,9 +85,9 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
     /** Language is global: core validation messages and Compose both read it, so switch them together. */
     fun language(lang: Lang) {
         if (state.value.lang == lang) return
-        val untested = tr("Соединение ещё не проверено", "The connection has not been checked yet")
+        val untested = ui("runtime.not_checked")
         uiLanguage = lang
-        mutable.update { it.copy(lang = lang, health = if (it.health == untested) tr("Соединение ещё не проверено", "The connection has not been checked yet") else it.health) }
+        mutable.update { it.copy(lang = lang, health = if (it.health == untested) ui("runtime.not_checked") else it.health) }
         scope.launch { store.saveLanguage(lang) }
         // The server's half of the language lives in its dictionary, so the two are switched together.
         refreshLocale(lang)
@@ -248,9 +248,9 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
                 // template needs arguments the envelope never carried keeps the server's sentence.
                 val refusal = if (e is ApiFailure) locError(e.code, e.message.orEmpty(), e.args) else e.message.orEmpty()
                 mutable.update { it.copy(failure = problem, error = true, message = when (problem) {
-                    FailureState.UncertainWrite -> tr("Ответ потерян. Запись могла сохраниться: обновите данные перед повтором.", "The response was lost. The write may have been applied: refresh before retrying.")
-                    FailureState.Offline -> tr("Нет соединения: ", "No connection: ") + transportDetail(e)
-                    else -> prefix + refusal.ifBlank { tr("Ошибка запроса", "Request failed") }
+                    FailureState.UncertainWrite -> ui("runtime.uncertain_write")
+                    FailureState.Offline -> ui("runtime.offline") + transportDetail(e)
+                    else -> prefix + refusal.ifBlank { ui("runtime.request_failed") }
                 }) }
             } finally { mutable.update { it.copy(busy = false) } }
         }

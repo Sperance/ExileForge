@@ -1,7 +1,7 @@
 package com.sperance.exileforge.presentation.features
 
 import com.sperance.exileforge.core.contract.WireJson
-import com.sperance.exileforge.core.i18n.tr
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.Catalog
 import com.sperance.exileforge.core.model.CatalogFilter
 import com.sperance.exileforge.core.network.normalizeServer
@@ -34,9 +34,9 @@ class SessionViewModel(private val runtime: ForgeRuntime) {
         clearSession()
         api = newApi(server)
         journal.clear()
-        mutable.update { it.copy(server = server, serverDraft = server, health = tr("Проверка соединения…", "Checking the connection…")) }
+        mutable.update { it.copy(server = server, serverDraft = server, health = ui("session.checking")) }
         val health = api.health()
-        mutable.update { it.copy(health = health.toString(), message = tr("Сервер доступен", "The server is reachable")) }
+        mutable.update { it.copy(health = health.toString(), message = ui("session.reachable")) }
         // A dictionary and an icon set belong to their server: the new one has its own.
         refreshLocale()
         refreshIcons()
@@ -44,7 +44,7 @@ class SessionViewModel(private val runtime: ForgeRuntime) {
 
     fun health() { with(runtime) { task {
         val result = api.health().toString()
-        mutable.update { it.copy(health = result, message = tr("Проверка соединения завершена", "Connection check finished")) }
+        mutable.update { it.copy(health = result, message = ui("session.check_done")) }
     } } }
 
     /** The server answers a login with the account document itself: there is no token to keep. */
@@ -79,7 +79,7 @@ class SessionViewModel(private val runtime: ForgeRuntime) {
      */
     private suspend fun signedIn(profile: com.sperance.exileforge.core.model.command.UserProfile, byDevice: Boolean) { with(runtime) {
         mutable.update { it.copy(signedIn = true, profile = profile, mode = AppMode.PLAYER, catalog = Catalog.EQUIPMENT,
-            phase = AppPhase.CHARACTERS, message = tr("Вход выполнен", "Signed in"), tab = 0) }
+            phase = AppPhase.CHARACTERS, message = ui("session.signed_in"), tab = 0) }
         store.saveDeviceSession(byDevice)
         restoreFilters()
         ensureDefinitions()
@@ -98,13 +98,13 @@ class SessionViewModel(private val runtime: ForgeRuntime) {
     } }
 
     fun changePassword(current: String, replacement: String) { with(runtime) { task(writing = true) {
-        require(replacement.length in 6..64) { tr("Новый пароль: от 6 до 64 символов", "New password: 6 to 64 characters") }
+        require(replacement.length in 6..64) { ui("session.new_password_rule") }
         require(replacement.any { it.isDigit() } && replacement.any { it.isUpperCase() } && !replacement.contains(' ')) {
-            tr("Пароль: цифра, заглавная буква и без пробелов", "Password: a digit, a capital letter and no spaces")
+            ui("session.password_rule")
         }
         api.changePassword(current, replacement)
         clearSession()
-        mutable.update { it.copy(message = tr("Пароль изменён. Войдите снова.", "The password was changed. Sign in again.")) }
+        mutable.update { it.copy(message = ui("session.password_changed")) }
     } } }
 
     private suspend fun restoreFilters() { with(runtime) {

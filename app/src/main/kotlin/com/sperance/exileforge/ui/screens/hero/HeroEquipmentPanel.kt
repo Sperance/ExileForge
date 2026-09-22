@@ -22,7 +22,7 @@ import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.statNumber
 import com.sperance.exileforge.core.display.statTitle
-import com.sperance.exileforge.core.i18n.tr
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -51,19 +51,18 @@ import kotlinx.serialization.json.put
     val fraction = if (span > 0.0) (within / span).toFloat() else 1f
     val percent = Math.round(fraction * 100).toInt()
     ForgePanel {
-        Engraved(tr("Опыт", "Experience"))
-        StatBar(tr("Опыт", "XP"),
-            if (next == null) tr("макс.", "max") else "$percent%",
+        Engraved(ui("grant.experience"))
+        StatBar(ui("hero.xp_short"),
+            if (next == null) ui("hero.max") else "$percent%",
             Rune, fraction = fraction)
         if (next == null) Text(
-            tr("Последний уровень: ${number(experience)} опыта", "The last level: ${number(experience)} experience"),
+            ui("hero.last_level", number(experience)),
             color = Muted, style = MaterialTheme.typography.labelSmall)
         else Text(
-            tr("${number(within)} из ${number(span)} до ${level + 1} уровня · всего ${number(experience)}",
-               "${number(within)} of ${number(span)} to level ${level + 1} · ${number(experience)} in all"),
+            ui("hero.xp_progress", number(within), number(span), level + 1, number(experience)),
             color = Muted, style = MaterialTheme.typography.labelSmall)
         // Without the table there is nothing to measure against, and a bar with no scale would lie.
-        if (s.levels.isEmpty()) Text(tr("Таблица уровней не загружена", "The level table is not loaded"),
+        if (s.levels.isEmpty()) Text(ui("hero.no_levels"),
             color = Muted, style = MaterialTheme.typography.labelSmall)
     }
 }
@@ -84,11 +83,10 @@ import kotlinx.serialization.json.put
                 Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text(hero.character.name, style = MaterialTheme.typography.headlineSmall, color = GoldBright)
                     // The class is the base every percentage is counted from; the server owns it.
-                    Text(s.heroClass?.title.orEmpty().ifBlank { tr("Класс неизвестен", "Unknown class") }, color = Rune, style = MaterialTheme.typography.labelLarge)
-                    Text(tr("Уровень ${hero.character.level}", "Level ${hero.character.level}"),
+                    Text(s.heroClass?.title.orEmpty().ifBlank { ui("hero.unknown_class") }, color = Rune, style = MaterialTheme.typography.labelLarge)
+                    Text(ui("hero.level", hero.character.level),
                         color = Muted, style = MaterialTheme.typography.labelMedium)
-                    Text(tr("Золото: ${hero.character.money} · Очки дерева: ${hero.tree.available}/${hero.tree.total}",
-                            "Gold: ${hero.character.money} · Tree points: ${hero.tree.available}/${hero.tree.total}"), color = Gold, style = MaterialTheme.typography.labelLarge)
+                    Text(ui("hero.purse", hero.character.money, hero.tree.available, hero.tree.total), color = Gold, style = MaterialTheme.typography.labelLarge)
                 }
             }
         }
@@ -96,14 +94,14 @@ import kotlinx.serialization.json.put
         // Life, mana and shield, exactly as the server calculated them, and the way into the rest:
         // the three vitals are what is read at a glance, the other forty are read on purpose.
         ForgePanel(modifier = Modifier.clickable { statsOpen = true }) {
-            listOf(Triple("STOCK_HEALTH", tr("ХП", "HP"), LifeRed), Triple("STOCK_MANA", tr("Мана", "MP"), ManaBlue),
-                Triple("STOCK_ENERGY_SHIELD", tr("Щит", "ES"), ShieldCyan)).forEach { (key, title, color) ->
+            listOf(Triple("STOCK_HEALTH", ui("hero.hp"), LifeRed), Triple("STOCK_MANA", ui("hero.mp"), ManaBlue),
+                Triple("STOCK_ENERGY_SHIELD", ui("hero.es"), ShieldCyan)).forEach { (key, title, color) ->
                 StatBar(title, statNumber(key, hero.stats[key] ?: 0.0), color)
             }
-            Text(tr("Все характеристики: ${hero.stats.size} · нажмите", "All stats: ${hero.stats.size} · tap"),
+            Text(ui("hero.all_stats", hero.stats.size),
                 color = Rune, style = MaterialTheme.typography.labelMedium)
         }
-        ExpandableSection(tr("Надето", "Equipped"), equipped.size, slotsExpanded, { slotsExpanded = !slotsExpanded }) {
+        ExpandableSection(ui("hero.equipped"), equipped.size, slotsExpanded, { slotsExpanded = !slotsExpanded }) {
             // The cells share the width evenly, so no gap is left on the right, and a wide screen
             // fits a fourth one in the row — a fixed width could do neither.
             BoxWithConstraints {
@@ -119,13 +117,13 @@ import kotlinx.serialization.json.put
                             .padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(slotTitle(slot, s.lang), style = MaterialTheme.typography.labelSmall, color = Gold, textAlign = TextAlign.Center)
                             ItemIcon(document, GoldBright, Modifier.size(48.dp), tint = Muted.takeIf { instance == null })
-                            Text(if (instance == null) tr("Пусто", "Empty") else document.text("name"), style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
+                            Text(if (instance == null) ui("hero.empty_slot") else document.text("name"), style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
                             // An item whose requirements stopped being met keeps its slot and stops counting.
                             instance?.let { worn -> hero.inactive[worn.id]?.let { reasons ->
-                                Text(tr("Не работает", "Not working"), color = LifeRed, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
+                                Text(ui("hero.inactive"), color = LifeRed, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
                                 reasons.forEach { Text(requirementReason(it, s.lang), color = LifeRed, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center) }
                             } }
-                            if (instance != null) TextButton(enabled = !s.busy && (s.ownsCharacter || s.isAdmin), onClick = { onUnequip(instance.id) }) { Text(tr("Снять", "Unequip")) }
+                            if (instance != null) TextButton(enabled = !s.busy && (s.ownsCharacter || s.isAdmin), onClick = { onUnequip(instance.id) }) { Text(ui("hero.unequip")) }
                         }
                     }
                 }
@@ -138,13 +136,13 @@ import kotlinx.serialization.json.put
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(ForgeGlyphs.Sigil, null, tint = Rune, modifier = Modifier.size(16.dp))
-                    Engraved(tr("Расчёт сервера", "Server calculation"), Rune)
+                    Engraved(ui("hero.server_calc"), Rune)
                 }
-                Text(tr("Уровень ${hero.sheet.level} · учтено предметов: ${hero.sheet.active.size}", "Level ${hero.sheet.level} · items counted: ${hero.sheet.active.size}"),
+                Text(ui("hero.sheet_line", hero.sheet.level, hero.sheet.active.size),
                     color = Muted, style = MaterialTheme.typography.labelMedium)
                 OrnateDivider(Rune)
             }
-            if (hero.stats.isEmpty()) item { Text(tr("Сервер не вернул характеристик", "The server returned no stats"), color = Muted) }
+            if (hero.stats.isEmpty()) item { Text(ui("hero.no_stats"), color = Muted) }
             // Whatever the sheet carried, whole: nothing here is folded behind another tap.
             items(hero.stats.toSortedMap().toList(), key = { it.first }) { (key, value) ->
                 PropertyRow(statTitle(key, s.lang), statNumber(key, value), key)

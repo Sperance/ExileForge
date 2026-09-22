@@ -13,7 +13,7 @@ import com.sperance.exileforge.core.display.IconManifest
 import com.sperance.exileforge.core.i18n.LocaleBundle
 import com.sperance.exileforge.core.i18n.LocaleLanguage
 import com.sperance.exileforge.core.i18n.LocaleManifest
-import com.sperance.exileforge.core.i18n.tr
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.Catalog
 import com.sperance.exileforge.core.model.CatalogFilter
 import com.sperance.exileforge.core.model.EntitySource
@@ -48,8 +48,8 @@ private const val AUCTION = "api/v1/auctionlot"
 private const val DEVICE_UNKNOWN = "US_015"
 
 fun normalizeServer(value: String): String {
-    val url = value.trim().toHttpUrlOrNull() ?: error(tr("Введите URL с http:// или https://", "Enter a URL starting with http:// or https://"))
-    require(url.username.isEmpty() && url.password.isEmpty() && url.query == null && url.fragment == null) { tr("URL не должен содержать пароль, query или fragment", "The URL must not contain a password, query or fragment") }
+    val url = value.trim().toHttpUrlOrNull() ?: error(ui("api.url_scheme"))
+    require(url.username.isEmpty() && url.password.isEmpty() && url.query == null && url.fragment == null) { ui("api.url_parts") }
     return url.toString().trimEnd('/') + "/"
 }
 
@@ -77,10 +77,10 @@ class GameApi(
     /** Credentials travel as query parameters because that is the route the server exposes. */
     suspend fun login(login: String, password: String): UserProfile {
         account = null
-        require(login.isNotBlank() && password.isNotEmpty()) { tr("Введите логин и пароль", "Enter a login and a password") }
+        require(login.isNotBlank() && password.isNotEmpty()) { ui("api.credentials") }
         val profile: UserProfile = WireJson.decodeFromJsonElement(request("GET", "api/v1/user/login", mapOf("login" to login, "password" to password), sensitive = true))
         requireId(profile.id)
-        require(profile.isActive) { tr("Учётная запись отключена", "The account is disabled") }
+        require(profile.isActive) { ui("api.account_disabled") }
         account = profile
         return profile
     }
@@ -94,10 +94,10 @@ class GameApi(
      */
     suspend fun loginByDevice(deviceId: String): UserProfile {
         account = null
-        require(deviceId.isNotBlank()) { tr("Не удалось определить устройство", "The device could not be identified") }
+        require(deviceId.isNotBlank()) { ui("api.no_device") }
         val profile = try { device("GET", "api/v1/user/login/byDeviceId", deviceId) }
             catch (e: ApiFailure) { if (e.code == DEVICE_UNKNOWN) device("POST", "api/v1/user/byDeviceId", deviceId) else throw e }
-        require(profile.isActive) { tr("Учётная запись отключена", "The account is disabled") }
+        require(profile.isActive) { ui("api.account_disabled") }
         account = profile
         return profile
     }
@@ -110,13 +110,13 @@ class GameApi(
     fun currentUser(): UserProfile? = account
     /** Re-reads the signed-in account, so a role or character count change is picked up. */
     suspend fun refreshUser(): UserProfile {
-        val id = requireNotNull(account) { tr("Войдите в аккаунт", "Sign in to your account") }.id
+        val id = requireNotNull(account) { ui("catalog.sign_in") }.id
         val profile: UserProfile = WireJson.decodeFromJsonElement(request("GET", "api/v1/user", mapOf("id" to id), authenticated = true))
         account = profile
         return profile
     }
     suspend fun changePassword(current: String, replacement: String) {
-        val id = requireNotNull(account) { tr("Войдите в аккаунт", "Sign in to your account") }.id
+        val id = requireNotNull(account) { ui("catalog.sign_in") }.id
         request("GET", "api/v1/user/changePassword", mapOf("id" to id, "password" to current, "new_password" to replacement), authenticated = true, sensitive = true)
         logout()
     }
@@ -160,7 +160,7 @@ class GameApi(
         return slice(matching, page, REFERENCE_PAGE_SIZE)
     }
 
-    private fun requirePage(page: Int) = require(page >= 0) { tr("Номер страницы не может быть отрицательным", "A page number cannot be negative") }
+    private fun requirePage(page: Int) = require(page >= 0) { ui("api.negative_page") }
 
     private fun slice(items: List<JsonObject>, page: Int, size: Int): ItemPage {
         val pages = (items.size + size - 1) / size
@@ -180,7 +180,7 @@ class GameApi(
         // and "one of your fields" leaves the reader to guess which of a dozen it was.
         val refused = document.keys.filterNot { it in allowed }
         require(refused.isEmpty()) {
-            tr("Поля не разрешены при создании: ${refused.joinToString()}", "These fields are not allowed on create: ${refused.joinToString()}")
+            ui("api.create_fields", refused.joinToString())
         }
         validate(document, catalog)
         return request("POST", route(catalog), body = JsonArray(listOf(document)), authenticated = true).jsonArray.single().jsonObject
@@ -192,12 +192,12 @@ class GameApi(
      */
     override suspend fun update(catalog: Catalog, id: String, changes: JsonObject): JsonObject {
         requireId(id)
-        require(changes.isNotEmpty()) { tr("Нет изменений", "No changes") }
-        require(changes.keys.none { it in protectedFields }) { tr("Нельзя изменять служебные поля", "Service fields cannot be changed") }
-        require(changes.keys.all { it in editableFields(catalog) }) { tr("Свойство управляется сервером и недоступно для редактирования", "The property is server-owned and cannot be edited") }
+        require(changes.isNotEmpty()) { ui("api.no_changes") }
+        require(changes.keys.none { it in protectedFields }) { ui("api.service_fields") }
+        require(changes.keys.all { it in editableFields(catalog) }) { ui("api.server_owned") }
         if (catalog == Catalog.EQUIPMENT) validateModifierPool(changes)
         return request("PUT", route(catalog), mapOf("id" to id), changes, authenticated = true).let {
-            if (it == JsonNull) throw ApiFailure(200, null, tr("Сервер не вернул изменённый предмет", "The server returned no updated item"))
+            if (it == JsonNull) throw ApiFailure(200, null, ui("api.no_updated_item"))
             it.jsonObject
         }
     }
@@ -211,12 +211,12 @@ class GameApi(
      * instance, in which tier and with which values, is decided by the server when it is created.
      */
     suspend fun randomTemplate(rarity: String = "", slot: String = "", random: kotlin.random.Random = kotlin.random.Random): JsonObject {
-        require(rarity.isBlank() || rarity in com.sperance.exileforge.core.contract.rarities) { tr("Неизвестная редкость", "Unknown rarity") }
-        require(slot.isBlank() || slot in com.sperance.exileforge.core.contract.slots) { tr("Неизвестная категория", "Unknown category") }
+        require(rarity.isBlank() || rarity in com.sperance.exileforge.core.contract.rarities) { ui("api.unknown_rarity") }
+        require(slot.isBlank() || slot in com.sperance.exileforge.core.contract.slots) { ui("api.unknown_category") }
         val matching = all(route(Catalog.EQUIPMENT)).filter {
             (rarity.isBlank() || it.text("rarity") == rarity) && (slot.isBlank() || it.text("slot") == slot)
         }
-        require(matching.isNotEmpty()) { tr("Нет шаблонов с такой редкостью и категорией", "No templates match that rarity and category") }
+        require(matching.isNotEmpty()) { ui("api.no_templates") }
         return matching[random.nextInt(matching.size)]
     }
     suspend fun count(catalog: Catalog): JsonElement = request("GET", "${route(catalog)}/count", authenticated = true)
@@ -276,7 +276,7 @@ class GameApi(
     }
     private suspend fun node(operation: String, characterId: String, nodeCode: String): SkillTreeState {
         requireId(characterId)
-        require(nodeCode.isNotBlank()) { tr("Выберите узел дерева", "Choose a node of the tree") }
+        require(nodeCode.isNotBlank()) { ui("api.choose_node") }
         return WireJson.decodeFromJsonElement(request("POST", "$TREE/$operation",
             mapOf("characterId" to characterId, "nodeCode" to nodeCode), authenticated = true))
     }
@@ -304,7 +304,7 @@ class GameApi(
 
     /** The dictionary as it was served, so a caller can store the very text it parsed. */
     suspend fun localeDocument(code: String): String {
-        require(code.isNotBlank()) { tr("Не указан язык", "No language given") }
+        require(code.isNotBlank()) { ui("api.no_language") }
         return fetchText("locale/$code.json")
     }
 
@@ -321,7 +321,7 @@ class GameApi(
 
     /** The set as it was served, so a caller can store the very text it parsed. */
     suspend fun iconDocument(file: String): String {
-        require(file.isNotBlank()) { tr("Не указан файл иконок", "No icon file given") }
+        require(file.isNotBlank()) { ui("api.no_icon_file") }
         return fetchText("icons/$file")
     }
 
@@ -360,12 +360,12 @@ class GameApi(
     }
     suspend fun sellItem(characterId: String, itemId: String, amount: Long, priceOrbId: String, price: Long): AuctionLot {
         requireId(itemId)
-        require(amount > 0) { tr("Количество должно быть больше нуля", "The amount must be greater than zero") }
+        require(amount > 0) { ui("api.amount_positive") }
         return sell("item", characterId, priceOrbId, price, mapOf("itemId" to itemId, "amount" to amount.toString()))
     }
     private suspend fun sell(what: String, characterId: String, priceOrbId: String, price: Long, extra: Map<String, String>): AuctionLot {
         requireId(characterId); requireId(priceOrbId)
-        require(price > 0) { tr("Цена должна быть больше нуля", "The price must be greater than zero") }
+        require(price > 0) { ui("api.price_positive") }
         return WireJson.decodeFromJsonElement(request("POST", "$AUCTION/sell/$what",
             extra + mapOf("characterId" to characterId, "priceOrbId" to priceOrbId, "price" to price.toString()),
             authenticated = true))
@@ -388,7 +388,7 @@ class GameApi(
     // ==================== character ====================
 
     suspend fun character(id: String): CharacterSummary {
-        val document = get(Catalog.CHARACTERS, id) ?: error(tr("Персонаж недоступен", "The character is unavailable"))
+        val document = get(Catalog.CHARACTERS, id) ?: error(ui("api.no_character"))
         return WireJson.decodeFromJsonElement(document)
     }
 
@@ -422,7 +422,7 @@ class GameApi(
     /** Grants experience; the server decides whether that crosses a level threshold. */
     suspend fun addExperience(characterId: String, amount: Double): CharacterSummary {
         requireId(characterId)
-        require(amount > 0 && amount.isFinite()) { tr("Опыт должен быть положительным числом", "Experience must be a positive number") }
+        require(amount > 0 && amount.isFinite()) { ui("api.xp_positive") }
         return WireJson.decodeFromJsonElement(request("POST", "api/v1/character/inventory/experience",
             mapOf("characterId" to characterId, "amount" to amount.toString()), authenticated = true))
     }
@@ -433,7 +433,7 @@ class GameApi(
     /** Adds or removes stacking items; a negative amount removes them. Answers with a status word. */
     suspend fun adjustItems(characterId: String, items: List<ItemStack>): String {
         requireId(characterId)
-        require(items.isNotEmpty()) { tr("Список предметов пуст", "The item list is empty") }
+        require(items.isNotEmpty()) { ui("api.empty_items") }
         val body = JsonArray(items.map { buildJsonObject { put("itemId", it.itemId); put("amount", it.amount) } })
         return request("POST", "api/v1/character/inventory/addItem", mapOf("characterId" to characterId), body, authenticated = true).jsonPrimitive.content
     }
@@ -464,7 +464,7 @@ class GameApi(
      */
     suspend fun socketJewel(characterId: String, inventoryId: String, nodeCode: String): EquipmentInstance {
         requireId(characterId); requireId(inventoryId)
-        require(nodeCode.isNotBlank()) { tr("Выберите гнездо", "Choose a socket") }
+        require(nodeCode.isNotBlank()) { ui("api.choose_socket") }
         return WireJson.decodeFromJsonElement(request("POST", "api/v1/characterequipment/socket",
             mapOf("characterId" to characterId, "inventoryId" to inventoryId, "nodeCode" to nodeCode), authenticated = true))
     }
@@ -543,7 +543,7 @@ class GameApi(
     }
     suspend fun redeem(characterId: String, code: String): JsonElement {
         requireId(characterId)
-        require(code.isNotBlank()) { tr("Введите промокод", "Enter a promo code") }
+        require(code.isNotBlank()) { ui("api.enter_promo") }
         return request("POST", "api/v1/redemptioncodes/useRedeptionCode", mapOf("characterId" to characterId, "redemptionCode" to code.trim()), authenticated = true)
     }
 
@@ -569,10 +569,10 @@ class GameApi(
             val payload = client.newCall(Request.Builder().url(url).header("Accept", "application/json").get().build()).awaitPayload()
             status = payload.status
             responseText = payload.body.take(2_000)
-            if (status !in 200..299) throw ApiFailure(status, null, tr("HTTP $status: файл не получен", "HTTP $status: the file was not served"))
+            if (status !in 200..299) throw ApiFailure(status, null, ui("api.file_not_served", status))
             try { withContext(Dispatchers.Default) { WireJson.parseToJsonElement(payload.body) } }
                 catch (e: CancellationException) { throw e }
-                catch (_: Exception) { throw ApiFailure(status, null, tr("Некорректный JSON в $path", "Malformed JSON in $path")) }
+                catch (_: Exception) { throw ApiFailure(status, null, ui("api.malformed_json_at", path)) }
             success = true
             return payload.body
         } catch (e: CancellationException) { throw e }
@@ -586,7 +586,7 @@ class GameApi(
     }
 
     private suspend fun request(method: String, path: String, query: Map<String, String> = emptyMap(), body: JsonElement? = null, authenticated: Boolean = false, sensitive: Boolean = false): JsonElement {
-        if (authenticated) require(account != null) { tr("Войдите во вкладке «Аккаунт»", "Sign in on the Account tab") }
+        if (authenticated) require(account != null) { ui("api.sign_in_tab") }
         val url = base.newBuilder().addPathSegments(path).apply { query.forEach { (k, v) -> addQueryParameter(k, v) } }.build()
         val bodyText = body?.toString().orEmpty()
         // Several server commands are POSTs carrying their arguments in the query string; OkHttp
@@ -606,25 +606,25 @@ class GameApi(
             responseText = raw.take(12_000)
             val envelope = try { withContext(Dispatchers.Default) { WireJson.parseToJsonElement(raw).jsonObject } }
                 catch (e: CancellationException) { throw e }
-                catch (_: Exception) { throw ApiFailure(status, null, if (status == 401) tr("Сессия истекла. Войдите снова", "The session has expired. Sign in again") else if (status == 403) tr("Недостаточно прав", "Not enough permissions") else tr("HTTP $status: пустой или некорректный JSON ответ сервера", "HTTP $status: empty or malformed JSON response")) }
+                catch (_: Exception) { throw ApiFailure(status, null, if (status == 401) ui("api.session_expired") else if (status == 403) ui("editor.no_rights") else ui("api.bad_json", status)) }
             if (status !in 200..299 || (envelope["success"] as? JsonPrimitive)?.booleanOrNull != true) {
                 val error = envelope["error"] as? JsonObject
                 throw ApiFailure(status, error?.text("errorCode"),
-                    error?.text("message")?.takeIf { it.isNotBlank() } ?: tr("HTTP $status: операция отклонена", "HTTP $status: the operation was rejected"),
+                    error?.text("message")?.takeIf { it.isNotBlank() } ?: ui("api.rejected", status),
                     // The arguments that filled the server's sentence, so the client can fill its own.
                     (error?.get("messageArgs") as? JsonArray).orEmpty().mapNotNull { (it as? JsonPrimitive)?.contentOrNull })
             }
             success = true
             return envelope["data"] ?: JsonNull
         } catch (e: CancellationException) {
-            responseText = tr("Запрос отменён. Результат записи следует проверить на сервере.", "The request was cancelled. Verify the write on the server."); throw e
+            responseText = ui("api.cancelled"); throw e
         } catch (e: Exception) {
             if (e is ApiFailure) status = e.status
             if (responseText.isBlank()) responseText = e.message.orEmpty()
             throw e
         } finally {
-            journal.add(RequestLog(method, url.encodedPath + (url.encodedQuery?.let { "?${if (sensitive) tr("[скрыто]", "[hidden]") else it}" } ?: ""), status,
-                (System.nanoTime() - start) / 1_000_000, if (sensitive) tr("[скрыто]", "[hidden]") else bodyText.take(12_000), if (sensitive) tr("[скрыто]", "[hidden]") else responseText, success))
+            journal.add(RequestLog(method, url.encodedPath + (url.encodedQuery?.let { "?${if (sensitive) ui("api.hidden") else it}" } ?: ""), status,
+                (System.nanoTime() - start) / 1_000_000, if (sensitive) ui("api.hidden") else bodyText.take(12_000), if (sensitive) ui("api.hidden") else responseText, success))
         }
     }
 }

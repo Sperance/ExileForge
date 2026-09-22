@@ -17,9 +17,13 @@ import org.junit.Test
 /**
  * The two halves of the language, and which owns what.
  *
- * The client's own labels come from `tr` and switch with [uiLanguage]. The name of a thing in the
+ * The client's own labels come from `ui` and switch with [uiLanguage]. The name of a thing in the
  * game comes from the server's dictionary, because since 0.14.0 the document carries only a code —
  * so switching the language means loading the other dictionary, not re-reading the same document.
+ *
+ * Chinese is the case that proves the split: the label and the name arrive from two different
+ * places, and both have to move together or the card reads half in one language and half in
+ * another.
  */
 class LocalizationTest {
     @get:Rule val compose = createComposeRule()
@@ -44,6 +48,15 @@ class LocalizationTest {
         compose.setContent { ForgeTheme { ItemCard(template(Catalog.EQUIPMENT)) } }
         compose.onNodeWithText("Наследие изгнанника").assertIsDisplayed()
         compose.onNodeWithText("Уровень предмета").assertIsDisplayed()
+    }
+
+    @Test fun chineseLabelsAndChineseNames() {
+        uiLanguage = Lang.ZH
+        dictionary("zh", "流亡者的遗产")
+        compose.setContent { ForgeTheme { ItemCard(template(Catalog.EQUIPMENT)) } }
+        compose.onNodeWithText("流亡者的遗产").assertIsDisplayed()
+        compose.onNodeWithText("物品等级").assertIsDisplayed()
+        compose.onNodeWithText("打开").assertIsDisplayed()
     }
 
     /** Without the server's dictionary the code stands in: a hole shows rather than an empty card. */

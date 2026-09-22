@@ -1,7 +1,7 @@
 package com.sperance.exileforge.presentation.features
 
 import com.sperance.exileforge.core.i18n.locError
-import com.sperance.exileforge.core.i18n.tr
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.auction.AuctionFilter
 import com.sperance.exileforge.core.model.auction.AuctionPage
 import com.sperance.exileforge.core.network.ApiFailure
@@ -53,7 +53,7 @@ class AuctionViewModel(private val runtime: ForgeRuntime) {
     fun buy(lotId: String) { with(runtime) { trade(writing = true) {
         val id = state.value.characterId.trim()
         val lot = api.buyLot(id, lotId)
-        mutable.update { it.copy(message = tr("Куплено: ${lot.title}", "Bought: ${lot.title}")) }
+        mutable.update { it.copy(message = ui("auction.bought", lot.title)) }
         refreshBag(id)
         val filter = state.value.auctionFilter.copy(excludeSellerId = if (state.value.showOwnLots) "" else id, lang = state.value.lang.code)
         mutable.update { it.copy(showcase = api.auctionSearch(id, filter, state.value.showcase.page)) }
@@ -75,13 +75,13 @@ class AuctionViewModel(private val runtime: ForgeRuntime) {
     fun cancel(lotId: String) { with(runtime) { trade(writing = true) {
         val id = state.value.characterId.trim()
         val lot = api.cancelLot(id, lotId)
-        mutable.update { it.copy(message = tr("Снято с продажи: ${lot.title}", "Withdrawn: ${lot.title}")) }
+        mutable.update { it.copy(message = ui("auction.withdrawn", lot.title)) }
         refreshInventory(id)
         mutable.update { it.copy(myLots = api.myLots(id)) }
     } } }
 
     private suspend fun listed(characterId: String, title: String) { with(runtime) {
-        mutable.update { it.copy(message = tr("Выставлено: $title", "Listed: $title")) }
+        mutable.update { it.copy(message = ui("auction.listed", title)) }
         refreshInventory(characterId)
         mutable.update { it.copy(myLots = api.myLots(characterId), auctionTab = 1) }
     } }
@@ -106,7 +106,7 @@ class AuctionViewModel(private val runtime: ForgeRuntime) {
      * sends the request, and a refusal from the auction becomes the screen's explanation.
      */
     private fun trade(writing: Boolean = false, block: suspend () -> Unit) { with(runtime) { task(writing) {
-        check(state.value.characterId.isNotBlank()) { tr("Выберите персонажа", "Choose a character") }
+        check(state.value.characterId.isNotBlank()) { ui("auction.choose_character") }
         try {
             block()
             mutable.update { it.copy(auctionLocked = null) }

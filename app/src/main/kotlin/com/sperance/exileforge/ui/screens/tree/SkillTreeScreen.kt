@@ -22,7 +22,8 @@ import com.sperance.exileforge.core.contract.text
 import com.sperance.exileforge.core.display.inventoryDocument
 import com.sperance.exileforge.core.display.statNumber
 import com.sperance.exileforge.core.display.statTitle
-import com.sperance.exileforge.core.i18n.tr
+import com.sperance.exileforge.core.i18n.plural
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.skilltree.SkillNodeType
 import com.sperance.exileforge.core.model.skilltree.StatContribution
 import com.sperance.exileforge.core.model.skilltree.SkillTreeNode
@@ -45,8 +46,8 @@ import kotlinx.serialization.json.putJsonArray
     // lives in the sheet. A pannable canvas inside a scroll fights the scroll for every drag.
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Spacer(Modifier.height(12.dp))
-        ScreenHeader(tr("Дерево навыков", "Passive tree"),
-            tr("Узлов в дереве: ${s.treeNodes.size}", "${s.treeNodes.size} nodes in the tree"), ForgeGlyphs.Constellation)
+        ScreenHeader(ui("tree.title"),
+            ui("tree.node_count", s.treeNodes.size), ForgeGlyphs.Constellation)
         SkillTreePanel(s, vm::selectNode, vm::allocateNode, vm::refundNode, vm::resetTree, vm::nodeQuery,
             onSocket = vm::socketJewel, onUnsocket = vm::unsocketJewel, modifier = Modifier.weight(1f))
         Spacer(Modifier.height(12.dp))
@@ -78,13 +79,13 @@ import kotlinx.serialization.json.putJsonArray
     var confirmRefund by remember { mutableStateOf<String?>(null) }
     var confirmReset by remember { mutableStateOf(false) }
     if (hero == null) {
-        InfoCard(tr("Герой не загружен", "The hero is not loaded"),
-            tr("Обновите героя во вкладке «Герой».", "Refresh the hero on the Hero tab."))
+        InfoCard(ui("tree.no_hero"),
+            ui("tree.no_hero_hint"))
         return
     }
     if (s.treeNodes.isEmpty()) {
-        InfoCard(tr("Дерево не загружено", "The tree is not loaded"),
-            tr("Сервер не вернул ни одного узла. Обновите героя.", "The server served no nodes. Refresh the hero."))
+        InfoCard(ui("tree.not_loaded"),
+            ui("tree.not_loaded_hint"))
         return
     }
     val taken = hero.tree.takenCodes
@@ -94,15 +95,14 @@ import kotlinx.serialization.json.putJsonArray
     val reachable = remember(s.treeNodes, taken) { reachableFrom(s.treeNodes, taken) }
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(tr("Очки: ${hero.tree.available} из ${hero.tree.total}", "Points: ${hero.tree.available} of ${hero.tree.total}"),
+            Text(ui("tree.points", hero.tree.available, hero.tree.total),
                 color = Gold, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
-            TextButton(onClick = { detailsOpen = true }) { Text(tr("Подробно", "Details")) }
+            TextButton(onClick = { detailsOpen = true }) { Text(ui("tree.details")) }
         }
         // A tap opens a small window about that one node, so the map stays in sight; everything
         // about the tree as a whole lives behind "Подробно".
         TreeCanvas(s, taken, reachable, Modifier.weight(1f)) { code -> onSelect(code); nodeOpen = true }
-        Text(tr("Потяните, чтобы сдвинуть, сведите пальцы для масштаба, коснитесь узла, чтобы выбрать.",
-                "Drag to pan, pinch to zoom, tap a node to select it."), color = Muted, style = MaterialTheme.typography.bodySmall)
+        Text(ui("tree.gesture_hint"), color = Muted, style = MaterialTheme.typography.bodySmall)
     }
     // The small window about the chosen node: what it gives, and the one command over it. It is
     // deliberately not expanded to full height — half the point is seeing where the branch leads.
@@ -128,17 +128,17 @@ import kotlinx.serialization.json.putJsonArray
             item {
                 ForgePanel {
                     Engraved(hero.character.name)
-                    PropertyRow(tr("Очков всего", "Points total"), hero.tree.total.toString(), "level")
-                    PropertyRow(tr("Потрачено", "Spent"), hero.tree.spent.toString(), "level")
-                    PropertyRow(tr("Доступно", "Available"), hero.tree.available.toString(), "level")
-                    Text(tr("Очки дают уровни: таблицу прогрессии ведёт сервер.", "Points come from levels: the progression table is the server's."),
+                    PropertyRow(ui("tree.points_total"), hero.tree.total.toString(), "level")
+                    PropertyRow(ui("tree.points_spent"), hero.tree.spent.toString(), "level")
+                    PropertyRow(ui("tree.points_available"), hero.tree.available.toString(), "level")
+                    Text(ui("tree.points_note"),
                         color = Muted, style = MaterialTheme.typography.bodySmall)
                 }
             }
             item {
                 ForgePanel(accent = Rune) {
-                    Engraved(tr("Даёт дерево целиком", "What the whole tree gives"), Rune)
-                    if (hero.tree.totals.isEmpty()) Text(tr("Взятые узлы ничего не дают", "The taken nodes give nothing"), color = Muted)
+                    Engraved(ui("tree.totals_title"), Rune)
+                    if (hero.tree.totals.isEmpty()) Text(ui("tree.totals_empty"), color = Muted)
                     // The server sums this: two INCREASED add up while two MORE multiply, so
                     // adding the snapshots here would lie exactly where a player is choosing.
                     // It is the tree's contribution, not the character's total — which is why a
@@ -151,9 +151,8 @@ import kotlinx.serialization.json.putJsonArray
             item { TreeSearch(s, onQuery) { code -> onSelect(code); detailsOpen = false; nodeOpen = true } }
             item {
                 OutlinedButton(enabled = enabled && hero.tree.nodes.size > 1, onClick = { detailsOpen = false; confirmReset = true },
-                    modifier = Modifier.fillMaxWidth()) { Text(tr("Сбросить дерево полностью", "Reset the whole tree")) }
-                Text(tr("Сброс стоит по сфере сожаления за каждый возвращаемый узел — столько же, сколько вернуть их по одному.",
-                        "A reset costs one Orb of Regret per node returned — the same as giving them back one at a time."),
+                    modifier = Modifier.fillMaxWidth()) { Text(ui("tree.reset_all")) }
+                Text(ui("tree.reset_note"),
                     color = Muted, style = MaterialTheme.typography.bodySmall)
             }
         }
@@ -172,10 +171,10 @@ import kotlinx.serialization.json.putJsonArray
         else s.treeNodes.filter { it.title.contains(s.nodeQuery.trim(), true) || it.code.contains(s.nodeQuery.trim(), true) }.take(8)
     }
     ForgePanel {
-        Engraved(tr("Найти узел", "Find a node"))
-        OutlinedTextField(s.nodeQuery, onQuery, label = { Text(tr("Название узла", "Node name")) },
+        Engraved(ui("tree.find_node"))
+        OutlinedTextField(s.nodeQuery, onQuery, label = { Text(ui("tree.node_name")) },
             singleLine = true, modifier = Modifier.fillMaxWidth())
-        if (s.nodeQuery.isNotBlank() && matches.isEmpty()) Text(tr("Ничего не найдено", "Nothing found"), color = Muted)
+        if (s.nodeQuery.isNotBlank() && matches.isEmpty()) Text(ui("tree.nothing_found"), color = Muted)
         matches.forEach { node ->
             TextButton(onClick = { onSelect(node.code) }, modifier = Modifier.fillMaxWidth()) {
                 Text("${node.title} · ${nodeTypeTitle(node.type.name, s.lang)}",
@@ -247,8 +246,8 @@ import kotlinx.serialization.json.putJsonArray
         }
         Row(Modifier.align(Alignment.BottomStart).padding(8.dp), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            TextButton(onClick = { scale = 1f; pan = Offset.Zero }) { Text(tr("Сбросить вид", "Reset the view")) }
-            Text(tr("Взято ${taken.size} · доступно ${reachable.size}", "${taken.size} taken · ${reachable.size} within reach"),
+            TextButton(onClick = { scale = 1f; pan = Offset.Zero }) { Text(ui("tree.reset_view")) }
+            Text(ui("tree.taken_reachable", taken.size, reachable.size),
                 color = Muted, style = MaterialTheme.typography.labelMedium)
         }
     }
@@ -264,7 +263,7 @@ import kotlinx.serialization.json.putJsonArray
     onAllocate: (String) -> Unit, onRefund: (String) -> Unit,
     onSocket: (String, String) -> Unit = { _, _ -> }, onUnsocket: (String) -> Unit = {}) {
     if (node == null) {
-        InfoCard(tr("Узел не выбран", "No node selected"), tr("Коснитесь узла на карте, чтобы увидеть, что он даёт.", "Tap a node on the map to see what it gives."))
+        InfoCard(ui("tree.no_selection"), ui("tree.no_selection_hint"))
         return
     }
     val allocated = node.code in taken
@@ -272,16 +271,16 @@ import kotlinx.serialization.json.putJsonArray
         // The node's name is this panel's title, so it keeps its own casing rather than being
         // shouted as an Engraved caption the way a section heading is.
         Text(node.title, color = nodeColour(node, true), style = MaterialTheme.typography.titleMedium)
-        PropertyRow(tr("Вид узла", "Node type"), nodeTypeTitle(node.type.name, s.lang), "node")
-        PropertyRow(tr("Стоимость", "Cost"), node.cost.toString(), "level")
-        PropertyRow(tr("Состояние", "State"), if (allocated) tr("Взят", "Taken") else tr("Не взят", "Not taken"), "node")
+        PropertyRow(ui("tree.node_type"), nodeTypeTitle(node.type.name, s.lang), "node")
+        PropertyRow(ui("tree.cost"), node.cost.toString(), "level")
+        PropertyRow(ui("card.state"), if (allocated) ui("tree.taken") else ui("tree.not_taken"), "node")
         node.details.takeIf { it.isNotBlank() }?.let { Text(it, color = Muted, style = MaterialTheme.typography.bodySmall) }
 
         OrnateDivider()
         if (node.type == SkillNodeType.JEWEL_SOCKET) {
             SocketContents(s, node, allocated, enabled, onSocket, onUnsocket)
         } else {
-            if (node.params.isEmpty()) Text(tr("Бонусов нет", "No bonuses"), color = Muted)
+            if (node.params.isEmpty()) Text(ui("tree.no_bonuses"), color = Muted)
             node.params.forEach { modifier ->
                 ModifierLine(modifierDocument(modifier.modifierId, modifier.values), s.definitions)
             }
@@ -289,19 +288,17 @@ import kotlinx.serialization.json.putJsonArray
 
         OrnateDivider()
         if (allocated) OutlinedButton(enabled = enabled && node.type != SkillNodeType.START, onClick = { onRefund(node.code) }, modifier = Modifier.fillMaxWidth()) {
-            Text(tr("Сбросить (сфера сожаления)", "Give back (Orb of Regret)"))
+            Text(ui("tree.refund"))
         } else Button(enabled = enabled, onClick = { onAllocate(node.code) }, modifier = Modifier.fillMaxWidth()) {
-            Text(tr("Взять узел", "Take the node"))
+            Text(ui("tree.allocate"))
         }
         Text(when {
                 node.type == SkillNodeType.START ->
-                    tr("Стартовый узел задаёт класс, и вернуть его можно только полным сбросом.", "The start node comes with the class and only a full reset gives it back.")
+                    ui("tree.start_note")
                 allocated ->
-                    tr("Возврат стоит одну сферу сожаления. Вернуть можно только тот узел, без которого остальное дерево не повиснет — проверяет сервер.",
-                       "Giving a node back costs one Orb of Regret, and only a node the rest of the tree does not hang from — the server checks.")
+                    ui("tree.refund_note")
                 else ->
-                    tr("Брать можно только рядом с уже взятым узлом. Проверяет сервер.",
-                       "A node is taken next to one already taken. The server checks.")
+                    ui("tree.allocate_note")
             },
             color = Muted, style = MaterialTheme.typography.bodySmall)
     }
@@ -323,10 +320,10 @@ import kotlinx.serialization.json.putJsonArray
     if (inside != null) {
         val document = inventoryDocument(inside, s.inventoryBases[inside.equipmentId])
         ItemRow(document, definitions = s.definitions, enabled = false,
-            note = if (allocated) tr("Работает", "Working") else tr("Гнездо не взято", "Socket not taken"),
+            note = if (allocated) ui("tree.socket_working") else ui("tree.socket_locked"),
             noteColor = if (allocated) Gold else LifeRed) { }
         OutlinedButton(enabled = enabled, onClick = { onUnsocket(inside.id) }, modifier = Modifier.fillMaxWidth()) {
-            Text(tr("Вынуть самоцвет", "Take the jewel out"))
+            Text(ui("tree.jewel_out"))
         }
         return
     }
@@ -335,14 +332,14 @@ import kotlinx.serialization.json.putJsonArray
         !instance.socketed && s.inventoryBases[instance.equipmentId]?.text("slot") == "JEWEL"
     }
     if (!allocated) {
-        Text(tr("Сначала возьмите гнездо.", "Take the socket first."), color = Muted, style = MaterialTheme.typography.bodySmall)
+        Text(ui("tree.socket_first"), color = Muted, style = MaterialTheme.typography.bodySmall)
         return
     }
     if (free.isEmpty()) {
-        Text(tr("Свободных самоцветов нет.", "No free jewels."), color = Muted, style = MaterialTheme.typography.bodySmall)
+        Text(ui("tree.no_jewels"), color = Muted, style = MaterialTheme.typography.bodySmall)
         return
     }
-    Engraved(tr("Вставить самоцвет", "Put a jewel in"))
+    Engraved(ui("tree.jewel_in"))
     free.forEach { instance ->
         val document = inventoryDocument(instance, s.inventoryBases[instance.equipmentId])
         ItemRow(document, definitions = s.definitions, enabled = enabled) { onSocket(instance.id, node.code) }
@@ -359,35 +356,30 @@ import kotlinx.serialization.json.putJsonArray
     allocate?.let { code ->
         val cost = s.treeNodes.firstOrNull { it.code == code }?.cost ?: 1
         ConfirmDialog(
-            title = tr("Взять узел?", "Take the node?"),
-            text = tr("«${nodeName(code)}» стоит $cost ${points(cost)}. Вернуть узел потом можно только за сферу сожаления.",
-                      "\"${nodeName(code)}\" costs $cost ${points(cost)}. Giving it back later costs an Orb of Regret."),
-            confirm = tr("Взять", "Take"), onDismiss = onClear) { onAllocate(code) }
+            title = ui("tree.allocate_q"),
+            text = ui("tree.allocate_text", nodeName(code), cost, points(cost)),
+            confirm = ui("tree.allocate_do"), onDismiss = onClear) { onAllocate(code) }
     }
     refund?.let { code ->
         ConfirmDialog(
-            title = tr("Вернуть узел?", "Give the node back?"),
-            text = tr("«${nodeName(code)}» вернётся, и это спишет одну сферу сожаления.",
-                      "\"${nodeName(code)}\" goes back, and that spends one Orb of Regret."),
-            confirm = tr("Вернуть", "Give back"), onDismiss = onClear) { onRefund(code) }
+            title = ui("tree.refund_q"),
+            text = ui("tree.refund_text", nodeName(code)),
+            confirm = ui("tree.refund_do"), onDismiss = onClear) { onRefund(code) }
     }
     if (reset) {
         // The start node is not given back, so it is not paid for — the count says what is.
         val returned = (s.hero?.tree?.nodes?.size ?: 1) - 1
         ConfirmDialog(
-            title = tr("Сбросить дерево?", "Reset the tree?"),
-            text = tr("Вернётся $returned ${nodes(returned)} и спишется столько же сфер сожаления. Стартовый узел класса останется.",
-                      "$returned ${nodes(returned)} go back and as many Orbs of Regret are spent. The class's start node stays."),
-            confirm = tr("Сбросить", "Reset"), onDismiss = onClear) { onReset() }
+            title = ui("tree.reset_q"),
+            text = ui("tree.reset_text", returned, nodes(returned)),
+            confirm = ui("tree.reset_do"), onDismiss = onClear) { onReset() }
     }
 }
 
-/** Russian counts its nouns; English does not have to try. */
-private fun points(n: Int) = tr(if (n % 10 == 1 && n % 100 != 11) "очко" else if (n % 10 in 2..4 && n % 100 !in 12..14) "очка" else "очков",
-                                if (n == 1) "point" else "points")
+/** Russian counts its nouns in three forms, English in two and Chinese in none: see `plural`. */
+private fun points(n: Int) = plural("tree.point", n)
 
-private fun nodes(n: Int) = tr(if (n % 10 == 1 && n % 100 != 11) "узел" else if (n % 10 in 2..4 && n % 100 !in 12..14) "узла" else "узлов",
-                               if (n == 1) "node" else "nodes")
+private fun nodes(n: Int) = plural("tree.node", n)
 
 /**
  * One line of what the tree gives: a number, and whether it is a flat one or a percentage.

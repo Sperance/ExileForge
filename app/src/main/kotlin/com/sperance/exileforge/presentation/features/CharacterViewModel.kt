@@ -2,7 +2,7 @@ package com.sperance.exileforge.presentation.features
 
 import com.sperance.exileforge.core.contract.characterDocument
 import com.sperance.exileforge.core.contract.entityId
-import com.sperance.exileforge.core.i18n.tr
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.Catalog
 import com.sperance.exileforge.presentation.ForgeRuntime
 import com.sperance.exileforge.presentation.state.AppPhase
@@ -75,16 +75,16 @@ class CharacterViewModel(private val runtime: ForgeRuntime) {
      * character between classes — so this form is the only place it is ever chosen.
      */
     fun create(name: String, classId: String) { with(runtime) { task(writing = true) {
-        require(name.isNotBlank()) { tr("Введите имя персонажа", "Enter the character's name") }
-        require(classId.isNotBlank()) { tr("Выберите класс", "Choose a class") }
+        require(name.isNotBlank()) { ui("character.enter_name") }
+        require(classId.isNotBlank()) { ui("character.choose_class") }
         val owner = state.value.profile?.id.orEmpty()
-        check(owner.isNotBlank()) { tr("Войдите в аккаунт", "Sign in to your account") }
+        check(owner.isNotBlank()) { ui("catalog.sign_in") }
         // The limit is the server's (CH_005); this only keeps the form honest about it.
         check(state.value.characters.size < MAX_CHARACTERS) {
-            tr("Больше $MAX_CHARACTERS персонажей аккаунт не держит", "An account holds no more than $MAX_CHARACTERS characters")
+            ui("character.limit", MAX_CHARACTERS)
         }
         val created = api.create(Catalog.CHARACTERS, characterDocument(owner, name, classId))
-        mutable.update { it.copy(message = tr("Персонаж создан: ${name.trim()}", "Character created: ${name.trim()}")) }
+        mutable.update { it.copy(message = ui("character.created", name.trim())) }
         readCharacters()
         entered(created.entityId)
     } } }
@@ -92,7 +92,7 @@ class CharacterViewModel(private val runtime: ForgeRuntime) {
     /** Giving a character up frees one of the account's slots; the server owns what that costs. */
     fun delete(id: String) { with(runtime) { task(writing = true) {
         api.delete(Catalog.CHARACTERS, id)
-        mutable.update { it.copy(message = tr("Персонаж удалён", "The character was deleted")) }
+        mutable.update { it.copy(message = ui("character.deleted")) }
         val remaining = state.value.characters.filterNot { character -> character.id == id }
         // Re-reading would enter the last survivor, and a deletion is not a choice to play them.
         mutable.update { it.copy(characters = remaining) }

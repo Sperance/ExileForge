@@ -16,7 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.i18n.Lang
-import com.sperance.exileforge.core.i18n.tr
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.ForgePanel
@@ -47,21 +47,20 @@ import com.sperance.exileforge.ui.theme.*
                 Icon(ForgeGlyphs.Sigil, null, tint = Gold, modifier = Modifier.size(48.dp))
             }
             Text("EXILE FORGE", style = MaterialTheme.typography.headlineMedium, color = GoldBright)
-            Text(tr("АРСЕНАЛ ИЗГНАННИКА", "THE EXILE'S ARSENAL"), style = MaterialTheme.typography.labelSmall, color = Muted)
+            Text(ui("app.title"), style = MaterialTheme.typography.labelSmall, color = Muted)
             if (s.busy) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised) else OrnateDivider(Gold)
 
             Button(enabled = !s.busy, onClick = vm::playOnThisDevice, modifier = Modifier.fillMaxWidth().height(56.dp)) {
                 Icon(ForgeGlyphs.Portal, null, Modifier.size(20.dp)); Spacer(Modifier.width(10.dp))
-                Text(tr("Играть", "Play"), style = MaterialTheme.typography.titleMedium)
+                Text(ui("auth.play"), style = MaterialTheme.typography.titleMedium)
             }
-            Text(tr("Учётная запись заводится сама, по этому устройству. Пароля нет и вводить нечего.",
-                    "The account is created by itself, from this device. There is no password to type."),
+            Text(ui("auth.device_note"),
                 color = Muted, style = MaterialTheme.typography.bodySmall)
 
             LoginPanel(s, vm)
             ServerPanel(s, vm)
 
-            if (s.error && s.message != null) InfoCard(tr("Не удалось войти", "Could not sign in"), s.message, failure = true)
+            if (s.error && s.message != null) InfoCard(ui("auth.failed"), s.message, failure = true)
         }
     }
 }
@@ -76,21 +75,20 @@ import com.sperance.exileforge.ui.theme.*
             verticalAlignment = Alignment.CenterVertically) {
             Icon(ForgeGlyphs.Exile, null, tint = Gold, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(10.dp))
-            Text(tr("Войти по логину", "Sign in with a login"), modifier = Modifier.weight(1f))
+            Text(ui("auth.by_login"), modifier = Modifier.weight(1f))
             Text(if (open) "−" else "+", color = Gold, style = MaterialTheme.typography.titleMedium)
         }
         if (open) {
-            OutlinedTextField(login, { login = it }, enabled = !s.busy, label = { Text(tr("Логин", "Login")) },
+            OutlinedTextField(login, { login = it }, enabled = !s.busy, label = { Text(ui("account.login")) },
                 singleLine = true, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(password, { password = it }, enabled = !s.busy, label = { Text(tr("Пароль", "Password")) },
+            OutlinedTextField(password, { password = it }, enabled = !s.busy, label = { Text(ui("account.password")) },
                 singleLine = true, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
             Button(enabled = !s.busy && login.isNotBlank() && password.isNotEmpty(),
                 onClick = { vm.login(login, password); password = "" }, modifier = Modifier.fillMaxWidth()) {
-                Text(tr("Войти", "Sign in"))
+                Text(ui("account.sign_in"))
             }
             // The password travels as a query parameter, so this is worth saying out loud.
-            Text(tr("Пароль уходит параметром запроса — это форма маршрута сервера. Вне локальной сети нужен HTTPS.",
-                    "The password travels as a query parameter, because that is the route the server exposes. Outside a local network, use HTTPS."),
+            Text(ui("auth.password_note"),
                 color = Muted, style = MaterialTheme.typography.bodySmall)
         }
     }
@@ -105,22 +103,22 @@ import com.sperance.exileforge.ui.theme.*
             Icon(ForgeGlyphs.Portal, null, tint = Gold, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
-                Text(tr("Сервер", "Server"))
+                Text(ui("account.server"))
                 Text(s.server, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1)
             }
             Text(if (open) "−" else "+", color = Gold, style = MaterialTheme.typography.titleMedium)
         }
         if (open) {
             OutlinedTextField(s.serverDraft, vm::serverDraft, enabled = !s.busy,
-                label = { Text(tr("Адрес сервера", "Server address")) },
-                supportingText = { Text(tr("Без /api/v1: https://example.com/", "Without /api/v1: https://example.com/")) },
+                label = { Text(ui("account.server_address")) },
+                supportingText = { Text(ui("account.address_hint")) },
                 singleLine = true, modifier = Modifier.fillMaxWidth())
             Button(enabled = !s.busy, onClick = vm::connect, modifier = Modifier.fillMaxWidth()) {
-                Text(tr("Сохранить и подключиться", "Save and connect"))
+                Text(ui("account.save_connect"))
             }
             Text(s.health, color = Muted, style = MaterialTheme.typography.bodySmall)
             // The identifier is not a secret, and naming an account in a support log needs it.
-            Text(tr("Устройство: …${s.deviceId.takeLast(12)}", "Device: …${s.deviceId.takeLast(12)}"),
+            Text(ui("auth.device", s.deviceId.takeLast(12)),
                 color = Muted, style = MaterialTheme.typography.labelSmall)
         }
     }

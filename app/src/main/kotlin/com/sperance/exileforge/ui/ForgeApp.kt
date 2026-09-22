@@ -20,7 +20,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.contract.entityId
 import com.sperance.exileforge.core.display.documentTitle
-import com.sperance.exileforge.core.i18n.tr
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.AppMode
 import com.sperance.exileforge.presentation.state.AppPhase
@@ -68,15 +68,15 @@ import com.sperance.exileforge.ui.theme.*
             onDeleteRequest = { confirmDelete = true }, onDiscardRequest = { confirmDiscard = true })
     }
     if (confirmDelete) AlertDialog(onDismissRequest = { confirmDelete = false }, containerColor = Panel, titleContentColor = Gold,
-        title = { Text(tr("Удалить запись?", "Delete the record?")) },
-        text = { Text("${s.original?.let(::documentTitle)}\n${s.original?.entityId}\n" + tr("Запись будет скрыта на сервере.", "The record will be hidden on the server.")) },
-        confirmButton = { TextButton(enabled = !s.busy, onClick = { confirmDelete = false; vm.delete() }) { Text(tr("Удалить", "Delete"), color = MaterialTheme.colorScheme.error) } },
-        dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(tr("Отмена", "Cancel")) } })
+        title = { Text(ui("common.delete_record_q")) },
+        text = { Text("${s.original?.let(::documentTitle)}\n${s.original?.entityId}\n" + ui("common.delete_record_text")) },
+        confirmButton = { TextButton(enabled = !s.busy, onClick = { confirmDelete = false; vm.delete() }) { Text(ui("common.delete"), color = MaterialTheme.colorScheme.error) } },
+        dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(ui("common.cancel")) } })
     if (confirmDiscard) AlertDialog(onDismissRequest = { confirmDiscard = false }, containerColor = Panel, titleContentColor = Gold,
-        title = { Text(tr("Закрыть редактор?", "Close the editor?")) },
-        text = { Text(tr("Несохранённые изменения будут потеряны.", "Unsaved changes will be lost.")) },
-        confirmButton = { TextButton(onClick = { confirmDiscard = false; vm.closeEditor() }) { Text(tr("Закрыть", "Close")) } },
-        dismissButton = { TextButton(onClick = { confirmDiscard = false }) { Text(tr("Продолжить", "Keep editing")) } })
+        title = { Text(ui("editor.close_q")) },
+        text = { Text(ui("editor.close_text")) },
+        confirmButton = { TextButton(onClick = { confirmDiscard = false; vm.closeEditor() }) { Text(ui("common.close")) } },
+        dismissButton = { TextButton(onClick = { confirmDiscard = false }) { Text(ui("editor.keep_editing")) } })
     }
     }
 }
@@ -92,9 +92,9 @@ import com.sperance.exileforge.ui.theme.*
                 modifier = Modifier.drawBehind { drawLine(Gold.copy(alpha = .35f), Offset(0f, 0f), Offset(size.width, 0f), 2f) }) {
                 // Four destinations are the game; an administrator gets exactly one more, and
                 // everything that used to crowd the bar lives behind it as a button.
-                val labels = mapOf(TAB_HERO to tr("Герой", "Hero"), TAB_TREE to tr("Дерево", "Tree"),
-                    TAB_AUCTION to tr("Аукцион", "Auction"), TAB_ACCOUNT to tr("Аккаунт", "Account"),
-                    TAB_ADMIN to tr("Админ", "Admin"))
+                val labels = mapOf(TAB_HERO to ui("nav.hero"), TAB_TREE to ui("nav.tree"),
+                    TAB_AUCTION to ui("nav.auction"), TAB_ACCOUNT to ui("nav.account"),
+                    TAB_ADMIN to ui("nav.admin"))
                 val destinations = PLAYER_TABS + listOfNotNull(TAB_ADMIN.takeIf { s.adminTools })
                 val icons = mapOf<Int, ImageVector>(TAB_ACCOUNT to ForgeGlyphs.Portal, TAB_HERO to ForgeGlyphs.Helm,
                     TAB_TREE to ForgeGlyphs.Constellation, TAB_AUCTION to ForgeGlyphs.Orb, TAB_ADMIN to ForgeGlyphs.Scroll)
@@ -150,8 +150,8 @@ import com.sperance.exileforge.ui.theme.*
         Column(Modifier.weight(1f)) {
             Text("EXILE FORGE", style = MaterialTheme.typography.titleLarge, color = GoldBright)
             val hero = s.character
-            Text(if (hero == null) tr("АРСЕНАЛ ИЗГНАННИКА", "THE EXILE'S ARSENAL")
-                 else hero.name + (s.heroClass?.let { " · ${it.title}" } ?: "") + tr(" · ур. ${hero.level}", " · lvl ${hero.level}"),
+            Text(if (hero == null) ui("app.title")
+                 else hero.name + (s.heroClass?.let { " · ${it.title}" } ?: "") + ui("app.hero_level", hero.level),
                 style = MaterialTheme.typography.labelSmall, color = Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }

@@ -10,7 +10,7 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.contract.text
 import com.sperance.exileforge.core.display.inventoryDocument
 import com.sperance.exileforge.core.display.rarityTitle
-import com.sperance.exileforge.core.i18n.tr
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.auction.AuctionLotKind
 import com.sperance.exileforge.core.model.auction.lotKindTitle
 import com.sperance.exileforge.presentation.ForgeViewModel
@@ -37,9 +37,8 @@ import com.sperance.exileforge.ui.theme.Muted
     Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Spacer(Modifier.height(2.dp))
         if (hero == null) {
-            InfoCard(tr("Герой не загружен", "The hero is not loaded"),
-                tr("Откройте вкладку «Герой» и обновите персонажа, чтобы увидеть, что можно продать.",
-                   "Open the Hero tab and refresh the character to see what can be sold."))
+            InfoCard(ui("tree.no_hero"),
+                ui("sell.hero_first"))
             return@Column
         }
         // The stash only: an item in a slot has to come off before it can be listed.
@@ -50,32 +49,30 @@ import com.sperance.exileforge.ui.theme.Muted
         }
         val bag = hero.bag.associate { item ->
             item.itemId to ((s.orbs.firstOrNull { it.id == item.itemId }?.title(s.lang)
-                ?: (tr("Предмет", "Item") + " …${item.itemId.takeLast(6)}")) + " · ${item.amount}")
+                ?: (ui("common.item") + " …${item.itemId.takeLast(6)}")) + " · ${item.amount}")
         }
         val owned = hero.bag.firstOrNull { it.itemId == goods }?.amount ?: 0L
         ForgePanel {
-            Engraved(tr("Что продаём", "What is on sale"))
-            Spinner(tr("Вид лота", "Lot kind"), kind.name,
+            Engraved(ui("sell.what"))
+            Spinner(ui("sell.lot_kind"), kind.name,
                 AuctionLotKind.entries.associate { it.name to lotKindTitle(it, s.lang) }, !s.busy) { kind = AuctionLotKind.valueOf(it) }
             if (kind == AuctionLotKind.EQUIPMENT) {
                 // A jewel is worn too, but it comes out of a socket on the tree, not off a slot.
-                if (equipment.isEmpty()) Text(tr("Снятой экипировки нет. Надетый предмет сервер выставить не даст — сначала снимите его во вкладке «Герой», а самоцвет выньте из гнезда во вкладке «Дерево».",
-                        "No unequipped items. The server refuses to list a worn one — take it off on the Hero tab first, or a jewel out of its socket on the Tree tab."), color = Muted)
-                else Spinner(tr("Предмет", "Item"), goods, equipment, !s.busy) { goods = it }
+                if (equipment.isEmpty()) Text(ui("sell.no_equipment"), color = Muted)
+                else Spinner(ui("common.item"), goods, equipment, !s.busy) { goods = it }
             } else {
-                if (bag.isEmpty()) Text(tr("Сумка пуста", "The bag is empty"), color = Muted)
-                else Spinner(tr("Предмет из сумки", "Bag item"), goods, bag, !s.busy) { goods = it }
-                OutlinedTextField(amount, { amount = it }, label = { Text(tr("Количество, есть $owned", "Amount, $owned owned")) },
+                if (bag.isEmpty()) Text(ui("hero.bag_empty"), color = Muted)
+                else Spinner(ui("sell.bag_item"), goods, bag, !s.busy) { goods = it }
+                OutlinedTextField(amount, { amount = it }, label = { Text(ui("sell.amount_owned", owned)) },
                     singleLine = true, modifier = Modifier.fillMaxWidth())
             }
         }
         ForgePanel {
-            Engraved(tr("Цена", "Price"))
-            Spinner(tr("Сфера", "Orb"), orb, s.orbs.associate { it.id to it.title(s.lang) }, !s.busy) { orb = it }
-            OutlinedTextField(price, { price = it }, label = { Text(tr("Сколько сфер за весь лот", "Orbs for the whole lot")) },
+            Engraved(ui("card.price"))
+            Spinner(ui("orb.orb"), orb, s.orbs.associate { it.id to it.title(s.lang) }, !s.busy) { orb = it }
+            OutlinedTextField(price, { price = it }, label = { Text(ui("sell.price")) },
                 singleLine = true, modifier = Modifier.fillMaxWidth())
-            Text(tr("Цена назначается только в сферах: это единственная валюта, в которой сервер торгует.",
-                    "The price is set in orbs alone: that is the only currency the server trades in."),
+            Text(ui("sell.price_note"),
                 color = Muted, style = MaterialTheme.typography.bodySmall)
         }
         val count = amount.toLongOrNull() ?: 0L
@@ -84,9 +81,8 @@ import com.sperance.exileforge.ui.theme.Muted
             cost > 0 && (kind == AuctionLotKind.EQUIPMENT || count > 0)
         Button(enabled = ready, modifier = Modifier.fillMaxWidth(), onClick = {
             if (kind == AuctionLotKind.EQUIPMENT) vm.sellEquipment(goods, orb, cost) else vm.sellItem(goods, count, orb, cost)
-        }) { Text(tr("Выставить на аукцион", "List on the auction")) }
-        Text(tr("Пока лот на витрине, товар лежит в нём: надеть или продать его второй раз нельзя.",
-                "While the lot is on the showcase the goods live inside it: it can be neither worn nor sold twice."),
+        }) { Text(ui("sell.list")) }
+        Text(ui("sell.note"),
             color = Muted, style = MaterialTheme.typography.bodySmall)
         Spacer(Modifier.height(10.dp))
     }

@@ -21,7 +21,7 @@ import com.sperance.exileforge.core.display.documentTitle
 import com.sperance.exileforge.core.display.modifierText
 import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.display.slotTitle
-import com.sperance.exileforge.core.i18n.tr
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.modifier.ModifierDefinition
 import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.theme.*
@@ -108,7 +108,7 @@ const val ROW_PROPERTIES = 5
                         modifier = Modifier.weight(1f, fill = false))
                     note?.let { Text(it, color = noteColor, style = MaterialTheme.typography.labelSmall) }
                 }
-                (listOfNotNull(slot, level.takeIf { it.isNotBlank() }?.let { tr("ур. $it", "lvl $it") }) + facts)
+                (listOfNotNull(slot, level.takeIf { it.isNotBlank() }?.let { ui("row.level", it) }) + facts)
                     .takeIf { it.isNotEmpty() }?.let {
                         Text(it.joinToString(" · "), color = Muted, style = MaterialTheme.typography.labelSmall,
                             maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -120,7 +120,7 @@ const val ROW_PROPERTIES = 5
                 // Counted rather than dropped: "ещё 3" is the difference between a short item
                 // and one whose best roll is just off the edge.
                 (properties.size - ROW_PROPERTIES).takeIf { it > 0 }?.let {
-                    Text(tr("ещё $it", "$it more"), color = Muted, style = MaterialTheme.typography.labelSmall)
+                    Text(ui("row.more", it), color = Muted, style = MaterialTheme.typography.labelSmall)
                 }
                 // The server's verdict, in its own words — never a requirement worked out here.
                 unwearable.forEach {

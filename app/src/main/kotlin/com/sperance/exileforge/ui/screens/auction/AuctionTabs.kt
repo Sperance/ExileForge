@@ -23,7 +23,7 @@ import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.display.weaponTitle
-import com.sperance.exileforge.core.i18n.tr
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.EntitySource
 import com.sperance.exileforge.core.model.auction.*
 import com.sperance.exileforge.presentation.ForgeViewModel
@@ -60,24 +60,24 @@ import kotlinx.serialization.json.put
     LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
         item { header() }
         if (s.showcase.items.isEmpty()) item {
-            InfoCard(tr("Ничего не найдено", "Nothing found"),
-                tr("На витрине нет лотов по этому фильтру.", "No lot on the showcase matches this filter."))
+            InfoCard(ui("tree.nothing_found"),
+                ui("auction.showcase_empty"))
         }
         items(s.showcase.items, key = { it.id }) { lot ->
             // A seller cannot buy their own lot, and the server says so; the sheet does not offer it.
-            LotRow(s, lot, note = if (lot.belongsTo(s.characterId)) tr("Ваш лот", "Your lot") else null) { openLot = lot.id }
+            LotRow(s, lot, note = if (lot.belongsTo(s.characterId)) ui("auction.your_lot") else null) { openLot = lot.id }
         }
         if (s.showcase.totalPages > 1) item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                OutlinedButton(enabled = !s.busy && s.showcase.page > 0, onClick = { onPage(s.showcase.page - 1) }) { Text(tr("Назад", "Back")) }
-                Text(tr("Страница ${s.showcase.page + 1} из ${s.showcase.totalPages}", "Page ${s.showcase.page + 1} of ${s.showcase.totalPages}"), color = Muted)
-                OutlinedButton(enabled = !s.busy && s.showcase.page + 1 < s.showcase.totalPages, onClick = { onPage(s.showcase.page + 1) }) { Text(tr("Вперёд", "Next")) }
+                OutlinedButton(enabled = !s.busy && s.showcase.page > 0, onClick = { onPage(s.showcase.page - 1) }) { Text(ui("common.back")) }
+                Text(ui("auction.page", s.showcase.page + 1, s.showcase.totalPages), color = Muted)
+                OutlinedButton(enabled = !s.busy && s.showcase.page + 1 < s.showcase.totalPages, onClick = { onPage(s.showcase.page + 1) }) { Text(ui("auction.forward")) }
             }
         }
     }
     s.showcase.items.firstOrNull { it.id == openLot }?.let { lot ->
-        LotSheet(s, lot, action = tr("Купить", "Buy"), enabled = !s.busy && !lot.belongsTo(s.characterId),
-            note = if (lot.belongsTo(s.characterId)) tr("Свой лот купить нельзя", "You cannot buy your own lot") else null,
+        LotSheet(s, lot, action = ui("auction.buy"), enabled = !s.busy && !lot.belongsTo(s.characterId),
+            note = if (lot.belongsTo(s.characterId)) ui("auction.own_lot") else null,
             loadBase = loadBase, onDismiss = { openLot = null }) { openLot = null; confirmBuy = lot.id }
     }
     // A purchase cannot be undone, so it is asked about — and an item the character cannot wear
@@ -85,16 +85,14 @@ import kotlinx.serialization.json.put
     s.showcase.items.firstOrNull { it.id == confirmBuy }?.let { lot ->
         val blocked = s.hero?.sheet?.unwearableBy?.get(lot.equipment?.equipmentId.orEmpty()).orEmpty()
         ConfirmDialog(
-            title = tr("Купить лот?", "Buy the lot?"),
+            title = ui("auction.buy_q"),
             text = listOfNotNull(
-                tr("«${lot.title}» за ${orbPrice(s, lot)}. Сделку проводит сервер, отменить её нельзя.",
-                   "\"${lot.title}\" for ${orbPrice(s, lot)}. The server carries out the trade and it cannot be undone."),
+                ui("auction.buy_text", lot.title, orbPrice(s, lot)),
                 blocked.takeIf { it.isNotEmpty() }?.let {
-                    tr("Надеть этот предмет сейчас нельзя: ${it.joinToString(", ") { r -> requirementReason(r, s.lang) }}.",
-                       "This item cannot be worn right now: ${it.joinToString(", ") { r -> requirementReason(r, s.lang) }}.")
+                    ui("auction.unwearable", it.joinToString(", ") { r -> requirementReason(r, s.lang) })
                 }
             ).joinToString("\n\n"),
-            confirm = tr("Купить лот", "Buy the lot"),
+            confirm = ui("auction.buy_do"),
             onDismiss = { confirmBuy = null }) { onBuy(lot.id) }
     }
 }
@@ -108,33 +106,32 @@ import kotlinx.serialization.json.put
 @Composable private fun ShowcaseFilter(s: ForgeState, vm: ForgeViewModel) {
     var more by remember { mutableStateOf(false) }
     val f = s.auctionFilter
-    val any = tr("Все", "All")
+    val any = ui("common.all")
     ForgePanel {
-        Engraved(tr("Поиск по витрине", "Search the showcase"))
-        OutlinedTextField(f.title, { vm.auctionFilter(f.copy(title = it)) }, label = { Text(tr("Название", "Name")) },
+        Engraved(ui("auction.search"))
+        OutlinedTextField(f.title, { vm.auctionFilter(f.copy(title = it)) }, label = { Text(ui("auction.name")) },
             singleLine = true, modifier = Modifier.fillMaxWidth())
-        Spinner(tr("Что продаётся", "What is sold"), f.kind,
+        Spinner(ui("auction.what_sold"), f.kind,
             mapOf("" to any) + AuctionLotKind.entries.associate { it.name to lotKindTitle(it, s.lang) }, !s.busy) { vm.auctionFilter(f.copy(kind = it)) }
-        Spinner(tr("Цена в сфере", "Priced in"), f.priceOrbId,
+        Spinner(ui("auction.priced_in"), f.priceOrbId,
             mapOf("" to any) + s.orbs.associate { it.id to it.title(s.lang) }, !s.busy) { vm.auctionFilter(f.copy(priceOrbId = it)) }
-        OutlinedTextField(f.maxPrice, { vm.auctionFilter(f.copy(maxPrice = it)) }, label = { Text(tr("Цена не выше", "Price at most")) },
+        OutlinedTextField(f.maxPrice, { vm.auctionFilter(f.copy(maxPrice = it)) }, label = { Text(ui("auction.price_max")) },
             singleLine = true, modifier = Modifier.fillMaxWidth())
-        TextButton(onClick = { more = !more }) { Text(tr("Ещё фильтры · ${if (more) "свернуть" else "показать"}", "More filters · ${if (more) "hide" else "show"}")) }
+        TextButton(onClick = { more = !more }) { Text(ui("auction.more_filters", if (more) ui("common.hide") else ui("common.show"))) }
         if (more) {
-            Spinner(tr("Слот", "Slot"), f.slot, mapOf("" to any) + slots.associateWith { slotTitle(it, s.lang) }, !s.busy) { vm.auctionFilter(f.copy(slot = it)) }
-            Spinner(tr("Редкость", "Rarity"), f.rarity, mapOf("" to any) + rarities.associateWith { rarityTitle(it, s.lang) }, !s.busy) { vm.auctionFilter(f.copy(rarity = it)) }
-            OutlinedTextField(f.minItemLevel, { vm.auctionFilter(f.copy(minItemLevel = it)) }, label = { Text(tr("Уровень предмета от", "Item level from")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(f.maxItemLevel, { vm.auctionFilter(f.copy(maxItemLevel = it)) }, label = { Text(tr("Уровень предмета до", "Item level to")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
-            EntitySpinner(tr("Продавец", "Seller"), f.sellerId, EntitySource.CHARACTER, !s.busy) { vm.auctionFilter(f.copy(sellerId = it)) }
+            Spinner(ui("common.slot"), f.slot, mapOf("" to any) + slots.associateWith { slotTitle(it, s.lang) }, !s.busy) { vm.auctionFilter(f.copy(slot = it)) }
+            Spinner(ui("common.rarity"), f.rarity, mapOf("" to any) + rarities.associateWith { rarityTitle(it, s.lang) }, !s.busy) { vm.auctionFilter(f.copy(rarity = it)) }
+            OutlinedTextField(f.minItemLevel, { vm.auctionFilter(f.copy(minItemLevel = it)) }, label = { Text(ui("auction.ilvl_from")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(f.maxItemLevel, { vm.auctionFilter(f.copy(maxItemLevel = it)) }, label = { Text(ui("auction.ilvl_to")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            EntitySpinner(ui("auction.seller"), f.sellerId, EntitySource.CHARACTER, !s.busy) { vm.auctionFilter(f.copy(sellerId = it)) }
         }
         // Own lots cannot be bought, so they are dropped unless a seller wants to compare prices.
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text(tr("Показывать свои лоты", "Show my own lots"), modifier = Modifier.weight(1f))
+            Text(ui("auction.show_mine"), modifier = Modifier.weight(1f))
             Switch(checked = s.showOwnLots, enabled = !s.busy, onCheckedChange = { vm.showOwnLots(it); vm.loadShowcase(0) })
         }
-        Button(enabled = !s.busy, onClick = { vm.loadShowcase(0) }, modifier = Modifier.fillMaxWidth()) { Text(tr("Искать", "Search")) }
-        Text(tr("Фильтр считает сервер: все поля лежат снимком в самом лоте.",
-                "The filter is the server's: every field is a snapshot the lot carries."),
+        Button(enabled = !s.busy, onClick = { vm.loadShowcase(0) }, modifier = Modifier.fillMaxWidth()) { Text(ui("auction.do_search")) }
+        Text(ui("auction.filter_note"),
             color = Muted, style = MaterialTheme.typography.bodySmall)
     }
 }
@@ -144,14 +141,14 @@ import kotlinx.serialization.json.put
     var openLot by remember { mutableStateOf<String?>(null) }
     LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
         if (s.myLots.isEmpty()) item {
-            InfoCard(tr("Лотов нет", "No lots"), tr("Вы ещё ничего не выставляли.", "You have not listed anything yet."))
+            InfoCard(ui("auction.no_lots"), ui("auction.no_lots_hint"))
         }
         items(s.myLots, key = { it.id }) { lot ->
             LotRow(s, lot, note = if (lot.onSale) null else lotStatusTitle(lot.status, s.lang)) { openLot = lot.id }
         }
     }
     s.myLots.firstOrNull { it.id == openLot }?.let { lot ->
-        LotSheet(s, lot, action = tr("Снять с продажи", "Withdraw"), enabled = !s.busy && lot.onSale,
+        LotSheet(s, lot, action = ui("auction.withdraw"), enabled = !s.busy && lot.onSale,
             note = if (lot.onSale) null else lotStatusTitle(lot.status, s.lang),
             loadBase = vm::equipmentBase, onDismiss = { openLot = null }) { openLot = null; vm.cancelLot(lot.id) }
     }
@@ -195,10 +192,10 @@ import kotlinx.serialization.json.put
 private fun lotFacts(s: ForgeState, lot: AuctionLot, document: JsonObject): List<String> {
     val kind = if (lot.slot == null) lotKindTitle(lot.kind, s.lang) else null
     val weapon = document.text("weaponType").takeIf { it.isNotBlank() }?.let { weaponTitle(it, s.lang) }
-    val amount = if (lot.kind == AuctionLotKind.ITEM && lot.amount > 1) tr("${lot.amount} шт.", "${lot.amount} pcs") else null
+    val amount = if (lot.kind == AuctionLotKind.ITEM && lot.amount > 1) ui("auction.pieces", lot.amount) else null
     // Requirements are printed, never enforced here: the server checks them and refuses in its own words.
     val needs = itemRequirements(document, s.lang).takeIf { it.isNotEmpty() }
-        ?.let { tr("треб. ${it.joinToString(", ")}", "needs ${it.joinToString(", ")}") }
+        ?.let { ui("auction.needs", it.joinToString(", ")) }
     return listOfNotNull(kind, weapon, amount, needs)
 }
 
@@ -257,22 +254,21 @@ private fun lotDocument(s: ForgeState, lot: AuctionLot): JsonObject {
                     // The lot names the goods; the template would call an unread base "an item".
                     val document = JsonObject(inventoryDocument(instance, base) + ("name" to JsonPrimitive(lot.title)))
                     ItemCard(document, enabled = false, detailed = true, definitions = s.definitions,
-                        actionLabel = tr("Лот", "Lot") + " · ${lot.id.takeLast(6)}")
+                        actionLabel = ui("auction.lot") + " · ${lot.id.takeLast(6)}")
                 }
             }
             item {
                 ForgePanel {
-                    Engraved(tr("Лот", "Lot"))
+                    Engraved(ui("auction.lot"))
                     if (lot.equipment == null) Text(lot.title, color = Gold, style = MaterialTheme.typography.titleMedium)
-                    if (lot.kind == AuctionLotKind.ITEM) PropertyRow(tr("Количество", "Amount"), lot.amount.toString(), "item")
+                    if (lot.kind == AuctionLotKind.ITEM) PropertyRow(ui("auction.amount"), lot.amount.toString(), "item")
                     // The price is always counted in orbs; the catalogue the hero read gives the orb its name.
-                    PropertyRow(tr("Цена", "Price"), orbPrice(s, lot), "price")
-                    PropertyRow(tr("Продавец", "Seller"), lot.sellerName.ifBlank { "…${lot.sellerId.takeLast(6)}" }, "character")
-                    listedAt(lot.createdAt)?.let { PropertyRow(tr("Выставлен", "Listed"), it, "level") }
+                    PropertyRow(ui("card.price"), orbPrice(s, lot), "price")
+                    PropertyRow(ui("auction.seller"), lot.sellerName.ifBlank { "…${lot.sellerId.takeLast(6)}" }, "character")
+                    listedAt(lot.createdAt)?.let { PropertyRow(ui("auction.listed_at"), it, "level") }
                     note?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelMedium) }
                     Button(enabled = enabled, onClick = onAction, modifier = Modifier.fillMaxWidth()) { Text(action) }
-                    Text(tr("Пока лот выставлен, предмет лежит в нём, а не у продавца. Сделку целиком проводит сервер.",
-                            "While a lot is listed the goods live inside it, not with the seller. The server carries out the whole trade."),
+                    Text(ui("auction.lot_note"),
                         color = Muted, style = MaterialTheme.typography.bodySmall)
                 }
             }
@@ -300,4 +296,4 @@ private fun listedAt(stamp: String): String? {
 /** A lot's price, in the orb it was set in; an orb the catalogue misses keeps its tail as a name. */
 private fun orbPrice(s: ForgeState, lot: AuctionLot): String = "${lot.price} × " +
     (s.orbs.firstOrNull { it.id == lot.priceOrbId }?.title(s.lang)
-        ?: tr("сфера …${lot.priceOrbId.takeLast(6)}", "orb …${lot.priceOrbId.takeLast(6)}"))
+        ?: ui("auction.orb_id", lot.priceOrbId.takeLast(6)))

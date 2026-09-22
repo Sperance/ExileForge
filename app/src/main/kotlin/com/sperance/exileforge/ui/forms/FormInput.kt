@@ -8,7 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.editor.InputSpec
 import com.sperance.exileforge.core.editor.defaultObject
-import com.sperance.exileforge.core.i18n.tr
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.components.EntitySpinner
 import com.sperance.exileforge.ui.components.Spinner
 import com.sperance.exileforge.ui.theme.Gold
@@ -20,7 +20,7 @@ import kotlinx.serialization.json.*
         is InputSpec.Reference -> EntitySpinner(label, (value as? JsonPrimitive)?.content.orEmpty(), spec.source, enabled) { onChange(JsonPrimitive(it)) }
         is InputSpec.Text -> {
             if (spec.suggestions.isNotEmpty()) Spinner(label, (value as? JsonPrimitive)?.content.orEmpty(), spec.suggestions.associateWith { it }, enabled) { onChange(JsonPrimitive(it)) }
-            TextFieldInput(if (spec.suggestions.isEmpty()) label else tr("Своё значение", "Custom value"), value, enabled, onChange)
+            TextFieldInput(if (spec.suggestions.isEmpty()) label else ui("form.custom_value"), value, enabled, onChange)
         }
         is InputSpec.Number -> NumberInput(label, spec, value, enabled, onChange)
         InputSpec.Flag -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -46,10 +46,10 @@ import kotlinx.serialization.json.*
                         values.forEachIndexed { index, element ->
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 FormInput("${index + 1}", spec.element, element, enabled) { replacement -> onChange(JsonArray(values.toMutableList().apply { set(index, replacement) })) }
-                                TextButton(enabled = enabled, onClick = { onChange(JsonArray(values.filterIndexed { i, _ -> i != index })) }) { Text(tr("Удалить ${index + 1}", "Remove ${index + 1}")) }
+                                TextButton(enabled = enabled, onClick = { onChange(JsonArray(values.filterIndexed { i, _ -> i != index })) }) { Text(ui("form.remove", index + 1)) }
                             }
                         }
-                        OutlinedButton(enabled = enabled, onClick = { onChange(JsonArray(values + inputDefault(spec.element))) }) { Text(tr("Добавить", "Add")) }
+                        OutlinedButton(enabled = enabled, onClick = { onChange(JsonArray(values + inputDefault(spec.element))) }) { Text(ui("form.add")) }
                     }
                 }
             }

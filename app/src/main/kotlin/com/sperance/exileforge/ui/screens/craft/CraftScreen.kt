@@ -9,7 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.contract.entityId
 import com.sperance.exileforge.core.contract.text
-import com.sperance.exileforge.core.i18n.tr
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.EntitySource
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
@@ -34,18 +34,16 @@ import kotlinx.serialization.json.JsonObject
     // Ingredients are read off the bag, so the forge opens on a hero that is not stale.
     LaunchedEffect(s.characterId, s.sessionEpoch) { vm.ensureHero() }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        ScreenHeader(tr("Кузница", "The forge"),
-            tr("Рецепты и превращения", "Recipes and transmutations"), ForgeGlyphs.Tome)
+        ScreenHeader(ui("craft.title"),
+            ui("craft.subtitle"), ForgeGlyphs.Tome)
         if (s.hero == null) {
-            InfoCard(tr("Герой не загружен", "The hero is not loaded"),
-                tr("Откройте вкладку «Герой» — рецепты тратят то, что лежит в сумке.",
-                   "Open the Hero tab — a recipe spends what is in the bag."))
+            InfoCard(ui("tree.no_hero"),
+                ui("craft.hero_first"))
             return@Column
         }
         ForgePanel { RecipeForm(s, vm, enabled = !s.busy && s.signedIn && (s.ownsCharacter || s.isAdmin)) }
-        InfoCard(tr("Что здесь будет", "What goes here"),
-            tr("Пока кузница умеет только рецепты. Всё, что появится потом — разборка, улучшение, зачарование — встанет рядом, а не поверх.",
-               "For now the forge only knows recipes. Whatever comes later — salvage, upgrades, enchantment — will stand beside them, not on top of them."))
+        InfoCard(ui("craft.future"),
+            ui("craft.future_note"))
     }
 }
 
@@ -58,8 +56,8 @@ import kotlinx.serialization.json.JsonObject
     var ingredients by remember(recipeId, refresh) { mutableStateOf<Map<Int, String>>(emptyMap()) }
     var amount by remember(recipeId) { mutableStateOf("1") }
     val owned = s.hero?.bag.orEmpty().associate { it.itemId to it.amount }
-    Engraved(tr("Рецепты", "Recipes"))
-    EntitySpinner(tr("Рецепт", "Recipe"), recipeId, EntitySource.RECIPE, enabled && !loading) { recipeId = it }
+    Engraved(ui("craft.recipes"))
+    EntitySpinner(ui("craft.recipe"), recipeId, EntitySource.RECIPE, enabled && !loading) { recipeId = it }
     LaunchedEffect(recipeId, refresh) {
         recipe = null; failure = null
         if (recipeId.isNotBlank()) {
@@ -91,16 +89,16 @@ import kotlinx.serialization.json.JsonObject
                         matches && (owned[item.entityId] ?: 0L) > 0
                     })
                 }) {
-                    EntitySpinner(tr("Ингредиент ${index + 1} · ${row.text("amount")} за применение", "Ingredient ${index + 1} · ${row.text("amount")} per use"),
+                    EntitySpinner(ui("craft.ingredient", index + 1, row.text("amount")),
                         ingredients[index].orEmpty(), EntitySource.ITEM, enabled) { ingredients = ingredients + (index to it) }
                 }
             }
         }
-        OutlinedTextField(amount, { amount = it }, label = { Text(tr("Число применений, 1–100", "Number of uses, 1–100")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(amount, { amount = it }, label = { Text(ui("craft.uses")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
         Button(enabled = enabled && !loading && amount.toLongOrNull()?.let { it in 1L..100L } == true && inputs.indices.all { !ingredients[it].isNullOrBlank() },
-            onClick = { vm.useRecipe(recipeId, inputs.indices.map { ingredients.getValue(it) }.distinct(), amount.toLong()) }) { Text(tr("Использовать рецепт", "Use the recipe")) }
-        OutlinedButton(enabled = enabled && !loading, onClick = { refresh++ }) { Text(tr("Обновить рецепт", "Refresh the recipe")) }
+            onClick = { vm.useRecipe(recipeId, inputs.indices.map { ingredients.getValue(it) }.distinct(), amount.toLong()) }) { Text(ui("craft.use")) }
+        OutlinedButton(enabled = enabled && !loading, onClick = { refresh++ }) { Text(ui("craft.refresh")) }
         // The command re-reads the hero itself, so the bag on the Hero tab is right by the time it opens.
-        Text(tr("Ингредиенты списывает сервер.", "Ingredients are consumed by the server."), color = Muted)
+        Text(ui("craft.note"), color = Muted)
     }
 }

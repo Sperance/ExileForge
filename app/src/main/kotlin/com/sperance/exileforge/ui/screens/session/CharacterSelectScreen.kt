@@ -12,7 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.statNumber
 import com.sperance.exileforge.core.display.statTitle
-import com.sperance.exileforge.core.i18n.tr
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.CharacterSummary
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
@@ -46,12 +46,11 @@ import com.sperance.exileforge.ui.theme.*
     }
     pendingDelete?.let { doomed ->
         AlertDialog(onDismissRequest = { pendingDelete = null }, containerColor = Panel, titleContentColor = Gold,
-            title = { Text(tr("Отпустить персонажа?", "Give the character up?")) },
-            text = { Text(doomed.name + "\n" + tr("Снаряжение, дерево и лоты уйдут вместе с ним. Это не отменить.",
-                                                  "Their gear, tree and lots go with them. This cannot be undone.")) },
+            title = { Text(ui("chars.release_q")) },
+            text = { Text(doomed.name + "\n" + ui("chars.release_text")) },
             confirmButton = { TextButton(enabled = !s.busy, onClick = { vm.deleteCharacter(doomed.id); pendingDelete = null }) {
-                Text(tr("Отпустить", "Give up"), color = MaterialTheme.colorScheme.error) } },
-            dismissButton = { TextButton(onClick = { pendingDelete = null }) { Text(tr("Отмена", "Cancel")) } })
+                Text(ui("chars.release_do"), color = MaterialTheme.colorScheme.error) } },
+            dismissButton = { TextButton(onClick = { pendingDelete = null }) { Text(ui("common.cancel")) } })
     }
 }
 
@@ -65,8 +64,8 @@ import com.sperance.exileforge.ui.theme.*
     onCreate: () -> Unit = {}, onRefresh: () -> Unit = {}, onLogout: () -> Unit = {}) {
     LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
-            ScreenHeader(tr("Кем играем", "Who are we playing"),
-                tr("Слотов свободно: ${s.characterSlotsLeft} из $MAX_CHARACTERS", "${s.characterSlotsLeft} of $MAX_CHARACTERS slots free"),
+            ScreenHeader(ui("chars.title"),
+                ui("chars.slots", s.characterSlotsLeft, MAX_CHARACTERS),
                 ForgeGlyphs.Exile)
         }
         items(s.characters, key = { it.id }) { character ->
@@ -74,22 +73,21 @@ import com.sperance.exileforge.ui.theme.*
         }
         item {
             Button(enabled = !s.busy && s.characterSlotsLeft > 0, onClick = onCreate, modifier = Modifier.fillMaxWidth()) {
-                Text(tr("Создать персонажа", "Create a character"))
+                Text(ui("editor.create_character"))
             }
             if (s.characterSlotsLeft == 0) Text(
-                tr("Все слоты заняты. Освободить можно, только отпустив персонажа.",
-                   "Every slot is taken. One is freed only by giving a character up."),
+                ui("chars.slots_full"),
                 color = Muted, style = MaterialTheme.typography.bodySmall)
         }
         item {
             OutlinedButton(enabled = !s.busy, onClick = onRefresh, modifier = Modifier.fillMaxWidth()) {
-                Text(tr("Обновить список", "Refresh the list"))
+                Text(ui("chars.refresh"))
             }
         }
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(s.accountTitle, color = Muted, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
-                TextButton(enabled = !s.busy, onClick = onLogout) { Text(tr("Выйти из аккаунта", "Sign out")) }
+                TextButton(enabled = !s.busy, onClick = onLogout) { Text(ui("chars.sign_out")) }
             }
         }
     }
@@ -98,7 +96,7 @@ import com.sperance.exileforge.ui.theme.*
 /** The creation form on its own page: there is nothing to choose between while it is open. */
 @Composable private fun ColumnScope.CreatingColumn(s: ForgeState, vm: ForgeViewModel, onBack: () -> Unit, onSignOut: () -> Unit) {
     LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item { ScreenHeader(tr("Новый изгнанник", "A new exile"), tr("Имя и класс", "A name and a class"), ForgeGlyphs.Exile) }
+        item { ScreenHeader(ui("chars.new"), ui("chars.name_and_class"), ForgeGlyphs.Exile) }
         item { CreateCharacterPanel(s, vm, canGoBack = s.characters.isNotEmpty(), onBack = onBack, onSignOut = onSignOut) }
     }
 }
@@ -108,11 +106,11 @@ import com.sperance.exileforge.ui.theme.*
     val characterClass = s.classes.firstOrNull { it.id == character.classId }
     ForgePanel(modifier = Modifier.clickable(enabled = !s.busy, onClick = onPlay)) {
         Text(character.name, color = GoldBright, style = MaterialTheme.typography.titleMedium)
-        PropertyRow(tr("Класс", "Class"), characterClass?.title ?: tr("неизвестен", "unknown"), "character")
-        PropertyRow(tr("Уровень", "Level"), character.level.toString(), "level")
+        PropertyRow(ui("common.class"), characterClass?.title ?: ui("chars.unknown"), "character")
+        PropertyRow(ui("common.level"), character.level.toString(), "level")
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(enabled = !s.busy, onClick = onPlay, modifier = Modifier.weight(1f)) { Text(tr("Играть", "Play")) }
-            OutlinedButton(enabled = !s.busy, onClick = onDelete) { Text(tr("Отпустить", "Give up"), color = MaterialTheme.colorScheme.error) }
+            Button(enabled = !s.busy, onClick = onPlay, modifier = Modifier.weight(1f)) { Text(ui("auth.play")) }
+            OutlinedButton(enabled = !s.busy, onClick = onDelete) { Text(ui("chars.release_do"), color = MaterialTheme.colorScheme.error) }
         }
     }
 }
@@ -129,34 +127,32 @@ import com.sperance.exileforge.ui.theme.*
     var classId by rememberSaveable(s.classes.size) { mutableStateOf(s.classes.firstOrNull()?.id.orEmpty()) }
     val chosen = s.classes.firstOrNull { it.id == classId }
     ForgePanel {
-        OutlinedTextField(name, { name = it }, enabled = !s.busy, label = { Text(tr("Имя", "Name")) },
-            supportingText = { Text(tr("Имя уникально на всём сервере", "The name is unique across the server")) },
+        OutlinedTextField(name, { name = it }, enabled = !s.busy, label = { Text(ui("common.name")) },
+            supportingText = { Text(ui("chars.name_unique")) },
             singleLine = true, modifier = Modifier.fillMaxWidth())
-        if (s.classes.isEmpty()) Text(tr("Сервер не вернул ни одного класса — персонажа создать нельзя.",
-                                         "The server served no classes — a character cannot be created."),
+        if (s.classes.isEmpty()) Text(ui("editor.no_classes"),
             color = MaterialTheme.colorScheme.error)
-        else Spinner(tr("Класс", "Class"), classId, s.classes.associate { it.id to it.title }, !s.busy) { classId = it }
+        else Spinner(ui("common.class"), classId, s.classes.associate { it.id to it.title }, !s.busy) { classId = it }
         chosen?.let { option ->
             if (option.details.isNotBlank()) Text(option.details, color = Muted, style = MaterialTheme.typography.bodySmall)
-            Text(tr("База 1 уровня: ", "Level 1 base: ") + option.baseStats.joinToString(" · ") {
+            Text(ui("editor.level1_base") + option.baseStats.joinToString(" · ") {
                 "${statTitle(it.stat, s.lang)} ${statNumber(it.stat, it.value)}" },
                 color = Muted, style = MaterialTheme.typography.bodySmall)
         }
         Button(enabled = !s.busy && name.isNotBlank() && classId.isNotBlank(),
             onClick = { vm.createCharacter(name, classId) }, modifier = Modifier.fillMaxWidth()) {
-            Text(tr("В изгнание", "Into exile"))
+            Text(ui("chars.create"))
         }
-        Text(tr("Класс выбирается один раз: он задаёт характеристики и корень дерева, и сменить его сервер не даст.",
-                "The class is chosen once: it sets the stats and the root of the tree, and the server will not move it."),
+        Text(ui("chars.class_note"),
             color = Muted, style = MaterialTheme.typography.bodySmall)
         if (canGoBack) TextButton(enabled = !s.busy, onClick = onBack, modifier = Modifier.fillMaxWidth()) {
-            Text(tr("Назад к списку", "Back to the list"))
+            Text(ui("chars.back"))
         }
         // An account with no characters has no list to go back to, and a device registration is
         // silent — so without this the first screen a new player sees is also the only one, with
         // no way to sign in as someone who already has an exile.
         TextButton(enabled = !s.busy, onClick = onSignOut, modifier = Modifier.fillMaxWidth()) {
-            Text(tr("Войти под другим аккаунтом", "Sign in as somebody else"))
+            Text(ui("chars.other_account"))
         }
     }
 }

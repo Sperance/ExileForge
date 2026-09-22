@@ -4,9 +4,9 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.3.0, `versionCode` 16) for the
-**ktor-bestgame** RPG server (0.17.0), pinned in
-`core/.../contract/Contract.kt` as `SERVER_COMMIT = eeb9e37ae69882fbf6d058a56e5d17bbaef85f62`
+ExileForge is an **Android Compose client** (version 2.4.0, `versionCode` 17) for the
+**ktor-bestgame** RPG server (0.18.0), pinned in
+`core/.../contract/Contract.kt` as `SERVER_COMMIT = 6026b1a709fb6a50609332e8414cae948c8082ed`
 on the server branch `claude/tender-pasteur-a36kj2`.
 
 The client is deliberately **thin**: the server owns items, stats, modifier rolls and inventory.
@@ -19,15 +19,23 @@ change, in this repository and in `ktor-bestgame`, whether or not the task menti
 
 1. **Anything with a name is born translated.** Adding an item, a piece of equipment, a class, a
    currency orb, a tree node, a modifier, an enum value or an error code means adding its strings
-   to **every** language the server currently serves — today `ru` and `en`, and whatever
-   `locale/index.json` lists tomorrow. A code without a name in all of them is an unfinished
-   change, not a change with a follow-up. The keys are `<section>.<CODE>.<field>` exactly as
-   `core/i18n/LocaleKey` and the server's own `LocaleKey` build them, so never hand-write one.
-   The server's `LocalizationTest` is what catches a miss: it checks that every dictionary covers
-   every key the code asks for, that the languages hold identical key sets, that no string is
-   empty, and that a placeholder never disappears in translation. Run it before calling such a
-   change done. Client-side labels are the other half of the same rule: a user-facing literal is
-   always `tr("русский", "English")`, never one language alone.
+   to **every** language `locale/index.json` lists — today `ru`, `en` and `zh`, and whatever it
+   lists tomorrow. A code without a name in all of them is an unfinished change, not a change with
+   a follow-up. The keys are `<section>.<CODE>.<field>` exactly as `core/i18n/LocaleKey` and the
+   server's own `LocaleKey` build them, so never hand-write one. The server's `LocalizationTest`
+   is what catches a miss: it checks that every dictionary covers every key the code asks for,
+   that the languages hold identical key sets, that no string is empty, and that a placeholder
+   never disappears in translation. Run it before calling such a change done.
+
+   Client-side labels are the other half of the same rule, and they work the same way. A
+   user-facing string is never written in the source: it is a key in
+   `core/src/main/resources/i18n/ui_{ru,en,zh}.json`, read with `ui("screen.thing")`, and the
+   three files must hold identical key sets. `:core`'s `UiStringsTest` enforces that, refuses an
+   empty string, refuses a lost `{0}`, walks every enum the client names codes from, and reads
+   the sources to fail on a `ui(...)` key that is in no dictionary. Adding a language means a
+   `Lang` entry, three-language coverage of a fourth file, and the server serving it — the picker
+   is built from the server's manifest, because an interface in a language the server cannot name
+   items in is half a translation.
 
 2. **Every finished change ends with a changelog entry and a version.** Once the checks have
    passed and the branches are pushed, write what changed into `CHANGELOG.md` — a new entry at
@@ -59,12 +67,13 @@ core/                                   Pure JVM library (java-library + kotlin-
                  skilltree/SkillTree.kt CharacterSkillNode, SkillTreeNode, SkillTreeState, reachableFrom
                  auction/Auction.kt     AuctionLot, AuctionFilter, AuctionPage, lot kinds and states
                  character/CharacterStats.kt  The server's stat enum names
-  i18n/          Loc.kt                 Lang (RU/EN), `tr(ru, en)` and the global `uiLanguage`
+  i18n/          Loc.kt                 Lang (RU/EN/ZH), `ui(key)`/`uiOr`/`plural`, the global `uiLanguage`
                  ServerLocale.kt        LocaleManifest/LocaleBundle/LocaleKey, the global `serverLocale`, loc/locOr/locError
   editor/        EditorSchema.kt        Declarative form schemas (FormField/InputSpec) used by the editor
-  display/       ItemPresentation.kt    Display-only projections and bilingual titles
+  display/       ItemPresentation.kt    Display-only projections and code-to-title tables
                  ServerIcons.kt         IconManifest/IconBundle/IconKey, the global `serverIcons`
   verification/  CrudScenario.kt        Admin-only self-check run from the Checks screen
+  src/main/resources/i18n/              ui_{ru,en,zh}.json — every label the client wrote itself
 app/                                    Android application (minSdk 26, compile/target SDK 37)
   MainActivity.kt, ForgeApplication.kt  Entry points; Application owns RequestJournal + ServerStore
   presentation/  ForgeRuntime.kt        Shared coroutine scope, GameApi instance, MutableStateFlow<ForgeState>, locale + device sign-in
@@ -284,7 +293,7 @@ These are enforced by tests and are the point of the client's design:
 18. **The server owns every name; the client owns its own labels.** Since 0.14.0 no document
     carries text: equipment, items, modifiers, tree nodes and classes store a `code`, and the
     strings are static files — `locale/index.json` (languages with a hash each) and
-    `locale/{ru,en}.json`, keyed `<section>.<CODE>.<field>` exactly as `core/i18n/LocaleKey`
+    `locale/{ru,en,zh}.json`, keyed `<section>.<CODE>.<field>` exactly as `core/i18n/LocaleKey`
     builds it. Both sides must compute the same key, so never hand-write one. The bundle is
     global (`serverLocale`), loaded by `ForgeRuntime.loadLocale` per server and language and
     stored by hash in `ServerStore`; a missing key returns itself so a hole is visible. A
@@ -293,7 +302,13 @@ These are enforced by tests and are the point of the client's design:
     them through the bundle before substituting. The bundle also has an `enum.` section, but the
     client keeps its own tables (`slotTitle`, `rarityTitle`, `statTitle`, `CurrencyOrb`): they
     take an explicit language, while the dictionary answers in whichever one is loaded — and
-    exactly one is loaded. A name is shown in the chosen language and in no other; the English
+    exactly one is loaded. Since 2.4.0 those tables are not two-argument enums either: they are
+    keys in the client's own dictionary, `core/src/main/resources/i18n/ui_{ru,en,zh}.json`, read
+    with `ui(lang, key)`. That is the whole of the client's half — one mechanism, keyed the same
+    way as the server's, and shipped in the jar so a label exists before any server has answered.
+    Which languages may be picked is still the server's to say: the picker is built from
+    `locale/index.json`, so a language the server cannot name items in is never offered.
+    A name is shown in the chosen language and in no other; the English
     twin the showcase briefly carried is gone, and so is the second bundle that fed it. Switching
     language is still cheap because `ServerStore` keeps a bundle per server *and* language, so the
     other one is usually already on disk. A refusal is translated by filling the client's own
@@ -331,15 +346,19 @@ These are enforced by tests and are the point of the client's design:
 
 ## Conventions
 
-- **Language split:** code, comments, commit messages and test names are English; every
-  user-facing string (including `require`/`check` messages, which surface in snackbars) is
-  **bilingual**: write it as `tr("русский текст", "English text")` from `core/i18n/Loc.kt`.
-  `tr` reads the global `uiLanguage`, which defaults to **RU**, so tests that assert Russian
-  keep passing. Compose refreshes because `ForgeApp` keys the whole tree on `s.lang`; helpers
-  that take an explicit language (`slotTitle`, `rarityTitle`, `weaponTitle`, `statTitle`,
-  `Catalog.title`) default to `uiLanguage`. Never add a user-facing literal in one language only.
-  The **name of a thing in the game** is not a client string: it comes from `serverLocale` through
-  `loc`/`locOr` (rule 18), so never write `tr` for one.
+- **Language split:** code, comments, commit messages and test names are English; **no
+  user-facing string is written in the source at all** — including `require`/`check` messages,
+  which surface in snackbars. It is a key in `core/src/main/resources/i18n/ui_{ru,en,zh}.json`,
+  read with `ui("screen.thing")` from `core/i18n/Loc.kt`. `ui` reads the global `uiLanguage`,
+  which defaults to **RU** in `:core`, so tests that assert Russian keep passing; `:app` sets it
+  from the store, or from the device's own language on a first run. Compose refreshes because
+  `ForgeApp` keys the whole tree on `s.lang`. Helpers that need an explicit language
+  (`slotTitle`, `rarityTitle`, `weaponTitle`, `statTitle`, `nodeTypeTitle`, `Catalog.title`,
+  `CurrencyOrb.title`) take one and pass it to `ui(lang, key)`; `uiOr` gives a fallback where a
+  code the client cannot know might arrive. A sentence with a number in it is a template with
+  `{0}`, never a label with a value appended — word order differs, and in Chinese it differs
+  most; a counted noun goes through `plural(key, n)`. The **name of a thing in the game** is not
+  a client string at all: it comes from `serverLocale` through `loc`/`locOr` (rule 18).
 - **Style:** dense, low-ceremony Kotlin — one-line bodies, `when` expression tables, few
   comments. Comments exist only where a rule is non-obvious (who rolls, what is display-only,
   why a POST carries an empty body). Match the surrounding density instead of expanding it.

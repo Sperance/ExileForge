@@ -1,7 +1,7 @@
 package com.sperance.exileforge.core.model.auction
 
 import com.sperance.exileforge.core.i18n.Lang
-import com.sperance.exileforge.core.i18n.pick
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.LocaleKey
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.uiLanguage
@@ -116,14 +116,7 @@ import kotlinx.serialization.Serializable
 )
 
 /** Title of a lot kind. */
-fun lotKindTitle(kind: AuctionLotKind, lang: Lang = uiLanguage): String = when (kind) {
-    AuctionLotKind.EQUIPMENT -> lang.pick("Экипировка", "Equipment")
-    AuctionLotKind.ITEM -> lang.pick("Предметы", "Items")
-}
+fun lotKindTitle(kind: AuctionLotKind, lang: Lang = uiLanguage): String = ui(lang, "enum.lot.${kind.name}")
 
 /** Title of a lot's state. */
-fun lotStatusTitle(status: AuctionLotStatus, lang: Lang = uiLanguage): String = when (status) {
-    AuctionLotStatus.ACTIVE -> lang.pick("На продаже", "On sale")
-    AuctionLotStatus.SOLD -> lang.pick("Продан", "Sold")
-    AuctionLotStatus.CANCELLED -> lang.pick("Снят", "Withdrawn")
-}
+fun lotStatusTitle(status: AuctionLotStatus, lang: Lang = uiLanguage): String = ui(lang, "enum.lot_status.${status.name}")

@@ -1,7 +1,7 @@
 package com.sperance.exileforge.presentation.features
 
 import com.sperance.exileforge.core.contract.WireJson
-import com.sperance.exileforge.core.i18n.tr
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.Catalog
 import com.sperance.exileforge.core.model.CatalogFilter
 import com.sperance.exileforge.presentation.ForgeRuntime
@@ -32,16 +32,16 @@ class CatalogViewModel(private val runtime: ForgeRuntime) {
     } } }
 
     fun refresh(page: Int = state.value.page) { with(runtime) {
-        task { if (state.value.signedIn) loadPage(page) else mutable.update { it.copy(tab = 3, message = tr("Войдите в аккаунт", "Sign in to your account")) } }
+        task { if (state.value.signedIn) loadPage(page) else mutable.update { it.copy(tab = 3, message = ui("catalog.sign_in")) } }
     } }
 
     fun count() { with(runtime) { task {
         val result = api.count(state.value.catalog)
-        mutable.update { it.copy(message = tr("Количество: $result", "Count: $result")) }
+        mutable.update { it.copy(message = ui("catalog.count", result)) }
     } } }
 
     fun open(id: String) { with(runtime) { task {
-        val document = api.get(state.value.catalog, id) ?: error(tr("Предмет не найден", "The item was not found"))
+        val document = api.get(state.value.catalog, id) ?: error(ui("catalog.not_found"))
         ensureDefinitions()
         setEditor(document, document)
     } } }

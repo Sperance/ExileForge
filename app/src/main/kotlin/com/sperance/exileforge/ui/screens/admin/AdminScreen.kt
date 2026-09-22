@@ -7,7 +7,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.sperance.exileforge.core.i18n.tr
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.AppMode
 import com.sperance.exileforge.presentation.state.ForgeState
@@ -31,22 +31,21 @@ import com.sperance.exileforge.ui.theme.Muted
 @Composable fun AdminScreen(s: ForgeState, vm: ForgeViewModel) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        ScreenHeader(tr("Администратор", "Administrator"),
-            tr("Инструменты, которых у игрока нет", "Tools a player does not have"), ForgeGlyphs.Scroll)
+        ScreenHeader(ui("account.administrator"),
+            ui("admin.subtitle"), ForgeGlyphs.Scroll)
 
         ForgePanel {
-            Engraved(tr("Экраны", "Screens"))
+            Engraved(ui("admin.screens"))
             OutlinedButton(enabled = !s.busy, onClick = { vm.tab(TAB_CATALOG) }, modifier = Modifier.fillMaxWidth()) {
-                Text(tr("Каталог", "Catalogue"))
+                Text(ui("admin.catalog"))
             }
             OutlinedButton(enabled = !s.busy, onClick = { vm.tab(TAB_EDITOR) }, modifier = Modifier.fillMaxWidth()) {
-                Text(tr("Редактор", "Editor"))
+                Text(ui("editor.editor"))
             }
             OutlinedButton(enabled = !s.busy, onClick = { vm.tab(TAB_CHECKS) }, modifier = Modifier.fillMaxWidth()) {
-                Text(tr("Проверки", "Checks"))
+                Text(ui("admin.checks"))
             }
-            Text(tr("Нижняя панель остаётся игровой: эти экраны открываются отсюда и закрываются ею же.",
-                    "The bottom bar stays the game's: these open from here and the bar is the way back."),
+            Text(ui("admin.screens_note"),
                 color = Muted, style = MaterialTheme.typography.bodySmall)
         }
 
@@ -55,20 +54,19 @@ import com.sperance.exileforge.ui.theme.Muted
         AdminGrantPanel(s, vm)
 
         ForgePanel {
-            Engraved(tr("Режим", "Mode"))
-            Text(if (s.adminTools) tr("Сейчас видно всё, включая эту вкладку.", "Everything is visible, this tab included.")
-                 else tr("Сейчас приложение выглядит так, как его видит игрок.", "The app looks the way a player sees it."),
+            Engraved(ui("admin.mode"))
+            Text(if (s.adminTools) ui("admin.mode_all")
+                 else ui("admin.mode_player"),
                 color = Muted, style = MaterialTheme.typography.bodySmall)
             // Leaving admin mode hides this very tab, so the switch says where it lands you: the
             // way back is the same switch on the Account tab, and nothing else can turn it on.
             OutlinedButton(enabled = !s.busy, modifier = Modifier.fillMaxWidth(),
                 onClick = { vm.mode(if (s.adminTools) AppMode.PLAYER else AppMode.ADMIN) }) {
-                Text(if (s.adminTools) tr("Смотреть как игрок", "Look at it as a player")
-                     else tr("Вернуть инструменты", "Bring the tools back"))
+                Text(if (s.adminTools) ui("admin.as_player")
+                     else ui("account.tools_back"))
             }
             if (s.adminTools) Text(
-                tr("Вкладка исчезнет из панели — вернуть её можно во вкладке «Аккаунт».",
-                   "The tab will leave the bar — the Account tab brings it back."),
+                ui("admin.as_player_note"),
                 color = Muted, style = MaterialTheme.typography.bodySmall)
         }
     }

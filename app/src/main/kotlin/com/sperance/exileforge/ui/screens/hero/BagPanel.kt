@@ -2,7 +2,7 @@ package com.sperance.exileforge.ui.screens.hero
 
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
-import com.sperance.exileforge.core.i18n.tr
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.theme.Muted
@@ -17,12 +17,12 @@ import com.sperance.exileforge.ui.theme.Muted
 @Composable fun BagPanel(s: ForgeState) {
     val hero = s.hero ?: return
     var expanded by remember(s.characterId) { mutableStateOf(false) }
-    ExpandableSection(tr("Сумка", "Bag"), hero.bag.size, expanded, { expanded = !expanded }) {
-        if (hero.bag.isEmpty()) Text(tr("Сумка пуста", "The bag is empty"), color = Muted)
+    ExpandableSection(ui("hero.bag"), hero.bag.size, expanded, { expanded = !expanded }) {
+        if (hero.bag.isEmpty()) Text(ui("hero.bag_empty"), color = Muted)
         // Currency is named from the catalogue the hero screen already read; anything else is an id.
         hero.bag.forEach { item ->
             val orb = s.orbs.firstOrNull { it.id == item.itemId }
-            PropertyRow(orb?.title(s.lang) ?: (tr("Предмет", "Item") + " …${item.itemId.takeLast(6)}"), item.amount.toString(), "item")
+            PropertyRow(orb?.title(s.lang) ?: (ui("common.item") + " …${item.itemId.takeLast(6)}"), item.amount.toString(), "item")
         }
     }
 }

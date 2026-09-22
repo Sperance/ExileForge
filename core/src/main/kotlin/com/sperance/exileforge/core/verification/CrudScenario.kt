@@ -1,7 +1,7 @@
 package com.sperance.exileforge.core.verification
 
 import com.sperance.exileforge.core.contract.*
-import com.sperance.exileforge.core.i18n.tr
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.Catalog
 import com.sperance.exileforge.core.network.ItemRepository
 import kotlinx.coroutines.CancellationException
@@ -12,7 +12,7 @@ import kotlinx.serialization.json.*
 /** Only a confirmed server-generated ID belongs to this run; cleanup removes exactly that record. */
 class CrudScenario(private val repository: ItemRepository, private val modifierId: String = "") {
     suspend fun run(catalog: Catalog, report: (CheckResult) -> Unit) {
-        require(catalog != Catalog.CHARACTERS) { tr("CRUD-сценарий предназначен для предметов", "The CRUD scenario is meant for items") }
+        require(catalog != Catalog.CHARACTERS) { ui("checks.items_only") }
         // A code, not a name: content has no text of its own since 0.14.0.
         val code = "EF_TEST_" + java.util.UUID.randomUUID().toString().replace("-", "_").uppercase()
         var owned: JsonObject? = null
@@ -20,15 +20,15 @@ class CrudScenario(private val repository: ItemRepository, private val modifierI
             val initial = JsonObject(template(catalog) + ("code" to JsonPrimitive(code)))
             owned = repository.create(catalog, initial)
             val id = owned.entityId
-            report(CheckResult(tr("Создание", "Create"), true, id))
+            report(CheckResult(ui("crud.create"), true, id))
             check(repository.get(catalog, id)?.text("code") == code)
-            report(CheckResult(tr("Получение по ID", "Get by id"), true, id))
+            report(CheckResult(ui("crud.get_by_id"), true, id))
             suspend fun update(changes: JsonObject, label: String) {
                 owned = repository.update(catalog, id, changes)
-                val loaded = repository.get(catalog, id) ?: error(tr("Запись исчезла", "The record disappeared"))
+                val loaded = repository.get(catalog, id) ?: error(ui("crud.vanished"))
                 // Items and equipment are StockEntity on this server: they carry no version at all.
                 check(changes.all { (key, value) -> loaded[key] == value })
-                report(CheckResult(label, true, tr("Свойства подтверждены чтением", "Fields confirmed by a read")))
+                report(CheckResult(label, true, ui("crud.fields_confirmed")))
             }
             // The two catalogues share no editable field at all, so each writes its most inert one:
             // a price changes nothing about an item, and a required level is only ever printed.
@@ -37,25 +37,25 @@ class CrudScenario(private val repository: ItemRepository, private val modifierI
             update(when (catalog) {
                 Catalog.ITEMS -> buildJsonObject { put("price", 7L) }
                 else -> buildJsonObject { put("requiredLevel", 7) }
-            }, tr("Изменение + GET", "Update + GET"))
+            }, ui("crud.update"))
             if (catalog == Catalog.EQUIPMENT && modifierId.isNotBlank()) {
-                update(buildJsonObject { put("modifierIds", buildJsonArray { add(modifierId) }) }, tr("Пул модификаторов + GET", "Modifier pool + GET"))
-                update(buildJsonObject { put("modifierIds", JsonArray(emptyList())) }, tr("Очистка пула + GET", "Pool cleared + GET"))
+                update(buildJsonObject { put("modifierIds", buildJsonArray { add(modifierId) }) }, ui("crud.pool"))
+                update(buildJsonObject { put("modifierIds", JsonArray(emptyList())) }, ui("crud.pool_cleared"))
             }
             repository.delete(catalog, id)
             owned = null
             check(repository.get(catalog, id) == null)
-            report(CheckResult(tr("Удаление + GET", "Delete + GET"), true, tr("Запись недоступна", "The record is gone")))
+            report(CheckResult(ui("crud.delete"), true, ui("crud.gone")))
         } catch (e: CancellationException) { throw e }
         catch (e: Exception) {
-            report(CheckResult(tr("Сценарий остановлен", "Scenario stopped"), false, e.message.orEmpty() + if (owned == null) tr(". При потере ответа POST проверьте вручную запись $code; повторное создание автоматически не выполняется.", ". If the POST response was lost, check record $code by hand; it is never re-created automatically.") else ""))
+            report(CheckResult(ui("crud.stopped"), false, e.message.orEmpty() + if (owned == null) ui("crud.lost_post", code) else ""))
         } finally {
             owned?.let { document -> withContext(NonCancellable) {
                 try {
                     repository.delete(catalog, document.entityId)
                     check(repository.get(catalog, document.entityId) == null)
-                    report(CheckResult(tr("Очистка", "Cleanup"), true, tr("Тестовая запись удалена", "The test record was deleted")))
-                } catch (e: Exception) { report(CheckResult(tr("Очистка не подтверждена", "Cleanup not confirmed"), false, tr("Проверьте ${document.entityId}: ${e.message}", "Check ${document.entityId}: ${e.message}"))) }
+                    report(CheckResult(ui("crud.cleanup"), true, ui("crud.cleanup_done")))
+                } catch (e: Exception) { report(CheckResult(ui("crud.cleanup_failed"), false, ui("crud.check", document.entityId, e.message))) }
             } }
         }
     }

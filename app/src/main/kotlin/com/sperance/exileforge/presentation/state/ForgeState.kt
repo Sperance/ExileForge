@@ -1,7 +1,7 @@
 package com.sperance.exileforge.presentation.state
 
 import com.sperance.exileforge.core.i18n.Lang
-import com.sperance.exileforge.core.i18n.tr
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.model.Catalog
 import com.sperance.exileforge.core.model.CatalogFilter
@@ -127,7 +127,7 @@ data class ForgeState(
     val iconKeys: Int = 0, val iconSprites: Int = 0,
 
     val checks: List<CheckResult> = emptyList(),
-    val health: String = tr("Соединение ещё не проверено", "The connection has not been checked yet"),
+    val health: String = ui("runtime.not_checked"),
 ) {
     val isAdmin: Boolean get() = signedIn && profile?.role == "ADMIN"
     /**
@@ -143,7 +143,7 @@ data class ForgeState(
     /** An account nobody named: a device registration leaves `name` and `login` empty. */
     val accountTitle: String get() = profile?.name?.takeIf { it.isNotBlank() }
         ?: profile?.login?.takeIf { it.isNotBlank() }
-        ?: tr("Гость", "Guest") + " · …${deviceId.takeLast(6)}"
+        ?: ui("session.guest") + " · …${deviceId.takeLast(6)}"
     /** Lots the character may act on: the showcase hides their own unless asked not to. */
     val ownLots: List<AuctionLot> get() = myLots.filter { it.onSale }
     /** The class the shown hero belongs to; the server owns the base it hands out. */

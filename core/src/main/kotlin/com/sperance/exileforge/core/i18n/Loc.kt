@@ -72,6 +72,14 @@ fun ui(lang: Lang, key: String, vararg args: Any?): String =
     }
 
 /**
+ * A label, or a fallback when the table has no such key.
+ *
+ * Used where a key the client cannot know might be asked for: a stat or a slot the server added
+ * since this build, which is better shown as a humanised code than as `enum.slot.FOO`.
+ */
+fun uiOr(lang: Lang, key: String, fallback: String): String = UiStrings.table(lang)[key] ?: fallback
+
+/**
  * The key of a counted noun.
  *
  * Russian counts its nouns in three forms, English in two and Chinese in none, so the rule belongs
@@ -90,14 +98,3 @@ fun pluralKey(key: String, n: Int, lang: Lang = uiLanguage): String = when (lang
 
 /** A counted noun in the current language: `plural("tree.node", 3)`. */
 fun plural(key: String, n: Int, lang: Lang = uiLanguage): String = ui(lang, pluralKey(key, n, lang))
-
-/**
- * The two-language pair the client used before the tables existed.
- *
- * Every call site moves to [ui] in the same change set; until the last one does, these keep the
- * app building. Chinese falls back to English here rather than to Russian, because English is the
- * manifest's default and the nearer of the two for a reader who has neither.
- */
-fun Lang.pick(ru: String, en: String): String = if (this == Lang.RU) ru else en
-
-fun tr(ru: String, en: String): String = uiLanguage.pick(ru, en)

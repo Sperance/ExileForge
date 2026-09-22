@@ -14,7 +14,7 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.contract.text
 import com.sperance.exileforge.core.display.inventoryDocument
 import com.sperance.exileforge.core.display.slotTitle
-import com.sperance.exileforge.core.i18n.tr
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.TAB_CRAFT
@@ -39,33 +39,33 @@ import com.sperance.exileforge.ui.theme.*
     PullToRefreshBox(isRefreshing = s.busy, onRefresh = vm::loadHero, modifier = Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
-                ScreenHeader(tr("Арсенал героя", "Hero's arsenal"),
-                    tr("Предметов в инвентаре: ${stash.size}", "${stash.size} items in the inventory"), ForgeGlyphs.Stash)
+                ScreenHeader(ui("hero.title"),
+                    ui("hero.inventory_count", stash.size), ForgeGlyphs.Stash)
             }
             // The character is the one chosen in the menu; no screen below the gate picks another.
             item { HeroEquipmentPanel(s, vm::unequip) }
             item {
                 OutlinedButton(enabled = !s.busy, onClick = { vm.tab(TAB_CRAFT) }, modifier = Modifier.fillMaxWidth()) {
                     Icon(ForgeGlyphs.Tome, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp))
-                    Text(tr("Крафт", "Crafting"))
+                    Text(ui("nav.craft"))
                 }
             }
             item { BagPanel(s) }
-            item { SectionHeader(tr("Арсенал", "Stash"), stash.size, stashOpen) { stashOpen = !stashOpen } }
+            item { SectionHeader(ui("hero.stash"), stash.size, stashOpen) { stashOpen = !stashOpen } }
             if (stashOpen) {
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(query, { query = it }, label = { Text(tr("Найти предмет в арсенале", "Find an item in the stash")) },
+                        OutlinedTextField(query, { query = it }, label = { Text(ui("hero.find_item")) },
                             leadingIcon = { Icon(Icons.Outlined.Search, null) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            item { FilterChip(selected = slot.isBlank(), onClick = { slot = "" }, label = { Text(tr("Все", "All")) }) }
+                            item { FilterChip(selected = slot.isBlank(), onClick = { slot = "" }, label = { Text(ui("common.all")) }) }
                             items(slots) { key -> FilterChip(selected = slot == key, onClick = { slot = key }, label = { Text(slotTitle(key, s.lang)) }) }
                         }
                     }
                 }
                 if (visible.isEmpty()) item {
-                    InfoCard(if (s.hero == null) tr("Арсенал ещё не загружен", "The stash is not loaded yet") else tr("Ничего не найдено", "Nothing found"),
-                        tr("Потяните список вниз или измените фильтры.", "Pull the list down or change the filters."))
+                    InfoCard(if (s.hero == null) ui("hero.stash_empty") else ui("tree.nothing_found"),
+                        ui("hero.stash_empty_hint"))
                 }
                 // A line, not a card: a stash is read down, and the card is one tap behind each line.
                 items(visible, key = { it.id }) { instance ->
@@ -78,11 +78,11 @@ import com.sperance.exileforge.ui.theme.*
                         unwearable = if (instance.equipped) emptyList()
                             else s.hero?.sheet?.unwearableBy?.get(instance.equipmentId).orEmpty(),
                         note = when {
-                            inactive -> tr("Не работает", "Not working")
+                            inactive -> ui("hero.inactive")
                             // A jewel is worn too, but not anywhere a player can point at on the
                             // body — saying "equipped" would send them looking through the slots.
-                            instance.socketed -> tr("В гнезде", "In a socket")
-                            instance.equipped -> tr("Надето", "Equipped")
+                            instance.socketed -> ui("hero.in_socket")
+                            instance.equipped -> ui("hero.equipped")
                             else -> null
                         },
                         noteColor = if (inactive) LifeRed else Gold) {
@@ -96,46 +96,43 @@ import com.sperance.exileforge.ui.theme.*
     sellId?.let { id ->
         val document = documents[id]
         ConfirmDialog(
-            title = tr("Продать предмет?", "Sell the item?"),
-            text = tr("«${document?.text("name").orEmpty()}» уйдёт торговцу вместе со всем, что на нём выпало. Сколько за него дадут, скажет сервер.",
-                      "\"${document?.text("name").orEmpty()}\" goes to the merchant with everything it rolled. What it fetches is the server's to say."),
-            confirm = tr("Продать", "Sell"),
+            title = ui("hero.sell_q"),
+            text = ui("hero.sell_text", document?.text("name").orEmpty()),
+            confirm = ui("hero.sell_do"),
             onDismiss = { sellId = null }) { detailId = null; vm.sellForGold(id) }
     }
     val instance = stash.firstOrNull { it.id == detailId }
     if (instance != null) ModalBottomSheet(onDismissRequest = { detailId = null }, containerColor = Panel, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         val document = documents.getValue(instance.id)
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.9f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            item { ItemCard(document, enabled = false, detailed = true, definitions = s.definitions, actionLabel = tr("Экземпляр", "Instance") + " · ${instance.id.takeLast(6)}") }
+            item { ItemCard(document, enabled = false, detailed = true, definitions = s.definitions, actionLabel = ui("hero.instance") + " · ${instance.id.takeLast(6)}") }
             item {
                 ForgePanel {
-                    Engraved(if (instance.equipped) tr("Снять", "Unequip") else tr("Надеть", "Equip"))
-                    Text(tr("Слот определяет шаблон предмета: ${slotTitle(document.text("slot"), s.lang)}.", "The template decides the slot: ${slotTitle(document.text("slot"), s.lang)}."), color = Muted, style = MaterialTheme.typography.bodySmall)
+                    Engraved(if (instance.equipped) ui("hero.unequip") else ui("hero.equip"))
+                    Text(ui("hero.slot_note", slotTitle(document.text("slot"), s.lang)), color = Muted, style = MaterialTheme.typography.bodySmall)
                     Button(enabled = !s.busy && s.signedIn && (s.ownsCharacter || s.isAdmin), modifier = Modifier.fillMaxWidth(), onClick = {
                         detailId = null
                         if (instance.equipped) vm.unequip(instance.id) else vm.equip(instance.id)
                     }) {
                         Icon(ForgeGlyphs.Helm, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp))
-                        Text(if (instance.equipped) tr("Снять предмет", "Take the item off") else tr("Надеть предмет", "Put the item on"))
+                        Text(if (instance.equipped) ui("hero.take_off") else ui("hero.put_on"))
                     }
-                    Text(tr("Предмет, уже занимающий слот, сервер снимет сам. Если требования предмета не выполнены, надеть его сервер не даст.",
-                            "The server takes off whatever already occupies the slot. If the item's requirements are not met, the server refuses to put it on."),
+                    Text(ui("hero.equip_note"),
                         color = Muted, style = MaterialTheme.typography.bodySmall)
                 }
             }
             item {
                 OrnateDivider()
                 ForgePanel {
-                    Engraved(tr("Продать торговцу", "Sell to a merchant"))
-                    Text(tr("Цену назначает сервер: база шаблона, редкость экземпляра и число выпавших модификаторов. Надетое и вставленное в гнездо не продаётся.",
-                            "The price is the server's: the template's base, the copy's rarity and how many modifiers rolled. Worn and socketed items are not sold."),
+                    Engraved(ui("hero.sell_section"))
+                    Text(ui("hero.sell_note"),
                         color = Muted, style = MaterialTheme.typography.bodySmall)
                     // Selling destroys the copy and its rolls, which is why it is asked about.
                     OutlinedButton(modifier = Modifier.fillMaxWidth(),
                         enabled = !s.busy && s.signedIn && (s.ownsCharacter || s.isAdmin) && !instance.equipped && !instance.socketed,
                         onClick = { sellId = instance.id }) {
                         Icon(ForgeGlyphs.Orb, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp))
-                        Text(tr("Продать за золото", "Sell for gold"))
+                        Text(ui("hero.sell_for_gold"))
                     }
                 }
             }
@@ -146,8 +143,8 @@ import com.sperance.exileforge.ui.theme.*
             item {
                 OrnateDivider()
                 OutlinedButton(modifier = Modifier.fillMaxWidth(), enabled = !s.busy && s.adminTools,
-                    onClick = { vm.editInventoryBase(instance.equipmentId); detailId = null }) { Icon(Icons.Outlined.Edit, null); Text(tr("Редактировать базу предмета", "Edit the item base")) }
-                Text(tr("База — общий шаблон. Выпавшие значения этого экземпляра принадлежат ему одному.", "The base is a shared template. The rolled values belong to this copy alone."), color = Muted, style = MaterialTheme.typography.bodySmall)
+                    onClick = { vm.editInventoryBase(instance.equipmentId); detailId = null }) { Icon(Icons.Outlined.Edit, null); Text(ui("hero.edit_base")) }
+                Text(ui("hero.base_note"), color = Muted, style = MaterialTheme.typography.bodySmall)
             }
         }
     }

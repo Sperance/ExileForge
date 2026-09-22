@@ -7,7 +7,7 @@ import com.sperance.exileforge.core.contract.requireId
 import com.sperance.exileforge.core.contract.slots
 import com.sperance.exileforge.core.contract.text
 import com.sperance.exileforge.core.contract.weapons
-import com.sperance.exileforge.core.i18n.tr
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.Catalog
 import com.sperance.exileforge.core.model.EntitySource
 import com.sperance.exileforge.core.model.EquipmentKind
@@ -31,62 +31,62 @@ fun schemaFields(schema: String, document: JsonObject = JsonObject(emptyMap())):
     // No name or description here since 0.14.0: a document carries a code and the words live in
     // the server's locale files, so renaming a thing is a translation change, not a write.
     "items" -> listOf(
-        text("code", tr("Код", "Code"), "EF_NEW_ITEM"),
-        text("category", tr("Категория", "Category"), "STONE_STOCK", itemCategories),
-        text("subCategory", tr("Подкатегория", "Sub-category"), "STONE"),
-        num("price", tr("Цена", "Price"), 0, true, 0.0),
+        text("code", ui("account.code"), "EF_NEW_ITEM"),
+        text("category", ui("grant.category"), "STONE_STOCK", itemCategories),
+        text("subCategory", ui("field.subcategory"), "STONE"),
+        num("price", ui("card.price"), 0, true, 0.0),
     )
     "equipment" -> buildList {
         addAll(listOf(
-            text("code", tr("Код", "Code"), "EF_NEW_EQUIPMENT"),
-            choice("slot", tr("Слот", "Slot"), slots),
-            choice("rarity", tr("Редкость", "Rarity"), rarities),
-            num("itemLevel", tr("Уровень предмета", "Item level"), 1, true, 1.0),
+            text("code", ui("account.code"), "EF_NEW_EQUIPMENT"),
+            choice("slot", ui("common.slot"), slots),
+            choice("rarity", ui("common.rarity"), rarities),
+            num("itemLevel", ui("card.item_level"), 1, true, 1.0),
         ))
         // Durability is the only number an item still keeps as a field of its own.
         if (EquipmentKind.of(document.text("type")) == EquipmentKind.Weapon) addAll(listOf(
-            choice("weaponType", tr("Тип оружия", "Weapon type"), weapons),
-            num("durability", tr("Прочность", "Durability"), 100, true, 0.0)))
+            choice("weaponType", ui("card.weapon_type"), weapons),
+            num("durability", ui("card.durability"), 100, true, 0.0)))
         addAll(listOf(
-            num("requiredLevel", tr("Требуемый уровень", "Required level"), 1, true, 1.0),
-            num("requiredStrength", tr("Требуется силы", "Strength required"), 0, true, 0.0),
-            num("requiredDexterity", tr("Требуется ловкости", "Dexterity required"), 0, true, 0.0),
-            num("requiredIntelligence", tr("Требуется интеллекта", "Intelligence required"), 0, true, 0.0)))
+            num("requiredLevel", ui("field.required_level"), 1, true, 1.0),
+            num("requiredStrength", ui("field.required_strength"), 0, true, 0.0),
+            num("requiredDexterity", ui("field.required_dexterity"), 0, true, 0.0),
+            num("requiredIntelligence", ui("field.required_intelligence"), 0, true, 0.0)))
         // The base — armour, damage, attack speed — is fixed modifiers rather than stat fields.
-        add(list("baseParams", tr("База предмета", "Item base"), InputSpec.Object("fixedModifier")))
+        add(list("baseParams", ui("field.base"), InputSpec.Object("fixedModifier")))
         // The pool is a list of ModifierDefinition ids; what lands on an instance is rolled by the server.
-        add(list("modifierIds", tr("Пул модификаторов", "Modifier pool"), InputSpec.Reference(EntitySource.MODIFIER)))
+        add(list("modifierIds", ui("field.modifier_pool"), InputSpec.Reference(EntitySource.MODIFIER)))
     }
     "character" -> listOf(
-        text("name", tr("Имя", "Name")),
-        text("description", tr("Описание", "Description")),
-        list("professionSkills", tr("Профессии", "Professions"), InputSpec.Object("professionSkill")),
-        list("battleSkills", tr("Боевые навыки", "Battle skills"), InputSpec.Object("battleSkill")),
-        list("boolSkills", tr("Состояния", "States"), InputSpec.Object("boolSkill")),
+        text("name", ui("common.name")),
+        text("description", ui("form.description")),
+        list("professionSkills", ui("field.professions"), InputSpec.Object("professionSkill")),
+        list("battleSkills", ui("field.battle_skills"), InputSpec.Object("battleSkill")),
+        list("boolSkills", ui("field.states"), InputSpec.Object("boolSkill")),
     )
     /** A modifier with values but no tier: an item's base, a class conversion, a tree node's bonus. */
     "fixedModifier" -> listOf(
-        reference("modifierId", tr("Модификатор", "Modifier"), EntitySource.MODIFIER),
-        list("values", tr("Значения", "Values"), InputSpec.Number()))
+        reference("modifierId", ui("field.modifier"), EntitySource.MODIFIER),
+        list("values", ui("field.values"), InputSpec.Number()))
     "professionSkill", "battleSkill" -> listOf(
-        choice("stat", tr("Навык", "Skill"), if (schema == "professionSkill") professionStats else battleStats),
-        num("level", tr("Уровень", "Level"), 0, true, 0.0, 127.0),
-        num("experience", tr("Опыт", "Experience"), 0.0, min = 0.0))
-    "boolSkill" -> listOf(choice("stat", tr("Состояние", "State"), boolStats), flag("value", tr("Активно", "Active")).copy(nullable = true, default = JsonNull))
+        choice("stat", ui("field.skill"), if (schema == "professionSkill") professionStats else battleStats),
+        num("level", ui("common.level"), 0, true, 0.0, 127.0),
+        num("experience", ui("grant.experience"), 0.0, min = 0.0))
+    "boolSkill" -> listOf(choice("stat", ui("card.state"), boolStats), flag("value", ui("field.active")).copy(nullable = true, default = JsonNull))
     // Read-only shapes the catalogue renders; they are never posted back.
     "modifierDefinition" -> listOf(
-        text("code", tr("Код", "Code")),
-        choice("source", tr("Источник", "Source"), modifierSources, "PREFIX"),
-        flag("isLocal", tr("Локальный", "Local")),
-        list("effects", tr("Эффекты", "Effects"), InputSpec.Object("modifierEffect")),
-        list("tags", tr("Теги", "Tags"), InputSpec.Text(emptyList())))
+        text("code", ui("account.code")),
+        choice("source", ui("field.source"), modifierSources, "PREFIX"),
+        flag("isLocal", ui("field.local")),
+        list("effects", ui("field.effects"), InputSpec.Object("modifierEffect")),
+        list("tags", ui("field.tags"), InputSpec.Text(emptyList())))
     // An effect with perStat is a conversion: the value is multiplied by the whole steps of a source stat.
     "modifierEffect" -> listOf(
-        text("stat", tr("Характеристика", "Stat"), stockStats.first(), stockStats),
-        choice("operation", tr("Операция", "Operation"), modifierOperations),
-        text("perStat", tr("За каждые (характеристика)", "Per (stat)"), "", stockStats).copy(nullable = true, default = JsonNull),
-        num("perAmount", tr("Шаг конверсии", "Conversion step"), 1.0, min = 0.000001))
-    else -> error(tr("Неизвестная форма: $schema", "Unknown form: $schema"))
+        text("stat", ui("field.stat"), stockStats.first(), stockStats),
+        choice("operation", ui("field.operation"), modifierOperations),
+        text("perStat", ui("field.per_stat"), "", stockStats).copy(nullable = true, default = JsonNull),
+        num("perAmount", ui("field.per_amount"), 1.0, min = 0.000001))
+    else -> error(ui("form.unknown", schema))
 }
 
 fun defaultObject(schema: String): JsonObject =
@@ -108,12 +108,12 @@ fun validateForm(schema: String, document: JsonObject) {
                 is InputSpec.Number -> {
                     val p = element as? JsonPrimitive
                     val n = p?.doubleOrNull
-                    require(p != null && !p.isString && n != null && n.isFinite() && (!spec.integer || p.longOrNull != null) && (spec.min == null || n >= spec.min) && (spec.max == null || n <= spec.max)) { tr("${field.label}: некорректное число", "${field.label}: invalid number") }
+                    require(p != null && !p.isString && n != null && n.isFinite() && (!spec.integer || p.longOrNull != null) && (spec.min == null || n >= spec.min) && (spec.max == null || n <= spec.max)) { ui("form.invalid_number", field.label) }
                 }
                 is InputSpec.Reference -> requireId(element.jsonPrimitive.content)
-                is InputSpec.Text -> require(element is JsonPrimitive && element.isString) { tr("${field.label}: требуется текст", "${field.label}: text required") }
-                InputSpec.Flag -> require(element is JsonPrimitive && !element.isString && element.booleanOrNull != null) { tr("${field.label}: требуется да/нет", "${field.label}: yes/no required") }
-                is InputSpec.Select -> require(element is JsonPrimitive && element.content in spec.options) { tr("${field.label}: выберите значение", "${field.label}: choose a value") }
+                is InputSpec.Text -> require(element is JsonPrimitive && element.isString) { ui("form.text_required", field.label) }
+                InputSpec.Flag -> require(element is JsonPrimitive && !element.isString && element.booleanOrNull != null) { ui("form.bool_required", field.label) }
+                is InputSpec.Select -> require(element is JsonPrimitive && element.content in spec.options) { ui("form.choice_required", field.label) }
                 is InputSpec.Object -> validateForm(spec.schema, element.jsonObject)
                 is InputSpec.ListOf -> element.jsonArray.forEach { checkValue(spec.element, it) }
             }

@@ -1,6 +1,6 @@
 package com.sperance.exileforge.core.model.command
 
-import com.sperance.exileforge.core.i18n.tr
+import com.sperance.exileforge.core.i18n.ui
 import kotlinx.serialization.Serializable
 
 /** Server page bounds; the client never asks for a page the server would reject. */
@@ -15,14 +15,14 @@ const val MAX_ITEM_AMOUNT = 100_000_000_000L
 /** One bag change. A negative amount removes units; the server refuses to go below zero. */
 @Serializable data class ItemStack(val itemId: String, val amount: Long) {
     init {
-        require(amount != 0L) { tr("Укажите ненулевое количество", "Enter a non-zero amount") }
-        require(kotlin.math.abs(amount) <= MAX_ITEM_AMOUNT) { tr("Не больше $MAX_ITEM_AMOUNT единиц за раз", "At most $MAX_ITEM_AMOUNT units at a time") }
+        require(amount != 0L) { ui("cmd.nonzero_amount") }
+        require(kotlin.math.abs(amount) <= MAX_ITEM_AMOUNT) { ui("cmd.max_amount", MAX_ITEM_AMOUNT) }
     }
 }
 
 /** Body of `POST /api/v1/recipe/useRecipe`. The field name is the server's, typo included. */
 @Serializable data class UseRecipeCommand(val ingridientsId: List<String>, val amount: Long = 1) {
-    init { require(amount in 1..100) { tr("Число применений — от 1 до 100", "The number of uses must be between 1 and 100") } }
+    init { require(amount in 1..100) { ui("cmd.uses_range") } }
 }
 
 /** The signed-in account. This server has no token: the login response is the whole session. */
@@ -86,8 +86,7 @@ data class ApiCapabilities(val routes: Set<String>) {
         )
         val missing = required.filterNot { (method, path) -> has(method, path) }
         require(missing.isEmpty()) {
-            tr("Сервер не поддерживает ${missing.joinToString { "${it.first} ${it.second}" }}. Обновите ktor-bestgame.",
-               "The server does not serve ${missing.joinToString { "${it.first} ${it.second}" }}. Update ktor-bestgame.")
+            ui("cmd.stale_server", missing.joinToString { "${it.first} ${it.second}" })
         }
     }
     companion object {

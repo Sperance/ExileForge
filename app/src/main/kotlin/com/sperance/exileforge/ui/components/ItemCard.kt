@@ -19,7 +19,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.contract.text
 import com.sperance.exileforge.core.display.*
-import com.sperance.exileforge.core.i18n.tr
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.modifier.ModifierDefinition
 import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.icons.propertyIcon
@@ -42,7 +42,7 @@ import kotlinx.serialization.json.*
 /** Path of Exile item frame: rarity border, engraved name band, then rolled properties. */
 @Composable fun ItemCard(doc: JsonObject, enabled: Boolean = true, selected: Boolean = false,
     detailed: Boolean = false, definitions: List<ModifierDefinition> = emptyList(),
-    actionLabel: String = tr("Открыть", "Open"), onClick: () -> Unit = {}) {
+    actionLabel: String = ui("common.open"), onClick: () -> Unit = {}) {
     val color = rarityColor(doc.text("rarity"))
     val shape = CutCornerShape(topStart = 14.dp, topEnd = 4.dp, bottomEnd = 14.dp, bottomStart = 4.dp)
     OutlinedCard(onClick = onClick, enabled = enabled, border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) GoldBright else color.copy(alpha = .45f)),
@@ -54,7 +54,7 @@ import kotlinx.serialization.json.*
                 .drawBehind { drawLine(color.copy(alpha = .45f), Offset(0f, size.height), Offset(size.width, size.height), 1f) }
                 .padding(horizontal = 16.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(doc.text("rarity").takeIf { it.isNotBlank() }?.let(::rarityTitle)?.uppercase()
-                    ?: if (doc["userId"] != null) tr("ПЕРСОНАЖ", "CHARACTER") else tr("ПРЕДМЕТ", "ITEM"), color = color, style = MaterialTheme.typography.labelSmall)
+                    ?: if (doc["userId"] != null) ui("card.character") else ui("card.item"), color = color, style = MaterialTheme.typography.labelSmall)
                 Text(doc.text("name").ifBlank { documentTitle(doc) }, style = MaterialTheme.typography.titleMedium,
                     color = color, maxLines = if (detailed) 5 else 2, overflow = TextOverflow.Ellipsis)
             }
@@ -63,25 +63,25 @@ import kotlinx.serialization.json.*
                     ItemIcon(doc, color, Modifier.size(64.dp))
                     Text(doc.text("slot").takeIf { it.isNotBlank() }?.let(::slotTitle) ?: doc.text("category"),
                         color = Muted, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
-                    if (selected) Icon(Icons.Outlined.CheckCircle, tr("Выбран", "Selected"), tint = GoldBright, modifier = Modifier.size(22.dp))
+                    if (selected) Icon(Icons.Outlined.CheckCircle, ui("card.selected"), tint = GoldBright, modifier = Modifier.size(22.dp))
                 }
                 OrnateDivider(color.copy(alpha = .7f))
-                if (doc["itemLevel"] != null) PropertyRow(tr("Уровень предмета", "Item level"), doc.text("itemLevel"), "level")
-                if (doc["level"] != null) PropertyRow(tr("Уровень персонажа", "Character level"), doc.text("level"), "level")
-                if (doc["weaponType"] != null) PropertyRow(tr("Тип оружия", "Weapon type"), weaponTitle(doc.text("weaponType")), "weapon")
-                if (doc["durability"] != null) PropertyRow(tr("Прочность", "Durability"), doc.text("durability"), "durability")
-                if (doc["price"] != null) PropertyRow(tr("Цена", "Price"), doc.text("price"), "price")
+                if (doc["itemLevel"] != null) PropertyRow(ui("card.item_level"), doc.text("itemLevel"), "level")
+                if (doc["level"] != null) PropertyRow(ui("card.character_level"), doc.text("level"), "level")
+                if (doc["weaponType"] != null) PropertyRow(ui("card.weapon_type"), weaponTitle(doc.text("weaponType")), "weapon")
+                if (doc["durability"] != null) PropertyRow(ui("card.durability"), doc.text("durability"), "durability")
+                if (doc["price"] != null) PropertyRow(ui("card.price"), doc.text("price"), "price")
                 // Requirements decide whether a worn item counts at all; the server does the checking.
-                itemRequirements(doc).takeIf { it.isNotEmpty() }?.let { PropertyRow(tr("Требования", "Requirements"), it.joinToString(" · "), "level") }
+                itemRequirements(doc).takeIf { it.isNotEmpty() }?.let { PropertyRow(ui("card.requirements"), it.joinToString(" · "), "level") }
                 // The base — armour, damage, attack speed — is fixed modifiers rather than item fields.
                 (doc["baseParams"] as? JsonArray).orEmpty().forEach { raw ->
                     val modifier = raw as? JsonObject ?: return@forEach
                     ModifierLine(modifier, definitions)
                 }
-                if (doc["money"] != null) PropertyRow(tr("Золото", "Gold"), doc.text("money"), "money")
+                if (doc["money"] != null) PropertyRow(ui("card.gold"), doc.text("money"), "money")
                 // Corruption is the one state that closes an item: no orb touches it again.
                 if ((doc["corrupted"] as? JsonPrimitive)?.booleanOrNull == true)
-                    PropertyRow(tr("Состояние", "State"), tr("Порченый", "Corrupted"), "corrupted")
+                    PropertyRow(ui("card.state"), ui("card.corrupted"), "corrupted")
                 // The pool is not printed: how many definitions a template may roll from says nothing
                 // about the item in front of you, and the administrator who owns it edits it in the
                 // editor. What a copy actually rolled is below.
@@ -90,7 +90,7 @@ import kotlinx.serialization.json.*
                     val modifier = raw as? JsonObject ?: return@forEach
                     ModifierLine(modifier, definitions)
                 }
-                if (!detailed && rolled.size > 3) Text(tr("Ещё ${rolled.size - 3} свойств", "${rolled.size - 3} more properties"), color = Rune, style = MaterialTheme.typography.labelMedium)
+                if (!detailed && rolled.size > 3) Text(ui("card.more_properties", rolled.size - 3), color = Rune, style = MaterialTheme.typography.labelMedium)
                 if (detailed) documentDescription(doc).takeIf { it.isNotBlank() }?.let {
                     Text(it, color = Muted, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Start)
                 }

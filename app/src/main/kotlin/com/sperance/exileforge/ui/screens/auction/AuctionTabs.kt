@@ -135,20 +135,20 @@ import kotlinx.serialization.json.put
     }
 }
 
-/** The character's own lots, open and closed alike: the closed ones are their trading history. */
+/** The character's own lots that are still on sale; withdrawn and sold lots leave this list. */
 @Composable internal fun ColumnScope.MyLotsTab(s: ForgeState, vm: ForgeViewModel) {
     var openLot by remember { mutableStateOf<String?>(null) }
     LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
-        if (s.myLots.isEmpty()) item {
+        if (s.ownLots.isEmpty()) item {
             InfoCard(ui("auction.no_lots"), ui("auction.no_lots_hint"))
         }
-        items(s.myLots, key = { it.id }) { lot ->
-            LotRow(s, lot, note = if (lot.onSale) null else lotStatusTitle(lot.status, s.lang)) { openLot = lot.id }
+        items(s.ownLots, key = { it.id }) { lot ->
+            LotRow(s, lot, note = null) { openLot = lot.id }
         }
     }
-    s.myLots.firstOrNull { it.id == openLot }?.let { lot ->
-        LotSheet(s, lot, action = ui("auction.withdraw"), enabled = !s.busy && lot.onSale,
-            note = if (lot.onSale) null else lotStatusTitle(lot.status, s.lang),
+    s.ownLots.firstOrNull { it.id == openLot }?.let { lot ->
+        LotSheet(s, lot, action = ui("auction.withdraw"), enabled = !s.busy,
+            note = null,
             loadBase = vm::equipmentBase, onDismiss = { openLot = null }) { openLot = null; vm.cancelLot(lot.id) }
     }
 }

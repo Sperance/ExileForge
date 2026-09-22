@@ -38,7 +38,7 @@ class LocalizationTest {
         dictionary("en", "Exile's Legacy")
         compose.setContent { ForgeTheme { ItemCard(template(Catalog.EQUIPMENT)) } }
         compose.onNodeWithText("Exile's Legacy").assertIsDisplayed()
-        compose.onNodeWithText("Item level").assertIsDisplayed()
+        compose.onNodeWithText("lvl 30").assertIsDisplayed()
         compose.onNodeWithText("OPEN").assertIsDisplayed()
     }
 
@@ -47,7 +47,8 @@ class LocalizationTest {
         dictionary("ru", "Наследие изгнанника")
         compose.setContent { ForgeTheme { ItemCard(template(Catalog.EQUIPMENT)) } }
         compose.onNodeWithText("Наследие изгнанника").assertIsDisplayed()
-        compose.onNodeWithText("Уровень предмета").assertIsDisplayed()
+        compose.onNodeWithText("ур. 30").assertIsDisplayed()
+        compose.onNodeWithText("ОТКРЫТЬ").assertIsDisplayed()
     }
 
     @Test fun chineseLabelsAndChineseNames() {
@@ -55,7 +56,7 @@ class LocalizationTest {
         dictionary("zh", "流亡者的遗产")
         compose.setContent { ForgeTheme { ItemCard(template(Catalog.EQUIPMENT)) } }
         compose.onNodeWithText("流亡者的遗产").assertIsDisplayed()
-        compose.onNodeWithText("物品等级").assertIsDisplayed()
+        compose.onNodeWithText("30 级").assertIsDisplayed()
         compose.onNodeWithText("打开").assertIsDisplayed()
     }
 

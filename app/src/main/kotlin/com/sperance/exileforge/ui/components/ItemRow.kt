@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
@@ -14,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.contract.text
@@ -26,7 +26,6 @@ import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.display.stateTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.modifier.ModifierDefinition
-import androidx.compose.ui.text.AnnotatedString
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.theme.*
@@ -72,12 +71,13 @@ const val ROW_PROPERTIES = 5
  * whether to stop and open it rides here — what it is, where it goes, what it rolled — and the
  * card behind the tap keeps the rest.
  *
+ * Rarity is the band down the left edge rather than a frame around the whole line: a stash is a
+ * column of these, and a hundred coloured boxes read as a fence. The band is enough to find a
+ * unique in a list, and it leaves the name in the colour of every other name.
+ *
  * The properties are the deciding half, so they are printed one per line rather than crushed into
  * one: five of them clipped at a screen edge is a count, not a reading. What does not fit is
  * counted instead of dropped.
- *
- * Rarity is never written out. It is the colour of the frame and of the name, which is how Path of
- * Exile says it and one word shorter than saying it twice.
  */
 @Composable fun ItemRow(document: JsonObject, definitions: List<ModifierDefinition> = emptyList(),
     note: String? = null, noteColor: Color = Gold, selected: Boolean = false, enabled: Boolean = true,
@@ -89,7 +89,6 @@ const val ROW_PROPERTIES = 5
     footer: @Composable (ColumnScope.() -> Unit)? = null,
     onClick: () -> Unit) {
     val color = rarityColor(document.text("rarity"))
-    val shape = CutCornerShape(topStart = 8.dp, bottomEnd = 8.dp)
     // The base first, carrying the number this copy really has — its own local modifiers are
     // already in it — and the rolls after, which is the order a card reads in too. The base the
     // item started from stays on the card: a line has no room for a sum and its history both.
@@ -100,55 +99,57 @@ const val ROW_PROPERTIES = 5
     val states = itemStates(document)
     val level = document.text("itemLevel")
     val slot = document.text("slot").takeIf { it.isNotBlank() }?.let(::slotTitle)
-    Column(Modifier.fillMaxWidth().background(Panel, shape)
-        .border(if (selected) 2.dp else 1.dp, if (selected) GoldBright else color.copy(alpha = .40f), shape)
-        .clickable(enabled = enabled, onClick = onClick).padding(10.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            // The marker rides on the icon rather than in the text: the icon is where the eye
-            // starts, and a line of its own would push the properties further down every row.
-            Box {
-                ItemIcon(document, color, Modifier.size(36.dp))
-                if (unwearable.isNotEmpty()) Icon(Icons.Outlined.Block, null, tint = LifeRed,
-                    modifier = Modifier.size(16.dp).align(Alignment.TopStart))
-            }
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(document.text("name").ifBlank { documentTitle(document) }, color = color,
-                        style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false))
-                    note?.let { Text(it, color = noteColor, style = MaterialTheme.typography.labelSmall) }
+    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).background(Panel)
+        .border(if (selected) 2.dp else 1.dp, if (selected) GoldBright else Bronze.copy(alpha = .30f))
+        .clickable(enabled = enabled, onClick = onClick)) {
+        RaritySpine(color, 4.dp)
+        Column(Modifier.weight(1f).padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(11.dp)) {
+                // The marker rides on the icon rather than in the text: the icon is where the eye
+                // starts, and a line of its own would push the properties further down every row.
+                Box {
+                    ItemIcon(document, color, Modifier.size(34.dp))
+                    if (unwearable.isNotEmpty()) Icon(Icons.Outlined.Block, null, tint = LifeRed,
+                        modifier = Modifier.size(16.dp).align(Alignment.TopStart))
                 }
-                (listOfNotNull(slot, level.takeIf { it.isNotBlank() }?.let { ui("row.level", it) }) + facts)
-                    .takeIf { it.isNotEmpty() }?.let {
-                        Text(it.joinToString(" · "), color = Muted, style = MaterialTheme.typography.labelSmall,
-                            maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(document.text("name").ifBlank { documentTitle(document) }, color = Parchment,
+                            style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false))
+                        note?.let { Text(it, color = noteColor, style = MaterialTheme.typography.labelSmall) }
                     }
-                properties.take(ROW_PROPERTIES).forEachIndexed { index, property ->
-                    Text(property, color = if (index < base.size) Parchment else Rune,
-                        style = MaterialTheme.typography.labelSmall,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-                // Counted rather than dropped: "ещё 3" is the difference between a short item
-                // and one whose best roll is just off the edge.
-                (properties.size - ROW_PROPERTIES).takeIf { it > 0 }?.let {
-                    Text(ui("row.more", it), color = Muted, style = MaterialTheme.typography.labelSmall)
-                }
-                // The server's verdict, in its own words — never a requirement worked out here.
-                unwearable.forEach {
-                    Text(requirementReason(it), color = LifeRed, style = MaterialTheme.typography.labelSmall,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-                // States get a line of their own at the bottom, as symbols: a line is read down,
-                // and four words about corruption and sockets would push the properties off it.
-                if (states.isNotEmpty()) Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    states.forEach { state ->
-                        Icon(stateGlyph(state), stateTitle(state), tint = stateColor(state), modifier = Modifier.size(14.dp))
+                    (listOfNotNull(slot, level.takeIf { it.isNotBlank() }?.let { ui("row.level", it) }) + facts)
+                        .takeIf { it.isNotEmpty() }?.let {
+                            Text(it.joinToString(" · "), color = Muted, style = MaterialTheme.typography.labelSmall,
+                                maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        }
+                    properties.take(ROW_PROPERTIES).forEachIndexed { index, property ->
+                        Text(property, color = if (index < base.size) Parchment else Rune,
+                            style = MaterialTheme.typography.labelSmall,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    // Counted rather than dropped: "ещё 3" is the difference between a short item
+                    // and one whose best roll is just off the edge.
+                    (properties.size - ROW_PROPERTIES).takeIf { it > 0 }?.let {
+                        Text(ui("row.more", it), color = Muted, style = MaterialTheme.typography.labelSmall)
+                    }
+                    // The server's verdict, in its own words — never a requirement worked out here.
+                    unwearable.forEach {
+                        Text(requirementReason(it), color = LifeRed, style = MaterialTheme.typography.labelSmall,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    // States get a line of their own at the bottom, as symbols: a line is read down,
+                    // and four words about corruption and sockets would push the properties off it.
+                    if (states.isNotEmpty()) Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        states.forEach { state ->
+                            Icon(stateGlyph(state), stateTitle(state), tint = stateColor(state), modifier = Modifier.size(14.dp))
+                        }
                     }
                 }
             }
+            footer?.invoke(this)
         }
-        footer?.invoke(this)
     }
 }
 
@@ -158,7 +159,7 @@ const val ROW_PROPERTIES = 5
  * A flag the server grows tomorrow gets the neutral sigil rather than nothing, so a row never
  * silently drops a state it has no picture for.
  */
-private fun stateGlyph(state: String) = when (state) {
+internal fun stateGlyph(state: String) = when (state) {
     "corrupted" -> ForgeGlyphs.Skull
     "mirrored" -> ForgeGlyphs.Chain
     "equipped" -> ForgeGlyphs.Helm
@@ -166,7 +167,7 @@ private fun stateGlyph(state: String) = when (state) {
     else -> ForgeGlyphs.Sigil
 }
 
-private fun stateColor(state: String) = when (state) {
+internal fun stateColor(state: String) = when (state) {
     "corrupted" -> LifeRed
     "equipped" -> Gold
     "mirrored", "socketed" -> Rune

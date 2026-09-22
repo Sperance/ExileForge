@@ -154,6 +154,7 @@
   "card.requirements": "需求",
   "card.selected": "已选中",
   "card.state": "状态",
+  "card.was": "· 基础 {0}",
   "card.weapon_type": "武器类型",
   "catalog.characters": "角色",
   "catalog.count": "数量：{0}",

@@ -20,7 +20,7 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.6.0, `versionCode` 20) for the
+ExileForge is an **Android Compose client** (version 2.7.0, `versionCode` 23) for the
 **ktor-bestgame** RPG server (0.20.0), pinned in
 `core/.../contract/Contract.kt` as `SERVER_COMMIT = e9964a01445e76051a4ced23f8b5735a61e51f00`
 on the server branch `claude/tender-pasteur-a36kj2`.
@@ -304,10 +304,16 @@ These are enforced by tests and are the point of the client's design:
     `statNumber(stat, value)`: whole, without a point, except the five rates where a fraction is
     the whole point — `STOCK_ATTACK_SPEED`, `STOCK_CAST_SPEED`, `STOCK_CRITICAL_CHANCE`,
     `STOCK_CRITICAL_MULTIPLIER`, `STOCK_MOVEMENT_SPEED` — which keep two decimals. Rounding is
-    display and never travels back to the server. Rarity is never written out either: it is the
-    colour of the frame and of the name, in `ItemRow` and in the auction's rows alike. A row lists
-    its modifiers one per line — base first, then what rolled — up to `ROW_PROPERTIES`, and counts
-    what does not fit rather than dropping it. Requirements
+    display and never travels back to the server. Rarity is never written out either: since 2.7.0
+    it is the **spine** — a band of the rarity colour down the left edge of an item, on a row and
+    on a card alike — rather than a frame drawn round the whole thing, because a stash is a column
+    of these and a hundred coloured boxes read as a fence. The name is then the colour of every
+    other name, and `ItemCard` says what the item *is* (its slot) where it used to say what rarity
+    it was. A row lists its modifiers one per line — base first, then what rolled — up to
+    `ROW_PROPERTIES`, and counts what does not fit rather than dropping it. On a card the base is
+    read as a figure rather than a sentence — 120 and «броня», the first one set large — and the
+    rolls are a list under a rhombus; the icon sits beside the name, because that is how an item
+    is recognised before any of it is read. Requirements
     (`requiredLevel`, `requiredStrength`, `requiredDexterity`, `requiredIntelligence`) are printed,
     never enforced here — the server checks them twice and the two checks are different rules:
     `equip` refuses an item out of reach outright (`CH_013`), while one already worn keeps its slot
@@ -412,8 +418,9 @@ These are enforced by tests and are the point of the client's design:
 - Theme: dark only, Path of Exile palette in `ui/theme/Theme.kt` (Ink/Abyss/Panel stone,
   Gold/Bronze frames, rarity colours matching the server enum, cut-corner shapes). Build screens
   from `ScreenHeader`, `ForgePanel`, `OrnateDivider`, `Engraved`, `StatBar`, `SectionHeader`,
-  `ItemRow` and `PropertyRow` instead of ad-hoc cards, and use `rarityColor` rather than new
-  ad-hoc colors. A stash is a list of `ItemRow`s with the full `ItemCard` one tap behind each,
+  `RaritySpine`, `Rhombus`, `ItemRow` and `PropertyRow` instead of ad-hoc cards, and use
+  `rarityColor` rather than new ad-hoc colors. An item is a banner: a `Row` of
+  `height(IntrinsicSize.Min)` with the spine first and everything else in the column beside it. A stash is a list of `ItemRow`s with the full `ItemCard` one tap behind each,
   because a card is a page about one item and a line is a stash you can read down.
 - Commit messages follow Conventional Commits: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`
   (docs-only commits often append `[skip ci]`).

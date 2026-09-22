@@ -160,7 +160,7 @@ import kotlinx.serialization.json.put
  * asked twice — what is it and what did it roll. What the auction adds is underneath:
  * the price on the left, where it is weighed, and the seller on the right.
  *
- * Rarity is not written anywhere: it is the colour of the frame and the name.
+ * Rarity is not written anywhere: it is the band down the left edge of the line.
  */
 @Composable private fun LotRow(s: ForgeState, lot: AuctionLot, note: String?, onClick: () -> Unit) {
     val document = lotDocument(s, lot)

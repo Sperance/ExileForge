@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.ui.theme.*
 
@@ -41,6 +42,29 @@ import com.sperance.exileforge.ui.theme.*
         }
         subtitle?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelMedium) }
         OrnateDivider(accent)
+    }
+}
+
+/**
+ * The band of rarity colour down the left edge of an item.
+ *
+ * An item used to be framed in its rarity; the frame is gone, and this carries it instead — a
+ * bookmark in the edge of a page rather than a box drawn round it. It fades downwards so a long
+ * card does not end in a stripe, and it needs its parent `Row` to be `height(IntrinsicSize.Min)`.
+ */
+@Composable fun RaritySpine(accent: Color, width: Dp = 4.dp) {
+    Box(Modifier.width(width).fillMaxHeight()
+        .background(Brush.verticalGradient(listOf(accent, accent.copy(alpha = .12f)))))
+}
+
+/** A small rotated square, the marker a rolled modifier is listed under. */
+@Composable fun Rhombus(accent: Color = Rune, side: Dp = 5.dp) {
+    Canvas(Modifier.size(side)) {
+        val w = size.width
+        val h = size.height
+        drawPath(Path().apply {
+            moveTo(w / 2, 0f); lineTo(w, h / 2); lineTo(w / 2, h); lineTo(0f, h / 2); close()
+        }, accent.copy(alpha = .75f))
     }
 }
 

@@ -1,26 +1,22 @@
 package com.sperance.exileforge.ui.components
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.contract.text
 import com.sperance.exileforge.core.display.*
@@ -41,6 +37,14 @@ import kotlinx.serialization.json.*
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Icon(propertyIcon(modifier.text("modifierId")), null, tint = Rune, modifier = Modifier.size(16.dp))
         Text(modifierText(modifier, definitions), color = Parchment, style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+/** A rolled modifier under its rhombus: what the item got on top of what it is. */
+@Composable fun BulletLine(text: String) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+        Box(Modifier.padding(top = 6.dp)) { Rhombus() }
+        Text(text, color = Rune, style = MaterialTheme.typography.bodyMedium)
     }
 }
 
@@ -88,67 +92,112 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
     }
 }
 
-/** Path of Exile item frame: rarity border, engraved name band, then rolled properties. */
+/**
+ * The number an item *is*, set large, with the characteristic under it.
+ *
+ * The base of an item is the one thing a player weighs it by, so it is read as a figure rather
+ * than as a sentence: 120 and "броня", not "+120 к броне". What the base was before the item's own
+ * modifiers raised it follows quietly, because a raised number without its origin is a claim.
+ *
+ * A property the dictionary cannot name a characteristic for falls back to the sentence — a line
+ * that reads oddly is better than a number with nothing beside it.
+ */
+@Composable private fun BannerStat(property: BaseProperty, big: Boolean) {
+    val stat = property.values.firstOrNull()?.stat.orEmpty()
+    if (stat.isBlank()) { BasePropertyLine(property); return }
+    Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(property.values.joinToString(" · ") { it.text },
+            color = if (property.augmented) Rune else Parchment,
+            style = if (big) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.titleMedium)
+        Text(statTitle(stat).uppercase(), color = Muted, style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(bottom = if (big) 4.dp else 1.dp))
+        property.values.firstOrNull()?.takeIf { it.augmented }?.let {
+            Text(ui("card.was", it.baseText), color = Muted, style = MaterialTheme.typography.labelSmall,
+                modifier = Modifier.padding(bottom = if (big) 4.dp else 1.dp))
+        }
+    }
+}
+
+/**
+ * An item as a banner: a band of its rarity down the edge, and the rest read top to bottom.
+ *
+ * There is no frame — rarity is the spine, which leaves the name in the colour of every other name
+ * and the card quiet enough to read. Above the name are the states it is in, drawn rather than
+ * spelled out because they are glanced at, and what it is; below it the base as figures, and the
+ * rolls as a list under their rhombus. The icon sits beside the name: it is how the item is
+ * recognised before any of it is read.
+ */
 @Composable fun ItemCard(doc: JsonObject, enabled: Boolean = true, selected: Boolean = false,
     detailed: Boolean = false, definitions: List<ModifierDefinition> = emptyList(),
     actionLabel: String = ui("common.open"), onClick: () -> Unit = {}) {
     val color = rarityColor(doc.text("rarity"))
-    val shape = CutCornerShape(topStart = 14.dp, topEnd = 4.dp, bottomEnd = 14.dp, bottomStart = 4.dp)
-    OutlinedCard(onClick = onClick, enabled = enabled, border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) GoldBright else color.copy(alpha = .45f)),
-        shape = shape, modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.outlinedCardColors(containerColor = Panel, disabledContainerColor = Panel, disabledContentColor = MaterialTheme.colorScheme.onSurface)) {
-        Column(Modifier.background(Brush.verticalGradient(listOf(color.copy(alpha = .12f), Panel, Abyss)))) {
-            // Name band: the plate an item's title sits on in the stash tooltip.
-            Column(Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(color.copy(alpha = .22f), Color.Transparent)))
-                .drawBehind { drawLine(color.copy(alpha = .45f), Offset(0f, size.height), Offset(size.width, size.height), 1f) }
-                .padding(horizontal = 16.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(doc.text("rarity").takeIf { it.isNotBlank() }?.let(::rarityTitle)?.uppercase()
-                    ?: if (doc["userId"] != null) ui("card.character") else ui("card.item"), color = color, style = MaterialTheme.typography.labelSmall)
-                Text(doc.text("name").ifBlank { documentTitle(doc) }, style = MaterialTheme.typography.titleMedium,
-                    color = color, maxLines = if (detailed) 5 else 2, overflow = TextOverflow.Ellipsis)
+    val base = baseProperties(doc, definitions)
+    val states = itemStates(doc)
+    val rolled = (doc["params"] as? JsonArray).orEmpty().mapNotNull { it as? JsonObject }
+    val kind = doc.text("slot").takeIf { it.isNotBlank() }?.let(::slotTitle)
+        ?: doc.text("category").takeIf { it.isNotBlank() }
+        ?: if (doc["userId"] != null) ui("card.character") else ui("card.item")
+
+    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).background(Panel)
+        .border(if (selected) 2.dp else 1.dp, if (selected) GoldBright else Bronze.copy(alpha = .40f))
+        .clickable(enabled = enabled, onClick = onClick)) {
+        RaritySpine(color, 6.dp)
+        Column(Modifier.weight(1f).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            // The ribbon: what it is, and what state it is in. Both are glanced at, never read.
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                states.forEach {
+                    Icon(stateGlyph(it), stateTitle(it), tint = stateColor(it), modifier = Modifier.size(15.dp))
+                }
+                Spacer(Modifier.weight(1f))
+                Text(kind, color = Muted, style = MaterialTheme.typography.labelSmall)
             }
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    ItemIcon(doc, color, Modifier.size(64.dp))
-                    Text(doc.text("slot").takeIf { it.isNotBlank() }?.let(::slotTitle) ?: doc.text("category"),
-                        color = Muted, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
-                    if (selected) Icon(Icons.Outlined.CheckCircle, ui("card.selected"), tint = GoldBright, modifier = Modifier.size(22.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                ItemIcon(doc, color, Modifier.size(56.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(doc.text("name").ifBlank { documentTitle(doc) }, color = Parchment,
+                        style = MaterialTheme.typography.titleLarge,
+                        maxLines = if (detailed) 5 else 2, overflow = TextOverflow.Ellipsis)
+                    cardFacts(doc).forEach {
+                        Text(it, color = Muted, style = MaterialTheme.typography.labelSmall)
+                    }
                 }
-                OrnateDivider(color.copy(alpha = .7f))
-                if (doc["itemLevel"] != null) PropertyRow(ui("card.item_level"), doc.text("itemLevel"), "level")
-                if (doc["level"] != null) PropertyRow(ui("card.character_level"), doc.text("level"), "level")
-                if (doc["weaponType"] != null) PropertyRow(ui("card.weapon_type"), weaponTitle(doc.text("weaponType")), "weapon")
-                if (doc["durability"] != null) PropertyRow(ui("card.durability"), doc.text("durability"), "durability")
-                if (doc["price"] != null) PropertyRow(ui("card.price"), doc.text("price"), "price")
-                // Requirements decide whether a worn item counts at all; the server does the checking.
-                itemRequirements(doc).takeIf { it.isNotEmpty() }?.let { PropertyRow(ui("card.requirements"), it.joinToString(" · "), "level") }
-                // The base — armour, damage, attack speed — is fixed modifiers rather than item
-                // fields, and what it prints is the base with this copy's own local modifiers in it.
-                baseProperties(doc, definitions).forEach { BasePropertyLine(it) }
-                if (doc["money"] != null) PropertyRow(ui("card.gold"), doc.text("money"), "money")
-                // Every state the document carries, named rather than guessed at: corruption and a
-                // mirrored copy both close an item to orbs, and being worn or socketed is why it
-                // cannot be sold or listed.
-                itemStates(doc).takeIf { it.isNotEmpty() }?.let {
-                    PropertyRow(ui("card.state"), it.joinToString(" · ") { state -> stateTitle(state) }, "corrupted")
-                }
-                // The pool is not printed: how many definitions a template may roll from says nothing
-                // about the item in front of you, and the administrator who owns it edits it in the
-                // editor. What a copy actually rolled is below.
-                val rolled = (doc["params"] as? JsonArray).orEmpty()
-                rolled.take(if (detailed) rolled.size else 3).forEach { raw ->
-                    val modifier = raw as? JsonObject ?: return@forEach
-                    ModifierLine(modifier, definitions)
-                }
-                if (!detailed && rolled.size > 3) Text(ui("card.more_properties", rolled.size - 3), color = Rune, style = MaterialTheme.typography.labelMedium)
-                if (detailed) documentDescription(doc).takeIf { it.isNotBlank() }?.let {
-                    Text(it, color = Muted, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Start)
-                }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-                    Text(actionLabel.uppercase(), color = color, style = MaterialTheme.typography.labelLarge)
-                    Icon(Icons.Outlined.ChevronRight, null, tint = color)
-                }
+                if (selected) Icon(Icons.Outlined.CheckCircle, ui("card.selected"), tint = GoldBright, modifier = Modifier.size(22.dp))
+            }
+
+            // The base first, as figures: the biggest is what the item is bought for.
+            base.forEachIndexed { index, property -> BannerStat(property, big = index == 0) }
+            // Then what this copy rolled, which is what makes it this one rather than another.
+            rolled.take(if (detailed) rolled.size else 3).forEach { BulletLine(modifierText(it, definitions)) }
+            if (!detailed && rolled.size > 3) Text(ui("card.more_properties", rolled.size - 3), color = Muted, style = MaterialTheme.typography.labelMedium)
+            if (detailed) documentDescription(doc).takeIf { it.isNotBlank() }?.let {
+                Text(it, color = Muted, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Start)
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+                Text(actionLabel.uppercase(), color = Gold, style = MaterialTheme.typography.labelLarge)
+                Icon(Icons.Outlined.ChevronRight, null, tint = Gold)
             }
         }
     }
 }
+
+/**
+ * The short facts under a name: everything that is a field of the document rather than a modifier.
+ *
+ * Two lines at most — what the item is worth knowing about before its properties, then the odds
+ * and ends a particular kind of document carries. A field the document does not have is left out
+ * rather than printed as nothing.
+ */
+private fun cardFacts(doc: JsonObject): List<String> = listOfNotNull(
+    listOfNotNull(
+        doc.text("itemLevel").takeIf { it.isNotBlank() }?.let { ui("row.level", it) },
+        doc.text("level").takeIf { it.isNotBlank() }?.let { ui("row.level", it) },
+        itemRequirements(doc).takeIf { it.isNotEmpty() }?.let { ui("auction.needs", it.joinToString(", ")) },
+    ).joinToString(" · ").takeIf { it.isNotBlank() },
+    listOfNotNull(
+        doc.text("weaponType").takeIf { it.isNotBlank() }?.let(::weaponTitle),
+        doc.text("durability").takeIf { it.isNotBlank() }?.let { "${ui("card.durability")} $it" },
+        doc.text("price").takeIf { it.isNotBlank() }?.let { "${ui("card.price")} $it" },
+        doc.text("money").takeIf { it.isNotBlank() }?.let { "${ui("card.gold")} $it" },
+    ).joinToString(" · ").takeIf { it.isNotBlank() },
+)

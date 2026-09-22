@@ -14,6 +14,7 @@ import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.tr
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.core.network.RequestLog
+import com.sperance.exileforge.presentation.state.AppMode
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -44,15 +45,16 @@ import com.sperance.exileforge.ui.theme.Panel
             }
             LoginForm(s, vm)
         }
-        // The editor and the checks left the bottom bar so it fits five destinations for everyone;
-        // they are administrator tools, and this is where an administrator already is.
-        if (s.adminTools) ForgePanel {
-            Engraved(tr("Инструменты администратора", "Administrator tools"))
-            OutlinedButton(enabled = !s.busy, onClick = { vm.tab(1) }, modifier = Modifier.fillMaxWidth()) { Text(tr("Редактор", "Editor")) }
-            OutlinedButton(enabled = !s.busy, onClick = { vm.tab(2) }, modifier = Modifier.fillMaxWidth()) { Text(tr("Проверки", "Checks")) }
-            Text(tr("Эти экраны открываются отсюда: в нижней панели они занимали место у всех.",
-                    "These screens open from here: in the bottom bar they took room from everyone."),
+        // Every administrator tool moved to its own tab in 2.3.0. What stays here is the way back
+        // into it: turning the tools off hides that tab, so the switch cannot live only inside it.
+        if (s.isAdmin && !s.adminTools) ForgePanel {
+            Engraved(tr("Администратор", "Administrator"))
+            Text(tr("Инструменты сейчас скрыты — приложение выглядит так, как его видит игрок.",
+                    "The tools are hidden — the app looks the way a player sees it."),
                 color = Muted, style = MaterialTheme.typography.bodySmall)
+            OutlinedButton(enabled = !s.busy, onClick = { vm.mode(AppMode.ADMIN) }, modifier = Modifier.fillMaxWidth()) {
+                Text(tr("Вернуть инструменты", "Bring the tools back"))
+            }
         }
         ForgePanel {
             Engraved(tr("Язык интерфейса", "Interface language"))

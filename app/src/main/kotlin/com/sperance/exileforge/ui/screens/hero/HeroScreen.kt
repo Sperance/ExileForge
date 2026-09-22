@@ -24,6 +24,7 @@ import com.sperance.exileforge.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun HeroScreen(s: ForgeState, vm: ForgeViewModel) {
+    var sellId by remember { mutableStateOf<String?>(null) }
     var detailId by remember(s.characterId) { mutableStateOf<String?>(null) }
     var query by remember(s.characterId) { mutableStateOf("") }
     var slot by remember(s.characterId) { mutableStateOf("") }
@@ -49,7 +50,6 @@ import com.sperance.exileforge.ui.theme.*
                     Text(tr("Крафт", "Crafting"))
                 }
             }
-            item { AdminGrantPanel(s, vm) }
             item { BagPanel(s) }
             item { SectionHeader(tr("Арсенал", "Stash"), stash.size, stashOpen) { stashOpen = !stashOpen } }
             if (stashOpen) {
@@ -72,6 +72,11 @@ import com.sperance.exileforge.ui.theme.*
                     val inactive = s.hero?.inactive?.get(instance.id) != null
                     ItemRow(documents.getValue(instance.id), definitions = s.definitions, enabled = !s.busy,
                         selected = instance.id == s.selectedEquipment,
+                        // The server's verdict on the template, not a requirement worked out here.
+                        // Something already worn is judged by `inactive` instead: it is in a slot,
+                        // and "cannot be worn" would be an odd thing to say about it.
+                        unwearable = if (instance.equipped) emptyList()
+                            else s.hero?.sheet?.unwearableBy?.get(instance.equipmentId).orEmpty(),
                         note = when {
                             inactive -> tr("Не работает", "Not working")
                             // A jewel is worn too, but not anywhere a player can point at on the
@@ -86,6 +91,16 @@ import com.sperance.exileforge.ui.theme.*
                 }
             }
         }
+    }
+    // Selling is final and takes the rolls with it, so it is asked about by name.
+    sellId?.let { id ->
+        val document = documents[id]
+        ConfirmDialog(
+            title = tr("Продать предмет?", "Sell the item?"),
+            text = tr("«${document?.text("name").orEmpty()}» уйдёт торговцу вместе со всем, что на нём выпало. Сколько за него дадут, скажет сервер.",
+                      "\"${document?.text("name").orEmpty()}\" goes to the merchant with everything it rolled. What it fetches is the server's to say."),
+            confirm = tr("Продать", "Sell"),
+            onDismiss = { sellId = null }) { detailId = null; vm.sellForGold(id) }
     }
     val instance = stash.firstOrNull { it.id == detailId }
     if (instance != null) ModalBottomSheet(onDismissRequest = { detailId = null }, containerColor = Panel, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
@@ -106,6 +121,22 @@ import com.sperance.exileforge.ui.theme.*
                     Text(tr("Предмет, уже занимающий слот, сервер снимет сам. Если требования предмета не выполнены, надеть его сервер не даст.",
                             "The server takes off whatever already occupies the slot. If the item's requirements are not met, the server refuses to put it on."),
                         color = Muted, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+            item {
+                OrnateDivider()
+                ForgePanel {
+                    Engraved(tr("Продать торговцу", "Sell to a merchant"))
+                    Text(tr("Цену назначает сервер: база шаблона, редкость экземпляра и число выпавших модификаторов. Надетое и вставленное в гнездо не продаётся.",
+                            "The price is the server's: the template's base, the copy's rarity and how many modifiers rolled. Worn and socketed items are not sold."),
+                        color = Muted, style = MaterialTheme.typography.bodySmall)
+                    // Selling destroys the copy and its rolls, which is why it is asked about.
+                    OutlinedButton(modifier = Modifier.fillMaxWidth(),
+                        enabled = !s.busy && s.signedIn && (s.ownsCharacter || s.isAdmin) && !instance.equipped && !instance.socketed,
+                        onClick = { sellId = instance.id }) {
+                        Icon(ForgeGlyphs.Orb, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp))
+                        Text(tr("Продать за золото", "Sell for gold"))
+                    }
                 }
             }
             item {

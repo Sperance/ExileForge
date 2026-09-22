@@ -55,6 +55,38 @@ import kotlinx.serialization.json.*
     val stats: Map<String, Double> = emptyMap(),
     val active: List<String> = emptyList(),
     val inactive: List<InactiveEquipment> = emptyList(),
+    /**
+     * Templates this character cannot wear right now, with the server's reasons.
+     *
+     * The verdict is on the *template*, because that is where a requirement lives, so one answer
+     * marks a stash line and a stranger's lot alike. The client never re-checks a requirement —
+     * it asks whether the template is in here.
+     */
+    val unwearable: List<UnwearableEquipment> = emptyList(),
+) {
+    /** Reasons a template is out of reach, keyed by its id; absent means it can be worn. */
+    val unwearableBy: Map<String, List<String>> get() = unwearable.associate { it.equipmentId to it.reasons }
+}
+
+/** An equipment template the character cannot currently meet the requirements of. */
+@Serializable data class UnwearableEquipment(
+    val equipmentId: String = "",
+    val code: String = "",
+    val reasons: List<String> = emptyList(),
+)
+
+/**
+ * What a merchant paid for an item.
+ *
+ * The instance is gone by the time this arrives, so it carries what the player needs to see:
+ * what was sold, what it fetched, and what the purse holds now. The price is the server's —
+ * the client never works one out.
+ */
+@Serializable data class SellOutcome(
+    val inventoryId: String = "",
+    val code: String = "",
+    val gold: Long = 0,
+    val money: Long = 0,
 )
 
 /**

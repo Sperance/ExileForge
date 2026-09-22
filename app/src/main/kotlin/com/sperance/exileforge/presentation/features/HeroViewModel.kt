@@ -114,6 +114,21 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
         api.unsocketJewel(id, inventoryId)
     } } }
 
+    /**
+     * Sells an item to a merchant.
+     *
+     * The price is the server's — it answers with what was paid and what the purse holds now —
+     * and the hero is re-read because the item is gone and the gold is not where it was.
+     */
+    fun sellForGold(inventoryId: String) { with(runtime) { characterCommand { id ->
+        val outcome = api.sellForGold(id, inventoryId)
+        // What it fetched is the whole point of the command, so it is said rather than left to
+        // the generic "saved" — characterCommand keeps a message that is already there.
+        mutable.update { it.copy(message = tr(
+            "Продано за ${outcome.gold} золота · в кошельке ${outcome.money}",
+            "Sold for ${outcome.gold} gold · ${outcome.money} in the purse")) }
+    } } }
+
     fun useRecipe(recipeId: String, ingredients: List<String>, amount: Long) { with(runtime) { characterCommand { id ->
         api.useRecipe(id, recipeId, UseRecipeCommand(ingredients, amount))
     } } }

@@ -1,6 +1,6 @@
 # Контракт Exile Forge 2.2
 
-Сервер: ветка `claude/tender-pasteur-a36kj2`, коммит `7271910fb6d71c5afbcbbb450472a03ab702f09e` (ktor-bestgame 0.16.0).
+Сервер: ветка `claude/tender-pasteur-a36kj2`, коммит `eeb9e37ae69882fbf6d058a56e5d17bbaef85f62` (ktor-bestgame 0.17.0).
 Успех: `{"success":true,"data":...}`. Ошибка: `{"success":false,"error":{"message","errorClass","errorMethod","errorCode"}}`; HTTP-статус сохраняется клиентом.
 
 ## Сессия

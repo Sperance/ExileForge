@@ -14,6 +14,7 @@ import com.sperance.exileforge.core.model.hero.CharacterSummary
 import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.core.model.modifier.ModifierDefinition
 import com.sperance.exileforge.core.model.progression.CharacterClass
+import com.sperance.exileforge.core.model.progression.ExperienceLevel
 import com.sperance.exileforge.core.model.skilltree.SkillTreeNode
 import com.sperance.exileforge.core.network.FailureState
 import com.sperance.exileforge.core.verification.CheckResult
@@ -76,6 +77,8 @@ data class ForgeState(
     val orbs: List<CurrencyItem> = emptyList(), val selectedOrb: String = "",
     /** The world's reference tables, read once per session: classes and the shared skill tree. */
     val classes: List<CharacterClass> = emptyList(), val treeNodes: List<SkillTreeNode> = emptyList(),
+    /** The level table, read with the classes: it says what the next level costs. */
+    val levels: List<ExperienceLevel> = emptyList(),
     /** The class a new character is being created with, and the tree node under the cursor. */
     val draftClass: String = "", val selectedNode: String = "",
     /** What the tree search box holds; a match moves the map to that node. */
@@ -152,10 +155,25 @@ data class ForgeState(
 const val MAX_CHARACTERS = 3
 
 /**
- * Crafting: a tab of its own, reached from the Hero tab rather than from the bottom bar.
+ * The tabs, by name.
  *
- * The bar holds five destinations and they are all a player needs at hand; the forge is somewhere
- * you go on purpose, like the editor and the checks. It is named because a button elsewhere opens
- * it, and a bare `7` in another file would say nothing about which screen that is.
+ * Four of them are the bottom bar a player sees, and [TAB_ADMIN] is the one an administrator has
+ * on top of it. Everything else is a screen a button opens: the forge from the Hero tab, and the
+ * catalogue, the editor and the checks from the administrator's tab. They are named because a
+ * bare number in another file says nothing about which screen it is.
  */
+const val TAB_CATALOG = 0
+const val TAB_EDITOR = 1
+const val TAB_CHECKS = 2
+const val TAB_ACCOUNT = 3
+const val TAB_HERO = 4
+const val TAB_TREE = 5
+const val TAB_AUCTION = 6
 const val TAB_CRAFT = 7
+const val TAB_ADMIN = 8
+
+/** What the bottom bar offers a player — and, with [TAB_ADMIN] appended, an administrator. */
+val PLAYER_TABS = listOf(TAB_HERO, TAB_TREE, TAB_AUCTION, TAB_ACCOUNT)
+
+/** Screens only an administrator may open, whichever button leads to them. */
+val ADMIN_TABS = setOf(TAB_CATALOG, TAB_EDITOR, TAB_CHECKS, TAB_ADMIN)

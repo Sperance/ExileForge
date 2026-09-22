@@ -24,6 +24,7 @@ import com.sperance.exileforge.core.display.statNumber
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.tr
 import com.sperance.exileforge.core.model.skilltree.SkillNodeType
+import com.sperance.exileforge.core.model.skilltree.StatContribution
 import com.sperance.exileforge.core.model.skilltree.SkillTreeNode
 import com.sperance.exileforge.core.model.skilltree.reachableFrom
 import com.sperance.exileforge.presentation.ForgeViewModel
@@ -71,6 +72,11 @@ import kotlinx.serialization.json.putJsonArray
     val hero = s.hero
     var detailsOpen by remember { mutableStateOf(false) }
     var nodeOpen by remember { mutableStateOf(false) }
+    // Each of the three tree commands spends something a player cannot get back for free — a point
+    // or an orb — so each is asked about, and the question names the price.
+    var confirmAllocate by remember { mutableStateOf<String?>(null) }
+    var confirmRefund by remember { mutableStateOf<String?>(null) }
+    var confirmReset by remember { mutableStateOf(false) }
     if (hero == null) {
         InfoCard(tr("Герой не загружен", "The hero is not loaded"),
             tr("Обновите героя во вкладке «Герой».", "Refresh the hero on the Hero tab."))
@@ -104,13 +110,17 @@ import kotlinx.serialization.json.putJsonArray
         Column(Modifier.fillMaxWidth().heightIn(max = 520.dp).verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             NodeDetails(s, s.treeNodes.firstOrNull { it.code == s.selectedNode }, taken, enabled,
-                onAllocate = { nodeOpen = false; onAllocate(it) },
-                onRefund = { nodeOpen = false; onRefund(it) },
+                onAllocate = { nodeOpen = false; confirmAllocate = it },
+                onRefund = { nodeOpen = false; confirmRefund = it },
                 onSocket = { instance, code -> nodeOpen = false; onSocket(instance, code) },
                 onUnsocket = { nodeOpen = false; onUnsocket(it) })
             Spacer(Modifier.height(8.dp))
         }
     }
+
+    TreeConfirmations(s, confirmAllocate, confirmRefund, confirmReset,
+        onClear = { confirmAllocate = null; confirmRefund = null; confirmReset = false },
+        onAllocate = onAllocate, onRefund = onRefund, onReset = onReset)
 
     if (detailsOpen) ModalBottomSheet(onDismissRequest = { detailsOpen = false }, containerColor = Panel,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
@@ -131,14 +141,16 @@ import kotlinx.serialization.json.putJsonArray
                     if (hero.tree.totals.isEmpty()) Text(tr("Взятые узлы ничего не дают", "The taken nodes give nothing"), color = Muted)
                     // The server sums this: two INCREASED add up while two MORE multiply, so
                     // adding the snapshots here would lie exactly where a player is choosing.
-                    hero.tree.totals.toSortedMap().forEach { (key, value) ->
-                        PropertyRow(statTitle(key, s.lang), statNumber(key, value), key)
+                    // It is the tree's contribution, not the character's total — which is why a
+                    // percentage stays a percentage and is written with its sign.
+                    hero.tree.totals.forEach { total ->
+                        PropertyRow(statTitle(total.stat, s.lang), contributionText(total), total.stat)
                     }
                 }
             }
             item { TreeSearch(s, onQuery) { code -> onSelect(code); detailsOpen = false; nodeOpen = true } }
             item {
-                OutlinedButton(enabled = enabled && hero.tree.nodes.size > 1, onClick = onReset,
+                OutlinedButton(enabled = enabled && hero.tree.nodes.size > 1, onClick = { detailsOpen = false; confirmReset = true },
                     modifier = Modifier.fillMaxWidth()) { Text(tr("Сбросить дерево полностью", "Reset the whole tree")) }
                 Text(tr("Сброс стоит по сфере сожаления за каждый возвращаемый узел — столько же, сколько вернуть их по одному.",
                         "A reset costs one Orb of Regret per node returned — the same as giving them back one at a time."),
@@ -334,6 +346,63 @@ import kotlinx.serialization.json.putJsonArray
     free.forEach { instance ->
         val document = inventoryDocument(instance, s.inventoryBases[instance.equipmentId])
         ItemRow(document, definitions = s.definitions, enabled = enabled) { onSocket(instance.id, node.code) }
+    }
+}
+
+@Composable private fun TreeConfirmations(
+    s: ForgeState,
+    allocate: String?, refund: String?, reset: Boolean,
+    onClear: () -> Unit,
+    onAllocate: (String) -> Unit, onRefund: (String) -> Unit, onReset: () -> Unit,
+) {
+    val nodeName = { code: String -> s.treeNodes.firstOrNull { it.code == code }?.title ?: code }
+    allocate?.let { code ->
+        val cost = s.treeNodes.firstOrNull { it.code == code }?.cost ?: 1
+        ConfirmDialog(
+            title = tr("Взять узел?", "Take the node?"),
+            text = tr("«${nodeName(code)}» стоит $cost ${points(cost)}. Вернуть узел потом можно только за сферу сожаления.",
+                      "\"${nodeName(code)}\" costs $cost ${points(cost)}. Giving it back later costs an Orb of Regret."),
+            confirm = tr("Взять", "Take"), onDismiss = onClear) { onAllocate(code) }
+    }
+    refund?.let { code ->
+        ConfirmDialog(
+            title = tr("Вернуть узел?", "Give the node back?"),
+            text = tr("«${nodeName(code)}» вернётся, и это спишет одну сферу сожаления.",
+                      "\"${nodeName(code)}\" goes back, and that spends one Orb of Regret."),
+            confirm = tr("Вернуть", "Give back"), onDismiss = onClear) { onRefund(code) }
+    }
+    if (reset) {
+        // The start node is not given back, so it is not paid for — the count says what is.
+        val returned = (s.hero?.tree?.nodes?.size ?: 1) - 1
+        ConfirmDialog(
+            title = tr("Сбросить дерево?", "Reset the tree?"),
+            text = tr("Вернётся $returned ${nodes(returned)} и спишется столько же сфер сожаления. Стартовый узел класса останется.",
+                      "$returned ${nodes(returned)} go back and as many Orbs of Regret are spent. The class's start node stays."),
+            confirm = tr("Сбросить", "Reset"), onDismiss = onClear) { onReset() }
+    }
+}
+
+/** Russian counts its nouns; English does not have to try. */
+private fun points(n: Int) = tr(if (n % 10 == 1 && n % 100 != 11) "очко" else if (n % 10 in 2..4 && n % 100 !in 12..14) "очка" else "очков",
+                                if (n == 1) "point" else "points")
+
+private fun nodes(n: Int) = tr(if (n % 10 == 1 && n % 100 != 11) "узел" else if (n % 10 in 2..4 && n % 100 !in 12..14) "узла" else "узлов",
+                               if (n == 1) "node" else "nodes")
+
+/**
+ * One line of what the tree gives: a number, and whether it is a flat one or a percentage.
+ *
+ * The operation is the whole point. "+120" and "+40%" to the same characteristic are different
+ * statements, and a line that dropped the distinction would be a third, untrue one.
+ */
+private fun contributionText(total: StatContribution): String {
+    val number = statNumber(total.stat, total.value)
+    val signed = if (total.value > 0) "+$number" else number
+    return when (total.operation) {
+        "INCREASED", "MORE" -> "$signed%"
+        // SET replaces the base outright, so it is not an addition and carries no sign.
+        "SET" -> statNumber(total.stat, total.value)
+        else -> signed
     }
 }
 

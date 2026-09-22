@@ -2,6 +2,7 @@ package com.sperance.exileforge.ui.screens.auction
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -20,13 +21,18 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
  * The auction opens at a level the server keeps to itself, so the screen does not guard the gate:
  * it asks, and turns the refusal into an explanation.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable fun AuctionScreen(s: ForgeState, vm: ForgeViewModel) {
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Spacer(Modifier.height(12.dp))
         ScreenHeader(tr("Аукцион", "Auction"),
             tr("Лотов на витрине: ${s.showcase.totalItems}", "${s.showcase.totalItems} lots on the showcase"), ForgeGlyphs.Orb)
         // Opening the tab is what fills both lists; the character is the one from the menu.
-        LaunchedEffect(s.characterId, s.sessionEpoch) { if (s.characterId.isNotBlank()) vm.loadAuction() }
+        // The hero comes too, and not for the bag: the sheet carries the server's verdict on which
+        // templates this character can wear, and that is what marks an unwearable lot.
+        LaunchedEffect(s.characterId, s.sessionEpoch) {
+            if (s.characterId.isNotBlank()) { vm.ensureHero(); vm.loadAuction() }
+        }
         s.auctionLocked?.let { locked ->
             InfoCard(tr("Аукцион закрыт", "The auction is closed"), locked, failure = true)
             OutlinedButton(enabled = !s.busy, onClick = vm::loadAuction, modifier = Modifier.fillMaxWidth()) {
@@ -44,10 +50,16 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
                     text = { Text(title, style = MaterialTheme.typography.labelLarge) })
             }
         }
-        when (s.auctionTab) {
-            0 -> ShowcaseTab(s, vm)
-            1 -> MyLotsTab(s, vm)
-            else -> SellTab(s, vm)
+        // Every tab is refreshed the same way the hero is: by pulling it. A button competing with
+        // the content was one more thing to find, and the gesture is already the habit here.
+        PullToRefreshBox(isRefreshing = s.busy, onRefresh = vm::loadAuction, modifier = Modifier.weight(1f)) {
+            Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                when (s.auctionTab) {
+                    0 -> ShowcaseTab(s, vm)
+                    1 -> MyLotsTab(s, vm)
+                    else -> SellTab(s, vm)
+                }
+            }
         }
     }
 }

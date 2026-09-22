@@ -114,24 +114,8 @@ object LocaleKey {
  */
 @Volatile var serverLocale: LocaleBundle = LocaleBundle()
 
-/**
- * The English dictionary, held beside the chosen one.
- *
- * The auction is the reason it exists: a lot is compared against a wiki and a trade site, and both
- * of those are English, so a row names its item in both languages. It is deliberately the *only*
- * second dictionary — everything else looks a name up in [serverLocale] alone, which is why that
- * one stays the single answer to "what is this called".
- *
- * It is the same bundle as [serverLocale] when the player is already reading English, so the two
- * never diverge and nothing is downloaded twice.
- */
-@Volatile var serverLocaleEn: LocaleBundle = LocaleBundle()
-
 /** A server string by key. Without a dictionary, or without the key, the key itself comes back. */
 fun loc(key: String): String = serverLocale[key]
-
-/** The English string for a key, or blank — a name that is missing is left out, never faked. */
-fun locEn(key: String): String = if (serverLocaleEn.contains(key)) serverLocaleEn[key] else ""
 
 /** A server string with its arguments filled; the arguments are themselves keys. */
 fun loc(key: String, args: List<String>): String = serverLocale.format(key, args)
@@ -152,10 +136,13 @@ fun locOr(key: String, fallback: String): String = if (serverLocale.contains(key
  * holes in it cannot be rebuilt here and the server's own sentence stands; a template without holes
  * is already a whole sentence and is shown in the chosen language.
  */
-fun locError(code: String?, message: String): String {
+fun locError(code: String?, message: String, args: List<String> = emptyList()): String {
     if (code.isNullOrBlank()) return message
     val key = LocaleKey.error(code)
     if (!serverLocale.contains(key)) return message
-    val text = serverLocale[key]
+    val text = serverLocale.format(key, args)
+    // A hole left unfilled means the server sent fewer arguments than the template wants, and half
+    // a sentence is worse than the server's own. This is now rare: since 0.17.0 the envelope
+    // carries what it interpolated.
     return if (text.contains("{0}")) message else text
 }

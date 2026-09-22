@@ -6,6 +6,18 @@ import com.sperance.exileforge.core.model.modifier.Modifier
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+/**
+ * One line of what a set of modifiers gives: a characteristic, an operation and a number.
+ *
+ * The operation is what stops the number from lying. `+60` and `+10%` to the same characteristic
+ * are two different statements, and printing them as one would be a third, untrue one.
+ */
+@Serializable data class StatContribution(
+    val stat: String = "",
+    val operation: String = "ADD",
+    val value: Double = 0.0,
+)
+
 /** What a node is worth on the tree, as the server grades them. */
 @Serializable enum class SkillNodeType { START, SMALL, NOTABLE, KEYSTONE, JEWEL_SOCKET }
 
@@ -62,13 +74,17 @@ import kotlinx.serialization.Serializable
     val nodes: List<CharacterSkillNode> = emptyList(),
 
     /**
-     * What the whole tree gives, one characteristic per entry.
+     * What the taken tree gives, one line per characteristic and kind of operation.
+     *
+     * This is the tree's *contribution*, not the character's total: there is no base under it, so
+     * "+40% physical damage" stays a percentage. It used to be a total over an empty base, where
+     * every percentage collapsed — nothing times 1.4 is nothing — and vanished from the answer.
      *
      * Counted by the server, not here. Modifiers carry operations and they do not add alike —
      * two INCREASED add together, two MORE multiply — so summing the taken snapshots on the
      * client would be wrong exactly where a player is deciding whether a node is worth a point.
      */
-    val totals: Map<String, Double> = emptyMap(),
+    val totals: List<StatContribution> = emptyList(),
 ) {
     val takenCodes: Set<String> get() = nodes.mapTo(mutableSetOf()) { it.code }
 }

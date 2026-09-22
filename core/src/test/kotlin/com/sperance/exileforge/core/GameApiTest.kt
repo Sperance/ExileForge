@@ -488,7 +488,7 @@ class GameApiTest {
             "POST" to "/api/v1/character/skilltree/allocate", "GET" to "/api/v1/auctionlot/search",
             "POST" to "/api/v1/auctionlot/sell/equipment", "POST" to "/api/v1/auctionlot/buy",
             "GET" to "/api/v1/equipment", "POST" to "/api/v1/characterequipment/socket",
-            "POST" to "/api/v1/characterequipment/unsocket")
+            "POST" to "/api/v1/characterequipment/unsocket", "POST" to "/api/v1/characterequipment/sell")
         // The server prints the Ktor selector, so a method arrives as "(GET)".
         ok(JsonArray(routes.map { buildJsonObject { put("path", it.second); put("method", "(${it.first})") } }).toString())
         val capabilities = api.capabilities()

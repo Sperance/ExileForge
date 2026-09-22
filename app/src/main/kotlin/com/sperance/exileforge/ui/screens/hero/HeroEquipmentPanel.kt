@@ -32,6 +32,42 @@ import com.sperance.exileforge.ui.theme.*
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
+/**
+ * How far along this level the character is.
+ *
+ * A bar of its own, because experience is the one number here that really fills up: the vitals are
+ * maxima the server reports and nothing says how much of one is left. The level table says what
+ * the next level costs — the client reads it to show what is coming, never to work out a level,
+ * which stays the server's to decide.
+ *
+ * At the last level there is nothing left to fill, so the bar is whole and says so rather than
+ * dividing by a step that does not exist.
+ */
+@Composable private fun ExperiencePanel(s: ForgeState, level: Int, experience: Double) {
+    val floor = s.levels.firstOrNull { it.level == level }?.experience ?: 0.0
+    val next = s.levels.firstOrNull { it.level == level + 1 }
+    val within = (experience - floor).coerceAtLeast(0.0)
+    val span = next?.let { it.experience - floor } ?: 0.0
+    val fraction = if (span > 0.0) (within / span).toFloat() else 1f
+    val percent = Math.round(fraction * 100).toInt()
+    ForgePanel {
+        Engraved(tr("Опыт", "Experience"))
+        StatBar(tr("Опыт", "XP"),
+            if (next == null) tr("макс.", "max") else "$percent%",
+            Rune, fraction = fraction)
+        if (next == null) Text(
+            tr("Последний уровень: ${number(experience)} опыта", "The last level: ${number(experience)} experience"),
+            color = Muted, style = MaterialTheme.typography.labelSmall)
+        else Text(
+            tr("${number(within)} из ${number(span)} до ${level + 1} уровня · всего ${number(experience)}",
+               "${number(within)} of ${number(span)} to level ${level + 1} · ${number(experience)} in all"),
+            color = Muted, style = MaterialTheme.typography.labelSmall)
+        // Without the table there is nothing to measure against, and a bar with no scale would lie.
+        if (s.levels.isEmpty()) Text(tr("Таблица уровней не загружена", "The level table is not loaded"),
+            color = Muted, style = MaterialTheme.typography.labelSmall)
+    }
+}
+
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable fun HeroEquipmentPanel(s: ForgeState, onUnequip: (String) -> Unit) {
     val hero = s.hero ?: return
@@ -49,13 +85,14 @@ import kotlinx.serialization.json.put
                     Text(hero.character.name, style = MaterialTheme.typography.headlineSmall, color = GoldBright)
                     // The class is the base every percentage is counted from; the server owns it.
                     Text(s.heroClass?.title.orEmpty().ifBlank { tr("Класс неизвестен", "Unknown class") }, color = Rune, style = MaterialTheme.typography.labelLarge)
-                    Text(tr("Уровень ${hero.character.level} · Опыт ${number(hero.character.experience)}",
-                        "Level ${hero.character.level} · Experience ${number(hero.character.experience)}"), color = Muted, style = MaterialTheme.typography.labelMedium)
+                    Text(tr("Уровень ${hero.character.level}", "Level ${hero.character.level}"),
+                        color = Muted, style = MaterialTheme.typography.labelMedium)
                     Text(tr("Золото: ${hero.character.money} · Очки дерева: ${hero.tree.available}/${hero.tree.total}",
                             "Gold: ${hero.character.money} · Tree points: ${hero.tree.available}/${hero.tree.total}"), color = Gold, style = MaterialTheme.typography.labelLarge)
                 }
             }
         }
+        ExperiencePanel(s, hero.character.level, hero.character.experience)
         // Life, mana and shield, exactly as the server calculated them, and the way into the rest:
         // the three vitals are what is read at a glance, the other forty are read on purpose.
         ForgePanel(modifier = Modifier.clickable { statsOpen = true }) {

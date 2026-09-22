@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
+import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -18,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.contract.text
 import com.sperance.exileforge.core.display.documentTitle
 import com.sperance.exileforge.core.display.modifierText
+import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.i18n.tr
 import com.sperance.exileforge.core.model.modifier.ModifierDefinition
@@ -55,6 +57,9 @@ import kotlinx.serialization.json.JsonObject
     }
 }
 
+/** How many properties a line carries before it stops being a line. */
+const val ROW_PROPERTIES = 5
+
 /**
  * One item of a stash, as a line rather than a card.
  *
@@ -62,36 +67,68 @@ import kotlinx.serialization.json.JsonObject
  * whether to stop and open it rides here — what it is, where it goes, what it rolled — and the
  * card behind the tap keeps the rest.
  *
- * The rolled modifiers are the deciding half, so they are printed even though they will not fit:
- * one clipped line of real properties tells a player more than a count of them would.
+ * The properties are the deciding half, so they are printed one per line rather than crushed into
+ * one: five of them clipped at a screen edge is a count, not a reading. What does not fit is
+ * counted instead of dropped.
+ *
+ * Rarity is never written out. It is the colour of the frame and of the name, which is how Path of
+ * Exile says it and one word shorter than saying it twice.
  */
 @Composable fun ItemRow(document: JsonObject, definitions: List<ModifierDefinition> = emptyList(),
     note: String? = null, noteColor: Color = Gold, selected: Boolean = false, enabled: Boolean = true,
+    /** The server's reasons this cannot be worn right now; empty means it can. */
+    unwearable: List<String> = emptyList(),
+    /** Extra facts for the second line, after the slot and the level. */
+    facts: List<String> = emptyList(),
+    /** A line below the properties — the price of a lot, and what else belongs at the bottom. */
+    footer: @Composable (ColumnScope.() -> Unit)? = null,
     onClick: () -> Unit) {
     val color = rarityColor(document.text("rarity"))
     val shape = CutCornerShape(topStart = 8.dp, bottomEnd = 8.dp)
-    val rolled = (document["params"] as? JsonArray).orEmpty()
+    val properties = ((document["baseParams"] as? JsonArray).orEmpty() + (document["params"] as? JsonArray).orEmpty())
+        .mapNotNull { (it as? JsonObject)?.let { one -> modifierText(one, definitions) } }
     val level = document.text("itemLevel")
     val slot = document.text("slot").takeIf { it.isNotBlank() }?.let(::slotTitle)
-    Row(Modifier.fillMaxWidth().background(Panel, shape)
+    Column(Modifier.fillMaxWidth().background(Panel, shape)
         .border(if (selected) 2.dp else 1.dp, if (selected) GoldBright else color.copy(alpha = .40f), shape)
         .clickable(enabled = enabled, onClick = onClick).padding(10.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        ItemIcon(document, color, Modifier.size(36.dp))
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(document.text("name").ifBlank { documentTitle(document) }, color = color,
-                    style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false))
-                note?.let { Text(it, color = noteColor, style = MaterialTheme.typography.labelSmall) }
+        verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            // The marker rides on the icon rather than in the text: the icon is where the eye
+            // starts, and a line of its own would push the properties further down every row.
+            Box {
+                ItemIcon(document, color, Modifier.size(36.dp))
+                if (unwearable.isNotEmpty()) Icon(Icons.Outlined.Block, null, tint = LifeRed,
+                    modifier = Modifier.size(16.dp).align(Alignment.TopStart))
             }
-            listOfNotNull(slot, level.takeIf { it.isNotBlank() }?.let { tr("ур. $it", "lvl $it") })
-                .takeIf { it.isNotEmpty() }?.let {
-                    Text(it.joinToString(" · "), color = Muted, style = MaterialTheme.typography.labelSmall)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(document.text("name").ifBlank { documentTitle(document) }, color = color,
+                        style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false))
+                    note?.let { Text(it, color = noteColor, style = MaterialTheme.typography.labelSmall) }
                 }
-            if (rolled.isNotEmpty()) Text(
-                rolled.mapNotNull { (it as? JsonObject)?.let { one -> modifierText(one, definitions) } }.joinToString(" · "),
-                color = Rune, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                (listOfNotNull(slot, level.takeIf { it.isNotBlank() }?.let { tr("ур. $it", "lvl $it") }) + facts)
+                    .takeIf { it.isNotEmpty() }?.let {
+                        Text(it.joinToString(" · "), color = Muted, style = MaterialTheme.typography.labelSmall,
+                            maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    }
+                properties.take(ROW_PROPERTIES).forEach {
+                    Text(it, color = Rune, style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                // Counted rather than dropped: "ещё 3" is the difference between a short item
+                // and one whose best roll is just off the edge.
+                (properties.size - ROW_PROPERTIES).takeIf { it > 0 }?.let {
+                    Text(tr("ещё $it", "$it more"), color = Muted, style = MaterialTheme.typography.labelSmall)
+                }
+                // The server's verdict, in its own words — never a requirement worked out here.
+                unwearable.forEach {
+                    Text(requirementReason(it), color = LifeRed, style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
         }
+        footer?.invoke(this)
     }
 }

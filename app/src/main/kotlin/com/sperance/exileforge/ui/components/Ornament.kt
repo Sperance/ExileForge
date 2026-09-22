@@ -66,13 +66,23 @@ import com.sperance.exileforge.ui.theme.*
  * and no current value, there being nothing yet that spends one. Drawing a partly empty bar would
  * claim a reserve the server never reported, so the fill stays honest and the number does the work.
  */
-@Composable fun StatBar(label: String, value: String, color: Color, modifier: Modifier = Modifier) {
+@Composable fun StatBar(label: String, value: String, color: Color, modifier: Modifier = Modifier,
+    /**
+     * How much of the bar is filled, 0..1.
+     *
+     * Full by default, because a vital is a maximum and nothing reports a current value — a
+     * half-empty life bar would claim a reserve the server never sent. Experience is the one
+     * thing here that really does fill up, so it passes its own share.
+     */
+    fraction: Float = 1f) {
     val shape = CutCornerShape(4.dp)
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(label, color = Muted, style = MaterialTheme.typography.labelMedium, modifier = Modifier.width(46.dp))
         Box(Modifier.weight(1f).height(18.dp).background(Color(0xFF0A0D12), shape)
-            .background(Brush.horizontalGradient(listOf(color.copy(alpha = .75f), color.copy(alpha = .35f))), shape)
-            .border(1.dp, color.copy(alpha = .8f), shape))
+            .border(1.dp, color.copy(alpha = .8f), shape)) {
+            Box(Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f)).fillMaxHeight()
+                .background(Brush.horizontalGradient(listOf(color.copy(alpha = .75f), color.copy(alpha = .35f))), shape))
+        }
         Text(value, color = GoldBright, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.End)
     }
 }

@@ -4,9 +4,9 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.2.0, `versionCode` 15) for the
-**ktor-bestgame** RPG server (0.16.0), pinned in
-`core/.../contract/Contract.kt` as `SERVER_COMMIT = 7271910fb6d71c5afbcbbb450472a03ab702f09e`
+ExileForge is an **Android Compose client** (version 2.3.0, `versionCode` 16) for the
+**ktor-bestgame** RPG server (0.17.0), pinned in
+`core/.../contract/Contract.kt` as `SERVER_COMMIT = eeb9e37ae69882fbf6d058a56e5d17bbaef85f62`
 on the server branch `claude/tender-pasteur-a36kj2`.
 
 The client is deliberately **thin**: the server owns items, stats, modifier rolls and inventory.

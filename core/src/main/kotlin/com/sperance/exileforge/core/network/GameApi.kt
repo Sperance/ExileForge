@@ -469,6 +469,19 @@ class GameApi(
             mapOf("characterId" to characterId, "inventoryId" to inventoryId, "nodeCode" to nodeCode), authenticated = true))
     }
 
+    /**
+     * Sells an item to a merchant for gold.
+     *
+     * The price is the server's alone — template, rarity and how many affixes rolled — and the
+     * instance is gone when this returns. A worn or socketed item is refused, as the auction
+     * refuses one.
+     */
+    suspend fun sellForGold(characterId: String, inventoryId: String): SellOutcome {
+        requireId(characterId); requireId(inventoryId)
+        return WireJson.decodeFromJsonElement(request("POST", "api/v1/characterequipment/sell",
+            mapOf("characterId" to characterId, "inventoryId" to inventoryId), authenticated = true))
+    }
+
     suspend fun unsocketJewel(characterId: String, inventoryId: String): EquipmentInstance =
         wear("unsocket", characterId, inventoryId)
 
@@ -596,7 +609,10 @@ class GameApi(
                 catch (_: Exception) { throw ApiFailure(status, null, if (status == 401) tr("Сессия истекла. Войдите снова", "The session has expired. Sign in again") else if (status == 403) tr("Недостаточно прав", "Not enough permissions") else tr("HTTP $status: пустой или некорректный JSON ответ сервера", "HTTP $status: empty or malformed JSON response")) }
             if (status !in 200..299 || (envelope["success"] as? JsonPrimitive)?.booleanOrNull != true) {
                 val error = envelope["error"] as? JsonObject
-                throw ApiFailure(status, error?.text("errorCode"), error?.text("message")?.takeIf { it.isNotBlank() } ?: tr("HTTP $status: операция отклонена", "HTTP $status: the operation was rejected"))
+                throw ApiFailure(status, error?.text("errorCode"),
+                    error?.text("message")?.takeIf { it.isNotBlank() } ?: tr("HTTP $status: операция отклонена", "HTTP $status: the operation was rejected"),
+                    // The arguments that filled the server's sentence, so the client can fill its own.
+                    (error?.get("messageArgs") as? JsonArray).orEmpty().mapNotNull { (it as? JsonPrimitive)?.contentOrNull })
             }
             success = true
             return envelope["data"] ?: JsonNull

@@ -20,6 +20,7 @@ import com.sperance.exileforge.core.display.inventoryDocument
 import com.sperance.exileforge.core.display.itemRequirements
 import com.sperance.exileforge.core.display.modifierText
 import com.sperance.exileforge.core.display.rarityTitle
+import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.display.weaponTitle
 import com.sperance.exileforge.core.i18n.tr
@@ -55,6 +56,7 @@ import kotlinx.serialization.json.put
 @Composable internal fun ColumnScope.ShowcaseList(s: ForgeState, header: @Composable () -> Unit = {},
     onBuy: (String) -> Unit, onPage: (Int) -> Unit, loadBase: suspend (String) -> JsonObject? = { null }) {
     var openLot by remember { mutableStateOf<String?>(null) }
+    var confirmBuy by remember { mutableStateOf<String?>(null) }
     LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
         item { header() }
         if (s.showcase.items.isEmpty()) item {
@@ -76,7 +78,24 @@ import kotlinx.serialization.json.put
     s.showcase.items.firstOrNull { it.id == openLot }?.let { lot ->
         LotSheet(s, lot, action = tr("Купить", "Buy"), enabled = !s.busy && !lot.belongsTo(s.characterId),
             note = if (lot.belongsTo(s.characterId)) tr("Свой лот купить нельзя", "You cannot buy your own lot") else null,
-            loadBase = loadBase, onDismiss = { openLot = null }) { openLot = null; onBuy(lot.id) }
+            loadBase = loadBase, onDismiss = { openLot = null }) { openLot = null; confirmBuy = lot.id }
+    }
+    // A purchase cannot be undone, so it is asked about — and an item the character cannot wear
+    // is said so in the same breath, because that is exactly the mistake worth catching.
+    s.showcase.items.firstOrNull { it.id == confirmBuy }?.let { lot ->
+        val blocked = s.hero?.sheet?.unwearableBy?.get(lot.equipment?.equipmentId.orEmpty()).orEmpty()
+        ConfirmDialog(
+            title = tr("Купить лот?", "Buy the lot?"),
+            text = listOfNotNull(
+                tr("«${lot.title}» за ${orbPrice(s, lot)}. Сделку проводит сервер, отменить её нельзя.",
+                   "\"${lot.title}\" for ${orbPrice(s, lot)}. The server carries out the trade and it cannot be undone."),
+                blocked.takeIf { it.isNotEmpty() }?.let {
+                    tr("Надеть этот предмет сейчас нельзя: ${it.joinToString(", ") { r -> requirementReason(r, s.lang) }}.",
+                       "This item cannot be worn right now: ${it.joinToString(", ") { r -> requirementReason(r, s.lang) }}.")
+                }
+            ).joinToString("\n\n"),
+            confirm = tr("Купить лот", "Buy the lot"),
+            onDismiss = { confirmBuy = null }) { onBuy(lot.id) }
     }
 }
 
@@ -130,7 +149,6 @@ import kotlinx.serialization.json.put
         items(s.myLots, key = { it.id }) { lot ->
             LotRow(s, lot, note = if (lot.onSale) null else lotStatusTitle(lot.status, s.lang)) { openLot = lot.id }
         }
-        item { OutlinedButton(enabled = !s.busy, onClick = vm::loadMyLots, modifier = Modifier.fillMaxWidth()) { Text(tr("Обновить", "Refresh")) } }
     }
     s.myLots.firstOrNull { it.id == openLot }?.let { lot ->
         LotSheet(s, lot, action = tr("Снять с продажи", "Withdraw"), enabled = !s.busy && lot.onSale,
@@ -142,72 +160,40 @@ import kotlinx.serialization.json.put
 /**
  * One lot as a line: everything a trader decides on without opening it.
  *
- * A stash line can be terse because its owner already knows what they own. A showcase line cannot:
- * lots differ by what they rolled, so the properties ride on the line, five at most, and the card
- * behind the tap carries the rest. The name is given in English too, because that is the language
- * of the wiki and of every trade site the lot will be compared against.
+ * It is the same [ItemRow] the stash draws, because a lot and a stash line are the same question
+ * asked twice — what is it, what did it roll, can I wear it. What the auction adds is underneath:
+ * the price on the left, where it is weighed, and the seller on the right.
  *
- * The price sits on its own line at the bottom, where the eye lands last: it is what everything
- * above is being weighed against, not one more property among them.
+ * Rarity is not written anywhere: it is the colour of the frame and the name.
  */
 @Composable private fun LotRow(s: ForgeState, lot: AuctionLot, note: String?, onClick: () -> Unit) {
     val document = lotDocument(s, lot)
-    val colour = lot.rarity?.let { rarityColor(it) } ?: Gold
-    val shape = CutCornerShape(topStart = 8.dp, bottomEnd = 8.dp)
-    val properties = lotProperties(s, document)
-    Column(Modifier.fillMaxWidth().background(Panel, shape).border(1.dp, colour.copy(alpha = .40f), shape)
-        .clickable(enabled = !s.busy, onClick = onClick).padding(10.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            // The icon always stands: it is how a row is recognised again after scrolling past it.
-            ItemIcon(document, colour, Modifier.size(40.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(lot.title + lot.titleEn.let { if (it.isBlank()) "" else " · $it" }, color = colour,
-                    style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text(lotFacts(s, lot, document), color = Muted, style = MaterialTheme.typography.labelSmall,
-                    maxLines = 2, overflow = TextOverflow.Ellipsis)
-                // Two lines, so five properties can actually be read instead of being clipped at two.
-                if (properties.isNotBlank()) Text(properties, color = Rune,
-                    style = MaterialTheme.typography.labelSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+    val base = lot.equipment?.equipmentId.orEmpty()
+    ItemRow(document, definitions = s.definitions, enabled = !s.busy, note = note, noteColor = Muted,
+        facts = lotFacts(s, lot, document),
+        // The verdict is the server's, off the sheet: the client never re-checks a requirement.
+        unwearable = s.hero?.sheet?.unwearableBy?.get(base).orEmpty(),
+        footer = {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(orbPrice(s, lot), color = Gold, style = MaterialTheme.typography.labelMedium,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                Text(lot.sellerName.ifBlank { "…${lot.sellerId.takeLast(6)}" }, color = Muted,
+                    style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-        }
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(orbPrice(s, lot), color = Gold, style = MaterialTheme.typography.labelMedium,
-                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-            note?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelSmall) }
-        }
-    }
+        },
+        onClick = onClick)
 }
 
-/** How many properties fit on a line before it stops being a line and turns into a card. */
-private const val LOT_PROPERTIES = 5
-
-/**
- * The lot's properties, compressed: the base first, then what it rolled, five at most.
- *
- * The base lives in the template and the rolls on the instance, but a trader reads them as one
- * list, so they are printed as one. What does not fit is counted rather than quietly dropped —
- * "ещё 3" is the difference between a short item and a clipped one.
- */
-private fun lotProperties(s: ForgeState, document: JsonObject): String {
-    val all = ((document["baseParams"] as? JsonArray).orEmpty() + (document["params"] as? JsonArray).orEmpty())
-        .mapNotNull { (it as? JsonObject)?.let { one -> modifierText(one, s.definitions) } }
-    val shown = all.take(LOT_PROPERTIES).joinToString(" · ")
-    val hidden = all.size - LOT_PROPERTIES
-    return if (hidden > 0) shown + tr(" · ещё $hidden", " · $hidden more") else shown
-}
-
-/** What the lot is: its slot or kind, its rarity, its level, and what it asks of a character. */
-private fun lotFacts(s: ForgeState, lot: AuctionLot, document: JsonObject): String {
+/** What the lot is: its slot or kind, its level, and what it asks of a character. */
+private fun lotFacts(s: ForgeState, lot: AuctionLot, document: JsonObject): List<String> {
     val kind = lot.slot?.let { slotTitle(it, s.lang) } ?: lotKindTitle(lot.kind, s.lang)
     val weapon = document.text("weaponType").takeIf { it.isNotBlank() }?.let { weaponTitle(it, s.lang) }
     val amount = if (lot.kind == AuctionLotKind.ITEM && lot.amount > 1) tr("${lot.amount} шт.", "${lot.amount} pcs") else null
-    val level = if (lot.itemLevel > 0) tr("ур. ${lot.itemLevel}", "lvl ${lot.itemLevel}") else null
     // Requirements are printed, never enforced here: the server checks them and refuses in its own words.
     val needs = itemRequirements(document, s.lang).takeIf { it.isNotEmpty() }
         ?.let { tr("треб. ${it.joinToString(", ")}", "needs ${it.joinToString(", ")}") }
-    return listOfNotNull(kind, weapon, amount, lot.rarity?.let { rarityTitle(it, s.lang) }, level, needs).joinToString(" · ")
+    return listOfNotNull(kind, weapon, amount, needs)
 }
 
 /**
@@ -276,6 +262,7 @@ private fun lotDocument(s: ForgeState, lot: AuctionLot): JsonObject {
                     // The price is always counted in orbs; the catalogue the hero read gives the orb its name.
                     PropertyRow(tr("Цена", "Price"), orbPrice(s, lot), "price")
                     PropertyRow(tr("Продавец", "Seller"), lot.sellerName.ifBlank { "…${lot.sellerId.takeLast(6)}" }, "character")
+                    listedAt(lot.createdAt)?.let { PropertyRow(tr("Выставлен", "Listed"), it, "level") }
                     note?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelMedium) }
                     Button(enabled = enabled, onClick = onAction, modifier = Modifier.fillMaxWidth()) { Text(action) }
                     Text(tr("Пока лот выставлен, предмет лежит в нём, а не у продавца. Сделку целиком проводит сервер.",
@@ -285,6 +272,23 @@ private fun lotDocument(s: ForgeState, lot: AuctionLot): JsonObject {
             }
         }
     }
+}
+
+/**
+ * When the lot was listed, in the zone the device is standing in.
+ *
+ * The server writes the stamp in UTC — its `LocalDateTime.now()` is built from
+ * `TimeZone.UTC` — so it carries no zone of its own and this is the one place that gives it one.
+ * A stamp that will not parse is simply not shown: a wrong time is worse than no time.
+ */
+private fun listedAt(stamp: String): String? {
+    if (stamp.isBlank()) return null
+    return try {
+        java.time.LocalDateTime.parse(stamp)
+            .atZone(java.time.ZoneOffset.UTC)
+            .withZoneSameInstant(java.time.ZoneId.systemDefault())
+            .format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"))
+    } catch (_: Exception) { null }
 }
 
 /** A lot's price, in the orb it was set in; an orb the catalogue misses keeps its tail as a name. */

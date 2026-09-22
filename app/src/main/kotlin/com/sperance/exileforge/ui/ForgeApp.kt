@@ -27,7 +27,7 @@ import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.AppMode
 import com.sperance.exileforge.presentation.state.AppPhase
 import com.sperance.exileforge.presentation.state.ForgeState
-import com.sperance.exileforge.presentation.state.TAB_CRAFT
+import com.sperance.exileforge.presentation.state.*
 import com.sperance.exileforge.ui.components.LocalEntityPageLoader
 import com.sperance.exileforge.ui.components.OrnateDivider
 import com.sperance.exileforge.ui.components.voidBackdrop
@@ -36,6 +36,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import com.sperance.exileforge.ui.screens.auction.AuctionScreen
 import com.sperance.exileforge.ui.screens.session.AuthScreen
 import com.sperance.exileforge.ui.screens.session.CharacterSelectScreen
+import com.sperance.exileforge.ui.screens.admin.AdminScreen
 import com.sperance.exileforge.ui.screens.catalog.CatalogScreen
 import com.sperance.exileforge.ui.screens.checks.ChecksScreen
 import com.sperance.exileforge.ui.screens.craft.CraftScreen
@@ -82,7 +83,7 @@ import com.sperance.exileforge.ui.theme.*
     }
 }
 
-/** The game proper: the banner, the five destinations and whichever tab is open. */
+/** The game proper: the banner, the destinations and whichever tab is open. */
 @Composable private fun GameScaffold(s: ForgeState, vm: ForgeViewModel, logs: List<com.sperance.exileforge.core.network.RequestLog>,
     snackbar: SnackbarHostState, onDeleteRequest: () -> Unit, onDiscardRequest: () -> Unit) {
     Scaffold(
@@ -91,13 +92,16 @@ import com.sperance.exileforge.ui.theme.*
         bottomBar = {
             NavigationBar(containerColor = Abyss, tonalElevation = 0.dp,
                 modifier = Modifier.drawBehind { drawLine(Gold.copy(alpha = .35f), Offset(0f, 0f), Offset(size.width, 0f), 2f) }) {
-                // Five destinations for everyone: the editor and the checks are reached from the
-                // Account tab instead, so an administrator's bar is no more crowded than a player's.
-                val destinations = listOf(0 to tr("Каталог", "Catalogue"), 4 to tr("Герой", "Hero"),
-                    5 to tr("Дерево", "Tree"), 6 to tr("Аукцион", "Auction"), 3 to tr("Аккаунт", "Account"))
-                val icons = mapOf<Int, ImageVector>(0 to ForgeGlyphs.Stash, 1 to ForgeGlyphs.Tome, 2 to ForgeGlyphs.Scroll,
-                    3 to ForgeGlyphs.Portal, 4 to ForgeGlyphs.Helm, 5 to ForgeGlyphs.Constellation, 6 to ForgeGlyphs.Orb)
-                destinations.forEach { (index, label) ->
+                // Four destinations are the game; an administrator gets exactly one more, and
+                // everything that used to crowd the bar lives behind it as a button.
+                val labels = mapOf(TAB_HERO to tr("Герой", "Hero"), TAB_TREE to tr("Дерево", "Tree"),
+                    TAB_AUCTION to tr("Аукцион", "Auction"), TAB_ACCOUNT to tr("Аккаунт", "Account"),
+                    TAB_ADMIN to tr("Админ", "Admin"))
+                val destinations = PLAYER_TABS + listOfNotNull(TAB_ADMIN.takeIf { s.adminTools })
+                val icons = mapOf<Int, ImageVector>(TAB_ACCOUNT to ForgeGlyphs.Portal, TAB_HERO to ForgeGlyphs.Helm,
+                    TAB_TREE to ForgeGlyphs.Constellation, TAB_AUCTION to ForgeGlyphs.Orb, TAB_ADMIN to ForgeGlyphs.Scroll)
+                destinations.forEach { index ->
+                    val label = labels.getValue(index)
                     NavigationBarItem(selected = s.tab == index, onClick = { vm.tab(index) },
                         icon = { Icon(icons.getValue(index), null, modifier = Modifier.size(22.dp)) }, label = { Text(label, fontSize = 10.sp) },
                         colors = NavigationBarItemDefaults.colors(selectedIconColor = GoldBright, selectedTextColor = Gold,
@@ -107,18 +111,20 @@ import com.sperance.exileforge.ui.theme.*
         }
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).imePadding().voidBackdrop()) {
-            ForgeBanner(s, !s.busy && !s.editorOpen, onMode = { vm.mode(if (s.adminTools) AppMode.PLAYER else AppMode.ADMIN) }, onLanguage = vm::language)
+            ForgeBanner(s, !s.busy && !s.editorOpen, onLanguage = vm::language)
             if (s.busy) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised) else OrnateDivider(Gold)
             when (s.tab) {
-                0 -> CatalogScreen(s, vm)
-                1 -> EditorScreen(s, vm, onDelete = onDeleteRequest, onClose = onDiscardRequest)
-                2 -> ChecksScreen(s, vm, logs)
-                3 -> ServerScreen(s, vm, logs)
-                4 -> HeroScreen(s, vm)
-                5 -> SkillTreeScreen(s, vm)
-                6 -> AuctionScreen(s, vm)
-                // The forge keeps no place in the bar: it opens from the Hero tab, like the editor
-                // and the checks open from the Account tab, and the bar is the way back out.
+                TAB_CATALOG -> CatalogScreen(s, vm)
+                TAB_EDITOR -> EditorScreen(s, vm, onDelete = onDeleteRequest, onClose = onDiscardRequest)
+                TAB_CHECKS -> ChecksScreen(s, vm, logs)
+                TAB_ACCOUNT -> ServerScreen(s, vm, logs)
+                TAB_HERO -> HeroScreen(s, vm)
+                TAB_TREE -> SkillTreeScreen(s, vm)
+                TAB_AUCTION -> AuctionScreen(s, vm)
+                TAB_ADMIN -> AdminScreen(s, vm)
+                // The forge keeps no place in the bar: it opens from the Hero tab, as the editor,
+                // the checks and the catalogue open from the administrator's, and the bar is the
+                // way back out of all of them.
                 TAB_CRAFT -> CraftScreen(s, vm)
             }
         }
@@ -126,12 +132,16 @@ import com.sperance.exileforge.ui.theme.*
 }
 
 /**
- * Title banner: the sigil, the character being played, and the two switches an exile keeps at hand.
+ * Title banner: the sigil, the character being played, and the one switch an exile keeps at hand.
  *
  * The subtitle names the character rather than the league, because every button on every tab acts
  * on that one and nothing on screen would otherwise say which.
+ *
+ * The administrator's mode switch used to sit here too. It moved to the administrator's own tab in
+ * 2.3.0: it is not something a player has, and the banner is the one thing on screen every player
+ * sees on every tab.
  */
-@Composable private fun ForgeBanner(s: ForgeState, enabled: Boolean, onMode: () -> Unit, onLanguage: (Lang) -> Unit) {
+@Composable private fun ForgeBanner(s: ForgeState, enabled: Boolean, onLanguage: (Lang) -> Unit) {
     Row(Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Gold.copy(alpha = .10f), Color.Transparent, Gold.copy(alpha = .06f))))
         .padding(horizontal = 18.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(40.dp).border(1.dp, Gold.copy(alpha = .5f), CutCornerShape(9.dp)), contentAlignment = Alignment.Center) {
@@ -146,7 +156,6 @@ import com.sperance.exileforge.ui.theme.*
                 style = MaterialTheme.typography.labelSmall, color = Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         LanguageSwitch(s.lang, onLanguage)
-        if (s.isAdmin) TextButton(enabled = enabled, onClick = onMode) { Text(if (s.adminTools) tr("Админ", "Admin") else tr("Игрок", "Player")) }
     }
 }
 

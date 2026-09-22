@@ -7,6 +7,8 @@ import com.sperance.exileforge.core.model.CatalogFilter
 import com.sperance.exileforge.core.network.normalizeServer
 import com.sperance.exileforge.presentation.ForgeRuntime
 import com.sperance.exileforge.presentation.state.AppMode
+import com.sperance.exileforge.presentation.state.TAB_ADMIN
+import com.sperance.exileforge.presentation.state.TAB_HERO
 import com.sperance.exileforge.presentation.state.AppPhase
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.update
@@ -17,7 +19,10 @@ class SessionViewModel(private val runtime: ForgeRuntime) {
 
     fun mode(mode: AppMode) { with(runtime) {
         if (state.value.busy || state.value.editorOpen || mode == AppMode.ADMIN && !state.value.isAdmin) return
-        mutable.update { it.copy(mode = mode, catalog = Catalog.EQUIPMENT, items = emptyList(), page = 0, tab = 0, filter = CatalogFilter(), query = "") }
+        // Dropping the tools closes the tabs that come with them, so the switch lands on the hero
+        // rather than on a screen that is about to refuse to draw.
+        mutable.update { it.copy(mode = mode, catalog = Catalog.EQUIPMENT, items = emptyList(), page = 0,
+            tab = if (mode == AppMode.ADMIN) TAB_ADMIN else TAB_HERO, filter = CatalogFilter(), query = "") }
         task { restoreFilters(); loadPage(0) }
     } }
 

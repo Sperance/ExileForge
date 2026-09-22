@@ -7,7 +7,6 @@ import com.sperance.exileforge.core.i18n.LocaleBundle
 import com.sperance.exileforge.core.i18n.locError
 import com.sperance.exileforge.core.i18n.serverLocale
 import com.sperance.exileforge.core.i18n.LocaleManifest
-import com.sperance.exileforge.core.i18n.serverLocaleEn
 import com.sperance.exileforge.core.i18n.tr
 import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.contract.entityId
@@ -21,6 +20,7 @@ import com.sperance.exileforge.data.settings.ServerStore
 import com.sperance.exileforge.presentation.features.*
 import com.sperance.exileforge.presentation.state.AppMode
 import com.sperance.exileforge.presentation.state.AppPhase
+import com.sperance.exileforge.presentation.state.ADMIN_TABS
 import com.sperance.exileforge.presentation.state.ForgeState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -106,11 +106,6 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
         val chosen = manifest.language(language.code) ?: manifest.language(manifest.default) ?: return
         if (cached == null || cached.first != chosen.hash || chosen.code != language.code)
             applyLocale(bundle(server, manifest, chosen.code) ?: return)
-        // The showcase names a lot in English as well, because that is the language of the wiki and
-        // of every trade site a lot is compared against. This is the only second dictionary the
-        // client holds, and when the player already reads English it is the very same one.
-        serverLocaleEn = if (chosen.code == Lang.EN.code) serverLocale
-            else bundle(server, manifest, Lang.EN.code) ?: LocaleBundle()
     }
 
     /** One dictionary, off the store when its fingerprint still matches and off the server when not. */
@@ -183,7 +178,17 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
     }
 
     /** The Checks tab runs writes against the server; it belongs to an administrator alone. */
-    fun tab(tab: Int) { if (!state.value.adminTools && tab == 2) return; mutable.update { it.copy(tab = tab) } }
+    /**
+     * Opens a tab, refusing the ones a player has no business on.
+     *
+     * The catalogue joined the editor and the checks behind this gate in 2.3.0: it is a view of
+     * the world's reference tables, which is an administrator's concern, and a player's four
+     * destinations are the game itself.
+     */
+    fun tab(tab: Int) {
+        if (!state.value.adminTools && tab in ADMIN_TABS) return
+        mutable.update { it.copy(tab = tab) }
+    }
     suspend fun referencePage(source: EntitySource, page: Int, query: String) = api.referencePage(source, page, query)
     /**
      * One equipment template, through the cache the inventory already fills.
@@ -221,7 +226,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
                 val prefix = if (e is ApiFailure) "HTTP ${e.status ?: "—"} ${e.code.orEmpty()}: " else ""
                 // A refusal the dictionary knows whole is shown in the chosen language; one whose
                 // template needs arguments the envelope never carried keeps the server's sentence.
-                val refusal = if (e is ApiFailure) locError(e.code, e.message.orEmpty()) else e.message.orEmpty()
+                val refusal = if (e is ApiFailure) locError(e.code, e.message.orEmpty(), e.args) else e.message.orEmpty()
                 mutable.update { it.copy(failure = problem, error = true, message = when (problem) {
                     FailureState.UncertainWrite -> tr("Ответ потерян. Запись могла сохраниться: обновите данные перед повтором.", "The response was lost. The write may have been applied: refresh before retrying.")
                     FailureState.Offline -> tr("Нет соединения: ", "No connection: ") + transportDetail(e)
@@ -253,10 +258,14 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
      * single read backs the character form and the tree screen alike.
      */
     suspend fun ensureProgression() {
-        if (state.value.classes.isNotEmpty() && state.value.treeNodes.isNotEmpty()) return
+        if (state.value.classes.isNotEmpty() && state.value.treeNodes.isNotEmpty() && state.value.levels.isNotEmpty()) return
         val classes = api.characterClasses()
         val nodes = api.skillTree()
-        mutable.update { it.copy(classes = classes, treeNodes = nodes, draftClass = it.draftClass.ifBlank { classes.firstOrNull()?.id.orEmpty() }) }
+        // The level table comes with them: it is the same kind of reference — fixed for a session —
+        // and without it the hero's experience is a number with nothing to measure it against.
+        val levels = api.experienceLevels().sortedBy { it.level }
+        mutable.update { it.copy(classes = classes, treeNodes = nodes, levels = levels,
+            draftClass = it.draftClass.ifBlank { classes.firstOrNull()?.id.orEmpty() }) }
     }
 
     /**

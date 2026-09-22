@@ -14,7 +14,6 @@ import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
 import com.sperance.exileforge.core.i18n.LocaleBundle
 import com.sperance.exileforge.core.i18n.serverLocale
-import com.sperance.exileforge.core.i18n.serverLocaleEn
 import com.sperance.exileforge.core.model.hero.CharacterSheet
 import com.sperance.exileforge.core.model.hero.CharacterSummary
 import com.sperance.exileforge.core.model.hero.InactiveEquipment
@@ -23,6 +22,7 @@ import com.sperance.exileforge.core.model.skilltree.CharacterSkillNode
 import com.sperance.exileforge.core.model.skilltree.SkillNodeType
 import com.sperance.exileforge.core.model.skilltree.SkillTreeNode
 import com.sperance.exileforge.core.model.skilltree.SkillTreeState
+import com.sperance.exileforge.core.model.skilltree.StatContribution
 import com.sperance.exileforge.core.model.hero.EquipmentInstance
 import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.core.model.modifier.Modifier as RolledModifier
@@ -65,12 +65,9 @@ class HeroPanelTest {
         "skilltree.STR_START.name": "Мародёр",
         "skilltree.STR_LIFE_1.name": "Крепость",
         "skilltree.STR_LIFE_1.description": "Больше здоровья"}""")
-        // The showcase names a lot in English as well; nothing else reads this second dictionary.
-        serverLocaleEn = LocaleBundle.parse("en", "sha-en", """{
-            "equipment.IRON_HELMET.name": "Iron Helmet",
-            "equipment.MY_HELMET.name": "My Helmet"}""") }
+        }
 
-    @After fun forget() { serverLocale = LocaleBundle(); serverLocaleEn = LocaleBundle() }
+    @After fun forget() { serverLocale = LocaleBundle() }
 
     /** The equipped slot shows its template's name and hands back the instance id, not the slot. */
     @Test fun equippedSlotShowsItsTemplateAndEmitsTheInstanceId() {
@@ -137,8 +134,10 @@ class HeroPanelTest {
         val hero = HeroView(CharacterSummary("hero", "owner", "Изгнанник", level = 5), emptyList(),
             tree = SkillTreeState("hero", total = 4, spent = 0, available = 4,
                 nodes = listOf(CharacterSkillNode("STR_START", emptyList(), SkillNodeType.START, 0)),
-                // The totals are the server's arithmetic, already done: the client only prints them.
-                totals = mapOf("STOCK_HEALTH" to 40.0)))
+                // The totals are the server's arithmetic, already done: the client only prints
+                // them, and an INCREASED one stays a percentage because there is no base under it.
+                totals = listOf(StatContribution("STOCK_HEALTH", "ADD", 40.0),
+                    StatContribution("STOCK_ATTACK_PHYSICAL", "INCREASED", 25.0))))
         var allocated: String? = null
         compose.setContent { ForgeTheme {
             // The search reads the query off the state, as it does in the app, so the test has to
@@ -156,15 +155,20 @@ class HeroPanelTest {
         compose.onNodeWithText("Очки: 4 из 4").assertIsDisplayed()
         compose.onNodeWithText("Подробно").performClick()
         compose.onNodeWithText("Доступно").performScrollTo().assertIsDisplayed()
-        // What the whole tree gives is counted by the server and printed whole, no dot.
+        // What the whole tree gives is counted by the server and printed whole, no dot — and a
+        // percentage survives, which it did not when the total was taken over an empty base.
         compose.onNodeWithText("Здоровье").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("40").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("+40").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("+25%").performScrollTo().assertIsDisplayed()
         // Finding a node opens the node itself: searching and then not being shown it
         // would be a strange place to stop.
         compose.onNodeWithText("Название узла").performScrollTo().performTextInput("Креп")
         compose.onNodeWithText("Крепость · Нотабль").performScrollTo().performClick()
         compose.onNodeWithText("Нотабль").assertIsDisplayed()
         compose.onNodeWithText("Взять узел").performScrollTo().performClick()
+        // Spending a point is asked about before it is spent, and the question names the price.
+        compose.onNodeWithText("Взять узел?").assertIsDisplayed()
+        compose.onNodeWithText("Взять").performClick()
         compose.runOnIdle { assertEquals("STR_LIFE_1", allocated) }
     }
 
@@ -203,21 +207,27 @@ class HeroPanelTest {
                 showcase = AuctionPage(listOf(theirs, mine), 0, 20, 2, 1)),
                 onBuy = { bought = it }, onPage = {})
         } } }
-        // First line: the name, and the English one beside it — a lot is read against an English wiki.
-        compose.onNodeWithText("Железный шлем · Iron Helmet").performScrollTo().assertIsDisplayed()
-        // Second line: what it is, what level it is, and what it asks of a character.
-        compose.onNodeWithText("Шлем · Редкий · ур. 30 · треб. 25 ур., 40 сил").performScrollTo().assertIsDisplayed()
-        // Third line: the base and the rolls as one list, five of them, and the sixth counted.
-        compose.onNodeWithText("ещё 1", substring = true).performScrollTo().assertIsDisplayed()
-        // The price stands on its own line at the bottom, counted in orbs the catalogue names.
+        // The name, in the chosen language and in it alone: no English twin beside it.
+        compose.onNodeWithText("Железный шлем").performScrollTo().assertIsDisplayed()
+        // What it is, what level it is, and what it asks of a character. Rarity is not written
+        // out anywhere — it is the colour of the frame and of the name.
+        compose.onNodeWithText("Шлем · ур. 30 · треб. 25 ур., 40 сил").performScrollTo().assertIsDisplayed()
+        compose.onAllNodesWithText("Редкий").assertCountEquals(0)
+        // The properties are a list, one per line — base first, then the rolls, five at most.
+        compose.onNodeWithText("12").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("ещё 1").performScrollTo().assertIsDisplayed()
+        // The bottom line: the price on the left, the seller on the right.
         compose.onNodeWithText("4 × Сфера хаоса").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Соперник").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("7 × Сфера хаоса").performScrollTo().assertIsDisplayed()
-        // The state of a lot sits beside its price, not in place of it.
         compose.onNodeWithText("Ваш лот").performScrollTo().assertIsDisplayed()
         // Nothing is bought from a line: the rolls are what is being paid for, so the card opens first.
         compose.onAllNodesWithText("Купить").assertCountEquals(0)
-        compose.onNodeWithText("Железный шлем · Iron Helmet").performScrollTo().performClick()
+        compose.onNodeWithText("Железный шлем").performScrollTo().performClick()
         compose.onNodeWithText("Купить").performClick()
+        // A purchase cannot be undone, so it is asked about before it happens.
+        compose.onNodeWithText("Купить лот?").assertIsDisplayed()
+        compose.onNodeWithText("Купить лот").performClick()
         compose.runOnIdle { assertEquals("lot-1", bought) }
     }
 

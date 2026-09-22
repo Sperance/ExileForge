@@ -44,7 +44,7 @@ class ServerLocaleTest {
     }"""
 
     private fun load() { serverLocale = LocaleBundle.parse("ru", "sha-1", document) }
-    @After fun forget() { serverLocale = LocaleBundle(); serverLocaleEn = LocaleBundle() }
+    @After fun forget() { serverLocale = LocaleBundle() }
 
     @Test fun `a key is section, code and field, exactly as the server writes it`() {
         assertEquals("equipment.IRON_SKULLCAP.name", LocaleKey.equipmentName("IRON_SKULLCAP"))
@@ -127,27 +127,22 @@ class ServerLocaleTest {
     }
 
     /**
-     * The showcase is the one screen that holds two dictionaries at once.
+     * A refusal is translated by filling the client's own template with the server's arguments.
      *
-     * A lot is weighed against a wiki and a trade site, both of them English, so its line carries
-     * the English name beside the local one. Nothing else reads the second dictionary, and a name
-     * it has no English for is left out rather than faked from the code.
+     * The envelope carries a finished English sentence, its code, and — since 0.17.0 — what was
+     * interpolated into it. Without those the client could only use a template with no holes,
+     * which is almost none of them, so nearly every refusal arrived in English.
      */
-    @Test fun `a lot names itself in English as well, when the English is known`() {
+    @Test fun `a refusal is translated by filling the template with the server's own arguments`() {
         load()
-        serverLocaleEn = LocaleBundle.parse("en", "sha-en", """{
-            "equipment.IRON_SKULLCAP.name": "Iron Skullcap",
-            "item.CHAOS_ORB.name": "Chaos Orb"}""")
-        assertEquals("Iron Skullcap", AuctionLot(kind = AuctionLotKind.EQUIPMENT, itemCode = "IRON_SKULLCAP").titleEn)
-        assertEquals("Chaos Orb", AuctionLot(kind = AuctionLotKind.ITEM, itemCode = "CHAOS_ORB").titleEn)
-        // A code the English dictionary misses leaves the second name off the line entirely.
-        assertEquals("", AuctionLot(kind = AuctionLotKind.EQUIPMENT, itemCode = "UNKNOWN_HAT").titleEn)
-        // Reading English already: the same name twice on one line tells nobody anything.
-        serverLocaleEn = serverLocale
-        assertEquals("", AuctionLot(kind = AuctionLotKind.EQUIPMENT, itemCode = "IRON_SKULLCAP").titleEn)
-        // Without a second dictionary at all the line is simply the one name.
-        serverLocaleEn = LocaleBundle()
-        assertEquals("", AuctionLot(kind = AuctionLotKind.EQUIPMENT, itemCode = "IRON_SKULLCAP").titleEn)
+        assertEquals("Уровень 3 слишком мал для аукциона",
+            locError("AU_002", "Character level 3 is too low for the auction", listOf("3")))
+        // No arguments and a template with a hole: the server's finished sentence still wins,
+        // because half a sentence is worse than one in the wrong language.
+        assertEquals("Character level 3 is too low for the auction",
+            locError("AU_002", "Character level 3 is too low for the auction"))
+        // A code the dictionary does not know is left exactly as the server said it.
+        assertEquals("Something went sideways", locError("ZZ_999", "Something went sideways", listOf("x")))
     }
 
     @Test fun `an orb the client has no table for is still named by the server`() {

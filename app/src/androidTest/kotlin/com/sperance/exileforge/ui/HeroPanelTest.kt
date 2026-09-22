@@ -214,8 +214,9 @@ class HeroPanelTest {
         // The name, in the chosen language and in it alone: no English twin beside it.
         compose.onNodeWithText("Железный шлем").performScrollTo().assertIsDisplayed()
         // The line shows only what the item is and its level; requirements belong to the opened card,
-        // not the showcase list.
-        compose.onNodeWithText("Шлем · ур. 30").performScrollTo().assertIsDisplayed()
+        // not the showcase list. Both lots say exactly that and nothing more, which is why there
+        // are two of them: with the requirements gone the two lines became the same sentence.
+        compose.onAllNodesWithText("Шлем · ур. 30").assertCountEquals(2)
         compose.onAllNodesWithText("Шлем · ур. 30 · треб. 25 ур., 40 сил").assertCountEquals(0)
         compose.onAllNodesWithText("Сила: нужно 30, есть 14").assertCountEquals(0)
         compose.onAllNodesWithText("Редкий").assertCountEquals(0)

@@ -46,12 +46,12 @@ import com.sperance.exileforge.ui.theme.*
         }
     }
     pendingDelete?.let { doomed ->
-        AlertDialog(onDismissRequest = { pendingDelete = null }, containerColor = Panel, titleContentColor = Gold,
-            title = { Text(ui("chars.release_q")) },
-            text = { Text(doomed.name + "\n" + ui("chars.release_text")) },
-            confirmButton = { TextButton(enabled = !s.busy, onClick = { vm.deleteCharacter(doomed.id); pendingDelete = null }) {
-                Text(ui("chars.release_do"), color = MaterialTheme.colorScheme.error) } },
-            dismissButton = { TextButton(onClick = { pendingDelete = null }) { Text(ui("common.cancel")) } })
+        ConfirmSheet(
+            title = ui("chars.release_q"), subtitle = doomed.name, danger = true,
+            icon = { Icon(ForgeGlyphs.Exile, null, tint = LifeRed, modifier = Modifier.size(40.dp)) },
+            note = ui("chars.release_text"),
+            confirm = ui("chars.release_do"),
+            onDismiss = { pendingDelete = null }) { vm.deleteCharacter(doomed.id) }
     }
 }
 

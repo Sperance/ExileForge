@@ -8,6 +8,7 @@ import androidx.compose.runtime.*
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.unit.dp
@@ -169,7 +170,9 @@ class HeroPanelTest {
         compose.onNodeWithText("Взять узел").performScrollTo().performClick()
         // Spending a point is asked about before it is spent, and the question names the price.
         compose.onNodeWithText("Взять узел?").assertIsDisplayed()
-        compose.onNodeWithText("Взять").performClick()
+        // The button is held, not tapped; the gesture itself is ConfirmSheetTest's. This path is the
+        // one a screen reader takes, which confirms at once.
+        compose.onNodeWithText("УДЕРЖИВАЙТЕ, ЧТОБЫ ВЗЯТЬ").performSemanticsAction(SemanticsActions.OnClick)
         compose.runOnIdle { assertEquals("STR_LIFE_1", allocated) }
     }
 
@@ -234,7 +237,9 @@ class HeroPanelTest {
         compose.onNodeWithText("Купить").performClick()
         // A purchase cannot be undone, so it is asked about before it happens.
         compose.onNodeWithText("Купить лот?").assertIsDisplayed()
-        compose.onNodeWithText("Купить лот").performClick()
+        // The price is a ledger line, in the orb it was set in.
+        compose.onNodeWithText("−4 × Сфера хаоса").assertIsDisplayed()
+        compose.onNodeWithText("УДЕРЖИВАЙТЕ, ЧТОБЫ КУПИТЬ ЛОТ").performSemanticsAction(SemanticsActions.OnClick)
         compose.runOnIdle { assertEquals("lot-1", bought) }
     }
 

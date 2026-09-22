@@ -24,6 +24,7 @@ import com.sperance.exileforge.core.display.statNumber
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.plural
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.model.currency.CurrencyOrb
 import com.sperance.exileforge.core.model.skilltree.SkillNodeType
 import com.sperance.exileforge.core.model.skilltree.StatContribution
 import com.sperance.exileforge.core.model.skilltree.SkillTreeNode
@@ -353,25 +354,45 @@ import kotlinx.serialization.json.putJsonArray
     onAllocate: (String) -> Unit, onRefund: (String) -> Unit, onReset: () -> Unit,
 ) {
     val nodeName = { code: String -> s.treeNodes.firstOrNull { it.code == code }?.title ?: code }
+    val treeIcon: @Composable () -> Unit = { Icon(ForgeGlyphs.Constellation, null, tint = Rune, modifier = Modifier.size(40.dp)) }
+    val available = s.hero?.tree?.available
+    // What a refund is paid with: the orb, and how many of it the bag holds right now.
+    val regret = s.orbOf(CurrencyOrb.ORB_OF_REGRET)
+    val regretTitle = regret?.title(s.lang) ?: CurrencyOrb.ORB_OF_REGRET.title(s.lang)
+    val regretLeft = regret?.let { s.bagAmount(it.id) }
+    fun regretLines(spent: Int) = listOfNotNull(
+        LedgerLine(ui("confirm.spend"), ui("confirm.minus", spent, regretTitle), Tone.SPEND),
+        regretLeft?.takeIf { it >= spent }?.let { LedgerLine(ui("confirm.left"), ui("confirm.amount", it - spent, regretTitle)) },
+    )
+    fun shortage(spent: Int) = regretLeft?.takeIf { it < spent }?.let { ui("confirm.short", it) }
+
     allocate?.let { code ->
         val cost = s.treeNodes.firstOrNull { it.code == code }?.cost ?: 1
-        ConfirmDialog(
-            title = ui("tree.allocate_q"),
-            text = ui("tree.allocate_text", nodeName(code), cost, points(cost)),
+        ConfirmSheet(
+            title = ui("tree.allocate_q"), subtitle = nodeName(code), icon = treeIcon,
+            ledger = listOfNotNull(
+                LedgerLine(ui("confirm.spend"), ui("confirm.minus_count", cost, points(cost)), Tone.SPEND),
+                available?.takeIf { it >= cost }?.let { LedgerLine(ui("confirm.left"), ui("confirm.count", it - cost, points(it - cost))) },
+                LedgerLine(ui("confirm.gain"), nodeName(code), Tone.GAIN),
+            ),
+            note = ui("tree.allocate_confirm"),
             confirm = ui("tree.allocate_do"), onDismiss = onClear) { onAllocate(code) }
     }
     refund?.let { code ->
-        ConfirmDialog(
-            title = ui("tree.refund_q"),
-            text = ui("tree.refund_text", nodeName(code)),
+        val cost = s.treeNodes.firstOrNull { it.code == code }?.cost ?: 1
+        ConfirmSheet(
+            title = ui("tree.refund_q"), subtitle = nodeName(code), icon = treeIcon,
+            ledger = regretLines(1) + LedgerLine(ui("confirm.returns"), ui("confirm.plus_count", cost, points(cost)), Tone.GAIN),
+            warning = shortage(1),
             confirm = ui("tree.refund_do"), onDismiss = onClear) { onRefund(code) }
     }
     if (reset) {
         // The start node is not given back, so it is not paid for — the count says what is.
         val returned = (s.hero?.tree?.nodes?.size ?: 1) - 1
-        ConfirmDialog(
-            title = ui("tree.reset_q"),
-            text = ui("tree.reset_text", returned, nodes(returned)),
+        ConfirmSheet(
+            title = ui("tree.reset_q"), subtitle = ui("confirm.count", returned, nodes(returned)), icon = treeIcon,
+            ledger = regretLines(returned) + LedgerLine(ui("confirm.returns"), ui("confirm.plus_count", returned, nodes(returned)), Tone.GAIN),
+            note = ui("tree.reset_confirm"), warning = shortage(returned), danger = true,
             confirm = ui("tree.reset_do"), onDismiss = onClear) { onReset() }
     }
 }

@@ -20,7 +20,7 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.7.1, `versionCode` 24) for the
+ExileForge is an **Android Compose client** (version 2.8.0, `versionCode` 25) for the
 **ktor-bestgame** RPG server (0.20.0), pinned in
 `core/.../contract/Contract.kt` as `SERVER_COMMIT = e9964a01445e76051a4ced23f8b5735a61e51f00`
 on the server branch `claude/tender-pasteur-a36kj2`.
@@ -109,7 +109,7 @@ app/                                    Android application (minSdk 26, compile/
                  state/ForgeState.kt    One immutable state object for the whole app
   ui/            ForgeApp.kt            Scaffold, banner with RU/EN switch, bottom navigation, tab dispatch
                  screens/               session (auth + character menu), admin, catalog, editor, hero, tree, craft, auction, checks, server
-                 components/            ItemCard, ItemRow, PropertyRow, InfoCard, ConfirmDialog, spinners and Ornament.kt
+                 components/            ItemCard, ItemRow, PropertyRow, InfoCard, ConfirmSheet, spinners and Ornament.kt
                  forms/, icons/ (ForgeGlyphs vector set, ItemEmblem, ItemIcon/PropertyIcon, ServerSprite), theme/
   data/settings/ServerStore.kt          DataStore Preferences: base URL, saved filters, language, locale bundles, icon set, device-session flag
                  DeviceId.kt            UUID v5 over the hardware fingerprint plus ANDROID_ID
@@ -420,7 +420,14 @@ These are enforced by tests and are the point of the client's design:
   from `ScreenHeader`, `ForgePanel`, `OrnateDivider`, `Engraved`, `StatBar`, `SectionHeader`,
   `RaritySpine`, `Rhombus`, `ItemRow` and `PropertyRow` instead of ad-hoc cards, and use
   `rarityColor` rather than new ad-hoc colors. An item is a banner: a `Row` of
-  `height(IntrinsicSize.Min)` with the spine first and everything else in the column beside it. A stash is a list of `ItemRow`s with the full `ItemCard` one tap behind each,
+  `height(IntrinsicSize.Min)` with the spine first and everything else in the column beside it.
+  Anything that spends what cannot be earned back in a moment asks through `ConfirmSheet`: a sheet
+  from the bottom with the same spine — gold for an exchange, `LifeRed` for a loss (`danger`) — a
+  ledger of what is taken, what is left and what comes back (`LedgerLine`, `Tone`), and a button
+  that is **held** for `HOLD_TO_CONFIRM_MS`, because a tap is what a thumb does on its way
+  elsewhere. The same button answers an accessibility click at once: a screen reader cannot hold.
+  "What is left" is printed only when the bag is known and can pay; when it cannot, the sheet says
+  so as a warning and still sends the command — the refusal is the server's. A stash is a list of `ItemRow`s with the full `ItemCard` one tap behind each,
   because a card is a page about one item and a line is a stash you can read down.
 - Commit messages follow Conventional Commits: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`
   (docs-only commits often append `[skip ci]`).

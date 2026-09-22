@@ -160,6 +160,15 @@ data class ForgeState(
     /** The editor is an administrator's tool now that a character is made from the menu. */
     val canEdit: Boolean get() = signedIn && adminTools
     val ownsCharacter: Boolean get() = signedIn && profile?.id == characterOwner
+    /**
+     * How many of one stacking item the hero holds, or null while the hero has not been read.
+     *
+     * A confirmation prints what a purchase or a refund leaves behind; before the bag is known it
+     * prints nothing rather than a guess of zero.
+     */
+    fun bagAmount(itemId: String): Long? = hero?.let { view -> view.bag.firstOrNull { it.itemId == itemId }?.amount ?: 0L }
+    /** The bag's orb of the given kind — the document a spent orb is counted by. */
+    fun orbOf(kind: com.sperance.exileforge.core.model.currency.CurrencyOrb) = orbs.firstOrNull { it.orb == kind }
 }
 
 /**

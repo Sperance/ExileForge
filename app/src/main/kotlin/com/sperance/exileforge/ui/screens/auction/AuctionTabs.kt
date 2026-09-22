@@ -83,14 +83,27 @@ import kotlinx.serialization.json.put
     // is said so in the same breath, because that is exactly the mistake worth catching.
     s.showcase.items.firstOrNull { it.id == confirmBuy }?.let { lot ->
         val blocked = s.hero?.sheet?.unwearableBy?.get(lot.equipment?.equipmentId.orEmpty()).orEmpty()
-        ConfirmDialog(
-            title = ui("auction.buy_q"),
-            text = listOfNotNull(
-                ui("auction.buy_text", lot.title, orbPrice(s, lot)),
+        val document = lotDocument(s, lot)
+        val orb = orbTitle(s, lot)
+        // What the bag keeps after paying: shown when the bag is known and can pay, and turned
+        // into a warning when it cannot — the server refuses a short purchase, this only says so first.
+        val have = s.bagAmount(lot.priceOrbId)
+        ConfirmSheet(
+            title = ui("auction.buy_q"), subtitle = lot.title,
+            icon = { ItemIcon(document, rarityColor(document.text("rarity")), Modifier.size(44.dp)) },
+            ledger = listOfNotNull(
+                LedgerLine(ui("confirm.spend"), ui("confirm.minus", lot.price, orb), Tone.SPEND),
+                have?.takeIf { it >= lot.price }?.let { LedgerLine(ui("confirm.left"), ui("confirm.amount", it - lot.price, orb)) },
+                LedgerLine(ui("confirm.gain"), lot.title, Tone.GAIN),
+                LedgerLine(ui("auction.seller"), lot.sellerName.ifBlank { "…${lot.sellerId.takeLast(6)}" }),
+            ),
+            note = ui("auction.buy_note"),
+            warning = listOfNotNull(
+                have?.takeIf { it < lot.price }?.let { ui("confirm.short", it) },
                 blocked.takeIf { it.isNotEmpty() }?.let {
                     ui("auction.unwearable", it.joinToString(", ") { r -> requirementReason(r, s.lang) })
-                }
-            ).joinToString("\n\n"),
+                },
+            ).joinToString("\n").ifBlank { null },
             confirm = ui("auction.buy_do"),
             onDismiss = { confirmBuy = null }) { onBuy(lot.id) }
     }
@@ -287,6 +300,7 @@ private fun listedAt(stamp: String): String? {
 }
 
 /** A lot's price, in the orb it was set in; an orb the catalogue misses keeps its tail as a name. */
-private fun orbPrice(s: ForgeState, lot: AuctionLot): String = "${lot.price} × " +
-    (s.orbs.firstOrNull { it.id == lot.priceOrbId }?.title(s.lang)
-        ?: ui("auction.orb_id", lot.priceOrbId.takeLast(6)))
+private fun orbPrice(s: ForgeState, lot: AuctionLot): String = ui("confirm.amount", lot.price, orbTitle(s, lot))
+
+private fun orbTitle(s: ForgeState, lot: AuctionLot): String =
+    s.orbs.firstOrNull { it.id == lot.priceOrbId }?.title(s.lang) ?: ui("auction.orb_id", lot.priceOrbId.takeLast(6))

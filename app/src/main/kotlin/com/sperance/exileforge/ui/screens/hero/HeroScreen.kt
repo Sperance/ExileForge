@@ -20,6 +20,7 @@ import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.TAB_CRAFT
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
+import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -95,9 +96,16 @@ import com.sperance.exileforge.ui.theme.*
     // Selling is final and takes the rolls with it, so it is asked about by name.
     sellId?.let { id ->
         val document = documents[id]
-        ConfirmDialog(
-            title = ui("hero.sell_q"),
-            text = ui("hero.sell_text", document?.text("name").orEmpty()),
+        val name = document?.text("name").orEmpty()
+        // The price is the merchant's: the sheet says gold is coming and leaves the sum to him.
+        ConfirmSheet(
+            title = ui("hero.sell_q"), subtitle = name, danger = true,
+            icon = if (document == null) null else ({ ItemIcon(document, rarityColor(document.text("rarity")), Modifier.size(44.dp)) }),
+            ledger = listOf(
+                LedgerLine(ui("confirm.give"), name, Tone.SPEND),
+                LedgerLine(ui("confirm.gain"), ui("confirm.gold_by_server"), Tone.GAIN),
+            ),
+            note = ui("hero.sell_confirm"),
             confirm = ui("hero.sell_do"),
             onDismiss = { sellId = null }) { detailId = null; vm.sellForGold(id) }
     }

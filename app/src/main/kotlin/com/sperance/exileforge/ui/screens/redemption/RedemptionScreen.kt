@@ -25,6 +25,7 @@ import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.Gold
+import com.sperance.exileforge.ui.theme.LifeRed
 import com.sperance.exileforge.ui.theme.Muted
 
 /**
@@ -55,9 +56,10 @@ import com.sperance.exileforge.ui.theme.Muted
     }
 
     pendingDelete?.let { doomed ->
-        ConfirmDialog(
-            title = ui("redemption.delete_q"),
-            text = doomed.code + "\n" + ui("redemption.delete_text"),
+        ConfirmSheet(
+            title = ui("redemption.delete_q"), subtitle = doomed.code, danger = true,
+            icon = { Icon(ForgeGlyphs.Scroll, null, tint = LifeRed, modifier = Modifier.size(40.dp)) },
+            note = ui("redemption.delete_text"),
             confirm = ui("common.delete"),
             onDismiss = { pendingDelete = null }) {
             vm.deleteRedemption(doomed.id); pendingDelete = null

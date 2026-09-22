@@ -29,13 +29,16 @@ change, in this repository and in `ktor-bestgame`, whether or not the task menti
    change done. Client-side labels are the other half of the same rule: a user-facing literal is
    always `tr("русский", "English")`, never one language alone.
 
-2. **Every finished change ends with a changelog and a version.** Once the checks have passed and
-   the branches are pushed, report what changed as a list, under a version number, **for the
-   application and for the server separately** — even when only one of them moved, say so. The
-   version numbers are the ones in `app/build.gradle.kts` (`versionName`/`versionCode`) and in the
-   server's `SERVER_VERSION`, and they are bumped as part of the change rather than left for
-   later. This is the last step of the work, not a courtesy: a change that is pushed but not
-   written up is not delivered.
+2. **Every finished change ends with a changelog entry and a version.** Once the checks have
+   passed and the branches are pushed, write what changed into `CHANGELOG.md` — a new entry at
+   the **top**, dated, under the version number, brief: what moved, and for a fix, what the cause
+   was. Each repository keeps its own file and they cross-reference each other, so the history of
+   dates answers "what changed and when" without reading commits. Then report the same list in
+   the reply, **for the application and for the server separately** — even when only one of them
+   moved, say so. The version numbers are the ones in `app/build.gradle.kts`
+   (`versionName`/`versionCode`) and in the server's `SERVER_VERSION`, and they are bumped as
+   part of the change rather than left for later. This is the last step of the work, not a
+   courtesy: a change that is pushed but not written up is not delivered.
 
 ## Repository layout
 
@@ -74,6 +77,7 @@ app/                                    Android application (minSdk 26, compile/
                  forms/, icons/ (ForgeGlyphs vector set, ItemEmblem, ItemIcon/PropertyIcon, ServerSprite), theme/
   data/settings/ServerStore.kt          DataStore Preferences: base URL, saved filters, language, locale bundles, icon set, device-session flag
                  DeviceId.kt            UUID v5 over the hardware fingerprint plus ANDROID_ID
+CHANGELOG.md                            Dated entries per version; the server keeps its own
 docs/                                   Russian reference docs (API_CONTRACT, VALIDATION)
 scripts/client_server_test.py           Boots the real backend + MongoDB and runs ServerIntegrationTest
 .github/workflows/android.yml           `build` job (unit/lint/APK/emulator UI) and `client-server` job

@@ -20,13 +20,14 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.5.1, `versionCode` 19) for the
-**ktor-bestgame** RPG server (0.19.1), pinned in
-`core/.../contract/Contract.kt` as `SERVER_COMMIT = 9037cb2c4593241268f2932879528e5054b93284`
+ExileForge is an **Android Compose client** (version 2.6.0, `versionCode` 20) for the
+**ktor-bestgame** RPG server (0.20.0), pinned in
+`core/.../contract/Contract.kt` as `SERVER_COMMIT = e9964a01445e76051a4ced23f8b5735a61e51f00`
 on the server branch `claude/tender-pasteur-a36kj2`.
 
 The client is deliberately **thin**: the server owns items, stats, modifier rolls and inventory.
-This client renders server state, sends commands, and never recomputes game numbers locally.
+This client renders server state and sends commands; it may add up what it was already sent to
+show a total, using the server's own formula, but it never decides a roll, a price or a sheet.
 
 ## Where the backlog lives
 
@@ -191,7 +192,14 @@ change or a language switch discards per-screen Compose state.
 
 These are enforced by tests and are the point of the client's design:
 
-1. **The server is authoritative.** Never compute damage, stats, prices or modifier rolls locally.
+1. **The server is authoritative about what is true; the client may do arithmetic to show it.**
+   Rolls, prices and the character sheet are the server's alone — it decides them and it stores
+   them, and a number the client works out never travels back. What the client may do, since 2.6.0,
+   is add up what it was already sent so a screen can answer a question the wire left in two halves:
+   `core/display/ItemTotals.kt` folds an item's own **local** modifiers into its own base, because
+   "100 armour" and "+20% armour" on two lines is a puzzle and 120 is the answer. It uses the
+   server's own formula — `(base + ΣADD) * (1 + ΣINCREASED/100) * Π(1 + MORE/100)`, SET last — so
+   the two sides cannot disagree; when one of them changes, the other does too.
    `GET /api/v1/character/inventory/stats` is the character sheet; the client prints it. Since
    0.10.0 it answers a `CharacterSheet` object: the numbers, the level, and the server's verdict on
    every worn item (`active` / `inactive` with the requirement each one misses). Since 0.17.0 it
@@ -199,9 +207,9 @@ These are enforced by tests and are the point of the client's design:
    The verdict is on the template because that is where a requirement lives, so one answer marks a
    stash line and a stranger's lot alike — and the client looks a template up rather than working
    a requirement out. A requirement is never re-checked here, and an attribute conversion
-   (`perStat`/`perAmount`) is never resolved here: the server applies the class's own conversions
-   (strength to life, intelligence to mana and three more) in the same pass as the tree, which is
-   what makes an attribute from a worn item feed one.
+   (`perStat`/`perAmount`) is never resolved here — an item has nothing inside it to convert from:
+   the server applies the class's own conversions (strength to life, intelligence to mana and three
+   more) in the same pass as the tree, which is what makes an attribute from a worn item feed one.
 2. **Identity comes from the server.** POST sends a JSON array of documents without `_id`;
    `requireId` demands 24 hex chars before any request is built.
 3. **The server owns versioning.** PUT sends only the changed fields and DELETE sends no body —
@@ -238,8 +246,13 @@ These are enforced by tests and are the point of the client's design:
 10. **Orbs are the server's rules.** A currency orb is an `items` document of category `CURRENCY`;
     `POST /api/v1/characterequipment/applyOrb` spends one and answers with the item plus a sentence
     saying what happened. The client sends the pair and prints that sentence — it never decides what
-    an orb did, and `CurrencyOrb` is a translation table, not a rule table. `rarity` and `corrupted`
-    belong to the instance, so the instance wins over its template in `inventoryDocument`.
+    an orb did, and `CurrencyOrb` is a translation table, not a rule table. `rarity`, `corrupted`
+    and `mirrored` belong to the instance, so the instance wins over its template in
+    `inventoryDocument`. Since 0.20.0 a Mirror of Kalandra marks its copy `mirrored` rather than
+    `corrupted`: the same refusal (`CR_010`), a different state, because an item that never met a
+    Vaal orb is not corrupted. The client never lists which states exist — `itemStates` reads every
+    `true` off the document, so a flag the server grows tomorrow appears without a rebuild and
+    `stateTitle` falls back to the field's own name until the dictionary has one.
 11. **A class is the base, and it is chosen once.** A character carries `classId`, not stats:
     `CharacterClass` holds the level-1 base, the per-level growth and the attribute conversions.
     It is a creation field with no update route — moving a character between classes would rewrite

@@ -72,7 +72,7 @@ fun weaponTitle(value: String, lang: Lang = uiLanguage) = uiOr(lang, "enum.weapo
 fun inventoryDocument(instance: JsonObject, base: JsonObject?): JsonObject = JsonObject(
     base.orEmpty()
         + mapOf("name" to JsonPrimitive(equipmentTitle(base)))
-        + instance.filterKeys { it in setOf("_id", "equipmentId", "params", "equippedSlot", "socketCode", "rarity", "corrupted") }
+        + instance.filterKeys { it in setOf("_id", "equipmentId", "params", "equippedSlot", "socketCode", "rarity", "corrupted", "mirrored") }
 )
 
 /**

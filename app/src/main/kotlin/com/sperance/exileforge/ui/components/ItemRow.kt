@@ -17,12 +17,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.contract.text
+import com.sperance.exileforge.core.display.baseProperties
 import com.sperance.exileforge.core.display.documentTitle
+import com.sperance.exileforge.core.display.itemStates
 import com.sperance.exileforge.core.display.modifierText
 import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.display.slotTitle
+import com.sperance.exileforge.core.display.stateTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.modifier.ModifierDefinition
+import androidx.compose.ui.text.AnnotatedString
+import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.serialization.json.JsonArray
@@ -85,8 +90,14 @@ const val ROW_PROPERTIES = 5
     onClick: () -> Unit) {
     val color = rarityColor(document.text("rarity"))
     val shape = CutCornerShape(topStart = 8.dp, bottomEnd = 8.dp)
-    val properties = ((document["baseParams"] as? JsonArray).orEmpty() + (document["params"] as? JsonArray).orEmpty())
-        .mapNotNull { (it as? JsonObject)?.let { one -> modifierText(one, definitions) } }
+    // The base first, carrying the number this copy really has — its own local modifiers are
+    // already in it — and the rolls after, which is the order a card reads in too. The base the
+    // item started from stays on the card: a line has no room for a sum and its history both.
+    val base = baseProperties(document, definitions)
+    val rolled = (document["params"] as? JsonArray).orEmpty()
+        .mapNotNull { (it as? JsonObject)?.let { one -> AnnotatedString(modifierText(one, definitions)) } }
+    val properties = base.map { basePropertyText(it, withBase = false) } + rolled
+    val states = itemStates(document)
     val level = document.text("itemLevel")
     val slot = document.text("slot").takeIf { it.isNotBlank() }?.let(::slotTitle)
     Column(Modifier.fillMaxWidth().background(Panel, shape)
@@ -113,8 +124,9 @@ const val ROW_PROPERTIES = 5
                         Text(it.joinToString(" · "), color = Muted, style = MaterialTheme.typography.labelSmall,
                             maxLines = 2, overflow = TextOverflow.Ellipsis)
                     }
-                properties.take(ROW_PROPERTIES).forEach {
-                    Text(it, color = Rune, style = MaterialTheme.typography.labelSmall,
+                properties.take(ROW_PROPERTIES).forEachIndexed { index, property ->
+                    Text(property, color = if (index < base.size) Parchment else Rune,
+                        style = MaterialTheme.typography.labelSmall,
                         maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 // Counted rather than dropped: "ещё 3" is the difference between a short item
@@ -127,8 +139,36 @@ const val ROW_PROPERTIES = 5
                     Text(requirementReason(it), color = LifeRed, style = MaterialTheme.typography.labelSmall,
                         maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
+                // States get a line of their own at the bottom, as symbols: a line is read down,
+                // and four words about corruption and sockets would push the properties off it.
+                if (states.isNotEmpty()) Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    states.forEach { state ->
+                        Icon(stateGlyph(state), stateTitle(state), tint = stateColor(state), modifier = Modifier.size(14.dp))
+                    }
+                }
             }
         }
         footer?.invoke(this)
     }
+}
+
+/**
+ * The drawing of a state, and its colour.
+ *
+ * A flag the server grows tomorrow gets the neutral sigil rather than nothing, so a row never
+ * silently drops a state it has no picture for.
+ */
+private fun stateGlyph(state: String) = when (state) {
+    "corrupted" -> ForgeGlyphs.Skull
+    "mirrored" -> ForgeGlyphs.Chain
+    "equipped" -> ForgeGlyphs.Helm
+    "socketed" -> ForgeGlyphs.Gem
+    else -> ForgeGlyphs.Sigil
+}
+
+private fun stateColor(state: String) = when (state) {
+    "corrupted" -> LifeRed
+    "equipped" -> Gold
+    "mirrored", "socketed" -> Rune
+    else -> Muted
 }

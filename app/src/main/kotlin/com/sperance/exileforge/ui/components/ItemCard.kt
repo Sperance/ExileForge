@@ -14,6 +14,11 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -36,6 +41,50 @@ import kotlinx.serialization.json.*
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Icon(propertyIcon(modifier.text("modifierId")), null, tint = Rune, modifier = Modifier.size(16.dp))
         Text(modifierText(modifier, definitions), color = Parchment, style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+/**
+ * A base property as one sentence, with the number the item really carries.
+ *
+ * The dictionary's template is filled with the folded value, and that value is coloured when a
+ * modifier moved it — the base it started from follows in brackets, so the line answers both
+ * "how much" and "why is it not the number on the shelf".
+ */
+fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString = buildAnnotatedString {
+    fun value(one: PropertyValue) {
+        if (!one.augmented) { append(one.text); return }
+        withStyle(SpanStyle(color = Rune, fontWeight = FontWeight.SemiBold)) { append(one.text) }
+        if (withBase) withStyle(SpanStyle(color = Muted)) { append(" (${one.baseText})") }
+    }
+    if (property.template.isBlank()) {
+        property.values.forEachIndexed { index, one ->
+            if (index > 0) append(" · ")
+            value(one)
+            if (one.stat.isNotBlank()) { append(" "); append(statTitle(one.stat)) }
+        }
+        return@buildAnnotatedString
+    }
+    var rest = property.template
+    while (true) {
+        val next = property.values.indices
+            .mapNotNull { index -> rest.indexOf("{$index}").takeIf { it >= 0 }?.let { it to index } }
+            .minByOrNull { it.first } ?: break
+        val (at, index) = next
+        append(rest.substring(0, at))
+        value(property.values[index])
+        rest = rest.substring(at + "{$index}".length)
+    }
+    append(rest)
+}
+
+/**
+ * One line of an item's base, drawn like a modifier but carrying the folded number.
+ */
+@Composable fun BasePropertyLine(property: BaseProperty, withBase: Boolean = true) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Icon(propertyIcon(property.modifierId), null, tint = Rune, modifier = Modifier.size(16.dp))
+        Text(basePropertyText(property, withBase), color = Parchment, style = MaterialTheme.typography.bodyMedium)
     }
 }
 
@@ -73,15 +122,16 @@ import kotlinx.serialization.json.*
                 if (doc["price"] != null) PropertyRow(ui("card.price"), doc.text("price"), "price")
                 // Requirements decide whether a worn item counts at all; the server does the checking.
                 itemRequirements(doc).takeIf { it.isNotEmpty() }?.let { PropertyRow(ui("card.requirements"), it.joinToString(" · "), "level") }
-                // The base — armour, damage, attack speed — is fixed modifiers rather than item fields.
-                (doc["baseParams"] as? JsonArray).orEmpty().forEach { raw ->
-                    val modifier = raw as? JsonObject ?: return@forEach
-                    ModifierLine(modifier, definitions)
-                }
+                // The base — armour, damage, attack speed — is fixed modifiers rather than item
+                // fields, and what it prints is the base with this copy's own local modifiers in it.
+                baseProperties(doc, definitions).forEach { BasePropertyLine(it) }
                 if (doc["money"] != null) PropertyRow(ui("card.gold"), doc.text("money"), "money")
-                // Corruption is the one state that closes an item: no orb touches it again.
-                if ((doc["corrupted"] as? JsonPrimitive)?.booleanOrNull == true)
-                    PropertyRow(ui("card.state"), ui("card.corrupted"), "corrupted")
+                // Every state the document carries, named rather than guessed at: corruption and a
+                // mirrored copy both close an item to orbs, and being worn or socketed is why it
+                // cannot be sold or listed.
+                itemStates(doc).takeIf { it.isNotEmpty() }?.let {
+                    PropertyRow(ui("card.state"), it.joinToString(" · ") { state -> stateTitle(state) }, "corrupted")
+                }
                 // The pool is not printed: how many definitions a template may roll from says nothing
                 // about the item in front of you, and the administrator who owns it edits it in the
                 // editor. What a copy actually rolled is below.

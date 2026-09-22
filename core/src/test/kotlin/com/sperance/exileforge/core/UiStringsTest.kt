@@ -136,6 +136,9 @@ class UiStringsTest {
             stockStats.forEach { add("enum.stat.$it") }
             listOf("requiredLevel", "requiredStrength", "requiredDexterity", "requiredIntelligence")
                 .forEach { add("req.short.$it") }
+            // The states an item can be in. The list is read off the document, so a flag the
+            // server grows tomorrow still shows - but the ones that exist today have names.
+            listOf("corrupted", "mirrored", "equipped", "socketed").forEach { add("state.$it") }
         }
 
         val known = UiStrings.keys(Lang.RU)

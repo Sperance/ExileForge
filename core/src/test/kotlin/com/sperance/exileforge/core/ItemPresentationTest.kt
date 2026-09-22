@@ -32,10 +32,16 @@ class ItemPresentationTest {
     @Test fun theCopysOwnRarityWinsOverTheTemplateItDroppedFrom() {
         // A template says what the item drops as; the orbs then move this copy up or down on its own.
         val base = buildJsonObject { put("_id", "template"); put("code", "IRON_RING"); put("slot", "RING"); put("rarity", "COMMON") }
-        val upgraded = buildJsonObject { put("_id", "instance"); put("equipmentId", "template"); put("rarity", "RARE"); put("corrupted", true) }
+        val upgraded = buildJsonObject {
+            put("_id", "instance"); put("equipmentId", "template"); put("rarity", "RARE")
+            put("corrupted", true); put("mirrored", true)
+        }
         val display = inventoryDocument(upgraded, base)
         assertEquals("RARE", display.text("rarity"))
         assertEquals(true, display.getValue("corrupted").jsonPrimitive.boolean)
+        // Every state of the copy has to survive the projection, or the card shows the template's.
+        assertEquals(true, display.getValue("mirrored").jsonPrimitive.boolean)
+        assertEquals(listOf("corrupted", "mirrored"), itemStates(display))
         assertEquals("COMMON", base.text("rarity"))
     }
 

@@ -106,6 +106,8 @@ import kotlinx.serialization.json.*
     val params: List<Modifier> = emptyList(),
     val rarity: String = "COMMON",
     val corrupted: Boolean = false,
+    /** A copy a Mirror of Kalandra made. Refuses every orb, as a corrupted item does. */
+    val mirrored: Boolean = false,
     val equippedSlot: String? = null,
     /**
      * The code of the tree socket this jewel sits in; null for everything else.

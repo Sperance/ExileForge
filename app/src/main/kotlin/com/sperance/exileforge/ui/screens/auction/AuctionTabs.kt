@@ -185,9 +185,15 @@ import kotlinx.serialization.json.put
         onClick = onClick)
 }
 
-/** What the lot is: its slot or kind, its level, and what it asks of a character. */
+/**
+ * What the row adds about a lot, after what it already says itself.
+ *
+ * [ItemRow] prints the slot and the item level off the document, so repeating them here would
+ * read "Шлем · ур. 30 · Шлем". The kind is only worth a word when there is no slot to print —
+ * a stack lot, which has none.
+ */
 private fun lotFacts(s: ForgeState, lot: AuctionLot, document: JsonObject): List<String> {
-    val kind = lot.slot?.let { slotTitle(it, s.lang) } ?: lotKindTitle(lot.kind, s.lang)
+    val kind = if (lot.slot == null) lotKindTitle(lot.kind, s.lang) else null
     val weapon = document.text("weaponType").takeIf { it.isNotBlank() }?.let { weaponTitle(it, s.lang) }
     val amount = if (lot.kind == AuctionLotKind.ITEM && lot.amount > 1) tr("${lot.amount} шт.", "${lot.amount} pcs") else null
     // Requirements are printed, never enforced here: the server checks them and refuses in its own words.

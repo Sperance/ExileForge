@@ -69,8 +69,8 @@ app/                                    Android application (minSdk 26, compile/
                  features/              Catalog, Editor, Hero, Session, Character, Checks, Auction view models
                  state/ForgeState.kt    One immutable state object for the whole app
   ui/            ForgeApp.kt            Scaffold, banner with RU/EN switch, bottom navigation, tab dispatch
-                 screens/               session (auth + character menu), catalog, editor, hero, tree, craft, auction, checks, server
-                 components/            ItemCard, PropertyRow, InfoCard, spinners and Ornament.kt
+                 screens/               session (auth + character menu), admin, catalog, editor, hero, tree, craft, auction, checks, server
+                 components/            ItemCard, ItemRow, PropertyRow, InfoCard, ConfirmDialog, spinners and Ornament.kt
                  forms/, icons/ (ForgeGlyphs vector set, ItemEmblem, ItemIcon/PropertyIcon, ServerSprite), theme/
   data/settings/ServerStore.kt          DataStore Preferences: base URL, saved filters, language, locale bundles, icon set, device-session flag
                  DeviceId.kt            UUID v5 over the hardware fingerprint plus ANDROID_ID
@@ -136,12 +136,15 @@ dispatched first by `ForgeApp`: the sign-in screen and the character menu are fu
 banner and no bottom bar. Only `GAME` builds the scaffold. Nothing below the gate writes
 `characterId` — `CharacterViewModel` owns it, so a tab can never move the player onto another hero.
 
-Inside `GAME` navigation is an `Int` tab in state, dispatched by a `when` in `ForgeApp`:
-`0` catalog/characters, `1` editor, `2` checks (admin only — `ForgeRuntime.tab` blocks it
-otherwise), `3` account/server, `4` hero, `5` skill tree, `6` auction, `TAB_CRAFT` (`7`) the forge.
-The bottom bar carries five destinations for everyone (`0, 4, 5, 6, 3`). Everything else is a tab
-reached by a button: the editor and the checks from the Account tab, the forge from the Hero tab.
-The bar stays on those screens and is the way back out of them.
+Inside `GAME` navigation is an `Int` tab in state, named in `ForgeState` and dispatched by a
+`when` in `ForgeApp`: `TAB_CATALOG`, `TAB_EDITOR`, `TAB_CHECKS`, `TAB_ACCOUNT`, `TAB_HERO`,
+`TAB_TREE`, `TAB_AUCTION`, `TAB_CRAFT`, `TAB_ADMIN`. The bottom bar carries `PLAYER_TABS` — hero,
+tree, auction, account — and, for an administrator only, `TAB_ADMIN` on top of them. That one tab
+holds every administrator tool as a button: the catalogue, the editor, the checks, granting items
+and the switch that drops the tools to see the app as a player sees it. `ADMIN_TABS` is what
+`ForgeRuntime.tab` refuses without them, so a player cannot reach any of those screens at all.
+The forge is still a tab a button opens, from the Hero tab. The bar stays on those screens and is
+the way back out of them.
 `ForgeApp` re-`key`s the whole tree on `server`, `sessionEpoch` and `lang`, so a logout, a server
 change or a language switch discards per-screen Compose state.
 
@@ -152,8 +155,14 @@ These are enforced by tests and are the point of the client's design:
 1. **The server is authoritative.** Never compute damage, stats, prices or modifier rolls locally.
    `GET /api/v1/character/inventory/stats` is the character sheet; the client prints it. Since
    0.10.0 it answers a `CharacterSheet` object: the numbers, the level, and the server's verdict on
-   every worn item (`active` / `inactive` with the requirement each one misses). A requirement is
-   never re-checked here, and an attribute conversion (`perStat`/`perAmount`) is never resolved here.
+   every worn item (`active` / `inactive` with the requirement each one misses). Since 0.17.0 it
+   also carries `unwearable`: every *template* the character cannot currently meet, with reasons.
+   The verdict is on the template because that is where a requirement lives, so one answer marks a
+   stash line and a stranger's lot alike — and the client looks a template up rather than working
+   a requirement out. A requirement is never re-checked here, and an attribute conversion
+   (`perStat`/`perAmount`) is never resolved here: the server applies the class's own conversions
+   (strength to life, intelligence to mana and three more) in the same pass as the tree, which is
+   what makes an attribute from a worn item feed one.
 2. **Identity comes from the server.** POST sends a JSON array of documents without `_id`;
    `requireId` demands 24 hex chars before any request is built.
 3. **The server owns versioning.** PUT sends only the changed fields and DELETE sends no body —
@@ -209,8 +218,13 @@ These are enforced by tests and are the point of the client's design:
     branches with no shared ring, and `SkillTreeSeeder` only reads it. Giving a node back is no
     longer free — a refund spends one **Orb of Regret** per node and a full reset one per node
     returned (`ST_015` when the bag is short) — and a tapped node opens a sheet with what it gives
-    and what it would cost, while «Подробно» prints `SkillTreeState.totals`, which the server sums
-    over the whole allocated tree rather than the client adding modifiers up. A `JEWEL_SOCKET`
+    and what it would cost, while «Подробно» prints `SkillTreeState.totals` — a list of
+    `StatContribution`, one line per characteristic and operation, which the server sums over the
+    whole allocated tree rather than the client adding modifiers up. It is the tree's
+    *contribution*, not the character's total: there is no base under it, so a percentage stays a
+    percentage. It used to be a total over an empty base, where every INCREASED collapsed to zero
+    and was then dropped, which is why no percentage node ever showed. Taking a node, giving one
+    back and resetting the tree all ask first, and the question names what it costs. A `JEWEL_SOCKET`
     node holds nothing itself: taking it opens a socket, and a jewel — an ordinary equipment
     instance of slot `JEWEL` — is put in it by `POST /api/v1/characterequipment/socket` naming the
     node code, which is why `EquipmentInstance` has `socketCode` beside `equippedSlot`: the slot
@@ -221,23 +235,36 @@ These are enforced by tests and are the point of the client's design:
     `CharacterEquipment` and the stack has left the bag, which is why a worn item cannot be listed
     (`AU_010`). Prices are counted in currency orbs alone (`AU_007`), a seller cannot buy their own
     lot (`AU_006`), and the level the auction opens at is a server constant the client never copies:
-    it asks, and turns `AU_002` into the screen's explanation.
-14. **An item has no stat fields, and no number is printed raw.** Armour, damage and attack speed
+    it asks, and turns `AU_002` into the screen's explanation. A lot's line is the same `ItemRow`
+    the stash draws — icon, name, what it is, its properties — with the price and the seller
+    underneath, and the card behind it adds when the lot was listed: the server writes `createdAt`
+    in UTC, so the client is free to show it in the device's zone. Every auction tab refreshes by
+    a pull, as the hero does, and buying asks first, saying so when the item cannot be worn yet.
+14. **Gold is the merchant's, not the client's.** `POST /api/v1/characterequipment/sell` destroys
+    the instance and pays for it; the price is the template's base times the copy's rarity times
+    how many affixes rolled, times `STOCK_GOLD` — a characteristic that exists, that nothing
+    grants yet, and that therefore costs nothing until something does. A worn or socketed item is
+    refused (`CH_014`, `CH_015`), as the auction refuses one. The client sends the pair and prints
+    what came back; it never works a price out, here or anywhere.
+15. **An item has no stat fields, and no number is printed raw.** Armour, damage and attack speed
     are fixed modifiers in `baseParams` (values, no tier); `durability` is the only number left as
     a field. Every `Double` the server sends is counted in full and *displayed* through
     `statNumber(stat, value)`: whole, without a point, except the five rates where a fraction is
     the whole point — `STOCK_ATTACK_SPEED`, `STOCK_CAST_SPEED`, `STOCK_CRITICAL_CHANCE`,
     `STOCK_CRITICAL_MULTIPLIER`, `STOCK_MOVEMENT_SPEED` — which keep two decimals. Rounding is
-    display and never travels back to the server. Requirements
+    display and never travels back to the server. Rarity is never written out either: it is the
+    colour of the frame and of the name, in `ItemRow` and in the auction's rows alike. A row lists
+    its modifiers one per line — base first, then what rolled — up to `ROW_PROPERTIES`, and counts
+    what does not fit rather than dropping it. Requirements
     (`requiredLevel`, `requiredStrength`, `requiredDexterity`, `requiredIntelligence`) are printed,
     never enforced here — the server checks them twice and the two checks are different rules:
     `equip` refuses an item out of reach outright (`CH_013`), while one already worn keeps its slot
     and only stops counting, landing in the sheet's `inactive`. Never disable a control on a
     requirement the client worked out itself; send the command and show the refusal.
-15. **Release builds require HTTPS** (`usesCleartextTraffic=false`); only the debug manifest
+16. **Release builds require HTTPS** (`usesCleartextTraffic=false`); only the debug manifest
     permits cleartext for local servers. This matters more than usual: the password travels as a
     query parameter, because that is the route the server exposes.
-16. **No network or raster images; a drawing is outlines, not a picture.** No image file is ever
+17. **No network or raster images; a drawing is outlines, not a picture.** No image file is ever
     downloaded, and no entity names one: the `image` URL both catalogues used to carry was removed
     in 0.15.1, because nothing had ever fetched it. The *shape* of an icon does come from the
     server: `icons/
@@ -250,7 +277,7 @@ These are enforced by tests and are the point of the client's design:
     mirror `LocaleKey`'s sections (`equipment.<CODE>`, `item.<CODE>`, `stat.<STAT>`) so one code
     answers both what a thing is called and how it is drawn. Modifiers are deliberately out: their
     text is a template with substitutions and an icon cannot stand in for a sentence.
-17. **The server owns every name; the client owns its own labels.** Since 0.14.0 no document
+18. **The server owns every name; the client owns its own labels.** Since 0.14.0 no document
     carries text: equipment, items, modifiers, tree nodes and classes store a `code`, and the
     strings are static files — `locale/index.json` (languages with a hash each) and
     `locale/{ru,en}.json`, keyed `<section>.<CODE>.<field>` exactly as `core/i18n/LocaleKey`
@@ -261,17 +288,18 @@ These are enforced by tests and are the point of the client's design:
     appending numbers to a label. `messageArgs` from the server are themselves keys, so resolve
     them through the bundle before substituting. The bundle also has an `enum.` section, but the
     client keeps its own tables (`slotTitle`, `rarityTitle`, `statTitle`, `CurrencyOrb`): they
-    take an explicit language, while the dictionary answers in whichever one is loaded. One is
-    loaded everywhere but the auction: `serverLocaleEn` holds the English dictionary beside
-    `serverLocale`, because a lot is weighed against a wiki and a trade site and both are English,
-    so a showcase line names its item twice (`AuctionLot.titleEn`, blank when the English is
-    unknown or would only repeat `title`). It is the same object as `serverLocale` when the player
-    already reads English, nothing else reads it, and every other name still comes from
-    `serverLocale` alone. An error is translated only
-    when `error.<code>` has no placeholder, because the error envelope carries the finished
-    sentence and the code but never the arguments — see `locError`.
+    take an explicit language, while the dictionary answers in whichever one is loaded — and
+    exactly one is loaded. A name is shown in the chosen language and in no other; the English
+    twin the showcase briefly carried is gone, and so is the second bundle that fed it. Switching
+    language is still cheap because `ServerStore` keeps a bundle per server *and* language, so the
+    other one is usually already on disk. A refusal is translated by filling the client's own
+    template with `ApiFailure.args` — since 0.17.0 the error envelope carries the arguments it
+    interpolated, so all 114 codes translate rather than the 17 whose template had no hole. A
+    template still holding `{0}` after substitution means the server sent fewer arguments than it
+    wants, and then the server's finished sentence wins: half a sentence is worse than one in the
+    wrong language. See `locError`.
 
-18. **A session is made, never restored; a character is chosen once per session.** The server
+19. **A session is made, never restored; a character is chosen once per session.** The server
     issues no token, so a relaunch signs in again — silently by device when `ServerStore`'s
     `deviceSession` flag says the last session was played that way, and an explicit sign-out
     clears it. Registration *is* the sign-in: `GET /user/login/byDeviceId` answering `US_015`
@@ -287,7 +315,7 @@ These are enforced by tests and are the point of the client's design:
     same as coming back: `readCharacters(autoEnter = true)` is passed exactly once, by the
     sign-in, because the menu is also where a player goes *to leave* a character — entering the
     only one again there would make the screen unreachable for anyone who owns one.
-19. **The hero is re-read on a reason, never on a timer and never on request.** Reading it whole
+20. **The hero is re-read on a reason, never on a timer and never on request.** Reading it whole
     is five requests, so nothing asks the player to press anything: a command re-reads it because
     the command changed it, and everything changed *elsewhere* — a trade, an administrator, the
     same account on another device — is caught by `heroReadAt` going cold. `ensureHero()` refreshes
@@ -307,7 +335,7 @@ These are enforced by tests and are the point of the client's design:
   that take an explicit language (`slotTitle`, `rarityTitle`, `weaponTitle`, `statTitle`,
   `Catalog.title`) default to `uiLanguage`. Never add a user-facing literal in one language only.
   The **name of a thing in the game** is not a client string: it comes from `serverLocale` through
-  `loc`/`locOr` (rule 17), so never write `tr` for one.
+  `loc`/`locOr` (rule 18), so never write `tr` for one.
 - **Style:** dense, low-ceremony Kotlin — one-line bodies, `when` expression tables, few
   comments. Comments exist only where a rule is non-obvious (who rolls, what is display-only,
   why a POST carries an empty body). Match the surrounding density instead of expanding it.

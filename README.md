@@ -17,13 +17,14 @@ Every label, hint, error and contract-validation message exists in Russian and E
 
 - **Вход** — «Играть» (учётная запись по устройству, заводится сама), форма логина для администратора, адрес сервера и переключатель языка.
 - **Персонажи** — список своих героев (до трёх), создание с именем и классом, удаление. Единственное место, где выбирается, кем играть.
-- **Каталог** — поиск и постраничный просмотр экипировки и предметов. Фильтры по слоту, редкости, типу оружия, уровню и модификатору в пуле.
-- **Герой** — сводка персонажа, класс, надетые слоты, полоски ХП/маны/щита, инвентарь и сумка раскрываемыми списками строк, применение валютных сфер. Надетое разложено по ширине экрана: три ячейки в ряд на телефоне, четыре на широком экране, и ряд растягивается целиком, а не жмётся к левому краю. Все характеристики сервера открываются шторкой по нажатию на полоски; герой перечитывается сам, вручную — потянуть список вниз.
+- **Каталог** — поиск и постраничный просмотр экипировки и предметов. Фильтры по слоту, редкости, типу оружия, уровню и модификатору в пуле. С 2.3.0 это экран администратора: у игрока его нет.
+- **Герой** — сводка персонажа, класс, отдельная полоска опыта (процент, сколько набрано внутри уровня и сколько осталось до следующего), надетые слоты, полоски ХП/маны/щита, инвентарь и сумка раскрываемыми списками строк, применение валютных сфер и продажа предмета торговцу за золото. Надетое разложено по ширине экрана: три ячейки в ряд на телефоне, четыре на широком экране, и ряд растягивается целиком, а не жмётся к левому краю. Все характеристики сервера открываются шторкой по нажатию на полоски; герой перечитывается сам, вручную — потянуть список вниз.
 - **Крафт** — рецепты отдельным экраном; открывается кнопкой из вкладки «Герой».
 - **Дерево** — дерево навыков: карта узлов, подсветка доступных, поиск по названию, взятие, возврат и полный сброс, баланс очков.
 - **Аукцион** — витрина с серверным поиском, свои лоты и выставление. Строка лота показывает иконку, оба названия, вид с требованиями, до пяти свойств и цену внизу; карточка открывает всё остальное — экземпляр едет внутри лота вместе с роллами, а база берётся из справочника, прочитанного в начале сессии. Купить и снять с продажи можно только из карточки.
 
-Нижняя панель одинакова для всех: Каталог, Герой, Дерево, Аукцион, Аккаунт. «Редактор» и «Проверки» — инструменты администратора и открываются из вкладки «Аккаунт», а «Крафт» — из вкладки «Герой», чтобы не занимать место у игрока. Промокод вводится диалогом во вкладке «Аккаунт» и называет персонажа, которому придёт награда. Экраны входа и выбора персонажа панели не имеют: там нечего выбирать, кроме как войти. Смена персонажа — кнопкой во вкладке «Аккаунт».
+Нижняя панель игрока: Герой, Дерево, Аукцион, Аккаунт. У администратора к ним добавляется ровно одна вкладка — «Админ», и в ней кнопками лежит всё остальное: Каталог, Редактор, Проверки, выдача предметов и переключатель «смотреть как игрок». «Крафт» открывается из вкладки «Герой». Промокод вводится диалогом во вкладке «Аккаунт» и называет персонажа, которому придёт награда. Экраны входа и выбора персонажа панели не имеют: там нечего выбирать, кроме как войти. Смена персонажа — кнопкой во вкладке «Аккаунт».
+- **Админ** (администратор) — одна вкладка на все инструменты: Каталог, Редактор, Проверки, выдача предметов и режим «смотреть как игрок».
 - **Редактор** — шаблоны экипировки и предметов, персонажи и их базовые характеристики.
 - **Проверки** (администратор) — CRUD-сценарий и журнал запросов.
 - **Аккаунт** — сервер, вход, смена пароля и язык.
@@ -76,15 +77,15 @@ Every label, hint, error and contract-validation message exists in Russian and E
 
 Свои лоты из витрины скрыты — купить их всё равно нельзя, — но переключатель «Показывать свои» возвращает их, чтобы сравнить свою цену с чужими.
 
-Строка лота на витрине устроена так, чтобы решение принималось не открывая её:
+Строка лота — это та же строка, что и в арсенале, и устроена так, чтобы решение принималось не открывая её:
 
-- слева **иконка** предмета — по ней строку узнают, пролистав мимо;
-- первая строка — **название и английское название**: лот сверяют с вики и торговыми площадками, а они английские;
-- вторая — **что это, какого уровня и что требует**: слот или вид лота, редкость, уровень предмета и требования;
-- третья — **сжатый список свойств**, база и роллы одним списком, не больше пяти; что не влезло, посчитано («ещё 3»), а не выброшено молча;
-- внизу отдельной строкой — **цена**, потому что с ней сравнивают всё остальное.
+- слева **иконка** предмета — по ней строку узнают, пролистав мимо; на ней же красный значок, если предмет сейчас надеть нельзя;
+- **название** на выбранном языке и только на нём;
+- **что это, какого уровня и что требует**: слот или вид лота, уровень предмета и требования. Редкость не пишется — она цвет рамки и названия;
+- **свойства списком**, по строке на каждое, база и роллы вместе, не больше пяти; что не влезло, посчитано («ещё 3»), а не выброшено молча;
+- внизу **цена слева и продавец справа**.
 
-Остальное — продавец, полный список свойств, кнопка покупки — в карточке по нажатию.
+Покупка спрашивает подтверждение, и если предмет сейчас надеть нельзя — говорит об этом в том же окне. Полный список свойств и время выставления — в карточке по нажатию; время показывается в зоне устройства.
 
 **Цена назначается только в сферах**: это единственная валюта, в которой сервер торгует. В карточке лота цена читается как «4 × Сфера хаоса».
 
@@ -127,6 +128,9 @@ Debug allows HTTP for local development; release requires HTTPS. **This server h
 - **The tree moved into the character (0.12.1).** `CharacterSkillNode` is no longer a collection: taken nodes are a snapshot inside `Character.skillNodes`, and the routes live under `/api/v1/character/skilltree`.
 - **The base of an item lives in the catalogue (0.16.0).** An instance used to be created with a copy of its template's `baseParams`, which meant a card printed `+12 armour` twice — once from the template it was drawn over, once from the copy — and a rebalanced base never reached the items already in the world. Now an instance carries only what it rolled and reaches its base through `equipmentId`. The client reads `GET /api/v1/equipment` whole, once per session, and the route is in `requireWorkbench`: a stale server is named rather than drawing half an item. The equipment, item and currency catalogues moved out of Kotlin into `resources/content/*.json` on the server; uniques stayed in code, because each one generates its own modifier definitions with tier ranges and that is a rule, not data.
 - **A tree worth walking (0.16.0).** 299 nodes and 423 links laid out by hand in `resources/skilltree/tree.json`, seven class areas meeting through their own branches with no shared ring. Jewel sockets are nodes; a jewel is an equipment instance of slot `JEWEL` placed with `POST /api/v1/characterequipment/socket` and counting globally while its socket is taken. Refunding costs an **Orb of Regret** per node, and a socket with a jewel in it is refused rather than silently emptied. The state answers `totals`, the server's own sum over the allocated tree.
+- **The tools moved into one tab (client 2.3.0).** An administrator has exactly one tab a player does not, and it holds all of them as buttons: the catalogue, the editor, the checks, granting items, and the switch that drops the tools to see the app as a player sees it. The catalogue left the bottom bar with them — a view of the world's reference tables is an administrator's concern — so a player's bar is four destinations and nothing else.
+- **Three things that were quietly wrong (server 0.17.0).** Attribute conversions never applied: the class holds five of them and the stats calculator expanded the tree and the items but never the class, so strength and intelligence did nothing. The tree's totals were computed over an empty base, where a percentage collapses to nothing and was then filtered out as a zero, so no percentage node ever showed in "Подробно". And the error envelope carried a finished English sentence with no arguments, so a client whose template has a hole — which is almost all of them — had to print the English; all 114 codes translate now, not 17.
+- **Selling, marking and confirming (client 2.3.0).** An item can be sold to a merchant from the arsenal card; the price is the server's. An item the character cannot wear is marked on its icon in the stash and on the showcase, from a verdict the sheet now carries for every template rather than only for what is worn. Five things ask before they happen — taking a node, giving one back, resetting the tree, selling, buying — and each question names what it costs.
 - **A showcase line you can decide on (client 2.2.0).** An auction row carries the icon, the name in both the player's language and English, what the item is with its level and requirements, up to five of its properties — base and rolls as one list, the overflow counted rather than dropped — and the price on its own line at the bottom. English is why the client now holds a second dictionary: a lot is weighed against a wiki and a trade site, and both of those are English. It is the only place two are held at once, and when the interface is already English it is the same one.
 - **Every number is printed whole (client 2.2.0).** Values are counted and stored in full precision, exactly as the server sent them, and rounded only in the last step before a string — except five rates where the fraction is the whole point: attack speed, cast speed, movement speed, critical chance and critical multiplier keep two decimals.
 - **`image` is gone (0.15.1).** Items and equipment carried an image URL that nothing ever fetched — no seeder filled it, no route read it, and the client draws no network images. With icons arriving as outlines there is nothing left for it to mean, so it was removed from the models, the editor form and the editable fields. Existing databases need no migration: the stale key is ignored on read and dropped on the next write.

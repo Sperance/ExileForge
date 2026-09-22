@@ -17,7 +17,6 @@ import com.sperance.exileforge.core.contract.rarities
 import com.sperance.exileforge.core.contract.slots
 import com.sperance.exileforge.core.contract.text
 import com.sperance.exileforge.core.display.inventoryDocument
-import com.sperance.exileforge.core.display.itemRequirements
 import com.sperance.exileforge.core.display.modifierText
 import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.display.requirementReason
@@ -158,18 +157,15 @@ import kotlinx.serialization.json.put
  * One lot as a line: everything a trader decides on without opening it.
  *
  * It is the same [ItemRow] the stash draws, because a lot and a stash line are the same question
- * asked twice — what is it, what did it roll, can I wear it. What the auction adds is underneath:
+ * asked twice — what is it and what did it roll. What the auction adds is underneath:
  * the price on the left, where it is weighed, and the seller on the right.
  *
  * Rarity is not written anywhere: it is the colour of the frame and the name.
  */
 @Composable private fun LotRow(s: ForgeState, lot: AuctionLot, note: String?, onClick: () -> Unit) {
     val document = lotDocument(s, lot)
-    val base = lot.equipment?.equipmentId.orEmpty()
     ItemRow(document, definitions = s.definitions, enabled = !s.busy, note = note, noteColor = Muted,
         facts = lotFacts(s, lot, document),
-        // The verdict is the server's, off the sheet: the client never re-checks a requirement.
-        unwearable = s.hero?.sheet?.unwearableBy?.get(base).orEmpty(),
         footer = {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -193,10 +189,7 @@ private fun lotFacts(s: ForgeState, lot: AuctionLot, document: JsonObject): List
     val kind = if (lot.slot == null) lotKindTitle(lot.kind, s.lang) else null
     val weapon = document.text("weaponType").takeIf { it.isNotBlank() }?.let { weaponTitle(it, s.lang) }
     val amount = if (lot.kind == AuctionLotKind.ITEM && lot.amount > 1) ui("auction.pieces", lot.amount) else null
-    // Requirements are printed, never enforced here: the server checks them and refuses in its own words.
-    val needs = itemRequirements(document, s.lang).takeIf { it.isNotEmpty() }
-        ?.let { ui("auction.needs", it.joinToString(", ")) }
-    return listOfNotNull(kind, weapon, amount, needs)
+    return listOfNotNull(kind, weapon, amount)
 }
 
 /**

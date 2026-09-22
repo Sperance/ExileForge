@@ -17,6 +17,7 @@ import com.sperance.exileforge.core.i18n.serverLocale
 import com.sperance.exileforge.core.model.hero.CharacterSheet
 import com.sperance.exileforge.core.model.hero.CharacterSummary
 import com.sperance.exileforge.core.model.hero.InactiveEquipment
+import com.sperance.exileforge.core.model.hero.UnwearableEquipment
 import com.sperance.exileforge.core.model.progression.CharacterClass
 import com.sperance.exileforge.core.model.skilltree.CharacterSkillNode
 import com.sperance.exileforge.core.model.skilltree.SkillNodeType
@@ -202,6 +203,9 @@ class HeroPanelTest {
         compose.setContent { ForgeTheme { Column(Modifier.background(Ink)) {
             ShowcaseList(ForgeState(busy = false, signedIn = true, characterId = "hero", characterOwner = "owner",
                 profile = com.sperance.exileforge.core.model.command.UserProfile("owner"), orbs = listOf(chaos),
+                hero = HeroView(CharacterSummary("hero", "owner", "Изгнанник"),
+                    sheet = CharacterSheet(unwearable = listOf(
+                        UnwearableEquipment("helmet-base", reasons = listOf("strength: need 30, have 14"))))),
                 auctionFilter = AuctionFilter(), showOwnLots = true,
                 inventoryBases = mapOf("helmet-base" to base),
                 showcase = AuctionPage(listOf(theirs, mine), 0, 20, 2, 1)),
@@ -209,9 +213,11 @@ class HeroPanelTest {
         } } }
         // The name, in the chosen language and in it alone: no English twin beside it.
         compose.onNodeWithText("Железный шлем").performScrollTo().assertIsDisplayed()
-        // What it is, what level it is, and what it asks of a character. Rarity is not written
-        // out anywhere — it is the colour of the frame and of the name.
-        compose.onNodeWithText("Шлем · ур. 30 · треб. 25 ур., 40 сил").performScrollTo().assertIsDisplayed()
+        // The line shows only what the item is and its level; requirements belong to the opened card,
+        // not the showcase list.
+        compose.onNodeWithText("Шлем · ур. 30").performScrollTo().assertIsDisplayed()
+        compose.onAllNodesWithText("Шлем · ур. 30 · треб. 25 ур., 40 сил").assertCountEquals(0)
+        compose.onAllNodesWithText("Сила: нужно 30, есть 14").assertCountEquals(0)
         compose.onAllNodesWithText("Редкий").assertCountEquals(0)
         // The properties are a list, one per line — base first, then the rolls, five at most.
         compose.onNodeWithText("12").performScrollTo().assertIsDisplayed()

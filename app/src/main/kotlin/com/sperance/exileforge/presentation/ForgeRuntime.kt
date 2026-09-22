@@ -44,6 +44,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
     val sessionViewModel = SessionViewModel(this)
     val checksViewModel = ChecksViewModel(this)
     val auctionViewModel = AuctionViewModel(this)
+    val redemptionViewModel = RedemptionViewModel(this)
     val characterViewModel = CharacterViewModel(this)
 
     fun newApi(server: String): GameApi {

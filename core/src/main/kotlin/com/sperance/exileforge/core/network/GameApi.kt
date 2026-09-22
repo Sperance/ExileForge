@@ -129,6 +129,9 @@ class GameApi(
 
     private fun route(catalog: Catalog) = "api/v1/${catalog.path}"
 
+    /** Promo codes are not a [Catalog]: no player ever lists them, so they have no tab of their own. */
+    private val REDEMPTION_ROUTE = "api/v1/${EntitySource.REDEMPTION.path}"
+
     /**
      * The whole collection.
      *
@@ -545,6 +548,41 @@ class GameApi(
         requireId(characterId)
         require(code.isNotBlank()) { ui("api.enter_promo") }
         return request("POST", "api/v1/redemptioncodes/useRedeptionCode", mapOf("characterId" to characterId, "redemptionCode" to code.trim()), authenticated = true)
+    }
+
+    // ==================== promo codes, administrator side ====================
+
+    /**
+     * Every promo code the server holds.
+     *
+     * Read whole rather than paged: these are counted in dozens, an administrator wants to see
+     * which codes exist rather than to walk them, and the server offers no filter here either.
+     */
+    suspend fun redemptionCodes(): List<RedemptionCode> =
+        all(REDEMPTION_ROUTE).map { WireJson.decodeFromJsonElement(RedemptionCode.serializer(), it) }
+
+    /**
+     * Creates one code. The server refuses a blank or duplicate code, an empty reward and a
+     * non-positive amount, so none of that is re-checked here — only what a typed model can say.
+     */
+    suspend fun createRedemption(code: RedemptionCode): RedemptionCode {
+        require(code.code.isNotBlank()) { ui("api.enter_promo") }
+        require(code.treasure.isNotEmpty()) { ui("api.empty_reward") }
+        code.treasure.forEach {
+            require(it.amount > 0) { ui("api.reward_amount") }
+            if (it.kind == RedemptionKind.ITEM || it.kind == RedemptionKind.EQUIPMENT) requireId(it.itemId)
+        }
+        // Trimmed on the way in exactly as redeem() trims on the way out: a player types the code
+        // by hand, and a stored one with a trailing space is a code nobody can ever enter.
+        val document = WireJson.encodeToJsonElement(RedemptionCode.serializer(), code.copy(id = "", used = 0, code = code.code.trim())).jsonObject
+        val body = JsonObject(document.filterKeys { it != "_id" && it != "used" })
+        return request("POST", REDEMPTION_ROUTE, body = JsonArray(listOf(body)), authenticated = true)
+            .jsonArray.single().let { WireJson.decodeFromJsonElement(RedemptionCode.serializer(), it) }
+    }
+
+    suspend fun deleteRedemption(id: String) {
+        requireId(id)
+        request("DELETE", REDEMPTION_ROUTE, mapOf("id" to id), authenticated = true)
     }
 
     // ==================== transport ====================

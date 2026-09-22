@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -62,7 +63,10 @@ import com.sperance.exileforge.ui.theme.*
  */
 @Composable internal fun ColumnScope.CharacterMenu(s: ForgeState, onPlay: (String) -> Unit, onDelete: (CharacterSummary) -> Unit,
     onCreate: () -> Unit = {}, onRefresh: () -> Unit = {}, onLogout: () -> Unit = {}) {
-    LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    // A list is refreshed by pulling it, here as everywhere else. The button that used to sit at
+    // the bottom of this one said the same thing twice.
+    PullToRefreshBox(isRefreshing = s.busy, onRefresh = onRefresh, modifier = Modifier.weight(1f)) {
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             ScreenHeader(ui("chars.title"),
                 ui("chars.slots", s.characterSlotsLeft, MAX_CHARACTERS),
@@ -80,16 +84,12 @@ import com.sperance.exileforge.ui.theme.*
                 color = Muted, style = MaterialTheme.typography.bodySmall)
         }
         item {
-            OutlinedButton(enabled = !s.busy, onClick = onRefresh, modifier = Modifier.fillMaxWidth()) {
-                Text(ui("chars.refresh"))
-            }
-        }
-        item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(s.accountTitle, color = Muted, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
                 TextButton(enabled = !s.busy, onClick = onLogout) { Text(ui("chars.sign_out")) }
             }
         }
+    }
     }
 }
 

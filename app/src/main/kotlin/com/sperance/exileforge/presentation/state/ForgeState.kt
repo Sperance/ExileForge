@@ -1,6 +1,7 @@
 package com.sperance.exileforge.presentation.state
 
 import com.sperance.exileforge.core.i18n.Lang
+import com.sperance.exileforge.core.model.command.RedemptionCode
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.model.Catalog
@@ -118,6 +119,13 @@ data class ForgeState(
      */
     val languages: List<Lang> = listOf(Lang.RU, Lang.EN),
     /**
+     * Promo codes, as an administrator sees them.
+     *
+     * They are not a [Catalog]: a player never lists them, only types one in, so they have no
+     * page, no filter and no place in the catalogue's three collections.
+     */
+    val redemptions: List<RedemptionCode> = emptyList(),
+    /**
      * How much of the server's icon set arrived: codes covered and drawings behind them.
      *
      * The set is global (`serverIcons`) for the same reason the dictionary is — `core` draws from
@@ -180,9 +188,10 @@ const val TAB_TREE = 5
 const val TAB_AUCTION = 6
 const val TAB_CRAFT = 7
 const val TAB_ADMIN = 8
+const val TAB_REDEMPTION = 9
 
 /** What the bottom bar offers a player — and, with [TAB_ADMIN] appended, an administrator. */
 val PLAYER_TABS = listOf(TAB_HERO, TAB_TREE, TAB_AUCTION, TAB_ACCOUNT)
 
 /** Screens only an administrator may open, whichever button leads to them. */
-val ADMIN_TABS = setOf(TAB_CATALOG, TAB_EDITOR, TAB_CHECKS, TAB_ADMIN)
+val ADMIN_TABS = setOf(TAB_CATALOG, TAB_EDITOR, TAB_CHECKS, TAB_ADMIN, TAB_REDEMPTION)

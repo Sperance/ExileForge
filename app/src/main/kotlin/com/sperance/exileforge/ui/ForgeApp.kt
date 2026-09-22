@@ -40,6 +40,7 @@ import com.sperance.exileforge.ui.screens.checks.ChecksScreen
 import com.sperance.exileforge.ui.screens.craft.CraftScreen
 import com.sperance.exileforge.ui.screens.editor.EditorScreen
 import com.sperance.exileforge.ui.screens.hero.HeroScreen
+import com.sperance.exileforge.ui.screens.redemption.RedemptionScreen
 import com.sperance.exileforge.ui.screens.server.ServerScreen
 import com.sperance.exileforge.ui.screens.tree.SkillTreeScreen
 import com.sperance.exileforge.ui.theme.*
@@ -124,6 +125,7 @@ import com.sperance.exileforge.ui.theme.*
                 // the checks and the catalogue open from the administrator's, and the bar is the
                 // way back out of all of them.
                 TAB_CRAFT -> CraftScreen(s, vm)
+                TAB_REDEMPTION -> RedemptionScreen(s, vm)
             }
         }
     }

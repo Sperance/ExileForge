@@ -14,6 +14,7 @@ import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.TAB_CATALOG
 import com.sperance.exileforge.presentation.state.TAB_CHECKS
 import com.sperance.exileforge.presentation.state.TAB_EDITOR
+import com.sperance.exileforge.presentation.state.TAB_REDEMPTION
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.hero.AdminGrantPanel
@@ -44,6 +45,9 @@ import com.sperance.exileforge.ui.theme.Muted
             }
             OutlinedButton(enabled = !s.busy, onClick = { vm.tab(TAB_CHECKS) }, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("admin.checks"))
+            }
+            OutlinedButton(enabled = !s.busy, onClick = { vm.tab(TAB_REDEMPTION); vm.loadRedemptions() }, modifier = Modifier.fillMaxWidth()) {
+                Text(ui("redemption.title"))
             }
             Text(ui("admin.screens_note"),
                 color = Muted, style = MaterialTheme.typography.bodySmall)

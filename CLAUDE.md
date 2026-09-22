@@ -416,5 +416,7 @@ referenced by the app. When behavior changes, update the matching doc: `docs/API
 changes, update `SERVER_COMMIT`, `SERVER_BRANCH`, `SERVER_VERSION`, `ApiCapabilities.requireWorkbench`,
 the README header and the `client-server` job's checkout ref together.
 
-`ExileForge-debug.apk` at the repo root is a committed build artifact; CI publishes fresh APKs as
-workflow artifacts. Don't regenerate it as part of ordinary changes.
+**No build goes in the repository.** `ExileForge-debug.apk` used to sit at the root; it was built
+from a version long past, so anyone who downloaded it got a different app from the one the sources
+describe, and every refresh added another 19MB to the history for good. `*.apk` is ignored now and
+CI publishes a fresh one as a workflow artifact on every run.

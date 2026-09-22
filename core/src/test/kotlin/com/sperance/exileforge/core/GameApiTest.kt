@@ -329,6 +329,50 @@ class GameApiTest {
         assertEquals("Chaos Orb", orbs.last().title())
     }
 
+    @Test fun `promo codes are read whole and posted as one document`(): Unit = runBlocking {
+        ok("""[{"_id":"$id","code":"WELCOME","description":"Стартовый набор","used":3,
+            "treasure":[{"kind":"EXPERIENCE","itemId":"","amount":500.0},
+                        {"kind":"ITEM","itemId":"$other","amount":3.0}]}]""")
+        val codes = api.redemptionCodes()
+        assertEquals("/game/api/v1/redemptioncodes", server.takeRequest().path)
+        assertEquals("WELCOME", codes.single().code)
+        assertEquals(3L, codes.single().used)
+        // One list, two kinds: an administrator writes the reward as one thought.
+        assertEquals(listOf(RedemptionKind.EXPERIENCE, RedemptionKind.ITEM), codes.single().treasure.map { it.kind })
+    }
+
+    @Test fun `creating a promo code sends neither an id nor a use count`(): Unit = runBlocking {
+        ok("""[{"_id":"$id","code":"WELCOME","used":0,"treasure":[{"kind":"GOLD","itemId":"","amount":100.0}]}]""")
+        api.createRedemption(RedemptionCode(id = id, code = " WELCOME ", used = 9,
+            treasure = listOf(RedemptionReward(RedemptionKind.GOLD, amount = 100.0))))
+        val sent = server.takeRequest()
+        assertEquals("/game/api/v1/redemptioncodes", sent.path)
+        val body = WireJson.parseToJsonElement(sent.body.readUtf8()).jsonArray.single().jsonObject
+        // Identity and the counter belong to the server; posting either would be the client
+        // deciding something it has no business deciding.
+        assertFalse("_id" in body, "the id must not be sent on create")
+        assertFalse("used" in body, "the use count must not be sent on create")
+        assertEquals("WELCOME", body.text("code"))
+    }
+
+    @Test fun `a promo code with no reward never reaches the server`(): Unit = runBlocking {
+        val sent = server.requestCount
+        assertFailsWith<IllegalArgumentException> { api.createRedemption(RedemptionCode(code = "EMPTY")) }
+        assertFailsWith<IllegalArgumentException> {
+            api.createRedemption(RedemptionCode(code = "FREE", treasure = listOf(RedemptionReward(RedemptionKind.GOLD, amount = 0.0))))
+        }
+        assertEquals(sent, server.requestCount)
+    }
+
+    @Test fun `deleting a promo code names it in the query and carries no body`(): Unit = runBlocking {
+        ok("{}")
+        api.deleteRedemption(id)
+        val sent = server.takeRequest()
+        assertEquals("DELETE", sent.method)
+        assertEquals("/game/api/v1/redemptioncodes?id=$id", sent.path)
+        assertEquals("", sent.body.readUtf8())
+    }
+
     @Test fun `applying an orb names the pair and prints what the server did`(): Unit = runBlocking {
         val rerolled = """{"_id":"$id","characterId":"$other","equipmentId":"$other","rarity":"RARE","corrupted":false,
             "params":[{"modifierId":"$id","tierId":"$other","tier":2,"values":[7.0]}]}"""

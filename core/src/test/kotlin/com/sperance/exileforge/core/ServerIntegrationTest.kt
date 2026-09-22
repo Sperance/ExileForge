@@ -12,6 +12,9 @@ import com.sperance.exileforge.core.i18n.serverLocale
 import com.sperance.exileforge.core.model.Catalog
 import com.sperance.exileforge.core.model.CatalogFilter
 import com.sperance.exileforge.core.model.command.ItemStack
+import com.sperance.exileforge.core.model.command.RedemptionCode
+import com.sperance.exileforge.core.model.command.RedemptionKind
+import com.sperance.exileforge.core.model.command.RedemptionReward
 import com.sperance.exileforge.core.model.auction.AuctionFilter
 import com.sperance.exileforge.core.model.auction.AuctionLotKind
 import com.sperance.exileforge.core.model.auction.AuctionLotStatus
@@ -309,6 +312,29 @@ class ServerIntegrationTest {
                 assertEquals(3L, (api.bag(id).firstOrNull { it.itemId == chaos.id } ?: fail("the stack never came back")).amount)
             } finally {
                 api.delete(Catalog.CHARACTERS, buyer)
+            }
+
+            // A promo code pays out for real, which is the whole of what 0.19.0 changed: it used
+            // to mark itself used and grant nothing. Experience, gold and a stack in one code,
+            // because the point is that the reward lands as one transaction rather than in parts.
+            val before = api.character(id)
+            val code = "EF_TEST_" + System.nanoTime()
+            val promo = api.createRedemption(RedemptionCode(code = code, description = "integration",
+                treasure = listOf(
+                    RedemptionReward(RedemptionKind.EXPERIENCE, amount = 250.0),
+                    RedemptionReward(RedemptionKind.GOLD, amount = 70.0),
+                    RedemptionReward(RedemptionKind.ITEM, chaos.id, 2.0))))
+            try {
+                assertTrue(api.redemptionCodes().any { it.code == code }, "the code was not stored")
+                api.redeem(id, code)
+                val after = api.character(id)
+                assertEquals(before.experience + 250.0, after.experience, "experience was not granted")
+                assertEquals(before.money + 70, after.money, "gold was not granted")
+                assertEquals(5L, (api.bag(id).firstOrNull { it.itemId == chaos.id } ?: fail("the orbs never arrived")).amount)
+                // One code, one account: the second attempt is a refusal, not a second reward.
+                assertFailsWith<ApiFailure> { api.redeem(id, code) }
+            } finally {
+                api.deleteRedemption(promo.id)
             }
 
             val player = GameApi(url)

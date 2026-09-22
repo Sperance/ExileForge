@@ -10,6 +10,7 @@ import com.sperance.exileforge.core.model.EquipmentKind
 import com.sperance.exileforge.core.model.auction.AuctionLotKind
 import com.sperance.exileforge.core.model.auction.AuctionLotStatus
 import com.sperance.exileforge.core.model.character.stockStats
+import com.sperance.exileforge.core.model.command.RedemptionKind
 import com.sperance.exileforge.core.model.currency.CurrencyOrb
 import java.io.File
 import kotlin.test.Test
@@ -131,6 +132,7 @@ class UiStringsTest {
             AuctionLotKind.entries.forEach { add("enum.lot.${it.name}") }
             AuctionLotStatus.entries.forEach { add("enum.lot_status.${it.name}") }
             CurrencyOrb.entries.forEach { add("enum.orb.${it.name}"); add("enum.orb.${it.name}.rule") }
+            RedemptionKind.entries.forEach { add("enum.reward.${it.name}") }
             stockStats.forEach { add("enum.stat.$it") }
             listOf("requiredLevel", "requiredStrength", "requiredDexterity", "requiredIntelligence")
                 .forEach { add("req.short.$it") }

@@ -97,6 +97,10 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     fun sellItem(itemId: String, amount: Long, priceOrbId: String, price: Long) = runtime.auctionViewModel.sellItem(itemId, amount, priceOrbId, price)
     fun runChecks() = runtime.checksViewModel.runChecks()
     fun clearLogs() = runtime.checksViewModel.clearLogs()
+
+    fun loadRedemptions() = runtime.redemptionViewModel.load()
+    fun createRedemption(code: com.sperance.exileforge.core.model.command.RedemptionCode) = runtime.redemptionViewModel.create(code)
+    fun deleteRedemption(id: String) = runtime.redemptionViewModel.delete(id)
     override fun onCleared() { runtime.close() }
     class Factory(private val app: ForgeApplication) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {

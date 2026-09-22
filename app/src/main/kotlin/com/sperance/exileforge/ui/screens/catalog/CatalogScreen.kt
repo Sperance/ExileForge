@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -20,6 +21,9 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.Muted
 
 @Composable internal fun CatalogScreen(s: ForgeState, vm: ForgeViewModel) {
+    // The gesture replaced the Refresh button that used to sit beside Create: one way to do one
+    // thing, and paging stays a pair of buttons because a page is a place, not a reload.
+    PullToRefreshBox(isRefreshing = s.busy, onRefresh = { vm.refresh() }, modifier = Modifier.fillMaxSize()) {
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             ScreenHeader(if (s.catalog == Catalog.CHARACTERS) ui("catalog.characters") else ui("catalog.stash"),
@@ -40,9 +44,8 @@ import com.sperance.exileforge.ui.theme.Muted
                     Catalog.EQUIPMENT -> EntitySource.EQUIPMENT
                     Catalog.ITEMS -> EntitySource.ITEM
                 }, !s.busy && !s.editorOpen && s.signedIn, vm::open)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(enabled = !s.busy && !s.editorOpen && s.canEdit, onClick = { vm.create() }) { Icon(Icons.Outlined.Add, null); Text(ui("common.create")) }
-                    OutlinedButton(enabled = !s.busy, onClick = { vm.refresh() }) { Text(ui("common.refresh")) }
+                Button(enabled = !s.busy && !s.editorOpen && s.canEdit, onClick = { vm.create() }, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Outlined.Add, null); Text(ui("common.create"))
                 }
             }
         }
@@ -57,5 +60,6 @@ import com.sperance.exileforge.ui.theme.Muted
                 OutlinedButton(enabled = !s.busy && s.page + 1 < s.totalPages, onClick = { vm.refresh(s.page + 1) }) { Text(ui("common.next")) }
             }
         }
+    }
     }
 }

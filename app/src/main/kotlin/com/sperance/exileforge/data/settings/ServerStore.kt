@@ -18,9 +18,30 @@ class ServerStore(private val context: Context) {
     suspend fun filters(server: String, catalog: String): String? = context.settings.data.first()[stringPreferencesKey("filters:$server:$catalog")]
     suspend fun saveFilters(server: String, catalog: String, value: String) { context.settings.edit { it[stringPreferencesKey("filters:$server:$catalog")] = value } }
 
+    /**
+     * The language the player chose, or nothing at all.
+     *
+     * Nothing is the answer that matters: on a first run there is no choice to honour, and the
+     * app takes the device's own language instead of starting everybody in Russian.
+     */
     private val languageKey = stringPreferencesKey("language")
-    val language = context.settings.data.map { Lang.of(it[languageKey]) }
+    val language = context.settings.data.map { it[languageKey] }
     suspend fun saveLanguage(value: Lang) { context.settings.edit { it[languageKey] = value.code } }
+
+    /**
+     * Which languages a server said it serves, kept so the picker is right before it answers.
+     *
+     * The manifest decides what may be chosen, and it arrives a moment after the first frame.
+     * Without this the list would flicker from two entries to three on every launch.
+     */
+    suspend fun languages(server: String): List<String> =
+        context.settings.data.first()[languagesKey(server)]?.split(',')?.filter { it.isNotBlank() }.orEmpty()
+
+    suspend fun saveLanguages(server: String, codes: List<String>) {
+        context.settings.edit { it[languagesKey(server)] = codes.joinToString(",") }
+    }
+
+    private fun languagesKey(server: String) = stringPreferencesKey("languages:$server")
 
     /**
      * The server's dictionary, stored verbatim per server and language.

@@ -41,7 +41,7 @@ import com.sperance.exileforge.ui.theme.*
         Column(Modifier.fillMaxSize().padding(padding).imePadding().voidBackdrop()
             .verticalScroll(rememberScrollState()).padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { LanguageCorner(s.lang, vm::language) }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { LanguageCorner(s.lang, s.languages, vm::language) }
             Spacer(Modifier.height(8.dp))
             Box(Modifier.size(84.dp).border(1.dp, Gold.copy(alpha = .5f), CutCornerShape(18.dp)), contentAlignment = Alignment.Center) {
                 Icon(ForgeGlyphs.Sigil, null, tint = Gold, modifier = Modifier.size(48.dp))
@@ -127,9 +127,9 @@ import com.sperance.exileforge.ui.theme.*
 }
 
 /** The language switch, which on this screen has no banner to live in. */
-@Composable private fun LanguageCorner(lang: Lang, onLanguage: (Lang) -> Unit) {
+@Composable private fun LanguageCorner(lang: Lang, offered: List<Lang>, onLanguage: (Lang) -> Unit) {
     Row(Modifier.border(1.dp, Gold.copy(alpha = .35f), CutCornerShape(6.dp)), verticalAlignment = Alignment.CenterVertically) {
-        Lang.entries.forEach { option ->
+        offered.forEach { option ->
             val active = option == lang
             Text(option.short, color = if (active) Ink else Muted, style = MaterialTheme.typography.labelSmall,
                 modifier = Modifier.background(if (active) Gold else Color.Transparent)

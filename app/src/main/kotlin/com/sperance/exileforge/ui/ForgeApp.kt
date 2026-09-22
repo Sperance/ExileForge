@@ -3,7 +3,6 @@ package com.sperance.exileforge.ui
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material3.*
@@ -21,7 +20,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.contract.entityId
 import com.sperance.exileforge.core.display.documentTitle
-import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.tr
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.AppMode
@@ -111,7 +109,7 @@ import com.sperance.exileforge.ui.theme.*
         }
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).imePadding().voidBackdrop()) {
-            ForgeBanner(s, !s.busy && !s.editorOpen, onLanguage = vm::language)
+            ForgeBanner(s)
             if (s.busy) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised) else OrnateDivider(Gold)
             when (s.tab) {
                 TAB_CATALOG -> CatalogScreen(s, vm)
@@ -139,9 +137,10 @@ import com.sperance.exileforge.ui.theme.*
  *
  * The administrator's mode switch used to sit here too. It moved to the administrator's own tab in
  * 2.3.0: it is not something a player has, and the banner is the one thing on screen every player
- * sees on every tab.
+ * sees on every tab. The language runes went the same way in 2.4.0, to the Account tab and to the
+ * sign-in screen: with a third language they were a crowd, and a language is a setting, not an act.
  */
-@Composable private fun ForgeBanner(s: ForgeState, enabled: Boolean, onLanguage: (Lang) -> Unit) {
+@Composable private fun ForgeBanner(s: ForgeState) {
     Row(Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Gold.copy(alpha = .10f), Color.Transparent, Gold.copy(alpha = .06f))))
         .padding(horizontal = 18.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(40.dp).border(1.dp, Gold.copy(alpha = .5f), CutCornerShape(9.dp)), contentAlignment = Alignment.Center) {
@@ -154,20 +153,6 @@ import com.sperance.exileforge.ui.theme.*
             Text(if (hero == null) tr("АРСЕНАЛ ИЗГНАННИКА", "THE EXILE'S ARSENAL")
                  else hero.name + (s.heroClass?.let { " · ${it.title}" } ?: "") + tr(" · ур. ${hero.level}", " · lvl ${hero.level}"),
                 style = MaterialTheme.typography.labelSmall, color = Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-        LanguageSwitch(s.lang, onLanguage)
-    }
-}
-
-/** Two runes carved side by side: the tongue every label speaks. */
-@Composable private fun LanguageSwitch(lang: Lang, onLanguage: (Lang) -> Unit) {
-    Row(Modifier.border(1.dp, Gold.copy(alpha = .35f), CutCornerShape(6.dp)), verticalAlignment = Alignment.CenterVertically) {
-        Lang.entries.forEach { option ->
-            val active = option == lang
-            Text(option.short, color = if (active) Ink else Muted, style = MaterialTheme.typography.labelSmall,
-                modifier = Modifier.background(if (active) Gold else Color.Transparent)
-                    .clickable(enabled = !active) { onLanguage(option) }
-                    .padding(horizontal = 9.dp, vertical = 6.dp))
         }
     }
 }

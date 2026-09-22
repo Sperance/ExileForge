@@ -16,6 +16,7 @@ import com.sperance.exileforge.core.network.FailureState
 import com.sperance.exileforge.core.network.transportDetail
 import com.sperance.exileforge.core.network.GameApi
 import com.sperance.exileforge.core.network.RequestJournal
+import com.sperance.exileforge.data.settings.deviceLanguage
 import com.sperance.exileforge.data.settings.ServerStore
 import com.sperance.exileforge.presentation.features.*
 import com.sperance.exileforge.presentation.state.AppMode
@@ -59,11 +60,15 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
     init {
         scope.launch {
             try {
-                val language = store.language.first()
+                // No choice stored means a first run, and a first run follows the device rather
+                // than the client's own default: a Chinese phone should not open in Russian.
+                val language = Lang.byCode(store.language.first()) ?: deviceLanguage()
                 uiLanguage = language
                 val server = store.server.first()
                 api = newApi(server)
-                mutable.update { it.copy(lang = language, server = server, serverDraft = server, busy = false, deviceId = deviceId) }
+                val known = store.languages(server).mapNotNull { Lang.byCode(it) }
+                mutable.update { it.copy(lang = language, server = server, serverDraft = server, busy = false, deviceId = deviceId,
+                    languages = known.ifEmpty { it.languages }) }
                 refreshLocale()
                 refreshIcons()
                 // The session itself cannot be restored — the server issues no token — but it can be
@@ -103,6 +108,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
         val cached = store.locale(server, language.code)
         cached?.let { (hash, document) -> applyLocale(LocaleBundle.parse(language.code, hash, document)) }
         val manifest = api.localeManifest()
+        applyLanguages(server, manifest)
         val chosen = manifest.language(language.code) ?: manifest.language(manifest.default) ?: return
         if (cached == null || cached.first != chosen.hash || chosen.code != language.code)
             applyLocale(bundle(server, manifest, chosen.code) ?: return)
@@ -169,6 +175,20 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
     private fun applyIcons(bundle: IconBundle) {
         serverIcons = bundle
         mutable.update { it.copy(iconKeys = bundle.size, iconSprites = bundle.spriteCount) }
+    }
+
+    /**
+     * Which languages this server offers.
+     *
+     * A language the client has no table of labels for is dropped: the server would name the items
+     * but every button would still be a key. The choice already made is kept whatever the manifest
+     * says, so a server that stops serving a language does not silently move a player off it.
+     */
+    private suspend fun applyLanguages(server: String, manifest: LocaleManifest) {
+        val offered = manifest.languages.mapNotNull { Lang.byCode(it.code) }
+        if (offered.isEmpty()) return
+        store.saveLanguages(server, offered.map { it.code })
+        mutable.update { it.copy(languages = (offered + it.lang).distinct().sortedBy(Lang::ordinal)) }
     }
 
     /** The bundle is global because `core` renders from it; the state only reports what is loaded. */

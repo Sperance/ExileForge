@@ -11,7 +11,10 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
+import com.sperance.exileforge.core.i18n.Lang
+import com.sperance.exileforge.core.i18n.uiLanguage
 
 /** Wraith-lit stone and tarnished gold: the palette of an exile's stash. */
 val Ink = Color(0xFF07090C)
@@ -49,7 +52,16 @@ fun panelBrush(accent: Color = Gold) = Brush.verticalGradient(
 )
 fun voidBrush() = Brush.verticalGradient(listOf(Abyss, Ink, Color(0xFF0A0D12)))
 
-@Composable fun ForgeTheme(content: @Composable () -> Unit) {
+/**
+ * The dark plate the whole app is drawn on.
+ *
+ * [lang] is here for one reason: the letter spacing. Carving a Latin or Cyrillic title wider makes
+ * it look cut in stone; doing the same to Chinese pulls the characters apart and leaves holes in
+ * the middle of a word, because a hanzi is already a full-width glyph. So under Chinese the same
+ * typography is built with the spacing closed up, and nothing else changes.
+ */
+@Composable fun ForgeTheme(lang: Lang = uiLanguage, content: @Composable () -> Unit) {
+    val carved: (Float) -> TextUnit = { if (lang == Lang.ZH) 0.sp else it.sp }
     MaterialTheme(
         colorScheme = darkColorScheme(primary = Gold, onPrimary = Ink, secondary = Rune, onSecondary = Ink,
             secondaryContainer = PanelRaised, onSecondaryContainer = Parchment, tertiary = GoldBright,
@@ -61,13 +73,13 @@ fun voidBrush() = Brush.verticalGradient(listOf(Abyss, Ink, Color(0xFF0A0D12)))
             large = RoundedCornerShape(4.dp), extraLarge = RoundedCornerShape(6.dp)
         ),
         typography = Typography(
-            headlineLarge = TextStyle(fontFamily = FontFamily.Serif, fontSize = 28.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp),
-            headlineSmall = TextStyle(fontFamily = FontFamily.Serif, fontSize = 21.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
-            titleLarge = TextStyle(fontFamily = FontFamily.Serif, fontSize = 20.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp),
-            titleMedium = TextStyle(fontFamily = FontFamily.Serif, fontSize = 17.sp, fontWeight = FontWeight.Medium, letterSpacing = .5.sp),
-            labelSmall = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp),
-            labelMedium = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 12.sp, letterSpacing = .8.sp),
-            labelLarge = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 13.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp)
+            headlineLarge = TextStyle(fontFamily = FontFamily.Serif, fontSize = 28.sp, fontWeight = FontWeight.Bold, letterSpacing = carved(2f)),
+            headlineSmall = TextStyle(fontFamily = FontFamily.Serif, fontSize = 21.sp, fontWeight = FontWeight.Bold, letterSpacing = carved(1f)),
+            titleLarge = TextStyle(fontFamily = FontFamily.Serif, fontSize = 20.sp, fontWeight = FontWeight.Medium, letterSpacing = carved(1f)),
+            titleMedium = TextStyle(fontFamily = FontFamily.Serif, fontSize = 17.sp, fontWeight = FontWeight.Medium, letterSpacing = carved(.5f)),
+            labelSmall = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = carved(1.6f)),
+            labelMedium = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 12.sp, letterSpacing = carved(.8f)),
+            labelLarge = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 13.sp, fontWeight = FontWeight.Medium, letterSpacing = carved(1f))
         ), content = {
             CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onBackground, content = content)
         }

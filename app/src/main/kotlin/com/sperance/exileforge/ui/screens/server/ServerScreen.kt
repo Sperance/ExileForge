@@ -10,7 +10,6 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.contract.SERVER_BRANCH
 import com.sperance.exileforge.core.contract.SERVER_COMMIT
 import com.sperance.exileforge.core.contract.SERVER_VERSION
-import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.tr
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.core.network.RequestLog
@@ -58,11 +57,7 @@ import com.sperance.exileforge.ui.theme.Panel
         }
         ForgePanel {
             Engraved(tr("Язык интерфейса", "Interface language"))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Lang.entries.forEach { option ->
-                    FilterChip(selected = s.lang == option, onClick = { vm.language(option) }, label = { Text(option.title) })
-                }
-            }
+            LanguagePicker(s.lang, s.languages, enabled = !s.busy, onLanguage = vm::language)
             Text(tr("Русский и английский переключаются мгновенно, выбор сохраняется на устройстве.", "Russian and English switch instantly; the choice is stored on this device."), color = Muted, style = MaterialTheme.typography.bodySmall)
             // Names of things belong to the server since 0.14.0: without its dictionary the screens
             // print codes, so how much of it arrived is worth saying out loud.

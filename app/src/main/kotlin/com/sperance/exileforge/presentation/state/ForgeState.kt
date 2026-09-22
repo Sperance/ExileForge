@@ -109,6 +109,15 @@ data class ForgeState(
      */
     val localeLanguage: String = "", val localeStrings: Int = 0,
     /**
+     * Which languages the player may choose from.
+     *
+     * The list is the server's, not the client's: `locale/index.json` says which dictionaries
+     * exist, and a language the server cannot name items in would be half a translation - the
+     * interface in one tongue and every item in another. Until a manifest arrives it is the two
+     * every server has always served, so the picker is never empty.
+     */
+    val languages: List<Lang> = listOf(Lang.RU, Lang.EN),
+    /**
      * How much of the server's icon set arrived: codes covered and drawings behind them.
      *
      * The set is global (`serverIcons`) for the same reason the dictionary is — `core` draws from

@@ -33,6 +33,11 @@ val Blood = Color(0xFF8A2E2E)
 val Vital = Color(0xFF5E9E5A)
 /** Fire and other burning damage on the arena stage. */
 val Ember = Color(0xFFD9642E)
+/** The colours Path of Exile gives a crafted and a fractured modifier, and the two influences. */
+val Crafted = Color(0xFFB4B4FF)
+val Fractured = Color(0xFFA29162)
+val Shaper = Color(0xFF9FD2F0)
+val Elder = Color(0xFFA77BCF)
 
 /** Item frames follow Path of Exile rarity colours; unknown values stay bone white. */
 fun rarityColor(value: String) = when (value) {

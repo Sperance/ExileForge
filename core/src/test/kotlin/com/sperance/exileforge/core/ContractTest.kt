@@ -121,7 +121,7 @@ class ContractTest {
         // EnumCurrencyOrb on the server; a sub-category outside it is served under its document name.
         assertEquals(setOf("ORB_OF_TRANSMUTATION", "ORB_OF_AUGMENTATION", "ORB_OF_ALTERATION", "ORB_OF_ALCHEMY", "REGAL_ORB",
             "CHAOS_ORB", "EXALTED_ORB", "DIVINE_ORB", "ORB_OF_ANNULMENT", "ORB_OF_SCOURING", "BLESSED_ORB", "VAAL_ORB",
-            "ORB_OF_CHANCE", "MIRROR_OF_KALANDRA", "ORB_OF_REGRET"), CurrencyOrb.entries.map { it.name }.toSet())
+            "ORB_OF_CHANCE", "MIRROR_OF_KALANDRA", "FRACTURING_ORB", "SHAPERS_ORB", "ELDER_ORB", "ORB_OF_REGRET"), CurrencyOrb.entries.map { it.name }.toSet())
         assertEquals(CurrencyOrb.VAAL_ORB, CurrencyOrb.of("VAAL_ORB"))
         assertNull(CurrencyOrb.of("ORB_OF_FUSING"))
         // An orb is called by its English name in every language, as in PoE; what it does is translated.

@@ -9,6 +9,7 @@ import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.model.currency.CURRENCY_CATEGORY
+import com.sperance.exileforge.core.model.modifier.BenchRecipe
 import com.sperance.exileforge.core.model.modifier.ModifierDefinition
 import kotlinx.serialization.json.*
 
@@ -72,7 +73,7 @@ fun weaponTitle(value: String, lang: Lang = uiLanguage) = uiOr(lang, "enum.weapo
 fun inventoryDocument(instance: JsonObject, base: JsonObject?): JsonObject = JsonObject(
     base.orEmpty()
         + mapOf("name" to JsonPrimitive(equipmentTitle(base)))
-        + instance.filterKeys { it in setOf("_id", "equipmentId", "params", "equippedSlot", "socketCode", "rarity", "corrupted", "mirrored") }
+        + instance.filterKeys { it in setOf("_id", "equipmentId", "params", "equippedSlot", "socketCode", "rarity", "corrupted", "mirrored", "influence") }
 )
 
 /**
@@ -157,15 +158,46 @@ private fun rolledValues(modifier: JsonObject, definition: ModifierDefinition? =
     }
 
 /**
+ * What a rolled affix is besides its sentence: its tier, and whether the bench placed it or a
+ * Fracturing Orb fixed it. A fixed modifier (a base, a tree node) has no tier and answers zero.
+ */
+data class AffixMarks(val tier: Int, val crafted: Boolean, val fractured: Boolean)
+
+fun affixMarks(modifier: JsonObject, definitions: List<ModifierDefinition>): AffixMarks = AffixMarks(
+    tier = modifier.text("tier").toIntOrNull() ?: 0,
+    crafted = definitions.firstOrNull { it.id == modifier.text("modifierId") }?.crafted == true,
+    fractured = (modifier["fractured"] as? JsonPrimitive)?.booleanOrNull == true,
+)
+
+/**
+ * A bench line as the sentence it would add, with the tier's range where the roll will land:
+ * "+(70–79) to maximum Life". The same template a rolled modifier fills, filled with a range.
+ */
+fun recipeText(recipe: BenchRecipe, definitions: List<ModifierDefinition>): String {
+    val definition = definitions.firstOrNull { it.id == recipe.modifierId }
+    val ranges = recipe.values.mapIndexed { index, range ->
+        val stat = definition?.effects?.getOrNull(index)?.stat.orEmpty()
+        val low = statNumber(stat, range.valueMin); val high = statNumber(stat, range.valueMax)
+        if (low == high) low else "($low–$high)"
+    }
+    val template = definition?.template?.takeIf { it != definition.code }
+        ?: return ranges.joinToString(" · ").ifBlank { displayName(recipe.modifierCode) }
+    return ranges.foldIndexed(template) { index, text, value -> text.replace("{$index}", value) }
+}
+
+/**
  * Characteristics whose meaning lives in the fraction.
  *
  * Everything else is printed whole, as Path of Exile prints it: a dot in front of a player is
- * noise when the number is armour or life. These five are the exception because rounding them
- * destroys them — 1.25 attacks per second becomes 1, and a 1.5 critical multiplier becomes 2.
+ * noise when the number is armour or life. These are the exception because rounding them
+ * destroys them — 1.25 attacks per second becomes 1, a 1.5 critical multiplier becomes 2, and
+ * 0.4% leech becomes nothing at all.
  */
 val preciseStats = setOf(
     "STOCK_ATTACK_SPEED", "STOCK_CAST_SPEED", "STOCK_CRITICAL_CHANCE",
     "STOCK_CRITICAL_MULTIPLIER", "STOCK_MOVEMENT_SPEED",
+    // Leech lives below one percent: 0.4% printed whole is 0%, a modifier that seems to do nothing.
+    "STOCK_LEECH_PHYSICAL", "STOCK_LEECH_MAGICAL", "STOCK_LEECH_ALL", "STOCK_CRITICAL_VAMPIRE",
 )
 
 /**

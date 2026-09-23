@@ -451,6 +451,35 @@ class GameApiTest {
         server.takeRequest()
     }
 
+    @Test fun `the bench lists its lines and crafts and uncrafts by name`(): Unit = runBlocking {
+        ok("""[{"code":"CRAFTED_ADD_MAXIMUM_LIFE_T3","modifierId":"$id","modifierCode":"CRAFTED_ADD_MAXIMUM_LIFE","tierId":"$other","tier":3,
+            "source":"PREFIX","group":"ADD_MAXIMUM_LIFE","values":[{"valueMin":25.0,"valueMax":34.0}],"orb":"ORB_OF_TRANSMUTATION",
+            "orbItemId":"$other","amount":3,"slots":[]}]""")
+        val line = api.hero.bench().single()
+        assertEquals("/game/api/v1/characterequipment/bench", server.takeRequest().path)
+        assertEquals(3L, line.amount)
+        assertTrue(line.fits("JEWEL"))
+
+        val item = """{"_id":"$id","characterId":"$other","equipmentId":"$other","rarity":"UNCOMMON","influence":"SHAPER",
+            "params":[{"modifierId":"$id","tierId":"$other","tier":3,"values":[30.0]},{"modifierId":"$other","tierId":"$id","tier":1,"values":[9.0],"fractured":true}]}"""
+        ok("""{"messageKey":"currency.crafted","messageArgs":["equipment.IRON_SKULLCAP.name"],"item":$item}""")
+        val crafted = api.hero.craft(other, id, line.code)
+        val sent = server.takeRequest()
+        assertEquals("POST", sent.method)
+        assertEquals("/game/api/v1/characterequipment/craft?characterId=$other&inventoryId=$id&recipe=CRAFTED_ADD_MAXIMUM_LIFE_T3", sent.path)
+        assertEquals("SHAPER", crafted.item.influence)
+        assertTrue(crafted.item.params.last().fractured)
+
+        ok("""{"messageKey":"currency.uncrafted","messageArgs":[],"item":$item}""")
+        api.hero.uncraft(other, id)
+        assertEquals("/game/api/v1/characterequipment/uncraft?characterId=$other&inventoryId=$id", server.takeRequest().path)
+
+        // A blank line is refused before anything is sent.
+        val count = server.requestCount
+        assertFailsWith<IllegalArgumentException> { api.hero.craft(other, id, " ") }
+        assertEquals(count, server.requestCount)
+    }
+
     @Test fun `stats and the bag come from the server as they are`(): Unit = runBlocking {
         // The sheet reports the numbers and the server's verdict on every worn item alongside them.
         ok("""{"characterId":"$id","level":12,"stats":{"STOCK_HEALTH":188.4,"STOCK_ARMOR":40.0},"active":["$other"],
@@ -593,7 +622,9 @@ class GameApiTest {
             "POST" to "/api/v1/character/skilltree/allocate", "GET" to "/api/v1/auctionlot/search",
             "POST" to "/api/v1/auctionlot/sell/equipment", "POST" to "/api/v1/auctionlot/buy",
             "GET" to "/api/v1/equipment", "POST" to "/api/v1/characterequipment/socket",
-            "POST" to "/api/v1/characterequipment/unsocket", "POST" to "/api/v1/characterequipment/sell")
+            "POST" to "/api/v1/characterequipment/unsocket", "POST" to "/api/v1/characterequipment/sell",
+            "GET" to "/api/v1/characterequipment/bench", "POST" to "/api/v1/characterequipment/craft",
+            "POST" to "/api/v1/characterequipment/uncraft")
         // The server prints the Ktor selector, so a method arrives as "(GET)".
         ok(JsonArray(routes.map { buildJsonObject { put("path", it.second); put("method", "(${it.first})") } }).toString())
         val capabilities = api.capabilities()

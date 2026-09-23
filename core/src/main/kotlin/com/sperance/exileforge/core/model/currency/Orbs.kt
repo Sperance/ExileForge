@@ -22,6 +22,8 @@ enum class CurrencyOrb {
     ORB_OF_TRANSMUTATION, ORB_OF_AUGMENTATION, ORB_OF_ALTERATION, ORB_OF_ALCHEMY,
     REGAL_ORB, CHAOS_ORB, EXALTED_ORB, DIVINE_ORB, ORB_OF_ANNULMENT, ORB_OF_SCOURING,
     BLESSED_ORB, VAAL_ORB, ORB_OF_CHANCE, MIRROR_OF_KALANDRA,
+    // Since 0.23.0: fracture one affix for good, and the two influences.
+    FRACTURING_ORB, SHAPERS_ORB, ELDER_ORB,
     // The one orb that is never applied to an item: the tree spends it, and applyOrb refuses it
     // outright (CR_009). It is in the table because it is still an orb in the bag and a price
     // on the auction, and a bag entry the client cannot name is a bag entry a player cannot read.

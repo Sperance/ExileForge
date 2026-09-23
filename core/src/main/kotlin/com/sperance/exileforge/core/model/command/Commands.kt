@@ -89,6 +89,10 @@ data class ApiCapabilities(val routes: Set<String>) {
             "POST" to "/api/v1/characterequipment/socket",
             "POST" to "/api/v1/characterequipment/unsocket",
             "POST" to "/api/v1/characterequipment/sell",
+            // The crafting bench, since 0.23.0.
+            "GET" to "/api/v1/characterequipment/bench",
+            "POST" to "/api/v1/characterequipment/craft",
+            "POST" to "/api/v1/characterequipment/uncraft",
             "GET" to "/api/v1/auctionlot/search",
             "POST" to "/api/v1/auctionlot/sell/equipment",
             "POST" to "/api/v1/auctionlot/buy",

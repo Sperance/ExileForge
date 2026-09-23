@@ -46,6 +46,7 @@ with (root / 'build/client-server.log').open('w') as log:
                 assert 'GET /api/v1/characterclass' in routes, sorted(routes)
                 assert 'POST /api/v1/character/skilltree/allocate' in routes, sorted(routes)
                 assert 'POST /api/v1/auctionlot/buy' in routes, sorted(routes)
+                assert 'POST /api/v1/characterequipment/craft' in routes, sorted(routes)
                 assert 'POST /api/v1/user/login' in routes, sorted(routes)
                 break
             except (urllib.error.URLError, TimeoutError, KeyError):

@@ -13,6 +13,7 @@ import com.sperance.exileforge.core.model.command.UserProfile
 import com.sperance.exileforge.core.model.currency.CurrencyItem
 import com.sperance.exileforge.core.model.hero.CharacterSummary
 import com.sperance.exileforge.core.model.hero.HeroView
+import com.sperance.exileforge.core.model.modifier.BenchRecipe
 import com.sperance.exileforge.core.model.modifier.ModifierDefinition
 import com.sperance.exileforge.core.model.progression.CharacterClass
 import com.sperance.exileforge.core.model.progression.ExperienceLevel
@@ -121,6 +122,8 @@ data class WorldState(
     val definitions: List<ModifierDefinition> = emptyList(),
     /** The currency catalogue; an orb is an `items` document of category `CURRENCY`. */
     val orbs: List<CurrencyItem> = emptyList(),
+    /** The crafting bench: crafted modifiers by tier and their price in orbs. Fixed per server. */
+    val bench: List<BenchRecipe> = emptyList(),
     /** Classes and the shared skill tree; a class carries the stat base, the tree its graph. */
     val classes: List<CharacterClass> = emptyList(), val treeNodes: List<SkillTreeNode> = emptyList(),
     /** The level table, read with the classes: it says what the next level costs. */

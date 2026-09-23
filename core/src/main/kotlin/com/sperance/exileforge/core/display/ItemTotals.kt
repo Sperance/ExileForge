@@ -107,25 +107,31 @@ private fun apply(operations: List<Pair<ModifierOperation, Double>>): Double {
  *
  * Read off the document rather than listed here, so a flag the server grows tomorrow shows up
  * without the client being rebuilt; [stateTitle] falls back to the field's own name until it has
- * one in the dictionary. Two states are not fields but readings of one: an item is worn when it
- * has a slot and socketed when it names a node.
+ * one in the dictionary. The rest are readings rather than fields: an item is worn when it has a
+ * slot and socketed when it names a node, it carries an influence when `influence` names one
+ * (lower-cased, `shaper`), and it is `fractured` or `crafted` when one of its rolls is — the
+ * second needs the definitions, because the bench is a property of the modifier, not of the roll.
  */
-fun itemStates(document: JsonObject): List<String> {
+fun itemStates(document: JsonObject, definitions: List<ModifierDefinition> = emptyList()): List<String> {
     val flags = document.keys.filter { key ->
         key !in SERVICE_FLAGS && (document[key] as? JsonPrimitive)?.booleanOrNull == true
     }
-    val worn = listOfNotNull(
+    val rolls = (document["params"] as? JsonArray).orEmpty().mapNotNull { it as? JsonObject }.map { affixMarks(it, definitions) }
+    val readings = listOfNotNull(
+        document.text("influence").takeIf { it.isNotBlank() }?.lowercase(),
+        "fractured".takeIf { rolls.any { it.fractured } },
+        "crafted".takeIf { rolls.any { it.crafted } },
         "equipped".takeIf { document.text("equippedSlot").isNotBlank() },
         "socketed".takeIf { document.text("socketCode").isNotBlank() },
     )
-    return (flags + worn).sortedBy { STATE_ORDER.indexOf(it).takeIf { at -> at >= 0 } ?: STATE_ORDER.size }
+    return (flags + readings).sortedBy { STATE_ORDER.indexOf(it).takeIf { at -> at >= 0 } ?: STATE_ORDER.size }
 }
 
 /** Bookkeeping the server keeps on every document; none of it is a state of the thing itself. */
 private val SERVICE_FLAGS = setOf("deleted", "isActive", "needOpenRecipe")
 
 /** The order states are read in, so two items never list the same pair differently. */
-private val STATE_ORDER = listOf("corrupted", "mirrored", "equipped", "socketed")
+private val STATE_ORDER = listOf("corrupted", "mirrored", "shaper", "elder", "fractured", "crafted", "equipped", "socketed")
 
 /**
  * What a state is called.

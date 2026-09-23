@@ -101,4 +101,23 @@ class ItemTotalsTest {
     @Test fun anItemInTheBagCarriesNoState() {
         assertEquals(emptyList(), itemStates(buildJsonObject { put("corrupted", false); put("equippedSlot", JsonNull) }))
     }
+
+    @Test fun influenceFracturedAndCraftedAreReadOffTheItem() {
+        val bench = ModifierDefinition(id = "bench", code = "CRAFTED_ADD_MAXIMUM_LIFE", crafted = true)
+        val document = buildJsonObject {
+            put("influence", "ELDER"); put("equippedSlot", "HELMET")
+            putJsonArray("params") {
+                addJsonObject { put("modifierId", "bench"); put("tier", 2); putJsonArray("values") { add(30.0) } }
+                addJsonObject { put("modifierId", "rolled"); put("tier", 1); put("fractured", true); putJsonArray("values") { add(9.0) } }
+            }
+        }
+        assertEquals(listOf("elder", "fractured", "crafted", "equipped"), itemStates(document, listOf(bench)))
+        // Without the definitions the bench cannot be told apart from a roll, and is not guessed at.
+        assertEquals(listOf("elder", "fractured", "equipped"), itemStates(document))
+        assertEquals("Elder influence", stateTitle("elder", com.sperance.exileforge.core.i18n.Lang.EN))
+
+        val params = (document["params"] as JsonArray).map { it.jsonObject }
+        assertEquals(AffixMarks(tier = 2, crafted = true, fractured = false), affixMarks(params[0], listOf(bench)))
+        assertEquals(AffixMarks(tier = 1, crafted = false, fractured = true), affixMarks(params[1], listOf(bench)))
+    }
 }

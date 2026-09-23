@@ -105,6 +105,17 @@ class ItemPresentationTest {
      * and this is only the last step before a string. But armour with a dot in it is noise, while
      * an attack speed rounded to a whole number stops saying anything at all.
      */
+    @Test fun `a bench line reads as the sentence it adds, with the tier's range`() {
+        val life = ModifierDefinition(id = "life", code = "CRAFTED_ADD_MAXIMUM_LIFE",
+            effects = listOf(com.sperance.exileforge.core.model.modifier.ModifierEffect("STOCK_HEALTH", com.sperance.exileforge.core.model.modifier.ModifierOperation.ADD)), crafted = true)
+        val recipe = com.sperance.exileforge.core.model.modifier.BenchRecipe(code = "CRAFTED_ADD_MAXIMUM_LIFE_T3", modifierId = "life",
+            modifierCode = "CRAFTED_ADD_MAXIMUM_LIFE", tier = 3,
+            values = listOf(com.sperance.exileforge.core.model.modifier.ModifierTierValue(25.0, 34.0)), slots = listOf("HELMET"))
+        // The range stands where the roll will land, printed by its stat's rule, dictionary or not.
+        assertTrue("(25–34)" in recipeText(recipe, listOf(life)), recipeText(recipe, listOf(life)))
+        assertTrue(recipe.fits("HELMET")); assertFalse(recipe.fits("JEWEL"))
+    }
+
     @Test fun `a number is whole unless its fraction is the point`() {
         assertEquals("48", statNumber("STOCK_ARMOR", 47.6))
         assertEquals("12", statNumber("STOCK_MANA", 11.5))
@@ -115,6 +126,8 @@ class ItemPresentationTest {
         assertEquals("1.25", statNumber("STOCK_ATTACK_SPEED", 1.25))
         assertEquals("5.50", statNumber("STOCK_CRITICAL_CHANCE", 5.5))
         assertEquals("1.50", statNumber("STOCK_CRITICAL_MULTIPLIER", 1.5))
+        // Leech lives below one percent; printed whole, 0.4% would read as nothing.
+        assertEquals("0.40", statNumber("STOCK_LEECH_ALL", 0.4))
         preciseStats.forEach { assertTrue(it.startsWith("STOCK_"), "$it is not a server stat") }
     }
 }

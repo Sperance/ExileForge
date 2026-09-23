@@ -116,6 +116,8 @@ import kotlinx.serialization.json.*
      * be filled — so the slot answers what it is and this answers where.
      */
     val socketCode: String? = null,
+    /** Since 0.23.0: `SHAPER` or `ELDER` when an influence orb touched this copy; null otherwise. */
+    val influence: String? = null,
     val version: Long = 0,
 ) {
     val equipped: Boolean get() = equippedSlot != null

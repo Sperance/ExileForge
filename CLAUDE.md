@@ -20,9 +20,9 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.14.0, `versionCode` 31) for the
-**ktor-bestgame** RPG server (0.22.0), pinned in
-`core/.../contract/Contract.kt` as `SERVER_COMMIT = f1dae3178b4b566297eab3022678f984b2bf772c`
+ExileForge is an **Android Compose client** (version 2.15.0, `versionCode` 32) for the
+**ktor-bestgame** RPG server (0.23.0), pinned in
+`core/.../contract/Contract.kt` as `SERVER_COMMIT = 7a6c8b6f51a1754d9e8427c1349f4aa59b73ce7b`
 on the server branch `claude/tender-pasteur-a36kj2`.
 
 The client is deliberately **thin**: the server owns items, stats, modifier rolls and inventory.
@@ -336,9 +336,10 @@ These are enforced by tests and are the point of the client's design:
 15. **An item has no stat fields, and no number is printed raw.** Armour, damage and attack speed
     are fixed modifiers in `baseParams` (values, no tier); `durability` is the only number left as
     a field. Every `Double` the server sends is counted in full and *displayed* through
-    `statNumber(stat, value)`: whole, without a point, except the five rates where a fraction is
-    the whole point — `STOCK_ATTACK_SPEED`, `STOCK_CAST_SPEED`, `STOCK_CRITICAL_CHANCE`,
-    `STOCK_CRITICAL_MULTIPLIER`, `STOCK_MOVEMENT_SPEED` — which keep two decimals. Rounding is
+    `statNumber(stat, value)`: whole, without a point, except where a fraction is the whole point —
+    the five rates `STOCK_ATTACK_SPEED`, `STOCK_CAST_SPEED`, `STOCK_CRITICAL_CHANCE`,
+    `STOCK_CRITICAL_MULTIPLIER`, `STOCK_MOVEMENT_SPEED`, and since 2.15.0 the leech stats, which
+    live below one percent — which keep two decimals (`preciseStats`). Rounding is
     display and never travels back to the server. Rarity is never written out either: since 2.7.0
     it is the **spine** — a band of the rarity colour down the left edge of an item, on a row and
     on a card alike — rather than a frame drawn round the whole thing, because a stash is a column
@@ -425,6 +426,16 @@ These are enforced by tests and are the point of the client's design:
     document. The manual path is a pull-to-refresh on the stash, not a button competing with the
     content. This server has no change feed and `version` belongs to the character alone, so a
     cheap "did anything change" question cannot be asked — the stamp is the answer instead.
+
+21. **Groups, the bench, fractured and influence are the server's (since 0.23.0).** A definition
+    carries `group`, `spawnWeight`, `influence` and `crafted`; an instance modifier carries
+    `fractured` and an instance carries `influence`. The client reads them only to show them:
+    `affixMarks` gives a card its tier and its crafted/fractured word, and `itemStates` reads the
+    influence and the two markers off an item so a stash row shows them as symbols. The crafting
+    bench is `HeroClient.bench/craft/uncraft`; its lines (`WorldState.bench`) are read once per
+    session beside the orbs, offered for the item's slot only (`BenchRecipe.fits` — a fact the line
+    states), and nothing else is pre-checked: one crafted modifier per item, a free place, no twin of
+    the same group and the price are refused by the server, for free.
 
 ## Conventions
 

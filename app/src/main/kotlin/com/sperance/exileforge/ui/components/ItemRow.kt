@@ -96,7 +96,7 @@ const val ROW_PROPERTIES = 5
     val rolled = (document["params"] as? JsonArray).orEmpty()
         .mapNotNull { (it as? JsonObject)?.let { one -> AnnotatedString(modifierText(one, definitions)) } }
     val properties = base.map { basePropertyText(it, withBase = false) } + rolled
-    val states = itemStates(document)
+    val states = itemStates(document, definitions)
     val level = document.text("itemLevel")
     val slot = document.text("slot").takeIf { it.isNotBlank() }?.let(::slotTitle)
     Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).background(Panel)
@@ -162,6 +162,10 @@ const val ROW_PROPERTIES = 5
 internal fun stateGlyph(state: String) = when (state) {
     "corrupted" -> ForgeGlyphs.Skull
     "mirrored" -> ForgeGlyphs.Chain
+    "shaper" -> ForgeGlyphs.Constellation
+    "elder" -> ForgeGlyphs.Portal
+    "fractured" -> ForgeGlyphs.Shard
+    "crafted" -> ForgeGlyphs.Anvil
     "equipped" -> ForgeGlyphs.Helm
     "socketed" -> ForgeGlyphs.Gem
     else -> ForgeGlyphs.Sigil
@@ -171,5 +175,9 @@ internal fun stateColor(state: String) = when (state) {
     "corrupted" -> LifeRed
     "equipped" -> Gold
     "mirrored", "socketed" -> Rune
+    "shaper" -> Shaper
+    "elder" -> Elder
+    "fractured" -> Fractured
+    "crafted" -> Crafted
     else -> Muted
 }

@@ -76,6 +76,21 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
         mutable.update { it.copy(message = outcome.message, play = it.play.copy(selectedEquipment = outcome.created?.id ?: outcome.item.id)) }
     } } }
 
+    /**
+     * The crafting bench: one crafted modifier placed, or taken back off.
+     *
+     * Every rule and the price are the server's; the answer is an orb's — the item and a sentence —
+     * and the hero is re-read after it like after any command.
+     */
+    fun craft(inventoryId: String, recipe: String) { with(runtime) { characterCommand { id ->
+        val outcome = api.hero.craft(id, inventoryId, recipe)
+        mutable.update { it.copy(message = outcome.message) }
+    } } }
+    fun uncraft(inventoryId: String) { with(runtime) { characterCommand { id ->
+        val outcome = api.hero.uncraft(id, inventoryId)
+        mutable.update { it.copy(message = outcome.message) }
+    } } }
+
     fun selectNode(code: String) { with(runtime) { mutable.update { it.copy(play = it.play.copy(selectedNode = code)) } } }
     fun nodeQuery(value: String) { with(runtime) { mutable.update { it.copy(play = it.play.copy(nodeQuery = value)) } } }
 
@@ -150,6 +165,7 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
         check(id.isNotBlank()) { ui("auction.choose_character") }
         ensureDefinitions()
         ensureOrbs()
+        ensureBench()
         ensureProgression()
         // The catalogue is half of every card now that an instance keeps only its rolls,
         // so it is read before the hero rather than chased afterwards.

@@ -54,8 +54,21 @@ import kotlinx.serialization.Serializable
     val isLocal: Boolean = false,
     // The server writes every nullable field, null included, so an absent tag list arrives as null.
     val tags: List<String>? = null,
+    /**
+     * Since 0.23.0: two modifiers of one group never share an item, which is why a crafted "+life"
+     * cannot stand beside a rolled one. Null means the group is the code itself. Enforced by the
+     * server; the client only reads it to say why a bench line would be refused.
+     */
+    val group: String? = null,
+    /** How often the server's roller draws this one against its neighbours. Never used here to roll. */
+    val spawnWeight: Int = 1000,
+    /** The influence (`SHAPER`, `ELDER`) an item must carry for this modifier to roll; null for the rest. */
+    val influence: String? = null,
+    /** A bench modifier: no orb rolls it, the crafting bench places it, one per item. */
+    val crafted: Boolean = false,
 ) {
     val composite: Boolean get() = effects.size > 1
+    val family: String get() = group ?: code
     /**
      * The whole sentence the modifier reads as, with a placeholder per effect.
      *
@@ -92,6 +105,36 @@ import kotlinx.serialization.Serializable
     val values: List<Double> = emptyList(),
     val tierId: String = "",
     val tier: Int = 0,
+    /** A fractured affix (Fracturing Orb, since 0.23.0): no orb removes, rerolls or changes it again. */
+    val fractured: Boolean = false,
 ) {
     val rolled: Boolean get() = tierId.isNotBlank()
+}
+
+/**
+ * One line of the crafting bench (`GET /api/v1/characterequipment/bench`, since 0.23.0): a crafted
+ * modifier in one tier, and what placing it costs.
+ *
+ * The price, the tier's range and which slots take it are the server's. [values] is there so the
+ * line reads "+(70–79) to maximum Life" before anything is crafted; the roll inside that range
+ * happens on the server when the command arrives.
+ */
+@Serializable data class BenchRecipe(
+    val code: String,
+    val modifierId: String = "",
+    val modifierCode: String = "",
+    val tierId: String = "",
+    val tier: Int = 1,
+    val source: ModifierSource = ModifierSource.PREFIX,
+    val group: String = "",
+    val values: List<ModifierTierValue> = emptyList(),
+    /** The orb's code, as `CurrencyOrb` names it. */
+    val orb: String = "",
+    /** The orb's `items` id: what the bag counts. */
+    val orbItemId: String = "",
+    val amount: Long = 1,
+    /** The slots that take this line; empty means every slot. */
+    val slots: List<String> = emptyList(),
+) {
+    fun fits(slot: String): Boolean = slots.isEmpty() || slot in slots
 }

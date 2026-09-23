@@ -51,6 +51,61 @@ class ServerIntegrationTest {
      * catalogue's generic writes belong to an administrator alone, and a session is its token.
      * Kept apart from the contract test because that one is already as large as a JVM method gets.
      */
+    /**
+     * The bench, fracturing and influence (server 0.23.0), against the real rules.
+     *
+     * Each step is set up so the server's answer is certain rather than likely: a magic item is
+     * scoured, transmuted and annulled down to one affix, so exactly one place of the other kind is
+     * free for the bench; a rare is fractured and then rerolled, and must keep what was fractured.
+     */
+    private suspend fun craftingIsTheServers(api: GameApi, id: String, templateId: String,
+        definitions: List<com.sperance.exileforge.core.model.modifier.ModifierDefinition>) {
+        val orbs = api.world.orbs().associateBy { it.orb }
+        fun orb(which: CurrencyOrb) = orbs[which]?.id ?: fail("no $which among ${orbs.keys}")
+        suspend fun give(which: CurrencyOrb, amount: Long) = api.hero.adjustItems(id, listOf(ItemStack(orb(which), amount)))
+        suspend fun owned(itemId: String) = api.hero.bag(id).firstOrNull { it.itemId == itemId }?.amount ?: 0L
+        fun affixes(params: List<com.sperance.exileforge.core.model.modifier.Modifier>) = params.mapNotNull { param ->
+            definitions.firstOrNull { it.id == param.modifierId }?.takeIf { it.source.name in setOf("PREFIX", "SUFFIX") }
+        }
+
+        give(CurrencyOrb.ORB_OF_SCOURING, 2); give(CurrencyOrb.ORB_OF_TRANSMUTATION, 1); give(CurrencyOrb.ORB_OF_ANNULMENT, 2)
+        val magic = api.hero.grant(id, templateId).id
+        api.hero.applyOrb(id, magic, orb(CurrencyOrb.ORB_OF_SCOURING))
+        api.hero.applyOrb(id, magic, orb(CurrencyOrb.ORB_OF_TRANSMUTATION))
+        val kept = affixes(api.hero.applyOrb(id, magic, orb(CurrencyOrb.ORB_OF_ANNULMENT)).item.params).single()
+
+        val bench = api.hero.bench()
+        assertTrue(bench.isNotEmpty(), "the server has no bench")
+        val recipe = bench.firstOrNull { it.fits("HELMET") && it.source != kept.source && it.group != kept.family }
+            ?: fail("no bench line for the free ${kept.source} place beside ${kept.code}")
+        give(CurrencyOrb.valueOf(recipe.orb), recipe.amount * 2)
+        val crafted = api.hero.craft(id, magic, recipe.code)
+        assertTrue(serverLocale.contains(crafted.messageKey), "no text for ${crafted.messageKey}")
+        assertTrue(crafted.item.params.any { it.modifierId == recipe.modifierId && it.tier == recipe.tier }, "the bench placed nothing: ${crafted.item.params}")
+        assertTrue(definitions.single { it.id == recipe.modifierId }.crafted)
+        assertEquals(recipe.amount, owned(recipe.orbItemId), "the bench took the wrong price")
+        // One crafted modifier per item, and a refusal costs nothing.
+        assertEquals("CR_015", assertFailsWith<ApiFailure> { api.hero.craft(id, magic, recipe.code) }.code)
+        assertEquals(recipe.amount, owned(recipe.orbItemId), "a refused craft was paid for")
+        val uncrafted = api.hero.uncraft(id, magic)
+        assertTrue(uncrafted.item.params.none { it.modifierId == recipe.modifierId }, "the crafted modifier stayed")
+
+        // A fractured affix survives a reroll.
+        give(CurrencyOrb.FRACTURING_ORB, 1); give(CurrencyOrb.CHAOS_ORB, 1); give(CurrencyOrb.SHAPERS_ORB, 1)
+        val rare = api.hero.grant(id, templateId)
+        assertTrue(affixes(rare.params).size >= 4, "a rare template rolled fewer than four affixes: ${rare.params}")
+        val fractured = api.hero.applyOrb(id, rare.id, orb(CurrencyOrb.FRACTURING_ORB)).item.params.single { it.fractured }
+        assertTrue(fractured in api.hero.applyOrb(id, rare.id, orb(CurrencyOrb.CHAOS_ORB)).item.params, "a Chaos Orb moved a fractured affix")
+
+        // An influence needs a free place: one is made, and the Shaper fills it from their own pool.
+        api.hero.applyOrb(id, rare.id, orb(CurrencyOrb.ORB_OF_ANNULMENT))
+        val shaped = api.hero.applyOrb(id, rare.id, orb(CurrencyOrb.SHAPERS_ORB)).item
+        assertEquals("SHAPER", shaped.influence)
+        assertTrue(shaped.params.any { param -> definitions.firstOrNull { it.id == param.modifierId }?.influence == "SHAPER" },
+            "the Shaper's Orb added nothing of the Shaper's: ${shaped.params}")
+        assertTrue(fractured in shaped.params, "the fractured affix was lost")
+    }
+
     private suspend fun accessIsTheServers(url: String, guest: GameApi, guestId: String, adminId: String, adminCharacter: String) {
         assertEquals(403, assertFailsWith<ApiFailure> { guest.hero.character(adminCharacter) }.status)
         assertEquals(403, assertFailsWith<ApiFailure> { guest.hero.charactersOf(adminId) }.status)
@@ -229,6 +284,7 @@ class ServerIntegrationTest {
             // A refusal costs nothing: with no orb left the server rejects the call and keeps the item.
             assertFailsWith<ApiFailure> { api.hero.applyOrb(id, instance.id, chaos.id) }
             assertEquals(rerolled.item.params, api.hero.inventory(id).single { it.id == instance.id }.params)
+            craftingIsTheServers(api, id, template.entityId, definitions)
 
             val items = api.catalog.referencePage(com.sperance.exileforge.core.model.EntitySource.ITEM, 0)
             val item = items.items.firstOrNull() ?: fail("the items collection is empty: $items")

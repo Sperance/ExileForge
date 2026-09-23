@@ -22,6 +22,7 @@ import com.sperance.exileforge.core.model.command.*
 import com.sperance.exileforge.core.model.currency.CURRENCY_CATEGORY
 import com.sperance.exileforge.core.model.currency.CurrencyItem
 import com.sperance.exileforge.core.model.hero.*
+import com.sperance.exileforge.core.model.modifier.BenchRecipe
 import com.sperance.exileforge.core.model.modifier.ModifierDefinition
 import com.sperance.exileforge.core.model.modifier.ModifierTier
 import com.sperance.exileforge.core.model.progression.CharacterClass
@@ -154,6 +155,32 @@ class HeroClient internal constructor(private val http: Transport, private val c
         requireId(characterId); requireId(inventoryId); requireId(orbItemId)
         return WireJson.decodeFromJsonElement(http.request("POST", "api/v1/characterequipment/applyOrb",
             mapOf("characterId" to characterId, "inventoryId" to inventoryId, "orbItemId" to orbItemId), authenticated = true))
+    }
+
+    /** The crafting bench: every crafted modifier in every tier, with its price in orbs. Fixed per server. */
+    suspend fun bench(): List<BenchRecipe> =
+        WireJson.decodeFromJsonElement(kotlinx.serialization.builtins.ListSerializer(BenchRecipe.serializer()),
+            http.request("GET", "api/v1/characterequipment/bench", authenticated = true))
+
+    /**
+     * Places one bench modifier on one item, paid in orbs.
+     *
+     * The server checks everything — one crafted modifier per item, a free place of the right kind,
+     * no twin of the same group, the slot, the price — and debits the orbs in the same transaction,
+     * so a refusal costs nothing. The answer is shaped like an orb's: the item and a sentence.
+     */
+    suspend fun craft(characterId: String, inventoryId: String, recipe: String): OrbOutcome {
+        requireId(characterId); requireId(inventoryId)
+        require(recipe.isNotBlank()) { ui("api.choose_recipe") }
+        return WireJson.decodeFromJsonElement(http.request("POST", "api/v1/characterequipment/craft",
+            mapOf("characterId" to characterId, "inventoryId" to inventoryId, "recipe" to recipe), authenticated = true))
+    }
+
+    /** Takes the bench modifier back off, for the server's price (an Orb of Scouring). */
+    suspend fun uncraft(characterId: String, inventoryId: String): OrbOutcome {
+        requireId(characterId); requireId(inventoryId)
+        return WireJson.decodeFromJsonElement(http.request("POST", "api/v1/characterequipment/uncraft",
+            mapOf("characterId" to characterId, "inventoryId" to inventoryId), authenticated = true))
     }
 
     suspend fun useRecipe(characterId: String, recipeId: String, command: UseRecipeCommand): JsonElement {

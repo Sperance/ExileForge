@@ -367,9 +367,16 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
         mutable.update { it.copy(world = it.world.copy(orbs = orbs), play = it.play.copy(selectedOrb = it.play.selectedOrb.ifBlank { orbs.firstOrNull()?.id.orEmpty() })) }
     }
 
+    /** The crafting bench's lines, fixed per server like the orbs they are paid in. */
+    suspend fun ensureBench() {
+        if (state.value.world.bench.isNotEmpty()) return
+        val bench = api.hero.bench()
+        mutable.update { it.copy(world = it.world.copy(bench = bench)) }
+    }
+
     fun clearSession() {
         api.logout(); journal.clear(); cancelReads()
-        mutable.update { it.copy(phase = AppPhase.AUTH, tab = 3, mode = AppMode.PLAYER, failure = null, account = it.account.copy(resumable = false, characters = emptyList(), charactersRead = false, signedIn = false, profile = null, sessionEpoch = it.account.sessionEpoch + 1), admin = it.admin.copy(items = emptyList(), total = 0, page = 0, totalPages = 0, original = null, draft = JsonObject(emptyMap()), editorOpen = false, checks = emptyList()), world = it.world.copy(definitions = emptyList(), orbs = emptyList(), classes = emptyList(), treeNodes = emptyList(), inventoryBases = emptyMap()), play = it.play.copy(selectedOrb = "", draftClass = "", selectedNode = "", nodeQuery = "", characterId = "", characterOwner = "", hero = null, selectedEquipment = ""), market = it.market.copy(tab = 0, showcase = com.sperance.exileforge.core.model.auction.AuctionPage(), filter = com.sperance.exileforge.core.model.auction.AuctionFilter(), showOwnLots = false, myLots = emptyList(), locked = null)) }
+        mutable.update { it.copy(phase = AppPhase.AUTH, tab = 3, mode = AppMode.PLAYER, failure = null, account = it.account.copy(resumable = false, characters = emptyList(), charactersRead = false, signedIn = false, profile = null, sessionEpoch = it.account.sessionEpoch + 1), admin = it.admin.copy(items = emptyList(), total = 0, page = 0, totalPages = 0, original = null, draft = JsonObject(emptyMap()), editorOpen = false, checks = emptyList()), world = it.world.copy(definitions = emptyList(), orbs = emptyList(), bench = emptyList(), classes = emptyList(), treeNodes = emptyList(), inventoryBases = emptyMap()), play = it.play.copy(selectedOrb = "", draftClass = "", selectedNode = "", nodeQuery = "", characterId = "", characterOwner = "", hero = null, selectedEquipment = ""), market = it.market.copy(tab = 0, showcase = com.sperance.exileforge.core.model.auction.AuctionPage(), filter = com.sperance.exileforge.core.model.auction.AuctionFilter(), showOwnLots = false, myLots = emptyList(), locked = null)) }
     }
 
     fun close() { scope.coroutineContext[Job]?.cancel() }

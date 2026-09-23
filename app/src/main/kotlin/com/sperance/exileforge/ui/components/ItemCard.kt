@@ -41,11 +41,26 @@ import kotlinx.serialization.json.*
     }
 }
 
-/** A rolled modifier under its rhombus: what the item got on top of what it is. */
-@Composable fun BulletLine(text: String) {
+/**
+ * A rolled affix on a card, under its rhombus: its sentence, then its tier and what placed it.
+ *
+ * The line takes the colour Path of Exile gives it — a crafted modifier reads in the bench's blue,
+ * a fractured one in its dull gold — and says so in a word as well, because a colour alone is not
+ * read by everyone. The tier is small and last: it is what a trader checks, not what a player reads.
+ */
+@Composable fun AffixLine(modifier: JsonObject, definitions: List<ModifierDefinition>) {
+    val marks = affixMarks(modifier, definitions)
+    val tone = when { marks.fractured -> Fractured; marks.crafted -> Crafted; else -> Rune }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
         Box(Modifier.padding(top = 6.dp)) { Rhombus() }
-        Text(text, color = Rune, style = MaterialTheme.typography.bodyMedium)
+        Text(modifierText(modifier, definitions), color = tone, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+        listOfNotNull(
+            (ui("mod.fractured") to tone).takeIf { marks.fractured },
+            (ui("mod.crafted") to tone).takeIf { marks.crafted },
+            (ui("mod.tier", marks.tier) to Muted).takeIf { marks.tier > 0 },
+        ).forEach { (word, color) ->
+            Text(word, color = color, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 2.dp))
+        }
     }
 }
 
@@ -133,7 +148,7 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
     actionLabel: String = ui("common.open"), onClick: () -> Unit = {}) {
     val color = rarityColor(doc.text("rarity"))
     val base = baseProperties(doc, definitions)
-    val states = itemStates(doc)
+    val states = itemStates(doc, definitions)
     val rolled = (doc["params"] as? JsonArray).orEmpty().mapNotNull { it as? JsonObject }
     val kind = doc.text("slot").takeIf { it.isNotBlank() }?.let(::slotTitle)
         ?: doc.text("category").takeIf { it.isNotBlank() }
@@ -169,7 +184,7 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
             // The base first, as figures: the biggest is what the item is bought for.
             base.forEachIndexed { index, property -> BannerStat(property, big = index == 0) }
             // Then what this copy rolled, which is what makes it this one rather than another.
-            rolled.take(if (detailed) rolled.size else 3).forEach { BulletLine(modifierText(it, definitions)) }
+            rolled.take(if (detailed) rolled.size else 3).forEach { AffixLine(it, definitions) }
             if (!detailed && rolled.size > 3) Text(ui("card.more_properties", rolled.size - 3), color = Muted, style = MaterialTheme.typography.labelMedium)
             if (detailed) documentDescription(doc).takeIf { it.isNotBlank() }?.let {
                 Text(it, color = Muted, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Start)

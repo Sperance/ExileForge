@@ -237,7 +237,9 @@ class HeroPanelTest {
         // are two of them: with the requirements gone the two lines became the same sentence.
         compose.onAllNodesWithText("Шлем · ур. 30").assertCountEquals(2)
         compose.onAllNodesWithText("Шлем · ур. 30 · треб. 25 ур., 40 сил").assertCountEquals(0)
-        compose.onAllNodesWithText("Сила: нужно 30, есть 14").assertCountEquals(0)
+        // What the server says this character cannot meet is marked on the line, as the stash marks
+        // it (since 2.20.0): only the lot whose template carries the verdict, and in the server's words.
+        compose.onAllNodesWithText("Сила: нужно 30, есть 14", substring = true).assertCountEquals(1)
         compose.onAllNodesWithText("Редкий").assertCountEquals(0)
         // The properties are a list, one per line — base first, then the rolls, five at most.
         compose.onNodeWithText("12").performScrollTo().assertIsDisplayed()

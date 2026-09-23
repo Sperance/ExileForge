@@ -17,6 +17,7 @@ import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
+import com.sperance.exileforge.ui.screens.hero.bagTitle
 import com.sperance.exileforge.ui.theme.*
 
 /** Listing something for sale: the stash and the bag, each thing one tap from its price. */
@@ -53,7 +54,7 @@ import com.sperance.exileforge.ui.theme.*
                 horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                 RaritySpine(Gold.copy(alpha = .35f), 3.dp)
                 Icon(ForgeGlyphs.Orb, null, tint = Gold, modifier = Modifier.size(24.dp))
-                Text(stackTitle(s, stack.itemId), color = Parchment, style = MaterialTheme.typography.bodyLarge,
+                Text(bagTitle(s, stack.itemId), color = Parchment, style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.weight(1f).padding(vertical = 10.dp))
                 Text(stack.amount.toString(), color = GoldBright, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(end = 4.dp))
             }
@@ -67,12 +68,8 @@ import com.sperance.exileforge.ui.theme.*
         }
     }
     pickedStack?.let { id ->
-        ListingSheet(s, stackTitle(s, id), owned = s.bagAmount(id) ?: 0L, onDismiss = { pickedStack = null }) { orb, price, amount ->
+        ListingSheet(s, bagTitle(s, id), owned = s.bagAmount(id) ?: 0L, onDismiss = { pickedStack = null }) { orb, price, amount ->
             pickedStack = null; onItem(id, amount, orb, price)
         }
     }
 }
-
-/** A bag stack's name: the orb's own, or the tail of an id the catalogue does not name. */
-private fun stackTitle(s: ForgeState, itemId: String): String =
-    s.world.orbs.firstOrNull { it.id == itemId }?.title(s.lang) ?: (ui("common.item") + " …${itemId.takeLast(6)}")

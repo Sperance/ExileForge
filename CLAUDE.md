@@ -20,7 +20,7 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.22.0, `versionCode` 39) for the
+ExileForge is an **Android Compose client** (version 2.23.0, `versionCode` 40) for the
 **ktor-bestgame** RPG server (0.25.0), pinned in
 `core/.../contract/Contract.kt` as `SERVER_COMMIT = a1f4fbabe6dd3512cfb421031fc88b81324617cb`
 on the server branch `claude/tender-pasteur-a36kj2`.
@@ -219,8 +219,11 @@ Since 2.19.0 it is one item on top and three sections — orbs, bench, recipes �
 bench lines as a ledger and the choice in a bar over the navigation whose `HoldButton` re-arms
 after each hold; the server's sentence lands in `PlayState.forgeLine` under the item, not in a
 snackbar. Since 2.12.0 the
-Hero tab itself has three sections — Character, Equipment, Stash — so the stash is one tap away
-rather than at the bottom of a long scroll. The bar stays on those screens and is
+Hero tab itself has sections rather than one long scroll; since 2.23.0 there are four — Character,
+Equipment, Stash, Bag — drawn as a glyph over a short label so four fit a phone. The stash holds
+only loose items (what is worn or socketed is the Equipment section's), and the bag is a list in
+the orb catalogue's order whose line opens `BagSheet`: the orb's rule, «В кузницу» (every orb but
+Regret, which only the tree spends) and «На аукцион». The bar stays on those screens and is
 the way back out of them.
 `ForgeApp` re-`key`s the whole tree on `server`, `sessionEpoch` and `lang`, so a logout, a server
 change or a language switch discards per-screen Compose state.

@@ -11,7 +11,3 @@
 -keepclasseswithmembers class com.sperance.exileforge.** {
     kotlinx.serialization.KSerializer serializer(...);
 }
-
-# libGDX (the campaign's scene, since 2.24.0) reaches its backends and natives by reflection and JNI.
--keep class com.badlogic.gdx.** { *; }
--dontwarn com.badlogic.gdx.**

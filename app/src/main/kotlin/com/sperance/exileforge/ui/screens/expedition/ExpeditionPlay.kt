@@ -29,7 +29,6 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.fragment.compose.AndroidFragment
 import com.sperance.exileforge.core.campaign.*
 import com.sperance.exileforge.core.display.inventoryDocument
 import com.sperance.exileforge.core.display.number
@@ -40,14 +39,14 @@ import com.sperance.exileforge.presentation.features.key
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
-import com.sperance.exileforge.ui.screens.expedition.gdx.FightLayout
-import com.sperance.exileforge.ui.screens.expedition.gdx.SceneHost
+import com.sperance.exileforge.ui.screens.expedition.scene.ExpeditionScene
+import com.sperance.exileforge.ui.screens.expedition.scene.FightLayout
 import com.sperance.exileforge.ui.theme.*
 import kotlin.math.hypot
 import kotlin.math.roundToInt
 
 /**
- * A run of the campaign, over the whole screen: the libGDX scene underneath, the overlay above.
+ * A run of the campaign, over the whole screen: the scene underneath, the overlay above.
  *
  * The scene draws and steps the world; everything with words or numbers in it — the bars, the
  * monster's name and modifiers, the hits, the loot — is Compose, in the app's dictionary and
@@ -55,16 +54,12 @@ import kotlin.math.roundToInt
  * screen sets it, and letting go stops the hero.
  */
 @Composable fun ExpeditionPlay(s: ForgeState, vm: ForgeViewModel, run: ExpeditionRun) {
-    DisposableEffect(run) {
-        SceneHost.run = run
-        onDispose { if (SceneHost.run === run) SceneHost.run = null }
-    }
     val hud by run.hud.collectAsState()
     BackHandler { vm.runCommand(RunCommand.Leave) }
     LaunchedEffect(hud.phase) { if (hud.phase == RunPhase.LEFT) vm.closeRun() }
 
     Box(Modifier.fillMaxSize().background(Ink)) {
-        AndroidFragment<SceneFragment>(Modifier.fillMaxSize())
+        ExpeditionScene(run, Modifier.fillMaxSize())
         when (hud.phase) {
             RunPhase.MAP -> {
                 Stick(run)

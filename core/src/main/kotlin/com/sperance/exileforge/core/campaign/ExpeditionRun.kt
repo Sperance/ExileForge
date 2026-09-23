@@ -40,7 +40,7 @@ data class RunHud(
     val gold: Long = 0, val experience: Double = 0.0, val kills: Int = 0,
 )
 
-/** What the overlay asks of the run; applied on the thread that steps it. */
+/** What the overlay asks of the run; applied at the start of the next step. */
 sealed interface RunCommand {
     data object Continue : RunCommand
     data object Speed : RunCommand
@@ -52,7 +52,7 @@ sealed interface RunCommand {
 /**
  * One run of a campaign map: the world, the hero's life across it and the fights on the way.
  *
- * The scene calls [update] every frame on its own thread and draws [world] and [fight]; the
+ * The scene calls [update] once a frame and draws [world] and [fight]; the
  * overlay reads [hud] and sends [RunCommand]s, and the stick writes [stickX]/[stickY] in screen
  * axes. Nothing here talks to the server: a won fight calls [onKill] and the map's exit calls
  * [onCleared], and whoever listens reports them and hands the reward back as a command.

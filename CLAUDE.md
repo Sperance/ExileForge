@@ -20,9 +20,9 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.24.1, `versionCode` 42) for the
-**ktor-bestgame** RPG server (0.26.0), pinned in
-`core/.../contract/Contract.kt` as `SERVER_COMMIT = 5aa7605f6332b555b21bbe7a55bbd327c5ce69a7`
+ExileForge is an **Android Compose client** (version 2.25.0, `versionCode` 43) for the
+**ktor-bestgame** RPG server (0.27.0), pinned in
+`core/.../contract/Contract.kt` as `SERVER_COMMIT = db6e6b1ba706a2546c4e79c8371bcb57aa939363`
 on the server branch `claude/tender-pasteur-a36kj2`.
 
 The client is deliberately **thin**: the server owns items, stats, modifier rolls and inventory.
@@ -126,15 +126,14 @@ core/                                   Pure JVM library (java-library + kotlin-
   verification/  CrudScenario.kt        Admin-only self-check run from the Checks screen
   src/main/resources/i18n/              ui_{ru,en}.json — every label the client wrote itself
 app/                                    Android application (minSdk 26, compile/target SDK 37)
-  MainActivity.kt, ForgeApplication.kt  Entry points; Application owns RequestJournal + ServerStore. MainActivity is
-                                        a FragmentActivity since 2.24.0: the campaign scene is libGDX's own fragment
+  MainActivity.kt, ForgeApplication.kt  Entry points; Application owns RequestJournal + ServerStore
   presentation/  ForgeRuntime.kt        Shared coroutine scope, GameApi instance, MutableStateFlow<ForgeState>, locale + device sign-in
                  ForgeViewModel.kt      Lifecycle owner and thin facade delegating to feature models
                  features/              Catalog, Editor, Hero, Session, Character, Checks, Auction view models
                  state/ForgeState.kt    One immutable state object, in slices: account, world, play, market, admin
   ui/            ForgeApp.kt            Scaffold, banner with RU/EN switch, bottom navigation, tab dispatch
                  screens/               session (auth + character menu), admin, catalog, editor, hero, tree, craft, auction, checks, server,
-                                        expedition (the campaign tab, the run's overlay, and gdx/ — the libGDX scene)
+                                        expedition (the campaign tab, the run's overlay, and scene/ — the Canvas scene)
                  components/            ItemCard, ItemRow, PropertyRow, InfoCard, ConfirmSheet, spinners and Ornament.kt
                  forms/, icons/ (ForgeGlyphs vector set, GlyphIcons, ItemEmblem, ItemIcon/StatIcon, ServerSprite), theme/
   data/settings/ServerStore.kt          DataStore Preferences: base URL, saved filters, language, locale bundles, icon set, device-session flag
@@ -485,18 +484,23 @@ These are enforced by tests and are the point of the client's design:
     It is the one exception to rule 1, and a narrow one. `GET /character/campaign/chapters` is the
     server's tables — maps, monsters with stats already raised to their map, monster modifiers,
     rarity weights — and the client does the rest: `MapGenerator` carves a map from a seed,
-    `MonsterRoller` throws the rarity and modifiers and folds them with the server's own formula,
+    `MonsterRoller` throws the rarity and modifiers and folds them with the server's own formula —
+    since 0.27.0 a tier raises every growing stat (the server serves it expanded into the rarity's
+    effects), opens the modifiers whose `minRarity` it reaches and multiplies their values by its
+    `modifierPower` —
     and `Combat` plays the automatic fight (attacks only; spells, mana, curses and auras are a TODO
     in `Combat.kt`). What a kill *earns* stays the server's: `kill` names the map, the monster and
     the rarity, the server checks the map is open (`CP_003`) and the monster lives there (`CP_004`)
     and rolls the experience, gold, orbs and equipment itself. A kill is never retried and never
     dropped: `ExpeditionViewModel` reports them one after another on a lane of its own rather than
     through `task`, which refuses while busy. Reaching a map's exit is `complete`, which opens the
-    next map. The scene is libGDX (`ui/screens/expedition/gdx`), shapes only — rule 17 holds, no
-    picture is loaded — and everything with text on it is the Compose overlay above it. The run
-    (`ExpeditionRun`) lives in `:core` and is stepped by the scene's own thread; the overlay reads
-    its `RunHud` and sends `RunCommand`s. libGDX's natives are unpacked into the git-ignored
-    `app/src/main/jniLibs` by `copyGdxNatives` before every build.
+    next map. The scene is Compose's own `Canvas` (`ui/screens/expedition/scene`) since 2.25.0 —
+    libGDX was tried in 2.24 and removed, so there is no engine, no fragment and no native library.
+    `Pen` is a thin pen over `DrawScope` that measures up from a figure's feet, `Figures` draws the
+    hero and every monster form, all shapes — rule 17 holds, no picture is loaded — and everything
+    with text on it is the overlay above. The run (`ExpeditionRun`) lives in `:core` and is stepped
+    once a frame from a `withFrameNanos` loop; the canvas reads a clock state, so each frame redraws
+    without recomposing. The overlay reads the run's `RunHud` and sends `RunCommand`s.
 
 ## Conventions
 

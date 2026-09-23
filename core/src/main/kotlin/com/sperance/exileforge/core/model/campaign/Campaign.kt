@@ -10,19 +10,35 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE }
 /** One change to a monster's characteristic: `ADD`, `INCREASED`, `MORE` or `SET`, as on items. */
 @Serializable data class MonsterEffect(val stat: String, val operation: String, val value: Double)
 
-/** How often a rarity appears, how many modifiers it brings and what it adds on its own. */
+/**
+ * How often a rarity appears, how many modifiers it brings and what it adds on its own.
+ *
+ * Since server 0.27.0 a tier raises every growing stat: the server expands that into [effects], so
+ * it folds like anything else. [modifierPower] is how much stronger this tier's modifiers roll.
+ */
 @Serializable data class CampaignRarity(
     val rarity: String,
     val weight: Int,
     val modifiers: List<Int> = listOf(0, 0),
+    val statScale: Double = 0.0,
+    val modifierPower: Double = 1.0,
     val effects: List<MonsterEffect> = emptyList(),
     val quantity: Double = 1.0,
     val rarityBonus: Double = 0.0,
     val experience: Double = 1.0,
 )
 
-/** A monster modifier, its values already raised to the map it came with. */
-@Serializable data class MonsterModifier(val code: String, val weight: Int, val minLevel: Int = 1, val effects: List<MonsterEffect> = emptyList())
+/**
+ * A monster modifier, its values already raised to the map it came with. [minRarity] is the lowest
+ * tier that may roll it: a rare monster draws from a wider pool than a magic one.
+ */
+@Serializable data class MonsterModifier(
+    val code: String,
+    val weight: Int,
+    val minLevel: Int = 1,
+    val minRarity: String = MonsterRarity.MAGIC.name,
+    val effects: List<MonsterEffect> = emptyList(),
+)
 
 /** A monster of one map: stats at the map's level, and the silhouette it is drawn as. */
 @Serializable data class CampaignMonster(val code: String, val form: String = "", val stats: Map<String, Double> = emptyMap())

@@ -20,6 +20,10 @@ data class RolledMonster(
 /**
  * Rarity and modifiers of a monster — the client's roll since server 0.26.0.
  *
+ * Since 0.27.0 the tier does three things, all from the server's tables: its effects raise every
+ * growing stat, it opens modifiers whose `minRarity` it reaches, and it multiplies the values of
+ * what it rolls by its `modifierPower` — so the modifier lines on screen print the stronger number.
+ *
  * The client fights, so it is the client that has to know what it is fighting. The weights, the
  * counts and the effects are the server's tables; only the dice are thrown here, and the rarity
  * rolled is what the kill reports, because the server pays by it.
@@ -31,8 +35,11 @@ object MonsterRoller {
         val rule = weighted(rarities, random) { it.weight } ?: CampaignRarity(MonsterRarity.NORMAL.name, 1)
         val rarity = MonsterRarity.entries.firstOrNull { it.name == rule.rarity } ?: MonsterRarity.NORMAL
         val count = rule.modifiers.let { (low, high) -> if (high > low) random.nextInt(low, high + 1) else low }
-        val pool = map.modifiers.filter { it.minLevel <= map.level }.toMutableList()
+        // The tier widens the pool and strengthens what is drawn from it.
+        val tier = rarity.ordinal
+        val pool = map.modifiers.filter { it.minLevel <= map.level && (MonsterRarity.entries.firstOrNull { r -> r.name == it.minRarity }?.ordinal ?: 1) <= tier }.toMutableList()
         val picked = List(count) { weighted(pool, random) { it.weight }?.also { pool.remove(it) } }.filterNotNull()
+            .map { modifier -> modifier.copy(effects = modifier.effects.map { it.copy(value = it.value * rule.modifierPower) }) }
         return RolledMonster(monster.code, monster.form, rarity, picked, fold(monster, rule.effects + picked.flatMap { it.effects }))
     }
 

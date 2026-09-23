@@ -9,11 +9,11 @@ import kotlin.test.*
 class CampaignTest {
     private val drowned = CampaignMonster("DROWNED", "HUMANOID", mapOf("STOCK_HEALTH" to 18.0, "STOCK_ATTACK_PHYSICAL" to 4.0, "STOCK_ATTACK_SPEED" to 1.0))
     private val map = CampaignMap("C1_TIDAL_SHORE", "CHAPTER_1", 1, "SHORE", 1, listOf(10, 14), listOf(drowned),
-        listOf(MonsterModifier("MOB_TOUGH", 100, 1, listOf(MonsterEffect("STOCK_HEALTH", "INCREASED", 60.0))),
-            MonsterModifier("MOB_STRONG", 100, 1, listOf(MonsterEffect("STOCK_ATTACK_PHYSICAL", "INCREASED", 40.0))),
-            MonsterModifier("MOB_DEEP", 100, 9, listOf(MonsterEffect("STOCK_ARMOR", "ADD", 25.0)))))
+        listOf(MonsterModifier("MOB_TOUGH", 100, 1, effects = listOf(MonsterEffect("STOCK_HEALTH", "INCREASED", 60.0))),
+            MonsterModifier("MOB_STRONG", 100, 1, effects = listOf(MonsterEffect("STOCK_ATTACK_PHYSICAL", "INCREASED", 40.0))),
+            MonsterModifier("MOB_DEEP", 100, 9, effects = listOf(MonsterEffect("STOCK_ARMOR", "ADD", 25.0)))))
     private val rarities = listOf(CampaignRarity("NORMAL", 0), CampaignRarity("MAGIC", 0), CampaignRarity("RARE", 1, listOf(2, 2),
-        listOf(MonsterEffect("STOCK_HEALTH", "MORE", 100.0))))
+        effects = listOf(MonsterEffect("STOCK_HEALTH", "MORE", 100.0))))
 
     @Test fun `a monster folds its effects with the server's formula`() {
         val stats = MonsterRoller.fold(drowned, listOf(
@@ -151,5 +151,22 @@ class CampaignTest {
         assertEquals(0, run.hud.value.heroLife)
         run.send(RunCommand.Continue); run.update(0.016)
         assertEquals(RunPhase.LEFT, run.hud.value.phase)
+    }
+
+    @Test fun `a higher tier draws from a wider pool and rolls stronger values`() {
+        val pool = listOf(
+            MonsterModifier("MOB_TOUGH", 100, 1, "MAGIC", listOf(MonsterEffect("STOCK_HEALTH", "INCREASED", 60.0))),
+            MonsterModifier("MOB_BERSERK", 100, 1, "RARE", listOf(MonsterEffect("STOCK_ATTACK_PHYSICAL", "MORE", 30.0))))
+        val tiered = map.copy(modifiers = pool)
+        val magic = listOf(CampaignRarity("MAGIC", 1, listOf(2, 2), modifierPower = 1.5))
+        repeat(10) { seed ->
+            val monster = MonsterRoller.roll(tiered, magic, Random(seed))
+            assertEquals(listOf("MOB_TOUGH"), monster.modifiers.map { it.code }, "a magic monster rolled a rare-only modifier")
+            assertEquals(90.0, monster.modifiers.single().effects.single().value)
+        }
+        val rare = listOf(CampaignRarity("RARE", 1, listOf(2, 2), modifierPower = 2.0))
+        val monster = MonsterRoller.roll(tiered, rare, Random(1))
+        assertEquals(setOf("MOB_TOUGH", "MOB_BERSERK"), monster.modifiers.map { it.code }.toSet())
+        assertEquals(drowned.stats.getValue("STOCK_HEALTH") * 2.2, monster.stats.getValue("STOCK_HEALTH"), 1e-9)
     }
 }

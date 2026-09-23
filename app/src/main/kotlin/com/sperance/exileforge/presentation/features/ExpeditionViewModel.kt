@@ -18,8 +18,8 @@ import kotlinx.coroutines.launch
 /**
  * The campaign: its chapters and progress, and the run on the map a player is walking.
  *
- * The run is not a slice of the state: it is a world that moves every frame on the scene's own
- * thread, and copying it into an immutable state sixty times a second would buy nothing. It is
+ * The run is not a slice of the state: it is a world the scene steps every frame, and copying it
+ * into an immutable state sixty times a second would buy nothing. It is
  * held here and the overlay reads its [ExpeditionRun.hud].
  *
  * What a run reports goes through a lane of its own, one report after another, rather than

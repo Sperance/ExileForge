@@ -1,9 +1,14 @@
 package com.sperance.exileforge.ui.screens.inventory
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.contract.*
 import com.sperance.exileforge.core.i18n.tr
@@ -12,7 +17,8 @@ import com.sperance.exileforge.core.model.command.MAX_ITEM_UNITS
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.*
-import com.sperance.exileforge.ui.theme.Muted
+import com.sperance.exileforge.ui.icons.ItemIcon
+import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.*
 
@@ -21,20 +27,11 @@ import kotlinx.serialization.json.*
     var expanded by remember(s.characterId) { mutableStateOf(false) }
     val enabled = !s.busy && s.signedIn && s.pending == null && s.inventoryVersion != null
     TextButton(onClick = { expanded = !expanded }) {
-        Text(tr("Предметы, награды и рецепты · ${if(expanded) "свернуть" else "показать"}", "Items, rewards and recipes · ${if(expanded) "hide" else "show"}"))
+        Text(tr("Сумка и рецепты · ${if(expanded) "свернуть" else "показать"}", "Bag and recipes · ${if(expanded) "hide" else "show"}"))
     }
     if(!expanded) return
     ForgePanel {
-        Engraved(tr("Сумка", "Bag"))
-        // Stacks are gone: the amount is a count of unit documents the server recomputed for us.
-        if(s.itemTotals.isEmpty()) Text(tr("Сумка пуста", "The bag is empty"), color = Muted)
-        s.itemTotals.forEach { (itemId, amount) ->
-            val currency = s.currencies.firstOrNull { it.text("itemId") == itemId }
-            PropertyRow(currency?.text("name") ?: tr("Предмет", "Item") + " …${itemId.takeLast(6)}", amount.toString(), "currency")
-        }
-        var code by remember(s.characterId) { mutableStateOf("") }
-        OutlinedTextField(code, { code = it.take(100) }, label = { Text(tr("Промокод", "Promo code")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
-        Button(enabled = enabled && code.isNotBlank(), onClick = { vm.redeem(code) }) { Text(tr("Получить награду", "Claim the reward")) }
+        BagInventory(s)
         OrnateDivider()
         RecipeCommandForm(s, vm, enabled)
         if(s.adminTools) {
@@ -50,6 +47,46 @@ import kotlinx.serialization.json.*
                 supportingText = { Text(tr("Отрицательное число списывает предметы. Каждая единица — отдельная запись, за команду не больше $MAX_ITEM_UNITS.", "A negative number removes items. Every unit is a separate record, at most $MAX_ITEM_UNITS per command.")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
             Button(enabled = enabled && itemId.isNotBlank() && amount.toLongOrNull()?.let { it != 0L && it in -MAX_ITEM_UNITS..MAX_ITEM_UNITS } == true,
                 onClick = { vm.adjustItems(itemId, amount.toLong()) }) { Text(tr("Изменить количество", "Change the amount")) }
+        }
+    }
+}
+
+private data class BagEntry(val itemId: String, val name: String, val kind: String, val amount: Long, val document: JsonObject, val known: Boolean)
+
+/** Bag ledger: a socketed icon, name and kind, the server's unit count struck large on the right. */
+@Composable private fun BagInventory(s: ForgeState) {
+    var byAmount by remember(s.characterId) { mutableStateOf(true) }
+    val entries = remember(s.itemTotals, s.currencies, s.lang) {
+        s.itemTotals.map { (itemId, amount) ->
+            val currency = s.currencies.firstOrNull { it.text("itemId") == itemId }
+            // Currencies rarely carry a category; the emblem fallback still has to draw an orb for them.
+            val document = currency?.let { if(it.text("category").isBlank()) JsonObject(it + ("category" to JsonPrimitive("Currency"))) else it } ?: JsonObject(emptyMap())
+            BagEntry(itemId, currency?.text("name")?.ifBlank { null } ?: (tr("Предмет", "Item") + " …${itemId.takeLast(6)}"),
+                if(currency != null) tr("Валюта", "Currency") else tr("Без описания", "No description"), amount, document, currency != null)
+        }
+    }
+    val sorted = if(byAmount) entries.sortedWith(compareByDescending<BagEntry> { it.amount }.thenBy { it.name }) else entries.sortedBy { it.name.lowercase() }
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Engraved(tr("Сумка", "Bag"), modifier = Modifier.weight(1f))
+        if(entries.size > 1) OutlinedButton(onClick = { byAmount = !byAmount }, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp), modifier = Modifier.heightIn(min = 30.dp)) {
+            Text(if(byAmount) tr("↓ по количеству", "↓ by amount") else tr("↓ по названию", "↓ by name"), style = MaterialTheme.typography.labelMedium)
+        }
+    }
+    // Stacks are gone: the amount is a count of unit documents the server recomputed for us.
+    if(entries.isEmpty()) { Text(tr("Сумка пуста", "The bag is empty"), color = Muted); return }
+    Column {
+        sorted.forEachIndexed { index, entry ->
+            Row(Modifier.fillMaxWidth().padding(vertical = 8.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Box(Modifier.size(38.dp).background(Rune.copy(alpha = .10f), CutCornerShape(6.dp)), contentAlignment = Alignment.Center) {
+                    ItemIcon(entry.document, if(entry.known) Gold else Muted, Modifier.size(28.dp), framed = false)
+                }
+                Column(Modifier.weight(1f)) {
+                    Text(entry.name, color = if(entry.known) Parchment else Muted, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(entry.kind, color = Muted, style = MaterialTheme.typography.labelMedium)
+                }
+                Text(entry.amount.toString(), color = GoldBright, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.End, modifier = Modifier.widthIn(min = 44.dp))
+            }
+            if(index < sorted.lastIndex) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         }
     }
 }

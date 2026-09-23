@@ -415,7 +415,4 @@ object Combat {
         while (battle.outcome == null) battle.advance(1.0)
         return battle.log()
     }
-
-    /** Life regained per second while walking: the hero's own regeneration, and never less than 3% of life. */
-    fun walkingRegen(hero: Combatant): Double = max(hero.lifeRegen, hero.maxLife * 0.03)
 }

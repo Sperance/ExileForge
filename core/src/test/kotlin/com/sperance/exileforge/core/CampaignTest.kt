@@ -173,6 +173,32 @@ class CampaignTest {
         assertEquals(RunPhase.LEFT, run.hud.value.phase)
     }
 
+    @Test fun `nothing returns while walking, but a flask can be drunk on the map`() {
+        val rules = CombatRules(flask = FlaskRule(charges = 2, perKill = 1, heal = 10.0, duration = 1.0))
+        // Slow enough to take a couple of blows, so the fight leaves a mark; regeneration only counts inside it.
+        val run = ExpeditionRun.start(map, rarities, mapOf("STOCK_HEALTH" to 300.0, "STOCK_MANA" to 40.0, "STOCK_ATTACK_PHYSICAL" to 10.0, "STOCK_ATTACK_SPEED" to 2.0, "STOCK_CRITICAL_CHANCE" to 0.0), 10, 7,
+            onKill = {}, onCleared = {}, rules = rules)
+        // A fight leaves the hero hurt; walking away from it heals nothing.
+        val agent = run.world.agents.first()
+        run.world.heroX = agent.x; run.world.heroY = agent.y
+        repeat(3000) { if (run.hud.value.phase != RunPhase.LOOT) run.update(0.05) }
+        run.send(RunCommand.Reward(CampaignReward())); run.send(RunCommand.Continue); run.update(0.016)
+        assertEquals(RunPhase.MAP, run.hud.value.phase)
+        val hurt = run.hud.value.heroLife
+        assertTrue(hurt < 300, "the fight should have cost something")
+        run.world.agents.forEach { it.alive = false }
+        repeat(100) { run.update(0.05) }
+        assertEquals(hurt, run.hud.value.heroLife, "life came back while walking")
+        // The flask works on the map too: a tenth of the life over its second, one charge spent.
+        run.send(RunCommand.Flask); run.update(0.016)
+        assertTrue(run.hud.value.flaskActive)
+        assertEquals(1, run.hud.value.flasks)
+        repeat(25) { run.update(0.05) }
+        assertFalse(run.hud.value.flaskActive)
+        val expected = minOf(300, hurt + 30)
+        assertTrue(run.hud.value.heroLife in (expected - 2)..expected, "${run.hud.value.heroLife} after $hurt")
+    }
+
     @Test fun `the flask starts full, is drunk in a fight and earns a charge back per kill`() {
         val rules = CombatRules(flask = FlaskRule(charges = 2, perKill = 1, heal = 40.0, duration = 3.0))
         val run = ExpeditionRun.start(map, rarities, mapOf("STOCK_HEALTH" to 500.0, "STOCK_ATTACK_PHYSICAL" to 60.0, "STOCK_ATTACK_SPEED" to 2.0), 10, 7,

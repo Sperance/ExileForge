@@ -21,6 +21,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -85,8 +86,9 @@ internal fun DamageType.key() = "enum.damage.$name"
  * item's frame is. The frame carries everything about its fighter: the name and what it is on top,
  * the bust in the middle, and under it life with the shield over it, the hero's mana, a bar that
  * fills toward the next swing at its own attack speed, one toward the next spell, and the ailments
- * on it as chips that drain as they wear off. What the monster rolled sits under its frame, apart
- * from it, in the rune blue the modifiers are written in everywhere.
+ * on it as chips that drain as they wear off. The portrait is three by four on every phone (since
+ * 2.29.0) and the frame is as tall as it and its lines need. What the monster rolled sits under its
+ * frame, apart from it, in the rune blue the modifiers are written in everywhere.
  *
  * A blow is the frame itself: it draws back and strikes the other frame, a flash bursts where they
  * meet, the number rises off the one that was hit and its frame shudders. A spell is a bolt from
@@ -102,23 +104,26 @@ internal fun DamageType.key() = "enum.damage.$name"
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val height = maxHeight
         Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(10.dp)) {
-            // The frames and everything that flies between them.
-            BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
+            // The frames and everything that flies between them. A frame is as tall as its portrait
+            // (three by four) and its lines make it, so the row measures itself and tells the numbers where to fly.
+            val density = LocalDensity.current
+            var rowHeight by remember { mutableStateOf(0.dp) }
+            BoxWithConstraints(Modifier.fillMaxWidth().onSizeChanged { rowHeight = with(density) { it.height.toDp() } }) {
                 val gap = 12.dp
                 val cardWidth = (maxWidth - gap) / 2
-                val cardHeight = maxHeight
+                val cardHeight = rowHeight
                 val reach = cardWidth * .3f
                 val heroShift = shift(lunge, Side.HERO, reach)
                 val monsterShift = shift(lunge, Side.MONSTER, reach)
-                Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(gap)) {
-                    FighterFrame(Modifier.weight(1f).fillMaxHeight().offset { IntOffset(heroShift.roundToPx(), 0) },
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
+                    FighterFrame(Modifier.weight(1f).offset { IntOffset(heroShift.roundToPx(), 0) },
                         side = Side.HERO, accent = GoldBright, name = hero?.name.orEmpty(),
                         line = ui("expedition.hero_line", s.heroClass?.title.orEmpty(), hero?.level ?: 1),
                         life = fight.heroLife, maxLife = hud.heroMaxLife, shield = fight.heroShield, maxShield = hud.heroMaxShield,
                         mana = fight.heroMana, maxMana = fight.heroMaxMana, swing = fight.heroSwing, cast = fight.heroCast.takeIf { fight.heroCasts },
                         ailments = fight.heroAilments, held = fight.heroHeld, flash = flash(lunge, Side.HERO), glow = if (fight.flaskActive) Vital else null,
                         portrait = { time, wash, amount, flash -> Portraits.hero(this, time, wash, amount, flash) })
-                    FighterFrame(Modifier.weight(1f).fillMaxHeight().offset { IntOffset(monsterShift.roundToPx(), 0) },
+                    FighterFrame(Modifier.weight(1f).offset { IntOffset(monsterShift.roundToPx(), 0) },
                         side = Side.MONSTER, accent = rarityTint(monster.rarity), name = monsterTitle(monster.code),
                         line = ui("expedition.monster_line", ui(monster.rarity.key()), level),
                         life = fight.monsterLife, maxLife = fight.monsterMaxLife, shield = fight.monsterShield, maxShield = fight.monsterMaxShield,
@@ -128,7 +133,6 @@ internal fun DamageType.key() = "enum.damage.$name"
                 }
                 Strikes(lunge, cardWidth, cardHeight, gap)
                 // The numbers rise off the frame that was hit, coloured by what hit it.
-                val density = LocalDensity.current
                 fight.hits.forEach { hit ->
                     val centre = if (hit.target == Side.HERO) cardWidth / 2 else cardWidth * 1.5f + gap
                     val rise = (hit.age / ExpeditionRun.HIT_LIFETIME).toFloat()
@@ -162,6 +166,7 @@ internal fun DamageType.key() = "enum.damage.$name"
                     }
                 }
             }
+            Spacer(Modifier.weight(1f))
             Column(Modifier.fillMaxWidth().padding(top = 8.dp).animateContentSize().background(Panel.copy(alpha = .92f), RoundedCornerShape(10.dp))
                 .border(1.dp, Bronze.copy(alpha = .5f), RoundedCornerShape(10.dp)).padding(horizontal = 10.dp, vertical = 8.dp)
                 .height(if (logOpen) height * .5f else 96.dp)) {
@@ -280,7 +285,8 @@ private fun flash(lunge: LungeView?, side: Side): Float {
             Text(name, color = accent, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(line, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        Box(Modifier.fillMaxWidth().weight(1f).border(1.dp, Bronze.copy(alpha = .5f)).background(Color.Black)) {
+        // The portrait is always three by four, whatever the phone: the frame grows round it.
+        Box(Modifier.fillMaxWidth().aspectRatio(3f / 4f).border(1.dp, Bronze.copy(alpha = .5f)).background(Color.Black)) {
             Canvas(Modifier.fillMaxSize()) {
                 portrait(this, time, wash?.let(::ailmentTint), wash?.let(::washAmount) ?: 0f, flash)
                 if (held) drawRect(Ink.copy(alpha = .45f))

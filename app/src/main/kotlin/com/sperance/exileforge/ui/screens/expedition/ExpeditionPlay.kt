@@ -62,7 +62,7 @@ import kotlin.math.roundToInt
         when (hud.phase) {
             RunPhase.MAP -> {
                 Stick(run)
-                MapBar(hud, onLeave = { vm.runCommand(RunCommand.Leave) })
+                MapBar(hud, onLeave = { vm.runCommand(RunCommand.Leave) }, onFlask = { vm.runCommand(RunCommand.Flask) })
             }
             RunPhase.FIGHT -> hud.fight?.let { ArenaOverlay(s, hud, it, run.map.level, onCommand = vm::runCommand) }
             // The fight is over: its report — the log, what it came to, and the loot of a victory.
@@ -77,8 +77,11 @@ import kotlin.math.roundToInt
 
 // ==================== Walking ====================
 
-/** Life, shield, mana and the flask, what is left on the map, and the way out. */
-@Composable private fun MapBar(hud: RunHud, onLeave: (() -> Unit)?) {
+/**
+ * Life, shield, mana and the flask, what is left on the map, and the way out. Nothing comes back on
+ * its own between fights (2.29.0), so the flask is here too: the same charge, the same heal.
+ */
+@Composable private fun MapBar(hud: RunHud, onLeave: (() -> Unit)?, onFlask: () -> Unit) {
     Column(Modifier.fillMaxWidth().statusBarsPadding().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Column(Modifier.weight(1f)) {
@@ -88,9 +91,11 @@ import kotlin.math.roundToInt
             onLeave?.let { OutlinedButton(onClick = it) { Text(ui("expedition.leave")) } }
         }
         Vitals(hud.heroLife, hud.heroMaxLife, hud.heroShield, hud.heroMaxShield, hud.heroMana, hud.heroMaxMana, Modifier.fillMaxWidth(.6f))
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(ForgeGlyphs.Flask, null, tint = if (hud.flasks > 0) Blood else Muted, modifier = Modifier.size(14.dp))
-            Text(ui("expedition.flask_charges", hud.flasks, hud.maxFlasks), color = if (hud.flasks > 0) Parchment else Muted, style = MaterialTheme.typography.labelSmall)
+        Button(enabled = hud.flasks > 0 && !hud.flaskActive, onClick = onFlask, modifier = Modifier.fillMaxWidth(.6f).height(34.dp), contentPadding = PaddingValues(horizontal = 12.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Blood, contentColor = GoldBright, disabledContainerColor = Panel, disabledContentColor = Muted)) {
+            Icon(ForgeGlyphs.Flask, null, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(ui(if (hud.flaskActive) "expedition.flask_drinking" else "expedition.flask", hud.flasks, hud.maxFlasks), style = MaterialTheme.typography.labelMedium)
         }
     }
 }

@@ -82,6 +82,8 @@ data class RunHud(
     val heroLife: Int, val heroMaxLife: Int, val heroShield: Int, val heroMaxShield: Int,
     val heroMana: Int = 0, val heroMaxMana: Int = 0,
     val flasks: Int = 0, val maxFlasks: Int = 0,
+    /** A flask being drunk on the map. */
+    val flaskActive: Boolean = false,
     val alive: Int, val total: Int,
     val fight: FightHud? = null,
     val reward: CampaignReward? = null,
@@ -120,9 +122,11 @@ sealed interface RunCommand {
  * the server: a won fight calls [onKill], a lost one [onFallen] and the map's exit [onCleared], and
  * whoever listens reports them and hands the answer back as a command.
  *
- * The hero's life and mana carry from fight to fight and slowly return while walking; the shield is
- * whole again after every fight. The flask starts the run with the rule's charges and earns one per
- * kill. A lost fight ends the run and keeps everything already looted; a fight the hero walked out
+ * The hero's life and mana carry from fight to fight and **do not return while walking** (since
+ * 2.29.0): life comes back only in a fight — by regeneration, leech or the flask — or from a flask
+ * drunk on the map, which heals over the same seconds it does in a fight and is cut short by an
+ * encounter. The shield is whole again after every fight. The flask starts the run with the rule's
+ * charges and earns one per kill. A lost fight ends the run and keeps everything already looted; a fight the hero walked out
  * of, or that ran out of time, leaves the monster standing and calm for a while.
  */
 class ExpeditionRun(
@@ -155,6 +159,10 @@ class ExpeditionRun(
     private var experience = 0.0
     private var kills = 0
     private var fightAgent: MonsterAgent? = null
+    /** The map's own clock, and the flask drunk on it: until when it heals, and how fast. */
+    private var clock = 0.0
+    private var flaskUntil = 0.0
+    private var flaskRate = 0.0
 
     /** The fight being played, for the scene: the battle itself, alive, with its clock and its log. */
     var fight: Battle? = null
@@ -181,7 +189,7 @@ class ExpeditionRun(
         when (command) {
             RunCommand.Speed -> speed = if (speed >= 4) 1 else speed * 2
             RunCommand.Leave -> if (phase == RunPhase.MAP || phase == RunPhase.DEAD || phase == RunPhase.CLEARED) phase = RunPhase.LEFT
-            RunCommand.Flask -> fight?.useFlask()
+            RunCommand.Flask -> fight?.useFlask() ?: drinkOnMap()
             RunCommand.Retreat -> fight?.retreat()
             RunCommand.Continue -> when (phase) {
                 RunPhase.LOOT -> if (!rewardPending) { phase = RunPhase.MAP; reward = null; slain = null; report = null; rewardFailed = false }
@@ -201,12 +209,23 @@ class ExpeditionRun(
         }
     }
 
+    /** A flask on the map: the same charge, the same heal over the same seconds, one at a time. */
+    private fun drinkOnMap(): Boolean {
+        if (phase != RunPhase.MAP || flasks <= 0 || flaskUntil > clock) return false
+        flasks--
+        flaskUntil = clock + rules.flask.duration
+        flaskRate = hero.maxLife * rules.flask.heal / 100 / rules.flask.duration
+        return true
+    }
+
     private fun walk(dt: Double) {
         val (x, y) = ExpeditionWorld.screenToWorld(stickX, stickY)
-        life = (life + Combat.walkingRegen(hero) * dt).coerceAtMost(hero.maxLife)
-        mana = (mana + hero.manaRegen * dt).coerceAtMost(hero.maxMana)
+        clock += dt
+        // Nothing returns on its own between fights; only a flask heals here.
+        if (flaskUntil > clock) life = (life + flaskRate * dt).coerceAtMost(hero.maxLife)
         when (val event = world.step(dt, x, y)) {
             is WorldEvent.Encounter -> {
+                flaskUntil = 0.0
                 val monster = Combatant(event.agent.monster.stats, map.level, rules)
                 fightAgent = event.agent
                 fight = Battle(hero, monster, rules, life, mana, flasks, Random(seed * 31 + fights++))
@@ -251,7 +270,7 @@ class ExpeditionRun(
             heroLife = (battle?.heroLife ?: life).roundToInt(), heroMaxLife = hero.maxLife.roundToInt(),
             heroShield = (battle?.fighter(Side.HERO)?.shield ?: hero.maxShield).roundToInt(), heroMaxShield = hero.maxShield.roundToInt(),
             heroMana = (battle?.heroMana ?: mana).roundToInt(), heroMaxMana = hero.maxMana.roundToInt(),
-            flasks = battle?.flasks ?: flasks, maxFlasks = rules.flask.charges,
+            flasks = battle?.flasks ?: flasks, maxFlasks = rules.flask.charges, flaskActive = battle?.flaskActive ?: (flaskUntil > clock),
             alive = world.alive, total = world.agents.size,
             fight = battle?.let { b -> fightAgent?.let { fightHud(b, it.monster) } },
             reward = reward, rewardPending = rewardPending, rewardFailed = rewardFailed, slain = slain, report = report,

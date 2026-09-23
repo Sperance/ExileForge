@@ -20,9 +20,9 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.16.0, `versionCode` 33) for the
-**ktor-bestgame** RPG server (0.24.0), pinned in
-`core/.../contract/Contract.kt` as `SERVER_COMMIT = 590bd4b1f4e85a5a69e18728861b5979277e000a`
+ExileForge is an **Android Compose client** (version 2.17.0, `versionCode` 34) for the
+**ktor-bestgame** RPG server (0.25.0), pinned in
+`core/.../contract/Contract.kt` as `SERVER_COMMIT = a1f4fbabe6dd3512cfb421031fc88b81324617cb`
 on the server branch `claude/tender-pasteur-a36kj2`.
 
 The client is deliberately **thin**: the server owns items, stats, modifier rolls and inventory.
@@ -59,6 +59,11 @@ change, in this repository and in `ktor-bestgame`, whether or not the task menti
    where players trade and search by one name. On the server `equipment.<CODE>.name`,
    `item.<CODE>.name` and `enum.EnumCurrencyOrb.*` hold the English string in every dictionary,
    and `LocalizationTest` enforces it; on the client the orb titles `enum.orb.<ORB>` do the same.
+   Since server 0.25.0 and client 2.17.0 such a string is written **once**: the server keeps the
+   traded names in `locale/common.json` and merges it into every language it serves, and the
+   client keeps the orb titles in `core/src/main/resources/i18n/ui_common.json`, which `UiStrings`
+   reads under every language. A key lives in the common file or in the language files, never
+   both — `LocalizationTest` and `UiStringsTest` refuse a repeat.
    Their descriptions, the modifiers, classes, tree nodes, stats, slots, rarities, errors and every
    label are translated as usual. So a new item still gets a key in every language — the same
    English name in each, and a description in each.

@@ -38,19 +38,33 @@ enum class Lang(val code: String, val title: String, val short: String) {
  *
  * A missing key returns itself, exactly as [LocaleBundle] does, so a hole shows up on the screen
  * instead of being papered over by another language.
+ *
+ * What is the same in every language — the orb titles, English everywhere as the server's item
+ * names are — is written once, in `ui_common.json` ([COMMON]), and read under every language, as
+ * the server merges its own `locale/common.json`. A key is in the common file or in the language
+ * files, never in both; `UiStringsTest` holds that line.
  */
 object UiStrings {
+    /** The file of labels that do not change with the language. */
+    const val COMMON = "common"
+
     private val json = Json { ignoreUnknownKeys = true }
     private val tables = HashMap<Lang, Map<String, String>>()
 
-    /** The whole table for one language; read from the jar once and kept. */
-    @Synchronized fun table(lang: Lang): Map<String, String> = tables.getOrPut(lang) { read(lang) }
+    /** The whole table for one language, common labels included; read from the jar once and kept. */
+    @Synchronized fun table(lang: Lang): Map<String, String> = tables.getOrPut(lang) { common() + own(lang) }
 
     /** Every key the table holds - what the completeness test walks. */
     fun keys(lang: Lang): Set<String> = table(lang).keys
 
-    private fun read(lang: Lang): Map<String, String> =
-        javaClass.classLoader?.getResourceAsStream("i18n/ui_${lang.code}.json")
+    /** The labels one language writes itself, without the common ones. */
+    fun own(lang: Lang): Map<String, String> = read(lang.code)
+
+    /** The labels every language shares. */
+    fun common(): Map<String, String> = read(COMMON)
+
+    private fun read(name: String): Map<String, String> =
+        javaClass.classLoader?.getResourceAsStream("i18n/ui_$name.json")
             ?.bufferedReader()?.use { it.readText() }
             ?.let { json.decodeFromString(MapSerializer(String.serializer(), String.serializer()), it) }
             ?: emptyMap()

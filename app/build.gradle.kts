@@ -1,3 +1,5 @@
+import javax.inject.Inject
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
@@ -11,8 +13,8 @@ android {
         applicationId = "com.sperance.exileforge"
         minSdk = 26
         targetSdk = 37
-        versionCode = 41
-        versionName = "2.24.0"
+        versionCode = 42
+        versionName = "2.24.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures { compose = true }
@@ -35,25 +37,37 @@ android {
  * libGDX draws the campaign's map and fights (since 2.24.0). Its native library ships as one jar per
  * ABI with `libgdx.so` at the root, which AGP does not package from a dependency, so the jars are
  * unpacked into `src/main/jniLibs/<abi>` — the default native folder, ignored by git — before a build.
+ *
+ * The task touches no `project` while it runs, so it works with the configuration cache on, and it
+ * declares no output: the folder is a source folder every packaging task already reads, and naming
+ * it an output would make Gradle demand an explicit dependency from each of them.
  */
-val gdxVersion = "1.14.2"
-val gdxNatives: Configuration by configurations.creating
-val gdxAbis = listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
-val copyGdxNatives by tasks.registering {
-    val natives = gdxNatives
-    val target = layout.projectDirectory.dir("src/main/jniLibs")
-    // No declared output: the folder is a source folder every packaging task already reads, and
-    // naming it an output would make Gradle demand an explicit dependency from each of them.
-    inputs.files(natives)
-    doLast {
-        natives.files.forEach { jar ->
-            val abi = gdxAbis.first { jar.name.endsWith("natives-$it.jar") }
-            copy {
-                from(zipTree(jar)) { include("*.so") }
+abstract class UnpackGdxNatives @Inject constructor(
+    private val files: FileSystemOperations,
+    private val archives: ArchiveOperations,
+) : DefaultTask() {
+    @get:InputFiles abstract val jars: ConfigurableFileCollection
+    @get:Input abstract val abis: ListProperty<String>
+    @get:Internal abstract val target: DirectoryProperty
+
+    @TaskAction fun unpack() {
+        jars.forEach { jar ->
+            val abi = abis.get().first { jar.name.endsWith("natives-$it.jar") }
+            files.copy {
+                from(archives.zipTree(jar)) { include("*.so") }
                 into(target.dir(abi))
             }
         }
     }
+}
+
+val gdxVersion = "1.14.2"
+val gdxNatives: Configuration by configurations.creating
+val gdxAbis = listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+val copyGdxNatives by tasks.registering(UnpackGdxNatives::class) {
+    jars.from(gdxNatives)
+    abis.set(gdxAbis)
+    target.set(layout.projectDirectory.dir("src/main/jniLibs"))
 }
 tasks.named("preBuild") { dependsOn(copyGdxNatives) }
 
@@ -62,7 +76,9 @@ dependencies {
     implementation("com.badlogicgames.gdx:gdx:$gdxVersion")
     implementation("com.badlogicgames.gdx:gdx-backend-android:$gdxVersion")
     gdxAbis.forEach { gdxNatives("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-$it") }
-    // The scene is a fragment inside the Compose tree: AndroidFragment hosts libGDX's own.
+    // The scene is a fragment inside the Compose tree: AndroidFragment hosts libGDX's own, and
+    // MainActivity is a FragmentActivity. Both are named here rather than left to arrive transitively.
+    implementation("androidx.fragment:fragment-ktx:1.8.6")
     implementation("androidx.fragment:fragment-compose:1.8.6")
     implementation(platform("androidx.compose:compose-bom:2026.08.00"))
     implementation("androidx.activity:activity-compose:1.13.0")

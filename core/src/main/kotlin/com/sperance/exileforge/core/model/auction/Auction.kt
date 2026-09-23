@@ -104,7 +104,32 @@ import kotlinx.serialization.Serializable
         // The language only matters when there is text to resolve.
         if (title.isNotBlank()) put("lang", lang)
     }.filterValues { it.isNotBlank() }
+
+    /**
+     * The filters set besides the name, in the order the showcase shows them as chips. The name
+     * has its own field and the seller's own lots are the market's switch, so neither is here.
+     */
+    fun active(): List<FilterField> = FilterField.entries.filter { value(it).isNotBlank() }
+
+    fun value(field: FilterField): String = when (field) {
+        FilterField.KIND -> kind; FilterField.SLOT -> slot; FilterField.RARITY -> rarity
+        FilterField.MIN_LEVEL -> minItemLevel.trim(); FilterField.MAX_LEVEL -> maxItemLevel.trim()
+        FilterField.ORB -> priceOrbId; FilterField.MAX_PRICE -> maxPrice.trim(); FilterField.SELLER -> sellerId
+    }
+
+    /** The same filter with one field dropped: what a chip's cross asks for. */
+    fun without(field: FilterField): AuctionFilter = when (field) {
+        FilterField.KIND -> copy(kind = ""); FilterField.SLOT -> copy(slot = ""); FilterField.RARITY -> copy(rarity = "")
+        FilterField.MIN_LEVEL -> copy(minItemLevel = ""); FilterField.MAX_LEVEL -> copy(maxItemLevel = "")
+        FilterField.ORB -> copy(priceOrbId = ""); FilterField.MAX_PRICE -> copy(maxPrice = ""); FilterField.SELLER -> copy(sellerId = "")
+    }
+
+    /** Every filter off, the name kept: "reset" in the sheet leaves what was typed in the field. */
+    fun cleared(): AuctionFilter = AuctionFilter(title = title, lang = lang)
 }
+
+/** A filter of the showcase that is not the name: each one a chip when set. */
+enum class FilterField { KIND, SLOT, RARITY, MIN_LEVEL, MAX_LEVEL, ORB, MAX_PRICE, SELLER }
 
 /** One page of the showcase, as the server pages it. */
 @Serializable data class AuctionPage(

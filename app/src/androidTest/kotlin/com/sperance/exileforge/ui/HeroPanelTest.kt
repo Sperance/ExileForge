@@ -46,6 +46,7 @@ import com.sperance.exileforge.core.model.auction.AuctionFilter
 import com.sperance.exileforge.core.model.auction.AuctionLot
 import com.sperance.exileforge.core.model.auction.AuctionLotKind
 import com.sperance.exileforge.core.model.auction.AuctionPage
+import com.sperance.exileforge.ui.screens.auction.SellList
 import com.sperance.exileforge.ui.screens.auction.ShowcaseList
 import com.sperance.exileforge.ui.theme.ForgeTheme
 import com.sperance.exileforge.ui.theme.Ink
@@ -315,5 +316,32 @@ class HeroPanelTest {
         compose.runOnIdle { assertEquals("chaos-orb", selected) }
         compose.onNodeWithText("УДЕРЖИВАЙТЕ, ЧТОБЫ ПРИМЕНИТЬ СФЕРУ").performSemanticsAction(SemanticsActions.OnClick)
         compose.runOnIdle { assertEquals("ring-instance" to "chaos-orb", applied) }
+    }
+
+    /**
+     * The sell tab is the stash and the bag, read down: a worn item is left out because the server
+     * refuses it, and a stack asks how many before its price.
+     */
+    @Test fun theSellTabListsTheLooseStashAndTheBag() {
+        val loose = EquipmentInstance("helm-instance", "hero", "helm-base")
+        val worn = EquipmentInstance("ring-instance", "hero", "ring-base", equippedSlot = "RING")
+        val helm = buildJsonObject { put("_id", "helm-base"); put("code", "MY_HELMET"); put("slot", "HELMET"); put("rarity", "RARE") }
+        val ring = buildJsonObject { put("_id", "ring-base"); put("code", "HERO_RING"); put("slot", "RING"); put("rarity", "RARE") }
+        val chaos = CurrencyItem("chaos-orb", "CHAOS_ORB", "CHAOS_ORB", 300)
+        val hero = HeroView(CharacterSummary("hero", "owner", "Изгнанник"), listOf(loose, worn),
+            bag = listOf(com.sperance.exileforge.core.model.hero.CharacterItem("chaos-orb", 7)))
+        var stack: List<Any>? = null
+        compose.setContent { ForgeTheme { Column(Modifier.fillMaxSize().background(Ink).padding(12.dp)) {
+            SellList(ForgeState(busy = false, account = AccountState(signedIn = true, profile = com.sperance.exileforge.core.model.command.UserProfile("owner")),
+                play = PlayState(hero = hero, characterOwner = "owner"),
+                world = WorldState(inventoryBases = mapOf("helm-base" to helm, "ring-base" to ring), orbs = listOf(chaos))),
+                onEquipment = { _, _, _ -> }, onItem = { id, amount, orb, price -> stack = listOf(id, amount, orb, price) })
+        } } }
+        compose.onNodeWithText("Мой шлем").assertIsDisplayed()
+        compose.onAllNodesWithText("Кольцо героя").assertCountEquals(0)
+        compose.onNodeWithText("Chaos Orb").performClick()
+        compose.onNodeWithText("Количество, есть 7").assertIsDisplayed()
+        compose.onAllNodesWithText("Выставить на аукцион").onLast().performClick()
+        compose.runOnIdle { assertEquals(listOf("chaos-orb", 1L, "chaos-orb", 1L), stack) }
     }
 }

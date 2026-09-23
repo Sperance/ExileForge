@@ -43,7 +43,8 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
                 color = com.sperance.exileforge.ui.theme.Muted, style = MaterialTheme.typography.bodySmall)
             return@Column
         }
-        val tabs = listOf(ui("auction.showcase"), ui("auction.my_lots"), ui("auction.sell_tab"))
+        val mine = s.ownLots.size
+        val tabs = listOf(ui("auction.showcase"), if (mine > 0) ui("auction.my_lots_n", mine) else ui("auction.my_lots"), ui("auction.sell_tab"))
         TabRow(selectedTabIndex = s.market.tab, containerColor = com.sperance.exileforge.ui.theme.Abyss) {
             tabs.forEachIndexed { index, title ->
                 Tab(selected = s.market.tab == index, enabled = !s.busy, onClick = { vm.auctionTab(index) },

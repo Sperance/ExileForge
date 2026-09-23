@@ -172,6 +172,19 @@ class ContractTest {
         assertFalse(AuctionLot(status = AuctionLotStatus.CANCELLED).onSale)
     }
 
+    @Test fun `the showcase filter names what is set and drops one thing at a time`() {
+        val filter = AuctionFilter(title = "visor", kind = "EQUIPMENT", slot = "HELMET", minItemLevel = " ", maxPrice = " 5 ", priceOrbId = "chaos")
+        // The name is the search field, not a chip; a blank level is not a filter.
+        assertEquals(listOf(FilterField.KIND, FilterField.SLOT, FilterField.ORB, FilterField.MAX_PRICE), filter.active())
+        assertEquals("5", filter.value(FilterField.MAX_PRICE))
+        val narrower = filter.without(FilterField.SLOT)
+        assertEquals(listOf(FilterField.KIND, FilterField.ORB, FilterField.MAX_PRICE), narrower.active())
+        assertEquals("visor", narrower.title)
+        // Reset keeps the typed name and nothing else.
+        assertEquals(AuctionFilter(title = "visor"), filter.cleared())
+        FilterField.entries.forEach { assertFalse(it in filter.without(it).active()) }
+    }
+
     @Test fun `identity is 24 hexadecimal characters`() {
         requireId(id)
         listOf("", "0123", "0123456789abcdef0123456", "0123456789abcdef012345678", "0123456789abcdef0123456g").forEach {

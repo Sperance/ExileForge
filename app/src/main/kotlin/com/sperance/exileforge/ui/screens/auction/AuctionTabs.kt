@@ -9,6 +9,17 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CutCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.FilterList
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -41,7 +52,7 @@ import kotlinx.serialization.json.put
 
 /** The showcase: the server's own search, so the page and the filter both belong to it. */
 @Composable internal fun ColumnScope.ShowcaseTab(s: ForgeState, vm: ForgeViewModel) {
-    ShowcaseList(s, header = { ShowcaseFilter(s, vm) }, onBuy = vm::buyLot, onPage = vm::loadShowcase, loadBase = vm::equipmentBase)
+    ShowcaseList(s, header = { ShowcaseHeader(s, vm) }, onBuy = vm::buyLot, onPage = vm::loadShowcase, loadBase = vm::equipmentBase)
 }
 
 /**
@@ -112,41 +123,98 @@ import kotlinx.serialization.json.put
 }
 
 /**
- * The filter.
+ * The showcase's head: the name to search for, the button to every other filter, and the filters
+ * already set as chips.
  *
- * Name, kind and the price ceiling are always in reach because they are what a trader reaches for;
- * the rest of what the server understands sits one tap away.
+ * Nothing here asks the server on its own: the search key of the keyboard, «Показать» in the sheet
+ * and a chip's cross do. A chip is one filter the server understands, named as the player set it,
+ * and its cross drops that filter and asks again — the quickest way back from "nothing found".
  */
-@Composable private fun ShowcaseFilter(s: ForgeState, vm: ForgeViewModel) {
-    var more by remember { mutableStateOf(false) }
+@OptIn(ExperimentalLayoutApi::class)
+@Composable private fun ShowcaseHeader(s: ForgeState, vm: ForgeViewModel) {
+    var sheet by remember { mutableStateOf(false) }
     val f = s.market.filter
+    val count = f.active().size + if (s.market.showOwnLots) 1 else 0
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(f.title, { vm.auctionFilter(f.copy(title = it)) }, placeholder = { Text(ui("auction.name")) },
+                leadingIcon = { Icon(Icons.Outlined.Search, null) }, singleLine = true, modifier = Modifier.weight(1f),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { vm.loadShowcase(0) }))
+            OutlinedButton(onClick = { sheet = true }, enabled = !s.busy, contentPadding = PaddingValues(horizontal = 12.dp)) {
+                Icon(Icons.Outlined.FilterList, ui("auction.filters"), modifier = Modifier.size(18.dp))
+                if (count > 0) { Spacer(Modifier.width(6.dp)); Text(count.toString()) }
+            }
+        }
+        if (count > 0) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            f.active().forEach { field ->
+                ActiveFilter(chipLabel(s, field, f.value(field))) { vm.auctionFilter(f.without(field)); vm.loadShowcase(0) }
+            }
+            if (s.market.showOwnLots) ActiveFilter(ui("auction.show_mine")) { vm.showOwnLots(false); vm.loadShowcase(0) }
+        }
+    }
+    if (sheet) FilterSheet(s, onDismiss = { sheet = false }) { filter, mine ->
+        sheet = false; vm.auctionFilter(filter); vm.showOwnLots(mine); vm.loadShowcase(0)
+    }
+}
+
+/** A filter that is set, named by its value, with a cross that drops it. */
+@Composable private fun ActiveFilter(label: String, onClear: () -> Unit) {
+    InputChip(selected = true, onClick = onClear, label = { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        trailingIcon = { Icon(Icons.Outlined.Close, ui("auction.remove_filter"), modifier = Modifier.size(16.dp)) },
+        colors = InputChipDefaults.inputChipColors(selectedContainerColor = Gold, selectedLabelColor = Ink, selectedTrailingIconColor = Ink))
+}
+
+private fun chipLabel(s: ForgeState, field: FilterField, value: String): String = when (field) {
+    FilterField.KIND -> runCatching { lotKindTitle(AuctionLotKind.valueOf(value), s.lang) }.getOrDefault(value)
+    FilterField.SLOT -> slotTitle(value, s.lang)
+    FilterField.RARITY -> rarityTitle(value, s.lang)
+    FilterField.MIN_LEVEL -> ui("auction.chip_ilvl_from", value)
+    FilterField.MAX_LEVEL -> ui("auction.chip_ilvl_to", value)
+    FilterField.ORB -> ui("auction.chip_orb", s.world.orbs.firstOrNull { it.id == value }?.title(s.lang) ?: value.takeLast(6))
+    FilterField.MAX_PRICE -> ui("auction.chip_max_price", value)
+    FilterField.SELLER -> ui("auction.chip_seller", value.takeLast(6))
+}
+
+/**
+ * Every filter the server understands, on a draft: nothing reaches the showcase until «Показать»,
+ * so trying a combination costs no request, and «Сбросить» clears all but the typed name.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable private fun FilterSheet(s: ForgeState, onDismiss: () -> Unit, onApply: (AuctionFilter, Boolean) -> Unit) {
+    var draft by remember { mutableStateOf(s.market.filter) }
+    var mine by remember { mutableStateOf(s.market.showOwnLots) }
     val any = ui("common.all")
-    ForgePanel {
-        Engraved(ui("auction.search"))
-        OutlinedTextField(f.title, { vm.auctionFilter(f.copy(title = it)) }, label = { Text(ui("auction.name")) },
-            singleLine = true, modifier = Modifier.fillMaxWidth())
-        Spinner(ui("auction.what_sold"), f.kind,
-            mapOf("" to any) + AuctionLotKind.entries.associate { it.name to lotKindTitle(it, s.lang) }, !s.busy, glyph = Glyph.ITEM) { vm.auctionFilter(f.copy(kind = it)) }
-        Spinner(ui("auction.priced_in"), f.priceOrbId,
-            mapOf("" to any) + s.world.orbs.associate { it.id to it.title(s.lang) }, !s.busy, glyph = Glyph.CURRENCY) { vm.auctionFilter(f.copy(priceOrbId = it)) }
-        OutlinedTextField(f.maxPrice, { vm.auctionFilter(f.copy(maxPrice = it)) }, label = { Text(ui("auction.price_max")) },
-            singleLine = true, modifier = Modifier.fillMaxWidth())
-        TextButton(onClick = { more = !more }) { Text(ui("auction.more_filters", if (more) ui("common.hide") else ui("common.show"))) }
-        if (more) {
-            Spinner(ui("common.slot"), f.slot, mapOf("" to any) + slots.associateWith { slotTitle(it, s.lang) }, !s.busy, glyph = Glyph.ITEM) { vm.auctionFilter(f.copy(slot = it)) }
-            Spinner(ui("common.rarity"), f.rarity, mapOf("" to any) + rarities.associateWith { rarityTitle(it, s.lang) }, !s.busy, glyph = Glyph.RARITY) { vm.auctionFilter(f.copy(rarity = it)) }
-            OutlinedTextField(f.minItemLevel, { vm.auctionFilter(f.copy(minItemLevel = it)) }, label = { Text(ui("auction.ilvl_from")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(f.maxItemLevel, { vm.auctionFilter(f.copy(maxItemLevel = it)) }, label = { Text(ui("auction.ilvl_to")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
-            EntitySpinner(ui("auction.seller"), f.sellerId, EntitySource.CHARACTER, !s.busy) { vm.auctionFilter(f.copy(sellerId = it)) }
+    val digits = KeyboardOptions(keyboardType = KeyboardType.Number)
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp).navigationBarsPadding(),
+            verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Engraved(ui("auction.filters"))
+            Spinner(ui("auction.what_sold"), draft.kind,
+                mapOf("" to any) + AuctionLotKind.entries.associate { it.name to lotKindTitle(it, s.lang) }, true, glyph = Glyph.ITEM) { draft = draft.copy(kind = it) }
+            Spinner(ui("common.slot"), draft.slot, mapOf("" to any) + slots.associateWith { slotTitle(it, s.lang) }, true, glyph = Glyph.ITEM) { draft = draft.copy(slot = it) }
+            Spinner(ui("common.rarity"), draft.rarity, mapOf("" to any) + rarities.associateWith { rarityTitle(it, s.lang) }, true, glyph = Glyph.RARITY) { draft = draft.copy(rarity = it) }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(draft.minItemLevel, { draft = draft.copy(minItemLevel = it.filter(Char::isDigit)) }, label = { Text(ui("auction.ilvl_from")) },
+                    singleLine = true, keyboardOptions = digits, modifier = Modifier.weight(1f))
+                OutlinedTextField(draft.maxItemLevel, { draft = draft.copy(maxItemLevel = it.filter(Char::isDigit)) }, label = { Text(ui("auction.ilvl_to")) },
+                    singleLine = true, keyboardOptions = digits, modifier = Modifier.weight(1f))
+            }
+            Spinner(ui("auction.priced_in"), draft.priceOrbId,
+                mapOf("" to any) + s.world.orbs.associate { it.id to it.title(s.lang) }, true, glyph = Glyph.CURRENCY) { draft = draft.copy(priceOrbId = it) }
+            OutlinedTextField(draft.maxPrice, { draft = draft.copy(maxPrice = it.filter(Char::isDigit)) }, label = { Text(ui("auction.price_max")) },
+                singleLine = true, keyboardOptions = digits, modifier = Modifier.fillMaxWidth())
+            EntitySpinner(ui("auction.seller"), draft.sellerId, EntitySource.CHARACTER, true) { draft = draft.copy(sellerId = it) }
+            // Own lots cannot be bought, so they are dropped unless a seller wants to compare prices.
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(ui("auction.show_mine"), modifier = Modifier.weight(1f))
+                Switch(checked = mine, onCheckedChange = { mine = it })
+            }
+            Text(ui("auction.filter_note"), color = Muted, style = MaterialTheme.typography.bodySmall)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { draft = draft.cleared(); mine = false }, modifier = Modifier.weight(1f)) { Text(ui("auction.reset")) }
+                Button(enabled = !s.busy, onClick = { onApply(draft, mine) }, modifier = Modifier.weight(1f)) { Text(ui("auction.apply")) }
+            }
         }
-        // Own lots cannot be bought, so they are dropped unless a seller wants to compare prices.
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text(ui("auction.show_mine"), modifier = Modifier.weight(1f))
-            Switch(checked = s.market.showOwnLots, enabled = !s.busy, onCheckedChange = { vm.showOwnLots(it); vm.loadShowcase(0) })
-        }
-        Button(enabled = !s.busy, onClick = { vm.loadShowcase(0) }, modifier = Modifier.fillMaxWidth()) { Text(ui("auction.do_search")) }
-        Text(ui("auction.filter_note"),
-            color = Muted, style = MaterialTheme.typography.bodySmall)
     }
 }
 
@@ -181,9 +249,12 @@ import kotlinx.serialization.json.put
     val document = lotDocument(s, lot)
     ItemRow(document, definitions = s.world.definitions, enabled = !s.busy, note = note, noteColor = Muted,
         facts = lotFacts(s, lot, document),
+        // The server's verdict on the template, as the stash marks it: a lot the buyer cannot wear yet.
+        unwearable = s.play.hero?.sheet?.unwearableBy?.get(lot.equipment?.equipmentId.orEmpty()).orEmpty(),
         footer = {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(ForgeGlyphs.Orb, null, tint = Gold, modifier = Modifier.size(16.dp))
                 Text(orbPrice(s, lot), color = Gold, style = MaterialTheme.typography.labelMedium,
                     maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 Text(lot.sellerName.ifBlank { "…${lot.sellerId.takeLast(6)}" }, color = Muted,

@@ -20,7 +20,7 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.19.0, `versionCode` 36) for the
+ExileForge is an **Android Compose client** (version 2.20.0, `versionCode` 37) for the
 **ktor-bestgame** RPG server (0.25.0), pinned in
 `core/.../contract/Contract.kt` as `SERVER_COMMIT = a1f4fbabe6dd3512cfb421031fc88b81324617cb`
 on the server branch `claude/tender-pasteur-a36kj2`.
@@ -337,6 +337,10 @@ These are enforced by tests and are the point of the client's design:
     underneath, and the card behind it adds when the lot was listed: the server writes `createdAt`
     in UTC, so the client is free to show it in the device's zone. Every auction tab refreshes by
     a pull, as the hero does, and buying asks first, saying so when the item cannot be worn yet.
+    Since 2.20.0 the showcase's head is a search field and a filter sheet worked on a draft: nothing
+    reaches the server until the keyboard's search, «Показать» or a chip's cross, and the chips are
+    `AuctionFilter.active()` — the name is the field, not a chip. «Продать» lists the loose stash
+    and the bag and opens the one `ListingSheet` the item card uses too.
 14. **Gold is the merchant's, not the client's.** `POST /api/v1/characterequipment/sell` destroys
     the instance and pays for it; the price is the template's base times the copy's rarity times
     how many affixes rolled, times `STOCK_GOLD` — a characteristic that exists, that nothing

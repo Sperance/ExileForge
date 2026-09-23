@@ -27,6 +27,7 @@ import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeSection
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.*
+import com.sperance.exileforge.ui.screens.auction.ListingSheet
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.theme.*
@@ -85,7 +86,7 @@ private enum class ItemAction { AUCTION, SELL }
         }
     }
     when (open) {
-        ItemAction.AUCTION -> ListingSheet(s, name, onDismiss = { open = null }) { orb, price ->
+        ItemAction.AUCTION -> ListingSheet(s, name, onDismiss = { open = null }) { orb, price, _ ->
             open = null; onDismiss(); vm.sellEquipment(instance.id, orb, price)
         }
         // Selling is final and takes the rolls with it, so it is asked about by name. The price is
@@ -111,33 +112,5 @@ private enum class ItemAction { AUCTION, SELL }
         Icon(icon, null, tint = if (enabled) accent else Muted.copy(alpha = .45f), modifier = Modifier.size(22.dp))
         Text(label, color = if (enabled) Parchment else Muted.copy(alpha = .6f), style = MaterialTheme.typography.labelSmall,
             textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis)
-    }
-}
-
-/**
- * Listing one item on the auction, from the item itself.
- *
- * The price is counted in orbs alone (`AU_007`), so the orb is picked from the server's catalogue
- * and the amount typed; whether the listing stands is the server's to say.
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable private fun ListingSheet(s: ForgeState, name: String, onDismiss: () -> Unit, onList: (orb: String, price: Long) -> Unit) {
-    var orb by remember { mutableStateOf(s.world.orbs.firstOrNull()?.id.orEmpty()) }
-    var price by remember { mutableStateOf("1") }
-    val cost = price.toLongOrNull() ?: 0L
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel) {
-        Column(Modifier.fillMaxWidth().padding(16.dp).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Engraved(ui("sell.list"))
-            Text(name, color = Parchment, style = MaterialTheme.typography.titleMedium)
-            if (s.world.orbs.isEmpty()) Text(ui("orb.none"), color = Muted)
-            else Spinner(ui("orb.orb"), orb, s.world.orbs.associate { it.id to it.title(s.lang) }, !s.busy, glyph = Glyph.CURRENCY) { orb = it }
-            OutlinedTextField(price, { value -> price = value.filter(Char::isDigit) }, label = { Text(ui("sell.price")) },
-                singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
-            Text(ui("sell.price_note"), color = Muted, style = MaterialTheme.typography.bodySmall)
-            Text(ui("sell.note"), color = Muted, style = MaterialTheme.typography.bodySmall)
-            Button(enabled = !s.busy && orb.isNotBlank() && cost > 0, onClick = { onList(orb, cost) }, modifier = Modifier.fillMaxWidth()) {
-                Text(ui("sell.list"))
-            }
-        }
     }
 }

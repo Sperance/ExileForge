@@ -34,7 +34,7 @@ import kotlin.math.sin
 object FightLayout {
     const val HERO_X = .28f
     const val MONSTER_X = .72f
-    const val GROUND_Y = .66f
+    const val GROUND_Y = .62f
 }
 
 /**
@@ -213,8 +213,11 @@ private class ScenePainter {
         val h = scope.size.height
         val ground = h * (1 - FightLayout.GROUND_Y)
         val size = max(w, h) * .2f
-        // The pen measures up from the bottom edge.
-        scope.translate(0f, h) {
+        // A critical strike shakes the whole scene for a moment; the pen measures up from the bottom edge.
+        val shake = playback.lunge()?.let { (event, progress) ->
+            if (event.kind == HitKind.CRIT && progress > .5) ((1 - progress) * unit * .4 * sin(progress * 70)).toFloat() else 0f
+        } ?: 0f
+        scope.translate(shake, h + shake / 2) {
             // The ground as a lit oval fading into the biome's dark.
             for (i in 6 downTo 1) {
                 pen.color = palette.floor.copy(alpha = .16f * (7 - i) / 6f + .05f)

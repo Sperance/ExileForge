@@ -129,6 +129,10 @@ class CampaignTest {
         assertEquals(RunPhase.LOOT, run.hud.value.phase)
         assertEquals(listOf("DROWNED"), killed)
         assertTrue(run.hud.value.rewardPending)
+        // The screen after the fight has the whole log and what it came to.
+        val report = assertNotNull(run.hud.value.report)
+        assertEquals(Outcome.WIN, report.outcome)
+        assertTrue(report.events.isNotEmpty() && report.dealt > 0)
         // Nothing moves on while the server has not answered.
         run.send(RunCommand.Continue); run.update(0.016)
         assertEquals(RunPhase.LOOT, run.hud.value.phase)
@@ -136,6 +140,7 @@ class CampaignTest {
         run.send(RunCommand.Continue); run.update(0.016)
         assertEquals(RunPhase.MAP, run.hud.value.phase)
         assertEquals(5L, run.hud.value.gold)
+        assertNull(run.hud.value.report)
         assertEquals(run.world.agents.size - 1, run.hud.value.alive)
         run.send(RunCommand.Leave); run.update(0.016)
         assertEquals(RunPhase.LEFT, run.hud.value.phase)
@@ -168,5 +173,16 @@ class CampaignTest {
         val monster = MonsterRoller.roll(tiered, rare, Random(1))
         assertEquals(setOf("MOB_TOUGH", "MOB_BERSERK"), monster.modifiers.map { it.code }.toSet())
         assertEquals(drowned.stats.getValue("STOCK_HEALTH") * 2.2, monster.stats.getValue("STOCK_HEALTH"), 1e-9)
+    }
+
+    @Test fun `each side's swing bar fills at its own attack speed`() {
+        val log = Combat.fight(Combatant(mapOf("STOCK_HEALTH" to 500.0, "STOCK_ATTACK_SPEED" to 2.0), 1),
+            Combatant(mapOf("STOCK_HEALTH" to 500.0, "STOCK_ATTACK_SPEED" to 0.5), 1), 500.0, Random(2))
+        val playback = FightPlayback(MonsterAgent(0, MonsterRoller.roll(map, rarities, Random(1)), 0.5, 0.5), Combatant(emptyMap(), 1), log)
+        val firstHero = log.events.first { it.attacker == Side.HERO }
+        playback.clock = firstHero.time + 0.25
+        assertEquals(0.5f, playback.swing(Side.HERO, 2.0), 1e-3f)
+        playback.clock = firstHero.time
+        assertEquals(0f, playback.swing(Side.HERO, 2.0), 1e-3f)
     }
 }

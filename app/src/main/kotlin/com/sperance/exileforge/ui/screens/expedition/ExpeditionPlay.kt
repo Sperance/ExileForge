@@ -65,12 +65,11 @@ import kotlin.math.roundToInt
                 Stick(run)
                 MapBar(hud, onLeave = { vm.runCommand(RunCommand.Leave) })
             }
-            RunPhase.FIGHT -> hud.fight?.let { FightOverlay(hud, it) { vm.runCommand(RunCommand.Speed) } }
-            RunPhase.LOOT -> {
-                MapBar(hud, onLeave = null)
-                LootPanel(s, hud) { vm.runCommand(RunCommand.Continue) }
-            }
-            RunPhase.DEAD -> Ending(ui("expedition.dead"), ui("expedition.dead_hint"), LifeRed, hud) { vm.runCommand(RunCommand.Continue) }
+            RunPhase.FIGHT -> hud.fight?.let { ArenaOverlay(s, hud, it, run.map.level) { vm.runCommand(RunCommand.Speed) } }
+            // The fight is over: its report — the log, what it came to, and the loot of a victory.
+            RunPhase.LOOT -> hud.report?.let { ReportScreen(s, hud, it) { vm.runCommand(RunCommand.Continue) } }
+            RunPhase.DEAD -> hud.report?.let { ReportScreen(s, hud, it) { vm.runCommand(RunCommand.Continue) } }
+                ?: Ending(ui("expedition.dead"), ui("expedition.dead_hint"), LifeRed, hud) { vm.runCommand(RunCommand.Continue) }
             RunPhase.CLEARED -> Ending(ui("expedition.map_done"), ui("expedition.map_done_hint"), Vital, hud) { vm.runCommand(RunCommand.Continue) }
             RunPhase.LEFT -> Unit
         }
@@ -152,98 +151,7 @@ import kotlin.math.roundToInt
     }
 }
 
-// ==================== Fighting ====================
-
-private fun rarityTint(rarity: MonsterRarity) = when (rarity) {
-    MonsterRarity.NORMAL -> Parchment
-    MonsterRarity.MAGIC -> Color(0xFF8888FF)
-    MonsterRarity.RARE -> Color(0xFFFFFF77)
-}
-
-/** The monster's name and modifiers on top, both bars over the fighters, and the hits flying off them. */
-@Composable private fun FightOverlay(hud: RunHud, fight: FightHud, onSpeed: () -> Unit) {
-    val monster = fight.monster
-    BoxWithConstraints(Modifier.fillMaxSize()) {
-        val width = maxWidth
-        val height = maxHeight
-        Column(Modifier.fillMaxWidth().statusBarsPadding().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(monsterTitle(monster.code), color = rarityTint(monster.rarity), style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
-            Text(ui(monster.rarity.key()), color = Muted, style = MaterialTheme.typography.labelMedium)
-            monster.modifiers.forEach { Text(monsterModifierText(it), color = Rune, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center) }
-        }
-        val barWidth = width * .36f
-        val barTop = height * FightLayout.GROUND_Y + 12.dp
-        Vitals(fight.heroLife, hud.heroMaxLife, fight.heroShield, hud.heroMaxShield,
-            Modifier.width(barWidth).offset(x = width * FightLayout.HERO_X - barWidth / 2, y = barTop))
-        Vitals(fight.monsterLife, fight.monsterMaxLife, fight.monsterShield, fight.monsterMaxShield,
-            Modifier.width(barWidth).offset(x = width * FightLayout.MONSTER_X - barWidth / 2, y = barTop))
-        val density = LocalDensity.current
-        fight.hits.forEach { hit ->
-            val column = if (hit.target == Side.HERO) FightLayout.HERO_X else FightLayout.MONSTER_X
-            val rise = (hit.age / ExpeditionRun.HIT_LIFETIME).toFloat()
-            val x = with(density) { (width * column).toPx() } + ((hit.id % 3) - 1) * 40f
-            val y = with(density) { (height * (FightLayout.GROUND_Y - .3f)).toPx() } - rise * 120f
-            Text(hitText(hit), color = hitColour(hit).copy(alpha = (1 - rise).coerceIn(0f, 1f)),
-                fontSize = if (hit.kind == HitKind.CRIT) 30.sp else 22.sp, fontWeight = FontWeight.Bold,
-                modifier = Modifier.offset { IntOffset((x - 40f).roundToInt(), y.roundToInt()) }.width(80.dp), textAlign = TextAlign.Center)
-        }
-        fight.outcome?.let {
-            Text(ui("expedition.outcome_${it.name.lowercase()}"), color = when (it) { Outcome.WIN -> Vital; Outcome.LOSS -> LifeRed; Outcome.RETREAT -> Muted },
-                style = MaterialTheme.typography.headlineMedium, modifier = Modifier.align(Alignment.Center))
-        }
-        OutlinedButton(onClick = onSpeed, modifier = Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(16.dp)) {
-            Text(ui("expedition.speed", fight.speed))
-        }
-    }
-}
-
-private fun hitText(hit: FloatingHit): String = when (hit.kind) {
-    HitKind.EVADED -> ui("expedition.evaded")
-    HitKind.BLOCKED -> ui("expedition.blocked")
-    HitKind.CRIT -> ui("expedition.crit", hit.amount)
-    HitKind.HIT -> hit.amount.toString()
-}
-
-private fun hitColour(hit: FloatingHit): Color = when (hit.kind) {
-    HitKind.EVADED, HitKind.BLOCKED -> Muted
-    HitKind.CRIT -> Color(0xFFFFD34A)
-    HitKind.HIT -> if (hit.target == Side.HERO) LifeRed else Parchment
-}
-
 // ==================== After ====================
-
-/** What the kill brought: the server's roll, or its absence said plainly, and the way on. */
-@Composable private fun BoxScope.LootPanel(s: ForgeState, hud: RunHud, onContinue: () -> Unit) {
-    RunPanel(Modifier.align(Alignment.BottomCenter)) {
-        Engraved(ui("expedition.victory"))
-        hud.slain?.let { Text(monsterTitle(it.code), color = rarityTint(it.rarity), style = MaterialTheme.typography.titleLarge) }
-        val reward = hud.reward
-        when {
-            hud.rewardPending -> Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                CircularProgressIndicator(Modifier.size(18.dp), color = Gold, strokeWidth = 2.dp)
-                Text(ui("expedition.loot_pending"), color = Muted)
-            }
-            hud.rewardFailed -> Text(ui("expedition.loot_failed"), color = LifeRed, style = MaterialTheme.typography.bodyMedium)
-            reward != null -> Column(Modifier.heightIn(max = 320.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(ui("expedition.loot_experience", number(reward.experience)), color = Rune)
-                if (reward.gold > 0) Text(ui("expedition.loot_gold", reward.gold), color = GoldBright)
-                reward.items.forEach { stack ->
-                    val orb = s.world.orbs.firstOrNull { it.id == stack.itemId }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(ForgeGlyphs.Orb, null, tint = Gold, modifier = Modifier.size(18.dp))
-                        Text(ui("expedition.loot_stack", orb?.title(s.lang) ?: ui("common.item"), stack.amount), color = Parchment)
-                    }
-                }
-                reward.equipment.forEach { instance ->
-                    ItemRow(inventoryDocument(instance, s.world.inventoryBases[instance.equipmentId]), s.world.definitions) {}
-                }
-                if (reward.items.isEmpty() && reward.equipment.isEmpty()) Text(ui("expedition.loot_nothing"), color = Muted)
-            }
-        }
-        Button(enabled = !hud.rewardPending, onClick = onContinue, modifier = Modifier.fillMaxWidth()) { Text(ui("expedition.continue")) }
-    }
-}
 
 /** A run that ended — by death or by the exit — and what it brought all told. */
 @Composable private fun Ending(title: String, hint: String, accent: Color, hud: RunHud, onDone: () -> Unit) {

@@ -20,7 +20,7 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.25.0, `versionCode` 43) for the
+ExileForge is an **Android Compose client** (version 2.26.0, `versionCode` 44) for the
 **ktor-bestgame** RPG server (0.27.0), pinned in
 `core/.../contract/Contract.kt` as `SERVER_COMMIT = db6e6b1ba706a2546c4e79c8371bcb57aa939363`
 on the server branch `claude/tender-pasteur-a36kj2`.
@@ -500,7 +500,12 @@ These are enforced by tests and are the point of the client's design:
     hero and every monster form, all shapes — rule 17 holds, no picture is loaded — and everything
     with text on it is the overlay above. The run (`ExpeditionRun`) lives in `:core` and is stepped
     once a frame from a `withFrameNanos` loop; the canvas reads a clock state, so each frame redraws
-    without recomposing. The overlay reads the run's `RunHud` and sends `RunCommand`s.
+    without recomposing. The overlay reads the run's `RunHud` and sends `RunCommand`s. The fight
+    screen is «Арена» since 2.26.0 (`ArenaOverlay.kt`): a nameplate per side with life, shield and
+    a bar filling toward its next swing at its own attack speed (`FightPlayback.swing`), the
+    monster's modifiers under its name, the log under the fighters (newest first, unfolds on
+    demand), and after the fight `ReportScreen` — outcome, totals, the whole log and the loot — read
+    off `RunHud.report`, which a defeat gets too.
 
 ## Conventions
 

@@ -16,7 +16,11 @@ enum class RunPhase { MAP, FIGHT, LOOT, DEAD, CLEARED, LEFT }
 /** A number floating off a fighter, [age] seconds after the swing that made it. */
 data class FloatingHit(val id: Int, val target: Side, val kind: HitKind, val amount: Int, val age: Double, val healed: Int)
 
-/** The fight as the overlay prints it: who, how much life each side has, and what just landed. */
+/**
+ * The fight as the overlay prints it: who, how much life each side has, what just landed, how far
+ * each side is into its next swing (0..1, filled at its own attack speed) and the swings so far,
+ * newest first, for the log under the fighters.
+ */
 data class FightHud(
     val monster: RolledMonster,
     val heroLife: Int, val heroShield: Int,
@@ -24,7 +28,27 @@ data class FightHud(
     val hits: List<FloatingHit>,
     val speed: Int,
     val outcome: Outcome?,
+    val heroSwing: Float = 0f, val monsterSwing: Float = 0f,
+    val events: List<CombatEvent> = emptyList(),
 )
+
+/**
+ * A fight that is over, as the screen after it reads it: the whole log to scroll back through and
+ * what it came to — dealt, taken, how long, how many critical strikes landed, how often the monster
+ * blocked and how often the hero evaded.
+ */
+data class FightReport(
+    val monster: RolledMonster,
+    val outcome: Outcome,
+    val events: List<CombatEvent>,
+    val duration: Double,
+) {
+    val dealt: Int get() = events.filter { it.attacker == Side.HERO }.sumOf { it.damage }.roundToInt()
+    val taken: Int get() = events.filter { it.attacker == Side.MONSTER }.sumOf { it.damage }.roundToInt()
+    val crits: Int get() = events.count { it.attacker == Side.HERO && it.kind == HitKind.CRIT }
+    val blocked: Int get() = events.count { it.attacker == Side.HERO && it.kind == HitKind.BLOCKED }
+    val evaded: Int get() = events.count { it.attacker == Side.MONSTER && it.kind == HitKind.EVADED }
+}
 
 /** Everything the overlay draws, as one value: it changes only when something on it does. */
 data class RunHud(
@@ -37,6 +61,8 @@ data class RunHud(
     val rewardPending: Boolean = false,
     val rewardFailed: Boolean = false,
     val slain: RolledMonster? = null,
+    /** The fight just over, kept for the screen after it — a victory's loot or a defeat. */
+    val report: FightReport? = null,
     val gold: Long = 0, val experience: Double = 0.0, val kills: Int = 0,
 )
 
@@ -79,6 +105,7 @@ class ExpeditionRun(
     private var rewardPending = false
     private var rewardFailed = false
     private var slain: RolledMonster? = null
+    private var report: FightReport? = null
     private var gold = 0L
     private var experience = 0.0
     private var kills = 0
@@ -107,7 +134,7 @@ class ExpeditionRun(
             RunCommand.Speed -> speed = if (speed >= 4) 1 else speed * 2
             RunCommand.Leave -> if (phase == RunPhase.MAP || phase == RunPhase.DEAD || phase == RunPhase.CLEARED) phase = RunPhase.LEFT
             RunCommand.Continue -> when (phase) {
-                RunPhase.LOOT -> if (!rewardPending) { phase = RunPhase.MAP; reward = null; slain = null; rewardFailed = false }
+                RunPhase.LOOT -> if (!rewardPending) { phase = RunPhase.MAP; reward = null; slain = null; report = null; rewardFailed = false }
                 RunPhase.DEAD, RunPhase.CLEARED -> phase = RunPhase.LEFT
                 else -> Unit
             }
@@ -140,6 +167,7 @@ class ExpeditionRun(
         val playback = fight ?: return
         playback.clock += dt * speed
         if (playback.clock < playback.log.duration + AFTERMATH) return
+        report = FightReport(playback.agent.monster, playback.log.outcome, playback.log.events, playback.log.duration)
         when (playback.log.outcome) {
             Outcome.WIN -> {
                 life = playback.log.heroLife
@@ -151,7 +179,7 @@ class ExpeditionRun(
                 onKill(playback.agent.monster)
             }
             Outcome.LOSS -> { life = 0.0; phase = RunPhase.DEAD }
-            Outcome.RETREAT -> { life = playback.log.heroLife; world.retreatFrom(playback.agent); phase = RunPhase.MAP }
+            Outcome.RETREAT -> { life = playback.log.heroLife; world.retreatFrom(playback.agent); report = null; phase = RunPhase.MAP }
         }
         fight = null
     }
@@ -164,7 +192,7 @@ class ExpeditionRun(
             heroShield = (playback?.current()?.heroShield ?: hero.maxShield).roundToInt(), heroMaxShield = hero.maxShield.roundToInt(),
             alive = world.alive, total = world.agents.size,
             fight = playback?.let { fightHud(it) },
-            reward = reward, rewardPending = rewardPending, rewardFailed = rewardFailed, slain = slain,
+            reward = reward, rewardPending = rewardPending, rewardFailed = rewardFailed, slain = slain, report = report,
             gold = gold, experience = experience, kills = kills,
         )
     }
@@ -185,6 +213,8 @@ class ExpeditionRun(
             monsterMaxLife = playback.monster.maxLife.roundToInt(), monsterMaxShield = playback.monster.maxShield.roundToInt(),
             hits = hits, speed = speed,
             outcome = playback.log.outcome.takeIf { playback.clock >= playback.log.duration },
+            heroSwing = playback.swing(Side.HERO, hero.attackSpeed), monsterSwing = playback.swing(Side.MONSTER, playback.monster.attackSpeed),
+            events = playback.log.events.filter { it.time <= playback.clock }.asReversed(),
         )
     }
 
@@ -205,6 +235,15 @@ class FightPlayback(val agent: MonsterAgent, val monster: Combatant, val log: Co
 
     /** The last swing that has already happened. */
     fun current(): CombatEvent? = log.events.lastOrNull { it.time <= clock }
+
+    /**
+     * How far [side] is into its next swing, 0 just after one and 1 as the next lands — the bar
+     * that makes attack speed something a player can see. Nothing left to swing reads as empty.
+     */
+    fun swing(side: Side, attackSpeed: Double): Float {
+        val next = log.events.firstOrNull { it.attacker == side && it.time > clock } ?: return 0f
+        return (1 - (next.time - clock) * attackSpeed).toFloat().coerceIn(0f, 1f)
+    }
 
     /** The swing whose lunge is on screen right now, and how far into it the scene is (0..1). */
     fun lunge(): Pair<CombatEvent, Double>? = log.events.firstOrNull { clock - it.time in -LUNGE..LUNGE }

@@ -1,6 +1,7 @@
 package com.sperance.exileforge.ui.screens.redemption
 
 import androidx.compose.foundation.layout.*
+import com.sperance.exileforge.presentation.state.Reads
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -42,7 +43,7 @@ import com.sperance.exileforge.ui.theme.Muted
 @Composable fun RedemptionScreen(s: ForgeState, vm: ForgeViewModel) {
     var pendingDelete by remember { mutableStateOf<RedemptionCode?>(null) }
 
-    PullToRefreshBox(isRefreshing = s.busy, onRefresh = vm::loadRedemptions, modifier = Modifier.fillMaxSize()) {
+    PullToRefreshBox(isRefreshing = s.refreshing(Reads.REDEMPTIONS), onRefresh = vm::loadRedemptions, modifier = Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
                 ScreenHeader(ui("redemption.title"), ui("redemption.count", s.redemptions.size), ForgeGlyphs.Scroll)

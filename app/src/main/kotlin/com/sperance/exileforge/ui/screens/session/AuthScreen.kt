@@ -48,7 +48,12 @@ import com.sperance.exileforge.ui.theme.*
             }
             Text("EXILE FORGE", style = MaterialTheme.typography.headlineMedium, color = GoldBright)
             Text(ui("app.title"), style = MaterialTheme.typography.labelSmall, color = Muted)
-            if (s.busy) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised) else OrnateDivider(Gold)
+            if (s.busy || s.reading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised) else OrnateDivider(Gold)
+
+            if (s.resumable) {
+                InfoCard(ui("auth.offline_title"), ui("auth.offline_note"), failure = true)
+                Button(enabled = !s.busy, onClick = vm::retryResume, modifier = Modifier.fillMaxWidth()) { Text(ui("auth.retry")) }
+            }
 
             Button(enabled = !s.busy, onClick = vm::playOnThisDevice, modifier = Modifier.fillMaxWidth().height(56.dp)) {
                 Icon(ForgeGlyphs.Portal, null, Modifier.size(20.dp)); Spacer(Modifier.width(10.dp))
@@ -87,7 +92,7 @@ import com.sperance.exileforge.ui.theme.*
                 onClick = { vm.login(login, password); password = "" }, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("account.sign_in"))
             }
-            // The password travels as a query parameter, so this is worth saying out loud.
+            // Where the password goes and how long the session lasts are worth saying out loud.
             Text(ui("auth.password_note"),
                 color = Muted, style = MaterialTheme.typography.bodySmall)
         }

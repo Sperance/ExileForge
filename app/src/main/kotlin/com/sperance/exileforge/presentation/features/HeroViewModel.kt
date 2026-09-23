@@ -7,14 +7,15 @@ import com.sperance.exileforge.core.model.command.ItemStack
 import com.sperance.exileforge.core.model.command.UseRecipeCommand
 import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.presentation.ForgeRuntime
+import com.sperance.exileforge.presentation.state.Reads
 import kotlinx.coroutines.flow.update
 
 class HeroViewModel(private val runtime: ForgeRuntime) {
     private val state get() = runtime.state
 
-    fun selectEquipment(value: String) { with(runtime) { if (!state.value.busy) mutable.update { it.copy(selectedEquipment = value) } } }
+    fun selectEquipment(value: String) { with(runtime) { mutable.update { it.copy(selectedEquipment = value) } } }
 
-    fun loadHero() { with(runtime) { task { readHero() } } }
+    fun loadHero() { with(runtime) { read(Reads.HERO) { readHero() } } }
 
     /**
      * The hero, if what is on screen has gone cold.
@@ -28,7 +29,7 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
         val now = System.currentTimeMillis()
         if (state.value.characterId.isBlank()) return
         if (state.value.hero != null && now - state.value.heroReadAt < FRESH_FOR) return
-        task { readHero() }
+        read(Reads.HERO) { readHero() }
     } }
 
     fun equip(instanceId: String) { with(runtime) { characterCommand { id -> api.equip(id, instanceId) } } }
@@ -40,8 +41,8 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
         api.grant(id, equipmentId)
     } } }
 
-    fun grantRarity(value: String) { with(runtime) { if (!state.value.busy) mutable.update { it.copy(grantRarity = value) } } }
-    fun grantSlot(value: String) { with(runtime) { if (!state.value.busy) mutable.update { it.copy(grantSlot = value) } } }
+    fun grantRarity(value: String) { with(runtime) { mutable.update { it.copy(grantRarity = value) } } }
+    fun grantSlot(value: String) { with(runtime) { mutable.update { it.copy(grantSlot = value) } } }
 
     /**
      * Admin only: a random template of the chosen rarity and category, with server-rolled modifiers.
@@ -62,7 +63,7 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
         api.adjustItems(id, listOf(ItemStack(itemId, amount)))
     } } }
 
-    fun selectOrb(value: String) { with(runtime) { if (!state.value.busy) mutable.update { it.copy(selectedOrb = value) } } }
+    fun selectOrb(value: String) { with(runtime) { mutable.update { it.copy(selectedOrb = value) } } }
 
     /**
      * Spends one orb on one item of the inventory.
@@ -75,7 +76,7 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
         mutable.update { it.copy(selectedEquipment = outcome.created?.id ?: outcome.item.id, message = outcome.message) }
     } } }
 
-    fun selectNode(code: String) { with(runtime) { if (!state.value.busy) mutable.update { it.copy(selectedNode = code) } } }
+    fun selectNode(code: String) { with(runtime) { mutable.update { it.copy(selectedNode = code) } } }
     fun nodeQuery(value: String) { with(runtime) { mutable.update { it.copy(nodeQuery = value) } } }
 
     /**
@@ -135,7 +136,7 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
      * Every character command is a write the server may have applied even when the answer is lost,
      * so the hero is always re-read afterwards rather than patched from the response.
      */
-    private fun characterCommand(block: suspend (String) -> Unit) { with(runtime) { task(writing = true) {
+    private fun characterCommand(block: suspend (String) -> Unit) { with(runtime) { task(writing = true, touches = setOf(Reads.HERO)) {
         val id = state.value.characterId.trim()
         check(id.isNotBlank()) { ui("auction.choose_character") }
         check(state.value.ownsCharacter || state.value.isAdmin) { ui("hero.owner_only") }

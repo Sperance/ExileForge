@@ -20,7 +20,7 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.9.0, `versionCode` 26) for the
+ExileForge is an **Android Compose client** (version 2.10.0, `versionCode` 27) for the
 **ktor-bestgame** RPG server (0.21.0), pinned in
 `core/.../contract/Contract.kt` as `SERVER_COMMIT = 3c152d6efc824e6bbe4779c3eb1d96edd8e924bf`
 on the server branch `claude/tender-pasteur-a36kj2`.
@@ -156,11 +156,18 @@ page, editor draft, hero, checks, failures. Derived permissions are computed pro
 **ForgeRuntime** owns the `SupervisorJob` scope, the `MutableStateFlow<ForgeState>`, the current
 `GameApi`, and instantiates the five feature view models. It also provides shared helpers:
 
-- `task(writing = false) { ... }` — the standard action wrapper. It refuses to start while
-  `busy`, clears previous message/error/failure, runs the block on the runtime scope, maps
-  exceptions to `FailureState` + a bilingual user message, and always clears `busy`. **Every
-  user-triggered server call goes through `task`.** Pass `writing = true` for mutations so that
-  IO/5xx failures are classified as `UncertainWrite` rather than `Offline`.
+- Two lanes, since 2.10.0. `task(writing, touches) { ... }` is a **command**: one at a time, it
+  refuses to start while `busy`, clears previous message/error/failure, maps exceptions to
+  `FailureState` + a translated message, and always clears `busy` — the only flag that disables
+  controls. `read(key, restart) { ... }` is a **read**: it runs beside commands and other reads,
+  one per key (`Reads.HERO`, `Reads.AUCTION`, …), shows in `loading` and never disables anything.
+  A command names in `touches` the reads it redoes itself; those are cancelled when it starts and
+  skipped while it runs, so a read begun before a trade never lands after it with the old
+  picture. `restart = true` is for a read whose question changed (a filter, a page).
+  `clearSession` and leaving a character cancel every read. **Every user-triggered server call
+  goes through one of the two.** Pass `writing = true` for mutations so that IO/5xx failures are
+  classified as `UncertainWrite` rather than `Offline`. A refusal is shown to a player as the
+  sentence alone and to an administrator as `HTTP <status> <code>: <sentence>` (`refusalLine`).
 - `loadPage`, `setEditor`, `ensureDefinitions`, `recipeDocument`, `clearSession`, `newApi`.
 
 **Feature view models** (`presentation/features/*`) hold no state of their own; they read

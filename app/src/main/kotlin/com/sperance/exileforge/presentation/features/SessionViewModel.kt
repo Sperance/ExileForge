@@ -6,10 +6,12 @@ import com.sperance.exileforge.core.model.Catalog
 import com.sperance.exileforge.core.model.CatalogFilter
 import com.sperance.exileforge.core.network.normalizeServer
 import com.sperance.exileforge.presentation.ForgeRuntime
+import com.sperance.exileforge.presentation.state.Reads
 import com.sperance.exileforge.presentation.state.AppMode
 import com.sperance.exileforge.presentation.state.TAB_ADMIN
 import com.sperance.exileforge.presentation.state.TAB_HERO
 import com.sperance.exileforge.presentation.state.AppPhase
+import com.sperance.exileforge.core.network.FailureState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
@@ -24,10 +26,10 @@ class SessionViewModel(private val runtime: ForgeRuntime) {
         // rather than on a screen that is about to refuse to draw.
         mutable.update { it.copy(mode = mode, catalog = Catalog.EQUIPMENT, items = emptyList(), page = 0,
             tab = if (mode == AppMode.ADMIN) TAB_ADMIN else TAB_HERO, filter = CatalogFilter(), query = "") }
-        task { restoreFilters(); loadPage(0) }
+        read(Reads.CATALOG, restart = true) { restoreFilters(); loadPage(0) }
     } }
 
-    fun serverDraft(value: String) { with(runtime) { if (!state.value.busy) mutable.update { it.copy(serverDraft = value) } } }
+    fun serverDraft(value: String) { with(runtime) { mutable.update { it.copy(serverDraft = value) } } }
 
     fun connect() { with(runtime) { task {
         val server = normalizeServer(state.value.serverDraft)
@@ -43,7 +45,7 @@ class SessionViewModel(private val runtime: ForgeRuntime) {
         refreshIcons()
     } } }
 
-    fun health() { with(runtime) { task {
+    fun health() { with(runtime) { read(Reads.HEALTH) {
         val result = api.health().toString()
         mutable.update { it.copy(health = result, message = ui("session.check_done")) }
     } } }
@@ -72,9 +74,11 @@ class SessionViewModel(private val runtime: ForgeRuntime) {
     } } }
 
     /**
-     * A session kept from an earlier launch. Silent like the device path: a launch that cannot
-     * reach the server leaves the token in place for the next one and shows the sign-in screen,
-     * and a token the server refused is handled by `newApi`'s 401 path rather than here.
+     * A session kept from an earlier launch.
+     *
+     * A launch that cannot reach the server keeps the token and says so, with a way to try again,
+     * rather than dropping the player on a sign-in they do not need. A token the server refused is
+     * handled by `newApi`'s 401 path, and anything else stays as quiet as the device path.
      */
     fun resume(saved: String) { with(runtime) { task {
         clearSession()
@@ -82,7 +86,15 @@ class SessionViewModel(private val runtime: ForgeRuntime) {
             api.capabilities().requireWorkbench()
             signedIn(api.resume(saved), byDevice = store.deviceSession.first())
         } catch (e: CancellationException) { throw e }
-        catch (_: Exception) {}
+        catch (e: Exception) {
+            if (FailureState.from(e, writing = false) == FailureState.Offline) mutable.update { it.copy(resumable = true) }
+        }
+    } } }
+
+    /** The retry the offline sign-in screen offers; the token is read again in case it was dropped meanwhile. */
+    fun retryResume() { with(runtime) { scope.launch {
+        val saved = store.token(state.value.server)
+        if (saved == null) mutable.update { it.copy(resumable = false) } else resume(saved)
     } } }
 
     /**
@@ -93,7 +105,7 @@ class SessionViewModel(private val runtime: ForgeRuntime) {
      * checks are reached from inside the game, so everyone passes through the menu.
      */
     private suspend fun signedIn(profile: com.sperance.exileforge.core.model.command.UserProfile, byDevice: Boolean) { with(runtime) {
-        mutable.update { it.copy(signedIn = true, profile = profile, mode = AppMode.PLAYER, catalog = Catalog.EQUIPMENT,
+        mutable.update { it.copy(signedIn = true, resumable = false, profile = profile, mode = AppMode.PLAYER, catalog = Catalog.EQUIPMENT,
             phase = AppPhase.CHARACTERS, message = ui("session.signed_in"), tab = 0) }
         store.saveDeviceSession(byDevice)
         store.saveToken(state.value.server, api.sessionToken())
@@ -123,11 +135,9 @@ class SessionViewModel(private val runtime: ForgeRuntime) {
         }
     } }
 
+    /** What a password must be is the server's rule (`US_004`), so it is sent and its refusal shown. */
     fun changePassword(current: String, replacement: String) { with(runtime) { task(writing = true) {
-        require(replacement.length in 6..64) { ui("session.new_password_rule") }
-        require(replacement.any { it.isDigit() } && replacement.any { it.isUpperCase() } && !replacement.contains(' ')) {
-            ui("session.password_rule")
-        }
+        require(current.isNotEmpty() && replacement.isNotEmpty()) { ui("api.credentials") }
         // Every other session of the account ends; this one stays, so there is nothing to sign into again.
         api.changePassword(current, replacement)
         mutable.update { it.copy(message = ui("session.password_changed")) }

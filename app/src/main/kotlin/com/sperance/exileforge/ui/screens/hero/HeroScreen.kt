@@ -1,6 +1,7 @@
 package com.sperance.exileforge.ui.screens.hero
 
 import androidx.compose.foundation.layout.*
+import com.sperance.exileforge.presentation.state.Reads
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -37,7 +38,7 @@ import com.sperance.exileforge.ui.theme.*
     val documents = stash.associate { it.id to inventoryDocument(it, s.inventoryBases[it.equipmentId]) }
     val slots = documents.values.map { it.text("slot") }.filter(String::isNotBlank).distinct()
     val visible = stash.filter { instance -> documents[instance.id]?.let { (slot.isBlank() || it.text("slot") == slot) && it.text("name").contains(query, true) } == true }
-    PullToRefreshBox(isRefreshing = s.busy, onRefresh = vm::loadHero, modifier = Modifier.fillMaxSize()) {
+    PullToRefreshBox(isRefreshing = s.refreshing(Reads.HERO), onRefresh = vm::loadHero, modifier = Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
                 ScreenHeader(ui("hero.title"),

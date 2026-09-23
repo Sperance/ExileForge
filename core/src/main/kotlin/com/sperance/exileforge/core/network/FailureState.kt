@@ -55,3 +55,13 @@ fun transportDetail(error: Throwable): String = when {
         ui("net.refused", error.message)
     else -> error.message ?: error::class.java.simpleName
 }
+
+/**
+ * The line a refusal is shown as.
+ *
+ * A player reads the sentence and nothing else: `HTTP 403 AUTH_004` is not something they can act
+ * on. An administrator gets the status and the code in front of it, because that is what they look
+ * up. The request journal keeps both for everyone either way.
+ */
+fun refusalLine(error: Throwable, sentence: String, detailed: Boolean): String =
+    if (detailed && error is ApiFailure) "HTTP ${error.status ?: "—"} ${error.code.orEmpty()}: $sentence" else sentence

@@ -6,6 +6,7 @@ import com.sperance.exileforge.core.model.auction.AuctionFilter
 import com.sperance.exileforge.core.model.auction.AuctionPage
 import com.sperance.exileforge.core.network.ApiFailure
 import com.sperance.exileforge.presentation.ForgeRuntime
+import com.sperance.exileforge.presentation.state.Reads
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.update
 
@@ -22,12 +23,12 @@ import kotlinx.coroutines.flow.update
 class AuctionViewModel(private val runtime: ForgeRuntime) {
     private val state get() = runtime.state
 
-    fun auctionTab(tab: Int) { with(runtime) { if (!state.value.busy) mutable.update { it.copy(auctionTab = tab) } } }
-    fun auctionFilter(filter: AuctionFilter) { with(runtime) { if (!state.value.busy) mutable.update { it.copy(auctionFilter = filter) } } }
-    fun showOwnLots(show: Boolean) { with(runtime) { if (!state.value.busy) mutable.update { it.copy(showOwnLots = show) } } }
+    fun auctionTab(tab: Int) { with(runtime) { mutable.update { it.copy(auctionTab = tab) } } }
+    fun auctionFilter(filter: AuctionFilter) { with(runtime) { mutable.update { it.copy(auctionFilter = filter) } } }
+    fun showOwnLots(show: Boolean) { with(runtime) { mutable.update { it.copy(showOwnLots = show) } } }
 
     /** The showcase, page by page. `excludeSellerId` is what keeps a seller's own lots out of it. */
-    fun loadShowcase(page: Int = 0) { with(runtime) { trade {
+    fun loadShowcase(page: Int = 0) { with(runtime) { trade(restart = true) {
         val id = state.value.characterId.trim()
         val filter = state.value.auctionFilter.copy(
             excludeSellerId = if (state.value.showOwnLots) "" else id, lang = state.value.lang.code)
@@ -35,19 +36,13 @@ class AuctionViewModel(private val runtime: ForgeRuntime) {
         mutable.update { it.copy(showcase = showcase) }
     } } }
 
-    fun loadMyLots() { with(runtime) { trade {
+    fun loadMyLots() { with(runtime) { trade(key = Reads.LOTS) {
         val lots = api.myLots(state.value.characterId.trim())
         mutable.update { it.copy(myLots = lots) }
     } } }
 
-    /** Both lists at once, for opening the tab and for the refresh button. */
-    fun loadAuction() { with(runtime) { trade {
-        val id = state.value.characterId.trim()
-        val filter = state.value.auctionFilter.copy(excludeSellerId = if (state.value.showOwnLots) "" else id, lang = state.value.lang.code)
-        val showcase = api.auctionSearch(id, filter, 0)
-        val lots = api.myLots(id)
-        mutable.update { it.copy(showcase = showcase, myLots = lots) }
-    } } }
+    /** Both lists at once, for opening the tab and for a pull: two reads, so neither waits on the other. */
+    fun loadAuction() { loadShowcase(0); loadMyLots() }
 
     /** Buying costs orbs out of the bag, so the bag and the showcase are what go stale. */
     fun buy(lotId: String) { with(runtime) { trade(writing = true) {
@@ -105,7 +100,13 @@ class AuctionViewModel(private val runtime: ForgeRuntime) {
      * The level the auction opens at is a server constant, so the client never carries a copy: it
      * sends the request, and a refusal from the auction becomes the screen's explanation.
      */
-    private fun trade(writing: Boolean = false, block: suspend () -> Unit) { with(runtime) { task(writing) {
+    private fun trade(writing: Boolean = false, restart: Boolean = false, key: String = Reads.AUCTION, block: suspend () -> Unit) { with(runtime) {
+        // A read shows the auction; a trade changes it and the goods it moved, and redoes them.
+        if (writing) task(writing = true, touches = setOf(Reads.AUCTION, Reads.LOTS, Reads.HERO)) { gated(block) }
+        else read(key, restart) { gated(block) }
+    } }
+
+    private suspend fun gated(block: suspend () -> Unit) { with(runtime) {
         check(state.value.characterId.isNotBlank()) { ui("auction.choose_character") }
         try {
             block()
@@ -117,7 +118,7 @@ class AuctionViewModel(private val runtime: ForgeRuntime) {
             mutable.update { it.copy(auctionLocked = locError(e.code, e.message.orEmpty()), showcase = AuctionPage(), myLots = emptyList()) }
             throw e
         }
-    } } }
+    } }
 }
 
 /** The server's code for "this character's level is too low for the auction". */

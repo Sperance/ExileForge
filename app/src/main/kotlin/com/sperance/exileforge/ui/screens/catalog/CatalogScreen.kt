@@ -1,6 +1,7 @@
 package com.sperance.exileforge.ui.screens.catalog
 
 import androidx.compose.foundation.layout.*
+import com.sperance.exileforge.presentation.state.Reads
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -23,7 +24,7 @@ import com.sperance.exileforge.ui.theme.Muted
 @Composable internal fun CatalogScreen(s: ForgeState, vm: ForgeViewModel) {
     // The gesture replaced the Refresh button that used to sit beside Create: one way to do one
     // thing, and paging stays a pair of buttons because a page is a place, not a reload.
-    PullToRefreshBox(isRefreshing = s.busy, onRefresh = { vm.refresh() }, modifier = Modifier.fillMaxSize()) {
+    PullToRefreshBox(isRefreshing = s.refreshing(Reads.CATALOG), onRefresh = { vm.refresh() }, modifier = Modifier.fillMaxSize()) {
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             ScreenHeader(if (s.catalog == Catalog.CHARACTERS) ui("catalog.characters") else ui("catalog.stash"),
@@ -50,7 +51,7 @@ import com.sperance.exileforge.ui.theme.Muted
             }
         }
         val visible = s.items
-        if (visible.isEmpty()) item { InfoCard(if (s.busy) ui("common.loading") else ui("catalog.empty"), ui("catalog.empty_hint")) }
+        if (visible.isEmpty()) item { InfoCard(if (s.refreshing(Reads.CATALOG)) ui("common.loading") else ui("catalog.empty"), ui("catalog.empty_hint")) }
         items(visible, key = { it.entityId }) { doc ->
             ItemCard(doc, enabled = !s.busy && !s.editorOpen, definitions = s.definitions) { vm.open(doc.entityId) }
         }

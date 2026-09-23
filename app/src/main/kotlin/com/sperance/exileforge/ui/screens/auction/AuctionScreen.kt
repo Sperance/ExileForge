@@ -1,6 +1,7 @@
 package com.sperance.exileforge.ui.screens.auction
 
 import androidx.compose.foundation.layout.*
+import com.sperance.exileforge.presentation.state.Reads
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
@@ -51,7 +52,7 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
         }
         // Every tab is refreshed the same way the hero is: by pulling it. A button competing with
         // the content was one more thing to find, and the gesture is already the habit here.
-        PullToRefreshBox(isRefreshing = s.busy, onRefresh = vm::loadAuction, modifier = Modifier.weight(1f)) {
+        PullToRefreshBox(isRefreshing = s.refreshing(Reads.AUCTION) || Reads.LOTS in s.loading, onRefresh = vm::loadAuction, modifier = Modifier.weight(1f)) {
             Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 when (s.auctionTab) {
                     0 -> ShowcaseTab(s, vm)

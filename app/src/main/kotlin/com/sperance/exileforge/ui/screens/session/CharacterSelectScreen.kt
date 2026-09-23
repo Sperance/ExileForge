@@ -1,6 +1,7 @@
 package com.sperance.exileforge.ui.screens.session
 
 import androidx.compose.foundation.clickable
+import com.sperance.exileforge.presentation.state.Reads
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -39,7 +40,7 @@ import com.sperance.exileforge.ui.theme.*
     Scaffold(containerColor = Ink,
         snackbarHost = { SnackbarHost(snackbar) { data -> Snackbar(data, containerColor = PanelRaised, contentColor = Parchment, actionColor = Gold, shape = MaterialTheme.shapes.small) } }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).imePadding().voidBackdrop()) {
-            if (s.busy) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised) else OrnateDivider(Gold)
+            if (s.busy || s.reading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised) else OrnateDivider(Gold)
             if (creating) CreatingColumn(s, vm, onBack = { creating = false }, onSignOut = vm::logout)
             else CharacterMenu(s, onPlay = vm::enterCharacter, onDelete = { pendingDelete = it },
                 onCreate = { creating = true }, onRefresh = vm::refreshCharacters, onLogout = vm::logout)
@@ -65,7 +66,7 @@ import com.sperance.exileforge.ui.theme.*
     onCreate: () -> Unit = {}, onRefresh: () -> Unit = {}, onLogout: () -> Unit = {}) {
     // A list is refreshed by pulling it, here as everywhere else. The button that used to sit at
     // the bottom of this one said the same thing twice.
-    PullToRefreshBox(isRefreshing = s.busy, onRefresh = onRefresh, modifier = Modifier.weight(1f)) {
+    PullToRefreshBox(isRefreshing = s.refreshing(Reads.CHARACTERS), onRefresh = onRefresh, modifier = Modifier.weight(1f)) {
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             ScreenHeader(ui("chars.title"),

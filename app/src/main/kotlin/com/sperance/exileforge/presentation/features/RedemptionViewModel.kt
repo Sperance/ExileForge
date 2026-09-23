@@ -3,6 +3,7 @@ package com.sperance.exileforge.presentation.features
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.RedemptionCode
 import com.sperance.exileforge.presentation.ForgeRuntime
+import com.sperance.exileforge.presentation.state.Reads
 import kotlinx.coroutines.flow.update
 
 /**
@@ -16,19 +17,19 @@ import kotlinx.coroutines.flow.update
 class RedemptionViewModel(private val runtime: ForgeRuntime) {
     private val state get() = runtime.state
 
-    fun load() { with(runtime) { task {
+    fun load() { with(runtime) { read(Reads.REDEMPTIONS) {
         check(state.value.isAdmin) { ui("redemption.admin_only") }
         val codes = api.redemptionCodes()
         mutable.update { it.copy(redemptions = codes) }
     } } }
 
-    fun create(code: RedemptionCode) { with(runtime) { task(writing = true) {
+    fun create(code: RedemptionCode) { with(runtime) { task(writing = true, touches = setOf(Reads.REDEMPTIONS)) {
         check(state.value.isAdmin) { ui("redemption.admin_only") }
         val created = api.createRedemption(code)
         mutable.update { it.copy(redemptions = it.redemptions + created, message = ui("redemption.created", created.code)) }
     } } }
 
-    fun delete(id: String) { with(runtime) { task(writing = true) {
+    fun delete(id: String) { with(runtime) { task(writing = true, touches = setOf(Reads.REDEMPTIONS)) {
         check(state.value.isAdmin) { ui("redemption.admin_only") }
         api.deleteRedemption(id)
         mutable.update { it.copy(redemptions = it.redemptions.filterNot { code -> code.id == id }, message = ui("redemption.deleted")) }

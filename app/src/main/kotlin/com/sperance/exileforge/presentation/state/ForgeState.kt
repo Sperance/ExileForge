@@ -39,8 +39,15 @@ data class ForgeState(
     val failure: FailureState? = null,
 
     val profile: UserProfile? = null, val signedIn: Boolean = false, val sessionEpoch: Int = 0,
+    /** A kept session the server could not be reached to confirm: the sign-in screen offers to try again. */
+    val resumable: Boolean = false,
     val server: String = "http://10.0.2.2:8080/", val serverDraft: String = "http://10.0.2.2:8080/",
-    val busy: Boolean = true, val message: String? = null, val error: Boolean = false,
+    /**
+     * [busy] is a command in flight — the one thing that disables controls, because two writes at
+     * once could spend the same orb twice. [loading] names the reads in flight: they run beside a
+     * command and beside each other, and only say that something is on its way.
+     */
+    val busy: Boolean = true, val loading: Set<String> = emptySet(), val message: String? = null, val error: Boolean = false,
 
     val tab: Int = 3, val catalog: Catalog = Catalog.EQUIPMENT,
     val filter: CatalogFilter = CatalogFilter(), val query: String = "",
@@ -138,6 +145,9 @@ data class ForgeState(
     val health: String = ui("runtime.not_checked"),
 ) {
     val isAdmin: Boolean get() = signedIn && profile?.role == "ADMIN"
+    val reading: Boolean get() = loading.isNotEmpty()
+    /** Whether a pull on this list is still being answered, by a read of its own or by a command. */
+    fun refreshing(read: String): Boolean = busy || read in loading
     /**
      * The character every command on every tab acts on; the gate guarantees there is one.
      *
@@ -188,6 +198,22 @@ const val MAX_CHARACTERS = 3
  * catalogue, the editor and the checks from the administrator's tab. They are named because a
  * bare number in another file says nothing about which screen it is.
  */
+/**
+ * What a read reads. One read per name runs at a time, and a command names the reads it will
+ * redo itself, so none of them lands after it with what was true before.
+ */
+object Reads {
+    const val HERO = "hero"
+    const val CHARACTERS = "characters"
+    const val AUCTION = "auction"
+    const val LOTS = "lots"
+    const val CATALOG = "catalog"
+    const val PROGRESSION = "progression"
+    const val REDEMPTIONS = "redemptions"
+    const val HEALTH = "health"
+    const val DEFINITIONS = "definitions"
+}
+
 const val TAB_CATALOG = 0
 const val TAB_EDITOR = 1
 const val TAB_CHECKS = 2

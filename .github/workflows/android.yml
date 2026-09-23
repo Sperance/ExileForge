@@ -18,6 +18,9 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - run: chmod +x gradlew
       - run: ./gradlew :core:test :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest
+      # The release build is shrunk by R8, which removes what it cannot see being used; building it
+      # here is what catches a serializer or a class R8 took away. The APK is not published.
+      - run: ./gradlew :app:assembleRelease
       - uses: actions/upload-artifact@v4
         with:
           name: exile-forge-debug

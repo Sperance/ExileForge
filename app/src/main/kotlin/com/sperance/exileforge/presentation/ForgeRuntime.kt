@@ -14,6 +14,7 @@ import com.sperance.exileforge.core.model.EntitySource
 import com.sperance.exileforge.core.network.ApiFailure
 import com.sperance.exileforge.core.network.FailureState
 import com.sperance.exileforge.core.network.transportDetail
+import com.sperance.exileforge.core.network.refusalLine
 import com.sperance.exileforge.core.network.GameApi
 import com.sperance.exileforge.core.network.RequestJournal
 import com.sperance.exileforge.data.settings.deviceLanguage
@@ -24,6 +25,7 @@ import com.sperance.exileforge.presentation.state.AppPhase
 import com.sperance.exileforge.presentation.state.ADMIN_TABS
 import com.sperance.exileforge.presentation.state.ForgeState
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -37,6 +39,8 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
     val logs = journal.entries
     lateinit var api: GameApi
     var localeJob: Job? = null
+    private val reads = mutableMapOf<String, Job>()
+    private var touching: Set<String> = emptySet()
     var iconJob: Job? = null
     val catalogViewModel = CatalogViewModel(this)
     val editorViewModel = EditorViewModel(this)
@@ -245,30 +249,70 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
     fun dismissMessage() { mutable.update { it.copy(message = null) } }
 
     /**
-     * The standard action wrapper: one server call at a time, failures mapped to a message.
+     * A command: one at a time, and the only thing that disables controls.
      *
      * [writing] marks a mutation, so an IO error or a 5xx becomes [FailureState.UncertainWrite]
-     * instead of "offline": the write may have landed and only a refresh can tell.
+     * instead of "offline": the write may have landed and only a refresh can tell. [touches] names
+     * the reads the command redoes itself: one already on its way is cancelled, because it would
+     * land after the command with what was true before, and one asked for meanwhile is skipped.
      */
-    fun task(writing: Boolean = false, block: suspend () -> Unit) {
+    fun task(writing: Boolean = false, touches: Set<String> = emptySet(), block: suspend () -> Unit) {
         if (state.value.busy) return
-        mutable.update { it.copy(busy = true, message = null, error = false, failure = null) }
+        touches.forEach { reads.remove(it)?.cancel() }
+        touching = touches
+        mutable.update { it.copy(busy = true, loading = reads.keys.toSet(), message = null, error = false, failure = null) }
         scope.launch {
             try { block() }
             catch (e: CancellationException) { throw e }
-            catch (e: Exception) {
-                val problem = FailureState.from(e, writing)
-                val prefix = if (e is ApiFailure) "HTTP ${e.status ?: "—"} ${e.code.orEmpty()}: " else ""
-                // A refusal the dictionary knows whole is shown in the chosen language; one whose
-                // template needs arguments the envelope never carried keeps the server's sentence.
-                val refusal = if (e is ApiFailure) locError(e.code, e.message.orEmpty(), e.args) else e.message.orEmpty()
-                mutable.update { it.copy(failure = problem, error = true, message = when (problem) {
-                    FailureState.UncertainWrite -> ui("runtime.uncertain_write")
-                    FailureState.Offline -> ui("runtime.offline") + transportDetail(e)
-                    else -> prefix + refusal.ifBlank { ui("runtime.request_failed") }
-                }) }
-            } finally { mutable.update { it.copy(busy = false) } }
+            catch (e: Exception) { report(e, writing) }
+            finally { touching = emptySet(); mutable.update { it.copy(busy = false) } }
         }
+    }
+
+    /**
+     * A read: it never waits for a command and never holds one up.
+     *
+     * One per [key] at a time — a second pull on the same list is the first one still coming —
+     * and none while a command that redoes it is running. [restart] is for a read whose question
+     * changed, a new filter or page: the one on its way answers the old question, so it is dropped.
+     * A failure is reported like a command's, so a list that cannot be read says why rather than
+     * staying quietly empty.
+     */
+    fun read(key: String, restart: Boolean = false, block: suspend () -> Unit) {
+        if (key in touching) return
+        if (restart) reads.remove(key)?.cancel()
+        if (reads[key]?.isActive == true) return
+        val job = scope.launch(start = CoroutineStart.LAZY) {
+            try { block() }
+            catch (e: CancellationException) { throw e }
+            catch (e: Exception) { report(e, writing = false) }
+            finally {
+                if (reads[key] === coroutineContext[Job]) reads.remove(key)
+                mutable.update { it.copy(loading = reads.keys.toSet()) }
+            }
+        }
+        reads[key] = job
+        mutable.update { it.copy(loading = reads.keys.toSet()) }
+        job.start()
+    }
+
+    /** Every read of the session that is ending: what it would bring back belongs to nobody now. */
+    fun cancelReads() {
+        reads.values.forEach { it.cancel() }
+        reads.clear()
+        mutable.update { it.copy(loading = emptySet()) }
+    }
+
+    private fun report(e: Exception, writing: Boolean) {
+        val problem = FailureState.from(e, writing)
+        // A refusal the dictionary knows whole is shown in the chosen language; one whose
+        // template needs arguments the envelope never carried keeps the server's sentence.
+        val refusal = if (e is ApiFailure) locError(e.code, e.message.orEmpty(), e.args) else e.message.orEmpty()
+        mutable.update { it.copy(failure = problem, error = true, message = when (problem) {
+            FailureState.UncertainWrite -> ui("runtime.uncertain_write")
+            FailureState.Offline -> ui("runtime.offline") + transportDetail(e)
+            else -> refusalLine(e, refusal.ifBlank { ui("runtime.request_failed") }, detailed = it.isAdmin)
+        }) }
     }
 
     suspend fun loadPage(page: Int) {
@@ -326,8 +370,8 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
     }
 
     fun clearSession() {
-        api.logout(); journal.clear()
-        mutable.update { it.copy(phase = AppPhase.AUTH, characters = emptyList(), charactersRead = false,
+        api.logout(); journal.clear(); cancelReads()
+        mutable.update { it.copy(phase = AppPhase.AUTH, resumable = false, characters = emptyList(), charactersRead = false,
             signedIn = false, profile = null, sessionEpoch = it.sessionEpoch + 1,
             items = emptyList(), total = 0, page = 0, totalPages = 0, definitions = emptyList(),
             orbs = emptyList(), selectedOrb = "",

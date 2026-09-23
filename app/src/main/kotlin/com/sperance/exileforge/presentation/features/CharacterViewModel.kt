@@ -5,6 +5,7 @@ import com.sperance.exileforge.core.contract.entityId
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.Catalog
 import com.sperance.exileforge.presentation.ForgeRuntime
+import com.sperance.exileforge.presentation.state.Reads
 import com.sperance.exileforge.presentation.state.AppPhase
 import com.sperance.exileforge.presentation.state.MAX_CHARACTERS
 import kotlinx.coroutines.flow.update
@@ -34,10 +35,10 @@ class CharacterViewModel(private val runtime: ForgeRuntime) {
         if (autoEnter) characters.singleOrNull()?.let { only -> entered(only.id) }
     } }
 
-    fun refresh() { with(runtime) { task { readCharacters() } } }
+    fun refresh() { with(runtime) { read(Reads.CHARACTERS) { readCharacters() } } }
 
     /** Enter the game as one character. Every screen below reads `characterId` and nothing else. */
-    fun enter(id: String) { with(runtime) { task { entered(id) } } }
+    fun enter(id: String) { with(runtime) { task(touches = setOf(Reads.HERO, Reads.CATALOG)) { entered(id) } } }
 
     /**
      * The same step from inside a running action, because `task` refuses to nest.
@@ -61,11 +62,13 @@ class CharacterViewModel(private val runtime: ForgeRuntime) {
      */
     fun leaveGame() { with(runtime) {
         if (state.value.busy) return
+        // What was on its way belonged to the character being left.
+        cancelReads()
         mutable.update { it.copy(phase = AppPhase.CHARACTERS, characterId = "", characterOwner = "",
             hero = null, inventoryBases = emptyMap(), selectedEquipment = "", selectedNode = "", nodeQuery = "",
             myLots = emptyList(), showcase = com.sperance.exileforge.core.model.auction.AuctionPage(),
             auctionTab = 0, auctionLocked = null, editorOpen = false, original = null, draft = JsonObject(emptyMap())) }
-        task { readCharacters() }
+        read(Reads.CHARACTERS) { readCharacters() }
     } }
 
     /**
@@ -74,7 +77,7 @@ class CharacterViewModel(private val runtime: ForgeRuntime) {
      * The class is a creation field with no update route — the server has no way to move a
      * character between classes — so this form is the only place it is ever chosen.
      */
-    fun create(name: String, classId: String) { with(runtime) { task(writing = true) {
+    fun create(name: String, classId: String) { with(runtime) { task(writing = true, touches = setOf(Reads.CHARACTERS, Reads.HERO, Reads.CATALOG)) {
         require(name.isNotBlank()) { ui("character.enter_name") }
         require(classId.isNotBlank()) { ui("character.choose_class") }
         val owner = state.value.profile?.id.orEmpty()
@@ -90,7 +93,7 @@ class CharacterViewModel(private val runtime: ForgeRuntime) {
     } } }
 
     /** Giving a character up frees one of the account's slots; the server owns what that costs. */
-    fun delete(id: String) { with(runtime) { task(writing = true) {
+    fun delete(id: String) { with(runtime) { task(writing = true, touches = setOf(Reads.CHARACTERS)) {
         api.delete(Catalog.CHARACTERS, id)
         mutable.update { it.copy(message = ui("character.deleted")) }
         val remaining = state.value.characters.filterNot { character -> character.id == id }
@@ -99,5 +102,5 @@ class CharacterViewModel(private val runtime: ForgeRuntime) {
     } } }
 
     /** The classes the creation form offers; they are seeded and fixed for a session. */
-    fun ensureClasses() { with(runtime) { task { ensureProgression() } } }
+    fun ensureClasses() { with(runtime) { read(Reads.PROGRESSION) { ensureProgression() } } }
 }

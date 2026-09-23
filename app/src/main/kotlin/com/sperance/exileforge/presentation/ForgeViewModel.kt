@@ -76,6 +76,7 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     fun health() = runtime.sessionViewModel.health()
     fun login(login: String, password: String) = runtime.sessionViewModel.login(login, password)
     fun playOnThisDevice() = runtime.sessionViewModel.playOnThisDevice()
+    fun retryResume() = runtime.sessionViewModel.retryResume()
     fun enterCharacter(id: String) = runtime.characterViewModel.enter(id)
     fun leaveGame() = runtime.characterViewModel.leaveGame()
     fun createCharacter(name: String, classId: String) = runtime.characterViewModel.create(name, classId)

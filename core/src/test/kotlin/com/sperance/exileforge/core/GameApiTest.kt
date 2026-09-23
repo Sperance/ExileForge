@@ -620,6 +620,14 @@ class GameApiTest {
         assertEquals(FailureState.UncertainWrite, FailureState.from(java.net.ConnectException("refused"), writing = true))
     }
 
+    @Test fun `a refusal reads as a sentence to a player and with its code to an administrator`() {
+        val refused = ApiFailure(403, "AUTH_004", "Character belongs to another account")
+        assertEquals("Это не ваш персонаж", refusalLine(refused, "Это не ваш персонаж", detailed = false))
+        assertEquals("HTTP 403 AUTH_004: Это не ваш персонаж", refusalLine(refused, "Это не ваш персонаж", detailed = true))
+        // Only a server's answer has a status and a code to show.
+        assertEquals("нет связи", refusalLine(java.io.IOException("reset"), "нет связи", detailed = true))
+    }
+
     @Test fun `a transport failure names itself instead of blaming the network`() {
         // Android's cleartext block is the one that looks exactly like "no connection" but is config.
         val blocked = java.net.UnknownServiceException("CLEARTEXT communication to 10.0.2.2 not permitted by network security policy")

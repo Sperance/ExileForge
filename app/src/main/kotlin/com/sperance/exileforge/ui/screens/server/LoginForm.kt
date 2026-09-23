@@ -28,7 +28,7 @@ import kotlinx.serialization.json.*
         if(change) {
             OutlinedTextField(oldPassword, { oldPassword = it }, label = { Text(ui("account.current_password")) }, visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(newPassword, { newPassword = it }, label = { Text(ui("account.new_password")) }, visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth())
-            Button(enabled = !s.busy && oldPassword.isNotEmpty() && newPassword.length in 6..64, onClick = { vm.changePassword(oldPassword, newPassword); oldPassword = ""; newPassword = ""; change = false }) { Text(ui("account.do_change_password")) }
+            Button(enabled = !s.busy && oldPassword.isNotEmpty() && newPassword.isNotEmpty(), onClick = { vm.changePassword(oldPassword, newPassword); oldPassword = ""; newPassword = ""; change = false }) { Text(ui("account.do_change_password")) }
         }
         OutlinedButton(enabled = !s.busy, onClick = vm::logout) { Text(ui("account.sign_out")) }
     } else {

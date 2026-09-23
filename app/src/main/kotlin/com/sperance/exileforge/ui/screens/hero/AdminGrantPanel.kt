@@ -1,5 +1,7 @@
 package com.sperance.exileforge.ui.screens.hero
 
+import com.sperance.exileforge.core.display.Glyph
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -34,8 +36,8 @@ import com.sperance.exileforge.ui.theme.Muted
     if (!expanded) return
     ForgePanel {
         Engraved(ui("grant.random_item"))
-        Spinner(ui("common.rarity"), s.play.grantRarity, mapOf("" to any) + rarities.associateWith { rarityTitle(it, s.lang) }, enabled, vm::grantRarity)
-        Spinner(ui("grant.category"), s.play.grantSlot, mapOf("" to any) + slots.associateWith { slotTitle(it, s.lang) }, enabled, vm::grantSlot)
+        Spinner(ui("common.rarity"), s.play.grantRarity, mapOf("" to any) + rarities.associateWith { rarityTitle(it, s.lang) }, enabled, glyph = Glyph.RARITY, onChange = vm::grantRarity)
+        Spinner(ui("grant.category"), s.play.grantSlot, mapOf("" to any) + slots.associateWith { slotTitle(it, s.lang) }, enabled, glyph = Glyph.ITEM, onChange = vm::grantSlot)
         Button(enabled = enabled, onClick = vm::grantRandom, modifier = Modifier.fillMaxWidth()) {
             Icon(ForgeGlyphs.Anvil, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp))
             Text(ui("grant.roll"))

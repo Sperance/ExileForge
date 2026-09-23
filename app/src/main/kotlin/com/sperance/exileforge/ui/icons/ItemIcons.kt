@@ -4,9 +4,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import com.sperance.exileforge.core.display.IconKey
 import com.sperance.exileforge.core.display.documentIcon
-import com.sperance.exileforge.core.display.icon
 import com.sperance.exileforge.core.display.itemVisualKind
 import kotlinx.serialization.json.JsonObject
 
@@ -26,16 +24,4 @@ import kotlinx.serialization.json.JsonObject
     val sprite = documentIcon(document)?.let(::spriteVector)
     if (sprite != null) Icon(sprite, null, tint = paint, modifier = modifier)
     else ItemEmblem(itemVisualKind(document), paint, modifier)
-}
-
-/**
- * A rolled property, a stat or a modifier: the server's drawing, or the glyph that matches its name.
- *
- * Stats pass their own enum name as the key, so they are looked up exactly. Everything else — the
- * client's own labels like "Цена" and "Продавец" — never matches a stat key and falls through to
- * the bundled glyph, which is where those labels' icons have always come from.
- */
-@Composable fun PropertyIcon(key: String, tint: Color, modifier: Modifier = Modifier) {
-    val sprite = icon(IconKey.stat(key))?.let(::spriteVector)
-    Icon(sprite ?: propertyIcon(key), null, tint = tint, modifier = modifier)
 }

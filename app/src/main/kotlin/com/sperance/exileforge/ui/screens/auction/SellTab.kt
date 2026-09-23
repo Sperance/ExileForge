@@ -1,5 +1,7 @@
 package com.sperance.exileforge.ui.screens.auction
 
+import com.sperance.exileforge.core.display.Glyph
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -55,21 +57,21 @@ import com.sperance.exileforge.ui.theme.Muted
         ForgePanel {
             Engraved(ui("sell.what"))
             Spinner(ui("sell.lot_kind"), kind.name,
-                AuctionLotKind.entries.associate { it.name to lotKindTitle(it, s.lang) }, !s.busy) { kind = AuctionLotKind.valueOf(it) }
+                AuctionLotKind.entries.associate { it.name to lotKindTitle(it, s.lang) }, !s.busy, glyph = Glyph.ITEM) { kind = AuctionLotKind.valueOf(it) }
             if (kind == AuctionLotKind.EQUIPMENT) {
                 // A jewel is worn too, but it comes out of a socket on the tree, not off a slot.
                 if (equipment.isEmpty()) Text(ui("sell.no_equipment"), color = Muted)
-                else Spinner(ui("common.item"), goods, equipment, !s.busy) { goods = it }
+                else Spinner(ui("common.item"), goods, equipment, !s.busy, glyph = Glyph.ITEM) { goods = it }
             } else {
                 if (bag.isEmpty()) Text(ui("hero.bag_empty"), color = Muted)
-                else Spinner(ui("sell.bag_item"), goods, bag, !s.busy) { goods = it }
+                else Spinner(ui("sell.bag_item"), goods, bag, !s.busy, glyph = Glyph.CURRENCY) { goods = it }
                 OutlinedTextField(amount, { amount = it }, label = { Text(ui("sell.amount_owned", owned)) },
                     singleLine = true, modifier = Modifier.fillMaxWidth())
             }
         }
         ForgePanel {
             Engraved(ui("card.price"))
-            Spinner(ui("orb.orb"), orb, s.world.orbs.associate { it.id to it.title(s.lang) }, !s.busy) { orb = it }
+            Spinner(ui("orb.orb"), orb, s.world.orbs.associate { it.id to it.title(s.lang) }, !s.busy, glyph = Glyph.CURRENCY) { orb = it }
             OutlinedTextField(price, { price = it }, label = { Text(ui("sell.price")) },
                 singleLine = true, modifier = Modifier.fillMaxWidth())
             Text(ui("sell.price_note"),

@@ -1,5 +1,7 @@
 package com.sperance.exileforge.ui.screens.tree
 
+import com.sperance.exileforge.core.display.Glyph
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -129,9 +131,9 @@ import kotlinx.serialization.json.putJsonArray
             item {
                 ForgePanel {
                     Engraved(hero.character.name)
-                    PropertyRow(ui("tree.points_total"), hero.tree.total.toString(), "level")
-                    PropertyRow(ui("tree.points_spent"), hero.tree.spent.toString(), "level")
-                    PropertyRow(ui("tree.points_available"), hero.tree.available.toString(), "level")
+                    PropertyRow(ui("tree.points_total"), hero.tree.total.toString(), Glyph.LEVEL)
+                    PropertyRow(ui("tree.points_spent"), hero.tree.spent.toString(), Glyph.LEVEL)
+                    PropertyRow(ui("tree.points_available"), hero.tree.available.toString(), Glyph.LEVEL)
                     Text(ui("tree.points_note"),
                         color = Muted, style = MaterialTheme.typography.bodySmall)
                 }
@@ -145,7 +147,7 @@ import kotlinx.serialization.json.putJsonArray
                     // It is the tree's contribution, not the character's total — which is why a
                     // percentage stays a percentage and is written with its sign.
                     hero.tree.totals.forEach { total ->
-                        PropertyRow(statTitle(total.stat, s.lang), contributionText(total), total.stat)
+                        PropertyRow(statTitle(total.stat, s.lang), contributionText(total), stat = total.stat)
                     }
                 }
             }
@@ -272,9 +274,9 @@ import kotlinx.serialization.json.putJsonArray
         // The node's name is this panel's title, so it keeps its own casing rather than being
         // shouted as an Engraved caption the way a section heading is.
         Text(node.title, color = nodeColour(node, true), style = MaterialTheme.typography.titleMedium)
-        PropertyRow(ui("tree.node_type"), nodeTypeTitle(node.type.name, s.lang), "node")
-        PropertyRow(ui("tree.cost"), node.cost.toString(), "level")
-        PropertyRow(ui("card.state"), if (allocated) ui("tree.taken") else ui("tree.not_taken"), "node")
+        PropertyRow(ui("tree.node_type"), nodeTypeTitle(node.type.name, s.lang), Glyph.TREE)
+        PropertyRow(ui("tree.cost"), node.cost.toString(), Glyph.LEVEL)
+        PropertyRow(ui("card.state"), if (allocated) ui("tree.taken") else ui("tree.not_taken"), Glyph.TREE)
         node.details.takeIf { it.isNotBlank() }?.let { Text(it, color = Muted, style = MaterialTheme.typography.bodySmall) }
 
         OrnateDivider()

@@ -1,5 +1,7 @@
 package com.sperance.exileforge.ui.screens.auction
 
+import com.sperance.exileforge.core.display.Glyph
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -124,15 +126,15 @@ import kotlinx.serialization.json.put
         OutlinedTextField(f.title, { vm.auctionFilter(f.copy(title = it)) }, label = { Text(ui("auction.name")) },
             singleLine = true, modifier = Modifier.fillMaxWidth())
         Spinner(ui("auction.what_sold"), f.kind,
-            mapOf("" to any) + AuctionLotKind.entries.associate { it.name to lotKindTitle(it, s.lang) }, !s.busy) { vm.auctionFilter(f.copy(kind = it)) }
+            mapOf("" to any) + AuctionLotKind.entries.associate { it.name to lotKindTitle(it, s.lang) }, !s.busy, glyph = Glyph.ITEM) { vm.auctionFilter(f.copy(kind = it)) }
         Spinner(ui("auction.priced_in"), f.priceOrbId,
-            mapOf("" to any) + s.world.orbs.associate { it.id to it.title(s.lang) }, !s.busy) { vm.auctionFilter(f.copy(priceOrbId = it)) }
+            mapOf("" to any) + s.world.orbs.associate { it.id to it.title(s.lang) }, !s.busy, glyph = Glyph.CURRENCY) { vm.auctionFilter(f.copy(priceOrbId = it)) }
         OutlinedTextField(f.maxPrice, { vm.auctionFilter(f.copy(maxPrice = it)) }, label = { Text(ui("auction.price_max")) },
             singleLine = true, modifier = Modifier.fillMaxWidth())
         TextButton(onClick = { more = !more }) { Text(ui("auction.more_filters", if (more) ui("common.hide") else ui("common.show"))) }
         if (more) {
-            Spinner(ui("common.slot"), f.slot, mapOf("" to any) + slots.associateWith { slotTitle(it, s.lang) }, !s.busy) { vm.auctionFilter(f.copy(slot = it)) }
-            Spinner(ui("common.rarity"), f.rarity, mapOf("" to any) + rarities.associateWith { rarityTitle(it, s.lang) }, !s.busy) { vm.auctionFilter(f.copy(rarity = it)) }
+            Spinner(ui("common.slot"), f.slot, mapOf("" to any) + slots.associateWith { slotTitle(it, s.lang) }, !s.busy, glyph = Glyph.ITEM) { vm.auctionFilter(f.copy(slot = it)) }
+            Spinner(ui("common.rarity"), f.rarity, mapOf("" to any) + rarities.associateWith { rarityTitle(it, s.lang) }, !s.busy, glyph = Glyph.RARITY) { vm.auctionFilter(f.copy(rarity = it)) }
             OutlinedTextField(f.minItemLevel, { vm.auctionFilter(f.copy(minItemLevel = it)) }, label = { Text(ui("auction.ilvl_from")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(f.maxItemLevel, { vm.auctionFilter(f.copy(maxItemLevel = it)) }, label = { Text(ui("auction.ilvl_to")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
             EntitySpinner(ui("auction.seller"), f.sellerId, EntitySource.CHARACTER, !s.busy) { vm.auctionFilter(f.copy(sellerId = it)) }
@@ -267,11 +269,11 @@ private fun lotDocument(s: ForgeState, lot: AuctionLot): JsonObject {
                 ForgePanel {
                     Engraved(ui("auction.lot"))
                     if (lot.equipment == null) Text(lot.title, color = Gold, style = MaterialTheme.typography.titleMedium)
-                    if (lot.kind == AuctionLotKind.ITEM) PropertyRow(ui("auction.amount"), lot.amount.toString(), "item")
+                    if (lot.kind == AuctionLotKind.ITEM) PropertyRow(ui("auction.amount"), lot.amount.toString(), Glyph.ITEM)
                     // The price is always counted in orbs; the catalogue the hero read gives the orb its name.
-                    PropertyRow(ui("card.price"), orbPrice(s, lot), "price")
-                    PropertyRow(ui("auction.seller"), lot.sellerName.ifBlank { "…${lot.sellerId.takeLast(6)}" }, "character")
-                    listedAt(lot.createdAt)?.let { PropertyRow(ui("auction.listed_at"), it, "level") }
+                    PropertyRow(ui("card.price"), orbPrice(s, lot), Glyph.CURRENCY)
+                    PropertyRow(ui("auction.seller"), lot.sellerName.ifBlank { "…${lot.sellerId.takeLast(6)}" }, Glyph.CHARACTER)
+                    listedAt(lot.createdAt)?.let { PropertyRow(ui("auction.listed_at"), it, Glyph.LEVEL) }
                     note?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelMedium) }
                     Button(enabled = enabled, onClick = onAction, modifier = Modifier.fillMaxWidth()) { Text(action) }
                     Text(ui("auction.lot_note"),

@@ -7,7 +7,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.editor.defaultValue
 import com.sperance.exileforge.core.editor.schemaFields
-import com.sperance.exileforge.ui.icons.propertyIcon
+import com.sperance.exileforge.core.display.Glyph
+import com.sperance.exileforge.ui.icons.vector
 import com.sperance.exileforge.ui.theme.Gold
 import kotlinx.serialization.json.*
 
@@ -18,7 +19,7 @@ import kotlinx.serialization.json.*
                 val value = document[field.key] ?: defaultValue(field.spec, field.default)
                 val editable = enabled && field.key !in locked
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(propertyIcon(field.key), null, tint = Gold, modifier = Modifier.size(18.dp))
+                    Icon(Glyph.ofField(field.key).vector, null, tint = Gold, modifier = Modifier.size(18.dp))
                     Text(field.label, style = MaterialTheme.typography.labelLarge)
                 }
                 if (field.nullable) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {

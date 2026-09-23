@@ -1,5 +1,7 @@
 package com.sperance.exileforge.ui.screens.redemption
 
+import com.sperance.exileforge.core.display.Glyph
+
 import androidx.compose.foundation.layout.*
 import com.sperance.exileforge.presentation.state.Reads
 import androidx.compose.foundation.lazy.LazyColumn
@@ -79,8 +81,8 @@ import com.sperance.exileforge.ui.theme.Muted
         code.description?.takeIf { it.isNotBlank() }?.let {
             Text(it, color = Muted, style = MaterialTheme.typography.bodySmall)
         }
-        PropertyRow(ui("redemption.used"), code.used.toString(), "level")
-        code.expiredAt?.takeIf { it.isNotBlank() }?.let { PropertyRow(ui("redemption.expires"), it, "description") }
+        PropertyRow(ui("redemption.used"), code.used.toString(), Glyph.LEVEL)
+        code.expiredAt?.takeIf { it.isNotBlank() }?.let { PropertyRow(ui("redemption.expires"), it, Glyph.TEXT) }
         OrnateDivider(Gold)
         code.treasure.forEach { reward -> Text(rewardLine(reward), style = MaterialTheme.typography.labelMedium) }
     }
@@ -130,7 +132,7 @@ private fun rewardLine(reward: RedemptionReward): String {
         OrnateDivider(Gold)
         Engraved(ui("redemption.reward"))
         Spinner(ui("redemption.kind"), kind.name,
-            RedemptionKind.entries.associate { it.name to ui("enum.reward.${it.name}") }, !s.busy) {
+            RedemptionKind.entries.associate { it.name to ui("enum.reward.${it.name}") }, !s.busy, glyph = Glyph.CURRENCY) {
             kind = RedemptionKind.valueOf(it); itemId = ""
         }
         if (needsDocument) EntitySpinner(

@@ -69,7 +69,7 @@ class ServerIconTest {
         // No set: the bundled emblem stands in and the card still renders in full.
         compose.setContent { ForgeTheme { Column(Modifier.fillMaxSize().background(Ink)) {
             ItemCard(helmet, actionLabel = "Открыть")
-            PropertyRow("Броня", "120", "STOCK_ARMOR")
+            PropertyRow("Броня", "120", stat = "STOCK_ARMOR")
         } } }
         compose.onNodeWithText("Железный шишак").assertIsDisplayed()
         compose.onNodeWithText("120").assertIsDisplayed()

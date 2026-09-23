@@ -1,5 +1,7 @@
 package com.sperance.exileforge.ui.screens.session
 
+import com.sperance.exileforge.core.display.Glyph
+
 import androidx.compose.foundation.clickable
 import com.sperance.exileforge.presentation.state.Reads
 import androidx.compose.foundation.layout.*
@@ -107,8 +109,8 @@ import com.sperance.exileforge.ui.theme.*
     val characterClass = s.world.classes.firstOrNull { it.id == character.classId }
     ForgePanel(modifier = Modifier.clickable(enabled = !s.busy, onClick = onPlay)) {
         Text(character.name, color = GoldBright, style = MaterialTheme.typography.titleMedium)
-        PropertyRow(ui("common.class"), characterClass?.title ?: ui("chars.unknown"), "character")
-        PropertyRow(ui("common.level"), character.level.toString(), "level")
+        PropertyRow(ui("common.class"), characterClass?.title ?: ui("chars.unknown"), Glyph.CHARACTER)
+        PropertyRow(ui("common.level"), character.level.toString(), Glyph.LEVEL)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(enabled = !s.busy, onClick = onPlay, modifier = Modifier.weight(1f)) { Text(ui("auth.play")) }
             OutlinedButton(enabled = !s.busy, onClick = onDelete) { Text(ui("chars.release_do"), color = MaterialTheme.colorScheme.error) }
@@ -133,7 +135,7 @@ import com.sperance.exileforge.ui.theme.*
             singleLine = true, modifier = Modifier.fillMaxWidth())
         if (s.world.classes.isEmpty()) Text(ui("editor.no_classes"),
             color = MaterialTheme.colorScheme.error)
-        else Spinner(ui("common.class"), classId, s.world.classes.associate { it.id to it.title }, !s.busy) { classId = it }
+        else Spinner(ui("common.class"), classId, s.world.classes.associate { it.id to it.title }, !s.busy, glyph = Glyph.CHARACTER) { classId = it }
         chosen?.let { option ->
             if (option.details.isNotBlank()) Text(option.details, color = Muted, style = MaterialTheme.typography.bodySmall)
             Text(ui("editor.level1_base") + option.baseStats.joinToString(" · ") {

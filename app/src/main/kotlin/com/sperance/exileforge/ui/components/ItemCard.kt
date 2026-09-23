@@ -23,7 +23,8 @@ import com.sperance.exileforge.core.display.*
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.modifier.ModifierDefinition
 import com.sperance.exileforge.ui.icons.ItemIcon
-import com.sperance.exileforge.ui.icons.propertyIcon
+import com.sperance.exileforge.core.display.Glyph
+import com.sperance.exileforge.ui.icons.vector
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.serialization.json.*
 
@@ -35,7 +36,7 @@ import kotlinx.serialization.json.*
  */
 @Composable fun ModifierLine(modifier: JsonObject, definitions: List<ModifierDefinition>) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Icon(propertyIcon(modifier.text("modifierId")), null, tint = Rune, modifier = Modifier.size(16.dp))
+        Icon(Glyph.ofModifier(modifier.text("modifierId"), definitions).vector, null, tint = Rune, modifier = Modifier.size(16.dp))
         Text(modifierText(modifier, definitions), color = Parchment, style = MaterialTheme.typography.bodyMedium)
     }
 }
@@ -87,7 +88,7 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
  */
 @Composable fun BasePropertyLine(property: BaseProperty, withBase: Boolean = true) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Icon(propertyIcon(property.modifierId), null, tint = Rune, modifier = Modifier.size(16.dp))
+        Icon(Glyph.ofStat(property.values.firstOrNull()?.stat.orEmpty()).vector, null, tint = Rune, modifier = Modifier.size(16.dp))
         Text(basePropertyText(property, withBase), color = Parchment, style = MaterialTheme.typography.bodyMedium)
     }
 }

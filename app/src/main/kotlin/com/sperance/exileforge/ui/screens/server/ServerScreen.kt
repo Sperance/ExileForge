@@ -1,5 +1,7 @@
 package com.sperance.exileforge.ui.screens.server
 
+import com.sperance.exileforge.core.display.Glyph
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -31,7 +33,7 @@ import com.sperance.exileforge.ui.theme.Panel
             // A character is swapped by leaving the game, never from inside a tab: every button
             // below is bound to the one chosen in the menu, and this is the way back to it.
             s.character?.let { hero ->
-                PropertyRow(ui("common.character"), hero.name + ui("app.hero_level", hero.level), "character")
+                PropertyRow(ui("common.character"), hero.name + ui("app.hero_level", hero.level), Glyph.CHARACTER)
             }
             OutlinedButton(enabled = !s.busy && !s.admin.editorOpen, onClick = vm::leaveGame, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("account.change_character"))
@@ -61,12 +63,12 @@ import com.sperance.exileforge.ui.theme.Panel
             // Names of things belong to the server since 0.14.0: without its dictionary the screens
             // print codes, so how much of it arrived is worth saying out loud.
             if (s.world.localeStrings > 0) PropertyRow(ui("account.dictionary"),
-                "${s.world.localeLanguage.uppercase()} · " + ui("account.strings", s.world.localeStrings), "description")
+                "${s.world.localeLanguage.uppercase()} · " + ui("account.strings", s.world.localeStrings), Glyph.TEXT)
             else Text(ui("account.dictionary_missing"), color = Muted, style = MaterialTheme.typography.bodySmall)
             // Drawings come from the server too, and a missing set is invisible by design: every
             // hole falls back to a bundled emblem, so the count is the only way to notice one.
             if (s.world.iconKeys > 0) PropertyRow(ui("account.icons"),
-                ui("account.icons_count", s.world.iconKeys, s.world.iconSprites), "image")
+                ui("account.icons_count", s.world.iconKeys, s.world.iconSprites), Glyph.IMAGE)
             else Text(ui("account.icons_missing"), color = Muted, style = MaterialTheme.typography.bodySmall)
             OutlinedButton(enabled = !s.busy, onClick = { vm.refreshLocale(); vm.refreshIcons() }, modifier = Modifier.fillMaxWidth()) { Text(ui("account.reread_bundles")) }
         }

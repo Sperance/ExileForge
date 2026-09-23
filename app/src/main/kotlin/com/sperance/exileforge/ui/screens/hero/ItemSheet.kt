@@ -1,5 +1,7 @@
 package com.sperance.exileforge.ui.screens.hero
 
+import com.sperance.exileforge.core.display.Glyph
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -133,7 +135,7 @@ private enum class ItemAction { ORB, AUCTION, SELL }
             Engraved(ui("sell.list"))
             Text(name, color = Parchment, style = MaterialTheme.typography.titleMedium)
             if (s.world.orbs.isEmpty()) Text(ui("orb.none"), color = Muted)
-            else Spinner(ui("orb.orb"), orb, s.world.orbs.associate { it.id to it.title(s.lang) }, !s.busy) { orb = it }
+            else Spinner(ui("orb.orb"), orb, s.world.orbs.associate { it.id to it.title(s.lang) }, !s.busy, glyph = Glyph.CURRENCY) { orb = it }
             OutlinedTextField(price, { value -> price = value.filter(Char::isDigit) }, label = { Text(ui("sell.price")) },
                 singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
             Text(ui("sell.price_note"), color = Muted, style = MaterialTheme.typography.bodySmall)

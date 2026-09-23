@@ -79,7 +79,7 @@ import com.sperance.exileforge.ui.theme.*
             if (hero.stats.isEmpty()) item { Text(ui("hero.no_stats"), color = Muted) }
             // Whatever the sheet carried, whole: nothing here is folded behind another tap.
             items(hero.stats.toSortedMap().toList(), key = { it.first }) { (key, value) ->
-                PropertyRow(statTitle(key, s.lang), statNumber(key, value), key)
+                PropertyRow(statTitle(key, s.lang), statNumber(key, value), stat = key)
             }
         }
     }

@@ -20,7 +20,7 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.13.0, `versionCode` 30) for the
+ExileForge is an **Android Compose client** (version 2.14.0, `versionCode` 31) for the
 **ktor-bestgame** RPG server (0.22.0), pinned in
 `core/.../contract/Contract.kt` as `SERVER_COMMIT = f1dae3178b4b566297eab3022678f984b2bf772c`
 on the server branch `claude/tender-pasteur-a36kj2`.
@@ -110,6 +110,7 @@ core/                                   Pure JVM library (java-library + kotlin-
                  ServerLocale.kt        LocaleManifest/LocaleBundle/LocaleKey, the global `serverLocale`, loc/locOr/locError
   editor/        EditorSchema.kt        Declarative form schemas (FormField/InputSpec) used by the editor
   display/       ItemPresentation.kt    Display-only projections and code-to-title tables
+                 Glyph.kt               What a small icon means: stats, fields, catalogues and modifiers mapped to a Glyph
                  ServerIcons.kt         IconManifest/IconBundle/IconKey, the global `serverIcons`
   verification/  CrudScenario.kt        Admin-only self-check run from the Checks screen
   src/main/resources/i18n/              ui_{ru,en}.json — every label the client wrote itself
@@ -122,7 +123,7 @@ app/                                    Android application (minSdk 26, compile/
   ui/            ForgeApp.kt            Scaffold, banner with RU/EN switch, bottom navigation, tab dispatch
                  screens/               session (auth + character menu), admin, catalog, editor, hero, tree, craft, auction, checks, server
                  components/            ItemCard, ItemRow, PropertyRow, InfoCard, ConfirmSheet, spinners and Ornament.kt
-                 forms/, icons/ (ForgeGlyphs vector set, ItemEmblem, ItemIcon/PropertyIcon, ServerSprite), theme/
+                 forms/, icons/ (ForgeGlyphs vector set, GlyphIcons, ItemEmblem, ItemIcon/StatIcon, ServerSprite), theme/
   data/settings/ServerStore.kt          DataStore Preferences: base URL, saved filters, language, locale bundles, icon set, device-session flag
                  DeviceId.kt            UUID v5 over the hardware fingerprint plus ANDROID_ID
 CHANGELOG.md                            Dated entries per version; the server keeps its own
@@ -362,7 +363,7 @@ These are enforced by tests and are the point of the client's design:
     server: `icons/
     index.json` carries a fingerprint the server computes from the file, `icons/icons.json` holds
     the drawings and a `code → drawing` table, and the client paints the path data itself. A
-    sprite carries alpha and no colour, so `ItemIcon` and `PropertyIcon` tint it by rarity exactly
+    sprite carries alpha and no colour, so `ItemIcon` and `StatIcon` tint it by rarity exactly
     as they tint the bundled set. Everything the server does not cover — and every sprite whose
     path data will not parse — falls back to `ItemEmblem`/`ForgeGlyphs`, which is why a missing set
     is invisible rather than broken and why the Account tab reports how much of it arrived. Keys
@@ -468,6 +469,15 @@ These are enforced by tests and are the point of the client's design:
   a listing, a sale, and the base for an administrator — so what a player came to do is never below
   the fold. An empty equipment slot opens the stash narrowed to that slot (`SlotPicker`). A vital
   with no current value is a figure in a tile, never a bar: a bar that can only be full says nothing.
+- **An icon names a meaning, never a label.** Small icons are a `Glyph` (`core/display/Glyph.kt`):
+  a caller passes one explicitly (`PropertyRow(..., Glyph.LEVEL)`, `Spinner(..., glyph = Glyph.ITEM)`,
+  `InfoCard(..., glyph = ...)`), or derives it from a domain code — `Glyph.ofStat` from the
+  server's stat enum names, `Glyph.ofField` from a document key, `Glyph.of(catalog)`,
+  `Glyph.ofModifier` from a modifier's first effect. A characteristic goes through
+  `PropertyRow(..., stat = key)`/`StatIcon`, which draws the server's sprite first. `:app` maps a
+  glyph to its drawing in one exhaustive `when` (`ui/icons/GlyphIcons.kt`), so a new glyph does not
+  compile without a picture. Never pick an icon by searching translated text — that is what the
+  removed `propertyIcon` did, and it broke whenever a label was reworded or shown in English.
 - Commit messages follow Conventional Commits: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`
   (docs-only commits often append `[skip ci]`).
 

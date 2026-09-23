@@ -11,14 +11,21 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.sperance.exileforge.ui.icons.PropertyIcon
+import com.sperance.exileforge.core.display.Glyph
+import com.sperance.exileforge.ui.icons.GlyphIcon
+import com.sperance.exileforge.ui.icons.StatIcon
 import com.sperance.exileforge.ui.theme.*
 
-/** One rolled property: socketed rune, engraved label, value struck in gold. */
-@Composable fun PropertyRow(label: String, value: String, iconKey: String = label) {
+/**
+ * One rolled property: socketed rune, engraved label, value struck in gold.
+ *
+ * The icon says what the line is: [glyph] for anything the client wrote itself, or [stat] for a
+ * characteristic, which is drawn from the server's icon set first.
+ */
+@Composable fun PropertyRow(label: String, value: String, glyph: Glyph = Glyph.INFO, stat: String? = null) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Box(Modifier.size(26.dp).background(Rune.copy(alpha = .10f), CutCornerShape(5.dp)), contentAlignment = Alignment.Center) {
-            PropertyIcon(iconKey, Rune, Modifier.size(16.dp))
+            if (stat != null) StatIcon(stat, Rune, Modifier.size(16.dp)) else GlyphIcon(glyph, Rune, Modifier.size(16.dp))
         }
         Text(label, style = MaterialTheme.typography.bodyMedium, color = Parchment, modifier = Modifier.weight(1f))
         Text(value, modifier = Modifier.widthIn(max = 130.dp)

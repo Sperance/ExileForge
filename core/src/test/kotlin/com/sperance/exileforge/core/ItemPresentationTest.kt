@@ -118,3 +118,35 @@ class ItemPresentationTest {
         preciseStats.forEach { assertTrue(it.startsWith("STOCK_"), "$it is not a server stat") }
     }
 }
+
+class GlyphTest {
+    @Test fun `a stat is drawn by its element first, then by its kind`() {
+        assertEquals(Glyph.FIRE, Glyph.ofStat("STOCK_RESIST_FIRE"))
+        assertEquals(Glyph.FIRE, Glyph.ofStat("STOCK_ATTACK_FIRE"))
+        assertEquals(Glyph.SHIELD, Glyph.ofStat("STOCK_ENERGY_SHIELD"))
+        assertEquals(Glyph.MANA, Glyph.ofStat("STOCK_ENERGY"))
+        assertEquals(Glyph.LIFE, Glyph.ofStat("STOCK_HEALTH_REGEN"))
+        assertEquals(Glyph.DEFENCE, Glyph.ofStat("STOCK_ARMOR"))
+        assertEquals(Glyph.CRITICAL, Glyph.ofStat("STOCK_CRITICAL_MULTIPLIER"))
+        assertEquals(Glyph.ATTACK, Glyph.ofStat("STOCK_ATTACK_PHYSICAL"))
+        // A code nobody mapped keeps the neutral glyph rather than a guess.
+        assertEquals(Glyph.INFO, Glyph.ofStat("STOCK_SOMETHING_NEW"))
+    }
+
+    @Test fun `every stat the client names has a glyph of its own`() {
+        val unnamed = com.sperance.exileforge.core.model.character.stockStats.filter { Glyph.ofStat(it) == Glyph.INFO }
+        // The auras and curses have no drawing yet; everything else must.
+        assertEquals(setOf("STOCK_AURA_EFFECT", "STOCK_CURSE_EFFECT"), unnamed.toSet())
+    }
+
+    @Test fun `a field, a catalogue and a modifier name their glyph exactly`() {
+        assertEquals(Glyph.LEVEL, Glyph.ofField("requiredLevel"))
+        assertEquals(Glyph.FIRE, Glyph.ofField("STOCK_RESIST_FIRE"))
+        assertEquals(Glyph.INFO, Glyph.ofField("somethingElse"))
+        assertEquals(Glyph.CHARACTER, Glyph.of(com.sperance.exileforge.core.model.Catalog.CHARACTERS))
+        val armour = com.sperance.exileforge.core.model.modifier.ModifierDefinition(id = "m1",
+            effects = listOf(com.sperance.exileforge.core.model.modifier.ModifierEffect("STOCK_ARMOR", com.sperance.exileforge.core.model.modifier.ModifierOperation.ADD)))
+        assertEquals(Glyph.DEFENCE, Glyph.ofModifier("m1", listOf(armour)))
+        assertEquals(Glyph.INFO, Glyph.ofModifier("unknown", listOf(armour)))
+    }
+}

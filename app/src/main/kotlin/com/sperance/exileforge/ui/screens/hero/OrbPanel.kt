@@ -1,5 +1,7 @@
 package com.sperance.exileforge.ui.screens.hero
 
+import com.sperance.exileforge.core.display.Glyph
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -36,13 +38,13 @@ import com.sperance.exileforge.ui.theme.Muted
     Engraved(ui("orb.title"))
     if (s.world.orbs.isEmpty()) { Text(ui("orb.none"), color = Muted); return }
     Spinner(ui("orb.orb"), s.play.selectedOrb,
-        s.world.orbs.associate { it.id to "${it.title(s.lang)} · ${owned[it.id] ?: 0L}" }, enabled, onSelect)
+        s.world.orbs.associate { it.id to "${it.title(s.lang)} · ${owned[it.id] ?: 0L}" }, enabled, glyph = Glyph.CURRENCY, onChange = onSelect)
     // An orb the client has no translation for still explains itself: the server's dictionary has one.
     orb?.let { Text(it.details(s.lang), color = Muted, style = MaterialTheme.typography.bodySmall) }
     if (instance == null) { Text(ui("orb.choose_item"), color = Muted); return }
     val document = inventoryDocument(instance, s.world.inventoryBases[instance.equipmentId])
-    PropertyRow(ui("common.item"), document.text("name"), "item")
-    PropertyRow(ui("orb.copy_rarity"), rarityTitle(instance.rarity, s.lang), "rarity")
+    PropertyRow(ui("common.item"), document.text("name"), Glyph.ITEM)
+    PropertyRow(ui("orb.copy_rarity"), rarityTitle(instance.rarity, s.lang), Glyph.RARITY)
     if (instance.corrupted) Text(ui("orb.corrupted"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
     Button(enabled = enabled && !instance.corrupted && s.play.selectedOrb.isNotBlank(),
         onClick = { onApply(instance.id, s.play.selectedOrb) }, modifier = Modifier.fillMaxWidth()) {
@@ -73,6 +75,6 @@ const val ORB_TOP_UP = 10L
         instance.id to "${document.text("name")} · ${rarityTitle(instance.rarity, s.lang)}"
     }
     if (targets.isEmpty()) { Text(ui("orb.empty_inventory"), color = Muted); return }
-    Spinner(ui("orb.target"), s.play.selectedEquipment, targets, !s.busy, vm::selectEquipment)
+    Spinner(ui("orb.target"), s.play.selectedEquipment, targets, !s.busy, glyph = Glyph.ITEM, onChange = vm::selectEquipment)
     OrbPanel(s, s.play.selectedEquipment, vm::selectOrb, vm::applyOrb) { orb -> vm.adjustItems(orb, ORB_TOP_UP) }
 }

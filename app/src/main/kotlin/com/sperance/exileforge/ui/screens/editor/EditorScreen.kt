@@ -1,5 +1,7 @@
 package com.sperance.exileforge.ui.screens.editor
 
+import com.sperance.exileforge.core.display.Glyph
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
@@ -65,7 +67,7 @@ import kotlinx.serialization.json.JsonPrimitive
                     // The class is the whole stat base and the way into the tree, and the server has
                     // no route to change it later: it is chosen here or nowhere.
                     Spinner(ui("common.class"), s.admin.draft.text("classId"),
-                        s.world.classes.associate { it.id to it.title }, !s.busy) { chosen ->
+                        s.world.classes.associate { it.id to it.title }, !s.busy, glyph = Glyph.CHARACTER) { chosen ->
                         vm.draftClass(chosen); vm.edit(JsonObject(s.admin.draft + ("classId" to JsonPrimitive(chosen))))
                     }
                     s.world.classes.firstOrNull { it.id == s.admin.draft.text("classId") }?.let { chosen ->

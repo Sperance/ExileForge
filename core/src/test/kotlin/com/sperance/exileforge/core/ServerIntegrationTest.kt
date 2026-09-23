@@ -58,6 +58,33 @@ class ServerIntegrationTest {
      * scoured, transmuted and annulled down to one affix, so exactly one place of the other kind is
      * free for the bench; a rare is fractured and then rerolled, and must keep what was fractured.
      */
+    /**
+     * Two rings and two hands (server 0.24.0): the second ring goes to the free place or the one
+     * named, and a two-handed weapon takes the off-hand with it. The lightest bases are chosen, so
+     * the character's own attributes are enough to wear them.
+     */
+    private suspend fun handsAreTheServers(api: GameApi, id: String) {
+        val sheet = api.hero.stats(id)
+        val catalogue = api.catalog.equipment().filter { it.text("rarity") != "UNIQUE" }
+        fun lightest(slot: String) = catalogue.filter { it.text("slot") == slot }.minByOrNull { demand(it, sheet) }
+            ?: fail("no $slot base in the catalogue")
+
+        val ring = lightest("RING").entityId
+        val first = api.hero.equip(id, api.hero.grant(id, ring).id)
+        val second = api.hero.equip(id, api.hero.grant(id, ring).id)
+        assertEquals(setOf("RING", "RING_2"), setOf(first.equippedSlot, second.equippedSlot), "two rings did not take two places")
+        val third = api.hero.equip(id, api.hero.grant(id, ring).id, "RING_2")
+        assertEquals("RING_2", third.equippedSlot)
+        val worn = api.hero.inventory(id).filter { it.equipped }
+        assertEquals(1, worn.count { it.equippedSlot == "RING_2" }, "the second place holds two rings")
+        assertTrue(worn.any { it.id == first.id || it.id == second.id }, "the other ring was taken off too")
+
+        val shield = api.hero.equip(id, api.hero.grant(id, lightest("SHIELD").entityId).id)
+        val twoHanded = api.hero.equip(id, api.hero.grant(id, lightest("WEAPON_2H").entityId).id)
+        assertEquals("WEAPON_2H", twoHanded.equippedSlot)
+        assertTrue(api.hero.inventory(id).none { it.id == shield.id && it.equipped }, "a two-handed weapon left the shield on")
+    }
+
     private suspend fun craftingIsTheServers(api: GameApi, id: String, templateId: String,
         definitions: List<com.sperance.exileforge.core.model.modifier.ModifierDefinition>) {
         val orbs = api.world.orbs().associateBy { it.orb }
@@ -285,6 +312,7 @@ class ServerIntegrationTest {
             assertFailsWith<ApiFailure> { api.hero.applyOrb(id, instance.id, chaos.id) }
             assertEquals(rerolled.item.params, api.hero.inventory(id).single { it.id == instance.id }.params)
             craftingIsTheServers(api, id, template.entityId, definitions)
+            handsAreTheServers(api, id)
 
             val items = api.catalog.referencePage(com.sperance.exileforge.core.model.EntitySource.ITEM, 0)
             val item = items.items.firstOrNull() ?: fail("the items collection is empty: $items")

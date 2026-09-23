@@ -116,5 +116,5 @@ private enum class HeroSection(val title: String) {
         }
     }
     detailId?.let { id -> ItemSheet(s, vm, id) { detailId = null } }
-    pickSlot?.let { bodySlot -> SlotPicker(s, bodySlot, onDismiss = { pickSlot = null }, onEquip = vm::equip) }
+    pickSlot?.let { bodySlot -> SlotPicker(s, bodySlot, onDismiss = { pickSlot = null }, onEquip = { instanceId -> vm.equip(instanceId, bodySlot) }) }
 }

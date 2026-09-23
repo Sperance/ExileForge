@@ -48,7 +48,7 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     fun loadHero() = runtime.heroViewModel.loadHero()
     /** Re-reads the hero only if what is on screen has gone cold; every character tab opens with it. */
     fun ensureHero() = runtime.heroViewModel.ensureHero()
-    fun equip(instanceId: String) = runtime.heroViewModel.equip(instanceId)
+    fun equip(instanceId: String, slot: String? = null) = runtime.heroViewModel.equip(instanceId, slot)
     fun unequip(instanceId: String) = runtime.heroViewModel.unequip(instanceId)
     fun grant(equipmentId: String) = runtime.heroViewModel.grant(equipmentId)
     fun grantRarity(value: String) = runtime.heroViewModel.grantRarity(value)

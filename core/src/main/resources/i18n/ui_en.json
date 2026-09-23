@@ -438,6 +438,7 @@
   "enum.slot.JEWEL": "Jewel",
   "enum.slot.QUIVER": "Quiver",
   "enum.slot.RING": "Ring",
+  "enum.slot.RING_2": "Ring 2",
   "enum.slot.SHIELD": "Shield",
   "enum.slot.WEAPON_1H": "One handed",
   "enum.slot.WEAPON_2H": "Two handed",

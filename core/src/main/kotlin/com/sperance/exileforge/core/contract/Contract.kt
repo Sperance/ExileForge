@@ -19,14 +19,25 @@ val rarities = listOf("COMMON", "UNCOMMON", "RARE", "EPIC", "UNIQUE", "MYTHICAL"
 // JEWEL is last on purpose: it is not worn on the body but sits in a socket on the tree,
 // and `CharacterEquipment.socketCode` says which one.
 val slots = listOf("HELMET", "BODY", "GLOVES", "RING", "BOOTS", "WINGS", "BELT", "WEAPON_1H", "WEAPON_2H", "QUIVER", "SHIELD", "AMULET", "JEWEL")
+/**
+ * The places an item is worn in, in the order the equipment grid draws them.
+ *
+ * Since server 0.24.0 there are two rings: `RING_2` is where the second one goes, never the slot a
+ * template names — which is why it is here and not in [slots]. A jewel sits in the tree, not here.
+ */
+val wornSlots = slots.filterNot { it == "JEWEL" }.flatMap { if (it == "RING") listOf("RING", "RING_2") else listOf(it) }
+
+/** The template slot that fills a place: the second ring is a ring. */
+fun templateSlot(worn: String): String = if (worn == "RING_2") "RING" else worn
+
 val weapons = listOf("SWORD", "LONGSWORD", "BOW", "WAND", "AXE", "DOUBLEAXE", "DOUBLESWORD", "BLADE")
 val modifierSources = listOf("IMPLICIT", "PREFIX", "SUFFIX", "UNIQUE", "ENCHANTMENT", "CORRUPTION", "PASSIVE")
 val skillNodeTypes = listOf("START", "SMALL", "NOTABLE", "KEYSTONE", "JEWEL_SOCKET")
 val lotKinds = listOf("EQUIPMENT", "ITEM")
 val modifierOperations = listOf("ADD", "INCREASED", "MORE", "SET")
-const val SERVER_COMMIT = "7a6c8b6f51a1754d9e8427c1349f4aa59b73ce7b"
+const val SERVER_COMMIT = "590bd4b1f4e85a5a69e18728861b5979277e000a"
 const val SERVER_BRANCH = "claude/tender-pasteur-a36kj2"
-const val SERVER_VERSION = "0.23.0"
+const val SERVER_VERSION = "0.24.0"
 
 fun template(catalog: Catalog, kind: EquipmentKind = EquipmentKind.Weapon): JsonObject = when (catalog) {
     Catalog.CHARACTERS -> defaultObject("character")

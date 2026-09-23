@@ -15,7 +15,8 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.sperance.exileforge.core.contract.slots
+import com.sperance.exileforge.core.contract.templateSlot
+import com.sperance.exileforge.core.contract.wornSlots
 import com.sperance.exileforge.core.contract.text
 import com.sperance.exileforge.core.display.inventoryDocument
 import com.sperance.exileforge.core.display.requirementReason
@@ -39,8 +40,8 @@ import kotlinx.serialization.json.put
 @Composable fun EquipmentGrid(s: ForgeState, onSlot: (slot: String, instanceId: String?) -> Unit) {
     val hero = s.play.hero ?: return
     // A jewel is worn in a socket on the tree, not on the body, so it has no cell here — the tree
-    // draws it where it actually sits.
-    val bodySlots = slots.filterNot { it == "JEWEL" }
+    // draws it where it actually sits. There are two rings, and each has its own cell.
+    val bodySlots = wornSlots
     BoxWithConstraints {
         // The cells share the width evenly, so no gap is left on the right, and a wide screen fits
         // more of them in a row — a fixed width could do neither.
@@ -48,7 +49,7 @@ import kotlinx.serialization.json.put
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp), maxItemsInEachRow = perRow) {
             bodySlots.forEach { slot ->
                 val instance = hero.equipped[slot]
-                val document = instance?.let { inventoryDocument(it, s.world.inventoryBases[it.equipmentId]) } ?: buildJsonObject { put("slot", slot) }
+                val document = instance?.let { inventoryDocument(it, s.world.inventoryBases[it.equipmentId]) } ?: buildJsonObject { put("slot", templateSlot(slot)) }
                 val reasons = instance?.let { hero.inactive[it.id] }
                 val accent = when {
                     reasons != null -> LifeRed
@@ -84,13 +85,14 @@ import kotlinx.serialization.json.put
  *
  * Whether the character can actually wear a line is the server's verdict, shown as the row shows it
  * everywhere else; the tap sends the command either way and the refusal, if any, is the server's.
+ * The slot goes with it, so a ring picked for the second cell lands in the second ring.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun SlotPicker(s: ForgeState, slot: String, onDismiss: () -> Unit, onEquip: (String) -> Unit) {
     val hero = s.play.hero ?: return
     val fitting = hero.inventory.filter { !it.equipped && !it.socketed }
         .map { it to inventoryDocument(it, s.world.inventoryBases[it.equipmentId]) }
-        .filter { (_, document) -> document.text("slot") == slot }
+        .filter { (_, document) -> document.text("slot") == templateSlot(slot) }
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.8f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

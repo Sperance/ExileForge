@@ -32,7 +32,7 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
         read(Reads.HERO) { readHero() }
     } }
 
-    fun equip(instanceId: String) { with(runtime) { characterCommand { id -> api.hero.equip(id, instanceId) } } }
+    fun equip(instanceId: String, slot: String? = null) { with(runtime) { characterCommand { id -> api.hero.equip(id, instanceId, slot) } } }
     fun unequip(instanceId: String) { with(runtime) { characterCommand { id -> api.hero.unequip(id, instanceId) } } }
 
     /** Admin only: hand the character a named template, rolled by the server. */

@@ -73,7 +73,7 @@ private enum class ItemAction { ORB, BENCH, AUCTION, SELL }
                 when {
                     instance.socketed -> Action(ForgeGlyphs.Gem, ui("hero.unequip"), can) { onDismiss(); vm.unsocketJewel(instance.id) }
                     instance.equipped -> Action(ForgeGlyphs.Helm, ui("hero.unequip"), can) { onDismiss(); vm.unequip(instance.id) }
-                    else -> Action(ForgeGlyphs.Helm, ui("hero.equip"), can, GoldBright) { onDismiss(); vm.equip(instance.id) }
+                    else -> Action(ForgeGlyphs.Helm, ui("hero.equip"), can, GoldBright) { onDismiss(); vm.equip(instance.id, null) }
                 }
                 Action(ForgeGlyphs.Orb, ui("hero.action_orb"), can) { open = ItemAction.ORB }
                 Action(ForgeGlyphs.Anvil, ui("hero.action_bench"), can, Crafted) { open = ItemAction.BENCH }

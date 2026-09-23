@@ -109,7 +109,16 @@ class HeroClient internal constructor(private val http: Transport, private val c
             mapOf("characterId" to characterId, "equipmentId" to equipmentId), authenticated = true))
     }
 
-    suspend fun equip(characterId: String, inventoryId: String): EquipmentInstance = wear("equip", characterId, inventoryId)
+    /**
+     * Puts an item on. Everything it displaces — the other hand, the ring in its place — is taken
+     * off by the server, whose rules those are. [slot] names which of the two rings (`RING`,
+     * `RING_2`) to take; without it the server takes a free one.
+     */
+    suspend fun equip(characterId: String, inventoryId: String, slot: String? = null): EquipmentInstance {
+        requireId(characterId); requireId(inventoryId)
+        val query = mapOf("characterId" to characterId, "inventoryId" to inventoryId) + listOfNotNull(slot?.let { "slot" to it })
+        return WireJson.decodeFromJsonElement(http.request("POST", "api/v1/characterequipment/equip", query, authenticated = true))
+    }
     suspend fun unequip(characterId: String, inventoryId: String): EquipmentInstance = wear("unequip", characterId, inventoryId)
     /**
      * Puts a jewel into a socket on the passive tree, and takes it back out.

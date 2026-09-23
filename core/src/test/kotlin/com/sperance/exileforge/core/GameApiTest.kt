@@ -328,6 +328,12 @@ class GameApiTest {
         ok("""{"_id":"$id","characterId":"$other","equipmentId":"$other","params":[]}""")
         assertFalse(api.hero.unequip(other, id).equipped)
         assertEquals("/game/api/v1/characterequipment/unequip?characterId=$other&inventoryId=$id", server.takeRequest().path)
+        // A ring can be sent to the second place by name; the slot rides in the query, not a body.
+        ok("""{"_id":"$id","characterId":"$other","equipmentId":"$other","equippedSlot":"RING_2","params":[]}""")
+        assertEquals("RING_2", api.hero.equip(other, id, "RING_2").equippedSlot)
+        assertEquals("/game/api/v1/characterequipment/equip?characterId=$other&inventoryId=$id&slot=RING_2", server.takeRequest().path)
+        assertEquals(listOf("RING", "RING_2"), com.sperance.exileforge.core.contract.wornSlots.filter { it.startsWith("RING") })
+        assertEquals("RING", com.sperance.exileforge.core.contract.templateSlot("RING_2"))
     }
 
     /**

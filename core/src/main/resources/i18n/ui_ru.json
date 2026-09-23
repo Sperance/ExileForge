@@ -438,6 +438,7 @@
   "enum.slot.JEWEL": "Самоцвет",
   "enum.slot.QUIVER": "Колчан",
   "enum.slot.RING": "Кольцо",
+  "enum.slot.RING_2": "Кольцо 2",
   "enum.slot.SHIELD": "Щит",
   "enum.slot.WEAPON_1H": "Одноручное",
   "enum.slot.WEAPON_2H": "Двуручное",

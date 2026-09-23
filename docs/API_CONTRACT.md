@@ -1,6 +1,6 @@
 # Контракт Exile Forge 2.5
 
-Сервер: ветка `claude/tender-pasteur-a36kj2`, коммит `7a6c8b6f51a1754d9e8427c1349f4aa59b73ce7b` (ktor-bestgame 0.23.0).
+Сервер: ветка `claude/tender-pasteur-a36kj2`, коммит `590bd4b1f4e85a5a69e18728861b5979277e000a` (ktor-bestgame 0.24.0).
 Успех: `{"success":true,"data":...}`. Ошибка: `{"success":false,"error":{"message","errorClass","errorMethod","errorCode","messageArgs"}}`; HTTP-статус сохраняется клиентом.
 
 `messageArgs` добавлено в 0.17.0 и чинит давнюю дыру: `message` — готовое английское предложение, а `error.<код>` в словаре почти всегда шаблон с дыркой («Уровень {0} слишком мал»). Заполнить её клиенту было нечем, и переводились только 17 кодов из 114 — те, у кого шаблон без дырок. Теперь конверт несёт то, что сервер подставил в своё предложение, и клиент собирает своё. Если после подстановки `{0}` остался, значит аргументов пришло меньше, чем ждёт шаблон, и показывается серверная фраза: половина предложения хуже, чем предложение не на том языке.
@@ -142,7 +142,7 @@
 | Изменить сумку | `POST /api/v1/character/inventory/addItem?characterId=`, тело `[{itemId,amount}]` |
 | **Выдать предмет с роллами** | `POST /api/v1/character/inventory/itemToInventory?characterId=&equipmentId=` |
 | **Применить сферу** | `POST /api/v1/characterequipment/applyOrb?characterId=&inventoryId=&orbItemId=` |
-| Надеть | `POST /api/v1/characterequipment/equip?characterId=&inventoryId=` |
+| Надеть | `POST /api/v1/characterequipment/equip?characterId=&inventoryId=[&slot=RING\|RING_2]` |
 | Снять | `POST /api/v1/characterequipment/unequip?characterId=&inventoryId=` |
 | **Вставить самоцвет** | `POST /api/v1/characterequipment/socket?characterId=&inventoryId=&nodeCode=` → экземпляр |
 | **Вынуть самоцвет** | `POST /api/v1/characterequipment/unsocket?characterId=&inventoryId=` → экземпляр |
@@ -150,6 +150,8 @@
 | Промокод | `POST /api/v1/redemptioncodes/useRedeptionCode?characterId=&redemptionCode=` |
 
 Часть команд — POST с аргументами в строке запроса и без тела; клиент отправляет пустое тело, потому что этого требует HTTP-клиент, а не сервер.
+
+С 0.24.0 надевание снимает и то, с чем предмет не носится: двуручное оружие освобождает `WEAPON_1H`, `SHIELD` и `QUIVER`; лук (одноручный) носится с колчаном, любое другое одноручное — со щитом. Колец два: второе надето в `equippedSlot = RING_2` — шаблона с таким слотом не бывает. Без `slot` кольцо занимает свободное место, а если заняты оба — первое. Обычные базы теперь есть во всех слотах (223 базы PoE), у каждого слота свой пул модификаторов, а локальные аффиксы защиты и урона определяет сама база.
 
 ## Класс, уровни и расчёт характеристик
 

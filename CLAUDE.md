@@ -20,9 +20,9 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.15.0, `versionCode` 32) for the
-**ktor-bestgame** RPG server (0.23.0), pinned in
-`core/.../contract/Contract.kt` as `SERVER_COMMIT = 7a6c8b6f51a1754d9e8427c1349f4aa59b73ce7b`
+ExileForge is an **Android Compose client** (version 2.16.0, `versionCode` 33) for the
+**ktor-bestgame** RPG server (0.24.0), pinned in
+`core/.../contract/Contract.kt` as `SERVER_COMMIT = 590bd4b1f4e85a5a69e18728861b5979277e000a`
 on the server branch `claude/tender-pasteur-a36kj2`.
 
 The client is deliberately **thin**: the server owns items, stats, modifier rolls and inventory.
@@ -436,6 +436,12 @@ These are enforced by tests and are the point of the client's design:
     session beside the orbs, offered for the item's slot only (`BenchRecipe.fits` — a fact the line
     states), and nothing else is pre-checked: one crafted modifier per item, a free place, no twin of
     the same group and the price are refused by the server, for free.
+
+22. **Two rings and two hands are the server's (since 0.24.0).** `RING_2` is a place, not a kind of
+    item: `wornSlots` lists the grid's cells, `templateSlot` maps a cell back to the template slot
+    that fills it, and `HeroClient.equip(…, slot)` names the ring place a cell was picked for. What
+    a two-handed weapon, a bow, a shield or a quiver takes off is decided by the server when the
+    item is put on; the client re-reads the hero and draws what is worn.
 
 ## Conventions
 

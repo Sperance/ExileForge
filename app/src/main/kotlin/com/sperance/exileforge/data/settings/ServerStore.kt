@@ -84,13 +84,23 @@ class ServerStore(private val context: Context) {
     /**
      * Whether the last session was played on this device's own account.
      *
-     * The server issues no token, so a session cannot be restored — only made again. This is the
-     * one bit that says it may be made silently: it is set by playing, and cleared by signing out,
-     * so an explicit sign-out is not undone by the next launch.
+     * A kept token restores a session; this bit says that one may also be *made* silently when the
+     * token is gone or refused. It is set by playing and cleared by signing out, so an explicit
+     * sign-out is not undone by the next launch.
      */
     private val deviceKey = stringPreferencesKey("device_session")
     val deviceSession = context.settings.data.map { it[deviceKey] == "true" }
     suspend fun saveDeviceSession(value: Boolean) { context.settings.edit { it[deviceKey] = value.toString() } }
+
+    /**
+     * The session token for one server. It is a secret, but on this device it is the account's own:
+     * losing it costs a sign-in, and DataStore lives in the app's private storage.
+     */
+    suspend fun token(server: String): String? = context.settings.data.first()[tokenKey(server)]
+    suspend fun saveToken(server: String, value: String?) {
+        context.settings.edit { if (value == null) it.remove(tokenKey(server)) else it[tokenKey(server)] = value }
+    }
+    private fun tokenKey(server: String) = stringPreferencesKey("token:$server")
 
     private fun hashKey(server: String, language: String) = stringPreferencesKey("locale:$server:$language:hash")
     private fun documentKey(server: String, language: String) = stringPreferencesKey("locale:$server:$language:body")

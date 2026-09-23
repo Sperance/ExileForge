@@ -59,7 +59,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: Sperance/ktor-bestgame
-          ref: e9964a01445e76051a4ced23f8b5735a61e51f00
+          ref: 3c152d6efc824e6bbe4779c3eb1d96edd8e924bf
           path: backend
       - uses: actions/setup-java@v4
         with:

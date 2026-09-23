@@ -46,6 +46,23 @@ class ServerIntegrationTest {
             short("requiredIntelligence", sheet.stats["STOCK_INTELLECT"] ?: 0.0)
     }
 
+    /**
+     * Since 0.21.0 the server knows who asks: a player is refused whatever is not theirs, the
+     * catalogue's generic writes belong to an administrator alone, and a session is its token.
+     * Kept apart from the contract test because that one is already as large as a JVM method gets.
+     */
+    private suspend fun accessIsTheServers(url: String, guest: GameApi, guestId: String, adminId: String, adminCharacter: String) {
+        assertEquals(403, assertFailsWith<ApiFailure> { guest.character(adminCharacter) }.status)
+        assertEquals(403, assertFailsWith<ApiFailure> { guest.charactersOf(adminId) }.status)
+        assertEquals(403, assertFailsWith<ApiFailure> { guest.update(Catalog.CHARACTERS, adminCharacter, buildJsonObject { put("name", "stolen") }) }.status)
+        assertEquals(403, assertFailsWith<ApiFailure> { guest.stats(adminCharacter) }.status)
+        // A kept token restores the session on a fresh client, and a revoked one is refused.
+        val kept = requireNotNull(guest.sessionToken())
+        assertEquals(guestId, GameApi(url).resume(kept).id)
+        guest.revoke(kept)
+        assertEquals(401, assertFailsWith<ApiFailure> { GameApi(url).resume(kept) }.status)
+    }
+
     @Test fun realServerClientContract(): Unit = runBlocking {
         val url = System.getenv("EF_LIVE_URL")
         assumeTrue("Enabled only by the isolated client/server job", !url.isNullOrBlank())
@@ -135,6 +152,7 @@ class ServerIntegrationTest {
             // The second sign-in finds the same account rather than making a second one.
             assertEquals(registered.id, GameApi(url).loginByDevice(device).id)
             assertTrue(guest.charactersOf(registered.id).isEmpty(), "a new account starts with no characters")
+            accessIsTheServers(url, guest, registered.id, admin.id, id)
             // The account is left behind: a game client has no route that deletes one, and the
             // client-server job seeds a fresh database for every run anyway.
 

@@ -37,6 +37,12 @@ const val MAX_ITEM_AMOUNT = 100_000_000_000L
     val countCharacters: Int = 0,
 )
 
+/** What every sign-in answers since server 0.21.0: the account and the token that stands for it. */
+@Serializable data class SignedIn(val user: UserProfile, val token: String)
+@Serializable data class LoginCredentials(val login: String, val password: String)
+@Serializable data class DeviceCredentials(val deviceId: String)
+@Serializable data class PasswordChange(val password: String, val newPassword: String)
+
 /**
  * One entry of `GET /system/routes`: how the client learns what this server can do.
  *
@@ -57,10 +63,13 @@ data class ApiCapabilities(val routes: Set<String>) {
     /** Everything the catalogue, editor and hero screens call. Missing any of it means a stale server. */
     fun requireWorkbench() {
         val required = listOf(
-            "GET" to "/api/v1/user/login",
+            // Since 0.21.0 a sign-in is a POST that answers a token, and /me is how one comes back.
+            "POST" to "/api/v1/user/login",
             // The player never types anything: the account is found, or made, by device.
-            "GET" to "/api/v1/user/login/byDeviceId",
+            "POST" to "/api/v1/user/login/byDeviceId",
             "POST" to "/api/v1/user/byDeviceId",
+            "GET" to "/api/v1/user/me",
+            "POST" to "/api/v1/user/logout",
             "GET" to "/api/v1/character/byUser",
             "GET" to "/api/v1/equipment/paged",
             // The base of an item lives in the catalogue alone since 0.16.0, so reading it whole

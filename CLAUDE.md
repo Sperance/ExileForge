@@ -20,9 +20,9 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.8.0, `versionCode` 25) for the
-**ktor-bestgame** RPG server (0.20.0), pinned in
-`core/.../contract/Contract.kt` as `SERVER_COMMIT = e9964a01445e76051a4ced23f8b5735a61e51f00`
+ExileForge is an **Android Compose client** (version 2.9.0, `versionCode` 26) for the
+**ktor-bestgame** RPG server (0.21.0), pinned in
+`core/.../contract/Contract.kt` as `SERVER_COMMIT = 3c152d6efc824e6bbe4779c3eb1d96edd8e924bf`
 on the server branch `claude/tender-pasteur-a36kj2`.
 
 The client is deliberately **thin**: the server owns items, stats, modifier rolls and inventory.
@@ -215,16 +215,24 @@ These are enforced by tests and are the point of the client's design:
 3. **The server owns versioning.** PUT sends only the changed fields and DELETE sends no body —
    the server reads the stored document, checks its own `version` and rejects a racing write. A
    mutation is **never** silently retried, and a rejection is surfaced with its message.
-4. **There is no token.** `GET /api/v1/user/login` answers with the account document, which is the
-   whole session and lives in memory only. `logout()` drops it; `authenticated = true` requires it.
-   A 401 still clears the session through `GameApi(onUnauthorized = ...)` → `clearSession()`.
+4. **The session is a Bearer token (since server 0.21.0).** `POST /api/v1/user/login` (and both
+   device routes) take a JSON body and answer `{user, token}`; every other non-public request
+   carries `Authorization: Bearer`. The server stores only the token's hash, for 30 days, extended
+   on each use. `ServerStore` keeps the token per server; `logout()` drops it here, `revoke(token)`
+   ends it on the server. A 401 goes through `GameApi(onUnauthorized = ...)`: the session is
+   cleared, the stored token forgotten, and a device player is signed in again without being
+   asked. Who may call what is the server's table (`AccessPolicy`): generic CRUD writes are
+   ADMIN-only except creating and deleting one's own character, and a foreign `userId` or
+   `characterId` is refused (`AUTH_004`/`AUTH_005`) — never work around a 403 client-side.
 5. **Uncertain writes are surfaced, not retried.** `FailureState.UncertainWrite` (IO error or 5xx
    on a write) tells the user to refresh. There is no durable replay: this server has no
    `requestId`, so a repeat would create a second instance.
 6. **Capabilities gate features.** `ApiCapabilities` is built from the server's own `/system/routes`
    table, and `requireWorkbench()` runs before login so a stale server is named, not guessed at.
-7. **Secrets never reach the journal.** `request(sensitive = true)` for login and password change;
-   the query string and body are stored as `[скрыто]`. The account document lives in memory only.
+7. **Secrets never reach the journal.** `request(sensitive = true)` for every exchange that carries a
+   password or answers a token (both logins, device registration, password change): the query,
+   body and response are stored as `[скрыто]`, and the `Authorization` header is never journaled.
+   A password never travels in a query string.
 8. **Template vs. instance: the base is a reference, never a copy.** A template carries
    `modifierIds` — a pool of `ModifierDefinition` ids — and `baseParams`, the armour, damage and
    attack speed every copy of it has. What lands on a copy, in which tier and with which value, is
@@ -320,8 +328,8 @@ These are enforced by tests and are the point of the client's design:
     and only stops counting, landing in the sheet's `inactive`. Never disable a control on a
     requirement the client worked out itself; send the command and show the refusal.
 16. **Release builds require HTTPS** (`usesCleartextTraffic=false`); only the debug manifest
-    permits cleartext for local servers. This matters more than usual: the password travels as a
-    query parameter, because that is the route the server exposes.
+    permits cleartext for local servers. This matters more than usual: the token in every header
+    is the account for 30 days.
 17. **No network or raster images; a drawing is outlines, not a picture.** No image file is ever
     downloaded, and no entity names one: the `image` URL both catalogues used to carry was removed
     in 0.15.1, because nothing had ever fetched it. The *shape* of an icon does come from the
@@ -363,11 +371,13 @@ These are enforced by tests and are the point of the client's design:
     wants, and then the server's finished sentence wins: half a sentence is worse than one in the
     wrong language. See `locError`.
 
-19. **A session is made, never restored; a character is chosen once per session.** The server
-    issues no token, so a relaunch signs in again — silently by device when `ServerStore`'s
-    `deviceSession` flag says the last session was played that way, and an explicit sign-out
-    clears it. Registration *is* the sign-in: `GET /user/login/byDeviceId` answering `US_015`
-    means "never seen", and that becomes `POST /user/byDeviceId`; any other refusal is reported,
+19. **A session is restored by its token; a character is chosen once per session.** A relaunch
+    calls `GET /user/me` with the token `ServerStore` kept for that server (`SessionViewModel.resume`,
+    silent). Without a token it signs in again — silently by device when `ServerStore`'s
+    `deviceSession` flag says the last session was played that way; an explicit sign-out clears
+    both the flag and the token and revokes it. Registration *is* the sign-in:
+    `POST /user/login/byDeviceId` answering `US_015` means "never seen", and that becomes
+    `POST /user/byDeviceId`; any other refusal is reported,
     never registered around. The identifier is derived in `:app` (`deviceId()`) as a UUID v5 over
     `MANUFACTURER|MODEL|DEVICE|HARDWARE|ANDROID_ID` — the `Build.*` parts describe the *model*, so
     `ANDROID_ID` is what actually makes it unique and hardware alone would hand two owners of the

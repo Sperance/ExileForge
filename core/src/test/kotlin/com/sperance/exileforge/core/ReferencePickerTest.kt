@@ -17,7 +17,7 @@ class ReferencePickerTest {
 
     private suspend fun signedIn(server: MockWebServer): GameApi {
         val api = GameApi(server.url("/game/").toString())
-        server.enqueue(MockResponse().setBody("""{"success":true,"data":{"id":"$id","name":"Admin","login":"admin","role":"ADMIN","isActive":true}}"""))
+        server.enqueue(MockResponse().setBody("""{"success":true,"data":{"user":{"id":"$id","name":"Admin","login":"admin","role":"ADMIN","isActive":true},"token":"token-0123456789abcdef"}}"""))
         api.login("admin", "password"); server.takeRequest()
         return api
     }

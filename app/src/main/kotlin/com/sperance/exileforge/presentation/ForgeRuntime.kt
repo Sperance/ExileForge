@@ -47,12 +47,24 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
     val redemptionViewModel = RedemptionViewModel(this)
     val characterViewModel = CharacterViewModel(this)
 
+    /**
+     * A refused token is forgotten, and a player who plays by device is signed in again without
+     * being asked: the account is theirs by the device, so a lapsed token is no reason to stop. The
+     * sign-in waits for the command that met the 401 to finish, because [task] refuses to start
+     * while another one runs.
+     */
     fun newApi(server: String): GameApi {
         lateinit var created: GameApi
         created = GameApi(server, journal, onUnauthorized = {
             if (::api.isInitialized && api === created) {
                 clearSession()
-                mutable.update { it.copy(message = ui("runtime.session_expired")) }
+                scope.launch {
+                    store.saveToken(server, null)
+                    if (store.deviceSession.first()) {
+                        state.first { !it.busy }
+                        if (api === created) sessionViewModel.playOnThisDevice(silent = true)
+                    } else mutable.update { it.copy(message = ui("runtime.session_expired")) }
+                }
             }
         })
         return created
@@ -72,9 +84,11 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
                     languages = known.ifEmpty { it.languages }) }
                 refreshLocale()
                 refreshIcons()
-                // The session itself cannot be restored — the server issues no token — but it can be
-                // made again without asking, and only for someone who last played on this device.
-                if (store.deviceSession.first()) sessionViewModel.playOnThisDevice(silent = true)
+                // A kept token comes back as it was; without one, a session is made again without
+                // asking, and only for someone who last played on this device.
+                val saved = store.token(server)
+                if (saved != null) sessionViewModel.resume(saved)
+                else if (store.deviceSession.first()) sessionViewModel.playOnThisDevice(silent = true)
             } catch (e: CancellationException) { throw e }
             catch (e: Exception) {
                 api = newApi("http://10.0.2.2:8080/")

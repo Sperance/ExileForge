@@ -56,9 +56,10 @@ fun normalizeServer(value: String): String {
 /**
  * The single HTTP client for every ktor-bestgame route.
  *
- * This server issues no token: `GET /api/v1/user/login` answers with the account document and the
- * client keeps it in memory for the rest of the session. [account] is therefore the whole session —
- * it is what `authenticated = true` requires and what [logout] drops.
+ * Since server 0.21.0 a sign-in answers the account *and* a token, and every other request carries
+ * that token as `Authorization: Bearer`. [token] is therefore the session and [account] is what it
+ * belongs to; `authenticated = true` requires the first, and [logout] drops both. The token is a
+ * secret: every exchange that carries one in its body is journaled as hidden.
  */
 class GameApi(
     server: String,
@@ -71,54 +72,82 @@ class GameApi(
 ) : ItemRepository {
     private val base = normalizeServer(server).toHttpUrlOrNull()!!
     private var account: UserProfile? = null
+    private var token: String? = null
 
     // ==================== session ====================
 
-    /** Credentials travel as query parameters because that is the route the server exposes. */
+    /** Credentials travel in the body: a query string settles in every proxy log on the way. */
     suspend fun login(login: String, password: String): UserProfile {
-        account = null
+        logout()
         require(login.isNotBlank() && password.isNotEmpty()) { ui("api.credentials") }
-        val profile: UserProfile = WireJson.decodeFromJsonElement(request("GET", "api/v1/user/login", mapOf("login" to login, "password" to password), sensitive = true))
-        requireId(profile.id)
-        require(profile.isActive) { ui("api.account_disabled") }
-        account = profile
-        return profile
+        return signedIn(request("POST", "api/v1/user/login", body = WireJson.encodeToJsonElement(LoginCredentials(login, password)), sensitive = true))
     }
     /**
      * Sign in with the device's own identifier, and register on the first try.
      *
-     * The server keeps one account per `device_id` and answers `US_015` when it has never seen
-     * this one, which is the whole registration handshake: a miss becomes a `POST` that creates
-     * the account and answers with it. There is no password in this path at all, so nothing here
-     * is sensitive — the identifier is not a secret, it is a name.
+     * The server keeps one account per device and answers `US_015` when it has never seen this
+     * one, which is the whole registration handshake: a miss becomes a second `POST` that creates
+     * the account and answers with it. The identifier is not a secret, but the token that comes
+     * back is, so the exchange is journaled as hidden all the same.
      */
     suspend fun loginByDevice(deviceId: String): UserProfile {
-        account = null
+        logout()
         require(deviceId.isNotBlank()) { ui("api.no_device") }
-        val profile = try { device("GET", "api/v1/user/login/byDeviceId", deviceId) }
-            catch (e: ApiFailure) { if (e.code == DEVICE_UNKNOWN) device("POST", "api/v1/user/byDeviceId", deviceId) else throw e }
-        require(profile.isActive) { ui("api.account_disabled") }
-        account = profile
-        return profile
+        val body = WireJson.encodeToJsonElement(DeviceCredentials(deviceId))
+        val answer = try { request("POST", "api/v1/user/login/byDeviceId", body = body, sensitive = true) }
+            catch (e: ApiFailure) { if (e.code == DEVICE_UNKNOWN) request("POST", "api/v1/user/byDeviceId", body = body, sensitive = true) else throw e }
+        return signedIn(answer)
     }
 
-    private suspend fun device(method: String, path: String, deviceId: String): UserProfile =
-        WireJson.decodeFromJsonElement<UserProfile>(request(method, path, mapOf("deviceId" to deviceId)))
-            .also { requireId(it.id) }
+    private fun signedIn(answer: JsonElement): UserProfile {
+        val session = WireJson.decodeFromJsonElement<SignedIn>(answer)
+        requireId(session.user.id)
+        require(session.token.isNotBlank()) { ui("api.no_token") }
+        require(session.user.isActive) { ui("api.account_disabled") }
+        token = session.token
+        account = session.user
+        return session.user
+    }
 
-    fun logout() { account = null }
+    /**
+     * Comes back to a session kept from an earlier launch. The server extends a token each time it
+     * is used, so a player who opens the game once a month never signs in again; a token it no
+     * longer knows answers 401, which [onUnauthorized] turns into a fresh sign-in.
+     */
+    suspend fun resume(saved: String): UserProfile {
+        logout()
+        require(saved.isNotBlank()) { ui("api.no_token") }
+        token = saved
+        return try { refreshUser().also { require(it.isActive) { ui("api.account_disabled") } } }
+            catch (e: Exception) { logout(); throw e }
+    }
+
+    /** Drops the session here. The server's half is [revoke]; an unrevoked token expires on its own. */
+    fun logout() { account = null; token = null }
     fun currentUser(): UserProfile? = account
+    /** The token to keep between launches, or null when nobody is signed in. */
+    fun sessionToken(): String? = token
+    /**
+     * Ends one session on the server. It takes the token rather than reading [token], because
+     * signing out drops the local session at once and this call is only its echo: nothing waits
+     * for it, and a failure changes nothing a player can see.
+     */
+    suspend fun revoke(saved: String) {
+        try { request("POST", "api/v1/user/logout", bearer = saved) }
+        catch (e: CancellationException) { throw e }
+        catch (_: Exception) {}
+    }
     /** Re-reads the signed-in account, so a role or character count change is picked up. */
     suspend fun refreshUser(): UserProfile {
-        val id = requireNotNull(account) { ui("catalog.sign_in") }.id
-        val profile: UserProfile = WireJson.decodeFromJsonElement(request("GET", "api/v1/user", mapOf("id" to id), authenticated = true))
+        val profile: UserProfile = WireJson.decodeFromJsonElement(request("GET", "api/v1/user/me", authenticated = true))
+        requireId(profile.id)
         account = profile
         return profile
     }
+    /** The server ends every other session of the account and keeps this one. */
     suspend fun changePassword(current: String, replacement: String) {
-        val id = requireNotNull(account) { ui("catalog.sign_in") }.id
-        request("GET", "api/v1/user/changePassword", mapOf("id" to id, "password" to current, "new_password" to replacement), authenticated = true, sensitive = true)
-        logout()
+        request("POST", "api/v1/user/changePassword", body = WireJson.encodeToJsonElement(PasswordChange(current, replacement)),
+            authenticated = true, sensitive = true)
     }
 
     suspend fun capabilities(): ApiCapabilities =
@@ -623,15 +652,22 @@ class GameApi(
         }
     }
 
-    private suspend fun request(method: String, path: String, query: Map<String, String> = emptyMap(), body: JsonElement? = null, authenticated: Boolean = false, sensitive: Boolean = false): JsonElement {
-        if (authenticated) require(account != null) { ui("api.sign_in_tab") }
+    /**
+     * @param bearer a token to send instead of the session's own — only [revoke] passes one, since
+     * it speaks for a session that has already been dropped here
+     */
+    private suspend fun request(method: String, path: String, query: Map<String, String> = emptyMap(), body: JsonElement? = null,
+                                authenticated: Boolean = false, sensitive: Boolean = false, bearer: String? = null): JsonElement {
+        val credential = bearer ?: token.takeIf { authenticated }
+        if (authenticated) require(credential != null) { ui("api.sign_in_tab") }
         val url = base.newBuilder().addPathSegments(path).apply { query.forEach { (k, v) -> addQueryParameter(k, v) } }.build()
         val bodyText = body?.toString().orEmpty()
         // Several server commands are POSTs carrying their arguments in the query string; OkHttp
         // still demands a body for those methods, so an empty one stands in for "no payload".
         val payload = body?.toString()?.toRequestBody(JsonMedia)
             ?: if (method in setOf("POST", "PUT", "PATCH")) "".toRequestBody(JsonMedia) else null
-        val request = Request.Builder().url(url).header("Accept", "application/json").method(method, payload).build()
+        val request = Request.Builder().url(url).header("Accept", "application/json")
+            .apply { credential?.let { header("Authorization", "Bearer $it") } }.method(method, payload).build()
         val start = System.nanoTime()
         var status: Int? = null
         var responseText = ""

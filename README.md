@@ -1,7 +1,7 @@
-# ExileForge 2.8.0
+# ExileForge 2.9.0
 
-Android Compose client for **ktor-bestgame 0.20.0**.
-Server: branch `claude/tender-pasteur-a36kj2`, commit `e9964a01445e76051a4ced23f8b5735a61e51f00`.
+Android Compose client for **ktor-bestgame 0.21.0**.
+Server: branch `claude/tender-pasteur-a36kj2`, commit `3c152d6efc824e6bbe4779c3eb1d96edd8e924bf`.
 
 ## Язык интерфейса · Interface language
 
@@ -114,11 +114,11 @@ Russian, English and Simplified Chinese. Every label, hint, error and contract-v
 4. In **Каталог**, create your character. The current account becomes the owner; the server enforces the per-account limit.
 5. In **Герой**, select a character and refresh it.
 
-Debug allows HTTP for local development; release requires HTTPS. **This server has no token**: the login response is the session and lives in memory only. The password travels as a query parameter, so HTTPS is not optional outside a local network. Login and password changes are recorded as `[скрыто]` in the request journal.
+Debug allows HTTP for local development; release requires HTTPS. Since server 0.21.0 a sign-in answers a **session token**, sent as `Authorization: Bearer` and kept per server in the app's private storage, so a relaunch comes straight back through `GET /user/me`. The token is the account for 30 days, so HTTPS is not optional outside a local network. Passwords travel in a POST body, never in a query string, and every exchange that carries a password or a token is recorded as `[скрыто]` in the request journal.
 
 ## What changed for server 0.9.0
 
-- **No token.** `GET /api/v1/user/login` answers with the account document; the client keeps it in memory and drops it on sign-out. Permissions come from the server's `role`.
+- **A token, and a server that knows who asks (client 2.9.0, server 0.21.0).** Sign-in is a `POST` answering `{user, token}`; the token rides every request as a Bearer header and is kept per server, so a relaunch resumes instead of signing in. The server checks every request against one access table: a player acts only for their own account and characters, the generic CRUD writes belong to an administrator, and a lapsed token signs a device player straight back in. Permissions still come from the server's `role`.
 - **No client version on writes.** `PUT` sends the changed fields and `DELETE` sends nothing: the server reads the stored document and rejects a racing write itself. A rejected write is reported, never retried silently.
 - **Equipment is a pool of references.** A template carries `modifierIds`; which of them land on a copy, in which tier and with which value, is rolled by the server when the instance is created.
 - **Inventory is its own collection.** One item in a character's bag is one `CharacterEquipment` document with its own rolls; the slot comes from the template, so equipping takes an instance id and nothing else.

@@ -29,6 +29,7 @@ class GameApiTest {
     private val id = "0123456789abcdef01234567"
     private val other = "89abcdef0123456701234567"
     private val journal = RequestJournal()
+    private val token = "private-token-0123456789abcdef"
 
     @Before fun before(): Unit = runBlocking {
         server = MockWebServer(); server.start(); api = GameApi(server.url("/game/").toString(), journal)
@@ -38,7 +39,7 @@ class GameApiTest {
             "equipment.IRON_SKULLCAP.name": "Iron Skullcap", "item.CHAOS_ORB.name": "Chaos Orb",
             "class.MARAUDER.name": "Marauder", "class.MARAUDER.description": "Сила",
             "currency.chaos": "{0}: перекатаны аффиксы, всего {1}"}""")
-        ok("""{"id":"$id","version":1,"name":"Admin","login":"admin","role":"ADMIN","isActive":true}""")
+        ok("""{"user":{"id":"$id","version":1,"name":"Admin","login":"admin","role":"ADMIN","isActive":true},"token":"$token"}""")
         api.login("admin", "private-password"); server.takeRequest(); Unit
     }
     @After fun after() { server.shutdown(); serverLocale = LocaleBundle() }
@@ -51,13 +52,17 @@ class GameApiTest {
     @Test fun `a known device signs straight in and nothing is registered`(): Unit = runBlocking {
         api.logout()
         val sent = server.requestCount
-        ok("""{"id":"$other","version":3,"name":"","login":"","role":"USER","isActive":true,"countCharacters":2}""")
+        ok("""{"user":{"id":"$other","version":3,"name":"","login":"","role":"USER","isActive":true,"countCharacters":2},"token":"device-token-0123456789"}""")
         val profile = api.loginByDevice("device-uuid")
-        assertEquals("/game/api/v1/user/login/byDeviceId?deviceId=device-uuid", server.takeRequest().path)
+        val request = server.takeRequest()
+        assertEquals("POST", request.method)
+        assertEquals("/game/api/v1/user/login/byDeviceId", request.path)
+        assertEquals("""{"deviceId":"device-uuid"}""", request.body.readUtf8())
         assertEquals(other, profile.id)
         assertEquals(2, profile.countCharacters)
-        // The account document is the whole session, exactly as a password login leaves it.
+        // The session is the token, exactly as a password login leaves it.
         assertEquals(other, assertNotNull(api.currentUser()).id)
+        assertEquals("device-token-0123456789", api.sessionToken())
         // One request: an account that exists is never re-registered.
         assertEquals(sent + 1, server.requestCount)
     }
@@ -66,12 +71,13 @@ class GameApiTest {
         api.logout()
         // US_015 is not an error to report — it is the server saying "this one is new".
         refusal(404, "US_015", "User with deviceId device-uuid not found")
-        ok("""{"id":"$other","version":0,"name":"","login":"","role":"USER","isActive":true}""")
+        ok("""{"user":{"id":"$other","version":0,"name":"","login":"","role":"USER","isActive":true},"token":"device-token-0123456789"}""")
         assertEquals(other, api.loginByDevice("device-uuid").id)
-        assertEquals("/game/api/v1/user/login/byDeviceId?deviceId=device-uuid", server.takeRequest().path)
+        assertEquals("/game/api/v1/user/login/byDeviceId", server.takeRequest().path)
         val registration = server.takeRequest()
         assertEquals("POST", registration.method)
-        assertEquals("/game/api/v1/user/byDeviceId?deviceId=device-uuid", registration.path)
+        assertEquals("/game/api/v1/user/byDeviceId", registration.path)
+        assertEquals("""{"deviceId":"device-uuid"}""", registration.body.readUtf8())
     }
 
     @Test fun `any other device refusal is reported, not registered around`(): Unit = runBlocking {
@@ -118,14 +124,68 @@ class GameApiTest {
         assertEquals(sent + 1, server.requestCount)
     }
 
-    @Test fun `login answers with the account itself and never records the password`(): Unit = runBlocking {
+    @Test fun `login posts the credentials and never records them or the token`(): Unit = runBlocking {
         assertEquals("ADMIN", assertNotNull(api.currentUser()).role)
-        assertFalse(journal.entries.value.toString().contains("private-password"))
-        // Signing out drops the whole session: there is no token to fall back on.
+        assertEquals(token, api.sessionToken())
+        // Neither the password nor the token that came back may reach the journal.
+        assertFalse(journal.entries.value.toString().contains("private-"))
+        // Signing out drops the whole session, token included.
         api.logout()
         assertNull(api.currentUser())
+        assertNull(api.sessionToken())
         assertFailsWith<IllegalArgumentException> { api.page(Catalog.ITEMS, 0) }
         assertEquals(1, server.requestCount)
+    }
+
+    @Test fun `the password travels in a POST body, never in the query string`(): Unit = runBlocking {
+        ok("""{"user":{"id":"$id","version":1,"login":"admin","role":"ADMIN","isActive":true},"token":"$token"}""")
+        api.login("admin", "private-password")
+        val request = server.takeRequest()
+        assertEquals("POST", request.method)
+        assertEquals("/game/api/v1/user/login", request.path)
+        assertEquals("""{"login":"admin","password":"private-password"}""", request.body.readUtf8())
+        assertNull(request.getHeader("Authorization"))
+    }
+
+    @Test fun `every signed-in request carries the token as a bearer`(): Unit = runBlocking {
+        ok("[]"); api.page(Catalog.ITEMS, 0)
+        assertEquals("Bearer $token", server.takeRequest().getHeader("Authorization"))
+        // What anyone may read carries no token at all: it is not the server's business who asked.
+        server.enqueue(MockResponse().setBody("""{"default":"ru","languages":[]}"""))
+        api.localeManifest()
+        assertNull(server.takeRequest().getHeader("Authorization"))
+    }
+
+    @Test fun `a kept token comes back through me`(): Unit = runBlocking {
+        api.logout()
+        ok("""{"id":"$other","version":2,"login":"test1","role":"USER","isActive":true}""")
+        assertEquals(other, api.resume("kept-token-0123456789").id)
+        val request = server.takeRequest()
+        assertEquals("/game/api/v1/user/me", request.path)
+        assertEquals("Bearer kept-token-0123456789", request.getHeader("Authorization"))
+        assertEquals("kept-token-0123456789", api.sessionToken())
+    }
+
+    @Test fun `a refused kept token leaves nobody signed in`(): Unit = runBlocking {
+        var unauthorized = 0
+        val fresh = GameApi(server.url("/game/").toString(), journal, onUnauthorized = { unauthorized++ })
+        refusal(401, "AUTH_002", "Session expired")
+        assertEquals(401, assertFailsWith<ApiFailure> { fresh.resume("stale-token-0123456789") }.status)
+        assertNull(fresh.sessionToken())
+        assertNull(fresh.currentUser())
+        assertEquals(1, unauthorized)
+    }
+
+    @Test fun `signing out revokes the token it was handed`(): Unit = runBlocking {
+        api.logout()
+        ok("\"system.success\""); api.revoke(token)
+        val request = server.takeRequest()
+        assertEquals("POST", request.method)
+        assertEquals("/game/api/v1/user/logout", request.path)
+        assertEquals("Bearer $token", request.getHeader("Authorization"))
+        // The echo is best effort: a server that cannot be reached changes nothing on screen.
+        failure(500); api.revoke(token)
+        assertNull(api.currentUser())
     }
 
     @Test fun `create posts an array without identity and keeps the discriminator`(): Unit = runBlocking {
@@ -522,8 +582,9 @@ class GameApiTest {
     }
 
     @Test fun `capabilities are read from the server's own route table`(): Unit = runBlocking {
-        val routes = listOf("GET" to "/api/v1/user/login", "GET" to "/api/v1/user/login/byDeviceId",
-            "POST" to "/api/v1/user/byDeviceId", "GET" to "/api/v1/character/byUser",
+        val routes = listOf("POST" to "/api/v1/user/login", "POST" to "/api/v1/user/login/byDeviceId",
+            "POST" to "/api/v1/user/byDeviceId", "GET" to "/api/v1/user/me", "POST" to "/api/v1/user/logout",
+            "GET" to "/api/v1/character/byUser",
             "GET" to "/api/v1/equipment/paged", "GET" to "/api/v1/character/inventory/equipments",
             "GET" to "/api/v1/character/inventory/stats", "POST" to "/api/v1/character/inventory/itemToInventory",
             "POST" to "/api/v1/characterequipment/equip", "POST" to "/api/v1/characterequipment/applyOrb",
@@ -537,9 +598,11 @@ class GameApiTest {
         ok(JsonArray(routes.map { buildJsonObject { put("path", it.second); put("method", "(${it.first})") } }).toString())
         val capabilities = api.capabilities()
         capabilities.requireWorkbench()
-        assertTrue(capabilities.has("GET", "/api/v1/user/login"))
+        assertTrue(capabilities.has("POST", "/api/v1/user/login"))
         assertEquals("/game/system/routes", server.takeRequest().path)
-        assertFailsWith<IllegalArgumentException> { ApiCapabilities.of(listOf(RouteInfo("/api/v1/user/login", "(GET)"))).requireWorkbench() }
+        // A server from before 0.21.0 signs in by GET and issues no token: it is named, not guessed at.
+        val stale = ApiCapabilities.of(routes.map { (method, path) -> RouteInfo(path, "(${if (path == "/api/v1/user/login") "GET" else method})") })
+        assertFailsWith<IllegalArgumentException> { stale.requireWorkbench() }
     }
 
     @Test fun `a server answer is never reported as a lost connection`() {
@@ -591,11 +654,15 @@ class GameApiTest {
         assertEquals(2, server.requestCount)
     }
 
-    @Test fun `password change hides both secrets and ends the session`(): Unit = runBlocking {
+    @Test fun `password change posts both secrets, hides them and keeps this session`(): Unit = runBlocking {
         ok("\"system.success\""); api.changePassword("private-old", "private-New1")
-        assertEquals("/game/api/v1/user/changePassword", server.takeRequest().path!!.substringBefore('?'))
+        val request = server.takeRequest()
+        assertEquals("POST", request.method)
+        assertEquals("/game/api/v1/user/changePassword", request.path)
+        assertEquals("""{"password":"private-old","newPassword":"private-New1"}""", request.body.readUtf8())
         assertFalse(journal.entries.value.toString().contains("private-"))
-        assertNull(api.currentUser())
+        // The server ends every other session and keeps this one.
+        assertEquals(token, api.sessionToken())
     }
 
     @Test fun `malformed server response remains a useful protocol error`(): Unit = runBlocking {

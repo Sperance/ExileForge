@@ -11,6 +11,7 @@ import com.sperance.exileforge.presentation.state.TAB_ADMIN
 import com.sperance.exileforge.presentation.state.TAB_HERO
 import com.sperance.exileforge.presentation.state.AppPhase
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -47,7 +48,7 @@ class SessionViewModel(private val runtime: ForgeRuntime) {
         mutable.update { it.copy(health = result, message = ui("session.check_done")) }
     } } }
 
-    /** The server answers a login with the account document itself: there is no token to keep. */
+    /** A sign-in answers the account and a token; the token is kept per server for the next launch. */
     fun login(login: String, password: String) { with(runtime) { task {
         clearSession()
         api.capabilities().requireWorkbench()
@@ -71,6 +72,20 @@ class SessionViewModel(private val runtime: ForgeRuntime) {
     } } }
 
     /**
+     * A session kept from an earlier launch. Silent like the device path: a launch that cannot
+     * reach the server leaves the token in place for the next one and shows the sign-in screen,
+     * and a token the server refused is handled by `newApi`'s 401 path rather than here.
+     */
+    fun resume(saved: String) { with(runtime) { task {
+        clearSession()
+        try {
+            api.capabilities().requireWorkbench()
+            signedIn(api.resume(saved), byDevice = store.deviceSession.first())
+        } catch (e: CancellationException) { throw e }
+        catch (_: Exception) {}
+    } } }
+
+    /**
      * What every sign-in ends with: the account is the session, and the gate opens one step.
      *
      * The character is never chosen here. Which characters exist is the next screen's question,
@@ -81,6 +96,7 @@ class SessionViewModel(private val runtime: ForgeRuntime) {
         mutable.update { it.copy(signedIn = true, profile = profile, mode = AppMode.PLAYER, catalog = Catalog.EQUIPMENT,
             phase = AppPhase.CHARACTERS, message = ui("session.signed_in"), tab = 0) }
         store.saveDeviceSession(byDevice)
+        store.saveToken(state.value.server, api.sessionToken())
         restoreFilters()
         ensureDefinitions()
         // The catalogue is codes without it, and the first attempt may have run before the server was up.
@@ -90,11 +106,21 @@ class SessionViewModel(private val runtime: ForgeRuntime) {
         runtime.characterViewModel.readCharacters(autoEnter = true)
     } }
 
-    /** Signing out is explicit, so the next launch must not sign straight back in. */
+    /**
+     * Signing out is explicit, so the next launch must not sign straight back in. The token is
+     * taken before the local session drops it, and revoked on the server without waiting.
+     */
     fun logout() { with(runtime) {
         if (state.value.busy) return
+        val server = state.value.server
+        val leaving = api
+        val token = leaving.sessionToken()
         clearSession()
-        scope.launch { store.saveDeviceSession(false) }
+        scope.launch {
+            store.saveDeviceSession(false)
+            store.saveToken(server, null)
+            token?.let { leaving.revoke(it) }
+        }
     } }
 
     fun changePassword(current: String, replacement: String) { with(runtime) { task(writing = true) {
@@ -102,8 +128,8 @@ class SessionViewModel(private val runtime: ForgeRuntime) {
         require(replacement.any { it.isDigit() } && replacement.any { it.isUpperCase() } && !replacement.contains(' ')) {
             ui("session.password_rule")
         }
+        // Every other session of the account ends; this one stays, so there is nothing to sign into again.
         api.changePassword(current, replacement)
-        clearSession()
         mutable.update { it.copy(message = ui("session.password_changed")) }
     } } }
 

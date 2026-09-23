@@ -21,9 +21,8 @@ import org.junit.Test
  * game comes from the server's dictionary, because since 0.14.0 the document carries only a code —
  * so switching the language means loading the other dictionary, not re-reading the same document.
  *
- * Chinese is the case that proves the split: the label and the name arrive from two different
- * places, and both have to move together or the card reads half in one language and half in
- * another.
+ * Since 2.13.0 the name of an item is English in every dictionary, as in PoE, so a Russian card
+ * carries an English name under Russian labels — the split is what makes that possible.
  */
 class LocalizationTest {
     @get:Rule val compose = createComposeRule()
@@ -51,13 +50,13 @@ class LocalizationTest {
         compose.onNodeWithText("ОТКРЫТЬ").assertIsDisplayed()
     }
 
-    @Test fun chineseLabelsAndChineseNames() {
-        uiLanguage = Lang.ZH
-        dictionary("zh", "流亡者的遗产")
+    @Test fun anEnglishNameSitsUnderRussianLabels() {
+        uiLanguage = Lang.RU
+        dictionary("ru", "Exile's Legacy")
         compose.setContent { ForgeTheme { ItemCard(template(Catalog.EQUIPMENT)) } }
-        compose.onNodeWithText("流亡者的遗产").assertIsDisplayed()
-        compose.onNodeWithText("30 级").assertIsDisplayed()
-        compose.onNodeWithText("打开").assertIsDisplayed()
+        compose.onNodeWithText("Exile's Legacy").assertIsDisplayed()
+        compose.onNodeWithText("ур. 30").assertIsDisplayed()
+        compose.onNodeWithText("ОТКРЫТЬ").assertIsDisplayed()
     }
 
     /** Without the server's dictionary the code stands in: a hole shows rather than an empty card. */

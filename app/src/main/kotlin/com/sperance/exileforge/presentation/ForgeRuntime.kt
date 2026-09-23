@@ -78,7 +78,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
         scope.launch {
             try {
                 // No choice stored means a first run, and a first run follows the device rather
-                // than the client's own default: a Chinese phone should not open in Russian.
+                // than the client's own default: an English phone should not open in Russian.
                 val language = Lang.byCode(store.language.first()) ?: deviceLanguage()
                 uiLanguage = language
                 val server = store.server.first()

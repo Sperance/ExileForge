@@ -30,7 +30,7 @@ class ServerLocaleTest {
     private val document = """{
         "equipment.IRON_SKULLCAP.name": "Железный шишак",
         "equipment.IRON_SKULLCAP.description": "Шлем наёмника",
-        "item.CHAOS_ORB.name": "Сфера хаоса",
+        "item.CHAOS_ORB.name": "Chaos Orb",
         "item.ORB_OF_FUSING.name": "Сфера соединения",
         "item.ORB_OF_FUSING.description": "Меняет связи гнёзд",
         "modifier.LIFE_AND_MANA.name": "+{0} к здоровью и +{1} к мане",
@@ -105,7 +105,7 @@ class ServerLocaleTest {
         assertEquals("Железный шишак", documentTitle(helmet))
         assertEquals("Шлем наёмника", documentDescription(helmet))
         val orb = buildJsonObject { put("_id", id); put("code", "CHAOS_ORB"); put("category", "CURRENCY") }
-        assertEquals("Сфера хаоса", documentTitle(orb))
+        assertEquals("Chaos Orb", documentTitle(orb))
         // A character is the one document whose name its player wrote, so it is not in the dictionary.
         val exile = buildJsonObject { put("_id", id); put("userId", id); put("name", "Изгнанник") }
         assertEquals("Изгнанник", documentTitle(exile))
@@ -123,7 +123,7 @@ class ServerLocaleTest {
         assertEquals("Больше здоровья", node.details)
         // Which section a lot's code belongs to is decided by what kind of lot it is.
         assertEquals("Железный шишак", AuctionLot(kind = AuctionLotKind.EQUIPMENT, itemCode = "IRON_SKULLCAP").title)
-        assertEquals("Сфера хаоса", AuctionLot(kind = AuctionLotKind.ITEM, itemCode = "CHAOS_ORB").title)
+        assertEquals("Chaos Orb", AuctionLot(kind = AuctionLotKind.ITEM, itemCode = "CHAOS_ORB").title)
     }
 
     /**
@@ -153,7 +153,7 @@ class ServerLocaleTest {
         assertEquals("Меняет связи гнёзд", unknown.details(Lang.EN))
         // One the client does know keeps its own rule when the dictionary has no description for it.
         val chaos = CurrencyItem(id, "CHAOS_ORB", "CHAOS_ORB", 1)
-        assertEquals("Сфера хаоса", chaos.title(Lang.RU))
+        assertEquals("Chaos Orb", chaos.title(Lang.RU))
         assertEquals("Перекатывает аффиксы редкого предмета", chaos.details(Lang.RU))
     }
 
@@ -172,7 +172,7 @@ class ServerLocaleTest {
     @Test fun `the catalogue narrows itself by name through the dictionary`() {
         load()
         assertEquals(setOf("IRON_SKULLCAP"), serverLocale.codesMatching(LocaleKey.EQUIPMENT, "шишак"))
-        assertEquals(setOf("CHAOS_ORB"), serverLocale.codesMatching(LocaleKey.ITEM, "хаос"))
+        assertEquals(setOf("CHAOS_ORB"), serverLocale.codesMatching(LocaleKey.ITEM, "chaos"))
         // A description is not a name, and a blank needle is not a filter.
         assertTrue(serverLocale.codesMatching(LocaleKey.EQUIPMENT, "наёмника").isEmpty())
         assertTrue(serverLocale.codesMatching(LocaleKey.EQUIPMENT, "  ").isEmpty())

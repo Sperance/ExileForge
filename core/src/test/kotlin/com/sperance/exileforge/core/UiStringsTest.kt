@@ -82,7 +82,6 @@ class UiStringsTest {
     fun arguments_fill_the_holes() {
         assertEquals("Уровень 7", ui(Lang.RU, "hero.level", 7))
         assertEquals("Level 7", ui(Lang.EN, "hero.level", 7))
-        assertEquals("7 级", ui(Lang.ZH, "hero.level", 7))
     }
 
     @Test
@@ -91,9 +90,7 @@ class UiStringsTest {
         assertEquals("tree.node.few", pluralKey("tree.node", 3, Lang.RU))
         assertEquals("tree.node.many", pluralKey("tree.node", 11, Lang.RU))
         assertEquals("tree.node.many", pluralKey("tree.node", 5, Lang.EN))
-        assertEquals("tree.node.one", pluralKey("tree.node", 5, Lang.ZH))
         assertEquals("узла", plural("tree.node", 3, Lang.RU))
-        assertEquals("个节点", plural("tree.node", 3, Lang.ZH))
     }
 
     @Test

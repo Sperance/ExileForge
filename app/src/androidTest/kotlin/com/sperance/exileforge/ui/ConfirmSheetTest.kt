@@ -32,7 +32,7 @@ class ConfirmSheetTest {
         compose.setContent { ForgeTheme {
             ConfirmSheet(title = "Сбросить дерево?", subtitle = "14 узлов", danger = true,
                 ledger = listOf(
-                    LedgerLine("Спишется", "−14 × Сфера сожаления", Tone.SPEND),
+                    LedgerLine("Спишется", "−14 × Orb of Regret", Tone.SPEND),
                     LedgerLine("Вернётся", "+14 узлов", Tone.GAIN)),
                 confirm = "Сбросить", onDismiss = { dismissed++ }) { confirmed++ }
         } }
@@ -43,7 +43,7 @@ class ConfirmSheetTest {
     @Test fun theLedgerSaysWhatIsTakenAndWhatComesBack() {
         show()
         compose.onNodeWithText("Сбросить дерево?").assertIsDisplayed()
-        compose.onNodeWithText("−14 × Сфера сожаления").assertIsDisplayed()
+        compose.onNodeWithText("−14 × Orb of Regret").assertIsDisplayed()
         compose.onNodeWithText("+14 узлов").assertIsDisplayed()
     }
 

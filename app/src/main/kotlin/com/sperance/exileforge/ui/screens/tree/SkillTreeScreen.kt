@@ -397,7 +397,7 @@ import kotlinx.serialization.json.putJsonArray
     }
 }
 
-/** Russian counts its nouns in three forms, English in two and Chinese in none: see `plural`. */
+/** Russian counts its nouns in three forms and English in two: see `plural`. */
 private fun points(n: Int) = plural("tree.point", n)
 
 private fun nodes(n: Int) = plural("tree.node", n)

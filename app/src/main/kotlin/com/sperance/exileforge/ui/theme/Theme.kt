@@ -13,8 +13,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
-import com.sperance.exileforge.core.i18n.Lang
-import com.sperance.exileforge.core.i18n.uiLanguage
 
 /** Wraith-lit stone and tarnished gold: the palette of an exile's stash. */
 val Ink = Color(0xFF07090C)
@@ -52,16 +50,9 @@ fun panelBrush(accent: Color = Gold) = Brush.verticalGradient(
 )
 fun voidBrush() = Brush.verticalGradient(listOf(Abyss, Ink, Color(0xFF0A0D12)))
 
-/**
- * The dark plate the whole app is drawn on.
- *
- * [lang] is here for one reason: the letter spacing. Carving a Latin or Cyrillic title wider makes
- * it look cut in stone; doing the same to Chinese pulls the characters apart and leaves holes in
- * the middle of a word, because a hanzi is already a full-width glyph. So under Chinese the same
- * typography is built with the spacing closed up, and nothing else changes.
- */
-@Composable fun ForgeTheme(lang: Lang = uiLanguage, content: @Composable () -> Unit) {
-    val carved: (Float) -> TextUnit = { if (lang == Lang.ZH) 0.sp else it.sp }
+/** The dark plate the whole app is drawn on; titles are carved wide, as if cut in stone. */
+@Composable fun ForgeTheme(content: @Composable () -> Unit) {
+    val carved: (Float) -> TextUnit = { it.sp }
     MaterialTheme(
         colorScheme = darkColorScheme(primary = Gold, onPrimary = Ink, secondary = Rune, onSecondary = Ink,
             secondaryContainer = PanelRaised, onSecondaryContainer = Parchment, tertiary = GoldBright,

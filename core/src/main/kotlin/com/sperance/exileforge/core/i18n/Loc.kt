@@ -14,7 +14,7 @@ import kotlinx.serialization.json.Json
  * [short] is the rune drawn in a picker, [title] the language's name written in itself.
  */
 enum class Lang(val code: String, val title: String, val short: String) {
-    RU("ru", "Русский", "RU"), EN("en", "English", "EN"), ZH("zh", "简体中文", "中");
+    RU("ru", "Русский", "RU"), EN("en", "English", "EN");
     companion object {
         /** The language with this code, or nothing: used where an unknown code must not become one. */
         fun byCode(code: String?) = entries.firstOrNull { it.code == code }
@@ -61,7 +61,7 @@ object UiStrings {
  *
  * `ui("hero.unequip")` and `ui("tree.points", taken, total)` are the only two shapes. A template
  * keeps its `{0}`, `{1}` in every language, so a sentence is never assembled by appending a number
- * to a label - word order differs, and in Chinese it differs the most.
+ * to a label - word order differs between languages.
  */
 fun ui(key: String, vararg args: Any?): String = ui(uiLanguage, key, *args)
 
@@ -82,9 +82,8 @@ fun uiOr(lang: Lang, key: String, fallback: String): String = UiStrings.table(la
 /**
  * The key of a counted noun.
  *
- * Russian counts its nouns in three forms, English in two and Chinese in none, so the rule belongs
- * to the language rather than to the screen that needed it. Every form exists in every table - in
- * Chinese they are simply the same word.
+ * Russian counts its nouns in three forms and English in two, so the rule belongs to the language
+ * rather than to the screen that needed it. Every form exists in every table.
  */
 fun pluralKey(key: String, n: Int, lang: Lang = uiLanguage): String = when (lang) {
     Lang.RU -> when {
@@ -93,7 +92,6 @@ fun pluralKey(key: String, n: Int, lang: Lang = uiLanguage): String = when (lang
         else -> "$key.many"
     }
     Lang.EN -> if (n == 1) "$key.one" else "$key.many"
-    Lang.ZH -> "$key.one"
 }
 
 /** A counted noun in the current language: `plural("tree.node", 3)`. */

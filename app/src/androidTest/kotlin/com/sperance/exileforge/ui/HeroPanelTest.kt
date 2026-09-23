@@ -66,7 +66,7 @@ class HeroPanelTest {
         "equipment.HERO_RING.name": "Кольцо героя",
         "equipment.IRON_HELMET.name": "Железный шлем",
         "equipment.MY_HELMET.name": "Мой шлем",
-        "item.CHAOS_ORB.name": "Сфера хаоса",
+        "item.CHAOS_ORB.name": "Chaos Orb",
         "item.CHAOS_ORB.description": "Перекатывает аффиксы редкого предмета",
         "class.MARAUDER.name": "Мародёр",
         "skilltree.STR_START.name": "Мародёр",
@@ -231,9 +231,9 @@ class HeroPanelTest {
         compose.onNodeWithText("12").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("ещё 1").performScrollTo().assertIsDisplayed()
         // The bottom line: the price on the left, the seller on the right.
-        compose.onNodeWithText("4 × Сфера хаоса").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("4 × Chaos Orb").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Соперник").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("7 × Сфера хаоса").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("7 × Chaos Orb").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Ваш лот").performScrollTo().assertIsDisplayed()
         // Nothing is bought from a line: the rolls are what is being paid for, so the card opens first.
         compose.onAllNodesWithText("Купить").assertCountEquals(0)
@@ -242,7 +242,7 @@ class HeroPanelTest {
         // A purchase cannot be undone, so it is asked about before it happens.
         compose.onNodeWithText("Купить лот?").assertIsDisplayed()
         // The price is a ledger line, in the orb it was set in.
-        compose.onNodeWithText("−4 × Сфера хаоса").assertIsDisplayed()
+        compose.onNodeWithText("−4 × Chaos Orb").assertIsDisplayed()
         compose.onNodeWithText("УДЕРЖИВАЙТЕ, ЧТОБЫ КУПИТЬ ЛОТ").performSemanticsAction(SemanticsActions.OnClick)
         compose.runOnIdle { assertEquals("lot-1", bought) }
     }
@@ -260,7 +260,7 @@ class HeroPanelTest {
                 "ring-instance", {}, { item, orb -> applied = item to orb })
         } } }
         // The count the character owns rides along with the orb's own translated name.
-        compose.onNodeWithText("Сфера хаоса · 7").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Chaos Orb · 7").performScrollTo().assertIsDisplayed()
         // The copy's own rarity is shown, not the COMMON its template drops as.
         compose.onNodeWithText("Необычный").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Применить сферу").performScrollTo().performClick()

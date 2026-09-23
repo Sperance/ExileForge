@@ -482,6 +482,7 @@
   "enum.stat.STOCK_MANA": "Mana",
   "enum.stat.STOCK_MANA_REGEN": "Mana regeneration",
   "enum.stat.STOCK_MOVEMENT_SPEED": "Movement speed",
+  "enum.stat.STOCK_LIGHT_RADIUS": "Light radius",
   "enum.stat.STOCK_QUANTITY": "Item quantity, %",
   "enum.stat.STOCK_RARITY": "Item rarity, %",
   "enum.stat.STOCK_RESIST_ALL": "All resistances, %",

@@ -160,6 +160,15 @@ class ServerIntegrationTest {
         assertTrue(fractured in shaped.params, "the fractured affix was lost")
     }
 
+    /** Every portrait the server serves is one the client can draw, and every class has one. */
+    private suspend fun portraitsAreDrawable(api: GameApi) {
+        val portraits = api.files.portraitManifest()
+        assertTrue(portraits.portraits.keys.count { it.startsWith("class.") } >= 7, "a class has no portrait")
+        portraits.portraits.keys.forEach { key ->
+            assertTrue(PortraitSvg.parse(api.files.portraitDocument(key)).shapes.isNotEmpty(), "$key drew nothing")
+        }
+    }
+
     private suspend fun accessIsTheServers(url: String, guest: GameApi, guestId: String, adminId: String, adminCharacter: String) {
         assertEquals(403, assertFailsWith<ApiFailure> { guest.hero.character(adminCharacter) }.status)
         assertEquals(403, assertFailsWith<ApiFailure> { guest.hero.charactersOf(adminId) }.status)
@@ -205,12 +214,7 @@ class ServerIntegrationTest {
         // it — which is the quiet failure this whole check is here to catch.
         assertTrue(iconBundle.size > 100, "only ${iconBundle.size} codes carry an icon")
         serverIcons = iconBundle
-        // Every portrait the server serves is one the client can draw, and every class has one.
-        val portraits = api.files.portraitManifest()
-        assertTrue(portraits.portraits.keys.count { it.startsWith("class.") } >= 7, "a class has no portrait")
-        portraits.portraits.keys.forEach { key ->
-            assertTrue(PortraitSvg.parse(api.files.portraitDocument(key)).shapes.isNotEmpty(), "$key drew nothing")
-        }
+        portraitsAreDrawable(api)
 
         // The seeded modifier catalogue is what every rolled value on an instance points back at.
         val definitions = api.world.modifiers()

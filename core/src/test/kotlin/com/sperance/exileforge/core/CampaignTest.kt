@@ -95,24 +95,95 @@ class CampaignTest {
         assertEquals(0.0 to 0.0, ExpeditionWorld.screenToWorld(0.0, 0.0))
     }
 
-    @Test fun `walking into a monster starts a fight and the hero never enters rock`() {
+    @Test fun `touching a monster starts a fight, and one the hero ran from lets them go`() {
         val world = ExpeditionWorld.create(map, rarities, emptyMap(), 5)
         val agent = world.agents.first()
-        var event: WorldEvent? = null
-        repeat(4000) {
-            if (event != null) return@repeat
-            val dx = agent.x - world.heroX
-            val dy = agent.y - world.heroY
-            val length = hypot(dx, dy)
-            event = world.step(0.016, dx / length, dy / length)
-            assertTrue(world.map.walkable(world.heroX.toInt(), world.heroY.toInt()))
-            // A wall in the way: the monster comes the rest of the way itself once the hero is close.
-            if (event == null && length > ExpeditionWorld.AGGRO) { world.heroX = agent.x - 1.0.coerceAtMost(length); world.heroY = agent.y }
-            if (!world.map.walkable(world.heroX.toInt(), world.heroY.toInt())) { world.heroX = agent.x; world.heroY = agent.y }
-        }
-        assertIs<WorldEvent.Encounter>(event)
+        world.heroX = agent.x + 0.4
+        world.heroY = agent.y
+        assertEquals(WorldEvent.Encounter(agent), world.step(0.016, 0.0, 0.0))
         world.retreatFrom(agent)
         assertNull(world.step(0.016, 0.0, 0.0).takeIf { it is WorldEvent.Encounter && it.agent == agent })
+        assertFalse(agent.chasing, "a monster the hero ran from goes home")
+    }
+
+    /** A small map drawn by hand: `#` rock, `.` floor, `M` the monster, `H` the hero, `E` the exit. */
+    private fun sketch(vararg rows: String, rule: BehaviourRule = BehaviourRule(), light: Double = 5.0): ExpeditionWorld {
+        val height = rows.size
+        val width = rows.first().length
+        fun find(c: Char) = rows.withIndex().firstNotNullOf { (y, row) -> row.indexOf(c).takeIf { it >= 0 }?.let { Cell(it, y) } }
+        val tiles = Array(width * height) { i -> if (rows[i / width][i % width] == '#') Tile.WALL else Tile.FLOOR }
+        val layout = ExpeditionMap(width, height, tiles, IntArray(width * height), find('H'), find('E'), listOf(find('M')))
+        val monster = RolledMonster("DROWNED", "HUMANOID", MonsterRarity.NORMAL, emptyList(), drowned.stats, rule)
+        return ExpeditionWorld(layout, listOf(monster), 3.2, 1, light)
+    }
+
+    @Test fun `a chase goes round the rock instead of into it`() {
+        val world = sketch(
+            "#########",
+            "#M......#",
+            "#######.#",
+            "#.......#",
+            "#H....E.#",
+            "#########", rule = BehaviourRule(sight = 20.0, giveUp = 30.0))
+        val route = world.path(Cell(1, 1), Cell(1, 4))
+        assertEquals(Cell(1, 1), route.first())
+        assertEquals(Cell(1, 4), route.last())
+        assertTrue(route.all { world.map.walkable(it.x, it.y) })
+        assertTrue(route.any { it.x == 7 && it.y == 2 }, "the only way down is the gap")
+        // The monster is told where the hero is and has to walk the long way there.
+        val agent = world.agents.first()
+        agent.mode = AgentMode.HUNTING
+        agent.lastX = world.heroX
+        agent.lastY = world.heroY
+        var event: WorldEvent? = null
+        repeat(2000) { if (event == null) event = world.step(0.016, 0.0, 0.0) }
+        assertEquals(WorldEvent.Encounter(agent), event)
+    }
+
+    @Test fun `a monster behind rock does not see the hero, and an ambusher waits until they are close`() {
+        val hidden = sketch(
+            "#######",
+            "#M....#",
+            "#######",
+            "#H...E#",
+            "#######", rule = BehaviourRule(sight = 10.0))
+        repeat(60) { hidden.step(0.016, 0.0, 0.0) }
+        assertFalse(hidden.agents.first().chasing, "rock stands between them")
+
+        val ambush = sketch(
+            "#########",
+            "#M......#",
+            "#......H#",
+            "#.....E.#",
+            "#########", rule = BehaviourRule(type = BehaviourRule.AMBUSH, sight = 10.0, wake = 2.0))
+        val lurker = ambush.agents.first()
+        repeat(60) { ambush.step(0.016, 0.0, 0.0) }
+        assertEquals(AgentMode.LURKING, lurker.mode)
+        assertEquals(1.5, lurker.x, 1e-9)
+        ambush.heroX = lurker.x + 1.5
+        ambush.heroY = lurker.y
+        ambush.step(0.016, 0.0, 0.0)
+        assertTrue(lurker.chasing)
+    }
+
+    @Test fun `the hero sees their light radius through open ground and remembers what they saw`() {
+        val world = sketch(
+            "############",
+            "#H.........#",
+            "#.##########",
+            "#M........E#",
+            "############", light = 3.0)
+        assertTrue(world.lit(2, 1) && world.lit(4, 1))
+        assertFalse(world.lit(6, 1), "beyond the light")
+        assertTrue(world.lit(2, 2), "a rock face in reach is seen")
+        assertFalse(world.lit(3, 3), "behind the rock is not")
+        world.heroX = 5.5
+        world.step(0.016, 0.0, 0.0)
+        assertTrue(world.lit(8, 1))
+        assertFalse(world.lit(1, 1))
+        assertTrue(world.explored(1, 1), "what was seen stays on the map")
+        assertEquals(5.0 * 0.7, ExpeditionWorld.lightRadius(emptyMap(), 0.7), 1e-9)
+        assertEquals(8.0 * 1.2, ExpeditionWorld.lightRadius(mapOf("STOCK_LIGHT_RADIUS" to 8.0), 1.2), 1e-9)
     }
 
     @Test fun `standing on the exit ends the map`() {

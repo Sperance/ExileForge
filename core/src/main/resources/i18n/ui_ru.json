@@ -482,6 +482,7 @@
   "enum.stat.STOCK_MANA": "Мана",
   "enum.stat.STOCK_MANA_REGEN": "Реген маны",
   "enum.stat.STOCK_MOVEMENT_SPEED": "Скорость движения",
+  "enum.stat.STOCK_LIGHT_RADIUS": "Радиус света",
   "enum.stat.STOCK_QUANTITY": "Количество добычи, %",
   "enum.stat.STOCK_RARITY": "Редкость добычи, %",
   "enum.stat.STOCK_RESIST_ALL": "Все сопротивления, %",

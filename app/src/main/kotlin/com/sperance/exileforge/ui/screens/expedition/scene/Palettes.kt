@@ -29,6 +29,8 @@ object Palettes {
     val hero = Color(0xFFC8AA6E)
     val heroCape = Color(0xFF8A2E2E)
     val bronze = Color(0xFF8A6A3A)
+    /** The warm light of a torch or a brazier. */
+    val torch = Color(0xFFFFB060)
     val magic = Color(0xFF8888FF)
     val rare = Color(0xFFFFFF77)
     val portal = Color(0xFF7FA9C8)

@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.campaign
 
+import com.sperance.exileforge.core.model.campaign.BehaviourRule
 import com.sperance.exileforge.core.model.campaign.CampaignMap
 import com.sperance.exileforge.core.model.campaign.CampaignMonster
 import com.sperance.exileforge.core.model.campaign.CampaignRarity
@@ -15,6 +16,7 @@ data class RolledMonster(
     val rarity: MonsterRarity,
     val modifiers: List<MonsterModifier>,
     val stats: Map<String, Double>,
+    val behaviour: BehaviourRule = BehaviourRule(),
 )
 
 /**
@@ -40,7 +42,7 @@ object MonsterRoller {
         val pool = map.modifiers.filter { it.minLevel <= map.level && (MonsterRarity.entries.firstOrNull { r -> r.name == it.minRarity }?.ordinal ?: 1) <= tier }.toMutableList()
         val picked = List(count) { weighted(pool, random) { it.weight }?.also { pool.remove(it) } }.filterNotNull()
             .map { modifier -> modifier.copy(effects = modifier.effects.map { it.copy(value = it.value * rule.modifierPower) }) }
-        return RolledMonster(monster.code, monster.form, rarity, picked, fold(monster, rule.effects + picked.flatMap { it.effects }))
+        return RolledMonster(monster.code, monster.form, rarity, picked, fold(monster, rule.effects + picked.flatMap { it.effects }), monster.behaviour)
     }
 
     /**

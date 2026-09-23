@@ -20,9 +20,9 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.31.0, `versionCode` 49) for the
-**ktor-bestgame** RPG server (0.29.0), pinned in
-`core/.../contract/Contract.kt` as `SERVER_COMMIT = e32ca999a2adac21e8d132b188e5e6a432a97f15`
+ExileForge is an **Android Compose client** (version 2.32.0, `versionCode` 50) for the
+**ktor-bestgame** RPG server (0.30.0), pinned in
+`core/.../contract/Contract.kt` as `SERVER_COMMIT = ee87597c80130dbcea55dddfc7c65fcd40ecb640`
 on the server branch `claude/tender-pasteur-a36kj2`.
 
 The client is deliberately **thin**: the server owns items, stats, modifier rolls and inventory.
@@ -321,7 +321,7 @@ These are enforced by tests and are the point of the client's design:
     are all checked server-side. The class's start node arrives with the character and costs
     nothing, and a reset is a respec that leaves it in place — a new tree is never empty. The
     screen draws the seeded coordinates and sends one node code. `reachableFrom` highlights
-    neighbours so 299 nodes stay navigable — it reads `connections`, it does not decide: a
+    neighbours so 309 nodes stay navigable — it reads `connections`, it does not decide: a
     highlighted node can still be refused. Since 0.16.0 the graph is a file,
     `resources/skilltree/tree.json` on the server: seven class areas that meet through their own
     branches with no shared ring, and `SkillTreeSeeder` only reads it. Giving a node back is no
@@ -519,7 +519,12 @@ These are enforced by tests and are the point of the client's design:
     next map. The scene is Compose's own `Canvas` (`ui/screens/expedition/scene`) since 2.25.0 —
     libGDX was tried in 2.24 and removed, so there is no engine, no fragment and no native library.
     `Pen` is a thin pen over `DrawScope`; since 2.31.0 the hero and every monster walk the map as
-    round tokens of their portraits (`Figures` is gone) — rule 17 holds, no picture is loaded — and
+    round tokens of their portraits (`Figures` is gone). Since 2.32.0 (server 0.30.0) the map is lit
+    and remembered: `ExpeditionWorld` keeps `lit` and `explored` from the hero's `lightRadius` (the
+    sheet's `STOCK_LIGHT_RADIUS` times the map's `light`) along lines rock does not block, the scene
+    draws only what was explored, dims what is not lit and shows monsters in the light alone; each
+    monster walks by its `BehaviourRule` from the server (`WANDER`, `PATROL`, `AMBUSH`, `SLEEP`),
+    noticing a hero only in sight and chasing along `path` round the rock — rule 17 holds, no picture is loaded — and
     everything with text on it is the overlay above. The run (`ExpeditionRun`) lives in `:core` and is stepped
     once a frame from a `withFrameNanos` loop; the canvas reads a clock state, so each frame redraws
     without recomposing. The overlay reads the run's `RunHud` and sends `RunCommand`s. The fight

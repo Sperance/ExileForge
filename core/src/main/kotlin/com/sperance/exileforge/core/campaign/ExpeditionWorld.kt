@@ -1,13 +1,19 @@
 package com.sperance.exileforge.core.campaign
 
+import com.sperance.exileforge.core.model.campaign.BehaviourRule
 import com.sperance.exileforge.core.model.campaign.CampaignMap
 import com.sperance.exileforge.core.model.campaign.CampaignRarity
+import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.hypot
 import kotlin.random.Random
 
+/** What a monster is doing on the map, between fights. */
+enum class AgentMode { IDLE, ASLEEP, LURKING, CHASING, HUNTING, RETURNING }
+
 /** A monster walking the map: where it lives, where it is going, and whether it is still there. */
 class MonsterAgent(val id: Int, val monster: RolledMonster, val homeX: Double, val homeY: Double) {
+    val rule: BehaviourRule get() = monster.behaviour
     var x = homeX
     var y = homeY
     var targetX = homeX
@@ -16,7 +22,23 @@ class MonsterAgent(val id: Int, val monster: RolledMonster, val homeX: Double, v
     /** Seconds it will neither chase nor fight: a monster the hero ran from does not pounce at once. */
     var calm = 0.0
     var alive = true
-    var chasing = false
+    var mode = when (monster.behaviour.type) {
+        BehaviourRule.AMBUSH -> AgentMode.LURKING
+        BehaviourRule.SLEEP -> AgentMode.ASLEEP
+        else -> AgentMode.IDLE
+    }
+    /** Seconds since it last saw the hero it is hunting. */
+    var unseen = 0.0
+    /** Where it last saw the hero: a hunt goes there before it gives up. */
+    var lastX = homeX
+    var lastY = homeY
+    /** The far end of a patrol, or null for a monster that does not patrol. */
+    var patrol: Cell? = null
+    var outbound = true
+    internal var path: List<Cell> = emptyList()
+    internal var pathTo: Cell? = null
+    internal var repath = 0.0
+    val chasing: Boolean get() = mode == AgentMode.CHASING || mode == AgentMode.HUNTING
 }
 
 /** What a step of the world ran into. */
@@ -29,15 +51,28 @@ sealed interface WorldEvent {
  * The map in motion — positions in tile units, stepped by the scene every frame.
  *
  * It is pure so a test can walk it: the scene reads positions from here and draws them, and the
- * stick's direction comes in already in world axes (see [screenToWorld]). Monsters wander around
- * where they stood, chase a hero who comes close and start a fight on contact; the exit ends the
- * map. None of this is a game rule the server knows — it is how a run feels, and nothing of it
- * travels except which monster was killed.
+ * stick's direction comes in already in world axes (see [screenToWorld]). A fight starts on
+ * contact and the exit ends the map. None of this is a game rule the server knows — it is how a
+ * run feels, and nothing of it travels except which monster was killed.
+ *
+ * Since 2.32.0 (server 0.30.0) the map is lit and remembered: the hero sees [lightRadius] cells —
+ * the sheet's `STOCK_LIGHT_RADIUS` times the biome's `light` — along lines rock does not block
+ * ([lit]); what was ever seen stays [explored], dim. Monsters walk by their [BehaviourRule]: they
+ * notice a hero they can see, chase along a path round the rock, hunt the spot they lost them at
+ * and go home after `giveUp` seconds; an ambusher waits until the hero is close, a sleeper wakes.
  */
-class ExpeditionWorld(val map: ExpeditionMap, monsters: List<RolledMonster>, private val heroSpeed: Double, seed: Long) {
+class ExpeditionWorld(
+    val map: ExpeditionMap,
+    monsters: List<RolledMonster>,
+    private val heroSpeed: Double,
+    seed: Long,
+    val lightRadius: Double = DEFAULT_LIGHT,
+) {
     private val random = Random(seed)
     val agents: List<MonsterAgent> = monsters.zip(map.spawns).mapIndexed { index, (monster, cell) ->
-        MonsterAgent(index, monster, cell.x + 0.5, cell.y + 0.5)
+        MonsterAgent(index, monster, cell.x + 0.5, cell.y + 0.5).also { agent ->
+            if (monster.behaviour.type == BehaviourRule.PATROL) agent.patrol = patrolEnd(cell, monster.behaviour.wanderRadius)
+        }
     }
     var heroX = map.start.x + 0.5
     var heroY = map.start.y + 0.5
@@ -45,6 +80,17 @@ class ExpeditionWorld(val map: ExpeditionMap, monsters: List<RolledMonster>, pri
     var facingX = 1.0
     var facingY = 0.0
     var moving = false
+
+    /** Every cell the hero has ever seen, floor and rock alike. */
+    val explored = BooleanArray(map.width * map.height)
+    /** The cells the hero sees right now. */
+    val lit = BooleanArray(map.width * map.height)
+    private var litFrom: Cell? = null
+
+    init { light() }
+
+    fun explored(x: Int, y: Int) = x in 0 until map.width && y in 0 until map.height && explored[y * map.width + x]
+    fun lit(x: Int, y: Int) = x in 0 until map.width && y in 0 until map.height && lit[y * map.width + x]
 
     fun step(dt: Double, stickX: Double, stickY: Double): WorldEvent? {
         val length = hypot(stickX, stickY)
@@ -57,27 +103,92 @@ class ExpeditionWorld(val map: ExpeditionMap, monsters: List<RolledMonster>, pri
             heroX = nx
             heroY = ny
         }
+        light()
         agents.filter { it.alive }.forEach { agent ->
             agent.calm = (agent.calm - dt).coerceAtLeast(0.0)
             val toHero = hypot(heroX - agent.x, heroY - agent.y)
             if (agent.calm <= 0 && toHero < CONTACT) return WorldEvent.Encounter(agent)
-            agent.chasing = agent.calm <= 0 && toHero < AGGRO
-            if (agent.chasing) {
-                agent.targetX = heroX
-                agent.targetY = heroY
-                walk(agent, CHASE_SPEED, dt)
-            } else if (agent.idle > 0) {
-                agent.idle -= dt
-            } else if (!walk(agent, WANDER_SPEED, dt)) {
-                agent.idle = 1 + random.nextDouble() * 2.5
-                pickWanderTarget(agent)
-            }
+            think(agent, toHero, dt)
         }
         if (hypot(heroX - (map.exit.x + 0.5), heroY - (map.exit.y + 0.5)) < EXIT_REACH) return WorldEvent.Exit
         return null
     }
 
     val alive: Int get() = agents.count { it.alive }
+
+    // ==================== Monsters ====================
+
+    private fun think(agent: MonsterAgent, toHero: Double, dt: Double) {
+        val rule = agent.rule
+        val sees = agent.calm <= 0 && toHero <= rule.sight && sight(agent.x, agent.y, heroX, heroY)
+        when (agent.mode) {
+            // A sleeper and an ambusher only stir when the hero is right there.
+            AgentMode.ASLEEP, AgentMode.LURKING -> if (sees && toHero <= rule.wake) agent.mode = AgentMode.CHASING
+            else -> if (sees) agent.mode = AgentMode.CHASING
+        }
+        when (agent.mode) {
+            AgentMode.ASLEEP, AgentMode.LURKING -> Unit
+            AgentMode.CHASING -> {
+                agent.lastX = heroX
+                agent.lastY = heroY
+                agent.unseen = 0.0
+                if (!sees) agent.mode = AgentMode.HUNTING
+                go(agent, heroX, heroY, rule.chaseSpeed, dt)
+            }
+            AgentMode.HUNTING -> {
+                agent.unseen += dt
+                if (agent.unseen >= rule.giveUp) agent.mode = AgentMode.RETURNING
+                else go(agent, agent.lastX, agent.lastY, rule.chaseSpeed, dt)
+            }
+            AgentMode.RETURNING -> if (!go(agent, agent.homeX, agent.homeY, rule.wanderSpeed.coerceAtLeast(MIN_WALK), dt)) {
+                agent.mode = if (rule.type == BehaviourRule.AMBUSH) AgentMode.LURKING else AgentMode.IDLE
+            }
+            AgentMode.IDLE -> roam(agent, rule, dt)
+        }
+    }
+
+    /** Wandering round home, or walking a patrol: the monster's own business while nobody is near. */
+    private fun roam(agent: MonsterAgent, rule: BehaviourRule, dt: Double) {
+        if (rule.wanderSpeed <= 0 || rule.type == BehaviourRule.AMBUSH) return
+        if (agent.idle > 0) { agent.idle -= dt; return }
+        val patrol = agent.patrol
+        if (patrol != null) {
+            val (tx, ty) = if (agent.outbound) patrol.x + 0.5 to patrol.y + 0.5 else agent.homeX to agent.homeY
+            if (!go(agent, tx, ty, rule.wanderSpeed, dt)) { agent.outbound = !agent.outbound; agent.idle = 0.8 + random.nextDouble() }
+            return
+        }
+        if (!walk(agent, rule.wanderSpeed, dt)) {
+            agent.idle = 1 + random.nextDouble() * 2.5
+            pickWanderTarget(agent, rule.wanderRadius)
+        }
+    }
+
+    /**
+     * Heads for ([tx], [ty]): straight when nothing is in the way, along a path round the rock
+     * otherwise. False once it has arrived or has no way there.
+     */
+    private fun go(agent: MonsterAgent, tx: Double, ty: Double, speed: Double, dt: Double): Boolean {
+        if (hypot(tx - agent.x, ty - agent.y) < 0.1) return false
+        if (sight(agent.x, agent.y, tx, ty)) {
+            agent.targetX = tx
+            agent.targetY = ty
+            // A corner can still catch a body wider than the line: then the path takes over.
+            if (walk(agent, speed, dt)) { agent.path = emptyList(); return true }
+        }
+        val goal = Cell(floor(tx).toInt(), floor(ty).toInt())
+        agent.repath -= dt
+        if (agent.pathTo != goal || agent.repath <= 0 || agent.path.isEmpty()) {
+            agent.path = path(Cell(floor(agent.x).toInt(), floor(agent.y).toInt()), goal).drop(1)
+            agent.pathTo = goal
+            agent.repath = REPATH
+        }
+        val next = agent.path.firstOrNull() ?: return false
+        agent.targetX = next.x + 0.5
+        agent.targetY = next.y + 0.5
+        if (hypot(agent.targetX - agent.x, agent.targetY - agent.y) < 0.2) agent.path = agent.path.drop(1)
+        walk(agent, speed, dt)
+        return true
+    }
 
     /** Moves toward the target; false once it has arrived or a wall stopped it. */
     private fun walk(agent: MonsterAgent, speed: Double, dt: Double): Boolean {
@@ -93,11 +204,103 @@ class ExpeditionWorld(val map: ExpeditionMap, monsters: List<RolledMonster>, pri
         return moved
     }
 
-    private fun pickWanderTarget(agent: MonsterAgent) {
+    private fun pickWanderTarget(agent: MonsterAgent, radius: Double) {
         repeat(8) {
-            val tx = agent.homeX + (random.nextDouble() * 2 - 1) * WANDER_RADIUS
-            val ty = agent.homeY + (random.nextDouble() * 2 - 1) * WANDER_RADIUS
+            val tx = agent.homeX + (random.nextDouble() * 2 - 1) * radius
+            val ty = agent.homeY + (random.nextDouble() * 2 - 1) * radius
             if (map.walkable(floor(tx).toInt(), floor(ty).toInt())) { agent.targetX = tx; agent.targetY = ty; return }
+        }
+    }
+
+    /** The far end of a patrol: the reachable floor furthest from home within [radius] steps. */
+    private fun patrolEnd(home: Cell, radius: Double): Cell? {
+        val limit = ceil(radius).toInt().coerceAtLeast(1)
+        val distance = distances(home, limit)
+        return distance.entries.filter { it.value == limit }.map { it.key }.let { far -> if (far.isEmpty()) null else far[random.nextInt(far.size)] }
+    }
+
+    // ==================== The grid ====================
+
+    /**
+     * The shortest way from [from] to [to] over floor, eight ways, never cutting a corner of rock;
+     * empty when there is none. Both ends are included.
+     */
+    fun path(from: Cell, to: Cell): List<Cell> {
+        if (!map.walkable(to.x, to.y) || !map.walkable(from.x, from.y)) return emptyList()
+        if (from == to) return listOf(from)
+        val previous = IntArray(map.width * map.height) { -1 }
+        val start = from.y * map.width + from.x
+        val goal = to.y * map.width + to.x
+        previous[start] = start
+        val queue = ArrayDeque<Int>().apply { add(start) }
+        while (queue.isNotEmpty()) {
+            val index = queue.removeFirst()
+            if (index == goal) break
+            val x = index % map.width
+            val y = index / map.width
+            for ((dx, dy) in STEPS) {
+                val nx = x + dx
+                val ny = y + dy
+                if (!map.walkable(nx, ny) || (dx != 0 && dy != 0 && !(map.walkable(x + dx, y) && map.walkable(x, y + dy)))) continue
+                val next = ny * map.width + nx
+                if (previous[next] >= 0) continue
+                previous[next] = index
+                queue.add(next)
+            }
+        }
+        if (previous[goal] < 0) return emptyList()
+        val cells = ArrayList<Cell>()
+        var index = goal
+        while (index != start) { cells += Cell(index % map.width, index / map.width); index = previous[index] }
+        cells += from
+        return cells.reversed()
+    }
+
+    /** Steps from [from] to every floor cell within [limit] steps, four ways. */
+    private fun distances(from: Cell, limit: Int): Map<Cell, Int> {
+        val seen = mutableMapOf(from to 0)
+        val queue = ArrayDeque<Cell>().apply { add(from) }
+        while (queue.isNotEmpty()) {
+            val cell = queue.removeFirst()
+            val d = seen.getValue(cell)
+            if (d == limit) continue
+            for ((dx, dy) in STEPS.take(4)) {
+                val next = Cell(cell.x + dx, cell.y + dy)
+                if (map.walkable(next.x, next.y) && next !in seen) { seen[next] = d + 1; queue.add(next) }
+            }
+        }
+        return seen
+    }
+
+    /** Whether a straight line from one point to another crosses no rock. */
+    fun sight(ax: Double, ay: Double, bx: Double, by: Double): Boolean {
+        val distance = hypot(bx - ax, by - ay)
+        val steps = ceil(distance / SIGHT_STEP).toInt()
+        for (i in 1 until steps) {
+            val t = i.toDouble() / steps
+            if (!map.walkable(floor(ax + (bx - ax) * t).toInt(), floor(ay + (by - ay) * t).toInt())) return false
+        }
+        return true
+    }
+
+    /** What the hero sees from the cell they stand in, worked out again only when they leave it. */
+    private fun light() {
+        val here = Cell(floor(heroX).toInt(), floor(heroY).toInt())
+        if (here == litFrom) return
+        litFrom = here
+        lit.fill(false)
+        val reach = ceil(lightRadius).toInt()
+        for (y in here.y - reach..here.y + reach) for (x in here.x - reach..here.x + reach) {
+            if (x !in 0 until map.width || y !in 0 until map.height) continue
+            if (hypot(x - here.x.toDouble(), y - here.y.toDouble()) > lightRadius) continue
+            // A rock face is seen when the line reaches it; what is behind it is not.
+            val cx = x + 0.5
+            val cy = y + 0.5
+            val toward = hypot(cx - heroX, cy - heroY).coerceAtLeast(1e-6)
+            val near = (toward - 0.75).coerceAtLeast(0.0) / toward
+            if (!sight(heroX, heroY, heroX + (cx - heroX) * near, heroY + (cy - heroY) * near)) continue
+            lit[y * map.width + x] = true
+            explored[y * map.width + x] = true
         }
     }
 
@@ -112,20 +315,25 @@ class ExpeditionWorld(val map: ExpeditionMap, monsters: List<RolledMonster>, pri
         listOf(-radius to -radius, radius to -radius, -radius to radius, radius to radius)
             .all { (ox, oy) -> map.walkable(floor(x + ox).toInt(), floor(y + oy).toInt()) }
 
-    /** The hero stepped back from a fight nobody won: the monster lets them go for a while. */
-    fun retreatFrom(agent: MonsterAgent) { agent.calm = CALM_AFTER_RETREAT }
+    /** The hero stepped back from a fight nobody won: the monster lets them go for a while, and goes home. */
+    fun retreatFrom(agent: MonsterAgent) {
+        agent.calm = CALM_AFTER_RETREAT
+        agent.mode = AgentMode.RETURNING
+    }
 
     companion object {
         const val HERO_SPEED = 3.2
         const val HERO_RADIUS = 0.28
         const val MONSTER_RADIUS = 0.3
-        const val WANDER_SPEED = 1.1
-        const val CHASE_SPEED = 2.2
-        const val WANDER_RADIUS = 3.0
-        const val AGGRO = 3.5
         const val CONTACT = 0.8
         const val EXIT_REACH = 0.7
         const val CALM_AFTER_RETREAT = 4.0
+        /** What a hero sees by when the server has not said: the level-1 base since server 0.30.0. */
+        const val DEFAULT_LIGHT = 5.0
+        private const val MIN_WALK = 0.8
+        private const val REPATH = 0.4
+        private const val SIGHT_STEP = 0.25
+        private val STEPS = listOf(1 to 0, -1 to 0, 0 to 1, 0 to -1, 1 to 1, 1 to -1, -1 to 1, -1 to -1)
 
         /**
          * The stick's direction on screen, turned into world axes.
@@ -152,10 +360,17 @@ class ExpeditionWorld(val map: ExpeditionMap, monsters: List<RolledMonster>, pri
             val (low, high) = map.monsterCount.let { (it.getOrNull(0) ?: 10) to (it.getOrNull(1) ?: 14) }
             val layout = MapGenerator.generate(seed, map.biome, random.nextInt(low, high + 1))
             val monsters = List(layout.spawns.size) { MonsterRoller.roll(map, rarities, random) }
-            return ExpeditionWorld(layout, monsters, heroSpeed(heroStats), seed)
+            return ExpeditionWorld(layout, monsters, heroSpeed(heroStats), seed, lightRadius(heroStats, map.light))
         }
 
         /** The hero's pace, sped up by movement speed from the sheet. */
         fun heroSpeed(stats: Map<String, Double>): Double = HERO_SPEED * (1 + (stats["STOCK_MOVEMENT_SPEED"] ?: 0.0) / 100).coerceIn(0.5, 2.5)
+
+        /** How far the hero sees: the sheet's light radius — the base, if the server sent none — times the biome's light. */
+        fun lightRadius(stats: Map<String, Double>, biomeLight: Double): Double =
+            ((stats["STOCK_LIGHT_RADIUS"]?.takeIf { it > 0 } ?: DEFAULT_LIGHT) * biomeLight).coerceIn(MIN_LIGHT, MAX_LIGHT)
+
+        const val MIN_LIGHT = 2.0
+        const val MAX_LIGHT = 14.0
     }
 }

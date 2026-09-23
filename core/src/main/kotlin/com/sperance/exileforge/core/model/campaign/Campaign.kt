@@ -40,8 +40,37 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE }
     val effects: List<MonsterEffect> = emptyList(),
 )
 
-/** A monster of one map: stats at the map's level, and the silhouette it is drawn as. */
-@Serializable data class CampaignMonster(val code: String, val form: String = "", val stats: Map<String, Double> = emptyMap())
+/**
+ * How a monster walks the map before a fight (since server 0.30.0): the server's numbers, the
+ * client's steps. [type] is `WANDER`, `PATROL`, `AMBUSH` or `SLEEP`; [sight] is how far it notices
+ * a hero it can see, [wake] how close an ambusher or a sleeper lets one come, and [giveUp] how many
+ * seconds it hunts a hero it has lost before it goes home. The defaults are what every monster did
+ * before the server said.
+ */
+@Serializable data class BehaviourRule(
+    val type: String = WANDER,
+    val wanderSpeed: Double = 1.1,
+    val chaseSpeed: Double = 2.2,
+    val sight: Double = 4.5,
+    val wanderRadius: Double = 3.0,
+    val wake: Double = 0.0,
+    val giveUp: Double = 3.0,
+) {
+    companion object {
+        const val WANDER = "WANDER"
+        const val PATROL = "PATROL"
+        const val AMBUSH = "AMBUSH"
+        const val SLEEP = "SLEEP"
+    }
+}
+
+/** A monster of one map: stats at the map's level, the silhouette it is drawn as and how it walks. */
+@Serializable data class CampaignMonster(
+    val code: String,
+    val form: String = "",
+    val stats: Map<String, Double> = emptyMap(),
+    val behaviour: BehaviourRule = BehaviourRule(),
+)
 
 @Serializable data class CampaignMap(
     val code: String,
@@ -52,6 +81,8 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE }
     val monsterCount: List<Int> = listOf(10, 14),
     val monsters: List<CampaignMonster> = emptyList(),
     val modifiers: List<MonsterModifier> = emptyList(),
+    /** How much the biome widens or narrows the hero's light (since server 0.30.0). */
+    val light: Double = 1.0,
 )
 
 @Serializable data class CampaignChapter(val code: String, val maps: List<CampaignMap> = emptyList())

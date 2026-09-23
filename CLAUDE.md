@@ -20,7 +20,7 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.17.0, `versionCode` 34) for the
+ExileForge is an **Android Compose client** (version 2.18.0, `versionCode` 35) for the
 **ktor-bestgame** RPG server (0.25.0), pinned in
 `core/.../contract/Contract.kt` as `SERVER_COMMIT = a1f4fbabe6dd3512cfb421031fc88b81324617cb`
 on the server branch `claude/tender-pasteur-a36kj2`.
@@ -443,10 +443,15 @@ These are enforced by tests and are the point of the client's design:
     the same group and the price are refused by the server, for free.
 
 22. **Two rings and two hands are the server's (since 0.24.0).** `RING_2` is a place, not a kind of
-    item: `wornSlots` lists the grid's cells, `templateSlot` maps a cell back to the template slot
-    that fills it, and `HeroClient.equip(…, slot)` names the ring place a cell was picked for. What
-    a two-handed weapon, a bow, a shield or a quiver takes off is decided by the server when the
-    item is put on; the client re-reads the hero and draws what is worn.
+    item. Since 2.18.0 what the character wears is a ledger, one line per `BodyPlace`
+    (`bodyPlaces` in `Contract.kt`): the hands are two places — `MAIN_HAND` takes a one- or
+    two-handed weapon, `OFF_HAND` a shield or a quiver and reads as taken while a two-handed weapon
+    is worn — and the rings are two places filled from one template slot, whose `ring` is what
+    `HeroClient.equip(…, slot)` names. What a two-handed weapon, a bow, a shield or a quiver takes
+    off is decided by the server when the item is put on; the client re-reads the hero and draws
+    what is worn. Above the Hero tab's sections sits `HeroHeader` — name, class and level, gold and
+    tree points as chips, experience as a thin bar — and the Equipment section is the vitals over
+    the ledger.
 
 ## Conventions
 
@@ -489,7 +494,7 @@ These are enforced by tests and are the point of the client's design:
   because a card is a page about one item and a line is a stash you can read down. That card is
   `ItemSheet`: it scrolls, and the actions sit in a row pinned under it — wear or take off, an orb,
   a listing, a sale, and the base for an administrator — so what a player came to do is never below
-  the fold. An empty equipment slot opens the stash narrowed to that slot (`SlotPicker`). A vital
+  the fold. An empty place on the body opens the stash narrowed to what fits it (`SlotPicker`). A vital
   with no current value is a figure in a tile, never a bar: a bar that can only be full says nothing.
 - **An icon names a meaning, never a label.** Small icons are a `Glyph` (`core/display/Glyph.kt`):
   a caller passes one explicitly (`PropertyRow(..., Glyph.LEVEL)`, `Spinner(..., glyph = Glyph.ITEM)`,

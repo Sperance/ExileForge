@@ -20,15 +20,32 @@ val rarities = listOf("COMMON", "UNCOMMON", "RARE", "EPIC", "UNIQUE", "MYTHICAL"
 // and `CharacterEquipment.socketCode` says which one.
 val slots = listOf("HELMET", "BODY", "GLOVES", "RING", "BOOTS", "WINGS", "BELT", "WEAPON_1H", "WEAPON_2H", "QUIVER", "SHIELD", "AMULET", "JEWEL")
 /**
- * The places an item is worn in, in the order the equipment grid draws them.
+ * One line of the equipment ledger: a place on the body and the template slots that fill it.
  *
- * Since server 0.24.0 there are two rings: `RING_2` is where the second one goes, never the slot a
- * template names — which is why it is here and not in [slots]. A jewel sits in the tree, not here.
+ * Since 2.18.0 the hands are two places rather than four slots — a one- or two-handed weapon in
+ * the main hand, a shield or a quiver in the other — because the server never lets both of a pair
+ * be worn at once, and four cells for two hands read as four things to fill. The rings are two
+ * places filled from one template slot: [ring] is the place the server is asked to put a ring in
+ * (`RING`, `RING_2`), null everywhere else, where the template's own slot decides.
  */
-val wornSlots = slots.filterNot { it == "JEWEL" }.flatMap { if (it == "RING") listOf("RING", "RING_2") else listOf(it) }
+data class BodyPlace(val code: String, val fits: List<String>, val ring: String? = null) {
+    /** What is worn here, out of the hero's items keyed by `equippedSlot`. */
+    fun <T> wornIn(equipped: Map<String, T>): T? = if (ring != null) equipped[ring] else fits.firstNotNullOfOrNull { equipped[it] }
+    /** The off hand is taken whenever a two-handed weapon is — by the server's rule, shown here. */
+    fun blockedBy(equipped: Map<String, *>): Boolean = code == OFF_HAND && "WEAPON_2H" in equipped
+    companion object {
+        const val MAIN_HAND = "MAIN_HAND"
+        const val OFF_HAND = "OFF_HAND"
+    }
+}
 
-/** The template slot that fills a place: the second ring is a ring. */
-fun templateSlot(worn: String): String = if (worn == "RING_2") "RING" else worn
+/** The ledger's lines, top to bottom: the hands first, then the body, then the jewellery. */
+val bodyPlaces = listOf(
+    BodyPlace(BodyPlace.MAIN_HAND, listOf("WEAPON_1H", "WEAPON_2H")),
+    BodyPlace(BodyPlace.OFF_HAND, listOf("SHIELD", "QUIVER")),
+) + listOf("HELMET", "BODY", "GLOVES", "BOOTS", "AMULET").map { BodyPlace(it, listOf(it)) } +
+    listOf(BodyPlace("RING", listOf("RING"), "RING"), BodyPlace("RING_2", listOf("RING"), "RING_2")) +
+    listOf("BELT", "WINGS").map { BodyPlace(it, listOf(it)) }
 
 val weapons = listOf("SWORD", "LONGSWORD", "BOW", "WAND", "AXE", "DOUBLEAXE", "DOUBLESWORD", "BLADE")
 val modifierSources = listOf("IMPLICIT", "PREFIX", "SUFFIX", "UNIQUE", "ENCHANTMENT", "CORRUPTION", "PASSIVE")

@@ -332,8 +332,24 @@ class GameApiTest {
         ok("""{"_id":"$id","characterId":"$other","equipmentId":"$other","equippedSlot":"RING_2","params":[]}""")
         assertEquals("RING_2", api.hero.equip(other, id, "RING_2").equippedSlot)
         assertEquals("/game/api/v1/characterequipment/equip?characterId=$other&inventoryId=$id&slot=RING_2", server.takeRequest().path)
-        assertEquals(listOf("RING", "RING_2"), com.sperance.exileforge.core.contract.wornSlots.filter { it.startsWith("RING") })
-        assertEquals("RING", com.sperance.exileforge.core.contract.templateSlot("RING_2"))
+    }
+
+    @Test fun `the ledger has two hands and two rings, and every template slot has a place`() {
+        val places = com.sperance.exileforge.core.contract.bodyPlaces
+        assertEquals(11, places.size)
+        assertEquals((com.sperance.exileforge.core.contract.slots - "JEWEL").toSet(), places.flatMap { it.fits }.toSet())
+        val main = places.first { it.code == "MAIN_HAND" }
+        val off = places.first { it.code == "OFF_HAND" }
+        // A two-handed weapon fills the main hand and takes the other one with it.
+        val worn = mapOf("WEAPON_2H" to "greatsword", "RING_2" to "second")
+        assertEquals("greatsword", main.wornIn(worn))
+        assertNull(off.wornIn(worn))
+        assertTrue(off.blockedBy(worn))
+        assertFalse(main.blockedBy(worn))
+        // The two rings are filled from one slot, and each place asks for its own.
+        assertEquals("second", places.first { it.code == "RING_2" }.wornIn(worn))
+        assertNull(places.first { it.code == "RING" }.wornIn(worn))
+        assertEquals(listOf("RING", "RING_2"), places.mapNotNull { it.ring })
     }
 
     /**

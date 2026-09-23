@@ -34,7 +34,8 @@ import com.sperance.exileforge.presentation.state.PlayState
 import com.sperance.exileforge.presentation.state.WorldState
 import com.sperance.exileforge.presentation.state.MarketState
 import com.sperance.exileforge.core.model.currency.CurrencyItem
-import com.sperance.exileforge.ui.screens.hero.EquipmentGrid
+import com.sperance.exileforge.ui.screens.hero.EquipmentLedger
+import com.sperance.exileforge.ui.screens.hero.HeroHeader
 import com.sperance.exileforge.ui.screens.hero.HeroSummary
 import com.sperance.exileforge.ui.screens.hero.OrbPanel
 import com.sperance.exileforge.ui.screens.tree.SkillTreePanel
@@ -77,10 +78,10 @@ class HeroPanelTest {
     @After fun forget() { serverLocale = LocaleBundle() }
 
     /**
-     * The character section and the equipment grid, as the Hero tab draws them.
+     * The header, the character section and the equipment ledger, as the Hero tab draws them.
      *
-     * A worn slot hands back the instance, so the item's sheet can open; an empty one hands back
-     * only its slot, so the stash can be narrowed to what fits it.
+     * A worn place hands back the instance, so the item's sheet can open; an empty one hands back
+     * only its place, so the stash can be narrowed to what fits it.
      */
     @Test fun equippedSlotShowsItsTemplateAndEmitsTheInstanceId() {
         val instance = EquipmentInstance("ring-instance", "hero", "ring-base",
@@ -92,17 +93,21 @@ class HeroPanelTest {
         compose.setContent { ForgeTheme { Column(Modifier.background(Ink).verticalScroll(rememberScrollState()).padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)) {
             val state = ForgeState(busy = false, account = AccountState(signedIn = true, profile = com.sperance.exileforge.core.model.command.UserProfile("owner")), play = PlayState(hero = hero, characterOwner = "owner"), world = WorldState(inventoryBases = mapOf("ring-base" to base)))
+            HeroHeader(state) {}
             HeroSummary(state)
-            EquipmentGrid(state) { slot, instance -> picked = slot to instance }
+            EquipmentLedger(state) { place, instance -> picked = place.code to instance }
         } } }
         val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
         val directory = File(InstrumentationRegistry.getInstrumentation().targetContext.getExternalFilesDir(null), "design").apply { mkdirs() }
         File(directory, "hero.jpg").outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 80, it) }
         compose.onNodeWithText("Кольцо героя").performScrollTo().performClick()
         compose.runOnIdle { assertEquals("RING" to "ring-instance", picked) }
-        // An empty slot names itself and nothing else.
+        // An empty place names itself and nothing else.
         compose.onNodeWithText("Шлем").performScrollTo().performClick()
         compose.runOnIdle { assertEquals("HELMET" to null, picked) }
+        // The hands are two places: the main hand takes any weapon, the other a shield or a quiver.
+        compose.onNodeWithText("Основная рука").performScrollTo().performClick()
+        compose.runOnIdle { assertEquals("MAIN_HAND" to null, picked) }
         // Life is a figure, not a bar: the sheet carries a maximum and no current value.
         compose.onNodeWithText("88").performScrollTo().assertIsDisplayed()
         // Every stat the server sent is in the sheet the vitals open, with nothing folded inside it.
@@ -130,10 +135,12 @@ class HeroPanelTest {
                 listOf(InactiveEquipment("helm-instance", "IRON_HELMET", listOf("strength: need 30, have 14")))))
         compose.setContent { ForgeTheme { Column(Modifier.background(Ink).verticalScroll(rememberScrollState()).padding(12.dp)) {
             val state = ForgeState(busy = false, account = AccountState(signedIn = true, profile = com.sperance.exileforge.core.model.command.UserProfile("owner")), play = PlayState(hero = hero, characterOwner = "owner"), world = WorldState(classes = listOf(CharacterClass("marauder", "MARAUDER", "STR_START")), inventoryBases = mapOf("helm-base" to base)))
+            HeroHeader(state) {}
             HeroSummary(state)
-            EquipmentGrid(state) { _, _ -> }
+            EquipmentLedger(state) { _, _ -> }
         } } }
-        compose.onNodeWithText("Мародёр").performScrollTo().assertIsDisplayed()
+        // Class and level are one line of the header.
+        compose.onNodeWithText("Мародёр · 3 уровень").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Не работает").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Сила: нужно 30, есть 14").performScrollTo().assertIsDisplayed()
     }

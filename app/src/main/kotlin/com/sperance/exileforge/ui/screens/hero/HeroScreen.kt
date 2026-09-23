@@ -10,9 +10,9 @@ import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.contract.BodyPlace
 import com.sperance.exileforge.core.contract.text
 import com.sperance.exileforge.core.display.inventoryDocument
 import com.sperance.exileforge.core.display.slotTitle
@@ -35,14 +35,14 @@ private enum class HeroSection(val title: String) {
  *
  * It used to be one long scroll with the stash — the list a player opens this tab for — at the very
  * bottom, under a character sheet and eleven slots that were mostly empty. Each is its own section
- * now, one tap apart. The forge sits in the header because it is reached from here but is not a
- * part of the hero. Every item, wherever it is shown, opens the same [ItemSheet].
+ * now, one tap apart, under a header that says who the character is — the one part they all share.
+ * Every item, wherever it is shown, opens the same [ItemSheet].
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun HeroScreen(s: ForgeState, vm: ForgeViewModel) {
     var section by rememberSaveable(s.play.characterId) { mutableStateOf(HeroSection.CHARACTER) }
     var detailId by remember(s.play.characterId) { mutableStateOf<String?>(null) }
-    var pickSlot by remember(s.play.characterId) { mutableStateOf<String?>(null) }
+    var pickPlace by remember(s.play.characterId) { mutableStateOf<BodyPlace?>(null) }
     var query by remember(s.play.characterId) { mutableStateOf("") }
     var slot by remember(s.play.characterId) { mutableStateOf("") }
     // Opening the tab is what refreshes the hero, and only when the last reading has gone cold.
@@ -56,12 +56,9 @@ private enum class HeroSection(val title: String) {
     PullToRefreshBox(isRefreshing = s.refreshing(Reads.HERO), onRefresh = vm::loadHero, modifier = Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
-                Row(verticalAlignment = Alignment.Top) {
-                    Box(Modifier.weight(1f)) { ScreenHeader(ui("hero.title"), ui("hero.inventory_count", stash.size), ForgeGlyphs.Stash) }
-                    IconButton(enabled = !s.busy, onClick = { vm.tab(TAB_CRAFT) }) {
-                        Icon(ForgeGlyphs.Tome, ui("nav.craft"), tint = Gold, modifier = Modifier.size(24.dp))
-                    }
-                }
+                // Who the character is heads every section; until the hero arrives the tab says what it is.
+                if (hero != null) HeroHeader(s) { vm.tab(TAB_CRAFT) }
+                else ScreenHeader(ui("hero.title"), ui("hero.inventory_count", stash.size), ForgeGlyphs.Stash)
             }
             item {
                 TabRow(selectedTabIndex = section.ordinal, containerColor = Abyss) {
@@ -74,8 +71,9 @@ private enum class HeroSection(val title: String) {
             if (hero == null) item { InfoCard(ui("common.loading"), ui("hero.stash_empty_hint")) }
             else when (section) {
                 HeroSection.CHARACTER -> item { HeroSummary(s) }
-                HeroSection.EQUIPMENT -> item {
-                    EquipmentGrid(s) { bodySlot, worn -> if (worn != null) detailId = worn else pickSlot = bodySlot }
+                HeroSection.EQUIPMENT -> {
+                    item { HeroVitals(s) }
+                    item { EquipmentLedger(s) { place, worn -> if (worn != null) detailId = worn else pickPlace = place } }
                 }
                 HeroSection.STASH -> {
                     item { BagPanel(s) }
@@ -116,5 +114,5 @@ private enum class HeroSection(val title: String) {
         }
     }
     detailId?.let { id -> ItemSheet(s, vm, id) { detailId = null } }
-    pickSlot?.let { bodySlot -> SlotPicker(s, bodySlot, onDismiss = { pickSlot = null }, onEquip = { instanceId -> vm.equip(instanceId, bodySlot) }) }
+    pickPlace?.let { place -> SlotPicker(s, place, onDismiss = { pickPlace = null }, onEquip = { instanceId -> vm.equip(instanceId, place.ring) }) }
 }

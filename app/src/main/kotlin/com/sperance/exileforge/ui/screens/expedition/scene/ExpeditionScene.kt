@@ -194,16 +194,15 @@ private class ScenePainter {
 
     /**
      * Under the arena's frames (2.28.0) the scene keeps only the ground: the biome's floor as a lit
-     * oval fading into its dark, breathing slowly. The fighters are the overlay's framed portraits.
+     * oval fading into its dark, and still (2.30.0): only the two frames move. The fighters are the overlay's framed portraits.
      */
     private fun fight(scope: DrawScope, palette: Palette) {
         val w = scope.size.width
         val h = scope.size.height
-        val breath = 1f + .03f * sin(time * 1.2f)
         scope.translate(0f, h * .62f) {
             for (i in 6 downTo 1) {
                 pen.color = palette.floor.copy(alpha = .14f * (7 - i) / 6f + .04f)
-                pen.ellipse(w / 2 - w * .09f * i * breath, -h * .035f * i, w * .18f * i * breath, h * .07f * i)
+                pen.ellipse(w / 2 - w * .09f * i, -h * .035f * i, w * .18f * i, h * .07f * i)
             }
             pen.color = palette.accent.copy(alpha = .08f)
             pen.ellipse(w / 2 - w * .3f, -h * .02f, w * .6f, h * .04f)

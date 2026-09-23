@@ -20,7 +20,7 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.29.0, `versionCode` 47) for the
+ExileForge is an **Android Compose client** (version 2.30.0, `versionCode` 48) for the
 **ktor-bestgame** RPG server (0.28.0), pinned in
 `core/.../contract/Contract.kt` as `SERVER_COMMIT = 04335520b0b9e1e614d3bca082cd2b58d297989f`
 on the server branch `claude/tender-pasteur-a36kj2`.
@@ -521,8 +521,9 @@ These are enforced by tests and are the point of the client's design:
     two `FighterFrame`s side by side, gold for the hero and the rarity colour for the monster,
     cut-cornered like an item's frame, each carrying its fighter's name and kind, a bust drawn on a
     `Canvas` by `scene/Portraits.kt` (the hero, and one per monster `form`, all shapes — rule 17)
-    in a box that is **always three by four** (`aspectRatio(3f / 4f)`, since 2.29.0) so the frame
-    is as tall as its portrait and lines make it,
+    in a box that is **always three by four** (`aspectRatio(3f / 4f)`, since 2.29.0); since 2.30.0
+    the frames take only what the log and the buttons under them leave, the damage numbers rise
+    inside the portrait that was hit and nothing outside the two frames moves,
     life with the shield over it, the hero's mana, the swing bar (`Battle.swing`) and the cast bar
     (`Battle.cast`), and the ailments as draining chips. The monster's modifiers are printed under
     its frame, outside it. **The blow is the frame**: `FightHud.lunge` (`LungeView`) is the event

@@ -575,9 +575,19 @@ class GameApiTest {
         ok("""{"chapters":[{"code":"CHAPTER_1","maps":[{"code":"C1_TIDAL_SHORE","chapter":"CHAPTER_1","order":1,"biome":"SHORE","level":1,
             "monsterCount":[10,14],"monsters":[{"code":"DROWNED","form":"HUMANOID","stats":{"STOCK_HEALTH":18.0}}],
             "modifiers":[{"code":"MOB_TOUGH","weight":100,"minLevel":1,"effects":[{"stat":"STOCK_HEALTH","operation":"INCREASED","value":60.0}]}]}]}],
-            "rarities":[{"rarity":"NORMAL","weight":85,"modifiers":[0,0]}]}""")
+            "rarities":[{"rarity":"NORMAL","weight":85,"modifiers":[0,0]}],
+            "combat":{"timeLimit":45.0,"variance":20.0,"resistCap":75.0,"blockCap":75.0,"spellBlockShare":50.0,"unarmed":{"damage":4.0,"speed":1.2},
+            "critical":{"chance":5.0,"multiplier":150.0},"armour":{"factor":5.0,"cap":90.0},"evasion":{"base":150.0,"perLevel":40.0,"cap":75.0},
+            "stun":{"share":15.0,"duration":0.4},"shield":{"rechargeDelay":2.0,"rechargePerSecond":20.0},
+            "spell":{"innateDamage":2.0,"innatePerLevel":0.5,"castSpeed":0.8,"manaCost":12.0,"manaRegenShare":1.75},
+            "flask":{"charges":2,"perKill":1,"heal":40.0,"duration":3.0},"retreat":{"delay":1.5},"death":{"fromLevel":10,"experienceShare":5.0},
+            "ailments":[{"ailment":"BURNING","type":"STOCK_ATTACK_FIRE","chance":30.0,"magnitude":60.0,"duration":4.0}]}}""")
         val view = api.campaign.chapters()
         assertEquals(18.0, view.chapters.single().maps.single().monsters.single().stats["STOCK_HEALTH"])
+        // The rules of the fight are the server's and arrive with the chapters (0.28.0).
+        assertEquals(45.0, view.combat.timeLimit)
+        assertEquals(2, view.combat.flask.charges)
+        assertEquals("BURNING", view.combat.ailments.single().ailment)
         assertEquals("/game/api/v1/character/campaign/chapters", server.takeRequest().path)
         ok("""{"cleared":[],"unlocked":["C1_TIDAL_SHORE"]}""")
         assertEquals(listOf("C1_TIDAL_SHORE"), api.campaign.progress(id).unlocked)
@@ -590,6 +600,11 @@ class GameApiTest {
         ok("""{"cleared":["C1_TIDAL_SHORE"],"unlocked":["C1_TIDAL_SHORE","C1_BRINE_CAVES"]}""")
         assertEquals(2, api.campaign.complete(id, "C1_TIDAL_SHORE").unlocked.size)
         assertEquals("/game/api/v1/character/campaign/complete?characterId=$id&mapCode=C1_TIDAL_SHORE", server.takeRequest().path)
+        ok("""{"lost":50.0,"level":12,"totalExperience":1450.0}""")
+        assertEquals(50.0, api.campaign.fall(id, "C1_TIDAL_SHORE").lost)
+        val fall = server.takeRequest()
+        assertEquals("POST", fall.method)
+        assertEquals("/game/api/v1/character/campaign/fall?characterId=$id&mapCode=C1_TIDAL_SHORE", fall.path)
     }
 
     @Test fun `experience is granted and the level comes back from the server`(): Unit = runBlocking {
@@ -669,7 +684,8 @@ class GameApiTest {
             "GET" to "/api/v1/characterequipment/bench", "POST" to "/api/v1/characterequipment/craft",
             "POST" to "/api/v1/characterequipment/uncraft",
             "GET" to "/api/v1/character/campaign/chapters", "GET" to "/api/v1/character/campaign/progress",
-            "POST" to "/api/v1/character/campaign/kill", "POST" to "/api/v1/character/campaign/complete")
+            "POST" to "/api/v1/character/campaign/kill", "POST" to "/api/v1/character/campaign/complete",
+            "POST" to "/api/v1/character/campaign/fall")
         // The server prints the Ktor selector, so a method arrives as "(GET)".
         ok(JsonArray(routes.map { buildJsonObject { put("path", it.second); put("method", "(${it.first})") } }).toString())
         val capabilities = api.capabilities()

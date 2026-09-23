@@ -20,9 +20,9 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.26.0, `versionCode` 44) for the
-**ktor-bestgame** RPG server (0.27.0), pinned in
-`core/.../contract/Contract.kt` as `SERVER_COMMIT = db6e6b1ba706a2546c4e79c8371bcb57aa939363`
+ExileForge is an **Android Compose client** (version 2.27.0, `versionCode` 45) for the
+**ktor-bestgame** RPG server (0.28.0), pinned in
+`core/.../contract/Contract.kt` as `SERVER_COMMIT = 04335520b0b9e1e614d3bca082cd2b58d297989f`
 on the server branch `claude/tender-pasteur-a36kj2`.
 
 The client is deliberately **thin**: the server owns items, stats, modifier rolls and inventory.
@@ -488,8 +488,24 @@ These are enforced by tests and are the point of the client's design:
     since 0.27.0 a tier raises every growing stat (the server serves it expanded into the rarity's
     effects), opens the modifiers whose `minRarity` it reaches and multiplies their values by its
     `modifierPower` —
-    and `Combat` plays the automatic fight (attacks only; spells, mana, curses and auras are a TODO
-    in `Combat.kt`). What a kill *earns* stays the server's: `kill` names the map, the monster and
+    and `Battle` plays the fight (`Combat.kt`) — live, in fixed slices of `Battle.STEP`, so a seed
+    is one fight and a frame's length changes nothing, and open to two commands while it runs:
+    `RunCommand.Flask` and `RunCommand.Retreat`. Since 2.27.0 (server 0.28.0) **every number the
+    fight uses is the server's**: `CampaignView.combat` (`CombatRules`) arrives with the chapters and
+    the client keeps no constants of its own beyond the defaults a test builds a fight from. What
+    the fight does: swings at attack speed and, for a side with a spell and mana, casts at cast speed
+    (the hero's innate spell is `spell.innateDamage + innatePerLevel × (level − 1)` on top of the
+    sheet's `STOCK_ATTACK_MAGICAL`; a spell cannot be evaded, is blocked at `spellBlockShare`, and
+    ignores armour and resistances); evasion, block, criticals, armour and resistances by the rules;
+    energy shield before life with chaos around it and a recharge after `shield.rechargeDelay`;
+    leech, stun; the six **ailments** of the server's `EnumStatBool` by `rules.ailments` — burning,
+    poison and bleeding as damage over time logged once a second as `Action.TICK`, chill as slower
+    actions, shock as more damage taken, freeze as a held fighter; the life flask
+    (`rules.flask`, charges per run, one back per kill); and retreat (`rules.retreat.delay` of the
+    monster's free swings). Auras and curses are still not part of it. A death is reported to
+    `POST /campaign/fall` the same way a kill is, once and never retried: the server takes
+    `death.experienceShare` of the level's experience from map level `death.fromLevel`, never the
+    level, and `RunHud.fall` is what the report screen prints. What a kill *earns* stays the server's: `kill` names the map, the monster and
     the rarity, the server checks the map is open (`CP_003`) and the monster lives there (`CP_004`)
     and rolls the experience, gold, orbs and equipment itself. A kill is never retried and never
     dropped: `ExpeditionViewModel` reports them one after another on a lane of its own rather than
@@ -501,11 +517,15 @@ These are enforced by tests and are the point of the client's design:
     with text on it is the overlay above. The run (`ExpeditionRun`) lives in `:core` and is stepped
     once a frame from a `withFrameNanos` loop; the canvas reads a clock state, so each frame redraws
     without recomposing. The overlay reads the run's `RunHud` and sends `RunCommand`s. The fight
-    screen is «Арена» since 2.26.0 (`ArenaOverlay.kt`): a nameplate per side with life, shield and
-    a bar filling toward its next swing at its own attack speed (`FightPlayback.swing`), the
-    monster's modifiers under its name, the log under the fighters (newest first, unfolds on
-    demand), and after the fight `ReportScreen` — outcome, totals, the whole log and the loot — read
-    off `RunHud.report`, which a defeat gets too.
+    screen is «Арена» since 2.26.0 (`ArenaOverlay.kt`): a nameplate per side with life, shield, the
+    hero's mana, a bar filling toward its next swing at its own attack speed (`Battle.swing`) and
+    one toward its next spell (`Battle.cast`), the ailments on it as draining chips, the monster's
+    modifiers under its name, the log under the fighters (newest first, unfolds on demand), the
+    flask and retreat buttons, and after the fight `ReportScreen` — outcome, totals, the whole log
+    and the loot, or the price of death — read off `RunHud.report`. Numbers, log lines and figures
+    are coloured by damage type (`damageTint`) and ailment (`ailmentTint`); the scene washes a
+    figure with `Figures.tinted`, draws its `Figures.ailments` particles, a spell as a bolt and the
+    flask as a green swell.
 
 ## Conventions
 

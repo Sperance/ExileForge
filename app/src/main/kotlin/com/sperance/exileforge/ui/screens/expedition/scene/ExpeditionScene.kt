@@ -15,7 +15,8 @@ import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.campaign.ExpeditionMap
 import com.sperance.exileforge.core.campaign.ExpeditionRun
-import com.sperance.exileforge.core.campaign.FightPlayback
+import com.sperance.exileforge.core.campaign.Action
+import com.sperance.exileforge.core.campaign.Battle
 import com.sperance.exileforge.core.campaign.HitKind
 import com.sperance.exileforge.core.campaign.Outcome
 import com.sperance.exileforge.core.campaign.Side
@@ -39,7 +40,8 @@ object FightLayout {
 
 /**
  * The campaign's scene, drawn by Compose itself: the map in pseudo-isometry while walking, two
- * fighters face to face while fighting. Everything is a shape — rule 17, no picture is ever loaded
+ * fighters face to face while fighting — lunging, casting bolts, drinking, coloured by what is on
+ * them and ringed by its particles. Everything is a shape — rule 17, no picture is ever loaded
  * — and nothing here is text: names, bars and numbers are the overlay's, in the app's dictionary.
  *
  * The scene is also the run's clock: every frame [ExpeditionRun.update] is called once from the
@@ -78,8 +80,8 @@ private class ScenePainter {
         unit = with(scope) { 30.dp.toPx() }
         val palette = Palettes.of(run.map.biome)
         scope.drawRect(palette.void)
-        val playback = run.fight
-        if (playback != null) fight(scope, playback, palette) else map(scope, run, palette)
+        val battle = run.fight
+        if (battle != null) fight(scope, run, battle, palette) else map(scope, run, palette)
     }
 
     // ==================== The map ====================
@@ -208,14 +210,16 @@ private class ScenePainter {
 
     // ==================== The fight ====================
 
-    private fun fight(scope: DrawScope, playback: FightPlayback, palette: Palette) {
+    private fun fight(scope: DrawScope, run: ExpeditionRun, battle: Battle, palette: Palette) {
+        val monster = run.fightAgentOnMap?.monster ?: return
         val w = scope.size.width
         val h = scope.size.height
         val ground = h * (1 - FightLayout.GROUND_Y)
         val size = max(w, h) * .2f
+        val lunge = battle.lunge()
         // A critical strike shakes the whole scene for a moment; the pen measures up from the bottom edge.
-        val shake = playback.lunge()?.let { (event, progress) ->
-            if (event.kind == HitKind.CRIT && progress > .5) ((1 - progress) * unit * .4 * sin(progress * 70)).toFloat() else 0f
+        val shake = lunge?.let { (event, progress) ->
+            if (event.kind == HitKind.CRIT && event.action != Action.TICK && progress > .5) ((1 - progress) * unit * .4 * sin(progress * 70)).toFloat() else 0f
         } ?: 0f
         scope.translate(shake, h + shake / 2) {
             // The ground as a lit oval fading into the biome's dark.
@@ -225,43 +229,80 @@ private class ScenePainter {
             }
             val heroX = w * FightLayout.HERO_X
             val monsterX = w * FightLayout.MONSTER_X
-            var heroShift = 0f
+            var heroShift = if (battle.retreating) -size * .25f else 0f
             var monsterShift = 0f
             var heroFlash = 0f
             var monsterFlash = 0f
-            playback.lunge()?.let { (event, progress) ->
+            lunge?.let { (event, progress) ->
                 val t = progress.toFloat()
                 val swing = sin(t * PI).toFloat()
-                val reach = (monsterX - heroX) * .28f * swing
-                val landed = event.kind == HitKind.HIT || event.kind == HitKind.CRIT
-                val flash = if (landed && t > .5f) (1 - t) * 2f * (if (event.kind == HitKind.CRIT) 1f else .7f) else 0f
-                val dodge = if (event.kind == HitKind.EVADED) swing * size * .25f else 0f
-                if (event.attacker == Side.HERO) { heroShift = reach; monsterFlash = flash; monsterShift = dodge }
-                else { monsterShift = -reach; heroFlash = flash; heroShift = -dodge }
-                if (event.kind == HitKind.BLOCKED && t > .4f) {
-                    val target = if (event.attacker == Side.HERO) monsterX - size * .3f else heroX + size * .3f
-                    pen.color = Palettes.steel.copy(alpha = .7f * (1 - t))
-                    pen.arc(target, ground + size * .5f, size * .45f, if (event.attacker == Side.HERO) 110f else -70f, 140f)
+                val byHero = event.actor == Side.HERO
+                val targetX = if (byHero) monsterX else heroX
+                val sourceX = if (byHero) heroX else monsterX
+                when (event.action) {
+                    Action.ATTACK -> {
+                        val reach = (monsterX - heroX) * .28f * swing
+                        val flash = if (event.landed && t > .5f) (1 - t) * 2f * (if (event.kind == HitKind.CRIT) 1f else .7f) else 0f
+                        val dodge = if (event.kind == HitKind.EVADED) swing * size * .25f else 0f
+                        if (byHero) { heroShift += reach; monsterFlash = flash; monsterShift = dodge }
+                        else { monsterShift = -reach; heroFlash = flash; heroShift -= dodge }
+                    }
+                    // A spell is a bolt that crosses from the caster and bursts on the target.
+                    Action.SPELL -> {
+                        val flight = (t * 2).coerceAtMost(1f)
+                        val bx = sourceX + (targetX - sourceX) * flight
+                        val by = ground + size * .55f + sin(flight * PI).toFloat() * size * .3f
+                        val tint = Palettes.arcane
+                        if (t < .5f) {
+                            for (i in 3 downTo 1) { pen.color = tint.copy(alpha = .15f * i); pen.circle(bx, by, size * .05f * i) }
+                            pen.color = Color.White.copy(alpha = .8f); pen.circle(bx, by, size * .035f)
+                        } else if (event.landed) {
+                            val burst = (t - .5f) * 2
+                            pen.color = tint.copy(alpha = .55f * (1 - burst))
+                            pen.circle(targetX, ground + size * .5f, size * (.15f + .45f * burst))
+                            if (byHero) monsterFlash = (1 - burst) * .8f else heroFlash = (1 - burst) * .8f
+                        }
+                    }
+                    // The flask: a green swell around the drinker.
+                    Action.FLASK -> {
+                        pen.color = Palettes.vital.copy(alpha = .45f * (1 - t))
+                        pen.ellipse(heroX - size * .45f * (1 + t), ground - size * .1f, size * .9f * (1 + t), size * .35f * (1 + t))
+                    }
+                    Action.RETREAT, Action.TICK -> Unit
                 }
-                if (event.kind == HitKind.CRIT && t > .5f) {
-                    val target = if (event.attacker == Side.HERO) monsterX else heroX
+                if (event.kind == HitKind.BLOCKED && t > .4f) {
+                    val target = if (byHero) monsterX - size * .3f else heroX + size * .3f
+                    pen.color = Palettes.steel.copy(alpha = .7f * (1 - t))
+                    pen.arc(target, ground + size * .5f, size * .45f, if (byHero) 110f else -70f, 140f)
+                }
+                if (event.kind == HitKind.CRIT && event.action == Action.ATTACK && t > .5f) {
                     pen.color = Palettes.blood.copy(alpha = .5f * (1 - t))
-                    pen.circle(target, ground + size * .5f, size * .6f * t)
+                    pen.circle(targetX, ground + size * .5f, size * .6f * t)
                 }
             }
-            val outcome = playback.log.outcome.takeIf { playback.clock >= playback.log.duration }
-            val fade = ((playback.clock - playback.log.duration) / ExpeditionRun.AFTERMATH).toFloat().coerceIn(0f, 1f)
-            val monster = playback.agent.monster
+            val outcome = battle.outcome
+            val fade = if (outcome != null) ((battle.time - battle.duration) / ExpeditionRun.AFTERMATH).toFloat().coerceIn(0f, 1f) else 0f
             val grown = when (monster.rarity) { MonsterRarity.NORMAL -> 1f; MonsterRarity.MAGIC -> 1.1f; MonsterRarity.RARE -> 1.25f }
             when (monster.rarity) {
                 MonsterRarity.MAGIC -> figures.ring(monsterX + monsterShift, ground, size * .9f * grown, Palettes.magic, time)
                 MonsterRarity.RARE -> figures.ring(monsterX + monsterShift, ground, size * grown, Palettes.rare, time)
                 MonsterRarity.NORMAL -> Unit
             }
-            figures.monster(monster.form, monsterX + monsterShift, ground, size * grown, -1f, time, monsterFlash,
-                if (outcome == Outcome.WIN) 1 - fade else 1f)
-            figures.hero(heroX + heroShift, ground, size * 1.05f, 1f, time, false, heroFlash,
-                if (outcome == Outcome.LOSS) 1 - fade else 1f)
+            val heroSide = battle.fighter(Side.HERO)
+            val monsterSide = battle.fighter(Side.MONSTER)
+            // What is on a fighter colours it: frost blue, fire orange, venom green, a shock's flicker.
+            figures.tinted(monsterSide.ailments.map { it.ailment }, time) {
+                figures.monster(monster.form, monsterX + monsterShift, ground, size * grown, -1f, time, monsterFlash, if (outcome == Outcome.WIN) 1 - fade else 1f)
+            }
+            figures.tinted(heroSide.ailments.map { it.ailment }, time) {
+                figures.hero(heroX + heroShift, ground, size * 1.05f, 1f, time, battle.retreating && outcome == null, heroFlash, if (outcome == Outcome.LOSS) 1 - fade else 1f)
+            }
+            if (outcome == null || fade < 1f) {
+                figures.ailments(monsterSide.ailments.map { it.ailment }, monsterX + monsterShift, ground, size * grown, time)
+                figures.ailments(heroSide.ailments.map { it.ailment }, heroX + heroShift, ground, size * 1.05f, time)
+                if (heroSide.held) figures.daze(heroX + heroShift, ground + size * 1.05f, size, time)
+                if (monsterSide.held) figures.daze(monsterX + monsterShift, ground + size * grown, size * grown, time)
+            }
         }
     }
 }

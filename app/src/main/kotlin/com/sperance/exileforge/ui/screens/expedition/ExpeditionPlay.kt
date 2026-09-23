@@ -49,9 +49,9 @@ import kotlin.math.roundToInt
  * A run of the campaign, over the whole screen: the scene underneath, the overlay above.
  *
  * The scene draws and steps the world; everything with words or numbers in it — the bars, the
- * monster's name and modifiers, the hits, the loot — is Compose, in the app's dictionary and
- * theme, laid over it. The stick is the overlay's too: a thumb anywhere in the lower part of the
- * screen sets it, and letting go stops the hero.
+ * monster's name and modifiers, the hits, the ailments, the flask, the loot — is Compose, in the
+ * app's dictionary and theme, laid over it. The stick is the overlay's too: a thumb anywhere in the
+ * lower part of the screen sets it, and letting go stops the hero.
  */
 @Composable fun ExpeditionPlay(s: ForgeState, vm: ForgeViewModel, run: ExpeditionRun) {
     val hud by run.hud.collectAsState()
@@ -65,7 +65,7 @@ import kotlin.math.roundToInt
                 Stick(run)
                 MapBar(hud, onLeave = { vm.runCommand(RunCommand.Leave) })
             }
-            RunPhase.FIGHT -> hud.fight?.let { ArenaOverlay(s, hud, it, run.map.level) { vm.runCommand(RunCommand.Speed) } }
+            RunPhase.FIGHT -> hud.fight?.let { ArenaOverlay(s, hud, it, run.map.level, onCommand = vm::runCommand) }
             // The fight is over: its report — the log, what it came to, and the loot of a victory.
             RunPhase.LOOT -> hud.report?.let { ReportScreen(s, hud, it) { vm.runCommand(RunCommand.Continue) } }
             RunPhase.DEAD -> hud.report?.let { ReportScreen(s, hud, it) { vm.runCommand(RunCommand.Continue) } }
@@ -78,7 +78,7 @@ import kotlin.math.roundToInt
 
 // ==================== Walking ====================
 
-/** Life, shield and what is left on the map, with the way out. */
+/** Life, shield, mana and the flask, what is left on the map, and the way out. */
 @Composable private fun MapBar(hud: RunHud, onLeave: (() -> Unit)?) {
     Column(Modifier.fillMaxWidth().statusBarsPadding().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -88,18 +88,25 @@ import kotlin.math.roundToInt
             }
             onLeave?.let { OutlinedButton(onClick = it) { Text(ui("expedition.leave")) } }
         }
-        Vitals(hud.heroLife, hud.heroMaxLife, hud.heroShield, hud.heroMaxShield, Modifier.fillMaxWidth(.6f))
+        Vitals(hud.heroLife, hud.heroMaxLife, hud.heroShield, hud.heroMaxShield, hud.heroMana, hud.heroMaxMana, Modifier.fillMaxWidth(.6f))
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(ForgeGlyphs.Flask, null, tint = if (hud.flasks > 0) Blood else Muted, modifier = Modifier.size(14.dp))
+            Text(ui("expedition.flask_charges", hud.flasks, hud.maxFlasks), color = if (hud.flasks > 0) Parchment else Muted, style = MaterialTheme.typography.labelSmall)
+        }
     }
 }
 
-/** A life bar with the shield laid over it, and the figure in words. */
-@Composable private fun Vitals(life: Int, maxLife: Int, shield: Int, maxShield: Int, modifier: Modifier = Modifier) {
+/** A life bar with the shield laid over it, a thin mana bar under it, and the figure in words. */
+@Composable private fun Vitals(life: Int, maxLife: Int, shield: Int, maxShield: Int, mana: Int, maxMana: Int, modifier: Modifier = Modifier) {
     val shape = CutCornerShape(3.dp)
     val lifeShare by animateFloatAsState(if (maxLife > 0) life / maxLife.toFloat() else 0f, label = "life")
     Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Box(Modifier.fillMaxWidth().height(12.dp).background(Color(0xCC0A0D12), shape).border(1.dp, LifeRed.copy(alpha = .8f), shape)) {
             Box(Modifier.fillMaxWidth(lifeShare.coerceIn(0f, 1f)).fillMaxHeight().background(Brush.horizontalGradient(listOf(LifeRed, LifeRed.copy(alpha = .55f))), shape))
             if (maxShield > 0) Box(Modifier.fillMaxWidth((shield / maxShield.toFloat()).coerceIn(0f, 1f)).height(4.dp).align(Alignment.TopStart).background(ShieldCyan.copy(alpha = .85f)))
+        }
+        if (maxMana > 0) Box(Modifier.fillMaxWidth().height(5.dp).background(Color(0xCC0A0D12), shape).border(1.dp, ManaBlue.copy(alpha = .7f), shape)) {
+            Box(Modifier.fillMaxWidth((mana / maxMana.toFloat()).coerceIn(0f, 1f)).fillMaxHeight().background(ManaBlue, shape))
         }
         Text(if (maxShield > 0) ui("expedition.vitals_shield", life, maxLife, shield) else ui("expedition.vitals", life, maxLife),
             color = Parchment, style = MaterialTheme.typography.labelSmall)

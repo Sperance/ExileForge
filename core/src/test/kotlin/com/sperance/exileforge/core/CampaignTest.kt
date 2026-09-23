@@ -47,21 +47,28 @@ class CampaignTest {
         assertEquals(Outcome.LOSS, Combat.fight(hero, brute, hero.maxLife, Random(3)).outcome)
     }
 
-    @Test fun `a hero with no weapon still swings`() {
-        val bare = Combatant(mapOf("STOCK_HEALTH" to 50.0), 1)
-        assertEquals(Combatant.UNARMED_SPEED, bare.attackSpeed)
-        assertEquals(Combatant.UNARMED_DAMAGE, bare.damage.getValue(DamageType.PHYSICAL))
-        assertEquals(0.05, bare.critChance)
+    @Test fun `a hero with no weapon still swings, by the server's unarmed rule`() {
+        val rules = CombatRules(unarmed = UnarmedRule(damage = 6.0, speed = 1.5), critical = CriticalRule(chance = 7.0, multiplier = 150.0))
+        val bare = Combatant(mapOf("STOCK_HEALTH" to 50.0), 1, rules)
+        assertEquals(1.5, bare.attackSpeed)
+        assertEquals(6.0, bare.damage.getValue(DamageType.PHYSICAL))
+        assertEquals(0.07, bare.critChance)
+        // No spell damage, no mana: nothing to cast. A hero with mana knows the innate spell.
+        assertFalse(bare.casts)
+        val exile = Combatant(mapOf("STOCK_HEALTH" to 50.0, "STOCK_MANA" to 40.0), 3, rules, innateSpell = true)
+        assertTrue(exile.casts)
+        assertEquals(rules.spell.innateDamage + rules.spell.innatePerLevel * 2, exile.spellDamage)
+        assertEquals(rules.spell.castSpeed, exile.castSpeed)
     }
 
     @Test fun `chaos goes around energy shield and leech heals the striker`() {
         val warded = Combatant(mapOf("STOCK_HEALTH" to 1000.0, "STOCK_ENERGY_SHIELD" to 1000.0, "STOCK_ATTACK_PHYSICAL" to 0.1, "STOCK_ATTACK_SPEED" to 0.3), 1)
         val poisoner = Combatant(mapOf("STOCK_HEALTH" to 100.0, "STOCK_ATTACK_CHAOS" to 20.0, "STOCK_ATTACK_SPEED" to 2.0, "STOCK_CRITICAL_CHANCE" to 0.0), 1)
-        val first = Combat.fight(poisoner, warded, 50.0, Random(1)).events.first { it.attacker == Side.HERO && it.damage > 0 }
+        val first = Combat.fight(poisoner, warded, 50.0, Random(1)).events.first { it.actor == Side.HERO && it.damage > 0 }
         assertEquals(1000.0, first.monsterShield)
         assertTrue(first.monsterLife < 1000.0)
         val vampire = Combatant(mapOf("STOCK_HEALTH" to 100.0, "STOCK_ATTACK_PHYSICAL" to 20.0, "STOCK_LEECH_ALL" to 50.0, "STOCK_CRITICAL_CHANCE" to 0.0), 1)
-        val hit = Combat.fight(vampire, warded, 50.0, Random(1)).events.first { it.attacker == Side.HERO && it.damage > 0 }
+        val hit = Combat.fight(vampire, warded, 50.0, Random(1)).events.first { it.actor == Side.HERO && it.damage > 0 }
         assertTrue(hit.healed > 0)
         assertTrue(hit.heroLife > 50.0)
     }
@@ -146,16 +153,44 @@ class CampaignTest {
         assertEquals(RunPhase.LEFT, run.hud.value.phase)
     }
 
-    @Test fun `a lost fight ends the run`() {
-        val run = ExpeditionRun.start(map, rarities, mapOf("STOCK_HEALTH" to 1.0, "STOCK_ATTACK_PHYSICAL" to 0.1), 1, 3, onKill = {}, onCleared = {})
+    @Test fun `a lost fight ends the run once the server has priced the death`() {
+        var fallen = 0
+        val run = ExpeditionRun.start(map, rarities, mapOf("STOCK_HEALTH" to 1.0, "STOCK_ATTACK_PHYSICAL" to 0.1), 1, 3, onKill = {}, onCleared = {}, onFallen = { fallen++ })
         val agent = run.world.agents.first()
         run.world.heroX = agent.x
         run.world.heroY = agent.y
         repeat(3000) { if (run.hud.value.phase != RunPhase.DEAD) run.update(0.05) }
         assertEquals(RunPhase.DEAD, run.hud.value.phase)
         assertEquals(0, run.hud.value.heroLife)
+        assertEquals(1, fallen)
+        assertTrue(run.hud.value.fallPending)
+        // Nothing moves on while the server has not said what the death cost.
         run.send(RunCommand.Continue); run.update(0.016)
+        assertEquals(RunPhase.DEAD, run.hud.value.phase)
+        run.send(RunCommand.Fallen(CampaignFall(lost = 50.0, level = 1, totalExperience = 0.0)))
+        run.send(RunCommand.Continue); run.update(0.016)
+        assertEquals(50.0, run.hud.value.fall?.lost)
         assertEquals(RunPhase.LEFT, run.hud.value.phase)
+    }
+
+    @Test fun `the flask starts full, is drunk in a fight and earns a charge back per kill`() {
+        val rules = CombatRules(flask = FlaskRule(charges = 2, perKill = 1, heal = 40.0, duration = 3.0))
+        val run = ExpeditionRun.start(map, rarities, mapOf("STOCK_HEALTH" to 500.0, "STOCK_ATTACK_PHYSICAL" to 60.0, "STOCK_ATTACK_SPEED" to 2.0), 10, 7,
+            onKill = {}, onCleared = {}, rules = rules)
+        assertEquals(2, run.hud.value.flasks)
+        assertEquals(2, run.hud.value.maxFlasks)
+        val agent = run.world.agents.first()
+        run.world.heroX = agent.x
+        run.world.heroY = agent.y
+        run.update(0.016)
+        assertEquals(RunPhase.FIGHT, run.hud.value.phase)
+        run.send(RunCommand.Flask); run.update(0.016)
+        assertEquals(1, run.hud.value.flasks)
+        assertTrue(run.hud.value.fight!!.flaskActive)
+        repeat(3000) { if (run.hud.value.phase == RunPhase.FIGHT) run.update(0.05) }
+        assertEquals(RunPhase.LOOT, run.hud.value.phase)
+        assertEquals(2, run.hud.value.flasks, "a kill gives a charge back, up to the rule's count")
+        assertEquals(1, run.hud.value.report?.flasks)
     }
 
     @Test fun `a higher tier draws from a wider pool and rolls stronger values`() {
@@ -176,13 +211,102 @@ class CampaignTest {
     }
 
     @Test fun `each side's swing bar fills at its own attack speed`() {
-        val log = Combat.fight(Combatant(mapOf("STOCK_HEALTH" to 500.0, "STOCK_ATTACK_SPEED" to 2.0), 1),
-            Combatant(mapOf("STOCK_HEALTH" to 500.0, "STOCK_ATTACK_SPEED" to 0.5), 1), 500.0, Random(2))
-        val playback = FightPlayback(MonsterAgent(0, MonsterRoller.roll(map, rarities, Random(1)), 0.5, 0.5), Combatant(emptyMap(), 1), log)
-        val firstHero = log.events.first { it.attacker == Side.HERO }
-        playback.clock = firstHero.time + 0.25
-        assertEquals(0.5f, playback.swing(Side.HERO, 2.0), 1e-3f)
-        playback.clock = firstHero.time
-        assertEquals(0f, playback.swing(Side.HERO, 2.0), 1e-3f)
+        val rules = CombatRules()
+        val battle = Battle(Combatant(mapOf("STOCK_HEALTH" to 500.0, "STOCK_ATTACK_SPEED" to 2.0), 1, rules),
+            Combatant(mapOf("STOCK_HEALTH" to 500.0, "STOCK_ATTACK_SPEED" to 0.5), 1, rules), rules, 500.0, 0.0, 0, Random(2))
+        battle.advance(0.36)
+        val first = battle.events.first { it.actor == Side.HERO }
+        assertTrue(battle.swing(Side.HERO) < 0.1f)
+        battle.advance(0.25)
+        assertEquals(0.5f, battle.swing(Side.HERO), 0.05f)
+        // The monster swings once in two seconds, so a quarter second in it has barely begun.
+        assertTrue(battle.swing(Side.MONSTER) < 0.35f)
+        assertEquals(first, battle.events.first { it.actor == Side.HERO })
+    }
+
+    @Test fun `a fire hit can ignite, and the burn is logged once a second`() {
+        val rules = CombatRules(ailments = listOf(AilmentRule("BURNING", "STOCK_ATTACK_FIRE", 100.0, 100.0, 2.0)))
+        val torch = Combatant(mapOf("STOCK_HEALTH" to 100.0, "STOCK_ATTACK_FIRE" to 10.0, "STOCK_ATTACK_SPEED" to 0.5, "STOCK_CRITICAL_CHANCE" to 0.0), 1, rules)
+        val dummy = Combatant(mapOf("STOCK_HEALTH" to 10000.0, "STOCK_ATTACK_PHYSICAL" to 0.1, "STOCK_ATTACK_SPEED" to 0.3), 1, rules)
+        val log = Combat.fight(torch, dummy, 100.0, Random(4), rules)
+        val hit = log.events.first { it.actor == Side.HERO && it.action == Action.ATTACK }
+        assertEquals(listOf(Ailment.BURNING), hit.inflicted)
+        assertEquals(DamageType.FIRE, hit.type)
+        val ticks = log.events.filter { it.action == Action.TICK && it.actor == Side.HERO }
+        assertTrue(ticks.isNotEmpty())
+        assertTrue(ticks.all { it.ailment == Ailment.BURNING && it.type == DamageType.FIRE && it.damage > 0 })
+        // A two-second burn of 100% is the hit again, in two ticks of about half each.
+        val burn = ticks.take(2).sumOf { it.damage }
+        assertEquals(hit.damage, burn, hit.damage * 0.1)
+        assertEquals(1.0, ticks[1].time - ticks[0].time, 0.05)
+    }
+
+    @Test fun `cold chills and a heavy cold hit freezes, so the frozen side misses its turn`() {
+        val rules = CombatRules(ailments = listOf(
+            AilmentRule("CHILLED", "STOCK_ATTACK_COLD", 100.0, 50.0, 3.0),
+            AilmentRule("FROZEN", "STOCK_ATTACK_COLD", 100.0, 0.0, 1.5, threshold = 10.0)))
+        // One heavy cold swing every two and a half seconds: the freeze has time to pass before the next.
+        val frost = Combatant(mapOf("STOCK_HEALTH" to 1000.0, "STOCK_ATTACK_COLD" to 30.0, "STOCK_ATTACK_SPEED" to 0.4, "STOCK_CRITICAL_CHANCE" to 0.0), 1, rules)
+        val victim = Combatant(mapOf("STOCK_HEALTH" to 200.0, "STOCK_ATTACK_PHYSICAL" to 1.0, "STOCK_ATTACK_SPEED" to 1.0, "STOCK_CRITICAL_CHANCE" to 0.0), 1, rules)
+        val battle = Battle(frost, victim, rules, 1000.0, 0.0, 0, Random(5))
+        battle.advance(0.4)
+        val hit = battle.events.first { it.actor == Side.HERO }
+        assertEquals(setOf(Ailment.CHILLED, Ailment.FROZEN), hit.inflicted.toSet())
+        assertTrue(battle.fighter(Side.MONSTER).held)
+        // Frozen for a second and a half from 0.35: the monster's swing at 0.55 never comes.
+        battle.advance(1.0)
+        assertTrue(battle.events.none { it.actor == Side.MONSTER })
+        battle.advance(1.0)
+        assertTrue(battle.events.any { it.actor == Side.MONSTER })
+        // Chill slows: the next swing after the thaw is scheduled at 1.5 times the interval.
+        assertEquals(1.5, battle.fighter(Side.MONSTER).slow())
+    }
+
+    @Test fun `the innate spell is cast beside the swings and costs mana`() {
+        val rules = CombatRules(spell = SpellRule(innateDamage = 5.0, innatePerLevel = 1.0, castSpeed = 1.0, manaCost = 50.0, manaRegenShare = 0.0))
+        val exile = Combatant(mapOf("STOCK_HEALTH" to 500.0, "STOCK_MANA" to 40.0, "STOCK_ATTACK_PHYSICAL" to 1.0, "STOCK_ATTACK_SPEED" to 1.0, "STOCK_CRITICAL_CHANCE" to 0.0), 2, rules, innateSpell = true)
+        val wall = Combatant(mapOf("STOCK_HEALTH" to 100000.0, "STOCK_ARMOR" to 100000.0, "STOCK_EVASION" to 100000.0, "STOCK_ATTACK_PHYSICAL" to 0.1, "STOCK_ATTACK_SPEED" to 0.3), 1, rules)
+        val log = Combat.fight(exile, wall, 500.0, Random(6), rules)
+        val spells = log.events.filter { it.actor == Side.HERO && it.action == Action.SPELL }
+        // Two casts empty a 40-mana pool at half each; no regeneration, so no third.
+        assertEquals(2, spells.size)
+        assertTrue(spells.all { it.landed && it.type == DamageType.MAGICAL })
+        // A spell goes around armour and evasion: it lands for about its base.
+        assertEquals(6.0, spells.first().damage, 6.0 * rules.variance / 100 + 1e-9)
+        assertEquals(0.0, log.heroMana, 1e-9)
+        // Every swing at the wall is evaded or lands for nothing; the spell is what hurt it.
+        assertTrue(log.events.filter { it.actor == Side.HERO && it.action == Action.ATTACK }.all { it.kind == HitKind.EVADED || it.damage < 0.2 })
+    }
+
+    @Test fun `a flask heals over its duration and a retreat gives the monster its free swings`() {
+        val rules = CombatRules(flask = FlaskRule(charges = 2, perKill = 1, heal = 50.0, duration = 1.0), retreat = RetreatRule(delay = 1.0))
+        val hero = Combatant(mapOf("STOCK_HEALTH" to 100.0, "STOCK_ATTACK_PHYSICAL" to 0.1, "STOCK_ATTACK_SPEED" to 1.0), 1, rules)
+        val monster = Combatant(mapOf("STOCK_HEALTH" to 1000.0, "STOCK_ATTACK_PHYSICAL" to 0.1, "STOCK_ATTACK_SPEED" to 1.0, "STOCK_CRITICAL_CHANCE" to 0.0), 1, rules)
+        val battle = Battle(hero, monster, rules, 20.0, 0.0, 2, Random(7))
+        assertTrue(battle.useFlask())
+        assertFalse(battle.useFlask(), "one flask at a time")
+        assertEquals(1, battle.flasks)
+        battle.advance(1.05)
+        assertTrue(battle.heroLife in 65.0..71.0, "${battle.heroLife}")
+        assertEquals(Action.FLASK, battle.events.first().action)
+        assertTrue(battle.retreat())
+        val before = battle.events.count { it.actor == Side.MONSTER && it.action == Action.ATTACK }
+        battle.advance(1.05)
+        assertEquals(Outcome.RETREAT, battle.outcome)
+        assertTrue(battle.events.count { it.actor == Side.MONSTER && it.action == Action.ATTACK } > before, "the monster kept swinging")
+        assertTrue(battle.events.none { it.actor == Side.HERO && it.action == Action.ATTACK && it.time > battle.events.first { e -> e.action == Action.RETREAT }.time })
+    }
+
+    @Test fun `energy shield recharges once left alone`() {
+        val rules = CombatRules(shield = ShieldRule(rechargeDelay = 1.0, rechargePerSecond = 50.0))
+        val warded = Combatant(mapOf("STOCK_HEALTH" to 1000.0, "STOCK_ENERGY_SHIELD" to 100.0, "STOCK_ATTACK_PHYSICAL" to 0.1, "STOCK_ATTACK_SPEED" to 0.3), 1, rules)
+        val hitter = Combatant(mapOf("STOCK_HEALTH" to 1000.0, "STOCK_ATTACK_PHYSICAL" to 40.0, "STOCK_ATTACK_SPEED" to 0.3, "STOCK_CRITICAL_CHANCE" to 0.0, "STOCK_EVASION" to 0.0), 1, rules)
+        val battle = Battle(warded, hitter, rules, 1000.0, 0.0, 0, Random(8))
+        battle.advance(0.6)
+        val hit = battle.events.first { it.actor == Side.MONSTER && it.landed }
+        assertTrue(hit.heroShield < 100.0)
+        // A second untouched, then half the shield a second: whole again well before the next swing.
+        battle.advance(2.0)
+        assertTrue(battle.fighter(Side.HERO).shield > hit.heroShield)
     }
 }

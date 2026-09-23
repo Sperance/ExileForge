@@ -2,6 +2,7 @@ package com.sperance.exileforge.core.network
 
 import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.contract.requireId
+import com.sperance.exileforge.core.model.campaign.CampaignFall
 import com.sperance.exileforge.core.model.campaign.CampaignProgress
 import com.sperance.exileforge.core.model.campaign.CampaignReward
 import com.sperance.exileforge.core.model.campaign.CampaignView
@@ -17,6 +18,8 @@ private const val CAMPAIGN = "api/v1/character/campaign"
  * Since 0.26.0 the fight is the client's — the owner's decision — and what it earns is not:
  * [kill] names the map, the monster and the rarity the client rolled, and the server checks the
  * map is open and the monster lives there before it rolls the experience and the loot itself.
+ * Since 0.28.0 the numbers the fight is played by arrive in [chapters] as `combat`, and a death is
+ * reported with [fall]: the server takes its share of the level's experience, never the level.
  */
 class CampaignClient internal constructor(private val http: Transport) {
     /** The chapters with every monster and modifier already raised to its map's level. */
@@ -39,6 +42,13 @@ class CampaignClient internal constructor(private val http: Transport) {
     suspend fun complete(characterId: String, mapCode: String): CampaignProgress {
         requireId(characterId)
         return WireJson.decodeFromJsonElement(http.request("POST", "$CAMPAIGN/complete",
+            mapOf("characterId" to characterId, "mapCode" to mapCode), authenticated = true))
+    }
+
+    /** The hero fell: the server prices the death by its own rule. Never retried — a repeat would charge it twice. */
+    suspend fun fall(characterId: String, mapCode: String): CampaignFall {
+        requireId(characterId)
+        return WireJson.decodeFromJsonElement(http.request("POST", "$CAMPAIGN/fall",
             mapOf("characterId" to characterId, "mapCode" to mapCode), authenticated = true))
     }
 }

@@ -24,8 +24,9 @@ import kotlinx.coroutines.launch
  *
  * What a run reports goes through a lane of its own, one report after another, rather than
  * [ForgeRuntime.task]: a command refuses to start while another runs, and a kill that lands while
- * the previous one is still on its way must wait its turn, not be dropped — it is loot. Neither is
- * ever retried: a repeated kill would be paid twice.
+ * the previous one is still on its way must wait its turn, not be dropped — it is loot. A death is
+ * reported the same way (0.28.0), and none of it is ever retried: a repeated kill would be paid
+ * twice, a repeated death charged twice.
  */
 class ExpeditionViewModel(private val runtime: ForgeRuntime) {
     private val mutableRun = MutableStateFlow<ExpeditionRun?>(null)
@@ -72,7 +73,9 @@ class ExpeditionViewModel(private val runtime: ForgeRuntime) {
         lateinit var run: ExpeditionRun
         run = ExpeditionRun.start(map, view.rarities, hero.sheet.stats, hero.sheet.level, System.nanoTime(),
             onKill = { monster -> reports.trySend { kill(run, characterId, map.code, monster) } },
-            onCleared = { reports.trySend { complete(characterId, map.code) } })
+            onCleared = { reports.trySend { complete(characterId, map.code) } },
+            rules = view.combat,
+            onFallen = { reports.trySend { fall(run, characterId, map.code) } })
         mutableRun.value = run
     } }
 
@@ -98,6 +101,17 @@ class ExpeditionViewModel(private val runtime: ForgeRuntime) {
                 hero = s.play.hero?.let { it.copy(character = it.character.copy(level = reward.level, experience = reward.totalExperience, money = reward.money)) })) }
         } catch (e: CancellationException) { throw e }
         catch (e: Exception) { run.send(RunCommand.RewardFailed); report(e, writing = true) }
+    } }
+
+    /** The hero fell: the server prices it, and the header's experience is what it says now. */
+    private suspend fun fall(run: ExpeditionRun, characterId: String, mapCode: String) { with(runtime) {
+        try {
+            val fall = api.campaign.fall(characterId, mapCode)
+            run.send(RunCommand.Fallen(fall))
+            mutable.update { s -> if (s.play.characterId != characterId) s else s.copy(play = s.play.copy(heroReadAt = 0,
+                hero = s.play.hero?.let { it.copy(character = it.character.copy(level = fall.level, experience = fall.totalExperience)) })) }
+        } catch (e: CancellationException) { throw e }
+        catch (e: Exception) { run.send(RunCommand.FallFailed); report(e, writing = true) }
     } }
 
     private suspend fun complete(characterId: String, mapCode: String) { with(runtime) {

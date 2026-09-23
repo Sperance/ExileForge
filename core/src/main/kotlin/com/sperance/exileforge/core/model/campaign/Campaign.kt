@@ -56,8 +56,55 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE }
 
 @Serializable data class CampaignChapter(val code: String, val maps: List<CampaignMap> = emptyList())
 
-/** The whole campaign as the server serves it, read once per session. */
-@Serializable data class CampaignView(val chapters: List<CampaignChapter> = emptyList(), val rarities: List<CampaignRarity> = emptyList())
+/**
+ * One ailment, as the server rules it (0.28.0): which damage [type] inflicts it, with what [chance]
+ * per hit that dealt some, and what it does — a damage-over-time ailment deals [magnitude] percent
+ * of that hit's damage of the type over [duration] seconds; a chill slows the target's actions by
+ * [magnitude] percent; a shock makes it take [magnitude] percent more damage; a freeze only stops
+ * it. [threshold] is the share of the target's life the hit must take off first (a freeze needs a
+ * heavy blow), and a [stacks] ailment (poison) adds up where the others refresh.
+ */
+@Serializable data class AilmentRule(
+    val ailment: String, val type: String, val chance: Double, val magnitude: Double = 0.0,
+    val duration: Double, val threshold: Double = 0.0, val stacks: Boolean = false,
+)
+
+@Serializable data class UnarmedRule(val damage: Double = 4.0, val speed: Double = 1.2)
+@Serializable data class CriticalRule(val chance: Double = 5.0, val multiplier: Double = 150.0)
+@Serializable data class ArmourRule(val factor: Double = 5.0, val cap: Double = 90.0)
+@Serializable data class EvasionRule(val base: Double = 150.0, val perLevel: Double = 40.0, val cap: Double = 75.0)
+@Serializable data class StunRule(val share: Double = 15.0, val duration: Double = 0.4)
+@Serializable data class ShieldRule(val rechargeDelay: Double = 2.0, val rechargePerSecond: Double = 20.0)
+@Serializable data class SpellRule(val innateDamage: Double = 2.0, val innatePerLevel: Double = 0.5, val castSpeed: Double = 0.8, val manaCost: Double = 12.0, val manaRegenShare: Double = 1.75)
+@Serializable data class FlaskRule(val charges: Int = 3, val perKill: Int = 1, val heal: Double = 40.0, val duration: Double = 3.0)
+@Serializable data class RetreatRule(val delay: Double = 1.5)
+@Serializable data class DeathRule(val fromLevel: Int = 10, val experienceShare: Double = 5.0)
+
+/**
+ * The numbers the fight is played by — the server's since 0.28.0, read with the chapters.
+ *
+ * The fight is the client's (rule 23) but its constants are not: armour, evasion, criticals,
+ * stun, the energy shield's recharge, the innate spell and its mana, the life flask, retreat, the
+ * price of death and the six ailments all arrive here. The defaults are what the server ships
+ * today, so a test can build a fight without a payload; a served value always wins.
+ */
+@Serializable data class CombatRules(
+    val timeLimit: Double = 60.0, val variance: Double = 20.0, val resistCap: Double = 75.0, val blockCap: Double = 75.0, val spellBlockShare: Double = 50.0,
+    val unarmed: UnarmedRule = UnarmedRule(), val critical: CriticalRule = CriticalRule(), val armour: ArmourRule = ArmourRule(),
+    val evasion: EvasionRule = EvasionRule(), val stun: StunRule = StunRule(), val shield: ShieldRule = ShieldRule(),
+    val spell: SpellRule = SpellRule(), val flask: FlaskRule = FlaskRule(), val retreat: RetreatRule = RetreatRule(), val death: DeathRule = DeathRule(),
+    val ailments: List<AilmentRule> = listOf(
+        AilmentRule("BURNING", "STOCK_ATTACK_FIRE", 30.0, 60.0, 4.0),
+        AilmentRule("CHILLED", "STOCK_ATTACK_COLD", 100.0, 15.0, 2.0),
+        AilmentRule("FROZEN", "STOCK_ATTACK_COLD", 50.0, 0.0, 0.8, threshold = 15.0),
+        AilmentRule("SHOCKED", "STOCK_ATTACK_LIGHTNING", 35.0, 20.0, 3.0),
+        AilmentRule("POISONED", "STOCK_ATTACK_CHAOS", 40.0, 30.0, 3.0, stacks = true),
+        AilmentRule("BLEEDING", "STOCK_ATTACK_PHYSICAL", 15.0, 50.0, 4.0),
+    ),
+)
+
+/** The whole campaign as the server serves it, read once per session: the chapters, the rarities and the rules of the fight. */
+@Serializable data class CampaignView(val chapters: List<CampaignChapter> = emptyList(), val rarities: List<CampaignRarity> = emptyList(), val combat: CombatRules = CombatRules())
 
 /** Which maps the character has cleared, and which are open to them. */
 @Serializable data class CampaignProgress(val cleared: List<String> = emptyList(), val unlocked: List<String> = emptyList())
@@ -72,3 +119,6 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE }
     val totalExperience: Double = 0.0,
     val money: Long = 0,
 )
+
+/** What a death cost (server 0.28.0): the experience taken, and the level, which never falls. */
+@Serializable data class CampaignFall(val lost: Double = 0.0, val level: Int = 1, val totalExperience: Double = 0.0)

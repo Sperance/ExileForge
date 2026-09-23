@@ -29,15 +29,15 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 @Composable internal fun EditorScreen(s: ForgeState, vm: ForgeViewModel, onDelete: () -> Unit, onClose: () -> Unit) {
-    if (!s.editorOpen) {
+    if (!s.admin.editorOpen) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             ScreenHeader(ui("editor.title_forge"), ui("editor.workshop_title"), ForgeGlyphs.Anvil)
             InfoCard(ui("editor.workshop"), ui("editor.workshop_note"))
             InfoCard(ui("editor.editor"), ui("editor.pick_note"))
             if (s.adminTools) CatalogSwitch(s, vm)
             ForgePanel {
-                if (s.catalog != Catalog.EQUIPMENT) Button(enabled = !s.busy && s.canEdit, onClick = { vm.create() }, modifier = Modifier.fillMaxWidth()) {
-                    Text(if (s.catalog == Catalog.CHARACTERS) ui("editor.create_character") else ui("editor.create_item"))
+                if (s.admin.catalog != Catalog.EQUIPMENT) Button(enabled = !s.busy && s.canEdit, onClick = { vm.create() }, modifier = Modifier.fillMaxWidth()) {
+                    Text(if (s.admin.catalog == Catalog.CHARACTERS) ui("editor.create_character") else ui("editor.create_item"))
                 }
                 else EquipmentKind.entries.forEach { kind ->
                     OutlinedButton(enabled = !s.busy && s.canEdit, onClick = { vm.create(kind) }, modifier = Modifier.fillMaxWidth()) {
@@ -52,34 +52,34 @@ import kotlinx.serialization.json.JsonPrimitive
         }
         return
     }
-    key(s.catalog, s.original?.entityId) {
+    key(s.admin.catalog, s.admin.original?.entityId) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.weight(1f)) { ScreenHeader(if (s.catalog == Catalog.CHARACTERS) ui("common.character") else ui("nav.forge"), icon = ForgeGlyphs.Anvil) }
+                    Box(Modifier.weight(1f)) { ScreenHeader(if (s.admin.catalog == Catalog.CHARACTERS) ui("common.character") else ui("nav.forge"), icon = ForgeGlyphs.Anvil) }
                     IconButton(enabled = !s.busy, onClick = onClose) { Icon(Icons.Outlined.Close, ui("editor.close")) }
                 }
-                if (s.catalog != Catalog.CHARACTERS) ItemCard(s.draft, enabled = false, detailed = true, definitions = s.definitions, actionLabel = ui("editor.preview"))
-                if (s.catalog == Catalog.CHARACTERS && s.original == null) {
+                if (s.admin.catalog != Catalog.CHARACTERS) ItemCard(s.admin.draft, enabled = false, detailed = true, definitions = s.world.definitions, actionLabel = ui("editor.preview"))
+                if (s.admin.catalog == Catalog.CHARACTERS && s.admin.original == null) {
                     Text(ui("editor.owner_note"), color = Muted)
                     // The class is the whole stat base and the way into the tree, and the server has
                     // no route to change it later: it is chosen here or nowhere.
-                    Spinner(ui("common.class"), s.draft.text("classId"),
-                        s.classes.associate { it.id to it.title }, !s.busy) { chosen ->
-                        vm.draftClass(chosen); vm.edit(JsonObject(s.draft + ("classId" to JsonPrimitive(chosen))))
+                    Spinner(ui("common.class"), s.admin.draft.text("classId"),
+                        s.world.classes.associate { it.id to it.title }, !s.busy) { chosen ->
+                        vm.draftClass(chosen); vm.edit(JsonObject(s.admin.draft + ("classId" to JsonPrimitive(chosen))))
                     }
-                    s.classes.firstOrNull { it.id == s.draft.text("classId") }?.let { chosen ->
+                    s.world.classes.firstOrNull { it.id == s.admin.draft.text("classId") }?.let { chosen ->
                         Text(chosen.details, color = Muted, style = MaterialTheme.typography.bodySmall)
                         Text(ui("editor.level1_base") + chosen.baseStats.joinToString(" · ") { "${statTitle(it.stat, s.lang)} ${statNumber(it.stat, it.value)}" },
                             color = Muted, style = MaterialTheme.typography.bodySmall)
                     }
-                    if (s.classes.isEmpty()) Text(ui("editor.no_classes"), color = MaterialTheme.colorScheme.error)
+                    if (s.world.classes.isEmpty()) Text(ui("editor.no_classes"), color = MaterialTheme.colorScheme.error)
                 }
             }
-            if (s.catalog == Catalog.EQUIPMENT && s.adminTools) item {
+            if (s.admin.catalog == Catalog.EQUIPMENT && s.adminTools) item {
                 ForgePanel {
                     Engraved(ui("editor.modifiers"))
-                    Text(ui("editor.definitions_loaded", s.definitions.size), color = Muted)
+                    Text(ui("editor.definitions_loaded", s.world.definitions.size), color = Muted)
                     OutlinedButton(enabled = !s.busy, onClick = vm::loadDefinitions) { Text(ui("editor.refresh_modifiers")) }
                     Text(ui("editor.pool_note"),
                         color = Muted, style = MaterialTheme.typography.bodySmall)
@@ -87,12 +87,12 @@ import kotlinx.serialization.json.JsonPrimitive
             }
             item {
                 // A player may rename their own character; only an administrator touches its stats.
-                val locked = if (s.catalog == Catalog.CHARACTERS && !s.adminTools) setOf("professionSkills", "battleSkills", "boolSkills") else emptySet()
-                ObjectForm(formSchema(s.catalog), s.draft, !s.busy && s.canEdit, locked = locked, onChange = vm::edit)
+                val locked = if (s.admin.catalog == Catalog.CHARACTERS && !s.adminTools) setOf("professionSkills", "battleSkills", "boolSkills") else emptySet()
+                ObjectForm(formSchema(s.admin.catalog), s.admin.draft, !s.busy && s.canEdit, locked = locked, onChange = vm::edit)
             }
             item { Button(enabled = !s.busy && s.canEdit, onClick = vm::save, modifier = Modifier.fillMaxWidth()) { Text(ui("editor.save")) } }
-            if (s.original != null) item { OutlinedButton(enabled = !s.busy, onClick = vm::reloadEditor, modifier = Modifier.fillMaxWidth()) { Text(ui("editor.reread")) } }
-            if (s.original != null && s.canEdit) item { TextButton(enabled = !s.busy, onClick = onDelete, modifier = Modifier.fillMaxWidth()) { Text(ui("common.delete"), color = MaterialTheme.colorScheme.error) } }
+            if (s.admin.original != null) item { OutlinedButton(enabled = !s.busy, onClick = vm::reloadEditor, modifier = Modifier.fillMaxWidth()) { Text(ui("editor.reread")) } }
+            if (s.admin.original != null && s.canEdit) item { TextButton(enabled = !s.busy, onClick = onDelete, modifier = Modifier.fillMaxWidth()) { Text(ui("common.delete"), color = MaterialTheme.colorScheme.error) } }
         }
     }
 }

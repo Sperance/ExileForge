@@ -32,31 +32,79 @@ enum class AppMode { PLAYER, ADMIN }
  */
 enum class AppPhase { AUTH, CHARACTERS, GAME }
 
+/**
+ * The whole app, as one immutable value.
+ *
+ * What every screen needs — where the app is, the language, the lanes of work in flight and the
+ * last word the server said — sits at the top. Everything else is grouped by whose it is, so a
+ * change to one part is written as a copy of that part and reads as such:
+ * [account] is the session and the characters it owns, [world] the reference tables read once
+ * per session, [play] the character being played, [market] the auction, and [admin] the
+ * administrator's catalogue, editor, promo codes and checks.
+ */
 data class ForgeState(
     val phase: AppPhase = AppPhase.AUTH,
     val lang: Lang = uiLanguage,
     val mode: AppMode = AppMode.PLAYER,
     val failure: FailureState? = null,
-
-    val profile: UserProfile? = null, val signedIn: Boolean = false, val sessionEpoch: Int = 0,
-    /** A kept session the server could not be reached to confirm: the sign-in screen offers to try again. */
-    val resumable: Boolean = false,
-    val server: String = "http://10.0.2.2:8080/", val serverDraft: String = "http://10.0.2.2:8080/",
     /**
      * [busy] is a command in flight — the one thing that disables controls, because two writes at
      * once could spend the same orb twice. [loading] names the reads in flight: they run beside a
      * command and beside each other, and only say that something is on its way.
      */
     val busy: Boolean = true, val loading: Set<String> = emptySet(), val message: String? = null, val error: Boolean = false,
+    val tab: Int = 3,
+    val account: AccountState = AccountState(),
+    val world: WorldState = WorldState(),
+    val play: PlayState = PlayState(),
+    val market: MarketState = MarketState(),
+    val admin: AdminState = AdminState(),
+) {
+    val isAdmin: Boolean get() = account.signedIn && account.profile?.role == "ADMIN"
+    val reading: Boolean get() = loading.isNotEmpty()
+    /** Whether a pull on this list is still being answered, by a read of its own or by a command. */
+    fun refreshing(read: String): Boolean = busy || read in loading
+    /**
+     * The character every command on every tab acts on; the gate guarantees there is one.
+     *
+     * The loaded hero wins over the menu's snapshot, which was taken before any experience was
+     * earned — otherwise the banner would keep showing the level the player came in on.
+     */
+    val character: CharacterSummary? get() = play.hero?.character?.takeIf { it.id == play.characterId }
+        ?: account.characters.firstOrNull { it.id == play.characterId }
+    /** The server refuses a fourth, so the button that would ask for one is not offered. */
+    val characterSlotsLeft: Int get() = (MAX_CHARACTERS - account.characters.size).coerceAtLeast(0)
+    /** An account nobody named: a device registration leaves `name` and `login` empty. */
+    val accountTitle: String get() = account.profile?.name?.takeIf { it.isNotBlank() }
+        ?: account.profile?.login?.takeIf { it.isNotBlank() }
+        ?: ui("session.guest") + " · …${account.deviceId.takeLast(6)}"
+    /** Lots the character may act on: the showcase hides their own unless asked not to. */
+    val ownLots: List<AuctionLot> get() = market.myLots.filter { it.onSale }
+    /** The class the shown hero belongs to; the server owns the base it hands out. */
+    val heroClass: CharacterClass? get() = play.hero?.let { view -> world.classes.firstOrNull { it.id == view.character.classId } }
+    val adminTools: Boolean get() = isAdmin && mode == AppMode.ADMIN
+    /** The editor is an administrator's tool now that a character is made from the menu. */
+    val canEdit: Boolean get() = account.signedIn && adminTools
+    val ownsCharacter: Boolean get() = account.signedIn && account.profile?.id == play.characterOwner
+    /**
+     * How many of one stacking item the hero holds, or null while the hero has not been read.
+     *
+     * A confirmation prints what a purchase or a refund leaves behind; before the bag is known it
+     * prints nothing rather than a guess of zero.
+     */
+    fun bagAmount(itemId: String): Long? = play.hero?.let { view -> view.bag.firstOrNull { it.itemId == itemId }?.amount ?: 0L }
+    /** The bag's orb of the given kind — the document a spent orb is counted by. */
+    fun orbOf(kind: com.sperance.exileforge.core.model.currency.CurrencyOrb) = world.orbs.firstOrNull { it.orb == kind }
+}
 
-    val tab: Int = 3, val catalog: Catalog = Catalog.EQUIPMENT,
-    val filter: CatalogFilter = CatalogFilter(), val query: String = "",
-    val items: List<JsonObject> = emptyList(), val page: Int = 0, val totalPages: Int = 0, val total: Long = 0,
-
-    val original: JsonObject? = null, val editorOpen: Boolean = false, val draft: JsonObject = JsonObject(emptyMap()),
-    /** The shared modifier catalogue, read once per session so rolled values can be named. */
-    val definitions: List<ModifierDefinition> = emptyList(),
-
+/** The session: who is signed in, to which server, and which characters they own. */
+data class AccountState(
+    val profile: UserProfile? = null, val signedIn: Boolean = false, val sessionEpoch: Int = 0,
+    /** A kept session the server could not be reached to confirm: the sign-in screen offers to try again. */
+    val resumable: Boolean = false,
+    val server: String = "http://10.0.2.2:8080/", val serverDraft: String = "http://10.0.2.2:8080/",
+    /** The identifier this device registers under; shown so a support log can name the account. */
+    val deviceId: String = "",
     /**
      * The account's characters, as the server narrowed them, and whether they have been read yet.
      *
@@ -64,53 +112,25 @@ data class ForgeState(
      * the one that opens the creation form, so "no characters" and "not asked yet" must differ.
      */
     val characters: List<CharacterSummary> = emptyList(), val charactersRead: Boolean = false,
-    /** The identifier this device registers under; shown so a support log can name the account. */
-    val deviceId: String = "",
+    val health: String = ui("runtime.not_checked"),
+)
 
-    val characterId: String = "", val characterOwner: String = "", val hero: HeroView? = null,
-    /**
-     * When the hero was last read whole, as epoch millis; 0 means "never, or known to be stale".
-     *
-     * Reading the hero is five requests, so it is not done on every glance at a tab. A command
-     * re-reads it because the command changed it; anything that changed it *elsewhere* — a trade,
-     * another device, an administrator — is caught by this stamp going cold.
-     */
-    val heroReadAt: Long = 0,
-    /** Templates of the instances on screen, keyed by `equipmentId`; an instance carries only rolls. */
-    val inventoryBases: Map<String, JsonObject> = emptyMap(),
-    val selectedEquipment: String = "",
-    /** What the admin's random grant asks the server for. Blank means "any". */
-    val grantRarity: String = "", val grantSlot: String = "",
-    /** The currency catalogue, read once per session; `selectedOrb` is the `items` id of one orb. */
-    val orbs: List<CurrencyItem> = emptyList(), val selectedOrb: String = "",
-    /** The world's reference tables, read once per session: classes and the shared skill tree. */
+/** The world's reference tables: seeded, fixed for a session, and read once. */
+data class WorldState(
+    /** The shared modifier catalogue, read once per session so rolled values can be named. */
+    val definitions: List<ModifierDefinition> = emptyList(),
+    /** The currency catalogue; an orb is an `items` document of category `CURRENCY`. */
+    val orbs: List<CurrencyItem> = emptyList(),
+    /** Classes and the shared skill tree; a class carries the stat base, the tree its graph. */
     val classes: List<CharacterClass> = emptyList(), val treeNodes: List<SkillTreeNode> = emptyList(),
     /** The level table, read with the classes: it says what the next level costs. */
     val levels: List<ExperienceLevel> = emptyList(),
-    /** The class a new character is being created with, and the tree node under the cursor. */
-    val draftClass: String = "", val selectedNode: String = "",
-    /** What the tree search box holds; a match moves the map to that node. */
-    val nodeQuery: String = "",
-
-    /** Which of the auction's own tabs is open: 0 showcase, 1 my lots, 2 sell. */
-    val auctionTab: Int = 0,
-    /** The showcase as the server paged it, and the filter it was asked for. */
-    val showcase: AuctionPage = AuctionPage(), val auctionFilter: AuctionFilter = AuctionFilter(),
-    /** Own lots are dropped from the showcase by default: they cannot be bought anyway. */
-    val showOwnLots: Boolean = false,
-    val myLots: List<AuctionLot> = emptyList(),
-    /**
-     * Why the auction is closed to this character, in the server's own words.
-     *
-     * The level it opens at is the server's constant; the client never carries a copy of it and
-     * learns the gate only by being refused.
-     */
-    val auctionLocked: String? = null,
-
+    /** Templates of the instances on screen, keyed by `equipmentId`; an instance carries only rolls. */
+    val inventoryBases: Map<String, JsonObject> = emptyMap(),
     /**
      * The server's dictionary for the current language, and how many strings it holds.
      *
-     * Since 0.14.0 no document carries text: an entity stores a code and the name lives here. The
+     * Since 0.14.0 no document carries text: an entity stores a code and the name lives there. The
      * bundle itself is global (`serverLocale`) because `core` renders from it without a state
      * object; what is kept here is only what the screens need to report — which language is loaded
      * and whether it arrived at all.
@@ -126,13 +146,6 @@ data class ForgeState(
      */
     val languages: List<Lang> = listOf(Lang.RU, Lang.EN),
     /**
-     * Promo codes, as an administrator sees them.
-     *
-     * They are not a [Catalog]: a player never lists them, only types one in, so they have no
-     * page, no filter and no place in the catalogue's three collections.
-     */
-    val redemptions: List<RedemptionCode> = emptyList(),
-    /**
      * How much of the server's icon set arrived: codes covered and drawings behind them.
      *
      * The set is global (`serverIcons`) for the same reason the dictionary is — `core` draws from
@@ -140,46 +153,63 @@ data class ForgeState(
      * than merely invisible: every hole falls back to a bundled emblem and looks deliberate.
      */
     val iconKeys: Int = 0, val iconSprites: Int = 0,
+)
 
+/** The character being played, and what the player has picked on its screens. */
+data class PlayState(
+    val characterId: String = "", val characterOwner: String = "", val hero: HeroView? = null,
+    /**
+     * When the hero was last read whole, as epoch millis; 0 means "never, or known to be stale".
+     *
+     * Reading the hero is five requests, so it is not done on every glance at a tab. A command
+     * re-reads it because the command changed it; anything that changed it *elsewhere* — a trade,
+     * another device, an administrator — is caught by this stamp going cold.
+     */
+    val heroReadAt: Long = 0,
+    val selectedEquipment: String = "",
+    /** The `items` id of the orb picked in the forge. */
+    val selectedOrb: String = "",
+    /** What the admin's random grant asks the server for. Blank means "any". */
+    val grantRarity: String = "", val grantSlot: String = "",
+    /** The class a new character is being created with, and the tree node under the cursor. */
+    val draftClass: String = "", val selectedNode: String = "",
+    /** What the tree search box holds; a match moves the map to that node. */
+    val nodeQuery: String = "",
+)
+
+/** The auction, as this character sees it. */
+data class MarketState(
+    /** Which of the auction's own tabs is open: 0 showcase, 1 my lots, 2 sell. */
+    val tab: Int = 0,
+    /** The showcase as the server paged it, and the filter it was asked for. */
+    val showcase: AuctionPage = AuctionPage(), val filter: AuctionFilter = AuctionFilter(),
+    /** Own lots are dropped from the showcase by default: they cannot be bought anyway. */
+    val showOwnLots: Boolean = false,
+    val myLots: List<AuctionLot> = emptyList(),
+    /**
+     * Why the auction is closed to this character, in the server's own words.
+     *
+     * The level it opens at is the server's constant; the client never carries a copy of it and
+     * learns the gate only by being refused.
+     */
+    val locked: String? = null,
+)
+
+/** The administrator's tools: the catalogue and its editor, promo codes and the self-checks. */
+data class AdminState(
+    val catalog: Catalog = Catalog.EQUIPMENT,
+    val filter: CatalogFilter = CatalogFilter(), val query: String = "",
+    val items: List<JsonObject> = emptyList(), val page: Int = 0, val totalPages: Int = 0, val total: Long = 0,
+    val original: JsonObject? = null, val editorOpen: Boolean = false, val draft: JsonObject = JsonObject(emptyMap()),
+    /**
+     * Promo codes, as an administrator sees them.
+     *
+     * They are not a [Catalog]: a player never lists them, only types one in, so they have no
+     * page, no filter and no place in the catalogue's three collections.
+     */
+    val redemptions: List<RedemptionCode> = emptyList(),
     val checks: List<CheckResult> = emptyList(),
-    val health: String = ui("runtime.not_checked"),
-) {
-    val isAdmin: Boolean get() = signedIn && profile?.role == "ADMIN"
-    val reading: Boolean get() = loading.isNotEmpty()
-    /** Whether a pull on this list is still being answered, by a read of its own or by a command. */
-    fun refreshing(read: String): Boolean = busy || read in loading
-    /**
-     * The character every command on every tab acts on; the gate guarantees there is one.
-     *
-     * The loaded hero wins over the menu's snapshot, which was taken before any experience was
-     * earned — otherwise the banner would keep showing the level the player came in on.
-     */
-    val character: CharacterSummary? get() = hero?.character?.takeIf { it.id == characterId }
-        ?: characters.firstOrNull { it.id == characterId }
-    /** The server refuses a fourth, so the button that would ask for one is not offered. */
-    val characterSlotsLeft: Int get() = (MAX_CHARACTERS - characters.size).coerceAtLeast(0)
-    /** An account nobody named: a device registration leaves `name` and `login` empty. */
-    val accountTitle: String get() = profile?.name?.takeIf { it.isNotBlank() }
-        ?: profile?.login?.takeIf { it.isNotBlank() }
-        ?: ui("session.guest") + " · …${deviceId.takeLast(6)}"
-    /** Lots the character may act on: the showcase hides their own unless asked not to. */
-    val ownLots: List<AuctionLot> get() = myLots.filter { it.onSale }
-    /** The class the shown hero belongs to; the server owns the base it hands out. */
-    val heroClass: CharacterClass? get() = hero?.let { view -> classes.firstOrNull { it.id == view.character.classId } }
-    val adminTools: Boolean get() = isAdmin && mode == AppMode.ADMIN
-    /** The editor is an administrator's tool now that a character is made from the menu. */
-    val canEdit: Boolean get() = signedIn && adminTools
-    val ownsCharacter: Boolean get() = signedIn && profile?.id == characterOwner
-    /**
-     * How many of one stacking item the hero holds, or null while the hero has not been read.
-     *
-     * A confirmation prints what a purchase or a refund leaves behind; before the bag is known it
-     * prints nothing rather than a guess of zero.
-     */
-    fun bagAmount(itemId: String): Long? = hero?.let { view -> view.bag.firstOrNull { it.itemId == itemId }?.amount ?: 0L }
-    /** The bag's orb of the given kind — the document a spent orb is counted by. */
-    fun orbOf(kind: com.sperance.exileforge.core.model.currency.CurrencyOrb) = orbs.firstOrNull { it.orb == kind }
-}
+)
 
 /**
  * How many characters one account may hold — the server's `CONST_USER_MAX_CHARACTERS`.
@@ -190,14 +220,6 @@ data class ForgeState(
  */
 const val MAX_CHARACTERS = 3
 
-/**
- * The tabs, by name.
- *
- * Four of them are the bottom bar a player sees, and [TAB_ADMIN] is the one an administrator has
- * on top of it. Everything else is a screen a button opens: the forge from the Hero tab, and the
- * catalogue, the editor and the checks from the administrator's tab. They are named because a
- * bare number in another file says nothing about which screen it is.
- */
 /**
  * What a read reads. One read per name runs at a time, and a command names the reads it will
  * redo itself, so none of them lands after it with what was true before.
@@ -214,6 +236,14 @@ object Reads {
     const val DEFINITIONS = "definitions"
 }
 
+/**
+ * The tabs, by name.
+ *
+ * Four of them are the bottom bar a player sees, and [TAB_ADMIN] is the one an administrator has
+ * on top of it. Everything else is a screen a button opens: the forge from the Hero tab, and the
+ * catalogue, the editor and the checks from the administrator's tab. They are named because a
+ * bare number in another file says nothing about which screen it is.
+ */
 const val TAB_CATALOG = 0
 const val TAB_EDITOR = 1
 const val TAB_CHECKS = 2

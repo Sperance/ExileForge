@@ -46,11 +46,11 @@ import com.sperance.exileforge.ui.theme.Muted
     PullToRefreshBox(isRefreshing = s.refreshing(Reads.REDEMPTIONS), onRefresh = vm::loadRedemptions, modifier = Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
-                ScreenHeader(ui("redemption.title"), ui("redemption.count", s.redemptions.size), ForgeGlyphs.Scroll)
+                ScreenHeader(ui("redemption.title"), ui("redemption.count", s.admin.redemptions.size), ForgeGlyphs.Scroll)
             }
             item { NewCodePanel(s, vm) }
-            if (s.redemptions.isEmpty()) item { InfoCard(ui("redemption.empty"), ui("redemption.empty_hint")) }
-            items(s.redemptions, key = { it.id }) { code ->
+            if (s.admin.redemptions.isEmpty()) item { InfoCard(ui("redemption.empty"), ui("redemption.empty_hint")) }
+            items(s.admin.redemptions, key = { it.id }) { code ->
                 CodeCard(s, code, onDelete = { pendingDelete = code })
             }
         }

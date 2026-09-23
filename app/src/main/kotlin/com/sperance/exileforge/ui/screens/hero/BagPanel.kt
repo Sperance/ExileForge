@@ -15,13 +15,13 @@ import com.sperance.exileforge.ui.theme.Muted
  * nothing, and the section is folded away because it is read on purpose, not at a glance.
  */
 @Composable fun BagPanel(s: ForgeState) {
-    val hero = s.hero ?: return
-    var expanded by remember(s.characterId) { mutableStateOf(false) }
+    val hero = s.play.hero ?: return
+    var expanded by remember(s.play.characterId) { mutableStateOf(false) }
     ExpandableSection(ui("hero.bag"), hero.bag.size, expanded, { expanded = !expanded }) {
         if (hero.bag.isEmpty()) Text(ui("hero.bag_empty"), color = Muted)
         // Currency is named from the catalogue the hero screen already read; anything else is an id.
         hero.bag.forEach { item ->
-            val orb = s.orbs.firstOrNull { it.id == item.itemId }
+            val orb = s.world.orbs.firstOrNull { it.id == item.itemId }
             PropertyRow(orb?.title(s.lang) ?: (ui("common.item") + " …${item.itemId.takeLast(6)}"), item.amount.toString(), "item")
         }
     }

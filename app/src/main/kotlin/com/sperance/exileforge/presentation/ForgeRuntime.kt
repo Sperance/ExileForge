@@ -84,8 +84,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
                 val server = store.server.first()
                 api = newApi(server)
                 val known = store.languages(server).mapNotNull { Lang.byCode(it) }
-                mutable.update { it.copy(lang = language, server = server, serverDraft = server, busy = false, deviceId = deviceId,
-                    languages = known.ifEmpty { it.languages }) }
+                mutable.update { it.copy(lang = language, busy = false, account = it.account.copy(server = server, serverDraft = server, deviceId = deviceId), world = it.world.copy(languages = known.ifEmpty { it.world.languages })) }
                 refreshLocale()
                 refreshIcons()
                 // A kept token comes back as it was; without one, a session is made again without
@@ -106,7 +105,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
         if (state.value.lang == lang) return
         val untested = ui("runtime.not_checked")
         uiLanguage = lang
-        mutable.update { it.copy(lang = lang, health = if (it.health == untested) ui("runtime.not_checked") else it.health) }
+        mutable.update { it.copy(lang = lang, account = it.account.copy(health = if (it.account.health == untested) ui("runtime.not_checked") else it.account.health)) }
         scope.launch { store.saveLanguage(lang) }
         // The server's half of the language lives in its dictionary, so the two are switched together.
         refreshLocale(lang)
@@ -123,10 +122,10 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
      * A dictionary belongs to a server as well as to a language: two servers may seed different text.
      */
     suspend fun loadLocale(language: Lang) {
-        val server = state.value.server
+        val server = state.value.account.server
         val cached = store.locale(server, language.code)
         cached?.let { (hash, document) -> applyLocale(LocaleBundle.parse(language.code, hash, document)) }
-        val manifest = api.localeManifest()
+        val manifest = api.files.localeManifest()
         applyLanguages(server, manifest)
         val chosen = manifest.language(language.code) ?: manifest.language(manifest.default) ?: return
         if (cached == null || cached.first != chosen.hash || chosen.code != language.code)
@@ -139,7 +138,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
         store.locale(server, code)?.let { (hash, document) ->
             if (hash == language.hash) return LocaleBundle.parse(code, hash, document)
         }
-        val document = api.localeDocument(code)
+        val document = api.files.localeDocument(code)
         store.saveLocale(server, code, language.hash, document)
         return LocaleBundle.parse(code, language.hash, document)
     }
@@ -171,12 +170,12 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
      * which is what they were for before the server had any.
      */
     suspend fun loadIcons() {
-        val server = state.value.server
+        val server = state.value.account.server
         val cached = store.icons(server)
         cached?.let { (hash, document) -> applyIcons(IconBundle.parse(hash, document)) }
-        val manifest = api.iconManifest()
+        val manifest = api.files.iconManifest()
         if (manifest.hash.isBlank() || cached?.first == manifest.hash) return
-        val document = api.iconDocument(manifest.file)
+        val document = api.files.iconDocument(manifest.file)
         store.saveIcons(server, manifest.hash, document)
         applyIcons(IconBundle.parse(manifest.hash, document))
     }
@@ -193,7 +192,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
 
     private fun applyIcons(bundle: IconBundle) {
         serverIcons = bundle
-        mutable.update { it.copy(iconKeys = bundle.size, iconSprites = bundle.spriteCount) }
+        mutable.update { it.copy(world = it.world.copy(iconKeys = bundle.size, iconSprites = bundle.spriteCount)) }
     }
 
     /**
@@ -207,13 +206,13 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
         val offered = manifest.languages.mapNotNull { Lang.byCode(it.code) }
         if (offered.isEmpty()) return
         store.saveLanguages(server, offered.map { it.code })
-        mutable.update { it.copy(languages = (offered + it.lang).distinct().sortedBy(Lang::ordinal)) }
+        mutable.update { it.copy(world = it.world.copy(languages = (offered + it.lang).distinct().sortedBy(Lang::ordinal))) }
     }
 
     /** The bundle is global because `core` renders from it; the state only reports what is loaded. */
     private fun applyLocale(bundle: LocaleBundle) {
         serverLocale = bundle
-        mutable.update { it.copy(localeLanguage = bundle.language, localeStrings = bundle.size) }
+        mutable.update { it.copy(world = it.world.copy(localeLanguage = bundle.language, localeStrings = bundle.size)) }
     }
 
     /** The Checks tab runs writes against the server; it belongs to an administrator alone. */
@@ -228,7 +227,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
         if (!state.value.adminTools && tab in ADMIN_TABS) return
         mutable.update { it.copy(tab = tab) }
     }
-    suspend fun referencePage(source: EntitySource, page: Int, query: String) = api.referencePage(source, page, query)
+    suspend fun referencePage(source: EntitySource, page: Int, query: String) = api.catalog.referencePage(source, page, query)
     /**
      * One equipment template, through the cache the inventory already fills.
      *
@@ -240,12 +239,12 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
     suspend fun equipmentBase(id: String): JsonObject? {
         if (id.isBlank()) return null
         ensureEquipment()
-        return state.value.inventoryBases[id]
+        return state.value.world.inventoryBases[id]
     }
 
     /** The recipe form reads one document directly; it is never edited, only spent. */
     suspend fun recipeDocument(id: String): JsonObject =
-        com.sperance.exileforge.core.contract.WireJson.encodeToJsonElement(com.sperance.exileforge.core.model.hero.RecipeDocument.serializer(), api.recipe(id)).jsonObject
+        com.sperance.exileforge.core.contract.WireJson.encodeToJsonElement(com.sperance.exileforge.core.model.hero.RecipeDocument.serializer(), api.world.recipe(id)).jsonObject
     fun dismissMessage() { mutable.update { it.copy(message = null) } }
 
     /**
@@ -316,18 +315,18 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
     }
 
     suspend fun loadPage(page: Int) {
-        val result = api.search(state.value.catalog, page, state.value.filter.copy(query = state.value.query))
-        mutable.update { it.copy(items = result.items, page = result.page, total = result.totalItems, totalPages = result.totalPages) }
+        val result = api.catalog.search(state.value.admin.catalog, page, state.value.admin.filter.copy(query = state.value.admin.query))
+        mutable.update { it.copy(admin = it.admin.copy(items = result.items, page = result.page, total = result.totalItems, totalPages = result.totalPages)) }
     }
 
     fun setEditor(document: JsonObject, original: JsonObject?) {
-        mutable.update { it.copy(original = original, editorOpen = true, draft = document, tab = 1) }
+        mutable.update { it.copy(tab = 1, admin = it.admin.copy(original = original, editorOpen = true, draft = document)) }
     }
 
     /** The modifier catalogue is small and shared; one read per session names every rolled value. */
     suspend fun ensureDefinitions() {
-        if (state.value.definitions.isNotEmpty()) return
-        mutable.update { it.copy(definitions = api.modifierDefinitions()) }
+        if (state.value.world.definitions.isNotEmpty()) return
+        mutable.update { it.copy(world = it.world.copy(definitions = api.world.modifiers())) }
     }
 
     /**
@@ -337,14 +336,13 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
      * single read backs the character form and the tree screen alike.
      */
     suspend fun ensureProgression() {
-        if (state.value.classes.isNotEmpty() && state.value.treeNodes.isNotEmpty() && state.value.levels.isNotEmpty()) return
-        val classes = api.characterClasses()
-        val nodes = api.skillTree()
+        if (state.value.world.classes.isNotEmpty() && state.value.world.treeNodes.isNotEmpty() && state.value.world.levels.isNotEmpty()) return
+        val classes = api.world.classes()
+        val nodes = api.world.tree()
         // The level table comes with them: it is the same kind of reference — fixed for a session —
         // and without it the hero's experience is a number with nothing to measure it against.
-        val levels = api.experienceLevels().sortedBy { it.level }
-        mutable.update { it.copy(classes = classes, treeNodes = nodes, levels = levels,
-            draftClass = it.draftClass.ifBlank { classes.firstOrNull()?.id.orEmpty() }) }
+        val levels = api.world.levels().sortedBy { it.level }
+        mutable.update { it.copy(world = it.world.copy(classes = classes, treeNodes = nodes, levels = levels), play = it.play.copy(draftClass = it.play.draftClass.ifBlank { classes.firstOrNull()?.id.orEmpty() })) }
     }
 
     /**
@@ -357,31 +355,21 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
      * documents and the client already reads it whole for the Catalogue tab.
      */
     suspend fun ensureEquipment() {
-        if (state.value.inventoryBases.isNotEmpty()) return
-        val templates = api.equipmentCatalogue().associateBy { it.entityId }
-        mutable.update { it.copy(inventoryBases = templates) }
+        if (state.value.world.inventoryBases.isNotEmpty()) return
+        val templates = api.catalog.equipment().associateBy { it.entityId }
+        mutable.update { it.copy(world = it.world.copy(inventoryBases = templates)) }
     }
 
     /** The orbs the server seeded. The catalogue is fixed for a session, so one read covers it. */
     suspend fun ensureOrbs() {
-        if (state.value.orbs.isNotEmpty()) return
-        val orbs = api.currencyOrbs()
-        mutable.update { it.copy(orbs = orbs, selectedOrb = it.selectedOrb.ifBlank { orbs.firstOrNull()?.id.orEmpty() }) }
+        if (state.value.world.orbs.isNotEmpty()) return
+        val orbs = api.world.orbs()
+        mutable.update { it.copy(world = it.world.copy(orbs = orbs), play = it.play.copy(selectedOrb = it.play.selectedOrb.ifBlank { orbs.firstOrNull()?.id.orEmpty() })) }
     }
 
     fun clearSession() {
         api.logout(); journal.clear(); cancelReads()
-        mutable.update { it.copy(phase = AppPhase.AUTH, resumable = false, characters = emptyList(), charactersRead = false,
-            signedIn = false, profile = null, sessionEpoch = it.sessionEpoch + 1,
-            items = emptyList(), total = 0, page = 0, totalPages = 0, definitions = emptyList(),
-            orbs = emptyList(), selectedOrb = "",
-            classes = emptyList(), treeNodes = emptyList(), draftClass = "", selectedNode = "", nodeQuery = "",
-            auctionTab = 0, showcase = com.sperance.exileforge.core.model.auction.AuctionPage(),
-            auctionFilter = com.sperance.exileforge.core.model.auction.AuctionFilter(),
-            showOwnLots = false, myLots = emptyList(), auctionLocked = null,
-            original = null, draft = JsonObject(emptyMap()), editorOpen = false,
-            characterId = "", characterOwner = "", hero = null, inventoryBases = emptyMap(), selectedEquipment = "",
-            checks = emptyList(), tab = 3, mode = AppMode.PLAYER, failure = null) }
+        mutable.update { it.copy(phase = AppPhase.AUTH, tab = 3, mode = AppMode.PLAYER, failure = null, account = it.account.copy(resumable = false, characters = emptyList(), charactersRead = false, signedIn = false, profile = null, sessionEpoch = it.account.sessionEpoch + 1), admin = it.admin.copy(items = emptyList(), total = 0, page = 0, totalPages = 0, original = null, draft = JsonObject(emptyMap()), editorOpen = false, checks = emptyList()), world = it.world.copy(definitions = emptyList(), orbs = emptyList(), classes = emptyList(), treeNodes = emptyList(), inventoryBases = emptyMap()), play = it.play.copy(selectedOrb = "", draftClass = "", selectedNode = "", nodeQuery = "", characterId = "", characterOwner = "", hero = null, selectedEquipment = ""), market = it.market.copy(tab = 0, showcase = com.sperance.exileforge.core.model.auction.AuctionPage(), filter = com.sperance.exileforge.core.model.auction.AuctionFilter(), showOwnLots = false, myLots = emptyList(), locked = null)) }
     }
 
     fun close() { scope.coroutineContext[Job]?.cancel() }

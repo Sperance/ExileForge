@@ -27,20 +27,20 @@ import kotlinx.serialization.json.*
         item {
             ScreenHeader(ui("checks.title"), ui("checks.subtitle"), ForgeGlyphs.Scroll)
             CatalogSwitch(s, vm)
-            if(s.catalog == Catalog.CHARACTERS) Text(ui("checks.items_note"), color = Muted)
+            if(s.admin.catalog == Catalog.CHARACTERS) Text(ui("checks.items_note"), color = Muted)
             InfoCard(ui("checks.crud"),
-                ui("checks.crud_note", if (s.catalog == Catalog.EQUIPMENT) ui("checks.modify_step") else ""))
+                ui("checks.crud_note", if (s.admin.catalog == Catalog.EQUIPMENT) ui("checks.modify_step") else ""))
         }
         item {
             ForgePanel {
-                Button(enabled = !s.busy && s.isAdmin && s.catalog != Catalog.CHARACTERS, onClick = { confirmRun = true }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Outlined.PlayArrow, null); Text(ui("checks.run_check")) }
+                Button(enabled = !s.busy && s.isAdmin && s.admin.catalog != Catalog.CHARACTERS, onClick = { confirmRun = true }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Outlined.PlayArrow, null); Text(ui("checks.run_check")) }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(enabled = !s.busy, onClick = vm::count) { Text(ui("checks.check_count")) }
                     TextButton(onClick = vm::clearLogs) { Text(ui("checks.clear_journal")) }
                 }
             }
         }
-        itemsIndexed(s.checks) { _, check ->
+        itemsIndexed(s.admin.checks) { _, check ->
             InfoCard((if (check.passed) "✓ " else "✕ ") + check.label, check.detail, failure = !check.passed)
         }
         item {
@@ -52,7 +52,7 @@ import kotlinx.serialization.json.*
     }
     if (confirmRun) AlertDialog(onDismissRequest = { confirmRun = false }, containerColor = MaterialTheme.colorScheme.surface, titleContentColor = Gold,
         title = { Text(ui("checks.run_q")) },
-        text = { Text(ui("checks.run_text", s.server, s.catalog.path)) },
+        text = { Text(ui("checks.run_text", s.account.server, s.admin.catalog.path)) },
         confirmButton = { TextButton(onClick = { confirmRun = false; vm.runChecks() }) { Text(ui("checks.run_do")) } },
         dismissButton = { TextButton(onClick = { confirmRun = false }) { Text(ui("common.cancel")) } })
 }

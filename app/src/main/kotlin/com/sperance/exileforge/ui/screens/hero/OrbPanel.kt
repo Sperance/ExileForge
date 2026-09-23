@@ -28,29 +28,29 @@ import com.sperance.exileforge.ui.theme.Muted
  */
 @Composable fun OrbPanel(s: ForgeState, instanceId: String, onSelect: (String) -> Unit,
     onApply: (String, String) -> Unit, onGrant: ((String) -> Unit)? = null) {
-    val hero = s.hero ?: return
+    val hero = s.play.hero ?: return
     val instance = hero.inventory.firstOrNull { it.id == instanceId }
     val owned = hero.bag.associate { it.itemId to it.amount }
-    val orb = s.orbs.firstOrNull { it.id == s.selectedOrb }
-    val enabled = !s.busy && s.signedIn && (s.ownsCharacter || s.isAdmin)
+    val orb = s.world.orbs.firstOrNull { it.id == s.play.selectedOrb }
+    val enabled = !s.busy && s.account.signedIn && (s.ownsCharacter || s.isAdmin)
     Engraved(ui("orb.title"))
-    if (s.orbs.isEmpty()) { Text(ui("orb.none"), color = Muted); return }
-    Spinner(ui("orb.orb"), s.selectedOrb,
-        s.orbs.associate { it.id to "${it.title(s.lang)} · ${owned[it.id] ?: 0L}" }, enabled, onSelect)
+    if (s.world.orbs.isEmpty()) { Text(ui("orb.none"), color = Muted); return }
+    Spinner(ui("orb.orb"), s.play.selectedOrb,
+        s.world.orbs.associate { it.id to "${it.title(s.lang)} · ${owned[it.id] ?: 0L}" }, enabled, onSelect)
     // An orb the client has no translation for still explains itself: the server's dictionary has one.
     orb?.let { Text(it.details(s.lang), color = Muted, style = MaterialTheme.typography.bodySmall) }
     if (instance == null) { Text(ui("orb.choose_item"), color = Muted); return }
-    val document = inventoryDocument(instance, s.inventoryBases[instance.equipmentId])
+    val document = inventoryDocument(instance, s.world.inventoryBases[instance.equipmentId])
     PropertyRow(ui("common.item"), document.text("name"), "item")
     PropertyRow(ui("orb.copy_rarity"), rarityTitle(instance.rarity, s.lang), "rarity")
     if (instance.corrupted) Text(ui("orb.corrupted"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
-    Button(enabled = enabled && !instance.corrupted && s.selectedOrb.isNotBlank(),
-        onClick = { onApply(instance.id, s.selectedOrb) }, modifier = Modifier.fillMaxWidth()) {
+    Button(enabled = enabled && !instance.corrupted && s.play.selectedOrb.isNotBlank(),
+        onClick = { onApply(instance.id, s.play.selectedOrb) }, modifier = Modifier.fillMaxWidth()) {
         Icon(ForgeGlyphs.Orb, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp))
         Text(ui("orb.apply"))
     }
-    if (onGrant != null) OutlinedButton(enabled = enabled && s.isAdmin && s.selectedOrb.isNotBlank(),
-        onClick = { onGrant(s.selectedOrb) }, modifier = Modifier.fillMaxWidth()) {
+    if (onGrant != null) OutlinedButton(enabled = enabled && s.isAdmin && s.play.selectedOrb.isNotBlank(),
+        onClick = { onGrant(s.play.selectedOrb) }, modifier = Modifier.fillMaxWidth()) {
         Text(ui("orb.top_up", ORB_TOP_UP))
     }
     Text(ui("orb.note"),
@@ -67,12 +67,12 @@ const val ORB_TOP_UP = 10L
  * repeatedly without leaving the panel.
  */
 @Composable fun AdminOrbPanel(s: ForgeState, vm: ForgeViewModel) {
-    val hero = s.hero ?: return
+    val hero = s.play.hero ?: return
     val targets = hero.inventory.associate { instance ->
-        val document = inventoryDocument(instance, s.inventoryBases[instance.equipmentId])
+        val document = inventoryDocument(instance, s.world.inventoryBases[instance.equipmentId])
         instance.id to "${document.text("name")} · ${rarityTitle(instance.rarity, s.lang)}"
     }
     if (targets.isEmpty()) { Text(ui("orb.empty_inventory"), color = Muted); return }
-    Spinner(ui("orb.target"), s.selectedEquipment, targets, !s.busy, vm::selectEquipment)
-    OrbPanel(s, s.selectedEquipment, vm::selectOrb, vm::applyOrb) { orb -> vm.adjustItems(orb, ORB_TOP_UP) }
+    Spinner(ui("orb.target"), s.play.selectedEquipment, targets, !s.busy, vm::selectEquipment)
+    OrbPanel(s, s.play.selectedEquipment, vm::selectOrb, vm::applyOrb) { orb -> vm.adjustItems(orb, ORB_TOP_UP) }
 }

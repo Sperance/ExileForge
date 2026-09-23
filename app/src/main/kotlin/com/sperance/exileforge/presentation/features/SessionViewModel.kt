@@ -21,25 +21,24 @@ class SessionViewModel(private val runtime: ForgeRuntime) {
     private val state get() = runtime.state
 
     fun mode(mode: AppMode) { with(runtime) {
-        if (state.value.busy || state.value.editorOpen || mode == AppMode.ADMIN && !state.value.isAdmin) return
+        if (state.value.busy || state.value.admin.editorOpen || mode == AppMode.ADMIN && !state.value.isAdmin) return
         // Dropping the tools closes the tabs that come with them, so the switch lands on the hero
         // rather than on a screen that is about to refuse to draw.
-        mutable.update { it.copy(mode = mode, catalog = Catalog.EQUIPMENT, items = emptyList(), page = 0,
-            tab = if (mode == AppMode.ADMIN) TAB_ADMIN else TAB_HERO, filter = CatalogFilter(), query = "") }
+        mutable.update { it.copy(mode = mode, tab = if (mode == AppMode.ADMIN) TAB_ADMIN else TAB_HERO, admin = it.admin.copy(catalog = Catalog.EQUIPMENT, items = emptyList(), page = 0, filter = CatalogFilter(), query = "")) }
         read(Reads.CATALOG, restart = true) { restoreFilters(); loadPage(0) }
     } }
 
-    fun serverDraft(value: String) { with(runtime) { mutable.update { it.copy(serverDraft = value) } } }
+    fun serverDraft(value: String) { with(runtime) { mutable.update { it.copy(account = it.account.copy(serverDraft = value)) } } }
 
     fun connect() { with(runtime) { task {
-        val server = normalizeServer(state.value.serverDraft)
+        val server = normalizeServer(state.value.account.serverDraft)
         store.save(server)
         clearSession()
         api = newApi(server)
         journal.clear()
-        mutable.update { it.copy(server = server, serverDraft = server, health = ui("session.checking")) }
+        mutable.update { it.copy(account = it.account.copy(server = server, serverDraft = server, health = ui("session.checking"))) }
         val health = api.health()
-        mutable.update { it.copy(health = health.toString(), message = ui("session.reachable")) }
+        mutable.update { it.copy(message = ui("session.reachable"), account = it.account.copy(health = health.toString())) }
         // A dictionary and an icon set belong to their server: the new one has its own.
         refreshLocale()
         refreshIcons()
@@ -47,7 +46,7 @@ class SessionViewModel(private val runtime: ForgeRuntime) {
 
     fun health() { with(runtime) { read(Reads.HEALTH) {
         val result = api.health().toString()
-        mutable.update { it.copy(health = result, message = ui("session.check_done")) }
+        mutable.update { it.copy(message = ui("session.check_done"), account = it.account.copy(health = result)) }
     } } }
 
     /** A sign-in answers the account and a token; the token is kept per server for the next launch. */
@@ -68,7 +67,7 @@ class SessionViewModel(private val runtime: ForgeRuntime) {
         clearSession()
         try {
             api.capabilities().requireWorkbench()
-            signedIn(api.loginByDevice(state.value.deviceId), byDevice = true)
+            signedIn(api.loginByDevice(state.value.account.deviceId), byDevice = true)
         } catch (e: CancellationException) { throw e }
         catch (e: Exception) { if (!silent) throw e }
     } } }
@@ -87,14 +86,14 @@ class SessionViewModel(private val runtime: ForgeRuntime) {
             signedIn(api.resume(saved), byDevice = store.deviceSession.first())
         } catch (e: CancellationException) { throw e }
         catch (e: Exception) {
-            if (FailureState.from(e, writing = false) == FailureState.Offline) mutable.update { it.copy(resumable = true) }
+            if (FailureState.from(e, writing = false) == FailureState.Offline) mutable.update { it.copy(account = it.account.copy(resumable = true)) }
         }
     } } }
 
     /** The retry the offline sign-in screen offers; the token is read again in case it was dropped meanwhile. */
     fun retryResume() { with(runtime) { scope.launch {
-        val saved = store.token(state.value.server)
-        if (saved == null) mutable.update { it.copy(resumable = false) } else resume(saved)
+        val saved = store.token(state.value.account.server)
+        if (saved == null) mutable.update { it.copy(account = it.account.copy(resumable = false)) } else resume(saved)
     } } }
 
     /**
@@ -105,10 +104,9 @@ class SessionViewModel(private val runtime: ForgeRuntime) {
      * checks are reached from inside the game, so everyone passes through the menu.
      */
     private suspend fun signedIn(profile: com.sperance.exileforge.core.model.command.UserProfile, byDevice: Boolean) { with(runtime) {
-        mutable.update { it.copy(signedIn = true, resumable = false, profile = profile, mode = AppMode.PLAYER, catalog = Catalog.EQUIPMENT,
-            phase = AppPhase.CHARACTERS, message = ui("session.signed_in"), tab = 0) }
+        mutable.update { it.copy(mode = AppMode.PLAYER, phase = AppPhase.CHARACTERS, message = ui("session.signed_in"), tab = 0, account = it.account.copy(signedIn = true, resumable = false, profile = profile), admin = it.admin.copy(catalog = Catalog.EQUIPMENT)) }
         store.saveDeviceSession(byDevice)
-        store.saveToken(state.value.server, api.sessionToken())
+        store.saveToken(state.value.account.server, api.sessionToken())
         restoreFilters()
         ensureDefinitions()
         // The catalogue is codes without it, and the first attempt may have run before the server was up.
@@ -124,7 +122,7 @@ class SessionViewModel(private val runtime: ForgeRuntime) {
      */
     fun logout() { with(runtime) {
         if (state.value.busy) return
-        val server = state.value.server
+        val server = state.value.account.server
         val leaving = api
         val token = leaving.sessionToken()
         clearSession()
@@ -144,7 +142,7 @@ class SessionViewModel(private val runtime: ForgeRuntime) {
     } } }
 
     private suspend fun restoreFilters() { with(runtime) {
-        val saved = store.filters(state.value.server, state.value.catalog.path)?.let { WireJson.decodeFromString(CatalogFilter.serializer(), it) } ?: CatalogFilter()
-        mutable.update { it.copy(filter = saved, query = saved.query) }
+        val saved = store.filters(state.value.account.server, state.value.admin.catalog.path)?.let { WireJson.decodeFromString(CatalogFilter.serializer(), it) } ?: CatalogFilter()
+        mutable.update { it.copy(admin = it.admin.copy(filter = saved, query = saved.query)) }
     } }
 }

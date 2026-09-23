@@ -28,12 +28,12 @@ import com.sperance.exileforge.ui.theme.Muted
  * The price is always counted in orbs, because that is the only currency the server prices in.
  */
 @Composable internal fun ColumnScope.SellTab(s: ForgeState, vm: ForgeViewModel) {
-    val hero = s.hero
-    var kind by remember(s.characterId) { mutableStateOf(AuctionLotKind.EQUIPMENT) }
-    var goods by remember(s.characterId, kind) { mutableStateOf("") }
-    var amount by remember(s.characterId, kind) { mutableStateOf("1") }
-    var orb by remember(s.characterId) { mutableStateOf(s.orbs.firstOrNull()?.id.orEmpty()) }
-    var price by remember(s.characterId) { mutableStateOf("1") }
+    val hero = s.play.hero
+    var kind by remember(s.play.characterId) { mutableStateOf(AuctionLotKind.EQUIPMENT) }
+    var goods by remember(s.play.characterId, kind) { mutableStateOf("") }
+    var amount by remember(s.play.characterId, kind) { mutableStateOf("1") }
+    var orb by remember(s.play.characterId) { mutableStateOf(s.world.orbs.firstOrNull()?.id.orEmpty()) }
+    var price by remember(s.play.characterId) { mutableStateOf("1") }
     Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Spacer(Modifier.height(2.dp))
         if (hero == null) {
@@ -44,11 +44,11 @@ import com.sperance.exileforge.ui.theme.Muted
         // The stash only: an item in a slot has to come off before it can be listed.
         val stash = hero.inventory.filterNot { it.equipped }
         val equipment = stash.associate { instance ->
-            val document = inventoryDocument(instance, s.inventoryBases[instance.equipmentId])
+            val document = inventoryDocument(instance, s.world.inventoryBases[instance.equipmentId])
             instance.id to "${document.text("name")} · ${rarityTitle(instance.rarity, s.lang)}"
         }
         val bag = hero.bag.associate { item ->
-            item.itemId to ((s.orbs.firstOrNull { it.id == item.itemId }?.title(s.lang)
+            item.itemId to ((s.world.orbs.firstOrNull { it.id == item.itemId }?.title(s.lang)
                 ?: (ui("common.item") + " …${item.itemId.takeLast(6)}")) + " · ${item.amount}")
         }
         val owned = hero.bag.firstOrNull { it.itemId == goods }?.amount ?: 0L
@@ -69,7 +69,7 @@ import com.sperance.exileforge.ui.theme.Muted
         }
         ForgePanel {
             Engraved(ui("card.price"))
-            Spinner(ui("orb.orb"), orb, s.orbs.associate { it.id to it.title(s.lang) }, !s.busy) { orb = it }
+            Spinner(ui("orb.orb"), orb, s.world.orbs.associate { it.id to it.title(s.lang) }, !s.busy) { orb = it }
             OutlinedTextField(price, { price = it }, label = { Text(ui("sell.price")) },
                 singleLine = true, modifier = Modifier.fillMaxWidth())
             Text(ui("sell.price_note"),
@@ -77,7 +77,7 @@ import com.sperance.exileforge.ui.theme.Muted
         }
         val count = amount.toLongOrNull() ?: 0L
         val cost = price.toLongOrNull() ?: 0L
-        val ready = !s.busy && s.signedIn && (s.ownsCharacter || s.isAdmin) && goods.isNotBlank() && orb.isNotBlank() &&
+        val ready = !s.busy && s.account.signedIn && (s.ownsCharacter || s.isAdmin) && goods.isNotBlank() && orb.isNotBlank() &&
             cost > 0 && (kind == AuctionLotKind.EQUIPMENT || count > 0)
         Button(enabled = ready, modifier = Modifier.fillMaxWidth(), onClick = {
             if (kind == AuctionLotKind.EQUIPMENT) vm.sellEquipment(goods, orb, cost) else vm.sellItem(goods, count, orb, cost)

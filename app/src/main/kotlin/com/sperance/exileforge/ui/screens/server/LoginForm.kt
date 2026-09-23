@@ -16,7 +16,7 @@ import kotlinx.serialization.json.*
 @Composable fun LoginForm(s: ForgeState, vm: ForgeViewModel) {
     var login by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    if(s.signedIn) {
+    if(s.account.signedIn) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Icon(ForgeGlyphs.Exile, null, tint = Gold, modifier = Modifier.size(20.dp))
             Text("${s.accountTitle} · ${if(s.isAdmin) ui("account.administrator") else ui("account.player")}")

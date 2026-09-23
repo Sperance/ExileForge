@@ -23,22 +23,22 @@ import kotlinx.coroutines.flow.update
 class AuctionViewModel(private val runtime: ForgeRuntime) {
     private val state get() = runtime.state
 
-    fun auctionTab(tab: Int) { with(runtime) { mutable.update { it.copy(auctionTab = tab) } } }
-    fun auctionFilter(filter: AuctionFilter) { with(runtime) { mutable.update { it.copy(auctionFilter = filter) } } }
-    fun showOwnLots(show: Boolean) { with(runtime) { mutable.update { it.copy(showOwnLots = show) } } }
+    fun auctionTab(tab: Int) { with(runtime) { mutable.update { it.copy(market = it.market.copy(tab = tab)) } } }
+    fun auctionFilter(filter: AuctionFilter) { with(runtime) { mutable.update { it.copy(market = it.market.copy(filter = filter)) } } }
+    fun showOwnLots(show: Boolean) { with(runtime) { mutable.update { it.copy(market = it.market.copy(showOwnLots = show)) } } }
 
     /** The showcase, page by page. `excludeSellerId` is what keeps a seller's own lots out of it. */
     fun loadShowcase(page: Int = 0) { with(runtime) { trade(restart = true) {
-        val id = state.value.characterId.trim()
-        val filter = state.value.auctionFilter.copy(
-            excludeSellerId = if (state.value.showOwnLots) "" else id, lang = state.value.lang.code)
-        val showcase = api.auctionSearch(id, filter, page)
-        mutable.update { it.copy(showcase = showcase) }
+        val id = state.value.play.characterId.trim()
+        val filter = state.value.market.filter.copy(
+            excludeSellerId = if (state.value.market.showOwnLots) "" else id, lang = state.value.lang.code)
+        val showcase = api.auction.search(id, filter, page)
+        mutable.update { it.copy(market = it.market.copy(showcase = showcase)) }
     } } }
 
     fun loadMyLots() { with(runtime) { trade(key = Reads.LOTS) {
-        val lots = api.myLots(state.value.characterId.trim())
-        mutable.update { it.copy(myLots = lots) }
+        val lots = api.auction.myLots(state.value.play.characterId.trim())
+        mutable.update { it.copy(market = it.market.copy(myLots = lots)) }
     } } }
 
     /** Both lists at once, for opening the tab and for a pull: two reads, so neither waits on the other. */
@@ -46,52 +46,52 @@ class AuctionViewModel(private val runtime: ForgeRuntime) {
 
     /** Buying costs orbs out of the bag, so the bag and the showcase are what go stale. */
     fun buy(lotId: String) { with(runtime) { trade(writing = true) {
-        val id = state.value.characterId.trim()
-        val lot = api.buyLot(id, lotId)
+        val id = state.value.play.characterId.trim()
+        val lot = api.auction.buy(id, lotId)
         mutable.update { it.copy(message = ui("auction.bought", lot.title)) }
         refreshBag(id)
-        val filter = state.value.auctionFilter.copy(excludeSellerId = if (state.value.showOwnLots) "" else id, lang = state.value.lang.code)
-        mutable.update { it.copy(showcase = api.auctionSearch(id, filter, state.value.showcase.page)) }
+        val filter = state.value.market.filter.copy(excludeSellerId = if (state.value.market.showOwnLots) "" else id, lang = state.value.lang.code)
+        mutable.update { it.copy(market = it.market.copy(showcase = api.auction.search(id, filter, state.value.market.showcase.page))) }
     } } }
 
     /** Listing and withdrawing move goods between the character and the lot: both lists change. */
     fun sellEquipment(inventoryId: String, priceOrbId: String, price: Long) { with(runtime) { trade(writing = true) {
-        val id = state.value.characterId.trim()
-        val lot = api.sellEquipment(id, inventoryId, priceOrbId, price)
+        val id = state.value.play.characterId.trim()
+        val lot = api.auction.sellEquipment(id, inventoryId, priceOrbId, price)
         listed(id, lot.title)
     } } }
 
     fun sellItem(itemId: String, amount: Long, priceOrbId: String, price: Long) { with(runtime) { trade(writing = true) {
-        val id = state.value.characterId.trim()
-        val lot = api.sellItem(id, itemId, amount, priceOrbId, price)
+        val id = state.value.play.characterId.trim()
+        val lot = api.auction.sellItem(id, itemId, amount, priceOrbId, price)
         listed(id, lot.title)
     } } }
 
     fun cancel(lotId: String) { with(runtime) { trade(writing = true) {
-        val id = state.value.characterId.trim()
-        val lot = api.cancelLot(id, lotId)
+        val id = state.value.play.characterId.trim()
+        val lot = api.auction.cancel(id, lotId)
         mutable.update { it.copy(message = ui("auction.withdrawn", lot.title)) }
         refreshInventory(id)
-        mutable.update { it.copy(myLots = api.myLots(id)) }
+        mutable.update { it.copy(market = it.market.copy(myLots = api.auction.myLots(id))) }
     } } }
 
     private suspend fun listed(characterId: String, title: String) { with(runtime) {
         mutable.update { it.copy(message = ui("auction.listed", title)) }
         refreshInventory(characterId)
-        mutable.update { it.copy(myLots = api.myLots(characterId), auctionTab = 1) }
+        mutable.update { it.copy(market = it.market.copy(myLots = api.auction.myLots(characterId), tab = 1)) }
     } }
 
     /** The bag alone: a purchase spends orbs and may hand over stacking goods. */
     private suspend fun refreshBag(characterId: String) { with(runtime) {
-        val bag = api.bag(characterId)
-        mutable.update { state -> state.copy(hero = state.hero?.copy(bag = bag), heroReadAt = 0) }
+        val bag = api.hero.bag(characterId)
+        mutable.update { state -> state.copy(play = state.play.copy(hero = state.play.hero?.copy(bag = bag), heroReadAt = 0)) }
     } }
 
     /** The inventory and the bag: a listing can move either kind of goods. */
     private suspend fun refreshInventory(characterId: String) { with(runtime) {
-        val inventory = api.inventory(characterId)
-        val bag = api.bag(characterId)
-        mutable.update { state -> state.copy(hero = state.hero?.copy(inventory = inventory, bag = bag), heroReadAt = 0) }
+        val inventory = api.hero.inventory(characterId)
+        val bag = api.hero.bag(characterId)
+        mutable.update { state -> state.copy(play = state.play.copy(hero = state.play.hero?.copy(inventory = inventory, bag = bag), heroReadAt = 0)) }
     } }
 
     /**
@@ -107,15 +107,15 @@ class AuctionViewModel(private val runtime: ForgeRuntime) {
     } }
 
     private suspend fun gated(block: suspend () -> Unit) { with(runtime) {
-        check(state.value.characterId.isNotBlank()) { ui("auction.choose_character") }
+        check(state.value.play.characterId.isNotBlank()) { ui("auction.choose_character") }
         try {
             block()
-            mutable.update { it.copy(auctionLocked = null) }
+            mutable.update { it.copy(market = it.market.copy(locked = null)) }
         } catch (e: CancellationException) { throw e }
         catch (e: ApiFailure) {
             // AU_002 alone is the gate; every other auction refusal is an ordinary rejected command.
             if (e.code != LEVEL_GATE) throw e
-            mutable.update { it.copy(auctionLocked = locError(e.code, e.message.orEmpty()), showcase = AuctionPage(), myLots = emptyList()) }
+            mutable.update { it.copy(market = it.market.copy(locked = locError(e.code, e.message.orEmpty()), showcase = AuctionPage(), myLots = emptyList())) }
             throw e
         }
     } }

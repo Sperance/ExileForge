@@ -13,6 +13,8 @@ import com.sperance.exileforge.core.model.hero.CharacterSummary
 import com.sperance.exileforge.core.model.progression.CharacterClass
 import com.sperance.exileforge.presentation.state.AppPhase
 import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.AccountState
+import com.sperance.exileforge.presentation.state.WorldState
 import com.sperance.exileforge.presentation.state.MAX_CHARACTERS
 import com.sperance.exileforge.ui.screens.session.CharacterMenu
 import com.sperance.exileforge.ui.theme.ForgeTheme
@@ -41,10 +43,7 @@ class CharacterGateTest {
     private val marauder = CharacterClass("class-1", "MARAUDER", "STR_START")
     private val witch = CharacterClass("class-2", "WITCH", "INT_START")
 
-    private fun state(vararg characters: CharacterSummary) = ForgeState(
-        phase = AppPhase.CHARACTERS, busy = false, signedIn = true,
-        profile = UserProfile("owner", name = "", login = ""), deviceId = "aaaaaaaa-bbbb-cccc-dddd-eeeeffff0001",
-        classes = listOf(marauder, witch), characters = characters.toList(), charactersRead = true)
+    private fun state(vararg characters: CharacterSummary) = ForgeState(phase = AppPhase.CHARACTERS, busy = false, account = AccountState(signedIn = true, profile = UserProfile("owner", name = "", login = ""), deviceId = "aaaaaaaa-bbbb-cccc-dddd-eeeeffff0001", characters = characters.toList(), charactersRead = true), world = WorldState(classes = listOf(marauder, witch)))
 
     @Test fun theMenuNamesEachCharacterAndPlaysTheOneTapped() {
         val exile = CharacterSummary("hero-1", "owner", "Изгнанник", level = 12, classId = "class-1")

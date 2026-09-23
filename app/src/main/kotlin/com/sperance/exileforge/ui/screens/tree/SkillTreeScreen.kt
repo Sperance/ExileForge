@@ -48,7 +48,7 @@ import kotlinx.serialization.json.putJsonArray
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Spacer(Modifier.height(12.dp))
         ScreenHeader(ui("tree.title"),
-            ui("tree.node_count", s.treeNodes.size), ForgeGlyphs.Constellation)
+            ui("tree.node_count", s.world.treeNodes.size), ForgeGlyphs.Constellation)
         SkillTreePanel(s, vm::selectNode, vm::allocateNode, vm::refundNode, vm::resetTree, vm::nodeQuery,
             onSocket = vm::socketJewel, onUnsocket = vm::unsocketJewel, modifier = Modifier.weight(1f))
         Spacer(Modifier.height(12.dp))
@@ -71,7 +71,7 @@ import kotlinx.serialization.json.putJsonArray
     onRefund: (String) -> Unit, onReset: () -> Unit, onQuery: (String) -> Unit = {},
     onSocket: (String, String) -> Unit = { _, _ -> }, onUnsocket: (String) -> Unit = {},
     modifier: Modifier = Modifier) {
-    val hero = s.hero
+    val hero = s.play.hero
     var detailsOpen by remember { mutableStateOf(false) }
     var nodeOpen by remember { mutableStateOf(false) }
     // Each of the three tree commands spends something a player cannot get back for free — a point
@@ -84,16 +84,16 @@ import kotlinx.serialization.json.putJsonArray
             ui("tree.no_hero_hint"))
         return
     }
-    if (s.treeNodes.isEmpty()) {
+    if (s.world.treeNodes.isEmpty()) {
         InfoCard(ui("tree.not_loaded"),
             ui("tree.not_loaded_hint"))
         return
     }
     val taken = hero.tree.takenCodes
-    val enabled = !s.busy && s.signedIn && (s.ownsCharacter || s.isAdmin)
+    val enabled = !s.busy && s.account.signedIn && (s.ownsCharacter || s.isAdmin)
     // Which nodes are one step away: neighbours of what is taken, or the class's own start when
     // nothing is taken yet. The server still decides — this only says where to look on 122 nodes.
-    val reachable = remember(s.treeNodes, taken) { reachableFrom(s.treeNodes, taken) }
+    val reachable = remember(s.world.treeNodes, taken) { reachableFrom(s.world.treeNodes, taken) }
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(ui("tree.points", hero.tree.available, hero.tree.total),
@@ -110,7 +110,7 @@ import kotlinx.serialization.json.putJsonArray
     if (nodeOpen) ModalBottomSheet(onDismissRequest = { nodeOpen = false }, containerColor = Panel) {
         Column(Modifier.fillMaxWidth().heightIn(max = 520.dp).verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            NodeDetails(s, s.treeNodes.firstOrNull { it.code == s.selectedNode }, taken, enabled,
+            NodeDetails(s, s.world.treeNodes.firstOrNull { it.code == s.play.selectedNode }, taken, enabled,
                 onAllocate = { nodeOpen = false; confirmAllocate = it },
                 onRefund = { nodeOpen = false; confirmRefund = it },
                 onSocket = { instance, code -> nodeOpen = false; onSocket(instance, code) },
@@ -167,19 +167,19 @@ import kotlinx.serialization.json.putJsonArray
  * realistic. A match selects the node, which is what the map draws a ring around.
  */
 @Composable private fun TreeSearch(s: ForgeState, onQuery: (String) -> Unit, onSelect: (String) -> Unit) {
-    val matches = remember(s.treeNodes, s.nodeQuery) {
-        if (s.nodeQuery.isBlank()) emptyList()
-        else s.treeNodes.filter { it.title.contains(s.nodeQuery.trim(), true) || it.code.contains(s.nodeQuery.trim(), true) }.take(8)
+    val matches = remember(s.world.treeNodes, s.play.nodeQuery) {
+        if (s.play.nodeQuery.isBlank()) emptyList()
+        else s.world.treeNodes.filter { it.title.contains(s.play.nodeQuery.trim(), true) || it.code.contains(s.play.nodeQuery.trim(), true) }.take(8)
     }
     ForgePanel {
         Engraved(ui("tree.find_node"))
-        OutlinedTextField(s.nodeQuery, onQuery, label = { Text(ui("tree.node_name")) },
+        OutlinedTextField(s.play.nodeQuery, onQuery, label = { Text(ui("tree.node_name")) },
             singleLine = true, modifier = Modifier.fillMaxWidth())
-        if (s.nodeQuery.isNotBlank() && matches.isEmpty()) Text(ui("tree.nothing_found"), color = Muted)
+        if (s.play.nodeQuery.isNotBlank() && matches.isEmpty()) Text(ui("tree.nothing_found"), color = Muted)
         matches.forEach { node ->
             TextButton(onClick = { onSelect(node.code) }, modifier = Modifier.fillMaxWidth()) {
                 Text("${node.title} · ${nodeTypeTitle(node.type.name, s.lang)}",
-                    color = nodeColour(node, node.code == s.selectedNode))
+                    color = nodeColour(node, node.code == s.play.selectedNode))
             }
         }
     }
@@ -196,7 +196,7 @@ import kotlinx.serialization.json.putJsonArray
  */
 @Composable private fun TreeCanvas(s: ForgeState, taken: Set<String>, reachable: Set<String>,
     modifier: Modifier = Modifier, onSelect: (String) -> Unit) {
-    val nodes = s.treeNodes
+    val nodes = s.world.treeNodes
     val byCode = remember(nodes) { nodes.associateBy { it.code } }
     val bounds = remember(nodes) { Bounds.of(nodes) }
     var scale by remember { mutableFloatStateOf(1f) }
@@ -236,13 +236,13 @@ import kotlinx.serialization.json.putJsonArray
             }
             nodes.forEach { node ->
                 val centre = place(node, bounds, width, height, scale, pan)
-                val colour = nodeColour(node, node.code == s.selectedNode)
+                val colour = nodeColour(node, node.code == s.play.selectedNode)
                 val here = node.code in taken
                 val next = node.code in reachable
                 // Taken is solid, reachable is half-lit and ringed, the rest is barely there.
                 drawCircle(colour.copy(alpha = if (here) .85f else if (next) .45f else .12f), radius(node) * scale, centre)
                 drawCircle(if (next && !here) GoldBright else colour, radius(node) * scale, centre,
-                    style = Stroke(if (node.code == s.selectedNode) 3.5f else if (next) 2.5f else 1f))
+                    style = Stroke(if (node.code == s.play.selectedNode) 3.5f else if (next) 2.5f else 1f))
             }
         }
         Row(Modifier.align(Alignment.BottomStart).padding(8.dp), verticalAlignment = Alignment.CenterVertically,
@@ -283,7 +283,7 @@ import kotlinx.serialization.json.putJsonArray
         } else {
             if (node.params.isEmpty()) Text(ui("tree.no_bonuses"), color = Muted)
             node.params.forEach { modifier ->
-                ModifierLine(modifierDocument(modifier.modifierId, modifier.values), s.definitions)
+                ModifierLine(modifierDocument(modifier.modifierId, modifier.values), s.world.definitions)
             }
         }
 
@@ -315,12 +315,12 @@ import kotlinx.serialization.json.putJsonArray
  */
 @Composable private fun SocketContents(s: ForgeState, node: SkillTreeNode, allocated: Boolean, enabled: Boolean,
     onSocket: (String, String) -> Unit, onUnsocket: (String) -> Unit) {
-    val hero = s.hero ?: return
+    val hero = s.play.hero ?: return
     val inside = hero.jewels[node.code]
 
     if (inside != null) {
-        val document = inventoryDocument(inside, s.inventoryBases[inside.equipmentId])
-        ItemRow(document, definitions = s.definitions, enabled = false,
+        val document = inventoryDocument(inside, s.world.inventoryBases[inside.equipmentId])
+        ItemRow(document, definitions = s.world.definitions, enabled = false,
             note = if (allocated) ui("tree.socket_working") else ui("tree.socket_locked"),
             noteColor = if (allocated) Gold else LifeRed) { }
         OutlinedButton(enabled = enabled, onClick = { onUnsocket(inside.id) }, modifier = Modifier.fillMaxWidth()) {
@@ -330,7 +330,7 @@ import kotlinx.serialization.json.putJsonArray
     }
 
     val free = hero.inventory.filter { instance ->
-        !instance.socketed && s.inventoryBases[instance.equipmentId]?.text("slot") == "JEWEL"
+        !instance.socketed && s.world.inventoryBases[instance.equipmentId]?.text("slot") == "JEWEL"
     }
     if (!allocated) {
         Text(ui("tree.socket_first"), color = Muted, style = MaterialTheme.typography.bodySmall)
@@ -342,8 +342,8 @@ import kotlinx.serialization.json.putJsonArray
     }
     Engraved(ui("tree.jewel_in"))
     free.forEach { instance ->
-        val document = inventoryDocument(instance, s.inventoryBases[instance.equipmentId])
-        ItemRow(document, definitions = s.definitions, enabled = enabled) { onSocket(instance.id, node.code) }
+        val document = inventoryDocument(instance, s.world.inventoryBases[instance.equipmentId])
+        ItemRow(document, definitions = s.world.definitions, enabled = enabled) { onSocket(instance.id, node.code) }
     }
 }
 
@@ -353,9 +353,9 @@ import kotlinx.serialization.json.putJsonArray
     onClear: () -> Unit,
     onAllocate: (String) -> Unit, onRefund: (String) -> Unit, onReset: () -> Unit,
 ) {
-    val nodeName = { code: String -> s.treeNodes.firstOrNull { it.code == code }?.title ?: code }
+    val nodeName = { code: String -> s.world.treeNodes.firstOrNull { it.code == code }?.title ?: code }
     val treeIcon: @Composable () -> Unit = { Icon(ForgeGlyphs.Constellation, null, tint = Rune, modifier = Modifier.size(40.dp)) }
-    val available = s.hero?.tree?.available
+    val available = s.play.hero?.tree?.available
     // What a refund is paid with: the orb, and how many of it the bag holds right now.
     val regret = s.orbOf(CurrencyOrb.ORB_OF_REGRET)
     val regretTitle = regret?.title(s.lang) ?: CurrencyOrb.ORB_OF_REGRET.title(s.lang)
@@ -367,7 +367,7 @@ import kotlinx.serialization.json.putJsonArray
     fun shortage(spent: Int) = regretLeft?.takeIf { it < spent }?.let { ui("confirm.short", it) }
 
     allocate?.let { code ->
-        val cost = s.treeNodes.firstOrNull { it.code == code }?.cost ?: 1
+        val cost = s.world.treeNodes.firstOrNull { it.code == code }?.cost ?: 1
         ConfirmSheet(
             title = ui("tree.allocate_q"), subtitle = nodeName(code), icon = treeIcon,
             ledger = listOfNotNull(
@@ -379,7 +379,7 @@ import kotlinx.serialization.json.putJsonArray
             confirm = ui("tree.allocate_do"), onDismiss = onClear) { onAllocate(code) }
     }
     refund?.let { code ->
-        val cost = s.treeNodes.firstOrNull { it.code == code }?.cost ?: 1
+        val cost = s.world.treeNodes.firstOrNull { it.code == code }?.cost ?: 1
         ConfirmSheet(
             title = ui("tree.refund_q"), subtitle = nodeName(code), icon = treeIcon,
             ledger = regretLines(1) + LedgerLine(ui("confirm.returns"), ui("confirm.plus_count", cost, points(cost)), Tone.GAIN),
@@ -388,7 +388,7 @@ import kotlinx.serialization.json.putJsonArray
     }
     if (reset) {
         // The start node is not given back, so it is not paid for — the count says what is.
-        val returned = (s.hero?.tree?.nodes?.size ?: 1) - 1
+        val returned = (s.play.hero?.tree?.nodes?.size ?: 1) - 1
         ConfirmSheet(
             title = ui("tree.reset_q"), subtitle = ui("confirm.count", returned, nodes(returned)), icon = treeIcon,
             ledger = regretLines(returned) + LedgerLine(ui("confirm.returns"), ui("confirm.plus_count", returned, nodes(returned)), Tone.GAIN),

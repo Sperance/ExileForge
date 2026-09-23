@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.update
 class HeroViewModel(private val runtime: ForgeRuntime) {
     private val state get() = runtime.state
 
-    fun selectEquipment(value: String) { with(runtime) { mutable.update { it.copy(selectedEquipment = value) } } }
+    fun selectEquipment(value: String) { with(runtime) { mutable.update { it.copy(play = it.play.copy(selectedEquipment = value)) } } }
 
     fun loadHero() { with(runtime) { read(Reads.HERO) { readHero() } } }
 
@@ -27,22 +27,22 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
      */
     fun ensureHero() { with(runtime) {
         val now = System.currentTimeMillis()
-        if (state.value.characterId.isBlank()) return
-        if (state.value.hero != null && now - state.value.heroReadAt < FRESH_FOR) return
+        if (state.value.play.characterId.isBlank()) return
+        if (state.value.play.hero != null && now - state.value.play.heroReadAt < FRESH_FOR) return
         read(Reads.HERO) { readHero() }
     } }
 
-    fun equip(instanceId: String) { with(runtime) { characterCommand { id -> api.equip(id, instanceId) } } }
-    fun unequip(instanceId: String) { with(runtime) { characterCommand { id -> api.unequip(id, instanceId) } } }
+    fun equip(instanceId: String) { with(runtime) { characterCommand { id -> api.hero.equip(id, instanceId) } } }
+    fun unequip(instanceId: String) { with(runtime) { characterCommand { id -> api.hero.unequip(id, instanceId) } } }
 
     /** Admin only: hand the character a named template, rolled by the server. */
     fun grant(equipmentId: String) { with(runtime) { characterCommand { id ->
         check(state.value.isAdmin) { ui("hero.grant_admin_only") }
-        api.grant(id, equipmentId)
+        api.hero.grant(id, equipmentId)
     } } }
 
-    fun grantRarity(value: String) { with(runtime) { mutable.update { it.copy(grantRarity = value) } } }
-    fun grantSlot(value: String) { with(runtime) { mutable.update { it.copy(grantSlot = value) } } }
+    fun grantRarity(value: String) { with(runtime) { mutable.update { it.copy(play = it.play.copy(grantRarity = value)) } } }
+    fun grantSlot(value: String) { with(runtime) { mutable.update { it.copy(play = it.play.copy(grantSlot = value)) } } }
 
     /**
      * Admin only: a random template of the chosen rarity and category, with server-rolled modifiers.
@@ -52,18 +52,18 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
      */
     fun grantRandom() { with(runtime) { characterCommand { id ->
         check(state.value.isAdmin) { ui("hero.grant_admin_only") }
-        val template = api.randomTemplate(state.value.grantRarity, state.value.grantSlot)
-        api.grant(id, template.entityId)
+        val template = api.catalog.randomTemplate(state.value.play.grantRarity, state.value.play.grantSlot)
+        api.hero.grant(id, template.entityId)
         val name = equipmentTitle(template)
         mutable.update { it.copy(message = ui("hero.rolled", name)) }
     } } }
 
     fun adjustItems(itemId: String, amount: Long) { with(runtime) { characterCommand { id ->
         check(state.value.isAdmin) { ui("hero.bag_admin_only") }
-        api.adjustItems(id, listOf(ItemStack(itemId, amount)))
+        api.hero.adjustItems(id, listOf(ItemStack(itemId, amount)))
     } } }
 
-    fun selectOrb(value: String) { with(runtime) { mutable.update { it.copy(selectedOrb = value) } } }
+    fun selectOrb(value: String) { with(runtime) { mutable.update { it.copy(play = it.play.copy(selectedOrb = value)) } } }
 
     /**
      * Spends one orb on one item of the inventory.
@@ -72,12 +72,12 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
      * the client only names the pair and prints the sentence that comes back.
      */
     fun applyOrb(inventoryId: String, orbItemId: String) { with(runtime) { characterCommand { id ->
-        val outcome = api.applyOrb(id, inventoryId, orbItemId)
-        mutable.update { it.copy(selectedEquipment = outcome.created?.id ?: outcome.item.id, message = outcome.message) }
+        val outcome = api.hero.applyOrb(id, inventoryId, orbItemId)
+        mutable.update { it.copy(message = outcome.message, play = it.play.copy(selectedEquipment = outcome.created?.id ?: outcome.item.id)) }
     } } }
 
-    fun selectNode(code: String) { with(runtime) { mutable.update { it.copy(selectedNode = code) } } }
-    fun nodeQuery(value: String) { with(runtime) { mutable.update { it.copy(nodeQuery = value) } } }
+    fun selectNode(code: String) { with(runtime) { mutable.update { it.copy(play = it.play.copy(selectedNode = code)) } } }
+    fun nodeQuery(value: String) { with(runtime) { mutable.update { it.copy(play = it.play.copy(nodeQuery = value)) } } }
 
     /**
      * Skill tree: take a node, give it back, or drop the whole tree.
@@ -85,9 +85,9 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
      * Every rule is the server's — which node is reachable, what it costs, whether a refund would
      * leave the rest of the tree hanging in the air — so the client names a node and reports back.
      */
-    fun allocateNode(code: String) { with(runtime) { characterCommand { id -> treeChanged(api.allocateNode(id, code)) } } }
-    fun refundNode(code: String) { with(runtime) { characterCommand { id -> treeChanged(api.refundNode(id, code)) } } }
-    fun resetTree() { with(runtime) { characterCommand { id -> treeChanged(api.resetTree(id)) } } }
+    fun allocateNode(code: String) { with(runtime) { characterCommand { id -> treeChanged(api.tree.allocate(id, code)) } } }
+    fun refundNode(code: String) { with(runtime) { characterCommand { id -> treeChanged(api.tree.refund(id, code)) } } }
+    fun resetTree() { with(runtime) { characterCommand { id -> treeChanged(api.tree.reset(id)) } } }
     private fun treeChanged(state: com.sperance.exileforge.core.model.skilltree.SkillTreeState) { with(runtime) {
         mutable.update { it.copy(message = ui("hero.points_left", state.available, state.total)) }
     } }
@@ -95,11 +95,11 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
     /** Admin only: hand the character experience and let the server decide about the level. */
     fun addExperience(amount: Double) { with(runtime) { characterCommand { id ->
         check(state.value.isAdmin) { ui("hero.xp_admin_only") }
-        val character = api.addExperience(id, amount)
+        val character = api.hero.addExperience(id, amount)
         mutable.update { it.copy(message = ui("hero.level_and_xp", character.level, character.experience)) }
     } } }
 
-    fun redeem(code: String) { with(runtime) { characterCommand { id -> api.redeem(id, code) } } }
+    fun redeem(code: String) { with(runtime) { characterCommand { id -> api.hero.redeem(id, code) } } }
 
     /**
      * Puts a jewel into a socket, and takes it back out.
@@ -108,11 +108,11 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
      * server's to say; the client names the pair and prints the refusal.
      */
     fun socketJewel(inventoryId: String, nodeCode: String) { with(runtime) { characterCommand { id ->
-        api.socketJewel(id, inventoryId, nodeCode)
+        api.hero.socket(id, inventoryId, nodeCode)
     } } }
 
     fun unsocketJewel(inventoryId: String) { with(runtime) { characterCommand { id ->
-        api.unsocketJewel(id, inventoryId)
+        api.hero.unsocket(id, inventoryId)
     } } }
 
     /**
@@ -122,14 +122,14 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
      * and the hero is re-read because the item is gone and the gold is not where it was.
      */
     fun sellForGold(inventoryId: String) { with(runtime) { characterCommand { id ->
-        val outcome = api.sellForGold(id, inventoryId)
+        val outcome = api.hero.sellForGold(id, inventoryId)
         // What it fetched is the whole point of the command, so it is said rather than left to
         // the generic "saved" — characterCommand keeps a message that is already there.
         mutable.update { it.copy(message = ui("hero.sold_for", outcome.gold, outcome.money)) }
     } } }
 
     fun useRecipe(recipeId: String, ingredients: List<String>, amount: Long) { with(runtime) { characterCommand { id ->
-        api.useRecipe(id, recipeId, UseRecipeCommand(ingredients, amount))
+        api.hero.useRecipe(id, recipeId, UseRecipeCommand(ingredients, amount))
     } } }
 
     /**
@@ -137,7 +137,7 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
      * so the hero is always re-read afterwards rather than patched from the response.
      */
     private fun characterCommand(block: suspend (String) -> Unit) { with(runtime) { task(writing = true, touches = setOf(Reads.HERO)) {
-        val id = state.value.characterId.trim()
+        val id = state.value.play.characterId.trim()
         check(id.isNotBlank()) { ui("auction.choose_character") }
         check(state.value.ownsCharacter || state.value.isAdmin) { ui("hero.owner_only") }
         block(id)
@@ -146,7 +146,7 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
     } } }
 
     internal suspend fun readHero() { with(runtime) {
-        val id = state.value.characterId.trim()
+        val id = state.value.play.characterId.trim()
         check(id.isNotBlank()) { ui("auction.choose_character") }
         ensureDefinitions()
         ensureOrbs()
@@ -154,11 +154,10 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
         // The catalogue is half of every card now that an instance keeps only its rolls,
         // so it is read before the hero rather than chased afterwards.
         ensureEquipment()
-        val character = api.character(id)
-        val view = HeroView(character, api.inventory(id), api.stats(id), api.bag(id), api.characterTree(id))
-        mutable.update { it.copy(hero = view, characterOwner = character.userId, heroReadAt = System.currentTimeMillis(),
-            selectedEquipment = it.selectedEquipment.takeIf { chosen -> view.inventory.any { item -> item.id == chosen } }
-                ?: view.inventory.firstOrNull()?.id.orEmpty()) }
+        val character = api.hero.character(id)
+        val view = HeroView(character, api.hero.inventory(id), api.hero.stats(id), api.hero.bag(id), api.tree.state(id))
+        mutable.update { it.copy(play = it.play.copy(hero = view, characterOwner = character.userId, heroReadAt = System.currentTimeMillis(), selectedEquipment = it.play.selectedEquipment.takeIf { chosen -> view.inventory.any { item -> item.id == chosen } }
+                ?: view.inventory.firstOrNull()?.id.orEmpty())) }
     } }
 }
 

@@ -43,7 +43,7 @@ class ReferencePickerTest {
             val records = JsonArray((1..120).map { buildJsonObject { put("_id", id); put("name", "Record $it") } })
             EntitySource.entries.forEach { source ->
                 server.enqueue(MockResponse().setBody("""{"success":true,"data":$records}"""))
-                val result = api.referencePage(source, 2)
+                val result = api.catalog.referencePage(source, 2)
                 assertEquals(2, result.page); assertEquals(3, result.totalPages); assertEquals(120L, result.totalItems)
                 assertEquals(20, result.items.size)
                 assertEquals("/game/api/v1/${source.path}", server.takeRequest().path)
@@ -56,7 +56,7 @@ class ReferencePickerTest {
             server.start(); val api = signedIn(server)
             val records = JsonArray(listOf("Iron Ring", "Coral Ring", "Iron Helm").map { name -> buildJsonObject { put("_id", id); put("name", name) } })
             server.enqueue(MockResponse().setBody("""{"success":true,"data":$records}"""))
-            val result = api.referencePage(EntitySource.EQUIPMENT, 0, "iron")
+            val result = api.catalog.referencePage(EntitySource.EQUIPMENT, 0, "iron")
             assertEquals("/game/api/v1/equipment", server.takeRequest().path)
             assertEquals(2L, result.totalItems)
         }
@@ -65,7 +65,7 @@ class ReferencePickerTest {
     @Test fun `an invalid page never sends a request`() = runBlocking {
         MockWebServer().use { server ->
             server.start(); val api = signedIn(server)
-            assertFailsWith<IllegalArgumentException> { api.referencePage(EntitySource.CHARACTER, -1) }
+            assertFailsWith<IllegalArgumentException> { api.catalog.referencePage(EntitySource.CHARACTER, -1) }
             assertEquals(1, server.requestCount)
         }
     }

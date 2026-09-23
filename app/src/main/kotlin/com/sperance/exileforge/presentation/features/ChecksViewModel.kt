@@ -11,12 +11,12 @@ class ChecksViewModel(private val runtime: ForgeRuntime) {
 
     fun runChecks() { with(runtime) { task(writing = true) {
         check(state.value.isAdmin) { ui("checks.admin_only") }
-        require(state.value.catalog != Catalog.CHARACTERS) { ui("checks.items_only") }
-        mutable.update { it.copy(checks = emptyList()) }
+        require(state.value.admin.catalog != Catalog.CHARACTERS) { ui("checks.items_only") }
+        mutable.update { it.copy(admin = it.admin.copy(checks = emptyList())) }
         ensureDefinitions()
         // Equipment keeps a pool of modifier references, so the scenario needs one real definition id.
-        val modifierId = if (state.value.catalog == Catalog.EQUIPMENT) state.value.definitions.firstOrNull()?.id.orEmpty() else ""
-        CrudScenario(api, modifierId).run(state.value.catalog) { result -> mutable.update { it.copy(checks = it.checks + result) } }
+        val modifierId = if (state.value.admin.catalog == Catalog.EQUIPMENT) state.value.world.definitions.firstOrNull()?.id.orEmpty() else ""
+        CrudScenario(api.catalog, modifierId).run(state.value.admin.catalog) { result -> mutable.update { it.copy(admin = it.admin.copy(checks = it.admin.checks + result)) } }
     } } }
 
     fun clearLogs() { with(runtime) { journal.clear() } }

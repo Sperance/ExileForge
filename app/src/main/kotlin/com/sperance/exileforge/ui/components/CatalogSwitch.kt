@@ -13,8 +13,8 @@ import com.sperance.exileforge.ui.theme.Gold
 
 @Composable internal fun CatalogSwitch(s: ForgeState, vm: ForgeViewModel) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Catalog.entries.forEach { catalog -> FilterChip(selected = s.catalog == catalog,
-            enabled = !s.busy && !s.editorOpen, onClick = { vm.catalog(catalog) },
+        Catalog.entries.forEach { catalog -> FilterChip(selected = s.admin.catalog == catalog,
+            enabled = !s.busy && !s.admin.editorOpen, onClick = { vm.catalog(catalog) },
             leadingIcon = { Icon(propertyIcon(catalog.path), null, tint = Gold, modifier = Modifier.size(16.dp)) },
             label = { Text(catalog.title(s.lang)) }) }
     }

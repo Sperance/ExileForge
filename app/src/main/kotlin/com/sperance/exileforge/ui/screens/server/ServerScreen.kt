@@ -33,13 +33,13 @@ import com.sperance.exileforge.ui.theme.Panel
             s.character?.let { hero ->
                 PropertyRow(ui("common.character"), hero.name + ui("app.hero_level", hero.level), "character")
             }
-            OutlinedButton(enabled = !s.busy && !s.editorOpen, onClick = vm::leaveGame, modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(enabled = !s.busy && !s.admin.editorOpen, onClick = vm::leaveGame, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("account.change_character"))
             }
-            if (s.editorOpen) Text(ui("account.close_editor_first"), color = Muted, style = MaterialTheme.typography.bodySmall)
+            if (s.admin.editorOpen) Text(ui("account.close_editor_first"), color = Muted, style = MaterialTheme.typography.bodySmall)
             // A reward is paid to a character, not to an account, so the code is asked for where
             // the character being played is already named — and the dialog names them again.
-            OutlinedButton(enabled = !s.busy && s.characterId.isNotBlank(), onClick = { promoOpen = true }, modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(enabled = !s.busy && s.play.characterId.isNotBlank(), onClick = { promoOpen = true }, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("account.enter_promo"))
             }
             LoginForm(s, vm)
@@ -56,29 +56,29 @@ import com.sperance.exileforge.ui.theme.Panel
         }
         ForgePanel {
             Engraved(ui("account.language"))
-            LanguagePicker(s.lang, s.languages, enabled = !s.busy, onLanguage = vm::language)
+            LanguagePicker(s.lang, s.world.languages, enabled = !s.busy, onLanguage = vm::language)
             Text(ui("account.language_note"), color = Muted, style = MaterialTheme.typography.bodySmall)
             // Names of things belong to the server since 0.14.0: without its dictionary the screens
             // print codes, so how much of it arrived is worth saying out loud.
-            if (s.localeStrings > 0) PropertyRow(ui("account.dictionary"),
-                "${s.localeLanguage.uppercase()} · " + ui("account.strings", s.localeStrings), "description")
+            if (s.world.localeStrings > 0) PropertyRow(ui("account.dictionary"),
+                "${s.world.localeLanguage.uppercase()} · " + ui("account.strings", s.world.localeStrings), "description")
             else Text(ui("account.dictionary_missing"), color = Muted, style = MaterialTheme.typography.bodySmall)
             // Drawings come from the server too, and a missing set is invisible by design: every
             // hole falls back to a bundled emblem, so the count is the only way to notice one.
-            if (s.iconKeys > 0) PropertyRow(ui("account.icons"),
-                ui("account.icons_count", s.iconKeys, s.iconSprites), "image")
+            if (s.world.iconKeys > 0) PropertyRow(ui("account.icons"),
+                ui("account.icons_count", s.world.iconKeys, s.world.iconSprites), "image")
             else Text(ui("account.icons_missing"), color = Muted, style = MaterialTheme.typography.bodySmall)
             OutlinedButton(enabled = !s.busy, onClick = { vm.refreshLocale(); vm.refreshIcons() }, modifier = Modifier.fillMaxWidth()) { Text(ui("account.reread_bundles")) }
         }
         ForgePanel {
             Engraved(ui("account.server"))
-            OutlinedTextField(s.serverDraft, vm::serverDraft, enabled = !s.busy, label = { Text(ui("account.server_address")) },
+            OutlinedTextField(s.account.serverDraft, vm::serverDraft, enabled = !s.busy, label = { Text(ui("account.server_address")) },
                 supportingText = { Text(ui("account.address_hint")) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            Button(enabled = !s.busy && !s.editorOpen, onClick = vm::connect, modifier = Modifier.fillMaxWidth()) { Text(ui("account.save_connect")) }
-            if (s.editorOpen) Text(ui("account.close_editor_note"), color = Muted)
+            Button(enabled = !s.busy && !s.admin.editorOpen, onClick = vm::connect, modifier = Modifier.fillMaxWidth()) { Text(ui("account.save_connect")) }
+            if (s.admin.editorOpen) Text(ui("account.close_editor_note"), color = Muted)
             OutlinedButton(enabled = !s.busy, onClick = vm::health, modifier = Modifier.fillMaxWidth()) { Text(ui("account.check_health")) }
         }
-        InfoCard(ui("account.server_state"), s.health)
+        InfoCard(ui("account.server_state"), s.account.health)
         InfoCard(ui("account.local_dev"),
             ui("account.local_dev_note"))
         InfoCard(ui("account.contract"),

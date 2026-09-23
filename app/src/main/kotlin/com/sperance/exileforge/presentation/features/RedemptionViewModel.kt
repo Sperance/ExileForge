@@ -19,19 +19,19 @@ class RedemptionViewModel(private val runtime: ForgeRuntime) {
 
     fun load() { with(runtime) { read(Reads.REDEMPTIONS) {
         check(state.value.isAdmin) { ui("redemption.admin_only") }
-        val codes = api.redemptionCodes()
-        mutable.update { it.copy(redemptions = codes) }
+        val codes = api.promo.codes()
+        mutable.update { it.copy(admin = it.admin.copy(redemptions = codes)) }
     } } }
 
     fun create(code: RedemptionCode) { with(runtime) { task(writing = true, touches = setOf(Reads.REDEMPTIONS)) {
         check(state.value.isAdmin) { ui("redemption.admin_only") }
-        val created = api.createRedemption(code)
-        mutable.update { it.copy(redemptions = it.redemptions + created, message = ui("redemption.created", created.code)) }
+        val created = api.promo.create(code)
+        mutable.update { it.copy(message = ui("redemption.created", created.code), admin = it.admin.copy(redemptions = it.admin.redemptions + created)) }
     } } }
 
     fun delete(id: String) { with(runtime) { task(writing = true, touches = setOf(Reads.REDEMPTIONS)) {
         check(state.value.isAdmin) { ui("redemption.admin_only") }
-        api.deleteRedemption(id)
-        mutable.update { it.copy(redemptions = it.redemptions.filterNot { code -> code.id == id }, message = ui("redemption.deleted")) }
+        api.promo.delete(id)
+        mutable.update { it.copy(message = ui("redemption.deleted"), admin = it.admin.copy(redemptions = it.admin.redemptions.filterNot { code -> code.id == id })) }
     } } }
 }

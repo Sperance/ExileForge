@@ -27,14 +27,14 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Spacer(Modifier.height(12.dp))
         ScreenHeader(ui("nav.auction"),
-            ui("auction.showcase_count", s.showcase.totalItems), ForgeGlyphs.Orb)
+            ui("auction.showcase_count", s.market.showcase.totalItems), ForgeGlyphs.Orb)
         // Opening the tab is what fills both lists; the character is the one from the menu.
         // The hero comes too, and not for the bag: the sheet carries the server's verdict on which
         // templates this character can wear, and that is what marks an unwearable lot.
-        LaunchedEffect(s.characterId, s.sessionEpoch) {
-            if (s.characterId.isNotBlank()) { vm.ensureHero(); vm.loadAuction() }
+        LaunchedEffect(s.play.characterId, s.account.sessionEpoch) {
+            if (s.play.characterId.isNotBlank()) { vm.ensureHero(); vm.loadAuction() }
         }
-        s.auctionLocked?.let { locked ->
+        s.market.locked?.let { locked ->
             InfoCard(ui("auction.closed"), locked, failure = true)
             OutlinedButton(enabled = !s.busy, onClick = vm::loadAuction, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("auction.check_again"))
@@ -44,9 +44,9 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
             return@Column
         }
         val tabs = listOf(ui("auction.showcase"), ui("auction.my_lots"), ui("auction.sell_tab"))
-        TabRow(selectedTabIndex = s.auctionTab, containerColor = com.sperance.exileforge.ui.theme.Abyss) {
+        TabRow(selectedTabIndex = s.market.tab, containerColor = com.sperance.exileforge.ui.theme.Abyss) {
             tabs.forEachIndexed { index, title ->
-                Tab(selected = s.auctionTab == index, enabled = !s.busy, onClick = { vm.auctionTab(index) },
+                Tab(selected = s.market.tab == index, enabled = !s.busy, onClick = { vm.auctionTab(index) },
                     text = { Text(title, style = MaterialTheme.typography.labelLarge) })
             }
         }
@@ -54,7 +54,7 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
         // the content was one more thing to find, and the gesture is already the habit here.
         PullToRefreshBox(isRefreshing = s.refreshing(Reads.AUCTION) || Reads.LOTS in s.loading, onRefresh = vm::loadAuction, modifier = Modifier.weight(1f)) {
             Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                when (s.auctionTab) {
+                when (s.market.tab) {
                     0 -> ShowcaseTab(s, vm)
                     1 -> MyLotsTab(s, vm)
                     else -> SellTab(s, vm)

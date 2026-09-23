@@ -18,7 +18,7 @@ import kotlinx.serialization.json.*
 class EditorViewModel(private val runtime: ForgeRuntime) {
     private val state get() = runtime.state
 
-    fun draftClass(value: String) { with(runtime) { mutable.update { it.copy(draftClass = value) } } }
+    fun draftClass(value: String) { with(runtime) { mutable.update { it.copy(play = it.play.copy(draftClass = value)) } } }
 
     /**
      * A blank draft.
@@ -29,64 +29,64 @@ class EditorViewModel(private val runtime: ForgeRuntime) {
      */
     fun create(kind: EquipmentKind = EquipmentKind.Weapon) { with(runtime) {
         if (state.value.busy || !state.value.canEdit) return
-        if (state.value.catalog != Catalog.CHARACTERS) { setEditor(template(state.value.catalog, kind), null); return }
+        if (state.value.admin.catalog != Catalog.CHARACTERS) { setEditor(template(state.value.admin.catalog, kind), null); return }
         task(touches = setOf(Reads.PROGRESSION)) {
             ensureProgression()
             setEditor(JsonObject(template(Catalog.CHARACTERS) + mapOf(
-                "userId" to JsonPrimitive(state.value.profile?.id.orEmpty()),
-                "classId" to JsonPrimitive(state.value.draftClass))), null)
+                "userId" to JsonPrimitive(state.value.account.profile?.id.orEmpty()),
+                "classId" to JsonPrimitive(state.value.play.draftClass))), null)
         }
     } }
 
-    fun closeEditor() { with(runtime) { if (!state.value.busy) mutable.update { it.copy(editorOpen = false, original = null, draft = JsonObject(emptyMap())) } } }
-    fun edit(document: JsonObject) { with(runtime) { if (!state.value.busy) mutable.update { it.copy(draft = document) } } }
+    fun closeEditor() { with(runtime) { if (!state.value.busy) mutable.update { it.copy(admin = it.admin.copy(editorOpen = false, original = null, draft = JsonObject(emptyMap()))) } } }
+    fun edit(document: JsonObject) { with(runtime) { if (!state.value.busy) mutable.update { it.copy(admin = it.admin.copy(draft = document)) } } }
 
     fun loadDefinitions() { with(runtime) { read(Reads.DEFINITIONS) {
-        mutable.update { it.copy(definitions = api.modifierDefinitions()) }
-        mutable.update { it.copy(message = ui("editor.modifiers_loaded", it.definitions.size)) }
+        mutable.update { it.copy(world = it.world.copy(definitions = api.world.modifiers())) }
+        mutable.update { it.copy(message = ui("editor.modifiers_loaded", it.world.definitions.size)) }
     } } }
 
     fun reloadEditor() { with(runtime) { task(touches = setOf(Reads.CATALOG)) {
-        val original = requireNotNull(state.value.original)
-        val latest = api.get(state.value.catalog, original.entityId) ?: error(ui("editor.record_deleted"))
+        val original = requireNotNull(state.value.admin.original)
+        val latest = api.catalog.get(state.value.admin.catalog, original.entityId) ?: error(ui("editor.record_deleted"))
         setEditor(latest, latest)
     } } }
 
     fun save() { with(runtime) { task(writing = true, touches = setOf(Reads.CATALOG)) {
         check(state.value.canEdit) { ui("editor.no_rights") }
-        val document = state.value.draft
-        val catalog = state.value.catalog
+        val document = state.value.admin.draft
+        val catalog = state.value.admin.catalog
         validate(document, catalog)
-        val original = state.value.original
-        val saved = if (original == null) api.create(catalog, JsonObject(document.filterKeys { it in editableFields(catalog) + creationFields(catalog) }))
+        val original = state.value.admin.original
+        val saved = if (original == null) api.catalog.create(catalog, JsonObject(document.filterKeys { it in editableFields(catalog) + creationFields(catalog) }))
         else {
             val changes = diff(original, document)
             require(changes.isNotEmpty()) { ui("editor.nothing_to_save") }
-            api.update(catalog, original.entityId, changes)
+            api.catalog.update(catalog, original.entityId, changes)
         }
-        if (catalog == Catalog.EQUIPMENT) mutable.update { it.copy(inventoryBases = it.inventoryBases + (saved.entityId to saved)) }
+        if (catalog == Catalog.EQUIPMENT) mutable.update { it.copy(world = it.world.copy(inventoryBases = it.world.inventoryBases + (saved.entityId to saved))) }
         setEditor(saved, saved)
         mutable.update { it.copy(message = ui("editor.saved", saved.entityId)) }
         // List refresh failure must not imply that the successful mutation failed.
-        try { loadPage(state.value.page) } catch (e: CancellationException) { throw e }
+        try { loadPage(state.value.admin.page) } catch (e: CancellationException) { throw e }
         catch (_: Exception) { mutable.update { it.copy(message = ui("editor.saved_refresh")) } }
     } } }
 
     fun delete() { with(runtime) { task(writing = true, touches = setOf(Reads.CATALOG)) {
-        val original = state.value.original ?: error(ui("editor.save_first"))
+        val original = state.value.admin.original ?: error(ui("editor.save_first"))
         check(state.value.canEdit)
-        api.delete(state.value.catalog, original.entityId)
-        mutable.update { it.copy(editorOpen = false, original = null, tab = 0, items = it.items.filterNot { item -> item.entityId == original.entityId }, message = ui("editor.item_deleted")) }
+        api.catalog.delete(state.value.admin.catalog, original.entityId)
+        mutable.update { it.copy(tab = 0, message = ui("editor.item_deleted"), admin = it.admin.copy(editorOpen = false, original = null, items = it.admin.items.filterNot { item -> item.entityId == original.entityId })) }
         try { loadPage(0) } catch (e: CancellationException) { throw e }
         catch (_: Exception) { mutable.update { it.copy(message = ui("editor.deleted_refresh")) } }
     } } }
 
     /** Opens the shared template an inventory instance was rolled from. */
     fun editInventoryBase(id: String) { with(runtime) { task(touches = setOf(Reads.CATALOG)) {
-        check(!state.value.editorOpen || state.value.original?.let { diff(it, state.value.draft).isEmpty() } == true) { ui("editor.close_draft") }
-        val document = api.get(Catalog.EQUIPMENT, id) ?: error(ui("editor.base_not_found"))
+        check(!state.value.admin.editorOpen || state.value.admin.original?.let { diff(it, state.value.admin.draft).isEmpty() } == true) { ui("editor.close_draft") }
+        val document = api.catalog.get(Catalog.EQUIPMENT, id) ?: error(ui("editor.base_not_found"))
         ensureDefinitions()
-        mutable.update { it.copy(catalog = Catalog.EQUIPMENT, items = emptyList(), total = 0, page = 0, totalPages = 0) }
+        mutable.update { it.copy(admin = it.admin.copy(catalog = Catalog.EQUIPMENT, items = emptyList(), total = 0, page = 0, totalPages = 0)) }
         setEditor(document, document)
     } } }
 }

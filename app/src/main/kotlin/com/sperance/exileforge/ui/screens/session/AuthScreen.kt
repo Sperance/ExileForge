@@ -41,7 +41,7 @@ import com.sperance.exileforge.ui.theme.*
         Column(Modifier.fillMaxSize().padding(padding).imePadding().voidBackdrop()
             .verticalScroll(rememberScrollState()).padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { LanguageCorner(s.lang, s.languages, vm::language) }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { LanguageCorner(s.lang, s.world.languages, vm::language) }
             Spacer(Modifier.height(8.dp))
             Box(Modifier.size(84.dp).border(1.dp, Gold.copy(alpha = .5f), CutCornerShape(18.dp)), contentAlignment = Alignment.Center) {
                 Icon(ForgeGlyphs.Sigil, null, tint = Gold, modifier = Modifier.size(48.dp))
@@ -50,7 +50,7 @@ import com.sperance.exileforge.ui.theme.*
             Text(ui("app.title"), style = MaterialTheme.typography.labelSmall, color = Muted)
             if (s.busy || s.reading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised) else OrnateDivider(Gold)
 
-            if (s.resumable) {
+            if (s.account.resumable) {
                 InfoCard(ui("auth.offline_title"), ui("auth.offline_note"), failure = true)
                 Button(enabled = !s.busy, onClick = vm::retryResume, modifier = Modifier.fillMaxWidth()) { Text(ui("auth.retry")) }
             }
@@ -109,21 +109,21 @@ import com.sperance.exileforge.ui.theme.*
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Text(ui("account.server"))
-                Text(s.server, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                Text(s.account.server, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1)
             }
             Text(if (open) "−" else "+", color = Gold, style = MaterialTheme.typography.titleMedium)
         }
         if (open) {
-            OutlinedTextField(s.serverDraft, vm::serverDraft, enabled = !s.busy,
+            OutlinedTextField(s.account.serverDraft, vm::serverDraft, enabled = !s.busy,
                 label = { Text(ui("account.server_address")) },
                 supportingText = { Text(ui("account.address_hint")) },
                 singleLine = true, modifier = Modifier.fillMaxWidth())
             Button(enabled = !s.busy, onClick = vm::connect, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("account.save_connect"))
             }
-            Text(s.health, color = Muted, style = MaterialTheme.typography.bodySmall)
+            Text(s.account.health, color = Muted, style = MaterialTheme.typography.bodySmall)
             // The identifier is not a secret, and naming an account in a support log needs it.
-            Text(ui("auth.device", s.deviceId.takeLast(12)),
+            Text(ui("auth.device", s.account.deviceId.takeLast(12)),
                 color = Muted, style = MaterialTheme.typography.labelSmall)
         }
     }

@@ -20,7 +20,7 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.10.0, `versionCode` 27) for the
+ExileForge is an **Android Compose client** (version 2.11.0, `versionCode` 28) for the
 **ktor-bestgame** RPG server (0.21.0), pinned in
 `core/.../contract/Contract.kt` as `SERVER_COMMIT = 3c152d6efc824e6bbe4779c3eb1d96edd8e924bf`
 on the server branch `claude/tender-pasteur-a36kj2`.
@@ -82,8 +82,11 @@ build.gradle.kts, settings.gradle.kts   Gradle 9.7.1, AGP 9.4.0, Kotlin 2.4.20, 
 core/                                   Pure JVM library (java-library + kotlin-jvm, toolchain 17)
   contract/      Contract.kt            Wire JSON, validation, editable/creation fields, templates, requireId
                  CharacterContract.kt   Character document validation
-  network/       GameApi.kt             The single HTTP client (OkHttp) for every server route
-                 ItemRepository.kt      CRUD interface implemented by GameApi (lets tests fake it)
+  network/       GameApi.kt             The server's client: the session (login, token, /me) and one property per feature
+                 Transport.kt           OkHttp, the envelope, the journal and the Bearer token; `request` is internal
+                 CatalogClient/WorldClient/StaticClient/HeroClient/TreeClient/AuctionClient/PromoClient
+                                        The routes, grouped by what they are about: `api.auction.buy(…)`
+                 ItemRepository.kt      CRUD interface implemented by CatalogClient (lets tests fake it)
                  ApiFailure/FailureState/RequestJournal/RequestLog/ItemPage/HttpPayload
   model/         Catalog, EntitySource, CatalogFilter, EquipmentKind
                  command/Commands.kt    UserProfile, ItemStack, UseRecipeCommand, RouteInfo, ApiCapabilities
@@ -106,7 +109,7 @@ app/                                    Android application (minSdk 26, compile/
   presentation/  ForgeRuntime.kt        Shared coroutine scope, GameApi instance, MutableStateFlow<ForgeState>, locale + device sign-in
                  ForgeViewModel.kt      Lifecycle owner and thin facade delegating to feature models
                  features/              Catalog, Editor, Hero, Session, Character, Checks, Auction view models
-                 state/ForgeState.kt    One immutable state object for the whole app
+                 state/ForgeState.kt    One immutable state object, in slices: account, world, play, market, admin
   ui/            ForgeApp.kt            Scaffold, banner with RU/EN switch, bottom navigation, tab dispatch
                  screens/               session (auth + character menu), admin, catalog, editor, hero, tree, craft, auction, checks, server
                  components/            ItemCard, ItemRow, PropertyRow, InfoCard, ConfirmSheet, spinners and Ornament.kt
@@ -149,9 +152,14 @@ change before committing. Otherwise rely on CI and keep changes reviewable by re
 
 ## Architecture and state
 
-**One state object.** `ForgeState` (a single `data class`) holds everything: session, catalog
-page, editor draft, hero, checks, failures. Derived permissions are computed properties on it:
-`isAdmin`, `adminTools`, `canEdit`, `ownsCharacter`.
+**One state object, in slices.** `ForgeState` holds what every screen needs at the top — phase,
+language, mode, tab, the `busy`/`loading` lanes, the last message and failure — and everything
+else in five nested `data class`es, grouped by whose it is: `account` (session, server, the
+account's characters), `world` (reference tables read once per session: modifiers, orbs, classes,
+tree, levels, equipment bases, dictionary and icon counts), `play` (the character being played and
+what is picked on its screens), `market` (the auction) and `admin` (catalogue, editor, promo codes,
+checks). A change is a copy of its slice: `it.copy(play = it.play.copy(hero = view))`. Derived
+permissions stay computed properties on the top: `isAdmin`, `adminTools`, `canEdit`, `ownsCharacter`.
 
 **ForgeRuntime** owns the `SupervisorJob` scope, the `MutableStateFlow<ForgeState>`, the current
 `GameApi`, and instantiates the five feature view models. It also provides shared helpers:
@@ -451,8 +459,10 @@ These are enforced by tests and are the point of the client's design:
 
 ## Common tasks
 
-**Adding a server route:** add the typed model under `core/model/...`, add one `suspend fun` on
-`GameApi` (reuse the private `request(...)`, pass `authenticated = true` when it needs an account),
+**Adding a server route:** add the typed model under `core/model/...`, add one `suspend fun` to the
+feature client it belongs to (`HeroClient`, `AuctionClient`, …; reuse `http.request(...)`, pass
+`authenticated = true` when it needs an account; a new area gets its own client and a property on
+`GameApi`),
 cover it with a MockWebServer test asserting path, query and exact body, then expose it through a
 feature view model + a `ForgeViewModel` delegate.
 

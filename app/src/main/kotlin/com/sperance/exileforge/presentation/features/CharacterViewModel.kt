@@ -29,9 +29,9 @@ class CharacterViewModel(private val runtime: ForgeRuntime) {
      * screen unreachable for anyone who owns exactly one — which is most people.
      */
     suspend fun readCharacters(autoEnter: Boolean = false) { with(runtime) {
-        val owner = state.value.profile?.id.orEmpty()
-        val characters = if (owner.isBlank()) emptyList() else api.charactersOf(owner)
-        mutable.update { it.copy(characters = characters, charactersRead = true) }
+        val owner = state.value.account.profile?.id.orEmpty()
+        val characters = if (owner.isBlank()) emptyList() else api.hero.charactersOf(owner)
+        mutable.update { it.copy(account = it.account.copy(characters = characters, charactersRead = true)) }
         if (autoEnter) characters.singleOrNull()?.let { only -> entered(only.id) }
     } }
 
@@ -47,8 +47,7 @@ class CharacterViewModel(private val runtime: ForgeRuntime) {
      * already loaded, which is what "every button is bound to the chosen one" has to mean.
      */
     private suspend fun entered(id: String) { with(runtime) {
-        mutable.update { it.copy(phase = AppPhase.GAME, characterId = id, tab = 0,
-            hero = null, characterOwner = "", inventoryBases = emptyMap(), selectedEquipment = "") }
+        mutable.update { it.copy(phase = AppPhase.GAME, tab = 0, play = it.play.copy(characterId = id, hero = null, characterOwner = "", selectedEquipment = ""), world = it.world.copy(inventoryBases = emptyMap())) }
         heroViewModel.readHero()
         // Tab 0 is the catalogue, and this is where it becomes the open one.
         loadPage(0)
@@ -64,10 +63,7 @@ class CharacterViewModel(private val runtime: ForgeRuntime) {
         if (state.value.busy) return
         // What was on its way belonged to the character being left.
         cancelReads()
-        mutable.update { it.copy(phase = AppPhase.CHARACTERS, characterId = "", characterOwner = "",
-            hero = null, inventoryBases = emptyMap(), selectedEquipment = "", selectedNode = "", nodeQuery = "",
-            myLots = emptyList(), showcase = com.sperance.exileforge.core.model.auction.AuctionPage(),
-            auctionTab = 0, auctionLocked = null, editorOpen = false, original = null, draft = JsonObject(emptyMap())) }
+        mutable.update { it.copy(phase = AppPhase.CHARACTERS, play = it.play.copy(characterId = "", characterOwner = "", hero = null, selectedEquipment = "", selectedNode = "", nodeQuery = ""), world = it.world.copy(inventoryBases = emptyMap()), market = it.market.copy(myLots = emptyList(), showcase = com.sperance.exileforge.core.model.auction.AuctionPage(), tab = 0, locked = null), admin = it.admin.copy(editorOpen = false, original = null, draft = JsonObject(emptyMap()))) }
         read(Reads.CHARACTERS) { readCharacters() }
     } }
 
@@ -80,13 +76,13 @@ class CharacterViewModel(private val runtime: ForgeRuntime) {
     fun create(name: String, classId: String) { with(runtime) { task(writing = true, touches = setOf(Reads.CHARACTERS, Reads.HERO, Reads.CATALOG)) {
         require(name.isNotBlank()) { ui("character.enter_name") }
         require(classId.isNotBlank()) { ui("character.choose_class") }
-        val owner = state.value.profile?.id.orEmpty()
+        val owner = state.value.account.profile?.id.orEmpty()
         check(owner.isNotBlank()) { ui("catalog.sign_in") }
         // The limit is the server's (CH_005); this only keeps the form honest about it.
-        check(state.value.characters.size < MAX_CHARACTERS) {
+        check(state.value.account.characters.size < MAX_CHARACTERS) {
             ui("character.limit", MAX_CHARACTERS)
         }
-        val created = api.create(Catalog.CHARACTERS, characterDocument(owner, name, classId))
+        val created = api.catalog.create(Catalog.CHARACTERS, characterDocument(owner, name, classId))
         mutable.update { it.copy(message = ui("character.created", name.trim())) }
         readCharacters()
         entered(created.entityId)
@@ -94,11 +90,11 @@ class CharacterViewModel(private val runtime: ForgeRuntime) {
 
     /** Giving a character up frees one of the account's slots; the server owns what that costs. */
     fun delete(id: String) { with(runtime) { task(writing = true, touches = setOf(Reads.CHARACTERS)) {
-        api.delete(Catalog.CHARACTERS, id)
+        api.catalog.delete(Catalog.CHARACTERS, id)
         mutable.update { it.copy(message = ui("character.deleted")) }
-        val remaining = state.value.characters.filterNot { character -> character.id == id }
+        val remaining = state.value.account.characters.filterNot { character -> character.id == id }
         // Re-reading would enter the last survivor, and a deletion is not a choice to play them.
-        mutable.update { it.copy(characters = remaining) }
+        mutable.update { it.copy(account = it.account.copy(characters = remaining)) }
     } } }
 
     /** The classes the creation form offers; they are seeded and fixed for a session. */

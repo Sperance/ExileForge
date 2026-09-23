@@ -33,7 +33,7 @@ import com.sperance.exileforge.ui.theme.*
  * straight away, because an empty list is not a decision.
  */
 @Composable fun CharacterSelectScreen(s: ForgeState, vm: ForgeViewModel, snackbar: SnackbarHostState) {
-    val empty = s.charactersRead && s.characters.isEmpty()
+    val empty = s.account.charactersRead && s.account.characters.isEmpty()
     var creating by rememberSaveable(empty) { mutableStateOf(empty) }
     var pendingDelete by remember { mutableStateOf<CharacterSummary?>(null) }
     LaunchedEffect(creating) { if (creating) vm.ensureClasses() }
@@ -73,7 +73,7 @@ import com.sperance.exileforge.ui.theme.*
                 ui("chars.slots", s.characterSlotsLeft, MAX_CHARACTERS),
                 ForgeGlyphs.Exile)
         }
-        items(s.characters, key = { it.id }) { character ->
+        items(s.account.characters, key = { it.id }) { character ->
             CharacterCard(s, character, onPlay = { onPlay(character.id) }, onDelete = { onDelete(character) })
         }
         item {
@@ -98,13 +98,13 @@ import com.sperance.exileforge.ui.theme.*
 @Composable private fun ColumnScope.CreatingColumn(s: ForgeState, vm: ForgeViewModel, onBack: () -> Unit, onSignOut: () -> Unit) {
     LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { ScreenHeader(ui("chars.new"), ui("chars.name_and_class"), ForgeGlyphs.Exile) }
-        item { CreateCharacterPanel(s, vm, canGoBack = s.characters.isNotEmpty(), onBack = onBack, onSignOut = onSignOut) }
+        item { CreateCharacterPanel(s, vm, canGoBack = s.account.characters.isNotEmpty(), onBack = onBack, onSignOut = onSignOut) }
     }
 }
 
 /** One character, as the menu describes them: the name, the class and how far they have come. */
 @Composable private fun CharacterCard(s: ForgeState, character: CharacterSummary, onPlay: () -> Unit, onDelete: () -> Unit) {
-    val characterClass = s.classes.firstOrNull { it.id == character.classId }
+    val characterClass = s.world.classes.firstOrNull { it.id == character.classId }
     ForgePanel(modifier = Modifier.clickable(enabled = !s.busy, onClick = onPlay)) {
         Text(character.name, color = GoldBright, style = MaterialTheme.typography.titleMedium)
         PropertyRow(ui("common.class"), characterClass?.title ?: ui("chars.unknown"), "character")
@@ -125,15 +125,15 @@ import com.sperance.exileforge.ui.theme.*
 @Composable private fun CreateCharacterPanel(s: ForgeState, vm: ForgeViewModel, canGoBack: Boolean,
     onBack: () -> Unit, onSignOut: () -> Unit) {
     var name by rememberSaveable { mutableStateOf("") }
-    var classId by rememberSaveable(s.classes.size) { mutableStateOf(s.classes.firstOrNull()?.id.orEmpty()) }
-    val chosen = s.classes.firstOrNull { it.id == classId }
+    var classId by rememberSaveable(s.world.classes.size) { mutableStateOf(s.world.classes.firstOrNull()?.id.orEmpty()) }
+    val chosen = s.world.classes.firstOrNull { it.id == classId }
     ForgePanel {
         OutlinedTextField(name, { name = it }, enabled = !s.busy, label = { Text(ui("common.name")) },
             supportingText = { Text(ui("chars.name_unique")) },
             singleLine = true, modifier = Modifier.fillMaxWidth())
-        if (s.classes.isEmpty()) Text(ui("editor.no_classes"),
+        if (s.world.classes.isEmpty()) Text(ui("editor.no_classes"),
             color = MaterialTheme.colorScheme.error)
-        else Spinner(ui("common.class"), classId, s.classes.associate { it.id to it.title }, !s.busy) { classId = it }
+        else Spinner(ui("common.class"), classId, s.world.classes.associate { it.id to it.title }, !s.busy) { classId = it }
         chosen?.let { option ->
             if (option.details.isNotBlank()) Text(option.details, color = Muted, style = MaterialTheme.typography.bodySmall)
             Text(ui("editor.level1_base") + option.baseStats.joinToString(" · ") {

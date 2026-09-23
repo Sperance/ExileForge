@@ -27,15 +27,15 @@ import com.sperance.exileforge.ui.theme.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun HeroScreen(s: ForgeState, vm: ForgeViewModel) {
     var sellId by remember { mutableStateOf<String?>(null) }
-    var detailId by remember(s.characterId) { mutableStateOf<String?>(null) }
-    var query by remember(s.characterId) { mutableStateOf("") }
-    var slot by remember(s.characterId) { mutableStateOf("") }
-    var stashOpen by remember(s.characterId) { mutableStateOf(true) }
+    var detailId by remember(s.play.characterId) { mutableStateOf<String?>(null) }
+    var query by remember(s.play.characterId) { mutableStateOf("") }
+    var slot by remember(s.play.characterId) { mutableStateOf("") }
+    var stashOpen by remember(s.play.characterId) { mutableStateOf(true) }
     // Opening the tab is what refreshes the hero, and only when the last reading has gone cold.
     // Nothing here asks the player to press anything: the pull below is for when they disagree.
-    LaunchedEffect(s.characterId, s.sessionEpoch) { vm.ensureHero() }
-    val stash = s.hero?.inventory.orEmpty()
-    val documents = stash.associate { it.id to inventoryDocument(it, s.inventoryBases[it.equipmentId]) }
+    LaunchedEffect(s.play.characterId, s.account.sessionEpoch) { vm.ensureHero() }
+    val stash = s.play.hero?.inventory.orEmpty()
+    val documents = stash.associate { it.id to inventoryDocument(it, s.world.inventoryBases[it.equipmentId]) }
     val slots = documents.values.map { it.text("slot") }.filter(String::isNotBlank).distinct()
     val visible = stash.filter { instance -> documents[instance.id]?.let { (slot.isBlank() || it.text("slot") == slot) && it.text("name").contains(query, true) } == true }
     PullToRefreshBox(isRefreshing = s.refreshing(Reads.HERO), onRefresh = vm::loadHero, modifier = Modifier.fillMaxSize()) {
@@ -66,19 +66,19 @@ import com.sperance.exileforge.ui.theme.*
                     }
                 }
                 if (visible.isEmpty()) item {
-                    InfoCard(if (s.hero == null) ui("hero.stash_empty") else ui("tree.nothing_found"),
+                    InfoCard(if (s.play.hero == null) ui("hero.stash_empty") else ui("tree.nothing_found"),
                         ui("hero.stash_empty_hint"))
                 }
                 // A line, not a card: a stash is read down, and the card is one tap behind each line.
                 items(visible, key = { it.id }) { instance ->
-                    val inactive = s.hero?.inactive?.get(instance.id) != null
-                    ItemRow(documents.getValue(instance.id), definitions = s.definitions, enabled = !s.busy,
-                        selected = instance.id == s.selectedEquipment,
+                    val inactive = s.play.hero?.inactive?.get(instance.id) != null
+                    ItemRow(documents.getValue(instance.id), definitions = s.world.definitions, enabled = !s.busy,
+                        selected = instance.id == s.play.selectedEquipment,
                         // The server's verdict on the template, not a requirement worked out here.
                         // Something already worn is judged by `inactive` instead: it is in a slot,
                         // and "cannot be worn" would be an odd thing to say about it.
                         unwearable = if (instance.equipped) emptyList()
-                            else s.hero?.sheet?.unwearableBy?.get(instance.equipmentId).orEmpty(),
+                            else s.play.hero?.sheet?.unwearableBy?.get(instance.equipmentId).orEmpty(),
                         note = when {
                             inactive -> ui("hero.inactive")
                             // A jewel is worn too, but not anywhere a player can point at on the
@@ -114,12 +114,12 @@ import com.sperance.exileforge.ui.theme.*
     if (instance != null) ModalBottomSheet(onDismissRequest = { detailId = null }, containerColor = Panel, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         val document = documents.getValue(instance.id)
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.9f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            item { ItemCard(document, enabled = false, detailed = true, definitions = s.definitions, actionLabel = ui("hero.instance") + " · ${instance.id.takeLast(6)}") }
+            item { ItemCard(document, enabled = false, detailed = true, definitions = s.world.definitions, actionLabel = ui("hero.instance") + " · ${instance.id.takeLast(6)}") }
             item {
                 ForgePanel {
                     Engraved(if (instance.equipped) ui("hero.unequip") else ui("hero.equip"))
                     Text(ui("hero.slot_note", slotTitle(document.text("slot"), s.lang)), color = Muted, style = MaterialTheme.typography.bodySmall)
-                    Button(enabled = !s.busy && s.signedIn && (s.ownsCharacter || s.isAdmin), modifier = Modifier.fillMaxWidth(), onClick = {
+                    Button(enabled = !s.busy && s.account.signedIn && (s.ownsCharacter || s.isAdmin), modifier = Modifier.fillMaxWidth(), onClick = {
                         detailId = null
                         if (instance.equipped) vm.unequip(instance.id) else vm.equip(instance.id)
                     }) {
@@ -138,7 +138,7 @@ import com.sperance.exileforge.ui.theme.*
                         color = Muted, style = MaterialTheme.typography.bodySmall)
                     // Selling destroys the copy and its rolls, which is why it is asked about.
                     OutlinedButton(modifier = Modifier.fillMaxWidth(),
-                        enabled = !s.busy && s.signedIn && (s.ownsCharacter || s.isAdmin) && !instance.equipped && !instance.socketed,
+                        enabled = !s.busy && s.account.signedIn && (s.ownsCharacter || s.isAdmin) && !instance.equipped && !instance.socketed,
                         onClick = { sellId = instance.id }) {
                         Icon(ForgeGlyphs.Orb, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp))
                         Text(ui("hero.sell_for_gold"))

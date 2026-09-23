@@ -54,12 +54,12 @@ import com.sperance.exileforge.ui.theme.*
     LaunchedEffect(s.message) {
         s.message?.let { snackbar.showSnackbar(it, withDismissAction = true); vm.dismissMessage() }
     }
-    BackHandler(s.editorOpen && !s.busy) { confirmDiscard = true }
+    BackHandler(s.admin.editorOpen && !s.busy) { confirmDiscard = true }
     CompositionLocalProvider(LocalEntityPageLoader provides vm::referencePage) {
     // Language is part of the key: every cached label is rebuilt in the chosen tongue.
     // The dictionary arrives after the first frame, so its size joins the key: when the server's
     // names land, every screen that printed a bare code is drawn again.
-    key(s.server, s.sessionEpoch, s.lang, s.localeStrings) {
+    key(s.account.server, s.account.sessionEpoch, s.lang, s.world.localeStrings) {
     // The two screens above the tabs carry no banner and no bottom bar: there is no character to
     // name in the one and no tab to reach from the other.
     when (s.phase) {
@@ -70,7 +70,7 @@ import com.sperance.exileforge.ui.theme.*
     }
     if (confirmDelete) AlertDialog(onDismissRequest = { confirmDelete = false }, containerColor = Panel, titleContentColor = Gold,
         title = { Text(ui("common.delete_record_q")) },
-        text = { Text("${s.original?.let(::documentTitle)}\n${s.original?.entityId}\n" + ui("common.delete_record_text")) },
+        text = { Text("${s.admin.original?.let(::documentTitle)}\n${s.admin.original?.entityId}\n" + ui("common.delete_record_text")) },
         confirmButton = { TextButton(enabled = !s.busy, onClick = { confirmDelete = false; vm.delete() }) { Text(ui("common.delete"), color = MaterialTheme.colorScheme.error) } },
         dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(ui("common.cancel")) } })
     if (confirmDiscard) AlertDialog(onDismissRequest = { confirmDiscard = false }, containerColor = Panel, titleContentColor = Gold,

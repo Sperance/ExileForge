@@ -20,7 +20,7 @@ import com.sperance.exileforge.ui.theme.Muted
     var expanded by remember { mutableStateOf(false) }
     TextButton(onClick = { expanded = !expanded }) { Text(ui("catalog.filters", if (expanded) ui("common.hide") else ui("common.show"))) }
     if (!expanded) return
-    val f = s.filter
+    val f = s.admin.filter
     val any = ui("common.all")
     Spinner(ui("common.slot"), f.slot, mapOf("" to any) + slots.associateWith { slotTitle(it, s.lang) }, !s.busy) { vm.filter(f.copy(slot = it)) }
     Spinner(ui("common.rarity"), f.rarity, mapOf("" to any) + rarities.associateWith { rarityTitle(it, s.lang) }, !s.busy) { vm.filter(f.copy(rarity = it)) }
@@ -29,7 +29,7 @@ import com.sperance.exileforge.ui.theme.Muted
     OutlinedTextField(f.maxLevel, { vm.filter(f.copy(maxLevel = it)) }, label = { Text(ui("catalog.level_to")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
     TextButton(enabled = !s.busy, onClick = vm::loadDefinitions) { Text(ui("catalog.load_modifiers")) }
     Spinner(ui("catalog.modifier_in_pool"), f.modifierId,
-        mapOf("" to ui("common.any")) + s.definitions.associate { it.id to it.template }, !s.busy) { vm.filter(f.copy(modifierId = it)) }
+        mapOf("" to ui("common.any")) + s.world.definitions.associate { it.id to it.template }, !s.busy) { vm.filter(f.copy(modifierId = it)) }
     Text(ui("catalog.filter_note"),
         color = Muted, style = MaterialTheme.typography.bodySmall)
 }

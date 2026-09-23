@@ -32,30 +32,30 @@ import kotlinx.serialization.json.JsonObject
  */
 @Composable fun CraftScreen(s: ForgeState, vm: ForgeViewModel) {
     // Ingredients are read off the bag, so the forge opens on a hero that is not stale.
-    LaunchedEffect(s.characterId, s.sessionEpoch) { vm.ensureHero() }
+    LaunchedEffect(s.play.characterId, s.account.sessionEpoch) { vm.ensureHero() }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         ScreenHeader(ui("craft.title"),
             ui("craft.subtitle"), ForgeGlyphs.Tome)
-        if (s.hero == null) {
+        if (s.play.hero == null) {
             InfoCard(ui("tree.no_hero"),
                 ui("craft.hero_first"))
             return@Column
         }
-        ForgePanel { RecipeForm(s, vm, enabled = !s.busy && s.signedIn && (s.ownsCharacter || s.isAdmin)) }
+        ForgePanel { RecipeForm(s, vm, enabled = !s.busy && s.account.signedIn && (s.ownsCharacter || s.isAdmin)) }
         InfoCard(ui("craft.future"),
             ui("craft.future_note"))
     }
 }
 
 @Composable private fun ColumnScope.RecipeForm(s: ForgeState, vm: ForgeViewModel, enabled: Boolean) {
-    var recipeId by remember(s.characterId) { mutableStateOf("") }
-    var recipe by remember(s.characterId) { mutableStateOf<JsonObject?>(null) }
+    var recipeId by remember(s.play.characterId) { mutableStateOf("") }
+    var recipe by remember(s.play.characterId) { mutableStateOf<JsonObject?>(null) }
     var failure by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(false) }
     var refresh by remember { mutableIntStateOf(0) }
     var ingredients by remember(recipeId, refresh) { mutableStateOf<Map<Int, String>>(emptyMap()) }
     var amount by remember(recipeId) { mutableStateOf("1") }
-    val owned = s.hero?.bag.orEmpty().associate { it.itemId to it.amount }
+    val owned = s.play.hero?.bag.orEmpty().associate { it.itemId to it.amount }
     Engraved(ui("craft.recipes"))
     EntitySpinner(ui("craft.recipe"), recipeId, EntitySource.RECIPE, enabled && !loading) { recipeId = it }
     LaunchedEffect(recipeId, refresh) {

@@ -33,7 +33,7 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     fun catalog(value: Catalog) = runtime.catalogViewModel.catalog(value)
     fun filter(value: CatalogFilter) = runtime.catalogViewModel.filter(value)
     fun applyFilters() = runtime.catalogViewModel.applyFilters()
-    fun refresh(page: Int = runtime.state.value.page) = runtime.catalogViewModel.refresh(page)
+    fun refresh(page: Int = runtime.state.value.admin.page) = runtime.catalogViewModel.refresh(page)
     fun count() = runtime.catalogViewModel.count()
     fun open(id: String) = runtime.catalogViewModel.open(id)
     fun create(kind: EquipmentKind = EquipmentKind.Weapon) = runtime.editorViewModel.create(kind)

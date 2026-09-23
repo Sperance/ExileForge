@@ -44,8 +44,8 @@ import kotlinx.serialization.json.put
  * dividing by a step that does not exist.
  */
 @Composable private fun ExperiencePanel(s: ForgeState, level: Int, experience: Double) {
-    val floor = s.levels.firstOrNull { it.level == level }?.experience ?: 0.0
-    val next = s.levels.firstOrNull { it.level == level + 1 }
+    val floor = s.world.levels.firstOrNull { it.level == level }?.experience ?: 0.0
+    val next = s.world.levels.firstOrNull { it.level == level + 1 }
     val within = (experience - floor).coerceAtLeast(0.0)
     val span = next?.let { it.experience - floor } ?: 0.0
     val fraction = if (span > 0.0) (within / span).toFloat() else 1f
@@ -62,16 +62,16 @@ import kotlinx.serialization.json.put
             ui("hero.xp_progress", number(within), number(span), level + 1, number(experience)),
             color = Muted, style = MaterialTheme.typography.labelSmall)
         // Without the table there is nothing to measure against, and a bar with no scale would lie.
-        if (s.levels.isEmpty()) Text(ui("hero.no_levels"),
+        if (s.world.levels.isEmpty()) Text(ui("hero.no_levels"),
             color = Muted, style = MaterialTheme.typography.labelSmall)
     }
 }
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable fun HeroEquipmentPanel(s: ForgeState, onUnequip: (String) -> Unit) {
-    val hero = s.hero ?: return
-    var statsOpen by remember(s.characterId) { mutableStateOf(false) }
-    var slotsExpanded by remember(s.characterId) { mutableStateOf(true) }
+    val hero = s.play.hero ?: return
+    var statsOpen by remember(s.play.characterId) { mutableStateOf(false) }
+    var slotsExpanded by remember(s.play.characterId) { mutableStateOf(true) }
     val equipped = hero.equipped
     // A jewel is worn in a socket on the tree, not on the body, so it has no cell in this grid —
     // the tree draws it where it actually sits.
@@ -109,7 +109,7 @@ import kotlinx.serialization.json.put
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp), maxItemsInEachRow = perRow) {
                     bodySlots.forEach { slot ->
                         val instance = equipped[slot]
-                        val document = instance?.let { inventoryDocument(it, s.inventoryBases[it.equipmentId]) } ?: buildJsonObject { put("slot", slot) }
+                        val document = instance?.let { inventoryDocument(it, s.world.inventoryBases[it.equipmentId]) } ?: buildJsonObject { put("slot", slot) }
                         val shape = CutCornerShape(8.dp)
                         Column(Modifier.weight(1f)
                             .background(if (instance == null) SolidColor(Panel) else panelBrush(Gold), shape)

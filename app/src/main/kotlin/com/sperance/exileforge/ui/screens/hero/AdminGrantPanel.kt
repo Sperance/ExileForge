@@ -24,9 +24,9 @@ import com.sperance.exileforge.ui.theme.Muted
  * the server rolls its modifiers, their tiers and their values when the instance is created.
  */
 @Composable fun AdminGrantPanel(s: ForgeState, vm: ForgeViewModel) {
-    if (!s.adminTools || s.characterId.isBlank()) return
-    var expanded by remember(s.characterId) { mutableStateOf(true) }
-    val enabled = !s.busy && s.signedIn && s.characterId.isNotBlank()
+    if (!s.adminTools || s.play.characterId.isBlank()) return
+    var expanded by remember(s.play.characterId) { mutableStateOf(true) }
+    val enabled = !s.busy && s.account.signedIn && s.play.characterId.isNotBlank()
     val any = ui("grant.any")
     TextButton(onClick = { expanded = !expanded }) {
         Text(ui("grant.title", if (expanded) ui("common.hide") else ui("common.show")))
@@ -34,8 +34,8 @@ import com.sperance.exileforge.ui.theme.Muted
     if (!expanded) return
     ForgePanel {
         Engraved(ui("grant.random_item"))
-        Spinner(ui("common.rarity"), s.grantRarity, mapOf("" to any) + rarities.associateWith { rarityTitle(it, s.lang) }, enabled, vm::grantRarity)
-        Spinner(ui("grant.category"), s.grantSlot, mapOf("" to any) + slots.associateWith { slotTitle(it, s.lang) }, enabled, vm::grantSlot)
+        Spinner(ui("common.rarity"), s.play.grantRarity, mapOf("" to any) + rarities.associateWith { rarityTitle(it, s.lang) }, enabled, vm::grantRarity)
+        Spinner(ui("grant.category"), s.play.grantSlot, mapOf("" to any) + slots.associateWith { slotTitle(it, s.lang) }, enabled, vm::grantSlot)
         Button(enabled = enabled, onClick = vm::grantRandom, modifier = Modifier.fillMaxWidth()) {
             Icon(ForgeGlyphs.Anvil, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp))
             Text(ui("grant.roll"))
@@ -45,7 +45,7 @@ import com.sperance.exileforge.ui.theme.Muted
 
         OrnateDivider()
         Engraved(ui("grant.named_template"))
-        var equipmentId by remember(s.characterId) { mutableStateOf("") }
+        var equipmentId by remember(s.play.characterId) { mutableStateOf("") }
         EntitySpinner(ui("grant.equipment"), equipmentId, EntitySource.EQUIPMENT, enabled) { equipmentId = it }
         Button(enabled = enabled && equipmentId.isNotBlank(), onClick = { vm.grant(equipmentId) }) { Text(ui("grant.chosen_item")) }
 
@@ -57,7 +57,7 @@ import com.sperance.exileforge.ui.theme.Muted
 
         OrnateDivider()
         Engraved(ui("grant.experience"))
-        var experience by remember(s.characterId) { mutableStateOf("100") }
+        var experience by remember(s.play.characterId) { mutableStateOf("100") }
         OutlinedTextField(experience, { experience = it }, label = { Text(ui("grant.grant_xp")) },
             supportingText = { Text(ui("grant.xp_note")) },
             singleLine = true, modifier = Modifier.fillMaxWidth())
@@ -66,8 +66,8 @@ import com.sperance.exileforge.ui.theme.Muted
 
         OrnateDivider()
         Engraved(ui("grant.stacking"))
-        var itemId by remember(s.characterId) { mutableStateOf("") }
-        var amount by remember(s.characterId) { mutableStateOf("1") }
+        var itemId by remember(s.play.characterId) { mutableStateOf("") }
+        var amount by remember(s.play.characterId) { mutableStateOf("1") }
         EntitySpinner(ui("common.item"), itemId, EntitySource.ITEM, enabled) { itemId = it }
         OutlinedTextField(amount, { amount = it }, label = { Text(ui("grant.change_amount_label")) },
             supportingText = { Text(ui("grant.negative_note")) }, singleLine = true, modifier = Modifier.fillMaxWidth())

@@ -52,10 +52,10 @@ class ServerIntegrationTest {
      * Kept apart from the contract test because that one is already as large as a JVM method gets.
      */
     private suspend fun accessIsTheServers(url: String, guest: GameApi, guestId: String, adminId: String, adminCharacter: String) {
-        assertEquals(403, assertFailsWith<ApiFailure> { guest.character(adminCharacter) }.status)
-        assertEquals(403, assertFailsWith<ApiFailure> { guest.charactersOf(adminId) }.status)
-        assertEquals(403, assertFailsWith<ApiFailure> { guest.update(Catalog.CHARACTERS, adminCharacter, buildJsonObject { put("name", "stolen") }) }.status)
-        assertEquals(403, assertFailsWith<ApiFailure> { guest.stats(adminCharacter) }.status)
+        assertEquals(403, assertFailsWith<ApiFailure> { guest.hero.character(adminCharacter) }.status)
+        assertEquals(403, assertFailsWith<ApiFailure> { guest.hero.charactersOf(adminId) }.status)
+        assertEquals(403, assertFailsWith<ApiFailure> { guest.catalog.update(Catalog.CHARACTERS, adminCharacter, buildJsonObject { put("name", "stolen") }) }.status)
+        assertEquals(403, assertFailsWith<ApiFailure> { guest.hero.stats(adminCharacter) }.status)
         // A kept token restores the session on a fresh client, and a revoked one is refused.
         val kept = requireNotNull(guest.sessionToken())
         assertEquals(guestId, GameApi(url).resume(kept).id)
@@ -75,21 +75,21 @@ class ServerIntegrationTest {
         // The dictionary the whole client reads: since 0.14.0 no document carries text, so a
         // mismatch between the key this client builds and the one the server wrote would show up
         // nowhere but here — a mocked bundle agrees with itself by construction.
-        val manifest = api.localeManifest()
+        val manifest = api.files.localeManifest()
         assertTrue(manifest.languages.map { it.code }.containsAll(listOf("ru", "en")), "languages: ${manifest.languages}")
         for (language in manifest.languages) {
-            val bundle = api.localeBundle(language)
+            val bundle = api.files.localeBundle(language)
             assertEquals(language.code, bundle.language)
             assertTrue(bundle.size > 100, "${language.code} holds only ${bundle.size} strings")
         }
-        serverLocale = api.localeBundle(assertNotNull(manifest.language("ru")))
+        serverLocale = api.files.localeBundle(assertNotNull(manifest.language("ru")))
         assertTrue(serverLocale.contains("system.success"), "the server's own success key is missing")
 
         // The icon set, which only the live server can prove: the manifest's fingerprint is
         // computed from the file, so a set edited without touching the manifest is still noticed.
-        val iconManifest = api.iconManifest()
+        val iconManifest = api.files.iconManifest()
         assertTrue(iconManifest.hash.isNotBlank(), "the server served no icon fingerprint")
-        val iconBundle = IconBundle.parse(iconManifest.hash, api.iconDocument(iconManifest.file))
+        val iconBundle = IconBundle.parse(iconManifest.hash, api.files.iconDocument(iconManifest.file))
         assertEquals(iconManifest.icons, iconBundle.size, "the manifest and the set disagree on how many codes there are")
         assertEquals(iconManifest.sprites, iconBundle.spriteCount, "the manifest and the set disagree on how many drawings there are")
         // Every code in the table has to name a drawing that exists, or `parse` would have dropped
@@ -98,49 +98,49 @@ class ServerIntegrationTest {
         serverIcons = iconBundle
 
         // The seeded modifier catalogue is what every rolled value on an instance points back at.
-        val definitions = api.modifierDefinitions()
+        val definitions = api.world.modifiers()
         assertTrue(definitions.isNotEmpty())
         assertTrue(definitions.any { it.composite })
         val described = definitions.firstOrNull { it.effects.isNotEmpty() } ?: fail("no definition carries an effect: $definitions")
-        val tiers = api.modifierTiers(described.id)
+        val tiers = api.world.tiers(described.id)
         assertTrue(tiers.isNotEmpty() && tiers.all { it.values.isNotEmpty() }, "tiers of ${described.code}: $tiers")
         // The key this client builds has to be the key the server wrote, or the template is the code.
         assertTrue(serverLocale.contains(LocaleKey.modifierName(described.code)), "no text for ${described.code}")
         assertNotEquals(described.code, described.template)
 
         // A character is nothing without a class: it carries the whole stat base and the tree's root.
-        val classes = api.characterClasses()
+        val classes = api.world.classes()
         val chosenClass = classes.firstOrNull() ?: fail("the server seeded no character classes")
         assertTrue(chosenClass.baseStats.isNotEmpty(), "${chosenClass.code} has no base: $chosenClass")
         assertTrue(chosenClass.startNodeCode.isNotBlank(), "${chosenClass.code} names no start node")
         assertTrue(chosenClass.params.none { it.rolled }, "a class conversion must not be rolled: ${chosenClass.params}")
         assertNotEquals(chosenClass.code, chosenClass.title, "the class has no name in the dictionary")
-        val levels = api.experienceLevels()
+        val levels = api.world.levels()
         assertTrue(levels.isNotEmpty() && levels.first().level == 1, "progression table: $levels")
 
-        val tree = api.skillTree()
+        val tree = api.world.tree()
         assertTrue(tree.isNotEmpty(), "the server seeded no skill tree")
         val start = tree.firstOrNull { it.code == chosenClass.startNodeCode } ?: fail("${chosenClass.startNodeCode} is not in the tree")
         assertEquals(SkillNodeType.START, start.type)
         assertNotEquals(start.code, start.title, "${start.code} has no name in the dictionary")
 
         val name = "EF-integration-${java.util.UUID.randomUUID()}"
-        val character = api.create(Catalog.CHARACTERS, buildJsonObject {
+        val character = api.catalog.create(Catalog.CHARACTERS, buildJsonObject {
             put("userId", admin.id); put("name", name); put("description", "Integration fixture"); put("classId", chosenClass.id)
         })
         val id = character.entityId
         try {
-            assertEquals(name, api.character(id).name)
-            assertEquals(1, api.search(Catalog.CHARACTERS, 0, CatalogFilter(query = name)).items.size)
-            assertTrue(api.inventory(id).isEmpty())
+            assertEquals(name, api.hero.character(id).name)
+            assertEquals(1, api.catalog.search(Catalog.CHARACTERS, 0, CatalogFilter(query = name)).items.size)
+            assertTrue(api.hero.inventory(id).isEmpty())
 
             // The character menu reads one account's characters, not the whole collection.
-            val mine = api.charactersOf(admin.id)
+            val mine = api.hero.charactersOf(admin.id)
             assertTrue(mine.any { it.id == id }, "the account's own character is missing: ${mine.map { it.name }}")
             assertTrue(mine.all { it.userId == admin.id }, "someone else's character came back: $mine")
             assertTrue(mine.size <= 3, "an account cannot hold more than three characters: ${mine.size}")
             // An unknown account is refused rather than answered with an empty list.
-            assertFailsWith<ApiFailure> { api.charactersOf("0123456789abcdef01234567") }
+            assertFailsWith<ApiFailure> { api.hero.charactersOf("0123456789abcdef01234567") }
 
             // Registration by device, which is the whole sign-up: the first attempt is refused with
             // US_015 and turns into the POST that creates the account.
@@ -151,13 +151,13 @@ class ServerIntegrationTest {
             assertEquals(0, registered.countCharacters, "a fresh account already has characters")
             // The second sign-in finds the same account rather than making a second one.
             assertEquals(registered.id, GameApi(url).loginByDevice(device).id)
-            assertTrue(guest.charactersOf(registered.id).isEmpty(), "a new account starts with no characters")
+            assertTrue(guest.hero.charactersOf(registered.id).isEmpty(), "a new account starts with no characters")
             accessIsTheServers(url, guest, registered.id, admin.id, id)
             // The account is left behind: a game client has no route that deletes one, and the
             // client-server job seeds a fresh database for every run anyway.
 
             // A random grant of a chosen rarity and category: the client names a base, the server rolls it.
-            val template = api.randomTemplate("RARE", "HELMET")
+            val template = api.catalog.randomTemplate("RARE", "HELMET")
             assertEquals("HELMET", template.text("slot"))
             assertEquals("RARE", template.text("rarity"))
             // A template carries a code and no text: its name has to come back from the dictionary.
@@ -165,7 +165,7 @@ class ServerIntegrationTest {
             assertNotEquals(template.text("code"), equipmentTitle(template), "no name for ${template.text("code")}")
             // The same code that finds the name has to find the drawing.
             assertNotNull(documentIcon(template), "no icon for ${template.text("code")}")
-            val instance = api.grant(id, template.entityId)
+            val instance = api.hero.grant(id, template.entityId)
             assertEquals(template.entityId, instance.equipmentId)
             assertTrue(instance.params.isNotEmpty(), "the server rolled no modifiers")
             assertTrue(instance.params.all { it.modifierId in definitions.map { definition -> definition.id } })
@@ -177,37 +177,37 @@ class ServerIntegrationTest {
             assertFalse(instance.equipped)
 
             // Points come from levels, so the character is levelled before wearing or spending anything.
-            assertTrue(api.addExperience(id, levels.last().experience).level > 1)
-            val base = api.stats(id)
+            assertTrue(api.hero.addExperience(id, levels.last().experience).level > 1)
+            val base = api.hero.stats(id)
             assertTrue(base.stats.isNotEmpty(), "the server returned no stats")
             assertEquals(character.text("_id"), base.characterId)
 
             // Requirements are checked twice by the server, and the two checks are not the same rule:
             // an item out of reach cannot be put on at all, while one already worn merely stops
             // counting. The wearable base is chosen here from what the sheet already says.
-            val helmets = api.search(Catalog.EQUIPMENT, 0, CatalogFilter(slot = "HELMET")).items
+            val helmets = api.catalog.search(Catalog.EQUIPMENT, 0, CatalogFilter(slot = "HELMET")).items
             assertTrue(helmets.isNotEmpty(), "no helmet templates to wear")
             val wearable = helmets.minByOrNull { demand(it, base) } ?: fail("no helmet templates")
-            val wornInstance = api.grant(id, wearable.entityId)
-            val worn = api.equip(id, wornInstance.id)
+            val wornInstance = api.hero.grant(id, wearable.entityId)
+            val worn = api.hero.equip(id, wornInstance.id)
             assertEquals("HELMET", worn.equippedSlot)
-            assertEquals(listOf(wornInstance.id), api.inventory(id).filter { it.equipped }.map { it.id })
+            assertEquals(listOf(wornInstance.id), api.hero.inventory(id).filter { it.equipped }.map { it.id })
             // Wearing the item is what changes the character sheet; the client recomputes nothing.
-            val sheet = api.stats(id)
-            assertEquals(sheet, api.stats(id))
+            val sheet = api.hero.stats(id)
+            assertEquals(sheet, api.hero.stats(id))
             assertEquals(listOf(wornInstance.id), sheet.active, "the worn item was not counted: $sheet")
             assertTrue(sheet.inactive.isEmpty(), "nothing should be refused here: ${sheet.inactive}")
 
             // The other half of the rule: a base the sheet cannot reach is refused outright.
             helmets.maxByOrNull { demand(it, base) }?.takeIf { demand(it, base) > 0 }?.let { heavy ->
-                val granted = api.grant(id, heavy.entityId)
-                val refused = assertFailsWith<ApiFailure> { api.equip(id, granted.id) }
+                val granted = api.hero.grant(id, heavy.entityId)
+                val refused = assertFailsWith<ApiFailure> { api.hero.equip(id, granted.id) }
                 assertTrue(refused.message.orEmpty().contains(heavy.text("name")), "refusal names no item: ${refused.message}")
             }
-            assertFalse(api.unequip(id, wornInstance.id).equipped)
+            assertFalse(api.hero.unequip(id, wornInstance.id).equipped)
 
             // Currency is the same collection as every other item, told apart by its category alone.
-            val orbs = api.currencyOrbs()
+            val orbs = api.world.orbs()
             assertTrue(orbs.isNotEmpty(), "the server seeded no currency")
             assertTrue(orbs.all { it.orb != null }, "unknown orbs: ${orbs.filter { it.orb == null }.map { it.subCategory }}")
             val chaos = orbs.firstOrNull { it.orb == CurrencyOrb.CHAOS_ORB } ?: fail("no Chaos Orb among ${orbs.map { it.code }}")
@@ -215,8 +215,8 @@ class ServerIntegrationTest {
             assertNotNull(icon(IconKey.item(chaos.code)), "no icon for ${chaos.code}")
 
             // The orb is spent from the bag, so it is handed over first; the rerolls are the server's.
-            assertEquals("system.success", api.adjustItems(id, listOf(ItemStack(chaos.id, 1))))
-            val rerolled = api.applyOrb(id, instance.id, chaos.id)
+            assertEquals("system.success", api.hero.adjustItems(id, listOf(ItemStack(chaos.id, 1))))
+            val rerolled = api.hero.applyOrb(id, instance.id, chaos.id)
             // The server sends a key and arguments that are keys themselves: what has to come out
             // is a sentence naming the item, not the key it was built from.
             assertTrue(serverLocale.contains(rerolled.messageKey), "no text for ${rerolled.messageKey}")
@@ -225,39 +225,39 @@ class ServerIntegrationTest {
             assertEquals(instance.id, rerolled.item.id)
             assertEquals("RARE", rerolled.item.rarity, "a Chaos Orb must leave the rarity alone: ${rerolled.message}")
             assertNull(rerolled.created, "only a mirror creates a second item")
-            assertTrue(api.bag(id).none { it.itemId == chaos.id }, "the orb was not spent")
+            assertTrue(api.hero.bag(id).none { it.itemId == chaos.id }, "the orb was not spent")
             // A refusal costs nothing: with no orb left the server rejects the call and keeps the item.
-            assertFailsWith<ApiFailure> { api.applyOrb(id, instance.id, chaos.id) }
-            assertEquals(rerolled.item.params, api.inventory(id).single { it.id == instance.id }.params)
+            assertFailsWith<ApiFailure> { api.hero.applyOrb(id, instance.id, chaos.id) }
+            assertEquals(rerolled.item.params, api.hero.inventory(id).single { it.id == instance.id }.params)
 
-            val items = api.referencePage(com.sperance.exileforge.core.model.EntitySource.ITEM, 0)
+            val items = api.catalog.referencePage(com.sperance.exileforge.core.model.EntitySource.ITEM, 0)
             val item = items.items.firstOrNull() ?: fail("the items collection is empty: $items")
-            assertEquals("system.success", api.adjustItems(id, listOf(ItemStack(item.entityId, 5))))
-            val bag = api.bag(id)
+            assertEquals("system.success", api.hero.adjustItems(id, listOf(ItemStack(item.entityId, 5))))
+            val bag = api.hero.bag(id)
             assertEquals(5L, (bag.firstOrNull { it.itemId == item.entityId } ?: fail("${item.entityId} is not in the bag: $bag")).amount)
-            assertEquals("system.success", api.adjustItems(id, listOf(ItemStack(item.entityId, -5))))
-            assertTrue(api.bag(id).none { it.itemId == item.entityId })
+            assertEquals("system.success", api.hero.adjustItems(id, listOf(ItemStack(item.entityId, -5))))
+            assertTrue(api.hero.bag(id).none { it.itemId == item.entityId })
 
             // A template is editable; an instance's rolls are not reachable from the catalogue at all.
             // Its words are not editable either: they live in the locale files, not in the document.
-            val edited = api.update(Catalog.EQUIPMENT, template.entityId, buildJsonObject { put("requiredLevel", 7) })
+            val edited = api.catalog.update(Catalog.EQUIPMENT, template.entityId, buildJsonObject { put("requiredLevel", 7) })
             assertEquals("7", edited.text("requiredLevel"))
-            assertFailsWith<IllegalArgumentException> { api.update(Catalog.EQUIPMENT, template.entityId, buildJsonObject { put("description", "by hand") }) }
+            assertFailsWith<IllegalArgumentException> { api.catalog.update(Catalog.EQUIPMENT, template.entityId, buildJsonObject { put("description", "by hand") }) }
             // `image` was removed in 0.15.1; it is refused before the request is built, like any
             // field the server does not have. An older client's write is simply ignored instead.
-            assertFailsWith<IllegalArgumentException> { api.update(Catalog.EQUIPMENT, template.entityId, buildJsonObject { put("image", "http://old/url.png") }) }
+            assertFailsWith<IllegalArgumentException> { api.catalog.update(Catalog.EQUIPMENT, template.entityId, buildJsonObject { put("image", "http://old/url.png") }) }
             // An equipment template is a StockEntity: the server keeps no version on it.
             assertFalse("version" in edited, "equipment gained a version: $edited")
-            assertFailsWith<IllegalArgumentException> { api.update(Catalog.EQUIPMENT, template.entityId, buildJsonObject { put("params", JsonArray(emptyList())) }) }
+            assertFailsWith<IllegalArgumentException> { api.catalog.update(Catalog.EQUIPMENT, template.entityId, buildJsonObject { put("params", JsonArray(emptyList())) }) }
 
             // Since 0.12.0 the class's start node comes with the character, free of charge.
-            val started = api.characterTree(id)
+            val started = api.tree.state(id)
             assertEquals(setOf(start.code), started.takenCodes, "a new character is not on its class node: $started")
             assertTrue(started.total > 0, "a levelled character has no skill points: $started")
             assertEquals(started.nodes.sumOf { node -> node.cost }, started.spent)
 
             val neighbour = tree.firstOrNull { it.code in start.connections } ?: fail("${start.code} has no neighbour")
-            val grown = api.allocateNode(id, neighbour.code)
+            val grown = api.tree.allocate(id, neighbour.code)
             assertEquals(setOf(start.code, neighbour.code), grown.takenCodes)
             assertEquals(started.available - neighbour.cost, grown.available)
             // A node's bonuses are a snapshot taken when it was allocated, and they are never rolled.
@@ -267,100 +267,100 @@ class ServerIntegrationTest {
             if (grown.nodes.any { node -> node.params.isNotEmpty() })
                 assertTrue(grown.totals.isNotEmpty(), "the tree gives nothing after a node with bonuses: $grown")
             // Taking what is already taken is refused, and the start node is the tree's root.
-            assertFailsWith<ApiFailure> { api.allocateNode(id, start.code) }
-            assertFailsWith<ApiFailure> { api.refundNode(id, start.code) }
+            assertFailsWith<ApiFailure> { api.tree.allocate(id, start.code) }
+            assertFailsWith<ApiFailure> { api.tree.refund(id, start.code) }
             // Since 0.16.0 giving a node back costs an Orb of Regret, so an empty bag is a refusal
             // and not a free undo.
-            assertFailsWith<ApiFailure> { api.refundNode(id, neighbour.code) }
+            assertFailsWith<ApiFailure> { api.tree.refund(id, neighbour.code) }
             val regret = orbs.firstOrNull { it.orb == CurrencyOrb.ORB_OF_REGRET } ?: fail("no Orb of Regret among ${orbs.map { it.code }}")
-            assertEquals("system.success", api.adjustItems(id, listOf(ItemStack(regret.id, 1))))
-            assertEquals(setOf(start.code), api.refundNode(id, neighbour.code).takenCodes)
+            assertEquals("system.success", api.hero.adjustItems(id, listOf(ItemStack(regret.id, 1))))
+            assertEquals(setOf(start.code), api.tree.refund(id, neighbour.code).takenCodes)
             // The orb is spent, not merely checked: a second refund would have to be paid for again.
-            assertTrue(api.bag(id).none { it.itemId == regret.id }, "the orb of regret was not spent")
+            assertTrue(api.hero.bag(id).none { it.itemId == regret.id }, "the orb of regret was not spent")
             // A reset is a respec: it leaves the character standing on its class node, not on nothing.
             // Nothing is left to give back here, so it costs no orb.
-            val respec = api.resetTree(id)
+            val respec = api.tree.reset(id)
             assertEquals(setOf(start.code), respec.takenCodes, "a reset emptied the tree: $respec")
             assertEquals(started.available, respec.available)
 
             // The auction needs two characters: the server refuses to let one buy its own lot.
             val buyerName = "EF-buyer-${java.util.UUID.randomUUID()}"
-            val buyer = api.create(Catalog.CHARACTERS, buildJsonObject {
+            val buyer = api.catalog.create(Catalog.CHARACTERS, buildJsonObject {
                 put("userId", admin.id); put("name", buyerName); put("description", "Auction buyer"); put("classId", chosenClass.id)
             }).entityId
             try {
                 // Both ends have to clear the level the auction opens at; the server names it itself.
-                api.addExperience(buyer, levels.last().experience)
+                api.hero.addExperience(buyer, levels.last().experience)
 
-                val listed = api.sellEquipment(id, wornInstance.id, chaos.id, 3)
+                val listed = api.auction.sellEquipment(id, wornInstance.id, chaos.id, 3)
                 assertEquals(AuctionLotStatus.ACTIVE, listed.status)
                 assertEquals(AuctionLotKind.EQUIPMENT, listed.kind)
                 // The lot stores a code, and the name comes back through the same dictionary.
                 assertEquals(equipmentTitle(wearable), listed.title)
                 assertEquals(wearable.text("code"), listed.itemCode)
                 // While it is listed the goods live in the lot, not with the seller.
-                assertTrue(api.inventory(id).none { it.id == wornInstance.id }, "the listed item stayed in the inventory")
-                assertEquals(listOf(listed.id), api.myLots(id).filter { it.onSale }.map { it.id })
+                assertTrue(api.hero.inventory(id).none { it.id == wornInstance.id }, "the listed item stayed in the inventory")
+                assertEquals(listOf(listed.id), api.auction.myLots(id).filter { it.onSale }.map { it.id })
 
                 // The showcase is the server's own search, and it hides the seller's own lots.
-                val own = api.auctionSearch(id, AuctionFilter(excludeSellerId = id), 0)
+                val own = api.auction.search(id, AuctionFilter(excludeSellerId = id), 0)
                 assertTrue(own.items.none { it.id == listed.id }, "the seller sees their own lot: $own")
                 // A lot has no name to match, so a text search is resolved to codes on the server —
                 // which is why the language the player typed in travels with it.
-                val shown = api.auctionSearch(buyer, AuctionFilter(title = listed.title, lang = serverLocale.language), 0)
+                val shown = api.auction.search(buyer, AuctionFilter(title = listed.title, lang = serverLocale.language), 0)
                 assertTrue(shown.items.any { it.id == listed.id }, "the lot is not on the showcase: $shown")
-                assertFailsWith<ApiFailure> { api.buyLot(id, listed.id) }
+                assertFailsWith<ApiFailure> { api.auction.buy(id, listed.id) }
 
                 // Paying: the orbs go to the seller, the goods to the buyer, in one transaction.
-                assertEquals("system.success", api.adjustItems(buyer, listOf(ItemStack(chaos.id, 3))))
-                val sold = api.buyLot(buyer, listed.id)
+                assertEquals("system.success", api.hero.adjustItems(buyer, listOf(ItemStack(chaos.id, 3))))
+                val sold = api.auction.buy(buyer, listed.id)
                 assertEquals(AuctionLotStatus.SOLD, sold.status)
                 assertEquals(buyer, sold.buyerId)
-                assertTrue(api.inventory(buyer).any { it.equipmentId == wearable.entityId }, "the buyer never got the item")
-                assertTrue(api.bag(buyer).none { it.itemId == chaos.id }, "the buyer kept the orbs")
-                assertEquals(3L, (api.bag(id).firstOrNull { it.itemId == chaos.id } ?: fail("the seller was not paid")).amount)
+                assertTrue(api.hero.inventory(buyer).any { it.equipmentId == wearable.entityId }, "the buyer never got the item")
+                assertTrue(api.hero.bag(buyer).none { it.itemId == chaos.id }, "the buyer kept the orbs")
+                assertEquals(3L, (api.hero.bag(id).firstOrNull { it.itemId == chaos.id } ?: fail("the seller was not paid")).amount)
                 // A closed lot is history: it never returns to the showcase and cannot be bought twice.
-                assertFailsWith<ApiFailure> { api.buyLot(buyer, listed.id) }
+                assertFailsWith<ApiFailure> { api.auction.buy(buyer, listed.id) }
 
                 // Withdrawing returns the goods; a stack lot travels the same way an instance does.
-                val stack = api.sellItem(id, chaos.id, 2, chaos.id, 1)
+                val stack = api.auction.sellItem(id, chaos.id, 2, chaos.id, 1)
                 assertEquals(2L, stack.amount)
-                assertEquals(1L, (api.bag(id).firstOrNull { it.itemId == chaos.id } ?: fail("the stack was not debited")).amount)
-                assertFalse(api.cancelLot(id, stack.id).onSale)
-                assertEquals(3L, (api.bag(id).firstOrNull { it.itemId == chaos.id } ?: fail("the stack never came back")).amount)
+                assertEquals(1L, (api.hero.bag(id).firstOrNull { it.itemId == chaos.id } ?: fail("the stack was not debited")).amount)
+                assertFalse(api.auction.cancel(id, stack.id).onSale)
+                assertEquals(3L, (api.hero.bag(id).firstOrNull { it.itemId == chaos.id } ?: fail("the stack never came back")).amount)
             } finally {
-                api.delete(Catalog.CHARACTERS, buyer)
+                api.catalog.delete(Catalog.CHARACTERS, buyer)
             }
 
             // A promo code pays out for real, which is the whole of what 0.19.0 changed: it used
             // to mark itself used and grant nothing. Experience, gold and a stack in one code,
             // because the point is that the reward lands as one transaction rather than in parts.
-            val before = api.character(id)
+            val before = api.hero.character(id)
             val code = "EF_TEST_" + System.nanoTime()
-            val promo = api.createRedemption(RedemptionCode(code = code, description = "integration",
+            val promo = api.promo.create(RedemptionCode(code = code, description = "integration",
                 treasure = listOf(
                     RedemptionReward(RedemptionKind.EXPERIENCE, amount = 250.0),
                     RedemptionReward(RedemptionKind.GOLD, amount = 70.0),
                     RedemptionReward(RedemptionKind.ITEM, chaos.id, 2.0))))
             try {
-                assertTrue(api.redemptionCodes().any { it.code == code }, "the code was not stored")
-                api.redeem(id, code)
-                val after = api.character(id)
+                assertTrue(api.promo.codes().any { it.code == code }, "the code was not stored")
+                api.hero.redeem(id, code)
+                val after = api.hero.character(id)
                 assertEquals(before.experience + 250.0, after.experience, "experience was not granted")
                 assertEquals(before.money + 70, after.money, "gold was not granted")
-                assertEquals(5L, (api.bag(id).firstOrNull { it.itemId == chaos.id } ?: fail("the orbs never arrived")).amount)
+                assertEquals(5L, (api.hero.bag(id).firstOrNull { it.itemId == chaos.id } ?: fail("the orbs never arrived")).amount)
                 // One code, one account: the second attempt is a refusal, not a second reward.
-                assertFailsWith<ApiFailure> { api.redeem(id, code) }
+                assertFailsWith<ApiFailure> { api.hero.redeem(id, code) }
             } finally {
-                api.deleteRedemption(promo.id)
+                api.promo.delete(promo.id)
             }
 
             val player = GameApi(url)
             player.login(requireNotNull(System.getenv("EF_PLAYER_LOGIN")), requireNotNull(System.getenv("EF_PLAYER_PASSWORD")))
             assertEquals("USER", assertNotNull(player.currentUser()).role)
         } finally {
-            api.delete(Catalog.CHARACTERS, id)
-            assertNull(api.get(Catalog.CHARACTERS, id))
+            api.catalog.delete(Catalog.CHARACTERS, id)
+            assertNull(api.catalog.get(Catalog.CHARACTERS, id))
         }
     }
 }

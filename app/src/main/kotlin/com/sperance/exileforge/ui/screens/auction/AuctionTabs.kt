@@ -58,31 +58,31 @@ import kotlinx.serialization.json.put
     var confirmBuy by remember { mutableStateOf<String?>(null) }
     LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
         item { header() }
-        if (s.showcase.items.isEmpty()) item {
+        if (s.market.showcase.items.isEmpty()) item {
             InfoCard(ui("tree.nothing_found"),
                 ui("auction.showcase_empty"))
         }
-        items(s.showcase.items, key = { it.id }) { lot ->
+        items(s.market.showcase.items, key = { it.id }) { lot ->
             // A seller cannot buy their own lot, and the server says so; the sheet does not offer it.
-            LotRow(s, lot, note = if (lot.belongsTo(s.characterId)) ui("auction.your_lot") else null) { openLot = lot.id }
+            LotRow(s, lot, note = if (lot.belongsTo(s.play.characterId)) ui("auction.your_lot") else null) { openLot = lot.id }
         }
-        if (s.showcase.totalPages > 1) item {
+        if (s.market.showcase.totalPages > 1) item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                OutlinedButton(enabled = !s.busy && s.showcase.page > 0, onClick = { onPage(s.showcase.page - 1) }) { Text(ui("common.back")) }
-                Text(ui("auction.page", s.showcase.page + 1, s.showcase.totalPages), color = Muted)
-                OutlinedButton(enabled = !s.busy && s.showcase.page + 1 < s.showcase.totalPages, onClick = { onPage(s.showcase.page + 1) }) { Text(ui("auction.forward")) }
+                OutlinedButton(enabled = !s.busy && s.market.showcase.page > 0, onClick = { onPage(s.market.showcase.page - 1) }) { Text(ui("common.back")) }
+                Text(ui("auction.page", s.market.showcase.page + 1, s.market.showcase.totalPages), color = Muted)
+                OutlinedButton(enabled = !s.busy && s.market.showcase.page + 1 < s.market.showcase.totalPages, onClick = { onPage(s.market.showcase.page + 1) }) { Text(ui("auction.forward")) }
             }
         }
     }
-    s.showcase.items.firstOrNull { it.id == openLot }?.let { lot ->
-        LotSheet(s, lot, action = ui("auction.buy"), enabled = !s.busy && !lot.belongsTo(s.characterId),
-            note = if (lot.belongsTo(s.characterId)) ui("auction.own_lot") else null,
+    s.market.showcase.items.firstOrNull { it.id == openLot }?.let { lot ->
+        LotSheet(s, lot, action = ui("auction.buy"), enabled = !s.busy && !lot.belongsTo(s.play.characterId),
+            note = if (lot.belongsTo(s.play.characterId)) ui("auction.own_lot") else null,
             loadBase = loadBase, onDismiss = { openLot = null }) { openLot = null; confirmBuy = lot.id }
     }
     // A purchase cannot be undone, so it is asked about — and an item the character cannot wear
     // is said so in the same breath, because that is exactly the mistake worth catching.
-    s.showcase.items.firstOrNull { it.id == confirmBuy }?.let { lot ->
-        val blocked = s.hero?.sheet?.unwearableBy?.get(lot.equipment?.equipmentId.orEmpty()).orEmpty()
+    s.market.showcase.items.firstOrNull { it.id == confirmBuy }?.let { lot ->
+        val blocked = s.play.hero?.sheet?.unwearableBy?.get(lot.equipment?.equipmentId.orEmpty()).orEmpty()
         val document = lotDocument(s, lot)
         val orb = orbTitle(s, lot)
         // What the bag keeps after paying: shown when the bag is known and can pay, and turned
@@ -117,7 +117,7 @@ import kotlinx.serialization.json.put
  */
 @Composable private fun ShowcaseFilter(s: ForgeState, vm: ForgeViewModel) {
     var more by remember { mutableStateOf(false) }
-    val f = s.auctionFilter
+    val f = s.market.filter
     val any = ui("common.all")
     ForgePanel {
         Engraved(ui("auction.search"))
@@ -126,7 +126,7 @@ import kotlinx.serialization.json.put
         Spinner(ui("auction.what_sold"), f.kind,
             mapOf("" to any) + AuctionLotKind.entries.associate { it.name to lotKindTitle(it, s.lang) }, !s.busy) { vm.auctionFilter(f.copy(kind = it)) }
         Spinner(ui("auction.priced_in"), f.priceOrbId,
-            mapOf("" to any) + s.orbs.associate { it.id to it.title(s.lang) }, !s.busy) { vm.auctionFilter(f.copy(priceOrbId = it)) }
+            mapOf("" to any) + s.world.orbs.associate { it.id to it.title(s.lang) }, !s.busy) { vm.auctionFilter(f.copy(priceOrbId = it)) }
         OutlinedTextField(f.maxPrice, { vm.auctionFilter(f.copy(maxPrice = it)) }, label = { Text(ui("auction.price_max")) },
             singleLine = true, modifier = Modifier.fillMaxWidth())
         TextButton(onClick = { more = !more }) { Text(ui("auction.more_filters", if (more) ui("common.hide") else ui("common.show"))) }
@@ -140,7 +140,7 @@ import kotlinx.serialization.json.put
         // Own lots cannot be bought, so they are dropped unless a seller wants to compare prices.
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text(ui("auction.show_mine"), modifier = Modifier.weight(1f))
-            Switch(checked = s.showOwnLots, enabled = !s.busy, onCheckedChange = { vm.showOwnLots(it); vm.loadShowcase(0) })
+            Switch(checked = s.market.showOwnLots, enabled = !s.busy, onCheckedChange = { vm.showOwnLots(it); vm.loadShowcase(0) })
         }
         Button(enabled = !s.busy, onClick = { vm.loadShowcase(0) }, modifier = Modifier.fillMaxWidth()) { Text(ui("auction.do_search")) }
         Text(ui("auction.filter_note"),
@@ -177,7 +177,7 @@ import kotlinx.serialization.json.put
  */
 @Composable private fun LotRow(s: ForgeState, lot: AuctionLot, note: String?, onClick: () -> Unit) {
     val document = lotDocument(s, lot)
-    ItemRow(document, definitions = s.definitions, enabled = !s.busy, note = note, noteColor = Muted,
+    ItemRow(document, definitions = s.world.definitions, enabled = !s.busy, note = note, noteColor = Muted,
         facts = lotFacts(s, lot, document),
         footer = {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
@@ -214,7 +214,7 @@ private fun lotFacts(s: ForgeState, lot: AuctionLot, document: JsonObject): List
  */
 private fun lotDocument(s: ForgeState, lot: AuctionLot): JsonObject {
     val instance = lot.equipment
-    val base = instance?.let { s.inventoryBases[it.equipmentId] }
+    val base = instance?.let { s.world.inventoryBases[it.equipmentId] }
     val own = buildJsonObject {
         put("name", lot.title)
         // A stack lot carries no instance, so without this it would have neither an icon nor an
@@ -259,7 +259,7 @@ private fun lotDocument(s: ForgeState, lot: AuctionLot): JsonObject {
                 item {
                     // The lot names the goods; the template would call an unread base "an item".
                     val document = JsonObject(inventoryDocument(instance, base) + ("name" to JsonPrimitive(lot.title)))
-                    ItemCard(document, enabled = false, detailed = true, definitions = s.definitions,
+                    ItemCard(document, enabled = false, detailed = true, definitions = s.world.definitions,
                         actionLabel = ui("auction.lot") + " · ${lot.id.takeLast(6)}")
                 }
             }
@@ -303,4 +303,4 @@ private fun listedAt(stamp: String): String? {
 private fun orbPrice(s: ForgeState, lot: AuctionLot): String = ui("confirm.amount", lot.price, orbTitle(s, lot))
 
 private fun orbTitle(s: ForgeState, lot: AuctionLot): String =
-    s.orbs.firstOrNull { it.id == lot.priceOrbId }?.title(s.lang) ?: ui("auction.orb_id", lot.priceOrbId.takeLast(6))
+    s.world.orbs.firstOrNull { it.id == lot.priceOrbId }?.title(s.lang) ?: ui("auction.orb_id", lot.priceOrbId.takeLast(6))

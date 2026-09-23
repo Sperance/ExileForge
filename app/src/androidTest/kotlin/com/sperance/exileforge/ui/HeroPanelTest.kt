@@ -29,6 +29,10 @@ import com.sperance.exileforge.core.model.hero.EquipmentInstance
 import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.core.model.modifier.Modifier as RolledModifier
 import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.AccountState
+import com.sperance.exileforge.presentation.state.PlayState
+import com.sperance.exileforge.presentation.state.WorldState
+import com.sperance.exileforge.presentation.state.MarketState
 import com.sperance.exileforge.core.model.currency.CurrencyItem
 import com.sperance.exileforge.ui.screens.hero.HeroEquipmentPanel
 import com.sperance.exileforge.ui.screens.hero.OrbPanel
@@ -80,9 +84,7 @@ class HeroPanelTest {
             listOf(instance), CharacterSheet("hero", 10, mapOf("STOCK_HEALTH" to 88.0, "STOCK_ARMOR" to 40.0), listOf("ring-instance")))
         var removed: String? = null
         compose.setContent { ForgeTheme { Column(Modifier.background(Ink).verticalScroll(rememberScrollState()).padding(12.dp)) {
-            HeroEquipmentPanel(ForgeState(busy = false, signedIn = true, hero = hero, characterOwner = "owner",
-                profile = com.sperance.exileforge.core.model.command.UserProfile("owner"),
-                inventoryBases = mapOf("ring-base" to base)), { removed = it })
+            HeroEquipmentPanel(ForgeState(busy = false, account = AccountState(signedIn = true, profile = com.sperance.exileforge.core.model.command.UserProfile("owner")), play = PlayState(hero = hero, characterOwner = "owner"), world = WorldState(inventoryBases = mapOf("ring-base" to base))), { removed = it })
         } } }
         val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
         val directory = File(InstrumentationRegistry.getInstrumentation().targetContext.getExternalFilesDir(null), "design").apply { mkdirs() }
@@ -117,10 +119,7 @@ class HeroPanelTest {
             CharacterSheet("hero", 3, mapOf("STOCK_HEALTH" to 60.0), emptyList(),
                 listOf(InactiveEquipment("helm-instance", "IRON_HELMET", listOf("strength: need 30, have 14")))))
         compose.setContent { ForgeTheme { Column(Modifier.background(Ink).verticalScroll(rememberScrollState()).padding(12.dp)) {
-            HeroEquipmentPanel(ForgeState(busy = false, signedIn = true, hero = hero, characterOwner = "owner",
-                profile = com.sperance.exileforge.core.model.command.UserProfile("owner"),
-                classes = listOf(CharacterClass("marauder", "MARAUDER", "STR_START")),
-                inventoryBases = mapOf("helm-base" to base)), {})
+            HeroEquipmentPanel(ForgeState(busy = false, account = AccountState(signedIn = true, profile = com.sperance.exileforge.core.model.command.UserProfile("owner")), play = PlayState(hero = hero, characterOwner = "owner"), world = WorldState(classes = listOf(CharacterClass("marauder", "MARAUDER", "STR_START")), inventoryBases = mapOf("helm-base" to base))), {})
         } } }
         compose.onNodeWithText("Мародёр").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Не работает").performScrollTo().assertIsDisplayed()
@@ -144,13 +143,11 @@ class HeroPanelTest {
         compose.setContent { ForgeTheme {
             // The search reads the query off the state, as it does in the app, so the test has to
             // hold one: typing into a screen whose state never moves proves nothing.
-            var state by remember { mutableStateOf(ForgeState(busy = false, signedIn = true, hero = hero,
-                characterOwner = "owner", profile = com.sperance.exileforge.core.model.command.UserProfile("owner"),
-                treeNodes = listOf(start, life), selectedNode = "STR_LIFE_1")) }
+            var state by remember { mutableStateOf(ForgeState(busy = false, account = AccountState(signedIn = true, profile = com.sperance.exileforge.core.model.command.UserProfile("owner")), play = PlayState(hero = hero, characterOwner = "owner", selectedNode = "STR_LIFE_1"), world = WorldState(treeNodes = listOf(start, life)))) }
             Column(Modifier.fillMaxSize().background(Ink).padding(12.dp)) {
-                SkillTreePanel(state, onSelect = { state = state.copy(selectedNode = it) },
+                SkillTreePanel(state, onSelect = { state = state.copy(play = state.play.copy(selectedNode = it)) },
                     onAllocate = { allocated = it }, onRefund = {}, onReset = {},
-                    onQuery = { state = state.copy(nodeQuery = it) }, modifier = Modifier.weight(1f))
+                    onQuery = { state = state.copy(play = state.play.copy(nodeQuery = it)) }, modifier = Modifier.weight(1f))
             }
         } }
         // The map takes the whole panel; the balance is on it and everything else opens over it.
@@ -204,14 +201,9 @@ class HeroPanelTest {
             equipment = null, price = 7)
         var bought: String? = null
         compose.setContent { ForgeTheme { Column(Modifier.background(Ink)) {
-            ShowcaseList(ForgeState(busy = false, signedIn = true, characterId = "hero", characterOwner = "owner",
-                profile = com.sperance.exileforge.core.model.command.UserProfile("owner"), orbs = listOf(chaos),
-                hero = HeroView(CharacterSummary("hero", "owner", "Изгнанник"),
+            ShowcaseList(ForgeState(busy = false, account = AccountState(signedIn = true, profile = com.sperance.exileforge.core.model.command.UserProfile("owner")), play = PlayState(characterId = "hero", characterOwner = "owner", hero = HeroView(CharacterSummary("hero", "owner", "Изгнанник"),
                     sheet = CharacterSheet(unwearable = listOf(
-                        UnwearableEquipment("helmet-base", reasons = listOf("strength: need 30, have 14"))))),
-                auctionFilter = AuctionFilter(), showOwnLots = true,
-                inventoryBases = mapOf("helmet-base" to base),
-                showcase = AuctionPage(listOf(theirs, mine), 0, 20, 2, 1)),
+                        UnwearableEquipment("helmet-base", reasons = listOf("strength: need 30, have 14")))))), world = WorldState(orbs = listOf(chaos), inventoryBases = mapOf("helmet-base" to base)), market = MarketState(filter = AuctionFilter(), showOwnLots = true, showcase = AuctionPage(listOf(theirs, mine), 0, 20, 2, 1))),
                 onBuy = { bought = it }, onPage = {})
         } } }
         // The name, in the chosen language and in it alone: no English twin beside it.
@@ -252,9 +244,7 @@ class HeroPanelTest {
             bag = listOf(com.sperance.exileforge.core.model.hero.CharacterItem("chaos-orb", 7)))
         var applied: Pair<String, String>? = null
         compose.setContent { ForgeTheme { Column(Modifier.background(Ink).verticalScroll(rememberScrollState()).padding(12.dp)) {
-            OrbPanel(ForgeState(busy = false, signedIn = true, hero = hero, characterOwner = "owner",
-                profile = com.sperance.exileforge.core.model.command.UserProfile("owner"),
-                inventoryBases = mapOf("ring-base" to base), orbs = listOf(chaos), selectedOrb = "chaos-orb"),
+            OrbPanel(ForgeState(busy = false, account = AccountState(signedIn = true, profile = com.sperance.exileforge.core.model.command.UserProfile("owner")), play = PlayState(hero = hero, characterOwner = "owner", selectedOrb = "chaos-orb"), world = WorldState(inventoryBases = mapOf("ring-base" to base), orbs = listOf(chaos))),
                 "ring-instance", {}, { item, orb -> applied = item to orb })
         } } }
         // The count the character owns rides along with the orb's own translated name.

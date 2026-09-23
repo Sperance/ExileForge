@@ -1,6 +1,9 @@
 package com.sperance.exileforge.presentation
 
 import com.sperance.exileforge.core.display.IconBundle
+import com.sperance.exileforge.core.display.PortraitBundle
+import com.sperance.exileforge.core.display.PortraitSvg
+import com.sperance.exileforge.core.display.serverPortraits
 import com.sperance.exileforge.core.display.serverIcons
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.LocaleBundle
@@ -26,9 +29,11 @@ import com.sperance.exileforge.presentation.state.ADMIN_TABS
 import com.sperance.exileforge.presentation.state.ForgeState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 
@@ -188,7 +193,36 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
             try { loadIcons() }
             catch (e: CancellationException) { throw e }
             catch (_: Exception) { }
+            try { loadPortraits() }
+            catch (e: CancellationException) { throw e }
+            catch (_: Exception) { }
         }
+    }
+
+    /**
+     * The server's portraits (since 2.31.0): the manifest names a fingerprint per file, and only a
+     * file whose fingerprint moved is fetched again. What is stored is shown at once, before the
+     * manifest answers. A portrait that will not parse is dropped, and the client draws its own bust.
+     */
+    suspend fun loadPortraits() {
+        val server = state.value.account.server
+        val cached = store.portraits(server)
+        applyPortraits(cached)
+        val manifest = api.files.portraitManifest()
+        val fresh = manifest.portraits.mapValues { (key, hash) ->
+            cached[key]?.takeIf { it.first == hash } ?: (hash to api.files.portraitDocument(key))
+        }
+        if (fresh == cached) return
+        store.savePortraits(server, fresh)
+        applyPortraits(fresh)
+    }
+
+    private suspend fun applyPortraits(files: Map<String, Pair<String, String>>) {
+        val parsed = withContext(Dispatchers.Default) {
+            files.mapNotNull { (key, file) -> runCatching { key to PortraitSvg.parse(file.second) }.getOrNull() }.toMap()
+        }
+        serverPortraits = PortraitBundle(parsed)
+        mutable.update { it.copy(world = it.world.copy(portraits = parsed.size)) }
     }
 
     private fun applyIcons(bundle: IconBundle) {

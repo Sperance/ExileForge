@@ -7,6 +7,11 @@ import com.sperance.exileforge.presentation.state.Reads
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CutCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
@@ -108,9 +113,14 @@ import com.sperance.exileforge.ui.theme.*
 @Composable private fun CharacterCard(s: ForgeState, character: CharacterSummary, onPlay: () -> Unit, onDelete: () -> Unit) {
     val characterClass = s.world.classes.firstOrNull { it.id == character.classId }
     ForgePanel(modifier = Modifier.clickable(enabled = !s.busy, onClick = onPlay)) {
-        Text(character.name, color = GoldBright, style = MaterialTheme.typography.titleMedium)
-        PropertyRow(ui("common.class"), characterClass?.title ?: ui("chars.unknown"), Glyph.CHARACTER)
-        PropertyRow(ui("common.level"), character.level.toString(), Glyph.LEVEL)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            ClassPortrait(characterClass?.code, s.world.portraits, Modifier.size(64.dp), round = true)
+            Column(Modifier.weight(1f)) {
+                Text(character.name, color = GoldBright, style = MaterialTheme.typography.titleMedium)
+                PropertyRow(ui("common.class"), characterClass?.title ?: ui("chars.unknown"), Glyph.CHARACTER)
+                PropertyRow(ui("common.level"), character.level.toString(), Glyph.LEVEL)
+            }
+        }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(enabled = !s.busy, onClick = onPlay, modifier = Modifier.weight(1f)) { Text(ui("auth.play")) }
             OutlinedButton(enabled = !s.busy, onClick = onDelete) { Text(ui("chars.release_do"), color = MaterialTheme.colorScheme.error) }
@@ -135,7 +145,19 @@ import com.sperance.exileforge.ui.theme.*
             singleLine = true, modifier = Modifier.fillMaxWidth())
         if (s.world.classes.isEmpty()) Text(ui("editor.no_classes"),
             color = MaterialTheme.colorScheme.error)
-        else Spinner(ui("common.class"), classId, s.world.classes.associate { it.id to it.title }, !s.busy, glyph = Glyph.CHARACTER) { classId = it }
+        // Every class as its portrait, three by four, side by side: the one chosen is framed in gold.
+        else LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            items(s.world.classes, key = { it.id }) { option ->
+                val picked = option.id == classId
+                val shape = CutCornerShape(8.dp)
+                Column(Modifier.width(96.dp).border(if (picked) 2.dp else 1.dp, if (picked) GoldBright else Bronze.copy(alpha = .5f), shape)
+                    .clip(shape).clickable(enabled = !s.busy) { classId = option.id }, horizontalAlignment = Alignment.CenterHorizontally) {
+                    ClassPortrait(option.code, s.world.portraits, Modifier.fillMaxWidth())
+                    Text(option.title, color = if (picked) GoldBright else Parchment, style = MaterialTheme.typography.labelMedium,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(4.dp))
+                }
+            }
+        }
         chosen?.let { option ->
             if (option.details.isNotBlank()) Text(option.details, color = Muted, style = MaterialTheme.typography.bodySmall)
             Text(ui("editor.level1_base") + option.baseStats.joinToString(" · ") {

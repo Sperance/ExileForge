@@ -3,7 +3,6 @@ package com.sperance.exileforge.ui.screens.hero
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -14,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.ui.components.ClassPortrait
 import com.sperance.exileforge.ui.components.ForgePanel
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
@@ -31,9 +31,8 @@ import com.sperance.exileforge.ui.theme.*
     val character = hero.character
     ForgePanel {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            Box(Modifier.size(60.dp).background(PanelRaised, CircleShape).border(1.dp, Bronze, CircleShape), contentAlignment = Alignment.Center) {
-                Icon(ForgeGlyphs.Exile, null, tint = Gold, modifier = Modifier.size(34.dp))
-            }
+            // The class's portrait as the map's token (since 2.31.0).
+            ClassPortrait(s.heroClass?.code, s.world.portraits, Modifier.size(64.dp), round = true)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(character.name, style = MaterialTheme.typography.headlineSmall, color = GoldBright)
                 // The class is the base every percentage is counted from; the server owns it.

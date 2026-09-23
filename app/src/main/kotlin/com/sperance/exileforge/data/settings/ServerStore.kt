@@ -4,7 +4,12 @@ import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.i18n.Lang
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
@@ -80,6 +85,28 @@ class ServerStore(private val context: Context) {
 
     private fun iconHashKey(server: String) = stringPreferencesKey("icons:$server:hash")
     private fun iconBodyKey(server: String) = stringPreferencesKey("icons:$server:body")
+
+    /**
+     * The server's portraits (since 2.31.0): every SVG verbatim beside the fingerprint it was served
+     * with, by key, in one entry per server — a changed file is fetched again, the rest never are.
+     */
+    suspend fun portraits(server: String): Map<String, Pair<String, String>> {
+        val stored = context.settings.data.first()[portraitKey(server)] ?: return emptyMap()
+        return runCatching {
+            WireJson.parseToJsonElement(stored).jsonObject.mapValues { (_, value) ->
+                value.jsonObject.let { it.getValue("hash").jsonPrimitive.content to it.getValue("body").jsonPrimitive.content }
+            }
+        }.getOrDefault(emptyMap())
+    }
+
+    suspend fun savePortraits(server: String, portraits: Map<String, Pair<String, String>>) {
+        val document = buildJsonObject {
+            portraits.forEach { (key, file) -> put(key, buildJsonObject { put("hash", file.first); put("body", file.second) }) }
+        }
+        context.settings.edit { it[portraitKey(server)] = document.toString() }
+    }
+
+    private fun portraitKey(server: String) = stringPreferencesKey("portraits:$server")
 
     /**
      * Whether the last session was played on this device's own account.

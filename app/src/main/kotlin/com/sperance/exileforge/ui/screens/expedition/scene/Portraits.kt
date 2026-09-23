@@ -7,6 +7,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import com.sperance.exileforge.core.display.classPortrait
+import com.sperance.exileforge.core.display.monsterPortrait
+import com.sperance.exileforge.ui.icons.drawPortrait
 import kotlin.math.sin
 
 /**
@@ -20,7 +23,15 @@ import kotlin.math.sin
  */
 object Portraits {
 
-    fun hero(scope: DrawScope, time: Float, wash: Color? = null, washAmount: Float = 0f, flash: Float = 0f) = with(scope) {
+    /**
+     * The hero's bust: the server's portrait of the class when there is one (since 2.31.0), breathing
+     * a little, and the client's own helm otherwise.
+     */
+    fun hero(scope: DrawScope, classCode: String?, time: Float, wash: Color? = null, washAmount: Float = 0f, flash: Float = 0f) = with(scope) {
+        classPortrait(classCode)?.let {
+            drawPortrait(it, sin(time * 1.5f) * size.height * .006f)
+            return@with finish(scope, wash, washAmount, flash)
+        }
         val w = size.width
         val h = size.height
         drawRect(Brush.verticalGradient(listOf(Color(0xFF2A2F3A), Color(0xFF0B0E13))))
@@ -55,7 +66,12 @@ object Portraits {
         finish(scope, wash, washAmount, flash)
     }
 
-    fun monster(scope: DrawScope, form: String, accent: Color, time: Float, wash: Color? = null, washAmount: Float = 0f, flash: Float = 0f) = with(scope) {
+    /** A monster's bust: its own portrait, then its form's, then the client's own drawing of the form. */
+    fun monster(scope: DrawScope, code: String, form: String, accent: Color, time: Float, wash: Color? = null, washAmount: Float = 0f, flash: Float = 0f) = with(scope) {
+        monsterPortrait(code, form)?.let {
+            drawPortrait(it, sin(time * 1.2f + 1f) * size.height * .006f)
+            return@with finish(scope, wash, washAmount, flash)
+        }
         val w = size.width
         val h = size.height
         val body = Palettes.body(form)

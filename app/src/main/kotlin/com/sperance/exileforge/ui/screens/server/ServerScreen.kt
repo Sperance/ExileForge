@@ -70,6 +70,7 @@ import com.sperance.exileforge.ui.theme.Panel
             if (s.world.iconKeys > 0) PropertyRow(ui("account.icons"),
                 ui("account.icons_count", s.world.iconKeys, s.world.iconSprites), Glyph.IMAGE)
             else Text(ui("account.icons_missing"), color = Muted, style = MaterialTheme.typography.bodySmall)
+            if (s.world.portraits > 0) PropertyRow(ui("account.portraits"), s.world.portraits.toString(), Glyph.IMAGE)
             OutlinedButton(enabled = !s.busy, onClick = { vm.refreshLocale(); vm.refreshIcons() }, modifier = Modifier.fillMaxWidth()) { Text(ui("account.reread_bundles")) }
         }
         ForgePanel {

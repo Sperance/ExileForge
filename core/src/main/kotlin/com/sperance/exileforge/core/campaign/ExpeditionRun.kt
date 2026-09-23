@@ -20,6 +20,9 @@ enum class RunPhase { MAP, FIGHT, LOOT, DEAD, CLEARED, LEFT }
 data class FloatingHit(val id: Int, val target: Side, val action: Action, val kind: HitKind, val amount: Int, val age: Double, val healed: Int,
     val type: DamageType?, val inflicted: List<Ailment>, val stunned: Boolean)
 
+/** The blow on screen right now, for the frames to act out: who, what, whether it landed, and how far along (0..1). */
+data class LungeView(val actor: Side, val action: Action, val kind: HitKind, val landed: Boolean, val progress: Float)
+
 /** An ailment on a fighter as the overlay prints it: what, how much of it is left (1 fresh, 0 gone), and how many stacks. */
 data class AilmentView(val ailment: Ailment, val left: Float, val stacks: Int)
 
@@ -41,6 +44,7 @@ data class FightHud(
     val heroAilments: List<AilmentView> = emptyList(), val monsterAilments: List<AilmentView> = emptyList(),
     val heroHeld: Boolean = false, val monsterHeld: Boolean = false,
     val flasks: Int = 0, val flaskActive: Boolean = false, val retreating: Boolean = false,
+    val lunge: LungeView? = null,
     val events: List<CombatEvent> = emptyList(),
 )
 
@@ -281,6 +285,7 @@ class ExpeditionRun(
             heroAilments = ailments(h), monsterAilments = ailments(m),
             heroHeld = h.held, monsterHeld = m.held,
             flasks = battle.flasks, flaskActive = battle.flaskActive, retreating = battle.retreating,
+            lunge = battle.lunge()?.let { (event, progress) -> LungeView(event.actor, event.action, event.kind, event.landed, progress.toFloat()) },
             events = battle.events.toList().asReversed(),
         )
     }

@@ -1,10 +1,7 @@
 package com.sperance.exileforge.ui.screens.expedition.scene
 
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.lerp
-import com.sperance.exileforge.core.campaign.Ailment
 import kotlin.math.abs
-import kotlin.math.cos
 import kotlin.math.sin
 
 /**
@@ -16,76 +13,7 @@ import kotlin.math.sin
  */
 internal class Figures(private val pen: Pen) {
 
-    /** A wash over the whole figure — frost, fire, venom — set around a drawing by [tinted]. */
-    private var tint: Color? = null
-    private var tintAmount = 0f
-
-    private fun paint(base: Color, flash: Float, alpha: Float, dim: Float = 1f) {
-        val plain = tone(base, dim, flash, alpha)
-        pen.color = tint?.let { lerp(plain, it.copy(alpha = plain.alpha), tintAmount) } ?: plain
-    }
-
-    /** Draws [figure] washed by the strongest of [ailments]; a shock flickers rather than stays. */
-    fun tinted(ailments: List<Ailment>, time: Float, figure: () -> Unit) {
-        val strongest = ailments.map { it to Palettes.ailment(it) }.maxByOrNull { it.second.second }
-        tint = strongest?.second?.first
-        tintAmount = strongest?.let { (ailment, wash) -> if (ailment == Ailment.SHOCKED) wash.second * abs(sin(time * 30f)) else wash.second } ?: 0f
-        figure()
-        tint = null
-        tintAmount = 0f
-    }
-
-    /** The particles of what is on a figure `size` tall standing at `(x, y)`: flames, frost, sparks, bubbles, drips. */
-    fun ailments(ailments: List<Ailment>, x: Float, y: Float, size: Float, time: Float) {
-        val u = size / 10f
-        ailments.distinct().forEach { ailment ->
-            when (ailment) {
-                Ailment.BURNING -> for (i in 0..4) {
-                    val phase = (time * 2.2f + i * .37f) % 1f
-                    pen.color = Palettes.ember.copy(alpha = .75f * (1 - phase))
-                    val fx = x + sin(time * 5f + i * 1.7f) * u * 1.6f
-                    pen.triangle(fx - u * .5f, y + u * (2f + phase * 8f), fx + u * .5f, y + u * (2f + phase * 8f), fx, y + u * (3.6f + phase * 8f))
-                }
-                Ailment.CHILLED, Ailment.FROZEN -> for (i in 0..5) {
-                    val phase = (time * .6f + i * .17f) % 1f
-                    pen.color = Palettes.frost.copy(alpha = if (ailment == Ailment.FROZEN) .8f else .45f)
-                    val fx = x + cos(i * 1.05f + time * .8f) * u * 3.2f
-                    val fy = y + u * (1f + 8f * phase)
-                    pen.line(fx - u * .4f, fy, fx + u * .4f, fy, u * .15f)
-                    pen.line(fx, fy - u * .4f, fx, fy + u * .4f, u * .15f)
-                }
-                Ailment.SHOCKED -> for (i in 0..3) {
-                    val jitter = sin(time * 40f + i * 2.1f)
-                    pen.color = Palettes.spark.copy(alpha = .5f + .4f * abs(jitter))
-                    val sx = x + (i - 1.5f) * u * 1.8f
-                    val sy = y + u * (3f + 3f * abs(cos(time * 13f + i)))
-                    pen.line(sx, sy, sx + u * .9f * jitter, sy + u * 1.6f, u * .2f)
-                    pen.line(sx + u * .9f * jitter, sy + u * 1.6f, sx + u * .3f * jitter, sy + u * 3f, u * .2f)
-                }
-                Ailment.POISONED -> for (i in 0..4) {
-                    val phase = (time * .9f + i * .23f) % 1f
-                    pen.color = Palettes.venom.copy(alpha = .6f * (1 - phase))
-                    pen.circle(x + sin(i * 2.3f + time) * u * 2.6f, y + u * (1f + phase * 9f), u * (.35f + .25f * phase))
-                }
-                Ailment.BLEEDING -> for (i in 0..3) {
-                    val phase = (time * 1.4f + i * .29f) % 1f
-                    pen.color = Palettes.blood.copy(alpha = .8f * (1 - phase * .6f))
-                    val bx = x + (i - 1.5f) * u * 1.3f
-                    pen.ellipse(bx - u * .2f, y + u * (5.5f - 5.5f * phase), u * .4f, u * .8f)
-                }
-            }
-        }
-    }
-
-    /** Stars over a stunned or frozen head: nothing is swung until they pass. */
-    fun daze(x: Float, top: Float, size: Float, time: Float) {
-        val u = size / 10f
-        for (i in 0..2) {
-            val angle = time * 4f + i * 2.1f
-            pen.color = Palettes.spark.copy(alpha = .85f)
-            pen.circle(x + cos(angle) * u * 1.8f, top + u * .8f + sin(angle) * u * .5f, u * .28f)
-        }
-    }
+    private fun paint(base: Color, flash: Float, alpha: Float, dim: Float = 1f) { pen.color = tone(base, dim, flash, alpha) }
 
     fun shadow(x: Float, y: Float, width: Float, alpha: Float = .45f) {
         pen.color = Color(0f, 0f, 0f, alpha)

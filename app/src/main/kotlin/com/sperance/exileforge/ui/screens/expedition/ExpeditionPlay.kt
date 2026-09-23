@@ -40,7 +40,6 @@ import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.expedition.scene.ExpeditionScene
-import com.sperance.exileforge.ui.screens.expedition.scene.FightLayout
 import com.sperance.exileforge.ui.theme.*
 import kotlin.math.hypot
 import kotlin.math.roundToInt

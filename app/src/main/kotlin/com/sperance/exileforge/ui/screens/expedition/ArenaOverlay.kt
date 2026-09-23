@@ -2,6 +2,7 @@ package com.sperance.exileforge.ui.screens.expedition
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -18,14 +19,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -38,10 +43,12 @@ import com.sperance.exileforge.presentation.features.key
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
-import com.sperance.exileforge.ui.screens.expedition.scene.FightLayout
+import com.sperance.exileforge.ui.screens.expedition.scene.Portraits
 import com.sperance.exileforge.ui.theme.*
 import java.util.Locale
+import kotlin.math.PI
 import kotlin.math.roundToInt
+import kotlin.math.sin
 
 internal fun rarityTint(rarity: MonsterRarity) = when (rarity) {
     MonsterRarity.NORMAL -> Parchment
@@ -49,7 +56,7 @@ internal fun rarityTint(rarity: MonsterRarity) = when (rarity) {
     MonsterRarity.RARE -> Color(0xFFFFFF77)
 }
 
-/** Each damage type's colour, on a number, in the log and on the scene alike. */
+/** Each damage type's colour, on a number and in the log alike. */
 internal fun damageTint(type: DamageType?, onHero: Boolean = false): Color = when (type) {
     DamageType.FIRE -> Ember
     DamageType.COLD -> ShieldCyan
@@ -73,64 +80,91 @@ internal fun Ailment.key() = "enum.ailment.$name"
 internal fun DamageType.key() = "enum.damage.$name"
 
 /**
- * The fight — «Арена» (2.26.0, reworked in 2.27.0): the two sides named on top, each with life,
- * shield, the hero's mana, a bar that fills toward its next swing at its own attack speed and a
- * second one toward its next spell, and whatever is on it — burning, chilled, frozen, shocked,
- * poisoned, bleeding — as chips that drain as the ailment runs out; the fighters in the middle,
- * drawn by the scene; the log under them, newest line first, which unfolds over the scene on
- * demand; and the player's two hands: the flask and the way out.
+ * The fight — «Арена», as heraldry since 2.28.0 (the owner's pick of five): two framed portraits
+ * side by side, the hero's in gold and the monster's in its rarity's colour, cut-cornered as an
+ * item's frame is. The frame carries everything about its fighter: the name and what it is on top,
+ * the bust in the middle, and under it life with the shield over it, the hero's mana, a bar that
+ * fills toward the next swing at its own attack speed, one toward the next spell, and the ailments
+ * on it as chips that drain as they wear off. What the monster rolled sits under its frame, apart
+ * from it, in the rune blue the modifiers are written in everywhere.
  *
- * Everything here is read off [FightHud]; the numbers flying off the fighters are placed over the
- * spots [FightLayout] gives the scene, so a hit rises from the one who took it, coloured by what it was.
+ * A blow is the frame itself: it draws back and strikes the other frame, a flash bursts where they
+ * meet, the number rises off the one that was hit and its frame shudders. A spell is a bolt from
+ * frame to frame; a flask is a green glow on the hero's; a stunned or frozen fighter's frame dims.
+ * Under the frames, the log, newest line first, which unfolds over the scene on demand, and the
+ * player's two hands: the flask and the way out.
  */
 @Composable internal fun ArenaOverlay(s: ForgeState, hud: RunHud, fight: FightHud, level: Int, onCommand: (RunCommand) -> Unit) {
     var logOpen by rememberSaveable { mutableStateOf(false) }
     val monster = fight.monster
     val hero = s.play.hero?.character
+    val lunge = fight.lunge
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        val width = maxWidth
         val height = maxHeight
-        val density = LocalDensity.current
-        fight.hits.forEach { hit ->
-            val column = if (hit.target == Side.HERO) FightLayout.HERO_X else FightLayout.MONSTER_X
-            val rise = (hit.age / ExpeditionRun.HIT_LIFETIME).toFloat()
-            val x = with(density) { (width * column).toPx() } + ((hit.id % 3) - 1) * 40f
-            val y = with(density) { (height * (FightLayout.GROUND_Y - .3f)).toPx() } - rise * 120f
-            val alpha = (1 - rise).coerceIn(0f, 1f)
-            Column(Modifier.offset { IntOffset((x - 60f).roundToInt(), y.roundToInt()) }.width(120.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(hitText(hit), color = hitColour(hit).copy(alpha = alpha), textAlign = TextAlign.Center,
-                    fontSize = when { hit.kind == HitKind.CRIT -> 30.sp; hit.action == Action.TICK -> 16.sp; else -> 22.sp },
-                    fontWeight = if (hit.action == Action.TICK) FontWeight.Normal else FontWeight.Bold,
-                    fontStyle = if (hit.action == Action.TICK) FontStyle.Italic else FontStyle.Normal)
-                // What the blow left behind is said under the number: a stun, an ailment.
-                val marks = (if (hit.stunned) listOf(ui("expedition.stunned")) else emptyList()) + hit.inflicted.map { ui(it.key()) }
-                if (marks.isNotEmpty()) Text(marks.joinToString(" · "), color = (hit.inflicted.firstOrNull()?.let(::ailmentTint) ?: GoldBright).copy(alpha = alpha),
-                    style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
-            }
-        }
-        fight.outcome?.let {
-            Text(ui("expedition.outcome_${it.name.lowercase()}"), color = outcomeColour(it), style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.align(Alignment.Center))
-        }
         Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(10.dp)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Nameplate(Modifier.weight(1f), hero?.name.orEmpty(), ui("expedition.hero_line", s.heroClass?.title.orEmpty(), hero?.level ?: 1), GoldBright,
-                    fight.heroLife, hud.heroMaxLife, fight.heroShield, hud.heroMaxShield, fight.heroMana, fight.heroMaxMana,
-                    fight.heroSwing, fight.heroCast.takeIf { fight.heroCasts }, fight.heroAilments, fight.heroHeld, alignEnd = false)
-                Nameplate(Modifier.weight(1f), monsterTitle(monster.code), ui("expedition.monster_line", ui(monster.rarity.key()), level), rarityTint(monster.rarity),
-                    fight.monsterLife, fight.monsterMaxLife, fight.monsterShield, fight.monsterMaxShield, 0, 0,
-                    fight.monsterSwing, fight.monsterCast.takeIf { fight.monsterCasts }, fight.monsterAilments, fight.monsterHeld, alignEnd = true)
-            }
-            // What the monster rolled sits under its own name: a tier's strength is read before the fight.
-            Column(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalAlignment = Alignment.End) {
-                monster.modifiers.forEach {
-                    Text(monsterModifierText(it), color = Rune, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.End)
+            // The frames and everything that flies between them.
+            BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
+                val gap = 12.dp
+                val cardWidth = (maxWidth - gap) / 2
+                val cardHeight = maxHeight
+                val reach = cardWidth * .3f
+                val heroShift = shift(lunge, Side.HERO, reach)
+                val monsterShift = shift(lunge, Side.MONSTER, reach)
+                Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(gap)) {
+                    FighterFrame(Modifier.weight(1f).fillMaxHeight().offset { IntOffset(heroShift.roundToPx(), 0) },
+                        side = Side.HERO, accent = GoldBright, name = hero?.name.orEmpty(),
+                        line = ui("expedition.hero_line", s.heroClass?.title.orEmpty(), hero?.level ?: 1),
+                        life = fight.heroLife, maxLife = hud.heroMaxLife, shield = fight.heroShield, maxShield = hud.heroMaxShield,
+                        mana = fight.heroMana, maxMana = fight.heroMaxMana, swing = fight.heroSwing, cast = fight.heroCast.takeIf { fight.heroCasts },
+                        ailments = fight.heroAilments, held = fight.heroHeld, flash = flash(lunge, Side.HERO), glow = if (fight.flaskActive) Vital else null,
+                        portrait = { time, wash, amount, flash -> Portraits.hero(this, time, wash, amount, flash) })
+                    FighterFrame(Modifier.weight(1f).fillMaxHeight().offset { IntOffset(monsterShift.roundToPx(), 0) },
+                        side = Side.MONSTER, accent = rarityTint(monster.rarity), name = monsterTitle(monster.code),
+                        line = ui("expedition.monster_line", ui(monster.rarity.key()), level),
+                        life = fight.monsterLife, maxLife = fight.monsterMaxLife, shield = fight.monsterShield, maxShield = fight.monsterMaxShield,
+                        mana = 0, maxMana = 0, swing = fight.monsterSwing, cast = fight.monsterCast.takeIf { fight.monsterCasts },
+                        ailments = fight.monsterAilments, held = fight.monsterHeld, flash = flash(lunge, Side.MONSTER), glow = null,
+                        portrait = { time, wash, amount, flash -> Portraits.monster(this, monster.form, rarityTint(monster.rarity), time, wash, amount, flash) })
+                }
+                Strikes(lunge, cardWidth, cardHeight, gap)
+                // The numbers rise off the frame that was hit, coloured by what hit it.
+                val density = LocalDensity.current
+                fight.hits.forEach { hit ->
+                    val centre = if (hit.target == Side.HERO) cardWidth / 2 else cardWidth * 1.5f + gap
+                    val rise = (hit.age / ExpeditionRun.HIT_LIFETIME).toFloat()
+                    val x = with(density) { centre.toPx() } + ((hit.id % 3) - 1) * 26f
+                    val y = with(density) { (cardHeight * .42f).toPx() } - rise * 110f
+                    val alpha = (1 - rise).coerceIn(0f, 1f)
+                    Column(Modifier.offset { IntOffset((x - 70f).roundToInt(), y.roundToInt()) }.width(140.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(hitText(hit), color = hitColour(hit).copy(alpha = alpha), textAlign = TextAlign.Center,
+                            fontSize = when { hit.kind == HitKind.CRIT -> 30.sp; hit.action == Action.TICK -> 16.sp; else -> 22.sp },
+                            fontWeight = if (hit.action == Action.TICK) FontWeight.Normal else FontWeight.Bold,
+                            fontStyle = if (hit.action == Action.TICK) FontStyle.Italic else FontStyle.Normal)
+                        val marks = (if (hit.stunned) listOf(ui("expedition.stunned")) else emptyList()) + hit.inflicted.map { ui(it.key()) }
+                        if (marks.isNotEmpty()) Text(marks.joinToString(" · "), color = (hit.inflicted.firstOrNull()?.let(::ailmentTint) ?: GoldBright).copy(alpha = alpha),
+                            style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
+                    }
+                }
+                fight.outcome?.let {
+                    Text(ui("expedition.outcome_${it.name.lowercase()}"), color = outcomeColour(it), style = MaterialTheme.typography.headlineMedium,
+                        modifier = Modifier.align(Alignment.Center).background(Ink.copy(alpha = .7f), RoundedCornerShape(8.dp)).padding(horizontal = 16.dp, vertical = 6.dp))
                 }
             }
-            Spacer(Modifier.weight(1f))
-            Column(Modifier.fillMaxWidth().animateContentSize().background(Panel.copy(alpha = .92f), RoundedCornerShape(10.dp))
+            // What the monster rolled: outside its frame, under it, apart from the fighter's own numbers.
+            if (monster.modifiers.isNotEmpty()) Row(Modifier.fillMaxWidth().padding(top = 6.dp)) {
+                Spacer(Modifier.weight(1f))
+                Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
+                    monster.modifiers.forEach {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                            Rhombus(Rune, 4.dp)
+                            Text(monsterModifierText(it), color = Rune, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.End)
+                        }
+                    }
+                }
+            }
+            Column(Modifier.fillMaxWidth().padding(top = 8.dp).animateContentSize().background(Panel.copy(alpha = .92f), RoundedCornerShape(10.dp))
                 .border(1.dp, Bronze.copy(alpha = .5f), RoundedCornerShape(10.dp)).padding(horizontal = 10.dp, vertical = 8.dp)
-                .height(if (logOpen) height * .5f else 116.dp)) {
+                .height(if (logOpen) height * .5f else 96.dp)) {
                 FightLog(fight.events, monster.code)
             }
             val live = fight.outcome == null
@@ -156,39 +190,145 @@ internal fun DamageType.key() = "enum.damage.$name"
     }
 }
 
-/** One side of the fight: its name, what it is, life with shield over it, mana if it has any, the swing and cast bars, and what is on it. */
-@Composable private fun Nameplate(modifier: Modifier, name: String, line: String, tint: Color, life: Int, maxLife: Int,
-    shield: Int, maxShield: Int, mana: Int, maxMana: Int, swing: Float, cast: Float?, ailments: List<AilmentView>, held: Boolean, alignEnd: Boolean) {
-    val align = if (alignEnd) Alignment.End else Alignment.Start
-    val shape = CutCornerShape(3.dp)
-    val share by animateFloatAsState(if (maxLife > 0) life / maxLife.toFloat() else 0f, label = "life")
-    Column(modifier, horizontalAlignment = align, verticalArrangement = Arrangement.spacedBy(3.dp)) {
-        Text(name, color = tint, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Text(line, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Box(Modifier.fillMaxWidth().height(16.dp).background(Color(0xCC0A0D12), shape).border(1.dp, LifeRed.copy(alpha = .8f), shape)) {
-            Box(Modifier.fillMaxWidth(share.coerceIn(0f, 1f)).fillMaxHeight().background(Brush.horizontalGradient(listOf(LifeRed, LifeRed.copy(alpha = .55f))), shape))
-            if (maxShield > 0) Box(Modifier.fillMaxWidth((shield / maxShield.toFloat()).coerceIn(0f, 1f)).height(4.dp).background(ShieldCyan.copy(alpha = .85f)))
-            Text(if (maxShield > 0) "$life / $maxLife · $shield" else "$life / $maxLife", color = Parchment, fontSize = 10.sp,
-                modifier = Modifier.align(Alignment.Center))
-        }
-        if (maxMana > 0) Box(Modifier.fillMaxWidth().height(6.dp).background(Color(0xCC0A0D12), shape).border(1.dp, ManaBlue.copy(alpha = .7f), shape)) {
-            Box(Modifier.fillMaxWidth((mana / maxMana.toFloat()).coerceIn(0f, 1f)).fillMaxHeight().background(ManaBlue, shape))
-        }
-        // The swing bar: full the instant the next blow lands. A held fighter's bar is dimmed: nothing lands while it stands stunned or frozen.
-        Box(Modifier.fillMaxWidth().height(3.dp).background(Color(0x14FFFFFF), RoundedCornerShape(2.dp))) {
-            Box(Modifier.fillMaxWidth(swing.coerceIn(0f, 1f)).fillMaxHeight().background(if (held) Muted else Gold, RoundedCornerShape(2.dp)))
-        }
-        // The cast bar, for a side that knows a spell.
-        cast?.let {
-            Box(Modifier.fillMaxWidth().height(3.dp).background(Color(0x14FFFFFF), RoundedCornerShape(2.dp))) {
-                Box(Modifier.fillMaxWidth(it.coerceIn(0f, 1f)).fillMaxHeight().background(if (held) Muted else Rune, RoundedCornerShape(2.dp)))
+/** How far [side]'s frame is out of its place, toward the other: lunging on its own blow, shuddering when the other's lands, leaning away from a miss. */
+private fun shift(lunge: LungeView?, side: Side, reach: Dp): Dp {
+    lunge ?: return 0.dp
+    val t = lunge.progress
+    val toward = if (side == Side.HERO) 1f else -1f
+    val out = when {
+        // A short draw back, then the strike.
+        lunge.actor == side && lunge.action == Action.ATTACK -> if (t < .12f) -sin(t / .12f * PI).toFloat() * .35f else sin((t - .12f) / .88f * PI).toFloat()
+        lunge.actor == side && lunge.action == Action.RETREAT -> -.5f * sin(t * PI).toFloat()
+        lunge.actor != side && lunge.landed && lunge.action != Action.TICK && lunge.action != Action.FLASK && t > .5f -> -.2f * (1 - t) * sin(t * 60).toFloat()
+        lunge.actor != side && lunge.kind == HitKind.EVADED -> -.35f * sin(t * PI).toFloat()
+        else -> 0f
+    }
+    return reach * out * toward
+}
+
+/** How white [side]'s portrait flashes: a blow that just landed on it. */
+private fun flash(lunge: LungeView?, side: Side): Float {
+    lunge ?: return 0f
+    if (lunge.actor == side || !lunge.landed || lunge.action == Action.TICK || lunge.action == Action.FLASK || lunge.progress <= .5f) return 0f
+    return (1 - lunge.progress) * 2f * (if (lunge.kind == HitKind.CRIT) 1f else .6f)
+}
+
+/** The burst where the frames meet, the bolt of a spell, the arc of a block — drawn over the frames. */
+@Composable private fun Strikes(lunge: LungeView?, cardWidth: Dp, cardHeight: Dp, gap: Dp) {
+    lunge ?: return
+    if (lunge.action == Action.TICK || lunge.action == Action.RETREAT) return
+    Canvas(Modifier.fillMaxSize()) {
+        val t = lunge.progress
+        val byHero = lunge.actor == Side.HERO
+        val cw = cardWidth.toPx()
+        val g = gap.toPx()
+        val seam = cw + g / 2
+        val y = cardHeight.toPx() * .45f
+        val sourceX = if (byHero) cw / 2 else cw * 1.5f + g
+        val targetX = if (byHero) cw * 1.5f + g else cw / 2
+        fun block() = drawArc(Color(0xFFC8C8C8).copy(alpha = .8f * (1 - t)), if (byHero) 110f else -70f, 140f, false,
+            Offset(targetX - cw * .3f, y - cw * .3f), Size(cw * .6f, cw * .6f), style = Stroke(6f))
+        when (lunge.action) {
+            Action.ATTACK -> {
+                if (lunge.landed && t > .5f) {
+                    val burst = (t - .5f) * 2
+                    val tint = if (lunge.kind == HitKind.CRIT) Color(0xFFFFD34A) else GoldBright
+                    val radius = cw * (.25f + .45f * burst)
+                    drawCircle(Brush.radialGradient(listOf(tint.copy(alpha = .9f * (1 - burst)), tint.copy(alpha = .3f * (1 - burst)), Color.Transparent), Offset(seam, y), radius), radius, Offset(seam, y))
+                }
+                if (lunge.kind == HitKind.BLOCKED && t > .4f) block()
             }
-        }
-        if (ailments.isNotEmpty() || held) Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-            if (held && ailments.none { it.ailment == Ailment.FROZEN }) AilmentChip(ui("expedition.stunned"), GoldBright, 1f)
-            ailments.forEach { AilmentChip(if (it.stacks > 1) ui("expedition.ailment_stacks", ui(it.ailment.key()), it.stacks) else ui(it.ailment.key()), ailmentTint(it.ailment), it.left) }
+            Action.SPELL -> {
+                val flight = (t * 2).coerceAtMost(1f)
+                val bx = sourceX + (targetX - sourceX) * flight
+                val by = y - sin(flight * PI).toFloat() * cw * .3f
+                if (t < .5f) {
+                    for (i in 3 downTo 1) drawCircle(Rune.copy(alpha = .15f * i), cw * .05f * i, Offset(bx, by))
+                    drawCircle(Color.White.copy(alpha = .85f), cw * .035f, Offset(bx, by))
+                } else if (lunge.landed) {
+                    val burst = (t - .5f) * 2
+                    drawCircle(Rune.copy(alpha = .55f * (1 - burst)), cw * (.12f + .4f * burst), Offset(targetX, y))
+                } else if (lunge.kind == HitKind.BLOCKED) block()
+            }
+            Action.FLASK -> {
+                val radius = cw * (.4f + .4f * t)
+                drawCircle(Brush.radialGradient(listOf(Vital.copy(alpha = .5f * (1 - t)), Color.Transparent), Offset(cw / 2, y), radius), radius, Offset(cw / 2, y))
+            }
+            Action.TICK, Action.RETREAT -> Unit
         }
     }
+}
+
+/**
+ * One fighter's frame: the name and what it is, the bust, the pools, the swing and cast bars, and
+ * what is on it. The frame is gold for the hero and the rarity's colour for a monster, with a bronze
+ * line inside as an item's frame has; a flask glows it green, a held fighter dims it.
+ */
+@Composable private fun FighterFrame(modifier: Modifier, side: Side, accent: Color, name: String, line: String, life: Int, maxLife: Int, shield: Int, maxShield: Int,
+    mana: Int, maxMana: Int, swing: Float, cast: Float?, ailments: List<AilmentView>, held: Boolean, flash: Float, glow: Color?,
+    portrait: DrawScope.(Float, Color?, Float, Float) -> Unit) {
+    val shape = CutCornerShape(12.dp)
+    val inner = CutCornerShape(9.dp)
+    val bar = CutCornerShape(3.dp)
+    val share by animateFloatAsState(if (maxLife > 0) life / maxLife.toFloat() else 0f, label = "life")
+    val time by rememberClock()
+    val wash = ailments.map { it.ailment }.maxByOrNull { washAmount(it) }
+    Column(modifier
+        .background(Brush.verticalGradient(listOf(PanelRaised, Abyss)), shape)
+        .border(2.dp, glow ?: accent, shape).padding(3.dp).border(1.dp, Bronze.copy(alpha = .85f), inner).clip(inner)) {
+        Column(Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Abyss, Color.Transparent))).padding(horizontal = 10.dp, vertical = 6.dp)) {
+            Text(name, color = accent, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(line, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        Box(Modifier.fillMaxWidth().weight(1f).border(1.dp, Bronze.copy(alpha = .5f)).background(Color.Black)) {
+            Canvas(Modifier.fillMaxSize()) {
+                portrait(this, time, wash?.let(::ailmentTint), wash?.let(::washAmount) ?: 0f, flash)
+                if (held) drawRect(Ink.copy(alpha = .45f))
+            }
+            if (side == Side.MONSTER && accent != Parchment) Canvas(Modifier.fillMaxSize()) { Portraits.ring(this, accent, time) }
+        }
+        Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Box(Modifier.fillMaxWidth().height(14.dp).background(Color(0xCC0A0D12), bar).border(1.dp, LifeRed.copy(alpha = .8f), bar)) {
+                Box(Modifier.fillMaxWidth(share.coerceIn(0f, 1f)).fillMaxHeight().background(Brush.horizontalGradient(listOf(LifeRed, LifeRed.copy(alpha = .55f))), bar))
+                if (maxShield > 0) Box(Modifier.fillMaxWidth((shield / maxShield.toFloat()).coerceIn(0f, 1f)).height(3.dp).background(ShieldCyan.copy(alpha = .85f)))
+                Text(if (maxShield > 0) "$life / $maxLife · $shield" else "$life / $maxLife", color = Parchment, fontSize = 9.sp, modifier = Modifier.align(Alignment.Center))
+            }
+            if (maxMana > 0) Box(Modifier.fillMaxWidth().height(5.dp).background(Color(0xCC0A0D12), bar).border(1.dp, ManaBlue.copy(alpha = .7f), bar)) {
+                Box(Modifier.fillMaxWidth((mana / maxMana.toFloat()).coerceIn(0f, 1f)).fillMaxHeight().background(ManaBlue, bar))
+            }
+            // The swing bar: full the instant the next blow lands; dimmed while nothing can land.
+            Box(Modifier.fillMaxWidth().height(3.dp).background(Color(0x14FFFFFF), RoundedCornerShape(2.dp))) {
+                Box(Modifier.fillMaxWidth(swing.coerceIn(0f, 1f)).fillMaxHeight().background(if (held) Muted else Gold, RoundedCornerShape(2.dp)))
+            }
+            cast?.let {
+                Box(Modifier.fillMaxWidth().height(3.dp).background(Color(0x14FFFFFF), RoundedCornerShape(2.dp))) {
+                    Box(Modifier.fillMaxWidth(it.coerceIn(0f, 1f)).fillMaxHeight().background(if (held) Muted else Rune, RoundedCornerShape(2.dp)))
+                }
+            }
+            if (ailments.isNotEmpty() || held) Row(Modifier.padding(top = 2.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (held && ailments.none { it.ailment == Ailment.FROZEN }) AilmentChip(ui("expedition.stunned"), GoldBright, 1f)
+                ailments.take(3).forEach { AilmentChip(if (it.stacks > 1) ui("expedition.ailment_stacks", ui(it.ailment.key()), it.stacks) else ui(it.ailment.key()), ailmentTint(it.ailment), it.left) }
+            }
+        }
+    }
+}
+
+/** How strongly an ailment washes a portrait: a freeze is the whole face, a bleed a tint. */
+private fun washAmount(ailment: Ailment): Float = when (ailment) {
+    Ailment.FROZEN -> .55f
+    Ailment.BURNING -> .35f
+    Ailment.CHILLED, Ailment.POISONED, Ailment.SHOCKED -> .3f
+    Ailment.BLEEDING -> .25f
+}
+
+/** A clock in seconds for the portraits' idle motion, ticking once a frame while the frame is on screen. */
+@Composable private fun rememberClock(): State<Float> {
+    val clock = remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(Unit) {
+        var last = 0L
+        while (true) withFrameNanos { now -> if (last != 0L) clock.floatValue += ((now - last) / 1e9f).coerceAtMost(.05f); last = now }
+    }
+    return clock
 }
 
 /** A small coloured chip whose fill drains as the ailment wears off. */

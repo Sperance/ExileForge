@@ -20,7 +20,7 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.27.0, `versionCode` 45) for the
+ExileForge is an **Android Compose client** (version 2.28.0, `versionCode` 46) for the
 **ktor-bestgame** RPG server (0.28.0), pinned in
 `core/.../contract/Contract.kt` as `SERVER_COMMIT = 04335520b0b9e1e614d3bca082cd2b58d297989f`
 on the server branch `claude/tender-pasteur-a36kj2`.
@@ -517,15 +517,22 @@ These are enforced by tests and are the point of the client's design:
     with text on it is the overlay above. The run (`ExpeditionRun`) lives in `:core` and is stepped
     once a frame from a `withFrameNanos` loop; the canvas reads a clock state, so each frame redraws
     without recomposing. The overlay reads the run's `RunHud` and sends `RunCommand`s. The fight
-    screen is «Арена» since 2.26.0 (`ArenaOverlay.kt`): a nameplate per side with life, shield, the
-    hero's mana, a bar filling toward its next swing at its own attack speed (`Battle.swing`) and
-    one toward its next spell (`Battle.cast`), the ailments on it as draining chips, the monster's
-    modifiers under its name, the log under the fighters (newest first, unfolds on demand), the
-    flask and retreat buttons, and after the fight `ReportScreen` — outcome, totals, the whole log
-    and the loot, or the price of death — read off `RunHud.report`. Numbers, log lines and figures
-    are coloured by damage type (`damageTint`) and ailment (`ailmentTint`); the scene washes a
-    figure with `Figures.tinted`, draws its `Figures.ailments` particles, a spell as a bolt and the
-    flask as a green swell.
+    screen is «Арена» (`ArenaOverlay.kt`), heraldry since 2.28.0 — the owner's pick of five mockups:
+    two `FighterFrame`s side by side, gold for the hero and the rarity colour for the monster,
+    cut-cornered like an item's frame, each carrying its fighter's name and kind, a bust drawn on a
+    `Canvas` by `scene/Portraits.kt` (the hero, and one per monster `form`, all shapes — rule 17),
+    life with the shield over it, the hero's mana, the swing bar (`Battle.swing`) and the cast bar
+    (`Battle.cast`), and the ailments as draining chips. The monster's modifiers are printed under
+    its frame, outside it. **The blow is the frame**: `FightHud.lunge` (`LungeView`) is the event
+    on screen right now, `shift` moves the striking frame at the other and shudders the one hit,
+    `flash` whitens the hit portrait, and `Strikes` draws the burst at the seam, a spell's bolt, a
+    block's arc and a flask's glow. An ailment washes the portrait in its colour (`washAmount`), a
+    held fighter dims its frame. The scene under the frames (`ExpeditionScene.fight`) draws only
+    the biome's ground; the walking map keeps `Figures`. Under the frames: the log (newest first,
+    unfolds on demand), the flask and retreat buttons, speed and log; after the fight
+    `ReportScreen` — outcome, totals, the whole log and the loot, or the price of death — read off
+    `RunHud.report`. Numbers and log lines are coloured by damage type (`damageTint`) and ailment
+    (`ailmentTint`).
 
 ## Conventions
 

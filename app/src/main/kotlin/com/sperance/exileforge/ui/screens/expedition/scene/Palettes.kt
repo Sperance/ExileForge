@@ -1,7 +1,6 @@
 package com.sperance.exileforge.ui.screens.expedition.scene
 
 import androidx.compose.ui.graphics.Color
-import com.sperance.exileforge.core.campaign.Ailment
 
 /** One biome's colours: the void around the map, the ground, the rock, and what grows on it. */
 class Palette(val void: Color, val floor: Color, val wallTop: Color, val wallSide: Color, val decor: Color, val accent: Color)
@@ -34,23 +33,6 @@ object Palettes {
     val portal = Color(0xFF7FA9C8)
     val blood = Color(0xFFB03A3A)
     val steel = Color(0xFFC8C8C8)
-    val arcane = Color(0xFF7FA9C8)
-    val vital = Color(0xFF5E9E5A)
-    val ember = Color(0xFFD9642E)
-    val frost = Color(0xFF9FD2F0)
-    val spark = Color(0xFFFFD34A)
-    val venom = Color(0xFF5E9E5A)
-
-    /** The colour an ailment washes a figure with, and how strongly. */
-    fun ailment(ailment: Ailment): Pair<Color, Float> = when (ailment) {
-        Ailment.BURNING -> ember to .35f
-        Ailment.CHILLED -> frost to .3f
-        Ailment.FROZEN -> frost to .65f
-        Ailment.SHOCKED -> spark to .3f
-        Ailment.POISONED -> venom to .3f
-        Ailment.BLEEDING -> blood to .25f
-    }
-
     /** A monster's body by its form, so a crab and a wraith differ before any name is read. */
     fun body(form: String): Color = when (form) {
         "CRAB" -> Color(0xFFB0533A)

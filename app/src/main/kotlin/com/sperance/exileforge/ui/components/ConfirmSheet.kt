@@ -24,6 +24,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
@@ -124,22 +125,34 @@ data class LedgerLine(val label: String, val value: String, val tone: Tone = Ton
  *
  * The band fills from the left while the finger is down and drains when it lifts early; reaching
  * the end is the confirmation, with a knock of haptics so the hand knows as well as the eye.
+ *
+ * In a sheet it fires once, because the sheet goes with it. [rearm] is for a button that stays —
+ * the forge's, where the same orb is spent again and again — and empties the band after each hold.
  */
-@Composable private fun HoldButton(label: String, accent: Color, onHeld: () -> Unit) {
+@Composable fun HoldButton(label: String, accent: Color, modifier: Modifier = Modifier, enabled: Boolean = true,
+    rearm: Boolean = false, onHeld: () -> Unit) {
     val progress = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
     val haptics = LocalHapticFeedback.current
     val held by rememberUpdatedState(onHeld)
+    val live by rememberUpdatedState(enabled)
     var fired by remember { mutableStateOf(false) }
-    val fire = { if (!fired) { fired = true; held() } }
-    Box(Modifier.fillMaxWidth().height(52.dp).background(Abyss).border(1.dp, accent)
+    val fire = {
+        if (!fired && live) {
+            fired = true; held()
+            if (rearm) { fired = false; scope.launch { progress.animateTo(0f, tween(180)) } }
+        }
+    }
+    val tint = if (enabled) accent else Muted.copy(alpha = .45f)
+    Box(modifier.fillMaxWidth().height(52.dp).background(Abyss).border(1.dp, tint)
         .drawBehind {
             drawRect(Brush.horizontalGradient(listOf(accent.copy(alpha = .55f), accent.copy(alpha = .25f))),
                 size = Size(size.width * progress.value, size.height))
         }
-        .semantics(mergeDescendants = true) { role = Role.Button; onClick(label) { fire(); true } }
+        .semantics(mergeDescendants = true) { role = Role.Button; if (!enabled) disabled(); onClick(label) { fire(); true } }
         .pointerInput(Unit) {
             detectTapGestures(onPress = {
+                if (!live) return@detectTapGestures
                 val filling = scope.launch {
                     progress.animateTo(1f, tween(HOLD_TO_CONFIRM_MS, easing = LinearEasing))
                     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -153,7 +166,7 @@ data class LedgerLine(val label: String, val value: String, val tone: Tone = Ton
             })
         },
         contentAlignment = Alignment.Center) {
-        Text(label.uppercase(), color = if (accent == LifeRed) Parchment else GoldBright,
+        Text(label.uppercase(), color = if (!enabled) Muted else if (accent == LifeRed) Parchment else GoldBright,
             style = MaterialTheme.typography.labelLarge, textAlign = TextAlign.Center,
             modifier = Modifier.padding(horizontal = 12.dp))
     }

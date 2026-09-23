@@ -213,7 +213,12 @@ tree, auction, account — and, for an administrator only, `TAB_ADMIN` on top of
 holds every administrator tool as a button: the catalogue, the editor, the checks, granting items
 and the switch that drops the tools to see the app as a player sees it. `ADMIN_TABS` is what
 `ForgeRuntime.tab` refuses without them, so a player cannot reach any of those screens at all.
-The forge is still a tab a button opens, from an icon in the Hero tab's header. Since 2.12.0 the
+The forge is still a tab a button opens, from an icon in the Hero tab's header (with the last item
+worked on) or from «Сфера»/«Верстак» on an item's card (`openForge(instanceId, ForgeSection)`).
+Since 2.19.0 it is one item on top and three sections — orbs, bench, recipes — with the orbs and
+bench lines as a ledger and the choice in a bar over the navigation whose `HoldButton` re-arms
+after each hold; the server's sentence lands in `PlayState.forgeLine` under the item, not in a
+snackbar. Since 2.12.0 the
 Hero tab itself has three sections — Character, Equipment, Stash — so the stash is one tap away
 rather than at the bottom of a long scroll. The bar stays on those screens and is
 the way back out of them.

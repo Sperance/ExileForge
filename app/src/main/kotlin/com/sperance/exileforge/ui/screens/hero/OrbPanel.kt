@@ -17,9 +17,12 @@ import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.LifeRed
 import com.sperance.exileforge.ui.theme.Muted
+import com.sperance.exileforge.ui.theme.Rune
 
 /**
- * Applying one currency orb to one item of the inventory.
+ * The administrator's orb panel: one currency orb on one item, with a top-up beside it.
+ *
+ * A player spends orbs in the forge (`CraftScreen`); this is the same command behind the admin tab.
  *
  * Every orb of the server's `CURRENCY` category is offered as it is seeded, with the count the
  * character owns beside it. What an orb does — which rarity it demands, what it rerolls, what it
@@ -51,6 +54,8 @@ import com.sperance.exileforge.ui.theme.Muted
         Icon(ForgeGlyphs.Orb, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp))
         Text(ui("orb.apply"))
     }
+    // The server's sentence about the last orb, as the forge prints it under its item.
+    s.play.forgeLine.takeIf { it.isNotBlank() }?.let { Text(it, color = Rune, style = MaterialTheme.typography.bodyMedium) }
     if (onGrant != null) OutlinedButton(enabled = enabled && s.isAdmin && s.play.selectedOrb.isNotBlank(),
         onClick = { onGrant(s.play.selectedOrb) }, modifier = Modifier.fillMaxWidth()) {
         Text(ui("orb.top_up", ORB_TOP_UP))

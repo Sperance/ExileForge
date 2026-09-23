@@ -47,7 +47,7 @@ class CharacterViewModel(private val runtime: ForgeRuntime) {
      * already loaded, which is what "every button is bound to the chosen one" has to mean.
      */
     private suspend fun entered(id: String) { with(runtime) {
-        mutable.update { it.copy(phase = AppPhase.GAME, tab = 0, play = it.play.copy(characterId = id, hero = null, characterOwner = "", selectedEquipment = ""), world = it.world.copy(inventoryBases = emptyMap())) }
+        mutable.update { it.copy(phase = AppPhase.GAME, tab = 0, play = it.play.copy(characterId = id, hero = null, characterOwner = "", selectedEquipment = "", forgeLine = ""), world = it.world.copy(inventoryBases = emptyMap())) }
         heroViewModel.readHero()
         // Tab 0 is the catalogue, and this is where it becomes the open one.
         loadPage(0)
@@ -63,7 +63,7 @@ class CharacterViewModel(private val runtime: ForgeRuntime) {
         if (state.value.busy) return
         // What was on its way belonged to the character being left.
         cancelReads()
-        mutable.update { it.copy(phase = AppPhase.CHARACTERS, play = it.play.copy(characterId = "", characterOwner = "", hero = null, selectedEquipment = "", selectedNode = "", nodeQuery = ""), world = it.world.copy(inventoryBases = emptyMap()), market = it.market.copy(myLots = emptyList(), showcase = com.sperance.exileforge.core.model.auction.AuctionPage(), tab = 0, locked = null), admin = it.admin.copy(editorOpen = false, original = null, draft = JsonObject(emptyMap()))) }
+        mutable.update { it.copy(phase = AppPhase.CHARACTERS, play = it.play.copy(characterId = "", characterOwner = "", hero = null, selectedEquipment = "", forgeLine = "", selectedNode = "", nodeQuery = ""), world = it.world.copy(inventoryBases = emptyMap()), market = it.market.copy(myLots = emptyList(), showcase = com.sperance.exileforge.core.model.auction.AuctionPage(), tab = 0, locked = null), admin = it.admin.copy(editorOpen = false, original = null, draft = JsonObject(emptyMap()))) }
         read(Reads.CHARACTERS) { readCharacters() }
     } }
 

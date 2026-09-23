@@ -24,6 +24,7 @@ import com.sperance.exileforge.core.display.inventoryDocument
 import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.state.ForgeSection
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -31,14 +32,14 @@ import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.theme.*
 
 /** What the action row opened on top of the sheet, if anything. */
-private enum class ItemAction { ORB, BENCH, AUCTION, SELL }
+private enum class ItemAction { AUCTION, SELL }
 
 /**
  * One item of the stash: its card, and what can be done with it.
  *
  * The card scrolls; the actions do not — they sit in a row at the foot of the sheet, so the thing a
  * player came to do is never below the fold. Each one is a single tap: wearing and taking off at
- * once, an orb, the crafting bench and a listing through a small sheet of their own, and selling to
+ * once, an orb and the crafting bench in the forge, opened over this item, a listing through a small sheet of its own, and selling to
  * the merchant through the held confirmation, because that one cannot be taken back. Every rule behind them is the
  * server's; a control is off only for what the client already knows as a fact — nobody signed in,
  * another command running, an item that is worn.
@@ -75,8 +76,8 @@ private enum class ItemAction { ORB, BENCH, AUCTION, SELL }
                     instance.equipped -> Action(ForgeGlyphs.Helm, ui("hero.unequip"), can) { onDismiss(); vm.unequip(instance.id) }
                     else -> Action(ForgeGlyphs.Helm, ui("hero.equip"), can, GoldBright) { onDismiss(); vm.equip(instance.id, null) }
                 }
-                Action(ForgeGlyphs.Orb, ui("hero.action_orb"), can) { open = ItemAction.ORB }
-                Action(ForgeGlyphs.Anvil, ui("hero.action_bench"), can, Crafted) { open = ItemAction.BENCH }
+                Action(ForgeGlyphs.Orb, ui("hero.action_orb"), can) { onDismiss(); vm.openForge(instance.id, ForgeSection.ORBS) }
+                Action(ForgeGlyphs.Anvil, ui("hero.action_bench"), can, Crafted) { onDismiss(); vm.openForge(instance.id, ForgeSection.BENCH) }
                 Action(ForgeGlyphs.Scales, ui("hero.action_auction"), can && loose) { open = ItemAction.AUCTION }
                 Action(ForgeGlyphs.Coins, ui("hero.action_sell"), can && loose, LifeRed) { open = ItemAction.SELL }
                 if (s.adminTools) Action(Icons.Outlined.Edit, ui("hero.action_base"), !s.busy, Rune) { onDismiss(); vm.editInventoryBase(instance.equipmentId) }
@@ -84,19 +85,6 @@ private enum class ItemAction { ORB, BENCH, AUCTION, SELL }
         }
     }
     when (open) {
-        ItemAction.ORB -> ModalBottomSheet(onDismissRequest = { open = null }, containerColor = Panel) {
-            // The item sheet stays underneath: the card behind it is re-read after every orb, so the
-            // result is visible the moment this one is put away.
-            Column(Modifier.fillMaxWidth().padding(16.dp).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                OrbPanel(s, instance.id, vm::selectOrb, vm::applyOrb)
-            }
-        }
-        ItemAction.BENCH -> ModalBottomSheet(onDismissRequest = { open = null }, containerColor = Panel) {
-            // Like the orbs, the bench sits over the item sheet, whose card is re-read after the craft.
-            Column(Modifier.fillMaxWidth().padding(16.dp).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                BenchPanel(s, instance.id, vm::craft, vm::uncraft)
-            }
-        }
         ItemAction.AUCTION -> ListingSheet(s, name, onDismiss = { open = null }) { orb, price ->
             open = null; onDismiss(); vm.sellEquipment(instance.id, orb, price)
         }

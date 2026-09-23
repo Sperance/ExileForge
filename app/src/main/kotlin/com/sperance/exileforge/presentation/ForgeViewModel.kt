@@ -11,6 +11,7 @@ import com.sperance.exileforge.core.model.EquipmentKind
 import com.sperance.exileforge.core.network.RequestJournal
 import com.sperance.exileforge.data.settings.ServerStore
 import com.sperance.exileforge.presentation.state.AppMode
+import com.sperance.exileforge.presentation.state.ForgeSection
 import kotlinx.serialization.json.JsonObject
 
 /** Lifecycle owner and compatibility facade; screen actions live in feature models. */
@@ -56,6 +57,8 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     fun grantRandom() = runtime.heroViewModel.grantRandom()
     fun adjustItems(itemId: String, amount: Long) = runtime.heroViewModel.adjustItems(itemId, amount)
     fun selectOrb(value: String) = runtime.heroViewModel.selectOrb(value)
+    fun openForge(instanceId: String?, section: ForgeSection) = runtime.heroViewModel.openForge(instanceId, section)
+    fun forgeSection(section: ForgeSection) = runtime.heroViewModel.forgeSection(section)
     fun selectNode(code: String) = runtime.heroViewModel.selectNode(code)
     fun allocateNode(code: String) = runtime.heroViewModel.allocateNode(code)
     fun refundNode(code: String) = runtime.heroViewModel.refundNode(code)

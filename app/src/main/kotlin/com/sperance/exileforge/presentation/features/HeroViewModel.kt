@@ -7,13 +7,24 @@ import com.sperance.exileforge.core.model.command.ItemStack
 import com.sperance.exileforge.core.model.command.UseRecipeCommand
 import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.presentation.ForgeRuntime
+import com.sperance.exileforge.presentation.state.ForgeSection
 import com.sperance.exileforge.presentation.state.Reads
+import com.sperance.exileforge.presentation.state.TAB_CRAFT
 import kotlinx.coroutines.flow.update
 
 class HeroViewModel(private val runtime: ForgeRuntime) {
     private val state get() = runtime.state
 
-    fun selectEquipment(value: String) { with(runtime) { mutable.update { it.copy(play = it.play.copy(selectedEquipment = value)) } } }
+    fun selectEquipment(value: String) { with(runtime) { mutable.update { it.copy(play = it.play.copy(selectedEquipment = value,
+        forgeLine = if (value == it.play.selectedEquipment) it.play.forgeLine else "")) } } }
+
+    /** The forge over one item, on the section the player came for; `null` keeps the item it had. */
+    fun openForge(instanceId: String?, section: ForgeSection) { with(runtime) {
+        instanceId?.let { selectEquipment(it) }
+        mutable.update { it.copy(play = it.play.copy(forgeSection = section)) }
+        tab(TAB_CRAFT)
+    } }
+    fun forgeSection(section: ForgeSection) { with(runtime) { mutable.update { it.copy(play = it.play.copy(forgeSection = section)) } } }
 
     fun loadHero() { with(runtime) { read(Reads.HERO) { readHero() } } }
 
@@ -71,9 +82,9 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
      * Whether the orb applies at all, what it rerolls and what it leaves alone is the server's rule;
      * the client only names the pair and prints the sentence that comes back.
      */
-    fun applyOrb(inventoryId: String, orbItemId: String) { with(runtime) { characterCommand { id ->
+    fun applyOrb(inventoryId: String, orbItemId: String) { with(runtime) { forgeCommand { id ->
         val outcome = api.hero.applyOrb(id, inventoryId, orbItemId)
-        mutable.update { it.copy(message = outcome.message, play = it.play.copy(selectedEquipment = outcome.created?.id ?: outcome.item.id)) }
+        mutable.update { it.copy(play = it.play.copy(forgeLine = outcome.message, selectedEquipment = outcome.created?.id ?: outcome.item.id)) }
     } } }
 
     /**
@@ -82,13 +93,13 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
      * Every rule and the price are the server's; the answer is an orb's — the item and a sentence —
      * and the hero is re-read after it like after any command.
      */
-    fun craft(inventoryId: String, recipe: String) { with(runtime) { characterCommand { id ->
+    fun craft(inventoryId: String, recipe: String) { with(runtime) { forgeCommand { id ->
         val outcome = api.hero.craft(id, inventoryId, recipe)
-        mutable.update { it.copy(message = outcome.message) }
+        mutable.update { it.copy(play = it.play.copy(forgeLine = outcome.message)) }
     } } }
-    fun uncraft(inventoryId: String) { with(runtime) { characterCommand { id ->
+    fun uncraft(inventoryId: String) { with(runtime) { forgeCommand { id ->
         val outcome = api.hero.uncraft(id, inventoryId)
-        mutable.update { it.copy(message = outcome.message) }
+        mutable.update { it.copy(play = it.play.copy(forgeLine = outcome.message)) }
     } } }
 
     fun selectNode(code: String) { with(runtime) { mutable.update { it.copy(play = it.play.copy(selectedNode = code)) } } }
@@ -151,14 +162,24 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
      * Every character command is a write the server may have applied even when the answer is lost,
      * so the hero is always re-read afterwards rather than patched from the response.
      */
-    private fun characterCommand(block: suspend (String) -> Unit) { with(runtime) { task(writing = true, touches = setOf(Reads.HERO)) {
+    private fun characterCommand(announce: Boolean = true, block: suspend (String) -> Unit) { with(runtime) { task(writing = true, touches = setOf(Reads.HERO)) {
         val id = state.value.play.characterId.trim()
         check(id.isNotBlank()) { ui("auction.choose_character") }
         check(state.value.ownsCharacter || state.value.isAdmin) { ui("hero.owner_only") }
         block(id)
         readHero()
-        mutable.update { it.copy(message = it.message ?: ui("hero.changes_saved")) }
+        if (announce) mutable.update { it.copy(message = it.message ?: ui("hero.changes_saved")) }
     } } }
+
+    /**
+     * A command of the forge: its answer is the server's sentence under the item rather than a
+     * snackbar, and the previous sentence goes the moment another command starts, so a refusal is
+     * never read beside the success before it.
+     */
+    private fun forgeCommand(block: suspend (String) -> Unit) = characterCommand(announce = false) { id ->
+        runtime.mutable.update { it.copy(play = it.play.copy(forgeLine = "")) }
+        block(id)
+    }
 
     internal suspend fun readHero() { with(runtime) {
         val id = state.value.play.characterId.trim()

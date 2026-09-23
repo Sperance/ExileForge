@@ -172,6 +172,8 @@ data class PlayState(
     val selectedEquipment: String = "",
     /** The `items` id of the orb picked in the forge. */
     val selectedOrb: String = "",
+    /** Which of the forge's three sections is open, and the server's sentence about the last thing it did. */
+    val forgeSection: ForgeSection = ForgeSection.ORBS, val forgeLine: String = "",
     /** What the admin's random grant asks the server for. Blank means "any". */
     val grantRarity: String = "", val grantSlot: String = "",
     /** The class a new character is being created with, and the tree node under the cursor. */
@@ -179,6 +181,9 @@ data class PlayState(
     /** What the tree search box holds; a match moves the map to that node. */
     val nodeQuery: String = "",
 )
+
+/** The forge's sections: orbs and the bench work on one item, a recipe on the bag. */
+enum class ForgeSection { ORBS, BENCH, RECIPES }
 
 /** The auction, as this character sees it. */
 data class MarketState(

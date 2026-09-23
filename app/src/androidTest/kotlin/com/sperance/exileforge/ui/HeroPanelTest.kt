@@ -38,6 +38,9 @@ import com.sperance.exileforge.ui.screens.hero.EquipmentLedger
 import com.sperance.exileforge.ui.screens.hero.HeroHeader
 import com.sperance.exileforge.ui.screens.hero.HeroSummary
 import com.sperance.exileforge.ui.screens.hero.OrbPanel
+import com.sperance.exileforge.ui.screens.craft.ForgeTarget
+import com.sperance.exileforge.ui.screens.craft.OrbBar
+import com.sperance.exileforge.ui.screens.craft.OrbLedger
 import com.sperance.exileforge.ui.screens.tree.SkillTreePanel
 import com.sperance.exileforge.core.model.auction.AuctionFilter
 import com.sperance.exileforge.core.model.auction.AuctionLot
@@ -109,7 +112,7 @@ class HeroPanelTest {
         compose.onNodeWithText("Основная рука").performScrollTo().performClick()
         compose.runOnIdle { assertEquals("MAIN_HAND" to null, picked) }
         // Life is a figure, not a bar: the sheet carries a maximum and no current value.
-        compose.onNodeWithText("88").performScrollTo().assertIsDisplayed()
+        compose.onAllNodesWithText("88")[0].performScrollTo().assertIsDisplayed()
         // Every stat the server sent is in the section itself, grouped, with nothing behind a tap.
         compose.onNodeWithText("Запас").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Защита").performScrollTo().assertIsDisplayed()
@@ -272,6 +275,45 @@ class HeroPanelTest {
         // The copy's own rarity is shown, not the COMMON its template drops as.
         compose.onNodeWithText("Необычный").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Применить сферу").performScrollTo().performClick()
+        compose.runOnIdle { assertEquals("ring-instance" to "chaos-orb", applied) }
+    }
+
+    /**
+     * The forge over one item: the orbs the bag holds as a ledger, the chosen one in the bar under
+     * it, and the server's last sentence under the item.
+     *
+     * An orb the bag does not hold has no line, and neither has Regret, which is the tree's. The
+     * bar's button is held; a screen reader's click stands in for the hold, as in [ConfirmSheet].
+     */
+    @Test fun theForgeListsOwnedOrbsAndSendsTheHeldOne() {
+        val instance = EquipmentInstance("ring-instance", "hero", "ring-base", rarity = "RARE")
+        val base = buildJsonObject { put("_id", "ring-base"); put("code", "HERO_RING"); put("slot", "RING"); put("rarity", "COMMON") }
+        val chaos = CurrencyItem("chaos-orb", "CHAOS_ORB", "CHAOS_ORB", 300)
+        val exalted = CurrencyItem("exalted-orb", "EXALTED_ORB", "EXALTED_ORB", 900)
+        val regret = CurrencyItem("regret-orb", "ORB_OF_REGRET", "ORB_OF_REGRET", 50)
+        val hero = HeroView(CharacterSummary("hero", "owner", "Изгнанник"), listOf(instance),
+            bag = listOf(com.sperance.exileforge.core.model.hero.CharacterItem("chaos-orb", 7),
+                com.sperance.exileforge.core.model.hero.CharacterItem("regret-orb", 3)))
+        var selected: String? = null
+        var applied: Pair<String, String>? = null
+        compose.setContent { ForgeTheme { Column(Modifier.background(Ink).padding(12.dp)) {
+            val state = ForgeState(busy = false, account = AccountState(signedIn = true, profile = com.sperance.exileforge.core.model.command.UserProfile("owner")),
+                play = PlayState(hero = hero, characterOwner = "owner", selectedEquipment = "ring-instance", selectedOrb = "chaos-orb", forgeLine = "Аффиксы перекатаны"),
+                world = WorldState(inventoryBases = mapOf("ring-base" to base), orbs = listOf(chaos, exalted, regret)))
+            ForgeTarget(state, instance) {}
+            OrbLedger(state) { selected = it }
+            OrbBar(state, instance, enabled = true) { item, orb -> applied = item to orb }
+        } } }
+        compose.onNodeWithText("Кольцо героя").assertIsDisplayed()
+        compose.onNodeWithText("Аффиксы перекатаны").assertIsDisplayed()
+        // The ledger line and the bar both name the chosen orb.
+        compose.onAllNodesWithText("Chaos Orb").assertCountEquals(2)
+        compose.onAllNodesWithText("Exalted Orb").assertCountEquals(0)
+        compose.onAllNodesWithText("Orb of Regret").assertCountEquals(0)
+        compose.onNodeWithText("Есть 7 · останется 6").assertIsDisplayed()
+        compose.onAllNodesWithText("Chaos Orb")[0].performClick()
+        compose.runOnIdle { assertEquals("chaos-orb", selected) }
+        compose.onNodeWithText("УДЕРЖИВАЙТЕ, ЧТОБЫ ПРИМЕНИТЬ СФЕРУ").performSemanticsAction(SemanticsActions.OnClick)
         compose.runOnIdle { assertEquals("ring-instance" to "chaos-orb", applied) }
     }
 }

@@ -2,61 +2,79 @@ package com.sperance.exileforge.ui.screens.hero
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CutCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.display.StatGroup
+import com.sperance.exileforge.core.display.groupedStats
 import com.sperance.exileforge.core.display.statNumber
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.ForgeState
-import com.sperance.exileforge.ui.components.*
-import com.sperance.exileforge.ui.icons.ForgeGlyphs
+import com.sperance.exileforge.ui.icons.StatIcon
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * The character's figures: life, mana and shield, and everything else the server counted.
+ * The character's figures: life, mana and shield on top, then everything else the server counted,
+ * one card per group.
  *
  * The first of the Hero tab's three sections. Nothing here is a command — it is the sheet a player
- * reads before deciding what to wear. Who the character is lives in [HeroHeader] above the sections.
+ * reads before deciding what to wear, whole and in place rather than behind another tap. Which
+ * group a stat belongs to is [StatGroup]'s, so a stat nobody named still lands in «Прочее».
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable fun HeroSummary(s: ForgeState) {
     val hero = s.play.hero ?: return
-    var statsOpen by remember(s.play.characterId) { mutableStateOf(false) }
-    ForgePanel(modifier = Modifier.clickable { statsOpen = true }) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         HeroVitals(s)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(ui("hero.all_stats", hero.stats.size), color = Rune, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
-            Icon(Icons.Outlined.ChevronRight, null, tint = Rune, modifier = Modifier.size(18.dp))
+        if (hero.stats.isEmpty()) Text(ui("hero.no_stats"), color = Muted)
+        groupedStats(hero.stats).forEach { (group, stats) -> StatGroupCard(group, stats, s) }
+    }
+}
+
+private fun StatGroup.accent(): Color = when (this) {
+    StatGroup.RESERVE -> LifeRed
+    StatGroup.DEFENCE -> Gold
+    StatGroup.RESISTANCE -> ShieldCyan
+    StatGroup.ATTACK -> Ember
+    StatGroup.ATTRIBUTE -> Rune
+    StatGroup.OTHER -> Muted
+}
+
+/** A group: a band of its colour, its name, and its figures two to a row. */
+@Composable private fun StatGroupCard(group: StatGroup, stats: List<Pair<String, Double>>, s: ForgeState) {
+    val accent = group.accent()
+    val shape = CutCornerShape(topStart = 0.dp, topEnd = 0.dp, bottomStart = 8.dp, bottomEnd = 8.dp)
+    Column(Modifier.fillMaxWidth().clip(shape).background(Panel).border(1.dp, accent.copy(alpha = .3f), shape)) {
+        Box(Modifier.fillMaxWidth().height(3.dp).background(accent))
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(group.title(s.lang), color = accent, style = MaterialTheme.typography.labelLarge)
+            stats.chunked(2).forEach { pair ->
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    pair.forEach { (key, value) -> StatCell(key, value, accent, s, Modifier.weight(1f)) }
+                    if (pair.size == 1) Spacer(Modifier.weight(1f))
+                }
+            }
         }
     }
-    if (statsOpen) ModalBottomSheet(onDismissRequest = { statsOpen = false }, containerColor = Panel,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-        LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.9f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(ForgeGlyphs.Sigil, null, tint = Rune, modifier = Modifier.size(16.dp))
-                    Engraved(ui("hero.server_calc"), Rune)
-                }
-                Text(ui("hero.sheet_line", hero.sheet.level, hero.sheet.active.size), color = Muted, style = MaterialTheme.typography.labelMedium)
-                OrnateDivider(Rune)
-            }
-            if (hero.stats.isEmpty()) item { Text(ui("hero.no_stats"), color = Muted) }
-            // Whatever the sheet carried, whole: nothing here is folded behind another tap.
-            items(hero.stats.toSortedMap().toList(), key = { it.first }) { (key, value) ->
-                PropertyRow(statTitle(key, s.lang), statNumber(key, value), stat = key)
-            }
+}
+
+/** One figure: a small icon and the stat's name over the number the server sent. */
+@Composable private fun StatCell(key: String, value: Double, accent: Color, s: ForgeState, modifier: Modifier) {
+    Column(modifier.background(Abyss, RoundedCornerShape(6.dp)).padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            StatIcon(key, accent, Modifier.size(14.dp))
+            Text(statTitle(key, s.lang), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
+        Text(statNumber(key, value), color = Parchment, style = MaterialTheme.typography.titleLarge)
     }
 }
 

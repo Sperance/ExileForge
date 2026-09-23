@@ -148,6 +148,7 @@ class UiStringsTest {
             CurrencyOrb.entries.forEach { add("enum.orb.${it.name}"); add("enum.orb.${it.name}.rule") }
             RedemptionKind.entries.forEach { add("enum.reward.${it.name}") }
             stockStats.forEach { add("enum.stat.$it") }
+            com.sperance.exileforge.core.display.StatGroup.entries.forEach { add("enum.stat_group.${it.name}") }
             listOf("requiredLevel", "requiredStrength", "requiredDexterity", "requiredIntelligence")
                 .forEach { add("req.short.$it") }
             // The states an item can be in. The list is read off the document, so a flag the

@@ -116,6 +116,18 @@ class ItemPresentationTest {
         assertTrue(recipe.fits("HELMET")); assertFalse(recipe.fits("JEWEL"))
     }
 
+    @Test fun `the sheet is read in groups, and a stat nobody named still lands somewhere`() {
+        val grouped = groupedStats(mapOf("STOCK_RARITY" to 38.0, "STOCK_RESIST_COLD" to 68.0, "STOCK_HEALTH" to 1184.0,
+            "STOCK_ATTACK_SPEED" to 1.55, "STOCK_STRENGTH" to 142.0, "STOCK_ARMOR" to 1242.0, "STOCK_MANA" to 412.0, "BATTLE_ARCHERY" to 3.0))
+        assertEquals(StatGroup.entries.toList(), grouped.map { it.first })
+        // Inside a group the server's own enum order holds: life before mana.
+        assertEquals(listOf("STOCK_HEALTH", "STOCK_MANA"), grouped.first().second.map { it.first })
+        assertEquals(StatGroup.OTHER, StatGroup.of("STOCK_SOMETHING_NEW"))
+        assertEquals(listOf("STOCK_RARITY", "BATTLE_ARCHERY"), grouped.last().second.map { it.first })
+        // An empty group is left out rather than drawn as an empty card.
+        assertEquals(listOf(StatGroup.RESERVE), groupedStats(mapOf("STOCK_HEALTH" to 1.0)).map { it.first })
+    }
+
     @Test fun `a number is whole unless its fraction is the point`() {
         assertEquals("48", statNumber("STOCK_ARMOR", 47.6))
         assertEquals("12", statNumber("STOCK_MANA", 11.5))

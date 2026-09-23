@@ -20,7 +20,7 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.18.0, `versionCode` 35) for the
+ExileForge is an **Android Compose client** (version 2.19.0, `versionCode` 36) for the
 **ktor-bestgame** RPG server (0.25.0), pinned in
 `core/.../contract/Contract.kt` as `SERVER_COMMIT = a1f4fbabe6dd3512cfb421031fc88b81324617cb`
 on the server branch `claude/tender-pasteur-a36kj2`.
@@ -451,7 +451,9 @@ These are enforced by tests and are the point of the client's design:
     off is decided by the server when the item is put on; the client re-reads the hero and draws
     what is worn. Above the Hero tab's sections sits `HeroHeader` — name, class and level, gold and
     tree points as chips, experience as a thin bar — and the Equipment section is the vitals over
-    the ledger.
+    the ledger. Since 2.19.0 the Character section is the vitals over one card per `StatGroup`
+    (`core/display/StatGroups.kt`): the grouping reads server codes, is display only, and sends a
+    code it has never seen to `OTHER` rather than dropping it; an empty group is not drawn.
 
 ## Conventions
 

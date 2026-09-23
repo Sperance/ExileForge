@@ -9,3 +9,6 @@ local.properties
 
 # Сборки не живут в репозитории: свежий APK публикует CI артефактом каждого прогона.
 *.apk
+
+# Native libGDX libraries are unpacked here by :app's copyGdxNatives before every build.
+app/src/main/jniLibs/

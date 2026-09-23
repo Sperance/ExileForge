@@ -20,9 +20,9 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.23.0, `versionCode` 40) for the
-**ktor-bestgame** RPG server (0.25.0), pinned in
-`core/.../contract/Contract.kt` as `SERVER_COMMIT = a1f4fbabe6dd3512cfb421031fc88b81324617cb`
+ExileForge is an **Android Compose client** (version 2.24.0, `versionCode` 41) for the
+**ktor-bestgame** RPG server (0.26.0), pinned in
+`core/.../contract/Contract.kt` as `SERVER_COMMIT = 5aa7605f6332b555b21bbe7a55bbd327c5ce69a7`
 on the server branch `claude/tender-pasteur-a36kj2`.
 
 The client is deliberately **thin**: the server owns items, stats, modifier rolls and inventory.
@@ -98,7 +98,7 @@ core/                                   Pure JVM library (java-library + kotlin-
                  CharacterContract.kt   Character document validation
   network/       GameApi.kt             The server's client: the session (login, token, /me) and one property per feature
                  Transport.kt           OkHttp, the envelope, the journal and the Bearer token; `request` is internal
-                 CatalogClient/WorldClient/StaticClient/HeroClient/TreeClient/AuctionClient/PromoClient
+                 CatalogClient/WorldClient/StaticClient/HeroClient/TreeClient/AuctionClient/PromoClient/CampaignClient
                                         The routes, grouped by what they are about: `api.auction.buy(…)`
                  ItemRepository.kt      CRUD interface implemented by CatalogClient (lets tests fake it)
                  ApiFailure/FailureState/RequestJournal/RequestLog/ItemPage/HttpPayload
@@ -110,6 +110,12 @@ core/                                   Pure JVM library (java-library + kotlin-
                  progression/Progression.kt   CharacterClass, ExperienceLevel, StatValue
                  skilltree/SkillTree.kt CharacterSkillNode, SkillTreeNode, SkillTreeState, reachableFrom
                  auction/Auction.kt     AuctionLot, AuctionFilter, AuctionPage, lot kinds and states
+                 campaign/Campaign.kt   CampaignView/Map/Monster/Rarity, MonsterModifier, CampaignProgress, CampaignReward
+  campaign/      MapGenerator.kt        Seeded maps: caverns or halls, trimmed to one region, start, exit, spawns
+                 MonsterRoller.kt       A monster's rarity and modifiers from the server's tables, folded into its stats
+                 Combat.kt              The automatic fight (the client's since 2.24.0): Combatant, CombatLog
+                 ExpeditionWorld.kt     The map in motion: the hero, the stick, wandering and chasing monsters
+                 ExpeditionRun.kt       A run's phases, fight playback and the overlay's RunHud
                  character/CharacterStats.kt  The server's stat enum names
   i18n/          Loc.kt                 Lang (RU/EN), `ui(key)`/`uiOr`/`plural`, the global `uiLanguage`
                  ServerLocale.kt        LocaleManifest/LocaleBundle/LocaleKey, the global `serverLocale`, loc/locOr/locError
@@ -120,13 +126,15 @@ core/                                   Pure JVM library (java-library + kotlin-
   verification/  CrudScenario.kt        Admin-only self-check run from the Checks screen
   src/main/resources/i18n/              ui_{ru,en}.json — every label the client wrote itself
 app/                                    Android application (minSdk 26, compile/target SDK 37)
-  MainActivity.kt, ForgeApplication.kt  Entry points; Application owns RequestJournal + ServerStore
+  MainActivity.kt, ForgeApplication.kt  Entry points; Application owns RequestJournal + ServerStore. MainActivity is
+                                        a FragmentActivity since 2.24.0: the campaign scene is libGDX's own fragment
   presentation/  ForgeRuntime.kt        Shared coroutine scope, GameApi instance, MutableStateFlow<ForgeState>, locale + device sign-in
                  ForgeViewModel.kt      Lifecycle owner and thin facade delegating to feature models
                  features/              Catalog, Editor, Hero, Session, Character, Checks, Auction view models
                  state/ForgeState.kt    One immutable state object, in slices: account, world, play, market, admin
   ui/            ForgeApp.kt            Scaffold, banner with RU/EN switch, bottom navigation, tab dispatch
-                 screens/               session (auth + character menu), admin, catalog, editor, hero, tree, craft, auction, checks, server
+                 screens/               session (auth + character menu), admin, catalog, editor, hero, tree, craft, auction, checks, server,
+                                        expedition (the campaign tab, the run's overlay, and gdx/ — the libGDX scene)
                  components/            ItemCard, ItemRow, PropertyRow, InfoCard, ConfirmSheet, spinners and Ornament.kt
                  forms/, icons/ (ForgeGlyphs vector set, GlyphIcons, ItemEmblem, ItemIcon/StatIcon, ServerSprite), theme/
   data/settings/ServerStore.kt          DataStore Preferences: base URL, saved filters, language, locale bundles, icon set, device-session flag
@@ -208,8 +216,10 @@ banner and no bottom bar. Only `GAME` builds the scaffold. Nothing below the gat
 
 Inside `GAME` navigation is an `Int` tab in state, named in `ForgeState` and dispatched by a
 `when` in `ForgeApp`: `TAB_CATALOG`, `TAB_EDITOR`, `TAB_CHECKS`, `TAB_ACCOUNT`, `TAB_HERO`,
-`TAB_TREE`, `TAB_AUCTION`, `TAB_CRAFT`, `TAB_ADMIN`. The bottom bar carries `PLAYER_TABS` — hero,
-tree, auction, account — and, for an administrator only, `TAB_ADMIN` on top of them. That one tab
+`TAB_TREE`, `TAB_AUCTION`, `TAB_CRAFT`, `TAB_ADMIN`, `TAB_EXPEDITION`. The bottom bar carries
+`PLAYER_TABS` — hero, expedition, tree, auction, account — and, for an administrator only,
+`TAB_ADMIN` on top of them. A campaign run is above the tabs: while `vm.expedition` holds one,
+`ForgeApp` draws `ExpeditionPlay` over the whole screen instead of the scaffold. That one tab
 holds every administrator tool as a button: the catalogue, the editor, the checks, granting items
 and the switch that drops the tools to see the app as a player sees it. `ADMIN_TABS` is what
 `ForgeRuntime.tab` refuses without them, so a player cannot reach any of those screens at all.
@@ -470,6 +480,23 @@ These are enforced by tests and are the point of the client's design:
     the ledger. Since 2.19.0 the Character section is the vitals over one card per `StatGroup`
     (`core/display/StatGroups.kt`): the grouping reads server codes, is display only, and sends a
     code it has never seen to `OTHER` rather than dropping it; an empty group is not drawn.
+
+23. **The campaign's fight is the client's (since 2.24.0, server 0.26.0) — the owner's decision.**
+    It is the one exception to rule 1, and a narrow one. `GET /character/campaign/chapters` is the
+    server's tables — maps, monsters with stats already raised to their map, monster modifiers,
+    rarity weights — and the client does the rest: `MapGenerator` carves a map from a seed,
+    `MonsterRoller` throws the rarity and modifiers and folds them with the server's own formula,
+    and `Combat` plays the automatic fight (attacks only; spells, mana, curses and auras are a TODO
+    in `Combat.kt`). What a kill *earns* stays the server's: `kill` names the map, the monster and
+    the rarity, the server checks the map is open (`CP_003`) and the monster lives there (`CP_004`)
+    and rolls the experience, gold, orbs and equipment itself. A kill is never retried and never
+    dropped: `ExpeditionViewModel` reports them one after another on a lane of its own rather than
+    through `task`, which refuses while busy. Reaching a map's exit is `complete`, which opens the
+    next map. The scene is libGDX (`ui/screens/expedition/gdx`), shapes only — rule 17 holds, no
+    picture is loaded — and everything with text on it is the Compose overlay above it. The run
+    (`ExpeditionRun`) lives in `:core` and is stepped by the scene's own thread; the overlay reads
+    its `RunHud` and sends `RunCommand`s. libGDX's natives are unpacked into the git-ignored
+    `app/src/main/jniLibs` by `copyGdxNatives` before every build.
 
 ## Conventions
 

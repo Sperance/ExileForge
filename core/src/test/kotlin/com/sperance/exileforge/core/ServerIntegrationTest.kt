@@ -85,6 +85,32 @@ class ServerIntegrationTest {
         assertTrue(api.hero.inventory(id).none { it.id == shield.id && it.equipped }, "a two-handed weapon left the shield on")
     }
 
+    /**
+     * The campaign: the client fights, the server pays. A kill on a locked map or of a monster that
+     * does not live there is refused, and clearing a map opens the next one.
+     */
+    private suspend fun campaignIsTheServers(api: GameApi, id: String) {
+        val view = api.campaign.chapters()
+        val maps = view.chapters.single().maps
+        assertEquals(10, maps.size)
+        maps.forEach { map ->
+            assertTrue(map.monsters.size in 2..4, "${map.code}: ${map.monsters.size} monsters")
+            assertTrue(serverLocale.contains(com.sperance.exileforge.core.i18n.LocaleKey.mapName(map.code)), "no name for ${map.code}")
+            map.monsters.forEach { assertTrue(serverLocale.contains(com.sperance.exileforge.core.i18n.LocaleKey.monsterName(it.code)), "no name for ${it.code}") }
+        }
+        val first = maps.first()
+        assertEquals(listOf(first.code), api.campaign.progress(id).unlocked)
+        val reward = api.campaign.kill(id, first.code, first.monsters.first().code, com.sperance.exileforge.core.model.campaign.MonsterRarity.RARE)
+        assertTrue(reward.experience > 0, "a kill gave no experience")
+        val bag = api.hero.bag(id)
+        reward.items.forEach { stack -> assertTrue(bag.any { it.itemId == stack.itemId }, "the looted ${stack.itemId} is not in the bag") }
+        assertEquals("CP_004", assertFailsWith<ApiFailure> { api.campaign.kill(id, first.code, maps.last().monsters.first().code, com.sperance.exileforge.core.model.campaign.MonsterRarity.NORMAL) }.code)
+        assertEquals("CP_003", assertFailsWith<ApiFailure> { api.campaign.kill(id, maps[1].code, maps[1].monsters.first().code, com.sperance.exileforge.core.model.campaign.MonsterRarity.NORMAL) }.code)
+        val progress = api.campaign.complete(id, first.code)
+        assertEquals(listOf(first.code), progress.cleared)
+        assertTrue(maps[1].code in progress.unlocked)
+    }
+
     private suspend fun craftingIsTheServers(api: GameApi, id: String, templateId: String,
         definitions: List<com.sperance.exileforge.core.model.modifier.ModifierDefinition>) {
         val orbs = api.world.orbs().associateBy { it.orb }
@@ -313,6 +339,7 @@ class ServerIntegrationTest {
             assertEquals(rerolled.item.params, api.hero.inventory(id).single { it.id == instance.id }.params)
             craftingIsTheServers(api, id, template.entityId, definitions)
             handsAreTheServers(api, id)
+            campaignIsTheServers(api, id)
 
             val items = api.catalog.referencePage(com.sperance.exileforge.core.model.EntitySource.ITEM, 0)
             val item = items.items.firstOrNull() ?: fail("the items collection is empty: $items")

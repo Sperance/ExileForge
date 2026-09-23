@@ -571,6 +571,27 @@ class GameApiTest {
         assertEquals(sent, server.requestCount)
     }
 
+    @Test fun `the campaign is read whole and a kill names the map, the monster and the rarity`(): Unit = runBlocking {
+        ok("""{"chapters":[{"code":"CHAPTER_1","maps":[{"code":"C1_TIDAL_SHORE","chapter":"CHAPTER_1","order":1,"biome":"SHORE","level":1,
+            "monsterCount":[10,14],"monsters":[{"code":"DROWNED","form":"HUMANOID","stats":{"STOCK_HEALTH":18.0}}],
+            "modifiers":[{"code":"MOB_TOUGH","weight":100,"minLevel":1,"effects":[{"stat":"STOCK_HEALTH","operation":"INCREASED","value":60.0}]}]}]}],
+            "rarities":[{"rarity":"NORMAL","weight":85,"modifiers":[0,0]}]}""")
+        val view = api.campaign.chapters()
+        assertEquals(18.0, view.chapters.single().maps.single().monsters.single().stats["STOCK_HEALTH"])
+        assertEquals("/game/api/v1/character/campaign/chapters", server.takeRequest().path)
+        ok("""{"cleared":[],"unlocked":["C1_TIDAL_SHORE"]}""")
+        assertEquals(listOf("C1_TIDAL_SHORE"), api.campaign.progress(id).unlocked)
+        assertEquals("/game/api/v1/character/campaign/progress?characterId=$id", server.takeRequest().path)
+        ok("""{"experience":20.0,"gold":5,"items":[{"itemId":"$other","amount":1}],"equipment":[],"level":1,"totalExperience":20.0,"money":5}""")
+        assertEquals(5L, api.campaign.kill(id, "C1_TIDAL_SHORE", "DROWNED", com.sperance.exileforge.core.model.campaign.MonsterRarity.MAGIC).gold)
+        val kill = server.takeRequest()
+        assertEquals("POST", kill.method)
+        assertEquals("/game/api/v1/character/campaign/kill?characterId=$id&mapCode=C1_TIDAL_SHORE&monsterCode=DROWNED&rarity=MAGIC", kill.path)
+        ok("""{"cleared":["C1_TIDAL_SHORE"],"unlocked":["C1_TIDAL_SHORE","C1_BRINE_CAVES"]}""")
+        assertEquals(2, api.campaign.complete(id, "C1_TIDAL_SHORE").unlocked.size)
+        assertEquals("/game/api/v1/character/campaign/complete?characterId=$id&mapCode=C1_TIDAL_SHORE", server.takeRequest().path)
+    }
+
     @Test fun `experience is granted and the level comes back from the server`(): Unit = runBlocking {
         ok("""{"_id":"$id","userId":"$other","name":"Изгнанник","classId":"$id","level":7,"experience":1200.0}""")
         assertEquals(7, api.hero.addExperience(id, 1200.0).level)
@@ -646,7 +667,9 @@ class GameApiTest {
             "GET" to "/api/v1/equipment", "POST" to "/api/v1/characterequipment/socket",
             "POST" to "/api/v1/characterequipment/unsocket", "POST" to "/api/v1/characterequipment/sell",
             "GET" to "/api/v1/characterequipment/bench", "POST" to "/api/v1/characterequipment/craft",
-            "POST" to "/api/v1/characterequipment/uncraft")
+            "POST" to "/api/v1/characterequipment/uncraft",
+            "GET" to "/api/v1/character/campaign/chapters", "GET" to "/api/v1/character/campaign/progress",
+            "POST" to "/api/v1/character/campaign/kill", "POST" to "/api/v1/character/campaign/complete")
         // The server prints the Ktor selector, so a method arrives as "(GET)".
         ok(JsonArray(routes.map { buildJsonObject { put("path", it.second); put("method", "(${it.first})") } }).toString())
         val capabilities = api.capabilities()

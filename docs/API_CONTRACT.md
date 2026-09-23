@@ -1,6 +1,6 @@
 # Контракт Exile Forge 2.5
 
-Сервер: ветка `claude/tender-pasteur-a36kj2`, коммит `a1f4fbabe6dd3512cfb421031fc88b81324617cb` (ktor-bestgame 0.25.0).
+Сервер: ветка `claude/tender-pasteur-a36kj2`, коммит `5aa7605f6332b555b21bbe7a55bbd327c5ce69a7` (ktor-bestgame 0.26.0).
 Успех: `{"success":true,"data":...}`. Ошибка: `{"success":false,"error":{"message","errorClass","errorMethod","errorCode","messageArgs"}}`; HTTP-статус сохраняется клиентом.
 
 `messageArgs` добавлено в 0.17.0 и чинит давнюю дыру: `message` — готовое английское предложение, а `error.<код>` в словаре почти всегда шаблон с дыркой («Уровень {0} слишком мал»). Заполнить её клиенту было нечем, и переводились только 17 кодов из 114 — те, у кого шаблон без дырок. Теперь конверт несёт то, что сервер подставил в своё предложение, и клиент собирает своё. Если после подстановки `{0}` остался, значит аргументов пришло меньше, чем ждёт шаблон, и показывается серверная фраза: половина предложения хуже, чем предложение не на том языке.
@@ -314,9 +314,23 @@
 
 Дополнительно: `GET /api/v1/modifierdefinition/byCode?code=`, `GET /api/v1/modifiertier/byModifier?modifierId=`, `GET /api/v1/{collection}/cache/hash` для кэшируемых коллекций.
 
+## Кампания (с 0.26.0)
+
+Содержимое — `resources/content/campaign.json` сервера. `GET /api/v1/character/campaign/chapters` отдаёт главы целиком:
+
+```json
+{"chapters":[{"code":"CHAPTER_1","maps":[{"code":"C1_TIDAL_SHORE","chapter":"CHAPTER_1","order":1,"biome":"SHORE","level":1,
+  "monsterCount":[10,14],"monsters":[{"code":"DROWNED","form":"HUMANOID","stats":{"STOCK_HEALTH":18.0,"STOCK_ATTACK_PHYSICAL":4.0}}],
+  "modifiers":[{"code":"MOB_TOUGH","weight":100,"minLevel":1,"effects":[{"stat":"STOCK_HEALTH","operation":"INCREASED","value":60.0}]}]}]}],
+ "rarities":[{"rarity":"MAGIC","weight":12,"modifiers":[1,2],"effects":[{"stat":"STOCK_HEALTH","operation":"MORE","value":60.0}],
+  "quantity":2.0,"rarityBonus":30.0,"experience":1.8}]}
+```
+
+Характеристики монстров и `ADD`-модификаторы уже подняты до уровня карты. **Бой считает клиент** (решение владельца): он строит карту из зерна, катает редкость и модификаторы монстра по этим таблицам и проигрывает автобой. `POST /api/v1/character/campaign/kill?characterId=&mapCode=&monsterCode=&rarity=NORMAL|MAGIC|RARE` — победа; сервер проверяет, что карта открыта (`CP_003`) и монстр на ней водится (`CP_004`), и сам катает опыт, золото, сферы и экипировку уровня карты с множителями за редкость и бонусами героя (`STOCK_EXPERIENCE`, `STOCK_QUANTITY`, `STOCK_RARITY`, `STOCK_GOLD`). Ответ: `{experience, gold, items:[{itemId, amount}], equipment:[CharacterEquipment], level, totalExperience, money}`. Запрос никогда не повторяется: повтор оплатил бы убийство дважды. `POST /campaign/complete?characterId=&mapCode=` — герой дошёл до выхода, карта пройдена (`Character.campaign`) и открывает следующую; `GET /campaign/progress?characterId=` — `{cleared, unlocked}`. Имена — `chapter.*`, `map.*.name`/`.description`, `monster.*.name`, `monstermod.*.name` (шаблон с `{0}` на эффект).
+
 ## Чего у этого сервера нет
 
-Боя, JWT, поиска и фильтров на сервере, курсорной постраничной выдачи инвентаря. Соответствующие экраны и модели из клиента удалены, а не заглушены. Сферы вернулись в 0.9.1, дерево навыков — в 0.9.2; и то и другое реализовано целиком.
+Серверного боя (с 0.26.0 его считает клиент), JWT, поиска и фильтров на сервере, курсорной постраничной выдачи инвентаря. Соответствующие экраны и модели из клиента удалены, а не заглушены. Сферы вернулись в 0.9.1, дерево навыков — в 0.9.2; и то и другое реализовано целиком.
 
 ## Совместимость
 

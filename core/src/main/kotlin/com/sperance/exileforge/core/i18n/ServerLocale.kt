@@ -102,6 +102,13 @@ object LocaleKey {
     fun className(code: String) = key(CHARACTER_CLASS, code, NAME)
     fun classDescription(code: String) = key(CHARACTER_CLASS, code, DESCRIPTION)
     fun error(code: String) = "$ERROR.$code"
+    // The campaign, since server 0.26.0.
+    fun chapterName(code: String) = key("chapter", code, NAME)
+    fun mapName(code: String) = key("map", code, NAME)
+    fun mapDescription(code: String) = key("map", code, DESCRIPTION)
+    fun monsterName(code: String) = key("monster", code, NAME)
+    /** A template with `{0}`, `{1}` per effect, as an item modifier's. */
+    fun monsterModifierName(code: String) = key("monstermod", code, NAME)
     private fun key(section: String, code: String, field: String) = "$section.$code.$field"
 }
 

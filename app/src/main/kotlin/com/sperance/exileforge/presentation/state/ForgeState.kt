@@ -1,5 +1,7 @@
 package com.sperance.exileforge.presentation.state
 
+import com.sperance.exileforge.core.model.campaign.CampaignProgress
+import com.sperance.exileforge.core.model.campaign.CampaignView
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.model.command.RedemptionCode
 import com.sperance.exileforge.core.i18n.ui
@@ -156,6 +158,8 @@ data class WorldState(
      * than merely invisible: every hole falls back to a bundled emblem and looks deliberate.
      */
     val iconKeys: Int = 0, val iconSprites: Int = 0,
+    /** The campaign's chapters, monsters and rarities, read once per session (server 0.26.0). */
+    val campaign: CampaignView? = null,
 )
 
 /** The character being played, and what the player has picked on its screens. */
@@ -180,6 +184,8 @@ data class PlayState(
     val draftClass: String = "", val selectedNode: String = "",
     /** What the tree search box holds; a match moves the map to that node. */
     val nodeQuery: String = "",
+    /** Which campaign maps this character has cleared and which are open. */
+    val campaign: CampaignProgress? = null,
 )
 
 /** The forge's sections: orbs and the bench work on one item, a recipe on the bag. */
@@ -242,13 +248,14 @@ object Reads {
     const val REDEMPTIONS = "redemptions"
     const val HEALTH = "health"
     const val DEFINITIONS = "definitions"
+    const val CAMPAIGN = "campaign"
 }
 
 /**
  * The tabs, by name.
  *
- * Four of them are the bottom bar a player sees, and [TAB_ADMIN] is the one an administrator has
- * on top of it. Everything else is a screen a button opens: the forge from the Hero tab, and the
+ * Five of them are the bottom bar a player sees — the expedition joined them in 2.24.0 — and
+ * [TAB_ADMIN] is the one an administrator has on top of it. Everything else is a screen a button opens: the forge from the Hero tab, and the
  * catalogue, the editor and the checks from the administrator's tab. They are named because a
  * bare number in another file says nothing about which screen it is.
  */
@@ -262,9 +269,10 @@ const val TAB_AUCTION = 6
 const val TAB_CRAFT = 7
 const val TAB_ADMIN = 8
 const val TAB_REDEMPTION = 9
+const val TAB_EXPEDITION = 10
 
 /** What the bottom bar offers a player — and, with [TAB_ADMIN] appended, an administrator. */
-val PLAYER_TABS = listOf(TAB_HERO, TAB_TREE, TAB_AUCTION, TAB_ACCOUNT)
+val PLAYER_TABS = listOf(TAB_HERO, TAB_EXPEDITION, TAB_TREE, TAB_AUCTION, TAB_ACCOUNT)
 
 /** Screens only an administrator may open, whichever button leads to them. */
 val ADMIN_TABS = setOf(TAB_CATALOG, TAB_EDITOR, TAB_CHECKS, TAB_ADMIN, TAB_REDEMPTION)

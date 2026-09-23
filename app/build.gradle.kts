@@ -11,8 +11,8 @@ android {
         applicationId = "com.sperance.exileforge"
         minSdk = 26
         targetSdk = 37
-        versionCode = 40
-        versionName = "2.23.0"
+        versionCode = 41
+        versionName = "2.24.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures { compose = true }
@@ -31,8 +31,39 @@ android {
     }
 }
 
+/**
+ * libGDX draws the campaign's map and fights (since 2.24.0). Its native library ships as one jar per
+ * ABI with `libgdx.so` at the root, which AGP does not package from a dependency, so the jars are
+ * unpacked into `src/main/jniLibs/<abi>` — the default native folder, ignored by git — before a build.
+ */
+val gdxVersion = "1.14.2"
+val gdxNatives: Configuration by configurations.creating
+val gdxAbis = listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+val copyGdxNatives by tasks.registering {
+    val natives = gdxNatives
+    val target = layout.projectDirectory.dir("src/main/jniLibs")
+    // No declared output: the folder is a source folder every packaging task already reads, and
+    // naming it an output would make Gradle demand an explicit dependency from each of them.
+    inputs.files(natives)
+    doLast {
+        natives.files.forEach { jar ->
+            val abi = gdxAbis.first { jar.name.endsWith("natives-$it.jar") }
+            copy {
+                from(zipTree(jar)) { include("*.so") }
+                into(target.dir(abi))
+            }
+        }
+    }
+}
+tasks.named("preBuild") { dependsOn(copyGdxNatives) }
+
 dependencies {
     implementation(project(":core"))
+    implementation("com.badlogicgames.gdx:gdx:$gdxVersion")
+    implementation("com.badlogicgames.gdx:gdx-backend-android:$gdxVersion")
+    gdxAbis.forEach { gdxNatives("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-$it") }
+    // The scene is a fragment inside the Compose tree: AndroidFragment hosts libGDX's own.
+    implementation("androidx.fragment:fragment-compose:1.8.6")
     implementation(platform("androidx.compose:compose-bom:2026.08.00"))
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.compose.material3:material3")

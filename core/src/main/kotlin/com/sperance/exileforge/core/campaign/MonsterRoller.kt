@@ -1,0 +1,63 @@
+package com.sperance.exileforge.core.campaign
+
+import com.sperance.exileforge.core.model.campaign.CampaignMap
+import com.sperance.exileforge.core.model.campaign.CampaignMonster
+import com.sperance.exileforge.core.model.campaign.CampaignRarity
+import com.sperance.exileforge.core.model.campaign.MonsterEffect
+import com.sperance.exileforge.core.model.campaign.MonsterModifier
+import com.sperance.exileforge.core.model.campaign.MonsterRarity
+import kotlin.random.Random
+
+/** A monster as it stands on the map: its rarity, what it rolled, and the stats that came of it. */
+data class RolledMonster(
+    val code: String,
+    val form: String,
+    val rarity: MonsterRarity,
+    val modifiers: List<MonsterModifier>,
+    val stats: Map<String, Double>,
+)
+
+/**
+ * Rarity and modifiers of a monster — the client's roll since server 0.26.0.
+ *
+ * The client fights, so it is the client that has to know what it is fighting. The weights, the
+ * counts and the effects are the server's tables; only the dice are thrown here, and the rarity
+ * rolled is what the kill reports, because the server pays by it.
+ */
+object MonsterRoller {
+
+    fun roll(map: CampaignMap, rarities: List<CampaignRarity>, random: Random): RolledMonster {
+        val monster = map.monsters[random.nextInt(map.monsters.size)]
+        val rule = weighted(rarities, random) { it.weight } ?: CampaignRarity(MonsterRarity.NORMAL.name, 1)
+        val rarity = MonsterRarity.entries.firstOrNull { it.name == rule.rarity } ?: MonsterRarity.NORMAL
+        val count = rule.modifiers.let { (low, high) -> if (high > low) random.nextInt(low, high + 1) else low }
+        val pool = map.modifiers.filter { it.minLevel <= map.level }.toMutableList()
+        val picked = List(count) { weighted(pool, random) { it.weight }?.also { pool.remove(it) } }.filterNotNull()
+        return RolledMonster(monster.code, monster.form, rarity, picked, fold(monster, rule.effects + picked.flatMap { it.effects }))
+    }
+
+    /**
+     * A monster's stats after its rarity and modifiers: `(base + ΣADD) × (1 + ΣINCREASED/100) ×
+     * Π(1 + MORE/100)`, and `SET` last — the formula the server folds item modifiers with.
+     */
+    fun fold(monster: CampaignMonster, effects: List<MonsterEffect>): Map<String, Double> {
+        val byStat = effects.groupBy { it.stat }
+        return (monster.stats.keys + byStat.keys).associateWith { stat ->
+            val own = byStat[stat].orEmpty()
+            own.lastOrNull { it.operation == "SET" }?.value ?: run {
+                val added = (monster.stats[stat] ?: 0.0) + own.filter { it.operation == "ADD" }.sumOf { it.value }
+                val increased = 1 + own.filter { it.operation == "INCREASED" }.sumOf { it.value } / 100
+                val more = own.filter { it.operation == "MORE" }.fold(1.0) { product, it -> product * (1 + it.value / 100) }
+                added * increased * more
+            }
+        }
+    }
+
+    private fun <T> weighted(items: List<T>, random: Random, weight: (T) -> Int): T? {
+        val live = items.filter { weight(it) > 0 }
+        if (live.isEmpty()) return null
+        var point = random.nextInt(live.sumOf(weight))
+        live.forEach { item -> point -= weight(item); if (point < 0) return item }
+        return live.last()
+    }
+}

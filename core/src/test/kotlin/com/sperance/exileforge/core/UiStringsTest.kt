@@ -147,6 +147,7 @@ class UiStringsTest {
             AuctionLotStatus.entries.forEach { add("enum.lot_status.${it.name}") }
             CurrencyOrb.entries.forEach { add("enum.orb.${it.name}"); add("enum.orb.${it.name}.rule") }
             RedemptionKind.entries.forEach { add("enum.reward.${it.name}") }
+            com.sperance.exileforge.core.model.campaign.MonsterRarity.entries.forEach { add("enum.monster_rarity.${it.name}") }
             stockStats.forEach { add("enum.stat.$it") }
             com.sperance.exileforge.core.display.StatGroup.entries.forEach { add("enum.stat_group.${it.name}") }
             listOf("requiredLevel", "requiredStrength", "requiredDexterity", "requiredIntelligence")

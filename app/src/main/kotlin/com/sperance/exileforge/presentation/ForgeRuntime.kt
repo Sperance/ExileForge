@@ -50,6 +50,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
     val auctionViewModel = AuctionViewModel(this)
     val redemptionViewModel = RedemptionViewModel(this)
     val characterViewModel = CharacterViewModel(this)
+    val expeditionViewModel = ExpeditionViewModel(this)
 
     /**
      * A refused token is forgotten, and a player who plays by device is signed in again without
@@ -302,7 +303,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
         mutable.update { it.copy(loading = emptySet()) }
     }
 
-    private fun report(e: Exception, writing: Boolean) {
+    internal fun report(e: Exception, writing: Boolean) {
         val problem = FailureState.from(e, writing)
         // A refusal the dictionary knows whole is shown in the chosen language; one whose
         // template needs arguments the envelope never carried keeps the server's sentence.
@@ -375,8 +376,8 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
     }
 
     fun clearSession() {
-        api.logout(); journal.clear(); cancelReads()
-        mutable.update { it.copy(phase = AppPhase.AUTH, tab = 3, mode = AppMode.PLAYER, failure = null, account = it.account.copy(resumable = false, characters = emptyList(), charactersRead = false, signedIn = false, profile = null, sessionEpoch = it.account.sessionEpoch + 1), admin = it.admin.copy(items = emptyList(), total = 0, page = 0, totalPages = 0, original = null, draft = JsonObject(emptyMap()), editorOpen = false, checks = emptyList()), world = it.world.copy(definitions = emptyList(), orbs = emptyList(), bench = emptyList(), classes = emptyList(), treeNodes = emptyList(), inventoryBases = emptyMap()), play = it.play.copy(selectedOrb = "", draftClass = "", selectedNode = "", nodeQuery = "", characterId = "", characterOwner = "", hero = null, selectedEquipment = "", forgeLine = ""), market = it.market.copy(tab = 0, showcase = com.sperance.exileforge.core.model.auction.AuctionPage(), filter = com.sperance.exileforge.core.model.auction.AuctionFilter(), showOwnLots = false, myLots = emptyList(), locked = null)) }
+        api.logout(); journal.clear(); cancelReads(); expeditionViewModel.drop()
+        mutable.update { it.copy(phase = AppPhase.AUTH, tab = 3, mode = AppMode.PLAYER, failure = null, account = it.account.copy(resumable = false, characters = emptyList(), charactersRead = false, signedIn = false, profile = null, sessionEpoch = it.account.sessionEpoch + 1), admin = it.admin.copy(items = emptyList(), total = 0, page = 0, totalPages = 0, original = null, draft = JsonObject(emptyMap()), editorOpen = false, checks = emptyList()), world = it.world.copy(definitions = emptyList(), orbs = emptyList(), bench = emptyList(), classes = emptyList(), treeNodes = emptyList(), inventoryBases = emptyMap(), campaign = null), play = it.play.copy(selectedOrb = "", draftClass = "", selectedNode = "", nodeQuery = "", characterId = "", characterOwner = "", hero = null, selectedEquipment = "", forgeLine = "", campaign = null), market = it.market.copy(tab = 0, showcase = com.sperance.exileforge.core.model.auction.AuctionPage(), filter = com.sperance.exileforge.core.model.auction.AuctionFilter(), showOwnLots = false, myLots = emptyList(), locked = null)) }
     }
 
     fun close() { scope.coroutineContext[Job]?.cancel() }

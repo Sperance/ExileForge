@@ -39,6 +39,8 @@ import com.sperance.exileforge.ui.screens.catalog.CatalogScreen
 import com.sperance.exileforge.ui.screens.checks.ChecksScreen
 import com.sperance.exileforge.ui.screens.craft.CraftScreen
 import com.sperance.exileforge.ui.screens.editor.EditorScreen
+import com.sperance.exileforge.ui.screens.expedition.ExpeditionPlay
+import com.sperance.exileforge.ui.screens.expedition.ExpeditionScreen
 import com.sperance.exileforge.ui.screens.hero.HeroScreen
 import com.sperance.exileforge.ui.screens.redemption.RedemptionScreen
 import com.sperance.exileforge.ui.screens.server.ServerScreen
@@ -48,6 +50,7 @@ import com.sperance.exileforge.ui.theme.*
 @Composable fun ForgeApp(vm: ForgeViewModel) {
     val s by vm.state.collectAsStateWithLifecycle()
     val logs by vm.logs.collectAsStateWithLifecycle()
+    val expedition by vm.expedition.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
     var confirmDiscard by rememberSaveable { mutableStateOf(false) }
@@ -65,7 +68,8 @@ import com.sperance.exileforge.ui.theme.*
     when (s.phase) {
         AppPhase.AUTH -> AuthScreen(s, vm, snackbar)
         AppPhase.CHARACTERS -> CharacterSelectScreen(s, vm, snackbar)
-        AppPhase.GAME -> GameScaffold(s, vm, logs, snackbar,
+        // A campaign run takes the whole screen: no banner and no bar, the scene is the game.
+        AppPhase.GAME -> expedition?.let { ExpeditionPlay(s, vm, it) } ?: GameScaffold(s, vm, logs, snackbar,
             onDeleteRequest = { confirmDelete = true }, onDiscardRequest = { confirmDiscard = true })
     }
     if (confirmDelete) AlertDialog(onDismissRequest = { confirmDelete = false }, containerColor = Panel, titleContentColor = Gold,
@@ -91,13 +95,13 @@ import com.sperance.exileforge.ui.theme.*
         bottomBar = {
             NavigationBar(containerColor = Abyss, tonalElevation = 0.dp,
                 modifier = Modifier.drawBehind { drawLine(Gold.copy(alpha = .35f), Offset(0f, 0f), Offset(size.width, 0f), 2f) }) {
-                // Four destinations are the game; an administrator gets exactly one more, and
+                // Five destinations are the game; an administrator gets exactly one more, and
                 // everything that used to crowd the bar lives behind it as a button.
-                val labels = mapOf(TAB_HERO to ui("nav.hero"), TAB_TREE to ui("nav.tree"),
+                val labels = mapOf(TAB_HERO to ui("nav.hero"), TAB_EXPEDITION to ui("nav.expedition"), TAB_TREE to ui("nav.tree"),
                     TAB_AUCTION to ui("nav.auction"), TAB_ACCOUNT to ui("nav.account"),
                     TAB_ADMIN to ui("nav.admin"))
                 val destinations = PLAYER_TABS + listOfNotNull(TAB_ADMIN.takeIf { s.adminTools })
-                val icons = mapOf<Int, ImageVector>(TAB_ACCOUNT to ForgeGlyphs.Portal, TAB_HERO to ForgeGlyphs.Helm,
+                val icons = mapOf<Int, ImageVector>(TAB_ACCOUNT to ForgeGlyphs.Portal, TAB_HERO to ForgeGlyphs.Helm, TAB_EXPEDITION to ForgeGlyphs.Swords,
                     TAB_TREE to ForgeGlyphs.Constellation, TAB_AUCTION to ForgeGlyphs.Orb, TAB_ADMIN to ForgeGlyphs.Scroll)
                 destinations.forEach { index ->
                     val label = labels.getValue(index)
@@ -118,6 +122,7 @@ import com.sperance.exileforge.ui.theme.*
                 TAB_CHECKS -> ChecksScreen(s, vm, logs)
                 TAB_ACCOUNT -> ServerScreen(s, vm, logs)
                 TAB_HERO -> HeroScreen(s, vm)
+                TAB_EXPEDITION -> ExpeditionScreen(s, vm)
                 TAB_TREE -> SkillTreeScreen(s, vm)
                 TAB_AUCTION -> AuctionScreen(s, vm)
                 TAB_ADMIN -> AdminScreen(s, vm)

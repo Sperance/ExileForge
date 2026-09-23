@@ -20,6 +20,13 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     val state = runtime.state
     val logs = runtime.logs
     fun tab(tab: Int) = runtime.tab(tab)
+    /** The campaign run on screen, if any: a world the scene steps and the overlay reads. */
+    val expedition = runtime.expeditionViewModel.run
+    fun loadCampaign() = runtime.expeditionViewModel.loadCampaign()
+    fun nextCampaignMap() = runtime.expeditionViewModel.nextMap()
+    fun startRun(mapCode: String) = runtime.expeditionViewModel.start(mapCode)
+    fun runCommand(command: com.sperance.exileforge.core.campaign.RunCommand) = runtime.expeditionViewModel.send(command)
+    fun closeRun() = runtime.expeditionViewModel.close()
     fun language(lang: Lang) = runtime.language(lang)
     /** The server's names live in its dictionary; this re-reads it without touching the session. */
     fun refreshLocale() = runtime.refreshLocale()

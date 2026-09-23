@@ -20,7 +20,7 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.20.0, `versionCode` 37) for the
+ExileForge is an **Android Compose client** (version 2.21.0, `versionCode` 38) for the
 **ktor-bestgame** RPG server (0.25.0), pinned in
 `core/.../contract/Contract.kt` as `SERVER_COMMIT = a1f4fbabe6dd3512cfb421031fc88b81324617cb`
 on the server branch `claude/tender-pasteur-a36kj2`.
@@ -357,10 +357,14 @@ These are enforced by tests and are the point of the client's design:
     display and never travels back to the server. Rarity is never written out either: since 2.7.0
     it is the **spine** — a band of the rarity colour down the left edge of an item, on a row and
     on a card alike — rather than a frame drawn round the whole thing, because a stash is a column
-    of these and a hundred coloured boxes read as a fence. The name is then the colour of every
-    other name, and `ItemCard` says what the item *is* (its slot) where it used to say what rarity
-    it was. A row lists its modifiers one per line — base first, then what rolled — up to
-    `ROW_PROPERTIES`, and counts what does not fit rather than dropping it. On a card the base is
+    of these and a hundred coloured boxes read as a fence. `ItemCard` says what the item *is* (its
+    slot) where it used to say what rarity it was. Since 2.21.0 a *row* (`ItemRow` — the stash, the
+    forge, the sell tab, the showcase) drops the spine instead: the icon leads in a square framed in
+    the rarity colour, with the item level and the states under it, and the name takes that colour.
+    The base is chips, one per figure, and the rolls a list under rhombi with their tier (or the
+    bench's word) on the right, up to `ROW_MODIFIERS`, counting what does not fit rather than
+    dropping it; a lot's price is the row's `trailing`, opposite the name. The equipment ledger and
+    the card keep the spine. On a card the base is
     read as a figure rather than a sentence — 120 and «броня», the first one set large — and the
     rolls are a list under a rhombus; the icon sits beside the name, because that is how an item
     is recognised before any of it is read. Requirements
@@ -493,8 +497,9 @@ These are enforced by tests and are the point of the client's design:
   Gold/Bronze frames, rarity colours matching the server enum, cut-corner shapes). Build screens
   from `ScreenHeader`, `ForgePanel`, `OrnateDivider`, `Engraved`, `StatBar`, `SectionHeader`,
   `RaritySpine`, `Rhombus`, `ItemRow` and `PropertyRow` instead of ad-hoc cards, and use
-  `rarityColor` rather than new ad-hoc colors. An item is a banner: a `Row` of
-  `height(IntrinsicSize.Min)` with the spine first and everything else in the column beside it.
+  `rarityColor` rather than new ad-hoc colors. An item card or ledger line is a banner: a `Row` of
+  `height(IntrinsicSize.Min)` with the spine first and everything else in the column beside it;
+  an `ItemRow` (since 2.21.0) leads with its icon in a rarity-coloured frame instead.
   Anything that spends what cannot be earned back in a moment asks through `ConfirmSheet`: a sheet
   from the bottom with the same spine — gold for an exchange, `LifeRed` for a loss (`danger`) — a
   ledger of what is taken, what is left and what comes back (`LedgerLine`, `Tone`), and a button

@@ -206,7 +206,7 @@ class HeroPanelTest {
      */
     @Test fun theShowcaseNamesThePriceInOrbsAndWillNotSellYouYourOwnLot() {
         val chaos = CurrencyItem("chaos-orb", "CHAOS_ORB", "CHAOS_ORB", 300)
-        // Six properties on one item: the base is two and the rolls are four, so one is over the cap.
+        // Two base figures and five rolls: the base is chips, and one roll is over the cap of four.
         val base = buildJsonObject {
             put("_id", "helmet-base"); put("code", "IRON_HELMET"); put("slot", "HELMET")
             put("requiredLevel", 25); put("requiredStrength", 40)
@@ -215,7 +215,7 @@ class HeroPanelTest {
                 add(buildJsonObject { put("modifierId", "evasion"); putJsonArray("values") { add(8.0) } })
             }
         }
-        val rolls = listOf("life", "mana", "fire", "cold").map { RolledModifier(it, listOf(7.0), "tier-1", 1) }
+        val rolls = listOf("life", "mana", "fire", "cold", "lightning").map { RolledModifier(it, listOf(7.0), "tier-1", 1) }
         val instance = EquipmentInstance("helmet-instance", "rival", "helmet-base", rolls, rarity = "RARE")
         val theirs = AuctionLot(id = "lot-1", sellerId = "rival", sellerName = "Соперник", kind = AuctionLotKind.EQUIPMENT,
             equipment = instance, itemCode = "IRON_HELMET", slot = "HELMET", rarity = "RARE", itemLevel = 30,
@@ -235,13 +235,13 @@ class HeroPanelTest {
         // The line shows only what the item is and its level; requirements belong to the opened card,
         // not the showcase list. Both lots say exactly that and nothing more, which is why there
         // are two of them: with the requirements gone the two lines became the same sentence.
-        compose.onAllNodesWithText("Шлем · ур. 30").assertCountEquals(2)
+        compose.onAllNodesWithText("ур. 30").assertCountEquals(2)
         compose.onAllNodesWithText("Шлем · ур. 30 · треб. 25 ур., 40 сил").assertCountEquals(0)
         // What the server says this character cannot meet is marked on the line, as the stash marks
         // it (since 2.20.0): only the lot whose template carries the verdict, and in the server's words.
         compose.onAllNodesWithText("Сила: нужно 30, есть 14", substring = true).assertCountEquals(1)
         compose.onAllNodesWithText("Редкий").assertCountEquals(0)
-        // The properties are a list, one per line — base first, then the rolls, five at most.
+        // The base as figures, then the rolls, four at most, with the rest counted.
         compose.onNodeWithText("12").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("ещё 1").performScrollTo().assertIsDisplayed()
         // The bottom line: the price on the left, the seller on the right.

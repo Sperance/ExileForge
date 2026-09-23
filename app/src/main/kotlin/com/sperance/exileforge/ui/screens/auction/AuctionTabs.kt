@@ -241,22 +241,26 @@ private fun chipLabel(s: ForgeState, field: FilterField, value: String): String 
  *
  * It is the same [ItemRow] the stash draws, because a lot and a stash line are the same question
  * asked twice — what is it and what did it roll. What the auction adds is underneath:
- * the price on the left, where it is weighed, and the seller on the right.
+ * the price opposite the name, where it is weighed with it, and the seller at the bottom.
  *
- * Rarity is not written anywhere: it is the band down the left edge of the line.
+ * Rarity is not written anywhere: it is the frame of the icon and the colour of the name.
  */
 @Composable private fun LotRow(s: ForgeState, lot: AuctionLot, note: String?, onClick: () -> Unit) {
     val document = lotDocument(s, lot)
-    ItemRow(document, definitions = s.world.definitions, enabled = !s.busy, note = note, noteColor = Muted,
+    ItemRow(document, definitions = s.world.definitions, enabled = !s.busy,
         facts = lotFacts(s, lot, document),
         // The server's verdict on the template, as the stash marks it: a lot the buyer cannot wear yet.
         unwearable = s.play.hero?.sheet?.unwearableBy?.get(lot.equipment?.equipmentId.orEmpty()).orEmpty(),
+        trailing = {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                Icon(ForgeGlyphs.Orb, null, tint = Gold, modifier = Modifier.size(15.dp))
+                Text(orbPrice(s, lot), color = GoldBright, style = MaterialTheme.typography.labelLarge, maxLines = 1)
+            }
+        },
         footer = {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Icon(ForgeGlyphs.Orb, null, tint = Gold, modifier = Modifier.size(16.dp))
-                Text(orbPrice(s, lot), color = Gold, style = MaterialTheme.typography.labelMedium,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                verticalAlignment = Alignment.CenterVertically) {
+                note?.let { Text(it, color = Rune, style = MaterialTheme.typography.labelSmall) }
                 Text(lot.sellerName.ifBlank { "…${lot.sellerId.takeLast(6)}" }, color = Muted,
                     style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }

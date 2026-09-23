@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
@@ -13,10 +14,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.contract.text
+import com.sperance.exileforge.core.display.PropertyValue
+import com.sperance.exileforge.core.display.affixMarks
 import com.sperance.exileforge.core.display.baseProperties
 import com.sperance.exileforge.core.display.documentTitle
 import com.sperance.exileforge.core.display.itemStates
@@ -24,6 +27,7 @@ import com.sperance.exileforge.core.display.modifierText
 import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.display.stateTitle
+import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.modifier.ModifierDefinition
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -61,8 +65,8 @@ import kotlinx.serialization.json.JsonObject
     }
 }
 
-/** How many properties a line carries before it stops being a line. */
-const val ROW_PROPERTIES = 5
+/** How many rolled modifiers a line carries before it counts the rest instead. */
+const val ROW_MODIFIERS = 4
 
 /**
  * One item of a stash, as a line rather than a card.
@@ -71,85 +75,108 @@ const val ROW_PROPERTIES = 5
  * whether to stop and open it rides here — what it is, where it goes, what it rolled — and the
  * card behind the tap keeps the rest.
  *
- * Rarity is the band down the left edge rather than a frame around the whole line: a stash is a
- * column of these, and a hundred coloured boxes read as a fence. The band is enough to find a
- * unique in a list, and it leaves the name in the colour of every other name.
- *
- * The properties are the deciding half, so they are printed one per line rather than crushed into
- * one: five of them clipped at a screen edge is a count, not a reading. What does not fit is
- * counted instead of dropped.
+ * Since 2.21.0 the icon leads, in a square framed in the rarity colour with the item level and the
+ * item's states under it, and the name takes that colour too: the frame is enough to find a unique
+ * in a list without a band down every line. The base is read as figures — a chip per number, the
+ * number set bold — and the rolls are a list under rhombi, each with its tier on the right, the way
+ * the card prints them. What does not fit is counted instead of dropped. [trailing] sits opposite
+ * the name — a lot's price — and [footer] under everything, for what a list adds about the item.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable fun ItemRow(document: JsonObject, definitions: List<ModifierDefinition> = emptyList(),
     note: String? = null, noteColor: Color = Gold, selected: Boolean = false, enabled: Boolean = true,
     /** The server's reasons this cannot be worn right now; empty means it can. */
     unwearable: List<String> = emptyList(),
-    /** Extra facts for the second line, after the slot and the level. */
+    /** Extra facts for the line under the name, after the slot. */
     facts: List<String> = emptyList(),
-    /** A line below the properties — the price of a lot, and what else belongs at the bottom. */
+    /** Opposite the name: the price of a lot. */
+    trailing: (@Composable () -> Unit)? = null,
+    /** A line below the properties — the seller of a lot, and what else belongs at the bottom. */
     footer: @Composable (ColumnScope.() -> Unit)? = null,
     onClick: () -> Unit) {
     val color = rarityColor(document.text("rarity"))
-    // The base first, carrying the number this copy really has — its own local modifiers are
-    // already in it — and the rolls after, which is the order a card reads in too. The base the
-    // item started from stays on the card: a line has no room for a sum and its history both.
-    val base = baseProperties(document, definitions)
-    val rolled = (document["params"] as? JsonArray).orEmpty()
-        .mapNotNull { (it as? JsonObject)?.let { one -> AnnotatedString(modifierText(one, definitions)) } }
-    val properties = base.map { basePropertyText(it, withBase = false) } + rolled
+    // The base carries the number this copy really has — its own local modifiers are already in
+    // it. The base the item started from stays on the card: a line has no room for a sum and its
+    // history both.
+    val base = baseProperties(document, definitions).flatMap { it.values }
+    val rolled = (document["params"] as? JsonArray).orEmpty().mapNotNull { it as? JsonObject }
     val states = itemStates(document, definitions)
     val level = document.text("itemLevel")
     val slot = document.text("slot").takeIf { it.isNotBlank() }?.let(::slotTitle)
-    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).background(Panel)
-        .border(if (selected) 2.dp else 1.dp, if (selected) GoldBright else Bronze.copy(alpha = .30f))
-        .clickable(enabled = enabled, onClick = onClick)) {
-        RaritySpine(color, 4.dp)
-        Column(Modifier.weight(1f).padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(11.dp)) {
-                // The marker rides on the icon rather than in the text: the icon is where the eye
-                // starts, and a line of its own would push the properties further down every row.
-                Box {
-                    ItemIcon(document, color, Modifier.size(34.dp))
-                    if (unwearable.isNotEmpty()) Icon(Icons.Outlined.Block, null, tint = LifeRed,
-                        modifier = Modifier.size(16.dp).align(Alignment.TopStart))
+    val frame = RoundedCornerShape(6.dp)
+    Row(Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(8.dp))
+        .border(if (selected) 2.dp else 1.dp, if (selected) GoldBright else PanelRaised, RoundedCornerShape(8.dp))
+        .clickable(enabled = enabled, onClick = onClick).padding(10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            // The marker rides on the icon rather than in the text: the icon is where the eye starts.
+            Box(Modifier.size(54.dp).background(color.copy(alpha = .08f), frame).border(1.dp, color, frame), contentAlignment = Alignment.Center) {
+                ItemIcon(document, color, Modifier.size(34.dp))
+                if (unwearable.isNotEmpty()) Icon(Icons.Outlined.Block, null, tint = LifeRed,
+                    modifier = Modifier.align(Alignment.TopStart).padding(2.dp).size(14.dp))
+            }
+            if (level.isNotBlank()) Text(ui("row.level", level), color = Muted, style = MaterialTheme.typography.labelSmall)
+            // States as symbols, three to a row under the icon: words about corruption and sockets
+            // would push the properties off the line.
+            states.chunked(3).forEach { three ->
+                Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                    three.forEach { state -> Icon(stateGlyph(state), stateTitle(state), tint = stateColor(state), modifier = Modifier.size(13.dp)) }
                 }
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(document.text("name").ifBlank { documentTitle(document) }, color = Parchment,
-                            style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false))
-                        note?.let { Text(it, color = noteColor, style = MaterialTheme.typography.labelSmall) }
-                    }
-                    (listOfNotNull(slot, level.takeIf { it.isNotBlank() }?.let { ui("row.level", it) }) + facts)
-                        .takeIf { it.isNotEmpty() }?.let {
-                            Text(it.joinToString(" · "), color = Muted, style = MaterialTheme.typography.labelSmall,
-                                maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        }
-                    properties.take(ROW_PROPERTIES).forEachIndexed { index, property ->
-                        Text(property, color = if (index < base.size) Parchment else Rune,
-                            style = MaterialTheme.typography.labelSmall,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                    // Counted rather than dropped: "ещё 3" is the difference between a short item
-                    // and one whose best roll is just off the edge.
-                    (properties.size - ROW_PROPERTIES).takeIf { it > 0 }?.let {
-                        Text(ui("row.more", it), color = Muted, style = MaterialTheme.typography.labelSmall)
-                    }
-                    // The server's verdict, in its own words — never a requirement worked out here.
-                    unwearable.forEach {
-                        Text(requirementReason(it), color = LifeRed, style = MaterialTheme.typography.labelSmall,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                    // States get a line of their own at the bottom, as symbols: a line is read down,
-                    // and four words about corruption and sockets would push the properties off it.
-                    if (states.isNotEmpty()) Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        states.forEach { state ->
-                            Icon(stateGlyph(state), stateTitle(state), tint = stateColor(state), modifier = Modifier.size(14.dp))
-                        }
-                    }
-                }
+            }
+        }
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(document.text("name").ifBlank { documentTitle(document) }, color = color,
+                    style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f))
+                note?.let { Text(it, color = noteColor, style = MaterialTheme.typography.labelSmall) }
+                trailing?.invoke()
+            }
+            (listOfNotNull(slot) + facts).takeIf { it.isNotEmpty() }?.let {
+                Text(it.joinToString(" · "), color = Muted, style = MaterialTheme.typography.labelSmall,
+                    maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+            if (base.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                base.forEach { value -> BaseChip(value) }
+            }
+            rolled.take(ROW_MODIFIERS).forEach { RollLine(it, definitions) }
+            // Counted rather than dropped: "ещё 3" is the difference between a short item and one
+            // whose best roll is just off the edge.
+            (rolled.size - ROW_MODIFIERS).takeIf { it > 0 }?.let {
+                Text(ui("row.more", it), color = Muted, style = MaterialTheme.typography.labelSmall)
+            }
+            // The server's verdict, in its own words — never a requirement worked out here.
+            unwearable.forEach {
+                Text(requirementReason(it), color = LifeRed, style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             footer?.invoke(this)
         }
+    }
+}
+
+/** One base figure: the number bold, coloured when a local modifier moved it, and what it counts. */
+@Composable private fun BaseChip(value: PropertyValue) {
+    Row(Modifier.background(Abyss, RoundedCornerShape(4.dp)).padding(horizontal = 7.dp, vertical = 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(value.text, color = if (value.augmented) Rune else GoldBright, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+        if (value.stat.isNotBlank()) Text(statTitle(value.stat), color = Muted, style = MaterialTheme.typography.labelSmall,
+            maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/** A rolled modifier on a line: its sentence under a rhombus, its tier or its craft on the right. */
+@Composable private fun RollLine(modifier: JsonObject, definitions: List<ModifierDefinition>) {
+    val marks = affixMarks(modifier, definitions)
+    val tone = when { marks.fractured -> Fractured; marks.crafted -> Crafted; else -> Rune }
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.CenterVertically) {
+        Rhombus(Bronze, 5.dp)
+        Text(modifierText(modifier, definitions), color = tone, style = MaterialTheme.typography.labelMedium,
+            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        when {
+            marks.crafted -> ui("mod.crafted")
+            marks.tier > 0 -> ui("mod.tier", marks.tier)
+            else -> null
+        }?.let { Text(it, color = if (marks.crafted) Crafted else Muted, style = MaterialTheme.typography.labelSmall) }
     }
 }
 

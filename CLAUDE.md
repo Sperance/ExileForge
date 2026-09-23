@@ -20,7 +20,7 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.11.0, `versionCode` 28) for the
+ExileForge is an **Android Compose client** (version 2.12.0, `versionCode` 29) for the
 **ktor-bestgame** RPG server (0.21.0), pinned in
 `core/.../contract/Contract.kt` as `SERVER_COMMIT = 3c152d6efc824e6bbe4779c3eb1d96edd8e924bf`
 on the server branch `claude/tender-pasteur-a36kj2`.
@@ -198,7 +198,9 @@ tree, auction, account — and, for an administrator only, `TAB_ADMIN` on top of
 holds every administrator tool as a button: the catalogue, the editor, the checks, granting items
 and the switch that drops the tools to see the app as a player sees it. `ADMIN_TABS` is what
 `ForgeRuntime.tab` refuses without them, so a player cannot reach any of those screens at all.
-The forge is still a tab a button opens, from the Hero tab. The bar stays on those screens and is
+The forge is still a tab a button opens, from an icon in the Hero tab's header. Since 2.12.0 the
+Hero tab itself has three sections — Character, Equipment, Stash — so the stash is one tap away
+rather than at the bottom of a long scroll. The bar stays on those screens and is
 the way back out of them.
 `ForgeApp` re-`key`s the whole tree on `server`, `sessionEpoch` and `lang`, so a logout, a server
 change or a language switch discards per-screen Compose state.
@@ -453,7 +455,11 @@ These are enforced by tests and are the point of the client's design:
   elsewhere. The same button answers an accessibility click at once: a screen reader cannot hold.
   "What is left" is printed only when the bag is known and can pay; when it cannot, the sheet says
   so as a warning and still sends the command — the refusal is the server's. A stash is a list of `ItemRow`s with the full `ItemCard` one tap behind each,
-  because a card is a page about one item and a line is a stash you can read down.
+  because a card is a page about one item and a line is a stash you can read down. That card is
+  `ItemSheet`: it scrolls, and the actions sit in a row pinned under it — wear or take off, an orb,
+  a listing, a sale, and the base for an administrator — so what a player came to do is never below
+  the fold. An empty equipment slot opens the stash narrowed to that slot (`SlotPicker`). A vital
+  with no current value is a figure in a tile, never a bar: a bar that can only be full says nothing.
 - Commit messages follow Conventional Commits: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`
   (docs-only commits often append `[skip ci]`).
 

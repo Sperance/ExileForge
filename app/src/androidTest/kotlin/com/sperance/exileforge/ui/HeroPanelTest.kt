@@ -34,7 +34,8 @@ import com.sperance.exileforge.presentation.state.PlayState
 import com.sperance.exileforge.presentation.state.WorldState
 import com.sperance.exileforge.presentation.state.MarketState
 import com.sperance.exileforge.core.model.currency.CurrencyItem
-import com.sperance.exileforge.ui.screens.hero.HeroEquipmentPanel
+import com.sperance.exileforge.ui.screens.hero.EquipmentGrid
+import com.sperance.exileforge.ui.screens.hero.HeroSummary
 import com.sperance.exileforge.ui.screens.hero.OrbPanel
 import com.sperance.exileforge.ui.screens.tree.SkillTreePanel
 import com.sperance.exileforge.core.model.auction.AuctionFilter
@@ -75,31 +76,40 @@ class HeroPanelTest {
 
     @After fun forget() { serverLocale = LocaleBundle() }
 
-    /** The equipped slot shows its template's name and hands back the instance id, not the slot. */
+    /**
+     * The character section and the equipment grid, as the Hero tab draws them.
+     *
+     * A worn slot hands back the instance, so the item's sheet can open; an empty one hands back
+     * only its slot, so the stash can be narrowed to what fits it.
+     */
     @Test fun equippedSlotShowsItsTemplateAndEmitsTheInstanceId() {
         val instance = EquipmentInstance("ring-instance", "hero", "ring-base",
             listOf(RolledModifier("life-modifier", listOf(42.0), "tier-1", 1)), equippedSlot = "RING")
         val base = buildJsonObject { put("_id", "ring-base"); put("code", "HERO_RING"); put("slot", "RING"); put("rarity", "RARE") }
         val hero = HeroView(CharacterSummary("hero", "owner", "Изгнанник", version = 3, level = 10),
             listOf(instance), CharacterSheet("hero", 10, mapOf("STOCK_HEALTH" to 88.0, "STOCK_ARMOR" to 40.0), listOf("ring-instance")))
-        var removed: String? = null
-        compose.setContent { ForgeTheme { Column(Modifier.background(Ink).verticalScroll(rememberScrollState()).padding(12.dp)) {
-            HeroEquipmentPanel(ForgeState(busy = false, account = AccountState(signedIn = true, profile = com.sperance.exileforge.core.model.command.UserProfile("owner")), play = PlayState(hero = hero, characterOwner = "owner"), world = WorldState(inventoryBases = mapOf("ring-base" to base))), { removed = it })
+        var picked: Pair<String, String?>? = null
+        compose.setContent { ForgeTheme { Column(Modifier.background(Ink).verticalScroll(rememberScrollState()).padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            val state = ForgeState(busy = false, account = AccountState(signedIn = true, profile = com.sperance.exileforge.core.model.command.UserProfile("owner")), play = PlayState(hero = hero, characterOwner = "owner"), world = WorldState(inventoryBases = mapOf("ring-base" to base)))
+            HeroSummary(state)
+            EquipmentGrid(state) { slot, instance -> picked = slot to instance }
         } } }
         val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
         val directory = File(InstrumentationRegistry.getInstrumentation().targetContext.getExternalFilesDir(null), "design").apply { mkdirs() }
         File(directory, "hero.jpg").outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 80, it) }
-        compose.onNodeWithText("Кольцо героя").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Снять").performClick()
-        compose.runOnIdle { assertEquals("ring-instance", removed) }
-        // Life is a bar with the number on it: the sheet carries a maximum and no current value,
-        // so the bar is always full and the figure is the whole of what it says.
+        compose.onNodeWithText("Кольцо героя").performScrollTo().performClick()
+        compose.runOnIdle { assertEquals("RING" to "ring-instance", picked) }
+        // An empty slot names itself and nothing else.
+        compose.onNodeWithText("Шлем").performScrollTo().performClick()
+        compose.runOnIdle { assertEquals("HELMET" to null, picked) }
+        // Life is a figure, not a bar: the sheet carries a maximum and no current value.
         compose.onNodeWithText("88").performScrollTo().assertIsDisplayed()
         // Every stat the server sent is in the sheet the vitals open, with nothing folded inside it.
-        compose.onNodeWithText("Все характеристики: 2 · нажмите").performScrollTo().performClick()
+        compose.onNodeWithText("Все характеристики: 2").performScrollTo().performClick()
         compose.onNodeWithText("Здоровье").assertIsDisplayed()
         // Whole numbers, no dot: the 88.0 the server sent reads "88". It matches twice, because the
-        // bar behind the sheet carries the same figure — the sheet did not round it differently.
+        // tile behind the sheet carries the same figure — the sheet did not round it differently.
         compose.onAllNodesWithText("88").assertCountEquals(2)
         // The second stat is checked by its value: "Броня" is also the name of the BODY slot, and
         // the empty slot is drawn right behind the sheet, so the label matches two nodes.
@@ -119,7 +129,9 @@ class HeroPanelTest {
             CharacterSheet("hero", 3, mapOf("STOCK_HEALTH" to 60.0), emptyList(),
                 listOf(InactiveEquipment("helm-instance", "IRON_HELMET", listOf("strength: need 30, have 14")))))
         compose.setContent { ForgeTheme { Column(Modifier.background(Ink).verticalScroll(rememberScrollState()).padding(12.dp)) {
-            HeroEquipmentPanel(ForgeState(busy = false, account = AccountState(signedIn = true, profile = com.sperance.exileforge.core.model.command.UserProfile("owner")), play = PlayState(hero = hero, characterOwner = "owner"), world = WorldState(classes = listOf(CharacterClass("marauder", "MARAUDER", "STR_START")), inventoryBases = mapOf("helm-base" to base))), {})
+            val state = ForgeState(busy = false, account = AccountState(signedIn = true, profile = com.sperance.exileforge.core.model.command.UserProfile("owner")), play = PlayState(hero = hero, characterOwner = "owner"), world = WorldState(classes = listOf(CharacterClass("marauder", "MARAUDER", "STR_START")), inventoryBases = mapOf("helm-base" to base)))
+            HeroSummary(state)
+            EquipmentGrid(state) { _, _ -> }
         } } }
         compose.onNodeWithText("Мародёр").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Не работает").performScrollTo().assertIsDisplayed()

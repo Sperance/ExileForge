@@ -124,7 +124,7 @@ internal fun DamageType.key() = "enum.damage.$name"
                                 mana = fight.heroMana, maxMana = fight.heroMaxMana, swing = fight.heroSwing, cast = fight.heroCast.takeIf { fight.heroCasts },
                                 ailments = fight.heroAilments, held = fight.heroHeld, flash = flash(lunge, Side.HERO), glow = if (fight.flaskActive) Vital else null,
                                 hits = fight.hits.filter { it.target == Side.HERO },
-                                portrait = { time, wash, amount, flash -> Portraits.hero(this, time, wash, amount, flash) })
+                                portrait = { time, wash, amount, flash -> Portraits.hero(this, s.heroClass?.code, time, wash, amount, flash) })
                             FighterFrame(Modifier.weight(1f).fillMaxHeight().offset { IntOffset(monsterShift.roundToPx(), 0) },
                                 side = Side.MONSTER, accent = rarityTint(monster.rarity), name = monsterTitle(monster.code),
                                 line = ui("expedition.monster_line", ui(monster.rarity.key()), level),
@@ -132,7 +132,7 @@ internal fun DamageType.key() = "enum.damage.$name"
                                 mana = 0, maxMana = 0, swing = fight.monsterSwing, cast = fight.monsterCast.takeIf { fight.monsterCasts },
                                 ailments = fight.monsterAilments, held = fight.monsterHeld, flash = flash(lunge, Side.MONSTER), glow = null,
                                 hits = fight.hits.filter { it.target == Side.MONSTER },
-                                portrait = { time, wash, amount, flash -> Portraits.monster(this, monster.form, rarityTint(monster.rarity), time, wash, amount, flash) })
+                                portrait = { time, wash, amount, flash -> Portraits.monster(this, monster.code, monster.form, rarityTint(monster.rarity), time, wash, amount, flash) })
                         }
                         Strikes(lunge, cardWidth, cardHeight, gap)
                         fight.outcome?.let {

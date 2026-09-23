@@ -2,6 +2,7 @@ package com.sperance.exileforge.core
 
 import com.sperance.exileforge.core.contract.*
 import com.sperance.exileforge.core.display.IconBundle
+import com.sperance.exileforge.core.display.PortraitSvg
 import com.sperance.exileforge.core.display.IconKey
 import com.sperance.exileforge.core.display.documentIcon
 import com.sperance.exileforge.core.display.equipmentTitle
@@ -204,6 +205,12 @@ class ServerIntegrationTest {
         // it — which is the quiet failure this whole check is here to catch.
         assertTrue(iconBundle.size > 100, "only ${iconBundle.size} codes carry an icon")
         serverIcons = iconBundle
+        // Every portrait the server serves is one the client can draw, and every class has one.
+        val portraits = api.files.portraitManifest()
+        assertTrue(portraits.portraits.keys.count { it.startsWith("class.") } >= 7, "a class has no portrait")
+        portraits.portraits.keys.forEach { key ->
+            assertTrue(PortraitSvg.parse(api.files.portraitDocument(key)).shapes.isNotEmpty(), "$key drew nothing")
+        }
 
         // The seeded modifier catalogue is what every rolled value on an instance points back at.
         val definitions = api.world.modifiers()

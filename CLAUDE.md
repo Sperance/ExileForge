@@ -20,10 +20,10 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.30.0, `versionCode` 48) for the
-**ktor-bestgame** RPG server (0.28.0), pinned in
-`core/.../contract/Contract.kt` as `SERVER_COMMIT = 04335520b0b9e1e614d3bca082cd2b58d297989f`
-on the server branch `claude/tender-pasteur-a36kj2`.
+ExileForge is an **Android Compose client** (version 2.31.0, `versionCode` 49) for the
+**ktor-bestgame** RPG server (0.29.0), pinned in
+`core/.../contract/Contract.kt` as `SERVER_COMMIT = e32ca999a2adac21e8d132b188e5e6a432a97f15`
+on the server branch `claude/vigilant-wozniak-ptnxmx`.
 
 The client is deliberately **thin**: the server owns items, stats, modifier rolls and inventory.
 This client renders server state and sends commands; it may add up what it was already sent to
@@ -400,7 +400,13 @@ These are enforced by tests and are the point of the client's design:
     is invisible rather than broken and why the Account tab reports how much of it arrived. Keys
     mirror `LocaleKey`'s sections (`equipment.<CODE>`, `item.<CODE>`, `stat.<STAT>`) so one code
     answers both what a thing is called and how it is drawn. Modifiers are deliberately out: their
-    text is a template with substitutions and an icon cannot stand in for a sentence.
+    text is a template with substitutions and an icon cannot stand in for a sentence. Since 2.31.0
+    (server 0.29.0) **portraits** come the same way: `portraits/index.json` (a fingerprint per file)
+    and one colour SVG per class, monster form or monster (`class.<CODE>`, `form.<FORM>`,
+    `monster.<CODE>`), three by four, parsed by `core/display/ServerPortraits.kt` (`PortraitSvg`, a
+    narrow subset the server's `PortraitTest` enforces) and painted by `ui/icons/PortraitPainter.kt`.
+    A monster takes its own portrait, then its form's, then the client's bust; the map cuts a round
+    token out of the face (`drawToken`), and the menu, the class choice and `HeroHeader` show it.
 18. **The server owns every name; the client owns its own labels.** Since 0.14.0 no document
     carries text: equipment, items, modifiers, tree nodes and classes store a `code`, and the
     strings are static files — `locale/index.json` (languages with a hash each) and
@@ -512,9 +518,9 @@ These are enforced by tests and are the point of the client's design:
     through `task`, which refuses while busy. Reaching a map's exit is `complete`, which opens the
     next map. The scene is Compose's own `Canvas` (`ui/screens/expedition/scene`) since 2.25.0 —
     libGDX was tried in 2.24 and removed, so there is no engine, no fragment and no native library.
-    `Pen` is a thin pen over `DrawScope` that measures up from a figure's feet, `Figures` draws the
-    hero and every monster form, all shapes — rule 17 holds, no picture is loaded — and everything
-    with text on it is the overlay above. The run (`ExpeditionRun`) lives in `:core` and is stepped
+    `Pen` is a thin pen over `DrawScope`; since 2.31.0 the hero and every monster walk the map as
+    round tokens of their portraits (`Figures` is gone) — rule 17 holds, no picture is loaded — and
+    everything with text on it is the overlay above. The run (`ExpeditionRun`) lives in `:core` and is stepped
     once a frame from a `withFrameNanos` loop; the canvas reads a clock state, so each frame redraws
     without recomposing. The overlay reads the run's `RunHud` and sends `RunCommand`s. The fight
     screen is «Арена» (`ArenaOverlay.kt`), heraldry since 2.28.0 — the owner's pick of five mockups:
@@ -531,7 +537,7 @@ These are enforced by tests and are the point of the client's design:
     `flash` whitens the hit portrait, and `Strikes` draws the burst at the seam, a spell's bolt, a
     block's arc and a flask's glow. An ailment washes the portrait in its colour (`washAmount`), a
     held fighter dims its frame. The scene under the frames (`ExpeditionScene.fight`) draws only
-    the biome's ground; the walking map keeps `Figures`. Under the frames: the log (newest first,
+    the biome's ground; the walking map draws the tokens. Under the frames: the log (newest first,
     unfolds on demand), the flask and retreat buttons, speed and log; after the fight
     `ReportScreen` — outcome, totals, the whole log and the loot, or the price of death — read off
     `RunHud.report`. Numbers and log lines are coloured by damage type (`damageTint`) and ailment

@@ -10,6 +10,8 @@ import com.sperance.exileforge.core.contract.text
 import com.sperance.exileforge.core.contract.validate
 import com.sperance.exileforge.core.contract.validateModifierPool
 import com.sperance.exileforge.core.display.IconManifest
+import com.sperance.exileforge.core.display.PortraitKey
+import com.sperance.exileforge.core.display.PortraitManifest
 import com.sperance.exileforge.core.i18n.LocaleBundle
 import com.sperance.exileforge.core.i18n.LocaleLanguage
 import com.sperance.exileforge.core.i18n.LocaleManifest
@@ -83,5 +85,17 @@ class StaticClient internal constructor(private val http: Transport) {
     suspend fun iconDocument(file: String): String {
         require(file.isNotBlank()) { ui("api.no_icon_file") }
         return http.fetchText("icons/$file")
+    }
+
+    /**
+     * The portraits (since server 0.29.0): a manifest with a fingerprint per file, then each SVG on
+     * its own, so a client fetches only what changed. Static, public, no envelope, like the icons.
+     */
+    suspend fun portraitManifest(): PortraitManifest = WireJson.decodeFromJsonElement(http.fetch("portraits/index.json"))
+
+    /** One portrait's SVG as it was served, so it can be stored verbatim and parsed again offline. */
+    suspend fun portraitDocument(key: String): String {
+        require('.' in key) { ui("api.no_portrait") }
+        return http.fetchText(PortraitKey.path(key), json = false)
     }
 }

@@ -84,19 +84,22 @@ class Transport(
      */
     internal suspend fun fetch(path: String): JsonElement = WireJson.parseToJsonElement(fetchText(path))
 
-    /** The same file as text, so a dictionary can be stored verbatim and parsed again offline. */
-    internal suspend fun fetchText(path: String): String {
+    /**
+     * The same file as text, so a dictionary can be stored verbatim and parsed again offline.
+     * [json] = false is for a portrait's SVG, which is checked by its own parser, not as JSON.
+     */
+    internal suspend fun fetchText(path: String, json: Boolean = true): String {
         val url = base.newBuilder().addPathSegments(path).build()
         val start = System.nanoTime()
         var status: Int? = null
         var responseText = ""
         var success = false
         try {
-            val payload = client.newCall(Request.Builder().url(url).header("Accept", "application/json").get().build()).awaitPayload()
+            val payload = client.newCall(Request.Builder().url(url).header("Accept", if (json) "application/json" else "image/svg+xml").get().build()).awaitPayload()
             status = payload.status
             responseText = payload.body.take(2_000)
             if (status !in 200..299) throw ApiFailure(status, null, ui("api.file_not_served", status))
-            try { withContext(Dispatchers.Default) { WireJson.parseToJsonElement(payload.body) } }
+            if (json) try { withContext(Dispatchers.Default) { WireJson.parseToJsonElement(payload.body) } }
                 catch (e: CancellationException) { throw e }
                 catch (_: Exception) { throw ApiFailure(status, null, ui("api.malformed_json_at", path)) }
             success = true

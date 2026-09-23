@@ -9,6 +9,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.translate
@@ -17,13 +19,15 @@ import com.sperance.exileforge.core.campaign.ExpeditionMap
 import com.sperance.exileforge.core.campaign.ExpeditionRun
 import com.sperance.exileforge.core.campaign.Tile
 import com.sperance.exileforge.core.model.campaign.MonsterRarity
+import com.sperance.exileforge.ui.icons.drawToken
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.sin
 
 /**
- * The campaign's scene, drawn by Compose itself: the map in pseudo-isometry while walking, and the
+ * The campaign's scene, drawn by Compose itself: the map in pseudo-isometry while walking, with
+ * the hero and the monsters as round tokens of their portraits (since 2.31.0), and the
  * ground alone while fighting — the fighters are the arena overlay's framed portraits. Everything is a shape — rule 17, no picture is ever loaded
  * — and nothing here is text: names, bars and numbers are the overlay's, in the app's dictionary.
  *
@@ -32,7 +36,7 @@ import kotlin.math.sin
  * never seen half-moved. Reading [clock] in the draw block is what redraws it: only the drawing is
  * repeated each frame, never the composition.
  */
-@Composable fun ExpeditionScene(run: ExpeditionRun, modifier: Modifier = Modifier) {
+@Composable fun ExpeditionScene(run: ExpeditionRun, classCode: String?, modifier: Modifier = Modifier) {
     var clock by remember(run) { mutableFloatStateOf(0f) }
     val painter = remember { ScenePainter() }
     LaunchedEffect(run) {
@@ -46,19 +50,22 @@ import kotlin.math.sin
             last = now
         }
     }
-    Canvas(modifier) { painter.draw(this, run, clock) }
+    Canvas(modifier) { painter.draw(this, run, clock, classCode) }
 }
 
-/** Everything the scene draws, holding the one pen and the one set of figures it draws with. */
+/** Everything the scene draws, holding the one pen it draws with. */
 private class ScenePainter {
     private val pen = Pen()
-    private val figures = Figures(pen)
     private var time = 0f
     /** Half a tile's width on screen; the tile is twice as wide as it is tall. */
     private var unit = 30f
 
-    fun draw(scope: DrawScope, run: ExpeditionRun, time: Float) {
+    /** The hero's class, whose portrait is the hero's token. */
+    private var classCode: String? = null
+
+    fun draw(scope: DrawScope, run: ExpeditionRun, time: Float, classCode: String?) {
         this.time = time
+        this.classCode = classCode
         pen.scope = scope
         unit = with(scope) { 30.dp.toPx() }
         val palette = Palettes.of(run.map.biome)
@@ -104,27 +111,35 @@ private class ScenePainter {
                 val near = depth > heroDepth && depth - heroDepth < 3 && abs((x - y) - (world.heroX - world.heroY)) < 3
                 standing += depth to { wall(x, y, palette, if (near) .45f else 1f) }
             }
+            // Since 2.31.0 whoever walks the map is a round token cut from their portrait's face: the
+            // class's for the hero, the monster's own or its form's for a monster, ringed by what it is.
             world.agents.filter { it.alive }.forEach { agent ->
                 standing += (agent.x + agent.y) to {
-                    val sx = isoX(agent.x, agent.y)
-                    val sy = isoY(agent.x, agent.y)
-                    when (agent.monster.rarity) {
-                        MonsterRarity.MAGIC -> figures.ring(sx, sy, unit * 1.3f, Palettes.magic, time)
-                        MonsterRarity.RARE -> figures.ring(sx, sy, unit * 1.5f, Palettes.rare, time)
-                        MonsterRarity.NORMAL -> Unit
-                    }
-                    val facing = if (agent.targetX - agent.targetY >= agent.x - agent.y) 1f else -1f
+                    val monster = agent.monster
                     // A rarer monster is a bigger one: the tier is read before the ring is noticed.
-                    val scale = when (agent.monster.rarity) { MonsterRarity.NORMAL -> 1.5f; MonsterRarity.MAGIC -> 1.65f; MonsterRarity.RARE -> 1.85f }
-                    figures.monster(agent.monster.form, sx, sy, unit * scale, facing, time)
+                    val radius = unit * when (monster.rarity) { MonsterRarity.NORMAL -> .7f; MonsterRarity.MAGIC -> .8f; MonsterRarity.RARE -> .92f }
+                    val ring = when (monster.rarity) { MonsterRarity.NORMAL -> Palettes.bronze; MonsterRarity.MAGIC -> Palettes.magic; MonsterRarity.RARE -> Palettes.rare }
+                    val bob = abs(sin(time * 3f + agent.id)) * unit * .08f
+                    token(isoX(agent.x, agent.y), isoY(agent.x, agent.y), radius, ring, bob) {
+                        Portraits.monster(this, monster.code, monster.form, ring, time)
+                    }
                 }
             }
             standing += heroDepth to {
-                val facing = if (world.facingX - world.facingY >= 0) 1f else -1f
-                figures.hero(isoX(world.heroX, world.heroY), isoY(world.heroX, world.heroY), unit * 1.6f, facing, time, world.moving)
+                val bob = if (world.moving) abs(sin(time * 9f)) * unit * .14f else 0f
+                token(isoX(world.heroX, world.heroY), isoY(world.heroX, world.heroY), unit * .85f, Palettes.hero, bob) {
+                    Portraits.hero(this, classCode, time)
+                }
             }
             standing.sortedBy { it.first }.forEach { it.second() }
         }
+    }
+
+    /** A token standing on its feet at ([x], [y]): a shadow on the floor and the disc above it, lifted by [bob]. */
+    private fun token(x: Float, y: Float, radius: Float, ring: Color, bob: Float, draw: DrawScope.() -> Unit) {
+        val scope = pen.scope
+        scope.drawOval(Color.Black.copy(alpha = .45f), Offset(x - radius * .8f, y - radius * .22f), Size(radius * 1.6f, radius * .44f))
+        scope.drawToken(Offset(x, y - radius * 1.1f - bob), radius, ring, draw)
     }
 
     private fun touchesFloor(map: ExpeditionMap, x: Int, y: Int) =

@@ -111,6 +111,18 @@ class GameApiTest {
         assertFailsWith<IllegalArgumentException> { api.files.iconDocument("") }
     }
 
+    @Test fun `a portrait is fetched by its key, each file on its own`(): Unit = runBlocking {
+        server.enqueue(MockResponse().setBody("""{"hash":"ab12","width":300,"height":400,"portraits":{"class.WITCH":"f00d","form.BAT":"beef"}}"""))
+        val manifest = api.files.portraitManifest()
+        assertEquals("/game/portraits/index.json", server.takeRequest().path)
+        assertEquals(setOf("class.WITCH", "form.BAT"), manifest.portraits.keys)
+
+        server.enqueue(MockResponse().setBody("""<svg viewBox="0 0 300 400"/>"""))
+        assertEquals("""<svg viewBox="0 0 300 400"/>""", api.files.portraitDocument("class.WITCH"))
+        assertEquals("/game/portraits/class/WITCH.svg", server.takeRequest().path)
+        assertFailsWith<IllegalArgumentException> { api.files.portraitDocument("WITCH") }
+    }
+
     @Test fun `the character menu reads one account's characters and no one else's`(): Unit = runBlocking {
         val sent = server.requestCount
         ok("""[{"_id":"$id","userId":"$other","name":"Изгнанник","level":7,"classId":"$id"},

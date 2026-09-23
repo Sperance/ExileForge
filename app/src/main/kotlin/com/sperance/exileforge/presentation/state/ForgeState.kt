@@ -158,6 +158,8 @@ data class WorldState(
      * than merely invisible: every hole falls back to a bundled emblem and looks deliberate.
      */
     val iconKeys: Int = 0, val iconSprites: Int = 0,
+    /** How many of the server's portraits are drawn from (since 2.31.0); a screen reads it to redraw when they arrive. */
+    val portraits: Int = 0,
     /** The campaign's chapters, monsters and rarities, read once per session (server 0.26.0). */
     val campaign: CampaignView? = null,
 )

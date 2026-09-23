@@ -58,7 +58,7 @@ import kotlin.math.roundToInt
     LaunchedEffect(hud.phase) { if (hud.phase == RunPhase.LEFT) vm.closeRun() }
 
     Box(Modifier.fillMaxSize().background(Ink)) {
-        ExpeditionScene(run, Modifier.fillMaxSize())
+        ExpeditionScene(run, s.heroClass?.code, Modifier.fillMaxSize())
         when (hud.phase) {
             RunPhase.MAP -> {
                 Stick(run)

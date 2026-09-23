@@ -1,6 +1,5 @@
 package com.sperance.exileforge.ui.screens.expedition
 
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -18,10 +17,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -34,6 +33,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.min
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.campaign.*
 import com.sperance.exileforge.core.display.inventoryDocument
@@ -104,72 +104,59 @@ internal fun DamageType.key() = "enum.damage.$name"
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val height = maxHeight
         Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(10.dp)) {
-            // The frames and everything that flies between them. A frame is as tall as its portrait
-            // (three by four) and its lines make it, so the row measures itself and tells the numbers where to fly.
-            val density = LocalDensity.current
-            var rowHeight by remember { mutableStateOf(0.dp) }
-            BoxWithConstraints(Modifier.fillMaxWidth().onSizeChanged { rowHeight = with(density) { it.height.toDp() } }) {
-                val gap = 12.dp
-                val cardWidth = (maxWidth - gap) / 2
-                val cardHeight = rowHeight
-                val reach = cardWidth * .3f
-                val heroShift = shift(lunge, Side.HERO, reach)
-                val monsterShift = shift(lunge, Side.MONSTER, reach)
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
-                    FighterFrame(Modifier.weight(1f).offset { IntOffset(heroShift.roundToPx(), 0) },
-                        side = Side.HERO, accent = GoldBright, name = hero?.name.orEmpty(),
-                        line = ui("expedition.hero_line", s.heroClass?.title.orEmpty(), hero?.level ?: 1),
-                        life = fight.heroLife, maxLife = hud.heroMaxLife, shield = fight.heroShield, maxShield = hud.heroMaxShield,
-                        mana = fight.heroMana, maxMana = fight.heroMaxMana, swing = fight.heroSwing, cast = fight.heroCast.takeIf { fight.heroCasts },
-                        ailments = fight.heroAilments, held = fight.heroHeld, flash = flash(lunge, Side.HERO), glow = if (fight.flaskActive) Vital else null,
-                        portrait = { time, wash, amount, flash -> Portraits.hero(this, time, wash, amount, flash) })
-                    FighterFrame(Modifier.weight(1f).offset { IntOffset(monsterShift.roundToPx(), 0) },
-                        side = Side.MONSTER, accent = rarityTint(monster.rarity), name = monsterTitle(monster.code),
-                        line = ui("expedition.monster_line", ui(monster.rarity.key()), level),
-                        life = fight.monsterLife, maxLife = fight.monsterMaxLife, shield = fight.monsterShield, maxShield = fight.monsterMaxShield,
-                        mana = 0, maxMana = 0, swing = fight.monsterSwing, cast = fight.monsterCast.takeIf { fight.monsterCasts },
-                        ailments = fight.monsterAilments, held = fight.monsterHeld, flash = flash(lunge, Side.MONSTER), glow = null,
-                        portrait = { time, wash, amount, flash -> Portraits.monster(this, monster.form, rarityTint(monster.rarity), time, wash, amount, flash) })
-                }
-                Strikes(lunge, cardWidth, cardHeight, gap)
-                // The numbers rise off the frame that was hit, coloured by what hit it.
-                fight.hits.forEach { hit ->
-                    val centre = if (hit.target == Side.HERO) cardWidth / 2 else cardWidth * 1.5f + gap
-                    val rise = (hit.age / ExpeditionRun.HIT_LIFETIME).toFloat()
-                    val x = with(density) { centre.toPx() } + ((hit.id % 3) - 1) * 26f
-                    val y = with(density) { (cardHeight * .42f).toPx() } - rise * 110f
-                    val alpha = (1 - rise).coerceIn(0f, 1f)
-                    Column(Modifier.offset { IntOffset((x - 70f).roundToInt(), y.roundToInt()) }.width(140.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(hitText(hit), color = hitColour(hit).copy(alpha = alpha), textAlign = TextAlign.Center,
-                            fontSize = when { hit.kind == HitKind.CRIT -> 30.sp; hit.action == Action.TICK -> 16.sp; else -> 22.sp },
-                            fontWeight = if (hit.action == Action.TICK) FontWeight.Normal else FontWeight.Bold,
-                            fontStyle = if (hit.action == Action.TICK) FontStyle.Italic else FontStyle.Normal)
-                        val marks = (if (hit.stunned) listOf(ui("expedition.stunned")) else emptyList()) + hit.inflicted.map { ui(it.key()) }
-                        if (marks.isNotEmpty()) Text(marks.joinToString(" · "), color = (hit.inflicted.firstOrNull()?.let(::ailmentTint) ?: GoldBright).copy(alpha = alpha),
-                            style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
+            // The frames take whatever the log and the buttons leave, so those never leave the screen;
+            // everything that moves is clipped to the frames' own row.
+            Column(Modifier.weight(1f).fillMaxWidth()) {
+                BoxWithConstraints(Modifier.weight(1f).fillMaxWidth().clipToBounds(), contentAlignment = Alignment.TopCenter) {
+                    val gap = 12.dp
+                    val cardWidth = (maxWidth - gap) / 2
+                    // A frame is its portrait (three by four) and its lines, and no taller than the room it has.
+                    val cardHeight = min(maxHeight, cardWidth * 4f / 3f + FRAME_LINES)
+                    val reach = cardWidth * .3f
+                    val heroShift = shift(lunge, Side.HERO, reach)
+                    val monsterShift = shift(lunge, Side.MONSTER, reach)
+                    Box(Modifier.fillMaxWidth().height(cardHeight)) {
+                        Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(gap)) {
+                            FighterFrame(Modifier.weight(1f).fillMaxHeight().offset { IntOffset(heroShift.roundToPx(), 0) },
+                                side = Side.HERO, accent = GoldBright, name = hero?.name.orEmpty(),
+                                line = ui("expedition.hero_line", s.heroClass?.title.orEmpty(), hero?.level ?: 1),
+                                life = fight.heroLife, maxLife = hud.heroMaxLife, shield = fight.heroShield, maxShield = hud.heroMaxShield,
+                                mana = fight.heroMana, maxMana = fight.heroMaxMana, swing = fight.heroSwing, cast = fight.heroCast.takeIf { fight.heroCasts },
+                                ailments = fight.heroAilments, held = fight.heroHeld, flash = flash(lunge, Side.HERO), glow = if (fight.flaskActive) Vital else null,
+                                hits = fight.hits.filter { it.target == Side.HERO },
+                                portrait = { time, wash, amount, flash -> Portraits.hero(this, time, wash, amount, flash) })
+                            FighterFrame(Modifier.weight(1f).fillMaxHeight().offset { IntOffset(monsterShift.roundToPx(), 0) },
+                                side = Side.MONSTER, accent = rarityTint(monster.rarity), name = monsterTitle(monster.code),
+                                line = ui("expedition.monster_line", ui(monster.rarity.key()), level),
+                                life = fight.monsterLife, maxLife = fight.monsterMaxLife, shield = fight.monsterShield, maxShield = fight.monsterMaxShield,
+                                mana = 0, maxMana = 0, swing = fight.monsterSwing, cast = fight.monsterCast.takeIf { fight.monsterCasts },
+                                ailments = fight.monsterAilments, held = fight.monsterHeld, flash = flash(lunge, Side.MONSTER), glow = null,
+                                hits = fight.hits.filter { it.target == Side.MONSTER },
+                                portrait = { time, wash, amount, flash -> Portraits.monster(this, monster.form, rarityTint(monster.rarity), time, wash, amount, flash) })
+                        }
+                        Strikes(lunge, cardWidth, cardHeight, gap)
+                        fight.outcome?.let {
+                            Text(ui("expedition.outcome_${it.name.lowercase()}"), color = outcomeColour(it), style = MaterialTheme.typography.headlineMedium,
+                                modifier = Modifier.align(Alignment.Center).background(Ink.copy(alpha = .7f), RoundedCornerShape(8.dp)).padding(horizontal = 16.dp, vertical = 6.dp))
+                        }
                     }
                 }
-                fight.outcome?.let {
-                    Text(ui("expedition.outcome_${it.name.lowercase()}"), color = outcomeColour(it), style = MaterialTheme.typography.headlineMedium,
-                        modifier = Modifier.align(Alignment.Center).background(Ink.copy(alpha = .7f), RoundedCornerShape(8.dp)).padding(horizontal = 16.dp, vertical = 6.dp))
-                }
-            }
-            // What the monster rolled: outside its frame, under it, apart from the fighter's own numbers.
-            if (monster.modifiers.isNotEmpty()) Row(Modifier.fillMaxWidth().padding(top = 6.dp)) {
-                Spacer(Modifier.weight(1f))
-                Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                    monster.modifiers.forEach {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                            Rhombus(Rune, 4.dp)
-                            Text(monsterModifierText(it), color = Rune, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.End)
+                // What the monster rolled: outside its frame, under it, apart from the fighter's own numbers.
+                if (monster.modifiers.isNotEmpty()) Row(Modifier.fillMaxWidth().padding(top = 6.dp)) {
+                    Spacer(Modifier.weight(1f))
+                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
+                        monster.modifiers.forEach {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                                Rhombus(Rune, 4.dp)
+                                Text(monsterModifierText(it), color = Rune, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.End)
+                            }
                         }
                     }
                 }
             }
-            Spacer(Modifier.weight(1f))
-            Column(Modifier.fillMaxWidth().padding(top = 8.dp).animateContentSize().background(Panel.copy(alpha = .92f), RoundedCornerShape(10.dp))
+            Column(Modifier.fillMaxWidth().padding(top = 8.dp).background(Panel.copy(alpha = .92f), RoundedCornerShape(10.dp))
                 .border(1.dp, Bronze.copy(alpha = .5f), RoundedCornerShape(10.dp)).padding(horizontal = 10.dp, vertical = 8.dp)
-                .height(if (logOpen) height * .5f else 96.dp)) {
+                .height(if (logOpen) height * .35f else 96.dp)) {
                 FightLog(fight.events, monster.code)
             }
             val live = fight.outcome == null
@@ -194,6 +181,9 @@ internal fun DamageType.key() = "enum.damage.$name"
         }
     }
 }
+
+/** What a frame holds besides its portrait: the name and the kind above, the bars and the ailments below. */
+private val FRAME_LINES = 112.dp
 
 /** How far [side]'s frame is out of its place, toward the other: lunging on its own blow, shuddering when the other's lands, leaning away from a miss. */
 private fun shift(lunge: LungeView?, side: Side, reach: Dp): Dp {
@@ -270,7 +260,7 @@ private fun flash(lunge: LungeView?, side: Side): Float {
  * line inside as an item's frame has; a flask glows it green, a held fighter dims it.
  */
 @Composable private fun FighterFrame(modifier: Modifier, side: Side, accent: Color, name: String, line: String, life: Int, maxLife: Int, shield: Int, maxShield: Int,
-    mana: Int, maxMana: Int, swing: Float, cast: Float?, ailments: List<AilmentView>, held: Boolean, flash: Float, glow: Color?,
+    mana: Int, maxMana: Int, swing: Float, cast: Float?, ailments: List<AilmentView>, held: Boolean, flash: Float, glow: Color?, hits: List<FloatingHit>,
     portrait: DrawScope.(Float, Color?, Float, Float) -> Unit) {
     val shape = CutCornerShape(12.dp)
     val inner = CutCornerShape(9.dp)
@@ -286,12 +276,36 @@ private fun flash(lunge: LungeView?, side: Side): Float {
             Text(line, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         // The portrait is always three by four, whatever the phone: the frame grows round it.
-        Box(Modifier.fillMaxWidth().aspectRatio(3f / 4f).border(1.dp, Bronze.copy(alpha = .5f)).background(Color.Black)) {
-            Canvas(Modifier.fillMaxSize()) {
-                portrait(this, time, wash?.let(::ailmentTint), wash?.let(::washAmount) ?: 0f, flash)
-                if (held) drawRect(Ink.copy(alpha = .45f))
+        // The portrait is three by four, as large as the frame's room allows; the numbers rise inside it.
+        BoxWithConstraints(Modifier.fillMaxWidth().weight(1f).border(1.dp, Bronze.copy(alpha = .5f)).background(Color.Black).clipToBounds(),
+            contentAlignment = Alignment.Center) {
+            Box(Modifier.aspectRatio(3f / 4f)) {
+                Canvas(Modifier.fillMaxSize()) {
+                    portrait(this, time, wash?.let(::ailmentTint), wash?.let(::washAmount) ?: 0f, flash)
+                    if (held) drawRect(Ink.copy(alpha = .45f))
+                }
+                if (side == Side.MONSTER && accent != Parchment) Canvas(Modifier.fillMaxSize()) { Portraits.ring(this, accent, time) }
             }
-            if (side == Side.MONSTER && accent != Parchment) Canvas(Modifier.fillMaxSize()) { Portraits.ring(this, accent, time) }
+            val density = LocalDensity.current
+            val boxWidth = with(density) { maxWidth.toPx() }
+            val boxHeight = with(density) { maxHeight.toPx() }
+            hits.forEach { hit ->
+                val rise = (hit.age / ExpeditionRun.HIT_LIFETIME).toFloat()
+                val x = boxWidth / 2 + ((hit.id % 3) - 1) * 26f
+                val y = boxHeight * .45f - rise * boxHeight * .35f
+                val alpha = (1 - rise).coerceIn(0f, 1f)
+                val half = with(density) { 70.dp.toPx() }
+                Column(Modifier.align(Alignment.TopStart).offset { IntOffset((x - half).roundToInt(), y.roundToInt()) }.width(140.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(hitText(hit), color = hitColour(hit).copy(alpha = alpha), textAlign = TextAlign.Center,
+                        fontSize = when { hit.kind == HitKind.CRIT -> 30.sp; hit.action == Action.TICK -> 16.sp; else -> 22.sp },
+                        fontWeight = if (hit.action == Action.TICK) FontWeight.Normal else FontWeight.Bold,
+                        fontStyle = if (hit.action == Action.TICK) FontStyle.Italic else FontStyle.Normal)
+                    val marks = (if (hit.stunned) listOf(ui("expedition.stunned")) else emptyList()) + hit.inflicted.map { ui(it.key()) }
+                    if (marks.isNotEmpty()) Text(marks.joinToString(" · "), color = (hit.inflicted.firstOrNull()?.let(::ailmentTint) ?: GoldBright).copy(alpha = alpha),
+                        style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
+                }
+            }
         }
         Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Box(Modifier.fillMaxWidth().height(14.dp).background(Color(0xCC0A0D12), bar).border(1.dp, LifeRed.copy(alpha = .8f), bar)) {
@@ -311,7 +325,8 @@ private fun flash(lunge: LungeView?, side: Side): Float {
                     Box(Modifier.fillMaxWidth(it.coerceIn(0f, 1f)).fillMaxHeight().background(if (held) Muted else Rune, RoundedCornerShape(2.dp)))
                 }
             }
-            if (ailments.isNotEmpty() || held) Row(Modifier.padding(top = 2.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+            // The ailments' row keeps its place empty, so a frame never changes height mid-fight.
+            Row(Modifier.padding(top = 2.dp).height(16.dp).clipToBounds(), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
                 if (held && ailments.none { it.ailment == Ailment.FROZEN }) AilmentChip(ui("expedition.stunned"), GoldBright, 1f)
                 ailments.take(3).forEach { AilmentChip(if (it.stacks > 1) ui("expedition.ailment_stacks", ui(it.ailment.key()), it.stacks) else ui(it.ailment.key()), ailmentTint(it.ailment), it.left) }
             }

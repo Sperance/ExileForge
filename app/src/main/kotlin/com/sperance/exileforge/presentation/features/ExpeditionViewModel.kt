@@ -136,7 +136,7 @@ class ExpeditionViewModel(private val runtime: ForgeRuntime) {
             rules = view.combat,
             onFallen = { reports.trySend { fall(run, characterId, map.code) } },
             onChest = { reports.trySend { openChest(run, characterId, map.code) } },
-            mapEffects = effects, fountains = view.fountains)
+            mapEffects = effects, fountains = view.fountains, corruption = view.corruption)
         // How many chests stand on the map is the server's (0.31.0), answered by the entry itself.
         run.send(RunCommand.Chests(chests))
         mutableRun.value = run
@@ -172,9 +172,13 @@ class ExpeditionViewModel(private val runtime: ForgeRuntime) {
 
     private suspend fun kill(run: ExpeditionRun, characterId: String, mapCode: String, monster: RolledMonster) { with(runtime) {
         try {
-            // A boss is reported by its own route (0.32.0): the server opens the exit and rolls its uniques.
-            val reward = if (monster.rarity == MonsterRarity.UNIQUE) api.campaign.slayBoss(characterId, mapCode)
-                else api.campaign.kill(characterId, mapCode, monster.code, monster.rarity)
+            // The corrupted zone's guardian and the boss are each reported by their own route
+            // (0.46.0, 0.32.0): the boss opens the exit, the corrupted zone rolls its own table.
+            val reward = when {
+                monster.corrupted -> api.campaign.corrupt(characterId, mapCode, monster.code)
+                monster.rarity == MonsterRarity.UNIQUE -> api.campaign.slayBoss(characterId, mapCode)
+                else -> api.campaign.kill(characterId, mapCode, monster.code, monster.rarity)
+            }
             run.send(RunCommand.Reward(reward))
             loot(characterId, reward.equipment)
             // The purse, the level and the experience are what the header prints; the bag and the

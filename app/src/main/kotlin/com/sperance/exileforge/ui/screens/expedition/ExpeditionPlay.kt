@@ -152,6 +152,7 @@ import kotlin.math.roundToInt
         fun mark(x: Int, y: Int, color: Color, radius: Float = dot) = drawCircle(color, radius, Offset(left + (x + .5f) * cell, top + (y + .5f) * cell))
         world.chests.filter { !it.opened && world.explored(it.cell.x, it.cell.y) }.forEach { mark(it.cell.x, it.cell.y, GoldBright) }
         world.fountains.filter { !it.used && world.explored(it.cell.x, it.cell.y) }.forEach { mark(it.cell.x, it.cell.y, ShieldCyan) }
+        world.corruption?.takeIf { it.alive && world.explored(it.x.toInt(), it.y.toInt()) }?.let { mark(it.x.toInt(), it.y.toInt(), Rune, dot * 1.2f) }
         if (world.explored(map.exit.x, map.exit.y)) mark(map.exit.x, map.exit.y, if (world.sealed) LifeRed else Vital, dot * 1.4f)
         drawCircle(Gold, dot * 1.3f, Offset(left + world.heroX.toFloat() * cell, top + world.heroY.toFloat() * cell))
     }

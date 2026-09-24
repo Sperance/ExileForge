@@ -101,6 +101,8 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
     val boss: CampaignBoss? = null,
     /** The map's side in cells (since server 0.40.0); an older server's maps keep 48. */
     val size: Int = 48,
+    /** The corrupted zone's guardian this location can roll (since server 0.46.0), or none from an older server. */
+    val corrupted: CampaignBoss? = null,
 )
 
 @Serializable data class CampaignChapter(val code: String, val maps: List<CampaignMap> = emptyList())
@@ -157,10 +159,16 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
 
 /** The whole campaign as the server serves it, read once per session: the chapters, the rarities and the rules of the fight. */
 @Serializable data class CampaignView(val chapters: List<CampaignChapter> = emptyList(), val rarities: List<CampaignRarity> = emptyList(), val combat: CombatRules = CombatRules(),
-    val services: ServiceRule = ServiceRule(), val maps: MapRule = MapRule(), val fountains: FountainRule = FountainRule())
+    val services: ServiceRule = ServiceRule(), val maps: MapRule = MapRule(), val fountains: FountainRule = FountainRule(), val corruption: CorruptionRule = CorruptionRule())
 
 /** Fountains (since server 0.43.0): how many a map holds, low and high, and what share of life each gives back, once. */
 @Serializable data class FountainRule(val count: List<Int> = listOf(0, 2), val heal: Double = 30.0)
+
+/**
+ * The corrupted zone (since server 0.46.0): a random portal on the map, 0-1 a run, by [chance] and
+ * the seed. Its guardian is a small boss of its own — [uniqueChance] at a unique from [uniquePools].
+ */
+@Serializable data class CorruptionRule(val chance: Double = 0.0, val uniqueChance: Double = 0.0, val uniquePools: List<String> = emptyList())
 
 /**
  * Maps (since server 0.35.0): an item of slot `MAP` per location, `MAP_<code>`, spent on entry.

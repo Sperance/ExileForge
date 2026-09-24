@@ -84,6 +84,13 @@ class CampaignClient internal constructor(private val http: Transport) {
             mapOf("characterId" to characterId, "mapCode" to mapCode), authenticated = true))
     }
 
+    /** The corrupted zone's guardian was slain (server 0.46.0): its own loot table, a chance at a unique. Never retried. */
+    suspend fun corrupt(characterId: String, mapCode: String, monsterCode: String): CampaignReward {
+        requireId(characterId)
+        return WireJson.decodeFromJsonElement(http.request("POST", "$CAMPAIGN/corrupt",
+            mapOf("characterId" to characterId, "mapCode" to mapCode, "monsterCode" to monsterCode), authenticated = true))
+    }
+
     /** A treasure map (0.34.0): one more chest on the map this window, for gold. Never retried. */
     suspend fun treasure(characterId: String, mapCode: String): MapServiceOutcome {
         requireId(characterId)

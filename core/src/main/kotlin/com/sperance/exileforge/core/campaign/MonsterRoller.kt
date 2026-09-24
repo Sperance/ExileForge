@@ -19,6 +19,8 @@ data class RolledMonster(
     val behaviour: BehaviourRule = BehaviourRule(),
     /** What the entered map added to it (since 2.45.0): already in [stats], kept apart so the arena can say so. */
     val mapBuffs: List<MonsterEffect> = emptyList(),
+    /** The corrupted zone's guardian (since 2.53.0): reported through `corrupt`, never `kill`/`boss`. */
+    val corrupted: Boolean = false,
 )
 
 /**
@@ -57,6 +59,19 @@ object MonsterRoller {
         val modifiers = boss.modifiers.map { modifier -> modifier.copy(effects = modifier.effects.map { it.copy(value = it.value * rule.modifierPower) }) }
         val body = CampaignMonster(boss.code, boss.form, boss.stats, boss.behaviour)
         return RolledMonster(boss.code, boss.form, MonsterRarity.UNIQUE, modifiers, fold(body, rule.effects + modifiers.flatMap { it.effects }), boss.behaviour)
+    }
+
+    /**
+     * The corrupted zone's guardian (since server 0.46.0): [chance] whether this run rolled one at
+     * all — nothing stands there otherwise. Folds the same way as [boss], `UNIQUE` and fixed.
+     */
+    fun corruption(map: CampaignMap, rarities: List<CampaignRarity>, chance: Double, random: Random): RolledMonster? {
+        val guardian = map.corrupted ?: return null
+        if (random.nextDouble() >= chance) return null
+        val rule = rarities.firstOrNull { it.rarity == MonsterRarity.UNIQUE.name } ?: CampaignRarity(MonsterRarity.UNIQUE.name, 0)
+        val modifiers = guardian.modifiers.map { modifier -> modifier.copy(effects = modifier.effects.map { it.copy(value = it.value * rule.modifierPower) }) }
+        val body = CampaignMonster(guardian.code, guardian.form, guardian.stats, guardian.behaviour)
+        return RolledMonster(guardian.code, guardian.form, MonsterRarity.UNIQUE, modifiers, fold(body, rule.effects + modifiers.flatMap { it.effects }), guardian.behaviour, corrupted = true)
     }
 
     /**

@@ -388,10 +388,11 @@ class ExpeditionRun(
         fun start(map: CampaignMap, rarities: List<CampaignRarity>, heroStats: Map<String, Double>, heroLevel: Int, seed: Long,
                   onKill: (RolledMonster) -> Unit, onCleared: () -> Unit, rules: CombatRules = CombatRules(), onFallen: () -> Unit = {},
                   onChest: () -> Unit = {}, mapEffects: Map<String, Double> = emptyMap(),
-                  fountains: com.sperance.exileforge.core.model.campaign.FountainRule = com.sperance.exileforge.core.model.campaign.FountainRule()): ExpeditionRun {
+                  fountains: com.sperance.exileforge.core.model.campaign.FountainRule = com.sperance.exileforge.core.model.campaign.FountainRule(),
+                  corruption: com.sperance.exileforge.core.model.campaign.CorruptionRule = com.sperance.exileforge.core.model.campaign.CorruptionRule()): ExpeditionRun {
             val stats = MapEffects.hero(heroStats, mapEffects)
             val played = MapEffects.rules(rules, mapEffects)
-            val world = ExpeditionWorld.create(MapEffects.map(map, mapEffects), MapEffects.rarities(rarities, mapEffects), stats, seed, MapEffects.buffs(mapEffects))
+            val world = ExpeditionWorld.create(MapEffects.map(map, mapEffects), MapEffects.rarities(rarities, mapEffects), stats, seed, MapEffects.buffs(mapEffects), corruption.chance)
             world.placeFountains(fountains.count.getOrElse(0) { 0 }, fountains.count.getOrElse(1) { 0 }, fountains.heal)
             return ExpeditionRun(map, world, Combatant(stats, heroLevel, played), played, seed, onKill, onCleared, onFallen, onChest, mapEffects)
         }

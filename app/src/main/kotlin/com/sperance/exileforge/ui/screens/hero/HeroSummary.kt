@@ -23,8 +23,8 @@ import com.sperance.exileforge.ui.icons.StatIcon
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * The character's figures: life, mana and shield on top, then everything else the server counted,
- * one card per group.
+ * The character's figures: life and shield on top, then everything else the sheet counts, one
+ * card per group — since 2.48.0 a figure is one short line, so the whole sheet fits a screen or two.
  *
  * The first of the Hero tab's three sections. Nothing here is a command — it is the sheet a player
  * reads before deciding what to wear, whole and in place rather than behind another tap. Which
@@ -32,7 +32,7 @@ import com.sperance.exileforge.ui.theme.*
  */
 @Composable fun HeroSummary(s: ForgeState) {
     val hero = s.play.hero ?: return
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         HeroVitals(s)
         if (hero.stats.isEmpty()) Text(ui("hero.no_stats"), color = Muted)
         groupedStats(hero.stats).forEach { (group, stats) -> StatGroupCard(group, stats, s) }
@@ -55,10 +55,10 @@ private fun StatGroup.accent(): Color = when (this) {
     val shape = CutCornerShape(topStart = 0.dp, topEnd = 0.dp, bottomStart = 8.dp, bottomEnd = 8.dp)
     Column(Modifier.fillMaxWidth().clip(shape).background(Panel).border(1.dp, accent.copy(alpha = .3f), shape)) {
         Box(Modifier.fillMaxWidth().height(3.dp).background(accent))
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(group.title(s.lang), color = accent, style = MaterialTheme.typography.labelLarge)
+        Column(Modifier.padding(horizontal = 8.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(group.title(s.lang), color = accent, style = MaterialTheme.typography.labelMedium)
             stats.chunked(2).forEach { pair ->
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     pair.forEach { (key, value) -> StatCell(key, value, accent, s, Modifier.weight(1f)) }
                     if (pair.size == 1) Spacer(Modifier.weight(1f))
                 }
@@ -67,27 +67,25 @@ private fun StatGroup.accent(): Color = when (this) {
     }
 }
 
-/** One figure: a small icon and the stat's name over the number the server sent. */
+/** One figure on one line: a small icon, the stat's name, and the number on the right. */
 @Composable private fun StatCell(key: String, value: Double, accent: Color, s: ForgeState, modifier: Modifier) {
-    Column(modifier.background(Abyss, RoundedCornerShape(6.dp)).padding(horizontal = 10.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            StatIcon(key, accent, Modifier.size(14.dp))
-            Text(statTitle(key, s.lang), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
-        }
-        Text(statNumber(key, value), color = Parchment, style = MaterialTheme.typography.titleLarge)
+    Row(modifier.background(Abyss, RoundedCornerShape(4.dp)).padding(horizontal = 6.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        StatIcon(key, accent, Modifier.size(12.dp))
+        Text(statTitle(key, s.lang), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f))
+        Text(statNumber(key, value), color = Parchment, style = MaterialTheme.typography.labelLarge, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
     }
 }
 
 /**
- * Life, mana and shield as figures, not bars: the sheet carries a maximum and no current value, so
- * a bar could only ever be full — and a full bar for a mana of 0 said the opposite.
+ * Life and shield as figures, not bars: the sheet carries a maximum and no current value, so a bar
+ * could only ever be full. Mana left the game in 2.48.0.
  */
 @Composable fun HeroVitals(s: ForgeState) {
     val hero = s.play.hero ?: return
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        listOf(Triple("STOCK_HEALTH", ui("hero.hp"), LifeRed), Triple("STOCK_MANA", ui("hero.mp"), ManaBlue),
-            Triple("STOCK_ENERGY_SHIELD", ui("hero.es"), ShieldCyan)).forEach { (key, title, color) ->
+        listOf(Triple("STOCK_HEALTH", ui("hero.hp"), LifeRed), Triple("STOCK_ENERGY_SHIELD", ui("hero.es"), ShieldCyan)).forEach { (key, title, color) ->
             VitalTile(title, statNumber(key, hero.stats[key] ?: 0.0), color, Modifier.weight(1f))
         }
     }
@@ -97,9 +95,9 @@ private fun StatGroup.accent(): Color = when (this) {
 @Composable private fun VitalTile(title: String, value: String, color: Color, modifier: Modifier = Modifier) {
     val shape = CutCornerShape(6.dp)
     Column(modifier.background(Color.Black.copy(alpha = .22f), shape).border(1.dp, color.copy(alpha = .45f), shape)
-        .padding(vertical = 10.dp, horizontal = 8.dp), horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Text(title, color = color, style = MaterialTheme.typography.labelMedium)
-        Text(value, color = Parchment, style = MaterialTheme.typography.headlineSmall)
+        .padding(vertical = 6.dp, horizontal = 8.dp), horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(1.dp)) {
+        Text(title, color = color, style = MaterialTheme.typography.labelSmall)
+        Text(value, color = Parchment, style = MaterialTheme.typography.titleMedium)
     }
 }

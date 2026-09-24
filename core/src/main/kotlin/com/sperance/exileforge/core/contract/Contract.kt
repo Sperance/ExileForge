@@ -52,9 +52,9 @@ val modifierSources = listOf("IMPLICIT", "PREFIX", "SUFFIX", "UNIQUE", "ENCHANTM
 val skillNodeTypes = listOf("START", "SMALL", "NOTABLE", "KEYSTONE", "JEWEL_SOCKET")
 val lotKinds = listOf("EQUIPMENT", "ITEM")
 val modifierOperations = listOf("ADD", "INCREASED", "MORE", "SET")
-const val SERVER_COMMIT = "e6176f22596b0ef125d57af8f81d7c02466251b5"
+const val SERVER_COMMIT = "0cf6eb9393b05270a47c57a467088e9b1be1840d"
 const val SERVER_BRANCH = "claude/vigilant-wozniak-ptnxmx"
-const val SERVER_VERSION = "0.42.0"
+const val SERVER_VERSION = "0.43.0"
 
 fun template(catalog: Catalog, kind: EquipmentKind = EquipmentKind.Weapon): JsonObject = when (catalog) {
     Catalog.CHARACTERS -> defaultObject("character")

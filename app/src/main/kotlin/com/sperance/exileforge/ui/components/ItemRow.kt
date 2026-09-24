@@ -25,6 +25,7 @@ import com.sperance.exileforge.core.display.documentTitle
 import com.sperance.exileforge.core.display.itemStates
 import com.sperance.exileforge.core.display.modifierText
 import com.sperance.exileforge.core.display.requirementReason
+import com.sperance.exileforge.core.display.shownLines
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.display.stateTitle
 import com.sperance.exileforge.core.display.statTitle
@@ -98,7 +99,7 @@ import kotlinx.serialization.json.JsonObject
     // it. The base the item started from stays on the card: a line has no room for a sum and its
     // history both.
     val base = baseProperties(document, definitions).flatMap { it.values }
-    val rolled = (document["params"] as? JsonArray).orEmpty().mapNotNull { it as? JsonObject }
+    val rolled = shownLines((document["params"] as? JsonArray).orEmpty().mapNotNull { it as? JsonObject }, definitions)
     val states = itemStates(document, definitions)
     val level = document.text("itemLevel")
     val slot = document.text("slot").takeIf { it.isNotBlank() }?.let(::slotTitle)

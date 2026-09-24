@@ -125,7 +125,6 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
 @Serializable data class EvasionRule(val base: Double = 150.0, val perLevel: Double = 40.0, val cap: Double = 75.0)
 @Serializable data class StunRule(val share: Double = 15.0, val duration: Double = 0.4)
 @Serializable data class ShieldRule(val rechargeDelay: Double = 2.0, val rechargePerSecond: Double = 20.0)
-@Serializable data class SpellRule(val innateDamage: Double = 2.0, val innatePerLevel: Double = 0.5, val castSpeed: Double = 0.8, val manaCost: Double = 12.0, val manaRegenShare: Double = 1.75)
 @Serializable data class FlaskRule(val charges: Int = 3, val perKill: Int = 1, val heal: Double = 40.0, val duration: Double = 3.0)
 @Serializable data class RetreatRule(val delay: Double = 1.5)
 @Serializable data class DeathRule(val fromLevel: Int = 10, val experienceShare: Double = 5.0)
@@ -139,10 +138,10 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
  * today, so a test can build a fight without a payload; a served value always wins.
  */
 @Serializable data class CombatRules(
-    val timeLimit: Double = 60.0, val variance: Double = 20.0, val resistCap: Double = 75.0, val blockCap: Double = 75.0, val spellBlockShare: Double = 50.0,
+    val timeLimit: Double = 60.0, val variance: Double = 20.0, val resistCap: Double = 75.0, val blockCap: Double = 75.0,
     val unarmed: UnarmedRule = UnarmedRule(), val critical: CriticalRule = CriticalRule(), val armour: ArmourRule = ArmourRule(),
     val evasion: EvasionRule = EvasionRule(), val stun: StunRule = StunRule(), val shield: ShieldRule = ShieldRule(),
-    val spell: SpellRule = SpellRule(), val flask: FlaskRule = FlaskRule(), val retreat: RetreatRule = RetreatRule(), val death: DeathRule = DeathRule(),
+    val flask: FlaskRule = FlaskRule(), val retreat: RetreatRule = RetreatRule(), val death: DeathRule = DeathRule(),
     /** Since server 0.36.0: no "+% to maximum resistance" lifts a resistance past [resistHardCap], and no reduction shortens an ailment by more than [ailmentDurationCap] percent. */
     val resistHardCap: Double = 90.0, val ailmentDurationCap: Double = 75.0,
     val ailments: List<AilmentRule> = listOf(
@@ -157,7 +156,10 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
 
 /** The whole campaign as the server serves it, read once per session: the chapters, the rarities and the rules of the fight. */
 @Serializable data class CampaignView(val chapters: List<CampaignChapter> = emptyList(), val rarities: List<CampaignRarity> = emptyList(), val combat: CombatRules = CombatRules(),
-    val services: ServiceRule = ServiceRule(), val maps: MapRule = MapRule())
+    val services: ServiceRule = ServiceRule(), val maps: MapRule = MapRule(), val fountains: FountainRule = FountainRule())
+
+/** Fountains (since server 0.43.0): how many a map holds, low and high, and what share of life each gives back, once. */
+@Serializable data class FountainRule(val count: List<Int> = listOf(0, 2), val heal: Double = 30.0)
 
 /**
  * Maps (since server 0.35.0): an item of slot `MAP` per location, `MAP_<code>`, spent on entry.

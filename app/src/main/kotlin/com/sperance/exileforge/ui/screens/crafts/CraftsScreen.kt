@@ -299,8 +299,11 @@ private fun share(profession: ProfessionView): Float = profession.next?.takeIf {
             }
         }
         item { Engraved(ui("crafts.works")) }
-        items(profession.jobs, key = { it.code }) { job ->
-            JobRow(s, job, locked = job.level > profession.level || !job.open, current = work?.job == job.code) { chosen = job }
+        // Open works, and the one after them as «???» with its level (2.48.0, as the expedition does).
+        val locked = { job: JobView -> job.level > profession.level || !job.open }
+        val next = profession.jobs.firstOrNull(locked)
+        items(profession.jobs.filter { !locked(it) || it == next }, key = { it.code }) { job ->
+            JobRow(s, job, locked = locked(job), current = work?.job == job.code) { if (!locked(job)) chosen = job }
         }
     }
     chosen?.let { job -> JobSheet(s, vm, profession, job, current = work?.job == job.code) { chosen = null } }
@@ -341,9 +344,9 @@ private fun share(profession: ProfessionView): Float = profession.next?.takeIf {
         .clickable(role = Role.Button, onClick = onClick).padding(12.dp), verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(jobTitle(job.code), color = if (locked) Muted else GoldBright, style = MaterialTheme.typography.titleSmall)
-            Text(ui("crafts.job_line", jobProduct(job), number(job.cycleMillis / 1000.0), number(job.nothing)), color = Muted, style = MaterialTheme.typography.bodySmall)
-            if (job.inputs.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(if (locked) ui("expedition.hidden") else jobTitle(job.code), color = if (locked) Muted else GoldBright, style = MaterialTheme.typography.titleSmall)
+            if (!locked) Text(ui("crafts.job_line", jobProduct(job), number(job.cycleMillis / 1000.0), number(job.nothing)), color = Muted, style = MaterialTheme.typography.bodySmall)
+            if (!locked && job.inputs.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 job.inputs.forEach { InputChip(s, it) }
             }
         }

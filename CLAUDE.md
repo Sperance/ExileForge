@@ -20,9 +20,9 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.47.0, `versionCode` 65) for the
-**ktor-bestgame** RPG server (0.42.0), pinned in
-`core/.../contract/Contract.kt` as `SERVER_COMMIT = e6176f22596b0ef125d57af8f81d7c02466251b5`
+ExileForge is an **Android Compose client** (version 2.48.0, `versionCode` 66) for the
+**ktor-bestgame** RPG server (0.43.0), pinned in
+`core/.../contract/Contract.kt` as `SERVER_COMMIT = 0cf6eb9393b05270a47c57a467088e9b1be1840d`
 on the server branch `claude/vigilant-wozniak-ptnxmx`.
 
 The client is deliberately **thin**: the server owns items, modifier rolls and inventory, and it
@@ -394,6 +394,13 @@ These are enforced by tests and are the point of the client's design:
     0.34.0) the fourth tab is the merchant (`MerchantClient`: a four-hour shelf per hero, priced in
     gold by the server), «Мои лоты» shows the lot places (`AuctionSlots`) and sells one more, and a
     campaign map's coin icon opens its services — a treasure map and summoning its guardian.
+    Since 2.48.0 (server 0.43.0) mana and spells are gone: `Combat.kt` has no casts, no mana and no
+    `Action.SPELL`/`DamageType.MAGICAL`, and `core/display/Retired.kt` (`retiredStats`, `shownLines`)
+    keeps mana and spell lines off the sheet, monsters, items and the bench; a fight waits for
+    «Начать» (`RunCommand.Begin`, `FightHud.started` — «Отступить» before it walks away); maps hold
+    0–2 fountains by the seed (`CampaignView.fountains`, `ExpeditionWorld.placeFountains`,
+    `WorldEvent.Drank`, a share of life, once); «Покинуть» asks first; the account left the bottom
+    bar for the banner's corner, which also shows the craft under way; «Выставить» left the auction.
     Since 2.47.0 (server 0.42.0) maps roll as in PoE — magic 1–2 affixes, rare 4–6 — and pay for their
     own rarity (`MapRule.rarityBonus`, printed under the portal); the expedition tab lists only the
     open maps and the next one as «???» with its level; a jewel is never empty (at least magic, `CR_023`);

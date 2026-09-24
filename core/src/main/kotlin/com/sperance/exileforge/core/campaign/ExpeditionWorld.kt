@@ -45,10 +45,14 @@ class MonsterAgent(val id: Int, val monster: RolledMonster, val homeX: Double, v
 /** A chest on the map (since 2.33.0): where it stands and whether the hero has opened it. */
 class Chest(val id: Int, val cell: Cell) { var opened = false }
 
+/** A fountain on the map (since 2.48.0): where it stands, how much life it gives back, and whether it was drunk dry. */
+class Fountain(val id: Int, val cell: Cell, val heal: Double) { var used = false }
+
 /** What a step of the world ran into. */
 sealed interface WorldEvent {
     data class Encounter(val agent: MonsterAgent) : WorldEvent
     data class Opened(val chest: Chest) : WorldEvent
+    data class Drank(val fountain: Fountain) : WorldEvent
     data object Exit : WorldEvent
 }
 
@@ -116,6 +120,8 @@ class ExpeditionWorld(
 
     /** The chests the server says stand on this map, placed by [placeChests]. */
     val chests = mutableListOf<Chest>()
+    /** The fountains, placed by [placeFountains]. */
+    val fountains = mutableListOf<Fountain>()
 
     init { light() }
 
@@ -127,13 +133,31 @@ class ExpeditionWorld(
     fun placeChests(count: Int) {
         if (count <= 0 || chests.isNotEmpty()) return
         val placing = Random(seed * 7919 + 17)
-        val taken = map.spawns.toSet() + map.exit + map.start
+        val taken = map.spawns.toSet() + map.exit + map.start + fountains.map { it.cell }
         fun nook(cell: Cell) = STEPS.count { (dx, dy) -> !map.walkable(cell.x + dx, cell.y + dy) }
         val candidates = distances(map.start, Int.MAX_VALUE).filter { (cell, steps) -> steps >= CHEST_STEPS && cell !in taken }.keys
             .shuffled(placing).sortedByDescending(::nook)
         for (cell in candidates) {
             if (chests.size >= count) break
             if (chests.all { hypot((it.cell.x - cell.x).toDouble(), (it.cell.y - cell.y).toDouble()) >= CHEST_SPACING }) chests += Chest(chests.size, cell)
+        }
+    }
+
+    /**
+     * Puts the map's fountains down, once (since 2.48.0): how many, between the rule's low and high,
+     * and where, both by the seed — away from the start, the exit, the monsters' places and each other.
+     * Each gives back [heal] percent of life, once.
+     */
+    fun placeFountains(low: Int, high: Int, heal: Double) {
+        if (high <= 0 || fountains.isNotEmpty()) return
+        val placing = Random(seed * 104729 + 31)
+        val count = low + placing.nextInt(high - low + 1)
+        if (count <= 0) return
+        val taken = map.spawns.toSet() + map.exit + map.start + chests.map { it.cell }
+        val candidates = distances(map.start, Int.MAX_VALUE).filter { (cell, steps) -> steps >= FOUNTAIN_STEPS && cell !in taken }.keys.shuffled(placing)
+        for (cell in candidates) {
+            if (fountains.size >= count) break
+            if (fountains.all { hypot((it.cell.x - cell.x).toDouble(), (it.cell.y - cell.y).toDouble()) >= FOUNTAIN_SPACING }) fountains += Fountain(fountains.size, cell, heal)
         }
     }
 
@@ -155,6 +179,10 @@ class ExpeditionWorld(
         chests.firstOrNull { !it.opened && hypot(it.cell.x + 0.5 - heroX, it.cell.y + 0.5 - heroY) < CHEST_REACH }?.let { chest ->
             chest.opened = true
             return WorldEvent.Opened(chest)
+        }
+        fountains.firstOrNull { !it.used && hypot(it.cell.x + 0.5 - heroX, it.cell.y + 0.5 - heroY) < CHEST_REACH }?.let { fountain ->
+            fountain.used = true
+            return WorldEvent.Drank(fountain)
         }
         agents.filter { it.alive }.forEach { agent ->
             agent.calm = (agent.calm - dt).coerceAtLeast(0.0)
@@ -386,6 +414,9 @@ class ExpeditionWorld(
         /** A chest stands at least this many steps from the start and this far from another chest. */
         const val CHEST_STEPS = 8
         const val CHEST_SPACING = 5.0
+        /** A fountain stands at least this many steps from the start and this far from another one. */
+        const val FOUNTAIN_STEPS = 6
+        const val FOUNTAIN_SPACING = 8.0
         /** What a hero sees by when the server has not said: the level-1 base since server 0.30.0. */
         const val DEFAULT_LIGHT = 5.0
         private const val MIN_WALK = 0.8

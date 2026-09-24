@@ -55,7 +55,9 @@ import kotlin.math.roundToInt
 @Composable fun ExpeditionPlay(s: ForgeState, vm: ForgeViewModel, run: ExpeditionRun) {
     val hud by run.hud.collectAsState()
     var gear by remember { mutableStateOf(false) }
-    BackHandler { vm.runCommand(RunCommand.Leave) }
+    // Leaving a map gives up what is left on it, so it is asked first (2.48.0); the fight has its own retreat.
+    var leaving by remember { mutableStateOf(false) }
+    BackHandler { if (hud.phase == RunPhase.MAP) leaving = true else vm.runCommand(RunCommand.Leave) }
     LaunchedEffect(hud.phase) { if (hud.phase == RunPhase.LEFT) vm.closeRun() }
 
     Box(Modifier.fillMaxSize().background(Ink)) {
@@ -63,9 +65,13 @@ import kotlin.math.roundToInt
         when (hud.phase) {
             RunPhase.MAP -> {
                 Stick(run)
-                MapBar(hud, onLeave = { vm.runCommand(RunCommand.Leave) }, onFlask = { vm.runCommand(RunCommand.Flask) }, onGear = { gear = true })
+                MapBar(hud, onLeave = { leaving = true }, onFlask = { vm.runCommand(RunCommand.Flask) }, onGear = { gear = true })
                 if (gear) GearSheet(s, vm) { gear = false }
                 if (hud.chestPending || hud.chestFailed || hud.chest != null) ChestLoot(s, hud) { vm.runCommand(RunCommand.DismissChest) }
+                if (leaving) ConfirmSheet(title = ui("expedition.leave_q"), confirm = ui("expedition.leave"), danger = true,
+                    subtitle = mapTitle(hud.mapCode),
+                    ledger = listOf(LedgerLine(ui("expedition.leave_left"), ui("expedition.monsters_left", hud.alive, hud.total), Tone.SPEND)),
+                    note = ui("expedition.leave_note"), onDismiss = { leaving = false }) { vm.runCommand(RunCommand.Leave) }
             }
             RunPhase.FIGHT -> hud.fight?.let { ArenaOverlay(s, hud, it, run.map.level, onCommand = vm::runCommand) }
             // The fight is over: its report — the log, what it came to, and the loot of a victory.
@@ -83,7 +89,7 @@ import kotlin.math.roundToInt
 // ==================== Walking ====================
 
 /**
- * Life, shield, mana and the flask, what is left on the map, and the way out. Nothing comes back on
+ * Life, shield and the flask, what is left on the map, and the way out. Nothing comes back on
  * its own between fights (2.29.0), so the flask is here too: the same charge, the same heal.
  */
 @Composable private fun MapBar(hud: RunHud, onLeave: (() -> Unit)?, onFlask: () -> Unit, onGear: () -> Unit) {
@@ -93,12 +99,13 @@ import kotlin.math.roundToInt
                 Text(mapTitle(hud.mapCode), color = GoldBright, style = MaterialTheme.typography.titleMedium)
                 Text(ui("expedition.monsters_left", hud.alive, hud.total), color = Muted, style = MaterialTheme.typography.labelMedium)
                 if (hud.chestsLeft > 0) Text(ui("expedition.chests_left", hud.chestsLeft), color = GoldBright, style = MaterialTheme.typography.labelMedium)
+                if (hud.fountainsLeft > 0) Text(ui("expedition.fountains_left", hud.fountainsLeft), color = ShieldCyan, style = MaterialTheme.typography.labelMedium)
                 if (hud.sealed) Text(ui("expedition.exit_sealed"), color = LifeRed, style = MaterialTheme.typography.labelMedium)
             }
             IconButton(onClick = onGear) { Icon(ForgeGlyphs.Helm, ui("expedition.gear"), tint = Gold, modifier = Modifier.size(24.dp)) }
             onLeave?.let { OutlinedButton(onClick = it) { Text(ui("expedition.leave")) } }
         }
-        Vitals(hud.heroLife, hud.heroMaxLife, hud.heroShield, hud.heroMaxShield, hud.heroMana, hud.heroMaxMana, Modifier.fillMaxWidth(.6f))
+        Vitals(hud.heroLife, hud.heroMaxLife, hud.heroShield, hud.heroMaxShield, Modifier.fillMaxWidth(.6f))
         Button(enabled = hud.flasks > 0 && !hud.flaskActive, onClick = onFlask, modifier = Modifier.fillMaxWidth(.6f).height(34.dp), contentPadding = PaddingValues(horizontal = 12.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Blood, contentColor = GoldBright, disabledContainerColor = Panel, disabledContentColor = Muted)) {
             Icon(ForgeGlyphs.Flask, null, modifier = Modifier.size(16.dp))
@@ -108,17 +115,14 @@ import kotlin.math.roundToInt
     }
 }
 
-/** A life bar with the shield laid over it, a thin mana bar under it, and the figure in words. */
-@Composable private fun Vitals(life: Int, maxLife: Int, shield: Int, maxShield: Int, mana: Int, maxMana: Int, modifier: Modifier = Modifier) {
+/** A life bar with the shield laid over it, and the figure in words. */
+@Composable private fun Vitals(life: Int, maxLife: Int, shield: Int, maxShield: Int, modifier: Modifier = Modifier) {
     val shape = CutCornerShape(3.dp)
     val lifeShare by animateFloatAsState(if (maxLife > 0) life / maxLife.toFloat() else 0f, label = "life")
     Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Box(Modifier.fillMaxWidth().height(12.dp).background(Color(0xCC0A0D12), shape).border(1.dp, LifeRed.copy(alpha = .8f), shape)) {
             Box(Modifier.fillMaxWidth(lifeShare.coerceIn(0f, 1f)).fillMaxHeight().background(Brush.horizontalGradient(listOf(LifeRed, LifeRed.copy(alpha = .55f))), shape))
             if (maxShield > 0) Box(Modifier.fillMaxWidth((shield / maxShield.toFloat()).coerceIn(0f, 1f)).height(4.dp).align(Alignment.TopStart).background(ShieldCyan.copy(alpha = .85f)))
-        }
-        if (maxMana > 0) Box(Modifier.fillMaxWidth().height(5.dp).background(Color(0xCC0A0D12), shape).border(1.dp, ManaBlue.copy(alpha = .7f), shape)) {
-            Box(Modifier.fillMaxWidth((mana / maxMana.toFloat()).coerceIn(0f, 1f)).fillMaxHeight().background(ManaBlue, shape))
         }
         Text(if (maxShield > 0) ui("expedition.vitals_shield", life, maxLife, shield) else ui("expedition.vitals", life, maxLife),
             color = Parchment, style = MaterialTheme.typography.labelSmall)

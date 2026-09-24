@@ -46,6 +46,7 @@ enum class StatGroup {
  */
 fun groupedStats(stats: Map<String, Double>): List<Pair<StatGroup, List<Pair<String, Double>>>> {
     val order = stockStats.withIndex().associate { (index, stat) -> stat to index }
-    return stats.entries.groupBy { StatGroup.of(it.key) }.toSortedMap()
+    // Mana and spells left the game in 2.48.0: the sheet may still carry them, and they are not shown.
+    return stats.entries.filterNot { retired(it.key) }.groupBy { StatGroup.of(it.key) }.toSortedMap()
         .map { (group, entries) -> group to entries.sortedWith(compareBy({ order[it.key] ?: Int.MAX_VALUE }, { it.key })).map { it.key to it.value } }
 }

@@ -57,17 +57,14 @@ fun bagStacks(s: ForgeState): List<CharacterItem> {
  */
 @Composable fun BagRow(s: ForgeState, stack: CharacterItem, onClick: () -> Unit) {
     val code = stackCode(s, stack.itemId)
-    Row(Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(8.dp)).border(1.dp, PanelRaised, RoundedCornerShape(8.dp))
-        .clickable(role = Role.Button, onClick = onClick).padding(10.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-        StackIcon(code, s.world.orbs.any { it.id == stack.itemId }, 40)
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(bagTitle(s, stack.itemId), color = Parchment, style = MaterialTheme.typography.titleSmall)
-            bagDetails(s, stack.itemId)?.takeIf { it.isNotBlank() }?.let {
-                Text(it, color = Muted, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            }
-        }
-        Text(stack.amount.toString(), color = GoldBright, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+    // One short line since 2.48.0: the name and the count; what it does is behind the tap, in BagSheet.
+    Row(Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(6.dp)).border(1.dp, PanelRaised, RoundedCornerShape(6.dp))
+        .clickable(role = Role.Button, onClick = onClick).padding(horizontal = 8.dp, vertical = 5.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        StackIcon(code, s.world.orbs.any { it.id == stack.itemId }, 28)
+        Text(bagTitle(s, stack.itemId), color = Parchment, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f))
+        Text(stack.amount.toString(), color = GoldBright, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
     }
 }
 

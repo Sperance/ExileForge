@@ -153,7 +153,7 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
     val color = rarityColor(doc.text("rarity"))
     val base = baseProperties(doc, definitions)
     val states = itemStates(doc, definitions)
-    val rolled = (doc["params"] as? JsonArray).orEmpty().mapNotNull { it as? JsonObject }
+    val rolled = shownLines((doc["params"] as? JsonArray).orEmpty().mapNotNull { it as? JsonObject }, definitions)
     val kind = doc.text("slot").takeIf { it.isNotBlank() }?.let(::slotTitle)
         ?: doc.text("category").takeIf { it.isNotBlank() }
         ?: if (doc["userId"] != null) ui("card.character") else ui("card.item")

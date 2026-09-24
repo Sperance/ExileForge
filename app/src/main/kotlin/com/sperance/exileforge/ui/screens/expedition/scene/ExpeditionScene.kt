@@ -138,6 +138,10 @@ private class ScenePainter {
                 standing += depth to { wall(x, y, palette, biome, if (near) .4f else 1f, glow(x, y)) }
             }
             // A chest stands once the hero has seen its place (2.33.0); an opened one stays, open.
+            // A fountain stands once seen (2.48.0): brimming until drunk, dry after.
+            world.fountains.filter { world.explored(it.cell.x, it.cell.y) }.forEach { fountain ->
+                standing += (fountain.cell.x + fountain.cell.y + 1.0) to { drawFountain(fountain.cell.x + .5, fountain.cell.y + .5, fountain.used, glow(fountain.cell.x, fountain.cell.y)) }
+            }
             world.chests.filter { world.explored(it.cell.x, it.cell.y) }.forEach { chest ->
                 standing += (chest.cell.x + chest.cell.y + 1.0) to { drawChest(chest.cell.x + .5, chest.cell.y + .5, chest.opened, glow(chest.cell.x, chest.cell.y)) }
             }
@@ -291,6 +295,33 @@ private class ScenePainter {
                 pen.line(left + unit * .3f, cy + h * .7f, left + unit * .5f, cy + h * .45f, unit * .03f)
                 pen.line(left + unit * .5f, cy + h * .45f, left + unit * .42f, cy + h * .2f, unit * .03f)
             }
+        }
+    }
+
+    /** A fountain: a stone basin on the ground, its water glowing while it can still heal, dark once drunk. */
+    private fun drawFountain(x: Double, y: Double, used: Boolean, light: Float) {
+        val cx = isoX(x, y)
+        val cy = isoY(x, y)
+        val w = unit * .42f
+        val d = unit * .21f
+        val h = unit * .2f
+        val stone = Color(0xFF6E6A62)
+        pen.color = Color.Black.copy(alpha = .35f)
+        pen.ellipse(cx - w * 1.2f, cy - d * .8f, w * 2.4f, d * 1.6f)
+        pen.color = tone(stone, .7f * light)
+        pen.quad(cx - w, cy, cx, cy - d, cx, cy - d + h, cx - w, cy + h)
+        pen.color = tone(stone, .55f * light)
+        pen.quad(cx, cy - d, cx + w, cy, cx + w, cy + h, cx, cy - d + h)
+        pen.color = tone(stone, .95f * light)
+        diamond(cx, cy + h, w, d)
+        val water = if (used) Color(0xFF1B2226) else Color(0xFF4FB8D8)
+        pen.color = tone(water, light)
+        diamond(cx, cy + h, w * .72f, d * .72f)
+        if (!used) {
+            pen.color = water.copy(alpha = (.35f + .25f * sin(time * 2.5f + x.toFloat())) * light)
+            pen.circle(cx, cy + h, unit * .45f)
+            pen.color = Color.White.copy(alpha = .5f * light)
+            pen.circle(cx, cy + h - unit * .05f, unit * .05f + unit * .03f * sin(time * 4f))
         }
     }
 

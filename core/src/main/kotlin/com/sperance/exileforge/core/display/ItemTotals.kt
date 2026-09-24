@@ -61,7 +61,8 @@ fun baseProperties(document: JsonObject, definitions: List<ModifierDefinition>):
     val baseTotals = fold(base, definitions)
     val totals = fold(base + rolled, definitions)
 
-    return base.map { modifier ->
+    // A base line of mana or spells (a wand's, a Paua ring's) is not shown since 2.48.0: see retired.
+    return base.filterNot { modifier -> definitions.firstOrNull { it.id == modifier.text("modifierId") }?.retired() == true }.map { modifier ->
         val definition = definitions.firstOrNull { it.id == modifier.text("modifierId") }
         // A definition the client has not read yet still prints its numbers: a value the server
         // wrote should never vanish because the reference tables have not arrived.

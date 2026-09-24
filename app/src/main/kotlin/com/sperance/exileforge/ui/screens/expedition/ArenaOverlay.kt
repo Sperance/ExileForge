@@ -66,7 +66,6 @@ internal fun damageTint(type: DamageType?, onHero: Boolean = false): Color = whe
     DamageType.COLD -> ShieldCyan
     DamageType.LIGHTNING -> Color(0xFFFFD34A)
     DamageType.CHAOS -> Elder
-    DamageType.MAGICAL -> Rune
     else -> if (onHero) LifeRed else Parchment
 }
 
@@ -87,17 +86,17 @@ internal fun DamageType.key() = "enum.damage.$name"
  * The fight — «Арена», as heraldry since 2.28.0 (the owner's pick of five): two framed portraits
  * side by side, the hero's in gold and the monster's in its rarity's colour, cut-cornered as an
  * item's frame is. The frame carries everything about its fighter: the name and what it is on top,
- * the bust in the middle, and under it life with the shield over it, the hero's mana, a bar that
- * fills toward the next swing at its own attack speed, one toward the next spell, and the ailments
+ * the bust in the middle, and under it life with the shield over it, a bar that fills toward the
+ * next swing at its own attack speed, and the ailments
  * on it as chips that drain as they wear off. The portrait is three by four on every phone (since
  * 2.29.0) and the frame is as tall as it and its lines need. What the monster rolled sits under its
  * frame, apart from it, in the rune blue the modifiers are written in everywhere.
  *
  * A blow is the frame itself: it draws back and strikes the other frame, a flash bursts where they
- * meet, the number rises off the one that was hit and its frame shudders. A spell is a bolt from
- * frame to frame; a flask is a green glow on the hero's; a stunned or frozen fighter's frame dims.
- * Under the frames, the log, newest line first, which unfolds over the scene on demand, and the
- * player's two hands: the flask and the way out.
+ * meet, the number rises off the one that was hit and its frame shudders. A flask is a green glow
+ * on the hero's; a stunned or frozen fighter's frame dims. Under the frames, the log, newest line
+ * first, which unfolds over the scene on demand, and the player's two hands: the flask and the way
+ * out. Since 2.48.0 the two only face each other until «Начать» — or «Отступить», which walks away.
  */
 @Composable internal fun ArenaOverlay(s: ForgeState, hud: RunHud, fight: FightHud, level: Int, onCommand: (RunCommand) -> Unit) {
     var logOpen by rememberSaveable { mutableStateOf(false) }
@@ -124,7 +123,7 @@ internal fun DamageType.key() = "enum.damage.$name"
                                 side = Side.HERO, accent = GoldBright, name = hero?.name.orEmpty(),
                                 line = ui("expedition.hero_line", s.heroClass?.title.orEmpty(), hero?.level ?: 1),
                                 life = fight.heroLife, maxLife = hud.heroMaxLife, shield = fight.heroShield, maxShield = hud.heroMaxShield,
-                                mana = fight.heroMana, maxMana = fight.heroMaxMana, swing = fight.heroSwing, cast = fight.heroCast.takeIf { fight.heroCasts },
+                                swing = fight.heroSwing,
                                 ailments = fight.heroAilments, held = fight.heroHeld, flash = flash(lunge, Side.HERO), glow = if (fight.flaskActive) Vital else null,
                                 hits = fight.hits.filter { it.target == Side.HERO },
                                 portrait = { time, wash, amount, flash -> Portraits.hero(this, s.heroClass?.code, time, wash, amount, flash) })
@@ -132,7 +131,7 @@ internal fun DamageType.key() = "enum.damage.$name"
                                 side = Side.MONSTER, accent = rarityTint(monster.rarity), name = monsterTitle(monster.code),
                                 line = ui("expedition.monster_line", ui(monster.rarity.key()), level),
                                 life = fight.monsterLife, maxLife = fight.monsterMaxLife, shield = fight.monsterShield, maxShield = fight.monsterMaxShield,
-                                mana = 0, maxMana = 0, swing = fight.monsterSwing, cast = fight.monsterCast.takeIf { fight.monsterCasts },
+                                swing = fight.monsterSwing,
                                 ailments = fight.monsterAilments, held = fight.monsterHeld, flash = flash(lunge, Side.MONSTER), glow = null,
                                 hits = fight.hits.filter { it.target == Side.MONSTER },
                                 portrait = { time, wash, amount, flash -> Portraits.monster(this, monster.code, monster.form, rarityTint(monster.rarity), time, wash, amount, flash) })
@@ -167,7 +166,15 @@ internal fun DamageType.key() = "enum.damage.$name"
                 FightLog(fight.events, monster.code)
             }
             val live = fight.outcome == null
-            Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (!fight.started) Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = { onCommand(RunCommand.Begin) }, modifier = Modifier.weight(2f).height(52.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Blood, contentColor = GoldBright)) {
+                    Icon(ForgeGlyphs.Swords, null, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(ui("expedition.begin"), style = MaterialTheme.typography.titleMedium)
+                }
+                OutlinedButton(onClick = { onCommand(RunCommand.Retreat) }, modifier = Modifier.weight(1f).height(52.dp)) { Text(ui("expedition.retreat")) }
+            } else Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 // The flask: what is left of it is the label, and it cannot be drunk twice at once.
                 Button(enabled = live && fight.flasks > 0 && !fight.flaskActive, onClick = { onCommand(RunCommand.Flask) }, modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(containerColor = Blood, contentColor = GoldBright, disabledContainerColor = Panel, disabledContentColor = Muted)) {
@@ -215,7 +222,7 @@ private fun flash(lunge: LungeView?, side: Side): Float {
     return (1 - lunge.progress) * 2f * (if (lunge.kind == HitKind.CRIT) 1f else .6f)
 }
 
-/** The burst where the frames meet, the bolt of a spell, the arc of a block — drawn over the frames. */
+/** The burst where the frames meet and the arc of a block — drawn over the frames. */
 @Composable private fun Strikes(lunge: LungeView?, cardWidth: Dp, cardHeight: Dp, gap: Dp) {
     lunge ?: return
     if (lunge.action == Action.TICK || lunge.action == Action.RETREAT) return
@@ -226,7 +233,6 @@ private fun flash(lunge: LungeView?, side: Side): Float {
         val g = gap.toPx()
         val seam = cw + g / 2
         val y = cardHeight.toPx() * .45f
-        val sourceX = if (byHero) cw / 2 else cw * 1.5f + g
         val targetX = if (byHero) cw * 1.5f + g else cw / 2
         fun block() = drawArc(Color(0xFFC8C8C8).copy(alpha = .8f * (1 - t)), if (byHero) 110f else -70f, 140f, false,
             Offset(targetX - cw * .3f, y - cw * .3f), Size(cw * .6f, cw * .6f), style = Stroke(6f))
@@ -240,18 +246,6 @@ private fun flash(lunge: LungeView?, side: Side): Float {
                 }
                 if (lunge.kind == HitKind.BLOCKED && t > .4f) block()
             }
-            Action.SPELL -> {
-                val flight = (t * 2).coerceAtMost(1f)
-                val bx = sourceX + (targetX - sourceX) * flight
-                val by = y - sin(flight * PI).toFloat() * cw * .3f
-                if (t < .5f) {
-                    for (i in 3 downTo 1) drawCircle(Rune.copy(alpha = .15f * i), cw * .05f * i, Offset(bx, by))
-                    drawCircle(Color.White.copy(alpha = .85f), cw * .035f, Offset(bx, by))
-                } else if (lunge.landed) {
-                    val burst = (t - .5f) * 2
-                    drawCircle(Rune.copy(alpha = .55f * (1 - burst)), cw * (.12f + .4f * burst), Offset(targetX, y))
-                } else if (lunge.kind == HitKind.BLOCKED) block()
-            }
             Action.FLASK -> {
                 val radius = cw * (.4f + .4f * t)
                 drawCircle(Brush.radialGradient(listOf(Vital.copy(alpha = .5f * (1 - t)), Color.Transparent), Offset(cw / 2, y), radius), radius, Offset(cw / 2, y))
@@ -262,12 +256,12 @@ private fun flash(lunge: LungeView?, side: Side): Float {
 }
 
 /**
- * One fighter's frame: the name and what it is, the bust, the pools, the swing and cast bars, and
+ * One fighter's frame: the name and what it is, the bust, life and shield, the swing bar, and
  * what is on it. The frame is gold for the hero and the rarity's colour for a monster, with a bronze
  * line inside as an item's frame has; a flask glows it green, a held fighter dims it.
  */
 @Composable private fun FighterFrame(modifier: Modifier, side: Side, accent: Color, name: String, line: String, life: Int, maxLife: Int, shield: Int, maxShield: Int,
-    mana: Int, maxMana: Int, swing: Float, cast: Float?, ailments: List<AilmentView>, held: Boolean, flash: Float, glow: Color?, hits: List<FloatingHit>,
+    swing: Float, ailments: List<AilmentView>, held: Boolean, flash: Float, glow: Color?, hits: List<FloatingHit>,
     portrait: DrawScope.(Float, Color?, Float, Float) -> Unit) {
     val shape = CutCornerShape(12.dp)
     val inner = CutCornerShape(9.dp)
@@ -320,17 +314,9 @@ private fun flash(lunge: LungeView?, side: Side): Float {
                 if (maxShield > 0) Box(Modifier.fillMaxWidth((shield / maxShield.toFloat()).coerceIn(0f, 1f)).height(3.dp).background(ShieldCyan.copy(alpha = .85f)))
                 Text(if (maxShield > 0) "$life / $maxLife · $shield" else "$life / $maxLife", color = Parchment, fontSize = 9.sp, modifier = Modifier.align(Alignment.Center))
             }
-            if (maxMana > 0) Box(Modifier.fillMaxWidth().height(5.dp).background(Color(0xCC0A0D12), bar).border(1.dp, ManaBlue.copy(alpha = .7f), bar)) {
-                Box(Modifier.fillMaxWidth((mana / maxMana.toFloat()).coerceIn(0f, 1f)).fillMaxHeight().background(ManaBlue, bar))
-            }
             // The swing bar: full the instant the next blow lands; dimmed while nothing can land.
             Box(Modifier.fillMaxWidth().height(3.dp).background(Color(0x14FFFFFF), RoundedCornerShape(2.dp))) {
                 Box(Modifier.fillMaxWidth(swing.coerceIn(0f, 1f)).fillMaxHeight().background(if (held) Muted else Gold, RoundedCornerShape(2.dp)))
-            }
-            cast?.let {
-                Box(Modifier.fillMaxWidth().height(3.dp).background(Color(0x14FFFFFF), RoundedCornerShape(2.dp))) {
-                    Box(Modifier.fillMaxWidth(it.coerceIn(0f, 1f)).fillMaxHeight().background(if (held) Muted else Rune, RoundedCornerShape(2.dp)))
-                }
             }
             // The ailments' row keeps its place empty, so a frame never changes height mid-fight.
             Row(Modifier.padding(top = 2.dp).height(16.dp).clipToBounds(), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -397,11 +383,6 @@ private fun logLine(event: CombatEvent, monster: String): String {
             val ailment = event.ailment?.let { ui(it.key()) }.orEmpty()
             if (hero) ui("expedition.log_tick_they", monster, damage, ailment) else ui("expedition.log_tick_you", damage, ailment)
         }
-        Action.SPELL -> when (event.kind) {
-            HitKind.CRIT -> if (hero) ui("expedition.log_you_spell_crit", damage) else ui("expedition.log_they_spell_crit", monster, damage)
-            HitKind.BLOCKED -> if (hero) ui("expedition.log_they_block", monster) else ui("expedition.log_you_block")
-            else -> if (hero) ui("expedition.log_you_spell", damage) else ui("expedition.log_they_spell", monster, damage)
-        }
         Action.ATTACK -> when (event.kind) {
             HitKind.HIT -> if (hero) ui("expedition.log_you_hit", damage) else ui("expedition.log_they_hit", monster, damage)
             HitKind.CRIT -> if (hero) ui("expedition.log_you_crit", damage) else ui("expedition.log_they_crit", monster, damage)
@@ -424,7 +405,6 @@ private fun logColour(event: CombatEvent): Color = when {
     event.action == Action.RETREAT -> Muted
     event.action == Action.TICK -> damageTint(event.type).copy(alpha = .85f)
     event.kind == HitKind.CRIT -> Color(0xFFFFD34A)
-    event.action == Action.SPELL && event.landed -> Rune
     event.kind == HitKind.HIT -> if (event.actor == Side.HERO) Parchment else Color(0xFFE9A0A0)
     else -> Muted
 }
@@ -460,7 +440,7 @@ private fun outcomeColour(outcome: Outcome) = when (outcome) { Outcome.WIN -> Vi
         val cells = listOf(
             report.dealt.toString() to "expedition.sum_dealt", report.taken.toString() to "expedition.sum_taken",
             ui("expedition.log_time", String.format(Locale.ROOT, "%.1f", report.duration)) to "expedition.sum_time",
-            report.crits.toString() to "expedition.sum_crits", report.spells.toString() to "expedition.sum_spells", report.flasks.toString() to "expedition.sum_flasks",
+            report.crits.toString() to "expedition.sum_crits", report.dotTaken.toString() to "expedition.sum_dot_taken", report.flasks.toString() to "expedition.sum_flasks",
             report.dotDealt.toString() to "expedition.sum_dot_dealt", report.blocked.toString() to "expedition.sum_blocked", report.evaded.toString() to "expedition.sum_evaded")
         cells.chunked(3).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

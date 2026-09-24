@@ -53,12 +53,6 @@ class CampaignTest {
         assertEquals(1.5, bare.attackSpeed)
         assertEquals(6.0, bare.damage.getValue(DamageType.PHYSICAL))
         assertEquals(0.07, bare.critChance)
-        // No spell damage, no mana: nothing to cast. A hero with mana knows the innate spell.
-        assertFalse(bare.casts)
-        val exile = Combatant(mapOf("STOCK_HEALTH" to 50.0, "STOCK_MANA" to 40.0), 3, rules, innateSpell = true)
-        assertTrue(exile.casts)
-        assertEquals(rules.spell.innateDamage + rules.spell.innatePerLevel * 2, exile.spellDamage)
-        assertEquals(rules.spell.castSpeed, exile.castSpeed)
     }
 
     @Test fun `chaos goes around energy shield and leech heals the striker`() {
@@ -211,21 +205,21 @@ class CampaignTest {
         val run = ExpeditionRun.start(map, rarities, emptyMap(), 1, 11, onKill = {}, onCleared = {}, onChest = { opened++ })
         run.world.agents.forEach { it.alive = false }
         run.send(RunCommand.Chests(1))
-        run.update(0.016)
+        run.tick(0.016)
         assertEquals(1, run.hud.value.chestsLeft)
         val chest = run.world.chests.single()
         run.world.heroX = chest.cell.x + 0.5
         run.world.heroY = chest.cell.y + 0.5
-        run.update(0.016)
+        run.tick(0.016)
         assertEquals(1, opened)
         assertTrue(run.hud.value.chestPending)
         assertEquals(0, run.hud.value.chestsLeft)
         run.send(RunCommand.ChestReward(CampaignReward(gold = 40)))
-        run.update(0.016)
+        run.tick(0.016)
         assertEquals(40L, run.hud.value.chest?.gold)
         assertEquals(RunPhase.MAP, run.hud.value.phase)
         run.send(RunCommand.DismissChest)
-        run.update(0.016)
+        run.tick(0.016)
         assertNull(run.hud.value.chest)
     }
 
@@ -269,9 +263,9 @@ class CampaignTest {
         val agent = run.world.agents.first()
         run.world.heroX = agent.x
         run.world.heroY = agent.y
-        run.update(0.016)
+        run.tick(0.016)
         assertEquals(RunPhase.FIGHT, run.hud.value.phase)
-        repeat(3000) { if (run.hud.value.phase == RunPhase.FIGHT) run.update(0.05) }
+        repeat(3000) { if (run.hud.value.phase == RunPhase.FIGHT) run.tick(0.05) }
         assertEquals(RunPhase.LOOT, run.hud.value.phase)
         assertEquals(listOf("DROWNED"), killed)
         assertTrue(run.hud.value.rewardPending)
@@ -280,16 +274,46 @@ class CampaignTest {
         assertEquals(Outcome.WIN, report.outcome)
         assertTrue(report.events.isNotEmpty() && report.dealt > 0)
         // Nothing moves on while the server has not answered.
-        run.send(RunCommand.Continue); run.update(0.016)
+        run.send(RunCommand.Continue); run.tick(0.016)
         assertEquals(RunPhase.LOOT, run.hud.value.phase)
         run.send(RunCommand.Reward(CampaignReward(experience = 20.0, gold = 5)))
-        run.send(RunCommand.Continue); run.update(0.016)
+        run.send(RunCommand.Continue); run.tick(0.016)
         assertEquals(RunPhase.MAP, run.hud.value.phase)
         assertEquals(5L, run.hud.value.gold)
         assertNull(run.hud.value.report)
         assertEquals(run.world.agents.size - 1, run.hud.value.alive)
-        run.send(RunCommand.Leave); run.update(0.016)
+        run.send(RunCommand.Leave); run.tick(0.016)
         assertEquals(RunPhase.LEFT, run.hud.value.phase)
+    }
+
+    @Test fun `a fight waits for its beginning, and turning away before it strikes nothing`() {
+        val run = ExpeditionRun.start(map, rarities, mapOf("STOCK_HEALTH" to 500.0, "STOCK_ATTACK_PHYSICAL" to 60.0), 10, 7, onKill = {}, onCleared = {})
+        val agent = run.world.agents.first()
+        run.world.heroX = agent.x
+        run.world.heroY = agent.y
+        run.update(0.016)
+        repeat(100) { run.update(0.05) }
+        val fight = assertNotNull(run.hud.value.fight)
+        assertFalse(fight.started)
+        assertTrue(fight.events.isEmpty(), "nothing is struck before «Начать»")
+        run.send(RunCommand.Retreat); run.update(0.016)
+        assertEquals(RunPhase.MAP, run.hud.value.phase)
+        assertTrue(agent.alive)
+    }
+
+    @Test fun `a fountain gives back its share of life once`() {
+        val world = ExpeditionWorld.create(map, rarities, emptyMap(), 9)
+        world.placeFountains(2, 2, 30.0)
+        assertTrue(world.fountains.isNotEmpty() && world.fountains.size <= 2)
+        assertTrue(world.fountains.none { it.cell == world.map.start || it.cell == world.map.exit })
+        world.agents.forEach { it.alive = false }
+        val fountain = world.fountains.first()
+        world.heroX = fountain.cell.x + 0.5
+        world.heroY = fountain.cell.y + 0.5
+        assertEquals(WorldEvent.Drank(fountain), world.step(0.016, 0.0, 0.0))
+        assertNull(world.step(0.016, 0.0, 0.0).takeIf { it is WorldEvent.Drank })
+        val same = ExpeditionWorld.create(map, rarities, emptyMap(), 9).also { it.placeFountains(2, 2, 30.0) }
+        assertEquals(world.fountains.map { it.cell }, same.fountains.map { it.cell })
     }
 
     @Test fun `a lost fight ends the run once the server has priced the death`() {
@@ -298,16 +322,16 @@ class CampaignTest {
         val agent = run.world.agents.first()
         run.world.heroX = agent.x
         run.world.heroY = agent.y
-        repeat(3000) { if (run.hud.value.phase != RunPhase.DEAD) run.update(0.05) }
+        repeat(3000) { if (run.hud.value.phase != RunPhase.DEAD) run.tick(0.05) }
         assertEquals(RunPhase.DEAD, run.hud.value.phase)
         assertEquals(0, run.hud.value.heroLife)
         assertEquals(1, fallen)
         assertTrue(run.hud.value.fallPending)
         // Nothing moves on while the server has not said what the death cost.
-        run.send(RunCommand.Continue); run.update(0.016)
+        run.send(RunCommand.Continue); run.tick(0.016)
         assertEquals(RunPhase.DEAD, run.hud.value.phase)
         run.send(RunCommand.Fallen(CampaignFall(lost = 50.0, level = 1, totalExperience = 0.0)))
-        run.send(RunCommand.Continue); run.update(0.016)
+        run.send(RunCommand.Continue); run.tick(0.016)
         assertEquals(50.0, run.hud.value.fall?.lost)
         assertEquals(RunPhase.LEFT, run.hud.value.phase)
     }
@@ -320,19 +344,19 @@ class CampaignTest {
         // A fight leaves the hero hurt; walking away from it heals nothing.
         val agent = run.world.agents.first()
         run.world.heroX = agent.x; run.world.heroY = agent.y
-        repeat(3000) { if (run.hud.value.phase != RunPhase.LOOT) run.update(0.05) }
-        run.send(RunCommand.Reward(CampaignReward())); run.send(RunCommand.Continue); run.update(0.016)
+        repeat(3000) { if (run.hud.value.phase != RunPhase.LOOT) run.tick(0.05) }
+        run.send(RunCommand.Reward(CampaignReward())); run.send(RunCommand.Continue); run.tick(0.016)
         assertEquals(RunPhase.MAP, run.hud.value.phase)
         val hurt = run.hud.value.heroLife
         assertTrue(hurt < 300, "the fight should have cost something")
         run.world.agents.forEach { it.alive = false }
-        repeat(100) { run.update(0.05) }
+        repeat(100) { run.tick(0.05) }
         assertEquals(hurt, run.hud.value.heroLife, "life came back while walking")
         // The flask works on the map too: a tenth of the life over its second, one charge spent.
-        run.send(RunCommand.Flask); run.update(0.016)
+        run.send(RunCommand.Flask); run.tick(0.016)
         assertTrue(run.hud.value.flaskActive)
         assertEquals(1, run.hud.value.flasks)
-        repeat(25) { run.update(0.05) }
+        repeat(25) { run.tick(0.05) }
         assertFalse(run.hud.value.flaskActive)
         val expected = minOf(300, hurt + 30)
         assertTrue(run.hud.value.heroLife in (expected - 2)..expected, "${run.hud.value.heroLife} after $hurt")
@@ -347,12 +371,12 @@ class CampaignTest {
         val agent = run.world.agents.first()
         run.world.heroX = agent.x
         run.world.heroY = agent.y
-        run.update(0.016)
+        run.tick(0.016)
         assertEquals(RunPhase.FIGHT, run.hud.value.phase)
-        run.send(RunCommand.Flask); run.update(0.016)
+        run.send(RunCommand.Flask); run.tick(0.016)
         assertEquals(1, run.hud.value.flasks)
         assertTrue(run.hud.value.fight!!.flaskActive)
-        repeat(3000) { if (run.hud.value.phase == RunPhase.FIGHT) run.update(0.05) }
+        repeat(3000) { if (run.hud.value.phase == RunPhase.FIGHT) run.tick(0.05) }
         assertEquals(RunPhase.LOOT, run.hud.value.phase)
         assertEquals(2, run.hud.value.flasks, "a kill gives a charge back, up to the rule's count")
         assertEquals(1, run.hud.value.report?.flasks)
@@ -378,7 +402,7 @@ class CampaignTest {
     @Test fun `each side's swing bar fills at its own attack speed`() {
         val rules = CombatRules()
         val battle = Battle(Combatant(mapOf("STOCK_HEALTH" to 500.0, "STOCK_ATTACK_SPEED" to 2.0), 1, rules),
-            Combatant(mapOf("STOCK_HEALTH" to 500.0, "STOCK_ATTACK_SPEED" to 0.5), 1, rules), rules, 500.0, 0.0, 0, Random(2))
+            Combatant(mapOf("STOCK_HEALTH" to 500.0, "STOCK_ATTACK_SPEED" to 0.5), 1, rules), rules, 500.0, 0, Random(2))
         battle.advance(0.36)
         val first = battle.events.first { it.actor == Side.HERO }
         assertTrue(battle.swing(Side.HERO) < 0.1f)
@@ -413,7 +437,7 @@ class CampaignTest {
         // One heavy cold swing every two and a half seconds: the freeze has time to pass before the next.
         val frost = Combatant(mapOf("STOCK_HEALTH" to 1000.0, "STOCK_ATTACK_COLD" to 30.0, "STOCK_ATTACK_SPEED" to 0.4, "STOCK_CRITICAL_CHANCE" to 0.0), 1, rules)
         val victim = Combatant(mapOf("STOCK_HEALTH" to 200.0, "STOCK_ATTACK_PHYSICAL" to 1.0, "STOCK_ATTACK_SPEED" to 1.0, "STOCK_CRITICAL_CHANCE" to 0.0), 1, rules)
-        val battle = Battle(frost, victim, rules, 1000.0, 0.0, 0, Random(5))
+        val battle = Battle(frost, victim, rules, 1000.0, 0, Random(5))
         battle.advance(0.4)
         val hit = battle.events.first { it.actor == Side.HERO }
         assertEquals(setOf(Ailment.CHILLED, Ailment.FROZEN), hit.inflicted.toSet())
@@ -459,7 +483,6 @@ class CampaignTest {
         assertEquals(0.90, maxed.resist(DamageType.FIRE), 1e-9)
         // "All maximum resistances" is the three elements'; chaos keeps its own ceiling.
         assertEquals(0.75, maxed.resist(DamageType.CHAOS), 1e-9)
-        assertEquals(0.30, warded.spellBlock, 1e-9)
         assertEquals(0.05, warded.physicalReduction, 1e-9)
     }
 
@@ -483,27 +506,20 @@ class CampaignTest {
         assertEquals(60.0, run.hero.flaskHeal, 1e-9)
     }
 
-    @Test fun `the innate spell is cast beside the swings and costs mana`() {
-        val rules = CombatRules(spell = SpellRule(innateDamage = 5.0, innatePerLevel = 1.0, castSpeed = 1.0, manaCost = 50.0, manaRegenShare = 0.0))
-        val exile = Combatant(mapOf("STOCK_HEALTH" to 500.0, "STOCK_MANA" to 40.0, "STOCK_ATTACK_PHYSICAL" to 1.0, "STOCK_ATTACK_SPEED" to 1.0, "STOCK_CRITICAL_CHANCE" to 0.0), 2, rules, innateSpell = true)
-        val wall = Combatant(mapOf("STOCK_HEALTH" to 100000.0, "STOCK_ARMOR" to 100000.0, "STOCK_EVASION" to 100000.0, "STOCK_ATTACK_PHYSICAL" to 0.1, "STOCK_ATTACK_SPEED" to 0.3), 1, rules)
-        val log = Combat.fight(exile, wall, 500.0, Random(6), rules)
-        val spells = log.events.filter { it.actor == Side.HERO && it.action == Action.SPELL }
-        // Two casts empty a 40-mana pool at half each; no regeneration, so no third.
-        assertEquals(2, spells.size)
-        assertTrue(spells.all { it.landed && it.type == DamageType.MAGICAL })
-        // A spell goes around armour and evasion: it lands for about its base.
-        assertEquals(6.0, spells.first().damage, 6.0 * rules.variance / 100 + 1e-9)
-        assertEquals(0.0, log.heroMana, 1e-9)
-        // Every swing at the wall is evaded or lands for nothing; the spell is what hurt it.
-        assertTrue(log.events.filter { it.actor == Side.HERO && it.action == Action.ATTACK }.all { it.kind == HitKind.EVADED || it.damage < 0.2 })
+    @Test fun `nobody casts since spells left the game`() {
+        // A sheet with spell damage and mana still only swings (2.48.0): spells and mana are gone.
+        val exile = Combatant(mapOf("STOCK_HEALTH" to 500.0, "STOCK_MANA" to 40.0, "STOCK_ATTACK_MAGICAL" to 50.0, "STOCK_ATTACK_PHYSICAL" to 1.0), 2)
+        val wall = Combatant(mapOf("STOCK_HEALTH" to 1000.0, "STOCK_ATTACK_PHYSICAL" to 0.1, "STOCK_ATTACK_SPEED" to 0.3), 1)
+        val log = Combat.fight(exile, wall, 500.0, Random(6))
+        assertTrue(log.events.filter { it.actor == Side.HERO }.all { it.action != Action.TICK || it.ailment != null })
+        assertTrue(log.events.filter { it.actor == Side.HERO && it.damage > 0 && it.action == Action.ATTACK }.all { it.type != null })
     }
 
     @Test fun `a flask heals over its duration and a retreat gives the monster its free swings`() {
         val rules = CombatRules(flask = FlaskRule(charges = 2, perKill = 1, heal = 50.0, duration = 1.0), retreat = RetreatRule(delay = 1.0))
         val hero = Combatant(mapOf("STOCK_HEALTH" to 100.0, "STOCK_ATTACK_PHYSICAL" to 0.1, "STOCK_ATTACK_SPEED" to 1.0), 1, rules)
         val monster = Combatant(mapOf("STOCK_HEALTH" to 1000.0, "STOCK_ATTACK_PHYSICAL" to 0.1, "STOCK_ATTACK_SPEED" to 1.0, "STOCK_CRITICAL_CHANCE" to 0.0), 1, rules)
-        val battle = Battle(hero, monster, rules, 20.0, 0.0, 2, Random(7))
+        val battle = Battle(hero, monster, rules, 20.0, 2, Random(7))
         assertTrue(battle.useFlask())
         assertFalse(battle.useFlask(), "one flask at a time")
         assertEquals(1, battle.flasks)
@@ -522,7 +538,7 @@ class CampaignTest {
         val rules = CombatRules(shield = ShieldRule(rechargeDelay = 1.0, rechargePerSecond = 50.0))
         val warded = Combatant(mapOf("STOCK_HEALTH" to 1000.0, "STOCK_ENERGY_SHIELD" to 100.0, "STOCK_ATTACK_PHYSICAL" to 0.1, "STOCK_ATTACK_SPEED" to 0.3), 1, rules)
         val hitter = Combatant(mapOf("STOCK_HEALTH" to 1000.0, "STOCK_ATTACK_PHYSICAL" to 40.0, "STOCK_ATTACK_SPEED" to 0.3, "STOCK_CRITICAL_CHANCE" to 0.0, "STOCK_EVASION" to 0.0), 1, rules)
-        val battle = Battle(warded, hitter, rules, 1000.0, 0.0, 0, Random(8))
+        val battle = Battle(warded, hitter, rules, 1000.0, 0, Random(8))
         battle.advance(0.6)
         val hit = battle.events.first { it.actor == Side.MONSTER && it.landed }
         assertTrue(hit.heroShield < 100.0)
@@ -556,10 +572,10 @@ class CampaignTest {
 
     @Test fun `new gear on the map lands between fights and keeps the share of life`() {
         val run = ExpeditionRun.start(map, rarities, mapOf("STOCK_HEALTH" to 100.0, "STOCK_LIGHT_RADIUS" to 5.0), 1, 3, onKill = {}, onCleared = {})
-        run.update(0.0)
+        run.tick(0.0)
         val before = run.hud.value.heroMaxLife
         run.send(RunCommand.Regear(mapOf("STOCK_HEALTH" to 200.0, "STOCK_LIGHT_RADIUS" to 8.0, "STOCK_FLASK_CHARGES" to 1.0), 1))
-        run.update(0.0)
+        run.tick(0.0)
         assertEquals(before * 2, run.hud.value.heroMaxLife)
         assertEquals(run.hud.value.heroMaxLife, run.hud.value.heroLife, "a whole hero stays whole")
         assertEquals(CombatRules().flask.charges + 1, run.hud.value.maxFlasks)
@@ -592,3 +608,6 @@ class CampaignTest {
         assertTrue(world.agents.size >= 30, "a 72-cell map holds a pack of 35: ${world.agents.size}")
     }
 }
+
+/** A step of a run whose fights begin at once, as a player pressing «Начать» the moment one opens (2.48.0). */
+private fun ExpeditionRun.tick(dt: Double) { send(RunCommand.Begin); update(dt) }

@@ -121,7 +121,8 @@ class ItemPresentationTest {
             "STOCK_ATTACK_SPEED" to 1.55, "STOCK_STRENGTH" to 142.0, "STOCK_ARMOR" to 1242.0, "STOCK_MANA" to 412.0, "STOCK_IGNITE_CHANCE" to 25.0, "BATTLE_ARCHERY" to 3.0))
         assertEquals(StatGroup.entries.toList(), grouped.map { it.first })
         // Inside a group the server's own enum order holds: life before mana.
-        assertEquals(listOf("STOCK_HEALTH", "STOCK_MANA"), grouped.first().second.map { it.first })
+        // Mana left the game in 2.48.0: the sheet may carry it, and it is not shown.
+        assertEquals(listOf("STOCK_HEALTH"), grouped.first().second.map { it.first })
         assertEquals(StatGroup.OTHER, StatGroup.of("STOCK_SOMETHING_NEW"))
         // Ailments sit together, but avoiding a stun is a defence and a higher ceiling is a resistance.
         assertEquals(StatGroup.AILMENT, StatGroup.of("STOCK_AVOID_FREEZE"))

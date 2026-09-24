@@ -3,6 +3,7 @@ package com.sperance.exileforge.ui
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material3.*
@@ -115,7 +116,9 @@ import com.sperance.exileforge.ui.theme.*
         }
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).imePadding().voidBackdrop()) {
-            ForgeBanner(s)
+            // The craft under way is read with the game, so the banner's plaque knows it from the start.
+            LaunchedEffect(s.play.characterId) { if (s.play.characterId.isNotBlank()) vm.loadCrafts() }
+            ForgeBanner(s, vm)
             if (s.busy || s.reading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised) else OrnateDivider(Gold)
             RefusalLine(s.refusal, vm::dismissMessage)
             when (s.tab) {
@@ -149,8 +152,10 @@ import com.sperance.exileforge.ui.theme.*
  * 2.3.0: it is not something a player has, and the banner is the one thing on screen every player
  * sees on every tab. The language runes went the same way in 2.4.0, to the Account tab and to the
  * sign-in screen: with a third language they were a crowd, and a language is a setting, not an act.
+ * Since 2.48.0 the hero's class is gone from it, a short plaque of the craft under way opens the
+ * crafts, and the account sits in its corner — it left the bottom bar.
  */
-@Composable private fun ForgeBanner(s: ForgeState) {
+@Composable private fun ForgeBanner(s: ForgeState, vm: ForgeViewModel) {
     Row(Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Gold.copy(alpha = .10f), Color.Transparent, Gold.copy(alpha = .06f))))
         .padding(horizontal = 18.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(40.dp).border(1.dp, Gold.copy(alpha = .5f), CutCornerShape(9.dp)), contentAlignment = Alignment.Center) {
@@ -160,9 +165,28 @@ import com.sperance.exileforge.ui.theme.*
         Column(Modifier.weight(1f)) {
             Text("EXILE FORGE", style = MaterialTheme.typography.titleLarge, color = GoldBright)
             val hero = s.character
-            Text(if (hero == null) ui("app.title")
-                 else hero.name + (s.heroClass?.let { " · ${it.title}" } ?: "") + ui("app.hero_level", hero.level),
+            Text(if (hero == null) ui("app.title") else hero.name + ui("app.hero_level", hero.level),
                 style = MaterialTheme.typography.labelSmall, color = Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
+        WorkBadge(s) { vm.tab(TAB_CRAFTS) }
+        IconButton(onClick = { vm.tab(TAB_ACCOUNT) }) {
+            Icon(ForgeGlyphs.Portal, ui("nav.account"), tint = if (s.tab == TAB_ACCOUNT) GoldBright else Gold, modifier = Modifier.size(24.dp))
+        }
+    }
+}
+
+/** The craft under way, very short: its name and the cycle filling, every frame. Nothing when the hero works at nothing. */
+@Composable private fun WorkBadge(s: ForgeState, onClick: () -> Unit) {
+    val crafts = s.play.crafts ?: return
+    val work = crafts.work ?: return
+    val offset = crafts.now - s.play.craftsAt
+    val now by produceState(System.currentTimeMillis()) { while (true) withFrameMillis { value = System.currentTimeMillis() } }
+    Column(Modifier.widthIn(max = 120.dp).clickable(onClick = onClick).padding(horizontal = 6.dp, vertical = 2.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            Icon(ForgeGlyphs.Anvil, null, tint = Gold, modifier = Modifier.size(12.dp))
+            Text(com.sperance.exileforge.ui.screens.crafts.jobTitle(work.job), color = Parchment, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        LinearProgressIndicator(progress = { if (work.cycleMillis > 0) ((now + offset - work.settledAt).toFloat() / work.cycleMillis).coerceIn(0f, 1f) else 0f },
+            modifier = Modifier.fillMaxWidth().height(2.dp).padding(top = 1.dp), color = Gold, trackColor = PanelRaised)
     }
 }

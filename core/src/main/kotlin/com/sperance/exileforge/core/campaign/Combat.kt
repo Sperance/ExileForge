@@ -9,8 +9,8 @@ import kotlin.random.Random
 /** Who acted. */
 enum class Side { HERO, MONSTER; val other: Side get() = if (this == HERO) MONSTER else HERO }
 
-/** What a fighter did: swung a weapon, cast the spell, let an ailment burn on, drank, or turned to leave. */
-enum class Action { ATTACK, SPELL, TICK, FLASK, RETREAT }
+/** What a fighter did: swung a weapon, let an ailment burn on, drank, or turned to leave. Spells left the game in 2.48.0. */
+enum class Action { ATTACK, TICK, FLASK, RETREAT }
 
 /** How a blow ended: it landed, landed hard, or never reached. */
 enum class HitKind { HIT, CRIT, EVADED, BLOCKED }
@@ -18,14 +18,13 @@ enum class HitKind { HIT, CRIT, EVADED, BLOCKED }
 /** How the whole fight ended; a retreat is a fight nobody won inside the time limit, or one the hero walked out of. */
 enum class Outcome { WIN, LOSS, RETREAT }
 
-/** Damage by type, as the sheet names it; magical is the spell's and goes around armour, evasion and resistances alike. */
+/** Damage by type, as the sheet names it. */
 enum class DamageType(val attack: String, val resist: String?) {
     PHYSICAL("STOCK_ATTACK_PHYSICAL", null),
     FIRE("STOCK_ATTACK_FIRE", "STOCK_RESIST_FIRE"),
     COLD("STOCK_ATTACK_COLD", "STOCK_RESIST_COLD"),
     LIGHTNING("STOCK_ATTACK_LIGHTNING", "STOCK_RESIST_LIGHTNING"),
-    CHAOS("STOCK_ATTACK_CHAOS", "STOCK_RESIST_CHAOS"),
-    MAGICAL("STOCK_ATTACK_MAGICAL", null);
+    CHAOS("STOCK_ATTACK_CHAOS", "STOCK_RESIST_CHAOS");
 
     /** The stat that lifts this resistance's ceiling (since server 0.36.0). */
     val maxResist: String? get() = resist?.replace("STOCK_RESIST_", "STOCK_RESIST_MAX_")
@@ -52,34 +51,23 @@ enum class Ailment(val word: String, val damage: String? = null) {
  *
  * Every number here is one the server sent; the fight only decides what they do to each other. A
  * hero with no weapon still swings — unarmed, as in PoE — and a missing critical chance is the one
- * every attack has. The hero also knows one spell ([innateSpell]): its base is the rule's innate
- * damage per level on top of whatever spell damage the sheet has, and it is cast beside the swings
- * at the sheet's cast speed (or the rule's) for a share of the mana. A monster casts only when its
- * table gives it spell damage and mana.
+ * every attack has. Spells and mana left the game in 2.48.0 (server 0.43.0): nobody casts, and a
+ * sheet's spell or mana lines count for nothing here.
  */
-data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: CombatRules = CombatRules(), val innateSpell: Boolean = false) {
+data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: CombatRules = CombatRules()) {
     private fun stat(name: String) = stats[name] ?: 0.0
     private fun percent(name: String, cap: Double = 100.0) = stat(name).coerceIn(0.0, cap) / 100
 
     val maxLife = max(1.0, stat("STOCK_HEALTH"))
     val maxShield = max(0.0, stat("STOCK_ENERGY_SHIELD"))
-    val maxMana = max(0.0, stat("STOCK_MANA"))
-    val damage: Map<DamageType, Double> = DamageType.entries.filter { it != DamageType.MAGICAL }.associateWith { max(0.0, stat(it.attack)) }
+    val damage: Map<DamageType, Double> = DamageType.entries.associateWith { max(0.0, stat(it.attack)) }
         .let { rolled -> if (rolled.values.sum() > 0) rolled else rolled + (DamageType.PHYSICAL to rules.unarmed.damage) }
     val attackSpeed = stat("STOCK_ATTACK_SPEED").takeIf { it > 0 }?.coerceIn(0.3, 5.0) ?: rules.unarmed.speed
-    val spellDamage = max(0.0, stat("STOCK_ATTACK_MAGICAL")) + (if (innateSpell) rules.spell.innateDamage + rules.spell.innatePerLevel * (level - 1) else 0.0)
-    val castSpeed = stat("STOCK_CAST_SPEED").takeIf { it > 0 }?.coerceIn(0.2, 5.0) ?: rules.spell.castSpeed
-    val castStrength = 1 + max(0.0, stat("STOCK_CAST_STRENGTH")) / 100
-    val casts = spellDamage > 0 && maxMana > 0
-    val manaCost = maxMana * rules.spell.manaCost / 100
-    val manaRegen = max(0.0, stat("STOCK_MANA_REGEN")) + maxMana * rules.spell.manaRegenShare / 100
     val critChance = (stats["STOCK_CRITICAL_CHANCE"] ?: rules.critical.chance).coerceIn(0.0, 100.0) / 100
     val critMultiplier = max(100.0, (stats["STOCK_CRITICAL_MULTIPLIER"] ?: rules.critical.multiplier) + stat("STOCK_CRITICAL_DAMAGE")) / 100
     val armour = max(0.0, stat("STOCK_ARMOR"))
     val evasion = max(0.0, stat("STOCK_EVASION"))
     val block = stat("STOCK_BLOCK_CHANCE").coerceIn(0.0, rules.blockCap) / 100
-    /** A spell meets the rule's share of the block chance plus the sheet's own spell block, under the same cap. */
-    val spellBlock = (stat("STOCK_BLOCK_CHANCE").coerceIn(0.0, rules.blockCap) * rules.spellBlockShare / 100 + stat("STOCK_SPELL_BLOCK")).coerceIn(0.0, rules.blockCap) / 100
     /** Taken off physical damage after armour, under armour's own cap. */
     val physicalReduction = percent("STOCK_PHYSICAL_REDUCTION", rules.armour.cap)
     /** Chaos stands alone, as in PoE; "all resistances" and "all maximum resistances" cover the three elements. */
@@ -92,7 +80,6 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
     val lifeRegen = max(0.0, stat("STOCK_HEALTH_REGEN"))
     val shieldRegen = max(0.0, stat("STOCK_ENERGY_REGEN"))
     val leechPhysical = max(0.0, stat("STOCK_LEECH_PHYSICAL")) / 100
-    val leechMagical = max(0.0, stat("STOCK_LEECH_MAGICAL")) / 100
     val leechAll = max(0.0, stat("STOCK_LEECH_ALL")) / 100
     val critLeech = max(0.0, stat("STOCK_CRITICAL_VAMPIRE")) / 100
     val stunThreshold = max(0.0, stat("STOCK_STUN_THRESHOLD"))
@@ -105,9 +92,7 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
     /** What is left of [ailment]'s duration on this fighter, never less than the rule's cap allows. */
     fun ailmentDuration(ailment: Ailment) = 1 - percent("STOCK_${ailment.word}_DURATION_ON_SELF", rules.ailmentDurationCap)
     val lifeOnHit = max(0.0, stat("STOCK_HEALTH_ON_HIT"))
-    val manaOnHit = max(0.0, stat("STOCK_MANA_ON_HIT"))
     val lifeOnKill = max(0.0, stat("STOCK_HEALTH_ON_KILL"))
-    val manaOnKill = max(0.0, stat("STOCK_MANA_ON_KILL"))
     /** Charges the flask carries on top of the rule's, and how much more one heals. */
     val extraFlasks = max(0.0, stat("STOCK_FLASK_CHARGES")).toInt()
     val flaskHeal = rules.flask.heal * (1 + max(0.0, stat("STOCK_FLASK_RECOVERY")) / 100)
@@ -138,7 +123,6 @@ data class CombatEvent(
     val ailment: Ailment?,
     val heroLife: Double,
     val heroShield: Double,
-    val heroMana: Double,
     val monsterLife: Double,
     val monsterShield: Double,
 ) {
@@ -148,23 +132,21 @@ data class CombatEvent(
 }
 
 /** A whole fight, as a test or a replay reads it. */
-data class CombatLog(val events: List<CombatEvent>, val outcome: Outcome, val heroLife: Double, val heroMana: Double, val flasks: Int, val duration: Double)
+data class CombatLog(val events: List<CombatEvent>, val outcome: Outcome, val heroLife: Double, val flasks: Int, val duration: Double)
 
 /**
  * The fight, alive: stepped in fixed slices of time so that the same seed is the same fight on any
  * screen, and open to the player while it runs — a flask can be drunk and a retreat begun.
  *
- * Each side swings at its own attack speed and, if it has a spell and the mana, casts at its cast
- * speed beside the swings. A swing can be evaded (evasion against the attacker's level), blocked,
+ * Each side swings at its own attack speed. A swing can be evaded (evasion against the attacker's level), blocked,
  * or land; a landing hit rolls the rule's variance per damage type, may be a critical strike, and is
  * reduced by armour (physical, `armour / (armour + factor × damage)`) and by resistances (elements
- * and chaos, capped). A spell cannot be evaded, is blocked at a share of the block chance, ignores
- * armour and resistances, and costs mana. Energy shield takes a hit before life, except chaos,
+ * and chaos, capped). Energy shield takes a hit before life, except chaos,
  * which goes around it; a shield left alone for the rule's delay recharges. Leech gives back a share
  * of what was dealt; a hit big enough against the target's life stuns it, and a frozen or stunned
  * fighter does nothing until it passes. Every landing hit may inflict the ailments its damage types
  * carry: burning, poison and bleeding deal a share of the hit over time, chill slows the target's
- * actions, shock makes it take more, a freeze stops it. Life, mana and shield regenerate as they go.
+ * actions, shock makes it take more, a freeze stops it. Life and shield regenerate as they go.
  *
  * The client fights by the owner's decision (rule 23); every constant here is the server's [rules].
  */
@@ -173,20 +155,16 @@ class Battle(
     val monster: Combatant,
     val rules: CombatRules,
     heroLife: Double,
-    heroMana: Double,
     flasks: Int,
     private val random: Random,
 ) {
     /** One side in motion: its pools, its clocks and what is on it. */
-    inner class Fighter(val side: Side, val body: Combatant, life: Double, mana: Double) {
+    inner class Fighter(val side: Side, val body: Combatant, life: Double) {
         var life = life.coerceIn(0.0, body.maxLife)
         var shield = body.maxShield
-        var mana = mana.coerceIn(0.0, body.maxMana)
         var nextAttack = if (side == Side.HERO) 0.35 else 0.55
-        var nextCast = if (side == Side.HERO) 0.9 else 1.1
         var attackInterval = 1 / body.attackSpeed
-        var castInterval = 1 / body.castSpeed
-        /** Stunned or frozen until then: nothing is swung or cast before it. */
+        /** Stunned or frozen until then: nothing is swung before it. */
         var heldUntil = 0.0
         var lastHit = -1e9
         val ailments = mutableListOf<ActiveAilment>()
@@ -207,8 +185,8 @@ class Battle(
     }
 
     private val fighters = mapOf(
-        Side.HERO to Fighter(Side.HERO, hero, heroLife, heroMana),
-        Side.MONSTER to Fighter(Side.MONSTER, monster, monster.maxLife, monster.maxMana),
+        Side.HERO to Fighter(Side.HERO, hero, heroLife),
+        Side.MONSTER to Fighter(Side.MONSTER, monster, monster.maxLife),
     )
     private val ailmentRules: Map<AilmentRule, Pair<Ailment, DamageType>> = rules.ailments
         .mapNotNull { rule -> Ailment.of(rule.ailment)?.let { a -> DamageType.of(rule.type)?.let { t -> rule to (a to t) } } }.toMap()
@@ -229,7 +207,6 @@ class Battle(
 
     fun fighter(side: Side) = fighters.getValue(side)
     val heroLife: Double get() = fighter(Side.HERO).life
-    val heroMana: Double get() = fighter(Side.HERO).mana
     val retreating: Boolean get() = !retreatAt.isNaN()
     val flaskActive: Boolean get() = fighter(Side.HERO).flaskUntil > time
 
@@ -267,11 +244,8 @@ class Battle(
     /** How far [side] is into its next swing, 0 just after one and 1 as the next lands. */
     fun swing(side: Side): Float = fighter(side).let { if (outcome != null || (side == Side.HERO && retreating)) 0f else (1 - (it.nextAttack - time) / it.attackInterval).toFloat().coerceIn(0f, 1f) }
 
-    /** The same for the spell; a side that does not cast reads as empty. */
-    fun cast(side: Side): Float = fighter(side).let { if (outcome != null || !it.body.casts || (side == Side.HERO && retreating)) 0f else (1 - (it.nextCast - time) / it.castInterval).toFloat().coerceIn(0f, 1f) }
-
     /** The log as a test or a report reads it, once the fight is over. */
-    fun log(): CombatLog = CombatLog(log.toList(), outcome ?: Outcome.RETREAT, heroLife, heroMana, flasks, duration)
+    fun log(): CombatLog = CombatLog(log.toList(), outcome ?: Outcome.RETREAT, heroLife, flasks, duration)
 
     // ==================== One slice of time ====================
 
@@ -285,11 +259,6 @@ class Battle(
             if (!me.alive || me.held || (side == Side.HERO && retreating)) return@forEach
             if (me.nextAttack <= time) { attack(me, fighter(side.other)); me.nextAttack = time + me.attackInterval * me.slow() }
             if (finished()) return
-            if (me.body.casts && me.nextCast <= time) {
-                if (me.mana >= me.body.manaCost) { me.mana -= me.body.manaCost; cast(me, fighter(side.other)); me.nextCast = time + me.castInterval * me.slow() }
-                else me.nextCast = time + 0.25
-            }
-            if (finished()) return
         }
         if (retreating && time >= retreatAt) end(Outcome.RETREAT)
         else if (time >= rules.timeLimit) end(Outcome.RETREAT)
@@ -298,7 +267,6 @@ class Battle(
     private fun regenerate(me: Fighter, dt: Double) {
         if (!me.alive) return
         me.life = min(me.body.maxLife, me.life + me.body.lifeRegen * dt)
-        me.mana = min(me.body.maxMana, me.mana + me.body.manaRegen * dt)
         val recharge = if (time - me.lastHit >= rules.shield.rechargeDelay) me.body.maxShield * rules.shield.rechargePerSecond / 100 else 0.0
         me.shield = min(me.body.maxShield, me.shield + (me.body.shieldRegen + recharge) * dt)
         if (me.flaskUntil > time) me.life = min(me.body.maxLife, me.life + me.flaskRate * dt)
@@ -354,18 +322,6 @@ class Battle(
         land(me, target, Action.ATTACK, kind, taken)
     }
 
-    private fun cast(me: Fighter, target: Fighter) {
-        val kind = when {
-            !target.frozen() && random.nextDouble() < target.body.spellBlock -> HitKind.BLOCKED
-            random.nextDouble() < me.body.critChance -> HitKind.CRIT
-            else -> HitKind.HIT
-        }
-        if (kind == HitKind.BLOCKED) { record(me.side, Action.SPELL, kind, 0.0, DamageType.MAGICAL, 0.0, false, emptyList(), null); return }
-        val multiplier = if (kind == HitKind.CRIT) me.body.critMultiplier else 1.0
-        val raw = me.body.spellDamage * me.body.castStrength * (1 + (random.nextDouble() * 2 - 1) * rules.variance / 100) * multiplier * target.weakness()
-        land(me, target, Action.SPELL, kind, mapOf(DamageType.MAGICAL to raw))
-    }
-
     /** A blow that got through: the shield takes what it can, chaos goes around it, leech and stun and ailments follow. */
     private fun land(me: Fighter, target: Fighter, action: Action, kind: HitKind, taken: Map<DamageType, Double>) {
         val chaos = taken[DamageType.CHAOS] ?: 0.0
@@ -376,10 +332,9 @@ class Battle(
         target.lastHit = time
         val dealt = taken.values.sum()
         val physical = taken[DamageType.PHYSICAL] ?: 0.0
-        val healed = physical * me.body.leechPhysical + (dealt - physical) * me.body.leechMagical + dealt * me.body.leechAll +
+        val healed = physical * me.body.leechPhysical + dealt * me.body.leechAll +
             (if (kind == HitKind.CRIT) dealt * me.body.critLeech else 0.0) + (if (action == Action.ATTACK) me.body.lifeOnHit else 0.0)
         me.life = min(me.body.maxLife, me.life + healed)
-        if (action == Action.ATTACK) me.mana = min(me.body.maxMana, me.mana + me.body.manaOnHit)
 
         var stunned = false
         // Only a fighter with a chance to avoid draws for it, so a sheet without one plays the same seed as before.
@@ -432,17 +387,16 @@ class Battle(
 
     private fun end(how: Outcome) { outcome = how; duration = time }
 
-    /** Life and mana on kill land the moment the monster falls, so the next fight starts with them. */
+    /** Life on kill lands the moment the monster falls, so the next fight starts with it. */
     private fun reward(hero: Fighter) {
         if (!hero.alive) return
         hero.life = min(hero.body.maxLife, hero.life + hero.body.lifeOnKill)
-        hero.mana = min(hero.body.maxMana, hero.mana + hero.body.manaOnKill)
     }
 
     private fun record(actor: Side, action: Action, kind: HitKind, damage: Double, type: DamageType?, healed: Double, stunned: Boolean, inflicted: List<Ailment>, ailment: Ailment?) {
         val h = fighter(Side.HERO)
         val m = fighter(Side.MONSTER)
-        log += CombatEvent(time, actor, action, kind, damage, type, healed, stunned, inflicted, ailment, h.life, h.shield, h.mana, m.life, m.shield)
+        log += CombatEvent(time, actor, action, kind, damage, type, healed, stunned, inflicted, ailment, h.life, h.shield, m.life, m.shield)
     }
 
     companion object {
@@ -456,8 +410,8 @@ class Battle(
 
 /** The fight run through from start to finish, for a test or a summary. */
 object Combat {
-    fun fight(hero: Combatant, monster: Combatant, heroLife: Double, random: Random, rules: CombatRules = hero.rules, heroMana: Double = hero.maxMana, flasks: Int = 0): CombatLog {
-        val battle = Battle(hero, monster, rules, heroLife, heroMana, flasks, random)
+    fun fight(hero: Combatant, monster: Combatant, heroLife: Double, random: Random, rules: CombatRules = hero.rules, flasks: Int = 0): CombatLog {
+        val battle = Battle(hero, monster, rules, heroLife, flasks, random)
         while (battle.outcome == null) battle.advance(1.0)
         return battle.log()
     }

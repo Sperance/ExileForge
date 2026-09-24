@@ -322,7 +322,8 @@ const val TAB_CRAFTS = 11
 
 /** What the bottom bar offers a player — and, with [TAB_ADMIN] appended, an administrator. */
 /** The bar. The tree left it in 2.40.0: it opens from the Hero tab's header, as the forge does. */
-val PLAYER_TABS = listOf(TAB_HERO, TAB_EXPEDITION, TAB_CRAFTS, TAB_AUCTION, TAB_ACCOUNT)
+/** The bottom bar (the account moved to the banner's corner in 2.48.0). */
+val PLAYER_TABS = listOf(TAB_HERO, TAB_EXPEDITION, TAB_CRAFTS, TAB_AUCTION)
 
 /** Screens only an administrator may open, whichever button leads to them. */
 val ADMIN_TABS = setOf(TAB_CATALOG, TAB_EDITOR, TAB_CHECKS, TAB_ADMIN, TAB_REDEMPTION)

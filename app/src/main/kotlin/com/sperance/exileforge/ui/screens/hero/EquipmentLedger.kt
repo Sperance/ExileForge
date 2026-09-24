@@ -2,7 +2,9 @@ package com.sperance.exileforge.ui.screens.hero
 
 import com.sperance.exileforge.presentation.state.unmetFor
 import com.sperance.exileforge.presentation.state.sellPrice
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -43,13 +45,16 @@ import kotlinx.serialization.json.put
  */
 @Composable fun EquipmentLedger(s: ForgeState, onPlace: (place: BodyPlace, instanceId: String?) -> Unit) {
     val hero = s.play.hero ?: return
+    // How many loose items of each slot lie in the stash (2.48.0): each place says what it could take.
+    val loose = hero.inventory.filter { !it.equipped && !it.socketed }.mapNotNull { s.world.inventoryBases[it.equipmentId]?.text("slot") }
+        .groupingBy { it }.eachCount()
     Column(Modifier.fillMaxWidth()) {
         bodyPlaces.forEach { place ->
             val instance = place.wornIn(hero.equipped)
             val document = instance?.let { inventoryDocument(it, s.world.inventoryBases[it.equipmentId]) }
                 ?: buildJsonObject { put("slot", place.fits.first()) }
             PlaceLine(s, place, document, worn = instance != null, blocked = place.blockedBy(hero.equipped),
-                reasons = instance?.let { hero.inactive[it.id] }) { onPlace(place, instance?.id) }
+                reasons = instance?.let { hero.inactive[it.id] }, spare = place.fits.sumOf { loose[it] ?: 0 }) { onPlace(place, instance?.id) }
             HorizontalDivider(color = PanelRaised)
         }
     }
@@ -62,7 +67,7 @@ import kotlinx.serialization.json.put
  * so in red with the server's first reason, instead of the property it no longer gives.
  */
 @Composable private fun PlaceLine(s: ForgeState, place: BodyPlace, document: JsonObject, worn: Boolean, blocked: Boolean,
-    reasons: List<String>?, onClick: () -> Unit) {
+    reasons: List<String>?, spare: Int = 0, onClick: () -> Unit) {
     val title = slotTitle(place.code, s.lang)
     val color = if (worn) rarityColor(document.text("rarity")) else PanelRaised
     Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)
@@ -87,6 +92,8 @@ import kotlinx.serialization.json.put
                 else -> Text(ui("hero.empty_slot"), color = Muted, style = MaterialTheme.typography.bodyMedium)
             }
         }
+        if (spare > 0) Text(ui("hero.place_spare", spare), color = GoldBright, style = MaterialTheme.typography.labelMedium,
+            modifier = Modifier.background(Abyss, RoundedCornerShape(4.dp)).padding(horizontal = 6.dp, vertical = 2.dp))
         Icon(Icons.Outlined.ChevronRight, null, tint = Muted, modifier = Modifier.padding(end = 6.dp).size(18.dp))
     }
 }

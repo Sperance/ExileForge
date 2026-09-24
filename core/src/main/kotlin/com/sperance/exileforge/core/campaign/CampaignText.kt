@@ -30,6 +30,7 @@ data class MonsterLine(val stat: String, val operation: String, val value: Doubl
  */
 fun monsterLines(monster: RolledMonster): List<MonsterLine> =
     (monster.modifiers.flatMap { it.effects }.map { it to false } + monster.mapBuffs.map { it to true })
+        .filterNot { (effect, _) -> com.sperance.exileforge.core.display.retired(effect.stat) }
         .groupBy { (effect, _) -> effect.stat to effect.operation }
         .map { (key, parts) -> MonsterLine(key.first, key.second, parts.sumOf { it.first.value }, parts.any { it.second }) }
 

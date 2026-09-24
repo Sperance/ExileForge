@@ -28,6 +28,7 @@ import com.sperance.exileforge.presentation.state.ForgeSection
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.Reads
 import com.sperance.exileforge.presentation.state.TAB_CRAFT
+import com.sperance.exileforge.presentation.state.TAB_TREE
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.auction.ListingSheet
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -72,7 +73,7 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
                 // Who the character is heads every section; until the hero arrives the tab says what it is.
-                if (hero != null) HeroHeader(s) { vm.tab(TAB_CRAFT) }
+                if (hero != null) HeroHeader(s, onTree = { vm.tab(TAB_TREE) }) { vm.tab(TAB_CRAFT) }
                 else ScreenHeader(ui("hero.title"), ui("hero.inventory_count", stash.size), ForgeGlyphs.Stash)
             }
             item { SectionBar(section) { section = it } }

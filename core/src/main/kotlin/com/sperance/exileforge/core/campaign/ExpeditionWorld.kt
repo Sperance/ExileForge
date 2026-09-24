@@ -68,11 +68,18 @@ sealed interface WorldEvent {
 class ExpeditionWorld(
     val map: ExpeditionMap,
     monsters: List<RolledMonster>,
-    private val heroSpeed: Double,
+    heroSpeed: Double,
     private val seed: Long,
-    val lightRadius: Double = DEFAULT_LIGHT,
+    lightRadius: Double = DEFAULT_LIGHT,
     bossMonster: RolledMonster? = null,
 ) {
+    /** The hero's pace and sight; both follow the gear when it is changed on the map (since 2.40.0). */
+    private var heroSpeed = heroSpeed
+    var lightRadius = lightRadius
+        private set
+
+    fun regear(speed: Double, light: Double) { heroSpeed = speed; lightRadius = light }
+
     private val random = Random(seed)
     /** The map's boss (since 2.34.0): the guardian of the exit, standing beside it; none from an older server. */
     val boss: MonsterAgent? = bossMonster?.let { monster -> guardPost()?.let { cell -> MonsterAgent(monsters.size, monster, cell.x + 0.5, cell.y + 0.5) } }

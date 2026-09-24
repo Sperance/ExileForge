@@ -23,10 +23,10 @@ import com.sperance.exileforge.ui.theme.*
  *
  * The name, then class and level as one line, then the purse and the tree as two chips, and the
  * experience as a thin bar under them — the progress a player checks at a glance, which used to be a
- * card of its own. The forge opens from the corner, because it is reached from here but is not a
+ * card of its own. The tree and the forge open from the corner, because it is reached from here but is not a
  * part of the hero.
  */
-@Composable fun HeroHeader(s: ForgeState, onForge: () -> Unit) {
+@Composable fun HeroHeader(s: ForgeState, onTree: () -> Unit, onForge: () -> Unit) {
     val hero = s.play.hero ?: return
     val character = hero.character
     ForgePanel {
@@ -38,6 +38,10 @@ import com.sperance.exileforge.ui.theme.*
                 // The class is the base every percentage is counted from; the server owns it.
                 Text(ui("hero.class_level", s.heroClass?.title.orEmpty().ifBlank { ui("hero.unknown_class") }, character.level),
                     color = Rune, style = MaterialTheme.typography.labelLarge)
+            }
+            // The tree left the bar in 2.40.0 and opens from here, beside the forge.
+            IconButton(onClick = onTree) {
+                Icon(ForgeGlyphs.Constellation, ui("nav.tree"), tint = Gold, modifier = Modifier.size(24.dp))
             }
             IconButton(enabled = !s.busy, onClick = onForge) {
                 Icon(ForgeGlyphs.Tome, ui("nav.craft"), tint = Gold, modifier = Modifier.size(24.dp))

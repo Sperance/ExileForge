@@ -292,7 +292,8 @@ const val TAB_REDEMPTION = 9
 const val TAB_EXPEDITION = 10
 
 /** What the bottom bar offers a player — and, with [TAB_ADMIN] appended, an administrator. */
-val PLAYER_TABS = listOf(TAB_HERO, TAB_EXPEDITION, TAB_TREE, TAB_AUCTION, TAB_ACCOUNT)
+/** The bar. The tree left it in 2.40.0: it opens from the Hero tab's header, as the forge does. */
+val PLAYER_TABS = listOf(TAB_HERO, TAB_EXPEDITION, TAB_AUCTION, TAB_ACCOUNT)
 
 /** Screens only an administrator may open, whichever button leads to them. */
 val ADMIN_TABS = setOf(TAB_CATALOG, TAB_EDITOR, TAB_CHECKS, TAB_ADMIN, TAB_REDEMPTION)

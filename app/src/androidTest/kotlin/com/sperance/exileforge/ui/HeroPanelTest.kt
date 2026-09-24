@@ -97,7 +97,7 @@ class HeroPanelTest {
         compose.setContent { ForgeTheme { Column(Modifier.background(Ink).verticalScroll(rememberScrollState()).padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)) {
             val state = ForgeState(busy = false, account = AccountState(signedIn = true, profile = com.sperance.exileforge.core.model.command.UserProfile("owner")), play = PlayState(hero = hero, characterOwner = "owner"), world = WorldState(inventoryBases = mapOf("ring-base" to base)))
-            HeroHeader(state) {}
+            HeroHeader(state, onTree = {}) {}
             HeroSummary(state)
             EquipmentLedger(state) { place, instance -> picked = place.code to instance }
         } } }
@@ -140,7 +140,7 @@ class HeroPanelTest {
                 listOf(InactiveEquipment("helm-instance", "IRON_HELMET", listOf("strength: need 30, have 14")))))
         compose.setContent { ForgeTheme { Column(Modifier.background(Ink).verticalScroll(rememberScrollState()).padding(12.dp)) {
             val state = ForgeState(busy = false, account = AccountState(signedIn = true, profile = com.sperance.exileforge.core.model.command.UserProfile("owner")), play = PlayState(hero = hero, characterOwner = "owner"), world = WorldState(classes = listOf(CharacterClass("marauder", "MARAUDER", "STR_START")), inventoryBases = mapOf("helm-base" to base)))
-            HeroHeader(state) {}
+            HeroHeader(state, onTree = {}) {}
             HeroSummary(state)
             EquipmentLedger(state) { _, _ -> }
         } } }

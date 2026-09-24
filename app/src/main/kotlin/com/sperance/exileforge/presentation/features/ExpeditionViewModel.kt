@@ -144,6 +144,12 @@ class ExpeditionViewModel(private val runtime: ForgeRuntime) {
 
     fun send(command: RunCommand) { mutableRun.value?.send(command) }
 
+    /** The hero was re-read after a change of gear (2.40.0): a run under way takes the new sheet between fights. */
+    fun regear() {
+        val hero = runtime.state.value.play.hero ?: return
+        mutableRun.value?.send(RunCommand.Regear(hero.sheet.stats, hero.sheet.level))
+    }
+
     /** The run is over or abandoned; the hero changed on the way, so the next glance re-reads them. */
     fun close() {
         mutableRun.value = null

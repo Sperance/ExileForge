@@ -52,8 +52,9 @@ import kotlin.math.roundToInt
  * app's dictionary and theme, laid over it. The stick is the overlay's too: a thumb anywhere in the
  * lower part of the screen sets it, and letting go stops the hero.
  */
-@Composable fun ExpeditionPlay(s: ForgeState, vm: ForgeViewModel, run: ExpeditionRun) {
+@Composable fun ExpeditionPlay(s: ForgeState, vm: ForgeViewModel, run: ExpeditionRun, snackbar: SnackbarHostState) {
     val hud by run.hud.collectAsState()
+    var gear by remember { mutableStateOf(false) }
     BackHandler { vm.runCommand(RunCommand.Leave) }
     LaunchedEffect(hud.phase) { if (hud.phase == RunPhase.LEFT) vm.closeRun() }
 
@@ -62,7 +63,8 @@ import kotlin.math.roundToInt
         when (hud.phase) {
             RunPhase.MAP -> {
                 Stick(run)
-                MapBar(hud, onLeave = { vm.runCommand(RunCommand.Leave) }, onFlask = { vm.runCommand(RunCommand.Flask) })
+                MapBar(hud, onLeave = { vm.runCommand(RunCommand.Leave) }, onFlask = { vm.runCommand(RunCommand.Flask) }, onGear = { gear = true })
+                if (gear) GearSheet(s, vm) { gear = false }
                 if (hud.chestPending || hud.chestFailed || hud.chest != null) ChestLoot(s, hud) { vm.runCommand(RunCommand.DismissChest) }
             }
             RunPhase.FIGHT -> hud.fight?.let { ArenaOverlay(s, hud, it, run.map.level, onCommand = vm::runCommand) }
@@ -73,6 +75,8 @@ import kotlin.math.roundToInt
             RunPhase.CLEARED -> Ending(ui("expedition.map_done"), ui("expedition.map_done_hint"), Vital, hud) { vm.runCommand(RunCommand.Continue) }
             RunPhase.LEFT -> Unit
         }
+        // A refusal of the gear (2.40.0) has to be read here too: the run has no bar and no banner.
+        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).navigationBarsPadding())
     }
 }
 
@@ -82,7 +86,7 @@ import kotlin.math.roundToInt
  * Life, shield, mana and the flask, what is left on the map, and the way out. Nothing comes back on
  * its own between fights (2.29.0), so the flask is here too: the same charge, the same heal.
  */
-@Composable private fun MapBar(hud: RunHud, onLeave: (() -> Unit)?, onFlask: () -> Unit) {
+@Composable private fun MapBar(hud: RunHud, onLeave: (() -> Unit)?, onFlask: () -> Unit, onGear: () -> Unit) {
     Column(Modifier.fillMaxWidth().statusBarsPadding().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Column(Modifier.weight(1f)) {
@@ -91,6 +95,7 @@ import kotlin.math.roundToInt
                 if (hud.chestsLeft > 0) Text(ui("expedition.chests_left", hud.chestsLeft), color = GoldBright, style = MaterialTheme.typography.labelMedium)
                 if (hud.sealed) Text(ui("expedition.exit_sealed"), color = LifeRed, style = MaterialTheme.typography.labelMedium)
             }
+            IconButton(onClick = onGear) { Icon(ForgeGlyphs.Helm, ui("expedition.gear"), tint = Gold, modifier = Modifier.size(24.dp)) }
             onLeave?.let { OutlinedButton(onClick = it) { Text(ui("expedition.leave")) } }
         }
         Vitals(hud.heroLife, hud.heroMaxLife, hud.heroShield, hud.heroMaxShield, hud.heroMana, hud.heroMaxMana, Modifier.fillMaxWidth(.6f))

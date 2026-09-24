@@ -20,7 +20,7 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.39.0, `versionCode` 57) for the
+ExileForge is an **Android Compose client** (version 2.40.0, `versionCode` 58) for the
 **ktor-bestgame** RPG server (0.36.0), pinned in
 `core/.../contract/Contract.kt` as `SERVER_COMMIT = 6c18941d3c482370146ba0083691c0c5ef001958`
 on the server branch `claude/tender-pasteur-a36kj2`.
@@ -216,9 +216,13 @@ banner and no bottom bar. Only `GAME` builds the scaffold. Nothing below the gat
 Inside `GAME` navigation is an `Int` tab in state, named in `ForgeState` and dispatched by a
 `when` in `ForgeApp`: `TAB_CATALOG`, `TAB_EDITOR`, `TAB_CHECKS`, `TAB_ACCOUNT`, `TAB_HERO`,
 `TAB_TREE`, `TAB_AUCTION`, `TAB_CRAFT`, `TAB_ADMIN`, `TAB_EXPEDITION`. The bottom bar carries
-`PLAYER_TABS` — hero, expedition, tree, auction, account — and, for an administrator only,
+`PLAYER_TABS` — hero, expedition, auction, account (the tree left the bar in 2.40.0 and opens
+from an icon in `HeroHeader`, beside the forge; the Hero tab reads as chosen while it is open) — and, for an administrator only,
 `TAB_ADMIN` on top of them. A campaign run is above the tabs: while `vm.expedition` holds one,
-`ForgeApp` draws `ExpeditionPlay` over the whole screen instead of the scaffold. That one tab
+`ForgeApp` draws `ExpeditionPlay` over the whole screen instead of the scaffold; since 2.40.0 its
+map bar has a helm that opens `GearSheet` — the body's ledger, equip and take off on the map — and
+`RunCommand.Regear` hands the run the re-read sheet, applied between fights with life and mana kept
+as a share. The merchant's offer opens its full card with a held «Купить» (`OfferSheet`). That one tab
 holds every administrator tool as a button: the catalogue, the editor, the checks, granting items
 and the switch that drops the tools to see the app as a player sees it. `ADMIN_TABS` is what
 `ForgeRuntime.tab` refuses without them, so a player cannot reach any of those screens at all.

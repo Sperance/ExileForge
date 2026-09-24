@@ -553,4 +553,16 @@ class CampaignTest {
         val run = ExpeditionRun.start(map, rarities, emptyMap(), 1, 5, onKill = {}, onCleared = {}, mapEffects = effects)
         assertEquals(1, run.rules.flask.charges)
     }
+
+    @Test fun `new gear on the map lands between fights and keeps the share of life`() {
+        val run = ExpeditionRun.start(map, rarities, mapOf("STOCK_HEALTH" to 100.0, "STOCK_LIGHT_RADIUS" to 5.0), 1, 3, onKill = {}, onCleared = {})
+        run.update(0.0)
+        val before = run.hud.value.heroMaxLife
+        run.send(RunCommand.Regear(mapOf("STOCK_HEALTH" to 200.0, "STOCK_LIGHT_RADIUS" to 8.0, "STOCK_FLASK_CHARGES" to 1.0), 1))
+        run.update(0.0)
+        assertEquals(before * 2, run.hud.value.heroMaxLife)
+        assertEquals(run.hud.value.heroMaxLife, run.hud.value.heroLife, "a whole hero stays whole")
+        assertEquals(CombatRules().flask.charges + 1, run.hud.value.maxFlasks)
+        assertTrue(run.world.lightRadius > ExpeditionWorld.lightRadius(mapOf("STOCK_LIGHT_RADIUS" to 5.0), map.light))
+    }
 }

@@ -71,7 +71,7 @@ import com.sperance.exileforge.ui.theme.*
         AppPhase.CHARACTERS -> CharacterSelectScreen(s, vm, snackbar)
         // A campaign run takes the whole screen: no banner and no bar, the scene is the game.
         // The launch window (2.38.0) is above the tabs too: the portal before the run.
-        AppPhase.GAME -> expedition?.let { ExpeditionPlay(s, vm, it) }
+        AppPhase.GAME -> expedition?.let { ExpeditionPlay(s, vm, it, snackbar) }
             ?: s.play.launch?.let { LaunchScreen(s, vm, snackbar) }
             ?: GameScaffold(s, vm, logs, snackbar, onDeleteRequest = { confirmDelete = true }, onDiscardRequest = { confirmDiscard = true })
     }
@@ -100,15 +100,16 @@ import com.sperance.exileforge.ui.theme.*
                 modifier = Modifier.drawBehind { drawLine(Gold.copy(alpha = .35f), Offset(0f, 0f), Offset(size.width, 0f), 2f) }) {
                 // Five destinations are the game; an administrator gets exactly one more, and
                 // everything that used to crowd the bar lives behind it as a button.
-                val labels = mapOf(TAB_HERO to ui("nav.hero"), TAB_EXPEDITION to ui("nav.expedition"), TAB_TREE to ui("nav.tree"),
+                val labels = mapOf(TAB_HERO to ui("nav.hero"), TAB_EXPEDITION to ui("nav.expedition"),
                     TAB_AUCTION to ui("nav.auction"), TAB_ACCOUNT to ui("nav.account"),
                     TAB_ADMIN to ui("nav.admin"))
                 val destinations = PLAYER_TABS + listOfNotNull(TAB_ADMIN.takeIf { s.adminTools })
                 val icons = mapOf<Int, ImageVector>(TAB_ACCOUNT to ForgeGlyphs.Portal, TAB_HERO to ForgeGlyphs.Helm, TAB_EXPEDITION to ForgeGlyphs.Swords,
-                    TAB_TREE to ForgeGlyphs.Constellation, TAB_AUCTION to ForgeGlyphs.Orb, TAB_ADMIN to ForgeGlyphs.Scroll)
+                    TAB_AUCTION to ForgeGlyphs.Orb, TAB_ADMIN to ForgeGlyphs.Scroll)
                 destinations.forEach { index ->
                     val label = labels.getValue(index)
-                    NavigationBarItem(selected = s.tab == index, onClick = { vm.tab(index) },
+                    // The tree is the hero's (2.40.0): while it is open, the Hero tab reads as the one chosen.
+                    NavigationBarItem(selected = s.tab == index || (index == TAB_HERO && s.tab == TAB_TREE), onClick = { vm.tab(index) },
                         icon = { Icon(icons.getValue(index), null, modifier = Modifier.size(22.dp)) }, label = { Text(label, fontSize = 10.sp) },
                         colors = NavigationBarItemDefaults.colors(selectedIconColor = GoldBright, selectedTextColor = Gold,
                             indicatorColor = Gold.copy(alpha = .16f), unselectedIconColor = Muted, unselectedTextColor = Muted))

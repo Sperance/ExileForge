@@ -168,6 +168,7 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
         check(state.value.ownsCharacter || state.value.isAdmin) { ui("hero.owner_only") }
         block(id)
         readHero()
+        expeditionViewModel.regear()
         if (announce) mutable.update { it.copy(message = it.message ?: ui("hero.changes_saved")) }
     } } }
 

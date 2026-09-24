@@ -126,6 +126,11 @@ sealed interface RunCommand {
     data object DismissChest : RunCommand
     /** The server says the map's boss was slain within the hour: it is not there, the exit is open. */
     data object BossAbsent : RunCommand
+    /**
+     * The gear changed on the map (since 2.40.0): the server's new sheet. It lands between fights —
+     * one under way keeps the fighter it began with — and life and mana keep their share.
+     */
+    data class Regear(val stats: Map<String, Double>, val level: Int) : RunCommand
 }
 
 /**
@@ -147,14 +152,19 @@ sealed interface RunCommand {
 class ExpeditionRun(
     val map: CampaignMap,
     val world: ExpeditionWorld,
-    val hero: Combatant,
+    hero: Combatant,
     val rules: CombatRules,
     private val seed: Long,
     private val onKill: (RolledMonster) -> Unit,
     private val onCleared: () -> Unit,
     private val onFallen: () -> Unit = {},
     private val onChest: () -> Unit = {},
+    /** The entered map's effects, laid again over a sheet that changes on the way (since 2.40.0). */
+    private val mapEffects: Map<String, Double> = emptyMap(),
 ) {
+    /** The hero as the sheet has them; a change of gear on the map replaces them between fights. */
+    var hero: Combatant = hero
+        private set
     @Volatile var stickX = 0.0
     @Volatile var stickY = 0.0
     private val commands = ConcurrentLinkedQueue<RunCommand>()
@@ -162,7 +172,7 @@ class ExpeditionRun(
     private var life = hero.maxLife
     private var mana = hero.maxMana
     /** The rule's charges and whatever the sheet adds (since 2.39.0). */
-    private val maxFlasks = rules.flask.charges + hero.extraFlasks
+    private var maxFlasks = rules.flask.charges + hero.extraFlasks
     private var flasks = maxFlasks
     private var fights = 0
     private var speed = 1
@@ -184,6 +194,19 @@ class ExpeditionRun(
     private var clock = 0.0
     private var flaskUntil = 0.0
     private var flaskRate = 0.0
+
+    private var pendingGear: RunCommand.Regear? = null
+
+    private fun regear(gear: RunCommand.Regear) {
+        val stats = MapEffects.hero(gear.stats, mapEffects)
+        val next = Combatant(stats, gear.level, rules, innateSpell = true)
+        life = if (hero.maxLife > 0) life / hero.maxLife * next.maxLife else next.maxLife
+        mana = if (hero.maxMana > 0) mana / hero.maxMana * next.maxMana else next.maxMana
+        maxFlasks = rules.flask.charges + next.extraFlasks
+        flasks = flasks.coerceAtMost(maxFlasks)
+        hero = next
+        world.regear(ExpeditionWorld.heroSpeed(stats), ExpeditionWorld.lightRadius(stats, map.light))
+    }
 
     /** The fight being played, for the scene: the battle itself, alive, with its clock and its log. */
     var fight: Battle? = null
@@ -228,6 +251,7 @@ class ExpeditionRun(
             is RunCommand.Fallen -> { fall = command.fall; fallPending = false }
             RunCommand.FallFailed -> fallPending = false
             is RunCommand.Chests -> world.placeChests(command.count)
+            is RunCommand.Regear -> if (phase == RunPhase.FIGHT) pendingGear = command else regear(command)
             is RunCommand.ChestReward -> {
                 chest = command.reward
                 chestPending = false
@@ -292,6 +316,9 @@ class ExpeditionRun(
         }
         fight = null
         fightAgent = null
+        // Gear changed while the fight went on lands now, on the life the fight left.
+        if (phase != RunPhase.DEAD) pendingGear?.let(::regear)
+        pendingGear = null
     }
 
     private fun snapshot(): RunHud {
@@ -353,7 +380,7 @@ class ExpeditionRun(
             val stats = MapEffects.hero(heroStats, mapEffects)
             val played = MapEffects.rules(rules, mapEffects)
             return ExpeditionRun(map, ExpeditionWorld.create(MapEffects.map(map, mapEffects), MapEffects.rarities(rarities, mapEffects), stats, seed),
-                Combatant(stats, heroLevel, played, innateSpell = true), played, seed, onKill, onCleared, onFallen, onChest)
+                Combatant(stats, heroLevel, played, innateSpell = true), played, seed, onKill, onCleared, onFallen, onChest, mapEffects)
         }
     }
 }

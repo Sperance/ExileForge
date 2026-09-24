@@ -43,15 +43,31 @@ import com.sperance.exileforge.ui.theme.*
                 trailing = { GoldPrice(offer.price) }, onClick = { chosen = offer })
         }
     }
-    chosen?.let { offer ->
-        val left = money?.let { it - offer.price }
-        ConfirmSheet(title = ui("merchant.buy_q"), confirm = ui("merchant.buy"), onDismiss = { chosen = null },
-            ledger = listOfNotNull(LedgerLine(ui("confirm.spend"), ui("merchant.gold_amount", offer.price), Tone.SPEND),
-                left?.takeIf { it >= 0 }?.let { LedgerLine(ui("confirm.left"), ui("merchant.gold_amount", it)) }),
-            warning = if (left != null && left < 0) ui("merchant.short") else null,
-            icon = { Icon(ForgeGlyphs.Coins, null, tint = Gold, modifier = Modifier.size(40.dp)) }) {
-            chosen = null
-            vm.buyOffer(offer.id)
+    chosen?.let { offer -> OfferSheet(s, offer, money, onDismiss = { chosen = null }) { chosen = null; vm.buyOffer(offer.id) } }
+}
+
+/**
+ * An offer's full card (since 2.40.0): the item as the stash would show it, scrolling, and under it
+ * the one way to buy it — a button held for the price. Short of gold, it says so and still sends:
+ * the refusal is the server's.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable private fun OfferSheet(s: ForgeState, offer: MerchantOffer, money: Long?, onDismiss: () -> Unit, onBuy: () -> Unit) {
+    val document = inventoryDocument(offer.item, s.world.inventoryBases[offer.item.equipmentId])
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.fillMaxWidth().fillMaxHeight(.92f)) {
+            LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                item { ItemCard(document, enabled = false, detailed = true, definitions = s.world.definitions) }
+                s.play.hero?.sheet?.unwearableBy?.get(offer.item.equipmentId)?.takeIf { it.isNotEmpty() }?.let { item {
+                    Text(ui("merchant.unwearable"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
+                } }
+            }
+            OrnateDivider()
+            Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                money?.let { PropertyRow(ui("merchant.gold"), number(it.toDouble()), com.sperance.exileforge.core.display.Glyph.CURRENCY) }
+                if (money != null && money < offer.price) Text(ui("merchant.short"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
+                HoldButton(ui("merchant.buy_for", number(offer.price.toDouble())), Gold, Modifier.fillMaxWidth(), enabled = !s.busy, onHeld = onBuy)
+            }
         }
     }
 }

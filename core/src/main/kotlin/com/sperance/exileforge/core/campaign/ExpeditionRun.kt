@@ -5,6 +5,7 @@ import com.sperance.exileforge.core.model.campaign.CampaignMap
 import com.sperance.exileforge.core.model.campaign.CampaignRarity
 import com.sperance.exileforge.core.model.campaign.CampaignReward
 import com.sperance.exileforge.core.model.campaign.CombatRules
+import com.sperance.exileforge.core.model.campaign.MonsterRarity
 import java.util.concurrent.ConcurrentLinkedQueue
 import kotlin.math.roundToInt
 import kotlin.random.Random

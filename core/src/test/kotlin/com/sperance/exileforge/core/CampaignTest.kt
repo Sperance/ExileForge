@@ -474,4 +474,27 @@ class CampaignTest {
         battle.advance(2.0)
         assertTrue(battle.fighter(Side.HERO).shield > hit.heroShield)
     }
+
+    @Test fun `a map buffs every monster, packs more of them and takes its share of the hero`() {
+        val effects = mapOf(MapRule.MONSTER_LIFE to 50.0, MapRule.MONSTER_RESIST to 20.0, MapRule.PACK_SIZE to 50.0, MapRule.MONSTER_RARITY to 100.0,
+            MapRule.HERO_LIGHT to 40.0, MapRule.HERO_FLASK to 2.0, MapRule.HERO_RESIST to 10.0, MapRule.HERO_REGEN to 50.0)
+        assertEquals(listOf(15, 21), MapEffects.map(map, effects).monsterCount)
+        val table = listOf(CampaignRarity("NORMAL", 100), CampaignRarity("MAGIC", 30))
+        val buffed = MapEffects.rarities(table, effects)
+        assertEquals(listOf(100, 60), buffed.map { it.weight }, "only the rarer grow")
+        val monster = MonsterRoller.fold(drowned, buffed.first().effects)
+        assertEquals(27.0, monster.getValue("STOCK_HEALTH"))
+        assertEquals(20.0, monster.getValue("STOCK_RESIST_FIRE"))
+        val hero = MapEffects.hero(mapOf("STOCK_LIGHT_RADIUS" to 5.0, "STOCK_RESIST_FIRE" to 30.0, "STOCK_HEALTH_REGEN" to 4.0), effects)
+        assertEquals(3.0, hero.getValue("STOCK_LIGHT_RADIUS"))
+        assertEquals(20.0, hero.getValue("STOCK_RESIST_FIRE"))
+        assertEquals(-10.0, hero.getValue("STOCK_RESIST_CHAOS"))
+        assertEquals(2.0, hero.getValue("STOCK_HEALTH_REGEN"))
+        assertEquals(1, MapEffects.rules(CombatRules(), effects).flask.charges)
+        assertEquals(0, MapEffects.rules(CombatRules(), mapOf(MapRule.HERO_FLASK to 9.0)).flask.charges)
+        // No map, no change.
+        assertSame(map, MapEffects.map(map, emptyMap()))
+        val run = ExpeditionRun.start(map, rarities, emptyMap(), 1, 5, onKill = {}, onCleared = {}, mapEffects = effects)
+        assertEquals(1, run.rules.flask.charges)
+    }
 }

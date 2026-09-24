@@ -344,10 +344,14 @@ class ExpeditionRun(
         const val AFTERMATH = 0.8
         const val HIT_LIFETIME = 1.0
 
+        /** A run of [map]; [mapEffects] are the summed effects of the map item it was entered with (since 2.37.0), see [MapEffects]. */
         fun start(map: CampaignMap, rarities: List<CampaignRarity>, heroStats: Map<String, Double>, heroLevel: Int, seed: Long,
                   onKill: (RolledMonster) -> Unit, onCleared: () -> Unit, rules: CombatRules = CombatRules(), onFallen: () -> Unit = {},
-                  onChest: () -> Unit = {}): ExpeditionRun =
-            ExpeditionRun(map, ExpeditionWorld.create(map, rarities, heroStats, seed), Combatant(heroStats, heroLevel, rules, innateSpell = true), rules, seed,
-                onKill, onCleared, onFallen, onChest)
+                  onChest: () -> Unit = {}, mapEffects: Map<String, Double> = emptyMap()): ExpeditionRun {
+            val stats = MapEffects.hero(heroStats, mapEffects)
+            val played = MapEffects.rules(rules, mapEffects)
+            return ExpeditionRun(map, ExpeditionWorld.create(MapEffects.map(map, mapEffects), MapEffects.rarities(rarities, mapEffects), stats, seed),
+                Combatant(stats, heroLevel, played, innateSpell = true), played, seed, onKill, onCleared, onFallen, onChest)
+        }
     }
 }

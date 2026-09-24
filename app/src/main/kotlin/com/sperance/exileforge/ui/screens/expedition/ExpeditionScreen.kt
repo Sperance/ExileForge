@@ -23,8 +23,17 @@ import com.sperance.exileforge.core.campaign.mapDescription
 import com.sperance.exileforge.core.campaign.mapTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.campaign.CampaignMap
+import com.sperance.exileforge.core.model.campaign.MapRule
 import com.sperance.exileforge.core.model.campaign.ServiceRule
-import com.sperance.exileforge.presentation.state.MapServices
+import com.sperance.exileforge.core.campaign.MapEffects
+import com.sperance.exileforge.core.campaign.monsterTitle
+import com.sperance.exileforge.core.display.inventoryDocument
+import com.sperance.exileforge.core.display.number
+import com.sperance.exileforge.core.contract.text
+import com.sperance.exileforge.presentation.state.MapLaunchState
+import com.sperance.exileforge.ui.screens.auction.untilText
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.Reads
@@ -61,7 +70,7 @@ import com.sperance.exileforge.ui.theme.*
                         LinearProgressIndicator(progress = { if (chapter.maps.isEmpty()) 0f else cleared / chapter.maps.size.toFloat() },
                             modifier = Modifier.fillMaxWidth().height(4.dp), color = Gold, trackColor = PanelRaised)
                         val next = vm.nextCampaignMap()
-                        Button(enabled = ready && next != null, onClick = { next?.let { vm.startRun(it.code) } }, modifier = Modifier.fillMaxWidth().height(56.dp)) {
+                        Button(enabled = ready && next != null, onClick = { next?.let { vm.openLaunch(it.code) } }, modifier = Modifier.fillMaxWidth().height(56.dp)) {
                             Icon(ForgeGlyphs.Swords, null, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(10.dp))
                             Text(ui("expedition.campaign"), style = MaterialTheme.typography.titleMedium)
@@ -71,51 +80,89 @@ import com.sperance.exileforge.ui.theme.*
                 }
                 items(chapter.maps, key = { it.code }) { map ->
                     val open = map.code in progress.unlocked
-                    MapRow(map, open = open, cleared = map.code in progress.cleared, enabled = ready && open,
-                        onServices = { vm.openMapServices(map.code) }.takeIf { open && ready }) { vm.startRun(map.code) }
+                    MapRow(map, open = open, cleared = map.code in progress.cleared, enabled = ready && open) { vm.openLaunch(map.code) }
                 }
             }
             item { Text(ui("expedition.note"), color = Muted, style = MaterialTheme.typography.bodySmall) }
         }
     }
-    val services = s.play.mapServices
-    if (services != null && view != null) view.chapters.flatMap { it.maps }.firstOrNull { it.code == services.mapCode }?.let { map ->
-        MapServicesSheet(s, map, services, view.services, onTreasure = { vm.buyTreasure(map.code) }, onSummon = { vm.summonGuardian(map.code) }, onDismiss = vm::closeMapServices)
+    val launch = s.play.launch
+    if (launch != null && view != null) view.chapters.flatMap { it.maps }.firstOrNull { it.code == launch.mapCode }?.let { map ->
+        LaunchSheet(s, map, launch, view.services, view.maps, onPick = vm::pickMap, onTreasure = { vm.buyTreasure(map.code) },
+            onSummon = { vm.summonGuardian(map.code) }, onGo = { vm.startRun(map.code) }, onDismiss = vm::closeLaunch)
     }
 }
 
 /**
- * A map's services for gold (since 2.36.0, server 0.34.0): a treasure map — one more chest this
- * window, once — and summoning a slain guardian back to the exit. The prices are the server's per
- * map level; each is held to confirm, and a refusal is the server's.
+ * The launch window (since 2.37.0, server 0.35.0): it opens before every run. What the location is
+ * — its level, who lives there, whether its guardian stands, how many chests the window holds — then
+ * the map slot: every stash map of this location, each with its rolls, and what the picked one pays
+ * by the server's own weights. The map services live here too. «В путь» enters on the server, which
+ * spends the map; a refusal is the server's.
  */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable private fun MapServicesSheet(s: ForgeState, map: CampaignMap, services: MapServices, rule: ServiceRule,
-    onTreasure: () -> Unit, onSummon: () -> Unit, onDismiss: () -> Unit) {
+@Composable private fun LaunchSheet(s: ForgeState, map: CampaignMap, launch: MapLaunchState, services: ServiceRule, rule: MapRule,
+    onPick: (String?) -> Unit, onTreasure: () -> Unit, onSummon: () -> Unit, onGo: () -> Unit, onDismiss: () -> Unit) {
     val money = s.play.hero?.character?.money ?: 0L
-    val treasure = rule.treasurePerLevel * map.level
-    val summon = rule.summonPerLevel * map.level
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel) {
-        Column(Modifier.fillMaxWidth().padding(16.dp).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(mapTitle(map.code), color = GoldBright, style = MaterialTheme.typography.titleMedium)
-            PropertyRow(ui("merchant.gold"), money.toString(), com.sperance.exileforge.core.display.Glyph.CURRENCY)
-            Engraved(ui("expedition.treasure"))
-            Text(ui("expedition.chests_window", services.chests.left, com.sperance.exileforge.ui.screens.auction.untilText(services.chests.refreshAt)),
-                color = Muted, style = MaterialTheme.typography.bodySmall)
-            if (services.chests.bought) Text(ui("expedition.treasure_done"), color = Vital, style = MaterialTheme.typography.bodySmall)
-            else HoldButton(ui("expedition.treasure_buy", treasure), Gold, Modifier.fillMaxWidth(), enabled = !s.busy && money >= treasure, onHeld = onTreasure)
-            Engraved(ui("expedition.guardian"))
-            if (services.boss.alive) Text(ui("expedition.guardian_stands"), color = Muted, style = MaterialTheme.typography.bodySmall)
-            else {
-                Text(ui("expedition.guardian_back", com.sperance.exileforge.ui.screens.auction.untilText(services.boss.respawnAt)), color = Muted, style = MaterialTheme.typography.bodySmall)
-                HoldButton(ui("expedition.guardian_summon", summon), Gold, Modifier.fillMaxWidth(), enabled = !s.busy && money >= summon, onHeld = onSummon)
+    val template = MapRule.templateCode(map.code)
+    val maps = s.play.hero?.inventory.orEmpty().filter { !it.equipped && !it.socketed }
+        .map { it to inventoryDocument(it, s.world.inventoryBases[it.equipmentId]) }
+        .filter { (_, document) -> document.text("slot") == MapRule.SLOT && document.text("code") == template }
+    val picked = maps.firstOrNull { it.first.id == launch.picked }?.first
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.fillMaxWidth().navigationBarsPadding()) {
+            Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(mapTitle(map.code), color = GoldBright, style = MaterialTheme.typography.titleLarge)
+                Text(ui("expedition.map_level", map.level), color = Rune, style = MaterialTheme.typography.labelMedium)
+                Text(mapDescription(map.code), color = Muted, style = MaterialTheme.typography.bodySmall)
+                Text(ui("expedition.launch_dwellers", map.monsters.joinToString { monsterTitle(it.code) }), color = Parchment, style = MaterialTheme.typography.bodySmall)
+                map.boss?.let { boss ->
+                    val slain = launch.boss?.alive == false
+                    Text(if (slain) ui("expedition.launch_boss_slain", monsterTitle(boss.code), untilText(launch.boss!!.respawnAt))
+                        else ui("expedition.launch_boss_alive", monsterTitle(boss.code)), color = if (slain) Muted else LifeRed, style = MaterialTheme.typography.bodySmall)
+                }
+                launch.chests?.let { Text(ui("expedition.chests_window", it.left, untilText(it.refreshAt)), color = Muted, style = MaterialTheme.typography.bodySmall) }
+
+                Engraved(ui("expedition.launch_map"))
+                if (maps.isEmpty()) Text(ui("expedition.launch_no_maps", map.level), color = Muted, style = MaterialTheme.typography.bodySmall)
+                else {
+                    FilterChip(selected = picked == null, onClick = { onPick(null) }, label = { Text(ui("expedition.launch_no_map")) })
+                    maps.forEach { (instance, document) ->
+                        ItemRow(document, definitions = s.world.definitions, selected = instance.id == picked?.id, enabled = !s.busy) {
+                            onPick(instance.id.takeIf { it != picked?.id })
+                        }
+                    }
+                }
+                picked?.let { item ->
+                    val bonus = rule.bonus(MapEffects.of(item.params, s.world.definitions))
+                    Text(ui("expedition.launch_bonus", number(bonus.quantity), number(bonus.rarity), number(bonus.experience)),
+                        color = GoldBright, style = MaterialTheme.typography.labelLarge)
+                    Text(ui("expedition.launch_spent"), color = Muted, style = MaterialTheme.typography.bodySmall)
+                }
+
+                Engraved(ui("expedition.services"))
+                PropertyRow(ui("merchant.gold"), money.toString(), com.sperance.exileforge.core.display.Glyph.CURRENCY)
+                launch.chests?.let { chests ->
+                    val treasure = services.treasurePerLevel * map.level
+                    if (chests.bought) Text(ui("expedition.treasure_done"), color = Vital, style = MaterialTheme.typography.bodySmall)
+                    else HoldButton(ui("expedition.treasure_buy", treasure), Gold, Modifier.fillMaxWidth(), enabled = !s.busy && money >= treasure, onHeld = onTreasure)
+                }
+                launch.boss?.takeIf { !it.alive }?.let {
+                    val summon = services.summonPerLevel * map.level
+                    HoldButton(ui("expedition.guardian_summon", summon), Gold, Modifier.fillMaxWidth(), enabled = !s.busy && money >= summon, onHeld = onSummon)
+                }
+            }
+            Button(enabled = !s.busy, onClick = onGo, modifier = Modifier.fillMaxWidth().padding(16.dp).height(56.dp)) {
+                Icon(ForgeGlyphs.Swords, null, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(10.dp))
+                Text(ui(if (picked != null) "expedition.launch_go_map" else "expedition.launch_go"), style = MaterialTheme.typography.titleMedium)
             }
         }
     }
 }
 
 /** One map of the chapter: its number, name, level and what lives there, and whether it is open. */
-@Composable private fun MapRow(map: CampaignMap, open: Boolean, cleared: Boolean, enabled: Boolean, onServices: (() -> Unit)?, onClick: () -> Unit) {
+@Composable private fun MapRow(map: CampaignMap, open: Boolean, cleared: Boolean, enabled: Boolean, onClick: () -> Unit) {
     val accent = when { cleared -> Vital; open -> Gold; else -> Muted }
     val shape = RoundedCornerShape(8.dp)
     Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).background(Panel, shape).border(1.dp, if (open && !cleared) Gold.copy(alpha = .5f) else PanelRaised, shape)
@@ -130,7 +177,6 @@ import com.sperance.exileforge.ui.theme.*
             Text(ui("expedition.map_level", map.level), color = Rune, style = MaterialTheme.typography.labelSmall)
             Text(mapDescription(map.code), color = Muted, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
-        onServices?.let { IconButton(onClick = it) { Icon(ForgeGlyphs.Coins, ui("expedition.services"), tint = Gold, modifier = Modifier.size(20.dp)) } }
         when {
             cleared -> Icon(Icons.Outlined.CheckCircle, ui("expedition.map_cleared"), tint = Vital, modifier = Modifier.size(20.dp))
             !open -> Icon(Icons.Outlined.Lock, ui("expedition.map_locked"), tint = Muted, modifier = Modifier.size(20.dp))

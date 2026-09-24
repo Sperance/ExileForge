@@ -6,7 +6,7 @@ import com.sperance.exileforge.core.campaign.RunCommand
 import com.sperance.exileforge.core.model.campaign.CampaignMap
 import com.sperance.exileforge.core.model.campaign.MonsterRarity
 import com.sperance.exileforge.presentation.ForgeRuntime
-import com.sperance.exileforge.presentation.state.MapServices
+import com.sperance.exileforge.presentation.state.MapLaunchState
 import com.sperance.exileforge.presentation.state.Reads
 import com.sperance.exileforge.core.model.campaign.MapServiceOutcome
 import com.sperance.exileforge.core.i18n.ui
@@ -52,17 +52,30 @@ class ExpeditionViewModel(private val runtime: ForgeRuntime) {
         mutable.update { if (it.play.characterId == id) it.copy(play = it.play.copy(campaign = progress)) else it }
     } } }
 
-    /** A map's services sheet (0.34.0): its chests and its boss, read when the sheet opens. */
-    fun openMapServices(mapCode: String) { with(runtime) {
-        mutable.update { it.copy(play = it.play.copy(mapServices = null)) }
+    /**
+     * A location's launch window (since 2.37.0) opens before every run: it shows at once, and its
+     * chests and its boss arrive when the server has said. A stash map of the location's own level is
+     * picked in it by the player; nothing is picked for them.
+     */
+    fun openLaunch(mapCode: String) { with(runtime) {
+        mutable.update { it.copy(play = it.play.copy(launch = MapLaunchState(mapCode))) }
         read(Reads.MAP_SERVICES, restart = true) {
             val id = state.value.play.characterId
-            val services = MapServices(mapCode, api.campaign.chests(id, mapCode), api.campaign.boss(id, mapCode))
-            mutable.update { if (it.play.characterId == id) it.copy(play = it.play.copy(mapServices = services)) else it }
+            val chests = api.campaign.chests(id, mapCode)
+            val boss = api.campaign.boss(id, mapCode)
+            mutable.update { s ->
+                val open = s.play.launch?.takeIf { s.play.characterId == id && it.mapCode == mapCode }
+                if (open == null) s else s.copy(play = s.play.copy(launch = open.copy(chests = chests, boss = boss)))
+            }
         }
     } }
 
-    fun closeMapServices() { runtime.mutable.update { it.copy(play = it.play.copy(mapServices = null)) } }
+    fun closeLaunch() { runtime.mutable.update { it.copy(play = it.play.copy(launch = null)) } }
+
+    /** The stash map to enter with, or null to enter without one. */
+    fun pickMap(instanceId: String?) {
+        runtime.mutable.update { s -> s.copy(play = s.play.copy(launch = s.play.launch?.copy(picked = instanceId))) }
+    }
 
     /** One more chest on the map this window, for gold. */
     fun buyTreasure(mapCode: String) = service(mapCode, "expedition.treasure_bought") { id -> runtime.api.campaign.treasure(id, mapCode) }
@@ -74,7 +87,8 @@ class ExpeditionViewModel(private val runtime: ForgeRuntime) {
         task(writing = true, touches = setOf(Reads.MAP_SERVICES)) {
             val id = state.value.play.characterId
             val outcome = call(id)
-            mutable.update { s -> s.copy(message = ui(message), play = s.play.copy(mapServices = MapServices(mapCode, outcome.chests, outcome.boss),
+            mutable.update { s -> s.copy(message = ui(message), play = s.play.copy(
+                launch = s.play.launch?.takeIf { it.mapCode == mapCode }?.copy(chests = outcome.chests, boss = outcome.boss),
                 hero = s.play.hero?.let { it.copy(character = it.character.copy(money = outcome.money)) })) }
         }
     } }
@@ -89,8 +103,10 @@ class ExpeditionViewModel(private val runtime: ForgeRuntime) {
     }
 
     /**
-     * A new run of [mapCode] with the hero as the sheet has them now: their life full, their gear
-     * as worn. The map, its monsters and their rolls come from one fresh seed.
+     * «В путь»: the location is entered on the server first (since 0.35.0) — with the picked map,
+     * which is spent there, or without one — and then a new run starts with the hero as the sheet has
+     * them now and the map's effects on the monsters and on the hero. The map, its monsters and their
+     * rolls come from one fresh seed; how many chests stand on it is the entry's answer.
      */
     fun start(mapCode: String) { with(runtime) {
         if (mutableRun.value != null || state.value.busy) return
@@ -98,21 +114,33 @@ class ExpeditionViewModel(private val runtime: ForgeRuntime) {
         val view = s.world.campaign ?: return
         val map = view.chapters.flatMap { it.maps }.firstOrNull { it.code == mapCode } ?: return
         if (s.play.campaign?.unlocked?.contains(mapCode) != true) return
-        val hero = s.play.hero ?: return
-        val characterId = s.play.characterId
+        val picked = s.play.launch?.takeIf { it.mapCode == mapCode }?.picked
+        task(writing = true, touches = setOf(Reads.MAP_SERVICES)) {
+            val characterId = state.value.play.characterId
+            val launch = api.campaign.start(characterId, mapCode, picked)
+            val hero = state.value.play.hero ?: return@task
+            mutable.update { it.copy(play = it.play.copy(launch = null, heroReadAt = if (picked != null) 0 else it.play.heroReadAt,
+                hero = if (picked == null) it.play.hero else it.play.hero?.let { h -> h.copy(inventory = h.inventory.filterNot { item -> item.id == picked }) })) }
+            begin(map, view, hero, characterId, launch.map?.effects.orEmpty(), launch.chests.left)
+        }
+    } }
+
+    private fun begin(map: CampaignMap, view: com.sperance.exileforge.core.model.campaign.CampaignView, hero: com.sperance.exileforge.core.model.hero.HeroView,
+                      characterId: String, effects: Map<String, Double>, chests: Int) {
         lateinit var run: ExpeditionRun
         run = ExpeditionRun.start(map, view.rarities, hero.sheet.stats, hero.sheet.level, System.nanoTime(),
             onKill = { monster -> reports.trySend { kill(run, characterId, map.code, monster) } },
             onCleared = { reports.trySend { complete(characterId, map.code) } },
             rules = view.combat,
             onFallen = { reports.trySend { fall(run, characterId, map.code) } },
-            onChest = { reports.trySend { openChest(run, characterId, map.code) } })
+            onChest = { reports.trySend { openChest(run, characterId, map.code) } },
+            mapEffects = effects)
+        // How many chests stand on the map is the server's (0.31.0), answered by the entry itself.
+        run.send(RunCommand.Chests(chests))
         mutableRun.value = run
-        // How many chests stand on the map is the server's (0.31.0); they appear once it says.
-        reports.trySend { chests(run, characterId, map.code) }
         // The boss stands until the server says it was slain within the hour (0.32.0).
         if (map.boss != null) reports.trySend { boss(run, characterId, map.code) }
-    } }
+    }
 
     fun send(command: RunCommand) { mutableRun.value?.send(command) }
 
@@ -154,13 +182,6 @@ class ExpeditionViewModel(private val runtime: ForgeRuntime) {
     /** Whether the map's boss is there: a failure leaves it standing, which is what the exit expects. */
     private suspend fun boss(run: ExpeditionRun, characterId: String, mapCode: String) { with(runtime) {
         try { if (!api.campaign.boss(characterId, mapCode).alive) run.send(RunCommand.BossAbsent) }
-        catch (e: CancellationException) { throw e }
-        catch (_: Exception) { }
-    } }
-
-    /** The map's chests: a failure only means none this run, never a banner. */
-    private suspend fun chests(run: ExpeditionRun, characterId: String, mapCode: String) { with(runtime) {
-        try { run.send(RunCommand.Chests(api.campaign.chests(characterId, mapCode).left)) }
         catch (e: CancellationException) { throw e }
         catch (_: Exception) { }
     } }

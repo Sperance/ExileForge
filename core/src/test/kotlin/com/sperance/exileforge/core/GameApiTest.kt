@@ -11,6 +11,7 @@ import com.sperance.exileforge.core.model.EquipmentKind
 import com.sperance.exileforge.core.model.command.*
 import com.sperance.exileforge.core.model.currency.CurrencyOrb
 import com.sperance.exileforge.core.model.auction.*
+import com.sperance.exileforge.core.model.campaign.MapRule
 import com.sperance.exileforge.core.model.skilltree.SkillNodeType
 import com.sperance.exileforge.core.network.*
 import java.util.concurrent.TimeUnit
@@ -349,7 +350,7 @@ class GameApiTest {
     @Test fun `the ledger has two hands and two rings, and every template slot has a place`() {
         val places = com.sperance.exileforge.core.contract.bodyPlaces
         assertEquals(11, places.size)
-        assertEquals((com.sperance.exileforge.core.contract.slots - "JEWEL").toSet(), places.flatMap { it.fits }.toSet())
+        assertEquals((com.sperance.exileforge.core.contract.slots - "JEWEL" - "MAP").toSet(), places.flatMap { it.fits }.toSet())
         val main = places.first { it.code == "MAIN_HAND" }
         val off = places.first { it.code == "OFF_HAND" }
         // A two-handed weapon fills the main hand and takes the other one with it.
@@ -610,6 +611,29 @@ class GameApiTest {
         assertEquals("/game/api/v1/character/campaign/summon?characterId=$id&mapCode=C1_TIDAL_SHORE", server.takeRequest().path)
     }
 
+    @Test fun `a location is entered with a map from the stash or without one`(): Unit = runBlocking {
+        val mapItem = "b".repeat(24)
+        ok("""{"map":{"mapCode":"C1_TIDAL_SHORE","effects":{"MAP_MONSTER_LIFE":30.0,"MAP_CHESTS":1.0},"quantity":12.0,"rarity":12.0,"experience":12.0},"chests":{"left":3,"refreshAt":1}}""")
+        val launch = api.campaign.start(id, "C1_TIDAL_SHORE", mapItem)
+        assertEquals(30.0, launch.map!!.effects["MAP_MONSTER_LIFE"])
+        assertEquals(3, launch.chests.left)
+        val entered = server.takeRequest()
+        assertEquals("POST", entered.method)
+        assertEquals("/game/api/v1/character/campaign/start?characterId=$id&mapCode=C1_TIDAL_SHORE&itemId=$mapItem", entered.path)
+        ok("""{"map":null,"chests":{"left":1,"refreshAt":1}}""")
+        assertEquals(null, api.campaign.start(id, "C1_TIDAL_SHORE").map)
+        assertEquals("/game/api/v1/character/campaign/start?characterId=$id&mapCode=C1_TIDAL_SHORE", server.takeRequest().path)
+        assertFailsWith<IllegalArgumentException> { api.campaign.start(id, "C1_TIDAL_SHORE", "not-an-id") }
+    }
+
+    @Test fun `a map's risk pays by the server's weights`() {
+        val rule = MapRule(risk = mapOf("MAP_MONSTER_LIFE" to .4, "MAP_HERO_FLASK" to 6.0))
+        val bonus = rule.bonus(mapOf("MAP_MONSTER_LIFE" to 30.0, "MAP_HERO_FLASK" to 2.0, "MAP_QUANTITY" to 10.0, "MAP_PACK_SIZE" to 25.0))
+        assertEquals(34.0, bonus.quantity)
+        assertEquals(24.0, bonus.rarity)
+        assertEquals(24.0, bonus.experience)
+    }
+
     @Test fun `a map's boss is asked after and reported by its own route`(): Unit = runBlocking {
         ok("""{"alive":false,"respawnAt":1700000000000}""")
         assertFalse(api.campaign.boss(id, "C1_TIDAL_SHORE").alive)
@@ -747,7 +771,7 @@ class GameApiTest {
             "POST" to "/api/v1/characterequipment/uncraft",
             "GET" to "/api/v1/character/campaign/chapters", "GET" to "/api/v1/character/campaign/progress",
             "POST" to "/api/v1/character/campaign/kill", "POST" to "/api/v1/character/campaign/complete",
-            "POST" to "/api/v1/character/campaign/fall")
+            "POST" to "/api/v1/character/campaign/fall", "POST" to "/api/v1/character/campaign/start")
         // The server prints the Ktor selector, so a method arrives as "(GET)".
         ok(JsonArray(routes.map { buildJsonObject { put("path", it.second); put("method", "(${it.first})") } }).toString())
         val capabilities = api.capabilities()

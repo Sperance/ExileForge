@@ -121,6 +121,18 @@ class ServerIntegrationTest {
         val progress = api.campaign.complete(id, first.code)
         assertEquals(listOf(first.code), progress.cleared)
         assertTrue(maps[1].code in progress.unlocked)
+        mapsAreTheServers(api, id)
+    }
+
+    /** Maps (0.35.0): the rule is served, and a location is entered without one; another location's map is refused. */
+    private suspend fun mapsAreTheServers(api: GameApi, id: String) {
+        val view = api.campaign.chapters()
+        assertTrue(view.maps.risk.isNotEmpty(), "no risk weights")
+        val first = view.chapters.first().maps.first()
+        val launch = api.campaign.start(id, first.code)
+        assertNull(launch.map)
+        assertEquals(api.campaign.chests(id, first.code).left, launch.chests.left)
+        assertEquals("CH_008", assertFailsWith<ApiFailure> { api.campaign.start(id, first.code, "0".repeat(24)) }.code)
     }
 
     private suspend fun craftingIsTheServers(api: GameApi, id: String, templateId: String,

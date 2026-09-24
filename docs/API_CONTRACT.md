@@ -1,6 +1,6 @@
 # Контракт Exile Forge 2.5
 
-Сервер: ветка `claude/tender-pasteur-a36kj2`, коммит `05a3642ed954bc5fca45c387990a4a7686615279` (ktor-bestgame 0.34.0).
+Сервер: ветка `claude/tender-pasteur-a36kj2`, коммит `e6d8d0c755a476ca2421c78c420df7773f24f347` (ktor-bestgame 0.35.0).
 Успех: `{"success":true,"data":...}`. Ошибка: `{"success":false,"error":{"message","errorClass","errorMethod","errorCode","messageArgs"}}`; HTTP-статус сохраняется клиентом.
 
 `messageArgs` добавлено в 0.17.0 и чинит давнюю дыру: `message` — готовое английское предложение, а `error.<код>` в словаре почти всегда шаблон с дыркой («Уровень {0} слишком мал»). Заполнить её клиенту было нечем, и переводились только 17 кодов из 114 — те, у кого шаблон без дырок. Теперь конверт несёт то, что сервер подставил в своё предложение, и клиент собирает своё. Если после подстановки `{0}` остался, значит аргументов пришло меньше, чем ждёт шаблон, и показывается серверная фраза: половина предложения хуже, чем предложение не на том языке.
@@ -346,6 +346,7 @@
 | Босс убит | `POST /api/v1/character/campaign/boss?characterId=&mapCode=` → `CampaignReward`; выход открыт на час, повтор — `CP_008`; пока босс жив, `complete` — `CP_007` |
 | Карта сокровищ (0.34.0) | `POST /api/v1/character/campaign/treasure?characterId=&mapCode=` → `{money, chests, boss}`; раз за окно, иначе `CP_009` |
 | Вызов стража | `POST /api/v1/character/campaign/summon?characterId=&mapCode=` → `{money, chests, boss}`; живого — `CP_010` |
+| Вход в локацию (0.35.0) | `POST /api/v1/character/campaign/start?characterId=&mapCode=[&itemId=]` → `{map, chests}`; карта (слот `MAP`, шаблон `MAP_<mapCode>`) тратится, чужая локация — `CP_011`; без `itemId` — вход без карты |
 | Витрина торговца | `GET /api/v1/character/merchant?characterId=` → `{refreshAt, offers:[{id, item, price}]}` |
 | Покупка у торговца | `POST /api/v1/character/merchant/buy?characterId=&offerId=` → `{item, money}`; `CH_016` не хватает золота, `CH_017` нет предложения |
 | Места под лоты | `GET`/`POST /api/v1/auctionlot/slots?characterId=` → `{used, limit, max, price, money}`; `AU_012` все заняты, `AU_013` потолок |

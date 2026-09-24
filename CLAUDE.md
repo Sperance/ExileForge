@@ -20,9 +20,9 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.36.0, `versionCode` 54) for the
-**ktor-bestgame** RPG server (0.34.0), pinned in
-`core/.../contract/Contract.kt` as `SERVER_COMMIT = 05a3642ed954bc5fca45c387990a4a7686615279`
+ExileForge is an **Android Compose client** (version 2.37.0, `versionCode` 55) for the
+**ktor-bestgame** RPG server (0.35.0), pinned in
+`core/.../contract/Contract.kt` as `SERVER_COMMIT = e6d8d0c755a476ca2421c78c420df7773f24f347`
 on the server branch `claude/tender-pasteur-a36kj2`.
 
 The client is deliberately **thin**: the server owns items, stats, modifier rolls and inventory.
@@ -356,6 +356,13 @@ These are enforced by tests and are the point of the client's design:
     0.34.0) the fourth tab is the merchant (`MerchantClient`: a four-hour shelf per hero, priced in
     gold by the server), «Мои лоты» shows the lot places (`AuctionSlots`) and sells one more, and a
     campaign map's coin icon opens its services — a treasure map and summoning its guardian.
+    Since 2.37.0 (server 0.35.0) a map row opens the **launch window** (`LaunchSheet`,
+    `PlayState.launch`) before every run: the location, its guardian and chests, the map slot —
+    stash items of slot `MAP` and template `MAP_<location>` — with `MapRule.bonus` printing what the
+    picked one pays by the server's weights, and the services. «В путь» is `CampaignClient.start`,
+    which spends the map; `MapEffects` applies its summed effects to the run (monster buffs join every
+    rarity's effects, pack size and rarer monsters change counts and weights, the hero loses light,
+    flask charges, resistances and regeneration). A map is never worn: its card offers «К локации».
 14. **Gold is the merchant's, not the client's.** `POST /api/v1/characterequipment/sell` destroys
     the instance and pays for it; the price is the template's base times the copy's rarity times
     how many affixes rolled, times `STOCK_GOLD` — a characteristic that exists, that nothing

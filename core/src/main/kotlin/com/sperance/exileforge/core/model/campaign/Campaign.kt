@@ -151,7 +151,61 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
 
 /** The whole campaign as the server serves it, read once per session: the chapters, the rarities and the rules of the fight. */
 @Serializable data class CampaignView(val chapters: List<CampaignChapter> = emptyList(), val rarities: List<CampaignRarity> = emptyList(), val combat: CombatRules = CombatRules(),
-    val services: ServiceRule = ServiceRule())
+    val services: ServiceRule = ServiceRule(), val maps: MapRule = MapRule())
+
+/**
+ * Maps (since server 0.35.0): an item of slot `MAP` per location, `MAP_<code>`, spent on entry.
+ * [risk] is how many percent of quantity, rarity and experience one point of each harmful modifier
+ * pays — the server's numbers, printed by the launch window as the server will count them.
+ */
+@Serializable data class MapRule(
+    val dropChance: Double = 0.0,
+    val bossChance: Double = 0.0,
+    val nextChance: Double = 0.0,
+    val rarities: Map<String, Int> = emptyMap(),
+    val risk: Map<String, Double> = emptyMap(),
+) {
+    /** What a map's summed effects add to the loot, in percent: the risk, then each direct bonus on top. */
+    fun bonus(effects: Map<String, Double>): MapBonus {
+        val risk = Math.round(effects.entries.sumOf { (stat, value) -> value * (risk[stat] ?: 0.0) } * 10) / 10.0
+        return MapBonus(risk + (effects[QUANTITY] ?: 0.0), risk + (effects[RARITY] ?: 0.0), risk + (effects[EXPERIENCE] ?: 0.0))
+    }
+
+    companion object {
+        const val SLOT = "MAP"
+        const val QUANTITY = "MAP_QUANTITY"
+        const val RARITY = "MAP_RARITY"
+        const val EXPERIENCE = "MAP_EXPERIENCE"
+        const val PACK_SIZE = "MAP_PACK_SIZE"
+        const val MONSTER_RARITY = "MAP_MONSTER_RARITY"
+        const val MONSTER_LIFE = "MAP_MONSTER_LIFE"
+        const val MONSTER_DAMAGE = "MAP_MONSTER_DAMAGE"
+        const val MONSTER_SPEED = "MAP_MONSTER_SPEED"
+        const val MONSTER_RESIST = "MAP_MONSTER_RESIST"
+        const val HERO_LIGHT = "MAP_HERO_LIGHT"
+        const val HERO_FLASK = "MAP_HERO_FLASK"
+        const val HERO_RESIST = "MAP_HERO_RESIST"
+        const val HERO_REGEN = "MAP_HERO_REGEN"
+
+        /** The template a location's map is: `MAP_<location code>`. */
+        fun templateCode(mapCode: String) = "MAP_$mapCode"
+    }
+}
+
+/** A map's pay, in percent of the loot's quantity, rarity and experience. */
+@Serializable data class MapBonus(val quantity: Double = 0.0, val rarity: Double = 0.0, val experience: Double = 0.0)
+
+/** The map a hero entered with (since server 0.35.0): its effects summed per stat and what they pay. */
+@Serializable data class ActiveMap(
+    val mapCode: String = "",
+    val effects: Map<String, Double> = emptyMap(),
+    val quantity: Double = 0.0,
+    val rarity: Double = 0.0,
+    val experience: Double = 0.0,
+)
+
+/** What entering a location answered: the map spent on it, if any, and its chests as they stand now. */
+@Serializable data class MapLaunch(val map: ActiveMap? = null, val chests: ChestState = ChestState())
 
 /**
  * The map's services for gold (since server 0.34.0): a treasure map is one more chest in the

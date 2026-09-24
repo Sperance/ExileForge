@@ -103,6 +103,8 @@ data class ApiCapabilities(val routes: Set<String>) {
             "POST" to "/api/v1/character/campaign/complete",
             // 0.28.0: the rules of the fight come with the chapters, and a death is priced by the server.
             "POST" to "/api/v1/character/campaign/fall",
+            // 0.35.0: every run is entered, with a map or without one.
+            "POST" to "/api/v1/character/campaign/start",
         )
         val missing = required.filterNot { (method, path) -> has(method, path) }
         require(missing.isEmpty()) {

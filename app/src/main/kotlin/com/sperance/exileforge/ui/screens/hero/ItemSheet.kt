@@ -28,6 +28,8 @@ import com.sperance.exileforge.presentation.state.ForgeSection
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.auction.ListingSheet
+import com.sperance.exileforge.core.model.campaign.MapRule
+import com.sperance.exileforge.presentation.state.TAB_EXPEDITION
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.theme.*
@@ -75,6 +77,10 @@ private enum class ItemAction { AUCTION, SELL }
                 when {
                     instance.socketed -> Action(ForgeGlyphs.Gem, ui("hero.unequip"), can) { onDismiss(); vm.unsocketJewel(instance.id) }
                     instance.equipped -> Action(ForgeGlyphs.Helm, ui("hero.unequip"), can) { onDismiss(); vm.unequip(instance.id) }
+                    // A map is not worn (2.37.0): it goes into its location's launch window, picked.
+                    document.text("slot") == MapRule.SLOT -> Action(ForgeGlyphs.Portal, ui("hero.action_map"), can, GoldBright) {
+                        onDismiss(); vm.tab(TAB_EXPEDITION); vm.openLaunch(document.text("code").removePrefix("MAP_")); vm.pickMap(instance.id)
+                    }
                     else -> Action(ForgeGlyphs.Helm, ui("hero.equip"), can, GoldBright) { onDismiss(); vm.equip(instance.id, null) }
                 }
                 Action(ForgeGlyphs.Orb, ui("hero.action_orb"), can) { onDismiss(); vm.openForge(instance.id, ForgeSection.ORBS) }

@@ -188,13 +188,20 @@ data class PlayState(
     val nodeQuery: String = "",
     /** Which campaign maps this character has cleared and which are open. */
     val campaign: CampaignProgress? = null,
-    /** The map whose services sheet is open (0.34.0): its chests and its boss as the server last said. */
-    val mapServices: MapServices? = null,
+    /** The location whose launch window is open (since 2.37.0): its chests, its boss and the map picked for it. */
+    val launch: MapLaunchState? = null,
 )
 
-/** One map's chests and boss, for its services sheet. */
-data class MapServices(val mapCode: String, val chests: com.sperance.exileforge.core.model.campaign.ChestState,
-    val boss: com.sperance.exileforge.core.model.campaign.BossState)
+/**
+ * One location's launch window: its chests and boss as the server last said (null until it has),
+ * and the stash map picked to enter it with — null enters without one.
+ */
+data class MapLaunchState(
+    val mapCode: String,
+    val chests: com.sperance.exileforge.core.model.campaign.ChestState? = null,
+    val boss: com.sperance.exileforge.core.model.campaign.BossState? = null,
+    val picked: String? = null,
+)
 
 /** The forge's sections: orbs and the bench work on one item, a recipe on the bag. */
 enum class ForgeSection { ORBS, BENCH, RECIPES }

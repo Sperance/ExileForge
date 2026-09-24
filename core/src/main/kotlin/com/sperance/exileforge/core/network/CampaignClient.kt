@@ -8,6 +8,7 @@ import com.sperance.exileforge.core.model.campaign.CampaignProgress
 import com.sperance.exileforge.core.model.campaign.CampaignReward
 import com.sperance.exileforge.core.model.campaign.CampaignView
 import com.sperance.exileforge.core.model.campaign.ChestState
+import com.sperance.exileforge.core.model.campaign.MapLaunch
 import com.sperance.exileforge.core.model.campaign.MapServiceOutcome
 import com.sperance.exileforge.core.model.campaign.MonsterRarity
 import kotlinx.serialization.json.decodeFromJsonElement
@@ -95,5 +96,16 @@ class CampaignClient internal constructor(private val http: Transport) {
         requireId(characterId)
         return WireJson.decodeFromJsonElement(http.request("POST", "$CAMPAIGN/summon",
             mapOf("characterId" to characterId, "mapCode" to mapCode), authenticated = true))
+    }
+
+    /**
+     * Entering a location (since 0.35.0), with a map of its level from the stash or without one. The
+     * map is spent: the server keeps its effects for this location until the exit or a death. Never retried.
+     */
+    suspend fun start(characterId: String, mapCode: String, itemId: String? = null): MapLaunch {
+        requireId(characterId)
+        itemId?.let(::requireId)
+        return WireJson.decodeFromJsonElement(http.request("POST", "$CAMPAIGN/start",
+            mapOf("characterId" to characterId, "mapCode" to mapCode) + listOfNotNull(itemId?.let { "itemId" to it }), authenticated = true))
     }
 }

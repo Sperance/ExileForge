@@ -52,7 +52,7 @@ class SessionViewModel(private val runtime: ForgeRuntime) {
     /** A sign-in answers the account and a token; the token is kept per server for the next launch. */
     fun login(login: String, password: String) { with(runtime) { task {
         clearSession()
-        api.capabilities().requireWorkbench()
+        api.manifest().requireWorkbench()
         signedIn(api.login(login, password), byDevice = false)
     } } }
 
@@ -66,7 +66,7 @@ class SessionViewModel(private val runtime: ForgeRuntime) {
     fun playOnThisDevice(silent: Boolean = false) { with(runtime) { task {
         clearSession()
         try {
-            api.capabilities().requireWorkbench()
+            api.manifest().requireWorkbench()
             signedIn(api.loginByDevice(state.value.account.deviceId), byDevice = true)
         } catch (e: CancellationException) { throw e }
         catch (e: Exception) { if (!silent) throw e }
@@ -82,7 +82,7 @@ class SessionViewModel(private val runtime: ForgeRuntime) {
     fun resume(saved: String) { with(runtime) { task {
         clearSession()
         try {
-            api.capabilities().requireWorkbench()
+            api.manifest().requireWorkbench()
             signedIn(api.resume(saved), byDevice = store.deviceSession.first())
         } catch (e: CancellationException) { throw e }
         catch (e: Exception) {
@@ -108,7 +108,7 @@ class SessionViewModel(private val runtime: ForgeRuntime) {
         store.saveDeviceSession(byDevice)
         store.saveToken(state.value.account.server, api.sessionToken())
         restoreFilters()
-        ensureDefinitions()
+        ensureWorld()
         // The catalogue is codes without it, and the first attempt may have run before the server was up.
         refreshLocale()
         refreshIcons()

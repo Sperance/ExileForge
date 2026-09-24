@@ -25,7 +25,7 @@ class CraftsViewModel(private val runtime: ForgeRuntime) {
     fun load() { with(runtime) { read(Reads.CRAFTS) {
         val id = state.value.play.characterId
         if (id.isBlank()) return@read
-        ensureMaterials(); ensureEquipment(); ensureDefinitions()
+        ensureWorld()
         land(id, api.crafts.state(id))
     } } }
 
@@ -56,12 +56,14 @@ class CraftsViewModel(private val runtime: ForgeRuntime) {
 
     fun start(job: String, additives: List<String> = emptyList()) { with(runtime) { task(writing = true, touches = setOf(Reads.CRAFTS)) {
         val id = state.value.play.characterId
-        land(id, api.crafts.start(id, job, additives))
+        val before = heroViewModel.snapshots
+        land(id, api.crafts.start(id, job, additives), heroViewModel.snapshots != before)
     } } }
 
     fun stop() { with(runtime) { task(writing = true, touches = setOf(Reads.CRAFTS)) {
         val id = state.value.play.characterId
-        land(id, api.crafts.stop(id))
+        val before = heroViewModel.snapshots
+        land(id, api.crafts.stop(id), heroViewModel.snapshots != before)
     } } }
 
     /** A tool into its profession's slot: the server's equip, and the crafts read again for the new numbers. */
@@ -69,7 +71,6 @@ class CraftsViewModel(private val runtime: ForgeRuntime) {
         val id = state.value.play.characterId
         api.hero.equip(id, instanceId, null)
         land(id, api.crafts.state(id))
-        mutable.update { it.copy(play = it.play.copy(heroReadAt = 0)) }
     } } }
 
     /**
@@ -78,13 +79,17 @@ class CraftsViewModel(private val runtime: ForgeRuntime) {
      * with; when it is behind the device (its clock has not reached them yet), it confirms what it
      * counted and the rest stays predicted until the next answer.
      */
-    private fun land(id: String, answer: CraftsState) { with(runtime) {
+    private fun land(id: String, answer: CraftsState, bagFromServer: Boolean = false) { with(runtime) {
         mutable.update { s ->
             if (s.play.characterId != id) return@update s
             val pending = s.play.craftsPending
             val local = s.play.crafts?.work
             val behind = local != null && answer.work != null && answer.work!!.job == local.job && answer.work!!.cycle < local.cycle
-            if (behind) s.copy(play = s.play.copy(crafts = answer.copy(work = local), craftsAt = System.currentTimeMillis(),
+            // A command's snapshot already holds the bag the server settled, predictions and all.
+            if (bagFromServer) s.copy(play = s.play.copy(crafts = answer, craftsAt = System.currentTimeMillis(),
+                craftsPending = WorkGains(), craftsLast = if (answer.gains.cycles > 0) answer.gains else s.play.craftsLast,
+                craftsTotals = if (behind) s.play.craftsTotals else s.play.craftsTotals + (answer.gains - pending).copy(equipment = answer.gains.equipment)))
+            else if (behind) s.copy(play = s.play.copy(crafts = answer.copy(work = local), craftsAt = System.currentTimeMillis(),
                 craftsPending = pending - answer.gains))
             else {
                 val beyond = answer.gains - pending

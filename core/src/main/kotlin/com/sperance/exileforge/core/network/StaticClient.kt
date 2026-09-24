@@ -39,6 +39,7 @@ import okhttp3.*
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
+import com.sperance.exileforge.core.model.sync.StaticManifest
 
 /**
  * The server's static files: the dictionaries and the icon set.
@@ -97,5 +98,14 @@ class StaticClient internal constructor(private val http: Transport) {
     suspend fun portraitDocument(key: String): String {
         require('.' in key) { ui("api.no_portrait") }
         return http.fetchText(PortraitKey.path(key), json = false)
+    }
+
+    /** `static/index.json` (server 0.48.0): the routes and every fingerprint, in one public read. */
+    suspend fun manifest(): StaticManifest = WireJson.decodeFromJsonElement(http.fetch("static/index.json"))
+
+    /** Every reference table as it was served, for a signed-in caller; stored verbatim like the icons. */
+    suspend fun worldDocument(file: String): String {
+        require(file.isNotBlank()) { ui("api.no_world_file") }
+        return http.fetchText("world/$file", authenticated = true)
     }
 }

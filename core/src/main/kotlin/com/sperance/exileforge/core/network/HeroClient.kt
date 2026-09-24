@@ -38,6 +38,8 @@ import okhttp3.*
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
+import com.sperance.exileforge.core.model.sync.HeroParts
+import com.sperance.exileforge.core.model.sync.HeroSnapshot
 
 /**
  * One character: what it is, what it carries and wears, and every command that changes that.
@@ -46,6 +48,20 @@ import okhttp3.RequestBody.Companion.toRequestBody
  * what an orb does — is the server's, and a refusal comes back as it was said.
  */
 class HeroClient internal constructor(private val http: Transport, private val catalog: CatalogClient) {
+    /**
+     * The hero in one read (server 0.48.0): only the parts whose fingerprints [parts] does not hold,
+     * or `null` when the server answers 304 because nothing moved since [parts] was taken.
+     */
+    suspend fun view(characterId: String, parts: HeroParts): HeroSnapshot? {
+        requireId(characterId)
+        val headers = buildMap {
+            put(HeroParts.HEADER, parts.header())
+            if (parts.complete && parts.version.isNotBlank()) put("If-None-Match", "\"${parts.version}\"")
+        }
+        val answer = http.request("GET", "api/v1/character/view", mapOf("characterId" to characterId), authenticated = true, headers = headers)
+        return if (answer is JsonNull) null else WireJson.decodeFromJsonElement(HeroSnapshot.serializer(), answer)
+    }
+
     suspend fun character(id: String): CharacterSummary {
         val document = catalog.get(Catalog.CHARACTERS, id) ?: error(ui("api.no_character"))
         return WireJson.decodeFromJsonElement(document)

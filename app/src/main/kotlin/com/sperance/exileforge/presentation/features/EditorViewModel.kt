@@ -31,7 +31,7 @@ class EditorViewModel(private val runtime: ForgeRuntime) {
         if (state.value.busy || !state.value.canEdit) return
         if (state.value.admin.catalog != Catalog.CHARACTERS) { setEditor(template(state.value.admin.catalog, kind), null); return }
         task(touches = setOf(Reads.PROGRESSION)) {
-            ensureProgression()
+            ensureWorld()
             setEditor(JsonObject(template(Catalog.CHARACTERS) + mapOf(
                 "userId" to JsonPrimitive(state.value.account.profile?.id.orEmpty()),
                 "classId" to JsonPrimitive(state.value.play.draftClass))), null)
@@ -41,9 +41,7 @@ class EditorViewModel(private val runtime: ForgeRuntime) {
     fun closeEditor() { with(runtime) { if (!state.value.busy) mutable.update { it.copy(admin = it.admin.copy(editorOpen = false, original = null, draft = JsonObject(emptyMap()))) } } }
     fun edit(document: JsonObject) { with(runtime) { if (!state.value.busy) mutable.update { it.copy(admin = it.admin.copy(draft = document)) } } }
 
-    fun loadDefinitions() { with(runtime) { read(Reads.DEFINITIONS) {
-        mutable.update { it.copy(world = it.world.copy(definitions = api.world.modifiers())) }
-    } } }
+    fun loadDefinitions() { with(runtime) { read(Reads.DEFINITIONS) { ensureWorld(fresh = true) } } }
 
     fun reloadEditor() { with(runtime) { task(touches = setOf(Reads.CATALOG)) {
         val original = requireNotNull(state.value.admin.original)
@@ -63,6 +61,7 @@ class EditorViewModel(private val runtime: ForgeRuntime) {
             require(changes.isNotEmpty()) { ui("editor.nothing_to_save") }
             api.catalog.update(catalog, original.entityId, changes)
         }
+        staleWorld()
         if (catalog == Catalog.EQUIPMENT) mutable.update { it.copy(world = it.world.copy(inventoryBases = it.world.inventoryBases + (saved.entityId to saved))) }
         setEditor(saved, saved)
         // List refresh failure must not imply that the successful mutation failed.
@@ -74,6 +73,7 @@ class EditorViewModel(private val runtime: ForgeRuntime) {
         val original = state.value.admin.original ?: error(ui("editor.save_first"))
         check(state.value.canEdit)
         api.catalog.delete(state.value.admin.catalog, original.entityId)
+        staleWorld()
         mutable.update { it.copy(tab = 0, admin = it.admin.copy(editorOpen = false, original = null, items = it.admin.items.filterNot { item -> item.entityId == original.entityId })) }
         try { loadPage(0) } catch (e: CancellationException) { throw e }
         catch (_: Exception) { mutable.update { it.copy(message = ui("editor.deleted_refresh"), error = true) } }
@@ -83,7 +83,7 @@ class EditorViewModel(private val runtime: ForgeRuntime) {
     fun editInventoryBase(id: String) { with(runtime) { task(touches = setOf(Reads.CATALOG)) {
         check(!state.value.admin.editorOpen || state.value.admin.original?.let { diff(it, state.value.admin.draft).isEmpty() } == true) { ui("editor.close_draft") }
         val document = api.catalog.get(Catalog.EQUIPMENT, id) ?: error(ui("editor.base_not_found"))
-        ensureDefinitions()
+        ensureWorld()
         mutable.update { it.copy(admin = it.admin.copy(catalog = Catalog.EQUIPMENT, items = emptyList(), total = 0, page = 0, totalPages = 0)) }
         setEditor(document, document)
     } } }

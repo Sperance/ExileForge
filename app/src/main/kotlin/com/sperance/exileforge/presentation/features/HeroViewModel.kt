@@ -5,6 +5,8 @@ import com.sperance.exileforge.core.contract.entityId
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.ItemStack
 import com.sperance.exileforge.core.model.hero.HeroView
+import com.sperance.exileforge.core.model.sync.HeroParts
+import com.sperance.exileforge.core.model.sync.HeroSnapshot
 import com.sperance.exileforge.presentation.ForgeRuntime
 import com.sperance.exileforge.presentation.state.ForgeSection
 import com.sperance.exileforge.presentation.state.Reads
@@ -30,10 +32,10 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
     /**
      * The hero, if what is on screen has gone cold.
      *
-     * Reading it whole is five requests, so a tab does not ask for one every time it is opened. A
-     * command already re-reads what it changed; this is for everything that changed the character
-     * somewhere else — a trade, an administrator, the same account on another device — where the
-     * client has no way to be told. [FRESH_FOR] is how long a reading is trusted without asking.
+     * A command brings the hero back in its own answer; this is for everything that changed the
+     * character somewhere else — a trade, an administrator, the same account on another device —
+     * where the client has no way to be told. It is one request, and usually a 304 (server 0.48.0).
+     * [FRESH_FOR] is how long a reading is trusted without asking.
      */
     fun ensureHero() { with(runtime) {
         val now = System.currentTimeMillis()
@@ -143,15 +145,16 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
     fun sellForGold(inventoryId: String) { with(runtime) { characterCommand { id -> api.hero.sellForGold(id, inventoryId) } } }
 
     /**
-     * Every character command is a write the server may have applied even when the answer is lost,
-     * so the hero is always re-read afterwards rather than patched from the response.
+     * Every character command answers with the hero as the server has it now (server 0.48.0), so
+     * nothing is patched from the response and nothing is read again — unless the answer came
+     * without a snapshot, which [delivered] marks by setting the reading cold.
      */
     private fun characterCommand(block: suspend (String) -> Unit) { with(runtime) { task(writing = true, touches = setOf(Reads.HERO)) {
         val id = state.value.play.characterId.trim()
         check(id.isNotBlank()) { ui("auction.choose_character") }
         check(state.value.ownsCharacter || state.value.isAdmin) { ui("hero.owner_only") }
         block(id)
-        readHero()
+        if (state.value.play.heroReadAt == 0L) readHero()
         expeditionViewModel.regear()
     } } }
 
@@ -165,27 +168,64 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
         block(id)
     }
 
+    /** The parts of the hero held here, and the character they belong to. */
+    private var parts: HeroParts? = null
+
+    /** How many snapshots have been applied; a command compares it to know one came back. */
+    var snapshots = 0L
+        private set
+
+    /** Another character, or nobody: what is held no longer answers `If-None-Match`. */
+    fun forget() { parts = null }
+
+    /** What a command on [characterId] tells the server the client holds; `null` asks for nothing. */
+    fun heldParts(characterId: String): String? =
+        if (characterId != state.value.play.characterId.trim()) null
+        else parts?.takeIf { it.characterId == characterId }?.header() ?: HeroParts(characterId).header()
+
+    /** A command's answer: its snapshot, or none — and then the reading is cold and read again. */
+    fun delivered(characterId: String, snapshot: HeroSnapshot?) {
+        if (characterId != state.value.play.characterId.trim()) return
+        if (snapshot == null) runtime.mutable.update { it.copy(play = it.play.copy(heroReadAt = 0)) }
+        else apply(characterId, snapshot)
+    }
+
+    /**
+     * The hero in one request (server 0.48.0): only what moved since the parts held here, or a 304
+     * when nothing did. The reference tables come first — a card is half its base.
+     */
     internal suspend fun readHero() { with(runtime) {
         val id = state.value.play.characterId.trim()
         check(id.isNotBlank()) { ui("auction.choose_character") }
-        ensureDefinitions()
-        ensureOrbs()
-        ensureMaterials()
-        ensureBench(id)
-        ensureProgression()
-        // The catalogue is half of every card now that an instance keeps only its rolls,
-        // so it is read before the hero rather than chased afterwards.
-        ensureEquipment()
-        ensureStatTables()
-        val character = api.hero.character(id)
-        val inventory = api.hero.inventory(id)
-        val tree = api.tree.state(id)
-        // The sheet is added up here since 2.46.0, by the server's formula and in its order.
+        ensureWorld()
+        val held = parts?.takeIf { it.characterId == id } ?: HeroParts(id)
+        val snapshot = api.hero.view(id, held)
+        when {
+            snapshot != null -> apply(id, snapshot)
+            state.value.play.hero == null -> apply(id, HeroSnapshot(held.version))
+            else -> mutable.update { it.copy(play = it.play.copy(heroReadAt = System.currentTimeMillis(), heroSeenAt = System.currentTimeMillis())) }
+        }
+    } }
+
+    /**
+     * Folds a snapshot into the parts held and draws the hero from them. The sheet is added up
+     * here since 2.46.0, by the server's formula and in its order; a part is replaced whole.
+     */
+    private fun apply(characterId: String, snapshot: HeroSnapshot) { with(runtime) {
+        val merged = (parts?.takeIf { it.characterId == characterId } ?: HeroParts(characterId)).merge(snapshot)
+        if (!merged.complete) { parts = null; mutable.update { it.copy(play = it.play.copy(heroReadAt = 0)) }; return }
+        parts = merged
+        snapshots++
+        val character = merged.character
+        val inventory = merged.inventory
+        val tree = merged.tree
         val world = state.value.world
         val sheet = Sheet.calculate(character, world.classes.firstOrNull { it.id == character.classId }, tree.nodes, inventory,
             world.inventoryBases, world.definitions, world.statTables)
-        val view = HeroView(character, inventory, sheet, api.hero.bag(id), tree)
-        mutable.update { it.copy(play = it.play.copy(hero = view, characterOwner = character.userId, heroReadAt = System.currentTimeMillis(), heroSeenAt = System.currentTimeMillis(), selectedEquipment = it.play.selectedEquipment.takeIf { chosen -> view.inventory.any { item -> item.id == chosen } }
+        val view = HeroView(character, inventory, sheet, merged.bag, tree)
+        val now = System.currentTimeMillis()
+        mutable.update { it.copy(world = it.world.copy(bench = merged.bench), play = it.play.copy(hero = view, characterOwner = character.userId,
+            heroReadAt = now, heroSeenAt = now, selectedEquipment = it.play.selectedEquipment.takeIf { chosen -> view.inventory.any { item -> item.id == chosen } }
                 ?: view.inventory.firstOrNull()?.id.orEmpty())) }
     } }
 }

@@ -1028,5 +1028,7 @@
   "enum.orb.VAAL_ORB": "Vaal Orb",
   "hero.worn_title": "The item is worn",
   "hero.worn_note": "A worn item cannot be sold or listed on the auction — take it off first.",
-  "row.worn": "Worn"
+  "row.worn": "Worn",
+  "api.no_world_file": "No reference file given",
+  "cmd.stale_revision": "The server speaks API revision {0}, but {1} is needed. Update ktor-bestgame."
 }

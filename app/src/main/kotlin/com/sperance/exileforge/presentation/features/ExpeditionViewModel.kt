@@ -44,7 +44,7 @@ class ExpeditionViewModel(private val runtime: ForgeRuntime) {
         val id = state.value.play.characterId
         if (id.isBlank()) return@read
         // The loot panel names orbs and draws items as the stash does, so it needs the same tables.
-        ensureOrbs(); ensureEquipment(); ensureDefinitions()
+        ensureWorld()
         if (state.value.world.campaign == null) {
             val view = api.campaign.chapters()
             mutable.update { it.copy(world = it.world.copy(campaign = view)) }
@@ -152,7 +152,10 @@ class ExpeditionViewModel(private val runtime: ForgeRuntime) {
         mutableRun.value?.send(RunCommand.Regear(hero.sheet.stats, hero.sheet.level))
     }
 
-    /** The run is over or abandoned; the hero changed on the way, so the next glance re-reads them. */
+    /**
+     * The run is over or abandoned. Every report on the way brought the hero back with it; the
+     * next glance still asks once, which is a 304 unless a report was lost on the way.
+     */
     fun close() {
         mutableRun.value = null
         runtime.mutable.update { it.copy(play = it.play.copy(heroReadAt = 0)) }
@@ -181,13 +184,8 @@ class ExpeditionViewModel(private val runtime: ForgeRuntime) {
             }
             run.send(RunCommand.Reward(reward))
             loot(characterId, reward.equipment)
-            // The purse, the level and the experience are what the header prints; the bag and the
-            // stash are re-read when the hero is next opened. A found recipe drops the bench cache
-            // too, so the next hero read picks it up.
-            mutable.update { s -> if (s.play.characterId != characterId) s else s.copy(
-                play = s.play.copy(heroReadAt = 0,
-                    hero = s.play.hero?.let { it.copy(character = it.character.copy(level = reward.level, experience = reward.totalExperience, money = reward.money)) }),
-                world = if (reward.recipeFound != null) s.world.copy(bench = emptyList()) else s.world) }
+            // The hero, bag, stash and bench came back with the answer (server 0.48.0); an answer
+            // without them has already set the reading cold.
         } catch (e: CancellationException) { throw e }
         catch (e: Exception) { run.send(RunCommand.RewardFailed); report(e, writing = true) }
     } }
@@ -197,8 +195,6 @@ class ExpeditionViewModel(private val runtime: ForgeRuntime) {
         try {
             val fall = api.campaign.fall(characterId, mapCode)
             run.send(RunCommand.Fallen(fall))
-            mutable.update { s -> if (s.play.characterId != characterId) s else s.copy(play = s.play.copy(heroReadAt = 0,
-                hero = s.play.hero?.let { it.copy(character = it.character.copy(level = fall.level, experience = fall.totalExperience)) })) }
         } catch (e: CancellationException) { throw e }
         catch (e: Exception) { run.send(RunCommand.FallFailed); report(e, writing = true) }
     } }
@@ -216,8 +212,6 @@ class ExpeditionViewModel(private val runtime: ForgeRuntime) {
             val reward = api.campaign.openChest(characterId, mapCode)
             run.send(RunCommand.ChestReward(reward))
             loot(characterId, reward.equipment)
-            mutable.update { s -> if (s.play.characterId != characterId) s else s.copy(play = s.play.copy(heroReadAt = 0,
-                hero = s.play.hero?.let { it.copy(character = it.character.copy(level = reward.level, experience = reward.totalExperience, money = reward.money)) })) }
         } catch (e: CancellationException) { throw e }
         catch (e: Exception) { run.send(RunCommand.ChestFailed); report(e, writing = true) }
     } }

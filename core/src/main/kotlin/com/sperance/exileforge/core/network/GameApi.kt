@@ -37,6 +37,9 @@ import okhttp3.*
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
+import com.sperance.exileforge.core.model.sync.HeroSnapshot
+import com.sperance.exileforge.core.model.sync.StaticManifest
+import kotlinx.coroutines.sync.withLock
 
 /** "No account for this device yet" — the server's way of saying "register it". */
 private const val DEVICE_UNKNOWN = "US_015"
@@ -150,7 +153,25 @@ class GameApi(
             authenticated = true, sensitive = true)
     }
 
-    suspend fun capabilities(): ApiCapabilities =
-        ApiCapabilities.of(WireJson.decodeFromJsonElement(kotlinx.serialization.builtins.ListSerializer(RouteInfo.serializer()), http.request("GET", "system/routes")))
+    private val manifestLock = kotlinx.coroutines.sync.Mutex()
+    private var manifest: StaticManifest? = null
+
+    /**
+     * `static/index.json`, read once for this server (a server change makes a new [GameApi]):
+     * the routes and every fingerprint the start needs. [fresh] asks again — after an
+     * administrator's edit, which moves the world's fingerprint.
+     */
+    suspend fun manifest(fresh: Boolean = false): StaticManifest = manifestLock.withLock {
+        manifest?.takeIf { !fresh } ?: files.manifest().also { manifest = it }
+    }
+
+    suspend fun capabilities(): ApiCapabilities = manifest().capabilities
+
+    /**
+     * Where commands deliver the hero (server 0.48.0): [parts] names the fingerprints held for a
+     * character — `null` for one nobody shows — and [apply] receives the snapshot, or `null` when
+     * the answer carried none and the hero has to be read again.
+     */
+    fun heroSync(parts: (String) -> String?, apply: (String, HeroSnapshot?) -> Unit) { http.heroParts = parts; http.onHero = apply }
     suspend fun health(): JsonElement = http.request("GET", "system/health")
 }

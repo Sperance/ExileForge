@@ -12,6 +12,8 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 private val Context.settings by preferencesDataStore("server_settings")
 
@@ -107,6 +109,29 @@ class ServerStore(private val context: Context) {
     }
 
     private fun portraitKey(server: String) = stringPreferencesKey("portraits:$server")
+
+    /**
+     * The world's reference tables (server 0.48.0), kept per server as a file beside its hash.
+     *
+     * The file is the size of the whole catalogue, too big for a preference; the hash stays in
+     * DataStore so a torn write is a missing file, never a stale one under a fresh hash.
+     */
+    suspend fun world(server: String): Pair<String, String>? = withContext(Dispatchers.IO) {
+        val hash = context.settings.data.first()[worldHashKey(server)] ?: return@withContext null
+        worldFile(server).takeIf { it.isFile }?.readText()?.let { hash to it }
+    }
+
+    suspend fun saveWorld(server: String, hash: String, document: String) {
+        withContext(Dispatchers.IO) {
+            context.settings.edit { it.remove(worldHashKey(server)) }
+            worldFile(server).apply { parentFile?.mkdirs() }.writeText(document)
+            context.settings.edit { it[worldHashKey(server)] = hash }
+        }
+    }
+
+    private fun worldHashKey(server: String) = stringPreferencesKey("world:$server:hash")
+    private fun worldFile(server: String) =
+        java.io.File(context.filesDir, "world/" + java.util.UUID.nameUUIDFromBytes(server.toByteArray()) + ".json")
 
     /**
      * Whether the last session was played on this device's own account.

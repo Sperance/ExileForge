@@ -45,7 +45,7 @@ class CatalogViewModel(private val runtime: ForgeRuntime) {
 
     fun open(id: String) { with(runtime) { task(touches = setOf(Reads.CATALOG)) {
         val document = api.catalog.get(state.value.admin.catalog, id) ?: error(ui("catalog.not_found"))
-        ensureDefinitions()
+        ensureWorld()
         setEditor(document, document)
     } } }
 }

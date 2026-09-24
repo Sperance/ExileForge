@@ -109,6 +109,9 @@ data class ApiCapabilities(val routes: Set<String>) {
             // 0.37.0: the crafts, worked by time on the server.
             "GET" to "/api/v1/character/crafts",
             "POST" to "/api/v1/character/crafts/start",
+            // 0.48.0: the reference tables as one kept file and the hero as one snapshot.
+            "GET" to "/world/world.json",
+            "GET" to "/api/v1/character/view",
         )
         val missing = required.filterNot { (method, path) -> has(method, path) }
         require(missing.isEmpty()) {

@@ -36,6 +36,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
+import com.sperance.exileforge.core.model.sync.WorldTables
+import kotlinx.coroutines.sync.withLock
 
 class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val deviceId: String = "") {
     val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Main.immediate)
@@ -78,6 +80,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
                 }
             }
         })
+        created.heroSync(heroViewModel::heldParts, heroViewModel::delivered)
         return created
     }
 
@@ -132,7 +135,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
         val server = state.value.account.server
         val cached = store.locale(server, language.code)
         cached?.let { (hash, document) -> applyLocale(LocaleBundle.parse(language.code, hash, document)) }
-        val manifest = api.files.localeManifest()
+        val manifest = api.manifest().locale
         applyLanguages(server, manifest)
         val chosen = manifest.language(language.code) ?: manifest.language(manifest.default) ?: return
         if (cached == null || cached.first != chosen.hash || chosen.code != language.code)
@@ -180,7 +183,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
         val server = state.value.account.server
         val cached = store.icons(server)
         cached?.let { (hash, document) -> applyIcons(IconBundle.parse(hash, document)) }
-        val manifest = api.files.iconManifest()
+        val manifest = api.manifest().icons
         if (manifest.hash.isBlank() || cached?.first == manifest.hash) return
         val document = api.files.iconDocument(manifest.file)
         store.saveIcons(server, manifest.hash, document)
@@ -209,7 +212,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
         val server = state.value.account.server
         val cached = store.portraits(server)
         applyPortraits(cached)
-        val manifest = api.files.portraitManifest()
+        val manifest = api.manifest().portraits
         val fresh = manifest.portraits.mapValues { (key, hash) ->
             cached[key]?.takeIf { it.first == hash } ?: (hash to api.files.portraitDocument(key))
         }
@@ -275,7 +278,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
      */
     suspend fun equipmentBase(id: String): JsonObject? {
         if (id.isBlank()) return null
-        ensureEquipment()
+        ensureWorld()
         return state.value.world.inventoryBases[id]
     }
 
@@ -360,77 +363,41 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
         mutable.update { it.copy(tab = 1, admin = it.admin.copy(original = original, editorOpen = true, draft = document)) }
     }
 
-    /** The modifier catalogue is small and shared; one read per session names every rolled value. */
-    suspend fun ensureDefinitions() {
-        if (state.value.world.definitions.isNotEmpty()) return
-        mutable.update { it.copy(world = it.world.copy(definitions = api.world.modifiers())) }
-    }
+    private val worldLock = kotlinx.coroutines.sync.Mutex()
+    private var worldHash = ""
+    private var worldStale = false
 
     /**
-     * The world's reference tables: the classes and the shared skill tree.
+     * Every reference table of the world (server 0.48.0): modifiers, classes, tree, levels,
+     * equipment bases, orbs, materials and the sheet's tables, one file kept on the device per
+     * server and fetched again only when the start manifest's fingerprint moves. A warm start reads
+     * none of it. [fresh] asks the manifest again — on entering a character, and after an
+     * administrator's edit, which is what moves the fingerprint.
      *
-     * Both are seeded and fixed for a session, and the tree is one graph rather than a page, so a
-     * single read backs the character form and the tree screen alike.
+     * Since 0.16.0 an instance carries only what it rolled, so a card without its base has nothing
+     * to say: this is a prerequisite of every hero read, not a courtesy.
      */
-    suspend fun ensureProgression() {
-        if (state.value.world.classes.isNotEmpty() && state.value.world.treeNodes.isNotEmpty() && state.value.world.levels.isNotEmpty()) return
-        val classes = api.world.classes()
-        val nodes = api.world.tree()
-        // The level table comes with them: it is the same kind of reference — fixed for a session —
-        // and without it the hero's experience is a number with nothing to measure it against.
-        val levels = api.world.levels().sortedBy { it.level }
-        mutable.update { it.copy(world = it.world.copy(classes = classes, treeNodes = nodes, levels = levels), play = it.play.copy(draftClass = it.play.draftClass.ifBlank { classes.firstOrNull()?.id.orEmpty() })) }
+    suspend fun ensureWorld(fresh: Boolean = false) = worldLock.withLock {
+        val server = state.value.account.server
+        val manifest = api.manifest(fresh || worldStale).world
+        worldStale = false
+        if (manifest.hash == worldHash && state.value.world.inventoryBases.isNotEmpty()) return@withLock
+        val stored = store.world(server)?.takeIf { it.first == manifest.hash }?.second
+        val document = stored ?: api.files.worldDocument(manifest.file).also { store.saveWorld(server, manifest.hash, it) }
+        val tables = withContext(Dispatchers.Default) { WorldTables.parse(manifest.hash, document) }
+        worldHash = tables.hash
+        mutable.update { it.copy(
+            world = it.world.copy(definitions = tables.modifiers, classes = tables.classes, treeNodes = tables.tree, levels = tables.levels,
+                inventoryBases = tables.equipment, statTables = tables.stats, orbs = tables.orbs, materials = tables.materials),
+            play = it.play.copy(draftClass = it.play.draftClass.ifBlank { tables.classes.firstOrNull()?.id.orEmpty() },
+                selectedOrb = it.play.selectedOrb.ifBlank { tables.orbs.firstOrNull()?.id.orEmpty() })) }
     }
 
-    /**
-     * The equipment catalogue, read whole once per session.
-     *
-     * Since 0.16.0 an instance carries only what it rolled: armour, damage and every requirement
-     * belong to the template and live in the catalogue in one copy. A card without its template
-     * therefore has nothing to say, so this is a hard requirement like the classes and the tree —
-     * not the background courtesy the per-item fetch used to be. The catalogue is some sixty
-     * documents and the client already reads it whole for the Catalogue tab.
-     */
-    suspend fun ensureEquipment() {
-        if (state.value.world.inventoryBases.isNotEmpty()) return
-        val templates = api.catalog.equipment().associateBy { it.entityId }
-        mutable.update { it.copy(world = it.world.copy(inventoryBases = templates)) }
-    }
-
-    /** The tables the client adds the sheet up by: public and fixed per server, so read once. */
-    suspend fun ensureStatTables() {
-        if (state.value.world.statTables.stats.isNotEmpty()) return
-        val tables = api.world.statTables()
-        mutable.update { it.copy(world = it.world.copy(statTables = tables)) }
-    }
-
-    /** The orbs the server seeded. The catalogue is fixed for a session, so one read covers it. */
-    suspend fun ensureOrbs() {
-        if (state.value.world.orbs.isNotEmpty()) return
-        val orbs = api.world.orbs()
-        mutable.update { it.copy(world = it.world.copy(orbs = orbs), play = it.play.copy(selectedOrb = it.play.selectedOrb.ifBlank { orbs.firstOrNull()?.id.orEmpty() })) }
-    }
-
-    /** The materials of the crafts (2.41.0), read once per session like the orbs. */
-    suspend fun ensureMaterials() {
-        if (state.value.world.materials.isNotEmpty()) return
-        val materials = api.world.materials()
-        mutable.update { it.copy(world = it.world.copy(materials = materials)) }
-    }
-
-    /**
-     * The crafting bench lines this character has found on maps (since 0.46.0). Cached like the
-     * rest of the world state, but a new find invalidates it (`world.bench` set empty) so the next
-     * hero read picks it up.
-     */
-    suspend fun ensureBench(characterId: String) {
-        if (state.value.world.bench.isNotEmpty()) return
-        val bench = api.hero.bench(characterId)
-        mutable.update { it.copy(world = it.world.copy(bench = bench)) }
-    }
+    /** An administrator changed a reference table: the next [ensureWorld] asks the manifest again. */
+    fun staleWorld() { worldStale = true }
 
     fun clearSession() {
-        api.logout(); journal.clear(); cancelReads(); expeditionViewModel.drop()
+        api.logout(); journal.clear(); cancelReads(); expeditionViewModel.drop(); worldHash = ""; heroViewModel.forget()
         mutable.update { it.copy(phase = AppPhase.AUTH, tab = 3, mode = AppMode.PLAYER, failure = null, account = it.account.copy(resumable = false, characters = emptyList(), charactersRead = false, signedIn = false, profile = null, sessionEpoch = it.account.sessionEpoch + 1), admin = it.admin.copy(items = emptyList(), total = 0, page = 0, totalPages = 0, original = null, draft = JsonObject(emptyMap()), editorOpen = false, checks = emptyList()), world = it.world.copy(definitions = emptyList(), orbs = emptyList(), bench = emptyList(), classes = emptyList(), treeNodes = emptyList(), inventoryBases = emptyMap(), campaign = null, statTables = com.sperance.exileforge.core.character.StatTables()), play = it.play.copy(selectedOrb = "", draftClass = "", selectedNode = "", nodeQuery = "", characterId = "", characterOwner = "", hero = null, selectedEquipment = "", forgeLine = "", campaign = null), market = it.market.copy(tab = 0, showcase = com.sperance.exileforge.core.model.auction.AuctionPage(), filter = com.sperance.exileforge.core.model.auction.AuctionFilter(), showOwnLots = false, myLots = emptyList(), locked = null)) }
     }
 

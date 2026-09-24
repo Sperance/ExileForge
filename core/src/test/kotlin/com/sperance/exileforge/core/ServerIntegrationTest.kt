@@ -1,5 +1,8 @@
 package com.sperance.exileforge.core
 
+import com.sperance.exileforge.core.model.sync.HeroParts
+import com.sperance.exileforge.core.model.sync.HeroSnapshot
+
 import com.sperance.exileforge.core.contract.*
 import com.sperance.exileforge.core.display.IconBundle
 import com.sperance.exileforge.core.display.PortraitSvg
@@ -261,6 +264,31 @@ class ServerIntegrationTest {
         assertEquals(started.available, respec.available)
     }
 
+    /**
+     * Fewer requests (server 0.48.0): the world file holds what the tables did, the hero comes back
+     * whole on a read and as a 304 when nothing moved, and a command brings back only what it changed.
+     */
+    private suspend fun snapshotsAreTheServers(api: GameApi, id: String) {
+        val manifest = api.manifest(fresh = true)
+        manifest.requireWorkbench()
+        val world = com.sperance.exileforge.core.model.sync.WorldTables.parse(manifest.world.hash, api.files.worldDocument(manifest.world.file))
+        assertEquals(api.catalog.equipment().size, world.equipment.size)
+        assertEquals(api.world.modifiers().size, world.modifiers.size)
+        assertTrue(world.orbs.isNotEmpty() && world.classes.isNotEmpty() && world.tree.isNotEmpty() && world.stats.stats.isNotEmpty())
+        val first = assertNotNull(api.hero.view(id, HeroParts(id)))
+        val held = HeroParts(id).merge(first)
+        assertTrue(held.complete, "parts: ${first.parts.keys}")
+        assertEquals(api.hero.inventory(id).map { it.id }.toSet(), held.inventory.map { it.id }.toSet())
+        assertNull(api.hero.view(id, held), "an unchanged hero was sent again")
+        var delivered: HeroSnapshot? = null
+        api.heroSync({ if (it == id) held.header() else null }, { _, snapshot -> delivered = snapshot })
+        try {
+            api.hero.addExperience(id, 1.0)
+            val moved = assertNotNull(delivered, "the command came back without the hero")
+            assertTrue(HeroParts.CHARACTER in moved.parts && HeroParts.INVENTORY !in moved.parts, "parts: ${moved.parts.keys}")
+        } finally { api.heroSync({ null }, { _, _ -> }) }
+    }
+
     @Test fun realServerClientContract(): Unit = runBlocking {
         val url = System.getenv("EF_LIVE_URL")
         assumeTrue("Enabled only by the isolated client/server job", !url.isNullOrBlank())
@@ -374,6 +402,7 @@ class ServerIntegrationTest {
                 assertEquals(definition.effects.size, rolled.values.size, "${definition.code} rolled ${rolled.values}")
             }
             assertFalse(instance.equipped)
+            snapshotsAreTheServers(api, id)
 
             // Points come from levels, so the character is levelled before wearing or spending anything.
             assertTrue(api.hero.addExperience(id, levels.last().experience).level > 1)

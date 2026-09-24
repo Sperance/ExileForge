@@ -48,7 +48,9 @@ class CharacterViewModel(private val runtime: ForgeRuntime) {
      */
     private suspend fun entered(id: String) { with(runtime) {
         mutable.update { it.copy(phase = AppPhase.GAME, tab = 0, play = it.play.copy(characterId = id, hero = null, characterOwner = "", selectedEquipment = "", forgeLine = "", campaign = null,
-            crafts = null, craftsTotals = com.sperance.exileforge.core.model.crafts.WorkGains(), craftsLast = null, craftsPending = com.sperance.exileforge.core.model.crafts.WorkGains()), world = it.world.copy(inventoryBases = emptyMap())) }
+            crafts = null, craftsTotals = com.sperance.exileforge.core.model.crafts.WorkGains(), craftsLast = null, craftsPending = com.sperance.exileforge.core.model.crafts.WorkGains()))) }
+        heroViewModel.forget()
+        ensureWorld(fresh = true)
         heroViewModel.readHero()
         // Tab 0 is the catalogue, and this is where it becomes the open one.
         loadPage(0)
@@ -98,5 +100,5 @@ class CharacterViewModel(private val runtime: ForgeRuntime) {
     } } }
 
     /** The classes the creation form offers; they are seeded and fixed for a session. */
-    fun ensureClasses() { with(runtime) { read(Reads.PROGRESSION) { ensureProgression() } } }
+    fun ensureClasses() { with(runtime) { read(Reads.PROGRESSION) { ensureWorld() } } }
 }

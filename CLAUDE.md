@@ -26,9 +26,9 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.54.1, `versionCode` 74) for the
-**ktor-bestgame** RPG server (0.47.1), pinned in
-`core/.../contract/Contract.kt` as `SERVER_COMMIT = e35ff79e4b29b82ebfd30811ac1c3f72f379ab48`
+ExileForge is an **Android Compose client** (version 2.55.0, `versionCode` 75) for the
+**ktor-bestgame** RPG server (0.48.0), pinned in
+`core/.../contract/Contract.kt` as `SERVER_COMMIT = e1ff56c5bd6cfec6f703190bfb7ccb4f976d1a4c`
 on the server branch `claude/tender-pasteur-a36kj2`.
 
 The client is deliberately **thin**: the server owns items, modifier rolls and inventory, and it
@@ -207,7 +207,7 @@ permissions stay computed properties on the top: `isAdmin`, `adminTools`, `canEd
   goes through one of the two.** Pass `writing = true` for mutations so that IO/5xx failures are
   classified as `UncertainWrite` rather than `Offline`. A refusal is shown to a player as the
   sentence alone and to an administrator as `HTTP <status> <code>: <sentence>` (`refusalLine`).
-- `loadPage`, `setEditor`, `ensureDefinitions`, `recipeDocument`, `clearSession`, `newApi`.
+- `loadPage`, `setEditor`, `ensureWorld`, `staleWorld`, `recipeDocument`, `clearSession`, `newApi`.
 
 **Feature view models** (`presentation/features/*`) hold no state of their own; they read
 `runtime.state.value` and `mutable.update { it.copy(...) }`. They are written as
@@ -317,8 +317,10 @@ These are enforced by tests and are the point of the client's design:
 5. **Uncertain writes are surfaced, not retried.** `FailureState.UncertainWrite` (IO error or 5xx
    on a write) tells the user to refresh. There is no durable replay: this server has no
    `requestId`, so a repeat would create a second instance.
-6. **Capabilities gate features.** `ApiCapabilities` is built from the server's own `/system/routes`
-   table, and `requireWorkbench()` runs before login so a stale server is named, not guessed at.
+6. **Capabilities gate features.** `ApiCapabilities` is built from the routes in the server's
+   `static/index.json` (`StaticManifest`, read once per `GameApi` by `api.manifest()`), and
+   `StaticManifest.requireWorkbench()` runs before login — API revision first (`API_REVISION`,
+   5 since 2.55.0), then the routes — so a stale server is named, not guessed at.
 7. **Secrets never reach the journal.** `request(sensitive = true)` for every exchange that carries a
    password or answers a token (both logins, device registration, password change): the query,
    body and response are stored as `[скрыто]`, and the `Authorization` header is never journaled.
@@ -334,7 +336,7 @@ These are enforced by tests and are the point of the client's design:
    rolled: the base lives in the catalogue in a single copy and reaches an item through its
    `equipmentId`, so rebalancing a base reaches every copy already in the world and no card can
    print a property twice. That makes the catalogue a prerequisite rather than a nicety —
-   `ForgeRuntime.ensureEquipment()` reads `GET /api/v1/equipment` whole, once per session, and
+   `ForgeRuntime.ensureWorld()` brings the catalogue with `world/world.json` (since 2.55.0), and
    `requireWorkbench` names the route so a stale server is reported instead of drawing half an
    item. `validateModifierPool` rejects rolled `params` in a template write, and
    `inventoryDocument` is a display-only projection — base first, then the rolls — that must never
@@ -538,9 +540,15 @@ These are enforced by tests and are the point of the client's design:
     same as coming back: `readCharacters(autoEnter = true)` is passed exactly once, by the
     sign-in, because the menu is also where a player goes *to leave* a character — entering the
     only one again there would make the screen unreachable for anyone who owns one.
-20. **The hero is re-read on a reason, never on a timer and never on request.** Reading it whole
-    is five requests, so nothing asks the player to press anything: a command re-reads it because
-    the command changed it, and everything changed *elsewhere* — a trade, an administrator, the
+20. **The hero comes back with the command; it is re-read on a reason, never on a timer.** Since
+    2.55.0 (server 0.48.0) `Transport` sends `X-Hero-Parts` (the fingerprints `HeroViewModel` holds
+    in `HeroParts`) with every POST that names the shown `characterId`, and the answer's `hero`
+    snapshot — only the parts that moved — is folded in by `HeroViewModel.delivered`; an answer
+    without one sets `heroReadAt` to 0 and the command reads the hero again. A read is one
+    `GET /character/view` with `If-None-Match`, usually a 304. The reference tables are one file,
+    `world/world.json`, kept on the device by `ServerStore.world` and applied by
+    `ForgeRuntime.ensureWorld()` (it replaced every `ensure*` table read and `ensureBench`: the bench
+    is a hero part). Nothing asks the player to press anything, and everything changed *elsewhere* — a trade, an administrator, the
     same account on another device — is caught by `heroReadAt` going cold. `ensureHero()` refreshes
     when a character tab opens and the last reading is older than `FRESH_FOR`; a trade sets the
     stamp to 0 because the auction patches only the bag and the inventory, never the character

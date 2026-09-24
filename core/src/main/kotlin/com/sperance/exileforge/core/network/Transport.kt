@@ -37,6 +37,8 @@ import okhttp3.*
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
+import com.sperance.exileforge.core.model.sync.HeroParts
+import com.sperance.exileforge.core.model.sync.HeroSnapshot
 
 private val JsonMedia = "application/json; charset=utf-8".toMediaType()
 
@@ -65,6 +67,15 @@ class Transport(
     internal var token: String? = null
 
     /**
+     * The fingerprints of the hero parts held for a character, or `null` for a character nobody is
+     * looking at. A command on a character that has them asks the server for its snapshot.
+     */
+    internal var heroParts: (String) -> String? = { null }
+
+    /** A command's snapshot of the hero, or `null` when the answer came without one. */
+    internal var onHero: (String, HeroSnapshot?) -> Unit = { _, _ -> }
+
+    /**
      * The whole collection.
      *
      * This is how every list is read. The server's `/paged` route still hands `page` straight to the
@@ -88,14 +99,17 @@ class Transport(
      * The same file as text, so a dictionary can be stored verbatim and parsed again offline.
      * [json] = false is for a portrait's SVG, which is checked by its own parser, not as JSON.
      */
-    internal suspend fun fetchText(path: String, json: Boolean = true): String {
+    internal suspend fun fetchText(path: String, json: Boolean = true, authenticated: Boolean = false): String {
         val url = base.newBuilder().addPathSegments(path).build()
+        val credential = token.takeIf { authenticated }
+        if (authenticated) require(credential != null) { ui("api.sign_in_tab") }
         val start = System.nanoTime()
         var status: Int? = null
         var responseText = ""
         var success = false
         try {
-            val payload = client.newCall(Request.Builder().url(url).header("Accept", if (json) "application/json" else "image/svg+xml").get().build()).awaitPayload()
+            val payload = client.newCall(Request.Builder().url(url).header("Accept", if (json) "application/json" else "image/svg+xml")
+                .apply { credential?.let { header("Authorization", "Bearer $it") } }.get().build()).awaitPayload()
             status = payload.status
             responseText = payload.body.take(2_000)
             if (status !in 200..299) throw ApiFailure(status, null, ui("api.file_not_served", status))
@@ -119,7 +133,8 @@ class Transport(
      * it speaks for a session that has already been dropped here
      */
     internal suspend fun request(method: String, path: String, query: Map<String, String> = emptyMap(), body: JsonElement? = null,
-                                authenticated: Boolean = false, sensitive: Boolean = false, bearer: String? = null): JsonElement {
+                                authenticated: Boolean = false, sensitive: Boolean = false, bearer: String? = null,
+                                headers: Map<String, String> = emptyMap()): JsonElement {
         val credential = bearer ?: token.takeIf { authenticated }
         if (authenticated) require(credential != null) { ui("api.sign_in_tab") }
         val url = base.newBuilder().addPathSegments(path).apply { query.forEach { (k, v) -> addQueryParameter(k, v) } }.build()
@@ -128,8 +143,13 @@ class Transport(
         // still demands a body for those methods, so an empty one stands in for "no payload".
         val payload = body?.toString()?.toRequestBody(JsonMedia)
             ?: if (method in setOf("POST", "PUT", "PATCH")) "".toRequestBody(JsonMedia) else null
+        // Every command on a character the client shows asks for the hero back (server 0.48.0).
+        val heroOf = query["characterId"]?.takeIf { method == "POST" && authenticated }
+        val parts = heroOf?.let(heroParts)
         val request = Request.Builder().url(url).header("Accept", "application/json")
-            .apply { credential?.let { header("Authorization", "Bearer $it") } }.method(method, payload).build()
+            .apply { credential?.let { header("Authorization", "Bearer $it") } }
+            .apply { parts?.let { header(HeroParts.HEADER, it) } }
+            .apply { headers.forEach { (name, value) -> header(name, value) } }.method(method, payload).build()
         val start = System.nanoTime()
         var status: Int? = null
         var responseText = ""
@@ -138,6 +158,7 @@ class Transport(
             val payload = client.newCall(request).awaitPayload()
             status = payload.status
             if (status == 401 && authenticated) { token = null; onUnauthorized() }
+            if (status == 304) { success = true; return JsonNull }
             val raw = payload.body
             responseText = raw.take(12_000)
             val envelope = try { withContext(Dispatchers.Default) { WireJson.parseToJsonElement(raw).jsonObject } }
@@ -151,6 +172,9 @@ class Transport(
                     (error?.get("messageArgs") as? JsonArray).orEmpty().mapNotNull { (it as? JsonPrimitive)?.contentOrNull })
             }
             success = true
+            // The command has landed: a snapshot that cannot be read only means the hero is read again.
+            if (heroOf != null && parts != null) runCatching { onHero(heroOf, envelope["hero"]?.takeIf { it is JsonObject }
+                ?.let { runCatching { WireJson.decodeFromJsonElement(HeroSnapshot.serializer(), it) }.getOrNull() }) }
             return envelope["data"] ?: JsonNull
         } catch (e: CancellationException) {
             responseText = ui("api.cancelled"); throw e

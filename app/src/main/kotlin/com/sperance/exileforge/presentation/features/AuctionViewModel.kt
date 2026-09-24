@@ -46,7 +46,7 @@ class AuctionViewModel(private val runtime: ForgeRuntime) {
     /** The merchant's shelf (0.34.0): the server rolls it every four hours, nobody renews it sooner. */
     fun loadMerchant() { with(runtime) { trade(key = Reads.MERCHANT) {
         // An offer is drawn as the stash draws an item, base and all: the catalogue comes first.
-        ensureEquipment(); ensureDefinitions()
+        ensureWorld()
         val stock = api.merchant.stock(state.value.play.characterId.trim())
         mutable.update { it.copy(market = it.market.copy(merchant = stock)) }
     } } }
@@ -61,7 +61,7 @@ class AuctionViewModel(private val runtime: ForgeRuntime) {
         mutable.update { it.copy(market = it.market.copy(
             merchant = it.market.merchant?.let { stock -> stock.copy(offers = stock.offers.filter { offer -> offer.id != offerId }) })) }
         gold(purchase.money)
-        refreshInventory(id)
+        refreshHero(id)
     } } }
 
     /** One more lot place for gold (0.34.0). */
@@ -80,7 +80,7 @@ class AuctionViewModel(private val runtime: ForgeRuntime) {
     fun buy(lotId: String) { with(runtime) { trade(writing = true) {
         val id = state.value.play.characterId.trim()
         api.auction.buy(id, lotId)
-        refreshBag(id)
+        refreshHero(id)
         val filter = state.value.market.filter.copy(excludeSellerId = if (state.value.market.showOwnLots) "" else id, lang = state.value.lang.code)
         mutable.update { it.copy(market = it.market.copy(showcase = api.auction.search(id, filter, state.value.market.showcase.page))) }
     } } }
@@ -101,27 +101,20 @@ class AuctionViewModel(private val runtime: ForgeRuntime) {
     fun cancel(lotId: String) { with(runtime) { trade(writing = true) {
         val id = state.value.play.characterId.trim()
         api.auction.cancel(id, lotId)
-        refreshInventory(id)
+        refreshHero(id)
         mutable.update { it.copy(market = it.market.copy(myLots = api.auction.myLots(id), slots = api.auction.slots(id))) }
     } } }
 
     private suspend fun listed(characterId: String) { with(runtime) {
-        refreshInventory(characterId)
+        refreshHero(characterId)
         mutable.update { it.copy(market = it.market.copy(myLots = api.auction.myLots(characterId), slots = api.auction.slots(characterId), tab = 1)) }
     } }
 
-    /** The bag alone: a purchase spends orbs and may hand over stacking goods. */
-    private suspend fun refreshBag(characterId: String) { with(runtime) {
-        val bag = api.hero.bag(characterId)
-        mutable.update { state -> state.copy(play = state.play.copy(hero = state.play.hero?.copy(bag = bag), heroReadAt = 0)) }
-    } }
-
-    /** The inventory and the bag: a listing can move either kind of goods. */
-    private suspend fun refreshInventory(characterId: String) { with(runtime) {
-        val inventory = api.hero.inventory(characterId)
-        val bag = api.hero.bag(characterId)
-        mutable.update { state -> state.copy(play = state.play.copy(hero = state.play.hero?.copy(inventory = inventory, bag = bag), heroReadAt = 0)) }
-    } }
+    /**
+     * The hero after a trade: one read of what moved (server 0.48.0) — the bag, the stash, the
+     * purse — rather than the bag and the inventory as two requests.
+     */
+    private suspend fun refreshHero(characterId: String) { if (characterId == runtime.state.value.play.characterId.trim()) runtime.heroViewModel.readHero() }
 
     /**
      * The standard wrapper plus the auction's own gate.

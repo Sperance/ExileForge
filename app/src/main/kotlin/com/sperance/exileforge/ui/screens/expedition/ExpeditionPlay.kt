@@ -51,7 +51,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
  * A run of the campaign, over the whole screen: the scene underneath, the overlay above.
  *
  * The scene draws and steps the world; everything with words or numbers in it — the bars, the
- * monster's name and modifiers, the hits, the ailments, the flask, the loot — is Compose, in the
+ * monster's name and modifiers, the hits, the ailments, the loot — is Compose, in the
  * app's dictionary and theme, laid over it. The stick is the overlay's too: a thumb anywhere in the
  * lower part of the screen sets it, and letting go stops the hero.
  */
@@ -68,7 +68,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
         when (hud.phase) {
             RunPhase.MAP -> {
                 Stick(run)
-                MapBar(run, hud, onLeave = { leaving = true }, onFlask = { vm.runCommand(RunCommand.Flask) }, onGear = { gear = true })
+                MapBar(run, hud, onLeave = { leaving = true }, onGear = { gear = true })
                 if (gear) GearSheet(s, vm) { gear = false }
                 if (hud.chestPending || hud.chestFailed || hud.chest != null) ChestLoot(s, hud) { vm.runCommand(RunCommand.DismissChest) }
                 if (leaving) ConfirmSheet(title = ui("expedition.leave_q"), confirm = ui("expedition.leave"), danger = true,
@@ -92,11 +92,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 // ==================== Walking ====================
 
 /**
- * Life, shield and the flask, the map's name and whether its warden still lives, and the way out.
- * Nothing comes back on its own between fights (2.29.0), so the flask is here too: the same charge,
- * the same heal. What the map still holds — foes, chests, fountains — is the walk's to find (2.56.1).
+ * Life and shield, the map's name and whether its warden still lives, and the way out. Nothing
+ * comes back on its own between fights (2.29.0) but a fountain. What the map still holds — foes, chests, fountains — is the walk's to find (2.56.1).
  */
-@Composable private fun MapBar(run: ExpeditionRun, hud: RunHud, onLeave: (() -> Unit)?, onFlask: () -> Unit, onGear: () -> Unit) {
+@Composable private fun MapBar(run: ExpeditionRun, hud: RunHud, onLeave: (() -> Unit)?, onGear: () -> Unit) {
     Column(Modifier.fillMaxWidth().statusBarsPadding().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             // The way out (2.56.1): a portal in a bronze ring, first thing in the corner, and it asks before it goes.
@@ -111,12 +110,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
             MiniMap(run.world)
         }
         Vitals(hud.heroLife, hud.heroMaxLife, hud.heroShield, hud.heroMaxShield, Modifier.fillMaxWidth(.6f))
-        Button(enabled = hud.flasks > 0 && !hud.flaskActive, onClick = onFlask, modifier = Modifier.fillMaxWidth(.6f).height(34.dp), contentPadding = PaddingValues(horizontal = 12.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Blood, contentColor = GoldBright, disabledContainerColor = Panel, disabledContentColor = Muted)) {
-            Icon(ForgeGlyphs.Flask, null, modifier = Modifier.size(16.dp))
-            Spacer(Modifier.width(6.dp))
-            Text(ui(if (hud.flaskActive) "expedition.flask_drinking" else "expedition.flask", hud.flasks, hud.maxFlasks), style = MaterialTheme.typography.labelMedium)
-        }
     }
 }
 

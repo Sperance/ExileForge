@@ -32,8 +32,8 @@ import kotlin.math.sin
 
 /**
  * The campaign's scene, drawn by Compose itself: the map in pseudo-isometry while walking, with
- * the hero and the monsters as round tokens of their portraits (since 2.31.0), and the
- * ground alone while fighting — the fighters are the arena overlay's framed portraits. Everything is a shape — rule 17, no picture is ever loaded
+ * the hero and the monsters as round tokens of their portraits (since 2.31.0), and while fighting
+ * the cave of the owner's mockup VI with the fighters standing in it (2.57.0, [fightStage]). Everything is a shape — rule 17, no picture is ever loaded
  * — and nothing here is text: names, bars and numbers are the overlay's, in the app's dictionary.
  *
  * The scene is also the run's clock: every frame [ExpeditionRun.update] is called once from the
@@ -78,7 +78,12 @@ private class ScenePainter {
         unit = with(scope) { 30.dp.toPx() }
         val palette = Palettes.of(run.map.biome)
         scope.drawRect(palette.void)
-        if (run.fight != null) fight(scope, palette) else map(scope, run, palette)
+        val fight = run.hud.value.fight
+        if (run.fight != null && fight != null) {
+            val agent = run.fightAgentOnMap
+            val waiting = agent?.let { it.pack.drop(it.packIndex + 1) }.orEmpty()
+            scope.fightStage(fight, waiting, palette, classCode, time)
+        } else map(scope, run, palette)
     }
 
     // ==================== The map ====================
@@ -376,25 +381,6 @@ private class ScenePainter {
             pen.line(cx - unit * .4f, cy + unit * .7f, cx + unit * .4f, cy + unit * 1.5f, unit * .06f)
             pen.line(cx + unit * .4f, cy + unit * .7f, cx - unit * .4f, cy + unit * 1.5f, unit * .06f)
             pen.circle(cx, cy + unit * 1.1f, unit * .1f)
-        }
-    }
-
-    // ==================== The fight ====================
-
-    /**
-     * Under the arena's frames (2.28.0) the scene keeps only the ground: the biome's floor as a lit
-     * oval fading into its dark, and still (2.30.0): only the two frames move. The fighters are the overlay's framed portraits.
-     */
-    private fun fight(scope: DrawScope, palette: Palette) {
-        val w = scope.size.width
-        val h = scope.size.height
-        scope.translate(0f, h * .62f) {
-            for (i in 6 downTo 1) {
-                pen.color = palette.floor.copy(alpha = .14f * (7 - i) / 6f + .04f)
-                pen.ellipse(w / 2 - w * .09f * i, -h * .035f * i, w * .18f * i, h * .07f * i)
-            }
-            pen.color = palette.accent.copy(alpha = .08f)
-            pen.ellipse(w / 2 - w * .3f, -h * .02f, w * .6f, h * .04f)
         }
     }
 }

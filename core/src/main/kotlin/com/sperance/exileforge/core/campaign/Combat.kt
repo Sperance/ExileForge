@@ -10,7 +10,7 @@ import kotlin.random.Random
 enum class Side { HERO, MONSTER; val other: Side get() = if (this == HERO) MONSTER else HERO }
 
 /** What a fighter did: swung a weapon, let an ailment burn on, drank, or turned to leave. Spells left the game in 2.48.0. */
-enum class Action { ATTACK, TICK, FLASK, RETREAT }
+enum class Action { ATTACK, TICK, RETREAT }
 
 /** How a blow ended: it landed, landed hard, or never reached. */
 enum class HitKind { HIT, CRIT, EVADED, BLOCKED }
@@ -93,9 +93,6 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
     fun ailmentDuration(ailment: Ailment) = 1 - percent("STOCK_${ailment.word}_DURATION_ON_SELF", rules.ailmentDurationCap)
     val lifeOnHit = max(0.0, stat("STOCK_HEALTH_ON_HIT"))
     val lifeOnKill = max(0.0, stat("STOCK_HEALTH_ON_KILL"))
-    /** Charges the flask carries on top of the rule's, and how much more one heals. */
-    val extraFlasks = max(0.0, stat("STOCK_FLASK_CHARGES")).toInt()
-    val flaskHeal = rules.flask.heal * (1 + max(0.0, stat("STOCK_FLASK_RECOVERY")) / 100)
 }
 
 /** An ailment on a fighter: what, until when, how hard, and who put it there. */
@@ -104,8 +101,7 @@ data class ActiveAilment(val ailment: Ailment, val until: Double, val magnitude:
 /**
  * One thing that happened, and where both sides stood after it.
  *
- * [actor] is who did it; what it did was done to the other side, except a [Action.FLASK], which is
- * drunk by the actor. A [Action.TICK] is an ailment's damage gathered over the last second, so the
+ * [actor] is who did it; what it did was done to the other side. A [Action.TICK] is an ailment's damage gathered over the last second, so the
  * log is not a flood; [type] is the damage that led — the biggest share of a hit, or the ailment's.
  */
 data class CombatEvent(
@@ -127,16 +123,16 @@ data class CombatEvent(
     val monsterShield: Double,
 ) {
     /** Who the number floats off. */
-    val target: Side get() = if (action == Action.FLASK) actor else actor.other
+    val target: Side get() = actor.other
     val landed: Boolean get() = kind == HitKind.HIT || kind == HitKind.CRIT
 }
 
 /** A whole fight, as a test or a replay reads it. */
-data class CombatLog(val events: List<CombatEvent>, val outcome: Outcome, val heroLife: Double, val flasks: Int, val duration: Double)
+data class CombatLog(val events: List<CombatEvent>, val outcome: Outcome, val heroLife: Double, val duration: Double)
 
 /**
  * The fight, alive: stepped in fixed slices of time so that the same seed is the same fight on any
- * screen, and open to the player while it runs — a flask can be drunk and a retreat begun.
+ * screen, and open to the player while it runs — a retreat can be begun.
  *
  * Each side swings at its own attack speed. A swing can be evaded (evasion against the attacker's level), blocked,
  * or land; a landing hit rolls the rule's variance per damage type, may be a critical strike, and is
@@ -155,7 +151,6 @@ class Battle(
     val monster: Combatant,
     val rules: CombatRules,
     heroLife: Double,
-    flasks: Int,
     private val random: Random,
 ) {
     /** One side in motion: its pools, its clocks and what is on it. */
@@ -171,8 +166,6 @@ class Battle(
         /** Damage over time gathered per ailment since its last tick was logged, and when that was. */
         val ticking = mutableMapOf<Ailment, Double>()
         val tickedAt = mutableMapOf<Ailment, Double>()
-        var flaskUntil = 0.0
-        var flaskRate = 0.0
 
         val alive: Boolean get() = life > 0
         val held: Boolean get() = heldUntil > time
@@ -198,8 +191,6 @@ class Battle(
         private set
     var outcome: Outcome? = null
         private set
-    var flasks = flasks
-        private set
     private var retreatAt = Double.NaN
     private var carry = 0.0
     private val log = mutableListOf<CombatEvent>()
@@ -208,7 +199,6 @@ class Battle(
     fun fighter(side: Side) = fighters.getValue(side)
     val heroLife: Double get() = fighter(Side.HERO).life
     val retreating: Boolean get() = !retreatAt.isNaN()
-    val flaskActive: Boolean get() = fighter(Side.HERO).flaskUntil > time
 
     /** Moves the fight on by [dt] seconds in fixed slices, so a frame's length never changes what happens. */
     fun advance(dt: Double) {
@@ -216,17 +206,6 @@ class Battle(
         if (outcome != null) { time += dt; return }
         carry += dt
         while (carry >= STEP - 1e-12 && outcome == null) { carry -= STEP; step(STEP) }
-    }
-
-    /** Drinks a charge: [FlaskRule.heal] percent of life, raised by the sheet's recovery, over its duration. One at a time, and never after the fight. */
-    fun useFlask(): Boolean {
-        val me = fighter(Side.HERO)
-        if (outcome != null || flasks <= 0 || me.flaskUntil > time) return false
-        flasks--
-        me.flaskUntil = time + rules.flask.duration
-        me.flaskRate = me.body.maxLife * me.body.flaskHeal / 100 / rules.flask.duration
-        record(Side.HERO, Action.FLASK, HitKind.HIT, 0.0, null, me.body.maxLife * me.body.flaskHeal / 100, false, emptyList(), null)
-        return true
     }
 
     /** Turns to leave: the hero stops swinging, the monster gets the rule's delay of free swings, then the fight is over. */
@@ -245,7 +224,7 @@ class Battle(
     fun swing(side: Side): Float = fighter(side).let { if (outcome != null || (side == Side.HERO && retreating)) 0f else (1 - (it.nextAttack - time) / it.attackInterval).toFloat().coerceIn(0f, 1f) }
 
     /** The log as a test or a report reads it, once the fight is over. */
-    fun log(): CombatLog = CombatLog(log.toList(), outcome ?: Outcome.RETREAT, heroLife, flasks, duration)
+    fun log(): CombatLog = CombatLog(log.toList(), outcome ?: Outcome.RETREAT, heroLife, duration)
 
     // ==================== One slice of time ====================
 
@@ -269,7 +248,6 @@ class Battle(
         me.life = min(me.body.maxLife, me.life + me.body.lifeRegen * dt)
         val recharge = if (time - me.lastHit >= rules.shield.rechargeDelay) me.body.maxShield * rules.shield.rechargePerSecond / 100 else 0.0
         me.shield = min(me.body.maxShield, me.shield + (me.body.shieldRegen + recharge) * dt)
-        if (me.flaskUntil > time) me.life = min(me.body.maxLife, me.life + me.flaskRate * dt)
     }
 
     /** Ailments run their course: damage over time is applied every slice and logged once a second. */
@@ -410,8 +388,8 @@ class Battle(
 
 /** The fight run through from start to finish, for a test or a summary. */
 object Combat {
-    fun fight(hero: Combatant, monster: Combatant, heroLife: Double, random: Random, rules: CombatRules = hero.rules, flasks: Int = 0): CombatLog {
-        val battle = Battle(hero, monster, rules, heroLife, flasks, random)
+    fun fight(hero: Combatant, monster: Combatant, heroLife: Double, random: Random, rules: CombatRules = hero.rules): CombatLog {
+        val battle = Battle(hero, monster, rules, heroLife, random)
         while (battle.outcome == null) battle.advance(1.0)
         return battle.log()
     }

@@ -6,7 +6,6 @@ import com.sperance.exileforge.core.model.campaign.CampaignRarity
 import com.sperance.exileforge.core.model.campaign.CampaignReward
 import com.sperance.exileforge.core.model.campaign.CombatRules
 import java.util.concurrent.ConcurrentLinkedQueue
-import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.random.Random
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,9 +27,9 @@ data class AilmentView(val ailment: Ailment, val left: Float, val stacks: Int)
 
 /**
  * The fight as the overlay prints it: who, how much life and shield each side has, what just
- * landed, how far each side is into its next swing (0..1), what is on each of them, the hero's
- * flask, and the blows so far, newest first, for the log under the fighters. Until [started] the
- * fighters stand still: since 2.48.0 a fight begins when the player says so.
+ * landed, how far each side is into its next swing (0..1), what is on each of them, and the blows
+ * so far, newest first, for the log under the fighters. Until [started] the fighters stand still: a
+ * fight begins when the player says so (2.48.0), and since 2.57.0 so does each next foe of a pack.
  */
 data class FightHud(
     val monster: RolledMonster,
@@ -42,7 +41,7 @@ data class FightHud(
     val heroSwing: Float = 0f, val monsterSwing: Float = 0f,
     val heroAilments: List<AilmentView> = emptyList(), val monsterAilments: List<AilmentView> = emptyList(),
     val heroHeld: Boolean = false, val monsterHeld: Boolean = false,
-    val flasks: Int = 0, val flaskActive: Boolean = false, val retreating: Boolean = false,
+    val retreating: Boolean = false,
     val lunge: LungeView? = null,
     val events: List<CombatEvent> = emptyList(),
     val started: Boolean = true,
@@ -58,7 +57,7 @@ data class PackHit(val monster: RolledMonster, val events: List<CombatEvent>, va
 /**
  * A fight that is over, as the screen after it reads it: the whole log to scroll back through and
  * what it came to — dealt and taken by blows and by ailments, how long, criticals,
- * blocks, evasions, what was inflicted, flasks drunk.
+ * blocks, evasions, what was inflicted.
  *
  * Since 2.54.0 a jetton can be a pack of up to three, fought one after another without leaving the
  * arena: [pack] holds one [PackHit] per foe actually fought, in order, and [monster] — for the
@@ -82,7 +81,6 @@ data class FightReport(
     val crits: Int get() = mine().count { it.kind == HitKind.CRIT }
     val blocked: Int get() = mine().count { it.kind == HitKind.BLOCKED }
     val evaded: Int get() = theirs().count { it.kind == HitKind.EVADED }
-    val flasks: Int get() = mine(Action.FLASK).size
     val inflicted: List<Ailment> get() = mine().flatMap { it.inflicted }.distinct()
     val suffered: List<Ailment> get() = theirs().flatMap { it.inflicted }.distinct()
     val retreated: Boolean get() = mine(Action.RETREAT).isNotEmpty()
@@ -93,9 +91,6 @@ data class RunHud(
     val phase: RunPhase,
     val mapCode: String,
     val heroLife: Int, val heroMaxLife: Int, val heroShield: Int, val heroMaxShield: Int,
-    val flasks: Int = 0, val maxFlasks: Int = 0,
-    /** A flask being drunk on the map. */
-    val flaskActive: Boolean = false,
     val alive: Int, val total: Int,
     /** The exit is sealed while the map's boss lives (since 2.34.0). */
     val sealed: Boolean = false,
@@ -124,11 +119,9 @@ sealed interface RunCommand {
     data object Continue : RunCommand
     data object Speed : RunCommand
     data object Leave : RunCommand
-    /** Drink a life flask, mid-fight. */
-    data object Flask : RunCommand
     /** Walk out of the fight: the monster gets its free swings first; before it began, simply walk away. */
     data object Retreat : RunCommand
-    /** The fight begins (since 2.48.0): until then the two only face each other. */
+    /** The fight begins (since 2.48.0), and each next foe of a pack too (2.57.0): until then the two only face each other. */
     data object Begin : RunCommand
     data class Reward(val reward: CampaignReward) : RunCommand
     data object RewardFailed : RunCommand
@@ -150,7 +143,7 @@ sealed interface RunCommand {
 }
 
 /**
- * One run of a campaign map: the world, the hero's life and flask across it and the fights on
+ * One run of a campaign map: the world, the hero's life across it and the fights on
  * the way.
  *
  * The scene calls [update] once a frame and draws [world] and [fight]; the overlay reads [hud] and
@@ -159,10 +152,9 @@ sealed interface RunCommand {
  * whoever listens reports them and hands the answer back as a command.
  *
  * The hero's life carries from fight to fight and **does not return while walking** (since
- * 2.29.0): life comes back only in a fight — by regeneration, leech or the flask — from a flask
- * drunk on the map, or once from each fountain the map holds (since 2.48.0), which heals over the same seconds it does in a fight and is cut short by an
- * encounter. The shield is whole again after every fight. The flask starts the run with the rule's
- * charges and earns one per kill. A lost fight ends the run and keeps everything already looted; a fight the hero walked out
+ * 2.29.0): life comes back only in a fight — by regeneration or leech — or once from each
+ * fountain the map holds (since 2.48.0). The flask left the game in 2.57.0. The shield is whole
+ * again after every fight. A lost fight ends the run and keeps everything already looted; a fight the hero walked out
  * of, or that ran out of time, leaves the monster standing and calm for a while.
  */
 class ExpeditionRun(
@@ -187,9 +179,6 @@ class ExpeditionRun(
     private var phase = RunPhase.MAP
     private var life = hero.maxLife
     private var started = false
-    /** The rule's charges and whatever the sheet adds (since 2.39.0). */
-    private var maxFlasks = rules.flask.charges + hero.extraFlasks
-    private var flasks = maxFlasks
     private var fights = 0
     private var speed = 1
     private var reward: CampaignReward? = null
@@ -209,10 +198,6 @@ class ExpeditionRun(
     private var chestPending = false
     private var chestFailed = false
     private var fightAgent: MonsterAgent? = null
-    /** The map's own clock, and the flask drunk on it: until when it heals, and how fast. */
-    private var clock = 0.0
-    private var flaskUntil = 0.0
-    private var flaskRate = 0.0
 
     private var pendingGear: RunCommand.Regear? = null
 
@@ -220,8 +205,6 @@ class ExpeditionRun(
         val stats = MapEffects.hero(gear.stats, mapEffects)
         val next = Combatant(stats, gear.level, rules)
         life = if (hero.maxLife > 0) life / hero.maxLife * next.maxLife else next.maxLife
-        maxFlasks = rules.flask.charges + next.extraFlasks
-        flasks = flasks.coerceAtMost(maxFlasks)
         hero = next
         world.regear(ExpeditionWorld.heroSpeed(stats), ExpeditionWorld.lightRadius(stats, map.light))
     }
@@ -251,7 +234,6 @@ class ExpeditionRun(
         when (command) {
             RunCommand.Speed -> speed = if (speed >= 4) 1 else speed * 2
             RunCommand.Leave -> if (phase == RunPhase.MAP || phase == RunPhase.DEAD || phase == RunPhase.CLEARED) phase = RunPhase.LEFT
-            RunCommand.Flask -> fight?.useFlask() ?: drinkOnMap()
             RunCommand.Retreat -> if (fight != null && !started) walkAway() else fight?.retreat()
             RunCommand.Begin -> if (fight != null) started = true
             RunCommand.Continue -> when (phase) {
@@ -295,17 +277,12 @@ class ExpeditionRun(
         (a + b).groupingBy { it.itemId }.fold(0L) { total, item -> total + item.amount }
             .map { (itemId, amount) -> com.sperance.exileforge.core.model.hero.CharacterItem(itemId, amount) }
 
-    /** A flask on the map: the same charge, the same heal over the same seconds, one at a time. */
-    private fun drinkOnMap(): Boolean {
-        if (phase != RunPhase.MAP || flasks <= 0 || flaskUntil > clock) return false
-        flasks--
-        flaskUntil = clock + rules.flask.duration
-        flaskRate = hero.maxLife * hero.flaskHeal / 100 / rules.flask.duration
-        return true
-    }
-
-    /** Turning away before the fight began: nothing was struck, and the monster stays calm a while. */
+    /**
+     * Turning away before the fight began: nothing was struck, and the monster stays calm a while.
+     * Between two foes of a pack it is the same: the fallen were reported as they fell.
+     */
     private fun walkAway() {
+        packLog = emptyList()
         fightAgent?.let(world::retreatFrom)
         fight = null
         fightAgent = null
@@ -314,17 +291,13 @@ class ExpeditionRun(
 
     private fun walk(dt: Double) {
         val (x, y) = ExpeditionWorld.screenToWorld(stickX, stickY)
-        clock += dt
-        // Nothing returns on its own between fights; only a flask heals here.
-        if (flaskUntil > clock) life = (life + flaskRate * dt).coerceAtMost(hero.maxLife)
         when (val event = world.step(dt, x, y)) {
             is WorldEvent.Encounter -> {
-                flaskUntil = 0.0
                 // Fought in the order it rolled (2.54.0): the token shows the strongest, but the
                 // first blow lands on whoever is first in the pack.
                 val monster = Combatant(event.agent.current.stats, map.level, rules)
                 fightAgent = event.agent
-                fight = Battle(hero, monster, rules, life, flasks, Random(seed * 31 + fights++))
+                fight = Battle(hero, monster, rules, life, Random(seed * 31 + fights++))
                 started = false
                 phase = RunPhase.FIGHT
             }
@@ -343,20 +316,19 @@ class ExpeditionRun(
         val outcome = battle.outcome ?: return
         if (battle.time < battle.duration + AFTERMATH) return
         life = battle.heroLife
-        flasks = battle.flasks
         when (outcome) {
             Outcome.WIN -> {
                 packLog = packLog + PackHit(agent.current, battle.events, battle.duration)
                 kills++
-                flasks = min(maxFlasks, flasks + rules.flask.perKill)
                 pendingRewards++
                 onKill(agent.current)
                 agent.packIndex++
                 if (agent.packIndex < agent.pack.size) {
-                    // Another foe stands in the same jetton (2.54.0): straight into the next bout,
-                    // no trip back to the map — the brief pause is the same AFTERMATH every fight ends on.
+                    // Another foe stands in the same jetton (2.54.0): the next bout, no trip back to
+                    // the map, and like the first it waits for «Начать» (2.57.0).
                     val next = Combatant(agent.current.stats, map.level, rules)
-                    fight = Battle(hero, next, rules, life, flasks, Random(seed * 31 + fights++))
+                    fight = Battle(hero, next, rules, life, Random(seed * 31 + fights++))
+                    started = false
                     if (phase != RunPhase.DEAD) pendingGear?.let(::regear)
                     pendingGear = null
                     return
@@ -390,7 +362,6 @@ class ExpeditionRun(
             phase = phase, mapCode = map.code,
             heroLife = (battle?.heroLife ?: life).roundToInt(), heroMaxLife = hero.maxLife.roundToInt(),
             heroShield = (battle?.fighter(Side.HERO)?.shield ?: hero.maxShield).roundToInt(), heroMaxShield = hero.maxShield.roundToInt(),
-            flasks = battle?.flasks ?: flasks, maxFlasks = maxFlasks, flaskActive = battle?.flaskActive ?: (flaskUntil > clock),
             alive = world.alive, total = world.total, sealed = world.sealed,
             fight = battle?.let { b -> fightAgent?.let { fightHud(b, it) } },
             reward = reward, rewardPending = pendingRewards > 0, rewardFailed = rewardFailed, slain = slain, report = report,
@@ -424,7 +395,7 @@ class ExpeditionRun(
             heroSwing = battle.swing(Side.HERO), monsterSwing = battle.swing(Side.MONSTER),
             heroAilments = ailments(h), monsterAilments = ailments(m),
             heroHeld = h.held, monsterHeld = m.held,
-            flasks = battle.flasks, flaskActive = battle.flaskActive, retreating = battle.retreating,
+            retreating = battle.retreating,
             lunge = battle.lunge()?.let { (event, progress) -> LungeView(event.actor, event.action, event.kind, event.landed, progress.toFloat()) },
             events = battle.events.toList().asReversed(),
             started = started,
@@ -444,10 +415,9 @@ class ExpeditionRun(
                   fountains: com.sperance.exileforge.core.model.campaign.FountainRule = com.sperance.exileforge.core.model.campaign.FountainRule(),
                   corruption: com.sperance.exileforge.core.model.campaign.CorruptionRule = com.sperance.exileforge.core.model.campaign.CorruptionRule()): ExpeditionRun {
             val stats = MapEffects.hero(heroStats, mapEffects)
-            val played = MapEffects.rules(rules, mapEffects)
             val world = ExpeditionWorld.create(MapEffects.map(map, mapEffects), MapEffects.rarities(rarities, mapEffects), stats, seed, MapEffects.buffs(mapEffects), corruption.chance)
             world.placeFountains(fountains.count.getOrElse(0) { 0 }, fountains.count.getOrElse(1) { 0 }, fountains.heal)
-            return ExpeditionRun(map, world, Combatant(stats, heroLevel, played), played, seed, onKill, onCleared, onFallen, onChest, mapEffects)
+            return ExpeditionRun(map, world, Combatant(stats, heroLevel, rules), rules, seed, onKill, onCleared, onFallen, onChest, mapEffects)
         }
     }
 }

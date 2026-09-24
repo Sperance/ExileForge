@@ -128,7 +128,6 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
 @Serializable data class EvasionRule(val base: Double = 150.0, val perLevel: Double = 40.0, val cap: Double = 75.0)
 @Serializable data class StunRule(val share: Double = 15.0, val duration: Double = 0.4)
 @Serializable data class ShieldRule(val rechargeDelay: Double = 2.0, val rechargePerSecond: Double = 20.0)
-@Serializable data class FlaskRule(val charges: Int = 3, val perKill: Int = 1, val heal: Double = 40.0, val duration: Double = 3.0)
 @Serializable data class RetreatRule(val delay: Double = 1.5)
 @Serializable data class DeathRule(val fromLevel: Int = 10, val experienceShare: Double = 5.0)
 
@@ -136,7 +135,7 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
  * The numbers the fight is played by — the server's since 0.28.0, read with the chapters.
  *
  * The fight is the client's (rule 23) but its constants are not: armour, evasion, criticals,
- * stun, the energy shield's recharge, the innate spell and its mana, the life flask, retreat, the
+ * stun, the energy shield's recharge, the innate spell and its mana, retreat, the
  * price of death and the six ailments all arrive here. The defaults are what the server ships
  * today, so a test can build a fight without a payload; a served value always wins.
  */
@@ -144,7 +143,7 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
     val timeLimit: Double = 60.0, val variance: Double = 20.0, val resistCap: Double = 75.0, val blockCap: Double = 75.0,
     val unarmed: UnarmedRule = UnarmedRule(), val critical: CriticalRule = CriticalRule(), val armour: ArmourRule = ArmourRule(),
     val evasion: EvasionRule = EvasionRule(), val stun: StunRule = StunRule(), val shield: ShieldRule = ShieldRule(),
-    val flask: FlaskRule = FlaskRule(), val retreat: RetreatRule = RetreatRule(), val death: DeathRule = DeathRule(),
+    val retreat: RetreatRule = RetreatRule(), val death: DeathRule = DeathRule(),
     /** Since server 0.36.0: no "+% to maximum resistance" lifts a resistance past [resistHardCap], and no reduction shortens an ailment by more than [ailmentDurationCap] percent. */
     val resistHardCap: Double = 90.0, val ailmentDurationCap: Double = 75.0,
     val ailments: List<AilmentRule> = listOf(
@@ -221,7 +220,6 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
         const val MONSTER_SPEED = "MAP_MONSTER_SPEED"
         const val MONSTER_RESIST = "MAP_MONSTER_RESIST"
         const val HERO_LIGHT = "MAP_HERO_LIGHT"
-        const val HERO_FLASK = "MAP_HERO_FLASK"
         const val HERO_RESIST = "MAP_HERO_RESIST"
         const val HERO_REGEN = "MAP_HERO_REGEN"
 

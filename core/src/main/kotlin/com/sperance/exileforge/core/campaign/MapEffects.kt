@@ -2,7 +2,6 @@ package com.sperance.exileforge.core.campaign
 
 import com.sperance.exileforge.core.model.campaign.CampaignMap
 import com.sperance.exileforge.core.model.campaign.CampaignRarity
-import com.sperance.exileforge.core.model.campaign.CombatRules
 import com.sperance.exileforge.core.model.campaign.MapRule
 import com.sperance.exileforge.core.model.campaign.MonsterEffect
 import com.sperance.exileforge.core.model.campaign.MonsterRarity
@@ -69,10 +68,5 @@ object MapEffects {
             byId[modifier.modifierId]?.effects?.forEachIndexed { index, effect -> effects.merge(effect.stat, modifier.values.getOrElse(index) { 0.0 }, Double::plus) }
         }
         return effects
-    }
-
-    fun rules(rules: CombatRules, effects: Map<String, Double>): CombatRules {
-        val fewer = effects[MapRule.HERO_FLASK]?.roundToInt() ?: return rules
-        return rules.copy(flask = rules.flask.copy(charges = max(0, rules.flask.charges - fewer)))
     }
 }

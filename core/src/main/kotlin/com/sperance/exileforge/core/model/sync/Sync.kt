@@ -23,6 +23,7 @@ import com.sperance.exileforge.core.model.progression.ExperienceLevel
 import com.sperance.exileforge.core.model.skilltree.SkillTreeNode
 import com.sperance.exileforge.core.model.skilltree.SkillTreeState
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
@@ -30,7 +31,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 
 /** The API revision this client is written against (server 0.48.0). */
-const val API_REVISION = 5
+const val API_REVISION = 6
 
 @Serializable data class WorldManifest(val hash: String = "", val file: String = "world.json")
 
@@ -95,8 +96,15 @@ class WorldTables(
     }
 }
 
-/** One part of the hero and its fingerprint; a part is replaced whole, never merged by element. */
-@Serializable data class HeroPart(val version: String, val data: JsonElement)
+/**
+ * One part of the hero and its version. Whole when [base] is null: the client replaces it and
+ * merges nothing. The inventory may come as a patch (server 0.49.0): [base] names the version it
+ * lies over and [data] is an [InventoryPatch]; a patch over a version not held drops the part.
+ */
+@Serializable data class HeroPart(val version: String, val data: JsonElement, val base: String? = null)
+
+/** What one command did to the inventory: the items that appeared or changed, and the ids that left. */
+@Serializable data class InventoryPatch(val changed: List<JsonObject> = emptyList(), val removed: List<String> = emptyList())
 
 /** The hero as the server answers it: only the parts whose fingerprints the client did not hold. */
 @Serializable data class HeroSnapshot(val version: String, val parts: Map<String, HeroPart> = emptyMap())
@@ -113,7 +121,24 @@ class HeroParts(val characterId: String, val version: String = "", private val p
     /** `character=<hash>,…`, or `none`: the header is how a client asks for a snapshot at all. */
     fun header(): String = parts.entries.joinToString(",") { "${it.key}=${it.value.version}" }.ifEmpty { "none" }
 
-    fun merge(snapshot: HeroSnapshot) = HeroParts(characterId, snapshot.version, parts + snapshot.parts)
+    fun merge(snapshot: HeroSnapshot): HeroParts {
+        val next = parts.toMutableMap()
+        snapshot.parts.forEach { (name, part) ->
+            val base = part.base
+            if (base == null) { next[name] = part; return@forEach }
+            val held = parts[name]
+            // A patch over a version this client does not hold: the part is gone, the hero is read again.
+            if (held == null || held.version != base) next.remove(name)
+            else next[name] = HeroPart(part.version, patched(held.data, part.data))
+        }
+        return HeroParts(characterId, snapshot.version, next)
+    }
+
+    private fun patched(held: JsonElement, patch: JsonElement): JsonElement {
+        val delta = WireJson.decodeFromJsonElement<InventoryPatch>(patch)
+        val gone = delta.removed.toHashSet() + delta.changed.map { it.entityId }
+        return JsonArray(held.jsonArray.filterNot { it.jsonObject.entityId in gone } + delta.changed)
+    }
 
     val character: CharacterSummary get() = decode(CHARACTER)
     val inventory: List<EquipmentInstance> get() = decode(INVENTORY)

@@ -281,7 +281,7 @@
   "confirm.short": "Не хватает: в сумке {0}",
   "confirm.spend": "Спишется",
   "contract.bad_id": "ID должен содержать 24 шестнадцатеричных символа",
-  "contract.bag_format": "Предмет сумки записывается как «itemId:количество»",
+  "contract.bag_format": "Сумка — объект «bag»: id предмета → количество",
   "contract.base_finite": "baseParams: значения должны быть конечными числами",
   "contract.base_list": "baseParams: требуется список модификаторов",
   "contract.base_no_tier": "База предмета не роллится и тира не имеет",

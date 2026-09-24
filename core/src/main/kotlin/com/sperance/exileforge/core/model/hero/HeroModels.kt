@@ -25,7 +25,8 @@ import kotlinx.serialization.json.*
     val experience: Double = 0.0,
     val money: Long = 0,
     val classId: String = "",
-    val items: List<String> = emptyList(),
+    /** The bag as the server keeps it since 0.49.0: item id to amount. */
+    val bag: Map<String, Long> = emptyMap(),
     val recipeAccess: List<String> = emptyList(),
 )
 

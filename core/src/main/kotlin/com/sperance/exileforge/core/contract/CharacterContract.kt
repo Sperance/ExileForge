@@ -13,12 +13,10 @@ fun validateCharacter(doc: JsonObject) {
     require("stockSkills" !in doc) { ui("contract.stats_from_class") }
     require("params" !in doc) { ui("contract.modifiers_server") }
     (doc["recipeAccess"] as? JsonArray).orEmpty().forEach { requireId(it.jsonPrimitive.content) }
-    // Bag items are the flat storage strings "itemId:amount" the server reads back itself.
-    (doc["items"] as? JsonArray).orEmpty().forEach { raw ->
-        val entry = raw.jsonPrimitive.content
-        require(entry.substringAfterLast(':').toLongOrNull() != null && entry.substringBeforeLast(':').isNotBlank()) {
-            ui("contract.bag_format")
-        }
+    // The bag is a map of item id to amount since server 0.49.0; the old "itemId:amount" strings are gone.
+    require("items" !in doc) { ui("contract.bag_format") }
+    (doc["bag"] as? JsonObject).orEmpty().forEach { (itemId, amount) ->
+        require(itemId.isNotBlank() && amount.jsonPrimitive.content.toLongOrNull() != null) { ui("contract.bag_format") }
     }
     (doc["gainedRedemptionCodes"] as? JsonArray).orEmpty().forEach {
         requireId(it.jsonObject.text("redemptionCodeId"))

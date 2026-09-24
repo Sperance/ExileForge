@@ -11,6 +11,7 @@ import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.model.currency.CURRENCY_CATEGORY
 import com.sperance.exileforge.core.model.modifier.BenchRecipe
 import com.sperance.exileforge.core.model.modifier.ModifierDefinition
+import com.sperance.exileforge.core.model.modifier.definition
 import kotlinx.serialization.json.*
 
 /**
@@ -51,7 +52,7 @@ fun itemVisualKind(doc: JsonObject): ItemVisualKind = when {
 }
 
 fun displayName(value: String, lang: Lang = uiLanguage): String = value.substringAfterLast('/').substringAfterLast('.').replace('_', ' ')
-    .replace(Regex("([a-z])([A-Z])"), "$1 $2").ifBlank { ui(lang, "item.unnamed") }
+    .replace(CAMEL_GAP, "$1 $2").ifBlank { ui(lang, "item.unnamed") }
 
 // A jewel is not worn on the body: its "slot" is a socket on the passive tree, and the table
 // names it all the same, because a stash line still has to say what the thing is.
@@ -144,7 +145,7 @@ fun inventoryDocument(instance: com.sperance.exileforge.core.model.hero.Equipmen
  * still printed: a value the server rolled should never vanish because a translation is missing.
  */
 fun modifierText(modifier: JsonObject, definitions: List<ModifierDefinition> = emptyList()): String {
-    val definition = definitions.firstOrNull { it.id == modifier.text("modifierId") }
+    val definition = definitions.definition(modifier.text("modifierId"))
     val values = rolledValues(modifier, definition)
     val template = definition?.template
     if (template != null && template != definition.code && values.isNotEmpty())
@@ -176,7 +177,7 @@ private fun rolledValues(modifier: JsonObject, definition: ModifierDefinition? =
 data class AffixMarks(val tier: Int, val crafted: Boolean, val fractured: Boolean, val handcrafted: Boolean = false, val alchemy: Boolean = false)
 
 fun affixMarks(modifier: JsonObject, definitions: List<ModifierDefinition>): AffixMarks {
-    val definition = definitions.firstOrNull { it.id == modifier.text("modifierId") }
+    val definition = definitions.definition(modifier.text("modifierId"))
     return AffixMarks(
         tier = modifier.text("tier").toIntOrNull() ?: 0,
         crafted = definition?.crafted == true,
@@ -192,7 +193,7 @@ fun affixMarks(modifier: JsonObject, definitions: List<ModifierDefinition>): Aff
  * "+(70–79) to maximum Life". The same template a rolled modifier fills, filled with a range.
  */
 fun recipeText(recipe: BenchRecipe, definitions: List<ModifierDefinition>): String {
-    val definition = definitions.firstOrNull { it.id == recipe.modifierId }
+    val definition = definitions.definition(recipe.modifierId)
     val ranges = recipe.values.mapIndexed { index, range ->
         val stat = definition?.effects?.getOrNull(index)?.stat.orEmpty()
         val low = statNumber(stat, range.valueMin); val high = statNumber(stat, range.valueMax)
@@ -246,8 +247,8 @@ fun requirementReason(reason: String, lang: Lang = uiLanguage): String {
     val rest = reason.substringAfter(':', "").trim()
     val title = uiOr(lang, "req.$name", displayName(name, lang))
     if (rest.isBlank()) return title
-    val need = Regex("need\\s+(-?\\d+)").find(rest)?.groupValues?.get(1)
-    val have = Regex("have\\s+(-?\\d+)").find(rest)?.groupValues?.get(1)
+    val need = NEED.find(rest)?.groupValues?.get(1)
+    val have = HAVE.find(rest)?.groupValues?.get(1)
     return if (need == null || have == null) "$title: $rest"
         else "$title: " + ui(lang, "req.reason", need, have)
 }
@@ -258,3 +259,8 @@ fun requirementReason(reason: String, lang: Lang = uiLanguage): String {
  */
 fun statTitle(stat: String, lang: Lang = uiLanguage): String =
     uiOr(lang, "enum.stat.$stat", displayName(stat.substringAfter('_'), lang))
+
+// Compiled once (2.56.0): these ran on every line of every card.
+private val CAMEL_GAP = Regex("([a-z])([A-Z])")
+private val NEED = Regex("need\\s+(-?\\d+)")
+private val HAVE = Regex("have\\s+(-?\\d+)")

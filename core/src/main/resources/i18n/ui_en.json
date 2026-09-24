@@ -281,7 +281,7 @@
   "confirm.short": "Not enough: {0} in the bag",
   "confirm.spend": "You pay",
   "contract.bad_id": "The id must be 24 hexadecimal characters",
-  "contract.bag_format": "A bag item is written as \"itemId:amount\"",
+  "contract.bag_format": "The bag is a \"bag\" object: item id to amount",
   "contract.base_finite": "baseParams: values must be finite numbers",
   "contract.base_list": "baseParams: a list of modifiers is required",
   "contract.base_no_tier": "An item's base is not rolled and carries no tier",

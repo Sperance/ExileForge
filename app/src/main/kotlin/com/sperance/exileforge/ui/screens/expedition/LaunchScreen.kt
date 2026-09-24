@@ -50,6 +50,7 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.screens.auction.untilText
 import com.sperance.exileforge.ui.theme.*
+import com.sperance.exileforge.core.model.modifier.definition
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 
@@ -162,7 +163,7 @@ private data class MapLine(val text: String, val kind: MapLineKind, val risk: Do
 private fun lines(map: StashMap, s: ForgeState, rule: MapRule): List<MapLine> {
     val documents = (map.document["params"] as? JsonArray).orEmpty().mapNotNull { it as? JsonObject }
     return map.instance.params.mapIndexed { index, modifier ->
-        val effects = s.world.definitions.firstOrNull { it.id == modifier.modifierId }?.effects.orEmpty()
+        val effects = s.world.definitions.definition(modifier.modifierId)?.effects.orEmpty()
         val kinds = effects.map { rule.kindOf(it.stat) }
         val kind = when { MapLineKind.HARM in kinds -> MapLineKind.HARM; MapLineKind.REWARD in kinds -> MapLineKind.REWARD; else -> MapLineKind.CONTENT }
         val risk = effects.withIndex().sumOf { (i, effect) -> rule.riskOf(effect.stat, modifier.values.getOrElse(i) { 0.0 }) }

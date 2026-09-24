@@ -17,6 +17,8 @@ data class RolledMonster(
     val modifiers: List<MonsterModifier>,
     val stats: Map<String, Double>,
     val behaviour: BehaviourRule = BehaviourRule(),
+    /** What the entered map added to it (since 2.45.0): already in [stats], kept apart so the arena can say so. */
+    val mapBuffs: List<MonsterEffect> = emptyList(),
 )
 
 /**

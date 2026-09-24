@@ -571,4 +571,24 @@ class CampaignTest {
         val weighed = MapEffects.rarities(table, mapOf(MapRule.MAGIC_MONSTERS to 100.0, MapRule.RARE_MONSTERS to 50.0))
         assertEquals(listOf(100, 60, 15), weighed.map { it.weight })
     }
+
+    @Test fun `a monster's own modifiers and its map's buffs read as one summed list`() {
+        val effects = mapOf(MapRule.MONSTER_LIFE to 30.0)
+        val run = ExpeditionRun.start(map, rarities, emptyMap(), 1, 4, onKill = {}, onCleared = {}, mapEffects = effects)
+        val monster = run.world.agents.first().monster
+        assertEquals(listOf(MonsterEffect("STOCK_HEALTH", "INCREASED", 30.0)), monster.mapBuffs)
+        val own = MonsterModifier("MOB_TOUGH", 100, 1, effects = listOf(MonsterEffect("STOCK_HEALTH", "INCREASED", 40.0)))
+        val lines = monsterLines(monster.copy(modifiers = listOf(own)))
+        val life = lines.single { it.stat == "STOCK_HEALTH" && it.operation == "INCREASED" }
+        assertEquals(70.0, life.value)
+        assertTrue(life.fromMap)
+        assertTrue(monsterLineText(life).contains("70"))
+    }
+
+    @Test fun `a map is carved at the size the server gives it, and a larger one holds the pack`() {
+        val wide = map.copy(size = 72, monsterCount = listOf(35, 35))
+        val world = ExpeditionWorld.create(wide, rarities, emptyMap(), 8)
+        assertEquals(72, world.map.width)
+        assertTrue(world.agents.size >= 30, "a 72-cell map holds a pack of 35: ${world.agents.size}")
+    }
 }

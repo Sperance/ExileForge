@@ -144,13 +144,17 @@ internal fun DamageType.key() = "enum.damage.$name"
                     }
                 }
                 // What the monster rolled: outside its frame, under it, apart from the fighter's own numbers.
-                if (monster.modifiers.isNotEmpty()) Row(Modifier.fillMaxWidth().padding(top = 6.dp)) {
+                // Since 2.45.0 one list: its own modifiers and its map's buffs, summed per characteristic,
+                // a line the map is in marked so — the sum the fight already folds.
+                val lines = monsterLines(monster)
+                if (lines.isNotEmpty()) Row(Modifier.fillMaxWidth().padding(top = 6.dp)) {
                     Spacer(Modifier.weight(1f))
                     Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                        monster.modifiers.forEach {
+                        lines.forEach { line ->
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                                Rhombus(Rune, 4.dp)
-                                Text(monsterModifierText(it), color = Rune, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.End)
+                                Rhombus(if (line.fromMap) LifeRed else Rune, 4.dp)
+                                Text(monsterLineText(line), color = Rune, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.End)
+                                if (line.fromMap) Text(ui("fight.line_map"), color = LifeRed, style = MaterialTheme.typography.labelSmall)
                             }
                         }
                     }

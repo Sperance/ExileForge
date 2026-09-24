@@ -195,7 +195,7 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
         ensureEquipment()
         val character = api.hero.character(id)
         val view = HeroView(character, api.hero.inventory(id), api.hero.stats(id), api.hero.bag(id), api.tree.state(id))
-        mutable.update { it.copy(play = it.play.copy(hero = view, characterOwner = character.userId, heroReadAt = System.currentTimeMillis(), selectedEquipment = it.play.selectedEquipment.takeIf { chosen -> view.inventory.any { item -> item.id == chosen } }
+        mutable.update { it.copy(play = it.play.copy(hero = view, characterOwner = character.userId, heroReadAt = System.currentTimeMillis(), heroSeenAt = System.currentTimeMillis(), selectedEquipment = it.play.selectedEquipment.takeIf { chosen -> view.inventory.any { item -> item.id == chosen } }
                 ?: view.inventory.firstOrNull()?.id.orEmpty())) }
     } }
 }

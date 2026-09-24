@@ -20,9 +20,9 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.44.0, `versionCode` 62) for the
-**ktor-bestgame** RPG server (0.39.0), pinned in
-`core/.../contract/Contract.kt` as `SERVER_COMMIT = 7db1e5a9b3469f8a3e82c0fc5d909d431d6e09d1`
+ExileForge is an **Android Compose client** (version 2.45.0, `versionCode` 63) for the
+**ktor-bestgame** RPG server (0.40.0), pinned in
+`core/.../contract/Contract.kt` as `SERVER_COMMIT = a42b8a789813c900084837b2defcde3eaea49751`
 on the server branch `claude/vigilant-wozniak-ptnxmx`.
 
 The client is deliberately **thin**: the server owns items, stats, modifier rolls and inventory.
@@ -234,7 +234,11 @@ from an icon in `HeroHeader`, beside the forge; the Hero tab reads as chosen whi
 `ForgeApp` draws `ExpeditionPlay` over the whole screen instead of the scaffold; since 2.40.0 its
 map bar has a helm that opens `GearSheet` — the body's ledger, equip and take off on the map — and
 `RunCommand.Regear` hands the run the re-read sheet, applied between fights with life and mana kept
-as a share. The merchant's offer opens its full card with a held «Купить» (`OfferSheet`). That one tab
+as a share; since 2.45.0 the sheet's foot has a second tab, «Новый лут» (`PlayState.runLoot`, `newLoot`):
+the gear this run brought, maps aside, each to wear or to sell (held) while it is still loose. The
+arena prints a monster's own modifiers and its map's buffs (`RolledMonster.mapBuffs`) as one list
+summed per characteristic (`monsterLines`), the map's share marked; the map is carved at the
+server's `CampaignMap.size` (server 0.40.0). The merchant's offer opens its full card with a held «Купить» (`OfferSheet`). That one tab
 holds every administrator tool as a button: the catalogue, the editor, the checks, granting items
 and the switch that drops the tools to see the app as a player sees it. `ADMIN_TABS` is what
 `ForgeRuntime.tab` refuses without them, so a player cannot reach any of those screens at all.
@@ -408,8 +412,7 @@ These are enforced by tests and are the point of the client's design:
     forge, the sell tab, the showcase) drops the spine instead: the icon leads in a square framed in
     the rarity colour, with the item level and the states under it, and the name takes that colour.
     The base is chips, one per figure, and the rolls a list under rhombi with their tier (or the
-    bench's word) on the right, up to `ROW_MODIFIERS`, counting what does not fit rather than
-    dropping it; a lot's price is the row's `trailing`, opposite the name. The equipment ledger and
+    bench's word) on the right — since 2.45.0 every one of them, whole, with nothing counted away; a lot's price is the row's `trailing`, opposite the name. The equipment ledger and
     the card keep the spine. On a card the base is
     read as a figure rather than a sentence — 120 and «броня», the first one set large — and the
     rolls are a list under a rhombus; the icon sits beside the name, because that is how an item

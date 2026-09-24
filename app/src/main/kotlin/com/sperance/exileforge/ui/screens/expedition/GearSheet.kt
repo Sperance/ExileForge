@@ -2,6 +2,7 @@ package com.sperance.exileforge.ui.screens.expedition
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -22,16 +23,60 @@ import com.sperance.exileforge.ui.theme.*
  * with «Снять» and «Заменить». The server decides, the hero is re-read, and the run takes the new
  * sheet before its next fight — life and mana keep their share.
  */
+/**
+ * «Новый лут» (2.45.0): the gear this run brought, maps aside, while it is still loose — a hero read
+ * after a piece landed says whether it was worn or sold since; before that it is taken as loose.
+ */
+fun newLoot(s: ForgeState): List<com.sperance.exileforge.core.model.hero.EquipmentInstance> {
+    val hero = s.play.hero
+    return s.play.runLoot.filter { entry ->
+        val slot = s.world.inventoryBases[entry.item.equipmentId]?.let { com.sperance.exileforge.core.display.inventoryDocument(entry.item, it) }
+            ?.let { (it["slot"] as? kotlinx.serialization.json.JsonPrimitive)?.content }
+        val now = hero?.inventory?.firstOrNull { it.id == entry.item.id }
+        slot != com.sperance.exileforge.core.model.campaign.MapRule.SLOT && when {
+            now != null -> !now.equipped && !now.socketed
+            else -> s.play.heroSeenAt < entry.at
+        }
+    }.map { it.item }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun GearSheet(s: ForgeState, vm: ForgeViewModel, onDismiss: () -> Unit) {
     var place by remember { mutableStateOf<BodyPlace?>(null) }
     var worn by remember { mutableStateOf<String?>(null) }
+    var lootTab by remember { mutableStateOf(false) }
+    var looked by remember { mutableStateOf<String?>(null) }
+    val loot = newLoot(s)
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-        LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.85f).navigationBarsPadding(), contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            item { Engraved(ui("expedition.gear")) }
-            item { Text(ui("expedition.gear_hint"), color = Muted, style = MaterialTheme.typography.bodySmall) }
-            item { EquipmentLedger(s) { p, w -> place = p; worn = w } }
+        Column(Modifier.fillMaxWidth().fillMaxHeight(.85f).navigationBarsPadding()) {
+            LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (!lootTab) {
+                    item { Engraved(ui("expedition.gear")) }
+                    item { Text(ui("expedition.gear_hint"), color = Muted, style = MaterialTheme.typography.bodySmall) }
+                    item { EquipmentLedger(s) { p, w -> place = p; worn = w } }
+                } else {
+                    item { Engraved(ui("expedition.loot_tab")) }
+                    if (loot.isEmpty()) item { Text(ui("expedition.loot_empty"), color = Muted, style = MaterialTheme.typography.bodySmall) }
+                    items(loot, key = { it.id }) { item ->
+                        ItemRow(inventoryDocument(item, s.world.inventoryBases[item.equipmentId]), definitions = s.world.definitions, enabled = !s.busy,
+                            unwearable = s.play.hero?.sheet?.unwearableBy?.get(item.equipmentId).orEmpty()) { looked = item.id }
+                    }
+                }
+            }
+            // The tabs sit at the foot (2.45.0): the body's ledger, and what this run brought.
+            TabRow(selectedTabIndex = if (lootTab) 1 else 0, containerColor = Abyss, contentColor = Gold) {
+                Tab(selected = !lootTab, onClick = { lootTab = false }, text = { Text(ui("expedition.gear")) })
+                Tab(selected = lootTab, onClick = { lootTab = true }, text = { Text(ui("expedition.loot_tab_count", loot.size)) })
+            }
+        }
+    }
+    loot.firstOrNull { it.id == looked }?.let { item ->
+        ModalBottomSheet(onDismissRequest = { looked = null }, containerColor = Panel) {
+            Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                ItemCard(inventoryDocument(item, s.world.inventoryBases[item.equipmentId]), enabled = false, detailed = true, definitions = s.world.definitions)
+                Button(enabled = !s.busy, onClick = { looked = null; vm.equip(item.id) }, modifier = Modifier.fillMaxWidth()) { Text(ui("hero.equip")) }
+                HoldButton(ui("expedition.loot_sell"), LifeRed, Modifier.fillMaxWidth(), enabled = !s.busy) { looked = null; vm.sellForGold(item.id) }
+            }
         }
     }
     val chosen = place

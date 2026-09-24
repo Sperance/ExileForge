@@ -65,9 +65,6 @@ import kotlinx.serialization.json.JsonObject
     }
 }
 
-/** How many rolled modifiers a line carries before it counts the rest instead. */
-const val ROW_MODIFIERS = 4
-
 /**
  * One item of a stash, as a line rather than a card.
  *
@@ -138,12 +135,8 @@ const val ROW_MODIFIERS = 4
             if (base.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 base.forEach { value -> BaseChip(value) }
             }
-            rolled.take(ROW_MODIFIERS).forEach { RollLine(it, definitions) }
-            // Counted rather than dropped: "ещё 3" is the difference between a short item and one
-            // whose best roll is just off the edge.
-            (rolled.size - ROW_MODIFIERS).takeIf { it > 0 }?.let {
-                Text(ui("row.more", it), color = Muted, style = MaterialTheme.typography.labelSmall)
-            }
+            // Every roll, whole (since 2.45.0): a line that hides one is a line a trader cannot read.
+            rolled.forEach { RollLine(it, definitions) }
             // The server's verdict, in its own words — never a requirement worked out here.
             unwearable.forEach {
                 Text(requirementReason(it), color = LifeRed, style = MaterialTheme.typography.labelSmall,
@@ -170,8 +163,7 @@ const val ROW_MODIFIERS = 4
     val tone = when { marks.fractured -> Fractured; marks.crafted -> Crafted; marks.handcrafted -> Handcrafted; marks.alchemy -> Vital; else -> Rune }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.CenterVertically) {
         Rhombus(Bronze, 5.dp)
-        Text(modifierText(modifier, definitions), color = tone, style = MaterialTheme.typography.labelMedium,
-            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        Text(modifierText(modifier, definitions), color = tone, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
         when {
             marks.crafted -> ui("mod.crafted")
             marks.handcrafted -> ui("mod.handcrafted")

@@ -177,6 +177,8 @@ data class PlayState(
      * another device, an administrator — is caught by this stamp going cold.
      */
     val heroReadAt: Long = 0,
+    /** When the hero was last actually read (2.45.0); unlike [heroReadAt] it is never set cold. */
+    val heroSeenAt: Long = 0,
     val selectedEquipment: String = "",
     /** The `items` id of the orb picked in the forge. */
     val selectedOrb: String = "",
@@ -201,7 +203,12 @@ data class PlayState(
     val craftsAt: Long = 0,
     val craftsProfession: String = "",
     val craftsLog: List<com.sperance.exileforge.core.model.crafts.WorkGains> = emptyList(),
+    /** The gear this run brought (2.45.0), with when each piece landed, for the gear sheet's «Новый лут». */
+    val runLoot: List<LootEntry> = emptyList(),
 )
+
+/** A piece a run brought and the moment it landed: a hero read after that moment says whether it is still loose. */
+data class LootEntry(val item: com.sperance.exileforge.core.model.hero.EquipmentInstance, val at: Long)
 
 /**
  * One location's launch window: its chests and boss as the server last said (null until it has),

@@ -2,6 +2,7 @@ package com.sperance.exileforge.core.campaign
 
 import com.sperance.exileforge.core.model.campaign.BehaviourRule
 import com.sperance.exileforge.core.model.campaign.CampaignMap
+import com.sperance.exileforge.core.model.campaign.MonsterEffect
 import com.sperance.exileforge.core.model.campaign.CampaignRarity
 import kotlin.math.ceil
 import kotlin.math.floor
@@ -412,12 +413,15 @@ class ExpeditionWorld(
          * A new run of [map]: how many monsters, the ground they stand on and what each one rolled,
          * all from one seed.
          */
-        fun create(map: CampaignMap, rarities: List<CampaignRarity>, heroStats: Map<String, Double>, seed: Long): ExpeditionWorld {
+        fun create(map: CampaignMap, rarities: List<CampaignRarity>, heroStats: Map<String, Double>, seed: Long,
+                   mapBuffs: List<MonsterEffect> = emptyList()): ExpeditionWorld {
             val random = Random(seed)
             val (low, high) = map.monsterCount.let { (it.getOrNull(0) ?: 10) to (it.getOrNull(1) ?: 14) }
-            val layout = MapGenerator.generate(seed, map.biome, random.nextInt(low, high + 1))
-            val monsters = List(layout.spawns.size) { MonsterRoller.roll(map, rarities, random) }
-            return ExpeditionWorld(layout, monsters, heroSpeed(heroStats), seed, lightRadius(heroStats, map.light), MonsterRoller.boss(map, rarities))
+            // The map's size is the server's since 0.40.0; room for the pack a map's modifier asks for comes with it.
+            val layout = MapGenerator.generate(seed, map.biome, random.nextInt(low, high + 1), map.size)
+            val monsters = List(layout.spawns.size) { MonsterRoller.roll(map, rarities, random).copy(mapBuffs = mapBuffs) }
+            return ExpeditionWorld(layout, monsters, heroSpeed(heroStats), seed, lightRadius(heroStats, map.light),
+                MonsterRoller.boss(map, rarities)?.copy(mapBuffs = mapBuffs))
         }
 
         /** The hero's pace, sped up by movement speed from the sheet. */

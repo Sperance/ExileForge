@@ -98,6 +98,8 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
     val light: Double = 1.0,
     /** The guardian of the exit (since server 0.32.0), or none from an older server. */
     val boss: CampaignBoss? = null,
+    /** The map's side in cells (since server 0.40.0); an older server's maps keep 48. */
+    val size: Int = 48,
 )
 
 @Serializable data class CampaignChapter(val code: String, val maps: List<CampaignMap> = emptyList())

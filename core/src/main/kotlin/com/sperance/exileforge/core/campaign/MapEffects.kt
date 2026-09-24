@@ -28,16 +28,19 @@ object MapEffects {
         return if (pack == 1.0) map else map.copy(monsterCount = map.monsterCount.map { (it * pack).roundToInt() })
     }
 
+    /** What a map adds to every monster on it, as effects folded by the same formula as a modifier. */
+    fun buffs(effects: Map<String, Double>): List<MonsterEffect> = buildList {
+        effects[MapRule.MONSTER_LIFE]?.let { add(MonsterEffect("STOCK_HEALTH", "INCREASED", it)) }
+        effects[MapRule.MONSTER_DAMAGE]?.let { v -> damage.forEach { add(MonsterEffect(it, "INCREASED", v)) } }
+        effects[MapRule.MONSTER_SPEED]?.let { v -> listOf("STOCK_ATTACK_SPEED", "STOCK_CAST_SPEED").forEach { add(MonsterEffect(it, "INCREASED", v)) } }
+        effects[MapRule.MONSTER_RESIST]?.let { v -> resists.forEach { add(MonsterEffect(it, "ADD", v)) } }
+    }
+
     fun rarities(rarities: List<CampaignRarity>, effects: Map<String, Double>): List<CampaignRarity> {
         val rarer = 1 + (effects[MapRule.MONSTER_RARITY] ?: 0.0) / 100
         val magic = 1 + (effects[MapRule.MAGIC_MONSTERS] ?: 0.0) / 100
         val rare = 1 + (effects[MapRule.RARE_MONSTERS] ?: 0.0) / 100
-        val buffs = buildList {
-            effects[MapRule.MONSTER_LIFE]?.let { add(MonsterEffect("STOCK_HEALTH", "INCREASED", it)) }
-            effects[MapRule.MONSTER_DAMAGE]?.let { v -> damage.forEach { add(MonsterEffect(it, "INCREASED", v)) } }
-            effects[MapRule.MONSTER_SPEED]?.let { v -> listOf("STOCK_ATTACK_SPEED", "STOCK_CAST_SPEED").forEach { add(MonsterEffect(it, "INCREASED", v)) } }
-            effects[MapRule.MONSTER_RESIST]?.let { v -> resists.forEach { add(MonsterEffect(it, "ADD", v)) } }
-        }
+        val buffs = buffs(effects)
         return rarities.map { rarity ->
             val weight = when (rarity.rarity) {
                 MonsterRarity.MAGIC.name -> (rarity.weight * rarer * magic).roundToInt()

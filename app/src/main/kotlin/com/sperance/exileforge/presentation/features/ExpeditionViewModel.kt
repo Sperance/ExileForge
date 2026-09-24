@@ -7,6 +7,7 @@ import com.sperance.exileforge.core.model.campaign.CampaignMap
 import com.sperance.exileforge.core.model.campaign.MonsterRarity
 import com.sperance.exileforge.presentation.ForgeRuntime
 import com.sperance.exileforge.presentation.state.MapLaunchState
+import com.sperance.exileforge.presentation.state.LootEntry
 import com.sperance.exileforge.presentation.state.Reads
 import com.sperance.exileforge.core.model.campaign.MapServiceOutcome
 import com.sperance.exileforge.core.i18n.ui
@@ -127,6 +128,7 @@ class ExpeditionViewModel(private val runtime: ForgeRuntime) {
 
     private fun begin(map: CampaignMap, view: com.sperance.exileforge.core.model.campaign.CampaignView, hero: com.sperance.exileforge.core.model.hero.HeroView,
                       characterId: String, effects: Map<String, Double>, chests: Int) {
+        runtime.mutable.update { it.copy(play = it.play.copy(runLoot = emptyList())) }
         lateinit var run: ExpeditionRun
         run = ExpeditionRun.start(map, view.rarities, hero.sheet.stats, hero.sheet.level, System.nanoTime(),
             onKill = { monster -> reports.trySend { kill(run, characterId, map.code, monster) } },
@@ -157,6 +159,14 @@ class ExpeditionViewModel(private val runtime: ForgeRuntime) {
         loadCampaign()
     }
 
+    /** A reward's gear joins the run's «Новый лут» (2.45.0). */
+    private fun loot(characterId: String, equipment: List<com.sperance.exileforge.core.model.hero.EquipmentInstance>) {
+        if (equipment.isEmpty()) return
+        val now = System.currentTimeMillis()
+        runtime.mutable.update { s -> if (s.play.characterId != characterId) s
+            else s.copy(play = s.play.copy(runLoot = s.play.runLoot + equipment.map { LootEntry(it, now) })) }
+    }
+
     /** Dropped without a word: the character or the session it belonged to is gone. */
     fun drop() { mutableRun.value = null }
 
@@ -166,6 +176,7 @@ class ExpeditionViewModel(private val runtime: ForgeRuntime) {
             val reward = if (monster.rarity == MonsterRarity.UNIQUE) api.campaign.slayBoss(characterId, mapCode)
                 else api.campaign.kill(characterId, mapCode, monster.code, monster.rarity)
             run.send(RunCommand.Reward(reward))
+            loot(characterId, reward.equipment)
             // The purse, the level and the experience are what the header prints; the bag and the
             // stash are re-read when the hero is next opened.
             mutable.update { s -> if (s.play.characterId != characterId) s else s.copy(play = s.play.copy(heroReadAt = 0,
@@ -197,6 +208,7 @@ class ExpeditionViewModel(private val runtime: ForgeRuntime) {
         try {
             val reward = api.campaign.openChest(characterId, mapCode)
             run.send(RunCommand.ChestReward(reward))
+            loot(characterId, reward.equipment)
             mutable.update { s -> if (s.play.characterId != characterId) s else s.copy(play = s.play.copy(heroReadAt = 0,
                 hero = s.play.hero?.let { it.copy(character = it.character.copy(level = reward.level, experience = reward.totalExperience, money = reward.money)) })) }
         } catch (e: CancellationException) { throw e }

@@ -379,7 +379,7 @@ class ExpeditionRun(
                   onChest: () -> Unit = {}, mapEffects: Map<String, Double> = emptyMap()): ExpeditionRun {
             val stats = MapEffects.hero(heroStats, mapEffects)
             val played = MapEffects.rules(rules, mapEffects)
-            return ExpeditionRun(map, ExpeditionWorld.create(MapEffects.map(map, mapEffects), MapEffects.rarities(rarities, mapEffects), stats, seed),
+            return ExpeditionRun(map, ExpeditionWorld.create(MapEffects.map(map, mapEffects), MapEffects.rarities(rarities, mapEffects), stats, seed, MapEffects.buffs(mapEffects)),
                 Combatant(stats, heroLevel, played, innateSpell = true), played, seed, onKill, onCleared, onFallen, onChest, mapEffects)
         }
     }

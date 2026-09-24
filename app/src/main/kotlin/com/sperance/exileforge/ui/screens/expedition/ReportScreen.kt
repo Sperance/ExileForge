@@ -95,7 +95,7 @@ import java.util.Locale
 /** An engraved caption with a bronze rule running out of it, heading one part of the spoils. */
 @Composable private fun Caption(text: String, tone: Color = Gold) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
-        Text(text.uppercase(Locale.getDefault()), color = tone, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+        Text(text.uppercase(), color = tone, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
         Box(Modifier.weight(1f).height(1.dp).background(Brush.horizontalGradient(listOf(Bronze, Color.Transparent))))
     }
 }

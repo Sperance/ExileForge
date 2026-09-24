@@ -198,8 +198,8 @@ class ServerIntegrationTest {
     /** The merchant's shelf and the map services (0.34.0): the server's rolls, prices and refusals. */
     private suspend fun merchantIsTheServers(api: GameApi, id: String) {
         val stock = api.merchant.stock(id)
-        assertTrue(stock.offers.size in 4..6, "the merchant laid out ${stock.offers.size} items")
-        assertTrue(stock.offers.all { it.price > 0 && it.item.rarity in setOf("UNCOMMON", "RARE") })
+        assertTrue(stock.offers.size in 12..16, "the merchant laid out ${stock.offers.size} items")
+        assertTrue(stock.offers.all { it.price > 0 && it.item.rarity in setOf("COMMON", "UNCOMMON", "RARE") })
         assertEquals(stock, api.merchant.stock(id), "the shelf changed before its window ended")
         val first = api.campaign.chapters().chapters.first().maps.first()
         val chests = api.campaign.chests(id, first.code)

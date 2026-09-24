@@ -25,6 +25,7 @@ import com.sperance.exileforge.core.campaign.*
 import com.sperance.exileforge.core.contract.text
 import com.sperance.exileforge.core.display.inventoryDocument
 import com.sperance.exileforge.core.display.number
+import com.sperance.exileforge.core.display.recipeText
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.EquipmentInstance
@@ -116,6 +117,10 @@ import java.util.Locale
         }
         hud.rewardFailed -> Text(ui("expedition.loot_failed"), color = LifeRed, style = MaterialTheme.typography.bodyMedium)
         reward != null -> {
+            reward.recipeFound?.let { recipe ->
+                Caption(ui("expedition.report_recipe"))
+                Chip(recipeText(recipe, s.world.definitions), Rune)
+            }
             if (reward.equipment.isNotEmpty()) {
                 Caption(ui("expedition.report_gear"))
                 reward.equipment.forEach { SpoilLine(s, it) { onItem(it) } }

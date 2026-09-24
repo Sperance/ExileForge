@@ -166,10 +166,12 @@ class HeroClient internal constructor(private val http: Transport, private val c
             mapOf("characterId" to characterId, "inventoryId" to inventoryId, "orbItemId" to orbItemId), authenticated = true))
     }
 
-    /** The crafting bench: every crafted modifier in every tier, with its price in orbs. Fixed per server. */
-    suspend fun bench(): List<BenchRecipe> =
-        WireJson.decodeFromJsonElement(kotlinx.serialization.builtins.ListSerializer(BenchRecipe.serializer()),
-            http.request("GET", "api/v1/characterequipment/bench", authenticated = true))
+    /** The crafting bench lines the character has found on maps (since 0.46.0); the rest stay hidden. */
+    suspend fun bench(characterId: String): List<BenchRecipe> {
+        requireId(characterId)
+        return WireJson.decodeFromJsonElement(kotlinx.serialization.builtins.ListSerializer(BenchRecipe.serializer()),
+            http.request("GET", "api/v1/characterequipment/bench", mapOf("characterId" to characterId), authenticated = true))
+    }
 
     /**
      * Places one bench modifier on one item, paid in orbs.

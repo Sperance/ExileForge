@@ -178,9 +178,12 @@ class ExpeditionViewModel(private val runtime: ForgeRuntime) {
             run.send(RunCommand.Reward(reward))
             loot(characterId, reward.equipment)
             // The purse, the level and the experience are what the header prints; the bag and the
-            // stash are re-read when the hero is next opened.
-            mutable.update { s -> if (s.play.characterId != characterId) s else s.copy(play = s.play.copy(heroReadAt = 0,
-                hero = s.play.hero?.let { it.copy(character = it.character.copy(level = reward.level, experience = reward.totalExperience, money = reward.money)) })) }
+            // stash are re-read when the hero is next opened. A found recipe drops the bench cache
+            // too, so the next hero read picks it up.
+            mutable.update { s -> if (s.play.characterId != characterId) s else s.copy(
+                play = s.play.copy(heroReadAt = 0,
+                    hero = s.play.hero?.let { it.copy(character = it.character.copy(level = reward.level, experience = reward.totalExperience, money = reward.money)) }),
+                world = if (reward.recipeFound != null) s.world.copy(bench = emptyList()) else s.world) }
         } catch (e: CancellationException) { throw e }
         catch (e: Exception) { run.send(RunCommand.RewardFailed); report(e, writing = true) }
     } }

@@ -2,6 +2,7 @@ package com.sperance.exileforge.core.model.campaign
 
 import com.sperance.exileforge.core.model.hero.CharacterItem
 import com.sperance.exileforge.core.model.hero.EquipmentInstance
+import com.sperance.exileforge.core.model.modifier.BenchRecipe
 import kotlinx.serialization.Serializable
 
 /** The monster rarities, as the server names them; `UNIQUE` (server 0.32.0) is a map's boss alone. */
@@ -260,6 +261,8 @@ enum class MapLineKind { HARM, CONTENT, REWARD }
     val level: Int = 1,
     val totalExperience: Double = 0.0,
     val money: Long = 0,
+    /** A bench recipe just found on the map (server 0.46.0); null almost always. */
+    val recipeFound: BenchRecipe? = null,
 )
 
 /**

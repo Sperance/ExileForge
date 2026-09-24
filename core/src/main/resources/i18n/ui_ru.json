@@ -701,6 +701,7 @@
   "expedition.outcome_win": "Победа",
   "expedition.report_death": "Цена смерти",
   "expedition.report_fallen": "Вы пали",
+  "expedition.report_recipe": "Найден рецепт",
   "expedition.report_gear": "Снаряжение",
   "expedition.report_kills": "Убито: {0}",
   "expedition.report_orbs": "Сферы",

@@ -65,7 +65,10 @@ private const val UNCRAFT = "-"
     var benchLine by remember(instance?.id) { mutableStateOf("") }
     // A map takes no bench line (2.47.0): its forge is the orbs alone, with no tabs to choose between.
     val isMap = instance?.let { s.world.inventoryBases[it.equipmentId]?.text("slot") } == MapRule.SLOT
-    val sections = if (isMap) listOf(ForgeSection.ORBS) else ForgeSection.entries
+    // The bench takes a modifier only from Magic rarity up (2.51.0), same as the server: a common
+    // item has no affix slots and a unique's are closed, so it never had anything to offer there.
+    val benchable = instance?.rarity !in setOf("COMMON", "UNIQUE")
+    val sections = if (isMap || !benchable) listOf(ForgeSection.ORBS) else ForgeSection.entries
     val section = s.play.forgeSection.takeIf { it in sections } ?: ForgeSection.ORBS
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {

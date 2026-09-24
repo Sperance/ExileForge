@@ -418,10 +418,14 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
         mutable.update { it.copy(world = it.world.copy(materials = materials)) }
     }
 
-    /** The crafting bench's lines, fixed per server like the orbs they are paid in. */
-    suspend fun ensureBench() {
+    /**
+     * The crafting bench lines this character has found on maps (since 0.46.0). Cached like the
+     * rest of the world state, but a new find invalidates it (`world.bench` set empty) so the next
+     * hero read picks it up.
+     */
+    suspend fun ensureBench(characterId: String) {
         if (state.value.world.bench.isNotEmpty()) return
-        val bench = api.hero.bench()
+        val bench = api.hero.bench(characterId)
         mutable.update { it.copy(world = it.world.copy(bench = bench)) }
     }
 

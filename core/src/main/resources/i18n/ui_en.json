@@ -701,6 +701,7 @@
   "expedition.outcome_win": "Victory",
   "expedition.report_death": "The price of death",
   "expedition.report_fallen": "You have fallen",
+  "expedition.report_recipe": "Recipe found",
   "expedition.report_gear": "Gear",
   "expedition.report_kills": "Slain: {0}",
   "expedition.report_orbs": "Orbs",

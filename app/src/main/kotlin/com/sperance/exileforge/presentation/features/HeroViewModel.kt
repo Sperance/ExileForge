@@ -171,7 +171,7 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
         ensureDefinitions()
         ensureOrbs()
         ensureMaterials()
-        ensureBench()
+        ensureBench(id)
         ensureProgression()
         // The catalogue is half of every card now that an instance keeps only its rolls,
         // so it is read before the hero rather than chased afterwards.

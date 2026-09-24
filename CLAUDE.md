@@ -20,9 +20,9 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.46.0, `versionCode` 64) for the
-**ktor-bestgame** RPG server (0.41.0), pinned in
-`core/.../contract/Contract.kt` as `SERVER_COMMIT = 433f095253cc3f00ee67584f747983bd028b067f`
+ExileForge is an **Android Compose client** (version 2.47.0, `versionCode` 65) for the
+**ktor-bestgame** RPG server (0.42.0), pinned in
+`core/.../contract/Contract.kt` as `SERVER_COMMIT = e6176f22596b0ef125d57af8f81d7c02466251b5`
 on the server branch `claude/vigilant-wozniak-ptnxmx`.
 
 The client is deliberately **thin**: the server owns items, modifier rolls and inventory, and it
@@ -225,7 +225,14 @@ yield, every work with the server's numbers for this hero and a `JobSheet` to st
 runs on the server by time (`CraftsClient`, server 0.37.0): `CraftsViewModel` asks when the tab opens
 and again when `WorkView.nextAt` is due, runs the bar on the device's clock set by the answer's
 `now`, and every answer's `gains` are already in the bag — the materials `WorldState.materials`
-names there. Since 2.42.0 (server 0.38.0) six professions: a crafting work shows what it spends per
+names there. Since 2.47.0 (server 0.42.0) a cycle is thrown on the device the moment it ends:
+`WorkView` carries the work's `seed` and the number of its next `cycle`, `core/crafts/CraftCycle`
+draws it with the server's generator in the server's order (`CraftCycleTest` and the server's
+`CraftsTest` pin the same number), its stacks go into the bag at once and `craftsPending` holds
+them until the server's answer, asked in the background, is set against them (`CraftsViewModel.land`:
+an answer behind the device confirms part, one level with it corrects bag and tally). Gear and
+maps still arrive with the answer. The bar fills every frame (`CycleBar`, `withFrameMillis`) and the
+window's log is one tally of the session (`craftsTotals`, `SessionTally`). Since 2.42.0 (server 0.38.0) six professions: a crafting work shows what it spends per
 cycle against the bag (`bagCount`), the smith's `JobSheet` picks up to `maxAdditives` additives, a
 cartographer's chart of a location not yet opened is locked, and `gainsLine` names the pieces
 made and a bag run dry; `AffixMarks.handcrafted`/`alchemy` colour the smith's lines
@@ -246,7 +253,8 @@ and the switch that drops the tools to see the app as a player sees it. `ADMIN_T
 `ForgeRuntime.tab` refuses without them, so a player cannot reach any of those screens at all.
 The forge is still a tab a button opens, from an icon in the Hero tab's header (with the last item
 worked on) or from «Сфера»/«Верстак» on an item's card (`openForge(instanceId, ForgeSection)`).
-Since 2.19.0 it is one item on top and three sections — orbs, bench, recipes — with the orbs and
+Since 2.19.0 it is one item on top and its sections — orbs and bench (recipes left in 2.47.0; a map
+gets the orbs alone, with no tabs) — with the orbs and
 bench lines as a ledger and the choice in a bar over the navigation whose `HoldButton` re-arms
 after each hold; the server's sentence lands in `PlayState.forgeLine` under the item, not in a
 snackbar — and since 2.46.0 there are no snackbars at all: a success says nothing, and a refusal is
@@ -386,6 +394,10 @@ These are enforced by tests and are the point of the client's design:
     0.34.0) the fourth tab is the merchant (`MerchantClient`: a four-hour shelf per hero, priced in
     gold by the server), «Мои лоты» shows the lot places (`AuctionSlots`) and sells one more, and a
     campaign map's coin icon opens its services — a treasure map and summoning its guardian.
+    Since 2.47.0 (server 0.42.0) maps roll as in PoE — magic 1–2 affixes, rare 4–6 — and pay for their
+    own rarity (`MapRule.rarityBonus`, printed under the portal); the expedition tab lists only the
+    open maps and the next one as «???» with its level; a jewel is never empty (at least magic, `CR_023`);
+    the stash's slot chips count what they hold.
     Since 2.37.0 (server 0.35.0) a map row opens the **launch window** (`PlayState.launch`) before
     every run — since 2.38.0 `LaunchScreen`, «Портал», the owner's pick of five mockups: a full
     screen above the tabs like the run (`ForgeApp` dispatches it), a still portal with the picked map

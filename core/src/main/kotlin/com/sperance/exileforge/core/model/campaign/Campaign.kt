@@ -170,11 +170,19 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
     val nextChance: Double = 0.0,
     val rarities: Map<String, Int> = emptyMap(),
     val risk: Map<String, Double> = emptyMap(),
+    /** Since server 0.42.0, as in PoE: how many affixes a map of each rarity rolls, low and high — magic 1–2, rare 4–6. */
+    val affixes: Map<String, List<Int>> = emptyMap(),
+    /** Since server 0.42.0: what the map's own rarity adds to quantity and rarity, in percent. */
+    val rarityBonus: Map<String, Double> = emptyMap(),
 ) {
-    /** What a map's summed effects add to the loot, in percent: the risk, then each direct bonus on top. */
-    fun bonus(effects: Map<String, Double>): MapBonus {
+    /**
+     * What a map's summed effects add to the loot, in percent: the risk, then each direct bonus on
+     * top, and the map's own [rarity] to quantity and rarity — the server's `CampaignMaps.active`.
+     */
+    fun bonus(effects: Map<String, Double>, rarity: String = "COMMON"): MapBonus {
         val risk = Math.round(effects.entries.sumOf { (stat, value) -> value * (risk[stat] ?: 0.0) } * 10) / 10.0
-        return MapBonus(risk + (effects[QUANTITY] ?: 0.0), risk + (effects[RARITY] ?: 0.0), risk + (effects[EXPERIENCE] ?: 0.0))
+        val own = rarityBonus[rarity] ?: 0.0
+        return MapBonus(risk + own + (effects[QUANTITY] ?: 0.0), risk + own + (effects[RARITY] ?: 0.0), risk + (effects[EXPERIENCE] ?: 0.0))
     }
 
     /** What a map's stat does, for its line's mark: a harm pays by [risk], a reward pays itself, the rest is content. */

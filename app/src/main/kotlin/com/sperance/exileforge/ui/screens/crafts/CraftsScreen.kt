@@ -109,30 +109,27 @@ private fun eta(millis: Long): String {
 /**
  * The crafts tab (since 2.41.0, server 0.37.0): the work under way on a plaque over the tiles, one
  * tile per profession, and a profession's window behind each. The work runs on the server by time;
- * this screen asks when it opens and when the next cycle is due, and runs the cycle's bar between
- * answers on the device's clock set by the server's.
+ * this screen asks when it opens, throws each cycle here the moment it ends (2.47.0) and asks the
+ * server behind it, and runs the cycle's bar smoothly on the device's clock set by the server's.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun CraftsScreen(s: ForgeState, vm: ForgeViewModel) {
     LaunchedEffect(s.play.characterId, s.account.sessionEpoch) { vm.ensureHero(); vm.loadCrafts() }
     val crafts = s.play.crafts
     val offset = crafts?.let { it.now - s.play.craftsAt } ?: 0L
-    var clock by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(Unit) { while (true) { delay(TICK); clock = System.currentTimeMillis() } }
-    // The next cycle is due: ask, and the answer carries it and whatever came before it.
+    // The next cycle is due (2.47.0): it is thrown here and paid into the bag at once, and the server is asked behind it.
     LaunchedEffect(crafts?.work?.nextAt, s.play.craftsAt) {
         val next = crafts?.work?.nextAt ?: return@LaunchedEffect
-        delay((next - offset - System.currentTimeMillis()).coerceAtLeast(0) + SETTLE_GRACE)
-        vm.loadCrafts()
+        delay((next - offset - System.currentTimeMillis()).coerceAtLeast(0))
+        vm.craftsCycleDue()
     }
-    val serverNow = clock + offset
     val open = crafts?.professions?.firstOrNull { it.code == s.play.craftsProfession }
-    if (open != null) { ProfessionWindow(s, vm, open, serverNow); return }
+    if (open != null) { ProfessionWindow(s, vm, open, offset); return }
     PullToRefreshBox(isRefreshing = s.refreshing(Reads.CRAFTS), onRefresh = vm::loadCrafts, modifier = Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item { ScreenHeader(ui("crafts.title"), ui("crafts.subtitle"), ForgeGlyphs.Anvil) }
             if (crafts == null) { item { InfoCard(ui("common.loading"), ui("crafts.loading_hint")) }; return@LazyColumn }
-            item { WorkPlaque(s, vm, serverNow) }
+            item { WorkPlaque(s, vm, offset) }
             // Gathering over crafting, with the materials flowing from one into the other (the owner's pick of five mockups, 2.44.0).
             val (crafting, gathering) = crafts.professions.partition { it.crafting }
             listOf("crafts.section_gather" to gathering, "crafts.section_craft" to crafting).filter { it.second.isNotEmpty() }.forEachIndexed { index, (title, group) ->
@@ -151,7 +148,7 @@ private fun eta(millis: Long): String {
 }
 
 /** The work under way, on every screen of the tab: which, how far the cycle is, what it last brought, and a stop. */
-@Composable private fun WorkPlaque(s: ForgeState, vm: ForgeViewModel, serverNow: Long) {
+@Composable private fun WorkPlaque(s: ForgeState, vm: ForgeViewModel, offset: Long) {
     val work = s.play.crafts?.work
     ForgePanel {
         if (work == null) { Text(ui("crafts.idle"), color = Muted, style = MaterialTheme.typography.bodyMedium); return@ForgePanel }
@@ -162,10 +159,36 @@ private fun eta(millis: Long): String {
             }
             OutlinedButton(enabled = !s.busy, onClick = vm::stopWork) { Text(ui("crafts.stop")) }
         }
-        CycleBar(work.settledAt, work.cycleMillis, serverNow, caption = false)
-        s.play.craftsLog.firstOrNull()?.let { Text(gainsLine(s, it), color = Parchment, style = MaterialTheme.typography.bodySmall) }
+        CycleBar(work.settledAt, work.cycleMillis, offset, caption = false)
+        s.play.craftsLast?.let { Text(gainsLine(s, it), color = Parchment, style = MaterialTheme.typography.bodySmall) }
         s.play.crafts?.professions?.firstOrNull { it.code == work.profession }?.jobs?.firstOrNull { it.code == work.job }
             ?.let { stockLine(s, work, it) }?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelSmall) }
+    }
+}
+
+/**
+ * What this session's crafting brought, summed (2.47.0): one line of cycles, the empty ones and the
+ * experience, then a chip per stack — gathered in green, spent in red — and the pieces made.
+ */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable private fun SessionTally(s: ForgeState, totals: WorkGains) {
+    if (totals.cycles == 0) { Text(ui("crafts.session_empty"), color = Muted, style = MaterialTheme.typography.labelMedium); return }
+    Text(ui("crafts.session_line", totals.cycles, totals.nothing, number(totals.experience)), color = Muted, style = MaterialTheme.typography.labelMedium)
+    if (totals.items.isNotEmpty() || totals.spent.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        totals.items.entries.sortedByDescending { it.value }.forEach { (code, amount) -> TallyChip(materialTitle(code), "+$amount", Vital) }
+        totals.spent.entries.sortedByDescending { it.value }.forEach { (code, amount) -> TallyChip(materialTitle(code), "−$amount", LifeRed) }
+    }
+    if (totals.equipment.isNotEmpty()) Text(ui("crafts.made", totals.equipment.joinToString { inventoryDocument(it, s.world.inventoryBases[it.equipmentId]).text("name") }),
+        color = Parchment, style = MaterialTheme.typography.bodySmall)
+    if (totals.starved) Text(ui("crafts.starved"), color = LifeRed, style = MaterialTheme.typography.labelSmall)
+}
+
+@Composable private fun TallyChip(title: String, figure: String, tone: Color) {
+    val shape = RoundedCornerShape(2.dp)
+    Row(Modifier.background(Abyss, shape).border(1.dp, tone.copy(alpha = .5f), shape).padding(horizontal = 7.dp, vertical = 3.dp),
+        horizontalArrangement = Arrangement.spacedBy(5.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(figure, color = tone, style = MaterialTheme.typography.labelMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+        Text(title, color = Parchment, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -186,9 +209,14 @@ private fun eta(millis: Long): String {
     }
 }
 
-@Composable private fun CycleBar(settledAt: Long, cycleMillis: Long, serverNow: Long, height: Int = 6, caption: Boolean = true) {
-    val share = if (cycleMillis > 0) ((serverNow - settledAt).toFloat() / cycleMillis).coerceIn(0f, 1f) else 0f
-    LinearProgressIndicator(progress = { share }, modifier = Modifier.fillMaxWidth().height(height.dp), color = Gold, trackColor = PanelRaised)
+/**
+ * A cycle's bar, filled smoothly (2.47.0): it reads the device's clock every frame, set by the
+ * server's through [offset], and only the bar is redrawn — the screen around it is not recomposed.
+ */
+@Composable private fun CycleBar(settledAt: Long, cycleMillis: Long, offset: Long, height: Int = 6, caption: Boolean = true) {
+    val now by produceState(System.currentTimeMillis()) { while (true) withFrameMillis { value = System.currentTimeMillis() } }
+    LinearProgressIndicator(progress = { if (cycleMillis > 0) ((now + offset - settledAt).toFloat() / cycleMillis).coerceIn(0f, 1f) else 0f },
+        modifier = Modifier.fillMaxWidth().height(height.dp), color = Gold, trackColor = PanelRaised)
     if (caption) Text(ui("crafts.cycle", number(cycleMillis / 1000.0)), color = Muted, style = MaterialTheme.typography.labelSmall)
 }
 
@@ -233,7 +261,7 @@ private fun share(profession: ProfessionView): Float = profession.next?.takeIf {
  * work under way here with what this session brought, and every work with the numbers the server
  * worked out for this hero — a locked one says the level it wants.
  */
-@Composable private fun ProfessionWindow(s: ForgeState, vm: ForgeViewModel, profession: ProfessionView, serverNow: Long) {
+@Composable private fun ProfessionWindow(s: ForgeState, vm: ForgeViewModel, profession: ProfessionView, offset: Long) {
     BackHandler { vm.openProfession("") }
     var picking by remember { mutableStateOf(false) }
     var chosen by remember { mutableStateOf<JobView?>(null) }
@@ -266,10 +294,8 @@ private fun share(profession: ProfessionView): Float = profession.next?.takeIf {
         if (work != null) item {
             ForgePanel(accent = GoldBright) {
                 Engraved(ui("crafts.now", jobTitle(work.job)))
-                CycleBar(work.settledAt, work.cycleMillis, serverNow, height = 10)
-                val log = s.play.craftsLog
-                Text(ui("crafts.session", log.sumOf { it.cycles }, log.sumOf { it.nothing }), color = Muted, style = MaterialTheme.typography.labelMedium)
-                log.take(FEED).forEach { Text(gainsLine(s, it), color = Parchment, style = MaterialTheme.typography.bodySmall) }
+                CycleBar(work.settledAt, work.cycleMillis, offset, height = 10)
+                SessionTally(s, s.play.craftsTotals)
             }
         }
         item { Engraved(ui("crafts.works")) }
@@ -393,8 +419,4 @@ private fun share(profession: ProfessionView): Float = profession.next?.takeIf {
     }
 }
 
-private const val TICK = 200L
-/** The server counts a cycle when its moment has passed; asking a little after it lands the cycle. */
-private const val SETTLE_GRACE = 400L
-private const val FEED = 8
 private const val TILES = 3

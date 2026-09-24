@@ -34,6 +34,7 @@ import com.sperance.exileforge.core.campaign.monsterTitle
 import com.sperance.exileforge.core.contract.text
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.inventoryDocument
+import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.display.modifierText
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
@@ -116,8 +117,15 @@ private data class MapLine(val text: String, val kind: MapLineKind, val risk: Do
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { Portal(picked, 176.dp) }
             Text(picked?.document?.text("name") ?: ui("expedition.launch_no_map"), color = picked?.let { rarityColor(it.document.text("rarity")) } ?: Muted,
                 style = MaterialTheme.typography.titleSmall, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+            // The map's rarity in words, and what it pays by itself (2.47.0, server 0.42.0).
+            picked?.let { chosen ->
+                val rarity = chosen.instance.rarity
+                val own = rule.rarityBonus[rarity] ?: 0.0
+                Text(if (own > 0) ui("expedition.launch_rarity_line", rarityTitle(rarity, s.lang), number(own)) else rarityTitle(rarity, s.lang),
+                    color = rarityColor(rarity), style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+            }
             MapRibbon(maps, picked, enabled = !s.busy, onPick = vm::pickMap)
-            val bonus = picked?.let { rule.bonus(MapEffects.of(it.instance.params, s.world.definitions)) }
+            val bonus = picked?.let { rule.bonus(MapEffects.of(it.instance.params, s.world.definitions), it.instance.rarity) }
             Row(Modifier.fillMaxWidth().background(Abyss).border(1.dp, PanelRaised).padding(vertical = 12.dp), horizontalArrangement = Arrangement.SpaceAround) {
                 Figure(bonus?.quantity ?: 0.0, ui("expedition.launch_quantity"))
                 Figure(bonus?.rarity ?: 0.0, ui("expedition.launch_rarity"))

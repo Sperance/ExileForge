@@ -28,6 +28,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.EntitySource
 import com.sperance.exileforge.core.model.currency.CurrencyOrb
 import com.sperance.exileforge.core.model.hero.EquipmentInstance
+import com.sperance.exileforge.core.model.campaign.MapRule
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeSection
 import com.sperance.exileforge.presentation.state.ForgeState
@@ -42,7 +43,7 @@ import kotlinx.serialization.json.JsonObject
 private const val UNCRAFT = "-"
 
 /**
- * The forge: orbs and the bench over one item, and recipes over the bag.
+ * The forge: orbs and the bench over one item — a map gets the orbs alone, and the recipes are gone (2.47.0).
  *
  * The item is the plate on top — the one the card's «Сфера» or «Верстак» opened the forge with, or
  * the last one worked on — and a tap on it picks another from the stash. Below it the section's
@@ -57,18 +58,21 @@ private const val UNCRAFT = "-"
     // Orbs and ingredients are read off the bag, so the forge opens on a hero that is not stale.
     LaunchedEffect(s.play.characterId, s.account.sessionEpoch) { vm.ensureHero() }
     val hero = s.play.hero
-    val section = s.play.forgeSection
     val instance = hero?.inventory?.firstOrNull { it.id == s.play.selectedEquipment }
     val enabled = !s.busy && s.account.signedIn && (s.ownsCharacter || s.isAdmin)
     var picking by remember { mutableStateOf(false) }
     var benchLine by remember(instance?.id) { mutableStateOf("") }
+    // A map takes no bench line (2.47.0): its forge is the orbs alone, with no tabs to choose between.
+    val isMap = instance?.let { s.world.inventoryBases[it.equipmentId]?.text("slot") } == MapRule.SLOT
+    val sections = if (isMap) listOf(ForgeSection.ORBS) else ForgeSection.entries
+    val section = s.play.forgeSection.takeIf { it in sections } ?: ForgeSection.ORBS
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             ScreenHeader(ui("craft.title"), ui("craft.subtitle"), ForgeGlyphs.Anvil)
             if (hero == null) { InfoCard(ui("tree.no_hero"), ui("craft.hero_first")); return@Column }
-            if (section != ForgeSection.RECIPES) ForgeTarget(s, instance) { picking = true }
-            TabRow(selectedTabIndex = section.ordinal, containerColor = Abyss) {
-                ForgeSection.entries.forEach { entry ->
+            ForgeTarget(s, instance) { picking = true }
+            if (sections.size > 1) TabRow(selectedTabIndex = sections.indexOf(section), containerColor = Abyss) {
+                sections.forEach { entry ->
                     Tab(selected = section == entry, onClick = { vm.forgeSection(entry) },
                         text = { Text(ui(entry.title), style = MaterialTheme.typography.labelLarge) })
                 }
@@ -76,13 +80,11 @@ private const val UNCRAFT = "-"
             when (section) {
                 ForgeSection.ORBS -> OrbLedger(s, vm::selectOrb)
                 ForgeSection.BENCH -> instance?.let { BenchLedger(s, it, benchLine) { line -> benchLine = line } }
-                ForgeSection.RECIPES -> ForgePanel { RecipeForm(s, vm, enabled) }
             }
         }
         if (hero != null && instance != null) when (section) {
             ForgeSection.ORBS -> OrbBar(s, instance, enabled, vm::applyOrb)
             ForgeSection.BENCH -> BenchBar(s, vm, instance, benchLine, enabled)
-            ForgeSection.RECIPES -> Unit
         }
     }
     if (picking) TargetPicker(s, onDismiss = { picking = false }) { vm.selectEquipment(it); picking = false }
@@ -91,7 +93,6 @@ private const val UNCRAFT = "-"
 private val ForgeSection.title get() = when (this) {
     ForgeSection.ORBS -> "forge.section_orbs"
     ForgeSection.BENCH -> "forge.section_bench"
-    ForgeSection.RECIPES -> "forge.section_recipes"
 }
 
 /** The item being worked on, as the stash draws it, with the server's last word about it underneath. */
@@ -252,59 +253,3 @@ private fun craftedModifier(s: ForgeState, document: JsonObject): JsonObject? =
 
 private fun orbTitle(s: ForgeState, code: String) = s.world.orbs.firstOrNull { it.subCategory == code }?.title(s.lang)
     ?: CurrencyOrb.of(code)?.title(s.lang) ?: code
-
-@Composable private fun ColumnScope.RecipeForm(s: ForgeState, vm: ForgeViewModel, enabled: Boolean) {
-    var recipeId by remember(s.play.characterId) { mutableStateOf("") }
-    var recipe by remember(s.play.characterId) { mutableStateOf<JsonObject?>(null) }
-    var failure by remember { mutableStateOf<String?>(null) }
-    var loading by remember { mutableStateOf(false) }
-    var refresh by remember { mutableIntStateOf(0) }
-    var ingredients by remember(recipeId, refresh) { mutableStateOf<Map<Int, String>>(emptyMap()) }
-    var amount by remember(recipeId) { mutableStateOf("1") }
-    val owned = s.play.hero?.bag.orEmpty().associate { it.itemId to it.amount }
-    Engraved(ui("craft.recipes"))
-    EntitySpinner(ui("craft.recipe"), recipeId, EntitySource.RECIPE, enabled && !loading) { recipeId = it }
-    LaunchedEffect(recipeId, refresh) {
-        recipe = null; failure = null
-        if (recipeId.isNotBlank()) {
-            loading = true
-            try { recipe = vm.recipeDocument(recipeId) }
-            catch (e: CancellationException) { throw e }
-            catch (e: Exception) { failure = e.message }
-            finally { loading = false }
-        }
-    }
-    if (loading) LinearProgressIndicator(Modifier.fillMaxWidth())
-    failure?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-    recipe?.let { selected ->
-        val inputs = (selected["arrayIn"] as? JsonArray).orEmpty()
-        Text(selected.text("name"))
-        inputs.forEachIndexed { index, input ->
-            val row = input as JsonObject
-            val loader = LocalEntityPageLoader.current
-            key(recipeId, index, refresh) {
-                // Only what the character actually owns can be spent, and only of the required kind.
-                CompositionLocalProvider(LocalEntityPageLoader provides { source, page, query ->
-                    val result = loader(source, page, query)
-                    result.copy(items = result.items.filter { item ->
-                        val matches = when {
-                            row.text("itemId").isNotBlank() -> item.entityId == row.text("itemId")
-                            row.text("category").isNotBlank() -> item.text("category") == row.text("category")
-                            else -> item.text("subCategory") == row.text("subCategory")
-                        }
-                        matches && (owned[item.entityId] ?: 0L) > 0
-                    })
-                }) {
-                    EntitySpinner(ui("craft.ingredient", index + 1, row.text("amount")),
-                        ingredients[index].orEmpty(), EntitySource.ITEM, enabled) { ingredients = ingredients + (index to it) }
-                }
-            }
-        }
-        OutlinedTextField(amount, { amount = it }, label = { Text(ui("craft.uses")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
-        Button(enabled = enabled && !loading && amount.toLongOrNull()?.let { it in 1L..100L } == true && inputs.indices.all { !ingredients[it].isNullOrBlank() },
-            onClick = { vm.useRecipe(recipeId, inputs.indices.map { ingredients.getValue(it) }.distinct(), amount.toLong()) }) { Text(ui("craft.use")) }
-        OutlinedButton(enabled = enabled && !loading, onClick = { refresh++ }) { Text(ui("craft.refresh")) }
-        // The command re-reads the hero itself, so the bag on the Hero tab is right by the time it opens.
-        Text(ui("craft.note"), color = Muted)
-    }
-}

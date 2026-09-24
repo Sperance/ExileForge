@@ -4,7 +4,6 @@ import com.sperance.exileforge.core.character.Sheet
 import com.sperance.exileforge.core.contract.entityId
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.ItemStack
-import com.sperance.exileforge.core.model.command.UseRecipeCommand
 import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.presentation.ForgeRuntime
 import com.sperance.exileforge.presentation.state.ForgeSection
@@ -142,10 +141,6 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
      * the merchant's own rule, and the hero is re-read because the item is gone and the gold moved.
      */
     fun sellForGold(inventoryId: String) { with(runtime) { characterCommand { id -> api.hero.sellForGold(id, inventoryId) } } }
-
-    fun useRecipe(recipeId: String, ingredients: List<String>, amount: Long) { with(runtime) { characterCommand { id ->
-        api.hero.useRecipe(id, recipeId, UseRecipeCommand(ingredients, amount))
-    } } }
 
     /**
      * Every character command is a write the server may have applied even when the answer is lost,

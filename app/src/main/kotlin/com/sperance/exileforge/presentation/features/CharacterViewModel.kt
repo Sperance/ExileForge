@@ -47,7 +47,8 @@ class CharacterViewModel(private val runtime: ForgeRuntime) {
      * already loaded, which is what "every button is bound to the chosen one" has to mean.
      */
     private suspend fun entered(id: String) { with(runtime) {
-        mutable.update { it.copy(phase = AppPhase.GAME, tab = 0, play = it.play.copy(characterId = id, hero = null, characterOwner = "", selectedEquipment = "", forgeLine = "", campaign = null), world = it.world.copy(inventoryBases = emptyMap())) }
+        mutable.update { it.copy(phase = AppPhase.GAME, tab = 0, play = it.play.copy(characterId = id, hero = null, characterOwner = "", selectedEquipment = "", forgeLine = "", campaign = null,
+            crafts = null, craftsTotals = com.sperance.exileforge.core.model.crafts.WorkGains(), craftsLast = null, craftsPending = com.sperance.exileforge.core.model.crafts.WorkGains()), world = it.world.copy(inventoryBases = emptyMap())) }
         heroViewModel.readHero()
         // Tab 0 is the catalogue, and this is where it becomes the open one.
         loadPage(0)

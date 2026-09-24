@@ -200,13 +200,17 @@ data class PlayState(
     val launch: MapLaunchState? = null,
     /**
      * The crafts (2.41.0) as the server last answered, with the device's clock at that moment so a
-     * cycle's bar can run between answers; the profession whose window is open ("" is the tiles);
-     * and what the answers of this session brought, newest first.
+     * cycle's bar can run between answers; the profession whose window is open ("" is the tiles).
+     * Since 2.47.0 a cycle is thrown here the moment it ends: [craftsTotals] is what this session
+     * brought, summed; [craftsLast] the last cycle or answer; [craftsPending] the cycles thrown here
+     * that the server has not answered for yet — its answer is set against them.
      */
     val crafts: com.sperance.exileforge.core.model.crafts.CraftsState? = null,
     val craftsAt: Long = 0,
     val craftsProfession: String = "",
-    val craftsLog: List<com.sperance.exileforge.core.model.crafts.WorkGains> = emptyList(),
+    val craftsTotals: com.sperance.exileforge.core.model.crafts.WorkGains = com.sperance.exileforge.core.model.crafts.WorkGains(),
+    val craftsLast: com.sperance.exileforge.core.model.crafts.WorkGains? = null,
+    val craftsPending: com.sperance.exileforge.core.model.crafts.WorkGains = com.sperance.exileforge.core.model.crafts.WorkGains(),
     /** The gear this run brought (2.45.0), with when each piece landed, for the gear sheet's «Новый лут». */
     val runLoot: List<LootEntry> = emptyList(),
 )
@@ -226,7 +230,7 @@ data class MapLaunchState(
 )
 
 /** The forge's sections: orbs and the bench work on one item, a recipe on the bag. */
-enum class ForgeSection { ORBS, BENCH, RECIPES }
+enum class ForgeSection { ORBS, BENCH }
 
 /** The auction, as this character sees it. */
 data class MarketState(

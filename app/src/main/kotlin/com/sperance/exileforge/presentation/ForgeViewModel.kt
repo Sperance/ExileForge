@@ -27,6 +27,7 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     fun startRun(mapCode: String) = runtime.expeditionViewModel.start(mapCode)
     fun openLaunch(mapCode: String) = runtime.expeditionViewModel.openLaunch(mapCode)
     fun loadCrafts() = runtime.craftsViewModel.load()
+    fun craftsCycleDue() = runtime.craftsViewModel.cycleDue()
     fun openProfession(code: String) = runtime.craftsViewModel.openProfession(code)
     fun startWork(job: String, additives: List<String> = emptyList()) = runtime.craftsViewModel.start(job, additives)
     fun stopWork() = runtime.craftsViewModel.stop()
@@ -91,7 +92,6 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     fun unsocketJewel(inventoryId: String) = runtime.heroViewModel.unsocketJewel(inventoryId)
     /** Sells an item to a merchant; the price and the refusal are both the server's. */
     fun sellForGold(inventoryId: String) = runtime.heroViewModel.sellForGold(inventoryId)
-    fun useRecipe(recipeId: String, ingredients: List<String>, amount: Long) = runtime.heroViewModel.useRecipe(recipeId, ingredients, amount)
     fun mode(mode: AppMode) = runtime.sessionViewModel.mode(mode)
     fun serverDraft(value: String) = runtime.sessionViewModel.serverDraft(value)
     fun connect() = runtime.sessionViewModel.connect()

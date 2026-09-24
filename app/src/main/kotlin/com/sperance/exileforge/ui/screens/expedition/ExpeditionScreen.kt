@@ -35,7 +35,8 @@ import com.sperance.exileforge.ui.theme.*
  *
  * «Кампания» leads straight to the next map the character has not cleared, because that is what
  * the button is pressed for nine times out of ten; the chapter's maps are listed under it for the
- * tenth — a cleared map is played again for its loot. A locked map says so and opens nothing.
+ * tenth — a cleared map is played again for its loot. Only the open maps are listed, and the next
+ * locked one as a lock and a level with its name and description kept back (2.47.0).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun ExpeditionScreen(s: ForgeState, vm: ForgeViewModel) {
@@ -50,11 +51,17 @@ import com.sperance.exileforge.ui.theme.*
                 item { InfoCard(ui("common.loading"), ui("expedition.loading_hint")) }
                 return@LazyColumn
             }
+            // Only what is open, and the one map after it (2.47.0): that one is a lock, a level and «???» —
+            // its name, its description and everything beyond it are not the player's yet.
+            val following = view.chapters.flatMap { it.maps }.firstOrNull { it.code !in progress.unlocked }?.code
             view.chapters.forEach { chapter ->
+                val shown = chapter.maps.filter { it.code in progress.unlocked || it.code == following }
+                if (shown.isEmpty()) return@forEach
+                val known = chapter.maps.any { it.code in progress.unlocked }
                 val cleared = chapter.maps.count { it.code in progress.cleared }
                 item(key = chapter.code) {
                     ForgePanel {
-                        Engraved(chapterTitle(chapter.code))
+                        Engraved(if (known) chapterTitle(chapter.code) else ui("expedition.hidden"))
                         Text(ui("expedition.cleared", cleared, chapter.maps.size), color = Muted, style = MaterialTheme.typography.bodySmall)
                         LinearProgressIndicator(progress = { if (chapter.maps.isEmpty()) 0f else cleared / chapter.maps.size.toFloat() },
                             modifier = Modifier.fillMaxWidth().height(4.dp), color = Gold, trackColor = PanelRaised)
@@ -67,7 +74,7 @@ import com.sperance.exileforge.ui.theme.*
                         next?.let { Text(ui("expedition.next", mapTitle(it.code), it.level), color = Rune, style = MaterialTheme.typography.labelMedium) }
                     }
                 }
-                items(chapter.maps, key = { it.code }) { map ->
+                items(shown, key = { it.code }) { map ->
                     val open = map.code in progress.unlocked
                     MapRow(map, open = open, cleared = map.code in progress.cleared, enabled = ready && open) { vm.openLaunch(map.code) }
                 }
@@ -89,9 +96,9 @@ import com.sperance.exileforge.ui.theme.*
             Text(map.order.toString(), color = accent, style = MaterialTheme.typography.titleMedium)
         }
         Column(Modifier.weight(1f).padding(vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(mapTitle(map.code), color = if (open) GoldBright else Muted, style = MaterialTheme.typography.titleSmall)
+            Text(if (open) mapTitle(map.code) else ui("expedition.hidden"), color = if (open) GoldBright else Muted, style = MaterialTheme.typography.titleSmall)
             Text(ui("expedition.map_level", map.level), color = Rune, style = MaterialTheme.typography.labelSmall)
-            Text(mapDescription(map.code), color = Muted, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            if (open) Text(mapDescription(map.code), color = Muted, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
         when {
             cleared -> Icon(Icons.Outlined.CheckCircle, ui("expedition.map_cleared"), tint = Vital, modifier = Modifier.size(20.dp))

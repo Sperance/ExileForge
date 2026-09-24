@@ -89,7 +89,7 @@ private enum class ItemAction { AUCTION, SELL }
                     else -> Action(ForgeGlyphs.Helm, ui("hero.equip"), can && reachable, GoldBright) { onDismiss(); vm.equip(instance.id, null) }
                 }
                 Action(ForgeGlyphs.Orb, ui("hero.action_orb"), can) { onDismiss(); vm.openForge(instance.id, ForgeSection.ORBS) }
-                Action(ForgeGlyphs.Anvil, ui("hero.action_bench"), can, Crafted) { onDismiss(); vm.openForge(instance.id, ForgeSection.BENCH) }
+                if (document.text("slot") != MapRule.SLOT) Action(ForgeGlyphs.Anvil, ui("hero.action_bench"), can, Crafted) { onDismiss(); vm.openForge(instance.id, ForgeSection.BENCH) }
                 Action(ForgeGlyphs.Scales, ui("hero.action_auction"), can && loose) { open = ItemAction.AUCTION }
                 Action(ForgeGlyphs.Coins, ui("hero.action_sell"), can && loose, LifeRed) { open = ItemAction.SELL }
                 if (s.adminTools) Action(Icons.Outlined.Edit, ui("hero.action_base"), !s.busy, Rune) { onDismiss(); vm.editInventoryBase(instance.equipmentId) }

@@ -66,6 +66,9 @@ import kotlinx.serialization.Serializable
     val cycleMillis: Long = 0,
     val nextAt: Long = 0,
     val additives: List<String> = emptyList(),
+    /** Since server 0.42.0: the work's seed and the number of its next cycle — what [com.sperance.exileforge.core.crafts.CraftCycle] throws it by. */
+    val seed: Long = 0,
+    val cycle: Long = 0,
 )
 
 /** What the cycles counted by one answer brought. */

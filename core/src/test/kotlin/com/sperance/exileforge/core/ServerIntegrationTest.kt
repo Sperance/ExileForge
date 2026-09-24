@@ -227,6 +227,40 @@ class ServerIntegrationTest {
         assertEquals(401, assertFailsWith<ApiFailure> { GameApi(url).resume(kept) }.status)
     }
 
+    /** The tree (0.12.0, 0.16.0): a neighbour taken, what is taken refused again, a refund paid for with an Orb of Regret, a reset back to the class node. */
+    private suspend fun treeIsTheServers(api: GameApi, id: String, tree: List<com.sperance.exileforge.core.model.skilltree.SkillTreeNode>,
+                                         start: com.sperance.exileforge.core.model.skilltree.SkillTreeNode,
+                                         started: com.sperance.exileforge.core.model.skilltree.SkillTreeState,
+                                         orbs: List<com.sperance.exileforge.core.model.currency.CurrencyItem>) {
+        val neighbour = tree.firstOrNull { it.code in start.connections } ?: fail("${start.code} has no neighbour")
+        val grown = api.tree.allocate(id, neighbour.code)
+        assertEquals(setOf(start.code, neighbour.code), grown.takenCodes)
+        assertEquals(started.available - neighbour.cost, grown.available)
+        // A node's bonuses are a snapshot taken when it was allocated, and they are never rolled.
+        assertTrue(grown.nodes.flatMap { node -> node.params }.none { param -> param.rolled })
+        // What the whole tree gives is the server's arithmetic, sent with the state: the client
+        // adds nothing up, so a node with bonuses has to show up here.
+        if (grown.nodes.any { node -> node.params.isNotEmpty() })
+            assertTrue(grown.totals.isNotEmpty(), "the tree gives nothing after a node with bonuses: $grown")
+        // Taking what is already taken is refused, and the start node is the tree's root.
+        assertFailsWith<ApiFailure> { api.tree.allocate(id, start.code) }
+        assertFailsWith<ApiFailure> { api.tree.refund(id, start.code) }
+        // Since 0.16.0 giving a node back costs an Orb of Regret, so an empty bag is a refusal
+        // and not a free undo. The campaign above may have dropped one, so the bag is emptied first.
+        val regret = orbs.firstOrNull { it.orb == CurrencyOrb.ORB_OF_REGRET } ?: fail("no Orb of Regret among ${orbs.map { it.code }}")
+        api.hero.bag(id).firstOrNull { it.itemId == regret.id }?.let { api.hero.adjustItems(id, listOf(ItemStack(regret.id, -it.amount))) }
+        assertFailsWith<ApiFailure> { api.tree.refund(id, neighbour.code) }
+        assertEquals("system.success", api.hero.adjustItems(id, listOf(ItemStack(regret.id, 1))))
+        assertEquals(setOf(start.code), api.tree.refund(id, neighbour.code).takenCodes)
+        // The orb is spent, not merely checked: a second refund would have to be paid for again.
+        assertTrue(api.hero.bag(id).none { it.itemId == regret.id }, "the orb of regret was not spent")
+        // A reset is a respec: it leaves the character standing on its class node, not on nothing.
+        // Nothing is left to give back here, so it costs no orb.
+        val respec = api.tree.reset(id)
+        assertEquals(setOf(start.code), respec.takenCodes, "a reset emptied the tree: $respec")
+        assertEquals(started.available, respec.available)
+    }
+
     @Test fun realServerClientContract(): Unit = runBlocking {
         val url = System.getenv("EF_LIVE_URL")
         assumeTrue("Enabled only by the isolated client/server job", !url.isNullOrBlank())
@@ -425,33 +459,7 @@ class ServerIntegrationTest {
             assertTrue(started.total > 0, "a levelled character has no skill points: $started")
             assertEquals(started.nodes.sumOf { node -> node.cost }, started.spent)
 
-            val neighbour = tree.firstOrNull { it.code in start.connections } ?: fail("${start.code} has no neighbour")
-            val grown = api.tree.allocate(id, neighbour.code)
-            assertEquals(setOf(start.code, neighbour.code), grown.takenCodes)
-            assertEquals(started.available - neighbour.cost, grown.available)
-            // A node's bonuses are a snapshot taken when it was allocated, and they are never rolled.
-            assertTrue(grown.nodes.flatMap { node -> node.params }.none { param -> param.rolled })
-            // What the whole tree gives is the server's arithmetic, sent with the state: the client
-            // adds nothing up, so a node with bonuses has to show up here.
-            if (grown.nodes.any { node -> node.params.isNotEmpty() })
-                assertTrue(grown.totals.isNotEmpty(), "the tree gives nothing after a node with bonuses: $grown")
-            // Taking what is already taken is refused, and the start node is the tree's root.
-            assertFailsWith<ApiFailure> { api.tree.allocate(id, start.code) }
-            assertFailsWith<ApiFailure> { api.tree.refund(id, start.code) }
-            // Since 0.16.0 giving a node back costs an Orb of Regret, so an empty bag is a refusal
-            // and not a free undo. The campaign above may have dropped one, so the bag is emptied first.
-            val regret = orbs.firstOrNull { it.orb == CurrencyOrb.ORB_OF_REGRET } ?: fail("no Orb of Regret among ${orbs.map { it.code }}")
-            api.hero.bag(id).firstOrNull { it.itemId == regret.id }?.let { api.hero.adjustItems(id, listOf(ItemStack(regret.id, -it.amount))) }
-            assertFailsWith<ApiFailure> { api.tree.refund(id, neighbour.code) }
-            assertEquals("system.success", api.hero.adjustItems(id, listOf(ItemStack(regret.id, 1))))
-            assertEquals(setOf(start.code), api.tree.refund(id, neighbour.code).takenCodes)
-            // The orb is spent, not merely checked: a second refund would have to be paid for again.
-            assertTrue(api.hero.bag(id).none { it.itemId == regret.id }, "the orb of regret was not spent")
-            // A reset is a respec: it leaves the character standing on its class node, not on nothing.
-            // Nothing is left to give back here, so it costs no orb.
-            val respec = api.tree.reset(id)
-            assertEquals(setOf(start.code), respec.takenCodes, "a reset emptied the tree: $respec")
-            assertEquals(started.available, respec.available)
+            treeIsTheServers(api, id, tree, start, started, orbs)
 
             // The auction needs two characters: the server refuses to let one buy its own lot.
             val buyerName = "EF-buyer-${java.util.UUID.randomUUID()}"

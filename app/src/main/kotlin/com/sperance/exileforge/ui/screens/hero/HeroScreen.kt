@@ -68,7 +68,9 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
     // Worn and socketed items are the Equipment section's; the stash is what lies loose.
     val stash = hero?.inventory.orEmpty().filterNot { it.equipped || it.socketed }
     val documents = stash.associate { it.id to inventoryDocument(it, s.world.inventoryBases[it.equipmentId]) }
-    val slots = documents.values.map { it.text("slot") }.filter(String::isNotBlank).distinct()
+    // How many loose items each slot holds (2.47.0): a chip says it, and a slot with none has no chip.
+    val slotCounts = documents.values.map { it.text("slot") }.filter(String::isNotBlank).groupingBy { it }.eachCount()
+    val slots = slotCounts.keys.toList()
     val visible = stash.filter { instance -> documents[instance.id]?.let { (slot.isBlank() || it.text("slot") == slot) && it.text("name").contains(query, true) } == true }
     PullToRefreshBox(isRefreshing = s.refreshing(Reads.HERO), onRefresh = vm::loadHero, modifier = Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -96,8 +98,9 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
                             OutlinedTextField(query, { query = it }, label = { Text(ui("hero.find_item")) },
                                 leadingIcon = { Icon(Icons.Outlined.Search, null) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                item { FilterChip(selected = slot.isBlank(), onClick = { slot = "" }, label = { Text(ui("common.all")) }) }
-                                items(slots) { key -> FilterChip(selected = slot == key, onClick = { slot = key }, label = { Text(slotTitle(key, s.lang)) }) }
+                                item { FilterChip(selected = slot.isBlank(), onClick = { slot = "" }, label = { Text(ui("hero.slot_count", ui("common.all"), stash.size)) }) }
+                                items(slots) { key -> FilterChip(selected = slot == key, onClick = { slot = key },
+                                    label = { Text(ui("hero.slot_count", slotTitle(key, s.lang), slotCounts[key] ?: 0)) }) }
                             }
                         }
                     }
@@ -107,7 +110,10 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
                         ItemRow(documents.getValue(instance.id), definitions = s.world.definitions,
                             selected = instance.id == s.play.selectedEquipment,
                             // The sheet added up here (2.46.0) says what the template needs, and the merchant's rule what it fetches.
-                            unwearable = hero.sheet.unwearableBy[instance.equipmentId].orEmpty(), price = s.sellPrice(instance)) {
+                            unwearable = hero.sheet.unwearableBy[instance.equipmentId].orEmpty(), price = s.sellPrice(instance),
+                            // A map's rarity decides its affixes and what it pays (2.47.0), so it is said in words too.
+                            facts = listOfNotNull(com.sperance.exileforge.core.display.rarityTitle(instance.rarity, s.lang)
+                                .takeIf { documents.getValue(instance.id).text("slot") == com.sperance.exileforge.core.model.campaign.MapRule.SLOT })) {
                             detailId = instance.id; vm.selectEquipment(instance.id)
                         }
                     }

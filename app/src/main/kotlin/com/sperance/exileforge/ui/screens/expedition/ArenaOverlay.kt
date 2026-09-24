@@ -115,6 +115,7 @@ internal fun DamageType.key() = "enum.damage.$name"
     val live = fight.outcome == null
     val panel = RoundedCornerShape(10.dp)
     BoxWithConstraints(Modifier.fillMaxSize()) {
+        val logHeight = maxHeight * .3f
         FloatingHits(fight.hits, maxWidth, maxHeight)
         fight.outcome?.let {
             Text(ui("expedition.outcome_${it.name.lowercase()}"), color = outcomeColour(it), style = MaterialTheme.typography.headlineMedium,
@@ -128,7 +129,7 @@ internal fun DamageType.key() = "enum.damage.$name"
         Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth()
             .background(Brush.verticalGradient(listOf(Color.Transparent, Ink.copy(alpha = .92f))))
             .navigationBarsPadding().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (logOpen) Box(Modifier.fillMaxWidth().height(maxHeight * .3f).background(Panel.copy(alpha = .94f), panel)
+            if (logOpen) Box(Modifier.fillMaxWidth().height(logHeight).background(Panel.copy(alpha = .94f), panel)
                 .border(1.dp, Bronze.copy(alpha = .5f), panel).padding(horizontal = 10.dp, vertical = 8.dp)) {
                 FightLog(fight.events, fight.monster.code)
             }

@@ -20,7 +20,7 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.48.0, `versionCode` 66) for the
+ExileForge is an **Android Compose client** (version 2.49.0, `versionCode` 67) for the
 **ktor-bestgame** RPG server (0.43.0), pinned in
 `core/.../contract/Contract.kt` as `SERVER_COMMIT = 0cf6eb9393b05270a47c57a467088e9b1be1840d`
 on the server branch `claude/vigilant-wozniak-ptnxmx`.
@@ -394,6 +394,10 @@ These are enforced by tests and are the point of the client's design:
     0.34.0) the fourth tab is the merchant (`MerchantClient`: a four-hour shelf per hero, priced in
     gold by the server), «Мои лоты» shows the lot places (`AuctionSlots`) and sells one more, and a
     campaign map's coin icon opens its services — a treasure map and summoning its guardian.
+    Since 2.49.0 the screen after a fight is «Поле боя» (`ReportScreen.kt`, the owner's pick of five
+    mockups): the fallen monster's token over the outcome, the spoils in engraved sections — gear as
+    lines with the merchant's price whose tap opens the card (`LootCard`), orbs, gold and experience —
+    or the price of death and what the run gathered; the fight as a row of figures, its log on demand.
     Since 2.48.0 (server 0.43.0) mana and spells are gone: `Combat.kt` has no casts, no mana and no
     `Action.SPELL`/`DamageType.MAGICAL`, and `core/display/Retired.kt` (`retiredStats`, `shownLines`)
     keeps mana and spell lines off the sheet, monsters, items and the bench; a fight waits for

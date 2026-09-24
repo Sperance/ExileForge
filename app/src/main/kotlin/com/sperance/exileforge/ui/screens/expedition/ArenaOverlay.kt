@@ -336,7 +336,7 @@ private fun washAmount(ailment: Ailment): Float = when (ailment) {
 }
 
 /** A clock in seconds for the portraits' idle motion, ticking once a frame while the frame is on screen. */
-@Composable private fun rememberClock(): State<Float> {
+@Composable internal fun rememberClock(): State<Float> {
     val clock = remember { mutableFloatStateOf(0f) }
     LaunchedEffect(Unit) {
         var last = 0L
@@ -424,69 +424,7 @@ private fun hitColour(hit: FloatingHit): Color = when {
     else -> damageTint(hit.type, onHero = hit.target == Side.HERO)
 }
 
-private fun outcomeColour(outcome: Outcome) = when (outcome) { Outcome.WIN -> Vital; Outcome.LOSS -> LifeRed; Outcome.RETREAT -> Muted }
-
-/**
- * After the fight: how it ended, what it came to, the whole log to scroll back through and — for a
- * victory — what the server rolled. The same screen closes a defeat, with what the death cost
- * instead of the loot.
- */
-@Composable internal fun ReportScreen(s: ForgeState, hud: RunHud, report: FightReport, onContinue: () -> Unit) {
-    val won = report.outcome == Outcome.WIN
-    Column(Modifier.fillMaxSize().background(Ink.copy(alpha = .9f)).statusBarsPadding().navigationBarsPadding().padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(ui("expedition.outcome_${report.outcome.name.lowercase()}"), color = outcomeColour(report.outcome), style = MaterialTheme.typography.headlineSmall)
-        Text(monsterTitle(report.monster.code), color = rarityTint(report.monster.rarity), style = MaterialTheme.typography.titleMedium)
-        val cells = listOf(
-            report.dealt.toString() to "expedition.sum_dealt", report.taken.toString() to "expedition.sum_taken",
-            ui("expedition.log_time", String.format(Locale.ROOT, "%.1f", report.duration)) to "expedition.sum_time",
-            report.crits.toString() to "expedition.sum_crits", report.dotTaken.toString() to "expedition.sum_dot_taken", report.flasks.toString() to "expedition.sum_flasks",
-            report.dotDealt.toString() to "expedition.sum_dot_dealt", report.blocked.toString() to "expedition.sum_blocked", report.evaded.toString() to "expedition.sum_evaded")
-        cells.chunked(3).forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                row.forEach { (value, label) ->
-                    Column(Modifier.weight(1f).background(Panel, RoundedCornerShape(8.dp)).border(1.dp, Bronze.copy(alpha = .4f), RoundedCornerShape(8.dp))
-                        .padding(vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(value, color = GoldBright, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text(ui(label), color = Muted, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
-                    }
-                }
-            }
-        }
-        // What was inflicted, each way, as coloured words.
-        if (report.inflicted.isNotEmpty()) AilmentLine(ui("expedition.sum_inflicted"), report.inflicted)
-        if (report.suffered.isNotEmpty()) AilmentLine(ui("expedition.sum_suffered"), report.suffered)
-        Box(Modifier.weight(1f).fillMaxWidth().background(Panel, RoundedCornerShape(10.dp)).border(1.dp, Bronze.copy(alpha = .4f), RoundedCornerShape(10.dp))
-            .padding(horizontal = 10.dp, vertical = 8.dp)) {
-            // The whole fight, from the first blow down, as it happened.
-            FightLog(report.events, report.monster.code, Modifier.fillMaxSize())
-        }
-        if (won) Loot(s, hud) else Fall(hud)
-        Button(enabled = !hud.rewardPending && !hud.fallPending, onClick = onContinue, modifier = Modifier.fillMaxWidth()) {
-            Text(ui(if (won) "expedition.continue" else "expedition.back_to_camp"))
-        }
-    }
-}
-
-@Composable private fun AilmentLine(label: String, ailments: List<Ailment>) {
-    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, color = Muted, style = MaterialTheme.typography.labelSmall)
-        ailments.forEach { Text(ui(it.key()), color = ailmentTint(it), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold) }
-    }
-}
-
-/** What the kill brought: the server's roll, or its absence said plainly. */
-@Composable private fun Loot(s: ForgeState, hud: RunHud) {
-    val reward = hud.reward
-    when {
-        hud.rewardPending -> Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-            CircularProgressIndicator(Modifier.size(18.dp), color = Gold, strokeWidth = 2.dp)
-            Text(ui("expedition.loot_pending"), color = Muted)
-        }
-        hud.rewardFailed -> Text(ui("expedition.loot_failed"), color = LifeRed, style = MaterialTheme.typography.bodyMedium)
-        reward != null -> RewardLines(s, reward)
-    }
-}
+internal fun outcomeColour(outcome: Outcome) = when (outcome) { Outcome.WIN -> Vital; Outcome.LOSS -> LifeRed; Outcome.RETREAT -> Muted }
 
 /** What the server rolled — experience, gold, orbs and items — for a kill and a chest alike. */
 @Composable internal fun RewardLines(s: ForgeState, reward: CampaignReward) {
@@ -506,22 +444,5 @@ private fun outcomeColour(outcome: Outcome) = when (outcome) { Outcome.WIN -> Vi
             ItemRow(inventoryDocument(instance, s.world.inventoryBases[instance.equipmentId]), s.world.definitions, price = s.sellPrice(instance)) {}
         }
         if (reward.items.isEmpty() && reward.equipment.isEmpty()) Text(ui("expedition.loot_nothing"), color = Muted)
-    }
-}
-
-/** What the death cost: the server's word, awaited, or its absence said plainly. */
-@Composable private fun Fall(hud: RunHud) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(ui("expedition.dead_hint"), color = Parchment, style = MaterialTheme.typography.bodySmall)
-        val fall = hud.fall
-        when {
-            hud.fallPending -> Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                CircularProgressIndicator(Modifier.size(18.dp), color = Gold, strokeWidth = 2.dp)
-                Text(ui("expedition.fall_pending"), color = Muted)
-            }
-            fall == null -> Text(ui("expedition.fall_failed"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
-            fall.lost > 0 -> Text(ui("expedition.fall_lost", number(fall.lost)), color = LifeRed, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-            else -> Text(ui("expedition.fall_free"), color = Muted, style = MaterialTheme.typography.bodySmall)
-        }
     }
 }

@@ -12,6 +12,7 @@ import com.sperance.exileforge.presentation.state.Reads
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 
 /**
  * The crafts (since 2.41.0, server 0.37.0). The work runs on the server by time. Since 2.47.0 a
@@ -22,12 +23,28 @@ import kotlinx.coroutines.launch
  */
 class CraftsViewModel(private val runtime: ForgeRuntime) {
 
-    fun load() { with(runtime) { read(Reads.CRAFTS) {
+    fun load(silent: Boolean = false) { with(runtime) { read(Reads.CRAFTS, silent = silent) {
         val id = state.value.play.characterId
         if (id.isBlank()) return@read
         ensureWorld()
         land(id, api.crafts.state(id))
     } } }
+
+    private var cycle: Job? = null
+
+    /**
+     * The next cycle's alarm (2.56.1): it lives here, not on the crafts screen, so a cycle ends on
+     * every tab and during a run alike — before, the badge over the game filled up and froze until
+     * the crafts tab was opened again. Armed anew after every answer and every cycle thrown.
+     */
+    private fun armCycle() { with(runtime) {
+        cycle?.cancel()
+        val play = state.value.play
+        val crafts = play.crafts ?: return
+        val work = crafts.work ?: return
+        val due = work.nextAt - (crafts.now - play.craftsAt) - System.currentTimeMillis()
+        cycle = scope.launch { delay(due.coerceAtLeast(0)); cycleDue() }
+    } }
 
     /** The cycle under way has ended: throw it here, pay it into the bag, and ask the server behind it. */
     fun cycleDue() { with(runtime) {
@@ -48,8 +65,9 @@ class CraftsViewModel(private val runtime: ForgeRuntime) {
                     craftsTotals = s.play.craftsTotals + gains, craftsLast = gains, craftsPending = s.play.craftsPending + gains)) }
             }
         }
-        // The server is asked a moment later, so its clock has reached the cycle too.
-        scope.launch { delay(SETTLE_GRACE); load() }
+        armCycle()
+        // The server is asked a moment later, so its clock has reached the cycle too — and quietly.
+        scope.launch { delay(SETTLE_GRACE); load(silent = true) }
     } }
 
     fun openProfession(code: String) { runtime.mutable.update { it.copy(play = it.play.copy(craftsProfession = code)) } }
@@ -102,6 +120,7 @@ class CraftsViewModel(private val runtime: ForgeRuntime) {
                     heroReadAt = if (answer.gains.equipment.isNotEmpty() || beyond.items.isNotEmpty() || beyond.spent.isNotEmpty()) 0 else s.play.heroReadAt))
             }
         }
+        armCycle()
     } }
 
     /** The bag with a tally's stacks paid in and its spending taken out, by the items' codes. */

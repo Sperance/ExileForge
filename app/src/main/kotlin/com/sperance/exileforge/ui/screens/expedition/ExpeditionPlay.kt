@@ -13,8 +13,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -46,6 +44,8 @@ import com.sperance.exileforge.ui.screens.expedition.scene.ExpeditionScene
 import com.sperance.exileforge.ui.theme.*
 import kotlin.math.hypot
 import kotlin.math.roundToInt
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
  * A run of the campaign, over the whole screen: the scene underneath, the overlay above.
@@ -73,7 +73,7 @@ import kotlin.math.roundToInt
                 if (hud.chestPending || hud.chestFailed || hud.chest != null) ChestLoot(s, hud) { vm.runCommand(RunCommand.DismissChest) }
                 if (leaving) ConfirmSheet(title = ui("expedition.leave_q"), confirm = ui("expedition.leave"), danger = true,
                     subtitle = mapTitle(hud.mapCode),
-                    ledger = listOf(LedgerLine(ui("expedition.leave_left"), ui("expedition.monsters_left", hud.alive, hud.total), Tone.SPEND)),
+                    ledger = listOf(LedgerLine(ui("expedition.leave_left"), ui(if (hud.sealed) "expedition.boss_alive" else "expedition.boss_slain"), Tone.SPEND)),
                     note = ui("expedition.leave_note"), onDismiss = { leaving = false }) { vm.runCommand(RunCommand.Leave) }
             }
             RunPhase.FIGHT -> hud.fight?.let { ArenaOverlay(s, hud, it, run.map.level, onCommand = vm::runCommand) }
@@ -92,29 +92,23 @@ import kotlin.math.roundToInt
 // ==================== Walking ====================
 
 /**
- * Life, shield and the flask, what is left on the map, and the way out. Nothing comes back on
- * its own between fights (2.29.0), so the flask is here too: the same charge, the same heal.
+ * Life, shield and the flask, the map's name and whether its warden still lives, and the way out.
+ * Nothing comes back on its own between fights (2.29.0), so the flask is here too: the same charge,
+ * the same heal. What the map still holds — foes, chests, fountains — is the walk's to find (2.56.1).
  */
 @Composable private fun MapBar(run: ExpeditionRun, hud: RunHud, onLeave: (() -> Unit)?, onFlask: () -> Unit, onGear: () -> Unit) {
     Column(Modifier.fillMaxWidth().statusBarsPadding().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Column(Modifier.weight(1f)) {
+        Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            // The way out (2.56.1): a portal in a bronze ring, first thing in the corner, and it asks before it goes.
+            onLeave?.let { RoundButton(ForgeGlyphs.Portal, ui("expedition.leave"), onClick = it) }
+            Column(Modifier.weight(1f).padding(top = 4.dp)) {
                 Text(mapTitle(hud.mapCode), color = GoldBright, style = MaterialTheme.typography.titleMedium)
-                Text(ui("expedition.monsters_left", hud.alive, hud.total), color = Muted, style = MaterialTheme.typography.labelMedium)
-                if (hud.chestsLeft > 0) Text(ui("expedition.chests_left", hud.chestsLeft), color = GoldBright, style = MaterialTheme.typography.labelMedium)
-                if (hud.fountainsLeft > 0) Text(ui("expedition.fountains_left", hud.fountainsLeft), color = ShieldCyan, style = MaterialTheme.typography.labelMedium)
-                if (hud.sealed) Text(ui("expedition.exit_sealed"), color = LifeRed, style = MaterialTheme.typography.labelMedium)
+                Text(ui(if (hud.sealed) "expedition.boss_alive" else "expedition.boss_slain"), color = if (hud.sealed) LifeRed else Vital,
+                    style = MaterialTheme.typography.labelMedium)
             }
-            IconButton(onClick = onGear) { Icon(ForgeGlyphs.Helm, ui("expedition.gear"), tint = Gold, modifier = Modifier.size(24.dp)) }
-            // The minimap (2.51.0), opened as the map is explored, and the way out under it.
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                MiniMap(run.world)
-                onLeave?.let {
-                    IconButton(onClick = it, modifier = Modifier.size(36.dp).background(Color(0xCC0A0D12), CircleShape).border(1.dp, LifeRed.copy(alpha = .7f), CircleShape)) {
-                        Icon(Icons.AutoMirrored.Outlined.Logout, ui("expedition.leave"), tint = LifeRed, modifier = Modifier.size(20.dp))
-                    }
-                }
-            }
+            RoundButton(ForgeGlyphs.Helm, ui("expedition.gear"), onClick = onGear)
+            // The minimap (2.51.0), opened as the map is explored; round and around the hero since 2.56.1.
+            MiniMap(run.world)
         }
         Vitals(hud.heroLife, hud.heroMaxLife, hud.heroShield, hud.heroMaxShield, Modifier.fillMaxWidth(.6f))
         Button(enabled = hud.flasks > 0 && !hud.flaskActive, onClick = onFlask, modifier = Modifier.fillMaxWidth(.6f).height(34.dp), contentPadding = PaddingValues(horizontal = 12.dp),
@@ -126,37 +120,55 @@ import kotlin.math.roundToInt
     }
 }
 
+/** A glyph in a bronze ring on dark glass: the map's buttons share one look (2.56.1). */
+@Composable private fun RoundButton(icon: ImageVector, label: String, onClick: () -> Unit) {
+    IconButton(onClick = onClick, modifier = Modifier.size(44.dp).background(Color(0xE60A0D12), CircleShape).border(1.5.dp, Bronze, CircleShape)) {
+        Icon(icon, label, tint = GoldBright, modifier = Modifier.size(24.dp))
+    }
+}
+
 /**
- * The map in small (2.51.0): only what the hero has explored, rock darker than floor, the exit once
- * seen, the chests and fountains still standing, and the hero. It redraws a few times a second on
- * its own tick — the scene's clock is the scene's.
+ * The map in small: round, framed in bronze, the hero at its centre and the explored ground moving
+ * under them (2.56.1) — rock darker than floor, the exit once seen, the chests and fountains still
+ * standing. It redraws a few times a second on its own tick — the scene's clock is the scene's.
  */
 @Composable private fun MiniMap(world: ExpeditionWorld) {
     var tick by remember(world) { mutableIntStateOf(0) }
     LaunchedEffect(world) { while (true) { kotlinx.coroutines.delay(200); tick++ } }
     val map = world.map
-    val side = 108.dp
-    val shape = RoundedCornerShape(6.dp)
-    Canvas(Modifier.size(side).background(Color(0xCC0A0D12), shape).border(1.dp, Bronze.copy(alpha = .7f), shape).padding(4.dp)) {
+    Canvas(Modifier.size(150.dp).clip(CircleShape).background(Color(0xE60A0D12))) {
         if (tick < 0) return@Canvas
-        val cell = minOf(size.width / map.width, size.height / map.height)
-        val left = (size.width - cell * map.width) / 2
-        val top = (size.height - cell * map.height) / 2
+        val cell = size.width / MINIMAP_CELLS
+        val centre = Offset(size.width / 2, size.height / 2)
+        val radius = size.width / 2
+        val left = centre.x - world.heroX.toFloat() * cell
+        val top = centre.y - world.heroY.toFloat() * cell
         fun at(x: Int, y: Int) = Offset(left + x * cell, top + y * cell)
         val square = androidx.compose.ui.geometry.Size(cell, cell)
-        for (y in 0 until map.height) for (x in 0 until map.width) {
+        // Only the cells under the glass are drawn: the map may be far larger than the window.
+        val xs = (kotlin.math.floor(-left / cell).toInt() - 1).coerceAtLeast(0)..(kotlin.math.ceil((size.width - left) / cell).toInt() + 1).coerceAtMost(map.width - 1)
+        val ys = (kotlin.math.floor(-top / cell).toInt() - 1).coerceAtLeast(0)..(kotlin.math.ceil((size.height - top) / cell).toInt() + 1).coerceAtMost(map.height - 1)
+        for (y in ys) for (x in xs) {
             if (!world.explored(x, y)) continue
             drawRect(if (map.walkable(x, y)) Parchment.copy(alpha = if (world.lit(x, y)) .55f else .3f) else Color(0xFF2A2B33), at(x, y), square)
         }
-        val dot = cell.coerceAtLeast(2.5f)
-        fun mark(x: Int, y: Int, color: Color, radius: Float = dot) = drawCircle(color, radius, Offset(left + (x + .5f) * cell, top + (y + .5f) * cell))
+        val dot = cell * .5f
+        fun mark(x: Int, y: Int, color: Color, size: Float = dot) = drawCircle(color, size, Offset(left + (x + .5f) * cell, top + (y + .5f) * cell))
         world.chests.filter { !it.opened && world.explored(it.cell.x, it.cell.y) }.forEach { mark(it.cell.x, it.cell.y, GoldBright) }
         world.fountains.filter { !it.used && world.explored(it.cell.x, it.cell.y) }.forEach { mark(it.cell.x, it.cell.y, ShieldCyan) }
         world.corruption?.takeIf { it.alive && world.explored(it.x.toInt(), it.y.toInt()) }?.let { mark(it.x.toInt(), it.y.toInt(), Rune, dot * 1.2f) }
         if (world.explored(map.exit.x, map.exit.y)) mark(map.exit.x, map.exit.y, if (world.sealed) LifeRed else Vital, dot * 1.4f)
-        drawCircle(Gold, dot * 1.3f, Offset(left + world.heroX.toFloat() * cell, top + world.heroY.toFloat() * cell))
+        // The hero, and the glass: darker toward the rim, a bronze ring and a thin gold one inside it.
+        drawCircle(Gold, dot * 1.4f, centre)
+        drawCircle(Ink, dot * .5f, centre)
+        drawCircle(Brush.radialGradient(listOf(Color.Transparent, Color.Transparent, Color(0xB30A0D12)), centre, radius), radius, centre)
+        drawCircle(Bronze, radius - 1.5.dp.toPx(), centre, style = Stroke(3.dp.toPx()))
+        drawCircle(GoldBright.copy(alpha = .35f), radius - 5.dp.toPx(), centre, style = Stroke(1.dp.toPx()))
     }
 }
+
+/** How many cells the minimap shows across: the hero's near ground, not the whole map. */
+private const val MINIMAP_CELLS = 22f
 
 /** A life bar with the shield laid over it, and the figure in words. */
 @Composable private fun Vitals(life: Int, maxLife: Int, shield: Int, maxShield: Int, modifier: Modifier = Modifier) {

@@ -52,6 +52,14 @@ import java.util.Locale
 import kotlin.math.PI
 import kotlin.math.roundToInt
 import kotlin.math.sin
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Arrangement
+import com.sperance.exileforge.ui.theme.Muted
+import com.sperance.exileforge.ui.theme.GoldBright
 
 internal fun rarityTint(rarity: MonsterRarity) = when (rarity) {
     MonsterRarity.NORMAL -> Parchment
@@ -109,6 +117,7 @@ internal fun DamageType.key() = "enum.damage.$name"
             // The frames take whatever the log and the buttons leave, so those never leave the screen;
             // everything that moves is clipped to the frames' own row.
             Column(Modifier.weight(1f).fillMaxWidth()) {
+                if (fight.packTotal > 1) PackRow(fight)
                 BoxWithConstraints(Modifier.weight(1f).fillMaxWidth().clipToBounds(), contentAlignment = Alignment.TopCenter) {
                     val gap = 12.dp
                     val cardWidth = (maxWidth - gap) / 2
@@ -462,5 +471,20 @@ internal fun outcomeColour(outcome: Outcome) = when (outcome) { Outcome.WIN -> V
             ItemRow(inventoryDocument(instance, s.world.inventoryBases[instance.equipmentId]), s.world.definitions, price = s.sellPrice(instance)) {}
         }
         if (reward.items.isEmpty() && reward.equipment.isEmpty()) Text(ui("expedition.loot_nothing"), color = Muted)
+    }
+}
+
+/** The pack (2.56.1): a mark per foe in its rarity's colour, the fallen dimmed, the one at hand ringed in gold. */
+@Composable private fun PackRow(fight: FightHud) {
+    Row(Modifier.fillMaxWidth().padding(bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+        verticalAlignment = Alignment.CenterVertically) {
+        fight.pack.forEachIndexed { index, rarity ->
+            val fallen = index < fight.packIndex - 1
+            val current = index == fight.packIndex - 1
+            Box(Modifier.size(if (current) 14.dp else 10.dp).background(rarityTint(rarity).copy(alpha = if (fallen) .25f else 1f), CircleShape)
+                .then(if (current) Modifier.border(2.dp, GoldBright, CircleShape) else Modifier))
+        }
+        Text(ui("expedition.pack_left", fight.packTotal - fight.packIndex + 1, fight.packTotal), color = Muted,
+            style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(start = 6.dp))
     }
 }

@@ -117,7 +117,7 @@ import com.sperance.exileforge.ui.theme.*
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).imePadding().voidBackdrop()) {
             // The craft under way is read with the game, so the banner's plaque knows it from the start.
-            LaunchedEffect(s.play.characterId) { if (s.play.characterId.isNotBlank()) vm.loadCrafts() }
+            LaunchedEffect(s.play.characterId) { if (s.play.characterId.isNotBlank()) vm.loadCrafts(silent = true) }
             ForgeBanner(s, vm)
             if (s.busy || s.reading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised) else OrnateDivider(Gold)
             RefusalLine(s.refusal, vm::dismissMessage)

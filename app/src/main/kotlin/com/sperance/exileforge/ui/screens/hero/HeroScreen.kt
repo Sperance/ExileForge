@@ -34,6 +34,8 @@ import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.auction.ListingSheet
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 
 /** The Hero tab's four sections, in the order a player reaches for them. */
 private enum class HeroSection(val title: String, val icon: ImageVector) {
@@ -61,6 +63,8 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
     var slot by remember(s.play.characterId) { mutableStateOf("") }
     var stackId by remember(s.play.characterId) { mutableStateOf<String?>(null) }
     var listStack by remember(s.play.characterId) { mutableStateOf<String?>(null) }
+    // The stash is two shelves since 2.56.1: gear, and the professions' tools apart from it.
+    var tools by rememberSaveable(s.play.characterId) { mutableStateOf(false) }
     // Opening the tab is what refreshes the hero, and only when the last reading has gone cold.
     // Nothing here asks the player to press anything: the pull below is for when they disagree.
     LaunchedEffect(s.play.characterId, s.account.sessionEpoch) { vm.ensureHero() }
@@ -69,9 +73,10 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
     val stash = hero?.inventory.orEmpty()
     val documents = stash.associate { it.id to inventoryDocument(it, s.world.inventoryBases[it.equipmentId]) }
     // How many loose items each slot holds (2.47.0): a chip says it, and a slot with none has no chip.
-    val slotCounts = documents.values.map { it.text("slot") }.filter(String::isNotBlank).groupingBy { it }.eachCount()
+    val shelf = stash.filter { documents.getValue(it.id).text("slot").startsWith(TOOL_SLOT) == tools }
+    val slotCounts = shelf.map { documents.getValue(it.id).text("slot") }.filter(String::isNotBlank).groupingBy { it }.eachCount()
     val slots = slotCounts.keys.toList()
-    val visible = stash.filter { instance -> documents[instance.id]?.let { (slot.isBlank() || it.text("slot") == slot) && it.text("name").contains(query, true) } == true }
+    val visible = shelf.filter { instance -> documents[instance.id]?.let { (slot.isBlank() || it.text("slot") == slot) && it.text("name").contains(query, true) } == true }
     PullToRefreshBox(isRefreshing = s.refreshing(Reads.HERO), onRefresh = vm::loadHero, modifier = Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
@@ -95,10 +100,16 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
                 HeroSection.STASH -> {
                     item {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                FilterChip(selected = !tools, onClick = { tools = false; slot = "" }, label = { Text(ui("hero.stash_gear")) },
+                                    leadingIcon = { Icon(ForgeGlyphs.Helm, null, modifier = Modifier.size(16.dp)) })
+                                FilterChip(selected = tools, onClick = { tools = true; slot = "" }, label = { Text(ui("hero.stash_tools")) },
+                                    leadingIcon = { Icon(ForgeGlyphs.Anvil, null, modifier = Modifier.size(16.dp)) })
+                            }
                             OutlinedTextField(query, { query = it }, label = { Text(ui("hero.find_item")) },
                                 leadingIcon = { Icon(Icons.Outlined.Search, null) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                item { FilterChip(selected = slot.isBlank(), onClick = { slot = "" }, label = { Text(ui("hero.slot_count", ui("common.all"), stash.size)) }) }
+                                item { FilterChip(selected = slot.isBlank(), onClick = { slot = "" }, label = { Text(ui("hero.slot_count", ui("common.all"), shelf.size)) }) }
                                 items(slots) { key -> FilterChip(selected = slot == key, onClick = { slot = key },
                                     label = { Text(ui("hero.slot_count", slotTitle(key, s.lang), slotCounts[key] ?: 0)) }) }
                             }
@@ -159,3 +170,6 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
         HorizontalDivider(color = PanelRaised)
     }
 }
+
+/** The slots a profession's tool goes in all begin so; the stash shelves them apart. */
+private const val TOOL_SLOT = "TOOL_"

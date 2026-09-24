@@ -26,7 +26,7 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     fun nextCampaignMap() = runtime.expeditionViewModel.nextMap()
     fun startRun(mapCode: String) = runtime.expeditionViewModel.start(mapCode)
     fun openLaunch(mapCode: String) = runtime.expeditionViewModel.openLaunch(mapCode)
-    fun loadCrafts() = runtime.craftsViewModel.load()
+    fun loadCrafts(silent: Boolean = false) = runtime.craftsViewModel.load(silent)
     fun craftsCycleDue() = runtime.craftsViewModel.cycleDue()
     fun openProfession(code: String) = runtime.craftsViewModel.openProfession(code)
     fun startWork(job: String, additives: List<String> = emptyList()) = runtime.craftsViewModel.start(job, additives)

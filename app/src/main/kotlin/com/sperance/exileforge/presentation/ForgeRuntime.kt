@@ -314,26 +314,34 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
      * One per [key] at a time — a second pull on the same list is the first one still coming —
      * and none while a command that redoes it is running. [restart] is for a read whose question
      * changed, a new filter or page: the one on its way answers the old question, so it is dropped.
+     * [silent] is for a read nobody asked for — a craft cycle checking with the server — and it
+     * shows no strip and no spinner.
      * A failure is reported like a command's, so a list that cannot be read says why rather than
      * staying quietly empty.
      */
-    fun read(key: String, restart: Boolean = false, block: suspend () -> Unit) {
+    fun read(key: String, restart: Boolean = false, silent: Boolean = false, block: suspend () -> Unit) {
         if (key in touching) return
         if (restart) reads.remove(key)?.cancel()
         if (reads[key]?.isActive == true) return
+        if (silent) quiet += key else quiet -= key
         val job = scope.launch(start = CoroutineStart.LAZY) {
             try { block() }
             catch (e: CancellationException) { throw e }
             catch (e: Exception) { report(e, writing = false) }
             finally {
-                if (reads[key] === coroutineContext[Job]) reads.remove(key)
-                mutable.update { it.copy(loading = reads.keys.toSet()) }
+                if (reads[key] === coroutineContext[Job]) { reads.remove(key); quiet -= key }
+                mutable.update { it.copy(loading = loading()) }
             }
         }
         reads[key] = job
-        mutable.update { it.copy(loading = reads.keys.toSet()) }
+        mutable.update { it.copy(loading = loading()) }
         job.start()
     }
+
+    /** Reads on their way that the player should see; a [read] asked for in silence is not one (2.56.1). */
+    private fun loading(): Set<String> = reads.keys.filterNotTo(HashSet()) { it in quiet }
+
+    private val quiet = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
 
     /** Every read of the session that is ending: what it would bring back belongs to nobody now. */
     fun cancelReads() {

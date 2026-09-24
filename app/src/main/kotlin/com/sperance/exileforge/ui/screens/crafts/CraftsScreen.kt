@@ -51,7 +51,6 @@ import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.theme.*
-import kotlinx.coroutines.delay
 
 fun professionTitle(code: String) = locOr(LocaleKey.professionName(code), displayName(code))
 fun jobTitle(code: String) = locOr(LocaleKey.jobName(code), displayName(code))
@@ -114,15 +113,10 @@ private fun eta(millis: Long): String {
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun CraftsScreen(s: ForgeState, vm: ForgeViewModel) {
-    LaunchedEffect(s.play.characterId, s.account.sessionEpoch) { vm.ensureHero(); vm.loadCrafts() }
+    // A screen already holding the crafts asks again in silence: the cycle's alarm is the view model's (2.56.1).
+    LaunchedEffect(s.play.characterId, s.account.sessionEpoch) { vm.ensureHero(); vm.loadCrafts(silent = s.play.crafts != null) }
     val crafts = s.play.crafts
     val offset = crafts?.let { it.now - s.play.craftsAt } ?: 0L
-    // The next cycle is due (2.47.0): it is thrown here and paid into the bag at once, and the server is asked behind it.
-    LaunchedEffect(crafts?.work?.nextAt, s.play.craftsAt) {
-        val next = crafts?.work?.nextAt ?: return@LaunchedEffect
-        delay((next - offset - System.currentTimeMillis()).coerceAtLeast(0))
-        vm.craftsCycleDue()
-    }
     val open = crafts?.professions?.firstOrNull { it.code == s.play.craftsProfession }
     if (open != null) { ProfessionWindow(s, vm, open, offset); return }
     PullToRefreshBox(isRefreshing = s.refreshing(Reads.CRAFTS), onRefresh = vm::loadCrafts, modifier = Modifier.fillMaxSize()) {

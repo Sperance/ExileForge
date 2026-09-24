@@ -48,6 +48,8 @@ data class FightHud(
     val started: Boolean = true,
     /** Which foe of the jetton's pack this is (since 2.54.0); 1 of 1 for an ordinary one. */
     val packIndex: Int = 1, val packTotal: Int = 1,
+    /** The whole pack's rarities in fighting order (2.56.1), so the arena can show who is left. */
+    val pack: List<MonsterRarity> = emptyList(),
 )
 
 /** One member of a pack fought and its own log, kept apart so a mixed pack's log names each one right. */
@@ -426,7 +428,7 @@ class ExpeditionRun(
             lunge = battle.lunge()?.let { (event, progress) -> LungeView(event.actor, event.action, event.kind, event.landed, progress.toFloat()) },
             events = battle.events.toList().asReversed(),
             started = started,
-            packIndex = agent.packIndex + 1, packTotal = agent.pack.size,
+            packIndex = agent.packIndex + 1, packTotal = agent.pack.size, pack = agent.pack.map { it.rarity },
         )
     }
 

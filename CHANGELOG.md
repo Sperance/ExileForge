@@ -6,6 +6,17 @@
 Новая запись добавляется **сверху**, в день, когда изменения прошли проверки и уехали в ветку.
 Коротко: что поменялось и, если что-то чинилось, в чём была причина.
 
+## 2.54.1 (74) — 2026-09-24
+
+Сервер: 0.47.1 — остались только критичные тесты, поведение не менялось.
+
+- **Остались только критичные тесты** (решение владельца): `UiStringsTest`, `SheetTest`,
+  `CraftCycleTest`, живой `ServerIntegrationTest`, а из UI — `DesignPreviewTest` и `HeroPanelTest`
+  (урезан до снимка `hero.jpg`, без которого падает CI). Удалены `GameApiTest`, `CampaignTest`,
+  `ContractTest`, `ItemTotalsTest`, `ItemPresentationTest`, `ServerLocaleTest`, `ServerIconsTest`,
+  `ServerPortraitsTest`, `CrudScenarioTest`, `ReferencePickerTest` и шесть UI-тестов, а также
+  устаревший `docs/test-results.json`; `docs/VALIDATION.md` переписан под оставшийся набор.
+
 ## 2.54.0 (73) — 2026-09-24
 
 Сервер: без изменений (0.47.0).

@@ -26,9 +26,9 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.51.0, `versionCode` 70) for the
-**ktor-bestgame** RPG server (0.45.0), pinned in
-`core/.../contract/Contract.kt` as `SERVER_COMMIT = f0bf12aa590a2fc13f9bfcb3559776d5b9921ec9`
+ExileForge is an **Android Compose client** (version 2.54.1, `versionCode` 74) for the
+**ktor-bestgame** RPG server (0.47.1), pinned in
+`core/.../contract/Contract.kt` as `SERVER_COMMIT = e35ff79e4b29b82ebfd30811ac1c3f72f379ab48`
 on the server branch `claude/tender-pasteur-a36kj2`.
 
 The client is deliberately **thin**: the server owns items, modifier rolls and inventory, and it
@@ -170,7 +170,8 @@ run the `:app` tasks — `dl.google.com` is usually unreachable there. `:core` c
 and tested locally by temporarily pointing the daemon JVM criteria at the available JDK; revert that
 change before committing. Otherwise rely on CI and keep changes reviewable by reading.
 
-- `:core:test` — JUnit + `kotlin-test` + **MockWebServer**; no device or SDK needed.
+- `:core:test` — JUnit + `kotlin-test`; since 2.54.0 only the critical tests remain (`UiStringsTest`,
+  `SheetTest`, `CraftCycleTest`, and the opt-in `ServerIntegrationTest`); no device or SDK needed.
 - `:app:connectedAndroidTest` equivalents run in CI on an **API 35 emulator** via
   `adb shell am instrument`; the workflow greps for `OK (n tests)`.
 - `ServerIntegrationTest` is **opt-in**: it is skipped (`assumeTrue`) unless `EF_LIVE_URL` is
@@ -701,7 +702,7 @@ These are enforced by tests and are the point of the client's design:
 feature client it belongs to (`HeroClient`, `AuctionClient`, …; reuse `http.request(...)`, pass
 `authenticated = true` when it needs an account; a new area gets its own client and a property on
 `GameApi`),
-cover it with a MockWebServer test asserting path, query and exact body, then expose it through a
+then expose it through a
 feature view model + a `ForgeViewModel` delegate.
 
 **Adding a screen:** create `ui/screens/<feature>/`, add the tab index to the `when` in

@@ -9,7 +9,7 @@ import com.sperance.exileforge.core.model.EquipmentKind
 import com.sperance.exileforge.core.model.modifier.Modifier
 import kotlinx.serialization.json.*
 
-val WireJson = Json { prettyPrint = true; ignoreUnknownKeys = true }
+val WireJson = Json { ignoreUnknownKeys = true }
 fun JsonObject.text(key: String): String = (get(key) as? JsonPrimitive)?.contentOrNull.orEmpty()
 val JsonObject.entityId: String get() = text("_id").ifBlank { text("id") }
 /** Fields MongoDB owns. `type` is the polymorphic discriminator: allowed on create, never on update. */
@@ -52,9 +52,9 @@ val modifierSources = listOf("IMPLICIT", "PREFIX", "SUFFIX", "UNIQUE", "ENCHANTM
 val skillNodeTypes = listOf("START", "SMALL", "NOTABLE", "KEYSTONE", "JEWEL_SOCKET")
 val lotKinds = listOf("EQUIPMENT", "ITEM")
 val modifierOperations = listOf("ADD", "INCREASED", "MORE", "SET")
-const val SERVER_COMMIT = "e1ff56c5bd6cfec6f703190bfb7ccb4f976d1a4c"
+const val SERVER_COMMIT = "14066c87ebe704c811b7eec6900e1cad75e26a64"
 const val SERVER_BRANCH = "claude/tender-pasteur-a36kj2"
-const val SERVER_VERSION = "0.48.0"
+const val SERVER_VERSION = "0.48.1"
 
 fun template(catalog: Catalog, kind: EquipmentKind = EquipmentKind.Weapon): JsonObject = when (catalog) {
     Catalog.CHARACTERS -> defaultObject("character")

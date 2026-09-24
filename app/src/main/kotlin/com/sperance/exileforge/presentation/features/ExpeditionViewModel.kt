@@ -6,7 +6,10 @@ import com.sperance.exileforge.core.campaign.RunCommand
 import com.sperance.exileforge.core.model.campaign.CampaignMap
 import com.sperance.exileforge.core.model.campaign.MonsterRarity
 import com.sperance.exileforge.presentation.ForgeRuntime
+import com.sperance.exileforge.presentation.state.MapServices
 import com.sperance.exileforge.presentation.state.Reads
+import com.sperance.exileforge.core.model.campaign.MapServiceOutcome
+import com.sperance.exileforge.core.i18n.ui
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -48,6 +51,33 @@ class ExpeditionViewModel(private val runtime: ForgeRuntime) {
         val progress = api.campaign.progress(id)
         mutable.update { if (it.play.characterId == id) it.copy(play = it.play.copy(campaign = progress)) else it }
     } } }
+
+    /** A map's services sheet (0.34.0): its chests and its boss, read when the sheet opens. */
+    fun openMapServices(mapCode: String) { with(runtime) {
+        mutable.update { it.copy(play = it.play.copy(mapServices = null)) }
+        read(Reads.MAP_SERVICES, restart = true) {
+            val id = state.value.play.characterId
+            val services = MapServices(mapCode, api.campaign.chests(id, mapCode), api.campaign.boss(id, mapCode))
+            mutable.update { if (it.play.characterId == id) it.copy(play = it.play.copy(mapServices = services)) else it }
+        }
+    } }
+
+    fun closeMapServices() { runtime.mutable.update { it.copy(play = it.play.copy(mapServices = null)) } }
+
+    /** One more chest on the map this window, for gold. */
+    fun buyTreasure(mapCode: String) = service(mapCode, "expedition.treasure_bought") { id -> runtime.api.campaign.treasure(id, mapCode) }
+
+    /** A slain guardian back at the exit, for gold. */
+    fun summonGuardian(mapCode: String) = service(mapCode, "expedition.guardian_summoned") { id -> runtime.api.campaign.summon(id, mapCode) }
+
+    private fun service(mapCode: String, message: String, call: suspend (String) -> MapServiceOutcome) { with(runtime) {
+        task(writing = true, touches = setOf(Reads.MAP_SERVICES)) {
+            val id = state.value.play.characterId
+            val outcome = call(id)
+            mutable.update { s -> s.copy(message = ui(message), play = s.play.copy(mapServices = MapServices(mapCode, outcome.chests, outcome.boss),
+                hero = s.play.hero?.let { it.copy(character = it.character.copy(money = outcome.money)) })) }
+        }
+    } }
 
     /** The map «Кампания» leads to: the first open one not yet cleared, or the deepest open one. */
     fun nextMap(): CampaignMap? {

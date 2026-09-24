@@ -8,6 +8,7 @@ import com.sperance.exileforge.core.model.campaign.CampaignProgress
 import com.sperance.exileforge.core.model.campaign.CampaignReward
 import com.sperance.exileforge.core.model.campaign.CampaignView
 import com.sperance.exileforge.core.model.campaign.ChestState
+import com.sperance.exileforge.core.model.campaign.MapServiceOutcome
 import com.sperance.exileforge.core.model.campaign.MonsterRarity
 import kotlinx.serialization.json.decodeFromJsonElement
 
@@ -79,6 +80,20 @@ class CampaignClient internal constructor(private val http: Transport) {
     suspend fun slayBoss(characterId: String, mapCode: String): CampaignReward {
         requireId(characterId)
         return WireJson.decodeFromJsonElement(http.request("POST", "$CAMPAIGN/boss",
+            mapOf("characterId" to characterId, "mapCode" to mapCode), authenticated = true))
+    }
+
+    /** A treasure map (0.34.0): one more chest on the map this window, for gold. Never retried. */
+    suspend fun treasure(characterId: String, mapCode: String): MapServiceOutcome {
+        requireId(characterId)
+        return WireJson.decodeFromJsonElement(http.request("POST", "$CAMPAIGN/treasure",
+            mapOf("characterId" to characterId, "mapCode" to mapCode), authenticated = true))
+    }
+
+    /** Summons a slain guardian back to the exit (0.34.0), for gold. Never retried. */
+    suspend fun summon(characterId: String, mapCode: String): MapServiceOutcome {
+        requireId(characterId)
+        return WireJson.decodeFromJsonElement(http.request("POST", "$CAMPAIGN/summon",
             mapOf("characterId" to characterId, "mapCode" to mapCode), authenticated = true))
     }
 }

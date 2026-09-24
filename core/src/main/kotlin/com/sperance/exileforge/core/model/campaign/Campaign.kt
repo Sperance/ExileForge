@@ -150,7 +150,17 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
 )
 
 /** The whole campaign as the server serves it, read once per session: the chapters, the rarities and the rules of the fight. */
-@Serializable data class CampaignView(val chapters: List<CampaignChapter> = emptyList(), val rarities: List<CampaignRarity> = emptyList(), val combat: CombatRules = CombatRules())
+@Serializable data class CampaignView(val chapters: List<CampaignChapter> = emptyList(), val rarities: List<CampaignRarity> = emptyList(), val combat: CombatRules = CombatRules(),
+    val services: ServiceRule = ServiceRule())
+
+/**
+ * The map's services for gold (since server 0.34.0): a treasure map is one more chest in the
+ * window, once a window; summoning brings a slain guardian back. Both cost so much per map level.
+ */
+@Serializable data class ServiceRule(val treasurePerLevel: Long = 60, val summonPerLevel: Long = 150)
+
+/** What a map service left behind: the hero's gold, and the map's chests and boss as they stand now. */
+@Serializable data class MapServiceOutcome(val money: Long = 0, val chests: ChestState = ChestState(), val boss: BossState = BossState())
 
 /** Which maps the character has cleared, and which are open to them. */
 @Serializable data class CampaignProgress(val cleared: List<String> = emptyList(), val unlocked: List<String> = emptyList())
@@ -173,7 +183,7 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
 /** A map's boss for one hero (since server 0.32.0): alive, or slain until [respawnAt] (epoch milliseconds). */
 @Serializable data class BossState(val alive: Boolean = true, val respawnAt: Long = 0)
 
-@Serializable data class ChestState(val left: Int = 0, val refreshAt: Long = 0)
+@Serializable data class ChestState(val left: Int = 0, val refreshAt: Long = 0, val bought: Boolean = false)
 
 /** What a death cost (server 0.28.0): the experience taken, and the level, which never falls. */
 @Serializable data class CampaignFall(val lost: Double = 0.0, val level: Int = 1, val totalExperience: Double = 0.0)

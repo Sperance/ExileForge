@@ -188,7 +188,13 @@ data class PlayState(
     val nodeQuery: String = "",
     /** Which campaign maps this character has cleared and which are open. */
     val campaign: CampaignProgress? = null,
+    /** The map whose services sheet is open (0.34.0): its chests and its boss as the server last said. */
+    val mapServices: MapServices? = null,
 )
+
+/** One map's chests and boss, for its services sheet. */
+data class MapServices(val mapCode: String, val chests: com.sperance.exileforge.core.model.campaign.ChestState,
+    val boss: com.sperance.exileforge.core.model.campaign.BossState)
 
 /** The forge's sections: orbs and the bench work on one item, a recipe on the bag. */
 enum class ForgeSection { ORBS, BENCH, RECIPES }
@@ -209,6 +215,9 @@ data class MarketState(
      * learns the gate only by being refused.
      */
     val locked: String? = null,
+    /** The merchant's shelf for this hero (0.34.0) and the hero's lot places. */
+    val merchant: com.sperance.exileforge.core.model.trade.MerchantStock? = null,
+    val slots: com.sperance.exileforge.core.model.auction.AuctionSlots? = null,
 )
 
 /** The administrator's tools: the catalogue and its editor, promo codes and the self-checks. */
@@ -251,6 +260,8 @@ object Reads {
     const val HEALTH = "health"
     const val DEFINITIONS = "definitions"
     const val CAMPAIGN = "campaign"
+    const val MERCHANT = "merchant"
+    const val MAP_SERVICES = "mapServices"
 }
 
 /**

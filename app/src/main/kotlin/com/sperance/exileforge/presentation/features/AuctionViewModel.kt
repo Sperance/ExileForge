@@ -37,12 +37,44 @@ class AuctionViewModel(private val runtime: ForgeRuntime) {
     } } }
 
     fun loadMyLots() { with(runtime) { trade(key = Reads.LOTS) {
-        val lots = api.auction.myLots(state.value.play.characterId.trim())
-        mutable.update { it.copy(market = it.market.copy(myLots = lots)) }
+        val id = state.value.play.characterId.trim()
+        val lots = api.auction.myLots(id)
+        val slots = api.auction.slots(id)
+        mutable.update { it.copy(market = it.market.copy(myLots = lots, slots = slots)) }
     } } }
 
-    /** Both lists at once, for opening the tab and for a pull: two reads, so neither waits on the other. */
-    fun loadAuction() { loadShowcase(0); loadMyLots() }
+    /** The merchant's shelf (0.34.0): the server rolls it every four hours, nobody renews it sooner. */
+    fun loadMerchant() { with(runtime) { trade(key = Reads.MERCHANT) {
+        // An offer is drawn as the stash draws an item, base and all: the catalogue comes first.
+        ensureEquipment(); ensureDefinitions()
+        val stock = api.merchant.stock(state.value.play.characterId.trim())
+        mutable.update { it.copy(market = it.market.copy(merchant = stock)) }
+    } } }
+
+    /** Every list at once, for opening the tab and for a pull: separate reads, so none waits on another. */
+    fun loadAuction() { loadShowcase(0); loadMyLots(); loadMerchant() }
+
+    /** Buying from the merchant spends gold and adds to the stash: those, and the shelf, change. */
+    fun buyOffer(offerId: String) { with(runtime) { trade(writing = true) {
+        val id = state.value.play.characterId.trim()
+        val purchase = api.merchant.buy(id, offerId)
+        mutable.update { it.copy(message = ui("merchant.bought"), market = it.market.copy(
+            merchant = it.market.merchant?.let { stock -> stock.copy(offers = stock.offers.filter { offer -> offer.id != offerId }) })) }
+        gold(purchase.money)
+        refreshInventory(id)
+    } } }
+
+    /** One more lot place for gold (0.34.0). */
+    fun buySlot() { with(runtime) { trade(writing = true) {
+        val slots = api.auction.buySlot(state.value.play.characterId.trim())
+        mutable.update { it.copy(message = ui("auction.slot_bought", slots.limit), market = it.market.copy(slots = slots)) }
+        gold(slots.money)
+    } } }
+
+    /** The purse the header prints, as the server answered it. */
+    private fun gold(money: Long) { with(runtime) {
+        mutable.update { s -> s.copy(play = s.play.copy(hero = s.play.hero?.let { it.copy(character = it.character.copy(money = money)) })) }
+    } }
 
     /** Buying costs orbs out of the bag, so the bag and the showcase are what go stale. */
     fun buy(lotId: String) { with(runtime) { trade(writing = true) {
@@ -72,13 +104,13 @@ class AuctionViewModel(private val runtime: ForgeRuntime) {
         val lot = api.auction.cancel(id, lotId)
         mutable.update { it.copy(message = ui("auction.withdrawn", lot.title)) }
         refreshInventory(id)
-        mutable.update { it.copy(market = it.market.copy(myLots = api.auction.myLots(id))) }
+        mutable.update { it.copy(market = it.market.copy(myLots = api.auction.myLots(id), slots = api.auction.slots(id))) }
     } } }
 
     private suspend fun listed(characterId: String, title: String) { with(runtime) {
         mutable.update { it.copy(message = ui("auction.listed", title)) }
         refreshInventory(characterId)
-        mutable.update { it.copy(market = it.market.copy(myLots = api.auction.myLots(characterId), tab = 1)) }
+        mutable.update { it.copy(market = it.market.copy(myLots = api.auction.myLots(characterId), slots = api.auction.slots(characterId), tab = 1)) }
     } }
 
     /** The bag alone: a purchase spends orbs and may hand over stacking goods. */
@@ -102,7 +134,7 @@ class AuctionViewModel(private val runtime: ForgeRuntime) {
      */
     private fun trade(writing: Boolean = false, restart: Boolean = false, key: String = Reads.AUCTION, block: suspend () -> Unit) { with(runtime) {
         // A read shows the auction; a trade changes it and the goods it moved, and redoes them.
-        if (writing) task(writing = true, touches = setOf(Reads.AUCTION, Reads.LOTS, Reads.HERO)) { gated(block) }
+        if (writing) task(writing = true, touches = setOf(Reads.AUCTION, Reads.LOTS, Reads.HERO, Reads.MERCHANT)) { gated(block) }
         else read(key, restart) { gated(block) }
     } }
 

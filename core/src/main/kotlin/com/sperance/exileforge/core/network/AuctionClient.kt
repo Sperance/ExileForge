@@ -57,6 +57,18 @@ class AuctionClient internal constructor(private val http: Transport) {
     }
 
     /** Everything the character ever listed, open and closed alike — the lots are their history. */
+    /** The hero's lot places (0.34.0): how many are taken and what one more costs. */
+    suspend fun slots(characterId: String): AuctionSlots {
+        requireId(characterId)
+        return WireJson.decodeFromJsonElement(http.request("GET", "$AUCTION/slots", mapOf("characterId" to characterId), authenticated = true))
+    }
+
+    /** Buys one more lot place for gold. Never retried. */
+    suspend fun buySlot(characterId: String): AuctionSlots {
+        requireId(characterId)
+        return WireJson.decodeFromJsonElement(http.request("POST", "$AUCTION/slots", mapOf("characterId" to characterId), authenticated = true))
+    }
+
     suspend fun myLots(characterId: String): List<AuctionLot> {
         requireId(characterId)
         return WireJson.decodeFromJsonElement(kotlinx.serialization.builtins.ListSerializer(AuctionLot.serializer()),

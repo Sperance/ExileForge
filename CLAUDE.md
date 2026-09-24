@@ -20,9 +20,9 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.35.0, `versionCode` 53) for the
-**ktor-bestgame** RPG server (0.33.0), pinned in
-`core/.../contract/Contract.kt` as `SERVER_COMMIT = 08cec1076555e93e0976ccc1c0dd602f5838e5e6`
+ExileForge is an **Android Compose client** (version 2.36.0, `versionCode` 54) for the
+**ktor-bestgame** RPG server (0.34.0), pinned in
+`core/.../contract/Contract.kt` as `SERVER_COMMIT = 05a3642ed954bc5fca45c387990a4a7686615279`
 on the server branch `claude/tender-pasteur-a36kj2`.
 
 The client is deliberately **thin**: the server owns items, stats, modifier rolls and inventory.
@@ -352,7 +352,10 @@ These are enforced by tests and are the point of the client's design:
     Since 2.20.0 the showcase's head is a search field and a filter sheet worked on a draft: nothing
     reaches the server until the keyboard's search, «Показать» or a chip's cross, and the chips are
     `AuctionFilter.active()` — the name is the field, not a chip. «Продать» lists the loose stash
-    and the bag and opens the one `ListingSheet` the item card uses too.
+    and the bag and opens the one `ListingSheet` the item card uses too. Since 2.36.0 (server
+    0.34.0) the fourth tab is the merchant (`MerchantClient`: a four-hour shelf per hero, priced in
+    gold by the server), «Мои лоты» shows the lot places (`AuctionSlots`) and sells one more, and a
+    campaign map's coin icon opens its services — a treasure map and summoning its guardian.
 14. **Gold is the merchant's, not the client's.** `POST /api/v1/characterequipment/sell` destroys
     the instance and pays for it; the price is the template's base times the copy's rarity times
     how many affixes rolled, times `STOCK_GOLD` — a characteristic that exists, that nothing

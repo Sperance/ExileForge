@@ -171,6 +171,17 @@ class ServerIntegrationTest {
         assertTrue(fractured in shaped.params, "the fractured affix was lost")
     }
 
+    /** The merchant's shelf and the map services (0.34.0): the server's rolls, prices and refusals. */
+    private suspend fun merchantIsTheServers(api: GameApi, id: String) {
+        val stock = api.merchant.stock(id)
+        assertTrue(stock.offers.size in 4..6, "the merchant laid out ${stock.offers.size} items")
+        assertTrue(stock.offers.all { it.price > 0 && it.item.rarity in setOf("UNCOMMON", "RARE") })
+        assertEquals(stock, api.merchant.stock(id), "the shelf changed before its window ended")
+        val first = api.campaign.chapters().chapters.first().maps.first()
+        val chests = api.campaign.chests(id, first.code)
+        assertTrue(!chests.bought)
+    }
+
     /** Every portrait the server serves is one the client can draw, and every class has one. */
     private suspend fun portraitsAreDrawable(api: GameApi) {
         val portraits = api.files.portraitManifest()
@@ -362,6 +373,7 @@ class ServerIntegrationTest {
             craftingIsTheServers(api, id, template.entityId, definitions)
             handsAreTheServers(api, id)
             campaignIsTheServers(api, id)
+            merchantIsTheServers(api, id)
 
             val items = api.catalog.referencePage(com.sperance.exileforge.core.model.EntitySource.ITEM, 0)
             val item = items.items.firstOrNull() ?: fail("the items collection is empty: $items")

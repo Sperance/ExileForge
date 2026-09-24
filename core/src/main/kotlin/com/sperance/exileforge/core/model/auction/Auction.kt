@@ -145,3 +145,11 @@ fun lotKindTitle(kind: AuctionLotKind, lang: Lang = uiLanguage): String = ui(lan
 
 /** Title of a lot's state. */
 fun lotStatusTitle(status: AuctionLotStatus, lang: Lang = uiLanguage): String = ui(lang, "enum.lot_status.${status.name}")
+
+/**
+ * The hero's lot places (since server 0.34.0): [used] of [limit] taken, up to [max] bought one at a
+ * time for [price] gold (0 once none can be bought). [money] is the gold left after a purchase.
+ */
+@Serializable data class AuctionSlots(val used: Int = 0, val limit: Int = 5, val max: Int = 20, val price: Long = 0, val money: Long = 0) {
+    val full: Boolean get() = used >= limit
+}

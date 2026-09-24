@@ -44,8 +44,8 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
             return@Column
         }
         val mine = s.ownLots.size
-        val tabs = listOf(ui("auction.showcase"), if (mine > 0) ui("auction.my_lots_n", mine) else ui("auction.my_lots"), ui("auction.sell_tab"))
-        TabRow(selectedTabIndex = s.market.tab, containerColor = com.sperance.exileforge.ui.theme.Abyss) {
+        val tabs = listOf(ui("auction.showcase"), if (mine > 0) ui("auction.my_lots_n", mine) else ui("auction.my_lots"), ui("auction.sell_tab"), ui("merchant.tab"))
+        ScrollableTabRow(selectedTabIndex = s.market.tab, containerColor = com.sperance.exileforge.ui.theme.Abyss, edgePadding = 0.dp) {
             tabs.forEachIndexed { index, title ->
                 Tab(selected = s.market.tab == index, enabled = !s.busy, onClick = { vm.auctionTab(index) },
                     text = { Text(title, style = MaterialTheme.typography.labelLarge) })
@@ -53,12 +53,13 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
         }
         // Every tab is refreshed the same way the hero is: by pulling it. A button competing with
         // the content was one more thing to find, and the gesture is already the habit here.
-        PullToRefreshBox(isRefreshing = s.refreshing(Reads.AUCTION) || Reads.LOTS in s.loading, onRefresh = vm::loadAuction, modifier = Modifier.weight(1f)) {
+        PullToRefreshBox(isRefreshing = s.refreshing(Reads.AUCTION) || Reads.LOTS in s.loading || Reads.MERCHANT in s.loading, onRefresh = vm::loadAuction, modifier = Modifier.weight(1f)) {
             Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 when (s.market.tab) {
                     0 -> ShowcaseTab(s, vm)
                     1 -> MyLotsTab(s, vm)
-                    else -> SellTab(s, vm)
+                    2 -> SellTab(s, vm)
+                    else -> MerchantTab(s, vm)
                 }
             }
         }

@@ -73,6 +73,7 @@ class GameApi(
     val auction = AuctionClient(http)
     val promo = PromoClient(http)
     val campaign = CampaignClient(http)
+    val merchant = MerchantClient(http)
 
     /** Credentials travel in the body: a query string settles in every proxy log on the way. */
     suspend fun login(login: String, password: String): UserProfile {

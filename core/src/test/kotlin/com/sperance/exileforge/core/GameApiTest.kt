@@ -583,6 +583,33 @@ class GameApiTest {
         assertEquals(sent, server.requestCount)
     }
 
+    @Test fun `the merchant's shelf is read and bought from by offer`(): Unit = runBlocking {
+        ok("""{"refreshAt":1700000000000,"offers":[{"id":"o1","item":{"_id":"$other","characterId":"$id","equipmentId":"$id","params":[],"rarity":"RARE"},"price":480}]}""")
+        val stock = api.merchant.stock(id)
+        assertEquals("/game/api/v1/character/merchant?characterId=$id", server.takeRequest().path)
+        assertEquals(480L, stock.offers.single().price)
+        ok("""{"item":{"_id":"$other","characterId":"$id","equipmentId":"$id","params":[],"rarity":"RARE"},"money":20}""")
+        assertEquals(20L, api.merchant.buy(id, "o1").money)
+        val buy = server.takeRequest()
+        assertEquals("POST", buy.method)
+        assertEquals("/game/api/v1/character/merchant/buy?characterId=$id&offerId=o1", buy.path)
+    }
+
+    @Test fun `lot places are read and bought, and map services are named by the map`(): Unit = runBlocking {
+        ok("""{"used":5,"limit":5,"max":20,"price":500}""")
+        assertTrue(api.auction.slots(id).full)
+        assertEquals("/game/api/v1/auctionlot/slots?characterId=$id", server.takeRequest().path)
+        ok("""{"used":5,"limit":6,"max":20,"price":750,"money":100}""")
+        assertEquals(6, api.auction.buySlot(id).limit)
+        assertEquals("POST", server.takeRequest().method)
+        ok("""{"money":40,"chests":{"left":2,"refreshAt":1,"bought":true},"boss":{"alive":true,"respawnAt":0}}""")
+        assertTrue(api.campaign.treasure(id, "C1_TIDAL_SHORE").chests.bought)
+        assertEquals("/game/api/v1/character/campaign/treasure?characterId=$id&mapCode=C1_TIDAL_SHORE", server.takeRequest().path)
+        ok("""{"money":10,"chests":{"left":0,"refreshAt":1},"boss":{"alive":true,"respawnAt":0}}""")
+        assertTrue(api.campaign.summon(id, "C1_TIDAL_SHORE").boss.alive)
+        assertEquals("/game/api/v1/character/campaign/summon?characterId=$id&mapCode=C1_TIDAL_SHORE", server.takeRequest().path)
+    }
+
     @Test fun `a map's boss is asked after and reported by its own route`(): Unit = runBlocking {
         ok("""{"alive":false,"respawnAt":1700000000000}""")
         assertFalse(api.campaign.boss(id, "C1_TIDAL_SHORE").alive)

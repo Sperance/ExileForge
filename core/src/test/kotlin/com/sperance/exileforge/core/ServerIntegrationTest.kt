@@ -439,9 +439,10 @@ class ServerIntegrationTest {
             assertFailsWith<ApiFailure> { api.tree.allocate(id, start.code) }
             assertFailsWith<ApiFailure> { api.tree.refund(id, start.code) }
             // Since 0.16.0 giving a node back costs an Orb of Regret, so an empty bag is a refusal
-            // and not a free undo.
-            assertFailsWith<ApiFailure> { api.tree.refund(id, neighbour.code) }
+            // and not a free undo. The campaign above may have dropped one, so the bag is emptied first.
             val regret = orbs.firstOrNull { it.orb == CurrencyOrb.ORB_OF_REGRET } ?: fail("no Orb of Regret among ${orbs.map { it.code }}")
+            api.hero.bag(id).firstOrNull { it.itemId == regret.id }?.let { api.hero.adjustItems(id, listOf(ItemStack(regret.id, -it.amount))) }
+            assertFailsWith<ApiFailure> { api.tree.refund(id, neighbour.code) }
             assertEquals("system.success", api.hero.adjustItems(id, listOf(ItemStack(regret.id, 1))))
             assertEquals(setOf(start.code), api.tree.refund(id, neighbour.code).takenCodes)
             // The orb is spent, not merely checked: a second refund would have to be paid for again.

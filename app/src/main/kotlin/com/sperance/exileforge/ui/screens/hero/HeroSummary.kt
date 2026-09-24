@@ -44,6 +44,7 @@ private fun StatGroup.accent(): Color = when (this) {
     StatGroup.DEFENCE -> Gold
     StatGroup.RESISTANCE -> ShieldCyan
     StatGroup.ATTACK -> Ember
+    StatGroup.AILMENT -> Vital
     StatGroup.ATTRIBUTE -> Rune
     StatGroup.OTHER -> Muted
 }

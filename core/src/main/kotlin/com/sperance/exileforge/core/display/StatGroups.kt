@@ -13,14 +13,18 @@ import com.sperance.exileforge.core.model.character.stockStats
  * sheet never drops a number it was sent.
  */
 enum class StatGroup {
-    RESERVE, DEFENCE, RESISTANCE, ATTACK, ATTRIBUTE, OTHER;
+    RESERVE, DEFENCE, RESISTANCE, ATTACK, AILMENT, ATTRIBUTE, OTHER;
 
     fun title(lang: Lang = uiLanguage): String = ui(lang, "enum.stat_group.$name")
 
     companion object {
         private val reserve = setOf("STOCK_HEALTH", "STOCK_MANA", "STOCK_ENERGY_SHIELD", "STOCK_ENERGY",
-            "STOCK_HEALTH_REGEN", "STOCK_MANA_REGEN", "STOCK_ENERGY_REGEN")
-        private val defence = setOf("STOCK_ARMOR", "STOCK_EVASION", "STOCK_BLOCK_CHANCE", "STOCK_STUN_THRESHOLD")
+            "STOCK_HEALTH_REGEN", "STOCK_MANA_REGEN", "STOCK_ENERGY_REGEN", "STOCK_HEALTH_ON_KILL", "STOCK_MANA_ON_KILL",
+            "STOCK_HEALTH_ON_HIT", "STOCK_MANA_ON_HIT", "STOCK_FLASK_CHARGES", "STOCK_FLASK_RECOVERY")
+        private val defence = setOf("STOCK_ARMOR", "STOCK_EVASION", "STOCK_BLOCK_CHANCE", "STOCK_STUN_THRESHOLD", "STOCK_SPELL_BLOCK",
+            "STOCK_PHYSICAL_REDUCTION", "STOCK_AVOID_STUN")
+        private val ailment = setOf("STOCK_IGNITE_CHANCE", "STOCK_FREEZE_CHANCE", "STOCK_SHOCK_CHANCE", "STOCK_POISON_CHANCE",
+            "STOCK_BLEED_CHANCE", "STOCK_BURNING_DAMAGE", "STOCK_POISON_DAMAGE", "STOCK_BLEED_DAMAGE")
         private val attribute = setOf("STOCK_STRENGTH", "STOCK_AGILITY", "STOCK_INTELLECT", "STOCK_CONSTITUTION")
         private val attack = setOf("STOCK_CAST_SPEED", "STOCK_CAST_STRENGTH")
 
@@ -28,6 +32,7 @@ enum class StatGroup {
             stat in reserve -> RESERVE
             stat in defence -> DEFENCE
             stat.startsWith("STOCK_RESIST_") -> RESISTANCE
+            stat in ailment || stat.startsWith("STOCK_AVOID_") || stat.endsWith("_DURATION_ON_SELF") -> AILMENT
             stat in attribute -> ATTRIBUTE
             stat.startsWith("STOCK_ATTACK_") || stat.startsWith("STOCK_CRITICAL_") || stat.startsWith("STOCK_LEECH_") || stat in attack -> ATTACK
             else -> OTHER

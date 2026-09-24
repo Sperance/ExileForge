@@ -27,11 +27,20 @@ enum class DamageType(val attack: String, val resist: String?) {
     CHAOS("STOCK_ATTACK_CHAOS", "STOCK_RESIST_CHAOS"),
     MAGICAL("STOCK_ATTACK_MAGICAL", null);
 
+    /** The stat that lifts this resistance's ceiling (since server 0.36.0). */
+    val maxResist: String? get() = resist?.replace("STOCK_RESIST_", "STOCK_RESIST_MAX_")
+
     companion object { fun of(stat: String) = entries.firstOrNull { it.attack == stat } }
 }
 
-/** The six ailments the server rules (its `EnumStatBool` without the prefix). Which damage brings which is the rule's, not ours. */
-enum class Ailment { BURNING, CHILLED, FROZEN, SHOCKED, POISONED, BLEEDING;
+/**
+ * The six ailments the server rules (its `EnumStatBool` without the prefix). Which damage brings which is the rule's, not ours.
+ * [word] is how the sheet's stats name it since server 0.36.0 — `STOCK_IGNITE_CHANCE`, `STOCK_AVOID_IGNITE`,
+ * `STOCK_IGNITE_DURATION_ON_SELF` — and [damage] the stat that makes its damage over time heavier.
+ */
+enum class Ailment(val word: String, val damage: String? = null) {
+    BURNING("IGNITE", "STOCK_BURNING_DAMAGE"), CHILLED("CHILL"), FROZEN("FREEZE"), SHOCKED("SHOCK"),
+    POISONED("POISON", "STOCK_POISON_DAMAGE"), BLEEDING("BLEED", "STOCK_BLEED_DAMAGE");
     /** Deals damage over time, as opposed to slowing, weakening or stopping. */
     val hurts: Boolean get() = this == BURNING || this == POISONED || this == BLEEDING
     companion object { fun of(name: String) = entries.firstOrNull { it.name == name } }
@@ -50,7 +59,7 @@ enum class Ailment { BURNING, CHILLED, FROZEN, SHOCKED, POISONED, BLEEDING;
  */
 data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: CombatRules = CombatRules(), val innateSpell: Boolean = false) {
     private fun stat(name: String) = stats[name] ?: 0.0
-    private fun cap(value: Double) = value.coerceIn(0.0, rules.resistCap) / 100
+    private fun percent(name: String, cap: Double = 100.0) = stat(name).coerceIn(0.0, cap) / 100
 
     val maxLife = max(1.0, stat("STOCK_HEALTH"))
     val maxShield = max(0.0, stat("STOCK_ENERGY_SHIELD"))
@@ -69,11 +78,16 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
     val armour = max(0.0, stat("STOCK_ARMOR"))
     val evasion = max(0.0, stat("STOCK_EVASION"))
     val block = stat("STOCK_BLOCK_CHANCE").coerceIn(0.0, rules.blockCap) / 100
-    /** Chaos stands alone, as in PoE; "all resistances" covers the three elements. */
-    fun resist(type: DamageType): Double = when (val name = type.resist) {
-        null -> 0.0
-        "STOCK_RESIST_CHAOS" -> cap(stat(name))
-        else -> cap(stat(name) + stat("STOCK_RESIST_ALL"))
+    /** A spell meets the rule's share of the block chance plus the sheet's own spell block, under the same cap. */
+    val spellBlock = (stat("STOCK_BLOCK_CHANCE").coerceIn(0.0, rules.blockCap) * rules.spellBlockShare / 100 + stat("STOCK_SPELL_BLOCK")).coerceIn(0.0, rules.blockCap) / 100
+    /** Taken off physical damage after armour, under armour's own cap. */
+    val physicalReduction = percent("STOCK_PHYSICAL_REDUCTION", rules.armour.cap)
+    /** Chaos stands alone, as in PoE; "all resistances" and "all maximum resistances" cover the three elements. */
+    fun resist(type: DamageType): Double {
+        val name = type.resist ?: return 0.0
+        val chaos = name == "STOCK_RESIST_CHAOS"
+        val ceiling = (rules.resistCap + stat(type.maxResist.orEmpty()) + (if (chaos) 0.0 else stat("STOCK_RESIST_MAX_ALL"))).coerceIn(0.0, rules.resistHardCap)
+        return (stat(name) + (if (chaos) 0.0 else stat("STOCK_RESIST_ALL"))).coerceIn(0.0, ceiling) / 100
     }
     val lifeRegen = max(0.0, stat("STOCK_HEALTH_REGEN"))
     val shieldRegen = max(0.0, stat("STOCK_ENERGY_REGEN"))
@@ -82,6 +96,21 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
     val leechAll = max(0.0, stat("STOCK_LEECH_ALL")) / 100
     val critLeech = max(0.0, stat("STOCK_CRITICAL_VAMPIRE")) / 100
     val stunThreshold = max(0.0, stat("STOCK_STUN_THRESHOLD"))
+    val avoidStun = percent("STOCK_AVOID_STUN")
+    /** What gear adds to the rule's chance to inflict [ailment], in percent; chill has no such stat. */
+    fun inflictChance(ailment: Ailment) = max(0.0, stat("STOCK_${ailment.word}_CHANCE"))
+    /** How much heavier [ailment]'s damage over time runs. */
+    fun ailmentDamage(ailment: Ailment) = 1 + max(0.0, ailment.damage?.let(::stat) ?: 0.0) / 100
+    fun avoid(ailment: Ailment) = percent("STOCK_AVOID_${ailment.word}")
+    /** What is left of [ailment]'s duration on this fighter, never less than the rule's cap allows. */
+    fun ailmentDuration(ailment: Ailment) = 1 - percent("STOCK_${ailment.word}_DURATION_ON_SELF", rules.ailmentDurationCap)
+    val lifeOnHit = max(0.0, stat("STOCK_HEALTH_ON_HIT"))
+    val manaOnHit = max(0.0, stat("STOCK_MANA_ON_HIT"))
+    val lifeOnKill = max(0.0, stat("STOCK_HEALTH_ON_KILL"))
+    val manaOnKill = max(0.0, stat("STOCK_MANA_ON_KILL"))
+    /** Charges the flask carries on top of the rule's, and how much more one heals. */
+    val extraFlasks = max(0.0, stat("STOCK_FLASK_CHARGES")).toInt()
+    val flaskHeal = rules.flask.heal * (1 + max(0.0, stat("STOCK_FLASK_RECOVERY")) / 100)
 }
 
 /** An ailment on a fighter: what, until when, how hard, and who put it there. */
@@ -212,14 +241,14 @@ class Battle(
         while (carry >= STEP - 1e-12 && outcome == null) { carry -= STEP; step(STEP) }
     }
 
-    /** Drinks a charge: [FlaskRule.heal] percent of life over its duration. One at a time, and never after the fight. */
+    /** Drinks a charge: [FlaskRule.heal] percent of life, raised by the sheet's recovery, over its duration. One at a time, and never after the fight. */
     fun useFlask(): Boolean {
         val me = fighter(Side.HERO)
         if (outcome != null || flasks <= 0 || me.flaskUntil > time) return false
         flasks--
         me.flaskUntil = time + rules.flask.duration
-        me.flaskRate = me.body.maxLife * rules.flask.heal / 100 / rules.flask.duration
-        record(Side.HERO, Action.FLASK, HitKind.HIT, 0.0, null, me.body.maxLife * rules.flask.heal / 100, false, emptyList(), null)
+        me.flaskRate = me.body.maxLife * me.body.flaskHeal / 100 / rules.flask.duration
+        record(Side.HERO, Action.FLASK, HitKind.HIT, 0.0, null, me.body.maxLife * me.body.flaskHeal / 100, false, emptyList(), null)
         return true
     }
 
@@ -318,7 +347,7 @@ class Battle(
         val taken = me.body.damage.filterValues { it > 0 }.mapValues { (type, base) ->
             val raw = base * (1 + (random.nextDouble() * 2 - 1) * rules.variance / 100) * multiplier
             when (type) {
-                DamageType.PHYSICAL -> raw * (1 - (target.body.armour / (target.body.armour + rules.armour.factor * raw)).coerceAtMost(rules.armour.cap / 100))
+                DamageType.PHYSICAL -> raw * (1 - (target.body.armour / (target.body.armour + rules.armour.factor * raw)).coerceAtMost(rules.armour.cap / 100)) * (1 - target.body.physicalReduction)
                 else -> raw * (1 - target.body.resist(type))
             }.coerceAtLeast(0.0) * target.weakness()
         }
@@ -327,7 +356,7 @@ class Battle(
 
     private fun cast(me: Fighter, target: Fighter) {
         val kind = when {
-            !target.frozen() && random.nextDouble() < target.body.block * rules.spellBlockShare / 100 -> HitKind.BLOCKED
+            !target.frozen() && random.nextDouble() < target.body.spellBlock -> HitKind.BLOCKED
             random.nextDouble() < me.body.critChance -> HitKind.CRIT
             else -> HitKind.HIT
         }
@@ -348,11 +377,14 @@ class Battle(
         val dealt = taken.values.sum()
         val physical = taken[DamageType.PHYSICAL] ?: 0.0
         val healed = physical * me.body.leechPhysical + (dealt - physical) * me.body.leechMagical + dealt * me.body.leechAll +
-            (if (kind == HitKind.CRIT) dealt * me.body.critLeech else 0.0)
+            (if (kind == HitKind.CRIT) dealt * me.body.critLeech else 0.0) + (if (action == Action.ATTACK) me.body.lifeOnHit else 0.0)
         me.life = min(me.body.maxLife, me.life + healed)
+        if (action == Action.ATTACK) me.mana = min(me.body.maxMana, me.mana + me.body.manaOnHit)
 
         var stunned = false
-        if (target.alive && dealt >= target.body.maxLife * rules.stun.share / 100 + target.body.stunThreshold) {
+        // Only a fighter with a chance to avoid draws for it, so a sheet without one plays the same seed as before.
+        if (target.alive && dealt >= target.body.maxLife * rules.stun.share / 100 + target.body.stunThreshold &&
+            !(target.body.avoidStun > 0 && random.nextDouble() < target.body.avoidStun)) {
             stunned = true
             target.heldUntil = max(target.heldUntil, time + rules.stun.duration)
         }
@@ -360,13 +392,22 @@ class Battle(
         record(me.side, action, kind, dealt, taken.maxByOrNull { it.value }?.key, healed, stunned, inflicted, null)
     }
 
-    /** Which ailments this blow's damage brings, by the server's rules: a roll per rule whose type did some damage. */
+    /**
+     * Which ailments this blow's damage brings, by the server's rules: a roll per rule whose type did some damage.
+     * The hero starts from the rule's [AilmentRule.heroChance] where it has one, and the striker's gear adds to it;
+     * the target may avoid it and shortens it by its own gear, and the damage over time runs heavier by the striker's.
+     */
     private fun inflict(me: Fighter, target: Fighter, taken: Map<DamageType, Double>): List<Ailment> = ailmentRules.mapNotNull { (rule, what) ->
         val (ailment, type) = what
         val amount = taken[type] ?: 0.0
-        if (amount <= 0 || amount < target.body.maxLife * rule.threshold / 100 || random.nextDouble() >= rule.chance / 100) return@mapNotNull null
-        val magnitude = if (ailment.hurts) amount * rule.magnitude / 100 / rule.duration else rule.magnitude
-        val fresh = ActiveAilment(ailment, time + rule.duration, magnitude, rule.duration, me.side)
+        val base = if (me.side == Side.HERO) rule.heroChance ?: rule.chance else rule.chance
+        val chance = (base + me.body.inflictChance(ailment)).coerceAtMost(100.0) / 100
+        if (amount <= 0 || chance <= 0 || amount < target.body.maxLife * rule.threshold / 100 || random.nextDouble() >= chance) return@mapNotNull null
+        val avoid = target.body.avoid(ailment)
+        if (avoid > 0 && random.nextDouble() < avoid) return@mapNotNull null
+        val duration = rule.duration * target.body.ailmentDuration(ailment)
+        val magnitude = if (ailment.hurts) amount * rule.magnitude / 100 / rule.duration * me.body.ailmentDamage(ailment) else rule.magnitude
+        val fresh = ActiveAilment(ailment, time + duration, magnitude, duration, me.side)
         if (ailment.hurts) target.tickedAt.putIfAbsent(ailment, time)
         val existing = target.ailments.filter { it.ailment == ailment }
         when {
@@ -382,7 +423,7 @@ class Battle(
     private fun finished(): Boolean {
         if (outcome != null) return true
         when {
-            !fighter(Side.MONSTER).alive -> end(Outcome.WIN)
+            !fighter(Side.MONSTER).alive -> { reward(fighter(Side.HERO)); end(Outcome.WIN) }
             !fighter(Side.HERO).alive -> end(Outcome.LOSS)
             else -> return false
         }
@@ -390,6 +431,13 @@ class Battle(
     }
 
     private fun end(how: Outcome) { outcome = how; duration = time }
+
+    /** Life and mana on kill land the moment the monster falls, so the next fight starts with them. */
+    private fun reward(hero: Fighter) {
+        if (!hero.alive) return
+        hero.life = min(hero.body.maxLife, hero.life + hero.body.lifeOnKill)
+        hero.mana = min(hero.body.maxMana, hero.mana + hero.body.manaOnKill)
+    }
 
     private fun record(actor: Side, action: Action, kind: HitKind, damage: Double, type: DamageType?, healed: Double, stunned: Boolean, inflicted: List<Ailment>, ailment: Ailment?) {
         val h = fighter(Side.HERO)

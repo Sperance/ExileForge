@@ -427,6 +427,62 @@ class CampaignTest {
         assertEquals(1.5, battle.fighter(Side.MONSTER).slow())
     }
 
+    @Test fun `the hero ignites only by gear, and the target's own gear avoids or shortens it`() {
+        val rules = CombatRules(ailments = listOf(AilmentRule("BURNING", "STOCK_ATTACK_FIRE", 100.0, 100.0, 2.0, heroChance = 0.0)))
+        val torch = mapOf("STOCK_HEALTH" to 100.0, "STOCK_ATTACK_FIRE" to 10.0, "STOCK_ATTACK_SPEED" to 0.5, "STOCK_CRITICAL_CHANCE" to 0.0)
+        val dummy = mapOf("STOCK_HEALTH" to 10000.0, "STOCK_ATTACK_PHYSICAL" to 0.1, "STOCK_ATTACK_SPEED" to 0.3)
+        fun fight(hero: Map<String, Double>, target: Map<String, Double> = dummy) =
+            Combat.fight(Combatant(hero, 1, rules), Combatant(target, 1, rules), 100.0, Random(4), rules)
+        fun burn(log: CombatLog) = log.events.filter { it.action == Action.TICK && it.actor == Side.HERO }.take(2).sumOf { it.damage }
+        // The monsters' chance is not the hero's: without gear the hero never ignites.
+        assertTrue(fight(torch).events.none { it.actor == Side.HERO && Ailment.BURNING in it.inflicted })
+        val lit = fight(torch + ("STOCK_IGNITE_CHANCE" to 100.0))
+        val hit = lit.events.first { it.actor == Side.HERO && it.action == Action.ATTACK }
+        assertEquals(listOf(Ailment.BURNING), hit.inflicted)
+        assertEquals(hit.damage, burn(lit), hit.damage * 0.1)
+        // Burning damage runs the same seconds harder; a halved duration burns half as long at the same rate.
+        assertEquals(hit.damage * 2, burn(fight(torch + ("STOCK_IGNITE_CHANCE" to 100.0) + ("STOCK_BURNING_DAMAGE" to 100.0))), hit.damage * 0.2)
+        val shortened = fight(torch + ("STOCK_IGNITE_CHANCE" to 100.0), dummy + ("STOCK_IGNITE_DURATION_ON_SELF" to 50.0))
+        assertEquals(hit.damage / 2, shortened.events.filter { it.action == Action.TICK && it.actor == Side.HERO }.take(1).sumOf { it.damage }, hit.damage * 0.1)
+        assertTrue(fight(torch + ("STOCK_IGNITE_CHANCE" to 100.0), dummy + ("STOCK_AVOID_IGNITE" to 100.0)).events.none { Ailment.BURNING in it.inflicted })
+        // The rule's cap holds however much reduction the gear stacks.
+        assertEquals(0.25, Combatant(dummy + ("STOCK_IGNITE_DURATION_ON_SELF" to 200.0), 1, rules).ailmentDuration(Ailment.BURNING), 1e-9)
+    }
+
+    @Test fun `a higher ceiling lifts a resistance up to the hard cap, and spell block adds to the block's share`() {
+        val rules = CombatRules()
+        val warded = Combatant(mapOf("STOCK_RESIST_FIRE" to 95.0, "STOCK_RESIST_COLD" to 95.0, "STOCK_RESIST_CHAOS" to 95.0, "STOCK_RESIST_MAX_FIRE" to 5.0,
+            "STOCK_BLOCK_CHANCE" to 40.0, "STOCK_SPELL_BLOCK" to 10.0, "STOCK_PHYSICAL_REDUCTION" to 5.0), 1, rules)
+        assertEquals(0.80, warded.resist(DamageType.FIRE), 1e-9)
+        assertEquals(0.75, warded.resist(DamageType.COLD), 1e-9)
+        val maxed = Combatant(warded.stats + ("STOCK_RESIST_MAX_ALL" to 20.0), 1, rules)
+        assertEquals(0.90, maxed.resist(DamageType.FIRE), 1e-9)
+        // "All maximum resistances" is the three elements'; chaos keeps its own ceiling.
+        assertEquals(0.75, maxed.resist(DamageType.CHAOS), 1e-9)
+        assertEquals(0.30, warded.spellBlock, 1e-9)
+        assertEquals(0.05, warded.physicalReduction, 1e-9)
+    }
+
+    @Test fun `life on hit heals every landed swing and life on kill lands when the monster falls`() {
+        val base = mapOf("STOCK_HEALTH" to 200.0, "STOCK_ATTACK_PHYSICAL" to 20.0, "STOCK_ATTACK_SPEED" to 1.5, "STOCK_CRITICAL_CHANCE" to 0.0)
+        val monster = Combatant(mapOf("STOCK_HEALTH" to 60.0, "STOCK_ATTACK_PHYSICAL" to 2.0, "STOCK_ATTACK_SPEED" to 0.5), 1)
+        val plain = Combat.fight(Combatant(base, 1), monster, 50.0, Random(8))
+        val fed = Combat.fight(Combatant(base + ("STOCK_HEALTH_ON_KILL" to 30.0), 1), monster, 50.0, Random(8))
+        assertEquals(Outcome.WIN, fed.outcome)
+        assertEquals(plain.heroLife + 30.0, fed.heroLife, 1e-9)
+        val leech = Combat.fight(Combatant(base + ("STOCK_HEALTH_ON_HIT" to 4.0), 1), monster, 50.0, Random(8))
+        assertTrue(leech.events.filter { it.actor == Side.HERO && it.action == Action.ATTACK && it.landed }.all { it.healed >= 4.0 })
+    }
+
+    @Test fun `flask charges and recovery from the sheet ride on the rule's`() {
+        val rules = CombatRules(flask = FlaskRule(charges = 2, perKill = 1, heal = 40.0, duration = 3.0))
+        val run = ExpeditionRun.start(map, rarities, mapOf("STOCK_HEALTH" to 500.0, "STOCK_FLASK_CHARGES" to 1.0, "STOCK_FLASK_RECOVERY" to 50.0), 10, 7,
+            onKill = {}, onCleared = {}, rules = rules)
+        assertEquals(3, run.hud.value.flasks)
+        assertEquals(3, run.hud.value.maxFlasks)
+        assertEquals(60.0, run.hero.flaskHeal, 1e-9)
+    }
+
     @Test fun `the innate spell is cast beside the swings and costs mana`() {
         val rules = CombatRules(spell = SpellRule(innateDamage = 5.0, innatePerLevel = 1.0, castSpeed = 1.0, manaCost = 50.0, manaRegenShare = 0.0))
         val exile = Combatant(mapOf("STOCK_HEALTH" to 500.0, "STOCK_MANA" to 40.0, "STOCK_ATTACK_PHYSICAL" to 1.0, "STOCK_ATTACK_SPEED" to 1.0, "STOCK_CRITICAL_CHANCE" to 0.0), 2, rules, innateSpell = true)

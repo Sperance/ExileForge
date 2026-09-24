@@ -20,9 +20,9 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.38.0, `versionCode` 56) for the
-**ktor-bestgame** RPG server (0.35.0), pinned in
-`core/.../contract/Contract.kt` as `SERVER_COMMIT = e6d8d0c755a476ca2421c78c420df7773f24f347`
+ExileForge is an **Android Compose client** (version 2.39.0, `versionCode` 57) for the
+**ktor-bestgame** RPG server (0.36.0), pinned in
+`core/.../contract/Contract.kt` as `SERVER_COMMIT = 6c18941d3c482370146ba0083691c0c5ef001958`
 on the server branch `claude/tender-pasteur-a36kj2`.
 
 The client is deliberately **thin**: the server owns items, stats, modifier rolls and inventory.
@@ -522,7 +522,7 @@ These are enforced by tests and are the point of the client's design:
     poison and bleeding as damage over time logged once a second as `Action.TICK`, chill as slower
     actions, shock as more damage taken, freeze as a held fighter; the life flask
     (`rules.flask`, charges per run, one back per kill); and retreat (`rules.retreat.delay` of the
-    monster's free swings). Auras and curses were removed from the game in 2.35.0 (server 0.33.0). A death is reported to
+    monster's free swings). Auras and curses were removed from the game in 2.35.0 (server 0.33.0). Since 2.39.0 (server 0.36.0) the sheet carries what gear does to that fight — `Combatant` reads a chance per ailment on top of the rule (the hero starts from `AilmentRule.heroChance`, zero for ignite, shock, poison and bleed), damage over time, avoiding and shortening each ailment (to `ailmentDurationCap`), avoiding a stun, spell block, physical reduction, resistance ceilings (to `resistHardCap`), life and mana on hit and on kill, flask charges and recovery. A death is reported to
     `POST /campaign/fall` the same way a kill is, once and never retried: the server takes
     `death.experienceShare` of the level's experience from map level `death.fromLevel`, never the
     level, and `RunHud.fall` is what the report screen prints. What a kill *earns* stays the server's: `kill` names the map, the monster and

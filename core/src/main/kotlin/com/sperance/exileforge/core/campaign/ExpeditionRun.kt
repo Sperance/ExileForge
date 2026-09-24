@@ -161,7 +161,9 @@ class ExpeditionRun(
     private var phase = RunPhase.MAP
     private var life = hero.maxLife
     private var mana = hero.maxMana
-    private var flasks = rules.flask.charges
+    /** The rule's charges and whatever the sheet adds (since 2.39.0). */
+    private val maxFlasks = rules.flask.charges + hero.extraFlasks
+    private var flasks = maxFlasks
     private var fights = 0
     private var speed = 1
     private var reward: CampaignReward? = null
@@ -242,7 +244,7 @@ class ExpeditionRun(
         if (phase != RunPhase.MAP || flasks <= 0 || flaskUntil > clock) return false
         flasks--
         flaskUntil = clock + rules.flask.duration
-        flaskRate = hero.maxLife * rules.flask.heal / 100 / rules.flask.duration
+        flaskRate = hero.maxLife * hero.flaskHeal / 100 / rules.flask.duration
         return true
     }
 
@@ -280,7 +282,7 @@ class ExpeditionRun(
                 agent.alive = false
                 slain = agent.monster
                 kills++
-                flasks = min(rules.flask.charges, flasks + rules.flask.perKill)
+                flasks = min(maxFlasks, flasks + rules.flask.perKill)
                 rewardPending = true
                 phase = RunPhase.LOOT
                 onKill(agent.monster)
@@ -299,7 +301,7 @@ class ExpeditionRun(
             heroLife = (battle?.heroLife ?: life).roundToInt(), heroMaxLife = hero.maxLife.roundToInt(),
             heroShield = (battle?.fighter(Side.HERO)?.shield ?: hero.maxShield).roundToInt(), heroMaxShield = hero.maxShield.roundToInt(),
             heroMana = (battle?.heroMana ?: mana).roundToInt(), heroMaxMana = hero.maxMana.roundToInt(),
-            flasks = battle?.flasks ?: flasks, maxFlasks = rules.flask.charges, flaskActive = battle?.flaskActive ?: (flaskUntil > clock),
+            flasks = battle?.flasks ?: flasks, maxFlasks = maxFlasks, flaskActive = battle?.flaskActive ?: (flaskUntil > clock),
             alive = world.alive, total = world.total, sealed = world.sealed,
             fight = battle?.let { b -> fightAgent?.let { fightHud(b, it.monster) } },
             reward = reward, rewardPending = rewardPending, rewardFailed = rewardFailed, slain = slain, report = report,

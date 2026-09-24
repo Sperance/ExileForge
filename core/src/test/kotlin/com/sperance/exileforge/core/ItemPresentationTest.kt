@@ -118,11 +118,16 @@ class ItemPresentationTest {
 
     @Test fun `the sheet is read in groups, and a stat nobody named still lands somewhere`() {
         val grouped = groupedStats(mapOf("STOCK_RARITY" to 38.0, "STOCK_RESIST_COLD" to 68.0, "STOCK_HEALTH" to 1184.0,
-            "STOCK_ATTACK_SPEED" to 1.55, "STOCK_STRENGTH" to 142.0, "STOCK_ARMOR" to 1242.0, "STOCK_MANA" to 412.0, "BATTLE_ARCHERY" to 3.0))
+            "STOCK_ATTACK_SPEED" to 1.55, "STOCK_STRENGTH" to 142.0, "STOCK_ARMOR" to 1242.0, "STOCK_MANA" to 412.0, "STOCK_IGNITE_CHANCE" to 25.0, "BATTLE_ARCHERY" to 3.0))
         assertEquals(StatGroup.entries.toList(), grouped.map { it.first })
         // Inside a group the server's own enum order holds: life before mana.
         assertEquals(listOf("STOCK_HEALTH", "STOCK_MANA"), grouped.first().second.map { it.first })
         assertEquals(StatGroup.OTHER, StatGroup.of("STOCK_SOMETHING_NEW"))
+        // Ailments sit together, but avoiding a stun is a defence and a higher ceiling is a resistance.
+        assertEquals(StatGroup.AILMENT, StatGroup.of("STOCK_AVOID_FREEZE"))
+        assertEquals(StatGroup.AILMENT, StatGroup.of("STOCK_BLEED_DURATION_ON_SELF"))
+        assertEquals(StatGroup.DEFENCE, StatGroup.of("STOCK_AVOID_STUN"))
+        assertEquals(StatGroup.RESISTANCE, StatGroup.of("STOCK_RESIST_MAX_FIRE"))
         assertEquals(listOf("STOCK_RARITY", "BATTLE_ARCHERY"), grouped.last().second.map { it.first })
         // An empty group is left out rather than drawn as an empty card.
         assertEquals(listOf(StatGroup.RESERVE), groupedStats(mapOf("STOCK_HEALTH" to 1.0)).map { it.first })

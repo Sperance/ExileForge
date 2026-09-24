@@ -113,6 +113,8 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
 @Serializable data class AilmentRule(
     val ailment: String, val type: String, val chance: Double, val magnitude: Double = 0.0,
     val duration: Double, val threshold: Double = 0.0, val stacks: Boolean = false,
+    /** The hero's own base instead of [chance] (since server 0.36.0): as in PoE, igniting, shocking, poisoning and bleeding come from gear alone. */
+    val heroChance: Double? = null,
 )
 
 @Serializable data class UnarmedRule(val damage: Double = 4.0, val speed: Double = 1.2)
@@ -139,13 +141,15 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
     val unarmed: UnarmedRule = UnarmedRule(), val critical: CriticalRule = CriticalRule(), val armour: ArmourRule = ArmourRule(),
     val evasion: EvasionRule = EvasionRule(), val stun: StunRule = StunRule(), val shield: ShieldRule = ShieldRule(),
     val spell: SpellRule = SpellRule(), val flask: FlaskRule = FlaskRule(), val retreat: RetreatRule = RetreatRule(), val death: DeathRule = DeathRule(),
+    /** Since server 0.36.0: no "+% to maximum resistance" lifts a resistance past [resistHardCap], and no reduction shortens an ailment by more than [ailmentDurationCap] percent. */
+    val resistHardCap: Double = 90.0, val ailmentDurationCap: Double = 75.0,
     val ailments: List<AilmentRule> = listOf(
-        AilmentRule("BURNING", "STOCK_ATTACK_FIRE", 30.0, 60.0, 4.0),
+        AilmentRule("BURNING", "STOCK_ATTACK_FIRE", 30.0, 60.0, 4.0, heroChance = 0.0),
         AilmentRule("CHILLED", "STOCK_ATTACK_COLD", 100.0, 15.0, 2.0),
         AilmentRule("FROZEN", "STOCK_ATTACK_COLD", 50.0, 0.0, 0.8, threshold = 15.0),
-        AilmentRule("SHOCKED", "STOCK_ATTACK_LIGHTNING", 35.0, 20.0, 3.0),
-        AilmentRule("POISONED", "STOCK_ATTACK_CHAOS", 40.0, 30.0, 3.0, stacks = true),
-        AilmentRule("BLEEDING", "STOCK_ATTACK_PHYSICAL", 15.0, 50.0, 4.0),
+        AilmentRule("SHOCKED", "STOCK_ATTACK_LIGHTNING", 35.0, 20.0, 3.0, heroChance = 0.0),
+        AilmentRule("POISONED", "STOCK_ATTACK_CHAOS", 40.0, 30.0, 3.0, stacks = true, heroChance = 0.0),
+        AilmentRule("BLEEDING", "STOCK_ATTACK_PHYSICAL", 15.0, 50.0, 4.0, heroChance = 0.0),
     ),
 )
 

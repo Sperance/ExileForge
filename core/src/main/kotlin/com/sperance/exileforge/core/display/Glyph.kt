@@ -51,6 +51,8 @@ enum class Glyph {
             "BLOCK" to DEFENCE, "STUN" to DEFENCE, "ATTACK" to ATTACK, "COMBAT" to ATTACK, "STRENGTH" to ATTRIBUTE,
             "CONSTITUTION" to ATTRIBUTE, "GOLD" to CURRENCY, "RARITY" to RARITY, "QUANTITY" to RARITY,
             "EXPERIENCE" to LEVEL, "INVENTORY" to ITEM, "MAGIC" to MANA,
+            "IGNITE" to FIRE, "BURNING" to FIRE, "CHILL" to COLD, "FREEZE" to COLD, "SHOCK" to LIGHTNING, "POISON" to CHAOS,
+            "BLEED" to ATTACK, "FLASK" to LIFE, "REDUCTION" to DEFENCE,
         )
 
         private val fields = mapOf(

@@ -48,7 +48,7 @@ class CharacterViewModel(private val runtime: ForgeRuntime) {
      */
     private suspend fun entered(id: String) { with(runtime) {
         mutable.update { it.copy(phase = AppPhase.GAME, tab = 0, play = it.play.copy(characterId = id, hero = null, characterOwner = "", selectedEquipment = "", forgeLine = "", campaign = null,
-            crafts = null, craftsTotals = com.sperance.exileforge.core.model.crafts.WorkGains(), craftsLast = null, craftsPending = com.sperance.exileforge.core.model.crafts.WorkGains()))) }
+            crafts = null, craftsTotals = com.sperance.exileforge.core.model.crafts.WorkGains(), craftsLast = null, craftsPending = com.sperance.exileforge.core.model.crafts.WorkGains())) }
         heroViewModel.forget()
         ensureWorld(fresh = true)
         heroViewModel.readHero()

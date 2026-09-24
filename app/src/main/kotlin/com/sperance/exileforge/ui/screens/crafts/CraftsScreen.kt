@@ -16,6 +16,13 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.shape.CutCornerShape
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.contract.text
@@ -24,7 +31,9 @@ import com.sperance.exileforge.core.display.inventoryDocument
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.LocaleKey
 import com.sperance.exileforge.core.i18n.locOr
+import com.sperance.exileforge.core.i18n.plural
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.model.crafts.JobInput
 import com.sperance.exileforge.core.model.crafts.JobKind
 import com.sperance.exileforge.core.model.crafts.JobView
 import androidx.compose.foundation.layout.FlowRow
@@ -32,6 +41,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import com.sperance.exileforge.core.model.crafts.ProfessionView
 import com.sperance.exileforge.core.model.crafts.WorkGains
+import com.sperance.exileforge.core.model.crafts.WorkView
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.Reads
@@ -68,6 +78,32 @@ fun jobProduct(job: JobView): String = when (job.kind) {
     JobKind.MAP -> ui("crafts.kind_map", com.sperance.exileforge.core.campaign.mapTitle(job.map))
 }
 
+/** A crafting profession spends materials; a gathering one only brings them. The works say which, not a list of codes. */
+val ProfessionView.crafting get() = jobs.any { it.inputs.isNotEmpty() }
+
+/**
+ * How long the bag keeps the work going: the input that runs out first, what the bag holds of it and
+ * how many cycles that pays for — every additive the work was started with is spent each cycle too.
+ * Display only: the server stops the work when a cycle cannot be paid.
+ */
+fun stockLine(s: ForgeState, work: WorkView, job: JobView): String? {
+    val inputs = job.inputs + work.additives.map { JobInput(it, 1) }
+    val scarce = inputs.filter { it.amount > 0 }.minByOrNull { bagCount(s, it.item) / it.amount } ?: return null
+    val have = bagCount(s, scarce.item)
+    val cycles = (have / scarce.amount).toInt()
+    return if (cycles == 0) ui("crafts.stock_empty", materialTitle(scarce.item), have)
+    else ui("crafts.stock", materialTitle(scarce.item), have, cycles, plural("crafts.cycles", cycles), eta(cycles * work.cycleMillis))
+}
+
+private fun eta(millis: Long): String {
+    val seconds = (millis + 999) / 1000
+    return when {
+        seconds < 60 -> ui("crafts.eta_seconds", seconds)
+        seconds < 3600 -> ui("crafts.eta_minutes", (seconds + 59) / 60)
+        else -> ui("crafts.eta_hours", seconds / 3600, seconds % 3600 / 60)
+    }
+}
+
 /**
  * The crafts tab (since 2.41.0, server 0.37.0): the work under way on a plaque over the tiles, one
  * tile per profession, and a profession's window behind each. The work runs on the server by time;
@@ -95,10 +131,16 @@ fun jobProduct(job: JobView): String = when (job.kind) {
             item { ScreenHeader(ui("crafts.title"), ui("crafts.subtitle"), ForgeGlyphs.Anvil) }
             if (crafts == null) { item { InfoCard(ui("common.loading"), ui("crafts.loading_hint")) }; return@LazyColumn }
             item { WorkPlaque(s, vm, serverNow) }
-            items(crafts.professions.chunked(2)) { pair ->
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    pair.forEach { ProfessionTile(s, it, working = crafts.work?.profession == it.code, Modifier.weight(1f)) { vm.openProfession(it.code) } }
-                    if (pair.size == 1) Spacer(Modifier.weight(1f))
+            // Gathering over crafting, with the materials flowing from one into the other (the owner's pick of five mockups, 2.44.0).
+            val (crafting, gathering) = crafts.professions.partition { it.crafting }
+            listOf("crafts.section_gather" to gathering, "crafts.section_craft" to crafting).filter { it.second.isNotEmpty() }.forEachIndexed { index, (title, group) ->
+                if (index > 0) item { FlowMark() }
+                item { SectionRule(ui(title)) }
+                items(group.chunked(TILES)) { row ->
+                    Row(Modifier.height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        row.forEach { ProfessionTile(s, it, working = crafts.work?.profession == it.code, Modifier.weight(1f).fillMaxHeight()) { vm.openProfession(it.code) } }
+                        repeat(TILES - row.size) { Spacer(Modifier.weight(1f)) }
+                    }
                 }
             }
             item { Text(ui("crafts.note", number(crafts.rules.offlineHours)), color = Muted, style = MaterialTheme.typography.bodySmall) }
@@ -114,33 +156,66 @@ fun jobProduct(job: JobView): String = when (job.kind) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(jobTitle(work.job), color = GoldBright, style = MaterialTheme.typography.titleMedium)
-                Text(professionTitle(work.profession), color = Rune, style = MaterialTheme.typography.labelMedium)
+                Text(ui("crafts.work_line", professionTitle(work.profession), number(work.cycleMillis / 1000.0)), color = Rune, style = MaterialTheme.typography.labelMedium)
             }
             OutlinedButton(enabled = !s.busy, onClick = vm::stopWork) { Text(ui("crafts.stop")) }
         }
-        CycleBar(work.settledAt, work.cycleMillis, serverNow)
+        CycleBar(work.settledAt, work.cycleMillis, serverNow, caption = false)
         s.play.craftsLog.firstOrNull()?.let { Text(gainsLine(s, it), color = Parchment, style = MaterialTheme.typography.bodySmall) }
+        s.play.crafts?.professions?.firstOrNull { it.code == work.profession }?.jobs?.firstOrNull { it.code == work.job }
+            ?.let { stockLine(s, work, it) }?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelSmall) }
     }
 }
 
-@Composable private fun CycleBar(settledAt: Long, cycleMillis: Long, serverNow: Long, height: Int = 6) {
+/** An engraved caption with a bronze rule running out of it, heading a group of tiles. */
+@Composable private fun SectionRule(title: String) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Engraved(title)
+        Box(Modifier.weight(1f).height(1.dp).background(Brush.horizontalGradient(listOf(Bronze, Color.Transparent))))
+    }
+}
+
+/** Between gathering and crafting: what the first brings is what the second spends. */
+@Composable private fun FlowMark() {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically) {
+        Rhombus(Bronze, 6.dp)
+        Engraved(ui("crafts.flow"), accent = Bronze)
+        Rhombus(Bronze, 6.dp)
+    }
+}
+
+@Composable private fun CycleBar(settledAt: Long, cycleMillis: Long, serverNow: Long, height: Int = 6, caption: Boolean = true) {
     val share = if (cycleMillis > 0) ((serverNow - settledAt).toFloat() / cycleMillis).coerceIn(0f, 1f) else 0f
     LinearProgressIndicator(progress = { share }, modifier = Modifier.fillMaxWidth().height(height.dp), color = Gold, trackColor = PanelRaised)
-    Text(ui("crafts.cycle", number(cycleMillis / 1000.0)), color = Muted, style = MaterialTheme.typography.labelSmall)
+    if (caption) Text(ui("crafts.cycle", number(cycleMillis / 1000.0)), color = Muted, style = MaterialTheme.typography.labelSmall)
 }
 
-/** A profession as a tile: its tool's drawing, name, level and how far to the next one. */
+/** A profession as a tile, three to a row: its tool in a medallion, name, level, how far to the next one, and what stands out. */
 @Composable private fun ProfessionTile(s: ForgeState, profession: ProfessionView, working: Boolean, modifier: Modifier, onClick: () -> Unit) {
-    val shape = RoundedCornerShape(10.dp)
+    val shape = RoundedCornerShape(4.dp)
+    val toolless = profession.equipped == null
     Column(modifier.background(Panel, shape).border(if (working) 2.dp else 1.dp, if (working) GoldBright else PanelRaised, shape)
-        .clickable(role = Role.Button, onClick = onClick).padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp),
+        .clickable(role = Role.Button, onClick = onClick).padding(horizontal = 6.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(5.dp),
         horizontalAlignment = Alignment.CenterHorizontally) {
-        ToolIcon(s, profession, 44)
-        Text(professionTitle(profession.code), color = GoldBright, style = MaterialTheme.typography.titleSmall)
-        Text(ui("crafts.level", profession.level), color = Rune, style = MaterialTheme.typography.labelMedium)
-        LinearProgressIndicator(progress = { share(profession) }, modifier = Modifier.fillMaxWidth().height(4.dp), color = Vital, trackColor = PanelRaised)
-        if (working) Text(ui("crafts.working"), color = Gold, style = MaterialTheme.typography.labelSmall)
+        Medallion(if (toolless) LifeRed else Bronze) { ToolIcon(s, profession, 26) }
+        Box(Modifier.heightIn(min = 32.dp), contentAlignment = Alignment.Center) {
+            Text(professionTitle(profession.code), color = GoldBright, style = MaterialTheme.typography.labelLarge, textAlign = TextAlign.Center,
+                maxLines = 2, overflow = TextOverflow.Ellipsis)
+        }
+        Text(ui("crafts.level", profession.level), color = Rune, style = MaterialTheme.typography.labelSmall)
+        LinearProgressIndicator(progress = { share(profession) }, modifier = Modifier.fillMaxWidth().height(3.dp), color = Vital, trackColor = PanelRaised)
+        when {
+            working -> Text(ui("crafts.working"), color = Gold, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
+            toolless -> Text(ui("crafts.no_tool_short"), color = LifeRed, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
+        }
     }
+}
+
+/** A square stood on its corner, as the tree's nodes are, holding a drawing upright. */
+@Composable private fun Medallion(frame: Color, content: @Composable () -> Unit) {
+    Box(Modifier.padding(6.dp).size(40.dp).rotate(45f)
+        .background(Brush.radialGradient(listOf(PanelRaised, Ink)), CutCornerShape(2.dp)).border(1.dp, frame, CutCornerShape(2.dp)),
+        contentAlignment = Alignment.Center) { Box(Modifier.rotate(-45f)) { content() } }
 }
 
 private fun share(profession: ProfessionView): Float = profession.next?.takeIf { it > 0 }?.let { (profession.experience / it).toFloat().coerceIn(0f, 1f) } ?: 1f
@@ -183,8 +258,7 @@ private fun share(profession: ProfessionView): Float = profession.next?.takeIf {
                 if (tool == null) Text(ui("crafts.no_tool"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
                 else ItemRow(inventoryDocument(tool, s.world.inventoryBases[tool.equipmentId]), definitions = s.world.definitions, enabled = !s.busy) { picking = true }
                 OutlinedButton(enabled = !s.busy, onClick = { picking = true }, modifier = Modifier.fillMaxWidth()) { Text(ui("crafts.change_tool")) }
-                Text(ui("crafts.bonus", number(profession.bonus.speed), number(profession.bonus.yield), number(profession.bonus.luck),
-                    number(profession.bonus.experience), number(profession.bonus.find)), color = Parchment, style = MaterialTheme.typography.bodySmall)
+                BonusChips(profession)
             }
         }
         if (work != null) item {
@@ -198,23 +272,52 @@ private fun share(profession: ProfessionView): Float = profession.next?.takeIf {
         }
         item { Engraved(ui("crafts.works")) }
         items(profession.jobs, key = { it.code }) { job ->
-            JobRow(job, locked = job.level > profession.level || !job.open, current = work?.job == job.code) { chosen = job }
+            JobRow(s, job, locked = job.level > profession.level || !job.open, current = work?.job == job.code) { chosen = job }
         }
     }
     chosen?.let { job -> JobSheet(s, vm, profession, job, current = work?.job == job.code) { chosen = null } }
     if (picking) ToolPicker(s, profession, onDismiss = { picking = false }) { id -> picking = false; vm.equipTool(id) }
 }
 
-@Composable private fun JobRow(job: JobView, locked: Boolean, current: Boolean, onClick: () -> Unit) {
-    val shape = RoundedCornerShape(8.dp)
-    Row(Modifier.fillMaxWidth().background(Panel, shape).border(if (current) 2.dp else 1.dp, if (current) GoldBright else PanelRaised, shape)
+/** What the tool and the tree give this profession, a chip per figure that is not zero. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable private fun BonusChips(profession: ProfessionView) {
+    val bonus = profession.bonus
+    val figures = listOf("crafts.bonus_speed" to bonus.speed, "crafts.bonus_yield" to bonus.yield, "crafts.bonus_luck" to bonus.luck,
+        "crafts.bonus_experience" to bonus.experience, "crafts.bonus_find" to bonus.find).filter { it.second != 0.0 }
+    if (figures.isEmpty()) { Text(ui("crafts.bonus_none"), color = Muted, style = MaterialTheme.typography.bodySmall); return }
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        figures.forEach { (key, value) ->
+            Text(ui(key, number(value)), color = Parchment, style = MaterialTheme.typography.labelMedium,
+                modifier = Modifier.background(PanelRaised, RoundedCornerShape(2.dp)).padding(horizontal = 8.dp, vertical = 3.dp))
+        }
+    }
+}
+
+/** A material a cycle spends against what the bag holds: green while one cycle is paid for, red when it is not. */
+@Composable private fun InputChip(s: ForgeState, input: JobInput) {
+    val have = bagCount(s, input.item)
+    val tone = if (have >= input.amount) Vital else LifeRed
+    val shape = RoundedCornerShape(2.dp)
+    Row(Modifier.background(Panel, shape).border(1.dp, tone.copy(alpha = .6f), shape).padding(horizontal = 7.dp, vertical = 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(materialTitle(input.item), color = Parchment, style = MaterialTheme.typography.labelSmall)
+        Text(ui("crafts.ratio", have, input.amount), color = tone, style = MaterialTheme.typography.labelSmall)
+    }
+}
+
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable private fun JobRow(s: ForgeState, job: JobView, locked: Boolean, current: Boolean, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(4.dp)
+    Row(Modifier.fillMaxWidth().alpha(if (locked) .5f else 1f).background(Panel, shape).border(if (current) 2.dp else 1.dp, if (current) GoldBright else PanelRaised, shape)
         .clickable(role = Role.Button, onClick = onClick).padding(12.dp), verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(jobTitle(job.code), color = if (locked) Muted else GoldBright, style = MaterialTheme.typography.titleSmall)
             Text(ui("crafts.job_line", jobProduct(job), number(job.cycleMillis / 1000.0), number(job.nothing)), color = Muted, style = MaterialTheme.typography.bodySmall)
-            if (job.inputs.isNotEmpty()) Text(job.inputs.joinToString { ui("crafts.gain", it.amount, materialTitle(it.item)).removePrefix("+") },
-                color = Muted, style = MaterialTheme.typography.labelSmall)
+            if (job.inputs.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                job.inputs.forEach { InputChip(s, it) }
+            }
         }
         if (locked) Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Outlined.Lock, null, tint = Muted, modifier = Modifier.size(16.dp))
@@ -290,3 +393,4 @@ private const val TICK = 200L
 /** The server counts a cycle when its moment has passed; asking a little after it lands the cycle. */
 private const val SETTLE_GRACE = 400L
 private const val FEED = 8
+private const val TILES = 3

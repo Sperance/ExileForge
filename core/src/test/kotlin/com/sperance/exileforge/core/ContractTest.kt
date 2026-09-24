@@ -83,11 +83,12 @@ class ContractTest {
     }
 
     @Test fun `filters compare stored fields and nothing else`() {
-        val bow = buildJsonObject { put("name", "Short Bow"); put("slot", "WEAPON_2H"); put("weaponType", "BOW"); put("rarity", "RARE"); put("itemLevel", 40); put("modifierIds", buildJsonArray { add(id) }) }
+        val bow = buildJsonObject { put("name", "Short Bow"); put("slot", "WEAPON_2H"); put("weaponType", "BOW"); put("rarity", "RARE"); put("itemLevel", 40); put("modifierPools", buildJsonArray { add("bow") }); put("pools", buildJsonObject { put("drop", 100) }) }
         assertTrue(CatalogFilter().isEmpty)
-        assertTrue(CatalogFilter(query = "short", slot = "WEAPON_2H", rarity = "RARE", minLevel = "10", maxLevel = "40", weaponType = "BOW", modifierId = id).matches(bow))
+        assertTrue(CatalogFilter(query = "short", slot = "WEAPON_2H", rarity = "RARE", minLevel = "10", maxLevel = "40", weaponType = "BOW", pool = "bow").matches(bow))
+        assertTrue(CatalogFilter(pool = "drop").matches(bow))
         assertFalse(CatalogFilter(maxLevel = "39").matches(bow))
-        assertFalse(CatalogFilter(modifierId = "other").matches(bow))
+        assertFalse(CatalogFilter(pool = "other").matches(bow))
         assertFalse(CatalogFilter(query = "sword").matches(bow))
     }
 

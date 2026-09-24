@@ -52,9 +52,9 @@ val modifierSources = listOf("IMPLICIT", "PREFIX", "SUFFIX", "UNIQUE", "ENCHANTM
 val skillNodeTypes = listOf("START", "SMALL", "NOTABLE", "KEYSTONE", "JEWEL_SOCKET")
 val lotKinds = listOf("EQUIPMENT", "ITEM")
 val modifierOperations = listOf("ADD", "INCREASED", "MORE", "SET")
-const val SERVER_COMMIT = "3ce731840bfe9c257c96e61a53a339bb0d2d8641"
-const val SERVER_BRANCH = "claude/tender-pasteur-a36kj2"
-const val SERVER_VERSION = "0.38.0"
+const val SERVER_COMMIT = "7db1e5a9b3469f8a3e82c0fc5d909d431d6e09d1"
+const val SERVER_BRANCH = "claude/vigilant-wozniak-ptnxmx"
+const val SERVER_VERSION = "0.39.0"
 
 fun template(catalog: Catalog, kind: EquipmentKind = EquipmentKind.Weapon): JsonObject = when (catalog) {
     Catalog.CHARACTERS -> defaultObject("character")
@@ -68,7 +68,7 @@ fun template(catalog: Catalog, kind: EquipmentKind = EquipmentKind.Weapon): Json
         put("code", "EF_TEST_LEGACY")
         put("slot", when (kind) { EquipmentKind.Weapon -> "WEAPON_1H"; EquipmentKind.Armor -> "BODY"; EquipmentKind.Accessory -> "RING" })
         put("rarity", "RARE"); put("itemLevel", 30)
-        put("modifierIds", JsonArray(emptyList()))
+        put("fixedModifierIds", JsonArray(emptyList())); put("modifierPools", JsonArray(emptyList())); put("pools", JsonObject(emptyMap()))
         // Armour, damage and attack speed are implicit modifiers since 0.10.0: the item has no
         // stat fields of its own, so its base is a list of fixed modifiers like any other source.
         put("baseParams", JsonArray(emptyList()))
@@ -176,15 +176,23 @@ fun validateBaseParams(document: JsonObject) {
 }
 
 /**
- * A template keeps a pool of references, never inline definitions and never rolled values.
+ * A template names pools and fixed references, never inline definitions and never rolled values.
  *
- * Which of them land on an instance is the server's decision: prefixes and suffixes are rolled in
- * the count the rarity allows, the other sources sit on every copy.
+ * Since server 0.39.0 a pool is a tag: `modifierPools` are the tags its affixes roll from and `pools`
+ * the tags it sits in itself, each with a weight. Which modifiers land on an instance is the server's
+ * decision; the fixed ones (implicits, a unique's lines) sit on every copy.
  */
 fun validateModifierPool(document: JsonObject) {
-    val pool = document["modifierIds"] ?: return
-    require(pool is JsonArray) { ui("contract.ids_list") }
-    pool.forEach { requireId((it as? JsonPrimitive)?.contentOrNull.orEmpty()) }
+    document["fixedModifierIds"]?.let { fixed ->
+        require(fixed is JsonArray) { ui("contract.ids_list") }
+        fixed.forEach { requireId((it as? JsonPrimitive)?.contentOrNull.orEmpty()) }
+    }
+    document["modifierPools"]?.let { tags ->
+        require(tags is JsonArray && tags.all { (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.content?.isNotBlank() == true }) { ui("contract.pool_tags") }
+    }
+    document["pools"]?.let { pools ->
+        require(pools is JsonObject && pools.all { (tag, weight) -> tag.isNotBlank() && (weight as? JsonPrimitive)?.longOrNull?.let { it >= 0 } == true }) { ui("contract.pool_weights") }
+    }
     require("params" !in document) { ui("contract.rolled_instance") }
 }
 
@@ -216,7 +224,7 @@ fun editableFields(catalog: Catalog): Set<String> = when (catalog) {
     Catalog.CHARACTERS -> setOf("name", "description")
     Catalog.ITEMS -> setOf("category", "subCategory", "price")
     Catalog.EQUIPMENT -> setOf("slot", "rarity", "itemLevel", "weaponType", "durability",
-        "modifierIds", "baseParams", "requiredLevel", "requiredStrength", "requiredDexterity", "requiredIntelligence")
+        "fixedModifierIds", "modifierPools", "pools", "baseParams", "requiredLevel", "requiredStrength", "requiredDexterity", "requiredIntelligence")
 }
 
 /**

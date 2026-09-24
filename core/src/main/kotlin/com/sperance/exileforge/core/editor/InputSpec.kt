@@ -10,4 +10,6 @@ sealed interface InputSpec {
     data class Select(val options: List<String>) : InputSpec
     data class Object(val schema: String) : InputSpec
     data class ListOf(val element: InputSpec) : InputSpec
+    /** A tag → weight object: the pools a record sits in (since server 0.39.0). */
+    data object Weights : InputSpec
 }

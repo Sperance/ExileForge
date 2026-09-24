@@ -272,10 +272,15 @@ class GameApiTest {
     }
 
     @Test fun `an equipment template carries references, never rolled values`(): Unit = runBlocking {
-        assertFailsWith<IllegalArgumentException> { api.catalog.update(Catalog.EQUIPMENT, id, buildJsonObject { put("modifierIds", buildJsonArray { add("not-an-id") }) }) }
+        assertFailsWith<IllegalArgumentException> { api.catalog.update(Catalog.EQUIPMENT, id, buildJsonObject { put("fixedModifierIds", buildJsonArray { add("not-an-id") }) }) }
+        assertFailsWith<IllegalArgumentException> { api.catalog.update(Catalog.EQUIPMENT, id, buildJsonObject { put("modifierPools", buildJsonArray { add(" ") }) }) }
+        assertFailsWith<IllegalArgumentException> { api.catalog.update(Catalog.EQUIPMENT, id, buildJsonObject { put("pools", buildJsonObject { put("drop", -1) }) }) }
         assertFailsWith<IllegalArgumentException> { api.catalog.create(Catalog.EQUIPMENT, JsonObject(template(Catalog.EQUIPMENT) + ("params" to JsonArray(emptyList())))) }
         ok("""{"_id":"$id","version":2}""")
-        api.catalog.update(Catalog.EQUIPMENT, id, buildJsonObject { put("modifierIds", buildJsonArray { add(other) }) })
+        api.catalog.update(Catalog.EQUIPMENT, id, buildJsonObject {
+            put("fixedModifierIds", buildJsonArray { add(other) }); put("modifierPools", buildJsonArray { add("helmet"); add("local:armor") })
+            put("pools", buildJsonObject { put("drop", 100); put("smith", 0) })
+        })
         assertEquals(2, server.requestCount)
     }
 

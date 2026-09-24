@@ -13,7 +13,7 @@ import kotlinx.serialization.json.*
 import org.junit.Test
 
 class CrudScenarioTest {
-    private val modifierId = "0123456789abcdef01234567"
+    private val pool = "helmet"
 
     private class FakeRepository(val failUpdate: Boolean = false, val ambiguousCreate: Boolean = false) : ItemRepository {
         val documents = mutableMapOf<String, JsonObject>()
@@ -38,7 +38,7 @@ class CrudScenarioTest {
         val repo = FakeRepository()
         repo.documents["existing"] = buildJsonObject { put("_id", "existing"); put("version", 1) }
         val reports = mutableListOf<CheckResult>()
-        CrudScenario(repo, modifierId).run(Catalog.EQUIPMENT, reports::add)
+        CrudScenario(repo, pool).run(Catalog.EQUIPMENT, reports::add)
         assertEquals(6, reports.size); assertTrue(reports.all { it.passed })
         assertEquals(setOf("existing"), repo.documents.keys)
         assertEquals(1, repo.deleted.size)

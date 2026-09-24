@@ -20,10 +20,10 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.42.0, `versionCode` 60) for the
-**ktor-bestgame** RPG server (0.38.0), pinned in
-`core/.../contract/Contract.kt` as `SERVER_COMMIT = 3ce731840bfe9c257c96e61a53a339bb0d2d8641`
-on the server branch `claude/tender-pasteur-a36kj2`.
+ExileForge is an **Android Compose client** (version 2.44.0, `versionCode` 62) for the
+**ktor-bestgame** RPG server (0.39.0), pinned in
+`core/.../contract/Contract.kt` as `SERVER_COMMIT = 7db1e5a9b3469f8a3e82c0fc5d909d431d6e09d1`
+on the server branch `claude/vigilant-wozniak-ptnxmx`.
 
 The client is deliberately **thin**: the server owns items, stats, modifier rolls and inventory.
 This client renders server state and sends commands; it may add up what it was already sent to
@@ -219,7 +219,7 @@ Inside `GAME` navigation is an `Int` tab in state, named in `ForgeState` and dis
 `PLAYER_TABS` — hero, expedition, crafts, auction, account (since 2.41.0 `TAB_CRAFTS`,
 `CraftsScreen`: a plaque of the work under way over one tile per profession, and a profession's
 window — level, the tool slot with `ToolPicker`, the work with its cycle bar and this session's
-yield, every work with the server's numbers for this hero and a `JobSheet` to start it. The work
+yield, every work with the server's numbers for this hero and a `JobSheet` to start it. Since 2.44.0 — the owner's pick of five mockups — the tiles stand three to a row under «Добыча» and «Ремесло» (`ProfessionView.crafting`: whether its works spend anything), the plaque adds how long the bag keeps the work going (`stockLine`, display only), the tool's bonus is chips, and a work's inputs are chips of what the bag holds against what a cycle takes. The work
 runs on the server by time (`CraftsClient`, server 0.37.0): `CraftsViewModel` asks when the tab opens
 and again when `WorkView.nextAt` is due, runs the bar on the device's clock set by the answer's
 `now`, and every answer's `gains` are already in the bag — the materials `WorldState.materials`
@@ -299,7 +299,11 @@ These are enforced by tests and are the point of the client's design:
    body and response are stored as `[скрыто]`, and the `Authorization` header is never journaled.
    A password never travels in a query string.
 8. **Template vs. instance: the base is a reference, never a copy.** A template carries
-   `modifierIds` — a pool of `ModifierDefinition` ids — and `baseParams`, the armour, damage and
+   `modifierPools` — since server 0.39.0 a pool is a **tag**, not a list: the template names the tags
+   it rolls from, a `ModifierDefinition` carries `pools` (tag → weight), the first tag the modifier
+   sits in decides its weight and 0 excludes it; `fixedModifierIds` (implicits, a unique's lines) and
+   `pools`, the equipment pools the template sits in itself (`drop`, `unique:world`, `boss:<code>`) —
+   the editor edits them as a text list and a `InputSpec.Weights` map — and `baseParams`, the armour, damage and
    attack speed every copy of it has. What lands on a copy, in which tier and with which value, is
    rolled by the server in `itemToInventory`. Since 0.16.0 an instance carries **only** what it
    rolled: the base lives in the catalogue in a single copy and reaches an item through its
@@ -494,7 +498,7 @@ These are enforced by tests and are the point of the client's design:
     cheap "did anything change" question cannot be asked — the stamp is the answer instead.
 
 21. **Groups, the bench, fractured and influence are the server's (since 0.23.0).** A definition
-    carries `group`, `spawnWeight`, `influence` and `crafted`; an instance modifier carries
+    carries `group`, `pools` (was `spawnWeight` until 0.39.0), `influence` and `crafted`; an instance modifier carries
     `fractured` and an instance carries `influence`. The client reads them only to show them:
     `affixMarks` gives a card its tier and its crafted/fractured word, and `itemStates` reads the
     influence and the two markers off an item so a stash row shows them as symbols. The crafting

@@ -15,8 +15,8 @@ class ChecksViewModel(private val runtime: ForgeRuntime) {
         mutable.update { it.copy(admin = it.admin.copy(checks = emptyList())) }
         ensureDefinitions()
         // Equipment keeps a pool of modifier references, so the scenario needs one real definition id.
-        val modifierId = if (state.value.admin.catalog == Catalog.EQUIPMENT) state.value.world.definitions.firstOrNull()?.id.orEmpty() else ""
-        CrudScenario(api.catalog, modifierId).run(state.value.admin.catalog) { result -> mutable.update { it.copy(admin = it.admin.copy(checks = it.admin.checks + result)) } }
+        val pool = if (state.value.admin.catalog == Catalog.EQUIPMENT) state.value.world.definitions.firstNotNullOfOrNull { it.pools.keys.firstOrNull() }.orEmpty() else ""
+        CrudScenario(api.catalog, pool).run(state.value.admin.catalog) { result -> mutable.update { it.copy(admin = it.admin.copy(checks = it.admin.checks + result)) } }
     } } }
 
     fun clearLogs() { with(runtime) { journal.clear() } }

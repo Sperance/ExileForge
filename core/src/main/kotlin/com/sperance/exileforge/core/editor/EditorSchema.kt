@@ -54,8 +54,12 @@ fun schemaFields(schema: String, document: JsonObject = JsonObject(emptyMap())):
             num("requiredIntelligence", ui("field.required_intelligence"), 0, true, 0.0)))
         // The base — armour, damage, attack speed — is fixed modifiers rather than stat fields.
         add(list("baseParams", ui("field.base"), InputSpec.Object("fixedModifier")))
-        // The pool is a list of ModifierDefinition ids; what lands on an instance is rolled by the server.
-        add(list("modifierIds", ui("field.modifier_pool"), InputSpec.Reference(EntitySource.MODIFIER)))
+        // Implicits and a unique's lines: ModifierDefinition ids that sit on every copy.
+        add(list("fixedModifierIds", ui("field.fixed_modifiers"), InputSpec.Reference(EntitySource.MODIFIER)))
+        // Since server 0.39.0 a pool is a tag: the template names the ones it rolls affixes from, and
+        // which pools it sits in itself. What lands on an instance is still rolled by the server.
+        add(list("modifierPools", ui("field.modifier_pools"), InputSpec.Text()))
+        add(FormField("pools", ui("field.pools"), InputSpec.Weights, JsonObject(emptyMap())))
     }
     "character" -> listOf(
         text("name", ui("common.name")),
@@ -79,7 +83,8 @@ fun schemaFields(schema: String, document: JsonObject = JsonObject(emptyMap())):
         choice("source", ui("field.source"), modifierSources, "PREFIX"),
         flag("isLocal", ui("field.local")),
         list("effects", ui("field.effects"), InputSpec.Object("modifierEffect")),
-        list("tags", ui("field.tags"), InputSpec.Text(emptyList())))
+        list("tags", ui("field.tags"), InputSpec.Text(emptyList())),
+        FormField("pools", ui("field.pools"), InputSpec.Weights, JsonObject(emptyMap())))
     // An effect with perStat is a conversion: the value is multiplied by the whole steps of a source stat.
     "modifierEffect" -> listOf(
         text("stat", ui("field.stat"), stockStats.first(), stockStats),
@@ -112,6 +117,7 @@ fun validateForm(schema: String, document: JsonObject) {
                 }
                 is InputSpec.Reference -> requireId(element.jsonPrimitive.content)
                 is InputSpec.Text -> require(element is JsonPrimitive && element.isString) { ui("form.text_required", field.label) }
+                InputSpec.Weights -> require(element is JsonObject && element.all { (tag, weight) -> tag.isNotBlank() && (weight as? JsonPrimitive)?.takeUnless { it.isString }?.longOrNull?.let { it >= 0 } == true }) { ui("form.weights_required", field.label) }
                 InputSpec.Flag -> require(element is JsonPrimitive && !element.isString && element.booleanOrNull != null) { ui("form.bool_required", field.label) }
                 is InputSpec.Select -> require(element is JsonPrimitive && element.content in spec.options) { ui("form.choice_required", field.label) }
                 is InputSpec.Object -> validateForm(spec.schema, element.jsonObject)

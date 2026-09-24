@@ -15,6 +15,7 @@ internal fun inputDefault(spec: InputSpec): JsonElement = when (spec) {
     InputSpec.Flag -> JsonPrimitive(false)
     is InputSpec.ListOf -> JsonArray(emptyList())
     is InputSpec.Select -> JsonPrimitive(spec.options.first())
+    InputSpec.Weights -> JsonObject(emptyMap())
 }
 
 internal fun summary(value: JsonElement): String = when (value) {

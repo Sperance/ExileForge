@@ -41,9 +41,13 @@ class MonsterAgent(val id: Int, val monster: RolledMonster, val homeX: Double, v
     val chasing: Boolean get() = mode == AgentMode.CHASING || mode == AgentMode.HUNTING
 }
 
+/** A chest on the map (since 2.33.0): where it stands and whether the hero has opened it. */
+class Chest(val id: Int, val cell: Cell) { var opened = false }
+
 /** What a step of the world ran into. */
 sealed interface WorldEvent {
     data class Encounter(val agent: MonsterAgent) : WorldEvent
+    data class Opened(val chest: Chest) : WorldEvent
     data object Exit : WorldEvent
 }
 
@@ -65,7 +69,7 @@ class ExpeditionWorld(
     val map: ExpeditionMap,
     monsters: List<RolledMonster>,
     private val heroSpeed: Double,
-    seed: Long,
+    private val seed: Long,
     val lightRadius: Double = DEFAULT_LIGHT,
 ) {
     private val random = Random(seed)
@@ -87,7 +91,28 @@ class ExpeditionWorld(
     val lit = BooleanArray(map.width * map.height)
     private var litFrom: Cell? = null
 
+    /** The chests the server says stand on this map, placed by [placeChests]. */
+    val chests = mutableListOf<Chest>()
+
     init { light() }
+
+    /**
+     * Puts [count] chests on the map, once: far from the start, off the exit and the monsters'
+     * places, a few steps apart, nooks first — a chest is found by walking, not by standing still.
+     * Where they stand is the seed's; how many, the server's.
+     */
+    fun placeChests(count: Int) {
+        if (count <= 0 || chests.isNotEmpty()) return
+        val placing = Random(seed * 7919 + 17)
+        val taken = map.spawns.toSet() + map.exit + map.start
+        fun nook(cell: Cell) = STEPS.count { (dx, dy) -> !map.walkable(cell.x + dx, cell.y + dy) }
+        val candidates = distances(map.start, Int.MAX_VALUE).filter { (cell, steps) -> steps >= CHEST_STEPS && cell !in taken }.keys
+            .shuffled(placing).sortedByDescending(::nook)
+        for (cell in candidates) {
+            if (chests.size >= count) break
+            if (chests.all { hypot((it.cell.x - cell.x).toDouble(), (it.cell.y - cell.y).toDouble()) >= CHEST_SPACING }) chests += Chest(chests.size, cell)
+        }
+    }
 
     fun explored(x: Int, y: Int) = x in 0 until map.width && y in 0 until map.height && explored[y * map.width + x]
     fun lit(x: Int, y: Int) = x in 0 until map.width && y in 0 until map.height && lit[y * map.width + x]
@@ -104,6 +129,10 @@ class ExpeditionWorld(
             heroY = ny
         }
         light()
+        chests.firstOrNull { !it.opened && hypot(it.cell.x + 0.5 - heroX, it.cell.y + 0.5 - heroY) < CHEST_REACH }?.let { chest ->
+            chest.opened = true
+            return WorldEvent.Opened(chest)
+        }
         agents.filter { it.alive }.forEach { agent ->
             agent.calm = (agent.calm - dt).coerceAtLeast(0.0)
             val toHero = hypot(heroX - agent.x, heroY - agent.y)
@@ -328,6 +357,10 @@ class ExpeditionWorld(
         const val CONTACT = 0.8
         const val EXIT_REACH = 0.7
         const val CALM_AFTER_RETREAT = 4.0
+        const val CHEST_REACH = 0.7
+        /** A chest stands at least this many steps from the start and this far from another chest. */
+        const val CHEST_STEPS = 8
+        const val CHEST_SPACING = 5.0
         /** What a hero sees by when the server has not said: the level-1 base since server 0.30.0. */
         const val DEFAULT_LIGHT = 5.0
         private const val MIN_WALK = 0.8

@@ -186,6 +186,49 @@ class CampaignTest {
         assertEquals(8.0 * 1.2, ExpeditionWorld.lightRadius(mapOf("STOCK_LIGHT_RADIUS" to 8.0), 1.2), 1e-9)
     }
 
+    @Test fun `chests stand where the seed says, as many as the server says, and open once`() {
+        val world = ExpeditionWorld.create(map, rarities, emptyMap(), 11)
+        world.placeChests(2)
+        assertEquals(2, world.chests.size)
+        world.placeChests(5)
+        assertEquals(2, world.chests.size, "chests are placed once")
+        val again = ExpeditionWorld.create(map, rarities, emptyMap(), 11).also { it.placeChests(2) }
+        assertEquals(world.chests.map { it.cell }, again.chests.map { it.cell })
+        world.chests.forEach { chest ->
+            assertTrue(world.map.walkable(chest.cell.x, chest.cell.y))
+            assertTrue(chest.cell != world.map.exit && chest.cell !in world.map.spawns)
+        }
+        world.agents.forEach { it.alive = false }
+        val chest = world.chests.first()
+        world.heroX = chest.cell.x + 0.5
+        world.heroY = chest.cell.y + 0.5
+        assertEquals(WorldEvent.Opened(chest), world.step(0.016, 0.0, 0.0))
+        assertNull(world.step(0.016, 0.0, 0.0))
+    }
+
+    @Test fun `a run places the server's chests and waits for what one brought`() {
+        var opened = 0
+        val run = ExpeditionRun.start(map, rarities, emptyMap(), 1, 11, onKill = {}, onCleared = {}, onChest = { opened++ })
+        run.world.agents.forEach { it.alive = false }
+        run.send(RunCommand.Chests(1))
+        run.update(0.016)
+        assertEquals(1, run.hud.value.chestsLeft)
+        val chest = run.world.chests.single()
+        run.world.heroX = chest.cell.x + 0.5
+        run.world.heroY = chest.cell.y + 0.5
+        run.update(0.016)
+        assertEquals(1, opened)
+        assertTrue(run.hud.value.chestPending)
+        assertEquals(0, run.hud.value.chestsLeft)
+        run.send(RunCommand.ChestReward(CampaignReward(gold = 40)))
+        run.update(0.016)
+        assertEquals(40L, run.hud.value.chest?.gold)
+        assertEquals(RunPhase.MAP, run.hud.value.phase)
+        run.send(RunCommand.DismissChest)
+        run.update(0.016)
+        assertNull(run.hud.value.chest)
+    }
+
     @Test fun `standing on the exit ends the map`() {
         val world = ExpeditionWorld.create(map, rarities, emptyMap(), 9)
         world.agents.forEach { it.alive = false }

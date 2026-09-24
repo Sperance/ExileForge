@@ -44,7 +44,7 @@ enum class Glyph {
         private fun stat(key: String) = if (key.startsWith("STOCK_") || key.startsWith("BATTLE_")) ofStat(key) else null
 
         private val statWords = listOf(
-            "FIRE" to FIRE, "COLD" to COLD, "WATER" to COLD, "LIGHTNING" to LIGHTNING, "ELECTRIC" to LIGHTNING,
+            "LIGHT_RADIUS" to MAP, "FIRE" to FIRE, "COLD" to COLD, "WATER" to COLD, "LIGHTNING" to LIGHTNING, "ELECTRIC" to LIGHTNING,
             "CHAOS" to CHAOS, "DARK" to CHAOS, "ENERGY_SHIELD" to SHIELD, "LEECH" to LEECH, "VAMPIRE" to LEECH,
             "HEALTH" to LIFE, "MANA" to MANA, "ENERGY" to MANA, "INTELLECT" to MANA, "CRITICAL" to CRITICAL,
             "SPEED" to SPEED, "EVASION" to EVASION, "AGILITY" to EVASION, "ARMOR" to DEFENCE, "RESIST" to DEFENCE,

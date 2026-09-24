@@ -96,6 +96,11 @@ data class RunHud(
     val fall: CampaignFall? = null,
     val fallPending: Boolean = false,
     val gold: Long = 0, val experience: Double = 0.0, val kills: Int = 0,
+    /** Chests on the map not yet opened (since 2.33.0), and what the last one opened brought. */
+    val chestsLeft: Int = 0,
+    val chest: CampaignReward? = null,
+    val chestPending: Boolean = false,
+    val chestFailed: Boolean = false,
 )
 
 /** What the overlay asks of the run; applied at the start of the next step. */
@@ -111,6 +116,12 @@ sealed interface RunCommand {
     data object RewardFailed : RunCommand
     data class Fallen(val fall: CampaignFall) : RunCommand
     data object FallFailed : RunCommand
+    /** The server's count of chests on this map: they are placed once it arrives. */
+    data class Chests(val count: Int) : RunCommand
+    data class ChestReward(val reward: CampaignReward) : RunCommand
+    data object ChestFailed : RunCommand
+    /** The chest's loot panel is put away. */
+    data object DismissChest : RunCommand
 }
 
 /**
@@ -138,6 +149,7 @@ class ExpeditionRun(
     private val onKill: (RolledMonster) -> Unit,
     private val onCleared: () -> Unit,
     private val onFallen: () -> Unit = {},
+    private val onChest: () -> Unit = {},
 ) {
     @Volatile var stickX = 0.0
     @Volatile var stickY = 0.0
@@ -158,6 +170,9 @@ class ExpeditionRun(
     private var gold = 0L
     private var experience = 0.0
     private var kills = 0
+    private var chest: CampaignReward? = null
+    private var chestPending = false
+    private var chestFailed = false
     private var fightAgent: MonsterAgent? = null
     /** The map's own clock, and the flask drunk on it: until when it heals, and how fast. */
     private var clock = 0.0
@@ -206,6 +221,14 @@ class ExpeditionRun(
             RunCommand.RewardFailed -> { rewardPending = false; rewardFailed = true }
             is RunCommand.Fallen -> { fall = command.fall; fallPending = false }
             RunCommand.FallFailed -> fallPending = false
+            is RunCommand.Chests -> world.placeChests(command.count)
+            is RunCommand.ChestReward -> {
+                chest = command.reward
+                chestPending = false
+                gold += command.reward.gold
+            }
+            RunCommand.ChestFailed -> { chestPending = false; chestFailed = true }
+            RunCommand.DismissChest -> if (!chestPending) { chest = null; chestFailed = false }
         }
     }
 
@@ -232,6 +255,7 @@ class ExpeditionRun(
                 phase = RunPhase.FIGHT
             }
             WorldEvent.Exit -> { phase = RunPhase.CLEARED; onCleared() }
+            is WorldEvent.Opened -> { chest = null; chestFailed = false; chestPending = true; onChest() }
             null -> Unit
         }
     }
@@ -276,6 +300,7 @@ class ExpeditionRun(
             reward = reward, rewardPending = rewardPending, rewardFailed = rewardFailed, slain = slain, report = report,
             fall = fall, fallPending = fallPending,
             gold = gold, experience = experience, kills = kills,
+            chestsLeft = world.chests.count { !it.opened }, chest = chest, chestPending = chestPending, chestFailed = chestFailed,
         )
     }
 
@@ -315,8 +340,9 @@ class ExpeditionRun(
         const val HIT_LIFETIME = 1.0
 
         fun start(map: CampaignMap, rarities: List<CampaignRarity>, heroStats: Map<String, Double>, heroLevel: Int, seed: Long,
-                  onKill: (RolledMonster) -> Unit, onCleared: () -> Unit, rules: CombatRules = CombatRules(), onFallen: () -> Unit = {}): ExpeditionRun =
+                  onKill: (RolledMonster) -> Unit, onCleared: () -> Unit, rules: CombatRules = CombatRules(), onFallen: () -> Unit = {},
+                  onChest: () -> Unit = {}): ExpeditionRun =
             ExpeditionRun(map, ExpeditionWorld.create(map, rarities, heroStats, seed), Combatant(heroStats, heroLevel, rules, innateSpell = true), rules, seed,
-                onKill, onCleared, onFallen)
+                onKill, onCleared, onFallen, onChest)
     }
 }

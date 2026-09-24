@@ -20,9 +20,9 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.32.0, `versionCode` 50) for the
-**ktor-bestgame** RPG server (0.30.0), pinned in
-`core/.../contract/Contract.kt` as `SERVER_COMMIT = ee87597c80130dbcea55dddfc7c65fcd40ecb640`
+ExileForge is an **Android Compose client** (version 2.33.0, `versionCode` 51) for the
+**ktor-bestgame** RPG server (0.31.0), pinned in
+`core/.../contract/Contract.kt` as `SERVER_COMMIT = dde7d92db166e1f8eac2db7d3f8a4fea9c69d2bd`
 on the server branch `claude/tender-pasteur-a36kj2`.
 
 The client is deliberately **thin**: the server owns items, stats, modifier rolls and inventory.
@@ -524,7 +524,10 @@ These are enforced by tests and are the point of the client's design:
     sheet's `STOCK_LIGHT_RADIUS` times the map's `light`) along lines rock does not block, the scene
     draws only what was explored, dims what is not lit and shows monsters in the light alone; each
     monster walks by its `BehaviourRule` from the server (`WANDER`, `PATROL`, `AMBUSH`, `SLEEP`),
-    noticing a hero only in sight and chasing along `path` round the rock — rule 17 holds, no picture is loaded — and
+    noticing a hero only in sight and chasing along `path` round the rock; since 2.33.0 (server 0.31.0)
+    `CampaignClient.chests` says how many chests stand on the map, `ExpeditionWorld.placeChests` puts
+    them by the seed, touching one is `WorldEvent.Opened` and `openChest` — reported on the run's own
+    lane like a kill, never retried — brings the server's loot to `RunHud.chest` — rule 17 holds, no picture is loaded — and
     everything with text on it is the overlay above. The run (`ExpeditionRun`) lives in `:core` and is stepped
     once a frame from a `withFrameNanos` loop; the canvas reads a clock state, so each frame redraws
     without recomposing. The overlay reads the run's `RunHud` and sends `RunCommand`s. The fight

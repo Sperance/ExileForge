@@ -151,5 +151,11 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE }
     val money: Long = 0,
 )
 
+/**
+ * The chests of one map for one hero (since server 0.31.0): how many are still standing and when
+ * the server rolls them again, in epoch milliseconds. A run places [left] of them on its map.
+ */
+@Serializable data class ChestState(val left: Int = 0, val refreshAt: Long = 0)
+
 /** What a death cost (server 0.28.0): the experience taken, and the level, which never falls. */
 @Serializable data class CampaignFall(val lost: Double = 0.0, val level: Int = 1, val totalExperience: Double = 0.0)

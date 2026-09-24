@@ -107,6 +107,11 @@ class ServerIntegrationTest {
         reward.items.forEach { stack -> assertTrue(bag.any { it.itemId == stack.itemId }, "the looted ${stack.itemId} is not in the bag") }
         assertEquals("CP_004", assertFailsWith<ApiFailure> { api.campaign.kill(id, first.code, maps.last().monsters.first().code, com.sperance.exileforge.core.model.campaign.MonsterRarity.NORMAL) }.code)
         assertEquals("CP_003", assertFailsWith<ApiFailure> { api.campaign.kill(id, maps[1].code, maps[1].monsters.first().code, com.sperance.exileforge.core.model.campaign.MonsterRarity.NORMAL) }.code)
+        // Chests (0.31.0): the window says how many, and one more than that is refused.
+        val chests = api.campaign.chests(id, first.code)
+        repeat(chests.left) { api.campaign.openChest(id, first.code) }
+        assertEquals(0, api.campaign.chests(id, first.code).left)
+        assertEquals("CP_006", assertFailsWith<ApiFailure> { api.campaign.openChest(id, first.code) }.code)
         val progress = api.campaign.complete(id, first.code)
         assertEquals(listOf(first.code), progress.cleared)
         assertTrue(maps[1].code in progress.unlocked)

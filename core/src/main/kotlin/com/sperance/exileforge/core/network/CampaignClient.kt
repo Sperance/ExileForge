@@ -6,6 +6,7 @@ import com.sperance.exileforge.core.model.campaign.CampaignFall
 import com.sperance.exileforge.core.model.campaign.CampaignProgress
 import com.sperance.exileforge.core.model.campaign.CampaignReward
 import com.sperance.exileforge.core.model.campaign.CampaignView
+import com.sperance.exileforge.core.model.campaign.ChestState
 import com.sperance.exileforge.core.model.campaign.MonsterRarity
 import kotlinx.serialization.json.decodeFromJsonElement
 
@@ -49,6 +50,20 @@ class CampaignClient internal constructor(private val http: Transport) {
     suspend fun fall(characterId: String, mapCode: String): CampaignFall {
         requireId(characterId)
         return WireJson.decodeFromJsonElement(http.request("POST", "$CAMPAIGN/fall",
+            mapOf("characterId" to characterId, "mapCode" to mapCode), authenticated = true))
+    }
+
+    /** How many chests stand on [mapCode] for this hero now (since 0.31.0): a six-hour window of the server's. */
+    suspend fun chests(characterId: String, mapCode: String): ChestState {
+        requireId(characterId)
+        return WireJson.decodeFromJsonElement(http.request("GET", "$CAMPAIGN/chests",
+            mapOf("characterId" to characterId, "mapCode" to mapCode), authenticated = true))
+    }
+
+    /** The hero opened a chest: the server takes one from the window and rolls its loot. Never retried. */
+    suspend fun openChest(characterId: String, mapCode: String): CampaignReward {
+        requireId(characterId)
+        return WireJson.decodeFromJsonElement(http.request("POST", "$CAMPAIGN/chest",
             mapOf("characterId" to characterId, "mapCode" to mapCode), authenticated = true))
     }
 }

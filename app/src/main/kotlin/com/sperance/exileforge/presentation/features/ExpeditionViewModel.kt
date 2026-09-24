@@ -75,8 +75,11 @@ class ExpeditionViewModel(private val runtime: ForgeRuntime) {
             onKill = { monster -> reports.trySend { kill(run, characterId, map.code, monster) } },
             onCleared = { reports.trySend { complete(characterId, map.code) } },
             rules = view.combat,
-            onFallen = { reports.trySend { fall(run, characterId, map.code) } })
+            onFallen = { reports.trySend { fall(run, characterId, map.code) } },
+            onChest = { reports.trySend { openChest(run, characterId, map.code) } })
         mutableRun.value = run
+        // How many chests stand on the map is the server's (0.31.0); they appear once it says.
+        reports.trySend { chests(run, characterId, map.code) }
     } }
 
     fun send(command: RunCommand) { mutableRun.value?.send(command) }
@@ -112,6 +115,24 @@ class ExpeditionViewModel(private val runtime: ForgeRuntime) {
                 hero = s.play.hero?.let { it.copy(character = it.character.copy(level = fall.level, experience = fall.totalExperience)) })) }
         } catch (e: CancellationException) { throw e }
         catch (e: Exception) { run.send(RunCommand.FallFailed); report(e, writing = true) }
+    } }
+
+    /** The map's chests: a failure only means none this run, never a banner. */
+    private suspend fun chests(run: ExpeditionRun, characterId: String, mapCode: String) { with(runtime) {
+        try { run.send(RunCommand.Chests(api.campaign.chests(characterId, mapCode).left)) }
+        catch (e: CancellationException) { throw e }
+        catch (_: Exception) { }
+    } }
+
+    /** A chest the hero opened: the server rolls it, the purse in the header follows. Never retried. */
+    private suspend fun openChest(run: ExpeditionRun, characterId: String, mapCode: String) { with(runtime) {
+        try {
+            val reward = api.campaign.openChest(characterId, mapCode)
+            run.send(RunCommand.ChestReward(reward))
+            mutable.update { s -> if (s.play.characterId != characterId) s else s.copy(play = s.play.copy(heroReadAt = 0,
+                hero = s.play.hero?.let { it.copy(character = it.character.copy(level = reward.level, experience = reward.totalExperience, money = reward.money)) })) }
+        } catch (e: CancellationException) { throw e }
+        catch (e: Exception) { run.send(RunCommand.ChestFailed); report(e, writing = true) }
     } }
 
     private suspend fun complete(characterId: String, mapCode: String) { with(runtime) {

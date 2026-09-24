@@ -39,6 +39,7 @@ import com.sperance.exileforge.core.campaign.*
 import com.sperance.exileforge.core.display.inventoryDocument
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.model.campaign.CampaignReward
 import com.sperance.exileforge.core.model.campaign.MonsterRarity
 import com.sperance.exileforge.presentation.features.key
 import com.sperance.exileforge.presentation.state.ForgeState
@@ -497,23 +498,28 @@ private fun outcomeColour(outcome: Outcome) = when (outcome) { Outcome.WIN -> Vi
             Text(ui("expedition.loot_pending"), color = Muted)
         }
         hud.rewardFailed -> Text(ui("expedition.loot_failed"), color = LifeRed, style = MaterialTheme.typography.bodyMedium)
-        reward != null -> Column(Modifier.heightIn(max = 220.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                Text(ui("expedition.loot_experience", number(reward.experience)), color = Rune)
-                if (reward.gold > 0) Text(ui("expedition.loot_gold", reward.gold), color = GoldBright)
-            }
-            reward.items.forEach { stack ->
-                val orb = s.world.orbs.firstOrNull { it.id == stack.itemId }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(ForgeGlyphs.Orb, null, tint = Gold, modifier = Modifier.size(18.dp))
-                    Text(ui("expedition.loot_stack", orb?.title(s.lang) ?: ui("common.item"), stack.amount), color = Parchment)
-                }
-            }
-            reward.equipment.forEach { instance ->
-                ItemRow(inventoryDocument(instance, s.world.inventoryBases[instance.equipmentId]), s.world.definitions) {}
-            }
-            if (reward.items.isEmpty() && reward.equipment.isEmpty()) Text(ui("expedition.loot_nothing"), color = Muted)
+        reward != null -> RewardLines(s, reward)
+    }
+}
+
+/** What the server rolled — experience, gold, orbs and items — for a kill and a chest alike. */
+@Composable internal fun RewardLines(s: ForgeState, reward: CampaignReward) {
+    Column(Modifier.heightIn(max = 220.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            if (reward.experience > 0) Text(ui("expedition.loot_experience", number(reward.experience)), color = Rune)
+            if (reward.gold > 0) Text(ui("expedition.loot_gold", reward.gold), color = GoldBright)
         }
+        reward.items.forEach { stack ->
+            val orb = s.world.orbs.firstOrNull { it.id == stack.itemId }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(ForgeGlyphs.Orb, null, tint = Gold, modifier = Modifier.size(18.dp))
+                Text(ui("expedition.loot_stack", orb?.title(s.lang) ?: ui("common.item"), stack.amount), color = Parchment)
+            }
+        }
+        reward.equipment.forEach { instance ->
+            ItemRow(inventoryDocument(instance, s.world.inventoryBases[instance.equipmentId]), s.world.definitions) {}
+        }
+        if (reward.items.isEmpty() && reward.equipment.isEmpty()) Text(ui("expedition.loot_nothing"), color = Muted)
     }
 }
 

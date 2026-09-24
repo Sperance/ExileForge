@@ -137,6 +137,10 @@ private class ScenePainter {
                 val near = depth > heroDepth && depth - heroDepth < 4 && abs((x - y) - (world.heroX - world.heroY)) < 3
                 standing += depth to { wall(x, y, palette, biome, if (near) .4f else 1f, glow(x, y)) }
             }
+            // A chest stands once the hero has seen its place (2.33.0); an opened one stays, open.
+            world.chests.filter { world.explored(it.cell.x, it.cell.y) }.forEach { chest ->
+                standing += (chest.cell.x + chest.cell.y + 1.0) to { drawChest(chest.cell.x + .5, chest.cell.y + .5, chest.opened, glow(chest.cell.x, chest.cell.y)) }
+            }
             // Since 2.31.0 whoever walks the map is a round token cut from their portrait's face: the
             // class's for the hero, the monster's own or its form's for a monster, ringed by what it is.
             // Since 2.32.0 a monster is drawn only where the hero's light reaches.
@@ -287,6 +291,40 @@ private class ScenePainter {
                 pen.line(left + unit * .3f, cy + h * .7f, left + unit * .5f, cy + h * .45f, unit * .03f)
                 pen.line(left + unit * .5f, cy + h * .45f, left + unit * .42f, cy + h * .2f, unit * .03f)
             }
+        }
+    }
+
+    /** A chest: an iron-bound box on the ground, its lid shut and gleaming, or thrown back on an empty one. */
+    private fun drawChest(x: Double, y: Double, opened: Boolean, light: Float) {
+        val cx = isoX(x, y)
+        val cy = isoY(x, y)
+        val w = unit * .45f
+        val d = unit * .22f
+        val h = unit * .38f
+        val wood = Color(0xFF6B4423)
+        val iron = Color(0xFF3A3A40)
+        pen.color = Color.Black.copy(alpha = .35f)
+        pen.ellipse(cx - w * 1.2f, cy - d * .8f, w * 2.4f, d * 1.6f)
+        // Two faces seen at a slant, and the top.
+        pen.color = tone(wood, .85f * light)
+        pen.quad(cx - w, cy, cx, cy - d, cx, cy - d + h, cx - w, cy + h)
+        pen.color = tone(wood, .65f * light)
+        pen.quad(cx, cy - d, cx + w, cy, cx + w, cy + h, cx, cy - d + h)
+        pen.color = tone(iron, light)
+        pen.line(cx - w, cy + h * .5f, cx, cy - d + h * .5f, unit * .04f)
+        pen.line(cx, cy - d + h * .5f, cx + w, cy + h * .5f, unit * .04f)
+        if (opened) {
+            pen.color = tone(Color(0xFF1A120B), light)
+            diamond(cx, cy + h, w, d)
+            pen.color = tone(wood, .95f * light)
+            pen.quad(cx - w, cy + h, cx, cy + h + d, cx, cy + h + d + h * .8f, cx - w, cy + h + h * .8f)
+        } else {
+            pen.color = tone(wood, 1.05f * light)
+            diamond(cx, cy + h, w, d)
+            pen.color = Palettes.torch.copy(alpha = (.55f + .35f * sin(time * 3f + x.toFloat())) * light)
+            pen.circle(cx, cy + h * .55f, unit * .06f)
+            pen.color = Palettes.torch.copy(alpha = .12f * light)
+            pen.circle(cx, cy + h * .7f, unit * .5f)
         }
     }
 

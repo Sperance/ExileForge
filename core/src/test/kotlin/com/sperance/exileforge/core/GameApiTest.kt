@@ -583,6 +583,18 @@ class GameApiTest {
         assertEquals(sent, server.requestCount)
     }
 
+    @Test fun `a map's chests are asked for and opened by the map's code`(): Unit = runBlocking {
+        ok("""{"left":2,"refreshAt":1700000000000}""")
+        val chests = api.campaign.chests(id, "C1_TIDAL_SHORE")
+        assertEquals(2, chests.left)
+        assertEquals("/game/api/v1/character/campaign/chests?characterId=$id&mapCode=C1_TIDAL_SHORE", server.takeRequest().path)
+        ok("""{"experience":0.0,"gold":40,"items":[],"equipment":[],"level":3,"totalExperience":120.0,"money":540}""")
+        assertEquals(40L, api.campaign.openChest(id, "C1_TIDAL_SHORE").gold)
+        val open = server.takeRequest()
+        assertEquals("POST", open.method)
+        assertEquals("/game/api/v1/character/campaign/chest?characterId=$id&mapCode=C1_TIDAL_SHORE", open.path)
+    }
+
     @Test fun `the campaign is read whole and a kill names the map, the monster and the rarity`(): Unit = runBlocking {
         ok("""{"chapters":[{"code":"CHAPTER_1","maps":[{"code":"C1_TIDAL_SHORE","chapter":"CHAPTER_1","order":1,"biome":"SHORE","level":1,
             "monsterCount":[10,14],"monsters":[{"code":"DROWNED","form":"HUMANOID","stats":{"STOCK_HEALTH":18.0}}],

@@ -63,6 +63,7 @@ import kotlin.math.roundToInt
             RunPhase.MAP -> {
                 Stick(run)
                 MapBar(hud, onLeave = { vm.runCommand(RunCommand.Leave) }, onFlask = { vm.runCommand(RunCommand.Flask) })
+                if (hud.chestPending || hud.chestFailed || hud.chest != null) ChestLoot(s, hud) { vm.runCommand(RunCommand.DismissChest) }
             }
             RunPhase.FIGHT -> hud.fight?.let { ArenaOverlay(s, hud, it, run.map.level, onCommand = vm::runCommand) }
             // The fight is over: its report — the log, what it came to, and the loot of a victory.
@@ -87,6 +88,7 @@ import kotlin.math.roundToInt
             Column(Modifier.weight(1f)) {
                 Text(mapTitle(hud.mapCode), color = GoldBright, style = MaterialTheme.typography.titleMedium)
                 Text(ui("expedition.monsters_left", hud.alive, hud.total), color = Muted, style = MaterialTheme.typography.labelMedium)
+                if (hud.chestsLeft > 0) Text(ui("expedition.chests_left", hud.chestsLeft), color = GoldBright, style = MaterialTheme.typography.labelMedium)
             }
             onLeave?.let { OutlinedButton(onClick = it) { Text(ui("expedition.leave")) } }
         }
@@ -159,6 +161,28 @@ import kotlin.math.roundToInt
         }
         if (centre == null) Text(ui("expedition.stick_hint"), color = Muted.copy(alpha = .8f), style = MaterialTheme.typography.labelMedium,
             modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 24.dp))
+    }
+}
+
+/**
+ * What a chest brought (since 2.33.0), at the foot of the map while the hero walks on: the
+ * server's roll, awaited, or its absence said plainly, and a button that puts it away.
+ */
+@Composable private fun ChestLoot(s: ForgeState, hud: RunHud, onClose: () -> Unit) {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+        RunPanel(Modifier, GoldBright) {
+            Text(ui("expedition.chest"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
+            val reward = hud.chest
+            when {
+                hud.chestPending -> Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(Modifier.size(18.dp), color = Gold, strokeWidth = 2.dp)
+                    Text(ui("expedition.loot_pending"), color = Muted)
+                }
+                hud.chestFailed -> Text(ui("expedition.chest_failed"), color = LifeRed, style = MaterialTheme.typography.bodyMedium)
+                reward != null -> RewardLines(s, reward)
+            }
+            OutlinedButton(enabled = !hud.chestPending, onClick = onClose, modifier = Modifier.fillMaxWidth()) { Text(ui("common.close")) }
+        }
     }
 }
 

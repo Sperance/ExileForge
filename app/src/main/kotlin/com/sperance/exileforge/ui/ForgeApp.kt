@@ -42,6 +42,7 @@ import com.sperance.exileforge.ui.screens.editor.EditorScreen
 import com.sperance.exileforge.ui.screens.expedition.ExpeditionPlay
 import com.sperance.exileforge.ui.screens.expedition.ExpeditionScreen
 import com.sperance.exileforge.ui.screens.expedition.LaunchScreen
+import com.sperance.exileforge.ui.screens.crafts.CraftsScreen
 import com.sperance.exileforge.ui.screens.hero.HeroScreen
 import com.sperance.exileforge.ui.screens.redemption.RedemptionScreen
 import com.sperance.exileforge.ui.screens.server.ServerScreen
@@ -100,12 +101,12 @@ import com.sperance.exileforge.ui.theme.*
                 modifier = Modifier.drawBehind { drawLine(Gold.copy(alpha = .35f), Offset(0f, 0f), Offset(size.width, 0f), 2f) }) {
                 // Five destinations are the game; an administrator gets exactly one more, and
                 // everything that used to crowd the bar lives behind it as a button.
-                val labels = mapOf(TAB_HERO to ui("nav.hero"), TAB_EXPEDITION to ui("nav.expedition"),
+                val labels = mapOf(TAB_HERO to ui("nav.hero"), TAB_EXPEDITION to ui("nav.expedition"), TAB_CRAFTS to ui("nav.crafts"),
                     TAB_AUCTION to ui("nav.auction"), TAB_ACCOUNT to ui("nav.account"),
                     TAB_ADMIN to ui("nav.admin"))
                 val destinations = PLAYER_TABS + listOfNotNull(TAB_ADMIN.takeIf { s.adminTools })
                 val icons = mapOf<Int, ImageVector>(TAB_ACCOUNT to ForgeGlyphs.Portal, TAB_HERO to ForgeGlyphs.Helm, TAB_EXPEDITION to ForgeGlyphs.Swords,
-                    TAB_AUCTION to ForgeGlyphs.Orb, TAB_ADMIN to ForgeGlyphs.Scroll)
+                    TAB_CRAFTS to ForgeGlyphs.Anvil, TAB_AUCTION to ForgeGlyphs.Orb, TAB_ADMIN to ForgeGlyphs.Scroll)
                 destinations.forEach { index ->
                     val label = labels.getValue(index)
                     // The tree is the hero's (2.40.0): while it is open, the Hero tab reads as the one chosen.
@@ -127,6 +128,7 @@ import com.sperance.exileforge.ui.theme.*
                 TAB_ACCOUNT -> ServerScreen(s, vm, logs)
                 TAB_HERO -> HeroScreen(s, vm)
                 TAB_EXPEDITION -> ExpeditionScreen(s, vm)
+                TAB_CRAFTS -> CraftsScreen(s, vm)
                 TAB_TREE -> SkillTreeScreen(s, vm)
                 TAB_AUCTION -> AuctionScreen(s, vm)
                 TAB_ADMIN -> AdminScreen(s, vm)

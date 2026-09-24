@@ -56,6 +56,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
     val redemptionViewModel = RedemptionViewModel(this)
     val characterViewModel = CharacterViewModel(this)
     val expeditionViewModel = ExpeditionViewModel(this)
+    val craftsViewModel = CraftsViewModel(this)
 
     /**
      * A refused token is forgotten, and a player who plays by device is signed in again without
@@ -400,6 +401,13 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
         if (state.value.world.orbs.isNotEmpty()) return
         val orbs = api.world.orbs()
         mutable.update { it.copy(world = it.world.copy(orbs = orbs), play = it.play.copy(selectedOrb = it.play.selectedOrb.ifBlank { orbs.firstOrNull()?.id.orEmpty() })) }
+    }
+
+    /** The materials of the crafts (2.41.0), read once per session like the orbs. */
+    suspend fun ensureMaterials() {
+        if (state.value.world.materials.isNotEmpty()) return
+        val materials = api.world.materials()
+        mutable.update { it.copy(world = it.world.copy(materials = materials)) }
     }
 
     /** The crafting bench's lines, fixed per server like the orbs they are paid in. */

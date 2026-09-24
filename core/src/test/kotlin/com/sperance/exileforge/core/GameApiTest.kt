@@ -350,7 +350,7 @@ class GameApiTest {
     @Test fun `the ledger has two hands and two rings, and every template slot has a place`() {
         val places = com.sperance.exileforge.core.contract.bodyPlaces
         assertEquals(11, places.size)
-        assertEquals((com.sperance.exileforge.core.contract.slots - "JEWEL" - "MAP").toSet(), places.flatMap { it.fits }.toSet())
+        assertEquals((com.sperance.exileforge.core.contract.slots.filterNot { it.startsWith("TOOL_") } - "JEWEL" - "MAP").toSet(), places.flatMap { it.fits }.toSet())
         val main = places.first { it.code == "MAIN_HAND" }
         val off = places.first { it.code == "OFF_HAND" }
         // A two-handed weapon fills the main hand and takes the other one with it.
@@ -611,6 +611,25 @@ class GameApiTest {
         assertEquals("/game/api/v1/character/campaign/summon?characterId=$id&mapCode=C1_TIDAL_SHORE", server.takeRequest().path)
     }
 
+    @Test fun `the crafts are read, started and stopped by the hero and the work's code`(): Unit = runBlocking {
+        ok("""{"now":1000,"rules":{"offlineHours":8.0,"maxLevel":50},"professions":[{"code":"MINING","tool":"TOOL_MINING","level":3,"experience":12.0,"next":80.0,
+            "bonus":{"speed":10.0},"jobs":[{"code":"COPPER_VEIN","level":1,"seconds":5.0,"cycleMillis":4500,"nothing":30.0,"output":"COPPER_ORE","experience":4.0}]}],
+            "work":{"profession":"MINING","job":"COPPER_VEIN","startedAt":1,"settledAt":900,"cycleMillis":4500,"nextAt":5400},
+            "gains":{"cycles":3,"nothing":1,"items":{"COPPER_ORE":2},"experience":8.0}}""")
+        val state = api.crafts.state(id)
+        assertEquals(4500L, state.professions.single().jobs.single().cycleMillis)
+        assertEquals(2L, state.gains.items["COPPER_ORE"])
+        assertEquals("/game/api/v1/character/crafts?characterId=$id", server.takeRequest().path)
+        ok("""{"now":1,"professions":[]}""")
+        api.crafts.start(id, "IRON_VEIN")
+        val started = server.takeRequest()
+        assertEquals("POST", started.method)
+        assertEquals("/game/api/v1/character/crafts/start?characterId=$id&job=IRON_VEIN", started.path)
+        ok("""{"now":1,"professions":[]}""")
+        assertNull(api.crafts.stop(id).work)
+        assertEquals("/game/api/v1/character/crafts/stop?characterId=$id", server.takeRequest().path)
+    }
+
     @Test fun `a location is entered with a map from the stash or without one`(): Unit = runBlocking {
         val mapItem = "b".repeat(24)
         ok("""{"map":{"mapCode":"C1_TIDAL_SHORE","effects":{"MAP_MONSTER_LIFE":30.0,"MAP_CHESTS":1.0},"quantity":12.0,"rarity":12.0,"experience":12.0},"chests":{"left":3,"refreshAt":1}}""")
@@ -776,7 +795,8 @@ class GameApiTest {
             "POST" to "/api/v1/characterequipment/uncraft",
             "GET" to "/api/v1/character/campaign/chapters", "GET" to "/api/v1/character/campaign/progress",
             "POST" to "/api/v1/character/campaign/kill", "POST" to "/api/v1/character/campaign/complete",
-            "POST" to "/api/v1/character/campaign/fall", "POST" to "/api/v1/character/campaign/start")
+            "POST" to "/api/v1/character/campaign/fall", "POST" to "/api/v1/character/campaign/start",
+            "GET" to "/api/v1/character/crafts", "POST" to "/api/v1/character/crafts/start")
         // The server prints the Ktor selector, so a method arrives as "(GET)".
         ok(JsonArray(routes.map { buildJsonObject { put("path", it.second); put("method", "(${it.first})") } }).toString())
         val capabilities = api.capabilities()

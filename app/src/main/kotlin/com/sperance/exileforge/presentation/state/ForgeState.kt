@@ -124,6 +124,8 @@ data class WorldState(
     val definitions: List<ModifierDefinition> = emptyList(),
     /** The currency catalogue; an orb is an `items` document of category `CURRENCY`. */
     val orbs: List<CurrencyItem> = emptyList(),
+    /** The materials the crafts gather (2.41.0), so the bag can name them. */
+    val materials: List<com.sperance.exileforge.core.model.crafts.MaterialItem> = emptyList(),
     /** The crafting bench: crafted modifiers by tier and their price in orbs. Fixed per server. */
     val bench: List<BenchRecipe> = emptyList(),
     /** Classes and the shared skill tree; a class carries the stat base, the tree its graph. */
@@ -190,6 +192,15 @@ data class PlayState(
     val campaign: CampaignProgress? = null,
     /** The location whose launch window is open (since 2.37.0): its chests, its boss and the map picked for it. */
     val launch: MapLaunchState? = null,
+    /**
+     * The crafts (2.41.0) as the server last answered, with the device's clock at that moment so a
+     * cycle's bar can run between answers; the profession whose window is open ("" is the tiles);
+     * and what the answers of this session brought, newest first.
+     */
+    val crafts: com.sperance.exileforge.core.model.crafts.CraftsState? = null,
+    val craftsAt: Long = 0,
+    val craftsProfession: String = "",
+    val craftsLog: List<com.sperance.exileforge.core.model.crafts.WorkGains> = emptyList(),
 )
 
 /**
@@ -269,6 +280,7 @@ object Reads {
     const val CAMPAIGN = "campaign"
     const val MERCHANT = "merchant"
     const val MAP_SERVICES = "mapServices"
+    const val CRAFTS = "crafts"
 }
 
 /**
@@ -290,10 +302,12 @@ const val TAB_CRAFT = 7
 const val TAB_ADMIN = 8
 const val TAB_REDEMPTION = 9
 const val TAB_EXPEDITION = 10
+/** The crafts (2.41.0): the bar's place the tree left. */
+const val TAB_CRAFTS = 11
 
 /** What the bottom bar offers a player — and, with [TAB_ADMIN] appended, an administrator. */
 /** The bar. The tree left it in 2.40.0: it opens from the Hero tab's header, as the forge does. */
-val PLAYER_TABS = listOf(TAB_HERO, TAB_EXPEDITION, TAB_AUCTION, TAB_ACCOUNT)
+val PLAYER_TABS = listOf(TAB_HERO, TAB_EXPEDITION, TAB_CRAFTS, TAB_AUCTION, TAB_ACCOUNT)
 
 /** Screens only an administrator may open, whichever button leads to them. */
 val ADMIN_TABS = setOf(TAB_CATALOG, TAB_EDITOR, TAB_CHECKS, TAB_ADMIN, TAB_REDEMPTION)

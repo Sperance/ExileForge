@@ -20,9 +20,9 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.40.0, `versionCode` 58) for the
-**ktor-bestgame** RPG server (0.36.0), pinned in
-`core/.../contract/Contract.kt` as `SERVER_COMMIT = 6c18941d3c482370146ba0083691c0c5ef001958`
+ExileForge is an **Android Compose client** (version 2.41.0, `versionCode` 59) for the
+**ktor-bestgame** RPG server (0.37.0), pinned in
+`core/.../contract/Contract.kt` as `SERVER_COMMIT = 3b03cfbb4268d921f55340c6595cd3e0098eb688`
 on the server branch `claude/tender-pasteur-a36kj2`.
 
 The client is deliberately **thin**: the server owns items, stats, modifier rolls and inventory.
@@ -216,7 +216,14 @@ banner and no bottom bar. Only `GAME` builds the scaffold. Nothing below the gat
 Inside `GAME` navigation is an `Int` tab in state, named in `ForgeState` and dispatched by a
 `when` in `ForgeApp`: `TAB_CATALOG`, `TAB_EDITOR`, `TAB_CHECKS`, `TAB_ACCOUNT`, `TAB_HERO`,
 `TAB_TREE`, `TAB_AUCTION`, `TAB_CRAFT`, `TAB_ADMIN`, `TAB_EXPEDITION`. The bottom bar carries
-`PLAYER_TABS` — hero, expedition, auction, account (the tree left the bar in 2.40.0 and opens
+`PLAYER_TABS` — hero, expedition, crafts, auction, account (since 2.41.0 `TAB_CRAFTS`,
+`CraftsScreen`: a plaque of the work under way over one tile per profession, and a profession's
+window — level, the tool slot with `ToolPicker`, the work with its cycle bar and this session's
+yield, every work with the server's numbers for this hero and a `JobSheet` to start it. The work
+runs on the server by time (`CraftsClient`, server 0.37.0): `CraftsViewModel` asks when the tab opens
+and again when `WorkView.nextAt` is due, runs the bar on the device's clock set by the answer's
+`now`, and every answer's `gains` are already in the bag — the materials `WorldState.materials`
+names there; the tree left the bar in 2.40.0 and opens
 from an icon in `HeroHeader`, beside the forge; the Hero tab reads as chosen while it is open) — and, for an administrator only,
 `TAB_ADMIN` on top of them. A campaign run is above the tabs: while `vm.expedition` holds one,
 `ForgeApp` draws `ExpeditionPlay` over the whole screen instead of the scaffold; since 2.40.0 its

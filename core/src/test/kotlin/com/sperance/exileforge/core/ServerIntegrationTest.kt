@@ -133,6 +133,18 @@ class ServerIntegrationTest {
         assertNull(launch.map)
         assertEquals(api.campaign.chests(id, first.code).left, launch.chests.left)
         assertEquals("CH_008", assertFailsWith<ApiFailure> { api.campaign.start(id, first.code, "0".repeat(24)) }.code)
+        craftsAreTheServers(api, id)
+    }
+
+    /** The crafts (0.37.0): a starter tool in every profession's slot, a first-level work started and stopped, a locked one refused. */
+    private suspend fun craftsAreTheServers(api: GameApi, id: String) {
+        val state = api.crafts.state(id)
+        assertEquals(3, state.professions.size)
+        state.professions.forEach { assertNotNull(it.equipped, "${it.code}: no starter tool") }
+        val mining = state.professions.first { it.code == "MINING" }
+        assertEquals("MINING", api.crafts.start(id, mining.jobs.first { it.level == 1 }.code).work?.profession)
+        assertEquals("CF_003", assertFailsWith<ApiFailure> { api.crafts.start(id, mining.jobs.maxBy { it.level }.code) }.code)
+        assertNull(api.crafts.stop(id).work)
     }
 
     private suspend fun craftingIsTheServers(api: GameApi, id: String, templateId: String,

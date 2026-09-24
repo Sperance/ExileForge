@@ -109,6 +109,10 @@ object LocaleKey {
     fun monsterName(code: String) = key("monster", code, NAME)
     /** A template with `{0}`, `{1}` per effect, as an item modifier's. */
     fun monsterModifierName(code: String) = key("monstermod", code, NAME)
+    // The crafts, since server 0.37.0.
+    fun professionName(code: String) = key("profession", code, NAME)
+    fun professionDescription(code: String) = key("profession", code, DESCRIPTION)
+    fun jobName(code: String) = key("job", code, NAME)
     private fun key(section: String, code: String, field: String) = "$section.$code.$field"
 }
 

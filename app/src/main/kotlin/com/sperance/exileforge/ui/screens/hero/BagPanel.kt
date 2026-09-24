@@ -16,7 +16,9 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.IconKey
 import com.sperance.exileforge.core.display.icon
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.model.currency.CurrencyItem
+import com.sperance.exileforge.core.i18n.LocaleKey
+import com.sperance.exileforge.core.i18n.locOr
+import com.sperance.exileforge.core.display.displayName
 import com.sperance.exileforge.core.model.currency.CurrencyOrb
 import com.sperance.exileforge.core.model.hero.CharacterItem
 import com.sperance.exileforge.presentation.state.ForgeState
@@ -27,7 +29,14 @@ import com.sperance.exileforge.ui.theme.*
 
 /** A bag stack's name: the orb's own, or the tail of an id the catalogue does not name. */
 fun bagTitle(s: ForgeState, itemId: String): String =
-    s.world.orbs.firstOrNull { it.id == itemId }?.title(s.lang) ?: (ui("common.item") + " …${itemId.takeLast(6)}")
+    s.world.orbs.firstOrNull { it.id == itemId }?.title(s.lang)
+        ?: s.world.materials.firstOrNull { it.id == itemId }?.let { locOr(LocaleKey.itemName(it.code), displayName(it.code)) }
+        ?: (ui("common.item") + " …${itemId.takeLast(6)}")
+
+/** What a stack is, from the dictionary: the orb's rule, or a material's description (since 2.41.0). */
+private fun bagDetails(s: ForgeState, itemId: String): String? =
+    s.world.orbs.firstOrNull { it.id == itemId }?.details(s.lang)
+        ?: s.world.materials.firstOrNull { it.id == itemId }?.let { locOr(LocaleKey.itemDescription(it.code), "") }
 
 /**
  * The bag in the order the forge lists its orbs — the catalogue's — and whatever the catalogue
@@ -35,7 +44,8 @@ fun bagTitle(s: ForgeState, itemId: String): String =
  */
 fun bagStacks(s: ForgeState): List<CharacterItem> {
     val bag = s.play.hero?.bag.orEmpty()
-    val order = s.world.orbs.withIndex().associate { (index, orb) -> orb.id to index }
+    // Orbs first in the forge's order, then the materials by profession (2.41.0), then the rest.
+    val order = (s.world.orbs.map { it.id } + s.world.materials.map { it.id }).withIndex().associate { (index, id) -> id to index }
     return bag.sortedBy { order[it.itemId] ?: Int.MAX_VALUE }
 }
 
@@ -46,14 +56,14 @@ fun bagStacks(s: ForgeState): List<CharacterItem> {
  * for the whole of it.
  */
 @Composable fun BagRow(s: ForgeState, stack: CharacterItem, onClick: () -> Unit) {
-    val orb = s.world.orbs.firstOrNull { it.id == stack.itemId }
+    val code = stackCode(s, stack.itemId)
     Row(Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(8.dp)).border(1.dp, PanelRaised, RoundedCornerShape(8.dp))
         .clickable(role = Role.Button, onClick = onClick).padding(10.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-        StackIcon(orb, 40)
+        StackIcon(code, s.world.orbs.any { it.id == stack.itemId }, 40)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(bagTitle(s, stack.itemId), color = Parchment, style = MaterialTheme.typography.titleSmall)
-            orb?.details(s.lang)?.takeIf { it.isNotBlank() }?.let {
+            bagDetails(s, stack.itemId)?.takeIf { it.isNotBlank() }?.let {
                 Text(it, color = Muted, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
         }
@@ -61,15 +71,19 @@ fun bagStacks(s: ForgeState): List<CharacterItem> {
     }
 }
 
+/** The code of a stack the client knows — an orb or a material — for its icon. */
+private fun stackCode(s: ForgeState, itemId: String): String? =
+    s.world.orbs.firstOrNull { it.id == itemId }?.code ?: s.world.materials.firstOrNull { it.id == itemId }?.code
+
 /**
- * An orb or an unnamed stack, drawn in a gold frame the way an item row frames its icon: the
+ * An orb, a material or an unnamed stack, drawn in a gold frame the way an item row frames its icon: the
  * server's sprite for the orb when the set has one, the bundled glyph otherwise.
  */
-@Composable private fun StackIcon(orb: CurrencyItem?, size: Int) {
+@Composable private fun StackIcon(code: String?, orb: Boolean, size: Int) {
     val frame = RoundedCornerShape(6.dp)
-    val art = orb?.let { icon(IconKey.item(it.code))?.let(::spriteVector) }
+    val art = code?.let { icon(IconKey.item(it))?.let(::spriteVector) }
     Box(Modifier.size(size.dp).background(Gold.copy(alpha = .08f), frame).border(1.dp, Gold.copy(alpha = .55f), frame), contentAlignment = Alignment.Center) {
-        Icon(art ?: if (orb != null) ForgeGlyphs.Orb else ForgeGlyphs.Gem, null, tint = if (orb != null) Gold else Muted,
+        Icon(art ?: if (orb) ForgeGlyphs.Orb else ForgeGlyphs.Gem, null, tint = if (code != null) Gold else Muted,
             modifier = Modifier.size((size * .55f).dp))
     }
 }
@@ -89,13 +103,13 @@ fun bagStacks(s: ForgeState): List<CharacterItem> {
             RaritySpine(Gold, 4.dp)
             Column(Modifier.weight(1f).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    StackIcon(orb, 56)
+                    StackIcon(stackCode(s, stack.itemId), orb != null, 56)
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(bagTitle(s, stack.itemId), color = GoldBright, style = MaterialTheme.typography.titleLarge)
                         Text(ui("bag.owned", stack.amount), color = Muted, style = MaterialTheme.typography.labelSmall)
                     }
                 }
-                orb?.details(s.lang)?.takeIf { it.isNotBlank() }?.let { Text(it, color = Parchment, style = MaterialTheme.typography.bodyMedium) }
+                bagDetails(s, stack.itemId)?.takeIf { it.isNotBlank() }?.let { Text(it, color = Parchment, style = MaterialTheme.typography.bodyMedium) }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (forgeable) Button(enabled = !s.busy, onClick = { onForge(stack.itemId) }, modifier = Modifier.weight(1f)) {
                         Text(ui("bag.to_forge"))

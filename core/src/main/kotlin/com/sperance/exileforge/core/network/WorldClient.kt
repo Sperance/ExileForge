@@ -75,5 +75,11 @@ class WorldClient internal constructor(private val http: Transport) {
             .map { WireJson.decodeFromJsonElement(CurrencyItem.serializer(), it) }
             .sortedBy { it.price }
 
+    /** The materials the crafts gather (since server 0.37.0), by the category the server seeded. */
+    suspend fun materials(): List<com.sperance.exileforge.core.model.crafts.MaterialItem> =
+        http.all("api/v1/${Catalog.ITEMS.path}").filter { it.text("category") == com.sperance.exileforge.core.model.crafts.MaterialItem.CATEGORY }
+            .map { WireJson.decodeFromJsonElement(com.sperance.exileforge.core.model.crafts.MaterialItem.serializer(), it) }
+            .sortedWith(compareBy({ it.subCategory }, { it.price }))
+
     suspend fun recipe(id: String): RecipeDocument { requireId(id); return WireJson.decodeFromJsonElement(http.request("GET", "api/v1/recipe", mapOf("id" to id), authenticated = true)) }
 }

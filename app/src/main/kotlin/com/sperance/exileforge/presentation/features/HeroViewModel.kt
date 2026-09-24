@@ -187,6 +187,7 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
         check(id.isNotBlank()) { ui("auction.choose_character") }
         ensureDefinitions()
         ensureOrbs()
+        ensureMaterials()
         ensureBench()
         ensureProgression()
         // The catalogue is half of every card now that an instance keeps only its rolls,

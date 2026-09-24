@@ -166,6 +166,12 @@ class ServerIntegrationTest {
         api.hero.applyOrb(id, magic, orb(CurrencyOrb.ORB_OF_TRANSMUTATION))
         val kept = affixes(api.hero.applyOrb(id, magic, orb(CurrencyOrb.ORB_OF_ANNULMENT)).item.params).single()
 
+        // Since 0.46.0 a bench line is found on a map, so a fresh hero knows none: the administrator
+        // writes every crafted modifier's tiers into the character (`<code>_T<tier>`, unknown ones ignored).
+        val known = definitions.filter { it.crafted }.flatMap { definition -> (1..10).map { "${definition.code}_T$it" } }
+        com.sperance.exileforge.core.network.Transport(requireNotNull(System.getenv("EF_LIVE_URL")), com.sperance.exileforge.core.network.RequestJournal(),
+            okhttp3.OkHttpClient()) {}.apply { token = api.sessionToken() }
+            .request("PUT", "api/v1/character", mapOf("id" to id), buildJsonObject { put("knownBenchRecipes", JsonArray(known.map(::JsonPrimitive))) }, authenticated = true)
         val bench = api.hero.bench(id)
         assertTrue(bench.isNotEmpty(), "the server has no bench")
         val recipe = bench.firstOrNull { it.fits("HELMET") && it.source != kept.source && it.group != kept.family }

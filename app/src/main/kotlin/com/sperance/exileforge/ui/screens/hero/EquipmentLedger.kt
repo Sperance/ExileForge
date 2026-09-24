@@ -3,13 +3,12 @@ package com.sperance.exileforge.ui.screens.hero
 import com.sperance.exileforge.presentation.state.unmetFor
 import com.sperance.exileforge.presentation.state.sellPrice
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,7 +21,7 @@ import com.sperance.exileforge.core.contract.bodyPlaces
 import com.sperance.exileforge.core.contract.text
 import com.sperance.exileforge.core.display.baseProperties
 import com.sperance.exileforge.core.display.inventoryDocument
-import com.sperance.exileforge.core.display.modifierText
+import com.sperance.exileforge.core.display.shownLines
 import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.i18n.ui
@@ -61,47 +60,58 @@ import kotlinx.serialization.json.put
 }
 
 /**
- * One place: the rarity spine, the item's icon, where it is worn, and what it is.
+ * One place, «Гроссбух» (2.50.0, the owner's pick of five mockups): a worn item is its icon in a
+ * rarity frame, the name and the place on one line, the base as chips and every roll under a rhombus
+ * with its tier — the stash's own row, tighter. An empty place is one thin line with what the stash
+ * holds for it.
  *
  * An item whose requirements stopped being met keeps its place and stops counting; the line says
- * so in red with the server's first reason, instead of the property it no longer gives.
+ * so in red with the server's first reason.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable private fun PlaceLine(s: ForgeState, place: BodyPlace, document: JsonObject, worn: Boolean, blocked: Boolean,
     reasons: List<String>?, spare: Int = 0, onClick: () -> Unit) {
     val title = slotTitle(place.code, s.lang)
-    val color = if (worn) rarityColor(document.text("rarity")) else PanelRaised
-    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)
-        .clickable(enabled = s.account.signedIn, role = Role.Button, onClickLabel = title, onClick = onClick),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        RaritySpine(color, 4.dp)
-        ItemIcon(document, color, Modifier.size(30.dp), tint = Muted.takeIf { !worn })
-        Text(title, color = Gold, style = MaterialTheme.typography.labelMedium, maxLines = 2, modifier = Modifier.width(84.dp))
-        Column(Modifier.weight(1f).padding(vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-            when {
-                worn -> {
-                    Text(document.text("name"), color = Parchment, style = MaterialTheme.typography.bodyLarge,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    if (reasons != null) {
-                        Text(ui("hero.inactive"), color = LifeRed, style = MaterialTheme.typography.labelSmall)
-                        reasons.firstOrNull()?.let { Text(requirementReason(it, s.lang), color = LifeRed, style = MaterialTheme.typography.labelSmall) }
-                    } else leadingProperty(document, s)?.let {
-                        Text(it, color = Muted, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                }
-                blocked -> Text(ui("hero.off_hand_taken"), color = Muted, style = MaterialTheme.typography.bodyMedium)
-                else -> Text(ui("hero.empty_slot"), color = Muted, style = MaterialTheme.typography.bodyMedium)
+    val click = Modifier.fillMaxWidth().clickable(enabled = s.account.signedIn, role = Role.Button, onClickLabel = title, onClick = onClick)
+    if (!worn) {
+        Row(click.padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            val frame = RoundedCornerShape(4.dp)
+            Box(Modifier.size(22.dp).border(1.dp, PanelRaised, frame), contentAlignment = Alignment.Center) {
+                ItemIcon(document, PanelRaised, Modifier.size(14.dp), tint = Muted.copy(alpha = .5f))
             }
+            Text(title, color = Gold, style = MaterialTheme.typography.labelMedium, maxLines = 1, modifier = Modifier.width(96.dp))
+            Text(ui(if (blocked) "hero.off_hand_taken" else "hero.empty_slot"), color = Muted, style = MaterialTheme.typography.labelMedium,
+                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            if (spare > 0) Text(ui("hero.place_spare", spare), color = GoldBright, style = MaterialTheme.typography.labelSmall,
+                modifier = Modifier.background(Abyss, RoundedCornerShape(4.dp)).padding(horizontal = 6.dp, vertical = 2.dp))
         }
-        if (spare > 0) Text(ui("hero.place_spare", spare), color = GoldBright, style = MaterialTheme.typography.labelMedium,
-            modifier = Modifier.background(Abyss, RoundedCornerShape(4.dp)).padding(horizontal = 6.dp, vertical = 2.dp))
-        Icon(Icons.Outlined.ChevronRight, null, tint = Muted, modifier = Modifier.padding(end = 6.dp).size(18.dp))
+        return
+    }
+    val color = rarityColor(document.text("rarity"))
+    val frame = RoundedCornerShape(5.dp)
+    val base = baseProperties(document, s.world.definitions).flatMap { it.values }
+    val rolled = shownLines((document["params"] as? JsonArray).orEmpty().mapNotNull { it as? JsonObject }, s.world.definitions)
+    Row(click.padding(vertical = 7.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Box(Modifier.size(38.dp).background(color.copy(alpha = .08f), frame).border(1.5.dp, color, frame), contentAlignment = Alignment.Center) {
+            ItemIcon(document, color, Modifier.size(26.dp))
+        }
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(document.text("name"), color = color, style = MaterialTheme.typography.titleSmall, maxLines = 1,
+                    overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                Text(title, color = Gold, style = MaterialTheme.typography.labelSmall, maxLines = 1)
+            }
+            if (reasons != null) {
+                Text(ui("hero.inactive"), color = LifeRed, style = MaterialTheme.typography.labelSmall)
+                reasons.firstOrNull()?.let { Text(requirementReason(it, s.lang), color = LifeRed, style = MaterialTheme.typography.labelSmall) }
+            }
+            if (base.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(5.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                base.forEach { BaseChip(it) }
+            }
+            rolled.forEach { RollLine(it, s.world.definitions) }
+        }
     }
 }
-
-/** The property an item is worn for: its base with its own local modifiers in it, else its first roll. */
-private fun leadingProperty(document: JsonObject, s: ForgeState): String? =
-    baseProperties(document, s.world.definitions).firstOrNull()?.line()
-        ?: (document["params"] as? JsonArray)?.firstOrNull()?.let { it as? JsonObject }?.let { modifierText(it, s.world.definitions) }
 
 /**
  * What could go into one empty place: the stash, narrowed to the slots that fill it.

@@ -20,7 +20,7 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.49.1, `versionCode` 68) for the
+ExileForge is an **Android Compose client** (version 2.50.0, `versionCode` 69) for the
 **ktor-bestgame** RPG server (0.44.0), pinned in
 `core/.../contract/Contract.kt` as `SERVER_COMMIT = defce6c01ffe412c2603ec64c04cf3fc5bbce349`
 on the server branch `claude/vigilant-wozniak-ptnxmx`.
@@ -394,6 +394,10 @@ These are enforced by tests and are the point of the client's design:
     0.34.0) the fourth tab is the merchant (`MerchantClient`: a four-hour shelf per hero, priced in
     gold by the server), «Мои лоты» shows the lot places (`AuctionSlots`) and sells one more, and a
     campaign map's coin icon opens its services — a treasure map and summoning its guardian.
+    Since 2.50.0 the Equipment section and the map's `GearSheet` share «Гроссбух» (`EquipmentLedger`,
+    the owner's pick of five mockups): a worn place is its icon in a rarity frame, name and place on
+    one line, the base as chips and every roll with its tier (`BaseChip`, `RollLine` from `ItemRow`);
+    an empty place is one thin line with what the stash holds for it; a tap still opens the card.
     Since 2.49.0 the screen after a fight is «Поле боя» (`ReportScreen.kt`, the owner's pick of five
     mockups): the fallen monster's token over the outcome, the spoils in engraved sections — gear as
     lines with the merchant's price whose tap opens the card (`LootCard`), orbs, gold and experience —

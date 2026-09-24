@@ -151,7 +151,7 @@ import kotlinx.serialization.json.JsonObject
 }
 
 /** One base figure: the number bold, coloured when a local modifier moved it, and what it counts. */
-@Composable private fun BaseChip(value: PropertyValue) {
+@Composable internal fun BaseChip(value: PropertyValue) {
     Row(Modifier.background(Abyss, RoundedCornerShape(4.dp)).padding(horizontal = 7.dp, vertical = 2.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(value.text, color = if (value.augmented) Rune else GoldBright, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
@@ -161,7 +161,7 @@ import kotlinx.serialization.json.JsonObject
 }
 
 /** A rolled modifier on a line: its sentence under a rhombus, its tier or its craft on the right. */
-@Composable private fun RollLine(modifier: JsonObject, definitions: List<ModifierDefinition>) {
+@Composable internal fun RollLine(modifier: JsonObject, definitions: List<ModifierDefinition>) {
     val marks = affixMarks(modifier, definitions)
     val tone = when { marks.fractured -> Fractured; marks.crafted -> Crafted; marks.handcrafted -> Handcrafted; marks.alchemy -> Vital; else -> Rune }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.CenterVertically) {

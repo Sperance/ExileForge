@@ -22,9 +22,11 @@ class ReferencePickerTest {
         return api
     }
 
-    @Test fun `the modifier pool is a typed picker into its own collection`() {
-        val pool = schemaFields("equipment").single { it.key == "modifierIds" }.spec
-        assertEquals(InputSpec.ListOf(InputSpec.Reference(EntitySource.MODIFIER)), pool)
+    @Test fun `fixed modifiers are a typed picker and pools are tags`() {
+        val fixed = schemaFields("equipment").single { it.key == "fixedModifierIds" }.spec
+        assertEquals(InputSpec.ListOf(InputSpec.Reference(EntitySource.MODIFIER)), fixed)
+        assertEquals(InputSpec.ListOf(InputSpec.Text()), schemaFields("equipment").single { it.key == "modifierPools" }.spec)
+        assertEquals(InputSpec.Weights, schemaFields("equipment").single { it.key == "pools" }.spec)
         // The base stats left the character document in 0.10.0: the class carries them now.
         assertEquals(setOf("name", "description", "professionSkills", "battleSkills", "boolSkills"), schemaFields("character").map { it.key }.toSet())
         // An item's base is fixed modifiers, so it picks from the same collection as the pool.
@@ -33,8 +35,11 @@ class ReferencePickerTest {
     }
 
     @Test fun `reference values retain identifiers and reject names`() {
-        validateForm("equipment", buildJsonObject { put("modifierIds", buildJsonArray { add(id) }) })
-        assertFailsWith<IllegalArgumentException> { validateForm("equipment", buildJsonObject { put("modifierIds", buildJsonArray { add("Maximum life") }) }) }
+        validateForm("equipment", buildJsonObject { put("fixedModifierIds", buildJsonArray { add(id) }) })
+        assertFailsWith<IllegalArgumentException> { validateForm("equipment", buildJsonObject { put("fixedModifierIds", buildJsonArray { add("Maximum life") }) }) }
+        validateForm("equipment", buildJsonObject { put("pools", buildJsonObject { put("drop", 100); put("smith", 0) }) })
+        assertFailsWith<IllegalArgumentException> { validateForm("equipment", buildJsonObject { put("pools", buildJsonObject { put("drop", 1.5) }) }) }
+        assertFailsWith<IllegalArgumentException> { validateForm("equipment", buildJsonObject { put("pools", buildJsonObject { put("", 100) }) }) }
     }
 
     @Test fun `each picker reads its own collection and pages it here`() = runBlocking {

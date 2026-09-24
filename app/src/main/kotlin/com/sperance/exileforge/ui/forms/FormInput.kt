@@ -36,6 +36,7 @@ import kotlinx.serialization.json.*
                 }
             }
         }
+        InputSpec.Weights -> WeightsInput(label, value as? JsonObject ?: JsonObject(emptyMap()), enabled, onChange)
         is InputSpec.ListOf -> {
             val values = value as? JsonArray ?: JsonArray(emptyList())
             var expanded by remember { mutableStateOf(false) }
@@ -56,6 +57,35 @@ import kotlinx.serialization.json.*
         }
     }
 }
+
+/** Pools a record sits in: one tag and its weight per line; a renamed tag keeps its place. */
+@Composable private fun WeightsInput(label: String, pools: JsonObject, enabled: Boolean, onChange: (JsonElement) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    val entries = pools.entries.toList()
+    fun write(lines: List<Pair<String, JsonElement>>) = onChange(JsonObject(lines.toMap(LinkedHashMap())))
+    OutlinedCard(border = BorderStroke(1.dp, Gold.copy(alpha = .3f)), modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            TextButton(onClick = { expanded = !expanded }) { Text("$label (${entries.size}) ${if (expanded) "▴" else "▾"}") }
+            if (expanded) {
+                entries.forEachIndexed { index, (tag, weight) ->
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        TextFieldInput(ui("form.pool_tag"), JsonPrimitive(tag), enabled) { renamed ->
+                            val name = (renamed as? JsonPrimitive)?.content.orEmpty()
+                            if (name == tag || name !in pools) write(entries.mapIndexed { i, (k, v) -> if (i == index) name to v else k to v })
+                        }
+                        NumberInput(ui("form.pool_weight"), InputSpec.Number(integer = true, min = 0.0), weight, enabled) { changed ->
+                            write(entries.mapIndexed { i, (k, v) -> if (i == index) k to changed else k to v })
+                        }
+                        TextButton(enabled = enabled, onClick = { write(entries.filterIndexed { i, _ -> i != index }.map { it.key to it.value }) }) { Text(ui("form.remove", index + 1)) }
+                    }
+                }
+                OutlinedButton(enabled = enabled && "" !in pools, onClick = { write(entries.map { it.key to it.value } + ("" to JsonPrimitive(DEFAULT_POOL_WEIGHT))) }) { Text(ui("form.add")) }
+            }
+        }
+    }
+}
+
+private const val DEFAULT_POOL_WEIGHT = 100
 
 internal fun numericValue(text: String, spec: InputSpec.Number): JsonElement =
     (if (spec.integer) text.toLongOrNull()?.let { JsonPrimitive(it) } else text.toDoubleOrNull()?.takeIf { it.isFinite() }?.let { JsonPrimitive(it) }) ?: JsonPrimitive(text)

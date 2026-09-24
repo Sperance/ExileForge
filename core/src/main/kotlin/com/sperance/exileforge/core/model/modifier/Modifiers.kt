@@ -61,8 +61,12 @@ import kotlinx.serialization.Serializable
      * server; the client only reads it to say why a bench line would be refused.
      */
     val group: String? = null,
-    /** How often the server's roller draws this one against its neighbours. Never used here to roll. */
-    val spawnWeight: Int = 1000,
+    /**
+     * Since server 0.39.0 a pool is a tag, and this is which pools the modifier sits in and how
+     * heavily (`helmet`, `local:armor`, `influence:SHAPER`, `corruption`). A template names the tags it
+     * rolls from; the server's roller draws by these weights. Never used here to roll.
+     */
+    val pools: Map<String, Int> = emptyMap(),
     /** The influence (`SHAPER`, `ELDER`) an item must carry for this modifier to roll; null for the rest. */
     val influence: String? = null,
     /** A bench modifier: no orb rolls it, the crafting bench places it, one per item. */

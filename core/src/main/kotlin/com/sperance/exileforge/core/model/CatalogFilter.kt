@@ -14,9 +14,11 @@ import kotlinx.serialization.json.*
  */
 @Serializable data class CatalogFilter(
     val query: String = "", val slot: String = "", val rarity: String = "",
-    val minLevel: String = "", val maxLevel: String = "", val weaponType: String = "", val modifierId: String = "",
+    val minLevel: String = "", val maxLevel: String = "", val weaponType: String = "",
+    /** A pool tag: templates that roll from it or sit in it (since server 0.39.0). */
+    val pool: String = "",
 ) {
-    val isEmpty: Boolean get() = listOf(query, slot, rarity, minLevel, maxLevel, weaponType, modifierId).all { it.isBlank() }
+    val isEmpty: Boolean get() = listOf(query, slot, rarity, minLevel, maxLevel, weaponType, pool).all { it.isBlank() }
 
     fun matches(document: JsonObject): Boolean {
         val level = document.text("itemLevel").toIntOrNull()
@@ -29,6 +31,6 @@ import kotlinx.serialization.json.*
             && (weaponType.isBlank() || document.text("weaponType") == weaponType)
             && (minLevel.toIntOrNull()?.let { level != null && level >= it } ?: true)
             && (maxLevel.toIntOrNull()?.let { level != null && level <= it } ?: true)
-            && (modifierId.isBlank() || (document["modifierIds"] as? JsonArray).orEmpty().any { it.jsonPrimitive.content == modifierId })
+            && (pool.isBlank() || (document["modifierPools"] as? JsonArray).orEmpty().any { it.jsonPrimitive.content == pool } || (document["pools"] as? JsonObject)?.containsKey(pool) == true)
     }
 }

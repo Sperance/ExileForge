@@ -10,7 +10,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.*
 
 /** Only a confirmed server-generated ID belongs to this run; cleanup removes exactly that record. */
-class CrudScenario(private val repository: ItemRepository, private val modifierId: String = "") {
+class CrudScenario(private val repository: ItemRepository, private val pool: String = "") {
     suspend fun run(catalog: Catalog, report: (CheckResult) -> Unit) {
         require(catalog != Catalog.CHARACTERS) { ui("checks.items_only") }
         // A code, not a name: content has no text of its own since 0.14.0.
@@ -38,9 +38,9 @@ class CrudScenario(private val repository: ItemRepository, private val modifierI
                 Catalog.ITEMS -> buildJsonObject { put("price", 7L) }
                 else -> buildJsonObject { put("requiredLevel", 7) }
             }, ui("crud.update"))
-            if (catalog == Catalog.EQUIPMENT && modifierId.isNotBlank()) {
-                update(buildJsonObject { put("modifierIds", buildJsonArray { add(modifierId) }) }, ui("crud.pool"))
-                update(buildJsonObject { put("modifierIds", JsonArray(emptyList())) }, ui("crud.pool_cleared"))
+            if (catalog == Catalog.EQUIPMENT && pool.isNotBlank()) {
+                update(buildJsonObject { put("modifierPools", buildJsonArray { add(pool) }) }, ui("crud.pool"))
+                update(buildJsonObject { put("modifierPools", JsonArray(emptyList())) }, ui("crud.pool_cleared"))
             }
             repository.delete(catalog, id)
             owned = null

@@ -61,7 +61,7 @@ enum class Glyph {
             "requiredStrength" to ATTRIBUTE, "requiredDexterity" to EVASION, "requiredIntelligence" to MANA,
             "rarity" to RARITY, "slot" to ITEM, "weaponType" to ATTACK, "category" to ITEM, "subCategory" to ITEM,
             "type" to ITEM, "durability" to DEFENCE, "price" to CURRENCY,
-            "modifierId" to REFERENCE, "modifierIds" to REFERENCE, "baseParams" to RULE, "effects" to RULE,
+            "modifierId" to REFERENCE, "fixedModifierIds" to REFERENCE, "modifierPools" to RULE, "pools" to RULE, "baseParams" to RULE, "effects" to RULE,
             "stat" to RULE, "perStat" to RULE, "perAmount" to RULE, "operation" to RULE, "value" to RULE, "values" to RULE,
             "source" to RULE, "isLocal" to RULE,
             "battleSkills" to ATTACK, "professionSkills" to CRAFT, "boolSkills" to STATE,

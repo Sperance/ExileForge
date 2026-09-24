@@ -1,7 +1,7 @@
-# ExileForge 2.42.0
+# ExileForge 2.43.0
 
-Android Compose client for **ktor-bestgame 0.38.0**.
-Server: branch `claude/tender-pasteur-a36kj2`, commit `3ce731840bfe9c257c96e61a53a339bb0d2d8641`.
+Android Compose client for **ktor-bestgame 0.39.0**.
+Server: branch `claude/vigilant-wozniak-ptnxmx`, commit `7db1e5a9b3469f8a3e82c0fc5d909d431d6e09d1`.
 
 ## Язык интерфейса · Interface language
 
@@ -120,7 +120,7 @@ Debug allows HTTP for local development; release requires HTTPS. Since server 0.
 
 - **A token, and a server that knows who asks (client 2.9.0, server 0.21.0).** Sign-in is a `POST` answering `{user, token}`; the token rides every request as a Bearer header and is kept per server, so a relaunch resumes instead of signing in. The server checks every request against one access table: a player acts only for their own account and characters, the generic CRUD writes belong to an administrator, and a lapsed token signs a device player straight back in. Permissions still come from the server's `role`.
 - **No client version on writes.** `PUT` sends the changed fields and `DELETE` sends nothing: the server reads the stored document and rejects a racing write itself. A rejected write is reported, never retried silently.
-- **Equipment is a pool of references.** A template carries `modifierIds`; which of them land on a copy, in which tier and with which value, is rolled by the server when the instance is created.
+- **A pool is a tag.** Since server 0.39.0 a template names the tags it rolls affixes from (`modifierPools`), its fixed modifiers (`fixedModifierIds`) and the pools it sits in itself (`pools`, tag → weight); a modifier carries its own `pools`. Which modifiers land on a copy, in which tier and with which value, is rolled by the server when the instance is created.
 - **Inventory is its own collection.** One item in a character's bag is one `CharacterEquipment` document with its own rolls; the slot comes from the template, so equipping takes an instance id and nothing else.
 - **Stats come from the server.** `GET /api/v1/character/inventory/stats` returns the summed sheet; the client prints it and implements no second calculator.
 - **Lists are paged on the client, except the auction.** `/paged` was fixed in 0.13.1, but the generic route still offers no filter, and moving the catalogue onto it would cost every catalogue filter. The auction has a search route of its own, so its showcase is filtered and paged by the server.

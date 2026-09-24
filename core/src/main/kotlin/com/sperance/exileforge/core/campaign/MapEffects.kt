@@ -30,6 +30,8 @@ object MapEffects {
 
     fun rarities(rarities: List<CampaignRarity>, effects: Map<String, Double>): List<CampaignRarity> {
         val rarer = 1 + (effects[MapRule.MONSTER_RARITY] ?: 0.0) / 100
+        val magic = 1 + (effects[MapRule.MAGIC_MONSTERS] ?: 0.0) / 100
+        val rare = 1 + (effects[MapRule.RARE_MONSTERS] ?: 0.0) / 100
         val buffs = buildList {
             effects[MapRule.MONSTER_LIFE]?.let { add(MonsterEffect("STOCK_HEALTH", "INCREASED", it)) }
             effects[MapRule.MONSTER_DAMAGE]?.let { v -> damage.forEach { add(MonsterEffect(it, "INCREASED", v)) } }
@@ -37,7 +39,12 @@ object MapEffects {
             effects[MapRule.MONSTER_RESIST]?.let { v -> resists.forEach { add(MonsterEffect(it, "ADD", v)) } }
         }
         return rarities.map { rarity ->
-            val weight = if (rarity.rarity == MonsterRarity.NORMAL.name) rarity.weight else (rarity.weight * rarer).roundToInt()
+            val weight = when (rarity.rarity) {
+                MonsterRarity.MAGIC.name -> (rarity.weight * rarer * magic).roundToInt()
+                MonsterRarity.RARE.name -> (rarity.weight * rarer * rare).roundToInt()
+                MonsterRarity.NORMAL.name, MonsterRarity.UNIQUE.name -> rarity.weight
+                else -> (rarity.weight * rarer).roundToInt()
+            }
             rarity.copy(weight = weight, effects = rarity.effects + buffs)
         }
     }

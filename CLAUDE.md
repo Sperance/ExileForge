@@ -20,9 +20,9 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.41.0, `versionCode` 59) for the
-**ktor-bestgame** RPG server (0.37.0), pinned in
-`core/.../contract/Contract.kt` as `SERVER_COMMIT = 3b03cfbb4268d921f55340c6595cd3e0098eb688`
+ExileForge is an **Android Compose client** (version 2.42.0, `versionCode` 60) for the
+**ktor-bestgame** RPG server (0.38.0), pinned in
+`core/.../contract/Contract.kt` as `SERVER_COMMIT = 3ce731840bfe9c257c96e61a53a339bb0d2d8641`
 on the server branch `claude/tender-pasteur-a36kj2`.
 
 The client is deliberately **thin**: the server owns items, stats, modifier rolls and inventory.
@@ -223,7 +223,12 @@ yield, every work with the server's numbers for this hero and a `JobSheet` to st
 runs on the server by time (`CraftsClient`, server 0.37.0): `CraftsViewModel` asks when the tab opens
 and again when `WorkView.nextAt` is due, runs the bar on the device's clock set by the answer's
 `now`, and every answer's `gains` are already in the bag — the materials `WorldState.materials`
-names there; the tree left the bar in 2.40.0 and opens
+names there. Since 2.42.0 (server 0.38.0) six professions: a crafting work shows what it spends per
+cycle against the bag (`bagCount`), the smith's `JobSheet` picks up to `maxAdditives` additives, a
+cartographer's chart of a location not yet opened is locked, and `gainsLine` names the pieces
+made and a bag run dry; `AffixMarks.handcrafted`/`alchemy` colour the smith's lines
+(`Handcrafted`) and a map's alchemy lines (`Vital`), and the seven map-only orbs are `CurrencyOrb`
+entries; the tree left the bar in 2.40.0 and opens
 from an icon in `HeroHeader`, beside the forge; the Hero tab reads as chosen while it is open) — and, for an administrator only,
 `TAB_ADMIN` on top of them. A campaign run is above the tabs: while `vm.expedition` holds one,
 `ForgeApp` draws `ExpeditionPlay` over the whole screen instead of the scaffold; since 2.40.0 its

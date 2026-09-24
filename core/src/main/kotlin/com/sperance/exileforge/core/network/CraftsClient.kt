@@ -20,9 +20,10 @@ class CraftsClient internal constructor(private val http: Transport) {
     }
 
     /** Starts [job], ending the work under way. Never retried. */
-    suspend fun start(characterId: String, job: String): CraftsState {
+    suspend fun start(characterId: String, job: String, additives: List<String> = emptyList()): CraftsState {
         requireId(characterId)
-        return WireJson.decodeFromJsonElement(http.request("POST", "$CRAFTS/start", mapOf("characterId" to characterId, "job" to job), authenticated = true))
+        val query = mapOf("characterId" to characterId, "job" to job) + listOfNotNull(additives.takeIf { it.isNotEmpty() }?.let { "additives" to it.joinToString(",") })
+        return WireJson.decodeFromJsonElement(http.request("POST", "$CRAFTS/start", query, authenticated = true))
     }
 
     suspend fun stop(characterId: String): CraftsState {

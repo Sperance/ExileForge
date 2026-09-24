@@ -14,7 +14,8 @@ import kotlinx.serialization.Serializable
  * PREFIX and SUFFIX are rolled onto an instance, the other item sources sit on every copy, and
  * PASSIVE never reaches an item at all — it is a skill-tree node's own bonus.
  */
-@Serializable enum class ModifierSource { IMPLICIT, PREFIX, SUFFIX, UNIQUE, ENCHANTMENT, CORRUPTION, PASSIVE }
+/** Where a modifier comes from; since server 0.38.0 also the smith's handcrafted lines and a map's alchemy lines, which no orb touches. */
+@Serializable enum class ModifierSource { IMPLICIT, PREFIX, SUFFIX, UNIQUE, ENCHANTMENT, CORRUPTION, PASSIVE, HANDCRAFTED, ALCHEMY }
 
 /**
  * One action of a modifier: which stat it touches and how.

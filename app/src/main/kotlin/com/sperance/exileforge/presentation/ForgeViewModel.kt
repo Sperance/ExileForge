@@ -28,7 +28,7 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     fun openLaunch(mapCode: String) = runtime.expeditionViewModel.openLaunch(mapCode)
     fun loadCrafts() = runtime.craftsViewModel.load()
     fun openProfession(code: String) = runtime.craftsViewModel.openProfession(code)
-    fun startWork(job: String) = runtime.craftsViewModel.start(job)
+    fun startWork(job: String, additives: List<String> = emptyList()) = runtime.craftsViewModel.start(job, additives)
     fun stopWork() = runtime.craftsViewModel.stop()
     fun equipTool(instanceId: String) = runtime.craftsViewModel.equipTool(instanceId)
     fun closeLaunch() = runtime.expeditionViewModel.closeLaunch()

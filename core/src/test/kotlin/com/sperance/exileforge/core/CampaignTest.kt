@@ -565,4 +565,10 @@ class CampaignTest {
         assertEquals(CombatRules().flask.charges + 1, run.hud.value.maxFlasks)
         assertTrue(run.world.lightRadius > ExpeditionWorld.lightRadius(mapOf("STOCK_LIGHT_RADIUS" to 5.0), map.light))
     }
+
+    @Test fun `the alchemist's lines weigh magic and rare monsters apart`() {
+        val table = listOf(CampaignRarity("NORMAL", 100), CampaignRarity("MAGIC", 30), CampaignRarity("RARE", 10))
+        val weighed = MapEffects.rarities(table, mapOf(MapRule.MAGIC_MONSTERS to 100.0, MapRule.RARE_MONSTERS to 50.0))
+        assertEquals(listOf(100, 60, 15), weighed.map { it.weight })
+    }
 }

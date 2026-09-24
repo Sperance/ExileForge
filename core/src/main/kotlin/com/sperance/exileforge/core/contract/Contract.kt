@@ -18,7 +18,7 @@ val protectedFields = setOf("_id", "id", "version", "deleted", "createdAt", "upd
 val rarities = listOf("COMMON", "UNCOMMON", "RARE", "EPIC", "UNIQUE", "MYTHICAL")
 // JEWEL is last on purpose: it is not worn on the body but sits in a socket on the tree,
 // and `CharacterEquipment.socketCode` says which one.
-val slots = listOf("HELMET", "BODY", "GLOVES", "RING", "BOOTS", "WINGS", "BELT", "WEAPON_1H", "WEAPON_2H", "QUIVER", "SHIELD", "AMULET", "JEWEL", "MAP", "TOOL_MINING", "TOOL_HERBALISM", "TOOL_WOODCUTTING")
+val slots = listOf("HELMET", "BODY", "GLOVES", "RING", "BOOTS", "WINGS", "BELT", "WEAPON_1H", "WEAPON_2H", "QUIVER", "SHIELD", "AMULET", "JEWEL", "MAP", "TOOL_MINING", "TOOL_HERBALISM", "TOOL_WOODCUTTING", "TOOL_SMITHING", "TOOL_ALCHEMY", "TOOL_CARTOGRAPHY")
 /**
  * One line of the equipment ledger: a place on the body and the template slots that fill it.
  *
@@ -52,9 +52,9 @@ val modifierSources = listOf("IMPLICIT", "PREFIX", "SUFFIX", "UNIQUE", "ENCHANTM
 val skillNodeTypes = listOf("START", "SMALL", "NOTABLE", "KEYSTONE", "JEWEL_SOCKET")
 val lotKinds = listOf("EQUIPMENT", "ITEM")
 val modifierOperations = listOf("ADD", "INCREASED", "MORE", "SET")
-const val SERVER_COMMIT = "3b03cfbb4268d921f55340c6595cd3e0098eb688"
+const val SERVER_COMMIT = "3ce731840bfe9c257c96e61a53a339bb0d2d8641"
 const val SERVER_BRANCH = "claude/tender-pasteur-a36kj2"
-const val SERVER_VERSION = "0.37.0"
+const val SERVER_VERSION = "0.38.0"
 
 fun template(catalog: Catalog, kind: EquipmentKind = EquipmentKind.Weapon): JsonObject = when (catalog) {
     Catalog.CHARACTERS -> defaultObject("character")

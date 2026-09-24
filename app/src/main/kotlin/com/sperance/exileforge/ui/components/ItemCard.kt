@@ -50,13 +50,15 @@ import kotlinx.serialization.json.*
  */
 @Composable fun AffixLine(modifier: JsonObject, definitions: List<ModifierDefinition>) {
     val marks = affixMarks(modifier, definitions)
-    val tone = when { marks.fractured -> Fractured; marks.crafted -> Crafted; else -> Rune }
+    val tone = when { marks.fractured -> Fractured; marks.crafted -> Crafted; marks.handcrafted -> Handcrafted; marks.alchemy -> Vital; else -> Rune }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
         Box(Modifier.padding(top = 6.dp)) { Rhombus() }
         Text(modifierText(modifier, definitions), color = tone, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
         listOfNotNull(
             (ui("mod.fractured") to tone).takeIf { marks.fractured },
             (ui("mod.crafted") to tone).takeIf { marks.crafted },
+            (ui("mod.handcrafted") to tone).takeIf { marks.handcrafted },
+            (ui("mod.alchemy") to tone).takeIf { marks.alchemy },
             (ui("mod.tier", marks.tier) to Muted).takeIf { marks.tier > 0 },
         ).forEach { (word, color) ->
             Text(word, color = color, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 2.dp))

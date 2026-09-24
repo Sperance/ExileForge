@@ -167,16 +167,18 @@ const val ROW_MODIFIERS = 4
 /** A rolled modifier on a line: its sentence under a rhombus, its tier or its craft on the right. */
 @Composable private fun RollLine(modifier: JsonObject, definitions: List<ModifierDefinition>) {
     val marks = affixMarks(modifier, definitions)
-    val tone = when { marks.fractured -> Fractured; marks.crafted -> Crafted; else -> Rune }
+    val tone = when { marks.fractured -> Fractured; marks.crafted -> Crafted; marks.handcrafted -> Handcrafted; marks.alchemy -> Vital; else -> Rune }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.CenterVertically) {
         Rhombus(Bronze, 5.dp)
         Text(modifierText(modifier, definitions), color = tone, style = MaterialTheme.typography.labelMedium,
             maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
         when {
             marks.crafted -> ui("mod.crafted")
+            marks.handcrafted -> ui("mod.handcrafted")
+            marks.alchemy -> ui("mod.alchemy")
             marks.tier > 0 -> ui("mod.tier", marks.tier)
             else -> null
-        }?.let { Text(it, color = if (marks.crafted) Crafted else Muted, style = MaterialTheme.typography.labelSmall) }
+        }?.let { Text(it, color = if (marks.crafted || marks.handcrafted || marks.alchemy) tone else Muted, style = MaterialTheme.typography.labelSmall) }
     }
 }
 

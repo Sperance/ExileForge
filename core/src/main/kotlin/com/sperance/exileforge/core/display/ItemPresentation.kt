@@ -161,13 +161,19 @@ private fun rolledValues(modifier: JsonObject, definition: ModifierDefinition? =
  * What a rolled affix is besides its sentence: its tier, and whether the bench placed it or a
  * Fracturing Orb fixed it. A fixed modifier (a base, a tree node) has no tier and answers zero.
  */
-data class AffixMarks(val tier: Int, val crafted: Boolean, val fractured: Boolean)
+data class AffixMarks(val tier: Int, val crafted: Boolean, val fractured: Boolean, val handcrafted: Boolean = false, val alchemy: Boolean = false)
 
-fun affixMarks(modifier: JsonObject, definitions: List<ModifierDefinition>): AffixMarks = AffixMarks(
-    tier = modifier.text("tier").toIntOrNull() ?: 0,
-    crafted = definitions.firstOrNull { it.id == modifier.text("modifierId") }?.crafted == true,
-    fractured = (modifier["fractured"] as? JsonPrimitive)?.booleanOrNull == true,
-)
+fun affixMarks(modifier: JsonObject, definitions: List<ModifierDefinition>): AffixMarks {
+    val definition = definitions.firstOrNull { it.id == modifier.text("modifierId") }
+    return AffixMarks(
+        tier = modifier.text("tier").toIntOrNull() ?: 0,
+        crafted = definition?.crafted == true,
+        fractured = (modifier["fractured"] as? JsonPrimitive)?.booleanOrNull == true,
+        // Since server 0.38.0: the smith's and cartographer's lines, and a map's alchemy — no orb touches either.
+        handcrafted = definition?.source == com.sperance.exileforge.core.model.modifier.ModifierSource.HANDCRAFTED,
+        alchemy = definition?.source == com.sperance.exileforge.core.model.modifier.ModifierSource.ALCHEMY,
+    )
+}
 
 /**
  * A bench line as the sentence it would add, with the tier's range where the roll will land:

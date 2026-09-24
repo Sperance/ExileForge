@@ -27,7 +27,9 @@ enum class CurrencyOrb {
     // The one orb that is never applied to an item: the tree spends it, and applyOrb refuses it
     // outright (CR_009). It is in the table because it is still an orb in the bag and a price
     // on the auction, and a bag entry the client cannot name is a bag entry a player cannot read.
-    ORB_OF_REGRET;
+    ORB_OF_REGRET,
+    // Since 0.38.0 the alchemist's orbs for maps, refused on anything else (CR_020).
+    EMPOWERING_ORB, MERCY_ORB, PERIL_ORB, HORDE_ORB, MAGUS_ORB, ELITE_ORB, BOUNTY_ORB;
 
     fun title(lang: Lang = uiLanguage): String = ui(lang, "enum.orb.$name")
     /** What the server's rule for this orb is, shown so a rejection is expected rather than puzzling. */

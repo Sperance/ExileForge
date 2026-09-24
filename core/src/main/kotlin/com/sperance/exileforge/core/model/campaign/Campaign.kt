@@ -192,6 +192,9 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
         const val EXPERIENCE = "MAP_EXPERIENCE"
         const val PACK_SIZE = "MAP_PACK_SIZE"
         const val MONSTER_RARITY = "MAP_MONSTER_RARITY"
+        /** Since 0.38.0, from the alchemist's orbs: magic and rare monsters apart. */
+        const val MAGIC_MONSTERS = "MAP_MAGIC_MONSTERS"
+        const val RARE_MONSTERS = "MAP_RARE_MONSTERS"
         const val MONSTER_LIFE = "MAP_MONSTER_LIFE"
         const val MONSTER_DAMAGE = "MAP_MONSTER_DAMAGE"
         const val MONSTER_SPEED = "MAP_MONSTER_SPEED"

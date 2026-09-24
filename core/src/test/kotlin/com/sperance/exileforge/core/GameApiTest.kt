@@ -628,6 +628,11 @@ class GameApiTest {
         ok("""{"now":1,"professions":[]}""")
         assertNull(api.crafts.stop(id).work)
         assertEquals("/game/api/v1/character/crafts/stop?characterId=$id", server.takeRequest().path)
+        ok("""{"now":1,"professions":[],"gains":{"made":1,"starved":true,"spent":{"COPPER_ORE":5}},"additives":{"FIRE_FLUX":"HC_FIRE"},"maxAdditives":2}""")
+        val forged = api.crafts.start(id, "COPPER_FORGING", listOf("FIRE_FLUX", "STONE_FLUX"))
+        assertTrue(forged.gains.starved)
+        assertEquals(2, forged.maxAdditives)
+        assertEquals("/game/api/v1/character/crafts/start?characterId=$id&job=COPPER_FORGING&additives=FIRE_FLUX%2CSTONE_FLUX", server.takeRequest().path)
     }
 
     @Test fun `a location is entered with a map from the stash or without one`(): Unit = runBlocking {

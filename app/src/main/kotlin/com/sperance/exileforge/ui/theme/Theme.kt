@@ -36,6 +36,8 @@ val Ember = Color(0xFFD9642E)
 /** The colours Path of Exile gives a crafted and a fractured modifier, and the two influences. */
 val Crafted = Color(0xFFB4B4FF)
 val Fractured = Color(0xFFA29162)
+/** The smith's handcrafted lines (2.42.0): forge copper. A map's alchemy lines read in `Vital`. */
+val Handcrafted = Color(0xFFD08A4E)
 val Shaper = Color(0xFF9FD2F0)
 val Elder = Color(0xFFA77BCF)
 

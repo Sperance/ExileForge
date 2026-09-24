@@ -1,7 +1,7 @@
-# ExileForge 2.41.0
+# ExileForge 2.42.0
 
-Android Compose client for **ktor-bestgame 0.37.0**.
-Server: branch `claude/tender-pasteur-a36kj2`, commit `3b03cfbb4268d921f55340c6595cd3e0098eb688`.
+Android Compose client for **ktor-bestgame 0.38.0**.
+Server: branch `claude/tender-pasteur-a36kj2`, commit `3ce731840bfe9c257c96e61a53a339bb0d2d8641`.
 
 ## Язык интерфейса · Interface language
 

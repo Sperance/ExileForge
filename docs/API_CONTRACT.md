@@ -1,6 +1,6 @@
 # Контракт Exile Forge 2.5
 
-Сервер: ветка `claude/tender-pasteur-a36kj2`, коммит `3b03cfbb4268d921f55340c6595cd3e0098eb688` (ktor-bestgame 0.37.0).
+Сервер: ветка `claude/tender-pasteur-a36kj2`, коммит `3ce731840bfe9c257c96e61a53a339bb0d2d8641` (ktor-bestgame 0.38.0).
 Успех: `{"success":true,"data":...}`. Ошибка: `{"success":false,"error":{"message","errorClass","errorMethod","errorCode","messageArgs"}}`; HTTP-статус сохраняется клиентом.
 
 `messageArgs` добавлено в 0.17.0 и чинит давнюю дыру: `message` — готовое английское предложение, а `error.<код>` в словаре почти всегда шаблон с дыркой («Уровень {0} слишком мал»). Заполнить её клиенту было нечем, и переводились только 17 кодов из 114 — те, у кого шаблон без дырок. Теперь конверт несёт то, что сервер подставил в своё предложение, и клиент собирает своё. Если после подстановки `{0}` остался, значит аргументов пришло меньше, чем ждёт шаблон, и показывается серверная фраза: половина предложения хуже, чем предложение не на том языке.
@@ -346,7 +346,7 @@
 | Босс убит | `POST /api/v1/character/campaign/boss?characterId=&mapCode=` → `CampaignReward`; выход открыт на час, повтор — `CP_008`; пока босс жив, `complete` — `CP_007` |
 | Карта сокровищ (0.34.0) | `POST /api/v1/character/campaign/treasure?characterId=&mapCode=` → `{money, chests, boss}`; раз за окно, иначе `CP_009` |
 | Вызов стража | `POST /api/v1/character/campaign/summon?characterId=&mapCode=` → `{money, chests, boss}`; живого — `CP_010` |
-| Ремёсла (0.37.0) | `GET /api/v1/character/crafts?characterId=` → `CraftsState` (досчитывает циклы до сейчас, добыча — в сумке); `POST …/crafts/start?characterId=&job=`, `POST …/crafts/stop?characterId=`; без инструмента — `CF_004`, мал уровень — `CF_003` |
+| Ремёсла (0.37.0) | `GET /api/v1/character/crafts?characterId=` → `CraftsState` (досчитывает циклы до сейчас, добыча — в сумке); `POST …/crafts/start?characterId=&job=[&additives=A,B]` (0.38.0: примеси кузнеца; ремесло тратит материалы каждый цикл и встаёт, когда они кончаются — `CF_006`, чужая примесь — `CF_007`, закрытая локация — `CF_005`), `POST …/crafts/stop?characterId=`; без инструмента — `CF_004`, мал уровень — `CF_003` |
 | Вход в локацию (0.35.0) | `POST /api/v1/character/campaign/start?characterId=&mapCode=[&itemId=]` → `{map, chests}`; карта (слот `MAP`, шаблон `MAP_<mapCode>`) тратится, чужая локация — `CP_011`; без `itemId` — вход без карты |
 | Витрина торговца | `GET /api/v1/character/merchant?characterId=` → `{refreshAt, offers:[{id, item, price}]}` |
 | Покупка у торговца | `POST /api/v1/character/merchant/buy?characterId=&offerId=` → `{item, money}`; `CH_016` не хватает золота, `CH_017` нет предложения |

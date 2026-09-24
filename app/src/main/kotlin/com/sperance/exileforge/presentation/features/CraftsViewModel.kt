@@ -23,9 +23,9 @@ class CraftsViewModel(private val runtime: ForgeRuntime) {
 
     fun openProfession(code: String) { runtime.mutable.update { it.copy(play = it.play.copy(craftsProfession = code)) } }
 
-    fun start(job: String) { with(runtime) { task(writing = true, touches = setOf(Reads.CRAFTS)) {
+    fun start(job: String, additives: List<String> = emptyList()) { with(runtime) { task(writing = true, touches = setOf(Reads.CRAFTS)) {
         val id = state.value.play.characterId
-        land(id, api.crafts.start(id, job))
+        land(id, api.crafts.start(id, job, additives))
         mutable.update { it.copy(message = ui("crafts.started")) }
     } } }
 

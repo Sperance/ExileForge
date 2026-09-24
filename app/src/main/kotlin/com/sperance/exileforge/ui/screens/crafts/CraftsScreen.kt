@@ -25,7 +25,11 @@ import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.LocaleKey
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.model.crafts.JobKind
 import com.sperance.exileforge.core.model.crafts.JobView
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import com.sperance.exileforge.core.model.crafts.ProfessionView
 import com.sperance.exileforge.core.model.crafts.WorkGains
 import com.sperance.exileforge.presentation.ForgeViewModel
@@ -41,9 +45,28 @@ fun professionTitle(code: String) = locOr(LocaleKey.professionName(code), displa
 fun jobTitle(code: String) = locOr(LocaleKey.jobName(code), displayName(code))
 fun materialTitle(code: String) = locOr(LocaleKey.itemName(code), displayName(code))
 
-/** What an answer brought, as one line: «+2 Iron Ore, +1 Bark», or that the cycles came up empty. */
-fun gainsLine(gains: WorkGains): String =
-    gains.items.entries.joinToString { (code, amount) -> ui("crafts.gain", amount, materialTitle(code)) }.ifBlank { ui("crafts.gain_nothing", gains.cycles) }
+/**
+ * What an answer brought, as one line: «+2 Iron Ore, +1 Bark», the pieces a smith or a cartographer
+ * made, that the bag ran dry, or that the cycles came up empty.
+ */
+fun gainsLine(s: ForgeState, gains: WorkGains): String = listOfNotNull(
+    gains.items.entries.joinToString { (code, amount) -> ui("crafts.gain", amount, materialTitle(code)) }.ifBlank { null },
+    gains.equipment.takeIf { it.isNotEmpty() }?.let { made -> ui("crafts.made", made.joinToString { inventoryDocument(it, s.world.inventoryBases[it.equipmentId]).text("name") }) },
+    ui("crafts.starved").takeIf { gains.starved },
+).joinToString(" · ").ifBlank { ui("crafts.gain_nothing", gains.cycles) }
+
+/** How many of a stack the bag holds, by the item's code — a material or an orb. */
+fun bagCount(s: ForgeState, code: String): Long {
+    val id = s.world.materials.firstOrNull { it.code == code }?.id ?: s.world.orbs.firstOrNull { it.code == code }?.id ?: return 0
+    return s.play.hero?.bag?.firstOrNull { it.itemId == id }?.amount ?: 0
+}
+
+/** What a work makes, in words: the stack, the smith's range or the cartographer's location. */
+fun jobProduct(job: JobView): String = when (job.kind) {
+    JobKind.ITEM -> materialTitle(job.output)
+    JobKind.EQUIPMENT -> ui("crafts.kind_equipment", job.band.getOrElse(0) { 1 }, job.band.getOrElse(1) { 1 })
+    JobKind.MAP -> ui("crafts.kind_map", com.sperance.exileforge.core.campaign.mapTitle(job.map))
+}
 
 /**
  * The crafts tab (since 2.41.0, server 0.37.0): the work under way on a plaque over the tiles, one
@@ -96,7 +119,7 @@ fun gainsLine(gains: WorkGains): String =
             OutlinedButton(enabled = !s.busy, onClick = vm::stopWork) { Text(ui("crafts.stop")) }
         }
         CycleBar(work.settledAt, work.cycleMillis, serverNow)
-        s.play.craftsLog.firstOrNull()?.let { Text(gainsLine(it), color = Parchment, style = MaterialTheme.typography.bodySmall) }
+        s.play.craftsLog.firstOrNull()?.let { Text(gainsLine(s, it), color = Parchment, style = MaterialTheme.typography.bodySmall) }
     }
 }
 
@@ -170,12 +193,12 @@ private fun share(profession: ProfessionView): Float = profession.next?.takeIf {
                 CycleBar(work.settledAt, work.cycleMillis, serverNow, height = 10)
                 val log = s.play.craftsLog
                 Text(ui("crafts.session", log.sumOf { it.cycles }, log.sumOf { it.nothing }), color = Muted, style = MaterialTheme.typography.labelMedium)
-                log.take(FEED).forEach { Text(gainsLine(it), color = Parchment, style = MaterialTheme.typography.bodySmall) }
+                log.take(FEED).forEach { Text(gainsLine(s, it), color = Parchment, style = MaterialTheme.typography.bodySmall) }
             }
         }
         item { Engraved(ui("crafts.works")) }
         items(profession.jobs, key = { it.code }) { job ->
-            JobRow(job, locked = job.level > profession.level, current = work?.job == job.code) { chosen = job }
+            JobRow(job, locked = job.level > profession.level || !job.open, current = work?.job == job.code) { chosen = job }
         }
     }
     chosen?.let { job -> JobSheet(s, vm, profession, job, current = work?.job == job.code) { chosen = null } }
@@ -189,7 +212,9 @@ private fun share(profession: ProfessionView): Float = profession.next?.takeIf {
         horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(jobTitle(job.code), color = if (locked) Muted else GoldBright, style = MaterialTheme.typography.titleSmall)
-            Text(ui("crafts.job_line", materialTitle(job.output), number(job.cycleMillis / 1000.0), number(job.nothing)), color = Muted, style = MaterialTheme.typography.bodySmall)
+            Text(ui("crafts.job_line", jobProduct(job), number(job.cycleMillis / 1000.0), number(job.nothing)), color = Muted, style = MaterialTheme.typography.bodySmall)
+            if (job.inputs.isNotEmpty()) Text(job.inputs.joinToString { ui("crafts.gain", it.amount, materialTitle(it.item)).removePrefix("+") },
+                color = Muted, style = MaterialTheme.typography.labelSmall)
         }
         if (locked) Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Outlined.Lock, null, tint = Muted, modifier = Modifier.size(16.dp))
@@ -199,13 +224,34 @@ private fun share(profession: ProfessionView): Float = profession.next?.takeIf {
 }
 
 /** A work, opened: what it brings, how long, how often in vain, what it teaches and finds on the side — and its button. */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable private fun JobSheet(s: ForgeState, vm: ForgeViewModel, profession: ProfessionView, job: JobView, current: Boolean, onDismiss: () -> Unit) {
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    val crafts = s.play.crafts
+    var additives by remember(job.code) { mutableStateOf(emptyList<String>()) }
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(jobTitle(job.code), color = GoldBright, style = MaterialTheme.typography.titleLarge)
             Text(professionTitle(profession.code), color = Rune, style = MaterialTheme.typography.labelMedium)
-            PropertyRow(ui("crafts.output"), materialTitle(job.output), com.sperance.exileforge.core.display.Glyph.ITEM)
+            PropertyRow(ui("crafts.output"), jobProduct(job), com.sperance.exileforge.core.display.Glyph.ITEM)
+            if (job.inputs.isNotEmpty()) {
+                Engraved(ui("crafts.inputs"))
+                job.inputs.forEach { input ->
+                    val have = bagCount(s, input.item)
+                    PropertyRow(materialTitle(input.item), ui("crafts.have", have, input.amount), com.sperance.exileforge.core.display.Glyph.CRAFT)
+                }
+            }
+            // The smith's additives (2.42.0): each is spent every smelt and guarantees its handcrafted line.
+            if (job.additives && crafts != null && crafts.maxAdditives > 0) {
+                Engraved(ui("crafts.additives", crafts.maxAdditives))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    crafts.additives.keys.forEach { code ->
+                        val picked = code in additives
+                        FilterChip(selected = picked, enabled = picked || (bagCount(s, code) > 0 && additives.size < crafts.maxAdditives),
+                            onClick = { additives = if (picked) additives - code else additives + code },
+                            label = { Text(ui("crafts.gain", bagCount(s, code), materialTitle(code)).removePrefix("+")) })
+                    }
+                }
+            }
             PropertyRow(ui("crafts.cycle_label"), ui("crafts.seconds", number(job.cycleMillis / 1000.0), number(job.seconds)), com.sperance.exileforge.core.display.Glyph.SPEED)
             PropertyRow(ui("crafts.nothing"), ui("crafts.percent", number(job.nothing)), com.sperance.exileforge.core.display.Glyph.INFO)
             PropertyRow(ui("crafts.experience"), number(job.experience), com.sperance.exileforge.core.display.Glyph.LEVEL)
@@ -213,8 +259,9 @@ private fun share(profession: ProfessionView): Float = profession.next?.takeIf {
             Spacer(Modifier.height(4.dp))
             when {
                 job.level > profession.level -> Text(ui("crafts.needs_level", job.level), color = LifeRed, style = MaterialTheme.typography.bodyMedium)
+                !job.open -> Text(ui("crafts.locked_map"), color = LifeRed, style = MaterialTheme.typography.bodyMedium)
                 current -> OutlinedButton(enabled = !s.busy, onClick = { onDismiss(); vm.stopWork() }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text(ui("crafts.stop")) }
-                else -> Button(enabled = !s.busy, onClick = { onDismiss(); vm.startWork(job.code) }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text(ui("crafts.start")) }
+                else -> Button(enabled = !s.busy, onClick = { onDismiss(); vm.startWork(job.code, additives) }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text(ui("crafts.start")) }
             }
             if (profession.equipped == null && job.level <= profession.level) Text(ui("crafts.no_tool"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
         }

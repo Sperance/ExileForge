@@ -50,6 +50,18 @@ object MonsterRoller {
     }
 
     /**
+     * A jetton as a pack (since 2.54.0): usually one monster, 15% of the time 1–3 of them, mixed
+     * species from the map's pool, each rolled on its own. [packRandom] is a stream of its own —
+     * never the one [random] feeds — so a plain spawn's roll is untouched whether or not this ever
+     * ran: the leader (first, fought first) comes from [random] exactly as [roll] alone would give it.
+     */
+    fun rollPack(map: CampaignMap, rarities: List<CampaignRarity>, random: Random, packRandom: Random): List<RolledMonster> {
+        val leader = roll(map, rarities, random)
+        val size = if (packRandom.nextDouble() < PACK_CHANCE) 1 + packRandom.nextInt(PACK_MAX) else 1
+        return listOf(leader) + List(size - 1) { roll(map, rarities, packRandom) }
+    }
+
+    /**
      * The map's boss as it stands (since server 0.32.0): nothing is thrown — its rarity is `UNIQUE`
      * and its modifiers are fixed — and it folds by the same formula, the tier's power included.
      */
@@ -90,6 +102,9 @@ object MonsterRoller {
             }
         }
     }
+
+    private const val PACK_CHANCE = 0.15
+    private const val PACK_MAX = 3
 
     private fun <T> weighted(items: List<T>, random: Random, weight: (T) -> Int): T? {
         val live = items.filter { weight(it) > 0 }

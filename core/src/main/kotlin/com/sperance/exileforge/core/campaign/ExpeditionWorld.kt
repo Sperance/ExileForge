@@ -12,9 +12,20 @@ import kotlin.random.Random
 /** What a monster is doing on the map, between fights. */
 enum class AgentMode { IDLE, ASLEEP, LURKING, CHASING, HUNTING, RETURNING }
 
-/** A monster walking the map: where it lives, where it is going, and whether it is still there. */
-class MonsterAgent(val id: Int, val monster: RolledMonster, val homeX: Double, val homeY: Double) {
+/**
+ * A monster walking the map: where it lives, where it is going, and whether it is still there.
+ *
+ * [pack] is one or more (2.54.0): a jetton is usually a single foe, sometimes a pack of up to
+ * three, fought one at a time without leaving the arena. [monster] — the map token, its walking
+ * behaviour and its portrait on the ground — is always the strongest of the pack; [current] is
+ * whoever is actually being fought, tracked by [packIndex].
+ */
+class MonsterAgent(val id: Int, val pack: List<RolledMonster>, val homeX: Double, val homeY: Double) {
+    val monster: RolledMonster = pack.maxBy { it.rarity.ordinal }
     val rule: BehaviourRule get() = monster.behaviour
+    /** Which member of [pack] is next to fight, or is being fought right now. */
+    var packIndex = 0
+    val current: RolledMonster get() = pack[packIndex]
     var x = homeX
     var y = homeY
     var targetX = homeX
@@ -72,7 +83,8 @@ sealed interface WorldEvent {
  */
 class ExpeditionWorld(
     val map: ExpeditionMap,
-    monsters: List<RolledMonster>,
+    /** One entry per spawn, usually of one monster — a pack (since 2.54.0) is more than one. */
+    packs: List<List<RolledMonster>>,
     heroSpeed: Double,
     private val seed: Long,
     lightRadius: Double = DEFAULT_LIGHT,
@@ -88,12 +100,12 @@ class ExpeditionWorld(
 
     private val random = Random(seed)
     /** The map's boss (since 2.34.0): the guardian of the exit, standing beside it; none from an older server. */
-    val boss: MonsterAgent? = bossMonster?.let { monster -> guardPost()?.let { cell -> MonsterAgent(monsters.size, monster, cell.x + 0.5, cell.y + 0.5) } }
+    val boss: MonsterAgent? = bossMonster?.let { monster -> guardPost()?.let { cell -> MonsterAgent(packs.size, listOf(monster), cell.x + 0.5, cell.y + 0.5) } }
     /** The corrupted zone's guardian (since 2.53.0), if this run rolled one at all — away from the everyday spawns and the exit. */
-    val corruption: MonsterAgent? = corruptionMonster?.let { monster -> corruptionPost()?.let { cell -> MonsterAgent(monsters.size + 1, monster, cell.x + 0.5, cell.y + 0.5) } }
-    val agents: List<MonsterAgent> = monsters.zip(map.spawns).mapIndexed { index, (monster, cell) ->
-        MonsterAgent(index, monster, cell.x + 0.5, cell.y + 0.5).also { agent ->
-            if (monster.behaviour.type == BehaviourRule.PATROL) agent.patrol = patrolEnd(cell, monster.behaviour.wanderRadius)
+    val corruption: MonsterAgent? = corruptionMonster?.let { monster -> corruptionPost()?.let { cell -> MonsterAgent(packs.size + 1, listOf(monster), cell.x + 0.5, cell.y + 0.5) } }
+    val agents: List<MonsterAgent> = packs.zip(map.spawns).mapIndexed { index, (pack, cell) ->
+        MonsterAgent(index, pack, cell.x + 0.5, cell.y + 0.5).also { agent ->
+            if (agent.monster.behaviour.type == BehaviourRule.PATROL) agent.patrol = patrolEnd(cell, agent.monster.behaviour.wanderRadius)
         }
     } + listOfNotNull(boss, corruption)
 
@@ -460,8 +472,11 @@ class ExpeditionWorld(
             val (low, high) = map.monsterCount.let { (it.getOrNull(0) ?: 10) to (it.getOrNull(1) ?: 14) }
             // The map's size is the server's since 0.40.0; room for the pack a map's modifier asks for comes with it.
             val layout = MapGenerator.generate(seed, map.biome, random.nextInt(low, high + 1), map.size)
-            val monsters = List(layout.spawns.size) { MonsterRoller.roll(map, rarities, random).copy(mapBuffs = mapBuffs) }
-            return ExpeditionWorld(layout, monsters, heroSpeed(heroStats), seed, lightRadius(heroStats, map.light),
+            // A pack's own stream (2.54.0), so whether a spawn is one or several never shifts the
+            // ordinary roll that follows it — the same seed still hands out the same single monsters.
+            val packRandom = Random(seed * 32452843 + 71)
+            val packs = List(layout.spawns.size) { MonsterRoller.rollPack(map, rarities, random, packRandom).map { it.copy(mapBuffs = mapBuffs) } }
+            return ExpeditionWorld(layout, packs, heroSpeed(heroStats), seed, lightRadius(heroStats, map.light),
                 MonsterRoller.boss(map, rarities)?.copy(mapBuffs = mapBuffs),
                 MonsterRoller.corruption(map, rarities, corruptionChance, random)?.copy(mapBuffs = mapBuffs))
         }

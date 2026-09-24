@@ -46,19 +46,31 @@ data class FightHud(
     val lunge: LungeView? = null,
     val events: List<CombatEvent> = emptyList(),
     val started: Boolean = true,
+    /** Which foe of the jetton's pack this is (since 2.54.0); 1 of 1 for an ordinary one. */
+    val packIndex: Int = 1, val packTotal: Int = 1,
 )
+
+/** One member of a pack fought and its own log, kept apart so a mixed pack's log names each one right. */
+data class PackHit(val monster: RolledMonster, val events: List<CombatEvent>, val duration: Double)
 
 /**
  * A fight that is over, as the screen after it reads it: the whole log to scroll back through and
  * what it came to — dealt and taken by blows and by ailments, how long, criticals,
  * blocks, evasions, what was inflicted, flasks drunk.
+ *
+ * Since 2.54.0 a jetton can be a pack of up to three, fought one after another without leaving the
+ * arena: [pack] holds one [PackHit] per foe actually fought, in order, and [monster] — for the
+ * header and the portrait — is the strongest of them, the one the token showed on the map. Every
+ * figure below sums over the whole pack.
  */
 data class FightReport(
     val monster: RolledMonster,
     val outcome: Outcome,
-    val events: List<CombatEvent>,
+    val pack: List<PackHit>,
     val duration: Double,
 ) {
+    val events: List<CombatEvent> get() = pack.flatMap { it.events }
+    val packSize: Int get() = pack.size
     private fun mine(action: Action? = null) = events.filter { it.actor == Side.HERO && (action == null || it.action == action) }
     private fun theirs(action: Action? = null) = events.filter { it.actor == Side.MONSTER && (action == null || it.action == action) }
     val dealt: Int get() = mine().sumOf { it.damage }.roundToInt()
@@ -179,10 +191,13 @@ class ExpeditionRun(
     private var fights = 0
     private var speed = 1
     private var reward: CampaignReward? = null
-    private var rewardPending = false
+    /** In-flight `kill` calls (since 2.54.0, one per pack member): the loot screen waits for all of them. */
+    private var pendingRewards = 0
     private var rewardFailed = false
     private var slain: RolledMonster? = null
     private var report: FightReport? = null
+    /** What a pack has brought down so far this encounter, one entry per foe, until the whole jetton is cleared. */
+    private var packLog: List<PackHit> = emptyList()
     private var fall: CampaignFall? = null
     private var fallPending = false
     private var gold = 0L
@@ -238,18 +253,26 @@ class ExpeditionRun(
             RunCommand.Retreat -> if (fight != null && !started) walkAway() else fight?.retreat()
             RunCommand.Begin -> if (fight != null) started = true
             RunCommand.Continue -> when (phase) {
-                RunPhase.LOOT -> if (!rewardPending) { phase = RunPhase.MAP; reward = null; slain = null; report = null; rewardFailed = false }
+                RunPhase.LOOT -> if (pendingRewards == 0) { phase = RunPhase.MAP; reward = null; slain = null; report = null; rewardFailed = false }
                 RunPhase.DEAD -> if (!fallPending) phase = RunPhase.LEFT
                 RunPhase.CLEARED -> phase = RunPhase.LEFT
                 else -> Unit
             }
+            // A pack (2.54.0) reports one kill per foe, so this can land more than once per
+            // encounter — merged rather than replaced, gold and experience summed as always.
             is RunCommand.Reward -> {
-                reward = command.reward
-                rewardPending = false
-                gold += command.reward.gold
-                experience += command.reward.experience
+                val incoming = command.reward
+                reward = reward?.copy(
+                    experience = reward!!.experience + incoming.experience, gold = reward!!.gold + incoming.gold,
+                    items = mergeStacks(reward!!.items, incoming.items), equipment = reward!!.equipment + incoming.equipment,
+                    level = incoming.level, totalExperience = incoming.totalExperience, money = incoming.money,
+                    recipeFound = reward!!.recipeFound ?: incoming.recipeFound,
+                ) ?: incoming
+                pendingRewards--
+                gold += incoming.gold
+                experience += incoming.experience
             }
-            RunCommand.RewardFailed -> { rewardPending = false; rewardFailed = true }
+            RunCommand.RewardFailed -> { pendingRewards--; rewardFailed = true }
             is RunCommand.Fallen -> { fall = command.fall; fallPending = false }
             RunCommand.FallFailed -> fallPending = false
             is RunCommand.Chests -> world.placeChests(command.count)
@@ -264,6 +287,11 @@ class ExpeditionRun(
             RunCommand.BossAbsent -> if (fightAgent !== world.boss) world.bossAbsent()
         }
     }
+
+    /** Two orb stacks merged by item (2.54.0): a pack's rewards are summed, not replaced. */
+    private fun mergeStacks(a: List<com.sperance.exileforge.core.model.hero.CharacterItem>, b: List<com.sperance.exileforge.core.model.hero.CharacterItem>) =
+        (a + b).groupingBy { it.itemId }.fold(0L) { total, item -> total + item.amount }
+            .map { (itemId, amount) -> com.sperance.exileforge.core.model.hero.CharacterItem(itemId, amount) }
 
     /** A flask on the map: the same charge, the same heal over the same seconds, one at a time. */
     private fun drinkOnMap(): Boolean {
@@ -290,7 +318,9 @@ class ExpeditionRun(
         when (val event = world.step(dt, x, y)) {
             is WorldEvent.Encounter -> {
                 flaskUntil = 0.0
-                val monster = Combatant(event.agent.monster.stats, map.level, rules)
+                // Fought in the order it rolled (2.54.0): the token shows the strongest, but the
+                // first blow lands on whoever is first in the pack.
+                val monster = Combatant(event.agent.current.stats, map.level, rules)
                 fightAgent = event.agent
                 fight = Battle(hero, monster, rules, life, flasks, Random(seed * 31 + fights++))
                 started = false
@@ -310,21 +340,40 @@ class ExpeditionRun(
         battle.advance(dt * speed)
         val outcome = battle.outcome ?: return
         if (battle.time < battle.duration + AFTERMATH) return
-        report = FightReport(agent.monster, outcome, battle.events, battle.duration)
         life = battle.heroLife
         flasks = battle.flasks
         when (outcome) {
             Outcome.WIN -> {
-                agent.alive = false
-                slain = agent.monster
+                packLog = packLog + PackHit(agent.current, battle.events, battle.duration)
                 kills++
                 flasks = min(maxFlasks, flasks + rules.flask.perKill)
-                rewardPending = true
+                pendingRewards++
+                onKill(agent.current)
+                agent.packIndex++
+                if (agent.packIndex < agent.pack.size) {
+                    // Another foe stands in the same jetton (2.54.0): straight into the next bout,
+                    // no trip back to the map — the brief pause is the same AFTERMATH every fight ends on.
+                    val next = Combatant(agent.current.stats, map.level, rules)
+                    fight = Battle(hero, next, rules, life, flasks, Random(seed * 31 + fights++))
+                    if (phase != RunPhase.DEAD) pendingGear?.let(::regear)
+                    pendingGear = null
+                    return
+                }
+                agent.alive = false
+                slain = agent.monster
+                report = FightReport(agent.monster, Outcome.WIN, packLog, packLog.sumOf { it.duration })
+                packLog = emptyList()
                 phase = RunPhase.LOOT
-                onKill(agent.monster)
             }
-            Outcome.LOSS -> { life = 0.0; fallPending = true; phase = RunPhase.DEAD; onFallen() }
-            Outcome.RETREAT -> { world.retreatFrom(agent); report = null; phase = RunPhase.MAP }
+            Outcome.LOSS -> {
+                packLog = packLog + PackHit(agent.current, battle.events, battle.duration)
+                report = FightReport(agent.monster, Outcome.LOSS, packLog, packLog.sumOf { it.duration })
+                packLog = emptyList()
+                life = 0.0; fallPending = true; phase = RunPhase.DEAD; onFallen()
+            }
+            // Nothing already looted is lost — every earlier kill in this pack was reported the
+            // moment it happened — but there is no report for a fight cut short.
+            Outcome.RETREAT -> { packLog = emptyList(); world.retreatFrom(agent); report = null; phase = RunPhase.MAP }
         }
         fight = null
         fightAgent = null
@@ -341,8 +390,8 @@ class ExpeditionRun(
             heroShield = (battle?.fighter(Side.HERO)?.shield ?: hero.maxShield).roundToInt(), heroMaxShield = hero.maxShield.roundToInt(),
             flasks = battle?.flasks ?: flasks, maxFlasks = maxFlasks, flaskActive = battle?.flaskActive ?: (flaskUntil > clock),
             alive = world.alive, total = world.total, sealed = world.sealed,
-            fight = battle?.let { b -> fightAgent?.let { fightHud(b, it.monster) } },
-            reward = reward, rewardPending = rewardPending, rewardFailed = rewardFailed, slain = slain, report = report,
+            fight = battle?.let { b -> fightAgent?.let { fightHud(b, it) } },
+            reward = reward, rewardPending = pendingRewards > 0, rewardFailed = rewardFailed, slain = slain, report = report,
             fall = fall, fallPending = fallPending,
             gold = gold, experience = experience, kills = kills,
             chestsLeft = world.chests.count { !it.opened }, chest = chest, chestPending = chestPending, chestFailed = chestFailed,
@@ -350,7 +399,8 @@ class ExpeditionRun(
         )
     }
 
-    private fun fightHud(battle: Battle, monster: RolledMonster): FightHud {
+    private fun fightHud(battle: Battle, agent: MonsterAgent): FightHud {
+        val monster = agent.current
         val h = battle.fighter(Side.HERO)
         val m = battle.fighter(Side.MONSTER)
         val hits = battle.events.withIndex()
@@ -376,6 +426,7 @@ class ExpeditionRun(
             lunge = battle.lunge()?.let { (event, progress) -> LungeView(event.actor, event.action, event.kind, event.landed, progress.toFloat()) },
             events = battle.events.toList().asReversed(),
             started = started,
+            packIndex = agent.packIndex + 1, packTotal = agent.pack.size,
         )
     }
 

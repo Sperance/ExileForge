@@ -36,6 +36,20 @@ class CampaignTest {
         }
     }
 
+    /** A jetton is a pack (since 2.54.0) on its own random stream, never touching the leader's roll. */
+    @Test fun `a jetton is usually one monster, sometimes a pack, never with a unique in it`() {
+        var sawPack = false
+        repeat(200) { seed ->
+            val solo = MonsterRoller.roll(map, rarities, Random(seed))
+            val pack = MonsterRoller.rollPack(map, rarities, Random(seed), Random(seed * 991L))
+            assertEquals(solo, pack.first(), "the pack's own random must never shift the leader's roll")
+            assertTrue(pack.size in 1..3)
+            assertTrue(pack.none { it.rarity == MonsterRarity.UNIQUE })
+            if (pack.size > 1) sawPack = true
+        }
+        assertTrue(sawPack, "some jetton among 200 should have come out as a pack")
+    }
+
     @Test fun `a strong hero wins, a weak one falls, and the same seed is the same fight`() {
         val hero = Combatant(mapOf("STOCK_HEALTH" to 60.0, "STOCK_ATTACK_PHYSICAL" to 9.0, "STOCK_ATTACK_SPEED" to 1.4), 1)
         val monster = Combatant(drowned.stats, 1)
@@ -108,7 +122,7 @@ class CampaignTest {
         val tiles = Array(width * height) { i -> if (rows[i / width][i % width] == '#') Tile.WALL else Tile.FLOOR }
         val layout = ExpeditionMap(width, height, tiles, IntArray(width * height), find('H'), find('E'), listOf(find('M')))
         val monster = RolledMonster("DROWNED", "HUMANOID", MonsterRarity.NORMAL, emptyList(), drowned.stats, rule)
-        return ExpeditionWorld(layout, listOf(monster), 3.2, 1, light)
+        return ExpeditionWorld(layout, listOf(listOf(monster)), 3.2, 1, light)
     }
 
     @Test fun `a chase goes round the rock instead of into it`() {
@@ -284,6 +298,33 @@ class CampaignTest {
         assertEquals(run.world.agents.size - 1, run.hud.value.alive)
         run.send(RunCommand.Leave); run.tick(0.016)
         assertEquals(RunPhase.LEFT, run.hud.value.phase)
+    }
+
+    /** A pack (since 2.54.0) is fought straight through, one report and one loot screen at the end. */
+    @Test fun `a pack is fought one after another to a single report and one loot screen`() {
+        val killed = mutableListOf<String>()
+        val run = ExpeditionRun.start(map, rarities, mapOf("STOCK_HEALTH" to 500.0, "STOCK_ATTACK_PHYSICAL" to 60.0, "STOCK_ATTACK_SPEED" to 2.0), 10, 18,
+            onKill = { killed += it.code }, onCleared = {})
+        val agent = run.world.agents.first()
+        assertEquals(2, agent.pack.size, "seed 18 is picked because its first jetton is a pack of two")
+        run.world.heroX = agent.x
+        run.world.heroY = agent.y
+        run.tick(0.016)
+        assertEquals(RunPhase.FIGHT, run.hud.value.phase)
+        repeat(6000) { if (run.hud.value.phase == RunPhase.FIGHT) run.tick(0.05) }
+        assertEquals(RunPhase.LOOT, run.hud.value.phase, "phase reaches LOOT only once the whole pack is down")
+        assertEquals(2, killed.size, "both members of the pack were reported")
+        val report = assertNotNull(run.hud.value.report)
+        assertEquals(2, report.packSize)
+        assertTrue(report.dealt > 0)
+        assertFalse(agent.alive)
+        run.send(RunCommand.Reward(CampaignReward(gold = 3))); run.tick(0.016)
+        assertTrue(run.hud.value.rewardPending, "one of the pack's two kills is still unanswered")
+        run.send(RunCommand.Reward(CampaignReward(gold = 4))); run.tick(0.016)
+        assertFalse(run.hud.value.rewardPending)
+        run.send(RunCommand.Continue); run.tick(0.016)
+        assertEquals(RunPhase.MAP, run.hud.value.phase)
+        assertEquals(7L, run.hud.value.gold, "gold from both kills is summed")
     }
 
     @Test fun `a fight waits for its beginning, and turning away before it strikes nothing`() {

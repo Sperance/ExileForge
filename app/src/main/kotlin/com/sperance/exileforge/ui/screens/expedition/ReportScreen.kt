@@ -58,7 +58,7 @@ import java.util.Locale
             if (won) Spoils(s, hud) { looked = it } else DeathPrice(hud)
             if (logOpen) Box(Modifier.fillMaxWidth().height(260.dp).background(Panel, RoundedCornerShape(8.dp))
                 .border(1.dp, Bronze.copy(alpha = .4f), RoundedCornerShape(8.dp)).padding(horizontal = 10.dp, vertical = 8.dp)) {
-                FightLog(report.events, report.monster.code, Modifier.fillMaxSize())
+                FightLog(report.pack, Modifier.fillMaxSize())
             }
         }
         FightFigures(report, logOpen) { logOpen = !logOpen }
@@ -89,12 +89,14 @@ import java.util.Locale
             }
             Text(if (won) ui("expedition.report_slain", monsterTitle(monster.code)) else ui("expedition.report_fallen"),
                 color = outcomeColour(report.outcome), style = MaterialTheme.typography.titleLarge)
+            // A pack (since 2.54.0) says its size under the outcome.
+            if (report.packSize > 1) Text(ui("expedition.report_pack", report.packSize), color = Muted, style = MaterialTheme.typography.labelSmall)
         }
     }
 }
 
 /** An engraved caption with a bronze rule running out of it, heading one part of the spoils. */
-@Composable private fun Caption(text: String, tone: Color = Gold) {
+@Composable internal fun Caption(text: String, tone: Color = Gold) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
         Text(text.uppercase(), color = tone, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
         Box(Modifier.weight(1f).height(1.dp).background(Brush.horizontalGradient(listOf(Bronze, Color.Transparent))))

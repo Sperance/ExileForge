@@ -129,7 +129,9 @@ internal fun DamageType.key() = "enum.damage.$name"
                                 portrait = { time, wash, amount, flash -> Portraits.hero(this, s.heroClass?.code, time, wash, amount, flash) })
                             FighterFrame(Modifier.weight(1f).fillMaxHeight().offset { IntOffset(monsterShift.roundToPx(), 0) },
                                 side = Side.MONSTER, accent = rarityTint(monster.rarity), name = monsterTitle(monster.code),
-                                line = ui("expedition.monster_line", ui(monster.rarity.key()), level),
+                                // A pack (since 2.54.0) says which foe of it this is.
+                                line = if (fight.packTotal > 1) ui("expedition.monster_line_pack", ui(monster.rarity.key()), level, fight.packIndex, fight.packTotal)
+                                    else ui("expedition.monster_line", ui(monster.rarity.key()), level),
                                 life = fight.monsterLife, maxLife = fight.monsterMaxLife, shield = fight.monsterShield, maxShield = fight.monsterMaxShield,
                                 swing = fight.monsterSwing,
                                 ailments = fight.monsterAilments, held = fight.monsterHeld, flash = flash(lunge, Side.MONSTER), glow = null,
@@ -359,17 +361,33 @@ private fun washAmount(ailment: Ailment): Float = when (ailment) {
 
 /** The blows so far, newest first: when, who, and what came of it, coloured by what it was. */
 @Composable internal fun FightLog(events: List<CombatEvent>, monsterCode: String, modifier: Modifier = Modifier) {
-    val monster = monsterTitle(monsterCode)
     LazyColumn(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-        items(events) { event ->
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(ui("expedition.log_time", String.format(Locale.ROOT, "%.1f", event.time)), color = Muted,
-                    style = MaterialTheme.typography.labelSmall, modifier = Modifier.width(40.dp))
-                Text(logLine(event, monster), color = logColour(event), style = MaterialTheme.typography.bodySmall,
-                    fontWeight = if (event.kind == HitKind.CRIT) FontWeight.Bold else FontWeight.Normal,
-                    fontStyle = if (event.action == Action.TICK) FontStyle.Italic else FontStyle.Normal)
-            }
+        items(events) { EventRow(it, monsterTitle(monsterCode)) }
+    }
+}
+
+/**
+ * The log of a whole pack (since 2.54.0): one list, each foe's blows under its own name — a mixed
+ * pack's «they hit» lines would otherwise all say the wrong name. A caption between them names which
+ * of the pack it was, only when there was more than one.
+ */
+@Composable internal fun FightLog(pack: List<PackHit>, modifier: Modifier = Modifier) {
+    LazyColumn(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+        pack.forEachIndexed { index, hit ->
+            val name = monsterTitle(hit.monster.code)
+            if (pack.size > 1) item { Caption(ui("expedition.report_pack_enemy", index + 1, pack.size, name)) }
+            items(hit.events) { EventRow(it, name) }
         }
+    }
+}
+
+@Composable private fun EventRow(event: CombatEvent, monster: String) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(ui("expedition.log_time", String.format(Locale.ROOT, "%.1f", event.time)), color = Muted,
+            style = MaterialTheme.typography.labelSmall, modifier = Modifier.width(40.dp))
+        Text(logLine(event, monster), color = logColour(event), style = MaterialTheme.typography.bodySmall,
+            fontWeight = if (event.kind == HitKind.CRIT) FontWeight.Bold else FontWeight.Normal,
+            fontStyle = if (event.action == Action.TICK) FontStyle.Italic else FontStyle.Normal)
     }
 }
 

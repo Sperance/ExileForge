@@ -20,9 +20,9 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.34.0, `versionCode` 52) for the
-**ktor-bestgame** RPG server (0.32.0), pinned in
-`core/.../contract/Contract.kt` as `SERVER_COMMIT = 88eea1e39a8b43176a183ad9dbcd87ffd396b817`
+ExileForge is an **Android Compose client** (version 2.35.0, `versionCode` 53) for the
+**ktor-bestgame** RPG server (0.33.0), pinned in
+`core/.../contract/Contract.kt` as `SERVER_COMMIT = 08cec1076555e93e0976ccc1c0dd602f5838e5e6`
 on the server branch `claude/tender-pasteur-a36kj2`.
 
 The client is deliberately **thin**: the server owns items, stats, modifier rolls and inventory.
@@ -508,7 +508,7 @@ These are enforced by tests and are the point of the client's design:
     poison and bleeding as damage over time logged once a second as `Action.TICK`, chill as slower
     actions, shock as more damage taken, freeze as a held fighter; the life flask
     (`rules.flask`, charges per run, one back per kill); and retreat (`rules.retreat.delay` of the
-    monster's free swings). Auras and curses are still not part of it. A death is reported to
+    monster's free swings). Auras and curses were removed from the game in 2.35.0 (server 0.33.0). A death is reported to
     `POST /campaign/fall` the same way a kill is, once and never retried: the server takes
     `death.experienceShare` of the level's experience from map level `death.fromLevel`, never the
     level, and `RunHud.fall` is what the report screen prints. What a kill *earns* stays the server's: `kill` names the map, the monster and

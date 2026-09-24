@@ -160,8 +160,7 @@ class GlyphTest {
 
     @Test fun `every stat the client names has a glyph of its own`() {
         val unnamed = com.sperance.exileforge.core.model.character.stockStats.filter { Glyph.ofStat(it) == Glyph.INFO }
-        // The auras and curses have no drawing yet; everything else must.
-        assertEquals(setOf("STOCK_AURA_EFFECT", "STOCK_CURSE_EFFECT"), unnamed.toSet())
+        assertEquals(emptySet(), unnamed.toSet())
     }
 
     @Test fun `a field, a catalogue and a modifier name their glyph exactly`() {

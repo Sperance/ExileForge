@@ -138,8 +138,6 @@ data class CombatLog(val events: List<CombatEvent>, val outcome: Outcome, val he
  * actions, shock makes it take more, a freeze stops it. Life, mana and shield regenerate as they go.
  *
  * The client fights by the owner's decision (rule 23); every constant here is the server's [rules].
- * Auras and curses are not part of it: `STOCK_AURA_EFFECT` and `STOCK_CURSE_EFFECT` have nothing
- * to act on yet.
  */
 class Battle(
     val hero: Combatant,

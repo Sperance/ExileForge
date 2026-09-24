@@ -136,10 +136,10 @@ class ServerIntegrationTest {
         craftsAreTheServers(api, id)
     }
 
-    /** The crafts (0.37.0): a starter tool in every profession's slot, a first-level work started and stopped, a locked one refused. */
+    /** The crafts (0.37.0, six since 0.38.0): a starter tool in every profession's slot, a first-level work started and stopped, a locked one refused. */
     private suspend fun craftsAreTheServers(api: GameApi, id: String) {
         val state = api.crafts.state(id)
-        assertEquals(3, state.professions.size)
+        assertEquals(6, state.professions.size)
         state.professions.forEach { assertNotNull(it.equipped, "${it.code}: no starter tool") }
         val mining = state.professions.first { it.code == "MINING" }
         assertEquals("MINING", api.crafts.start(id, mining.jobs.first { it.level == 1 }.code).work?.profession)

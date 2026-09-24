@@ -227,7 +227,9 @@ class HeroPanelTest {
         compose.setContent { ForgeTheme { Column(Modifier.background(Ink)) {
             ShowcaseList(ForgeState(busy = false, account = AccountState(signedIn = true, profile = com.sperance.exileforge.core.model.command.UserProfile("owner")), play = PlayState(characterId = "hero", characterOwner = "owner", hero = HeroView(CharacterSummary("hero", "owner", "Изгнанник"),
                     sheet = CharacterSheet(unwearable = listOf(
-                        UnwearableEquipment("helmet-base", reasons = listOf("strength: need 30, have 14")))))), world = WorldState(orbs = listOf(chaos), inventoryBases = mapOf("helmet-base" to base)), market = MarketState(filter = AuctionFilter(), showOwnLots = true, showcase = AuctionPage(listOf(theirs, mine), 0, 20, 2, 1))),
+                        UnwearableEquipment("helmet-base", reasons = listOf("strength: need 30, have 14")))),
+                    // The bag pays for the lot: a purchase the bag cannot pay for is not sent (2.46.0).
+                    bag = listOf(com.sperance.exileforge.core.model.hero.CharacterItem("chaos-orb", 10)))), world = WorldState(orbs = listOf(chaos), inventoryBases = mapOf("helmet-base" to base)), market = MarketState(filter = AuctionFilter(), showOwnLots = true, showcase = AuctionPage(listOf(theirs, mine), 0, 20, 2, 1))),
                 onBuy = { bought = it }, onPage = {})
         } } }
         // The name, in the chosen language and in it alone: no English twin beside it.
@@ -241,9 +243,9 @@ class HeroPanelTest {
         // it (since 2.20.0): only the lot whose template carries the verdict, and in the server's words.
         compose.onAllNodesWithText("Сила: нужно 30, есть 14", substring = true).assertCountEquals(1)
         compose.onAllNodesWithText("Редкий").assertCountEquals(0)
-        // The base as figures, then the rolls, four at most, with the rest counted.
+        // The base as figures, then every roll whole (since 2.45.0): nothing is counted away.
         compose.onNodeWithText("12").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("ещё 1").performScrollTo().assertIsDisplayed()
+        compose.onAllNodesWithText("ещё", substring = true).assertCountEquals(0)
         // The bottom line: the price on the left, the seller on the right.
         compose.onNodeWithText("4 × Chaos Orb").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Соперник").performScrollTo().assertIsDisplayed()

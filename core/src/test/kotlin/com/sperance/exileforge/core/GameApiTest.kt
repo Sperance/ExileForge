@@ -495,8 +495,8 @@ class GameApiTest {
         ok("""[{"code":"CRAFTED_ADD_MAXIMUM_LIFE_T3","modifierId":"$id","modifierCode":"CRAFTED_ADD_MAXIMUM_LIFE","tierId":"$other","tier":3,
             "source":"PREFIX","group":"ADD_MAXIMUM_LIFE","values":[{"valueMin":25.0,"valueMax":34.0}],"orb":"ORB_OF_TRANSMUTATION",
             "orbItemId":"$other","amount":3,"slots":[]}]""")
-        val line = api.hero.bench().single()
-        assertEquals("/game/api/v1/characterequipment/bench", server.takeRequest().path)
+        val line = api.hero.bench(other).single()
+        assertEquals("/game/api/v1/characterequipment/bench?characterId=$other", server.takeRequest().path)
         assertEquals(3L, line.amount)
         assertTrue(line.fits("JEWEL"))
 

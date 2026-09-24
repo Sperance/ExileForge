@@ -163,7 +163,7 @@ class ServerIntegrationTest {
         api.hero.applyOrb(id, magic, orb(CurrencyOrb.ORB_OF_TRANSMUTATION))
         val kept = affixes(api.hero.applyOrb(id, magic, orb(CurrencyOrb.ORB_OF_ANNULMENT)).item.params).single()
 
-        val bench = api.hero.bench()
+        val bench = api.hero.bench(id)
         assertTrue(bench.isNotEmpty(), "the server has no bench")
         val recipe = bench.firstOrNull { it.fits("HELMET") && it.source != kept.source && it.group != kept.family }
             ?: fail("no bench line for the free ${kept.source} place beside ${kept.code}")

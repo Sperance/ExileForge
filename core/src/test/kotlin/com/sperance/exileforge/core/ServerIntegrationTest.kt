@@ -487,6 +487,11 @@ class ServerIntegrationTest {
                 // which is why the language the player typed in travels with it.
                 val shown = api.auction.search(buyer, AuctionFilter(title = listed.title, lang = serverLocale.language), 0)
                 assertTrue(shown.items.any { it.id == listed.id }, "the lot is not on the showcase: $shown")
+                // The English trade name finds it too, whatever the language (server 0.45.0).
+                val trade = serverLocale[LocaleKey.equipmentTrade(wearable.text("code"))]
+                assertNotEquals(listed.title, trade, "the Russian name is still the English one")
+                val byTrade = api.auction.search(buyer, AuctionFilter(title = trade, lang = serverLocale.language), 0)
+                assertTrue(byTrade.items.any { it.id == listed.id }, "the English name does not find the lot: $byTrade")
                 assertFailsWith<ApiFailure> { api.auction.buy(id, listed.id) }
 
                 // Paying: the orbs go to the seller, the goods to the buyer, in one transaction.

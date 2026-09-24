@@ -9,9 +9,12 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -65,7 +68,7 @@ import kotlin.math.roundToInt
         when (hud.phase) {
             RunPhase.MAP -> {
                 Stick(run)
-                MapBar(hud, onLeave = { leaving = true }, onFlask = { vm.runCommand(RunCommand.Flask) }, onGear = { gear = true })
+                MapBar(run, hud, onLeave = { leaving = true }, onFlask = { vm.runCommand(RunCommand.Flask) }, onGear = { gear = true })
                 if (gear) GearSheet(s, vm) { gear = false }
                 if (hud.chestPending || hud.chestFailed || hud.chest != null) ChestLoot(s, hud) { vm.runCommand(RunCommand.DismissChest) }
                 if (leaving) ConfirmSheet(title = ui("expedition.leave_q"), confirm = ui("expedition.leave"), danger = true,
@@ -92,7 +95,7 @@ import kotlin.math.roundToInt
  * Life, shield and the flask, what is left on the map, and the way out. Nothing comes back on
  * its own between fights (2.29.0), so the flask is here too: the same charge, the same heal.
  */
-@Composable private fun MapBar(hud: RunHud, onLeave: (() -> Unit)?, onFlask: () -> Unit, onGear: () -> Unit) {
+@Composable private fun MapBar(run: ExpeditionRun, hud: RunHud, onLeave: (() -> Unit)?, onFlask: () -> Unit, onGear: () -> Unit) {
     Column(Modifier.fillMaxWidth().statusBarsPadding().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Column(Modifier.weight(1f)) {
@@ -103,7 +106,15 @@ import kotlin.math.roundToInt
                 if (hud.sealed) Text(ui("expedition.exit_sealed"), color = LifeRed, style = MaterialTheme.typography.labelMedium)
             }
             IconButton(onClick = onGear) { Icon(ForgeGlyphs.Helm, ui("expedition.gear"), tint = Gold, modifier = Modifier.size(24.dp)) }
-            onLeave?.let { OutlinedButton(onClick = it) { Text(ui("expedition.leave")) } }
+            // The minimap (2.51.0), opened as the map is explored, and the way out under it.
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                MiniMap(run.world)
+                onLeave?.let {
+                    IconButton(onClick = it, modifier = Modifier.size(36.dp).background(Color(0xCC0A0D12), CircleShape).border(1.dp, LifeRed.copy(alpha = .7f), CircleShape)) {
+                        Icon(Icons.AutoMirrored.Outlined.Logout, ui("expedition.leave"), tint = LifeRed, modifier = Modifier.size(20.dp))
+                    }
+                }
+            }
         }
         Vitals(hud.heroLife, hud.heroMaxLife, hud.heroShield, hud.heroMaxShield, Modifier.fillMaxWidth(.6f))
         Button(enabled = hud.flasks > 0 && !hud.flaskActive, onClick = onFlask, modifier = Modifier.fillMaxWidth(.6f).height(34.dp), contentPadding = PaddingValues(horizontal = 12.dp),
@@ -112,6 +123,37 @@ import kotlin.math.roundToInt
             Spacer(Modifier.width(6.dp))
             Text(ui(if (hud.flaskActive) "expedition.flask_drinking" else "expedition.flask", hud.flasks, hud.maxFlasks), style = MaterialTheme.typography.labelMedium)
         }
+    }
+}
+
+/**
+ * The map in small (2.51.0): only what the hero has explored, rock darker than floor, the exit once
+ * seen, the chests and fountains still standing, and the hero. It redraws a few times a second on
+ * its own tick — the scene's clock is the scene's.
+ */
+@Composable private fun MiniMap(world: ExpeditionWorld) {
+    var tick by remember(world) { mutableIntStateOf(0) }
+    LaunchedEffect(world) { while (true) { kotlinx.coroutines.delay(200); tick++ } }
+    val map = world.map
+    val side = 108.dp
+    val shape = RoundedCornerShape(6.dp)
+    Canvas(Modifier.size(side).background(Color(0xCC0A0D12), shape).border(1.dp, Bronze.copy(alpha = .7f), shape).padding(4.dp)) {
+        if (tick < 0) return@Canvas
+        val cell = minOf(size.width / map.width, size.height / map.height)
+        val left = (size.width - cell * map.width) / 2
+        val top = (size.height - cell * map.height) / 2
+        fun at(x: Int, y: Int) = Offset(left + x * cell, top + y * cell)
+        val square = androidx.compose.ui.geometry.Size(cell, cell)
+        for (y in 0 until map.height) for (x in 0 until map.width) {
+            if (!world.explored(x, y)) continue
+            drawRect(if (map.walkable(x, y)) Parchment.copy(alpha = if (world.lit(x, y)) .55f else .3f) else Color(0xFF2A2B33), at(x, y), square)
+        }
+        val dot = cell.coerceAtLeast(2.5f)
+        fun mark(x: Int, y: Int, color: Color, radius: Float = dot) = drawCircle(color, radius, Offset(left + (x + .5f) * cell, top + (y + .5f) * cell))
+        world.chests.filter { !it.opened && world.explored(it.cell.x, it.cell.y) }.forEach { mark(it.cell.x, it.cell.y, GoldBright) }
+        world.fountains.filter { !it.used && world.explored(it.cell.x, it.cell.y) }.forEach { mark(it.cell.x, it.cell.y, ShieldCyan) }
+        if (world.explored(map.exit.x, map.exit.y)) mark(map.exit.x, map.exit.y, if (world.sealed) LifeRed else Vital, dot * 1.4f)
+        drawCircle(Gold, dot * 1.3f, Offset(left + world.heroX.toFloat() * cell, top + world.heroY.toFloat() * cell))
     }
 }
 

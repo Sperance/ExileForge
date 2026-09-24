@@ -37,7 +37,7 @@ import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.theme.*
 
 /** What the action row opened on top of the sheet, if anything. */
-private enum class ItemAction { AUCTION, SELL }
+private enum class ItemAction { AUCTION, SELL, WORN }
 
 /**
  * One item of the stash: its card, and what can be done with it.
@@ -66,8 +66,7 @@ private enum class ItemAction { AUCTION, SELL }
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.92f)) {
             LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                item { ItemCard(document, enabled = false, detailed = true, definitions = s.world.definitions,
-                    actionLabel = ui("hero.instance") + " · ${instance.id.takeLast(6)}", price = price) }
+                item { ItemCard(document, enabled = false, detailed = true, definitions = s.world.definitions, price = price) }
                 item { WearPreview(s, instance) }
                 // Worn but not counting: the server's reasons, as the slot cell prints them.
                 s.play.hero?.inactive?.get(instance.id)?.let { reasons -> item {
@@ -88,10 +87,11 @@ private enum class ItemAction { AUCTION, SELL }
                     }
                     else -> Action(ForgeGlyphs.Helm, ui("hero.equip"), can && reachable, GoldBright) { onDismiss(); vm.equip(instance.id, null) }
                 }
-                Action(ForgeGlyphs.Orb, ui("hero.action_orb"), can) { onDismiss(); vm.openForge(instance.id, ForgeSection.ORBS) }
-                if (document.text("slot") != MapRule.SLOT) Action(ForgeGlyphs.Anvil, ui("hero.action_bench"), can, Crafted) { onDismiss(); vm.openForge(instance.id, ForgeSection.BENCH) }
-                Action(ForgeGlyphs.Scales, ui("hero.action_auction"), can && loose) { open = ItemAction.AUCTION }
-                Action(ForgeGlyphs.Coins, ui("hero.action_sell"), can && loose, LifeRed) { open = ItemAction.SELL }
+                // One way into the forge (2.51.0): its orbs and bench are its own tabs.
+                Action(ForgeGlyphs.Anvil, ui("nav.forge"), can) { onDismiss(); vm.openForge(instance.id, ForgeSection.ORBS) }
+                // A worn item cannot be listed or sold (AU_010, CH_014): the tap says so instead of doing nothing.
+                Action(ForgeGlyphs.Scales, ui("hero.action_auction"), can) { open = if (loose) ItemAction.AUCTION else ItemAction.WORN }
+                Action(ForgeGlyphs.Coins, ui("hero.action_sell"), can, LifeRed) { open = if (loose) ItemAction.SELL else ItemAction.WORN }
                 if (s.adminTools) Action(Icons.Outlined.Edit, ui("hero.action_base"), !s.busy, Rune) { onDismiss(); vm.editInventoryBase(instance.equipmentId) }
             }
         }
@@ -112,6 +112,13 @@ private enum class ItemAction { AUCTION, SELL }
             note = ui("hero.sell_confirm"),
             confirm = ui("hero.sell_do"),
             onDismiss = { open = null }) { onDismiss(); vm.sellForGold(instance.id) }
+        ItemAction.WORN -> AlertDialog(onDismissRequest = { open = null }, containerColor = Panel,
+            title = { Text(ui("hero.worn_title"), color = Gold) },
+            text = { Text(ui("hero.worn_note"), color = Parchment) },
+            confirmButton = { TextButton(enabled = can, onClick = {
+                open = null; if (instance.socketed) vm.unsocketJewel(instance.id) else vm.unequip(instance.id)
+            }) { Text(ui("hero.unequip")) } },
+            dismissButton = { TextButton(onClick = { open = null }) { Text(ui("common.close")) } })
         null -> Unit
     }
 }

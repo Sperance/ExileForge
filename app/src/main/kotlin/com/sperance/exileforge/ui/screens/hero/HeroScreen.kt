@@ -65,8 +65,8 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
     // Nothing here asks the player to press anything: the pull below is for when they disagree.
     LaunchedEffect(s.play.characterId, s.account.sessionEpoch) { vm.ensureHero() }
     val hero = s.play.hero
-    // Worn and socketed items are the Equipment section's; the stash is what lies loose.
-    val stash = hero?.inventory.orEmpty().filterNot { it.equipped || it.socketed }
+    // The stash holds everything (2.51.0): what is worn or socketed too, with a gold frame and a badge.
+    val stash = hero?.inventory.orEmpty()
     val documents = stash.associate { it.id to inventoryDocument(it, s.world.inventoryBases[it.equipmentId]) }
     // How many loose items each slot holds (2.47.0): a chip says it, and a slot with none has no chip.
     val slotCounts = documents.values.map { it.text("slot") }.filter(String::isNotBlank).groupingBy { it }.eachCount()
@@ -107,10 +107,11 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
                     if (visible.isEmpty()) item { InfoCard(ui("tree.nothing_found"), ui("hero.stash_empty_hint")) }
                     // A line, not a card: a stash is read down, and the card is one tap behind each line.
                     items(visible, key = { it.id }) { instance ->
+                        val worn = instance.equipped || instance.socketed
                         ItemRow(documents.getValue(instance.id), definitions = s.world.definitions,
-                            selected = instance.id == s.play.selectedEquipment,
+                            selected = instance.id == s.play.selectedEquipment, worn = worn,
                             // The sheet added up here (2.46.0) says what the template needs, and the merchant's rule what it fetches.
-                            unwearable = hero.sheet.unwearableBy[instance.equipmentId].orEmpty(), price = s.sellPrice(instance),
+                            unwearable = hero.sheet.unwearableBy[instance.equipmentId].orEmpty(), price = s.sellPrice(instance).takeUnless { worn },
                             // A map's rarity decides its affixes and what it pays (2.47.0), so it is said in words too.
                             facts = listOfNotNull(com.sperance.exileforge.core.display.rarityTitle(instance.rarity, s.lang)
                                 .takeIf { documents.getValue(instance.id).text("slot") == com.sperance.exileforge.core.model.campaign.MapRule.SLOT })) {

@@ -32,6 +32,8 @@ enum class CurrencyOrb {
     EMPOWERING_ORB, MERCY_ORB, PERIL_ORB, HORDE_ORB, MAGUS_ORB, ELITE_ORB, BOUNTY_ORB;
 
     fun title(lang: Lang = uiLanguage): String = ui(lang, "enum.orb.$name")
+    /** The English trade name (2.51.0): one in every language, printed under the title on a full card. */
+    fun trade(): String = ui(Lang.EN, "enum.orb.$name.trade")
     /** What the server's rule for this orb is, shown so a rejection is expected rather than puzzling. */
     fun rule(lang: Lang = uiLanguage): String = ui(lang, "enum.orb.$name.rule")
 

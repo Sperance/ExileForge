@@ -4,16 +4,19 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Block
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -83,6 +86,8 @@ import kotlinx.serialization.json.JsonObject
 @OptIn(ExperimentalLayoutApi::class)
 @Composable fun ItemRow(document: JsonObject, definitions: List<ModifierDefinition> = emptyList(),
     note: String? = null, noteColor: Color = Gold, selected: Boolean = false, enabled: Boolean = true,
+    /** Worn or socketed (2.51.0): the line is framed and washed in gold and the icon carries a badge. */
+    worn: Boolean = false,
     /** The server's reasons this cannot be worn right now; empty means it can. */
     unwearable: List<String> = emptyList(),
     /** Extra facts for the line under the name, after the slot. */
@@ -104,8 +109,8 @@ import kotlinx.serialization.json.JsonObject
     val level = document.text("itemLevel")
     val slot = document.text("slot").takeIf { it.isNotBlank() }?.let(::slotTitle)
     val frame = RoundedCornerShape(6.dp)
-    Row(Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(8.dp))
-        .border(if (selected) 2.dp else 1.dp, if (selected) GoldBright else PanelRaised, RoundedCornerShape(8.dp))
+    Row(Modifier.fillMaxWidth().background(if (worn) Gold.copy(alpha = .12f).compositeOver(Panel) else Panel, RoundedCornerShape(8.dp))
+        .border(if (selected || worn) 2.dp else 1.dp, if (selected) GoldBright else if (worn) Gold else PanelRaised, RoundedCornerShape(8.dp))
         .clickable(enabled = enabled, onClick = onClick).padding(10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
             // The marker rides on the icon rather than in the text: the icon is where the eye starts.
@@ -113,6 +118,8 @@ import kotlinx.serialization.json.JsonObject
                 ItemIcon(document, color, Modifier.size(34.dp))
                 if (unwearable.isNotEmpty()) Icon(Icons.Outlined.Block, null, tint = LifeRed,
                     modifier = Modifier.align(Alignment.TopStart).padding(2.dp).size(14.dp))
+                if (worn) Icon(Icons.Outlined.CheckCircle, ui("row.worn"), tint = Ink,
+                    modifier = Modifier.align(Alignment.BottomEnd).offset(4.dp, 4.dp).background(Gold, CircleShape).padding(1.dp).size(15.dp))
             }
             if (level.isNotBlank()) Text(ui("row.level", level), color = Muted, style = MaterialTheme.typography.labelSmall)
             // States as symbols, three to a row under the icon: words about corruption and sockets

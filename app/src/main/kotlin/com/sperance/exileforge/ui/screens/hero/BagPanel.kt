@@ -103,6 +103,10 @@ private fun stackCode(s: ForgeState, itemId: String): String? =
                     StackIcon(stackCode(s, stack.itemId), orb != null, 56)
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(bagTitle(s, stack.itemId), color = GoldBright, style = MaterialTheme.typography.titleLarge)
+                        // The English trade name (2.51.0), under the translated one.
+                        stackCode(s, stack.itemId)?.let { code -> locOr(LocaleKey.itemTrade(code), "") }
+                            ?.takeIf { it.isNotBlank() && it != bagTitle(s, stack.itemId) }
+                            ?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelMedium, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic) }
                         Text(ui("bag.owned", stack.amount), color = Muted, style = MaterialTheme.typography.labelSmall)
                     }
                 }

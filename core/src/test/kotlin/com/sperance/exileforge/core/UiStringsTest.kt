@@ -74,20 +74,22 @@ class UiStringsTest {
     }
 
     /**
-     * The orb titles are English in every language, so they are written once, in the common file,
-     * and never again in a language file — the same line the server draws with `locale/common.json`.
+     * An orb's English trade name (2.51.0) is one in every language, so it is written once, in the
+     * common file, and never again in a language file — the same line the server draws with
+     * `locale/common.json`. The title itself is translated; in English it is the trade name.
      */
     @Test
     fun what_every_language_shares_is_written_once() {
         val common = UiStrings.common()
         assertTrue(common.isNotEmpty(), "ui_common.json пуст или не прочитан")
-        val orbTitle = Regex("^enum\\.orb\\.[A-Z_]+$")
+        val orbTitle = Regex("^enum\\.orb\\.[A-Z_]+\\.trade$")
         assertEquals(emptyList(), common.keys.filterNot(orbTitle::matches), "в общем словаре переводимое")
         languages.forEach {
             val own = UiStrings.own(it)
             assertEquals(emptySet(), own.keys intersect common.keys, "${it.code}: повторяет ui_common.json")
-            assertEquals(emptyList(), own.keys.filter(orbTitle::matches), "${it.code}: название сферы вне общего словаря")
+            assertEquals(emptyList(), own.keys.filter(orbTitle::matches), "${it.code}: торговое имя сферы вне общего словаря")
         }
+        common.forEach { (key, trade) -> assertEquals(trade, UiStrings.own(Lang.EN)[key.removeSuffix(".trade")], "en: $key") }
     }
 
     @Test

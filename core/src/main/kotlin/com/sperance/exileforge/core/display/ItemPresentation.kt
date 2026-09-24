@@ -118,6 +118,18 @@ fun documentDescription(document: JsonObject): String {
     return locOr(key, "")
 }
 
+/**
+ * The English trade name of a catalogue document (2.51.0, server 0.45.0), for a full card only: a
+ * thing is named in the player's language everywhere, and the name it is traded by sits under it.
+ * Null when the dictionary has none or it is the very name already shown.
+ */
+fun documentTrade(document: JsonObject): String? {
+    val code = document.text("code")
+    if (document["userId"] != null || code.isBlank()) return null
+    val key = if (document["slot"] != null || document.text("type").isNotBlank()) LocaleKey.equipmentTrade(code) else LocaleKey.itemTrade(code)
+    return locOr(key, "").takeIf { it.isNotBlank() && it != documentTitle(document) }
+}
+
 fun inventoryDocument(instance: com.sperance.exileforge.core.model.hero.EquipmentInstance, base: JsonObject?): JsonObject =
     inventoryDocument(instance.document(), base)
 

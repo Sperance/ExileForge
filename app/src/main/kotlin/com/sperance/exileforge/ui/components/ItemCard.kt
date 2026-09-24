@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -51,9 +52,9 @@ import kotlinx.serialization.json.*
 @Composable fun AffixLine(modifier: JsonObject, definitions: List<ModifierDefinition>) {
     val marks = affixMarks(modifier, definitions)
     val tone = when { marks.fractured -> Fractured; marks.crafted -> Crafted; marks.handcrafted -> Handcrafted; marks.alchemy -> Vital; else -> Rune }
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-        Box(Modifier.padding(top = 6.dp)) { Rhombus() }
-        Text(modifierText(modifier, definitions), color = tone, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+        Box(Modifier.padding(top = 5.dp)) { Rhombus() }
+        Text(modifierText(modifier, definitions), color = tone, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
         listOfNotNull(
             (ui("mod.fractured") to tone).takeIf { marks.fractured },
             (ui("mod.crafted") to tone).takeIf { marks.crafted },
@@ -61,7 +62,7 @@ import kotlinx.serialization.json.*
             (ui("mod.alchemy") to tone).takeIf { marks.alchemy },
             (ui("mod.tier", marks.tier) to Muted).takeIf { marks.tier > 0 },
         ).forEach { (word, color) ->
-            Text(word, color = color, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 2.dp))
+            Text(word, color = color, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 1.dp))
         }
     }
 }
@@ -178,6 +179,8 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
                     Text(doc.text("name").ifBlank { documentTitle(doc) }, color = Parchment,
                         style = MaterialTheme.typography.titleLarge,
                         maxLines = if (detailed) 5 else 2, overflow = TextOverflow.Ellipsis)
+                    // The English trade name, on a full card only (2.51.0): what it is searched by.
+                    if (detailed) documentTrade(doc)?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelMedium, fontStyle = FontStyle.Italic) }
                     cardFacts(doc, withPrice = price == null).forEach {
                         Text(it, color = Muted, style = MaterialTheme.typography.labelSmall)
                     }
@@ -188,7 +191,10 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
             // The base first, as figures: the biggest is what the item is bought for.
             base.forEachIndexed { index, property -> BannerStat(property, big = index == 0) }
             // Then what this copy rolled, which is what makes it this one rather than another.
-            rolled.take(if (detailed) rolled.size else 3).forEach { AffixLine(it, definitions) }
+            // Tight (2.51.0): the rolls read as one block, not as a column of sentences.
+            if (rolled.isNotEmpty()) Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                rolled.take(if (detailed) rolled.size else 3).forEach { AffixLine(it, definitions) }
+            }
             if (!detailed && rolled.size > 3) Text(ui("card.more_properties", rolled.size - 3), color = Muted, style = MaterialTheme.typography.labelMedium)
             if (detailed) documentDescription(doc).takeIf { it.isNotBlank() }?.let {
                 Text(it, color = Muted, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Start)
@@ -198,8 +204,11 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
                     Text(ui("price.sell"), color = Muted, style = MaterialTheme.typography.labelSmall)
                     Spacer(Modifier.width(6.dp)); GoldPrice(it); Spacer(Modifier.weight(1f))
                 }
-                Text(actionLabel.uppercase(), color = Gold, style = MaterialTheme.typography.labelLarge)
-                Icon(Icons.Outlined.ChevronRight, null, tint = Gold)
+                // A full card is a page, not a way in: no label pointing further (2.51.0).
+                if (!detailed) {
+                    Text(actionLabel.uppercase(), color = Gold, style = MaterialTheme.typography.labelLarge)
+                    Icon(Icons.Outlined.ChevronRight, null, tint = Gold)
+                }
             }
         }
     }

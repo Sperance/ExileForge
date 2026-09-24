@@ -126,15 +126,16 @@ class ContractTest {
             "EMPOWERING_ORB", "MERCY_ORB", "PERIL_ORB", "HORDE_ORB", "MAGUS_ORB", "ELITE_ORB", "BOUNTY_ORB"), CurrencyOrb.entries.map { it.name }.toSet())
         assertEquals(CurrencyOrb.VAAL_ORB, CurrencyOrb.of("VAAL_ORB"))
         assertNull(CurrencyOrb.of("ORB_OF_FUSING"))
-        // An orb is called by its English name in every language, as in PoE; what it does is translated.
-        assertTrue(CurrencyOrb.entries.all { it.title(Lang.RU) == it.title(Lang.EN) })
-        assertEquals("Divine Orb", CurrencyOrb.DIVINE_ORB.title(Lang.RU))
+        // An orb is named in the player's language (2.51.0); its English trade name is one everywhere.
+        assertTrue(CurrencyOrb.entries.all { it.title(Lang.EN) == it.trade() })
+        assertEquals("Божественная сфера", CurrencyOrb.DIVINE_ORB.title(Lang.RU))
+        assertEquals("Divine Orb", CurrencyOrb.DIVINE_ORB.trade())
         assertNotEquals(CurrencyOrb.DIVINE_ORB.rule(Lang.RU), CurrencyOrb.DIVINE_ORB.rule(Lang.EN))
         assertTrue(CurrencyOrb.entries.all { it.rule(Lang.RU).isNotBlank() && it.rule(Lang.EN).isNotBlank() })
         // An orb is a document with a code and no text; without the dictionary the client's own
         // table names the ones it knows, and an unknown one is shown by its code.
         val chaos = CurrencyItem(id, "CHAOS_ORB", "CHAOS_ORB", 1)
-        assertEquals("Chaos Orb", chaos.title(Lang.RU))
+        assertEquals("Сфера хаоса", chaos.title(Lang.RU))
         val unknown = CurrencyItem(id, "ORB_OF_FUSING", "ORB_OF_FUSING", 5)
         assertNull(unknown.orb)
         assertEquals("ORB_OF_FUSING", unknown.title(Lang.EN))

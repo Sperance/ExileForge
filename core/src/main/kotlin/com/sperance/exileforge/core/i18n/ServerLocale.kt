@@ -91,10 +91,14 @@ object LocaleKey {
     const val ERROR = "error"
     const val NAME = "name"
     const val DESCRIPTION = "description"
+    /** The English trade name (server 0.45.0), one in every language: `equipment.<CODE>.trade`. */
+    const val TRADE = "trade"
 
     fun equipmentName(code: String) = key(EQUIPMENT, code, NAME)
     fun equipmentDescription(code: String) = key(EQUIPMENT, code, DESCRIPTION)
     fun itemName(code: String) = key(ITEM, code, NAME)
+    fun equipmentTrade(code: String) = key(EQUIPMENT, code, TRADE)
+    fun itemTrade(code: String) = key(ITEM, code, TRADE)
     fun itemDescription(code: String) = key(ITEM, code, DESCRIPTION)
     fun modifierName(code: String) = key(MODIFIER, code, NAME)
     fun skillNodeName(code: String) = key(SKILL_NODE, code, NAME)

@@ -20,10 +20,10 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.50.0, `versionCode` 69) for the
-**ktor-bestgame** RPG server (0.44.0), pinned in
-`core/.../contract/Contract.kt` as `SERVER_COMMIT = defce6c01ffe412c2603ec64c04cf3fc5bbce349`
-on the server branch `claude/vigilant-wozniak-ptnxmx`.
+ExileForge is an **Android Compose client** (version 2.51.0, `versionCode` 70) for the
+**ktor-bestgame** RPG server (0.45.0), pinned in
+`core/.../contract/Contract.kt` as `SERVER_COMMIT = f0bf12aa590a2fc13f9bfcb3559776d5b9921ec9`
+on the server branch `claude/tender-pasteur-a36kj2`.
 
 The client is deliberately **thin**: the server owns items, modifier rolls and inventory, and it
 checks every command. This client renders server state and sends commands; since 2.46.0 (the
@@ -394,6 +394,12 @@ These are enforced by tests and are the point of the client's design:
     0.34.0) the fourth tab is the merchant (`MerchantClient`: a four-hour shelf per hero, priced in
     gold by the server), «Мои лоты» shows the lot places (`AuctionSlots`) and sells one more, and a
     campaign map's coin icon opens its services — a treasure map and summoning its guardian.
+    Since 2.51.0 (server 0.45.0) names are translated: equipment, uniques, items and orbs are called
+    in the player's language, and the English trade name (`.trade` keys, `documentTrade`,
+    `CurrencyOrb.trade`) is printed only on a full card; the auction searches both. The run's map bar
+    carries a `MiniMap` of what is explored with the leave button under it; the stash lists worn
+    items too, framed in gold with a badge (`ItemRow(worn = …)`); the item sheet has one «Кузница»
+    button, and listing or selling a worn item explains that it must come off first.
     Since 2.50.0 the Equipment section and the map's `GearSheet` share «Гроссбух» (`EquipmentLedger`,
     the owner's pick of five mockups): a worn place is its icon in a rarity frame, name and place on
     one line, the base as chips and every roll with its tier (`BaseChip`, `RollLine` from `ItemRow`);

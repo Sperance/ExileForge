@@ -41,6 +41,7 @@ import com.sperance.exileforge.ui.screens.craft.CraftScreen
 import com.sperance.exileforge.ui.screens.editor.EditorScreen
 import com.sperance.exileforge.ui.screens.expedition.ExpeditionPlay
 import com.sperance.exileforge.ui.screens.expedition.ExpeditionScreen
+import com.sperance.exileforge.ui.screens.expedition.LaunchScreen
 import com.sperance.exileforge.ui.screens.hero.HeroScreen
 import com.sperance.exileforge.ui.screens.redemption.RedemptionScreen
 import com.sperance.exileforge.ui.screens.server.ServerScreen
@@ -69,8 +70,10 @@ import com.sperance.exileforge.ui.theme.*
         AppPhase.AUTH -> AuthScreen(s, vm, snackbar)
         AppPhase.CHARACTERS -> CharacterSelectScreen(s, vm, snackbar)
         // A campaign run takes the whole screen: no banner and no bar, the scene is the game.
-        AppPhase.GAME -> expedition?.let { ExpeditionPlay(s, vm, it) } ?: GameScaffold(s, vm, logs, snackbar,
-            onDeleteRequest = { confirmDelete = true }, onDiscardRequest = { confirmDiscard = true })
+        // The launch window (2.38.0) is above the tabs too: the portal before the run.
+        AppPhase.GAME -> expedition?.let { ExpeditionPlay(s, vm, it) }
+            ?: s.play.launch?.let { LaunchScreen(s, vm, snackbar) }
+            ?: GameScaffold(s, vm, logs, snackbar, onDeleteRequest = { confirmDelete = true }, onDiscardRequest = { confirmDiscard = true })
     }
     if (confirmDelete) AlertDialog(onDismissRequest = { confirmDelete = false }, containerColor = Panel, titleContentColor = Gold,
         title = { Text(ui("common.delete_record_q")) },

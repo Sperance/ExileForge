@@ -20,7 +20,7 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.37.0, `versionCode` 55) for the
+ExileForge is an **Android Compose client** (version 2.38.0, `versionCode` 56) for the
 **ktor-bestgame** RPG server (0.35.0), pinned in
 `core/.../contract/Contract.kt` as `SERVER_COMMIT = e6d8d0c755a476ca2421c78c420df7773f24f347`
 on the server branch `claude/tender-pasteur-a36kj2`.
@@ -356,8 +356,12 @@ These are enforced by tests and are the point of the client's design:
     0.34.0) the fourth tab is the merchant (`MerchantClient`: a four-hour shelf per hero, priced in
     gold by the server), «Мои лоты» shows the lot places (`AuctionSlots`) and sells one more, and a
     campaign map's coin icon opens its services — a treasure map and summoning its guardian.
-    Since 2.37.0 (server 0.35.0) a map row opens the **launch window** (`LaunchSheet`,
-    `PlayState.launch`) before every run: the location, its guardian and chests, the map slot —
+    Since 2.37.0 (server 0.35.0) a map row opens the **launch window** (`PlayState.launch`) before
+    every run — since 2.38.0 `LaunchScreen`, «Портал», the owner's pick of five mockups: a full
+    screen above the tabs like the run (`ForgeApp` dispatches it), a still portal with the picked map
+    in its socket, a ribbon of this location's stash maps with an empty square first, three figures of
+    what it pays, its lines marked by `MapRule.kindOf` (harm with its `riskOf`, content, reward), then
+    the location and its services; no map of the location folds the portal to an emblem. It shows: the location, its guardian and chests, the map slot —
     stash items of slot `MAP` and template `MAP_<location>` — with `MapRule.bonus` printing what the
     picked one pays by the server's weights, and the services. «В путь» is `CampaignClient.start`,
     which spends the map; `MapEffects` applies its summed effects to the run (monster buffs join every

@@ -171,6 +171,16 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
         return MapBonus(risk + (effects[QUANTITY] ?: 0.0), risk + (effects[RARITY] ?: 0.0), risk + (effects[EXPERIENCE] ?: 0.0))
     }
 
+    /** What a map's stat does, for its line's mark: a harm pays by [risk], a reward pays itself, the rest is content. */
+    fun kindOf(stat: String): MapLineKind = when {
+        stat == QUANTITY || stat == RARITY || stat == EXPERIENCE -> MapLineKind.REWARD
+        stat in risk -> MapLineKind.HARM
+        else -> MapLineKind.CONTENT
+    }
+
+    /** How many percent one rolled value of [stat] pays, by the server's weight; zero for what is not a risk. */
+    fun riskOf(stat: String, value: Double): Double = value * (risk[stat] ?: 0.0)
+
     companion object {
         const val SLOT = "MAP"
         const val QUANTITY = "MAP_QUANTITY"
@@ -191,6 +201,9 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
         fun templateCode(mapCode: String) = "MAP_$mapCode"
     }
 }
+
+/** What a line of a map is, as the launch window marks it. */
+enum class MapLineKind { HARM, CONTENT, REWARD }
 
 /** A map's pay, in percent of the loot's quantity, rarity and experience. */
 @Serializable data class MapBonus(val quantity: Double = 0.0, val rarity: Double = 0.0, val experience: Double = 0.0)

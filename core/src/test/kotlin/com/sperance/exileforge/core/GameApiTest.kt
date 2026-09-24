@@ -632,6 +632,11 @@ class GameApiTest {
         assertEquals(34.0, bonus.quantity)
         assertEquals(24.0, bonus.rarity)
         assertEquals(24.0, bonus.experience)
+        assertEquals(com.sperance.exileforge.core.model.campaign.MapLineKind.HARM, rule.kindOf("MAP_MONSTER_LIFE"))
+        assertEquals(com.sperance.exileforge.core.model.campaign.MapLineKind.CONTENT, rule.kindOf("MAP_PACK_SIZE"))
+        assertEquals(com.sperance.exileforge.core.model.campaign.MapLineKind.REWARD, rule.kindOf("MAP_QUANTITY"))
+        assertEquals(12.0, rule.riskOf("MAP_HERO_FLASK", 2.0))
+        assertEquals(0.0, rule.riskOf("MAP_PACK_SIZE", 25.0))
     }
 
     @Test fun `a map's boss is asked after and reported by its own route`(): Unit = runBlocking {

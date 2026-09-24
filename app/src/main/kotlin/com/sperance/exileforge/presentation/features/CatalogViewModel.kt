@@ -38,7 +38,9 @@ class CatalogViewModel(private val runtime: ForgeRuntime) {
 
     fun count() { with(runtime) { read("${Reads.CATALOG}.count") {
         val result = api.catalog.count(state.value.admin.catalog)
-        mutable.update { it.copy(admin = it.admin.copy(total = result)) }
+        // The server answers the count as a bare number; anything else leaves the last total standing.
+        val total = ((result as? kotlinx.serialization.json.JsonPrimitive)?.content ?: result.toString()).toDoubleOrNull()?.toLong()
+        mutable.update { it.copy(admin = it.admin.copy(total = total ?: it.admin.total)) }
     } } }
 
     fun open(id: String) { with(runtime) { task(touches = setOf(Reads.CATALOG)) {

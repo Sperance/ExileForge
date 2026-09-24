@@ -79,16 +79,16 @@ class ExpeditionViewModel(private val runtime: ForgeRuntime) {
     }
 
     /** One more chest on the map this window, for gold. */
-    fun buyTreasure(mapCode: String) = service(mapCode, "expedition.treasure_bought") { id -> runtime.api.campaign.treasure(id, mapCode) }
+    fun buyTreasure(mapCode: String) = service(mapCode) { id -> runtime.api.campaign.treasure(id, mapCode) }
 
     /** A slain guardian back at the exit, for gold. */
-    fun summonGuardian(mapCode: String) = service(mapCode, "expedition.guardian_summoned") { id -> runtime.api.campaign.summon(id, mapCode) }
+    fun summonGuardian(mapCode: String) = service(mapCode) { id -> runtime.api.campaign.summon(id, mapCode) }
 
-    private fun service(mapCode: String, message: String, call: suspend (String) -> MapServiceOutcome) { with(runtime) {
+    private fun service(mapCode: String, call: suspend (String) -> MapServiceOutcome) { with(runtime) {
         task(writing = true, touches = setOf(Reads.MAP_SERVICES)) {
             val id = state.value.play.characterId
             val outcome = call(id)
-            mutable.update { s -> s.copy(message = ui(message), play = s.play.copy(
+            mutable.update { s -> s.copy(play = s.play.copy(
                 launch = s.play.launch?.takeIf { it.mapCode == mapCode }?.copy(chests = outcome.chests, boss = outcome.boss),
                 hero = s.play.hero?.let { it.copy(character = it.character.copy(money = outcome.money)) })) }
         }

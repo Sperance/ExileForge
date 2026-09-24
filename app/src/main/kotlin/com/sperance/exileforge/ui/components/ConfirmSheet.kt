@@ -69,6 +69,8 @@ data class LedgerLine(val label: String, val value: String, val tone: Tone = Ton
     note: String? = null,
     warning: String? = null,
     danger: Boolean = false,
+    /** The client already knows the action cannot go through (2.46.0): the [warning] says why and the button stays off. */
+    blocked: Boolean = false,
     icon: (@Composable () -> Unit)? = null,
     onConfirm: () -> Unit,
 ) {
@@ -96,7 +98,7 @@ data class LedgerLine(val label: String, val value: String, val tone: Tone = Ton
                         Text(it, color = LifeRed, style = MaterialTheme.typography.bodySmall)
                     }
                 }
-                HoldButton(ui("confirm.hold", confirm.lowercase()), accent) { onDismiss(); onConfirm() }
+                HoldButton(ui("confirm.hold", confirm.lowercase()), accent, enabled = !blocked) { onDismiss(); onConfirm() }
                 Text(ui("common.cancel").uppercase(), color = Muted, style = MaterialTheme.typography.labelLarge,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth().clickable(onClick = onDismiss).padding(vertical = 8.dp))

@@ -15,6 +15,7 @@ import com.sperance.exileforge.core.model.trade.MerchantOffer
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.*
+import com.sperance.exileforge.ui.screens.hero.WearPreview
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
 
@@ -48,8 +49,8 @@ import com.sperance.exileforge.ui.theme.*
 
 /**
  * An offer's full card (since 2.40.0): the item as the stash would show it, scrolling, and under it
- * the one way to buy it — a button held for the price. Short of gold, it says so and still sends:
- * the refusal is the server's.
+ * the one way to buy it — a button held for the price. Short of gold, it says so and the button
+ * stays off (2.46.0); what wearing it would change is added up here, as on a stash card.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable private fun OfferSheet(s: ForgeState, offer: MerchantOffer, money: Long?, onDismiss: () -> Unit, onBuy: () -> Unit) {
@@ -58,25 +59,16 @@ import com.sperance.exileforge.ui.theme.*
         Column(Modifier.fillMaxWidth().fillMaxHeight(.92f)) {
             LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 item { ItemCard(document, enabled = false, detailed = true, definitions = s.world.definitions) }
-                s.play.hero?.sheet?.unwearableBy?.get(offer.item.equipmentId)?.takeIf { it.isNotEmpty() }?.let { item {
-                    Text(ui("merchant.unwearable"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
-                } }
+                item { WearPreview(s, offer.item) }
             }
             OrnateDivider()
             Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 money?.let { PropertyRow(ui("merchant.gold"), number(it.toDouble()), com.sperance.exileforge.core.display.Glyph.CURRENCY) }
                 if (money != null && money < offer.price) Text(ui("merchant.short"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
-                HoldButton(ui("merchant.buy_for", number(offer.price.toDouble())), Gold, Modifier.fillMaxWidth(), enabled = !s.busy, onHeld = onBuy)
+                HoldButton(ui("merchant.buy_for", number(offer.price.toDouble())), Gold, Modifier.fillMaxWidth(),
+                    enabled = !s.busy && (money == null || money >= offer.price), onHeld = onBuy)
             }
         }
-    }
-}
-
-/** A price in gold, as a lot's price in orbs is drawn: the coin and the figure. */
-@Composable internal fun GoldPrice(price: Long) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-        Icon(ForgeGlyphs.Coins, null, tint = Gold, modifier = Modifier.size(15.dp))
-        Text(number(price.toDouble()), color = GoldBright, style = MaterialTheme.typography.labelLarge, maxLines = 1)
     }
 }
 

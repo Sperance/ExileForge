@@ -28,6 +28,7 @@ import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.*
 import com.sperance.exileforge.ui.components.LocalEntityPageLoader
 import com.sperance.exileforge.ui.components.OrnateDivider
+import com.sperance.exileforge.ui.components.RefusalLine
 import com.sperance.exileforge.ui.components.voidBackdrop
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import androidx.compose.ui.text.style.TextOverflow
@@ -53,12 +54,8 @@ import com.sperance.exileforge.ui.theme.*
     val s by vm.state.collectAsStateWithLifecycle()
     val logs by vm.logs.collectAsStateWithLifecycle()
     val expedition by vm.expedition.collectAsStateWithLifecycle()
-    val snackbar = remember { SnackbarHostState() }
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
     var confirmDiscard by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(s.message) {
-        s.message?.let { snackbar.showSnackbar(it, withDismissAction = true); vm.dismissMessage() }
-    }
     BackHandler(s.admin.editorOpen && !s.busy) { confirmDiscard = true }
     CompositionLocalProvider(LocalEntityPageLoader provides vm::referencePage) {
     // Language is part of the key: every cached label is rebuilt in the chosen tongue.
@@ -68,13 +65,13 @@ import com.sperance.exileforge.ui.theme.*
     // The two screens above the tabs carry no banner and no bottom bar: there is no character to
     // name in the one and no tab to reach from the other.
     when (s.phase) {
-        AppPhase.AUTH -> AuthScreen(s, vm, snackbar)
-        AppPhase.CHARACTERS -> CharacterSelectScreen(s, vm, snackbar)
+        AppPhase.AUTH -> AuthScreen(s, vm)
+        AppPhase.CHARACTERS -> CharacterSelectScreen(s, vm)
         // A campaign run takes the whole screen: no banner and no bar, the scene is the game.
         // The launch window (2.38.0) is above the tabs too: the portal before the run.
-        AppPhase.GAME -> expedition?.let { ExpeditionPlay(s, vm, it, snackbar) }
-            ?: s.play.launch?.let { LaunchScreen(s, vm, snackbar) }
-            ?: GameScaffold(s, vm, logs, snackbar, onDeleteRequest = { confirmDelete = true }, onDiscardRequest = { confirmDiscard = true })
+        AppPhase.GAME -> expedition?.let { ExpeditionPlay(s, vm, it) }
+            ?: s.play.launch?.let { LaunchScreen(s, vm) }
+            ?: GameScaffold(s, vm, logs, onDeleteRequest = { confirmDelete = true }, onDiscardRequest = { confirmDiscard = true })
     }
     if (confirmDelete) AlertDialog(onDismissRequest = { confirmDelete = false }, containerColor = Panel, titleContentColor = Gold,
         title = { Text(ui("common.delete_record_q")) },
@@ -92,10 +89,9 @@ import com.sperance.exileforge.ui.theme.*
 
 /** The game proper: the banner, the destinations and whichever tab is open. */
 @Composable private fun GameScaffold(s: ForgeState, vm: ForgeViewModel, logs: List<com.sperance.exileforge.core.network.RequestLog>,
-    snackbar: SnackbarHostState, onDeleteRequest: () -> Unit, onDiscardRequest: () -> Unit) {
+    onDeleteRequest: () -> Unit, onDiscardRequest: () -> Unit) {
     Scaffold(
         containerColor = Ink,
-        snackbarHost = { SnackbarHost(snackbar) { data -> Snackbar(data, containerColor = PanelRaised, contentColor = Parchment, actionColor = Gold, shape = MaterialTheme.shapes.small) } },
         bottomBar = {
             NavigationBar(containerColor = Abyss, tonalElevation = 0.dp,
                 modifier = Modifier.drawBehind { drawLine(Gold.copy(alpha = .35f), Offset(0f, 0f), Offset(size.width, 0f), 2f) }) {
@@ -121,6 +117,7 @@ import com.sperance.exileforge.ui.theme.*
         Column(Modifier.fillMaxSize().padding(padding).imePadding().voidBackdrop()) {
             ForgeBanner(s)
             if (s.busy || s.reading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised) else OrnateDivider(Gold)
+            RefusalLine(s.refusal, vm::dismissMessage)
             when (s.tab) {
                 TAB_CATALOG -> CatalogScreen(s, vm)
                 TAB_EDITOR -> EditorScreen(s, vm, onDelete = onDeleteRequest, onClose = onDiscardRequest)

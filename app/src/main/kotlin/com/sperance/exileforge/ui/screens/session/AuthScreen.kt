@@ -35,9 +35,8 @@ import com.sperance.exileforge.ui.theme.*
  * The server's address lives here too, and that is not a convenience. Everything below this screen
  * is gated on a session, so a wrong address would otherwise lock the app with no way to correct it.
  */
-@Composable fun AuthScreen(s: ForgeState, vm: ForgeViewModel, snackbar: SnackbarHostState) {
-    Scaffold(containerColor = Ink,
-        snackbarHost = { SnackbarHost(snackbar) { data -> Snackbar(data, containerColor = PanelRaised, contentColor = Parchment, actionColor = Gold, shape = MaterialTheme.shapes.small) } }) { padding ->
+@Composable fun AuthScreen(s: ForgeState, vm: ForgeViewModel) {
+    Scaffold(containerColor = Ink) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).imePadding().voidBackdrop()
             .verticalScroll(rememberScrollState()).padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -65,7 +64,7 @@ import com.sperance.exileforge.ui.theme.*
             LoginPanel(s, vm)
             ServerPanel(s, vm)
 
-            if (s.error && s.message != null) InfoCard(ui("auth.failed"), s.message, failure = true)
+            s.refusal?.let { InfoCard(ui("auth.failed"), it, failure = true) }
         }
     }
 }

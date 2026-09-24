@@ -74,7 +74,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
                     if (store.deviceSession.first()) {
                         state.first { !it.busy }
                         if (api === created) sessionViewModel.playOnThisDevice(silent = true)
-                    } else mutable.update { it.copy(message = ui("runtime.session_expired")) }
+                    } else mutable.update { it.copy(message = ui("runtime.session_expired"), error = true) }
                 }
             }
         })
@@ -261,7 +261,8 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
      */
     fun tab(tab: Int) {
         if (!state.value.adminTools && tab in ADMIN_TABS) return
-        mutable.update { it.copy(tab = tab) }
+        // A refusal belongs to the screen it happened on.
+        mutable.update { it.copy(tab = tab, message = null, error = false) }
     }
     suspend fun referencePage(source: EntitySource, page: Int, query: String) = api.catalog.referencePage(source, page, query)
     /**
@@ -281,7 +282,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
     /** The recipe form reads one document directly; it is never edited, only spent. */
     suspend fun recipeDocument(id: String): JsonObject =
         com.sperance.exileforge.core.contract.WireJson.encodeToJsonElement(com.sperance.exileforge.core.model.hero.RecipeDocument.serializer(), api.world.recipe(id)).jsonObject
-    fun dismissMessage() { mutable.update { it.copy(message = null) } }
+    fun dismissMessage() { mutable.update { it.copy(message = null, error = false) } }
 
     /**
      * A command: one at a time, and the only thing that disables controls.
@@ -394,6 +395,13 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
         if (state.value.world.inventoryBases.isNotEmpty()) return
         val templates = api.catalog.equipment().associateBy { it.entityId }
         mutable.update { it.copy(world = it.world.copy(inventoryBases = templates)) }
+    }
+
+    /** The tables the client adds the sheet up by: public and fixed per server, so read once. */
+    suspend fun ensureStatTables() {
+        if (state.value.world.statTables.stats.isNotEmpty()) return
+        val tables = api.world.statTables()
+        mutable.update { it.copy(world = it.world.copy(statTables = tables)) }
     }
 
     /** The orbs the server seeded. The catalogue is fixed for a session, so one read covers it. */

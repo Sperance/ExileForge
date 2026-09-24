@@ -12,6 +12,11 @@ import com.sperance.exileforge.core.display.inventoryDocument
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.sellPrice
+import com.sperance.exileforge.presentation.state.unmetFor
+import com.sperance.exileforge.ui.screens.hero.WearPreview
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.hero.EquipmentLedger
 import com.sperance.exileforge.ui.screens.hero.SlotPicker
@@ -59,7 +64,7 @@ fun newLoot(s: ForgeState): List<com.sperance.exileforge.core.model.hero.Equipme
                     if (loot.isEmpty()) item { Text(ui("expedition.loot_empty"), color = Muted, style = MaterialTheme.typography.bodySmall) }
                     items(loot, key = { it.id }) { item ->
                         ItemRow(inventoryDocument(item, s.world.inventoryBases[item.equipmentId]), definitions = s.world.definitions, enabled = !s.busy,
-                            unwearable = s.play.hero?.sheet?.unwearableBy?.get(item.equipmentId).orEmpty()) { looked = item.id }
+                            unwearable = s.unmetFor(item.equipmentId), price = s.sellPrice(item)) { looked = item.id }
                     }
                 }
             }
@@ -72,10 +77,12 @@ fun newLoot(s: ForgeState): List<com.sperance.exileforge.core.model.hero.Equipme
     }
     loot.firstOrNull { it.id == looked }?.let { item ->
         ModalBottomSheet(onDismissRequest = { looked = null }, containerColor = Panel) {
-            Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                ItemCard(inventoryDocument(item, s.world.inventoryBases[item.equipmentId]), enabled = false, detailed = true, definitions = s.world.definitions)
-                Button(enabled = !s.busy, onClick = { looked = null; vm.equip(item.id) }, modifier = Modifier.fillMaxWidth()) { Text(ui("hero.equip")) }
-                HoldButton(ui("expedition.loot_sell"), LifeRed, Modifier.fillMaxWidth(), enabled = !s.busy) { looked = null; vm.sellForGold(item.id) }
+            Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                val price = s.sellPrice(item)
+                ItemCard(inventoryDocument(item, s.world.inventoryBases[item.equipmentId]), enabled = false, detailed = true, definitions = s.world.definitions, price = price)
+                WearPreview(s, item)
+                Button(enabled = !s.busy && s.unmetFor(item.equipmentId).isEmpty(), onClick = { looked = null; vm.equip(item.id) }, modifier = Modifier.fillMaxWidth()) { Text(ui("hero.equip")) }
+                HoldButton(price?.let { ui("expedition.loot_sell_for", it) } ?: ui("expedition.loot_sell"), LifeRed, Modifier.fillMaxWidth(), enabled = !s.busy) { looked = null; vm.sellForGold(item.id) }
             }
         }
     }
@@ -84,7 +91,8 @@ fun newLoot(s: ForgeState): List<com.sperance.exileforge.core.model.hero.Equipme
     if (chosen != null && instance != null) {
         ModalBottomSheet(onDismissRequest = { place = null; worn = null }, containerColor = Panel) {
             Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                ItemCard(inventoryDocument(instance, s.world.inventoryBases[instance.equipmentId]), enabled = false, detailed = true, definitions = s.world.definitions)
+                ItemCard(inventoryDocument(instance, s.world.inventoryBases[instance.equipmentId]), enabled = false, detailed = true, definitions = s.world.definitions,
+                    price = s.sellPrice(instance))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedButton(enabled = !s.busy, onClick = { vm.unequip(instance.id); place = null; worn = null }, modifier = Modifier.weight(1f)) {
                         Text(ui("hero.unequip"))

@@ -1,7 +1,7 @@
-# ExileForge 2.45.0
+# ExileForge 2.46.0
 
-Android Compose client for **ktor-bestgame 0.40.0**.
-Server: branch `claude/vigilant-wozniak-ptnxmx`, commit `a42b8a789813c900084837b2defcde3eaea49751`.
+Android Compose client for **ktor-bestgame 0.41.0**.
+Server: branch `claude/vigilant-wozniak-ptnxmx`, commit `433f095253cc3f00ee67584f747983bd028b067f`.
 
 ## Язык интерфейса · Interface language
 

@@ -1,7 +1,7 @@
 package com.sperance.exileforge.presentation.features
 
+import com.sperance.exileforge.core.character.Sheet
 import com.sperance.exileforge.core.contract.entityId
-import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.ItemStack
 import com.sperance.exileforge.core.model.command.UseRecipeCommand
@@ -65,8 +65,6 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
         check(state.value.isAdmin) { ui("hero.grant_admin_only") }
         val template = api.catalog.randomTemplate(state.value.play.grantRarity, state.value.play.grantSlot)
         api.hero.grant(id, template.entityId)
-        val name = equipmentTitle(template)
-        mutable.update { it.copy(message = ui("hero.rolled", name)) }
     } } }
 
     fun adjustItems(itemId: String, amount: Long) { with(runtime) { characterCommand { id ->
@@ -111,18 +109,14 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
      * Every rule is the server's — which node is reachable, what it costs, whether a refund would
      * leave the rest of the tree hanging in the air — so the client names a node and reports back.
      */
-    fun allocateNode(code: String) { with(runtime) { characterCommand { id -> treeChanged(api.tree.allocate(id, code)) } } }
-    fun refundNode(code: String) { with(runtime) { characterCommand { id -> treeChanged(api.tree.refund(id, code)) } } }
-    fun resetTree() { with(runtime) { characterCommand { id -> treeChanged(api.tree.reset(id)) } } }
-    private fun treeChanged(state: com.sperance.exileforge.core.model.skilltree.SkillTreeState) { with(runtime) {
-        mutable.update { it.copy(message = ui("hero.points_left", state.available, state.total)) }
-    } }
+    fun allocateNode(code: String) { with(runtime) { characterCommand { id -> api.tree.allocate(id, code) } } }
+    fun refundNode(code: String) { with(runtime) { characterCommand { id -> api.tree.refund(id, code) } } }
+    fun resetTree() { with(runtime) { characterCommand { id -> api.tree.reset(id) } } }
 
     /** Admin only: hand the character experience and let the server decide about the level. */
     fun addExperience(amount: Double) { with(runtime) { characterCommand { id ->
         check(state.value.isAdmin) { ui("hero.xp_admin_only") }
-        val character = api.hero.addExperience(id, amount)
-        mutable.update { it.copy(message = ui("hero.level_and_xp", character.level, character.experience)) }
+        api.hero.addExperience(id, amount)
     } } }
 
     fun redeem(code: String) { with(runtime) { characterCommand { id -> api.hero.redeem(id, code) } } }
@@ -144,15 +138,10 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
     /**
      * Sells an item to a merchant.
      *
-     * The price is the server's — it answers with what was paid and what the purse holds now —
-     * and the hero is re-read because the item is gone and the gold is not where it was.
+     * The server sets the price and pays it; the card showed the same sum beforehand (2.46.0), by
+     * the merchant's own rule, and the hero is re-read because the item is gone and the gold moved.
      */
-    fun sellForGold(inventoryId: String) { with(runtime) { characterCommand { id ->
-        val outcome = api.hero.sellForGold(id, inventoryId)
-        // What it fetched is the whole point of the command, so it is said rather than left to
-        // the generic "saved" — characterCommand keeps a message that is already there.
-        mutable.update { it.copy(message = ui("hero.sold_for", outcome.gold, outcome.money)) }
-    } } }
+    fun sellForGold(inventoryId: String) { with(runtime) { characterCommand { id -> api.hero.sellForGold(id, inventoryId) } } }
 
     fun useRecipe(recipeId: String, ingredients: List<String>, amount: Long) { with(runtime) { characterCommand { id ->
         api.hero.useRecipe(id, recipeId, UseRecipeCommand(ingredients, amount))
@@ -162,22 +151,21 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
      * Every character command is a write the server may have applied even when the answer is lost,
      * so the hero is always re-read afterwards rather than patched from the response.
      */
-    private fun characterCommand(announce: Boolean = true, block: suspend (String) -> Unit) { with(runtime) { task(writing = true, touches = setOf(Reads.HERO)) {
+    private fun characterCommand(block: suspend (String) -> Unit) { with(runtime) { task(writing = true, touches = setOf(Reads.HERO)) {
         val id = state.value.play.characterId.trim()
         check(id.isNotBlank()) { ui("auction.choose_character") }
         check(state.value.ownsCharacter || state.value.isAdmin) { ui("hero.owner_only") }
         block(id)
         readHero()
         expeditionViewModel.regear()
-        if (announce) mutable.update { it.copy(message = it.message ?: ui("hero.changes_saved")) }
     } } }
 
     /**
-     * A command of the forge: its answer is the server's sentence under the item rather than a
-     * snackbar, and the previous sentence goes the moment another command starts, so a refusal is
-     * never read beside the success before it.
+     * A command of the forge: its answer is the server's sentence under the item, and the previous
+     * sentence goes the moment another command starts, so a refusal is never read beside the
+     * success before it.
      */
-    private fun forgeCommand(block: suspend (String) -> Unit) = characterCommand(announce = false) { id ->
+    private fun forgeCommand(block: suspend (String) -> Unit) = characterCommand { id ->
         runtime.mutable.update { it.copy(play = it.play.copy(forgeLine = "")) }
         block(id)
     }
@@ -193,8 +181,15 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
         // The catalogue is half of every card now that an instance keeps only its rolls,
         // so it is read before the hero rather than chased afterwards.
         ensureEquipment()
+        ensureStatTables()
         val character = api.hero.character(id)
-        val view = HeroView(character, api.hero.inventory(id), api.hero.stats(id), api.hero.bag(id), api.tree.state(id))
+        val inventory = api.hero.inventory(id)
+        val tree = api.tree.state(id)
+        // The sheet is added up here since 2.46.0, by the server's formula and in its order.
+        val world = state.value.world
+        val sheet = Sheet.calculate(character, world.classes.firstOrNull { it.id == character.classId }, tree.nodes, inventory,
+            world.inventoryBases, world.definitions, world.statTables)
+        val view = HeroView(character, inventory, sheet, api.hero.bag(id), tree)
         mutable.update { it.copy(play = it.play.copy(hero = view, characterOwner = character.userId, heroReadAt = System.currentTimeMillis(), heroSeenAt = System.currentTimeMillis(), selectedEquipment = it.play.selectedEquipment.takeIf { chosen -> view.inventory.any { item -> item.id == chosen } }
                 ?: view.inventory.firstOrNull()?.id.orEmpty())) }
     } }

@@ -1,5 +1,7 @@
 package com.sperance.exileforge.ui.screens.hero
 
+import com.sperance.exileforge.presentation.state.unmetFor
+import com.sperance.exileforge.presentation.state.sellPrice
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -97,8 +99,8 @@ private fun leadingProperty(document: JsonObject, s: ForgeState): String? =
 /**
  * What could go into one empty place: the stash, narrowed to the slots that fill it.
  *
- * Whether the character can actually wear a line is the server's verdict, shown as the row shows it
- * everywhere else; the tap sends the command either way and the refusal, if any, is the server's.
+ * Whether the character can wear a line is read off the sheet added up here (2.46.0): a line out of
+ * reach says what it needs and does not send the command.
  * The ring place goes with it, so a ring picked for the second line lands in the second ring.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -113,8 +115,9 @@ private fun leadingProperty(document: JsonObject, s: ForgeState): String? =
             item { Engraved(ui("hero.slot_pick", slotTitle(place.code, s.lang))) }
             if (fitting.isEmpty()) item { InfoCard(ui("hero.slot_pick_empty"), ui("hero.slot_pick_hint")) }
             items(fitting, key = { it.first.id }) { (instance, document) ->
-                ItemRow(document, definitions = s.world.definitions, enabled = !s.busy && (s.ownsCharacter || s.isAdmin),
-                    unwearable = s.play.hero?.sheet?.unwearableBy?.get(instance.equipmentId).orEmpty()) {
+                val unmet = s.unmetFor(instance.equipmentId)
+                ItemRow(document, definitions = s.world.definitions, enabled = !s.busy && (s.ownsCharacter || s.isAdmin) && unmet.isEmpty(),
+                    unwearable = unmet, price = s.sellPrice(instance)) {
                     onDismiss(); onEquip(instance.id)
                 }
             }

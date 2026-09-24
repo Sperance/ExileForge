@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.hero
 
+import com.sperance.exileforge.presentation.state.sellPrice
 import androidx.compose.foundation.background
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.*
@@ -105,8 +106,8 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
                     items(visible, key = { it.id }) { instance ->
                         ItemRow(documents.getValue(instance.id), definitions = s.world.definitions,
                             selected = instance.id == s.play.selectedEquipment,
-                            // The server's verdict on the template, not a requirement worked out here.
-                            unwearable = hero.sheet.unwearableBy[instance.equipmentId].orEmpty()) {
+                            // The sheet added up here (2.46.0) says what the template needs, and the merchant's rule what it fetches.
+                            unwearable = hero.sheet.unwearableBy[instance.equipmentId].orEmpty(), price = s.sellPrice(instance)) {
                             detailId = instance.id; vm.selectEquipment(instance.id)
                         }
                     }

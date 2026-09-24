@@ -533,6 +533,14 @@ class GameApiTest {
         ok("""[{"itemId":"chaos_orb","amount":50}]""")
         assertEquals(50L, api.hero.bag(id).single().amount)
         assertEquals("/game/api/v1/character/inventory/items?characterId=$id", server.takeRequest().path)
+        // Since 0.41.0 the sheet is added up here, in the order the server counts and checks in.
+        ok("""{"stats":[{"stat":"STOCK_STRENGTH","order":10},{"stat":"STOCK_HEALTH","order":100}],"slots":["HELMET","BODY"],
+            "sell":{"affixShare":0.15,"rarity":{"COMMON":1.0,"RARE":2.5}}}""")
+        val tables = api.world.statTables()
+        assertEquals(100, tables.order.getValue("STOCK_HEALTH"))
+        assertEquals(listOf("HELMET", "BODY"), tables.slots)
+        assertEquals(2.5, tables.sell.rarity.getValue("RARE"))
+        assertEquals("/game/system/stats", server.takeRequest().path)
         ok("\"system.success\"")
         // The server answers a locale key now, not a word; the client passes it on untouched.
         assertEquals("system.success", api.hero.adjustItems(id, listOf(ItemStack("chaos_orb", -2))))
@@ -793,7 +801,7 @@ class GameApiTest {
             "POST" to "/api/v1/user/byDeviceId", "GET" to "/api/v1/user/me", "POST" to "/api/v1/user/logout",
             "GET" to "/api/v1/character/byUser",
             "GET" to "/api/v1/equipment/paged", "GET" to "/api/v1/character/inventory/equipments",
-            "GET" to "/api/v1/character/inventory/stats", "POST" to "/api/v1/character/inventory/itemToInventory",
+            "GET" to "/system/stats", "POST" to "/api/v1/character/inventory/itemToInventory",
             "POST" to "/api/v1/characterequipment/equip", "POST" to "/api/v1/characterequipment/applyOrb",
             "GET" to "/api/v1/modifierdefinition", "GET" to "/api/v1/characterclass", "GET" to "/api/v1/experiencelevel",
             "GET" to "/api/v1/skilltreenode", "GET" to "/api/v1/character/skilltree/state",

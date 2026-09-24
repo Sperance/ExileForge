@@ -68,19 +68,22 @@ private data class MapLine(val text: String, val kind: MapLineKind, val risk: Do
  * stash the portal block folds to a small emblem and the window is the location's description.
  * «Войти в портал» is pinned at the foot. Every number is the server's rule; the entry spends the map.
  */
-@Composable fun LaunchScreen(s: ForgeState, vm: ForgeViewModel, snackbar: SnackbarHostState) {
+@Composable fun LaunchScreen(s: ForgeState, vm: ForgeViewModel) {
     val launch = s.play.launch ?: return
     BackHandler(!s.busy) { vm.closeLaunch() }
     LaunchedEffect(launch.mapCode) { if (s.world.campaign == null) vm.loadCampaign(); vm.ensureHero() }
     val view = s.world.campaign
     val map = view?.chapters?.flatMap { it.maps }?.firstOrNull { it.code == launch.mapCode }
-    Scaffold(containerColor = Ink, snackbarHost = { SnackbarHost(snackbar) },
+    Scaffold(containerColor = Ink,
         bottomBar = {
-            Button(enabled = map != null && s.play.hero != null && !s.busy, onClick = { vm.startRun(launch.mapCode) }, shape = CutCornerShape(10.dp),
-                modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp).height(56.dp)) {
-                Icon(ForgeGlyphs.Portal, null, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(10.dp))
-                Text(ui("expedition.launch_go"), style = MaterialTheme.typography.titleMedium)
+            Column(Modifier.fillMaxWidth().navigationBarsPadding()) {
+                RefusalLine(s.refusal, vm::dismissMessage)
+                Button(enabled = map != null && s.play.hero != null && !s.busy, onClick = { vm.startRun(launch.mapCode) }, shape = CutCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth().padding(16.dp).height(56.dp)) {
+                    Icon(ForgeGlyphs.Portal, null, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(10.dp))
+                    Text(ui("expedition.launch_go"), style = MaterialTheme.typography.titleMedium)
+                }
             }
         }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).statusBarsPadding()) {

@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
+import androidx.compose.ui.Alignment
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
@@ -36,6 +37,8 @@ import kotlinx.serialization.json.*
                 Button(enabled = !s.busy && s.isAdmin && s.admin.catalog != Catalog.CHARACTERS, onClick = { confirmRun = true }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Outlined.PlayArrow, null); Text(ui("checks.run_check")) }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(enabled = !s.busy, onClick = vm::count) { Text(ui("checks.check_count")) }
+                    Text(ui("catalog.count", s.admin.total), color = Muted, style = MaterialTheme.typography.labelMedium,
+                        modifier = Modifier.align(Alignment.CenterVertically))
                     TextButton(onClick = vm::clearLogs) { Text(ui("checks.clear_journal")) }
                 }
             }

@@ -20,14 +20,16 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.45.0, `versionCode` 63) for the
-**ktor-bestgame** RPG server (0.40.0), pinned in
-`core/.../contract/Contract.kt` as `SERVER_COMMIT = a42b8a789813c900084837b2defcde3eaea49751`
+ExileForge is an **Android Compose client** (version 2.46.0, `versionCode` 64) for the
+**ktor-bestgame** RPG server (0.41.0), pinned in
+`core/.../contract/Contract.kt` as `SERVER_COMMIT = 433f095253cc3f00ee67584f747983bd028b067f`
 on the server branch `claude/vigilant-wozniak-ptnxmx`.
 
-The client is deliberately **thin**: the server owns items, stats, modifier rolls and inventory.
-This client renders server state and sends commands; it may add up what it was already sent to
-show a total, using the server's own formula, but it never decides a roll, a price or a sheet.
+The client is deliberately **thin**: the server owns items, modifier rolls and inventory, and it
+checks every command. This client renders server state and sends commands; since 2.46.0 (the
+owner's decision) it adds the character sheet and the merchant's price up itself, by the server's
+own formula and tables, and refuses to send what it can already see will fail — but it never
+decides a roll, and no number it works out ever travels back.
 
 ## Where the backlog lives
 
@@ -247,7 +249,9 @@ worked on) or from «Сфера»/«Верстак» on an item's card (`openFor
 Since 2.19.0 it is one item on top and three sections — orbs, bench, recipes — with the orbs and
 bench lines as a ledger and the choice in a bar over the navigation whose `HoldButton` re-arms
 after each hold; the server's sentence lands in `PlayState.forgeLine` under the item, not in a
-snackbar. Since 2.12.0 the
+snackbar — and since 2.46.0 there are no snackbars at all: a success says nothing, and a refusal is
+`RefusalLine` (`ForgeState.refusal`), a red line under the banner, on the launch screen, over the
+run and in the character menu, gone on a tap, a tab change or the next command. Since 2.12.0 the
 Hero tab itself has sections rather than one long scroll; since 2.23.0 there are four — Character,
 Equipment, Stash, Bag — drawn as a glyph over a short label so four fit a phone. The stash holds
 only loose items (what is worn or socketed is the Equipment section's), and the bag is a list in
@@ -269,16 +273,18 @@ These are enforced by tests and are the point of the client's design:
    "100 armour" and "+20% armour" on two lines is a puzzle and 120 is the answer. It uses the
    server's own formula — `(base + ΣADD) * (1 + ΣINCREASED/100) * Π(1 + MORE/100)`, SET last — so
    the two sides cannot disagree; when one of them changes, the other does too.
-   `GET /api/v1/character/inventory/stats` is the character sheet; the client prints it. Since
-   0.10.0 it answers a `CharacterSheet` object: the numbers, the level, and the server's verdict on
-   every worn item (`active` / `inactive` with the requirement each one misses). Since 0.17.0 it
-   also carries `unwearable`: every *template* the character cannot currently meet, with reasons.
-   The verdict is on the template because that is where a requirement lives, so one answer marks a
-   stash line and a stranger's lot alike — and the client looks a template up rather than working
-   a requirement out. A requirement is never re-checked here, and an attribute conversion
-   (`perStat`/`perAmount`) is never resolved here — an item has nothing inside it to convert from:
-   the server applies the class's own conversions (strength to life, intelligence to mana and three
-   more) in the same pass as the tree, which is what makes an attribute from a worn item feed one.
+   **Since 2.46.0 the character sheet is added up here** (`core/character/Sheet.kt`, the owner's
+   decision), line for line the server's `CharacterStatsCalculator`: the class's base at the level,
+   its conversions and the tree first, then the worn items in the server's slot order, each checked
+   against the pass before it, local modifiers folded inside their item, one decimal half-up. The
+   order stats are counted in (a conversion reads a source counted before it), the slot order and
+   the merchant's price rule are the server's tables, `GET /system/stats` (server 0.41.0), read once
+   per server into `WorldState.statTables`; `HeroViewModel.readHero` no longer asks
+   `/inventory/stats`. The result is the same `CharacterSheet` — numbers, `active`, `inactive` and
+   `unwearable` with the server's own reason strings — so every screen reads it as before.
+   `Sheet.wearing` says what putting an item on would change («Если надеть», `WearPreview`), by the
+   server's placement rule (`EquipSlots`). A requirement is checked here and a control is off for an
+   item out of reach; the server checks it again.
 2. **Identity comes from the server.** POST sends a JSON array of documents without `_id`;
    `requireId` demands 24 hex chars before any request is built.
 3. **The server owns versioning.** PUT sends only the changed fields and DELETE sends no body —
@@ -391,12 +397,14 @@ These are enforced by tests and are the point of the client's design:
     which spends the map; `MapEffects` applies its summed effects to the run (monster buffs join every
     rarity's effects, pack size and rarer monsters change counts and weights, the hero loses light,
     flask charges, resistances and regeneration). A map is never worn: its card offers «К локации».
-14. **Gold is the merchant's, not the client's.** `POST /api/v1/characterequipment/sell` destroys
-    the instance and pays for it; the price is the template's base times the copy's rarity times
-    how many affixes rolled, times `STOCK_GOLD` — a characteristic that exists, that nothing
-    grants yet, and that therefore costs nothing until something does. A worn or socketed item is
-    refused (`CH_014`, `CH_015`), as the auction refuses one. The client sends the pair and prints
-    what came back; it never works a price out, here or anywhere.
+14. **Gold is paid by the merchant, and shown by the client.** `POST /api/v1/characterequipment/sell`
+    destroys the instance and pays for it; the price is the template's base times the copy's rarity
+    (the copy's since server 0.41.0 — it used to read the template's) times how many affixes rolled,
+    times `STOCK_GOLD` — a characteristic that exists, that nothing grants yet, and that therefore
+    costs nothing until something does. A worn or socketed item is refused (`CH_014`, `CH_015`), as
+    the auction refuses one. Since 2.46.0 the client works the same sum out by the rule
+    `/system/stats` serves (`Sheet.sellPrice`, `ForgeState.sellPrice`) and shows it on every row of
+    the hero's own items and on the card, and the sell sheet names it; the server still pays its own.
 15. **An item has no stat fields, and no number is printed raw.** Armour, damage and attack speed
     are fixed modifiers in `baseParams` (values, no tier); `durability` is the only number left as
     a field. Every `Double` the server sends is counted in full and *displayed* through
@@ -417,11 +425,11 @@ These are enforced by tests and are the point of the client's design:
     read as a figure rather than a sentence — 120 and «броня», the first one set large — and the
     rolls are a list under a rhombus; the icon sits beside the name, because that is how an item
     is recognised before any of it is read. Requirements
-    (`requiredLevel`, `requiredStrength`, `requiredDexterity`, `requiredIntelligence`) are printed,
-    never enforced here — the server checks them twice and the two checks are different rules:
+    (`requiredLevel`, `requiredStrength`, `requiredDexterity`, `requiredIntelligence`) are printed
+    and, since 2.46.0, checked against the sheet added up here: wearing an item out of reach is off,
+    with the reasons in red. The server checks them twice and the two checks are different rules:
     `equip` refuses an item out of reach outright (`CH_013`), while one already worn keeps its slot
-    and only stops counting, landing in the sheet's `inactive`. Never disable a control on a
-    requirement the client worked out itself; send the command and show the refusal.
+    and only stops counting, landing in the sheet's `inactive`.
 16. **Release builds require HTTPS** (`usesCleartextTraffic=false`); only the debug manifest
     permits cleartext for local servers. This matters more than usual: the token in every header
     is the account for 30 days.
@@ -595,7 +603,7 @@ These are enforced by tests and are the point of the client's design:
 
 - **Language split:** code, comments, commit messages and test names are English; **no
   user-facing string is written in the source at all** — including `require`/`check` messages,
-  which surface in snackbars. It is a key in `core/src/main/resources/i18n/ui_{ru,en}.json`,
+  which surface in the refusal line. It is a key in `core/src/main/resources/i18n/ui_{ru,en}.json`,
   read with `ui("screen.thing")` from `core/i18n/Loc.kt`. `ui` reads the global `uiLanguage`,
   which defaults to **RU** in `:core`, so tests that assert Russian keep passing; `:app` sets it
   from the store, or from the device's own language on a first run. Compose refreshes because
@@ -629,7 +637,8 @@ These are enforced by tests and are the point of the client's design:
   that is **held** for `HOLD_TO_CONFIRM_MS`, because a tap is what a thumb does on its way
   elsewhere. The same button answers an accessibility click at once: a screen reader cannot hold.
   "What is left" is printed only when the bag is known and can pay; when it cannot, the sheet says
-  so as a warning and still sends the command — the refusal is the server's. A stash is a list of `ItemRow`s with the full `ItemCard` one tap behind each,
+  so as a warning and, since 2.46.0, the button stays off (`ConfirmSheet(blocked = …)`) — the same
+  for the forge's orbs and bench, the merchant, lot places, tree points and a work's materials. A stash is a list of `ItemRow`s with the full `ItemCard` one tap behind each,
   because a card is a page about one item and a line is a stash you can read down. That card is
   `ItemSheet`: it scrolls, and the actions sit in a row pinned under it — wear or take off, an orb,
   a listing, a sale, and the base for an administrator — so what a player came to do is never below

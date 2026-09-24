@@ -39,15 +39,15 @@ import com.sperance.exileforge.ui.theme.*
  * An account with nothing to choose between does not get a chooser: the creation form opens
  * straight away, because an empty list is not a decision.
  */
-@Composable fun CharacterSelectScreen(s: ForgeState, vm: ForgeViewModel, snackbar: SnackbarHostState) {
+@Composable fun CharacterSelectScreen(s: ForgeState, vm: ForgeViewModel) {
     val empty = s.account.charactersRead && s.account.characters.isEmpty()
     var creating by rememberSaveable(empty) { mutableStateOf(empty) }
     var pendingDelete by remember { mutableStateOf<CharacterSummary?>(null) }
     LaunchedEffect(creating) { if (creating) vm.ensureClasses() }
-    Scaffold(containerColor = Ink,
-        snackbarHost = { SnackbarHost(snackbar) { data -> Snackbar(data, containerColor = PanelRaised, contentColor = Parchment, actionColor = Gold, shape = MaterialTheme.shapes.small) } }) { padding ->
+    Scaffold(containerColor = Ink) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).imePadding().voidBackdrop()) {
             if (s.busy || s.reading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised) else OrnateDivider(Gold)
+            RefusalLine(s.refusal, vm::dismissMessage)
             if (creating) CreatingColumn(s, vm, onBack = { creating = false }, onSignOut = vm::logout)
             else CharacterMenu(s, onPlay = vm::enterCharacter, onDelete = { pendingDelete = it },
                 onCreate = { creating = true }, onRefresh = vm::refreshCharacters, onLogout = vm::logout)

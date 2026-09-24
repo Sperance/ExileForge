@@ -26,12 +26,12 @@ class RedemptionViewModel(private val runtime: ForgeRuntime) {
     fun create(code: RedemptionCode) { with(runtime) { task(writing = true, touches = setOf(Reads.REDEMPTIONS)) {
         check(state.value.isAdmin) { ui("redemption.admin_only") }
         val created = api.promo.create(code)
-        mutable.update { it.copy(message = ui("redemption.created", created.code), admin = it.admin.copy(redemptions = it.admin.redemptions + created)) }
+        mutable.update { it.copy(admin = it.admin.copy(redemptions = it.admin.redemptions + created)) }
     } } }
 
     fun delete(id: String) { with(runtime) { task(writing = true, touches = setOf(Reads.REDEMPTIONS)) {
         check(state.value.isAdmin) { ui("redemption.admin_only") }
         api.promo.delete(id)
-        mutable.update { it.copy(message = ui("redemption.deleted"), admin = it.admin.copy(redemptions = it.admin.redemptions.filterNot { code -> code.id == id })) }
+        mutable.update { it.copy(admin = it.admin.copy(redemptions = it.admin.redemptions.filterNot { code -> code.id == id })) }
     } } }
 }

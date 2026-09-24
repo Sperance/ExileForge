@@ -58,7 +58,7 @@ class AuctionViewModel(private val runtime: ForgeRuntime) {
     fun buyOffer(offerId: String) { with(runtime) { trade(writing = true) {
         val id = state.value.play.characterId.trim()
         val purchase = api.merchant.buy(id, offerId)
-        mutable.update { it.copy(message = ui("merchant.bought"), market = it.market.copy(
+        mutable.update { it.copy(market = it.market.copy(
             merchant = it.market.merchant?.let { stock -> stock.copy(offers = stock.offers.filter { offer -> offer.id != offerId }) })) }
         gold(purchase.money)
         refreshInventory(id)
@@ -67,7 +67,7 @@ class AuctionViewModel(private val runtime: ForgeRuntime) {
     /** One more lot place for gold (0.34.0). */
     fun buySlot() { with(runtime) { trade(writing = true) {
         val slots = api.auction.buySlot(state.value.play.characterId.trim())
-        mutable.update { it.copy(message = ui("auction.slot_bought", slots.limit), market = it.market.copy(slots = slots)) }
+        mutable.update { it.copy(market = it.market.copy(slots = slots)) }
         gold(slots.money)
     } } }
 
@@ -79,8 +79,7 @@ class AuctionViewModel(private val runtime: ForgeRuntime) {
     /** Buying costs orbs out of the bag, so the bag and the showcase are what go stale. */
     fun buy(lotId: String) { with(runtime) { trade(writing = true) {
         val id = state.value.play.characterId.trim()
-        val lot = api.auction.buy(id, lotId)
-        mutable.update { it.copy(message = ui("auction.bought", lot.title)) }
+        api.auction.buy(id, lotId)
         refreshBag(id)
         val filter = state.value.market.filter.copy(excludeSellerId = if (state.value.market.showOwnLots) "" else id, lang = state.value.lang.code)
         mutable.update { it.copy(market = it.market.copy(showcase = api.auction.search(id, filter, state.value.market.showcase.page))) }
@@ -89,26 +88,24 @@ class AuctionViewModel(private val runtime: ForgeRuntime) {
     /** Listing and withdrawing move goods between the character and the lot: both lists change. */
     fun sellEquipment(inventoryId: String, priceOrbId: String, price: Long) { with(runtime) { trade(writing = true) {
         val id = state.value.play.characterId.trim()
-        val lot = api.auction.sellEquipment(id, inventoryId, priceOrbId, price)
-        listed(id, lot.title)
+        api.auction.sellEquipment(id, inventoryId, priceOrbId, price)
+        listed(id)
     } } }
 
     fun sellItem(itemId: String, amount: Long, priceOrbId: String, price: Long) { with(runtime) { trade(writing = true) {
         val id = state.value.play.characterId.trim()
-        val lot = api.auction.sellItem(id, itemId, amount, priceOrbId, price)
-        listed(id, lot.title)
+        api.auction.sellItem(id, itemId, amount, priceOrbId, price)
+        listed(id)
     } } }
 
     fun cancel(lotId: String) { with(runtime) { trade(writing = true) {
         val id = state.value.play.characterId.trim()
-        val lot = api.auction.cancel(id, lotId)
-        mutable.update { it.copy(message = ui("auction.withdrawn", lot.title)) }
+        api.auction.cancel(id, lotId)
         refreshInventory(id)
         mutable.update { it.copy(market = it.market.copy(myLots = api.auction.myLots(id), slots = api.auction.slots(id))) }
     } } }
 
-    private suspend fun listed(characterId: String, title: String) { with(runtime) {
-        mutable.update { it.copy(message = ui("auction.listed", title)) }
+    private suspend fun listed(characterId: String) { with(runtime) {
         refreshInventory(characterId)
         mutable.update { it.copy(market = it.market.copy(myLots = api.auction.myLots(characterId), slots = api.auction.slots(characterId), tab = 1)) }
     } }

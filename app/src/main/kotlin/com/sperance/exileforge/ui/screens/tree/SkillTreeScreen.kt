@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.tree
 
+import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.core.display.Glyph
 
 import androidx.compose.foundation.Canvas
@@ -345,7 +346,7 @@ import kotlinx.serialization.json.putJsonArray
     Engraved(ui("tree.jewel_in"))
     free.forEach { instance ->
         val document = inventoryDocument(instance, s.world.inventoryBases[instance.equipmentId])
-        ItemRow(document, definitions = s.world.definitions, enabled = enabled) { onSocket(instance.id, node.code) }
+        ItemRow(document, definitions = s.world.definitions, enabled = enabled, price = s.sellPrice(instance)) { onSocket(instance.id, node.code) }
     }
 }
 
@@ -378,6 +379,7 @@ import kotlinx.serialization.json.putJsonArray
                 LedgerLine(ui("confirm.gain"), nodeName(code), Tone.GAIN),
             ),
             note = ui("tree.allocate_confirm"),
+            warning = available?.takeIf { it < cost }?.let { ui("tree.short_points", it) }, blocked = available != null && available < cost,
             confirm = ui("tree.allocate_do"), onDismiss = onClear) { onAllocate(code) }
     }
     refund?.let { code ->
@@ -385,7 +387,7 @@ import kotlinx.serialization.json.putJsonArray
         ConfirmSheet(
             title = ui("tree.refund_q"), subtitle = nodeName(code), icon = treeIcon,
             ledger = regretLines(1) + LedgerLine(ui("confirm.returns"), ui("confirm.plus_count", cost, points(cost)), Tone.GAIN),
-            warning = shortage(1),
+            warning = shortage(1), blocked = shortage(1) != null,
             confirm = ui("tree.refund_do"), onDismiss = onClear) { onRefund(code) }
     }
     if (reset) {
@@ -394,7 +396,7 @@ import kotlinx.serialization.json.putJsonArray
         ConfirmSheet(
             title = ui("tree.reset_q"), subtitle = ui("confirm.count", returned, nodes(returned)), icon = treeIcon,
             ledger = regretLines(returned) + LedgerLine(ui("confirm.returns"), ui("confirm.plus_count", returned, nodes(returned)), Tone.GAIN),
-            note = ui("tree.reset_confirm"), warning = shortage(returned), danger = true,
+            note = ui("tree.reset_confirm"), warning = shortage(returned), blocked = shortage(returned) != null, danger = true,
             confirm = ui("tree.reset_do"), onDismiss = onClear) { onReset() }
     }
 }

@@ -95,6 +95,8 @@ data class ForgeState(
      * A confirmation prints what a purchase or a refund leaves behind; before the bag is known it
      * prints nothing rather than a guess of zero.
      */
+    /** The refusal to print where the action was taken; a success is never shown (2.46.0). */
+    val refusal: String? get() = message.takeIf { error }
     fun bagAmount(itemId: String): Long? = play.hero?.let { view -> view.bag.firstOrNull { it.itemId == itemId }?.amount ?: 0L }
     /** The bag's orb of the given kind — the document a spent orb is counted by. */
     fun orbOf(kind: com.sperance.exileforge.core.model.currency.CurrencyOrb) = world.orbs.firstOrNull { it.orb == kind }
@@ -134,6 +136,8 @@ data class WorldState(
     val levels: List<ExperienceLevel> = emptyList(),
     /** Templates of the instances on screen, keyed by `equipmentId`; an instance carries only rolls. */
     val inventoryBases: Map<String, JsonObject> = emptyMap(),
+    /** The stat order, slot order and price rule the sheet is added up by here (server 0.41.0). */
+    val statTables: com.sperance.exileforge.core.character.StatTables = com.sperance.exileforge.core.character.StatTables(),
     /**
      * The server's dictionary for the current language, and how many strings it holds.
      *

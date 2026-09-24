@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.craft
 
+import com.sperance.exileforge.presentation.state.sellPrice
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -105,7 +106,7 @@ private val ForgeSection.title get() = when (this) {
     }
     val document = inventoryDocument(instance, s.world.inventoryBases[instance.equipmentId])
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        ItemRow(document, s.world.definitions, onClick = onPick)
+        ItemRow(document, s.world.definitions, price = s.sellPrice(instance), onClick = onPick)
         if (instance.corrupted) Text(ui("orb.corrupted"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
         s.play.forgeLine.takeIf { it.isNotBlank() }?.let {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -194,11 +195,11 @@ private val ForgeSection.title get() = when (this) {
             chosen == UNCRAFT -> {
                 val scouring = s.world.orbs.firstOrNull { it.orb == CurrencyOrb.ORB_OF_SCOURING }
                 BarTitle(ForgeGlyphs.Anvil, Crafted, ui("bench.remove"), stock(owned[scouring?.id] ?: 0L, 1))
-                HoldButton(ui("confirm.hold", ui("forge.remove_bench")), Crafted, enabled = enabled, rearm = true) { vm.uncraft(instance.id) }
+                HoldButton(ui("confirm.hold", ui("forge.remove_bench")), Crafted, enabled = enabled && (owned[scouring?.id] ?: 0L) >= 1, rearm = true) { vm.uncraft(instance.id) }
             }
             recipe != null -> {
                 BarTitle(ForgeGlyphs.Anvil, Crafted, recipeText(recipe, s.world.definitions), stock(owned[recipe.orbItemId] ?: 0L, recipe.amount))
-                HoldButton(ui("confirm.hold", ui("forge.apply_bench")), Crafted, enabled = enabled, rearm = true) { vm.craft(instance.id, recipe.code) }
+                HoldButton(ui("confirm.hold", ui("forge.apply_bench")), Crafted, enabled = enabled && (owned[recipe.orbItemId] ?: 0L) >= recipe.amount, rearm = true) { vm.craft(instance.id, recipe.code) }
             }
             else -> Text(ui("forge.pick_line"), color = Muted)
         }
@@ -207,7 +208,7 @@ private val ForgeSection.title get() = when (this) {
 
 /**
  * What the bag keeps after one use. It is printed only when the bag can pay; when it cannot, the
- * bar says so and the button still sends — the refusal is the server's, and it is free.
+ * bar says so in red and the button stays off (2.46.0).
  */
 private fun stock(have: Long, need: Long): Pair<String, Boolean> =
     if (have >= need) ui("forge.orb_left", have, have - need) to false else ui("forge.short", have) to true
@@ -239,7 +240,7 @@ private fun stock(have: Long, need: Long): Pair<String, Boolean> =
             items(inventory, key = { it.id }) { instance ->
                 ItemRow(inventoryDocument(instance, s.world.inventoryBases[instance.equipmentId]), s.world.definitions,
                     selected = instance.id == s.play.selectedEquipment,
-                    facts = if (instance.equipped || instance.socketed) listOf(ui("hero.equipped")) else emptyList()) { onPick(instance.id) }
+                    facts = if (instance.equipped || instance.socketed) listOf(ui("hero.equipped")) else emptyList(), price = s.sellPrice(instance)) { onPick(instance.id) }
             }
         }
     }

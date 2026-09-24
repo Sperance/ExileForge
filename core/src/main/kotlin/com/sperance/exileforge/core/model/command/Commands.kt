@@ -76,7 +76,8 @@ data class ApiCapabilities(val routes: Set<String>) {
             // once per session is not an optimisation any more — a card cannot be drawn without it.
             "GET" to "/api/v1/equipment",
             "GET" to "/api/v1/character/inventory/equipments",
-            "GET" to "/api/v1/character/inventory/stats",
+            // 0.41.0: the client adds the sheet up itself, in the server's order.
+            "GET" to "/system/stats",
             "POST" to "/api/v1/character/inventory/itemToInventory",
             "POST" to "/api/v1/characterequipment/equip",
             "POST" to "/api/v1/characterequipment/applyOrb",

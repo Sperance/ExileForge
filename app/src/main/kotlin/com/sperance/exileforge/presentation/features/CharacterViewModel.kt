@@ -84,7 +84,6 @@ class CharacterViewModel(private val runtime: ForgeRuntime) {
             ui("character.limit", MAX_CHARACTERS)
         }
         val created = api.catalog.create(Catalog.CHARACTERS, characterDocument(owner, name, classId))
-        mutable.update { it.copy(message = ui("character.created", name.trim())) }
         readCharacters()
         entered(created.entityId)
     } } }
@@ -92,7 +91,6 @@ class CharacterViewModel(private val runtime: ForgeRuntime) {
     /** Giving a character up frees one of the account's slots; the server owns what that costs. */
     fun delete(id: String) { with(runtime) { task(writing = true, touches = setOf(Reads.CHARACTERS)) {
         api.catalog.delete(Catalog.CHARACTERS, id)
-        mutable.update { it.copy(message = ui("character.deleted")) }
         val remaining = state.value.account.characters.filterNot { character -> character.id == id }
         // Re-reading would enter the last survivor, and a deletion is not a choice to play them.
         mutable.update { it.copy(account = it.account.copy(characters = remaining)) }

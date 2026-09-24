@@ -52,7 +52,7 @@ import kotlin.math.roundToInt
  * app's dictionary and theme, laid over it. The stick is the overlay's too: a thumb anywhere in the
  * lower part of the screen sets it, and letting go stops the hero.
  */
-@Composable fun ExpeditionPlay(s: ForgeState, vm: ForgeViewModel, run: ExpeditionRun, snackbar: SnackbarHostState) {
+@Composable fun ExpeditionPlay(s: ForgeState, vm: ForgeViewModel, run: ExpeditionRun) {
     val hud by run.hud.collectAsState()
     var gear by remember { mutableStateOf(false) }
     BackHandler { vm.runCommand(RunCommand.Leave) }
@@ -76,7 +76,7 @@ import kotlin.math.roundToInt
             RunPhase.LEFT -> Unit
         }
         // A refusal of the gear (2.40.0) has to be read here too: the run has no bar and no banner.
-        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).navigationBarsPadding())
+        RefusalLine(s.refusal, vm::dismissMessage, Modifier.align(Alignment.TopCenter).statusBarsPadding())
     }
 }
 

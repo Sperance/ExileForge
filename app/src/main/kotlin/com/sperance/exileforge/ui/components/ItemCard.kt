@@ -147,7 +147,9 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
  */
 @Composable fun ItemCard(doc: JsonObject, enabled: Boolean = true, selected: Boolean = false,
     detailed: Boolean = false, definitions: List<ModifierDefinition> = emptyList(),
-    actionLabel: String = ui("common.open"), onClick: () -> Unit = {}) {
+    actionLabel: String = ui("common.open"),
+    /** What the merchant pays for this copy (2.46.0); it replaces the template's bare base price. */
+    price: Long? = null, onClick: () -> Unit = {}) {
     val color = rarityColor(doc.text("rarity"))
     val base = baseProperties(doc, definitions)
     val states = itemStates(doc, definitions)
@@ -176,7 +178,7 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
                     Text(doc.text("name").ifBlank { documentTitle(doc) }, color = Parchment,
                         style = MaterialTheme.typography.titleLarge,
                         maxLines = if (detailed) 5 else 2, overflow = TextOverflow.Ellipsis)
-                    cardFacts(doc).forEach {
+                    cardFacts(doc, withPrice = price == null).forEach {
                         Text(it, color = Muted, style = MaterialTheme.typography.labelSmall)
                     }
                 }
@@ -192,6 +194,10 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
                 Text(it, color = Muted, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Start)
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+                price?.let {
+                    Text(ui("price.sell"), color = Muted, style = MaterialTheme.typography.labelSmall)
+                    Spacer(Modifier.width(6.dp)); GoldPrice(it); Spacer(Modifier.weight(1f))
+                }
                 Text(actionLabel.uppercase(), color = Gold, style = MaterialTheme.typography.labelLarge)
                 Icon(Icons.Outlined.ChevronRight, null, tint = Gold)
             }
@@ -206,7 +212,7 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
  * and ends a particular kind of document carries. A field the document does not have is left out
  * rather than printed as nothing.
  */
-private fun cardFacts(doc: JsonObject): List<String> = listOfNotNull(
+private fun cardFacts(doc: JsonObject, withPrice: Boolean = true): List<String> = listOfNotNull(
     listOfNotNull(
         doc.text("itemLevel").takeIf { it.isNotBlank() }?.let { ui("row.level", it) },
         doc.text("level").takeIf { it.isNotBlank() }?.let { ui("row.level", it) },
@@ -215,7 +221,7 @@ private fun cardFacts(doc: JsonObject): List<String> = listOfNotNull(
     listOfNotNull(
         doc.text("weaponType").takeIf { it.isNotBlank() }?.let(::weaponTitle),
         doc.text("durability").takeIf { it.isNotBlank() }?.let { "${ui("card.durability")} $it" },
-        doc.text("price").takeIf { it.isNotBlank() }?.let { "${ui("card.price")} $it" },
+        doc.text("price").takeIf { withPrice && it.isNotBlank() }?.let { "${ui("card.price")} $it" },
         doc.text("money").takeIf { it.isNotBlank() }?.let { "${ui("card.gold")} $it" },
     ).joinToString(" · ").takeIf { it.isNotBlank() },
 )

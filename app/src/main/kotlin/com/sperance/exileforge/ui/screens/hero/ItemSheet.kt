@@ -26,6 +26,8 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeSection
 import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.sellPrice
+import com.sperance.exileforge.presentation.state.unmetFor
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.auction.ListingSheet
 import com.sperance.exileforge.core.model.campaign.MapRule
@@ -44,8 +46,8 @@ private enum class ItemAction { AUCTION, SELL }
  * player came to do is never below the fold. Each one is a single tap: wearing and taking off at
  * once, an orb and the crafting bench in the forge, opened over this item, a listing through a small sheet of its own, and selling to
  * the merchant through the held confirmation, because that one cannot be taken back. Every rule behind them is the
- * server's; a control is off only for what the client already knows as a fact — nobody signed in,
- * another command running, an item that is worn.
+ * server's, and it checks them again; since 2.46.0 the client adds the sheet up itself, so wearing
+ * is also off for an item whose requirements it misses, and the card says what it would change.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun ItemSheet(s: ForgeState, vm: ForgeViewModel, instanceId: String, onDismiss: () -> Unit) {
@@ -57,13 +59,16 @@ private enum class ItemAction { AUCTION, SELL }
     val name = document.text("name")
     val can = !s.busy && s.account.signedIn && (s.ownsCharacter || s.isAdmin)
     val loose = !instance.equipped && !instance.socketed
+    val price = s.sellPrice(instance)
+    val reachable = s.unmetFor(instance.equipmentId).isEmpty()
     var open by remember(instanceId) { mutableStateOf<ItemAction?>(null) }
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.92f)) {
             LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 item { ItemCard(document, enabled = false, detailed = true, definitions = s.world.definitions,
-                    actionLabel = ui("hero.instance") + " · ${instance.id.takeLast(6)}") }
+                    actionLabel = ui("hero.instance") + " · ${instance.id.takeLast(6)}", price = price) }
+                item { WearPreview(s, instance) }
                 // Worn but not counting: the server's reasons, as the slot cell prints them.
                 s.play.hero?.inactive?.get(instance.id)?.let { reasons -> item {
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -81,7 +86,7 @@ private enum class ItemAction { AUCTION, SELL }
                     document.text("slot") == MapRule.SLOT -> Action(ForgeGlyphs.Portal, ui("hero.action_map"), can, GoldBright) {
                         onDismiss(); vm.tab(TAB_EXPEDITION); vm.openLaunch(document.text("code").removePrefix("MAP_")); vm.pickMap(instance.id)
                     }
-                    else -> Action(ForgeGlyphs.Helm, ui("hero.equip"), can, GoldBright) { onDismiss(); vm.equip(instance.id, null) }
+                    else -> Action(ForgeGlyphs.Helm, ui("hero.equip"), can && reachable, GoldBright) { onDismiss(); vm.equip(instance.id, null) }
                 }
                 Action(ForgeGlyphs.Orb, ui("hero.action_orb"), can) { onDismiss(); vm.openForge(instance.id, ForgeSection.ORBS) }
                 Action(ForgeGlyphs.Anvil, ui("hero.action_bench"), can, Crafted) { onDismiss(); vm.openForge(instance.id, ForgeSection.BENCH) }
@@ -95,14 +100,14 @@ private enum class ItemAction { AUCTION, SELL }
         ItemAction.AUCTION -> ListingSheet(s, name, onDismiss = { open = null }) { orb, price, _ ->
             open = null; onDismiss(); vm.sellEquipment(instance.id, orb, price)
         }
-        // Selling is final and takes the rolls with it, so it is asked about by name. The price is
-        // the merchant's: the sheet says gold is coming and leaves the sum to him.
+        // Selling is final and takes the rolls with it, so it is asked about by name, with the sum
+        // worked out here by the merchant's own rule.
         ItemAction.SELL -> ConfirmSheet(
             title = ui("hero.sell_q"), subtitle = name, danger = true,
             icon = { ItemIcon(document, rarityColor(document.text("rarity")), Modifier.size(44.dp)) },
             ledger = listOf(
                 LedgerLine(ui("confirm.give"), name, Tone.SPEND),
-                LedgerLine(ui("confirm.gain"), ui("confirm.gold_by_server"), Tone.GAIN),
+                LedgerLine(ui("confirm.gain"), price?.let { ui("merchant.gold_amount", it) } ?: ui("confirm.gold_by_server"), Tone.GAIN),
             ),
             note = ui("hero.sell_confirm"),
             confirm = ui("hero.sell_do"),

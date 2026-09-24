@@ -77,7 +77,7 @@ import kotlinx.serialization.json.JsonObject
  * in a list without a band down every line. The base is read as figures — a chip per number, the
  * number set bold — and the rolls are a list under rhombi, each with its tier on the right, the way
  * the card prints them. What does not fit is counted instead of dropped. [trailing] sits opposite
- * the name — a lot's price — and [footer] under everything, for what a list adds about the item.
+ * the name — a lot's price — or else [price], what the merchant pays, and [footer] under everything, for what a list adds about the item.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable fun ItemRow(document: JsonObject, definitions: List<ModifierDefinition> = emptyList(),
@@ -88,6 +88,8 @@ import kotlinx.serialization.json.JsonObject
     facts: List<String> = emptyList(),
     /** Opposite the name: the price of a lot. */
     trailing: (@Composable () -> Unit)? = null,
+    /** What the merchant pays for it (2.46.0), drawn opposite the name when nothing else is there. */
+    price: Long? = null,
     /** A line below the properties — the seller of a lot, and what else belongs at the bottom. */
     footer: @Composable (ColumnScope.() -> Unit)? = null,
     onClick: () -> Unit) {
@@ -126,7 +128,7 @@ import kotlinx.serialization.json.JsonObject
                     style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f))
                 note?.let { Text(it, color = noteColor, style = MaterialTheme.typography.labelSmall) }
-                trailing?.invoke()
+                trailing?.invoke() ?: price?.let { GoldPrice(it) }
             }
             (listOfNotNull(slot) + facts).takeIf { it.isNotEmpty() }?.let {
                 Text(it.joinToString(" · "), color = Muted, style = MaterialTheme.typography.labelSmall,

@@ -38,7 +38,7 @@ class SessionViewModel(private val runtime: ForgeRuntime) {
         journal.clear()
         mutable.update { it.copy(account = it.account.copy(server = server, serverDraft = server, health = ui("session.checking"))) }
         val health = api.health()
-        mutable.update { it.copy(message = ui("session.reachable"), account = it.account.copy(health = health.toString())) }
+        mutable.update { it.copy(account = it.account.copy(health = health.toString())) }
         // A dictionary and an icon set belong to their server: the new one has its own.
         refreshLocale()
         refreshIcons()
@@ -46,7 +46,7 @@ class SessionViewModel(private val runtime: ForgeRuntime) {
 
     fun health() { with(runtime) { read(Reads.HEALTH) {
         val result = api.health().toString()
-        mutable.update { it.copy(message = ui("session.check_done"), account = it.account.copy(health = result)) }
+        mutable.update { it.copy(account = it.account.copy(health = result)) }
     } } }
 
     /** A sign-in answers the account and a token; the token is kept per server for the next launch. */
@@ -104,7 +104,7 @@ class SessionViewModel(private val runtime: ForgeRuntime) {
      * checks are reached from inside the game, so everyone passes through the menu.
      */
     private suspend fun signedIn(profile: com.sperance.exileforge.core.model.command.UserProfile, byDevice: Boolean) { with(runtime) {
-        mutable.update { it.copy(mode = AppMode.PLAYER, phase = AppPhase.CHARACTERS, message = ui("session.signed_in"), tab = 0, account = it.account.copy(signedIn = true, resumable = false, profile = profile), admin = it.admin.copy(catalog = Catalog.EQUIPMENT)) }
+        mutable.update { it.copy(mode = AppMode.PLAYER, phase = AppPhase.CHARACTERS, tab = 0, account = it.account.copy(signedIn = true, resumable = false, profile = profile), admin = it.admin.copy(catalog = Catalog.EQUIPMENT)) }
         store.saveDeviceSession(byDevice)
         store.saveToken(state.value.account.server, api.sessionToken())
         restoreFilters()
@@ -138,7 +138,6 @@ class SessionViewModel(private val runtime: ForgeRuntime) {
         require(current.isNotEmpty() && replacement.isNotEmpty()) { ui("api.credentials") }
         // Every other session of the account ends; this one stays, so there is nothing to sign into again.
         api.changePassword(current, replacement)
-        mutable.update { it.copy(message = ui("session.password_changed")) }
     } } }
 
     private suspend fun restoreFilters() { with(runtime) {

@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.auction
 
+import com.sperance.exileforge.presentation.state.sellPrice
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -45,7 +46,7 @@ import com.sperance.exileforge.ui.theme.*
         item { Engraved(ui("sell.stash")) }
         if (stash.isEmpty()) item { Text(ui("sell.no_equipment"), color = Muted, style = MaterialTheme.typography.bodySmall) }
         items(stash, key = { it.id }) { instance ->
-            ItemRow(names.getValue(instance.id), s.world.definitions, enabled = !s.busy) { pickedItem = instance.id }
+            ItemRow(names.getValue(instance.id), s.world.definitions, enabled = !s.busy, price = s.sellPrice(instance)) { pickedItem = instance.id }
         }
         item { Spacer(Modifier.height(4.dp)); Engraved(ui("sell.bag")) }
         if (hero.bag.isEmpty()) item { Text(ui("hero.bag_empty"), color = Muted, style = MaterialTheme.typography.bodySmall) }

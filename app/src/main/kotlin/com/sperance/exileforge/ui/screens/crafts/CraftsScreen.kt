@@ -1,5 +1,7 @@
 package com.sperance.exileforge.ui.screens.crafts
 
+import com.sperance.exileforge.presentation.state.unmetFor
+import com.sperance.exileforge.presentation.state.sellPrice
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -256,7 +258,7 @@ private fun share(profession: ProfessionView): Float = profession.next?.takeIf {
                 Engraved(ui("crafts.tool"))
                 val tool = profession.equipped
                 if (tool == null) Text(ui("crafts.no_tool"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
-                else ItemRow(inventoryDocument(tool, s.world.inventoryBases[tool.equipmentId]), definitions = s.world.definitions, enabled = !s.busy) { picking = true }
+                else ItemRow(inventoryDocument(tool, s.world.inventoryBases[tool.equipmentId]), definitions = s.world.definitions, enabled = !s.busy, price = s.sellPrice(tool)) { picking = true }
                 OutlinedButton(enabled = !s.busy, onClick = { picking = true }, modifier = Modifier.fillMaxWidth()) { Text(ui("crafts.change_tool")) }
                 BonusChips(profession)
             }
@@ -364,6 +366,8 @@ private fun share(profession: ProfessionView): Float = profession.next?.takeIf {
                 job.level > profession.level -> Text(ui("crafts.needs_level", job.level), color = LifeRed, style = MaterialTheme.typography.bodyMedium)
                 !job.open -> Text(ui("crafts.locked_map"), color = LifeRed, style = MaterialTheme.typography.bodyMedium)
                 current -> OutlinedButton(enabled = !s.busy, onClick = { onDismiss(); vm.stopWork() }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text(ui("crafts.stop")) }
+                // A cycle the bag cannot feed is not started (2.46.0): the chips above say what is short.
+                job.inputs.any { bagCount(s, it.item) < it.amount } -> Text(ui("crafts.short_inputs"), color = LifeRed, style = MaterialTheme.typography.bodyMedium)
                 else -> Button(enabled = !s.busy, onClick = { onDismiss(); vm.startWork(job.code, additives) }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text(ui("crafts.start")) }
             }
             if (profession.equipped == null && job.level <= profession.level) Text(ui("crafts.no_tool"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
@@ -383,7 +387,7 @@ private fun share(profession: ProfessionView): Float = profession.next?.takeIf {
             if (tools.isEmpty()) item { InfoCard(ui("crafts.no_tools"), ui("crafts.no_tools_hint")) }
             items(tools, key = { it.first.id }) { (instance, document) ->
                 ItemRow(document, definitions = s.world.definitions, enabled = !s.busy,
-                    unwearable = s.play.hero?.sheet?.unwearableBy?.get(instance.equipmentId).orEmpty()) { onPick(instance.id) }
+                    unwearable = s.unmetFor(instance.equipmentId), price = s.sellPrice(instance)) { onPick(instance.id) }
             }
         }
     }

@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.expedition
 
+import com.sperance.exileforge.presentation.state.sellPrice
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -522,7 +523,7 @@ private fun outcomeColour(outcome: Outcome) = when (outcome) { Outcome.WIN -> Vi
             }
         }
         reward.equipment.forEach { instance ->
-            ItemRow(inventoryDocument(instance, s.world.inventoryBases[instance.equipmentId]), s.world.definitions) {}
+            ItemRow(inventoryDocument(instance, s.world.inventoryBases[instance.equipmentId]), s.world.definitions, price = s.sellPrice(instance)) {}
         }
         if (reward.items.isEmpty() && reward.equipment.isEmpty()) Text(ui("expedition.loot_nothing"), color = Muted)
     }

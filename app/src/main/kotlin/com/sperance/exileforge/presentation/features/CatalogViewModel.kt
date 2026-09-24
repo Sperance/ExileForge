@@ -33,12 +33,12 @@ class CatalogViewModel(private val runtime: ForgeRuntime) {
     } } }
 
     fun refresh(page: Int = state.value.admin.page) { with(runtime) {
-        read(Reads.CATALOG, restart = true) { if (state.value.account.signedIn) loadPage(page) else mutable.update { it.copy(tab = 3, message = ui("catalog.sign_in")) } }
+        read(Reads.CATALOG, restart = true) { if (state.value.account.signedIn) loadPage(page) else mutable.update { it.copy(tab = 3, message = ui("catalog.sign_in"), error = true) } }
     } }
 
     fun count() { with(runtime) { read("${Reads.CATALOG}.count") {
         val result = api.catalog.count(state.value.admin.catalog)
-        mutable.update { it.copy(message = ui("catalog.count", result)) }
+        mutable.update { it.copy(admin = it.admin.copy(total = result)) }
     } } }
 
     fun open(id: String) { with(runtime) { task(touches = setOf(Reads.CATALOG)) {

@@ -81,5 +81,9 @@ class WorldClient internal constructor(private val http: Transport) {
             .map { WireJson.decodeFromJsonElement(com.sperance.exileforge.core.model.crafts.MaterialItem.serializer(), it) }
             .sortedWith(compareBy({ it.subCategory }, { it.price }))
 
+    /** The stat order, the slot order and the price rule the client adds the sheet up by (server 0.41.0). Public, fixed per server. */
+    suspend fun statTables(): com.sperance.exileforge.core.character.StatTables =
+        WireJson.decodeFromJsonElement(com.sperance.exileforge.core.character.StatTables.serializer(), http.request("GET", "system/stats"))
+
     suspend fun recipe(id: String): RecipeDocument { requireId(id); return WireJson.decodeFromJsonElement(http.request("GET", "api/v1/recipe", mapOf("id" to id), authenticated = true)) }
 }

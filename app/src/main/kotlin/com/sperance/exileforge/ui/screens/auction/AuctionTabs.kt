@@ -98,8 +98,8 @@ import kotlinx.serialization.json.put
         val blocked = s.play.hero?.sheet?.unwearableBy?.get(lot.equipment?.equipmentId.orEmpty()).orEmpty()
         val document = lotDocument(s, lot)
         val orb = orbTitle(s, lot)
-        // What the bag keeps after paying: shown when the bag is known and can pay, and turned
-        // into a warning when it cannot — the server refuses a short purchase, this only says so first.
+        // What the bag keeps after paying: shown when the bag is known and can pay; when it cannot,
+        // the sheet says so and the purchase is not sent (2.46.0).
         val have = s.bagAmount(lot.priceOrbId)
         ConfirmSheet(
             title = ui("auction.buy_q"), subtitle = lot.title,
@@ -117,6 +117,7 @@ import kotlinx.serialization.json.put
                     ui("auction.unwearable", it.joinToString(", ") { r -> requirementReason(r, s.lang) })
                 },
             ).joinToString("\n").ifBlank { null },
+            blocked = have != null && have < lot.price,
             confirm = ui("auction.buy_do"),
             onDismiss = { confirmBuy = null }) { onBuy(lot.id) }
     }
@@ -249,7 +250,7 @@ private fun chipLabel(s: ForgeState, field: FilterField, value: String): String 
             ledger = listOfNotNull(LedgerLine(ui("confirm.spend"), ui("merchant.gold_amount", slots.price), Tone.SPEND),
                 LedgerLine(ui("confirm.gain"), ui("auction.slots_value", slots.used, slots.limit + 1, slots.max), Tone.GAIN),
                 money?.let { it - slots.price }?.takeIf { it >= 0 }?.let { LedgerLine(ui("confirm.left"), ui("merchant.gold_amount", it)) }),
-            warning = money?.takeIf { it < slots.price }?.let { ui("merchant.short") }) {
+            warning = money?.takeIf { it < slots.price }?.let { ui("merchant.short") }, blocked = money != null && money < slots.price) {
             buyingSlot = false
             vm.buyLotSlot()
         }

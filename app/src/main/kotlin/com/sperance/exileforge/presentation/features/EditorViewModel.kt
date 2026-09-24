@@ -43,7 +43,6 @@ class EditorViewModel(private val runtime: ForgeRuntime) {
 
     fun loadDefinitions() { with(runtime) { read(Reads.DEFINITIONS) {
         mutable.update { it.copy(world = it.world.copy(definitions = api.world.modifiers())) }
-        mutable.update { it.copy(message = ui("editor.modifiers_loaded", it.world.definitions.size)) }
     } } }
 
     fun reloadEditor() { with(runtime) { task(touches = setOf(Reads.CATALOG)) {
@@ -66,19 +65,18 @@ class EditorViewModel(private val runtime: ForgeRuntime) {
         }
         if (catalog == Catalog.EQUIPMENT) mutable.update { it.copy(world = it.world.copy(inventoryBases = it.world.inventoryBases + (saved.entityId to saved))) }
         setEditor(saved, saved)
-        mutable.update { it.copy(message = ui("editor.saved", saved.entityId)) }
         // List refresh failure must not imply that the successful mutation failed.
         try { loadPage(state.value.admin.page) } catch (e: CancellationException) { throw e }
-        catch (_: Exception) { mutable.update { it.copy(message = ui("editor.saved_refresh")) } }
+        catch (_: Exception) { mutable.update { it.copy(message = ui("editor.saved_refresh"), error = true) } }
     } } }
 
     fun delete() { with(runtime) { task(writing = true, touches = setOf(Reads.CATALOG)) {
         val original = state.value.admin.original ?: error(ui("editor.save_first"))
         check(state.value.canEdit)
         api.catalog.delete(state.value.admin.catalog, original.entityId)
-        mutable.update { it.copy(tab = 0, message = ui("editor.item_deleted"), admin = it.admin.copy(editorOpen = false, original = null, items = it.admin.items.filterNot { item -> item.entityId == original.entityId })) }
+        mutable.update { it.copy(tab = 0, admin = it.admin.copy(editorOpen = false, original = null, items = it.admin.items.filterNot { item -> item.entityId == original.entityId })) }
         try { loadPage(0) } catch (e: CancellationException) { throw e }
-        catch (_: Exception) { mutable.update { it.copy(message = ui("editor.deleted_refresh")) } }
+        catch (_: Exception) { mutable.update { it.copy(message = ui("editor.deleted_refresh"), error = true) } }
     } } }
 
     /** Opens the shared template an inventory instance was rolled from. */

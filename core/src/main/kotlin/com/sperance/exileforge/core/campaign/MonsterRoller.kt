@@ -46,6 +46,18 @@ object MonsterRoller {
     }
 
     /**
+     * The map's boss as it stands (since server 0.32.0): nothing is thrown — its rarity is `UNIQUE`
+     * and its modifiers are fixed — and it folds by the same formula, the tier's power included.
+     */
+    fun boss(map: CampaignMap, rarities: List<CampaignRarity>): RolledMonster? {
+        val boss = map.boss ?: return null
+        val rule = rarities.firstOrNull { it.rarity == MonsterRarity.UNIQUE.name } ?: CampaignRarity(MonsterRarity.UNIQUE.name, 0)
+        val modifiers = boss.modifiers.map { modifier -> modifier.copy(effects = modifier.effects.map { it.copy(value = it.value * rule.modifierPower) }) }
+        val body = CampaignMonster(boss.code, boss.form, boss.stats, boss.behaviour)
+        return RolledMonster(boss.code, boss.form, MonsterRarity.UNIQUE, modifiers, fold(body, rule.effects + modifiers.flatMap { it.effects }), boss.behaviour)
+    }
+
+    /**
      * A monster's stats after its rarity and modifiers: `(base + ΣADD) × (1 + ΣINCREASED/100) ×
      * Π(1 + MORE/100)`, and `SET` last — the formula the server folds item modifiers with.
      */

@@ -1,6 +1,6 @@
 # Контракт Exile Forge 2.5
 
-Сервер: ветка `claude/tender-pasteur-a36kj2`, коммит `dde7d92db166e1f8eac2db7d3f8a4fea9c69d2bd` (ktor-bestgame 0.31.0).
+Сервер: ветка `claude/tender-pasteur-a36kj2`, коммит `88eea1e39a8b43176a183ad9dbcd87ffd396b817` (ktor-bestgame 0.32.0).
 Успех: `{"success":true,"data":...}`. Ошибка: `{"success":false,"error":{"message","errorClass","errorMethod","errorCode","messageArgs"}}`; HTTP-статус сохраняется клиентом.
 
 `messageArgs` добавлено в 0.17.0 и чинит давнюю дыру: `message` — готовое английское предложение, а `error.<код>` в словаре почти всегда шаблон с дыркой («Уровень {0} слишком мал»). Заполнить её клиенту было нечем, и переводились только 17 кодов из 114 — те, у кого шаблон без дырок. Теперь конверт несёт то, что сервер подставил в своё предложение, и клиент собирает своё. Если после подстановки `{0}` остался, значит аргументов пришло меньше, чем ждёт шаблон, и показывается серверная фраза: половина предложения хуже, чем предложение не на том языке.
@@ -342,6 +342,8 @@
 С 0.28.0 в ответе `chapters` есть третье поле — `combat`, **правила боя**: клиент считает бой по ним и не держит своих чисел. `{timeLimit, variance, resistCap, blockCap, spellBlockShare, unarmed:{damage,speed}, critical:{chance,multiplier}, armour:{factor,cap}, evasion:{base,perLevel,cap}, stun:{share,duration}, shield:{rechargeDelay,rechargePerSecond}, spell:{innateDamage,innatePerLevel,castSpeed,manaCost,manaRegenShare}, flask:{charges,perKill,heal,duration}, retreat:{delay}, death:{fromLevel,experienceShare}, ailments:[{ailment,type,chance,magnitude,duration,threshold,stacks}]}`. Недуг — имя из `EnumStatBool` без `BOOL_` (`BURNING`, `CHILLED`, `FROZEN`, `SHOCKED`, `POISONED`, `BLEEDING`), `type` — характеристика урона, которая его вешает; `magnitude` у урона со временем — доля урона попадания за `duration`, у охлаждения — замедление действий, у шока — прибавка к получаемому урону; `threshold` — доля здоровья цели, которую должен снять удар (заморозка). Заклинание у героя врождённое — `innateDamage + innatePerLevel × (уровень − 1)` сверх `STOCK_ATTACK_MAGICAL` листа, при `STOCK_MANA > 0`; монстр колдует, если у него есть урон от заклинаний и мана (у пяти монстров главы есть, модификатор редких `MOB_ARCANE` даёт их). `POST /api/v1/character/campaign/fall?characterId=&mapCode=` — герой погиб: с карты уровня `death.fromLevel` сервер отнимает `death.experienceShare`% опыта текущего уровня, но не ниже его порога (уровень не падает); ответ `{lost, level, totalExperience}`, на ранних картах `lost` = 0. Как и `kill`, запрос не повторяется.
 | Сундуки карты (0.31.0) | `GET /api/v1/character/campaign/chests?characterId=&mapCode=` → `{left, refreshAt}` — окно в 6 часов на героя и карту |
 | Открыть сундук | `POST /api/v1/character/campaign/chest?characterId=&mapCode=` → `CampaignReward`; пустое окно — `CP_006`; не повторяется |
+| Босс карты (0.32.0) | `GET /api/v1/character/campaign/boss?characterId=&mapCode=` → `{alive, respawnAt}` |
+| Босс убит | `POST /api/v1/character/campaign/boss?characterId=&mapCode=` → `CampaignReward`; выход открыт на час, повтор — `CP_008`; пока босс жив, `complete` — `CP_007` |
 
 ## Чего у этого сервера нет
 

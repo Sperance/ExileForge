@@ -2,6 +2,7 @@ package com.sperance.exileforge.core.network
 
 import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.contract.requireId
+import com.sperance.exileforge.core.model.campaign.BossState
 import com.sperance.exileforge.core.model.campaign.CampaignFall
 import com.sperance.exileforge.core.model.campaign.CampaignProgress
 import com.sperance.exileforge.core.model.campaign.CampaignReward
@@ -64,6 +65,20 @@ class CampaignClient internal constructor(private val http: Transport) {
     suspend fun openChest(characterId: String, mapCode: String): CampaignReward {
         requireId(characterId)
         return WireJson.decodeFromJsonElement(http.request("POST", "$CAMPAIGN/chest",
+            mapOf("characterId" to characterId, "mapCode" to mapCode), authenticated = true))
+    }
+
+    /** Whether the map's boss stands for this hero now (since 0.32.0): slain, it is back an hour later. */
+    suspend fun boss(characterId: String, mapCode: String): BossState {
+        requireId(characterId)
+        return WireJson.decodeFromJsonElement(http.request("GET", "$CAMPAIGN/boss",
+            mapOf("characterId" to characterId, "mapCode" to mapCode), authenticated = true))
+    }
+
+    /** The map's boss was slain: the server rolls its loot and opens the exit. Never retried. */
+    suspend fun slayBoss(characterId: String, mapCode: String): CampaignReward {
+        requireId(characterId)
+        return WireJson.decodeFromJsonElement(http.request("POST", "$CAMPAIGN/boss",
             mapOf("characterId" to characterId, "mapCode" to mapCode), authenticated = true))
     }
 }

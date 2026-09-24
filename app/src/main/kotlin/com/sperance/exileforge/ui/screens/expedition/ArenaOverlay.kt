@@ -56,6 +56,7 @@ internal fun rarityTint(rarity: MonsterRarity) = when (rarity) {
     MonsterRarity.NORMAL -> Parchment
     MonsterRarity.MAGIC -> Color(0xFF8888FF)
     MonsterRarity.RARE -> Color(0xFFFFFF77)
+    MonsterRarity.UNIQUE -> Color(0xFFAF6025)
 }
 
 /** Each damage type's colour, on a number and in the log alike. */

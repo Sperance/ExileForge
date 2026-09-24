@@ -229,6 +229,31 @@ class CampaignTest {
         assertNull(run.hud.value.chest)
     }
 
+    @Test fun `a boss guards the exit, rolls nothing and seals it until it falls`() {
+        val guardian = CampaignBoss("BOSS_TIDECALLER", "HUMANOID", mapOf("STOCK_HEALTH" to 40.0, "STOCK_ATTACK_PHYSICAL" to 6.0),
+            BehaviourRule(type = BehaviourRule.AMBUSH, wake = 3.0), listOf(MonsterModifier("MOB_TOUGH", 100, effects = listOf(MonsterEffect("STOCK_HEALTH", "INCREASED", 60.0)))))
+        val withBoss = map.copy(boss = guardian)
+        val unique = CampaignRarity("UNIQUE", 0, modifierPower = 2.0, effects = listOf(MonsterEffect("STOCK_HEALTH", "MORE", 250.0)))
+        val rolled = assertNotNull(MonsterRoller.boss(withBoss, rarities + unique))
+        assertEquals(MonsterRarity.UNIQUE, rolled.rarity)
+        assertEquals(120.0, rolled.modifiers.single().effects.single().value, "the tier's power doubles the fixed modifier")
+        assertEquals(40.0 * 2.2 * 3.5, rolled.stats.getValue("STOCK_HEALTH"), 1e-9)
+        assertNull(MonsterRoller.boss(map, rarities), "an older server sends no boss")
+
+        val world = ExpeditionWorld.create(withBoss, rarities + unique, emptyMap(), 9)
+        val boss = assertNotNull(world.boss)
+        assertTrue(world.sealed)
+        assertTrue(hypot(boss.x - (world.map.exit.x + 0.5), boss.y - (world.map.exit.y + 0.5)) <= 3.0)
+        assertEquals(world.agents.size - 1, world.total, "the boss is the seal, not one of the monsters")
+        world.agents.filter { it !== boss }.forEach { it.alive = false }
+        boss.calm = 100.0
+        world.heroX = world.map.exit.x + 0.5
+        world.heroY = world.map.exit.y + 0.5
+        assertNull(world.step(0.016, 0.0, 0.0), "the exit is sealed")
+        world.bossAbsent()
+        assertEquals(WorldEvent.Exit, world.step(0.016, 0.0, 0.0))
+    }
+
     @Test fun `standing on the exit ends the map`() {
         val world = ExpeditionWorld.create(map, rarities, emptyMap(), 9)
         world.agents.forEach { it.alive = false }

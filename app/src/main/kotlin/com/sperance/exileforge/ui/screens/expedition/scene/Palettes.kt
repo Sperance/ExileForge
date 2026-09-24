@@ -33,6 +33,8 @@ object Palettes {
     val torch = Color(0xFFFFB060)
     val magic = Color(0xFF8888FF)
     val rare = Color(0xFFFFFF77)
+    /** A boss (server 0.32.0), in the unique items' brown-orange. */
+    val unique = Color(0xFFAF6025)
     val portal = Color(0xFF7FA9C8)
     val blood = Color(0xFFB03A3A)
     val steel = Color(0xFFC8C8C8)

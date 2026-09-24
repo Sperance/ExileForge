@@ -112,6 +112,12 @@ class ServerIntegrationTest {
         repeat(chests.left) { api.campaign.openChest(id, first.code) }
         assertEquals(0, api.campaign.chests(id, first.code).left)
         assertEquals("CP_006", assertFailsWith<ApiFailure> { api.campaign.openChest(id, first.code) }.code)
+        // The boss (0.32.0): the exit is sealed while it lives, and a slain one cannot be slain again.
+        assertTrue(api.campaign.boss(id, first.code).alive)
+        assertEquals("CP_007", assertFailsWith<ApiFailure> { api.campaign.complete(id, first.code) }.code)
+        assertTrue(api.campaign.slayBoss(id, first.code).experience > 0)
+        assertEquals("CP_008", assertFailsWith<ApiFailure> { api.campaign.slayBoss(id, first.code) }.code)
+        assertNotNull(first.boss, "the map has no boss")
         val progress = api.campaign.complete(id, first.code)
         assertEquals(listOf(first.code), progress.cleared)
         assertTrue(maps[1].code in progress.unlocked)

@@ -118,7 +118,7 @@ private class ScenePainter {
             // The ground first, all of it: nothing stands below the floor.
             for (y in ys) for (x in xs) if (map.walkable(x, y) && visible(x, y)) floor(x, y, palette, glow(x, y))
             for (y in ys) for (x in xs) if (map.walkable(x, y) && visible(x, y)) decor(map, x, y, palette, biome, glow(x, y))
-            if (world.explored(map.exit.x, map.exit.y)) portal(map.exit.x + .5, map.exit.y + .5)
+            if (world.explored(map.exit.x, map.exit.y)) portal(map.exit.x + .5, map.exit.y + .5, world.sealed)
             // The torch's warmth on the ground, an ellipse because the ground is seen at a slant.
             val hxs = isoX(world.heroX, world.heroY)
             val hys = -isoY(world.heroX, world.heroY)
@@ -148,8 +148,8 @@ private class ScenePainter {
                 standing += (agent.x + agent.y) to {
                     val monster = agent.monster
                     // A rarer monster is a bigger one: the tier is read before the ring is noticed.
-                    val size = unit * when (monster.rarity) { MonsterRarity.NORMAL -> .7f; MonsterRarity.MAGIC -> .8f; MonsterRarity.RARE -> .92f }
-                    val ring = when (monster.rarity) { MonsterRarity.NORMAL -> Palettes.bronze; MonsterRarity.MAGIC -> Palettes.magic; MonsterRarity.RARE -> Palettes.rare }
+                    val size = unit * when (monster.rarity) { MonsterRarity.NORMAL -> .7f; MonsterRarity.MAGIC -> .8f; MonsterRarity.RARE -> .92f; MonsterRarity.UNIQUE -> 1.2f }
+                    val ring = when (monster.rarity) { MonsterRarity.NORMAL -> Palettes.bronze; MonsterRarity.MAGIC -> Palettes.magic; MonsterRarity.RARE -> Palettes.rare; MonsterRarity.UNIQUE -> Palettes.unique }
                     // A sleeper sits still and a lurker low; whoever hunts bobs faster.
                     val bob = when (agent.mode) {
                         AgentMode.ASLEEP, AgentMode.LURKING -> 0f
@@ -328,16 +328,24 @@ private class ScenePainter {
         }
     }
 
-    private fun portal(x: Double, y: Double) {
+    /** The exit: a pale gate, or — while its guardian lives (since 2.34.0) — a dim red one crossed by chains. */
+    private fun portal(x: Double, y: Double, sealed: Boolean) {
         val cx = isoX(x, y)
         val cy = isoY(x, y)
-        val pulse = .5f + .5f * sin(time * 3f)
+        val pulse = .5f + .5f * sin(time * (if (sealed) 1.5f else 3f))
+        val hue = if (sealed) Palettes.blood else Palettes.portal
         for (i in 3 downTo 1) {
-            pen.color = Palettes.portal.copy(alpha = .12f + .1f * i * pulse)
+            pen.color = hue.copy(alpha = .12f + .1f * i * pulse)
             pen.ellipse(cx - unit * .35f * i, cy - unit * .15f * i + unit * .6f, unit * .7f * i, unit * .5f * i)
         }
-        pen.color = Color.White.copy(alpha = .5f + .4f * pulse)
+        pen.color = (if (sealed) Palettes.blood else Color.White).copy(alpha = .5f + .4f * pulse)
         pen.ellipse(cx - unit * .25f, cy + unit * .75f, unit * .5f, unit * .8f)
+        if (sealed) {
+            pen.color = Palettes.steel.copy(alpha = .85f)
+            pen.line(cx - unit * .4f, cy + unit * .7f, cx + unit * .4f, cy + unit * 1.5f, unit * .06f)
+            pen.line(cx + unit * .4f, cy + unit * .7f, cx - unit * .4f, cy + unit * 1.5f, unit * .06f)
+            pen.circle(cx, cy + unit * 1.1f, unit * .1f)
+        }
     }
 
     // ==================== The fight ====================

@@ -4,8 +4,8 @@ import com.sperance.exileforge.core.model.hero.CharacterItem
 import com.sperance.exileforge.core.model.hero.EquipmentInstance
 import kotlinx.serialization.Serializable
 
-/** The three monster rarities, as the server names them. */
-enum class MonsterRarity { NORMAL, MAGIC, RARE }
+/** The monster rarities, as the server names them; `UNIQUE` (server 0.32.0) is a map's boss alone. */
+enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
 
 /** One change to a monster's characteristic: `ADD`, `INCREASED`, `MORE` or `SET`, as on items. */
 @Serializable data class MonsterEffect(val stat: String, val operation: String, val value: Double)
@@ -72,6 +72,19 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE }
     val behaviour: BehaviourRule = BehaviourRule(),
 )
 
+/**
+ * A map's boss (since server 0.32.0), the guardian of its exit: stats and its fixed modifiers
+ * already raised to the map's level. It rolls nothing — its rarity is `UNIQUE` and its modifiers
+ * are the same every time.
+ */
+@Serializable data class CampaignBoss(
+    val code: String,
+    val form: String = "",
+    val stats: Map<String, Double> = emptyMap(),
+    val behaviour: BehaviourRule = BehaviourRule(),
+    val modifiers: List<MonsterModifier> = emptyList(),
+)
+
 @Serializable data class CampaignMap(
     val code: String,
     val chapter: String = "",
@@ -83,6 +96,8 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE }
     val modifiers: List<MonsterModifier> = emptyList(),
     /** How much the biome widens or narrows the hero's light (since server 0.30.0). */
     val light: Double = 1.0,
+    /** The guardian of the exit (since server 0.32.0), or none from an older server. */
+    val boss: CampaignBoss? = null,
 )
 
 @Serializable data class CampaignChapter(val code: String, val maps: List<CampaignMap> = emptyList())
@@ -155,6 +170,9 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE }
  * The chests of one map for one hero (since server 0.31.0): how many are still standing and when
  * the server rolls them again, in epoch milliseconds. A run places [left] of them on its map.
  */
+/** A map's boss for one hero (since server 0.32.0): alive, or slain until [respawnAt] (epoch milliseconds). */
+@Serializable data class BossState(val alive: Boolean = true, val respawnAt: Long = 0)
+
 @Serializable data class ChestState(val left: Int = 0, val refreshAt: Long = 0)
 
 /** What a death cost (server 0.28.0): the experience taken, and the level, which never falls. */

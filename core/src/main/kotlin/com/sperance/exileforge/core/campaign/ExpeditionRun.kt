@@ -85,6 +85,8 @@ data class RunHud(
     /** A flask being drunk on the map. */
     val flaskActive: Boolean = false,
     val alive: Int, val total: Int,
+    /** The exit is sealed while the map's boss lives (since 2.34.0). */
+    val sealed: Boolean = false,
     val fight: FightHud? = null,
     val reward: CampaignReward? = null,
     val rewardPending: Boolean = false,
@@ -122,6 +124,8 @@ sealed interface RunCommand {
     data object ChestFailed : RunCommand
     /** The chest's loot panel is put away. */
     data object DismissChest : RunCommand
+    /** The server says the map's boss was slain within the hour: it is not there, the exit is open. */
+    data object BossAbsent : RunCommand
 }
 
 /**
@@ -229,6 +233,7 @@ class ExpeditionRun(
             }
             RunCommand.ChestFailed -> { chestPending = false; chestFailed = true }
             RunCommand.DismissChest -> if (!chestPending) { chest = null; chestFailed = false }
+            RunCommand.BossAbsent -> if (fightAgent !== world.boss) world.bossAbsent()
         }
     }
 
@@ -295,7 +300,7 @@ class ExpeditionRun(
             heroShield = (battle?.fighter(Side.HERO)?.shield ?: hero.maxShield).roundToInt(), heroMaxShield = hero.maxShield.roundToInt(),
             heroMana = (battle?.heroMana ?: mana).roundToInt(), heroMaxMana = hero.maxMana.roundToInt(),
             flasks = battle?.flasks ?: flasks, maxFlasks = rules.flask.charges, flaskActive = battle?.flaskActive ?: (flaskUntil > clock),
-            alive = world.alive, total = world.agents.size,
+            alive = world.alive, total = world.total, sealed = world.sealed,
             fight = battle?.let { b -> fightAgent?.let { fightHud(b, it.monster) } },
             reward = reward, rewardPending = rewardPending, rewardFailed = rewardFailed, slain = slain, report = report,
             fall = fall, fallPending = fallPending,

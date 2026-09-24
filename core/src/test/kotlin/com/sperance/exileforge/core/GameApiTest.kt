@@ -583,6 +583,17 @@ class GameApiTest {
         assertEquals(sent, server.requestCount)
     }
 
+    @Test fun `a map's boss is asked after and reported by its own route`(): Unit = runBlocking {
+        ok("""{"alive":false,"respawnAt":1700000000000}""")
+        assertFalse(api.campaign.boss(id, "C1_TIDAL_SHORE").alive)
+        assertEquals("/game/api/v1/character/campaign/boss?characterId=$id&mapCode=C1_TIDAL_SHORE", server.takeRequest().path)
+        ok("""{"experience":900.0,"gold":80,"items":[],"equipment":[],"level":3,"totalExperience":1020.0,"money":620}""")
+        assertEquals(80L, api.campaign.slayBoss(id, "C1_TIDAL_SHORE").gold)
+        val slain = server.takeRequest()
+        assertEquals("POST", slain.method)
+        assertEquals("/game/api/v1/character/campaign/boss?characterId=$id&mapCode=C1_TIDAL_SHORE", slain.path)
+    }
+
     @Test fun `a map's chests are asked for and opened by the map's code`(): Unit = runBlocking {
         ok("""{"left":2,"refreshAt":1700000000000}""")
         val chests = api.campaign.chests(id, "C1_TIDAL_SHORE")

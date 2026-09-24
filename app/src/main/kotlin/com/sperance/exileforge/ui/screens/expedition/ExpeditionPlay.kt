@@ -89,6 +89,7 @@ import kotlin.math.roundToInt
                 Text(mapTitle(hud.mapCode), color = GoldBright, style = MaterialTheme.typography.titleMedium)
                 Text(ui("expedition.monsters_left", hud.alive, hud.total), color = Muted, style = MaterialTheme.typography.labelMedium)
                 if (hud.chestsLeft > 0) Text(ui("expedition.chests_left", hud.chestsLeft), color = GoldBright, style = MaterialTheme.typography.labelMedium)
+                if (hud.sealed) Text(ui("expedition.exit_sealed"), color = LifeRed, style = MaterialTheme.typography.labelMedium)
             }
             onLeave?.let { OutlinedButton(onClick = it) { Text(ui("expedition.leave")) } }
         }

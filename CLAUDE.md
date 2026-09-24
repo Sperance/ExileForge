@@ -20,9 +20,9 @@ Guidance for AI assistants working in this repository.
 
 ## What this project is
 
-ExileForge is an **Android Compose client** (version 2.33.0, `versionCode` 51) for the
-**ktor-bestgame** RPG server (0.31.0), pinned in
-`core/.../contract/Contract.kt` as `SERVER_COMMIT = dde7d92db166e1f8eac2db7d3f8a4fea9c69d2bd`
+ExileForge is an **Android Compose client** (version 2.34.0, `versionCode` 52) for the
+**ktor-bestgame** RPG server (0.32.0), pinned in
+`core/.../contract/Contract.kt` as `SERVER_COMMIT = 88eea1e39a8b43176a183ad9dbcd87ffd396b817`
 on the server branch `claude/tender-pasteur-a36kj2`.
 
 The client is deliberately **thin**: the server owns items, stats, modifier rolls and inventory.
@@ -527,7 +527,10 @@ These are enforced by tests and are the point of the client's design:
     noticing a hero only in sight and chasing along `path` round the rock; since 2.33.0 (server 0.31.0)
     `CampaignClient.chests` says how many chests stand on the map, `ExpeditionWorld.placeChests` puts
     them by the seed, touching one is `WorldEvent.Opened` and `openChest` — reported on the run's own
-    lane like a kill, never retried — brings the server's loot to `RunHud.chest` — rule 17 holds, no picture is loaded — and
+    lane like a kill, never retried — brings the server's loot to `RunHud.chest`; since 2.34.0 (server 0.32.0) the map's boss
+    (`CampaignMap.boss`, rolled by `MonsterRoller.boss` as `UNIQUE` with its fixed modifiers) stands by the
+    exit as `ExpeditionWorld.boss`, `sealed` keeps the exit shut while it lives, `CampaignClient.boss`
+    says whether it is there this hour and a slain one is reported by `slayBoss` — rule 17 holds, no picture is loaded — and
     everything with text on it is the overlay above. The run (`ExpeditionRun`) lives in `:core` and is stepped
     once a frame from a `withFrameNanos` loop; the canvas reads a clock state, so each frame redraws
     without recomposing. The overlay reads the run's `RunHud` and sends `RunCommand`s. The fight

@@ -71,12 +71,27 @@ class ExpeditionWorld(
     private val heroSpeed: Double,
     private val seed: Long,
     val lightRadius: Double = DEFAULT_LIGHT,
+    bossMonster: RolledMonster? = null,
 ) {
     private val random = Random(seed)
+    /** The map's boss (since 2.34.0): the guardian of the exit, standing beside it; none from an older server. */
+    val boss: MonsterAgent? = bossMonster?.let { monster -> guardPost()?.let { cell -> MonsterAgent(monsters.size, monster, cell.x + 0.5, cell.y + 0.5) } }
     val agents: List<MonsterAgent> = monsters.zip(map.spawns).mapIndexed { index, (monster, cell) ->
         MonsterAgent(index, monster, cell.x + 0.5, cell.y + 0.5).also { agent ->
             if (monster.behaviour.type == BehaviourRule.PATROL) agent.patrol = patrolEnd(cell, monster.behaviour.wanderRadius)
         }
+    } + listOfNotNull(boss)
+
+    /** The exit does not open while its guardian lives. */
+    val sealed: Boolean get() = boss?.alive == true
+
+    /** The server says the boss was slain within the hour: it is not on the map this run. */
+    fun bossAbsent() { boss?.alive = false }
+
+    /** Where the guardian stands: the floor nearest the exit, a step or two from it. */
+    private fun guardPost(): Cell? {
+        val near = distances(map.exit, 3)
+        return near.entries.filter { it.value in 1..2 && it.key !in map.spawns }.maxByOrNull { it.value }?.key
     }
     var heroX = map.start.x + 0.5
     var heroY = map.start.y + 0.5
@@ -139,11 +154,13 @@ class ExpeditionWorld(
             if (agent.calm <= 0 && toHero < CONTACT) return WorldEvent.Encounter(agent)
             think(agent, toHero, dt)
         }
-        if (hypot(heroX - (map.exit.x + 0.5), heroY - (map.exit.y + 0.5)) < EXIT_REACH) return WorldEvent.Exit
+        if (!sealed && hypot(heroX - (map.exit.x + 0.5), heroY - (map.exit.y + 0.5)) < EXIT_REACH) return WorldEvent.Exit
         return null
     }
 
-    val alive: Int get() = agents.count { it.alive }
+    /** Monsters still standing, the boss apart: it is counted as the exit's seal, not as one of them. */
+    val alive: Int get() = agents.count { it.alive && it !== boss }
+    val total: Int get() = agents.count { it !== boss }
 
     // ==================== Monsters ====================
 
@@ -393,7 +410,7 @@ class ExpeditionWorld(
             val (low, high) = map.monsterCount.let { (it.getOrNull(0) ?: 10) to (it.getOrNull(1) ?: 14) }
             val layout = MapGenerator.generate(seed, map.biome, random.nextInt(low, high + 1))
             val monsters = List(layout.spawns.size) { MonsterRoller.roll(map, rarities, random) }
-            return ExpeditionWorld(layout, monsters, heroSpeed(heroStats), seed, lightRadius(heroStats, map.light))
+            return ExpeditionWorld(layout, monsters, heroSpeed(heroStats), seed, lightRadius(heroStats, map.light), MonsterRoller.boss(map, rarities))
         }
 
         /** The hero's pace, sped up by movement speed from the sheet. */

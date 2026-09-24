@@ -80,6 +80,8 @@ class ExpeditionViewModel(private val runtime: ForgeRuntime) {
         mutableRun.value = run
         // How many chests stand on the map is the server's (0.31.0); they appear once it says.
         reports.trySend { chests(run, characterId, map.code) }
+        // The boss stands until the server says it was slain within the hour (0.32.0).
+        if (map.boss != null) reports.trySend { boss(run, characterId, map.code) }
     } }
 
     fun send(command: RunCommand) { mutableRun.value?.send(command) }
@@ -96,7 +98,9 @@ class ExpeditionViewModel(private val runtime: ForgeRuntime) {
 
     private suspend fun kill(run: ExpeditionRun, characterId: String, mapCode: String, monster: RolledMonster) { with(runtime) {
         try {
-            val reward = api.campaign.kill(characterId, mapCode, monster.code, monster.rarity)
+            // A boss is reported by its own route (0.32.0): the server opens the exit and rolls its uniques.
+            val reward = if (monster.rarity == MonsterRarity.UNIQUE) api.campaign.slayBoss(characterId, mapCode)
+                else api.campaign.kill(characterId, mapCode, monster.code, monster.rarity)
             run.send(RunCommand.Reward(reward))
             // The purse, the level and the experience are what the header prints; the bag and the
             // stash are re-read when the hero is next opened.
@@ -115,6 +119,13 @@ class ExpeditionViewModel(private val runtime: ForgeRuntime) {
                 hero = s.play.hero?.let { it.copy(character = it.character.copy(level = fall.level, experience = fall.totalExperience)) })) }
         } catch (e: CancellationException) { throw e }
         catch (e: Exception) { run.send(RunCommand.FallFailed); report(e, writing = true) }
+    } }
+
+    /** Whether the map's boss is there: a failure leaves it standing, which is what the exit expects. */
+    private suspend fun boss(run: ExpeditionRun, characterId: String, mapCode: String) { with(runtime) {
+        try { if (!api.campaign.boss(characterId, mapCode).alive) run.send(RunCommand.BossAbsent) }
+        catch (e: CancellationException) { throw e }
+        catch (_: Exception) { }
     } }
 
     /** The map's chests: a failure only means none this run, never a banner. */

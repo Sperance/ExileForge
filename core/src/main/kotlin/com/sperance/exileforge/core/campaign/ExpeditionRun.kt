@@ -17,41 +17,63 @@ import kotlinx.coroutines.flow.asStateFlow
 /** Where a run stands: walking, fighting, waiting on a kill's loot, at a Vaal portal's gate (2.65.0), or over one way or another. */
 enum class RunPhase { MAP, FIGHT, LOOT, GATE, DEAD, CLEARED, LEFT }
 
-/** A number floating off a fighter, [age] seconds after the blow that made it. */
+/** A number floating off a fighter, [age] seconds after the blow that made it; [foe] is the foe of the pack it was about. */
 data class FloatingHit(val id: Int, val target: Side, val action: Action, val kind: HitKind, val amount: Int, val age: Double, val healed: Int,
-    val type: DamageType?, val inflicted: List<Ailment>, val stunned: Boolean)
+    val type: DamageType?, val inflicted: List<Ailment>, val stunned: Boolean, val foe: Int = 0)
 
-/** The blow on screen right now, for the frames to act out: who, what, whether it landed, and how far along (0..1). */
-data class LungeView(val actor: Side, val action: Action, val kind: HitKind, val landed: Boolean, val progress: Float)
+/** The blow on screen right now, for the cards to act out: who, at or by which foe, what, whether it landed, and how far along (0..1). */
+data class LungeView(val actor: Side, val action: Action, val kind: HitKind, val landed: Boolean, val progress: Float, val foe: Int = 0)
 
 /** An ailment on a fighter as the overlay prints it: what, how much of it is left (1 fresh, 0 gone), and how many stacks. */
 data class AilmentView(val ailment: Ailment, val left: Float, val stacks: Int)
 
 /**
- * The fight as the overlay prints it: who, how much life and shield each side has, what just
- * landed, how far each side is into its next swing (0..1), what is on each of them, and the blows
- * so far, newest first, for the log under the fighters. Until [started] the fighters stand still: a
- * fight begins when the player says so (2.48.0), and since 2.57.0 so does each next foe of a pack.
+ * One foe of the pack as its card prints it (2.70.0): who, its row, its pools, its swing, what is
+ * on it, and whether the hero's weapon reaches it right now.
+ */
+data class FoeView(
+    val index: Int,
+    val monster: RolledMonster,
+    val life: Int, val maxLife: Int, val shield: Int, val maxShield: Int,
+    val swing: Float,
+    val ailments: List<AilmentView>,
+    val held: Boolean,
+    val alive: Boolean,
+    val reachable: Boolean,
+) {
+    val ranged: Boolean get() = monster.ranged
+}
+
+/**
+ * The fight as the overlay prints it (2.70.0, the owner's mockup B «карточки против карточек»):
+ * the pack as cards — [foes] in the order they were rolled, the overlay sorts them into rows — the
+ * hero's pools, swing and states, what just landed, whom the hero strikes next ([target]) and
+ * whether the player singled that one out ([focus]), and the blows so far, newest first.
+ *
+ * Until [started] nothing moves: it is the scouting pause, the pack laid open. [paused] is the same
+ * pause asked for mid-fight.
  */
 data class FightHud(
-    val monster: RolledMonster,
+    val leader: RolledMonster,
+    val foes: List<FoeView>,
     val heroLife: Int, val heroShield: Int,
-    val monsterLife: Int, val monsterShield: Int, val monsterMaxLife: Int, val monsterMaxShield: Int,
     val hits: List<FloatingHit>,
     val speed: Int,
     val outcome: Outcome?,
-    val heroSwing: Float = 0f, val monsterSwing: Float = 0f,
-    val heroAilments: List<AilmentView> = emptyList(), val monsterAilments: List<AilmentView> = emptyList(),
-    val heroHeld: Boolean = false, val monsterHeld: Boolean = false,
+    val heroSwing: Float = 0f,
+    val heroAilments: List<AilmentView> = emptyList(),
+    val heroHeld: Boolean = false,
     val retreating: Boolean = false,
     val lunge: LungeView? = null,
     val events: List<CombatEvent> = emptyList(),
     val started: Boolean = true,
-    /** Which foe of the jetton's pack this is (since 2.54.0); 1 of 1 for an ordinary one. */
-    val packIndex: Int = 1, val packTotal: Int = 1,
-    /** The whole pack's rarities in fighting order (2.56.1), so the arena can show who is left. */
-    val pack: List<MonsterRarity> = emptyList(),
-)
+    val paused: Boolean = false,
+    val target: Int? = null,
+    val focus: Int? = null,
+) {
+    /** Nothing is moving and the pack is laid open: before «В бой», or paused. */
+    val scouting: Boolean get() = outcome == null && (!started || paused)
+}
 
 /** One member of a pack fought and its own log, kept apart so a mixed pack's log names each one right. */
 data class PackHit(val monster: RolledMonster, val events: List<CombatEvent>, val duration: Double)
@@ -61,10 +83,10 @@ data class PackHit(val monster: RolledMonster, val events: List<CombatEvent>, va
  * what it came to — dealt and taken by blows and by ailments, how long, criticals,
  * blocks, evasions, what was inflicted.
  *
- * Since 2.54.0 a jetton can be a pack of up to three, fought one after another without leaving the
- * arena: [pack] holds one [PackHit] per foe actually fought, in order, and [monster] — for the
- * header and the portrait — is the strongest of them, the one the token showed on the map. Every
- * figure below sums over the whole pack.
+ * Since 2.54.0 a jetton can be a pack of up to three, fought all at once since 2.70.0: [pack]
+ * holds one [PackHit] per foe in the fight, each with its own blows, and [monster] — for the header
+ * and the portrait — is the strongest of them, the one the token showed on the map. Every figure
+ * below sums over the whole pack.
  */
 data class FightReport(
     val monster: RolledMonster,
@@ -125,8 +147,12 @@ sealed interface RunCommand {
     data object Leave : RunCommand
     /** Walk out of the fight: the monster gets its free swings first; before it began, simply walk away. */
     data object Retreat : RunCommand
-    /** The fight begins (since 2.48.0), and each next foe of a pack too (2.57.0): until then the two only face each other. */
+    /** The fight begins (since 2.48.0): until then the pack is laid open to be studied. Mid-fight it ends a [Pause]. */
     data object Begin : RunCommand
+    /** Stops the fight where it stands and lays the pack open again (2.70.0); [Begin] goes on. */
+    data object Pause : RunCommand
+    /** Singles out foe [index] of the pack as the hero's target (2.70.0); the same one again lets the class choose. */
+    data class Focus(val index: Int) : RunCommand
     data class Reward(val reward: CampaignReward) : RunCommand
     data object RewardFailed : RunCommand
     data class Fallen(val fall: CampaignFall) : RunCommand
@@ -152,7 +178,7 @@ sealed interface RunCommand {
      * The gear changed on the map (since 2.40.0): the server's new sheet. It lands between fights —
      * one under way keeps the fighter it began with — and life keeps its share.
      */
-    data class Regear(val stats: Map<String, Double>, val level: Int) : RunCommand
+    data class Regear(val stats: Map<String, Double>, val level: Int, val stance: HeroStance? = null) : RunCommand
 }
 
 /**
@@ -186,7 +212,12 @@ class ExpeditionRun(
     private val onPortal: () -> Unit = {},
     /** The life the hero walks in with; a Vaal zone (2.65.0) is entered with what the map left, a map at full. */
     startLife: Double? = null,
+    /** Whom the hero picks and how far their weapon reaches (2.70.0). */
+    stance: HeroStance = HeroStance(),
 ) {
+    /** Whom the hero picks and how far their weapon reaches; a change of weapon on the map changes it between fights. */
+    var stance: HeroStance = stance
+        private set
     /** The hero as the sheet has them; a change of gear on the map replaces them between fights. */
     var hero: Combatant = hero
         private set
@@ -201,6 +232,7 @@ class ExpeditionRun(
     private var gatePending = false
     private var gateFailed = false
     private var started = false
+    private var paused = false
     private var fights = 0
     private var speed = 1
     private var reward: CampaignReward? = null
@@ -209,8 +241,10 @@ class ExpeditionRun(
     private var rewardFailed = false
     private var slain: RolledMonster? = null
     private var report: FightReport? = null
-    /** What a pack has brought down so far this encounter, one entry per foe, until the whole jetton is cleared. */
-    private var packLog: List<PackHit> = emptyList()
+    /** The pack members in the fight, by their place in the pack; the battle numbers them in this order. */
+    private var members: List<Int> = emptyList()
+    /** How many of the battle's fallen were reported already. */
+    private var reported = 0
     private var fall: CampaignFall? = null
     private var fallPending = false
     private var gold = 0L
@@ -228,6 +262,7 @@ class ExpeditionRun(
         val next = Combatant(stats, gear.level, rules)
         life = if (hero.maxLife > 0) life / hero.maxLife * next.maxLife else next.maxLife
         hero = next
+        gear.stance?.let { stance = it }
         world.regear(ExpeditionWorld.heroSpeed(stats), ExpeditionWorld.lightRadius(stats, map.light))
     }
 
@@ -256,8 +291,10 @@ class ExpeditionRun(
         when (command) {
             RunCommand.Speed -> speed = if (speed >= 4) 1 else speed * 2
             RunCommand.Leave -> if (phase == RunPhase.MAP || phase == RunPhase.DEAD || phase == RunPhase.CLEARED) phase = RunPhase.LEFT
-            RunCommand.Retreat -> if (fight != null && !started) walkAway() else fight?.retreat()
-            RunCommand.Begin -> if (fight != null) started = true
+            RunCommand.Retreat -> if (fight != null && !started) walkAway() else { paused = false; fight?.retreat() }
+            RunCommand.Begin -> if (fight != null) { started = true; paused = false }
+            RunCommand.Pause -> if (fight != null && started && fight?.outcome == null) paused = !paused
+            is RunCommand.Focus -> fight?.focus(command.index)
             RunCommand.Continue -> when (phase) {
                 RunPhase.LOOT -> if (pendingRewards == 0) { phase = RunPhase.MAP; reward = null; slain = null; report = null; rewardFailed = false }
                 RunPhase.DEAD -> if (!fallPending) phase = RunPhase.LEFT
@@ -309,12 +346,8 @@ class ExpeditionRun(
         (a + b).groupingBy { it.itemId }.fold(0L) { total, item -> total + item.amount }
             .map { (itemId, amount) -> com.sperance.exileforge.core.model.hero.CharacterItem(itemId, amount) }
 
-    /**
-     * Turning away before the fight began: nothing was struck, and the monster stays calm a while.
-     * Between two foes of a pack it is the same: the fallen were reported as they fell.
-     */
+    /** Turning away before the fight began: nothing was struck, and the monster stays calm a while. */
     private fun walkAway() {
-        packLog = emptyList()
         fightAgent?.let(world::retreatFrom)
         fight = null
         fightAgent = null
@@ -325,12 +358,15 @@ class ExpeditionRun(
         val (x, y) = ExpeditionWorld.screenToWorld(stickX, stickY)
         when (val event = world.step(dt, x, y)) {
             is WorldEvent.Encounter -> {
-                // Fought in the order it rolled (2.54.0): the token shows the strongest, but the
-                // first blow lands on whoever is first in the pack.
-                val monster = Combatant(event.agent.current.stats, map.level, rules)
-                fightAgent = event.agent
-                fight = Battle(hero, monster, rules, life, Random(seed * 31 + fights++))
+                // The whole pack still standing at once (2.70.0), melee in front and ranged behind.
+                val agent = event.agent
+                members = agent.standing
+                reported = 0
+                fightAgent = agent
+                fight = Battle(hero, members.map { Foe(Combatant(agent.pack[it].stats, map.level, rules), agent.pack[it].ranged) },
+                    rules, life, Random(seed * 31 + fights++), stance)
                 started = false
+                paused = false
                 phase = RunPhase.FIGHT
             }
             WorldEvent.Exit -> { phase = RunPhase.CLEARED; onCleared() }
@@ -344,43 +380,34 @@ class ExpeditionRun(
     private fun play(dt: Double) {
         val battle = fight ?: return
         val agent = fightAgent ?: return
-        if (!started) return
+        if (!started || paused) return
         battle.advance(dt * speed)
+        // Every foe is a kill of its own, reported the moment it falls (2.54.0), the fight still going.
+        while (reported < battle.fallen.size) {
+            val member = members[battle.fallen[reported++]]
+            agent.fallen += member
+            kills++
+            pendingRewards++
+            onKill(agent.pack[member])
+        }
         val outcome = battle.outcome ?: return
         if (battle.time < battle.duration + AFTERMATH) return
         life = battle.heroLife
+        val pack = members.mapIndexed { index, member -> PackHit(agent.pack[member], battle.events.filter { it.foe == index }, battle.duration) }
         when (outcome) {
             Outcome.WIN -> {
-                packLog = packLog + PackHit(agent.current, battle.events, battle.duration)
-                kills++
-                pendingRewards++
-                onKill(agent.current)
-                agent.packIndex++
-                if (agent.packIndex < agent.pack.size) {
-                    // Another foe stands in the same jetton (2.54.0): the next bout, no trip back to
-                    // the map, and like the first it waits for «Начать» (2.57.0).
-                    val next = Combatant(agent.current.stats, map.level, rules)
-                    fight = Battle(hero, next, rules, life, Random(seed * 31 + fights++))
-                    started = false
-                    if (phase != RunPhase.DEAD) pendingGear?.let(::regear)
-                    pendingGear = null
-                    return
-                }
                 agent.alive = false
                 slain = agent.monster
-                report = FightReport(agent.monster, Outcome.WIN, packLog, packLog.sumOf { it.duration })
-                packLog = emptyList()
+                report = FightReport(agent.monster, Outcome.WIN, pack, battle.duration)
                 phase = RunPhase.LOOT
             }
             Outcome.LOSS -> {
-                packLog = packLog + PackHit(agent.current, battle.events, battle.duration)
-                report = FightReport(agent.monster, Outcome.LOSS, packLog, packLog.sumOf { it.duration })
-                packLog = emptyList()
+                report = FightReport(agent.monster, Outcome.LOSS, pack, battle.duration)
                 life = 0.0; fallPending = true; phase = RunPhase.DEAD; onFallen()
             }
-            // Nothing already looted is lost — every earlier kill in this pack was reported the
-            // moment it happened — but there is no report for a fight cut short.
-            Outcome.RETREAT -> { packLog = emptyList(); world.retreatFrom(agent); report = null; phase = RunPhase.MAP }
+            // Nothing already looted is lost — every foe that fell was reported as it fell — but
+            // there is no report for a fight cut short, and the rest of the pack stays standing.
+            Outcome.RETREAT -> { world.retreatFrom(agent); report = null; phase = RunPhase.MAP }
         }
         fight = null
         fightAgent = null
@@ -394,7 +421,7 @@ class ExpeditionRun(
         return RunHud(
             phase = phase, mapCode = map.code,
             heroLife = (battle?.heroLife ?: life).roundToInt(), heroMaxLife = hero.maxLife.roundToInt(),
-            heroShield = (battle?.fighter(Side.HERO)?.shield ?: hero.maxShield).roundToInt(), heroMaxShield = hero.maxShield.roundToInt(),
+            heroShield = (battle?.heroFighter?.shield ?: hero.maxShield).roundToInt(), heroMaxShield = hero.maxShield.roundToInt(),
             alive = world.alive, total = world.total, sealed = world.sealed,
             fight = battle?.let { b -> fightAgent?.let { fightHud(b, it) } },
             reward = reward, rewardPending = pendingRewards > 0, rewardFailed = rewardFailed, slain = slain, report = report,
@@ -407,33 +434,31 @@ class ExpeditionRun(
     }
 
     private fun fightHud(battle: Battle, agent: MonsterAgent): FightHud {
-        val monster = agent.current
-        val h = battle.fighter(Side.HERO)
-        val m = battle.fighter(Side.MONSTER)
+        val h = battle.heroFighter
         val hits = battle.events.withIndex()
             .filter { (_, event) -> event.time <= battle.time && battle.time - event.time < HIT_LIFETIME && event.action != Action.RETREAT }
             .map { (index, event) ->
                 FloatingHit(index, event.target, event.action, event.kind, event.damage.roundToInt(), battle.time - event.time, event.healed.roundToInt(),
-                    event.type, event.inflicted, event.stunned)
+                    event.type, event.inflicted, event.stunned, event.foe)
             }
         fun ailments(f: Battle.Fighter) = f.ailments.groupBy { it.ailment }.map { (ailment, active) ->
             AilmentView(ailment, ((active.maxOf { it.until } - battle.time) / active.first().duration).toFloat().coerceIn(0f, 1f), active.size)
         }
+        val foes = battle.foeFighters.map { f ->
+            FoeView(f.index, agent.pack[members[f.index]], f.life.roundToInt(), f.body.maxLife.roundToInt(), f.shield.roundToInt(), f.body.maxShield.roundToInt(),
+                battle.swing(f), ailments(f), f.held, f.alive, battle.reachable(f.index))
+        }
         return FightHud(
-            monster = monster,
+            leader = agent.monster, foes = foes,
             heroLife = h.life.roundToInt(), heroShield = h.shield.roundToInt(),
-            monsterLife = m.life.roundToInt(), monsterShield = m.shield.roundToInt(),
-            monsterMaxLife = battle.monster.maxLife.roundToInt(), monsterMaxShield = battle.monster.maxShield.roundToInt(),
             hits = hits, speed = speed,
             outcome = battle.outcome,
-            heroSwing = battle.swing(Side.HERO), monsterSwing = battle.swing(Side.MONSTER),
-            heroAilments = ailments(h), monsterAilments = ailments(m),
-            heroHeld = h.held, monsterHeld = m.held,
+            heroSwing = battle.swing(h), heroAilments = ailments(h), heroHeld = h.held,
             retreating = battle.retreating,
-            lunge = battle.lunge()?.let { (event, progress) -> LungeView(event.actor, event.action, event.kind, event.landed, progress.toFloat()) },
+            lunge = battle.lunge()?.let { (event, progress) -> LungeView(event.actor, event.action, event.kind, event.landed, progress.toFloat(), event.foe) },
             events = battle.events.toList().asReversed(),
-            started = started,
-            packIndex = agent.packIndex + 1, packTotal = agent.pack.size, pack = agent.pack.map { it.rarity },
+            started = started, paused = paused,
+            target = battle.target()?.index, focus = battle.focus,
         )
     }
 
@@ -447,11 +472,11 @@ class ExpeditionRun(
                   onKill: (RolledMonster) -> Unit, onCleared: () -> Unit, rules: CombatRules = CombatRules(), onFallen: () -> Unit = {},
                   onChest: () -> Unit = {}, mapEffects: Map<String, Double> = emptyMap(),
                   fountains: com.sperance.exileforge.core.model.campaign.FountainRule = com.sperance.exileforge.core.model.campaign.FountainRule(),
-                  portalChance: Double = 0.0, onPortal: () -> Unit = {}, startLife: Double? = null): ExpeditionRun {
+                  portalChance: Double = 0.0, onPortal: () -> Unit = {}, startLife: Double? = null, stance: HeroStance = HeroStance()): ExpeditionRun {
             val stats = MapEffects.hero(heroStats, mapEffects)
             val world = ExpeditionWorld.create(MapEffects.map(map, mapEffects), MapEffects.rarities(rarities, mapEffects), stats, seed, MapEffects.buffs(mapEffects), portalChance)
             world.placeFountains(fountains.count.getOrElse(0) { 0 }, fountains.count.getOrElse(1) { 0 }, fountains.heal)
-            return ExpeditionRun(map, world, Combatant(stats, heroLevel, rules), rules, seed, onKill, onCleared, onFallen, onChest, mapEffects, onPortal, startLife)
+            return ExpeditionRun(map, world, Combatant(stats, heroLevel, rules), rules, seed, onKill, onCleared, onFallen, onChest, mapEffects, onPortal, startLife, stance)
         }
     }
 }

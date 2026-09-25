@@ -34,7 +34,7 @@ import kotlin.math.sin
  * The campaign's scene, drawn by Compose itself: the map in pseudo-isometry while walking — its ground,
  * rock and air in the biome's [MapStyle] since 2.64.0 — with
  * the hero and the monsters as round tokens of their portraits (since 2.31.0), and while fighting
- * the cave of the owner's mockup VI with the fighters standing in it (2.57.0, [fightStage]). Everything is a shape — rule 17, no picture is ever loaded
+ * the cave of the owner's mockup VI behind the fight's cards (2.57.0, [fightBackdrop]). Everything is a shape — rule 17, no picture is ever loaded
  * — and nothing here is text: names, bars and numbers are the overlay's, in the app's dictionary.
  *
  * The scene is also the run's clock: every frame [ExpeditionRun.update] is called once from the
@@ -79,12 +79,7 @@ private class ScenePainter {
         unit = with(scope) { 30.dp.toPx() }
         val palette = Palettes.of(run.map.biome)
         scope.drawRect(palette.void)
-        val fight = run.hud.value.fight
-        if (run.fight != null && fight != null) {
-            val agent = run.fightAgentOnMap
-            val waiting = agent?.let { it.pack.drop(it.packIndex + 1) }.orEmpty()
-            scope.fightStage(fight, waiting, palette, classCode, time)
-        } else map(scope, run, palette)
+        if (run.fight != null) scope.fightBackdrop(palette, time) else map(scope, run, palette)
     }
 
     // ==================== The map ====================

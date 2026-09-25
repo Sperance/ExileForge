@@ -16,16 +16,16 @@ enum class AgentMode { IDLE, ASLEEP, LURKING, CHASING, HUNTING, RETURNING }
  * A monster walking the map: where it lives, where it is going, and whether it is still there.
  *
  * [pack] is one or more (2.54.0): a jetton is usually a single foe, sometimes a pack of up to
- * three, fought one at a time without leaving the arena. [monster] — the map token, its walking
- * behaviour and its portrait on the ground — is always the strongest of the pack; [current] is
- * whoever is actually being fought, tracked by [packIndex].
+ * three, fought all at once since 2.70.0. [monster] — the map token, its walking behaviour and its
+ * portrait on the ground — is always the strongest of the pack; [fallen] are those already killed.
  */
 class MonsterAgent(val id: Int, val pack: List<RolledMonster>, val homeX: Double, val homeY: Double) {
     val monster: RolledMonster = pack.maxBy { it.rarity.ordinal }
     val rule: BehaviourRule get() = monster.behaviour
-    /** Which member of [pack] is next to fight, or is being fought right now. */
-    var packIndex = 0
-    val current: RolledMonster get() = pack[packIndex]
+    /** Members of [pack] already killed (2.70.0): a pack the hero walked away from keeps its dead dead. */
+    val fallen = mutableSetOf<Int>()
+    /** Members still standing, by their place in [pack]. */
+    val standing: List<Int> get() = pack.indices.filterNot { it in fallen }
     var x = homeX
     var y = homeY
     var targetX = homeX

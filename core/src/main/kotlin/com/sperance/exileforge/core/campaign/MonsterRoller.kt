@@ -19,6 +19,8 @@ data class RolledMonster(
     val behaviour: BehaviourRule = BehaviourRule(),
     /** What the entered map added to it (since 2.45.0): already in [stats], kept apart so the arena can say so. */
     val mapBuffs: List<MonsterEffect> = emptyList(),
+    /** Fights from the back row and strikes from the first second (2.70.0, server 0.61.0). */
+    val ranged: Boolean = false,
 )
 
 /**
@@ -44,7 +46,8 @@ object MonsterRoller {
         val pool = map.modifiers.filter { it.minLevel <= map.level && (MonsterRarity.entries.firstOrNull { r -> r.name == it.minRarity }?.ordinal ?: 1) <= tier }.toMutableList()
         val picked = List(count) { weighted(pool, random) { it.weight }?.also { pool.remove(it) } }.filterNotNull()
             .map { modifier -> modifier.copy(effects = modifier.effects.map { it.copy(value = it.value * rule.modifierPower) }) }
-        return RolledMonster(monster.code, monster.form, rarity, picked, fold(monster, rule.effects + picked.flatMap { it.effects }), monster.behaviour)
+        return RolledMonster(monster.code, monster.form, rarity, picked, fold(monster, rule.effects + picked.flatMap { it.effects }), monster.behaviour,
+            ranged = monster.ranged)
     }
 
     /**
@@ -67,8 +70,9 @@ object MonsterRoller {
         val boss = map.boss ?: return null
         val rule = rarities.firstOrNull { it.rarity == MonsterRarity.UNIQUE.name } ?: CampaignRarity(MonsterRarity.UNIQUE.name, 0)
         val modifiers = boss.modifiers.map { modifier -> modifier.copy(effects = modifier.effects.map { it.copy(value = it.value * rule.modifierPower) }) }
-        val body = CampaignMonster(boss.code, boss.form, boss.stats, boss.behaviour)
-        return RolledMonster(boss.code, boss.form, MonsterRarity.UNIQUE, modifiers, fold(body, rule.effects + modifiers.flatMap { it.effects }), boss.behaviour)
+        val body = CampaignMonster(boss.code, boss.form, boss.stats, boss.behaviour, boss.range)
+        return RolledMonster(boss.code, boss.form, MonsterRarity.UNIQUE, modifiers, fold(body, rule.effects + modifiers.flatMap { it.effects }), boss.behaviour,
+            ranged = body.ranged)
     }
 
     /**

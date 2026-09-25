@@ -1,6 +1,8 @@
 package com.sperance.exileforge.presentation.features
 
 import com.sperance.exileforge.core.campaign.ExpeditionRun
+import com.sperance.exileforge.core.campaign.HeroStance
+import com.sperance.exileforge.core.contract.text
 import com.sperance.exileforge.core.campaign.RolledMonster
 import com.sperance.exileforge.core.campaign.RunCommand
 import com.sperance.exileforge.core.campaign.VaalZones
@@ -144,12 +146,23 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             onChest = { reports.trySend { openChest(run, characterId, map.code) } },
             // The atlas's own bonuses (2.68.0) ride the map item's: more and rarer monsters, fountains, the portal.
             mapEffects = AtlasEffects.map(effects, atlas), fountains = AtlasEffects.fountains(view.fountains, atlas),
-            portalChance = AtlasEffects.portalChance(view, atlas), onPortal = { reports.trySend { gate(run, characterId, map.code) } })
+            portalChance = AtlasEffects.portalChance(view, atlas), onPortal = { reports.trySend { gate(run, characterId, map.code) } },
+            stance = stance())
         // How many chests stand on the map is the server's (0.31.0), answered by the entry itself.
         run.send(RunCommand.Chests(chests))
         mutableRun.value = run
         // The boss stands until the server says it was slain within the hour (0.32.0).
         if (map.boss != null) reports.trySend { boss(run, characterId, map.code) }
+    }
+
+    /**
+     * Whom the hero strikes and how far they reach (2.70.0): the class's rule, and a bow or a wand
+     * in the main hand to reach the back row while the front stands.
+     */
+    private fun stance(): HeroStance = with(runtime) {
+        val s = state.value
+        val weapon = s.play.hero?.equipped?.let { it["WEAPON_1H"] ?: it["WEAPON_2H"] }
+        HeroStance.of(s.heroClass?.code, weapon?.let { s.world.inventoryBases[it.equipmentId]?.text("weaponType") })
     }
 
     fun send(command: RunCommand) { mutableRun.value?.send(command) }
@@ -174,7 +187,7 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             onCleared = {},
             rules = view.combat,
             onFallen = { reports.trySend { vaalLeave(inner, characterId, map.code) } },
-            mapEffects = stack(run.mapEffects, zone.effects), startLife = run.heroLife)
+            mapEffects = stack(run.mapEffects, zone.effects), startLife = run.heroLife, stance = run.stance)
         parent = run
         mutableRun.value = inner
     } }
@@ -231,7 +244,8 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     /** The hero was re-read after a change of gear (2.40.0): a run under way takes the new sheet between fights. */
     fun regear() {
         val hero = runtime.state.value.play.hero ?: return
-        listOfNotNull(mutableRun.value, parent).forEach { it.send(RunCommand.Regear(hero.sheet.stats, hero.sheet.level)) }
+        val stance = stance()
+        listOfNotNull(mutableRun.value, parent).forEach { it.send(RunCommand.Regear(hero.sheet.stats, hero.sheet.level, stance)) }
     }
 
     /**

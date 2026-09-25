@@ -93,16 +93,62 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
     fun ailmentDuration(ailment: Ailment) = 1 - percent("STOCK_${ailment.word}_DURATION_ON_SELF", rules.ailmentDurationCap)
     val lifeOnHit = max(0.0, stat("STOCK_HEALTH_ON_HIT"))
     val lifeOnKill = max(0.0, stat("STOCK_HEALTH_ON_KILL"))
+    /** How hard it presses, before anyone's defences: its damage per swing times its swings per second. */
+    val threat: Double get() = damage.values.sum() * attackSpeed
+    /** The damage type most of its blow is made of. */
+    val leading: DamageType get() = damage.maxBy { it.value }.key
 }
 
-/** An ailment on a fighter: what, until when, how hard, and who put it there. */
-data class ActiveAilment(val ailment: Ailment, val until: Double, val magnitude: Double, val duration: Double, val source: Side)
+/**
+ * An ailment on a fighter: what, until when, how hard, and who put it there — the side and, for a
+ * monster's, which foe of the pack ([foe], since 2.70.0).
+ */
+data class ActiveAilment(val ailment: Ailment, val until: Double, val magnitude: Double, val duration: Double, val source: Side, val foe: Int = 0)
+
+/**
+ * One foe of the pack as the fight takes it (2.70.0): its sheet and its row — a [ranged] foe
+ * stands in the back and strikes from the first second; a melee one stands in front of it.
+ */
+data class Foe(val body: Combatant, val ranged: Boolean = false)
+
+/**
+ * Whom the hero strikes when the player has not said (2.70.0), by class — the owner's table: a
+ * Marauder, a Duelist and a Ranger go for the one that presses hardest, a Shadow finishes the
+ * weakest, a Witch the one least resistant to her leading element, a Templar answers whoever
+ * struck last, a Scion finishes the weakest while healthy and answers when hurt.
+ */
+enum class TargetRule {
+    THREAT, WEAKEST, EXPOSED, AVENGE, ADAPTIVE;
+
+    companion object {
+        fun of(classCode: String?): TargetRule = when (classCode) {
+            "SHADOW" -> WEAKEST
+            "WITCH" -> EXPOSED
+            "TEMPLAR" -> AVENGE
+            "SCION" -> ADAPTIVE
+            else -> THREAT
+        }
+    }
+}
+
+/**
+ * The hero's side of a fight beyond the sheet (2.70.0): whom they pick by [rule], and whether
+ * their weapon reaches the back row while the front still stands — a bow or a wand does, a blade
+ * or bare hands do not.
+ */
+data class HeroStance(val rule: TargetRule = TargetRule.THREAT, val ranged: Boolean = false) {
+    companion object {
+        private val reaching = setOf("BOW", "WAND")
+        fun of(classCode: String?, weaponType: String?) = HeroStance(TargetRule.of(classCode), weaponType in reaching)
+    }
+}
 
 /**
  * One thing that happened, and where both sides stood after it.
  *
  * [actor] is who did it; what it did was done to the other side. A [Action.TICK] is an ailment's damage gathered over the last second, so the
- * log is not a flood; [type] is the damage that led — the biggest share of a hit, or the ailment's.
+ * log is not a flood; [type] is the damage that led — the biggest share of a hit, or the ailment's. [foe] (2.70.0) is the
+ * foe of the pack the event was about — the one that struck, or was struck — and [monsterLife], [monsterShield] are its.
  */
 data class CombatEvent(
     val time: Double,
@@ -121,6 +167,7 @@ data class CombatEvent(
     val heroShield: Double,
     val monsterLife: Double,
     val monsterShield: Double,
+    val foe: Int = 0,
 ) {
     /** Who the number floats off. */
     val target: Side get() = actor.other
@@ -132,32 +179,38 @@ data class CombatLog(val events: List<CombatEvent>, val outcome: Outcome, val he
 
 /**
  * The fight, alive: stepped in fixed slices of time so that the same seed is the same fight on any
- * screen, and open to the player while it runs — a retreat can be begun.
+ * screen, and open to the player while it runs — a retreat can be begun, a foe can be singled out.
  *
- * Each side swings at its own attack speed. A swing can be evaded (evasion against the attacker's level), blocked,
- * or land; a landing hit rolls the rule's variance per damage type, may be a critical strike, and is
- * reduced by armour (physical, `armour / (armour + factor × damage)`) and by resistances (elements
- * and chaos, capped). Energy shield takes a hit before life, except chaos,
- * which goes around it; a shield left alone for the rule's delay recharges. Leech gives back a share
- * of what was dealt; a hit big enough against the target's life stuns it, and a frozen or stunned
- * fighter does nothing until it passes. Every landing hit may inflict the ailments its damage types
- * carry: burning, poison and bleeding deal a share of the hit over time, chill slows the target's
- * actions, shock makes it take more, a freeze stops it. Life and shield regenerate as they go.
+ * Since 2.70.0 it is the hero against the whole pack at once, in two rows: every foe swings at the
+ * hero at its own speed from the first second, and the hero at one foe of the rows its weapon
+ * reaches — the back row only with a bow or a wand, or once the front has fallen. Whom is the
+ * player's [focus] when given, the class's [TargetRule] otherwise, chosen afresh at every swing.
+ *
+ * Each swing can be evaded (evasion against the attacker's level), blocked, or land; a landing hit
+ * rolls the rule's variance per damage type, may be a critical strike, and is reduced by armour
+ * (physical, `armour / (armour + factor × damage)`) and by resistances (elements and chaos,
+ * capped). Energy shield takes a hit before life, except chaos, which goes around it; a shield left
+ * alone for the rule's delay recharges. Leech gives back a share of what was dealt; a hit big enough
+ * against the target's life stuns it, and a frozen or stunned fighter does nothing until it passes.
+ * Every landing hit may inflict the ailments its damage types carry: burning, poison and bleeding
+ * deal a share of the hit over time, chill slows the target's actions, shock makes it take more, a
+ * freeze stops it. Life and shield regenerate as they go.
  *
  * The client fights by the owner's decision (rule 23); every constant here is the server's [rules].
  */
 class Battle(
     val hero: Combatant,
-    val monster: Combatant,
+    val foes: List<Foe>,
     val rules: CombatRules,
     heroLife: Double,
     private val random: Random,
+    val stance: HeroStance = HeroStance(),
 ) {
-    /** One side in motion: its pools, its clocks and what is on it. */
-    inner class Fighter(val side: Side, val body: Combatant, life: Double) {
+    /** One side in motion: its pools, its clocks and what is on it; [index] is its place in the pack, -1 for the hero. */
+    inner class Fighter(val side: Side, val body: Combatant, life: Double, val index: Int = -1, val ranged: Boolean = false) {
         var life = life.coerceIn(0.0, body.maxLife)
         var shield = body.maxShield
-        var nextAttack = if (side == Side.HERO) 0.35 else 0.55
+        var nextAttack = if (side == Side.HERO) 0.35 else 0.55 + index * 0.13
         var attackInterval = 1 / body.attackSpeed
         /** Stunned or frozen until then: nothing is swung before it. */
         var heldUntil = 0.0
@@ -177,10 +230,8 @@ class Battle(
         fun stacks(ailment: Ailment) = ailments.count { it.ailment == ailment }
     }
 
-    private val fighters = mapOf(
-        Side.HERO to Fighter(Side.HERO, hero, heroLife),
-        Side.MONSTER to Fighter(Side.MONSTER, monster, monster.maxLife),
-    )
+    val heroFighter = Fighter(Side.HERO, hero, heroLife)
+    val foeFighters: List<Fighter> = foes.mapIndexed { i, foe -> Fighter(Side.MONSTER, foe.body, foe.body.maxLife, i, foe.ranged) }
     private val ailmentRules: Map<AilmentRule, Pair<Ailment, DamageType>> = rules.ailments
         .mapNotNull { rule -> Ailment.of(rule.ailment)?.let { a -> DamageType.of(rule.type)?.let { t -> rule to (a to t) } } }.toMap()
 
@@ -191,13 +242,21 @@ class Battle(
         private set
     var outcome: Outcome? = null
         private set
+    /** The foe the player singled out, until it falls or is tapped again. */
+    var focus: Int? = null
+        private set
+    /** The foe that struck the hero last — the Templar's answer. */
+    private var lastStriker: Int? = null
     private var retreatAt = Double.NaN
     private var carry = 0.0
     private val log = mutableListOf<CombatEvent>()
     val events: List<CombatEvent> get() = log
+    private val fallenOrder = mutableListOf<Int>()
+    /** The foes that fell, in the order they fell: each is a kill to report the moment it happens. */
+    val fallen: List<Int> get() = fallenOrder
 
-    fun fighter(side: Side) = fighters.getValue(side)
-    val heroLife: Double get() = fighter(Side.HERO).life
+    fun foe(index: Int) = foeFighters[index]
+    val heroLife: Double get() = heroFighter.life
     val retreating: Boolean get() = !retreatAt.isNaN()
 
     /** Moves the fight on by [dt] seconds in fixed slices, so a frame's length never changes what happens. */
@@ -208,20 +267,54 @@ class Battle(
         while (carry >= STEP - 1e-12 && outcome == null) { carry -= STEP; step(STEP) }
     }
 
-    /** Turns to leave: the hero stops swinging, the monster gets the rule's delay of free swings, then the fight is over. */
+    /** Turns to leave: the hero stops swinging, the pack gets the rule's delay of free swings, then the fight is over. */
     fun retreat(): Boolean {
         if (outcome != null || retreating) return false
         retreatAt = time + rules.retreat.delay
-        record(Side.HERO, Action.RETREAT, HitKind.HIT, 0.0, null, 0.0, false, emptyList(), null)
+        record(Side.HERO, Action.RETREAT, HitKind.HIT, 0.0, null, 0.0, false, emptyList(), null, target()?.index ?: 0)
         return true
+    }
+
+    /** Singles out foe [index]; the same foe again, or a fallen one, gives the choice back to the class. */
+    fun focus(index: Int?) {
+        focus = index?.takeIf { it != focus && foeFighters.getOrNull(it)?.alive == true }
+    }
+
+    /** Whether the hero's weapon reaches foe [index] right now. */
+    fun reachable(index: Int): Boolean {
+        val foe = foeFighters.getOrNull(index)?.takeIf { it.alive } ?: return false
+        return stance.ranged || !foe.ranged || foeFighters.none { it.alive && !it.ranged }
+    }
+
+    /**
+     * The foe the hero's next swing goes to: the focus while it can be reached, else the class's
+     * pick among those that can. A focus behind the front waits until the front has fallen.
+     */
+    fun target(): Fighter? {
+        val reach = foeFighters.filter { reachable(it.index) }
+        if (reach.isEmpty()) return null
+        focus?.let { f -> reach.firstOrNull { it.index == f }?.let { return it } }
+        fun weakest() = reach.minBy { it.life + it.shield }
+        fun threat() = reach.maxBy { it.body.threat }
+        fun avenge() = lastStriker?.let { s -> reach.firstOrNull { it.index == s } } ?: threat()
+        return when (stance.rule) {
+            TargetRule.THREAT -> threat()
+            TargetRule.WEAKEST -> weakest()
+            TargetRule.EXPOSED -> hero.leading.let { type -> reach.minWith(compareBy<Fighter> { it.body.resist(type) }.thenBy { it.life + it.shield }) }
+            TargetRule.AVENGE -> avenge()
+            TargetRule.ADAPTIVE -> if (heroFighter.life >= hero.maxLife / 2) weakest() else avenge()
+        }
     }
 
     /** The blow whose lunge is on screen right now, and how far into it the scene is (0..1). */
     fun lunge(): Pair<CombatEvent, Double>? = log.lastOrNull { it.action != Action.TICK && time - it.time in -LUNGE..LUNGE }
         ?.let { it to ((time - it.time + LUNGE) / (2 * LUNGE)).coerceIn(0.0, 1.0) }
 
-    /** How far [side] is into its next swing, 0 just after one and 1 as the next lands. */
-    fun swing(side: Side): Float = fighter(side).let { if (outcome != null || (side == Side.HERO && retreating)) 0f else (1 - (it.nextAttack - time) / it.attackInterval).toFloat().coerceIn(0f, 1f) }
+    /** How far [fighter] is into its next swing, 0 just after one and 1 as the next lands. */
+    fun swing(fighter: Fighter): Float = when {
+        outcome != null || !fighter.alive || (fighter.side == Side.HERO && retreating) -> 0f
+        else -> (1 - (fighter.nextAttack - time) / fighter.attackInterval).toFloat().coerceIn(0f, 1f)
+    }
 
     /** The log as a test or a report reads it, once the fight is over. */
     fun log(): CombatLog = CombatLog(log.toList(), outcome ?: Outcome.RETREAT, heroLife, duration)
@@ -230,13 +323,14 @@ class Battle(
 
     private fun step(dt: Double) {
         time += dt
-        fighters.values.forEach { regenerate(it, dt); burn(it, dt) }
+        (listOf(heroFighter) + foeFighters).forEach { regenerate(it, dt); burn(it, dt) }
         if (finished()) return
-        // Whoever is due first acts first; both may be due in one slice.
-        listOf(Side.HERO, Side.MONSTER).sortedBy { fighter(it).nextAttack }.forEach { side ->
-            val me = fighter(side)
-            if (!me.alive || me.held || (side == Side.HERO && retreating)) return@forEach
-            if (me.nextAttack <= time) { attack(me, fighter(side.other)); me.nextAttack = time + me.attackInterval * me.slow() }
+        // Whoever is due first acts first; several may be due in one slice.
+        (listOf(heroFighter) + foeFighters).sortedBy { it.nextAttack }.forEach { me ->
+            if (!me.alive || me.held || (me.side == Side.HERO && retreating) || me.nextAttack > time) return@forEach
+            val target = if (me.side == Side.HERO) target() else heroFighter
+            if (target != null) attack(me, target)
+            me.nextAttack = time + me.attackInterval * me.slow()
             if (finished()) return
         }
         if (retreating && time >= retreatAt) end(Outcome.RETREAT)
@@ -253,6 +347,7 @@ class Battle(
     /** Ailments run their course: damage over time is applied every slice and logged once a second. */
     private fun burn(me: Fighter, dt: Double) {
         if (me.ailments.isEmpty()) return
+        val wasAlive = me.alive
         me.ailments.filter { it.ailment.hurts }.forEach { active ->
             val slice = active.magnitude * min(dt, active.until - (time - dt)).coerceAtLeast(0.0) * me.weakness()
             if (slice <= 0 || !me.alive) return@forEach
@@ -271,15 +366,19 @@ class Battle(
                 val amount = me.ticking.remove(ailment) ?: 0.0
                 me.tickedAt[ailment] = time
                 if (amount > 0) {
-                    val source = (me.ailments + expired).firstOrNull { it.ailment == ailment }?.source ?: me.side.other
+                    val active = (me.ailments + expired).firstOrNull { it.ailment == ailment }
+                    val source = active?.source ?: me.side.other
                     val type = ailmentRules.entries.firstOrNull { it.value.first == ailment }?.value?.second
-                    record(source, Action.TICK, HitKind.HIT, amount, type, 0.0, false, emptyList(), ailment)
+                    record(source, Action.TICK, HitKind.HIT, amount, type, 0.0, false, emptyList(), ailment,
+                        if (me.side == Side.MONSTER) me.index else active?.foe ?: 0)
                 }
             }
         }
+        if (wasAlive && !me.alive) fell(me)
     }
 
     private fun attack(me: Fighter, target: Fighter) {
+        val foe = if (me.side == Side.MONSTER) me.index else target.index
         val evade = (target.body.evasion / (target.body.evasion + rules.evasion.base + rules.evasion.perLevel * me.body.level)).coerceAtMost(rules.evasion.cap / 100)
         val kind = when {
             target.frozen() -> if (random.nextDouble() < me.body.critChance) HitKind.CRIT else HitKind.HIT
@@ -288,7 +387,8 @@ class Battle(
             random.nextDouble() < me.body.critChance -> HitKind.CRIT
             else -> HitKind.HIT
         }
-        if (kind == HitKind.EVADED || kind == HitKind.BLOCKED) { record(me.side, Action.ATTACK, kind, 0.0, null, 0.0, false, emptyList(), null); return }
+        if (me.side == Side.MONSTER) lastStriker = me.index
+        if (kind == HitKind.EVADED || kind == HitKind.BLOCKED) { record(me.side, Action.ATTACK, kind, 0.0, null, 0.0, false, emptyList(), null, foe); return }
         val multiplier = if (kind == HitKind.CRIT) me.body.critMultiplier else 1.0
         val taken = me.body.damage.filterValues { it > 0 }.mapValues { (type, base) ->
             val raw = base * (1 + (random.nextDouble() * 2 - 1) * rules.variance / 100) * multiplier
@@ -297,11 +397,11 @@ class Battle(
                 else -> raw * (1 - target.body.resist(type))
             }.coerceAtLeast(0.0) * target.weakness()
         }
-        land(me, target, Action.ATTACK, kind, taken)
+        land(me, target, Action.ATTACK, kind, taken, foe)
     }
 
     /** A blow that got through: the shield takes what it can, chaos goes around it, leech and stun and ailments follow. */
-    private fun land(me: Fighter, target: Fighter, action: Action, kind: HitKind, taken: Map<DamageType, Double>) {
+    private fun land(me: Fighter, target: Fighter, action: Action, kind: HitKind, taken: Map<DamageType, Double>, foe: Int) {
         val chaos = taken[DamageType.CHAOS] ?: 0.0
         val shielded = taken.values.sum() - chaos
         val absorbed = min(target.shield, shielded)
@@ -322,7 +422,8 @@ class Battle(
             target.heldUntil = max(target.heldUntil, time + rules.stun.duration)
         }
         val inflicted = if (target.alive) inflict(me, target, taken) else emptyList()
-        record(me.side, action, kind, dealt, taken.maxByOrNull { it.value }?.key, healed, stunned, inflicted, null)
+        record(me.side, action, kind, dealt, taken.maxByOrNull { it.value }?.key, healed, stunned, inflicted, null, foe)
+        if (!target.alive) fell(target)
     }
 
     /**
@@ -340,7 +441,7 @@ class Battle(
         if (avoid > 0 && random.nextDouble() < avoid) return@mapNotNull null
         val duration = rule.duration * target.body.ailmentDuration(ailment)
         val magnitude = if (ailment.hurts) amount * rule.magnitude / 100 / rule.duration * me.body.ailmentDamage(ailment) else rule.magnitude
-        val fresh = ActiveAilment(ailment, time + duration, magnitude, duration, me.side)
+        val fresh = ActiveAilment(ailment, time + duration, magnitude, duration, me.side, me.index.coerceAtLeast(0))
         if (ailment.hurts) target.tickedAt.putIfAbsent(ailment, time)
         val existing = target.ailments.filter { it.ailment == ailment }
         when {
@@ -353,11 +454,21 @@ class Battle(
         ailment
     }
 
+    /** A foe down: a kill to report, life on kill for the hero, and a focus on it let go. */
+    private fun fell(fighter: Fighter) {
+        if (fighter.side != Side.MONSTER || fighter.index in fallenOrder) return
+        fighter.ailments.clear()
+        fallenOrder += fighter.index
+        if (focus == fighter.index) focus = null
+        if (lastStriker == fighter.index) lastStriker = null
+        if (heroFighter.alive) heroFighter.life = min(hero.maxLife, heroFighter.life + hero.lifeOnKill)
+    }
+
     private fun finished(): Boolean {
         if (outcome != null) return true
         when {
-            !fighter(Side.MONSTER).alive -> { reward(fighter(Side.HERO)); end(Outcome.WIN) }
-            !fighter(Side.HERO).alive -> end(Outcome.LOSS)
+            !heroFighter.alive -> end(Outcome.LOSS)
+            foeFighters.none { it.alive } -> end(Outcome.WIN)
             else -> return false
         }
         return true
@@ -365,16 +476,11 @@ class Battle(
 
     private fun end(how: Outcome) { outcome = how; duration = time }
 
-    /** Life on kill lands the moment the monster falls, so the next fight starts with it. */
-    private fun reward(hero: Fighter) {
-        if (!hero.alive) return
-        hero.life = min(hero.body.maxLife, hero.life + hero.body.lifeOnKill)
-    }
-
-    private fun record(actor: Side, action: Action, kind: HitKind, damage: Double, type: DamageType?, healed: Double, stunned: Boolean, inflicted: List<Ailment>, ailment: Ailment?) {
-        val h = fighter(Side.HERO)
-        val m = fighter(Side.MONSTER)
-        log += CombatEvent(time, actor, action, kind, damage, type, healed, stunned, inflicted, ailment, h.life, h.shield, m.life, m.shield)
+    private fun record(actor: Side, action: Action, kind: HitKind, damage: Double, type: DamageType?, healed: Double, stunned: Boolean,
+                       inflicted: List<Ailment>, ailment: Ailment?, foe: Int) {
+        val m = foeFighters.getOrNull(foe)
+        log += CombatEvent(time, actor, action, kind, damage, type, healed, stunned, inflicted, ailment, heroFighter.life, heroFighter.shield,
+            m?.life ?: 0.0, m?.shield ?: 0.0, foe)
     }
 
     companion object {

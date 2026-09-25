@@ -70,7 +70,16 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
     val form: String = "",
     val stats: Map<String, Double> = emptyMap(),
     val behaviour: BehaviourRule = BehaviourRule(),
-)
+    /** `MELEE` or `RANGED` (since server 0.61.0): which row it fights from. */
+    val range: String = MELEE,
+) {
+    val ranged: Boolean get() = range == RANGED
+
+    companion object {
+        const val MELEE = "MELEE"
+        const val RANGED = "RANGED"
+    }
+}
 
 /**
  * A map's boss (since server 0.32.0), the guardian of its exit: stats and its fixed modifiers
@@ -83,6 +92,8 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
     val stats: Map<String, Double> = emptyMap(),
     val behaviour: BehaviourRule = BehaviourRule(),
     val modifiers: List<MonsterModifier> = emptyList(),
+    /** Its row, as a monster's (since server 0.61.0). */
+    val range: String = CampaignMonster.MELEE,
 )
 
 @Serializable data class CampaignMap(

@@ -110,7 +110,7 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
      * Every rule is the server's — which node is reachable, what it costs, whether a refund would
      * leave the rest of the tree hanging in the air — so the client names a node and reports back.
      */
-    fun allocateNode(code: String) { with(runtime) { characterCommand { id -> api.tree.allocate(id, code) } } }
+    fun allocateNode(code: String, choice: Int? = null) { with(runtime) { characterCommand { id -> api.tree.allocate(id, code, choice) } } }
     fun refundNode(code: String) { with(runtime) { characterCommand { id -> api.tree.refund(id, code) } } }
     fun resetTree() { with(runtime) { characterCommand { id -> api.tree.reset(id) } } }
 

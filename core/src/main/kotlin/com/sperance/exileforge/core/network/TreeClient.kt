@@ -61,17 +61,18 @@ class TreeClient internal constructor(private val http: Transport) {
      * Which node may be taken, whether a refund would leave the rest hanging and what a node costs
      * are the server's rules: the client names a node and reports the refusal it gets.
      */
-    suspend fun allocate(characterId: String, nodeCode: String): SkillTreeState = node("allocate", characterId, nodeCode)
+    /** [choice] is the picked option of a MASTERY or ATTRIBUTE node (server 0.52.0); every other node takes none. */
+    suspend fun allocate(characterId: String, nodeCode: String, choice: Int? = null): SkillTreeState = node("allocate", characterId, nodeCode, choice)
     suspend fun refund(characterId: String, nodeCode: String): SkillTreeState = node("refund", characterId, nodeCode)
     suspend fun reset(characterId: String): SkillTreeState {
         requireId(characterId)
         return WireJson.decodeFromJsonElement(http.request("POST", "$TREE/reset",
             mapOf("characterId" to characterId), authenticated = true))
     }
-    private suspend fun node(operation: String, characterId: String, nodeCode: String): SkillTreeState {
+    private suspend fun node(operation: String, characterId: String, nodeCode: String, choice: Int? = null): SkillTreeState {
         requireId(characterId)
         require(nodeCode.isNotBlank()) { ui("api.choose_node") }
-        return WireJson.decodeFromJsonElement(http.request("POST", "$TREE/$operation",
-            mapOf("characterId" to characterId, "nodeCode" to nodeCode), authenticated = true))
+        val query = mapOf("characterId" to characterId, "nodeCode" to nodeCode) + listOfNotNull(choice?.let { "choice" to it.toString() })
+        return WireJson.decodeFromJsonElement(http.request("POST", "$TREE/$operation", query, authenticated = true))
     }
 }

@@ -4,6 +4,24 @@ import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.core.display.Glyph
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.text.TextMeasurer
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.sp
+import kotlin.math.PI
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.sin
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
@@ -70,7 +88,7 @@ import kotlinx.serialization.json.putJsonArray
  * and the details are read one node at a time rather than alongside.
  */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun SkillTreePanel(s: ForgeState, onSelect: (String) -> Unit, onAllocate: (String) -> Unit,
+@Composable fun SkillTreePanel(s: ForgeState, onSelect: (String) -> Unit, onAllocate: (String, Int?) -> Unit,
     onRefund: (String) -> Unit, onReset: () -> Unit, onQuery: (String) -> Unit = {},
     onSocket: (String, String) -> Unit = { _, _ -> }, onUnsocket: (String) -> Unit = {},
     modifier: Modifier = Modifier) {
@@ -79,7 +97,7 @@ import kotlinx.serialization.json.putJsonArray
     var nodeOpen by remember { mutableStateOf(false) }
     // Each of the three tree commands spends something a player cannot get back for free — a point
     // or an orb — so each is asked about, and the question names the price.
-    var confirmAllocate by remember { mutableStateOf<String?>(null) }
+    var confirmAllocate by remember { mutableStateOf<Pair<String, Int?>?>(null) }
     var confirmRefund by remember { mutableStateOf<String?>(null) }
     var confirmReset by remember { mutableStateOf(false) }
     if (hero == null) {
@@ -113,8 +131,8 @@ import kotlinx.serialization.json.putJsonArray
     if (nodeOpen) ModalBottomSheet(onDismissRequest = { nodeOpen = false }, containerColor = Panel) {
         Column(Modifier.fillMaxWidth().heightIn(max = 520.dp).verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            NodeDetails(s, s.world.treeNodes.firstOrNull { it.code == s.play.selectedNode }, taken, enabled,
-                onAllocate = { nodeOpen = false; confirmAllocate = it },
+            NodeDetails(s, s.world.treeNodes.firstOrNull { it.code == s.play.selectedNode }, taken, reachable, enabled,
+                onAllocate = { code, choice -> nodeOpen = false; confirmAllocate = code to choice },
                 onRefund = { nodeOpen = false; confirmRefund = it },
                 onSocket = { instance, code -> nodeOpen = false; onSocket(instance, code) },
                 onUnsocket = { nodeOpen = false; onUnsocket(it) })
@@ -203,12 +221,13 @@ import kotlinx.serialization.json.putJsonArray
     val byCode = remember(nodes) { nodes.associateBy { it.code } }
     val bounds = remember(nodes) { Bounds.of(nodes) }
     var scale by remember { mutableFloatStateOf(1f) }
+    val labels = rememberTextMeasurer()
     var pan by remember { mutableStateOf(Offset.Zero) }
     Box(modifier.fillMaxWidth()) {
         Canvas(Modifier.fillMaxSize().clipToBounds()
             .pointerInput(nodes) {
                 detectTransformGestures { _, drag, zoom, _ ->
-                    scale = (scale * zoom).coerceIn(.4f, 4f)
+                    scale = (scale * zoom).coerceIn(.4f, 8f)
                     val limit = panLimit(bounds, size.width.toFloat(), size.height.toFloat(), scale)
                     pan = Offset((pan.x + drag.x).coerceIn(-limit.x, limit.x), (pan.y + drag.y).coerceIn(-limit.y, limit.y))
                 }
@@ -224,29 +243,20 @@ import kotlinx.serialization.json.putJsonArray
             }) {
             val width = size.width
             val height = size.height
+            wheel(nodes, bounds, width, height, scale, pan, labels)
             // Edges first, so a node always sits on top of the lines that reach it.
             nodes.forEach { node ->
                 val from = place(node, bounds, width, height, scale, pan)
                 node.connections.forEach { code ->
                     val other = byCode[code] ?: return@forEach
-                    // Each edge is declared on both ends; drawing it once keeps the line crisp.
-                    if (node.code < code) {
-                        val both = node.code in taken && code in taken
-                        drawLine(if (both) Gold.copy(alpha = .8f) else Bronze.copy(alpha = .35f),
-                            from, place(other, bounds, width, height, scale, pan), if (both) 3f else 1.5f)
-                    }
+                    val both = node.code in taken && code in taken
+                    val open = (node.code in taken && code in reachable) || (code in taken && node.code in reachable)
+                    drawLine(when { both -> Gold; open -> Color(0xFF6B5A3A); else -> Color(0xFF2B2E33) },
+                        from, place(other, bounds, width, height, scale, pan), (if (both) 3f else 2f) * scale.coerceIn(.6f, 1.6f))
                 }
             }
-            nodes.forEach { node ->
-                val centre = place(node, bounds, width, height, scale, pan)
-                val colour = nodeColour(node, node.code == s.play.selectedNode)
-                val here = node.code in taken
-                val next = node.code in reachable
-                // Taken is solid, reachable is half-lit and ringed, the rest is barely there.
-                drawCircle(colour.copy(alpha = if (here) .85f else if (next) .45f else .12f), radius(node) * scale, centre)
-                drawCircle(if (next && !here) GoldBright else colour, radius(node) * scale, centre,
-                    style = Stroke(if (node.code == s.play.selectedNode) 3.5f else if (next) 2.5f else 1f))
-            }
+            nodes.forEach { node -> medallion(node, place(node, bounds, width, height, scale, pan), scale, node.code in taken,
+                node.code in reachable, node.code == s.play.selectedNode) }
         }
         Row(Modifier.align(Alignment.BottomStart).padding(8.dp), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -263,14 +273,18 @@ import kotlinx.serialization.json.putJsonArray
  * A socket is the exception, because it gives nothing by itself — what it holds is a jewel, and
  * the command there is to put one in or take it out.
  */
-@Composable private fun NodeDetails(s: ForgeState, node: SkillTreeNode?, taken: Set<String>, enabled: Boolean,
-    onAllocate: (String) -> Unit, onRefund: (String) -> Unit,
+@Composable private fun NodeDetails(s: ForgeState, node: SkillTreeNode?, taken: Set<String>, reachable: Set<String>, enabled: Boolean,
+    onAllocate: (String, Int?) -> Unit, onRefund: (String) -> Unit,
     onSocket: (String, String) -> Unit = { _, _ -> }, onUnsocket: (String) -> Unit = {}) {
     if (node == null) {
         InfoCard(ui("tree.no_selection"), ui("tree.no_selection_hint"))
         return
     }
     val allocated = node.code in taken
+    val choosing = node.options.isNotEmpty()
+    // The option the hero took is theirs: it is read from the snapshot, not from the tree.
+    val chosen = s.play.hero?.tree?.nodes?.firstOrNull { it.code == node.code }?.choice
+    var picked by remember(node.code) { mutableStateOf<Int?>(null) }
     ForgePanel(accent = nodeColour(node, true)) {
         // The node's name is this panel's title, so it keeps its own casing rather than being
         // shouted as an Engraved caption the way a section heading is.
@@ -283,6 +297,17 @@ import kotlinx.serialization.json.putJsonArray
         OrnateDivider()
         if (node.type == SkillNodeType.JEWEL_SOCKET) {
             SocketContents(s, node, allocated, enabled, onSocket, onUnsocket)
+        } else if (choosing) {
+            // A mastery or an attribute node (server 0.52.0): one option, chosen when it is taken.
+            Text(ui(if (allocated) "tree.option_chosen" else "tree.option_pick"), color = Muted, style = MaterialTheme.typography.labelMedium)
+            node.options.forEachIndexed { index, option ->
+                val on = if (allocated) index == chosen else index == picked
+                OptionCard(on, enabled = !allocated && node.code in reachable, onClick = { picked = index }) {
+                    option.forEach { modifier -> ModifierLine(modifierDocument(modifier.modifierId, modifier.values), s.world.definitions) }
+                }
+            }
+            if (node.type == SkillNodeType.MASTERY && !allocated && node.code !in reachable)
+                Text(ui("tree.mastery_locked"), color = Muted, style = MaterialTheme.typography.bodySmall)
         } else {
             if (node.params.isEmpty()) Text(ui("tree.no_bonuses"), color = Muted)
             node.params.forEach { modifier ->
@@ -293,7 +318,7 @@ import kotlinx.serialization.json.putJsonArray
         OrnateDivider()
         if (allocated) OutlinedButton(enabled = enabled && node.type != SkillNodeType.START, onClick = { onRefund(node.code) }, modifier = Modifier.fillMaxWidth()) {
             Text(ui("tree.refund"))
-        } else Button(enabled = enabled, onClick = { onAllocate(node.code) }, modifier = Modifier.fillMaxWidth()) {
+        } else Button(enabled = enabled && (!choosing || picked != null), onClick = { onAllocate(node.code, picked) }, modifier = Modifier.fillMaxWidth()) {
             Text(ui("tree.allocate"))
         }
         Text(when {
@@ -352,9 +377,9 @@ import kotlinx.serialization.json.putJsonArray
 
 @Composable private fun TreeConfirmations(
     s: ForgeState,
-    allocate: String?, refund: String?, reset: Boolean,
+    allocate: Pair<String, Int?>?, refund: String?, reset: Boolean,
     onClear: () -> Unit,
-    onAllocate: (String) -> Unit, onRefund: (String) -> Unit, onReset: () -> Unit,
+    onAllocate: (String, Int?) -> Unit, onRefund: (String) -> Unit, onReset: () -> Unit,
 ) {
     val nodeName = { code: String -> s.world.treeNodes.firstOrNull { it.code == code }?.title ?: code }
     val treeIcon: @Composable () -> Unit = { Icon(ForgeGlyphs.Constellation, null, tint = Rune, modifier = Modifier.size(40.dp)) }
@@ -369,7 +394,7 @@ import kotlinx.serialization.json.putJsonArray
     )
     fun shortage(spent: Int) = regretLeft?.takeIf { it < spent }?.let { ui("confirm.short", it) }
 
-    allocate?.let { code ->
+    allocate?.let { (code, choice) ->
         val cost = s.world.treeNodes.firstOrNull { it.code == code }?.cost ?: 1
         ConfirmSheet(
             title = ui("tree.allocate_q"), subtitle = nodeName(code), icon = treeIcon,
@@ -380,7 +405,7 @@ import kotlinx.serialization.json.putJsonArray
             ),
             note = ui("tree.allocate_confirm"),
             warning = available?.takeIf { it < cost }?.let { ui("tree.short_points", it) }, blocked = available != null && available < cost,
-            confirm = ui("tree.allocate_do"), onDismiss = onClear) { onAllocate(code) }
+            confirm = ui("tree.allocate_do"), onDismiss = onClear) { onAllocate(code, choice) }
     }
     refund?.let { code ->
         val cost = s.world.treeNodes.firstOrNull { it.code == code }?.cost ?: 1
@@ -436,12 +461,15 @@ private fun nodeColour(node: SkillTreeNode, selected: Boolean): Color = when {
     // A socket gives nothing itself, so on the map it has to stand for what it can hold rather
     // than blend into the small nodes around it.
     node.type == SkillNodeType.JEWEL_SOCKET -> ManaBlue
+    node.type == SkillNodeType.MASTERY -> Elder
+    node.type == SkillNodeType.ATTRIBUTE -> Vital
     else -> Rune
 }
 
 private fun radius(node: SkillTreeNode): Float = when (node.type) {
     SkillNodeType.KEYSTONE -> 13f; SkillNodeType.NOTABLE -> 10f; SkillNodeType.START -> 12f
     SkillNodeType.JEWEL_SOCKET -> 11f; SkillNodeType.SMALL -> 6f
+    SkillNodeType.MASTERY -> 10f; SkillNodeType.ATTRIBUTE -> 7f
 }
 
 /** Extent of the seeded coordinates, so the whole tree fits whatever canvas it is given. */
@@ -477,4 +505,98 @@ private fun place(node: SkillTreeNode, bounds: Bounds, width: Float, height: Flo
     val x = (node.positionX - bounds.minX) * fit - bounds.spanX * fit / 2
     val y = (node.positionY - bounds.minY) * fit - bounds.spanY * fit / 2
     return Offset(width / 2 + x * scale + pan.x, height / 2 + y * scale + pan.y)
+}
+
+/** A mastery's or an attribute node's option: a framed card, gold when it is the one. */
+@Composable private fun OptionCard(on: Boolean, enabled: Boolean, onClick: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+    val shape = RoundedCornerShape(8.dp)
+    Column(Modifier.fillMaxWidth().clip(shape).background(if (on) Gold.copy(alpha = .12f) else Abyss)
+        .border(if (on) 1.5.dp else 1.dp, if (on) Gold else Bronze.copy(alpha = .5f), shape)
+        .clickable(enabled = enabled, onClick = onClick).padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp), content = content)
+}
+
+/** Each class's colour on the wheel, by the attributes its start node is named after. */
+private fun classTint(code: String): Color = when (code.removeSuffix("_START")) {
+    "STR" -> Color(0xFFC0504D); "DEX" -> Vital; "INT" -> Rune
+    "STR_DEX" -> Color(0xFFD08A4E); "STR_INT" -> Elder; "DEX_INT" -> ShieldCyan
+    else -> Gold
+}
+
+/**
+ * The wheel under the graph (2.59.0, the owner's pick «Колесо PoE»): a stone disc with its rings,
+ * each class's sector washed in its colour and named at the rim. The sectors are read off the start
+ * nodes' positions, so the wheel turns with whatever tree the server seeds.
+ */
+private fun DrawScope.wheel(nodes: List<SkillTreeNode>, bounds: Bounds, width: Float, height: Float, scale: Float, pan: Offset,
+    labels: TextMeasurer) {
+    drawRect(Color(0xFF0B0D11))
+    val fit = fitFactor(bounds, width, height) * scale
+    val centre = Offset(width / 2 + (-bounds.minX - bounds.spanX / 2) * fit + pan.x, height / 2 + (-bounds.minY - bounds.spanY / 2) * fit + pan.y)
+    val rim = max(bounds.spanX, bounds.spanY) / 2 * fit
+    drawCircle(Brush.radialGradient(listOf(Color(0xFF1A1E25), Color(0xFF0E1015)), centre, rim * 1.05f), rim * 1.05f, centre)
+    for (ring in 1..8) drawCircle(Bronze.copy(alpha = if (ring % 3 == 0) .2f else .08f), rim * ring / 8f, centre, style = Stroke(1f))
+    nodes.filter { it.type == SkillNodeType.START && it.code != "SCION_START" }.forEach { start ->
+        val angle = Math.toDegrees(atan2(start.positionY.toDouble(), start.positionX.toDouble())).toFloat()
+        val tint = classTint(start.code)
+        drawArc(tint.copy(alpha = .06f), angle - 30f, 60f, true, centre - Offset(rim, rim), Size(rim * 2, rim * 2))
+        if (scale > .55f) {
+            val layout = labels.measure(start.title, TextStyle(color = tint.copy(alpha = .85f), fontSize = (11 * scale.coerceAtMost(1.6f)).sp))
+            val at = centre + Offset(cos(Math.toRadians(angle.toDouble())).toFloat(), sin(Math.toRadians(angle.toDouble())).toFloat()) * rim * 1.0f
+            drawText(layout, topLeft = at - Offset(layout.size.width / 2f, layout.size.height / 2f))
+        }
+    }
+}
+
+/**
+ * One node as a medallion of its kind: a small disc, a notable's double ring, a keystone's
+ * hexagon, a mastery's violet diamond, an attribute's green triangle, a socket's hollow ring and a
+ * start's octagon in its class's colour. Taken is gold and glows, one step away is ringed in dull
+ * gold, the rest is stone.
+ */
+private fun DrawScope.medallion(node: SkillTreeNode, centre: Offset, scale: Float, taken: Boolean, next: Boolean, selected: Boolean) {
+    val r = radius(node) * scale.coerceIn(.5f, 2.2f)
+    val edge = when { taken -> Gold; next -> Color(0xFF9A8250); else -> Color(0xFF3A3A3A) }
+    val width = (if (node.type == SkillNodeType.SMALL) 1.5f else 2.2f) * scale.coerceIn(.6f, 1.6f)
+    if (taken && node.type != SkillNodeType.SMALL)
+        drawCircle(Brush.radialGradient(listOf(nodeColour(node, true).copy(alpha = .35f), Color.Transparent), centre, r * 2.6f), r * 2.6f, centre)
+    fun polygon(sides: Int, radius: Float, turn: Float) = Path().apply {
+        repeat(sides) { i ->
+            val a = turn + i * 2 * PI.toFloat() / sides
+            val p = centre + Offset(cos(a), sin(a)) * radius
+            if (i == 0) moveTo(p.x, p.y) else lineTo(p.x, p.y)
+        }
+        close()
+    }
+    val stone = Color(0xFF161A21)
+    when (node.type) {
+        SkillNodeType.START -> {
+            val tint = classTint(node.code)
+            val shape = polygon(8, r, PI.toFloat() / 8)
+            drawPath(shape, if (taken) tint.copy(alpha = .55f) else stone); drawPath(shape, tint, style = Stroke(width))
+        }
+        SkillNodeType.KEYSTONE -> {
+            val shape = polygon(6, r, 0f)
+            drawPath(shape, if (taken) LifeRed.copy(alpha = .5f) else Color(0xFF141820)); drawPath(shape, if (taken) Gold else edge, style = Stroke(width * 1.2f))
+            drawPath(polygon(6, r * .55f, PI.toFloat() / 6), edge, style = Stroke(width))
+        }
+        SkillNodeType.NOTABLE -> {
+            drawCircle(if (taken) Gold.copy(alpha = .6f) else stone, r, centre); drawCircle(edge, r, centre, style = Stroke(width))
+            drawCircle(edge, r * .55f, centre, style = Stroke(width))
+        }
+        SkillNodeType.MASTERY -> {
+            val shape = polygon(4, r, 0f)
+            drawPath(shape, if (taken) Elder.copy(alpha = .6f) else Color(0xFF15131C))
+            drawPath(shape, Elder.copy(alpha = if (taken) 1f else if (next) .9f else .35f), style = Stroke(width))
+        }
+        SkillNodeType.ATTRIBUTE -> {
+            val shape = polygon(3, r, -PI.toFloat() / 2)
+            drawPath(shape, if (taken) Vital.copy(alpha = .7f) else stone); drawPath(shape, if (taken) Vital else edge, style = Stroke(width))
+        }
+        SkillNodeType.JEWEL_SOCKET -> {
+            drawCircle(edge, r, centre, style = Stroke(width * 1.2f))
+            drawCircle(if (taken) ShieldCyan.copy(alpha = .5f) else Color(0xFF0B0E13), r * .6f, centre)
+        }
+        SkillNodeType.SMALL -> { drawCircle(if (taken) Gold else Color(0xFF1A1F27), r, centre); drawCircle(edge, r, centre, style = Stroke(width)) }
+    }
+    if (selected) drawCircle(GoldBright, r + 5.dp.toPx(), centre, style = Stroke(2.dp.toPx()))
 }

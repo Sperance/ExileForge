@@ -19,7 +19,8 @@ import kotlinx.serialization.Serializable
 )
 
 /** What a node is worth on the tree, as the server grades them. */
-@Serializable enum class SkillNodeType { START, SMALL, NOTABLE, KEYSTONE, JEWEL_SOCKET }
+/** Since server 0.52.0 a cluster's MASTERY and the paths' ATTRIBUTE nodes offer [SkillTreeNode.options] to choose from. */
+@Serializable enum class SkillNodeType { START, SMALL, NOTABLE, KEYSTONE, JEWEL_SOCKET, MASTERY, ATTRIBUTE }
 
 /**
  * One node of the shared skill tree (collection `SkillTreeNode`).
@@ -34,6 +35,8 @@ import kotlinx.serialization.Serializable
     val type: SkillNodeType = SkillNodeType.SMALL,
     val params: List<Modifier> = emptyList(),
     val connections: List<String> = emptyList(),
+    /** What a MASTERY or an ATTRIBUTE node offers (server 0.52.0): one is chosen, and its bonuses become the node's. */
+    val options: List<List<Modifier>> = emptyList(),
     val cost: Int = 1,
     val positionX: Int = 0,
     val positionY: Int = 0,
@@ -56,6 +59,8 @@ import kotlinx.serialization.Serializable
     val params: List<Modifier> = emptyList(),
     val type: SkillNodeType = SkillNodeType.SMALL,
     val cost: Int = 1,
+    /** Which of the node's options this hero chose (server 0.52.0); its bonuses are [params]. */
+    val choice: Int? = null,
 ) {
     val title: String get() = locOr(LocaleKey.skillNodeName(code), code)
 }
@@ -100,9 +105,11 @@ import kotlinx.serialization.Serializable
 fun reachableFrom(nodes: List<SkillTreeNode>, taken: Set<String>): Set<String> {
     if (taken.isEmpty()) return nodes.filter { it.type == SkillNodeType.START }.mapTo(mutableSetOf()) { it.code }
     val byCode = nodes.associateBy { it.code }
+    // A taken mastery leads nowhere (server 0.52.0): it is a cluster's leaf, not a path between its notables.
+    val leading = taken.filterTo(mutableSetOf()) { byCode[it]?.type != SkillNodeType.MASTERY }
     val adjacent = mutableSetOf<String>()
-    taken.forEach { code -> byCode[code]?.connections?.let(adjacent::addAll) }
+    leading.forEach { code -> byCode[code]?.connections?.let(adjacent::addAll) }
     // An edge is declared on both ends, but a one-sided one would otherwise stay invisible.
-    nodes.forEach { node -> if (node.connections.any { it in taken }) adjacent.add(node.code) }
+    nodes.forEach { node -> if (node.connections.any { it in leading }) adjacent.add(node.code) }
     return adjacent - taken
 }

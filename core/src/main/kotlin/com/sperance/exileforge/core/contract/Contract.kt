@@ -15,7 +15,7 @@ val JsonObject.entityId: String get() = text("_id").ifBlank { text("id") }
 /** Fields MongoDB owns. `type` is the polymorphic discriminator: allowed on create, never on update. */
 val protectedFields = setOf("_id", "id", "version", "deleted", "createdAt", "updatedAt", "type")
 
-val rarities = listOf("COMMON", "UNCOMMON", "RARE", "EPIC", "UNIQUE", "MYTHICAL")
+val rarities = listOf("COMMON", "UNCOMMON", "RARE", "UNIQUE", "MYTHICAL")
 // JEWEL is last on purpose: it is not worn on the body but sits in a socket on the tree,
 // and `CharacterEquipment.socketCode` says which one.
 val slots = listOf("HELMET", "BODY", "GLOVES", "RING", "BOOTS", "WINGS", "BELT", "WEAPON_1H", "WEAPON_2H", "QUIVER", "SHIELD", "AMULET", "JEWEL", "MAP", "TOOL_MINING", "TOOL_HERBALISM", "TOOL_WOODCUTTING", "TOOL_SMITHING", "TOOL_ALCHEMY", "TOOL_CARTOGRAPHY")
@@ -52,9 +52,9 @@ val modifierSources = listOf("IMPLICIT", "PREFIX", "SUFFIX", "UNIQUE", "ENCHANTM
 val skillNodeTypes = listOf("START", "SMALL", "NOTABLE", "KEYSTONE", "JEWEL_SOCKET")
 val lotKinds = listOf("EQUIPMENT", "ITEM")
 val modifierOperations = listOf("ADD", "INCREASED", "MORE", "SET")
-const val SERVER_COMMIT = "9c7a5a9c5edc08d52ed9a93950214990d842ad80"
+const val SERVER_COMMIT = "1e3377f8ecf6e07c3b83f8d8b181abca1b0567a6"
 const val SERVER_BRANCH = "claude/tender-pasteur-a36kj2"
-const val SERVER_VERSION = "0.52.0"
+const val SERVER_VERSION = "0.53.0"
 
 fun template(catalog: Catalog, kind: EquipmentKind = EquipmentKind.Weapon): JsonObject = when (catalog) {
     Catalog.CHARACTERS -> defaultObject("character")

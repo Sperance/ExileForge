@@ -486,7 +486,6 @@
   "enum.orb.SHAPERS_ORB.rule": "Накладывает на редкий предмет влияние Создателя и добавляет модификатор из его пула",
   "enum.orb.VAAL_ORB.rule": "Портит предмет: вешает модификатор порчи, после чего предмет неизменяем",
   "enum.rarity.COMMON": "Обычный",
-  "enum.rarity.EPIC": "Эпический",
   "enum.rarity.MYTHICAL": "Мифический",
   "enum.rarity.RARE": "Редкий",
   "enum.rarity.UNCOMMON": "Необычный",

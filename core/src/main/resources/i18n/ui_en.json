@@ -486,7 +486,6 @@
   "enum.orb.SHAPERS_ORB.rule": "Gives a rare item the Shaper's influence and adds one of its modifiers",
   "enum.orb.VAAL_ORB.rule": "Corrupts the item: adds a corruption modifier and locks it forever",
   "enum.rarity.COMMON": "Common",
-  "enum.rarity.EPIC": "Epic",
   "enum.rarity.MYTHICAL": "Mythical",
   "enum.rarity.RARE": "Rare",
   "enum.rarity.UNCOMMON": "Uncommon",

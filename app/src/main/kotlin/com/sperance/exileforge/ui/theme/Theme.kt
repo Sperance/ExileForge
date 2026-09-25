@@ -45,7 +45,6 @@ val Elder = Color(0xFFA77BCF)
 fun rarityColor(value: String) = when (value) {
     "UNCOMMON" -> Color(0xFF8888FF)
     "RARE" -> Color(0xFFFFFF77)
-    "EPIC" -> Color(0xFFBC8ED9)
     "UNIQUE" -> Color(0xFFAF6025)
     "MYTHICAL" -> Color(0xFFE05A4E)
     else -> Color(0xFFC8C8C8)

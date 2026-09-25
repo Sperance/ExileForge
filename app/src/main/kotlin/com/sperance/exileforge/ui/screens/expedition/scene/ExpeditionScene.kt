@@ -31,7 +31,8 @@ import kotlin.math.max
 import kotlin.math.sin
 
 /**
- * The campaign's scene, drawn by Compose itself: the map in pseudo-isometry while walking, with
+ * The campaign's scene, drawn by Compose itself: the map in pseudo-isometry while walking — its ground,
+ * rock and air in the biome's [MapStyle] since 2.64.0 — with
  * the hero and the monsters as round tokens of their portraits (since 2.31.0), and while fighting
  * the cave of the owner's mockup VI with the fighters standing in it (2.57.0, [fightStage]). Everything is a shape — rule 17, no picture is ever loaded
  * — and nothing here is text: names, bars and numbers are the overlay's, in the app's dictionary.
@@ -95,6 +96,8 @@ private class ScenePainter {
         val world = run.world
         val map = world.map
         val biome = run.map.biome
+        val style = MapStyles.of(biome)
+        val frame = SceneFrame(pen, unit, time)
         val width = scope.size.width
         val height = scope.size.height
         // The hero stands a little below the middle: more of the map lies ahead of a player than behind.
@@ -121,7 +124,7 @@ private class ScenePainter {
         fun visible(x: Int, y: Int) = world.explored(x, y) && abs((x - y) - (world.heroX - world.heroY)) < across
         scope.translate(width / 2 - cameraX, height * .55f + cameraY) {
             // The ground first, all of it: nothing stands below the floor.
-            for (y in ys) for (x in xs) if (map.walkable(x, y) && visible(x, y)) floor(x, y, palette, glow(x, y))
+            for (y in ys) for (x in xs) if (map.walkable(x, y) && visible(x, y)) style.floor(frame, spot(map, x, y), palette, glow(x, y))
             for (y in ys) for (x in xs) if (map.walkable(x, y) && visible(x, y)) decor(map, x, y, palette, biome, glow(x, y))
             if (world.explored(map.exit.x, map.exit.y)) portal(map.exit.x + .5, map.exit.y + .5, world.sealed)
             // The torch's warmth on the ground, an ellipse because the ground is seen at a slant.
@@ -140,7 +143,7 @@ private class ScenePainter {
                 val depth = x + y + 1.0
                 // Rock between the hero and the player is see-through, or a corridor would hide them.
                 val near = depth > heroDepth && depth - heroDepth < 4 && abs((x - y) - (world.heroX - world.heroY)) < 3
-                standing += depth to { wall(x, y, palette, biome, if (near) .4f else 1f, glow(x, y)) }
+                standing += depth to { style.wall(frame, spot(map, x, y), palette, if (near) .4f else 1f, glow(x, y)) }
             }
             // A chest stands once the hero has seen its place (2.33.0); an opened one stays, open.
             // A fountain stands once seen (2.48.0): brimming until drunk, dry after.
@@ -179,7 +182,13 @@ private class ScenePainter {
             }
             standing.sortedBy { it.first }.forEach { it.second() }
         }
+        // The air over everything (2.64.0): drips, fog, sparks or fireflies, by the biome's style.
+        style.atmosphere(scope, palette, time)
     }
+
+    /** A cell as the style reads it: where its centre falls and how much rock borders it. */
+    private fun spot(map: ExpeditionMap, x: Int, y: Int) = TileSpot(x, y, isoX(x + .5, y + .5), isoY(x + .5, y + .5),
+        listOf(x + 1 to y, x - 1 to y, x to y + 1, x to y - 1).count { (nx, ny) -> !map.walkable(nx, ny) })
 
     /**
      * A token standing on its feet at ([x], [y]) in the pen's upward measure: a shadow on the floor
@@ -204,11 +213,6 @@ private class ScenePainter {
 
     private fun diamond(cx: Float, cy: Float, halfWidth: Float, halfHeight: Float) =
         pen.quad(cx - halfWidth, cy, cx, cy + halfHeight, cx + halfWidth, cy, cx, cy - halfHeight)
-
-    private fun floor(x: Int, y: Int, palette: Palette, light: Float) {
-        pen.color = shade(palette.floor, x, y, light = light)
-        diamond(isoX(x + .5, y + .5), isoY(x + .5, y + .5), unit, unit / 2)
-    }
 
     /**
      * What lies on the ground, by biome (since 2.32.0): the seed says which of three kinds grows on
@@ -252,54 +256,6 @@ private class ScenePainter {
             "FROST" -> when (kind) { 1 -> { pen.color = tone(Color(0xFFE8F2FA), light); pen.ellipse(cx - u * 2f, cy - u * .6f, u * 4f, u * 1.6f) }; 2 -> shard(); else -> stone() }
             "TEMPLE" -> when (kind) { 1 -> column(); 2 -> flame(); else -> { pen.color = glowing; pen.circle(cx, cy, u * 1.3f); pen.color = tone(palette.floor, light); pen.circle(cx, cy, u * .8f) } }
             else -> when (kind) { 1 -> stone(); 2 -> tuft(); else -> shard() }
-        }
-    }
-
-    /**
-     * A block of rock, a tile and a half tall since 2.32.0: two lit faces and a cap, and the biome's
-     * mark on it — courses of stone in halls, ice on frost, leaves over the forest.
-     */
-    private fun wall(x: Int, y: Int, palette: Palette, biome: String, alpha: Float, light: Float) {
-        val cx = isoX(x + .5, y + .5)
-        val cy = isoY(x + .5, y + .5)
-        val h = unit * 1.5f
-        val left = cx - unit
-        val right = cx + unit
-        val bottom = cy - unit / 2
-        pen.color = shade(palette.wallSide, x, y, alpha = alpha, light = light)
-        pen.quad(left, cy, cx, bottom, cx, bottom + h, left, cy + h)
-        pen.color = tone(shade(palette.wallSide, x, y, light = light), .7f, alpha = alpha)
-        pen.quad(cx, bottom, right, cy, right, cy + h, cx, bottom + h)
-        pen.color = shade(palette.wallTop, x, y, alpha = alpha, light = light)
-        diamond(cx, cy + h, unit, unit / 2)
-        // The cap's front edges catch the light.
-        pen.color = tone(palette.wallTop, 1.35f * light, alpha = alpha * .8f)
-        pen.line(left, cy + h, cx, bottom + h, unit * .05f)
-        pen.line(cx, bottom + h, right, cy + h, unit * .05f)
-        val mark = tone(palette.wallSide, .55f * light, alpha = alpha * .7f)
-        when (biome) {
-            "RUINS", "CRYPT", "TEMPLE", "MINES" -> {
-                pen.color = mark
-                for (i in 1..2) {
-                    val lift = h * i / 3f
-                    pen.line(left, cy + lift, cx, bottom + lift, unit * .03f)
-                    pen.line(cx, bottom + lift, right, cy + lift, unit * .03f)
-                }
-            }
-            "FROST" -> {
-                pen.color = Color(0xFFDDEEFF).copy(alpha = alpha * .6f * light)
-                for (i in 0..2) { val t = .2f + i * .3f
-                    pen.triangle(left + unit * t, cy + h - unit * t / 2, left + unit * (t + .12f), cy + h - unit * (t + .12f) / 2, left + unit * (t + .06f), cy + h - unit * .6f) }
-            }
-            "FOREST" -> {
-                pen.color = tone(palette.decor, light, alpha = alpha)
-                for (i in -1..1) pen.circle(cx + i * unit * .45f, cy + h + unit * .12f, unit * .32f)
-            }
-            else -> {
-                pen.color = mark
-                pen.line(left + unit * .3f, cy + h * .7f, left + unit * .5f, cy + h * .45f, unit * .03f)
-                pen.line(left + unit * .5f, cy + h * .45f, left + unit * .42f, cy + h * .2f, unit * .03f)
-            }
         }
     }
 

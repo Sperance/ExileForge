@@ -37,8 +37,9 @@ class CatalogViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     fun count() { with(runtime) { read("${Reads.CATALOG}.count") {
         val result = api.catalog.count(state.value.admin.catalog)
-        // The server answers the count as a bare number; anything else leaves the last total standing.
-        val total = ((result as? kotlinx.serialization.json.JsonPrimitive)?.content ?: result.toString()).toDoubleOrNull()?.toLong()
+        // The server answers `{"count": n}`; a bare number is still read. Anything else leaves the last total standing.
+        val value = (result as? kotlinx.serialization.json.JsonObject)?.get("count") ?: result
+        val total = (value as? kotlinx.serialization.json.JsonPrimitive)?.content?.toDoubleOrNull()?.toLong()
         mutable.update { it.copy(admin = it.admin.copy(total = total ?: it.admin.total)) }
     } } }
 

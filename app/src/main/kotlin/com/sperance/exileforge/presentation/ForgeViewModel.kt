@@ -39,6 +39,12 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     fun closeRun() = runtime.expeditionViewModel.close()
     fun enterVaal() = runtime.expeditionViewModel.enterVaal()
     fun refuseVaal() = runtime.expeditionViewModel.refuseVaal()
+    fun openAtlas() = runtime.expeditionViewModel.openAtlas()
+    fun closeAtlas() = runtime.expeditionViewModel.closeAtlas()
+    fun selectAtlasNode(code: String) = runtime.expeditionViewModel.selectAtlasNode(code)
+    fun allocateAtlas(code: String) = runtime.expeditionViewModel.allocateAtlas(code)
+    fun refundAtlas(code: String) = runtime.expeditionViewModel.refundAtlas(code)
+    fun resetAtlas() = runtime.expeditionViewModel.resetAtlas()
     fun language(lang: Lang) = runtime.language(lang)
     /** The server's names live in its dictionary; this re-reads it without touching the session. */
     fun refreshLocale() = runtime.refreshLocale()

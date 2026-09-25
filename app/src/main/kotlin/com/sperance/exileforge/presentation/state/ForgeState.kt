@@ -215,6 +215,15 @@ data class PlayState(
     val craftsPending: com.sperance.exileforge.core.model.crafts.WorkGains = com.sperance.exileforge.core.model.crafts.WorkGains(),
     /** The gear this run brought (2.45.0), with when each piece landed, for the gear sheet's «Новый лут». */
     val runLoot: List<LootEntry> = emptyList(),
+    /** The atlas window (2.68.0), null while it is closed. */
+    val atlas: AtlasScreenState? = null,
+)
+
+/** The atlas window: the tree (once a session), this character's state, and the node looked at. */
+data class AtlasScreenState(
+    val tree: com.sperance.exileforge.core.model.atlas.AtlasTree? = null,
+    val state: com.sperance.exileforge.core.model.atlas.AtlasState? = null,
+    val selected: String = "",
 )
 
 /** A piece a run brought and the moment it landed: a hero read after that moment says whether it is still loose. */
@@ -298,6 +307,7 @@ object Reads {
     const val MERCHANT = "merchant"
     const val MAP_SERVICES = "mapServices"
     const val CRAFTS = "crafts"
+    const val ATLAS = "atlas"
 }
 
 /**

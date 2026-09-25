@@ -239,8 +239,11 @@ enum class MapLineKind { HARM, CONTENT, REWARD }
     val experience: Double = 0.0,
 )
 
-/** What entering a location answered: the map spent on it, if any, and its chests as they stand now. */
-@Serializable data class MapLaunch(val map: ActiveMap? = null, val chests: ChestState = ChestState())
+/**
+ * What entering a location answered: the map spent on it, if any, its chests as they stand now, and
+ * (server 0.60.0) the atlas's summed effects, stat → value.
+ */
+@Serializable data class MapLaunch(val map: ActiveMap? = null, val chests: ChestState = ChestState(), val atlas: Map<String, Double> = emptyMap())
 
 /**
  * The map's services for gold (since server 0.34.0): a treasure map is one more chest in the

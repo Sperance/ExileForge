@@ -4,6 +4,10 @@ import com.sperance.exileforge.core.campaign.ExpeditionRun
 import com.sperance.exileforge.core.campaign.RolledMonster
 import com.sperance.exileforge.core.campaign.RunCommand
 import com.sperance.exileforge.core.campaign.VaalZones
+import com.sperance.exileforge.core.atlas.AtlasEffects
+import com.sperance.exileforge.core.model.atlas.AtlasState
+import com.sperance.exileforge.core.model.atlas.AtlasTree
+import com.sperance.exileforge.presentation.state.AtlasScreenState
 import com.sperance.exileforge.core.model.campaign.CampaignMap
 import com.sperance.exileforge.core.model.campaign.MonsterRarity
 import com.sperance.exileforge.presentation.ForgeRuntime
@@ -124,12 +128,12 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             val hero = state.value.play.hero ?: return@task
             mutable.update { it.copy(play = it.play.copy(launch = null, heroReadAt = if (picked != null) 0 else it.play.heroReadAt,
                 hero = if (picked == null) it.play.hero else it.play.hero?.let { h -> h.copy(inventory = h.inventory.filterNot { item -> item.id == picked }) })) }
-            begin(map, view, hero, characterId, launch.map?.effects.orEmpty(), launch.chests.left)
+            begin(map, view, hero, characterId, launch.map?.effects.orEmpty(), launch.chests.left, launch.atlas)
         }
     } }
 
     private fun begin(map: CampaignMap, view: com.sperance.exileforge.core.model.campaign.CampaignView, hero: com.sperance.exileforge.core.model.hero.HeroView,
-                      characterId: String, effects: Map<String, Double>, chests: Int) {
+                      characterId: String, effects: Map<String, Double>, chests: Int, atlas: Map<String, Double> = emptyMap()) {
         runtime.mutable.update { it.copy(play = it.play.copy(runLoot = emptyList())) }
         lateinit var run: ExpeditionRun
         run = ExpeditionRun.start(map, view.rarities, hero.sheet.stats, hero.sheet.level, System.nanoTime(),
@@ -138,8 +142,9 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             rules = view.combat,
             onFallen = { reports.trySend { fall(run, characterId, map.code) } },
             onChest = { reports.trySend { openChest(run, characterId, map.code) } },
-            mapEffects = effects, fountains = view.fountains,
-            portalChance = view.corruption.chance, onPortal = { reports.trySend { gate(run, characterId, map.code) } })
+            // The atlas's own bonuses (2.68.0) ride the map item's: more and rarer monsters, fountains, the portal.
+            mapEffects = AtlasEffects.map(effects, atlas), fountains = AtlasEffects.fountains(view.fountains, atlas),
+            portalChance = AtlasEffects.portalChance(view, atlas), onPortal = { reports.trySend { gate(run, characterId, map.code) } })
         // How many chests stand on the map is the server's (0.31.0), answered by the entry itself.
         run.send(RunCommand.Chests(chests))
         mutableRun.value = run
@@ -180,6 +185,40 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
      */
     private fun stack(map: Map<String, Double>, zone: Map<String, Double>): Map<String, Double> =
         (map.keys + zone.keys).associateWith { (map[it] ?: 0.0) + (zone[it] ?: 0.0) }
+
+    // ==================== The atlas (2.68.0) ====================
+
+    /** Opens the atlas window: the tree once a session, this character's state every time. */
+    fun openAtlas() { with(runtime) {
+        mutable.update { it.copy(play = it.play.copy(atlas = it.play.atlas ?: AtlasScreenState(tree = atlasTree))) }
+        read(Reads.ATLAS, restart = true) {
+            val id = state.value.play.characterId
+            val tree = atlasTree ?: api.atlas.tree().also { atlasTree = it }
+            val atlas = api.atlas.state(id)
+            mutable.update { s -> s.play.atlas?.takeIf { s.play.characterId == id }
+                ?.let { s.copy(play = s.play.copy(atlas = it.copy(tree = tree, state = atlas, selected = it.selected.ifBlank { atlas.allocated.lastOrNull().orEmpty() }))) } ?: s }
+        }
+    } }
+
+    fun closeAtlas() { runtime.mutable.update { it.copy(play = it.play.copy(atlas = null)) } }
+
+    fun selectAtlasNode(code: String) { runtime.mutable.update { s -> s.copy(play = s.play.copy(atlas = s.play.atlas?.copy(selected = code))) } }
+
+    fun allocateAtlas(code: String) = atlasCommand { id -> runtime.api.atlas.allocate(id, code) }
+    fun refundAtlas(code: String) = atlasCommand { id -> runtime.api.atlas.refund(id, code) }
+    fun resetAtlas() = atlasCommand { id -> runtime.api.atlas.reset(id) }
+
+    /** A command of the atlas: its answer is the whole state; the purse follows the hero it brought back. */
+    private fun atlasCommand(call: suspend (String) -> AtlasState) { with(runtime) {
+        task(writing = true, touches = setOf(Reads.ATLAS)) {
+            val id = state.value.play.characterId
+            val atlas = call(id)
+            mutable.update { s -> s.copy(play = s.play.copy(atlas = s.play.atlas?.copy(state = atlas))) }
+        }
+    } }
+
+    /** The tree is the server's content: read once a session, not per character. */
+    private var atlasTree: AtlasTree? = null
 
     /** «Отказаться» at the Vaal gate: the portal is gone and the zone closed on the server. */
     fun refuseVaal() {

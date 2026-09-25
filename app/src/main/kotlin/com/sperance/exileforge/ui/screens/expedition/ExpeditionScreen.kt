@@ -72,6 +72,12 @@ import com.sperance.exileforge.ui.theme.*
                             Text(ui("expedition.campaign"), style = MaterialTheme.typography.titleMedium)
                         }
                         next?.let { Text(ui("expedition.next", mapTitle(it.code), it.level), color = Rune, style = MaterialTheme.typography.labelMedium) }
+                        // The atlas (2.68.0): the passives every map is played under.
+                        OutlinedButton(enabled = ready, onClick = vm::openAtlas, modifier = Modifier.fillMaxWidth()) {
+                            Icon(ForgeGlyphs.Constellation, null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(ui("atlas.open"))
+                        }
                     }
                 }
                 items(shown, key = { it.code }) { map ->

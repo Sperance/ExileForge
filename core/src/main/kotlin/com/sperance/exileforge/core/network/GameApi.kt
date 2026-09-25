@@ -40,6 +40,7 @@ class GameApi(
     val files = StaticClient(http)
     val hero = HeroClient(http, catalog)
     val tree = TreeClient(http)
+    val atlas = AtlasClient(http)
     val auction = AuctionClient(http)
     val promo = PromoClient(http)
     val campaign = CampaignClient(http)

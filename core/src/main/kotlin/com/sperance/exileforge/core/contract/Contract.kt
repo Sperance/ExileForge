@@ -50,7 +50,7 @@ val bodyPlaces = listOf(
 val weapons = listOf("SWORD", "LONGSWORD", "BOW", "WAND", "AXE", "DOUBLEAXE", "DOUBLESWORD", "BLADE")
 val modifierSources = listOf("IMPLICIT", "PREFIX", "SUFFIX", "UNIQUE", "ENCHANTMENT", "CORRUPTION", "PASSIVE")
 val modifierOperations = listOf("ADD", "INCREASED", "MORE", "SET")
-const val SERVER_COMMIT = "c90f2f007c1cb7201d1c1d828cd546cd8fd2ef4c"
+const val SERVER_COMMIT = "0d5696881a7ae1574eb311f1bd8c2d09969891e2"
 const val SERVER_BRANCH = "claude/tender-pasteur-a36kj2"
 const val SERVER_VERSION = "0.56.0"
 

@@ -13,6 +13,7 @@ import com.sperance.exileforge.presentation.state.TAB_HERO
 import com.sperance.exileforge.presentation.state.AppPhase
 import com.sperance.exileforge.core.network.FailureState
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -107,12 +108,16 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         store.saveDeviceSession(byDevice)
         store.saveToken(state.value.account.server, api.sessionToken())
         restoreFilters()
-        ensureWorld()
         // The catalogue is codes without it, and the first attempt may have run before the server was up.
         refreshLocale()
         refreshIcons()
-        // The one place a single character is entered without being chosen: arriving is not leaving.
-        runtime.characterViewModel.readCharacters(autoEnter = true)
+        // The world and the character list do not wait for each other; a character entered below
+        // takes the world's lock, so it still reads its hero only once the tables are in.
+        coroutineScope {
+            launch { ensureWorld() }
+            // The one place a single character is entered without being chosen: arriving is not leaving.
+            runtime.characterViewModel.readCharacters(autoEnter = true)
+        }
     } }
 
     /**

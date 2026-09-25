@@ -8,7 +8,9 @@ import com.sperance.exileforge.presentation.ForgeRuntime
 import com.sperance.exileforge.presentation.state.Reads
 import com.sperance.exileforge.presentation.state.AppPhase
 import com.sperance.exileforge.presentation.state.MAX_CHARACTERS
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonObject
 
 /**
@@ -50,9 +52,11 @@ class CharacterViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             crafts = null, craftsTotals = com.sperance.exileforge.core.model.crafts.WorkGains(), craftsLast = null, craftsPending = com.sperance.exileforge.core.model.crafts.WorkGains())) }
         heroViewModel.forget()
         ensureWorld(fresh = true)
-        heroViewModel.readHero()
-        // Tab 0 is the catalogue, and this is where it becomes the open one.
-        loadPage(0)
+        coroutineScope {
+            // Tab 0 is the catalogue, and this is where it becomes the open one; it does not wait for the hero.
+            launch { loadPage(0) }
+            heroViewModel.readHero()
+        }
     } }
 
     /**

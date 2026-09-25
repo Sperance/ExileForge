@@ -73,8 +73,10 @@ class Transport(
     /**
      * The same file as text, so a dictionary can be stored verbatim and parsed again offline.
      * [json] = false is for a portrait's SVG, which is checked by its own parser, not as JSON.
+     * [validate] = false skips the syntax check for a document its caller parses whole anyway,
+     * so a large file is not read twice.
      */
-    internal suspend fun fetchText(path: String, json: Boolean = true, authenticated: Boolean = false): String {
+    internal suspend fun fetchText(path: String, json: Boolean = true, authenticated: Boolean = false, validate: Boolean = json): String {
         val url = base.newBuilder().addPathSegments(path).build()
         val credential = token.takeIf { authenticated }
         if (authenticated) require(credential != null) { ui("api.sign_in_tab") }
@@ -88,7 +90,7 @@ class Transport(
             status = payload.status
             responseText = payload.body.take(2_000)
             if (status !in 200..299) throw ApiFailure(status, null, ui("api.file_not_served", status))
-            if (json) try { withContext(Dispatchers.Default) { WireJson.parseToJsonElement(payload.body) } }
+            if (validate) try { withContext(Dispatchers.Default) { WireJson.parseToJsonElement(payload.body) } }
                 catch (e: CancellationException) { throw e }
                 catch (_: Exception) { throw ApiFailure(status, null, ui("api.malformed_json_at", path)) }
             success = true

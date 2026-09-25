@@ -3,7 +3,6 @@ package com.sperance.exileforge.core.network
 import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.contract.requireId
 import com.sperance.exileforge.core.i18n.ui
-import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CancellationException
 import com.sperance.exileforge.core.model.sync.HeroSnapshot
 import com.sperance.exileforge.core.model.sync.StaticManifest
@@ -30,10 +29,7 @@ private const val DEVICE_UNKNOWN = "US_015"
 class GameApi(
     server: String,
     journal: RequestJournal = RequestJournal(),
-    client: OkHttpClient = OkHttpClient.Builder()
-        .connectTimeout(10, TimeUnit.SECONDS).readTimeout(20, TimeUnit.SECONDS)
-        .callTimeout(30, TimeUnit.SECONDS).retryOnConnectionFailure(false)
-        .followRedirects(false).followSslRedirects(false).build(),
+    client: OkHttpClient = ForgeHttp.client,
     private val onUnauthorized: () -> Unit = {}
 ) {
     private val http = Transport(server, journal, client) { account = null; onUnauthorized() }

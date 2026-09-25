@@ -37,10 +37,10 @@ class StaticClient internal constructor(private val http: Transport) {
     suspend fun localeBundle(language: LocaleLanguage): LocaleBundle =
         LocaleBundle.parse(language.code, language.hash, localeDocument(language.code))
 
-    /** The dictionary as it was served, so a caller can store the very text it parsed. */
+    /** The dictionary as it was served, unchecked: the caller parses it before it stores the very text. */
     suspend fun localeDocument(code: String): String {
         require(code.isNotBlank()) { ui("api.no_language") }
-        return http.fetchText("locale/$code.json")
+        return http.fetchText("locale/$code.json", validate = false)
     }
 
     /**
@@ -52,10 +52,10 @@ class StaticClient internal constructor(private val http: Transport) {
      */
     suspend fun iconManifest(): IconManifest = http.fetch("icons/index.json")
 
-    /** The set as it was served, so a caller can store the very text it parsed. */
+    /** The set as it was served, unchecked: the caller parses it before it stores the very text. */
     suspend fun iconDocument(file: String): String {
         require(file.isNotBlank()) { ui("api.no_icon_file") }
-        return http.fetchText("icons/$file")
+        return http.fetchText("icons/$file", validate = false)
     }
 
     /**
@@ -73,9 +73,9 @@ class StaticClient internal constructor(private val http: Transport) {
     /** `static/index.json` (server 0.48.0): the routes and every fingerprint, in one public read. */
     suspend fun manifest(): StaticManifest = http.fetch("static/index.json")
 
-    /** Every reference table as it was served, for a signed-in caller; stored verbatim like the icons. */
+    /** Every reference table as it was served, for a signed-in caller: unchecked, parsed and then stored verbatim like the icons. */
     suspend fun worldDocument(file: String): String {
         require(file.isNotBlank()) { ui("api.no_world_file") }
-        return http.fetchText("world/$file", authenticated = true)
+        return http.fetchText("world/$file", authenticated = true, validate = false)
     }
 }

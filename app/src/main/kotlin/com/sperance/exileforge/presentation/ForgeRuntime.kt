@@ -27,6 +27,9 @@ import com.sperance.exileforge.presentation.state.AppPhase
 import com.sperance.exileforge.presentation.state.ADMIN_TABS
 import com.sperance.exileforge.presentation.state.ForgeState
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -95,6 +98,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
                 mutable.update { it.copy(lang = language, busy = false, account = it.account.copy(server = server, serverDraft = server, deviceId = deviceId), world = it.world.copy(languages = known.ifEmpty { it.world.languages })) }
                 refreshLocale()
                 refreshIcons()
+                launch { quietly { store.dropLegacyDocuments() } }
                 // A kept token comes back as it was; without one, a session is made again without
                 // asking, and only for someone who last played on this device.
                 val saved = store.token(server)
@@ -132,7 +136,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
     suspend fun loadLocale(language: Lang) {
         val server = state.value.account.server
         val cached = store.locale(server, language.code)
-        cached?.let { (hash, document) -> applyLocale(LocaleBundle.parse(language.code, hash, document)) }
+        cached?.let { (hash, document) -> applyLocale(parsed { LocaleBundle.parse(language.code, hash, document) }) }
         val manifest = api.manifest().locale
         applyLanguages(server, manifest)
         val chosen = manifest.language(language.code) ?: manifest.language(manifest.default) ?: return
@@ -144,11 +148,12 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
     private suspend fun bundle(server: String, manifest: LocaleManifest, code: String): LocaleBundle? {
         val language = manifest.language(code) ?: return null
         store.locale(server, code)?.let { (hash, document) ->
-            if (hash == language.hash) return LocaleBundle.parse(code, hash, document)
+            if (hash == language.hash) return parsed { LocaleBundle.parse(code, hash, document) }
         }
         val document = api.files.localeDocument(code)
-        store.saveLocale(server, code, language.hash, document)
-        return LocaleBundle.parse(code, language.hash, document)
+        // Parsed before it is kept: a file that does not read is never stored under a good hash.
+        return parsed { LocaleBundle.parse(code, language.hash, document) }
+            .also { store.saveLocale(server, code, language.hash, document) }
     }
 
     /**
@@ -180,26 +185,36 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
     suspend fun loadIcons() {
         val server = state.value.account.server
         val cached = store.icons(server)
-        cached?.let { (hash, document) -> applyIcons(IconBundle.parse(hash, document)) }
+        cached?.let { (hash, document) -> applyIcons(parsed { IconBundle.parse(hash, document) }) }
         val manifest = api.manifest().icons
         if (manifest.hash.isBlank() || cached?.first == manifest.hash) return
         val document = api.files.iconDocument(manifest.file)
+        val bundle = parsed { IconBundle.parse(manifest.hash, document) }
         store.saveIcons(server, manifest.hash, document)
-        applyIcons(IconBundle.parse(manifest.hash, document))
+        applyIcons(bundle)
     }
 
-    /** Reading the icons is background work; a failure leaves the bundled emblems, not a banner. */
+    /**
+     * Reading the icons and the portraits is background work, side by side; a failure of either
+     * leaves the bundled emblems and busts, not a banner.
+     */
     fun refreshIcons() {
         iconJob?.cancel()
         iconJob = scope.launch {
-            try { loadIcons() }
-            catch (e: CancellationException) { throw e }
-            catch (_: Exception) { }
-            try { loadPortraits() }
-            catch (e: CancellationException) { throw e }
-            catch (_: Exception) { }
+            launch { quietly { loadIcons() } }
+            launch { quietly { loadPortraits() } }
         }
     }
+
+    /** Runs optional background work whose failure only means the bundled fallback stays on screen. */
+    private suspend fun quietly(block: suspend () -> Unit) {
+        try { block() }
+        catch (e: CancellationException) { throw e }
+        catch (_: Exception) { }
+    }
+
+    /** Parsing a served document is CPU work of its size, and never belongs on the main thread. */
+    private suspend fun <T> parsed(parse: () -> T): T = withContext(Dispatchers.Default) { parse() }
 
     /**
      * The server's portraits (since 2.31.0): the manifest names a fingerprint per file, and only a
@@ -211,8 +226,11 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
         val cached = store.portraits(server)
         applyPortraits(cached)
         val manifest = api.manifest().portraits
-        val fresh = manifest.portraits.mapValues { (key, hash) ->
-            cached[key]?.takeIf { it.first == hash } ?: (hash to api.files.portraitDocument(key))
+        // The changed files come down together; OkHttp caps how many go to one host at once.
+        val fresh = coroutineScope {
+            manifest.portraits.mapValues { (key, hash) ->
+                cached[key]?.takeIf { it.first == hash }?.let { CompletableDeferred(it) } ?: async { hash to api.files.portraitDocument(key) }
+            }.mapValues { (_, file) -> file.await() }
         }
         if (fresh == cached) return
         store.savePortraits(server, fresh)
@@ -385,8 +403,10 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
         worldStale = false
         if (manifest.hash == worldHash && state.value.world.inventoryBases.isNotEmpty()) return@withLock
         val stored = store.world(server)?.takeIf { it.first == manifest.hash }?.second
-        val document = stored ?: api.files.worldDocument(manifest.file).also { store.saveWorld(server, manifest.hash, it) }
-        val tables = withContext(Dispatchers.Default) { WorldTables.parse(manifest.hash, document) }
+        val document = stored ?: api.files.worldDocument(manifest.file)
+        val tables = parsed { WorldTables.parse(manifest.hash, document) }
+        // Kept only once it has read: a broken download is fetched again rather than stored.
+        if (stored == null) store.saveWorld(server, manifest.hash, document)
         worldHash = tables.hash
         mutable.update { it.copy(
             world = it.world.copy(definitions = tables.modifiers, classes = tables.classes, treeNodes = tables.tree, levels = tables.levels,

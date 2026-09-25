@@ -6,8 +6,7 @@ import com.sperance.exileforge.core.verification.CrudScenario
 import com.sperance.exileforge.presentation.ForgeRuntime
 import kotlinx.coroutines.flow.update
 
-class ChecksViewModel(private val runtime: ForgeRuntime) {
-    private val state get() = runtime.state
+class ChecksViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     fun runChecks() { with(runtime) { task(writing = true) {
         check(state.value.isAdmin) { ui("checks.admin_only") }

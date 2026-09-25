@@ -102,7 +102,7 @@ private val ForgeSection.title get() = when (this) {
         Column(Modifier.fillMaxWidth().border(1.dp, Bronze.copy(alpha = .6f), MaterialTheme.shapes.small)
             .clickable(role = Role.Button, onClick = onPick).padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(ui("forge.pick_item"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
-            Text(ui("forge.pick_item_hint"), color = Muted, style = MaterialTheme.typography.bodySmall)
+            MutedText(ui("forge.pick_item_hint"))
         }
         return
     }
@@ -131,7 +131,7 @@ private val ForgeSection.title get() = when (this) {
                 selected = orb.id == s.play.selectedOrb) { onSelect(orb.id) }
         }
     }
-    Text(ui("orb.note"), color = Muted, style = MaterialTheme.typography.bodySmall)
+    MutedText(ui("orb.note"))
 }
 
 /** The bench lines for this item's slot, and the crafted modifier it already carries, if any. */
@@ -156,7 +156,7 @@ private val ForgeSection.title get() = when (this) {
         }
     }
     if (recipes.isEmpty()) Text(ui("bench.none"), color = Muted)
-    Text(ui("bench.note"), color = Muted, style = MaterialTheme.typography.bodySmall)
+    MutedText(ui("bench.note"))
 }
 
 /** One line of a forge ledger: a spine lit when chosen, a drawing, a name over what it means, and a figure. */

@@ -86,6 +86,6 @@ import kotlinx.serialization.json.JsonObject
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
         if (rarity.isNotBlank()) Text(rarityTitle(rarity), color = color, style = MaterialTheme.typography.labelSmall)
         summary.quality?.let { Text(ui("row.rolls", it), color = Parchment, style = MaterialTheme.typography.labelSmall) }
-        summary.openSlots?.takeIf { it > 0 }?.let { Text(ui("row.open", it), color = Muted, style = MaterialTheme.typography.labelSmall) }
+        summary.openSlots?.takeIf { it > 0 }?.let { MutedText(ui("row.open", it), style = MaterialTheme.typography.labelSmall) }
     }
 }

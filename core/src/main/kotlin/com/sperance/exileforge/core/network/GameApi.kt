@@ -113,7 +113,7 @@ class GameApi(
     }
     /** Re-reads the signed-in account, so a role or character count change is picked up. */
     suspend fun refreshUser(): UserProfile {
-        val profile: UserProfile = WireJson.decodeFromJsonElement(http.request("GET", "api/v1/user/me", authenticated = true))
+        val profile: UserProfile = http.get("api/v1/user/me")
         requireId(profile.id)
         account = profile
         return profile

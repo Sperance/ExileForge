@@ -120,7 +120,7 @@ import kotlinx.serialization.json.JsonObject
                 if (worn) Icon(Icons.Outlined.CheckCircle, ui("row.worn"), tint = Ink,
                     modifier = Modifier.align(Alignment.BottomEnd).offset(4.dp, 4.dp).background(Gold, CircleShape).padding(1.dp).size(15.dp))
             }
-            if (level.isNotBlank()) Text(ui("row.level", level), color = Muted, style = MaterialTheme.typography.labelSmall)
+            if (level.isNotBlank()) MutedText(ui("row.level", level), style = MaterialTheme.typography.labelSmall)
             // States as symbols, three to a row under the icon: words about corruption and sockets
             // would push the properties off the line.
             states.chunked(3).forEach { three ->

@@ -14,8 +14,7 @@ import kotlinx.coroutines.flow.update
  * acceptable, so nothing is validated twice: a blank or duplicate code, an empty reward and a
  * non-positive amount are all refusals, and a refusal is shown rather than pre-empted.
  */
-class RedemptionViewModel(private val runtime: ForgeRuntime) {
-    private val state get() = runtime.state
+class RedemptionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     fun load() { with(runtime) { read(Reads.REDEMPTIONS) {
         check(state.value.isAdmin) { ui("redemption.admin_only") }

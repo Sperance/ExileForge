@@ -79,7 +79,7 @@ import com.sperance.exileforge.ui.theme.Muted
             IconButton(enabled = !s.busy, onClick = onDelete) { Icon(Icons.Outlined.Delete, null, tint = Muted) }
         }
         code.description?.takeIf { it.isNotBlank() }?.let {
-            Text(it, color = Muted, style = MaterialTheme.typography.bodySmall)
+            MutedText(it)
         }
         PropertyRow(ui("redemption.used"), code.used.toString(), Glyph.LEVEL)
         code.expiredAt?.takeIf { it.isNotBlank() }?.let { PropertyRow(ui("redemption.expires"), it, Glyph.TEXT) }
@@ -152,7 +152,7 @@ private fun rewardLine(reward: RedemptionReward): String {
             Icon(Icons.Outlined.Add, null); Text(ui("redemption.add_reward"))
         }
 
-        if (rewards.isEmpty()) Text(ui("redemption.no_rewards"), color = Muted, style = MaterialTheme.typography.bodySmall)
+        if (rewards.isEmpty()) MutedText(ui("redemption.no_rewards"))
         rewards.forEachIndexed { index, reward ->
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(rewardLine(reward), style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
@@ -170,6 +170,6 @@ private fun rewardLine(reward: RedemptionReward): String {
             }) {
             Text(ui("redemption.create"))
         }
-        Text(ui("redemption.note"), color = Muted, style = MaterialTheme.typography.bodySmall)
+        MutedText(ui("redemption.note"))
     }
 }

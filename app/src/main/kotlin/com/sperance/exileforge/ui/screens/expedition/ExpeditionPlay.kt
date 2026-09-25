@@ -242,7 +242,7 @@ private const val MINIMAP_CELLS = 22f
         RunPanel(Modifier, accent) {
             Text(title, color = accent, style = MaterialTheme.typography.headlineSmall)
             Text(hint, color = Parchment, style = MaterialTheme.typography.bodyMedium)
-            Text(ui("expedition.summary", hud.kills, hud.gold, number(hud.experience)), color = Muted, style = MaterialTheme.typography.bodySmall)
+            MutedText(ui("expedition.summary", hud.kills, hud.gold, number(hud.experience)))
             Button(onClick = onDone, modifier = Modifier.fillMaxWidth()) { Text(ui("expedition.back_to_camp")) }
         }
     }

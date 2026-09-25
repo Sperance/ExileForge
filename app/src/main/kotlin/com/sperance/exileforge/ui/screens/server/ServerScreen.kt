@@ -38,7 +38,7 @@ import com.sperance.exileforge.ui.theme.Panel
             OutlinedButton(enabled = !s.busy && !s.admin.editorOpen, onClick = vm::leaveGame, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("account.change_character"))
             }
-            if (s.admin.editorOpen) Text(ui("account.close_editor_first"), color = Muted, style = MaterialTheme.typography.bodySmall)
+            if (s.admin.editorOpen) MutedText(ui("account.close_editor_first"))
             // A reward is paid to a character, not to an account, so the code is asked for where
             // the character being played is already named — and the dialog names them again.
             OutlinedButton(enabled = !s.busy && s.play.characterId.isNotBlank(), onClick = { promoOpen = true }, modifier = Modifier.fillMaxWidth()) {
@@ -50,8 +50,7 @@ import com.sperance.exileforge.ui.theme.Panel
         // into it: turning the tools off hides that tab, so the switch cannot live only inside it.
         if (s.isAdmin && !s.adminTools) ForgePanel {
             Engraved(ui("account.administrator"))
-            Text(ui("account.tools_hidden"),
-                color = Muted, style = MaterialTheme.typography.bodySmall)
+            MutedText(ui("account.tools_hidden"))
             OutlinedButton(enabled = !s.busy, onClick = { vm.mode(AppMode.ADMIN) }, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("account.tools_back"))
             }
@@ -59,17 +58,17 @@ import com.sperance.exileforge.ui.theme.Panel
         ForgePanel {
             Engraved(ui("account.language"))
             LanguagePicker(s.lang, s.world.languages, enabled = !s.busy, onLanguage = vm::language)
-            Text(ui("account.language_note"), color = Muted, style = MaterialTheme.typography.bodySmall)
+            MutedText(ui("account.language_note"))
             // Names of things belong to the server since 0.14.0: without its dictionary the screens
             // print codes, so how much of it arrived is worth saying out loud.
             if (s.world.localeStrings > 0) PropertyRow(ui("account.dictionary"),
                 "${s.world.localeLanguage.uppercase()} · " + ui("account.strings", s.world.localeStrings), Glyph.TEXT)
-            else Text(ui("account.dictionary_missing"), color = Muted, style = MaterialTheme.typography.bodySmall)
+            else MutedText(ui("account.dictionary_missing"))
             // Drawings come from the server too, and a missing set is invisible by design: every
             // hole falls back to a bundled emblem, so the count is the only way to notice one.
             if (s.world.iconKeys > 0) PropertyRow(ui("account.icons"),
                 ui("account.icons_count", s.world.iconKeys, s.world.iconSprites), Glyph.IMAGE)
-            else Text(ui("account.icons_missing"), color = Muted, style = MaterialTheme.typography.bodySmall)
+            else MutedText(ui("account.icons_missing"))
             if (s.world.portraits > 0) PropertyRow(ui("account.portraits"), s.world.portraits.toString(), Glyph.IMAGE)
             OutlinedButton(enabled = !s.busy, onClick = { vm.refreshLocale(); vm.refreshIcons() }, modifier = Modifier.fillMaxWidth()) { Text(ui("account.reread_bundles")) }
         }
@@ -106,7 +105,7 @@ import com.sperance.exileforge.ui.theme.Panel
         title = { Text(ui("account.promo")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(ui("account.promo_target", s.character?.name.orEmpty()), color = Muted, style = MaterialTheme.typography.bodySmall)
+                MutedText(ui("account.promo_target", s.character?.name.orEmpty()))
                 OutlinedTextField(code, { code = it.take(100) }, label = { Text(ui("account.code")) },
                     singleLine = true, modifier = Modifier.fillMaxWidth())
             }
@@ -126,8 +125,7 @@ import com.sperance.exileforge.ui.theme.Panel
     var expanded by remember { mutableStateOf(false) }
     ForgePanel {
         Engraved(ui("account.journal"))
-        Text(ui("account.journal_note", logs.size),
-            color = Muted, style = MaterialTheme.typography.bodySmall)
+        MutedText(ui("account.journal_note", logs.size))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             TextButton(onClick = { expanded = !expanded }) { Text(if (expanded) ui("common.hide") else ui("common.show")) }
             TextButton(enabled = logs.isNotEmpty(), onClick = vm::clearLogs) { Text(ui("common.clear")) }

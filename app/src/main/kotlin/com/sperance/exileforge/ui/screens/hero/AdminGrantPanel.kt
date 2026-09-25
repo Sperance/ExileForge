@@ -17,7 +17,6 @@ import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
-import com.sperance.exileforge.ui.theme.Muted
 
 /**
  * Administrator tools for one character's inventory.
@@ -42,8 +41,7 @@ import com.sperance.exileforge.ui.theme.Muted
             Icon(ForgeGlyphs.Anvil, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp))
             Text(ui("grant.roll"))
         }
-        Text(ui("grant.roll_note"),
-            color = Muted, style = MaterialTheme.typography.bodySmall)
+        MutedText(ui("grant.roll_note"))
 
         OrnateDivider()
         Engraved(ui("grant.named_template"))
@@ -53,8 +51,7 @@ import com.sperance.exileforge.ui.theme.Muted
 
         OrnateDivider()
         Engraved(ui("grant.orbs"))
-        Text(ui("grant.orbs_note"),
-            color = Muted, style = MaterialTheme.typography.bodySmall)
+        MutedText(ui("grant.orbs_note"))
         AdminOrbPanel(s, vm)
 
         OrnateDivider()

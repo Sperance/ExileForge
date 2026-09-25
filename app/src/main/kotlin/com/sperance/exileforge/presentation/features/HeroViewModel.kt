@@ -13,8 +13,7 @@ import com.sperance.exileforge.presentation.state.Reads
 import com.sperance.exileforge.presentation.state.TAB_CRAFT
 import kotlinx.coroutines.flow.update
 
-class HeroViewModel(private val runtime: ForgeRuntime) {
-    private val state get() = runtime.state
+class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     fun selectEquipment(value: String) { with(runtime) { mutable.update { it.copy(play = it.play.copy(selectedEquipment = value,
         forgeLine = if (value == it.play.selectedEquipment) it.play.forgeLine else "")) } } }
@@ -25,7 +24,7 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
         mutable.update { it.copy(play = it.play.copy(forgeSection = section)) }
         tab(TAB_CRAFT)
     } }
-    fun forgeSection(section: ForgeSection) { with(runtime) { mutable.update { it.copy(play = it.play.copy(forgeSection = section)) } } }
+    fun forgeSection(section: ForgeSection) = update { it.copy(play = it.play.copy(forgeSection = section)) }
 
     fun loadHero() { with(runtime) { read(Reads.HERO) { readHero() } } }
 
@@ -53,8 +52,8 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
         api.hero.grant(id, equipmentId)
     } } }
 
-    fun grantRarity(value: String) { with(runtime) { mutable.update { it.copy(play = it.play.copy(grantRarity = value)) } } }
-    fun grantSlot(value: String) { with(runtime) { mutable.update { it.copy(play = it.play.copy(grantSlot = value)) } } }
+    fun grantRarity(value: String) = update { it.copy(play = it.play.copy(grantRarity = value)) }
+    fun grantSlot(value: String) = update { it.copy(play = it.play.copy(grantSlot = value)) }
 
     /**
      * Admin only: a random template of the chosen rarity and category, with server-rolled modifiers.
@@ -73,7 +72,7 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
         api.hero.adjustItems(id, listOf(ItemStack(itemId, amount)))
     } } }
 
-    fun selectOrb(value: String) { with(runtime) { mutable.update { it.copy(play = it.play.copy(selectedOrb = value)) } } }
+    fun selectOrb(value: String) = update { it.copy(play = it.play.copy(selectedOrb = value)) }
 
     /**
      * Spends one orb on one item of the inventory.
@@ -101,8 +100,8 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
         mutable.update { it.copy(play = it.play.copy(forgeLine = outcome.message)) }
     } } }
 
-    fun selectNode(code: String) { with(runtime) { mutable.update { it.copy(play = it.play.copy(selectedNode = code)) } } }
-    fun nodeQuery(value: String) { with(runtime) { mutable.update { it.copy(play = it.play.copy(nodeQuery = value)) } } }
+    fun selectNode(code: String) = update { it.copy(play = it.play.copy(selectedNode = code)) }
+    fun nodeQuery(value: String) = update { it.copy(play = it.play.copy(nodeQuery = value)) }
 
     /**
      * Skill tree: take a node, give it back, or drop the whole tree.
@@ -150,7 +149,7 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
      * without a snapshot, which [delivered] marks by setting the reading cold.
      */
     private fun characterCommand(block: suspend (String) -> Unit) { with(runtime) { task(writing = true, touches = setOf(Reads.HERO)) {
-        val id = state.value.play.characterId.trim()
+        val id = characterId
         check(id.isNotBlank()) { ui("auction.choose_character") }
         check(state.value.ownsCharacter || state.value.isAdmin) { ui("hero.owner_only") }
         block(id)
@@ -180,12 +179,12 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
 
     /** What a command on [characterId] tells the server the client holds; `null` asks for nothing. */
     fun heldParts(characterId: String): String? =
-        if (characterId != state.value.play.characterId.trim()) null
+        if (!onScreen(characterId)) null
         else parts?.takeIf { it.characterId == characterId }?.header() ?: HeroParts(characterId).header()
 
     /** A command's answer: its snapshot, or none — and then the reading is cold and read again. */
     fun delivered(characterId: String, snapshot: HeroSnapshot?) {
-        if (characterId != state.value.play.characterId.trim()) return
+        if (!onScreen(characterId)) return
         if (snapshot == null) runtime.mutable.update { it.copy(play = it.play.copy(heroReadAt = 0)) }
         else apply(characterId, snapshot)
     }
@@ -195,7 +194,7 @@ class HeroViewModel(private val runtime: ForgeRuntime) {
      * when nothing did. The reference tables come first — a card is half its base.
      */
     internal suspend fun readHero() { with(runtime) {
-        val id = state.value.play.characterId.trim()
+        val id = characterId
         check(id.isNotBlank()) { ui("auction.choose_character") }
         ensureWorld()
         val held = parts?.takeIf { it.characterId == id } ?: HeroParts(id)

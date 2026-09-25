@@ -40,7 +40,7 @@ import com.sperance.exileforge.ui.theme.*
             icon?.let { Icon(it, null, tint = accent, modifier = Modifier.size(26.dp)) }
             Text(title.uppercase(), style = MaterialTheme.typography.headlineLarge, color = accent)
         }
-        subtitle?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelMedium) }
+        subtitle?.let { MutedText(it, style = MaterialTheme.typography.labelMedium) }
         OrnateDivider(accent)
     }
 }

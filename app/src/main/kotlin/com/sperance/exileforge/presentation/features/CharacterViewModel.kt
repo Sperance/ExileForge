@@ -17,8 +17,7 @@ import kotlinx.serialization.json.JsonObject
  * Everything below the gate acts on `characterId`, so nothing else may write it. That is the whole
  * point of the menu — a tab cannot quietly move the player onto a different hero halfway through.
  */
-class CharacterViewModel(private val runtime: ForgeRuntime) {
-    private val state get() = runtime.state
+class CharacterViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     /**
      * The account's characters, and where the player lands after reading them.

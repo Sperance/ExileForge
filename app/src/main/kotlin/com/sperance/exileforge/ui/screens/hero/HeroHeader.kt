@@ -1,6 +1,7 @@
 package com.sperance.exileforge.ui.screens.hero
 
 import androidx.compose.foundation.background
+import com.sperance.exileforge.ui.components.MutedText
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -85,7 +86,7 @@ import com.sperance.exileforge.ui.theme.*
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row {
             Text(ui("hero.xp_short"), color = Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f))
-            Text(label, color = Muted, style = MaterialTheme.typography.labelSmall)
+            MutedText(label, style = MaterialTheme.typography.labelSmall)
         }
         if (s.world.levels.isNotEmpty()) Box(Modifier.fillMaxWidth().height(6.dp).background(PanelRaised, RoundedCornerShape(3.dp))) {
             Box(Modifier.fillMaxWidth(fraction).fillMaxHeight().background(Gold, RoundedCornerShape(3.dp)))

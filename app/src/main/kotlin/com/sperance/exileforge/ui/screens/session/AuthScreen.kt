@@ -1,6 +1,7 @@
 package com.sperance.exileforge.ui.screens.session
 
 import androidx.compose.foundation.background
+import com.sperance.exileforge.ui.components.MutedText
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -58,8 +59,7 @@ import com.sperance.exileforge.ui.theme.*
                 Icon(ForgeGlyphs.Portal, null, Modifier.size(20.dp)); Spacer(Modifier.width(10.dp))
                 Text(ui("auth.play"), style = MaterialTheme.typography.titleMedium)
             }
-            Text(ui("auth.device_note"),
-                color = Muted, style = MaterialTheme.typography.bodySmall)
+            MutedText(ui("auth.device_note"))
 
             LoginPanel(s, vm)
             ServerPanel(s, vm)
@@ -92,8 +92,7 @@ import com.sperance.exileforge.ui.theme.*
                 Text(ui("account.sign_in"))
             }
             // Where the password goes and how long the session lasts are worth saying out loud.
-            Text(ui("auth.password_note"),
-                color = Muted, style = MaterialTheme.typography.bodySmall)
+            MutedText(ui("auth.password_note"))
         }
     }
 }
@@ -120,10 +119,9 @@ import com.sperance.exileforge.ui.theme.*
             Button(enabled = !s.busy, onClick = vm::connect, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("account.save_connect"))
             }
-            Text(s.account.health, color = Muted, style = MaterialTheme.typography.bodySmall)
+            MutedText(s.account.health)
             // The identifier is not a secret, and naming an account in a support log needs it.
-            Text(ui("auth.device", s.account.deviceId.takeLast(12)),
-                color = Muted, style = MaterialTheme.typography.labelSmall)
+            MutedText(ui("auth.device", s.account.deviceId.takeLast(12)), style = MaterialTheme.typography.labelSmall)
         }
     }
 }

@@ -1,6 +1,7 @@
 package com.sperance.exileforge.core.network
 
 import com.sperance.exileforge.core.contract.WireJson
+import com.sperance.exileforge.core.contract.requireId
 import com.sperance.exileforge.core.contract.text
 import com.sperance.exileforge.core.i18n.ui
 import kotlinx.coroutines.CancellationException
@@ -67,7 +68,7 @@ class Transport(
      * missing dictionary is exactly the kind of thing that has to be visible when text turns into
      * raw keys on screen.
      */
-    internal suspend fun fetch(path: String): JsonElement = WireJson.parseToJsonElement(fetchText(path))
+    internal suspend inline fun <reified T> fetch(path: String): T = WireJson.decodeFromString(fetchText(path))
 
     /**
      * The same file as text, so a dictionary can be stored verbatim and parsed again offline.
@@ -160,5 +161,25 @@ class Transport(
             journal.add(RequestLog(method, url.encodedPath + (url.encodedQuery?.let { "?${if (sensitive) ui("api.hidden") else it}" } ?: ""), status,
                 (System.nanoTime() - start) / 1_000_000, if (sensitive) ui("api.hidden") else bodyText.take(12_000), if (sensitive) ui("api.hidden") else responseText, success))
         }
+    }
+}
+
+/** A signed-in read whose envelope `data` decodes to [T]. */
+internal suspend inline fun <reified T> Transport.get(path: String, query: Map<String, String> = emptyMap()): T =
+    WireJson.decodeFromJsonElement(request("GET", path, query, authenticated = true))
+
+/** A signed-in command whose envelope `data` decodes to [T]. */
+internal suspend inline fun <reified T> Transport.post(path: String, query: Map<String, String> = emptyMap(), body: JsonElement? = null): T =
+    WireJson.decodeFromJsonElement(request("POST", path, query, body, authenticated = true))
+
+/**
+ * The query of a route about one hero: every such route names it by `characterId`, checked here once.
+ * A `null` value leaves its parameter out, which is how an optional argument stays off the wire.
+ */
+internal fun heroQuery(characterId: String, vararg more: Pair<String, String?>): Map<String, String> {
+    requireId(characterId)
+    return buildMap {
+        put("characterId", characterId)
+        more.forEach { (name, value) -> if (value != null) put(name, value) }
     }
 }

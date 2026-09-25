@@ -8,10 +8,9 @@ import com.sperance.exileforge.presentation.ForgeRuntime
 import com.sperance.exileforge.presentation.state.Reads
 import kotlinx.coroutines.flow.update
 
-class CatalogViewModel(private val runtime: ForgeRuntime) {
-    private val state get() = runtime.state
+class CatalogViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
-    fun query(value: String) { with(runtime) { mutable.update { it.copy(admin = it.admin.copy(query = value)) } } }
+    fun query(value: String) = update { it.copy(admin = it.admin.copy(query = value)) }
 
     fun catalog(value: Catalog) { with(runtime) {
         // A player's catalogue is the stash and nothing else: their own character is reached
@@ -25,7 +24,7 @@ class CatalogViewModel(private val runtime: ForgeRuntime) {
         }
     } }
 
-    fun filter(value: CatalogFilter) { with(runtime) { mutable.update { it.copy(admin = it.admin.copy(filter = value, query = value.query)) } } }
+    fun filter(value: CatalogFilter) = update { it.copy(admin = it.admin.copy(filter = value, query = value.query)) }
 
     fun applyFilters() { with(runtime) { read(Reads.CATALOG, restart = true) {
         store.saveFilters(state.value.account.server, state.value.admin.catalog.path, WireJson.encodeToString(CatalogFilter.serializer(), state.value.admin.filter.copy(query = state.value.admin.query)))

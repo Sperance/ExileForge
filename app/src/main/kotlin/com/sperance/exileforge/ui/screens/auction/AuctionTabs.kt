@@ -204,7 +204,7 @@ private fun chipLabel(s: ForgeState, field: FilterField, value: String): String 
                 Text(ui("auction.show_mine"), modifier = Modifier.weight(1f))
                 Switch(checked = mine, onCheckedChange = { mine = it })
             }
-            Text(ui("auction.filter_note"), color = Muted, style = MaterialTheme.typography.bodySmall)
+            MutedText(ui("auction.filter_note"))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = { draft = draft.cleared(); mine = false }, modifier = Modifier.weight(1f)) { Text(ui("auction.reset")) }
                 Button(enabled = !s.busy, onClick = { onApply(draft, mine) }, modifier = Modifier.weight(1f)) { Text(ui("auction.apply")) }
@@ -369,10 +369,9 @@ private fun lotDocument(s: ForgeState, lot: AuctionLot): JsonObject {
                     PropertyRow(ui("card.price"), orbPrice(s, lot), Glyph.CURRENCY)
                     PropertyRow(ui("auction.seller"), lot.sellerName.ifBlank { "…${lot.sellerId.takeLast(6)}" }, Glyph.CHARACTER)
                     listedAt(lot.createdAt)?.let { PropertyRow(ui("auction.listed_at"), it, Glyph.LEVEL) }
-                    note?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelMedium) }
+                    note?.let { MutedText(it, style = MaterialTheme.typography.labelMedium) }
                     Button(enabled = enabled, onClick = onAction, modifier = Modifier.fillMaxWidth()) { Text(action) }
-                    Text(ui("auction.lot_note"),
-                        color = Muted, style = MaterialTheme.typography.bodySmall)
+                    MutedText(ui("auction.lot_note"))
                 }
             }
         }

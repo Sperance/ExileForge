@@ -193,7 +193,7 @@ internal fun DamageType.key() = "enum.damage.$name"
                 }
             }
         }
-        Text(ui("expedition.pack_left", fight.packTotal - fight.packIndex + 1, fight.packTotal), color = Muted, style = MaterialTheme.typography.labelSmall)
+        MutedText(ui("expedition.pack_left", fight.packTotal - fight.packIndex + 1, fight.packTotal), style = MaterialTheme.typography.labelSmall)
     }
 }
 
@@ -282,7 +282,7 @@ internal fun DamageType.key() = "enum.damage.$name"
 @Composable private fun StateTiles(ailments: List<AilmentView>, held: Boolean) {
     val stunned = held && ailments.none { it.ailment == Ailment.FROZEN }
     Row(Modifier.height(30.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-        if (!stunned && ailments.isEmpty()) Text(ui("fight.no_states"), color = Muted, style = MaterialTheme.typography.labelSmall)
+        if (!stunned && ailments.isEmpty()) MutedText(ui("fight.no_states"), style = MaterialTheme.typography.labelSmall)
         if (stunned) StateTile(null, GoldBright, 1f, 1, ui("expedition.stunned"))
         ailments.forEach { StateTile(it.ailment, ailmentTint(it.ailment), it.left, it.stacks, ailmentLabel(it)) }
     }

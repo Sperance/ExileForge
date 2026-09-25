@@ -71,9 +71,8 @@ import kotlinx.serialization.json.JsonPrimitive
                         vm.draftClass(chosen); vm.edit(JsonObject(s.admin.draft + ("classId" to JsonPrimitive(chosen))))
                     }
                     s.world.classes.firstOrNull { it.id == s.admin.draft.text("classId") }?.let { chosen ->
-                        Text(chosen.details, color = Muted, style = MaterialTheme.typography.bodySmall)
-                        Text(ui("editor.level1_base") + chosen.baseStats.joinToString(" · ") { "${statTitle(it.stat, s.lang)} ${statNumber(it.stat, it.value)}" },
-                            color = Muted, style = MaterialTheme.typography.bodySmall)
+                        MutedText(chosen.details)
+                        MutedText(ui("editor.level1_base") + chosen.baseStats.joinToString(" · ") { "${statTitle(it.stat, s.lang)} ${statNumber(it.stat, it.value)}" })
                     }
                     if (s.world.classes.isEmpty()) Text(ui("editor.no_classes"), color = MaterialTheme.colorScheme.error)
                 }
@@ -83,8 +82,7 @@ import kotlinx.serialization.json.JsonPrimitive
                     Engraved(ui("editor.modifiers"))
                     Text(ui("editor.definitions_loaded", s.world.definitions.size), color = Muted)
                     OutlinedButton(enabled = !s.busy, onClick = vm::loadDefinitions) { Text(ui("editor.refresh_modifiers")) }
-                    Text(ui("editor.pool_note"),
-                        color = Muted, style = MaterialTheme.typography.bodySmall)
+                    MutedText(ui("editor.pool_note"))
                 }
             }
             item {

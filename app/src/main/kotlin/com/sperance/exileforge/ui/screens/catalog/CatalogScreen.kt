@@ -19,7 +19,6 @@ import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
-import com.sperance.exileforge.ui.theme.Muted
 
 @Composable internal fun CatalogScreen(s: ForgeState, vm: ForgeViewModel) {
     // The gesture replaced the Refresh button that used to sit beside Create: one way to do one
@@ -31,7 +30,7 @@ import com.sperance.exileforge.ui.theme.Muted
                 ui("catalog.page_info", s.admin.total, s.admin.page + 1, maxOf(1, s.admin.totalPages)),
                 if (s.admin.catalog == Catalog.CHARACTERS) ForgeGlyphs.Exile else ForgeGlyphs.Stash)
             if (s.adminTools) CatalogSwitch(s, vm)
-            if (s.admin.editorOpen) Text(ui("catalog.editor_busy"), color = Muted, style = MaterialTheme.typography.bodySmall)
+            if (s.admin.editorOpen) MutedText(ui("catalog.editor_busy"))
         }
         item {
             ForgePanel {

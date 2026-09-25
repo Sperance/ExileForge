@@ -23,12 +23,11 @@ class HeroClient internal constructor(private val http: Transport, private val c
      * or `null` when the server answers 304 because nothing moved since [parts] was taken.
      */
     suspend fun view(characterId: String, parts: HeroParts): HeroSnapshot? {
-        requireId(characterId)
         val headers = buildMap {
             put(HeroParts.HEADER, parts.header())
             if (parts.complete && parts.version.isNotBlank()) put("If-None-Match", "\"${parts.version}\"")
         }
-        val answer = http.request("GET", "api/v1/character/view", mapOf("characterId" to characterId), authenticated = true, headers = headers)
+        val answer = http.request("GET", "api/v1/character/view", heroQuery(characterId), authenticated = true, headers = headers)
         return if (answer is JsonNull) null else WireJson.decodeFromJsonElement(HeroSnapshot.serializer(), answer)
     }
 
@@ -59,28 +58,21 @@ class HeroClient internal constructor(private val http: Transport, private val c
      * An item whose requirements stopped being met keeps its slot and stops working — that verdict
      * is the server's and arrives here already made.
      */
-    suspend fun stats(characterId: String): CharacterSheet {
-        requireId(characterId)
-        return WireJson.decodeFromJsonElement(http.request("GET", "api/v1/character/inventory/stats", mapOf("characterId" to characterId), authenticated = true))
-    }
+    suspend fun stats(characterId: String): CharacterSheet =
+        http.get("api/v1/character/inventory/stats", heroQuery(characterId))
 
     /** Grants experience; the server decides whether that crosses a level threshold. */
     suspend fun addExperience(characterId: String, amount: Double): CharacterSummary {
-        requireId(characterId)
         require(amount > 0 && amount.isFinite()) { ui("api.xp_positive") }
-        return WireJson.decodeFromJsonElement(http.request("POST", "api/v1/character/inventory/experience",
-            mapOf("characterId" to characterId, "amount" to amount.toString()), authenticated = true))
+        return http.post("api/v1/character/inventory/experience", heroQuery(characterId, "amount" to amount.toString()))
     }
-    suspend fun bag(characterId: String): List<CharacterItem> {
-        requireId(characterId)
-        return WireJson.decodeFromJsonElement(kotlinx.serialization.builtins.ListSerializer(CharacterItem.serializer()), http.request("GET", "api/v1/character/inventory/items", mapOf("characterId" to characterId), authenticated = true))
-    }
+    suspend fun bag(characterId: String): List<CharacterItem> =
+        http.get<List<CharacterItem>>("api/v1/character/inventory/items", heroQuery(characterId))
     /** Adds or removes stacking items; a negative amount removes them. Answers with a status word. */
     suspend fun adjustItems(characterId: String, items: List<ItemStack>): String {
-        requireId(characterId)
         require(items.isNotEmpty()) { ui("api.empty_items") }
         val body = JsonArray(items.map { buildJsonObject { put("itemId", it.itemId); put("amount", it.amount) } })
-        return http.request("POST", "api/v1/character/inventory/addItem", mapOf("characterId" to characterId), body, authenticated = true).jsonPrimitive.content
+        return http.request("POST", "api/v1/character/inventory/addItem", heroQuery(characterId), body, authenticated = true).jsonPrimitive.content
     }
 
     /**
@@ -90,9 +82,8 @@ class HeroClient internal constructor(private val http: Transport, private val c
      * and a tier inside each. The client only names the template.
      */
     suspend fun grant(characterId: String, equipmentId: String): EquipmentInstance {
-        requireId(characterId); requireId(equipmentId)
-        return WireJson.decodeFromJsonElement(http.request("POST", "api/v1/character/inventory/itemToInventory",
-            mapOf("characterId" to characterId, "equipmentId" to equipmentId), authenticated = true))
+        requireId(equipmentId)
+        return http.post("api/v1/character/inventory/itemToInventory", heroQuery(characterId, "equipmentId" to equipmentId))
     }
 
     /**
@@ -101,9 +92,9 @@ class HeroClient internal constructor(private val http: Transport, private val c
      * `RING_2`) to take; without it the server takes a free one.
      */
     suspend fun equip(characterId: String, inventoryId: String, slot: String? = null): EquipmentInstance {
-        requireId(characterId); requireId(inventoryId)
-        val query = mapOf("characterId" to characterId, "inventoryId" to inventoryId) + listOfNotNull(slot?.let { "slot" to it })
-        return WireJson.decodeFromJsonElement(http.request("POST", "api/v1/characterequipment/equip", query, authenticated = true))
+        requireId(inventoryId)
+        val query = heroQuery(characterId, "inventoryId" to inventoryId, "slot" to slot)
+        return http.post("api/v1/characterequipment/equip", query)
     }
     suspend fun unequip(characterId: String, inventoryId: String): EquipmentInstance = wear("unequip", characterId, inventoryId)
     /**
@@ -117,10 +108,9 @@ class HeroClient internal constructor(private val http: Transport, private val c
      * taken it, and that it is free. The client names the pair and prints the refusal.
      */
     suspend fun socket(characterId: String, inventoryId: String, nodeCode: String): EquipmentInstance {
-        requireId(characterId); requireId(inventoryId)
+        requireId(inventoryId)
         require(nodeCode.isNotBlank()) { ui("api.choose_socket") }
-        return WireJson.decodeFromJsonElement(http.request("POST", "api/v1/characterequipment/socket",
-            mapOf("characterId" to characterId, "inventoryId" to inventoryId, "nodeCode" to nodeCode), authenticated = true))
+        return http.post("api/v1/characterequipment/socket", heroQuery(characterId, "inventoryId" to inventoryId, "nodeCode" to nodeCode))
     }
 
     /**
@@ -131,9 +121,8 @@ class HeroClient internal constructor(private val http: Transport, private val c
      * refuses one.
      */
     suspend fun sellForGold(characterId: String, inventoryId: String): SellOutcome {
-        requireId(characterId); requireId(inventoryId)
-        return WireJson.decodeFromJsonElement(http.request("POST", "api/v1/characterequipment/sell",
-            mapOf("characterId" to characterId, "inventoryId" to inventoryId), authenticated = true))
+        requireId(inventoryId)
+        return http.post("api/v1/characterequipment/sell", heroQuery(characterId, "inventoryId" to inventoryId))
     }
 
     suspend fun unsocket(characterId: String, inventoryId: String): EquipmentInstance =
@@ -147,17 +136,13 @@ class HeroClient internal constructor(private val http: Transport, private val c
      * what happened. The orb is debited in the same transaction, so a refusal costs nothing.
      */
     suspend fun applyOrb(characterId: String, inventoryId: String, orbItemId: String): OrbOutcome {
-        requireId(characterId); requireId(inventoryId); requireId(orbItemId)
-        return WireJson.decodeFromJsonElement(http.request("POST", "api/v1/characterequipment/applyOrb",
-            mapOf("characterId" to characterId, "inventoryId" to inventoryId, "orbItemId" to orbItemId), authenticated = true))
+        requireId(inventoryId); requireId(orbItemId)
+        return http.post("api/v1/characterequipment/applyOrb", heroQuery(characterId, "inventoryId" to inventoryId, "orbItemId" to orbItemId))
     }
 
     /** The crafting bench lines the character has found on maps (since 0.46.0); the rest stay hidden. */
-    suspend fun bench(characterId: String): List<BenchRecipe> {
-        requireId(characterId)
-        return WireJson.decodeFromJsonElement(kotlinx.serialization.builtins.ListSerializer(BenchRecipe.serializer()),
-            http.request("GET", "api/v1/characterequipment/bench", mapOf("characterId" to characterId), authenticated = true))
-    }
+    suspend fun bench(characterId: String): List<BenchRecipe> =
+        http.get<List<BenchRecipe>>("api/v1/characterequipment/bench", heroQuery(characterId))
 
     /**
      * Places one bench modifier on one item, paid in orbs.
@@ -167,33 +152,26 @@ class HeroClient internal constructor(private val http: Transport, private val c
      * so a refusal costs nothing. The answer is shaped like an orb's: the item and a sentence.
      */
     suspend fun craft(characterId: String, inventoryId: String, recipe: String): OrbOutcome {
-        requireId(characterId); requireId(inventoryId)
+        requireId(inventoryId)
         require(recipe.isNotBlank()) { ui("api.choose_recipe") }
-        return WireJson.decodeFromJsonElement(http.request("POST", "api/v1/characterequipment/craft",
-            mapOf("characterId" to characterId, "inventoryId" to inventoryId, "recipe" to recipe), authenticated = true))
+        return http.post("api/v1/characterequipment/craft", heroQuery(characterId, "inventoryId" to inventoryId, "recipe" to recipe))
     }
 
     /** Takes the bench modifier back off, for the server's price (an Orb of Scouring). */
     suspend fun uncraft(characterId: String, inventoryId: String): OrbOutcome {
-        requireId(characterId); requireId(inventoryId)
-        return WireJson.decodeFromJsonElement(http.request("POST", "api/v1/characterequipment/uncraft",
-            mapOf("characterId" to characterId, "inventoryId" to inventoryId), authenticated = true))
+        requireId(inventoryId)
+        return http.post("api/v1/characterequipment/uncraft", heroQuery(characterId, "inventoryId" to inventoryId))
     }
 
     suspend fun redeem(characterId: String, code: String): JsonElement {
-        requireId(characterId)
         require(code.isNotBlank()) { ui("api.enter_promo") }
-        return http.request("POST", "api/v1/redemptioncodes/useRedeptionCode", mapOf("characterId" to characterId, "redemptionCode" to code.trim()), authenticated = true)
+        return http.request("POST", "api/v1/redemptioncodes/useRedeptionCode", heroQuery(characterId, "redemptionCode" to code.trim()), authenticated = true)
     }
 
     private suspend fun wear(operation: String, characterId: String, inventoryId: String): EquipmentInstance {
-        requireId(characterId); requireId(inventoryId)
-        return WireJson.decodeFromJsonElement(http.request("POST", "api/v1/characterequipment/$operation",
-            mapOf("characterId" to characterId, "inventoryId" to inventoryId), authenticated = true))
+        requireId(inventoryId)
+        return http.post("api/v1/characterequipment/$operation", heroQuery(characterId, "inventoryId" to inventoryId))
     }
-    private suspend fun instances(path: String, characterId: String): List<EquipmentInstance> {
-        requireId(characterId)
-        return WireJson.decodeFromJsonElement(kotlinx.serialization.builtins.ListSerializer(EquipmentInstance.serializer()),
-            http.request("GET", path, mapOf("characterId" to characterId), authenticated = true))
-    }
+    private suspend fun instances(path: String, characterId: String): List<EquipmentInstance> =
+        http.get<List<EquipmentInstance>>(path, heroQuery(characterId))
 }

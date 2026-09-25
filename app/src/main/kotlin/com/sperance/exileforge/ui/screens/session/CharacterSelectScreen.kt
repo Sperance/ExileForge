@@ -87,9 +87,7 @@ import com.sperance.exileforge.ui.theme.*
             Button(enabled = !s.busy && s.characterSlotsLeft > 0, onClick = onCreate, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("editor.create_character"))
             }
-            if (s.characterSlotsLeft == 0) Text(
-                ui("chars.slots_full"),
-                color = Muted, style = MaterialTheme.typography.bodySmall)
+            if (s.characterSlotsLeft == 0) MutedText(ui("chars.slots_full"))
         }
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -159,7 +157,7 @@ import com.sperance.exileforge.ui.theme.*
             }
         }
         chosen?.let { option ->
-            if (option.details.isNotBlank()) Text(option.details, color = Muted, style = MaterialTheme.typography.bodySmall)
+            if (option.details.isNotBlank()) MutedText(option.details)
             Text(ui("editor.level1_base") + option.baseStats.joinToString(" · ") {
                 "${statTitle(it.stat, s.lang)} ${statNumber(it.stat, it.value)}" },
                 color = Muted, style = MaterialTheme.typography.bodySmall)
@@ -168,8 +166,7 @@ import com.sperance.exileforge.ui.theme.*
             onClick = { vm.createCharacter(name, classId) }, modifier = Modifier.fillMaxWidth()) {
             Text(ui("chars.create"))
         }
-        Text(ui("chars.class_note"),
-            color = Muted, style = MaterialTheme.typography.bodySmall)
+        MutedText(ui("chars.class_note"))
         if (canGoBack) TextButton(enabled = !s.busy, onClick = onBack, modifier = Modifier.fillMaxWidth()) {
             Text(ui("chars.back"))
         }

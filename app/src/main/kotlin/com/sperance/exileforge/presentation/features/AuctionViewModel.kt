@@ -20,16 +20,15 @@ import kotlinx.coroutines.flow.update
  * cannot reach it marks stale instead: the character document itself is left for the Hero tab to
  * re-read, because a trade moves money the auction never looked at.
  */
-class AuctionViewModel(private val runtime: ForgeRuntime) {
-    private val state get() = runtime.state
+class AuctionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
-    fun auctionTab(tab: Int) { with(runtime) { mutable.update { it.copy(market = it.market.copy(tab = tab)) } } }
-    fun auctionFilter(filter: AuctionFilter) { with(runtime) { mutable.update { it.copy(market = it.market.copy(filter = filter)) } } }
-    fun showOwnLots(show: Boolean) { with(runtime) { mutable.update { it.copy(market = it.market.copy(showOwnLots = show)) } } }
+    fun auctionTab(tab: Int) = update { it.copy(market = it.market.copy(tab = tab)) }
+    fun auctionFilter(filter: AuctionFilter) = update { it.copy(market = it.market.copy(filter = filter)) }
+    fun showOwnLots(show: Boolean) = update { it.copy(market = it.market.copy(showOwnLots = show)) }
 
     /** The showcase, page by page. `excludeSellerId` is what keeps a seller's own lots out of it. */
     fun loadShowcase(page: Int = 0) { with(runtime) { trade(restart = true) {
-        val id = state.value.play.characterId.trim()
+        val id = characterId
         val filter = state.value.market.filter.copy(
             excludeSellerId = if (state.value.market.showOwnLots) "" else id, lang = state.value.lang.code)
         val showcase = api.auction.search(id, filter, page)
@@ -37,7 +36,7 @@ class AuctionViewModel(private val runtime: ForgeRuntime) {
     } } }
 
     fun loadMyLots() { with(runtime) { trade(key = Reads.LOTS) {
-        val id = state.value.play.characterId.trim()
+        val id = characterId
         val lots = api.auction.myLots(id)
         val slots = api.auction.slots(id)
         mutable.update { it.copy(market = it.market.copy(myLots = lots, slots = slots)) }
@@ -47,7 +46,7 @@ class AuctionViewModel(private val runtime: ForgeRuntime) {
     fun loadMerchant() { with(runtime) { trade(key = Reads.MERCHANT) {
         // An offer is drawn as the stash draws an item, base and all: the catalogue comes first.
         ensureWorld()
-        val stock = api.merchant.stock(state.value.play.characterId.trim())
+        val stock = api.merchant.stock(characterId)
         mutable.update { it.copy(market = it.market.copy(merchant = stock)) }
     } } }
 
@@ -56,7 +55,7 @@ class AuctionViewModel(private val runtime: ForgeRuntime) {
 
     /** Buying from the merchant spends gold and adds to the stash: those, and the shelf, change. */
     fun buyOffer(offerId: String) { with(runtime) { trade(writing = true) {
-        val id = state.value.play.characterId.trim()
+        val id = characterId
         val purchase = api.merchant.buy(id, offerId)
         mutable.update { it.copy(market = it.market.copy(
             merchant = it.market.merchant?.let { stock -> stock.copy(offers = stock.offers.filter { offer -> offer.id != offerId }) })) }
@@ -66,7 +65,7 @@ class AuctionViewModel(private val runtime: ForgeRuntime) {
 
     /** One more lot place for gold (0.34.0). */
     fun buySlot() { with(runtime) { trade(writing = true) {
-        val slots = api.auction.buySlot(state.value.play.characterId.trim())
+        val slots = api.auction.buySlot(characterId)
         mutable.update { it.copy(market = it.market.copy(slots = slots)) }
         gold(slots.money)
     } } }
@@ -78,7 +77,7 @@ class AuctionViewModel(private val runtime: ForgeRuntime) {
 
     /** Buying costs orbs out of the bag, so the bag and the showcase are what go stale. */
     fun buy(lotId: String) { with(runtime) { trade(writing = true) {
-        val id = state.value.play.characterId.trim()
+        val id = characterId
         api.auction.buy(id, lotId)
         refreshHero(id)
         val filter = state.value.market.filter.copy(excludeSellerId = if (state.value.market.showOwnLots) "" else id, lang = state.value.lang.code)
@@ -87,19 +86,19 @@ class AuctionViewModel(private val runtime: ForgeRuntime) {
 
     /** Listing and withdrawing move goods between the character and the lot: both lists change. */
     fun sellEquipment(inventoryId: String, priceOrbId: String, price: Long) { with(runtime) { trade(writing = true) {
-        val id = state.value.play.characterId.trim()
+        val id = characterId
         api.auction.sellEquipment(id, inventoryId, priceOrbId, price)
         listed(id)
     } } }
 
     fun sellItem(itemId: String, amount: Long, priceOrbId: String, price: Long) { with(runtime) { trade(writing = true) {
-        val id = state.value.play.characterId.trim()
+        val id = characterId
         api.auction.sellItem(id, itemId, amount, priceOrbId, price)
         listed(id)
     } } }
 
     fun cancel(lotId: String) { with(runtime) { trade(writing = true) {
-        val id = state.value.play.characterId.trim()
+        val id = characterId
         api.auction.cancel(id, lotId)
         refreshHero(id)
         mutable.update { it.copy(market = it.market.copy(myLots = api.auction.myLots(id), slots = api.auction.slots(id))) }
@@ -114,7 +113,7 @@ class AuctionViewModel(private val runtime: ForgeRuntime) {
      * The hero after a trade: one read of what moved (server 0.48.0) — the bag, the stash, the
      * purse — rather than the bag and the inventory as two requests.
      */
-    private suspend fun refreshHero(characterId: String) { if (characterId == runtime.state.value.play.characterId.trim()) runtime.heroViewModel.readHero() }
+    private suspend fun refreshHero(characterId: String) { if (onScreen(characterId)) runtime.heroViewModel.readHero() }
 
     /**
      * The standard wrapper plus the auction's own gate.

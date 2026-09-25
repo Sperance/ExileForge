@@ -1,6 +1,7 @@
 package com.sperance.exileforge.ui.screens.catalog
 
 import com.sperance.exileforge.core.display.Glyph
+import com.sperance.exileforge.ui.components.MutedText
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.*
@@ -16,7 +17,6 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.Spinner
-import com.sperance.exileforge.ui.theme.Muted
 import kotlinx.serialization.json.JsonObject
 
 @Composable fun CatalogFilters(s: ForgeState, vm: ForgeViewModel) {
@@ -33,6 +33,5 @@ import kotlinx.serialization.json.JsonObject
     TextButton(enabled = !s.busy, onClick = vm::loadDefinitions) { Text(ui("catalog.load_modifiers")) }
     val pools = (s.world.definitions.flatMap { it.pools.keys } + s.admin.items.flatMap { (it["pools"] as? JsonObject)?.keys.orEmpty() }).toSortedSet()
     Spinner(ui("catalog.pool"), f.pool, mapOf("" to ui("common.any")) + pools.associateWith { it }, !s.busy, glyph = Glyph.RULE) { vm.filter(f.copy(pool = it)) }
-    Text(ui("catalog.filter_note"),
-        color = Muted, style = MaterialTheme.typography.bodySmall)
+    MutedText(ui("catalog.filter_note"))
 }

@@ -31,8 +31,8 @@ import com.sperance.exileforge.ui.theme.*
             ForgePanel {
                 Engraved(ui("merchant.title"))
                 money?.let { PropertyRow(ui("merchant.gold"), number(it.toDouble()), com.sperance.exileforge.core.display.Glyph.CURRENCY) }
-                stock?.let { Text(ui("merchant.renews", untilText(it.refreshAt)), color = Muted, style = MaterialTheme.typography.bodySmall) }
-                Text(ui("merchant.note"), color = Muted, style = MaterialTheme.typography.bodySmall)
+                stock?.let { MutedText(ui("merchant.renews", untilText(it.refreshAt))) }
+                MutedText(ui("merchant.note"))
             }
         }
         if (stock != null && stock.offers.isEmpty()) item { InfoCard(ui("merchant.empty"), ui("merchant.empty_hint")) }

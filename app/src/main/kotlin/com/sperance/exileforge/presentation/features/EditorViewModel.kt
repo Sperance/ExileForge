@@ -15,10 +15,9 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.update
 import kotlinx.serialization.json.*
 
-class EditorViewModel(private val runtime: ForgeRuntime) {
-    private val state get() = runtime.state
+class EditorViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
-    fun draftClass(value: String) { with(runtime) { mutable.update { it.copy(play = it.play.copy(draftClass = value)) } } }
+    fun draftClass(value: String) = update { it.copy(play = it.play.copy(draftClass = value)) }
 
     /**
      * A blank draft.

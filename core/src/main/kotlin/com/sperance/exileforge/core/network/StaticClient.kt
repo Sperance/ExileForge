@@ -1,6 +1,5 @@
 package com.sperance.exileforge.core.network
 
-import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.contract.text
 import com.sperance.exileforge.core.display.IconManifest
 import com.sperance.exileforge.core.display.PortraitKey
@@ -27,7 +26,7 @@ class StaticClient internal constructor(private val http: Transport) {
      * they need an account — a language has to be readable before anyone has signed in.
      */
     suspend fun localeManifest(): LocaleManifest =
-        WireJson.decodeFromJsonElement(http.fetch("locale/index.json"))
+        http.fetch("locale/index.json")
 
     /**
      * One language's dictionary, tagged with the fingerprint the manifest gave it.
@@ -51,7 +50,7 @@ class StaticClient internal constructor(private val http: Transport) {
      * carries the fingerprint the server computed from the file, so a set that was edited is
      * always noticed and one that was not is never downloaded twice.
      */
-    suspend fun iconManifest(): IconManifest = WireJson.decodeFromJsonElement(http.fetch("icons/index.json"))
+    suspend fun iconManifest(): IconManifest = http.fetch("icons/index.json")
 
     /** The set as it was served, so a caller can store the very text it parsed. */
     suspend fun iconDocument(file: String): String {
@@ -63,7 +62,7 @@ class StaticClient internal constructor(private val http: Transport) {
      * The portraits (since server 0.29.0): a manifest with a fingerprint per file, then each SVG on
      * its own, so a client fetches only what changed. Static, public, no envelope, like the icons.
      */
-    suspend fun portraitManifest(): PortraitManifest = WireJson.decodeFromJsonElement(http.fetch("portraits/index.json"))
+    suspend fun portraitManifest(): PortraitManifest = http.fetch("portraits/index.json")
 
     /** One portrait's SVG as it was served, so it can be stored verbatim and parsed again offline. */
     suspend fun portraitDocument(key: String): String {
@@ -72,7 +71,7 @@ class StaticClient internal constructor(private val http: Transport) {
     }
 
     /** `static/index.json` (server 0.48.0): the routes and every fingerprint, in one public read. */
-    suspend fun manifest(): StaticManifest = WireJson.decodeFromJsonElement(http.fetch("static/index.json"))
+    suspend fun manifest(): StaticManifest = http.fetch("static/index.json")
 
     /** Every reference table as it was served, for a signed-in caller; stored verbatim like the icons. */
     suspend fun worldDocument(file: String): String {

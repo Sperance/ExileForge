@@ -18,27 +18,24 @@ import kotlinx.serialization.json.*
 class WorldClient internal constructor(private val http: Transport) {
     /** Descriptions are a small, shared catalogue: the whole set is read once and kept in state. */
     suspend fun modifiers(): List<ModifierDefinition> =
-        WireJson.decodeFromJsonElement(kotlinx.serialization.builtins.ListSerializer(ModifierDefinition.serializer()), http.request("GET", "api/v1/modifierdefinition", authenticated = true))
+        http.get<List<ModifierDefinition>>("api/v1/modifierdefinition")
     suspend fun tiers(modifierId: String): List<ModifierTier> {
         requireId(modifierId)
-        return WireJson.decodeFromJsonElement(kotlinx.serialization.builtins.ListSerializer(ModifierTier.serializer()), http.request("GET", "api/v1/modifiertier/byModifier", mapOf("modifierId" to modifierId), authenticated = true))
+        return http.get<List<ModifierTier>>("api/v1/modifiertier/byModifier", mapOf("modifierId" to modifierId))
     }
 
     /** The classes the world offers. A character references one; its base is never copied here. */
     suspend fun classes(): List<CharacterClass> =
-        WireJson.decodeFromJsonElement(kotlinx.serialization.builtins.ListSerializer(CharacterClass.serializer()),
-            http.request("GET", "api/v1/${EntitySource.CHARACTER_CLASS.path}", authenticated = true))
+        http.get<List<CharacterClass>>("api/v1/${EntitySource.CHARACTER_CLASS.path}")
 
     /** The progression table: when a level is reached and how many skill points it hands over. */
     suspend fun levels(): List<ExperienceLevel> =
-        WireJson.decodeFromJsonElement(kotlinx.serialization.builtins.ListSerializer(ExperienceLevel.serializer()),
-            http.request("GET", "api/v1/${EntitySource.EXPERIENCE_LEVEL.path}", authenticated = true))
+        http.get<List<ExperienceLevel>>("api/v1/${EntitySource.EXPERIENCE_LEVEL.path}")
             .sortedBy { it.level }
 
     /** The whole shared tree. It is one seeded graph, so it is read once and drawn from memory. */
     suspend fun tree(): List<SkillTreeNode> =
-        WireJson.decodeFromJsonElement(kotlinx.serialization.builtins.ListSerializer(SkillTreeNode.serializer()),
-            http.request("GET", "api/v1/${EntitySource.SKILL_NODE.path}", authenticated = true))
+        http.get<List<SkillTreeNode>>("api/v1/${EntitySource.SKILL_NODE.path}")
 
     /**
      * Every currency orb the server serves, read out of the shared `items` collection.

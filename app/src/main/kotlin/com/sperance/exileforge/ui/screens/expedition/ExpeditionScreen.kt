@@ -62,7 +62,7 @@ import com.sperance.exileforge.ui.theme.*
                 item(key = chapter.code) {
                     ForgePanel {
                         Engraved(if (known) chapterTitle(chapter.code) else ui("expedition.hidden"))
-                        Text(ui("expedition.cleared", cleared, chapter.maps.size), color = Muted, style = MaterialTheme.typography.bodySmall)
+                        MutedText(ui("expedition.cleared", cleared, chapter.maps.size))
                         LinearProgressIndicator(progress = { if (chapter.maps.isEmpty()) 0f else cleared / chapter.maps.size.toFloat() },
                             modifier = Modifier.fillMaxWidth().height(4.dp), color = Gold, trackColor = PanelRaised)
                         val next = vm.nextCampaignMap()
@@ -79,7 +79,7 @@ import com.sperance.exileforge.ui.theme.*
                     MapRow(map, open = open, cleared = map.code in progress.cleared, enabled = ready && open) { vm.openLaunch(map.code) }
                 }
             }
-            item { Text(ui("expedition.note"), color = Muted, style = MaterialTheme.typography.bodySmall) }
+            item { MutedText(ui("expedition.note")) }
         }
     }
 }

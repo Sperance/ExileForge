@@ -31,7 +31,7 @@ import kotlinx.coroutines.launch
  * reported the same way (0.28.0), and none of it is ever retried: a repeated kill would be paid
  * twice, a repeated death charged twice.
  */
-class ExpeditionViewModel(private val runtime: ForgeRuntime) {
+class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     private val mutableRun = MutableStateFlow<ExpeditionRun?>(null)
     val run: StateFlow<ExpeditionRun?> = mutableRun.asStateFlow()
     private val reports = Channel<suspend () -> Unit>(Channel.UNLIMITED)

@@ -1,6 +1,5 @@
 package com.sperance.exileforge.core.network
 
-import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.contract.requireId
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.auction.*
@@ -19,30 +18,21 @@ class AuctionClient internal constructor(private val http: Transport) {
      * the lot carries, so the whole search is a single query. Nothing is narrowed here afterwards.
      */
     suspend fun search(characterId: String, filter: AuctionFilter, page: Int): AuctionPage {
-        requireId(characterId); requirePage(page)
-        return WireJson.decodeFromJsonElement(http.request("GET", "$AUCTION/search",
-            mapOf("characterId" to characterId, "page" to page.toString(), "size" to AUCTION_PAGE_SIZE.toString()) + filter.query(),
-            authenticated = true))
+        requirePage(page)
+        return http.get("$AUCTION/search", heroQuery(characterId, "page" to page.toString(), "size" to AUCTION_PAGE_SIZE.toString()) + filter.query())
     }
 
     /** Everything the character ever listed, open and closed alike — the lots are their history. */
     /** The hero's lot places (0.34.0): how many are taken and what one more costs. */
-    suspend fun slots(characterId: String): AuctionSlots {
-        requireId(characterId)
-        return WireJson.decodeFromJsonElement(http.request("GET", "$AUCTION/slots", mapOf("characterId" to characterId), authenticated = true))
-    }
+    suspend fun slots(characterId: String): AuctionSlots =
+        http.get("$AUCTION/slots", heroQuery(characterId))
 
     /** Buys one more lot place for gold. Never retried. */
-    suspend fun buySlot(characterId: String): AuctionSlots {
-        requireId(characterId)
-        return WireJson.decodeFromJsonElement(http.request("POST", "$AUCTION/slots", mapOf("characterId" to characterId), authenticated = true))
-    }
+    suspend fun buySlot(characterId: String): AuctionSlots =
+        http.post("$AUCTION/slots", heroQuery(characterId))
 
-    suspend fun myLots(characterId: String): List<AuctionLot> {
-        requireId(characterId)
-        return WireJson.decodeFromJsonElement(kotlinx.serialization.builtins.ListSerializer(AuctionLot.serializer()),
-            http.request("GET", "$AUCTION/my", mapOf("characterId" to characterId), authenticated = true))
-    }
+    suspend fun myLots(characterId: String): List<AuctionLot> =
+        http.get<List<AuctionLot>>("$AUCTION/my", heroQuery(characterId))
 
     /**
      * Lists an item. The price is always counted in orbs, so [priceOrbId] must be a `CURRENCY`
@@ -61,11 +51,9 @@ class AuctionClient internal constructor(private val http: Transport) {
         return sell("item", characterId, priceOrbId, price, mapOf("itemId" to itemId, "amount" to amount.toString()))
     }
     private suspend fun sell(what: String, characterId: String, priceOrbId: String, price: Long, extra: Map<String, String>): AuctionLot {
-        requireId(characterId); requireId(priceOrbId)
+        requireId(priceOrbId)
         require(price > 0) { ui("api.price_positive") }
-        return WireJson.decodeFromJsonElement(http.request("POST", "$AUCTION/sell/$what",
-            extra + mapOf("characterId" to characterId, "priceOrbId" to priceOrbId, "price" to price.toString()),
-            authenticated = true))
+        return http.post("$AUCTION/sell/$what", extra + heroQuery(characterId, "priceOrbId" to priceOrbId, "price" to price.toString()))
     }
 
     /**
@@ -77,8 +65,7 @@ class AuctionClient internal constructor(private val http: Transport) {
     suspend fun buy(characterId: String, lotId: String): AuctionLot = lot("buy", characterId, lotId)
     suspend fun cancel(characterId: String, lotId: String): AuctionLot = lot("cancel", characterId, lotId)
     private suspend fun lot(operation: String, characterId: String, lotId: String): AuctionLot {
-        requireId(characterId); requireId(lotId)
-        return WireJson.decodeFromJsonElement(http.request("POST", "$AUCTION/$operation",
-            mapOf("characterId" to characterId, "lotId" to lotId), authenticated = true))
+        requireId(lotId)
+        return http.post("$AUCTION/$operation", heroQuery(characterId, "lotId" to lotId))
     }
 }

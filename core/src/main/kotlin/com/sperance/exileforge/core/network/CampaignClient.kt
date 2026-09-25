@@ -1,6 +1,5 @@
 package com.sperance.exileforge.core.network
 
-import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.contract.requireId
 import com.sperance.exileforge.core.model.campaign.BossState
 import com.sperance.exileforge.core.model.campaign.CampaignFall
@@ -11,7 +10,6 @@ import com.sperance.exileforge.core.model.campaign.ChestState
 import com.sperance.exileforge.core.model.campaign.MapLaunch
 import com.sperance.exileforge.core.model.campaign.MapServiceOutcome
 import com.sperance.exileforge.core.model.campaign.MonsterRarity
-import kotlinx.serialization.json.decodeFromJsonElement
 
 /** Route root of the campaign, since server 0.26.0. */
 private const val CAMPAIGN = "api/v1/character/campaign"
@@ -28,91 +26,57 @@ private const val CAMPAIGN = "api/v1/character/campaign"
 class CampaignClient internal constructor(private val http: Transport) {
     /** The chapters with every monster and modifier already raised to its map's level. */
     suspend fun chapters(): CampaignView =
-        WireJson.decodeFromJsonElement(http.request("GET", "$CAMPAIGN/chapters", authenticated = true))
+        http.get("$CAMPAIGN/chapters")
 
-    suspend fun progress(characterId: String): CampaignProgress {
-        requireId(characterId)
-        return WireJson.decodeFromJsonElement(http.request("GET", "$CAMPAIGN/progress", mapOf("characterId" to characterId), authenticated = true))
-    }
+    suspend fun progress(characterId: String): CampaignProgress =
+        http.get("$CAMPAIGN/progress", heroQuery(characterId))
 
     /** A monster the client fought and won against. Never retried: a repeat would pay twice. */
-    suspend fun kill(characterId: String, mapCode: String, monsterCode: String, rarity: MonsterRarity): CampaignReward {
-        requireId(characterId)
-        return WireJson.decodeFromJsonElement(http.request("POST", "$CAMPAIGN/kill",
-            mapOf("characterId" to characterId, "mapCode" to mapCode, "monsterCode" to monsterCode, "rarity" to rarity.name), authenticated = true))
-    }
+    suspend fun kill(characterId: String, mapCode: String, monsterCode: String, rarity: MonsterRarity): CampaignReward =
+        http.post("$CAMPAIGN/kill", heroQuery(characterId, "mapCode" to mapCode, "monsterCode" to monsterCode, "rarity" to rarity.name))
 
     /** The hero reached the exit: the map is cleared and the next one opens. */
-    suspend fun complete(characterId: String, mapCode: String): CampaignProgress {
-        requireId(characterId)
-        return WireJson.decodeFromJsonElement(http.request("POST", "$CAMPAIGN/complete",
-            mapOf("characterId" to characterId, "mapCode" to mapCode), authenticated = true))
-    }
+    suspend fun complete(characterId: String, mapCode: String): CampaignProgress =
+        http.post("$CAMPAIGN/complete", heroQuery(characterId, "mapCode" to mapCode))
 
     /** The hero fell: the server prices the death by its own rule. Never retried — a repeat would charge it twice. */
-    suspend fun fall(characterId: String, mapCode: String): CampaignFall {
-        requireId(characterId)
-        return WireJson.decodeFromJsonElement(http.request("POST", "$CAMPAIGN/fall",
-            mapOf("characterId" to characterId, "mapCode" to mapCode), authenticated = true))
-    }
+    suspend fun fall(characterId: String, mapCode: String): CampaignFall =
+        http.post("$CAMPAIGN/fall", heroQuery(characterId, "mapCode" to mapCode))
 
     /** How many chests stand on [mapCode] for this hero now (since 0.31.0): a six-hour window of the server's. */
-    suspend fun chests(characterId: String, mapCode: String): ChestState {
-        requireId(characterId)
-        return WireJson.decodeFromJsonElement(http.request("GET", "$CAMPAIGN/chests",
-            mapOf("characterId" to characterId, "mapCode" to mapCode), authenticated = true))
-    }
+    suspend fun chests(characterId: String, mapCode: String): ChestState =
+        http.get("$CAMPAIGN/chests", heroQuery(characterId, "mapCode" to mapCode))
 
     /** The hero opened a chest: the server takes one from the window and rolls its loot. Never retried. */
-    suspend fun openChest(characterId: String, mapCode: String): CampaignReward {
-        requireId(characterId)
-        return WireJson.decodeFromJsonElement(http.request("POST", "$CAMPAIGN/chest",
-            mapOf("characterId" to characterId, "mapCode" to mapCode), authenticated = true))
-    }
+    suspend fun openChest(characterId: String, mapCode: String): CampaignReward =
+        http.post("$CAMPAIGN/chest", heroQuery(characterId, "mapCode" to mapCode))
 
     /** Whether the map's boss stands for this hero now (since 0.32.0): slain, it is back an hour later. */
-    suspend fun boss(characterId: String, mapCode: String): BossState {
-        requireId(characterId)
-        return WireJson.decodeFromJsonElement(http.request("GET", "$CAMPAIGN/boss",
-            mapOf("characterId" to characterId, "mapCode" to mapCode), authenticated = true))
-    }
+    suspend fun boss(characterId: String, mapCode: String): BossState =
+        http.get("$CAMPAIGN/boss", heroQuery(characterId, "mapCode" to mapCode))
 
     /** The map's boss was slain: the server rolls its loot and opens the exit. Never retried. */
-    suspend fun slayBoss(characterId: String, mapCode: String): CampaignReward {
-        requireId(characterId)
-        return WireJson.decodeFromJsonElement(http.request("POST", "$CAMPAIGN/boss",
-            mapOf("characterId" to characterId, "mapCode" to mapCode), authenticated = true))
-    }
+    suspend fun slayBoss(characterId: String, mapCode: String): CampaignReward =
+        http.post("$CAMPAIGN/boss", heroQuery(characterId, "mapCode" to mapCode))
 
     /** The corrupted zone's guardian was slain (server 0.46.0): its own loot table, a chance at a unique. Never retried. */
-    suspend fun corrupt(characterId: String, mapCode: String, monsterCode: String): CampaignReward {
-        requireId(characterId)
-        return WireJson.decodeFromJsonElement(http.request("POST", "$CAMPAIGN/corrupt",
-            mapOf("characterId" to characterId, "mapCode" to mapCode, "monsterCode" to monsterCode), authenticated = true))
-    }
+    suspend fun corrupt(characterId: String, mapCode: String, monsterCode: String): CampaignReward =
+        http.post("$CAMPAIGN/corrupt", heroQuery(characterId, "mapCode" to mapCode, "monsterCode" to monsterCode))
 
     /** A treasure map (0.34.0): one more chest on the map this window, for gold. Never retried. */
-    suspend fun treasure(characterId: String, mapCode: String): MapServiceOutcome {
-        requireId(characterId)
-        return WireJson.decodeFromJsonElement(http.request("POST", "$CAMPAIGN/treasure",
-            mapOf("characterId" to characterId, "mapCode" to mapCode), authenticated = true))
-    }
+    suspend fun treasure(characterId: String, mapCode: String): MapServiceOutcome =
+        http.post("$CAMPAIGN/treasure", heroQuery(characterId, "mapCode" to mapCode))
 
     /** Summons a slain guardian back to the exit (0.34.0), for gold. Never retried. */
-    suspend fun summon(characterId: String, mapCode: String): MapServiceOutcome {
-        requireId(characterId)
-        return WireJson.decodeFromJsonElement(http.request("POST", "$CAMPAIGN/summon",
-            mapOf("characterId" to characterId, "mapCode" to mapCode), authenticated = true))
-    }
+    suspend fun summon(characterId: String, mapCode: String): MapServiceOutcome =
+        http.post("$CAMPAIGN/summon", heroQuery(characterId, "mapCode" to mapCode))
 
     /**
      * Entering a location (since 0.35.0), with a map of its level from the stash or without one. The
      * map is spent: the server keeps its effects for this location until the exit or a death. Never retried.
      */
     suspend fun start(characterId: String, mapCode: String, itemId: String? = null): MapLaunch {
-        requireId(characterId)
         itemId?.let(::requireId)
-        return WireJson.decodeFromJsonElement(http.request("POST", "$CAMPAIGN/start",
-            mapOf("characterId" to characterId, "mapCode" to mapCode) + listOfNotNull(itemId?.let { "itemId" to it }), authenticated = true))
+        return http.post("$CAMPAIGN/start", heroQuery(characterId, "mapCode" to mapCode, "itemId" to itemId))
     }
 }

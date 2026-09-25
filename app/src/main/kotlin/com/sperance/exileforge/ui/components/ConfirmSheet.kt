@@ -87,11 +87,11 @@ data class LedgerLine(val label: String, val value: String, val tone: Tone = Ton
                     icon?.let { Box(Modifier.size(46.dp), contentAlignment = Alignment.Center) { it() } }
                     Column(Modifier.weight(1f)) {
                         Text(title, color = Parchment, style = MaterialTheme.typography.titleLarge)
-                        subtitle?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelMedium) }
+                        subtitle?.let { MutedText(it, style = MaterialTheme.typography.labelMedium) }
                     }
                 }
                 if (ledger.isNotEmpty()) Ledger(ledger)
-                note?.let { Text(it, color = Muted, style = MaterialTheme.typography.bodySmall) }
+                note?.let { MutedText(it) }
                 warning?.let {
                     Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                         Icon(Icons.Outlined.ErrorOutline, null, tint = LifeRed, modifier = Modifier.size(16.dp).padding(top = 1.dp))
@@ -114,7 +114,7 @@ data class LedgerLine(val label: String, val value: String, val tone: Tone = Ton
             if (index > 0) HorizontalDivider(color = Muted.copy(alpha = .12f))
             Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(line.label, color = Muted, style = MaterialTheme.typography.bodySmall)
+                MutedText(line.label)
                 Text(line.value, color = when (line.tone) { Tone.SPEND -> LifeRed; Tone.GAIN -> Vital; Tone.PLAIN -> Parchment },
                     style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
             }

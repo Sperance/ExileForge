@@ -57,11 +57,11 @@ fun newLoot(s: ForgeState): List<com.sperance.exileforge.core.model.hero.Equipme
             LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (!lootTab) {
                     item { Engraved(ui("expedition.gear")) }
-                    item { Text(ui("expedition.gear_hint"), color = Muted, style = MaterialTheme.typography.bodySmall) }
+                    item { MutedText(ui("expedition.gear_hint")) }
                     item { EquipmentLedger(s) { p, w -> place = p; worn = w } }
                 } else {
                     item { Engraved(ui("expedition.loot_tab")) }
-                    if (loot.isEmpty()) item { Text(ui("expedition.loot_empty"), color = Muted, style = MaterialTheme.typography.bodySmall) }
+                    if (loot.isEmpty()) item { MutedText(ui("expedition.loot_empty")) }
                     items(loot, key = { it.id }) { item ->
                         ItemRow(inventoryDocument(item, s.world.inventoryBases[item.equipmentId]), definitions = s.world.definitions, enabled = !s.busy,
                             unwearable = s.unmetFor(item.equipmentId), price = s.sellPrice(item)) { looked = item.id }

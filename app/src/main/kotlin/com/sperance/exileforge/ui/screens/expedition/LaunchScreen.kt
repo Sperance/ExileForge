@@ -112,8 +112,8 @@ private data class MapLine(val text: String, val kind: MapLineKind, val risk: Do
         }
         if (maps.isEmpty()) {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { Portal(null, 72.dp) }
-            Text(mapDescription(map.code), color = Muted, style = MaterialTheme.typography.bodyMedium)
-            Text(ui("expedition.launch_no_maps", map.level), color = Muted, style = MaterialTheme.typography.bodySmall)
+            MutedText(mapDescription(map.code), style = MaterialTheme.typography.bodyMedium)
+            MutedText(ui("expedition.launch_no_maps", map.level))
         } else {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { Portal(picked, 176.dp) }
             Text(picked?.document?.text("name") ?: ui("expedition.launch_no_map"), color = picked?.let { rarityColor(it.document.text("rarity")) } ?: Muted,
@@ -133,8 +133,8 @@ private data class MapLine(val text: String, val kind: MapLineKind, val risk: Do
                 Figure(bonus?.experience ?: 0.0, ui("expedition.launch_experience"))
             }
             picked?.let { lines(it, s, rule).forEach { line -> LineRow(line) } }
-                ?: Text(mapDescription(map.code), color = Muted, style = MaterialTheme.typography.bodySmall)
-            if (picked != null) Text(ui("expedition.launch_spent"), color = Muted, style = MaterialTheme.typography.bodySmall)
+                ?: MutedText(mapDescription(map.code))
+            if (picked != null) MutedText(ui("expedition.launch_spent"))
         }
         OrnateDivider()
         Text(ui("expedition.launch_dwellers", map.monsters.joinToString { monsterTitle(it.code) }), color = Parchment, style = MaterialTheme.typography.bodySmall)
@@ -143,7 +143,7 @@ private data class MapLine(val text: String, val kind: MapLineKind, val risk: Do
             Text(if (slain) ui("expedition.launch_boss_slain", monsterTitle(boss.code), untilText(launch.boss!!.respawnAt))
                 else ui("expedition.launch_boss_alive", monsterTitle(boss.code)), color = if (slain) Muted else LifeRed, style = MaterialTheme.typography.bodySmall)
         }
-        launch.chests?.let { Text(ui("expedition.chests_window", it.left, untilText(it.refreshAt)), color = Muted, style = MaterialTheme.typography.bodySmall) }
+        launch.chests?.let { MutedText(ui("expedition.chests_window", it.left, untilText(it.refreshAt))) }
         val money = s.play.hero?.character?.money ?: 0L
         PropertyRow(ui("merchant.gold"), money.toString(), Glyph.CURRENCY)
         launch.chests?.let { chests ->
@@ -177,14 +177,14 @@ private fun lines(map: StashMap, s: ForgeState, rule: MapRule): List<MapLine> {
         Rhombus(tint, 7.dp)
         Text(line.text, color = Parchment, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
         if (line.kind == MapLineKind.HARM && line.risk > 0)
-            Text(ui("expedition.launch_risk", number(line.risk)), color = Muted, style = MaterialTheme.typography.labelSmall)
+            MutedText(ui("expedition.launch_risk", number(line.risk)), style = MaterialTheme.typography.labelSmall)
     }
 }
 
 @Composable private fun Figure(value: Double, label: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(ui("expedition.launch_percent", number(value)), color = if (value > 0) GoldBright else Muted, style = MaterialTheme.typography.headlineSmall)
-        Text(label, color = Muted, style = MaterialTheme.typography.labelSmall)
+        MutedText(label, style = MaterialTheme.typography.labelSmall)
     }
 }
 

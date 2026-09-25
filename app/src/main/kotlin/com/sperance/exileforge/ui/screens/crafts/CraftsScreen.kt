@@ -136,7 +136,7 @@ private fun eta(millis: Long): String {
                     }
                 }
             }
-            item { Text(ui("crafts.note", number(crafts.rules.offlineHours)), color = Muted, style = MaterialTheme.typography.bodySmall) }
+            item { MutedText(ui("crafts.note", number(crafts.rules.offlineHours))) }
         }
     }
 }
@@ -145,7 +145,7 @@ private fun eta(millis: Long): String {
 @Composable private fun WorkPlaque(s: ForgeState, vm: ForgeViewModel, offset: Long) {
     val work = s.play.crafts?.work
     ForgePanel {
-        if (work == null) { Text(ui("crafts.idle"), color = Muted, style = MaterialTheme.typography.bodyMedium); return@ForgePanel }
+        if (work == null) { MutedText(ui("crafts.idle"), style = MaterialTheme.typography.bodyMedium); return@ForgePanel }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(jobTitle(work.job), color = GoldBright, style = MaterialTheme.typography.titleMedium)
@@ -156,7 +156,7 @@ private fun eta(millis: Long): String {
         CycleBar(work.settledAt, work.cycleMillis, offset, caption = false)
         s.play.craftsLast?.let { Text(gainsLine(s, it), color = Parchment, style = MaterialTheme.typography.bodySmall) }
         s.play.crafts?.professions?.firstOrNull { it.code == work.profession }?.jobs?.firstOrNull { it.code == work.job }
-            ?.let { stockLine(s, work, it) }?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelSmall) }
+            ?.let { stockLine(s, work, it) }?.let { MutedText(it, style = MaterialTheme.typography.labelSmall) }
     }
 }
 
@@ -166,8 +166,8 @@ private fun eta(millis: Long): String {
  */
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable private fun SessionTally(s: ForgeState, totals: WorkGains) {
-    if (totals.cycles == 0) { Text(ui("crafts.session_empty"), color = Muted, style = MaterialTheme.typography.labelMedium); return }
-    Text(ui("crafts.session_line", totals.cycles, totals.nothing, number(totals.experience)), color = Muted, style = MaterialTheme.typography.labelMedium)
+    if (totals.cycles == 0) { MutedText(ui("crafts.session_empty"), style = MaterialTheme.typography.labelMedium); return }
+    MutedText(ui("crafts.session_line", totals.cycles, totals.nothing, number(totals.experience)), style = MaterialTheme.typography.labelMedium)
     if (totals.items.isNotEmpty() || totals.spent.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         totals.items.entries.sortedByDescending { it.value }.forEach { (code, amount) -> TallyChip(materialTitle(code), "+$amount", Vital) }
         totals.spent.entries.sortedByDescending { it.value }.forEach { (code, amount) -> TallyChip(materialTitle(code), "−$amount", LifeRed) }
@@ -211,7 +211,7 @@ private fun eta(millis: Long): String {
     val now by produceState(System.currentTimeMillis()) { while (true) withFrameMillis { value = System.currentTimeMillis() } }
     LinearProgressIndicator(progress = { if (cycleMillis > 0) ((now + offset - settledAt).toFloat() / cycleMillis).coerceIn(0f, 1f) else 0f },
         modifier = Modifier.fillMaxWidth().height(height.dp), color = Gold, trackColor = PanelRaised)
-    if (caption) Text(ui("crafts.cycle", number(cycleMillis / 1000.0)), color = Muted, style = MaterialTheme.typography.labelSmall)
+    if (caption) MutedText(ui("crafts.cycle", number(cycleMillis / 1000.0)), style = MaterialTheme.typography.labelSmall)
 }
 
 /** A profession as a tile, three to a row: its tool in a medallion, name, level, how far to the next one, and what stands out. */
@@ -269,7 +269,7 @@ private fun share(profession: ProfessionView): Float = profession.next?.takeIf {
         }
         item {
             ForgePanel {
-                Text(locOr(LocaleKey.professionDescription(profession.code), ""), color = Muted, style = MaterialTheme.typography.bodySmall)
+                MutedText(locOr(LocaleKey.professionDescription(profession.code), ""))
                 Text(profession.next?.let { ui("crafts.level_progress", profession.level, number(profession.experience), number(it)) } ?: ui("crafts.level_last", profession.level),
                     color = Rune, style = MaterialTheme.typography.labelLarge)
                 LinearProgressIndicator(progress = { share(profession) }, modifier = Modifier.fillMaxWidth().height(5.dp), color = Vital, trackColor = PanelRaised)
@@ -310,7 +310,7 @@ private fun share(profession: ProfessionView): Float = profession.next?.takeIf {
     val bonus = profession.bonus
     val figures = listOf("crafts.bonus_speed" to bonus.speed, "crafts.bonus_yield" to bonus.yield, "crafts.bonus_luck" to bonus.luck,
         "crafts.bonus_experience" to bonus.experience, "crafts.bonus_find" to bonus.find).filter { it.second != 0.0 }
-    if (figures.isEmpty()) { Text(ui("crafts.bonus_none"), color = Muted, style = MaterialTheme.typography.bodySmall); return }
+    if (figures.isEmpty()) { MutedText(ui("crafts.bonus_none")); return }
     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         figures.forEach { (key, value) ->
             Text(ui(key, number(value)), color = Parchment, style = MaterialTheme.typography.labelMedium,
@@ -339,14 +339,14 @@ private fun share(profession: ProfessionView): Float = profession.next?.takeIf {
         horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(if (locked) ui("expedition.hidden") else jobTitle(job.code), color = if (locked) Muted else GoldBright, style = MaterialTheme.typography.titleSmall)
-            if (!locked) Text(ui("crafts.job_line", jobProduct(job), number(job.cycleMillis / 1000.0), number(job.nothing)), color = Muted, style = MaterialTheme.typography.bodySmall)
+            if (!locked) MutedText(ui("crafts.job_line", jobProduct(job), number(job.cycleMillis / 1000.0), number(job.nothing)))
             if (!locked && job.inputs.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 job.inputs.forEach { InputChip(s, it) }
             }
         }
         if (locked) Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Outlined.Lock, null, tint = Muted, modifier = Modifier.size(16.dp))
-            Text(ui("crafts.level", job.level), color = Muted, style = MaterialTheme.typography.labelMedium)
+            MutedText(ui("crafts.level", job.level), style = MaterialTheme.typography.labelMedium)
         } else if (current) Text(ui("crafts.working"), color = Gold, style = MaterialTheme.typography.labelMedium)
     }
 }

@@ -43,7 +43,7 @@ import com.sperance.exileforge.ui.theme.Rune
     Spinner(ui("orb.orb"), s.play.selectedOrb,
         s.world.orbs.associate { it.id to "${it.title(s.lang)} · ${owned[it.id] ?: 0L}" }, enabled, glyph = Glyph.CURRENCY, onChange = onSelect)
     // An orb the client has no translation for still explains itself: the server's dictionary has one.
-    orb?.let { Text(it.details(s.lang), color = Muted, style = MaterialTheme.typography.bodySmall) }
+    orb?.let { MutedText(it.details(s.lang)) }
     if (instance == null) { Text(ui("orb.choose_item"), color = Muted); return }
     val document = inventoryDocument(instance, s.world.inventoryBases[instance.equipmentId])
     PropertyRow(ui("common.item"), document.text("name"), Glyph.ITEM)
@@ -60,8 +60,7 @@ import com.sperance.exileforge.ui.theme.Rune
         onClick = { onGrant(s.play.selectedOrb) }, modifier = Modifier.fillMaxWidth()) {
         Text(ui("orb.top_up", ORB_TOP_UP))
     }
-    Text(ui("orb.note"),
-        color = Muted, style = MaterialTheme.typography.bodySmall)
+    MutedText(ui("orb.note"))
 }
 
 /** How many orbs the administrator's top-up hands over at once — enough to try one out properly. */

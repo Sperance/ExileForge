@@ -1,7 +1,5 @@
 package com.sperance.exileforge.core.network
 
-import com.sperance.exileforge.core.contract.WireJson
-import com.sperance.exileforge.core.contract.requireId
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.skilltree.SkillTreeState
 import kotlinx.serialization.json.*
@@ -17,11 +15,8 @@ class TreeClient internal constructor(private val http: Transport) {
      * Since 0.12.0 the taken nodes live inside the character document rather than a collection of
      * their own, so the whole tree travels under `character/skilltree` with the character.
      */
-    suspend fun state(characterId: String): SkillTreeState {
-        requireId(characterId)
-        return WireJson.decodeFromJsonElement(http.request("GET", "$TREE/state",
-            mapOf("characterId" to characterId), authenticated = true))
-    }
+    suspend fun state(characterId: String): SkillTreeState =
+        http.get("$TREE/state", heroQuery(characterId))
 
     /**
      * Takes, gives back or drops tree nodes; every one of them answers with the whole tree state.
@@ -32,15 +27,11 @@ class TreeClient internal constructor(private val http: Transport) {
     /** [choice] is the picked option of a MASTERY or ATTRIBUTE node (server 0.52.0); every other node takes none. */
     suspend fun allocate(characterId: String, nodeCode: String, choice: Int? = null): SkillTreeState = node("allocate", characterId, nodeCode, choice)
     suspend fun refund(characterId: String, nodeCode: String): SkillTreeState = node("refund", characterId, nodeCode)
-    suspend fun reset(characterId: String): SkillTreeState {
-        requireId(characterId)
-        return WireJson.decodeFromJsonElement(http.request("POST", "$TREE/reset",
-            mapOf("characterId" to characterId), authenticated = true))
-    }
+    suspend fun reset(characterId: String): SkillTreeState =
+        http.post("$TREE/reset", heroQuery(characterId))
     private suspend fun node(operation: String, characterId: String, nodeCode: String, choice: Int? = null): SkillTreeState {
-        requireId(characterId)
         require(nodeCode.isNotBlank()) { ui("api.choose_node") }
-        val query = mapOf("characterId" to characterId, "nodeCode" to nodeCode) + listOfNotNull(choice?.let { "choice" to it.toString() })
-        return WireJson.decodeFromJsonElement(http.request("POST", "$TREE/$operation", query, authenticated = true))
+        val query = heroQuery(characterId, "nodeCode" to nodeCode) + listOfNotNull(choice?.let { "choice" to it.toString() })
+        return http.post("$TREE/$operation", query)
     }
 }

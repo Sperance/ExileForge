@@ -49,8 +49,7 @@ import com.sperance.exileforge.ui.theme.Muted
             OutlinedButton(enabled = !s.busy, onClick = { vm.tab(TAB_REDEMPTION); vm.loadRedemptions() }, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("redemption.title"))
             }
-            Text(ui("admin.screens_note"),
-                color = Muted, style = MaterialTheme.typography.bodySmall)
+            MutedText(ui("admin.screens_note"))
         }
 
         // Granting is done to a character, so it needs one chosen — which is why it says so itself
@@ -69,9 +68,7 @@ import com.sperance.exileforge.ui.theme.Muted
                 Text(if (s.adminTools) ui("admin.as_player")
                      else ui("account.tools_back"))
             }
-            if (s.adminTools) Text(
-                ui("admin.as_player_note"),
-                color = Muted, style = MaterialTheme.typography.bodySmall)
+            if (s.adminTools) MutedText(ui("admin.as_player_note"))
         }
     }
 }

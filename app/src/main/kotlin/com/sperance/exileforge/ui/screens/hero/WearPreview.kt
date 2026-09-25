@@ -1,6 +1,7 @@
 package com.sperance.exileforge.ui.screens.hero
 
 import androidx.compose.foundation.layout.*
+import com.sperance.exileforge.ui.components.MutedText
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,14 +42,13 @@ fun wearable(s: ForgeState, instance: EquipmentInstance): Boolean =
             return@Column
         }
         Text(ui("wear.title"), color = Gold, style = MaterialTheme.typography.labelLarge)
-        if (delta.isEmpty()) Text(ui("wear.nothing"), color = Muted, style = MaterialTheme.typography.bodySmall)
+        if (delta.isEmpty()) MutedText(ui("wear.nothing"))
         delta.forEach { line ->
             val tone = if (line.change > 0) Vital else LifeRed
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 StatIcon(line.stat, Muted, Modifier.size(14.dp))
                 Text(statTitle(line.stat), color = Parchment, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-                Text(ui("wear.from_to", statNumber(line.stat, line.before), statNumber(line.stat, line.after)), color = Muted,
-                    style = MaterialTheme.typography.labelSmall)
+                MutedText(ui("wear.from_to", statNumber(line.stat, line.before), statNumber(line.stat, line.after)), style = MaterialTheme.typography.labelSmall)
                 Text((if (line.change > 0) "+" else "−") + statNumber(line.stat, kotlin.math.abs(line.change)), color = tone,
                     fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
             }

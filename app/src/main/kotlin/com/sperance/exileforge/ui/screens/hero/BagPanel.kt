@@ -1,6 +1,7 @@
 package com.sperance.exileforge.ui.screens.hero
 
 import androidx.compose.foundation.background
+import com.sperance.exileforge.ui.components.MutedText
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -107,7 +108,7 @@ private fun stackCode(s: ForgeState, itemId: String): String? =
                         stackCode(s, stack.itemId)?.let { code -> locOr(LocaleKey.itemTrade(code), "") }
                             ?.takeIf { it.isNotBlank() && it != bagTitle(s, stack.itemId) }
                             ?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelMedium, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic) }
-                        Text(ui("bag.owned", stack.amount), color = Muted, style = MaterialTheme.typography.labelSmall)
+                        MutedText(ui("bag.owned", stack.amount), style = MaterialTheme.typography.labelSmall)
                     }
                 }
                 bagDetails(s, stack.itemId)?.takeIf { it.isNotBlank() }?.let { Text(it, color = Parchment, style = MaterialTheme.typography.bodyMedium) }

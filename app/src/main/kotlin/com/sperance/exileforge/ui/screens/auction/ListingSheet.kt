@@ -39,8 +39,8 @@ import com.sperance.exileforge.ui.theme.*
             else Spinner(ui("orb.orb"), orb, s.world.orbs.associate { it.id to it.title(s.lang) }, !s.busy, glyph = Glyph.CURRENCY) { orb = it }
             OutlinedTextField(price, { value -> price = value.filter(Char::isDigit) }, label = { Text(ui("sell.price")) },
                 singleLine = true, keyboardOptions = digits, modifier = Modifier.fillMaxWidth())
-            Text(ui("sell.price_note"), color = Muted, style = MaterialTheme.typography.bodySmall)
-            Text(ui("sell.note"), color = Muted, style = MaterialTheme.typography.bodySmall)
+            MutedText(ui("sell.price_note"))
+            MutedText(ui("sell.note"))
             Button(enabled = !s.busy && orb.isNotBlank() && cost > 0 && count > 0, onClick = { onList(orb, cost, count) }, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("sell.list"))
             }

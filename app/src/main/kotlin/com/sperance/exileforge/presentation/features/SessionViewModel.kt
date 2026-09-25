@@ -17,8 +17,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class SessionViewModel(private val runtime: ForgeRuntime) {
-    private val state get() = runtime.state
+class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     fun mode(mode: AppMode) { with(runtime) {
         if (state.value.busy || state.value.admin.editorOpen || mode == AppMode.ADMIN && !state.value.isAdmin) return
@@ -28,7 +27,7 @@ class SessionViewModel(private val runtime: ForgeRuntime) {
         read(Reads.CATALOG, restart = true) { restoreFilters(); loadPage(0) }
     } }
 
-    fun serverDraft(value: String) { with(runtime) { mutable.update { it.copy(account = it.account.copy(serverDraft = value)) } } }
+    fun serverDraft(value: String) = update { it.copy(account = it.account.copy(serverDraft = value)) }
 
     fun connect() { with(runtime) { task {
         val server = normalizeServer(state.value.account.serverDraft)

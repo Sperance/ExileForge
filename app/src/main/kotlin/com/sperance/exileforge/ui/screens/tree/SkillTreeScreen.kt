@@ -124,7 +124,7 @@ import kotlinx.serialization.json.putJsonArray
         // A tap opens a small window about that one node, so the map stays in sight; everything
         // about the tree as a whole lives behind "Подробно".
         TreeCanvas(s, taken, reachable, Modifier.weight(1f)) { code -> onSelect(code); nodeOpen = true }
-        Text(ui("tree.gesture_hint"), color = Muted, style = MaterialTheme.typography.bodySmall)
+        MutedText(ui("tree.gesture_hint"))
     }
     // The small window about the chosen node: what it gives, and the one command over it. It is
     // deliberately not expanded to full height — half the point is seeing where the branch leads.
@@ -153,8 +153,7 @@ import kotlinx.serialization.json.putJsonArray
                     PropertyRow(ui("tree.points_total"), hero.tree.total.toString(), Glyph.LEVEL)
                     PropertyRow(ui("tree.points_spent"), hero.tree.spent.toString(), Glyph.LEVEL)
                     PropertyRow(ui("tree.points_available"), hero.tree.available.toString(), Glyph.LEVEL)
-                    Text(ui("tree.points_note"),
-                        color = Muted, style = MaterialTheme.typography.bodySmall)
+                    MutedText(ui("tree.points_note"))
                 }
             }
             item {
@@ -174,8 +173,7 @@ import kotlinx.serialization.json.putJsonArray
             item {
                 OutlinedButton(enabled = enabled && hero.tree.nodes.size > 1, onClick = { detailsOpen = false; confirmReset = true },
                     modifier = Modifier.fillMaxWidth()) { Text(ui("tree.reset_all")) }
-                Text(ui("tree.reset_note"),
-                    color = Muted, style = MaterialTheme.typography.bodySmall)
+                MutedText(ui("tree.reset_note"))
             }
         }
     }
@@ -261,8 +259,7 @@ import kotlinx.serialization.json.putJsonArray
         Row(Modifier.align(Alignment.BottomStart).padding(8.dp), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             TextButton(onClick = { scale = 1f; pan = Offset.Zero }) { Text(ui("tree.reset_view")) }
-            Text(ui("tree.taken_reachable", taken.size, reachable.size),
-                color = Muted, style = MaterialTheme.typography.labelMedium)
+            MutedText(ui("tree.taken_reachable", taken.size, reachable.size), style = MaterialTheme.typography.labelMedium)
         }
     }
 }
@@ -292,14 +289,14 @@ import kotlinx.serialization.json.putJsonArray
         PropertyRow(ui("tree.node_type"), nodeTypeTitle(node.type.name, s.lang), Glyph.TREE)
         PropertyRow(ui("tree.cost"), node.cost.toString(), Glyph.LEVEL)
         PropertyRow(ui("card.state"), if (allocated) ui("tree.taken") else ui("tree.not_taken"), Glyph.TREE)
-        node.details.takeIf { it.isNotBlank() }?.let { Text(it, color = Muted, style = MaterialTheme.typography.bodySmall) }
+        node.details.takeIf { it.isNotBlank() }?.let { MutedText(it) }
 
         OrnateDivider()
         if (node.type == SkillNodeType.JEWEL_SOCKET) {
             SocketContents(s, node, allocated, enabled, onSocket, onUnsocket)
         } else if (choosing) {
             // A mastery or an attribute node (server 0.52.0): one option, chosen when it is taken.
-            Text(ui(if (allocated) "tree.option_chosen" else "tree.option_pick"), color = Muted, style = MaterialTheme.typography.labelMedium)
+            MutedText(ui(if (allocated) "tree.option_chosen" else "tree.option_pick"), style = MaterialTheme.typography.labelMedium)
             node.options.forEachIndexed { index, option ->
                 val on = if (allocated) index == chosen else index == picked
                 OptionCard(on, enabled = !allocated && node.code in reachable, onClick = { picked = index }) {
@@ -307,7 +304,7 @@ import kotlinx.serialization.json.putJsonArray
                 }
             }
             if (node.type == SkillNodeType.MASTERY && !allocated && node.code !in reachable)
-                Text(ui("tree.mastery_locked"), color = Muted, style = MaterialTheme.typography.bodySmall)
+                MutedText(ui("tree.mastery_locked"))
         } else {
             if (node.params.isEmpty()) Text(ui("tree.no_bonuses"), color = Muted)
             node.params.forEach { modifier ->
@@ -361,11 +358,11 @@ import kotlinx.serialization.json.putJsonArray
         !instance.socketed && s.world.inventoryBases[instance.equipmentId]?.text("slot") == "JEWEL"
     }
     if (!allocated) {
-        Text(ui("tree.socket_first"), color = Muted, style = MaterialTheme.typography.bodySmall)
+        MutedText(ui("tree.socket_first"))
         return
     }
     if (free.isEmpty()) {
-        Text(ui("tree.no_jewels"), color = Muted, style = MaterialTheme.typography.bodySmall)
+        MutedText(ui("tree.no_jewels"))
         return
     }
     Engraved(ui("tree.jewel_in"))

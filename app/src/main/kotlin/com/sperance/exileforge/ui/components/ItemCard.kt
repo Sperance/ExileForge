@@ -145,7 +145,7 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
                     Icon(stateGlyph(it), stateTitle(it), tint = stateColor(it), modifier = Modifier.size(15.dp))
                 }
                 Spacer(Modifier.weight(1f))
-                Text(kind, color = Muted, style = MaterialTheme.typography.labelSmall)
+                MutedText(kind, style = MaterialTheme.typography.labelSmall)
             }
 
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -157,7 +157,7 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
                     // The English trade name, on a full card only (2.51.0): what it is searched by.
                     if (detailed) documentTrade(doc)?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelMedium, fontStyle = FontStyle.Italic) }
                     cardFacts(doc, withPrice = price == null).forEach {
-                        Text(it, color = Muted, style = MaterialTheme.typography.labelSmall)
+                        MutedText(it, style = MaterialTheme.typography.labelSmall)
                     }
                 }
                 if (selected) Icon(Icons.Outlined.CheckCircle, ui("card.selected"), tint = GoldBright, modifier = Modifier.size(22.dp))
@@ -171,13 +171,13 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
                 if (detailed) RollScore(rollSummary(doc, rolled, definitions))
                 TradeTable(rolled.take(if (detailed) rolled.size else 3), definitions)
             }
-            if (!detailed && rolled.size > 3) Text(ui("card.more_properties", rolled.size - 3), color = Muted, style = MaterialTheme.typography.labelMedium)
+            if (!detailed && rolled.size > 3) MutedText(ui("card.more_properties", rolled.size - 3), style = MaterialTheme.typography.labelMedium)
             if (detailed) documentDescription(doc).takeIf { it.isNotBlank() }?.let {
                 Text(it, color = Muted, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Start)
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
                 price?.let {
-                    Text(ui("price.sell"), color = Muted, style = MaterialTheme.typography.labelSmall)
+                    MutedText(ui("price.sell"), style = MaterialTheme.typography.labelSmall)
                     Spacer(Modifier.width(6.dp)); GoldPrice(it); Spacer(Modifier.weight(1f))
                 }
                 // A full card is a page, not a way in: no label pointing further (2.51.0).

@@ -21,7 +21,7 @@ import kotlinx.coroutines.Job
  * and whatever it counted differently — or beyond, while the app was away — is set right then.
  * Gear and maps a cycle makes are the server's alone and arrive with its answer.
  */
-class CraftsViewModel(private val runtime: ForgeRuntime) {
+class CraftsViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     fun load(silent: Boolean = false) { with(runtime) { read(Reads.CRAFTS, silent = silent) {
         val id = state.value.play.characterId

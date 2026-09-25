@@ -90,7 +90,7 @@ import java.util.Locale
             Text(if (won) ui("expedition.report_slain", monsterTitle(monster.code)) else ui("expedition.report_fallen"),
                 color = outcomeColour(report.outcome), style = MaterialTheme.typography.titleLarge)
             // A pack (since 2.54.0) says its size under the outcome.
-            if (report.packSize > 1) Text(ui("expedition.report_pack", report.packSize), color = Muted, style = MaterialTheme.typography.labelSmall)
+            if (report.packSize > 1) MutedText(ui("expedition.report_pack", report.packSize), style = MaterialTheme.typography.labelSmall)
         }
     }
 }
@@ -141,7 +141,7 @@ import java.util.Locale
                 Chip(ui("expedition.loot_gold", reward.gold), GoldBright)
                 Chip(ui("expedition.loot_experience", number(reward.experience)), Rune)
             }
-            if (reward.items.isEmpty() && reward.equipment.isEmpty()) Text(ui("expedition.loot_nothing"), color = Muted, style = MaterialTheme.typography.bodySmall)
+            if (reward.items.isEmpty() && reward.equipment.isEmpty()) MutedText(ui("expedition.loot_nothing"))
         }
     }
 }
@@ -176,12 +176,12 @@ import java.util.Locale
         val fall = hud.fall
         Column(Modifier.weight(1f)) {
             when {
-                hud.fallPending -> Text(ui("expedition.fall_pending"), color = Muted, style = MaterialTheme.typography.bodyMedium)
+                hud.fallPending -> MutedText(ui("expedition.fall_pending"), style = MaterialTheme.typography.bodyMedium)
                 fall == null -> Text(ui("expedition.fall_failed"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
                 fall.lost > 0 -> Text(ui("expedition.fall_lost", number(fall.lost)), color = LifeRed, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
-                else -> Text(ui("expedition.fall_free"), color = Muted, style = MaterialTheme.typography.bodyMedium)
+                else -> MutedText(ui("expedition.fall_free"), style = MaterialTheme.typography.bodyMedium)
             }
-            Text(ui("expedition.dead_hint"), color = Muted, style = MaterialTheme.typography.labelSmall)
+            MutedText(ui("expedition.dead_hint"), style = MaterialTheme.typography.labelSmall)
         }
     }
     Caption(ui("expedition.report_run"))

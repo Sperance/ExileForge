@@ -10,7 +10,6 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.ui.icons.GlyphIcon
 import com.sperance.exileforge.ui.theme.Gold
-import com.sperance.exileforge.ui.theme.Muted
 
 /** Parchment note pinned to the stash wall; turns blood-red when it reports a failure. */
 @Composable internal fun InfoCard(title: String, body: String, failure: Boolean = false,
@@ -21,6 +20,6 @@ import com.sperance.exileforge.ui.theme.Muted
             GlyphIcon(glyph, accent, Modifier.size(18.dp))
             Text(title, color = accent, style = MaterialTheme.typography.titleMedium)
         }
-        SelectionContainer { Text(body, color = Muted, style = MaterialTheme.typography.bodySmall) }
+        SelectionContainer { MutedText(body) }
     }
 }

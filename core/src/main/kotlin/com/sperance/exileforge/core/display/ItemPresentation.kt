@@ -266,6 +266,14 @@ fun statNumber(stat: String, value: Double): String =
 /** The same rule for a number that belongs to no particular characteristic. */
 fun number(value: Double): String = statNumber("", value)
 
+/**
+ * A small figure with its tenth (2.74.0): a bleed of 0.4 a second is «0.4», not «0»; from ten up
+ * the tenth is noise and the whole number stays.
+ */
+fun fineNumber(value: Double): String =
+    if (kotlin.math.abs(value) >= 10) Math.round(value).toString()
+    else String.format(java.util.Locale.ROOT, "%.1f", value).removeSuffix(".0")
+
 /** Title of a skill-tree node's grade, as the server sorts them. */
 fun nodeTypeTitle(type: String, lang: Lang = uiLanguage) = uiOr(lang, "enum.node.$type", displayName(type, lang))
 

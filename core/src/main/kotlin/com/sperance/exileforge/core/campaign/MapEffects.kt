@@ -57,6 +57,7 @@ object MapEffects {
         effects[MapRule.HERO_LIGHT]?.let { v -> sheet["STOCK_LIGHT_RADIUS"] = (stats["STOCK_LIGHT_RADIUS"]?.takeIf { it > 0 } ?: ExpeditionWorld.DEFAULT_LIGHT) * (1 - v / 100) }
         effects[MapRule.HERO_RESIST]?.let { v -> resists.forEach { sheet[it] = (stats[it] ?: 0.0) - v } }
         effects[MapRule.HERO_REGEN]?.let { v -> sheet["STOCK_HEALTH_REGEN"] = (stats["STOCK_HEALTH_REGEN"] ?: 0.0) * max(0.0, 1 - v / 100) }
+        effects[MapRule.HERO_SLOW]?.let { v -> sheet["STOCK_MOVEMENT_SPEED"] = (stats["STOCK_MOVEMENT_SPEED"] ?: 0.0) - v }
         return sheet
     }
 

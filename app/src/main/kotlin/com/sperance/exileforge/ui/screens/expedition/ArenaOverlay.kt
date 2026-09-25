@@ -57,6 +57,7 @@ import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.campaign.*
 import com.sperance.exileforge.core.display.inventoryDocument
 import com.sperance.exileforge.core.display.number
+import com.sperance.exileforge.core.display.fineNumber
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.campaign.CampaignReward
 import com.sperance.exileforge.core.model.campaign.MonsterRarity
@@ -112,9 +113,9 @@ internal fun DamageType.key() = "enum.damage.$name"
  */
 private fun ailmentTip(view: AilmentView) = Tip(ui(view.ailment.key()), ui("fight.effect.${view.ailment.name}"), ailmentTint(view.ailment), listOfNotNull(
     view.strength.takeIf { it > 0 && view.ailment != Ailment.FROZEN }?.let {
-        ui("fight.fact_strength") to (if (view.ailment.hurts) ui("fight.fact_dps", number(it)) else ui("fight.fact_percent", number(it)))
+        ui("fight.fact_strength") to (if (view.ailment.hurts) ui("fight.fact_dps", fineNumber(it)) else ui("fight.fact_percent", fineNumber(it)))
     },
-    (ui("fight.fact_left") to ui("fight.fact_seconds", number(view.seconds))).takeIf { view.seconds > 0 },
+    (ui("fight.fact_left") to ui("fight.fact_seconds", fineNumber(view.seconds))).takeIf { view.seconds > 0 },
     (ui("fight.fact_stacks") to view.stacks.toString()).takeIf { view.stacks > 1 },
 ))
 

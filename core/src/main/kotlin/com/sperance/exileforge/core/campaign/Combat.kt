@@ -15,7 +15,7 @@ enum class Action { ATTACK, TICK, RETREAT }
 /** How a blow ended: it landed, landed hard, or never reached. */
 enum class HitKind { HIT, CRIT, EVADED, BLOCKED }
 
-/** How the whole fight ended; a retreat is a fight nobody won inside the time limit, or one the hero walked out of. */
+/** How the whole fight ended; a retreat is the hero walking out of it. */
 enum class Outcome { WIN, LOSS, RETREAT }
 
 /** Damage by type, as the sheet names it. */
@@ -346,8 +346,8 @@ class Battle(
             me.nextAttack = time + me.attackInterval * me.slow()
             if (finished()) return
         }
+        // No time limit since 2.74.0: a fight runs until a side falls or the hero walks out.
         if (retreating && time >= retreatAt) end(Outcome.RETREAT)
-        else if (time >= rules.timeLimit) end(Outcome.RETREAT)
     }
 
     private fun regenerate(me: Fighter, dt: Double) {

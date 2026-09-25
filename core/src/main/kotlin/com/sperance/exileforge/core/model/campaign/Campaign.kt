@@ -156,7 +156,7 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
  * today, so a test can build a fight without a payload; a served value always wins.
  */
 @Serializable data class CombatRules(
-    val timeLimit: Double = 60.0, val variance: Double = 20.0, val resistCap: Double = 75.0, val blockCap: Double = 75.0,
+    val variance: Double = 20.0, val resistCap: Double = 75.0, val blockCap: Double = 75.0,
     val unarmed: UnarmedRule = UnarmedRule(), val critical: CriticalRule = CriticalRule(), val armour: ArmourRule = ArmourRule(),
     val evasion: EvasionRule = EvasionRule(), val stun: StunRule = StunRule(), val shield: ShieldRule = ShieldRule(),
     val retreat: RetreatRule = RetreatRule(), val death: DeathRule = DeathRule(),
@@ -236,6 +236,8 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
         const val HERO_LIGHT = "MAP_HERO_LIGHT"
         const val HERO_RESIST = "MAP_HERO_RESIST"
         const val HERO_REGEN = "MAP_HERO_REGEN"
+        /** Since server 0.65.0: the hero walks the map so many percent slower. */
+        const val HERO_SLOW = "MAP_HERO_SLOW"
 
         /** The template a location's map is: `MAP_<location code>`. */
         fun templateCode(mapCode: String) = "MAP_$mapCode"

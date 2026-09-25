@@ -115,8 +115,9 @@ import kotlinx.serialization.json.JsonObject
             // The marker rides on the icon rather than in the text: the icon is where the eye starts.
             Box(Modifier.size(54.dp).background(color.copy(alpha = .08f), frame).border(1.dp, color, frame), contentAlignment = Alignment.Center) {
                 ItemIcon(document, color, Modifier.size(34.dp))
-                if (unwearable.isNotEmpty()) Icon(Icons.Outlined.Block, null, tint = LifeRed,
-                    modifier = Modifier.align(Alignment.TopStart).padding(2.dp).size(14.dp))
+                // The mark alone on a row (2.74.0): what is missing is the card's to say, or the mark's own tip.
+                if (unwearable.isNotEmpty()) Tipped({ Tip(ui("hero.inactive"), unwearable.joinToString("\n") { requirementReason(it) }, LifeRed) },
+                    Modifier.align(Alignment.TopStart).padding(2.dp)) { Icon(Icons.Outlined.Block, ui("hero.inactive"), tint = LifeRed, modifier = Modifier.size(14.dp)) }
                 if (worn) Icon(Icons.Outlined.CheckCircle, ui("row.worn"), tint = Ink,
                     modifier = Modifier.align(Alignment.BottomEnd).offset(4.dp, 4.dp).background(Gold, CircleShape).padding(1.dp).size(15.dp))
             }
@@ -148,11 +149,6 @@ import kotlinx.serialization.json.JsonObject
             }
             // Every line it rolled, as sentences (2.72.0): a stash is read down without opening each card.
             RollTops(rollSummary(document, rolled, definitions), rolled, definitions)
-            // The server's verdict, in its own words — never a requirement worked out here.
-            unwearable.forEach {
-                Text(requirementReason(it), color = LifeRed, style = MaterialTheme.typography.labelSmall,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
             footer?.invoke(this)
         }
     }

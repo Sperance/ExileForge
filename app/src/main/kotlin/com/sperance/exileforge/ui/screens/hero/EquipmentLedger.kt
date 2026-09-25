@@ -9,6 +9,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -99,11 +101,11 @@ import kotlinx.serialization.json.put
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(document.text("name"), color = color, style = MaterialTheme.typography.titleSmall, maxLines = 1,
                     overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                // An idle piece is a mark on the line (2.74.0); why is in its card, or behind the mark.
+                if (reasons != null) com.sperance.exileforge.ui.components.Tipped({
+                    com.sperance.exileforge.ui.components.Tip(ui("hero.inactive"), reasons.joinToString("\n") { requirementReason(it, s.lang) }, LifeRed)
+                }) { Icon(Icons.Outlined.Block, ui("hero.inactive"), tint = LifeRed, modifier = Modifier.size(14.dp)) }
                 Text(title, color = Gold, style = MaterialTheme.typography.labelSmall, maxLines = 1)
-            }
-            if (reasons != null) {
-                Text(ui("hero.inactive"), color = LifeRed, style = MaterialTheme.typography.labelSmall)
-                reasons.firstOrNull()?.let { Text(requirementReason(it, s.lang), color = LifeRed, style = MaterialTheme.typography.labelSmall) }
             }
             if (base.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(5.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 base.forEach { BaseChip(it) }

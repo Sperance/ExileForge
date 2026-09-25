@@ -46,16 +46,6 @@ class LocaleBundle(val language: String = "", val hash: String = "", private val
     fun format(key: String, args: List<String>): String =
         args.foldIndexed(get(key)) { index, text, argument -> text.replace("{$index}", get(argument)) }
 
-    /** Codes of one section whose name contains [text]; the catalogue narrows itself with this. */
-    fun codesMatching(section: String, text: String): Set<String> {
-        val needle = text.trim()
-        if (needle.isEmpty()) return emptySet()
-        val prefix = "$section."
-        val suffix = ".${LocaleKey.NAME}"
-        return strings.asSequence()
-            .filter { it.key.startsWith(prefix) && it.key.endsWith(suffix) && it.value.contains(needle, true) }
-            .mapTo(mutableSetOf()) { it.key.removePrefix(prefix).removeSuffix(suffix) }
-    }
 
     companion object {
         /**

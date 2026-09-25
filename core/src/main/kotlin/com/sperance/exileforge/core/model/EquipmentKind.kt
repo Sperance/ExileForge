@@ -12,11 +12,5 @@ enum class EquipmentKind {
     companion object {
         const val EQUIPMENT_PACKAGE = "features.data.equipment.equipment_data"
         fun of(type: String): EquipmentKind? = entries.firstOrNull { it.name == type.substringAfterLast('.') }
-        /** Which kind the server puts in a slot, so a template can be created for it. */
-        fun forSlot(slot: String): EquipmentKind = when (slot) {
-            "WEAPON_1H", "WEAPON_2H" -> Weapon
-            "RING", "AMULET", "BELT", "QUIVER" -> Accessory
-            else -> Armor
-        }
     }
 }

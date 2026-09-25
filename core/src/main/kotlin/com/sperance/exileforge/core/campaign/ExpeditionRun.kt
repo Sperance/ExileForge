@@ -73,18 +73,14 @@ data class FightReport(
 ) {
     val events: List<CombatEvent> get() = pack.flatMap { it.events }
     val packSize: Int get() = pack.size
-    private fun mine(action: Action? = null) = events.filter { it.actor == Side.HERO && (action == null || it.action == action) }
-    private fun theirs(action: Action? = null) = events.filter { it.actor == Side.MONSTER && (action == null || it.action == action) }
+    private fun mine() = events.filter { it.actor == Side.HERO }
+    private fun theirs() = events.filter { it.actor == Side.MONSTER }
     val dealt: Int get() = mine().sumOf { it.damage }.roundToInt()
     val taken: Int get() = theirs().sumOf { it.damage }.roundToInt()
-    val dotDealt: Int get() = mine(Action.TICK).sumOf { it.damage }.roundToInt()
-    val dotTaken: Int get() = theirs(Action.TICK).sumOf { it.damage }.roundToInt()
     val crits: Int get() = mine().count { it.kind == HitKind.CRIT }
     val blocked: Int get() = mine().count { it.kind == HitKind.BLOCKED }
     val evaded: Int get() = theirs().count { it.kind == HitKind.EVADED }
     val inflicted: List<Ailment> get() = mine().flatMap { it.inflicted }.distinct()
-    val suffered: List<Ailment> get() = theirs().flatMap { it.inflicted }.distinct()
-    val retreated: Boolean get() = mine(Action.RETREAT).isNotEmpty()
 }
 
 /** Everything the overlay draws, as one value: it changes only when something on it does. */

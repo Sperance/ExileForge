@@ -10,7 +10,6 @@ import com.sperance.exileforge.presentation.state.MapLaunchState
 import com.sperance.exileforge.presentation.state.LootEntry
 import com.sperance.exileforge.presentation.state.Reads
 import com.sperance.exileforge.core.model.campaign.MapServiceOutcome
-import com.sperance.exileforge.core.i18n.ui
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow

@@ -7,8 +7,8 @@ import com.sperance.exileforge.core.i18n.uiOr
 import com.sperance.exileforge.core.model.modifier.ModifierDefinition
 import com.sperance.exileforge.core.model.modifier.definition
 import com.sperance.exileforge.core.model.modifier.ModifierOperation
-import kotlinx.serialization.json.*
 import kotlin.math.round
+import kotlinx.serialization.json.*
 
 /**
  * What an item is worth once its own modifiers have been applied to its own base.

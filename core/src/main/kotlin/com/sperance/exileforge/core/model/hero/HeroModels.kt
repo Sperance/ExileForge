@@ -149,18 +149,6 @@ import kotlinx.serialization.json.*
 /** A stacking item in the bag. The server stores it as the flat string "itemId:amount". */
 @Serializable data class CharacterItem(val itemId: String, val amount: Long)
 
-@Serializable data class RecipeDocument(
-    @SerialName("_id") val id: String,
-    val name: String,
-    val arrayIn: List<RecipeInput> = emptyList(),
-    val arrayOut: List<RecipeOutput> = emptyList(),
-    val requirement: List<JsonObject>? = null,
-    val timeWork: Double = 1.0,
-    val needOpenRecipe: Boolean = false,
-    val globalUses: Long = 0,
-)
-@Serializable data class RecipeInput(val itemId: String? = null, val category: String? = null, val subCategory: String? = null, val amount: Double = 1.0)
-@Serializable data class RecipeOutput(val itemId: String, val amount: Double = 1.0, val chance: Double = 1.0)
 
 /** Everything one hero screen needs, assembled from the character routes the server offers. */
 data class HeroView(

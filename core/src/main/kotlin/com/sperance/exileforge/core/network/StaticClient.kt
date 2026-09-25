@@ -1,14 +1,7 @@
 package com.sperance.exileforge.core.network
 
 import com.sperance.exileforge.core.contract.WireJson
-import com.sperance.exileforge.core.contract.creationFields
-import com.sperance.exileforge.core.contract.editableFields
-import com.sperance.exileforge.core.contract.entityId
-import com.sperance.exileforge.core.contract.protectedFields
-import com.sperance.exileforge.core.contract.requireId
 import com.sperance.exileforge.core.contract.text
-import com.sperance.exileforge.core.contract.validate
-import com.sperance.exileforge.core.contract.validateModifierPool
 import com.sperance.exileforge.core.display.IconManifest
 import com.sperance.exileforge.core.display.PortraitKey
 import com.sperance.exileforge.core.display.PortraitManifest
@@ -16,30 +9,8 @@ import com.sperance.exileforge.core.i18n.LocaleBundle
 import com.sperance.exileforge.core.i18n.LocaleLanguage
 import com.sperance.exileforge.core.i18n.LocaleManifest
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.model.Catalog
-import com.sperance.exileforge.core.model.CatalogFilter
-import com.sperance.exileforge.core.model.EntitySource
-import com.sperance.exileforge.core.model.auction.*
-import com.sperance.exileforge.core.model.command.*
-import com.sperance.exileforge.core.model.currency.CURRENCY_CATEGORY
-import com.sperance.exileforge.core.model.currency.CurrencyItem
-import com.sperance.exileforge.core.model.hero.*
-import com.sperance.exileforge.core.model.modifier.ModifierDefinition
-import com.sperance.exileforge.core.model.modifier.ModifierTier
-import com.sperance.exileforge.core.model.progression.CharacterClass
-import com.sperance.exileforge.core.model.progression.ExperienceLevel
-import com.sperance.exileforge.core.model.skilltree.SkillTreeNode
-import com.sperance.exileforge.core.model.skilltree.SkillTreeState
-import java.util.concurrent.TimeUnit
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.*
-import okhttp3.*
-import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.RequestBody.Companion.toRequestBody
 import com.sperance.exileforge.core.model.sync.StaticManifest
+import kotlinx.serialization.json.*
 
 /**
  * The server's static files: the dictionaries and the icon set.

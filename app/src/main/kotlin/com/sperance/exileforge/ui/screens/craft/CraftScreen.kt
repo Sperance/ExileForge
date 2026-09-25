@@ -18,7 +18,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.sperance.exileforge.core.contract.entityId
 import com.sperance.exileforge.core.contract.text
 import com.sperance.exileforge.core.display.affixMarks
 import com.sperance.exileforge.core.display.inventoryDocument
@@ -26,7 +25,6 @@ import com.sperance.exileforge.core.display.modifierText
 import com.sperance.exileforge.core.display.recipeText
 import com.sperance.exileforge.core.display.retired
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.model.EntitySource
 import com.sperance.exileforge.core.model.currency.CurrencyOrb
 import com.sperance.exileforge.core.model.hero.EquipmentInstance
 import com.sperance.exileforge.core.model.campaign.MapRule
@@ -36,7 +34,6 @@ import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
-import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 

@@ -385,12 +385,3 @@ class Battle(
         const val LUNGE = 0.16
     }
 }
-
-/** The fight run through from start to finish, for a test or a summary. */
-object Combat {
-    fun fight(hero: Combatant, monster: Combatant, heroLife: Double, random: Random, rules: CombatRules = hero.rules): CombatLog {
-        val battle = Battle(hero, monster, rules, heroLife, random)
-        while (battle.outcome == null) battle.advance(1.0)
-        return battle.log()
-    }
-}

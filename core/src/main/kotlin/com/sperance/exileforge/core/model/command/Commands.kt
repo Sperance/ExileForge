@@ -21,9 +21,6 @@ const val MAX_ITEM_AMOUNT = 100_000_000_000L
 }
 
 /** Body of `POST /api/v1/recipe/useRecipe`. The field name is the server's, typo included. */
-@Serializable data class UseRecipeCommand(val ingridientsId: List<String>, val amount: Long = 1) {
-    init { require(amount in 1..100) { ui("cmd.uses_range") } }
-}
 
 /** The signed-in account. This server has no token: the login response is the whole session. */
 @Serializable data class UserProfile(
@@ -31,7 +28,6 @@ const val MAX_ITEM_AMOUNT = 100_000_000_000L
     val version: Long = 0,
     val name: String = "",
     val login: String = "",
-    val email: String = "",
     val role: String = "USER",
     val isActive: Boolean = true,
     val countCharacters: Int = 0,

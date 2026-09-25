@@ -12,7 +12,6 @@ import com.sperance.exileforge.core.i18n.serverLocale
 import com.sperance.exileforge.core.i18n.LocaleManifest
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
-import com.sperance.exileforge.core.contract.entityId
 import com.sperance.exileforge.core.model.EntitySource
 import com.sperance.exileforge.core.network.ApiFailure
 import com.sperance.exileforge.core.network.FailureState
@@ -35,7 +34,6 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.jsonObject
 import com.sperance.exileforge.core.model.sync.WorldTables
 import kotlinx.coroutines.sync.withLock
 
@@ -281,10 +279,6 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
         ensureWorld()
         return state.value.world.inventoryBases[id]
     }
-
-    /** The recipe form reads one document directly; it is never edited, only spent. */
-    suspend fun recipeDocument(id: String): JsonObject =
-        com.sperance.exileforge.core.contract.WireJson.encodeToJsonElement(com.sperance.exileforge.core.model.hero.RecipeDocument.serializer(), api.world.recipe(id)).jsonObject
     fun dismissMessage() { mutable.update { it.copy(message = null, error = false) } }
 
     /**

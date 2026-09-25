@@ -4,11 +4,10 @@ import java.io.IOException
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.serialization.json.*
-import okhttp3.*
 import com.sperance.exileforge.core.i18n.ui
+import okhttp3.*
 
-internal data class HttpPayload(val status: Int, val body: String, val etag: String = "")
+internal data class HttpPayload(val status: Int, val body: String)
 /** Consume and close the body on OkHttp's worker, keeping cancellation wired through the full read. */
 internal suspend fun Call.awaitPayload(): HttpPayload = suspendCancellableCoroutine { continuation ->
     continuation.invokeOnCancellation { cancel() }
@@ -19,11 +18,11 @@ internal suspend fun Call.awaitPayload(): HttpPayload = suspendCancellableCorout
         override fun onResponse(call: Call, response: Response) {
             try {
                 val payload = response.use {
-                    val source = it.body?.source() ?: throw ApiFailure(it.code, null, ui("api.empty_response"))
+                    val source = it.body.source()
                     val limit = 2L * 1024 * 1024
                     source.request(limit + 1)
                     if (source.buffer.size > limit) throw ApiFailure(it.code, null, ui("api.too_large"))
-                    HttpPayload(it.code, source.readUtf8(), it.header("ETag").orEmpty())
+                    HttpPayload(it.code, source.readUtf8())
                 }
                 if (!continuation.isCancelled) continuation.resume(payload)
             } catch (e: Exception) {

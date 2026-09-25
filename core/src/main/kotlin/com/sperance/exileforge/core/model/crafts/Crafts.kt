@@ -61,7 +61,6 @@ import kotlinx.serialization.Serializable
 @Serializable data class WorkView(
     val profession: String,
     val job: String,
-    val startedAt: Long = 0,
     val settledAt: Long = 0,
     val cycleMillis: Long = 0,
     val nextAt: Long = 0,

@@ -47,8 +47,6 @@ class IconBundle(
     /** The drawing for one key, or null — and null means "draw your own", never "draw nothing". */
     operator fun get(key: String): IconSprite? = icons[key]?.let { sprites[it] }
     fun contains(key: String): Boolean = get(key) != null
-    /** Which drawing a code resolves to; the checks screen reports coverage with it. */
-    fun spriteOf(key: String): String? = icons[key]
 
     companion object {
         /**

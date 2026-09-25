@@ -8,7 +8,6 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.Catalog
 import com.sperance.exileforge.core.model.EquipmentKind
 import com.sperance.exileforge.core.model.auction.AuctionLotKind
-import com.sperance.exileforge.core.model.auction.AuctionLotStatus
 import com.sperance.exileforge.core.model.character.stockStats
 import com.sperance.exileforge.core.model.command.RedemptionKind
 import com.sperance.exileforge.core.model.currency.CurrencyOrb
@@ -146,7 +145,6 @@ class UiStringsTest {
             Catalog.entries.forEach { add("enum.catalog.${it.name}") }
             EquipmentKind.entries.forEach { add("enum.kind.${it.name}") }
             AuctionLotKind.entries.forEach { add("enum.lot.${it.name}") }
-            AuctionLotStatus.entries.forEach { add("enum.lot_status.${it.name}") }
             CurrencyOrb.entries.forEach { add("enum.orb.${it.name}"); add("enum.orb.${it.name}.rule") }
             RedemptionKind.entries.forEach { add("enum.reward.${it.name}") }
             com.sperance.exileforge.core.model.campaign.MonsterRarity.entries.forEach { add("enum.monster_rarity.${it.name}") }

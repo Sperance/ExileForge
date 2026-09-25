@@ -6,7 +6,6 @@ import com.sperance.exileforge.core.editor.validateForm
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.Catalog
 import com.sperance.exileforge.core.model.EquipmentKind
-import com.sperance.exileforge.core.model.modifier.Modifier
 import kotlinx.serialization.json.*
 
 val WireJson = Json { ignoreUnknownKeys = true }
@@ -49,8 +48,6 @@ val bodyPlaces = listOf(
 
 val weapons = listOf("SWORD", "LONGSWORD", "BOW", "WAND", "AXE", "DOUBLEAXE", "DOUBLESWORD", "BLADE")
 val modifierSources = listOf("IMPLICIT", "PREFIX", "SUFFIX", "UNIQUE", "ENCHANTMENT", "CORRUPTION", "PASSIVE")
-val skillNodeTypes = listOf("START", "SMALL", "NOTABLE", "KEYSTONE", "JEWEL_SOCKET")
-val lotKinds = listOf("EQUIPMENT", "ITEM")
 val modifierOperations = listOf("ADD", "INCREASED", "MORE", "SET")
 const val SERVER_COMMIT = "6101b37956e35856ba4b4e86a154d6ed540d0cf6"
 const val SERVER_BRANCH = "claude/tender-pasteur-a36kj2"
@@ -196,29 +193,7 @@ fun validateModifierPool(document: JsonObject) {
     require("params" !in document) { ui("contract.rolled_instance") }
 }
 
-/**
- * An applied modifier, rolled or fixed.
- *
- * A rolled one names the tier it came from; a fixed one — a tree node's bonus, a class conversion,
- * an item's base — has none at all, and demanding a tier of it would reject what the server wrote.
- */
-fun validateModifier(document: JsonObject) {
-    val modifier = WireJson.decodeFromJsonElement(Modifier.serializer(), document)
-    requireId(modifier.modifierId)
-    require(if (modifier.rolled) modifier.tier > 0 else modifier.tier == 0) {
-        ui("contract.tier_rule")
-    }
-    require(modifier.values.all { it.isFinite() }) { ui("contract.values_finite") }
-}
 
-/**
- * The version of a versioned record.
- *
- * Only `user`, `character` and `characterequipment` are VersionedEntity on this server; items,
- * equipment, recipes, codes and modifier documents carry no version, so never ask them for one.
- */
-val JsonObject.entityVersion: Long get() = get("version")?.jsonPrimitive?.longOrNull?.takeIf { it >= 0 }
-    ?: error(ui("contract.no_version"))
 
 fun editableFields(catalog: Catalog): Set<String> = when (catalog) {
     Catalog.CHARACTERS -> setOf("name", "description")

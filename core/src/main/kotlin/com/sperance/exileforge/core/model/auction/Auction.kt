@@ -135,16 +135,12 @@ enum class FilterField { KIND, SLOT, RARITY, MIN_LEVEL, MAX_LEVEL, ORB, MAX_PRIC
 @Serializable data class AuctionPage(
     val items: List<AuctionLot> = emptyList(),
     val page: Int = 0,
-    val pageSize: Int = 20,
     val totalItems: Long = 0,
     val totalPages: Int = 0,
 )
 
 /** Title of a lot kind. */
 fun lotKindTitle(kind: AuctionLotKind, lang: Lang = uiLanguage): String = ui(lang, "enum.lot.${kind.name}")
-
-/** Title of a lot's state. */
-fun lotStatusTitle(status: AuctionLotStatus, lang: Lang = uiLanguage): String = ui(lang, "enum.lot_status.${status.name}")
 
 /**
  * The hero's lot places (since server 0.34.0): [used] of [limit] taken, up to [max] bought one at a

@@ -21,7 +21,6 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
     val rarity: String,
     val weight: Int,
     val modifiers: List<Int> = listOf(0, 0),
-    val statScale: Double = 0.0,
     val modifierPower: Double = 1.0,
     val effects: List<MonsterEffect> = emptyList(),
     val quantity: Double = 1.0,
@@ -175,9 +174,6 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
  * pays — the server's numbers, printed by the launch window as the server will count them.
  */
 @Serializable data class MapRule(
-    val dropChance: Double = 0.0,
-    val bossChance: Double = 0.0,
-    val nextChance: Double = 0.0,
     val rarities: Map<String, Int> = emptyMap(),
     val risk: Map<String, Double> = emptyMap(),
     /** Since server 0.42.0, as in PoE: how many affixes a map of each rarity rolls, low and high — magic 1–2, rare 4–6. */

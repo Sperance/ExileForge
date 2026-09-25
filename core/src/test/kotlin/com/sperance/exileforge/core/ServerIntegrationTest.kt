@@ -3,7 +3,6 @@ package com.sperance.exileforge.core
 import com.sperance.exileforge.core.model.sync.HeroParts
 import com.sperance.exileforge.core.model.sync.HeroSnapshot
 
-import com.sperance.exileforge.core.contract.*
 import com.sperance.exileforge.core.display.IconBundle
 import com.sperance.exileforge.core.display.PortraitSvg
 import com.sperance.exileforge.core.display.IconKey
@@ -25,12 +24,13 @@ import com.sperance.exileforge.core.model.auction.AuctionLotStatus
 import com.sperance.exileforge.core.model.currency.CurrencyOrb
 import com.sperance.exileforge.core.model.hero.CharacterSheet
 import com.sperance.exileforge.core.model.skilltree.SkillNodeType
-import com.sperance.exileforge.core.network.*
-import kotlin.test.*
 import kotlinx.coroutines.runBlocking
-import kotlinx.serialization.json.*
 import org.junit.Assume.assumeTrue
 import org.junit.Test
+import kotlinx.serialization.json.*
+import com.sperance.exileforge.core.contract.*
+import com.sperance.exileforge.core.network.*
+import kotlin.test.*
 
 /** Opt-in: CI launches a real backend and MongoDB replica set; no transport mocks. */
 class ServerIntegrationTest {

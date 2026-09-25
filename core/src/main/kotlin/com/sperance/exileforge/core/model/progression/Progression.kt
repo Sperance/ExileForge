@@ -42,5 +42,4 @@ import kotlinx.serialization.Serializable
     @SerialName("_id") val id: String = "",
     val level: Int = 1,
     val experience: Double = 0.0,
-    val skillPoints: Int = 1,
 )

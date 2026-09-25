@@ -13,8 +13,8 @@ import com.sperance.exileforge.core.model.modifier.ModifierOperation
 import com.sperance.exileforge.core.model.progression.CharacterClass
 import com.sperance.exileforge.core.model.progression.StatValue
 import com.sperance.exileforge.core.model.skilltree.CharacterSkillNode
-import kotlinx.serialization.json.*
 import org.junit.Test
+import kotlinx.serialization.json.*
 import kotlin.test.*
 
 /** The sheet the client adds up (2.46.0) follows the server's CharacterStatsCalculator step by step. */

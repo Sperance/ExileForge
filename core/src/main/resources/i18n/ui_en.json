@@ -482,7 +482,7 @@
   "enum.orb.PERIL_ORB.rule": "Maps only: adds a harmful affix beyond the limit",
   "enum.orb.REGAL_ORB.rule": "Upgrades a magic item to rare, keeping its affixes and adding one",
   "enum.orb.SHAPERS_ORB.rule": "Gives a rare item the Shaper's influence and adds one of its modifiers",
-  "enum.orb.VAAL_ORB.rule": "Corrupts an item or a map for good. Equally likely: nothing, a corruption modifier (a random map mod on a map), a reroll into a rare (not on uniques), or every value ×0.8–1.2, past the tier cap",
+  "enum.orb.VAAL_ORB.rule": "Corrupts an item or a map for good. Equally likely: nothing, a reroll into a rare (not on uniques), or every value ×0.8–1.2, past the tier cap; a map may also gain a random map mod",
   "enum.rarity.COMMON": "Common",
   "enum.rarity.MYTHICAL": "Mythical",
   "enum.rarity.RARE": "Rare",

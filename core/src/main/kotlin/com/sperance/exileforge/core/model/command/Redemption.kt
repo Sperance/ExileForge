@@ -29,7 +29,9 @@ import kotlinx.serialization.Serializable
 @Serializable data class RedemptionReward(
     val kind: RedemptionKind = RedemptionKind.ITEM,
     val itemId: String = "",
-    val amount: Double = 1.0,
+    // No default: the wire leaves out a value equal to its default, and the server has none for it,
+    // so an amount of 1 never reached it and the code was refused.
+    val amount: Double,
 )
 
 @Serializable enum class RedemptionKind { ITEM, EQUIPMENT, EXPERIENCE, GOLD }

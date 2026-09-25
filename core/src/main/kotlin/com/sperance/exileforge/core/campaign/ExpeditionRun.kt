@@ -495,10 +495,15 @@ class ExpeditionRun(
                   onKill: (RolledMonster) -> Unit, onCleared: () -> Unit, rules: CombatRules = CombatRules(), onFallen: () -> Unit = {},
                   onChest: () -> Unit = {}, mapEffects: Map<String, Double> = emptyMap(),
                   fountains: com.sperance.exileforge.core.model.campaign.FountainRule = com.sperance.exileforge.core.model.campaign.FountainRule(),
-                  portalChance: Double = 0.0, onPortal: () -> Unit = {}, startLife: Double? = null, stance: HeroStance = HeroStance()): ExpeditionRun {
+                  portalChance: Double = 0.0, onPortal: () -> Unit = {}, startLife: Double? = null, stance: HeroStance = HeroStance(),
+                  /** Modifiers a rare monster carries beyond its rule (the atlas, server 0.66.0). */
+                  extraRareMods: Int = 0): ExpeditionRun {
             val stats = MapEffects.hero(heroStats, mapEffects)
-            val world = ExpeditionWorld.create(MapEffects.map(map, mapEffects), MapEffects.rarities(rarities, mapEffects), stats, seed, MapEffects.buffs(mapEffects), portalChance)
-            world.placeFountains(fountains.count.getOrElse(0) { 0 }, fountains.count.getOrElse(1) { 0 }, fountains.heal)
+            val world = ExpeditionWorld.create(MapEffects.map(map, mapEffects), MapEffects.rarities(rarities, mapEffects), stats, seed, MapEffects.buffs(mapEffects), portalChance,
+                MapEffects.bossBuffs(mapEffects), extraRareMods)
+            // The map's own fountains (server 0.66.0) join the rule's, low and high alike.
+            val extraFountains = MapEffects.fountains(mapEffects)
+            world.placeFountains(fountains.count.getOrElse(0) { 0 } + extraFountains, fountains.count.getOrElse(1) { 0 } + extraFountains, fountains.heal)
             return ExpeditionRun(map, world, Combatant(stats, heroLevel, rules), rules, seed, onKill, onCleared, onFallen, onChest, mapEffects, onPortal, startLife, stance)
         }
     }

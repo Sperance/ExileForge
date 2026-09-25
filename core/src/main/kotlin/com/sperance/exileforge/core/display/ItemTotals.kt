@@ -43,7 +43,7 @@ data class BaseProperty(val modifierCode: String, val template: String, val valu
     val augmented: Boolean get() = values.any { it.augmented }
     /** The whole line as plain text, for a row that cannot colour part of a sentence. */
     fun line(): String {
-        if (template.isNotBlank()) return values.foldIndexed(template) { index, text, value -> text.replace("{$index}", value.text) }
+        if (template.isNotBlank()) return fillTemplate(template, values.map { it.text })
         return values.joinToString(" · ") { if (it.stat.isBlank()) it.text else "${it.text} ${statTitle(it.stat)}" }
     }
 }

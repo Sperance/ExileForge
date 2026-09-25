@@ -655,6 +655,8 @@ private fun logLine(event: CombatEvent, monster: String): String {
     val hero = event.actor == Side.HERO
     val line = when (event.action) {
         Action.RETREAT -> ui("expedition.log_retreat")
+        // Thorns and reflect (2.75.0): the one who was struck gives a blow back.
+        Action.REFLECT -> if (hero) ui("expedition.log_reflect_you", monster, damage) else ui("expedition.log_reflect_they", monster, damage)
         Action.TICK -> {
             val ailment = event.ailment?.let { ui(it.key()) }.orEmpty()
             if (hero) ui("expedition.log_tick_they", monster, damage, ailment) else ui("expedition.log_tick_you", damage, ailment)
@@ -678,7 +680,7 @@ private fun logLine(event: CombatEvent, monster: String): String {
 
 private fun logColour(event: CombatEvent): Color = when {
     event.action == Action.RETREAT -> Muted
-    event.action == Action.TICK -> damageTint(event.type).copy(alpha = .85f)
+    event.action == Action.TICK || event.action == Action.REFLECT -> damageTint(event.type).copy(alpha = .85f)
     event.kind == HitKind.CRIT -> Color(0xFFFFD34A)
     event.kind == HitKind.HIT -> if (event.actor == Side.HERO) Parchment else Color(0xFFE9A0A0)
     else -> Muted

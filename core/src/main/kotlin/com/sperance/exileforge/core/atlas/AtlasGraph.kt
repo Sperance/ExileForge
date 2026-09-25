@@ -48,8 +48,13 @@ object AtlasEffects {
     const val PACK_SIZE = "ATLAS_PACK_SIZE"
     const val RARE_MONSTERS = "ATLAS_RARE_MONSTERS"
 
+    const val MONSTER_MODS = "ATLAS_MONSTER_MODS"
+
     /** Stats counted in units rather than percent. */
-    val flat = setOf(FOUNTAINS, "ATLAS_CHESTS", "ATLAS_VAAL_MIN_MODS")
+    val flat = setOf(FOUNTAINS, "ATLAS_CHESTS", "ATLAS_VAAL_MIN_MODS", MONSTER_MODS)
+
+    /** How many modifiers a rare monster carries beyond its rule (server 0.66.0). */
+    fun extraRareMods(atlas: Map<String, Double>): Int = (atlas[MONSTER_MODS] ?: 0.0).toInt()
 
     /** [effects] of the entered map with the atlas's pack and rare monsters added, as one more map item's worth. */
     fun map(effects: Map<String, Double>, atlas: Map<String, Double>): Map<String, Double> {

@@ -9,8 +9,8 @@ import kotlin.random.Random
 /** Who acted. */
 enum class Side { HERO, MONSTER; val other: Side get() = if (this == HERO) MONSTER else HERO }
 
-/** What a fighter did: swung a weapon, let an ailment burn on, drank, or turned to leave. Spells left the game in 2.48.0. */
-enum class Action { ATTACK, TICK, RETREAT }
+/** What a fighter did: swung a weapon, let an ailment burn on, gave a blow back (thorns and reflect, 2.75.0), or turned to leave. Spells left the game in 2.48.0. */
+enum class Action { ATTACK, TICK, REFLECT, RETREAT }
 
 /** How a blow ended: it landed, landed hard, or never reached. */
 enum class HitKind { HIT, CRIT, EVADED, BLOCKED }
@@ -42,6 +42,8 @@ enum class Ailment(val word: String, val damage: String? = null) {
     POISONED("POISON", "STOCK_POISON_DAMAGE"), BLEEDING("BLEED", "STOCK_BLEED_DAMAGE");
     /** Deals damage over time, as opposed to slowing, weakening or stopping. */
     val hurts: Boolean get() = this == BURNING || this == POISONED || this == BLEEDING
+    /** The sheet's "increased damage against X enemies" stat for this ailment (server 0.66.0). */
+    val against: String get() = "STOCK_DAMAGE_VS_$name"
     companion object { fun of(name: String) = entries.firstOrNull { it.name == name } }
 }
 
@@ -70,12 +72,66 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
     val block = stat("STOCK_BLOCK_CHANCE").coerceIn(0.0, rules.blockCap) / 100
     /** Taken off physical damage after armour, under armour's own cap. */
     val physicalReduction = percent("STOCK_PHYSICAL_REDUCTION", rules.armour.cap)
-    /** Chaos stands alone, as in PoE; "all resistances" and "all maximum resistances" cover the three elements. */
-    fun resist(type: DamageType): Double {
+    /**
+     * Chaos stands alone, as in PoE; "all resistances" and "all maximum resistances" cover the three elements.
+     * [penetration] (server 0.66.0) is the striker's: it is taken off the resistance, and can push it below
+     * zero down to minus the cap, so a monster without resistance is still hurt more by a penetrating blow.
+     */
+    fun resist(type: DamageType, penetration: Double = 0.0): Double {
         val name = type.resist ?: return 0.0
         val chaos = name == "STOCK_RESIST_CHAOS"
         val ceiling = (rules.resistCap + stat(type.maxResist.orEmpty()) + (if (chaos) 0.0 else stat("STOCK_RESIST_MAX_ALL"))).coerceIn(0.0, rules.resistHardCap)
-        return (stat(name) + (if (chaos) 0.0 else stat("STOCK_RESIST_ALL"))).coerceIn(0.0, ceiling) / 100
+        val own = (stat(name) + (if (chaos) 0.0 else stat("STOCK_RESIST_ALL"))).coerceIn(0.0, ceiling)
+        return (own - penetration).coerceIn(-rules.resistCap, ceiling) / 100
+    }
+    /** How much of the target's [type] resistance this fighter's blows ignore, in percent (server 0.66.0). */
+    fun penetration(type: DamageType): Double = when (type) {
+        DamageType.PHYSICAL -> 0.0
+        DamageType.CHAOS -> max(0.0, stat("STOCK_PENETRATE_CHAOS"))
+        else -> max(0.0, stat("STOCK_PENETRATE_${type.name}")) + max(0.0, stat("STOCK_PENETRATE_ELEMENTAL"))
+    }
+    /**
+     * What a blow of [type] does to this fighter after its defences (server 0.66.0): "damage taken" of every
+     * kind and of that kind together, never below a tenth so no stack of it makes a fighter untouchable.
+     */
+    fun damageTaken(type: DamageType): Double {
+        val own = when (type) {
+            DamageType.PHYSICAL -> stat("STOCK_PHYSICAL_TAKEN")
+            DamageType.CHAOS -> stat("STOCK_CHAOS_TAKEN")
+            else -> stat("STOCK_ELEMENTAL_TAKEN")
+        }
+        return ((1 + stat("STOCK_DAMAGE_TAKEN") / 100) * (1 + own / 100)).coerceAtLeast(0.1)
+    }
+    /** How much harder this fighter hits a target under [ailments]: any ailment counts once, each named one on top. */
+    fun damageAgainst(ailments: Collection<Ailment>): Double {
+        if (ailments.isEmpty()) return 1.0
+        val named = ailments.toSet().sumOf { max(0.0, stat(it.against)) }
+        return 1 + (max(0.0, stat("STOCK_DAMAGE_VS_AILED")) + named) / 100
+    }
+    /** How much longer the ailments this fighter inflicts last on its foes. */
+    fun ailmentDurationOnFoes(ailment: Ailment): Double =
+        1 + (max(0.0, stat("STOCK_AILMENT_DURATION")) + max(0.0, stat("STOCK_${ailment.word}_DURATION"))) / 100
+    /** The pace of everything that gives life or shield back: regeneration, leech, on hit and on kill (server 0.66.0). */
+    val recoveryRate = max(0.0, 1 + stat("STOCK_RECOVERY_RATE") / 100)
+    /** The pace of the shield's recharge after the rule's delay. */
+    val shieldRecharge = max(0.0, 1 + stat("STOCK_SHIELD_RECHARGE") / 100)
+    /** Flat physical damage every attacker takes on hit, and the share of any damage taken given back the same way. */
+    val thorns = max(0.0, stat("STOCK_THORNS"))
+    val reflect = max(0.0, stat("STOCK_REFLECT")) / 100
+    /** What this fighter's presence does to its foes while it stands (server 0.66.0): the `AURA_*` stats, if any. */
+    val auras: Map<String, Double> = stats.filterKeys { it.startsWith("AURA_") }.filterValues { it > 0 }
+    /**
+     * This fighter under the [auras] of the foes still standing: fewer resistances, more damage taken, slower
+     * swings and slower recovery. The same sheet with the auras written into it, so every reading stays one.
+     */
+    fun under(auras: Map<String, Double>): Combatant {
+        if (auras.isEmpty()) return this
+        val sheet = stats.toMutableMap()
+        auras["AURA_RESIST"]?.let { v -> sheet["STOCK_RESIST_ALL"] = (stats["STOCK_RESIST_ALL"] ?: 0.0) - v; sheet["STOCK_RESIST_CHAOS"] = (stats["STOCK_RESIST_CHAOS"] ?: 0.0) - v }
+        auras["AURA_DAMAGE_TAKEN"]?.let { v -> sheet["STOCK_DAMAGE_TAKEN"] = (stats["STOCK_DAMAGE_TAKEN"] ?: 0.0) + v }
+        auras["AURA_SLOW"]?.let { v -> sheet["STOCK_ATTACK_SPEED"] = attackSpeed * max(0.1, 1 - v / 100) }
+        auras["AURA_RECOVERY"]?.let { v -> sheet["STOCK_RECOVERY_RATE"] = (stats["STOCK_RECOVERY_RATE"] ?: 0.0) - v }
+        return Combatant(sheet, level, rules)
     }
     val lifeRegen = max(0.0, stat("STOCK_HEALTH_REGEN"))
     val shieldRegen = max(0.0, stat("STOCK_ENERGY_REGEN"))
@@ -213,11 +269,22 @@ class Battle(
     /** «Волк-одиночка»: the hero alone deals more and takes less of every damage, by the server's [CombatRules.loneWolf]. */
     val loneWolf: Boolean get() = party <= 1
     /** One side in motion: its pools, its clocks and what is on it; [index] is its place in the pack, -1 for the hero. */
-    inner class Fighter(val side: Side, val body: Combatant, life: Double, val index: Int = -1, val ranged: Boolean = false) {
+    inner class Fighter(val side: Side, body: Combatant, life: Double, val index: Int = -1, val ranged: Boolean = false) {
+        /** The sheet as it stands: the hero's changes under the auras of the foes still standing (2.75.0). */
+        var body: Combatant = body
+            private set
         var life = life.coerceIn(0.0, body.maxLife)
         var shield = body.maxShield
         var nextAttack = if (side == Side.HERO) 0.35 else 0.55 + index * 0.13
         var attackInterval = 1 / body.attackSpeed
+        /** A new sheet mid-fight: the pools keep their share, the swing keeps its pace from the next one. */
+        fun rebody(next: Combatant) {
+            if (next === body) return
+            life = if (body.maxLife > 0) life / body.maxLife * next.maxLife else next.maxLife
+            shield = if (body.maxShield > 0) shield / body.maxShield * next.maxShield else min(shield, next.maxShield)
+            body = next
+            attackInterval = 1 / next.attackSpeed
+        }
         /** Stunned or frozen until then: nothing is swung before it. */
         var heldUntil = 0.0
         var lastHit = -1e9
@@ -236,8 +303,15 @@ class Battle(
         fun stacks(ailment: Ailment) = ailments.count { it.ailment == ailment }
     }
 
-    val heroFighter = Fighter(Side.HERO, hero, heroLife)
     val foeFighters: List<Fighter> = foes.mapIndexed { i, foe -> Fighter(Side.MONSTER, foe.body, foe.body.maxLife, i, foe.ranged) }
+    val heroFighter = Fighter(Side.HERO, hero.under(auras()), heroLife)
+
+    /** The auras of the foes still standing, summed per stat (server 0.66.0). */
+    private fun auras(): Map<String, Double> {
+        val sum = mutableMapOf<String, Double>()
+        foeFighters.filter { it.alive }.forEach { foe -> foe.body.auras.forEach { (stat, value) -> sum.merge(stat, value, Double::plus) } }
+        return sum
+    }
     private val ailmentRules: Map<AilmentRule, Pair<Ailment, DamageType>> = rules.ailments
         .mapNotNull { rule -> Ailment.of(rule.ailment)?.let { a -> DamageType.of(rule.type)?.let { t -> rule to (a to t) } } }.toMap()
 
@@ -320,7 +394,7 @@ class Battle(
     }
 
     /** The blow whose lunge is on screen right now, and how far into it the scene is (0..1). */
-    fun lunge(): Pair<CombatEvent, Double>? = log.lastOrNull { it.action != Action.TICK && time - it.time in -LUNGE..LUNGE }
+    fun lunge(): Pair<CombatEvent, Double>? = log.lastOrNull { it.action != Action.TICK && it.action != Action.REFLECT && time - it.time in -LUNGE..LUNGE }
         ?.let { it to ((time - it.time + LUNGE) / (2 * LUNGE)).coerceIn(0.0, 1.0) }
 
     /** How far [fighter] is into its next swing, 0 just after one and 1 as the next lands. */
@@ -352,9 +426,9 @@ class Battle(
 
     private fun regenerate(me: Fighter, dt: Double) {
         if (!me.alive) return
-        me.life = min(me.body.maxLife, me.life + me.body.lifeRegen * dt)
-        val recharge = if (time - me.lastHit >= rules.shield.rechargeDelay) me.body.maxShield * rules.shield.rechargePerSecond / 100 else 0.0
-        me.shield = min(me.body.maxShield, me.shield + (me.body.shieldRegen + recharge) * dt)
+        me.life = min(me.body.maxLife, me.life + me.body.lifeRegen * me.body.recoveryRate * dt)
+        val recharge = if (time - me.lastHit >= rules.shield.rechargeDelay) me.body.maxShield * rules.shield.rechargePerSecond / 100 * me.body.shieldRecharge else 0.0
+        me.shield = min(me.body.maxShield, me.shield + (me.body.shieldRegen * me.body.recoveryRate + recharge) * dt)
     }
 
     /** Ailments run their course: damage over time is applied every slice and logged once a second. */
@@ -409,14 +483,43 @@ class Battle(
             else -> 1 - rules.loneWolf.taken / 100
         }
         val multiplier = if (kind == HitKind.CRIT) me.body.critMultiplier else 1.0
+        // Server 0.66.0: a penetrating blow ignores part of the resistance, an ailed target takes more, and
+        // "damage taken" of the target scales what got through.
+        val against = me.body.damageAgainst(target.ailments.map { it.ailment })
         val taken = me.body.damage.filterValues { it > 0 }.mapValues { (type, base) ->
-            val raw = base * (1 + (random.nextDouble() * 2 - 1) * rules.variance / 100) * multiplier
+            val raw = base * (1 + (random.nextDouble() * 2 - 1) * rules.variance / 100) * multiplier * against
             when (type) {
                 DamageType.PHYSICAL -> raw * (1 - (target.body.armour / (target.body.armour + rules.armour.factor * raw)).coerceAtMost(rules.armour.cap / 100)) * (1 - target.body.physicalReduction)
-                else -> raw * (1 - target.body.resist(type))
-            }.coerceAtLeast(0.0) * target.weakness() * lone
+                else -> raw * (1 - target.body.resist(type, me.body.penetration(type)))
+            }.coerceAtLeast(0.0) * target.weakness() * lone * target.body.damageTaken(type)
         }
         land(me, target, Action.ATTACK, kind, taken, foe)
+        if (me.alive && target.body.thorns + target.body.reflect > 0) reflect(target, me, taken, foe)
+    }
+
+    /**
+     * Thorns and reflect (server 0.66.0): the struck fighter gives a flat physical blow and a share of
+     * what it took back to the attacker, each part reduced by the attacker's own armour or resistance.
+     */
+    private fun reflect(me: Fighter, attacker: Fighter, taken: Map<DamageType, Double>, foe: Int) {
+        val back = mutableMapOf<DamageType, Double>()
+        if (me.body.thorns > 0) back[DamageType.PHYSICAL] = me.body.thorns
+        if (me.body.reflect > 0) taken.forEach { (type, amount) -> back.merge(type, amount * me.body.reflect, Double::plus) }
+        val mitigated = back.mapValues { (type, raw) ->
+            when (type) {
+                DamageType.PHYSICAL -> raw * (1 - (attacker.body.armour / (attacker.body.armour + rules.armour.factor * raw)).coerceAtMost(rules.armour.cap / 100)) * (1 - attacker.body.physicalReduction)
+                else -> raw * (1 - attacker.body.resist(type))
+            }.coerceAtLeast(0.0) * attacker.body.damageTaken(type)
+        }.filterValues { it > 0 }
+        if (mitigated.isEmpty()) return
+        val chaos = mitigated[DamageType.CHAOS] ?: 0.0
+        val shielded = mitigated.values.sum() - chaos
+        val absorbed = min(attacker.shield, shielded)
+        attacker.shield -= absorbed
+        attacker.life = max(0.0, attacker.life - (shielded - absorbed) - chaos)
+        attacker.lastHit = time
+        record(me.side, Action.REFLECT, HitKind.HIT, mitigated.values.sum(), mitigated.maxBy { it.value }.key, 0.0, false, emptyList(), null, foe)
+        if (!attacker.alive) fell(attacker)
     }
 
     /** A blow that got through: the shield takes what it can, chaos goes around it, leech and stun and ailments follow. */
@@ -429,8 +532,8 @@ class Battle(
         target.lastHit = time
         val dealt = taken.values.sum()
         val physical = taken[DamageType.PHYSICAL] ?: 0.0
-        val healed = physical * me.body.leechPhysical + dealt * me.body.leechAll +
-            (if (kind == HitKind.CRIT) dealt * me.body.critLeech else 0.0) + (if (action == Action.ATTACK) me.body.lifeOnHit else 0.0)
+        val healed = (physical * me.body.leechPhysical + dealt * me.body.leechAll +
+            (if (kind == HitKind.CRIT) dealt * me.body.critLeech else 0.0) + (if (action == Action.ATTACK) me.body.lifeOnHit else 0.0)) * me.body.recoveryRate
         me.life = min(me.body.maxLife, me.life + healed)
 
         var stunned = false
@@ -458,7 +561,7 @@ class Battle(
         if (amount <= 0 || chance <= 0 || amount < target.body.maxLife * rule.threshold / 100 || random.nextDouble() >= chance) return@mapNotNull null
         val avoid = target.body.avoid(ailment)
         if (avoid > 0 && random.nextDouble() < avoid) return@mapNotNull null
-        val duration = rule.duration * target.body.ailmentDuration(ailment)
+        val duration = rule.duration * target.body.ailmentDuration(ailment) * me.body.ailmentDurationOnFoes(ailment)
         val magnitude = if (ailment.hurts) amount * rule.magnitude / 100 / rule.duration * me.body.ailmentDamage(ailment) else rule.magnitude
         val fresh = ActiveAilment(ailment, time + duration, magnitude, duration, me.side, me.index.coerceAtLeast(0))
         if (ailment.hurts) target.tickedAt.putIfAbsent(ailment, time)
@@ -473,14 +576,15 @@ class Battle(
         ailment
     }
 
-    /** A foe down: a kill to report, life on kill for the hero, and a focus on it let go. */
+    /** A foe down: a kill to report, life on kill for the hero, its aura lifted, and a focus on it let go. */
     private fun fell(fighter: Fighter) {
         if (fighter.side != Side.MONSTER || fighter.index in fallenOrder) return
         fighter.ailments.clear()
         fallenOrder += fighter.index
         if (focus == fighter.index) focus = null
         if (lastStriker == fighter.index) lastStriker = null
-        if (heroFighter.alive) heroFighter.life = min(hero.maxLife, heroFighter.life + hero.lifeOnKill)
+        if (fighter.body.auras.isNotEmpty()) heroFighter.rebody(hero.under(auras()))
+        if (heroFighter.alive) heroFighter.life = min(heroFighter.body.maxLife, heroFighter.life + heroFighter.body.lifeOnKill * heroFighter.body.recoveryRate)
     }
 
     private fun finished(): Boolean {

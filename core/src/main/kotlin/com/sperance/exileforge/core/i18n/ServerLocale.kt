@@ -101,8 +101,6 @@ object LocaleKey {
     fun mapName(code: String) = key("map", code, NAME)
     fun mapDescription(code: String) = key("map", code, DESCRIPTION)
     fun monsterName(code: String) = key("monster", code, NAME)
-    /** A template with `{0}`, `{1}` per effect, as an item modifier's. */
-    fun monsterModifierName(code: String) = key("monstermod", code, NAME)
     // The crafts, since server 0.37.0.
     fun professionName(code: String) = key("profession", code, NAME)
     fun professionDescription(code: String) = key("profession", code, DESCRIPTION)

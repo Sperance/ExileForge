@@ -146,7 +146,7 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             // The atlas's own bonuses (2.68.0) ride the map item's: more and rarer monsters, fountains, the portal.
             mapEffects = AtlasEffects.map(effects, atlas), fountains = AtlasEffects.fountains(view.fountains, atlas),
             portalChance = AtlasEffects.portalChance(view, atlas), onPortal = { reports.trySend { gate(run, characterId, map.code) } },
-            stance = stance())
+            stance = stance(), extraRareMods = AtlasEffects.extraRareMods(atlas))
         // How many chests stand on the map is the server's (0.31.0), answered by the entry itself.
         run.send(RunCommand.Chests(chests))
         mutableRun.value = run

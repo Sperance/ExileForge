@@ -39,8 +39,11 @@ import kotlin.math.floor
     val stats: List<StatOrder> = emptyList(),
     val slots: List<String> = emptyList(),
     val sell: SellRule = SellRule(),
+    /** Stats that are a percent already (server 0.65.0, served since 0.66.0): INCREASED adds into them instead of multiplying. */
+    val percent: List<String> = emptyList(),
 ) {
     val order: Map<String, Int> by lazy { stats.associate { it.stat to it.order } }
+    val percentStats: Set<String> by lazy { percent.toSet() }
 }
 
 /** What wearing an item changes: the characteristic, what it is now and what it would be. */
@@ -208,15 +211,16 @@ object Sheet {
         val result = mutableMapOf<String, Double>()
         (byStat.keys + base.keys).sortedBy { tables.order[it] ?: Int.MAX_VALUE }.forEach { stat ->
             val applied = byStat[stat].orEmpty().map { it.operation to it.resolve(it.perStat?.let { source -> result[source] } ?: 0.0) }
-            result[stat] = apply(base[stat] ?: 0.0, applied)
+            result[stat] = apply(base[stat] ?: 0.0, applied, stat in tables.percentStats)
         }
         return result
     }
 
-    /** The server's ModifierMath, rounded to one decimal half-up as it rounds. */
-    private fun apply(base: Double, operations: List<Pair<ModifierOperation, Double>>): Double {
+    /** The server's ModifierMath, rounded to one decimal half-up as it rounds; a percent stat takes INCREASED as an addition. */
+    private fun apply(base: Double, operations: List<Pair<ModifierOperation, Double>>, percent: Boolean = false): Double {
         var result = base + operations.filter { it.first == ModifierOperation.ADD }.sumOf { it.second }
-        result *= 1.0 + operations.filter { it.first == ModifierOperation.INCREASED }.sumOf { it.second } / 100.0
+        val increased = operations.filter { it.first == ModifierOperation.INCREASED }.sumOf { it.second }
+        if (percent) result += increased else result *= 1.0 + increased / 100.0
         operations.filter { it.first == ModifierOperation.MORE }.forEach { result *= 1.0 + it.second / 100.0 }
         operations.lastOrNull { it.first == ModifierOperation.SET }?.let { result = it.second }
         return BigDecimal.valueOf(result).setScale(1, RoundingMode.HALF_UP).toDouble()

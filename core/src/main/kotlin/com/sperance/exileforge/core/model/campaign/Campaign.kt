@@ -9,7 +9,9 @@ import kotlinx.serialization.Serializable
 enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
 
 /** One change to a monster's characteristic: `ADD`, `INCREASED`, `MORE` or `SET`, as on items. */
-@Serializable data class MonsterEffect(val stat: String, val operation: String, val value: Double)
+@Serializable data class MonsterEffect(val stat: String, val operation: String, val value: Double,
+    /** The top of the tier's range (server 0.66.0); the roll lands between [value] and it. An older server's line is fixed. */
+    val max: Double = value)
 
 /**
  * How often a rarity appears, how many modifiers it brings and what it adds on its own.
@@ -38,6 +40,8 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
     val minLevel: Int = 1,
     val minRarity: String = MonsterRarity.MAGIC.name,
     val effects: List<MonsterEffect> = emptyList(),
+    /** The tier the map's level opened (server 0.66.0), 1 the best. */
+    val tier: Int = 1,
 )
 
 /**
@@ -94,6 +98,9 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
     val modifiers: List<MonsterModifier> = emptyList(),
     /** Its row, as a monster's (since server 0.61.0). */
     val range: String = CampaignMonster.MELEE,
+    /** Its pool at the map's level (server 0.66.0): [rolls] random lines of it, low and high, join the signature ones each encounter. */
+    val pool: List<MonsterModifier> = emptyList(),
+    val rolls: List<Int> = listOf(0, 0),
 )
 
 @Serializable data class CampaignMap(
@@ -211,10 +218,13 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
 
     /** What a map's stat does, for its line's mark: a harm pays by [risk], a reward pays itself, the rest is content. */
     fun kindOf(stat: String): MapLineKind = when {
-        stat == QUANTITY || stat == RARITY || stat == EXPERIENCE -> MapLineKind.REWARD
+        stat in rewards -> MapLineKind.REWARD
         stat in risk -> MapLineKind.HARM
         else -> MapLineKind.CONTENT
     }
+
+    /** The lines that give without asking (server 0.66.0 added gold, chests, fountains and the hero's own boons). */
+    private val rewards: Set<String> get() = setOf(QUANTITY, RARITY, EXPERIENCE, GOLD, "MAP_CHESTS", FOUNTAINS, HERO_HASTE, HERO_ATTACK_SPEED, HERO_LIFE, HERO_LEECH)
 
     /** How many percent one rolled value of [stat] pays, by the server's weight; zero for what is not a risk. */
     fun riskOf(stat: String, value: Double): Double = value * (risk[stat] ?: 0.0)
@@ -238,6 +248,28 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
         const val HERO_REGEN = "MAP_HERO_REGEN"
         /** Since server 0.65.0: the hero walks the map so many percent slower. */
         const val HERO_SLOW = "MAP_HERO_SLOW"
+        // Since server 0.66.0: the harms and buffs of Path of Exile, and rewards to the hero.
+        const val HERO_DAMAGE_TAKEN = "MAP_HERO_DAMAGE_TAKEN"
+        const val HERO_RECOVERY = "MAP_HERO_RECOVERY"
+        const val HERO_MAX_RESIST = "MAP_HERO_MAX_RESIST"
+        const val HERO_DEFENCES = "MAP_HERO_DEFENCES"
+        const val HERO_BLOCK = "MAP_HERO_BLOCK"
+        const val HERO_CRIT = "MAP_HERO_CRIT"
+        const val MONSTER_PENETRATION = "MAP_MONSTER_PENETRATION"
+        const val MONSTER_REFLECT = "MAP_MONSTER_REFLECT"
+        const val MONSTER_CRITICAL = "MAP_MONSTER_CRITICAL"
+        const val MONSTER_AILMENTS = "MAP_MONSTER_AILMENTS"
+        const val MONSTER_ARMOUR = "MAP_MONSTER_ARMOUR"
+        const val MONSTER_LEECH = "MAP_MONSTER_LEECH"
+        const val MONSTER_STUN = "MAP_MONSTER_STUN"
+        const val MONSTER_MAGIC_MIN = "MAP_MONSTER_MAGIC_MIN"
+        const val HERO_HASTE = "MAP_HERO_HASTE"
+        const val HERO_ATTACK_SPEED = "MAP_HERO_ATTACK_SPEED"
+        const val HERO_LIFE = "MAP_HERO_LIFE"
+        const val HERO_LEECH = "MAP_HERO_LEECH"
+        const val GOLD = "MAP_GOLD"
+        const val FOUNTAINS = "MAP_FOUNTAINS"
+        const val BOSS_POWER = "MAP_BOSS_POWER"
 
         /** The template a location's map is: `MAP_<location code>`. */
         fun templateCode(mapCode: String) = "MAP_$mapCode"

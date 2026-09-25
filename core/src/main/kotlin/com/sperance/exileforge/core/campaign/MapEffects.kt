@@ -33,18 +33,37 @@ object MapEffects {
         effects[MapRule.MONSTER_DAMAGE]?.let { v -> damage.forEach { add(MonsterEffect(it, "INCREASED", v)) } }
         effects[MapRule.MONSTER_SPEED]?.let { v -> listOf("STOCK_ATTACK_SPEED", "STOCK_CAST_SPEED").forEach { add(MonsterEffect(it, "INCREASED", v)) } }
         effects[MapRule.MONSTER_RESIST]?.let { v -> resists.forEach { add(MonsterEffect(it, "ADD", v)) } }
+        // Server 0.66.0: the buffs of Path of Exile's maps.
+        effects[MapRule.MONSTER_PENETRATION]?.let { add(MonsterEffect("STOCK_PENETRATE_ELEMENTAL", "ADD", it)) }
+        effects[MapRule.MONSTER_REFLECT]?.let { add(MonsterEffect("STOCK_REFLECT", "ADD", it)) }
+        effects[MapRule.MONSTER_CRITICAL]?.let { add(MonsterEffect("STOCK_CRITICAL_CHANCE", "ADD", it)) }
+        effects[MapRule.MONSTER_AILMENTS]?.let { v -> Ailment.entries.filter { it != Ailment.CHILLED }.forEach { add(MonsterEffect("STOCK_${it.word}_CHANCE", "ADD", v)) } }
+        effects[MapRule.MONSTER_ARMOUR]?.let { v -> listOf("STOCK_ARMOR", "STOCK_EVASION").forEach { add(MonsterEffect(it, "INCREASED", v)) } }
+        effects[MapRule.MONSTER_LEECH]?.let { add(MonsterEffect("STOCK_LEECH_ALL", "ADD", it)) }
+        effects[MapRule.MONSTER_STUN]?.let { add(MonsterEffect("STOCK_AVOID_STUN", "ADD", it)) }
     }
+
+    /** What a map does to its boss alone (server 0.66.0): so many percent more life and damage. */
+    fun bossBuffs(effects: Map<String, Double>): List<MonsterEffect> = buildList {
+        effects[MapRule.BOSS_POWER]?.takeIf { it > 0 }?.let { v -> (listOf("STOCK_HEALTH") + damage).forEach { add(MonsterEffect(it, "MORE", v)) } }
+    }
+
+    /** Fountains a map adds beyond the rule's (server 0.66.0). */
+    fun fountains(effects: Map<String, Double>): Int = (effects[MapRule.FOUNTAINS] ?: 0.0).roundToInt().coerceAtLeast(0)
 
     fun rarities(rarities: List<CampaignRarity>, effects: Map<String, Double>): List<CampaignRarity> {
         val rarer = 1 + (effects[MapRule.MONSTER_RARITY] ?: 0.0) / 100
         val magic = 1 + (effects[MapRule.MAGIC_MONSTERS] ?: 0.0) / 100
         val rare = 1 + (effects[MapRule.RARE_MONSTERS] ?: 0.0) / 100
         val buffs = buffs(effects)
+        // "All monsters are at least magic" (server 0.66.0): the plain ones never roll.
+        val magicFloor = (effects[MapRule.MONSTER_MAGIC_MIN] ?: 0.0) > 0
         return rarities.map { rarity ->
             val weight = when (rarity.rarity) {
                 MonsterRarity.MAGIC.name -> (rarity.weight * rarer * magic).roundToInt()
                 MonsterRarity.RARE.name -> (rarity.weight * rarer * rare).roundToInt()
-                MonsterRarity.NORMAL.name, MonsterRarity.UNIQUE.name -> rarity.weight
+                MonsterRarity.NORMAL.name -> if (magicFloor) 0 else rarity.weight
+                MonsterRarity.UNIQUE.name -> rarity.weight
                 else -> (rarity.weight * rarer).roundToInt()
             }
             rarity.copy(weight = weight, effects = rarity.effects + buffs)
@@ -58,6 +77,19 @@ object MapEffects {
         effects[MapRule.HERO_RESIST]?.let { v -> resists.forEach { sheet[it] = (stats[it] ?: 0.0) - v } }
         effects[MapRule.HERO_REGEN]?.let { v -> sheet["STOCK_HEALTH_REGEN"] = (stats["STOCK_HEALTH_REGEN"] ?: 0.0) * max(0.0, 1 - v / 100) }
         effects[MapRule.HERO_SLOW]?.let { v -> sheet["STOCK_MOVEMENT_SPEED"] = (stats["STOCK_MOVEMENT_SPEED"] ?: 0.0) - v }
+        // Server 0.66.0: the harms of Path of Exile's maps, and the rewards this game gives the hero.
+        fun add(stat: String, v: Double) { sheet[stat] = (stats[stat] ?: 0.0) + v }
+        fun scale(stat: String, share: Double) { sheet[stat] = (stats[stat] ?: 0.0) * max(0.0, 1 + share / 100) }
+        effects[MapRule.HERO_DAMAGE_TAKEN]?.let { add("STOCK_DAMAGE_TAKEN", it) }
+        effects[MapRule.HERO_RECOVERY]?.let { add("STOCK_RECOVERY_RATE", -it) }
+        effects[MapRule.HERO_MAX_RESIST]?.let { v -> add("STOCK_RESIST_MAX_ALL", -v); add("STOCK_RESIST_MAX_CHAOS", -v) }
+        effects[MapRule.HERO_DEFENCES]?.let { v -> listOf("STOCK_ARMOR", "STOCK_EVASION", "STOCK_ENERGY_SHIELD").forEach { scale(it, -v) } }
+        effects[MapRule.HERO_BLOCK]?.let { add("STOCK_BLOCK_CHANCE", -it) }
+        effects[MapRule.HERO_CRIT]?.let { scale("STOCK_CRITICAL_CHANCE", -it) }
+        effects[MapRule.HERO_HASTE]?.let { add("STOCK_MOVEMENT_SPEED", it) }
+        effects[MapRule.HERO_ATTACK_SPEED]?.let { scale("STOCK_ATTACK_SPEED", it) }
+        effects[MapRule.HERO_LIFE]?.let { scale("STOCK_HEALTH", it) }
+        effects[MapRule.HERO_LEECH]?.let { add("STOCK_LEECH_ALL", it) }
         return sheet
     }
 

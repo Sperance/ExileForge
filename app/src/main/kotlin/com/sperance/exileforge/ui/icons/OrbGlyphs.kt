@@ -69,6 +69,13 @@ private val art = mapOf(
     CurrencyOrb.MAGUS_ORB to OrbArt(0xFF8888FF, Emblem.RUNE),
     CurrencyOrb.ELITE_ORB to OrbArt(0xFFFFFF77, Emblem.GEM),
     CurrencyOrb.BOUNTY_ORB to OrbArt(0xFFE8CF94, Emblem.COIN),
+    CurrencyOrb.TREASURE_ORB to OrbArt(0xFFD8B060, Emblem.GEM),
+    CurrencyOrb.GILDED_ORB to OrbArt(0xFFF0D060, Emblem.COIN, rays = true),
+    CurrencyOrb.WARDEN_ORB to OrbArt(0xFFB05050, Emblem.CROWN),
+    CurrencyOrb.HELMET_SCROLL to OrbArt(0xFFC8B8E8, Emblem.RUNE),
+    CurrencyOrb.GLOVES_SCROLL to OrbArt(0xFFB8C8E8, Emblem.RUNE),
+    CurrencyOrb.BOOTS_SCROLL to OrbArt(0xFFB8E0C8, Emblem.RUNE),
+    CurrencyOrb.WEAPON_SCROLL to OrbArt(0xFFE8C0B0, Emblem.RUNE),
 )
 
 /** An orb the client has no art for — one the server added later — is plain gold glass with a gem. */

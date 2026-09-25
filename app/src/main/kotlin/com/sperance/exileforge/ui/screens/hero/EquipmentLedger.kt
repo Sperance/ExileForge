@@ -108,7 +108,7 @@ import kotlinx.serialization.json.put
             if (base.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(5.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 base.forEach { BaseChip(it) }
             }
-            rolled.forEach { RollLine(it, s.world.definitions) }
+            if (rolled.isNotEmpty()) TradeTable(rolled, s.world.definitions)
         }
     }
 }

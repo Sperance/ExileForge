@@ -43,19 +43,6 @@ import kotlinx.serialization.json.*
 }
 
 /**
- * A rolled affix on a card: its badge — what placed it and its tier, «P1», «S3» (2.58.0) — then its
- * sentence in the colour Path of Exile gives that kind, a crafted line in the bench's blue, a
- * fractured one in its dull gold. The letter says it too, because a colour alone is not read by everyone.
- */
-@Composable fun AffixLine(modifier: JsonObject, definitions: List<ModifierDefinition>) {
-    val marks = affixMarks(modifier, definitions)
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.CenterVertically) {
-        AffixBadge(marks)
-        Text(modifierText(modifier, definitions), color = affixTint(marks.kind), style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-    }
-}
-
-/**
  * A base property as one sentence, with the number the item really carries.
  *
  * The dictionary's template is filled with the folded value, and that value is coloured when a
@@ -131,7 +118,7 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
  * There is no frame — rarity is the spine, which leaves the name in the colour of every other name
  * and the card quiet enough to read. Above the name are the states it is in, drawn rather than
  * spelled out because they are glanced at, and what it is; below it the base as figures, and the
- * rolls as a list under their rhombus. The icon sits beside the name: it is how the item is
+ * rolls as a trade table (2.60.0): the score of the roll over a row per line. The icon sits beside the name: it is how the item is
  * recognised before any of it is read.
  */
 @Composable fun ItemCard(doc: JsonObject, enabled: Boolean = true, selected: Boolean = false,
@@ -178,10 +165,11 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
 
             // The base first, as figures: the biggest is what the item is bought for.
             base.forEachIndexed { index, property -> BannerStat(property, big = index == 0) }
-            // Then what this copy rolled, which is what makes it this one rather than another.
-            // Tight (2.51.0): the rolls read as one block, not as a column of sentences.
-            if (rolled.isNotEmpty()) Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                rolled.take(if (detailed) rolled.size else 3).forEach { AffixLine(it, definitions) }
+            // Then what this copy rolled, as a trade table (2.60.0): the figures a trader weighs it by,
+            // then a row per line with how high it landed inside its tier.
+            if (rolled.isNotEmpty()) {
+                if (detailed) RollScore(rollSummary(doc, rolled, definitions))
+                TradeTable(rolled.take(if (detailed) rolled.size else 3), definitions)
             }
             if (!detailed && rolled.size > 3) Text(ui("card.more_properties", rolled.size - 3), color = Muted, style = MaterialTheme.typography.labelMedium)
             if (detailed) documentDescription(doc).takeIf { it.isNotBlank() }?.let {

@@ -71,6 +71,8 @@ import kotlinx.serialization.Serializable
     val influence: String? = null,
     /** A bench modifier: no orb rolls it, the crafting bench places it, one per item. */
     val crafted: Boolean = false,
+    /** Since server 0.54.0 the world bundle carries the tiers too: how good a roll is inside its own. */
+    val tiers: List<TierRange> = emptyList(),
 ) {
     val composite: Boolean get() = effects.size > 1
     val family: String get() = group ?: code
@@ -83,6 +85,9 @@ import kotlinx.serialization.Serializable
      */
     val template: String get() = locOr(LocaleKey.modifierName(code), code)
 }
+
+/** One tier as the world bundle carries it: its number and a `[min, max]` per effect. */
+@Serializable data class TierRange(val tier: Int, val values: List<List<Double>> = emptyList())
 
 /** Value range of one effect inside a tier. */
 @Serializable data class ModifierTierValue(val valueMin: Double, val valueMax: Double)

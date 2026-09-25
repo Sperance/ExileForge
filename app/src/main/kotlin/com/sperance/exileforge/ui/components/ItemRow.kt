@@ -22,12 +22,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.contract.text
 import com.sperance.exileforge.core.display.PropertyValue
-import com.sperance.exileforge.core.display.affixMarks
 import com.sperance.exileforge.core.display.baseProperties
 import com.sperance.exileforge.core.display.documentTitle
 import com.sperance.exileforge.core.display.itemStates
-import com.sperance.exileforge.core.display.modifierText
 import com.sperance.exileforge.core.display.requirementReason
+import com.sperance.exileforge.core.display.rollSummary
 import com.sperance.exileforge.core.display.shownLines
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.display.stateTitle
@@ -79,8 +78,8 @@ import kotlinx.serialization.json.JsonObject
  * Since 2.21.0 the icon leads, in a square framed in the rarity colour with the item level and the
  * item's states under it, and the name takes that colour too: the frame is enough to find a unique
  * in a list without a band down every line. The base is read as figures — a chip per number, the
- * number set bold — and the rolls are a list under rhombi, each with its tier on the right, the way
- * the card prints them. What does not fit is counted instead of dropped. [trailing] sits opposite
+ * number set bold — and since 2.60.0 the rolls are summed up in one line: the rarity, how well they
+ * landed inside their tiers and how many affix places are open. The card behind the tap lists them. [trailing] sits opposite
  * the name — a lot's price — or else [price], what the merchant pays, and [footer] under everything, for what a list adds about the item.
  */
 @OptIn(ExperimentalLayoutApi::class)
@@ -145,8 +144,8 @@ import kotlinx.serialization.json.JsonObject
             if (base.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 base.forEach { value -> BaseChip(value) }
             }
-            // Every roll, whole (since 2.45.0): a line that hides one is a line a trader cannot read.
-            rolled.forEach { RollLine(it, definitions) }
+            // The trade table's line (2.60.0): the rolls are summed up, not listed - the card lists them.
+            RollTops(document.text("rarity"), color, rollSummary(document, rolled, definitions))
             // The server's verdict, in its own words — never a requirement worked out here.
             unwearable.forEach {
                 Text(requirementReason(it), color = LifeRed, style = MaterialTheme.typography.labelSmall,
@@ -164,15 +163,6 @@ import kotlinx.serialization.json.JsonObject
         Text(value.text, color = if (value.augmented) Rune else GoldBright, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
         if (value.stat.isNotBlank()) Text(statTitle(value.stat), color = Muted, style = MaterialTheme.typography.labelSmall,
             maxLines = 1, overflow = TextOverflow.Ellipsis)
-    }
-}
-
-/** A rolled modifier on a line: its badge («P1», «S3», since 2.58.0), then its sentence in its kind's colour. */
-@Composable internal fun RollLine(modifier: JsonObject, definitions: List<ModifierDefinition>) {
-    val marks = affixMarks(modifier, definitions)
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.CenterVertically) {
-        AffixBadge(marks)
-        Text(modifierText(modifier, definitions), color = affixTint(marks.kind), style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
     }
 }
 

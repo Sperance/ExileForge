@@ -180,8 +180,8 @@ class ExpeditionRun(
     private val onCleared: () -> Unit,
     private val onFallen: () -> Unit = {},
     private val onChest: () -> Unit = {},
-    /** The entered map's effects, laid again over a sheet that changes on the way (since 2.40.0). */
-    private val mapEffects: Map<String, Double> = emptyMap(),
+    /** The entered map's effects, laid again over a sheet that changes on the way (since 2.40.0); a Vaal zone inherits them (2.65.1). */
+    val mapEffects: Map<String, Double> = emptyMap(),
     /** The hero reached the Vaal portal (2.65.0): whoever listens asks the server for its zone. */
     private val onPortal: () -> Unit = {},
     /** The life the hero walks in with; a Vaal zone (2.65.0) is entered with what the map left, a map at full. */

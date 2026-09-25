@@ -169,10 +169,17 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             onCleared = {},
             rules = view.combat,
             onFallen = { reports.trySend { vaalLeave(inner, characterId, map.code) } },
-            mapEffects = zone.effects, startLife = run.heroLife)
+            mapEffects = stack(run.mapEffects, zone.effects), startLife = run.heroLife)
         parent = run
         mutableRun.value = inner
     } }
+
+    /**
+     * The zone's modifiers on top of the map item's (2.65.1): the map still holds inside its Vaal
+     * zone, each stat summed, as the server sums both bonuses on the zone's loot.
+     */
+    private fun stack(map: Map<String, Double>, zone: Map<String, Double>): Map<String, Double> =
+        (map.keys + zone.keys).associateWith { (map[it] ?: 0.0) + (zone[it] ?: 0.0) }
 
     /** «Отказаться» at the Vaal gate: the portal is gone and the zone closed on the server. */
     fun refuseVaal() {

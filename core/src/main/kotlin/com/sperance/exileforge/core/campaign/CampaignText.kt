@@ -25,8 +25,10 @@ fun monsterLines(monster: RolledMonster): List<MonsterLine> =
         .map { (key, parts) -> MonsterLine(key.first, key.second, parts.sumOf { it.first.value }, parts.any { it.second }) }
 
 fun monsterLineText(line: MonsterLine): String {
-    val value = statNumber(line.stat, line.value)
     val stat = statTitle(line.stat)
+    // A taunt is there or not (2.71.0): how many modifiers gave it says nothing.
+    if (line.stat == "STOCK_TAUNT") return stat
+    val value = statNumber(line.stat, line.value)
     return when (line.operation) {
         "ADD" -> ui("fight.line_add", value, stat)
         "INCREASED" -> ui("fight.line_increased", value, stat)

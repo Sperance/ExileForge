@@ -93,6 +93,8 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
     fun ailmentDuration(ailment: Ailment) = 1 - percent("STOCK_${ailment.word}_DURATION_ON_SELF", rules.ailmentDurationCap)
     val lifeOnHit = max(0.0, stat("STOCK_HEALTH_ON_HIT"))
     val lifeOnKill = max(0.0, stat("STOCK_HEALTH_ON_KILL"))
+    /** Taunts (since server 0.62.0): while it stands, its foes must strike it first, past any row. */
+    val taunt: Boolean get() = stat("STOCK_TAUNT") > 0
     /** How hard it presses, before anyone's defences: its damage per swing times its swings per second. */
     val threat: Double get() = damage.values.sum() * attackSpeed
     /** The damage type most of its blow is made of. */
@@ -205,7 +207,11 @@ class Battle(
     heroLife: Double,
     private val random: Random,
     val stance: HeroStance = HeroStance(),
+    /** How many fight on the hero's side (2.71.0); alone, the hero is a lone wolf. */
+    val party: Int = 1,
 ) {
+    /** «Волк-одиночка»: the hero alone deals more and takes less of every damage, by the server's [CombatRules.loneWolf]. */
+    val loneWolf: Boolean get() = party <= 1
     /** One side in motion: its pools, its clocks and what is on it; [index] is its place in the pack, -1 for the hero. */
     inner class Fighter(val side: Side, val body: Combatant, life: Double, val index: Int = -1, val ranged: Boolean = false) {
         var life = life.coerceIn(0.0, body.maxLife)
@@ -280,15 +286,22 @@ class Battle(
         focus = index?.takeIf { it != focus && foeFighters.getOrNull(it)?.alive == true }
     }
 
-    /** Whether the hero's weapon reaches foe [index] right now. */
+    /** Foes taunting right now: while any stands, only they can be struck. */
+    private fun taunters() = foeFighters.filter { it.alive && it.body.taunt }
+
+    /**
+     * Whether the hero can strike foe [index] right now: a taunter always, past any row (2.71.0),
+     * and while one stands nobody else; otherwise as the weapon reaches.
+     */
     fun reachable(index: Int): Boolean {
         val foe = foeFighters.getOrNull(index)?.takeIf { it.alive } ?: return false
+        if (taunters().isNotEmpty()) return foe.body.taunt
         return stance.ranged || !foe.ranged || foeFighters.none { it.alive && !it.ranged }
     }
 
     /**
-     * The foe the hero's next swing goes to: the focus while it can be reached, else the class's
-     * pick among those that can. A focus behind the front waits until the front has fallen.
+     * The foe the hero's next swing goes to: the focus while it can be struck, else the class's
+     * pick among those that can. A focus behind the front, or behind a taunter, waits its turn.
      */
     fun target(): Fighter? {
         val reach = foeFighters.filter { reachable(it.index) }
@@ -389,13 +402,19 @@ class Battle(
         }
         if (me.side == Side.MONSTER) lastStriker = me.index
         if (kind == HitKind.EVADED || kind == HitKind.BLOCKED) { record(me.side, Action.ATTACK, kind, 0.0, null, 0.0, false, emptyList(), null, foe); return }
+        // The lone wolf's share rides the blow itself, so the ailments it brings carry it once and no more.
+        val lone = when {
+            !loneWolf -> 1.0
+            me.side == Side.HERO -> 1 + rules.loneWolf.dealt / 100
+            else -> 1 - rules.loneWolf.taken / 100
+        }
         val multiplier = if (kind == HitKind.CRIT) me.body.critMultiplier else 1.0
         val taken = me.body.damage.filterValues { it > 0 }.mapValues { (type, base) ->
             val raw = base * (1 + (random.nextDouble() * 2 - 1) * rules.variance / 100) * multiplier
             when (type) {
                 DamageType.PHYSICAL -> raw * (1 - (target.body.armour / (target.body.armour + rules.armour.factor * raw)).coerceAtMost(rules.armour.cap / 100)) * (1 - target.body.physicalReduction)
                 else -> raw * (1 - target.body.resist(type))
-            }.coerceAtLeast(0.0) * target.weakness()
+            }.coerceAtLeast(0.0) * target.weakness() * lone
         }
         land(me, target, Action.ATTACK, kind, taken, foe)
     }

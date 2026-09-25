@@ -220,9 +220,11 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
             }
             if (fight.target == foe.index && foe.alive && fight.outcome == null)
                 Text(if (focused) "◉" else "◎", color = GoldBright, fontSize = 14.sp, modifier = Modifier.align(Alignment.TopEnd).padding(3.dp))
+            if (foe.taunt && foe.alive) Text(ui("fight.taunt"), color = GoldBright, fontSize = 8.sp, fontWeight = FontWeight.Bold,
+                modifier = Modifier.align(Alignment.TopStart).padding(2.dp).background(Blood, RoundedCornerShape(3.dp)).padding(horizontal = 3.dp))
             if (!foe.alive) Text(ui("fight.fallen"), color = Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.Center))
-            else if (!foe.reachable) Text(ui("fight.out_of_reach_short"), color = Muted, fontSize = 9.sp,
-                modifier = Modifier.align(Alignment.BottomCenter).background(Ink.copy(alpha = .8f)).padding(horizontal = 4.dp))
+            else if (!foe.reachable) Text(ui(if (fight.foes.any { it.alive && it.taunt }) "fight.behind_taunt_short" else "fight.out_of_reach_short"),
+                color = Muted, fontSize = 9.sp, modifier = Modifier.align(Alignment.BottomCenter).background(Ink.copy(alpha = .8f)).padding(horizontal = 4.dp))
             CardHits(fight.hits.filter { it.target == Side.MONSTER && it.foe == foe.index })
         }
         Text(monsterTitle(foe.monster.code), color = ring, fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -278,6 +280,11 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
             LifeBar(fight.heroLife, hud.heroMaxLife, fight.heroShield, hud.heroMaxShield, Modifier.fillMaxWidth().height(16.dp))
             SwingBar(fight.heroSwing, fight.heroHeld, Modifier.fillMaxWidth())
             StateTiles(fight.heroAilments, fight.heroHeld)
+            val lone = fight.loneWolf
+            if (lone != null || fight.heroTaunt) Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                lone?.let { Mark(ui("fight.lone_wolf", number(it.dealt), number(it.taken)), GoldBright) }
+                if (fight.heroTaunt) Mark(ui("fight.taunt"), LifeRed)
+            }
             val target = fight.target?.let(names::get)
             if (target != null && fight.outcome == null) Text(
                 ui("fight.target_line", target, if (fight.focus != null) ui("fight.target_yours") else ui("fight.rule.${stance.rule.name}")),
@@ -326,7 +333,12 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
         // What it means for this hero.
         val leading = hero.leading
         val against = (body.resist(leading) * 100).roundToInt()
-        if (!foe.reachable) Hint(ui("fight.out_of_reach"), LifeRed)
+        val taunting = fight.foes.any { it.alive && it.taunt }
+        when {
+            foe.taunt -> Hint(ui("fight.taunt_hint"), LifeRed)
+            taunting -> Hint(ui("fight.behind_taunt"), LifeRed)
+            !foe.reachable -> Hint(ui("fight.out_of_reach"), LifeRed)
+        }
         if (leading != DamageType.PHYSICAL) Hint(ui(if (against <= 0) "fight.resist_good" else "fight.resist_bad", ui(leading.key()), against),
             if (against <= 25) Vital else LifeRed)
         else if (body.armour > 0) Hint(ui("fight.armour_note", number(body.armour)), Muted)
@@ -342,6 +354,13 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
             }
         }
     }
+}
+
+/** A small framed word on a card: a bonus or a property the fighter carries. */
+@Composable private fun Mark(text: String, tint: Color) {
+    val shape = RoundedCornerShape(4.dp)
+    Text(text, color = tint, fontSize = 9.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.background(tint.copy(alpha = .12f), shape).border(1.dp, tint.copy(alpha = .6f), shape).padding(horizontal = 5.dp, vertical = 1.dp))
 }
 
 @Composable private fun Fact(label: String, value: String, tint: Color) {

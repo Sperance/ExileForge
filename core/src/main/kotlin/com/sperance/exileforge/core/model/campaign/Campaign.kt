@@ -139,6 +139,12 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
 @Serializable data class StunRule(val share: Double = 15.0, val duration: Double = 0.4)
 @Serializable data class ShieldRule(val rechargeDelay: Double = 2.0, val rechargePerSecond: Double = 20.0)
 @Serializable data class RetreatRule(val delay: Double = 1.5)
+
+/**
+ * «Волк-одиночка» (since server 0.62.0): a hero fighting without a party deals [dealt] percent more
+ * of every damage and takes [taken] percent less. A second fighter in the party ends it.
+ */
+@Serializable data class LoneWolfRule(val dealt: Double = 10.0, val taken: Double = 10.0)
 @Serializable data class DeathRule(val fromLevel: Int = 10, val experienceShare: Double = 5.0)
 
 /**
@@ -156,6 +162,7 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
     val retreat: RetreatRule = RetreatRule(), val death: DeathRule = DeathRule(),
     /** Since server 0.36.0: no "+% to maximum resistance" lifts a resistance past [resistHardCap], and no reduction shortens an ailment by more than [ailmentDurationCap] percent. */
     val resistHardCap: Double = 90.0, val ailmentDurationCap: Double = 75.0,
+    val loneWolf: LoneWolfRule = LoneWolfRule(),
     val ailments: List<AilmentRule> = listOf(
         AilmentRule("BURNING", "STOCK_ATTACK_FIRE", 30.0, 60.0, 4.0, heroChance = 0.0),
         AilmentRule("CHILLED", "STOCK_ATTACK_COLD", 100.0, 15.0, 2.0),

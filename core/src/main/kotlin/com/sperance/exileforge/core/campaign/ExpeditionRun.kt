@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.campaign
 
+import com.sperance.exileforge.core.model.campaign.LoneWolfRule
 import com.sperance.exileforge.core.model.campaign.CampaignFall
 import com.sperance.exileforge.core.model.campaign.CampaignMap
 import com.sperance.exileforge.core.model.campaign.CampaignRarity
@@ -40,6 +41,8 @@ data class FoeView(
     val held: Boolean,
     val alive: Boolean,
     val reachable: Boolean,
+    /** Taunts (2.71.0): while it stands the hero must strike it, past any row. */
+    val taunt: Boolean = false,
 ) {
     val ranged: Boolean get() = monster.ranged
 }
@@ -70,6 +73,10 @@ data class FightHud(
     val paused: Boolean = false,
     val target: Int? = null,
     val focus: Int? = null,
+    /** The hero fights alone and has the «Волк-одиночка» bonus (2.71.0), and how much of it. */
+    val loneWolf: LoneWolfRule? = null,
+    /** The hero taunts (2.71.0): it will matter once they have a party to cover. */
+    val heroTaunt: Boolean = false,
 ) {
     /** Nothing is moving and the pack is laid open: before «В бой», or paused. */
     val scouting: Boolean get() = outcome == null && (!started || paused)
@@ -446,7 +453,7 @@ class ExpeditionRun(
         }
         val foes = battle.foeFighters.map { f ->
             FoeView(f.index, agent.pack[members[f.index]], f.life.roundToInt(), f.body.maxLife.roundToInt(), f.shield.roundToInt(), f.body.maxShield.roundToInt(),
-                battle.swing(f), ailments(f), f.held, f.alive, battle.reachable(f.index))
+                battle.swing(f), ailments(f), f.held, f.alive, battle.reachable(f.index), f.body.taunt)
         }
         return FightHud(
             leader = agent.monster, foes = foes,
@@ -459,6 +466,7 @@ class ExpeditionRun(
             events = battle.events.toList().asReversed(),
             started = started, paused = paused,
             target = battle.target()?.index, focus = battle.focus,
+            loneWolf = rules.loneWolf.takeIf { battle.loneWolf }, heroTaunt = hero.taunt,
         )
     }
 

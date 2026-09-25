@@ -44,7 +44,6 @@ fun itemVisualKind(doc: JsonObject): ItemVisualKind = when {
         "BELT" -> ItemVisualKind.BELT; "SHIELD" -> ItemVisualKind.SHIELD; "WINGS" -> ItemVisualKind.WINGS
         else -> when {
             doc.text("subCategory") == "STONE" -> ItemVisualKind.GEM
-            doc.text("category") == "CONSUMABLE" -> ItemVisualKind.FLASK
             doc.text("category") == CURRENCY_CATEGORY || doc.text("category").endsWith("_STOCK") -> ItemVisualKind.CURRENCY
             else -> ItemVisualKind.ITEM
         }

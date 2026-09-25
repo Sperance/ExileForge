@@ -47,7 +47,6 @@ val Glyph.vector: ImageVector get() = when (this) {
     Glyph.CRAFT -> ForgeGlyphs.Anvil
     Glyph.MAP -> ForgeGlyphs.Atlas
     Glyph.GEM -> ForgeGlyphs.Gem
-    Glyph.FLASK -> ForgeGlyphs.Flask
     Glyph.IMAGE -> Icons.Outlined.Image
     Glyph.INFO -> ForgeGlyphs.Sigil
     Glyph.ALERT -> Icons.Outlined.ErrorOutline

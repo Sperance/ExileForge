@@ -25,7 +25,7 @@ private fun choice(key: String, label: String, options: List<String>, default: S
 private fun flag(key: String, label: String, default: Boolean = false) = FormField(key, label, InputSpec.Flag, JsonPrimitive(default))
 private fun list(key: String, label: String, spec: InputSpec) = FormField(key, label, InputSpec.ListOf(spec), JsonArray(emptyList()))
 
-val itemCategories = listOf("WOOD_STOCK", "STONE_STOCK", "CONSUMABLE", "MATERIAL", "QUEST")
+val itemCategories = listOf("WOOD_STOCK", "STONE_STOCK", "MATERIAL", "QUEST")
 
 fun schemaFields(schema: String, document: JsonObject = JsonObject(emptyMap())): List<FormField> = when (schema) {
     // No name or description here since 0.14.0: a document carries a code and the words live in

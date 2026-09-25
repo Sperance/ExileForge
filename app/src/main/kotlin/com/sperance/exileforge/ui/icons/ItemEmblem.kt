@@ -50,7 +50,6 @@ import com.sperance.exileforge.core.i18n.ui
                 ItemVisualKind.BELT -> { shape(15f to 30f,65f to 30f,65f to 52f,15f to 52f);shape(30f to 26f,50f to 26f,50f to 56f,30f to 56f);line(40f,41f,57f,41f) }
                 ItemVisualKind.SHIELD -> { shape(40f to 15f,61f to 24f,57f to 49f,40f to 66f,23f to 49f,19f to 24f);line(40f,22f,40f,56f);line(28f,34f,52f,34f) }
                 ItemVisualKind.WINGS -> { shape(37f to 59f,16f to 34f,17f to 16f,35f to 33f);shape(43f to 59f,64f to 34f,63f to 16f,45f to 33f) }
-                ItemVisualKind.FLASK -> { shape(32f to 12f,48f to 12f,48f to 28f,58f to 46f,58f to 68f,22f to 68f,22f to 46f,32f to 28f); line(22f,46f,58f,46f); line(30f,55f,50f,55f,1.5f) }
                 ItemVisualKind.GEM -> { shape(40f to 10f,64f to 32f,52f to 68f,28f to 68f,16f to 32f); line(16f,32f,64f,32f,1.5f); line(40f,10f,28f,32f,1.5f); line(40f,10f,52f,32f,1.5f); line(28f,32f,40f,68f,1.5f); line(52f,32f,40f,68f,1.5f) }
                 ItemVisualKind.MAP -> { shape(14f to 20f,32f to 14f,48f to 24f,66f to 17f,66f to 60f,48f to 66f,32f to 56f,14f to 62f); line(32f,14f,32f,56f,1.5f); line(48f,24f,48f,66f,1.5f) }
                 ItemVisualKind.SCROLL -> { shape(22f to 12f,58f to 12f,58f to 68f,22f to 68f); line(22f,22f,58f,22f); line(22f,58f,58f,58f); line(31f,34f,49f,34f,1.5f); line(31f,44f,49f,44f,1.5f) }

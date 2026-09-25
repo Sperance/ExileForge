@@ -154,7 +154,7 @@ sealed interface RunCommand {
  *
  * The hero's life carries from fight to fight and **does not return while walking** (since
  * 2.29.0): life comes back only in a fight — by regeneration or leech — or once from each
- * fountain the map holds (since 2.48.0). The flask left the game in 2.57.0. The shield is whole
+ * fountain the map holds (since 2.48.0). The shield is whole
  * again after every fight. A lost fight ends the run and keeps everything already looted; a fight the hero walked out
  * of, or that ran out of time, leaves the monster standing and calm for a while.
  */

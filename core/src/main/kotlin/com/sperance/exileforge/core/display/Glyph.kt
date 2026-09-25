@@ -15,7 +15,7 @@ import com.sperance.exileforge.core.model.modifier.ModifierDefinition
 enum class Glyph {
     LIFE, MANA, SHIELD, FIRE, COLD, LIGHTNING, CHAOS, ATTACK, DEFENCE, EVASION, SPEED, CRITICAL,
     ATTRIBUTE, LEECH, LEVEL, CURRENCY, CHARACTER, ITEM, RARITY, STATE, TREE, TEXT, RULE, REFERENCE,
-    IDENTITY, SERVER, CRAFT, MAP, GEM, FLASK, IMAGE, INFO, ALERT;
+    IDENTITY, SERVER, CRAFT, MAP, GEM, IMAGE, INFO, ALERT;
 
     companion object {
         /**

@@ -43,8 +43,6 @@ object ForgeGlyphs {
     val Orb = glyph("Orb", { ring(12f, 12f, 8f) }, { poly(12f to 6f, 17f to 12f, 12f to 18f, 7f to 12f) }, { ring(12f, 12f, 2.2f) })
     /** Cut skill gem. */
     val Gem = glyph("Gem", { poly(12f to 2f, 20f to 9f, 16f to 21f, 8f to 21f, 4f to 9f) }, { line(4f, 9f, 20f, 9f); line(12f, 2f, 8f, 9f); line(12f, 2f, 16f, 9f); line(8f, 9f, 12f, 21f); line(16f, 9f, 12f, 21f) })
-    /** Utility flask. */
-    val Flask = glyph("Flask", { poly(9f to 2f, 15f to 2f, 15f to 7f, 19f to 14f, 19f to 21f, 5f to 21f, 5f to 14f, 9f to 7f) }, { line(5f, 14f, 19f, 14f); line(8f, 2f, 16f, 2f) })
     /** Great helm: the hero sheet. */
     val Helm = glyph("Helm", { poly(5f to 20f, 5f to 10f, 9f to 4f, 15f to 4f, 19f to 10f, 19f to 20f, 14f to 17f, 12f to 21f, 10f to 17f) }, { line(12f, 6f, 12f, 16f); line(7f, 12f, 10f, 13f); line(14f, 13f, 17f, 12f) })
     /** Kite shield with a rune bar. */

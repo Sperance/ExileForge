@@ -15,12 +15,13 @@ import kotlinx.serialization.json.*
 @Serializable data class CatalogFilter(
     val query: String = "", val slot: String = "", val rarity: String = "",
     val minLevel: String = "", val maxLevel: String = "", val weaponType: String = "",
-    /** A pool tag: templates that roll from it or sit in it (since server 0.39.0). */
+    /** A pool tag: templates that roll from it or sit in it, and the pools of that tag (server 0.56.0). */
     val pool: String = "",
 ) {
     val isEmpty: Boolean get() = listOf(query, slot, rarity, minLevel, maxLevel, weaponType, pool).all { it.isBlank() }
 
-    fun matches(document: JsonObject): Boolean {
+    /** @param members the codes the pools of tag [pool] hold: what "sits in it" means since pools left the records. */
+    fun matches(document: JsonObject, members: Set<String> = emptySet()): Boolean {
         val level = document.text("itemLevel").toIntOrNull()
         // Content carries a code, not a name, so the text is matched against what the player is
         // actually shown — the locale bundle's string — as well as the code and the raw fields.
@@ -31,6 +32,7 @@ import kotlinx.serialization.json.*
             && (weaponType.isBlank() || document.text("weaponType") == weaponType)
             && (minLevel.toIntOrNull()?.let { level != null && level >= it } ?: true)
             && (maxLevel.toIntOrNull()?.let { level != null && level <= it } ?: true)
-            && (pool.isBlank() || (document["modifierPools"] as? JsonArray).orEmpty().any { it.jsonPrimitive.content == pool } || (document["pools"] as? JsonObject)?.containsKey(pool) == true)
+            && (pool.isBlank() || (document["modifierPools"] as? JsonArray).orEmpty().any { it.jsonPrimitive.content == pool }
+                || document.text("code") in members || (document.containsKey("entries") && document.text("code") == pool))
     }
 }

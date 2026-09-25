@@ -62,10 +62,10 @@ object MapEffects {
 
     /** A map item's rolls summed per stat, as the server sums them on entry: display, never sent back. */
     fun of(params: List<Modifier>, definitions: List<ModifierDefinition>): Map<String, Double> {
-        val byId = definitions.associateBy { it.id }
+        val byCode = definitions.associateBy { it.code }
         val effects = mutableMapOf<String, Double>()
         params.forEach { modifier ->
-            byId[modifier.modifierId]?.effects?.forEachIndexed { index, effect -> effects.merge(effect.stat, modifier.values.getOrElse(index) { 0.0 }, Double::plus) }
+            byCode[modifier.modifierCode]?.effects?.forEachIndexed { index, effect -> effects.merge(effect.stat, modifier.values.getOrElse(index) { 0.0 }, Double::plus) }
         }
         return effects
     }

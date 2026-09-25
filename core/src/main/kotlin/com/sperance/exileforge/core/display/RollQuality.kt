@@ -27,7 +27,7 @@ fun rollQuality(modifier: JsonObject, definitions: List<ModifierDefinition>): Do
 
 /** The tier's ranges as the card prints them: "70–79", a fixed one as its single number, effects split by " / ". */
 fun rollRange(modifier: JsonObject, definitions: List<ModifierDefinition>): String? {
-    val definition = definitions.definition(modifier.text("modifierId"))
+    val definition = definitions.definition(modifier.text("modifierCode"))
     val ranges = tierRanges(modifier, definitions) ?: return null
     return ranges.mapIndexedNotNull { index, range ->
         val (low, high) = range.takeIf { it.size == 2 } ?: return@mapIndexedNotNull null
@@ -46,7 +46,7 @@ data class RollSummary(val quality: Int?, val openSlots: Int?, val bestTier: Int
 fun rollSummary(document: JsonObject, lines: List<JsonObject>, definitions: List<ModifierDefinition>): RollSummary {
     val qualities = lines.mapNotNull { rollQuality(it, definitions) }
     val affixes = lines.count { line ->
-        definitions.definition(line.text("modifierId"))?.source.let { it == ModifierSource.PREFIX || it == ModifierSource.SUFFIX }
+        definitions.definition(line.text("modifierCode"))?.source.let { it == ModifierSource.PREFIX || it == ModifierSource.SUFFIX }
     }
     return RollSummary(
         quality = qualities.takeIf { it.isNotEmpty() }?.let { Math.round(it.average() * 100).toInt() },
@@ -66,7 +66,7 @@ private val RANKED = setOf(AffixKind.PREFIX, AffixKind.SUFFIX, AffixKind.FRACTUR
 
 private fun tierRanges(modifier: JsonObject, definitions: List<ModifierDefinition>): List<List<Double>>? {
     val tier = modifier.text("tier").toIntOrNull()?.takeIf { it > 0 } ?: return null
-    return definitions.definition(modifier.text("modifierId"))?.tiers?.firstOrNull { it.tier == tier }?.values?.takeIf { it.isNotEmpty() }
+    return definitions.definition(modifier.text("modifierCode"))?.tier(tier)?.values?.takeIf { it.isNotEmpty() }
 }
 
 private fun rolledNumbers(modifier: JsonObject): List<Double> =

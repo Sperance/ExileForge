@@ -14,6 +14,7 @@ import com.sperance.exileforge.core.i18n.LocaleKey
 import com.sperance.exileforge.core.i18n.serverLocale
 import com.sperance.exileforge.core.model.Catalog
 import com.sperance.exileforge.core.model.CatalogFilter
+import com.sperance.exileforge.core.model.modifier.PoolKind
 import com.sperance.exileforge.core.model.command.ItemStack
 import com.sperance.exileforge.core.model.command.RedemptionCode
 import com.sperance.exileforge.core.model.command.RedemptionKind
@@ -157,7 +158,7 @@ class ServerIntegrationTest {
         suspend fun give(which: CurrencyOrb, amount: Long) = api.hero.adjustItems(id, listOf(ItemStack(orb(which), amount)))
         suspend fun owned(itemId: String) = api.hero.bag(id).firstOrNull { it.itemId == itemId }?.amount ?: 0L
         fun affixes(params: List<com.sperance.exileforge.core.model.modifier.Modifier>) = params.mapNotNull { param ->
-            definitions.firstOrNull { it.id == param.modifierId }?.takeIf { it.source.name in setOf("PREFIX", "SUFFIX") }
+            definitions.firstOrNull { it.code == param.modifierCode }?.takeIf { it.source.name in setOf("PREFIX", "SUFFIX") }
         }
 
         give(CurrencyOrb.ORB_OF_SCOURING, 2); give(CurrencyOrb.ORB_OF_TRANSMUTATION, 1); give(CurrencyOrb.ORB_OF_ANNULMENT, 2)
@@ -182,14 +183,14 @@ class ServerIntegrationTest {
         give(CurrencyOrb.valueOf(recipe.orb), recipe.amount * 2)
         val crafted = api.hero.craft(id, magic, recipe.code)
         assertTrue(serverLocale.contains(crafted.messageKey), "no text for ${crafted.messageKey}")
-        assertTrue(crafted.item.params.any { it.modifierId == recipe.modifierId && it.tier == recipe.tier }, "the bench placed nothing: ${crafted.item.params}")
-        assertTrue(definitions.single { it.id == recipe.modifierId }.crafted)
+        assertTrue(crafted.item.params.any { it.modifierCode == recipe.modifierCode && it.tier == recipe.tier }, "the bench placed nothing: ${crafted.item.params}")
+        assertTrue(definitions.single { it.code == recipe.modifierCode }.crafted)
         assertEquals(recipe.amount, owned(recipe.orbItemId), "the bench took the wrong price")
         // One crafted modifier per item, and a refusal costs nothing.
         assertEquals("CR_015", assertFailsWith<ApiFailure> { api.hero.craft(id, magic, recipe.code) }.code)
         assertEquals(recipe.amount, owned(recipe.orbItemId), "a refused craft was paid for")
         val uncrafted = api.hero.uncraft(id, magic)
-        assertTrue(uncrafted.item.params.none { it.modifierId == recipe.modifierId }, "the crafted modifier stayed")
+        assertTrue(uncrafted.item.params.none { it.modifierCode == recipe.modifierCode }, "the crafted modifier stayed")
 
         // A fractured affix survives a reroll.
         give(CurrencyOrb.FRACTURING_ORB, 1); give(CurrencyOrb.CHAOS_ORB, 1); give(CurrencyOrb.SHAPERS_ORB, 1)
@@ -204,9 +205,25 @@ class ServerIntegrationTest {
         if (affixes(rerolled).size >= 6) api.hero.applyOrb(id, rare.id, orb(CurrencyOrb.ORB_OF_ANNULMENT))
         val shaped = api.hero.applyOrb(id, rare.id, orb(CurrencyOrb.SHAPERS_ORB)).item
         assertEquals("SHAPER", shaped.influence)
-        assertTrue(shaped.params.any { param -> definitions.firstOrNull { it.id == param.modifierId }?.influence == "SHAPER" },
+        assertTrue(shaped.params.any { param -> definitions.firstOrNull { it.code == param.modifierCode }?.influence == "SHAPER" },
             "the Shaper's Orb added nothing of the Shaper's: ${shaped.params}")
         assertTrue(fractured in shaped.params, "the fractured affix was lost")
+    }
+
+    /** Pools are a catalogue of their own since server 0.56.0: read by anyone, written by an administrator. */
+    private suspend fun poolsAreTheServers(api: GameApi, definitions: List<com.sperance.exileforge.core.model.modifier.ModifierDefinition>) {
+        val pools = api.world.pools()
+        assertTrue(pools.any { it.kind == PoolKind.MODIFIER && it.code == "helmet" && it.entries.isNotEmpty() }, "no helmet pool among ${pools.map { it.code }}")
+        assertTrue(pools.filter { it.kind == PoolKind.MODIFIER }.flatMap { it.entries.keys }.all { code -> definitions.any { it.code == code } },
+            "a modifier pool names a modifier the server does not have")
+        val tag = "ef_test:${System.nanoTime()}"
+        val pool = api.catalog.create(Catalog.POOLS, JsonObject(template(Catalog.POOLS) + ("code" to JsonPrimitive(tag))))
+        assertEquals(tag, pool.text("code"))
+        val weighed = api.catalog.update(Catalog.POOLS, pool.entityId, buildJsonObject { put("entries", buildJsonObject { put(definitions.first().code, 3) }) })
+        assertEquals("3", (weighed["entries"] as? JsonObject)?.text(definitions.first().code), "the pool kept no weight: $weighed")
+        assertEquals(1, api.catalog.search(Catalog.POOLS, 0, CatalogFilter(query = tag)).items.size)
+        api.catalog.delete(Catalog.POOLS, pool.entityId)
+        assertNull(api.catalog.get(Catalog.POOLS, pool.entityId))
     }
 
     /** The merchant's shelf and the map services (0.34.0): the server's rolls, prices and refusals. */
@@ -285,6 +302,8 @@ class ServerIntegrationTest {
         val world = com.sperance.exileforge.core.model.sync.WorldTables.parse(manifest.world.hash, api.files.worldDocument(manifest.world.file))
         assertEquals(api.catalog.equipment().size, world.equipment.size)
         assertEquals(api.world.modifiers().size, world.modifiers.size)
+        // Since server 0.56.0 the pools ride along: the same list the catalogue "Pools" serves.
+        assertEquals(api.world.pools().map { it.kind to it.code }.toSet(), world.pools.map { it.kind to it.code }.toSet())
         assertTrue(world.orbs.isNotEmpty() && world.classes.isNotEmpty() && world.tree.isNotEmpty() && world.stats.stats.isNotEmpty())
         val first = assertNotNull(api.hero.view(id, HeroParts(id)))
         val held = HeroParts(id).merge(first)
@@ -340,8 +359,13 @@ class ServerIntegrationTest {
         assertTrue(definitions.isNotEmpty())
         assertTrue(definitions.any { it.composite })
         val described = definitions.firstOrNull { it.effects.isNotEmpty() } ?: fail("no definition carries an effect: $definitions")
-        val tiers = api.world.tiers(described.id)
-        assertTrue(tiers.isNotEmpty() && tiers.all { it.values.isNotEmpty() }, "tiers of ${described.code}: $tiers")
+        // Since server 0.56.0 the tiers sit inside the definition: a `[min, max]` per effect, best first.
+        val tiers = described.tiers
+        assertTrue(tiers.isNotEmpty() && tiers.all { it.values.size == described.effects.size && it.values.all { range -> range.size == 2 } },
+            "tiers of ${described.code}: $tiers")
+        assertTrue(tiers.zipWithNext().all { (better, worse) -> better.level >= worse.level }, "tiers of ${described.code} are not best first: $tiers")
+
+        poolsAreTheServers(api, definitions)
         // The key this client builds has to be the key the server wrote, or the template is the code.
         assertTrue(serverLocale.contains(LocaleKey.modifierName(described.code)), "no text for ${described.code}")
         assertNotEquals(described.code, described.template)
@@ -406,10 +430,10 @@ class ServerIntegrationTest {
             val instance = api.hero.grant(id, template.entityId)
             assertEquals(template.entityId, instance.equipmentId)
             assertTrue(instance.params.isNotEmpty(), "the server rolled no modifiers")
-            assertTrue(instance.params.all { it.modifierId in definitions.map { definition -> definition.id } })
+            assertTrue(instance.params.all { it.modifierCode in definitions.map { definition -> definition.code } })
             // One value per effect of the description: a composite modifier rolls all of them at once.
             instance.params.forEach { rolled ->
-                val definition = definitions.firstOrNull { it.id == rolled.modifierId } ?: fail("rolled $rolled names no known definition")
+                val definition = definitions.firstOrNull { it.code == rolled.modifierCode } ?: fail("rolled $rolled names no known definition")
                 assertEquals(definition.effects.size, rolled.values.size, "${definition.code} rolled ${rolled.values}")
             }
             assertFalse(instance.equipped)

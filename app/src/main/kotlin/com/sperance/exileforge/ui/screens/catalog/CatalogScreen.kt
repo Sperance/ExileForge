@@ -43,6 +43,7 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
                     Catalog.CHARACTERS -> EntitySource.CHARACTER
                     Catalog.EQUIPMENT -> EntitySource.EQUIPMENT
                     Catalog.ITEMS -> EntitySource.ITEM
+                    Catalog.POOLS -> EntitySource.POOL
                 }, !s.busy && !s.admin.editorOpen && s.account.signedIn, vm::open)
                 Button(enabled = !s.busy && !s.admin.editorOpen && s.canEdit, onClick = { vm.create() }, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Outlined.Add, null); Text(ui("common.create"))

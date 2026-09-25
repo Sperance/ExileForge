@@ -3,7 +3,6 @@ package com.sperance.exileforge.core.editor
 import com.sperance.exileforge.core.contract.modifierOperations
 import com.sperance.exileforge.core.contract.modifierSources
 import com.sperance.exileforge.core.contract.rarities
-import com.sperance.exileforge.core.contract.requireId
 import com.sperance.exileforge.core.contract.slots
 import com.sperance.exileforge.core.contract.text
 import com.sperance.exileforge.core.contract.weapons
@@ -11,6 +10,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.Catalog
 import com.sperance.exileforge.core.model.EntitySource
 import com.sperance.exileforge.core.model.EquipmentKind
+import com.sperance.exileforge.core.model.modifier.PoolKind
 import com.sperance.exileforge.core.model.character.battleStats
 import com.sperance.exileforge.core.model.character.boolStats
 import com.sperance.exileforge.core.model.character.professionStats
@@ -54,13 +54,18 @@ fun schemaFields(schema: String, document: JsonObject = JsonObject(emptyMap())):
             num("requiredIntelligence", ui("field.required_intelligence"), 0, true, 0.0)))
         // The base — armour, damage, attack speed — is fixed modifiers rather than stat fields.
         add(list("baseParams", ui("field.base"), InputSpec.Object("fixedModifier")))
-        // Implicits and a unique's lines: ModifierDefinition ids that sit on every copy.
-        add(list("fixedModifierIds", ui("field.fixed_modifiers"), InputSpec.Reference(EntitySource.MODIFIER)))
-        // Since server 0.39.0 a pool is a tag: the template names the ones it rolls affixes from, and
-        // which pools it sits in itself. What lands on an instance is still rolled by the server.
+        // Implicits and a unique's lines: ModifierDefinition codes that sit on every copy.
+        add(list("fixedModifierCodes", ui("field.fixed_modifiers"), InputSpec.Reference(EntitySource.MODIFIER)))
+        // A pool is a tag: the template names the ones it rolls affixes from. Which pools it sits in
+        // itself is the pools' own list since server 0.56.0 (catalogue "Pools").
         add(list("modifierPools", ui("field.modifier_pools"), InputSpec.Text()))
-        add(FormField("pools", ui("field.pools"), InputSpec.Weights, JsonObject(emptyMap())))
     }
+    // A pool (server 0.56.0): its tag, its kind and the codes it holds with their weights.
+    "pool" -> listOf(
+        text("code", ui("field.pool_tag"), "ef_test_pool"),
+        choice("kind", ui("field.pool_kind"), PoolKind.entries.map { it.name }),
+        FormField("entries", ui("field.pool_entries"), InputSpec.Weights, JsonObject(emptyMap())),
+    )
     "character" -> listOf(
         text("name", ui("common.name")),
         text("description", ui("form.description")),
@@ -70,7 +75,7 @@ fun schemaFields(schema: String, document: JsonObject = JsonObject(emptyMap())):
     )
     /** A modifier with values but no tier: an item's base, a class conversion, a tree node's bonus. */
     "fixedModifier" -> listOf(
-        reference("modifierId", ui("field.modifier"), EntitySource.MODIFIER),
+        reference("modifierCode", ui("field.modifier"), EntitySource.MODIFIER),
         list("values", ui("field.values"), InputSpec.Number()))
     "professionSkill", "battleSkill" -> listOf(
         choice("stat", ui("field.skill"), if (schema == "professionSkill") professionStats else battleStats),
@@ -83,8 +88,7 @@ fun schemaFields(schema: String, document: JsonObject = JsonObject(emptyMap())):
         choice("source", ui("field.source"), modifierSources, "PREFIX"),
         flag("isLocal", ui("field.local")),
         list("effects", ui("field.effects"), InputSpec.Object("modifierEffect")),
-        list("tags", ui("field.tags"), InputSpec.Text(emptyList())),
-        FormField("pools", ui("field.pools"), InputSpec.Weights, JsonObject(emptyMap())))
+        list("tags", ui("field.tags"), InputSpec.Text(emptyList())))
     // An effect with perStat is a conversion: the value is multiplied by the whole steps of a source stat.
     "modifierEffect" -> listOf(
         text("stat", ui("field.stat"), stockStats.first(), stockStats),
@@ -102,7 +106,7 @@ fun defaultValue(spec: InputSpec, fallback: JsonElement = JsonNull): JsonElement
     else -> fallback
 }
 
-fun formSchema(catalog: Catalog) = when (catalog) { Catalog.ITEMS -> "items"; Catalog.EQUIPMENT -> "equipment"; Catalog.CHARACTERS -> "character" }
+fun formSchema(catalog: Catalog) = when (catalog) { Catalog.ITEMS -> "items"; Catalog.EQUIPMENT -> "equipment"; Catalog.CHARACTERS -> "character"; Catalog.POOLS -> "pool" }
 
 fun validateForm(schema: String, document: JsonObject) {
     schemaFields(schema, document).forEach { field ->
@@ -115,7 +119,7 @@ fun validateForm(schema: String, document: JsonObject) {
                     val n = p?.doubleOrNull
                     require(p != null && !p.isString && n != null && n.isFinite() && (!spec.integer || p.longOrNull != null) && (spec.min == null || n >= spec.min) && (spec.max == null || n <= spec.max)) { ui("form.invalid_number", field.label) }
                 }
-                is InputSpec.Reference -> requireId(element.jsonPrimitive.content)
+                is InputSpec.Reference -> spec.source.requireReference(element.jsonPrimitive.content)
                 is InputSpec.Text -> require(element is JsonPrimitive && element.isString) { ui("form.text_required", field.label) }
                 InputSpec.Weights -> require(element is JsonObject && element.all { (tag, weight) -> tag.isNotBlank() && (weight as? JsonPrimitive)?.takeUnless { it.isString }?.longOrNull?.let { it >= 0 } == true }) { ui("form.weights_required", field.label) }
                 InputSpec.Flag -> require(element is JsonPrimitive && !element.isString && element.booleanOrNull != null) { ui("form.bool_required", field.label) }

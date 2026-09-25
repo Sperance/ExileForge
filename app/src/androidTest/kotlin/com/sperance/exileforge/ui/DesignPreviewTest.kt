@@ -22,10 +22,10 @@ class DesignPreviewTest {
     @Test fun cardsDisplayIconsPropertiesAndActions() {
         // An inventory instance as the hero screen projects it: `inventoryDocument` writes the
         // `name` from the dictionary, so the card is fed the same shape it gets in the app.
-        fun item(name: String, slot: String, modifierId: String, value: Int) = buildJsonObject {
+        fun item(name: String, slot: String, modifierCode: String, value: Int) = buildJsonObject {
             put("name", name); put("slot", slot); put("rarity", "RARE"); put("itemLevel", 85)
             put("params", buildJsonArray {
-                add(buildJsonObject { put("modifierId", modifierId); put("tier", 1); put("values", buildJsonArray { add(value) }) })
+                add(buildJsonObject { put("modifierCode", modifierCode); put("tier", 1); put("values", buildJsonArray { add(value) }) })
             })
         }
         compose.setContent { ForgeTheme {

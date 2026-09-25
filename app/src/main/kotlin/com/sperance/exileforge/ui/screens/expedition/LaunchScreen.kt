@@ -163,7 +163,7 @@ private data class MapLine(val text: String, val kind: MapLineKind, val risk: Do
 private fun lines(map: StashMap, s: ForgeState, rule: MapRule): List<MapLine> {
     val documents = (map.document["params"] as? JsonArray).orEmpty().mapNotNull { it as? JsonObject }
     return map.instance.params.mapIndexed { index, modifier ->
-        val effects = s.world.definitions.definition(modifier.modifierId)?.effects.orEmpty()
+        val effects = s.world.definitions.definition(modifier.modifierCode)?.effects.orEmpty()
         val kinds = effects.map { rule.kindOf(it.stat) }
         val kind = when { MapLineKind.HARM in kinds -> MapLineKind.HARM; MapLineKind.REWARD in kinds -> MapLineKind.REWARD; else -> MapLineKind.CONTENT }
         val risk = effects.withIndex().sumOf { (i, effect) -> rule.riskOf(effect.stat, modifier.values.getOrElse(i) { 0.0 }) }

@@ -66,7 +66,7 @@ class HeroPanelTest {
      */
     @Test fun equippedSlotShowsItsTemplateAndEmitsTheInstanceId() {
         val instance = EquipmentInstance("ring-instance", "hero", "ring-base",
-            listOf(RolledModifier("life-modifier", listOf(42.0), "tier-1", 1)), equippedSlot = "RING")
+            listOf(RolledModifier("life-modifier", listOf(42.0), 1)), equippedSlot = "RING")
         val base = buildJsonObject { put("_id", "ring-base"); put("code", "HERO_RING"); put("slot", "RING"); put("rarity", "RARE") }
         val hero = HeroView(CharacterSummary("hero", "owner", "Изгнанник", version = 3, level = 10),
             listOf(instance), CharacterSheet("hero", 10, mapOf("STOCK_HEALTH" to 88.0, "STOCK_ARMOR" to 40.0), listOf("ring-instance")))

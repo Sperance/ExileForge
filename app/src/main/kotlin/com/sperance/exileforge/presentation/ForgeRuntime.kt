@@ -410,7 +410,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
         worldHash = tables.hash
         mutable.update { it.copy(
             world = it.world.copy(definitions = tables.modifiers, classes = tables.classes, treeNodes = tables.tree, levels = tables.levels,
-                inventoryBases = tables.equipment, statTables = tables.stats, orbs = tables.orbs, materials = tables.materials),
+                inventoryBases = tables.equipment, statTables = tables.stats, orbs = tables.orbs, materials = tables.materials, pools = tables.pools),
             play = it.play.copy(draftClass = it.play.draftClass.ifBlank { tables.classes.firstOrNull()?.id.orEmpty() },
                 selectedOrb = it.play.selectedOrb.ifBlank { tables.orbs.firstOrNull()?.id.orEmpty() })) }
     }

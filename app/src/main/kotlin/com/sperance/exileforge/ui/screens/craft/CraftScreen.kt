@@ -23,7 +23,6 @@ import com.sperance.exileforge.core.display.affixMarks
 import com.sperance.exileforge.core.display.inventoryDocument
 import com.sperance.exileforge.core.display.modifierText
 import com.sperance.exileforge.core.display.recipeText
-import com.sperance.exileforge.core.display.retired
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.currency.CurrencyOrb
 import com.sperance.exileforge.core.model.hero.EquipmentInstance
@@ -138,8 +137,7 @@ private val ForgeSection.title get() = when (this) {
 @Composable private fun BenchLedger(s: ForgeState, instance: EquipmentInstance, chosen: String, onChoose: (String) -> Unit) {
     val document = inventoryDocument(instance, s.world.inventoryBases[instance.equipmentId])
     val owned = s.play.hero?.bag.orEmpty().associate { it.itemId to it.amount }
-    // A bench line of mana or spells is not offered since 2.48.0.
-    val recipes = s.world.bench.filter { recipe -> recipe.fits(document.text("slot")) && s.world.definitions.firstOrNull { it.id == recipe.modifierId }?.retired() != true }
+    val recipes = s.world.bench.filter { recipe -> recipe.fits(document.text("slot")) }
         .sortedWith(compareBy({ it.source }, { it.modifierCode }, { -it.tier }))
     val crafted = craftedModifier(s, document)
     Column {

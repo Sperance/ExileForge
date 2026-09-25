@@ -6,6 +6,7 @@ import com.sperance.exileforge.core.editor.validateForm
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.Catalog
 import com.sperance.exileforge.core.model.EquipmentKind
+import com.sperance.exileforge.core.model.modifier.PoolKind
 import kotlinx.serialization.json.*
 
 val WireJson = Json { ignoreUnknownKeys = true }
@@ -49,9 +50,9 @@ val bodyPlaces = listOf(
 val weapons = listOf("SWORD", "LONGSWORD", "BOW", "WAND", "AXE", "DOUBLEAXE", "DOUBLESWORD", "BLADE")
 val modifierSources = listOf("IMPLICIT", "PREFIX", "SUFFIX", "UNIQUE", "ENCHANTMENT", "CORRUPTION", "PASSIVE")
 val modifierOperations = listOf("ADD", "INCREASED", "MORE", "SET")
-const val SERVER_COMMIT = "5e176954754ca08b9eed86c51fc9f678ef9f53b4"
+const val SERVER_COMMIT = "9eb17da16f23ffd8a270a42c3e73e3f2c389896f"
 const val SERVER_BRANCH = "claude/tender-pasteur-a36kj2"
-const val SERVER_VERSION = "0.55.0"
+const val SERVER_VERSION = "0.56.0"
 
 fun template(catalog: Catalog, kind: EquipmentKind = EquipmentKind.Weapon): JsonObject = when (catalog) {
     Catalog.CHARACTERS -> defaultObject("character")
@@ -65,12 +66,16 @@ fun template(catalog: Catalog, kind: EquipmentKind = EquipmentKind.Weapon): Json
         put("code", "EF_TEST_LEGACY")
         put("slot", when (kind) { EquipmentKind.Weapon -> "WEAPON_1H"; EquipmentKind.Armor -> "BODY"; EquipmentKind.Accessory -> "RING" })
         put("rarity", "RARE"); put("itemLevel", 30)
-        put("fixedModifierIds", JsonArray(emptyList())); put("modifierPools", JsonArray(emptyList())); put("pools", JsonObject(emptyMap()))
+        put("fixedModifierCodes", JsonArray(emptyList())); put("modifierPools", JsonArray(emptyList()))
         // Armour, damage and attack speed are implicit modifiers since 0.10.0: the item has no
         // stat fields of its own, so its base is a list of fixed modifiers like any other source.
         put("baseParams", JsonArray(emptyList()))
         put("requiredLevel", 1); put("requiredStrength", 0); put("requiredDexterity", 0); put("requiredIntelligence", 0)
         if (kind == EquipmentKind.Weapon) { put("weaponType", "SWORD"); put("durability", 100) }
+    }
+    // A pool (server 0.56.0) is a tag of one kind and the codes it holds with their weights.
+    Catalog.POOLS -> buildJsonObject {
+        put("code", "ef_test_pool"); put("kind", PoolKind.MODIFIER.name); put("entries", JsonObject(emptyMap()))
     }
 }
 
@@ -109,8 +114,12 @@ fun diff(original: JsonObject, edited: JsonObject): JsonObject = JsonObject(
 fun validate(document: JsonObject, catalog: Catalog) {
     // A character is named by its player, so it keeps a literal name; everything else is content
     // and carries a code whose text lives in the server's locale bundle.
-    if (catalog == Catalog.CHARACTERS) require(document.text("name").isNotBlank()) { ui("contract.enter_name") }
-    else validateCode(document.text("code"))
+    when (catalog) {
+        Catalog.CHARACTERS -> require(document.text("name").isNotBlank()) { ui("contract.enter_name") }
+        // A pool is named by its tag, and a tag carries `:` (`local:armor`, `boss:BOSS_ALPHA_WOLF`).
+        Catalog.POOLS -> validatePoolTag(document.text("code"))
+        else -> validateCode(document.text("code"))
+    }
     validateForm(formSchema(catalog), document)
     when (catalog) {
         Catalog.CHARACTERS -> validateCharacter(document)
@@ -120,6 +129,25 @@ fun validate(document: JsonObject, catalog: Catalog) {
             require((document["price"] as? JsonPrimitive)?.longOrNull?.let { it >= 0 } == true) { ui("contract.price_whole") }
         }
         Catalog.EQUIPMENT -> validateEquipment(document)
+        Catalog.POOLS -> validatePool(document)
+    }
+}
+
+/** A pool's tag: a code whose parts are joined by `:`. */
+fun validatePoolTag(tag: String) {
+    require(Regex("[A-Za-z0-9_]+(:[A-Za-z0-9_+]+)*").matches(tag)) { ui("contract.pool_tag") }
+}
+
+/**
+ * A pool (server 0.56.0): its kind and the codes it holds. Which records those codes name, and how
+ * a draw weighs them, is the server's; the client only refuses what no pool could hold.
+ */
+fun validatePool(document: JsonObject) {
+    document["kind"]?.let { kind -> require(kind is JsonPrimitive && PoolKind.entries.any { it.name == kind.content }) { ui("contract.pool_kind") } }
+    document["entries"]?.let { entries ->
+        require(entries is JsonObject && entries.all { (code, weight) -> code.isNotBlank() && (weight as? JsonPrimitive)?.takeUnless { it.isString }?.longOrNull?.let { it >= 0 } == true }) {
+            ui("contract.pool_weights")
+        }
     }
 }
 
@@ -163,32 +191,30 @@ fun validateBaseParams(document: JsonObject) {
     require(base is JsonArray) { ui("contract.base_list") }
     base.forEach { raw ->
         val modifier = requireNotNull(raw as? JsonObject) { ui("contract.base_object") }
-        requireId(modifier.text("modifierId"))
+        validateCode(modifier.text("modifierCode"))
         val values = modifier["values"] as? JsonArray
         require(values != null && values.isNotEmpty() && values.all { (it as? JsonPrimitive)?.doubleOrNull?.isFinite() == true }) {
             ui("contract.base_finite")
         }
-        require(modifier.text("tierId").isBlank()) { ui("contract.base_no_tier") }
+        require(modifier.text("tier").ifBlank { "0" } == "0") { ui("contract.base_no_tier") }
     }
 }
 
 /**
  * A template names pools and fixed references, never inline definitions and never rolled values.
  *
- * Since server 0.39.0 a pool is a tag: `modifierPools` are the tags its affixes roll from and `pools`
- * the tags it sits in itself, each with a weight. Which modifiers land on an instance is the server's
- * decision; the fixed ones (implicits, a unique's lines) sit on every copy.
+ * A pool is a tag: `modifierPools` are the tags its affixes roll from. Which pools the template sits
+ * in itself is the pools' own list since server 0.56.0 (catalogue "Pools"). Which modifiers land on
+ * an instance is the server's decision; the fixed ones (implicits, a unique's lines) sit on every
+ * copy and are named by code.
  */
 fun validateModifierPool(document: JsonObject) {
-    document["fixedModifierIds"]?.let { fixed ->
+    document["fixedModifierCodes"]?.let { fixed ->
         require(fixed is JsonArray) { ui("contract.ids_list") }
-        fixed.forEach { requireId((it as? JsonPrimitive)?.contentOrNull.orEmpty()) }
+        fixed.forEach { validateCode((it as? JsonPrimitive)?.contentOrNull.orEmpty()) }
     }
     document["modifierPools"]?.let { tags ->
         require(tags is JsonArray && tags.all { (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.content?.isNotBlank() == true }) { ui("contract.pool_tags") }
-    }
-    document["pools"]?.let { pools ->
-        require(pools is JsonObject && pools.all { (tag, weight) -> tag.isNotBlank() && (weight as? JsonPrimitive)?.longOrNull?.let { it >= 0 } == true }) { ui("contract.pool_weights") }
     }
     require("params" !in document) { ui("contract.rolled_instance") }
 }
@@ -199,7 +225,8 @@ fun editableFields(catalog: Catalog): Set<String> = when (catalog) {
     Catalog.CHARACTERS -> setOf("name", "description")
     Catalog.ITEMS -> setOf("category", "subCategory", "price")
     Catalog.EQUIPMENT -> setOf("slot", "rarity", "itemLevel", "weaponType", "durability",
-        "fixedModifierIds", "modifierPools", "pools", "baseParams", "requiredLevel", "requiredStrength", "requiredDexterity", "requiredIntelligence")
+        "fixedModifierCodes", "modifierPools", "baseParams", "requiredLevel", "requiredStrength", "requiredDexterity", "requiredIntelligence")
+    Catalog.POOLS -> setOf("entries")
 }
 
 /**
@@ -213,4 +240,6 @@ fun creationFields(catalog: Catalog): Set<String> = when (catalog) {
     // A code names the row in the locale bundle, and renaming it would orphan every translation.
     Catalog.EQUIPMENT -> setOf("type", "code")
     Catalog.ITEMS -> setOf("code")
+    // A pool's tag and kind are its identity on the server: a unique pair, the `_id` derived from it.
+    Catalog.POOLS -> setOf("code", "kind")
 }

@@ -30,8 +30,8 @@ import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 
-/** The API revision this client is written against (server 0.52.0: the tree's masteries and attribute nodes). */
-const val API_REVISION = 7
+/** The API revision this client is written against (server 0.56.0: references by code, tiers inside definitions, pools). */
+const val API_REVISION = 8
 
 @Serializable data class WorldManifest(val hash: String = "", val file: String = "world.json")
 
@@ -74,6 +74,8 @@ class WorldTables(
     val orbs: List<CurrencyItem>,
     val materials: List<MaterialItem>,
     val stats: StatTables,
+    /** Every pool of the world (server 0.56.0): what the editor's pool filter and checks name. */
+    val pools: List<com.sperance.exileforge.core.model.modifier.Pool> = emptyList(),
 ) {
     companion object {
         fun parse(hash: String, document: String): WorldTables {
@@ -91,6 +93,7 @@ class WorldTables(
                 items.filter { it.text("category") == MaterialItem.CATEGORY }.map { WireJson.decodeFromJsonElement<MaterialItem>(it) }
                     .sortedWith(compareBy({ it.subCategory }, { it.price })),
                 root["stats"]?.let { WireJson.decodeFromJsonElement<StatTables>(it) } ?: StatTables(),
+                rows("pools").map { WireJson.decodeFromJsonElement(it) },
             )
         }
     }

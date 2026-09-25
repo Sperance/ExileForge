@@ -7,6 +7,7 @@ import com.sperance.exileforge.core.contract.requireId
 import com.sperance.exileforge.core.contract.text
 import com.sperance.exileforge.core.contract.validate
 import com.sperance.exileforge.core.contract.validateModifierPool
+import com.sperance.exileforge.core.contract.validatePool
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.Catalog
 import com.sperance.exileforge.core.model.CatalogFilter
@@ -29,7 +30,10 @@ class CatalogClient internal constructor(private val http: Transport) : ItemRepo
      */
     suspend fun search(catalog: Catalog, page: Int, filter: CatalogFilter): ItemPage {
         requirePage(page)
-        return slice(http.all(route(catalog)).filter(filter::matches), page, CATALOG_PAGE_SIZE)
+        // Which records sit in a pool is the pools' own list since server 0.56.0, not a field of the record.
+        val members = if (filter.pool.isBlank()) emptySet() else http.all("api/v1/${EntitySource.POOL.path}")
+            .filter { it.text("code") == filter.pool }.flatMap { (it["entries"] as? JsonObject)?.keys.orEmpty() }.toSet()
+        return slice(http.all(route(catalog)).filter { filter.matches(it, members) }, page, CATALOG_PAGE_SIZE)
     }
 
     suspend fun referencePage(source: EntitySource, page: Int, query: String = ""): ItemPage {
@@ -75,6 +79,7 @@ class CatalogClient internal constructor(private val http: Transport) : ItemRepo
         require(changes.keys.none { it in protectedFields }) { ui("api.service_fields") }
         require(changes.keys.all { it in editableFields(catalog) }) { ui("api.server_owned") }
         if (catalog == Catalog.EQUIPMENT) validateModifierPool(changes)
+        if (catalog == Catalog.POOLS) validatePool(changes)
         return http.request("PUT", route(catalog), mapOf("id" to id), changes, authenticated = true).let {
             if (it == JsonNull) throw ApiFailure(200, null, ui("api.no_updated_item"))
             it.jsonObject

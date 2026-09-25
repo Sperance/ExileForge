@@ -30,12 +30,14 @@ class CrudScenario(private val repository: ItemRepository, private val pool: Str
                 check(changes.all { (key, value) -> loaded[key] == value })
                 report(CheckResult(label, true, ui("crud.fields_confirmed")))
             }
-            // The two catalogues share no editable field at all, so each writes its most inert one:
+            // The catalogues share no editable field at all, so each writes its most inert one:
             // a price changes nothing about an item, and a required level is only ever printed.
             // Rarity and item level are deliberately left alone — they decide affix capacity and
             // which tiers may roll, so editing them would change what the next copy comes out as.
             update(when (catalog) {
                 Catalog.ITEMS -> buildJsonObject { put("price", 7L) }
+                // A pool of its own test tag: no source names it, so no draw ever reads it.
+                Catalog.POOLS -> buildJsonObject { put("entries", buildJsonObject { put(code, 7) }) }
                 else -> buildJsonObject { put("requiredLevel", 7) }
             }, ui("crud.update"))
             if (catalog == Catalog.EQUIPMENT && pool.isNotBlank()) {

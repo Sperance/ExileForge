@@ -49,7 +49,7 @@ class SheetTest {
 
     private fun template(slot: String, vararg base: Modifier, strength: Int = 0, price: Long = 100) = buildJsonObject {
         put("slot", slot); put("code", slot); put("price", price); put("requiredStrength", strength)
-        put("baseParams", buildJsonArray { base.forEach { add(buildJsonObject { put("modifierId", it.modifierId); put("values", buildJsonArray { it.values.forEach { v -> add(v) } }) }) } })
+        put("baseParams", buildJsonArray { base.forEach { add(buildJsonObject { put("modifierCode", it.modifierCode); put("values", buildJsonArray { it.values.forEach { v -> add(v) } }) }) } })
     }
 
     @Test fun theBaseTheTreeAndTheConversionsComeFirst() {

@@ -75,7 +75,7 @@ object Sheet {
         definitions: List<ModifierDefinition>,
         tables: StatTables,
     ): CharacterSheet {
-        val defs = definitions.associateBy { it.id }
+        val defs = definitions.associateBy { it.code }
         val level = character.level
         val base = baseOn(characterClass, level)
         val treeOps = expand(characterClass?.params.orEmpty(), defs) + expand(nodes.flatMap { it.params }, defs)
@@ -187,7 +187,7 @@ object Sheet {
         (template["baseParams"] as? JsonArray)?.let { runCatching { WireJson.decodeFromJsonElement(ListSerializer(Modifier.serializer()), it) }.getOrNull() }.orEmpty()
 
     private fun expand(modifiers: List<Modifier>, defs: Map<String, ModifierDefinition>): List<Op> = modifiers.flatMap { modifier ->
-        val definition = defs[modifier.modifierId] ?: return@flatMap emptyList()
+        val definition = defs[modifier.modifierCode] ?: return@flatMap emptyList()
         definition.effects.mapIndexedNotNull { index, effect ->
             val value = modifier.values.getOrNull(index) ?: return@mapIndexedNotNull null
             Op(effect.stat, effect.operation, value, effect.perStat, effect.perAmount)
@@ -196,7 +196,7 @@ object Sheet {
 
     /** Local modifiers count inside their own item from a zero base and hand the result out as an ADD. */
     private fun foldItem(modifiers: List<Modifier>, defs: Map<String, ModifierDefinition>, tables: StatTables): List<Op> {
-        val (local, global) = modifiers.partition { defs[it.modifierId]?.isLocal == true }
+        val (local, global) = modifiers.partition { defs[it.modifierCode]?.isLocal == true }
         if (local.isEmpty()) return expand(global, defs)
         val folded = compute(emptyMap(), expand(local, defs), tables).filterValues { it != 0.0 }
             .map { (stat, value) -> Op(stat, ModifierOperation.ADD, value, null, 1.0) }

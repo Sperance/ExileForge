@@ -39,7 +39,7 @@ data class PropertyValue(val stat: String, val base: Double, val total: Double) 
  * [template] is the dictionary's sentence with a `{0}` per value; when the dictionary has no
  * sentence for this modifier it is empty and the caller falls back to naming the stats itself.
  */
-data class BaseProperty(val modifierId: String, val template: String, val values: List<PropertyValue>) {
+data class BaseProperty(val modifierCode: String, val template: String, val values: List<PropertyValue>) {
     val augmented: Boolean get() = values.any { it.augmented }
     /** The whole line as plain text, for a row that cannot colour part of a sentence. */
     fun line(): String {
@@ -63,8 +63,8 @@ fun baseProperties(document: JsonObject, definitions: List<ModifierDefinition>):
     val totals = fold(base + rolled, definitions)
 
     // A base line of mana or spells (a wand's, a Paua ring's) is not shown since 2.48.0: see retired.
-    return base.filterNot { modifier -> definitions.definition(modifier.text("modifierId"))?.retired() == true }.map { modifier ->
-        val definition = definitions.definition(modifier.text("modifierId"))
+    return base.filterNot { modifier -> definitions.definition(modifier.text("modifierCode"))?.retired() == true }.map { modifier ->
+        val definition = definitions.definition(modifier.text("modifierCode"))
         // A definition the client has not read yet still prints its numbers: a value the server
         // wrote should never vanish because the reference tables have not arrived.
         val values = (modifier["values"] as? JsonArray).orEmpty().mapIndexedNotNull { index, raw ->
@@ -73,7 +73,7 @@ fun baseProperties(document: JsonObject, definitions: List<ModifierDefinition>):
             PropertyValue(stat, baseTotals[stat] ?: own, totals[stat] ?: own)
         }
         val template = definition?.template?.takeIf { it != definition.code }
-        BaseProperty(modifier.text("modifierId"), template.orEmpty(), values)
+        BaseProperty(modifier.text("modifierCode"), template.orEmpty(), values)
     }.filter { it.values.isNotEmpty() }
 }
 
@@ -81,7 +81,7 @@ fun baseProperties(document: JsonObject, definitions: List<ModifierDefinition>):
 private fun fold(modifiers: List<JsonObject>, definitions: List<ModifierDefinition>): Map<String, Double> {
     val operations = mutableMapOf<String, MutableList<Pair<ModifierOperation, Double>>>()
     modifiers.forEach { modifier ->
-        val definition = definitions.definition(modifier.text("modifierId")) ?: return@forEach
+        val definition = definitions.definition(modifier.text("modifierCode")) ?: return@forEach
         if (!definition.isLocal) return@forEach
         val values = (modifier["values"] as? JsonArray).orEmpty()
         definition.effects.forEachIndexed { index, effect ->

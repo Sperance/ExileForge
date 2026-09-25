@@ -19,7 +19,7 @@ internal fun inputDefault(spec: InputSpec): JsonElement = when (spec) {
 }
 
 internal fun summary(value: JsonElement): String = when (value) {
-    is JsonObject -> listOf("name", "code", "stat", "itemId", "equipmentId", "modifierId").firstNotNullOfOrNull { value.text(it).takeIf(String::isNotBlank) }.orEmpty()
+    is JsonObject -> listOf("name", "code", "stat", "itemId", "equipmentId", "modifierCode").firstNotNullOfOrNull { value.text(it).takeIf(String::isNotBlank) }.orEmpty()
     is JsonPrimitive -> value.content
     else -> ""
 }

@@ -4,7 +4,7 @@ import com.sperance.exileforge.core.display.rollQuality
 import com.sperance.exileforge.core.display.rollSummary
 import com.sperance.exileforge.core.model.modifier.ModifierDefinition
 import com.sperance.exileforge.core.model.modifier.ModifierSource
-import com.sperance.exileforge.core.model.modifier.TierRange
+import com.sperance.exileforge.core.model.modifier.ModifierTier
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
@@ -16,10 +16,10 @@ import kotlin.test.assertNull
 /** The trade table (2.60.0) reads a roll against its tier's range, and sums the item up. */
 class RollQualityTest {
     private val life = ModifierDefinition(id = "life", code = "LIFE", source = ModifierSource.PREFIX,
-        tiers = listOf(TierRange(1, listOf(listOf(70.0, 80.0))), TierRange(2, listOf(listOf(50.0, 50.0)))))
+        tiers = listOf(ModifierTier(80, listOf(listOf(70.0, 80.0))), ModifierTier(40, listOf(listOf(50.0, 50.0)))))
 
     private fun line(tier: Int, value: Double) = buildJsonObject {
-        put("modifierId", "life"); put("tier", tier); put("values", buildJsonArray { add(JsonPrimitive(value)) })
+        put("modifierCode", "LIFE"); put("tier", tier); put("values", buildJsonArray { add(JsonPrimitive(value)) })
     }
 
     @Test fun a_value_is_placed_inside_its_tier() {

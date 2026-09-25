@@ -128,6 +128,8 @@ data class WorldState(
     val orbs: List<CurrencyItem> = emptyList(),
     /** The materials the crafts gather (2.41.0), so the bag can name them. */
     val materials: List<com.sperance.exileforge.core.model.crafts.MaterialItem> = emptyList(),
+    /** Every pool of the world (server 0.56.0): a tag of one kind and the codes it holds. */
+    val pools: List<com.sperance.exileforge.core.model.modifier.Pool> = emptyList(),
     /** The crafting bench: crafted modifiers by tier and their price in orbs. Fixed per server. */
     val bench: List<BenchRecipe> = emptyList(),
     /** Classes and the shared skill tree; a class carries the stat base, the tree its graph. */

@@ -1,14 +1,13 @@
 package com.sperance.exileforge.core.network
 
 import com.sperance.exileforge.core.contract.WireJson
-import com.sperance.exileforge.core.contract.requireId
 import com.sperance.exileforge.core.contract.text
 import com.sperance.exileforge.core.model.Catalog
 import com.sperance.exileforge.core.model.EntitySource
 import com.sperance.exileforge.core.model.currency.CURRENCY_CATEGORY
 import com.sperance.exileforge.core.model.currency.CurrencyItem
 import com.sperance.exileforge.core.model.modifier.ModifierDefinition
-import com.sperance.exileforge.core.model.modifier.ModifierTier
+import com.sperance.exileforge.core.model.modifier.Pool
 import com.sperance.exileforge.core.model.progression.CharacterClass
 import com.sperance.exileforge.core.model.progression.ExperienceLevel
 import com.sperance.exileforge.core.model.skilltree.SkillTreeNode
@@ -16,13 +15,12 @@ import kotlinx.serialization.json.*
 
 /** The world's reference tables: seeded, fixed for a session, read once and kept in state. */
 class WorldClient internal constructor(private val http: Transport) {
-    /** Descriptions are a small, shared catalogue: the whole set is read once and kept in state. */
+    /** Descriptions are a small, shared catalogue, tiers inside (server 0.56.0): read once and kept in state. */
     suspend fun modifiers(): List<ModifierDefinition> =
         http.get<List<ModifierDefinition>>("api/v1/modifierdefinition")
-    suspend fun tiers(modifierId: String): List<ModifierTier> {
-        requireId(modifierId)
-        return http.get<List<ModifierTier>>("api/v1/modifiertier/byModifier", mapOf("modifierId" to modifierId))
-    }
+
+    /** Every pool (server 0.56.0): a tag of one kind and the codes it holds with their weights. */
+    suspend fun pools(): List<Pool> = http.get<List<Pool>>("api/v1/${EntitySource.POOL.path}")
 
     /** The classes the world offers. A character references one; its base is never copied here. */
     suspend fun classes(): List<CharacterClass> =

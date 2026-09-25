@@ -144,7 +144,7 @@ fun inventoryDocument(instance: com.sperance.exileforge.core.model.hero.Equipmen
  * still printed: a value the server rolled should never vanish because a translation is missing.
  */
 fun modifierText(modifier: JsonObject, definitions: List<ModifierDefinition> = emptyList()): String {
-    val definition = definitions.definition(modifier.text("modifierId"))
+    val definition = definitions.definition(modifier.text("modifierCode"))
     val values = rolledValues(modifier, definition)
     val template = definition?.template
     if (template != null && template != definition.code && values.isNotEmpty())
@@ -152,7 +152,7 @@ fun modifierText(modifier: JsonObject, definitions: List<ModifierDefinition> = e
     val effects = definition?.effects.orEmpty()
     return values.mapIndexed { index, value ->
         effects.getOrNull(index)?.let { "$value ${statTitle(it.stat)}" } ?: value
-    }.joinToString(" · ").ifBlank { definition?.code ?: displayName(modifier.text("modifierId")) }
+    }.joinToString(" · ").ifBlank { definition?.code ?: displayName(modifier.text("modifierCode")) }
 }
 
 /**
@@ -209,7 +209,7 @@ data class AffixMarks(val tier: Int, val crafted: Boolean, val fractured: Boolea
 }
 
 fun affixMarks(modifier: JsonObject, definitions: List<ModifierDefinition>): AffixMarks {
-    val definition = definitions.definition(modifier.text("modifierId"))
+    val definition = definitions.definition(modifier.text("modifierCode"))
     return AffixMarks(
         tier = modifier.text("tier").toIntOrNull() ?: 0,
         crafted = definition?.crafted == true,
@@ -226,10 +226,10 @@ fun affixMarks(modifier: JsonObject, definitions: List<ModifierDefinition>): Aff
  * "+(70–79) to maximum Life". The same template a rolled modifier fills, filled with a range.
  */
 fun recipeText(recipe: BenchRecipe, definitions: List<ModifierDefinition>): String {
-    val definition = definitions.definition(recipe.modifierId)
-    val ranges = recipe.values.mapIndexed { index, range ->
+    val definition = definitions.definition(recipe.modifierCode)
+    val ranges = recipe.values.filter { it.size == 2 }.mapIndexed { index, (min, max) ->
         val stat = definition?.effects?.getOrNull(index)?.stat.orEmpty()
-        val low = statNumber(stat, range.valueMin); val high = statNumber(stat, range.valueMax)
+        val low = statNumber(stat, min); val high = statNumber(stat, max)
         if (low == high) low else "($low–$high)"
     }
     val template = definition?.template?.takeIf { it != definition.code }
@@ -249,7 +249,7 @@ val preciseStats = setOf(
     "STOCK_ATTACK_SPEED", "STOCK_CAST_SPEED", "STOCK_CRITICAL_CHANCE",
     "STOCK_CRITICAL_MULTIPLIER", "STOCK_MOVEMENT_SPEED",
     // Leech lives below one percent: 0.4% printed whole is 0%, a modifier that seems to do nothing.
-    "STOCK_LEECH_PHYSICAL", "STOCK_LEECH_MAGICAL", "STOCK_LEECH_ALL", "STOCK_CRITICAL_VAMPIRE",
+    "STOCK_LEECH_PHYSICAL", "STOCK_LEECH_ALL", "STOCK_CRITICAL_VAMPIRE",
 )
 
 /**

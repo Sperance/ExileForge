@@ -39,7 +39,11 @@ import kotlinx.serialization.json.JsonPrimitive
             if (s.adminTools) CatalogSwitch(s, vm)
             ForgePanel {
                 if (s.admin.catalog != Catalog.EQUIPMENT) Button(enabled = !s.busy && s.canEdit, onClick = { vm.create() }, modifier = Modifier.fillMaxWidth()) {
-                    Text(if (s.admin.catalog == Catalog.CHARACTERS) ui("editor.create_character") else ui("editor.create_item"))
+                    Text(when (s.admin.catalog) {
+                        Catalog.CHARACTERS -> ui("editor.create_character")
+                        Catalog.POOLS -> ui("editor.create_pool")
+                        else -> ui("editor.create_item")
+                    })
                 }
                 else EquipmentKind.entries.forEach { kind ->
                     OutlinedButton(enabled = !s.busy && s.canEdit, onClick = { vm.create(kind) }, modifier = Modifier.fillMaxWidth()) {
@@ -61,7 +65,8 @@ import kotlinx.serialization.json.JsonPrimitive
                     Box(Modifier.weight(1f)) { ScreenHeader(if (s.admin.catalog == Catalog.CHARACTERS) ui("common.character") else ui("nav.forge"), icon = ForgeGlyphs.Anvil) }
                     IconButton(enabled = !s.busy, onClick = onClose) { Icon(Icons.Outlined.Close, ui("editor.close")) }
                 }
-                if (s.admin.catalog != Catalog.CHARACTERS) ItemCard(s.admin.draft, enabled = false, detailed = true, definitions = s.world.definitions, actionLabel = ui("editor.preview"))
+                // A pool (server 0.56.0) is a table of weights, not a thing to preview as an item.
+                if (s.admin.catalog == Catalog.ITEMS || s.admin.catalog == Catalog.EQUIPMENT) ItemCard(s.admin.draft, enabled = false, detailed = true, definitions = s.world.definitions, actionLabel = ui("editor.preview"))
                 if (s.admin.catalog == Catalog.CHARACTERS && s.admin.original == null) {
                     Text(ui("editor.owner_note"), color = Muted)
                     // The class is the whole stat base and the way into the tree, and the server has

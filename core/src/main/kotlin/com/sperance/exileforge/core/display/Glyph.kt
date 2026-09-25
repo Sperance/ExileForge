@@ -2,6 +2,7 @@ package com.sperance.exileforge.core.display
 
 import com.sperance.exileforge.core.model.Catalog
 import com.sperance.exileforge.core.model.modifier.ModifierDefinition
+import com.sperance.exileforge.core.model.modifier.definition
 
 /**
  * What a small icon stands for, apart from how it is drawn.
@@ -32,13 +33,14 @@ enum class Glyph {
         fun ofField(key: String): Glyph = fields[key] ?: stat(key) ?: INFO
 
         /** A modifier is drawn as the characteristic its first effect changes. */
-        fun ofModifier(modifierId: String, definitions: List<ModifierDefinition>): Glyph =
-            definitions.firstOrNull { it.id == modifierId }?.effects?.firstOrNull()?.stat?.let(::ofStat) ?: INFO
+        fun ofModifier(modifierCode: String, definitions: List<ModifierDefinition>): Glyph =
+            definitions.definition(modifierCode)?.effects?.firstOrNull()?.stat?.let(::ofStat) ?: INFO
 
         fun of(catalog: Catalog): Glyph = when (catalog) {
             Catalog.ITEMS -> CURRENCY
             Catalog.EQUIPMENT -> ITEM
             Catalog.CHARACTERS -> CHARACTER
+            Catalog.POOLS -> RULE
         }
 
         private fun stat(key: String) = if (key.startsWith("STOCK_") || key.startsWith("BATTLE_")) ofStat(key) else null
@@ -61,7 +63,7 @@ enum class Glyph {
             "requiredStrength" to ATTRIBUTE, "requiredDexterity" to EVASION, "requiredIntelligence" to MANA,
             "rarity" to RARITY, "slot" to ITEM, "weaponType" to ATTACK, "category" to ITEM, "subCategory" to ITEM,
             "type" to ITEM, "durability" to DEFENCE, "price" to CURRENCY,
-            "modifierId" to REFERENCE, "fixedModifierIds" to REFERENCE, "modifierPools" to RULE, "pools" to RULE, "baseParams" to RULE, "effects" to RULE,
+            "modifierCode" to REFERENCE, "fixedModifierCodes" to REFERENCE, "modifierPools" to RULE, "entries" to RULE, "kind" to RULE, "baseParams" to RULE, "effects" to RULE,
             "stat" to RULE, "perStat" to RULE, "perAmount" to RULE, "operation" to RULE, "value" to RULE, "values" to RULE,
             "source" to RULE, "isLocal" to RULE,
             "battleSkills" to ATTACK, "professionSkills" to CRAFT, "boolSkills" to STATE,

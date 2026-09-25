@@ -37,10 +37,17 @@ import kotlinx.serialization.Serializable
 }
 
 /**
+ * One tier of a definition (server 0.56.0: carried inside it): the item level it opens at and a
+ * `[min, max]` per effect. The first tier of [ModifierDefinition.tiers] is tier 1, the best, as in PoE.
+ */
+@Serializable data class ModifierTier(val level: Int = 1, val values: List<List<Double>> = emptyList())
+
+/**
  * Description of a possible modifier (collection `ModifierDefinition`).
  *
- * Carries no values and no tier: value ranges live in [ModifierTier], one document per tier.
- * More than one effect means a composite modifier — one roll changing several stats at once.
+ * Carries no rolled values: its [tiers] hold the ranges. Everything that points at a definition —
+ * an item line, a template's base, a tree node, a bench recipe, a pool — names it by [code] since
+ * server 0.56.0. More than one effect means a composite modifier — one roll changing several stats.
  */
 @Serializable data class ModifierDefinition(
     @SerialName("_id") val id: String = "",
@@ -61,21 +68,17 @@ import kotlinx.serialization.Serializable
      * server; the client only reads it to say why a bench line would be refused.
      */
     val group: String? = null,
-    /**
-     * Since server 0.39.0 a pool is a tag, and this is which pools the modifier sits in and how
-     * heavily (`helmet`, `local:armor`, `influence:SHAPER`, `corruption`). A template names the tags it
-     * rolls from; the server's roller draws by these weights. Never used here to roll.
-     */
-    val pools: Map<String, Int> = emptyMap(),
     /** The influence (`SHAPER`, `ELDER`) an item must carry for this modifier to roll; null for the rest. */
     val influence: String? = null,
     /** A bench modifier: no orb rolls it, the crafting bench places it, one per item. */
     val crafted: Boolean = false,
-    /** Since server 0.54.0 the world bundle carries the tiers too: how good a roll is inside its own. */
-    val tiers: List<TierRange> = emptyList(),
+    /** The tiers, best first: how good a roll is inside its own. Empty for a tree passive. */
+    val tiers: List<ModifierTier> = emptyList(),
 ) {
     val composite: Boolean get() = effects.size > 1
     val family: String get() = group ?: code
+    /** Tier [number] (1 is the best), if the definition has it. */
+    fun tier(number: Int): ModifierTier? = tiers.getOrNull(number - 1)
     /**
      * The whole sentence the modifier reads as, with a placeholder per effect.
      *
@@ -86,58 +89,40 @@ import kotlinx.serialization.Serializable
     val template: String get() = locOr(LocaleKey.modifierName(code), code)
 }
 
-/** One tier as the world bundle carries it: its number and a `[min, max]` per effect. */
-@Serializable data class TierRange(val tier: Int, val values: List<List<Double>> = emptyList())
-
-/** Value range of one effect inside a tier. */
-@Serializable data class ModifierTierValue(val valueMin: Double, val valueMax: Double)
-
-/** One tier of one [ModifierDefinition]; tier 1 is the best, as in PoE. */
-@Serializable data class ModifierTier(
-    @SerialName("_id") val id: String = "",
-    val modifierId: String = "",
-    val tier: Int = 1,
-    val values: List<ModifierTierValue> = emptyList(),
-    val minItemLevel: Int = 1,
-    val weight: Int = 1,
-)
-
 /**
  * An applied modifier: rolled onto an item instance, or fixed by a skill-tree node, a class or an
  * item's own base.
  *
  * `values` holds one number per effect of the description, in the same order. Rolling is the
  * server's job: the client never produces one of these itself. A fixed modifier has no tier at
- * all — [tierId] is empty and [tier] is zero — which is what [rolled] tells apart.
+ * all — [tier] is zero — which is what [rolled] tells apart.
  */
 @Serializable data class Modifier(
-    val modifierId: String,
+    /** The definition's [ModifierDefinition.code] (server 0.56.0; an id before). */
+    val modifierCode: String,
     val values: List<Double> = emptyList(),
-    val tierId: String = "",
     val tier: Int = 0,
     /** A fractured affix (Fracturing Orb, since 0.23.0): no orb removes, rerolls or changes it again. */
     val fractured: Boolean = false,
 ) {
-    val rolled: Boolean get() = tierId.isNotBlank()
+    val rolled: Boolean get() = tier > 0
 }
 
 /**
  * One line of the crafting bench (`GET /api/v1/characterequipment/bench`, since 0.23.0): a crafted
  * modifier in one tier, and what placing it costs.
  *
- * The price, the tier's range and which slots take it are the server's. [values] is there so the
- * line reads "+(70–79) to maximum Life" before anything is crafted; the roll inside that range
- * happens on the server when the command arrives.
+ * The price, the tier's range and which slots take it are the server's. [values] — a `[min, max]`
+ * per effect, as in the definition's tier — is there so the line reads "+(70–79) to maximum Life"
+ * before anything is crafted; the roll inside that range happens on the server.
  */
 @Serializable data class BenchRecipe(
     val code: String,
-    val modifierId: String = "",
     val modifierCode: String = "",
-    val tierId: String = "",
     val tier: Int = 1,
     val source: ModifierSource = ModifierSource.PREFIX,
     val group: String = "",
-    val values: List<ModifierTierValue> = emptyList(),
+    val values: List<List<Double>> = emptyList(),
     /** The orb's code, as `CurrencyOrb` names it. */
     val orb: String = "",
     /** The orb's `items` id: what the bag counts. */

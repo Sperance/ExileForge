@@ -300,7 +300,7 @@ import kotlinx.serialization.json.putJsonArray
             node.options.forEachIndexed { index, option ->
                 val on = if (allocated) index == chosen else index == picked
                 OptionCard(on, enabled = !allocated && node.code in reachable, onClick = { picked = index }) {
-                    option.forEach { modifier -> ModifierLine(modifierDocument(modifier.modifierId, modifier.values), s.world.definitions) }
+                    option.forEach { modifier -> ModifierLine(modifierDocument(modifier.modifierCode, modifier.values), s.world.definitions) }
                 }
             }
             if (node.type == SkillNodeType.MASTERY && !allocated && node.code !in reachable)
@@ -308,7 +308,7 @@ import kotlinx.serialization.json.putJsonArray
         } else {
             if (node.params.isEmpty()) Text(ui("tree.no_bonuses"), color = Muted)
             node.params.forEach { modifier ->
-                ModifierLine(modifierDocument(modifier.modifierId, modifier.values), s.world.definitions)
+                ModifierLine(modifierDocument(modifier.modifierCode, modifier.values), s.world.definitions)
             }
         }
 
@@ -446,8 +446,8 @@ private fun contributionText(total: StatContribution): String {
 }
 
 /** A fixed modifier as the display helpers expect it: they read documents, not typed models. */
-private fun modifierDocument(modifierId: String, values: List<Double>): JsonObject = buildJsonObject {
-    put("modifierId", modifierId)
+private fun modifierDocument(modifierCode: String, values: List<Double>): JsonObject = buildJsonObject {
+    put("modifierCode", modifierCode)
     putJsonArray("values") { values.forEach { add(JsonPrimitive(it)) } }
 }
 

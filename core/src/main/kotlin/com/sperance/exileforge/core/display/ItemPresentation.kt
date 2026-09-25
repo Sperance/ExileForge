@@ -11,6 +11,7 @@ import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.model.currency.CURRENCY_CATEGORY
 import com.sperance.exileforge.core.model.modifier.BenchRecipe
 import com.sperance.exileforge.core.model.modifier.ModifierDefinition
+import com.sperance.exileforge.core.model.modifier.ModifierSource
 import com.sperance.exileforge.core.model.modifier.definition
 import kotlinx.serialization.json.*
 
@@ -173,7 +174,40 @@ private fun rolledValues(modifier: JsonObject, definition: ModifierDefinition? =
  * What a rolled affix is besides its sentence: its tier, and whether the bench placed it or a
  * Fracturing Orb fixed it. A fixed modifier (a base, a tree node) has no tier and answers zero.
  */
-data class AffixMarks(val tier: Int, val crafted: Boolean, val fractured: Boolean, val handcrafted: Boolean = false, val alchemy: Boolean = false)
+/**
+ * What put a line on an item, as Path of Exile's trade site and advanced tooltip letter it (2.58.0):
+ * P prefix, S suffix, I implicit, E enchantment, C the bench, F fractured, U unique — and this game's
+ * own H for the smith's handcraft, V for a corruption, A for a map's alchemy.
+ */
+enum class AffixKind(val letter: Char) {
+    PREFIX('P'), SUFFIX('S'), IMPLICIT('I'), ENCHANTMENT('E'), CRAFTED('C'), HANDCRAFTED('H'),
+    FRACTURED('F'), CORRUPTION('V'), ALCHEMY('A'), UNIQUE('U');
+
+    companion object {
+        /** A fracture or the bench outranks the place a line holds: that is what decides what an orb may do to it. */
+        fun of(source: ModifierSource?, crafted: Boolean, fractured: Boolean): AffixKind? = when {
+            fractured -> FRACTURED
+            crafted -> CRAFTED
+            else -> when (source) {
+                ModifierSource.PREFIX -> PREFIX
+                ModifierSource.SUFFIX -> SUFFIX
+                ModifierSource.IMPLICIT -> IMPLICIT
+                ModifierSource.ENCHANTMENT -> ENCHANTMENT
+                ModifierSource.HANDCRAFTED -> HANDCRAFTED
+                ModifierSource.CORRUPTION -> CORRUPTION
+                ModifierSource.ALCHEMY -> ALCHEMY
+                ModifierSource.UNIQUE -> UNIQUE
+                ModifierSource.PASSIVE, null -> null
+            }
+        }
+    }
+}
+
+data class AffixMarks(val tier: Int, val crafted: Boolean, val fractured: Boolean, val handcrafted: Boolean = false, val alchemy: Boolean = false,
+    val kind: AffixKind? = null) {
+    /** The badge as it is printed: the letter and, for a rolled line, its tier — "P1", "S3", "I". */
+    val badge: String? get() = kind?.let { if (tier > 0) "${it.letter}$tier" else "${it.letter}" }
+}
 
 fun affixMarks(modifier: JsonObject, definitions: List<ModifierDefinition>): AffixMarks {
     val definition = definitions.definition(modifier.text("modifierId"))
@@ -184,6 +218,7 @@ fun affixMarks(modifier: JsonObject, definitions: List<ModifierDefinition>): Aff
         // Since server 0.38.0: the smith's and cartographer's lines, and a map's alchemy — no orb touches either.
         handcrafted = definition?.source == com.sperance.exileforge.core.model.modifier.ModifierSource.HANDCRAFTED,
         alchemy = definition?.source == com.sperance.exileforge.core.model.modifier.ModifierSource.ALCHEMY,
+        kind = AffixKind.of(definition?.source, definition?.crafted == true, (modifier["fractured"] as? JsonPrimitive)?.booleanOrNull == true),
     )
 }
 

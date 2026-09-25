@@ -43,27 +43,15 @@ import kotlinx.serialization.json.*
 }
 
 /**
- * A rolled affix on a card, under its rhombus: its sentence, then its tier and what placed it.
- *
- * The line takes the colour Path of Exile gives it — a crafted modifier reads in the bench's blue,
- * a fractured one in its dull gold — and says so in a word as well, because a colour alone is not
- * read by everyone. The tier is small and last: it is what a trader checks, not what a player reads.
+ * A rolled affix on a card: its badge — what placed it and its tier, «P1», «S3» (2.58.0) — then its
+ * sentence in the colour Path of Exile gives that kind, a crafted line in the bench's blue, a
+ * fractured one in its dull gold. The letter says it too, because a colour alone is not read by everyone.
  */
 @Composable fun AffixLine(modifier: JsonObject, definitions: List<ModifierDefinition>) {
     val marks = affixMarks(modifier, definitions)
-    val tone = when { marks.fractured -> Fractured; marks.crafted -> Crafted; marks.handcrafted -> Handcrafted; marks.alchemy -> Vital; else -> Rune }
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-        Box(Modifier.padding(top = 5.dp)) { Rhombus() }
-        Text(modifierText(modifier, definitions), color = tone, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-        listOfNotNull(
-            (ui("mod.fractured") to tone).takeIf { marks.fractured },
-            (ui("mod.crafted") to tone).takeIf { marks.crafted },
-            (ui("mod.handcrafted") to tone).takeIf { marks.handcrafted },
-            (ui("mod.alchemy") to tone).takeIf { marks.alchemy },
-            (ui("mod.tier", marks.tier) to Muted).takeIf { marks.tier > 0 },
-        ).forEach { (word, color) ->
-            Text(word, color = color, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 1.dp))
-        }
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.CenterVertically) {
+        AffixBadge(marks)
+        Text(modifierText(modifier, definitions), color = affixTint(marks.kind), style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
     }
 }
 

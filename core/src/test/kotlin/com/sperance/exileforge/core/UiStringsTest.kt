@@ -152,6 +152,7 @@ class UiStringsTest {
             com.sperance.exileforge.core.model.campaign.MonsterRarity.entries.forEach { add("enum.monster_rarity.${it.name}") }
             com.sperance.exileforge.core.campaign.Ailment.entries.forEach { add("enum.ailment.${it.name}") }
             com.sperance.exileforge.core.campaign.DamageType.entries.forEach { add("enum.damage.${it.name}") }
+            com.sperance.exileforge.core.display.AffixKind.entries.forEach { add("mod.kind.${it.name}") }
             stockStats.forEach { add("enum.stat.$it") }
             com.sperance.exileforge.core.display.StatGroup.entries.forEach { add("enum.stat_group.${it.name}") }
             listOf("requiredLevel", "requiredStrength", "requiredDexterity", "requiredIntelligence")

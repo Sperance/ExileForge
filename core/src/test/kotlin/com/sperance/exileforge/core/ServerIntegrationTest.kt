@@ -59,7 +59,7 @@ class ServerIntegrationTest {
      * The bench, fracturing and influence (server 0.23.0), against the real rules.
      *
      * Each step is set up so the server's answer is certain rather than likely: a magic item is
-     * scoured, transmuted and annulled down to one affix, so exactly one place of the other kind is
+     * scoured, transmuted and, when it rolled two, annulled down to one affix, so exactly one place of the other kind is
      * free for the bench; a rare is fractured and then rerolled, and must keep what was fractured.
      */
     /**
@@ -163,8 +163,11 @@ class ServerIntegrationTest {
         give(CurrencyOrb.ORB_OF_SCOURING, 2); give(CurrencyOrb.ORB_OF_TRANSMUTATION, 1); give(CurrencyOrb.ORB_OF_ANNULMENT, 2)
         val magic = api.hero.grant(id, templateId).id
         api.hero.applyOrb(id, magic, orb(CurrencyOrb.ORB_OF_SCOURING))
-        api.hero.applyOrb(id, magic, orb(CurrencyOrb.ORB_OF_TRANSMUTATION))
-        val kept = affixes(api.hero.applyOrb(id, magic, orb(CurrencyOrb.ORB_OF_ANNULMENT)).item.params).single()
+        // Since server 0.53.0 a magic item rolls one or two affixes, and an Orb of Annulment never takes
+        // it below one: only a second affix is taken off, so a single place is left free either way.
+        val transmuted = api.hero.applyOrb(id, magic, orb(CurrencyOrb.ORB_OF_TRANSMUTATION)).item.params
+        val kept = affixes(if (affixes(transmuted).size == 2) api.hero.applyOrb(id, magic, orb(CurrencyOrb.ORB_OF_ANNULMENT)).item.params
+            else transmuted).single()
 
         // Since 0.46.0 a bench line is found on a map, so a fresh hero knows none: the administrator
         // writes every crafted modifier's tiers into the character (`<code>_T<tier>`, unknown ones ignored).
@@ -193,10 +196,12 @@ class ServerIntegrationTest {
         val rare = api.hero.grant(id, templateId)
         assertTrue(affixes(rare.params).size >= 4, "a rare template rolled fewer than four affixes: ${rare.params}")
         val fractured = api.hero.applyOrb(id, rare.id, orb(CurrencyOrb.FRACTURING_ORB)).item.params.single { it.fractured }
-        assertTrue(fractured in api.hero.applyOrb(id, rare.id, orb(CurrencyOrb.CHAOS_ORB)).item.params, "a Chaos Orb moved a fractured affix")
+        val rerolled = api.hero.applyOrb(id, rare.id, orb(CurrencyOrb.CHAOS_ORB)).item.params
+        assertTrue(fractured in rerolled, "a Chaos Orb moved a fractured affix")
 
-        // An influence needs a free place: one is made, and the Shaper fills it from their own pool.
-        api.hero.applyOrb(id, rare.id, orb(CurrencyOrb.ORB_OF_ANNULMENT))
+        // An influence needs a free place. A rare rolls four to six affixes since server 0.53.0, so a place
+        // is made only when all six are taken; the Shaper fills it from their own pool.
+        if (affixes(rerolled).size >= 6) api.hero.applyOrb(id, rare.id, orb(CurrencyOrb.ORB_OF_ANNULMENT))
         val shaped = api.hero.applyOrb(id, rare.id, orb(CurrencyOrb.SHAPERS_ORB)).item
         assertEquals("SHAPER", shaped.influence)
         assertTrue(shaped.params.any { param -> definitions.firstOrNull { it.id == param.modifierId }?.influence == "SHAPER" },

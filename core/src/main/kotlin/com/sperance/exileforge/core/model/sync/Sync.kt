@@ -30,8 +30,8 @@ import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 
-/** The API revision this client is written against (server 0.56.0: references by code, tiers inside definitions, pools). */
-const val API_REVISION = 8
+/** The API revision this client is written against (server 0.57.0: the guardian of corruption only behind a Vaal zone). */
+const val API_REVISION = 9
 
 @Serializable data class WorldManifest(val hash: String = "", val file: String = "world.json")
 

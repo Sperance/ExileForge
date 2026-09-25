@@ -6,6 +6,7 @@ import com.sperance.exileforge.core.model.campaign.CampaignRarity
 import com.sperance.exileforge.core.model.campaign.CampaignReward
 import com.sperance.exileforge.core.model.campaign.CombatRules
 import com.sperance.exileforge.core.model.campaign.MonsterRarity
+import com.sperance.exileforge.core.model.campaign.VaalZone
 import java.util.concurrent.ConcurrentLinkedQueue
 import kotlin.math.roundToInt
 import kotlin.random.Random
@@ -13,8 +14,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-/** Where a run stands: walking, fighting, waiting on a kill's loot, or over one way or another. */
-enum class RunPhase { MAP, FIGHT, LOOT, DEAD, CLEARED, LEFT }
+/** Where a run stands: walking, fighting, waiting on a kill's loot, at a Vaal portal's gate (2.65.0), or over one way or another. */
+enum class RunPhase { MAP, FIGHT, LOOT, GATE, DEAD, CLEARED, LEFT }
 
 /** A number floating off a fighter, [age] seconds after the blow that made it. */
 data class FloatingHit(val id: Int, val target: Side, val action: Action, val kind: HitKind, val amount: Int, val age: Double, val healed: Int,
@@ -109,6 +110,12 @@ data class RunHud(
     val chestFailed: Boolean = false,
     /** Fountains on the map not yet drunk (since 2.48.0). */
     val fountainsLeft: Int = 0,
+    /** The Vaal zone behind the portal the hero stands at (2.65.0), once the server has rolled it. */
+    val gate: VaalZone? = null,
+    val gatePending: Boolean = false,
+    val gateFailed: Boolean = false,
+    /** This run is a Vaal zone (2.65.0): no way out but its guardian or a death, and a death is not the map's end. */
+    val vaal: Boolean = false,
 )
 
 /** What the overlay asks of the run; applied at the start of the next step. */
@@ -132,6 +139,15 @@ sealed interface RunCommand {
     data object DismissChest : RunCommand
     /** The server says the map's boss was slain within the hour: it is not there, the exit is open. */
     data object BossAbsent : RunCommand
+    /** The server rolled the Vaal zone behind the portal (2.65.0), for the gate to show. */
+    data class Gate(val zone: VaalZone) : RunCommand
+    data object GateFailed : RunCommand
+    /** Stepping back from the gate undecided: the portal stays, and opens again when walked onto. */
+    data object StepBack : RunCommand
+    /** The zone was entered or refused: the portal is gone and the map goes on. */
+    data object ShutGate : RunCommand
+    /** Back from the Vaal zone with [life] left (2.65.0). */
+    data class Returned(val life: Double) : RunCommand
     /**
      * The gear changed on the map (since 2.40.0): the server's new sheet. It lands between fights —
      * one under way keeps the fighter it began with — and life keeps its share.
@@ -166,6 +182,10 @@ class ExpeditionRun(
     private val onChest: () -> Unit = {},
     /** The entered map's effects, laid again over a sheet that changes on the way (since 2.40.0). */
     private val mapEffects: Map<String, Double> = emptyMap(),
+    /** The hero reached the Vaal portal (2.65.0): whoever listens asks the server for its zone. */
+    private val onPortal: () -> Unit = {},
+    /** The life the hero walks in with; a Vaal zone (2.65.0) is entered with what the map left, a map at full. */
+    startLife: Double? = null,
 ) {
     /** The hero as the sheet has them; a change of gear on the map replaces them between fights. */
     var hero: Combatant = hero
@@ -174,7 +194,12 @@ class ExpeditionRun(
     @Volatile var stickY = 0.0
     private val commands = ConcurrentLinkedQueue<RunCommand>()
     private var phase = RunPhase.MAP
-    private var life = hero.maxLife
+    private var life = startLife?.coerceIn(0.0, hero.maxLife) ?: hero.maxLife
+    /** The hero's life right now, between fights: what a Vaal zone is entered with. */
+    val heroLife: Double get() = life
+    private var gate: VaalZone? = null
+    private var gatePending = false
+    private var gateFailed = false
     private var started = false
     private var fights = 0
     private var speed = 1
@@ -266,7 +291,17 @@ class ExpeditionRun(
             RunCommand.ChestFailed -> { chestPending = false; chestFailed = true }
             RunCommand.DismissChest -> if (!chestPending) { chest = null; chestFailed = false }
             RunCommand.BossAbsent -> if (fightAgent !== world.boss) world.bossAbsent()
+            is RunCommand.Gate -> if (phase == RunPhase.GATE) { gate = command.zone; gatePending = false; gateFailed = false }
+            RunCommand.GateFailed -> { gatePending = false; gateFailed = true }
+            RunCommand.StepBack -> if (phase == RunPhase.GATE) closeGate()
+            RunCommand.ShutGate -> { world.closePortal(); closeGate() }
+            is RunCommand.Returned -> { life = command.life.coerceIn(0.0, hero.maxLife); phase = RunPhase.MAP }
         }
+    }
+
+    private fun closeGate() {
+        gate = null; gatePending = false; gateFailed = false
+        if (phase == RunPhase.GATE) phase = RunPhase.MAP
     }
 
     /** Two orb stacks merged by item (2.54.0): a pack's rewards are summed, not replaced. */
@@ -301,6 +336,7 @@ class ExpeditionRun(
             WorldEvent.Exit -> { phase = RunPhase.CLEARED; onCleared() }
             is WorldEvent.Opened -> { chest = null; chestFailed = false; chestPending = true; onChest() }
             is WorldEvent.Drank -> life = (life + hero.maxLife * event.fountain.heal / 100).coerceAtMost(hero.maxLife)
+            WorldEvent.Portal -> { phase = RunPhase.GATE; gate = null; gateFailed = false; gatePending = true; onPortal() }
             null -> Unit
         }
     }
@@ -366,6 +402,7 @@ class ExpeditionRun(
             gold = gold, experience = experience, kills = kills,
             chestsLeft = world.chests.count { !it.opened }, chest = chest, chestPending = chestPending, chestFailed = chestFailed,
             fountainsLeft = world.fountains.count { !it.used },
+            gate = gate, gatePending = gatePending, gateFailed = gateFailed, vaal = VaalZones.isZone(map),
         )
     }
 
@@ -410,11 +447,11 @@ class ExpeditionRun(
                   onKill: (RolledMonster) -> Unit, onCleared: () -> Unit, rules: CombatRules = CombatRules(), onFallen: () -> Unit = {},
                   onChest: () -> Unit = {}, mapEffects: Map<String, Double> = emptyMap(),
                   fountains: com.sperance.exileforge.core.model.campaign.FountainRule = com.sperance.exileforge.core.model.campaign.FountainRule(),
-                  corruption: com.sperance.exileforge.core.model.campaign.CorruptionRule = com.sperance.exileforge.core.model.campaign.CorruptionRule()): ExpeditionRun {
+                  portalChance: Double = 0.0, onPortal: () -> Unit = {}, startLife: Double? = null): ExpeditionRun {
             val stats = MapEffects.hero(heroStats, mapEffects)
-            val world = ExpeditionWorld.create(MapEffects.map(map, mapEffects), MapEffects.rarities(rarities, mapEffects), stats, seed, MapEffects.buffs(mapEffects), corruption.chance)
+            val world = ExpeditionWorld.create(MapEffects.map(map, mapEffects), MapEffects.rarities(rarities, mapEffects), stats, seed, MapEffects.buffs(mapEffects), portalChance)
             world.placeFountains(fountains.count.getOrElse(0) { 0 }, fountains.count.getOrElse(1) { 0 }, fountains.heal)
-            return ExpeditionRun(map, world, Combatant(stats, heroLevel, rules), rules, seed, onKill, onCleared, onFallen, onChest, mapEffects)
+            return ExpeditionRun(map, world, Combatant(stats, heroLevel, rules), rules, seed, onKill, onCleared, onFallen, onChest, mapEffects, onPortal, startLife)
         }
     }
 }

@@ -64,6 +64,8 @@ sealed interface WorldEvent {
     data class Encounter(val agent: MonsterAgent) : WorldEvent
     data class Opened(val chest: Chest) : WorldEvent
     data class Drank(val fountain: Fountain) : WorldEvent
+    /** The hero reached the Vaal portal (since 2.65.0). */
+    data object Portal : WorldEvent
     data object Exit : WorldEvent
 }
 
@@ -89,7 +91,7 @@ class ExpeditionWorld(
     private val seed: Long,
     lightRadius: Double = DEFAULT_LIGHT,
     bossMonster: RolledMonster? = null,
-    corruptionMonster: RolledMonster? = null,
+    hasPortal: Boolean = false,
 ) {
     /** The hero's pace and sight; both follow the gear when it is changed on the map (since 2.40.0). */
     private var heroSpeed = heroSpeed
@@ -101,13 +103,22 @@ class ExpeditionWorld(
     private val random = Random(seed)
     /** The map's boss (since 2.34.0): the guardian of the exit, standing beside it; none from an older server. */
     val boss: MonsterAgent? = bossMonster?.let { monster -> guardPost()?.let { cell -> MonsterAgent(packs.size, listOf(monster), cell.x + 0.5, cell.y + 0.5) } }
-    /** The corrupted zone's guardian (since 2.53.0), if this run rolled one at all — away from the everyday spawns and the exit. */
-    val corruption: MonsterAgent? = corruptionMonster?.let { monster -> corruptionPost()?.let { cell -> MonsterAgent(packs.size + 1, listOf(monster), cell.x + 0.5, cell.y + 0.5) } }
+    /**
+     * The Vaal portal (since 2.65.0), if this run rolled one — away from the everyday spawns and the
+     * exit. Touching it opens the gate; it is gone once the zone was entered or refused.
+     */
+    var portal: Cell? = if (hasPortal) portalPost() else null
+        private set
+
+    /** The portal is spent: entered, refused, or its zone closed. */
+    fun closePortal() { portal = null }
+    /** Stepping off the portal a refused gate left the hero on: it does not open again underfoot. */
+    private var portalArmed = true
     val agents: List<MonsterAgent> = packs.zip(map.spawns).mapIndexed { index, (pack, cell) ->
         MonsterAgent(index, pack, cell.x + 0.5, cell.y + 0.5).also { agent ->
             if (agent.monster.behaviour.type == BehaviourRule.PATROL) agent.patrol = patrolEnd(cell, agent.monster.behaviour.wanderRadius)
         }
-    } + listOfNotNull(boss, corruption)
+    } + listOfNotNull(boss)
 
     /** The exit does not open while its guardian lives. */
     val sealed: Boolean get() = boss?.alive == true
@@ -121,8 +132,8 @@ class ExpeditionWorld(
         return near.entries.filter { it.value in 1..2 && it.key !in map.spawns }.maxByOrNull { it.value }?.key
     }
 
-    /** Where the corrupted zone's portal stands: far from the start, off the exit and the spawns, by the seed. */
-    private fun corruptionPost(): Cell? {
+    /** Where the Vaal portal stands: far from the start, off the exit and the spawns, by the seed. */
+    private fun portalPost(): Cell? {
         val placing = Random(seed * 15485863 + 53)
         val taken = map.spawns.toSet() + map.exit + map.start
         return distances(map.start, Int.MAX_VALUE).filter { (cell, steps) -> steps >= CHEST_STEPS && cell !in taken }.keys.shuffled(placing).firstOrNull()
@@ -206,6 +217,11 @@ class ExpeditionWorld(
             fountain.used = true
             return WorldEvent.Drank(fountain)
         }
+        portal?.let { cell ->
+            val near = hypot(cell.x + 0.5 - heroX, cell.y + 0.5 - heroY) < CHEST_REACH
+            if (near && portalArmed) { portalArmed = false; return WorldEvent.Portal }
+            if (!near) portalArmed = true
+        }
         agents.filter { it.alive }.forEach { agent ->
             agent.calm = (agent.calm - dt).coerceAtLeast(0.0)
             val toHero = hypot(heroX - agent.x, heroY - agent.y)
@@ -217,8 +233,8 @@ class ExpeditionWorld(
     }
 
     /** Monsters still standing, the boss apart: it is counted as the exit's seal, not as one of them. */
-    val alive: Int get() = agents.count { it.alive && it !== boss && it !== corruption }
-    val total: Int get() = agents.count { it !== boss && it !== corruption }
+    val alive: Int get() = agents.count { it.alive && it !== boss }
+    val total: Int get() = agents.count { it !== boss }
 
     // ==================== Monsters ====================
 
@@ -467,7 +483,7 @@ class ExpeditionWorld(
          * all from one seed.
          */
         fun create(map: CampaignMap, rarities: List<CampaignRarity>, heroStats: Map<String, Double>, seed: Long,
-                   mapBuffs: List<MonsterEffect> = emptyList(), corruptionChance: Double = 0.0): ExpeditionWorld {
+                   mapBuffs: List<MonsterEffect> = emptyList(), portalChance: Double = 0.0): ExpeditionWorld {
             val random = Random(seed)
             val (low, high) = map.monsterCount.let { (it.getOrNull(0) ?: 10) to (it.getOrNull(1) ?: 14) }
             // The map's size is the server's since 0.40.0; room for the pack a map's modifier asks for comes with it.
@@ -478,7 +494,7 @@ class ExpeditionWorld(
             val packs = List(layout.spawns.size) { MonsterRoller.rollPack(map, rarities, random, packRandom).map { it.copy(mapBuffs = mapBuffs) } }
             return ExpeditionWorld(layout, packs, heroSpeed(heroStats), seed, lightRadius(heroStats, map.light),
                 MonsterRoller.boss(map, rarities)?.copy(mapBuffs = mapBuffs),
-                MonsterRoller.corruption(map, rarities, corruptionChance, random)?.copy(mapBuffs = mapBuffs))
+                MonsterRoller.portal(map, portalChance, random))
         }
 
         /** The hero's pace, sped up by movement speed from the sheet. */

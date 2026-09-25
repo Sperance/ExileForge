@@ -277,4 +277,19 @@ enum class MapLineKind { HARM, CONTENT, REWARD }
 @Serializable data class ChestState(val left: Int = 0, val refreshAt: Long = 0, val bought: Boolean = false)
 
 /** What a death cost (server 0.28.0): the experience taken, and the level, which never falls. */
+/**
+ * A Vaal zone as the server rolled it (since server 0.57.0), for the gate before it: its modifiers in
+ * the order they rolled, their effects summed per stat — laid on the zone's run as a map's are — and
+ * what it adds, in percent, to the loot of everything slain inside and of its guardian.
+ */
+@Serializable data class VaalZone(
+    val mapCode: String = "",
+    val level: Int = 1,
+    val modifiers: List<com.sperance.exileforge.core.model.modifier.Modifier> = emptyList(),
+    val effects: Map<String, Double> = emptyMap(),
+    val quantity: Double = 0.0,
+    val rarity: Double = 0.0,
+    val experience: Double = 0.0,
+)
+
 @Serializable data class CampaignFall(val lost: Double = 0.0, val level: Int = 1, val totalExperience: Double = 0.0)

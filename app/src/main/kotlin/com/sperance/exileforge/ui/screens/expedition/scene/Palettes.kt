@@ -22,6 +22,8 @@ object Palettes {
         "ASH" to Palette(Color(0xFF0A0605), Color(0xFF3A2A22), Color(0xFF40302A), Color(0xFF261A15), Color(0xFFD9642E), Color(0xFFE08A3C)),
         "FROST" to Palette(Color(0xFF070A0E), Color(0xFF46505C), Color(0xFF6C7A88), Color(0xFF3E4852), Color(0xFFBFD8EA), Color(0xFFDDEEFF)),
         "TEMPLE" to Palette(Color(0xFF04070A), Color(0xFF23343A), Color(0xFF2E4750), Color(0xFF192A30), Color(0xFF3B6FA8), Color(0xFF63B7C4)),
+        // The Vaal zones (2.65.0): black obsidian and scarlet, whatever map the portal stood on.
+        "VAAL" to Palette(Color(0xFF050102), Color(0xFF1E1416), Color(0xFF3A2A2C), Color(0xFF2A1D1F), Color(0xFF5A1A1A), Color(0xFFFF3C28)),
     )
 
     fun of(biome: String): Palette = table[biome] ?: table.getValue("SHORE")

@@ -3,6 +3,7 @@ package com.sperance.exileforge.presentation.features
 import com.sperance.exileforge.core.campaign.ExpeditionRun
 import com.sperance.exileforge.core.campaign.RolledMonster
 import com.sperance.exileforge.core.campaign.RunCommand
+import com.sperance.exileforge.core.campaign.VaalZones
 import com.sperance.exileforge.core.model.campaign.CampaignMap
 import com.sperance.exileforge.core.model.campaign.MonsterRarity
 import com.sperance.exileforge.presentation.ForgeRuntime
@@ -35,6 +36,8 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     private val mutableRun = MutableStateFlow<ExpeditionRun?>(null)
     val run: StateFlow<ExpeditionRun?> = mutableRun.asStateFlow()
     private val reports = Channel<suspend () -> Unit>(Channel.UNLIMITED)
+    /** The map run a Vaal zone was entered from (2.65.0): it stands still while the zone is played. */
+    private var parent: ExpeditionRun? = null
 
     init { runtime.scope.launch { for (report in reports) report() } }
 
@@ -135,7 +138,8 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             rules = view.combat,
             onFallen = { reports.trySend { fall(run, characterId, map.code) } },
             onChest = { reports.trySend { openChest(run, characterId, map.code) } },
-            mapEffects = effects, fountains = view.fountains, corruption = view.corruption)
+            mapEffects = effects, fountains = view.fountains,
+            portalChance = view.corruption.chance, onPortal = { reports.trySend { gate(run, characterId, map.code) } })
         // How many chests stand on the map is the server's (0.31.0), answered by the entry itself.
         run.send(RunCommand.Chests(chests))
         mutableRun.value = run
@@ -145,17 +149,62 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     fun send(command: RunCommand) { mutableRun.value?.send(command) }
 
+    /**
+     * «Войти» at the Vaal gate (2.65.0): the portal closes behind the hero and the zone is a run of
+     * its own — the zone's map, its modifiers laid on it as a map item's are, the hero walking in with
+     * the life the map left. The map run waits for them underneath.
+     */
+    fun enterVaal() { with(runtime) {
+        val run = mutableRun.value ?: return
+        val zone = run.hud.value.gate ?: return
+        val view = state.value.world.campaign ?: return
+        val hero = state.value.play.hero ?: return
+        val map = VaalZones.map(run.map) ?: return
+        if (parent != null) return
+        val characterId = state.value.play.characterId
+        run.send(RunCommand.ShutGate)
+        lateinit var inner: ExpeditionRun
+        inner = ExpeditionRun.start(map, view.rarities, hero.sheet.stats, hero.sheet.level, System.nanoTime(),
+            onKill = { monster -> reports.trySend { kill(inner, characterId, map.code, monster, vaal = true) } },
+            onCleared = {},
+            rules = view.combat,
+            onFallen = { reports.trySend { vaalLeave(inner, characterId, map.code) } },
+            mapEffects = zone.effects, startLife = run.heroLife)
+        parent = run
+        mutableRun.value = inner
+    } }
+
+    /** «Отказаться» at the Vaal gate: the portal is gone and the zone closed on the server. */
+    fun refuseVaal() {
+        val run = mutableRun.value ?: return
+        val characterId = runtime.state.value.play.characterId
+        run.send(RunCommand.ShutGate)
+        reports.trySend { vaalLeave(null, characterId, run.map.code) }
+    }
+
     /** The hero was re-read after a change of gear (2.40.0): a run under way takes the new sheet between fights. */
     fun regear() {
         val hero = runtime.state.value.play.hero ?: return
-        mutableRun.value?.send(RunCommand.Regear(hero.sheet.stats, hero.sheet.level))
+        listOfNotNull(mutableRun.value, parent).forEach { it.send(RunCommand.Regear(hero.sheet.stats, hero.sheet.level)) }
     }
 
     /**
      * The run is over or abandoned. Every report on the way brought the hero back with it; the
      * next glance still asks once, which is a 304 unless a report was lost on the way.
+     *
+     * A Vaal zone (2.65.0) over is not the end: the hero is back on the map by its portal with the
+     * life the zone left, or — fallen in it — with [VaalZones.WAKE_LIFE] of it.
      */
     fun close() {
+        val outer = parent
+        val zone = mutableRun.value
+        if (outer != null && zone != null) {
+            val share = if (zone.heroLife <= 0) VaalZones.WAKE_LIFE else zone.heroLife / zone.hero.maxLife
+            outer.send(RunCommand.Returned(outer.hero.maxLife * share))
+            parent = null
+            mutableRun.value = outer
+            return
+        }
         mutableRun.value = null
         runtime.mutable.update { it.copy(play = it.play.copy(heroReadAt = 0)) }
         loadCampaign()
@@ -170,16 +219,16 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     }
 
     /** Dropped without a word: the character or the session it belonged to is gone. */
-    fun drop() { mutableRun.value = null }
+    fun drop() { mutableRun.value = null; parent = null }
 
-    private suspend fun kill(run: ExpeditionRun, characterId: String, mapCode: String, monster: RolledMonster) { with(runtime) {
+    private suspend fun kill(run: ExpeditionRun, characterId: String, mapCode: String, monster: RolledMonster, vaal: Boolean = false) { with(runtime) {
         try {
-            // The corrupted zone's guardian and the boss are each reported by their own route
-            // (0.46.0, 0.32.0): the boss opens the exit, the corrupted zone rolls its own table.
+            // The guardians are each reported by their own route (0.57.0, 0.32.0): the Vaal zone's
+            // closes the zone and pays its bonus, the map's boss opens the exit.
             val reward = when {
-                monster.corrupted -> api.campaign.corrupt(characterId, mapCode, monster.code)
+                monster.rarity == MonsterRarity.UNIQUE && vaal -> api.campaign.corrupt(characterId, mapCode, monster.code)
                 monster.rarity == MonsterRarity.UNIQUE -> api.campaign.slayBoss(characterId, mapCode)
-                else -> api.campaign.kill(characterId, mapCode, monster.code, monster.rarity)
+                else -> api.campaign.kill(characterId, mapCode, monster.code, monster.rarity, vaal)
             }
             run.send(RunCommand.Reward(reward))
             loot(characterId, reward.equipment)
@@ -196,6 +245,22 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             run.send(RunCommand.Fallen(fall))
         } catch (e: CancellationException) { throw e }
         catch (e: Exception) { run.send(RunCommand.FallFailed); report(e, writing = true) }
+    } }
+
+    /** The zone behind the portal the hero reached: the gate waits for it, or says it could not be had. */
+    private suspend fun gate(run: ExpeditionRun, characterId: String, mapCode: String) { with(runtime) {
+        try { run.send(RunCommand.Gate(api.campaign.vaal(characterId, mapCode))) }
+        catch (e: CancellationException) { throw e }
+        catch (e: Exception) { run.send(RunCommand.GateFailed); report(e, writing = true) }
+    } }
+
+    /** The Vaal zone closed without its guardian: refused ([run] null) or fallen in, which costs no experience. */
+    private suspend fun vaalLeave(run: ExpeditionRun?, characterId: String, mapCode: String) { with(runtime) {
+        try {
+            val fall = api.campaign.vaalLeave(characterId, mapCode)
+            run?.send(RunCommand.Fallen(fall))
+        } catch (e: CancellationException) { throw e }
+        catch (e: Exception) { run?.send(RunCommand.FallFailed); report(e, writing = true) }
     } }
 
     /** Whether the map's boss is there: a failure leaves it standing, which is what the exit expects. */

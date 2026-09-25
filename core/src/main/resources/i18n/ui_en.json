@@ -1034,5 +1034,21 @@
   "row.rolls": "rolls {0}%",
   "row.worn": "Worn",
   "api.no_world_file": "No reference file given",
-  "cmd.stale_revision": "The server speaks API revision {0}, but {1} is needed. Update ktor-bestgame."
+  "cmd.stale_revision": "The server speaks API revision {0}, but {1} is needed. Update ktor-bestgame.",
+  "vaal.eyebrow": "Vaal zone · corrupted",
+  "vaal.title": "Vaal zone · {0}",
+  "vaal.level": "Level {0}",
+  "vaal.level_guardian": "Level {0} · guardian: {1}",
+  "vaal.failed": "Could not learn what waits beyond the portal. Step away and walk up to it again.",
+  "vaal.warning": "The portal closes behind you. The only ways out are the guardian or death.",
+  "vaal.enter": "Enter",
+  "vaal.refuse": "Refuse",
+  "vaal.later": "Step away from the portal",
+  "vaal.percent": "+{0}%",
+  "vaal.guardian_alive": "The guardian lives — no way out",
+  "vaal.guardian_slain": "The guardian has fallen — the exit is open",
+  "vaal.done": "Vaal zone cleared",
+  "vaal.done_hint": "The guardian of corruption has fallen. The portal takes you back to the map.",
+  "vaal.dead_hint": "The guardian's loot is lost, your experience is not. You wake by the portal on the map; the run goes on.",
+  "vaal.back": "Back to the map"
 }

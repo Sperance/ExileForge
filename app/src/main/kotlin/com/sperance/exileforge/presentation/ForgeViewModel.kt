@@ -37,6 +37,8 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     fun summonGuardian(mapCode: String) = runtime.expeditionViewModel.summonGuardian(mapCode)
     fun runCommand(command: com.sperance.exileforge.core.campaign.RunCommand) = runtime.expeditionViewModel.send(command)
     fun closeRun() = runtime.expeditionViewModel.close()
+    fun enterVaal() = runtime.expeditionViewModel.enterVaal()
+    fun refuseVaal() = runtime.expeditionViewModel.refuseVaal()
     fun language(lang: Lang) = runtime.language(lang)
     /** The server's names live in its dictionary; this re-reads it without touching the session. */
     fun refreshLocale() = runtime.refreshLocale()

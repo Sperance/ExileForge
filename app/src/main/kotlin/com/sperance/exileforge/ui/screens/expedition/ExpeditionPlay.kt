@@ -50,7 +50,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
     var gear by remember { mutableStateOf(false) }
     // Leaving a map gives up what is left on it, so it is asked first (2.48.0); the fight has its own retreat.
     var leaving by remember { mutableStateOf(false) }
-    BackHandler { if (hud.phase == RunPhase.MAP) leaving = true else vm.runCommand(RunCommand.Leave) }
+    // A Vaal zone (2.65.0) has no way out but its guardian or a death: back does nothing on its map.
+    val zone = VaalZones.isZone(run.map)
+    BackHandler { when {
+        hud.phase == RunPhase.GATE -> vm.runCommand(RunCommand.StepBack)
+        hud.phase == RunPhase.MAP -> if (!zone) leaving = true
+        else -> vm.runCommand(RunCommand.Leave)
+    } }
     LaunchedEffect(hud.phase) { if (hud.phase == RunPhase.LEFT) vm.closeRun() }
 
     Box(Modifier.fillMaxSize().background(Ink)) {
@@ -58,7 +64,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
         when (hud.phase) {
             RunPhase.MAP -> {
                 Stick(run)
-                MapBar(run, hud, onLeave = { leaving = true }, onGear = { gear = true })
+                MapBar(run, hud, onLeave = if (zone) null else ({ leaving = true }), onGear = { gear = true })
                 if (gear) GearSheet(s, vm) { gear = false }
                 if (hud.chestPending || hud.chestFailed || hud.chest != null) ChestLoot(s, hud) { vm.runCommand(RunCommand.DismissChest) }
                 if (leaving) ConfirmSheet(title = ui("expedition.leave_q"), confirm = ui("expedition.leave"), danger = true,
@@ -70,8 +76,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
             // The fight is over: its report — the log, what it came to, and the loot of a victory.
             RunPhase.LOOT -> hud.report?.let { ReportScreen(s, hud, it) { vm.runCommand(RunCommand.Continue) } }
             RunPhase.DEAD -> hud.report?.let { ReportScreen(s, hud, it) { vm.runCommand(RunCommand.Continue) } }
-                ?: Ending(ui("expedition.dead"), ui("expedition.dead_hint"), LifeRed, hud) { vm.runCommand(RunCommand.Continue) }
-            RunPhase.CLEARED -> Ending(ui("expedition.map_done"), ui("expedition.map_done_hint"), Vital, hud) { vm.runCommand(RunCommand.Continue) }
+                ?: Ending(ui("expedition.dead"), ui(if (zone) "vaal.dead_hint" else "expedition.dead_hint"), LifeRed, hud,
+                    if (zone) ui("vaal.back") else ui("expedition.back_to_camp")) { vm.runCommand(RunCommand.Continue) }
+            RunPhase.CLEARED -> if (zone) Ending(ui("vaal.done"), ui("vaal.done_hint"), Vital, hud, ui("vaal.back")) { vm.runCommand(RunCommand.Continue) }
+                else Ending(ui("expedition.map_done"), ui("expedition.map_done_hint"), Vital, hud) { vm.runCommand(RunCommand.Continue) }
+            RunPhase.GATE -> VaalGate(s, hud, run.map.corrupted?.code, onEnter = vm::enterVaal, onRefuse = vm::refuseVaal) { vm.runCommand(RunCommand.StepBack) }
             RunPhase.LEFT -> Unit
         }
         // A refusal of the gear (2.40.0) has to be read here too: the run has no bar and no banner.
@@ -91,9 +100,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
             // The way out (2.56.1): a portal in a bronze ring, first thing in the corner, and it asks before it goes.
             onLeave?.let { RoundButton(ForgeGlyphs.Portal, ui("expedition.leave"), onClick = it) }
             Column(Modifier.weight(1f).padding(top = 4.dp)) {
-                Text(mapTitle(hud.mapCode), color = GoldBright, style = MaterialTheme.typography.titleMedium)
-                Text(ui(if (hud.sealed) "expedition.boss_alive" else "expedition.boss_slain"), color = if (hud.sealed) LifeRed else Vital,
-                    style = MaterialTheme.typography.labelMedium)
+                val zone = VaalZones.isZone(run.map)
+                Text(if (zone) ui("vaal.title", mapTitle(hud.mapCode)) else mapTitle(hud.mapCode), color = if (zone) Color(0xFFFF8A78) else GoldBright,
+                    style = MaterialTheme.typography.titleMedium)
+                Text(ui(when { zone && hud.sealed -> "vaal.guardian_alive"; zone -> "vaal.guardian_slain"; hud.sealed -> "expedition.boss_alive"; else -> "expedition.boss_slain" }),
+                    color = if (hud.sealed) LifeRed else Vital, style = MaterialTheme.typography.labelMedium)
             }
             RoundButton(ForgeGlyphs.Helm, ui("expedition.gear"), onClick = onGear)
             // The minimap (2.51.0), opened as the map is explored; round and around the hero since 2.56.1.
@@ -139,7 +150,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
         fun mark(x: Int, y: Int, color: Color, size: Float = dot) = drawCircle(color, size, Offset(left + (x + .5f) * cell, top + (y + .5f) * cell))
         world.chests.filter { !it.opened && world.explored(it.cell.x, it.cell.y) }.forEach { mark(it.cell.x, it.cell.y, GoldBright) }
         world.fountains.filter { !it.used && world.explored(it.cell.x, it.cell.y) }.forEach { mark(it.cell.x, it.cell.y, ShieldCyan) }
-        world.corruption?.takeIf { it.alive && world.explored(it.x.toInt(), it.y.toInt()) }?.let { mark(it.x.toInt(), it.y.toInt(), Rune, dot * 1.2f) }
+        world.portal?.takeIf { world.explored(it.x, it.y) }?.let { mark(it.x, it.y, LifeRed, dot * 1.2f) }
         if (world.explored(map.exit.x, map.exit.y)) mark(map.exit.x, map.exit.y, if (world.sealed) LifeRed else Vital, dot * 1.4f)
         // The hero, and the glass: darker toward the rim, a bronze ring and a thin gold one inside it.
         drawCircle(Gold, dot * 1.4f, centre)
@@ -237,13 +248,13 @@ private const val MINIMAP_CELLS = 22f
 // ==================== After ====================
 
 /** A run that ended — by death or by the exit — and what it brought all told. */
-@Composable private fun Ending(title: String, hint: String, accent: Color, hud: RunHud, onDone: () -> Unit) {
+@Composable private fun Ending(title: String, hint: String, accent: Color, hud: RunHud, done: String = ui("expedition.back_to_camp"), onDone: () -> Unit) {
     Box(Modifier.fillMaxSize().background(Ink.copy(alpha = .72f)), contentAlignment = Alignment.Center) {
         RunPanel(Modifier, accent) {
             Text(title, color = accent, style = MaterialTheme.typography.headlineSmall)
             Text(hint, color = Parchment, style = MaterialTheme.typography.bodyMedium)
             MutedText(ui("expedition.summary", hud.kills, hud.gold, number(hud.experience)))
-            Button(onClick = onDone, modifier = Modifier.fillMaxWidth()) { Text(ui("expedition.back_to_camp")) }
+            Button(onClick = onDone, modifier = Modifier.fillMaxWidth()) { Text(done) }
         }
     }
 }

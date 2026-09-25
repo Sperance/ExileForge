@@ -127,6 +127,7 @@ private class ScenePainter {
             for (y in ys) for (x in xs) if (map.walkable(x, y) && visible(x, y)) style.floor(frame, spot(map, x, y), palette, glow(x, y))
             for (y in ys) for (x in xs) if (map.walkable(x, y) && visible(x, y)) decor(map, x, y, palette, biome, glow(x, y))
             if (world.explored(map.exit.x, map.exit.y)) portal(map.exit.x + .5, map.exit.y + .5, world.sealed)
+            world.portal?.takeIf { world.explored(it.x, it.y) }?.let { vaalPortal(it.x + .5, it.y + .5, glow(it.x, it.y)) }
             // The torch's warmth on the ground, an ellipse because the ground is seen at a slant.
             val hxs = isoX(world.heroX, world.heroY)
             val hys = -isoY(world.heroX, world.heroY)
@@ -254,6 +255,7 @@ private class ScenePainter {
             "ASH" -> when (kind) { 1 -> stone(); 2 -> { pen.color = Palettes.torch.copy(alpha = (.35f + .25f * sin(time * 3f + x + y)) * light); pen.ellipse(cx - u * 2f, cy - u * .6f, u * 4f, u * 1.2f) }
                 else -> { pen.rect(cx - u * .5f, cy, u, u * 2.6f); pen.color = Palettes.torch.copy(alpha = .5f * light); pen.circle(cx, cy + u * .3f, u * .5f) } }
             "FROST" -> when (kind) { 1 -> { pen.color = tone(Color(0xFFE8F2FA), light); pen.ellipse(cx - u * 2f, cy - u * .6f, u * 4f, u * 1.6f) }; 2 -> shard(); else -> stone() }
+            "VAAL" -> when (kind) { 1 -> bones(); 2 -> flame(); else -> puddle() }
             "TEMPLE" -> when (kind) { 1 -> column(); 2 -> flame(); else -> { pen.color = glowing; pen.circle(cx, cy, u * 1.3f); pen.color = tone(palette.floor, light); pen.circle(cx, cy, u * .8f) } }
             else -> when (kind) { 1 -> stone(); 2 -> tuft(); else -> shard() }
         }
@@ -318,6 +320,24 @@ private class ScenePainter {
             pen.color = Palettes.torch.copy(alpha = .12f * light)
             pen.circle(cx, cy + h * .7f, unit * .5f)
         }
+    }
+
+    /** The Vaal portal (2.65.0): a black mouth in scarlet rings, beating like the zone behind it. */
+    private fun vaalPortal(x: Double, y: Double, light: Float) {
+        val cx = isoX(x, y)
+        val cy = isoY(x, y)
+        val beat = .5f + .5f * sin(time * 2.4f)
+        val lit = light.coerceAtLeast(.5f)
+        pen.color = Palettes.blood.copy(alpha = .25f * lit)
+        pen.ellipse(cx - unit * .9f, cy - unit * .3f, unit * 1.8f, unit * .6f)
+        for (i in 3 downTo 1) {
+            pen.color = Color(0xFFFF3C28).copy(alpha = (.1f + .12f * i * beat) * lit)
+            pen.ellipse(cx - unit * .32f * i, cy - unit * .12f * i + unit * .7f, unit * .64f * i, unit * .55f * i)
+        }
+        pen.color = Color(0xFF120204)
+        pen.ellipse(cx - unit * .28f, cy + unit * .72f, unit * .56f, unit * .95f)
+        pen.color = Color(0xFFFF5A46).copy(alpha = (.55f + .35f * beat) * lit)
+        pen.ring(cx - unit * .3f, cy + unit * .7f, unit * .6f, unit * 1f, unit * .06f)
     }
 
     /** The exit: a pale gate, or — while its guardian lives (since 2.34.0) — a dim red one crossed by chains. */

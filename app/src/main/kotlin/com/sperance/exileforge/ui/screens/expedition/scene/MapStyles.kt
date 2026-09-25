@@ -61,8 +61,10 @@ internal object MapStyles {
     private val runes = RuneDark()
     private val ash = Ashen()
     private val moss = Overgrown()
+    private val altar = BloodAltar()
 
     fun of(biome: String): MapStyle = when (biome) {
+        com.sperance.exileforge.core.campaign.VaalZones.BIOME -> altar
         "CRYPT", "TEMPLE" -> runes
         "ASH" -> ash
         "FOREST", "MIRE" -> moss
@@ -239,6 +241,72 @@ private class Overgrown : MapStyle() {
             val a = .4f + .4f * sin(time * 3f + i)
             scope.drawCircle(fly.copy(alpha = a * .2f), dot * 4, at)
             scope.drawCircle(fly.copy(alpha = a), dot, at)
+        }
+    }
+}
+
+/**
+ * VI · Blood altar, the Vaal zones' own (2.65.0, the owner's mockup I): black obsidian where scarlet
+ * veins pulse in a wave, pools of blood in the hollows, stepped blocks weeping blood, red haze.
+ */
+private class BloodAltar : MapStyle() {
+    private val vein = Color(0xFFFF3C28)
+    private val blood = Color(0xFF5A0406)
+    private val weep = Color(0xFFAA0C0C)
+
+    override fun floor(frame: SceneFrame, spot: TileSpot, palette: Palette, light: Float): Unit = with(frame) {
+        val (cx, cy, u) = Triple(spot.cx, spot.cy, unit)
+        pen.color = tone(palette.floor, (.85f + noise(spot.x, spot.y) * .35f) * light)
+        pen.diamond(cx, cy, u, u / 2)
+        pen.color = Color.Black.copy(alpha = .5f)
+        pen.polyline(cx - u, cy, cx, cy + u / 2, cx + u, cy, width = u * .025f)
+        if (noise(spot.x, spot.y, 3) < .38f) {
+            // The veins pulse as one wave rolling across the floor, not each on its own.
+            val a = (.4f + .4f * sin(time * 2.2f - (spot.x + spot.y) * .6f)) * max(.4f, light)
+            val bend = (noise(spot.x, spot.y, 5) - .5f) * u * .3f
+            val across = noise(spot.x, spot.y, 4) < .5f
+            val line = if (across) floatArrayOf(cx - u / 2, cy + u / 4, cx + bend, cy, cx + u / 2, cy - u / 4)
+                else floatArrayOf(cx - u / 2, cy - u / 4, cx, cy + bend * .6f, cx + u / 2, cy + u / 4)
+            pen.color = vein.copy(alpha = a * .3f); pen.polyline(*line, width = u * .12f)
+            pen.color = vein.copy(alpha = a); pen.polyline(*line, width = u * .035f)
+        }
+        if (spot.walls == 0 && noise(spot.x, spot.y, 6) < .07f) {
+            val w = u * .5f
+            pen.color = tone(blood, light.coerceAtLeast(.5f), alpha = .9f); pen.ellipse(cx - w, cy - w / 2, w * 2, w)
+            pen.color = Color(0xFFFF5A46).copy(alpha = (.3f + .15f * sin(time * 3f + spot.x)) * light)
+            pen.ellipse(cx - w * .6f, cy, w * .6f, w * .2f)
+        }
+    }
+
+    override fun wall(frame: SceneFrame, spot: TileSpot, palette: Palette, alpha: Float, light: Float): Unit = with(frame) {
+        val h = unit * (1.3f + noise(spot.x, spot.y, 8) * .5f)
+        block(spot, h, tone(palette.wallSide, light, alpha = alpha), tone(palette.wallSide, .65f * light, alpha = alpha), tone(palette.wallTop, light, alpha = alpha))
+        // A second, narrower step on top: the altar's terraces.
+        val step = TileSpot(spot.x, spot.y, spot.cx, spot.cy + h, spot.walls)
+        val inset = unit * .3f
+        pen.color = tone(palette.wallSide, 1.1f * light, alpha = alpha)
+        pen.quad(step.cx - unit + inset, step.cy, step.cx, step.cy - unit / 2 + inset / 2, step.cx, step.cy - unit / 2 + inset / 2 + unit * .35f, step.cx - unit + inset, step.cy + unit * .35f)
+        pen.color = tone(palette.wallSide, .7f * light, alpha = alpha)
+        pen.quad(step.cx, step.cy - unit / 2 + inset / 2, step.cx + unit - inset, step.cy, step.cx + unit - inset, step.cy + unit * .35f, step.cx, step.cy - unit / 2 + inset / 2 + unit * .35f)
+        pen.color = tone(palette.wallTop, 1.25f * light, alpha = alpha)
+        pen.diamond(step.cx, step.cy + unit * .35f, unit - inset, (unit - inset) / 2)
+        if (noise(spot.x, spot.y, 9) < .35f) {
+            pen.color = weep.copy(alpha = ((.5f + .3f * sin(time * 1.5f + spot.x)) * light * alpha).coerceIn(0f, 1f))
+            val x = spot.cx + unit * (.2f + noise(spot.x, spot.y, 10) * .6f)
+            val top = spot.cy - unit / 2 + h - unit * .1f
+            pen.line(x, top, x, top - h * (.4f + noise(spot.x, spot.y, 11) * .4f), unit * .06f)
+        }
+    }
+
+    override fun atmosphere(scope: DrawScope, palette: Palette, time: Float) {
+        val (w, h) = scope.size.width to scope.size.height
+        val centre = Offset(w / 2, h * .55f)
+        scope.drawRect(Brush.radialGradient(listOf(Color.Transparent, Color(0xFF500000).copy(alpha = .55f)), centre, max(w, h) * .75f))
+        repeat(5) { i ->
+            val x = (spread(i, 3) * w * 1.6f + time * w * (.015f + i * .005f)) % (w * 1.6f) - w * .3f
+            val y = h * (.2f + spread(i, 4) * .7f)
+            val r = w * .3f
+            scope.drawCircle(Brush.radialGradient(listOf(Color(0xFFC81414).copy(alpha = .09f), Color.Transparent), Offset(x, y), r), r, Offset(x, y))
         }
     }
 }

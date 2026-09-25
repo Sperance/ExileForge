@@ -181,7 +181,7 @@ import java.util.Locale
                 fall.lost > 0 -> Text(ui("expedition.fall_lost", number(fall.lost)), color = LifeRed, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
                 else -> MutedText(ui("expedition.fall_free"), style = MaterialTheme.typography.bodyMedium)
             }
-            MutedText(ui("expedition.dead_hint"), style = MaterialTheme.typography.labelSmall)
+            MutedText(ui(if (hud.vaal) "vaal.dead_hint" else "expedition.dead_hint"), style = MaterialTheme.typography.labelSmall)
         }
     }
     Caption(ui("expedition.report_run"))

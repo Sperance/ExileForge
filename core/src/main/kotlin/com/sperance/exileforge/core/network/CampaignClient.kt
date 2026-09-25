@@ -10,6 +10,7 @@ import com.sperance.exileforge.core.model.campaign.ChestState
 import com.sperance.exileforge.core.model.campaign.MapLaunch
 import com.sperance.exileforge.core.model.campaign.MapServiceOutcome
 import com.sperance.exileforge.core.model.campaign.MonsterRarity
+import com.sperance.exileforge.core.model.campaign.VaalZone
 
 /** Route root of the campaign, since server 0.26.0. */
 private const val CAMPAIGN = "api/v1/character/campaign"
@@ -32,8 +33,9 @@ class CampaignClient internal constructor(private val http: Transport) {
         http.get("$CAMPAIGN/progress", heroQuery(characterId))
 
     /** A monster the client fought and won against. Never retried: a repeat would pay twice. */
-    suspend fun kill(characterId: String, mapCode: String, monsterCode: String, rarity: MonsterRarity): CampaignReward =
-        http.post("$CAMPAIGN/kill", heroQuery(characterId, "mapCode" to mapCode, "monsterCode" to monsterCode, "rarity" to rarity.name))
+    suspend fun kill(characterId: String, mapCode: String, monsterCode: String, rarity: MonsterRarity, vaal: Boolean = false): CampaignReward =
+        http.post("$CAMPAIGN/kill", heroQuery(characterId, "mapCode" to mapCode, "monsterCode" to monsterCode, "rarity" to rarity.name,
+            "vaal" to if (vaal) "true" else null))
 
     /** The hero reached the exit: the map is cleared and the next one opens. */
     suspend fun complete(characterId: String, mapCode: String): CampaignProgress =
@@ -59,9 +61,20 @@ class CampaignClient internal constructor(private val http: Transport) {
     suspend fun slayBoss(characterId: String, mapCode: String): CampaignReward =
         http.post("$CAMPAIGN/boss", heroQuery(characterId, "mapCode" to mapCode))
 
-    /** The corrupted zone's guardian was slain (server 0.46.0): its own loot table, a chance at a unique. Never retried. */
+    /**
+     * The guardian at the Vaal zone's end was slain (server 0.57.0; the corrupted zone's since 0.46.0):
+     * its own loot table with the zone's bonus, a chance at a unique, and the zone is closed. Never retried.
+     */
     suspend fun corrupt(characterId: String, mapCode: String, monsterCode: String): CampaignReward =
         http.post("$CAMPAIGN/corrupt", heroQuery(characterId, "mapCode" to mapCode, "monsterCode" to monsterCode))
+
+    /** The Vaal zone behind this run's portal (server 0.57.0): rolled once a run, the same answer until it is closed. */
+    suspend fun vaal(characterId: String, mapCode: String): VaalZone =
+        http.post("$CAMPAIGN/vaal", heroQuery(characterId, "mapCode" to mapCode))
+
+    /** The Vaal zone closed without its guardian — refused at the gate or died in (server 0.57.0). Never retried. */
+    suspend fun vaalLeave(characterId: String, mapCode: String): CampaignFall =
+        http.post("$CAMPAIGN/vaal/leave", heroQuery(characterId, "mapCode" to mapCode))
 
     /** A treasure map (0.34.0): one more chest on the map this window, for gold. Never retried. */
     suspend fun treasure(characterId: String, mapCode: String): MapServiceOutcome =

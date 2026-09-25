@@ -42,7 +42,7 @@ class ExpeditionMap(
  */
 object MapGenerator {
 
-    private val halls = setOf("RUINS", "CRYPT", "MINES", "TEMPLE")
+    private val halls = setOf("RUINS", "CRYPT", "MINES", "TEMPLE", VaalZones.BIOME)
 
     fun styleOf(biome: String): MapStyle = if (biome in halls) MapStyle.HALLS else MapStyle.CAVERN
 

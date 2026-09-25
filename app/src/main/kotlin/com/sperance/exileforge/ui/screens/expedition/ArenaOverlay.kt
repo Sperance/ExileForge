@@ -480,7 +480,8 @@ internal fun outcomeColour(outcome: Outcome) = when (outcome) { Outcome.WIN -> V
         reward.items.forEach { stack ->
             val orb = s.world.orbs.firstOrNull { it.id == stack.itemId }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(ForgeGlyphs.Orb, null, tint = Gold, modifier = Modifier.size(18.dp))
+                if (orb != null) com.sperance.exileforge.ui.icons.OrbGlyph(orb.orb, Modifier.size(20.dp))
+                else Icon(ForgeGlyphs.Orb, null, tint = Gold, modifier = Modifier.size(18.dp))
                 Text(ui("expedition.loot_stack", orb?.title(s.lang) ?: ui("common.item"), stack.amount), color = Parchment)
             }
         }

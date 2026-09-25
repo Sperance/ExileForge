@@ -62,7 +62,7 @@ fun bagStacks(s: ForgeState): List<CharacterItem> {
     Row(Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(6.dp)).border(1.dp, PanelRaised, RoundedCornerShape(6.dp))
         .clickable(role = Role.Button, onClick = onClick).padding(horizontal = 8.dp, vertical = 5.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-        StackIcon(code, s.world.orbs.any { it.id == stack.itemId }, 28)
+        StackIcon(code, s.world.orbs.firstOrNull { it.id == stack.itemId }, 28)
         Text(bagTitle(s, stack.itemId), color = Parchment, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f))
         Text(stack.amount.toString(), color = GoldBright, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
@@ -74,14 +74,16 @@ private fun stackCode(s: ForgeState, itemId: String): String? =
     s.world.orbs.firstOrNull { it.id == itemId }?.code ?: s.world.materials.firstOrNull { it.id == itemId }?.code
 
 /**
- * An orb, a material or an unnamed stack, drawn in a gold frame the way an item row frames its icon: the
- * server's sprite for the orb when the set has one, the bundled glyph otherwise.
+ * An orb, a material or an unnamed stack, drawn in a gold frame the way an item row frames its icon.
+ * An orb is its stained glass since 2.69.0; a material is the server's sprite when the set has one,
+ * the bundled glyph otherwise.
  */
-@Composable private fun StackIcon(code: String?, orb: Boolean, size: Int) {
+@Composable private fun StackIcon(code: String?, currency: com.sperance.exileforge.core.model.currency.CurrencyItem?, size: Int) {
+    if (currency != null) { com.sperance.exileforge.ui.icons.OrbGlyph(currency.orb, Modifier.size(size.dp)); return }
     val frame = RoundedCornerShape(6.dp)
     val art = code?.let { icon(IconKey.item(it))?.let(::spriteVector) }
     Box(Modifier.size(size.dp).background(Gold.copy(alpha = .08f), frame).border(1.dp, Gold.copy(alpha = .55f), frame), contentAlignment = Alignment.Center) {
-        Icon(art ?: if (orb) ForgeGlyphs.Orb else ForgeGlyphs.Gem, null, tint = if (code != null) Gold else Muted,
+        Icon(art ?: ForgeGlyphs.Gem, null, tint = if (code != null) Gold else Muted,
             modifier = Modifier.size((size * .55f).dp))
     }
 }
@@ -101,7 +103,7 @@ private fun stackCode(s: ForgeState, itemId: String): String? =
             RaritySpine(Gold, 4.dp)
             Column(Modifier.weight(1f).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    StackIcon(stackCode(s, stack.itemId), orb != null, 56)
+                    StackIcon(stackCode(s, stack.itemId), orb, 56)
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(bagTitle(s, stack.itemId), color = GoldBright, style = MaterialTheme.typography.titleLarge)
                         // The English trade name (2.51.0), under the translated one.

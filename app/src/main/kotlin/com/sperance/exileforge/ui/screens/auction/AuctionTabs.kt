@@ -273,7 +273,9 @@ private fun chipLabel(s: ForgeState, field: FilterField, value: String): String 
         unwearable = s.play.hero?.sheet?.unwearableBy?.get(lot.equipment?.equipmentId.orEmpty()).orEmpty(),
         trailing = {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                Icon(ForgeGlyphs.Orb, null, tint = Gold, modifier = Modifier.size(15.dp))
+                // The price's orb in its own glass (2.69.0), the plain glyph for one the client does not know.
+                s.world.orbs.firstOrNull { it.id == lot.priceOrbId }?.let { com.sperance.exileforge.ui.icons.OrbGlyph(it.orb, Modifier.size(18.dp)) }
+                    ?: Icon(ForgeGlyphs.Orb, null, tint = Gold, modifier = Modifier.size(15.dp))
                 Text(orbPrice(s, lot), color = GoldBright, style = MaterialTheme.typography.labelLarge, maxLines = 1)
             }
         },

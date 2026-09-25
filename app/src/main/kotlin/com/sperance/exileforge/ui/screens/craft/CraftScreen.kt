@@ -127,7 +127,7 @@ private val ForgeSection.title get() = when (this) {
     Column {
         orbs.forEach { orb ->
             LedgerRow(ForgeGlyphs.Orb, Gold, orb.title(s.lang), orb.details(s.lang), (owned[orb.id] ?: 0L).toString(),
-                selected = orb.id == s.play.selectedOrb) { onSelect(orb.id) }
+                selected = orb.id == s.play.selectedOrb, orb = orb.orb) { onSelect(orb.id) }
         }
     }
     MutedText(ui("orb.note"))
@@ -159,12 +159,14 @@ private val ForgeSection.title get() = when (this) {
 
 /** One line of a forge ledger: a spine lit when chosen, a drawing, a name over what it means, and a figure. */
 @Composable private fun LedgerRow(icon: ImageVector, accent: Color, title: String, subtitle: String, figure: String,
-    selected: Boolean, onClick: () -> Unit) {
+    selected: Boolean, orb: CurrencyOrb? = null, onClick: () -> Unit) {
     Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).clickable(role = Role.Button, onClick = onClick)
         .background(if (selected) Panel else Color.Transparent),
         horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
         RaritySpine(if (selected) GoldBright else accent.copy(alpha = .35f), 3.dp)
-        Icon(icon, null, tint = accent, modifier = Modifier.size(24.dp))
+        // An orb's line wears its stained glass (2.69.0); the bench and the rest keep their glyph.
+        if (orb != null) com.sperance.exileforge.ui.icons.OrbGlyph(orb, Modifier.size(28.dp))
+        else Icon(icon, null, tint = accent, modifier = Modifier.size(24.dp))
         Column(Modifier.weight(1f).padding(vertical = 9.dp)) {
             Text(title, color = if (selected) GoldBright else Parchment, style = MaterialTheme.typography.bodyLarge)
             Text(subtitle, color = Muted, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)

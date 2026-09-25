@@ -15,6 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -130,9 +131,12 @@ data class LedgerLine(val label: String, val value: String, val tone: Tone = Ton
  *
  * In a sheet it fires once, because the sheet goes with it. [rearm] is for a button that stays —
  * the forge's, where the same orb is spent again and again — and empties the band after each hold.
+ *
+ * An [icon] and a [figure] (2.73.0) make it a ribbon: a rounded gilt frame, the icon on the left
+ * and the figure — a price — in a coin chip on the right.
  */
 @Composable fun HoldButton(label: String, accent: Color, modifier: Modifier = Modifier, enabled: Boolean = true,
-    rearm: Boolean = false, onHeld: () -> Unit) {
+    rearm: Boolean = false, icon: androidx.compose.ui.graphics.vector.ImageVector? = null, figure: String? = null, onHeld: () -> Unit) {
     val progress = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
     val haptics = LocalHapticFeedback.current
@@ -146,7 +150,12 @@ data class LedgerLine(val label: String, val value: String, val tone: Tone = Ton
         }
     }
     val tint = if (enabled) accent else Muted.copy(alpha = .45f)
-    Box(modifier.fillMaxWidth().height(52.dp).background(Abyss).border(1.dp, tint)
+    val ribbon = icon != null || figure != null
+    val shape = if (ribbon) androidx.compose.foundation.shape.RoundedCornerShape(10.dp) else androidx.compose.ui.graphics.RectangleShape
+    Box(modifier.fillMaxWidth().height(52.dp).clip(shape)
+        .background(if (ribbon) Brush.verticalGradient(listOf(tint.copy(alpha = .18f), Abyss)) else Brush.linearGradient(listOf(Abyss, Abyss)))
+        .border(if (ribbon) 1.5.dp else 1.dp, if (ribbon) Brush.horizontalGradient(listOf(tint, GoldBright.copy(alpha = if (enabled) .8f else .2f), tint))
+            else Brush.linearGradient(listOf(tint, tint)), shape)
         .drawBehind {
             drawRect(Brush.horizontalGradient(listOf(accent.copy(alpha = .55f), accent.copy(alpha = .25f))),
                 size = Size(size.width * progress.value, size.height))
@@ -168,8 +177,18 @@ data class LedgerLine(val label: String, val value: String, val tone: Tone = Ton
             })
         },
         contentAlignment = Alignment.Center) {
-        Text(label.uppercase(), color = if (!enabled) Muted else if (accent == LifeRed) Parchment else GoldBright,
-            style = MaterialTheme.typography.labelLarge, textAlign = TextAlign.Center,
+        val ink = if (!enabled) Muted else if (accent == LifeRed) Parchment else GoldBright
+        if (!ribbon) Text(label.uppercase(), color = ink, style = MaterialTheme.typography.labelLarge, textAlign = TextAlign.Center,
             modifier = Modifier.padding(horizontal = 12.dp))
+        else Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            icon?.let { androidx.compose.material3.Icon(it, null, tint = if (enabled) GoldBright else Muted, modifier = Modifier.size(22.dp)) }
+            Text(label.uppercase(), color = ink, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+            figure?.let {
+                val chip = androidx.compose.foundation.shape.RoundedCornerShape(50)
+                Text(it, color = if (enabled) Ink else Muted, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.background(Brush.verticalGradient(listOf(GoldBright, Gold)), chip).padding(horizontal = 10.dp, vertical = 2.dp))
+            }
+        }
     }
 }

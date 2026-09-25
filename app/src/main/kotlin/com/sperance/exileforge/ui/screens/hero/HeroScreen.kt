@@ -95,7 +95,10 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
                 HeroSection.BAG -> {
                     val stacks = bagStacks(s)
                     if (stacks.isEmpty()) item { InfoCard(ui("hero.bag_empty"), ui("bag.empty_hint")) }
-                    items(stacks, key = { "bag-" + it.itemId }) { stack -> BagRow(s, stack) { stackId = stack.itemId } }
+                    // One block with its own tight spacing (2.73.0): the list's 12 dp between rows was half the bag.
+                    if (stacks.isNotEmpty()) item(key = "bag") {
+                        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) { stacks.forEach { stack -> BagRow(s, stack) { stackId = stack.itemId } } }
+                    }
                 }
                 HeroSection.STASH -> {
                     item {
@@ -122,10 +125,8 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
                         ItemRow(documents.getValue(instance.id), definitions = s.world.definitions,
                             selected = instance.id == s.play.selectedEquipment, worn = worn,
                             // The sheet added up here (2.46.0) says what the template needs, and the merchant's rule what it fetches.
-                            unwearable = hero.sheet.unwearableBy[instance.equipmentId].orEmpty(), price = s.sellPrice(instance).takeUnless { worn },
-                            // A map's rarity decides its affixes and what it pays (2.47.0), so it is said in words too.
-                            facts = listOfNotNull(com.sperance.exileforge.core.display.rarityTitle(instance.rarity, s.lang)
-                                .takeIf { documents.getValue(instance.id).text("slot") == com.sperance.exileforge.core.model.campaign.MapRule.SLOT })) {
+                            // No rarity in words, a map's included (2.73.0): the row's frame already wears it.
+                            unwearable = hero.sheet.unwearableBy[instance.equipmentId].orEmpty(), price = s.sellPrice(instance).takeUnless { worn }) {
                             detailId = instance.id; vm.selectEquipment(instance.id)
                         }
                     }

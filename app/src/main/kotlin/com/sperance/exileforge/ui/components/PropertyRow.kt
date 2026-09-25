@@ -12,6 +12,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.Glyph
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.icons.GlyphIcon
 import com.sperance.exileforge.ui.icons.StatIcon
 import com.sperance.exileforge.ui.theme.*
@@ -24,7 +25,9 @@ import com.sperance.exileforge.ui.theme.*
  */
 @Composable fun PropertyRow(label: String, value: String, glyph: Glyph = Glyph.INFO, stat: String? = null) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Box(Modifier.size(26.dp).background(Rune.copy(alpha = .10f), CutCornerShape(5.dp)), contentAlignment = Alignment.Center) {
+        // A tap on the rune says what the line is and what it holds (2.73.0).
+        Tipped({ Tip(label, tint = Rune, facts = listOf(ui("tip.value") to value)) }, Modifier.size(26.dp).background(Rune.copy(alpha = .10f), CutCornerShape(5.dp)),
+            contentAlignment = Alignment.Center) {
             if (stat != null) StatIcon(stat, Rune, Modifier.size(16.dp)) else GlyphIcon(glyph, Rune, Modifier.size(16.dp))
         }
         Text(label, style = MaterialTheme.typography.bodyMedium, color = Parchment, modifier = Modifier.weight(1f))

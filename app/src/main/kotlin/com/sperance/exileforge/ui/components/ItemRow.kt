@@ -125,7 +125,9 @@ import kotlinx.serialization.json.JsonObject
             // would push the properties off the line.
             states.chunked(3).forEach { three ->
                 Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                    three.forEach { state -> Icon(stateGlyph(state), stateTitle(state), tint = stateColor(state), modifier = Modifier.size(13.dp)) }
+                    three.forEach { state ->
+                        Tipped({ Tip(stateTitle(state), tint = stateColor(state)) }) { Icon(stateGlyph(state), stateTitle(state), tint = stateColor(state), modifier = Modifier.size(13.dp)) }
+                    }
                 }
             }
         }
@@ -145,7 +147,7 @@ import kotlinx.serialization.json.JsonObject
                 base.forEach { value -> BaseChip(value) }
             }
             // Every line it rolled, as sentences (2.72.0): a stash is read down without opening each card.
-            RollTops(document.text("rarity"), color, rollSummary(document, rolled, definitions), rolled, definitions)
+            RollTops(rollSummary(document, rolled, definitions), rolled, definitions)
             // The server's verdict, in its own words — never a requirement worked out here.
             unwearable.forEach {
                 Text(requirementReason(it), color = LifeRed, style = MaterialTheme.typography.labelSmall,

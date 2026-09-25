@@ -38,7 +38,7 @@ import kotlinx.serialization.json.*
 @Composable fun ModifierLine(modifier: JsonObject, definitions: List<ModifierDefinition>) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Icon(Glyph.ofModifier(modifier.text("modifierCode"), definitions).vector, null, tint = Rune, modifier = Modifier.size(16.dp))
-        Text(modifierText(modifier, definitions), color = Parchment, style = MaterialTheme.typography.bodyMedium)
+        Text(modifierText(modifier, definitions), color = ModBlue, style = MaterialTheme.typography.bodyMedium)
     }
 }
 

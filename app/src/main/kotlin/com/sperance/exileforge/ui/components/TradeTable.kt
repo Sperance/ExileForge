@@ -23,7 +23,6 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.RollSummary
 import com.sperance.exileforge.core.display.affixMarks
 import com.sperance.exileforge.core.display.modifierText
-import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.display.rollRange
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.modifier.ModifierDefinition
@@ -49,7 +48,7 @@ import kotlinx.serialization.json.JsonObject
     Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically) {
         AffixBadge(marks)
-        Text(modifierText(modifier, definitions), color = affixTint(marks.kind), style = MaterialTheme.typography.labelMedium,
+        Text(modifierText(modifier, definitions), color = ModBlue, style = MaterialTheme.typography.labelMedium,
             modifier = Modifier.weight(1f))
         rollRange(modifier, definitions)?.let {
             Text(it, color = Muted, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.End, maxLines = 1,
@@ -96,16 +95,21 @@ private fun qualityVerdict(quality: Int): Pair<String, Color> = when {
 }
 
 /**
- * A list line's rolls (2.72.0): its rarity and how well it rolled, then every line it carries as a
- * sentence in its kind's colour — no tier letters and no bars, the card behind the tap has those.
+ * A list line's rolls (2.72.0): how well it rolled, then every line it carries as a sentence — no
+ * tier letters and no bars, the card behind the tap has those. No rarity since 2.73.0: the frame says it.
  */
-@Composable fun RollTops(rarity: String, color: Color, summary: RollSummary, lines: List<JsonObject> = emptyList(),
-                         definitions: List<ModifierDefinition> = emptyList()) {
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-        if (rarity.isNotBlank()) Text(rarityTitle(rarity), color = color, style = MaterialTheme.typography.labelSmall)
-        summary.quality?.let { Text(ui("row.rolls", it), color = Parchment, style = MaterialTheme.typography.labelSmall) }
-    }
+@Composable fun RollTops(summary: RollSummary, lines: List<JsonObject> = emptyList(), definitions: List<ModifierDefinition> = emptyList()) {
+    summary.quality?.let { RollPill(it) }
     lines.forEach { line ->
-        Text(modifierText(line, definitions), color = affixTint(affixMarks(line, definitions).kind), style = MaterialTheme.typography.labelSmall)
+        Text(modifierText(line, definitions), color = ModBlue, style = MaterialTheme.typography.labelSmall)
     }
+}
+
+/** «роллы 87%» as a pill in the verdict's colour (2.73.0): the one figure a list line is judged by. */
+@Composable fun RollPill(quality: Int) {
+    val tint = qualityVerdict(quality).second
+    val shape = RoundedCornerShape(50)
+    Text(ui("row.rolls", quality), color = tint, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelSmall,
+        modifier = Modifier.background(Brush.horizontalGradient(listOf(tint.copy(alpha = .22f), tint.copy(alpha = .08f))), shape)
+            .border(1.dp, tint.copy(alpha = .55f), shape).padding(horizontal = 8.dp, vertical = 1.dp))
 }

@@ -287,11 +287,11 @@ fun requirementReason(reason: String, lang: Lang = uiLanguage): String {
 }
 
 /**
- * Title of a server stat enum. Names outside this table keep their humanised identifier, which is
- * language-neutral and still readable — the server owns the list and it grows without the client.
+ * Title of a server stat enum. A name outside this table is the server dictionary's own (2.73.0 —
+ * the atlas's stats live only there), and only then the humanised identifier.
  */
 fun statTitle(stat: String, lang: Lang = uiLanguage): String =
-    uiOr(lang, "enum.stat.$stat", displayName(stat.substringAfter('_'), lang))
+    uiOr(lang, "enum.stat.$stat", locOr("enum.EnumStatStock.$stat", displayName(stat.substringAfter('_'), lang)))
 
 // Compiled once (2.56.0): these ran on every line of every card.
 private val CAMEL_GAP = Regex("([a-z])([A-Z])")

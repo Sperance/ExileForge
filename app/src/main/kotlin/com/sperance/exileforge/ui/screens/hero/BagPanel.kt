@@ -40,14 +40,16 @@ private fun bagDetails(s: ForgeState, itemId: String): String? =
         ?: s.world.materials.firstOrNull { it.id == itemId }?.let { locOr(LocaleKey.itemDescription(it.code), "") }
 
 /**
- * The bag in the order the forge lists its orbs — the catalogue's — and whatever the catalogue
- * does not name after them, so one orb sits in the same place on both screens.
+ * The bag by category — orbs, then materials, then whatever the catalogue does not name — then by
+ * rarity, then by name (2.73.0). A stack has no rarity of its own, so its worth stands for it: the
+ * dearer the rarer.
  */
 fun bagStacks(s: ForgeState): List<CharacterItem> {
-    val bag = s.play.hero?.bag.orEmpty()
-    // Orbs first in the forge's order, then the materials by profession (2.41.0), then the rest.
-    val order = (s.world.orbs.map { it.id } + s.world.materials.map { it.id }).withIndex().associate { (index, id) -> id to index }
-    return bag.sortedBy { order[it.itemId] ?: Int.MAX_VALUE }
+    val orbs = s.world.orbs.associateBy { it.id }
+    val materials = s.world.materials.associateBy { it.id }
+    fun category(id: String) = when (id) { in orbs -> 0; in materials -> 1; else -> 2 }
+    fun worth(id: String) = orbs[id]?.price ?: materials[id]?.price ?: 0L
+    return s.play.hero?.bag.orEmpty().sortedWith(compareBy<CharacterItem>({ category(it.itemId) }, { -worth(it.itemId) }, { bagTitle(s, it.itemId) }))
 }
 
 /**
@@ -60,12 +62,13 @@ fun bagStacks(s: ForgeState): List<CharacterItem> {
     val code = stackCode(s, stack.itemId)
     // One short line since 2.48.0: the name and the count; what it does is behind the tap, in BagSheet.
     Row(Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(6.dp)).border(1.dp, PanelRaised, RoundedCornerShape(6.dp))
-        .clickable(role = Role.Button, onClick = onClick).padding(horizontal = 8.dp, vertical = 5.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-        StackIcon(code, s.world.orbs.firstOrNull { it.id == stack.itemId }, 28)
-        Text(bagTitle(s, stack.itemId), color = Parchment, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
+        .clickable(role = Role.Button, onClick = onClick).padding(horizontal = 6.dp, vertical = 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+        // Tighter since 2.73.0: more of the bag on one screen.
+        StackIcon(code, s.world.orbs.firstOrNull { it.id == stack.itemId }, 22)
+        Text(bagTitle(s, stack.itemId), color = Parchment, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f))
-        Text(stack.amount.toString(), color = GoldBright, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+        Text(stack.amount.toString(), color = GoldBright, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
     }
 }
 

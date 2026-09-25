@@ -18,6 +18,8 @@ import com.sperance.exileforge.core.display.groupedStats
 import com.sperance.exileforge.core.display.statNumber
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.ui.components.Tip
+import com.sperance.exileforge.ui.components.Tipped
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.icons.StatIcon
 import com.sperance.exileforge.ui.theme.*
@@ -71,7 +73,7 @@ private fun StatGroup.accent(): Color = when (this) {
 @Composable private fun StatCell(key: String, value: Double, accent: Color, s: ForgeState, modifier: Modifier) {
     Row(modifier.background(Abyss, RoundedCornerShape(4.dp)).padding(horizontal = 6.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        StatIcon(key, accent, Modifier.size(12.dp))
+        Tipped({ Tip(statTitle(key, s.lang), tint = accent, facts = listOf(ui("tip.value") to statNumber(key, value))) }) { StatIcon(key, accent, Modifier.size(12.dp)) }
         Text(statTitle(key, s.lang), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f))
         Text(statNumber(key, value), color = Parchment, style = MaterialTheme.typography.labelLarge, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)

@@ -25,6 +25,8 @@ val Bronze = Color(0xFF6B5836)
 val Parchment = Color(0xFFE4DCCF)
 val Muted = Color(0xFF8E8676)
 val Rune = Color(0xFF7FA9C8)
+/** Every modifier's sentence — item, monster, map or atlas — in one sky blue (2.73.0). */
+val ModBlue = Color(0xFF8EC5FF)
 val LifeRed = Color(0xFFB03A3A)
 val ManaBlue = Color(0xFF3B6FA8)
 val ShieldCyan = Color(0xFF63B7C4)

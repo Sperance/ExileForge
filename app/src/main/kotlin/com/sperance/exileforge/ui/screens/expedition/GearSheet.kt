@@ -82,7 +82,9 @@ fun newLoot(s: ForgeState): List<com.sperance.exileforge.core.model.hero.Equipme
                 ItemCard(inventoryDocument(item, s.world.inventoryBases[item.equipmentId]), enabled = false, detailed = true, definitions = s.world.definitions, price = price)
                 WearPreview(s, item)
                 Button(enabled = !s.busy && s.unmetFor(item.equipmentId).isEmpty(), onClick = { looked = null; vm.equip(item.id) }, modifier = Modifier.fillMaxWidth()) { Text(ui("hero.equip")) }
-                HoldButton(price?.let { ui("expedition.loot_sell_for", it) } ?: ui("expedition.loot_sell"), LifeRed, Modifier.fillMaxWidth(), enabled = !s.busy) { looked = null; vm.sellForGold(item.id) }
+                // A gilt ribbon with the coin and the price in a chip (2.73.0), held as before.
+                HoldButton(ui("expedition.loot_sell"), Gold, Modifier.fillMaxWidth(), enabled = !s.busy, icon = com.sperance.exileforge.ui.icons.ForgeGlyphs.Coins,
+                    figure = price?.let { "+$it" }) { looked = null; vm.sellForGold(item.id) }
             }
         }
     }

@@ -26,7 +26,12 @@ data class FloatingHit(val id: Int, val target: Side, val action: Action, val ki
 data class LungeView(val actor: Side, val action: Action, val kind: HitKind, val landed: Boolean, val progress: Float, val foe: Int = 0)
 
 /** An ailment on a fighter as the overlay prints it: what, how much of it is left (1 fresh, 0 gone), and how many stacks. */
-data class AilmentView(val ailment: Ailment, val left: Float, val stacks: Int)
+/**
+ * One ailment on a fighter as its tile shows it: the share of time [left], how many [stacks], and
+ * since 2.73.0 the [seconds] it still holds and its [strength] — damage a second for one that
+ * hurts (every stack summed), the percent of slow or weakness for a chill or a shock.
+ */
+data class AilmentView(val ailment: Ailment, val left: Float, val stacks: Int, val seconds: Double = 0.0, val strength: Double = 0.0)
 
 /**
  * One foe of the pack as its card prints it (2.70.0): who, its row, its pools, its swing, what is
@@ -158,6 +163,11 @@ sealed interface RunCommand {
     data object Begin : RunCommand
     /** Stops the fight where it stands and lays the pack open again (2.70.0); [Begin] goes on. */
     data object Pause : RunCommand
+    /**
+     * A window over the map — the whole map, the gear — stops the world while it is open (2.73.0):
+     * `true` takes a hold, `false` gives one back, and the run goes on once none is left.
+     */
+    data class Hold(val on: Boolean) : RunCommand
     /** Singles out foe [index] of the pack as the hero's target (2.70.0); the same one again lets the class choose. */
     data class Focus(val index: Int) : RunCommand
     data class Reward(val reward: CampaignReward) : RunCommand
@@ -240,6 +250,8 @@ class ExpeditionRun(
     private var gateFailed = false
     private var started = false
     private var paused = false
+    /** How many windows hold the run (2.73.0); the world stands still while any does. */
+    private var holds = 0
     private var fights = 0
     private var speed = 1
     private var reward: CampaignReward? = null
@@ -286,7 +298,7 @@ class ExpeditionRun(
 
     fun update(dt: Double) {
         while (true) apply(commands.poll() ?: break)
-        when (phase) {
+        if (holds == 0) when (phase) {
             RunPhase.MAP -> walk(dt)
             RunPhase.FIGHT -> play(dt)
             else -> Unit
@@ -302,6 +314,7 @@ class ExpeditionRun(
             RunCommand.Begin -> if (fight != null) { started = true; paused = false }
             RunCommand.Pause -> if (fight != null && started && fight?.outcome == null) paused = !paused
             is RunCommand.Focus -> fight?.focus(command.index)
+            is RunCommand.Hold -> holds = (holds + if (command.on) 1 else -1).coerceAtLeast(0)
             RunCommand.Continue -> when (phase) {
                 RunPhase.LOOT -> if (pendingRewards == 0) { phase = RunPhase.MAP; reward = null; slain = null; report = null; rewardFailed = false }
                 RunPhase.DEAD -> if (!fallPending) phase = RunPhase.LEFT
@@ -449,7 +462,9 @@ class ExpeditionRun(
                     event.type, event.inflicted, event.stunned, event.foe)
             }
         fun ailments(f: Battle.Fighter) = f.ailments.groupBy { it.ailment }.map { (ailment, active) ->
-            AilmentView(ailment, ((active.maxOf { it.until } - battle.time) / active.first().duration).toFloat().coerceIn(0f, 1f), active.size)
+            val until = active.maxOf { it.until }
+            AilmentView(ailment, ((until - battle.time) / active.first().duration).toFloat().coerceIn(0f, 1f), active.size,
+                (until - battle.time).coerceAtLeast(0.0), if (ailment.hurts) active.sumOf { it.magnitude } else active.maxOf { it.magnitude })
         }
         val foes = battle.foeFighters.map { f ->
             FoeView(f.index, agent.pack[members[f.index]], f.life.roundToInt(), f.body.maxLife.roundToInt(), f.shield.roundToInt(), f.body.maxShield.roundToInt(),

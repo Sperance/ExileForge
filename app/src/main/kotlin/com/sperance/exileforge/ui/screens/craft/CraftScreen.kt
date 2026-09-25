@@ -145,12 +145,12 @@ private val ForgeSection.title get() = when (this) {
             val scouring = s.world.orbs.firstOrNull { orb -> orb.orb == CurrencyOrb.ORB_OF_SCOURING }
             LedgerRow(ForgeGlyphs.Anvil, Crafted, modifierText(it, s.world.definitions),
                 ui("bench.current") + " · " + ui("bench.cost_line", orbTitle(s, CurrencyOrb.ORB_OF_SCOURING.name), 1, owned[scouring?.id] ?: 0L),
-                "×", selected = chosen == UNCRAFT) { onChoose(UNCRAFT) }
+                "×", selected = chosen == UNCRAFT, ink = ModBlue) { onChoose(UNCRAFT) }
         }
         recipes.forEach { recipe ->
             LedgerRow(ForgeGlyphs.Anvil, Crafted, recipeText(recipe, s.world.definitions),
                 ui("bench.cost_line", orbTitle(s, recipe.orb), recipe.amount, owned[recipe.orbItemId] ?: 0L),
-                "T${recipe.tier}", selected = chosen == recipe.code) { onChoose(recipe.code) }
+                "T${recipe.tier}", selected = chosen == recipe.code, ink = ModBlue) { onChoose(recipe.code) }
         }
     }
     if (recipes.isEmpty()) Text(ui("bench.none"), color = Muted)
@@ -159,7 +159,7 @@ private val ForgeSection.title get() = when (this) {
 
 /** One line of a forge ledger: a spine lit when chosen, a drawing, a name over what it means, and a figure. */
 @Composable private fun LedgerRow(icon: ImageVector, accent: Color, title: String, subtitle: String, figure: String,
-    selected: Boolean, orb: CurrencyOrb? = null, onClick: () -> Unit) {
+    selected: Boolean, orb: CurrencyOrb? = null, ink: Color = Parchment, onClick: () -> Unit) {
     Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).clickable(role = Role.Button, onClick = onClick)
         .background(if (selected) Panel else Color.Transparent),
         horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -168,7 +168,7 @@ private val ForgeSection.title get() = when (this) {
         if (orb != null) com.sperance.exileforge.ui.icons.OrbGlyph(orb, Modifier.size(28.dp))
         else Icon(icon, null, tint = accent, modifier = Modifier.size(24.dp))
         Column(Modifier.weight(1f).padding(vertical = 9.dp)) {
-            Text(title, color = if (selected) GoldBright else Parchment, style = MaterialTheme.typography.bodyLarge)
+            Text(title, color = if (selected) GoldBright else ink, style = MaterialTheme.typography.bodyLarge)
             Text(subtitle, color = Muted, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
         Text(figure, color = GoldBright, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(end = 4.dp))

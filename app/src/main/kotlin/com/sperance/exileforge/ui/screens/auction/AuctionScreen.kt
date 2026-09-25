@@ -46,7 +46,8 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
         val mine = s.ownLots.size
         // «Выставить» left in 2.48.0: an item is listed from its own card, a stack from the bag.
         val tabs = listOf(ui("auction.showcase"), if (mine > 0) ui("auction.my_lots_n", mine) else ui("auction.my_lots"), ui("merchant.tab"))
-        ScrollableTabRow(selectedTabIndex = s.market.tab, containerColor = com.sperance.exileforge.ui.theme.Abyss, edgePadding = 0.dp) {
+        // Three tabs share the width (2.73.0): a scrollable row left room for a fourth.
+        TabRow(selectedTabIndex = s.market.tab, containerColor = com.sperance.exileforge.ui.theme.Abyss) {
             tabs.forEachIndexed { index, title ->
                 Tab(selected = s.market.tab == index, enabled = !s.busy, onClick = { vm.auctionTab(index) },
                     text = { Text(title, style = MaterialTheme.typography.labelLarge) })

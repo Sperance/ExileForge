@@ -85,7 +85,7 @@ private object Altar {
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
         Box(Modifier.width(2.dp).fillMaxHeight().background(Altar.line))
         Box(Modifier.size(7.dp).rotate(45f).background(Altar.vein))
-        Text(text, color = Parchment, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f).padding(vertical = 7.dp, horizontal = 2.dp))
+        Text(text, color = ModBlue, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f).padding(vertical = 7.dp, horizontal = 2.dp))
     }
 }
 

@@ -33,7 +33,6 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     fun equipTool(instanceId: String) = runtime.craftsViewModel.equipTool(instanceId)
     fun closeLaunch() = runtime.expeditionViewModel.closeLaunch()
     fun pickMap(instanceId: String?) = runtime.expeditionViewModel.pickMap(instanceId)
-    fun buyTreasure(mapCode: String) = runtime.expeditionViewModel.buyTreasure(mapCode)
     fun summonGuardian(mapCode: String) = runtime.expeditionViewModel.summonGuardian(mapCode)
     fun runCommand(command: com.sperance.exileforge.core.campaign.RunCommand) = runtime.expeditionViewModel.send(command)
     fun closeRun() = runtime.expeditionViewModel.close()

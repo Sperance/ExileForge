@@ -137,21 +137,12 @@ private data class MapLine(val text: String, val kind: MapLineKind, val risk: Do
             if (picked != null) MutedText(ui("expedition.launch_spent"))
         }
         OrnateDivider()
-        Text(ui("expedition.launch_dwellers", map.monsters.joinToString { monsterTitle(it.code) }), color = Parchment, style = MaterialTheme.typography.bodySmall)
-        map.boss?.let { boss ->
-            val slain = launch.boss?.alive == false
-            Text(if (slain) ui("expedition.launch_boss_slain", monsterTitle(boss.code), untilText(launch.boss!!.respawnAt))
-                else ui("expedition.launch_boss_alive", monsterTitle(boss.code)), color = if (slain) Muted else LifeRed, style = MaterialTheme.typography.bodySmall)
-        }
-        launch.chests?.let { MutedText(ui("expedition.chests_window", it.left, untilText(it.refreshAt))) }
-        val money = s.play.hero?.character?.money ?: 0L
-        PropertyRow(ui("merchant.gold"), money.toString(), Glyph.CURRENCY)
-        launch.chests?.let { chests ->
-            val price = services.treasurePerLevel * map.level
-            if (chests.bought) Text(ui("expedition.treasure_done"), color = Vital, style = MaterialTheme.typography.bodySmall)
-            else HoldButton(ui("expedition.treasure_buy", price), Gold, Modifier.fillMaxWidth(), enabled = !s.busy && money >= price) { vm.buyTreasure(map.code) }
-        }
-        launch.boss?.takeIf { !it.alive }?.let {
+        // Dwellers, the standing guardian and the chests are the map's own business (2.73.0): only a slain guardian is news.
+        val slain = launch.boss?.takeIf { !it.alive }
+        map.boss?.let { boss -> slain?.let { Text(ui("expedition.launch_boss_slain", monsterTitle(boss.code), untilText(it.respawnAt)), color = Muted, style = MaterialTheme.typography.bodySmall) } }
+        slain?.let {
+            val money = s.play.hero?.character?.money ?: 0L
+            PropertyRow(ui("merchant.gold"), money.toString(), Glyph.CURRENCY)
             val price = services.summonPerLevel * map.level
             HoldButton(ui("expedition.guardian_summon", price), Gold, Modifier.fillMaxWidth(), enabled = !s.busy && money >= price) { vm.summonGuardian(map.code) }
         }
@@ -175,7 +166,7 @@ private fun lines(map: StashMap, s: ForgeState, rule: MapRule): List<MapLine> {
     val tint = when (line.kind) { MapLineKind.HARM -> LifeRed; MapLineKind.CONTENT -> Rune; MapLineKind.REWARD -> Gold }
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Rhombus(tint, 7.dp)
-        Text(line.text, color = Parchment, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+        Text(line.text, color = ModBlue, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
         if (line.kind == MapLineKind.HARM && line.risk > 0)
             MutedText(ui("expedition.launch_risk", number(line.risk)), style = MaterialTheme.typography.labelSmall)
     }

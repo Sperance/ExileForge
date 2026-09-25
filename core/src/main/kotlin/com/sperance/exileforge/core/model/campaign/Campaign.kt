@@ -264,10 +264,10 @@ enum class MapLineKind { HARM, CONTENT, REWARD }
 @Serializable data class MapLaunch(val map: ActiveMap? = null, val chests: ChestState = ChestState(), val atlas: Map<String, Double> = emptyMap())
 
 /**
- * The map's services for gold (since server 0.34.0): a treasure map is one more chest in the
- * window, once a window; summoning brings a slain guardian back. Both cost so much per map level.
+ * The map's service for gold (since server 0.34.0): summoning brings a slain guardian back, at so
+ * much per map level. The treasure map is gone since 2.73.0 (server 0.64.0).
  */
-@Serializable data class ServiceRule(val treasurePerLevel: Long = 60, val summonPerLevel: Long = 150)
+@Serializable data class ServiceRule(val summonPerLevel: Long = 150)
 
 /** What a map service left behind: the hero's gold, and the map's chests and boss as they stand now. */
 @Serializable data class MapServiceOutcome(val money: Long = 0, val chests: ChestState = ChestState(), val boss: BossState = BossState())

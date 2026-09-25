@@ -201,7 +201,7 @@ private fun DrawScope.star(node: AtlasNode, at: Offset, taken: Boolean, open: Bo
         Text(if (node.branch == AtlasBranch.ROOT) kind else ui("atlas.kind_branch", kind, ui("atlas.branch.${node.branch.name}")).uppercase(),
             color = Sky.text.copy(alpha = .75f), style = MaterialTheme.typography.labelSmall)
         Text(loc("atlas.node.${node.code}.name"), color = Color.White, style = MaterialTheme.typography.titleMedium)
-        node.effects.forEach { Text("•  " + effectLine(it), color = Sky.text, style = MaterialTheme.typography.bodySmall) }
+        node.effects.forEach { Text("•  " + effectLine(it), color = ModBlue, style = MaterialTheme.typography.bodySmall) }
         val isTaken = node.code in taken
         val canTake = graph.canTake(node.code, taken)
         val canRefund = graph.canRefund(node.code, taken)
@@ -227,5 +227,6 @@ private fun DrawScope.star(node: AtlasNode, at: Offset, taken: Boolean, open: Bo
 private fun effectLine(effect: AtlasEffect): String {
     val sign = if (effect.value >= 0) "+" else "−"
     val unit = if (effect.stat in AtlasEffects.flat) "" else "%"
-    return "$sign${number(kotlin.math.abs(effect.value))}$unit ${statTitle(effect.stat)}"
+    // The dictionary's «Атлас: …» prefix is the screen's own title here (2.73.0).
+    return "$sign${number(kotlin.math.abs(effect.value))}$unit ${statTitle(effect.stat).substringAfter(": ")}"
 }

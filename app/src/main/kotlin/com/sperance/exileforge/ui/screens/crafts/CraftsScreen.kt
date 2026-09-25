@@ -167,7 +167,8 @@ private fun eta(millis: Long): String {
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable private fun SessionTally(s: ForgeState, totals: WorkGains) {
     if (totals.cycles == 0) { MutedText(ui("crafts.session_empty"), style = MaterialTheme.typography.labelMedium); return }
-    MutedText(ui("crafts.session_line", totals.cycles, totals.nothing, number(totals.experience)), style = MaterialTheme.typography.labelMedium)
+    MutedText(if (totals.nothing > 0) ui("crafts.session_line", totals.cycles, totals.nothing, number(totals.experience))
+        else ui("crafts.session_line_sure", totals.cycles, number(totals.experience)), style = MaterialTheme.typography.labelMedium)
     if (totals.items.isNotEmpty() || totals.spent.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         totals.items.entries.sortedByDescending { it.value }.forEach { (code, amount) -> TallyChip(materialTitle(code), "+$amount", Vital) }
         totals.spent.entries.sortedByDescending { it.value }.forEach { (code, amount) -> TallyChip(materialTitle(code), "−$amount", LifeRed) }
@@ -339,7 +340,9 @@ private fun share(profession: ProfessionView): Float = profession.next?.takeIf {
         horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(if (locked) ui("expedition.hidden") else jobTitle(job.code), color = if (locked) Muted else GoldBright, style = MaterialTheme.typography.titleSmall)
-            if (!locked) MutedText(ui("crafts.job_line", jobProduct(job), number(job.cycleMillis / 1000.0), number(job.nothing)))
+            // Gathering never comes back empty (2.73.0): its line drops the wasted share.
+            if (!locked) MutedText(if (job.nothing > 0) ui("crafts.job_line", jobProduct(job), number(job.cycleMillis / 1000.0), number(job.nothing))
+                else ui("crafts.job_line_sure", jobProduct(job), number(job.cycleMillis / 1000.0)))
             if (!locked && job.inputs.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 job.inputs.forEach { InputChip(s, it) }
             }
@@ -381,7 +384,7 @@ private fun share(profession: ProfessionView): Float = profession.next?.takeIf {
                 }
             }
             PropertyRow(ui("crafts.cycle_label"), ui("crafts.seconds", number(job.cycleMillis / 1000.0), number(job.seconds)), com.sperance.exileforge.core.display.Glyph.SPEED)
-            PropertyRow(ui("crafts.nothing"), ui("crafts.percent", number(job.nothing)), com.sperance.exileforge.core.display.Glyph.INFO)
+            if (job.nothing > 0) PropertyRow(ui("crafts.nothing"), ui("crafts.percent", number(job.nothing)), com.sperance.exileforge.core.display.Glyph.INFO)
             PropertyRow(ui("crafts.experience"), number(job.experience), com.sperance.exileforge.core.display.Glyph.LEVEL)
             job.extra.forEach { PropertyRow(ui("crafts.find", materialTitle(it.item)), ui("crafts.percent", number(it.chance)), com.sperance.exileforge.core.display.Glyph.ITEM) }
             Spacer(Modifier.height(4.dp))

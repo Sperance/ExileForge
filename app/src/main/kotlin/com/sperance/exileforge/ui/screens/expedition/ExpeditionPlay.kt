@@ -83,7 +83,7 @@ import kotlin.math.floor
             RunPhase.MAP -> {
                 Stick(run)
                 MapBar(run, hud, onLeave = if (zone) null else ({ leaving = true }), onGear = { gear = true })
-                if (gear) GearSheet(s, vm) { gear = false }
+                if (gear) { HoldsRun(run); GearSheet(s, vm) { gear = false } }
                 if (hud.chestPending || hud.chestFailed || hud.chest != null) ChestLoot(s, hud) { vm.runCommand(RunCommand.DismissChest) }
                 if (leaving) ConfirmSheet(title = ui("expedition.leave_q"), confirm = ui("expedition.leave"), danger = true,
                     subtitle = mapTitle(hud.mapCode),
@@ -116,7 +116,11 @@ import kotlin.math.floor
     Column(Modifier.fillMaxWidth().statusBarsPadding().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             // The way out (2.56.1): a portal in a bronze ring, first thing in the corner, and it asks before it goes.
-            onLeave?.let { RoundButton(ForgeGlyphs.Portal, ui("expedition.leave"), onClick = it) }
+            // The gear right under it, on the same line (2.73.0).
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                onLeave?.let { RoundButton(ForgeGlyphs.Portal, ui("expedition.leave"), onClick = it) }
+                RoundButton(ForgeGlyphs.Helm, ui("expedition.gear"), onClick = onGear)
+            }
             Column(Modifier.weight(1f).padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 val zone = VaalZones.isZone(run.map)
                 Text(if (zone) ui("vaal.title", mapTitle(hud.mapCode)) else mapTitle(hud.mapCode), color = if (zone) Color(0xFFFF8A78) else GoldBright,
@@ -125,12 +129,19 @@ import kotlin.math.floor
                     color = if (hud.sealed) LifeRed else Vital, style = MaterialTheme.typography.labelMedium)
                 // Life under the map's name (2.72.0), out of the middle of the view.
                 Vitals(hud.heroLife, hud.heroMaxLife, hud.heroShield, hud.heroMaxShield, Modifier.fillMaxWidth())
-                RoundButton(ForgeGlyphs.Helm, ui("expedition.gear"), onClick = onGear)
             }
             // The minimap (2.51.0), opened as the map is explored; round and around the hero since 2.56.1,
             // with its own zoom and the whole map behind a tap since 2.72.0.
             MiniMap(run, hud)
         }
+    }
+}
+
+/** The run stands still for as long as this is in the composition (2.73.0): a window over the map pauses it. */
+@Composable private fun HoldsRun(run: ExpeditionRun) {
+    DisposableEffect(run) {
+        run.send(RunCommand.Hold(true))
+        onDispose { run.send(RunCommand.Hold(false)) }
     }
 }
 
@@ -169,7 +180,7 @@ import kotlin.math.floor
             ZoomButton("+", ui("expedition.zoom_in")) { cells = (cells / 1.4f).coerceAtLeast(MINIMAP_MIN) }
         }
     }
-    if (full) FullMap(run, hud, tick) { full = false }
+    if (full) { HoldsRun(run); FullMap(run, hud, tick) { full = false } }
 }
 
 @Composable private fun ZoomButton(sign: String, label: String, onClick: () -> Unit) {
@@ -247,9 +258,9 @@ private fun DrawScope.drawExplored(world: ExpeditionWorld, origin: Offset, cell:
                 Engraved(ui("map.modifiers"))
                 run.mapEffects.forEach { (stat, value) ->
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        StatIcon(stat, Rune, Modifier.size(16.dp))
-                        Text(statTitle(stat), color = Parchment, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-                        Text(statNumber(stat, value), color = Rune, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
+                        Tipped({ Tip(statTitle(stat), tint = ModBlue, facts = listOf(ui("tip.value") to statNumber(stat, value))) }) { StatIcon(stat, Rune, Modifier.size(16.dp)) }
+                        Text(statTitle(stat), color = ModBlue, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                        Text(statNumber(stat, value), color = ModBlue, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
                     }
                 }
             } else MutedText(ui("map.no_modifiers"))

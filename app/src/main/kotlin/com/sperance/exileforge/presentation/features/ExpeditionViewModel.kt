@@ -87,7 +87,6 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     }
 
     /** One more chest on the map this window, for gold. */
-    fun buyTreasure(mapCode: String) = service(mapCode) { id -> runtime.api.campaign.treasure(id, mapCode) }
 
     /** A slain guardian back at the exit, for gold. */
     fun summonGuardian(mapCode: String) = service(mapCode) { id -> runtime.api.campaign.summon(id, mapCode) }

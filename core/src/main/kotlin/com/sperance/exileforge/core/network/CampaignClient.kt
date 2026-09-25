@@ -76,10 +76,6 @@ class CampaignClient internal constructor(private val http: Transport) {
     suspend fun vaalLeave(characterId: String, mapCode: String): CampaignFall =
         http.post("$CAMPAIGN/vaal/leave", heroQuery(characterId, "mapCode" to mapCode))
 
-    /** A treasure map (0.34.0): one more chest on the map this window, for gold. Never retried. */
-    suspend fun treasure(characterId: String, mapCode: String): MapServiceOutcome =
-        http.post("$CAMPAIGN/treasure", heroQuery(characterId, "mapCode" to mapCode))
-
     /** Summons a slain guardian back to the exit (0.34.0), for gold. Never retried. */
     suspend fun summon(characterId: String, mapCode: String): MapServiceOutcome =
         http.post("$CAMPAIGN/summon", heroQuery(characterId, "mapCode" to mapCode))

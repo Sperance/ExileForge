@@ -71,7 +71,7 @@ import kotlinx.serialization.json.putJsonArray
         ScreenHeader(ui("tree.title"),
             ui("tree.node_count", s.world.treeNodes.size), ForgeGlyphs.Constellation)
         SkillTreePanel(s, vm::selectNode, vm::allocateNode, vm::refundNode, vm::resetTree, vm::nodeQuery,
-            onSocket = vm::socketJewel, onUnsocket = vm::unsocketJewel, modifier = Modifier.weight(1f))
+            onSocket = vm::socketJewel, onUnsocket = vm::unsocketJewel, onRechoose = vm::rechooseNode, modifier = Modifier.weight(1f))
         Spacer(Modifier.height(12.dp))
     }
 }
@@ -91,14 +91,13 @@ import kotlinx.serialization.json.putJsonArray
 @Composable fun SkillTreePanel(s: ForgeState, onSelect: (String) -> Unit, onAllocate: (String, Int?) -> Unit,
     onRefund: (String) -> Unit, onReset: () -> Unit, onQuery: (String) -> Unit = {},
     onSocket: (String, String) -> Unit = { _, _ -> }, onUnsocket: (String) -> Unit = {},
+    onRechoose: (String, Int) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier) {
     val hero = s.play.hero
     var detailsOpen by remember { mutableStateOf(false) }
     var nodeOpen by remember { mutableStateOf(false) }
-    // Each of the three tree commands spends something a player cannot get back for free — a point
-    // or an orb — so each is asked about, and the question names the price.
-    var confirmAllocate by remember { mutableStateOf<Pair<String, Int?>?>(null) }
-    var confirmRefund by remember { mutableStateOf<String?>(null) }
+    // The node's own window is the question (2.72.0): taking or giving back a node acts at once from
+    // it, the price written beside the button. Only the whole tree's reset is still asked twice.
     var confirmReset by remember { mutableStateOf(false) }
     if (hero == null) {
         InfoCard(ui("tree.no_hero"),
@@ -132,17 +131,16 @@ import kotlinx.serialization.json.putJsonArray
         Column(Modifier.fillMaxWidth().heightIn(max = 520.dp).verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             NodeDetails(s, s.world.treeNodes.firstOrNull { it.code == s.play.selectedNode }, taken, reachable, enabled,
-                onAllocate = { code, choice -> nodeOpen = false; confirmAllocate = code to choice },
-                onRefund = { nodeOpen = false; confirmRefund = it },
+                onAllocate = { code, choice -> nodeOpen = false; onAllocate(code, choice) },
+                onRefund = { nodeOpen = false; onRefund(it) },
+                onRechoose = { code, choice -> nodeOpen = false; onRechoose(code, choice) },
                 onSocket = { instance, code -> nodeOpen = false; onSocket(instance, code) },
                 onUnsocket = { nodeOpen = false; onUnsocket(it) })
             Spacer(Modifier.height(8.dp))
         }
     }
 
-    TreeConfirmations(s, confirmAllocate, confirmRefund, confirmReset,
-        onClear = { confirmAllocate = null; confirmRefund = null; confirmReset = false },
-        onAllocate = onAllocate, onRefund = onRefund, onReset = onReset)
+    TreeConfirmations(s, confirmReset, onClear = { confirmReset = false }, onReset = onReset)
 
     if (detailsOpen) ModalBottomSheet(onDismissRequest = { detailsOpen = false }, containerColor = Panel,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
@@ -272,7 +270,7 @@ import kotlinx.serialization.json.putJsonArray
  */
 @Composable private fun NodeDetails(s: ForgeState, node: SkillTreeNode?, taken: Set<String>, reachable: Set<String>, enabled: Boolean,
     onAllocate: (String, Int?) -> Unit, onRefund: (String) -> Unit,
-    onSocket: (String, String) -> Unit = { _, _ -> }, onUnsocket: (String) -> Unit = {}) {
+    onSocket: (String, String) -> Unit = { _, _ -> }, onUnsocket: (String) -> Unit = {}, onRechoose: (String, Int) -> Unit = { _, _ -> }) {
     if (node == null) {
         InfoCard(ui("tree.no_selection"), ui("tree.no_selection_hint"))
         return
@@ -295,12 +293,25 @@ import kotlinx.serialization.json.putJsonArray
         if (node.type == SkillNodeType.JEWEL_SOCKET) {
             SocketContents(s, node, allocated, enabled, onSocket, onUnsocket)
         } else if (choosing) {
-            // A mastery or an attribute node (server 0.52.0): one option, chosen when it is taken.
-            MutedText(ui(if (allocated) "tree.option_chosen" else "tree.option_pick"), style = MaterialTheme.typography.labelMedium)
+            // A mastery or an attribute node (server 0.52.0): one option, chosen when it is taken. A taken
+            // attribute node may change it for a Chaos Orb (2.72.0, server 0.63.0); a mastery may not.
+            val rechoosable = allocated && node.type == SkillNodeType.ATTRIBUTE
+            MutedText(ui(when { rechoosable -> "tree.option_rechoose"; allocated -> "tree.option_chosen"; else -> "tree.option_pick" }),
+                style = MaterialTheme.typography.labelMedium)
             node.options.forEachIndexed { index, option ->
-                val on = if (allocated) index == chosen else index == picked
-                OptionCard(on, enabled = !allocated && node.code in reachable, onClick = { picked = index }) {
+                val on = when { picked != null -> index == picked; allocated -> index == chosen; else -> false }
+                OptionCard(on, enabled = (!allocated && node.code in reachable) || (rechoosable && enabled), onClick = { picked = index }) {
                     option.forEach { modifier -> ModifierLine(modifierDocument(modifier.modifierCode, modifier.values), s.world.definitions) }
+                }
+            }
+            if (rechoosable) {
+                val chaos = s.orbOf(CurrencyOrb.CHAOS_ORB)
+                val owned = chaos?.let { s.bagAmount(it.id) } ?: 0L
+                Button(enabled = enabled && picked != null && picked != chosen && owned > 0, onClick = { picked?.let { onRechoose(node.code, it) } },
+                    modifier = Modifier.fillMaxWidth()) {
+                    com.sperance.exileforge.ui.icons.OrbGlyph(CurrencyOrb.CHAOS_ORB, Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(ui("tree.rechoose", owned))
                 }
             }
             if (node.type == SkillNodeType.MASTERY && !allocated && node.code !in reachable)
@@ -372,16 +383,9 @@ import kotlinx.serialization.json.putJsonArray
     }
 }
 
-@Composable private fun TreeConfirmations(
-    s: ForgeState,
-    allocate: Pair<String, Int?>?, refund: String?, reset: Boolean,
-    onClear: () -> Unit,
-    onAllocate: (String, Int?) -> Unit, onRefund: (String) -> Unit, onReset: () -> Unit,
-) {
-    val nodeName = { code: String -> s.world.treeNodes.firstOrNull { it.code == code }?.title ?: code }
+@Composable private fun TreeConfirmations(s: ForgeState, reset: Boolean, onClear: () -> Unit, onReset: () -> Unit) {
     val treeIcon: @Composable () -> Unit = { Icon(ForgeGlyphs.Constellation, null, tint = Rune, modifier = Modifier.size(40.dp)) }
-    val available = s.play.hero?.tree?.available
-    // What a refund is paid with: the orb, and how many of it the bag holds right now.
+    // What a reset is paid with: the orb, and how many of it the bag holds right now.
     val regret = s.orbOf(CurrencyOrb.ORB_OF_REGRET)
     val regretTitle = regret?.title(s.lang) ?: CurrencyOrb.ORB_OF_REGRET.title(s.lang)
     val regretLeft = regret?.let { s.bagAmount(it.id) }
@@ -391,27 +395,6 @@ import kotlinx.serialization.json.putJsonArray
     )
     fun shortage(spent: Int) = regretLeft?.takeIf { it < spent }?.let { ui("confirm.short", it) }
 
-    allocate?.let { (code, choice) ->
-        val cost = s.world.treeNodes.firstOrNull { it.code == code }?.cost ?: 1
-        ConfirmSheet(
-            title = ui("tree.allocate_q"), subtitle = nodeName(code), icon = treeIcon,
-            ledger = listOfNotNull(
-                LedgerLine(ui("confirm.spend"), ui("confirm.minus_count", cost, points(cost)), Tone.SPEND),
-                available?.takeIf { it >= cost }?.let { LedgerLine(ui("confirm.left"), ui("confirm.count", it - cost, points(it - cost))) },
-                LedgerLine(ui("confirm.gain"), nodeName(code), Tone.GAIN),
-            ),
-            note = ui("tree.allocate_confirm"),
-            warning = available?.takeIf { it < cost }?.let { ui("tree.short_points", it) }, blocked = available != null && available < cost,
-            confirm = ui("tree.allocate_do"), onDismiss = onClear) { onAllocate(code, choice) }
-    }
-    refund?.let { code ->
-        val cost = s.world.treeNodes.firstOrNull { it.code == code }?.cost ?: 1
-        ConfirmSheet(
-            title = ui("tree.refund_q"), subtitle = nodeName(code), icon = treeIcon,
-            ledger = regretLines(1) + LedgerLine(ui("confirm.returns"), ui("confirm.plus_count", cost, points(cost)), Tone.GAIN),
-            warning = shortage(1), blocked = shortage(1) != null,
-            confirm = ui("tree.refund_do"), onDismiss = onClear) { onRefund(code) }
-    }
     if (reset) {
         // The start node is not given back, so it is not paid for — the count says what is.
         val returned = (s.play.hero?.tree?.nodes?.size ?: 1) - 1
@@ -424,7 +407,6 @@ import kotlinx.serialization.json.putJsonArray
 }
 
 /** Russian counts its nouns in three forms and English in two: see `plural`. */
-private fun points(n: Int) = plural("tree.point", n)
 
 private fun nodes(n: Int) = plural("tree.node", n)
 

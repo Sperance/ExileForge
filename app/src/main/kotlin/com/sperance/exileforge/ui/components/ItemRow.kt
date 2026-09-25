@@ -144,8 +144,8 @@ import kotlinx.serialization.json.JsonObject
             if (base.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 base.forEach { value -> BaseChip(value) }
             }
-            // The trade table's line (2.60.0): the rolls are summed up, not listed - the card lists them.
-            RollTops(document.text("rarity"), color, rollSummary(document, rolled, definitions))
+            // Every line it rolled, as sentences (2.72.0): a stash is read down without opening each card.
+            RollTops(document.text("rarity"), color, rollSummary(document, rolled, definitions), rolled, definitions)
             // The server's verdict, in its own words — never a requirement worked out here.
             unwearable.forEach {
                 Text(requirementReason(it), color = LifeRed, style = MaterialTheme.typography.labelSmall,

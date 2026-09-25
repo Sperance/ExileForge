@@ -27,6 +27,8 @@ class TreeClient internal constructor(private val http: Transport) {
     /** [choice] is the picked option of a MASTERY or ATTRIBUTE node (server 0.52.0); every other node takes none. */
     suspend fun allocate(characterId: String, nodeCode: String, choice: Int? = null): SkillTreeState = node("allocate", characterId, nodeCode, choice)
     suspend fun refund(characterId: String, nodeCode: String): SkillTreeState = node("refund", characterId, nodeCode)
+    /** Another option of a taken ATTRIBUTE node, paid with one Chaos Orb (server 0.63.0); the node stays taken. */
+    suspend fun rechoose(characterId: String, nodeCode: String, choice: Int): SkillTreeState = node("rechoose", characterId, nodeCode, choice)
     suspend fun reset(characterId: String): SkillTreeState =
         http.post("$TREE/reset", heroQuery(characterId))
     private suspend fun node(operation: String, characterId: String, nodeCode: String, choice: Int? = null): SkillTreeState {

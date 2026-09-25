@@ -111,6 +111,7 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
      */
     fun allocateNode(code: String, choice: Int? = null) { with(runtime) { characterCommand { id -> api.tree.allocate(id, code, choice) } } }
     fun refundNode(code: String) { with(runtime) { characterCommand { id -> api.tree.refund(id, code) } } }
+    fun rechooseNode(code: String, choice: Int) { with(runtime) { characterCommand { id -> api.tree.rechoose(id, code, choice) } } }
     fun resetTree() { with(runtime) { characterCommand { id -> api.tree.reset(id) } } }
 
     /** Admin only: hand the character experience and let the server decide about the level. */

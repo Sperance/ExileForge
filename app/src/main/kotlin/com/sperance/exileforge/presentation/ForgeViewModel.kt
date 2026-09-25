@@ -86,6 +86,7 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     fun selectNode(code: String) = runtime.heroViewModel.selectNode(code)
     fun allocateNode(code: String, choice: Int? = null) = runtime.heroViewModel.allocateNode(code, choice)
     fun refundNode(code: String) = runtime.heroViewModel.refundNode(code)
+    fun rechooseNode(code: String, choice: Int) = runtime.heroViewModel.rechooseNode(code, choice)
     fun resetTree() = runtime.heroViewModel.resetTree()
     fun addExperience(amount: Double) = runtime.heroViewModel.addExperience(amount)
     fun draftClass(value: String) = runtime.editorViewModel.draftClass(value)

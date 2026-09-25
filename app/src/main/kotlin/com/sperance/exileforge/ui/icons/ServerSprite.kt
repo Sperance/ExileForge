@@ -2,6 +2,8 @@ package com.sperance.exileforge.ui.icons
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.unit.dp
@@ -18,6 +20,9 @@ import java.util.concurrent.ConcurrentHashMap
  * re-parsing that outline per frame would be the most expensive thing on it.
  */
 private val parsed = ConcurrentHashMap<IconSprite, ImageVector>()
+
+/** A traced outline's width, as a share of the sprite's box: 1.8 in the usual 24. */
+private const val STROKE_SHARE = .075f
 
 /**
  * The sprite as an `ImageVector`, or null when its outlines cannot be read.
@@ -37,8 +42,13 @@ fun spriteVector(sprite: IconSprite): ImageVector? {
             defaultWidth = 24.dp, defaultHeight = 24.dp,
             viewportWidth = sprite.viewBox, viewportHeight = sprite.viewBox,
         ).apply {
+            // Every outline is filled and also traced (2.72.0): a sprite drawn with bare lines — the
+            // snowflake of cold, a slash, a row of bars — has no area to fill and was invisible.
+            val line = sprite.viewBox * STROKE_SHARE
             outlines.forEach { (path, nodes) ->
-                addPath(nodes, fill = SolidColor(Color.Black), fillAlpha = path.alpha.coerceIn(0f, 1f))
+                val alpha = path.alpha.coerceIn(0f, 1f)
+                addPath(nodes, fill = SolidColor(Color.Black), fillAlpha = alpha, stroke = SolidColor(Color.Black), strokeAlpha = alpha,
+                    strokeLineWidth = line, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round)
             }
         }.build()
         parsed[sprite] = built

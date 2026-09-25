@@ -239,6 +239,7 @@
 | Дерево персонажа | `GET /api/v1/character/skilltree/state?characterId=` → `CharacterSkillTreeState` |
 | Взять узел | `POST /api/v1/character/skilltree/allocate?characterId=&nodeCode=` |
 | Вернуть узел | `POST /api/v1/character/skilltree/refund?characterId=&nodeCode=` |
+| Сменить выбор атрибутного узла за сферу хаоса (0.63.0) | `POST /api/v1/character/skilltree/rechoose?characterId=&nodeCode=&choice=` |
 | Сбросить дерево | `POST /api/v1/character/skilltree/reset?characterId=` |
 
 Все четыре отвечают состоянием целиком: `{characterId, total, spent, available, nodes, totals}`.

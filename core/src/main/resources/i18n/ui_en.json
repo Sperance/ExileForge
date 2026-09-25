@@ -112,6 +112,7 @@
   "auction.choose_character": "Choose a character",
   "auction.closed": "The auction is closed",
   "auction.closed_note": "The threshold is the server's: the client keeps no copy and learns it from the refusal.",
+  "auction.done_refresh": "Done, but the auction could not be read again",
   "auction.filter_note": "The filter is the server's: every field is a snapshot the lot carries.",
   "auction.filters": "Filters",
   "auction.forward": "Next",

@@ -79,9 +79,12 @@ class AuctionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     fun buy(lotId: String) { with(runtime) { trade(writing = true) {
         val id = characterId
         api.auction.buy(id, lotId)
-        refreshHero(id)
-        val filter = state.value.market.filter.copy(excludeSellerId = if (state.value.market.showOwnLots) "" else id, lang = state.value.lang.code)
-        mutable.update { it.copy(market = it.market.copy(showcase = api.auction.search(id, filter, state.value.market.showcase.page))) }
+        afterTrade {
+            refreshHero(id)
+            val filter = state.value.market.filter.copy(excludeSellerId = if (state.value.market.showOwnLots) "" else id, lang = state.value.lang.code)
+            val showcase = api.auction.search(id, filter, state.value.market.showcase.page)
+            mutable.update { it.copy(market = it.market.copy(showcase = showcase)) }
+        }
     } } }
 
     /** Listing and withdrawing move goods between the character and the lot: both lists change. */
@@ -100,13 +103,30 @@ class AuctionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     fun cancel(lotId: String) { with(runtime) { trade(writing = true) {
         val id = characterId
         api.auction.cancel(id, lotId)
-        refreshHero(id)
-        mutable.update { it.copy(market = it.market.copy(myLots = api.auction.myLots(id), slots = api.auction.slots(id))) }
+        afterTrade {
+            refreshHero(id)
+            val lots = api.auction.myLots(id)
+            val slots = api.auction.slots(id)
+            mutable.update { it.copy(market = it.market.copy(myLots = lots, slots = slots)) }
+        }
     } } }
 
     private suspend fun listed(characterId: String) { with(runtime) {
-        refreshHero(characterId)
-        mutable.update { it.copy(market = it.market.copy(myLots = api.auction.myLots(characterId), slots = api.auction.slots(characterId), tab = 1)) }
+        afterTrade {
+            refreshHero(characterId)
+            val lots = api.auction.myLots(characterId)
+            val slots = api.auction.slots(characterId)
+            mutable.update { it.copy(market = it.market.copy(myLots = lots, slots = slots, tab = 1)) }
+        }
+    } }
+
+    /**
+     * The reads after a trade the server already made. Their failure is not the trade's: reported
+     * as the command's, a bought lot would look unbought and could be bought again.
+     */
+    private suspend fun afterTrade(block: suspend () -> Unit) { with(runtime) {
+        try { block() } catch (e: CancellationException) { throw e }
+        catch (_: Exception) { mutable.update { it.copy(message = ui("auction.done_refresh"), error = true) } }
     } }
 
     /**

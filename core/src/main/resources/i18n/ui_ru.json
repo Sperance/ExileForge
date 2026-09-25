@@ -112,6 +112,7 @@
   "auction.choose_character": "Выберите персонажа",
   "auction.closed": "Аукцион закрыт",
   "auction.closed_note": "Порог называет сервер: клиент не хранит его копию и узнаёт только по отказу.",
+  "auction.done_refresh": "Готово, но аукцион не удалось перечитать",
   "auction.filter_note": "Фильтр считает сервер: все поля лежат снимком в самом лоте.",
   "auction.filters": "Фильтры",
   "auction.forward": "Вперёд",

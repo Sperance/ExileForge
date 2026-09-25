@@ -12,7 +12,11 @@ import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.graphics.vector.group
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.model.currency.CurrencyItem
 import com.sperance.exileforge.core.model.currency.CurrencyOrb
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.unit.Dp
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.cos
 import kotlin.math.sin
@@ -27,6 +31,14 @@ import kotlin.math.sin
  */
 @Composable fun OrbGlyph(orb: CurrencyOrb?, modifier: Modifier = Modifier, description: String? = null) =
     Image(rememberVectorPainter(orbVector(orb)), description, modifier)
+
+/**
+ * A picker's art for orb options keyed by their `items` id (2.69.1): the orb's glass, or nothing for
+ * a key that is not an orb — «любая сфера», an empty choice — which then keeps the list's own spacing.
+ */
+fun orbArt(orbs: List<CurrencyItem>): @Composable (String, Dp) -> Unit = { key, size ->
+    orbs.firstOrNull { it.id == key }?.let { OrbGlyph(it.orb, Modifier.size(size)) } ?: Spacer(Modifier.size(size))
+}
 
 /** One orb's look: its glass, its sign, and whether it is precious enough for rays. */
 private class OrbArt(val hue: Long, val emblem: Emblem, val rays: Boolean = false)

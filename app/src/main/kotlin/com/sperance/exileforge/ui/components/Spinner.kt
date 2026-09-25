@@ -8,6 +8,7 @@ import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.display.Glyph
@@ -18,13 +19,16 @@ import com.sperance.exileforge.ui.theme.Muted
 /**
  * A picker: [glyph] says what is being picked, and [optionGlyph], when given, draws each option —
  * a list of characteristics, say, where the options are codes with meanings of their own.
+ * [optionArt] (2.69.1) is richer art for an option — an orb's stained glass — drawn at the given
+ * size in the list and in place of [glyph] once that option is picked.
  */
 @Composable fun Spinner(label: String, value: String, options: Map<String, String>, enabled: Boolean = true,
-    glyph: Glyph = Glyph.INFO, optionGlyph: ((String) -> Glyph)? = null, onChange: (String) -> Unit) {
+    glyph: Glyph = Glyph.INFO, optionGlyph: ((String) -> Glyph)? = null,
+    optionArt: (@Composable (key: String, size: Dp) -> Unit)? = null, onChange: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     var search by remember { mutableStateOf("") }
     OutlinedButton(onClick = { search = ""; expanded = true }, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
-        Icon(glyph.vector, null, modifier = Modifier.size(20.dp), tint = Gold)
+        if (optionArt != null && value.isNotBlank()) optionArt(value, 24.dp) else Icon(glyph.vector, null, modifier = Modifier.size(20.dp), tint = Gold)
         Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
             Text(label.uppercase(), style = MaterialTheme.typography.labelSmall, color = Muted)
             Text(options[value] ?: value.ifBlank { ui("common.choose") }, style = MaterialTheme.typography.bodyMedium)
@@ -38,7 +42,8 @@ import com.sperance.exileforge.ui.theme.Muted
         LazyColumn(Modifier.fillMaxWidth().heightIn(max = 400.dp)) {
             items(filtered, key = { it.first }) { (key, title) ->
                 TextButton(enabled = enabled, onClick = { expanded = false; onChange(key) }, modifier = Modifier.fillMaxWidth()) {
-                    optionGlyph?.let { Icon(it(key).vector, null, tint = Gold, modifier = Modifier.size(22.dp)) }
+                    if (optionArt != null) optionArt(key, 26.dp)
+                    else optionGlyph?.let { Icon(it(key).vector, null, tint = Gold, modifier = Modifier.size(22.dp)) }
                     Text(title, modifier = Modifier.weight(1f).padding(horizontal = 12.dp))
                     if(key == value) Icon(Icons.Outlined.CheckCircle, ui("common.chosen"), tint = Gold)
                 }

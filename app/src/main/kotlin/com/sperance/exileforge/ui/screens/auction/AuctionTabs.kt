@@ -195,7 +195,8 @@ private fun chipLabel(s: ForgeState, field: FilterField, value: String): String 
                     singleLine = true, keyboardOptions = digits, modifier = Modifier.weight(1f))
             }
             Spinner(ui("auction.priced_in"), draft.priceOrbId,
-                mapOf("" to any) + s.world.orbs.associate { it.id to it.title(s.lang) }, true, glyph = Glyph.CURRENCY) { draft = draft.copy(priceOrbId = it) }
+                mapOf("" to any) + s.world.orbs.associate { it.id to it.title(s.lang) }, true, glyph = Glyph.CURRENCY,
+                optionArt = com.sperance.exileforge.ui.icons.orbArt(s.world.orbs)) { draft = draft.copy(priceOrbId = it) }
             OutlinedTextField(draft.maxPrice, { draft = draft.copy(maxPrice = it.filter(Char::isDigit)) }, label = { Text(ui("auction.price_max")) },
                 singleLine = true, keyboardOptions = digits, modifier = Modifier.fillMaxWidth())
             EntitySpinner(ui("auction.seller"), draft.sellerId, EntitySource.CHARACTER, true) { draft = draft.copy(sellerId = it) }

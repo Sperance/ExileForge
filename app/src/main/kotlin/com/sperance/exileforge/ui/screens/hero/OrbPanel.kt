@@ -18,6 +18,7 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.LifeRed
 import com.sperance.exileforge.ui.theme.Muted
 import com.sperance.exileforge.ui.theme.Rune
+import com.sperance.exileforge.ui.icons.orbArt
 
 /**
  * The administrator's orb panel: one currency orb on one item, with a top-up beside it.
@@ -41,7 +42,8 @@ import com.sperance.exileforge.ui.theme.Rune
     Engraved(ui("orb.title"))
     if (s.world.orbs.isEmpty()) { Text(ui("orb.none"), color = Muted); return }
     Spinner(ui("orb.orb"), s.play.selectedOrb,
-        s.world.orbs.associate { it.id to "${it.title(s.lang)} · ${owned[it.id] ?: 0L}" }, enabled, glyph = Glyph.CURRENCY, onChange = onSelect)
+        s.world.orbs.associate { it.id to "${it.title(s.lang)} · ${owned[it.id] ?: 0L}" }, enabled, glyph = Glyph.CURRENCY,
+        optionArt = orbArt(s.world.orbs), onChange = onSelect)
     // An orb the client has no translation for still explains itself: the server's dictionary has one.
     orb?.let { MutedText(it.details(s.lang)) }
     if (instance == null) { Text(ui("orb.choose_item"), color = Muted); return }
@@ -51,7 +53,7 @@ import com.sperance.exileforge.ui.theme.Rune
     if (instance.corrupted) Text(ui("orb.corrupted"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
     Button(enabled = enabled && !instance.corrupted && s.play.selectedOrb.isNotBlank(),
         onClick = { onApply(instance.id, s.play.selectedOrb) }, modifier = Modifier.fillMaxWidth()) {
-        Icon(ForgeGlyphs.Orb, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp))
+        orb?.let { com.sperance.exileforge.ui.icons.OrbGlyph(it.orb, Modifier.size(22.dp)) } ?: Icon(ForgeGlyphs.Orb, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp))
         Text(ui("orb.apply"))
     }
     // The server's sentence about the last orb, as the forge prints it under its item.

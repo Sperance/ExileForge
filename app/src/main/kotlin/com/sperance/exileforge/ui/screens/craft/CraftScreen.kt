@@ -182,7 +182,7 @@ private val ForgeSection.title get() = when (this) {
     val orb = s.world.orbs.firstOrNull { it.id == s.play.selectedOrb && (owned[it.id] ?: 0L) > 0 }
     ForgeBar {
         if (orb == null) { Text(ui("forge.pick_orb"), color = Muted); return@ForgeBar }
-        BarTitle(ForgeGlyphs.Orb, Gold, orb.title(s.lang), stock(owned[orb.id] ?: 0L, 1))
+        BarTitle(ForgeGlyphs.Orb, Gold, orb.title(s.lang), stock(owned[orb.id] ?: 0L, 1), orb = orb.orb)
         HoldButton(ui("confirm.hold", ui("forge.apply_orb")), Gold, enabled = enabled && !instance.corrupted, rearm = true) {
             onApply(instance.id, orb.id)
         }
@@ -222,9 +222,10 @@ private fun stock(have: Long, need: Long): Pair<String, Boolean> =
         verticalArrangement = Arrangement.spacedBy(10.dp), content = content)
 }
 
-@Composable private fun BarTitle(icon: ImageVector, accent: Color, title: String, stock: Pair<String, Boolean>) {
+@Composable private fun BarTitle(icon: ImageVector, accent: Color, title: String, stock: Pair<String, Boolean>, orb: CurrencyOrb? = null) {
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, null, tint = accent, modifier = Modifier.size(30.dp))
+        if (orb != null) com.sperance.exileforge.ui.icons.OrbGlyph(orb, Modifier.size(34.dp))
+        else Icon(icon, null, tint = accent, modifier = Modifier.size(30.dp))
         Column(Modifier.weight(1f)) {
             Text(title, color = GoldBright, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(stock.first, color = if (stock.second) LifeRed else Muted, style = MaterialTheme.typography.labelMedium)

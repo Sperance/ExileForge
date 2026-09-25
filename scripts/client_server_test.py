@@ -57,6 +57,12 @@ with (root / 'build/client-server.log').open('w') as log:
                         EF_PLAYER_LOGIN=player_login, EF_PLAYER_PASSWORD=player_password)
         subprocess.run(['bash', 'gradlew', ':core:test', '--tests', 'com.sperance.exileforge.core.ServerIntegrationTest', '--rerun-tasks'],
                        cwd=root, env=test_env, check=True)
+    except Exception:
+        # The backend's own errors (SP_500 with its stack) are only in its log: show them where CI shows output.
+        log.flush()
+        errors = [line for line in (root / 'build/client-server.log').read_text(errors='replace').splitlines() if 'SP_500' in line or 'Exception' in line or '\tat ' in line]
+        print('\n'.join(errors[-150:]))
+        raise
     finally:
         process.terminate()
         try:

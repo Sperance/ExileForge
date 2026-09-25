@@ -70,6 +70,7 @@ class CharacterViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         // What was on its way belonged to the character being left.
         cancelReads()
         expeditionViewModel.drop()
+        craftsViewModel.drop()
         mutable.update { it.copy(phase = AppPhase.CHARACTERS, play = it.play.copy(characterId = "", characterOwner = "", hero = null, selectedEquipment = "", forgeLine = "", selectedNode = "", nodeQuery = "", campaign = null), world = it.world.copy(inventoryBases = emptyMap()), market = it.market.copy(myLots = emptyList(), showcase = com.sperance.exileforge.core.model.auction.AuctionPage(), tab = 0, locked = null), admin = it.admin.copy(editorOpen = false, original = null, draft = JsonObject(emptyMap()))) }
         read(Reads.CHARACTERS) { readCharacters() }
     } }

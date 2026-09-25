@@ -53,6 +53,7 @@ class CraftsViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         val profession = play.crafts?.professions?.firstOrNull { it.code == work?.profession }
         val job = profession?.jobs?.firstOrNull { it.code == work?.job }
         val bag = play.hero?.bag
+        var thrown = false
         if (work != null && profession != null && job != null && bag != null) {
             val spent = CraftCycle.spent(job, work.additives)
             // A cycle the bag cannot pay for is the server's to stop: nothing is thrown for it here.
@@ -63,11 +64,21 @@ class CraftsViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
                     crafts = s.play.crafts?.copy(work = work.copy(settledAt = work.settledAt + work.cycleMillis,
                         nextAt = work.nextAt + work.cycleMillis, cycle = work.cycle + 1)),
                     craftsTotals = s.play.craftsTotals + gains, craftsLast = gains, craftsPending = s.play.craftsPending + gains)) }
+                thrown = true
             }
         }
-        armCycle()
+        // Only a thrown cycle moves the alarm forward. One that was not would be re-armed at the
+        // same past moment and fire again at once, forever, on the main thread; the server's answer arms it instead.
+        if (thrown) armCycle() else cycle = null
         // The server is asked a moment later, so its clock has reached the cycle too — and quietly.
         scope.launch { delay(SETTLE_GRACE); load(silent = true) }
+    } }
+
+    /** The hero is left or the session is closed: the alarm stops and the crafts go with the hero. */
+    fun drop() { with(runtime) {
+        cycle?.cancel()
+        cycle = null
+        mutable.update { it.copy(play = it.play.copy(crafts = null, craftsPending = WorkGains())) }
     } }
 
     fun openProfession(code: String) { runtime.mutable.update { it.copy(play = it.play.copy(craftsProfession = code)) } }

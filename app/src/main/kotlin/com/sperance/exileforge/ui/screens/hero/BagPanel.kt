@@ -12,7 +12,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.IconKey
 import com.sperance.exileforge.core.display.icon
@@ -39,37 +38,68 @@ private fun bagDetails(s: ForgeState, itemId: String): String? =
     s.world.orbs.firstOrNull { it.id == itemId }?.details(s.lang)
         ?: s.world.materials.firstOrNull { it.id == itemId }?.let { locOr(LocaleKey.itemDescription(it.code), "") }
 
+/** A shelf of the bag (2.75.0): each has its heading over its own run of cells. */
+enum class BagCategory(val key: String) { ORBS("bag.section_orbs"), MATERIALS("bag.section_materials"), OTHER("bag.section_other") }
+
 /**
- * The bag by category — orbs, then materials, then whatever the catalogue does not name — then by
+ * The bag by category — orbs, then materials, then whatever the catalogue does not name — each by
  * rarity, then by name (2.73.0). A stack has no rarity of its own, so its worth stands for it: the
- * dearer the rarer.
+ * dearer the rarer. An empty category is left out.
  */
-fun bagStacks(s: ForgeState): List<CharacterItem> {
+fun bagSections(s: ForgeState): List<Pair<BagCategory, List<CharacterItem>>> {
     val orbs = s.world.orbs.associateBy { it.id }
     val materials = s.world.materials.associateBy { it.id }
-    fun category(id: String) = when (id) { in orbs -> 0; in materials -> 1; else -> 2 }
+    fun category(id: String) = when (id) { in orbs -> BagCategory.ORBS; in materials -> BagCategory.MATERIALS; else -> BagCategory.OTHER }
     fun worth(id: String) = orbs[id]?.price ?: materials[id]?.price ?: 0L
-    return s.play.hero?.bag.orEmpty().sortedWith(compareBy<CharacterItem>({ category(it.itemId) }, { -worth(it.itemId) }, { bagTitle(s, it.itemId) }))
+    val byCategory = s.play.hero?.bag.orEmpty().sortedWith(compareBy<CharacterItem>({ -worth(it.itemId) }, { bagTitle(s, it.itemId) }))
+        .groupBy { category(it.itemId) }
+    return BagCategory.entries.mapNotNull { category -> byCategory[category]?.let { category to it } }
 }
 
 /**
- * One stack of the bag as a line: the orb, what it does, and how many there are.
- *
- * What it does is the dictionary's sentence, cut to two lines — the sheet behind the tap has room
- * for the whole of it.
+ * The bag as a table (2.75.0): a heading per category and under it square cells — the stack's icon
+ * and its count in the corner — as many to a row as fit [CELL]. The name, the rule and the ways on
+ * are one tap behind a cell, in [BagSheet].
  */
-@Composable fun BagRow(s: ForgeState, stack: CharacterItem, onClick: () -> Unit) {
-    val code = stackCode(s, stack.itemId)
-    // One short line since 2.48.0: the name and the count; what it does is behind the tap, in BagSheet.
-    Row(Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(6.dp)).border(1.dp, PanelRaised, RoundedCornerShape(6.dp))
-        .clickable(role = Role.Button, onClick = onClick).padding(horizontal = 6.dp, vertical = 2.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-        // Tighter since 2.73.0: more of the bag on one screen.
-        StackIcon(code, s.world.orbs.firstOrNull { it.id == stack.itemId }, 22)
-        Text(bagTitle(s, stack.itemId), color = Parchment, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f))
-        Text(stack.amount.toString(), color = GoldBright, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+@Composable fun BagGrid(s: ForgeState, sections: List<Pair<BagCategory, List<CharacterItem>>>, onOpen: (String) -> Unit) {
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val columns = ((maxWidth + GAP) / (CELL + GAP)).toInt().coerceAtLeast(1)
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            sections.forEach { (category, stacks) ->
+                Column(verticalArrangement = Arrangement.spacedBy(GAP)) {
+                    MutedText(ui(category.key), style = MaterialTheme.typography.labelMedium)
+                    stacks.chunked(columns).forEach { row ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(GAP)) {
+                            row.forEach { stack -> BagCell(s, stack, Modifier.weight(1f)) { onOpen(stack.itemId) } }
+                            repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
+                        }
+                    }
+                }
+            }
+        }
     }
+}
+
+private val CELL = 60.dp
+private val GAP = 6.dp
+
+/** One cell of the bag: the stack's icon in a panel square, its count in the bottom corner. */
+@Composable private fun BagCell(s: ForgeState, stack: CharacterItem, modifier: Modifier, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(6.dp)
+    val title = bagTitle(s, stack.itemId)
+    Box(modifier.aspectRatio(1f).background(Panel, shape).border(1.dp, PanelRaised, shape)
+        .clickable(role = Role.Button, onClickLabel = title, onClick = onClick), contentAlignment = Alignment.Center) {
+        StackIcon(stackCode(s, stack.itemId), s.world.orbs.firstOrNull { it.id == stack.itemId }, 36)
+        Text(compactCount(stack.amount), color = GoldBright, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.align(Alignment.BottomEnd).padding(horizontal = 4.dp, vertical = 2.dp))
+    }
+}
+
+/** A count that fits a cell's corner: 12 345 is «12k», a million and more «1.2M». */
+internal fun compactCount(amount: Long): String = when {
+    amount >= 1_000_000 -> String.format(java.util.Locale.ROOT, "%.1fM", amount / 1_000_000.0).replace(".0M", "M")
+    amount >= 10_000 -> "${amount / 1_000}k"
+    else -> amount.toString()
 }
 
 /** The code of a stack the client knows — an orb or a material — for its icon. */

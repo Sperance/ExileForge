@@ -10,6 +10,7 @@ import com.sperance.exileforge.core.model.hero.UnwearableEquipment
 import com.sperance.exileforge.core.model.modifier.Modifier
 import com.sperance.exileforge.core.model.modifier.ModifierDefinition
 import com.sperance.exileforge.core.model.modifier.ModifierOperation
+import com.sperance.exileforge.core.model.powers.PowerBook
 import com.sperance.exileforge.core.model.progression.CharacterClass
 import com.sperance.exileforge.core.model.skilltree.CharacterSkillNode
 import kotlinx.serialization.Serializable
@@ -41,6 +42,8 @@ import kotlin.math.floor
     val sell: SellRule = SellRule(),
     /** Stats that are a percent already (server 0.65.0, served since 0.66.0): INCREASED adds into them instead of multiplying. */
     val percent: List<String> = emptyList(),
+    /** The powers of unique items (server 0.70.0): their sheet rules close [Sheet.compute], the fight reads the rest. */
+    val powers: PowerBook = PowerBook(),
 ) {
     val order: Map<String, Int> by lazy { stats.associate { it.stat to it.order } }
     val percentStats: Set<String> by lazy { percent.toSet() }
@@ -217,7 +220,7 @@ object Sheet {
             val applied = byStat[stat].orEmpty().map { it.operation to it.resolve(it.perStat?.let { source -> result[source] } ?: 0.0) }
             result[stat] = apply(base[stat] ?: 0.0, applied, stat in tables.percentStats)
         }
-        return result
+        return tables.powers.applySheet(result)
     }
 
     /** The server's ModifierMath, rounded to one decimal half-up as it rounds; a percent stat takes INCREASED as an addition. */

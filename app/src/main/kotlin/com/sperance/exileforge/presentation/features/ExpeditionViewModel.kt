@@ -184,7 +184,7 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             hero.equipped[slot]?.let { item -> s.world.inventoryBases[item.equipmentId]?.let { Flask.of(item, it, definitions, conditions.getOrNull(i)) } }
         }
         HeroGear(hero.sheet.stats, hero.sheet.level, hero.sheet.model, stance(),
-            Loadout.of(hero.character.skills, s.world.skills, s.heroClass?.code.orEmpty(), flasks), s.world.statTables.percentStats)
+            Loadout.of(hero.character.skills, s.world.skills, s.heroClass?.code.orEmpty(), flasks, s.world.statTables.powers), s.world.statTables.percentStats)
     }
 
     fun send(command: RunCommand) { mutableRun.value?.send(command) }

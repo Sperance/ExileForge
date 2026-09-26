@@ -55,7 +55,7 @@ val modifierSources = listOf("IMPLICIT", "PREFIX", "SUFFIX", "UNIQUE", "ENCHANTM
 val modifierOperations = listOf("ADD", "INCREASED", "MORE", "SET")
 const val SERVER_COMMIT = "34c2470c2c6013a9f974506908d706baf105bc36"
 const val SERVER_BRANCH = "claude/tender-pasteur-a36kj2"
-const val SERVER_VERSION = "0.69.1"
+const val SERVER_VERSION = "0.70.0"
 
 fun template(catalog: Catalog, kind: EquipmentKind = EquipmentKind.Weapon): JsonObject = when (catalog) {
     Catalog.CHARACTERS -> defaultObject("character")

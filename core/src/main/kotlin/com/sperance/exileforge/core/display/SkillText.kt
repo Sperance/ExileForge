@@ -21,7 +21,8 @@ import kotlin.math.abs
  */
 object SkillText {
 
-    fun title(code: String): String = locOr("skill.$code.name", displayName(code))
+    /** A skill's name; a unique item's power (2.79.0) is named by its stat. */
+    fun title(code: String): String = locOr("skill.$code.name", locOr("enum.EnumStatStock.$code", displayName(code)))
 
     /** What [skill] does at [level]: its blow, its poison, its buff or curse, its healing, its lines or its answer. */
     fun lines(skill: SkillDefinition, level: Int): List<String> = buildList {

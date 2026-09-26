@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core
 
+import com.sperance.exileforge.core.model.campaign.MapRule
 import com.sperance.exileforge.core.model.sync.HeroParts
 import com.sperance.exileforge.core.model.sync.HeroSnapshot
 
@@ -623,6 +624,7 @@ class ServerIntegrationTest {
                 // Both ends have to clear the level the auction opens at; the server names it itself.
                 api.hero.addExperience(buyer, levels.last().experience)
 
+                listedMapLeavesTheStash(api, id, chaos.id)
                 val listed = api.auction.sellEquipment(id, wornInstance.id, chaos.id, 3)
                 assertEquals(AuctionLotStatus.ACTIVE, listed.status)
                 assertEquals(AuctionLotKind.EQUIPMENT, listed.kind)
@@ -698,5 +700,27 @@ class ServerIntegrationTest {
             api.catalog.delete(Catalog.CHARACTERS, id)
             assertNull(api.catalog.get(Catalog.CHARACTERS, id))
         }
+    }
+
+    /**
+     * A listed map leaves the stash as the app reads it (2.79.1, server 0.70.1): the hero is read
+     * by its parts, and a lot that cleared the item's owner before the revision moved left the
+     * snapshot at 304 — the map stayed on screen and listing it again said it did not exist.
+     */
+    private suspend fun listedMapLeavesTheStash(api: GameApi, id: String, orb: String) {
+        var parts = HeroParts(id)
+        suspend fun read() { api.hero.view(id, parts)?.let { parts = parts.merge(it) } }
+        read()
+        val map = api.catalog.search(Catalog.EQUIPMENT, 0, CatalogFilter(slot = MapRule.SLOT)).items.firstOrNull() ?: fail("no map templates")
+        val granted = api.hero.grant(id, map.entityId)
+        read()
+        assertTrue(parts.inventory.any { it.id == granted.id }, "the granted map is not in the stash")
+        val lot = api.auction.sellEquipment(id, granted.id, orb, 2)
+        read()
+        assertTrue(parts.inventory.none { it.id == granted.id }, "the listed map is still in the stash")
+        // Taken back, it returns to the stash the same way; the seller's lots are as they were.
+        api.auction.cancel(id, lot.id)
+        read()
+        assertTrue(parts.inventory.any { it.equipmentId == map.entityId }, "the withdrawn map did not come back")
     }
 }

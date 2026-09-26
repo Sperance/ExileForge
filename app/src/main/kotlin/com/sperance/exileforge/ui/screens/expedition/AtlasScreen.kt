@@ -119,6 +119,9 @@ private fun AtlasBranch.hue(): Color = when (this) {
     var pan by remember { mutableStateOf(Offset.Zero) }
     val clock by produceState(0f) { var start = 0L; while (true) withFrameNanos { if (start == 0L) start = it; value = (it - start) / 1e9f } }
     val reachable = remember(taken, graph) { nodes.filter { graph.canTake(it.code, taken) }.map { it.code }.toSet() }
+    // The fog (2.79.1): three links past the taken nodes; what lies beyond is neither drawn nor tappable.
+    val sight = remember(taken, graph) { graph.visible(taken) }
+    val shown = remember(sight, nodes) { nodes.filter { it.code in sight } }
     Canvas(modifier.clipToBounds()
         .pointerInput(nodes) {
             detectTransformGestures { _, drag, zoom, _ ->
@@ -127,10 +130,10 @@ private fun AtlasBranch.hue(): Color = when (this) {
                 pan = Offset((pan.x + drag.x).coerceIn(-limit, limit), (pan.y + drag.y).coerceIn(-limit, limit * 2))
             }
         }
-        .pointerInput(nodes, scale, pan) {
+        .pointerInput(shown, scale, pan) {
             detectTapGestures { tap ->
                 val place = Placement(bounds, size.width.toFloat(), size.height.toFloat(), floor, margin, scale, pan)
-                val hit = nodes.minByOrNull { (place(it) - tap).getDistanceSquared() } ?: return@detectTapGestures
+                val hit = shown.minByOrNull { (place(it) - tap).getDistanceSquared() } ?: return@detectTapGestures
                 if ((place(hit) - tap).getDistance() <= 28.dp.toPx()) onSelect(hit.code)
             }
         }) {
@@ -138,13 +141,25 @@ private fun AtlasBranch.hue(): Color = when (this) {
         stars(clock)
         nodes.forEach { node -> node.parents.forEach { parent ->
             val from = graph.byCode[parent] ?: return@forEach
+            val near = parent in sight
+            if (!near && node.code !in sight) return@forEach
             val lit = node.code in taken && parent in taken
-            drawLine(if (lit) node.branch.hue() else Sky.faint.copy(alpha = .22f), place(from), place(node), (if (lit) 2.dp else 1.dp).toPx())
+            val a = place(from)
+            val b = place(node)
+            // A link into the fog is only its first stretch, fading out where the unseen begins.
+            if (near != (node.code in sight)) {
+                val (seen, hidden) = if (near) a to b else b to a
+                val end = seen + (hidden - seen) * FOG_STUB
+                drawLine(Brush.linearGradient(listOf(Sky.faint.copy(alpha = .3f), Color.Transparent), seen, end), seen, end, 1.dp.toPx())
+            } else drawLine(if (lit) node.branch.hue() else Sky.faint.copy(alpha = .22f), a, b, (if (lit) 2.dp else 1.dp).toPx())
         } }
         val zoom = scale.coerceIn(.8f, 1.6f)
-        nodes.forEach { star(it, place(it), it.code in taken, it.code in reachable, it.code == selected, clock, zoom) }
+        shown.forEach { star(it, place(it), it.code in taken, it.code in reachable, it.code == selected, clock, zoom) }
     }
 }
+
+/** How much of a link into the fog is drawn before it fades. */
+private const val FOG_STUB = .3f
 
 /** Where a node lands on screen: the start at the bottom middle above the sheet, y up, fitted to the width. */
 private class Placement(private val b: SkyBounds, private val width: Float, private val height: Float, private val floor: Float,

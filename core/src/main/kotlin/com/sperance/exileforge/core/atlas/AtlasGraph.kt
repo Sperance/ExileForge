@@ -35,6 +35,22 @@ class AtlasGraph(tree: AtlasTree) {
         while (queue.isNotEmpty()) neighbours(queue.removeFirst()).forEach { if (it in rest && seen.add(it)) queue.add(it) }
         return seen.size == rest.size
     }
+
+    /**
+     * What the fog leaves in sight (2.79.1): every node no more than [depth] links from one already
+     * taken, or from the start. Taking a node pushes the fog back; the rest of the tree is not drawn.
+     */
+    fun visible(taken: Set<String>, depth: Int = SIGHT): Set<String> {
+        val seen = (taken + listOfNotNull(start)).filterTo(mutableSetOf()) { it in byCode }
+        var frontier = seen.toList()
+        repeat(depth) { frontier = frontier.flatMap(::neighbours).filter(seen::add) }
+        return seen
+    }
+
+    companion object {
+        /** How many links ahead of the taken nodes the atlas shows. */
+        const val SIGHT = 3
+    }
 }
 
 /**

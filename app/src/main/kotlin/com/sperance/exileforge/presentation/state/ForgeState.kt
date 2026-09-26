@@ -168,7 +168,7 @@ data class WorldState(
     val iconKeys: Int = 0, val iconSprites: Int = 0,
     /** How many of the server's portraits are drawn from (since 2.31.0); a screen reads it to redraw when they arrive. */
     val portraits: Int = 0,
-    /** The campaign's chapters, monsters and rarities, read once per session (server 0.26.0). */
+    /** The campaign's world map, monsters and rarities, read once per session (server 0.26.0, the world since 0.67.0). */
     val campaign: CampaignView? = null,
 )
 
@@ -196,10 +196,12 @@ data class PlayState(
     val draftClass: String = "", val selectedNode: String = "",
     /** What the tree search box holds; a match moves the map to that node. */
     val nodeQuery: String = "",
-    /** Which campaign maps this character has cleared and which are open. */
+    /** Which zones of the world map this character has passed and which are open. */
     val campaign: CampaignProgress? = null,
-    /** The location whose launch window is open (since 2.37.0): its chests, its boss and the map picked for it. */
+    /** The zone whose card is open on the world map (2.76.0; the launch window since 2.37.0): its chests, its boss and the map picked for it. */
     val launch: MapLaunchState? = null,
+    /** This character's atlas as the world map last read it (2.76.0): the points each zone gave and the free ones. */
+    val atlasProgress: com.sperance.exileforge.core.model.atlas.AtlasState? = null,
     /**
      * The crafts (2.41.0) as the server last answered, with the device's clock at that moment so a
      * cycle's bar can run between answers; the profession whose window is open ("" is the tiles).
@@ -230,8 +232,8 @@ data class AtlasScreenState(
 data class LootEntry(val item: com.sperance.exileforge.core.model.hero.EquipmentInstance, val at: Long)
 
 /**
- * One location's launch window: its chests and boss as the server last said (null until it has),
- * and the stash map picked to enter it with — null enters without one.
+ * One zone's card: its chests and boss as the server last said (null until it has), and the stash
+ * map picked to enter it with — null enters without one.
  */
 data class MapLaunchState(
     val mapCode: String,

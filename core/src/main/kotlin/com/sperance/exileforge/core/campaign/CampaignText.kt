@@ -9,7 +9,7 @@ import com.sperance.exileforge.core.i18n.loc
 fun monsterTitle(code: String): String = loc(LocaleKey.monsterName(code))
 fun mapTitle(code: String): String = loc(LocaleKey.mapName(code))
 fun mapDescription(code: String): String = loc(LocaleKey.mapDescription(code))
-fun chapterTitle(code: String): String = loc(LocaleKey.chapterName(code))
+fun regionTitle(code: String): String = loc(LocaleKey.regionName(code))
 
 /**
  * One line of what a monster carries (since 2.45.0): a characteristic and an operation, summed —

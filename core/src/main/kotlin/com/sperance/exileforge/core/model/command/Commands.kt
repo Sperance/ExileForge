@@ -94,11 +94,12 @@ data class ApiCapabilities(val routes: Set<String>) {
             "POST" to "/api/v1/auctionlot/sell/equipment",
             "POST" to "/api/v1/auctionlot/buy",
             // The campaign, since 0.26.0: the client fights, the server rolls what a kill brings.
-            "GET" to "/api/v1/character/campaign/chapters",
+            // 0.67.0: a world map instead of chapters, and the exit only leaves.
+            "GET" to "/api/v1/character/campaign/world",
             "GET" to "/api/v1/character/campaign/progress",
             "POST" to "/api/v1/character/campaign/kill",
-            "POST" to "/api/v1/character/campaign/complete",
-            // 0.28.0: the rules of the fight come with the chapters, and a death is priced by the server.
+            "POST" to "/api/v1/character/campaign/leave",
+            // 0.28.0: the rules of the fight come with the world, and a death is priced by the server.
             "POST" to "/api/v1/character/campaign/fall",
             // 0.35.0: every run is entered, with a map or without one.
             "POST" to "/api/v1/character/campaign/start",

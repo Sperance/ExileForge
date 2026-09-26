@@ -1,115 +1,120 @@
 package com.sperance.exileforge.ui.screens.expedition
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.*
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import com.sperance.exileforge.core.campaign.chapterTitle
-import com.sperance.exileforge.core.campaign.mapDescription
-import com.sperance.exileforge.core.campaign.mapTitle
+import com.sperance.exileforge.core.campaign.WorldMap
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.model.campaign.CampaignMap
+import com.sperance.exileforge.core.model.campaign.WorldPoint
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
-import com.sperance.exileforge.presentation.state.Reads
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
+import com.sperance.exileforge.ui.screens.expedition.world.WorldArt
+import com.sperance.exileforge.ui.screens.expedition.world.WorldCamera
+import com.sperance.exileforge.ui.screens.expedition.world.WorldCanvas
 import com.sperance.exileforge.ui.theme.*
+import kotlinx.coroutines.launch
+
+/** Where a picked zone's token is flown to while its card covers the map's foot: this share down the screen. */
+private const val CARD_DOWN = .28f
+/** How far down the map a token can sit before the card would hide it. */
+private const val CARD_TOP = .48f
 
 /**
- * The expedition tab: the campaign and the way into it.
+ * The expedition tab (2.76.0): the world map, the owner's pick «Пергамент» of three mockups.
  *
- * «Кампания» leads straight to the next map the character has not cleared, because that is what
- * the button is pressed for nine times out of ten; the chapter's maps are listed under it for the
- * tenth — a cleared map is played again for its loot. Only the open maps are listed, and the next
- * locked one as a lock and a level with its name and description kept back (2.47.0).
+ * The zones are tokens on a parchment chart, linked from the start upward: a passed one is ticked,
+ * an open one glows, the «???» one past it is dark with its level, and the fog hides the rest. The
+ * map opens on the frontier; it drags and pinches, «+» and «−» zoom it and the crosshair flies back
+ * to the frontier. A tapped token raises its card over the map's foot — the way into the zone.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable fun ExpeditionScreen(s: ForgeState, vm: ForgeViewModel) {
     LaunchedEffect(s.play.characterId, s.account.sessionEpoch) { vm.ensureHero(); vm.loadCampaign() }
     val view = s.world.campaign
     val progress = s.play.campaign
-    val ready = view != null && progress != null && s.play.hero != null && !s.busy
-    PullToRefreshBox(isRefreshing = s.refreshing(Reads.CAMPAIGN), onRefresh = vm::loadCampaign, modifier = Modifier.fillMaxSize()) {
-        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            item { ScreenHeader(ui("expedition.title"), ui("expedition.subtitle"), ForgeGlyphs.Portal) }
-            if (view == null || progress == null) {
-                item { InfoCard(ui("common.loading"), ui("expedition.loading_hint")) }
-                return@LazyColumn
-            }
-            // Only what is open, and the one map after it (2.47.0): that one is a lock, a level and «???» —
-            // its name, its description and everything beyond it are not the player's yet.
-            val following = view.chapters.flatMap { it.maps }.firstOrNull { it.code !in progress.unlocked }?.code
-            view.chapters.forEach { chapter ->
-                val shown = chapter.maps.filter { it.code in progress.unlocked || it.code == following }
-                if (shown.isEmpty()) return@forEach
-                val known = chapter.maps.any { it.code in progress.unlocked }
-                val cleared = chapter.maps.count { it.code in progress.cleared }
-                item(key = chapter.code) {
-                    ForgePanel {
-                        Engraved(if (known) chapterTitle(chapter.code) else ui("expedition.hidden"))
-                        MutedText(ui("expedition.cleared", cleared, chapter.maps.size))
-                        LinearProgressIndicator(progress = { if (chapter.maps.isEmpty()) 0f else cleared / chapter.maps.size.toFloat() },
-                            modifier = Modifier.fillMaxWidth().height(4.dp), color = Gold, trackColor = PanelRaised)
-                        val next = vm.nextCampaignMap()
-                        Button(enabled = ready && next != null, onClick = { next?.let { vm.openLaunch(it.code) } }, modifier = Modifier.fillMaxWidth().height(56.dp)) {
-                            Icon(ForgeGlyphs.Swords, null, modifier = Modifier.size(20.dp))
-                            Spacer(Modifier.width(10.dp))
-                            Text(ui("expedition.campaign"), style = MaterialTheme.typography.titleMedium)
-                        }
-                        next?.let { Text(ui("expedition.next", mapTitle(it.code), it.level), color = Rune, style = MaterialTheme.typography.labelMedium) }
-                        // The atlas (2.68.0): the passives every map is played under.
-                        OutlinedButton(enabled = ready, onClick = vm::openAtlas, modifier = Modifier.fillMaxWidth()) {
-                            Icon(ForgeGlyphs.Constellation, null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text(ui("atlas.open"))
-                        }
-                    }
+    if (view == null || progress == null) {
+        Box(Modifier.fillMaxSize().padding(16.dp)) { InfoCard(ui("common.loading"), ui("expedition.loading_hint")) }
+        return
+    }
+    val world = remember(view, progress) { WorldMap(view, progress) }
+    val art = remember(view) { WorldArt.of(view) }
+    val density = LocalDensity.current.density
+    val camera = remember(view.world, density) { WorldCamera(view.world, density) }
+    val scope = rememberCoroutineScope()
+    val launch = s.play.launch?.takeIf { world.token(it.mapCode) != null }
+    val stash = remember(s.play.hero?.inventory, s.world.inventoryBases) { stashCounts(s) }
+    BackHandler(launch != null) { vm.closeZone() }
+    // The map opens on the frontier; a zone picked elsewhere — a map's sheet in the stash — is flown to above its card.
+    LaunchedEffect(camera, camera.viewport) {
+        if (!camera.placed && camera.viewport != IntSize.Zero) camera.look(world.frontier(), WorldCamera.HOME, if (launch != null) CARD_DOWN else .5f)
+    }
+    LaunchedEffect(launch?.mapCode, camera.placed) {
+        val zone = launch?.let { world.token(it.mapCode) }?.zone ?: return@LaunchedEffect
+        val at = WorldPoint(zone.x, zone.y)
+        if (camera.placed && !camera.sees(at, 48f, CARD_TOP)) camera.glide(at, maxOf(camera.scale, WorldCamera.HOME), CARD_DOWN)
+    }
+    Box(Modifier.fillMaxSize()) {
+        WorldCanvas(world, art, camera, launch?.mapCode, stash, Modifier.fillMaxSize()) { code -> if (code == null) vm.closeZone() else vm.selectZone(code) }
+        WorldBar(s, world, Modifier.align(Alignment.TopCenter),
+            onFrontier = { scope.launch { camera.glide(world.frontier(), WorldCamera.HOME, if (launch != null) CARD_DOWN else .5f) } },
+            onAtlas = vm::openAtlas)
+        ZoomButtons(camera, Modifier.align(Alignment.TopEnd).padding(top = 72.dp, end = 12.dp)) { factor -> scope.launch { camera.zoomBy(factor) } }
+        launch?.let { ZoneCard(s, vm, world, it, Modifier.align(Alignment.BottomCenter)) }
+    }
+}
+
+/** The map's head: how much of the world is passed, the way back to the frontier and the atlas with its free points. */
+@Composable private fun WorldBar(s: ForgeState, world: WorldMap, modifier: Modifier, onFrontier: () -> Unit, onAtlas: () -> Unit) {
+    Row(modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Ink.copy(alpha = .92f), Ink.copy(alpha = 0f))))
+        .padding(start = 16.dp, end = 12.dp, top = 8.dp, bottom = 16.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.weight(1f)) {
+            Text(ui("expedition.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
+            Text(ui("expedition.passed", world.passedCount, world.total), color = Muted, style = MaterialTheme.typography.labelMedium)
+        }
+        OutlinedIconButton(onClick = onFrontier, border = androidx.compose.foundation.BorderStroke(1.dp, Gold.copy(alpha = .4f)), modifier = Modifier.size(38.dp)) {
+            Icon(ForgeGlyphs.Target, ui("expedition.frontier"), tint = GoldBright, modifier = Modifier.size(20.dp))
+        }
+        val free = s.play.atlasProgress?.available ?: 0
+        OutlinedButton(onClick = onAtlas, enabled = !s.busy, border = androidx.compose.foundation.BorderStroke(1.dp, Gold.copy(alpha = .4f)),
+            contentPadding = PaddingValues(start = 12.dp, end = if (free > 0) 8.dp else 12.dp), modifier = Modifier.height(38.dp)) {
+            Icon(ForgeGlyphs.Constellation, null, tint = GoldBright, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(ui("atlas.open"), color = GoldBright, style = MaterialTheme.typography.labelLarge)
+            if (free > 0) {
+                Spacer(Modifier.width(6.dp))
+                Box(Modifier.background(Gold, CircleShape).padding(horizontal = 6.dp, vertical = 1.dp)) {
+                    Text(free.toString(), color = Ink, style = MaterialTheme.typography.labelSmall)
                 }
-                items(shown, key = { it.code }) { map ->
-                    val open = map.code in progress.unlocked
-                    MapRow(map, open = open, cleared = map.code in progress.cleared, enabled = ready && open) { vm.openLaunch(map.code) }
-                }
             }
-            item { MutedText(ui("expedition.note")) }
         }
     }
 }
 
-/** One map of the chapter: its number, name, level and what lives there, and whether it is open. */
-@Composable private fun MapRow(map: CampaignMap, open: Boolean, cleared: Boolean, enabled: Boolean, onClick: () -> Unit) {
-    val accent = when { cleared -> Vital; open -> Gold; else -> Muted }
-    val shape = RoundedCornerShape(8.dp)
-    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).background(Panel, shape).border(1.dp, if (open && !cleared) Gold.copy(alpha = .5f) else PanelRaised, shape)
-        .clickable(enabled = enabled, role = Role.Button, onClick = onClick).padding(end = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-        RaritySpine(accent, 4.dp)
-        Box(Modifier.size(38.dp).border(1.dp, accent.copy(alpha = .7f), RoundedCornerShape(6.dp)), contentAlignment = Alignment.Center) {
-            Text(map.order.toString(), color = accent, style = MaterialTheme.typography.titleMedium)
+/** «+» and «−»: nearer and farther by a step, about the middle of what is seen. */
+@Composable private fun ZoomButtons(camera: WorldCamera, modifier: Modifier, onZoom: (Float) -> Unit) {
+    val shape = RoundedCornerShape(12.dp)
+    Column(modifier.background(Abyss.copy(alpha = .88f), shape).border(1.dp, Gold.copy(alpha = .4f), shape)) {
+        IconButton(onClick = { onZoom(ZOOM_STEP) }, enabled = camera.canZoomIn, modifier = Modifier.size(40.dp)) {
+            Icon(ForgeGlyphs.Plus, ui("expedition.zoom_in"), tint = if (camera.canZoomIn) GoldBright else Muted, modifier = Modifier.size(20.dp))
         }
-        Column(Modifier.weight(1f).padding(vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(if (open) mapTitle(map.code) else ui("expedition.hidden"), color = if (open) GoldBright else Muted, style = MaterialTheme.typography.titleSmall)
-            Text(ui("expedition.map_level", map.level), color = Rune, style = MaterialTheme.typography.labelSmall)
-            if (open) Text(mapDescription(map.code), color = Muted, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
-        }
-        when {
-            cleared -> Icon(Icons.Outlined.CheckCircle, ui("expedition.map_cleared"), tint = Vital, modifier = Modifier.size(20.dp))
-            !open -> Icon(Icons.Outlined.Lock, ui("expedition.map_locked"), tint = Muted, modifier = Modifier.size(20.dp))
-            else -> Unit
+        HorizontalDivider(Modifier.width(40.dp), color = Gold.copy(alpha = .25f))
+        IconButton(onClick = { onZoom(1 / ZOOM_STEP) }, enabled = camera.canZoomOut, modifier = Modifier.size(40.dp)) {
+            Icon(ForgeGlyphs.Minus, ui("expedition.zoom_out"), tint = if (camera.canZoomOut) GoldBright else Muted, modifier = Modifier.size(20.dp))
         }
     }
 }
+
+private const val ZOOM_STEP = 1.35f

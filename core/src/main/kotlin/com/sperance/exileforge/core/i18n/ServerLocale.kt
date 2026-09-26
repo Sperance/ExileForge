@@ -97,7 +97,7 @@ object LocaleKey {
     fun classDescription(code: String) = key(CHARACTER_CLASS, code, DESCRIPTION)
     fun error(code: String) = "$ERROR.$code"
     // The campaign, since server 0.26.0.
-    fun chapterName(code: String) = key("chapter", code, NAME)
+    fun regionName(code: String) = key("region", code, NAME)
     fun mapName(code: String) = key("map", code, NAME)
     fun mapDescription(code: String) = key("map", code, DESCRIPTION)
     fun monsterName(code: String) = key("monster", code, NAME)

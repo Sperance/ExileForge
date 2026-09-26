@@ -16,18 +16,18 @@ import com.sperance.exileforge.core.model.campaign.VaalZone
 private const val CAMPAIGN = "api/v1/character/campaign"
 
 /**
- * The campaign: its chapters, a character's progress, and the two things a run reports.
+ * The campaign: its world map, a character's progress, and the two things a run reports.
  *
  * Since 0.26.0 the fight is the client's — the owner's decision — and what it earns is not:
  * [kill] names the map, the monster and the rarity the client rolled, and the server checks the
  * map is open and the monster lives there before it rolls the experience and the loot itself.
- * Since 0.28.0 the numbers the fight is played by arrive in [chapters] as `combat`, and a death is
+ * Since 0.28.0 the numbers the fight is played by arrive in [world] as `combat`, and a death is
  * reported with [fall]: the server takes its share of the level's experience, never the level.
  */
 class CampaignClient internal constructor(private val http: Transport) {
-    /** The chapters with every monster and modifier already raised to its map's level. */
-    suspend fun chapters(): CampaignView =
-        http.get("$CAMPAIGN/chapters")
+    /** The world map (server 0.67.0), every monster and modifier already raised to its zone's level. */
+    suspend fun world(): CampaignView =
+        http.get("$CAMPAIGN/world")
 
     suspend fun progress(characterId: String): CampaignProgress =
         http.get("$CAMPAIGN/progress", heroQuery(characterId))
@@ -37,9 +37,9 @@ class CampaignClient internal constructor(private val http: Transport) {
         http.post("$CAMPAIGN/kill", heroQuery(characterId, "mapCode" to mapCode, "monsterCode" to monsterCode, "rarity" to rarity.name,
             "vaal" to if (vaal) "true" else null))
 
-    /** The hero reached the exit: the map is cleared and the next one opens. */
-    suspend fun complete(characterId: String, mapCode: String): CampaignProgress =
-        http.post("$CAMPAIGN/complete", heroQuery(characterId, "mapCode" to mapCode))
+    /** The hero left through the exit back to the world map (server 0.67.0): the boss has passed the zone already. */
+    suspend fun leave(characterId: String, mapCode: String): CampaignProgress =
+        http.post("$CAMPAIGN/leave", heroQuery(characterId, "mapCode" to mapCode))
 
     /** The hero fell: the server prices the death by its own rule. Never retried — a repeat would charge it twice. */
     suspend fun fall(characterId: String, mapCode: String): CampaignFall =
@@ -57,7 +57,7 @@ class CampaignClient internal constructor(private val http: Transport) {
     suspend fun boss(characterId: String, mapCode: String): BossState =
         http.get("$CAMPAIGN/boss", heroQuery(characterId, "mapCode" to mapCode))
 
-    /** The map's boss was slain: the server rolls its loot and opens the exit. Never retried. */
+    /** The map's boss was slain: the server rolls its loot, opens the exit and passes the zone (0.67.0). Never retried. */
     suspend fun slayBoss(characterId: String, mapCode: String): CampaignReward =
         http.post("$CAMPAIGN/boss", heroQuery(characterId, "mapCode" to mapCode))
 

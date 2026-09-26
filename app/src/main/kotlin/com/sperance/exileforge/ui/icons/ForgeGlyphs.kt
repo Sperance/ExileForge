@@ -53,6 +53,11 @@ object ForgeGlyphs {
     val Scroll = glyph("Scroll", { poly(6f to 3f, 18f to 3f, 18f to 21f, 6f to 21f) }, { line(6f, 6f, 18f, 6f); line(6f, 18f, 18f, 18f) }, { line(9f, 10f, 15f, 10f); line(9f, 13f, 15f, 13f) })
     /** Waypoint portal: servers and travel. */
     val Portal = glyph("Portal", { poly(12f to 2f, 20f to 12f, 12f to 22f, 4f to 12f) }, { poly(12f to 6f, 17f to 12f, 12f to 18f, 7f to 12f) }, { ring(12f, 12f, 1.6f) })
+    /** Crosshair: back to the frontier of the world map (2.76.0). */
+    val Target = glyph("Target", { ring(12f, 12f, 6.5f) }, { ring(12f, 12f, 1.6f) }, { line(12f, 2.5f, 12f, 6.5f); line(12f, 17.5f, 12f, 21.5f); line(2.5f, 12f, 6.5f, 12f); line(17.5f, 12f, 21.5f, 12f) })
+    /** Nearer and farther on the world map (2.76.0). */
+    val Plus = glyph("Plus", { line(12f, 5f, 12f, 19f); line(5f, 12f, 19f, 12f) })
+    val Minus = glyph("Minus", { line(5f, 12f, 19f, 12f) })
     /** Constellation: linked nodes and progression. */
     val Constellation = glyph("Constellation", { line(6f, 18f, 11f, 11f); line(11f, 11f, 17f, 13f); line(11f, 11f, 13f, 4f); line(17f, 13f, 19f, 19f) }, { ring(11f, 11f, 2.2f) }, { ring(6f, 18f, 1.4f); ring(13f, 4f, 1.4f); ring(17f, 13f, 1.4f); ring(19f, 19f, 1.4f) })
     /** Monster skull: bestiary and losses. */

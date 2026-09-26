@@ -42,7 +42,6 @@ import com.sperance.exileforge.ui.screens.craft.CraftScreen
 import com.sperance.exileforge.ui.screens.editor.EditorScreen
 import com.sperance.exileforge.ui.screens.expedition.ExpeditionPlay
 import com.sperance.exileforge.ui.screens.expedition.ExpeditionScreen
-import com.sperance.exileforge.ui.screens.expedition.LaunchScreen
 import com.sperance.exileforge.ui.screens.expedition.AtlasScreen
 import com.sperance.exileforge.ui.screens.crafts.CraftsScreen
 import com.sperance.exileforge.ui.screens.hero.HeroScreen
@@ -69,10 +68,9 @@ import com.sperance.exileforge.ui.theme.*
         AppPhase.AUTH -> AuthScreen(s, vm)
         AppPhase.CHARACTERS -> CharacterSelectScreen(s, vm)
         // A campaign run takes the whole screen: no banner and no bar, the scene is the game.
-        // The launch window (2.38.0) is above the tabs too: the portal before the run.
+        // The zone's card (2.76.0) lies on the world map in the tab itself.
         AppPhase.GAME -> expedition?.let { ExpeditionPlay(s, vm, it) }
-            ?: s.play.launch?.let { LaunchScreen(s, vm) }
-            // The atlas (2.68.0) is a sky of its own, above the tabs like the launch window.
+            // The atlas (2.68.0) is a sky of its own, above the tabs.
             ?: s.play.atlas?.let { AtlasScreen(s, vm) }
             ?: GameScaffold(s, vm, logs, onDeleteRequest = { confirmDelete = true }, onDiscardRequest = { confirmDiscard = true })
     }

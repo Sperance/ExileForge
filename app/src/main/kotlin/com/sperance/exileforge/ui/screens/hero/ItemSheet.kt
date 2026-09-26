@@ -80,7 +80,7 @@ private enum class ItemAction { AUCTION, SELL, WORN }
                     instance.equipped -> Action(ForgeGlyphs.Helm, ui("hero.unequip"), can) { onDismiss(); vm.unequip(instance.id) }
                     // A map is not worn (2.37.0): it goes into its location's launch window, picked.
                     document.text("slot") == MapRule.SLOT -> Action(ForgeGlyphs.Portal, ui("hero.action_map"), can, GoldBright) {
-                        onDismiss(); vm.tab(TAB_EXPEDITION); vm.openLaunch(document.text("code").removePrefix("MAP_")); vm.pickMap(instance.id)
+                        onDismiss(); vm.tab(TAB_EXPEDITION); vm.selectZone(document.text("code").removePrefix("MAP_")); vm.pickMap(instance.id)
                     }
                     else -> Action(ForgeGlyphs.Helm, ui("hero.equip"), can && reachable, GoldBright) { onDismiss(); vm.equip(instance.id, null) }
                 }

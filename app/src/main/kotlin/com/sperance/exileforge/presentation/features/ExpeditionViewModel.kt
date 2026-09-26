@@ -26,7 +26,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * The campaign: its chapters and progress, and the run on the map a player is walking.
+ * The campaign: its world map and progress, and the run on the map a player is walking.
  *
  * The run is not a slice of the state: it is a world the scene steps every frame, and copying it
  * into an immutable state sixty times a second would buy nothing. It is
@@ -47,26 +47,30 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     init { runtime.scope.launch { for (report in reports) report() } }
 
-    /** The chapters once per session, and this character's progress every time the tab opens. */
+    /**
+     * The world map once per session, and this character's progress every time the tab opens — with
+     * their atlas (2.76.0): the zone card marks the atlas points each zone has given, the bar the free ones.
+     */
     fun loadCampaign() { with(runtime) { read(Reads.CAMPAIGN) {
         val id = state.value.play.characterId
         if (id.isBlank()) return@read
         // The loot panel names orbs and draws items as the stash does, so it needs the same tables.
         ensureWorld()
         if (state.value.world.campaign == null) {
-            val view = api.campaign.chapters()
+            val view = api.campaign.world()
             mutable.update { it.copy(world = it.world.copy(campaign = view)) }
         }
         val progress = api.campaign.progress(id)
-        mutable.update { if (it.play.characterId == id) it.copy(play = it.play.copy(campaign = progress)) else it }
+        val atlas = api.atlas.state(id)
+        mutable.update { if (it.play.characterId == id) it.copy(play = it.play.copy(campaign = progress, atlasProgress = atlas)) else it }
     } } }
 
     /**
-     * A location's launch window (since 2.37.0) opens before every run: it shows at once, and its
-     * chests and its boss arrive when the server has said. A stash map of the location's own level is
-     * picked in it by the player; nothing is picked for them.
+     * A zone's card on the world map (2.76.0; the launch window since 2.37.0) opens before every run:
+     * it shows at once, and its chests and its boss arrive when the server has said. A stash map of the
+     * zone is picked in it by the player; nothing is picked for them.
      */
-    fun openLaunch(mapCode: String) { with(runtime) {
+    fun selectZone(mapCode: String) { with(runtime) {
         mutable.update { it.copy(play = it.play.copy(launch = MapLaunchState(mapCode))) }
         read(Reads.MAP_SERVICES, restart = true) {
             val id = state.value.play.characterId
@@ -79,7 +83,7 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         }
     } }
 
-    fun closeLaunch() { runtime.mutable.update { it.copy(play = it.play.copy(launch = null)) } }
+    fun closeZone() { runtime.mutable.update { it.copy(play = it.play.copy(launch = null)) } }
 
     /** The stash map to enter with, or null to enter without one. */
     fun pickMap(instanceId: String?) {
@@ -101,15 +105,6 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         }
     } }
 
-    /** The map «Кампания» leads to: the first open one not yet cleared, or the deepest open one. */
-    fun nextMap(): CampaignMap? {
-        val s = runtime.state.value
-        val maps = s.world.campaign?.chapters?.flatMap { it.maps }.orEmpty()
-        val progress = s.play.campaign ?: return null
-        return maps.firstOrNull { it.code in progress.unlocked && it.code !in progress.cleared }
-            ?: maps.lastOrNull { it.code in progress.unlocked }
-    }
-
     /**
      * «В путь»: the location is entered on the server first (since 0.35.0) — with the picked map,
      * which is spent there, or without one — and then a new run starts with the hero as the sheet has
@@ -120,7 +115,7 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         if (mutableRun.value != null || state.value.busy) return
         val s = state.value
         val view = s.world.campaign ?: return
-        val map = view.chapters.flatMap { it.maps }.firstOrNull { it.code == mapCode } ?: return
+        val map = view.zone(mapCode) ?: return
         if (s.play.campaign?.unlocked?.contains(mapCode) != true) return
         val picked = s.play.launch?.takeIf { it.mapCode == mapCode }?.picked
         task(writing = true, touches = setOf(Reads.MAP_SERVICES)) {
@@ -139,7 +134,7 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         lateinit var run: ExpeditionRun
         run = ExpeditionRun.start(map, view.rarities, hero.sheet.stats, hero.sheet.level, System.nanoTime(),
             onKill = { monster -> reports.trySend { kill(run, characterId, map.code, monster) } },
-            onCleared = { reports.trySend { complete(characterId, map.code) } },
+            onCleared = { reports.trySend { leave(characterId, map.code) } },
             rules = view.combat,
             onFallen = { reports.trySend { fall(run, characterId, map.code) } },
             onChest = { reports.trySend { openChest(run, characterId, map.code) } },
@@ -208,7 +203,7 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             val tree = atlasTree ?: api.atlas.tree().also { atlasTree = it }
             val atlas = api.atlas.state(id)
             mutable.update { s -> s.play.atlas?.takeIf { s.play.characterId == id }
-                ?.let { s.copy(play = s.play.copy(atlas = it.copy(tree = tree, state = atlas, selected = it.selected.ifBlank { atlas.allocated.lastOrNull().orEmpty() }))) } ?: s }
+                ?.let { s.copy(play = s.play.copy(atlasProgress = atlas, atlas = it.copy(tree = tree, state = atlas, selected = it.selected.ifBlank { atlas.allocated.lastOrNull().orEmpty() }))) } ?: s }
         }
     } }
 
@@ -225,7 +220,7 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         task(writing = true, touches = setOf(Reads.ATLAS)) {
             val id = state.value.play.characterId
             val atlas = call(id)
-            mutable.update { s -> s.copy(play = s.play.copy(atlas = s.play.atlas?.copy(state = atlas))) }
+            mutable.update { s -> s.copy(play = s.play.copy(atlasProgress = atlas, atlas = s.play.atlas?.copy(state = atlas))) }
         }
     } }
 
@@ -283,7 +278,7 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     private suspend fun kill(run: ExpeditionRun, characterId: String, mapCode: String, monster: RolledMonster, vaal: Boolean = false) { with(runtime) {
         try {
             // The guardians are each reported by their own route (0.57.0, 0.32.0): the Vaal zone's
-            // closes the zone and pays its bonus, the map's boss opens the exit.
+            // closes the zone and pays its bonus, the map's boss opens the exit and passes the zone.
             val reward = when {
                 monster.rarity == MonsterRarity.UNIQUE && vaal -> api.campaign.corrupt(characterId, mapCode, monster.code)
                 monster.rarity == MonsterRarity.UNIQUE -> api.campaign.slayBoss(characterId, mapCode)
@@ -291,6 +286,8 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             }
             run.send(RunCommand.Reward(reward))
             loot(characterId, reward.equipment)
+            // A slain boss passes its zone (server 0.67.0): the world map opens what it leads to at once.
+            reward.progress?.let { progress -> mutable.update { if (it.play.characterId == characterId) it.copy(play = it.play.copy(campaign = progress)) else it } }
             // The hero, bag, stash and bench came back with the answer (server 0.48.0); an answer
             // without them has already set the reading cold.
         } catch (e: CancellationException) { throw e }
@@ -339,9 +336,10 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         catch (e: Exception) { run.send(RunCommand.ChestFailed); report(e, writing = true) }
     } }
 
-    private suspend fun complete(characterId: String, mapCode: String) { with(runtime) {
+    /** The hero left through the exit (server 0.67.0): back to the world map, the map item spent. */
+    private suspend fun leave(characterId: String, mapCode: String) { with(runtime) {
         try {
-            val progress = api.campaign.complete(characterId, mapCode)
+            val progress = api.campaign.leave(characterId, mapCode)
             mutable.update { if (it.play.characterId == characterId) it.copy(play = it.play.copy(campaign = progress)) else it }
         } catch (e: CancellationException) { throw e }
         catch (e: Exception) { report(e, writing = true) }

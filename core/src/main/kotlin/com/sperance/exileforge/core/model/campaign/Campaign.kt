@@ -103,10 +103,20 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
     val rolls: List<Int> = listOf(0, 0),
 )
 
+/**
+ * A zone of the world map (server 0.67.0; a chapter's map before): its token stands at [x], [y] of
+ * the world — `y` grows up from the start — in [region]. [from] are the zones whose links lead in,
+ * [to] those its own lead to: a zone opens once the boss of any of [from] is slain. A zone with
+ * nowhere to lead that is not its region's [finale] is a dead end.
+ */
 @Serializable data class CampaignMap(
     val code: String,
-    val chapter: String = "",
-    val order: Int = 0,
+    val region: String = "",
+    val x: Int = 0,
+    val y: Int = 0,
+    val from: List<String> = emptyList(),
+    val to: List<String> = emptyList(),
+    val finale: Boolean = false,
     val biome: String = "",
     val level: Int = 1,
     val monsterCount: List<Int> = listOf(10, 14),
@@ -122,7 +132,14 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
     val corrupted: CampaignBoss? = null,
 )
 
-@Serializable data class CampaignChapter(val code: String, val maps: List<CampaignMap> = emptyList())
+/** A point of the world map, in its units: `x` to the right, `y` up from the start. */
+@Serializable data class WorldPoint(val x: Int = 0, val y: Int = 0)
+
+/** The world's field (server 0.67.0): new regions are laid above, so a token's place never moves. */
+@Serializable data class WorldRule(val width: Int = 1000, val height: Int = 1000)
+
+/** A region of the world map (server 0.67.0; a chapter before): its zones and where its name is written. */
+@Serializable data class CampaignRegion(val code: String, val label: WorldPoint = WorldPoint(), val zones: List<CampaignMap> = emptyList())
 
 /**
  * One ailment, as the server rules it (0.28.0): which damage [type] inflicts it, with what [chance]
@@ -155,7 +172,7 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
 @Serializable data class DeathRule(val fromLevel: Int = 10, val experienceShare: Double = 5.0)
 
 /**
- * The numbers the fight is played by — the server's since 0.28.0, read with the chapters.
+ * The numbers the fight is played by — the server's since 0.28.0, read with the world.
  *
  * The fight is the client's (rule 23) but its constants are not: armour, evasion, criticals,
  * stun, the energy shield's recharge, the innate spell and its mana, retreat, the
@@ -180,9 +197,15 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
     ),
 )
 
-/** The whole campaign as the server serves it, read once per session: the chapters, the rarities and the rules of the fight. */
-@Serializable data class CampaignView(val chapters: List<CampaignChapter> = emptyList(), val rarities: List<CampaignRarity> = emptyList(), val combat: CombatRules = CombatRules(),
-    val services: ServiceRule = ServiceRule(), val maps: MapRule = MapRule(), val fountains: FountainRule = FountainRule(), val corruption: CorruptionRule = CorruptionRule())
+/** The whole campaign as the server serves it, read once per session: the world map, the rarities and the rules of the fight. */
+@Serializable data class CampaignView(val world: WorldRule = WorldRule(), val regions: List<CampaignRegion> = emptyList(), val rarities: List<CampaignRarity> = emptyList(),
+    val combat: CombatRules = CombatRules(), val services: ServiceRule = ServiceRule(), val maps: MapRule = MapRule(), val fountains: FountainRule = FountainRule(),
+    val corruption: CorruptionRule = CorruptionRule()) {
+    /** Every zone of the world, region by region. */
+    val zones: List<CampaignMap> get() = regions.flatMap { it.zones }
+
+    fun zone(code: String): CampaignMap? = zones.firstOrNull { it.code == code }
+}
 
 /** Fountains (since server 0.43.0): how many a map holds, low and high, and what share of life each gives back, once. */
 @Serializable data class FountainRule(val count: List<Int> = listOf(0, 2), val heal: Double = 30.0)
@@ -306,7 +329,7 @@ enum class MapLineKind { HARM, CONTENT, REWARD }
 /** What a map service left behind: the hero's gold, and the map's chests and boss as they stand now. */
 @Serializable data class MapServiceOutcome(val money: Long = 0, val chests: ChestState = ChestState(), val boss: BossState = BossState())
 
-/** Which maps the character has cleared, and which are open to them. */
+/** Which zones the character has passed — slain their boss — and which are open to them. */
 @Serializable data class CampaignProgress(val cleared: List<String> = emptyList(), val unlocked: List<String> = emptyList())
 
 /** What one kill brought, rolled by the server, and where the character stands after it. */
@@ -320,6 +343,8 @@ enum class MapLineKind { HARM, CONTENT, REWARD }
     val money: Long = 0,
     /** A bench recipe just found on the map (server 0.46.0); null almost always. */
     val recipeFound: BenchRecipe? = null,
+    /** The world map's progress after a boss (server 0.67.0): the boss passes its zone and opens the ones it leads to. */
+    val progress: CampaignProgress? = null,
 )
 
 /**

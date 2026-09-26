@@ -103,19 +103,19 @@ class ServerIntegrationTest {
     }
 
     /**
-     * The campaign: the client fights, the server pays. A kill on a locked map or of a monster that
-     * does not live there is refused, and clearing a map opens the next one.
+     * The campaign: the client fights, the server pays. A kill in a closed zone or of a monster that
+     * does not live there is refused, and a slain boss passes its zone and opens the ones it leads to (0.67.0).
      */
     private suspend fun campaignIsTheServers(api: GameApi, id: String, definitions: List<com.sperance.exileforge.core.model.modifier.ModifierDefinition>) {
-        val view = api.campaign.chapters()
-        val maps = view.chapters.single().maps
-        assertEquals(10, maps.size)
+        val view = api.campaign.world()
+        val maps = view.zones
+        assertEquals(33, maps.size)
         maps.forEach { map ->
             assertTrue(map.monsters.size in 2..4, "${map.code}: ${map.monsters.size} monsters")
             assertTrue(serverLocale.contains(com.sperance.exileforge.core.i18n.LocaleKey.mapName(map.code)), "no name for ${map.code}")
             map.monsters.forEach { assertTrue(serverLocale.contains(com.sperance.exileforge.core.i18n.LocaleKey.monsterName(it.code)), "no name for ${it.code}") }
         }
-        val first = maps.first()
+        val first = maps.single { it.from.isEmpty() }
         assertEquals(listOf(first.code), api.campaign.progress(id).unlocked)
         val reward = api.campaign.kill(id, first.code, first.monsters.first().code, com.sperance.exileforge.core.model.campaign.MonsterRarity.RARE)
         assertTrue(reward.experience > 0, "a kill gave no experience")
@@ -124,7 +124,8 @@ class ServerIntegrationTest {
         val bag = api.hero.bag(id)
         reward.items.forEach { stack -> assertTrue(bag.any { it.itemId == stack.itemId }, "the looted ${stack.itemId} is not in the bag") }
         assertEquals("CP_004", assertFailsWith<ApiFailure> { api.campaign.kill(id, first.code, maps.last().monsters.first().code, com.sperance.exileforge.core.model.campaign.MonsterRarity.NORMAL) }.code)
-        assertEquals("CP_003", assertFailsWith<ApiFailure> { api.campaign.kill(id, maps[1].code, maps[1].monsters.first().code, com.sperance.exileforge.core.model.campaign.MonsterRarity.NORMAL) }.code)
+        val closed = maps.first { it.code != first.code }
+        assertEquals("CP_003", assertFailsWith<ApiFailure> { api.campaign.kill(id, closed.code, closed.monsters.first().code, com.sperance.exileforge.core.model.campaign.MonsterRarity.NORMAL) }.code)
         // Chests (0.31.0): the window says how many, and one more than that is refused.
         val chests = api.campaign.chests(id, first.code)
         repeat(chests.left) { api.campaign.openChest(id, first.code) }
@@ -132,21 +133,23 @@ class ServerIntegrationTest {
         assertEquals("CP_006", assertFailsWith<ApiFailure> { api.campaign.openChest(id, first.code) }.code)
         // The boss (0.32.0): the exit is sealed while it lives, and a slain one cannot be slain again.
         assertTrue(api.campaign.boss(id, first.code).alive)
-        assertEquals("CP_007", assertFailsWith<ApiFailure> { api.campaign.complete(id, first.code) }.code)
-        assertTrue(api.campaign.slayBoss(id, first.code).experience > 0)
+        assertEquals("CP_007", assertFailsWith<ApiFailure> { api.campaign.leave(id, first.code) }.code)
+        val slain = api.campaign.slayBoss(id, first.code)
+        assertTrue(slain.experience > 0)
+        val passed = assertNotNull(slain.progress, "the boss answered no progress")
+        assertEquals(listOf(first.code), passed.cleared)
+        assertTrue(first.to.isNotEmpty() && first.to.all { it in passed.unlocked }, "the boss opened ${passed.unlocked}, not ${first.to}")
         assertEquals("CP_008", assertFailsWith<ApiFailure> { api.campaign.slayBoss(id, first.code) }.code)
         assertNotNull(first.boss, "the map has no boss")
-        val progress = api.campaign.complete(id, first.code)
-        assertEquals(listOf(first.code), progress.cleared)
-        assertTrue(maps[1].code in progress.unlocked)
+        assertEquals(passed, api.campaign.leave(id, first.code))
         mapsAreTheServers(api, id)
     }
 
     /** Maps (0.35.0): the rule is served, and a location is entered without one; another location's map is refused. */
     private suspend fun mapsAreTheServers(api: GameApi, id: String) {
-        val view = api.campaign.chapters()
+        val view = api.campaign.world()
         assertTrue(view.maps.risk.isNotEmpty(), "no risk weights")
-        val first = view.chapters.first().maps.first()
+        val first = view.zones.first()
         val launch = api.campaign.start(id, first.code)
         assertNull(launch.map)
         assertEquals(api.campaign.chests(id, first.code).left, launch.chests.left)
@@ -253,7 +256,7 @@ class ServerIntegrationTest {
         val slots = api.catalog.equipment().associate { it.entityId to it.text("slot") }
         stock.offers.forEach { assertFloor(it.item, slots[it.item.equipmentId], definitions) }
         assertEquals(stock, api.merchant.stock(id), "the shelf changed before its window ended")
-        val first = api.campaign.chapters().chapters.first().maps.first()
+        val first = api.campaign.world().zones.first()
         val chests = api.campaign.chests(id, first.code)
         assertTrue(!chests.bought)
     }

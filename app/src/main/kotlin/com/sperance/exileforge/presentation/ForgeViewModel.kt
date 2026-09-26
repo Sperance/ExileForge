@@ -23,15 +23,14 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     /** The campaign run on screen, if any: a world the scene steps and the overlay reads. */
     val expedition = runtime.expeditionViewModel.run
     fun loadCampaign() = runtime.expeditionViewModel.loadCampaign()
-    fun nextCampaignMap() = runtime.expeditionViewModel.nextMap()
     fun startRun(mapCode: String) = runtime.expeditionViewModel.start(mapCode)
-    fun openLaunch(mapCode: String) = runtime.expeditionViewModel.openLaunch(mapCode)
+    fun selectZone(mapCode: String) = runtime.expeditionViewModel.selectZone(mapCode)
     fun loadCrafts(silent: Boolean = false) = runtime.craftsViewModel.load(silent)
     fun openProfession(code: String) = runtime.craftsViewModel.openProfession(code)
     fun startWork(job: String, additives: List<String> = emptyList()) = runtime.craftsViewModel.start(job, additives)
     fun stopWork() = runtime.craftsViewModel.stop()
     fun equipTool(instanceId: String) = runtime.craftsViewModel.equipTool(instanceId)
-    fun closeLaunch() = runtime.expeditionViewModel.closeLaunch()
+    fun closeZone() = runtime.expeditionViewModel.closeZone()
     fun pickMap(instanceId: String?) = runtime.expeditionViewModel.pickMap(instanceId)
     fun summonGuardian(mapCode: String) = runtime.expeditionViewModel.summonGuardian(mapCode)
     fun runCommand(command: com.sperance.exileforge.core.campaign.RunCommand) = runtime.expeditionViewModel.send(command)

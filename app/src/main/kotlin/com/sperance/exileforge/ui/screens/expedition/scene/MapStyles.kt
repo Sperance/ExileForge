@@ -74,19 +74,21 @@ internal abstract class MapStyle {
 /** How many kindred wall textures each style draws (2.73.0). */
 private const val WALL_VARIANTS = 3
 
-/** Which style draws which biome: halls of stone, the dark of crypts, the burnt land, the living cave. */
+/** Which style draws which biome: halls of stone, the dark of crypts, the burnt land, the living cave, the sands. */
 internal object MapStyles {
     private val wet = WetStone()
     private val runes = RuneDark()
     private val ash = Ashen()
     private val moss = Overgrown()
     private val altar = BloodAltar()
+    private val dunes = Dunes()
 
     fun of(biome: String): MapStyle = when (biome) {
         com.sperance.exileforge.core.campaign.VaalZones.BIOME -> altar
-        "CRYPT", "TEMPLE" -> runes
-        "ASH" -> ash
-        "FOREST", "MIRE" -> moss
+        "CRYPT", "TEMPLE", "ABYSS" -> runes
+        "ASH", "VOLCANO" -> ash
+        "FOREST", "MIRE", "JUNGLE", "HIVE", "BLIGHT" -> moss
+        "DESERT", "CANYON" -> dunes
         else -> wet
     }
 }
@@ -425,6 +427,48 @@ private class BloodAltar : MapStyle() {
             val y = h * (.2f + spread(i, 4) * .7f)
             val r = w * .3f
             scope.drawCircle(Brush.radialGradient(listOf(Color(0xFFC81414).copy(alpha = .09f), Color.Transparent), Offset(x, y), r), r, Offset(x, y))
+        }
+    }
+}
+
+/** VI · Dunes (2.77.0): sand rippled by the wind, sandstone laid in bands, grains blowing across the screen. */
+private class Dunes : MapStyle() {
+    override fun floor(frame: SceneFrame, spot: TileSpot, palette: Palette, light: Float): Unit = with(frame) {
+        val (cx, cy, u) = Triple(spot.cx, spot.cy, unit)
+        pen.color = tone(palette.floor, (.95f + noise(spot.x, spot.y) * .25f) * light)
+        pen.diamond(cx, cy, u, u / 2)
+        // The wind's hand: two or three soft ripples across the tile.
+        pen.color = tone(palette.decor, .9f * light, alpha = .35f)
+        val ripples = 2 + (noise(spot.x, spot.y, 40) * 2).toInt()
+        repeat(ripples) { k ->
+            val y = cy + ((k + 1f) / (ripples + 1) - .5f) * u * .8f + (noise(spot.x, spot.y, 41 + k) - .5f) * u * .1f
+            pen.polyline(cx - u * .55f, y, cx, y + u * .08f, cx + u * .55f, y, width = u * .03f)
+        }
+    }
+
+    override fun wall(frame: SceneFrame, spot: TileSpot, palette: Palette, alpha: Float, light: Float): Unit = with(frame) {
+        val h = unit * (1f + noise(spot.x, spot.y, 42) * .7f)
+        block(spot, h, tone(palette.wallSide, 1.15f * light, alpha = alpha), tone(palette.wallSide, .8f * light, alpha = alpha),
+            tone(palette.wallTop, 1.05f * light, alpha = alpha))
+        // Strata: the bands the sandstone was laid in, running across both faces.
+        pen.color = tone(palette.wallTop, .75f * light, alpha = .5f * alpha)
+        val bands = if (variant(spot) == 0) listOf(.3f, .6f) else listOf(.25f, .5f, .75f)
+        bands.forEach { z ->
+            seam({ t, lift -> left(spot, t, lift) }, unit * .04f, 0f, h * z, 1f, h * z)
+            seam({ t, lift -> right(spot, t, lift) }, unit * .04f, 0f, h * z, 1f, h * z)
+        }
+        // A sunlit crest on some of the rock.
+        if (variant(spot) == 2) frontEdges(spot, h, tone(palette.accent, light, alpha = .35f * alpha), unit * .04f)
+    }
+
+    override fun atmosphere(scope: DrawScope, palette: Palette, time: Float) {
+        val (w, h) = scope.size.width to scope.size.height
+        scope.drawRect(Brush.verticalGradient(listOf(palette.accent.copy(alpha = .06f), Color.Transparent), startY = 0f, endY = h * .6f))
+        val grain = w / 260f
+        repeat(60) { i ->
+            val drift = (time * (.08f + spread(i, 21) * .08f) + spread(i, 22)) % 1f
+            val y = spread(i, 23) * h + sin(time * 1.5f + i) * grain * 4
+            scope.drawCircle(palette.accent.copy(alpha = .25f + .25f * spread(i, 24)), grain, Offset(drift * w * 1.2f - w * .1f, y))
         }
     }
 }

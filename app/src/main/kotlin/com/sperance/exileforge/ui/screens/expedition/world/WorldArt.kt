@@ -22,7 +22,8 @@ import kotlin.random.Random
 /**
  * The parchment the world map is drawn on (2.76.0, the owner's pick «Пергамент»): a dark chart with
  * a sea along the west, the land each zone stands on sketched in its biome — hills and snow over the
- * mines and passes, trees in the forests, reeds in the mire, columns over ruins — the dotted borders
+ * mines and passes, trees in the forests, reeds in the mire, columns over ruins, and since 2.77.0
+ * dunes, mesas, hives, towers, chasms and spore caps over the lands up to level 70 — the dotted borders
  * of the regions and a compass rose. It is the world's alone, not the hero's: built once per world,
  * laid out «down» (`height - y`, as the screen goes) in world units, and every sketch of one kind is
  * one path, so a frame is a few dozen draws however far the map is zoomed.
@@ -91,6 +92,8 @@ class WorldArt private constructor(
             val zones = view.zones
             val tokens = zones.map { Offset(it.x.toFloat(), height - it.y) }
             val labels = view.regions.map { Rect(Offset(it.label.x.toFloat(), height - it.label.y), 190f) }
+            // The stains and the grain were measured for the first chart of 1100 × 2000; a taller world gets as many per stretch.
+            val area = width * height / (1100f * 2000f)
             // A sketch keeps off the tokens, off the names hanging under them, off the regions' names and out of the sea.
             fun free(p: Offset, room: Float): Boolean =
                 p.x > coastAt(p.y) + 14 && p.x < width - 8 && p.y > 8 && p.y < height - 8 &&
@@ -100,7 +103,7 @@ class WorldArt private constructor(
             val pools = view.regions.filter { it.zones.isNotEmpty() }.map { region ->
                 val centre = Offset(region.zones.map { it.x }.average().toFloat(), height - region.zones.map { it.y }.average().toFloat())
                 Glow(centre, 520f, poolColor(region.zones.groupingBy { it.biome }.eachCount().maxByOrNull { it.value }?.key.orEmpty()))
-            } + List(12) { Glow(Offset(random.nextFloat() * width, random.nextFloat() * height), 80f + random.nextFloat() * 170f, Color.Black.copy(alpha = .18f)) }
+            } + List((12 * area).toInt()) { Glow(Offset(random.nextFloat() * width, random.nextFloat() * height), 80f + random.nextFloat() * 170f, Color.Black.copy(alpha = .18f)) }
 
             val shore = (0..height.toInt() step 5).map { y -> Offset(coastAt(y.toFloat()), y.toFloat()) }
             val sea = Path().apply { moveTo(0f, 0f); shore.forEach { lineTo(it.x, it.y) }; lineTo(0f, height); close() }
@@ -134,7 +137,7 @@ class WorldArt private constructor(
                 }
             }
             val grain = listOf(.03f, .05f, .08f).map { alpha ->
-                Grain(List(1400) { Offset(random.nextFloat() * width, random.nextFloat() * height) }, Color(0xFFE4DCCF).copy(alpha = alpha))
+                Grain(List((1400 * area).toInt()) { Offset(random.nextFloat() * width, random.nextFloat() * height) }, Color(0xFFE4DCCF).copy(alpha = alpha))
             }
             val borders = WorldMap.borders(view).map { y ->
                 val down = height - y
@@ -145,28 +148,38 @@ class WorldArt private constructor(
 
         private fun poolColor(biome: String): Color = when (biome) {
             "MINES", "FROST" -> Color(0xFF7FA9C8).copy(alpha = .13f)
-            "ASH" -> Color(0xFFD9642E).copy(alpha = .1f)
+            "ASH", "VOLCANO", "CITADEL" -> Color(0xFFD9642E).copy(alpha = .1f)
             "TEMPLE", "VAAL" -> Color(0xFF3A8290).copy(alpha = .1f)
             "CRYPT", "RUINS" -> Color(0xFF8A7AA0).copy(alpha = .08f)
+            "DESERT", "CANYON" -> Color(0xFFD8B070).copy(alpha = .1f)
+            "JUNGLE", "HIVE" -> Color(0xFF3A8A3E).copy(alpha = .12f)
+            "ABYSS", "BLIGHT" -> Color(0xFF6A3AA0).copy(alpha = .12f)
             else -> Color(0xFF805E38).copy(alpha = .2f)
         }
 
         private fun sketchOf(biome: String): SketchKind? = when (biome) {
             "MINES" -> SketchKind.CRYSTAL_HILL
             "FROST" -> SketchKind.SNOW_HILL
-            "ASH" -> SketchKind.CINDER_HILL
-            "FOREST" -> SketchKind.TREE
+            "ASH", "VOLCANO" -> SketchKind.CINDER_HILL
+            "FOREST", "JUNGLE" -> SketchKind.TREE
             "MIRE" -> SketchKind.REED
             "RUINS", "TEMPLE" -> SketchKind.COLUMN
             "CRYPT" -> SketchKind.TOMB
             "CAVE", "SHORE" -> SketchKind.ROCK
+            "DESERT" -> SketchKind.DUNE
+            "CANYON" -> SketchKind.MESA
+            "HIVE" -> SketchKind.MOUND
+            "CITADEL" -> SketchKind.TOWER
+            "ABYSS" -> SketchKind.CHASM
+            "BLIGHT" -> SketchKind.SPORE
             else -> null
         }
     }
 
     /** What a biome's land is sketched with, how many a zone gets and how much room each wants. */
     private enum class SketchKind(val count: Int, val room: Float) {
-        CRYSTAL_HILL(6, 52f), SNOW_HILL(6, 52f), CINDER_HILL(6, 52f), TREE(10, 30f), REED(10, 28f), COLUMN(7, 26f), TOMB(7, 26f), ROCK(7, 28f)
+        CRYSTAL_HILL(6, 52f), SNOW_HILL(6, 52f), CINDER_HILL(6, 52f), TREE(10, 30f), REED(10, 28f), COLUMN(7, 26f), TOMB(7, 26f), ROCK(7, 28f),
+        DUNE(8, 40f), MESA(5, 56f), MOUND(7, 30f), TOWER(6, 30f), CHASM(5, 44f), SPORE(9, 28f)
     }
 
     /** The sketches gathered into one path per ink, so the whole land is drawn in a handful of calls. */
@@ -184,6 +197,11 @@ class WorldArt private constructor(
         private val reeds = Path()
         private val stones = Path()
         private val stoneEdge = Path()
+        private val dunes = Path()
+        private val voids = Path()
+        private val voidEdge = Path()
+        private val caps = Path()
+        private val glints = Path()
 
         fun crowded(p: Offset, room: Float) = spots.any { hypot(it.x - p.x, it.y - p.y) < room }
 
@@ -214,6 +232,49 @@ class WorldArt private constructor(
                 SketchKind.ROCK -> {
                     val rock = Rect(p.x - 6 * size, p.y - 4 * size, p.x + 6 * size, p.y)
                     stones.addOval(rock); stoneEdge.addOval(rock)
+                }
+                SketchKind.DUNE -> {
+                    val s = 9 * size
+                    dunes.moveTo(p.x - s * 1.3f, p.y); dunes.quadraticTo(p.x - s * .4f, p.y - s * .8f, p.x + s * .4f, p.y)
+                    dunes.moveTo(p.x - s * .2f, p.y - 1); dunes.quadraticTo(p.x + s * .6f, p.y - s * .6f, p.x + s * 1.3f, p.y - 1)
+                }
+                SketchKind.MESA -> {
+                    val s = 13 * size
+                    hillBody.moveTo(p.x - s, p.y); hillBody.lineTo(p.x - s * .55f, p.y - s * .7f); hillBody.lineTo(p.x + s * .55f, p.y - s * .7f)
+                    hillBody.lineTo(p.x + s, p.y); hillBody.close()
+                    hillEdge.moveTo(p.x - s, p.y); hillEdge.lineTo(p.x - s * .55f, p.y - s * .7f); hillEdge.lineTo(p.x + s * .55f, p.y - s * .7f); hillEdge.lineTo(p.x + s, p.y)
+                    // The strata of the red rock, two bands across the face.
+                    for (t in listOf(.35f, .65f)) { hillHatch.moveTo(p.x - s * (1 - .45f * t), p.y - s * .7f * t); hillHatch.lineTo(p.x + s * (1 - .45f * t), p.y - s * .7f * t) }
+                }
+                SketchKind.MOUND -> {
+                    val s = 8 * size
+                    val dome = Path().apply { moveTo(p.x - s, p.y); cubicTo(p.x - s, p.y - s * 1.4f, p.x + s, p.y - s * 1.4f, p.x + s, p.y); close() }
+                    stones.addPath(dome); stoneEdge.addPath(dome)
+                    glints.addOval(Rect(Offset(p.x - s * .35f, p.y - s * .35f), s * .16f)); glints.addOval(Rect(Offset(p.x + s * .3f, p.y - s * .6f), s * .13f))
+                }
+                SketchKind.TOWER -> {
+                    val h = 12 + 6 * size
+                    val tower = Path().apply {
+                        moveTo(p.x - 4, p.y); lineTo(p.x - 4, p.y - h); lineTo(p.x - 5.5f, p.y - h); lineTo(p.x - 5.5f, p.y - h - 3); lineTo(p.x - 2.5f, p.y - h - 3)
+                        lineTo(p.x - 2.5f, p.y - h - 1); lineTo(p.x + 2.5f, p.y - h - 1); lineTo(p.x + 2.5f, p.y - h - 3); lineTo(p.x + 5.5f, p.y - h - 3)
+                        lineTo(p.x + 5.5f, p.y - h); lineTo(p.x + 4, p.y - h); lineTo(p.x + 4, p.y); close()
+                    }
+                    stones.addPath(tower); stoneEdge.addPath(tower)
+                    glints.addRect(Rect(p.x - 1, p.y - h * .7f, p.x + 1, p.y - h * .55f))
+                }
+                SketchKind.CHASM -> {
+                    val s = 12 * size
+                    val crack = Path().apply {
+                        moveTo(p.x - s, p.y); lineTo(p.x - s * .4f, p.y - s * .22f); lineTo(p.x, p.y - s * .08f); lineTo(p.x + s * .5f, p.y - s * .26f)
+                        lineTo(p.x + s, p.y - s * .05f); lineTo(p.x + s * .45f, p.y + s * .12f); lineTo(p.x - s * .1f, p.y + s * .05f); lineTo(p.x - s * .5f, p.y + s * .14f); close()
+                    }
+                    voids.addPath(crack); voidEdge.addPath(crack)
+                }
+                SketchKind.SPORE -> {
+                    val s = 5 * size
+                    trunks.moveTo(p.x, p.y); trunks.lineTo(p.x, p.y - s)
+                    val cap = Path().apply { moveTo(p.x - s * 1.1f, p.y - s); quadraticTo(p.x, p.y - s * 2.3f, p.x + s * 1.1f, p.y - s); close() }
+                    caps.addPath(cap); canopyEdge.addPath(cap)
                 }
             }
         }
@@ -257,10 +318,15 @@ class WorldArt private constructor(
                 Sketch(crystals, Color(0xFF8EC5FF).copy(alpha = .5f), fill = true),
                 Sketch(trunks, gold.copy(alpha = .35f), fill = false),
                 Sketch(canopies, Color(0xF2223420), fill = true),
+                Sketch(caps, Color(0xE66A3A5A), fill = true),
                 Sketch(canopyEdge, Color(0xFFA0B478).copy(alpha = .45f), fill = false),
                 Sketch(reeds, Color(0xFF8CA578).copy(alpha = .5f), fill = false),
                 Sketch(stones, Color(0xFF3A3326).copy(alpha = .9f), fill = true),
                 Sketch(stoneEdge, gold.copy(alpha = .35f), fill = false),
+                Sketch(glints, Color(0xFFF0B83A).copy(alpha = .75f), fill = true),
+                Sketch(dunes, Color(0xFFD8B070).copy(alpha = .45f), fill = false, width = 1.2f),
+                Sketch(voids, Color(0xF207050C), fill = true),
+                Sketch(voidEdge, Color(0xFFA070FF).copy(alpha = .45f), fill = false),
             )
         }
     }

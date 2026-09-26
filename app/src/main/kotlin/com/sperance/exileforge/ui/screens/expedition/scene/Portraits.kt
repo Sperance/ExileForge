@@ -186,6 +186,54 @@ object Portraits {
                 drawLine(Color(0xFFE4DCCF), Offset(cx + r * .5f, cy + r * .9f), Offset(cx + r * .7f, cy + r * 1.4f), r * .14f)
                 eyes(cy - r * .1f, r * .9f)
             }
+            // The forms of the lands past the Drowned Temple (2.77.0, server 0.68.0).
+            "SCORPION" -> {
+                for (i in 0..4) drawCircle(tone(body, .8f + i * .05f), r * (.55f - i * .05f), Offset(cx + r * (1.6f - i * .45f), h * (.78f - i * .13f)))
+                drawCircle(Color(0xFFE0C080), r * .2f, Offset(cx - r * .4f, h * .2f))
+                for (side in listOf(-1, 1)) {
+                    drawLine(tone(body, .85f), Offset(cx + side * r * .8f, h * .62f), Offset(cx + side * w * .36f, h * .45f), r * .3f)
+                    drawCircle(tone(body, 1.1f), r * .45f, Offset(cx + side * w * .38f, h * .4f))
+                }
+                drawOval(body, Offset(cx - w * .36f, h * .6f), Size(w * .72f, h * .44f))
+                head(r * .95f, cy + r * .4f)
+                eyes(cy + r * .3f, r * .6f)
+            }
+            "INSECT" -> {
+                val buzz = sin(time * 20f) * h * .01f
+                drawOval(Color.White.copy(alpha = .15f), Offset(w * .02f, h * .15f + buzz), Size(w * .42f, h * .5f))
+                drawOval(Color.White.copy(alpha = .15f), Offset(w * .56f, h * .15f - buzz), Size(w * .42f, h * .5f))
+                drawOval(body, Offset(cx - r * 1.3f, h * .62f), Size(r * 2.6f, h * .45f))
+                for (i in 0..1) drawRect(Color(0xFFC8A030).copy(alpha = .6f), Offset(cx - r * 1.1f, h * (.72f + i * .1f)), Size(r * 2.2f, h * .035f))
+                for (side in listOf(-1, 1)) drawLine(tone(body, .8f), Offset(cx + side * r * .3f, cy - r * .9f), Offset(cx + side * r * .9f, cy - r * 2.1f), r * .08f)
+                path { moveTo(cx, cy + r * 1.4f); lineTo(cx - r * 1.2f, cy - r * .2f); quadraticTo(cx, cy - r * 1.4f, cx + r * 1.2f, cy - r * .2f); close() }
+                    .also { drawPath(it, tone(body, 1.1f)) }
+                drawOval(Color(0xFF9AFF3A), Offset(cx - r * 1.05f, cy - r * .55f), Size(r * .7f, r * .9f))
+                drawOval(Color(0xFF9AFF3A), Offset(cx + r * .35f, cy - r * .55f), Size(r * .7f, r * .9f))
+            }
+            "DEMON" -> {
+                shoulders(1.25f, .64f)
+                drawCircle(Color(0xFFFF6A20).copy(alpha = .5f), r * .45f, Offset(cx, h * .84f))
+                for (side in listOf(-1, 1)) {
+                    path { moveTo(cx + side * r * .6f, cy - r * .6f); quadraticTo(cx + side * r * 1.9f, cy - r * 1.2f, cx + side * r * 1.6f, cy - r * 2.4f)
+                        quadraticTo(cx + side * r * 1.2f, cy - r * 1.3f, cx + side * r * .2f, cy - r * .9f); close() }.also { drawPath(it, Color(0xFFE0D2B0)) }
+                }
+                head(r * 1.05f)
+                for (side in listOf(-1, 1)) {
+                    path { moveTo(cx + side * r * .7f, cy + r * .05f); lineTo(cx + side * r * .15f, cy + r * .25f); lineTo(cx + side * r * .6f, cy + r * .35f); close() }
+                        .also { drawPath(it, Color(0xFFFFD030)) }
+                }
+                drawLine(Color(0xFF140404), Offset(cx - r * .45f, cy + r * .7f), Offset(cx + r * .45f, cy + r * .7f), r * .14f)
+            }
+            "FUNGUS" -> {
+                drawRect(Color(0xFFD8CCB4), Offset(cx - r * .7f, cy + r * .3f), Size(r * 1.4f, h - cy - r * .3f))
+                path { moveTo(cx - r * 2.6f, cy + r * .4f); quadraticTo(cx - r * 2.4f, cy - r * 2.2f, cx, cy - r * 2.3f); quadraticTo(cx + r * 2.4f, cy - r * 2.2f, cx + r * 2.6f, cy + r * .4f); close() }
+                    .also { drawPath(it, body) }
+                listOf(-1.4f to -1.2f, .2f to -1.7f, 1.3f to -.9f, -.4f to -.6f).forEach { (dx, dy) ->
+                    drawCircle(Color(0xFFECDCF4).copy(alpha = .7f), r * .28f, Offset(cx + r * dx, cy + r * dy))
+                }
+                drawCircle(Color(0xFFC0FF5A), r * .15f, Offset(cx - r * .35f, cy + r * .9f))
+                drawCircle(Color(0xFFC0FF5A), r * .15f, Offset(cx + r * .35f, cy + r * .9f))
+            }
             else -> {
                 shoulders()
                 drawRect(tone(body, 1.1f), Offset(cx - r * .3f, cy + r * .6f), Size(r * .6f, r * .8f))

@@ -22,6 +22,16 @@ object Palettes {
         "ASH" to Palette(Color(0xFF0A0605), Color(0xFF3A2A22), Color(0xFF40302A), Color(0xFF261A15), Color(0xFFD9642E), Color(0xFFE08A3C)),
         "FROST" to Palette(Color(0xFF070A0E), Color(0xFF46505C), Color(0xFF6C7A88), Color(0xFF3E4852), Color(0xFFBFD8EA), Color(0xFFDDEEFF)),
         "TEMPLE" to Palette(Color(0xFF04070A), Color(0xFF23343A), Color(0xFF2E4750), Color(0xFF192A30), Color(0xFF3B6FA8), Color(0xFF63B7C4)),
+        // The lands past the Drowned Temple (2.77.0, server 0.68.0): sand and red rock, the green
+        // dark and the amber hive, fire and its fortress, the void and the rot.
+        "DESERT" to Palette(Color(0xFF0B0906), Color(0xFF5A4A30), Color(0xFF7A6340), Color(0xFF4A3B26), Color(0xFFB8965A), Color(0xFFE8C878)),
+        "CANYON" to Palette(Color(0xFF0A0605), Color(0xFF4E3024), Color(0xFF7A4530), Color(0xFF4A2A1E), Color(0xFF9A5A3A), Color(0xFFE07A4A)),
+        "JUNGLE" to Palette(Color(0xFF030704), Color(0xFF24331E), Color(0xFF1E4424), Color(0xFF122A16), Color(0xFF3A8A3E), Color(0xFF7ADE6A)),
+        "HIVE" to Palette(Color(0xFF080602), Color(0xFF3A2E16), Color(0xFF5A4518), Color(0xFF352810), Color(0xFFC8962A), Color(0xFFF0B83A)),
+        "VOLCANO" to Palette(Color(0xFF0A0303), Color(0xFF2E1E1A), Color(0xFF3A2622), Color(0xFF1E1210), Color(0xFFFF5A20), Color(0xFFFF7A2A)),
+        "CITADEL" to Palette(Color(0xFF070405), Color(0xFF3A2A2A), Color(0xFF5A3E3A), Color(0xFF2E1E1E), Color(0xFF8A3030), Color(0xFFFF6A3A)),
+        "ABYSS" to Palette(Color(0xFF020104), Color(0xFF1E1A2A), Color(0xFF2E2640), Color(0xFF161222), Color(0xFF6A3AA0), Color(0xFFA070FF)),
+        "BLIGHT" to Palette(Color(0xFF050604), Color(0xFF2E3022), Color(0xFF3A3A28), Color(0xFF22241A), Color(0xFF7A8A30), Color(0xFFB0D040)),
         // The Vaal zones (2.65.0): black obsidian and scarlet, whatever map the portal stood on.
         "VAAL" to Palette(Color(0xFF050102), Color(0xFF1E1416), Color(0xFF3A2A2C), Color(0xFF2A1D1F), Color(0xFF5A1A1A), Color(0xFFFF3C28)),
     )
@@ -52,6 +62,10 @@ object Palettes {
         "GOLEM" -> Color(0xFF7D8590)
         "WRAITH" -> Color(0xFF9FD2F0)
         "BRUTE" -> Color(0xFF7A8C9A)
+        "SCORPION" -> Color(0xFFA07A4A)
+        "INSECT" -> Color(0xFF6A7A2A)
+        "DEMON" -> Color(0xFF8A2E22)
+        "FUNGUS" -> Color(0xFF8A4A7A)
         else -> Color(0xFF7E8A6A)
     }
 }

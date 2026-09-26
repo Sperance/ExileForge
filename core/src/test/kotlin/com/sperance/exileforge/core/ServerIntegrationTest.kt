@@ -105,11 +105,13 @@ class ServerIntegrationTest {
     /**
      * The campaign: the client fights, the server pays. A kill in a closed zone or of a monster that
      * does not live there is refused, and a slain boss passes its zone and opens the ones it leads to (0.67.0).
+     * Since 0.68.0 the world holds six regions and 105 zones, up to level 70.
      */
     private suspend fun campaignIsTheServers(api: GameApi, id: String, definitions: List<com.sperance.exileforge.core.model.modifier.ModifierDefinition>) {
         val view = api.campaign.world()
         val maps = view.zones
-        assertEquals(33, maps.size)
+        assertEquals(105, maps.size)
+        assertEquals(70, maps.maxOf { it.level })
         maps.forEach { map ->
             assertTrue(map.monsters.size in 2..4, "${map.code}: ${map.monsters.size} monsters")
             assertTrue(serverLocale.contains(com.sperance.exileforge.core.i18n.LocaleKey.mapName(map.code)), "no name for ${map.code}")
@@ -245,6 +247,20 @@ class ServerIntegrationTest {
         assertEquals(1, api.catalog.search(Catalog.POOLS, 0, CatalogFilter(query = tag)).items.size)
         api.catalog.delete(Catalog.POOLS, pool.entityId)
         assertNull(api.catalog.get(Catalog.POOLS, pool.entityId))
+    }
+
+    /**
+     * Every stat a map modifier or an atlas node names has the client's own words in both languages
+     * (2.77.0): no modifier of any pool goes unnamed on the client, checked against the live server.
+     */
+    private suspend fun mapAndAtlasStatsAreNamed(api: GameApi, definitions: List<com.sperance.exileforge.core.model.modifier.ModifierDefinition>) {
+        val stats = (definitions.flatMap { it.effects }.map { it.stat }.filter { it.startsWith("MAP_") || it.startsWith("ATLAS_") } +
+            api.atlas.tree().nodes.flatMap { it.effects }.map { it.stat }).distinct()
+        assertTrue(stats.any { it.startsWith("ATLAS_") }, "no atlas stat among $stats")
+        com.sperance.exileforge.core.i18n.Lang.entries.forEach { lang ->
+            val missing = stats.filter { "enum.stat.$it" !in com.sperance.exileforge.core.i18n.UiStrings.keys(lang) }
+            assertTrue(missing.isEmpty(), "${lang.code}: no client name for $missing")
+        }
     }
 
     /** The merchant's shelf and the map services (0.34.0): the server's rolls, prices and refusals. */
@@ -390,6 +406,7 @@ class ServerIntegrationTest {
         assertTrue(tiers.zipWithNext().all { (better, worse) -> better.level >= worse.level }, "tiers of ${described.code} are not best first: $tiers")
 
         poolsAreTheServers(api, definitions)
+        mapAndAtlasStatsAreNamed(api, definitions)
         // The key this client builds has to be the key the server wrote, or the template is the code.
         assertTrue(serverLocale.contains(LocaleKey.modifierName(described.code)), "no text for ${described.code}")
         assertNotEquals(described.code, described.template)

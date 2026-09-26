@@ -35,14 +35,14 @@ class ExpeditionMap(
 /**
  * Every map of a run is new: carved from a seed, so the same seed is the same map.
  *
- * The biome decides the carving — a crypt, a temple, ruins and mines are halls joined by
+ * The biome decides the carving — a crypt, a temple, ruins, mines and a citadel are halls joined by
  * corridors, everything else a cavern dug by wandering walkers — and the map is then trimmed to
  * the one region the start can reach, so an exit or a monster is never sealed in rock. The exit is
  * the farthest reachable cell from the start; monsters stand away from both.
  */
 object MapGenerator {
 
-    private val halls = setOf("RUINS", "CRYPT", "MINES", "TEMPLE", VaalZones.BIOME)
+    private val halls = setOf("RUINS", "CRYPT", "MINES", "TEMPLE", "CITADEL", VaalZones.BIOME)
 
     fun styleOf(biome: String): MapStyle = if (biome in halls) MapStyle.HALLS else MapStyle.CAVERN
 

@@ -239,6 +239,7 @@ private class ScenePainter {
             pen.color = Palettes.torch.copy(alpha = .15f); pen.circle(cx, cy + u * 2.6f, u * 2.2f) }
         fun column() { pen.rect(cx - u * .8f, cy, u * 1.6f, u * 3.4f); pen.color = tone(palette.decor, 1.25f * light); pen.ellipse(cx - u * .8f, cy + u * 3.1f, u * 1.6f, u * .6f) }
         fun mushroom() { pen.rect(cx - u * .2f, cy, u * .4f, u * 1.4f); pen.color = glowing; pen.ellipse(cx - u * .9f, cy + u * 1.2f, u * 1.8f, u * .9f) }
+        fun embers() { pen.color = Palettes.torch.copy(alpha = (.35f + .25f * sin(time * 3f + x + y)) * light); pen.ellipse(cx - u * 2f, cy - u * .6f, u * 4f, u * 1.2f) }
         when (biome) {
             "SHORE" -> when (kind) { 1 -> stone(); 2 -> puddle(); else -> { pen.color = tone(Color(0xFFE6D2B4), light); pen.arc(cx, cy, u * 1.2f, 0f, 180f) } }
             "CAVE" -> when (kind) { 1 -> stone(); 2 -> { pen.triangle(cx - u, cy, cx + u, cy, cx, cy + u * 4f) }; else -> shard() }
@@ -247,10 +248,20 @@ private class ScenePainter {
             "RUINS" -> when (kind) { 1 -> stone(); 2 -> column(); else -> bones() }
             "CRYPT" -> when (kind) { 1 -> bones(); 2 -> flame(); else -> { pen.rect(cx - u, cy, u * 2f, u * 2.4f); pen.circle(cx, cy + u * 2.4f, u) } }
             "MINES" -> when (kind) { 1 -> stone(); 2 -> shard(); else -> flame() }
-            "ASH" -> when (kind) { 1 -> stone(); 2 -> { pen.color = Palettes.torch.copy(alpha = (.35f + .25f * sin(time * 3f + x + y)) * light); pen.ellipse(cx - u * 2f, cy - u * .6f, u * 4f, u * 1.2f) }
+            "ASH" -> when (kind) { 1 -> stone(); 2 -> embers()
                 else -> { pen.rect(cx - u * .5f, cy, u, u * 2.6f); pen.color = Palettes.torch.copy(alpha = .5f * light); pen.circle(cx, cy + u * .3f, u * .5f) } }
             "FROST" -> when (kind) { 1 -> { pen.color = tone(Color(0xFFE8F2FA), light); pen.ellipse(cx - u * 2f, cy - u * .6f, u * 4f, u * 1.6f) }; 2 -> shard(); else -> stone() }
             "VAAL" -> when (kind) { 1 -> bones(); 2 -> flame(); else -> puddle() }
+            // The lands past the Drowned Temple (2.77.0): bleached bones in the sand, pillars of red
+            // rock, the jungle's tufts, amber in the hive, lava pools, braziers, void crystals, rot.
+            "DESERT" -> when (kind) { 1 -> stone(); 2 -> bones(); else -> tuft() }
+            "CANYON" -> when (kind) { 1 -> stone(); 2 -> column(); else -> bones() }
+            "JUNGLE" -> when (kind) { 1 -> tuft(); 2 -> mushroom(); else -> puddle() }
+            "HIVE" -> when (kind) { 1 -> shard(); 2 -> mushroom(); else -> bones() }
+            "VOLCANO" -> when (kind) { 1 -> stone(); 2 -> embers(); else -> shard() }
+            "CITADEL" -> when (kind) { 1 -> column(); 2 -> flame(); else -> stone() }
+            "ABYSS" -> when (kind) { 1 -> shard(); 2 -> bones(); else -> puddle() }
+            "BLIGHT" -> when (kind) { 1 -> mushroom(); 2 -> puddle(); else -> tuft() }
             "TEMPLE" -> when (kind) { 1 -> column(); 2 -> flame(); else -> { pen.color = glowing; pen.circle(cx, cy, u * 1.3f); pen.color = tone(palette.floor, light); pen.circle(cx, cy, u * .8f) } }
             else -> when (kind) { 1 -> stone(); 2 -> tuft(); else -> shard() }
         }

@@ -66,6 +66,7 @@ import kotlin.math.floor
 @Composable fun ExpeditionPlay(s: ForgeState, vm: ForgeViewModel, run: ExpeditionRun) {
     val hud by run.hud.collectAsState()
     var gear by remember { mutableStateOf(false) }
+    var sheet by remember { mutableStateOf(false) }
     // Leaving a map gives up what is left on it, so it is asked first (2.48.0); the fight has its own retreat.
     var leaving by remember { mutableStateOf(false) }
     // A Vaal zone (2.65.0) has no way out but its guardian or a death: back does nothing on its map.
@@ -82,15 +83,16 @@ import kotlin.math.floor
         when (hud.phase) {
             RunPhase.MAP -> {
                 Stick(run)
-                MapBar(run, hud, onLeave = if (zone) null else ({ leaving = true }), onGear = { gear = true })
+                MapBar(run, hud, onLeave = if (zone) null else ({ leaving = true }), onGear = { gear = true }, onStats = { sheet = true })
                 if (gear) { HoldsRun(run); GearSheet(s, vm) { gear = false } }
+                if (sheet) { HoldsRun(run); StatsSheet(s, run.mapEffects) { sheet = false } }
                 if (hud.chestPending || hud.chestFailed || hud.chest != null) ChestLoot(s, hud) { vm.runCommand(RunCommand.DismissChest) }
                 if (leaving) ConfirmSheet(title = ui("expedition.leave_q"), confirm = ui("expedition.leave"), danger = true,
                     subtitle = mapTitle(hud.mapCode),
                     ledger = listOf(LedgerLine(ui("expedition.leave_left"), ui(if (hud.sealed) "expedition.boss_alive" else "expedition.boss_slain"), Tone.SPEND)),
                     note = ui("expedition.leave_note"), onDismiss = { leaving = false }) { vm.runCommand(RunCommand.Leave) }
             }
-            RunPhase.FIGHT -> hud.fight?.let { ArenaOverlay(s, hud, it, run.map.level, run.hero, run.rules, run.stance, onCommand = vm::runCommand) }
+            RunPhase.FIGHT -> hud.fight?.let { ArenaOverlay(s, hud, it, run.map.level, run.rules, run.stance, onCommand = vm::runCommand) }
             // The fight is over: its report — the log, what it came to, and the loot of a victory.
             RunPhase.LOOT -> hud.report?.let { ReportScreen(s, hud, it) { vm.runCommand(RunCommand.Continue) } }
             RunPhase.DEAD -> hud.report?.let { ReportScreen(s, hud, it) { vm.runCommand(RunCommand.Continue) } }
@@ -112,14 +114,15 @@ import kotlin.math.floor
  * Life and shield, the map's name and whether its warden still lives, and the way out. Nothing
  * comes back on its own between fights (2.29.0) but a fountain. What the map still holds — foes, chests, fountains — is the walk's to find (2.56.1).
  */
-@Composable private fun MapBar(run: ExpeditionRun, hud: RunHud, onLeave: (() -> Unit)?, onGear: () -> Unit) {
+@Composable private fun MapBar(run: ExpeditionRun, hud: RunHud, onLeave: (() -> Unit)?, onGear: () -> Unit, onStats: () -> Unit) {
     Column(Modifier.fillMaxWidth().statusBarsPadding().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             // The way out (2.56.1): a portal in a bronze ring, first thing in the corner, and it asks before it goes.
-            // The gear right under it, on the same line (2.73.0).
+            // The gear right under it, on the same line (2.73.0), and the hero's figures under the gear (2.75.0).
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 onLeave?.let { RoundButton(ForgeGlyphs.Portal, ui("expedition.leave"), onClick = it) }
                 RoundButton(ForgeGlyphs.Helm, ui("expedition.gear"), onClick = onGear)
+                RoundButton(ForgeGlyphs.Scroll, ui("expedition.stats_hero"), onClick = onStats)
             }
             Column(Modifier.weight(1f).padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 val zone = VaalZones.isZone(run.map)

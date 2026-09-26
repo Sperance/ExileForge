@@ -43,6 +43,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import com.sperance.exileforge.core.model.crafts.ProfessionView
 import com.sperance.exileforge.core.model.crafts.WorkGains
+import com.sperance.exileforge.core.model.crafts.WorkTally
 import com.sperance.exileforge.core.model.crafts.WorkView
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
@@ -141,7 +142,12 @@ private fun eta(millis: Long): String {
     }
 }
 
-/** The work under way, on every screen of the tab: which, how far the cycle is, what it last brought, and a stop. */
+/**
+ * The work under way, on every screen of the tab: which, how far the cycle is, and a stop — and
+ * since 2.75.0 (server 0.66.0), in its own frame, what the work has come to since it started: how
+ * long it runs, its cycles and experience, what it made, and every stack gathered and spent.
+ */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable private fun WorkPlaque(s: ForgeState, vm: ForgeViewModel, offset: Long) {
     val work = s.play.crafts?.work
     ForgePanel {
@@ -154,9 +160,62 @@ private fun eta(millis: Long): String {
             OutlinedButton(enabled = !s.busy, onClick = vm::stopWork) { Text(ui("crafts.stop")) }
         }
         CycleBar(work.settledAt, work.cycleMillis, offset, caption = false)
+        WorkTotals(s, work.startedAt, work.totals + s.play.craftsPending, offset)
         s.play.craftsLast?.let { Text(gainsLine(s, it), color = Parchment, style = MaterialTheme.typography.bodySmall) }
         s.play.crafts?.professions?.firstOrNull { it.code == work.profession }?.jobs?.firstOrNull { it.code == work.job }
             ?.let { stockLine(s, work, it) }?.let { MutedText(it, style = MaterialTheme.typography.labelSmall) }
+    }
+}
+
+/** A work's totals with the cycles this device threw ahead of the server's count. */
+private operator fun WorkTally.plus(pending: WorkGains): WorkTally {
+    fun Map<String, Long>.merge(other: Map<String, Long>) = (keys + other.keys).associateWith { (this[it] ?: 0) + (other[it] ?: 0) }
+    return WorkTally(cycles + pending.cycles, nothing + pending.nothing, items.merge(pending.items), spent.merge(pending.spent),
+        made + pending.equipment.size, experience + pending.experience, levels + pending.levels)
+}
+
+/**
+ * What the work has come to since it started, framed inside its plaque: four figures in a row —
+ * the time it runs (ticking by the server's clock), cycles, experience, pieces made — and under
+ * them a chip per stack, gathered in green and spent in red.
+ */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable private fun WorkTotals(s: ForgeState, startedAt: Long, totals: WorkTally, offset: Long) {
+    val shape = RoundedCornerShape(4.dp)
+    Column(Modifier.fillMaxWidth().background(Abyss, shape).border(1.dp, Bronze.copy(alpha = .6f), shape).padding(10.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(ui("crafts.totals_title"), color = Gold, style = MaterialTheme.typography.labelMedium)
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            if (startedAt > 0) {
+                val now by produceState(System.currentTimeMillis()) { while (true) { value = System.currentTimeMillis(); kotlinx.coroutines.delay(1_000) } }
+                TotalFigure(ui("crafts.totals_time"), duration(now + offset - startedAt), Modifier.weight(1f))
+            }
+            TotalFigure(ui("crafts.totals_cycles"), if (totals.nothing > 0) "${totals.cycles} (−${totals.nothing})" else totals.cycles.toString(), Modifier.weight(1f))
+            TotalFigure(ui("crafts.totals_experience"), "+" + number(totals.experience) + (if (totals.levels > 0) " ▲${totals.levels}" else ""), Modifier.weight(1f))
+            if (totals.made > 0) TotalFigure(ui("crafts.totals_made"), totals.made.toString(), Modifier.weight(1f))
+        }
+        if (totals.items.isEmpty() && totals.spent.isEmpty()) MutedText(ui("crafts.totals_empty"), style = MaterialTheme.typography.labelSmall)
+        else FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            totals.items.entries.sortedByDescending { it.value }.forEach { (code, amount) -> TallyChip(materialTitle(code), "+$amount", Vital) }
+            totals.spent.entries.sortedByDescending { it.value }.forEach { (code, amount) -> TallyChip(materialTitle(code), "−$amount", LifeRed) }
+        }
+    }
+}
+
+@Composable private fun TotalFigure(title: String, figure: String, modifier: Modifier) {
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(1.dp)) {
+        Text(figure, color = Parchment, style = MaterialTheme.typography.titleSmall, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1)
+        Text(title, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/** How long a work runs: «2 ч 05 мин», «14 мин 03 с», «42 с». */
+private fun duration(millis: Long): String {
+    val seconds = (millis / 1000).coerceAtLeast(0)
+    return when {
+        seconds >= 3600 -> ui("crafts.duration_hours", seconds / 3600, "%02d".format(seconds % 3600 / 60))
+        seconds >= 60 -> ui("crafts.duration_minutes", seconds / 60, "%02d".format(seconds % 60))
+        else -> ui("crafts.duration_seconds", seconds)
     }
 }
 

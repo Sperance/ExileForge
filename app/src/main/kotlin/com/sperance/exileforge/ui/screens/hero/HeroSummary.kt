@@ -11,6 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.StatGroup
@@ -34,10 +35,19 @@ import com.sperance.exileforge.ui.theme.*
  */
 @Composable fun HeroSummary(s: ForgeState) {
     val hero = s.play.hero ?: return
+    StatSheet(s, hero.stats)
+}
+
+/**
+ * A sheet of figures (2.75.0: apart from the hero, so the map's window draws the same one). Given
+ * [before], a figure that differs from it is lit and says what it was — the sheet under a map's
+ * effects held against the hero's own.
+ */
+@Composable fun StatSheet(s: ForgeState, stats: Map<String, Double>, before: Map<String, Double>? = null) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        HeroVitals(s)
-        if (hero.stats.isEmpty()) Text(ui("hero.no_stats"), color = Muted)
-        groupedStats(hero.stats).forEach { (group, stats) -> StatGroupCard(group, stats, s) }
+        HeroVitals(stats)
+        if (stats.isEmpty()) Text(ui("hero.no_stats"), color = Muted)
+        groupedStats(stats).forEach { (group, figures) -> StatGroupCard(group, figures, s, before) }
     }
 }
 
@@ -52,7 +62,7 @@ private fun StatGroup.accent(): Color = when (this) {
 }
 
 /** A group: a band of its colour, its name, and its figures two to a row. */
-@Composable private fun StatGroupCard(group: StatGroup, stats: List<Pair<String, Double>>, s: ForgeState) {
+@Composable private fun StatGroupCard(group: StatGroup, stats: List<Pair<String, Double>>, s: ForgeState, before: Map<String, Double>?) {
     val accent = group.accent()
     val shape = CutCornerShape(topStart = 0.dp, topEnd = 0.dp, bottomStart = 8.dp, bottomEnd = 8.dp)
     Column(Modifier.fillMaxWidth().clip(shape).background(Panel).border(1.dp, accent.copy(alpha = .3f), shape)) {
@@ -61,7 +71,7 @@ private fun StatGroup.accent(): Color = when (this) {
             Text(group.title(s.lang), color = accent, style = MaterialTheme.typography.labelMedium)
             stats.chunked(2).forEach { pair ->
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    pair.forEach { (key, value) -> StatCell(key, value, accent, s, Modifier.weight(1f)) }
+                    pair.forEach { (key, value) -> StatCell(key, value, before?.let { it[key] ?: 0.0 }?.takeIf { it != value }, accent, s, Modifier.weight(1f)) }
                     if (pair.size == 1) Spacer(Modifier.weight(1f))
                 }
             }
@@ -69,14 +79,18 @@ private fun StatGroup.accent(): Color = when (this) {
     }
 }
 
-/** One figure on one line: a small icon, the stat's name, and the number on the right. */
-@Composable private fun StatCell(key: String, value: Double, accent: Color, s: ForgeState, modifier: Modifier) {
-    Row(modifier.background(Abyss, RoundedCornerShape(4.dp)).padding(horizontal = 6.dp, vertical = 4.dp),
+/** One figure on one line: a small icon, the stat's name, and the number on the right — lit, with the old one, when [was] differs. */
+@Composable private fun StatCell(key: String, value: Double, was: Double?, accent: Color, s: ForgeState, modifier: Modifier) {
+    val shape = RoundedCornerShape(4.dp)
+    Row(modifier.background(Abyss, shape).then(if (was != null) Modifier.border(1.dp, Ember.copy(alpha = .7f), shape) else Modifier)
+        .padding(horizontal = 6.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         Tipped({ Tip(statTitle(key, s.lang), tint = accent, facts = listOf(ui("tip.value") to statNumber(key, value))) }) { StatIcon(key, accent, Modifier.size(12.dp)) }
         Text(statTitle(key, s.lang), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f))
-        Text(statNumber(key, value), color = Parchment, style = MaterialTheme.typography.labelLarge, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+        was?.let { Text(statNumber(key, it), color = Muted, style = MaterialTheme.typography.labelSmall, textDecoration = TextDecoration.LineThrough) }
+        Text(statNumber(key, value), color = if (was != null) Ember else Parchment, style = MaterialTheme.typography.labelLarge,
+            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
     }
 }
 
@@ -85,10 +99,13 @@ private fun StatGroup.accent(): Color = when (this) {
  * could only ever be full. Mana left the game in 2.48.0.
  */
 @Composable fun HeroVitals(s: ForgeState) {
-    val hero = s.play.hero ?: return
+    HeroVitals(s.play.hero?.stats ?: return)
+}
+
+@Composable private fun HeroVitals(stats: Map<String, Double>) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         listOf(Triple("STOCK_HEALTH", ui("hero.hp"), LifeRed), Triple("STOCK_ENERGY_SHIELD", ui("hero.es"), ShieldCyan)).forEach { (key, title, color) ->
-            VitalTile(title, statNumber(key, hero.stats[key] ?: 0.0), color, Modifier.weight(1f))
+            VitalTile(title, statNumber(key, stats[key] ?: 0.0), color, Modifier.weight(1f))
         }
     }
 }

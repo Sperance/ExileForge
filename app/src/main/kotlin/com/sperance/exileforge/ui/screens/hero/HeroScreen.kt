@@ -8,7 +8,17 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.text.input.ImeAction
+import com.sperance.exileforge.core.display.ItemSearch
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
@@ -60,6 +70,7 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
     var detailId by remember(s.play.characterId) { mutableStateOf<String?>(null) }
     var pickPlace by remember(s.play.characterId) { mutableStateOf<BodyPlace?>(null) }
     var query by remember(s.play.characterId) { mutableStateOf("") }
+    var searching by remember { mutableStateOf(false) }
     var slot by remember(s.play.characterId) { mutableStateOf("") }
     var stackId by remember(s.play.characterId) { mutableStateOf<String?>(null) }
     var listStack by remember(s.play.characterId) { mutableStateOf<String?>(null) }
@@ -76,7 +87,7 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
     val shelf = stash.filter { documents.getValue(it.id).text("slot").startsWith(TOOL_SLOT) == tools }
     val slotCounts = shelf.map { documents.getValue(it.id).text("slot") }.filter(String::isNotBlank).groupingBy { it }.eachCount()
     val slots = slotCounts.keys.toList()
-    val visible = shelf.filter { instance -> documents[instance.id]?.let { (slot.isBlank() || it.text("slot") == slot) && it.text("name").contains(query, true) } == true }
+    val visible = shelf.filter { instance -> documents[instance.id]?.let { (slot.isBlank() || it.text("slot") == slot) && ItemSearch.matches(it, query) } == true }
     PullToRefreshBox(isRefreshing = s.refreshing(Reads.HERO), onRefresh = vm::loadHero, modifier = Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
@@ -93,24 +104,25 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
                     item { EquipmentLedger(s) { place, worn -> if (worn != null) detailId = worn else pickPlace = place } }
                 }
                 HeroSection.BAG -> {
-                    val stacks = bagStacks(s)
-                    if (stacks.isEmpty()) item { InfoCard(ui("hero.bag_empty"), ui("bag.empty_hint")) }
-                    // One block with its own tight spacing (2.73.0): the list's 12 dp between rows was half the bag.
-                    if (stacks.isNotEmpty()) item(key = "bag") {
-                        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) { stacks.forEach { stack -> BagRow(s, stack) { stackId = stack.itemId } } }
-                    }
+                    val sections = bagSections(s)
+                    if (sections.isEmpty()) item { InfoCard(ui("hero.bag_empty"), ui("bag.empty_hint")) }
+                    // A table since 2.75.0: icon and count per cell, everything else behind the tap.
+                    else item(key = "bag") { BagGrid(s, sections) { stackId = it } }
                 }
                 HeroSection.STASH -> {
                     item {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                                 FilterChip(selected = !tools, onClick = { tools = false; slot = "" }, label = { Text(ui("hero.stash_gear")) },
                                     leadingIcon = { Icon(ForgeGlyphs.Helm, null, modifier = Modifier.size(16.dp)) })
                                 FilterChip(selected = tools, onClick = { tools = true; slot = "" }, label = { Text(ui("hero.stash_tools")) },
                                     leadingIcon = { Icon(ForgeGlyphs.Anvil, null, modifier = Modifier.size(16.dp)) })
+                                Spacer(Modifier.weight(1f))
+                                // The search is a glyph at the side since 2.75.0, the field behind it in a dialog.
+                                SearchGlyph(active = query.isNotBlank()) { searching = true }
                             }
-                            OutlinedTextField(query, { query = it }, label = { Text(ui("hero.find_item")) },
-                                leadingIcon = { Icon(Icons.Outlined.Search, null) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                            if (query.isNotBlank()) InputChip(selected = true, onClick = { searching = true }, label = { Text(ui("hero.search_chip", query.trim())) },
+                                trailingIcon = { Icon(Icons.Outlined.Close, ui("hero.search_clear"), Modifier.size(16.dp).clickable { query = "" }) })
                             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 item { FilterChip(selected = slot.isBlank(), onClick = { slot = "" }, label = { Text(ui("hero.slot_count", ui("common.all"), shelf.size)) }) }
                                 items(slots) { key -> FilterChip(selected = slot == key, onClick = { slot = key },
@@ -135,6 +147,7 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
         }
     }
     detailId?.let { id -> ItemSheet(s, vm, id) { detailId = null } }
+    if (searching) SearchDialog(query, onDismiss = { searching = false }) { query = it; searching = false }
     stackId?.let { id -> s.play.hero?.bag?.firstOrNull { it.itemId == id } }?.let { stack ->
         BagSheet(s, stack, onDismiss = { stackId = null },
             onForge = { id -> stackId = null; vm.selectOrb(id); vm.openForge(null, ForgeSection.ORBS) },
@@ -174,3 +187,27 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
 
 /** The slots a profession's tool goes in all begin so; the stash shelves them apart. */
 private const val TOOL_SLOT = "TOOL_"
+
+/** The stash's search glyph (2.75.0): a lens in a small ring, lit while a query filters the shelf. */
+@Composable private fun SearchGlyph(active: Boolean, onClick: () -> Unit) {
+    val tint = if (active) GoldBright else Muted
+    IconButton(onClick = onClick, modifier = Modifier.size(36.dp).border(1.dp, tint.copy(alpha = .6f), CircleShape)) {
+        Icon(Icons.Outlined.Search, ui("hero.find_item"), tint = tint, modifier = Modifier.size(18.dp))
+    }
+}
+
+/** The field behind the glyph: typed, then found, or cleared; the query is kept until it is. */
+@Composable private fun SearchDialog(query: String, onDismiss: () -> Unit, onFind: (String) -> Unit) {
+    var text by remember { mutableStateOf(query) }
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focus.requestFocus() }
+    AlertDialog(onDismissRequest = onDismiss, containerColor = Panel,
+        title = { Text(ui("hero.find_item"), color = GoldBright) },
+        text = {
+            OutlinedTextField(text, { text = it }, placeholder = { Text(ui("hero.search_hint")) }, leadingIcon = { Icon(Icons.Outlined.Search, null) },
+                singleLine = true, keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { onFind(text) }),
+                modifier = Modifier.fillMaxWidth().focusRequester(focus))
+        },
+        confirmButton = { TextButton(onClick = { onFind(text) }) { Text(ui("hero.search_find")) } },
+        dismissButton = { TextButton(onClick = { onFind("") }) { Text(ui("hero.search_clear")) } })
+}

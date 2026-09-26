@@ -194,7 +194,7 @@ private const val HERO_CARD = -1
  * Before «В бой», and whenever paused, nothing moves: the tapped foe — or the one the hero would
  * strike — is laid open, its numbers held against the hero's.
  */
-@Composable internal fun ArenaOverlay(s: ForgeState, hud: RunHud, fight: FightHud, level: Int, hero: Combatant, rules: CombatRules, stance: HeroStance,
+@Composable internal fun ArenaOverlay(s: ForgeState, hud: RunHud, fight: FightHud, level: Int, rules: CombatRules, stance: HeroStance,
                                       onCommand: (RunCommand) -> Unit) {
     val time by rememberClock()
     val bounds = remember { mutableStateMapOf<Int, Rect>() }
@@ -221,7 +221,7 @@ private const val HERO_CARD = -1
             }
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 val shown = fight.foes.firstOrNull { it.index == chosen }
-                if (fight.scouting && shown != null) ScoutPanel(shown, fight, level, hero, rules, stance)
+                if (fight.scouting && shown != null) ScoutPanel(shown, fight, level, rules, stance)
                 else FightFeed(fight.events, names)
             }
             HeroCard(s, hud, fight, time, names, stance, track(HERO_CARD), large)
@@ -386,13 +386,13 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
 }
 
 /**
- * The scouting panel (2.70.0): everything about one foe while nothing moves — what it is and where
- * it stands, its pools and defences, how hard and how often it strikes, its resistances, what it
- * rolled — and what that means for this hero: whether the weapon reaches it, and how its
- * resistance meets the hero's leading damage.
+ * The scouting panel (2.70.0): one foe while nothing moves — what it is and where it stands, its
+ * pools, block, how hard and how often it strikes, what it rolled — and whether the hero's weapon
+ * reaches it. Its armour, evasion and resistances are not shown since 2.75.0: the fight is read by
+ * what happens in it, not by the foe's defence sheet.
  */
 @OptIn(ExperimentalLayoutApi::class)
-@Composable private fun ScoutPanel(foe: FoeView, fight: FightHud, level: Int, hero: Combatant, rules: CombatRules, stance: HeroStance) {
+@Composable private fun ScoutPanel(foe: FoeView, fight: FightHud, level: Int, rules: CombatRules, stance: HeroStance) {
     val body = remember(foe.monster) { Combatant(foe.monster.stats, level, rules) }
     val shape = RoundedCornerShape(10.dp)
     val ring = rarityTint(foe.monster.rarity)
@@ -404,8 +404,6 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
         FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Fact(ui("fight.stat_life"), number(body.maxLife), LifeRed)
             if (body.maxShield > 0) Fact(ui("fight.stat_shield"), number(body.maxShield), ShieldCyan)
-            if (body.armour > 0) Fact(ui("fight.stat_armour"), number(body.armour), Parchment)
-            if (body.evasion > 0) Fact(ui("fight.stat_evasion"), number(body.evasion), Parchment)
             if (body.block > 0) Fact(ui("fight.stat_block"), "${(body.block * 100).roundToInt()}%", Parchment)
             Fact(ui("fight.stat_speed"), String.format(Locale.ROOT, "%.2f", body.attackSpeed), Parchment)
         }
@@ -415,25 +413,13 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
                 Text("${ui(type.key())} ${number(amount)}", color = damageTint(type), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
             }
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            DamageType.entries.filter { it.resist != null }.forEach { type ->
-                val resist = (body.resist(type) * 100).roundToInt()
-                Text("${ui(type.key())} $resist%", color = damageTint(type), fontSize = 10.sp, textAlign = TextAlign.Center,
-                    modifier = Modifier.weight(1f).background(Ink.copy(alpha = .6f), RoundedCornerShape(4.dp)).padding(vertical = 2.dp))
-            }
-        }
         // What it means for this hero.
-        val leading = hero.leading
-        val against = (body.resist(leading) * 100).roundToInt()
         val taunting = fight.foes.any { it.alive && it.taunt }
         when {
             foe.taunt -> Hint(ui("fight.taunt_hint"), LifeRed)
             taunting -> Hint(ui("fight.behind_taunt"), LifeRed)
             !foe.reachable -> Hint(ui("fight.out_of_reach"), LifeRed)
         }
-        if (leading != DamageType.PHYSICAL) Hint(ui(if (against <= 0) "fight.resist_good" else "fight.resist_bad", ui(leading.key()), against),
-            if (against <= 25) Vital else LifeRed)
-        else if (body.armour > 0) Hint(ui("fight.armour_note", number(body.armour)), Muted)
         Hint(if (fight.focus == foe.index) ui("fight.focus_on") else ui("fight.focus_off", ui("fight.rule.${stance.rule.name}")), GoldBright)
         monsterLines(foe.monster).takeIf { it.isNotEmpty() }?.let { lines ->
             Caption(ui("fight.modifiers", lines.size))

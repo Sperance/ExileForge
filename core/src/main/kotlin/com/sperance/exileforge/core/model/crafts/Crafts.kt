@@ -68,6 +68,20 @@ import kotlinx.serialization.Serializable
     /** Since server 0.42.0: the work's seed and the number of its next cycle — what [com.sperance.exileforge.core.crafts.CraftCycle] throws it by. */
     val seed: Long = 0,
     val cycle: Long = 0,
+    /** Since server 0.66.0: when the work was started, and what it has brought and spent since. */
+    val startedAt: Long = 0,
+    val totals: WorkTally = WorkTally(),
+)
+
+/** What a work has come to since it started (server 0.66.0): the numbers of [WorkGains], without the pieces. */
+@Serializable data class WorkTally(
+    val cycles: Long = 0,
+    val nothing: Long = 0,
+    val items: Map<String, Long> = emptyMap(),
+    val spent: Map<String, Long> = emptyMap(),
+    val made: Long = 0,
+    val experience: Double = 0.0,
+    val levels: Int = 0,
 )
 
 /** What the cycles counted by one answer brought. */

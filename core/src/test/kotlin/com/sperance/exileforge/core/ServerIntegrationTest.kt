@@ -162,7 +162,6 @@ class ServerIntegrationTest {
         assertTrue(zone.modifiers.isNotEmpty() && zone.boss?.pool.orEmpty().isNotEmpty(), "the entry's ${zone.code} carries no pools")
         assertEquals(api.campaign.chests(id, first.code).left, launch.chests.left)
         assertEquals("CH_008", assertFailsWith<ApiFailure> { api.campaign.start(id, first.code, "0".repeat(24)) }.code)
-        abyssIsTheServers(api, id)
         craftsAreTheServers(api, id)
     }
 
@@ -732,6 +731,8 @@ class ServerIntegrationTest {
             val player = GameApi(url)
             player.login(requireNotNull(System.getenv("EF_PLAYER_LOGIN")), requireNotNull(System.getenv("EF_PLAYER_PASSWORD")))
             assertEquals("USER", assertNotNull(player.currentUser()).role)
+            // Last of all: the hoard pays random orbs, and the counts of the auction and the code above are exact.
+            abyssIsTheServers(api, id)
         } finally {
             api.catalog.delete(Catalog.CHARACTERS, id)
             assertNull(api.catalog.get(Catalog.CHARACTERS, id))

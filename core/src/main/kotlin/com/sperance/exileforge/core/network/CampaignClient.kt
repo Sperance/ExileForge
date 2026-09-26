@@ -1,6 +1,7 @@
 package com.sperance.exileforge.core.network
 
 import com.sperance.exileforge.core.contract.requireId
+import com.sperance.exileforge.core.model.campaign.AbyssOpened
 import com.sperance.exileforge.core.model.campaign.BossState
 import com.sperance.exileforge.core.model.campaign.CampaignFall
 import com.sperance.exileforge.core.model.campaign.CampaignProgress
@@ -92,6 +93,21 @@ class CampaignClient internal constructor(private val http: Transport) {
     /** A Vaal orb on crystal [index] (server 0.69.0), once a crystal: its essences higher, one special, or a stronger guardian. Never retried. */
     suspend fun vaalCrystal(characterId: String, mapCode: String, index: Int): CrystalVaal =
         http.post("$CAMPAIGN/crystal/vaal", heroQuery(characterId, "mapCode" to mapCode, "index" to index.toString()))
+
+    /**
+     * Opens crack [index] of the Abyss in [mapCode] (server 0.72.0), by its place among the zone's cracks still
+     * standing: the answer is how deep the descent goes. Never retried — a repeat would open the next crack.
+     */
+    suspend fun openAbyss(characterId: String, mapCode: String, index: Int): AbyssOpened =
+        http.post("$CAMPAIGN/abyss", heroQuery(characterId, "mapCode" to mapCode, "index" to index.toString()))
+
+    /**
+     * The descent is over at [depth] depths cleared (server 0.72.0): the hoard taken — or, [fallen], burned
+     * but for the atlas's share. Never retried: the descent is closed by the first answer.
+     */
+    suspend fun claimAbyss(characterId: String, mapCode: String, depth: Int, fallen: Boolean): CampaignReward =
+        http.post("$CAMPAIGN/abyss/claim", heroQuery(characterId, "mapCode" to mapCode, "depth" to depth.toString(),
+            "fallen" to if (fallen) "true" else null))
 
     /** Summons a slain guardian back to the exit (0.34.0), for gold. Never retried. */
     suspend fun summon(characterId: String, mapCode: String): MapServiceOutcome =

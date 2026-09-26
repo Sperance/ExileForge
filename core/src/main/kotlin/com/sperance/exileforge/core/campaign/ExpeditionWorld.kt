@@ -67,6 +67,12 @@ class Fountain(val id: Int, val cell: Cell, val heal: Double) { var used = false
  */
 class CrystalSpot(val id: Int, val cell: Cell, var crystal: Crystal) { var freed = false }
 
+/**
+ * A crack of the Abyss on the map (2.82.0, server 0.72.0): where it gapes, how many depths it leads down with
+ * the map entered, and whether it was opened. [id] is its place among the zone's cracks at the entry.
+ */
+class AbyssSpot(val id: Int, val cell: Cell, val depth: Int) { var opened = false }
+
 /** What a step of the world ran into. */
 sealed interface WorldEvent {
     data class Encounter(val agent: MonsterAgent) : WorldEvent
@@ -74,6 +80,8 @@ sealed interface WorldEvent {
     data class Drank(val fountain: Fountain) : WorldEvent
     /** The hero stepped up to a crystal of essences (2.78.0). */
     data class Crystal(val spot: CrystalSpot) : WorldEvent
+    /** The hero stepped up to a crack of the Abyss (2.82.0). */
+    data class Abyss(val spot: AbyssSpot) : WorldEvent
     /** The hero reached the Vaal portal (since 2.65.0). */
     data object Portal : WorldEvent
     data object Exit : WorldEvent
@@ -169,6 +177,10 @@ class ExpeditionWorld(
     val crystals = mutableListOf<CrystalSpot>()
     /** The crystal the hero stands at, until they step off it: it does not open again underfoot. */
     private var atCrystal: CrystalSpot? = null
+    /** The cracks of the Abyss (2.82.0), placed by [placeCracks]. */
+    val cracks = mutableListOf<AbyssSpot>()
+    /** The crack the hero stands at, until they step off it. */
+    private var atCrack: AbyssSpot? = null
 
     init { light() }
 
@@ -226,6 +238,25 @@ class ExpeditionWorld(
     /** The crystals still standing, in the server's order: a crystal's place among them is what the server names it by. */
     val standingCrystals: List<CrystalSpot> get() = crystals.filterNot { it.freed }
 
+    /**
+     * Puts the zone's cracks of the Abyss down, once (2.82.0): how deep each leads is the server's, where it
+     * gapes the seed's — away from everything else on the map, the crystals too, and apart.
+     */
+    fun placeCracks(depths: List<Int>) {
+        if (depths.isEmpty() || cracks.isNotEmpty()) return
+        val placing = Random(seed * 6151 + 53)
+        val taken = map.spawns.toSet() + map.exit + map.start + chests.map { it.cell } + fountains.map { it.cell } + crystals.map { it.cell } + listOfNotNull(portal)
+        val candidates = distances(map.start, Int.MAX_VALUE).filter { (cell, steps) -> steps >= CHEST_STEPS && cell !in taken }.keys.shuffled(placing)
+        for (cell in candidates) {
+            if (cracks.size >= depths.size) break
+            val apart = (cracks.map { it.cell } + crystals.map { it.cell }).all { hypot((it.x - cell.x).toDouble(), (it.y - cell.y).toDouble()) >= CHEST_SPACING }
+            if (apart) cracks += AbyssSpot(cracks.size, cell, depths[cracks.size])
+        }
+    }
+
+    /** The cracks not yet opened, in the server's order: a crack's place among them is what the server names it by. */
+    val standingCracks: List<AbyssSpot> get() = cracks.filterNot { it.opened }
+
     fun explored(x: Int, y: Int) = x in 0 until map.width && y in 0 until map.height && explored[y * map.width + x]
     fun lit(x: Int, y: Int) = x in 0 until map.width && y in 0 until map.height && lit[y * map.width + x]
 
@@ -252,6 +283,9 @@ class ExpeditionWorld(
         val crystal = crystals.firstOrNull { !it.freed && hypot(it.cell.x + 0.5 - heroX, it.cell.y + 0.5 - heroY) < CHEST_REACH }
         if (crystal == null) atCrystal = null
         else if (crystal !== atCrystal) { atCrystal = crystal; return WorldEvent.Crystal(crystal) }
+        val crack = cracks.firstOrNull { !it.opened && hypot(it.cell.x + 0.5 - heroX, it.cell.y + 0.5 - heroY) < CHEST_REACH }
+        if (crack == null) atCrack = null
+        else if (crack !== atCrack) { atCrack = crack; return WorldEvent.Abyss(crack) }
         portal?.let { cell ->
             val near = hypot(cell.x + 0.5 - heroX, cell.y + 0.5 - heroY) < CHEST_REACH
             if (near && portalArmed) { portalArmed = false; return WorldEvent.Portal }

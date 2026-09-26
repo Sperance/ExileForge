@@ -492,7 +492,8 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
                 Spacer(Modifier.width(8.dp))
                 Text(ui("expedition.begin"), style = MaterialTheme.typography.titleMedium)
             }
-            ForgeOutlinedButton(onClick = { onCommand(RunCommand.Retreat) }, modifier = Modifier.height(52.dp)) { Text(ui("fight.walk_away")) }
+            // The Abyss lets nobody walk away from its wave (2.82.0).
+            if (fight.escape) ForgeOutlinedButton(onClick = { onCommand(RunCommand.Retreat) }, modifier = Modifier.height(52.dp)) { Text(ui("fight.walk_away")) }
         }
         return
     }
@@ -504,7 +505,7 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
         ForgeOutlinedButton(onClick = { onCommand(RunCommand.Speed) }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 8.dp)) {
             Text(ui("expedition.speed", fight.speed), style = MaterialTheme.typography.labelMedium)
         }
-        ForgeOutlinedButton(enabled = live && !fight.retreating, onClick = { onCommand(RunCommand.Retreat) }, modifier = Modifier.weight(1f),
+        if (fight.escape) ForgeOutlinedButton(enabled = live && !fight.retreating, onClick = { onCommand(RunCommand.Retreat) }, modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(horizontal = 8.dp)) {
             Text(ui(if (fight.retreating) "expedition.retreating" else "expedition.retreat"), style = MaterialTheme.typography.labelMedium)
         }

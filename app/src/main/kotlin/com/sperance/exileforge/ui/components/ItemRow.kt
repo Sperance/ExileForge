@@ -177,6 +177,7 @@ internal fun stateGlyph(state: String) = when (state) {
     "mirrored" -> ForgeGlyphs.Chain
     "shaper" -> ForgeGlyphs.Constellation
     "elder" -> ForgeGlyphs.Portal
+    "abyss" -> ForgeGlyphs.Rift
     "fractured" -> ForgeGlyphs.Shard
     "crafted" -> ForgeGlyphs.Anvil
     "equipped" -> ForgeGlyphs.Helm
@@ -190,6 +191,7 @@ internal fun stateColor(state: String) = when (state) {
     "mirrored", "socketed" -> Rune
     "shaper" -> Shaper
     "elder" -> Elder
+    "abyss" -> AbyssGlow
     "fractured" -> Fractured
     "crafted" -> Crafted
     else -> Muted

@@ -81,6 +81,10 @@ object ForgeGlyphs {
     /** A cracked crystal: an affix a Fracturing Orb fixed for good. */
     val Shard = glyph("Shard", { poly(12f to 2f, 19f to 10f, 12f to 22f, 5f to 10f) }, { line(12f, 2f, 10.5f, 9f); line(10.5f, 9f, 13.5f, 13f); line(13.5f, 13f, 12f, 22f) })
 
+    /** A crack of the Abyss (2.82.0): a jagged rift torn open, its lips flaring. */
+    val Rift = glyph("Rift", { poly(12f to 2f, 15.5f to 8f, 12.5f to 12f, 16.5f to 17f, 12f to 22f, 8.5f to 16f, 11.5f to 12f, 7.5f to 7f) },
+        { line(3f, 12f, 7f, 12f); line(17f, 12f, 21f, 12f) })
+
     /** A stack of coins — what the merchant pays. */
     val Coins = glyph("Coins", { ring(10f, 9f, 6f) }, { ring(14f, 15f, 6f) }, { line(14f, 12.5f, 14f, 17.5f) })
 

@@ -129,13 +129,14 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             if (state.value.play.hero == null) return@task
             mutable.update { it.copy(play = it.play.copy(launch = null, heroReadAt = if (picked != null) 0 else it.play.heroReadAt,
                 hero = if (picked == null) it.play.hero else it.play.hero?.let { h -> h.copy(inventory = h.inventory.filterNot { item -> item.id == picked }) })) }
-            begin(launch.zone ?: map, view, characterId, launch.map?.effects.orEmpty(), launch.chests.left, launch.atlas, launch.crystals)
+            begin(launch.zone ?: map, view, characterId, launch.map?.effects.orEmpty(), launch.chests.left, launch.atlas, launch.crystals, launch.abyss)
         }
     } }
 
     private fun begin(map: CampaignMap, view: com.sperance.exileforge.core.model.campaign.CampaignView,
                       characterId: String, effects: Map<String, Double>, chests: Int, atlas: Map<String, Double> = emptyMap(),
-                      crystals: com.sperance.exileforge.core.model.essences.CrystalState? = null) {
+                      crystals: com.sperance.exileforge.core.model.essences.CrystalState? = null,
+                      abyss: com.sperance.exileforge.core.model.campaign.AbyssLaunch? = null) {
         val gear = gear() ?: return
         val world = runtime.state.value.world
         runtime.mutable.update { it.copy(play = it.play.copy(runLoot = emptyList())) }
@@ -153,7 +154,11 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             // The skills of the monsters and the essences' guardians (2.78.0, server 0.69.0).
             skills = world.skills, essences = world.essenceBook, crystals = crystals,
             onCrystal = { index -> reports.trySend { freeCrystal(run, characterId, map.code, index) } },
-            onCrystalVaal = { index -> reports.trySend { vaalCrystal(run, characterId, map.code, index) } })
+            onCrystalVaal = { index -> reports.trySend { vaalCrystal(run, characterId, map.code, index) } },
+            // The Abyss (2.82.0, server 0.72.0): a crack opened by its place, the hoard taken or burned by the depths cleared.
+            abyss = abyss,
+            onAbyssOpen = { index -> reports.trySend { openAbyss(run, characterId, map.code, index) } },
+            onAbyssClaim = { depth, fallen -> reports.trySend { claimAbyss(run, characterId, map.code, depth, fallen) } })
         // How many chests stand on the map is the server's (0.31.0), answered by the entry itself.
         run.send(RunCommand.Chests(chests))
         mutableRun.value = run
@@ -341,6 +346,23 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             run.send(RunCommand.CrystalChanged(vaal.outcome, vaal.state))
         } catch (e: CancellationException) { throw e }
         catch (e: Exception) { run.send(RunCommand.CrystalFailed); report(e, writing = true) }
+    } }
+
+    /** A crack of the Abyss opened (2.82.0): how deep the descent goes — the first wave rises at once. Never retried. */
+    private suspend fun openAbyss(run: ExpeditionRun, characterId: String, mapCode: String, index: Int) { with(runtime) {
+        try { run.send(RunCommand.AbyssOpened(api.campaign.openAbyss(characterId, mapCode, index))) }
+        catch (e: CancellationException) { throw e }
+        catch (e: Exception) { run.send(RunCommand.AbyssFailed); report(e, writing = true) }
+    } }
+
+    /** The descent over (2.82.0): the hoard of the depths cleared — whole, or what a fall left of it. Never retried. */
+    private suspend fun claimAbyss(run: ExpeditionRun, characterId: String, mapCode: String, depth: Int, fallen: Boolean) { with(runtime) {
+        try {
+            val reward = api.campaign.claimAbyss(characterId, mapCode, depth, fallen)
+            run.send(RunCommand.Hoard(reward))
+            loot(characterId, reward.equipment)
+        } catch (e: CancellationException) { throw e }
+        catch (e: Exception) { run.send(RunCommand.HoardFailed); report(e, writing = true) }
     } }
 
     /** The hero fell: the server prices it, and the header's experience is what it says now. */

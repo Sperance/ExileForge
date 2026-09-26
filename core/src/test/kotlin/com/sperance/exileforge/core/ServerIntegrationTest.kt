@@ -162,7 +162,43 @@ class ServerIntegrationTest {
         assertTrue(zone.modifiers.isNotEmpty() && zone.boss?.pool.orEmpty().isNotEmpty(), "the entry's ${zone.code} carries no pools")
         assertEquals(api.campaign.chests(id, first.code).left, launch.chests.left)
         assertEquals("CH_008", assertFailsWith<ApiFailure> { api.campaign.start(id, first.code, "0".repeat(24)) }.code)
+        abyssIsTheServers(api, id)
         craftsAreTheServers(api, id)
+    }
+
+    /**
+     * The Abyss (server 0.72.0): the administrator opens the way to a zone of level ten and plants a crack three
+     * depths deep there; the entry brings its depths, a leader at the third, the crack opens a descent, a depth
+     * past it is refused, the hoard of three depths pays experience and items of the Abyss, and the descent is
+     * closed by it — a second claim and a second opening find nothing.
+     */
+    private suspend fun abyssIsTheServers(api: GameApi, id: String) {
+        val zone = api.campaign.world().zones.filter { it.level >= 10 }.minBy { it.level }
+        Transport(requireNotNull(System.getenv("EF_LIVE_URL")), RequestJournal(), okhttp3.OkHttpClient()) {}.apply { token = api.sessionToken() }
+            .request("PUT", "api/v1/character", mapOf("id" to id), buildJsonObject {
+                put("campaign", JsonArray((api.campaign.progress(id).cleared + zone.from).distinct().map(::JsonPrimitive)))
+                put("abyss", buildJsonObject { put(zone.code, buildJsonObject { put("refreshAt", 4_000_000_000_000L); put("cracks", JsonArray(listOf(JsonPrimitive(3)))) }) })
+            }, authenticated = true)
+        val abyss = assertNotNull(api.campaign.start(id, zone.code).abyss, "the planted crack did not come with the entry")
+        assertEquals(listOf(3), abyss.cracks)
+        assertEquals(7, abyss.depths.size)
+        assertNotNull(abyss.depths[2].leader, "no leader at the third depth")
+        assertTrue(abyss.depths.all { it.monsters.isNotEmpty() } && abyss.modifiers.isNotEmpty(), "the Abyss came without monsters or modifiers")
+        assertTrue(abyss.depths.last().level > abyss.depths.first().level, "the deepest wave stands no deeper")
+        abyss.depths.flatMap { depth -> depth.monsters.map { it.code } + listOfNotNull(depth.leader?.code) }.distinct()
+            .forEach { assertTrue(serverLocale.contains(LocaleKey.monsterName(it)), "no name for $it") }
+        assertEquals("CP_016", assertFailsWith<ApiFailure> { api.campaign.claimAbyss(id, zone.code, 1, false) }.code)
+        val opened = api.campaign.openAbyss(id, zone.code, 0)
+        assertEquals(3, opened.depth)
+        assertTrue(opened.cracks.isEmpty())
+        assertEquals("CP_017", assertFailsWith<ApiFailure> { api.campaign.claimAbyss(id, zone.code, 4, false) }.code)
+        val hoard = api.campaign.claimAbyss(id, zone.code, 3, false)
+        assertTrue(hoard.experience > 0, "the hoard paid no experience")
+        val items = hoard.equipment.filter { it.rarity != "UNIQUE" }
+        assertTrue(items.isNotEmpty(), "three depths brought no item")
+        items.forEach { assertEquals("ABYSS", it.influence, "an item of the hoard without the Abyss: $it") }
+        assertEquals("CP_016", assertFailsWith<ApiFailure> { api.campaign.claimAbyss(id, zone.code, 3, false) }.code)
+        assertEquals("CP_015", assertFailsWith<ApiFailure> { api.campaign.openAbyss(id, zone.code, 0) }.code)
     }
 
     /** The crafts (0.37.0, six since 0.38.0, seven with enchanting since 0.66.0): a starter tool in every profession's slot, a first-level work started and stopped, a locked one refused. */

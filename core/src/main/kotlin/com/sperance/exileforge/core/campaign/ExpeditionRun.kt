@@ -1,5 +1,8 @@
 package com.sperance.exileforge.core.campaign
 
+import com.sperance.exileforge.core.model.campaign.AbyssDepth
+import com.sperance.exileforge.core.model.campaign.AbyssLaunch
+import com.sperance.exileforge.core.model.campaign.AbyssOpened
 import com.sperance.exileforge.core.model.campaign.LoneWolfRule
 import com.sperance.exileforge.core.model.campaign.CampaignFall
 import com.sperance.exileforge.core.model.campaign.CampaignMap
@@ -21,9 +24,9 @@ import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * Where a run stands: walking, fighting, waiting on a kill's loot, at a Vaal portal's gate (2.65.0), at a
- * crystal of essences (2.78.0), or over one way or another.
+ * crystal of essences (2.78.0), at a crack of the Abyss or between its depths (2.82.0), or over one way or another.
  */
-enum class RunPhase { MAP, FIGHT, LOOT, GATE, CRYSTAL, DEAD, CLEARED, LEFT }
+enum class RunPhase { MAP, FIGHT, LOOT, GATE, CRYSTAL, ABYSS, DEAD, CLEARED, LEFT }
 
 /** A number floating off a fighter, [age] seconds after the blow that made it; [foe] is the foe of the pack it was about. */
 data class FloatingHit(val id: Int, val target: Side, val action: Action, val kind: HitKind, val amount: Int, val age: Double, val healed: Int,
@@ -100,6 +103,10 @@ data class FightHud(
     val heroEffects: List<EffectView> = emptyList(),
     /** A barrier's soak left (2.78.0). */
     val heroBarrier: Int = 0,
+    /** The level the foes stand at (2.82.0): a depth of the Abyss stands deeper than its zone; 0 is the zone's. */
+    val level: Int = 0,
+    /** Whether the hero may walk out (2.82.0): the Abyss lets nobody go mid-wave. */
+    val escape: Boolean = true,
 ) {
     /** Nothing is moving and the pack is laid open: before «В бой», or paused. */
     val scouting: Boolean get() = outcome == null && (!started || paused)
@@ -174,7 +181,24 @@ data class RunHud(
     /** The crystal the hero stands at, its sheet open (2.78.0); the ones still standing on the map. */
     val crystal: CrystalView? = null,
     val crystalsLeft: Int = 0,
+    /** The crack of the Abyss the hero stands at or descends (2.82.0), its sheet open; the cracks not yet opened. */
+    val abyss: AbyssView? = null,
+    val cracksLeft: Int = 0,
 )
+
+/**
+ * The Abyss as its sheet shows it (2.82.0, server 0.72.0): how many depths the crack leads down, how many
+ * are [cleared] — none before it is [open] — every depth's wave and hoard, and the share of the hoard in
+ * percent a fall keeps. [pending] and [failed] are the server's answer to an opening or a claim; [hoard] is
+ * what the claim brought, [fallen] once the hero fell in the depths and the hoard burned.
+ */
+data class AbyssView(val depth: Int, val cleared: Int, val open: Boolean, val depths: List<AbyssDepth>, val keep: Double,
+                     val pending: Boolean = false, val failed: Boolean = false, val hoard: CampaignReward? = null, val fallen: Boolean = false) {
+    /** The hoard as it stands now, the depths cleared counted; none before the first. */
+    val current: com.sperance.exileforge.core.model.campaign.AbyssHoard? get() = depths.getOrNull(cleared - 1)?.hoard
+    /** The depth below, if the crack leads there. */
+    val next: AbyssDepth? get() = if (cleared < depth) depths.getOrNull(cleared) else null
+}
 
 /**
  * A crystal of essences as its sheet shows it (2.78.0): what it holds, who guards it — the zone's monster
@@ -239,8 +263,18 @@ sealed interface RunCommand {
     /** The server's answer to a Vaal orb on a crystal: what it did, and the zone's crystals as they stand. */
     data class CrystalChanged(val outcome: String, val state: CrystalState) : RunCommand
     data object CrystalFailed : RunCommand
-    /** Steps away from the crystal undecided: it stays, and opens again when walked up to. */
+    /** Steps away from the crystal undecided: it stays, and opens again when walked up to. Leaves a crack of the Abyss as well. */
     data object StepOff : RunCommand
+    /** At a crack of the Abyss (2.82.0): opens it, or goes a depth deeper from the sheet between depths. */
+    data object Descend : RunCommand
+    /** The server opened the crack: how deep the descent goes. The first wave rises at once. */
+    data class AbyssOpened(val opened: com.sperance.exileforge.core.model.campaign.AbyssOpened) : RunCommand
+    data object AbyssFailed : RunCommand
+    /** Takes the hoard of the depths cleared and leaves the Abyss. */
+    data object TakeHoard : RunCommand
+    /** What the hoard brought — all of it, or what a fall left of it. */
+    data class Hoard(val reward: CampaignReward) : RunCommand
+    data object HoardFailed : RunCommand
 }
 
 /**
@@ -288,6 +322,14 @@ class ExpeditionRun(
     private val onCrystal: (Int) -> Unit = {},
     /** A Vaal orb asked for on a crystal (2.78.0), by the same place. */
     private val onCrystalVaal: (Int) -> Unit = {},
+    /** The zone's Abyss (2.82.0): its depths and hoards; none without a crack. */
+    private val abyss: AbyssLaunch? = null,
+    /** A crack opened, by its place among those still unopened, as the server counts them. */
+    private val onAbyssOpen: (Int) -> Unit = {},
+    /** The descent over at so many depths cleared: taken, or fallen. */
+    private val onAbyssClaim: (Int, Boolean) -> Unit = { _, _ -> },
+    /** Modifiers a rare monster carries beyond its rule (the atlas): the Abyss's rares too. */
+    private val extraRareMods: Int = 0,
 ) {
     /** How the hero's body is made: the sheet, the passives and the map; a change of gear replaces it between fights. */
     var build: HeroBuild = build
@@ -320,6 +362,15 @@ class ExpeditionRun(
     private var crystalPending = false
     private var crystalFailed = false
     private var crystalOutcome: String? = null
+    /** The crack the hero stands at (2.82.0), the descent under way, and the server's answer awaited or refused. */
+    private var rift: AbyssSpot? = null
+    private var descent: Descent? = null
+    private var abyssPending = false
+    private var abyssFailed = false
+    /** The fight is a wave of the Abyss: no walking out, no kill reported — the hoard pays. */
+    private var abyssFight = false
+    /** The level the fight's foes stand at. */
+    private var fightLevel = 0
     private var started = false
     private var paused = false
     /** How many windows hold the run (2.73.0); the world stands still while any does. */
@@ -397,7 +448,7 @@ class ExpeditionRun(
         when (command) {
             RunCommand.Speed -> speed = if (speed >= 4) 1 else speed * 2
             RunCommand.Leave -> if (phase == RunPhase.MAP || phase == RunPhase.DEAD || phase == RunPhase.CLEARED) phase = RunPhase.LEFT
-            RunCommand.Retreat -> if (fight != null && !started) walkAway() else { paused = false; fight?.retreat() }
+            RunCommand.Retreat -> if (abyssFight) Unit else if (fight != null && !started) walkAway() else { paused = false; fight?.retreat() }
             RunCommand.Begin -> if (fight != null) { started = true; paused = false }
             RunCommand.Pause -> if (fight != null && started && fight?.outcome == null) paused = !paused
             is RunCommand.Focus -> fight?.focus(command.index)
@@ -445,7 +496,8 @@ class ExpeditionRun(
                 phase = RunPhase.MAP
             }
             is RunCommand.Cast -> fight?.useSkill(command.slot)
-            is RunCommand.Drink -> if (phase == RunPhase.FIGHT) fight?.useFlask(command.slot) else if (phase == RunPhase.MAP || phase == RunPhase.CRYSTAL) drinkOnMap(command.slot)
+            is RunCommand.Drink -> if (phase == RunPhase.FIGHT) fight?.useFlask(command.slot)
+                else if (phase == RunPhase.MAP || phase == RunPhase.CRYSTAL || phase == RunPhase.ABYSS) drinkOnMap(command.slot)
             RunCommand.Release -> if (phase == RunPhase.CRYSTAL && !crystalPending) release()
             RunCommand.VaalCrystal -> crystal?.takeIf { phase == RunPhase.CRYSTAL && !crystalPending && !it.crystal.vaal }?.let { spot ->
                 crystalPending = true; crystalFailed = false; crystalOutcome = null
@@ -458,8 +510,77 @@ class ExpeditionRun(
                 world.standingCrystals.zip(command.state.crystals).forEach { (spot, held) -> spot.crystal = held }
             }
             RunCommand.CrystalFailed -> { crystalPending = false; crystalFailed = true }
-            RunCommand.StepOff -> if (phase == RunPhase.CRYSTAL && !crystalPending) closeCrystal()
+            RunCommand.StepOff -> when {
+                phase == RunPhase.CRYSTAL && !crystalPending -> closeCrystal()
+                // A crack is left unopened, or once its hoard is in — never mid-descent with the hoard at stake.
+                phase == RunPhase.ABYSS && !abyssPending && (descent == null || descent?.hoard != null || abyssFailed) -> closeRift()
+            }
+            RunCommand.Descend -> if (phase == RunPhase.ABYSS && !abyssPending) descend()
+            is RunCommand.AbyssOpened -> if (phase == RunPhase.ABYSS) opened(command.opened)
+            RunCommand.AbyssFailed -> { abyssPending = false; abyssFailed = true }
+            RunCommand.TakeHoard -> descent?.takeIf { phase == RunPhase.ABYSS && !abyssPending && it.cleared > 0 && it.hoard == null }?.let { take(it, fallen = false) }
+            is RunCommand.Hoard -> {
+                abyssPending = false
+                descent?.hoard = command.reward
+                gold += command.reward.gold
+                experience += command.reward.experience
+            }
+            RunCommand.HoardFailed -> { abyssPending = false; abyssFailed = true }
         }
+    }
+
+    // ==================== The Abyss (2.82.0) ====================
+
+    /** A descent under way: its crack, how many depths it leads down, how many are cleared, and the fights of the wave left. */
+    private class Descent(val spot: AbyssSpot, val depth: Int) {
+        var cleared = 0
+        var level = 0
+        var fights: List<List<RolledMonster>> = emptyList()
+        var hoard: CampaignReward? = null
+        var fallen = false
+    }
+
+    /** «Спуститься»: the crack is opened on the server first; between depths, the next wave rises. */
+    private fun descend() {
+        val spot = rift ?: return
+        val current = descent
+        if (current == null) {
+            abyssPending = true; abyssFailed = false
+            onAbyssOpen(world.standingCracks.indexOf(spot))
+        } else if (current.hoard == null && current.cleared < current.depth) wave(current, current.cleared + 1)
+    }
+
+    private fun opened(answer: AbyssOpened) {
+        abyssPending = false
+        val spot = rift ?: return
+        spot.opened = true
+        Descent(spot, answer.depth.coerceAtLeast(1)).also { descent = it; wave(it, 1) }
+    }
+
+    /** Depth [depth]'s wave rises from the crack: its fights, fought one after another. */
+    private fun wave(current: Descent, depth: Int) {
+        val launch = abyss ?: return
+        current.level = launch.depths.getOrNull(depth - 1)?.level ?: map.level
+        current.fights = AbyssWaves.wave(launch, depth, map, rarities, mapEffects, skills, extraRareMods, Random(seed * 211 + current.spot.id * 31L + depth))
+        nextFight(current)
+    }
+
+    private fun nextFight(current: Descent) {
+        val group = current.fights.firstOrNull() ?: return
+        current.fights = current.fights.drop(1)
+        engage(MonsterAgent(ABYSS_AGENT - current.spot.id, group, current.spot.cell.x + 0.5, current.spot.cell.y + 0.5), current.level, abyssal = true)
+    }
+
+    /** The descent is over: the hoard of the depths cleared is asked for — whole, or what a fall leaves of it. */
+    private fun take(current: Descent, fallen: Boolean) {
+        current.fallen = fallen
+        abyssPending = true; abyssFailed = false
+        onAbyssClaim(current.cleared, fallen)
+    }
+
+    private fun closeRift() {
+        rift = null; descent = null; abyssFailed = false
+        if (phase == RunPhase.ABYSS) phase = RunPhase.MAP
     }
 
     private fun closeGate() {
@@ -530,18 +651,24 @@ class ExpeditionRun(
             }
             WorldEvent.Portal -> { phase = RunPhase.GATE; gate = null; gateFailed = false; gatePending = true; onPortal() }
             is WorldEvent.Crystal -> { phase = RunPhase.CRYSTAL; crystal = event.spot; crystalFailed = false; crystalOutcome = null }
+            is WorldEvent.Abyss -> { phase = RunPhase.ABYSS; rift = event.spot; descent = null; abyssFailed = false }
             null -> Unit
         }
     }
 
-    /** A fight with [agent]'s pack still standing, all at once (2.70.0), melee in front and ranged behind. */
-    private fun engage(agent: MonsterAgent) {
+    /**
+     * A fight with [agent]'s pack still standing, all at once (2.70.0), melee in front and ranged behind, at
+     * [level] — the zone's, or a depth's of the Abyss ([abyssal], 2.82.0).
+     */
+    private fun engage(agent: MonsterAgent, level: Int = map.level, abyssal: Boolean = false) {
         members = agent.standing
         reported = 0
         fightAgent = agent
+        abyssFight = abyssal
+        fightLevel = level
         fight = Battle(hero, members.map { index ->
             val monster = agent.pack[index]
-            Foe(Combatant(monster.stats, map.level, rules), monster.ranged, monster.rarity, monster.skills.mapNotNull(skills.monsters::get))
+            Foe(Combatant(monster.stats, level, rules), monster.ranged, monster.rarity, monster.skills.mapNotNull(skills.monsters::get))
         }, rules, life, Random(seed * 31 + fights++), stance, kit = kit, model = build, pools = HeroPools(life, mana, charges, flaskLeft),
             percent = build.gear.percent)
         started = false
@@ -574,6 +701,8 @@ class ExpeditionRun(
             val member = members[battle.fallen[reported++]]
             agent.fallen += member
             kills++
+            // A wave of the Abyss pays with its hoard (2.82.0), not kill by kill.
+            if (abyssFight) continue
             pendingRewards++
             val monster = agent.pack[member]
             // A crystal's guardian is reported by its crystal's place among those still standing, then the crystal is gone.
@@ -590,26 +719,41 @@ class ExpeditionRun(
         rates = out.rates
         rebody()
         val pack = members.mapIndexed { index, member -> PackHit(agent.pack[member], battle.events.filter { it.foe == index }, battle.duration) }
+        val down = descent?.takeIf { abyssFight }
         when (outcome) {
             Outcome.WIN -> {
                 agent.alive = false
-                slain = agent.monster
-                report = FightReport(agent.monster, Outcome.WIN, pack, battle.duration)
-                phase = RunPhase.LOOT
+                // A wave's fight won goes on to the next, or clears the depth: no loot screen in the Abyss (2.82.0).
+                if (down != null) { report = null; phase = RunPhase.ABYSS }
+                else {
+                    slain = agent.monster
+                    report = FightReport(agent.monster, Outcome.WIN, pack, battle.duration)
+                    phase = RunPhase.LOOT
+                }
             }
             Outcome.LOSS -> {
                 report = FightReport(agent.monster, Outcome.LOSS, pack, battle.duration)
                 life = 0.0; fallPending = true; phase = RunPhase.DEAD; onFallen()
+                // A fall in the Abyss burns its hoard, but for the atlas's share.
+                down?.let { take(it, fallen = true) }
             }
             // Nothing already looted is lost — every foe that fell was reported as it fell — but
             // there is no report for a fight cut short, and the rest of the pack stays standing.
-            Outcome.RETREAT -> { if (agent.id >= 0) world.retreatFrom(agent); report = null; phase = RunPhase.MAP }
+            // A wave that ran out of time throws the hero out of the Abyss, the hoard as if fallen.
+            Outcome.RETREAT -> {
+                if (agent.id >= 0) world.retreatFrom(agent)
+                report = null
+                if (down != null) { phase = RunPhase.ABYSS; take(down, fallen = true) } else phase = RunPhase.MAP
+            }
         }
         fight = null
         fightAgent = null
+        abyssFight = false
         // Gear changed while the fight went on lands now, on the life the fight left.
         if (phase != RunPhase.DEAD) pendingGear?.let { regear(it.gear) }
         pendingGear = null
+        // The wave goes on (2.82.0): its next fight at once, or the depth is cleared and its sheet opens.
+        if (outcome == Outcome.WIN && down != null) { if (down.fights.isNotEmpty()) nextFight(down) else down.cleared++ }
     }
 
     private fun snapshot(): RunHud {
@@ -630,7 +774,16 @@ class ExpeditionRun(
             flasks = battle?.flaskViews() ?: mapFlasks(),
             crystal = crystal?.let { CrystalView(it.id, it.crystal.essences, it.crystal.guardian, it.crystal.stronger, it.crystal.vaal, crystalPending, crystalFailed, crystalOutcome) },
             crystalsLeft = world.standingCrystals.size,
+            abyss = abyssView(), cracksLeft = world.standingCracks.size,
         )
+    }
+
+    private fun abyssView(): AbyssView? {
+        val spot = rift ?: return null
+        val launch = abyss ?: return null
+        val down = descent
+        return AbyssView(down?.depth ?: spot.depth, down?.cleared ?: 0, down != null, launch.depths, launch.keep, abyssPending, abyssFailed, down?.hoard,
+            down?.fallen == true)
     }
 
     /** The belt between fights, as the map's buttons draw it. */
@@ -676,6 +829,7 @@ class ExpeditionRun(
             heroMana = h.mana.roundToInt(), heroMaxMana = battle.manaCap().roundToInt(),
             skills = battle.skillViews(), flasks = battle.flaskViews(), heroEffects = battle.effects(h),
             heroBarrier = h.barrier.roundToInt(),
+            level = fightLevel, escape = !abyssFight,
         )
     }
 
@@ -683,6 +837,8 @@ class ExpeditionRun(
         /** How long the fight's last blow hangs before the scene moves on. */
         const val AFTERMATH = 0.8
         const val HIT_LIFETIME = 1.0
+        /** The agents of the Abyss's waves are numbered down from here, out of the way of the map's and the crystals'. */
+        private const val ABYSS_AGENT = -10_000
 
         /**
          * A run of [map] by the hero as [gear] has them; [mapEffects] are the summed effects of the map item it
@@ -696,7 +852,8 @@ class ExpeditionRun(
                   /** Modifiers a rare monster carries beyond its rule (the atlas, server 0.66.0). */
                   extraRareMods: Int = 0,
                   skills: SkillBook = SkillBook(), essences: EssenceBook = EssenceBook(), crystals: CrystalState? = null,
-                  onCrystal: (Int) -> Unit = {}, onCrystalVaal: (Int) -> Unit = {}): ExpeditionRun {
+                  onCrystal: (Int) -> Unit = {}, onCrystalVaal: (Int) -> Unit = {},
+                  abyss: AbyssLaunch? = null, onAbyssOpen: (Int) -> Unit = {}, onAbyssClaim: (Int, Boolean) -> Unit = { _, _ -> }): ExpeditionRun {
             val build = HeroBuild(gear, mapEffects, rules)
             val stats = build.body.stats
             val changed = MapEffects.rarities(rarities, mapEffects)
@@ -706,8 +863,9 @@ class ExpeditionRun(
             val extraFountains = MapEffects.fountains(mapEffects)
             world.placeFountains(fountains.count.getOrElse(0) { 0 } + extraFountains, fountains.count.getOrElse(1) { 0 } + extraFountains, fountains.heal)
             crystals?.let { world.placeCrystals(it.crystals) }
+            abyss?.let { world.placeCracks(it.cracks) }
             return ExpeditionRun(map, world, build, rules, seed, onKill, onCleared, onFallen, onChest, mapEffects, onPortal, startPools, skills, essences, changed,
-                onCrystal, onCrystalVaal)
+                onCrystal, onCrystalVaal, abyss, onAbyssOpen, onAbyssClaim, extraRareMods)
         }
     }
 }

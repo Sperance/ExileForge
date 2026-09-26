@@ -56,6 +56,8 @@ val Fractured = Color(0xFFA29162)
 val Handcrafted = Color(0xFFD08A4E)
 val Shaper = Color(0xFF9FD2F0)
 val Elder = Color(0xFFA77BCF)
+/** The Abyss (2.82.0): its cracks on the map, its sheet, and the influence of what it gives. */
+val AbyssGlow = Color(0xFFA26BFF)
 
 /** The three faces of «Эфир»: a wide display for titles, a quiet grotesque to read, a mono for numbers. */
 val Display = FontFamily(Font(R.font.unbounded_medium, FontWeight.Medium))

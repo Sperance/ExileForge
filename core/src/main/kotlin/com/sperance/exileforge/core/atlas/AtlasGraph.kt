@@ -67,6 +67,8 @@ object AtlasEffects {
     const val MONSTER_MODS = "ATLAS_MONSTER_MODS"
     /** Server 0.69.0: how much stronger a crystal's guardian stands, in percent of its life and damage. */
     const val GUARDIAN_POWER = "ATLAS_GUARDIAN_POWER"
+    /** Server 0.72.0: how much stronger the monsters of the Abyss stand, in percent of their life and damage. */
+    const val ABYSS_POWER = "ATLAS_ABYSS_POWER"
     const val FLASK_RARE = "ATLAS_FLASK_RARE"
 
     /**
@@ -78,16 +80,16 @@ object AtlasEffects {
         "ATLAS_FLASK_CHARGES" to "STOCK_FLASK_CHARGES_GAINED", "ATLAS_FLASK_DURATION" to "STOCK_FLASK_DURATION", FLASK_RARE to FLASK_RARE)
 
     /** Stats counted in units rather than percent. */
-    val flat = setOf(FOUNTAINS, "ATLAS_CHESTS", "ATLAS_VAAL_MIN_MODS", MONSTER_MODS, "ATLAS_CRYSTALS", "ATLAS_SKILL_LEVEL", FLASK_RARE)
+    val flat = setOf(FOUNTAINS, "ATLAS_CHESTS", "ATLAS_VAAL_MIN_MODS", MONSTER_MODS, "ATLAS_CRYSTALS", "ATLAS_SKILL_LEVEL", FLASK_RARE, "ATLAS_ABYSS_DEPTH")
 
     /** How many modifiers a rare monster carries beyond its rule (server 0.66.0). */
     fun extraRareMods(atlas: Map<String, Double>): Int = (atlas[MONSTER_MODS] ?: 0.0).toInt()
 
     /** [effects] of the entered map with the atlas's pack and rare monsters added, as one more map item's worth. */
     fun map(effects: Map<String, Double>, atlas: Map<String, Double>): Map<String, Double> {
-        // The hero's gifts and the guardians' power ride along under their own names (server 0.69.0).
+        // The hero's gifts and the guardians' power ride along under their own names (server 0.69.0), the Abyss's too (0.72.0).
         val extra = (mapOf(MapRule.PACK_SIZE to (atlas[PACK_SIZE] ?: 0.0), MapRule.RARE_MONSTERS to (atlas[RARE_MONSTERS] ?: 0.0)) +
-            (hero.keys + GUARDIAN_POWER).associateWith { atlas[it] ?: 0.0 }).filterValues { it != 0.0 }
+            (hero.keys + GUARDIAN_POWER + ABYSS_POWER).associateWith { atlas[it] ?: 0.0 }).filterValues { it != 0.0 }
         return (effects.keys + extra.keys).associateWith { (effects[it] ?: 0.0) + (extra[it] ?: 0.0) }
     }
 

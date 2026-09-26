@@ -153,6 +153,10 @@ private class ScenePainter {
             world.crystals.filter { world.explored(it.cell.x, it.cell.y) }.forEach { spot ->
                 standing += (spot.cell.x + spot.cell.y + 1.0) to { drawCrystal(spot.cell.x + .5, spot.cell.y + .5, spot.freed, spot.crystal.stronger, glow(spot.cell.x, spot.cell.y)) }
             }
+            // A crack of the Abyss gapes once seen (2.82.0): breathing violet until opened, a dull scar after.
+            world.cracks.filter { world.explored(it.cell.x, it.cell.y) }.forEach { spot ->
+                standing += (spot.cell.x + spot.cell.y + .5) to { drawCrack(spot.cell.x + .5, spot.cell.y + .5, spot.opened, spot.id, glow(spot.cell.x, spot.cell.y)) }
+            }
             // Since 2.31.0 whoever walks the map is a round token cut from their portrait's face: the
             // class's for the hero, the monster's own or its form's for a monster, ringed by what it is.
             // Since 2.32.0 a monster is drawn only where the hero's light reaches.
@@ -322,6 +326,36 @@ private class ScenePainter {
             pen.circle(cx, cy + h * .5f, unit * .6f)
             pen.color = Color.White.copy(alpha = .6f * light)
             pen.circle(cx - w * .35f, cy + h * .6f, unit * .035f)
+        }
+    }
+
+    /**
+     * A crack of the Abyss (2.82.0): a black rift torn in the ground, its lips lit violet and breathing, a
+     * haze rising from it — until it was opened, when it is only a dark scar.
+     */
+    private fun drawCrack(x: Double, y: Double, opened: Boolean, seed: Int, light: Float) {
+        val cx = isoX(x, y)
+        val cy = isoY(x, y)
+        val w = unit * .62f
+        val d = unit * .3f
+        val violet = Color(0xFFA26BFF)
+        val breath = .5f + .5f * sin(time * 1.6f + seed)
+        if (!opened) {
+            pen.color = violet.copy(alpha = (.12f + .1f * breath) * light)
+            pen.ellipse(cx - w * 1.5f, cy - d * 1.5f, w * 3f, d * 3f)
+        }
+        pen.color = tone(if (opened) Color(0xFF2A2433) else Color(0xFF0B0612), light)
+        pen.quad(cx - w, cy, cx - w * .2f, cy + d * .55f, cx + w, cy, cx + w * .15f, cy - d * .6f)
+        pen.color = (if (opened) Color(0xFF4A3A5C) else violet).copy(alpha = (if (opened) .5f else .75f + .25f * breath) * light)
+        pen.polyline(cx - w, cy, cx - w * .45f, cy + d * .2f, cx - w * .1f, cy - d * .15f, cx + w * .35f, cy + d * .25f, cx + w, cy, width = unit * .05f)
+        if (opened) return
+        pen.color = violet.copy(alpha = .9f * light)
+        pen.polyline(cx - w * .7f, cy + d * .05f, cx - w * .2f, cy - d * .25f, cx + w * .25f, cy + d * .1f, cx + w * .7f, cy - d * .05f, width = unit * .025f)
+        // A haze of the deep rising: three motes drifting up and fading.
+        for (i in 0 until 3) {
+            val t = ((time * .35f + i / 3f + seed * .13f) % 1f)
+            pen.color = violet.copy(alpha = (1 - t) * .55f * light)
+            pen.circle(cx + (i - 1) * w * .35f + sin(time * 2f + i) * unit * .05f, cy + t * unit * .9f, unit * (.05f + .03f * (1 - t)))
         }
     }
 

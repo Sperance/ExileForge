@@ -133,7 +133,7 @@ fun itemStates(document: JsonObject, definitions: List<ModifierDefinition> = emp
 private val SERVICE_FLAGS = setOf("deleted", "isActive", "needOpenRecipe")
 
 /** The order states are read in, so two items never list the same pair differently. */
-private val STATE_ORDER = listOf("corrupted", "mirrored", "shaper", "elder", "fractured", "crafted", "equipped", "socketed")
+private val STATE_ORDER = listOf("corrupted", "mirrored", "shaper", "elder", "abyss", "fractured", "crafted", "equipped", "socketed")
 
 /**
  * What a state is called.

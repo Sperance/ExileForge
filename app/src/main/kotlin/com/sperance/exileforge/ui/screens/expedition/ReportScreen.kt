@@ -55,14 +55,14 @@ import java.util.Locale
         verticalArrangement = Arrangement.spacedBy(10.dp)) {
         FieldHead(report, won)
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (won) Spoils(s, hud) { looked = it } else DeathPrice(hud)
+            if (won) Spoils(s, hud) { looked = it } else DeathPrice(s, hud)
             if (logOpen) Box(Modifier.fillMaxWidth().height(260.dp).background(Panel, RoundedCornerShape(8.dp))
                 .border(1.dp, Bronze.copy(alpha = .4f), RoundedCornerShape(8.dp)).padding(horizontal = 10.dp, vertical = 8.dp)) {
                 FightLog(report.pack, Modifier.fillMaxSize())
             }
         }
         FightFigures(report, logOpen) { logOpen = !logOpen }
-        ForgeButton(enabled = !hud.rewardPending && !hud.fallPending, onClick = onContinue, modifier = Modifier.fillMaxWidth().height(50.dp),
+        ForgeButton(enabled = !hud.rewardPending && !hud.fallPending && hud.abyss?.pending != true, onClick = onContinue, modifier = Modifier.fillMaxWidth().height(50.dp),
             colors = ButtonDefaults.buttonColors(containerColor = if (won) Gold else LifeRed, contentColor = if (won) Ink else Parchment)) {
             Text(ui(if (won) "expedition.continue" else "expedition.back_to_camp"), style = MaterialTheme.typography.titleMedium)
         }
@@ -167,7 +167,7 @@ import java.util.Locale
 }
 
 /** A defeat: what the death cost, the server's word awaited, and what the run had gathered before it. */
-@Composable private fun DeathPrice(hud: RunHud) {
+@Composable private fun DeathPrice(s: ForgeState, hud: RunHud) {
     Caption(ui("expedition.report_death"), LifeRed)
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Box(Modifier.size(40.dp).border(1.dp, LifeRed, RoundedCornerShape(6.dp)), contentAlignment = Alignment.Center) {
@@ -182,6 +182,17 @@ import java.util.Locale
                 else -> MutedText(ui("expedition.fall_free"), style = MaterialTheme.typography.bodyMedium)
             }
             MutedText(ui(if (hud.vaal) "vaal.dead_hint" else "expedition.dead_hint"), style = MaterialTheme.typography.labelSmall)
+        }
+    }
+    // A fall in the Abyss (2.82.0) burns its hoard, but for the atlas's share.
+    hud.abyss?.takeIf { it.fallen }?.let { abyss ->
+        Caption(ui("abyss.fallen"), AbyssGlow)
+        val kept = abyss.hoard
+        when {
+            abyss.pending -> MutedText(ui("expedition.fall_pending"), style = MaterialTheme.typography.bodyMedium)
+            kept == null -> Text(ui("abyss.failed"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
+            kept.items.isEmpty() && kept.equipment.isEmpty() && kept.experience <= 0 -> MutedText(ui("abyss.burned"))
+            else -> { MutedText(ui("abyss.kept")); RewardLines(s, kept) }
         }
     }
     Caption(ui("expedition.report_run"))

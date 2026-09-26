@@ -73,7 +73,7 @@ import kotlin.math.floor
     val zone = VaalZones.isZone(run.map)
     BackHandler { when {
         hud.phase == RunPhase.GATE -> vm.runCommand(RunCommand.StepBack)
-        hud.phase == RunPhase.CRYSTAL -> vm.runCommand(RunCommand.StepOff)
+        hud.phase == RunPhase.CRYSTAL || hud.phase == RunPhase.ABYSS -> vm.runCommand(RunCommand.StepOff)
         hud.phase == RunPhase.MAP -> if (!zone) leaving = true
         else -> vm.runCommand(RunCommand.Leave)
     } }
@@ -94,7 +94,7 @@ import kotlin.math.floor
                     ledger = listOf(LedgerLine(ui("expedition.leave_left"), ui(if (hud.sealed) "expedition.boss_alive" else "expedition.boss_slain"), Tone.SPEND)),
                     note = ui("expedition.leave_note"), onDismiss = { leaving = false }) { vm.runCommand(RunCommand.Leave) }
             }
-            RunPhase.FIGHT -> hud.fight?.let { ArenaOverlay(s, hud, it, run.map.level, run.rules, run.stance, onCommand = vm::runCommand) }
+            RunPhase.FIGHT -> hud.fight?.let { ArenaOverlay(s, hud, it, it.level.takeIf { level -> level > 0 } ?: run.map.level, run.rules, run.stance, onCommand = vm::runCommand) }
             // The fight is over: its report — the log, what it came to, and the loot of a victory.
             RunPhase.LOOT -> hud.report?.let { ReportScreen(s, hud, it) { vm.runCommand(RunCommand.Continue) } }
             RunPhase.DEAD -> hud.report?.let { ReportScreen(s, hud, it) { vm.runCommand(RunCommand.Continue) } }
@@ -104,6 +104,7 @@ import kotlin.math.floor
                 else Ending(ui("expedition.map_done"), ui("expedition.map_done_hint"), Vital, hud) { vm.runCommand(RunCommand.Continue) }
             RunPhase.GATE -> VaalGate(s, hud, run.map.corrupted?.code, onEnter = vm::enterVaal, onRefuse = vm::refuseVaal) { vm.runCommand(RunCommand.StepBack) }
             RunPhase.CRYSTAL -> hud.crystal?.let { CrystalSheet(s, it, onCommand = vm::runCommand) }
+            RunPhase.ABYSS -> hud.abyss?.let { AbyssSheet(s, it, onCommand = vm::runCommand) }
             RunPhase.LEFT -> Unit
         }
         // A refusal of the gear (2.40.0) has to be read here too: the run has no bar and no banner.
@@ -240,6 +241,7 @@ private fun DrawScope.drawExplored(world: ExpeditionWorld, origin: Offset, cell:
     world.chests.filter { !it.opened && world.explored(it.cell.x, it.cell.y) }.forEach { mark(it.cell.x + .5, it.cell.y + .5, GoldBright) }
     world.fountains.filter { !it.used && world.explored(it.cell.x, it.cell.y) }.forEach { mark(it.cell.x + .5, it.cell.y + .5, ShieldCyan) }
     world.crystals.filter { !it.freed && world.explored(it.cell.x, it.cell.y) }.forEach { mark(it.cell.x + .5, it.cell.y + .5, CrystalViolet) }
+    world.cracks.filter { !it.opened && world.explored(it.cell.x, it.cell.y) }.forEach { mark(it.cell.x + .5, it.cell.y + .5, AbyssGlow, dot * 1.2f) }
     world.portal?.takeIf { world.explored(it.x, it.y) }?.let { mark(it.x + .5, it.y + .5, LifeRed, dot * 1.2f) }
     if (world.explored(map.exit.x, map.exit.y)) mark(map.exit.x + .5, map.exit.y + .5, if (world.sealed) LifeRed else Vital, dot * 1.4f)
     if (monsters) world.agents.filter { it.alive && world.lit(it.x.toInt(), it.y.toInt()) }.forEach { agent ->
@@ -278,6 +280,7 @@ private fun DrawScope.drawExplored(world: ExpeditionWorld, origin: Offset, cell:
                 Counter(ui("map.chests_left", hud.chestsLeft), GoldBright)
                 Counter(ui("map.fountains_left", hud.fountainsLeft), ShieldCyan)
                 if (hud.crystalsLeft > 0) Counter(ui("map.crystals_left", hud.crystalsLeft), CrystalViolet)
+                if (hud.cracksLeft > 0) Counter(ui("map.cracks_left", hud.cracksLeft), AbyssGlow)
                 Counter(ui(if (hud.sealed) "expedition.boss_alive" else "expedition.boss_slain"), if (hud.sealed) LifeRed else Vital)
                 Counter(ui("map.explored", explored * 100 / floorCells), Parchment)
             }
@@ -285,7 +288,7 @@ private fun DrawScope.drawExplored(world: ExpeditionWorld, origin: Offset, cell:
             FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Legend(Gold, ui("map.legend_hero")); Legend(GoldBright, ui("map.legend_chest")); Legend(ShieldCyan, ui("map.legend_fountain"))
                 Legend(Vital, ui("map.legend_exit")); Legend(LifeRed, ui("map.legend_sealed")); Legend(Color(0xFFFF8A78), ui("map.legend_portal"))
-                Legend(CrystalViolet, ui("map.legend_crystal"))
+                Legend(CrystalViolet, ui("map.legend_crystal")); Legend(AbyssGlow, ui("map.legend_abyss"))
                 MonsterRarity.entries.forEach { Legend(rarityTint(it), ui(it.key())) }
             }
             if (run.mapEffects.isNotEmpty()) {

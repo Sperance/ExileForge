@@ -264,7 +264,7 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
 
     /** The lines that give without asking (server 0.66.0 added gold, chests, fountains and the hero's own boons). */
     private val rewards: Set<String> get() = setOf(QUANTITY, RARITY, EXPERIENCE, GOLD, "MAP_CHESTS", FOUNTAINS, HERO_HASTE, HERO_ATTACK_SPEED, HERO_LIFE, HERO_LEECH,
-        CRYSTALS, BOOKS)
+        CRYSTALS, BOOKS, ABYSS_CRACKS, ABYSS_DEPTH, ABYSS_HOARD, ABYSS_UNIQUE, ABYSS_ORBS, ABYSS_RARE)
 
     /** How many percent one rolled value of [stat] pays, by the server's weight; zero for what is not a risk. */
     fun riskOf(stat: String, value: Double): Double = value * (risk[stat] ?: 0.0)
@@ -317,6 +317,17 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
         const val SKILL_COST = "MAP_SKILL_COST"
         const val CRYSTALS = "MAP_CRYSTALS"
         const val BOOKS = "MAP_BOOKS"
+        // Since server 0.72.0: the Abyss - its cracks and their depth, its hoard, and how hard its monsters stand.
+        const val ABYSS_CRACKS = "MAP_ABYSS_CRACKS"
+        const val ABYSS_DEPTH = "MAP_ABYSS_DEPTH"
+        const val ABYSS_HOARD = "MAP_ABYSS_HOARD"
+        const val ABYSS_UNIQUE = "MAP_ABYSS_UNIQUE"
+        const val ABYSS_ORBS = "MAP_ABYSS_ORBS"
+        const val ABYSS_RARE = "MAP_ABYSS_RARE"
+        const val ABYSS_LIFE = "MAP_ABYSS_LIFE"
+        const val ABYSS_DAMAGE = "MAP_ABYSS_DAMAGE"
+        const val ABYSS_SWARM = "MAP_ABYSS_SWARM"
+        const val ABYSS_LEADER = "MAP_ABYSS_LEADER"
 
         /** The template a location's map is: `MAP_<location code>`. */
         fun templateCode(mapCode: String) = "MAP_$mapCode"
@@ -346,7 +357,9 @@ enum class MapLineKind { HARM, CONTENT, REWARD }
 @Serializable data class MapLaunch(val map: ActiveMap? = null, val chests: ChestState = ChestState(), val atlas: Map<String, Double> = emptyMap(),
                                    val zone: CampaignMap? = null,
                                    /** The zone's crystals of essences (server 0.69.0), the ones the map added among them. */
-                                   val crystals: CrystalState? = null)
+                                   val crystals: CrystalState? = null,
+                                   /** The zone's Abyss (server 0.72.0): its cracks, depths and hoards; none without a crack. */
+                                   val abyss: AbyssLaunch? = null)
 
 /**
  * The map's service for gold (since server 0.34.0): summoning brings a slain guardian back, at so

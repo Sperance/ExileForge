@@ -178,7 +178,7 @@ class ServerIntegrationTest {
             .request("PUT", "api/v1/character", mapOf("id" to id), buildJsonObject { put("knownBenchRecipes", JsonArray(known.map(::JsonPrimitive))) }, authenticated = true)
         val bench = api.hero.bench(id)
         assertTrue(bench.isNotEmpty(), "the server has no bench")
-        val recipe = bench.firstOrNull { it.fits("HELMET") && it.source != kept.source && it.group != kept.family }
+        val recipe = bench.firstOrNull { it.fits("HELMET") && it.source != kept.source && it.group != kept.groupKey }
             ?: fail("no bench line for the free ${kept.source} place beside ${kept.code}")
         give(CurrencyOrb.valueOf(recipe.orb), recipe.amount * 2)
         val crafted = api.hero.craft(id, magic, recipe.code)

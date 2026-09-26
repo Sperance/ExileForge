@@ -324,17 +324,17 @@
 Описание и его диапазоны разнесены по двум коллекциям.
 
 ```json
-// modifierdefinition
-{"_id":"…","code":"LIFE_AND_MANA","source":"PREFIX","tags":["life"],
- "effects":[{"stat":"STOCK_HEALTH","operation":"ADD"},{"stat":"STOCK_MANA","operation":"ADD"}]}
-// modifiertier
-{"_id":"…","modifierId":"…","tier":1,"minItemLevel":84,"weight":100,
- "values":[{"valueMin":46.0,"valueMax":48.0},{"valueMin":10.0,"valueMax":12.0}]}
+// modifierdefinition (с 0.66.0 тиры лежат внутри описания: тир 1 — первый в списке и лучший)
+{"_id":"…","code":"ADD_MAXIMUM_LIFE","family":"ADD_MAXIMUM_LIFE","variant":"NATURAL","source":"PREFIX","tags":["life","defences"],
+ "effects":[{"stat":"STOCK_HEALTH","operation":"ADD"}],
+ "tiers":[{"level":68,"weight":52,"values":[[105.0,120.0]]},{"level":60,"weight":72,"values":[[94.0,108.0]]},…,{"level":1,"weight":1000,"values":[[8.0,14.0]]}]}
+// тот же род, другой вариант: код `<семейство>@<вариант>`, варианты CRAFTED / IMPLICIT / CORRUPTED / ENCHANT
+{"_id":"…","code":"ADD_MAXIMUM_LIFE@CRAFTED","family":"ADD_MAXIMUM_LIFE","variant":"CRAFTED","source":"PREFIX","crafted":true,"tiers":[…]}
 ```
 
-С 0.23.0 у определения ещё четыре поля: `group` (на одном предмете не бывает двух модификаторов одной группы; `null` — группа равна коду), `spawnWeight` (вес во взвешенном выборе аффикса; с 0.39.0 заменён на `pools` — тег → вес), `influence` (`SHAPER`/`ELDER` — модификатор роллится только на предмете с этим влиянием) и `crafted` (модификатор верстака: сферы его не роллят). Клиент читает их только для показа.
+С 0.23.0 у определения ещё четыре поля: `group` (на одном предмете не бывает двух модификаторов одной группы; `null` — группа равна коду), `spawnWeight` (вес во взвешенном выборе аффикса; с 0.39.0 заменён на `pools` — тег → вес), `influence` (`SHAPER`/`ELDER` — модификатор роллится только на предмете с этим влиянием) и `crafted` (модификатор верстака: сферы его не роллят). Клиент читает их только для показа. С 0.66.0 добавлены `family` (род: все варианты одного модификатора), `variant` (`NATURAL`/`LOCAL`/`CRAFTED`/`IMPLICIT`/`CORRUPTED`/`ENCHANT`) и `minRarity` (только у `source: MONSTER` — с какой редкости монстра доступен); отдельной коллекции `modifiertier` больше нет, тир — `{level, weight, values:[[min,max]…]}` внутри описания, `level` — уровень предмета (карты), с которого тир открыт, `weight` — вес тира во взвешенном выборе.
 
-Текста у определения нет: строка лежит в словаре под `modifier.<CODE>.name` и является шаблоном с `{0}`, `{1}` по числу эффектов. Составной модификатор меняет несколько статов сразу: у него больше одного эффекта, и на экземпляре ему соответствует столько же значений в том же порядке. Тир 1 — лучший. Выпавший модификатор экземпляра: `{modifierId, tierId, tier, values:[Double], fractured}`.
+Текста у определения нет: строка лежит в словаре под `modifier.<CODE>.name` и является шаблоном с `{0}`, `{1}` по числу эффектов; сервер собирает её на старте из шаблонов статов `stat.template.<STAT>.<OP>` (клиент их не читает). Отрицательный эффект пишется плейсхолдером `{|0|}`: клиент печатает модуль значения. Составной модификатор меняет несколько статов сразу: у него больше одного эффекта, и на экземпляре ему соответствует столько же значений в том же порядке. Тир 1 — лучший. Выпавший модификатор экземпляра: `{modifierCode, values:[Double], tier, fractured}`.
 
 ### Верстак (с 0.23.0, рецепты ищут на картах с 0.46.0)
 
@@ -342,8 +342,8 @@
 нашёл (`Character.knownBenchRecipes`); остальные скрыты целиком:
 
 ```json
-[{"code":"CRAFTED_ADD_MAXIMUM_LIFE_T3","modifierId":"…","modifierCode":"CRAFTED_ADD_MAXIMUM_LIFE","tierId":"…","tier":3,
-  "source":"PREFIX","group":"ADD_MAXIMUM_LIFE","values":[{"valueMin":25.0,"valueMax":34.0}],
+[{"code":"ADD_MAXIMUM_LIFE@CRAFTED_T3","modifierCode":"ADD_MAXIMUM_LIFE@CRAFTED","tier":3,
+  "source":"PREFIX","group":"ADD_MAXIMUM_LIFE","values":[[59.0,68.0]],
   "orb":"ORB_OF_TRANSMUTATION","orbItemId":"…","amount":3,"slots":[]}]
 ```
 
@@ -363,12 +363,13 @@
 ```json
 {"chapters":[{"code":"CHAPTER_1","maps":[{"code":"C1_TIDAL_SHORE","chapter":"CHAPTER_1","order":1,"biome":"SHORE","level":1,
   "monsterCount":[10,14],"monsters":[{"code":"DROWNED","form":"HUMANOID","stats":{"STOCK_HEALTH":18.0,"STOCK_ATTACK_PHYSICAL":4.0}}],
-  "modifiers":[{"code":"MOB_TOUGH","weight":100,"minLevel":1,"effects":[{"stat":"STOCK_HEALTH","operation":"INCREASED","value":60.0}]}]}]}],
+  "modifiers":[{"code":"MOB_TOUGH","weight":100,"minLevel":1,"tier":3,"effects":[{"stat":"STOCK_HEALTH","operation":"INCREASED","value":45.0,"max":60.0}]}],
+  "boss":{"code":"…","modifiers":[…],"pool":[…],"rolls":[1,2]}}]}],
  "rarities":[{"rarity":"MAGIC","weight":12,"modifiers":[1,2],"effects":[{"stat":"STOCK_HEALTH","operation":"MORE","value":60.0}],
   "quantity":2.0,"rarityBonus":30.0,"experience":1.8}]}
 ```
 
-Характеристики монстров и `ADD`-модификаторы уже подняты до уровня карты. С 0.27.0 у редкости есть `statScale` (сервер отдаёт его развёрнутым в `effects` — «больше» к каждой растущей характеристике) и `modifierPower` (множитель значений модификаторов), а у модификатора — `minRarity`: редкому доступен более широкий пул. **Бой считает клиент** (решение владельца): он строит карту из зерна, катает редкость и модификаторы монстра по этим таблицам и проигрывает автобой. `POST /api/v1/character/campaign/kill?characterId=&mapCode=&monsterCode=&rarity=NORMAL|MAGIC|RARE` — победа; сервер проверяет, что карта открыта (`CP_003`) и монстр на ней водится (`CP_004`), и сам катает опыт, золото, сферы и экипировку уровня карты с множителями за редкость и бонусами героя (`STOCK_EXPERIENCE`, `STOCK_QUANTITY`, `STOCK_RARITY`, `STOCK_GOLD`). Ответ: `{experience, gold, items:[{itemId, amount}], equipment:[CharacterEquipment], level, totalExperience, money}`. Запрос никогда не повторяется: повтор оплатил бы убийство дважды. `POST /campaign/complete?characterId=&mapCode=` — герой дошёл до выхода, карта пройдена (`Character.campaign`) и открывает следующую; `GET /campaign/progress?characterId=` — `{cleared, unlocked}`. Имена — `chapter.*`, `map.*.name`/`.description`, `monster.*.name`, `monstermod.*.name` (шаблон с `{0}` на эффект).
+Характеристики монстров и `ADD`-модификаторы уже подняты до уровня карты. С 0.27.0 у редкости есть `statScale` (сервер отдаёт его развёрнутым в `effects` — «больше» к каждой растущей характеристике) и `modifierPower` (множитель значений модификаторов), а у модификатора — `minRarity`: редкому доступен более широкий пул. **Бой считает клиент** (решение владельца): он строит карту из зерна, катает редкость и модификаторы монстра по этим таблицам и проигрывает автобой. `POST /api/v1/character/campaign/kill?characterId=&mapCode=&monsterCode=&rarity=NORMAL|MAGIC|RARE` — победа; сервер проверяет, что карта открыта (`CP_003`) и монстр на ней водится (`CP_004`), и сам катает опыт, золото, сферы и экипировку уровня карты с множителями за редкость и бонусами героя (`STOCK_EXPERIENCE`, `STOCK_QUANTITY`, `STOCK_RARITY`, `STOCK_GOLD`). Ответ: `{experience, gold, items:[{itemId, amount}], equipment:[CharacterEquipment], level, totalExperience, money}`. Запрос никогда не повторяется: повтор оплатил бы убийство дважды. `POST /campaign/complete?characterId=&mapCode=` — герой дошёл до выхода, карта пройдена (`Character.campaign`) и открывает следующую; `GET /campaign/progress?characterId=` — `{cleared, unlocked}`. Имена — `chapter.*`, `map.*.name`/`.description`, `monster.*.name`; модификаторы монстров с 0.66.0 — обычные описания с `source: MONSTER` (пулы `monster`, `boss`), в карту они разворачиваются тиром по её уровню (`tier`, у эффекта — диапазон `value`…`max`, клиент катает значение), имена — `modifier.<код>.name`. У босса `modifiers` — фирменные строки, `pool` и `rolls` — сколько ещё строк катать из пула боссов при каждой встрече.
 
 С 0.28.0 в ответе `chapters` есть третье поле — `combat`, **правила боя**: клиент считает бой по ним и не держит своих чисел. `{timeLimit, variance, resistCap, blockCap, spellBlockShare, unarmed:{damage,speed}, critical:{chance,multiplier}, armour:{factor,cap}, evasion:{base,perLevel,cap}, stun:{share,duration}, shield:{rechargeDelay,rechargePerSecond}, spell:{innateDamage,innatePerLevel,castSpeed,manaCost,manaRegenShare}, retreat:{delay}, death:{fromLevel,experienceShare}, ailments:[{ailment,type,chance,magnitude,duration,threshold,stacks,heroChance}], resistHardCap, ailmentDurationCap}`. С 0.36.0 `heroChance` — база героя вместо `chance` (поджог, шок, яд и кровотечение — 0: только со снаряжения), `resistHardCap` — предел, выше которого «+% к максимуму сопротивления» не поднимает, `ailmentDurationCap` — предел сокращения длительности состояния на себе. Характеристики листа, которые бой читает с 0.36.0: `STOCK_<IGNITE|FREEZE|SHOCK|POISON|BLEED>_CHANCE` (прибавка к шансу), `STOCK_<BURNING|POISON|BLEED>_DAMAGE` (урон со временем), `STOCK_AVOID_<IGNITE|CHILL|FREEZE|SHOCK|POISON|BLEED|STUN>`, `STOCK_<…>_DURATION_ON_SELF`, `STOCK_SPELL_BLOCK`, `STOCK_PHYSICAL_REDUCTION`, `STOCK_RESIST_MAX_<FIRE|COLD|LIGHTNING|CHAOS|ALL>`, `STOCK_HEALTH_ON_KILL`/`STOCK_MANA_ON_KILL`, `STOCK_HEALTH_ON_HIT`/`STOCK_MANA_ON_HIT` (за удар атакой). С 0.50.0 флакона нет: поля `flask` в правилах больше нет; с 0.51.0 его статы, модификаторы и зелье здоровья удалены целиком и снимаются с вещей при старте сервера. Недуг — имя из `EnumStatBool` без `BOOL_` (`BURNING`, `CHILLED`, `FROZEN`, `SHOCKED`, `POISONED`, `BLEEDING`), `type` — характеристика урона, которая его вешает; `magnitude` у урона со временем — доля урона попадания за `duration`, у охлаждения — замедление действий, у шока — прибавка к получаемому урону; `threshold` — доля здоровья цели, которую должен снять удар (заморозка). Заклинание у героя врождённое — `innateDamage + innatePerLevel × (уровень − 1)` сверх `STOCK_ATTACK_MAGICAL` листа, при `STOCK_MANA > 0`; монстр колдует, если у него есть урон от заклинаний и мана (у пяти монстров главы есть, модификатор редких `MOB_ARCANE` даёт их). `POST /api/v1/character/campaign/fall?characterId=&mapCode=` — герой погиб: с карты уровня `death.fromLevel` сервер отнимает `death.experienceShare`% опыта текущего уровня, но не ниже его порога (уровень не падает); ответ `{lost, level, totalExperience}`, на ранних картах `lost` = 0. Как и `kill`, запрос не повторяется.
 | Сундуки карты (0.31.0) | `GET /api/v1/character/campaign/chests?characterId=&mapCode=` → `{left, refreshAt}` — окно в 6 часов на героя и карту |

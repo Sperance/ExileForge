@@ -18,7 +18,7 @@ val protectedFields = setOf("_id", "id", "version", "deleted", "createdAt", "upd
 val rarities = listOf("COMMON", "UNCOMMON", "RARE", "UNIQUE", "MYTHICAL")
 // JEWEL is last on purpose: it is not worn on the body but sits in a socket on the tree,
 // and `CharacterEquipment.socketCode` says which one.
-val slots = listOf("HELMET", "BODY", "GLOVES", "RING", "BOOTS", "WINGS", "BELT", "WEAPON_1H", "WEAPON_2H", "QUIVER", "SHIELD", "AMULET", "JEWEL", "MAP", "TOOL_MINING", "TOOL_HERBALISM", "TOOL_WOODCUTTING", "TOOL_SMITHING", "TOOL_ALCHEMY", "TOOL_CARTOGRAPHY")
+val slots = listOf("HELMET", "BODY", "GLOVES", "RING", "BOOTS", "WINGS", "BELT", "WEAPON_1H", "WEAPON_2H", "QUIVER", "SHIELD", "AMULET", "JEWEL", "MAP", "TOOL_MINING", "TOOL_HERBALISM", "TOOL_WOODCUTTING", "TOOL_SMITHING", "TOOL_ALCHEMY", "TOOL_CARTOGRAPHY", "TOOL_ENCHANTING")
 /**
  * One line of the equipment ledger: a place on the body and the template slots that fill it.
  *
@@ -48,11 +48,11 @@ val bodyPlaces = listOf(
     listOf("BELT", "WINGS").map { BodyPlace(it, listOf(it)) }
 
 val weapons = listOf("SWORD", "LONGSWORD", "BOW", "WAND", "AXE", "DOUBLEAXE", "DOUBLESWORD", "BLADE")
-val modifierSources = listOf("IMPLICIT", "PREFIX", "SUFFIX", "UNIQUE", "ENCHANTMENT", "CORRUPTION", "PASSIVE")
+val modifierSources = listOf("IMPLICIT", "PREFIX", "SUFFIX", "UNIQUE", "ENCHANTMENT", "CORRUPTION", "PASSIVE", "HANDCRAFTED", "ALCHEMY", "MONSTER")
 val modifierOperations = listOf("ADD", "INCREASED", "MORE", "SET")
-const val SERVER_COMMIT = "0490cb80724f8b67e67a7ae04ea41af71cb85b18"
-const val SERVER_BRANCH = "claude/festive-curie-jacrnb"
-const val SERVER_VERSION = "0.66.0"
+const val SERVER_COMMIT = "24de7de8a4ee2b4c8429a7466347b31e25eeef62"
+const val SERVER_BRANCH = "claude/epic-fermat-ahwd1v"
+const val SERVER_VERSION = "0.66.1"
 
 fun template(catalog: Catalog, kind: EquipmentKind = EquipmentKind.Weapon): JsonObject = when (catalog) {
     Catalog.CHARACTERS -> defaultObject("character")
@@ -104,6 +104,12 @@ fun validateCode(code: String) {
     require(Regex("[A-Za-z0-9_]+").matches(code)) {
         ui("contract.code_format")
     }
+}
+
+/** A modifier's code (server 0.66.0): a family code, or a variant of one — `ADD_ARMOUR@LOCAL`. */
+fun validateModifierCode(code: String) {
+    require(code.isNotBlank()) { ui("contract.enter_code") }
+    require(Regex("[A-Za-z0-9_]+(@[A-Z]+)?").matches(code)) { ui("contract.code_format") }
 }
 
 /** Only changed mutable fields: never sends the polymorphic discriminator to MongoDB. */
@@ -211,7 +217,7 @@ fun validateBaseParams(document: JsonObject) {
 fun validateModifierPool(document: JsonObject) {
     document["fixedModifierCodes"]?.let { fixed ->
         require(fixed is JsonArray) { ui("contract.ids_list") }
-        fixed.forEach { validateCode((it as? JsonPrimitive)?.contentOrNull.orEmpty()) }
+        fixed.forEach { validateModifierCode((it as? JsonPrimitive)?.contentOrNull.orEmpty()) }
     }
     document["modifierPools"]?.let { tags ->
         require(tags is JsonArray && tags.all { (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.content?.isNotBlank() == true }) { ui("contract.pool_tags") }

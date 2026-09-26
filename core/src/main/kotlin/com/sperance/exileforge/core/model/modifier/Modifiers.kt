@@ -15,7 +15,9 @@ import kotlinx.serialization.Serializable
  * PASSIVE never reaches an item at all — it is a skill-tree node's own bonus.
  */
 /** Where a modifier comes from; since server 0.38.0 also the smith's handcrafted lines and a map's alchemy lines, which no orb touches. */
-@Serializable enum class ModifierSource { IMPLICIT, PREFIX, SUFFIX, UNIQUE, ENCHANTMENT, CORRUPTION, PASSIVE, HANDCRAFTED, ALCHEMY }
+@Serializable enum class ModifierSource { IMPLICIT, PREFIX, SUFFIX, UNIQUE, ENCHANTMENT, CORRUPTION, PASSIVE, HANDCRAFTED, ALCHEMY,
+    /** A monster's modifier (server 0.66.0): the same shape as an item's, tiered by the map's level; never on an item. */
+    MONSTER }
 
 /**
  * One action of a modifier: which stat it touches and how.
@@ -40,7 +42,9 @@ import kotlinx.serialization.Serializable
  * One tier of a definition (server 0.56.0: carried inside it): the item level it opens at and a
  * `[min, max]` per effect. The first tier of [ModifierDefinition.tiers] is tier 1, the best, as in PoE.
  */
-@Serializable data class ModifierTier(val level: Int = 1, val values: List<List<Double>> = emptyList())
+@Serializable data class ModifierTier(val level: Int = 1, val values: List<List<Double>> = emptyList(),
+    /** The tier's weight among those open at a level (server 0.66.0); zero means the tier's number, the server's old rule. */
+    val weight: Int = 0)
 
 /**
  * Description of a possible modifier (collection `ModifierDefinition`).
@@ -74,9 +78,16 @@ import kotlinx.serialization.Serializable
     val crafted: Boolean = false,
     /** The tiers, best first: how good a roll is inside its own. Empty for a tree passive. */
     val tiers: List<ModifierTier> = emptyList(),
+    /** The family this is a variant of (server 0.66.0): the natural affix, or itself. */
+    val family: String = code,
+    /** `NATURAL`, `LOCAL`, `CRAFTED`, `IMPLICIT`, `CORRUPTED` or `ENCHANT` (server 0.66.0). */
+    val variant: String = "NATURAL",
+    /** A monster modifier's lowest rarity (server 0.66.0); null on anything an item carries. */
+    val minRarity: String? = null,
 ) {
     val composite: Boolean get() = effects.size > 1
-    val family: String get() = group ?: code
+    /** What the one-per-item rule keys on: the group, or the code when there is none. */
+    val groupKey: String get() = group ?: code
     /** Tier [number] (1 is the best), if the definition has it. */
     fun tier(number: Int): ModifierTier? = tiers.getOrNull(number - 1)
     /**

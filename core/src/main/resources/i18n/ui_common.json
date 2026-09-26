@@ -23,5 +23,12 @@
   "enum.orb.PERIL_ORB.trade": "Orb of Peril",
   "enum.orb.REGAL_ORB.trade": "Regal Orb",
   "enum.orb.SHAPERS_ORB.trade": "Shaper's Orb",
-  "enum.orb.VAAL_ORB.trade": "Vaal Orb"
+  "enum.orb.VAAL_ORB.trade": "Vaal Orb",
+  "enum.orb.TREASURE_ORB.trade": "Treasure Orb",
+  "enum.orb.GILDED_ORB.trade": "Gilded Orb",
+  "enum.orb.WARDEN_ORB.trade": "Warden Orb",
+  "enum.orb.HELMET_SCROLL.trade": "Helmet Scroll",
+  "enum.orb.GLOVES_SCROLL.trade": "Gloves Scroll",
+  "enum.orb.BOOTS_SCROLL.trade": "Boots Scroll",
+  "enum.orb.WEAPON_SCROLL.trade": "Weapon Scroll"
 }

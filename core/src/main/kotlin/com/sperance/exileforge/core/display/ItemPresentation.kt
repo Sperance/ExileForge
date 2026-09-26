@@ -148,12 +148,19 @@ fun modifierText(modifier: JsonObject, definitions: List<ModifierDefinition> = e
     val values = rolledValues(modifier, definition)
     val template = definition?.template
     if (template != null && template != definition.code && values.isNotEmpty())
-        return values.foldIndexed(template) { index, text, value -> text.replace("{$index}", value) }
+        return fillTemplate(template, values)
     val effects = definition?.effects.orEmpty()
     return values.mapIndexed { index, value ->
         effects.getOrNull(index)?.let { "$value ${statTitle(it.stat)}" } ?: value
     }.joinToString(" · ").ifBlank { definition?.code ?: displayName(modifier.text("modifierCode")) }
 }
+
+/**
+ * A template with its numbers in: `{0}` takes the value as printed, `{|0|}` (server 0.66.0) its size
+ * without the sign — the sentence itself carries the minus, "-{|0|} to maximum Life".
+ */
+fun fillTemplate(template: String, values: List<String>): String =
+    values.foldIndexed(template) { index, text, value -> text.replace("{|$index|}", value.removePrefix("-").removePrefix("−")).replace("{$index}", value) }
 
 /**
  * The rolled numbers as text, each one printed by the rule of the characteristic it rolled on.
@@ -196,7 +203,7 @@ enum class AffixKind(val letter: Char) {
                 ModifierSource.CORRUPTION -> CORRUPTION
                 ModifierSource.ALCHEMY -> ALCHEMY
                 ModifierSource.UNIQUE -> UNIQUE
-                ModifierSource.PASSIVE, null -> null
+                ModifierSource.PASSIVE, ModifierSource.MONSTER, null -> null
             }
         }
     }
@@ -234,7 +241,7 @@ fun recipeText(recipe: BenchRecipe, definitions: List<ModifierDefinition>): Stri
     }
     val template = definition?.template?.takeIf { it != definition.code }
         ?: return ranges.joinToString(" · ").ifBlank { displayName(recipe.modifierCode) }
-    return ranges.foldIndexed(template) { index, text, value -> text.replace("{$index}", value) }
+    return fillTemplate(template, ranges)
 }
 
 /**

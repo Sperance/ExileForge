@@ -50,15 +50,15 @@ fun rollSummary(document: JsonObject, lines: List<JsonObject>, definitions: List
     }
     return RollSummary(
         quality = qualities.takeIf { it.isNotEmpty() }?.let { Math.round(it.average() * 100).toInt() },
-        openSlots = affixPlaces(document.text("rarity"))?.let { (it - affixes).coerceAtLeast(0) },
+        openSlots = affixPlaces(document.text("rarity"), document.text("slot"))?.let { (it - affixes).coerceAtLeast(0) },
         bestTier = lines.filter { affixMarks(it, definitions).kind in RANKED }.mapNotNull { it.text("tier").toIntOrNull()?.takeIf { tier -> tier > 0 } }.minOrNull(),
     )
 }
 
-/** Prefix and suffix places together, as the server's rarities hold them; null for a rarity that rolls none. */
-fun affixPlaces(rarity: String): Int? = when (rarity) {
+/** Prefix and suffix places together, as the server's rarities hold them; a rare jewel holds four (server 0.66.0); null for a rarity that rolls none. */
+fun affixPlaces(rarity: String, slot: String = ""): Int? = when (rarity) {
     "UNCOMMON" -> 2
-    "RARE" -> 6
+    "RARE" -> if (slot == "JEWEL") 4 else 6
     else -> null
 }
 

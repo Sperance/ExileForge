@@ -36,18 +36,32 @@ data class RolledMonster(
  */
 object MonsterRoller {
 
-    fun roll(map: CampaignMap, rarities: List<CampaignRarity>, random: Random): RolledMonster {
+    fun roll(map: CampaignMap, rarities: List<CampaignRarity>, random: Random, extraRareMods: Int = 0): RolledMonster {
         val monster = map.monsters[random.nextInt(map.monsters.size)]
         val rule = weighted(rarities, random) { it.weight } ?: CampaignRarity(MonsterRarity.NORMAL.name, 1)
         val rarity = MonsterRarity.entries.firstOrNull { it.name == rule.rarity } ?: MonsterRarity.NORMAL
-        val count = rule.modifiers.let { (low, high) -> if (high > low) random.nextInt(low, high + 1) else low }
+        var count = rule.modifiers.let { (low, high) -> if (high > low) random.nextInt(low, high + 1) else low }
+        // The atlas (server 0.66.0) hangs more on a rare monster than its rule does.
+        if (rarity == MonsterRarity.RARE && count > 0) count += extraRareMods
         // The tier widens the pool and strengthens what is drawn from it.
         val tier = rarity.ordinal
         val pool = map.modifiers.filter { it.minLevel <= map.level && (MonsterRarity.entries.firstOrNull { r -> r.name == it.minRarity }?.ordinal ?: 1) <= tier }.toMutableList()
         val picked = List(count) { weighted(pool, random) { it.weight }?.also { pool.remove(it) } }.filterNotNull()
-            .map { modifier -> modifier.copy(effects = modifier.effects.map { it.copy(value = it.value * rule.modifierPower) }) }
+            .map { modifier -> rolled(modifier, rule.modifierPower, random) }
         return RolledMonster(monster.code, monster.form, rarity, picked, fold(monster, rule.effects + picked.flatMap { it.effects }), monster.behaviour,
             ranged = monster.ranged)
+    }
+
+    /**
+     * A modifier's values thrown inside its tier (server 0.66.0): one quality for every effect, as an item's
+     * composite rolls, times the rarity's power. A line whose range is a point is that point.
+     */
+    private fun rolled(modifier: MonsterModifier, power: Double, random: Random): MonsterModifier {
+        val quality = random.nextDouble()
+        return modifier.copy(effects = modifier.effects.map { effect ->
+            val value = (effect.value + (effect.max - effect.value) * quality) * power
+            effect.copy(value = Math.round(value * 10) / 10.0, max = Math.round(value * 10) / 10.0)
+        })
     }
 
     /**
@@ -56,22 +70,28 @@ object MonsterRoller {
      * never the one [random] feeds — so a plain spawn's roll is untouched whether or not this ever
      * ran: the leader (first, fought first) comes from [random] exactly as [roll] alone would give it.
      */
-    fun rollPack(map: CampaignMap, rarities: List<CampaignRarity>, random: Random, packRandom: Random): List<RolledMonster> {
-        val leader = roll(map, rarities, random)
+    fun rollPack(map: CampaignMap, rarities: List<CampaignRarity>, random: Random, packRandom: Random, extraRareMods: Int = 0): List<RolledMonster> {
+        val leader = roll(map, rarities, random, extraRareMods)
         val size = if (packRandom.nextDouble() < PACK_CHANCE) 1 + packRandom.nextInt(PACK_MAX) else 1
-        return listOf(leader) + List(size - 1) { roll(map, rarities, packRandom) }
+        return listOf(leader) + List(size - 1) { roll(map, rarities, packRandom, extraRareMods) }
     }
 
     /**
-     * The map's boss as it stands (since server 0.32.0): nothing is thrown — its rarity is `UNIQUE`
-     * and its modifiers are fixed — and it folds by the same formula, the tier's power included.
+     * The map's boss as it stands (since server 0.32.0): its rarity is `UNIQUE`, its signature modifiers
+     * are fixed, and since server 0.66.0 it draws `rolls` more from its own pool at every encounter, each
+     * thrown inside its tier; [extra] is what the entered map does to the boss alone. It folds by the
+     * same formula as any monster, the tier's power included.
      */
-    fun boss(map: CampaignMap, rarities: List<CampaignRarity>): RolledMonster? {
+    fun boss(map: CampaignMap, rarities: List<CampaignRarity>, random: Random = Random(0), extra: List<MonsterEffect> = emptyList()): RolledMonster? {
         val boss = map.boss ?: return null
         val rule = rarities.firstOrNull { it.rarity == MonsterRarity.UNIQUE.name } ?: CampaignRarity(MonsterRarity.UNIQUE.name, 0)
-        val modifiers = boss.modifiers.map { modifier -> modifier.copy(effects = modifier.effects.map { it.copy(value = it.value * rule.modifierPower) }) }
+        val signature = boss.modifiers.map { rolled(it, rule.modifierPower, random) }
+        val count = boss.rolls.let { (low, high) -> if (high > low) random.nextInt(low, high + 1) else low }.coerceAtMost(boss.pool.size)
+        val pool = boss.pool.toMutableList()
+        val drawn = List(count) { weighted(pool, random) { it.weight }?.also { pool.remove(it) } }.filterNotNull().map { rolled(it, rule.modifierPower, random) }
+        val modifiers = signature + drawn
         val body = CampaignMonster(boss.code, boss.form, boss.stats, boss.behaviour, boss.range)
-        return RolledMonster(boss.code, boss.form, MonsterRarity.UNIQUE, modifiers, fold(body, rule.effects + modifiers.flatMap { it.effects }), boss.behaviour,
+        return RolledMonster(boss.code, boss.form, MonsterRarity.UNIQUE, modifiers, fold(body, rule.effects + modifiers.flatMap { it.effects } + extra), boss.behaviour,
             ranged = body.ranged)
     }
 

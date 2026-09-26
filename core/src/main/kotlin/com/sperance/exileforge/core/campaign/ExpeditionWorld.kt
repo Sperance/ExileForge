@@ -483,7 +483,9 @@ class ExpeditionWorld(
          * all from one seed.
          */
         fun create(map: CampaignMap, rarities: List<CampaignRarity>, heroStats: Map<String, Double>, seed: Long,
-                   mapBuffs: List<MonsterEffect> = emptyList(), portalChance: Double = 0.0): ExpeditionWorld {
+                   mapBuffs: List<MonsterEffect> = emptyList(), portalChance: Double = 0.0,
+                   /** What the map does to its boss alone (server 0.66.0), and how many modifiers a rare monster carries beyond its rule. */
+                   bossBuffs: List<MonsterEffect> = emptyList(), extraRareMods: Int = 0): ExpeditionWorld {
             val random = Random(seed)
             val (low, high) = map.monsterCount.let { (it.getOrNull(0) ?: 10) to (it.getOrNull(1) ?: 14) }
             // The map's size is the server's since 0.40.0; room for the pack a map's modifier asks for comes with it.
@@ -491,9 +493,9 @@ class ExpeditionWorld(
             // A pack's own stream (2.54.0), so whether a spawn is one or several never shifts the
             // ordinary roll that follows it — the same seed still hands out the same single monsters.
             val packRandom = Random(seed * 32452843 + 71)
-            val packs = List(layout.spawns.size) { MonsterRoller.rollPack(map, rarities, random, packRandom).map { it.copy(mapBuffs = mapBuffs) } }
+            val packs = List(layout.spawns.size) { MonsterRoller.rollPack(map, rarities, random, packRandom, extraRareMods).map { it.copy(mapBuffs = mapBuffs) } }
             return ExpeditionWorld(layout, packs, heroSpeed(heroStats), seed, lightRadius(heroStats, map.light),
-                MonsterRoller.boss(map, rarities)?.copy(mapBuffs = mapBuffs),
+                MonsterRoller.boss(map, rarities, packRandom, bossBuffs)?.copy(mapBuffs = mapBuffs + bossBuffs),
                 MonsterRoller.portal(map, portalChance, random))
         }
 

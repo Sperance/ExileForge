@@ -50,9 +50,9 @@ val bodyPlaces = listOf(
 val weapons = listOf("SWORD", "LONGSWORD", "BOW", "WAND", "AXE", "DOUBLEAXE", "DOUBLESWORD", "BLADE")
 val modifierSources = listOf("IMPLICIT", "PREFIX", "SUFFIX", "UNIQUE", "ENCHANTMENT", "CORRUPTION", "PASSIVE", "HANDCRAFTED", "ALCHEMY", "MONSTER")
 val modifierOperations = listOf("ADD", "INCREASED", "MORE", "SET")
-const val SERVER_COMMIT = "3bfd7dd8c38f8b47ae21a7d624234d546cdb929f"
+const val SERVER_COMMIT = "9bbe673485f3605516c0bb58994a2b1bb78eb74a"
 const val SERVER_BRANCH = "claude/tender-pasteur-a36kj2"
-const val SERVER_VERSION = "0.66.3"
+const val SERVER_VERSION = "0.66.4"
 
 fun template(catalog: Catalog, kind: EquipmentKind = EquipmentKind.Weapon): JsonObject = when (catalog) {
     Catalog.CHARACTERS -> defaultObject("character")

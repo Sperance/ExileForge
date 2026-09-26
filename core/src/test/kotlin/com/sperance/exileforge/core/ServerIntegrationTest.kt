@@ -52,6 +52,18 @@ class ServerIntegrationTest {
     }
 
     /**
+     * The floor of a rarity (server 0.65.0): a magic item carries at least one affix, a rare one
+     * four, a rare jewel three. Affixes are the lines a card draws in blue under the base; an
+     * implicit, a corruption or an enchantment does not count.
+     */
+    private fun assertFloor(item: com.sperance.exileforge.core.model.hero.EquipmentInstance, slot: String?,
+        definitions: List<com.sperance.exileforge.core.model.modifier.ModifierDefinition>) {
+        val floor = when (item.rarity) { "UNCOMMON" -> 1; "RARE" -> if (slot == "JEWEL") 3 else 4; else -> return }
+        val affixes = item.params.count { param -> definitions.firstOrNull { it.code == param.modifierCode }?.source?.name in setOf("PREFIX", "SUFFIX") }
+        assertTrue(affixes >= floor, "${item.rarity} ${item.equipmentId} ($slot) carries $affixes affixes, below $floor: ${item.params}")
+    }
+
+    /**
      * Since 0.21.0 the server knows who asks: a player is refused whatever is not theirs, the
      * catalogue's generic writes belong to an administrator alone, and a session is its token.
      * Kept apart from the contract test because that one is already as large as a JVM method gets.
@@ -94,7 +106,7 @@ class ServerIntegrationTest {
      * The campaign: the client fights, the server pays. A kill on a locked map or of a monster that
      * does not live there is refused, and clearing a map opens the next one.
      */
-    private suspend fun campaignIsTheServers(api: GameApi, id: String) {
+    private suspend fun campaignIsTheServers(api: GameApi, id: String, definitions: List<com.sperance.exileforge.core.model.modifier.ModifierDefinition>) {
         val view = api.campaign.chapters()
         val maps = view.chapters.single().maps
         assertEquals(10, maps.size)
@@ -107,6 +119,8 @@ class ServerIntegrationTest {
         assertEquals(listOf(first.code), api.campaign.progress(id).unlocked)
         val reward = api.campaign.kill(id, first.code, first.monsters.first().code, com.sperance.exileforge.core.model.campaign.MonsterRarity.RARE)
         assertTrue(reward.experience > 0, "a kill gave no experience")
+        val slots = api.catalog.equipment().associate { it.entityId to it.text("slot") }
+        reward.equipment.forEach { assertFloor(it, slots[it.equipmentId], definitions) }
         val bag = api.hero.bag(id)
         reward.items.forEach { stack -> assertTrue(bag.any { it.itemId == stack.itemId }, "the looted ${stack.itemId} is not in the bag") }
         assertEquals("CP_004", assertFailsWith<ApiFailure> { api.campaign.kill(id, first.code, maps.last().monsters.first().code, com.sperance.exileforge.core.model.campaign.MonsterRarity.NORMAL) }.code)
@@ -166,7 +180,9 @@ class ServerIntegrationTest {
         api.hero.applyOrb(id, magic, orb(CurrencyOrb.ORB_OF_SCOURING))
         // Since server 0.53.0 a magic item rolls one or two affixes, and an Orb of Annulment never takes
         // it below one: only a second affix is taken off, so a single place is left free either way.
-        val transmuted = api.hero.applyOrb(id, magic, orb(CurrencyOrb.ORB_OF_TRANSMUTATION)).item.params
+        val transmutedItem = api.hero.applyOrb(id, magic, orb(CurrencyOrb.ORB_OF_TRANSMUTATION)).item
+        assertFloor(transmutedItem, "HELMET", definitions)
+        val transmuted = transmutedItem.params
         val kept = affixes(if (affixes(transmuted).size == 2) api.hero.applyOrb(id, magic, orb(CurrencyOrb.ORB_OF_ANNULMENT)).item.params
             else transmuted).single()
 
@@ -197,7 +213,9 @@ class ServerIntegrationTest {
         val rare = api.hero.grant(id, templateId)
         assertTrue(affixes(rare.params).size >= 4, "a rare template rolled fewer than four affixes: ${rare.params}")
         val fractured = api.hero.applyOrb(id, rare.id, orb(CurrencyOrb.FRACTURING_ORB)).item.params.single { it.fractured }
-        val rerolled = api.hero.applyOrb(id, rare.id, orb(CurrencyOrb.CHAOS_ORB)).item.params
+        val rerolledItem = api.hero.applyOrb(id, rare.id, orb(CurrencyOrb.CHAOS_ORB)).item
+        assertFloor(rerolledItem, "HELMET", definitions)
+        val rerolled = rerolledItem.params
         assertTrue(fractured in rerolled, "a Chaos Orb moved a fractured affix")
 
         // An influence needs a free place. A rare rolls four to six affixes since server 0.53.0, so a place
@@ -227,10 +245,13 @@ class ServerIntegrationTest {
     }
 
     /** The merchant's shelf and the map services (0.34.0): the server's rolls, prices and refusals. */
-    private suspend fun merchantIsTheServers(api: GameApi, id: String) {
+    private suspend fun merchantIsTheServers(api: GameApi, id: String, definitions: List<com.sperance.exileforge.core.model.modifier.ModifierDefinition>) {
         val stock = api.merchant.stock(id)
         assertTrue(stock.offers.size in 12..16, "the merchant laid out ${stock.offers.size} items")
         assertTrue(stock.offers.all { it.price > 0 && it.item.rarity in setOf("COMMON", "UNCOMMON", "RARE") })
+        // Server 0.66.2: nothing magic or rare below its floor on the shelf.
+        val slots = api.catalog.equipment().associate { it.entityId to it.text("slot") }
+        stock.offers.forEach { assertFloor(it.item, slots[it.item.equipmentId], definitions) }
         assertEquals(stock, api.merchant.stock(id), "the shelf changed before its window ended")
         val first = api.campaign.chapters().chapters.first().maps.first()
         val chests = api.campaign.chests(id, first.code)
@@ -494,8 +515,8 @@ class ServerIntegrationTest {
             assertEquals(rerolled.item.params, api.hero.inventory(id).single { it.id == instance.id }.params)
             craftingIsTheServers(api, id, template.entityId, definitions)
             handsAreTheServers(api, id)
-            campaignIsTheServers(api, id)
-            merchantIsTheServers(api, id)
+            campaignIsTheServers(api, id, definitions)
+            merchantIsTheServers(api, id, definitions)
 
             val items = api.catalog.referencePage(com.sperance.exileforge.core.model.EntitySource.ITEM, 0)
             val item = items.items.firstOrNull() ?: fail("the items collection is empty: $items")

@@ -104,7 +104,7 @@ import kotlin.math.floor
                 else Ending(ui("expedition.map_done"), ui("expedition.map_done_hint"), Vital, hud) { vm.runCommand(RunCommand.Continue) }
             RunPhase.GATE -> VaalGate(s, hud, run.map.corrupted?.code, onEnter = vm::enterVaal, onRefuse = vm::refuseVaal) { vm.runCommand(RunCommand.StepBack) }
             RunPhase.CRYSTAL -> hud.crystal?.let { CrystalSheet(s, it, onCommand = vm::runCommand) }
-            RunPhase.ABYSS -> hud.abyss?.let { AbyssSheet(s, it, onCommand = vm::runCommand) }
+            RunPhase.ABYSS -> hud.abyss?.let { AbyssSheet(s, hud, it, onCommand = vm::runCommand) }
             RunPhase.LEFT -> Unit
         }
         // A refusal of the gear (2.40.0) has to be read here too: the run has no bar and no banner.
@@ -149,7 +149,7 @@ import kotlin.math.floor
  * The belt on the map (2.78.0): a draught on the road brings its life or mana back at once, and a
  * utility flask's lines run as the hero walks. A flask is filled to its charges and ringed while it runs.
  */
-@Composable private fun MapFlasks(flasks: List<FlaskView?>, onDrink: (Int) -> Unit) {
+@Composable internal fun MapFlasks(flasks: List<FlaskView?>, onDrink: (Int) -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
         flasks.forEach { view ->
             if (view == null) return@forEach
@@ -327,7 +327,7 @@ private const val MINIMAP_MIN = 10f
 private const val MINIMAP_MAX = 60f
 
 /** A life bar with the shield laid over it, and the figure in words; the mana under it since 2.78.0. */
-@Composable private fun Vitals(life: Int, maxLife: Int, shield: Int, maxShield: Int, modifier: Modifier = Modifier, mana: Int = 0, maxMana: Int = 0) {
+@Composable internal fun Vitals(life: Int, maxLife: Int, shield: Int, maxShield: Int, modifier: Modifier = Modifier, mana: Int = 0, maxMana: Int = 0) {
     val shape = RoundedCornerShape(3.dp)
     val lifeShare by animateFloatAsState(if (maxLife > 0) life / maxLife.toFloat() else 0f, label = "life")
     Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {

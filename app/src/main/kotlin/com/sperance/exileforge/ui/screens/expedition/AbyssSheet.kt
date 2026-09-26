@@ -16,6 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.campaign.AbyssView
 import com.sperance.exileforge.core.campaign.RunCommand
+import com.sperance.exileforge.core.campaign.RunHud
 import com.sperance.exileforge.core.campaign.monsterTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
@@ -33,9 +34,10 @@ import com.sperance.exileforge.ui.theme.*
  * A crack of the Abyss (2.82.0, server 0.72.0): before the descent — how deep it leads, the first wave and
  * the hoard at its bottom; between depths — the hoard as it stands, the wave below and its leader, and the
  * choice: take the hoard and leave, or go deeper, where a fall burns it all but the atlas's share; after —
- * what the hoard brought.
+ * what the hoard brought. Between depths the hero's life, shield and mana are laid out, and the belt is
+ * at hand: what is left of them is what the next wave meets.
  */
-@Composable internal fun AbyssSheet(s: ForgeState, view: AbyssView, onCommand: (RunCommand) -> Unit) {
+@Composable internal fun AbyssSheet(s: ForgeState, hud: RunHud, view: AbyssView, onCommand: (RunCommand) -> Unit) {
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Ink.copy(alpha = .85f), Ink))), contentAlignment = Alignment.BottomCenter) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(12.dp).glow(AbyssGlow, radius = 14.dp, shape = RoundedCornerShape(12.dp))
             .background(Panel.copy(alpha = .97f), RoundedCornerShape(12.dp)).border(1.dp, AbyssGlow.copy(alpha = .7f), RoundedCornerShape(12.dp))
@@ -47,6 +49,11 @@ import com.sperance.exileforge.ui.theme.*
                     color = Parchment, style = MaterialTheme.typography.labelMedium)
             }
             val hoard = view.hoard
+            // Between depths (2.82.0): the hero as the last wave left them, and a draught before the next.
+            if (view.open && hoard == null && !view.fallen) {
+                Vitals(hud.heroLife, hud.heroMaxLife, hud.heroShield, hud.heroMaxShield, Modifier.fillMaxWidth(), hud.heroMana, hud.heroMaxMana)
+                if (hud.flasks.any { it != null }) MapFlasks(hud.flasks) { onCommand(RunCommand.Drink(it)) }
+            }
             when {
                 hoard != null -> {
                     Text(ui(if (view.fallen) "abyss.fallen" else "abyss.taken"), color = if (view.fallen) LifeRed else GoldBright,

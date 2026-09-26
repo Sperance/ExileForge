@@ -22,7 +22,6 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.semantics.Role
@@ -160,7 +159,7 @@ private fun eta(millis: Long): String {
                 Text(jobTitle(work.job), color = GoldBright, style = MaterialTheme.typography.titleMedium)
                 Text(ui("crafts.work_line", professionTitle(work.profession), number(work.cycleMillis / 1000.0)), color = Rune, style = MaterialTheme.typography.labelMedium)
             }
-            OutlinedButton(enabled = !s.busy, onClick = vm::stopWork) { Text(ui("crafts.stop")) }
+            ForgeOutlinedButton(enabled = !s.busy, onClick = vm::stopWork) { Text(ui("crafts.stop")) }
         }
         CycleBar(work.settledAt, work.cycleMillis, offset, caption = false)
         WorkTotals(s, work.startedAt, work.totals + s.play.craftsPending, offset)
@@ -301,7 +300,7 @@ private fun duration(millis: Long): String {
 /** A square stood on its corner, as the tree's nodes are, holding a drawing upright. */
 @Composable private fun Medallion(frame: Color, content: @Composable () -> Unit) {
     Box(Modifier.padding(6.dp).size(40.dp).rotate(45f)
-        .background(Brush.radialGradient(listOf(PanelRaised, Ink)), CutCornerShape(2.dp)).border(1.dp, frame, CutCornerShape(2.dp)),
+        .background(Brush.radialGradient(listOf(PanelRaised, Ink)), RoundedCornerShape(2.dp)).border(1.dp, frame, RoundedCornerShape(2.dp)),
         contentAlignment = Alignment.Center) { Box(Modifier.rotate(-45f)) { content() } }
 }
 
@@ -344,7 +343,7 @@ private fun share(profession: ProfessionView): Float = profession.next?.takeIf {
                 val tool = profession.equipped
                 if (tool == null) Text(ui("crafts.no_tool"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
                 else ItemRow(inventoryDocument(tool, s.world.inventoryBases[tool.equipmentId]), definitions = s.world.definitions, enabled = !s.busy, price = s.sellPrice(tool)) { picking = true }
-                OutlinedButton(enabled = !s.busy, onClick = { picking = true }, modifier = Modifier.fillMaxWidth()) { Text(ui("crafts.change_tool")) }
+                ForgeOutlinedButton(enabled = !s.busy, onClick = { picking = true }, modifier = Modifier.fillMaxWidth()) { Text(ui("crafts.change_tool")) }
                 BonusChips(profession)
             }
         }
@@ -453,10 +452,10 @@ private fun share(profession: ProfessionView): Float = profession.next?.takeIf {
             when {
                 job.level > profession.level -> Text(ui("crafts.needs_level", job.level), color = LifeRed, style = MaterialTheme.typography.bodyMedium)
                 !job.open -> Text(ui("crafts.locked_map"), color = LifeRed, style = MaterialTheme.typography.bodyMedium)
-                current -> OutlinedButton(enabled = !s.busy, onClick = { onDismiss(); vm.stopWork() }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text(ui("crafts.stop")) }
+                current -> ForgeOutlinedButton(enabled = !s.busy, onClick = { onDismiss(); vm.stopWork() }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text(ui("crafts.stop")) }
                 // A cycle the bag cannot feed is not started (2.46.0): the chips above say what is short.
                 job.inputs.any { bagCount(s, it.item) < it.amount } -> Text(ui("crafts.short_inputs"), color = LifeRed, style = MaterialTheme.typography.bodyMedium)
-                else -> Button(enabled = !s.busy, onClick = { onDismiss(); vm.startWork(job.code, additives) }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text(ui("crafts.start")) }
+                else -> ForgeButton(enabled = !s.busy, onClick = { onDismiss(); vm.startWork(job.code, additives) }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text(ui("crafts.start")) }
             }
             if (profession.equipped == null && job.level <= profession.level) Text(ui("crafts.no_tool"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
         }

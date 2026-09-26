@@ -30,7 +30,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -174,7 +173,7 @@ private fun Modifier.tauntAura(shape: Shape, time: Float) = drawBehind {
     Canvas(Modifier.fillMaxSize().semantics { contentDescription = ui("fight.lone_wolf_title") }) {
         val w = size.width
         val h = size.height
-        drawCircle(Brush.radialGradient(listOf(Color(0xFF2A2416), Color(0xFF0B0D11)), center, w / 2), w / 2, center)
+        drawCircle(Brush.radialGradient(listOf(PanelRaised, Color(0xFF0B0D11)), center, w / 2), w / 2, center)
         drawCircle(Bronze, w / 2 - 1.dp.toPx(), center, style = Stroke(1.5.dp.toPx()))
         val head = Path().apply {
             moveTo(w * .24f, h * .22f); lineTo(w * .38f, h * .38f); lineTo(w * .62f, h * .38f); lineTo(w * .76f, h * .22f)
@@ -371,7 +370,7 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
             translationY = -acting * 10.dp.toPx()
             translationX = if (hit) sin(time * 60f) * 2.dp.toPx() else 0f
         }
-        .background(if (acting > 0f) Color(0xFF2A2416) else Panel.copy(alpha = .94f), shape)
+        .background(if (acting > 0f) PanelRaised else Panel.copy(alpha = .94f), shape)
         .then(if (fight.heroTaunt && acting == 0f && !hit) Modifier.tauntAura(shape, time) else Modifier)
         .border(if (acting > 0f || hit) 2.dp else 1.dp, when { acting > 0f -> GoldBright; hit -> LifeRed; else -> Gold.copy(alpha = .6f) }, shape)
         .padding(8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -487,25 +486,25 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
     val live = fight.outcome == null
     if (!fight.started) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = { onCommand(RunCommand.Begin) }, modifier = Modifier.weight(1f).height(52.dp),
+            ForgeButton(onClick = { onCommand(RunCommand.Begin) }, modifier = Modifier.weight(1f).height(52.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Blood, contentColor = GoldBright)) {
                 Icon(ForgeGlyphs.Swords, null, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(ui("expedition.begin"), style = MaterialTheme.typography.titleMedium)
             }
-            OutlinedButton(onClick = { onCommand(RunCommand.Retreat) }, modifier = Modifier.height(52.dp)) { Text(ui("fight.walk_away")) }
+            ForgeOutlinedButton(onClick = { onCommand(RunCommand.Retreat) }, modifier = Modifier.height(52.dp)) { Text(ui("fight.walk_away")) }
         }
         return
     }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedButton(enabled = live && !fight.retreating, onClick = { onCommand(if (fight.paused) RunCommand.Begin else RunCommand.Pause) },
+        ForgeOutlinedButton(enabled = live && !fight.retreating, onClick = { onCommand(if (fight.paused) RunCommand.Begin else RunCommand.Pause) },
             modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 8.dp)) {
             Text(ui(if (fight.paused) "fight.resume" else "fight.pause"), style = MaterialTheme.typography.labelMedium)
         }
-        OutlinedButton(onClick = { onCommand(RunCommand.Speed) }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 8.dp)) {
+        ForgeOutlinedButton(onClick = { onCommand(RunCommand.Speed) }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 8.dp)) {
             Text(ui("expedition.speed", fight.speed), style = MaterialTheme.typography.labelMedium)
         }
-        OutlinedButton(enabled = live && !fight.retreating, onClick = { onCommand(RunCommand.Retreat) }, modifier = Modifier.weight(1f),
+        ForgeOutlinedButton(enabled = live && !fight.retreating, onClick = { onCommand(RunCommand.Retreat) }, modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(horizontal = 8.dp)) {
             Text(ui(if (fight.retreating) "expedition.retreating" else "expedition.retreat"), style = MaterialTheme.typography.labelMedium)
         }
@@ -529,7 +528,7 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
 
 /** A life bar with the shield laid over its top edge and the figures written across it. */
 @Composable private fun LifeBar(life: Int, maxLife: Int, shield: Int, maxShield: Int, modifier: Modifier, compact: Boolean = false, barrier: Int = 0) {
-    val shape = CutCornerShape(3.dp)
+    val shape = RoundedCornerShape(3.dp)
     val share by animateFloatAsState(if (maxLife > 0) life / maxLife.toFloat() else 0f, label = "life")
     // A barrier (2.78.0) rings the bar in gold-white while it soaks.
     Box(modifier.background(Color(0xCC0A0D12), shape).border(if (barrier > 0) 2.dp else 1.dp, if (barrier > 0) GoldBright else Gold.copy(alpha = .7f), shape)) {
@@ -542,7 +541,7 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
 
 /** Mana (2.78.0) under life: what the skills are paid with, and what the auras leave of it. */
 @Composable private fun ManaBar(mana: Int, maxMana: Int, modifier: Modifier) {
-    val shape = CutCornerShape(2.dp)
+    val shape = RoundedCornerShape(2.dp)
     val share by animateFloatAsState(if (maxMana > 0) mana / maxMana.toFloat() else 0f, label = "mana")
     Box(modifier.background(Color(0xCC0A0D12), shape).border(1.dp, ManaBlue.copy(alpha = .8f), shape)) {
         Box(Modifier.fillMaxWidth(share.coerceIn(0f, 1f)).fillMaxHeight().background(Brush.horizontalGradient(listOf(ManaBlue, ManaBlue.copy(alpha = .5f))), shape))
@@ -573,8 +572,9 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
 @Composable private fun SkillButton(view: SkillView, live: Boolean, modifier: Modifier, onTap: () -> Unit) {
     val shape = RoundedCornerShape(8.dp)
     val ready = view.ready >= 1f
-    Box(modifier.height(52.dp).clip(shape).background(PanelRaised, shape)
-        .border(if (ready && view.affordable) 2.dp else 1.dp, if (ready && view.affordable) Gold else Bronze, shape)
+    // A skill that can go now glows (2.80.0, «Эфир»): the light is the readiness.
+    Box(modifier.height(52.dp).glow(Gold, on = ready && view.affordable, radius = 10.dp, shape = shape).clip(shape).background(PanelRaised, shape)
+        .border(if (ready && view.affordable) 1.5.dp else 1.dp, if (ready && view.affordable) Gold else Bronze, shape)
         .clickable(enabled = live && ready && view.affordable, onClick = onTap)
         .semantics { contentDescription = SkillText.title(view.code) }) {
         SkillGlyph(view.icon, Modifier.size(26.dp).align(Alignment.Center), if (view.affordable) GoldBright else Muted)
@@ -591,7 +591,8 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
 
 @Composable private fun FlaskButton(view: FlaskView, live: Boolean, onTap: () -> Unit) {
     val tint = flaskTint(view.kind)
-    Box(Modifier.size(44.dp).clip(CircleShape).background(Color(0xE60A0D12)).border(if (view.active > 0f) 2.dp else 1.dp, if (view.active > 0f) GoldBright else Bronze, CircleShape)
+    Box(Modifier.size(44.dp).glow(tint, on = view.active > 0f, radius = 10.dp, shape = CircleShape).clip(CircleShape).background(Color(0xE60A0D12))
+        .border(if (view.active > 0f) 2.dp else 1.dp, if (view.active > 0f) GoldBright else Bronze, CircleShape)
         .clickable(enabled = live && view.usable, onClick = onTap), contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
             val fill = if (view.maxCharges > 0) view.charges / view.maxCharges.toFloat() else 0f

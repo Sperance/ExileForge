@@ -161,7 +161,7 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
      * The server sets the price and pays it; the card showed the same sum beforehand (2.46.0), by
      * the merchant's own rule, and the hero is re-read because the item is gone and the gold moved.
      */
-    fun sellForGold(inventoryId: String) { with(runtime) { characterCommand { id -> api.hero.sellForGold(id, inventoryId) } } }
+    fun sellForGold(inventoryId: String) { with(runtime) { characterCommand { id -> toast(ui("toast.sold", api.hero.sellForGold(id, inventoryId).gold)) } } }
 
     /**
      * Every character command answers with the hero as the server has it now (server 0.48.0), so

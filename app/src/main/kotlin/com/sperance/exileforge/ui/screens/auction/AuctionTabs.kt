@@ -75,9 +75,9 @@ import kotlinx.serialization.json.put
         }
         if (s.market.showcase.totalPages > 1) item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                OutlinedButton(enabled = !s.busy && s.market.showcase.page > 0, onClick = { onPage(s.market.showcase.page - 1) }) { Text(ui("common.back")) }
+                ForgeOutlinedButton(enabled = !s.busy && s.market.showcase.page > 0, onClick = { onPage(s.market.showcase.page - 1) }) { Text(ui("common.back")) }
                 Text(ui("auction.page", s.market.showcase.page + 1, s.market.showcase.totalPages), color = Muted)
-                OutlinedButton(enabled = !s.busy && s.market.showcase.page + 1 < s.market.showcase.totalPages, onClick = { onPage(s.market.showcase.page + 1) }) { Text(ui("auction.forward")) }
+                ForgeOutlinedButton(enabled = !s.busy && s.market.showcase.page + 1 < s.market.showcase.totalPages, onClick = { onPage(s.market.showcase.page + 1) }) { Text(ui("auction.forward")) }
             }
         }
     }
@@ -135,7 +135,7 @@ import kotlinx.serialization.json.put
             OutlinedTextField(f.title, { vm.auctionFilter(f.copy(title = it)) }, placeholder = { Text(ui("auction.name")) },
                 leadingIcon = { Icon(Icons.Outlined.Search, null) }, singleLine = true, modifier = Modifier.weight(1f),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { vm.loadShowcase(0) }))
-            OutlinedButton(onClick = { sheet = true }, enabled = !s.busy, contentPadding = PaddingValues(horizontal = 12.dp)) {
+            ForgeOutlinedButton(onClick = { sheet = true }, enabled = !s.busy, contentPadding = PaddingValues(horizontal = 12.dp)) {
                 Icon(Icons.Outlined.FilterList, ui("auction.filters"), modifier = Modifier.size(18.dp))
                 if (count > 0) { Spacer(Modifier.width(6.dp)); Text(count.toString()) }
             }
@@ -207,8 +207,8 @@ private fun chipLabel(s: ForgeState, field: FilterField, value: String): String 
             }
             MutedText(ui("auction.filter_note"))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { draft = draft.cleared(); mine = false }, modifier = Modifier.weight(1f)) { Text(ui("auction.reset")) }
-                Button(enabled = !s.busy, onClick = { onApply(draft, mine) }, modifier = Modifier.weight(1f)) { Text(ui("auction.apply")) }
+                ForgeOutlinedButton(onClick = { draft = draft.cleared(); mine = false }, modifier = Modifier.weight(1f)) { Text(ui("auction.reset")) }
+                ForgeButton(enabled = !s.busy, onClick = { onApply(draft, mine) }, modifier = Modifier.weight(1f)) { Text(ui("auction.apply")) }
             }
         }
     }
@@ -225,7 +225,7 @@ private fun chipLabel(s: ForgeState, field: FilterField, value: String): String 
                 ForgePanel {
                     PropertyRow(ui("auction.slots"), ui("auction.slots_value", slots.used, slots.limit, slots.max), Glyph.ITEM)
                     if (slots.full) Text(ui("auction.slots_full"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
-                    if (slots.price > 0) OutlinedButton(enabled = !s.busy, onClick = { buyingSlot = true }, modifier = Modifier.fillMaxWidth()) {
+                    if (slots.price > 0) ForgeOutlinedButton(enabled = !s.busy, onClick = { buyingSlot = true }, modifier = Modifier.fillMaxWidth()) {
                         Text(ui("auction.slot_buy", slots.price))
                     }
                 }
@@ -373,7 +373,7 @@ private fun lotDocument(s: ForgeState, lot: AuctionLot): JsonObject {
                     PropertyRow(ui("auction.seller"), lot.sellerName.ifBlank { "…${lot.sellerId.takeLast(6)}" }, Glyph.CHARACTER)
                     listedAt(lot.createdAt)?.let { PropertyRow(ui("auction.listed_at"), it, Glyph.LEVEL) }
                     note?.let { MutedText(it, style = MaterialTheme.typography.labelMedium) }
-                    Button(enabled = enabled, onClick = onAction, modifier = Modifier.fillMaxWidth()) { Text(action) }
+                    ForgeButton(enabled = enabled, onClick = onAction, modifier = Modifier.fillMaxWidth()) { Text(action) }
                     MutedText(ui("auction.lot_note"))
                 }
             }

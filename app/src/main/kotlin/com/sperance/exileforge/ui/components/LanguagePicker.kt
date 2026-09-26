@@ -4,7 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CutCornerShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -35,8 +35,8 @@ import com.sperance.exileforge.ui.theme.*
             val active = option == current
             val accent = if (active) Gold else Bronze
             Row(Modifier.fillMaxWidth()
-                .border(1.dp, accent.copy(alpha = if (active) .55f else .25f), CutCornerShape(8.dp))
-                .background(if (active) Gold.copy(alpha = .12f) else Color.Transparent, CutCornerShape(8.dp))
+                .border(1.dp, accent.copy(alpha = if (active) .55f else .25f), RoundedCornerShape(8.dp))
+                .background(if (active) Gold.copy(alpha = .12f) else Color.Transparent, RoundedCornerShape(8.dp))
                 .clickable(enabled = enabled && !active) { onLanguage(option) }
                 .padding(horizontal = 12.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {

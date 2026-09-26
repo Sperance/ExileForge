@@ -26,6 +26,10 @@ import kotlinx.serialization.json.JsonObject
 
 enum class AppMode { PLAYER, ADMIN }
 
+/** What a toast says had happened (2.80.0): its kind picks the colour, [at] tells two equal texts apart. */
+enum class NoticeKind { DONE, LOOT, CRAFT }
+data class Notice(val text: String, val kind: NoticeKind = NoticeKind.DONE, val at: Long = System.nanoTime())
+
 /**
  * Which of the three screens the app is on, above the tabs.
  *
@@ -55,7 +59,7 @@ data class ForgeState(
      * once could spend the same orb twice. [loading] names the reads in flight: they run beside a
      * command and beside each other, and only say that something is on its way.
      */
-    val busy: Boolean = true, val loading: Set<String> = emptySet(), val message: String? = null, val error: Boolean = false,
+    val busy: Boolean = true, val loading: Set<String> = emptySet(), val message: String? = null, val error: Boolean = false, val notice: Notice? = null,
     val tab: Int = 3,
     val account: AccountState = AccountState(),
     val world: WorldState = WorldState(),

@@ -42,7 +42,7 @@ import com.sperance.exileforge.ui.theme.*
                 singleLine = true, keyboardOptions = digits, modifier = Modifier.fillMaxWidth())
             MutedText(ui("sell.price_note"))
             MutedText(ui("sell.note"))
-            Button(enabled = !s.busy && orb.isNotBlank() && cost > 0 && count > 0, onClick = { onList(orb, cost, count) }, modifier = Modifier.fillMaxWidth()) {
+            ForgeButton(enabled = !s.busy && orb.isNotBlank() && cost > 0 && count > 0, onClick = { onList(orb, cost, count) }, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("sell.list"))
             }
         }

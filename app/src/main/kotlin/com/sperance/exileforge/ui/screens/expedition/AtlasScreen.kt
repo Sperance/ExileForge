@@ -95,7 +95,7 @@ private fun AtlasBranch.hue(): Color = when (this) {
                 state?.let { Text(ui("atlas.points", it.available, it.points), color = Sky.text, style = MaterialTheme.typography.labelMedium) }
             }
             val spent = (state?.allocated?.size ?: 1) - 1
-            OutlinedButton(onClick = { resetting = true }, enabled = spent > 0 && !s.busy) { Text(ui("atlas.reset"), color = Sky.text) }
+            ForgeOutlinedButton(onClick = { resetting = true }, enabled = spent > 0 && !s.busy) { Text(ui("atlas.reset"), color = Sky.text) }
         }
         if (resetting && tree != null && state != null) {
             val cost = tree.respec.perNode(s.play.hero?.sheet?.level ?: 1) * (state.allocated.size - 1)
@@ -104,7 +104,7 @@ private fun AtlasBranch.hue(): Color = when (this) {
                 ledger = listOf(LedgerLine(ui("atlas.reset_cost"), ui("atlas.gold", cost), Tone.SPEND), LedgerLine(ui("atlas.reset_back"), (state.allocated.size - 1).toString(), Tone.GAIN)),
                 blocked = money < cost, warning = if (money < cost) ui("atlas.no_gold") else null) { resetting = false; vm.resetAtlas() }
         }
-        RefusalLine(s.refusal, vm::dismissMessage, Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 64.dp))
+        ToastHost(s, vm::dismissMessage, vm::dismissNotice, Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 64.dp))
     }
 }
 
@@ -230,9 +230,9 @@ private fun DrawScope.star(node: AtlasNode, at: Offset, taken: Boolean, open: Bo
                 else -> ui("atlas.far_hint")
             }, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
             when {
-                canTake -> Button(onClick = onTake, enabled = enabled && available > 0,
+                canTake -> ForgeButton(onClick = onTake, enabled = enabled && available > 0,
                     colors = ButtonDefaults.buttonColors(containerColor = Sky.take, contentColor = Color.White)) { Text(ui("atlas.take")) }
-                canRefund -> OutlinedButton(onClick = onRefund, enabled = enabled) { Text(ui("atlas.refund"), color = Sky.text) }
+                canRefund -> ForgeOutlinedButton(onClick = onRefund, enabled = enabled) { Text(ui("atlas.refund"), color = Sky.text) }
             }
         }
     }

@@ -151,11 +151,11 @@ data class LedgerLine(val label: String, val value: String, val tone: Tone = Ton
     }
     val tint = if (enabled) accent else Muted.copy(alpha = .45f)
     val ribbon = icon != null || figure != null
-    val shape = if (ribbon) androidx.compose.foundation.shape.RoundedCornerShape(10.dp) else androidx.compose.ui.graphics.RectangleShape
-    Box(modifier.fillMaxWidth().height(52.dp).clip(shape)
-        .background(if (ribbon) Brush.verticalGradient(listOf(tint.copy(alpha = .18f), Abyss)) else Brush.linearGradient(listOf(Abyss, Abyss)))
-        .border(if (ribbon) 1.5.dp else 1.dp, if (ribbon) Brush.horizontalGradient(listOf(tint, GoldBright.copy(alpha = if (enabled) .8f else .2f), tint))
-            else Brush.linearGradient(listOf(tint, tint)), shape)
+    // «Эфир» (2.80.0): one rounded shape for both kinds, lower, and a halo while it can be held.
+    val shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp)
+    Box(modifier.fillMaxWidth().height(44.dp).glow(accent, on = enabled, radius = 8.dp, shape = shape).clip(shape)
+        .background(Brush.verticalGradient(listOf(tint.copy(alpha = if (ribbon) .16f else .10f), Panel)))
+        .border(1.dp, Brush.horizontalGradient(listOf(tint.copy(alpha = .5f), tint, tint.copy(alpha = .5f))), shape)
         .drawBehind {
             drawRect(Brush.horizontalGradient(listOf(accent.copy(alpha = .55f), accent.copy(alpha = .25f))),
                 size = Size(size.width * progress.value, size.height))
@@ -178,7 +178,7 @@ data class LedgerLine(val label: String, val value: String, val tone: Tone = Ton
         },
         contentAlignment = Alignment.Center) {
         val ink = if (!enabled) Muted else if (accent == LifeRed) Parchment else GoldBright
-        if (!ribbon) Text(label.uppercase(), color = ink, style = MaterialTheme.typography.labelLarge, textAlign = TextAlign.Center,
+        if (!ribbon) Text(label, color = ink, style = MaterialTheme.typography.labelLarge, textAlign = TextAlign.Center,
             modifier = Modifier.padding(horizontal = 12.dp))
         else Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)) {

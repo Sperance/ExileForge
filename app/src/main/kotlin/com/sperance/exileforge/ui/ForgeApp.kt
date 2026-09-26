@@ -5,7 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CutCornerShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -28,7 +28,7 @@ import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.*
 import com.sperance.exileforge.ui.components.LocalEntityPageLoader
 import com.sperance.exileforge.ui.components.OrnateDivider
-import com.sperance.exileforge.ui.components.RefusalLine
+import com.sperance.exileforge.ui.components.ToastHost
 import com.sperance.exileforge.ui.components.voidBackdrop
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import androidx.compose.ui.text.style.TextOverflow
@@ -50,6 +50,7 @@ import com.sperance.exileforge.ui.screens.server.ServerScreen
 import com.sperance.exileforge.ui.screens.skills.GrimoireScreen
 import com.sperance.exileforge.ui.screens.tree.SkillTreeScreen
 import com.sperance.exileforge.ui.theme.*
+import com.sperance.exileforge.ui.components.ForgeTextButton
 
 @Composable fun ForgeApp(vm: ForgeViewModel) {
     val s by vm.state.collectAsStateWithLifecycle()
@@ -78,13 +79,13 @@ import com.sperance.exileforge.ui.theme.*
     if (confirmDelete) AlertDialog(onDismissRequest = { confirmDelete = false }, containerColor = Panel, titleContentColor = Gold,
         title = { Text(ui("common.delete_record_q")) },
         text = { Text("${s.admin.original?.let(::documentTitle)}\n${s.admin.original?.entityId}\n" + ui("common.delete_record_text")) },
-        confirmButton = { TextButton(enabled = !s.busy, onClick = { confirmDelete = false; vm.delete() }) { Text(ui("common.delete"), color = MaterialTheme.colorScheme.error) } },
-        dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(ui("common.cancel")) } })
+        confirmButton = { ForgeTextButton(enabled = !s.busy, onClick = { confirmDelete = false; vm.delete() }) { Text(ui("common.delete"), color = MaterialTheme.colorScheme.error) } },
+        dismissButton = { ForgeTextButton(onClick = { confirmDelete = false }) { Text(ui("common.cancel")) } })
     if (confirmDiscard) AlertDialog(onDismissRequest = { confirmDiscard = false }, containerColor = Panel, titleContentColor = Gold,
         title = { Text(ui("editor.close_q")) },
         text = { Text(ui("editor.close_text")) },
-        confirmButton = { TextButton(onClick = { confirmDiscard = false; vm.closeEditor() }) { Text(ui("common.close")) } },
-        dismissButton = { TextButton(onClick = { confirmDiscard = false }) { Text(ui("editor.keep_editing")) } })
+        confirmButton = { ForgeTextButton(onClick = { confirmDiscard = false; vm.closeEditor() }) { Text(ui("common.close")) } },
+        dismissButton = { ForgeTextButton(onClick = { confirmDiscard = false }) { Text(ui("editor.keep_editing")) } })
     }
     }
 }
@@ -96,7 +97,7 @@ import com.sperance.exileforge.ui.theme.*
         containerColor = Ink,
         bottomBar = {
             NavigationBar(containerColor = Abyss, tonalElevation = 0.dp,
-                modifier = Modifier.drawBehind { drawLine(Gold.copy(alpha = .35f), Offset(0f, 0f), Offset(size.width, 0f), 2f) }) {
+                modifier = Modifier.drawBehind { drawLine(Brush.horizontalGradient(listOf(Color.Transparent, Gold.copy(alpha = .4f), Color.Transparent)), Offset(0f, 0f), Offset(size.width, 0f), 1f) }) {
                 // Five destinations are the game; an administrator gets exactly one more, and
                 // everything that used to crowd the bar lives behind it as a button.
                 val labels = mapOf(TAB_HERO to ui("nav.hero"), TAB_EXPEDITION to ui("nav.expedition"), TAB_CRAFTS to ui("nav.crafts"),
@@ -116,12 +117,12 @@ import com.sperance.exileforge.ui.theme.*
             }
         }
     ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).imePadding().voidBackdrop()) {
+        Box(Modifier.fillMaxSize().padding(padding).imePadding()) {
+        Column(Modifier.fillMaxSize().voidBackdrop()) {
             // The craft under way is read with the game, so the banner's plaque knows it from the start.
             LaunchedEffect(s.play.characterId) { if (s.play.characterId.isNotBlank()) vm.loadCrafts(silent = true) }
             ForgeBanner(s, vm)
             if (s.busy || s.reading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised) else OrnateDivider(Gold)
-            RefusalLine(s.refusal, vm::dismissMessage)
             when (s.tab) {
                 TAB_CATALOG -> CatalogScreen(s, vm)
                 TAB_EDITOR -> EditorScreen(s, vm, onDelete = onDeleteRequest, onClose = onDiscardRequest)
@@ -140,6 +141,9 @@ import com.sperance.exileforge.ui.theme.*
                 TAB_CRAFT -> CraftScreen(s, vm)
                 TAB_REDEMPTION -> RedemptionScreen(s, vm)
             }
+        }
+        // The toasts float over the screen, under the banner (2.80.0).
+        ToastHost(s, vm::dismissMessage, vm::dismissNotice, Modifier.align(Alignment.TopCenter).padding(top = 60.dp))
         }
     }
 }
@@ -160,7 +164,7 @@ import com.sperance.exileforge.ui.theme.*
 @Composable private fun ForgeBanner(s: ForgeState, vm: ForgeViewModel) {
     Row(Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Gold.copy(alpha = .10f), Color.Transparent, Gold.copy(alpha = .06f))))
         .padding(horizontal = 18.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(40.dp).border(1.dp, Gold.copy(alpha = .5f), CutCornerShape(9.dp)), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(40.dp).border(1.dp, Gold.copy(alpha = .5f), RoundedCornerShape(9.dp)), contentAlignment = Alignment.Center) {
             Icon(ForgeGlyphs.Sigil, null, tint = Gold, modifier = Modifier.size(24.dp))
         }
         Spacer(Modifier.width(12.dp))

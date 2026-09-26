@@ -6,7 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CutCornerShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -26,6 +26,7 @@ import com.sperance.exileforge.ui.components.OrnateDivider
 import com.sperance.exileforge.ui.components.voidBackdrop
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
+import com.sperance.exileforge.ui.components.ForgeButton
 
 /**
  * The way in, and the first screen the app ever shows.
@@ -43,7 +44,7 @@ import com.sperance.exileforge.ui.theme.*
             verticalArrangement = Arrangement.spacedBy(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { LanguageCorner(s.lang, s.world.languages, vm::language) }
             Spacer(Modifier.height(8.dp))
-            Box(Modifier.size(84.dp).border(1.dp, Gold.copy(alpha = .5f), CutCornerShape(18.dp)), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(84.dp).border(1.dp, Gold.copy(alpha = .5f), RoundedCornerShape(18.dp)), contentAlignment = Alignment.Center) {
                 Icon(ForgeGlyphs.Sigil, null, tint = Gold, modifier = Modifier.size(48.dp))
             }
             Text("EXILE FORGE", style = MaterialTheme.typography.headlineMedium, color = GoldBright)
@@ -52,10 +53,10 @@ import com.sperance.exileforge.ui.theme.*
 
             if (s.account.resumable) {
                 InfoCard(ui("auth.offline_title"), ui("auth.offline_note"), failure = true)
-                Button(enabled = !s.busy, onClick = vm::retryResume, modifier = Modifier.fillMaxWidth()) { Text(ui("auth.retry")) }
+                ForgeButton(enabled = !s.busy, onClick = vm::retryResume, modifier = Modifier.fillMaxWidth()) { Text(ui("auth.retry")) }
             }
 
-            Button(enabled = !s.busy, onClick = vm::playOnThisDevice, modifier = Modifier.fillMaxWidth().height(56.dp)) {
+            ForgeButton(enabled = !s.busy, onClick = vm::playOnThisDevice, modifier = Modifier.fillMaxWidth().height(56.dp)) {
                 Icon(ForgeGlyphs.Portal, null, Modifier.size(20.dp)); Spacer(Modifier.width(10.dp))
                 Text(ui("auth.play"), style = MaterialTheme.typography.titleMedium)
             }
@@ -87,7 +88,7 @@ import com.sperance.exileforge.ui.theme.*
                 singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(password, { password = it }, enabled = !s.busy, label = { Text(ui("account.password")) },
                 singleLine = true, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
-            Button(enabled = !s.busy && login.isNotBlank() && password.isNotEmpty(),
+            ForgeButton(enabled = !s.busy && login.isNotBlank() && password.isNotEmpty(),
                 onClick = { vm.login(login, password); password = "" }, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("account.sign_in"))
             }
@@ -116,7 +117,7 @@ import com.sperance.exileforge.ui.theme.*
                 label = { Text(ui("account.server_address")) },
                 supportingText = { Text(ui("account.address_hint")) },
                 singleLine = true, modifier = Modifier.fillMaxWidth())
-            Button(enabled = !s.busy, onClick = vm::connect, modifier = Modifier.fillMaxWidth()) {
+            ForgeButton(enabled = !s.busy, onClick = vm::connect, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("account.save_connect"))
             }
             MutedText(s.account.health)
@@ -128,7 +129,7 @@ import com.sperance.exileforge.ui.theme.*
 
 /** The language switch, which on this screen has no banner to live in. */
 @Composable private fun LanguageCorner(lang: Lang, offered: List<Lang>, onLanguage: (Lang) -> Unit) {
-    Row(Modifier.border(1.dp, Gold.copy(alpha = .35f), CutCornerShape(6.dp)), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.border(1.dp, Gold.copy(alpha = .35f), RoundedCornerShape(6.dp)), verticalAlignment = Alignment.CenterVertically) {
         offered.forEach { option ->
             val active = option == lang
             Text(option.short, color = if (active) Ink else Muted, style = MaterialTheme.typography.labelSmall,

@@ -14,6 +14,8 @@ import com.sperance.exileforge.ui.components.Spinner
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.Rune
 import kotlinx.serialization.json.*
+import com.sperance.exileforge.ui.components.ForgeOutlinedButton
+import com.sperance.exileforge.ui.components.ForgeTextButton
 
 @Composable internal fun FormInput(label: String, spec: InputSpec, value: JsonElement, enabled: Boolean, onChange: (JsonElement) -> Unit) {
     when (spec) {
@@ -31,7 +33,7 @@ import kotlinx.serialization.json.*
             var expanded by remember { mutableStateOf(false) }
             OutlinedCard(border = BorderStroke(1.dp, Rune.copy(alpha = .3f)), modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(onClick = { expanded = !expanded }) { Text("$label · ${summary(value)} ${if (expanded) "▴" else "▾"}") }
+                    ForgeTextButton(onClick = { expanded = !expanded }) { Text("$label · ${summary(value)} ${if (expanded) "▴" else "▾"}") }
                     if (expanded) ObjectForm(spec.schema, value as? JsonObject ?: defaultObject(spec.schema), enabled, onChange = onChange)
                 }
             }
@@ -42,15 +44,15 @@ import kotlinx.serialization.json.*
             var expanded by remember { mutableStateOf(false) }
             OutlinedCard(border = BorderStroke(1.dp, Gold.copy(alpha = .3f)), modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(onClick = { expanded = !expanded }) { Text("$label (${values.size}) ${if (expanded) "▴" else "▾"}") }
+                    ForgeTextButton(onClick = { expanded = !expanded }) { Text("$label (${values.size}) ${if (expanded) "▴" else "▾"}") }
                     if (expanded) {
                         values.forEachIndexed { index, element ->
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 FormInput("${index + 1}", spec.element, element, enabled) { replacement -> onChange(JsonArray(values.toMutableList().apply { set(index, replacement) })) }
-                                TextButton(enabled = enabled, onClick = { onChange(JsonArray(values.filterIndexed { i, _ -> i != index })) }) { Text(ui("form.remove", index + 1)) }
+                                ForgeTextButton(enabled = enabled, onClick = { onChange(JsonArray(values.filterIndexed { i, _ -> i != index })) }) { Text(ui("form.remove", index + 1)) }
                             }
                         }
-                        OutlinedButton(enabled = enabled, onClick = { onChange(JsonArray(values + inputDefault(spec.element))) }) { Text(ui("form.add")) }
+                        ForgeOutlinedButton(enabled = enabled, onClick = { onChange(JsonArray(values + inputDefault(spec.element))) }) { Text(ui("form.add")) }
                     }
                 }
             }
@@ -65,7 +67,7 @@ import kotlinx.serialization.json.*
     fun write(lines: List<Pair<String, JsonElement>>) = onChange(JsonObject(lines.toMap(LinkedHashMap())))
     OutlinedCard(border = BorderStroke(1.dp, Gold.copy(alpha = .3f)), modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(onClick = { expanded = !expanded }) { Text("$label (${entries.size}) ${if (expanded) "▴" else "▾"}") }
+            ForgeTextButton(onClick = { expanded = !expanded }) { Text("$label (${entries.size}) ${if (expanded) "▴" else "▾"}") }
             if (expanded) {
                 entries.forEachIndexed { index, (tag, weight) ->
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -76,10 +78,10 @@ import kotlinx.serialization.json.*
                         NumberInput(ui("form.pool_weight"), InputSpec.Number(integer = true, min = 0.0), weight, enabled) { changed ->
                             write(entries.mapIndexed { i, (k, v) -> if (i == index) k to changed else k to v })
                         }
-                        TextButton(enabled = enabled, onClick = { write(entries.filterIndexed { i, _ -> i != index }.map { it.key to it.value }) }) { Text(ui("form.remove", index + 1)) }
+                        ForgeTextButton(enabled = enabled, onClick = { write(entries.filterIndexed { i, _ -> i != index }.map { it.key to it.value }) }) { Text(ui("form.remove", index + 1)) }
                     }
                 }
-                OutlinedButton(enabled = enabled && "" !in pools, onClick = { write(entries.map { it.key to it.value } + ("" to JsonPrimitive(DEFAULT_POOL_WEIGHT))) }) { Text(ui("form.add")) }
+                ForgeOutlinedButton(enabled = enabled && "" !in pools, onClick = { write(entries.map { it.key to it.value } + ("" to JsonPrimitive(DEFAULT_POOL_WEIGHT))) }) { Text(ui("form.add")) }
             }
         }
     }

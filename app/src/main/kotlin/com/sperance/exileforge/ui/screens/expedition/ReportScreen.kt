@@ -62,7 +62,7 @@ import java.util.Locale
             }
         }
         FightFigures(report, logOpen) { logOpen = !logOpen }
-        Button(enabled = !hud.rewardPending && !hud.fallPending, onClick = onContinue, modifier = Modifier.fillMaxWidth().height(50.dp),
+        ForgeButton(enabled = !hud.rewardPending && !hud.fallPending, onClick = onContinue, modifier = Modifier.fillMaxWidth().height(50.dp),
             colors = ButtonDefaults.buttonColors(containerColor = if (won) Gold else LifeRed, contentColor = if (won) Ink else Parchment)) {
             Text(ui(if (won) "expedition.continue" else "expedition.back_to_camp"), style = MaterialTheme.typography.titleMedium)
         }

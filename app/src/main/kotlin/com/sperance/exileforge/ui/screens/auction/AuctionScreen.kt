@@ -36,7 +36,7 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
         }
         s.market.locked?.let { locked ->
             InfoCard(ui("auction.closed"), locked, failure = true)
-            OutlinedButton(enabled = !s.busy, onClick = vm::loadAuction, modifier = Modifier.fillMaxWidth()) {
+            ForgeOutlinedButton(enabled = !s.busy, onClick = vm::loadAuction, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("auction.check_again"))
             }
             Text(ui("auction.closed_note"),

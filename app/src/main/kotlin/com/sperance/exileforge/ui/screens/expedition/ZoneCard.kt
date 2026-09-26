@@ -10,7 +10,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -104,7 +103,7 @@ private fun stashMaps(s: ForgeState): List<StashMap> = s.play.hero?.inventory.or
             zone.boss?.let { Guardian(s, vm, zone, it, launch, world.view.services) }
             AtlasKeys(s.play.atlasProgress?.earned.orEmpty(), zone.code)
             Maps(s, vm, zone, launch, world.view.maps)
-            Button(enabled = s.play.hero != null && !s.busy, onClick = { vm.startRun(zone.code) }, shape = CutCornerShape(10.dp),
+            ForgeButton(enabled = s.play.hero != null && !s.busy, onClick = { vm.startRun(zone.code) }, shape = RoundedCornerShape(10.dp),
                 modifier = Modifier.fillMaxWidth().height(52.dp)) {
                 Icon(ForgeGlyphs.Portal, null, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(10.dp))

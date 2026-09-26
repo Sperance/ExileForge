@@ -9,7 +9,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.border
-import androidx.compose.foundation.shape.CutCornerShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material3.*
@@ -45,12 +45,14 @@ import com.sperance.exileforge.ui.theme.*
     var pendingDelete by remember { mutableStateOf<CharacterSummary?>(null) }
     LaunchedEffect(creating) { if (creating) vm.ensureClasses() }
     Scaffold(containerColor = Ink) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).imePadding().voidBackdrop()) {
+        Box(Modifier.fillMaxSize().padding(padding).imePadding()) {
+        Column(Modifier.fillMaxSize().voidBackdrop()) {
             if (s.busy || s.reading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised) else OrnateDivider(Gold)
-            RefusalLine(s.refusal, vm::dismissMessage)
             if (creating) CreatingColumn(s, vm, onBack = { creating = false }, onSignOut = vm::logout)
             else CharacterMenu(s, onPlay = vm::enterCharacter, onDelete = { pendingDelete = it },
                 onCreate = { creating = true }, onRefresh = vm::refreshCharacters, onLogout = vm::logout)
+        }
+        ToastHost(s, vm::dismissMessage, vm::dismissNotice, Modifier.align(Alignment.TopCenter).padding(top = 12.dp))
         }
     }
     pendingDelete?.let { doomed ->
@@ -84,7 +86,7 @@ import com.sperance.exileforge.ui.theme.*
             CharacterCard(s, character, onPlay = { onPlay(character.id) }, onDelete = { onDelete(character) })
         }
         item {
-            Button(enabled = !s.busy && s.characterSlotsLeft > 0, onClick = onCreate, modifier = Modifier.fillMaxWidth()) {
+            ForgeButton(enabled = !s.busy && s.characterSlotsLeft > 0, onClick = onCreate, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("editor.create_character"))
             }
             if (s.characterSlotsLeft == 0) MutedText(ui("chars.slots_full"))
@@ -92,7 +94,7 @@ import com.sperance.exileforge.ui.theme.*
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(s.accountTitle, color = Muted, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
-                TextButton(enabled = !s.busy, onClick = onLogout) { Text(ui("chars.sign_out")) }
+                ForgeTextButton(enabled = !s.busy, onClick = onLogout) { Text(ui("chars.sign_out")) }
             }
         }
     }
@@ -120,8 +122,8 @@ import com.sperance.exileforge.ui.theme.*
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(enabled = !s.busy, onClick = onPlay, modifier = Modifier.weight(1f)) { Text(ui("auth.play")) }
-            OutlinedButton(enabled = !s.busy, onClick = onDelete) { Text(ui("chars.release_do"), color = MaterialTheme.colorScheme.error) }
+            ForgeButton(enabled = !s.busy, onClick = onPlay, modifier = Modifier.weight(1f)) { Text(ui("auth.play")) }
+            ForgeOutlinedButton(enabled = !s.busy, onClick = onDelete) { Text(ui("chars.release_do"), color = MaterialTheme.colorScheme.error) }
         }
     }
 }
@@ -147,7 +149,7 @@ import com.sperance.exileforge.ui.theme.*
         else LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             items(s.world.classes, key = { it.id }) { option ->
                 val picked = option.id == classId
-                val shape = CutCornerShape(8.dp)
+                val shape = RoundedCornerShape(8.dp)
                 Column(Modifier.width(96.dp).border(if (picked) 2.dp else 1.dp, if (picked) GoldBright else Bronze.copy(alpha = .5f), shape)
                     .clip(shape).clickable(enabled = !s.busy) { classId = option.id }, horizontalAlignment = Alignment.CenterHorizontally) {
                     ClassPortrait(option.code, s.world.portraits, Modifier.fillMaxWidth())
@@ -162,18 +164,18 @@ import com.sperance.exileforge.ui.theme.*
                 "${statTitle(it.stat, s.lang)} ${statNumber(it.stat, it.value)}" },
                 color = Muted, style = MaterialTheme.typography.bodySmall)
         }
-        Button(enabled = !s.busy && name.isNotBlank() && classId.isNotBlank(),
+        ForgeButton(enabled = !s.busy && name.isNotBlank() && classId.isNotBlank(),
             onClick = { vm.createCharacter(name, classId) }, modifier = Modifier.fillMaxWidth()) {
             Text(ui("chars.create"))
         }
         MutedText(ui("chars.class_note"))
-        if (canGoBack) TextButton(enabled = !s.busy, onClick = onBack, modifier = Modifier.fillMaxWidth()) {
+        if (canGoBack) ForgeTextButton(enabled = !s.busy, onClick = onBack, modifier = Modifier.fillMaxWidth()) {
             Text(ui("chars.back"))
         }
         // An account with no characters has no list to go back to, and a device registration is
         // silent — so without this the first screen a new player sees is also the only one, with
         // no way to sign in as someone who already has an exile.
-        TextButton(enabled = !s.busy, onClick = onSignOut, modifier = Modifier.fillMaxWidth()) {
+        ForgeTextButton(enabled = !s.busy, onClick = onSignOut, modifier = Modifier.fillMaxWidth()) {
             Text(ui("chars.other_account"))
         }
     }

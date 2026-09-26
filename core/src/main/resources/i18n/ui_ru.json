@@ -1759,5 +1759,9 @@
   "enum.stat.POWER_STORMCALL": "Призыв бури",
   "enum.stat.POWER_FALLEN_GRACE": "Павшая благодать",
   "enum.stat.POWER_DIVINE_FALL": "Падение божества",
-  "enum.stat.POWER_GODS_BOUNTY": "Дар бога"
+  "enum.stat.POWER_GODS_BOUNTY": "Дар бога",
+  "toast.listed": "Выставлено на аукцион: {0}",
+  "toast.bought": "Куплено: {0}",
+  "toast.withdrawn": "Снято с аукциона: {0}",
+  "toast.sold": "Продано торговцу за {0} золота"
 }

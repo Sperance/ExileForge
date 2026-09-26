@@ -26,6 +26,8 @@ import com.sperance.exileforge.ui.components.RaritySpine
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.spriteVector
 import com.sperance.exileforge.ui.theme.*
+import com.sperance.exileforge.ui.components.ForgeButton
+import com.sperance.exileforge.ui.components.ForgeOutlinedButton
 
 /** The catalogue's plain stacks of the bag: materials, and since 2.78.0 the skill books and the essences. */
 private fun stacks(s: ForgeState) = s.world.materials + s.world.books + s.world.essences
@@ -168,16 +170,16 @@ private fun stackCode(s: ForgeState, itemId: String): String? =
                 }
                 bagDetails(s, stack.itemId)?.takeIf { it.isNotBlank() }?.let { Text(it, color = Parchment, style = MaterialTheme.typography.bodyMedium) }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (forgeable) Button(enabled = !s.busy, onClick = { onForge(stack.itemId) }, modifier = Modifier.weight(1f)) {
+                    if (forgeable) ForgeButton(enabled = !s.busy, onClick = { onForge(stack.itemId) }, modifier = Modifier.weight(1f)) {
                         Text(ui("bag.to_forge"))
                     }
-                    if (essence) Button(enabled = !s.busy, onClick = { onEssence(stack.itemId) }, modifier = Modifier.weight(1f)) {
+                    if (essence) ForgeButton(enabled = !s.busy, onClick = { onEssence(stack.itemId) }, modifier = Modifier.weight(1f)) {
                         Text(ui("bag.to_forge"))
                     }
-                    if (readable && skill != null) Button(enabled = !s.busy, onClick = { onRead(skill.code) }, modifier = Modifier.weight(1f)) {
+                    if (readable && skill != null) ForgeButton(enabled = !s.busy, onClick = { onRead(skill.code) }, modifier = Modifier.weight(1f)) {
                         Text(ui(if ((s.play.hero?.character?.skills?.level(skill.code) ?: 0) > 0) "bag.read_book" else "bag.learn_book"))
                     }
-                    OutlinedButton(enabled = !s.busy, onClick = { onAuction(stack.itemId) }, modifier = Modifier.weight(1f)) {
+                    ForgeOutlinedButton(enabled = !s.busy, onClick = { onAuction(stack.itemId) }, modifier = Modifier.weight(1f)) {
                         Text(ui("hero.action_auction"))
                     }
                 }

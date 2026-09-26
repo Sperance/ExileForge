@@ -38,14 +38,14 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
                 OutlinedTextField(s.admin.query, vm::query, label = { Text(ui("common.search_catalog")) },
                     leadingIcon = { Icon(Icons.Outlined.Search, null) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                 if (s.admin.catalog == Catalog.EQUIPMENT) CatalogFilters(s, vm)
-                Button(enabled = !s.busy && s.account.signedIn, onClick = vm::applyFilters, modifier = Modifier.fillMaxWidth()) { Text(ui("common.find")) }
+                ForgeButton(enabled = !s.busy && s.account.signedIn, onClick = vm::applyFilters, modifier = Modifier.fillMaxWidth()) { Text(ui("common.find")) }
                 EntitySpinner(ui("catalog.open_record"), "", when (s.admin.catalog) {
                     Catalog.CHARACTERS -> EntitySource.CHARACTER
                     Catalog.EQUIPMENT -> EntitySource.EQUIPMENT
                     Catalog.ITEMS -> EntitySource.ITEM
                     Catalog.POOLS -> EntitySource.POOL
                 }, !s.busy && !s.admin.editorOpen && s.account.signedIn, vm::open)
-                Button(enabled = !s.busy && !s.admin.editorOpen && s.canEdit, onClick = { vm.create() }, modifier = Modifier.fillMaxWidth()) {
+                ForgeButton(enabled = !s.busy && !s.admin.editorOpen && s.canEdit, onClick = { vm.create() }, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Outlined.Add, null); Text(ui("common.create"))
                 }
             }
@@ -57,8 +57,8 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
         }
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                OutlinedButton(enabled = !s.busy && s.admin.page > 0, onClick = { vm.refresh(s.admin.page - 1) }) { Text(ui("common.back")) }
-                OutlinedButton(enabled = !s.busy && s.admin.page + 1 < s.admin.totalPages, onClick = { vm.refresh(s.admin.page + 1) }) { Text(ui("common.next")) }
+                ForgeOutlinedButton(enabled = !s.busy && s.admin.page > 0, onClick = { vm.refresh(s.admin.page - 1) }) { Text(ui("common.back")) }
+                ForgeOutlinedButton(enabled = !s.busy && s.admin.page + 1 < s.admin.totalPages, onClick = { vm.refresh(s.admin.page + 1) }) { Text(ui("common.next")) }
             }
         }
     }

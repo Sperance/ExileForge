@@ -22,6 +22,8 @@ import com.sperance.exileforge.core.network.RequestJournal
 import com.sperance.exileforge.data.settings.deviceLanguage
 import com.sperance.exileforge.data.settings.ServerStore
 import com.sperance.exileforge.presentation.features.*
+import com.sperance.exileforge.presentation.state.Notice
+import com.sperance.exileforge.presentation.state.NoticeKind
 import com.sperance.exileforge.presentation.state.AppMode
 import com.sperance.exileforge.presentation.state.AppPhase
 import com.sperance.exileforge.presentation.state.ADMIN_TABS
@@ -298,6 +300,9 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
         return state.value.world.inventoryBases[id]
     }
     fun dismissMessage() { mutable.update { it.copy(message = null, error = false) } }
+    /** A success worth a toast (2.80.0): it replaces the one showing and leaves by itself. */
+    fun toast(text: String, kind: NoticeKind = NoticeKind.DONE) { mutable.update { it.copy(notice = Notice(text, kind)) } }
+    fun dismissNotice() { mutable.update { it.copy(notice = null) } }
 
     /**
      * A command: one at a time, and the only thing that disables controls.

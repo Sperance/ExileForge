@@ -39,7 +39,7 @@ val LocalEntityPageLoader = staticCompositionLocalOf<suspend (EntitySource, Int,
         ?: documentTitle(record).takeIf(String::isNotBlank) ?: ui("common.record")
     // A modifier is referenced by its code since server 0.56.0, everything else by its id.
     val selected = records.firstOrNull { source.reference(it) == value }
-    OutlinedButton(enabled = enabled, onClick = { records = emptyList(); page = 0; totalPages = 1; query = ""; expanded = true }, modifier = Modifier.fillMaxWidth()) {
+    ForgeOutlinedButton(enabled = enabled, onClick = { records = emptyList(); page = 0; totalPages = 1; query = ""; expanded = true }, modifier = Modifier.fillMaxWidth()) {
         Text("$label: ${selected?.let(::title) ?: if(value.isBlank()) ui("common.choose") else ui("common.chosen") + " · ${value.takeLast(6)}"} ▾")
     }
     LaunchedEffect(expanded, page, retry, source, query) {
@@ -60,14 +60,14 @@ val LocalEntityPageLoader = staticCompositionLocalOf<suspend (EntitySource, Int,
         failure?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         LazyColumn(Modifier.fillMaxWidth().heightIn(max = 320.dp)) {
             items(records, key = { it.entityId }) { record ->
-                TextButton(enabled = enabled, onClick = { onChange(source.reference(record)); expanded = false }, modifier = Modifier.fillMaxWidth()) {
+                ForgeTextButton(enabled = enabled, onClick = { onChange(source.reference(record)); expanded = false }, modifier = Modifier.fillMaxWidth()) {
                     ItemIcon(record, Gold, Modifier.size(44.dp))
                     Text("${title(record)} · ${record.entityId.takeLast(6)}", modifier = Modifier.weight(1f).padding(start = 12.dp))
                 }
             }
         }
         if(!loading && failure == null && records.isEmpty()) Text(ui("common.no_records"))
-        if(failure != null) TextButton(onClick = { retry++ }, enabled = !loading) { Text(ui("common.retry")) }
-        else if(page + 1 < totalPages) TextButton(onClick = { loading = true; page++ }, enabled = !loading) { Text(ui("common.load_more")) }
+        if(failure != null) ForgeTextButton(onClick = { retry++ }, enabled = !loading) { Text(ui("common.retry")) }
+        else if(page + 1 < totalPages) ForgeTextButton(onClick = { loading = true; page++ }, enabled = !loading) { Text(ui("common.load_more")) }
     }
 }

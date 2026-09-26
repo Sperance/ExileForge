@@ -3,7 +3,7 @@ package com.sperance.exileforge.ui.icons
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CutCornerShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -20,7 +20,7 @@ import com.sperance.exileforge.core.i18n.ui
 /** Original vector emblems, bundled and available offline for every item category. */
 @Composable fun ItemEmblem(kind: ItemVisualKind, tint: Color, modifier: Modifier = Modifier) {
     val description = ui("common.icon") + ": ${kind.name}"
-    Canvas(modifier.size(72.dp).clip(CutCornerShape(10.dp))
+    Canvas(modifier.size(72.dp).clip(RoundedCornerShape(10.dp))
         .background(Brush.radialGradient(listOf(tint.copy(alpha = .20f), Color(0xFF0C1015)), radius = 120f))
         .semantics { contentDescription = description }) {
         scale(size.width / 80f, size.height / 80f, pivot = Offset.Zero) {

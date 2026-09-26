@@ -27,7 +27,7 @@ import com.sperance.exileforge.ui.theme.Muted
     optionArt: (@Composable (key: String, size: Dp) -> Unit)? = null, onChange: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     var search by remember { mutableStateOf("") }
-    OutlinedButton(onClick = { search = ""; expanded = true }, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
+    ForgeOutlinedButton(onClick = { search = ""; expanded = true }, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
         if (optionArt != null && value.isNotBlank()) optionArt(value, 24.dp) else Icon(glyph.vector, null, modifier = Modifier.size(20.dp), tint = Gold)
         Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
             Text(label.uppercase(), style = MaterialTheme.typography.labelSmall, color = Muted)
@@ -41,7 +41,7 @@ import com.sperance.exileforge.ui.theme.Muted
         if(filtered.isEmpty()) Text(ui("common.no_options"), color = Muted)
         LazyColumn(Modifier.fillMaxWidth().heightIn(max = 400.dp)) {
             items(filtered, key = { it.first }) { (key, title) ->
-                TextButton(enabled = enabled, onClick = { expanded = false; onChange(key) }, modifier = Modifier.fillMaxWidth()) {
+                ForgeTextButton(enabled = enabled, onClick = { expanded = false; onChange(key) }, modifier = Modifier.fillMaxWidth()) {
                     if (optionArt != null) optionArt(key, 26.dp)
                     else optionGlyph?.let { Icon(it(key).vector, null, tint = Gold, modifier = Modifier.size(22.dp)) }
                     Text(title, modifier = Modifier.weight(1f).padding(horizontal = 12.dp))
@@ -58,5 +58,5 @@ import com.sperance.exileforge.ui.theme.Muted
         titleContentColor = Gold, shape = MaterialTheme.shapes.medium,
         title = { Text(title.uppercase(), style = MaterialTheme.typography.titleMedium) },
         text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp), content = body) },
-        confirmButton = { TextButton(onClick = onDismiss) { Text(ui("common.close")) } })
+        confirmButton = { ForgeTextButton(onClick = onDismiss) { Text(ui("common.close")) } })
 }

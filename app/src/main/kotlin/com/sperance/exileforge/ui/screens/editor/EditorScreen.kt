@@ -38,7 +38,7 @@ import kotlinx.serialization.json.JsonPrimitive
             InfoCard(ui("editor.editor"), ui("editor.pick_note"))
             if (s.adminTools) CatalogSwitch(s, vm)
             ForgePanel {
-                if (s.admin.catalog != Catalog.EQUIPMENT) Button(enabled = !s.busy && s.canEdit, onClick = { vm.create() }, modifier = Modifier.fillMaxWidth()) {
+                if (s.admin.catalog != Catalog.EQUIPMENT) ForgeButton(enabled = !s.busy && s.canEdit, onClick = { vm.create() }, modifier = Modifier.fillMaxWidth()) {
                     Text(when (s.admin.catalog) {
                         Catalog.CHARACTERS -> ui("editor.create_character")
                         Catalog.POOLS -> ui("editor.create_pool")
@@ -46,7 +46,7 @@ import kotlinx.serialization.json.JsonPrimitive
                     })
                 }
                 else EquipmentKind.entries.forEach { kind ->
-                    OutlinedButton(enabled = !s.busy && s.canEdit, onClick = { vm.create(kind) }, modifier = Modifier.fillMaxWidth()) {
+                    ForgeOutlinedButton(enabled = !s.busy && s.canEdit, onClick = { vm.create(kind) }, modifier = Modifier.fillMaxWidth()) {
                         Text(when (kind) {
                             EquipmentKind.Weapon -> ui("editor.create_weapon")
                             EquipmentKind.Armor -> ui("editor.create_armour")
@@ -86,7 +86,7 @@ import kotlinx.serialization.json.JsonPrimitive
                 ForgePanel {
                     Engraved(ui("editor.modifiers"))
                     Text(ui("editor.definitions_loaded", s.world.definitions.size), color = Muted)
-                    OutlinedButton(enabled = !s.busy, onClick = vm::loadDefinitions) { Text(ui("editor.refresh_modifiers")) }
+                    ForgeOutlinedButton(enabled = !s.busy, onClick = vm::loadDefinitions) { Text(ui("editor.refresh_modifiers")) }
                     MutedText(ui("editor.pool_note"))
                 }
             }
@@ -95,9 +95,9 @@ import kotlinx.serialization.json.JsonPrimitive
                 val locked = if (s.admin.catalog == Catalog.CHARACTERS && !s.adminTools) setOf("professionSkills", "battleSkills", "boolSkills") else emptySet()
                 ObjectForm(formSchema(s.admin.catalog), s.admin.draft, !s.busy && s.canEdit, locked = locked, onChange = vm::edit)
             }
-            item { Button(enabled = !s.busy && s.canEdit, onClick = vm::save, modifier = Modifier.fillMaxWidth()) { Text(ui("editor.save")) } }
-            if (s.admin.original != null) item { OutlinedButton(enabled = !s.busy, onClick = vm::reloadEditor, modifier = Modifier.fillMaxWidth()) { Text(ui("editor.reread")) } }
-            if (s.admin.original != null && s.canEdit) item { TextButton(enabled = !s.busy, onClick = onDelete, modifier = Modifier.fillMaxWidth()) { Text(ui("common.delete"), color = MaterialTheme.colorScheme.error) } }
+            item { ForgeButton(enabled = !s.busy && s.canEdit, onClick = vm::save, modifier = Modifier.fillMaxWidth()) { Text(ui("editor.save")) } }
+            if (s.admin.original != null) item { ForgeOutlinedButton(enabled = !s.busy, onClick = vm::reloadEditor, modifier = Modifier.fillMaxWidth()) { Text(ui("editor.reread")) } }
+            if (s.admin.original != null && s.canEdit) item { ForgeTextButton(enabled = !s.busy, onClick = onDelete, modifier = Modifier.fillMaxWidth()) { Text(ui("common.delete"), color = MaterialTheme.colorScheme.error) } }
         }
     }
 }

@@ -9,7 +9,6 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -108,7 +107,7 @@ import kotlin.math.floor
             RunPhase.LEFT -> Unit
         }
         // A refusal of the gear (2.40.0) has to be read here too: the run has no bar and no banner.
-        RefusalLine(s.refusal, vm::dismissMessage, Modifier.align(Alignment.TopCenter).statusBarsPadding())
+        ToastHost(s, vm::dismissMessage, vm::dismissNotice, Modifier.align(Alignment.TopCenter).statusBarsPadding())
     }
 }
 
@@ -326,7 +325,7 @@ private const val MINIMAP_MAX = 60f
 
 /** A life bar with the shield laid over it, and the figure in words; the mana under it since 2.78.0. */
 @Composable private fun Vitals(life: Int, maxLife: Int, shield: Int, maxShield: Int, modifier: Modifier = Modifier, mana: Int = 0, maxMana: Int = 0) {
-    val shape = CutCornerShape(3.dp)
+    val shape = RoundedCornerShape(3.dp)
     val lifeShare by animateFloatAsState(if (maxLife > 0) life / maxLife.toFloat() else 0f, label = "life")
     Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Box(Modifier.fillMaxWidth().height(12.dp).background(Color(0xCC0A0D12), shape).border(1.dp, LifeRed.copy(alpha = .8f), shape)) {
@@ -403,7 +402,7 @@ private const val MINIMAP_MAX = 60f
                 hud.chestFailed -> Text(ui("expedition.chest_failed"), color = LifeRed, style = MaterialTheme.typography.bodyMedium)
                 reward != null -> RewardLines(s, reward)
             }
-            OutlinedButton(enabled = !hud.chestPending, onClick = onClose, modifier = Modifier.fillMaxWidth()) { Text(ui("common.close")) }
+            ForgeOutlinedButton(enabled = !hud.chestPending, onClick = onClose, modifier = Modifier.fillMaxWidth()) { Text(ui("common.close")) }
         }
     }
 }
@@ -417,7 +416,7 @@ private const val MINIMAP_MAX = 60f
             Text(title, color = accent, style = MaterialTheme.typography.headlineSmall)
             Text(hint, color = Parchment, style = MaterialTheme.typography.bodyMedium)
             MutedText(ui("expedition.summary", hud.kills, hud.gold, number(hud.experience)))
-            Button(onClick = onDone, modifier = Modifier.fillMaxWidth()) { Text(done) }
+            ForgeButton(onClick = onDone, modifier = Modifier.fillMaxWidth()) { Text(done) }
         }
     }
 }

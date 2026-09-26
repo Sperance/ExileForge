@@ -108,8 +108,10 @@ import kotlinx.serialization.json.JsonObject
     val level = document.text("itemLevel")
     val slot = document.text("slot").takeIf { it.isNotBlank() }?.let(::slotTitle)
     val frame = RoundedCornerShape(6.dp)
-    Row(Modifier.fillMaxWidth().background(if (worn) Gold.copy(alpha = .12f).compositeOver(Panel) else Panel, RoundedCornerShape(8.dp))
-        .border(if (selected || worn) 2.dp else 1.dp, if (selected) GoldBright else if (worn) Gold else PanelRaised, RoundedCornerShape(8.dp))
+    val card = RoundedCornerShape(10.dp)
+    Row(Modifier.fillMaxWidth().glow(Gold, on = selected, radius = 10.dp, shape = card)
+        .background(if (worn) Gold.copy(alpha = .08f).compositeOver(Panel) else Panel, card)
+        .border(1.dp, if (selected) Gold else if (worn) Gold.copy(alpha = .5f) else Bronze, card)
         .clickable(enabled = enabled, onClick = onClick).padding(10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
             // The marker rides on the icon rather than in the text: the icon is where the eye starts.

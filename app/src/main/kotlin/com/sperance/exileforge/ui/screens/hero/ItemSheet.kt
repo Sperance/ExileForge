@@ -112,10 +112,10 @@ private enum class ItemAction { AUCTION, SELL, WORN }
         ItemAction.WORN -> AlertDialog(onDismissRequest = { open = null }, containerColor = Panel,
             title = { Text(ui("hero.worn_title"), color = Gold) },
             text = { Text(ui("hero.worn_note"), color = Parchment) },
-            confirmButton = { TextButton(enabled = can, onClick = {
+            confirmButton = { ForgeTextButton(enabled = can, onClick = {
                 open = null; if (instance.socketed) vm.unsocketJewel(instance.id) else vm.unequip(instance.id)
             }) { Text(ui("hero.unequip")) } },
-            dismissButton = { TextButton(onClick = { open = null }) { Text(ui("common.close")) } })
+            dismissButton = { ForgeTextButton(onClick = { open = null }) { Text(ui("common.close")) } })
         null -> Unit
     }
 }

@@ -88,7 +88,7 @@ private const val CARD_TOP = .48f
             Icon(ForgeGlyphs.Target, ui("expedition.frontier"), tint = GoldBright, modifier = Modifier.size(20.dp))
         }
         val free = s.play.atlasProgress?.available ?: 0
-        OutlinedButton(onClick = onAtlas, enabled = !s.busy, border = androidx.compose.foundation.BorderStroke(1.dp, Gold.copy(alpha = .4f)),
+        ForgeOutlinedButton(onClick = onAtlas, enabled = !s.busy,
             contentPadding = PaddingValues(start = 12.dp, end = if (free > 0) 8.dp else 12.dp), modifier = Modifier.height(38.dp)) {
             Icon(ForgeGlyphs.Constellation, null, tint = GoldBright, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(6.dp))

@@ -143,7 +143,7 @@ private fun rewardLine(reward: RedemptionReward): String {
         OutlinedTextField(amount, { amount = it }, label = { Text(ui("auction.amount")) }, singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
 
-        OutlinedButton(enabled = !s.busy && (!needsDocument || itemId.isNotBlank()) && amount.toDoubleOrNull() != null,
+        ForgeOutlinedButton(enabled = !s.busy && (!needsDocument || itemId.isNotBlank()) && amount.toDoubleOrNull() != null,
             modifier = Modifier.fillMaxWidth(),
             onClick = {
                 rewards = rewards + RedemptionReward(kind, itemId, amount.toDoubleOrNull() ?: 0.0)
@@ -162,7 +162,7 @@ private fun rewardLine(reward: RedemptionReward): String {
             }
         }
 
-        Button(enabled = !s.busy && code.isNotBlank() && rewards.isNotEmpty(), modifier = Modifier.fillMaxWidth(),
+        ForgeButton(enabled = !s.busy && code.isNotBlank() && rewards.isNotEmpty(), modifier = Modifier.fillMaxWidth(),
             onClick = {
                 vm.createRedemption(RedemptionCode(code = code.trim(),
                     description = description.takeIf { it.isNotBlank() }, treasure = rewards))

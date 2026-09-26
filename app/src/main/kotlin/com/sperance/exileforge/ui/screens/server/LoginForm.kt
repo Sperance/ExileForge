@@ -12,6 +12,9 @@ import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.Gold
 import kotlinx.serialization.json.*
+import com.sperance.exileforge.ui.components.ForgeButton
+import com.sperance.exileforge.ui.components.ForgeOutlinedButton
+import com.sperance.exileforge.ui.components.ForgeTextButton
 
 @Composable fun LoginForm(s: ForgeState, vm: ForgeViewModel) {
     var login by remember { mutableStateOf("") }
@@ -24,16 +27,16 @@ import kotlinx.serialization.json.*
         var change by remember { mutableStateOf(false) }
         var oldPassword by remember { mutableStateOf("") }
         var newPassword by remember { mutableStateOf("") }
-        TextButton(onClick = { change = !change; oldPassword = ""; newPassword = "" }) { Text(ui("account.change_password")) }
+        ForgeTextButton(onClick = { change = !change; oldPassword = ""; newPassword = "" }) { Text(ui("account.change_password")) }
         if(change) {
             OutlinedTextField(oldPassword, { oldPassword = it }, label = { Text(ui("account.current_password")) }, visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(newPassword, { newPassword = it }, label = { Text(ui("account.new_password")) }, visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth())
-            Button(enabled = !s.busy && oldPassword.isNotEmpty() && newPassword.isNotEmpty(), onClick = { vm.changePassword(oldPassword, newPassword); oldPassword = ""; newPassword = ""; change = false }) { Text(ui("account.do_change_password")) }
+            ForgeButton(enabled = !s.busy && oldPassword.isNotEmpty() && newPassword.isNotEmpty(), onClick = { vm.changePassword(oldPassword, newPassword); oldPassword = ""; newPassword = ""; change = false }) { Text(ui("account.do_change_password")) }
         }
-        OutlinedButton(enabled = !s.busy, onClick = vm::logout) { Text(ui("account.sign_out")) }
+        ForgeOutlinedButton(enabled = !s.busy, onClick = vm::logout) { Text(ui("account.sign_out")) }
     } else {
         OutlinedTextField(login, { login = it }, enabled = !s.busy, label = { Text(ui("account.login")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
         OutlinedTextField(password, { password = it }, enabled = !s.busy, label = { Text(ui("account.password")) }, singleLine = true, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
-        Button(enabled = !s.busy && login.isNotBlank() && password.isNotEmpty(), onClick = { vm.login(login, password); password = "" }, modifier = Modifier.fillMaxWidth()) { Text(ui("account.sign_in")) }
+        ForgeButton(enabled = !s.busy && login.isNotBlank() && password.isNotEmpty(), onClick = { vm.login(login, password); password = "" }, modifier = Modifier.fillMaxWidth()) { Text(ui("account.sign_in")) }
     }
 }

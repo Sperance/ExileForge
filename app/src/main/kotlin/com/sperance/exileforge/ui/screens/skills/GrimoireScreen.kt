@@ -275,7 +275,7 @@ private fun bookCount(s: ForgeState, code: String): Long =
                 Text(ui("skills.books_owned", owned), color = GoldBright, style = MaterialTheme.typography.titleSmall)
                 MutedText(ui("skills.exchange_hint", rule.books))
             }
-            OutlinedButton(enabled = owned >= rule.books && pages.isNotEmpty() && !s.busy, onClick = onExchange) { Text(ui("skills.exchange")) }
+            ForgeOutlinedButton(enabled = owned >= rule.books && pages.isNotEmpty() && !s.busy, onClick = onExchange) { Text(ui("skills.exchange")) }
         }
     }
 }
@@ -313,7 +313,7 @@ private fun bookCount(s: ForgeState, code: String): Long =
             }
             if (learned < Scale.MAX_LEVEL) {
                 Text(ui("skills.requires", next, needLine(s, skill, next)), color = if (unmet.isEmpty()) Parchment else LifeRed, style = MaterialTheme.typography.bodySmall)
-                if (books > 0) Button(enabled = unmet.isEmpty() && !s.busy, onClick = { onDismiss(); vm.learnSkill(skill.code) }, modifier = Modifier.fillMaxWidth(),
+                if (books > 0) ForgeButton(enabled = unmet.isEmpty() && !s.busy, onClick = { onDismiss(); vm.learnSkill(skill.code) }, modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = Blood, contentColor = GoldBright)) {
                     Text(ui(if (learned == 0) "skills.learn" else "skills.read", books))
                 }
@@ -356,7 +356,7 @@ private fun bookCount(s: ForgeState, code: String): Long =
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         (0 until open).forEach { index ->
             val here = index == standing
-            OutlinedButton(enabled = !s.busy, onClick = {
+            ForgeOutlinedButton(enabled = !s.busy, onClick = {
                 if (here) onEmpty(skill.kind, index) else { onDismiss(); onSlot(Pick.Slot(skill.kind, index)) }
             }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 6.dp)) {
                 Text(if (here) ui("skills.take_out") else ui("skills.to_slot", index + 1), style = MaterialTheme.typography.labelMedium, maxLines = 1)
@@ -386,7 +386,7 @@ private fun bookCount(s: ForgeState, code: String): Long =
                     Text(ui("skills.level_short", skills.level(skill.code)), color = Gold)
                 }
             }
-            TextButton(enabled = !s.busy, onClick = { onPick(null) }, modifier = Modifier.fillMaxWidth()) { Text(ui("skills.empty_it"), color = LifeRed) }
+            ForgeTextButton(enabled = !s.busy, onClick = { onPick(null) }, modifier = Modifier.fillMaxWidth()) { Text(ui("skills.empty_it"), color = LifeRed) }
         }
     }
 }
@@ -528,7 +528,7 @@ private fun worn(s: ForgeState, skills: HeroSkills): List<Pair<EquipmentInstance
             }
             val ready = chosen.size == rule.books && target != null && money >= price && !s.busy
             if (money < price) Text(ui("skills.exchange_gold", number(price.toDouble())), color = LifeRed, style = MaterialTheme.typography.bodySmall)
-            Button(enabled = ready, onClick = { target?.let { vm.exchangeBooks(chosen, it) }; onDismiss() }, modifier = Modifier.fillMaxWidth(),
+            ForgeButton(enabled = ready, onClick = { target?.let { vm.exchangeBooks(chosen, it) }; onDismiss() }, modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = Blood, contentColor = GoldBright)) { Text(ui("skills.exchange")) }
         }
     }

@@ -3,7 +3,6 @@ package com.sperance.exileforge.ui.screens.hero
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -64,7 +63,7 @@ private fun StatGroup.accent(): Color = when (this) {
 /** A group: a band of its colour, its name, and its figures two to a row. */
 @Composable private fun StatGroupCard(group: StatGroup, stats: List<Pair<String, Double>>, s: ForgeState, before: Map<String, Double>?) {
     val accent = group.accent()
-    val shape = CutCornerShape(topStart = 0.dp, topEnd = 0.dp, bottomStart = 8.dp, bottomEnd = 8.dp)
+    val shape = RoundedCornerShape(topStart = 0.dp, topEnd = 0.dp, bottomStart = 8.dp, bottomEnd = 8.dp)
     Column(Modifier.fillMaxWidth().clip(shape).background(Panel).border(1.dp, accent.copy(alpha = .3f), shape)) {
         Box(Modifier.fillMaxWidth().height(3.dp).background(accent))
         Column(Modifier.padding(horizontal = 8.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -112,7 +111,7 @@ private fun StatGroup.accent(): Color = when (this) {
 
 /** One vital: its name in its own colour over the figure the server sent. */
 @Composable private fun VitalTile(title: String, value: String, color: Color, modifier: Modifier = Modifier) {
-    val shape = CutCornerShape(6.dp)
+    val shape = RoundedCornerShape(6.dp)
     Column(modifier.background(Color.Black.copy(alpha = .22f), shape).border(1.dp, color.copy(alpha = .45f), shape)
         .padding(vertical = 6.dp, horizontal = 8.dp), horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(1.dp)) {

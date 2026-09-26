@@ -212,6 +212,6 @@ private const val TOOL_SLOT = "TOOL_"
                 singleLine = true, keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { onFind(text) }),
                 modifier = Modifier.fillMaxWidth().focusRequester(focus))
         },
-        confirmButton = { TextButton(onClick = { onFind(text) }) { Text(ui("hero.search_find")) } },
-        dismissButton = { TextButton(onClick = { onFind("") }) { Text(ui("hero.search_clear")) } })
+        confirmButton = { ForgeTextButton(onClick = { onFind(text) }) { Text(ui("hero.search_find")) } },
+        dismissButton = { ForgeTextButton(onClick = { onFind("") }) { Text(ui("hero.search_clear")) } })
 }

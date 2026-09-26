@@ -34,12 +34,12 @@ import kotlinx.serialization.json.*
         }
         item {
             ForgePanel {
-                Button(enabled = !s.busy && s.isAdmin && s.admin.catalog != Catalog.CHARACTERS, onClick = { confirmRun = true }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Outlined.PlayArrow, null); Text(ui("checks.run_check")) }
+                ForgeButton(enabled = !s.busy && s.isAdmin && s.admin.catalog != Catalog.CHARACTERS, onClick = { confirmRun = true }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Outlined.PlayArrow, null); Text(ui("checks.run_check")) }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(enabled = !s.busy, onClick = vm::count) { Text(ui("checks.check_count")) }
+                    ForgeTextButton(enabled = !s.busy, onClick = vm::count) { Text(ui("checks.check_count")) }
                     Text(ui("catalog.count", s.admin.total), color = Muted, style = MaterialTheme.typography.labelMedium,
                         modifier = Modifier.align(Alignment.CenterVertically))
-                    TextButton(onClick = vm::clearLogs) { Text(ui("checks.clear_journal")) }
+                    ForgeTextButton(onClick = vm::clearLogs) { Text(ui("checks.clear_journal")) }
                 }
             }
         }
@@ -56,6 +56,6 @@ import kotlinx.serialization.json.*
     if (confirmRun) AlertDialog(onDismissRequest = { confirmRun = false }, containerColor = MaterialTheme.colorScheme.surface, titleContentColor = Gold,
         title = { Text(ui("checks.run_q")) },
         text = { Text(ui("checks.run_text", s.account.server, s.admin.catalog.path)) },
-        confirmButton = { TextButton(onClick = { confirmRun = false; vm.runChecks() }) { Text(ui("checks.run_do")) } },
-        dismissButton = { TextButton(onClick = { confirmRun = false }) { Text(ui("common.cancel")) } })
+        confirmButton = { ForgeTextButton(onClick = { confirmRun = false; vm.runChecks() }) { Text(ui("checks.run_do")) } },
+        dismissButton = { ForgeTextButton(onClick = { confirmRun = false }) { Text(ui("common.cancel")) } })
 }

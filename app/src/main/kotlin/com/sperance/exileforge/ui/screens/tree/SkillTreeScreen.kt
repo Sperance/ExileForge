@@ -118,7 +118,7 @@ import kotlinx.serialization.json.putJsonArray
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(ui("tree.points", hero.tree.available, hero.tree.total),
                 color = Gold, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
-            TextButton(onClick = { detailsOpen = true }) { Text(ui("tree.details")) }
+            ForgeTextButton(onClick = { detailsOpen = true }) { Text(ui("tree.details")) }
         }
         // A tap opens a small window about that one node, so the map stays in sight; everything
         // about the tree as a whole lives behind "Подробно".
@@ -169,7 +169,7 @@ import kotlinx.serialization.json.putJsonArray
             }
             item { TreeSearch(s, onQuery) { code -> onSelect(code); detailsOpen = false; nodeOpen = true } }
             item {
-                OutlinedButton(enabled = enabled && hero.tree.nodes.size > 1, onClick = { detailsOpen = false; confirmReset = true },
+                ForgeOutlinedButton(enabled = enabled && hero.tree.nodes.size > 1, onClick = { detailsOpen = false; confirmReset = true },
                     modifier = Modifier.fillMaxWidth()) { Text(ui("tree.reset_all")) }
                 MutedText(ui("tree.reset_note"))
             }
@@ -194,7 +194,7 @@ import kotlinx.serialization.json.putJsonArray
             singleLine = true, modifier = Modifier.fillMaxWidth())
         if (s.play.nodeQuery.isNotBlank() && matches.isEmpty()) Text(ui("tree.nothing_found"), color = Muted)
         matches.forEach { node ->
-            TextButton(onClick = { onSelect(node.code) }, modifier = Modifier.fillMaxWidth()) {
+            ForgeTextButton(onClick = { onSelect(node.code) }, modifier = Modifier.fillMaxWidth()) {
                 Text("${node.title} · ${nodeTypeTitle(node.type.name, s.lang)}",
                     color = nodeColour(node, node.code == s.play.selectedNode))
             }
@@ -247,7 +247,7 @@ import kotlinx.serialization.json.putJsonArray
                     val other = byCode[code] ?: return@forEach
                     val both = node.code in taken && code in taken
                     val open = (node.code in taken && code in reachable) || (code in taken && node.code in reachable)
-                    drawLine(when { both -> Gold; open -> Color(0xFF6B5A3A); else -> Color(0xFF2B2E33) },
+                    drawLine(when { both -> Gold; open -> Gold.copy(alpha = .35f); else -> Bronze },
                         from, place(other, bounds, width, height, scale, pan), (if (both) 3f else 2f) * scale.coerceIn(.6f, 1.6f))
                 }
             }
@@ -256,7 +256,7 @@ import kotlinx.serialization.json.putJsonArray
         }
         Row(Modifier.align(Alignment.BottomStart).padding(8.dp), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            TextButton(onClick = { scale = 1f; pan = Offset.Zero }) { Text(ui("tree.reset_view")) }
+            ForgeTextButton(onClick = { scale = 1f; pan = Offset.Zero }) { Text(ui("tree.reset_view")) }
             MutedText(ui("tree.taken_reachable", taken.size, reachable.size), style = MaterialTheme.typography.labelMedium)
         }
     }
@@ -307,7 +307,7 @@ import kotlinx.serialization.json.putJsonArray
             if (rechoosable) {
                 val chaos = s.orbOf(CurrencyOrb.CHAOS_ORB)
                 val owned = chaos?.let { s.bagAmount(it.id) } ?: 0L
-                Button(enabled = enabled && picked != null && picked != chosen && owned > 0, onClick = { picked?.let { onRechoose(node.code, it) } },
+                ForgeButton(enabled = enabled && picked != null && picked != chosen && owned > 0, onClick = { picked?.let { onRechoose(node.code, it) } },
                     modifier = Modifier.fillMaxWidth()) {
                     com.sperance.exileforge.ui.icons.OrbGlyph(CurrencyOrb.CHAOS_ORB, Modifier.size(20.dp))
                     Spacer(Modifier.width(8.dp))
@@ -324,9 +324,9 @@ import kotlinx.serialization.json.putJsonArray
         }
 
         OrnateDivider()
-        if (allocated) OutlinedButton(enabled = enabled && node.type != SkillNodeType.START, onClick = { onRefund(node.code) }, modifier = Modifier.fillMaxWidth()) {
+        if (allocated) ForgeOutlinedButton(enabled = enabled && node.type != SkillNodeType.START, onClick = { onRefund(node.code) }, modifier = Modifier.fillMaxWidth()) {
             Text(ui("tree.refund"))
-        } else Button(enabled = enabled && (!choosing || picked != null), onClick = { onAllocate(node.code, picked) }, modifier = Modifier.fillMaxWidth()) {
+        } else ForgeButton(enabled = enabled && (!choosing || picked != null), onClick = { onAllocate(node.code, picked) }, modifier = Modifier.fillMaxWidth()) {
             Text(ui("tree.allocate"))
         }
         Text(when {
@@ -359,7 +359,7 @@ import kotlinx.serialization.json.putJsonArray
         ItemRow(document, definitions = s.world.definitions, enabled = false,
             note = if (allocated) ui("tree.socket_working") else ui("tree.socket_locked"),
             noteColor = if (allocated) Gold else LifeRed) { }
-        OutlinedButton(enabled = enabled, onClick = { onUnsocket(inside.id) }, modifier = Modifier.fillMaxWidth()) {
+        ForgeOutlinedButton(enabled = enabled, onClick = { onUnsocket(inside.id) }, modifier = Modifier.fillMaxWidth()) {
             Text(ui("tree.jewel_out"))
         }
         return
@@ -534,7 +534,7 @@ private fun DrawScope.wheel(nodes: List<SkillTreeNode>, bounds: Bounds, width: F
  */
 private fun DrawScope.medallion(node: SkillTreeNode, centre: Offset, scale: Float, taken: Boolean, next: Boolean, selected: Boolean) {
     val r = radius(node) * scale.coerceIn(.5f, 2.2f)
-    val edge = when { taken -> Gold; next -> Color(0xFF9A8250); else -> Color(0xFF3A3A3A) }
+    val edge = when { taken -> Gold; next -> Gold.copy(alpha = .55f); else -> Bronze }
     val width = (if (node.type == SkillNodeType.SMALL) 1.5f else 2.2f) * scale.coerceIn(.6f, 1.6f)
     if (taken && node.type != SkillNodeType.SMALL)
         drawCircle(Brush.radialGradient(listOf(nodeColour(node, true).copy(alpha = .35f), Color.Transparent), centre, r * 2.6f), r * 2.6f, centre)

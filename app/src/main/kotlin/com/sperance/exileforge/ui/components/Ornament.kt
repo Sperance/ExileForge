@@ -4,7 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CutCornerShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -14,21 +14,20 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.ui.theme.*
 
-/** Beaten-metal plate: lit top bevel, bronze frame, notched corners. */
+/** «Эфир» panel (2.80.0): a hairline frame, a soft lift at the top and a thread of light along the top edge. */
 @Composable fun ForgePanel(modifier: Modifier = Modifier, accent: Color = Gold, content: @Composable ColumnScope.() -> Unit) {
-    val shape = CutCornerShape(10.dp)
-    Column(modifier.fillMaxWidth().background(panelBrush(accent), shape).border(1.dp, accent.copy(alpha = .38f), shape)
+    val shape = RoundedCornerShape(12.dp)
+    Column(modifier.fillMaxWidth().background(panelBrush(accent), shape).border(1.dp, Bronze, shape)
         .drawBehind {
-            val inset = 5f
-            drawLine(accent.copy(alpha = .18f), Offset(inset, inset), Offset(size.width - inset, inset), 1f)
-            drawLine(accent.copy(alpha = .08f), Offset(inset, size.height - inset), Offset(size.width - inset, size.height - inset), 1f)
+            val edge = size.width * .18f
+            drawLine(Brush.horizontalGradient(listOf(Color.Transparent, accent.copy(alpha = .45f), Color.Transparent), edge, size.width - edge),
+                Offset(edge, .5f), Offset(size.width - edge, .5f), 1f)
         }
         .padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = content)
 }
@@ -38,7 +37,7 @@ import com.sperance.exileforge.ui.theme.*
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             icon?.let { Icon(it, null, tint = accent, modifier = Modifier.size(26.dp)) }
-            Text(title.uppercase(), style = MaterialTheme.typography.headlineLarge, color = accent)
+            Text(title, style = MaterialTheme.typography.headlineLarge, color = GoldBright)
         }
         subtitle?.let { MutedText(it, style = MaterialTheme.typography.labelMedium) }
         OrnateDivider(accent)
@@ -68,18 +67,14 @@ import com.sperance.exileforge.ui.theme.*
     }
 }
 
-/** Bronze rule with a central rhombus, the divider used across the stash UI. */
+/** A hairline of light that fades at both ends, a spark at its middle — the divider across the app. */
 @Composable fun OrnateDivider(accent: Color = Gold, modifier: Modifier = Modifier) {
-    Canvas(modifier.fillMaxWidth().height(12.dp)) {
+    Canvas(modifier.fillMaxWidth().height(9.dp)) {
         val middle = size.height / 2
-        val gap = 12f
-        drawLine(Brush.horizontalGradient(listOf(Color.Transparent, accent.copy(alpha = .55f))), Offset(0f, middle), Offset(size.width / 2 - gap, middle), 1.5f)
-        drawLine(Brush.horizontalGradient(listOf(accent.copy(alpha = .55f), Color.Transparent)), Offset(size.width / 2 + gap, middle), Offset(size.width, middle), 1.5f)
-        val rhombus = Path().apply {
-            moveTo(size.width / 2, middle - 5f); lineTo(size.width / 2 + 6f, middle)
-            lineTo(size.width / 2, middle + 5f); lineTo(size.width / 2 - 6f, middle); close()
-        }
-        drawPath(rhombus, accent.copy(alpha = .30f)); drawPath(rhombus, accent, style = Stroke(1.2f))
+        val centre = Offset(size.width / 2, middle)
+        drawLine(Brush.horizontalGradient(listOf(Color.Transparent, accent.copy(alpha = .4f), Color.Transparent)), Offset(0f, middle), Offset(size.width, middle), 1f)
+        drawCircle(Brush.radialGradient(listOf(accent.copy(alpha = .45f), Color.Transparent), centre, 9f), 9f, centre)
+        drawCircle(accent, 1.6f, centre)
     }
 }
 
@@ -99,26 +94,25 @@ import com.sperance.exileforge.ui.theme.*
      * thing here that really does fill up, so it passes its own share.
      */
     fraction: Float = 1f) {
-    val shape = CutCornerShape(4.dp)
+    val shape = RoundedCornerShape(50)
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(label, color = Muted, style = MaterialTheme.typography.labelMedium, modifier = Modifier.width(46.dp))
-        Box(Modifier.weight(1f).height(18.dp).background(Color(0xFF0A0D12), shape)
-            .border(1.dp, color.copy(alpha = .8f), shape)) {
-            Box(Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f)).fillMaxHeight()
-                .background(Brush.horizontalGradient(listOf(color.copy(alpha = .75f), color.copy(alpha = .35f))), shape))
+        Box(Modifier.weight(1f).height(6.dp).background(PanelRaised, shape)) {
+            Box(Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f)).fillMaxHeight().glow(color, radius = 6.dp, shape = shape)
+                .background(Brush.horizontalGradient(listOf(color.copy(alpha = .55f), color)), shape))
         }
-        Text(value, color = GoldBright, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.End)
+        Text(value, color = GoldBright, style = MaterialTheme.typography.labelLarge.copy(fontFamily = Numeric), textAlign = TextAlign.End)
     }
 }
 
 /** Small engraved caption used above grouped controls. */
 @Composable fun Engraved(text: String, accent: Color = Gold, modifier: Modifier = Modifier) {
-    Text(text.uppercase(), color = accent.copy(alpha = .85f), style = MaterialTheme.typography.labelSmall, modifier = modifier)
+    Text(text.uppercase(), color = accent.copy(alpha = .75f), style = MaterialTheme.typography.labelSmall, modifier = modifier)
 }
 
-/** Layered void backdrop: a stone vignette that keeps every screen anchored in the dark. */
+/** The dark ground of every screen, with a faint ether glow from the upper corner. */
 fun Modifier.voidBackdrop(): Modifier = this.background(voidBrush()).drawBehind {
-    drawCircle(Brush.radialGradient(listOf(Gold.copy(alpha = .05f), Color.Transparent), center = Offset(size.width / 2, 0f), radius = size.width * .9f),
-        radius = size.width * .9f, center = Offset(size.width / 2, 0f))
+    drawCircle(Brush.radialGradient(listOf(Gold.copy(alpha = .06f), Color.Transparent), center = Offset(size.width * .15f, 0f), radius = size.width * .9f),
+        radius = size.width * .9f, center = Offset(size.width * .15f, 0f))
     drawRect(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .45f)), startY = size.height * .55f, endY = size.height))
 }

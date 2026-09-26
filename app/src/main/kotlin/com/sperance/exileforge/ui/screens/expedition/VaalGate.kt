@@ -29,6 +29,9 @@ import com.sperance.exileforge.ui.theme.*
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import com.sperance.exileforge.ui.components.ForgeButton
+import com.sperance.exileforge.ui.components.ForgeOutlinedButton
+import com.sperance.exileforge.ui.components.ForgeTextButton
 
 /** The Vaal zone's own reds (2.65.0, the owner's mockup I «Кровавый алтарь»). */
 private object Altar {
@@ -68,12 +71,12 @@ private object Altar {
             zone?.let { Reward(it) }
             Text(ui("vaal.warning"), color = Altar.muted, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = if (zone != null) onRefuse else onBack, modifier = Modifier.weight(1f),
+                ForgeOutlinedButton(onClick = if (zone != null) onRefuse else onBack, modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = Altar.muted)) { Text(ui(if (zone != null) "vaal.refuse" else "common.close")) }
-                Button(onClick = onEnter, enabled = zone != null, modifier = Modifier.weight(1.4f),
+                ForgeButton(onClick = onEnter, enabled = zone != null, modifier = Modifier.weight(1.4f),
                     colors = ButtonDefaults.buttonColors(containerColor = Altar.deed, contentColor = Color.White)) { Text(ui("vaal.enter")) }
             }
-            TextButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterHorizontally)) { Text(ui("vaal.later"), color = Altar.muted) }
+            ForgeTextButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterHorizontally)) { Text(ui("vaal.later"), color = Altar.muted) }
         }
     }
 }

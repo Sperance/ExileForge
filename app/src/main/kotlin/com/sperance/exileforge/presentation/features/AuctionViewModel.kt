@@ -78,7 +78,8 @@ class AuctionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     /** Buying costs orbs out of the bag, so the bag and the showcase are what go stale. */
     fun buy(lotId: String) { with(runtime) { trade(writing = true) {
         val id = characterId
-        api.auction.buy(id, lotId)
+        val lot = api.auction.buy(id, lotId)
+        toast(ui("toast.bought", lot.title))
         afterTrade {
             refreshHero(id)
             val filter = state.value.market.filter.copy(excludeSellerId = if (state.value.market.showOwnLots) "" else id, lang = state.value.lang.code)
@@ -90,19 +91,19 @@ class AuctionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     /** Listing and withdrawing move goods between the character and the lot: both lists change. */
     fun sellEquipment(inventoryId: String, priceOrbId: String, price: Long) { with(runtime) { trade(writing = true) {
         val id = characterId
-        api.auction.sellEquipment(id, inventoryId, priceOrbId, price)
+        toast(ui("toast.listed", api.auction.sellEquipment(id, inventoryId, priceOrbId, price).title))
         listed(id)
     } } }
 
     fun sellItem(itemId: String, amount: Long, priceOrbId: String, price: Long) { with(runtime) { trade(writing = true) {
         val id = characterId
-        api.auction.sellItem(id, itemId, amount, priceOrbId, price)
+        toast(ui("toast.listed", api.auction.sellItem(id, itemId, amount, priceOrbId, price).title))
         listed(id)
     } } }
 
     fun cancel(lotId: String) { with(runtime) { trade(writing = true) {
         val id = characterId
-        api.auction.cancel(id, lotId)
+        toast(ui("toast.withdrawn", api.auction.cancel(id, lotId).title))
         afterTrade {
             refreshHero(id)
             val lots = api.auction.myLots(id)

@@ -49,6 +49,7 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     /** The server's drawings live in its icon set; this re-reads it without touching the session. */
     fun refreshIcons() = runtime.refreshIcons()
     fun dismissMessage() = runtime.dismissMessage()
+    fun dismissNotice() = runtime.dismissNotice()
     suspend fun referencePage(source: EntitySource, page: Int, query: String) = runtime.referencePage(source, page, query)
     /** The template behind an instance, for a card that has only the instance — an auction lot. */
     suspend fun equipmentBase(id: String) = runtime.equipmentBase(id)

@@ -51,14 +51,14 @@ import com.sperance.exileforge.ui.icons.orbArt
     PropertyRow(ui("common.item"), document.text("name"), Glyph.ITEM)
     PropertyRow(ui("orb.copy_rarity"), rarityTitle(instance.rarity, s.lang), Glyph.RARITY)
     if (instance.corrupted) Text(ui("orb.corrupted"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
-    Button(enabled = enabled && !instance.corrupted && s.play.selectedOrb.isNotBlank(),
+    ForgeButton(enabled = enabled && !instance.corrupted && s.play.selectedOrb.isNotBlank(),
         onClick = { onApply(instance.id, s.play.selectedOrb) }, modifier = Modifier.fillMaxWidth()) {
         orb?.let { com.sperance.exileforge.ui.icons.OrbGlyph(it.orb, Modifier.size(22.dp)) } ?: Icon(ForgeGlyphs.Orb, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp))
         Text(ui("orb.apply"))
     }
     // The server's sentence about the last orb, as the forge prints it under its item.
     s.play.forgeLine.takeIf { it.isNotBlank() }?.let { Text(it, color = Rune, style = MaterialTheme.typography.bodyMedium) }
-    if (onGrant != null) OutlinedButton(enabled = enabled && s.isAdmin && s.play.selectedOrb.isNotBlank(),
+    if (onGrant != null) ForgeOutlinedButton(enabled = enabled && s.isAdmin && s.play.selectedOrb.isNotBlank(),
         onClick = { onGrant(s.play.selectedOrb) }, modifier = Modifier.fillMaxWidth()) {
         Text(ui("orb.top_up", ORB_TOP_UP))
     }

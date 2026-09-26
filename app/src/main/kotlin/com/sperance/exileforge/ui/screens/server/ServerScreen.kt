@@ -35,13 +35,13 @@ import com.sperance.exileforge.ui.theme.Panel
             s.character?.let { hero ->
                 PropertyRow(ui("common.character"), hero.name + ui("app.hero_level", hero.level), Glyph.CHARACTER)
             }
-            OutlinedButton(enabled = !s.busy && !s.admin.editorOpen, onClick = vm::leaveGame, modifier = Modifier.fillMaxWidth()) {
+            ForgeOutlinedButton(enabled = !s.busy && !s.admin.editorOpen, onClick = vm::leaveGame, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("account.change_character"))
             }
             if (s.admin.editorOpen) MutedText(ui("account.close_editor_first"))
             // A reward is paid to a character, not to an account, so the code is asked for where
             // the character being played is already named — and the dialog names them again.
-            OutlinedButton(enabled = !s.busy && s.play.characterId.isNotBlank(), onClick = { promoOpen = true }, modifier = Modifier.fillMaxWidth()) {
+            ForgeOutlinedButton(enabled = !s.busy && s.play.characterId.isNotBlank(), onClick = { promoOpen = true }, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("account.enter_promo"))
             }
             LoginForm(s, vm)
@@ -51,7 +51,7 @@ import com.sperance.exileforge.ui.theme.Panel
         if (s.isAdmin && !s.adminTools) ForgePanel {
             Engraved(ui("account.administrator"))
             MutedText(ui("account.tools_hidden"))
-            OutlinedButton(enabled = !s.busy, onClick = { vm.mode(AppMode.ADMIN) }, modifier = Modifier.fillMaxWidth()) {
+            ForgeOutlinedButton(enabled = !s.busy, onClick = { vm.mode(AppMode.ADMIN) }, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("account.tools_back"))
             }
         }
@@ -70,15 +70,15 @@ import com.sperance.exileforge.ui.theme.Panel
                 ui("account.icons_count", s.world.iconKeys, s.world.iconSprites), Glyph.IMAGE)
             else MutedText(ui("account.icons_missing"))
             if (s.world.portraits > 0) PropertyRow(ui("account.portraits"), s.world.portraits.toString(), Glyph.IMAGE)
-            OutlinedButton(enabled = !s.busy, onClick = { vm.refreshLocale(); vm.refreshIcons() }, modifier = Modifier.fillMaxWidth()) { Text(ui("account.reread_bundles")) }
+            ForgeOutlinedButton(enabled = !s.busy, onClick = { vm.refreshLocale(); vm.refreshIcons() }, modifier = Modifier.fillMaxWidth()) { Text(ui("account.reread_bundles")) }
         }
         ForgePanel {
             Engraved(ui("account.server"))
             OutlinedTextField(s.account.serverDraft, vm::serverDraft, enabled = !s.busy, label = { Text(ui("account.server_address")) },
                 supportingText = { Text(ui("account.address_hint")) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            Button(enabled = !s.busy && !s.admin.editorOpen, onClick = vm::connect, modifier = Modifier.fillMaxWidth()) { Text(ui("account.save_connect")) }
+            ForgeButton(enabled = !s.busy && !s.admin.editorOpen, onClick = vm::connect, modifier = Modifier.fillMaxWidth()) { Text(ui("account.save_connect")) }
             if (s.admin.editorOpen) Text(ui("account.close_editor_note"), color = Muted)
-            OutlinedButton(enabled = !s.busy, onClick = vm::health, modifier = Modifier.fillMaxWidth()) { Text(ui("account.check_health")) }
+            ForgeOutlinedButton(enabled = !s.busy, onClick = vm::health, modifier = Modifier.fillMaxWidth()) { Text(ui("account.check_health")) }
         }
         InfoCard(ui("account.server_state"), s.account.health)
         InfoCard(ui("account.local_dev"),
@@ -110,9 +110,9 @@ import com.sperance.exileforge.ui.theme.Panel
                     singleLine = true, modifier = Modifier.fillMaxWidth())
             }
         },
-        confirmButton = { TextButton(enabled = !s.busy && code.isNotBlank(), onClick = { onRedeem(code) }) {
+        confirmButton = { ForgeTextButton(enabled = !s.busy && code.isNotBlank(), onClick = { onRedeem(code) }) {
             Text(ui("account.claim")) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(ui("common.cancel")) } })
+        dismissButton = { ForgeTextButton(onClick = onDismiss) { Text(ui("common.cancel")) } })
 }
 
 /**
@@ -127,8 +127,8 @@ import com.sperance.exileforge.ui.theme.Panel
         Engraved(ui("account.journal"))
         MutedText(ui("account.journal_note", logs.size))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(onClick = { expanded = !expanded }) { Text(if (expanded) ui("common.hide") else ui("common.show")) }
-            TextButton(enabled = logs.isNotEmpty(), onClick = vm::clearLogs) { Text(ui("common.clear")) }
+            ForgeTextButton(onClick = { expanded = !expanded }) { Text(if (expanded) ui("common.hide") else ui("common.show")) }
+            ForgeTextButton(enabled = logs.isNotEmpty(), onClick = vm::clearLogs) { Text(ui("common.clear")) }
         }
         if (expanded) {
             if (logs.isEmpty()) Text(ui("account.journal_empty"), color = Muted)

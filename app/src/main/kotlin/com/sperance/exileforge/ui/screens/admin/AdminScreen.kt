@@ -37,16 +37,16 @@ import com.sperance.exileforge.ui.theme.Muted
 
         ForgePanel {
             Engraved(ui("admin.screens"))
-            OutlinedButton(enabled = !s.busy, onClick = { vm.tab(TAB_CATALOG) }, modifier = Modifier.fillMaxWidth()) {
+            ForgeOutlinedButton(enabled = !s.busy, onClick = { vm.tab(TAB_CATALOG) }, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("admin.catalog"))
             }
-            OutlinedButton(enabled = !s.busy, onClick = { vm.tab(TAB_EDITOR) }, modifier = Modifier.fillMaxWidth()) {
+            ForgeOutlinedButton(enabled = !s.busy, onClick = { vm.tab(TAB_EDITOR) }, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("editor.editor"))
             }
-            OutlinedButton(enabled = !s.busy, onClick = { vm.tab(TAB_CHECKS) }, modifier = Modifier.fillMaxWidth()) {
+            ForgeOutlinedButton(enabled = !s.busy, onClick = { vm.tab(TAB_CHECKS) }, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("admin.checks"))
             }
-            OutlinedButton(enabled = !s.busy, onClick = { vm.tab(TAB_REDEMPTION); vm.loadRedemptions() }, modifier = Modifier.fillMaxWidth()) {
+            ForgeOutlinedButton(enabled = !s.busy, onClick = { vm.tab(TAB_REDEMPTION); vm.loadRedemptions() }, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("redemption.title"))
             }
             MutedText(ui("admin.screens_note"))
@@ -63,7 +63,7 @@ import com.sperance.exileforge.ui.theme.Muted
                 color = Muted, style = MaterialTheme.typography.bodySmall)
             // Leaving admin mode hides this very tab, so the switch says where it lands you: the
             // way back is the same switch on the Account tab, and nothing else can turn it on.
-            OutlinedButton(enabled = !s.busy, modifier = Modifier.fillMaxWidth(),
+            ForgeOutlinedButton(enabled = !s.busy, modifier = Modifier.fillMaxWidth(),
                 onClick = { vm.mode(if (s.adminTools) AppMode.PLAYER else AppMode.ADMIN) }) {
                 Text(if (s.adminTools) ui("admin.as_player")
                      else ui("account.tools_back"))

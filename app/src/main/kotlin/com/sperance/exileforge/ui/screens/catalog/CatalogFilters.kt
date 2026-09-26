@@ -18,10 +18,11 @@ import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.Spinner
 import com.sperance.exileforge.core.model.modifier.PoolKind
+import com.sperance.exileforge.ui.components.ForgeTextButton
 
 @Composable fun CatalogFilters(s: ForgeState, vm: ForgeViewModel) {
     var expanded by remember { mutableStateOf(false) }
-    TextButton(onClick = { expanded = !expanded }) { Text(ui("catalog.filters", if (expanded) ui("common.hide") else ui("common.show"))) }
+    ForgeTextButton(onClick = { expanded = !expanded }) { Text(ui("catalog.filters", if (expanded) ui("common.hide") else ui("common.show"))) }
     if (!expanded) return
     val f = s.admin.filter
     val any = ui("common.all")
@@ -30,7 +31,7 @@ import com.sperance.exileforge.core.model.modifier.PoolKind
     Spinner(ui("card.weapon_type"), f.weaponType, mapOf("" to any) + weapons.associateWith { weaponTitle(it, s.lang) }, !s.busy, glyph = Glyph.ATTACK) { vm.filter(f.copy(weaponType = it)) }
     OutlinedTextField(f.minLevel, { vm.filter(f.copy(minLevel = it)) }, label = { Text(ui("catalog.level_from")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
     OutlinedTextField(f.maxLevel, { vm.filter(f.copy(maxLevel = it)) }, label = { Text(ui("catalog.level_to")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
-    TextButton(enabled = !s.busy, onClick = vm::loadDefinitions) { Text(ui("catalog.load_modifiers")) }
+    ForgeTextButton(enabled = !s.busy, onClick = vm::loadDefinitions) { Text(ui("catalog.load_modifiers")) }
     // Pools are one list of the world since server 0.56.0: tags of modifiers and of templates alike.
     val pools = s.world.pools.filter { it.kind != PoolKind.MONSTER }.map { it.code }.toSortedSet()
     Spinner(ui("catalog.pool"), f.pool, mapOf("" to ui("common.any")) + pools.associateWith { it }, !s.busy, glyph = Glyph.RULE) { vm.filter(f.copy(pool = it)) }

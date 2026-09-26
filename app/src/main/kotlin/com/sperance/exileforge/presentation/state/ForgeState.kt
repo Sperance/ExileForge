@@ -170,6 +170,12 @@ data class WorldState(
     val portraits: Int = 0,
     /** The campaign's world map, monsters and rarities, read once per session (server 0.26.0, the world since 0.67.0). */
     val campaign: CampaignView? = null,
+    /** The class skills and the monsters' (server 0.69.0), and the books that teach them — items of the bag. */
+    val skills: com.sperance.exileforge.core.model.skills.SkillBook = com.sperance.exileforge.core.model.skills.SkillBook(),
+    val books: List<com.sperance.exileforge.core.model.crafts.MaterialItem> = emptyList(),
+    /** The essences (server 0.69.0): their kinds, steps and crystals, and the items of the bag. */
+    val essenceBook: com.sperance.exileforge.core.model.essences.EssenceBook = com.sperance.exileforge.core.model.essences.EssenceBook(),
+    val essences: List<com.sperance.exileforge.core.model.crafts.MaterialItem> = emptyList(),
 )
 
 /** The character being played, and what the player has picked on its screens. */
@@ -186,8 +192,8 @@ data class PlayState(
     /** When the hero was last actually read (2.45.0); unlike [heroReadAt] it is never set cold. */
     val heroSeenAt: Long = 0,
     val selectedEquipment: String = "",
-    /** The `items` id of the orb picked in the forge. */
-    val selectedOrb: String = "",
+    /** The `items` id of the orb picked in the forge, and of the essence (2.78.0). */
+    val selectedOrb: String = "", val selectedEssence: String = "",
     /** Which of the forge's three sections is open, and the server's sentence about the last thing it did. */
     val forgeSection: ForgeSection = ForgeSection.ORBS, val forgeLine: String = "",
     /** What the admin's random grant asks the server for. Blank means "any". */
@@ -242,8 +248,8 @@ data class MapLaunchState(
     val picked: String? = null,
 )
 
-/** The forge's sections: orbs and the bench work on one item, a recipe on the bag. */
-enum class ForgeSection { ORBS, BENCH }
+/** The forge's sections: orbs, the bench and (2.78.0) the essences work on one item. */
+enum class ForgeSection { ORBS, BENCH, ESSENCES }
 
 /** The auction, as this character sees it. */
 data class MarketState(
@@ -333,6 +339,8 @@ const val TAB_REDEMPTION = 9
 const val TAB_EXPEDITION = 10
 /** The crafts (2.41.0): the bar's place the tree left. */
 const val TAB_CRAFTS = 11
+/** The grimoire (2.78.0): the class's skills and the belt, opened from the Hero tab's header as the tree is. */
+const val TAB_SKILLS = 12
 
 /** What the bottom bar offers a player — and, with [TAB_ADMIN] appended, an administrator. */
 /** The bar. The tree left it in 2.40.0: it opens from the Hero tab's header, as the forge does. */

@@ -58,6 +58,11 @@ import com.sperance.exileforge.core.campaign.*
 import com.sperance.exileforge.core.display.inventoryDocument
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.fineNumber
+import com.sperance.exileforge.core.display.SkillText
+import com.sperance.exileforge.core.display.displayName
+import com.sperance.exileforge.core.i18n.LocaleKey
+import com.sperance.exileforge.core.i18n.locOr
+import com.sperance.exileforge.ui.screens.skills.FlaskBottle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.campaign.CampaignReward
 import com.sperance.exileforge.core.model.campaign.MonsterRarity
@@ -225,6 +230,8 @@ private const val HERO_CARD = -1
                 else FightFeed(fight.events, names)
             }
             HeroCard(s, hud, fight, time, names, stance, track(HERO_CARD), large)
+            // The skills and the belt (2.78.0): under the hero, over the fight's own controls.
+            if (fight.skills.any { it != null } || fight.flasks.any { it != null }) ActionBar(fight, onCommand)
             Controls(fight, onCommand)
         }
         StrikeLine(fight.lunge, bounds, origin)
@@ -248,17 +255,20 @@ private const val HERO_CARD = -1
     }
 }
 
+/** A swing and a skill's blow carry a card toward the other side (2.78.0); a tick, a reflection, a draught do not. */
+private val Action.strikes: Boolean get() = this == Action.ATTACK || this == Action.SKILL
+
 /** How far a card is carried toward the other side by its own swing: out and back over the lunge. */
 private fun reach(lunge: LungeView?, actor: Side, foe: Int?): Float {
     lunge ?: return 0f
-    if (lunge.actor != actor || lunge.action != Action.ATTACK || (foe != null && lunge.foe != foe)) return 0f
+    if (lunge.actor != actor || !lunge.action.strikes || (foe != null && lunge.foe != foe)) return 0f
     return sin(lunge.progress * PI).toFloat()
 }
 
 /** Whether this card is the one being struck right now, past the lunge's midpoint. */
 private fun struck(lunge: LungeView?, target: Side, foe: Int?): Boolean {
     lunge ?: return false
-    if (lunge.actor == target || lunge.action != Action.ATTACK || lunge.progress < .5f) return false
+    if (lunge.actor == target || !lunge.action.strikes || lunge.progress < .5f) return false
     return foe == null || lunge.foe == foe
 }
 
@@ -313,6 +323,10 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
         }
         Text(monsterTitle(foe.monster.code), color = ring, fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
         LifeBar(foe.life, foe.maxLife, foe.shield, foe.maxShield, Modifier.fillMaxWidth().height(12.dp), compact = true)
+        // A caster's or a boss's mana (2.78.0), a thread under its life: what its spells are paid with.
+        if (foe.maxMana > 0) Box(Modifier.fillMaxWidth().height(3.dp).background(Color(0x14FFFFFF), RoundedCornerShape(2.dp))) {
+            Box(Modifier.fillMaxWidth((foe.mana / foe.maxMana.toFloat()).coerceIn(0f, 1f)).fillMaxHeight().background(ManaBlue, RoundedCornerShape(2.dp)))
+        }
         SwingBar(foe.swing, foe.held, Modifier.fillMaxWidth(), if (acting > 0f) LifeRed else LifeRed.copy(alpha = .7f))
         if (foe.taunt && foe.alive) Text(ui("fight.taunt"), color = Color(0xFFE8B06A), fontSize = 9.sp, fontStyle = FontStyle.Italic, maxLines = 1)
         // What is on it: small tiles while it runs, larger while paused; a tap on one opens its window.
@@ -323,6 +337,7 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
             foe.ailments.take(5).forEach { view ->
                 StateTile(view.ailment, ailmentTint(view.ailment), view.left, view.stacks, ailmentLabel(view), tile) { ailmentTip(view) }
             }
+            foe.effects.take(3).forEach { EffectTile(it, tile) }
         }
     }
 }
@@ -374,9 +389,10 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
                 if (fight.heroTaunt) TauntSeal(time, Modifier.size(22.dp)) { tauntTip(true) }
                 fight.loneWolf?.let { rule -> LoneWolfMedal(Modifier.size(24.dp)) { loneWolfTip(rule) } }
             }
-            LifeBar(fight.heroLife, hud.heroMaxLife, fight.heroShield, hud.heroMaxShield, Modifier.fillMaxWidth().height(16.dp))
+            LifeBar(fight.heroLife, hud.heroMaxLife, fight.heroShield, hud.heroMaxShield, Modifier.fillMaxWidth().height(16.dp), barrier = fight.heroBarrier)
+            if (fight.heroMaxMana > 0) ManaBar(fight.heroMana, fight.heroMaxMana, Modifier.fillMaxWidth().height(10.dp))
             SwingBar(fight.heroSwing, fight.heroHeld, Modifier.fillMaxWidth())
-            StateTiles(fight.heroAilments, fight.heroHeld)
+            StateTiles(fight.heroAilments, fight.heroHeld, fight.heroEffects)
             val target = fight.target?.let(names::get)
             if (target != null && fight.outcome == null) Text(
                 ui("fight.target_line", target, if (fight.focus != null) ui("fight.target_yours") else ui("fight.rule.${stance.rule.name}")),
@@ -413,6 +429,9 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
                 Text("${ui(type.key())} ${number(amount)}", color = damageTint(type), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
             }
         }
+        // What it casts for its mana (2.78.0): a boss's own skills, a caster's spell, a borrowed one.
+        if (foe.monster.skills.isNotEmpty()) Text(ui("fight.skills", foe.monster.skills.joinToString(", ") { SkillText.title(it) }),
+            color = Rune, style = MaterialTheme.typography.labelSmall)
         // What it means for this hero.
         val taunting = fight.foes.any { it.alive && it.taunt }
         when {
@@ -495,7 +514,7 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
 
 /** The line from whoever swings to whom they strike, fading in and out over the lunge: gold from the hero, blood from a foe. */
 @Composable private fun StrikeLine(lunge: LungeView?, bounds: Map<Int, Rect>, origin: Offset) {
-    if (lunge == null || lunge.action != Action.ATTACK) return
+    if (lunge == null || !lunge.action.strikes) return
     val from = bounds[if (lunge.actor == Side.HERO) HERO_CARD else lunge.foe] ?: return
     val to = bounds[if (lunge.actor == Side.HERO) lunge.foe else HERO_CARD] ?: return
     val tint = if (lunge.actor == Side.HERO) GoldBright else LifeRed
@@ -509,14 +528,78 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
 }
 
 /** A life bar with the shield laid over its top edge and the figures written across it. */
-@Composable private fun LifeBar(life: Int, maxLife: Int, shield: Int, maxShield: Int, modifier: Modifier, compact: Boolean = false) {
+@Composable private fun LifeBar(life: Int, maxLife: Int, shield: Int, maxShield: Int, modifier: Modifier, compact: Boolean = false, barrier: Int = 0) {
     val shape = CutCornerShape(3.dp)
     val share by animateFloatAsState(if (maxLife > 0) life / maxLife.toFloat() else 0f, label = "life")
-    Box(modifier.background(Color(0xCC0A0D12), shape).border(1.dp, Gold.copy(alpha = .7f), shape)) {
+    // A barrier (2.78.0) rings the bar in gold-white while it soaks.
+    Box(modifier.background(Color(0xCC0A0D12), shape).border(if (barrier > 0) 2.dp else 1.dp, if (barrier > 0) GoldBright else Gold.copy(alpha = .7f), shape)) {
         Box(Modifier.fillMaxWidth(share.coerceIn(0f, 1f)).fillMaxHeight().background(Brush.horizontalGradient(listOf(LifeRed, LifeRed.copy(alpha = .55f))), shape))
         if (maxShield > 0) Box(Modifier.fillMaxWidth((shield / maxShield.toFloat()).coerceIn(0f, 1f)).height(4.dp).background(ShieldCyan.copy(alpha = .85f)))
         Text(if (compact) "$life" else if (maxShield > 0) ui("expedition.vitals_shield", life, maxLife, shield) else ui("expedition.vitals", life, maxLife),
             color = GoldBright, fontSize = if (compact) 8.sp else 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.Center))
+    }
+}
+
+/** Mana (2.78.0) under life: what the skills are paid with, and what the auras leave of it. */
+@Composable private fun ManaBar(mana: Int, maxMana: Int, modifier: Modifier) {
+    val shape = CutCornerShape(2.dp)
+    val share by animateFloatAsState(if (maxMana > 0) mana / maxMana.toFloat() else 0f, label = "mana")
+    Box(modifier.background(Color(0xCC0A0D12), shape).border(1.dp, ManaBlue.copy(alpha = .8f), shape)) {
+        Box(Modifier.fillMaxWidth(share.coerceIn(0f, 1f)).fillMaxHeight().background(Brush.horizontalGradient(listOf(ManaBlue, ManaBlue.copy(alpha = .5f))), shape))
+        Text(ui("fight.mana", mana, maxMana), color = GoldBright, fontSize = 8.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.Center))
+    }
+}
+
+/**
+ * The hero's skills and belt in the fight (2.78.0): the three active slots — dark while they recover,
+ * dim while the mana is short — then the three flasks, filled to their charges and ringed while one runs.
+ * A tap uses a skill or drinks a flask at once, whatever its condition.
+ */
+@Composable private fun ActionBar(fight: FightHud, onCommand: (RunCommand) -> Unit) {
+    val live = fight.started && fight.outcome == null && !fight.retreating
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+        fight.skills.forEach { view ->
+            if (view == null) Box(Modifier.weight(1f).height(52.dp).border(1.dp, Bronze.copy(alpha = .35f), RoundedCornerShape(8.dp)))
+            else SkillButton(view, live, Modifier.weight(1f)) { onCommand(RunCommand.Cast(view.slot)) }
+        }
+        Spacer(Modifier.width(4.dp))
+        fight.flasks.forEach { view ->
+            if (view == null) Box(Modifier.size(44.dp).border(1.dp, Bronze.copy(alpha = .35f), CircleShape))
+            else FlaskButton(view, live) { onCommand(RunCommand.Drink(view.slot)) }
+        }
+    }
+}
+
+@Composable private fun SkillButton(view: SkillView, live: Boolean, modifier: Modifier, onTap: () -> Unit) {
+    val shape = RoundedCornerShape(8.dp)
+    val ready = view.ready >= 1f
+    Box(modifier.height(52.dp).clip(shape).background(PanelRaised, shape)
+        .border(if (ready && view.affordable) 2.dp else 1.dp, if (ready && view.affordable) Gold else Bronze, shape)
+        .clickable(enabled = live && ready && view.affordable, onClick = onTap)
+        .semantics { contentDescription = SkillText.title(view.code) }) {
+        SkillGlyph(view.icon, Modifier.size(26.dp).align(Alignment.Center), if (view.affordable) GoldBright else Muted)
+        // What is left to recover darkens the button from the top, as a flask's charge fills it from the bottom.
+        if (!ready) Box(Modifier.fillMaxWidth().fillMaxHeight(1 - view.ready).background(Color.Black.copy(alpha = .6f)))
+        if (!ready) Text(fineNumber(view.seconds), color = Parchment, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.Center))
+        Text("${view.cost}", color = if (view.affordable) Rune else LifeRed, fontSize = 9.sp, fontWeight = FontWeight.Bold,
+            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 3.dp, bottom = 1.dp))
+        if (view.condition == com.sperance.exileforge.core.model.skills.SlotCondition.MANUAL)
+            Text("✋", fontSize = 9.sp, modifier = Modifier.align(Alignment.TopStart).padding(2.dp))
+        Text("${view.level}", color = Gold, fontSize = 9.sp, modifier = Modifier.align(Alignment.TopEnd).padding(end = 3.dp))
+    }
+}
+
+@Composable private fun FlaskButton(view: FlaskView, live: Boolean, onTap: () -> Unit) {
+    val tint = flaskTint(view.kind)
+    Box(Modifier.size(44.dp).clip(CircleShape).background(Color(0xE60A0D12)).border(if (view.active > 0f) 2.dp else 1.dp, if (view.active > 0f) GoldBright else Bronze, CircleShape)
+        .clickable(enabled = live && view.usable, onClick = onTap), contentAlignment = Alignment.Center) {
+        Canvas(Modifier.fillMaxSize()) {
+            val fill = if (view.maxCharges > 0) view.charges / view.maxCharges.toFloat() else 0f
+            drawRect(tint.copy(alpha = if (view.usable) .55f else .25f), topLeft = Offset(0f, size.height * (1 - fill)), size = Size(size.width, size.height * fill))
+            if (view.active > 0f) drawArc(GoldBright, -90f, 360f * view.active, false, style = Stroke(3.dp.toPx(), cap = StrokeCap.Round))
+        }
+        FlaskBottle(view.kind, 0f, true, Modifier.size(14.dp, 22.dp))
+        Text("${view.charges}", color = GoldBright, fontSize = 8.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 2.dp))
     }
 }
 
@@ -528,12 +611,26 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
 }
 
 /** Every state on the hero as a tile of its colour whose dark fill rises as it wears off; a stun is a gold star. */
-@Composable private fun StateTiles(ailments: List<AilmentView>, held: Boolean) {
+@Composable private fun StateTiles(ailments: List<AilmentView>, held: Boolean, effects: List<EffectView> = emptyList()) {
     val stunned = held && ailments.none { it.ailment == Ailment.FROZEN }
     Row(Modifier.height(30.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-        if (!stunned && ailments.isEmpty()) MutedText(ui("fight.no_states"), style = MaterialTheme.typography.labelSmall)
+        if (!stunned && ailments.isEmpty() && effects.isEmpty()) MutedText(ui("fight.no_states"), style = MaterialTheme.typography.labelSmall)
         if (stunned) StateTile(null, GoldBright, 1f, 1, ui("expedition.stunned")) { stunTip() }
         ailments.forEach { view -> StateTile(view.ailment, ailmentTint(view.ailment), view.left, view.stacks, ailmentLabel(view)) { ailmentTip(view) } }
+        effects.take(4).forEach { EffectTile(it) }
+    }
+}
+
+/** A buff or a curse (2.78.0) as a tile: the skill's mark in gold for a buff, in blood for a curse, darkening as it wears off. */
+@Composable private fun EffectTile(view: EffectView, side: Dp = 30.dp) {
+    val tint = if (view.kind == EffectKind.CURSE) LifeRed else Gold
+    val shape = RoundedCornerShape(4.dp)
+    val title = SkillText.title(view.source)
+    Tipped({ Tip(title, ui(if (view.kind == EffectKind.CURSE) "fight.effect_curse" else "fight.effect_buff", fineNumber(view.seconds))) },
+        Modifier.size(side).clip(shape).background(Color(0xFF0B0E13)).background(tint.copy(alpha = .16f)).border(1.dp, tint, shape)
+            .semantics { contentDescription = title }) {
+        SkillGlyph(view.icon, Modifier.fillMaxSize().padding(side / 6), tint)
+        Box(Modifier.fillMaxWidth().fillMaxHeight((1 - view.left).coerceIn(0f, 1f)).background(Color.Black.copy(alpha = .55f)))
     }
 }
 
@@ -654,10 +751,25 @@ private fun logLine(event: CombatEvent, monster: String): String {
             HitKind.EVADED -> if (hero) ui("expedition.log_they_evade", monster) else ui("expedition.log_you_evade")
             HitKind.BLOCKED -> if (hero) ui("expedition.log_they_block", monster) else ui("expedition.log_you_block")
         }
+        // A skill (2.78.0): a blow names it, anything else says who used it and on whom.
+        Action.SKILL -> {
+            val skill = SkillText.title(event.skill.orEmpty())
+            when {
+                event.kind == HitKind.EVADED -> if (hero) ui("expedition.log_skill_evaded", skill, monster) else ui("expedition.log_skill_you_evade", monster, skill)
+                event.kind == HitKind.BLOCKED -> if (hero) ui("expedition.log_skill_blocked", skill, monster) else ui("expedition.log_skill_you_block", monster, skill)
+                event.damage > 0 -> if (hero) ui(if (event.kind == HitKind.CRIT) "expedition.log_skill_crit" else "expedition.log_skill_hit", skill, monster, damage)
+                    else ui(if (event.kind == HitKind.CRIT) "expedition.log_they_skill_crit" else "expedition.log_they_skill_hit", monster, skill, damage)
+                event.onSelf -> (if (hero) ui("expedition.log_skill_self", skill) else ui("expedition.log_they_skill_self", monster, skill)) +
+                    (if (event.healed >= 1) " · +${event.healed.roundToInt()}" else "")
+                else -> if (hero) ui("expedition.log_skill_on", skill, monster) else ui("expedition.log_they_skill_on", monster, skill)
+            }
+        }
+        Action.FLASK -> ui("expedition.log_flask", locOr(LocaleKey.equipmentName(event.skill.orEmpty()), displayName(event.skill.orEmpty()))) +
+            (if (event.healed >= 1) " · +${event.healed.roundToInt()}" else "")
     }
     // The blow's leading element and what it left behind, as words after the sentence.
     val marks = buildList {
-        event.type?.takeIf { event.action == Action.ATTACK && event.landed && it != DamageType.PHYSICAL }?.let { add(ui(it.key())) }
+        event.type?.takeIf { event.action.strikes && event.landed && event.damage > 0 && it != DamageType.PHYSICAL }?.let { add(ui(it.key())) }
         if (event.stunned) add(ui("expedition.stunned"))
         event.inflicted.forEach { add(ui(it.key())) }
     }
@@ -666,6 +778,8 @@ private fun logLine(event: CombatEvent, monster: String): String {
 
 private fun logColour(event: CombatEvent): Color = when {
     event.action == Action.RETREAT -> Muted
+    event.action == Action.FLASK -> Vital
+    event.action == Action.SKILL && event.damage <= 0 && event.landed -> if (event.actor == Side.HERO) Gold else Color(0xFFE9A0A0)
     event.action == Action.TICK || event.action == Action.REFLECT -> damageTint(event.type).copy(alpha = .85f)
     event.kind == HitKind.CRIT -> Color(0xFFFFD34A)
     event.kind == HitKind.HIT -> if (event.actor == Side.HERO) Parchment else Color(0xFFE9A0A0)
@@ -673,6 +787,8 @@ private fun logColour(event: CombatEvent): Color = when {
 }
 
 private fun hitText(hit: FloatingHit): String = when {
+    // A heal (2.78.0): a skill's or a draught's, rising in green.
+    hit.amount == 0 && hit.healed > 0 -> "+${hit.healed}"
     hit.kind == HitKind.EVADED -> ui("expedition.evaded")
     hit.kind == HitKind.BLOCKED -> ui("expedition.blocked")
     hit.kind == HitKind.CRIT -> ui("expedition.crit", hit.amount)
@@ -680,6 +796,7 @@ private fun hitText(hit: FloatingHit): String = when {
 }
 
 private fun hitColour(hit: FloatingHit): Color = when {
+    hit.amount == 0 && hit.healed > 0 -> Vital
     hit.kind == HitKind.EVADED || hit.kind == HitKind.BLOCKED -> Muted
     hit.kind == HitKind.CRIT -> Color(0xFFFFD34A)
     else -> damageTint(hit.type, onHero = hit.target == Side.HERO)

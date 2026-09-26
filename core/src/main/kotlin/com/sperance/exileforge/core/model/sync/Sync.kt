@@ -11,6 +11,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.ApiCapabilities
 import com.sperance.exileforge.core.model.command.RouteInfo
 import com.sperance.exileforge.core.model.crafts.MaterialItem
+import com.sperance.exileforge.core.model.essences.EssenceBook
 import com.sperance.exileforge.core.model.currency.CURRENCY_CATEGORY
 import com.sperance.exileforge.core.model.currency.CurrencyItem
 import com.sperance.exileforge.core.model.hero.CharacterItem
@@ -21,6 +22,8 @@ import com.sperance.exileforge.core.model.modifier.ModifierDefinition
 import com.sperance.exileforge.core.model.progression.CharacterClass
 import com.sperance.exileforge.core.model.progression.ExperienceLevel
 import com.sperance.exileforge.core.model.skilltree.SkillTreeNode
+import com.sperance.exileforge.core.model.skills.BOOK_CATEGORY
+import com.sperance.exileforge.core.model.skills.SkillBook
 import com.sperance.exileforge.core.model.skilltree.SkillTreeState
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonArray
@@ -31,10 +34,10 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 
 /**
- * The API revision this client is written against (server 0.68.1: the world map's zones come as
- * tokens without their modifier pools, and entering a zone answers it whole).
+ * The API revision this client is written against (server 0.69.0: mana, class skills and their books,
+ * flasks on the belt, essences and their crystals).
  */
-const val API_REVISION = 12
+const val API_REVISION = 13
 
 @Serializable data class WorldManifest(val hash: String = "", val file: String = "world.json")
 
@@ -79,6 +82,12 @@ class WorldTables(
     val stats: StatTables,
     /** Every pool of the world (server 0.56.0): what the editor's pool filter and checks name. */
     val pools: List<com.sperance.exileforge.core.model.modifier.Pool> = emptyList(),
+    /** The class skills and the monsters' (server 0.69.0), and their books — items of the bag. */
+    val skills: SkillBook = SkillBook(),
+    val books: List<MaterialItem> = emptyList(),
+    /** The essences (server 0.69.0): their kinds and steps, the crystals' rule, and the items. */
+    val essenceBook: EssenceBook = EssenceBook(),
+    val essences: List<MaterialItem> = emptyList(),
 ) {
     companion object {
         fun parse(hash: String, document: String): WorldTables {
@@ -97,6 +106,10 @@ class WorldTables(
                     .sortedWith(compareBy({ it.subCategory }, { it.price })),
                 root["stats"]?.let { WireJson.decodeFromJsonElement<StatTables>(it) } ?: StatTables(),
                 rows("pools").map { WireJson.decodeFromJsonElement(it) },
+                root["skills"]?.let { WireJson.decodeFromJsonElement<SkillBook>(it) } ?: SkillBook(),
+                items.filter { it.text("category") == BOOK_CATEGORY }.map { WireJson.decodeFromJsonElement<MaterialItem>(it) }.sortedBy { it.code },
+                root["essences"]?.let { WireJson.decodeFromJsonElement<EssenceBook>(it) } ?: EssenceBook(),
+                items.filter { it.text("category") == EssenceBook.CATEGORY }.map { WireJson.decodeFromJsonElement<MaterialItem>(it) },
             )
         }
     }

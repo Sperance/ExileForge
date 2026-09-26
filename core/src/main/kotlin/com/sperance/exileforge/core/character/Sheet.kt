@@ -61,7 +61,7 @@ data class StatDelta(val stat: String, val before: Double, val after: Double) {
  */
 object Sheet {
 
-    private class Op(val stat: String, val operation: ModifierOperation, val value: Double, val perStat: String?, val perAmount: Double) {
+    internal class Op(val stat: String, val operation: ModifierOperation, val value: Double, val perStat: String?, val perAmount: Double) {
         fun resolve(source: Double): Double = when {
             perStat == null -> value
             perAmount <= 0.0 -> 0.0
@@ -91,7 +91,8 @@ object Sheet {
             .sortedBy { tables.slots.indexOf(it.equippedSlot).takeIf { at -> at >= 0 } ?: Int.MAX_VALUE }
             .forEach { item ->
                 val template = templates[item.equipmentId] ?: return@forEach
-                if (template.text("slot").startsWith("TOOL_")) return@forEach
+                // A tool works for its craft, a flask only while drunk in a fight (server 0.69.0): neither is on the sheet.
+                if (template.text("slot").let { it.startsWith("TOOL_") || it in FLASK_SLOTS }) return@forEach
                 val socket = item.socketCode
                 if (!socket.isNullOrBlank() && socket !in taken) {
                     inactive += InactiveEquipment(item.id, template.text("code"), listOf("socket: need $socket, have none"))
@@ -109,8 +110,11 @@ object Sheet {
         val unwearable = templates.mapNotNull { (id, template) ->
             unmet(template, level, stats).takeIf { it.isNotEmpty() }?.let { UnwearableEquipment(id, template.text("code"), it) }
         }
-        return CharacterSheet(character.id, level, stats, active, inactive, unwearable)
+        return CharacterSheet(character.id, level, stats, active, inactive, unwearable, SheetModel(base, treeOps + itemOps, tables))
     }
+
+    /** The belt's three places (server 0.69.0); a flask's template is always the first. */
+    val FLASK_SLOTS = listOf("FLASK", "FLASK_2", "FLASK_3")
 
     /** What an item's requirements miss, in the server's words: `strength: need 40, have 32`. */
     fun unmet(template: JsonObject, level: Int, stats: Map<String, Double>): List<String> = listOfNotNull(
@@ -206,7 +210,7 @@ object Sheet {
         return folded + expand(global, defs)
     }
 
-    private fun compute(base: Map<String, Double>, operations: List<Op>, tables: StatTables): Map<String, Double> {
+    internal fun compute(base: Map<String, Double>, operations: List<Op>, tables: StatTables): Map<String, Double> {
         val byStat = operations.groupBy { it.stat }
         val result = mutableMapOf<String, Double>()
         (byStat.keys + base.keys).sortedBy { tables.order[it] ?: Int.MAX_VALUE }.forEach { stat ->
@@ -230,4 +234,34 @@ object Sheet {
         if (required <= actual) null else "$name: need $required, have $actual"
 
     private fun int(template: JsonObject, key: String): Int = (template[key] as? JsonPrimitive)?.let { it.intOrNull ?: it.doubleOrNull?.toInt() } ?: 0
+}
+
+/** A line laid on a sheet for a while — a buff, a curse, a flask, a passive skill — shaped as a modifier's effect. */
+data class StatLine(val stat: String, val operation: ModifierOperation, val value: Double)
+
+/**
+ * What a sheet was added up from (2.78.0): the class's base and every operation in the server's order,
+ * so a fight can lay [StatLine]s among them and add the sheet up again as the server would — an increase
+ * joins the increases of its stat instead of multiplying the total. A percent stat, which takes an
+ * increase as an addition, takes MORE on its whole multiplier: 20% more damage over 30% increased is 56%.
+ */
+class SheetModel internal constructor(private val base: Map<String, Double>, private val ops: List<Sheet.Op>, private val tables: StatTables) {
+    /** The sheet with nothing laid over it: the one the server has. */
+    val plain: Map<String, Double> by lazy { Sheet.compute(base, ops, tables) }
+
+    fun with(lines: List<StatLine>): Map<String, Double> {
+        if (lines.isEmpty()) return plain
+        val (scaling, folding) = lines.partition { it.operation == ModifierOperation.MORE && it.stat in tables.percentStats }
+        val stats = Sheet.compute(base, ops + folding.map { Sheet.Op(it.stat, it.operation, it.value, null, 1.0) }, tables).toMutableMap()
+        scaling.forEach { line -> stats[line.stat] = (100 + (stats[line.stat] ?: 0.0)) * (1 + line.value / 100) - 100 }
+        return stats
+    }
+
+    /** The increases of [stat] summed, [lines] among them: what a spell of that element is multiplied by. */
+    fun increased(stat: String, lines: List<StatLine> = emptyList()): Double =
+        ops.filter { it.stat == stat && it.operation == ModifierOperation.INCREASED }.sumOf { op -> op.resolve(op.perStat?.let { plain[it] } ?: 0.0) } +
+            lines.filter { it.stat == stat && it.operation == ModifierOperation.INCREASED }.sumOf { it.value }
+
+    override fun equals(other: Any?): Boolean = other is SheetModel && other.plain == plain
+    override fun hashCode(): Int = plain.hashCode()
 }

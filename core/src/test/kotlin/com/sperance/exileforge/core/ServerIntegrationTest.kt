@@ -255,12 +255,19 @@ class ServerIntegrationTest {
     }
 
     /**
-     * Every stat a map modifier or an atlas node names has the client's own words in both languages
-     * (2.77.0): no modifier of any pool goes unnamed on the client, checked against the live server.
+     * Every stat a modifier of any pool — an item's, a monster's, a map's, a flask's — an atlas node or a
+     * skill names has the client's own words in both languages (2.77.0, every pool since 2.78.0): no line
+     * goes unnamed on the client, checked against the live server.
      */
-    private suspend fun mapAndAtlasStatsAreNamed(api: GameApi, definitions: List<com.sperance.exileforge.core.model.modifier.ModifierDefinition>) {
-        val stats = (definitions.flatMap { it.effects }.map { it.stat }.filter { it.startsWith("MAP_") || it.startsWith("ATLAS_") } +
-            api.atlas.tree().nodes.flatMap { it.effects }.map { it.stat }).distinct()
+    private suspend fun statsAreNamed(api: GameApi, definitions: List<com.sperance.exileforge.core.model.modifier.ModifierDefinition>) {
+        val manifest = api.manifest(fresh = true)
+        val world = com.sperance.exileforge.core.model.sync.WorldTables.parse(manifest.world.hash, api.files.worldDocument(manifest.world.file))
+        val skillStats = world.skills.skills.flatMap { skill ->
+            skill.stats + listOfNotNull(skill.hit, skill.trigger?.hit).flatMap { it.stats } + listOfNotNull(skill.buff, skill.trigger?.buff).flatMap { it.stats } +
+                skill.curse?.stats.orEmpty()
+        } + world.skills.monsterSkills.flatMap { it.buff?.stats.orEmpty() + it.curse?.stats.orEmpty() }
+        val stats = (definitions.flatMap { it.effects }.map { it.stat } + api.atlas.tree().nodes.flatMap { it.effects }.map { it.stat } +
+            skillStats.map { it.stat }).distinct()
         assertTrue(stats.any { it.startsWith("ATLAS_") }, "no atlas stat among $stats")
         com.sperance.exileforge.core.i18n.Lang.entries.forEach { lang ->
             val missing = stats.filter { "enum.stat.$it" !in com.sperance.exileforge.core.i18n.UiStrings.keys(lang) }
@@ -268,10 +275,42 @@ class ServerIntegrationTest {
         }
     }
 
+    /**
+     * The class skills, the belt and the crystals (server 0.69.0): a new hero knows the class's first active
+     * and passive skill, both in their slots, and wears a small life flask; the slots and the belt take a
+     * condition; a book not in the bag is refused; the crystals of a zone are a window like the chests.
+     */
+    private suspend fun skillsAreTheServers(api: GameApi, id: String) {
+        val manifest = api.manifest(fresh = true)
+        val world = com.sperance.exileforge.core.model.sync.WorldTables.parse(manifest.world.hash, api.files.worldDocument(manifest.world.file))
+        assertTrue(world.skills.classes.size >= 7 && world.skills.skills.size >= 7 * 14, "skills: ${world.skills.skills.size}")
+        assertTrue(world.books.size == world.skills.skills.size, "a skill has no book: ${world.books.size} of ${world.skills.skills.size}")
+        assertTrue(world.essenceBook.kinds.isNotEmpty() && world.essences.size == world.essenceBook.kinds.size * world.essenceBook.tiers.size + world.essenceBook.specials.size,
+            "essences: ${world.essences.size}")
+        world.skills.skills.forEach { assertTrue(serverLocale.contains("skill.${it.code}.name"), "no name for the skill ${it.code}") }
+        val character = api.hero.character(id)
+        val skills = character.skills
+        assertEquals(2, skills.learned.size, "the starter skills: $skills")
+        val active = assertNotNull(skills.active.firstOrNull(), "no active skill in the first slot: $skills")
+        assertNotNull(skills.passive.firstOrNull(), "no passive skill in the first slot: $skills")
+        val flask = api.hero.inventory(id).firstOrNull { it.equippedSlot == "FLASK" }
+        assertNotNull(flask, "the new hero wears no flask")
+        val manual = api.hero.slotSkill(id, "ACTIVE", 0, active.skill, "MANUAL")
+        assertEquals(com.sperance.exileforge.core.model.skills.SlotCondition.MANUAL, manual.active.first()?.condition)
+        val belt = api.hero.flaskCondition(id, 0, "LIFE_35")
+        assertEquals(com.sperance.exileforge.core.model.skills.SlotCondition.LIFE_35, belt.flasks.first())
+        assertFailsWith<ApiFailure> { api.hero.learnSkill(id, active.skill) }
+        val zone = api.campaign.world().zones.first()
+        api.campaign.crystals(id, zone.code).crystals.flatMap { it.essences }.forEach { code ->
+            assertNotNull(world.essenceBook.essence(code), "a crystal holds an unknown essence $code")
+        }
+    }
+
     /** The merchant's shelf and the map services (0.34.0): the server's rolls, prices and refusals. */
     private suspend fun merchantIsTheServers(api: GameApi, id: String, definitions: List<com.sperance.exileforge.core.model.modifier.ModifierDefinition>) {
         val stock = api.merchant.stock(id)
-        assertTrue(stock.offers.size in 12..16, "the merchant laid out ${stock.offers.size} items")
+        // Twelve to sixteen pieces of gear and, since server 0.69.0, one or two flasks beside them.
+        assertTrue(stock.offers.size in 12..18, "the merchant laid out ${stock.offers.size} items")
         assertTrue(stock.offers.all { it.price > 0 && it.item.rarity in setOf("COMMON", "UNCOMMON", "RARE") })
         // Server 0.66.2: nothing magic or rare below its floor on the shelf.
         val slots = api.catalog.equipment().associate { it.entityId to it.text("slot") }
@@ -411,7 +450,7 @@ class ServerIntegrationTest {
         assertTrue(tiers.zipWithNext().all { (better, worse) -> better.level >= worse.level }, "tiers of ${described.code} are not best first: $tiers")
 
         poolsAreTheServers(api, definitions)
-        mapAndAtlasStatsAreNamed(api, definitions)
+        statsAreNamed(api, definitions)
         // The key this client builds has to be the key the server wrote, or the template is the code.
         assertTrue(serverLocale.contains(LocaleKey.modifierName(described.code)), "no text for ${described.code}")
         assertNotEquals(described.code, described.template)
@@ -440,7 +479,10 @@ class ServerIntegrationTest {
         try {
             assertEquals(name, api.hero.character(id).name)
             assertEquals(1, api.catalog.search(Catalog.CHARACTERS, 0, CatalogFilter(query = name)).items.size)
-            assertTrue(api.hero.inventory(id).isEmpty())
+            // A new hero owns one thing (server 0.69.0): the small life flask, already on the belt's first place.
+            val kit = api.hero.inventory(id)
+            assertEquals(listOf("FLASK"), kit.map { it.equippedSlot }, "a new hero's things: $kit")
+            val starter = kit.single()
 
             // The character menu reads one account's characters, not the whole collection.
             val mine = api.hero.charactersOf(admin.id)
@@ -500,7 +542,7 @@ class ServerIntegrationTest {
             val wornInstance = api.hero.grant(id, wearable.entityId)
             val worn = api.hero.equip(id, wornInstance.id)
             assertEquals("HELMET", worn.equippedSlot)
-            assertEquals(listOf(wornInstance.id), api.hero.inventory(id).filter { it.equipped }.map { it.id })
+            assertEquals(setOf(starter.id, wornInstance.id), api.hero.inventory(id).filter { it.equipped }.map { it.id }.toSet())
             // Wearing the item is what changes the character sheet; the client recomputes nothing.
             val sheet = api.hero.stats(id)
             assertEquals(sheet, api.hero.stats(id))
@@ -541,6 +583,7 @@ class ServerIntegrationTest {
             craftingIsTheServers(api, id, template.entityId, definitions)
             handsAreTheServers(api, id)
             campaignIsTheServers(api, id, definitions)
+            skillsAreTheServers(api, id)
             merchantIsTheServers(api, id, definitions)
 
             val items = api.catalog.referencePage(com.sperance.exileforge.core.model.EntitySource.ITEM, 0)

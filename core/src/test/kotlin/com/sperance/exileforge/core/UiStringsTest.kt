@@ -152,6 +152,15 @@ class UiStringsTest {
             com.sperance.exileforge.core.campaign.DamageType.entries.forEach { add("enum.damage.${it.name}") }
             com.sperance.exileforge.core.display.AffixKind.entries.forEach { add("mod.kind.${it.name}") }
             stockStats.forEach { add("enum.stat.$it") }
+            // The class skills (2.78.0): when a slot fires, what a skill is, what a passive answers, and the words of its lines.
+            com.sperance.exileforge.core.model.skills.SlotCondition.entries.forEach { add("skills.condition.${it.name}") }
+            com.sperance.exileforge.core.model.skills.SkillType.entries.forEach { add("skills.type.${it.name}") }
+            com.sperance.exileforge.core.model.skills.SkillEvent.entries.forEach { add("skill.on.${it.name}") }
+            (com.sperance.exileforge.core.campaign.DamageType.entries.map { it.name } + "RANDOM").forEach { add("skill.element.$it") }
+            (com.sperance.exileforge.core.campaign.Ailment.entries.map { it.word } + "ELEMENT").forEach { add("skill.ailment.$it") }
+            listOf(com.sperance.exileforge.core.model.essences.EssenceBook.VAAL_UPGRADE, com.sperance.exileforge.core.model.essences.EssenceBook.VAAL_SPECIAL,
+                com.sperance.exileforge.core.model.essences.EssenceBook.VAAL_STRONGER).forEach { add("crystal.outcome.$it") }
+            com.sperance.exileforge.core.contract.bodyPlaces.forEach { add("enum.slot.${it.code}") }
             com.sperance.exileforge.core.display.StatGroup.entries.forEach { add("enum.stat_group.${it.name}") }
             listOf("requiredLevel", "requiredStrength", "requiredDexterity", "requiredIntelligence")
                 .forEach { add("req.short.$it") }

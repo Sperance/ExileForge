@@ -67,9 +67,9 @@ fun gainsLine(s: ForgeState, gains: WorkGains): String = listOfNotNull(
     ui("crafts.starved").takeIf { gains.starved },
 ).joinToString(" · ").ifBlank { ui("crafts.gain_nothing", gains.cycles) }
 
-/** How many of a stack the bag holds, by the item's code — a material or an orb. */
+/** How many of a stack the bag holds, by the item's code — a material, an orb, an essence or a book. */
 fun bagCount(s: ForgeState, code: String): Long {
-    val id = s.world.materials.firstOrNull { it.code == code }?.id ?: s.world.orbs.firstOrNull { it.code == code }?.id ?: return 0
+    val id = (s.world.materials + s.world.essences + s.world.books).firstOrNull { it.code == code }?.id ?: s.world.orbs.firstOrNull { it.code == code }?.id ?: return 0
     return s.play.hero?.bag?.firstOrNull { it.itemId == id }?.amount ?: 0
 }
 
@@ -78,6 +78,9 @@ fun jobProduct(job: JobView): String = when (job.kind) {
     JobKind.ITEM -> materialTitle(job.output)
     JobKind.EQUIPMENT -> ui("crafts.kind_equipment", job.band.getOrElse(0) { 1 }, job.band.getOrElse(1) { 1 })
     JobKind.MAP -> ui("crafts.kind_map", com.sperance.exileforge.core.campaign.mapTitle(job.map))
+    // Server 0.69.0: a flask of the output's base, and a book of the output's class opened up to the band's level.
+    JobKind.FLASK -> locOr(LocaleKey.equipmentName(job.output), displayName(job.output))
+    JobKind.BOOK -> ui("crafts.kind_book", locOr(LocaleKey.className(job.output), displayName(job.output)), job.band.getOrElse(0) { 1 })
 }
 
 /** A crafting profession spends materials; a gathering one only brings them. The works say which, not a list of codes. */

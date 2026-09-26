@@ -18,7 +18,7 @@ val protectedFields = setOf("_id", "id", "version", "deleted", "createdAt", "upd
 val rarities = listOf("COMMON", "UNCOMMON", "RARE", "UNIQUE", "MYTHICAL")
 // JEWEL is last on purpose: it is not worn on the body but sits in a socket on the tree,
 // and `CharacterEquipment.socketCode` says which one.
-val slots = listOf("HELMET", "BODY", "GLOVES", "RING", "BOOTS", "WINGS", "BELT", "WEAPON_1H", "WEAPON_2H", "QUIVER", "SHIELD", "AMULET", "JEWEL", "MAP", "TOOL_MINING", "TOOL_HERBALISM", "TOOL_WOODCUTTING", "TOOL_SMITHING", "TOOL_ALCHEMY", "TOOL_CARTOGRAPHY", "TOOL_ENCHANTING")
+val slots = listOf("HELMET", "BODY", "GLOVES", "RING", "BOOTS", "WINGS", "BELT", "WEAPON_1H", "WEAPON_2H", "QUIVER", "SHIELD", "AMULET", "JEWEL", "MAP", "FLASK", "TOOL_MINING", "TOOL_HERBALISM", "TOOL_WOODCUTTING", "TOOL_SMITHING", "TOOL_ALCHEMY", "TOOL_CARTOGRAPHY", "TOOL_ENCHANTING")
 /**
  * One line of the equipment ledger: a place on the body and the template slots that fill it.
  *
@@ -26,7 +26,8 @@ val slots = listOf("HELMET", "BODY", "GLOVES", "RING", "BOOTS", "WINGS", "BELT",
  * the main hand, a shield or a quiver in the other — because the server never lets both of a pair
  * be worn at once, and four cells for two hands read as four things to fill. The rings are two
  * places filled from one template slot: [ring] is the place the server is asked to put a ring in
- * (`RING`, `RING_2`), null everywhere else, where the template's own slot decides.
+ * (`RING`, `RING_2`) — or, since 2.78.0, a flask in (`FLASK`, `FLASK_2`, `FLASK_3`, the belt's three) —
+ * null everywhere else, where the template's own slot decides.
  */
 data class BodyPlace(val code: String, val fits: List<String>, val ring: String? = null) {
     /** What is worn here, out of the hero's items keyed by `equippedSlot`. */
@@ -45,14 +46,16 @@ val bodyPlaces = listOf(
     BodyPlace(BodyPlace.OFF_HAND, listOf("SHIELD", "QUIVER")),
 ) + listOf("HELMET", "BODY", "GLOVES", "BOOTS", "AMULET").map { BodyPlace(it, listOf(it)) } +
     listOf(BodyPlace("RING", listOf("RING"), "RING"), BodyPlace("RING_2", listOf("RING"), "RING_2")) +
-    listOf("BELT", "WINGS").map { BodyPlace(it, listOf(it)) }
+    listOf("BELT", "WINGS").map { BodyPlace(it, listOf(it)) } +
+    // The belt's three flasks (2.78.0, server 0.69.0): one template slot, three places, as the rings.
+    listOf("FLASK", "FLASK_2", "FLASK_3").map { BodyPlace(it, listOf("FLASK"), it) }
 
 val weapons = listOf("SWORD", "LONGSWORD", "BOW", "WAND", "AXE", "DOUBLEAXE", "DOUBLESWORD", "BLADE")
-val modifierSources = listOf("IMPLICIT", "PREFIX", "SUFFIX", "UNIQUE", "ENCHANTMENT", "CORRUPTION", "PASSIVE", "HANDCRAFTED", "ALCHEMY", "MONSTER")
+val modifierSources = listOf("IMPLICIT", "PREFIX", "SUFFIX", "UNIQUE", "ENCHANTMENT", "CORRUPTION", "PASSIVE", "HANDCRAFTED", "ALCHEMY", "MONSTER", "ESSENCE")
 val modifierOperations = listOf("ADD", "INCREASED", "MORE", "SET")
-const val SERVER_COMMIT = "91c0338d9f7b35cd1c8ed550f5a588a71ba1a8c6"
+const val SERVER_COMMIT = "34c2470c2c6013a9f974506908d706baf105bc36"
 const val SERVER_BRANCH = "claude/tender-pasteur-a36kj2"
-const val SERVER_VERSION = "0.68.1"
+const val SERVER_VERSION = "0.69.1"
 
 fun template(catalog: Catalog, kind: EquipmentKind = EquipmentKind.Weapon): JsonObject = when (catalog) {
     Catalog.CHARACTERS -> defaultObject("character")

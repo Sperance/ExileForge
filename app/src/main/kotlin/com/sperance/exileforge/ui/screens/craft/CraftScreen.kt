@@ -18,7 +18,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.character.Sheet
 import com.sperance.exileforge.core.contract.text
+import com.sperance.exileforge.core.display.displayName
+import com.sperance.exileforge.core.i18n.LocaleKey
+import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.display.affixMarks
 import com.sperance.exileforge.core.display.inventoryDocument
 import com.sperance.exileforge.core.display.modifierText
@@ -64,7 +68,10 @@ private const val UNCRAFT = "-"
     // The bench takes a modifier only from Magic rarity up (2.51.0), same as the server: a common
     // item has no affix slots and a unique's are closed, so it never had anything to offer there.
     val benchable = instance?.rarity !in setOf("COMMON", "UNIQUE")
-    val sections = if (isMap || !benchable) listOf(ForgeSection.ORBS) else ForgeSection.entries
+    // An essence (2.78.0) takes a common item to rare, or rolls a rare anew — any gear but a map, a flask or a unique.
+    val slot = instance?.let { s.world.inventoryBases[it.equipmentId]?.text("slot") }.orEmpty()
+    val essential = !isMap && slot !in Sheet.FLASK_SLOTS && !slot.startsWith("TOOL_") && slot != "JEWEL" && instance?.rarity in setOf("COMMON", "RARE")
+    val sections = listOfNotNull(ForgeSection.ORBS, ForgeSection.BENCH.takeIf { !isMap && benchable }, ForgeSection.ESSENCES.takeIf { essential })
     val section = s.play.forgeSection.takeIf { it in sections } ?: ForgeSection.ORBS
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -80,11 +87,13 @@ private const val UNCRAFT = "-"
             when (section) {
                 ForgeSection.ORBS -> OrbLedger(s, vm::selectOrb)
                 ForgeSection.BENCH -> instance?.let { BenchLedger(s, it, benchLine) { line -> benchLine = line } }
+                ForgeSection.ESSENCES -> EssenceLedger(s, vm::selectEssence)
             }
         }
         if (hero != null && instance != null) when (section) {
             ForgeSection.ORBS -> OrbBar(s, instance, enabled, vm::applyOrb)
             ForgeSection.BENCH -> BenchBar(s, vm, instance, benchLine, enabled)
+            ForgeSection.ESSENCES -> EssenceBar(s, instance, enabled, vm::applyEssence)
         }
     }
     if (picking) TargetPicker(s, onDismiss = { picking = false }) { vm.selectEquipment(it); picking = false }
@@ -93,6 +102,40 @@ private const val UNCRAFT = "-"
 private val ForgeSection.title get() = when (this) {
     ForgeSection.ORBS -> "forge.section_orbs"
     ForgeSection.BENCH -> "forge.section_bench"
+    ForgeSection.ESSENCES -> "forge.section_essences"
+}
+
+/**
+ * Every essence the bag holds (2.78.0), one line each — what it makes of a common item and of a rare one,
+ * in the server's words, and how many there are; the special ones in gold.
+ */
+@Composable private fun EssenceLedger(s: ForgeState, onSelect: (String) -> Unit) {
+    val owned = s.play.hero?.bag.orEmpty().associate { it.itemId to it.amount }
+    val essences = s.world.essences.filter { (owned[it.id] ?: 0L) > 0 }
+        .sortedWith(compareBy({ s.world.essenceBook.essence(it.code)?.special == true }, { -(s.world.essenceBook.essence(it.code)?.tier ?: 0) }))
+    if (essences.isEmpty()) { Text(ui("forge.no_essences"), color = Muted); return }
+    Column {
+        essences.forEach { essence ->
+            val special = s.world.essenceBook.essence(essence.code)?.special == true
+            LedgerRow(ForgeGlyphs.Shard, if (special) GoldBright else Elder, locOr(LocaleKey.itemName(essence.code), displayName(essence.code)),
+                locOr(LocaleKey.itemDescription(essence.code), ""), (owned[essence.id] ?: 0L).toString(),
+                selected = essence.id == s.play.selectedEssence) { onSelect(essence.id) }
+        }
+    }
+    MutedText(ui("essence.note"))
+}
+
+/** The chosen essence over the navigation, with the held button: a common item becomes rare, a rare one is rolled anew. */
+@Composable private fun EssenceBar(s: ForgeState, instance: EquipmentInstance, enabled: Boolean, onApply: (String, String) -> Unit) {
+    val owned = s.play.hero?.bag.orEmpty().associate { it.itemId to it.amount }
+    val essence = s.world.essences.firstOrNull { it.id == s.play.selectedEssence && (owned[it.id] ?: 0L) > 0 }
+    ForgeBar {
+        if (essence == null) { Text(ui("forge.pick_essence"), color = Muted); return@ForgeBar }
+        BarTitle(ForgeGlyphs.Shard, Elder, locOr(LocaleKey.itemName(essence.code), displayName(essence.code)), stock(owned[essence.id] ?: 0L, 1))
+        HoldButton(ui("confirm.hold", ui("forge.apply_essence")), Elder, enabled = enabled && !instance.corrupted, rearm = true) {
+            onApply(instance.id, essence.id)
+        }
+    }
 }
 
 /** The item being worked on, as the stash draws it, with the server's last word about it underneath. */

@@ -30,5 +30,8 @@
   "enum.orb.HELMET_SCROLL.trade": "Helmet Scroll",
   "enum.orb.GLOVES_SCROLL.trade": "Gloves Scroll",
   "enum.orb.BOOTS_SCROLL.trade": "Boots Scroll",
-  "enum.orb.WEAPON_SCROLL.trade": "Weapon Scroll"
+  "enum.orb.WEAPON_SCROLL.trade": "Weapon Scroll",
+  "enum.orb.ESSENCE_ORB.trade": "Essence Orb",
+  "enum.orb.SCRIBE_ORB.trade": "Scribe Orb",
+  "enum.orb.GLASSBLOWERS_BAUBLE.trade": "Glassblower's Bauble"
 }

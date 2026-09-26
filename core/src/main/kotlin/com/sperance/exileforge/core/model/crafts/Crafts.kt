@@ -30,8 +30,11 @@ import kotlinx.serialization.Serializable
     val open: Boolean = true,
 )
 
-/** What a successful cycle makes (since server 0.38.0): a stack, the smith's gear or a cartographer's map. */
-@Serializable enum class JobKind { ITEM, EQUIPMENT, MAP }
+/**
+ * What a successful cycle makes (since server 0.38.0): a stack, the smith's gear or a cartographer's map;
+ * since 0.69.0 an alchemist's flask and an enchanter's skill book of a class.
+ */
+@Serializable enum class JobKind { ITEM, EQUIPMENT, MAP, FLASK, BOOK }
 
 /** A material a cycle spends. */
 @Serializable data class JobInput(val item: String = "", val amount: Long = 0)

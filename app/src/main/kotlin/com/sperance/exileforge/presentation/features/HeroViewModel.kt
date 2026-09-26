@@ -73,6 +73,7 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     } } }
 
     fun selectOrb(value: String) = update { it.copy(play = it.play.copy(selectedOrb = value)) }
+    fun selectEssence(value: String) = update { it.copy(play = it.play.copy(selectedEssence = value)) }
 
     /**
      * Spends one orb on one item of the inventory.
@@ -99,6 +100,24 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         val outcome = api.hero.uncraft(id, inventoryId)
         mutable.update { it.copy(play = it.play.copy(forgeLine = outcome.message)) }
     } } }
+
+    /**
+     * An essence on one item (2.78.0, server 0.69.0): what it guarantees and what it rerolls are the
+     * server's; the answer is an orb's, a sentence under the item.
+     */
+    fun applyEssence(inventoryId: String, essenceItemId: String) { with(runtime) { forgeCommand { id ->
+        val outcome = api.hero.applyEssence(id, inventoryId, essenceItemId)
+        mutable.update { it.copy(play = it.play.copy(forgeLine = outcome.message, selectedEquipment = outcome.item.id)) }
+    } } }
+
+    /**
+     * The grimoire (2.78.0, server 0.69.0): a book read, a skill slotted or taken out, a slot's or a flask's
+     * condition, books traded for one. Every requirement is the server's; the hero comes back with the answer.
+     */
+    fun learnSkill(code: String) { with(runtime) { characterCommand { id -> api.hero.learnSkill(id, code) } } }
+    fun slotSkill(kind: String, index: Int, code: String?, condition: String? = null) { with(runtime) { characterCommand { id -> api.hero.slotSkill(id, kind, index, code, condition) } } }
+    fun flaskCondition(index: Int, condition: String?) { with(runtime) { characterCommand { id -> api.hero.flaskCondition(id, index, condition) } } }
+    fun exchangeBooks(books: List<String>, code: String) { with(runtime) { characterCommand { id -> api.hero.exchangeBooks(id, books, code) } } }
 
     fun selectNode(code: String) = update { it.copy(play = it.play.copy(selectedNode = code)) }
     fun nodeQuery(value: String) = update { it.copy(play = it.play.copy(nodeQuery = value)) }

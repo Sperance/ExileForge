@@ -7,6 +7,7 @@ import com.sperance.exileforge.core.model.campaign.CampaignRarity
 import com.sperance.exileforge.core.model.campaign.MonsterEffect
 import com.sperance.exileforge.core.model.campaign.MonsterModifier
 import com.sperance.exileforge.core.model.campaign.MonsterRarity
+import com.sperance.exileforge.core.model.skills.SkillBook
 import kotlin.random.Random
 
 /** A monster as it stands on the map: its rarity, what it rolled, and the stats that came of it. */
@@ -21,6 +22,10 @@ data class RolledMonster(
     val mapBuffs: List<MonsterEffect> = emptyList(),
     /** Fights from the back row and strikes from the first second (2.70.0, server 0.61.0). */
     val ranged: Boolean = false,
+    /** What it casts for its mana (2.78.0, server 0.69.0): codes of the monsters' skill book. */
+    val skills: List<String> = emptyList(),
+    /** The guardian of a crystal of essences (2.78.0): which one of the map's, by its place; null for everyone else. */
+    val crystal: Int? = null,
 )
 
 /**
@@ -43,13 +48,32 @@ object MonsterRoller {
         var count = rule.modifiers.let { (low, high) -> if (high > low) random.nextInt(low, high + 1) else low }
         // The atlas (server 0.66.0) hangs more on a rare monster than its rule does.
         if (rarity == MonsterRarity.RARE && count > 0) count += extraRareMods
-        // The tier widens the pool and strengthens what is drawn from it.
-        val tier = rarity.ordinal
-        val pool = map.modifiers.filter { it.minLevel <= map.level && (MonsterRarity.entries.firstOrNull { r -> r.name == it.minRarity }?.ordinal ?: 1) <= tier }.toMutableList()
-        val picked = List(count) { weighted(pool, random) { it.weight }?.also { pool.remove(it) } }.filterNotNull()
-            .map { modifier -> rolled(modifier, rule.modifierPower, random) }
+        val picked = draw(map, rarity, rule, count, random)
         return RolledMonster(monster.code, monster.form, rarity, picked, fold(monster, rule.effects + picked.flatMap { it.effects }), monster.behaviour,
             ranged = monster.ranged)
+    }
+
+    /** [count] modifiers of the map's pool for [rarity]: the tier widens the pool and strengthens what is drawn from it. */
+    private fun draw(map: CampaignMap, rarity: MonsterRarity, rule: CampaignRarity, count: Int, random: Random): List<MonsterModifier> {
+        val tier = rarity.ordinal
+        val pool = map.modifiers.filter { it.minLevel <= map.level && (MonsterRarity.entries.firstOrNull { r -> r.name == it.minRarity }?.ordinal ?: 1) <= tier }.toMutableList()
+        return List(count) { weighted(pool, random) { it.weight }?.also { pool.remove(it) } }.filterNotNull()
+            .map { modifier -> rolled(modifier, rule.modifierPower, random) }
+    }
+
+    /**
+     * A crystal's guardian (2.78.0, server 0.69.0): the zone's monster [code] standing up rare — its rule's
+     * modifiers drawn as any rare's — with the modifier of every kind of essence it guards, [essences], and
+     * [extra], what a Vaal orb and the atlas add to it. [crystal] is its crystal's place on the map.
+     */
+    fun guardian(map: CampaignMap, rarities: List<CampaignRarity>, code: String, essences: List<MonsterModifier>, extra: List<MonsterEffect>,
+                 crystal: Int, random: Random): RolledMonster? {
+        val monster = map.monsters.firstOrNull { it.code == code } ?: map.monsters.firstOrNull() ?: return null
+        val rule = rarities.firstOrNull { it.rarity == MonsterRarity.RARE.name } ?: CampaignRarity(MonsterRarity.RARE.name, 0)
+        val count = rule.modifiers.let { (low, high) -> if (high > low) random.nextInt(low, high + 1) else low }
+        val modifiers = draw(map, MonsterRarity.RARE, rule, count, random) + essences.map { rolled(it, 1.0, random) }
+        return RolledMonster(monster.code, monster.form, MonsterRarity.RARE, modifiers, fold(monster, rule.effects + modifiers.flatMap { it.effects } + extra),
+            monster.behaviour, mapBuffs = extra, ranged = monster.ranged, crystal = crystal)
     }
 
     /**
@@ -92,7 +116,7 @@ object MonsterRoller {
         val modifiers = signature + drawn
         val body = CampaignMonster(boss.code, boss.form, boss.stats, boss.behaviour, boss.range)
         return RolledMonster(boss.code, boss.form, MonsterRarity.UNIQUE, modifiers, fold(body, rule.effects + modifiers.flatMap { it.effects } + extra), boss.behaviour,
-            ranged = body.ranged)
+            ranged = body.ranged, skills = boss.skills)
     }
 
     /**
@@ -118,6 +142,24 @@ object MonsterRoller {
         }
     }
 
+    /**
+     * What a monster casts (2.78.0, server 0.69.0): a boss its own skills; a monster with mana and none of
+     * its own, the casters' spell of its leading element; one with a mad essence, one more of any monster's,
+     * borrowed for the run — and mana to cast it with, if it had none.
+     */
+    fun skilled(monster: RolledMonster, book: SkillBook, random: Random): RolledMonster {
+        val mana = monster.stats["STOCK_MANA"] ?: 0.0
+        val own = monster.skills.ifEmpty {
+            if (mana > 0) listOfNotNull(book.rules.casterSpells[DamageType.entries.maxBy { monster.stats[it.attack] ?: 0.0 }.name]) else emptyList()
+        }
+        val borrows = (monster.stats["STOCK_BORROW_SKILLS"] ?: 0.0) > 0 && book.monsterSkills.isNotEmpty()
+        val skills = (own + if (borrows) listOf(book.monsterSkills[random.nextInt(book.monsterSkills.size)].code) else emptyList()).distinct()
+        if (skills == monster.skills) return monster
+        val stats = if (borrows && mana <= 0) monster.stats + ("STOCK_MANA" to BORROWED_MANA) else monster.stats
+        return monster.copy(skills = skills, stats = stats)
+    }
+
+    private const val BORROWED_MANA = 40.0
     private const val PACK_CHANCE = 0.15
     private const val PACK_MAX = 3
 

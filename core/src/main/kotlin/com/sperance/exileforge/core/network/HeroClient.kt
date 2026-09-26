@@ -9,7 +9,11 @@ import com.sperance.exileforge.core.model.sync.HeroParts
 import com.sperance.exileforge.core.model.sync.HeroSnapshot
 import com.sperance.exileforge.core.model.command.*
 import com.sperance.exileforge.core.model.hero.*
+import com.sperance.exileforge.core.model.skills.HeroSkills
 import kotlinx.serialization.json.*
+
+/** Route root of the class skills (server 0.69.0). */
+private const val SKILLS = "api/v1/character/skills"
 
 /**
  * One character: what it is, what it carries and wears, and every command that changes that.
@@ -138,6 +142,36 @@ class HeroClient internal constructor(private val http: Transport, private val c
     suspend fun applyOrb(characterId: String, inventoryId: String, orbItemId: String): OrbOutcome {
         requireId(inventoryId); requireId(orbItemId)
         return http.post("api/v1/characterequipment/applyOrb", heroQuery(characterId, "inventoryId" to inventoryId, "orbItemId" to orbItemId))
+    }
+
+    /**
+     * Spends one essence of the character's on one item (server 0.69.0): a common item becomes rare with the
+     * essence's line guaranteed, a rare one is rolled anew around it from its step up. The answer is an orb's.
+     */
+    suspend fun applyEssence(characterId: String, inventoryId: String, essenceItemId: String): OrbOutcome {
+        requireId(inventoryId); requireId(essenceItemId)
+        return http.post("api/v1/characterequipment/applyEssence", heroQuery(characterId, "inventoryId" to inventoryId, "essenceItemId" to essenceItemId))
+    }
+
+    /** Reads a skill book of the class (server 0.69.0): the first teaches the skill, each next one a level, by the book's requirements. */
+    suspend fun learnSkill(characterId: String, skill: String): HeroSkills =
+        http.post("$SKILLS/learn", heroQuery(characterId, "skill" to skill))
+
+    /**
+     * Puts a learned skill into slot [index] of [kind] — `ACTIVE` or `PASSIVE` — or empties it without [skill];
+     * [condition] is when an active slot fires by itself. The slots open with the hero's level (server 0.69.0).
+     */
+    suspend fun slotSkill(characterId: String, kind: String, index: Int, skill: String?, condition: String? = null): HeroSkills =
+        http.post("$SKILLS/slot", heroQuery(characterId, "kind" to kind, "index" to index.toString(), "skill" to skill, "condition" to condition))
+
+    /** When the flask of belt place [index] is drunk by itself (server 0.69.0); none gives it back to its kind's own. */
+    suspend fun flaskCondition(characterId: String, index: Int, condition: String?): HeroSkills =
+        http.post("$SKILLS/flask", heroQuery(characterId, "index" to index.toString(), "condition" to condition))
+
+    /** Trades [books] — skill codes, one book each — and the server's gold for one book of the class's [skill] (server 0.69.0). */
+    suspend fun exchangeBooks(characterId: String, books: List<String>, skill: String): HeroSkills {
+        require(books.isNotEmpty() && skill.isNotBlank()) { ui("skills.choose_books") }
+        return http.post("$SKILLS/exchange", heroQuery(characterId, "books" to books.joinToString(","), "skill" to skill))
     }
 
     /** The crafting bench lines the character has found on maps (since 0.46.0); the rest stay hidden. */

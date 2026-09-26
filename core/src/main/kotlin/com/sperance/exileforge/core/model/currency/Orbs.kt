@@ -31,7 +31,9 @@ enum class CurrencyOrb {
     // Since 0.38.0 the alchemist's orbs for maps, refused on anything else (CR_020).
     EMPOWERING_ORB, MERCY_ORB, PERIL_ORB, HORDE_ORB, MAGUS_ORB, ELITE_ORB, BOUNTY_ORB,
     // Since 0.66.0: three more alchemy lines, and the enchanter's scrolls, one enchantment per item of their slot.
-    TREASURE_ORB, GILDED_ORB, WARDEN_ORB, HELMET_SCROLL, GLOVES_SCROLL, BOOTS_SCROLL, WEAPON_SCROLL;
+    TREASURE_ORB, GILDED_ORB, WARDEN_ORB, HELMET_SCROLL, GLOVES_SCROLL, BOOTS_SCROLL, WEAPON_SCROLL,
+    // Since 0.69.0: two alchemy lines for maps — crystals of essences, skill books — and a flask's quality.
+    ESSENCE_ORB, SCRIBE_ORB, GLASSBLOWERS_BAUBLE;
 
     fun title(lang: Lang = uiLanguage): String = ui(lang, "enum.orb.$name")
     /** The English trade name (2.51.0): one in every language, printed under the title on a full card. */

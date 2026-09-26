@@ -76,6 +76,9 @@ private val art = mapOf(
     CurrencyOrb.GLOVES_SCROLL to OrbArt(0xFFB8C8E8, Emblem.RUNE),
     CurrencyOrb.BOOTS_SCROLL to OrbArt(0xFFB8E0C8, Emblem.RUNE),
     CurrencyOrb.WEAPON_SCROLL to OrbArt(0xFFE8C0B0, Emblem.RUNE),
+    CurrencyOrb.ESSENCE_ORB to OrbArt(0xFFB07FE0, Emblem.CRYSTAL),
+    CurrencyOrb.SCRIBE_ORB to OrbArt(0xFFD8C8A0, Emblem.BOOK),
+    CurrencyOrb.GLASSBLOWERS_BAUBLE to OrbArt(0xFF9FD8E8, Emblem.FLASK),
 )
 
 /** An orb the client has no art for — one the server added later — is plain gold glass with a gem. */
@@ -108,6 +111,8 @@ private enum class Emblem(val d: String, val filled: Boolean) {
     RUNE("M50 24 V76 M50 36 L64 26 M50 50 L36 40 M50 50 L64 62", false),
     GEM("M36 36 H64 L74 48 L50 76 L26 48 Z M26 48 H74 M42 36 L38 48 L50 76 L62 48 L58 36", true),
     COIN("M50 30 a20 20 0 1 1 -0.1 0 Z M50 38 V62 M44 42 H55 Q60 42 60 47 Q60 50 50 50 Q40 50 40 55 Q40 58 45 58 H56", false),
+    CRYSTAL("M50 22 L64 40 L58 76 H42 L36 40 Z M36 40 H64 M50 22 L46 40 L50 76", true),
+    BOOK("M28 32 Q40 28 50 34 Q60 28 72 32 V70 Q60 66 50 72 Q40 66 28 70 Z M50 34 V72", false),
 }
 
 private val lead = SolidColor(Color(0xFF111111))

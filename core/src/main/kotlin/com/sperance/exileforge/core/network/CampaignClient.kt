@@ -11,6 +11,8 @@ import com.sperance.exileforge.core.model.campaign.MapLaunch
 import com.sperance.exileforge.core.model.campaign.MapServiceOutcome
 import com.sperance.exileforge.core.model.campaign.MonsterRarity
 import com.sperance.exileforge.core.model.campaign.VaalZone
+import com.sperance.exileforge.core.model.essences.CrystalState
+import com.sperance.exileforge.core.model.essences.CrystalVaal
 
 /** Route root of the campaign, since server 0.26.0. */
 private const val CAMPAIGN = "api/v1/character/campaign"
@@ -75,6 +77,21 @@ class CampaignClient internal constructor(private val http: Transport) {
     /** The Vaal zone closed without its guardian — refused at the gate or died in (server 0.57.0). Never retried. */
     suspend fun vaalLeave(characterId: String, mapCode: String): CampaignFall =
         http.post("$CAMPAIGN/vaal/leave", heroQuery(characterId, "mapCode" to mapCode))
+
+    /** The crystals of essences in [mapCode] for this hero now (server 0.69.0): a window like the chests'. */
+    suspend fun crystals(characterId: String, mapCode: String): CrystalState =
+        http.get("$CAMPAIGN/crystals", heroQuery(characterId, "mapCode" to mapCode))
+
+    /**
+     * The guardian of crystal [index] was slain (server 0.69.0): its essences go to the bag, its loot is a
+     * rare monster's, and the crystal leaves the window. Never retried — a repeat would pay twice.
+     */
+    suspend fun freeCrystal(characterId: String, mapCode: String, index: Int): CampaignReward =
+        http.post("$CAMPAIGN/crystal", heroQuery(characterId, "mapCode" to mapCode, "index" to index.toString()))
+
+    /** A Vaal orb on crystal [index] (server 0.69.0), once a crystal: its essences higher, one special, or a stronger guardian. Never retried. */
+    suspend fun vaalCrystal(characterId: String, mapCode: String, index: Int): CrystalVaal =
+        http.post("$CAMPAIGN/crystal/vaal", heroQuery(characterId, "mapCode" to mapCode, "index" to index.toString()))
 
     /** Summons a slain guardian back to the exit (0.34.0), for gold. Never retried. */
     suspend fun summon(characterId: String, mapCode: String): MapServiceOutcome =

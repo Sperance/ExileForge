@@ -149,6 +149,10 @@ private class ScenePainter {
             world.chests.filter { world.explored(it.cell.x, it.cell.y) }.forEach { chest ->
                 standing += (chest.cell.x + chest.cell.y + 1.0) to { drawChest(chest.cell.x + .5, chest.cell.y + .5, chest.opened, glow(chest.cell.x, chest.cell.y)) }
             }
+            // A crystal of essences stands once seen (2.78.0): humming until its guardian is slain, dull after.
+            world.crystals.filter { world.explored(it.cell.x, it.cell.y) }.forEach { spot ->
+                standing += (spot.cell.x + spot.cell.y + 1.0) to { drawCrystal(spot.cell.x + .5, spot.cell.y + .5, spot.freed, spot.crystal.stronger, glow(spot.cell.x, spot.cell.y)) }
+            }
             // Since 2.31.0 whoever walks the map is a round token cut from their portrait's face: the
             // class's for the hero, the monster's own or its form's for a monster, ringed by what it is.
             // Since 2.32.0 a monster is drawn only where the hero's light reaches.
@@ -291,6 +295,33 @@ private class ScenePainter {
             pen.circle(cx, cy + h, unit * .45f)
             pen.color = Color.White.copy(alpha = .5f * light)
             pen.circle(cx, cy + h - unit * .05f, unit * .05f + unit * .03f * sin(time * 4f))
+        }
+    }
+
+    /**
+     * A crystal of essences (2.78.0): a tall prism of violet glass on the ground, humming while its guardian
+     * waits — red once a Vaal orb made the guardian stronger — and dull glass once it is freed.
+     */
+    private fun drawCrystal(x: Double, y: Double, freed: Boolean, stronger: Boolean, light: Float) {
+        val cx = isoX(x, y)
+        val cy = isoY(x, y)
+        val w = unit * .26f
+        val d = unit * .13f
+        val h = unit * (if (freed) .45f else .95f)
+        val glass = when { freed -> Color(0xFF3A3346); stronger -> Color(0xFFD04A5A); else -> Color(0xFFB07FE0) }
+        pen.color = Color.Black.copy(alpha = .35f)
+        pen.ellipse(cx - w * 1.4f, cy - d, w * 2.8f, d * 2f)
+        pen.color = tone(glass, .78f * light)
+        pen.quad(cx - w, cy, cx, cy - d, cx, cy - d + h * .8f, cx - w, cy + h * .7f)
+        pen.color = tone(glass, .55f * light)
+        pen.quad(cx, cy - d, cx + w, cy, cx + w, cy + h * .7f, cx, cy - d + h * .8f)
+        pen.color = tone(glass, light)
+        pen.quad(cx - w, cy + h * .7f, cx, cy - d + h * .8f, cx + w, cy + h * .7f, cx, cy + h)
+        if (!freed) {
+            pen.color = glass.copy(alpha = (.18f + .12f * sin(time * 2f + x.toFloat())) * light)
+            pen.circle(cx, cy + h * .5f, unit * .6f)
+            pen.color = Color.White.copy(alpha = .6f * light)
+            pen.circle(cx - w * .35f, cy + h * .6f, unit * .035f)
         }
     }
 

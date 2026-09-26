@@ -45,6 +45,8 @@ fun affixTint(kind: AffixKind?): Color = when (kind) {
     AffixKind.CORRUPTION -> Color(0xFFD20000)
     AffixKind.ALCHEMY -> Vital
     AffixKind.UNIQUE -> Color(0xFFAF6025)
+    // A special essence (2.78.0), violet as its crystal.
+    AffixKind.ESSENCE -> Color(0xFFB07FE0)
 }
 
 /**

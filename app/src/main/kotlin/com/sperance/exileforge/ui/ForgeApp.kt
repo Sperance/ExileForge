@@ -47,6 +47,7 @@ import com.sperance.exileforge.ui.screens.crafts.CraftsScreen
 import com.sperance.exileforge.ui.screens.hero.HeroScreen
 import com.sperance.exileforge.ui.screens.redemption.RedemptionScreen
 import com.sperance.exileforge.ui.screens.server.ServerScreen
+import com.sperance.exileforge.ui.screens.skills.GrimoireScreen
 import com.sperance.exileforge.ui.screens.tree.SkillTreeScreen
 import com.sperance.exileforge.ui.theme.*
 
@@ -107,7 +108,7 @@ import com.sperance.exileforge.ui.theme.*
                 destinations.forEach { index ->
                     val label = labels.getValue(index)
                     // The tree is the hero's (2.40.0): while it is open, the Hero tab reads as the one chosen.
-                    NavigationBarItem(selected = s.tab == index || (index == TAB_HERO && s.tab == TAB_TREE), onClick = { vm.tab(index) },
+                    NavigationBarItem(selected = s.tab == index || (index == TAB_HERO && (s.tab == TAB_TREE || s.tab == TAB_SKILLS)), onClick = { vm.tab(index) },
                         icon = { Icon(icons.getValue(index), null, modifier = Modifier.size(22.dp)) }, label = { Text(label, fontSize = 10.sp) },
                         colors = NavigationBarItemDefaults.colors(selectedIconColor = GoldBright, selectedTextColor = Gold,
                             indicatorColor = Gold.copy(alpha = .16f), unselectedIconColor = Muted, unselectedTextColor = Muted))
@@ -130,6 +131,7 @@ import com.sperance.exileforge.ui.theme.*
                 TAB_EXPEDITION -> ExpeditionScreen(s, vm)
                 TAB_CRAFTS -> CraftsScreen(s, vm)
                 TAB_TREE -> SkillTreeScreen(s, vm)
+                TAB_SKILLS -> GrimoireScreen(s, vm)
                 TAB_AUCTION -> AuctionScreen(s, vm)
                 TAB_ADMIN -> AdminScreen(s, vm)
                 // The forge keeps no place in the bar: it opens from the Hero tab, as the editor,

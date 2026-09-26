@@ -387,9 +387,23 @@
 | Ваал-зона (0.57.0) | `POST /api/v1/character/campaign/vaal?characterId=&mapCode=` → `VaalZone {mapCode, level, modifiers, effects, quantity, rarity, experience}` — зона за порталом, катится раз за заход, повтор отдаёт ту же; закрытая — `CP_012`. `POST …/kill?…&vaal=true` — монстр зоны, её бонус поверх карты. `POST …/corrupt` — страж зоны, требует открытую зону и закрывает её. `POST …/vaal/leave` → `CampaignFall` (без потери опыта) — отказ у ворот или смерть внутри |
 | Ремёсла (0.37.0) | `GET /api/v1/character/crafts?characterId=` → `CraftsState` (досчитывает циклы до сейчас, добыча — в сумке); `POST …/crafts/start?characterId=&job=[&additives=A,B]` (0.38.0: примеси кузнеца; ремесло тратит материалы каждый цикл и встаёт, когда они кончаются — `CF_006`, чужая примесь — `CF_007`, закрытая локация — `CF_005`), `POST …/crafts/stop?characterId=`; без инструмента — `CF_004`, мал уровень — `CF_003`. С 0.66.2 у `work` ещё `startedAt` и `totals` — итоги работы с запуска: `{cycles, nothing, items, spent, made, experience, levels}` |
 | Вход в локацию (0.35.0) | `POST /api/v1/character/campaign/start?characterId=&mapCode=[&itemId=]` → `{map, chests, atlas, zone}`; карта (слот `MAP`, шаблон `MAP_<mapCode>`) тратится, чужая локация — `CP_011`; без `itemId` — вход без карты. С 0.68.1 `zone` — зона целиком, с пулами модификаторов монстров, босса и стража порчи: заход строится по ней |
-| Витрина торговца | `GET /api/v1/character/merchant?characterId=` → `{refreshAt, offers:[{id, item, price}]}`; с 0.66.2 волшебная и редкая вещь витрины не ниже дна своей редкости (пустая выкладывается белой) |
+| Кристаллы эссенций (0.69.0) | `GET /api/v1/character/campaign/crystals?characterId=&mapCode=` → `{crystals:[{essences, guardian, stronger, vaal}], refreshAt}` — окно на зону, как у сундуков; вход в зону отдаёт его в `MapLaunch.crystals` (с учётом строки карты `MAP_CRYSTALS`) |
+| Страж кристалла убит | `POST …/campaign/crystal?characterId=&mapCode=&index=` → `CampaignReward`: эссенции кристалла, добыча редкого монстра, с шансом книга умения; кристалл уходит из окна (индекс — место среди оставшихся); нет такого — `CP_013`; не повторяется |
+| Сфера Ваал на кристалле | `POST …/campaign/crystal/vaal?characterId=&mapCode=&index=` → `{outcome: UPGRADE\|SPECIAL\|STRONGER, crystal, state}`; раз на кристалл, повтор — `CP_014`; тратит `VAAL_ORB` |
+| Умения класса (0.69.0) | `POST /api/v1/character/skills/learn?characterId=&skill=` — книга `BOOK_<skill>` из сумки поднимает уровень (требования — уровень героя и характеристики класса, `SK_*`); `POST …/skills/slot?characterId=&kind=ACTIVE\|PASSIVE&index=[&skill=][&condition=]` — слот (без `skill` — пусто); `POST …/skills/flask?characterId=&index=[&condition=]` — условие глотка места пояса; `POST …/skills/exchange?characterId=&books=A,B,C&skill=` — 3 книги и золото за уровень героя на книгу своего класса. Ответ — `HeroSkills {learned, active:[{skill, condition}], passive, flasks}` и снимок героя |
+| Эссенция на вещь (0.69.0) | `POST /api/v1/characterequipment/applyEssence?characterId=&inventoryId=&essenceItemId=` → как `applyOrb`; обычная вещь становится редкой с гарантированной строкой, редкая перебрасывается от ступени `rerollsRare`; фляга, карта и уникалка — отказ (`CR_029`/`CR_030`) |
+| Витрина торговца | `GET /api/v1/character/merchant?characterId=` → `{refreshAt, offers:[{id, item, price}]}`; с 0.66.2 волшебная и редкая вещь витрины не ниже дна своей редкости (пустая выкладывается белой); с 0.69.0 рядом 1–2 фляги |
 | Покупка у торговца | `POST /api/v1/character/merchant/buy?characterId=&offerId=` → `{item, money}`; `CH_016` не хватает золота, `CH_017` нет предложения |
 | Места под лоты | `GET`/`POST /api/v1/auctionlot/slots?characterId=` → `{used, limit, max, price, money}`; `AU_012` все заняты, `AU_013` потолок |
+
+С 0.69.0 (ревизия 13) в правилах боя есть `mana: {regen}` — доля максимума маны в секунду — и `flasks: {perKill}` —
+заряды фляг за убийство по редкости монстра. `world.json` несёт `skills` (правила книги, классы, 98 умений классов и
+умения монстров: `SkillDefinition {code, heroClass, type, unlock, icon, mana, cooldown, reserve, condition, hit, dot, buff,
+curse, heal, shield, barrier, stats, lowLife, trigger}`, числа — `[на 1-м уровне, на 20-м]`) и `essences` (ступени, виды,
+особые, правило кристаллов и сгущения); книги — предметы категории `BOOK` (`subCategory` — класс), эссенции — `ESSENCE`.
+Фляга — шаблон слота `FLASK`, надевается на `FLASK`/`FLASK_2`/`FLASK_3` (`equip?slot=`), в лист героя не входит; у
+экземпляра есть `quality`. У персонажа — `skills: HeroSkills`. У босса зоны — `skills`, у зоны при входе — `essences`
+(модификаторы стражей кристаллов). Бой по-прежнему считает клиент: умения, фляги и умения монстров — его.
 
 ## Чего у этого сервера нет
 

@@ -68,6 +68,12 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     fun delete() = runtime.editorViewModel.delete()
     fun editInventoryBase(id: String) = runtime.editorViewModel.editInventoryBase(id)
     fun selectEquipment(value: String) = runtime.heroViewModel.selectEquipment(value)
+    fun applyEssence(inventoryId: String, essenceItemId: String) = runtime.heroViewModel.applyEssence(inventoryId, essenceItemId)
+    fun selectEssence(value: String) = runtime.heroViewModel.selectEssence(value)
+    fun learnSkill(code: String) = runtime.heroViewModel.learnSkill(code)
+    fun slotSkill(kind: String, index: Int, code: String?, condition: String? = null) = runtime.heroViewModel.slotSkill(kind, index, code, condition)
+    fun flaskCondition(index: Int, condition: String?) = runtime.heroViewModel.flaskCondition(index, condition)
+    fun exchangeBooks(books: List<String>, code: String) = runtime.heroViewModel.exchangeBooks(books, code)
     fun loadHero() = runtime.heroViewModel.loadHero()
     /** Re-reads the hero only if what is on screen has gone cold; every character tab opens with it. */
     fun ensureHero() = runtime.heroViewModel.ensureHero()

@@ -2,6 +2,7 @@ package com.sperance.exileforge.core
 
 import com.sperance.exileforge.core.character.SellRule
 import com.sperance.exileforge.core.character.Sheet
+import com.sperance.exileforge.core.character.StatLine
 import com.sperance.exileforge.core.character.StatOrder
 import com.sperance.exileforge.core.character.StatTables
 import com.sperance.exileforge.core.model.hero.CharacterSummary
@@ -58,6 +59,16 @@ class SheetTest {
         // Strength 30 is counted before life: 50 + 2 * 10 per level + 30 / 2 = 85, then 10% more.
         assertEquals(30.0, sheet.stats["STOCK_STRENGTH"])
         assertEquals(93.5, sheet.stats["STOCK_HEALTH"])
+    }
+
+    /** A buff laid on in a fight (2.78.0) joins the increases of its stat, as the server would count it, not the total. */
+    @Test fun aLineLaidOverTheSheetJoinsItsStatsIncreases() {
+        val sheet = Sheet.calculate(hero, warrior, listOf(CharacterSkillNode("n", listOf(mod("str", 10.0), mod("lifeInc", 10.0)))),
+            emptyList(), emptyMap(), definitions, tables)
+        val model = assertNotNull(sheet.model)
+        assertEquals(sheet.stats, model.plain)
+        // 85 base with 10% + 20% increased: 110.5, not 93.5 × 1.2.
+        assertEquals(110.5, model.with(listOf(StatLine("STOCK_HEALTH", ModifierOperation.INCREASED, 20.0)))["STOCK_HEALTH"])
     }
 
     @Test fun anItemFoldsItsLocalModifiersAndNeedsItsRequirements() {

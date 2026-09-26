@@ -183,11 +183,11 @@ private fun rolledValues(modifier: JsonObject, definition: ModifierDefinition? =
 /**
  * What put a line on an item, as Path of Exile's trade site and advanced tooltip letter it (2.58.0):
  * P prefix, S suffix, I implicit, E enchantment, C the bench, F fractured, U unique — and this game's
- * own H for the smith's handcraft, V for a corruption, A for a map's alchemy.
+ * own H for the smith's handcraft, V for a corruption, A for a map's alchemy, X for a special essence's line (2.78.0).
  */
 enum class AffixKind(val letter: Char) {
     PREFIX('P'), SUFFIX('S'), IMPLICIT('I'), ENCHANTMENT('E'), CRAFTED('C'), HANDCRAFTED('H'),
-    FRACTURED('F'), CORRUPTION('V'), ALCHEMY('A'), UNIQUE('U');
+    FRACTURED('F'), CORRUPTION('V'), ALCHEMY('A'), UNIQUE('U'), ESSENCE('X');
 
     companion object {
         /** A fracture or the bench outranks the place a line holds: that is what decides what an orb may do to it. */
@@ -203,6 +203,7 @@ enum class AffixKind(val letter: Char) {
                 ModifierSource.CORRUPTION -> CORRUPTION
                 ModifierSource.ALCHEMY -> ALCHEMY
                 ModifierSource.UNIQUE -> UNIQUE
+                ModifierSource.ESSENCE -> ESSENCE
                 ModifierSource.PASSIVE, ModifierSource.MONSTER, null -> null
             }
         }

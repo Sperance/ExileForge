@@ -39,6 +39,7 @@ import com.sperance.exileforge.presentation.state.ForgeSection
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.Reads
 import com.sperance.exileforge.presentation.state.TAB_CRAFT
+import com.sperance.exileforge.presentation.state.TAB_SKILLS
 import com.sperance.exileforge.presentation.state.TAB_TREE
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.auction.ListingSheet
@@ -92,7 +93,7 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
                 // Who the character is heads every section; until the hero arrives the tab says what it is.
-                if (hero != null) HeroHeader(s, onTree = { vm.tab(TAB_TREE) }) { vm.tab(TAB_CRAFT) }
+                if (hero != null) HeroHeader(s, onTree = { vm.tab(TAB_TREE) }, onSkills = { vm.tab(TAB_SKILLS) }) { vm.tab(TAB_CRAFT) }
                 else ScreenHeader(ui("hero.title"), ui("hero.inventory_count", stash.size), ForgeGlyphs.Stash)
             }
             item { SectionBar(section) { section = it } }
@@ -151,7 +152,10 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
     stackId?.let { id -> s.play.hero?.bag?.firstOrNull { it.itemId == id } }?.let { stack ->
         BagSheet(s, stack, onDismiss = { stackId = null },
             onForge = { id -> stackId = null; vm.selectOrb(id); vm.openForge(null, ForgeSection.ORBS) },
-            onAuction = { id -> stackId = null; listStack = id })
+            onAuction = { id -> stackId = null; listStack = id },
+            // A book is read where it lies, and its page opens in the grimoire (2.78.0); an essence goes to the forge.
+            onRead = { code -> stackId = null; vm.learnSkill(code); vm.tab(TAB_SKILLS) },
+            onEssence = { id -> stackId = null; vm.selectEssence(id); vm.openForge(null, ForgeSection.ESSENCES) })
     }
     listStack?.let { id ->
         ListingSheet(s, bagTitle(s, id), owned = s.bagAmount(id) ?: 0L, onDismiss = { listStack = null }) { orb, price, amount ->

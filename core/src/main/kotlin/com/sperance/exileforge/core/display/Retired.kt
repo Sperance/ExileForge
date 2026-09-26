@@ -6,14 +6,11 @@ import com.sperance.exileforge.core.model.modifier.definition
 import kotlinx.serialization.json.JsonObject
 
 /**
- * Mana and spells left the hero's game in 2.48.0 (server 0.43.0): no fight of theirs casts. Their
- * modifiers are gone from the server since 0.56.0, but a monster still carries mana and spell damage
- * and a few bases keep such an implicit, so the client shows none of it — not on the sheet, not on a
- * monster, not on an item — where such a line would promise what nothing delivers.
+ * What no fight delivers, so the client shows it nowhere — not on the sheet, not on a monster, not on an
+ * item. Mana and spells left the game in 2.48.0 (server 0.43.0) and came back in 2.78.0 (server 0.69.0)
+ * with the class skills and the monsters' spells; blocking a spell apart from a blow is still not a thing.
  */
-val retiredStats = setOf(
-    "STOCK_MANA", "STOCK_SPELL_BLOCK", "STOCK_ATTACK_MAGICAL", "STOCK_CAST_SPEED", "STOCK_MANA_REGEN",
-)
+val retiredStats = setOf("STOCK_SPELL_BLOCK")
 
 fun retired(stat: String): Boolean = stat in retiredStats
 

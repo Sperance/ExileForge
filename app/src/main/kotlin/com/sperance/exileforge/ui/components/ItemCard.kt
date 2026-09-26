@@ -205,6 +205,8 @@ private fun cardFacts(doc: JsonObject, withPrice: Boolean = true): List<String> 
     ).joinToString(" · ").takeIf { it.isNotBlank() },
     listOfNotNull(
         doc.text("weaponType").takeIf { it.isNotBlank() }?.let(::weaponTitle),
+        // A flask's quality (2.78.0): each percent a percent more effect or recovery.
+        doc.text("quality").toIntOrNull()?.takeIf { it > 0 }?.let { ui("card.quality", it) },
         doc.text("durability").takeIf { it.isNotBlank() }?.let { "${ui("card.durability")} $it" },
         doc.text("price").takeIf { withPrice && it.isNotBlank() }?.let { "${ui("card.price")} $it" },
         doc.text("money").takeIf { it.isNotBlank() }?.let { "${ui("card.gold")} $it" },

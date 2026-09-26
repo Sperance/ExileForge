@@ -2,6 +2,7 @@ package com.sperance.exileforge.core.model.campaign
 
 import com.sperance.exileforge.core.model.hero.CharacterItem
 import com.sperance.exileforge.core.model.hero.EquipmentInstance
+import com.sperance.exileforge.core.model.essences.CrystalState
 import com.sperance.exileforge.core.model.modifier.BenchRecipe
 import kotlinx.serialization.Serializable
 
@@ -101,6 +102,8 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
     /** Its pool at the map's level (server 0.66.0): [rolls] random lines of it, low and high, join the signature ones each encounter. */
     val pool: List<MonsterModifier> = emptyList(),
     val rolls: List<Int> = listOf(0, 0),
+    /** Its skills (server 0.69.0): codes of the monsters' skill book, cast for its own mana. */
+    val skills: List<String> = emptyList(),
 )
 
 /**
@@ -132,6 +135,8 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
     val size: Int = 48,
     /** The corrupted zone's guardian this location can roll (since server 0.46.0), or none from an older server. */
     val corrupted: CampaignBoss? = null,
+    /** The modifiers of crystal guardians at the zone's level (server 0.69.0), one per kind of essence; whole with the entry only. */
+    val essences: List<MonsterModifier> = emptyList(),
 )
 
 /** A point of the world map, in its units: `x` to the right, `y` up from the start. */
@@ -173,6 +178,12 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
 @Serializable data class LoneWolfRule(val dealt: Double = 10.0, val taken: Double = 10.0)
 @Serializable data class DeathRule(val fromLevel: Int = 10, val experienceShare: Double = 5.0)
 
+/** Mana (server 0.69.0): so many percent of the maximum come back every second. */
+@Serializable data class ManaRule(val regen: Double = 2.0)
+
+/** Flasks (server 0.69.0): full on entering a zone, then so many charges a kill by the monster's rarity. */
+@Serializable data class FlaskRule(val perKill: Map<String, Double> = mapOf("NORMAL" to 1.0, "MAGIC" to 2.0, "RARE" to 3.0, "UNIQUE" to 5.0))
+
 /**
  * The numbers the fight is played by — the server's since 0.28.0, read with the world.
  *
@@ -189,6 +200,9 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
     /** Since server 0.36.0: no "+% to maximum resistance" lifts a resistance past [resistHardCap], and no reduction shortens an ailment by more than [ailmentDurationCap] percent. */
     val resistHardCap: Double = 90.0, val ailmentDurationCap: Double = 75.0,
     val loneWolf: LoneWolfRule = LoneWolfRule(),
+    /** Since server 0.69.0: mana comes back to the fight, and flasks fill up with kills. */
+    val mana: ManaRule = ManaRule(),
+    val flasks: FlaskRule = FlaskRule(),
     val ailments: List<AilmentRule> = listOf(
         AilmentRule("BURNING", "STOCK_ATTACK_FIRE", 30.0, 60.0, 4.0, heroChance = 0.0),
         AilmentRule("CHILLED", "STOCK_ATTACK_COLD", 100.0, 15.0, 2.0),
@@ -249,7 +263,8 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
     }
 
     /** The lines that give without asking (server 0.66.0 added gold, chests, fountains and the hero's own boons). */
-    private val rewards: Set<String> get() = setOf(QUANTITY, RARITY, EXPERIENCE, GOLD, "MAP_CHESTS", FOUNTAINS, HERO_HASTE, HERO_ATTACK_SPEED, HERO_LIFE, HERO_LEECH)
+    private val rewards: Set<String> get() = setOf(QUANTITY, RARITY, EXPERIENCE, GOLD, "MAP_CHESTS", FOUNTAINS, HERO_HASTE, HERO_ATTACK_SPEED, HERO_LIFE, HERO_LEECH,
+        CRYSTALS, BOOKS)
 
     /** How many percent one rolled value of [stat] pays, by the server's weight; zero for what is not a risk. */
     fun riskOf(stat: String, value: Double): Double = value * (risk[stat] ?: 0.0)
@@ -295,6 +310,13 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
         const val GOLD = "MAP_GOLD"
         const val FOUNTAINS = "MAP_FOUNTAINS"
         const val BOSS_POWER = "MAP_BOSS_POWER"
+        // Since server 0.69.0: mana, skills, flasks, crystals of essences and skill books.
+        const val FLASK_CHARGES = "MAP_FLASK_CHARGES"
+        const val HERO_MANA_REGEN = "MAP_HERO_MANA_REGEN"
+        const val MONSTER_CAST = "MAP_MONSTER_CAST"
+        const val SKILL_COST = "MAP_SKILL_COST"
+        const val CRYSTALS = "MAP_CRYSTALS"
+        const val BOOKS = "MAP_BOOKS"
 
         /** The template a location's map is: `MAP_<location code>`. */
         fun templateCode(mapCode: String) = "MAP_$mapCode"
@@ -322,7 +344,9 @@ enum class MapLineKind { HARM, CONTENT, REWARD }
  * the monster, boss and corruption modifier pools the world's tokens leave out. The run is built on it.
  */
 @Serializable data class MapLaunch(val map: ActiveMap? = null, val chests: ChestState = ChestState(), val atlas: Map<String, Double> = emptyMap(),
-                                   val zone: CampaignMap? = null)
+                                   val zone: CampaignMap? = null,
+                                   /** The zone's crystals of essences (server 0.69.0), the ones the map added among them. */
+                                   val crystals: CrystalState? = null)
 
 /**
  * The map's service for gold (since server 0.34.0): summoning brings a slain guardian back, at so

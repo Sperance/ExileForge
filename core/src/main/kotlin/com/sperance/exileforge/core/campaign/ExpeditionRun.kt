@@ -8,6 +8,9 @@ import com.sperance.exileforge.core.model.campaign.CampaignReward
 import com.sperance.exileforge.core.model.campaign.CombatRules
 import com.sperance.exileforge.core.model.campaign.MonsterRarity
 import com.sperance.exileforge.core.model.campaign.VaalZone
+import com.sperance.exileforge.core.model.essences.CrystalState
+import com.sperance.exileforge.core.model.essences.EssenceBook
+import com.sperance.exileforge.core.model.skills.SkillBook
 import java.util.concurrent.ConcurrentLinkedQueue
 import kotlin.math.roundToInt
 import kotlin.random.Random
@@ -15,8 +18,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-/** Where a run stands: walking, fighting, waiting on a kill's loot, at a Vaal portal's gate (2.65.0), or over one way or another. */
-enum class RunPhase { MAP, FIGHT, LOOT, GATE, DEAD, CLEARED, LEFT }
+/**
+ * Where a run stands: walking, fighting, waiting on a kill's loot, at a Vaal portal's gate (2.65.0), at a
+ * crystal of essences (2.78.0), or over one way or another.
+ */
+enum class RunPhase { MAP, FIGHT, LOOT, GATE, CRYSTAL, DEAD, CLEARED, LEFT }
 
 /** A number floating off a fighter, [age] seconds after the blow that made it; [foe] is the foe of the pack it was about. */
 data class FloatingHit(val id: Int, val target: Side, val action: Action, val kind: HitKind, val amount: Int, val age: Double, val healed: Int,
@@ -48,6 +54,10 @@ data class FoeView(
     val reachable: Boolean,
     /** Taunts (2.71.0): while it stands the hero must strike it, past any row. */
     val taunt: Boolean = false,
+    /** The buffs and the hero's curses on it (2.78.0). */
+    val effects: List<EffectView> = emptyList(),
+    /** Its mana (2.78.0): a boss's or a caster's, what its spells are paid with. */
+    val mana: Int = 0, val maxMana: Int = 0,
 ) {
     val ranged: Boolean get() = monster.ranged
 }
@@ -82,6 +92,13 @@ data class FightHud(
     val loneWolf: LoneWolfRule? = null,
     /** The hero taunts (2.71.0): it will matter once they have a party to cover. */
     val heroTaunt: Boolean = false,
+    /** Since 2.78.0: the hero's mana and what the auras leave of it, the active slots, the belt, and what lies on the hero. */
+    val heroMana: Int = 0, val heroMaxMana: Int = 0,
+    val skills: List<SkillView?> = emptyList(),
+    val flasks: List<FlaskView?> = emptyList(),
+    val heroEffects: List<EffectView> = emptyList(),
+    /** A barrier's soak left (2.78.0). */
+    val heroBarrier: Int = 0,
 ) {
     /** Nothing is moving and the pack is laid open: before «В бой», or paused. */
     val scouting: Boolean get() = outcome == null && (!started || paused)
@@ -150,7 +167,21 @@ data class RunHud(
     val gateFailed: Boolean = false,
     /** This run is a Vaal zone (2.65.0): no way out but its guardian or a death, and a death is not the map's end. */
     val vaal: Boolean = false,
+    /** Since 2.78.0: the hero's mana between fights, and the belt as the map's buttons draw it. */
+    val heroMana: Int = 0, val heroMaxMana: Int = 0,
+    val flasks: List<FlaskView?> = emptyList(),
+    /** The crystal the hero stands at, its sheet open (2.78.0); the ones still standing on the map. */
+    val crystal: CrystalView? = null,
+    val crystalsLeft: Int = 0,
 )
+
+/**
+ * A crystal of essences as its sheet shows it (2.78.0): what it holds, who guards it — the zone's monster
+ * standing up rare with its essences' modifiers — and whether a Vaal orb passed over it and made the
+ * guardian stronger; a Vaal orb asked for and not yet answered, or refused.
+ */
+data class CrystalView(val id: Int, val essences: List<String>, val guardian: String, val stronger: Boolean, val vaal: Boolean,
+                       val pending: Boolean = false, val failed: Boolean = false, val outcome: String? = null)
 
 /** What the overlay asks of the run; applied at the start of the next step. */
 sealed interface RunCommand {
@@ -189,13 +220,26 @@ sealed interface RunCommand {
     data object StepBack : RunCommand
     /** The zone was entered or refused: the portal is gone and the map goes on. */
     data object ShutGate : RunCommand
-    /** Back from the Vaal zone with [life] left (2.65.0). */
-    data class Returned(val life: Double) : RunCommand
+    /** Back from the Vaal zone with [life] left (2.65.0), and (2.78.0) the mana and flasks it left. */
+    data class Returned(val life: Double, val pools: HeroPools? = null) : RunCommand
     /**
-     * The gear changed on the map (since 2.40.0): the server's new sheet. It lands between fights —
-     * one under way keeps the fighter it began with — and life keeps its share.
+     * The gear changed on the map (since 2.40.0): the server's new sheet, and (2.78.0) the skills and the
+     * belt. It lands between fights — one under way keeps the fighter it began with — and life keeps its share.
      */
-    data class Regear(val stats: Map<String, Double>, val level: Int, val stance: HeroStance? = null) : RunCommand
+    data class Regear(val gear: HeroGear) : RunCommand
+    /** Uses the skill of active slot [slot] now (2.78.0), whatever its condition. */
+    data class Cast(val slot: Int) : RunCommand
+    /** Drinks the flask of belt place [slot] (2.78.0): in a fight at the next slice, on the map at once. */
+    data class Drink(val slot: Int) : RunCommand
+    /** Takes on the guardian of the crystal the hero stands at (2.78.0). */
+    data object Release : RunCommand
+    /** Asks for a Vaal orb on the crystal the hero stands at (2.78.0): whoever listens asks the server. */
+    data object VaalCrystal : RunCommand
+    /** The server's answer to a Vaal orb on a crystal: what it did, and the zone's crystals as they stand. */
+    data class CrystalChanged(val outcome: String, val state: CrystalState) : RunCommand
+    data object CrystalFailed : RunCommand
+    /** Steps away from the crystal undecided: it stays, and opens again when walked up to. */
+    data object StepOff : RunCommand
 }
 
 /**
@@ -212,11 +256,15 @@ sealed interface RunCommand {
  * fountain the map holds (since 2.48.0). The shield is whole
  * again after every fight. A lost fight ends the run and keeps everything already looted; a fight the hero walked out
  * of, or that ran out of time, leaves the monster standing and calm for a while.
+ *
+ * Since 2.78.0 mana carries too and comes back as the hero walks; the flasks come in full and fill with
+ * kills, a draught runs on between fights, and a fountain fills every flask. A crystal of essences opens a
+ * sheet: its guardian is fought like any pack and reported by [onCrystal], a Vaal orb on it by [onCrystalVaal].
  */
 class ExpeditionRun(
     val map: CampaignMap,
     val world: ExpeditionWorld,
-    hero: Combatant,
+    build: HeroBuild,
     val rules: CombatRules,
     private val seed: Long,
     private val onKill: (RolledMonster) -> Unit,
@@ -227,27 +275,48 @@ class ExpeditionRun(
     val mapEffects: Map<String, Double> = emptyMap(),
     /** The hero reached the Vaal portal (2.65.0): whoever listens asks the server for its zone. */
     private val onPortal: () -> Unit = {},
-    /** The life the hero walks in with; a Vaal zone (2.65.0) is entered with what the map left, a map at full. */
-    startLife: Double? = null,
-    /** Whom the hero picks and how far their weapon reaches (2.70.0). */
-    stance: HeroStance = HeroStance(),
+    /** What the hero walks in with; a Vaal zone (2.65.0) is entered with what the map left, a map at full. */
+    startPools: HeroPools? = null,
+    /** The monsters' skills (2.78.0): what a crystal's guardian casts. */
+    private val skills: SkillBook = SkillBook(),
+    /** The essences (2.78.0): which modifier a crystal's guardian takes from each. */
+    private val essences: EssenceBook = EssenceBook(),
+    /** The rarities of the map, as it changes them: a guardian stands up rare by them. */
+    private val rarities: List<CampaignRarity> = emptyList(),
+    /** A crystal's guardian slain (2.78.0): its place among the crystals still standing, as the server counts them. */
+    private val onCrystal: (Int) -> Unit = {},
+    /** A Vaal orb asked for on a crystal (2.78.0), by the same place. */
+    private val onCrystalVaal: (Int) -> Unit = {},
 ) {
-    /** Whom the hero picks and how far their weapon reaches; a change of weapon on the map changes it between fights. */
-    var stance: HeroStance = stance
+    /** How the hero's body is made: the sheet, the passives and the map; a change of gear replaces it between fights. */
+    var build: HeroBuild = build
         private set
-    /** The hero as the sheet has them; a change of gear on the map replaces them between fights. */
-    var hero: Combatant = hero
+    /** Whom the hero picks and how far their weapon reaches; a change of weapon on the map changes it between fights. */
+    val stance: HeroStance get() = build.gear.stance
+    /** The hero between fights: the sheet with the passives and a draught still running. */
+    var hero: Combatant = build.body
         private set
     @Volatile var stickX = 0.0
     @Volatile var stickY = 0.0
     private val commands = ConcurrentLinkedQueue<RunCommand>()
     private var phase = RunPhase.MAP
-    private var life = startLife?.coerceIn(0.0, hero.maxLife) ?: hero.maxLife
+    private var life = startPools?.life?.coerceIn(0.0, hero.maxLife) ?: hero.maxLife
     /** The hero's life right now, between fights: what a Vaal zone is entered with. */
     val heroLife: Double get() = life
+    private val kit: Loadout get() = build.gear.kit
+    /** Mana, the flasks' charges and how long each draught still runs (2.78.0), between fights. */
+    private var mana = startPools?.mana?.coerceIn(0.0, manaCap()) ?: manaCap()
+    private var charges: List<Double> = kit.flasks.mapIndexed { i, flask -> flask?.let { startPools?.charges?.getOrNull(i)?.coerceIn(0.0, it.maxCharges) ?: it.maxCharges } ?: 0.0 }
+    private var flaskLeft: List<Double> = kit.flasks.indices.map { startPools?.flaskLeft?.getOrNull(it) ?: 0.0 }
+    /** What the hero carries into a Vaal zone and back out of it. */
+    val pools: HeroPools get() = HeroPools(life, mana, charges, flaskLeft)
     private var gate: VaalZone? = null
     private var gatePending = false
     private var gateFailed = false
+    private var crystal: CrystalSpot? = null
+    private var crystalPending = false
+    private var crystalFailed = false
+    private var crystalOutcome: String? = null
     private var started = false
     private var paused = false
     /** How many windows hold the run (2.73.0); the world stands still while any does. */
@@ -276,13 +345,27 @@ class ExpeditionRun(
 
     private var pendingGear: RunCommand.Regear? = null
 
-    private fun regear(gear: RunCommand.Regear) {
-        val stats = MapEffects.hero(gear.stats, mapEffects)
-        val next = Combatant(stats, gear.level, rules)
-        life = if (hero.maxLife > 0) life / hero.maxLife * next.maxLife else next.maxLife
-        hero = next
-        gear.stance?.let { stance = it }
-        world.regear(ExpeditionWorld.heroSpeed(stats), ExpeditionWorld.lightRadius(stats, map.light))
+    private fun manaCap(): Double = hero.maxMana * (1 - kit.reserved(hero) / 100)
+
+    private fun regear(gear: HeroGear) {
+        val next = HeroBuild(gear, mapEffects, rules)
+        val before = hero
+        build = next
+        rebody()
+        life = if (before.maxLife > 0) life / before.maxLife * hero.maxLife else hero.maxLife
+        // A flask put on the belt on the way comes with the charges its place had, up to its own ceiling.
+        charges = next.gear.kit.flasks.mapIndexed { i, flask -> flask?.let { (charges.getOrNull(i) ?: 0.0).coerceIn(0.0, it.maxCharges) } ?: 0.0 }
+        flaskLeft = next.gear.kit.flasks.indices.map { i -> if (next.gear.kit.flasks[i] != null) flaskLeft.getOrNull(i) ?: 0.0 else 0.0 }
+        rebody()
+    }
+
+    /** The hero between fights made again: the sheet with the draughts still running, and the pace and sight they give. */
+    private fun rebody() {
+        val lines = kit.flasks.withIndex().filter { (i, flask) -> flask != null && (flaskLeft.getOrNull(i) ?: 0.0) > 0 }
+            .flatMap { (_, flask) -> flask!!.draught(build.body, life, 0.0).lines }
+        hero = if (lines.isEmpty()) build.body else build.body(lines)
+        mana = mana.coerceIn(0.0, manaCap())
+        world.regear(ExpeditionWorld.heroSpeed(hero.stats), ExpeditionWorld.lightRadius(hero.stats, map.light))
     }
 
     /** The fight being played, for the scene: the battle itself, alive, with its clock and its log. */
@@ -339,7 +422,7 @@ class ExpeditionRun(
             is RunCommand.Fallen -> { fall = command.fall; fallPending = false }
             RunCommand.FallFailed -> fallPending = false
             is RunCommand.Chests -> world.placeChests(command.count)
-            is RunCommand.Regear -> if (phase == RunPhase.FIGHT) pendingGear = command else regear(command)
+            is RunCommand.Regear -> if (phase == RunPhase.FIGHT) pendingGear = command else regear(command.gear)
             is RunCommand.ChestReward -> {
                 chest = command.reward
                 chestPending = false
@@ -352,13 +435,37 @@ class ExpeditionRun(
             RunCommand.GateFailed -> { gatePending = false; gateFailed = true }
             RunCommand.StepBack -> if (phase == RunPhase.GATE) closeGate()
             RunCommand.ShutGate -> { world.closePortal(); closeGate() }
-            is RunCommand.Returned -> { life = command.life.coerceIn(0.0, hero.maxLife); phase = RunPhase.MAP }
+            is RunCommand.Returned -> {
+                life = command.life.coerceIn(0.0, hero.maxLife)
+                command.pools?.let { mana = it.mana.coerceIn(0.0, manaCap()); charges = it.charges.ifEmpty { charges }; flaskLeft = it.flaskLeft.ifEmpty { flaskLeft }; rebody() }
+                phase = RunPhase.MAP
+            }
+            is RunCommand.Cast -> fight?.useSkill(command.slot)
+            is RunCommand.Drink -> if (phase == RunPhase.FIGHT) fight?.useFlask(command.slot) else if (phase == RunPhase.MAP || phase == RunPhase.CRYSTAL) drinkOnMap(command.slot)
+            RunCommand.Release -> if (phase == RunPhase.CRYSTAL && !crystalPending) release()
+            RunCommand.VaalCrystal -> crystal?.takeIf { phase == RunPhase.CRYSTAL && !crystalPending && !it.crystal.vaal }?.let { spot ->
+                crystalPending = true; crystalFailed = false; crystalOutcome = null
+                onCrystalVaal(world.standingCrystals.indexOf(spot))
+            }
+            is RunCommand.CrystalChanged -> {
+                crystalPending = false
+                crystalOutcome = command.outcome
+                // The server's crystals in its order are the ones still standing here, in theirs.
+                world.standingCrystals.zip(command.state.crystals).forEach { (spot, held) -> spot.crystal = held }
+            }
+            RunCommand.CrystalFailed -> { crystalPending = false; crystalFailed = true }
+            RunCommand.StepOff -> if (phase == RunPhase.CRYSTAL && !crystalPending) closeCrystal()
         }
     }
 
     private fun closeGate() {
         gate = null; gatePending = false; gateFailed = false
         if (phase == RunPhase.GATE) phase = RunPhase.MAP
+    }
+
+    private fun closeCrystal() {
+        crystal = null; crystalFailed = false; crystalOutcome = null
+        if (phase == RunPhase.CRYSTAL) phase = RunPhase.MAP
     }
 
     /** Two orb stacks merged by item (2.54.0): a pack's rewards are summed, not replaced. */
@@ -368,33 +475,80 @@ class ExpeditionRun(
 
     /** Turning away before the fight began: nothing was struck, and the monster stays calm a while. */
     private fun walkAway() {
-        fightAgent?.let(world::retreatFrom)
+        fightAgent?.let { agent -> if (agent.pack.none { it.crystal != null }) world.retreatFrom(agent) }
         fight = null
         fightAgent = null
         phase = RunPhase.MAP
     }
 
+    /**
+     * A draught on the map (2.78.0): what it gives back comes at once, and what it lays on runs as the hero
+     * walks — a quicksilver flask is for the road as much as for the fight.
+     */
+    private fun drinkOnMap(slot: Int) {
+        val flask = kit.flasks.getOrNull(slot) ?: return
+        if ((flaskLeft.getOrNull(slot) ?: 0.0) > 0 || (charges.getOrNull(slot) ?: 0.0) + 1e-9 < flask.perUse(hero)) return
+        val draught = flask.draught(hero, life, manaCap())
+        charges = charges.toMutableList().also { it[slot] = if (flask.usesAll) 0.0 else (it[slot] - flask.perUse(hero)).coerceAtLeast(0.0) }
+        flaskLeft = flaskLeft.toMutableList().also { it[slot] = draught.duration }
+        rebody()
+        life = (life + draught.life + draught.lifeRate * draught.duration).coerceAtMost(hero.maxLife)
+        mana = (mana + draught.mana + draught.manaRate * draught.duration).coerceAtMost(manaCap())
+    }
+
     private fun walk(dt: Double) {
+        // Mana comes back as the hero walks (2.78.0), and a draught runs out on the road as in a fight.
+        mana = (mana + hero.manaRegen(rules.mana) * dt).coerceAtMost(manaCap())
+        if (flaskLeft.any { it > 0 }) {
+            val before = flaskLeft.map { it > 0 }
+            flaskLeft = flaskLeft.map { (it - dt).coerceAtLeast(0.0) }
+            if (flaskLeft.map { it > 0 } != before) rebody()
+        }
         val (x, y) = ExpeditionWorld.screenToWorld(stickX, stickY)
         when (val event = world.step(dt, x, y)) {
-            is WorldEvent.Encounter -> {
-                // The whole pack still standing at once (2.70.0), melee in front and ranged behind.
-                val agent = event.agent
-                members = agent.standing
-                reported = 0
-                fightAgent = agent
-                fight = Battle(hero, members.map { Foe(Combatant(agent.pack[it].stats, map.level, rules), agent.pack[it].ranged) },
-                    rules, life, Random(seed * 31 + fights++), stance)
-                started = false
-                paused = false
-                phase = RunPhase.FIGHT
-            }
+            is WorldEvent.Encounter -> engage(event.agent)
             WorldEvent.Exit -> { phase = RunPhase.CLEARED; onCleared() }
             is WorldEvent.Opened -> { chest = null; chestFailed = false; chestPending = true; onChest() }
-            is WorldEvent.Drank -> life = (life + hero.maxLife * event.fountain.heal / 100).coerceAtMost(hero.maxLife)
+            is WorldEvent.Drank -> {
+                life = (life + hero.maxLife * event.fountain.heal / 100).coerceAtMost(hero.maxLife)
+                // A fountain fills the flasks, and gives mana back as it gives life (2.78.0).
+                mana = (mana + manaCap() * event.fountain.heal / 100).coerceAtMost(manaCap())
+                charges = kit.flasks.map { it?.maxCharges ?: 0.0 }
+            }
             WorldEvent.Portal -> { phase = RunPhase.GATE; gate = null; gateFailed = false; gatePending = true; onPortal() }
+            is WorldEvent.Crystal -> { phase = RunPhase.CRYSTAL; crystal = event.spot; crystalFailed = false; crystalOutcome = null }
             null -> Unit
         }
+    }
+
+    /** A fight with [agent]'s pack still standing, all at once (2.70.0), melee in front and ranged behind. */
+    private fun engage(agent: MonsterAgent) {
+        members = agent.standing
+        reported = 0
+        fightAgent = agent
+        fight = Battle(hero, members.map { index ->
+            val monster = agent.pack[index]
+            Foe(Combatant(monster.stats, map.level, rules), monster.ranged, monster.rarity, monster.skills.mapNotNull(skills.monsters::get))
+        }, rules, life, Random(seed * 31 + fights++), stance, kit = kit, model = build, pools = HeroPools(life, mana, charges, flaskLeft),
+            percent = build.gear.percent)
+        started = false
+        paused = false
+        phase = RunPhase.FIGHT
+    }
+
+    /**
+     * «Освободить»: the crystal's guardian stands up (2.78.0) — the zone's monster, rare, with the modifiers
+     * of the essences it guards, stronger if a Vaal orb or the atlas made it so — and the fight begins.
+     */
+    private fun release() {
+        val spot = crystal ?: return
+        val modifiers = spot.crystal.essences.mapNotNull(essences::monster).distinct().mapNotNull { code -> map.essences.firstOrNull { it.code == code } }
+        val extra = MapEffects.guardianBuffs(spot.crystal.stronger, essences.crystals.stronger, mapEffects)
+        val guardian = MonsterRoller.guardian(map, rarities, spot.crystal.guardian, modifiers, extra, spot.id, Random(seed * 131 + spot.id))
+            ?.let { MonsterRoller.skilled(it, skills, Random(seed * 137 + spot.id)) } ?: return
+        crystal = null
+        crystalOutcome = null
+        engage(MonsterAgent(-1 - spot.id, listOf(guardian), spot.cell.x + 0.5, spot.cell.y + 0.5))
     }
 
     private fun play(dt: Double) {
@@ -408,11 +562,19 @@ class ExpeditionRun(
             agent.fallen += member
             kills++
             pendingRewards++
-            onKill(agent.pack[member])
+            val monster = agent.pack[member]
+            // A crystal's guardian is reported by its crystal's place among those still standing, then the crystal is gone.
+            val spot = monster.crystal?.let { id -> world.crystals.firstOrNull { it.id == id } }
+            if (spot != null) { onCrystal(world.standingCrystals.indexOf(spot)); spot.freed = true } else onKill(monster)
         }
         val outcome = battle.outcome ?: return
         if (battle.time < battle.duration + AFTERMATH) return
-        life = battle.heroLife
+        val out = battle.pools()
+        life = out.life
+        mana = out.mana
+        charges = out.charges
+        flaskLeft = out.flaskLeft
+        rebody()
         val pack = members.mapIndexed { index, member -> PackHit(agent.pack[member], battle.events.filter { it.foe == index }, battle.duration) }
         when (outcome) {
             Outcome.WIN -> {
@@ -427,12 +589,12 @@ class ExpeditionRun(
             }
             // Nothing already looted is lost — every foe that fell was reported as it fell — but
             // there is no report for a fight cut short, and the rest of the pack stays standing.
-            Outcome.RETREAT -> { world.retreatFrom(agent); report = null; phase = RunPhase.MAP }
+            Outcome.RETREAT -> { if (agent.id >= 0) world.retreatFrom(agent); report = null; phase = RunPhase.MAP }
         }
         fight = null
         fightAgent = null
         // Gear changed while the fight went on lands now, on the life the fight left.
-        if (phase != RunPhase.DEAD) pendingGear?.let(::regear)
+        if (phase != RunPhase.DEAD) pendingGear?.let { regear(it.gear) }
         pendingGear = null
     }
 
@@ -450,13 +612,27 @@ class ExpeditionRun(
             chestsLeft = world.chests.count { !it.opened }, chest = chest, chestPending = chestPending, chestFailed = chestFailed,
             fountainsLeft = world.fountains.count { !it.used },
             gate = gate, gatePending = gatePending, gateFailed = gateFailed, vaal = VaalZones.isZone(map),
+            heroMana = (battle?.heroMana ?: mana).roundToInt(), heroMaxMana = (battle?.manaCap() ?: manaCap()).roundToInt(),
+            flasks = battle?.flaskViews() ?: mapFlasks(),
+            crystal = crystal?.let { CrystalView(it.id, it.crystal.essences, it.crystal.guardian, it.crystal.stronger, it.crystal.vaal, crystalPending, crystalFailed, crystalOutcome) },
+            crystalsLeft = world.standingCrystals.size,
         )
+    }
+
+    /** The belt between fights, as the map's buttons draw it. */
+    private fun mapFlasks(): List<FlaskView?> = kit.flasks.mapIndexed { i, flask ->
+        flask?.let {
+            val left = flaskLeft.getOrNull(i) ?: 0.0
+            FlaskView(i, it.code, it.kind, (charges.getOrNull(i) ?: 0.0).toInt(), it.maxCharges.toInt(), kotlin.math.ceil(it.perUse(hero) - 1e-9).toInt(),
+                if (left > 0) (left / it.duration(hero)).toFloat().coerceIn(0f, 1f) else 0f, it.condition)
+        }
     }
 
     private fun fightHud(battle: Battle, agent: MonsterAgent): FightHud {
         val h = battle.heroFighter
         val hits = battle.events.withIndex()
-            .filter { (_, event) -> event.time <= battle.time && battle.time - event.time < HIT_LIFETIME && event.action != Action.RETREAT }
+            .filter { (_, event) -> event.time <= battle.time && battle.time - event.time < HIT_LIFETIME && event.action != Action.RETREAT &&
+                (event.damage > 0 || event.healed > 0 || event.kind == HitKind.EVADED || event.kind == HitKind.BLOCKED || event.action == Action.ATTACK) }
             .map { (index, event) ->
                 FloatingHit(index, event.target, event.action, event.kind, event.damage.roundToInt(), battle.time - event.time, event.healed.roundToInt(),
                     event.type, event.inflicted, event.stunned, event.foe)
@@ -468,7 +644,8 @@ class ExpeditionRun(
         }
         val foes = battle.foeFighters.map { f ->
             FoeView(f.index, agent.pack[members[f.index]], f.life.roundToInt(), f.body.maxLife.roundToInt(), f.shield.roundToInt(), f.body.maxShield.roundToInt(),
-                battle.swing(f), ailments(f), f.held, f.alive, battle.reachable(f.index), f.body.taunt)
+                battle.swing(f), ailments(f), f.held, f.alive, battle.reachable(f.index), f.body.taunt, battle.effects(f),
+                f.mana.roundToInt(), f.body.maxMana.roundToInt())
         }
         return FightHud(
             leader = agent.monster, foes = foes,
@@ -482,6 +659,9 @@ class ExpeditionRun(
             started = started, paused = paused,
             target = battle.target()?.index, focus = battle.focus,
             loneWolf = rules.loneWolf.takeIf { battle.loneWolf }, heroTaunt = hero.taunt,
+            heroMana = h.mana.roundToInt(), heroMaxMana = battle.manaCap().roundToInt(),
+            skills = battle.skillViews(), flasks = battle.flaskViews(), heroEffects = battle.effects(h),
+            heroBarrier = h.barrier.roundToInt(),
         )
     }
 
@@ -490,21 +670,30 @@ class ExpeditionRun(
         const val AFTERMATH = 0.8
         const val HIT_LIFETIME = 1.0
 
-        /** A run of [map]; [mapEffects] are the summed effects of the map item it was entered with (since 2.37.0), see [MapEffects]. */
-        fun start(map: CampaignMap, rarities: List<CampaignRarity>, heroStats: Map<String, Double>, heroLevel: Int, seed: Long,
+        /**
+         * A run of [map] by the hero as [gear] has them; [mapEffects] are the summed effects of the map item it
+         * was entered with (since 2.37.0), see [MapEffects]. [crystals] are the zone's crystals of essences (2.78.0).
+         */
+        fun start(map: CampaignMap, rarities: List<CampaignRarity>, gear: HeroGear, seed: Long,
                   onKill: (RolledMonster) -> Unit, onCleared: () -> Unit, rules: CombatRules = CombatRules(), onFallen: () -> Unit = {},
                   onChest: () -> Unit = {}, mapEffects: Map<String, Double> = emptyMap(),
                   fountains: com.sperance.exileforge.core.model.campaign.FountainRule = com.sperance.exileforge.core.model.campaign.FountainRule(),
-                  portalChance: Double = 0.0, onPortal: () -> Unit = {}, startLife: Double? = null, stance: HeroStance = HeroStance(),
+                  portalChance: Double = 0.0, onPortal: () -> Unit = {}, startPools: HeroPools? = null,
                   /** Modifiers a rare monster carries beyond its rule (the atlas, server 0.66.0). */
-                  extraRareMods: Int = 0): ExpeditionRun {
-            val stats = MapEffects.hero(heroStats, mapEffects)
-            val world = ExpeditionWorld.create(MapEffects.map(map, mapEffects), MapEffects.rarities(rarities, mapEffects), stats, seed, MapEffects.buffs(mapEffects), portalChance,
-                MapEffects.bossBuffs(mapEffects), extraRareMods)
+                  extraRareMods: Int = 0,
+                  skills: SkillBook = SkillBook(), essences: EssenceBook = EssenceBook(), crystals: CrystalState? = null,
+                  onCrystal: (Int) -> Unit = {}, onCrystalVaal: (Int) -> Unit = {}): ExpeditionRun {
+            val build = HeroBuild(gear, mapEffects, rules)
+            val stats = build.body.stats
+            val changed = MapEffects.rarities(rarities, mapEffects)
+            val world = ExpeditionWorld.create(MapEffects.map(map, mapEffects), changed, stats, seed, MapEffects.buffs(mapEffects), portalChance,
+                MapEffects.bossBuffs(mapEffects), extraRareMods, skills)
             // The map's own fountains (server 0.66.0) join the rule's, low and high alike.
             val extraFountains = MapEffects.fountains(mapEffects)
             world.placeFountains(fountains.count.getOrElse(0) { 0 } + extraFountains, fountains.count.getOrElse(1) { 0 } + extraFountains, fountains.heal)
-            return ExpeditionRun(map, world, Combatant(stats, heroLevel, rules), rules, seed, onKill, onCleared, onFallen, onChest, mapEffects, onPortal, startLife, stance)
+            crystals?.let { world.placeCrystals(it.crystals) }
+            return ExpeditionRun(map, world, build, rules, seed, onKill, onCleared, onFallen, onChest, mapEffects, onPortal, startPools, skills, essences, changed,
+                onCrystal, onCrystalVaal)
         }
     }
 }

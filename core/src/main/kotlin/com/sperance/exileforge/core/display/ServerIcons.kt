@@ -46,6 +46,8 @@ class IconBundle(
 
     /** The drawing for one key, or null — and null means "draw your own", never "draw nothing". */
     operator fun get(key: String): IconSprite? = icons[key]?.let { sprites[it] }
+    /** A drawing by its own name (2.78.0): a skill names the sprite it is drawn with. */
+    fun sprite(name: String): IconSprite? = sprites[name]
     fun contains(key: String): Boolean = get(key) != null
 
     companion object {
@@ -91,6 +93,9 @@ object IconKey {
 
 /** The drawing for a key, or null when the client should fall back to its own emblem. */
 fun icon(key: String): IconSprite? = serverIcons[key]
+
+/** The drawing a skill names (2.78.0, server 0.69.0), or null for the client's own emblem. */
+fun skillIcon(name: String): IconSprite? = name.takeIf { it.isNotBlank() }?.let(serverIcons::sprite)
 
 /**
  * The drawing for a catalogue document, found by the shape rules that find its name.

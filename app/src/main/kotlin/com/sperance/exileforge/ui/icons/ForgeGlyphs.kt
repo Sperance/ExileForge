@@ -83,4 +83,11 @@ object ForgeGlyphs {
 
     /** A stack of coins — what the merchant pays. */
     val Coins = glyph("Coins", { ring(10f, 9f, 6f) }, { ring(14f, 15f, 6f) }, { line(14f, 12.5f, 14f, 17.5f) })
+
+    /** An open book with a star on it — the grimoire of the class skills (2.78.0). */
+    val Grimoire = glyph("Grimoire", { poly(3f to 5f, 11f to 7f, 11f to 21f, 3f to 19f) }, { poly(21f to 5f, 13f to 7f, 13f to 21f, 21f to 19f) },
+        { poly(17f to 9f, 18f to 11.5f, 20f to 12f, 18f to 13f, 17f to 16f, 16f to 13f, 14f to 12f, 16f to 11.5f) })
+
+    /** A flask — the belt's places (2.78.0). */
+    val Flask = glyph("Flask", { poly(10f to 3f, 14f to 3f, 14f to 9f, 19f to 19f, 17f to 21f, 7f to 21f, 5f to 19f, 10f to 9f) }, { line(7f, 15f, 17f, 15f) })
 }

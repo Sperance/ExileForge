@@ -1,12 +1,15 @@
 package com.sperance.exileforge.core.model.hero
 
+import com.sperance.exileforge.core.character.SheetModel
 import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.model.modifier.Modifier
 import com.sperance.exileforge.core.model.progression.CharacterClass
+import com.sperance.exileforge.core.model.skills.HeroSkills
 import com.sperance.exileforge.core.model.skilltree.SkillTreeState
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import kotlinx.serialization.json.*
 
 /**
@@ -28,6 +31,8 @@ import kotlinx.serialization.json.*
     /** The bag as the server keeps it since 0.49.0: item id to amount. */
     val bag: Map<String, Long> = emptyMap(),
     val recipeAccess: List<String> = emptyList(),
+    /** The class skills (server 0.69.0): learned levels, the slots and the belt's conditions. */
+    val skills: HeroSkills = HeroSkills(),
 )
 
 /**
@@ -64,6 +69,11 @@ import kotlinx.serialization.json.*
      * it asks whether the template is in here.
      */
     val unwearable: List<UnwearableEquipment> = emptyList(),
+    /**
+     * What the sheet was added up from (2.78.0), for a fight to lay a buff, a curse or a flask over it
+     * the way the server would; the client's own, never on the wire.
+     */
+    @Transient val model: SheetModel? = null,
 ) {
     /** Reasons a template is out of reach, keyed by its id; absent means it can be worn. */
     val unwearableBy: Map<String, List<String>> get() = unwearable.associate { it.equipmentId to it.reasons }
@@ -120,6 +130,8 @@ import kotlinx.serialization.json.*
     /** Since 0.23.0: `SHAPER` or `ELDER` when an influence orb touched this copy; null otherwise. */
     val influence: String? = null,
     val version: Long = 0,
+    /** A flask's quality (server 0.69.0), in percent: each one a percent more effect or recovery. */
+    val quality: Int = 0,
 ) {
     val equipped: Boolean get() = equippedSlot != null
     /** A jewel is "worn" in a socket, and only counts while that socket is taken. */

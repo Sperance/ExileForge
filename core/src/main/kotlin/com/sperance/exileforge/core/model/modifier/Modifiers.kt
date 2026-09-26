@@ -17,7 +17,9 @@ import kotlinx.serialization.Serializable
 /** Where a modifier comes from; since server 0.38.0 also the smith's handcrafted lines and a map's alchemy lines, which no orb touches. */
 @Serializable enum class ModifierSource { IMPLICIT, PREFIX, SUFFIX, UNIQUE, ENCHANTMENT, CORRUPTION, PASSIVE, HANDCRAFTED, ALCHEMY,
     /** A monster's modifier (server 0.66.0): the same shape as an item's, tiered by the map's level; never on an item. */
-    MONSTER }
+    MONSTER,
+    /** A special essence's line (server 0.69.0): only that essence lays it; it takes no affix place but leaves with the affixes. */
+    ESSENCE }
 
 /**
  * One action of a modifier: which stat it touches and how.

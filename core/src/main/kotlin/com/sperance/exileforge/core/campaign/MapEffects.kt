@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.campaign
 
+import com.sperance.exileforge.core.atlas.AtlasEffects
 import com.sperance.exileforge.core.model.campaign.CampaignMap
 import com.sperance.exileforge.core.model.campaign.CampaignRarity
 import com.sperance.exileforge.core.model.campaign.MapRule
@@ -41,6 +42,17 @@ object MapEffects {
         effects[MapRule.MONSTER_ARMOUR]?.let { v -> listOf("STOCK_ARMOR", "STOCK_EVASION").forEach { add(MonsterEffect(it, "INCREASED", v)) } }
         effects[MapRule.MONSTER_LEECH]?.let { add(MonsterEffect("STOCK_LEECH_ALL", "ADD", it)) }
         effects[MapRule.MONSTER_STUN]?.let { add(MonsterEffect("STOCK_AVOID_STUN", "ADD", it)) }
+        // Server 0.69.0: the monsters' skills come round faster.
+        effects[MapRule.MONSTER_CAST]?.let { add(MonsterEffect("STOCK_COOLDOWN_RECOVERY", "ADD", it)) }
+    }
+
+    /**
+     * A crystal's guardian beyond its rarity (server 0.69.0): so many percent more life and damage when a
+     * Vaal orb made it [stronger], and more again by the atlas's power of guardians.
+     */
+    fun guardianBuffs(stronger: Boolean, strongerBy: Double, effects: Map<String, Double>): List<MonsterEffect> {
+        val power = (if (stronger) strongerBy else 0.0) + (effects[AtlasEffects.GUARDIAN_POWER] ?: 0.0)
+        return if (power <= 0) emptyList() else (listOf("STOCK_HEALTH") + damage).map { MonsterEffect(it, "MORE", power) }
     }
 
     /** What a map does to its boss alone (server 0.66.0): so many percent more life and damage. */
@@ -91,6 +103,11 @@ object MapEffects {
         effects[MapRule.HERO_ATTACK_SPEED]?.let { scale("STOCK_ATTACK_SPEED", it) }
         effects[MapRule.HERO_LIFE]?.let { scale("STOCK_HEALTH", it) }
         effects[MapRule.HERO_LEECH]?.let { add("STOCK_LEECH_ALL", it) }
+        // Server 0.69.0: mana, skills and flasks on the map, and what the atlas gives them.
+        effects[MapRule.HERO_MANA_REGEN]?.let { v -> sheet["STOCK_MANA_REGEN"] = (100 + (sheet["STOCK_MANA_REGEN"] ?: 0.0)) * max(0.0, 1 - v / 100) - 100 }
+        effects[MapRule.SKILL_COST]?.let { add("STOCK_SKILL_COST", -it) }
+        effects[MapRule.FLASK_CHARGES]?.let { add("STOCK_FLASK_CHARGES_GAINED", -it) }
+        AtlasEffects.hero.forEach { (atlas, stat) -> effects[atlas]?.let { add(stat, it) } }
         return sheet
     }
 

@@ -24,6 +24,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.campaign.*
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
@@ -73,6 +74,7 @@ import kotlin.math.floor
     val zone = VaalZones.isZone(run.map)
     BackHandler { when {
         hud.phase == RunPhase.GATE -> vm.runCommand(RunCommand.StepBack)
+        hud.phase == RunPhase.CRYSTAL -> vm.runCommand(RunCommand.StepOff)
         hud.phase == RunPhase.MAP -> if (!zone) leaving = true
         else -> vm.runCommand(RunCommand.Leave)
     } }
@@ -83,7 +85,8 @@ import kotlin.math.floor
         when (hud.phase) {
             RunPhase.MAP -> {
                 Stick(run)
-                MapBar(run, hud, onLeave = if (zone) null else ({ leaving = true }), onGear = { gear = true }, onStats = { sheet = true })
+                MapBar(run, hud, onLeave = if (zone) null else ({ leaving = true }), onGear = { gear = true }, onStats = { sheet = true },
+                    onDrink = { vm.runCommand(RunCommand.Drink(it)) })
                 if (gear) { HoldsRun(run); GearSheet(s, vm) { gear = false } }
                 if (sheet) { HoldsRun(run); StatsSheet(s, run.mapEffects) { sheet = false } }
                 if (hud.chestPending || hud.chestFailed || hud.chest != null) ChestLoot(s, hud) { vm.runCommand(RunCommand.DismissChest) }
@@ -101,6 +104,7 @@ import kotlin.math.floor
             RunPhase.CLEARED -> if (zone) Ending(ui("vaal.done"), ui("vaal.done_hint"), Vital, hud, ui("vaal.back")) { vm.runCommand(RunCommand.Continue) }
                 else Ending(ui("expedition.map_done"), ui("expedition.map_done_hint"), Vital, hud) { vm.runCommand(RunCommand.Continue) }
             RunPhase.GATE -> VaalGate(s, hud, run.map.corrupted?.code, onEnter = vm::enterVaal, onRefuse = vm::refuseVaal) { vm.runCommand(RunCommand.StepBack) }
+            RunPhase.CRYSTAL -> hud.crystal?.let { CrystalSheet(s, it, onCommand = vm::runCommand) }
             RunPhase.LEFT -> Unit
         }
         // A refusal of the gear (2.40.0) has to be read here too: the run has no bar and no banner.
@@ -114,7 +118,7 @@ import kotlin.math.floor
  * Life and shield, the map's name and whether its warden still lives, and the way out. Nothing
  * comes back on its own between fights (2.29.0) but a fountain. What the map still holds — foes, chests, fountains — is the walk's to find (2.56.1).
  */
-@Composable private fun MapBar(run: ExpeditionRun, hud: RunHud, onLeave: (() -> Unit)?, onGear: () -> Unit, onStats: () -> Unit) {
+@Composable private fun MapBar(run: ExpeditionRun, hud: RunHud, onLeave: (() -> Unit)?, onGear: () -> Unit, onStats: () -> Unit, onDrink: (Int) -> Unit) {
     Column(Modifier.fillMaxWidth().statusBarsPadding().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             // The way out (2.56.1): a portal in a bronze ring, first thing in the corner, and it asks before it goes.
@@ -130,12 +134,37 @@ import kotlin.math.floor
                     style = MaterialTheme.typography.titleMedium, maxLines = 2)
                 Text(ui(when { zone && hud.sealed -> "vaal.guardian_alive"; zone -> "vaal.guardian_slain"; hud.sealed -> "expedition.boss_alive"; else -> "expedition.boss_slain" }),
                     color = if (hud.sealed) LifeRed else Vital, style = MaterialTheme.typography.labelMedium)
-                // Life under the map's name (2.72.0), out of the middle of the view.
-                Vitals(hud.heroLife, hud.heroMaxLife, hud.heroShield, hud.heroMaxShield, Modifier.fillMaxWidth())
+                // Life under the map's name (2.72.0), out of the middle of the view; the mana and the belt under it (2.78.0).
+                Vitals(hud.heroLife, hud.heroMaxLife, hud.heroShield, hud.heroMaxShield, Modifier.fillMaxWidth(), hud.heroMana, hud.heroMaxMana)
+                if (hud.flasks.any { it != null }) MapFlasks(hud.flasks, onDrink)
             }
             // The minimap (2.51.0), opened as the map is explored; round and around the hero since 2.56.1,
             // with its own zoom and the whole map behind a tap since 2.72.0.
             MiniMap(run, hud)
+        }
+    }
+}
+
+/**
+ * The belt on the map (2.78.0): a draught on the road brings its life or mana back at once, and a
+ * utility flask's lines run as the hero walks. A flask is filled to its charges and ringed while it runs.
+ */
+@Composable private fun MapFlasks(flasks: List<FlaskView?>, onDrink: (Int) -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        flasks.forEach { view ->
+            if (view == null) return@forEach
+            val tint = flaskTint(view.kind)
+            Box(Modifier.size(34.dp).clip(CircleShape).background(Color(0xE60A0D12))
+                .border(if (view.active > 0f) 2.dp else 1.dp, if (view.active > 0f) GoldBright else Bronze, CircleShape)
+                .clickable(enabled = view.usable) { onDrink(view.slot) }.semantics { contentDescription = ui("expedition.drink") },
+                contentAlignment = Alignment.Center) {
+                Canvas(Modifier.fillMaxSize()) {
+                    val fill = if (view.maxCharges > 0) view.charges / view.maxCharges.toFloat() else 0f
+                    drawRect(tint.copy(alpha = if (view.usable) .55f else .25f), topLeft = Offset(0f, size.height * (1 - fill)), size = Size(size.width, size.height * fill))
+                    if (view.active > 0f) drawArc(GoldBright, -90f, 360f * view.active, false, style = Stroke(2.5.dp.toPx()))
+                }
+                Text("${view.charges}", color = GoldBright, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+            }
         }
     }
 }
@@ -211,6 +240,7 @@ private fun DrawScope.drawExplored(world: ExpeditionWorld, origin: Offset, cell:
     fun mark(x: Double, y: Double, color: Color, size: Float = dot) = drawCircle(color, size, Offset(origin.x + x.toFloat() * cell, origin.y + y.toFloat() * cell))
     world.chests.filter { !it.opened && world.explored(it.cell.x, it.cell.y) }.forEach { mark(it.cell.x + .5, it.cell.y + .5, GoldBright) }
     world.fountains.filter { !it.used && world.explored(it.cell.x, it.cell.y) }.forEach { mark(it.cell.x + .5, it.cell.y + .5, ShieldCyan) }
+    world.crystals.filter { !it.freed && world.explored(it.cell.x, it.cell.y) }.forEach { mark(it.cell.x + .5, it.cell.y + .5, CrystalViolet) }
     world.portal?.takeIf { world.explored(it.x, it.y) }?.let { mark(it.x + .5, it.y + .5, LifeRed, dot * 1.2f) }
     if (world.explored(map.exit.x, map.exit.y)) mark(map.exit.x + .5, map.exit.y + .5, if (world.sealed) LifeRed else Vital, dot * 1.4f)
     if (monsters) world.agents.filter { it.alive && world.lit(it.x.toInt(), it.y.toInt()) }.forEach { agent ->
@@ -248,6 +278,7 @@ private fun DrawScope.drawExplored(world: ExpeditionWorld, origin: Offset, cell:
                 Counter(ui("map.monsters_left", hud.alive, hud.total), LifeRed)
                 Counter(ui("map.chests_left", hud.chestsLeft), GoldBright)
                 Counter(ui("map.fountains_left", hud.fountainsLeft), ShieldCyan)
+                if (hud.crystalsLeft > 0) Counter(ui("map.crystals_left", hud.crystalsLeft), CrystalViolet)
                 Counter(ui(if (hud.sealed) "expedition.boss_alive" else "expedition.boss_slain"), if (hud.sealed) LifeRed else Vital)
                 Counter(ui("map.explored", explored * 100 / floorCells), Parchment)
             }
@@ -255,6 +286,7 @@ private fun DrawScope.drawExplored(world: ExpeditionWorld, origin: Offset, cell:
             FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Legend(Gold, ui("map.legend_hero")); Legend(GoldBright, ui("map.legend_chest")); Legend(ShieldCyan, ui("map.legend_fountain"))
                 Legend(Vital, ui("map.legend_exit")); Legend(LifeRed, ui("map.legend_sealed")); Legend(Color(0xFFFF8A78), ui("map.legend_portal"))
+                Legend(CrystalViolet, ui("map.legend_crystal"))
                 MonsterRarity.entries.forEach { Legend(rarityTint(it), ui(it.key())) }
             }
             if (run.mapEffects.isNotEmpty()) {
@@ -284,13 +316,16 @@ private fun DrawScope.drawExplored(world: ExpeditionWorld, origin: Offset, cell:
     }
 }
 
+/** A crystal of essences on the maps and its sheet (2.78.0): the violet of its glass. */
+internal val CrystalViolet = Color(0xFFB07FE0)
+
 /** How many cells the minimap shows across by default, and how near and how far its zoom goes. */
 private const val MINIMAP_CELLS = 22f
 private const val MINIMAP_MIN = 10f
 private const val MINIMAP_MAX = 60f
 
-/** A life bar with the shield laid over it, and the figure in words. */
-@Composable private fun Vitals(life: Int, maxLife: Int, shield: Int, maxShield: Int, modifier: Modifier = Modifier) {
+/** A life bar with the shield laid over it, and the figure in words; the mana under it since 2.78.0. */
+@Composable private fun Vitals(life: Int, maxLife: Int, shield: Int, maxShield: Int, modifier: Modifier = Modifier, mana: Int = 0, maxMana: Int = 0) {
     val shape = CutCornerShape(3.dp)
     val lifeShare by animateFloatAsState(if (maxLife > 0) life / maxLife.toFloat() else 0f, label = "life")
     Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -298,8 +333,11 @@ private const val MINIMAP_MAX = 60f
             Box(Modifier.fillMaxWidth(lifeShare.coerceIn(0f, 1f)).fillMaxHeight().background(Brush.horizontalGradient(listOf(LifeRed, LifeRed.copy(alpha = .55f))), shape))
             if (maxShield > 0) Box(Modifier.fillMaxWidth((shield / maxShield.toFloat()).coerceIn(0f, 1f)).height(4.dp).align(Alignment.TopStart).background(ShieldCyan.copy(alpha = .85f)))
         }
-        Text(if (maxShield > 0) ui("expedition.vitals_shield", life, maxLife, shield) else ui("expedition.vitals", life, maxLife),
-            color = Parchment, style = MaterialTheme.typography.labelSmall)
+        if (maxMana > 0) Box(Modifier.fillMaxWidth().height(6.dp).background(Color(0xCC0A0D12), shape).border(1.dp, ManaBlue.copy(alpha = .8f), shape)) {
+            Box(Modifier.fillMaxWidth((mana / maxMana.toFloat()).coerceIn(0f, 1f)).fillMaxHeight().background(ManaBlue, shape))
+        }
+        Text((if (maxShield > 0) ui("expedition.vitals_shield", life, maxLife, shield) else ui("expedition.vitals", life, maxLife)) +
+            (if (maxMana > 0) " · " + ui("expedition.vitals_mana", mana, maxMana) else ""), color = Parchment, style = MaterialTheme.typography.labelSmall)
     }
 }
 

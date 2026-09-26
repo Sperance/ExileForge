@@ -27,7 +27,7 @@ import com.sperance.exileforge.ui.theme.*
  * card of its own. The tree and the forge open from the corner, because it is reached from here but is not a
  * part of the hero.
  */
-@Composable fun HeroHeader(s: ForgeState, onTree: () -> Unit, onForge: () -> Unit) {
+@Composable fun HeroHeader(s: ForgeState, onTree: () -> Unit, onSkills: () -> Unit = {}, onForge: () -> Unit) {
     val hero = s.play.hero ?: return
     val character = hero.character
     ForgePanel {
@@ -43,6 +43,10 @@ import com.sperance.exileforge.ui.theme.*
             // The tree left the bar in 2.40.0 and opens from here, beside the forge.
             IconButton(onClick = onTree) {
                 Icon(ForgeGlyphs.Constellation, ui("nav.tree"), tint = Gold, modifier = Modifier.size(24.dp))
+            }
+            // The grimoire (2.78.0): the class's skills and the belt.
+            IconButton(onClick = onSkills) {
+                Icon(ForgeGlyphs.Grimoire, ui("nav.skills"), tint = Gold, modifier = Modifier.size(24.dp))
             }
             IconButton(enabled = !s.busy, onClick = onForge) {
                 Icon(ForgeGlyphs.Tome, ui("nav.craft"), tint = Gold, modifier = Modifier.size(24.dp))

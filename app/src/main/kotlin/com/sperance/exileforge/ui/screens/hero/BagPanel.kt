@@ -27,19 +27,24 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.spriteVector
 import com.sperance.exileforge.ui.theme.*
 
+/** The catalogue's plain stacks of the bag: materials, and since 2.78.0 the skill books and the essences. */
+private fun stacks(s: ForgeState) = s.world.materials + s.world.books + s.world.essences
+
 /** A bag stack's name: the orb's own, or the tail of an id the catalogue does not name. */
 fun bagTitle(s: ForgeState, itemId: String): String =
     s.world.orbs.firstOrNull { it.id == itemId }?.title(s.lang)
-        ?: s.world.materials.firstOrNull { it.id == itemId }?.let { locOr(LocaleKey.itemName(it.code), displayName(it.code)) }
+        ?: stacks(s).firstOrNull { it.id == itemId }?.let { locOr(LocaleKey.itemName(it.code), displayName(it.code)) }
         ?: (ui("common.item") + " …${itemId.takeLast(6)}")
 
-/** What a stack is, from the dictionary: the orb's rule, or a material's description (since 2.41.0). */
+/** What a stack is, from the dictionary: the orb's rule, or a material's, a book's or an essence's description (since 2.41.0). */
 private fun bagDetails(s: ForgeState, itemId: String): String? =
     s.world.orbs.firstOrNull { it.id == itemId }?.details(s.lang)
-        ?: s.world.materials.firstOrNull { it.id == itemId }?.let { locOr(LocaleKey.itemDescription(it.code), "") }
+        ?: stacks(s).firstOrNull { it.id == itemId }?.let { locOr(LocaleKey.itemDescription(it.code), "") }
 
-/** A shelf of the bag (2.75.0): each has its heading over its own run of cells. */
-enum class BagCategory(val key: String) { ORBS("bag.section_orbs"), MATERIALS("bag.section_materials"), OTHER("bag.section_other") }
+/** A shelf of the bag (2.75.0): each has its heading over its own run of cells; books and essences since 2.78.0. */
+enum class BagCategory(val key: String) {
+    ORBS("bag.section_orbs"), ESSENCES("bag.section_essences"), BOOKS("bag.section_books"), MATERIALS("bag.section_materials"), OTHER("bag.section_other")
+}
 
 /**
  * The bag by category — orbs, then materials, then whatever the catalogue does not name — each by
@@ -49,8 +54,16 @@ enum class BagCategory(val key: String) { ORBS("bag.section_orbs"), MATERIALS("b
 fun bagSections(s: ForgeState): List<Pair<BagCategory, List<CharacterItem>>> {
     val orbs = s.world.orbs.associateBy { it.id }
     val materials = s.world.materials.associateBy { it.id }
-    fun category(id: String) = when (id) { in orbs -> BagCategory.ORBS; in materials -> BagCategory.MATERIALS; else -> BagCategory.OTHER }
-    fun worth(id: String) = orbs[id]?.price ?: materials[id]?.price ?: 0L
+    val books = s.world.books.associateBy { it.id }
+    val essences = s.world.essences.associateBy { it.id }
+    fun category(id: String) = when (id) {
+        in orbs -> BagCategory.ORBS
+        in essences -> BagCategory.ESSENCES
+        in books -> BagCategory.BOOKS
+        in materials -> BagCategory.MATERIALS
+        else -> BagCategory.OTHER
+    }
+    fun worth(id: String) = orbs[id]?.price ?: (materials[id] ?: books[id] ?: essences[id])?.price ?: 0L
     val byCategory = s.play.hero?.bag.orEmpty().sortedWith(compareBy<CharacterItem>({ -worth(it.itemId) }, { bagTitle(s, it.itemId) }))
         .groupBy { category(it.itemId) }
     return BagCategory.entries.mapNotNull { category -> byCategory[category]?.let { category to it } }
@@ -104,7 +117,7 @@ internal fun compactCount(amount: Long): String = when {
 
 /** The code of a stack the client knows — an orb or a material — for its icon. */
 private fun stackCode(s: ForgeState, itemId: String): String? =
-    s.world.orbs.firstOrNull { it.id == itemId }?.code ?: s.world.materials.firstOrNull { it.id == itemId }?.code
+    s.world.orbs.firstOrNull { it.id == itemId }?.code ?: stacks(s).firstOrNull { it.id == itemId }?.code
 
 /**
  * An orb, a material or an unnamed stack, drawn in a gold frame the way an item row frames its icon.
@@ -128,9 +141,16 @@ private fun stackCode(s: ForgeState, itemId: String): String? =
  * server refuses it on an item (`CR_009`), so it has no way in. The auction takes any stack.
  */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun BagSheet(s: ForgeState, stack: CharacterItem, onDismiss: () -> Unit, onForge: (String) -> Unit, onAuction: (String) -> Unit) {
+@Composable fun BagSheet(s: ForgeState, stack: CharacterItem, onDismiss: () -> Unit, onForge: (String) -> Unit, onAuction: (String) -> Unit,
+                         /** A skill book of the class read at once (2.78.0), by the skill's code. */
+                         onRead: (String) -> Unit = {},
+                         /** An essence taken to the forge (2.78.0). */
+                         onEssence: (String) -> Unit = {}) {
     val orb = s.world.orbs.firstOrNull { it.id == stack.itemId }
     val forgeable = orb != null && orb.orb != CurrencyOrb.ORB_OF_REGRET
+    val skill = s.world.books.firstOrNull { it.id == stack.itemId }?.let { s.world.skills.byBook(it.code) }
+    val readable = skill != null && skill.heroClass == s.heroClass?.code
+    val essence = s.world.essences.any { it.id == stack.itemId }
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel) {
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).navigationBarsPadding()) {
             RaritySpine(Gold, 4.dp)
@@ -150,6 +170,12 @@ private fun stackCode(s: ForgeState, itemId: String): String? =
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (forgeable) Button(enabled = !s.busy, onClick = { onForge(stack.itemId) }, modifier = Modifier.weight(1f)) {
                         Text(ui("bag.to_forge"))
+                    }
+                    if (essence) Button(enabled = !s.busy, onClick = { onEssence(stack.itemId) }, modifier = Modifier.weight(1f)) {
+                        Text(ui("bag.to_forge"))
+                    }
+                    if (readable && skill != null) Button(enabled = !s.busy, onClick = { onRead(skill.code) }, modifier = Modifier.weight(1f)) {
+                        Text(ui(if ((s.play.hero?.character?.skills?.level(skill.code) ?: 0) > 0) "bag.read_book" else "bag.learn_book"))
                     }
                     OutlinedButton(enabled = !s.busy, onClick = { onAuction(stack.itemId) }, modifier = Modifier.weight(1f)) {
                         Text(ui("hero.action_auction"))

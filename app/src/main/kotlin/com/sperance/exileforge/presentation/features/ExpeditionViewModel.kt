@@ -1,7 +1,11 @@
 package com.sperance.exileforge.presentation.features
 
 import com.sperance.exileforge.core.campaign.ExpeditionRun
+import com.sperance.exileforge.core.campaign.Flask
+import com.sperance.exileforge.core.campaign.HeroGear
 import com.sperance.exileforge.core.campaign.HeroStance
+import com.sperance.exileforge.core.campaign.Loadout
+import com.sperance.exileforge.core.character.Sheet
 import com.sperance.exileforge.core.contract.text
 import com.sperance.exileforge.core.campaign.RolledMonster
 import com.sperance.exileforge.core.campaign.RunCommand
@@ -122,18 +126,21 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         task(writing = true, touches = setOf(Reads.MAP_SERVICES)) {
             val characterId = state.value.play.characterId
             val launch = api.campaign.start(characterId, mapCode, picked)
-            val hero = state.value.play.hero ?: return@task
+            if (state.value.play.hero == null) return@task
             mutable.update { it.copy(play = it.play.copy(launch = null, heroReadAt = if (picked != null) 0 else it.play.heroReadAt,
                 hero = if (picked == null) it.play.hero else it.play.hero?.let { h -> h.copy(inventory = h.inventory.filterNot { item -> item.id == picked }) })) }
-            begin(launch.zone ?: map, view, hero, characterId, launch.map?.effects.orEmpty(), launch.chests.left, launch.atlas)
+            begin(launch.zone ?: map, view, characterId, launch.map?.effects.orEmpty(), launch.chests.left, launch.atlas, launch.crystals)
         }
     } }
 
-    private fun begin(map: CampaignMap, view: com.sperance.exileforge.core.model.campaign.CampaignView, hero: com.sperance.exileforge.core.model.hero.HeroView,
-                      characterId: String, effects: Map<String, Double>, chests: Int, atlas: Map<String, Double> = emptyMap()) {
+    private fun begin(map: CampaignMap, view: com.sperance.exileforge.core.model.campaign.CampaignView,
+                      characterId: String, effects: Map<String, Double>, chests: Int, atlas: Map<String, Double> = emptyMap(),
+                      crystals: com.sperance.exileforge.core.model.essences.CrystalState? = null) {
+        val gear = gear() ?: return
+        val world = runtime.state.value.world
         runtime.mutable.update { it.copy(play = it.play.copy(runLoot = emptyList())) }
         lateinit var run: ExpeditionRun
-        run = ExpeditionRun.start(map, view.rarities, hero.sheet.stats, hero.sheet.level, System.nanoTime(),
+        run = ExpeditionRun.start(map, view.rarities, gear, System.nanoTime(),
             onKill = { monster -> reports.trySend { kill(run, characterId, map.code, monster) } },
             onCleared = { reports.trySend { leave(characterId, map.code) } },
             rules = view.combat,
@@ -142,7 +149,11 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             // The atlas's own bonuses (2.68.0) ride the map item's: more and rarer monsters, fountains, the portal.
             mapEffects = AtlasEffects.map(effects, atlas), fountains = AtlasEffects.fountains(view.fountains, atlas),
             portalChance = AtlasEffects.portalChance(view, atlas), onPortal = { reports.trySend { gate(run, characterId, map.code) } },
-            stance = stance(), extraRareMods = AtlasEffects.extraRareMods(atlas))
+            extraRareMods = AtlasEffects.extraRareMods(atlas),
+            // The skills of the monsters and the essences' guardians (2.78.0, server 0.69.0).
+            skills = world.skills, essences = world.essenceBook, crystals = crystals,
+            onCrystal = { index -> reports.trySend { freeCrystal(run, characterId, map.code, index) } },
+            onCrystalVaal = { index -> reports.trySend { vaalCrystal(run, characterId, map.code, index) } })
         // How many chests stand on the map is the server's (0.31.0), answered by the entry itself.
         run.send(RunCommand.Chests(chests))
         mutableRun.value = run
@@ -160,6 +171,22 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         HeroStance.of(s.heroClass?.code, weapon?.let { s.world.inventoryBases[it.equipmentId]?.text("weaponType") })
     }
 
+    /**
+     * The hero as a run takes them (2.78.0): the sheet and what it was added up from, whom they strike and
+     * how far they reach, and what they bring beyond the sheet — the slotted skills and the belt's flasks.
+     */
+    private fun gear(): HeroGear? = with(runtime) {
+        val s = state.value
+        val hero = s.play.hero ?: return null
+        val definitions = s.world.definitions.associateBy { it.code }
+        val conditions = hero.character.skills.flasks
+        val flasks = Sheet.FLASK_SLOTS.mapIndexed { i, slot ->
+            hero.equipped[slot]?.let { item -> s.world.inventoryBases[item.equipmentId]?.let { Flask.of(item, it, definitions, conditions.getOrNull(i)) } }
+        }
+        HeroGear(hero.sheet.stats, hero.sheet.level, hero.sheet.model, stance(),
+            Loadout.of(hero.character.skills, s.world.skills, s.heroClass?.code.orEmpty(), flasks), s.world.statTables.percentStats)
+    }
+
     fun send(command: RunCommand) { mutableRun.value?.send(command) }
 
     /**
@@ -171,18 +198,18 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         val run = mutableRun.value ?: return
         val zone = run.hud.value.gate ?: return
         val view = state.value.world.campaign ?: return
-        val hero = state.value.play.hero ?: return
+        val gear = gear()?.copy(stance = run.stance) ?: return
         val map = VaalZones.map(run.map) ?: return
         if (parent != null) return
         val characterId = state.value.play.characterId
         run.send(RunCommand.ShutGate)
         lateinit var inner: ExpeditionRun
-        inner = ExpeditionRun.start(map, view.rarities, hero.sheet.stats, hero.sheet.level, System.nanoTime(),
+        inner = ExpeditionRun.start(map, view.rarities, gear, System.nanoTime(),
             onKill = { monster -> reports.trySend { kill(inner, characterId, map.code, monster, vaal = true) } },
             onCleared = {},
             rules = view.combat,
             onFallen = { reports.trySend { vaalLeave(inner, characterId, map.code) } },
-            mapEffects = stack(run.mapEffects, zone.effects), startLife = run.heroLife, stance = run.stance)
+            mapEffects = stack(run.mapEffects, zone.effects), startPools = run.pools, skills = state.value.world.skills)
         parent = run
         mutableRun.value = inner
     } }
@@ -238,9 +265,8 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     /** The hero was re-read after a change of gear (2.40.0): a run under way takes the new sheet between fights. */
     fun regear() {
-        val hero = runtime.state.value.play.hero ?: return
-        val stance = stance()
-        listOfNotNull(mutableRun.value, parent).forEach { it.send(RunCommand.Regear(hero.sheet.stats, hero.sheet.level, stance)) }
+        val gear = gear() ?: return
+        listOfNotNull(mutableRun.value, parent).forEach { it.send(RunCommand.Regear(gear)) }
     }
 
     /**
@@ -255,7 +281,7 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         val zone = mutableRun.value
         if (outer != null && zone != null) {
             val share = if (zone.heroLife <= 0) VaalZones.WAKE_LIFE else zone.heroLife / zone.hero.maxLife
-            outer.send(RunCommand.Returned(outer.hero.maxLife * share))
+            outer.send(RunCommand.Returned(outer.hero.maxLife * share, zone.pools))
             parent = null
             mutableRun.value = outer
             return
@@ -293,6 +319,28 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             // without them has already set the reading cold.
         } catch (e: CancellationException) { throw e }
         catch (e: Exception) { run.send(RunCommand.RewardFailed); report(e, writing = true) }
+    } }
+
+    /**
+     * A crystal's guardian slain (2.78.0, server 0.69.0): the crystal's essences, a rare monster's loot and
+     * maybe a book — reported by the crystal's place among those still standing. Never retried.
+     */
+    private suspend fun freeCrystal(run: ExpeditionRun, characterId: String, mapCode: String, index: Int) { with(runtime) {
+        try {
+            val reward = api.campaign.freeCrystal(characterId, mapCode, index)
+            run.send(RunCommand.Reward(reward))
+            loot(characterId, reward.equipment)
+        } catch (e: CancellationException) { throw e }
+        catch (e: Exception) { run.send(RunCommand.RewardFailed); report(e, writing = true) }
+    } }
+
+    /** A Vaal orb on a crystal (2.78.0): the server's outcome and the zone's crystals as they stand after it. Never retried. */
+    private suspend fun vaalCrystal(run: ExpeditionRun, characterId: String, mapCode: String, index: Int) { with(runtime) {
+        try {
+            val vaal = api.campaign.vaalCrystal(characterId, mapCode, index)
+            run.send(RunCommand.CrystalChanged(vaal.outcome, vaal.state))
+        } catch (e: CancellationException) { throw e }
+        catch (e: Exception) { run.send(RunCommand.CrystalFailed); report(e, writing = true) }
     } }
 
     /** The hero fell: the server prices it, and the header's experience is what it says now. */

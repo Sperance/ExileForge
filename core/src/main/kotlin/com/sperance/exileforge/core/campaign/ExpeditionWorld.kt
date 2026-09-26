@@ -4,6 +4,8 @@ import com.sperance.exileforge.core.model.campaign.BehaviourRule
 import com.sperance.exileforge.core.model.campaign.CampaignMap
 import com.sperance.exileforge.core.model.campaign.MonsterEffect
 import com.sperance.exileforge.core.model.campaign.CampaignRarity
+import com.sperance.exileforge.core.model.essences.Crystal
+import com.sperance.exileforge.core.model.skills.SkillBook
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.hypot
@@ -59,11 +61,19 @@ class Chest(val id: Int, val cell: Cell) { var opened = false }
 /** A fountain on the map (since 2.48.0): where it stands, how much life it gives back, and whether it was drunk dry. */
 class Fountain(val id: Int, val cell: Cell, val heal: Double) { var used = false }
 
+/**
+ * A crystal of essences on the map (2.78.0, server 0.69.0): where it stands, what it holds as the server
+ * last said, and whether its guardian was slain. [id] is its place among the zone's crystals at the entry.
+ */
+class CrystalSpot(val id: Int, val cell: Cell, var crystal: Crystal) { var freed = false }
+
 /** What a step of the world ran into. */
 sealed interface WorldEvent {
     data class Encounter(val agent: MonsterAgent) : WorldEvent
     data class Opened(val chest: Chest) : WorldEvent
     data class Drank(val fountain: Fountain) : WorldEvent
+    /** The hero stepped up to a crystal of essences (2.78.0). */
+    data class Crystal(val spot: CrystalSpot) : WorldEvent
     /** The hero reached the Vaal portal (since 2.65.0). */
     data object Portal : WorldEvent
     data object Exit : WorldEvent
@@ -155,6 +165,10 @@ class ExpeditionWorld(
     val chests = mutableListOf<Chest>()
     /** The fountains, placed by [placeFountains]. */
     val fountains = mutableListOf<Fountain>()
+    /** The crystals of essences (2.78.0), placed by [placeCrystals]. */
+    val crystals = mutableListOf<CrystalSpot>()
+    /** The crystal the hero stands at, until they step off it: it does not open again underfoot. */
+    private var atCrystal: CrystalSpot? = null
 
     init { light() }
 
@@ -194,6 +208,24 @@ class ExpeditionWorld(
         }
     }
 
+    /**
+     * Puts the zone's crystals down, once (2.78.0): what they hold is the server's, where they stand the
+     * seed's — away from the start, the exit, the monsters' places, the chests and fountains, and apart.
+     */
+    fun placeCrystals(held: List<Crystal>) {
+        if (held.isEmpty() || crystals.isNotEmpty()) return
+        val placing = Random(seed * 7727 + 97)
+        val taken = map.spawns.toSet() + map.exit + map.start + chests.map { it.cell } + fountains.map { it.cell } + listOfNotNull(portal)
+        val candidates = distances(map.start, Int.MAX_VALUE).filter { (cell, steps) -> steps >= CHEST_STEPS && cell !in taken }.keys.shuffled(placing)
+        for (cell in candidates) {
+            if (crystals.size >= held.size) break
+            if (crystals.all { hypot((it.cell.x - cell.x).toDouble(), (it.cell.y - cell.y).toDouble()) >= CHEST_SPACING }) crystals += CrystalSpot(crystals.size, cell, held[crystals.size])
+        }
+    }
+
+    /** The crystals still standing, in the server's order: a crystal's place among them is what the server names it by. */
+    val standingCrystals: List<CrystalSpot> get() = crystals.filterNot { it.freed }
+
     fun explored(x: Int, y: Int) = x in 0 until map.width && y in 0 until map.height && explored[y * map.width + x]
     fun lit(x: Int, y: Int) = x in 0 until map.width && y in 0 until map.height && lit[y * map.width + x]
 
@@ -217,6 +249,9 @@ class ExpeditionWorld(
             fountain.used = true
             return WorldEvent.Drank(fountain)
         }
+        val crystal = crystals.firstOrNull { !it.freed && hypot(it.cell.x + 0.5 - heroX, it.cell.y + 0.5 - heroY) < CHEST_REACH }
+        if (crystal == null) atCrystal = null
+        else if (crystal !== atCrystal) { atCrystal = crystal; return WorldEvent.Crystal(crystal) }
         portal?.let { cell ->
             val near = hypot(cell.x + 0.5 - heroX, cell.y + 0.5 - heroY) < CHEST_REACH
             if (near && portalArmed) { portalArmed = false; return WorldEvent.Portal }
@@ -485,7 +520,9 @@ class ExpeditionWorld(
         fun create(map: CampaignMap, rarities: List<CampaignRarity>, heroStats: Map<String, Double>, seed: Long,
                    mapBuffs: List<MonsterEffect> = emptyList(), portalChance: Double = 0.0,
                    /** What the map does to its boss alone (server 0.66.0), and how many modifiers a rare monster carries beyond its rule. */
-                   bossBuffs: List<MonsterEffect> = emptyList(), extraRareMods: Int = 0): ExpeditionWorld {
+                   bossBuffs: List<MonsterEffect> = emptyList(), extraRareMods: Int = 0,
+                   /** The monsters' skills (server 0.69.0): what a boss, a caster and a borrower cast. */
+                   skills: SkillBook = SkillBook()): ExpeditionWorld {
             val random = Random(seed)
             val (low, high) = map.monsterCount.let { (it.getOrNull(0) ?: 10) to (it.getOrNull(1) ?: 14) }
             // The map's size is the server's since 0.40.0; room for the pack a map's modifier asks for comes with it.
@@ -493,9 +530,11 @@ class ExpeditionWorld(
             // A pack's own stream (2.54.0), so whether a spawn is one or several never shifts the
             // ordinary roll that follows it — the same seed still hands out the same single monsters.
             val packRandom = Random(seed * 32452843 + 71)
-            val packs = List(layout.spawns.size) { MonsterRoller.rollPack(map, rarities, random, packRandom, extraRareMods).map { it.copy(mapBuffs = mapBuffs) } }
+            // What a monster casts is thrown on a stream of its own (2.78.0), so the old rolls stay as they were.
+            val casting = Random(seed * 49979687 + 13)
+            val packs = List(layout.spawns.size) { MonsterRoller.rollPack(map, rarities, random, packRandom, extraRareMods).map { MonsterRoller.skilled(it.copy(mapBuffs = mapBuffs), skills, casting) } }
             return ExpeditionWorld(layout, packs, heroSpeed(heroStats), seed, lightRadius(heroStats, map.light),
-                MonsterRoller.boss(map, rarities, packRandom, bossBuffs)?.copy(mapBuffs = mapBuffs + bossBuffs),
+                MonsterRoller.boss(map, rarities, packRandom, bossBuffs)?.let { MonsterRoller.skilled(it.copy(mapBuffs = mapBuffs + bossBuffs), skills, casting) },
                 MonsterRoller.portal(map, portalChance, random))
         }
 

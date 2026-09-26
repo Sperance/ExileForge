@@ -109,7 +109,8 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
      * «В путь»: the location is entered on the server first (since 0.35.0) — with the picked map,
      * which is spent there, or without one — and then a new run starts with the hero as the sheet has
      * them now and the map's effects on the monsters and on the hero. The map, its monsters and their
-     * rolls come from one fresh seed; how many chests stand on it is the entry's answer.
+     * rolls come from one fresh seed; how many chests stand on it is the entry's answer, and so is the
+     * zone itself (2.77.1, server 0.68.1): the world holds tokens, the entry brings the modifier pools.
      */
     fun start(mapCode: String) { with(runtime) {
         if (mutableRun.value != null || state.value.busy) return
@@ -124,7 +125,7 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             val hero = state.value.play.hero ?: return@task
             mutable.update { it.copy(play = it.play.copy(launch = null, heroReadAt = if (picked != null) 0 else it.play.heroReadAt,
                 hero = if (picked == null) it.play.hero else it.play.hero?.let { h -> h.copy(inventory = h.inventory.filterNot { item -> item.id == picked }) })) }
-            begin(map, view, hero, characterId, launch.map?.effects.orEmpty(), launch.chests.left, launch.atlas)
+            begin(launch.zone ?: map, view, hero, characterId, launch.map?.effects.orEmpty(), launch.chests.left, launch.atlas)
         }
     } }
 

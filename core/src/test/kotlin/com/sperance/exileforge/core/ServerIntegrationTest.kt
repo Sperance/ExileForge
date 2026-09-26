@@ -147,13 +147,18 @@ class ServerIntegrationTest {
         mapsAreTheServers(api, id)
     }
 
-    /** Maps (0.35.0): the rule is served, and a location is entered without one; another location's map is refused. */
+    /** Maps (0.35.0): the rule is served, and a location is entered without one — its whole zone answered (0.68.1); another location's map is refused. */
     private suspend fun mapsAreTheServers(api: GameApi, id: String) {
         val view = api.campaign.world()
         assertTrue(view.maps.risk.isNotEmpty(), "no risk weights")
         val first = view.zones.first()
         val launch = api.campaign.start(id, first.code)
         assertNull(launch.map)
+        // Server 0.68.1: the world's token leaves the modifier pools out and the entry brings the zone whole.
+        assertTrue(first.modifiers.isEmpty() && first.boss?.pool.orEmpty().isEmpty(), "the world still carries ${first.code}'s pools")
+        val zone = assertNotNull(launch.zone, "the entry brought no zone")
+        assertEquals(first.code, zone.code)
+        assertTrue(zone.modifiers.isNotEmpty() && zone.boss?.pool.orEmpty().isNotEmpty(), "the entry's ${zone.code} carries no pools")
         assertEquals(api.campaign.chests(id, first.code).left, launch.chests.left)
         assertEquals("CH_008", assertFailsWith<ApiFailure> { api.campaign.start(id, first.code, "0".repeat(24)) }.code)
         craftsAreTheServers(api, id)

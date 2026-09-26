@@ -359,7 +359,8 @@
 ## Кампания (с 0.26.0)
 
 Содержимое — `resources/content/campaign.json` сервера. С 0.67.0 это **карта мира**: `GET /api/v1/character/campaign/world`
-отдаёт поле мира и регионы с зонами-жетонами (с 0.68.0 — шесть регионов, 105 зон до 70-го уровня). У зоны — место `x`/`y` (ось `y` растёт вверх от старта), связи `from` (откуда в неё
+отдаёт поле мира и регионы с зонами-жетонами (с 0.68.0 — шесть регионов, 105 зон до 70-го уровня; с 0.68.1, ревизия 12, жетон
+не несёт пулов модификаторов — `modifiers`, `boss.pool` и `corrupted.pool` пусты, зона целиком приходит ответом на вход). У зоны — место `x`/`y` (ось `y` растёт вверх от старта), связи `from` (откуда в неё
 ведут) и `to` (куда ведут из неё), `finale` у финала региона; зона открыта, когда убит босс хотя бы одной зоны из `from`:
 
 ```json
@@ -385,7 +386,7 @@
 | Осквернённая зона (0.46.0) | `POST /api/v1/character/campaign/corrupt?characterId=&mapCode=&monsterCode=` → `CampaignReward`; случайный портал за заход (`corruption.chance`), не больше одного — повтор `CP_012`; своя таблица добычи, шанс на уникалку из `corruption.uniquePools` |
 | Ваал-зона (0.57.0) | `POST /api/v1/character/campaign/vaal?characterId=&mapCode=` → `VaalZone {mapCode, level, modifiers, effects, quantity, rarity, experience}` — зона за порталом, катится раз за заход, повтор отдаёт ту же; закрытая — `CP_012`. `POST …/kill?…&vaal=true` — монстр зоны, её бонус поверх карты. `POST …/corrupt` — страж зоны, требует открытую зону и закрывает её. `POST …/vaal/leave` → `CampaignFall` (без потери опыта) — отказ у ворот или смерть внутри |
 | Ремёсла (0.37.0) | `GET /api/v1/character/crafts?characterId=` → `CraftsState` (досчитывает циклы до сейчас, добыча — в сумке); `POST …/crafts/start?characterId=&job=[&additives=A,B]` (0.38.0: примеси кузнеца; ремесло тратит материалы каждый цикл и встаёт, когда они кончаются — `CF_006`, чужая примесь — `CF_007`, закрытая локация — `CF_005`), `POST …/crafts/stop?characterId=`; без инструмента — `CF_004`, мал уровень — `CF_003`. С 0.66.2 у `work` ещё `startedAt` и `totals` — итоги работы с запуска: `{cycles, nothing, items, spent, made, experience, levels}` |
-| Вход в локацию (0.35.0) | `POST /api/v1/character/campaign/start?characterId=&mapCode=[&itemId=]` → `{map, chests}`; карта (слот `MAP`, шаблон `MAP_<mapCode>`) тратится, чужая локация — `CP_011`; без `itemId` — вход без карты |
+| Вход в локацию (0.35.0) | `POST /api/v1/character/campaign/start?characterId=&mapCode=[&itemId=]` → `{map, chests, atlas, zone}`; карта (слот `MAP`, шаблон `MAP_<mapCode>`) тратится, чужая локация — `CP_011`; без `itemId` — вход без карты. С 0.68.1 `zone` — зона целиком, с пулами модификаторов монстров, босса и стража порчи: заход строится по ней |
 | Витрина торговца | `GET /api/v1/character/merchant?characterId=` → `{refreshAt, offers:[{id, item, price}]}`; с 0.66.2 волшебная и редкая вещь витрины не ниже дна своей редкости (пустая выкладывается белой) |
 | Покупка у торговца | `POST /api/v1/character/merchant/buy?characterId=&offerId=` → `{item, money}`; `CH_016` не хватает золота, `CH_017` нет предложения |
 | Места под лоты | `GET`/`POST /api/v1/auctionlot/slots?characterId=` → `{used, limit, max, price, money}`; `AU_012` все заняты, `AU_013` потолок |

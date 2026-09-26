@@ -107,7 +107,9 @@ enum class MonsterRarity { NORMAL, MAGIC, RARE, UNIQUE }
  * A zone of the world map (server 0.67.0; a chapter's map before): its token stands at [x], [y] of
  * the world — `y` grows up from the start — in [region]. [from] are the zones whose links lead in,
  * [to] those its own lead to: a zone opens once the boss of any of [from] is slain. A zone with
- * nowhere to lead that is not its region's [finale] is a dead end.
+ * nowhere to lead that is not its region's [finale] is a dead end. The world serves it as a token
+ * (server 0.68.1): [modifiers] and the pools of [boss] and [corrupted] come empty there and whole with
+ * the entry, [MapLaunch.zone].
  */
 @Serializable data class CampaignMap(
     val code: String,
@@ -315,10 +317,12 @@ enum class MapLineKind { HARM, CONTENT, REWARD }
 )
 
 /**
- * What entering a location answered: the map spent on it, if any, its chests as they stand now, and
- * (server 0.60.0) the atlas's summed effects, stat → value.
+ * What entering a location answered: the map spent on it, if any, its chests as they stand now,
+ * (server 0.60.0) the atlas's summed effects, stat → value, and (server 0.68.1) the [zone] whole — with
+ * the monster, boss and corruption modifier pools the world's tokens leave out. The run is built on it.
  */
-@Serializable data class MapLaunch(val map: ActiveMap? = null, val chests: ChestState = ChestState(), val atlas: Map<String, Double> = emptyMap())
+@Serializable data class MapLaunch(val map: ActiveMap? = null, val chests: ChestState = ChestState(), val atlas: Map<String, Double> = emptyMap(),
+                                   val zone: CampaignMap? = null)
 
 /**
  * The map's service for gold (since server 0.34.0): summoning brings a slain guardian back, at so

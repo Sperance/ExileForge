@@ -30,8 +30,11 @@ import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 
-/** The API revision this client is written against (server 0.67.0: the world map, a boss passes its zone, the exit only leaves). */
-const val API_REVISION = 11
+/**
+ * The API revision this client is written against (server 0.68.1: the world map's zones come as
+ * tokens without their modifier pools, and entering a zone answers it whole).
+ */
+const val API_REVISION = 12
 
 @Serializable data class WorldManifest(val hash: String = "", val file: String = "world.json")
 

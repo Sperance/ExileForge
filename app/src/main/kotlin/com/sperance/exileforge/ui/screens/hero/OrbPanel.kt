@@ -62,7 +62,6 @@ import com.sperance.exileforge.ui.icons.orbArt
         onClick = { onGrant(s.play.selectedOrb) }, modifier = Modifier.fillMaxWidth()) {
         Text(ui("orb.top_up", ORB_TOP_UP))
     }
-    MutedText(ui("orb.note"))
 }
 
 /** How many orbs the administrator's top-up hands over at once — enough to try one out properly. */

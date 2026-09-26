@@ -104,7 +104,6 @@ import kotlinx.serialization.json.put
                 LedgerLine(ui("confirm.gain"), lot.title, Tone.GAIN),
                 LedgerLine(ui("auction.seller"), lot.sellerName.ifBlank { "…${lot.sellerId.takeLast(6)}" }),
             ),
-            note = ui("auction.buy_note"),
             warning = listOfNotNull(
                 have?.takeIf { it < lot.price }?.let { ui("confirm.short", it) },
                 blocked.takeIf { it.isNotEmpty() }?.let {
@@ -205,7 +204,6 @@ private fun chipLabel(s: ForgeState, field: FilterField, value: String): String 
                 Text(ui("auction.show_mine"), modifier = Modifier.weight(1f))
                 Switch(checked = mine, onCheckedChange = { mine = it })
             }
-            MutedText(ui("auction.filter_note"))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ForgeOutlinedButton(onClick = { draft = draft.cleared(); mine = false }, modifier = Modifier.weight(1f)) { Text(ui("auction.reset")) }
                 ForgeButton(enabled = !s.busy, onClick = { onApply(draft, mine) }, modifier = Modifier.weight(1f)) { Text(ui("auction.apply")) }
@@ -374,7 +372,6 @@ private fun lotDocument(s: ForgeState, lot: AuctionLot): JsonObject {
                     listedAt(lot.createdAt)?.let { PropertyRow(ui("auction.listed_at"), it, Glyph.LEVEL) }
                     note?.let { MutedText(it, style = MaterialTheme.typography.labelMedium) }
                     ForgeButton(enabled = enabled, onClick = onAction, modifier = Modifier.fillMaxWidth()) { Text(action) }
-                    MutedText(ui("auction.lot_note"))
                 }
             }
         }

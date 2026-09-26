@@ -173,7 +173,6 @@ private val ForgeSection.title get() = when (this) {
                 selected = orb.id == s.play.selectedOrb, orb = orb.orb) { onSelect(orb.id) }
         }
     }
-    MutedText(ui("orb.note"))
 }
 
 /** The bench lines for this item's slot, and the crafted modifier it already carries, if any. */
@@ -197,7 +196,6 @@ private val ForgeSection.title get() = when (this) {
         }
     }
     if (recipes.isEmpty()) Text(ui("bench.none"), color = Muted)
-    MutedText(ui("bench.note"))
 }
 
 /** One line of a forge ledger: a spine lit when chosen, a drawing, a name over what it means, and a figure. */

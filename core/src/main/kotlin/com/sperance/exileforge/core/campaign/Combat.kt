@@ -263,7 +263,16 @@ data class TimedEffect(val kind: EffectKind, val source: String, val lines: List
  * What the hero carries from fight to fight (2.78.0): life, mana, each flask's charges and how long
  * its draught still runs, in seconds.
  */
-data class HeroPools(val life: Double, val mana: Double, val charges: List<Double> = emptyList(), val flaskLeft: List<Double> = emptyList())
+data class HeroPools(val life: Double, val mana: Double, val charges: List<Double> = emptyList(), val flaskLeft: List<Double> = emptyList(),
+                     val rates: List<DraughtRate> = emptyList())
+
+/**
+ * How much life and mana a running draught still gives each second (2.81.0). It rides with the draught's
+ * time left, so a flask drunk at the end of a fight keeps healing on the map and in the next fight.
+ */
+data class DraughtRate(val life: Double = 0.0, val mana: Double = 0.0) {
+    val flows: Boolean get() = life > 0 || mana > 0
+}
 
 /** An active slot as the fight's buttons draw it (2.78.0): how far it has recovered (1 ready), and whether the mana is there. */
 data class SkillView(val slot: Int, val code: String, val icon: String, val level: Int, val cost: Int, val ready: Float, val affordable: Boolean,
@@ -371,7 +380,7 @@ internal class Blow(
 }
 
 /** Life and mana a draught gives a second until [until] (2.78.0). */
-private class Recovery(val life: Double, val mana: Double, val until: Double)
+private class Recovery(val life: Double, val mana: Double, val until: Double, val slot: Int)
 
 /**
  * The fight, alive: stepped in fixed slices of time so that the same seed is the same fight on any
@@ -531,6 +540,8 @@ class Battle(
             if (left <= 0) return@forEachIndexed
             val draught = flask.draught(heroFighter.body, heroFighter.life, 0.0)
             heroFighter.effects += TimedEffect(EffectKind.FLASK, flask.code, draught.lines, left, draught.duration, slot = i)
+            // Its recovery comes along with it (2.81.0): before, the draught's buff ran on but its healing stopped.
+            pools?.rates?.getOrNull(i)?.takeIf { it.flows }?.let { recoveries += Recovery(it.life, it.mana, left, i) }
             flaskOpened[i] = true
         }
         if (heroFighter.effects.isNotEmpty()) remake(heroFighter)
@@ -555,7 +566,8 @@ class Battle(
 
     /** What the hero walks out with: life, mana, the flasks' charges and the seconds each draught still runs. */
     fun pools(): HeroPools = HeroPools(heroFighter.life, heroFighter.mana, charges.toList(),
-        kit.flasks.indices.map { i -> draughtOf(i)?.let { (it.until - time).coerceAtLeast(0.0) } ?: 0.0 })
+        kit.flasks.indices.map { i -> draughtOf(i)?.let { (it.until - time).coerceAtLeast(0.0) } ?: 0.0 },
+        kit.flasks.indices.map { i -> recoveries.firstOrNull { it.slot == i && it.until > time }?.let { DraughtRate(it.life, it.mana) } ?: DraughtRate() })
 
     /** The active slots as their buttons draw them; null where a slot is empty. */
     fun skillViews(): List<SkillView?> = kit.actives.mapIndexed { slot, kitSkill ->
@@ -1296,7 +1308,7 @@ class Battle(
         hero.ailments.removeAll { hero.body.immune(it.ailment) }
         hero.mana = min(manaCap(), hero.mana + draught.mana)
         hero.shield = min(hero.body.maxShield, hero.shield + draught.shield)
-        if (draught.lifeRate > 0 || draught.manaRate > 0) recoveries += Recovery(draught.lifeRate, draught.manaRate, time + draught.duration)
+        if (draught.lifeRate > 0 || draught.manaRate > 0) recoveries += Recovery(draught.lifeRate, draught.manaRate, time + draught.duration, slot)
         if (draught.invulnerable > 0) hero.invulnerableUntil = time + draught.invulnerable
         val before = hero.life
         hero.life = min(hero.body.maxLife, hero.life + draught.life)

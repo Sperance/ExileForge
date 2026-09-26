@@ -12,6 +12,7 @@ import com.sperance.exileforge.core.model.essences.CrystalState
 import com.sperance.exileforge.core.model.essences.EssenceBook
 import com.sperance.exileforge.core.model.skills.SkillBook
 import java.util.concurrent.ConcurrentLinkedQueue
+import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.random.Random
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -308,8 +309,10 @@ class ExpeditionRun(
     private var mana = startPools?.mana?.coerceIn(0.0, manaCap()) ?: manaCap()
     private var charges: List<Double> = kit.flasks.mapIndexed { i, flask -> flask?.let { startPools?.charges?.getOrNull(i)?.coerceIn(0.0, it.maxCharges) ?: it.maxCharges } ?: 0.0 }
     private var flaskLeft: List<Double> = kit.flasks.indices.map { startPools?.flaskLeft?.getOrNull(it) ?: 0.0 }
+    /** What each running draught still gives per second (2.81.0): it heals on the road too, not only in a fight. */
+    private var rates: List<DraughtRate> = kit.flasks.indices.map { startPools?.rates?.getOrNull(it) ?: DraughtRate() }
     /** What the hero carries into a Vaal zone and back out of it. */
-    val pools: HeroPools get() = HeroPools(life, mana, charges, flaskLeft)
+    val pools: HeroPools get() = HeroPools(life, mana, charges, flaskLeft, rates)
     private var gate: VaalZone? = null
     private var gatePending = false
     private var gateFailed = false
@@ -356,6 +359,7 @@ class ExpeditionRun(
         // A flask put on the belt on the way comes with the charges its place had, up to its own ceiling.
         charges = next.gear.kit.flasks.mapIndexed { i, flask -> flask?.let { (charges.getOrNull(i) ?: 0.0).coerceIn(0.0, it.maxCharges) } ?: 0.0 }
         flaskLeft = next.gear.kit.flasks.indices.map { i -> if (next.gear.kit.flasks[i] != null) flaskLeft.getOrNull(i) ?: 0.0 else 0.0 }
+        rates = next.gear.kit.flasks.indices.map { i -> if (next.gear.kit.flasks[i] != null) rates.getOrNull(i) ?: DraughtRate() else DraughtRate() }
         rebody()
     }
 
@@ -437,7 +441,7 @@ class ExpeditionRun(
             RunCommand.ShutGate -> { world.closePortal(); closeGate() }
             is RunCommand.Returned -> {
                 life = command.life.coerceIn(0.0, hero.maxLife)
-                command.pools?.let { mana = it.mana.coerceIn(0.0, manaCap()); charges = it.charges.ifEmpty { charges }; flaskLeft = it.flaskLeft.ifEmpty { flaskLeft }; rebody() }
+                command.pools?.let { mana = it.mana.coerceIn(0.0, manaCap()); charges = it.charges.ifEmpty { charges }; flaskLeft = it.flaskLeft.ifEmpty { flaskLeft }; rates = it.rates.ifEmpty { rates }; rebody() }
                 phase = RunPhase.MAP
             }
             is RunCommand.Cast -> fight?.useSkill(command.slot)
@@ -491,9 +495,11 @@ class ExpeditionRun(
         val draught = flask.draught(hero, life, manaCap())
         charges = charges.toMutableList().also { it[slot] = if (flask.usesAll) 0.0 else (it[slot] - flask.perUse(hero)).coerceAtLeast(0.0) }
         flaskLeft = flaskLeft.toMutableList().also { it[slot] = draught.duration }
+        rates = rates.toMutableList().also { it[slot] = DraughtRate(draught.lifeRate, draught.manaRate) }
         rebody()
-        life = (life + draught.life + draught.lifeRate * draught.duration).coerceAtMost(hero.maxLife)
-        mana = (mana + draught.mana + draught.manaRate * draught.duration).coerceAtMost(manaCap())
+        // The instant share now, the rest over the draught's time as the hero walks — as in a fight.
+        life = (life + draught.life).coerceAtMost(hero.maxLife)
+        mana = (mana + draught.mana).coerceAtMost(manaCap())
     }
 
     private fun walk(dt: Double) {
@@ -501,6 +507,13 @@ class ExpeditionRun(
         mana = (mana + hero.manaRegen(rules.mana) * dt).coerceAtMost(manaCap())
         if (flaskLeft.any { it > 0 }) {
             val before = flaskLeft.map { it > 0 }
+            flaskLeft.forEachIndexed { i, left ->
+                val rate = rates.getOrNull(i) ?: return@forEachIndexed
+                val slice = min(dt, left)
+                if (slice <= 0 || !rate.flows) return@forEachIndexed
+                life = (life + rate.life * slice).coerceAtMost(hero.maxLife)
+                mana = (mana + rate.mana * slice).coerceAtMost(manaCap())
+            }
             flaskLeft = flaskLeft.map { (it - dt).coerceAtLeast(0.0) }
             if (flaskLeft.map { it > 0 } != before) rebody()
         }
@@ -574,6 +587,7 @@ class ExpeditionRun(
         mana = out.mana
         charges = out.charges
         flaskLeft = out.flaskLeft
+        rates = out.rates
         rebody()
         val pack = members.mapIndexed { index, member -> PackHit(agent.pack[member], battle.events.filter { it.foe == index }, battle.duration) }
         when (outcome) {

@@ -3,9 +3,11 @@ package com.sperance.exileforge.core
 import com.sperance.exileforge.core.campaign.Action
 import com.sperance.exileforge.core.campaign.Battle
 import com.sperance.exileforge.core.campaign.Combatant
+import com.sperance.exileforge.core.campaign.DraughtRate
 import com.sperance.exileforge.core.campaign.Flask
 import com.sperance.exileforge.core.campaign.FlaskKind
 import com.sperance.exileforge.core.campaign.Foe
+import com.sperance.exileforge.core.campaign.HeroPools
 import com.sperance.exileforge.core.campaign.KitSkill
 import com.sperance.exileforge.core.campaign.Loadout
 import com.sperance.exileforge.core.model.campaign.CombatRules
@@ -49,5 +51,15 @@ class SkillCombatTest {
     @Test fun noManaNoSpell() {
         val battle = fight(mana = 0.0)
         assertTrue(battle.events.none { it.action == Action.SKILL }, "a spell cast for nothing")
+    }
+
+    /** A draught drunk as the last fight ended heals on in the next (2.81.0): its recovery rides with its time left. */
+    @Test fun aRunningDraughtKeepsHealingInTheNextFight() {
+        val hero = Combatant(mapOf("STOCK_HEALTH" to 200.0, "STOCK_ATTACK_PHYSICAL" to 1.0, "STOCK_ATTACK_SPEED" to 1.0), 10, rules)
+        val foe = Combatant(mapOf("STOCK_HEALTH" to 600.0, "STOCK_ATTACK_SPEED" to 1.0), 10, rules)
+        val carried = HeroPools(100.0, 0.0, listOf(30.0), listOf(2.0), listOf(DraughtRate(life = 20.0)))
+        val battle = Battle(hero, listOf(Foe(foe)), rules, 100.0, Random(7), kit = Loadout(flasks = listOf(flask)), pools = carried)
+        repeat(60) { battle.advance(1.0 / 60) }
+        assertTrue(battle.pools().life > 110.0, "the carried draught stopped healing: ${battle.pools().life}")
     }
 }

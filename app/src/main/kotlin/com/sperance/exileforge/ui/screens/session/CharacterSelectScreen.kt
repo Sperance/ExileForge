@@ -168,7 +168,6 @@ import com.sperance.exileforge.ui.theme.*
             onClick = { vm.createCharacter(name, classId) }, modifier = Modifier.fillMaxWidth()) {
             Text(ui("chars.create"))
         }
-        MutedText(ui("chars.class_note"))
         if (canGoBack) ForgeTextButton(enabled = !s.busy, onClick = onBack, modifier = Modifier.fillMaxWidth()) {
             Text(ui("chars.back"))
         }

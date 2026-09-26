@@ -107,7 +107,8 @@ private sealed interface Pick {
             GrimoireSection.SKILLS -> {
                 item { Slots(s, skills, level) { pick = it } }
                 item { Caption(ui("skills.book_of", s.heroClass?.title.orEmpty())) }
-                items(pages, key = { it.code }) { skill ->
+                // Only what the hero has learned (2.81.0): an unread book's skill appears once its book is read.
+                items(pages.filter { skills.level(it.code) > 0 }, key = { it.code }) { skill ->
                     Page(s, skill, skills.level(skill.code), level, body.stats, slotOf(skills, skill.code)) { page = skill.code }
                 }
                 item { Books(s, pages) { exchanging = true } }

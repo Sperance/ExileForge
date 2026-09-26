@@ -22,16 +22,16 @@ import androidx.compose.ui.unit.sp
 /*
  * «Эфир» (2.80.0, the owner's pick of six mockups): thin lines over dark basalt, air between things,
  * and light only on what is alive — the chosen, the ready, the mana. The names are the roles the app
- * has always drawn with; since 2.80.0 `Gold` is the ether accent and `Parchment` the reading text.
+ * has always drawn with; `Gold` is the accent (emerald since 2.81.0) and `Parchment` the reading text.
  */
 val Ink = Color(0xFF0C1115)
 val Abyss = Color(0xFF0A0E12)
 val Panel = Color(0xFF0F161B)
 val PanelRaised = Color(0xFF16212A)
-/** The accent: ether, a pale sea-glass cyan. */
-val Gold = Color(0xFF7FF0E0)
+/** The accent (2.81.0, the owner's choice): a deep emerald green, bright enough to read on basalt. */
+val Gold = Color(0xFF3FB67A)
 /** Titles and the lit state of the accent. */
-val GoldBright = Color(0xFFF0FBFB)
+val GoldBright = Color(0xFFEEF8F1)
 /** Hairlines and frames. */
 val Bronze = Color(0xFF1F2C35)
 /** Reading text. */
@@ -89,7 +89,7 @@ fun Modifier.glow(color: Color = Gold, on: Boolean = true, radius: Dp = 10.dp, s
     fun text(family: FontFamily, size: Float, weight: FontWeight = FontWeight.Normal, tracking: Float = 0f, line: Float = size * 1.35f) =
         TextStyle(fontFamily = family, fontSize = size.sp, fontWeight = weight, letterSpacing = tracking.sp, lineHeight = line.sp)
     MaterialTheme(
-        colorScheme = darkColorScheme(primary = Gold, onPrimary = Color(0xFF032320), secondary = Rune, onSecondary = Ink,
+        colorScheme = darkColorScheme(primary = Gold, onPrimary = Color(0xFF04210F), secondary = Rune, onSecondary = Ink,
             secondaryContainer = PanelRaised, onSecondaryContainer = Parchment, tertiary = GoldBright,
             background = Ink, surface = Panel, surfaceVariant = PanelRaised, surfaceContainerHighest = PanelRaised,
             surfaceContainer = Panel, surfaceContainerHigh = PanelRaised, surfaceContainerLow = Panel,

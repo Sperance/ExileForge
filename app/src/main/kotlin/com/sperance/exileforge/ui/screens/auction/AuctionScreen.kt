@@ -39,8 +39,6 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
             ForgeOutlinedButton(enabled = !s.busy, onClick = vm::loadAuction, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("auction.check_again"))
             }
-            Text(ui("auction.closed_note"),
-                color = com.sperance.exileforge.ui.theme.Muted, style = MaterialTheme.typography.bodySmall)
             return@Column
         }
         val mine = s.ownLots.size

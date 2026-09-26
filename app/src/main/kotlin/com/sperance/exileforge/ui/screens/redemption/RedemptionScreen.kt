@@ -170,6 +170,5 @@ private fun rewardLine(reward: RedemptionReward): String {
             }) {
             Text(ui("redemption.create"))
         }
-        MutedText(ui("redemption.note"))
     }
 }

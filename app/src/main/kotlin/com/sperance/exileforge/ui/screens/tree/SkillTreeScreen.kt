@@ -151,7 +151,6 @@ import kotlinx.serialization.json.putJsonArray
                     PropertyRow(ui("tree.points_total"), hero.tree.total.toString(), Glyph.LEVEL)
                     PropertyRow(ui("tree.points_spent"), hero.tree.spent.toString(), Glyph.LEVEL)
                     PropertyRow(ui("tree.points_available"), hero.tree.available.toString(), Glyph.LEVEL)
-                    MutedText(ui("tree.points_note"))
                 }
             }
             item {
@@ -329,15 +328,7 @@ import kotlinx.serialization.json.putJsonArray
         } else ForgeButton(enabled = enabled && (!choosing || picked != null), onClick = { onAllocate(node.code, picked) }, modifier = Modifier.fillMaxWidth()) {
             Text(ui("tree.allocate"))
         }
-        Text(when {
-                node.type == SkillNodeType.START ->
-                    ui("tree.start_note")
-                allocated ->
-                    ui("tree.refund_note")
-                else ->
-                    ui("tree.allocate_note")
-            },
-            color = Muted, style = MaterialTheme.typography.bodySmall)
+        if (node.type == SkillNodeType.START) Text(ui("tree.start_note"), color = Muted, style = MaterialTheme.typography.bodySmall)
     }
 }
 

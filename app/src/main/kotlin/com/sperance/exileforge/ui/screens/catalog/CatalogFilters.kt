@@ -35,5 +35,4 @@ import com.sperance.exileforge.ui.components.ForgeTextButton
     // Pools are one list of the world since server 0.56.0: tags of modifiers and of templates alike.
     val pools = s.world.pools.filter { it.kind != PoolKind.MONSTER }.map { it.code }.toSortedSet()
     Spinner(ui("catalog.pool"), f.pool, mapOf("" to ui("common.any")) + pools.associateWith { it }, !s.busy, glyph = Glyph.RULE) { vm.filter(f.copy(pool = it)) }
-    MutedText(ui("catalog.filter_note"))
 }

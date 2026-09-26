@@ -78,8 +78,9 @@ object MapEffects {
         effects[MapRule.HERO_REGEN]?.let { v -> sheet["STOCK_HEALTH_REGEN"] = (stats["STOCK_HEALTH_REGEN"] ?: 0.0) * max(0.0, 1 - v / 100) }
         effects[MapRule.HERO_SLOW]?.let { v -> sheet["STOCK_MOVEMENT_SPEED"] = (stats["STOCK_MOVEMENT_SPEED"] ?: 0.0) - v }
         // Server 0.66.0: the harms of Path of Exile's maps, and the rewards this game gives the hero.
-        fun add(stat: String, v: Double) { sheet[stat] = (stats[stat] ?: 0.0) + v }
-        fun scale(stat: String, share: Double) { sheet[stat] = (stats[stat] ?: 0.0) * max(0.0, 1 + share / 100) }
+        // On what the lines above already left (2.75.1): a map that both slows and hastens the hero keeps both.
+        fun add(stat: String, v: Double) { sheet[stat] = (sheet[stat] ?: 0.0) + v }
+        fun scale(stat: String, share: Double) { sheet[stat] = (sheet[stat] ?: 0.0) * max(0.0, 1 + share / 100) }
         effects[MapRule.HERO_DAMAGE_TAKEN]?.let { add("STOCK_DAMAGE_TAKEN", it) }
         effects[MapRule.HERO_RECOVERY]?.let { add("STOCK_RECOVERY_RATE", -it) }
         effects[MapRule.HERO_MAX_RESIST]?.let { v -> add("STOCK_RESIST_MAX_ALL", -v); add("STOCK_RESIST_MAX_CHAOS", -v) }

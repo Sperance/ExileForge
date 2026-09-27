@@ -1,6 +1,7 @@
 package com.sperance.exileforge.core.network
 
 import com.sperance.exileforge.core.contract.requireId
+import com.sperance.exileforge.core.contract.requireItemId
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.auction.AuctionFilter
 import com.sperance.exileforge.core.model.auction.AuctionLot
@@ -25,7 +26,7 @@ class AuctionClient internal constructor(private val http: Transport) {
 
     /** Lists a copy; the price is in orbs, [priceOrb] the currency's item code. The copy has to be off the hero first. */
     suspend fun sellEquipment(heroId: String, itemId: String, priceOrb: String, price: Long): AuctionLot {
-        requireId(itemId)
+        requireItemId(itemId)
         return sell("equipment", heroId, priceOrb, price, mapOf("itemId" to itemId))
     }
 

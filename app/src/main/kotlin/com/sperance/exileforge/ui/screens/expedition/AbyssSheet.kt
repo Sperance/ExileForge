@@ -76,7 +76,7 @@ import com.sperance.exileforge.ui.theme.*
                     } else Text(ui("abyss.bottom"), color = AbyssGlow, style = MaterialTheme.typography.bodyMedium)
                 }
             }
-            if (hoard == null) Text(if (view.keep > 0) ui("abyss.keep", number(view.keep)) else ui("abyss.burns"), color = LifeRed.copy(alpha = .85f),
+            if (hoard == null) Text(ui("abyss.burns"), color = LifeRed.copy(alpha = .85f),
                 style = MaterialTheme.typography.bodySmall)
             Actions(view, onCommand)
         }

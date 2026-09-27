@@ -124,7 +124,8 @@ import java.util.Locale
     val gear = reward.equipment.mapNotNull { s.view(it) }
     if (gear.isNotEmpty()) {
         Caption(ui("expedition.report_gear"))
-        gear.forEach { SpoilLine(s, it) { onItem(it) } }
+        // Every piece whole (3.2.0): base, every line with its tier and range, the roll quality and the price — no tap needed to judge it
+        gear.forEach { ItemCard(it, detailed = true, actionLabel = ui("expedition.loot_compare"), price = s.sellPrice(it.item)) { onItem(it) } }
     }
     if (reward.items.isNotEmpty()) {
         Caption(ui("expedition.report_orbs"))
@@ -138,23 +139,6 @@ import java.util.Locale
         Chip(ui("expedition.loot_experience", number(reward.experience)), Rune)
     }
     if (reward.items.isEmpty() && reward.equipment.isEmpty()) MutedText(ui("expedition.loot_nothing"))
-}
-
-/** One piece of the spoils: its icon in the rarity's frame, its name in that colour, what it is, and what the merchant pays. A tap opens its card. */
-@Composable private fun SpoilLine(s: ForgeState, item: ItemView, onClick: () -> Unit) {
-    val color = rarityColor(item.rarity.name)
-    val frame = RoundedCornerShape(6.dp)
-    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).clickable(role = Role.Button, onClick = onClick).padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Box(Modifier.size(40.dp).background(color.copy(alpha = .08f), frame).border(1.dp, color, frame), contentAlignment = Alignment.Center) {
-            ItemIcon(item, color, Modifier.size(26.dp))
-        }
-        Column(Modifier.weight(1f)) {
-            Text(item.title, color = color, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(listOf(slotTitle(item.slot, s.lang), ui("row.level", item.level)).joinToString(" · "), color = Muted, style = MaterialTheme.typography.labelSmall)
-        }
-        s.sellPrice(item.item)?.let { GoldPrice(it) }
-    }
 }
 
 /** A defeat: what the death cost by the rules' price — the server's answer stands — and what the run had gathered before it. */
@@ -211,7 +195,7 @@ import java.util.Locale
     }
 }
 
-/** A piece of the spoils, opened: its full card with the merchant's price and what wearing it would change. */
+/** A piece of the spoils, compared: its card again with what wearing it would change. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable private fun LootCard(s: ForgeState, item: ItemView, onDismiss: () -> Unit) {
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {

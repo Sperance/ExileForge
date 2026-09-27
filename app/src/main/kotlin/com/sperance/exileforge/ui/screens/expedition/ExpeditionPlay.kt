@@ -25,11 +25,14 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.campaign.*
+import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.mapTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.sellPrice
+import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.run.Reward
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -49,8 +52,8 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import com.sperance.exileforge.core.display.statNumber
 import com.sperance.exileforge.core.display.statTitle
+import com.sperance.exileforge.core.display.statValue
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.ui.icons.StatIcon
 import kotlin.math.ceil
@@ -84,9 +87,10 @@ import kotlin.math.floor
         ExpeditionScene(run, s.heroClass?.code, Modifier.fillMaxSize())
         when (hud.phase) {
             RunPhase.MAP -> {
-                Stick(run)
+                // An autorun walks by itself (3.2.0): no stick under the thumb while it runs
+                if (hud.auto == null) Stick(run)
                 MapBar(s, run, hud, onLeave = if (zone) null else ({ leaving = true }), onGear = { gear = true }, onStats = { sheet = true },
-                    onDrink = { vm.runCommand(RunCommand.Drink(it)) }, onSummon = { vm.runCommand(RunCommand.Summon) })
+                    onDrink = { vm.runCommand(RunCommand.Drink(it)) })
                 if (gear) { HoldsRun(run); GearSheet(s, vm) { gear = false } }
                 if (sheet) { HoldsRun(run); StatsSheet(s, run.mapEffects) { sheet = false } }
                 hud.chest?.let { ChestLoot(s, it) { vm.runCommand(RunCommand.DismissChest) } }
@@ -102,11 +106,15 @@ import kotlin.math.floor
                 ?: Ending(ui("expedition.dead"), ui(if (zone) "vaal.dead_hint" else "expedition.dead_hint"), LifeRed, hud,
                     if (zone) ui("vaal.back") else ui("expedition.back_to_camp")) { vm.runCommand(RunCommand.Continue) }
             RunPhase.CLEARED -> if (zone) Ending(ui("vaal.done"), ui("vaal.done_hint"), Vital, hud, ui("vaal.back")) { vm.runCommand(RunCommand.Continue) }
+                else if (hud.autoReward != null) AutoReport(s, hud) { vm.runCommand(RunCommand.Continue) }
                 else Ending(ui("expedition.map_done"), ui("expedition.map_done_hint"), Vital, hud) { vm.runCommand(RunCommand.Continue) }
             RunPhase.GATE -> VaalGate(s, hud, run.zone.corrupted.takeIf { it.isNotBlank() }, onEnter = vm::enterVaal, onRefuse = vm::refuseVaal) { vm.runCommand(RunCommand.StepBack) }
             RunPhase.CRYSTAL -> hud.crystal?.let { CrystalSheet(s, it, onCommand = vm::runCommand) }
             RunPhase.ABYSS -> hud.abyss?.let { AbyssSheet(s, hud, it, onCommand = vm::runCommand) }
             RunPhase.LEFT -> Unit
+        }
+        hud.auto?.takeIf { hud.phase == RunPhase.MAP || hud.phase == RunPhase.FIGHT }?.let { auto ->
+            AutoBar(auto, Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 8.dp)) { vm.runCommand(RunCommand.StopAuto) }
         }
         // A refusal of the gear (2.40.0) has to be read here too: the run has no bar and no banner.
         ToastHost(s, vm::dismissMessage, vm::dismissNotice, Modifier.align(Alignment.TopCenter).statusBarsPadding())
@@ -118,10 +126,10 @@ import kotlin.math.floor
 /**
  * Life and shield, the map's name and whether its warden still lives, and the way out. Nothing
  * comes back on its own between fights (2.29.0) but a fountain. What the map still holds — foes, chests, fountains — is the walk's to find (2.56.1).
- * A guardian slain and not yet back can be summoned for gold (3.0.0), and the journal's unsent events are counted quietly under the name.
+ * The journal's unsent events are counted quietly under the name; a slain guardian is not bought back (3.2.0) — it returns in its time.
  */
 @Composable private fun MapBar(s: ForgeState, run: ExpeditionRun, hud: RunHud, onLeave: (() -> Unit)?, onGear: () -> Unit, onStats: () -> Unit,
-                               onDrink: (Int) -> Unit, onSummon: () -> Unit) {
+                               onDrink: (Int) -> Unit) {
     Column(Modifier.fillMaxWidth().statusBarsPadding().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             // The way out (2.56.1): a portal in a bronze ring, first thing in the corner, and it asks before it goes.
@@ -138,11 +146,6 @@ import kotlin.math.floor
                 Text(ui(when { zone && hud.sealed -> "vaal.guardian_alive"; zone -> "vaal.guardian_slain"; hud.sealed -> "expedition.boss_alive"; else -> "expedition.boss_slain" }),
                     color = if (hud.sealed) LifeRed else Vital, style = MaterialTheme.typography.labelMedium)
                 Journal(hud)
-                // The guardian slain until its time (3.0.0): a summon for gold brings it back to the exit at once — the event is the journal's.
-                if (hud.bossDown && !zone) ForgeOutlinedButton(enabled = (s.hero?.money ?: 0L) >= hud.summonPrice, onClick = onSummon,
-                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp)) {
-                    Text(ui("expedition.guardian_summon", hud.summonPrice), style = MaterialTheme.typography.labelSmall)
-                }
                 // Life under the map's name (2.72.0), out of the middle of the view; the mana and the belt under it (2.78.0).
                 Vitals(hud.heroLife, hud.heroMaxLife, hud.heroShield, hud.heroMaxShield, Modifier.fillMaxWidth(), hud.heroMana, hud.heroMaxMana)
                 if (hud.flasks.any { it != null }) MapFlasks(hud.flasks, onDrink)
@@ -314,9 +317,9 @@ private fun DrawScope.drawExplored(world: ExpeditionWorld, origin: Offset, cell:
                 Engraved(ui("map.modifiers"))
                 run.mapEffects.forEach { (stat, value) ->
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Tipped({ Tip(statTitle(stat), tint = ModBlue, facts = listOf(ui("tip.value") to statNumber(stat, value))) }) { StatIcon(stat, Rune, Modifier.size(16.dp)) }
+                        Tipped({ Tip(statTitle(stat), tint = ModBlue, facts = listOf(ui("tip.value") to statValue(stat, value))) }) { StatIcon(stat, Rune, Modifier.size(16.dp)) }
                         Text(statTitle(stat), color = ModBlue, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-                        Text(statNumber(stat, value), color = ModBlue, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
+                        Text(statValue(stat, value), color = ModBlue, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
                     }
                 }
             } else MutedText(ui("map.no_modifiers"))
@@ -433,6 +436,33 @@ private const val MINIMAP_MAX = 60f
             Journal(hud)
             ForgeButton(onClick = onDone, modifier = Modifier.fillMaxWidth()) { Text(done) }
         }
+    }
+}
+
+/** The autorun's plate (3.2.0): the wave under way of how many, and a stop that hands the run back to the stick. */
+@Composable private fun AutoBar(auto: AutoHud, modifier: Modifier, onStop: () -> Unit) {
+    val shape = RoundedCornerShape(50)
+    Row(modifier.background(Panel.copy(alpha = .92f), shape).border(1.dp, Gold.copy(alpha = .5f), shape).padding(start = 14.dp, end = 4.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(ui("auto.wave", auto.wave, auto.waves), color = GoldBright, style = MaterialTheme.typography.labelLarge)
+        ForgeTextButton(onClick = onStop) { Text(ui("auto.stop"), color = LifeRed) }
+    }
+}
+
+/** The autorun is done (3.2.0): what it came to — the tally, and every stack and piece it brought, each piece as its whole card. */
+@Composable private fun AutoReport(s: ForgeState, hud: RunHud, onDone: () -> Unit) {
+    val reward = hud.autoReward ?: return
+    Column(Modifier.fillMaxSize().background(Ink.copy(alpha = .94f)).statusBarsPadding().navigationBarsPadding().padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(ui("auto.done"), color = Vital, style = MaterialTheme.typography.headlineSmall)
+        MutedText(ui("expedition.summary", hud.kills, hud.gold, number(hud.experience)))
+        Journal(hud)
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            reward.items.forEach { (code, amount) -> Text(ui("expedition.loot_stack", itemTitle(code), amount), color = Parchment) }
+            reward.equipment.forEach { instance -> s.view(instance)?.let { ItemCard(it, enabled = false, detailed = true, price = s.sellPrice(instance)) } }
+            if (reward.items.isEmpty() && reward.equipment.isEmpty()) MutedText(ui("expedition.loot_nothing"))
+        }
+        ForgeButton(onClick = onDone, modifier = Modifier.fillMaxWidth().height(50.dp)) { Text(ui("expedition.back_to_camp")) }
     }
 }
 

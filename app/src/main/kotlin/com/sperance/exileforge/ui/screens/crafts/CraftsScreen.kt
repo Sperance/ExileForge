@@ -57,6 +57,8 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.ItemEmblem
 import com.sperance.exileforge.ui.icons.spriteVector
 import com.sperance.exileforge.ui.theme.*
+import kotlin.math.ceil
+import kotlinx.coroutines.delay
 
 /** The dictionary's name of a work; the tab bar's badge (ForgeApp) names it by this package, so it stays here. */
 fun jobTitle(code: String): String = com.sperance.exileforge.core.display.jobTitle(code)
@@ -99,6 +101,22 @@ fun stockLine(s: ForgeState, work: WorkView, job: JobView): String? {
     val cycles = (have / scarce.amount).toInt()
     return if (cycles == 0) ui("crafts.stock_empty", itemTitle(scarce.item), have)
     else ui("crafts.stock", itemTitle(scarce.item), have, cycles, plural("crafts.cycles", cycles), eta(cycles * work.cycleMillis))
+}
+
+/**
+ * How long the work still needs to lift its profession a level (3.2.0), counted here: the experience a
+ * cycle brings past its «nothing» chance, the cycles that leaves, less what the running cycle has done.
+ */
+@Composable private fun levelLine(s: ForgeState, work: WorkView, offset: Long): String? {
+    val profession = s.play.crafts?.professions?.firstOrNull { it.code == work.profession } ?: return null
+    val next = profession.next ?: return ui("crafts.level_top")
+    val job = profession.jobs.firstOrNull { it.code == work.job } ?: return null
+    val perCycle = job.experience * (1 + profession.bonus.experience.coerceAtLeast(0.0) / 100) * (1 - job.nothing / 100)
+    if (perCycle <= 0 || work.cycleMillis <= 0) return null
+    val now by produceState(System.currentTimeMillis()) { while (true) { delay(1000); value = System.currentTimeMillis() } }
+    val cycles = ceil((next - profession.experience).coerceAtLeast(0.0) / perCycle).toLong()
+    val running = (now + offset - work.settledAt).coerceIn(0L, work.cycleMillis)
+    return ui("crafts.level_eta", profession.level + 1, eta((cycles * work.cycleMillis - running).coerceAtLeast(0L)))
 }
 
 private fun eta(millis: Long): String {
@@ -165,6 +183,7 @@ private fun eta(millis: Long): String {
             ForgeOutlinedButton(enabled = !s.busy, onClick = vm::stopWork) { Text(ui("crafts.stop")) }
         }
         CycleBar(work.settledAt, work.cycleMillis, offset, caption = false)
+        levelLine(s, work, offset)?.let { Text(it, color = Vital, style = MaterialTheme.typography.labelMedium) }
         // The server's tally with the cycles this device threw ahead of its count: the rules' own sum.
         WorkTotals(work.startedAt, work.totals + s.play.craftsPending, offset)
         s.play.craftsLast?.let { Text(gainsLine(it), color = Parchment, style = MaterialTheme.typography.bodySmall) }

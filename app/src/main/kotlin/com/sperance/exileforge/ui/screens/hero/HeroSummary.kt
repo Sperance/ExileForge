@@ -17,6 +17,7 @@ import com.sperance.exileforge.core.display.StatGroup
 import com.sperance.exileforge.core.display.groupedStats
 import com.sperance.exileforge.core.display.statNumber
 import com.sperance.exileforge.core.display.statTitle
+import com.sperance.exileforge.core.display.statValue
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.components.Tip
 import com.sperance.exileforge.ui.components.Tipped
@@ -85,11 +86,11 @@ private fun StatGroup.accent(): Color = when (this) {
     Row(modifier.background(Abyss, shape).then(if (was != null) Modifier.border(1.dp, Ember.copy(alpha = .7f), shape) else Modifier)
         .padding(horizontal = 6.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        Tipped({ Tip(statTitle(key, s.lang), tint = accent, facts = listOf(ui("tip.value") to statNumber(key, value))) }) { StatIcon(key, accent, Modifier.size(12.dp)) }
+        Tipped({ Tip(statTitle(key, s.lang), tint = accent, facts = listOf(ui("tip.value") to statValue(key, value, s.index))) }) { StatIcon(key, accent, Modifier.size(12.dp)) }
         Text(statTitle(key, s.lang), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f))
-        was?.let { Text(statNumber(key, it), color = Muted, style = MaterialTheme.typography.labelSmall, textDecoration = TextDecoration.LineThrough) }
-        Text(statNumber(key, value), color = if (was != null) Ember else Parchment, style = MaterialTheme.typography.labelLarge,
+        was?.let { Text(statValue(key, it, s.index), color = Muted, style = MaterialTheme.typography.labelSmall, textDecoration = TextDecoration.LineThrough) }
+        Text(statValue(key, value, s.index), color = if (was != null) Ember else Parchment, style = MaterialTheme.typography.labelLarge,
             fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
     }
 }

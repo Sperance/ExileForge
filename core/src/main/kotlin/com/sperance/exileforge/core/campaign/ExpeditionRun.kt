@@ -133,16 +133,18 @@ data class RunHud(
     val crystalsLeft: Int = 0,
     val abyss: AbyssView? = null,
     val cracksLeft: Int = 0,
-    /** The guardian is slain and not yet back: it can be summoned for [summonPrice] gold. */
+    /** The guardian is slain and not yet back. */
     val bossDown: Boolean = false,
-    val summonPrice: Long = 0,
+    /** The autorun under way, and what it has gathered (3.2.0). */
+    val auto: AutoHud? = null,
+    val autoReward: Reward? = null,
     /** Events of the journal the server has not taken yet, and the ones it refused. */
     val pending: Int = 0,
     val rejected: Int = 0,
 )
 
 /** The Abyss as its sheet shows it: how many depths the crack leads down, how many are cleared, every depth's wave and hoard, and the share a fall keeps. */
-data class AbyssView(val depth: Int, val cleared: Int, val open: Boolean, val depths: List<AbyssDepth>, val keep: Double,
+data class AbyssView(val depth: Int, val cleared: Int, val open: Boolean, val depths: List<AbyssDepth>,
                      val hoard: Reward? = null, val fallen: Boolean = false) {
     val current: AbyssDepth? get() = depths.getOrNull(cleared - 1)
     val next: AbyssDepth? get() = if (cleared < depth) depths.getOrNull(cleared) else null
@@ -185,8 +187,8 @@ sealed interface RunCommand {
     data object Descend : RunCommand
     /** Takes the hoard of the depths cleared and leaves the Abyss. */
     data object TakeHoard : RunCommand
-    /** Summons the slain guardian back, for gold. */
-    data object Summon : RunCommand
+    /** Stops the autorun: the run goes on by hand from where it stands. */
+    data object StopAuto : RunCommand
 }
 
 /**
@@ -215,8 +217,6 @@ class ExpeditionRun(
     startPools: HeroPools?,
     private val heroExperience: Double,
     private val heroLevel: Int,
-    /** The hero's gold at hand, for a summon. */
-    private val wallet: () -> Long,
     /** Vaal orbs at hand, the ones already spent on this run's journal counted out. */
     private val vaalOrbs: () -> Long,
     private var corruptionOpened: Boolean,
@@ -227,6 +227,8 @@ class ExpeditionRun(
     private val onFallen: () -> Unit,
     /** Gear a reward brought, the moment it was rolled: for the gear sheet's «Новый лут». */
     private val onLoot: (List<com.sperance.exileforge.rules.roll.ItemInstance>) -> Unit = {},
+    /** The autorun that drives this run instead of the stick (3.2.0); null walks by hand. */
+    private var autopilot: AutoPilot? = null,
 ) {
     /** The run as the rules roll it; it takes the Vaal zone's context once the portal opens. */
     var run: Run = run
@@ -262,6 +264,8 @@ class ExpeditionRun(
     private var fights = 0
     private var speed = 1
     private var reward: Reward? = null
+    /** What an autorun has gathered so far, fight by fight: its report at the end. */
+    private var autoReward: Reward? = null
     private var slain: RolledMonster? = null
     private var report: FightReport? = null
     private var members: List<Int> = emptyList()
@@ -311,7 +315,7 @@ class ExpeditionRun(
     fun update(dt: Double) {
         while (true) apply(commands.poll() ?: break)
         if (holds == 0) when (phase) {
-            RunPhase.MAP -> walk(dt)
+            RunPhase.MAP -> autopilot?.let { drive(it, dt) } ?: walk(dt)
             RunPhase.FIGHT -> play(dt)
             else -> Unit
         }
@@ -324,6 +328,7 @@ class ExpeditionRun(
 
     private fun earn(reward: Reward?) {
         val gained = reward ?: return
+        if (autopilot != null) autoReward = autoReward?.plus(gained) ?: gained
         gold += gained.gold
         experience += gained.experience
         if (gained.equipment.isNotEmpty()) onLoot(gained.equipment)
@@ -332,6 +337,7 @@ class ExpeditionRun(
     private fun apply(command: RunCommand) {
         when (command) {
             RunCommand.Speed -> speed = if (speed >= 4) 1 else speed * 2
+            RunCommand.StopAuto -> autopilot = null
             RunCommand.Leave -> if (phase == RunPhase.MAP || phase == RunPhase.DEAD || phase == RunPhase.CLEARED) phase = RunPhase.LEFT
             RunCommand.Retreat -> if (abyssFight) Unit else if (fight != null && !started) walkAway() else { paused = false; fight?.retreat() }
             RunCommand.Begin -> if (fight != null) { started = true; paused = false }
@@ -376,11 +382,8 @@ class ExpeditionRun(
             }
             RunCommand.Descend -> if (phase == RunPhase.ABYSS) descend()
             RunCommand.TakeHoard -> descent?.takeIf { phase == RunPhase.ABYSS && it.cleared > 0 && it.hoard == null }?.let { take(it, fallen = false) }
-            RunCommand.Summon -> if (bossDown && !vaal && wallet() >= summonPrice() && record(RunEventKind.SUMMON) != null) { bossDown = false; world.bossReturns() }
         }
     }
-
-    private fun summonPrice(): Long = index.campaign.services.summonPerLevel * zone.level
 
     // ==================== The Abyss ====================
 
@@ -424,8 +427,8 @@ class ExpeditionRun(
     private fun take(current: Descent, fallen: Boolean) {
         current.fallen = fallen
         record(RunEventKind.ABYSS_CLAIM, depth = current.cleared, fallen = fallen) ?: return
-        val keep = if (fallen) AtlasEffects.abyssKeep(run.context.atlas) else 1.0
-        current.hoard = run.hoard(current.cleared, keep).also(::earn)
+        // A fall in the Abyss burns the whole hoard (server 1.2.0); the hoard is still counted, as the server counts it
+        current.hoard = run.hoard(current.cleared, if (fallen) 0.0 else 1.0).also(::earn)
     }
 
     private fun closeRift() {
@@ -465,27 +468,11 @@ class ExpeditionRun(
     }
 
     private fun walk(dt: Double) {
-        mana = (mana + hero.manaRegen(rules.mana) * dt).coerceAtMost(manaCap())
-        if (flaskLeft.any { it > 0 }) {
-            val before = flaskLeft.map { it > 0 }
-            flaskLeft.forEachIndexed { i, left ->
-                val rate = rates.getOrNull(i) ?: return@forEachIndexed
-                val slice = min(dt, left)
-                if (slice <= 0 || !rate.flows) return@forEachIndexed
-                life = (life + rate.life * slice).coerceAtMost(hero.maxLife)
-                mana = (mana + rate.mana * slice).coerceAtMost(manaCap())
-            }
-            flaskLeft = flaskLeft.map { (it - dt).coerceAtLeast(0.0) }
-            if (flaskLeft.map { it > 0 } != before) rebody()
-        }
+        recover(dt)
         val (x, y) = ExpeditionWorld.screenToWorld(stickX, stickY)
         when (val event = world.step(dt, x, y)) {
             is WorldEvent.Encounter -> engage(event.agent)
-            WorldEvent.Exit -> {
-                // The Vaal zone's exit leads back to the map; the zone's own records the leaving, the boss passed.
-                if (!vaal) record(RunEventKind.LEAVE)
-                phase = RunPhase.CLEARED; onCleared()
-            }
+            WorldEvent.Exit -> exit()
             is WorldEvent.Opened -> {
                 chest = if (record(RunEventKind.CHEST, index = event.chest.id) != null) run.chest().also(::earn) else null
             }
@@ -498,6 +485,56 @@ class ExpeditionRun(
             is WorldEvent.Crystal -> { phase = RunPhase.CRYSTAL; crystal = event.spot; crystalOutcome = null }
             is WorldEvent.Abyss -> { phase = RunPhase.ABYSS; rift = event.spot; descent = null }
             null -> Unit
+        }
+    }
+
+    /** The way out: the Vaal zone's exit leads back to the map; the zone's own records the leaving, the boss passed. */
+    private fun exit() {
+        if (!vaal) record(RunEventKind.LEAVE)
+        phase = RunPhase.CLEARED; onCleared()
+    }
+
+    /**
+     * The autorun's beat (3.2.0): mana and draughts run as on the road, and after a short rest the next step
+     * is taken — a fight begins at once, a chest opens, a guardian stands up; a crack or the portal stops the
+     * run for the player's word, and the way out ends it.
+     */
+    private fun drive(pilot: AutoPilot, dt: Double) {
+        recover(dt)
+        pilot.rest -= dt * speed
+        if (pilot.rest > 0) return
+        pilot.rest = AutoPilot.BEAT
+        while (phase == RunPhase.MAP) when (val step = pilot.next()) {
+            null -> { autopilot = null; return }
+            is AutoStep.Wave -> Unit
+            is AutoStep.Fight -> if (step.agent.alive && step.agent.standing.isNotEmpty()) { engage(step.agent); started = true; return }
+            is AutoStep.OpenChest -> if (!step.chest.opened) {
+                step.chest.opened = true
+                if (record(RunEventKind.CHEST, index = step.chest.id) != null) earn(run.chest())
+                return
+            }
+            is AutoStep.Guardian -> if (!step.spot.freed) { crystal = step.spot; release(); started = true; return }
+            is AutoStep.Rift -> if (!step.spot.opened) { phase = RunPhase.ABYSS; rift = step.spot; descent = null }
+            AutoStep.Portal -> if (world.portal != null) openGate()
+            AutoStep.Boss -> world.boss?.takeIf { it.alive }?.let { engage(it); started = true; return }
+            AutoStep.Exit -> exit()
+        }
+    }
+
+    /** Mana back on the road and the draughts still running, over [dt] seconds off the fight. */
+    private fun recover(dt: Double) {
+        mana = (mana + hero.manaRegen(rules.mana) * dt).coerceAtMost(manaCap())
+        if (flaskLeft.any { it > 0 }) {
+            val before = flaskLeft.map { it > 0 }
+            flaskLeft.forEachIndexed { i, left ->
+                val rate = rates.getOrNull(i) ?: return@forEachIndexed
+                val slice = min(dt, left)
+                if (slice <= 0 || !rate.flows) return@forEachIndexed
+                life = (life + rate.life * slice).coerceAtMost(hero.maxLife)
+                mana = (mana + rate.mana * slice).coerceAtMost(manaCap())
+            }
+            flaskLeft = flaskLeft.map { (it - dt).coerceAtLeast(0.0) }
+            if (flaskLeft.map { it > 0 } != before) rebody()
         }
     }
 
@@ -582,6 +619,8 @@ class ExpeditionRun(
             Outcome.WIN -> {
                 agent.alive = false
                 if (down != null) { report = null; phase = RunPhase.ABYSS }
+                // An autorun goes on without the report: what the fight brought is in its tally already
+                else if (autopilot != null) { reward = null; slain = null; report = null; phase = RunPhase.MAP }
                 else {
                     slain = agent.monster
                     report = FightReport(agent.monster, Outcome.WIN, pack, battle.duration)
@@ -591,6 +630,7 @@ class ExpeditionRun(
             Outcome.LOSS -> {
                 report = FightReport(agent.monster, Outcome.LOSS, pack, battle.duration)
                 life = 0.0
+                autopilot = null
                 phase = RunPhase.DEAD
                 // A fall in the Abyss burns its hoard, but for the atlas's share; then the zone's own price.
                 down?.let { take(it, fallen = true) }
@@ -599,6 +639,8 @@ class ExpeditionRun(
             }
             // Nothing already looted is lost, but there is no report for a fight cut short, and the rest of the pack stays standing.
             Outcome.RETREAT -> {
+                // Walking out of a fight takes the run back into the player's hands
+                autopilot = null
                 if (agent.id >= 0) world.retreatFrom(agent)
                 report = null
                 if (down != null) { phase = RunPhase.ABYSS; take(down, fallen = true) } else phase = RunPhase.MAP
@@ -639,7 +681,8 @@ class ExpeditionRun(
             crystal = crystal?.let { CrystalView(it.id, it.crystal.essences, it.crystal.guardian, it.crystal.stronger, it.crystal.vaal, crystalOutcome) },
             crystalsLeft = world.standingCrystals.size,
             abyss = abyssView(), cracksLeft = world.standingCracks.size,
-            bossDown = bossDown, summonPrice = summonPrice(),
+            bossDown = bossDown,
+            auto = autopilot?.let { AutoHud(it.wave, it.waves) }, autoReward = autoReward,
             pending = journal.pending.size, rejected = journal.rejected.size,
         )
     }
@@ -648,7 +691,7 @@ class ExpeditionRun(
         val spot = rift ?: return null
         val rule = abyssRule ?: return null
         val down = descent
-        return AbyssView(down?.depth ?: spot.depth, down?.cleared ?: 0, down != null, waves.depths(rule, zone), AtlasEffects.abyssKeep(run.context.atlas) * 100,
+        return AbyssView(down?.depth ?: spot.depth, down?.cleared ?: 0, down != null, waves.depths(rule, zone),
             down?.hoard, down?.fallen == true)
     }
 
@@ -714,11 +757,13 @@ class ExpeditionRun(
          */
         fun start(
             index: ContentIndex, location: Zone, run: Run, journal: RunJournal, gear: HeroGear, campaign: CampaignState, now: Long,
-            heroExperience: Double, heroLevel: Int, wallet: () -> Long, vaalOrbs: () -> Long, onRecorded: (RunEvent) -> Unit = {},
+            heroExperience: Double, heroLevel: Int, vaalOrbs: () -> Long, onRecorded: (RunEvent) -> Unit = {},
             vaal: Boolean = false, startPools: HeroPools? = null, onCleared: () -> Unit = {}, onFallen: () -> Unit = {},
             onLoot: (List<com.sperance.exileforge.rules.roll.ItemInstance>) -> Unit = {},
             /** Tokens `i*8+m` the server already counts as killed: a run entered again keeps its dead dead. */
             killed: Collection<Int> = emptyList(),
+            /** An autorun instead of the stick (3.2.0). */
+            auto: AutoPlan? = null,
         ): ExpeditionRun {
             val zone = if (vaal) VaalZones.zone(location) ?: location else location
             val context = run.context
@@ -745,8 +790,9 @@ class ExpeditionRun(
                 world.placeCrystals(campaign.crystals[location.code]?.crystals.orEmpty())
                 world.placeCracks(campaign.abyss[location.code]?.cracks.orEmpty())
             }
-            return ExpeditionRun(index, zone, run, journal, world, build, rules, run.seed, effects, vaal, startPools, heroExperience, heroLevel, wallet, vaalOrbs,
-                campaign.corruptionOpened, vaalZone, bossDown, onRecorded, onCleared, onFallen, onLoot)
+            val pilot = auto?.let { AutoPilot.of(world, it, if (vaal) run.seed xor VAAL_SALT else run.seed, bossStands = world.boss?.alive == true) }
+            return ExpeditionRun(index, zone, run, journal, world, build, rules, run.seed, effects, vaal, startPools, heroExperience, heroLevel, vaalOrbs,
+                campaign.corruptionOpened, vaalZone, bossDown, onRecorded, onCleared, onFallen, onLoot, pilot)
         }
 
         private const val VAAL_SALT = 0x5661616C5A6F6E65L

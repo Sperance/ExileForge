@@ -13,8 +13,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.requirementReason
-import com.sperance.exileforge.core.display.statNumber
 import com.sperance.exileforge.core.display.statTitle
+import com.sperance.exileforge.core.display.statValue
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.unmetFor
@@ -47,11 +47,11 @@ fun wearable(s: ForgeState, item: ItemInstance): Boolean =
         delta.forEach { line ->
             val tone = if (line.change > 0) Vital else LifeRed
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Tipped({ Tip(statTitle(line.stat), tint = tone, facts = listOf(ui("tip.before") to statNumber(line.stat, line.before),
-                    ui("tip.after") to statNumber(line.stat, line.after))) }) { StatIcon(line.stat, Muted, Modifier.size(14.dp)) }
+                Tipped({ Tip(statTitle(line.stat), tint = tone, facts = listOf(ui("tip.before") to statValue(line.stat, line.before),
+                    ui("tip.after") to statValue(line.stat, line.after))) }) { StatIcon(line.stat, Muted, Modifier.size(14.dp)) }
                 Text(statTitle(line.stat), color = Parchment, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-                MutedText(ui("wear.from_to", statNumber(line.stat, line.before), statNumber(line.stat, line.after)), style = MaterialTheme.typography.labelSmall)
-                Text((if (line.change > 0) "+" else "−") + statNumber(line.stat, kotlin.math.abs(line.change)), color = tone,
+                MutedText(ui("wear.from_to", statValue(line.stat, line.before), statValue(line.stat, line.after)), style = MaterialTheme.typography.labelSmall)
+                Text((if (line.change > 0) "+" else "−") + statValue(line.stat, kotlin.math.abs(line.change)), color = tone,
                     fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
             }
         }

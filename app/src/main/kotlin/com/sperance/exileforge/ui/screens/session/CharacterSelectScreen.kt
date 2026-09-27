@@ -19,8 +19,8 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.classDescription
 import com.sperance.exileforge.core.display.classTitle
-import com.sperance.exileforge.core.display.statNumber
 import com.sperance.exileforge.core.display.statTitle
+import com.sperance.exileforge.core.display.statValue
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.HeroSummary
 import com.sperance.exileforge.presentation.ForgeViewModel
@@ -173,7 +173,7 @@ import com.sperance.exileforge.ui.theme.*
             classDescription(chosen.code).takeIf { it.isNotBlank() }?.let { MutedText(it) }
             val base = chosen.base.filterValues { it != 0.0 }.entries.sortedBy { index.stats.order(it.key) }
             if (base.isNotEmpty()) Text(ui("editor.level1_base") + base.joinToString(" · ") { (stat, value) ->
-                "${statTitle(stat, s.lang)} ${statNumber(stat, value)}" },
+                "${statTitle(stat, s.lang)} ${statValue(stat, value)}" },
                 color = Muted, style = MaterialTheme.typography.bodySmall)
         }
         ForgeButton(enabled = !s.busy && name.isNotBlank() && heroClass.isNotBlank(),

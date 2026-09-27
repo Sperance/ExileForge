@@ -54,8 +54,20 @@ fun jobTitle(code: String): String = locOr(LocaleKey.jobName(code), displayName(
  * Title of a stat: the client's own table first (it takes an explicit language), then the server's label
  * for the stat's group, then the humanised code.
  */
-fun statTitle(stat: String, lang: Lang = uiLanguage): String =
+fun statTitle(stat: String, lang: Lang = uiLanguage): String = rawStatTitle(stat, lang).replace(PERCENT_MARK, "")
+
+private fun rawStatTitle(stat: String, lang: Lang): String =
     uiOr(lang, "enum.stat.$stat", locOr("enum.EnumStatStock.$stat", locOr("enum.EnumStatBattle.$stat", locOr("enum.EnumStatProfession.$stat", displayName(stat.substringAfter('_'), lang)))))
+
+/** «Шанс крита, %»: the dictionaries mark a stat counted in percent at the end of its name; the mark moves to the figure (3.2.0). */
+private val PERCENT_MARK = Regex("""[,\s]*%\s*$""")
+
+/** Whether a stat reads in percent: its name carries the mark, or the registry counts it so. */
+fun statPercent(stat: String, index: ContentIndex? = null): Boolean =
+    PERCENT_MARK.containsMatchIn(rawStatTitle(stat, uiLanguage)) || index?.stats?.isPercent(stat) == true
+
+/** A stat's figure as a sheet shows it, the percent sign at the number rather than in the name: «Шанс крита 5%». */
+fun statValue(stat: String, value: Double, index: ContentIndex? = null): String = statNumber(stat, value) + if (statPercent(stat, index)) "%" else ""
 
 /** The rules' modifier text over the server's dictionary as it stands now. */
 fun modifierText(index: ContentIndex): ModifierText = ModifierText(index.stats, serverLocale::string)

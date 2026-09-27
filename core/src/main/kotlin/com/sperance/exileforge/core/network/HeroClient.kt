@@ -2,6 +2,7 @@ package com.sperance.exileforge.core.network
 
 import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.contract.requireId
+import com.sperance.exileforge.core.contract.requireItemId
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.CreateHeroCommand
 import com.sperance.exileforge.core.model.hero.CurrencyApplyResponse
@@ -78,12 +79,12 @@ class HeroClient internal constructor(private val http: Transport) {
 
     /** Puts an item on; [slot] names which ring or flask place to take, the server picks a free one without it. */
     suspend fun equip(heroId: String, itemId: String, slot: Slot? = null): ItemInstance {
-        requireId(itemId)
+        requireItemId(itemId)
         return http.post("$HERO/equip", heroQuery(heroId, "itemId" to itemId, "slot" to slot?.name))
     }
     suspend fun unequip(heroId: String, itemId: String): ItemInstance = item("unequip", heroId, itemId)
     suspend fun socket(heroId: String, itemId: String, nodeCode: String): ItemInstance {
-        requireId(itemId)
+        requireItemId(itemId)
         require(nodeCode.isNotBlank()) { ui("api.choose_socket") }
         return http.post("$HERO/socket", heroQuery(heroId, "itemId" to itemId, "nodeCode" to nodeCode))
     }
@@ -91,7 +92,7 @@ class HeroClient internal constructor(private val http: Transport) {
 
     /** Sells an item to a merchant for gold; the copy is gone when this returns. */
     suspend fun sell(heroId: String, itemId: String): SellOutcome {
-        requireId(itemId)
+        requireItemId(itemId)
         return http.post("$HERO/sell", heroQuery(heroId, "itemId" to itemId))
     }
 
@@ -105,7 +106,7 @@ class HeroClient internal constructor(private val http: Transport) {
 
     /** Sells an item of the overflow to the merchant without taking it in. */
     suspend fun sellOverflow(heroId: String, itemId: String): StashState {
-        requireId(itemId)
+        requireItemId(itemId)
         return http.post("$HERO/stash/sell", heroQuery(heroId, "itemId" to itemId))
     }
 
@@ -113,13 +114,13 @@ class HeroClient internal constructor(private val http: Transport) {
 
     /** Spends one orb of the bag on one item; [orb] is the orb's item code. */
     suspend fun applyOrb(heroId: String, itemId: String, orb: String): CurrencyApplyResponse {
-        requireId(itemId)
+        requireItemId(itemId)
         require(orb.isNotBlank()) { ui("api.choose_orb") }
         return http.post("$HERO/orb", heroQuery(heroId, "itemId" to itemId, "orb" to orb))
     }
 
     suspend fun applyEssence(heroId: String, itemId: String, essence: String): CurrencyApplyResponse {
-        requireId(itemId)
+        requireItemId(itemId)
         require(essence.isNotBlank()) { ui("api.choose_orb") }
         return http.post("$HERO/essence", heroQuery(heroId, "itemId" to itemId, "essence" to essence))
     }
@@ -128,13 +129,13 @@ class HeroClient internal constructor(private val http: Transport) {
     suspend fun bench(heroId: String): List<BenchRecipe> = http.get("$HERO/bench", heroQuery(heroId))
 
     suspend fun craft(heroId: String, itemId: String, recipe: String): CurrencyApplyResponse {
-        requireId(itemId)
+        requireItemId(itemId)
         require(recipe.isNotBlank()) { ui("api.choose_recipe") }
         return http.post("$HERO/craft", heroQuery(heroId, "itemId" to itemId, "recipe" to recipe))
     }
 
     suspend fun uncraft(heroId: String, itemId: String): CurrencyApplyResponse {
-        requireId(itemId)
+        requireItemId(itemId)
         return http.post("$HERO/uncraft", heroQuery(heroId, "itemId" to itemId))
     }
 
@@ -161,7 +162,7 @@ class HeroClient internal constructor(private val http: Transport) {
     }
 
     private suspend fun item(operation: String, heroId: String, itemId: String): ItemInstance {
-        requireId(itemId)
+        requireItemId(itemId)
         return http.post("$HERO/$operation", heroQuery(heroId, "itemId" to itemId))
     }
 }

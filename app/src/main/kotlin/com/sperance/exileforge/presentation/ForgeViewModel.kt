@@ -3,6 +3,7 @@ package com.sperance.exileforge.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.sperance.exileforge.ForgeApplication
+import com.sperance.exileforge.core.campaign.AutoPlan
 import com.sperance.exileforge.core.campaign.RunCommand
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.model.auction.AuctionFilter
@@ -24,6 +25,7 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     val expedition = runtime.expeditionViewModel.run
     fun loadCampaign() = runtime.expeditionViewModel.loadCampaign()
     fun startRun(mapCode: String) = runtime.expeditionViewModel.start(mapCode)
+    fun startAutoRun(mapCode: String, plan: AutoPlan) = runtime.expeditionViewModel.start(mapCode, plan)
     fun selectZone(mapCode: String) = runtime.expeditionViewModel.selectZone(mapCode)
     fun loadCrafts(silent: Boolean = false) = runtime.craftsViewModel.load(silent)
     fun openProfession(code: String) = runtime.craftsViewModel.openProfession(code)

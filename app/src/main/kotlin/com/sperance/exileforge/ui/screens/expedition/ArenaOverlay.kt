@@ -801,18 +801,9 @@ private fun hitColour(hit: FloatingHit): Color = when {
 
 internal fun outcomeColour(outcome: Outcome) = when (outcome) { Outcome.WIN -> Vital; Outcome.LOSS -> LifeRed; Outcome.RETREAT -> Muted }
 
-/** What the run's seed rolled — experience, gold, orbs and items — for a kill and a chest alike; an item opens its card (2.72.0). */
-@OptIn(ExperimentalMaterial3Api::class)
+/** What the run's seed rolled — experience, gold, orbs and items — for a kill and a chest alike; each item as its whole card (3.2.0). */
 @Composable internal fun RewardLines(s: ForgeState, reward: Reward) {
-    var opened by remember { mutableStateOf<ItemView?>(null) }
-    opened?.let { item ->
-        ModalBottomSheet(onDismissRequest = { opened = null }, containerColor = Panel) {
-            Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(16.dp)) {
-                ItemCard(item, enabled = false, detailed = true)
-            }
-        }
-    }
-    Column(Modifier.heightIn(max = 220.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             if (reward.experience > 0) Text(ui("expedition.loot_experience", number(reward.experience)), color = Rune)
             if (reward.gold > 0) Text(ui("expedition.loot_gold", reward.gold), color = GoldBright)
@@ -824,7 +815,8 @@ internal fun outcomeColour(outcome: Outcome) = when (outcome) { Outcome.WIN -> V
             }
         }
         reward.equipment.forEach { instance ->
-            s.view(instance)?.let { item -> ItemRow(item, price = s.sellPrice(instance)) { opened = item } }
+            // The whole card, not a line (3.2.0): what dropped is read where it dropped
+            s.view(instance)?.let { item -> ItemCard(item, enabled = false, detailed = true, price = s.sellPrice(instance)) }
         }
         if (reward.items.isEmpty() && reward.equipment.isEmpty()) Text(ui("expedition.loot_nothing"), color = Muted)
     }

@@ -123,7 +123,7 @@ private sealed interface Pick {
         }
     }
     page?.let { code -> book?.byCode?.get(code) }?.let { skill ->
-        if (hero != null && body != null && index != null) SkillSheet(s, vm, index, skill, skills, level, body.stats, onSlot = { pick = it }) { page = null }
+        if (hero != null && body != null && index != null) SkillSheet(s, vm, index, skill, skills, level, body.stats) { page = null }
     }
     when (val chosen = pick) {
         is Pick.Slot -> SkillPicker(s, chosen, skills, pages, onDismiss = { pick = null }) { code -> pick = null; vm.slotSkill(chosen.kind.name, chosen.index, code) }
@@ -291,7 +291,7 @@ private fun books(index: ContentIndex): List<Item> = index.itemsByCategory[Item.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable private fun SkillSheet(s: ForgeState, vm: ForgeViewModel, index: ContentIndex, skill: SkillDefinition, skills: HeroSkills, heroLevel: Int,
-                                   stats: Map<String, Double>, onSlot: (Pick) -> Unit, onDismiss: () -> Unit) {
+                                   stats: Map<String, Double>, onDismiss: () -> Unit) {
     val learned = skills.level(skill.code)
     val books = bookCount(s, skill.code)
     val next = (learned + 1).coerceAtMost(SkillRules.MAX_LEVEL)
@@ -323,8 +323,9 @@ private fun books(index: ContentIndex): List<Item> = index.itemsByCategory[Item.
                 }
                 else MutedText(ui(if (heroLevel < skill.unlock && learned == 0) "skills.no_book_opens" else "skills.no_book", skill.unlock))
             }
-            if (learned > 0) SlotActions(s, index, skill, skills, heroLevel, onSlot, onDismiss) { kind, at ->
-                onDismiss(); vm.slotSkill(kind.name, at, null)
+            // Only the slots of the skill's own kind, and a tap puts this very skill there (3.2.0): a passive page never offers an active slot
+            if (learned > 0) SlotActions(s, index, skill, skills, heroLevel) { kind, at, put ->
+                onDismiss(); vm.slotSkill(kind.name, at, if (put) skill.code else null)
             }
         }
     }
@@ -352,8 +353,8 @@ private fun books(index: ContentIndex): List<Item> = index.itemsByCategory[Item.
 }
 
 /** Where a learned skill may go: each open slot of its kind, and out of the one it stands in. */
-@Composable private fun SlotActions(s: ForgeState, index: ContentIndex, skill: SkillDefinition, skills: HeroSkills, heroLevel: Int, onSlot: (Pick) -> Unit,
-                                    onDismiss: () -> Unit, onEmpty: (SkillKind, Int) -> Unit) {
+@Composable private fun SlotActions(s: ForgeState, index: ContentIndex, skill: SkillDefinition, skills: HeroSkills, heroLevel: Int,
+                                    onSlot: (SkillKind, Int, Boolean) -> Unit) {
     val open = if (skill.kind == SkillKind.ACTIVE) index.skillRules.activeSlots(heroLevel) else index.skillRules.passiveSlots(heroLevel)
     val standing = if (skill.kind == SkillKind.ACTIVE) skills.active.indexOfFirst { it?.skill == skill.code } else skills.passive.indexOf(skill.code)
     Caption(ui(if (skill.kind == SkillKind.ACTIVE) "skills.slots_active" else "skills.slots_passive"))
@@ -361,7 +362,7 @@ private fun books(index: ContentIndex): List<Item> = index.itemsByCategory[Item.
         (0 until open).forEach { at ->
             val here = at == standing
             ForgeOutlinedButton(enabled = !s.busy, onClick = {
-                if (here) onEmpty(skill.kind, at) else { onDismiss(); onSlot(Pick.Slot(skill.kind, at)) }
+                onSlot(skill.kind, at, !here)
             }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 6.dp)) {
                 Text(if (here) ui("skills.take_out") else ui("skills.to_slot", at + 1), style = MaterialTheme.typography.labelMedium, maxLines = 1)
             }

@@ -46,7 +46,6 @@ object AtlasEffects {
     val GUARDIAN_POWER = AtlasStat.GUARDIAN_POWER.code
     val ABYSS_POWER = AtlasStat.ABYSS_POWER.code
     val FLASK_RARE = AtlasStat.FLASK_RARE.code
-    val ABYSS_KEEP = AtlasStat.ABYSS_KEEP.code
 
     /** The atlas's gifts to the hero on a map, each to the sheet's stat it adds to. */
     val hero = mapOf(AtlasStat.MANA_REGEN.code to "STOCK_MANA_REGEN", AtlasStat.SKILL_LEVEL.code to "STOCK_SKILL_LEVEL",
@@ -69,7 +68,4 @@ object AtlasEffects {
         val more = (atlas[FOUNTAINS] ?: 0.0).toInt()
         return if (more == 0) rule else rule.copy(count = rule.count.map { (it + more).coerceAtLeast(0) })
     }
-
-    /** The share of the Abyss's hoard a fall keeps, 0..1. */
-    fun abyssKeep(atlas: Map<String, Double>): Double = (atlas[ABYSS_KEEP] ?: 0.0).coerceIn(0.0, 100.0) / 100
 }

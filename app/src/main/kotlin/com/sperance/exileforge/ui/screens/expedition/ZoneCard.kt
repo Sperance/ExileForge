@@ -17,6 +17,10 @@ import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -25,6 +29,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.campaign.AutoPlan
 import com.sperance.exileforge.core.campaign.MapLineKind
 import com.sperance.exileforge.core.campaign.MapStats
 import com.sperance.exileforge.core.campaign.TokenState
@@ -108,6 +113,34 @@ private fun stashMaps(s: ForgeState): List<StashMap> =
                 Spacer(Modifier.width(10.dp))
                 Text(ui("expedition.launch_go"), style = MaterialTheme.typography.titleMedium)
             }
+            AutoLaunch(s, vm, zone.code, launch)
+        }
+    }
+}
+
+/**
+ * The autorun (3.2.0): once the zone's guardian has fallen, a map of it can be run by itself — its packs as
+ * waves on the arena, the guardian last. What else it takes on is chosen here; a crack of the Abyss and the
+ * Vaal portal still stop it for the player's word.
+ */
+@Composable private fun AutoLaunch(s: ForgeState, vm: ForgeViewModel, zone: String, launch: MapLaunchState) {
+    if (s.progress?.cleared?.contains(zone) != true) return
+    var chests by rememberSaveable { mutableStateOf(true) }
+    var crystals by rememberSaveable { mutableStateOf(true) }
+    var abyss by rememberSaveable { mutableStateOf(true) }
+    ForgePanel {
+        Engraved(ui("auto.title"))
+        MutedText(ui("auto.hint"))
+        listOf(Triple("auto.chests", chests) { v: Boolean -> chests = v }, Triple("auto.crystals", crystals) { v: Boolean -> crystals = v },
+            Triple("auto.abyss", abyss) { v: Boolean -> abyss = v }).forEach { (key, on, set) ->
+            Row(Modifier.fillMaxWidth().clickable { set(!on) }, verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(checked = on, onCheckedChange = set)
+                Text(ui(key), color = Parchment, style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+        ForgeOutlinedButton(enabled = s.hero != null && !s.busy && launch.picked != null, modifier = Modifier.fillMaxWidth(),
+            onClick = { vm.startAutoRun(zone, AutoPlan(chests, crystals, abyss)) }) {
+            Text(ui(if (launch.picked == null) "auto.needs_map" else "auto.go"))
         }
     }
 }

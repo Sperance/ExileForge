@@ -38,6 +38,7 @@ import com.sperance.exileforge.core.display.nodeTitle
 import com.sperance.exileforge.core.display.nodeTypeTitle
 import com.sperance.exileforge.core.display.statNumber
 import com.sperance.exileforge.core.display.statTitle
+import com.sperance.exileforge.core.display.statPercent
 import com.sperance.exileforge.core.i18n.plural
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ForgeViewModel
@@ -421,7 +422,7 @@ private fun contributionText(total: StatContribution): String {
         Op.INCREASED, Op.MORE -> "$signed%"
         // SET replaces the base outright, so it is not an addition and carries no sign.
         Op.SET -> number
-        Op.ADD -> signed
+        Op.ADD -> signed + if (statPercent(total.stat)) "%" else ""
     }
 }
 

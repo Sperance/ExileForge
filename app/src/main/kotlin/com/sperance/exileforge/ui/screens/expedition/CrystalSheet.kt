@@ -35,7 +35,7 @@ import com.sperance.exileforge.ui.theme.*
 /**
  * A crystal of essences (2.78.0, the owner's mockup A): what it holds, who guards it — the zone's monster
  * standing up rare with the modifier of every essence inside — and the choice. «Освободить» takes the
- * guardian on; a Vaal orb passes over the crystal once — every essence a step higher, one of them
+ * guardian on; «Применить сферу Ваал», one plain button greyed without an orb (3.2.0), passes over the crystal once — every essence a step higher, one of them
  * special, or a stronger guardian — and stepping away leaves it standing for later. Since 3.0.0 the orb's
  * outcome is rolled by the run's seed the moment it is spent: nothing here waits for the server.
  */
@@ -64,16 +64,14 @@ import com.sperance.exileforge.ui.theme.*
             Text(ui("crystal.guardian", monsterTitle(view.guardian), traits.joinToString(", ")), color = Rune, style = MaterialTheme.typography.bodySmall)
             if (view.stronger) Text(ui("crystal.stronger", number(index?.essences?.crystals?.stronger ?: 0.0)), color = LifeRed, style = MaterialTheme.typography.bodySmall)
             view.outcome?.let { Text(ui("crystal.outcome.$it"), color = GoldBright, style = MaterialTheme.typography.bodyMedium) }
-            if (!view.vaal) MutedText(ui("crystal.vaal_hint"))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                ForgeOutlinedButton(enabled = !view.vaal && vaalOrbs > 0, onClick = { onCommand(RunCommand.VaalCrystal) }, modifier = Modifier.weight(1f)) {
-                    OrbGlyph(Orb.VAAL_ORB, Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(ui("crystal.vaal", vaalOrbs))
-                }
-                ForgeButton(onClick = { onCommand(RunCommand.Release) }, modifier = Modifier.weight(1.3f),
-                    colors = ButtonDefaults.buttonColors(containerColor = Blood, contentColor = GoldBright)) { Text(ui("crystal.release")) }
+            // One plain button for the Vaal orb (3.2.0): it says what it does, and without an orb it cannot be pressed
+            if (!view.vaal) ForgeOutlinedButton(enabled = vaalOrbs > 0, onClick = { onCommand(RunCommand.VaalCrystal) }, modifier = Modifier.fillMaxWidth()) {
+                OrbGlyph(Orb.VAAL_ORB, Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(ui("crystal.vaal"))
             }
+            ForgeButton(onClick = { onCommand(RunCommand.Release) }, modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = Blood, contentColor = GoldBright)) { Text(ui("crystal.release")) }
             ForgeTextButton(onClick = { onCommand(RunCommand.StepOff) }, modifier = Modifier.align(Alignment.CenterHorizontally)) {
                 Text(ui("crystal.later"), color = Muted, textAlign = TextAlign.Center)
             }

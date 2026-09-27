@@ -83,6 +83,8 @@ private val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
     val index = s.index
     val state = s.atlasState
     var resetting by remember { mutableStateOf(false) }
+    // A node given back asks first, held to confirm (3.2.0): the points come back, the gold does not
+    var refunding by remember { mutableStateOf<String?>(null) }
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Sky.deep, Sky.night, Sky.dawn)))) {
         if (index == null || state == null) CircularProgressIndicator(Modifier.align(Alignment.Center), color = Sky.text)
         else {
@@ -90,7 +92,7 @@ private val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
             Sky(index, taken, atlas.selected, Modifier.fillMaxSize(), onSelect = vm::selectAtlasNode)
             index.atlasGraph.node(atlas.selected)?.let { node ->
                 NodeSheet(index, node, taken, state.available, index.atlas.respec.price(s.heroLevel, 1), enabled = !s.busy,
-                    onTake = { vm.allocateAtlas(node.code) }, onRefund = { vm.refundAtlas(node.code) },
+                    onTake = { vm.allocateAtlas(node.code) }, onRefund = { refunding = node.code },
                     modifier = Modifier.align(Alignment.BottomCenter))
             }
         }
@@ -112,6 +114,13 @@ private val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
                 ledger = listOf(LedgerLine(ui("atlas.reset_cost"), ui("atlas.gold", cost), Tone.SPEND), LedgerLine(ui("atlas.reset_back"), nodes.toString(), Tone.GAIN)),
                 blocked = money < cost, warning = if (money < cost) ui("atlas.no_gold") else null) { resetting = false; vm.resetAtlas() }
         }
+        refunding?.let { code -> if (index != null) {
+            val cost = index.atlas.respec.price(s.heroLevel, 1)
+            val money = s.hero?.money ?: 0L
+            ConfirmSheet(title = ui("atlas.refund_q"), subtitle = atlasNodeTitle(code), confirm = ui("atlas.refund"), danger = true, onDismiss = { refunding = null },
+                ledger = listOf(LedgerLine(ui("atlas.reset_cost"), ui("atlas.gold", cost), Tone.SPEND), LedgerLine(ui("atlas.reset_back"), "1", Tone.GAIN)),
+                blocked = money < cost, warning = if (money < cost) ui("atlas.no_gold") else null) { refunding = null; vm.refundAtlas(code) }
+        } }
         ToastHost(s, vm::dismissMessage, vm::dismissNotice, Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 64.dp))
     }
 }

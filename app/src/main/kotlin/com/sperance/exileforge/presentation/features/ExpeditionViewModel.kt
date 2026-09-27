@@ -1,5 +1,6 @@
 package com.sperance.exileforge.presentation.features
 
+import com.sperance.exileforge.core.campaign.AutoPlan
 import com.sperance.exileforge.core.campaign.ExpeditionRun
 import com.sperance.exileforge.core.campaign.Flask
 import com.sperance.exileforge.core.campaign.HeroGear
@@ -51,6 +52,8 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     private var runJournal: RunJournal? = null
     private val flushes = Channel<Unit>(Channel.CONFLATED)
     private var saveJob: Job? = null
+    /** The autorun the run under way was started with; its Vaal zone runs by itself too. */
+    private var autoPlan: AutoPlan? = null
     /** The Vaal zone's tokens the server already counted when the run was entered again. */
     private var vaalKilled: List<Int> = emptyList()
 
@@ -72,12 +75,15 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
      * «В путь»: the zone is entered on the server — with the picked map, spent there, or without one — and the
      * seed and the frozen context come back with the hero; the run is then built here and walked.
      */
-    fun start(mapCode: String) { with(runtime) {
+    fun start(mapCode: String, auto: AutoPlan? = null) { with(runtime) {
         if (mutableRun.value != null || state.value.busy) return
         val s = state.value
         val index = s.index ?: return
         if (index.zone(mapCode) == null || s.progress?.unlocked?.contains(mapCode) != true) return
         val picked = s.play.launch?.takeIf { it.mapCode == mapCode }?.picked
+        // An autorun (3.2.0) spends a map of a zone whose guardian has fallen once
+        if (auto != null && (picked == null || s.progress?.cleared?.contains(mapCode) != true)) return
+        autoPlan = auto
         task(writing = true, touches = setOf(Reads.HERO)) {
             val id = heroId
             // A journal the server has not taken yet is not dropped for a new run: its kills are the hero's.
@@ -103,8 +109,8 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         val journal = RunJournal(started.id, id, zone.code, applied = started.applied, base = started.applied).also { runJournal = it }
         mutable.update { it.copy(play = it.play.copy(runLoot = emptyList(), launch = null, runPending = 0, runRejected = 0)) }
         mutableRun.value = ExpeditionRun.start(index, zone, run, journal, gear, hero.campaign, System.currentTimeMillis(), hero.info.experience, hero.level,
-            wallet = { state.value.hero?.money ?: 0L }, vaalOrbs = ::vaalOrbsFree, onRecorded = ::recorded,
-            onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, onLoot = { loot(id, it) }, killed = started.killed)
+            vaalOrbs = ::vaalOrbsFree, onRecorded = ::recorded,
+            onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, onLoot = { loot(id, it) }, killed = started.killed, auto = autoPlan)
         vaalKilled = started.vaalKilled
         persist()
     } }
@@ -200,8 +206,8 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         if (parent != null || outer.hud.value.gate == null) return
         outer.send(RunCommand.ShutGate(entered = true))
         val inner = ExpeditionRun.start(index, outer.run.zone, outer.run, journal, gear, hero.campaign, System.currentTimeMillis(), hero.info.experience, hero.level,
-            wallet = { state.value.hero?.money ?: 0L }, vaalOrbs = ::vaalOrbsFree, onRecorded = ::recorded, vaal = true, startPools = outer.pools,
-            onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, onLoot = { loot(hero.id, it) }, killed = vaalKilled)
+            vaalOrbs = ::vaalOrbsFree, onRecorded = ::recorded, vaal = true, startPools = outer.pools,
+            onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, onLoot = { loot(hero.id, it) }, killed = vaalKilled, auto = autoPlan.takeIf { outer.hud.value.auto != null })
         parent = outer
         mutableRun.value = inner
     } }
@@ -236,7 +242,7 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         listOfNotNull(mutableRun.value, parent).forEach { it.send(RunCommand.Regear(gear)) }
     }
 
-    /** A new reading of the hero: nothing to do — the run reads the wallet and the bag through the state. */
+    /** A new reading of the hero: nothing to do — the run reads the bag through the state. */
     fun heroChanged(view: HeroView) { }
 
     /**

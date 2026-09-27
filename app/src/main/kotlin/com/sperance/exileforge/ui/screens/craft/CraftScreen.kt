@@ -34,6 +34,7 @@ import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.roll.ItemInstance
+import com.sperance.exileforge.rules.roll.OrbApplier
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.OrbGlyph
@@ -78,6 +79,17 @@ private val ESSENTIAL = setOf(Rarity.COMMON, Rarity.RARE)
     val benchable = instance != null && instance.rarity in BENCHABLE
     // An essence works on gear alone: not a map, a jewel, a flask or a tool.
     val essential = slot != null && !slot.isJewelLike && !slot.isFlask && !slot.isTool && instance != null && instance.rarity in ESSENTIAL
+    // Only what goes on this item is offered (3.2.0): each orb and essence tried over a copy by the rules, a refusal left out
+    val refused: Set<String> = remember(instance, view, index) {
+        val item = instance
+        val target = view?.template
+        if (index == null || item == null || target == null) emptySet() else {
+            val applier = OrbApplier(index)
+            Orb.entries.filterNot { applier.accepts(it, item, target) }.map { it.name }.toSet() +
+                index.essences.essences.values.filterNot { applier.accepts(it, item, target) }.map { it.code }
+        }
+    }
+    val accepted: (String) -> Boolean = { it !in refused }
     val sections = listOfNotNull(ForgeSection.ORBS, ForgeSection.BENCH.takeIf { !isMap && benchable }, ForgeSection.ESSENCES.takeIf { essential })
     val section = s.play.forgeSection.takeIf { it in sections } ?: ForgeSection.ORBS
     Column(Modifier.fillMaxSize()) {
@@ -92,15 +104,15 @@ private val ESSENTIAL = setOf(Rarity.COMMON, Rarity.RARE)
                 }
             }
             when (section) {
-                ForgeSection.ORBS -> OrbLedger(s, vm::selectOrb)
+                ForgeSection.ORBS -> OrbLedger(s, accepted, vm::selectOrb)
                 ForgeSection.BENCH -> view?.let { BenchLedger(s, index, hero, it, benchLine) { line -> benchLine = line } }
-                ForgeSection.ESSENCES -> EssenceLedger(s, vm::selectEssence)
+                ForgeSection.ESSENCES -> EssenceLedger(s, accepted, vm::selectEssence)
             }
         }
         if (hero != null && instance != null) when (section) {
-            ForgeSection.ORBS -> OrbBar(s, instance, enabled, vm::applyOrb)
+            ForgeSection.ORBS -> OrbBar(s, instance, enabled, accepted, vm::applyOrb)
             ForgeSection.BENCH -> BenchBar(s, vm, instance, benchLine, enabled)
-            ForgeSection.ESSENCES -> EssenceBar(s, instance, enabled, vm::applyEssence)
+            ForgeSection.ESSENCES -> EssenceBar(s, instance, enabled, accepted, vm::applyEssence)
         }
     }
     if (picking) TargetPicker(s, onDismiss = { picking = false }) { vm.selectEquipment(it); picking = false }
@@ -116,10 +128,10 @@ private val ForgeSection.title get() = when (this) {
  * Every essence the bag holds (2.78.0), one line each — what it makes of a common item and of a rare one,
  * in the server's words, and how many there are; the special ones in gold.
  */
-@Composable private fun EssenceLedger(s: ForgeState, onSelect: (String) -> Unit) {
+@Composable private fun EssenceLedger(s: ForgeState, accepted: (String) -> Boolean, onSelect: (String) -> Unit) {
     val hero = s.hero ?: return
     val index = s.index ?: return
-    val essences = index.itemsByCategory[Item.ESSENCE].orEmpty().filter { hero.count(it.code) > 0 }
+    val essences = index.itemsByCategory[Item.ESSENCE].orEmpty().filter { hero.count(it.code) > 0 && accepted(it.code) }
         .sortedWith(compareBy({ index.essence(it.code)?.special == true }, { -(index.essence(it.code)?.tier ?: 0) }))
     if (essences.isEmpty()) { Text(ui("forge.no_essences"), color = Muted); return }
     Column {
@@ -133,10 +145,10 @@ private val ForgeSection.title get() = when (this) {
 }
 
 /** The chosen essence over the navigation, with the held button: a common item becomes rare, a rare one is rolled anew. */
-@Composable private fun EssenceBar(s: ForgeState, instance: ItemInstance, enabled: Boolean, onApply: (String, String) -> Unit) {
+@Composable private fun EssenceBar(s: ForgeState, instance: ItemInstance, enabled: Boolean, accepted: (String) -> Boolean, onApply: (String, String) -> Unit) {
     val code = s.play.selectedEssence
     val owned = s.bagAmount(code) ?: 0L
-    val essence = s.index?.essence(code)?.takeIf { owned > 0 }
+    val essence = s.index?.essence(code)?.takeIf { owned > 0 && accepted(code) }
     ForgeBar {
         if (essence == null) { Text(ui("forge.pick_essence"), color = Muted); return@ForgeBar }
         BarTitle(ForgeGlyphs.Shard, Elder, itemTitle(code), stock(owned, 1))
@@ -169,10 +181,10 @@ private val ForgeSection.title get() = when (this) {
 }
 
 /** Every orb the bag holds, one line each: what it does and how many there are. */
-@Composable fun OrbLedger(s: ForgeState, onSelect: (String) -> Unit) {
+@Composable fun OrbLedger(s: ForgeState, accepted: (String) -> Boolean, onSelect: (String) -> Unit) {
     val hero = s.hero ?: return
-    // Regret is spent on the tree, never on an item, so it has no line here.
-    val orbs = s.orbs.filter { hero.count(it.code) > 0 && it.code != Orb.ORB_OF_REGRET.name }
+    // Regret is spent on the tree, never on an item, so it has no line here; an orb the item refuses is not offered.
+    val orbs = s.orbs.filter { hero.count(it.code) > 0 && it.code != Orb.ORB_OF_REGRET.name && accepted(it.code) }
     if (orbs.isEmpty()) { Text(ui("forge.no_orbs"), color = Muted); return }
     Column {
         orbs.forEach { orb ->
@@ -225,10 +237,10 @@ private val ForgeSection.title get() = when (this) {
 }
 
 /** The chosen orb over the navigation: what it does, what the bag keeps, and the button that is held. */
-@Composable fun OrbBar(s: ForgeState, instance: ItemInstance, enabled: Boolean, onApply: (String, String) -> Unit) {
+@Composable fun OrbBar(s: ForgeState, instance: ItemInstance, enabled: Boolean, accepted: (String) -> Boolean, onApply: (String, String) -> Unit) {
     val code = s.play.selectedOrb
     val owned = s.bagAmount(code) ?: 0L
-    val orb = s.orbs.firstOrNull { it.code == code && owned > 0 }
+    val orb = s.orbs.firstOrNull { it.code == code && owned > 0 && accepted(code) }
     ForgeBar {
         if (orb == null) { Text(ui("forge.pick_orb"), color = Muted); return@ForgeBar }
         BarTitle(ForgeGlyphs.Orb, Gold, itemTitle(orb.code), stock(owned, 1), orb = Orb.of(orb.code))

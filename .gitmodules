@@ -1,0 +1,4 @@
+[submodule "backend"]
+	path = backend
+	url = https://github.com/Sperance/ktor-bestgame.git
+	branch = claude/tender-pasteur-a36kj2

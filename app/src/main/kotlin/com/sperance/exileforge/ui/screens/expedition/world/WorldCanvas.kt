@@ -44,8 +44,8 @@ import com.sperance.exileforge.core.campaign.RoadState
 import com.sperance.exileforge.core.campaign.TokenState
 import com.sperance.exileforge.core.campaign.WorldMap
 import com.sperance.exileforge.core.campaign.WorldToken
-import com.sperance.exileforge.core.campaign.mapTitle
-import com.sperance.exileforge.core.campaign.regionTitle
+import com.sperance.exileforge.core.display.mapTitle
+import com.sperance.exileforge.core.display.regionTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.theme.Bronze
 import com.sperance.exileforge.ui.theme.Gold

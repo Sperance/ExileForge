@@ -25,10 +25,12 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.campaign.*
+import com.sperance.exileforge.core.display.mapTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.rules.run.Reward
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.expedition.scene.ExpeditionScene
@@ -49,8 +51,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import com.sperance.exileforge.core.display.statNumber
 import com.sperance.exileforge.core.display.statTitle
-import com.sperance.exileforge.core.model.campaign.MonsterRarity
-import com.sperance.exileforge.presentation.features.key
+import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.ui.icons.StatIcon
 import kotlin.math.ceil
 import kotlin.math.floor
@@ -70,7 +71,7 @@ import kotlin.math.floor
     // Leaving a map gives up what is left on it, so it is asked first (2.48.0); the fight has its own retreat.
     var leaving by remember { mutableStateOf(false) }
     // A Vaal zone (2.65.0) has no way out but its guardian or a death: back does nothing on its map.
-    val zone = VaalZones.isZone(run.map)
+    val zone = VaalZones.isZone(run.zone)
     BackHandler { when {
         hud.phase == RunPhase.GATE -> vm.runCommand(RunCommand.StepBack)
         hud.phase == RunPhase.CRYSTAL || hud.phase == RunPhase.ABYSS -> vm.runCommand(RunCommand.StepOff)
@@ -84,17 +85,17 @@ import kotlin.math.floor
         when (hud.phase) {
             RunPhase.MAP -> {
                 Stick(run)
-                MapBar(run, hud, onLeave = if (zone) null else ({ leaving = true }), onGear = { gear = true }, onStats = { sheet = true },
-                    onDrink = { vm.runCommand(RunCommand.Drink(it)) })
+                MapBar(s, run, hud, onLeave = if (zone) null else ({ leaving = true }), onGear = { gear = true }, onStats = { sheet = true },
+                    onDrink = { vm.runCommand(RunCommand.Drink(it)) }, onSummon = { vm.runCommand(RunCommand.Summon) })
                 if (gear) { HoldsRun(run); GearSheet(s, vm) { gear = false } }
                 if (sheet) { HoldsRun(run); StatsSheet(s, run.mapEffects) { sheet = false } }
-                if (hud.chestPending || hud.chestFailed || hud.chest != null) ChestLoot(s, hud) { vm.runCommand(RunCommand.DismissChest) }
+                hud.chest?.let { ChestLoot(s, it) { vm.runCommand(RunCommand.DismissChest) } }
                 if (leaving) ConfirmSheet(title = ui("expedition.leave_q"), confirm = ui("expedition.leave"), danger = true,
                     subtitle = mapTitle(hud.mapCode),
                     ledger = listOf(LedgerLine(ui("expedition.leave_left"), ui(if (hud.sealed) "expedition.boss_alive" else "expedition.boss_slain"), Tone.SPEND)),
                     note = ui("expedition.leave_note"), onDismiss = { leaving = false }) { vm.runCommand(RunCommand.Leave) }
             }
-            RunPhase.FIGHT -> hud.fight?.let { ArenaOverlay(s, hud, it, it.level.takeIf { level -> level > 0 } ?: run.map.level, run.rules, run.stance, onCommand = vm::runCommand) }
+            RunPhase.FIGHT -> hud.fight?.let { ArenaOverlay(s, hud, it, it.level.takeIf { level -> level > 0 } ?: run.zone.level, run.rules, run.stance, onCommand = vm::runCommand) }
             // The fight is over: its report — the log, what it came to, and the loot of a victory.
             RunPhase.LOOT -> hud.report?.let { ReportScreen(s, hud, it) { vm.runCommand(RunCommand.Continue) } }
             RunPhase.DEAD -> hud.report?.let { ReportScreen(s, hud, it) { vm.runCommand(RunCommand.Continue) } }
@@ -102,7 +103,7 @@ import kotlin.math.floor
                     if (zone) ui("vaal.back") else ui("expedition.back_to_camp")) { vm.runCommand(RunCommand.Continue) }
             RunPhase.CLEARED -> if (zone) Ending(ui("vaal.done"), ui("vaal.done_hint"), Vital, hud, ui("vaal.back")) { vm.runCommand(RunCommand.Continue) }
                 else Ending(ui("expedition.map_done"), ui("expedition.map_done_hint"), Vital, hud) { vm.runCommand(RunCommand.Continue) }
-            RunPhase.GATE -> VaalGate(s, hud, run.map.corrupted?.code, onEnter = vm::enterVaal, onRefuse = vm::refuseVaal) { vm.runCommand(RunCommand.StepBack) }
+            RunPhase.GATE -> VaalGate(s, hud, run.zone.corrupted.takeIf { it.isNotBlank() }, onEnter = vm::enterVaal, onRefuse = vm::refuseVaal) { vm.runCommand(RunCommand.StepBack) }
             RunPhase.CRYSTAL -> hud.crystal?.let { CrystalSheet(s, it, onCommand = vm::runCommand) }
             RunPhase.ABYSS -> hud.abyss?.let { AbyssSheet(s, hud, it, onCommand = vm::runCommand) }
             RunPhase.LEFT -> Unit
@@ -117,8 +118,10 @@ import kotlin.math.floor
 /**
  * Life and shield, the map's name and whether its warden still lives, and the way out. Nothing
  * comes back on its own between fights (2.29.0) but a fountain. What the map still holds — foes, chests, fountains — is the walk's to find (2.56.1).
+ * A guardian slain and not yet back can be summoned for gold (3.0.0), and the journal's unsent events are counted quietly under the name.
  */
-@Composable private fun MapBar(run: ExpeditionRun, hud: RunHud, onLeave: (() -> Unit)?, onGear: () -> Unit, onStats: () -> Unit, onDrink: (Int) -> Unit) {
+@Composable private fun MapBar(s: ForgeState, run: ExpeditionRun, hud: RunHud, onLeave: (() -> Unit)?, onGear: () -> Unit, onStats: () -> Unit,
+                               onDrink: (Int) -> Unit, onSummon: () -> Unit) {
     Column(Modifier.fillMaxWidth().statusBarsPadding().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             // The way out (2.56.1): a portal in a bronze ring, first thing in the corner, and it asks before it goes.
@@ -129,11 +132,17 @@ import kotlin.math.floor
                 RoundButton(ForgeGlyphs.Scroll, ui("expedition.stats_hero"), onClick = onStats)
             }
             Column(Modifier.weight(1f).padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                val zone = VaalZones.isZone(run.map)
+                val zone = VaalZones.isZone(run.zone)
                 Text(if (zone) ui("vaal.title", mapTitle(hud.mapCode)) else mapTitle(hud.mapCode), color = if (zone) Color(0xFFFF8A78) else GoldBright,
                     style = MaterialTheme.typography.titleMedium, maxLines = 2)
                 Text(ui(when { zone && hud.sealed -> "vaal.guardian_alive"; zone -> "vaal.guardian_slain"; hud.sealed -> "expedition.boss_alive"; else -> "expedition.boss_slain" }),
                     color = if (hud.sealed) LifeRed else Vital, style = MaterialTheme.typography.labelMedium)
+                Journal(hud)
+                // The guardian slain until its time (3.0.0): a summon for gold brings it back to the exit at once — the event is the journal's.
+                if (hud.bossDown && !zone) ForgeOutlinedButton(enabled = (s.hero?.money ?: 0L) >= hud.summonPrice, onClick = onSummon,
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp)) {
+                    Text(ui("expedition.guardian_summon", hud.summonPrice), style = MaterialTheme.typography.labelSmall)
+                }
                 // Life under the map's name (2.72.0), out of the middle of the view; the mana and the belt under it (2.78.0).
                 Vitals(hud.heroLife, hud.heroMaxLife, hud.heroShield, hud.heroMaxShield, Modifier.fillMaxWidth(), hud.heroMana, hud.heroMaxMana)
                 if (hud.flasks.any { it != null }) MapFlasks(hud.flasks, onDrink)
@@ -167,6 +176,16 @@ import kotlin.math.floor
             }
         }
     }
+}
+
+/**
+ * The journal, quietly (3.0.0): how many events the server has not taken yet, and how many it refused.
+ * Nothing while everything is counted — the run does not talk about its bookkeeping unprompted.
+ */
+@Composable private fun Journal(hud: RunHud) {
+    if (hud.pending == 0 && hud.rejected == 0) return
+    Text(listOfNotNull(ui("expedition.pending", hud.pending).takeIf { hud.pending > 0 }, ui("expedition.rejected", hud.rejected).takeIf { hud.rejected > 0 }).joinToString(" · "),
+        color = if (hud.rejected > 0) LifeRed.copy(alpha = .85f) else Muted, style = MaterialTheme.typography.labelSmall)
 }
 
 /** The run stands still for as long as this is in the composition (2.73.0): a window over the map pauses it. */
@@ -389,23 +408,15 @@ private const val MINIMAP_MAX = 60f
 }
 
 /**
- * What a chest brought (since 2.33.0), at the foot of the map while the hero walks on: the
- * server's roll, awaited, or its absence said plainly, and a button that puts it away.
+ * What a chest brought (since 2.33.0), at the foot of the map while the hero walks on: the run's own
+ * roll, made the moment the lid went up (3.0.0), and a button that puts it away.
  */
-@Composable private fun ChestLoot(s: ForgeState, hud: RunHud, onClose: () -> Unit) {
+@Composable private fun ChestLoot(s: ForgeState, reward: Reward, onClose: () -> Unit) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         RunPanel(Modifier, GoldBright) {
             Text(ui("expedition.chest"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
-            val reward = hud.chest
-            when {
-                hud.chestPending -> Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    CircularProgressIndicator(Modifier.size(18.dp), color = Gold, strokeWidth = 2.dp)
-                    Text(ui("expedition.loot_pending"), color = Muted)
-                }
-                hud.chestFailed -> Text(ui("expedition.chest_failed"), color = LifeRed, style = MaterialTheme.typography.bodyMedium)
-                reward != null -> RewardLines(s, reward)
-            }
-            ForgeOutlinedButton(enabled = !hud.chestPending, onClick = onClose, modifier = Modifier.fillMaxWidth()) { Text(ui("common.close")) }
+            RewardLines(s, reward)
+            ForgeOutlinedButton(onClick = onClose, modifier = Modifier.fillMaxWidth()) { Text(ui("common.close")) }
         }
     }
 }
@@ -419,6 +430,7 @@ private const val MINIMAP_MAX = 60f
             Text(title, color = accent, style = MaterialTheme.typography.headlineSmall)
             Text(hint, color = Parchment, style = MaterialTheme.typography.bodyMedium)
             MutedText(ui("expedition.summary", hud.kills, hud.gold, number(hud.experience)))
+            Journal(hud)
             ForgeButton(onClick = onDone, modifier = Modifier.fillMaxWidth()) { Text(done) }
         }
     }

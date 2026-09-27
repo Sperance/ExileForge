@@ -11,9 +11,6 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.AppMode
 import com.sperance.exileforge.presentation.state.ForgeState
-import com.sperance.exileforge.presentation.state.TAB_CATALOG
-import com.sperance.exileforge.presentation.state.TAB_CHECKS
-import com.sperance.exileforge.presentation.state.TAB_EDITOR
 import com.sperance.exileforge.presentation.state.TAB_REDEMPTION
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -23,11 +20,12 @@ import com.sperance.exileforge.ui.theme.Muted
 /**
  * Everything an administrator can do, in one place.
  *
- * It is the only tab a player does not have, which is the point: the editor, the checks and the
- * catalogue used to be scattered — two of them behind the Account tab, the grant panel sitting
- * inside the Hero tab where a player would otherwise be reading their own stash. Gathering them
- * here leaves every other screen the same for everyone, which is what makes "look at it as a
- * player" below a real check rather than a guess.
+ * It is the only tab a player does not have, which is the point: the promo codes open from here,
+ * and the grant panel sits here rather than inside the Hero tab where a player would otherwise be
+ * reading their own stash. The catalogue, the editor and the checks left with the content (3.0.0):
+ * the world is a set of files the server serves, not records to edit. Gathering what remains here
+ * leaves every other screen the same for everyone, which is what makes "look at it as a player"
+ * below a real check rather than a guess.
  */
 @Composable fun AdminScreen(s: ForgeState, vm: ForgeViewModel) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
@@ -37,22 +35,13 @@ import com.sperance.exileforge.ui.theme.Muted
 
         ForgePanel {
             Engraved(ui("admin.screens"))
-            ForgeOutlinedButton(enabled = !s.busy, onClick = { vm.tab(TAB_CATALOG) }, modifier = Modifier.fillMaxWidth()) {
-                Text(ui("admin.catalog"))
-            }
-            ForgeOutlinedButton(enabled = !s.busy, onClick = { vm.tab(TAB_EDITOR) }, modifier = Modifier.fillMaxWidth()) {
-                Text(ui("editor.editor"))
-            }
-            ForgeOutlinedButton(enabled = !s.busy, onClick = { vm.tab(TAB_CHECKS) }, modifier = Modifier.fillMaxWidth()) {
-                Text(ui("admin.checks"))
-            }
             ForgeOutlinedButton(enabled = !s.busy, onClick = { vm.tab(TAB_REDEMPTION); vm.loadRedemptions() }, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("redemption.title"))
             }
             MutedText(ui("admin.screens_note"))
         }
 
-        // Granting is done to a character, so it needs one chosen — which is why it says so itself
+        // Granting is done to a hero, so it needs one chosen — which is why it says so itself
         // rather than being hidden when there is none.
         AdminGrantPanel(s, vm)
 

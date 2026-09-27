@@ -4,8 +4,6 @@ package com.sperance.exileforge.ui.screens.hero
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,8 +14,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.sperance.exileforge.core.contract.text
-import com.sperance.exileforge.core.display.inventoryDocument
 import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ForgeViewModel
@@ -25,9 +21,10 @@ import com.sperance.exileforge.presentation.state.ForgeSection
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.unmetFor
+import com.sperance.exileforge.presentation.state.view
+import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.auction.ListingSheet
-import com.sperance.exileforge.core.model.campaign.MapRule
 import com.sperance.exileforge.presentation.state.TAB_EXPEDITION
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.ItemIcon
@@ -35,6 +32,9 @@ import com.sperance.exileforge.ui.theme.*
 
 /** What the action row opened on top of the sheet, if anything. */
 private enum class ItemAction { AUCTION, SELL, WORN }
+
+/** The template a zone's map is named after: `MAP_<zone code>`; the card's map action walks it back. */
+private const val MAP_PREFIX = "MAP_"
 
 /**
  * One item of the stash: its card, and what can be done with it.
@@ -47,26 +47,26 @@ private enum class ItemAction { AUCTION, SELL, WORN }
  * is also off for an item whose requirements it misses, and the card says what it would change.
  */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun ItemSheet(s: ForgeState, vm: ForgeViewModel, instanceId: String, onDismiss: () -> Unit) {
-    val instance = s.play.hero?.inventory?.firstOrNull { it.id == instanceId }
+@Composable fun ItemSheet(s: ForgeState, vm: ForgeViewModel, itemId: String, onDismiss: () -> Unit) {
+    val instance = s.hero?.item(itemId)
+    val view = instance?.let { s.view(it) }
     // The item can leave while its sheet is open — sold, listed, rolled into a copy — and then the
-    // sheet has nothing left to be about.
-    if (instance == null) { LaunchedEffect(instanceId) { onDismiss() }; return }
-    val document = inventoryDocument(instance, s.world.inventoryBases[instance.equipmentId])
-    val name = document.text("name")
+    // sheet has nothing left to be about; nor is there a card for a copy the content cannot explain.
+    if (instance == null || view == null) { LaunchedEffect(itemId) { onDismiss() }; return }
+    val name = view.title
     val can = !s.busy && s.account.signedIn && (s.ownsCharacter || s.isAdmin)
     val loose = !instance.equipped && !instance.socketed
     val price = s.sellPrice(instance)
-    val reachable = s.unmetFor(instance.equipmentId).isEmpty()
-    var open by remember(instanceId) { mutableStateOf<ItemAction?>(null) }
+    val reachable = s.unmetFor(instance.template).isEmpty()
+    var open by remember(itemId) { mutableStateOf<ItemAction?>(null) }
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.92f)) {
             LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                item { ItemCard(document, enabled = false, detailed = true, definitions = s.world.definitions, price = price) }
+                item { ItemCard(view, enabled = false, detailed = true, price = price) }
                 item { WearPreview(s, instance) }
-                // Worn but not counting: the server's reasons, as the slot cell prints them.
-                s.play.hero?.inactive?.get(instance.id)?.let { reasons -> item {
+                // Worn but not counting: the rules' reasons, as the slot cell prints them.
+                s.hero?.inactive?.get(instance.id)?.let { reasons -> item {
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(ui("hero.inactive"), color = LifeRed, style = MaterialTheme.typography.labelLarge)
                         reasons.forEach { Text(requirementReason(it, s.lang), color = LifeRed, style = MaterialTheme.typography.bodySmall) }
@@ -78,9 +78,9 @@ private enum class ItemAction { AUCTION, SELL, WORN }
                 when {
                     instance.socketed -> Action(ForgeGlyphs.Gem, ui("hero.unequip"), can) { onDismiss(); vm.unsocketJewel(instance.id) }
                     instance.equipped -> Action(ForgeGlyphs.Helm, ui("hero.unequip"), can) { onDismiss(); vm.unequip(instance.id) }
-                    // A map is not worn (2.37.0): it goes into its location's launch window, picked.
-                    document.text("slot") == MapRule.SLOT -> Action(ForgeGlyphs.Portal, ui("hero.action_map"), can, GoldBright) {
-                        onDismiss(); vm.tab(TAB_EXPEDITION); vm.selectZone(document.text("code").removePrefix("MAP_")); vm.pickMap(instance.id)
+                    // A map is not worn (2.37.0): it goes into its zone's launch window, picked.
+                    view.slot == Slot.MAP -> Action(ForgeGlyphs.Portal, ui("hero.action_map"), can, GoldBright) {
+                        onDismiss(); vm.tab(TAB_EXPEDITION); vm.selectZone(view.code.removePrefix(MAP_PREFIX)); vm.pickMap(instance.id)
                     }
                     else -> Action(ForgeGlyphs.Helm, ui("hero.equip"), can && reachable, GoldBright) { onDismiss(); vm.equip(instance.id, null) }
                 }
@@ -89,7 +89,6 @@ private enum class ItemAction { AUCTION, SELL, WORN }
                 // A worn item cannot be listed or sold (AU_010, CH_014): the tap says so instead of doing nothing.
                 Action(ForgeGlyphs.Scales, ui("hero.action_auction"), can) { open = if (loose) ItemAction.AUCTION else ItemAction.WORN }
                 Action(ForgeGlyphs.Coins, ui("hero.action_sell"), can, LifeRed) { open = if (loose) ItemAction.SELL else ItemAction.WORN }
-                if (s.adminTools) Action(Icons.Outlined.Edit, ui("hero.action_base"), !s.busy, Rune) { onDismiss(); vm.editInventoryBase(instance.equipmentId) }
             }
         }
     }
@@ -101,7 +100,7 @@ private enum class ItemAction { AUCTION, SELL, WORN }
         // worked out here by the merchant's own rule.
         ItemAction.SELL -> ConfirmSheet(
             title = ui("hero.sell_q"), subtitle = name, danger = true,
-            icon = { ItemIcon(document, rarityColor(document.text("rarity")), Modifier.size(44.dp)) },
+            icon = { ItemIcon(view, rarityColor(view.rarity.name), Modifier.size(44.dp)) },
             ledger = listOf(
                 LedgerLine(ui("confirm.give"), name, Tone.SPEND),
                 LedgerLine(ui("confirm.gain"), price?.let { ui("merchant.gold_amount", it) } ?: ui("confirm.gold_by_server"), Tone.GAIN),

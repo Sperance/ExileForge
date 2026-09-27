@@ -3,209 +3,150 @@ package com.sperance.exileforge.core.network
 import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.contract.requireId
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.model.Catalog
-import com.sperance.exileforge.core.model.modifier.BenchRecipe
+import com.sperance.exileforge.core.model.command.CreateHeroCommand
+import com.sperance.exileforge.core.model.hero.CurrencyApplyResponse
+import com.sperance.exileforge.core.model.hero.HeroSummary
+import com.sperance.exileforge.core.model.hero.SellOutcome
 import com.sperance.exileforge.core.model.sync.HeroParts
 import com.sperance.exileforge.core.model.sync.HeroSnapshot
-import com.sperance.exileforge.core.model.command.*
-import com.sperance.exileforge.core.model.hero.*
-import com.sperance.exileforge.core.model.skills.HeroSkills
-import kotlinx.serialization.json.*
+import com.sperance.exileforge.rules.content.BenchRecipe
+import com.sperance.exileforge.rules.content.HeroSkills
+import com.sperance.exileforge.rules.content.Rarity
+import com.sperance.exileforge.rules.content.Slot
+import com.sperance.exileforge.rules.roll.ItemInstance
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonPrimitive
 
-/** Route root of the class skills (server 0.69.0). */
-private const val SKILLS = "api/v1/character/skills"
+private const val HERO = "api/v1/hero"
 
 /**
- * One character: what it is, what it carries and wears, and every command that changes that.
- *
- * Each command names the character and the thing; every rule — requirements, sockets, prices,
- * what an orb does — is the server's, and a refusal comes back as it was said.
+ * One hero: what they are, what they carry and wear, and every command that changes that. Each command
+ * names the hero and the thing; every rule is the server's, and a refusal comes back as it was said.
  */
-class HeroClient internal constructor(private val http: Transport, private val catalog: CatalogClient) {
-    /**
-     * The hero in one read (server 0.48.0): only the parts whose fingerprints [parts] does not hold,
-     * or `null` when the server answers 304 because nothing moved since [parts] was taken.
-     */
-    suspend fun view(characterId: String, parts: HeroParts): HeroSnapshot? {
+class HeroClient internal constructor(private val http: Transport) {
+    /** The hero in one read: only the parts whose fingerprints [parts] does not hold, or `null` on a 304. */
+    suspend fun view(heroId: String, parts: HeroParts): HeroSnapshot? {
         val headers = buildMap {
             put(HeroParts.HEADER, parts.header())
             if (parts.complete && parts.version.isNotBlank()) put("If-None-Match", "\"${parts.version}\"")
         }
-        val answer = http.request("GET", "api/v1/character/view", heroQuery(characterId), authenticated = true, headers = headers)
+        val answer = http.request("GET", "$HERO/view", heroQuery(heroId), authenticated = true, headers = headers)
         return if (answer is JsonNull) null else WireJson.decodeFromJsonElement(HeroSnapshot.serializer(), answer)
     }
 
-    suspend fun character(id: String): CharacterSummary {
-        val document = catalog.get(Catalog.CHARACTERS, id) ?: error(ui("api.no_character"))
-        return WireJson.decodeFromJsonElement(document)
-    }
-
-    /**
-     * The characters one account owns — what the character menu offers.
-     *
-     * The server narrows this itself rather than the client reading the whole collection: a player
-     * has at most a handful, and nobody else's characters need to leave the server to show them.
-     */
-    suspend fun charactersOf(userId: String): List<CharacterSummary> {
+    /** The heroes one account owns — what the hero menu offers. */
+    suspend fun heroesOf(userId: String): List<HeroSummary> {
         requireId(userId)
-        return http.request("GET", "api/v1/character/byUser", mapOf("userId" to userId), authenticated = true)
-            .jsonArray.map { WireJson.decodeFromJsonElement(it) }
+        return http.request("GET", "$HERO/byUser", mapOf("userId" to userId), authenticated = true).jsonArray.map { WireJson.decodeFromJsonElement(it) }
     }
 
-    suspend fun inventory(characterId: String): List<EquipmentInstance> =
-        instances("api/v1/character/inventory/equipments", characterId)
-    /**
-     * The character sheet.
-     *
-     * Since 0.10.0 this is an object, not a flat map: alongside the numbers the server reports the
-     * equipped items it counted and the ones it refused, with the requirement each of them misses.
-     * An item whose requirements stopped being met keeps its slot and stops working — that verdict
-     * is the server's and arrives here already made.
-     */
-    suspend fun stats(characterId: String): CharacterSheet =
-        http.get("api/v1/character/inventory/stats", heroQuery(characterId))
+    suspend fun create(userId: String, name: String, description: String, heroClass: String): HeroSummary {
+        requireId(userId)
+        require(name.isNotBlank()) { ui("contract.enter_name") }
+        require(heroClass.isNotBlank()) { ui("api.choose_class") }
+        val body = JsonArray(listOf(WireJson.encodeToJsonElement(CreateHeroCommand.serializer(), CreateHeroCommand(userId, name.trim(), description.trim(), heroClass))))
+        return http.request("POST", HERO, body = body, authenticated = true).jsonArray.single().let { WireJson.decodeFromJsonElement(it) }
+    }
 
-    /** Grants experience; the server decides whether that crosses a level threshold. */
-    suspend fun addExperience(characterId: String, amount: Double): CharacterSummary {
+    suspend fun delete(heroId: String) {
+        requireId(heroId)
+        http.request("DELETE", HERO, mapOf("id" to heroId), authenticated = true)
+    }
+
+    // ---- an administrator grants out of nothing ----
+
+    suspend fun grantExperience(heroId: String, amount: Double): Int {
         require(amount > 0 && amount.isFinite()) { ui("api.xp_positive") }
-        return http.post("api/v1/character/inventory/experience", heroQuery(characterId, "amount" to amount.toString()))
-    }
-    suspend fun bag(characterId: String): List<CharacterItem> =
-        http.get<List<CharacterItem>>("api/v1/character/inventory/items", heroQuery(characterId))
-    /** Adds or removes stacking items; a negative amount removes them. Answers with a status word. */
-    suspend fun adjustItems(characterId: String, items: List<ItemStack>): String {
-        require(items.isNotEmpty()) { ui("api.empty_items") }
-        val body = JsonArray(items.map { buildJsonObject { put("itemId", it.itemId); put("amount", it.amount) } })
-        return http.request("POST", "api/v1/character/inventory/addItem", heroQuery(characterId), body, authenticated = true).jsonPrimitive.content
+        return http.request("POST", "$HERO/grant/experience", heroQuery(heroId, "amount" to amount.toString()), authenticated = true).jsonPrimitive.content.toInt()
     }
 
-    /**
-     * Creates one instance of a template in the character's inventory.
-     *
-     * The rolls belong to the server: it picks prefixes and suffixes in the count the rarity allows
-     * and a tier inside each. The client only names the template.
-     */
-    suspend fun grant(characterId: String, equipmentId: String): EquipmentInstance {
-        requireId(equipmentId)
-        return http.post("api/v1/character/inventory/itemToInventory", heroQuery(characterId, "equipmentId" to equipmentId))
+    suspend fun grantItem(heroId: String, code: String, amount: Long): Map<String, Long> {
+        require(code.isNotBlank() && amount > 0) { ui("api.amount_positive") }
+        return http.post("$HERO/grant/item", heroQuery(heroId, "code" to code, "amount" to amount.toString()))
     }
 
-    /**
-     * Puts an item on. Everything it displaces — the other hand, the ring in its place — is taken
-     * off by the server, whose rules those are. [slot] names which of the two rings (`RING`,
-     * `RING_2`) to take; without it the server takes a free one.
-     */
-    suspend fun equip(characterId: String, inventoryId: String, slot: String? = null): EquipmentInstance {
-        requireId(inventoryId)
-        val query = heroQuery(characterId, "inventoryId" to inventoryId, "slot" to slot)
-        return http.post("api/v1/characterequipment/equip", query)
+    suspend fun grantEquipment(heroId: String, template: String, rarity: Rarity? = null): ItemInstance {
+        require(template.isNotBlank()) { ui("api.choose_template") }
+        return http.post("$HERO/grant/equipment", heroQuery(heroId, "template" to template, "rarity" to rarity?.name))
     }
-    suspend fun unequip(characterId: String, inventoryId: String): EquipmentInstance = wear("unequip", characterId, inventoryId)
-    /**
-     * Puts a jewel into a socket on the passive tree, and takes it back out.
-     *
-     * A jewel is an ordinary equipment instance, so everything else about it — rolls, rarity, orbs,
-     * the auction — already worked. What differs is where it is worn: the tree has many sockets and
-     * the node's code says which one, so this is not `equip` with a different slot.
-     *
-     * Every rule is the server's: that the node exists, that it is a socket, that the character has
-     * taken it, and that it is free. The client names the pair and prints the refusal.
-     */
-    suspend fun socket(characterId: String, inventoryId: String, nodeCode: String): EquipmentInstance {
-        requireId(inventoryId)
+
+    // ---- wearing ----
+
+    /** Puts an item on; [slot] names which ring or flask place to take, the server picks a free one without it. */
+    suspend fun equip(heroId: String, itemId: String, slot: Slot? = null): ItemInstance {
+        requireId(itemId)
+        return http.post("$HERO/equip", heroQuery(heroId, "itemId" to itemId, "slot" to slot?.name))
+    }
+    suspend fun unequip(heroId: String, itemId: String): ItemInstance = item("unequip", heroId, itemId)
+    suspend fun socket(heroId: String, itemId: String, nodeCode: String): ItemInstance {
+        requireId(itemId)
         require(nodeCode.isNotBlank()) { ui("api.choose_socket") }
-        return http.post("api/v1/characterequipment/socket", heroQuery(characterId, "inventoryId" to inventoryId, "nodeCode" to nodeCode))
+        return http.post("$HERO/socket", heroQuery(heroId, "itemId" to itemId, "nodeCode" to nodeCode))
+    }
+    suspend fun unsocket(heroId: String, itemId: String): ItemInstance = item("unsocket", heroId, itemId)
+
+    /** Sells an item to a merchant for gold; the copy is gone when this returns. */
+    suspend fun sell(heroId: String, itemId: String): SellOutcome {
+        requireId(itemId)
+        return http.post("$HERO/sell", heroQuery(heroId, "itemId" to itemId))
     }
 
-    /**
-     * Sells an item to a merchant for gold.
-     *
-     * The price is the server's alone — template, rarity and how many affixes rolled — and the
-     * instance is gone when this returns. A worn or socketed item is refused, as the auction
-     * refuses one.
-     */
-    suspend fun sellForGold(characterId: String, inventoryId: String): SellOutcome {
-        requireId(inventoryId)
-        return http.post("api/v1/characterequipment/sell", heroQuery(characterId, "inventoryId" to inventoryId))
+    // ---- orbs, essences, the bench ----
+
+    /** Spends one orb of the bag on one item; [orb] is the orb's item code. */
+    suspend fun applyOrb(heroId: String, itemId: String, orb: String): CurrencyApplyResponse {
+        requireId(itemId)
+        require(orb.isNotBlank()) { ui("api.choose_orb") }
+        return http.post("$HERO/orb", heroQuery(heroId, "itemId" to itemId, "orb" to orb))
     }
 
-    suspend fun unsocket(characterId: String, inventoryId: String): EquipmentInstance =
-        wear("unsocket", characterId, inventoryId)
-
-    /**
-     * Spends one orb of the character's on one item of their inventory.
-     *
-     * What the orb does is entirely the server's: it checks the rarity the orb demands, rolls new
-     * affixes, tiers and values, and answers with the item as it now stands plus a sentence saying
-     * what happened. The orb is debited in the same transaction, so a refusal costs nothing.
-     */
-    suspend fun applyOrb(characterId: String, inventoryId: String, orbItemId: String): OrbOutcome {
-        requireId(inventoryId); requireId(orbItemId)
-        return http.post("api/v1/characterequipment/applyOrb", heroQuery(characterId, "inventoryId" to inventoryId, "orbItemId" to orbItemId))
+    suspend fun applyEssence(heroId: String, itemId: String, essence: String): CurrencyApplyResponse {
+        requireId(itemId)
+        require(essence.isNotBlank()) { ui("api.choose_orb") }
+        return http.post("$HERO/essence", heroQuery(heroId, "itemId" to itemId, "essence" to essence))
     }
 
-    /**
-     * Spends one essence of the character's on one item (server 0.69.0): a common item becomes rare with the
-     * essence's line guaranteed, a rare one is rolled anew around it from its step up. The answer is an orb's.
-     */
-    suspend fun applyEssence(characterId: String, inventoryId: String, essenceItemId: String): OrbOutcome {
-        requireId(inventoryId); requireId(essenceItemId)
-        return http.post("api/v1/characterequipment/applyEssence", heroQuery(characterId, "inventoryId" to inventoryId, "essenceItemId" to essenceItemId))
-    }
+    /** The bench lines the hero has found on maps; the rest stay hidden. */
+    suspend fun bench(heroId: String): List<BenchRecipe> = http.get("$HERO/bench", heroQuery(heroId))
 
-    /** Reads a skill book of the class (server 0.69.0): the first teaches the skill, each next one a level, by the book's requirements. */
-    suspend fun learnSkill(characterId: String, skill: String): HeroSkills =
-        http.post("$SKILLS/learn", heroQuery(characterId, "skill" to skill))
-
-    /**
-     * Puts a learned skill into slot [index] of [kind] — `ACTIVE` or `PASSIVE` — or empties it without [skill];
-     * [condition] is when an active slot fires by itself. The slots open with the hero's level (server 0.69.0).
-     */
-    suspend fun slotSkill(characterId: String, kind: String, index: Int, skill: String?, condition: String? = null): HeroSkills =
-        http.post("$SKILLS/slot", heroQuery(characterId, "kind" to kind, "index" to index.toString(), "skill" to skill, "condition" to condition))
-
-    /** When the flask of belt place [index] is drunk by itself (server 0.69.0); none gives it back to its kind's own. */
-    suspend fun flaskCondition(characterId: String, index: Int, condition: String?): HeroSkills =
-        http.post("$SKILLS/flask", heroQuery(characterId, "index" to index.toString(), "condition" to condition))
-
-    /** Trades [books] — skill codes, one book each — and the server's gold for one book of the class's [skill] (server 0.69.0). */
-    suspend fun exchangeBooks(characterId: String, books: List<String>, skill: String): HeroSkills {
-        require(books.isNotEmpty() && skill.isNotBlank()) { ui("skills.choose_books") }
-        return http.post("$SKILLS/exchange", heroQuery(characterId, "books" to books.joinToString(","), "skill" to skill))
-    }
-
-    /** The crafting bench lines the character has found on maps (since 0.46.0); the rest stay hidden. */
-    suspend fun bench(characterId: String): List<BenchRecipe> =
-        http.get<List<BenchRecipe>>("api/v1/characterequipment/bench", heroQuery(characterId))
-
-    /**
-     * Places one bench modifier on one item, paid in orbs.
-     *
-     * The server checks everything — one crafted modifier per item, a free place of the right kind,
-     * no twin of the same group, the slot, the price — and debits the orbs in the same transaction,
-     * so a refusal costs nothing. The answer is shaped like an orb's: the item and a sentence.
-     */
-    suspend fun craft(characterId: String, inventoryId: String, recipe: String): OrbOutcome {
-        requireId(inventoryId)
+    suspend fun craft(heroId: String, itemId: String, recipe: String): CurrencyApplyResponse {
+        requireId(itemId)
         require(recipe.isNotBlank()) { ui("api.choose_recipe") }
-        return http.post("api/v1/characterequipment/craft", heroQuery(characterId, "inventoryId" to inventoryId, "recipe" to recipe))
+        return http.post("$HERO/craft", heroQuery(heroId, "itemId" to itemId, "recipe" to recipe))
     }
 
-    /** Takes the bench modifier back off, for the server's price (an Orb of Scouring). */
-    suspend fun uncraft(characterId: String, inventoryId: String): OrbOutcome {
-        requireId(inventoryId)
-        return http.post("api/v1/characterequipment/uncraft", heroQuery(characterId, "inventoryId" to inventoryId))
+    suspend fun uncraft(heroId: String, itemId: String): CurrencyApplyResponse {
+        requireId(itemId)
+        return http.post("$HERO/uncraft", heroQuery(heroId, "itemId" to itemId))
     }
 
-    suspend fun redeem(characterId: String, code: String): JsonElement {
+    // ---- the class skills ----
+
+    suspend fun learnSkill(heroId: String, skill: String): HeroSkills = http.post("$HERO/skills/learn", heroQuery(heroId, "skill" to skill))
+
+    /** Puts a learned skill into slot [index] of [kind] — `ACTIVE` or `PASSIVE` — or empties it without [skill]. */
+    suspend fun slotSkill(heroId: String, kind: String, index: Int, skill: String?, condition: String? = null): HeroSkills =
+        http.post("$HERO/skills/slot", heroQuery(heroId, "kind" to kind, "index" to index.toString(), "skill" to skill, "condition" to condition))
+
+    suspend fun flaskCondition(heroId: String, index: Int, condition: String?): HeroSkills =
+        http.post("$HERO/skills/flask", heroQuery(heroId, "index" to index.toString(), "condition" to condition))
+
+    suspend fun exchangeBooks(heroId: String, books: List<String>, skill: String): HeroSkills {
+        require(books.isNotEmpty() && skill.isNotBlank()) { ui("skills.choose_books") }
+        return http.post("$HERO/skills/exchange", heroQuery(heroId, "books" to books.joinToString(","), "skill" to skill))
+    }
+
+    /** Redeems a promo code for the hero; the reward lands in the snapshot that comes back with the answer. */
+    suspend fun redeem(heroId: String, code: String): String {
         require(code.isNotBlank()) { ui("api.enter_promo") }
-        return http.request("POST", "api/v1/redemptioncodes/useRedeptionCode", heroQuery(characterId, "redemptionCode" to code.trim()), authenticated = true)
+        return http.request("POST", "api/v1/redemptioncodes/redeem", heroQuery(heroId, "code" to code.trim()), authenticated = true).jsonPrimitive.content
     }
 
-    private suspend fun wear(operation: String, characterId: String, inventoryId: String): EquipmentInstance {
-        requireId(inventoryId)
-        return http.post("api/v1/characterequipment/$operation", heroQuery(characterId, "inventoryId" to inventoryId))
+    private suspend fun item(operation: String, heroId: String, itemId: String): ItemInstance {
+        requireId(itemId)
+        return http.post("$HERO/$operation", heroQuery(heroId, "itemId" to itemId))
     }
-    private suspend fun instances(path: String, characterId: String): List<EquipmentInstance> =
-        http.get<List<EquipmentInstance>>(path, heroQuery(characterId))
 }

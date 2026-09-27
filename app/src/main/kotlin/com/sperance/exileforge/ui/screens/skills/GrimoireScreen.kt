@@ -37,23 +37,24 @@ import com.sperance.exileforge.core.campaign.Flask
 import com.sperance.exileforge.core.campaign.FlaskKind
 import com.sperance.exileforge.core.campaign.Loadout
 import com.sperance.exileforge.core.campaign.draught
-import com.sperance.exileforge.core.character.Sheet
+import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.SkillText
-import com.sperance.exileforge.core.display.documentTitle
+import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.fineNumber
-import com.sperance.exileforge.core.display.inventoryDocument
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.model.hero.EquipmentInstance
-import com.sperance.exileforge.core.model.skills.HeroSkills
-import com.sperance.exileforge.core.model.skills.Scale
-import com.sperance.exileforge.core.model.skills.SkillDefinition
-import com.sperance.exileforge.core.model.skills.SkillKind
-import com.sperance.exileforge.core.model.skills.SkillType
-import com.sperance.exileforge.core.model.skills.SlotCondition
+import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.rules.content.ContentIndex
+import com.sperance.exileforge.rules.content.HeroSkills
+import com.sperance.exileforge.rules.content.Item
+import com.sperance.exileforge.rules.content.SkillDefinition
+import com.sperance.exileforge.rules.content.SkillKind
+import com.sperance.exileforge.rules.content.SkillRules
+import com.sperance.exileforge.rules.content.Slot
+import com.sperance.exileforge.rules.content.SlotCondition
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.expedition.Caption
@@ -78,50 +79,51 @@ private sealed interface Pick {
  * the hero's level; under them every skill of the class, its level, and what the next book of it asks.
  * A page opens its skill whole: what it does now and at the next level, the book to read, the slot to
  * put it in. The belt holds the three flasks worn, each with when it is drunk by itself. Every rule is
- * the server's; the page says beforehand what it will say.
+ * the rules module's (3.0.0), read off the content on screen; the page says beforehand what the server will say.
  */
 @Composable fun GrimoireScreen(s: ForgeState, vm: ForgeViewModel) {
-    var section by rememberSaveable(s.play.characterId) { mutableStateOf(GrimoireSection.SKILLS) }
-    var page by remember(s.play.characterId) { mutableStateOf<String?>(null) }
-    var pick by remember(s.play.characterId) { mutableStateOf<Pick?>(null) }
-    var exchanging by remember(s.play.characterId) { mutableStateOf(false) }
-    var belt by rememberSaveable(s.play.characterId) { mutableIntStateOf(0) }
-    LaunchedEffect(s.play.characterId, s.account.sessionEpoch) { vm.ensureHero() }
-    val hero = s.play.hero
-    val book = s.world.skills
-    val classCode = s.heroClass?.code.orEmpty()
-    val skills = hero?.character?.skills ?: HeroSkills()
-    val level = hero?.character?.level ?: 1
-    val body = remember(hero?.sheet) { hero?.let { Combatant(it.sheet.stats, it.sheet.level) } }
-    val pages = remember(book, classCode) { book.ofClass(classCode) }
+    var section by rememberSaveable(s.play.heroId) { mutableStateOf(GrimoireSection.SKILLS) }
+    var page by remember(s.play.heroId) { mutableStateOf<String?>(null) }
+    var pick by remember(s.play.heroId) { mutableStateOf<Pick?>(null) }
+    var exchanging by remember(s.play.heroId) { mutableStateOf(false) }
+    var belt by rememberSaveable(s.play.heroId) { mutableIntStateOf(0) }
+    LaunchedEffect(s.play.heroId, s.account.sessionEpoch) { vm.ensureHero() }
+    val hero = s.hero
+    val index = s.index
+    val book = index?.skills
+    val classCode = hero?.heroClass.orEmpty()
+    val skills = hero?.skills ?: HeroSkills()
+    val level = hero?.level ?: 1
+    val body = remember(hero?.sheet, index) { index?.let { i -> hero?.let { Combatant(it.stats, it.level, i.campaign.combat) } } }
+    val pages = remember(book, classCode) { book?.ofClass(classCode).orEmpty() }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             val mana = body?.maxMana ?: 0.0
-            val reserved = body?.let { Loadout.of(skills, book, classCode, emptyList()).reserved(it) } ?: 0.0
-            ScreenHeader(ui("skills.title"), listOfNotNull(s.heroClass?.title, ui("skills.level", level),
+            val reserved = if (body != null && book != null) Loadout.of(skills, book, classCode, emptyList()).reserved(body) else 0.0
+            ScreenHeader(ui("skills.title"), listOfNotNull(classCode.takeIf { it.isNotBlank() }?.let(::classTitle), ui("skills.level", level),
                 ui("skills.mana", number(mana)) + if (reserved > 0) " " + ui("skills.reserved", number(reserved)) else "").joinToString(" · "), ForgeGlyphs.Grimoire)
         }
         item { Tabs(section) { section = it } }
-        if (hero == null || body == null) item { InfoCard(ui("common.loading"), ui("skills.loading_hint")) }
+        if (hero == null || body == null || index == null) item { InfoCard(ui("common.loading"), ui("skills.loading_hint")) }
         else when (section) {
             GrimoireSection.SKILLS -> {
-                item { Slots(s, skills, level) { pick = it } }
-                item { Caption(ui("skills.book_of", s.heroClass?.title.orEmpty())) }
+                item { Slots(index, skills, level) { pick = it } }
+                item { Caption(ui("skills.book_of", classTitle(classCode))) }
                 // Only what the hero has learned (2.81.0): an unread book's skill appears once its book is read.
                 items(pages.filter { skills.level(it.code) > 0 }, key = { it.code }) { skill ->
-                    Page(s, skill, skills.level(skill.code), level, body.stats, slotOf(skills, skill.code)) { page = skill.code }
+                    Page(s, index, skill, skills.level(skill.code), level, slotOf(skills, skill.code)) { page = skill.code }
                 }
-                item { Books(s, pages) { exchanging = true } }
+                item { Books(s, index, pages) { exchanging = true } }
             }
             GrimoireSection.BELT -> {
                 item { MutedText(ui("skills.belt_hint")) }
-                item { Belt(s, skills, body, belt) { belt = it } }
-                item { BeltDetail(s, skills, body, belt) { pick = Pick.Belt(belt) } }
+                item { Belt(hero, index, skills, body, belt) { belt = it } }
+                item { BeltDetail(hero, index, skills, body, belt) { pick = Pick.Belt(belt) } }
             }
         }
     }
-    page?.let { code -> book.byCode[code] }?.let { skill ->
-        if (hero != null && body != null) SkillSheet(s, vm, skill, skills, level, body.stats, onSlot = { pick = it }) { page = null }
+    page?.let { code -> book?.byCode?.get(code) }?.let { skill ->
+        if (hero != null && body != null && index != null) SkillSheet(s, vm, index, skill, skills, level, body.stats, onSlot = { pick = it }) { page = null }
     }
     when (val chosen = pick) {
         is Pick.Slot -> SkillPicker(s, chosen, skills, pages, onDismiss = { pick = null }) { code -> pick = null; vm.slotSkill(chosen.kind.name, chosen.index, code) }
@@ -135,7 +137,7 @@ private sealed interface Pick {
         }
         null -> Unit
     }
-    if (exchanging && hero != null) Exchange(s, vm, pages, level) { exchanging = false }
+    if (exchanging && hero != null && index != null) Exchange(s, vm, index, hero, pages) { exchanging = false }
 }
 
 /** The slot a skill stands in, as a word — «Слот 2 · Как готово» — or null. */
@@ -164,27 +166,27 @@ private fun slotOf(skills: HeroSkills, code: String): String? {
 }
 
 /** The five slots: three active over two passive, each open from its level, a tap to fill, change or empty it. */
-@Composable private fun Slots(s: ForgeState, skills: HeroSkills, level: Int, onPick: (Pick) -> Unit) {
-    val rules = s.world.skills.rules
+@Composable private fun Slots(index: ContentIndex, skills: HeroSkills, level: Int, onPick: (Pick) -> Unit) {
+    val rules = index.skills.rules
     ForgePanel {
         val actives = rules.activeSlots.indices.map { skills.active.getOrNull(it) }
-        Engraved(ui("skills.actives", actives.count { it != null }, s.world.skills.activeSlots(level)))
+        Engraved(ui("skills.actives", actives.count { it != null }, index.skillRules.activeSlots(level)))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            rules.activeSlots.forEachIndexed { index, opens ->
-                val slot = actives[index]
-                val skill = slot?.let { s.world.skills.byCode[it.skill] }
+            rules.activeSlots.forEachIndexed { at, opens ->
+                val slot = actives[at]
+                val skill = slot?.let { index.skills.byCode[it.skill] }
                 SlotTile(skill, skills.level(skill?.code.orEmpty()), slot?.condition?.let(::conditionTitle), opens, level, Modifier.weight(1f),
-                    onTap = { onPick(if (slot == null) Pick.Slot(SkillKind.ACTIVE, index) else Pick.Condition(index)) },
-                    onSwap = { onPick(Pick.Slot(SkillKind.ACTIVE, index)) })
+                    onTap = { onPick(if (slot == null) Pick.Slot(SkillKind.ACTIVE, at) else Pick.Condition(at)) },
+                    onSwap = { onPick(Pick.Slot(SkillKind.ACTIVE, at)) })
             }
         }
         val passives = rules.passiveSlots.indices.map { skills.passive.getOrNull(it) }
-        Engraved(ui("skills.passives", passives.count { it != null }, s.world.skills.passiveSlots(level)))
+        Engraved(ui("skills.passives", passives.count { it != null }, index.skillRules.passiveSlots(level)))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            rules.passiveSlots.forEachIndexed { index, opens ->
-                val skill = passives[index]?.let { s.world.skills.byCode[it] }
+            rules.passiveSlots.forEachIndexed { at, opens ->
+                val skill = passives[at]?.let { index.skills.byCode[it] }
                 SlotTile(skill, skills.level(skill?.code.orEmpty()), skill?.takeIf { it.reserve > 0 }?.let { ui("skills.reserve", number(it.reserve)) },
-                    opens, level, Modifier.weight(1f), onTap = { onPick(Pick.Slot(SkillKind.PASSIVE, index)) })
+                    opens, level, Modifier.weight(1f), onTap = { onPick(Pick.Slot(SkillKind.PASSIVE, at)) })
             }
         }
     }
@@ -229,7 +231,7 @@ private fun slotOf(skills: HeroSkills, code: String): String? {
  * A page of the class's book: what the skill is, its level, where it stands, and what comes next —
  * the requirements of the next book, a book ready to be read, or the level it opens at.
  */
-@Composable private fun Page(s: ForgeState, skill: SkillDefinition, learned: Int, heroLevel: Int, stats: Map<String, Double>, slot: String?, onOpen: () -> Unit) {
+@Composable private fun Page(s: ForgeState, index: ContentIndex, skill: SkillDefinition, learned: Int, heroLevel: Int, slot: String?, onOpen: () -> Unit) {
     val books = bookCount(s, skill.code)
     val shape = RoundedCornerShape(8.dp)
     Row(Modifier.fillMaxWidth().clip(shape).background(Panel, shape).border(1.dp, if (slot != null) Gold.copy(alpha = .6f) else PanelRaised, shape)
@@ -239,7 +241,7 @@ private fun slotOf(skills: HeroSkills, code: String): String? {
             Text(skillKindLine(skill), color = Muted, style = MaterialTheme.typography.labelSmall)
             Text(SkillText.title(skill.code), color = if (learned > 0) GoldBright else Parchment, style = MaterialTheme.typography.titleSmall)
             slot?.let { Text(it, color = Rune, style = MaterialTheme.typography.labelSmall) }
-            Text(nextLine(s, skill, learned, heroLevel, stats, books), color = if (books > 0 && learned < Scale.MAX_LEVEL) Vital else Muted,
+            Text(nextLine(index, skill, learned, heroLevel, books), color = if (books > 0 && learned < SkillRules.MAX_LEVEL) Vital else Muted,
                 style = MaterialTheme.typography.labelSmall)
         }
         Text(if (learned > 0) ui("skills.level_short", learned) else "—", color = if (learned > 0) Gold else Muted, style = MaterialTheme.typography.titleMedium)
@@ -247,28 +249,30 @@ private fun slotOf(skills: HeroSkills, code: String): String? {
 }
 
 /** What stands before the next level of a skill: the last one, a book to read, what its book asks, or the level it opens at. */
-private fun nextLine(s: ForgeState, skill: SkillDefinition, learned: Int, heroLevel: Int, stats: Map<String, Double>, books: Long): String = when {
-    learned >= Scale.MAX_LEVEL -> ui("skills.max_level")
+private fun nextLine(index: ContentIndex, skill: SkillDefinition, learned: Int, heroLevel: Int, books: Long): String = when {
+    learned >= SkillRules.MAX_LEVEL -> ui("skills.max_level")
     books > 0 -> ui("skills.book_ready", books, learned + 1)
     learned == 0 && heroLevel < skill.unlock -> ui("skills.no_book_opens", skill.unlock)
     learned == 0 -> ui("skills.no_book")
-    else -> ui("skills.next_book", needLine(s, skill, learned + 1))
+    else -> ui("skills.next_book", needLine(index, skill, learned + 1))
 }
 
 /** A level's requirements as the page prints them: the hero's level and each attribute. */
-private fun needLine(s: ForgeState, skill: SkillDefinition, level: Int): String {
-    val need = s.world.skills.need(skill, level)
+private fun needLine(index: ContentIndex, skill: SkillDefinition, level: Int): String {
+    val need = index.skillRules.need(skill, level)
     return (listOf(ui("skills.need_level", need.heroLevel)) + need.attributes.map { (stat, amount) -> "${statTitle(stat).lowercase()} $amount" }).joinToString(" · ")
 }
 
-/** How many books of [code] lie in the bag. */
-private fun bookCount(s: ForgeState, code: String): Long =
-    s.world.books.firstOrNull { it.code == SkillDefinition.BOOK_PREFIX + code }?.let { s.bagAmount(it.id) } ?: 0L
+/** How many books of [code] lie in the bag: the bag is keyed by the book's item code. */
+private fun bookCount(s: ForgeState, code: String): Long = s.bagAmount(SkillRules.book(code)) ?: 0L
+
+/** Every book the content knows, of every class: what the bag is counted by. */
+private fun books(index: ContentIndex): List<Item> = index.itemsByCategory[Item.BOOK].orEmpty()
 
 /** The books in the bag, of every class, and the trade of three for one of the class's own. */
-@Composable private fun Books(s: ForgeState, pages: List<SkillDefinition>, onExchange: () -> Unit) {
-    val owned = s.world.books.sumOf { s.bagAmount(it.id) ?: 0L }
-    val rule = s.world.skills.rules.exchange
+@Composable private fun Books(s: ForgeState, index: ContentIndex, pages: List<SkillDefinition>, onExchange: () -> Unit) {
+    val owned = books(index).sumOf { s.bagAmount(it.code) ?: 0L }
+    val rule = index.skills.rules.exchange
     ForgePanel {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Icon(ForgeGlyphs.Tome, null, tint = Gold, modifier = Modifier.size(22.dp))
@@ -286,13 +290,12 @@ private fun bookCount(s: ForgeState, code: String): Long =
  * next book asks and whether it is in the bag, and the slots it may go in.
  */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable private fun SkillSheet(s: ForgeState, vm: ForgeViewModel, skill: SkillDefinition, skills: HeroSkills, heroLevel: Int, stats: Map<String, Double>,
-                                   onSlot: (Pick) -> Unit, onDismiss: () -> Unit) {
+@Composable private fun SkillSheet(s: ForgeState, vm: ForgeViewModel, index: ContentIndex, skill: SkillDefinition, skills: HeroSkills, heroLevel: Int,
+                                   stats: Map<String, Double>, onSlot: (Pick) -> Unit, onDismiss: () -> Unit) {
     val learned = skills.level(skill.code)
     val books = bookCount(s, skill.code)
-    val next = (learned + 1).coerceAtMost(Scale.MAX_LEVEL)
-    val need = s.world.skills.need(skill, next)
-    val unmet = need.unmet(heroLevel, stats)
+    val next = (learned + 1).coerceAtMost(SkillRules.MAX_LEVEL)
+    val unmet = index.skillRules.unmet(skill, next, heroLevel, stats)
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 18.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -307,21 +310,21 @@ private fun bookCount(s: ForgeState, code: String): Long =
             val shown = learned.coerceAtLeast(1)
             Price(skill, shown)
             SkillLines(SkillText.lines(skill, shown))
-            if (learned in 1 until Scale.MAX_LEVEL) {
+            if (learned in 1 until SkillRules.MAX_LEVEL) {
                 Caption(ui("skills.at_level", next))
                 Price(skill, next)
                 SkillLines(SkillText.lines(skill, next), ModBlue.copy(alpha = .75f))
             }
-            if (learned < Scale.MAX_LEVEL) {
-                Text(ui("skills.requires", next, needLine(s, skill, next)), color = if (unmet.isEmpty()) Parchment else LifeRed, style = MaterialTheme.typography.bodySmall)
+            if (learned < SkillRules.MAX_LEVEL) {
+                Text(ui("skills.requires", next, needLine(index, skill, next)), color = if (unmet.isEmpty()) Parchment else LifeRed, style = MaterialTheme.typography.bodySmall)
                 if (books > 0) ForgeButton(enabled = unmet.isEmpty() && !s.busy, onClick = { onDismiss(); vm.learnSkill(skill.code) }, modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = Blood, contentColor = GoldBright)) {
                     Text(ui(if (learned == 0) "skills.learn" else "skills.read", books))
                 }
                 else MutedText(ui(if (heroLevel < skill.unlock && learned == 0) "skills.no_book_opens" else "skills.no_book", skill.unlock))
             }
-            if (learned > 0) SlotActions(s, skill, skills, heroLevel, onSlot, onDismiss) { kind, index ->
-                onDismiss(); vm.slotSkill(kind.name, index, null)
+            if (learned > 0) SlotActions(s, index, skill, skills, heroLevel, onSlot, onDismiss) { kind, at ->
+                onDismiss(); vm.slotSkill(kind.name, at, null)
             }
         }
     }
@@ -349,18 +352,18 @@ private fun bookCount(s: ForgeState, code: String): Long =
 }
 
 /** Where a learned skill may go: each open slot of its kind, and out of the one it stands in. */
-@Composable private fun SlotActions(s: ForgeState, skill: SkillDefinition, skills: HeroSkills, heroLevel: Int, onSlot: (Pick) -> Unit, onDismiss: () -> Unit,
-                                    onEmpty: (SkillKind, Int) -> Unit) {
-    val open = if (skill.kind == SkillKind.ACTIVE) s.world.skills.activeSlots(heroLevel) else s.world.skills.passiveSlots(heroLevel)
+@Composable private fun SlotActions(s: ForgeState, index: ContentIndex, skill: SkillDefinition, skills: HeroSkills, heroLevel: Int, onSlot: (Pick) -> Unit,
+                                    onDismiss: () -> Unit, onEmpty: (SkillKind, Int) -> Unit) {
+    val open = if (skill.kind == SkillKind.ACTIVE) index.skillRules.activeSlots(heroLevel) else index.skillRules.passiveSlots(heroLevel)
     val standing = if (skill.kind == SkillKind.ACTIVE) skills.active.indexOfFirst { it?.skill == skill.code } else skills.passive.indexOf(skill.code)
     Caption(ui(if (skill.kind == SkillKind.ACTIVE) "skills.slots_active" else "skills.slots_passive"))
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        (0 until open).forEach { index ->
-            val here = index == standing
+        (0 until open).forEach { at ->
+            val here = at == standing
             ForgeOutlinedButton(enabled = !s.busy, onClick = {
-                if (here) onEmpty(skill.kind, index) else { onDismiss(); onSlot(Pick.Slot(skill.kind, index)) }
+                if (here) onEmpty(skill.kind, at) else { onDismiss(); onSlot(Pick.Slot(skill.kind, at)) }
             }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 6.dp)) {
-                Text(if (here) ui("skills.take_out") else ui("skills.to_slot", index + 1), style = MaterialTheme.typography.labelMedium, maxLines = 1)
+                Text(if (here) ui("skills.take_out") else ui("skills.to_slot", at + 1), style = MaterialTheme.typography.labelMedium, maxLines = 1)
             }
         }
     }
@@ -413,15 +416,15 @@ private fun bookCount(s: ForgeState, code: String): Long =
 }
 
 /** The belt as three flasks side by side, each filled to its charges, the chosen one lit; an empty place is a dashed outline. */
-@Composable private fun Belt(s: ForgeState, skills: HeroSkills, body: Combatant, selected: Int, onSelect: (Int) -> Unit) {
-    val flasks = worn(s, skills)
+@Composable private fun Belt(hero: HeroView, index: ContentIndex, skills: HeroSkills, body: Combatant, selected: Int, onSelect: (Int) -> Unit) {
+    val flasks = worn(hero, index, skills)
     Row(Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Color(0xFF3A2A1A), Color(0xFF24190F))), RoundedCornerShape(10.dp))
         .border(1.dp, Bronze, RoundedCornerShape(10.dp)).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        flasks.forEachIndexed { index, pair ->
-            val flask = pair?.second
-            val on = index == selected
+        flasks.forEachIndexed { at, worn ->
+            val flask = worn?.flask
+            val on = at == selected
             Column(Modifier.weight(1f).clip(RoundedCornerShape(8.dp)).background(if (on) Gold.copy(alpha = .12f) else Color.Transparent)
-                .border(1.dp, if (on) GoldBright else Color.Transparent, RoundedCornerShape(8.dp)).clickable { onSelect(index) }.padding(6.dp),
+                .border(1.dp, if (on) GoldBright else Color.Transparent, RoundedCornerShape(8.dp)).clickable { onSelect(at) }.padding(6.dp),
                 horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 FlaskBottle(flask?.kind, 1f, flask != null, Modifier.size(34.dp, 56.dp))
                 Text(if (flask != null) "${flask.maxCharges.toInt()} · ${flask.perUse(body).toInt()}" else ui("skills.belt_empty"),
@@ -432,12 +435,13 @@ private fun bookCount(s: ForgeState, code: String): Long =
     }
 }
 
-/** The belt's three places: each worn flask with the fight's reading of it; null where a place is empty. */
-private fun worn(s: ForgeState, skills: HeroSkills): List<Pair<EquipmentInstance, Flask>?> {
-    val hero = s.play.hero ?: return List(3) { null }
-    val definitions = s.world.definitions.associateBy { it.code }
-    return Sheet.FLASK_SLOTS.mapIndexed { i, slot ->
-        hero.equipped[slot]?.let { item -> s.world.inventoryBases[item.equipmentId]?.let { item to Flask.of(item, it, definitions, skills.flasks.getOrNull(i)) } }
+/** A flask worn on the belt: the copy over the content on screen, and the fight's reading of it. */
+private data class WornFlask(val view: ItemView, val flask: Flask)
+
+/** The belt's three places: each worn flask with the fight's reading of it; null where a place is empty or its template is unknown. */
+private fun worn(hero: HeroView, index: ContentIndex, skills: HeroSkills): List<WornFlask?> = Slot.FLASKS.mapIndexed { i, slot ->
+    hero.equipped[slot]?.let { item ->
+        index.template(item.template)?.let { WornFlask(ItemView(item, it, index), Flask.of(item, it, index, skills.flasks.getOrNull(i))) }
     }
 }
 
@@ -464,15 +468,14 @@ private fun worn(s: ForgeState, skills: HeroSkills): List<Pair<EquipmentInstance
  * life or mana and how fast, how long it lasts, what it costs of its charges — when it is drunk by
  * itself, and its card.
  */
-@Composable private fun BeltDetail(s: ForgeState, skills: HeroSkills, body: Combatant, index: Int, onCondition: () -> Unit) {
-    val (item, flask) = worn(s, skills).getOrNull(index) ?: run {
-        InfoCard(ui("skills.belt_place", index + 1), ui("skills.belt_empty_hint"))
+@Composable private fun BeltDetail(hero: HeroView, index: ContentIndex, skills: HeroSkills, body: Combatant, at: Int, onCondition: () -> Unit) {
+    val (view, flask) = worn(hero, index, skills).getOrNull(at) ?: run {
+        InfoCard(ui("skills.belt_place", at + 1), ui("skills.belt_empty_hint"))
         return
     }
-    val document = inventoryDocument(item, s.world.inventoryBases[item.equipmentId])
     val draught = flask.draught(body, body.maxLife, body.maxMana)
     ForgePanel(accent = flaskTint(flask.kind)) {
-        Text(documentTitle(document), color = rarityColor(item.rarity), style = MaterialTheme.typography.titleMedium)
+        Text(view.title, color = rarityColor(view.rarity.name), style = MaterialTheme.typography.titleMedium)
         val gives = when (flask.kind) {
             FlaskKind.LIFE -> ui("skills.flask_life", number(draught.life + draught.lifeRate * draught.duration), fineNumber(draught.duration))
             FlaskKind.MANA -> ui("skills.flask_mana", number(draught.mana + draught.manaRate * draught.duration), fineNumber(draught.duration))
@@ -480,28 +483,28 @@ private fun worn(s: ForgeState, skills: HeroSkills): List<Pair<EquipmentInstance
         }
         Text(gives, color = Parchment, style = MaterialTheme.typography.bodyMedium)
         Text(ui("skills.flask_charges", number(flask.perUse(body)), number(flask.maxCharges)) +
-            (if (item.quality > 0) " · " + ui("skills.flask_quality", item.quality) else ""), color = Muted, style = MaterialTheme.typography.labelMedium)
-        if (draught.lines.isNotEmpty()) SkillLines(draught.lines.map { SkillText.statLine(it.stat, it.operation, it.value) })
+            (if (view.quality > 0) " · " + ui("skills.flask_quality", view.quality) else ""), color = Muted, style = MaterialTheme.typography.labelMedium)
+        if (draught.lines.isNotEmpty()) SkillLines(draught.lines.map { SkillText.statLine(it.stat, it.op, it.value) })
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(ui("skills.drunk_when"), color = Muted, style = MaterialTheme.typography.labelMedium)
             AssistChip(onClick = onCondition, label = { Text(conditionTitle(flask.condition)) })
         }
     }
-    ItemCard(document, enabled = false, detailed = true, definitions = s.world.definitions)
+    ItemCard(view, enabled = false, detailed = true)
 }
 
 /**
  * Three books for one (2.78.0): any three of the bag — a book counted as often as it lies there — and the
- * server's gold for a book of the class's own, opened by the hero's level.
+ * rules' gold for a book of the class's own, opened by the hero's level.
  */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable private fun Exchange(s: ForgeState, vm: ForgeViewModel, pages: List<SkillDefinition>, heroLevel: Int, onDismiss: () -> Unit) {
-    val rule = s.world.skills.rules.exchange
-    val owned = s.world.books.mapNotNull { book -> (s.bagAmount(book.id) ?: 0L).takeIf { it > 0 }?.let { book.code.removePrefix(SkillDefinition.BOOK_PREFIX) to it } }
+@Composable private fun Exchange(s: ForgeState, vm: ForgeViewModel, index: ContentIndex, hero: HeroView, pages: List<SkillDefinition>, onDismiss: () -> Unit) {
+    val rule = index.skills.rules.exchange
+    val owned = books(index).mapNotNull { book -> (s.bagAmount(book.code) ?: 0L).takeIf { it > 0 }?.let { book.code.removePrefix(SkillRules.BOOK_PREFIX) to it } }
     var chosen by remember { mutableStateOf(listOf<String>()) }
     var target by remember { mutableStateOf<String?>(null) }
-    val price = rule.goldPerLevel * heroLevel
-    val money = s.play.hero?.character?.money ?: 0L
+    val price = rule.goldPerLevel * hero.level
+    val money = hero.money
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -513,13 +516,13 @@ private fun worn(s: ForgeState, skills: HeroSkills): List<Pair<EquipmentInstance
                 Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).background(if (taken > 0) PanelRaised else Color.Transparent)
                     .clickable { chosen = if (taken < amount && chosen.size < rule.books) chosen + code else chosen - code }.padding(8.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    s.world.skills.byCode[code]?.let { SkillGlyph(it.icon, Modifier.size(22.dp), if (taken > 0) GoldBright else Muted) }
+                    index.skills.byCode[code]?.let { SkillGlyph(it.icon, Modifier.size(22.dp), if (taken > 0) GoldBright else Muted) }
                     Text(SkillText.title(code), color = if (taken > 0) GoldBright else Parchment, modifier = Modifier.weight(1f))
                     Text(if (taken > 0) "$taken / $amount" else "× $amount", color = Gold)
                 }
             }
             Caption(ui("skills.exchange_take"))
-            pages.filter { it.unlock <= heroLevel }.forEach { skill ->
+            pages.filter { it.unlock <= hero.level }.forEach { skill ->
                 val on = target == skill.code
                 Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).background(if (on) PanelRaised else Color.Transparent)
                     .clickable { target = skill.code }.padding(8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {

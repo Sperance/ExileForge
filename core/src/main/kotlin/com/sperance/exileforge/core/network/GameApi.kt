@@ -3,13 +3,21 @@ package com.sperance.exileforge.core.network
 import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.contract.requireId
 import com.sperance.exileforge.core.i18n.ui
-import kotlinx.coroutines.CancellationException
+import com.sperance.exileforge.core.model.command.ApiCapabilities
+import com.sperance.exileforge.core.model.command.DeviceCredentials
+import com.sperance.exileforge.core.model.command.LoginCredentials
+import com.sperance.exileforge.core.model.command.PasswordChange
+import com.sperance.exileforge.core.model.command.SignedIn
+import com.sperance.exileforge.core.model.command.UserProfile
 import com.sperance.exileforge.core.model.sync.HeroSnapshot
 import com.sperance.exileforge.core.model.sync.StaticManifest
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import com.sperance.exileforge.core.model.command.*
-import kotlinx.serialization.json.*
-import okhttp3.*
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.encodeToJsonElement
+import okhttp3.OkHttpClient
 
 /** "No account for this device yet" — the server's way of saying "register it". */
 private const val DEVICE_UNKNOWN = "US_015"
@@ -17,14 +25,10 @@ private const val DEVICE_UNKNOWN = "US_015"
 /**
  * The client of one ktor-bestgame server: the session here, every other route in a feature client.
  *
- * Since server 0.21.0 a sign-in answers the account *and* a token, and every other request carries
- * that token as `Authorization: Bearer`. The token lives in [Transport] and is the session;
- * [account] is who it belongs to, and [logout] drops both. The token is a secret: every exchange
- * that carries one in its body is journaled as hidden.
- *
- * The routes are grouped by what they are about — [catalog], [world], [files], [hero], [tree],
- * [auction], [promo] — so a feature reads as `api.auction.buy(…)` rather than one flat list of
- * seventy calls.
+ * A sign-in answers the account *and* a token, and every other request carries that token as
+ * `Authorization: Bearer`. The token lives in [Transport] and is the session; [account] is who it
+ * belongs to, and [logout] drops both. The routes are grouped by what they are about — [files],
+ * [hero], [campaign], [tree], [atlas], [auction], [merchant], [crafts], [promo].
  */
 class GameApi(
     server: String,
@@ -35,10 +39,8 @@ class GameApi(
     private val http = Transport(server, journal, client) { account = null; onUnauthorized() }
     private var account: UserProfile? = null
 
-    val catalog = CatalogClient(http)
-    val world = WorldClient(http)
     val files = StaticClient(http)
-    val hero = HeroClient(http, catalog)
+    val hero = HeroClient(http)
     val tree = TreeClient(http)
     val atlas = AtlasClient(http)
     val auction = AuctionClient(http)
@@ -53,14 +55,8 @@ class GameApi(
         require(login.isNotBlank() && password.isNotEmpty()) { ui("api.credentials") }
         return signedIn(http.request("POST", "api/v1/user/login", body = WireJson.encodeToJsonElement(LoginCredentials(login, password)), sensitive = true))
     }
-    /**
-     * Sign in with the device's own identifier, and register on the first try.
-     *
-     * The server keeps one account per device and answers `US_015` when it has never seen this
-     * one, which is the whole registration handshake: a miss becomes a second `POST` that creates
-     * the account and answers with it. The identifier is not a secret, but the token that comes
-     * back is, so the exchange is journaled as hidden all the same.
-     */
+
+    /** Sign in with the device's own identifier, and register on the first try: `US_015` is the whole registration handshake. */
     suspend fun loginByDevice(deviceId: String): UserProfile {
         logout()
         require(deviceId.isNotBlank()) { ui("api.no_device") }
@@ -80,11 +76,7 @@ class GameApi(
         return session.user
     }
 
-    /**
-     * Comes back to a session kept from an earlier launch. The server extends a token each time it
-     * is used, so a player who opens the game once a month never signs in again; a token it no
-     * longer knows answers 401, which [onUnauthorized] turns into a fresh sign-in.
-     */
+    /** Comes back to a session kept from an earlier launch; a token the server no longer knows answers 401. */
     suspend fun resume(saved: String): UserProfile {
         logout()
         require(saved.isNotBlank()) { ui("api.no_token") }
@@ -93,53 +85,40 @@ class GameApi(
             catch (e: Exception) { logout(); throw e }
     }
 
-    /** Drops the session here. The server's half is [revoke]; an unrevoked token expires on its own. */
     fun logout() { account = null; http.token = null }
     fun currentUser(): UserProfile? = account
-    /** The token to keep between launches, or null when nobody is signed in. */
     fun sessionToken(): String? = http.token
-    /**
-     * Ends one session on the server. It takes the token rather than reading the session's own, because
-     * signing out drops the local session at once and this call is only its echo: nothing waits
-     * for it, and a failure changes nothing a player can see.
-     */
+
+    /** Ends one session on the server: only the echo of a local sign-out, nothing waits for it. */
     suspend fun revoke(saved: String) {
         try { http.request("POST", "api/v1/user/logout", bearer = saved) }
         catch (e: CancellationException) { throw e }
         catch (_: Exception) {}
     }
-    /** Re-reads the signed-in account, so a role or character count change is picked up. */
+
     suspend fun refreshUser(): UserProfile {
         val profile: UserProfile = http.get("api/v1/user/me")
         requireId(profile.id)
         account = profile
         return profile
     }
-    /** The server ends every other session of the account and keeps this one. */
+
     suspend fun changePassword(current: String, replacement: String) {
         http.request("POST", "api/v1/user/changePassword", body = WireJson.encodeToJsonElement(PasswordChange(current, replacement)),
             authenticated = true, sensitive = true)
     }
 
-    private val manifestLock = kotlinx.coroutines.sync.Mutex()
+    private val manifestLock = Mutex()
     private var manifest: StaticManifest? = null
 
-    /**
-     * `static/index.json`, read once for this server (a server change makes a new [GameApi]):
-     * the routes and every fingerprint the start needs. [fresh] asks again — after an
-     * administrator's edit, which moves the world's fingerprint.
-     */
+    /** `static/index.json`, read once for this server; [fresh] asks again. */
     suspend fun manifest(fresh: Boolean = false): StaticManifest = manifestLock.withLock {
         manifest?.takeIf { !fresh } ?: files.manifest().also { manifest = it }
     }
 
     suspend fun capabilities(): ApiCapabilities = manifest().capabilities
 
-    /**
-     * Where commands deliver the hero (server 0.48.0): [parts] names the fingerprints held for a
-     * character — `null` for one nobody shows — and [apply] receives the snapshot, or `null` when
-     * the answer carried none and the hero has to be read again.
-     */
+    /** Where commands deliver the hero: [parts] names the fingerprints held for a hero, [apply] receives the snapshot or `null`. */
     fun heroSync(parts: (String) -> String?, apply: (String, HeroSnapshot?) -> Unit) { http.heroParts = parts; http.onHero = apply }
     suspend fun health(): JsonElement = http.request("GET", "system/health")
 }

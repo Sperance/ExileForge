@@ -12,31 +12,30 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.sperance.exileforge.core.contract.text
 import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.display.statNumber
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.model.hero.EquipmentInstance
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.unmetFor
 import com.sperance.exileforge.presentation.state.wearDelta
+import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.ui.icons.StatIcon
 import com.sperance.exileforge.ui.theme.*
 
 /** Whether an item goes on the body at all: a map, a tool and a jewel are placed elsewhere. */
-fun wearable(s: ForgeState, instance: EquipmentInstance): Boolean =
-    s.world.inventoryBases[instance.equipmentId]?.text("slot")?.let { it != "MAP" && it != "JEWEL" && !it.startsWith("TOOL_") } == true
+fun wearable(s: ForgeState, item: ItemInstance): Boolean =
+    s.index?.template(item.template)?.slot?.let { !it.isJewelLike && !it.isTool } == true
 
 /**
  * «Если надеть» (2.46.0): what the sheet would become with this item on, added up here by the
- * server's formula, one line per characteristic that moves. An item out of reach says instead, in
+ * rules' own formula, one line per characteristic that moves. An item out of reach says instead, in
  * red, what it needs — and its button stays off.
  */
-@Composable fun WearPreview(s: ForgeState, instance: EquipmentInstance) {
-    if (!wearable(s, instance) || instance.equipped || instance.socketed) return
-    val unmet = s.unmetFor(instance.equipmentId)
-    val delta = remember(instance, s.play.hero, s.world.statTables) { s.wearDelta(instance) }
+@Composable fun WearPreview(s: ForgeState, item: ItemInstance) {
+    if (!wearable(s, item) || item.equipped || item.socketed) return
+    val unmet = s.unmetFor(item.template)
+    val delta = remember(item, s.hero, s.index) { s.wearDelta(item) }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         if (unmet.isNotEmpty()) {
             Text(ui("wear.blocked"), color = LifeRed, style = MaterialTheme.typography.labelLarge)

@@ -12,8 +12,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.lerp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.util.lerp
-import com.sperance.exileforge.core.model.campaign.WorldPoint
-import com.sperance.exileforge.core.model.campaign.WorldRule
+import com.sperance.exileforge.rules.content.WorldPoint
+import com.sperance.exileforge.rules.content.WorldRule
 
 /**
  * The world map's camera (2.76.0): how near it is and where it looks.

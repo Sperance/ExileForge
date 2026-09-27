@@ -1,0 +1,73 @@
+package com.sperance.exileforge.core.model.campaign
+
+import com.sperance.exileforge.rules.roll.AbyssRun
+import com.sperance.exileforge.rules.roll.AbyssWindow
+import com.sperance.exileforge.rules.roll.ActiveMap
+import com.sperance.exileforge.rules.roll.ChestWindow
+import com.sperance.exileforge.rules.roll.CrystalWindow
+import com.sperance.exileforge.rules.roll.ItemInstance
+import com.sperance.exileforge.rules.roll.VaalZone
+import com.sperance.exileforge.rules.run.RunContext
+import kotlinx.serialization.Serializable
+
+/**
+ * The hero's campaign as the server keeps it: zones passed, the windows of chests, crystals and cracks
+ * per zone, when each boss returns (epoch millis), the map entered with, the Vaal zone rolled, the
+ * descent under way and the open [run].
+ */
+@Serializable data class CampaignState(
+    val cleared: List<String> = emptyList(),
+    val chests: Map<String, ChestWindow> = emptyMap(),
+    val bosses: Map<String, Long> = emptyMap(),
+    val crystals: Map<String, CrystalWindow> = emptyMap(),
+    val abyss: Map<String, AbyssWindow> = emptyMap(),
+    val activeMap: ActiveMap? = null,
+    val vaalZone: VaalZone? = null,
+    val abyssRun: AbyssRun? = null,
+    val recipeRolled: Boolean = false,
+    val corruptionOpened: Boolean = false,
+    val run: RunState? = null,
+) {
+    /** The boss of [mapCode] is slain and not yet back. */
+    fun bossDown(mapCode: String, now: Long): Boolean = (bosses[mapCode] ?: 0L) > now
+}
+
+/** The open run as the server holds it: the seed and the frozen context, and how far the journal was applied. */
+@Serializable data class RunState(
+    val id: String,
+    val seed: Long,
+    val zone: String,
+    val context: RunContext,
+    val startedAt: Long = 0,
+    val applied: Int = 0,
+    val killed: List<Int> = emptyList(),
+    val vaalKilled: List<Int> = emptyList(),
+)
+
+/** Which zones the hero has passed — slain their boss — and which are open to them. */
+@Serializable data class CampaignProgress(val cleared: List<String> = emptyList(), val unlocked: List<String> = emptyList())
+
+/** What a batch of events brought, as the server counted it. */
+@Serializable data class RewardView(
+    val experience: Double = 0.0,
+    val gold: Long = 0,
+    val items: Map<String, Long> = emptyMap(),
+    val equipment: List<ItemInstance> = emptyList(),
+    val recipe: String? = null,
+)
+
+/**
+ * The server's answer to a batch of run events: how far the journal is applied now, the numbers it
+ * refused, what the batch brought and cost, where the hero stands, and whether the run is still open.
+ */
+@Serializable data class RunReport(
+    val applied: Int = 0,
+    val rejected: List<Int> = emptyList(),
+    val reward: RewardView = RewardView(),
+    val lost: Double = 0.0,
+    val level: Int = 1,
+    val experience: Double = 0.0,
+    val money: Long = 0,
+    val progress: CampaignProgress = CampaignProgress(),
+    val open: Boolean = true,
+)

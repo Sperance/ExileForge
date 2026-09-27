@@ -2,70 +2,51 @@ package com.sperance.exileforge.core.network
 
 import com.sperance.exileforge.core.contract.requireId
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.model.auction.*
-import com.sperance.exileforge.core.model.command.*
-import kotlinx.serialization.json.*
+import com.sperance.exileforge.core.model.auction.AuctionFilter
+import com.sperance.exileforge.core.model.auction.AuctionLot
+import com.sperance.exileforge.core.model.auction.AuctionPage
+import com.sperance.exileforge.core.model.auction.AuctionSlots
+import com.sperance.exileforge.core.model.command.AUCTION_PAGE_SIZE
 
-/** Route root of every auction command, kept in one place so a move is one edit. */
 private const val AUCTION = "api/v1/auctionlot"
 
-/** The player auction: the showcase, a character's own lots, listing, buying and withdrawing. */
+/** The player auction: the showcase, a hero's own lots, listing, buying and withdrawing. */
 class AuctionClient internal constructor(private val http: Transport) {
-    /**
-     * The showcase, narrowed and paged by the server.
-     *
-     * This is the one list the server filters itself: every field the filter compares is a snapshot
-     * the lot carries, so the whole search is a single query. Nothing is narrowed here afterwards.
-     */
-    suspend fun search(characterId: String, filter: AuctionFilter, page: Int): AuctionPage {
+    /** The showcase, narrowed and paged by the server: every field the filter compares is a snapshot the lot carries. */
+    suspend fun search(heroId: String, filter: AuctionFilter, page: Int): AuctionPage {
         requirePage(page)
-        return http.get("$AUCTION/search", heroQuery(characterId, "page" to page.toString(), "size" to AUCTION_PAGE_SIZE.toString()) + filter.query())
+        return http.get("$AUCTION/search", heroQuery(heroId, "page" to page.toString(), "size" to AUCTION_PAGE_SIZE.toString()) + filter.query())
     }
 
-    /** Everything the character ever listed, open and closed alike — the lots are their history. */
-    /** The hero's lot places (0.34.0): how many are taken and what one more costs. */
-    suspend fun slots(characterId: String): AuctionSlots =
-        http.get("$AUCTION/slots", heroQuery(characterId))
-
+    suspend fun slots(heroId: String): AuctionSlots = http.get("$AUCTION/slots", heroQuery(heroId))
     /** Buys one more lot place for gold. Never retried. */
-    suspend fun buySlot(characterId: String): AuctionSlots =
-        http.post("$AUCTION/slots", heroQuery(characterId))
+    suspend fun buySlot(heroId: String): AuctionSlots = http.post("$AUCTION/slots", heroQuery(heroId))
+    suspend fun myLots(heroId: String): List<AuctionLot> = http.get("$AUCTION/my", heroQuery(heroId))
 
-    suspend fun myLots(characterId: String): List<AuctionLot> =
-        http.get<List<AuctionLot>>("$AUCTION/my", heroQuery(characterId))
-
-    /**
-     * Lists an item. The price is always counted in orbs, so [priceOrbId] must be a `CURRENCY`
-     * document — the server refuses anything else rather than inventing a conversion.
-     *
-     * An equipment instance has to be off the character first: while it is listed the goods live
-     * in the lot, and a worn item cannot be in two places.
-     */
-    suspend fun sellEquipment(characterId: String, inventoryId: String, priceOrbId: String, price: Long): AuctionLot {
-        requireId(inventoryId)
-        return sell("equipment", characterId, priceOrbId, price, mapOf("inventoryId" to inventoryId))
-    }
-    suspend fun sellItem(characterId: String, itemId: String, amount: Long, priceOrbId: String, price: Long): AuctionLot {
+    /** Lists a copy; the price is in orbs, [priceOrb] the currency's item code. The copy has to be off the hero first. */
+    suspend fun sellEquipment(heroId: String, itemId: String, priceOrb: String, price: Long): AuctionLot {
         requireId(itemId)
-        require(amount > 0) { ui("api.amount_positive") }
-        return sell("item", characterId, priceOrbId, price, mapOf("itemId" to itemId, "amount" to amount.toString()))
-    }
-    private suspend fun sell(what: String, characterId: String, priceOrbId: String, price: Long, extra: Map<String, String>): AuctionLot {
-        requireId(priceOrbId)
-        require(price > 0) { ui("api.price_positive") }
-        return http.post("$AUCTION/sell/$what", extra + heroQuery(characterId, "priceOrbId" to priceOrbId, "price" to price.toString()))
+        return sell("equipment", heroId, priceOrb, price, mapOf("itemId" to itemId))
     }
 
-    /**
-     * Buys a lot, or takes one back off the showcase.
-     *
-     * Payment, delivery and closing the lot are one server transaction, so a buyer short of orbs
-     * loses neither the orbs nor the goods. The client never checks the balance itself.
-     */
-    suspend fun buy(characterId: String, lotId: String): AuctionLot = lot("buy", characterId, lotId)
-    suspend fun cancel(characterId: String, lotId: String): AuctionLot = lot("cancel", characterId, lotId)
-    private suspend fun lot(operation: String, characterId: String, lotId: String): AuctionLot {
+    suspend fun sellItem(heroId: String, code: String, amount: Long, priceOrb: String, price: Long): AuctionLot {
+        require(code.isNotBlank()) { ui("api.choose_item") }
+        require(amount > 0) { ui("api.amount_positive") }
+        return sell("item", heroId, priceOrb, price, mapOf("code" to code, "amount" to amount.toString()))
+    }
+
+    private suspend fun sell(what: String, heroId: String, priceOrb: String, price: Long, extra: Map<String, String>): AuctionLot {
+        require(priceOrb.isNotBlank()) { ui("api.choose_orb") }
+        require(price > 0) { ui("api.price_positive") }
+        return http.post("$AUCTION/sell/$what", extra + heroQuery(heroId, "priceOrb" to priceOrb, "price" to price.toString()))
+    }
+
+    /** Payment, delivery and closing the lot are one server transaction. Never retried. */
+    suspend fun buy(heroId: String, lotId: String): AuctionLot = lot("buy", heroId, lotId)
+    suspend fun cancel(heroId: String, lotId: String): AuctionLot = lot("cancel", heroId, lotId)
+
+    private suspend fun lot(operation: String, heroId: String, lotId: String): AuctionLot {
         requireId(lotId)
-        return http.post("$AUCTION/$operation", heroQuery(characterId, "lotId" to lotId))
+        return http.post("$AUCTION/$operation", heroQuery(heroId, "lotId" to lotId))
     }
 }

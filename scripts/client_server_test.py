@@ -41,13 +41,10 @@ with (root / 'build/client-server.log').open('w') as log:
             try:
                 # Ktor prints the selector, so the method arrives as "(GET)".
                 routes = {''.join(c for c in route['method'] if c.isalpha()) + ' ' + route['path'] for route in request('/system/routes')}
-                assert 'GET /api/v1/character/inventory/stats' in routes, sorted(routes)
-                assert 'POST /api/v1/characterequipment/applyOrb' in routes, sorted(routes)
-                assert 'GET /api/v1/characterclass' in routes, sorted(routes)
-                assert 'POST /api/v1/character/skilltree/allocate' in routes, sorted(routes)
-                assert 'POST /api/v1/auctionlot/buy' in routes, sorted(routes)
-                assert 'POST /api/v1/characterequipment/craft' in routes, sorted(routes)
-                assert 'POST /api/v1/user/login' in routes, sorted(routes)
+                for route in ('GET /static/index.json', 'GET /content/{file}', 'POST /api/v1/user/login', 'GET /api/v1/hero/view',
+                              'POST /api/v1/hero/orb', 'POST /api/v1/hero/campaign/start', 'POST /api/v1/hero/campaign/events',
+                              'POST /api/v1/hero/skilltree/allocate', 'POST /api/v1/auctionlot/buy', 'POST /api/v1/redemptioncodes/redeem'):
+                    assert route in routes, (route, sorted(routes))
                 break
             except (urllib.error.URLError, TimeoutError, KeyError):
                 if time.monotonic() > deadline:

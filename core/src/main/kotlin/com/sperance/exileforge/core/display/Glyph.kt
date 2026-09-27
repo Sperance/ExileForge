@@ -1,8 +1,6 @@
 package com.sperance.exileforge.core.display
 
-import com.sperance.exileforge.core.model.Catalog
-import com.sperance.exileforge.core.model.modifier.ModifierDefinition
-import com.sperance.exileforge.core.model.modifier.definition
+import com.sperance.exileforge.rules.content.ContentIndex
 
 /**
  * What a small icon stands for, apart from how it is drawn.
@@ -33,15 +31,8 @@ enum class Glyph {
         fun ofField(key: String): Glyph = fields[key] ?: stat(key) ?: INFO
 
         /** A modifier is drawn as the characteristic its first effect changes. */
-        fun ofModifier(modifierCode: String, definitions: List<ModifierDefinition>): Glyph =
-            definitions.definition(modifierCode)?.effects?.firstOrNull()?.stat?.let(::ofStat) ?: INFO
-
-        fun of(catalog: Catalog): Glyph = when (catalog) {
-            Catalog.ITEMS -> CURRENCY
-            Catalog.EQUIPMENT -> ITEM
-            Catalog.CHARACTERS -> CHARACTER
-            Catalog.POOLS -> RULE
-        }
+        fun ofModifier(modifierCode: String, index: ContentIndex): Glyph =
+            index.modifier(modifierCode)?.effects?.firstOrNull()?.stat?.let(::ofStat) ?: INFO
 
         private fun stat(key: String) = if (key.startsWith("STOCK_") || key.startsWith("BATTLE_")) ofStat(key) else null
 

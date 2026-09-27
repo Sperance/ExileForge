@@ -1,19 +1,18 @@
 package com.sperance.exileforge.core.campaign
 
 import com.sperance.exileforge.core.character.StatLine
-import com.sperance.exileforge.core.model.campaign.MonsterRarity
-import com.sperance.exileforge.core.model.modifier.ModifierOperation
-import com.sperance.exileforge.core.model.powers.Power
-import com.sperance.exileforge.core.model.powers.PowerAct
-import com.sperance.exileforge.core.model.powers.PowerBase
-import com.sperance.exileforge.core.model.powers.PowerBook
-import com.sperance.exileforge.core.model.powers.PowerCheck
-import com.sperance.exileforge.core.model.powers.PowerCheckKind
-import com.sperance.exileforge.core.model.powers.PowerEffect
-import com.sperance.exileforge.core.model.powers.PowerEvent
-import com.sperance.exileforge.core.model.powers.PowerLine
-import com.sperance.exileforge.core.model.powers.PowerScale
-import com.sperance.exileforge.core.model.powers.PowerTarget
+import com.sperance.exileforge.rules.content.MonsterRarity
+import com.sperance.exileforge.rules.content.Power
+import com.sperance.exileforge.rules.content.PowerAct
+import com.sperance.exileforge.rules.content.PowerBase
+import com.sperance.exileforge.rules.content.PowerBook
+import com.sperance.exileforge.rules.content.PowerCheck
+import com.sperance.exileforge.rules.content.PowerCheckKind
+import com.sperance.exileforge.rules.content.PowerEffect
+import com.sperance.exileforge.rules.content.PowerEvent
+import com.sperance.exileforge.rules.content.PowerLine
+import com.sperance.exileforge.rules.content.PowerScale
+import com.sperance.exileforge.rules.content.PowerTarget
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
@@ -39,6 +38,11 @@ internal class PowerMoment(
  * A power never answers a power: what one strikes or lays sets off no other. Chances are drawn only
  * for a power the hero carries, so a fight without any plays its seed as before.
  */
+/** The roll [value] where a power puts it, or the effect's own number. */
+private fun Power.amount(own: Double?, value: Double): Double = own ?: if (roll == com.sperance.exileforge.rules.content.PowerRoll.AMOUNT) value else 0.0
+private fun Power.duration(own: Double?, value: Double): Double = own ?: if (roll == com.sperance.exileforge.rules.content.PowerRoll.DURATION) value else 0.0
+private fun Power.chance(value: Double): Double = chance ?: if (roll == com.sperance.exileforge.rules.content.PowerRoll.CHANCE) value else 100.0
+
 internal class PowerRunner(private val battle: Battle, book: PowerBook) {
     private val byEvent: Map<PowerEvent, List<Power>> = book.powers.filter { it.on != null }.groupBy { it.on!! }
     private val standingPowers = byEvent[PowerEvent.STANDING].orEmpty()
@@ -128,7 +132,7 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook) {
     private fun line(power: Power, line: PowerLine, times: Int = 1): StatLine {
         val base = line.value ?: power.amount(null, value(power))
         val count = line.scale?.let(::count)?.let { if (line.cap > 0) min(it, line.cap) else it } ?: 1.0
-        return StatLine(line.stat, ModifierOperation.valueOf(line.operation), base * count * times)
+        return StatLine(line.stat, line.op, base * count * times)
     }
 
     /** A count of the fight a line grows with. */

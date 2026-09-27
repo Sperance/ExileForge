@@ -10,36 +10,41 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
+import com.sperance.exileforge.core.display.ItemView
+import com.sperance.exileforge.core.i18n.LocaleBundle
+import com.sperance.exileforge.core.i18n.serverLocale
+import com.sperance.exileforge.rules.content.Rarity
+import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.ui.components.ItemCard
 import com.sperance.exileforge.ui.theme.*
-import kotlinx.serialization.json.*
+import org.junit.After
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import java.io.File
 
 class DesignPreviewTest {
     @get:Rule val compose = createComposeRule()
+
+    @Before fun dictionary() { serverLocale = TestWorld.russian }
+    @After fun forget() { serverLocale = LocaleBundle() }
+
     @Test fun cardsDisplayIconsPropertiesAndActions() {
-        // An inventory instance as the hero screen projects it: `inventoryDocument` writes the
-        // `name` from the dictionary, so the card is fed the same shape it gets in the app.
-        fun item(name: String, slot: String, modifierCode: String, value: Int) = buildJsonObject {
-            put("name", name); put("slot", slot); put("rarity", "RARE"); put("itemLevel", 85)
-            put("params", buildJsonArray {
-                add(buildJsonObject { put("modifierCode", modifierCode); put("tier", 1); put("values", buildJsonArray { add(value) }) })
-            })
-        }
+        val index = TestWorld.index
+        val ring = checkNotNull(ItemView.of(TestWorld.roll("ring", Slot.RING, Rarity.RARE), index))
+        val boots = checkNotNull(ItemView.of(TestWorld.roll("boots", Slot.BOOTS, Rarity.RARE, seed = 2L), index))
         compose.setContent { ForgeTheme {
             Column(Modifier.fillMaxSize().background(Ink).padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Text("EXILE FORGE", color = Gold, style = MaterialTheme.typography.labelLarge)
                 Text("Арсенал героя", style = MaterialTheme.typography.headlineLarge)
                 Text("Снаряжение, которое меняет игру", color = Muted)
-                ItemCard(item("Печать изгнанника", "RING", "MaximumLife", 72), selected = true, actionLabel = "Свойства")
-                ItemCard(item("Поступь пепла", "BOOTS", "FireResistance", 38), actionLabel = "Свойства")
+                ItemCard(ring, selected = true, detailed = true, actionLabel = "Свойства")
+                ItemCard(boots, actionLabel = "Свойства")
             }
         } }
-        compose.onNodeWithText("Печать изгнанника").assertIsDisplayed()
-        compose.onNodeWithContentDescription("Иконка: RING").assertIsDisplayed()
-        compose.onNodeWithText("72").assertIsDisplayed()
+        compose.onNodeWithText(ring.title).assertIsDisplayed()
+        compose.onNodeWithText(boots.title).assertIsDisplayed()
+        compose.onAllNodesWithText("Свойства").assertCountEquals(2)
         val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val dir = File(context.getExternalFilesDir(null), "design").apply { mkdirs() }

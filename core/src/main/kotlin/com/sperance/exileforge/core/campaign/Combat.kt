@@ -1,27 +1,32 @@
 package com.sperance.exileforge.core.campaign
 
 import com.sperance.exileforge.core.character.StatLine
-import com.sperance.exileforge.core.model.campaign.AilmentRule
-import com.sperance.exileforge.core.model.campaign.CombatRules
-import com.sperance.exileforge.core.model.campaign.ManaRule
-import com.sperance.exileforge.core.model.campaign.MonsterRarity
-import com.sperance.exileforge.core.model.modifier.ModifierOperation
-import com.sperance.exileforge.core.model.powers.PowerEvent
-import com.sperance.exileforge.core.model.skills.MonsterSkill
-import com.sperance.exileforge.core.model.skills.SkillAilment
-import com.sperance.exileforge.core.model.skills.SkillBarrier
-import com.sperance.exileforge.core.model.skills.SkillDot
-import com.sperance.exileforge.core.model.skills.SkillEvent
-import com.sperance.exileforge.core.model.skills.SkillHeal
-import com.sperance.exileforge.core.model.skills.SkillHit
-import com.sperance.exileforge.core.model.skills.SkillTrigger
-import com.sperance.exileforge.core.model.skills.SkillType
-import com.sperance.exileforge.core.model.skills.SlotCondition
+import com.sperance.exileforge.rules.content.AilmentRule
+import com.sperance.exileforge.rules.content.CombatRules
+import com.sperance.exileforge.rules.content.ManaRule
+import com.sperance.exileforge.rules.content.MonsterRarity
+import com.sperance.exileforge.rules.content.MonsterSkill
+import com.sperance.exileforge.rules.content.Op
+import com.sperance.exileforge.rules.content.PowerEvent
+import com.sperance.exileforge.rules.content.SkillAilment
+import com.sperance.exileforge.rules.content.SkillBarrier
+import com.sperance.exileforge.rules.content.SkillDefinition
+import com.sperance.exileforge.rules.content.SkillDot
+import com.sperance.exileforge.rules.content.SkillEvent
+import com.sperance.exileforge.rules.content.SkillHeal
+import com.sperance.exileforge.rules.content.SkillHit
+import com.sperance.exileforge.rules.content.SkillTrigger
+import com.sperance.exileforge.rules.content.SkillType
+import com.sperance.exileforge.rules.content.SlotCondition
+import com.sperance.exileforge.rules.content.WeaponType
 import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.random.Random
+
+/** A spell pays in cast speed and is not evaded; an attack pays in its weapon. */
+internal val SkillDefinition.spell: Boolean get() = type == SkillType.SPELL
 
 /** Who acted. */
 enum class Side { HERO, MONSTER; val other: Side get() = if (this == HERO) MONSTER else HERO }
@@ -93,7 +98,7 @@ enum class Ailment(val word: String, val damage: String? = null) {
  * every attack has. Mana came back in 2.78.0 (server 0.69.0) with the class skills and the monsters'
  * spells: it is what a skill is paid with, and it comes back by the rule's share a second.
  */
-data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: CombatRules = CombatRules()) {
+data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: CombatRules) {
     private fun stat(name: String) = stats[name] ?: 0.0
     private fun percent(name: String, cap: Double = 100.0) = stat(name).coerceIn(0.0, cap) / 100
 
@@ -314,8 +319,8 @@ enum class TargetRule {
  */
 data class HeroStance(val rule: TargetRule = TargetRule.THREAT, val ranged: Boolean = false) {
     companion object {
-        private val reaching = setOf("BOW", "WAND")
-        fun of(classCode: String?, weaponType: String?) = HeroStance(TargetRule.of(classCode), weaponType in reaching)
+        private val reaching = setOf(WeaponType.BOW, WeaponType.WAND)
+        fun of(classCode: String?, weaponType: WeaponType?) = HeroStance(TargetRule.of(classCode), weaponType in reaching)
     }
 }
 
@@ -763,7 +768,7 @@ class Battle(
         if (fighter === heroFighter) fighter.rebody(model.body((if (fighter.low) model.lowLife else emptyList()) + powers.standing + lines).under(auras()))
         else {
             val speed = fighter.model.body(emptyList())["STOCK_LOW_LIFE_SPEED"]
-            fighter.rebody(fighter.model.body(lines + if (fighter.low && speed > 0) listOf(StatLine("STOCK_ATTACK_SPEED", ModifierOperation.INCREASED, speed)) else emptyList()))
+            fighter.rebody(fighter.model.body(lines + if (fighter.low && speed > 0) listOf(StatLine("STOCK_ATTACK_SPEED", Op.INCREASED, speed)) else emptyList()))
         }
     }
 
@@ -1010,7 +1015,7 @@ class Battle(
         hero.life = min(hero.body.maxLife, hero.life + hero.body.lifeOnKill * hero.body.recoveryRate)
         hero.mana = min(manaCap(), hero.mana + hero.body.manaOnKill)
         val rarity = foes[fighter.index].rarity
-        val base = (rules.flasks.perKill[rarity.name] ?: 1.0) + if (rarity >= MonsterRarity.RARE) hero.body["ATLAS_FLASK_RARE"] else 0.0
+        val base = (rules.flasks.perKill[rarity] ?: 1.0) + if (rarity >= MonsterRarity.RARE) hero.body["ATLAS_FLASK_RARE"] else 0.0
         kit.flasks.forEachIndexed { i, flask ->
             flask ?: return@forEachIndexed
             charges[i] = min(flask.maxCharges, charges[i] + flask.gained(base, hero.body))
@@ -1085,7 +1090,7 @@ class Battle(
         skill.buff?.let { buff ->
             val speed = if (warcry) hero.body["STOCK_WARCRY_SPEED"] else 0.0
             buff(hero, skill.code, buff.stats.lines(level, if (warcry) 1 + hero.body["STOCK_WARCRY_EFFECT"] / 100 else 1.0) +
-                listOfNotNull(StatLine("STOCK_ATTACK_SPEED", ModifierOperation.INCREASED, speed).takeIf { speed > 0 }), buff.duration, buff.counter?.at(level) ?: 0.0)
+                listOfNotNull(StatLine("STOCK_ATTACK_SPEED", Op.INCREASED, speed).takeIf { speed > 0 }), buff.duration, buff.counter?.at(level) ?: 0.0)
             if (buff.nextCrit) nextCrit = true
         }
         var healed = skill.heal?.let { heal(it, level, hero.body.skillHealing) } ?: 0.0
@@ -1251,7 +1256,7 @@ class Battle(
             val code = passive.skill.code
             if (time < (triggerReady[code] ?: -1.0)) return@forEach
             val level = passive.level(heroFighter.body)
-            if (answer.chance != null && random.nextDouble() * 100 >= answer.chance.at(level)) return@forEach
+            answer.chance?.let { chance -> if (random.nextDouble() * 100 >= chance.at(level)) return@forEach }
             if (answer.cooldown > 0) triggerReady[code] = time + answer.cooldown
             depth++
             try { answer(code, answer, level, target, refund, taken) } finally { depth-- }

@@ -1,86 +1,81 @@
 package com.sperance.exileforge.ui.screens.expedition
 
-import com.sperance.exileforge.presentation.state.sellPrice
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
-import androidx.compose.animation.animateContentSize
-import androidx.compose.foundation.clickable
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.clipPath
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import com.sperance.exileforge.ui.screens.expedition.scene.Portraits
-import com.sperance.exileforge.core.model.campaign.CombatRules
-import com.sperance.exileforge.core.model.campaign.LoneWolfRule
-import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.drawOutline
-import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.boundsInRoot
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInRoot
-import kotlin.math.PI
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.campaign.*
-import com.sperance.exileforge.core.display.inventoryDocument
-import com.sperance.exileforge.core.display.number
-import com.sperance.exileforge.core.display.fineNumber
+import com.sperance.exileforge.core.display.ItemView
+import com.sperance.exileforge.core.display.ItemVisualKind
 import com.sperance.exileforge.core.display.SkillText
-import com.sperance.exileforge.core.display.displayName
-import com.sperance.exileforge.core.i18n.LocaleKey
-import com.sperance.exileforge.core.i18n.locOr
-import com.sperance.exileforge.ui.screens.skills.FlaskBottle
+import com.sperance.exileforge.core.display.bagVisualKind
+import com.sperance.exileforge.core.display.classTitle
+import com.sperance.exileforge.core.display.equipmentTitle
+import com.sperance.exileforge.core.display.fineNumber
+import com.sperance.exileforge.core.display.itemTitle
+import com.sperance.exileforge.core.display.monsterTitle
+import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.model.campaign.CampaignReward
-import com.sperance.exileforge.core.model.campaign.MonsterRarity
-import com.sperance.exileforge.presentation.features.key
 import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.sellPrice
+import com.sperance.exileforge.presentation.state.view
+import com.sperance.exileforge.rules.content.CombatRules
+import com.sperance.exileforge.rules.content.LoneWolfRule
+import com.sperance.exileforge.rules.content.MonsterRarity
+import com.sperance.exileforge.rules.content.SlotCondition
+import com.sperance.exileforge.rules.run.Reward
 import com.sperance.exileforge.ui.components.*
+import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
+import com.sperance.exileforge.ui.screens.expedition.scene.Portraits
+import com.sperance.exileforge.ui.screens.skills.FlaskBottle
 import com.sperance.exileforge.ui.theme.*
 import java.util.Locale
+import kotlin.math.PI
 import kotlin.math.roundToInt
 import kotlin.math.sin
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.Arrangement
-import com.sperance.exileforge.ui.theme.Muted
-import com.sperance.exileforge.ui.theme.GoldBright
+
+/** A monster rarity's name in the dictionary. */
+internal fun MonsterRarity.key() = "enum.monster_rarity.$name"
 
 internal fun rarityTint(rarity: MonsterRarity) = when (rarity) {
     MonsterRarity.NORMAL -> Parchment
@@ -360,7 +355,7 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
  */
 @Composable private fun HeroCard(s: ForgeState, hud: RunHud, fight: FightHud, time: Float, names: Map<Int, String>, stance: HeroStance, modifier: Modifier,
                                   large: Boolean) {
-    val character = s.play.hero?.character
+    val hero = s.heroInfo
     val lunge = fight.lunge
     val acting = reach(lunge, Side.HERO, null)
     val hit = struck(lunge, Side.MONSTER, null)
@@ -382,7 +377,7 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(listOfNotNull(character?.name, ui("expedition.hero_line", s.heroClass?.title.orEmpty(), character?.level ?: 1)).joinToString(" · "),
+                Text(listOfNotNull(hero?.name?.takeIf { it.isNotBlank() }, ui("expedition.hero_line", hero?.heroClass?.let(::classTitle).orEmpty(), s.heroLevel)).joinToString(" · "),
                     color = GoldBright, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 // The hero's own marks (2.72.0): the taunt's seal and the lone wolf's medallion, each opening its window on a tap.
                 if (fight.heroTaunt) TauntSeal(time, Modifier.size(22.dp)) { tauntTip(true) }
@@ -584,7 +579,7 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
         if (!ready) Text(fineNumber(view.seconds), color = Parchment, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.Center))
         Text("${view.cost}", color = if (view.affordable) Rune else LifeRed, fontSize = 9.sp, fontWeight = FontWeight.Bold,
             modifier = Modifier.align(Alignment.BottomEnd).padding(end = 3.dp, bottom = 1.dp))
-        if (view.condition == com.sperance.exileforge.core.model.skills.SlotCondition.MANUAL)
+        if (view.condition == SlotCondition.MANUAL)
             Text("✋", fontSize = 9.sp, modifier = Modifier.align(Alignment.TopStart).padding(2.dp))
         Text("${view.level}", color = Gold, fontSize = 9.sp, modifier = Modifier.align(Alignment.TopEnd).padding(end = 3.dp))
     }
@@ -766,7 +761,7 @@ private fun logLine(event: CombatEvent, monster: String): String {
                 else -> if (hero) ui("expedition.log_skill_on", skill, monster) else ui("expedition.log_they_skill_on", monster, skill)
             }
         }
-        Action.FLASK -> ui("expedition.log_flask", locOr(LocaleKey.equipmentName(event.skill.orEmpty()), displayName(event.skill.orEmpty()))) +
+        Action.FLASK -> ui("expedition.log_flask", equipmentTitle(event.skill.orEmpty())) +
             (if (event.healed >= 1) " · +${event.healed.roundToInt()}" else "")
     }
     // The blow's leading element and what it left behind, as words after the sentence.
@@ -806,14 +801,14 @@ private fun hitColour(hit: FloatingHit): Color = when {
 
 internal fun outcomeColour(outcome: Outcome) = when (outcome) { Outcome.WIN -> Vital; Outcome.LOSS -> LifeRed; Outcome.RETREAT -> Muted }
 
-/** What the server rolled — experience, gold, orbs and items — for a kill and a chest alike; an item opens its card (2.72.0). */
+/** What the run's seed rolled — experience, gold, orbs and items — for a kill and a chest alike; an item opens its card (2.72.0). */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable internal fun RewardLines(s: ForgeState, reward: CampaignReward) {
-    var opened by remember { mutableStateOf<kotlinx.serialization.json.JsonObject?>(null) }
-    opened?.let { document ->
+@Composable internal fun RewardLines(s: ForgeState, reward: Reward) {
+    var opened by remember { mutableStateOf<ItemView?>(null) }
+    opened?.let { item ->
         ModalBottomSheet(onDismissRequest = { opened = null }, containerColor = Panel) {
             Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(16.dp)) {
-                ItemCard(document, enabled = false, detailed = true, definitions = s.world.definitions)
+                ItemCard(item, enabled = false, detailed = true)
             }
         }
     }
@@ -822,17 +817,14 @@ internal fun outcomeColour(outcome: Outcome) = when (outcome) { Outcome.WIN -> V
             if (reward.experience > 0) Text(ui("expedition.loot_experience", number(reward.experience)), color = Rune)
             if (reward.gold > 0) Text(ui("expedition.loot_gold", reward.gold), color = GoldBright)
         }
-        reward.items.forEach { stack ->
-            val orb = s.world.orbs.firstOrNull { it.id == stack.itemId }
+        reward.items.forEach { (code, amount) ->
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                if (orb != null) com.sperance.exileforge.ui.icons.OrbGlyph(orb.orb, Modifier.size(20.dp))
-                else Icon(ForgeGlyphs.Orb, null, tint = Gold, modifier = Modifier.size(18.dp))
-                Text(ui("expedition.loot_stack", orb?.title(s.lang) ?: ui("common.item"), stack.amount), color = Parchment)
+                BagIcon(code, Modifier.size(20.dp), kind = s.index?.item(code)?.let(::bagVisualKind) ?: ItemVisualKind.ITEM)
+                Text(ui("expedition.loot_stack", itemTitle(code), amount), color = Parchment)
             }
         }
         reward.equipment.forEach { instance ->
-            val document = inventoryDocument(instance, s.world.inventoryBases[instance.equipmentId])
-            ItemRow(document, s.world.definitions, price = s.sellPrice(instance)) { opened = document }
+            s.view(instance)?.let { item -> ItemRow(item, price = s.sellPrice(instance)) { opened = item } }
         }
         if (reward.items.isEmpty() && reward.equipment.isEmpty()) Text(ui("expedition.loot_nothing"), color = Muted)
     }

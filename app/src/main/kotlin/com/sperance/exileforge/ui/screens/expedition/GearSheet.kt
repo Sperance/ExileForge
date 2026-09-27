@@ -3,24 +3,38 @@ package com.sperance.exileforge.ui.screens.expedition
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.sperance.exileforge.core.contract.BodyPlace
-import com.sperance.exileforge.core.display.inventoryDocument
+import com.sperance.exileforge.core.display.BodyPlace
+import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.unmetFor
-import com.sperance.exileforge.ui.screens.hero.WearPreview
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import com.sperance.exileforge.presentation.state.view
+import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.ui.components.*
+import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.hero.EquipmentLedger
 import com.sperance.exileforge.ui.screens.hero.SlotPicker
+import com.sperance.exileforge.ui.screens.hero.WearPreview
 import com.sperance.exileforge.ui.theme.*
+
+/**
+ * «Новый лут» (2.45.0): the gear this run brought, maps aside, while it is still loose — a hero read
+ * after a piece landed says whether it was worn or sold since; before that it is taken as loose. Each
+ * piece is its view over the content (3.0.0): the hero's copy of it when the hero holds it, the roll's otherwise.
+ */
+fun newLoot(s: ForgeState): List<ItemView> = s.play.runLoot.mapNotNull { entry ->
+    val held = s.hero?.item(entry.item.id)
+    val loose = if (held != null) !held.equipped && !held.socketed else s.play.heroSeenAt < entry.at
+    s.view(held ?: entry.item)?.takeIf { loose && it.slot != Slot.MAP }
+}
 
 /**
  * The gear on the map (since 2.40.0): the body's ledger as the Equipment section draws it, over the
@@ -28,23 +42,6 @@ import com.sperance.exileforge.ui.theme.*
  * with «Снять» and «Заменить». The server decides, the hero is re-read, and the run takes the new
  * sheet before its next fight — life and mana keep their share.
  */
-/**
- * «Новый лут» (2.45.0): the gear this run brought, maps aside, while it is still loose — a hero read
- * after a piece landed says whether it was worn or sold since; before that it is taken as loose.
- */
-fun newLoot(s: ForgeState): List<com.sperance.exileforge.core.model.hero.EquipmentInstance> {
-    val hero = s.play.hero
-    return s.play.runLoot.filter { entry ->
-        val slot = s.world.inventoryBases[entry.item.equipmentId]?.let { com.sperance.exileforge.core.display.inventoryDocument(entry.item, it) }
-            ?.let { (it["slot"] as? kotlinx.serialization.json.JsonPrimitive)?.content }
-        val now = hero?.inventory?.firstOrNull { it.id == entry.item.id }
-        slot != com.sperance.exileforge.core.model.campaign.MapRule.SLOT && when {
-            now != null -> !now.equipped && !now.socketed
-            else -> s.play.heroSeenAt < entry.at
-        }
-    }.map { it.item }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun GearSheet(s: ForgeState, vm: ForgeViewModel, onDismiss: () -> Unit) {
     var place by remember { mutableStateOf<BodyPlace?>(null) }
@@ -63,8 +60,7 @@ fun newLoot(s: ForgeState): List<com.sperance.exileforge.core.model.hero.Equipme
                     item { Engraved(ui("expedition.loot_tab")) }
                     if (loot.isEmpty()) item { MutedText(ui("expedition.loot_empty")) }
                     items(loot, key = { it.id }) { item ->
-                        ItemRow(inventoryDocument(item, s.world.inventoryBases[item.equipmentId]), definitions = s.world.definitions, enabled = !s.busy,
-                            unwearable = s.unmetFor(item.equipmentId), price = s.sellPrice(item)) { looked = item.id }
+                        ItemRow(item, enabled = !s.busy, unwearable = s.unmetFor(item.code), price = s.sellPrice(item.item)) { looked = item.id }
                     }
                 }
             }
@@ -78,23 +74,22 @@ fun newLoot(s: ForgeState): List<com.sperance.exileforge.core.model.hero.Equipme
     loot.firstOrNull { it.id == looked }?.let { item ->
         ModalBottomSheet(onDismissRequest = { looked = null }, containerColor = Panel) {
             Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                val price = s.sellPrice(item)
-                ItemCard(inventoryDocument(item, s.world.inventoryBases[item.equipmentId]), enabled = false, detailed = true, definitions = s.world.definitions, price = price)
-                WearPreview(s, item)
-                ForgeButton(enabled = !s.busy && s.unmetFor(item.equipmentId).isEmpty(), onClick = { looked = null; vm.equip(item.id) }, modifier = Modifier.fillMaxWidth()) { Text(ui("hero.equip")) }
+                val price = s.sellPrice(item.item)
+                ItemCard(item, enabled = false, detailed = true, price = price)
+                WearPreview(s, item.item)
+                ForgeButton(enabled = !s.busy && s.unmetFor(item.code).isEmpty(), onClick = { looked = null; vm.equip(item.id) }, modifier = Modifier.fillMaxWidth()) { Text(ui("hero.equip")) }
                 // A gilt ribbon with the coin and the price in a chip (2.73.0), held as before.
-                HoldButton(ui("expedition.loot_sell"), Gold, Modifier.fillMaxWidth(), enabled = !s.busy, icon = com.sperance.exileforge.ui.icons.ForgeGlyphs.Coins,
+                HoldButton(ui("expedition.loot_sell"), Gold, Modifier.fillMaxWidth(), enabled = !s.busy, icon = ForgeGlyphs.Coins,
                     figure = price?.let { "+$it" }) { looked = null; vm.sellForGold(item.id) }
             }
         }
     }
     val chosen = place
-    val instance = worn?.let { id -> s.play.hero?.inventory?.firstOrNull { it.id == id } }
+    val instance = worn?.let { id -> s.hero?.item(id) }
     if (chosen != null && instance != null) {
         ModalBottomSheet(onDismissRequest = { place = null; worn = null }, containerColor = Panel) {
             Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                ItemCard(inventoryDocument(instance, s.world.inventoryBases[instance.equipmentId]), enabled = false, detailed = true, definitions = s.world.definitions,
-                    price = s.sellPrice(instance))
+                s.view(instance)?.let { ItemCard(it, enabled = false, detailed = true, price = s.sellPrice(instance)) }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     ForgeOutlinedButton(enabled = !s.busy, onClick = { vm.unequip(instance.id); place = null; worn = null }, modifier = Modifier.weight(1f)) {
                         Text(ui("hero.unequip"))
@@ -104,6 +99,6 @@ fun newLoot(s: ForgeState): List<com.sperance.exileforge.core.model.hero.Equipme
             }
         }
     } else if (chosen != null && worn == null) {
-        SlotPicker(s, chosen, onDismiss = { place = null }, onEquip = { id -> vm.equip(id, chosen.ring) })
+        SlotPicker(s, chosen, onDismiss = { place = null }, onEquip = { id -> vm.equip(id, chosen.place) })
     }
 }

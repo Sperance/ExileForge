@@ -12,7 +12,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import com.sperance.exileforge.core.campaign.WorldMap
-import com.sperance.exileforge.core.model.campaign.CampaignView
+import com.sperance.exileforge.rules.content.CampaignFile
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.hypot
@@ -85,13 +85,13 @@ class WorldArt private constructor(
         /** Where the sea meets the land at [y] (down): a slow swell over a quick ripple. */
         fun coastAt(y: Float): Float = (95 + 26 * sin(y / 70.0) + 12 * sin(y / 29.0 + 1)).toFloat()
 
-        fun of(view: CampaignView): WorldArt {
-            val width = view.world.width.toFloat()
-            val height = view.world.height.toFloat()
-            val random = Random(view.regions.sumOf { it.code.hashCode() } xor view.world.height)
-            val zones = view.zones
+        fun of(campaign: CampaignFile): WorldArt {
+            val width = campaign.world.width.toFloat()
+            val height = campaign.world.height.toFloat()
+            val random = Random(campaign.regions.sumOf { it.code.hashCode() } xor campaign.world.height)
+            val zones = campaign.zones
             val tokens = zones.map { Offset(it.x.toFloat(), height - it.y) }
-            val labels = view.regions.map { Rect(Offset(it.label.x.toFloat(), height - it.label.y), 190f) }
+            val labels = campaign.regions.map { Rect(Offset(it.label.x.toFloat(), height - it.label.y), 190f) }
             // The stains and the grain were measured for the first chart of 1100 × 2000; a taller world gets as many per stretch.
             val area = width * height / (1100f * 2000f)
             // A sketch keeps off the tokens, off the names hanging under them, off the regions' names and out of the sea.
@@ -100,7 +100,7 @@ class WorldArt private constructor(
                     tokens.none { t -> hypot(t.x - p.x, t.y - p.y) < room || (kotlin.math.abs(t.x - p.x) < 72 && p.y > t.y && p.y < t.y + 56) } &&
                     labels.none { it.copy(top = it.center.y - 26, bottom = it.center.y + 26).contains(p) }
 
-            val pools = view.regions.filter { it.zones.isNotEmpty() }.map { region ->
+            val pools = campaign.regions.filter { it.zones.isNotEmpty() }.map { region ->
                 val centre = Offset(region.zones.map { it.x }.average().toFloat(), height - region.zones.map { it.y }.average().toFloat())
                 Glow(centre, 520f, poolColor(region.zones.groupingBy { it.biome }.eachCount().maxByOrNull { it.value }?.key.orEmpty()))
             } + List((12 * area).toInt()) { Glow(Offset(random.nextFloat() * width, random.nextFloat() * height), 80f + random.nextFloat() * 170f, Color.Black.copy(alpha = .18f)) }
@@ -139,7 +139,7 @@ class WorldArt private constructor(
             val grain = listOf(.03f, .05f, .08f).map { alpha ->
                 Grain(List((1400 * area).toInt()) { Offset(random.nextFloat() * width, random.nextFloat() * height) }, Color(0xFFE4DCCF).copy(alpha = alpha))
             }
-            val borders = WorldMap.borders(view).map { y ->
+            val borders = WorldMap.borders(campaign).map { y ->
                 val down = height - y
                 line((coastAt(down).toInt() + 4..width.toInt() step 4).map { x -> Offset(x.toFloat(), down + (14 * sin(x / 90.0)).toFloat()) })
             }

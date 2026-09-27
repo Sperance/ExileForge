@@ -28,11 +28,11 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
         Spacer(Modifier.height(12.dp))
         ScreenHeader(ui("nav.auction"),
             ui("auction.showcase_count", s.market.showcase.totalItems), ForgeGlyphs.Orb)
-        // Opening the tab is what fills both lists; the character is the one from the menu.
-        // The hero comes too, and not for the bag: the sheet carries the server's verdict on which
-        // templates this character can wear, and that is what marks an unwearable lot.
-        LaunchedEffect(s.play.characterId, s.account.sessionEpoch) {
-            if (s.play.characterId.isNotBlank()) { vm.ensureHero(); vm.loadAuction() }
+        // Opening the tab is what fills both lists; the hero is the one from the menu.
+        // The hero comes too, and not for the bag: the sheet is what the rules read to say which
+        // templates this hero can wear, and that is what marks an unwearable lot.
+        LaunchedEffect(s.play.heroId, s.account.sessionEpoch) {
+            if (s.play.heroId.isNotBlank()) { vm.ensureHero(); vm.loadAuction() }
         }
         s.market.locked?.let { locked ->
             InfoCard(ui("auction.closed"), locked, failure = true)

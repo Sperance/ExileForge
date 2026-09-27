@@ -1,9 +1,7 @@
 package com.sperance.exileforge.presentation.features
 
-import com.sperance.exileforge.core.character.Sheet
-import com.sperance.exileforge.core.contract.entityId
+import com.sperance.exileforge.core.character.Sheets
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.model.command.ItemStack
 import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.core.model.sync.HeroParts
 import com.sperance.exileforge.core.model.sync.HeroSnapshot
@@ -11,6 +9,9 @@ import com.sperance.exileforge.presentation.ForgeRuntime
 import com.sperance.exileforge.presentation.state.ForgeSection
 import com.sperance.exileforge.presentation.state.Reads
 import com.sperance.exileforge.presentation.state.TAB_CRAFT
+import com.sperance.exileforge.rules.content.Rarity
+import com.sperance.exileforge.rules.content.Slot
+import com.sperance.exileforge.rules.roll.Dice
 import kotlinx.coroutines.flow.update
 
 class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
@@ -19,8 +20,8 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         forgeLine = if (value == it.play.selectedEquipment) it.play.forgeLine else "")) } } }
 
     /** The forge over one item, on the section the player came for; `null` keeps the item it had. */
-    fun openForge(instanceId: String?, section: ForgeSection) { with(runtime) {
-        instanceId?.let { selectEquipment(it) }
+    fun openForge(itemId: String?, section: ForgeSection) { with(runtime) {
+        itemId?.let { selectEquipment(it) }
         mutable.update { it.copy(play = it.play.copy(forgeSection = section)) }
         tab(TAB_CRAFT)
     } }
@@ -28,148 +29,101 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     fun loadHero() { with(runtime) { read(Reads.HERO) { readHero() } } }
 
-    /**
-     * The hero, if what is on screen has gone cold.
-     *
-     * A command brings the hero back in its own answer; this is for everything that changed the
-     * character somewhere else — a trade, an administrator, the same account on another device —
-     * where the client has no way to be told. It is one request, and usually a 304 (server 0.48.0).
-     * [FRESH_FOR] is how long a reading is trusted without asking.
-     */
+    /** The hero, if what is on screen has gone cold: one request, and usually a 304. */
     fun ensureHero() { with(runtime) {
         val now = System.currentTimeMillis()
-        if (state.value.play.characterId.isBlank()) return
+        if (state.value.play.heroId.isBlank()) return
         if (state.value.play.hero != null && now - state.value.play.heroReadAt < FRESH_FOR) return
         read(Reads.HERO) { readHero() }
     } }
 
-    fun equip(instanceId: String, slot: String? = null) { with(runtime) { characterCommand { id -> api.hero.equip(id, instanceId, slot) } } }
-    fun unequip(instanceId: String) { with(runtime) { characterCommand { id -> api.hero.unequip(id, instanceId) } } }
+    fun equip(itemId: String, slot: Slot? = null) { with(runtime) { heroCommand { id -> api.hero.equip(id, itemId, slot) } } }
+    fun unequip(itemId: String) { with(runtime) { heroCommand { id -> api.hero.unequip(id, itemId) } } }
 
-    /** Admin only: hand the character a named template, rolled by the server. */
-    fun grant(equipmentId: String) { with(runtime) { characterCommand { id ->
+    /** Admin only: hand the hero a named template, rolled by the server. */
+    fun grant(template: String, rarity: Rarity? = null) { with(runtime) { heroCommand { id ->
         check(state.value.isAdmin) { ui("hero.grant_admin_only") }
-        api.hero.grant(id, equipmentId)
+        api.hero.grantEquipment(id, template, rarity)
     } } }
 
     fun grantRarity(value: String) = update { it.copy(play = it.play.copy(grantRarity = value)) }
     fun grantSlot(value: String) = update { it.copy(play = it.play.copy(grantSlot = value)) }
 
-    /**
-     * Admin only: a random template of the chosen rarity and category, with server-rolled modifiers.
-     *
-     * The client picks the base and nothing else — prefixes, suffixes, tiers and values all come
-     * back from `itemToInventory`.
-     */
-    fun grantRandom() { with(runtime) { characterCommand { id ->
+    /** Admin only: a random template of the chosen rarity and slot — picked here from the content, rolled by the server. */
+    fun grantRandom() { with(runtime) { heroCommand { id ->
         check(state.value.isAdmin) { ui("hero.grant_admin_only") }
-        val template = api.catalog.randomTemplate(state.value.play.grantRarity, state.value.play.grantSlot)
-        api.hero.grant(id, template.entityId)
+        val index = state.value.index ?: error(ui("runtime.request_failed"))
+        val rarity = Rarity.of(state.value.play.grantRarity)
+        val slot = Slot.of(state.value.play.grantSlot)
+        val candidates = index.templates.values.filter { (slot == null || it.slot == slot) && (rarity == null || rarity.fixed == it.unique) }
+        check(candidates.isNotEmpty()) { ui("hero.no_template") }
+        api.hero.grantEquipment(id, Dice.system().pick(candidates).code, rarity)
     } } }
 
-    fun adjustItems(itemId: String, amount: Long) { with(runtime) { characterCommand { id ->
+    /** Admin only: a stack into the bag. */
+    fun grantItem(code: String, amount: Long) { with(runtime) { heroCommand { id ->
         check(state.value.isAdmin) { ui("hero.bag_admin_only") }
-        api.hero.adjustItems(id, listOf(ItemStack(itemId, amount)))
+        api.hero.grantItem(id, code, amount)
     } } }
 
     fun selectOrb(value: String) = update { it.copy(play = it.play.copy(selectedOrb = value)) }
     fun selectEssence(value: String) = update { it.copy(play = it.play.copy(selectedEssence = value)) }
 
-    /**
-     * Spends one orb on one item of the inventory.
-     *
-     * Whether the orb applies at all, what it rerolls and what it leaves alone is the server's rule;
-     * the client only names the pair and prints the sentence that comes back.
-     */
-    fun applyOrb(inventoryId: String, orbItemId: String) { with(runtime) { forgeCommand { id ->
-        val outcome = api.hero.applyOrb(id, inventoryId, orbItemId)
+    /** Spends one orb on one item: whether it applies and what it rerolls is the rules'; the sentence comes back. */
+    fun applyOrb(itemId: String, orb: String) { with(runtime) { forgeCommand { id ->
+        val outcome = api.hero.applyOrb(id, itemId, orb)
         mutable.update { it.copy(play = it.play.copy(forgeLine = outcome.message, selectedEquipment = outcome.created?.id ?: outcome.item.id)) }
     } } }
 
-    /**
-     * The crafting bench: one crafted modifier placed, or taken back off.
-     *
-     * Every rule and the price are the server's; the answer is an orb's — the item and a sentence —
-     * and the hero is re-read after it like after any command.
-     */
-    fun craft(inventoryId: String, recipe: String) { with(runtime) { forgeCommand { id ->
-        val outcome = api.hero.craft(id, inventoryId, recipe)
+    fun craft(itemId: String, recipe: String) { with(runtime) { forgeCommand { id ->
+        val outcome = api.hero.craft(id, itemId, recipe)
         mutable.update { it.copy(play = it.play.copy(forgeLine = outcome.message)) }
     } } }
-    fun uncraft(inventoryId: String) { with(runtime) { forgeCommand { id ->
-        val outcome = api.hero.uncraft(id, inventoryId)
+    fun uncraft(itemId: String) { with(runtime) { forgeCommand { id ->
+        val outcome = api.hero.uncraft(id, itemId)
         mutable.update { it.copy(play = it.play.copy(forgeLine = outcome.message)) }
     } } }
 
-    /**
-     * An essence on one item (2.78.0, server 0.69.0): what it guarantees and what it rerolls are the
-     * server's; the answer is an orb's, a sentence under the item.
-     */
-    fun applyEssence(inventoryId: String, essenceItemId: String) { with(runtime) { forgeCommand { id ->
-        val outcome = api.hero.applyEssence(id, inventoryId, essenceItemId)
+    fun applyEssence(itemId: String, essence: String) { with(runtime) { forgeCommand { id ->
+        val outcome = api.hero.applyEssence(id, itemId, essence)
         mutable.update { it.copy(play = it.play.copy(forgeLine = outcome.message, selectedEquipment = outcome.item.id)) }
     } } }
 
-    /**
-     * The grimoire (2.78.0, server 0.69.0): a book read, a skill slotted or taken out, a slot's or a flask's
-     * condition, books traded for one. Every requirement is the server's; the hero comes back with the answer.
-     */
-    fun learnSkill(code: String) { with(runtime) { characterCommand { id -> api.hero.learnSkill(id, code) } } }
-    fun slotSkill(kind: String, index: Int, code: String?, condition: String? = null) { with(runtime) { characterCommand { id -> api.hero.slotSkill(id, kind, index, code, condition) } } }
-    fun flaskCondition(index: Int, condition: String?) { with(runtime) { characterCommand { id -> api.hero.flaskCondition(id, index, condition) } } }
-    fun exchangeBooks(books: List<String>, code: String) { with(runtime) { characterCommand { id -> api.hero.exchangeBooks(id, books, code) } } }
+    /** The grimoire: a book read, a skill slotted or taken out, a slot's or a flask's condition, books traded for one. */
+    fun learnSkill(code: String) { with(runtime) { heroCommand { id -> api.hero.learnSkill(id, code) } } }
+    fun slotSkill(kind: String, index: Int, code: String?, condition: String? = null) { with(runtime) { heroCommand { id -> api.hero.slotSkill(id, kind, index, code, condition) } } }
+    fun flaskCondition(index: Int, condition: String?) { with(runtime) { heroCommand { id -> api.hero.flaskCondition(id, index, condition) } } }
+    fun exchangeBooks(books: List<String>, code: String) { with(runtime) { heroCommand { id -> api.hero.exchangeBooks(id, books, code) } } }
 
     fun selectNode(code: String) = update { it.copy(play = it.play.copy(selectedNode = code)) }
     fun nodeQuery(value: String) = update { it.copy(play = it.play.copy(nodeQuery = value)) }
 
-    /**
-     * Skill tree: take a node, give it back, or drop the whole tree.
-     *
-     * Every rule is the server's — which node is reachable, what it costs, whether a refund would
-     * leave the rest of the tree hanging in the air — so the client names a node and reports back.
-     */
-    fun allocateNode(code: String, choice: Int? = null) { with(runtime) { characterCommand { id -> api.tree.allocate(id, code, choice) } } }
-    fun refundNode(code: String) { with(runtime) { characterCommand { id -> api.tree.refund(id, code) } } }
-    fun rechooseNode(code: String, choice: Int) { with(runtime) { characterCommand { id -> api.tree.rechoose(id, code, choice) } } }
-    fun resetTree() { with(runtime) { characterCommand { id -> api.tree.reset(id) } } }
+    /** Skill tree: take a node, give it back, or drop the whole tree. Every rule is the server's. */
+    fun allocateNode(code: String, choice: Int? = null) { with(runtime) { heroCommand { id -> api.tree.allocate(id, code, choice) } } }
+    fun refundNode(code: String) { with(runtime) { heroCommand { id -> api.tree.refund(id, code) } } }
+    fun rechooseNode(code: String, choice: Int) { with(runtime) { heroCommand { id -> api.tree.rechoose(id, code, choice) } } }
+    fun resetTree() { with(runtime) { heroCommand { id -> api.tree.reset(id) } } }
 
-    /** Admin only: hand the character experience and let the server decide about the level. */
-    fun addExperience(amount: Double) { with(runtime) { characterCommand { id ->
+    /** Admin only: hand the hero experience and let the server decide about the level. */
+    fun addExperience(amount: Double) { with(runtime) { heroCommand { id ->
         check(state.value.isAdmin) { ui("hero.xp_admin_only") }
-        api.hero.addExperience(id, amount)
+        api.hero.grantExperience(id, amount)
     } } }
 
-    fun redeem(code: String) { with(runtime) { characterCommand { id -> api.hero.redeem(id, code) } } }
+    fun redeem(code: String) { with(runtime) { heroCommand { id -> toast(ui("redemption.redeemed")); api.hero.redeem(id, code) } } }
+
+    fun socketJewel(itemId: String, nodeCode: String) { with(runtime) { heroCommand { id -> api.hero.socket(id, itemId, nodeCode) } } }
+    fun unsocketJewel(itemId: String) { with(runtime) { heroCommand { id -> api.hero.unsocket(id, itemId) } } }
+
+    /** Sells an item to a merchant: the server sets the price and pays it; the card showed the same sum beforehand. */
+    fun sellForGold(itemId: String) { with(runtime) { heroCommand { id -> toast(ui("toast.sold", api.hero.sell(id, itemId).gold)) } } }
 
     /**
-     * Puts a jewel into a socket, and takes it back out.
-     *
-     * Which socket exists, whether the character took it and whether it is free are all the
-     * server's to say; the client names the pair and prints the refusal.
+     * Every hero command answers with the hero as the server has it now, so nothing is patched from the
+     * response — unless the answer came without a snapshot, which [delivered] marks by setting the reading cold.
      */
-    fun socketJewel(inventoryId: String, nodeCode: String) { with(runtime) { characterCommand { id ->
-        api.hero.socket(id, inventoryId, nodeCode)
-    } } }
-
-    fun unsocketJewel(inventoryId: String) { with(runtime) { characterCommand { id ->
-        api.hero.unsocket(id, inventoryId)
-    } } }
-
-    /**
-     * Sells an item to a merchant.
-     *
-     * The server sets the price and pays it; the card showed the same sum beforehand (2.46.0), by
-     * the merchant's own rule, and the hero is re-read because the item is gone and the gold moved.
-     */
-    fun sellForGold(inventoryId: String) { with(runtime) { characterCommand { id -> toast(ui("toast.sold", api.hero.sellForGold(id, inventoryId).gold)) } } }
-
-    /**
-     * Every character command answers with the hero as the server has it now (server 0.48.0), so
-     * nothing is patched from the response and nothing is read again — unless the answer came
-     * without a snapshot, which [delivered] marks by setting the reading cold.
-     */
-    private fun characterCommand(block: suspend (String) -> Unit) { with(runtime) { task(writing = true, touches = setOf(Reads.HERO)) {
-        val id = characterId
+    private fun heroCommand(block: suspend (String) -> Unit) { with(runtime) { task(writing = true, touches = setOf(Reads.HERO)) {
+        val id = heroId
         check(id.isNotBlank()) { ui("auction.choose_character") }
         check(state.value.ownsCharacter || state.value.isAdmin) { ui("hero.owner_only") }
         block(id)
@@ -177,47 +131,37 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         expeditionViewModel.regear()
     } } }
 
-    /**
-     * A command of the forge: its answer is the server's sentence under the item, and the previous
-     * sentence goes the moment another command starts, so a refusal is never read beside the
-     * success before it.
-     */
-    private fun forgeCommand(block: suspend (String) -> Unit) = characterCommand { id ->
+    /** A command of the forge: the previous sentence goes the moment another command starts. */
+    private fun forgeCommand(block: suspend (String) -> Unit) = heroCommand { id ->
         runtime.mutable.update { it.copy(play = it.play.copy(forgeLine = "")) }
         block(id)
     }
 
-    /** The parts of the hero held here, and the character they belong to. */
     private var parts: HeroParts? = null
 
     /** How many snapshots have been applied; a command compares it to know one came back. */
     var snapshots = 0L
         private set
 
-    /** Another character, or nobody: what is held no longer answers `If-None-Match`. */
     fun forget() { parts = null }
 
-    /** What a command on [characterId] tells the server the client holds; `null` asks for nothing. */
-    fun heldParts(characterId: String): String? =
-        if (!onScreen(characterId)) null
-        else parts?.takeIf { it.characterId == characterId }?.header() ?: HeroParts(characterId).header()
+    /** What a command on [heroId] tells the server the client holds; `null` asks for nothing. */
+    fun heldParts(heroId: String): String? =
+        if (!onScreen(heroId)) null else parts?.takeIf { it.heroId == heroId }?.header() ?: HeroParts(heroId).header()
 
     /** A command's answer: its snapshot, or none — and then the reading is cold and read again. */
-    fun delivered(characterId: String, snapshot: HeroSnapshot?) {
-        if (!onScreen(characterId)) return
+    fun delivered(heroId: String, snapshot: HeroSnapshot?) {
+        if (!onScreen(heroId)) return
         if (snapshot == null) runtime.mutable.update { it.copy(play = it.play.copy(heroReadAt = 0)) }
-        else apply(characterId, snapshot)
+        else apply(heroId, snapshot)
     }
 
-    /**
-     * The hero in one request (server 0.48.0): only what moved since the parts held here, or a 304
-     * when nothing did. The reference tables come first — a card is half its base.
-     */
+    /** The hero in one request: only what moved since the parts held here, or a 304 when nothing did. The content comes first. */
     internal suspend fun readHero() { with(runtime) {
-        val id = characterId
+        val id = heroId
         check(id.isNotBlank()) { ui("auction.choose_character") }
-        ensureWorld()
-        val held = parts?.takeIf { it.characterId == id } ?: HeroParts(id)
+        ensureContent()
+        val held = parts?.takeIf { it.heroId == id } ?: HeroParts(id)
         val snapshot = api.hero.view(id, held)
         when {
             snapshot != null -> apply(id, snapshot)
@@ -226,33 +170,25 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         }
     } }
 
-    /**
-     * Folds a snapshot into the parts held and draws the hero from them. The sheet is added up
-     * here since 2.46.0, by the server's formula and in its order; a part is replaced whole.
-     */
-    private fun apply(characterId: String, snapshot: HeroSnapshot) { with(runtime) {
-        val merged = (parts?.takeIf { it.characterId == characterId } ?: HeroParts(characterId)).merge(snapshot)
+    /** Folds a snapshot into the parts held and draws the hero from them; the sheet is added up here by the rules. */
+    private fun apply(heroId: String, snapshot: HeroSnapshot) { with(runtime) {
+        val merged = (parts?.takeIf { it.heroId == heroId } ?: HeroParts(heroId)).merge(snapshot)
         if (!merged.complete) { parts = null; mutable.update { it.copy(play = it.play.copy(heroReadAt = 0)) }; return }
+        val index = state.value.index ?: run { mutable.update { it.copy(play = it.play.copy(heroReadAt = 0)) }; return }
         parts = merged
         snapshots++
-        val character = merged.character
-        val inventory = merged.inventory
+        val info = merged.hero
+        val items = merged.items
         val tree = merged.tree
-        val world = state.value.world
-        val sheet = Sheet.calculate(character, world.classes.firstOrNull { it.id == character.classId }, tree.nodes, inventory,
-            world.inventoryBases, world.definitions, world.statTables)
-        val view = HeroView(character, inventory, sheet, merged.bag, tree)
+        val sheet = Sheets.calculate(index, info.level, info.heroClass, tree, items)
+        val view = HeroView(info, items, merged.bag, tree, merged.campaign, merged.crafts, merged.merchant, sheet)
         val now = System.currentTimeMillis()
-        mutable.update { it.copy(world = it.world.copy(bench = merged.bench), play = it.play.copy(hero = view, characterOwner = character.userId,
-            heroReadAt = now, heroSeenAt = now, selectedEquipment = it.play.selectedEquipment.takeIf { chosen -> view.inventory.any { item -> item.id == chosen } }
-                ?: view.inventory.firstOrNull()?.id.orEmpty())) }
+        mutable.update { it.copy(play = it.play.copy(hero = view, heroOwner = info.userId, heroReadAt = now, heroSeenAt = now,
+            selectedEquipment = it.play.selectedEquipment.takeIf { chosen -> view.items.any { item -> item.id == chosen } } ?: view.items.firstOrNull()?.id.orEmpty()),
+            market = it.market.copy(merchant = view.merchant)) }
+        expeditionViewModel.heroChanged(view)
     } }
 }
 
-/**
- * How long a reading of the hero is trusted without asking again.
- *
- * Long enough that walking between tabs costs nothing, short enough that a purchase made on
- * another device is not still invisible by the time the player looks for it.
- */
+/** How long a reading of the hero is trusted without asking again. */
 private const val FRESH_FOR = 30_000L

@@ -21,7 +21,7 @@ import com.sperance.exileforge.ui.theme.*
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun StatsSheet(s: ForgeState, mapEffects: Map<String, Double>, onDismiss: () -> Unit) {
-    val own = s.play.hero?.stats.orEmpty()
+    val own = s.hero?.stats.orEmpty()
     val onMap = remember(own, mapEffects) { MapEffects.hero(own, mapEffects) }
     val changed = remember(own, onMap) { onMap.count { (key, value) -> (own[key] ?: 0.0) != value } }
     var mapTab by remember { mutableStateOf(false) }

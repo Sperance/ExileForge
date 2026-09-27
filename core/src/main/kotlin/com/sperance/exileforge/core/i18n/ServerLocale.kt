@@ -5,6 +5,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
+import com.sperance.exileforge.rules.text.LocaleKey
 
 /**
  * One language in the server's manifest.
@@ -35,6 +36,8 @@ class LocaleBundle(val language: String = "", val hash: String = "", private val
     val isEmpty: Boolean get() = strings.isEmpty()
     fun contains(key: String): Boolean = key in strings
     operator fun get(key: String): String = strings[key] ?: key
+    /** The string, or null when the dictionary has none: what the rules' text renderer asks. */
+    fun string(key: String): String? = strings[key]
 
     /**
      * A string with its numbered placeholders filled.
@@ -58,54 +61,6 @@ class LocaleBundle(val language: String = "", val hash: String = "", private val
             language, hash, WireJson.parseToJsonElement(document).jsonObject
                 .mapValues { (_, value) -> (value as? JsonPrimitive)?.contentOrNull.orEmpty() })
     }
-}
-
-/**
- * How a key is built from an entity's section and its code.
- *
- * This mirrors the server's own `LocaleKey`: both sides must compute the same string or a lookup
- * silently returns the key instead of a name.
- *
- * Only what the server *seeds* is looked up here. The bundle also carries an `enum.` section, but
- * the client keeps its own tables for slots, rarities and stats: those take an explicit language,
- * and a dictionary holds one language at a time, so reading them from it would answer a request for
- * English in Russian. Names of things the client cannot know come from the server; labels it wrote
- * itself stay its own.
- */
-object LocaleKey {
-    const val EQUIPMENT = "equipment"
-    const val ITEM = "item"
-    const val MODIFIER = "modifier"
-    const val SKILL_NODE = "skilltree"
-    const val CHARACTER_CLASS = "class"
-    const val ERROR = "error"
-    const val NAME = "name"
-    const val DESCRIPTION = "description"
-    /** The English trade name (server 0.45.0), one in every language: `equipment.<CODE>.trade`. */
-    const val TRADE = "trade"
-
-    fun equipmentName(code: String) = key(EQUIPMENT, code, NAME)
-    fun equipmentDescription(code: String) = key(EQUIPMENT, code, DESCRIPTION)
-    fun itemName(code: String) = key(ITEM, code, NAME)
-    fun equipmentTrade(code: String) = key(EQUIPMENT, code, TRADE)
-    fun itemTrade(code: String) = key(ITEM, code, TRADE)
-    fun itemDescription(code: String) = key(ITEM, code, DESCRIPTION)
-    fun modifierName(code: String) = key(MODIFIER, code, NAME)
-    fun skillNodeName(code: String) = key(SKILL_NODE, code, NAME)
-    fun skillNodeDescription(code: String) = key(SKILL_NODE, code, DESCRIPTION)
-    fun className(code: String) = key(CHARACTER_CLASS, code, NAME)
-    fun classDescription(code: String) = key(CHARACTER_CLASS, code, DESCRIPTION)
-    fun error(code: String) = "$ERROR.$code"
-    // The campaign, since server 0.26.0.
-    fun regionName(code: String) = key("region", code, NAME)
-    fun mapName(code: String) = key("map", code, NAME)
-    fun mapDescription(code: String) = key("map", code, DESCRIPTION)
-    fun monsterName(code: String) = key("monster", code, NAME)
-    // The crafts, since server 0.37.0.
-    fun professionName(code: String) = key("profession", code, NAME)
-    fun professionDescription(code: String) = key("profession", code, DESCRIPTION)
-    fun jobName(code: String) = key("job", code, NAME)
-    private fun key(section: String, code: String, field: String) = "$section.$code.$field"
 }
 
 /**

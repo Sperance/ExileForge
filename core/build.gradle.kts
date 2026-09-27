@@ -1,6 +1,8 @@
 plugins { kotlin("jvm"); `java-library`; id("org.jetbrains.kotlin.plugin.serialization") }
 
 dependencies {
+    // Общие правила сервера и клиента (сабмодуль backend/rules): контент, роллы, лист, заход по семени.
+    api("com.sperance.exileforge:rules:1.0.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
     api("com.squareup.okhttp3:okhttp:5.5.0")

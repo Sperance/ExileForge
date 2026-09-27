@@ -20,24 +20,16 @@ import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.sperance.exileforge.core.contract.text
+import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.PropertyValue
-import com.sperance.exileforge.core.display.baseProperties
-import com.sperance.exileforge.core.display.documentTitle
-import com.sperance.exileforge.core.display.itemStates
 import com.sperance.exileforge.core.display.requirementReason
-import com.sperance.exileforge.core.display.rollSummary
-import com.sperance.exileforge.core.display.shownLines
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.display.stateTitle
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.model.modifier.ModifierDefinition
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.theme.*
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonObject
 
 /**
  * A stash of anything, folded away until it is wanted.
@@ -81,13 +73,14 @@ import kotlinx.serialization.json.JsonObject
  * number set bold — and since 2.60.0 the rolls are summed up in one line: the rarity, how well they
  * landed inside their tiers and how many affix places are open. The card behind the tap lists them. [trailing] sits opposite
  * the name — a lot's price — or else [price], what the merchant pays, and [footer] under everything, for what a list adds about the item.
+ * The line reads the [item]'s view (3.0.0): the copy over its template and the content.
  */
 @OptIn(ExperimentalLayoutApi::class)
-@Composable fun ItemRow(document: JsonObject, definitions: List<ModifierDefinition> = emptyList(),
+@Composable fun ItemRow(item: ItemView,
     note: String? = null, noteColor: Color = Gold, selected: Boolean = false, enabled: Boolean = true,
     /** Worn or socketed (2.51.0): the line is framed and washed in gold and the icon carries a badge. */
     worn: Boolean = false,
-    /** The server's reasons this cannot be worn right now; empty means it can. */
+    /** The rules' reasons this cannot be worn right now; empty means it can. */
     unwearable: List<String> = emptyList(),
     /** Extra facts for the line under the name, after the slot. */
     facts: List<String> = emptyList(),
@@ -98,15 +91,14 @@ import kotlinx.serialization.json.JsonObject
     /** A line below the properties — the seller of a lot, and what else belongs at the bottom. */
     footer: @Composable (ColumnScope.() -> Unit)? = null,
     onClick: () -> Unit) {
-    val color = rarityColor(document.text("rarity"))
+    val color = rarityColor(item.rarity.name)
     // The base carries the number this copy really has — its own local modifiers are already in
     // it. The base the item started from stays on the card: a line has no room for a sum and its
     // history both.
-    val base = baseProperties(document, definitions).flatMap { it.values }
-    val rolled = shownLines((document["params"] as? JsonArray).orEmpty().mapNotNull { it as? JsonObject }, definitions)
-    val states = itemStates(document, definitions)
-    val level = document.text("itemLevel")
-    val slot = document.text("slot").takeIf { it.isNotBlank() }?.let(::slotTitle)
+    val base = item.base.flatMap { it.values }
+    val rolled = item.lines
+    val states = item.states
+    val slot = slotTitle(item.slot)
     val frame = RoundedCornerShape(6.dp)
     val card = RoundedCornerShape(10.dp)
     Row(Modifier.fillMaxWidth().glow(Gold, on = selected, radius = 10.dp, shape = card)
@@ -116,14 +108,14 @@ import kotlinx.serialization.json.JsonObject
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
             // The marker rides on the icon rather than in the text: the icon is where the eye starts.
             Box(Modifier.size(54.dp).background(color.copy(alpha = .08f), frame).border(1.dp, color, frame), contentAlignment = Alignment.Center) {
-                ItemIcon(document, color, Modifier.size(34.dp))
+                ItemIcon(item, color, Modifier.size(34.dp))
                 // The mark alone on a row (2.74.0): what is missing is the card's to say, or the mark's own tip.
                 if (unwearable.isNotEmpty()) Tipped({ Tip(ui("hero.inactive"), unwearable.joinToString("\n") { requirementReason(it) }, LifeRed) },
                     Modifier.align(Alignment.TopStart).padding(2.dp)) { Icon(Icons.Outlined.Block, ui("hero.inactive"), tint = LifeRed, modifier = Modifier.size(14.dp)) }
                 if (worn) Icon(Icons.Outlined.CheckCircle, ui("row.worn"), tint = Ink,
                     modifier = Modifier.align(Alignment.BottomEnd).offset(4.dp, 4.dp).background(Gold, CircleShape).padding(1.dp).size(15.dp))
             }
-            if (level.isNotBlank()) MutedText(ui("row.level", level), style = MaterialTheme.typography.labelSmall)
+            MutedText(ui("row.level", item.level), style = MaterialTheme.typography.labelSmall)
             // States as symbols, three to a row under the icon: words about corruption and sockets
             // would push the properties off the line.
             states.chunked(3).forEach { three ->
@@ -136,13 +128,13 @@ import kotlinx.serialization.json.JsonObject
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(document.text("name").ifBlank { documentTitle(document) }, color = color,
+                Text(item.title, color = color,
                     style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f))
                 note?.let { Text(it, color = noteColor, style = MaterialTheme.typography.labelSmall) }
                 trailing?.invoke() ?: price?.let { GoldPrice(it) }
             }
-            (listOfNotNull(slot) + facts).takeIf { it.isNotEmpty() }?.let {
+            (listOf(slot) + facts).let {
                 Text(it.joinToString(" · "), color = Muted, style = MaterialTheme.typography.labelSmall,
                     maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
@@ -150,7 +142,7 @@ import kotlinx.serialization.json.JsonObject
                 base.forEach { value -> BaseChip(value) }
             }
             // Every line it rolled, as sentences (2.72.0): a stash is read down without opening each card.
-            RollTops(rollSummary(document, rolled, definitions), rolled, definitions)
+            RollTops(item.summary, rolled)
             footer?.invoke(this)
         }
     }

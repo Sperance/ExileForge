@@ -3,16 +3,16 @@ package com.sperance.exileforge.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.sperance.exileforge.ForgeApplication
+import com.sperance.exileforge.core.campaign.RunCommand
 import com.sperance.exileforge.core.i18n.Lang
-import com.sperance.exileforge.core.model.Catalog
-import com.sperance.exileforge.core.model.CatalogFilter
-import com.sperance.exileforge.core.model.EntitySource
-import com.sperance.exileforge.core.model.EquipmentKind
+import com.sperance.exileforge.core.model.auction.AuctionFilter
+import com.sperance.exileforge.core.model.command.RedemptionCode
 import com.sperance.exileforge.core.network.RequestJournal
 import com.sperance.exileforge.data.settings.ServerStore
 import com.sperance.exileforge.presentation.state.AppMode
 import com.sperance.exileforge.presentation.state.ForgeSection
-import kotlinx.serialization.json.JsonObject
+import com.sperance.exileforge.rules.content.Rarity
+import com.sperance.exileforge.rules.content.Slot
 
 /** Lifecycle owner and compatibility facade; screen actions live in feature models. */
 class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: String) : ViewModel() {
@@ -29,12 +29,13 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     fun openProfession(code: String) = runtime.craftsViewModel.openProfession(code)
     fun startWork(job: String, additives: List<String> = emptyList()) = runtime.craftsViewModel.start(job, additives)
     fun stopWork() = runtime.craftsViewModel.stop()
-    fun equipTool(instanceId: String) = runtime.craftsViewModel.equipTool(instanceId)
+    fun equipTool(itemId: String) = runtime.craftsViewModel.equipTool(itemId)
     fun closeZone() = runtime.expeditionViewModel.closeZone()
-    fun pickMap(instanceId: String?) = runtime.expeditionViewModel.pickMap(instanceId)
-    fun summonGuardian(mapCode: String) = runtime.expeditionViewModel.summonGuardian(mapCode)
-    fun runCommand(command: com.sperance.exileforge.core.campaign.RunCommand) = runtime.expeditionViewModel.send(command)
+    fun pickMap(itemId: String?) = runtime.expeditionViewModel.pickMap(itemId)
+    fun runCommand(command: RunCommand) = runtime.expeditionViewModel.send(command)
     fun closeRun() = runtime.expeditionViewModel.close()
+    /** The run's journal goes out now: the app leaves the foreground. */
+    fun flushRun() = runtime.expeditionViewModel.flushRun()
     fun enterVaal() = runtime.expeditionViewModel.enterVaal()
     fun refuseVaal() = runtime.expeditionViewModel.refuseVaal()
     fun openAtlas() = runtime.expeditionViewModel.openAtlas()
@@ -44,49 +45,31 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     fun refundAtlas(code: String) = runtime.expeditionViewModel.refundAtlas(code)
     fun resetAtlas() = runtime.expeditionViewModel.resetAtlas()
     fun language(lang: Lang) = runtime.language(lang)
-    /** The server's names live in its dictionary; this re-reads it without touching the session. */
     fun refreshLocale() = runtime.refreshLocale()
-    /** The server's drawings live in its icon set; this re-reads it without touching the session. */
     fun refreshIcons() = runtime.refreshIcons()
     fun dismissMessage() = runtime.dismissMessage()
     fun dismissNotice() = runtime.dismissNotice()
-    suspend fun referencePage(source: EntitySource, page: Int, query: String) = runtime.referencePage(source, page, query)
-    /** The template behind an instance, for a card that has only the instance — an auction lot. */
-    suspend fun equipmentBase(id: String) = runtime.equipmentBase(id)
-    fun query(value: String) = runtime.catalogViewModel.query(value)
-    fun catalog(value: Catalog) = runtime.catalogViewModel.catalog(value)
-    fun filter(value: CatalogFilter) = runtime.catalogViewModel.filter(value)
-    fun applyFilters() = runtime.catalogViewModel.applyFilters()
-    fun refresh(page: Int = runtime.state.value.admin.page) = runtime.catalogViewModel.refresh(page)
-    fun count() = runtime.catalogViewModel.count()
-    fun open(id: String) = runtime.catalogViewModel.open(id)
-    fun create(kind: EquipmentKind = EquipmentKind.Weapon) = runtime.editorViewModel.create(kind)
-    fun closeEditor() = runtime.editorViewModel.closeEditor()
-    fun edit(document: JsonObject) = runtime.editorViewModel.edit(document)
-    fun loadDefinitions() = runtime.editorViewModel.loadDefinitions()
-    fun reloadEditor() = runtime.editorViewModel.reloadEditor()
-    fun save() = runtime.editorViewModel.save()
-    fun delete() = runtime.editorViewModel.delete()
-    fun editInventoryBase(id: String) = runtime.editorViewModel.editInventoryBase(id)
     fun selectEquipment(value: String) = runtime.heroViewModel.selectEquipment(value)
-    fun applyEssence(inventoryId: String, essenceItemId: String) = runtime.heroViewModel.applyEssence(inventoryId, essenceItemId)
+    /** An essence on one item, by the essence's item code. */
+    fun applyEssence(itemId: String, essence: String) = runtime.heroViewModel.applyEssence(itemId, essence)
     fun selectEssence(value: String) = runtime.heroViewModel.selectEssence(value)
     fun learnSkill(code: String) = runtime.heroViewModel.learnSkill(code)
     fun slotSkill(kind: String, index: Int, code: String?, condition: String? = null) = runtime.heroViewModel.slotSkill(kind, index, code, condition)
     fun flaskCondition(index: Int, condition: String?) = runtime.heroViewModel.flaskCondition(index, condition)
     fun exchangeBooks(books: List<String>, code: String) = runtime.heroViewModel.exchangeBooks(books, code)
     fun loadHero() = runtime.heroViewModel.loadHero()
-    /** Re-reads the hero only if what is on screen has gone cold; every character tab opens with it. */
     fun ensureHero() = runtime.heroViewModel.ensureHero()
-    fun equip(instanceId: String, slot: String? = null) = runtime.heroViewModel.equip(instanceId, slot)
-    fun unequip(instanceId: String) = runtime.heroViewModel.unequip(instanceId)
-    fun grant(equipmentId: String) = runtime.heroViewModel.grant(equipmentId)
+    fun equip(itemId: String, slot: Slot? = null) = runtime.heroViewModel.equip(itemId, slot)
+    fun unequip(itemId: String) = runtime.heroViewModel.unequip(itemId)
+    /** Admin only: a named template, rolled by the server at [rarity] or the template's own. */
+    fun grant(template: String, rarity: Rarity? = null) = runtime.heroViewModel.grant(template, rarity)
     fun grantRarity(value: String) = runtime.heroViewModel.grantRarity(value)
     fun grantSlot(value: String) = runtime.heroViewModel.grantSlot(value)
     fun grantRandom() = runtime.heroViewModel.grantRandom()
-    fun adjustItems(itemId: String, amount: Long) = runtime.heroViewModel.adjustItems(itemId, amount)
+    /** Admin only: a stack into the bag, by the item's code. */
+    fun grantItem(code: String, amount: Long) = runtime.heroViewModel.grantItem(code, amount)
     fun selectOrb(value: String) = runtime.heroViewModel.selectOrb(value)
-    fun openForge(instanceId: String?, section: ForgeSection) = runtime.heroViewModel.openForge(instanceId, section)
+    fun openForge(itemId: String?, section: ForgeSection) = runtime.heroViewModel.openForge(itemId, section)
     fun forgeSection(section: ForgeSection) = runtime.heroViewModel.forgeSection(section)
     fun selectNode(code: String) = runtime.heroViewModel.selectNode(code)
     fun allocateNode(code: String, choice: Int? = null) = runtime.heroViewModel.allocateNode(code, choice)
@@ -94,16 +77,15 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     fun rechooseNode(code: String, choice: Int) = runtime.heroViewModel.rechooseNode(code, choice)
     fun resetTree() = runtime.heroViewModel.resetTree()
     fun addExperience(amount: Double) = runtime.heroViewModel.addExperience(amount)
-    fun draftClass(value: String) = runtime.editorViewModel.draftClass(value)
-    fun applyOrb(inventoryId: String, orbItemId: String) = runtime.heroViewModel.applyOrb(inventoryId, orbItemId)
-    fun craft(inventoryId: String, recipe: String) = runtime.heroViewModel.craft(inventoryId, recipe)
-    fun uncraft(inventoryId: String) = runtime.heroViewModel.uncraft(inventoryId)
+    fun draftClass(value: String) = runtime.mutable.value.let { runtime.mutable.value = it.copy(play = it.play.copy(draftClass = value)) }
+    /** An orb on one item, by the orb's item code. */
+    fun applyOrb(itemId: String, orb: String) = runtime.heroViewModel.applyOrb(itemId, orb)
+    fun craft(itemId: String, recipe: String) = runtime.heroViewModel.craft(itemId, recipe)
+    fun uncraft(itemId: String) = runtime.heroViewModel.uncraft(itemId)
     fun redeem(code: String) = runtime.heroViewModel.redeem(code)
-    /** Puts a jewel into a socket on the tree, and takes it back out. */
-    fun socketJewel(inventoryId: String, nodeCode: String) = runtime.heroViewModel.socketJewel(inventoryId, nodeCode)
-    fun unsocketJewel(inventoryId: String) = runtime.heroViewModel.unsocketJewel(inventoryId)
-    /** Sells an item to a merchant; the price and the refusal are both the server's. */
-    fun sellForGold(inventoryId: String) = runtime.heroViewModel.sellForGold(inventoryId)
+    fun socketJewel(itemId: String, nodeCode: String) = runtime.heroViewModel.socketJewel(itemId, nodeCode)
+    fun unsocketJewel(itemId: String) = runtime.heroViewModel.unsocketJewel(itemId)
+    fun sellForGold(itemId: String) = runtime.heroViewModel.sellForGold(itemId)
     fun mode(mode: AppMode) = runtime.sessionViewModel.mode(mode)
     fun serverDraft(value: String) = runtime.sessionViewModel.serverDraft(value)
     fun connect() = runtime.sessionViewModel.connect()
@@ -113,7 +95,7 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     fun retryResume() = runtime.sessionViewModel.retryResume()
     fun enterCharacter(id: String) = runtime.characterViewModel.enter(id)
     fun leaveGame() = runtime.characterViewModel.leaveGame()
-    fun createCharacter(name: String, classId: String) = runtime.characterViewModel.create(name, classId)
+    fun createCharacter(name: String, heroClass: String) = runtime.characterViewModel.create(name, heroClass)
     fun deleteCharacter(id: String) = runtime.characterViewModel.delete(id)
     fun refreshCharacters() = runtime.characterViewModel.refresh()
     fun ensureClasses() = runtime.characterViewModel.ensureClasses()
@@ -121,7 +103,7 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     fun changePassword(current: String, replacement: String) = runtime.sessionViewModel.changePassword(current, replacement)
     fun nodeQuery(value: String) = runtime.heroViewModel.nodeQuery(value)
     fun auctionTab(tab: Int) = runtime.auctionViewModel.auctionTab(tab)
-    fun auctionFilter(filter: com.sperance.exileforge.core.model.auction.AuctionFilter) = runtime.auctionViewModel.auctionFilter(filter)
+    fun auctionFilter(filter: AuctionFilter) = runtime.auctionViewModel.auctionFilter(filter)
     fun showOwnLots(show: Boolean) = runtime.auctionViewModel.showOwnLots(show)
     fun loadAuction() = runtime.auctionViewModel.loadAuction()
     fun loadShowcase(page: Int = 0) = runtime.auctionViewModel.loadShowcase(page)
@@ -129,13 +111,13 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     fun buyOffer(offerId: String) = runtime.auctionViewModel.buyOffer(offerId)
     fun buyLotSlot() = runtime.auctionViewModel.buySlot()
     fun cancelLot(lotId: String) = runtime.auctionViewModel.cancel(lotId)
-    fun sellEquipment(inventoryId: String, priceOrbId: String, price: Long) = runtime.auctionViewModel.sellEquipment(inventoryId, priceOrbId, price)
-    fun sellItem(itemId: String, amount: Long, priceOrbId: String, price: Long) = runtime.auctionViewModel.sellItem(itemId, amount, priceOrbId, price)
-    fun runChecks() = runtime.checksViewModel.runChecks()
-    fun clearLogs() = runtime.checksViewModel.clearLogs()
-
+    /** Lists a copy for [price] of the orb [priceOrb] (an item code). */
+    fun sellEquipment(itemId: String, priceOrb: String, price: Long) = runtime.auctionViewModel.sellEquipment(itemId, priceOrb, price)
+    /** Lists [amount] of the stack [code]. */
+    fun sellItem(code: String, amount: Long, priceOrb: String, price: Long) = runtime.auctionViewModel.sellItem(code, amount, priceOrb, price)
+    fun clearLogs() = runtime.journal.clear()
     fun loadRedemptions() = runtime.redemptionViewModel.load()
-    fun createRedemption(code: com.sperance.exileforge.core.model.command.RedemptionCode) = runtime.redemptionViewModel.create(code)
+    fun createRedemption(code: RedemptionCode) = runtime.redemptionViewModel.create(code)
     fun deleteRedemption(id: String) = runtime.redemptionViewModel.delete(id)
     override fun onCleared() { runtime.close() }
     class Factory(private val app: ForgeApplication) : ViewModelProvider.Factory {

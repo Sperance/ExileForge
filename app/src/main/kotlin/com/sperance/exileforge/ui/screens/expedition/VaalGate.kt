@@ -17,21 +17,20 @@ import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.campaign.RunHud
-import com.sperance.exileforge.core.campaign.mapTitle
-import com.sperance.exileforge.core.campaign.monsterTitle
-import com.sperance.exileforge.core.display.modifierText
+import com.sperance.exileforge.core.display.displayName
+import com.sperance.exileforge.core.display.mapTitle
+import com.sperance.exileforge.core.display.modifierLine
+import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.model.campaign.VaalZone
-import com.sperance.exileforge.core.model.modifier.Modifier as Affix
 import com.sperance.exileforge.presentation.state.ForgeState
-import com.sperance.exileforge.ui.theme.*
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
+import com.sperance.exileforge.rules.content.ContentIndex
+import com.sperance.exileforge.rules.roll.Roll
+import com.sperance.exileforge.rules.roll.VaalZone
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeOutlinedButton
 import com.sperance.exileforge.ui.components.ForgeTextButton
+import com.sperance.exileforge.ui.theme.*
 
 /** The Vaal zone's own reds (2.65.0, the owner's mockup I «Кровавый алтарь»). */
 private object Altar {
@@ -47,11 +46,12 @@ private object Altar {
 }
 
 /**
- * The gate before a Vaal zone (2.65.0): what the server rolled for it — every modifier, and what
+ * The gate before a Vaal zone (2.65.0): what the run's seed rolled for it — every modifier, and what
  * the zone adds to the loot for bearing them — and the choice. «Войти» closes the portal behind the
  * hero, «Отказаться» closes it for good; the zone is never re-rolled by walking away and back.
  */
 @Composable fun VaalGate(s: ForgeState, hud: RunHud, guardian: String?, onEnter: () -> Unit, onRefuse: () -> Unit, onBack: () -> Unit) {
+    val index = s.index
     Box(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(Altar.glow, Altar.night, Altar.deep), radius = 1600f)), contentAlignment = Alignment.Center) {
         Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 18.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -61,13 +61,9 @@ private object Altar {
             val zone = hud.gate
             zone?.let { Text(guardian?.let { g -> ui("vaal.level_guardian", it.level, monsterTitle(g)) } ?: ui("vaal.level", it.level),
                 color = Parchment.copy(alpha = .75f), style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) }
-            when {
-                zone != null -> Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    zone.modifiers.forEach { ModLine(modifierText(it.document(), s.world.definitions)) }
-                }
-                hud.gateFailed -> Text(ui("vaal.failed"), color = LifeRed, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                else -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Altar.vein) }
-            }
+            if (zone != null) Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                zone.rolls.forEach { ModLine(rollText(index, it)) }
+            } else Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Altar.vein) }
             zone?.let { Reward(it) }
             Text(ui("vaal.warning"), color = Altar.muted, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -80,6 +76,10 @@ private object Altar {
         }
     }
 }
+
+/** A rolled line of the zone as its sentence; a code the content does not know reads as the code. */
+private fun rollText(index: ContentIndex?, roll: Roll): String =
+    index?.let { i -> i.modifier(roll.code)?.let { modifierLine(i, it, roll.values(it)) } } ?: displayName(roll.code)
 
 /** One modifier: a scarlet rhombus and its sentence on a dark red strip, a vein down its edge. */
 @Composable private fun ModLine(text: String) {
@@ -108,7 +108,3 @@ private object Altar {
         Text(ui("vaal.percent", number(value)), color = Altar.figure, style = MaterialTheme.typography.titleMedium)
     }
 }
-
-/** A rolled modifier as the item presentation reads one. */
-private fun Affix.document() = JsonObject(mapOf("modifierCode" to JsonPrimitive(modifierCode), "values" to JsonArray(values.map(::JsonPrimitive)),
-    "tier" to JsonPrimitive(tier)))

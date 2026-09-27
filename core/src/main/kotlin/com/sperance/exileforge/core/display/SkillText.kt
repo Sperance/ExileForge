@@ -2,17 +2,17 @@ package com.sperance.exileforge.core.display
 
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.model.modifier.ModifierOperation
-import com.sperance.exileforge.core.model.skills.MonsterSkill
-import com.sperance.exileforge.core.model.skills.Scale
-import com.sperance.exileforge.core.model.skills.SkillAilment
-import com.sperance.exileforge.core.model.skills.SkillBarrier
-import com.sperance.exileforge.core.model.skills.SkillBuff
-import com.sperance.exileforge.core.model.skills.SkillDefinition
-import com.sperance.exileforge.core.model.skills.SkillHeal
-import com.sperance.exileforge.core.model.skills.SkillHit
-import com.sperance.exileforge.core.model.skills.SkillStat
-import com.sperance.exileforge.core.model.skills.SkillTrigger
+import com.sperance.exileforge.rules.content.MonsterSkill
+import com.sperance.exileforge.rules.content.Op
+import com.sperance.exileforge.rules.content.Scale
+import com.sperance.exileforge.rules.content.SkillAilment
+import com.sperance.exileforge.rules.content.SkillBarrier
+import com.sperance.exileforge.rules.content.SkillBuff
+import com.sperance.exileforge.rules.content.SkillDefinition
+import com.sperance.exileforge.rules.content.SkillHeal
+import com.sperance.exileforge.rules.content.SkillHit
+import com.sperance.exileforge.rules.content.SkillStat
+import com.sperance.exileforge.rules.content.SkillTrigger
 import kotlin.math.abs
 
 /**
@@ -104,7 +104,7 @@ object SkillText {
 
     private fun ailments(list: List<SkillAilment>, level: Int) = list.map { ui("skill.line.ailment", number(it.chance.at(level)), ailment(it.ailment)) }
 
-    private fun stats(list: List<SkillStat>, level: Int) = list.map { statLine(it.stat, it.operation, it.value.at(level)) }
+    private fun stats(list: List<SkillStat>, level: Int) = list.map { statLine(it.stat, it.op, it.value.at(level)) }
 
     /** An element as the skill names it: `FIRE` … `CHAOS`, or `RANDOM` — any of the three elements. */
     fun element(name: String): String = ui("skill.element.$name")
@@ -116,17 +116,17 @@ object SkillText {
      * One stat line, a skill's or a flask's: the server's own sentence for the stat and operation — its
      * `.negative` one for a minus — or the stat's title and the number where the server has none.
      */
-    fun statLine(stat: String, operation: ModifierOperation, value: Double): String {
+    fun statLine(stat: String, operation: Op, value: Double): String {
         val key = "stat.template.$stat.${operation.name}"
         val negative = locOr("$key.negative", "").takeIf { value < 0 && it.isNotBlank() }
         val template = negative ?: locOr(key, "")
         if (template.isNotBlank()) return template.replace("{v}", statNumber(stat, if (negative != null) abs(value) else value))
         val size = statNumber(stat, abs(value))
         return when (operation) {
-            ModifierOperation.ADD -> ui("skill.stat_add", statTitle(stat), (if (value < 0) "−" else "+") + size)
-            ModifierOperation.INCREASED -> ui(if (value < 0) "skill.stat_reduced" else "skill.stat_increased", statTitle(stat), size)
-            ModifierOperation.MORE -> ui(if (value < 0) "skill.stat_less" else "skill.stat_more", statTitle(stat), size)
-            ModifierOperation.SET -> ui("skill.stat_set", statTitle(stat), size)
+            Op.ADD -> ui("skill.stat_add", statTitle(stat), (if (value < 0) "−" else "+") + size)
+            Op.INCREASED -> ui(if (value < 0) "skill.stat_reduced" else "skill.stat_increased", statTitle(stat), size)
+            Op.MORE -> ui(if (value < 0) "skill.stat_less" else "skill.stat_more", statTitle(stat), size)
+            Op.SET -> ui("skill.stat_set", statTitle(stat), size)
         }
     }
 

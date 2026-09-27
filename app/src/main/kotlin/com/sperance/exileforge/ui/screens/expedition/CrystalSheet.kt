@@ -16,32 +16,33 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.campaign.CrystalView
 import com.sperance.exileforge.core.campaign.RunCommand
-import com.sperance.exileforge.core.campaign.monsterTitle
 import com.sperance.exileforge.core.display.displayName
+import com.sperance.exileforge.core.display.itemTitle
+import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.display.number
-import com.sperance.exileforge.core.i18n.LocaleKey
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.model.currency.CurrencyOrb
 import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.rules.content.Orb
+import com.sperance.exileforge.ui.components.ForgeButton
+import com.sperance.exileforge.ui.components.ForgeOutlinedButton
+import com.sperance.exileforge.ui.components.ForgeTextButton
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.OrbGlyph
 import com.sperance.exileforge.ui.theme.*
-import com.sperance.exileforge.ui.components.ForgeButton
-import com.sperance.exileforge.ui.components.ForgeOutlinedButton
-import com.sperance.exileforge.ui.components.ForgeTextButton
 
 /**
  * A crystal of essences (2.78.0, the owner's mockup A): what it holds, who guards it — the zone's monster
  * standing up rare with the modifier of every essence inside — and the choice. «Освободить» takes the
  * guardian on; a Vaal orb passes over the crystal once — every essence a step higher, one of them
- * special, or a stronger guardian — and stepping away leaves it standing for later.
+ * special, or a stronger guardian — and stepping away leaves it standing for later. Since 3.0.0 the orb's
+ * outcome is rolled by the run's seed the moment it is spent: nothing here waits for the server.
  */
 @Composable internal fun CrystalSheet(s: ForgeState, view: CrystalView, onCommand: (RunCommand) -> Unit) {
-    val book = s.world.essenceBook
-    val vaalOrbs = s.orbOf(CurrencyOrb.VAAL_ORB)?.let { s.bagAmount(it.id) } ?: 0L
-    val kinds = view.essences.mapNotNull(book::essence).map { it.kind.code }.distinct()
+    val index = s.index
+    val vaalOrbs = s.bagAmount(Orb.VAAL_ORB.name) ?: 0L
+    val kinds = view.essences.mapNotNull { index?.essence(it) }.map { it.kind.code }.distinct()
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Ink.copy(alpha = .85f), Ink))), contentAlignment = Alignment.BottomCenter) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(12.dp).background(Panel.copy(alpha = .97f), RoundedCornerShape(12.dp))
             .border(1.dp, CrystalViolet.copy(alpha = .7f), RoundedCornerShape(12.dp)).padding(16.dp).heightIn(max = 520.dp)
@@ -52,30 +53,28 @@ import com.sperance.exileforge.ui.components.ForgeTextButton
                 if (view.vaal) Text(ui("crystal.corrupted"), color = LifeRed, style = MaterialTheme.typography.labelMedium)
             }
             view.essences.forEach { code ->
-                val special = book.essence(code)?.special == true
+                val special = index?.essence(code)?.special == true
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(Modifier.size(8.dp).background(if (special) GoldBright else CrystalViolet, RoundedCornerShape(2.dp)))
-                    Text(locOr(LocaleKey.itemName(code), displayName(code)), color = if (special) GoldBright else Parchment, style = MaterialTheme.typography.bodyMedium)
+                    Text(itemTitle(code), color = if (special) GoldBright else Parchment, style = MaterialTheme.typography.bodyMedium)
                 }
             }
             // The guardian: the zone's monster, rare, named by what its essences make of it.
             val traits = kinds.map { "«" + locOr("essence.$it.monster", displayName(it)) + "»" }
             Text(ui("crystal.guardian", monsterTitle(view.guardian), traits.joinToString(", ")), color = Rune, style = MaterialTheme.typography.bodySmall)
-            if (view.stronger) Text(ui("crystal.stronger", number(book.crystals.stronger)), color = LifeRed, style = MaterialTheme.typography.bodySmall)
+            if (view.stronger) Text(ui("crystal.stronger", number(index?.essences?.crystals?.stronger ?: 0.0)), color = LifeRed, style = MaterialTheme.typography.bodySmall)
             view.outcome?.let { Text(ui("crystal.outcome.$it"), color = GoldBright, style = MaterialTheme.typography.bodyMedium) }
-            if (view.failed) Text(ui("crystal.failed"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
             if (!view.vaal) MutedText(ui("crystal.vaal_hint"))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                ForgeOutlinedButton(enabled = !view.vaal && !view.pending && vaalOrbs > 0, onClick = { onCommand(RunCommand.VaalCrystal) }, modifier = Modifier.weight(1f)) {
-                    OrbGlyph(CurrencyOrb.VAAL_ORB, Modifier.size(18.dp))
+                ForgeOutlinedButton(enabled = !view.vaal && vaalOrbs > 0, onClick = { onCommand(RunCommand.VaalCrystal) }, modifier = Modifier.weight(1f)) {
+                    OrbGlyph(Orb.VAAL_ORB, Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
                     Text(ui("crystal.vaal", vaalOrbs))
                 }
-                ForgeButton(enabled = !view.pending, onClick = { onCommand(RunCommand.Release) }, modifier = Modifier.weight(1.3f),
+                ForgeButton(onClick = { onCommand(RunCommand.Release) }, modifier = Modifier.weight(1.3f),
                     colors = ButtonDefaults.buttonColors(containerColor = Blood, contentColor = GoldBright)) { Text(ui("crystal.release")) }
             }
-            if (view.pending) LinearProgressIndicator(Modifier.fillMaxWidth(), color = CrystalViolet, trackColor = PanelRaised)
-            ForgeTextButton(enabled = !view.pending, onClick = { onCommand(RunCommand.StepOff) }, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+            ForgeTextButton(onClick = { onCommand(RunCommand.StepOff) }, modifier = Modifier.align(Alignment.CenterHorizontally)) {
                 Text(ui("crystal.later"), color = Muted, textAlign = TextAlign.Center)
             }
         }

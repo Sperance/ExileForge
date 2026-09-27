@@ -5,12 +5,29 @@ import com.sperance.exileforge.core.i18n.UiStrings
 import com.sperance.exileforge.core.i18n.plural
 import com.sperance.exileforge.core.i18n.pluralKey
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.model.Catalog
-import com.sperance.exileforge.core.model.EquipmentKind
-import com.sperance.exileforge.core.model.auction.AuctionLotKind
-import com.sperance.exileforge.core.model.character.stockStats
+import com.sperance.exileforge.core.atlas.AtlasBranch
+import com.sperance.exileforge.core.campaign.Ailment
+import com.sperance.exileforge.core.campaign.DamageType
+import com.sperance.exileforge.core.campaign.Outcome
+import com.sperance.exileforge.core.campaign.TargetRule
+import com.sperance.exileforge.core.display.AffixKind
+import com.sperance.exileforge.core.display.StatGroup
+import com.sperance.exileforge.core.display.bodyPlaces
+import com.sperance.exileforge.core.model.auction.LotKind
 import com.sperance.exileforge.core.model.command.RedemptionKind
-import com.sperance.exileforge.core.model.currency.CurrencyOrb
+import com.sperance.exileforge.rules.content.AtlasNodeKind
+import com.sperance.exileforge.rules.content.AtlasPoints
+import com.sperance.exileforge.rules.content.EssenceBook
+import com.sperance.exileforge.rules.content.MonsterRarity
+import com.sperance.exileforge.rules.content.Orb
+import com.sperance.exileforge.rules.content.Rarity
+import com.sperance.exileforge.rules.content.SkillEvent
+import com.sperance.exileforge.rules.content.SkillNodeType
+import com.sperance.exileforge.rules.content.SkillType
+import com.sperance.exileforge.rules.content.Slot
+import com.sperance.exileforge.rules.content.SlotCondition
+import com.sperance.exileforge.rules.content.WeaponType
+import com.sperance.exileforge.rules.text.LocaleKey
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -135,41 +152,57 @@ class UiStringsTest {
     /**
      * Every code the client enumerates is named.
      *
-     * These are the keys built from a code at runtime, which the source scan above cannot see.
-     * Adding a value to one of these enums without adding its strings is exactly the mistake the
-     * standing rule is about, and this is what catches it.
+     * These are the keys built from a code at runtime, which the source scan above cannot see. The
+     * enums now live in `rules`, so a value the server grows without its strings is caught here.
      */
     @Test
     fun every_code_the_client_enumerates_is_named() {
         val expected = buildSet {
-            Catalog.entries.forEach { add("enum.catalog.${it.name}") }
-            EquipmentKind.entries.forEach { add("enum.kind.${it.name}") }
-            AuctionLotKind.entries.forEach { add("enum.lot.${it.name}") }
-            CurrencyOrb.entries.forEach { add("enum.orb.${it.name}"); add("enum.orb.${it.name}.rule") }
+            LotKind.entries.forEach { add("enum.lot.${it.name}") }
+            Orb.entries.forEach { add("enum.orb.${it.name}"); add("enum.orb.${it.name}.rule") }
             RedemptionKind.entries.forEach { add("enum.reward.${it.name}") }
-            com.sperance.exileforge.core.model.campaign.MonsterRarity.entries.forEach { add("enum.monster_rarity.${it.name}") }
-            com.sperance.exileforge.core.campaign.Ailment.entries.forEach { add("enum.ailment.${it.name}") }
-            com.sperance.exileforge.core.campaign.DamageType.entries.forEach { add("enum.damage.${it.name}") }
-            com.sperance.exileforge.core.display.AffixKind.entries.forEach { add("mod.kind.${it.name}") }
-            stockStats.forEach { add("enum.stat.$it") }
-            // The class skills (2.78.0): when a slot fires, what a skill is, what a passive answers, and the words of its lines.
-            com.sperance.exileforge.core.model.skills.SlotCondition.entries.forEach { add("skills.condition.${it.name}") }
-            com.sperance.exileforge.core.model.skills.SkillType.entries.forEach { add("skills.type.${it.name}") }
-            com.sperance.exileforge.core.model.skills.SkillEvent.entries.forEach { add("skill.on.${it.name}") }
-            (com.sperance.exileforge.core.campaign.DamageType.entries.map { it.name } + "RANDOM").forEach { add("skill.element.$it") }
-            (com.sperance.exileforge.core.campaign.Ailment.entries.map { it.word } + "ELEMENT").forEach { add("skill.ailment.$it") }
-            listOf(com.sperance.exileforge.core.model.essences.EssenceBook.VAAL_UPGRADE, com.sperance.exileforge.core.model.essences.EssenceBook.VAAL_SPECIAL,
-                com.sperance.exileforge.core.model.essences.EssenceBook.VAAL_STRONGER).forEach { add("crystal.outcome.$it") }
-            com.sperance.exileforge.core.contract.bodyPlaces.forEach { add("enum.slot.${it.code}") }
-            com.sperance.exileforge.core.display.StatGroup.entries.forEach { add("enum.stat_group.${it.name}") }
-            listOf("requiredLevel", "requiredStrength", "requiredDexterity", "requiredIntelligence")
-                .forEach { add("req.short.$it") }
-            // The states an item can be in. The list is read off the document, so a flag the
-            // server grows tomorrow still shows - but the ones that exist today have names.
+            MonsterRarity.entries.forEach { add("enum.monster_rarity.${it.name}") }
+            Rarity.entries.forEach { add("enum.rarity.${it.name}") }
+            Slot.entries.forEach { add("enum.slot.${it.name}") }
+            bodyPlaces.forEach { add("enum.slot.${it.code}") }
+            WeaponType.entries.forEach { add("enum.weapon.${it.name}") }
+            SkillNodeType.entries.forEach { add("enum.node.${it.name}") }
+            Ailment.entries.forEach { add("enum.ailment.${it.name}"); add("fight.effect.${it.name}") }
+            DamageType.entries.forEach { add("enum.damage.${it.name}") }
+            AffixKind.entries.forEach { add("mod.kind.${it.name}") }
+            StatGroup.entries.forEach { add("enum.stat_group.${it.name}") }
+            TargetRule.entries.forEach { add("fight.rule.${it.name}") }
+            Outcome.entries.forEach { add("expedition.outcome_${it.name.lowercase()}") }
+            AtlasNodeKind.entries.forEach { add("atlas.kind.${it.name}") }
+            AtlasBranch.entries.forEach { add("atlas.branch.${it.name}") }
+            AtlasPoints.KINDS.forEach { add("expedition.key_$it") }
+            SlotCondition.entries.forEach { add("skills.condition.${it.name}") }
+            SkillType.entries.forEach { add("skills.type.${it.name}") }
+            SkillEvent.entries.forEach { add("skill.on.${it.name}") }
+            (DamageType.entries.map { it.name } + "RANDOM").forEach { add("skill.element.$it") }
+            (Ailment.entries.map { it.word } + "ELEMENT").forEach { add("skill.ailment.$it") }
+            listOf(EssenceBook.VAAL_UPGRADE, EssenceBook.VAAL_SPECIAL, EssenceBook.VAAL_STRONGER).forEach { add("crystal.outcome.$it") }
+            listOf("requiredLevel", "requiredStrength", "requiredDexterity", "requiredIntelligence").forEach { add("req.short.$it") }
             listOf("corrupted", "mirrored", "equipped", "socketed").forEach { add("state.$it") }
         }
 
         val known = UiStrings.keys(Lang.RU)
         assertEquals(emptySet(), expected - known, "коды без строк в словаре")
+    }
+
+    /**
+     * Every stat of the content registry has a title the player can read: the client's own
+     * `enum.stat.*` or the server's label in each of its languages (`statTitle` falls back to it).
+     */
+    @Test
+    fun every_stat_of_the_registry_is_named() {
+        val index = TestContent.index
+        val own = UiStrings.keys(Lang.RU)
+        val server = TestContent.serverLocales()
+        assertTrue(server.isNotEmpty(), "server locale files not found")
+        val unnamed = index.stats.stats.filter { stat ->
+            "enum.stat.${stat.code}" !in own && server.any { (_, table) -> LocaleKey.statLabel(stat) !in table }
+        }
+        assertEquals(emptyList(), unnamed.map { it.code }, "stats without a title")
     }
 }

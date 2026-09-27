@@ -3,14 +3,11 @@ package com.sperance.exileforge.core.display
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
-import com.sperance.exileforge.core.model.character.stockStats
+import com.sperance.exileforge.rules.content.StatRegistry
 
 /**
- * The groups the character sheet is read in, top to bottom.
- *
- * Display only: which group a characteristic sits in says nothing about how the server counts it.
- * A code the client does not know — a stat the server grows tomorrow — lands in [OTHER], so the
- * sheet never drops a number it was sent.
+ * The groups the hero sheet is read in, top to bottom. Display only: which group a stat sits in says
+ * nothing about how it is counted. A code the client does not know lands in [OTHER].
  */
 enum class StatGroup {
     RESERVE, DEFENCE, RESISTANCE, ATTACK, AILMENT, ATTRIBUTE, OTHER;
@@ -18,16 +15,13 @@ enum class StatGroup {
     fun title(lang: Lang = uiLanguage): String = ui(lang, "enum.stat_group.$name")
 
     companion object {
-        private val reserve = setOf("STOCK_HEALTH", "STOCK_MANA", "STOCK_ENERGY_SHIELD", "STOCK_ENERGY",
-            "STOCK_HEALTH_REGEN", "STOCK_MANA_REGEN", "STOCK_ENERGY_REGEN", "STOCK_HEALTH_ON_KILL",
-            "STOCK_HEALTH_ON_HIT")
+        private val reserve = setOf("STOCK_HEALTH", "STOCK_MANA", "STOCK_ENERGY_SHIELD", "STOCK_ENERGY", "STOCK_HEALTH_REGEN", "STOCK_MANA_REGEN",
+            "STOCK_ENERGY_REGEN", "STOCK_HEALTH_ON_KILL", "STOCK_HEALTH_ON_HIT")
         private val defence = setOf("STOCK_ARMOR", "STOCK_EVASION", "STOCK_BLOCK_CHANCE", "STOCK_STUN_THRESHOLD", "STOCK_SPELL_BLOCK",
-            "STOCK_PHYSICAL_REDUCTION", "STOCK_AVOID_STUN",
-            // Server 0.66.0: what is taken, what comes back, and what is given back to attackers.
-            "STOCK_DAMAGE_TAKEN", "STOCK_PHYSICAL_TAKEN", "STOCK_ELEMENTAL_TAKEN", "STOCK_CHAOS_TAKEN", "STOCK_RECOVERY_RATE", "STOCK_SHIELD_RECHARGE",
-            "STOCK_THORNS", "STOCK_REFLECT")
-        private val ailment = setOf("STOCK_IGNITE_CHANCE", "STOCK_FREEZE_CHANCE", "STOCK_SHOCK_CHANCE", "STOCK_POISON_CHANCE",
-            "STOCK_BLEED_CHANCE", "STOCK_BURNING_DAMAGE", "STOCK_POISON_DAMAGE", "STOCK_BLEED_DAMAGE", "STOCK_AILMENT_DURATION")
+            "STOCK_PHYSICAL_REDUCTION", "STOCK_AVOID_STUN", "STOCK_DAMAGE_TAKEN", "STOCK_PHYSICAL_TAKEN", "STOCK_ELEMENTAL_TAKEN", "STOCK_CHAOS_TAKEN",
+            "STOCK_RECOVERY_RATE", "STOCK_SHIELD_RECHARGE", "STOCK_THORNS", "STOCK_REFLECT")
+        private val ailment = setOf("STOCK_IGNITE_CHANCE", "STOCK_FREEZE_CHANCE", "STOCK_SHOCK_CHANCE", "STOCK_POISON_CHANCE", "STOCK_BLEED_CHANCE",
+            "STOCK_BURNING_DAMAGE", "STOCK_POISON_DAMAGE", "STOCK_BLEED_DAMAGE", "STOCK_AILMENT_DURATION")
         private val attribute = setOf("STOCK_STRENGTH", "STOCK_AGILITY", "STOCK_INTELLECT", "STOCK_CONSTITUTION")
         private val attack = setOf("STOCK_CAST_SPEED")
 
@@ -44,13 +38,7 @@ enum class StatGroup {
     }
 }
 
-/**
- * The sheet the server sent, sorted into [StatGroup]s: groups in their own order, empty ones left
- * out, and inside each the server's own enum order, so two sheets always read the same way.
- */
-fun groupedStats(stats: Map<String, Double>): List<Pair<StatGroup, List<Pair<String, Double>>>> {
-    val order = stockStats.withIndex().associate { (index, stat) -> stat to index }
-    // Mana and spells left the game in 2.48.0: the sheet may still carry them, and they are not shown.
-    return stats.entries.filterNot { retired(it.key) }.groupBy { StatGroup.of(it.key) }.toSortedMap()
-        .map { (group, entries) -> group to entries.sortedWith(compareBy({ order[it.key] ?: Int.MAX_VALUE }, { it.key })).map { it.key to it.value } }
-}
+/** The sheet sorted into [StatGroup]s: groups in their own order, empty ones left out, and inside each the registry's order. */
+fun groupedStats(stats: Map<String, Double>, registry: StatRegistry? = null): List<Pair<StatGroup, List<Pair<String, Double>>>> =
+    stats.entries.filterNot { retired(it.key) }.groupBy { StatGroup.of(it.key) }.toSortedMap()
+        .map { (group, entries) -> group to entries.sortedWith(compareBy({ registry?.order(it.key) ?: Int.MAX_VALUE }, { it.key })).map { it.key to it.value } }

@@ -1,37 +1,35 @@
 package com.sperance.exileforge.ui.screens.hero
 
-import com.sperance.exileforge.presentation.state.sellPrice
 import androidx.compose.foundation.background
-import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.Search
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.text.input.ImeAction
-import com.sperance.exileforge.core.display.ItemSearch
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
-import com.sperance.exileforge.core.contract.BodyPlace
-import com.sperance.exileforge.core.contract.text
-import com.sperance.exileforge.core.display.inventoryDocument
+import com.sperance.exileforge.core.display.BodyPlace
+import com.sperance.exileforge.core.display.ItemSearch
+import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ForgeViewModel
@@ -41,12 +39,14 @@ import com.sperance.exileforge.presentation.state.Reads
 import com.sperance.exileforge.presentation.state.TAB_CRAFT
 import com.sperance.exileforge.presentation.state.TAB_SKILLS
 import com.sperance.exileforge.presentation.state.TAB_TREE
+import com.sperance.exileforge.presentation.state.sellPrice
+import com.sperance.exileforge.presentation.state.unmetFor
+import com.sperance.exileforge.presentation.state.view
+import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.ui.components.*
-import com.sperance.exileforge.ui.screens.auction.ListingSheet
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
+import com.sperance.exileforge.ui.screens.auction.ListingSheet
 import com.sperance.exileforge.ui.theme.*
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.size
 
 /** The Hero tab's four sections, in the order a player reaches for them. */
 private enum class HeroSection(val title: String, val icon: ImageVector) {
@@ -63,32 +63,34 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
  * Every item, wherever it is shown, opens the same [ItemSheet].
  *
  * Since 2.22.0 the stash holds only what lies loose — what is worn or socketed is the Equipment
- * section's — and the bag is a section of its own, a list rather than a strip of chips.
+ * section's — and the bag is a section of its own, a list rather than a strip of chips. Since 3.0.0
+ * every copy is read through its view over the content on the device, and the bag is keyed by item code.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun HeroScreen(s: ForgeState, vm: ForgeViewModel) {
-    var section by rememberSaveable(s.play.characterId) { mutableStateOf(HeroSection.CHARACTER) }
-    var detailId by remember(s.play.characterId) { mutableStateOf<String?>(null) }
-    var pickPlace by remember(s.play.characterId) { mutableStateOf<BodyPlace?>(null) }
-    var query by remember(s.play.characterId) { mutableStateOf("") }
+    val heroId = s.play.heroId
+    var section by rememberSaveable(heroId) { mutableStateOf(HeroSection.CHARACTER) }
+    var detailId by remember(heroId) { mutableStateOf<String?>(null) }
+    var pickPlace by remember(heroId) { mutableStateOf<BodyPlace?>(null) }
+    var query by remember(heroId) { mutableStateOf("") }
     var searching by remember { mutableStateOf(false) }
-    var slot by remember(s.play.characterId) { mutableStateOf("") }
-    var stackId by remember(s.play.characterId) { mutableStateOf<String?>(null) }
-    var listStack by remember(s.play.characterId) { mutableStateOf<String?>(null) }
+    var slot by remember(heroId) { mutableStateOf<Slot?>(null) }
+    var stackCode by remember(heroId) { mutableStateOf<String?>(null) }
+    var listStack by remember(heroId) { mutableStateOf<String?>(null) }
     // The stash is two shelves since 2.56.1: gear, and the professions' tools apart from it.
-    var tools by rememberSaveable(s.play.characterId) { mutableStateOf(false) }
+    var tools by rememberSaveable(heroId) { mutableStateOf(false) }
     // Opening the tab is what refreshes the hero, and only when the last reading has gone cold.
     // Nothing here asks the player to press anything: the pull below is for when they disagree.
-    LaunchedEffect(s.play.characterId, s.account.sessionEpoch) { vm.ensureHero() }
-    val hero = s.play.hero
+    LaunchedEffect(heroId, s.account.sessionEpoch) { vm.ensureHero() }
+    val hero = s.hero
     // The stash holds everything (2.51.0): what is worn or socketed too, with a gold frame and a badge.
-    val stash = hero?.inventory.orEmpty()
-    val documents = stash.associate { it.id to inventoryDocument(it, s.world.inventoryBases[it.equipmentId]) }
+    // A copy whose template the content does not hold is left out rather than drawn blank.
+    val stash = hero?.items.orEmpty().mapNotNull { s.view(it) }
     // How many loose items each slot holds (2.47.0): a chip says it, and a slot with none has no chip.
-    val shelf = stash.filter { documents.getValue(it.id).text("slot").startsWith(TOOL_SLOT) == tools }
-    val slotCounts = shelf.map { documents.getValue(it.id).text("slot") }.filter(String::isNotBlank).groupingBy { it }.eachCount()
+    val shelf = stash.filter { it.slot.isTool == tools }
+    val slotCounts = shelf.groupingBy { it.slot }.eachCount()
     val slots = slotCounts.keys.toList()
-    val visible = shelf.filter { instance -> documents[instance.id]?.let { (slot.isBlank() || it.text("slot") == slot) && ItemSearch.matches(it, query) } == true }
+    val visible = shelf.filter { (slot == null || it.slot == slot) && ItemSearch.matches(it, query) }
     PullToRefreshBox(isRefreshing = s.refreshing(Reads.HERO), onRefresh = vm::loadHero, modifier = Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
@@ -108,15 +110,15 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
                     val sections = bagSections(s)
                     if (sections.isEmpty()) item { InfoCard(ui("hero.bag_empty"), ui("bag.empty_hint")) }
                     // A table since 2.75.0: icon and count per cell, everything else behind the tap.
-                    else item(key = "bag") { BagGrid(s, sections) { stackId = it } }
+                    else item(key = "bag") { BagGrid(s, sections) { stackCode = it } }
                 }
                 HeroSection.STASH -> {
                     item {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                FilterChip(selected = !tools, onClick = { tools = false; slot = "" }, label = { Text(ui("hero.stash_gear")) },
+                                FilterChip(selected = !tools, onClick = { tools = false; slot = null }, label = { Text(ui("hero.stash_gear")) },
                                     leadingIcon = { Icon(ForgeGlyphs.Helm, null, modifier = Modifier.size(16.dp)) })
-                                FilterChip(selected = tools, onClick = { tools = true; slot = "" }, label = { Text(ui("hero.stash_tools")) },
+                                FilterChip(selected = tools, onClick = { tools = true; slot = null }, label = { Text(ui("hero.stash_tools")) },
                                     leadingIcon = { Icon(ForgeGlyphs.Anvil, null, modifier = Modifier.size(16.dp)) })
                                 Spacer(Modifier.weight(1f))
                                 // The search is a glyph at the side since 2.75.0, the field behind it in a dialog.
@@ -125,7 +127,7 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
                             if (query.isNotBlank()) InputChip(selected = true, onClick = { searching = true }, label = { Text(ui("hero.search_chip", query.trim())) },
                                 trailingIcon = { Icon(Icons.Outlined.Close, ui("hero.search_clear"), Modifier.size(16.dp).clickable { query = "" }) })
                             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                item { FilterChip(selected = slot.isBlank(), onClick = { slot = "" }, label = { Text(ui("hero.slot_count", ui("common.all"), shelf.size)) }) }
+                                item { FilterChip(selected = slot == null, onClick = { slot = null }, label = { Text(ui("hero.slot_count", ui("common.all"), shelf.size)) }) }
                                 items(slots) { key -> FilterChip(selected = slot == key, onClick = { slot = key },
                                     label = { Text(ui("hero.slot_count", slotTitle(key, s.lang), slotCounts[key] ?: 0)) }) }
                             }
@@ -133,14 +135,13 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
                     }
                     if (visible.isEmpty()) item { InfoCard(ui("tree.nothing_found"), ui("hero.stash_empty_hint")) }
                     // A line, not a card: a stash is read down, and the card is one tap behind each line.
-                    items(visible, key = { it.id }) { instance ->
-                        val worn = instance.equipped || instance.socketed
-                        ItemRow(documents.getValue(instance.id), definitions = s.world.definitions,
-                            selected = instance.id == s.play.selectedEquipment, worn = worn,
+                    items(visible, key = { it.id }) { piece ->
+                        val worn = piece.equipped || piece.socketed
+                        ItemRow(piece, selected = piece.id == s.play.selectedEquipment, worn = worn,
                             // The sheet added up here (2.46.0) says what the template needs, and the merchant's rule what it fetches.
                             // No rarity in words, a map's included (2.73.0): the row's frame already wears it.
-                            unwearable = hero.sheet.unwearableBy[instance.equipmentId].orEmpty(), price = s.sellPrice(instance).takeUnless { worn }) {
-                            detailId = instance.id; vm.selectEquipment(instance.id)
+                            unwearable = s.unmetFor(piece.code), price = s.sellPrice(piece.item).takeUnless { worn }) {
+                            detailId = piece.id; vm.selectEquipment(piece.id)
                         }
                     }
                 }
@@ -149,20 +150,22 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
     }
     detailId?.let { id -> ItemSheet(s, vm, id) { detailId = null } }
     if (searching) SearchDialog(query, onDismiss = { searching = false }) { query = it; searching = false }
-    stackId?.let { id -> s.play.hero?.bag?.firstOrNull { it.itemId == id } }?.let { stack ->
-        BagSheet(s, stack, onDismiss = { stackId = null },
-            onForge = { id -> stackId = null; vm.selectOrb(id); vm.openForge(null, ForgeSection.ORBS) },
-            onAuction = { id -> stackId = null; listStack = id },
+    // The sheet is about a stack the bag still holds: listed or read away, it closes with it.
+    stackCode?.let { code -> hero?.bag?.get(code)?.takeIf { it > 0 }?.let { amount ->
+        BagSheet(s, BagStack(code, amount), onDismiss = { stackCode = null },
+            onForge = { orb -> stackCode = null; vm.selectOrb(orb); vm.openForge(null, ForgeSection.ORBS) },
+            onAuction = { stack -> stackCode = null; listStack = stack },
             // A book is read where it lies, and its page opens in the grimoire (2.78.0); an essence goes to the forge.
-            onRead = { code -> stackId = null; vm.learnSkill(code); vm.tab(TAB_SKILLS) },
-            onEssence = { id -> stackId = null; vm.selectEssence(id); vm.openForge(null, ForgeSection.ESSENCES) })
-    }
-    listStack?.let { id ->
-        ListingSheet(s, bagTitle(s, id), owned = s.bagAmount(id) ?: 0L, onDismiss = { listStack = null }) { orb, price, amount ->
-            listStack = null; vm.sellItem(id, amount, orb, price)
+            onRead = { skill -> stackCode = null; vm.learnSkill(skill); vm.tab(TAB_SKILLS) },
+            onEssence = { essence -> stackCode = null; vm.selectEssence(essence); vm.openForge(null, ForgeSection.ESSENCES) })
+    } }
+    listStack?.let { code ->
+        ListingSheet(s, itemTitle(code), owned = s.bagAmount(code) ?: 0L, onDismiss = { listStack = null }) { orb, price, amount ->
+            listStack = null; vm.sellItem(code, amount, orb, price)
         }
     }
-    pickPlace?.let { place -> SlotPicker(s, place, onDismiss = { pickPlace = null }, onEquip = { instanceId -> vm.equip(instanceId, place.ring) }) }
+    // The place goes with the pick: a ring chosen for the second line lands in the second ring, a flask in its own bay.
+    pickPlace?.let { place -> SlotPicker(s, place, onDismiss = { pickPlace = null }, onEquip = { itemId -> vm.equip(itemId, place.place) }) }
 }
 
 /**
@@ -188,9 +191,6 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
         HorizontalDivider(color = PanelRaised)
     }
 }
-
-/** The slots a profession's tool goes in all begin so; the stash shelves them apart. */
-private const val TOOL_SLOT = "TOOL_"
 
 /** The stash's search glyph (2.75.0): a lens in a small ring, lit while a query filters the shelf. */
 @Composable private fun SearchGlyph(active: Boolean, onClick: () -> Unit) {

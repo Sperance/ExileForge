@@ -1,17 +1,15 @@
 package com.sperance.exileforge.presentation.features
 
-import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.model.Catalog
-import com.sperance.exileforge.core.model.CatalogFilter
+import com.sperance.exileforge.core.model.command.UserProfile
+import com.sperance.exileforge.core.network.FailureState
 import com.sperance.exileforge.core.network.normalizeServer
 import com.sperance.exileforge.presentation.ForgeRuntime
-import com.sperance.exileforge.presentation.state.Reads
 import com.sperance.exileforge.presentation.state.AppMode
+import com.sperance.exileforge.presentation.state.AppPhase
+import com.sperance.exileforge.presentation.state.Reads
 import com.sperance.exileforge.presentation.state.TAB_ADMIN
 import com.sperance.exileforge.presentation.state.TAB_HERO
-import com.sperance.exileforge.presentation.state.AppPhase
-import com.sperance.exileforge.core.network.FailureState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
@@ -21,11 +19,8 @@ import kotlinx.coroutines.launch
 class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     fun mode(mode: AppMode) { with(runtime) {
-        if (state.value.busy || state.value.admin.editorOpen || mode == AppMode.ADMIN && !state.value.isAdmin) return
-        // Dropping the tools closes the tabs that come with them, so the switch lands on the hero
-        // rather than on a screen that is about to refuse to draw.
-        mutable.update { it.copy(mode = mode, tab = if (mode == AppMode.ADMIN) TAB_ADMIN else TAB_HERO, admin = it.admin.copy(catalog = Catalog.EQUIPMENT, items = emptyList(), page = 0, filter = CatalogFilter(), query = "")) }
-        read(Reads.CATALOG, restart = true) { restoreFilters(); loadPage(0) }
+        if (state.value.busy || mode == AppMode.ADMIN && !state.value.isAdmin) return
+        mutable.update { it.copy(mode = mode, tab = if (mode == AppMode.ADMIN) TAB_ADMIN else TAB_HERO) }
     } }
 
     fun serverDraft(value: String) = update { it.copy(account = it.account.copy(serverDraft = value)) }
@@ -36,10 +31,9 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         clearSession()
         api = newApi(server)
         journal.clear()
-        mutable.update { it.copy(account = it.account.copy(server = server, serverDraft = server, health = ui("session.checking"))) }
+        mutable.update { it.copy(account = it.account.copy(server = server, serverDraft = server, health = ui("session.checking")), world = it.world.copy(content = null, contentHash = "")) }
         val health = api.health()
         mutable.update { it.copy(account = it.account.copy(health = health.toString())) }
-        // A dictionary and an icon set belong to their server: the new one has its own.
         refreshLocale()
         refreshIcons()
     } } }
@@ -56,13 +50,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         signedIn(api.login(login, password), byDevice = false)
     } } }
 
-    /**
-     * The account this device owns, registered on the way in if the server has never seen it.
-     *
-     * No credentials are typed and none are stored: the identifier *is* the account, which is why
-     * losing it loses the characters. [silent] is the relaunch path — it must not leave an error
-     * banner over the sign-in screen the player is already looking at.
-     */
+    /** The account this device owns, registered on the way in if the server has never seen it. [silent] is the relaunch path. */
     fun playOnThisDevice(silent: Boolean = false) { with(runtime) { task {
         clearSession()
         try {
@@ -72,13 +60,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         catch (e: Exception) { if (!silent) throw e }
     } } }
 
-    /**
-     * A session kept from an earlier launch.
-     *
-     * A launch that cannot reach the server keeps the token and says so, with a way to try again,
-     * rather than dropping the player on a sign-in they do not need. A token the server refused is
-     * handled by `newApi`'s 401 path, and anything else stays as quiet as the device path.
-     */
+    /** A session kept from an earlier launch; a launch that cannot reach the server keeps the token and says so. */
     fun resume(saved: String) { with(runtime) { task {
         clearSession()
         try {
@@ -90,40 +72,25 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         }
     } } }
 
-    /** The retry the offline sign-in screen offers; the token is read again in case it was dropped meanwhile. */
     fun retryResume() { with(runtime) { scope.launch {
         val saved = store.token(state.value.account.server)
         if (saved == null) mutable.update { it.copy(account = it.account.copy(resumable = false)) } else resume(saved)
     } } }
 
-    /**
-     * What every sign-in ends with: the account is the session, and the gate opens one step.
-     *
-     * The character is never chosen here. Which characters exist is the next screen's question,
-     * and it is the same question for a player and for an administrator — the editor and the
-     * checks are reached from inside the game, so everyone passes through the menu.
-     */
-    private suspend fun signedIn(profile: com.sperance.exileforge.core.model.command.UserProfile, byDevice: Boolean) { with(runtime) {
-        mutable.update { it.copy(mode = AppMode.PLAYER, phase = AppPhase.CHARACTERS, tab = 0, account = it.account.copy(signedIn = true, resumable = false, profile = profile), admin = it.admin.copy(catalog = Catalog.EQUIPMENT)) }
+    /** What every sign-in ends with: the account is the session, and the gate opens one step — the hero menu. */
+    private suspend fun signedIn(profile: UserProfile, byDevice: Boolean) { with(runtime) {
+        mutable.update { it.copy(mode = AppMode.PLAYER, phase = AppPhase.CHARACTERS, tab = TAB_HERO, account = it.account.copy(signedIn = true, resumable = false, profile = profile)) }
         store.saveDeviceSession(byDevice)
         store.saveToken(state.value.account.server, api.sessionToken())
-        restoreFilters()
-        // The catalogue is codes without it, and the first attempt may have run before the server was up.
         refreshLocale()
         refreshIcons()
-        // The world and the character list do not wait for each other; a character entered below
-        // takes the world's lock, so it still reads its hero only once the tables are in.
         coroutineScope {
-            launch { ensureWorld() }
-            // The one place a single character is entered without being chosen: arriving is not leaving.
+            launch { ensureContent() }
             runtime.characterViewModel.readCharacters(autoEnter = true)
         }
     } }
 
-    /**
-     * Signing out is explicit, so the next launch must not sign straight back in. The token is
-     * taken before the local session drops it, and revoked on the server without waiting.
-     */
+    /** Signing out is explicit, so the next launch must not sign straight back in. */
     fun logout() { with(runtime) {
         if (state.value.busy) return
         val server = state.value.account.server
@@ -137,15 +104,8 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         }
     } }
 
-    /** What a password must be is the server's rule (`US_004`), so it is sent and its refusal shown. */
     fun changePassword(current: String, replacement: String) { with(runtime) { task(writing = true) {
         require(current.isNotEmpty() && replacement.isNotEmpty()) { ui("api.credentials") }
-        // Every other session of the account ends; this one stays, so there is nothing to sign into again.
         api.changePassword(current, replacement)
     } } }
-
-    private suspend fun restoreFilters() { with(runtime) {
-        val saved = store.filters(state.value.account.server, state.value.admin.catalog.path)?.let { WireJson.decodeFromString(CatalogFilter.serializer(), it) } ?: CatalogFilter()
-        mutable.update { it.copy(admin = it.admin.copy(filter = saved, query = saved.query)) }
-    } }
 }

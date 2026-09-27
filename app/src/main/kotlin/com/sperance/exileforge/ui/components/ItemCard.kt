@@ -19,26 +19,36 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import com.sperance.exileforge.core.contract.text
-import com.sperance.exileforge.core.display.*
-import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.model.modifier.ModifierDefinition
-import com.sperance.exileforge.ui.icons.ItemIcon
+import com.sperance.exileforge.core.display.BaseProperty
 import com.sperance.exileforge.core.display.Glyph
+import com.sperance.exileforge.core.display.ItemView
+import com.sperance.exileforge.core.display.PropertyValue
+import com.sperance.exileforge.core.display.lineText
+import com.sperance.exileforge.core.display.slotTitle
+import com.sperance.exileforge.core.display.stateTitle
+import com.sperance.exileforge.core.display.statTitle
+import com.sperance.exileforge.core.display.weaponTitle
+import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.rules.content.ContentIndex
+import com.sperance.exileforge.rules.content.Line
+import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.icons.vector
 import com.sperance.exileforge.ui.theme.*
-import kotlinx.serialization.json.*
 
 /**
- * One modifier, as a whole sentence.
+ * One fixed line — a tree node's, a class's — as a whole sentence.
  *
- * The server's dictionary holds the phrasing — "+{0} to armour" — and the rolled values fill it,
- * so there is no label to put on the left of a number any more.
+ * The server's dictionary holds the phrasing — "+{0} to armour" — and the line's values fill it,
+ * so there is no label to put on the left of a number any more. The glyph is the characteristic
+ * the modifier's first effect changes.
  */
-@Composable fun ModifierLine(modifier: JsonObject, definitions: List<ModifierDefinition>) {
+@Composable fun ModifierLine(index: ContentIndex, line: Line) = ModifierLine(lineText(index, line), Glyph.ofModifier(line.code, index))
+
+/** A modifier's sentence already worded, under the glyph of what it changes. */
+@Composable fun ModifierLine(text: String, glyph: Glyph = Glyph.INFO) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Icon(Glyph.ofModifier(modifier.text("modifierCode"), definitions).vector, null, tint = Rune, modifier = Modifier.size(16.dp))
-        Text(modifierText(modifier, definitions), color = ModBlue, style = MaterialTheme.typography.bodyMedium)
+        Icon(glyph.vector, null, tint = Rune, modifier = Modifier.size(16.dp))
+        Text(text, color = ModBlue, style = MaterialTheme.typography.bodyMedium)
     }
 }
 
@@ -119,20 +129,17 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
  * and the card quiet enough to read. Above the name are the states it is in, drawn rather than
  * spelled out because they are glanced at, and what it is; below it the base as figures, and the
  * rolls as a trade table (2.60.0): the score of the roll over a row per line. The icon sits beside the name: it is how the item is
- * recognised before any of it is read.
+ * recognised before any of it is read. Everything printed is the [item]'s view (3.0.0): the copy over its template and the content.
  */
-@Composable fun ItemCard(doc: JsonObject, enabled: Boolean = true, selected: Boolean = false,
-    detailed: Boolean = false, definitions: List<ModifierDefinition> = emptyList(),
-    actionLabel: String = ui("common.open"),
+@Composable fun ItemCard(item: ItemView, enabled: Boolean = true, selected: Boolean = false,
+    detailed: Boolean = false, actionLabel: String = ui("common.open"),
     /** What the merchant pays for this copy (2.46.0); it replaces the template's bare base price. */
     price: Long? = null, onClick: () -> Unit = {}) {
-    val color = rarityColor(doc.text("rarity"))
-    val base = baseProperties(doc, definitions)
-    val states = itemStates(doc, definitions)
-    val rolled = shownLines((doc["params"] as? JsonArray).orEmpty().mapNotNull { it as? JsonObject }, definitions)
-    val kind = doc.text("slot").takeIf { it.isNotBlank() }?.let(::slotTitle)
-        ?: doc.text("category").takeIf { it.isNotBlank() }
-        ?: if (doc["userId"] != null) ui("card.character") else ui("card.item")
+    val color = rarityColor(item.rarity.name)
+    val base = item.base
+    val states = item.states
+    val rolled = item.lines
+    val kind = slotTitle(item.slot)
 
     Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).background(Panel)
         .border(if (selected) 2.dp else 1.dp, if (selected) GoldBright else Bronze.copy(alpha = .40f))
@@ -149,14 +156,14 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
             }
 
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                ItemIcon(doc, color, Modifier.size(56.dp))
+                ItemIcon(item, color, Modifier.size(56.dp))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(doc.text("name").ifBlank { documentTitle(doc) }, color = Parchment,
+                    Text(item.title, color = Parchment,
                         style = MaterialTheme.typography.titleLarge,
                         maxLines = if (detailed) 5 else 2, overflow = TextOverflow.Ellipsis)
                     // The English trade name, on a full card only (2.51.0): what it is searched by.
-                    if (detailed) documentTrade(doc)?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelMedium, fontStyle = FontStyle.Italic) }
-                    cardFacts(doc, withPrice = price == null).forEach {
+                    if (detailed) item.trade?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelMedium, fontStyle = FontStyle.Italic) }
+                    cardFacts(item, withPrice = price == null).forEach {
                         MutedText(it, style = MaterialTheme.typography.labelSmall)
                     }
                 }
@@ -168,11 +175,11 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
             // Then what this copy rolled, as a trade table (2.60.0): the figures a trader weighs it by,
             // then a row per line with how high it landed inside its tier.
             if (rolled.isNotEmpty()) {
-                if (detailed) RollScore(rollSummary(doc, rolled, definitions))
-                TradeTable(rolled.take(if (detailed) rolled.size else 3), definitions)
+                if (detailed) RollScore(item.summary)
+                TradeTable(rolled.take(if (detailed) rolled.size else 3))
             }
             if (!detailed && rolled.size > 3) MutedText(ui("card.more_properties", rolled.size - 3), style = MaterialTheme.typography.labelMedium)
-            if (detailed) documentDescription(doc).takeIf { it.isNotBlank() }?.let {
+            if (detailed) item.description.takeIf { it.isNotBlank() }?.let {
                 Text(it, color = Muted, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Start)
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
@@ -191,24 +198,22 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
 }
 
 /**
- * The short facts under a name: everything that is a field of the document rather than a modifier.
+ * The short facts under a name: everything that is a field of the template rather than a modifier.
  *
  * Two lines at most — what the item is worth knowing about before its properties, then the odds
- * and ends a particular kind of document carries. A field the document does not have is left out
+ * and ends a particular kind of item carries. A fact the template does not have is left out
  * rather than printed as nothing.
  */
-private fun cardFacts(doc: JsonObject, withPrice: Boolean = true): List<String> = listOfNotNull(
+private fun cardFacts(item: ItemView, withPrice: Boolean = true): List<String> = listOfNotNull(
     listOfNotNull(
-        doc.text("itemLevel").takeIf { it.isNotBlank() }?.let { ui("row.level", it) },
-        doc.text("level").takeIf { it.isNotBlank() }?.let { ui("row.level", it) },
-        itemRequirements(doc).takeIf { it.isNotEmpty() }?.let { ui("auction.needs", it.joinToString(", ")) },
+        ui("row.level", item.level),
+        item.requirements.takeIf { it.isNotEmpty() }?.let { ui("auction.needs", it.joinToString(", ")) },
     ).joinToString(" · ").takeIf { it.isNotBlank() },
     listOfNotNull(
-        doc.text("weaponType").takeIf { it.isNotBlank() }?.let(::weaponTitle),
+        item.weaponType?.let { weaponTitle(it) },
         // A flask's quality (2.78.0): each percent a percent more effect or recovery.
-        doc.text("quality").toIntOrNull()?.takeIf { it > 0 }?.let { ui("card.quality", it) },
-        doc.text("durability").takeIf { it.isNotBlank() }?.let { "${ui("card.durability")} $it" },
-        doc.text("price").takeIf { withPrice && it.isNotBlank() }?.let { "${ui("card.price")} $it" },
-        doc.text("money").takeIf { it.isNotBlank() }?.let { "${ui("card.gold")} $it" },
+        item.quality.takeIf { it > 0 }?.let { ui("card.quality", it) },
+        "${ui("card.durability")} ${item.template.durability}",
+        item.template.price?.takeIf { withPrice }?.let { "${ui("card.price")} $it" },
     ).joinToString(" · ").takeIf { it.isNotBlank() },
 )

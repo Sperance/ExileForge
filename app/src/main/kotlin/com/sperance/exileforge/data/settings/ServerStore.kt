@@ -24,9 +24,6 @@ class ServerStore(private val context: Context) {
     val server = context.settings.data.map { it[key] ?: "http://10.0.2.2:8080/" }
     suspend fun save(value: String) { context.settings.edit { it[key] = value } }
 
-    suspend fun filters(server: String, catalog: String): String? = context.settings.data.first()[stringPreferencesKey("filters:$server:$catalog")]
-    suspend fun saveFilters(server: String, catalog: String, value: String) { context.settings.edit { it[stringPreferencesKey("filters:$server:$catalog")] = value } }
-
     /**
      * The language the player chose, or nothing at all.
      *
@@ -95,18 +92,25 @@ class ServerStore(private val context: Context) {
     }
 
     /**
-     * The world's reference tables (server 0.48.0), kept per server as a file beside its hash.
-     *
-     * The file is the size of the whole catalogue, too big for a preference; the hash stays in
-     * DataStore so a torn write is a missing file, never a stale one under a fresh hash.
+     * One chunk of the world's content, kept per server and file beside the fingerprint the manifest gave it:
+     * a chunk is fetched again only when its own fingerprint moves, so a changed table costs one file.
      */
-    suspend fun world(server: String): Pair<String, String>? = worlds.read(server)
-    suspend fun saveWorld(server: String, hash: String, document: String) = worlds.write(server, hash, document)
+    suspend fun chunk(server: String, file: String): Pair<String, String>? = chunks.read(server, file)
+    suspend fun saveChunk(server: String, file: String, hash: String, document: String) = chunks.write(server, hash, document, file)
+
+    /**
+     * The journal of a hero's run, as text, so events the server has not taken survive the process: what
+     * was not sent is sent on the next launch, as long as the hero's run is still the one it names.
+     */
+    suspend fun journal(heroId: String): String? = withContext(Dispatchers.IO) { journalFile(heroId).takeIf { it.isFile }?.readText() }
+    suspend fun saveJournal(heroId: String, text: String) = withContext(Dispatchers.IO) { journalFile(heroId).apply { parentFile?.mkdirs() }.writeText(text) }
+    suspend fun clearJournal(heroId: String) = withContext(Dispatchers.IO) { journalFile(heroId).delete(); Unit }
+    private fun journalFile(heroId: String) = File(context.filesDir, "journal/$heroId.json")
 
     private val locales = Documents("locale")
     private val iconSets = Documents("icons")
     private val portraitSets = Documents("portraits")
-    private val worlds = Documents("world")
+    private val chunks = Documents("content")
 
     /**
      * Served documents kept on the device: the body in a file, its fingerprint in DataStore.

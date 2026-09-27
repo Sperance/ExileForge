@@ -6,7 +6,10 @@ jobs:
     permissions:
       contents: read
     steps:
+      # The core builds against the server's `rules` module, checked out as the `backend/` submodule.
       - uses: actions/checkout@v4
+        with:
+          submodules: true
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -58,12 +61,10 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      # The server under test is the pinned `backend/` submodule: the commit `SERVER_COMMIT` in Contract.kt names.
       - uses: actions/checkout@v4
         with:
-          repository: Sperance/ktor-bestgame
-          ref: 8f687bf00aec6bc9b5971599ebfe07cdac71ecc9
-          path: backend
+          submodules: true
       - uses: actions/setup-java@v4
         with:
           distribution: temurin

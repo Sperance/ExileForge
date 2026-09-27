@@ -6,18 +6,17 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 
 /**
- * What every feature of the one [ForgeRuntime] shares: the state it reads, the one way it changes
- * it, and the character it acts for. A feature keeps nothing a screen draws; that all lives in
- * [ForgeState], and commands and reads go through the runtime's `task` and `read`.
+ * What every feature of the one [ForgeRuntime] shares: the state it reads, the one way it changes it,
+ * and the hero it acts for. A feature keeps nothing a screen draws; that all lives in [ForgeState].
  */
 abstract class FeatureViewModel(protected val runtime: ForgeRuntime) {
     protected val state: StateFlow<ForgeState> get() = runtime.state
 
-    /** The character on screen, as every character route names it. */
-    protected val characterId: String get() = state.value.play.characterId.trim()
+    /** The hero on screen, as every hero route names it. */
+    protected val heroId: String get() = state.value.play.heroId.trim()
 
-    /** Whether [id] is the character on screen: an answer about any other one is not drawn. */
-    protected fun onScreen(id: String): Boolean = id == characterId
+    /** Whether [id] is the hero on screen: an answer about any other one is not drawn. */
+    protected fun onScreen(id: String): Boolean = id == heroId
 
     protected fun update(transform: (ForgeState) -> ForgeState) = runtime.mutable.update(transform)
 }

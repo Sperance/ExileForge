@@ -33,7 +33,7 @@ import com.sperance.exileforge.ui.theme.*
  * group a stat belongs to is [StatGroup]'s, so a stat nobody named still lands in «Прочее».
  */
 @Composable fun HeroSummary(s: ForgeState) {
-    val hero = s.play.hero ?: return
+    val hero = s.hero ?: return
     StatSheet(s, hero.stats)
 }
 
@@ -46,7 +46,8 @@ import com.sperance.exileforge.ui.theme.*
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         HeroVitals(stats)
         if (stats.isEmpty()) Text(ui("hero.no_stats"), color = Muted)
-        groupedStats(stats).forEach { (group, figures) -> StatGroupCard(group, figures, s, before) }
+        // The registry's order inside a group, once the content is here; the code's before that.
+        groupedStats(stats, s.index?.stats).forEach { (group, figures) -> StatGroupCard(group, figures, s, before) }
     }
 }
 
@@ -98,7 +99,7 @@ private fun StatGroup.accent(): Color = when (this) {
  * could only ever be full. Mana left the game in 2.48.0.
  */
 @Composable fun HeroVitals(s: ForgeState) {
-    HeroVitals(s.play.hero?.stats ?: return)
+    HeroVitals(s.hero?.stats ?: return)
 }
 
 @Composable private fun HeroVitals(stats: Map<String, Double>) {

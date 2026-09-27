@@ -1,67 +1,67 @@
 package com.sperance.exileforge.ui.screens.tree
 
-import com.sperance.exileforge.presentation.state.sellPrice
-import com.sperance.exileforge.core.display.Glyph
-
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.text.TextMeasurer
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.drawText
-import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.unit.sp
-import kotlin.math.PI
-import kotlin.math.atan2
-import kotlin.math.cos
-import kotlin.math.sin
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.TextMeasurer
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.sperance.exileforge.core.display.Glyph
+import com.sperance.exileforge.core.display.itemTitle
+import com.sperance.exileforge.core.display.nodeDescription
+import com.sperance.exileforge.core.display.nodeTitle
 import com.sperance.exileforge.core.display.nodeTypeTitle
-import com.sperance.exileforge.core.contract.text
-import com.sperance.exileforge.core.display.inventoryDocument
 import com.sperance.exileforge.core.display.statNumber
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.plural
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.model.currency.CurrencyOrb
-import com.sperance.exileforge.core.model.skilltree.SkillNodeType
-import com.sperance.exileforge.core.model.skilltree.StatContribution
-import com.sperance.exileforge.core.model.skilltree.SkillTreeNode
-import com.sperance.exileforge.core.model.skilltree.reachableFrom
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.sellPrice
+import com.sperance.exileforge.presentation.state.view
+import com.sperance.exileforge.rules.content.ContentIndex
+import com.sperance.exileforge.rules.content.HeroClass
+import com.sperance.exileforge.rules.content.Op
+import com.sperance.exileforge.rules.content.Orb
+import com.sperance.exileforge.rules.content.SkillNodeType
+import com.sperance.exileforge.rules.content.Slot
+import com.sperance.exileforge.rules.content.TreeNode
+import com.sperance.exileforge.rules.sheet.StatContribution
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
+import com.sperance.exileforge.ui.icons.OrbGlyph
 import com.sperance.exileforge.ui.theme.*
+import kotlin.math.PI
+import kotlin.math.atan2
+import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.min
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
-import kotlinx.serialization.json.putJsonArray
+import kotlin.math.sin
 
 @Composable fun SkillTreeScreen(s: ForgeState, vm: ForgeViewModel) {
     // No scrolling column here: the map owns the height, and everything that used to sit under it
@@ -69,7 +69,7 @@ import kotlinx.serialization.json.putJsonArray
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Spacer(Modifier.height(12.dp))
         ScreenHeader(ui("tree.title"),
-            ui("tree.node_count", s.world.treeNodes.size), ForgeGlyphs.Constellation)
+            ui("tree.node_count", s.index?.content?.tree?.nodes?.size ?: 0), ForgeGlyphs.Constellation)
         SkillTreePanel(s, vm::selectNode, vm::allocateNode, vm::refundNode, vm::resetTree, vm::nodeQuery,
             onSocket = vm::socketJewel, onUnsocket = vm::unsocketJewel, onRechoose = vm::rechooseNode, modifier = Modifier.weight(1f))
         Spacer(Modifier.height(12.dp))
@@ -79,9 +79,9 @@ import kotlinx.serialization.json.putJsonArray
 /**
  * The passive tree.
  *
- * The graph is the server's: node positions, edges, costs and bonuses all arrive seeded, and which
- * node may be taken next is decided by `allocate` rather than guessed at here. The panel draws what
- * it was given and sends one node code at a time.
+ * The graph is the content's: node positions, edges, costs and bonuses all arrive with the rules, and
+ * which node may be taken next is decided by `allocate` on the server rather than guessed at here. The
+ * panel draws what it was given and sends one node code at a time.
  *
  * The map takes the whole panel and everything else — the point balance, the search, the chosen
  * node and its two commands — opens as a sheet over it. A hundred and twenty nodes need the room,
@@ -93,7 +93,9 @@ import kotlinx.serialization.json.putJsonArray
     onSocket: (String, String) -> Unit = { _, _ -> }, onUnsocket: (String) -> Unit = {},
     onRechoose: (String, Int) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier) {
-    val hero = s.play.hero
+    val hero = s.hero
+    val index = s.index
+    val tree = s.treeState
     var detailsOpen by remember { mutableStateOf(false) }
     var nodeOpen by remember { mutableStateOf(false) }
     // The node's own window is the question (2.72.0): taking or giving back a node acts at once from
@@ -104,25 +106,27 @@ import kotlinx.serialization.json.putJsonArray
             ui("tree.no_hero_hint"))
         return
     }
-    if (s.world.treeNodes.isEmpty()) {
+    if (index == null || tree == null || index.content.tree.nodes.isEmpty()) {
         InfoCard(ui("tree.not_loaded"),
             ui("tree.not_loaded_hint"))
         return
     }
-    val taken = hero.tree.takenCodes
+    val nodes = index.content.tree.nodes
+    val taken = hero.takenNodes
     val enabled = !s.busy && s.account.signedIn && (s.ownsCharacter || s.isAdmin)
     // Which nodes are one step away: neighbours of what is taken, or the class's own start when
     // nothing is taken yet. The server still decides — this only says where to look on 122 nodes.
-    val reachable = remember(s.world.treeNodes, taken) { reachableFrom(s.world.treeNodes, taken) }
+    val heroClass = s.heroClass
+    val reachable = remember(index, heroClass, taken) { reachableFrom(index, heroClass, taken) }
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(ui("tree.points", hero.tree.available, hero.tree.total),
+            Text(ui("tree.points", tree.available, tree.total),
                 color = Gold, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
             ForgeTextButton(onClick = { detailsOpen = true }) { Text(ui("tree.details")) }
         }
         // A tap opens a small window about that one node, so the map stays in sight; everything
         // about the tree as a whole lives behind "Подробно".
-        TreeCanvas(s, taken, reachable, Modifier.weight(1f)) { code -> onSelect(code); nodeOpen = true }
+        TreeCanvas(nodes, s.play.selectedNode, taken, reachable, Modifier.weight(1f)) { code -> onSelect(code); nodeOpen = true }
         MutedText(ui("tree.gesture_hint"))
     }
     // The small window about the chosen node: what it gives, and the one command over it. It is
@@ -130,7 +134,7 @@ import kotlinx.serialization.json.putJsonArray
     if (nodeOpen) ModalBottomSheet(onDismissRequest = { nodeOpen = false }, containerColor = Panel) {
         Column(Modifier.fillMaxWidth().heightIn(max = 520.dp).verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            NodeDetails(s, s.world.treeNodes.firstOrNull { it.code == s.play.selectedNode }, taken, reachable, enabled,
+            NodeDetails(s, index, index.tree.node(s.play.selectedNode), taken, reachable, enabled,
                 onAllocate = { code, choice -> nodeOpen = false; onAllocate(code, choice) },
                 onRefund = { nodeOpen = false; onRefund(it) },
                 onRechoose = { code, choice -> nodeOpen = false; onRechoose(code, choice) },
@@ -147,28 +151,28 @@ import kotlinx.serialization.json.putJsonArray
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.9f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
                 ForgePanel {
-                    Engraved(hero.character.name)
-                    PropertyRow(ui("tree.points_total"), hero.tree.total.toString(), Glyph.LEVEL)
-                    PropertyRow(ui("tree.points_spent"), hero.tree.spent.toString(), Glyph.LEVEL)
-                    PropertyRow(ui("tree.points_available"), hero.tree.available.toString(), Glyph.LEVEL)
+                    Engraved(hero.info.name)
+                    PropertyRow(ui("tree.points_total"), tree.total.toString(), Glyph.LEVEL)
+                    PropertyRow(ui("tree.points_spent"), tree.spent.toString(), Glyph.LEVEL)
+                    PropertyRow(ui("tree.points_available"), tree.available.toString(), Glyph.LEVEL)
                 }
             }
             item {
                 ForgePanel(accent = Rune) {
                     Engraved(ui("tree.totals_title"), Rune)
-                    if (hero.tree.totals.isEmpty()) Text(ui("tree.totals_empty"), color = Muted)
-                    // The server sums this: two INCREASED add up while two MORE multiply, so
+                    if (tree.totals.isEmpty()) Text(ui("tree.totals_empty"), color = Muted)
+                    // The rules sum this: two INCREASED add up while two MORE multiply, so
                     // adding the snapshots here would lie exactly where a player is choosing.
                     // It is the tree's contribution, not the character's total — which is why a
                     // percentage stays a percentage and is written with its sign.
-                    hero.tree.totals.forEach { total ->
+                    tree.totals.forEach { total ->
                         PropertyRow(statTitle(total.stat, s.lang), contributionText(total), stat = total.stat)
                     }
                 }
             }
-            item { TreeSearch(s, onQuery) { code -> onSelect(code); detailsOpen = false; nodeOpen = true } }
+            item { TreeSearch(s, nodes, onQuery) { code -> onSelect(code); detailsOpen = false; nodeOpen = true } }
             item {
-                ForgeOutlinedButton(enabled = enabled && hero.tree.nodes.size > 1, onClick = { detailsOpen = false; confirmReset = true },
+                ForgeOutlinedButton(enabled = enabled && hero.tree.size > 1, onClick = { detailsOpen = false; confirmReset = true },
                     modifier = Modifier.fillMaxWidth()) { Text(ui("tree.reset_all")) }
                 MutedText(ui("tree.reset_note"))
             }
@@ -177,15 +181,24 @@ import kotlinx.serialization.json.putJsonArray
 }
 
 /**
+ * Which nodes are one step away: the class's own start while nothing is taken, otherwise every node
+ * not yet taken that the rules call adjacent — a taken mastery opens no neighbours.
+ */
+private fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Set<String>): Set<String> =
+    if (taken.isEmpty()) setOfNotNull(heroClass?.startNode)
+    else index.content.tree.nodes.mapNotNullTo(HashSet()) { node -> node.code.takeIf { it !in taken && index.tree.isAdjacentTo(it, taken) } }
+
+/**
  * Finding a node by name.
  *
  * The tree is over a hundred nodes across seven class areas, so panning to one by eye is no longer
  * realistic. A match selects the node, which is what the map draws a ring around.
  */
-@Composable private fun TreeSearch(s: ForgeState, onQuery: (String) -> Unit, onSelect: (String) -> Unit) {
-    val matches = remember(s.world.treeNodes, s.play.nodeQuery) {
-        if (s.play.nodeQuery.isBlank()) emptyList()
-        else s.world.treeNodes.filter { it.title.contains(s.play.nodeQuery.trim(), true) || it.code.contains(s.play.nodeQuery.trim(), true) }.take(8)
+@Composable private fun TreeSearch(s: ForgeState, nodes: List<TreeNode>, onQuery: (String) -> Unit, onSelect: (String) -> Unit) {
+    val matches = remember(nodes, s.play.nodeQuery, s.lang) {
+        val query = s.play.nodeQuery.trim()
+        if (query.isBlank()) emptyList()
+        else nodes.filter { nodeTitle(it.code).contains(query, true) || it.code.contains(query, true) }.take(8)
     }
     ForgePanel {
         Engraved(ui("tree.find_node"))
@@ -194,7 +207,7 @@ import kotlinx.serialization.json.putJsonArray
         if (s.play.nodeQuery.isNotBlank() && matches.isEmpty()) Text(ui("tree.nothing_found"), color = Muted)
         matches.forEach { node ->
             ForgeTextButton(onClick = { onSelect(node.code) }, modifier = Modifier.fillMaxWidth()) {
-                Text("${node.title} · ${nodeTypeTitle(node.type.name, s.lang)}",
+                Text("${nodeTitle(node.code)} · ${nodeTypeTitle(node.type, s.lang)}",
                     color = nodeColour(node, node.code == s.play.selectedNode))
             }
         }
@@ -202,7 +215,7 @@ import kotlinx.serialization.json.putJsonArray
 }
 
 /**
- * The graph, drawn from the coordinates the server seeded.
+ * The graph, drawn from the coordinates the content seeded.
  *
  * Panning and zooming are the only interaction beyond a tap: the layout is fixed data, so the
  * canvas never moves a node, it only chooses where to look. It clips, because a canvas does not:
@@ -210,9 +223,8 @@ import kotlinx.serialization.json.putJsonArray
  * pan is held to the tree's own half-extent, so a stray flick cannot drag the whole graph away and
  * leave an empty rectangle with no way back but the reset.
  */
-@Composable private fun TreeCanvas(s: ForgeState, taken: Set<String>, reachable: Set<String>,
+@Composable private fun TreeCanvas(nodes: List<TreeNode>, selected: String, taken: Set<String>, reachable: Set<String>,
     modifier: Modifier = Modifier, onSelect: (String) -> Unit) {
-    val nodes = s.world.treeNodes
     val byCode = remember(nodes) { nodes.associateBy { it.code } }
     val bounds = remember(nodes) { Bounds.of(nodes) }
     var scale by remember { mutableFloatStateOf(1f) }
@@ -251,7 +263,7 @@ import kotlinx.serialization.json.putJsonArray
                 }
             }
             nodes.forEach { node -> medallion(node, place(node, bounds, width, height, scale, pan), scale, node.code in taken,
-                node.code in reachable, node.code == s.play.selectedNode) }
+                node.code in reachable, node.code == selected) }
         }
         Row(Modifier.align(Alignment.BottomStart).padding(8.dp), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -267,7 +279,7 @@ import kotlinx.serialization.json.putJsonArray
  * A socket is the exception, because it gives nothing by itself — what it holds is a jewel, and
  * the command there is to put one in or take it out.
  */
-@Composable private fun NodeDetails(s: ForgeState, node: SkillTreeNode?, taken: Set<String>, reachable: Set<String>, enabled: Boolean,
+@Composable private fun NodeDetails(s: ForgeState, index: ContentIndex, node: TreeNode?, taken: Set<String>, reachable: Set<String>, enabled: Boolean,
     onAllocate: (String, Int?) -> Unit, onRefund: (String) -> Unit,
     onSocket: (String, String) -> Unit = { _, _ -> }, onUnsocket: (String) -> Unit = {}, onRechoose: (String, Int) -> Unit = { _, _ -> }) {
     if (node == null) {
@@ -277,38 +289,37 @@ import kotlinx.serialization.json.putJsonArray
     val allocated = node.code in taken
     val choosing = node.options.isNotEmpty()
     // The option the hero took is theirs: it is read from the snapshot, not from the tree.
-    val chosen = s.play.hero?.tree?.nodes?.firstOrNull { it.code == node.code }?.choice
+    val chosen = s.hero?.tree?.firstOrNull { it.code == node.code }?.choice
     var picked by remember(node.code) { mutableStateOf<Int?>(null) }
     ForgePanel(accent = nodeColour(node, true)) {
         // The node's name is this panel's title, so it keeps its own casing rather than being
         // shouted as an Engraved caption the way a section heading is.
-        Text(node.title, color = nodeColour(node, true), style = MaterialTheme.typography.titleMedium)
-        PropertyRow(ui("tree.node_type"), nodeTypeTitle(node.type.name, s.lang), Glyph.TREE)
+        Text(nodeTitle(node.code), color = nodeColour(node, true), style = MaterialTheme.typography.titleMedium)
+        PropertyRow(ui("tree.node_type"), nodeTypeTitle(node.type, s.lang), Glyph.TREE)
         PropertyRow(ui("tree.cost"), node.cost.toString(), Glyph.LEVEL)
         PropertyRow(ui("card.state"), if (allocated) ui("tree.taken") else ui("tree.not_taken"), Glyph.TREE)
-        node.details.takeIf { it.isNotBlank() }?.let { MutedText(it) }
+        nodeDescription(node.code).takeIf { it.isNotBlank() }?.let { MutedText(it) }
 
         OrnateDivider()
         if (node.type == SkillNodeType.JEWEL_SOCKET) {
-            SocketContents(s, node, allocated, enabled, onSocket, onUnsocket)
+            SocketContents(s, index, node, allocated, enabled, onSocket, onUnsocket)
         } else if (choosing) {
             // A mastery or an attribute node (server 0.52.0): one option, chosen when it is taken. A taken
             // attribute node may change it for a Chaos Orb (2.72.0, server 0.63.0); a mastery may not.
             val rechoosable = allocated && node.type == SkillNodeType.ATTRIBUTE
             MutedText(ui(when { rechoosable -> "tree.option_rechoose"; allocated -> "tree.option_chosen"; else -> "tree.option_pick" }),
                 style = MaterialTheme.typography.labelMedium)
-            node.options.forEachIndexed { index, option ->
-                val on = when { picked != null -> index == picked; allocated -> index == chosen; else -> false }
-                OptionCard(on, enabled = (!allocated && node.code in reachable) || (rechoosable && enabled), onClick = { picked = index }) {
-                    option.forEach { modifier -> ModifierLine(modifierDocument(modifier.modifierCode, modifier.values), s.world.definitions) }
+            node.options.forEachIndexed { at, option ->
+                val on = when { picked != null -> at == picked; allocated -> at == chosen; else -> false }
+                OptionCard(on, enabled = (!allocated && node.code in reachable) || (rechoosable && enabled), onClick = { picked = at }) {
+                    option.forEach { line -> ModifierLine(index, line) }
                 }
             }
             if (rechoosable) {
-                val chaos = s.orbOf(CurrencyOrb.CHAOS_ORB)
-                val owned = chaos?.let { s.bagAmount(it.id) } ?: 0L
+                val owned = s.bagAmount(Orb.CHAOS_ORB.name) ?: 0L
                 ForgeButton(enabled = enabled && picked != null && picked != chosen && owned > 0, onClick = { picked?.let { onRechoose(node.code, it) } },
                     modifier = Modifier.fillMaxWidth()) {
-                    com.sperance.exileforge.ui.icons.OrbGlyph(CurrencyOrb.CHAOS_ORB, Modifier.size(20.dp))
+                    OrbGlyph(Orb.CHAOS_ORB, Modifier.size(20.dp))
                     Spacer(Modifier.width(8.dp))
                     Text(ui("tree.rechoose", owned))
                 }
@@ -316,10 +327,8 @@ import kotlinx.serialization.json.putJsonArray
             if (node.type == SkillNodeType.MASTERY && !allocated && node.code !in reachable)
                 MutedText(ui("tree.mastery_locked"))
         } else {
-            if (node.params.isEmpty()) Text(ui("tree.no_bonuses"), color = Muted)
-            node.params.forEach { modifier ->
-                ModifierLine(modifierDocument(modifier.modifierCode, modifier.values), s.world.definitions)
-            }
+            if (node.lines.isEmpty()) Text(ui("tree.no_bonuses"), color = Muted)
+            node.lines.forEach { line -> ModifierLine(index, line) }
         }
 
         OrnateDivider()
@@ -335,29 +344,29 @@ import kotlinx.serialization.json.putJsonArray
 /**
  * What sits in a socket, and what can be put there.
  *
- * A jewel is an ordinary equipment instance, so the stash is where the candidates come from: every
- * jewel the character owns that is not already in another socket. Whether this one may go in is
- * still the server's call — the socket has to be taken and free — so the list offers and the
- * refusal explains.
+ * A jewel is an ordinary item, so the stash is where the candidates come from: every jewel the hero
+ * owns that is neither worn nor already in another socket. Whether this one may go in is still the
+ * server's call — the socket has to be taken and free — so the list offers and the refusal explains.
  */
-@Composable private fun SocketContents(s: ForgeState, node: SkillTreeNode, allocated: Boolean, enabled: Boolean,
+@Composable private fun SocketContents(s: ForgeState, index: ContentIndex, node: TreeNode, allocated: Boolean, enabled: Boolean,
     onSocket: (String, String) -> Unit, onUnsocket: (String) -> Unit) {
-    val hero = s.play.hero ?: return
+    val hero = s.hero ?: return
     val inside = hero.jewels[node.code]
 
     if (inside != null) {
-        val document = inventoryDocument(inside, s.world.inventoryBases[inside.equipmentId])
-        ItemRow(document, definitions = s.world.definitions, enabled = false,
-            note = if (allocated) ui("tree.socket_working") else ui("tree.socket_locked"),
-            noteColor = if (allocated) Gold else LifeRed) { }
+        s.view(inside)?.let { jewel ->
+            ItemRow(jewel, enabled = false,
+                note = if (allocated) ui("tree.socket_working") else ui("tree.socket_locked"),
+                noteColor = if (allocated) Gold else LifeRed) { }
+        }
         ForgeOutlinedButton(enabled = enabled, onClick = { onUnsocket(inside.id) }, modifier = Modifier.fillMaxWidth()) {
             Text(ui("tree.jewel_out"))
         }
         return
     }
 
-    val free = hero.inventory.filter { instance ->
-        !instance.socketed && s.world.inventoryBases[instance.equipmentId]?.text("slot") == "JEWEL"
+    val free = hero.items.filter { instance ->
+        !instance.equipped && !instance.socketed && index.template(instance.template)?.slot == Slot.JEWEL
     }
     if (!allocated) {
         MutedText(ui("tree.socket_first"))
@@ -369,17 +378,15 @@ import kotlinx.serialization.json.putJsonArray
     }
     Engraved(ui("tree.jewel_in"))
     free.forEach { instance ->
-        val document = inventoryDocument(instance, s.world.inventoryBases[instance.equipmentId])
-        ItemRow(document, definitions = s.world.definitions, enabled = enabled, price = s.sellPrice(instance)) { onSocket(instance.id, node.code) }
+        s.view(instance)?.let { jewel -> ItemRow(jewel, enabled = enabled, price = s.sellPrice(instance)) { onSocket(instance.id, node.code) } }
     }
 }
 
 @Composable private fun TreeConfirmations(s: ForgeState, reset: Boolean, onClear: () -> Unit, onReset: () -> Unit) {
     val treeIcon: @Composable () -> Unit = { Icon(ForgeGlyphs.Constellation, null, tint = Rune, modifier = Modifier.size(40.dp)) }
-    // What a reset is paid with: the orb, and how many of it the bag holds right now.
-    val regret = s.orbOf(CurrencyOrb.ORB_OF_REGRET)
-    val regretTitle = regret?.title(s.lang) ?: CurrencyOrb.ORB_OF_REGRET.title(s.lang)
-    val regretLeft = regret?.let { s.bagAmount(it.id) }
+    // What a reset is paid with: the orb, named by its code, and how many of it the bag holds right now.
+    val regretTitle = itemTitle(Orb.ORB_OF_REGRET.name)
+    val regretLeft = s.bagAmount(Orb.ORB_OF_REGRET.name)
     fun regretLines(spent: Int) = listOfNotNull(
         LedgerLine(ui("confirm.spend"), ui("confirm.minus", spent, regretTitle), Tone.SPEND),
         regretLeft?.takeIf { it >= spent }?.let { LedgerLine(ui("confirm.left"), ui("confirm.amount", it - spent, regretTitle)) },
@@ -388,7 +395,7 @@ import kotlinx.serialization.json.putJsonArray
 
     if (reset) {
         // The start node is not given back, so it is not paid for — the count says what is.
-        val returned = (s.play.hero?.tree?.nodes?.size ?: 1) - 1
+        val returned = (s.hero?.tree?.size ?: 1) - 1
         ConfirmSheet(
             title = ui("tree.reset_q"), subtitle = ui("confirm.count", returned, nodes(returned)), icon = treeIcon,
             ledger = regretLines(returned) + LedgerLine(ui("confirm.returns"), ui("confirm.plus_count", returned, nodes(returned)), Tone.GAIN),
@@ -410,21 +417,15 @@ private fun nodes(n: Int) = plural("tree.node", n)
 private fun contributionText(total: StatContribution): String {
     val number = statNumber(total.stat, total.value)
     val signed = if (total.value > 0) "+$number" else number
-    return when (total.operation) {
-        "INCREASED", "MORE" -> "$signed%"
+    return when (total.op) {
+        Op.INCREASED, Op.MORE -> "$signed%"
         // SET replaces the base outright, so it is not an addition and carries no sign.
-        "SET" -> statNumber(total.stat, total.value)
-        else -> signed
+        Op.SET -> number
+        Op.ADD -> signed
     }
 }
 
-/** A fixed modifier as the display helpers expect it: they read documents, not typed models. */
-private fun modifierDocument(modifierCode: String, values: List<Double>): JsonObject = buildJsonObject {
-    put("modifierCode", modifierCode)
-    putJsonArray("values") { values.forEach { add(JsonPrimitive(it)) } }
-}
-
-private fun nodeColour(node: SkillTreeNode, selected: Boolean): Color = when {
+private fun nodeColour(node: TreeNode, selected: Boolean): Color = when {
     node.type == SkillNodeType.KEYSTONE -> LifeRed
     node.type == SkillNodeType.NOTABLE -> if (selected) GoldBright else Gold
     node.type == SkillNodeType.START -> ShieldCyan
@@ -436,7 +437,7 @@ private fun nodeColour(node: SkillTreeNode, selected: Boolean): Color = when {
     else -> Rune
 }
 
-private fun radius(node: SkillTreeNode): Float = when (node.type) {
+private fun radius(node: TreeNode): Float = when (node.type) {
     SkillNodeType.KEYSTONE -> 13f; SkillNodeType.NOTABLE -> 10f; SkillNodeType.START -> 12f
     SkillNodeType.JEWEL_SOCKET -> 11f; SkillNodeType.SMALL -> 6f
     SkillNodeType.MASTERY -> 10f; SkillNodeType.ATTRIBUTE -> 7f
@@ -447,9 +448,9 @@ private data class Bounds(val minX: Float, val maxX: Float, val minY: Float, val
     val spanX get() = max(1f, maxX - minX)
     val spanY get() = max(1f, maxY - minY)
     companion object {
-        fun of(nodes: List<SkillTreeNode>) = Bounds(
-            nodes.minOfOrNull { it.positionX.toFloat() } ?: 0f, nodes.maxOfOrNull { it.positionX.toFloat() } ?: 1f,
-            nodes.minOfOrNull { it.positionY.toFloat() } ?: 0f, nodes.maxOfOrNull { it.positionY.toFloat() } ?: 1f)
+        fun of(nodes: List<TreeNode>) = Bounds(
+            nodes.minOfOrNull { it.x.toFloat() } ?: 0f, nodes.maxOfOrNull { it.x.toFloat() } ?: 1f,
+            nodes.minOfOrNull { it.y.toFloat() } ?: 0f, nodes.maxOfOrNull { it.y.toFloat() } ?: 1f)
     }
 }
 
@@ -470,10 +471,10 @@ private fun panLimit(bounds: Bounds, width: Float, height: Float, scale: Float):
     return Offset(max(0f, bounds.spanX * fit * scale / 2), max(0f, bounds.spanY * fit * scale / 2))
 }
 
-private fun place(node: SkillTreeNode, bounds: Bounds, width: Float, height: Float, scale: Float, pan: Offset): Offset {
+private fun place(node: TreeNode, bounds: Bounds, width: Float, height: Float, scale: Float, pan: Offset): Offset {
     val fit = fitFactor(bounds, width, height)
-    val x = (node.positionX - bounds.minX) * fit - bounds.spanX * fit / 2
-    val y = (node.positionY - bounds.minY) * fit - bounds.spanY * fit / 2
+    val x = (node.x - bounds.minX) * fit - bounds.spanX * fit / 2
+    val y = (node.y - bounds.minY) * fit - bounds.spanY * fit / 2
     return Offset(width / 2 + x * scale + pan.x, height / 2 + y * scale + pan.y)
 }
 
@@ -495,9 +496,9 @@ private fun classTint(code: String): Color = when (code.removeSuffix("_START")) 
 /**
  * The wheel under the graph (2.59.0, the owner's pick «Колесо PoE»): a stone disc with its rings,
  * each class's sector washed in its colour and named at the rim. The sectors are read off the start
- * nodes' positions, so the wheel turns with whatever tree the server seeds.
+ * nodes' positions, so the wheel turns with whatever tree the content seeds.
  */
-private fun DrawScope.wheel(nodes: List<SkillTreeNode>, bounds: Bounds, width: Float, height: Float, scale: Float, pan: Offset,
+private fun DrawScope.wheel(nodes: List<TreeNode>, bounds: Bounds, width: Float, height: Float, scale: Float, pan: Offset,
     labels: TextMeasurer) {
     drawRect(Color(0xFF0B0D11))
     val fit = fitFactor(bounds, width, height) * scale
@@ -506,11 +507,11 @@ private fun DrawScope.wheel(nodes: List<SkillTreeNode>, bounds: Bounds, width: F
     drawCircle(Brush.radialGradient(listOf(Color(0xFF1A1E25), Color(0xFF0E1015)), centre, rim * 1.05f), rim * 1.05f, centre)
     for (ring in 1..8) drawCircle(Bronze.copy(alpha = if (ring % 3 == 0) .2f else .08f), rim * ring / 8f, centre, style = Stroke(1f))
     nodes.filter { it.type == SkillNodeType.START && it.code != "SCION_START" }.forEach { start ->
-        val angle = Math.toDegrees(atan2(start.positionY.toDouble(), start.positionX.toDouble())).toFloat()
+        val angle = Math.toDegrees(atan2(start.y.toDouble(), start.x.toDouble())).toFloat()
         val tint = classTint(start.code)
         drawArc(tint.copy(alpha = .06f), angle - 30f, 60f, true, centre - Offset(rim, rim), Size(rim * 2, rim * 2))
         if (scale > .55f) {
-            val layout = labels.measure(start.title, TextStyle(color = tint.copy(alpha = .85f), fontSize = (11 * scale.coerceAtMost(1.6f)).sp))
+            val layout = labels.measure(nodeTitle(start.code), TextStyle(color = tint.copy(alpha = .85f), fontSize = (11 * scale.coerceAtMost(1.6f)).sp))
             val at = centre + Offset(cos(Math.toRadians(angle.toDouble())).toFloat(), sin(Math.toRadians(angle.toDouble())).toFloat()) * rim * 1.0f
             drawText(layout, topLeft = at - Offset(layout.size.width / 2f, layout.size.height / 2f))
         }
@@ -523,7 +524,7 @@ private fun DrawScope.wheel(nodes: List<SkillTreeNode>, bounds: Bounds, width: F
  * start's octagon in its class's colour. Taken is gold and glows, one step away is ringed in dull
  * gold, the rest is stone.
  */
-private fun DrawScope.medallion(node: SkillTreeNode, centre: Offset, scale: Float, taken: Boolean, next: Boolean, selected: Boolean) {
+private fun DrawScope.medallion(node: TreeNode, centre: Offset, scale: Float, taken: Boolean, next: Boolean, selected: Boolean) {
     val r = radius(node) * scale.coerceIn(.5f, 2.2f)
     val edge = when { taken -> Gold; next -> Gold.copy(alpha = .55f); else -> Bronze }
     val width = (if (node.type == SkillNodeType.SMALL) 1.5f else 2.2f) * scale.coerceIn(.6f, 1.6f)

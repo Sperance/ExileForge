@@ -11,6 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.ForgeState
@@ -20,7 +21,7 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * Who the character is, above the Hero tab's sections: the one part every section shares.
+ * Who the hero is, above the Hero tab's sections: the one part every section shares.
  *
  * The name, then class and level as one line, then the purse and the tree as two chips, and the
  * experience as a thin bar under them — the progress a player checks at a glance, which used to be a
@@ -28,16 +29,16 @@ import com.sperance.exileforge.ui.theme.*
  * part of the hero.
  */
 @Composable fun HeroHeader(s: ForgeState, onTree: () -> Unit, onSkills: () -> Unit = {}, onForge: () -> Unit) {
-    val hero = s.play.hero ?: return
-    val character = hero.character
+    val hero = s.hero ?: return
+    val info = hero.info
     ForgePanel {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             // The class's portrait as the map's token (since 2.31.0).
-            ClassPortrait(s.heroClass?.code, s.world.portraits, Modifier.size(64.dp), round = true)
+            ClassPortrait(hero.heroClass, s.world.portraits, Modifier.size(64.dp), round = true)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(character.name, style = MaterialTheme.typography.headlineSmall, color = GoldBright)
+                Text(info.name, style = MaterialTheme.typography.headlineSmall, color = GoldBright)
                 // The class is the base every percentage is counted from; the server owns it.
-                Text(ui("hero.class_level", s.heroClass?.title.orEmpty().ifBlank { ui("hero.unknown_class") }, character.level),
+                Text(ui("hero.class_level", hero.heroClass.takeIf { it.isNotBlank() }?.let(::classTitle) ?: ui("hero.unknown_class"), info.level),
                     color = Rune, style = MaterialTheme.typography.labelLarge)
             }
             // The tree left the bar in 2.40.0 and opens from here, beside the forge.
@@ -53,10 +54,11 @@ import com.sperance.exileforge.ui.theme.*
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Chip(ForgeGlyphs.Coins, ui("hero.gold_chip", number(character.money.toDouble())))
-            Chip(ForgeGlyphs.Constellation, ui("hero.tree_chip", hero.tree.available, hero.tree.total))
+            Chip(ForgeGlyphs.Coins, ui("hero.gold_chip", number(hero.money.toDouble())))
+            // The tree's balance is counted here by the rules (3.0.0), so it waits for the content.
+            s.treeState?.let { Chip(ForgeGlyphs.Constellation, ui("hero.tree_chip", it.available, it.total)) }
         }
-        ExperienceLine(s, character.level, character.experience)
+        ExperienceLine(s, info.level, info.experience)
     }
 }
 
@@ -71,19 +73,20 @@ import com.sperance.exileforge.ui.theme.*
 }
 
 /**
- * How far along this level the character is, as a thin bar with what it leads to.
+ * How far along this level the hero is, as a thin bar with what it leads to.
  *
- * The level table says what the next level costs — the client reads it to show what is coming,
- * never to work out a level, which stays the server's to decide. At the last level the bar is whole
- * and says so; without the table there is no scale, and only the total is printed.
+ * The classes' experience table says what the next level costs — the client reads it to show what
+ * is coming, never to work out a level, which stays the server's to decide. At the last level the
+ * bar is whole and says so; without the content there is no scale, and only the total is printed.
  */
 @Composable private fun ExperienceLine(s: ForgeState, level: Int, experience: Double) {
-    val floor = s.world.levels.firstOrNull { it.level == level }?.experience ?: 0.0
-    val next = s.world.levels.firstOrNull { it.level == level + 1 }
-    val span = next?.let { it.experience - floor } ?: 0.0
+    val classes = s.index?.classes
+    val floor = classes?.threshold(level) ?: 0.0
+    val next = classes?.nextThreshold(level)
+    val span = next?.let { it - floor } ?: 0.0
     val fraction = if (span > 0.0) ((experience - floor).coerceAtLeast(0.0) / span).toFloat().coerceIn(0f, 1f) else 1f
     val label = when {
-        s.world.levels.isEmpty() -> ui("hero.xp_total", number(experience))
+        classes == null -> ui("hero.xp_total", number(experience))
         next == null -> ui("hero.xp_last")
         else -> ui("hero.xp_to_next", Math.round(fraction * 100), level + 1)
     }
@@ -92,7 +95,7 @@ import com.sperance.exileforge.ui.theme.*
             Text(ui("hero.xp_short"), color = Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f))
             MutedText(label, style = MaterialTheme.typography.labelSmall)
         }
-        if (s.world.levels.isNotEmpty()) Box(Modifier.fillMaxWidth().height(6.dp).background(PanelRaised, RoundedCornerShape(3.dp))) {
+        if (classes != null) Box(Modifier.fillMaxWidth().height(6.dp).background(PanelRaised, RoundedCornerShape(3.dp))) {
             Box(Modifier.fillMaxWidth(fraction).fillMaxHeight().background(Gold, RoundedCornerShape(3.dp)))
         }
     }

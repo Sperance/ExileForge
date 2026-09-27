@@ -1,9 +1,7 @@
 package com.sperance.exileforge.core.display
 
 import com.sperance.exileforge.core.contract.WireJson
-import com.sperance.exileforge.core.contract.text
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 
 /** `icons/index.json`: the fingerprint of the set, and what it holds. */
@@ -97,15 +95,8 @@ fun icon(key: String): IconSprite? = serverIcons[key]
 /** The drawing a skill names (2.78.0, server 0.69.0), or null for the client's own emblem. */
 fun skillIcon(name: String): IconSprite? = name.takeIf { it.isNotBlank() }?.let(serverIcons::sprite)
 
-/**
- * The drawing for a catalogue document, found by the shape rules that find its name.
- *
- * A character is a player's, not content, so it is never looked up — it keeps the client's own
- * exile emblem. Anything without a code predates the set and falls back the same way.
- */
-fun documentIcon(document: JsonObject): IconSprite? {
-    val code = document.text("code")
-    if (code.isBlank() || document["userId"] != null) return null
-    val equipment = document["slot"] != null || document.text("type").isNotBlank()
-    return serverIcons[if (equipment) IconKey.equipment(code) else IconKey.item(code)]
-}
+/** The drawing of an equipment template, or null for the client's own emblem. */
+fun equipmentIcon(code: String): IconSprite? = code.takeIf { it.isNotBlank() }?.let { serverIcons[IconKey.equipment(it)] }
+
+/** The drawing of a stacking item — an orb, a material, a book, an essence — or null for the client's own emblem. */
+fun itemIcon(code: String): IconSprite? = code.takeIf { it.isNotBlank() }?.let { serverIcons[IconKey.item(it)] }

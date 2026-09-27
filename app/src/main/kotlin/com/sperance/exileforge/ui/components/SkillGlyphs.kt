@@ -8,8 +8,8 @@ import com.sperance.exileforge.core.campaign.FlaskKind
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.skillIcon
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.model.skills.SkillDefinition
-import com.sperance.exileforge.core.model.skills.SlotCondition
+import com.sperance.exileforge.rules.content.SkillDefinition
+import com.sperance.exileforge.rules.content.SlotCondition
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.spriteVector
 import com.sperance.exileforge.ui.theme.Gold

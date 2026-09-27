@@ -1,11 +1,9 @@
 package com.sperance.exileforge.core.campaign
 
-import com.sperance.exileforge.core.model.campaign.BehaviourRule
-import com.sperance.exileforge.core.model.campaign.CampaignMap
-import com.sperance.exileforge.core.model.campaign.MonsterEffect
-import com.sperance.exileforge.core.model.campaign.CampaignRarity
-import com.sperance.exileforge.core.model.essences.Crystal
-import com.sperance.exileforge.core.model.skills.SkillBook
+import com.sperance.exileforge.rules.content.BehaviourRule
+import com.sperance.exileforge.rules.content.Zone
+import com.sperance.exileforge.rules.roll.Crystal
+import com.sperance.exileforge.rules.roll.RolledMonster
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.hypot
@@ -21,7 +19,9 @@ enum class AgentMode { IDLE, ASLEEP, LURKING, CHASING, HUNTING, RETURNING }
  * three, fought all at once since 2.70.0. [monster] — the map token, its walking behaviour and its
  * portrait on the ground — is always the strongest of the pack; [fallen] are those already killed.
  */
-class MonsterAgent(val id: Int, val pack: List<RolledMonster>, val homeX: Double, val homeY: Double) {
+class MonsterAgent(val id: Int, val pack: List<RolledMonster>, val homeX: Double, val homeY: Double,
+                   /** The guardian of a crystal of essences: which one of the map's, by its place; null for everyone else. */
+                   val crystal: Int? = null) {
     val monster: RolledMonster = pack.maxBy { it.rarity.ordinal }
     val rule: BehaviourRule get() = monster.behaviour
     /** Members of [pack] already killed (2.70.0): a pack the hero walked away from keeps its dead dead. */
@@ -37,8 +37,8 @@ class MonsterAgent(val id: Int, val pack: List<RolledMonster>, val homeX: Double
     var calm = 0.0
     var alive = true
     var mode = when (monster.behaviour.type) {
-        BehaviourRule.AMBUSH -> AgentMode.LURKING
-        BehaviourRule.SLEEP -> AgentMode.ASLEEP
+        Behaviours.AMBUSH -> AgentMode.LURKING
+        Behaviours.SLEEP -> AgentMode.ASLEEP
         else -> AgentMode.IDLE
     }
     /** Seconds since it last saw the hero it is hunting. */
@@ -132,17 +132,20 @@ class ExpeditionWorld(
     fun closePortal() { portal = null }
     /** Stepping off the portal a refused gate left the hero on: it does not open again underfoot. */
     private var portalArmed = true
-    val agents: List<MonsterAgent> = packs.zip(map.spawns).mapIndexed { index, (pack, cell) ->
+    val agents: List<MonsterAgent> = packs.take(map.spawns.size).zip(map.spawns).mapIndexed { index, (pack, cell) ->
         MonsterAgent(index, pack, cell.x + 0.5, cell.y + 0.5).also { agent ->
-            if (agent.monster.behaviour.type == BehaviourRule.PATROL) agent.patrol = patrolEnd(cell, agent.monster.behaviour.wanderRadius)
+            if (agent.monster.behaviour.type == Behaviours.PATROL) agent.patrol = patrolEnd(cell, agent.monster.behaviour.wanderRadius)
         }
     } + listOfNotNull(boss)
 
     /** The exit does not open while its guardian lives. */
     val sealed: Boolean get() = boss?.alive == true
 
-    /** The server says the boss was slain within the hour: it is not on the map this run. */
+    /** The boss was slain within its respawn: it is not on the map this run. */
     fun bossAbsent() { boss?.alive = false }
+
+    /** The guardian summoned back for gold: it stands at its post again. */
+    fun bossReturns() { boss?.let { it.alive = true; it.mode = AgentMode.IDLE; it.x = it.homeX; it.y = it.homeY } }
 
     /** Where the guardian stands: the floor nearest the exit, a step or two from it. */
     private fun guardPost(): Cell? {
@@ -330,7 +333,7 @@ class ExpeditionWorld(
                 else go(agent, agent.lastX, agent.lastY, rule.chaseSpeed, dt)
             }
             AgentMode.RETURNING -> if (!go(agent, agent.homeX, agent.homeY, rule.wanderSpeed.coerceAtLeast(MIN_WALK), dt)) {
-                agent.mode = if (rule.type == BehaviourRule.AMBUSH) AgentMode.LURKING else AgentMode.IDLE
+                agent.mode = if (rule.type == Behaviours.AMBUSH) AgentMode.LURKING else AgentMode.IDLE
             }
             AgentMode.IDLE -> roam(agent, rule, dt)
         }
@@ -338,7 +341,7 @@ class ExpeditionWorld(
 
     /** Wandering round home, or walking a patrol: the monster's own business while nobody is near. */
     private fun roam(agent: MonsterAgent, rule: BehaviourRule, dt: Double) {
-        if (rule.wanderSpeed <= 0 || rule.type == BehaviourRule.AMBUSH) return
+        if (rule.wanderSpeed <= 0 || rule.type == Behaviours.AMBUSH) return
         if (agent.idle > 0) { agent.idle -= dt; return }
         val patrol = agent.patrol
         if (patrol != null) {
@@ -548,28 +551,12 @@ class ExpeditionWorld(
         }
 
         /**
-         * A new run of [map]: how many monsters, the ground they stand on and what each one rolled,
-         * all from one seed.
+         * A new world of [zone]: the ground carved from [seed], one spawn per pack of [packs] (the run's own
+         * rolls), the boss at the exit and, [hasPortal], a Vaal portal.
          */
-        fun create(map: CampaignMap, rarities: List<CampaignRarity>, heroStats: Map<String, Double>, seed: Long,
-                   mapBuffs: List<MonsterEffect> = emptyList(), portalChance: Double = 0.0,
-                   /** What the map does to its boss alone (server 0.66.0), and how many modifiers a rare monster carries beyond its rule. */
-                   bossBuffs: List<MonsterEffect> = emptyList(), extraRareMods: Int = 0,
-                   /** The monsters' skills (server 0.69.0): what a boss, a caster and a borrower cast. */
-                   skills: SkillBook = SkillBook()): ExpeditionWorld {
-            val random = Random(seed)
-            val (low, high) = map.monsterCount.let { (it.getOrNull(0) ?: 10) to (it.getOrNull(1) ?: 14) }
-            // The map's size is the server's since 0.40.0; room for the pack a map's modifier asks for comes with it.
-            val layout = MapGenerator.generate(seed, map.biome, random.nextInt(low, high + 1), map.size)
-            // A pack's own stream (2.54.0), so whether a spawn is one or several never shifts the
-            // ordinary roll that follows it — the same seed still hands out the same single monsters.
-            val packRandom = Random(seed * 32452843 + 71)
-            // What a monster casts is thrown on a stream of its own (2.78.0), so the old rolls stay as they were.
-            val casting = Random(seed * 49979687 + 13)
-            val packs = List(layout.spawns.size) { MonsterRoller.rollPack(map, rarities, random, packRandom, extraRareMods).map { MonsterRoller.skilled(it.copy(mapBuffs = mapBuffs), skills, casting) } }
-            return ExpeditionWorld(layout, packs, heroSpeed(heroStats), seed, lightRadius(heroStats, map.light),
-                MonsterRoller.boss(map, rarities, packRandom, bossBuffs)?.let { MonsterRoller.skilled(it.copy(mapBuffs = mapBuffs + bossBuffs), skills, casting) },
-                MonsterRoller.portal(map, portalChance, random))
+        fun create(zone: Zone, packs: List<List<RolledMonster>>, heroStats: Map<String, Double>, seed: Long, boss: RolledMonster?, hasPortal: Boolean): ExpeditionWorld {
+            val layout = MapGenerator.generate(seed, zone.biome, packs.size, zone.size)
+            return ExpeditionWorld(layout, packs, heroSpeed(heroStats), seed, lightRadius(heroStats, zone.light), boss, hasPortal)
         }
 
         /** The hero's pace, sped up by movement speed from the sheet. */
@@ -582,4 +569,12 @@ class ExpeditionWorld(
         const val MIN_LIGHT = 2.0
         const val MAX_LIGHT = 14.0
     }
+}
+
+/** The kinds of behaviour the campaign names: how a monster walks the map before a fight. */
+object Behaviours {
+    const val WANDER = "WANDER"
+    const val PATROL = "PATROL"
+    const val AMBUSH = "AMBUSH"
+    const val SLEEP = "SLEEP"
 }

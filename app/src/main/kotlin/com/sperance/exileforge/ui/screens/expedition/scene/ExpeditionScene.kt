@@ -21,7 +21,7 @@ import com.sperance.exileforge.core.campaign.AgentMode
 import com.sperance.exileforge.core.campaign.ExpeditionMap
 import com.sperance.exileforge.core.campaign.ExpeditionRun
 import com.sperance.exileforge.core.campaign.Tile
-import com.sperance.exileforge.core.model.campaign.MonsterRarity
+import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.ui.icons.drawToken
 import kotlin.math.abs
 import kotlin.math.ceil
@@ -77,7 +77,7 @@ private class ScenePainter {
         this.classCode = classCode
         pen.scope = scope
         unit = with(scope) { 30.dp.toPx() }
-        val palette = Palettes.of(run.map.biome)
+        val palette = Palettes.of(run.zone.biome)
         scope.drawRect(palette.void)
         if (run.fight != null) scope.fightBackdrop(palette, time) else map(scope, run, palette)
     }
@@ -90,7 +90,7 @@ private class ScenePainter {
     private fun map(scope: DrawScope, run: ExpeditionRun, palette: Palette) {
         val world = run.world
         val map = world.map
-        val biome = run.map.biome
+        val biome = run.zone.biome
         val style = MapStyles.of(biome)
         val frame = SceneFrame(pen, unit, time)
         val width = scope.size.width

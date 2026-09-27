@@ -1,11 +1,9 @@
 package com.sperance.exileforge.ui.screens.redemption
 
-import com.sperance.exileforge.core.display.Glyph
-
 import androidx.compose.foundation.layout.*
-import com.sperance.exileforge.presentation.state.Reads
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Delete
@@ -17,14 +15,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.text.KeyboardOptions
+import com.sperance.exileforge.core.display.Glyph
+import com.sperance.exileforge.core.display.equipmentTitle
+import com.sperance.exileforge.core.display.itemTitle
+import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.model.EntitySource
 import com.sperance.exileforge.core.model.command.RedemptionCode
 import com.sperance.exileforge.core.model.command.RedemptionKind
 import com.sperance.exileforge.core.model.command.RedemptionReward
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.Reads
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.Gold
@@ -91,17 +92,32 @@ import com.sperance.exileforge.ui.theme.Muted
 /**
  * One line of a reward, read by an administrator rather than by a player.
  *
- * Items and equipment are named by their identifier: the server's dictionary keys a name to a
- * code, and what is stored here is a document id, which no dictionary covers. The tail of it is
- * enough to recognise the row beside the picker that produced it.
+ * A stack and a template are named by code (3.0.0), and the code has a name in the server's
+ * dictionary — so the line reads as the player will see the gift, kind first: «Предмет · Сфера хаоса · 3 шт.».
  */
 private fun rewardLine(reward: RedemptionReward): String {
     val amount = if (reward.amount % 1.0 == 0.0) reward.amount.toLong().toString() else reward.amount.toString()
     return when (reward.kind) {
         RedemptionKind.EXPERIENCE -> ui("redemption.line_experience", amount)
         RedemptionKind.GOLD -> ui("redemption.line_gold", amount)
-        RedemptionKind.ITEM -> ui("redemption.line_item", amount, reward.itemId.takeLast(6))
-        RedemptionKind.EQUIPMENT -> ui("redemption.line_equipment", amount, reward.itemId.takeLast(6))
+        RedemptionKind.ITEM -> "${ui("enum.reward.ITEM")} · ${itemTitle(reward.item)} · ${ui("auction.pieces", amount)}"
+        RedemptionKind.EQUIPMENT -> "${ui("enum.reward.EQUIPMENT")} · ${equipmentTitle(reward.item)} · ${ui("auction.pieces", amount)}"
+    }
+}
+
+/**
+ * What a reward of [kind] may name, out of the content on screen: every stacking item by category,
+ * or every template by slot and level, keyed by code. Empty for the kinds that name nothing, and
+ * before the content has been read.
+ */
+private fun rewardOptions(s: ForgeState, kind: RedemptionKind): Map<String, String> {
+    val index = s.index ?: return emptyMap()
+    return when (kind) {
+        RedemptionKind.ITEM -> index.items.values.sortedWith(compareBy({ it.category }, { itemTitle(it.code) }))
+            .associate { it.code to itemTitle(it.code) }
+        RedemptionKind.EQUIPMENT -> index.templates.values.sortedWith(compareBy({ it.slot }, { it.level }))
+            .associate { it.code to "${equipmentTitle(it.code)} · ${slotTitle(it.slot, s.lang)} · ${it.level}" }
+        RedemptionKind.EXPERIENCE, RedemptionKind.GOLD -> emptyMap()
     }
 }
 
@@ -117,10 +133,10 @@ private fun rewardLine(reward: RedemptionReward): String {
     var rewards by remember { mutableStateOf(emptyList<RedemptionReward>()) }
 
     var kind by remember { mutableStateOf(RedemptionKind.ITEM) }
-    var itemId by remember { mutableStateOf("") }
+    var item by remember { mutableStateOf("") }
     var amount by rememberSaveable { mutableStateOf("1") }
 
-    val needsDocument = kind == RedemptionKind.ITEM || kind == RedemptionKind.EQUIPMENT
+    val needsCode = kind == RedemptionKind.ITEM || kind == RedemptionKind.EQUIPMENT
 
     ForgePanel {
         Engraved(ui("redemption.new"))
@@ -133,21 +149,18 @@ private fun rewardLine(reward: RedemptionReward): String {
         Engraved(ui("redemption.reward"))
         Spinner(ui("redemption.kind"), kind.name,
             RedemptionKind.entries.associate { it.name to ui("enum.reward.${it.name}") }, !s.busy, glyph = Glyph.CURRENCY) {
-            kind = RedemptionKind.valueOf(it); itemId = ""
+            kind = RedemptionKind.valueOf(it); item = ""
         }
-        if (needsDocument) EntitySpinner(
-            if (kind == RedemptionKind.ITEM) ui("common.item") else ui("enum.catalog.EQUIPMENT"),
-            itemId,
-            if (kind == RedemptionKind.ITEM) EntitySource.ITEM else EntitySource.EQUIPMENT,
-            !s.busy) { itemId = it }
+        // The goods are picked from the content the hero reads (3.0.0): a stack of the bag or a template, by code.
+        if (needsCode) Spinner(ui("enum.reward.${kind.name}"), item, rewardOptions(s, kind), !s.busy, glyph = Glyph.ITEM) { item = it }
         OutlinedTextField(amount, { amount = it }, label = { Text(ui("auction.amount")) }, singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
 
-        ForgeOutlinedButton(enabled = !s.busy && (!needsDocument || itemId.isNotBlank()) && amount.toDoubleOrNull() != null,
+        ForgeOutlinedButton(enabled = !s.busy && (!needsCode || item.isNotBlank()) && amount.toDoubleOrNull() != null,
             modifier = Modifier.fillMaxWidth(),
             onClick = {
-                rewards = rewards + RedemptionReward(kind, itemId, amount.toDoubleOrNull() ?: 0.0)
-                itemId = ""; amount = "1"
+                rewards = rewards + RedemptionReward(kind, item, amount.toDoubleOrNull() ?: 0.0)
+                item = ""; amount = "1"
             }) {
             Icon(Icons.Outlined.Add, null); Text(ui("redemption.add_reward"))
         }

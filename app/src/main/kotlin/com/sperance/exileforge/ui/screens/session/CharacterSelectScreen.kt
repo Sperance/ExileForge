@@ -1,31 +1,32 @@
 package com.sperance.exileforge.ui.screens.session
 
-import com.sperance.exileforge.core.display.Glyph
-
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import com.sperance.exileforge.presentation.state.Reads
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.border
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.display.Glyph
+import com.sperance.exileforge.core.display.classDescription
+import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.statNumber
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.model.hero.CharacterSummary
+import com.sperance.exileforge.core.model.hero.HeroSummary
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.MAX_CHARACTERS
+import com.sperance.exileforge.presentation.state.Reads
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
@@ -33,7 +34,7 @@ import com.sperance.exileforge.ui.theme.*
 /**
  * Choosing who to play, and the only place that choice is ever made.
  *
- * Every screen behind the gate acts on the chosen character, which is what lets them stop asking
+ * Every screen behind the gate acts on the chosen hero, which is what lets them stop asking
  * which one. Coming back here is the way to swap — a tab never moves the player onto another hero.
  *
  * An account with nothing to choose between does not get a chooser: the creation form opens
@@ -42,7 +43,7 @@ import com.sperance.exileforge.ui.theme.*
 @Composable fun CharacterSelectScreen(s: ForgeState, vm: ForgeViewModel) {
     val empty = s.account.charactersRead && s.account.characters.isEmpty()
     var creating by rememberSaveable(empty) { mutableStateOf(empty) }
-    var pendingDelete by remember { mutableStateOf<CharacterSummary?>(null) }
+    var pendingDelete by remember { mutableStateOf<HeroSummary?>(null) }
     LaunchedEffect(creating) { if (creating) vm.ensureClasses() }
     Scaffold(containerColor = Ink) { padding ->
         Box(Modifier.fillMaxSize().padding(padding).imePadding()) {
@@ -68,18 +69,19 @@ import com.sperance.exileforge.ui.theme.*
 /**
  * The menu itself, driven by callbacks so it can be shown without a view model.
  *
- * What is worth checking here is which character a tap plays and how many slots are left — not the
+ * What is worth checking here is which hero a tap plays and how many slots are left — not the
  * wiring behind them.
  */
-@Composable internal fun ColumnScope.CharacterMenu(s: ForgeState, onPlay: (String) -> Unit, onDelete: (CharacterSummary) -> Unit,
+@Composable internal fun ColumnScope.CharacterMenu(s: ForgeState, onPlay: (String) -> Unit, onDelete: (HeroSummary) -> Unit,
     onCreate: () -> Unit = {}, onRefresh: () -> Unit = {}, onLogout: () -> Unit = {}) {
     // A list is refreshed by pulling it, here as everywhere else. The button that used to sit at
     // the bottom of this one said the same thing twice.
     PullToRefreshBox(isRefreshing = s.refreshing(Reads.CHARACTERS), onRefresh = onRefresh, modifier = Modifier.weight(1f)) {
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
+            // How many heroes an account holds is the rules' to say; until they are read, the client's own figure stands in.
             ScreenHeader(ui("chars.title"),
-                ui("chars.slots", s.characterSlotsLeft, MAX_CHARACTERS),
+                ui("chars.slots", s.characterSlotsLeft, s.index?.rules?.maxCharacters ?: MAX_CHARACTERS),
                 ForgeGlyphs.Exile)
         }
         items(s.account.characters, key = { it.id }) { character ->
@@ -109,15 +111,20 @@ import com.sperance.exileforge.ui.theme.*
     }
 }
 
-/** One character, as the menu describes them: the name, the class and how far they have come. */
-@Composable private fun CharacterCard(s: ForgeState, character: CharacterSummary, onPlay: () -> Unit, onDelete: () -> Unit) {
-    val characterClass = s.world.classes.firstOrNull { it.id == character.classId }
+/**
+ * One hero, as the menu describes them: the name, the class and how far they have come.
+ *
+ * The row carries the class as a code (3.0.0); the server's dictionary names it, and the portrait
+ * is drawn by the code alone, so the menu reads before the content has.
+ */
+@Composable private fun CharacterCard(s: ForgeState, character: HeroSummary, onPlay: () -> Unit, onDelete: () -> Unit) {
+    val heroClass = character.heroClass.takeIf { it.isNotBlank() }
     ForgePanel(modifier = Modifier.clickable(enabled = !s.busy, onClick = onPlay)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            ClassPortrait(characterClass?.code, s.world.portraits, Modifier.size(64.dp), round = true)
+            ClassPortrait(heroClass, s.world.portraits, Modifier.size(64.dp), round = true)
             Column(Modifier.weight(1f)) {
                 Text(character.name, color = GoldBright, style = MaterialTheme.typography.titleMedium)
-                PropertyRow(ui("common.class"), characterClass?.title ?: ui("chars.unknown"), Glyph.CHARACTER)
+                PropertyRow(ui("common.class"), heroClass?.let(::classTitle) ?: ui("chars.unknown"), Glyph.CHARACTER)
                 PropertyRow(ui("common.level"), character.level.toString(), Glyph.LEVEL)
             }
         }
@@ -132,46 +139,51 @@ import com.sperance.exileforge.ui.theme.*
  * The creation form.
  *
  * The class is chosen here or nowhere: it is the whole stat base and the root of the tree, and the
- * server has no route that moves a character to another one.
+ * server has no route that moves a hero to another one. The classes come with the content
+ * (3.0.0), and the one picked is the play state's draft, so it survives the form being redrawn.
  */
 @Composable private fun CreateCharacterPanel(s: ForgeState, vm: ForgeViewModel, canGoBack: Boolean,
     onBack: () -> Unit, onSignOut: () -> Unit) {
     var name by rememberSaveable { mutableStateOf("") }
-    var classId by rememberSaveable(s.world.classes.size) { mutableStateOf(s.world.classes.firstOrNull()?.id.orEmpty()) }
-    val chosen = s.world.classes.firstOrNull { it.id == classId }
+    val index = s.index
+    val classes = index?.classes?.classes.orEmpty()
+    val heroClass = s.play.draftClass.takeIf { code -> classes.any { it.code == code } } ?: classes.firstOrNull()?.code.orEmpty()
+    // The class with the shared base folded in: what a level-one hero of it starts with.
+    val chosen = index?.heroClass(heroClass)
     ForgePanel {
         OutlinedTextField(name, { name = it }, enabled = !s.busy, label = { Text(ui("common.name")) },
             supportingText = { Text(ui("chars.name_unique")) },
             singleLine = true, modifier = Modifier.fillMaxWidth())
-        if (s.world.classes.isEmpty()) Text(ui("editor.no_classes"),
+        if (classes.isEmpty()) Text(ui("editor.no_classes"),
             color = MaterialTheme.colorScheme.error)
         // Every class as its portrait, three by four, side by side: the one chosen is framed in gold.
         else LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            items(s.world.classes, key = { it.id }) { option ->
-                val picked = option.id == classId
+            items(classes, key = { it.code }) { option ->
+                val picked = option.code == heroClass
                 val shape = RoundedCornerShape(8.dp)
                 Column(Modifier.width(96.dp).border(if (picked) 2.dp else 1.dp, if (picked) GoldBright else Bronze.copy(alpha = .5f), shape)
-                    .clip(shape).clickable(enabled = !s.busy) { classId = option.id }, horizontalAlignment = Alignment.CenterHorizontally) {
+                    .clip(shape).clickable(enabled = !s.busy) { vm.draftClass(option.code) }, horizontalAlignment = Alignment.CenterHorizontally) {
                     ClassPortrait(option.code, s.world.portraits, Modifier.fillMaxWidth())
-                    Text(option.title, color = if (picked) GoldBright else Parchment, style = MaterialTheme.typography.labelMedium,
+                    Text(classTitle(option.code), color = if (picked) GoldBright else Parchment, style = MaterialTheme.typography.labelMedium,
                         maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(4.dp))
                 }
             }
         }
-        chosen?.let { option ->
-            if (option.details.isNotBlank()) MutedText(option.details)
-            Text(ui("editor.level1_base") + option.baseStats.joinToString(" · ") {
-                "${statTitle(it.stat, s.lang)} ${statNumber(it.stat, it.value)}" },
+        if (chosen != null && index != null) {
+            classDescription(chosen.code).takeIf { it.isNotBlank() }?.let { MutedText(it) }
+            val base = chosen.base.filterValues { it != 0.0 }.entries.sortedBy { index.stats.order(it.key) }
+            if (base.isNotEmpty()) Text(ui("editor.level1_base") + base.joinToString(" · ") { (stat, value) ->
+                "${statTitle(stat, s.lang)} ${statNumber(stat, value)}" },
                 color = Muted, style = MaterialTheme.typography.bodySmall)
         }
-        ForgeButton(enabled = !s.busy && name.isNotBlank() && classId.isNotBlank(),
-            onClick = { vm.createCharacter(name, classId) }, modifier = Modifier.fillMaxWidth()) {
+        ForgeButton(enabled = !s.busy && name.isNotBlank() && heroClass.isNotBlank(),
+            onClick = { vm.createCharacter(name, heroClass) }, modifier = Modifier.fillMaxWidth()) {
             Text(ui("chars.create"))
         }
         if (canGoBack) ForgeTextButton(enabled = !s.busy, onClick = onBack, modifier = Modifier.fillMaxWidth()) {
             Text(ui("chars.back"))
         }
-        // An account with no characters has no list to go back to, and a device registration is
+        // An account with no heroes has no list to go back to, and a device registration is
         // silent — so without this the first screen a new player sees is also the only one, with
         // no way to sign in as someone who already has an exile.
         ForgeTextButton(enabled = !s.busy, onClick = onSignOut, modifier = Modifier.fillMaxWidth()) {

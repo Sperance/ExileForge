@@ -16,9 +16,9 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.campaign.WorldMap
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.model.campaign.WorldPoint
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.rules.content.WorldPoint
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.expedition.world.WorldArt
@@ -41,20 +41,21 @@ private const val CARD_TOP = .48f
  * to the frontier. A tapped token raises its card over the map's foot — the way into the zone.
  */
 @Composable fun ExpeditionScreen(s: ForgeState, vm: ForgeViewModel) {
-    LaunchedEffect(s.play.characterId, s.account.sessionEpoch) { vm.ensureHero(); vm.loadCampaign() }
-    val view = s.world.campaign
-    val progress = s.play.campaign
-    if (view == null || progress == null) {
+    LaunchedEffect(s.play.heroId, s.account.sessionEpoch) { vm.ensureHero(); vm.loadCampaign() }
+    val index = s.index
+    val progress = s.progress
+    if (index == null || progress == null) {
         Box(Modifier.fillMaxSize().padding(16.dp)) { InfoCard(ui("common.loading"), ui("expedition.loading_hint")) }
         return
     }
-    val world = remember(view, progress) { WorldMap(view, progress) }
-    val art = remember(view) { WorldArt.of(view) }
+    val campaign = index.campaign
+    val world = remember(index, progress) { WorldMap(campaign, index.world, progress) }
+    val art = remember(campaign) { WorldArt.of(campaign) }
     val density = LocalDensity.current.density
-    val camera = remember(view.world, density) { WorldCamera(view.world, density) }
+    val camera = remember(campaign.world, density) { WorldCamera(campaign.world, density) }
     val scope = rememberCoroutineScope()
     val launch = s.play.launch?.takeIf { world.token(it.mapCode) != null }
-    val stash = remember(s.play.hero?.inventory, s.world.inventoryBases) { stashCounts(s) }
+    val stash = remember(s.hero?.items, index) { stashCounts(s) }
     BackHandler(launch != null) { vm.closeZone() }
     // The map opens on the frontier; a zone picked elsewhere — a map's sheet in the stash — is flown to above its card.
     LaunchedEffect(camera, camera.viewport) {
@@ -87,7 +88,7 @@ private const val CARD_TOP = .48f
         OutlinedIconButton(onClick = onFrontier, border = androidx.compose.foundation.BorderStroke(1.dp, Gold.copy(alpha = .4f)), modifier = Modifier.size(38.dp)) {
             Icon(ForgeGlyphs.Target, ui("expedition.frontier"), tint = GoldBright, modifier = Modifier.size(20.dp))
         }
-        val free = s.play.atlasProgress?.available ?: 0
+        val free = s.atlasState?.available ?: 0
         ForgeOutlinedButton(onClick = onAtlas, enabled = !s.busy,
             contentPadding = PaddingValues(start = 12.dp, end = if (free > 0) 8.dp else 12.dp), modifier = Modifier.height(38.dp)) {
             Icon(ForgeGlyphs.Constellation, null, tint = GoldBright, modifier = Modifier.size(18.dp))

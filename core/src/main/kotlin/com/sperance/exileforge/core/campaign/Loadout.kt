@@ -2,23 +2,18 @@ package com.sperance.exileforge.core.campaign
 
 import com.sperance.exileforge.core.character.SheetModel
 import com.sperance.exileforge.core.character.StatLine
-import com.sperance.exileforge.core.contract.WireJson
-import com.sperance.exileforge.core.contract.text
-import com.sperance.exileforge.core.model.campaign.CombatRules
-import com.sperance.exileforge.core.model.hero.EquipmentInstance
-import com.sperance.exileforge.core.model.modifier.Modifier
-import com.sperance.exileforge.core.model.modifier.ModifierDefinition
-import com.sperance.exileforge.core.model.modifier.ModifierOperation
-import com.sperance.exileforge.core.model.powers.PowerBook
-import com.sperance.exileforge.core.model.skills.HeroSkills
-import com.sperance.exileforge.core.model.skills.SkillBook
-import com.sperance.exileforge.core.model.skills.SkillDefinition
-import com.sperance.exileforge.core.model.skills.SkillStat
-import com.sperance.exileforge.core.model.skills.SkillType
-import com.sperance.exileforge.core.model.skills.SlotCondition
-import kotlinx.serialization.builtins.ListSerializer
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonObject
+import com.sperance.exileforge.rules.content.CombatRules
+import com.sperance.exileforge.rules.content.ContentIndex
+import com.sperance.exileforge.rules.content.HeroSkills
+import com.sperance.exileforge.rules.content.ItemTemplate
+import com.sperance.exileforge.rules.content.Op
+import com.sperance.exileforge.rules.content.PowerBook
+import com.sperance.exileforge.rules.content.SkillBook
+import com.sperance.exileforge.rules.content.SkillDefinition
+import com.sperance.exileforge.rules.content.SkillStat
+import com.sperance.exileforge.rules.content.SkillType
+import com.sperance.exileforge.rules.content.SlotCondition
+import com.sperance.exileforge.rules.roll.ItemInstance
 import kotlin.math.max
 
 /** What a flask does when drunk (2.78.0), by its base: brings life back, brings mana back, or only lays its lines for a while. */
@@ -66,28 +61,28 @@ data class Flask(
         private fun mechanic(stat: String) = stat.startsWith("FLASK_") || stat.startsWith("STOCK_FLASK_")
 
         /** The flask [item] of [template] as the fight takes it; [condition] is the belt's, or the kind's own when null. */
-        fun of(item: EquipmentInstance, template: JsonObject, definitions: Map<String, ModifierDefinition>, condition: SlotCondition?): Flask {
-            val base = (template["baseParams"] as? JsonArray)
-                ?.let { runCatching { WireJson.decodeFromJsonElement(ListSerializer(Modifier.serializer()), it) }.getOrNull() }.orEmpty()
+        fun of(item: ItemInstance, template: ItemTemplate, index: ContentIndex, condition: SlotCondition?): Flask {
             val added = mutableMapOf<String, Double>()
             val increased = mutableMapOf<String, Double>()
             val lines = mutableListOf<StatLine>()
-            (base + item.params).forEach { modifier ->
-                definitions[modifier.modifierCode]?.effects?.forEachIndexed { index, effect ->
-                    val value = modifier.values.getOrNull(index) ?: return@forEachIndexed
+            fun take(code: String, values: List<Double>) {
+                index.modifier(code)?.effects?.forEachIndexed { i, effect ->
+                    val value = values.getOrNull(i) ?: return@forEachIndexed
                     when {
-                        !mechanic(effect.stat) -> lines += StatLine(effect.stat, effect.operation, value)
-                        effect.operation == ModifierOperation.INCREASED -> increased.merge(effect.stat, value, Double::plus)
+                        !mechanic(effect.stat) -> lines += StatLine(effect.stat, effect.op, value)
+                        effect.op == Op.INCREASED -> increased.merge(effect.stat, value, Double::plus)
                         else -> added.merge(effect.stat, value, Double::plus)
                     }
                 }
             }
+            template.base.forEach { take(it.code, it.values) }
+            item.rolls.forEach { take(it.code, it.values(index)) }
             val kind = when {
                 (added["FLASK_LIFE"] ?: 0.0) > 0 -> FlaskKind.LIFE
                 (added["FLASK_MANA"] ?: 0.0) > 0 -> FlaskKind.MANA
                 else -> FlaskKind.UTILITY
             }
-            return Flask(template.text("code"), kind, condition ?: defaultCondition(kind), item.quality, added, increased, lines)
+            return Flask(template.code, kind, condition ?: defaultCondition(kind), item.quality, added, increased, lines)
         }
 
         /** When a flask is drunk by itself unless the belt says otherwise: a life flask at half life, a mana flask low on mana, the rest at the start. */
@@ -120,7 +115,7 @@ data class KitSkill(val skill: SkillDefinition, val learned: Int, val condition:
 }
 
 /** A skill's stat lines at [level], each [scale]d — an aura's, a warcry's or a curse's effect. */
-fun List<SkillStat>.lines(level: Int, scale: Double = 1.0): List<StatLine> = map { StatLine(it.stat, it.operation, it.value.at(level) * scale) }
+fun List<SkillStat>.lines(level: Int, scale: Double = 1.0): List<StatLine> = map { StatLine(it.stat, it.op, it.value.at(level) * scale) }
 
 /**
  * What the hero brings to a fight beyond the sheet (2.78.0): the three active slots in the order they
@@ -199,10 +194,10 @@ object StatLines {
         if (lines.isEmpty()) return stats
         val result = stats.toMutableMap()
         lines.groupBy { it.stat }.forEach { (stat, own) ->
-            val added = (stats[stat] ?: 0.0) + own.filter { it.operation == ModifierOperation.ADD }.sumOf { it.value }
-            val increase = own.filter { it.operation == ModifierOperation.INCREASED }.sumOf { it.value }
-            val more = own.filter { it.operation == ModifierOperation.MORE }
-            result[stat] = own.lastOrNull { it.operation == ModifierOperation.SET }?.value ?: if (stat in percent || stat == DAMAGE)
+            val added = (stats[stat] ?: 0.0) + own.filter { it.op == Op.ADD }.sumOf { it.value }
+            val increase = own.filter { it.op == Op.INCREASED }.sumOf { it.value }
+            val more = own.filter { it.op == Op.MORE }
+            result[stat] = own.lastOrNull { it.op == Op.SET }?.value ?: if (stat in percent || stat == DAMAGE)
                 more.fold(added + increase) { value, line -> (100 + value) * (1 + line.value / 100) - 100 }
             else more.fold(added * (1 + increase / 100)) { value, line -> value * (1 + line.value / 100) }
         }

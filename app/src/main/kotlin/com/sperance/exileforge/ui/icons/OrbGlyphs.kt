@@ -12,8 +12,8 @@ import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.graphics.vector.group
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.unit.dp
-import com.sperance.exileforge.core.model.currency.CurrencyItem
-import com.sperance.exileforge.core.model.currency.CurrencyOrb
+import com.sperance.exileforge.rules.content.Item
+import com.sperance.exileforge.rules.content.Orb
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.unit.Dp
@@ -29,57 +29,58 @@ import kotlin.math.sin
  * Each is an [ImageVector] built once and kept: a bag of twenty stacks draws the same few again.
  * It is painted as an [Image], never an `Icon` — an icon's tint would flatten the glass to one colour.
  */
-@Composable fun OrbGlyph(orb: CurrencyOrb?, modifier: Modifier = Modifier, description: String? = null) =
+@Composable fun OrbGlyph(orb: Orb?, modifier: Modifier = Modifier, description: String? = null) =
     Image(rememberVectorPainter(orbVector(orb)), description, modifier)
 
 /**
- * A picker's art for orb options keyed by their `items` id (2.69.1): the orb's glass, or nothing for
- * a key that is not an orb — «любая сфера», an empty choice — which then keeps the list's own spacing.
+ * A picker's art for orb options keyed by the orb's item code (2.69.1; the code is the orb's name since
+ * 3.0.0): the orb's glass, or nothing for a key that is not an orb of [orbs] — «любая сфера», an empty
+ * choice — which then keeps the list's own spacing.
  */
-fun orbArt(orbs: List<CurrencyItem>): @Composable (String, Dp) -> Unit = { key, size ->
-    orbs.firstOrNull { it.id == key }?.let { OrbGlyph(it.orb, Modifier.size(size)) } ?: Spacer(Modifier.size(size))
+fun orbArt(orbs: List<Item>): @Composable (String, Dp) -> Unit = { key, size ->
+    Orb.of(key)?.takeIf { orbs.any { item -> item.code == key } }?.let { OrbGlyph(it, Modifier.size(size)) } ?: Spacer(Modifier.size(size))
 }
 
 /** One orb's look: its glass, its sign, and whether it is precious enough for rays. */
 private class OrbArt(val hue: Long, val emblem: Emblem, val rays: Boolean = false)
 
 private val art = mapOf(
-    CurrencyOrb.ORB_OF_TRANSMUTATION to OrbArt(0xFF7FB8E8, Emblem.ARROW_UP),
-    CurrencyOrb.ORB_OF_AUGMENTATION to OrbArt(0xFF6FA0E0, Emblem.PLUS),
-    CurrencyOrb.ORB_OF_ALTERATION to OrbArt(0xFF8A9CFF, Emblem.SWAP),
-    CurrencyOrb.ORB_OF_ALCHEMY to OrbArt(0xFFE8C060, Emblem.FLASK),
-    CurrencyOrb.REGAL_ORB to OrbArt(0xFFE0B040, Emblem.CROWN),
-    CurrencyOrb.CHAOS_ORB to OrbArt(0xFFD4A030, Emblem.SPIRAL),
-    CurrencyOrb.EXALTED_ORB to OrbArt(0xFFF0E0B0, Emblem.STAR, rays = true),
-    CurrencyOrb.DIVINE_ORB to OrbArt(0xFFFFE8A0, Emblem.SUN, rays = true),
-    CurrencyOrb.ORB_OF_ANNULMENT to OrbArt(0xFFC8D0E0, Emblem.MINUS),
-    CurrencyOrb.ORB_OF_SCOURING to OrbArt(0xFFB8C8C8, Emblem.WAVE),
-    CurrencyOrb.BLESSED_ORB to OrbArt(0xFFA8E0F0, Emblem.DROP),
-    CurrencyOrb.VAAL_ORB to OrbArt(0xFFE04030, Emblem.EYE, rays = true),
-    CurrencyOrb.ORB_OF_CHANCE to OrbArt(0xFF90D070, Emblem.CLOVER),
-    CurrencyOrb.MIRROR_OF_KALANDRA to OrbArt(0xFFE8F4FF, Emblem.MIRROR, rays = true),
-    CurrencyOrb.FRACTURING_ORB to OrbArt(0xFFC0A070, Emblem.CRACK),
-    CurrencyOrb.SHAPERS_ORB to OrbArt(0xFF7FC8F0, Emblem.HEX, rays = true),
-    CurrencyOrb.ELDER_ORB to OrbArt(0xFFB080E0, Emblem.TENTACLE, rays = true),
-    CurrencyOrb.ABYSS_ORB to OrbArt(0xFF8A4FE8, Emblem.RIFT, rays = true),
-    CurrencyOrb.ORB_OF_REGRET to OrbArt(0xFF9AA8B8, Emblem.MOON),
-    CurrencyOrb.EMPOWERING_ORB to OrbArt(0xFFF08040, Emblem.FLAME),
-    CurrencyOrb.MERCY_ORB to OrbArt(0xFF80E0C0, Emblem.HEART),
-    CurrencyOrb.PERIL_ORB to OrbArt(0xFFE05060, Emblem.SKULL),
-    CurrencyOrb.HORDE_ORB to OrbArt(0xFFC09060, Emblem.DOTS),
-    CurrencyOrb.MAGUS_ORB to OrbArt(0xFF8888FF, Emblem.RUNE),
-    CurrencyOrb.ELITE_ORB to OrbArt(0xFFFFFF77, Emblem.GEM),
-    CurrencyOrb.BOUNTY_ORB to OrbArt(0xFFE8CF94, Emblem.COIN),
-    CurrencyOrb.TREASURE_ORB to OrbArt(0xFFD8B060, Emblem.GEM),
-    CurrencyOrb.GILDED_ORB to OrbArt(0xFFF0D060, Emblem.COIN, rays = true),
-    CurrencyOrb.WARDEN_ORB to OrbArt(0xFFB05050, Emblem.CROWN),
-    CurrencyOrb.HELMET_SCROLL to OrbArt(0xFFC8B8E8, Emblem.RUNE),
-    CurrencyOrb.GLOVES_SCROLL to OrbArt(0xFFB8C8E8, Emblem.RUNE),
-    CurrencyOrb.BOOTS_SCROLL to OrbArt(0xFFB8E0C8, Emblem.RUNE),
-    CurrencyOrb.WEAPON_SCROLL to OrbArt(0xFFE8C0B0, Emblem.RUNE),
-    CurrencyOrb.ESSENCE_ORB to OrbArt(0xFFB07FE0, Emblem.CRYSTAL),
-    CurrencyOrb.SCRIBE_ORB to OrbArt(0xFFD8C8A0, Emblem.BOOK),
-    CurrencyOrb.GLASSBLOWERS_BAUBLE to OrbArt(0xFF9FD8E8, Emblem.FLASK),
+    Orb.ORB_OF_TRANSMUTATION to OrbArt(0xFF7FB8E8, Emblem.ARROW_UP),
+    Orb.ORB_OF_AUGMENTATION to OrbArt(0xFF6FA0E0, Emblem.PLUS),
+    Orb.ORB_OF_ALTERATION to OrbArt(0xFF8A9CFF, Emblem.SWAP),
+    Orb.ORB_OF_ALCHEMY to OrbArt(0xFFE8C060, Emblem.FLASK),
+    Orb.REGAL_ORB to OrbArt(0xFFE0B040, Emblem.CROWN),
+    Orb.CHAOS_ORB to OrbArt(0xFFD4A030, Emblem.SPIRAL),
+    Orb.EXALTED_ORB to OrbArt(0xFFF0E0B0, Emblem.STAR, rays = true),
+    Orb.DIVINE_ORB to OrbArt(0xFFFFE8A0, Emblem.SUN, rays = true),
+    Orb.ORB_OF_ANNULMENT to OrbArt(0xFFC8D0E0, Emblem.MINUS),
+    Orb.ORB_OF_SCOURING to OrbArt(0xFFB8C8C8, Emblem.WAVE),
+    Orb.BLESSED_ORB to OrbArt(0xFFA8E0F0, Emblem.DROP),
+    Orb.VAAL_ORB to OrbArt(0xFFE04030, Emblem.EYE, rays = true),
+    Orb.ORB_OF_CHANCE to OrbArt(0xFF90D070, Emblem.CLOVER),
+    Orb.MIRROR_OF_KALANDRA to OrbArt(0xFFE8F4FF, Emblem.MIRROR, rays = true),
+    Orb.FRACTURING_ORB to OrbArt(0xFFC0A070, Emblem.CRACK),
+    Orb.SHAPERS_ORB to OrbArt(0xFF7FC8F0, Emblem.HEX, rays = true),
+    Orb.ELDER_ORB to OrbArt(0xFFB080E0, Emblem.TENTACLE, rays = true),
+    Orb.ABYSS_ORB to OrbArt(0xFF8A4FE8, Emblem.RIFT, rays = true),
+    Orb.ORB_OF_REGRET to OrbArt(0xFF9AA8B8, Emblem.MOON),
+    Orb.EMPOWERING_ORB to OrbArt(0xFFF08040, Emblem.FLAME),
+    Orb.MERCY_ORB to OrbArt(0xFF80E0C0, Emblem.HEART),
+    Orb.PERIL_ORB to OrbArt(0xFFE05060, Emblem.SKULL),
+    Orb.HORDE_ORB to OrbArt(0xFFC09060, Emblem.DOTS),
+    Orb.MAGUS_ORB to OrbArt(0xFF8888FF, Emblem.RUNE),
+    Orb.ELITE_ORB to OrbArt(0xFFFFFF77, Emblem.GEM),
+    Orb.BOUNTY_ORB to OrbArt(0xFFE8CF94, Emblem.COIN),
+    Orb.TREASURE_ORB to OrbArt(0xFFD8B060, Emblem.GEM),
+    Orb.GILDED_ORB to OrbArt(0xFFF0D060, Emblem.COIN, rays = true),
+    Orb.WARDEN_ORB to OrbArt(0xFFB05050, Emblem.CROWN),
+    Orb.HELMET_SCROLL to OrbArt(0xFFC8B8E8, Emblem.RUNE),
+    Orb.GLOVES_SCROLL to OrbArt(0xFFB8C8E8, Emblem.RUNE),
+    Orb.BOOTS_SCROLL to OrbArt(0xFFB8E0C8, Emblem.RUNE),
+    Orb.WEAPON_SCROLL to OrbArt(0xFFE8C0B0, Emblem.RUNE),
+    Orb.ESSENCE_ORB to OrbArt(0xFFB07FE0, Emblem.CRYSTAL),
+    Orb.SCRIBE_ORB to OrbArt(0xFFD8C8A0, Emblem.BOOK),
+    Orb.GLASSBLOWERS_BAUBLE to OrbArt(0xFF9FD8E8, Emblem.FLASK),
 )
 
 /** An orb the client has no art for — one the server added later — is plain gold glass with a gem. */
@@ -118,10 +119,10 @@ private enum class Emblem(val d: String, val filled: Boolean) {
 }
 
 private val lead = SolidColor(Color(0xFF111111))
-private val built = ConcurrentHashMap<CurrencyOrb, ImageVector>()
+private val built = ConcurrentHashMap<Orb, ImageVector>()
 private val fallback by lazy { build(unknown) }
 
-private fun orbVector(orb: CurrencyOrb?): ImageVector =
+private fun orbVector(orb: Orb?): ImageVector =
     orb?.let { built.getOrPut(it) { build(art[it] ?: unknown) } } ?: fallback
 
 private fun nodes(d: String) = PathParser().parsePathString(d).toNodes()

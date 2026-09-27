@@ -8,22 +8,27 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.Glyph
+import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.*
+import com.sperance.exileforge.ui.icons.orbArt
 import com.sperance.exileforge.ui.theme.*
+
+/** The content's currencies as a picker's options (3.0.0): keyed by item code, named by the dictionary, cheapest first. */
+internal fun orbOptions(s: ForgeState): Map<String, String> = s.orbs.associate { it.code to itemTitle(it.code) }
 
 /**
  * Listing something on the auction: one item from its card or the sell tab, or part of a stack.
  *
- * The price is counted in orbs alone (`AU_007`), so the orb is picked from the server's catalogue
+ * The price is counted in orbs alone (`AU_007`), so the orb is picked from the content's currencies
  * and the amount typed; whether the listing stands is the server's to say. [owned] is given for a
  * stack, and then the sheet also asks how many of them — how many there are is said, not enforced.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun ListingSheet(s: ForgeState, name: String, owned: Long? = null, onDismiss: () -> Unit,
     onList: (orb: String, price: Long, amount: Long) -> Unit) {
-    var orb by remember { mutableStateOf(s.world.orbs.firstOrNull()?.id.orEmpty()) }
+    var orb by remember { mutableStateOf(s.orbs.firstOrNull()?.code.orEmpty()) }
     var price by remember { mutableStateOf("1") }
     var amount by remember { mutableStateOf("1") }
     val cost = price.toLongOrNull() ?: 0L
@@ -35,9 +40,8 @@ import com.sperance.exileforge.ui.theme.*
             Text(name, color = Parchment, style = MaterialTheme.typography.titleMedium)
             if (owned != null) OutlinedTextField(amount, { value -> amount = value.filter(Char::isDigit) }, label = { Text(ui("sell.amount_owned", owned)) },
                 singleLine = true, keyboardOptions = digits, modifier = Modifier.fillMaxWidth())
-            if (s.world.orbs.isEmpty()) Text(ui("orb.none"), color = Muted)
-            else Spinner(ui("orb.orb"), orb, s.world.orbs.associate { it.id to it.title(s.lang) }, !s.busy, glyph = Glyph.CURRENCY,
-                optionArt = com.sperance.exileforge.ui.icons.orbArt(s.world.orbs)) { orb = it }
+            if (s.orbs.isEmpty()) Text(ui("orb.none"), color = Muted)
+            else Spinner(ui("orb.orb"), orb, orbOptions(s), !s.busy, glyph = Glyph.CURRENCY, optionArt = orbArt(s.orbs)) { orb = it }
             OutlinedTextField(price, { value -> price = value.filter(Char::isDigit) }, label = { Text(ui("sell.price")) },
                 singleLine = true, keyboardOptions = digits, modifier = Modifier.fillMaxWidth())
             MutedText(ui("sell.note"))

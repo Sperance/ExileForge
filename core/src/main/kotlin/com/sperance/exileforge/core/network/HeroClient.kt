@@ -96,6 +96,9 @@ class HeroClient internal constructor(private val http: Transport) {
         return http.post("$HERO/sell", heroQuery(heroId, "itemId" to itemId))
     }
 
+    /** Wears the title [title] beside the name — one the chronicle has earned — or takes it off when blank (server 1.3.0). */
+    suspend fun setTitle(heroId: String, title: String): String = http.post("$HERO/title", heroQuery(heroId, "title" to title))
+
     // ---- the stash's places and its overflow (server 1.1.0) ----
 
     /** One more pack of stash places, for the rules' gold; never retried — a repeat would buy twice. */

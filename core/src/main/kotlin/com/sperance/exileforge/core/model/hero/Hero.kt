@@ -5,6 +5,7 @@ import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.model.campaign.CampaignState
 import com.sperance.exileforge.core.model.crafts.WorkState
 import com.sperance.exileforge.core.model.trade.MerchantStock
+import com.sperance.exileforge.rules.content.Counter
 import com.sperance.exileforge.rules.content.HeroSkills
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.TakenNode
@@ -35,6 +36,10 @@ import kotlinx.serialization.Serializable
     val version: Long = 0,
     /** Packs of stash places bought beyond the rules' base (1.1.0). */
     val stashSlots: Int = 0,
+    /** The chronicle's counters as the server keeps them (1.3.0); the derived ones are added here. */
+    val counters: Map<String, Long> = emptyMap(),
+    /** The title worn beside the name, or blank. */
+    val title: String = "",
 )
 
 /** The stash's places as the server counts them after a command: used, held, the ceiling, the next pack's price (0 at the ceiling), the overflow. */
@@ -89,6 +94,8 @@ data class HeroView(
     val takenNodes: Set<String> get() = tree.mapTo(HashSet()) { it.code }
     fun item(id: String): ItemInstance? = items.firstOrNull { it.id == id }
     fun count(code: String): Long = bag[code] ?: 0L
+    /** The chronicle whole: the kept counters and the level, the zones cleared and the atlas nodes taken. */
+    val chronicle: Map<String, Long> get() = Counter.values(info.counters, level, campaign.cleared.size, info.atlas.size)
 }
 
 /** A hero of the account's list (`GET /hero/byUser`, the raw document): enough for the menu, the rest comes with the view. */
@@ -101,4 +108,5 @@ data class HeroView(
     val level: Int = 1,
     val experience: Double = 0.0,
     val money: Long = 0,
+    val title: String = "",
 )

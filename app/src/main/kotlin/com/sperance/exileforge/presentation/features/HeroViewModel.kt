@@ -39,6 +39,8 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     fun equip(itemId: String, slot: Slot? = null) { with(runtime) { heroCommand { id -> api.hero.equip(id, itemId, slot) } } }
     fun unequip(itemId: String) { with(runtime) { heroCommand { id -> api.hero.unequip(id, itemId) } } }
+    /** The title beside the name (1.3.0): one the chronicle opened, or none. */
+    fun setTitle(title: String) { with(runtime) { heroCommand { id -> api.hero.setTitle(id, title) } } }
     /** One more pack of stash places for gold (1.1.0); the snapshot with the answer carries the new count. */
     fun expandStash() { with(runtime) { heroCommand { id -> api.hero.expandStash(id) } } }
     /** From the overflow into the stash: [itemId], or as many as fit. */

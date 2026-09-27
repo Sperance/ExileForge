@@ -64,6 +64,7 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     fun equip(itemId: String, slot: Slot? = null) = runtime.heroViewModel.equip(itemId, slot)
     fun unequip(itemId: String) = runtime.heroViewModel.unequip(itemId)
     fun expandStash() = runtime.heroViewModel.expandStash()
+    fun setTitle(title: String) = runtime.heroViewModel.setTitle(title)
     fun claimOverflow(itemId: String? = null) = runtime.heroViewModel.claimOverflow(itemId)
     fun sellOverflow(itemId: String) = runtime.heroViewModel.sellOverflow(itemId)
     /** Admin only: a named template, rolled by the server at [rarity] or the template's own. */

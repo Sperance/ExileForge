@@ -37,6 +37,8 @@ import com.sperance.exileforge.ui.theme.*
             ClassPortrait(hero.heroClass, s.world.portraits, Modifier.size(64.dp), round = true)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(info.name, style = MaterialTheme.typography.headlineSmall, color = GoldBright)
+                // The title the chronicle opened (3.3.0), under the name
+                info.title.takeIf { it.isNotBlank() }?.let { Text(titleName(it), color = Gold, style = MaterialTheme.typography.labelMedium) }
                 // The class is the base every percentage is counted from; the server owns it.
                 Text(ui("hero.class_level", hero.heroClass.takeIf { it.isNotBlank() }?.let(::classTitle) ?: ui("hero.unknown_class"), info.level),
                     color = Rune, style = MaterialTheme.typography.labelLarge)

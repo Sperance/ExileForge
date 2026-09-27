@@ -26,7 +26,7 @@ class ContentSmokeTest {
     @Test
     fun the_content_loads_and_every_class_stands() {
         assertTrue(index.hash.isNotBlank())
-        assertTrue(index.templates.isNotEmpty() && index.campaign.zones.isNotEmpty() && ContentFiles.ALL.size == 14)
+        assertTrue(index.templates.isNotEmpty() && index.campaign.zones.isNotEmpty() && ContentFiles.ALL.size == 15)
         index.classes.classes.forEach { heroClass ->
             val sheet = Sheets.calculate(index, 1, heroClass.code, emptyList(), emptyList())
             assertTrue((sheet.stats["STOCK_HEALTH"] ?: 0.0) > 0.0, "${heroClass.code} has no life at level 1")

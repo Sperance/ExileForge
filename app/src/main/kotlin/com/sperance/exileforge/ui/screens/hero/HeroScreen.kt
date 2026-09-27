@@ -101,7 +101,10 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
             item { SectionBar(section) { section = it } }
             if (hero == null) item { InfoCard(ui("common.loading"), ui("hero.stash_empty_hint")) }
             else when (section) {
-                HeroSection.CHARACTER -> item { HeroSummary(s) }
+                HeroSection.CHARACTER -> {
+                    item(key = "chronicle") { ChronicleCard(s, vm) }
+                    item { HeroSummary(s) }
+                }
                 HeroSection.EQUIPMENT -> {
                     item { HeroVitals(s) }
                     item { EquipmentLedger(s) { place, worn -> if (worn != null) detailId = worn else pickPlace = place } }

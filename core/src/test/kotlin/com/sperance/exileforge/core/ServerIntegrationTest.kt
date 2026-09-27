@@ -110,12 +110,15 @@ class ServerIntegrationTest {
             // The run is closed: a journal sent again is refused with CP_018, which the client reads as "settled, drop it".
             assertEquals("CP_018", assertFailsWith<ApiFailure> { api.campaign.events(heroId, events) }.code)
 
-            // The auction takes the item out of the hero and gives it back on cancel.
+            // The auction takes the item out of the hero and gives it back on cancel: the starter set and the run's loot
+            // hold chaos orbs too, so the count is compared with itself before the lot, not with a fixed figure.
+            suspend fun chaos() = HeroParts(heroId).merge(assertNotNull(api.hero.view(heroId, HeroParts(heroId)))).bag[Orb.CHAOS_ORB.name] ?: 0L
+            val held = chaos()
             val lot = api.auction.sellItem(heroId, Orb.CHAOS_ORB.name, 1, Orb.CHAOS_ORB.name, 1)
             assertEquals(LotStatus.ACTIVE, lot.status)
             assertTrue(api.auction.search(heroId, AuctionFilter(), 0).items.any { it.id == lot.id })
             assertEquals(LotStatus.CANCELLED, api.auction.cancel(heroId, lot.id).status)
-            assertEquals(1L, assertNotNull(api.hero.view(heroId, HeroParts(heroId))).let { HeroParts(heroId).merge(it).bag[Orb.CHAOS_ORB.name] })
+            assertEquals(held, chaos())
 
             // A code is a treasure once.
             val code = api.promo.create(RedemptionCode(code = "CONTRACT-${System.currentTimeMillis()}", treasure = listOf(RedemptionReward(RedemptionKind.GOLD, "", 100.0))))

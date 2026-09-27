@@ -5,7 +5,8 @@ Server: branch `claude/tender-pasteur-a36kj2`, commit `369094b30a912d0d218ab17d7
 as the `backend/` submodule; the core builds against its `rules` module (`includeBuild("backend/rules")`),
 so rolls, the sheet, modifier text and seeded runs are the same code on both sides. Content comes from
 the server as chunks of `static/index.json`; the hero is one snapshot in parts; a run is a seed and a
-journal (see `docs/API_CONTRACT.md`).
+journal (see `docs/API_CONTRACT.md`). Clone with `git clone --recurse-submodules`; a clone without the
+submodule is fetched by the Gradle settings on the first sync (`git` must be on the path).
 
 ## Язык интерфейса · Interface language
 

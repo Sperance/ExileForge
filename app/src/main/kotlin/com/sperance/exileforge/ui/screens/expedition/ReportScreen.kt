@@ -125,7 +125,7 @@ import java.util.Locale
     if (gear.isNotEmpty()) {
         Caption(ui("expedition.report_gear"))
         // Every piece whole (3.2.0): base, every line with its tier and range, the roll quality and the price — no tap needed to judge it
-        gear.forEach { ItemCard(it, detailed = true, actionLabel = ui("expedition.loot_compare"), price = s.sellPrice(it.item)) { onItem(it) } }
+        gear.forEach { ItemCard(it, detailed = true, actionLabel = ui("expedition.loot_compare"), action = true, price = s.sellPrice(it.item)) { onItem(it) } }
     }
     if (reward.items.isNotEmpty()) {
         Caption(ui("expedition.report_orbs"))

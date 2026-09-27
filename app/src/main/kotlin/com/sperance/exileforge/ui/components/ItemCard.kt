@@ -134,7 +134,9 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
 @Composable fun ItemCard(item: ItemView, enabled: Boolean = true, selected: Boolean = false,
     detailed: Boolean = false, actionLabel: String = ui("common.open"),
     /** What the merchant pays for this copy (2.46.0); it replaces the template's bare base price. */
-    price: Long? = null, onClick: () -> Unit = {}) {
+    price: Long? = null,
+    /** Whether the card shows its [actionLabel]: a short card always, a full one only when it leads somewhere (3.2.0). */
+    action: Boolean = !detailed, onClick: () -> Unit = {}) {
     val color = rarityColor(item.rarity.name)
     val base = item.base
     val states = item.states
@@ -187,8 +189,8 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
                     MutedText(ui("price.sell"), style = MaterialTheme.typography.labelSmall)
                     Spacer(Modifier.width(6.dp)); GoldPrice(it); Spacer(Modifier.weight(1f))
                 }
-                // A full card is a page, not a way in: no label pointing further (2.51.0).
-                if (!detailed) {
+                // A full card is a page, not a way in (2.51.0) — unless it is asked to lead on (3.2.0).
+                if (action) {
                     Text(actionLabel.uppercase(), color = Gold, style = MaterialTheme.typography.labelLarge)
                     Icon(Icons.Outlined.ChevronRight, null, tint = Gold)
                 }

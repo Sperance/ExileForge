@@ -44,7 +44,8 @@ class DesignPreviewTest {
         } }
         compose.onNodeWithText(ring.title).assertIsDisplayed()
         compose.onNodeWithText(boots.title).assertIsDisplayed()
-        compose.onAllNodesWithText("Свойства").assertCountEquals(2)
+        // The label is drawn in capitals, and only on the short card: a full one is a page, not a way in
+        compose.onAllNodesWithText("СВОЙСТВА").assertCountEquals(1)
         val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val dir = File(context.getExternalFilesDir(null), "design").apply { mkdirs() }

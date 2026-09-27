@@ -12,6 +12,7 @@ import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.graphics.vector.group
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.display.itemIcon
 import com.sperance.exileforge.rules.content.Item
 import com.sperance.exileforge.rules.content.Orb
 import androidx.compose.foundation.layout.Spacer
@@ -29,8 +30,12 @@ import kotlin.math.sin
  * Each is an [ImageVector] built once and kept: a bag of twenty stacks draws the same few again.
  * It is painted as an [Image], never an `Icon` — an icon's tint would flatten the glass to one colour.
  */
-@Composable fun OrbGlyph(orb: Orb?, modifier: Modifier = Modifier, description: String? = null) =
-    Image(rememberVectorPainter(orbVector(orb)), description, modifier)
+@Composable fun OrbGlyph(orb: Orb?, modifier: Modifier = Modifier, description: String? = null) {
+    // The server's glass wins since 3.6.0: the orbs are drawn there with every other item.
+    val sprite = orb?.let { itemIcon(it.name) }?.takeIf { it.isGlass }
+    if (sprite == null || !SpriteIcon(sprite, Color.Unspecified, modifier, halo = false))
+        Image(rememberVectorPainter(orbVector(orb)), description, modifier)
+}
 
 /**
  * A picker's art for orb options keyed by the orb's item code (2.69.1; the code is the orb's name since

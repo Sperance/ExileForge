@@ -49,7 +49,7 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.ItemEmblem
 import com.sperance.exileforge.ui.icons.OrbGlyph
 import com.sperance.exileforge.ui.icons.orbArt
-import com.sperance.exileforge.ui.icons.spriteVector
+import com.sperance.exileforge.ui.icons.SpriteIcon
 import com.sperance.exileforge.ui.theme.*
 
 /** The showcase: the server's own search, so the page and the filter both belong to it. */
@@ -334,9 +334,8 @@ private val templateSlots: List<Slot> = Slot.entries.filter { it != Slot.RING_2 
  * copy by its template, a stack by the item of the bag it is a stack of.
  */
 @Composable private fun LotIcon(s: ForgeState, lot: AuctionLot, modifier: Modifier) {
-    val sprite = (if (lot.kind == LotKind.EQUIPMENT) equipmentIcon(lot.itemCode) else itemIcon(lot.itemCode))?.let(::spriteVector)
-    if (sprite != null) Icon(sprite, null, tint = lotColor(lot), modifier = modifier)
-    else ItemEmblem(lotVisualKind(s, lot), lotColor(lot), modifier)
+    val sprite = if (lot.kind == LotKind.EQUIPMENT) equipmentIcon(lot.itemCode) else itemIcon(lot.itemCode)
+    if (!SpriteIcon(sprite, lotColor(lot), modifier, halo = lot.kind == LotKind.EQUIPMENT)) ItemEmblem(lotVisualKind(s, lot), lotColor(lot), modifier)
 }
 
 private fun lotVisualKind(s: ForgeState, lot: AuctionLot): ItemVisualKind = when (lot.kind) {

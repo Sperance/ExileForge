@@ -36,9 +36,7 @@ import com.sperance.exileforge.ui.theme.Gold
 /** The same by the template's code and the kind it is drawn as when the server has no outline for it. */
 @Composable fun ItemIcon(code: String, kind: ItemVisualKind, color: Color, modifier: Modifier = Modifier, tint: Color? = null) {
     val paint = tint ?: color
-    val sprite = equipmentIcon(code)?.let(::spriteVector)
-    if (sprite != null) Icon(sprite, null, tint = paint, modifier = modifier)
-    else ItemEmblem(kind, paint, modifier)
+    if (!SpriteIcon(equipmentIcon(code), paint, modifier)) ItemEmblem(kind, paint, modifier)
 }
 
 /** An empty place of the body: the emblem of what would go there. */
@@ -49,14 +47,19 @@ import com.sperance.exileforge.ui.theme.Gold
 fun slotVisualKind(slot: Slot): ItemVisualKind = itemVisualKind(ItemTemplate(code = "", slot = slot))
 
 /**
- * Artwork for a stacking item of the bag, by its code: an orb is its stained glass, anything else the
- * server's sprite when the set has one, or the bundled glyph of its [kind] — a scroll for a book, a
- * shard for an essence, a gem for a material or a stack the content does not name.
+ * Artwork for a stacking item of the bag, by its code: the server's glass when the set has it (3.6.0),
+ * else an orb's bundled glass, the server's mono sprite, or the bundled glyph of its [kind] — a scroll
+ * for a book, a shard for an essence, a gem for a material or a stack the content does not name.
+ * A stack has no rarity, so its glass goes without a halo.
  */
 @Composable fun BagIcon(code: String, modifier: Modifier = Modifier, tint: Color = Gold, kind: ItemVisualKind = ItemVisualKind.ITEM) {
+    val sprite = itemIcon(code)
     val orb = Orb.of(code)
-    if (orb != null) OrbGlyph(orb, modifier)
-    else Icon(itemIcon(code)?.let(::spriteVector) ?: bagGlyph(kind), null, tint = tint, modifier = modifier)
+    when {
+        sprite?.isGlass == true && SpriteIcon(sprite, tint, modifier, halo = false) -> Unit
+        orb != null -> OrbGlyph(orb, modifier)
+        !SpriteIcon(sprite, tint, modifier) -> Icon(bagGlyph(kind), null, tint = tint, modifier = modifier)
+    }
 }
 
 private fun bagGlyph(kind: ItemVisualKind): ImageVector = when (kind) {

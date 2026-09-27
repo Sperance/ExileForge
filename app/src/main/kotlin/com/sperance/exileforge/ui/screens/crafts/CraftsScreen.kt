@@ -55,7 +55,7 @@ import com.sperance.exileforge.rules.roll.WorkTally
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.ItemEmblem
-import com.sperance.exileforge.ui.icons.spriteVector
+import com.sperance.exileforge.ui.icons.SpriteIcon
 import com.sperance.exileforge.ui.theme.*
 import kotlin.math.ceil
 import kotlinx.coroutines.delay
@@ -328,8 +328,7 @@ private fun share(profession: ProfessionView): Float = profession.next?.takeIf {
     val tool = profession.equipped?.let { s.view(it) }
     if (tool == null) { Icon(ForgeGlyphs.Anvil, null, tint = Muted, modifier = modifier); return }
     val paint = rarityColor(tool.rarity.name)
-    val sprite = equipmentIcon(tool.code)?.let(::spriteVector)
-    if (sprite != null) Icon(sprite, null, tint = paint, modifier = modifier) else ItemEmblem(tool.visualKind, paint, modifier)
+    if (!SpriteIcon(equipmentIcon(tool.code), paint, modifier)) ItemEmblem(tool.visualKind, paint, modifier)
 }
 
 /**

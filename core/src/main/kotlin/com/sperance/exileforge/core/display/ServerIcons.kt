@@ -12,11 +12,29 @@ import kotlinx.serialization.json.jsonObject
     val icons: Int = 0,
 )
 
-/** One filled outline of a sprite. [alpha] is the only shading there is: a sprite has no colour. */
-@Serializable data class IconPath(val d: String = "", val alpha: Float = 1f)
+/**
+ * One outline of a sprite. A mono sprite shades by [alpha] alone; a glass one (3.6.0) also gives each
+ * outline its [color] (`#rrggbb`), draws it as a lead [line] of that width instead of a filled piece
+ * when [line] is set, and cuts holes by the even-odd rule when [evenOdd] is.
+ */
+@Serializable data class IconPath(
+    val d: String = "",
+    val alpha: Float = 1f,
+    val color: String? = null,
+    val line: Float = 0f,
+    val evenOdd: Boolean = false,
+)
 
-/** One drawing, in a square grid [viewBox] wide. */
-@Serializable data class IconSprite(val viewBox: Float = 24f, val paths: List<IconPath> = emptyList())
+/** One drawing, in a square grid [viewBox] wide, painted in its [style]: [MONO] or [GLASS]. */
+@Serializable data class IconSprite(val viewBox: Float = 24f, val paths: List<IconPath> = emptyList(), val style: String = MONO) {
+    /** Stained glass keeps its own colours: rarity is a halo behind it, never a tint over it. */
+    val isGlass: Boolean get() = style == GLASS
+
+    companion object {
+        const val MONO = "mono"
+        const val GLASS = "glass"
+    }
+}
 
 @Serializable private data class IconDocument(
     val sprites: Map<String, IconSprite> = emptyMap(),
@@ -30,8 +48,8 @@ import kotlinx.serialization.json.jsonObject
  * pointing one more code at an existing sprite should not cost another outline. It also means a
  * single item can be given its own drawing later by changing one line of the table.
  *
- * A sprite carries no colour, only alpha. The client tints it by the item's rarity exactly as it
- * tints its own emblems, and a server-chosen colour would fight the dark theme it lands on.
+ * A mono sprite carries no colour, only alpha, and the client tints it by the item's rarity. Item
+ * sprites are stained glass since 3.6.0: their colours are the materials', and rarity is the halo.
  */
 class IconBundle(
     val hash: String = "",

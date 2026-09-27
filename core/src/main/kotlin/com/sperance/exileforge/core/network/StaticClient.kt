@@ -1,8 +1,6 @@
 package com.sperance.exileforge.core.network
 
-import com.sperance.exileforge.core.display.IconManifest
 import com.sperance.exileforge.core.display.PortraitKey
-import com.sperance.exileforge.core.display.PortraitManifest
 import com.sperance.exileforge.core.i18n.LocaleBundle
 import com.sperance.exileforge.core.i18n.LocaleLanguage
 import com.sperance.exileforge.core.i18n.LocaleManifest
@@ -30,14 +28,10 @@ class StaticClient internal constructor(private val http: Transport) {
         return http.fetchText("locale/$code.json", validate = false)
     }
 
-    suspend fun iconManifest(): IconManifest = http.fetch("icons/index.json")
-
     suspend fun iconDocument(file: String): String {
         require(file.isNotBlank()) { ui("api.no_icon_file") }
         return http.fetchText("icons/$file", validate = false)
     }
-
-    suspend fun portraitManifest(): PortraitManifest = http.fetch("portraits/index.json")
 
     suspend fun portraitDocument(key: String): String {
         require('.' in key) { ui("api.no_portrait") }

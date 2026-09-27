@@ -7,8 +7,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ExpandLess
-import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material3.*
@@ -30,35 +28,6 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.theme.*
-
-/**
- * A stash of anything, folded away until it is wanted.
- *
- * The count belongs in the header rather than inside: a player deciding whether to open a bag is
- * asking how much is in it, and answering that costs no space at all when the answer is nothing.
- */
-@Composable fun ExpandableSection(title: String, count: Int, expanded: Boolean, onToggle: () -> Unit,
-    content: @Composable ColumnScope.() -> Unit) {
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SectionHeader(title, count, expanded, onToggle)
-        if (expanded) content()
-    }
-}
-
-/**
- * The header alone, for a section whose rows are items of a `LazyColumn`.
- *
- * A stash of a hundred instances has to stay lazy, and lazy rows cannot live inside a composable
- * that takes its content as a block — so the fold is offered as a header the list can carry.
- */
-@Composable fun SectionHeader(title: String, count: Int, expanded: Boolean, onToggle: () -> Unit) {
-    Row(Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Engraved(title, modifier = Modifier.weight(1f))
-        Text(count.toString(), color = GoldBright, style = MaterialTheme.typography.labelLarge)
-        Icon(if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, null, tint = Gold, modifier = Modifier.size(20.dp))
-    }
-}
 
 /**
  * One item of a stash, as a line rather than a card.

@@ -23,7 +23,6 @@ import com.sperance.exileforge.rules.content.BenchRecipe
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.HeroClass
 import com.sperance.exileforge.rules.content.Item
-import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.roll.WorkGains
 import com.sperance.exileforge.rules.sheet.SheetCalculator
@@ -85,7 +84,6 @@ data class ForgeState(
     fun bagAmount(code: String): Long? = hero?.let { it.bag[code] ?: 0L }
     /** The orbs of the world, in the order of their price: what the forge and the auction offer. */
     val orbs: List<Item> get() = index?.itemsByCategory?.get(Item.CURRENCY).orEmpty().sortedBy { it.price }
-    fun orbOf(orb: Orb): Item? = index?.item(orb.name)
     /** The bench lines the hero has found; the rest of the bench stays hidden. */
     val bench: List<BenchRecipe> get() = index?.let { i -> hero?.let { h -> i.bench.filter { it.code in h.info.recipes } } }.orEmpty()
     /** Which zones the hero has passed and which are open: derived from the hero, no request. */

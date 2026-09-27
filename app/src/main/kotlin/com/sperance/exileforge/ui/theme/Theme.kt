@@ -65,7 +65,6 @@ val Reading = FontFamily(
     Font(R.font.onest_regular, FontWeight.Normal), Font(R.font.onest_medium, FontWeight.Medium),
     Font(R.font.onest_semibold, FontWeight.SemiBold), Font(R.font.onest_semibold, FontWeight.Bold),
 )
-val Numeric = FontFamily(Font(R.font.jetbrains_mono_medium, FontWeight.Medium))
 
 /** Item frames follow Path of Exile rarity colours; unknown values stay bone white. */
 fun rarityColor(value: String) = when (value) {

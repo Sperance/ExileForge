@@ -30,6 +30,3 @@ val bodyPlaces: List<BodyPlace> = listOf(
     listOf(BodyPlace(Slot.RING.name, listOf(Slot.RING), Slot.RING), BodyPlace(Slot.RING_2.name, listOf(Slot.RING), Slot.RING_2)) +
     listOf(Slot.BELT, Slot.WINGS).map { BodyPlace(it.name, listOf(it)) } +
     Slot.FLASKS.map { BodyPlace(it.name, listOf(Slot.FLASK), it) }
-
-/** The slots a hero wears on the body, in the ledger's order — every worn place but the tree's sockets. */
-val bodySlots: List<Slot> = Slot.entries.filter { !it.isTool && it != Slot.JEWEL && it != Slot.MAP }

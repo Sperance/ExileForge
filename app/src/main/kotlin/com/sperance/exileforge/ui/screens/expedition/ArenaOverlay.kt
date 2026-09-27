@@ -44,7 +44,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.campaign.*
-import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.ItemVisualKind
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.bagVisualKind
@@ -692,18 +691,6 @@ internal fun washAmount(ailment: Ailment): Float = when (ailment) {
         while (true) withFrameNanos { now -> if (last != 0L) clock.floatValue += ((now - last) / 1e9f).coerceAtMost(.05f); last = now }
     }
     return clock
-}
-
-/** A small coloured chip whose fill drains as the ailment wears off. */
-@Composable private fun AilmentChip(label: String, tint: Color, left: Float) {
-    val shape = RoundedCornerShape(4.dp)
-    val fill = tint.copy(alpha = .3f)
-    Box(Modifier.clip(shape).border(1.dp, tint.copy(alpha = .8f), shape).drawBehind {
-        drawRect(Color(0xAA0A0D12))
-        drawRect(fill, size = Size(size.width * left.coerceIn(0f, 1f), size.height))
-    }) {
-        Text(label, color = tint, fontSize = 10.sp, modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp), maxLines = 1)
-    }
 }
 
 /** The blows so far, newest first: when, who, and what came of it, coloured by what it was. */

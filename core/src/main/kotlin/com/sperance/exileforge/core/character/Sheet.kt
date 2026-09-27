@@ -2,7 +2,6 @@ package com.sperance.exileforge.core.character
 
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.EquipSlots
-import com.sperance.exileforge.rules.content.HeroClass
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.TakenNode
@@ -91,7 +90,4 @@ object Sheets {
             .map { StatDelta(it, before[it] ?: 0.0, next[it] ?: 0.0) }
             .filter { abs(it.change) >= 0.05 }
     }
-
-    /** The class's base at [level], for a hero not yet made. */
-    fun baseOf(heroClass: HeroClass, level: Int): Map<String, Double> = heroClass.baseOn(level)
 }

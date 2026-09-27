@@ -53,7 +53,6 @@ class MonsterAgent(val id: Int, val pack: List<RolledMonster>, val homeX: Double
     internal var path: List<Cell> = emptyList()
     internal var pathTo: Cell? = null
     internal var repath = 0.0
-    val chasing: Boolean get() = mode == AgentMode.CHASING || mode == AgentMode.HUNTING
 }
 
 /** A chest on the map (since 2.33.0): where it stands and whether the hero has opened it. */
@@ -159,9 +158,6 @@ class ExpeditionWorld(
             if (agent.standing.isEmpty()) agent.alive = false
         }
     }
-
-    /** The guardian summoned back for gold: it stands at its post again. */
-    fun bossReturns() { boss?.let { it.alive = true; it.mode = AgentMode.IDLE; it.x = it.homeX; it.y = it.homeY } }
 
     /** Where the guardian stands: the floor nearest the exit, a step or two from it. */
     private fun guardPost(): Cell? {
@@ -609,7 +605,6 @@ class ExpeditionWorld(
 
 /** The kinds of behaviour the campaign names: how a monster walks the map before a fight. */
 object Behaviours {
-    const val WANDER = "WANDER"
     const val PATROL = "PATROL"
     const val AMBUSH = "AMBUSH"
     const val SLEEP = "SLEEP"

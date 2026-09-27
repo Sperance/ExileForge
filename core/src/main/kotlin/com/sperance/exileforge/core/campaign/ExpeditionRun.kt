@@ -110,7 +110,6 @@ data class FightReport(val monster: RolledMonster, val outcome: Outcome, val pac
     val taken: Int get() = theirs().sumOf { it.damage }.roundToInt()
     val crits: Int get() = mine().count { it.kind == HitKind.CRIT }
     val blocked: Int get() = mine().count { it.kind == HitKind.BLOCKED }
-    val evaded: Int get() = theirs().count { it.kind == HitKind.EVADED }
     val inflicted: List<Ailment> get() = mine().flatMap { it.inflicted }.distinct()
 }
 
@@ -351,7 +350,6 @@ class ExpeditionRun(
 
     var fight: Battle? = null
         private set
-    val fightAgentOnMap: MonsterAgent? get() = fightAgent
 
     private val state = MutableStateFlow(snapshot())
     val hud: StateFlow<RunHud> = state.asStateFlow()

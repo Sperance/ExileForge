@@ -11,6 +11,4 @@ import kotlinx.serialization.Serializable
     val available: Int = 0,
     val nodes: List<TakenNode> = emptyList(),
     val totals: List<StatContribution> = emptyList(),
-) {
-    val takenCodes: Set<String> get() = nodes.mapTo(HashSet()) { it.code }
-}
+)

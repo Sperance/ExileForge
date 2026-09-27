@@ -341,9 +341,6 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
                 selectedOrb = it.play.selectedOrb.ifBlank { index.itemsByCategory[com.sperance.exileforge.rules.content.Item.CURRENCY]?.minByOrNull { o -> o.price }?.code.orEmpty() })) }
     }
 
-    /** The content is the server's alone now: only a new manifest moves it. */
-    fun staleContent() { contentStale = true }
-
     fun clearSession() {
         api.logout(); journal.clear(); cancelReads(); expeditionViewModel.drop(); craftsViewModel.drop(); heroViewModel.forget()
         mutable.update { it.copy(phase = AppPhase.AUTH, tab = TAB_HERO, mode = AppMode.PLAYER, failure = null,

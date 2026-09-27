@@ -105,7 +105,6 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
     val rarity: Rarity get() = item.rarity
     /** The template's slot: what the thing is. Where it is worn is [wornSlot]. */
     val slot: Slot get() = template.slot
-    val wornSlot: Slot? get() = item.slot
     val socket: String? get() = item.socket
     val equipped: Boolean get() = item.equipped
     val socketed: Boolean get() = item.socketed

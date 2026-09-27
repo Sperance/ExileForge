@@ -27,9 +27,6 @@ enum class Glyph {
          */
         fun ofStat(stat: String): Glyph = statWords.firstOrNull { (word, _) -> word in stat.uppercase() }?.second ?: INFO
 
-        /** The glyph of a document field — an editor row, a form label — by its exact key. */
-        fun ofField(key: String): Glyph = fields[key] ?: stat(key) ?: INFO
-
         /** A modifier is drawn as the characteristic its first effect changes. */
         fun ofModifier(modifierCode: String, index: ContentIndex): Glyph =
             index.modifier(modifierCode)?.effects?.firstOrNull()?.stat?.let(::ofStat) ?: INFO

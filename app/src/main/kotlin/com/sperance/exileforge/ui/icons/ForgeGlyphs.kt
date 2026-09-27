@@ -70,14 +70,10 @@ object ForgeGlyphs {
     val Atlas = glyph("Atlas", { poly(3f to 6f, 9f to 4f, 15f to 7f, 21f to 5f, 21f to 18f, 15f to 20f, 9f to 17f, 3f to 20f) }, { line(9f, 4f, 9f, 17f); line(15f, 7f, 15f, 20f) })
     /** Bound tome: definitions and rules. */
     val Tome = glyph("Tome", { poly(4f to 4f, 11f to 6f, 11f to 21f, 4f to 19f) }, { poly(20f to 4f, 13f to 6f, 13f to 21f, 20f to 19f) }, { line(12f, 6f, 12f, 21f) })
-    /** Torch: highlights and hints. */
-    val Torch = glyph("Torch", { poly(12f to 2f, 15f to 7f, 12f to 11f, 9f to 7f) }, { poly(10f to 11f, 14f to 11f, 13f to 21f, 11f to 21f) })
     /** Balance scales: comparison. */
     val Scales = glyph("Scales", { line(12f, 4f, 12f, 20f); line(5f, 7f, 19f, 7f); line(8f, 20f, 16f, 20f) }, { poly(2f to 13f, 8f to 13f, 5f to 7f) }, { poly(16f to 13f, 22f to 13f, 19f to 7f) })
     /** Chain link: bound references. */
     val Chain = glyph("Chain", { ring(8f, 8f, 4f) }, { ring(16f, 16f, 4f) }, { line(10.5f, 10.5f, 13.5f, 13.5f) })
-    /** Banner: leagues and modes. */
-    val Banner = glyph("Banner", { line(6f, 3f, 6f, 21f) }, { poly(6f to 4f, 19f to 4f, 16f to 9f, 19f to 14f, 6f to 14f) })
     /** A cracked crystal: an affix a Fracturing Orb fixed for good. */
     val Shard = glyph("Shard", { poly(12f to 2f, 19f to 10f, 12f to 22f, 5f to 10f) }, { line(12f, 2f, 10.5f, 9f); line(10.5f, 9f, 13.5f, 13f); line(13.5f, 13f, 12f, 22f) })
 

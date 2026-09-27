@@ -4,6 +4,8 @@ import com.sperance.exileforge.core.atlas.AtlasEffects
 import com.sperance.exileforge.core.model.campaign.CampaignState
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.ContentIndex
+import com.sperance.exileforge.rules.content.DesecrationKind
+import com.sperance.exileforge.rules.content.DesecrationRule
 import com.sperance.exileforge.rules.content.LoneWolfRule
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.AbyssRifts
@@ -141,7 +143,12 @@ data class RunHud(
     /** Events of the journal the server has not taken yet, and the ones it refused. */
     val pending: Int = 0,
     val rejected: Int = 0,
+    /** The desecration on the hero, underfoot or trailing (3.4.0). */
+    val desecration: DesecrationView? = null,
 )
+
+/** A desecration on the hero as the screen shows it: its kind, the lines it lays at this zone for this hero, and the trail left. */
+data class DesecrationView(val kind: DesecrationKind, val lines: Map<String, Double>, val underfoot: Boolean, val trail: Double)
 
 /** The Abyss as its sheet shows it: how many depths the crack leads down, how many are cleared, every depth's wave and hoard, and the share a fall keeps. */
 data class AbyssView(val depth: Int, val cleared: Int, val open: Boolean, val depths: List<AbyssDepth>,
@@ -266,6 +273,26 @@ class ExpeditionRun(
     private var reward: Reward? = null
     /** What an autorun has gathered so far, fight by fight: its report at the end. */
     private var autoReward: Reward? = null
+    private val desecration = index.campaign.desecration
+    /** The patch whose lines are on the hero: the one underfoot, or the last one stepped off within its trail. */
+    private var desecratedBy: Desecrated? = null
+    private var trailLeft = 0.0
+
+    /** What a patch lays on this hero at this zone: its lines, cut by the hero's own guard against desecration. */
+    private fun desecrationLines(spot: Desecrated): Map<String, Double> =
+        desecration?.lines(spot.kind, zone.level, hero.stats[DesecrationRule.GUARD] ?: 0.0).orEmpty()
+
+    /** The map's lines with the desecration on the hero over them. */
+    private fun effects(): Map<String, Double> = desecratedBy?.let { MapEffects.sum(mapEffects, desecrationLines(it)) } ?: mapEffects
+
+    /** A step on desecrated ground or off it: the patch's lines come on at once and stay for the trail after it. */
+    private fun desecrate(dt: Double) {
+        val rule = desecration ?: return
+        val under = world.underfoot
+        trailLeft = if (under != null) rule.trail else (trailLeft - dt).coerceAtLeast(0.0)
+        val next = under ?: desecratedBy?.takeIf { trailLeft > 0 }
+        if (next !== desecratedBy) { desecratedBy = next; regear(build.gear) }
+    }
     private var slain: RolledMonster? = null
     private var report: FightReport? = null
     private var members: List<Int> = emptyList()
@@ -283,7 +310,7 @@ class ExpeditionRun(
     private fun manaCap(): Double = hero.maxMana * (1 - kit.reserved(hero) / 100)
 
     private fun regear(gear: HeroGear) {
-        val next = HeroBuild(gear, mapEffects, rules)
+        val next = HeroBuild(gear, effects(), rules)
         val before = hero
         build = next
         rebody()
@@ -469,6 +496,7 @@ class ExpeditionRun(
 
     private fun walk(dt: Double) {
         recover(dt)
+        desecrate(dt)
         val (x, y) = ExpeditionWorld.screenToWorld(stickX, stickY)
         when (val event = world.step(dt, x, y)) {
             is WorldEvent.Encounter -> engage(event.agent)
@@ -684,6 +712,7 @@ class ExpeditionRun(
             bossDown = bossDown,
             auto = autopilot?.let { AutoHud(it.wave, it.waves) }, autoReward = autoReward,
             pending = journal.pending.size, rejected = journal.rejected.size,
+            desecration = desecratedBy?.let { DesecrationView(it.kind, desecrationLines(it), world.underfoot === it, trailLeft) },
         )
     }
 
@@ -785,6 +814,7 @@ class ExpeditionRun(
             val fountains = AtlasEffects.fountains(index.campaign.fountains, context.atlas)
             val extraFountains = MapEffects.fountains(effects)
             world.placeFountains(fountains.count.getOrElse(0) { 0 } + extraFountains, fountains.count.getOrElse(1) { fountains.count.getOrElse(0) { 0 } } + extraFountains, fountains.heal)
+            index.campaign.desecration?.let { rule -> world.placeDesecration(rule.roll(zone.level, if (vaal) run.seed xor VAAL_SALT else run.seed), rule.radius) }
             if (!vaal) {
                 world.placeChests(campaign.chests[location.code]?.left ?: 0)
                 world.placeCrystals(campaign.crystals[location.code]?.crystals.orEmpty())

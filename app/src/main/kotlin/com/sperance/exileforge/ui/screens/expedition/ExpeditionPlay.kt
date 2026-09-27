@@ -29,6 +29,8 @@ import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.mapTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.i18n.loc
+import com.sperance.exileforge.ui.screens.expedition.scene.Palettes
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.sellPrice
@@ -112,6 +114,9 @@ import kotlin.math.floor
             RunPhase.CRYSTAL -> hud.crystal?.let { CrystalSheet(s, it, onCommand = vm::runCommand) }
             RunPhase.ABYSS -> hud.abyss?.let { AbyssSheet(s, hud, it, onCommand = vm::runCommand) }
             RunPhase.LEFT -> Unit
+        }
+        hud.desecration?.takeIf { hud.phase == RunPhase.MAP || hud.phase == RunPhase.FIGHT }?.let {
+            DesecrationBadge(it, Modifier.align(Alignment.TopStart).statusBarsPadding().padding(start = 8.dp, top = 96.dp))
         }
         hud.auto?.takeIf { hud.phase == RunPhase.MAP || hud.phase == RunPhase.FIGHT }?.let { auto ->
             AutoBar(auto, Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 8.dp)) { vm.runCommand(RunCommand.StopAuto) }
@@ -323,7 +328,27 @@ private fun DrawScope.drawExplored(world: ExpeditionWorld, origin: Offset, cell:
                     }
                 }
             } else MutedText(ui("map.no_modifiers"))
+            if (world.desecrated.isNotEmpty()) {
+                Engraved(ui("map.desecration"))
+                world.desecrated.groupingBy { it.kind }.eachCount().forEach { (kind, count) ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(10.dp).background(Palettes.desecration(kind.group), CircleShape))
+                        Text(loc("desecration.${kind.code}") + if (count > 1) " ×$count" else "", color = Parchment, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                        Text(loc("desecration.group.${kind.group}"), color = Palettes.desecration(kind.group), style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+                MutedText(ui("map.desecration_hint"))
+            }
         }
+    }
+}
+
+/** The desecration on the hero (3.4.0): its name in its group's colour, the trail left once stepped off, its lines on a touch. */
+@Composable private fun DesecrationBadge(view: DesecrationView, modifier: Modifier) {
+    val tint = Palettes.desecration(view.kind.group)
+    val name = loc("desecration.${view.kind.code}")
+    Tipped({ Tip(name, tint = tint, facts = view.lines.map { (stat, value) -> statTitle(stat) to statValue(stat, value) }) }, modifier) {
+        Counter(if (view.underfoot) name else ui("expedition.desecration_trail", name, view.trail.toInt() + 1), tint)
     }
 }
 

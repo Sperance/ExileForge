@@ -125,6 +125,8 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
     val immuneStun: Boolean get() = stat("STOCK_IMMUNE_STUN") > 0
     /** Life back a second as a share of the maximum (server 0.69.0), beside the flat regeneration. */
     val lifeRegenShare = max(0.0, stat("STOCK_LIFE_REGEN_PERCENT")) / 100
+    /** Life lost a second as a share of the maximum: desecrated ground (3.4.0). */
+    val lifeDegenShare = max(0.0, stat("STOCK_LIFE_DEGEN_PERCENT")) / 100
     val leechMana = max(0.0, stat("STOCK_LEECH_MANA")) / 100
     val manaOnHit = max(0.0, stat("STOCK_MANA_ON_HIT"))
     val manaOnKill = max(0.0, stat("STOCK_MANA_ON_KILL"))
@@ -691,7 +693,7 @@ class Battle(
 
     private fun step(dt: Double) {
         time += dt
-        (listOf(heroFighter) + foeFighters).forEach { regenerate(it, dt); burn(it, dt) }
+        (listOf(heroFighter) + foeFighters).forEach { regenerate(it, dt); degenerate(it, dt); burn(it, dt) }
         expire()
         if (finished()) return
         powers.tick()
@@ -776,6 +778,14 @@ class Battle(
     /** The hero's body for one blow: what lies on them and [extra], a skill's own lines. */
     private fun heroBody(extra: List<StatLine>): Combatant = model.body((if (heroFighter.low) model.lowLife else emptyList()) +
         powers.standing + heroFighter.effects.flatMap { it.lines } + extra).under(auras())
+
+    /** Desecrated ground eats life (3.4.0): a share of the maximum a second, past the shield, and it can kill. */
+    private fun degenerate(me: Fighter, dt: Double) {
+        val share = me.body.lifeDegenShare
+        if (share <= 0 || !me.alive || me.invulnerable) return
+        me.life = max(0.0, me.life - me.body.maxLife * share * dt)
+        if (!me.alive) fell(me)
+    }
 
     /** Ailments run their course: damage over time is applied every slice and logged once a second. */
     private fun burn(me: Fighter, dt: Double) {

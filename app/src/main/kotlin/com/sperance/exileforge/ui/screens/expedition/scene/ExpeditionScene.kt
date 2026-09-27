@@ -131,6 +131,18 @@ private class ScenePainter {
                 drawCircle(Brush.radialGradient(listOf(Palettes.torch.copy(alpha = .16f), Palettes.torch.copy(alpha = .05f), Color.Transparent),
                     Offset(hxs, hys), warm), warm, Offset(hxs, hys))
             }
+            // Desecrated ground (3.4.0) stains the floor once its middle was seen: a slow, breathing blot of its group's colour.
+            world.desecrated.filter { world.explored(floor(it.x).toInt(), floor(it.y).toInt()) }.forEach { patch ->
+                val px = isoX(patch.x, patch.y)
+                val py = -isoY(patch.x, patch.y)
+                val reach = (patch.radius * unit * 1.414).toFloat()
+                val tint = Palettes.desecration(patch.kind.group)
+                val breath = .75f + .25f * sin(time * 2f + patch.id)
+                scope.withTransform({ scale(1f, .5f, Offset(px, py)) }) {
+                    drawCircle(Brush.radialGradient(listOf(tint.copy(alpha = .42f * breath), tint.copy(alpha = .22f * breath), Color.Transparent),
+                        Offset(px, py), reach), reach, Offset(px, py))
+                }
+            }
 
             // Then everything that stands, back to front: rock, monsters and the hero by x + y.
             val heroDepth = world.heroX + world.heroY

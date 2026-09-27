@@ -143,6 +143,7 @@ object MapEffects {
         effects[MapStats.HERO_ATTACK_SPEED]?.let { scale("STOCK_ATTACK_SPEED", it) }
         effects[MapStats.HERO_LIFE]?.let { scale("STOCK_HEALTH", it) }
         effects[MapStats.HERO_LEECH]?.let { add("STOCK_LEECH_ALL", it) }
+        effects[MapStat.HERO_DEGEN.code]?.let { add("STOCK_LIFE_DEGEN_PERCENT", it) }
         effects[MapStats.HERO_MANA_REGEN]?.let { v -> sheet["STOCK_MANA_REGEN"] = (100 + (sheet["STOCK_MANA_REGEN"] ?: 0.0)) * max(0.0, 1 - v / 100) - 100 }
         effects[MapStats.SKILL_COST]?.let { add("STOCK_SKILL_COST", -it) }
         effects[MapStats.FLASK_CHARGES]?.let { add("STOCK_FLASK_CHARGES_GAINED", -it) }

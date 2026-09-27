@@ -89,10 +89,10 @@ class BalanceStudy(private val index: ContentIndex, private val config: BalanceC
         val utility = classes.flatMap { cls -> Archetype.entries.map { arch -> async { nodeUtility(BuildSpec(cls, arch, config.utilityLevel, seedOf(cls, arch, config.utilityLevel))) } } }.awaitAll().flatten()
         val skills = classes.map { cls -> async { skillUtility(cls, builds) } }.awaitAll().flatten()
         BalanceData(config.name, config.levels, config.runs, builds = builds, progress = progress(builds), loot = loot(measured),
-            nodes = nodes(utility), untakenNodes = untaken(utility), skills = skills)
+            nodes = nodes(utility), untakenNodes = untaken(utility, measured.flatMap { it.tree }), skills = skills)
     }
 
-    private class Measured(val result: BuildResult, val runs: List<MapRun>)
+    private class Measured(val result: BuildResult, val runs: List<MapRun>, val tree: Set<String>)
 
     /**
      * The build's own zone decides its difficulty; its loot and pace are measured where it would farm — the
@@ -122,7 +122,7 @@ class BalanceStudy(private val index: ContentIndex, private val config: BalanceC
             experiencePerHour = runs.filterNot { it.died }.sumOf { it.experience } / hours,
             goldPerHour = runs.filterNot { it.died }.sumOf { it.gold } / hours,
             arenaSecondsPerPack = bench.secondsPerPack, arenaLossRate = bench.lossRate,
-            bossSeconds = bench.bossSeconds, bossWinRate = bench.bossWinRate), runs)
+            bossSeconds = bench.bossSeconds, bossWinRate = bench.bossWinRate), runs, hero.tree.map { it.code }.toSet())
     }
 
     /** At each level, a build a half slower than the level's median in the arena is weak, a third faster strong. */
@@ -172,15 +172,19 @@ class BalanceStudy(private val index: ContentIndex, private val config: BalanceC
 
     private class NodeLoss(val code: String, val type: SkillNodeType, val loss: Double, val taken: Set<String>)
 
-    /** Every notable, keystone and mastery of the build taken away in turn: the arena's slowdown without it. */
+    /**
+     * Every notable, keystone and mastery of the build taken away in turn: how much weaker the hero is without it,
+     * in percent — against the zone's guardians ([Arena.duel]), or, for a farmer, in the loot its sheet brings.
+     */
     private fun nodeUtility(spec: BuildSpec): List<NodeLoss> {
         val hero = factory.build(spec)
         val arena = arena(zoneFor(spec.level), spec.heroClass)
-        val base = arena.bench(hero.gear, withBoss = false).cost
+        fun worth(built: BuiltHero) = if (spec.archetype == Archetype.FARMER) FarmValue.of(built.sheet.stats) else arena.duel(built.gear).power
+        val base = worth(hero)
         val taken = hero.tree.map { it.code }.toSet()
         return hero.tree.mapNotNull { node -> index.tree.node(node.code)?.takeIf { it.type in WEIGHED }?.let { it to node } }.map { (def, node) ->
             val without = factory.build(spec, hero.tree - node) { hero.skills }
-            NodeLoss(def.code, def.type, (arena.bench(without.gear, withBoss = false).cost / base - 1) * 100, taken)
+            NodeLoss(def.code, def.type, (base / worth(without) - 1) * 100, taken)
         }.ifEmpty { listOf(NodeLoss("", SkillNodeType.START, 0.0, taken)) }
     }
 
@@ -188,8 +192,8 @@ class BalanceStudy(private val index: ContentIndex, private val config: BalanceC
         NodeResult(code, rows.first().type.name, rows.size, rows.map { it.loss }.average())
     }.sortedByDescending { it.loss }
 
-    private fun untaken(losses: List<NodeLoss>): Map<String, Int> {
-        val taken = losses.flatMap { it.taken }.toSet()
+    private fun untaken(losses: List<NodeLoss>, measured: Collection<String>): Map<String, Int> {
+        val taken = losses.flatMap { it.taken }.toSet() + measured
         return index.tree.byCode.values.filter { it.type in WEIGHED && it.code !in taken }.groupingBy { it.type.name }.eachCount()
     }
 

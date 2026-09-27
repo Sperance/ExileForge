@@ -52,6 +52,32 @@ enum class Archetype(val title: String, private val weights: Map<String, Double>
             "REGENERATION" to 2.0, "DAMAGE_REDUCTION" to 3.0, "STUN_THRESHOLD" to 1.0, "LIFE_ON_KILL" to 1.0, "ALL_ATTRIBUTES" to 1.0,
             "DAMAGE" to 1.0, "ATTACK_SPEED" to 1.0),
         listOf(SkillType.GUARD, SkillType.HEAL, SkillType.ATTACK, SkillType.SPELL, SkillType.WARCRY, SkillType.CURSE),
+    ),
+    CRITIC(
+        "Крит",
+        mapOf("CRITICAL" to 3.5, "ATTACK_SPEED" to 2.5, "CAST_SPEED" to 2.0, "DAMAGE" to 1.5, "DEXTERITY" to 1.0, "ALL_ATTRIBUTES" to 1.0,
+            "COOLDOWN" to 1.0, "SKILL_LEVEL" to 1.0, "MAXIMUM_LIFE" to 2.0, "RESISTANCE" to 1.5, "EVASION" to 1.0),
+        listOf(SkillType.ATTACK, SkillType.SPELL, SkillType.CURSE, SkillType.WARCRY, SkillType.GUARD, SkillType.HEAL),
+    ),
+    AFFLICTOR(
+        "Недуги",
+        mapOf("POISON" to 3.5, "BLEED" to 3.5, "IGNITE" to 3.0, "BURNING" to 3.0, "SHOCK" to 2.0, "FREEZE" to 2.0, "CHAOS_DAMAGE" to 2.5,
+            "CURSE" to 2.0, "SKILL_DAMAGE" to 1.5, "ATTACK_SPEED" to 1.5, "MAXIMUM_LIFE" to 2.0, "RESISTANCE" to 1.5, "LEECH" to 1.0),
+        listOf(SkillType.ATTACK, SkillType.SPELL, SkillType.CURSE, SkillType.WARCRY, SkillType.GUARD, SkillType.HEAL),
+    ),
+    WARDEN(
+        "Энергощит",
+        mapOf("ENERGY_SHIELD" to 4.0, "ENERGY_REGENERATION" to 3.0, "INTELLIGENCE" to 1.5, "SPELL_DAMAGE" to 2.0, "CAST_SPEED" to 2.0,
+            "ELEMENTAL_DAMAGE" to 1.5, "MAXIMUM_MANA" to 1.0, "MANA_REGENERATION" to 1.0, "RESERVATION" to 1.0, "AURA" to 1.5,
+            "SKILL_COST" to 1.0, "RESISTANCE" to 2.0),
+        listOf(SkillType.SPELL, SkillType.GUARD, SkillType.CURSE, SkillType.ATTACK, SkillType.HEAL, SkillType.WARCRY),
+    ),
+    FARMER(
+        "Фармер",
+        mapOf("ITEM_QUANTITY" to 4.0, "ITEM_RARITY" to 3.0, "CHEST_QUANTITY" to 2.0, "MOVEMENT_SPEED" to 2.0, "EXPERIENCE_GAIN" to 2.0,
+            "SELL_VALUE" to 1.0, "LIGHT_RADIUS" to 1.0, "FLASK" to 1.0, "DESECRATION" to 1.0, "MAXIMUM_LIFE" to 2.5, "RESISTANCE" to 2.0,
+            "DAMAGE" to 1.0, "ATTACK_SPEED" to 1.0),
+        listOf(SkillType.ATTACK, SkillType.SPELL, SkillType.GUARD, SkillType.HEAL, SkillType.WARCRY, SkillType.CURSE),
     );
 
     fun weight(code: String): Double = weights.entries.filter { code.contains(it.key) }.maxOfOrNull { it.value } ?: 0.0

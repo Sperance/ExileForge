@@ -10,7 +10,7 @@ object ReportPage {
     fun render(data: BalanceData): String = buildString {
         append(HEAD)
         append("<h1>Баланс ExileForge</h1><p class=\"lead\">Прогон «${data.config}»: ${data.runs} автопробег(а) зоны своего уровня на сборку и уровень, ")
-        append("арена на одних и тех же стаях. Сборки: 7 классов × ${Archetype.entries.size} архетипа (${Archetype.entries.joinToString { it.title }}), редкая экипировка лучших баз уровня. ")
+        append("арена на одних и тех же стаях. Сборки: 7 классов × ${Archetype.entries.size} архетипов (${Archetype.entries.joinToString { it.title }}), редкая экипировка лучших баз уровня. ")
         append("Считалось ${fmt(data.seconds, 0)} с. Отчёт ничего не меняет.</p>")
         flags(data)
         builds(data)
@@ -98,7 +98,7 @@ object ReportPage {
     }
 
     private fun StringBuilder.nodes(data: BalanceData) {
-        append("<h2>Полезность узлов</h2><p>Каждый взятый значимый узел, ключевой и мастерство сборок уровня ${data.levels.firstOrNull { it >= 70 } ?: 70} снимается по одному: на сколько процентов арена медленнее без него. Отрицательное — без узла быстрее.</p>")
+        append("<h2>Полезность узлов</h2><p>Каждый взятый значимый узел, ключевой и мастерство сборок уровня ${data.levels.firstOrNull { it >= 70 } ?: 70} снимается по одному: на сколько процентов герой слабее без него: сила против стражей зоны (сколько стражей он переживёт — время жизни против бессмертного стража к времени убийства безобидного), у «Фармера» — ценность добычи по листу. Отрицательное — без узла сильнее.</p>")
         append("<div class=\"cols\"><div><h3>Самые ценные</h3>").append(nodeTable(data.nodes.take(15))).append("</div>")
         append("<div><h3>Пустые и вредные</h3>").append(nodeTable(data.nodes.filter { it.loss <= 0.5 }.sortedBy { it.loss }.take(20))).append("</div></div>")
         append("<p>Ни одна сборка не взяла: ${data.untakenNodes.entries.joinToString { "${it.key} — ${it.value}" }.ifEmpty { "таких нет" }}.</p>")

@@ -82,6 +82,22 @@ class MapSimulator(private val index: ContentIndex) {
     }
 }
 
+/** Seconds to kill a harmless guardian and seconds to fall to an undying one; their ratio is the hero's power against guardians. */
+data class Duel(val killSeconds: Double, val surviveSeconds: Double) {
+    val power: Double get() = surviveSeconds / killSeconds.coerceAtLeast(0.1)
+}
+
+/**
+ * A farming hero's worth from the sheet alone: quantity and rarity of loot, gold, chests, experience and pace,
+ * multiplied, each at the weight of what it pays. Loot per hour measured by runs is too noisy to weigh one node.
+ */
+object FarmValue {
+    private val WEIGHTS = mapOf("STOCK_QUANTITY" to 1.0, "STOCK_RARITY" to 0.5, "STOCK_GOLD" to 0.3, "STOCK_CHEST_QUANTITY" to 0.2,
+        "STOCK_EXPERIENCE" to 0.5, "STOCK_MOVEMENT_SPEED" to 0.5)
+
+    fun of(stats: Map<String, Double>): Double = WEIGHTS.entries.fold(1.0) { value, (stat, weight) -> value * (1 + (stats[stat] ?: 0.0) / 100 * weight) }
+}
+
 /** The arena's verdict on a hero: seconds per pack and the share of packs that killed them; the guardians apart. */
 data class Bench(val secondsPerPack: Double, val lossRate: Double, val bossSeconds: Double = 0.0, val bossWinRate: Double = 0.0) {
     /** One number to rank by: time per pack, a loss costing a minute. */
@@ -108,6 +124,28 @@ class Arena(private val index: ContentIndex, zone: Zone, seeds: List<Long>, hero
         return Bench(packSeconds, 1 - packWins, bossSeconds, bossWins)
     }
 
+    /**
+     * The hero against the zone's guardians, split in two so neither side saturates: how long the hero takes to
+     * kill a guardian that deals no damage, and how long they last against one that cannot die. [Duel.power] is
+     * the second over the first — how many guardians the hero outlasts — the measure a node or a skill is weighed by.
+     */
+    fun duel(gear: HeroGear): Duel {
+        val build = HeroBuild(gear, emptyMap(), rules)
+        fun timed(harmless: Boolean) = bosses.mapIndexed { i, pack ->
+            val boss = pack.single()
+            val stats = boss.stats.mapValues { (stat, value) -> when {
+                harmless && stat in DAMAGE -> 0.0
+                !harmless && stat == HEALTH -> value * UNDYING
+                else -> value } }
+            val hero = build.body
+            val battle = Battle(hero, listOf(Foe(Combatant(stats, level, rules), boss.ranged, boss.rarity, if (harmless) emptyList() else boss.skills.mapNotNull(index.skills.monsterByCode::get))),
+                rules, hero.maxLife, Random(i.toLong() * 7919), gear.stance, kit = gear.kit, model = build, percent = gear.percent)
+            while (battle.outcome == null && battle.time < DUEL_LIMIT) battle.advance(1.0)
+            battle.time
+        }.average()
+        return Duel(timed(harmless = true), timed(harmless = false))
+    }
+
     /** Every pack of [foes] met with full life: the mean seconds of the fights and the share won. */
     private fun fightAll(build: HeroBuild, gear: HeroGear, foes: List<List<RolledMonster>>, limit: Double): Pair<Double, Double> {
         val hero = build.body
@@ -129,5 +167,10 @@ class Arena(private val index: ContentIndex, zone: Zone, seeds: List<Long>, hero
         const val PACKS_PER_SEED = 6
         const val FIGHT_LIMIT = 120.0
         const val BOSS_LIMIT = 300.0
+        const val DUEL_LIMIT = 600.0
+        const val UNDYING = 1_000.0
+        const val HEALTH = "STOCK_HEALTH"
+        val DAMAGE = setOf("STOCK_ATTACK_PHYSICAL", "STOCK_ATTACK_FIRE", "STOCK_ATTACK_COLD", "STOCK_ATTACK_LIGHTNING", "STOCK_ATTACK_CHAOS", "STOCK_ATTACK_MAGICAL",
+            "STOCK_REFLECT", "STOCK_THORNS")
     }
 }

@@ -6,6 +6,9 @@ import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.DesecrationKind
 import com.sperance.exileforge.rules.content.DesecrationRule
+import com.sperance.exileforge.rules.content.Pet
+import com.sperance.exileforge.rules.content.PetRole
+import com.sperance.exileforge.rules.roll.Menagerie
 import com.sperance.exileforge.rules.content.LoneWolfRule
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.AbyssRifts
@@ -57,6 +60,9 @@ data class FoeView(
 }
 
 /** The fight as the overlay prints it: the pack as cards, the hero's pools and states, what just landed, and the blows so far, newest first. */
+/** The pet in a fight as its bar shows it (3.5.0). */
+data class AllyView(val species: String, val life: Int, val maxLife: Int, val alive: Boolean)
+
 data class FightHud(
     val leader: RolledMonster,
     val foes: List<FoeView>,
@@ -75,6 +81,8 @@ data class FightHud(
     val target: Int? = null,
     val focus: Int? = null,
     val loneWolf: LoneWolfRule? = null,
+    /** The pet beside the hero (3.5.0). */
+    val ally: AllyView? = null,
     val heroTaunt: Boolean = false,
     val heroMana: Int = 0, val heroMaxMana: Int = 0,
     val skills: List<SkillView?> = emptyList(),
@@ -236,6 +244,8 @@ class ExpeditionRun(
     private val onLoot: (List<com.sperance.exileforge.rules.roll.ItemInstance>) -> Unit = {},
     /** The autorun that drives this run instead of the stick (3.2.0); null walks by hand. */
     private var autopilot: AutoPilot? = null,
+    /** The combat pet at work (3.5.0). */
+    private val pet: Pet? = null,
 ) {
     /** The run as the rules roll it; it takes the Vaal zone's context once the portal opens. */
     var run: Run = run
@@ -274,6 +284,15 @@ class ExpeditionRun(
     /** What an autorun has gathered so far, fight by fight: its report at the end. */
     private var autoReward: Reward? = null
     private val desecration = index.campaign.desecration
+    /** The pet as a fighter: its sheet at its level, what its role does; a new one each fight stands up whole. */
+    private val ally: Ally? by lazy {
+        pet?.let { p ->
+            val pets = Menagerie(index)
+            val kind = pets.species(p.species) ?: return@let null
+            Ally(p.species, Combatant(pets.sheet(p), p.level, rules), kind.role == PetRole.TANK,
+                if (kind.role == PetRole.SUPPORT) pets.supportHeal(p) else 0.0, index.pets.drawFire)
+        }
+    }
     /** The patch whose lines are on the hero: the one underfoot, or the last one stepped off within its trail. */
     private var desecratedBy: Desecrated? = null
     private var trailLeft = 0.0
@@ -587,7 +606,7 @@ class ExpeditionRun(
             val monster = agent.pack[index]
             Foe(Combatant(monster.stats, level, rules), monster.ranged, monster.rarity, monster.skills.mapNotNull(this.index.skills.monsterByCode::get))
         }, rules, life, Random(Streams.mix(seed, FIGHT_STREAM, (fights++).toLong())), stance, kit = kit, model = build, pools = HeroPools(life, mana, charges, flaskLeft),
-            percent = build.gear.percent)
+            percent = build.gear.percent, ally = ally)
         started = false
         paused = false
         phase = RunPhase.FIGHT
@@ -752,6 +771,7 @@ class ExpeditionRun(
                 f.mana.roundToInt(), f.body.maxMana.roundToInt())
         }
         return FightHud(
+            ally = battle.allyFighter?.let { f -> AllyView(battle.ally!!.code, f.life.roundToInt(), f.body.maxLife.roundToInt(), f.alive) },
             leader = agent.monster, foes = foes,
             heroLife = h.life.roundToInt(), heroShield = h.shield.roundToInt(),
             hits = hits, speed = speed,
@@ -793,6 +813,8 @@ class ExpeditionRun(
             killed: Collection<Int> = emptyList(),
             /** An autorun instead of the stick (3.2.0). */
             auto: AutoPlan? = null,
+            /** The combat pet at work (3.5.0): it fights every fight at the hero's side. */
+            pet: Pet? = null,
         ): ExpeditionRun {
             val zone = if (vaal) VaalZones.zone(location) ?: location else location
             val context = run.context
@@ -822,7 +844,7 @@ class ExpeditionRun(
             }
             val pilot = auto?.let { AutoPilot.of(world, it, if (vaal) run.seed xor VAAL_SALT else run.seed, bossStands = world.boss?.alive == true) }
             return ExpeditionRun(index, zone, run, journal, world, build, rules, run.seed, effects, vaal, startPools, heroExperience, heroLevel, vaalOrbs,
-                campaign.corruptionOpened, vaalZone, bossDown, onRecorded, onCleared, onFallen, onLoot, pilot)
+                campaign.corruptionOpened, vaalZone, bossDown, onRecorded, onCleared, onFallen, onLoot, pilot, pet)
         }
 
         private const val VAAL_SALT = 0x5661616C5A6F6E65L

@@ -76,6 +76,8 @@ data class HeroView(
     val crafts: WorkState = WorkState(),
     val merchant: MerchantStock = MerchantStock(),
     val sheet: HeroSheet = HeroSheet.EMPTY,
+    /** The menagerie (3.5.0, server 1.5.0). */
+    val pets: PetState = PetState(),
 ) {
     val id: String get() = info.id
     val level: Int get() = info.level
@@ -96,6 +98,15 @@ data class HeroView(
     fun count(code: String): Long = bag[code] ?: 0L
     /** The chronicle whole: the kept counters and the level, the zones cleared and the atlas nodes taken. */
     val chronicle: Map<String, Long> get() = Counter.values(info.counters, level, campaign.cleared.size, info.atlas.size)
+}
+
+/** The menagerie as the server keeps it: the pets, the combat one and the helper at work by id, and the ceiling. */
+@kotlinx.serialization.Serializable data class PetState(
+    val pets: List<com.sperance.exileforge.rules.content.Pet> = emptyList(), val combat: String = "", val helper: String = "", val cap: Int = 0,
+) {
+    val active: List<com.sperance.exileforge.rules.content.Pet> get() = pets.filter { it.id == combat || it.id == helper }
+    fun pet(id: String) = pets.firstOrNull { it.id == id }
+    fun isActive(id: String) = id == combat || id == helper
 }
 
 /** A hero of the account's list (`GET /hero/byUser`, the raw document): enough for the menu, the rest comes with the view. */

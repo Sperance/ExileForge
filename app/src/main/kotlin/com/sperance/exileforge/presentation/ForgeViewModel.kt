@@ -67,6 +67,10 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     fun setTitle(title: String) = runtime.heroViewModel.setTitle(title)
     fun claimOverflow(itemId: String? = null) = runtime.heroViewModel.claimOverflow(itemId)
     fun sellOverflow(itemId: String) = runtime.heroViewModel.sellOverflow(itemId)
+    fun hatchPet(egg: String) = runtime.heroViewModel.hatchPet(egg)
+    fun petOrb(petId: String, orb: String) = runtime.heroViewModel.petOrb(petId, orb)
+    fun activatePet(petId: String) = runtime.heroViewModel.activatePet(petId)
+    fun releasePet(petId: String) = runtime.heroViewModel.releasePet(petId)
     /** Admin only: a named template, rolled by the server at [rarity] or the template's own. */
     fun grant(template: String, rarity: Rarity? = null) = runtime.heroViewModel.grant(template, rarity)
     fun grantRarity(value: String) = runtime.heroViewModel.grantRarity(value)

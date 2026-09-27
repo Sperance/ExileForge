@@ -253,6 +253,12 @@ data class ActiveAilment(val ailment: Ailment, val until: Double, val magnitude:
  * 2.78.0 its [rarity] tells a skill waiting for a rare or a boss, and its [skills] are what it casts
  * for its mana — a boss's own, a caster's spell of its element, one a mad essence borrowed.
  */
+/**
+ * A combat pet in a fight (3.5.0): [code] its species, [body] its sheet, a [tank] holds every blow on itself,
+ * [heal] mends the hero so many percent of their life a second, [drawFire] the share of blows it draws otherwise.
+ */
+class Ally(val code: String, val body: Combatant, val tank: Boolean, val heal: Double, val drawFire: Double)
+
 data class Foe(val body: Combatant, val ranged: Boolean = false, val rarity: MonsterRarity = MonsterRarity.NORMAL,
                val skills: List<MonsterSkill> = emptyList())
 
@@ -434,6 +440,8 @@ class Battle(
     pools: HeroPools? = null,
     /** The stats that are a percent already: the lines laid on a monster fold by them. */
     private val percent: Set<String> = emptySet(),
+    /** The combat pet at the hero's side (3.5.0); it stands up whole after the fight. */
+    val ally: Ally? = null,
 ) {
     /** «Волк-одиночка»: the hero alone deals more and takes less of every damage, by the server's [CombatRules.loneWolf]. */
     val loneWolf: Boolean get() = party <= 1
@@ -491,6 +499,14 @@ class Battle(
 
     val foeFighters: List<Fighter> = foes.mapIndexed { i, foe -> Fighter(Side.MONSTER, foe.body, foe.body.maxLife, i, foe.ranged) }
     val heroFighter = Fighter(Side.HERO, hero.under(auras()), heroLife)
+    /** The pet fighting beside the hero (3.5.0): it strikes the hero's target and draws blows meant for the hero. */
+    val allyFighter: Fighter? = ally?.let { Fighter(Side.HERO, it.body, it.body.maxLife, ALLY) }
+
+    /** Whom a monster's blow is for: a standing tank pet takes them all, any other pet its share, the hero the rest. */
+    private fun foeTarget(): Fighter {
+        val pet = allyFighter?.takeIf { it.alive } ?: return heroFighter
+        return if (ally!!.tank || random.nextDouble() < ally.drawFire) pet else heroFighter
+    }
 
     /** The auras of the foes still standing, summed per stat (server 0.66.0). */
     private fun auras(): Map<String, Double> {
@@ -693,7 +709,11 @@ class Battle(
 
     private fun step(dt: Double) {
         time += dt
-        (listOf(heroFighter) + foeFighters).forEach { regenerate(it, dt); degenerate(it, dt); burn(it, dt) }
+        (listOf(heroFighter) + listOfNotNull(allyFighter) + foeFighters).forEach { regenerate(it, dt); degenerate(it, dt); burn(it, dt) }
+        // A support pet mends the hero while it stands (3.5.0).
+        allyFighter?.takeIf { it.alive && heroFighter.alive && ally!!.heal > 0 }?.let {
+            heroFighter.life = min(heroFighter.body.maxLife, heroFighter.life + heroFighter.body.maxLife * ally!!.heal / 100 * dt)
+        }
         expire()
         if (finished()) return
         powers.tick()
@@ -709,9 +729,9 @@ class Battle(
         foeFighters.forEach { if (it.alive && !it.held) monsterCast(it) }
         if (finished()) return
         // Whoever is due first acts first; several may be due in one slice.
-        (listOf(heroFighter) + foeFighters).sortedBy { it.nextAttack }.forEach { me ->
+        (listOf(heroFighter) + listOfNotNull(allyFighter) + foeFighters).sortedBy { it.nextAttack }.forEach { me ->
             if (!me.alive || me.held || (me.side == Side.HERO && retreating) || me.nextAttack > time) return@forEach
-            val target = if (me.side == Side.HERO) target() else heroFighter
+            val target = if (me.side == Side.HERO) target() else foeTarget()
             if (target != null) strike(me, target, Blow(me.body.damage))
             me.nextAttack = time + me.attackInterval * me.slow()
             if (finished()) return
@@ -1440,6 +1460,8 @@ class Battle(
         /** How often an ailment's damage is written into the log. */
         const val TICK = 1.0
         const val LUNGE = 0.16
+        /** The pet's place in the fight: neither the hero's -1 nor a monster's. */
+        const val ALLY = -2
         /** How deep a passive's answer may set off another's. */
         private const val MAX_DEPTH = 2
         /** A skill's element picked at random, and its ailment named by the element that struck (server 0.69.0). */

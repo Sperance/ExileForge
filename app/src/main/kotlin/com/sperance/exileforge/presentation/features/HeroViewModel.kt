@@ -47,6 +47,12 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     fun claimOverflow(itemId: String? = null) { with(runtime) { heroCommand { id -> api.hero.claimOverflow(id, itemId) } } }
     fun sellOverflow(itemId: String) { with(runtime) { heroCommand { id -> api.hero.sellOverflow(id, itemId) } } }
 
+    // The menagerie (3.5.0): the snapshot with each answer carries the pets and the bag.
+    fun hatchPet(egg: String) { with(runtime) { heroCommand { id -> api.hero.hatchPet(id, egg) } } }
+    fun petOrb(petId: String, orb: String) { with(runtime) { heroCommand { id -> api.hero.petOrb(id, petId, orb) } } }
+    fun activatePet(petId: String) { with(runtime) { heroCommand { id -> api.hero.activatePet(id, petId) } } }
+    fun releasePet(petId: String) { with(runtime) { heroCommand { id -> api.hero.releasePet(id, petId) } } }
+
     /** Admin only: hand the hero a named template, rolled by the server. */
     fun grant(template: String, rarity: Rarity? = null) { with(runtime) { heroCommand { id ->
         check(state.value.isAdmin) { ui("hero.grant_admin_only") }
@@ -187,8 +193,9 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         val info = merged.hero
         val items = merged.items
         val tree = merged.tree
-        val sheet = Sheets.calculate(index, info.level, info.heroClass, tree, items)
-        val view = HeroView(info, items, merged.overflow, merged.bag, tree, merged.campaign, merged.crafts, merged.merchant, sheet)
+        val pets = merged.pets
+        val sheet = Sheets.calculate(index, info.level, info.heroClass, tree, items, pets.active)
+        val view = HeroView(info, items, merged.overflow, merged.bag, tree, merged.campaign, merged.crafts, merged.merchant, sheet, pets)
         val now = System.currentTimeMillis()
         mutable.update { it.copy(play = it.play.copy(hero = view, heroOwner = info.userId, heroReadAt = now, heroSeenAt = now,
             selectedEquipment = it.play.selectedEquipment.takeIf { chosen -> view.items.any { item -> item.id == chosen } } ?: view.items.firstOrNull()?.id.orEmpty()),

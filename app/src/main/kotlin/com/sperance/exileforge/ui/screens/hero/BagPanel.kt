@@ -33,7 +33,8 @@ data class BagStack(val code: String, val amount: Long)
 
 /** A shelf of the bag (2.75.0): each has its heading over its own run of cells; books and essences since 2.78.0. */
 enum class BagCategory(val key: String) {
-    ORBS("bag.section_orbs"), ESSENCES("bag.section_essences"), BOOKS("bag.section_books"), MATERIALS("bag.section_materials"), OTHER("bag.section_other")
+    ORBS("bag.section_orbs"), ESSENCES("bag.section_essences"), BOOKS("bag.section_books"), MATERIALS("bag.section_materials"), PETS("bag.section_pets"),
+    OTHER("bag.section_other")
 }
 
 /**
@@ -48,6 +49,7 @@ fun bagSections(s: ForgeState): List<Pair<BagCategory, List<BagStack>>> {
         Item.ESSENCE -> BagCategory.ESSENCES
         Item.BOOK -> BagCategory.BOOKS
         Item.MATERIAL -> BagCategory.MATERIALS
+        Item.PET -> BagCategory.PETS
         else -> BagCategory.OTHER
     }
     fun worth(code: String) = index?.item(code)?.price ?: 0L

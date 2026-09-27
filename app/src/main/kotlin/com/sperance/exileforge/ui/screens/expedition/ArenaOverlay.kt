@@ -387,6 +387,14 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
             if (fight.heroMaxMana > 0) ManaBar(fight.heroMana, fight.heroMaxMana, Modifier.fillMaxWidth().height(10.dp))
             SwingBar(fight.heroSwing, fight.heroHeld, Modifier.fillMaxWidth())
             StateTiles(fight.heroAilments, fight.heroHeld, fight.heroEffects)
+            // The combat pet beside the hero (3.5.0): its name and life; down, it waits for the fight's end.
+            fight.ally?.let { ally ->
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(com.sperance.exileforge.ui.screens.hero.petName(ally.species), color = if (ally.alive) Vital else Muted,
+                        style = MaterialTheme.typography.labelSmall, maxLines = 1, modifier = Modifier.width(96.dp))
+                    LifeBar(ally.life, ally.maxLife, 0, 0, Modifier.weight(1f).height(8.dp), compact = true)
+                }
+            }
             val target = fight.target?.let(names::get)
             if (target != null && fight.outcome == null) Text(
                 ui("fight.target_line", target, if (fight.focus != null) ui("fight.target_yours") else ui("fight.rule.${stance.rule.name}")),

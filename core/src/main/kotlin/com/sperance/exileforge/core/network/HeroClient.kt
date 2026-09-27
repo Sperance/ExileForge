@@ -8,6 +8,7 @@ import com.sperance.exileforge.core.model.command.CreateHeroCommand
 import com.sperance.exileforge.core.model.hero.CurrencyApplyResponse
 import com.sperance.exileforge.core.model.hero.HeroSummary
 import com.sperance.exileforge.core.model.hero.SellOutcome
+import com.sperance.exileforge.core.model.hero.PetState
 import com.sperance.exileforge.core.model.hero.StashState
 import com.sperance.exileforge.core.model.sync.HeroParts
 import com.sperance.exileforge.core.model.sync.HeroSnapshot
@@ -98,6 +99,13 @@ class HeroClient internal constructor(private val http: Transport) {
 
     /** Wears the title [title] beside the name — one the chronicle has earned — or takes it off when blank (server 1.3.0). */
     suspend fun setTitle(heroId: String, title: String): String = http.post("$HERO/title", heroQuery(heroId, "title" to title))
+
+    // ---- the menagerie (server 1.5.0); none retried: a repeat would spend a second egg or orb ----
+
+    suspend fun hatchPet(heroId: String, egg: String): PetState = http.post("$HERO/pets/hatch", heroQuery(heroId, "egg" to egg))
+    suspend fun petOrb(heroId: String, petId: String, orb: String): PetState = http.post("$HERO/pets/orb", heroQuery(heroId, "petId" to petId.also(::requireItemId), "orb" to orb))
+    suspend fun activatePet(heroId: String, petId: String): PetState = http.post("$HERO/pets/activate", heroQuery(heroId, "petId" to petId.also(::requireItemId)))
+    suspend fun releasePet(heroId: String, petId: String): PetState = http.post("$HERO/pets/release", heroQuery(heroId, "petId" to petId.also(::requireItemId)))
 
     // ---- the stash's places and its overflow (server 1.1.0) ----
 

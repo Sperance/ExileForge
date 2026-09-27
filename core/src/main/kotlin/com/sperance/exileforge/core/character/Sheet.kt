@@ -56,8 +56,11 @@ class HeroSheet(val stats: Map<String, Double>, val active: List<String>, val in
  * the class at the level, the tree, then the worn items in slot order, each checked against what came before.
  */
 object Sheets {
-    fun calculate(index: ContentIndex, level: Int, heroClass: String, tree: List<TakenNode>, items: List<ItemInstance>): HeroSheet {
-        val result = SheetCalculator(index).calculate(level, index.heroClass(heroClass), index.tree.lines(tree), items.filter { it.equipped }, tree.mapTo(HashSet()) { it.code })
+    fun calculate(index: ContentIndex, level: Int, heroClass: String, tree: List<TakenNode>, items: List<ItemInstance>,
+                  pets: List<com.sperance.exileforge.rules.content.Pet> = emptyList()): HeroSheet {
+        // A helper pet's lines lie on the hero beside the tree's (3.5.0), as the server adds them.
+        val lines = index.tree.lines(tree) + com.sperance.exileforge.rules.roll.Menagerie(index).helperLines(pets)
+        val result = SheetCalculator(index).calculate(level, index.heroClass(heroClass), lines, items.filter { it.equipped }, tree.mapTo(HashSet()) { it.code })
         return HeroSheet(result.stats, result.active, result.inactive.associate { it.id to it.reasons }, SheetModel(result.base, result.operations, index))
     }
 

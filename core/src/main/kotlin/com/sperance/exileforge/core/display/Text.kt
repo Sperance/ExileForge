@@ -59,6 +59,13 @@ fun statTitle(stat: String, lang: Lang = uiLanguage): String = rawStatTitle(stat
 private fun rawStatTitle(stat: String, lang: Lang): String =
     uiOr(lang, "enum.stat.$stat", locOr("enum.EnumStatStock.$stat", locOr("enum.EnumStatBattle.$stat", locOr("enum.EnumStatProfession.$stat", displayName(stat.substringAfter('_'), lang)))))
 
+/**
+ * What a stat is and what it moves: the client's table, then the server's; a unique's power stat not
+ * described on its own reads the powers' common line.
+ */
+fun statDescription(stat: String, lang: Lang = uiLanguage, power: Boolean = false): String =
+    uiOr(lang, "enum.stat_desc.$stat", locOr("enum.EnumStatStockDesc.$stat", if (power) uiOr(lang, "enum.stat_desc.__POWER__", "") else ""))
+
 /** «Шанс крита, %»: the dictionaries mark a stat counted in percent at the end of its name; the mark moves to the figure (3.2.0). */
 private val PERCENT_MARK = Regex("""[,\s]*%\s*$""")
 

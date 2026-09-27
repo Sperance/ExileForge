@@ -23,6 +23,7 @@ import com.sperance.exileforge.ui.theme.*
 @Composable fun StatsSheet(s: ForgeState, mapEffects: Map<String, Double>, onDismiss: () -> Unit) {
     val own = s.hero?.stats.orEmpty()
     val onMap = remember(own, mapEffects) { MapEffects.hero(own, mapEffects) }
+    val shifts = remember(own, mapEffects) { MapEffects.heroShifts(own, mapEffects) }
     val changed = remember(own, onMap) { onMap.count { (key, value) -> (own[key] ?: 0.0) != value } }
     var mapTab by remember { mutableStateOf(false) }
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
@@ -30,7 +31,7 @@ import com.sperance.exileforge.ui.theme.*
             LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 item { Engraved(ui(if (mapTab) "expedition.stats_map" else "expedition.stats_hero")) }
                 item { MutedText(if (!mapTab) ui("expedition.stats_hero_hint") else if (changed == 0) ui("expedition.stats_map_none") else ui("expedition.stats_map_hint", changed)) }
-                item { if (mapTab) StatSheet(s, onMap, before = own) else StatSheet(s, own) }
+                item { if (mapTab) StatSheet(s, onMap, before = own, shifts = shifts) else StatSheet(s, own) }
             }
             TabRow(selectedTabIndex = if (mapTab) 1 else 0, containerColor = Abyss, contentColor = Gold) {
                 Tab(selected = !mapTab, onClick = { mapTab = false }, text = { Text(ui("expedition.stats_hero")) })

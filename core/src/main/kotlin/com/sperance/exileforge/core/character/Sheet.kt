@@ -8,6 +8,8 @@ import com.sperance.exileforge.rules.content.TakenNode
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.sheet.Requirements
 import com.sperance.exileforge.rules.sheet.SheetCalculator
+import com.sperance.exileforge.rules.sheet.SheetExplainer
+import com.sperance.exileforge.rules.sheet.sourcedLines
 import com.sperance.exileforge.rules.sheet.StatOperation
 import kotlin.math.abs
 
@@ -27,6 +29,8 @@ data class StatDelta(val stat: String, val before: Double, val after: Double) {
 class SheetModel(private val base: Map<String, Double>, private val ops: List<StatOperation>, private val index: ContentIndex) {
     private val calculator = SheetCalculator(index)
     val plain: Map<String, Double> by lazy { calculator.compute(base, ops) }
+    /** The sheet taken apart by source, for a figure's own window. */
+    val explainer: SheetExplainer by lazy { SheetExplainer(index, base, ops) }
 
     fun with(lines: List<StatLine>): Map<String, Double> {
         if (lines.isEmpty()) return plain
@@ -58,7 +62,7 @@ object Sheets {
     fun calculate(index: ContentIndex, level: Int, heroClass: String, tree: List<TakenNode>, items: List<ItemInstance>,
                   pets: List<com.sperance.exileforge.rules.content.Pet> = emptyList()): HeroSheet {
         // A helper pet's lines lie on the hero beside the tree's (3.5.0), as the server adds them.
-        val lines = index.tree.lines(tree) + com.sperance.exileforge.rules.roll.Menagerie(index).helperLines(pets)
+        val lines = index.tree.sourcedLines(tree) + com.sperance.exileforge.rules.roll.Menagerie(index).helperSourced(pets)
         val result = SheetCalculator(index).calculate(level, index.heroClass(heroClass), lines, items.filter { it.equipped }, tree.mapTo(HashSet()) { it.code })
         return HeroSheet(result.stats, result.active, result.inactive.associate { it.id to it.reasons }, SheetModel(result.base, result.operations, index))
     }

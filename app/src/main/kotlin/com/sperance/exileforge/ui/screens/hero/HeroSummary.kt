@@ -2,6 +2,7 @@ package com.sperance.exileforge.ui.screens.hero
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -23,6 +24,7 @@ import com.sperance.exileforge.ui.components.Tip
 import com.sperance.exileforge.ui.components.Tipped
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.icons.StatIcon
+import com.sperance.exileforge.rules.sheet.Shift
 import com.sperance.exileforge.ui.theme.*
 
 /**
@@ -43,16 +45,19 @@ import com.sperance.exileforge.ui.theme.*
  * [before], a figure that differs from it is lit and says what it was — the sheet under a map's
  * effects held against the hero's own.
  */
-@Composable fun StatSheet(s: ForgeState, stats: Map<String, Double>, before: Map<String, Double>? = null) {
+@Composable fun StatSheet(s: ForgeState, stats: Map<String, Double>, before: Map<String, Double>? = null, shifts: Map<String, List<Shift>> = emptyMap()) {
+    // A figure opens its own window (3.11.0): what it is and what it is made of.
+    var open by remember { mutableStateOf<String?>(null) }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        HeroVitals(stats)
+        HeroVitals(stats) { open = it }
         if (stats.isEmpty()) Text(ui("hero.no_stats"), color = Muted)
         // The registry's order inside a group, once the content is here; the code's before that.
-        groupedStats(stats, s.index?.stats).forEach { (group, figures) -> StatGroupCard(group, figures, s, before) }
+        groupedStats(stats, s.index?.stats).forEach { (group, figures) -> StatGroupCard(group, figures, s, before) { open = it } }
     }
+    open?.let { StatBreakdownSheet(s, it, shifts) { open = null } }
 }
 
-private fun StatGroup.accent(): Color = when (this) {
+internal fun StatGroup.accent(): Color = when (this) {
     StatGroup.RESERVE -> LifeRed
     StatGroup.DEFENCE -> Gold
     StatGroup.RESISTANCE -> ShieldCyan
@@ -63,7 +68,7 @@ private fun StatGroup.accent(): Color = when (this) {
 }
 
 /** A group: a band of its colour, its name, and its figures two to a row. */
-@Composable private fun StatGroupCard(group: StatGroup, stats: List<Pair<String, Double>>, s: ForgeState, before: Map<String, Double>?) {
+@Composable private fun StatGroupCard(group: StatGroup, stats: List<Pair<String, Double>>, s: ForgeState, before: Map<String, Double>?, open: (String) -> Unit) {
     val accent = group.accent()
     val shape = RoundedCornerShape(topStart = 0.dp, topEnd = 0.dp, bottomStart = 8.dp, bottomEnd = 8.dp)
     Column(Modifier.fillMaxWidth().clip(shape).background(Panel).border(1.dp, accent.copy(alpha = .3f), shape)) {
@@ -72,7 +77,7 @@ private fun StatGroup.accent(): Color = when (this) {
             Text(group.title(s.lang), color = accent, style = MaterialTheme.typography.labelMedium)
             stats.chunked(2).forEach { pair ->
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    pair.forEach { (key, value) -> StatCell(key, value, before?.let { it[key] ?: 0.0 }?.takeIf { it != value }, accent, s, Modifier.weight(1f)) }
+                    pair.forEach { (key, value) -> StatCell(key, value, before?.let { it[key] ?: 0.0 }?.takeIf { it != value }, accent, s, Modifier.weight(1f).clip(RoundedCornerShape(4.dp)).clickable { open(key) }) }
                     if (pair.size == 1) Spacer(Modifier.weight(1f))
                 }
             }
@@ -83,7 +88,7 @@ private fun StatGroup.accent(): Color = when (this) {
 /** One figure on one line: a small icon, the stat's name, and the number on the right — lit, with the old one, when [was] differs. */
 @Composable private fun StatCell(key: String, value: Double, was: Double?, accent: Color, s: ForgeState, modifier: Modifier) {
     val shape = RoundedCornerShape(4.dp)
-    Row(modifier.background(Abyss, shape).then(if (was != null) Modifier.border(1.dp, Ember.copy(alpha = .7f), shape) else Modifier)
+    Row(modifier.clip(shape).background(Abyss, shape).then(if (was != null) Modifier.border(1.dp, Ember.copy(alpha = .7f), shape) else Modifier)
         .padding(horizontal = 6.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         Tipped({ Tip(statTitle(key, s.lang), tint = accent, facts = listOf(ui("tip.value") to statValue(key, value, s.index))) }) { StatIcon(key, accent, Modifier.size(12.dp)) }
@@ -100,13 +105,15 @@ private fun StatGroup.accent(): Color = when (this) {
  * could only ever be full. Mana left the game in 2.48.0.
  */
 @Composable fun HeroVitals(s: ForgeState) {
-    HeroVitals(s.hero?.stats ?: return)
+    var open by remember { mutableStateOf<String?>(null) }
+    HeroVitals(s.hero?.stats ?: return) { open = it }
+    open?.let { StatBreakdownSheet(s, it, emptyMap()) { open = null } }
 }
 
-@Composable private fun HeroVitals(stats: Map<String, Double>) {
+@Composable private fun HeroVitals(stats: Map<String, Double>, open: (String) -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         listOf(Triple("STOCK_HEALTH", ui("hero.hp"), LifeRed), Triple("STOCK_ENERGY_SHIELD", ui("hero.es"), ShieldCyan)).forEach { (key, title, color) ->
-            VitalTile(title, statNumber(key, stats[key] ?: 0.0), color, Modifier.weight(1f))
+            VitalTile(title, statNumber(key, stats[key] ?: 0.0), color, Modifier.weight(1f).clip(RoundedCornerShape(6.dp)).clickable { open(key) })
         }
     }
 }

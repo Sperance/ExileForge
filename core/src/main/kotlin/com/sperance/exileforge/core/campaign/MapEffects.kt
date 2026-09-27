@@ -6,6 +6,10 @@ import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.MapStat
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.roll.MonsterEffect
+import com.sperance.exileforge.rules.sheet.Shift
+import com.sperance.exileforge.rules.sheet.SourceKind
+import com.sperance.exileforge.rules.sheet.StatSource
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.roundToInt
 
@@ -150,6 +154,31 @@ object MapEffects {
         AtlasEffects.hero.forEach { (atlas, stat) -> effects[atlas]?.let { add(stat, it) } }
         return sheet
     }
+
+    /**
+     * What each of the map's and the atlas's effects moved on the hero's sheet, by stat: every effect
+     * laid alone, and whatever they do only together left on the stat's last shift, so the shifts add up to [hero].
+     */
+    fun heroShifts(stats: Map<String, Double>, effects: Map<String, Double>): Map<String, List<Shift>> {
+        if (effects.isEmpty()) return emptyMap()
+        val atlas = AtlasEffects.hero.keys
+        val shifts = LinkedHashMap<String, MutableList<Shift>>()
+        effects.forEach { (code, value) ->
+            val source = StatSource(if (code in atlas || code.startsWith("ATLAS_")) SourceKind.ATLAS else SourceKind.MAP, code)
+            hero(stats, mapOf(code to value)).forEach { (stat, moved) ->
+                val delta = moved - (stats[stat] ?: 0.0)
+                if (abs(delta) >= MOVED) shifts.getOrPut(stat) { mutableListOf() } += Shift(source, delta)
+            }
+        }
+        hero(stats, effects).forEach { (stat, joint) ->
+            val own = shifts[stat] ?: return@forEach
+            val rest = joint - (stats[stat] ?: 0.0) - own.sumOf { it.delta }
+            if (abs(rest) >= MOVED) own[own.lastIndex] = own.last().let { it.copy(delta = it.delta + rest) }
+        }
+        return shifts
+    }
+
+    private const val MOVED = 0.05
 
     /** Two maps of effects summed per stat: a Vaal zone's lines over the map's. */
     fun sum(a: Map<String, Double>, b: Map<String, Double>): Map<String, Double> = (a.keys + b.keys).associateWith { (a[it] ?: 0.0) + (b[it] ?: 0.0) }

@@ -33,7 +33,12 @@ import kotlinx.serialization.Serializable
     /** Auction places bought beyond the rules' base. */
     val auctionSlots: Int = 0,
     val version: Long = 0,
+    /** Packs of stash places bought beyond the rules' base (1.1.0). */
+    val stashSlots: Int = 0,
 )
+
+/** The stash's places as the server counts them after a command: used, held, the ceiling, the next pack's price (0 at the ceiling), the overflow. */
+@Serializable data class StashState(val used: Int = 0, val capacity: Int = 0, val max: Int = 0, val price: Long = 0, val overflow: Int = 0, val overflowMax: Int = 0, val money: Long = 0)
 
 /** What a merchant paid for an item: the copy is gone by the time this arrives. */
 @Serializable data class SellOutcome(val itemId: String = "", val code: String = "", val gold: Long = 0, val money: Long = 0)
@@ -58,6 +63,8 @@ import kotlinx.serialization.Serializable
 data class HeroView(
     val info: HeroInfo,
     val items: List<ItemInstance> = emptyList(),
+    /** Items the stash had no place for: they wait here to be taken in or sold (1.1.0). */
+    val overflow: List<ItemInstance> = emptyList(),
     val bag: Map<String, Long> = emptyMap(),
     val tree: List<TakenNode> = emptyList(),
     val campaign: CampaignState = CampaignState(),

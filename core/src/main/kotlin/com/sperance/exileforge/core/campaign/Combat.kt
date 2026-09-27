@@ -2,6 +2,7 @@ package com.sperance.exileforge.core.campaign
 
 import com.sperance.exileforge.core.character.StatLine
 import com.sperance.exileforge.rules.content.AilmentRule
+import com.sperance.exileforge.rules.content.AtlasStat
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.ManaRule
 import com.sperance.exileforge.rules.content.MonsterRarity
@@ -1015,7 +1016,7 @@ class Battle(
         hero.life = min(hero.body.maxLife, hero.life + hero.body.lifeOnKill * hero.body.recoveryRate)
         hero.mana = min(manaCap(), hero.mana + hero.body.manaOnKill)
         val rarity = foes[fighter.index].rarity
-        val base = (rules.flasks.perKill[rarity] ?: 1.0) + if (rarity >= MonsterRarity.RARE) hero.body["ATLAS_FLASK_RARE"] else 0.0
+        val base = (rules.flasks.perKill[rarity] ?: 1.0) + if (rarity >= MonsterRarity.RARE) hero.body[AtlasStat.FLASK_RARE.code] else 0.0
         kit.flasks.forEachIndexed { i, flask ->
             flask ?: return@forEachIndexed
             charges[i] = min(flask.maxCharges, charges[i] + flask.gained(base, hero.body))

@@ -51,6 +51,8 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     private var runJournal: RunJournal? = null
     private val flushes = Channel<Unit>(Channel.CONFLATED)
     private var saveJob: Job? = null
+    /** The Vaal zone's tokens the server already counted when the run was entered again. */
+    private var vaalKilled: List<Int> = emptyList()
 
     init {
         runtime.scope.launch { for (signal in flushes) flush() }
@@ -78,7 +80,12 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         val picked = s.play.launch?.takeIf { it.mapCode == mapCode }?.picked
         task(writing = true, touches = setOf(Reads.HERO)) {
             val id = heroId
-            if (runJournal != null) { flush(); store.clearJournal(id); runJournal = null }
+            // A journal the server has not taken yet is not dropped for a new run: its kills are the hero's.
+            runJournal?.let { j ->
+                flush()
+                check(j.settled || runJournal == null) { ui("expedition.unsent") }
+                store.clearJournal(id); runJournal = null
+            }
             val started = api.campaign.start(id, mapCode, picked)
             if (state.value.play.heroReadAt == 0L) heroViewModel.readHero()
             begin(id, started)
@@ -91,12 +98,14 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         val hero = s.hero?.takeIf { it.id == id } ?: return
         val zone = index.zone(started.zone) ?: return
         val gear = gear() ?: return
-        val run = Run(index, zone, started.seed, started.context)
-        val journal = RunJournal(started.id, id, zone.code).also { runJournal = it }
+        // Entered again, the run goes on (server 1.1.0): its numbers, its dead and its rewards counted so far.
+        val run = Run(index, zone, started.seed, started.context, started.tally.copy())
+        val journal = RunJournal(started.id, id, zone.code, applied = started.applied, base = started.applied).also { runJournal = it }
         mutable.update { it.copy(play = it.play.copy(runLoot = emptyList(), launch = null, runPending = 0, runRejected = 0)) }
         mutableRun.value = ExpeditionRun.start(index, zone, run, journal, gear, hero.campaign, System.currentTimeMillis(), hero.info.experience, hero.level,
             wallet = { state.value.hero?.money ?: 0L }, vaalOrbs = ::vaalOrbsFree, onRecorded = ::recorded,
-            onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, onLoot = { loot(id, it) })
+            onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, onLoot = { loot(id, it) }, killed = started.killed)
+        vaalKilled = started.vaalKilled
         persist()
     } }
 
@@ -128,12 +137,14 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             j.confirm(report.applied, report.rejected)
             mutable.update { it.copy(play = it.play.copy(runPending = j.pending.size, runRejected = j.rejected.size)) }
             if (report.rejected.isNotEmpty()) toast(ui("expedition.rejected", report.rejected.size))
+            report.received.takeIf { it.overflowed > 0 || it.sold > 0 }?.let { toast(ui("stash.received", it.overflowed, it.sold, it.gold)) }
             if (!report.open && j.settled) done(j) else store.saveJournal(j.heroId, j.encode())
             if (state.value.play.heroReadAt == 0L && onScreen(j.heroId)) heroViewModel.readHero()
         } catch (e: CancellationException) { throw e }
         catch (e: ApiFailure) {
-            // CP_018: the server holds no run for this hero - the journal's run is over, its last batch already settled.
-            if (e.code == NO_RUN) done(j) else report(e, writing = true)
+            // CP_018: the server holds no run for this hero - the journal's run is over, its last batch already settled;
+            // CP_020: the world changed under the run, and the server closed it.
+            if (e.code in RUN_CLOSED) done(j) else report(e, writing = true)
         }
         catch (_: Exception) { /* offline: the journal waits for the next flush */ }
     } }
@@ -190,7 +201,7 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         outer.send(RunCommand.ShutGate(entered = true))
         val inner = ExpeditionRun.start(index, outer.run.zone, outer.run, journal, gear, hero.campaign, System.currentTimeMillis(), hero.info.experience, hero.level,
             wallet = { state.value.hero?.money ?: 0L }, vaalOrbs = ::vaalOrbsFree, onRecorded = ::recorded, vaal = true, startPools = outer.pools,
-            onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, onLoot = { loot(hero.id, it) })
+            onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, onLoot = { loot(hero.id, it) }, killed = vaalKilled)
         parent = outer
         mutableRun.value = inner
     } }
@@ -260,8 +271,8 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     fun drop() { mutableRun.value = null; parent = null; runJournal = null }
 
     private companion object {
-        /** The server's "no run is open" refusal: a journal sent again after its run closed. */
-        const val NO_RUN = "CP_018"
+        /** The server's "no run is open" and "the world changed, the run is closed" refusals: the journal has nowhere to go. */
+        val RUN_CLOSED = setOf("CP_018", "CP_020")
         /** Events that send the journal at once: everything that is not a plain kill or a chest. */
         val CHECKPOINTS = setOf(RunEventKind.BOSS, RunEventKind.CORRUPT, RunEventKind.CRYSTAL, RunEventKind.CRYSTAL_VAAL, RunEventKind.VAAL_OPEN, RunEventKind.VAAL_LEAVE,
             RunEventKind.ABYSS_OPEN, RunEventKind.ABYSS_CLAIM, RunEventKind.SUMMON, RunEventKind.FALL, RunEventKind.LEAVE)

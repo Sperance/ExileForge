@@ -58,7 +58,8 @@ import kotlinx.serialization.Serializable
 
 /**
  * The server's answer to a batch of run events: how far the journal is applied now, the numbers it
- * refused, what the batch brought and cost, where the hero stands, and whether the run is still open.
+ * refused, what the batch brought and cost, where the hero stands, whether the run is still open, and
+ * where the items went.
  */
 @Serializable data class RunReport(
     val applied: Int = 0,
@@ -70,4 +71,9 @@ import kotlinx.serialization.Serializable
     val money: Long = 0,
     val progress: CampaignProgress = CampaignProgress(),
     val open: Boolean = true,
+    /** Where the batch's items went (server 1.1.0): the stash, its overflow, or sold for gold past both. */
+    val received: Received = Received(),
 )
+
+/** Where items that came to the hero went: into the stash, into its overflow, or to the merchant for [gold]. */
+@Serializable data class Received(val stashed: Int = 0, val overflowed: Int = 0, val sold: Int = 0, val gold: Long = 0)

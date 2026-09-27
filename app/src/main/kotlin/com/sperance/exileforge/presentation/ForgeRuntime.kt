@@ -15,6 +15,7 @@ import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.network.ApiFailure
 import com.sperance.exileforge.core.network.FailureState
 import com.sperance.exileforge.core.network.GameApi
+import com.sperance.exileforge.core.network.ManifestCache
 import com.sperance.exileforge.core.network.RequestJournal
 import com.sperance.exileforge.core.network.refusalLine
 import com.sperance.exileforge.core.network.transportDetail
@@ -93,6 +94,10 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
             }
         })
         created.heroSync(heroViewModel::heldParts, heroViewModel::delivered)
+        created.manifestCache = object : ManifestCache {
+            override suspend fun read(): String? = store.manifest(server)
+            override suspend fun write(text: String) = store.saveManifest(server, text)
+        }
         return created
     }
 
@@ -317,27 +322,24 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
         val manifest = api.manifest(fresh || contentStale).content
         contentStale = false
         if (manifest.hash == state.value.world.contentHash && state.value.world.content != null) return@withLock
-        val texts = coroutineScope {
+        // Each chunk says whether it came from the device or the network; the downloads are kept only once
+        // the whole world has read, so a broken download is fetched again rather than stored.
+        val chunks = coroutineScope {
             ContentFiles.ALL.associateWith { file ->
                 async {
                     val wanted = manifest.chunks[file].orEmpty()
-                    store.chunk(server, file)?.takeIf { it.first == wanted && wanted.isNotBlank() }?.second ?: api.files.contentChunk(file).also { text ->
-                        // Kept only once the whole world has read: a broken download is fetched again rather than stored.
-                        pendingChunks[file] = wanted to text
-                    }
+                    store.chunk(server, file)?.takeIf { it.first == wanted && wanted.isNotBlank() }?.let { it.second to false }
+                        ?: (api.files.contentChunk(file) to true)
                 }
             }.mapValues { it.value.await() }
         }
-        val index = parsed { ContentLoader.load { texts.getValue(it) } }
-        pendingChunks.forEach { (file, chunk) -> store.saveChunk(server, file, chunk.first, chunk.second) }
-        pendingChunks.clear()
+        val index = parsed { ContentLoader.load { chunks.getValue(it).first } }
+        chunks.forEach { (file, chunk) -> if (chunk.second) store.saveChunk(server, file, manifest.chunks[file].orEmpty(), chunk.first) }
         mutable.update { it.copy(
             world = it.world.copy(content = index, contentHash = manifest.hash),
             play = it.play.copy(draftClass = it.play.draftClass.ifBlank { index.classes.classes.firstOrNull()?.code.orEmpty() },
                 selectedOrb = it.play.selectedOrb.ifBlank { index.itemsByCategory[com.sperance.exileforge.rules.content.Item.CURRENCY]?.minByOrNull { o -> o.price }?.code.orEmpty() })) }
     }
-
-    private val pendingChunks = mutableMapOf<String, Pair<String, String>>()
 
     /** The content is the server's alone now: only a new manifest moves it. */
     fun staleContent() { contentStale = true }

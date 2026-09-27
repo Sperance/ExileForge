@@ -12,6 +12,7 @@ import com.sperance.exileforge.core.model.crafts.WorkState
 import com.sperance.exileforge.core.model.hero.HeroInfo
 import com.sperance.exileforge.core.model.trade.MerchantStock
 import com.sperance.exileforge.rules.content.TakenNode
+import com.sperance.exileforge.rules.roll.ItemBuckets
 import com.sperance.exileforge.rules.roll.ItemInstance
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
@@ -20,8 +21,8 @@ import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.JsonElement
 
-/** The API revision this client is written against (server 1.0.0: content chunks, one hero document, seeded runs). */
-const val API_REVISION = 14
+/** The API revision this client is written against (server 1.1.0: the stash's places and overflow, items in buckets, runs resumed). */
+const val API_REVISION = 15
 
 /** `static/index.json` → `content`: the fingerprint of the whole world and of each of its chunks, by file name. */
 @Serializable data class ContentManifest(val hash: String = "", val chunks: Map<String, String> = emptyMap())
@@ -54,7 +55,8 @@ const val API_REVISION = 14
 /**
  * The parts of one hero the client holds. Their fingerprints travel back in `X-Hero-Parts` with every
  * command and every read, so the server sends only what moved; [version] is the document's own and
- * answers `If-None-Match`.
+ * answers `If-None-Match`. The items come in [ItemBuckets] by id and their order as a part of its own
+ * (1.1.0): a new drop moves one bucket and the order, not the whole stash.
  */
 class HeroParts(val heroId: String, val version: String = "", private val parts: Map<String, HeroPart> = emptyMap()) {
     val complete: Boolean get() = NAMES.all { it in parts }
@@ -65,7 +67,11 @@ class HeroParts(val heroId: String, val version: String = "", private val parts:
     fun merge(snapshot: HeroSnapshot): HeroParts = HeroParts(heroId, snapshot.version, parts + snapshot.parts)
 
     val hero: HeroInfo get() = decode(HERO, HeroInfo.serializer())
-    val items: List<ItemInstance> get() = decode(ITEMS, ListSerializer(ItemInstance.serializer()))
+    val items: List<ItemInstance> get() {
+        val byId = ItemBuckets.names.flatMap { decode(it, ListSerializer(ItemInstance.serializer())) }.associateBy { it.id }
+        return decode(ItemBuckets.ORDER, ListSerializer(String.serializer())).mapNotNull(byId::get)
+    }
+    val overflow: List<ItemInstance> get() = decode(OVERFLOW, ListSerializer(ItemInstance.serializer()))
     val bag: Map<String, Long> get() = decode(BAG, MapSerializer(String.serializer(), Long.serializer()))
     val tree: List<TakenNode> get() = decode(TREE, ListSerializer(TakenNode.serializer()))
     val campaign: CampaignState get() = decode(CAMPAIGN, CampaignState.serializer())
@@ -77,12 +83,12 @@ class HeroParts(val heroId: String, val version: String = "", private val parts:
     companion object {
         const val HEADER = "X-Hero-Parts"
         const val HERO = "hero"
-        const val ITEMS = "items"
+        const val OVERFLOW = "overflow"
         const val BAG = "bag"
         const val TREE = "tree"
         const val CAMPAIGN = "campaign"
         const val CRAFTS = "crafts"
         const val MERCHANT = "merchant"
-        val NAMES = listOf(HERO, ITEMS, BAG, TREE, CAMPAIGN, CRAFTS, MERCHANT)
+        val NAMES = listOf(HERO, BAG, TREE, CAMPAIGN, CRAFTS, MERCHANT, OVERFLOW, ItemBuckets.ORDER) + ItemBuckets.names
     }
 }

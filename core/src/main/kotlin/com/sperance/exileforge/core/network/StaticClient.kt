@@ -16,6 +16,9 @@ import com.sperance.exileforge.core.model.sync.StaticManifest
 class StaticClient internal constructor(private val http: Transport) {
     suspend fun manifest(): StaticManifest = http.fetch("static/index.json")
 
+    /** The manifest as it was served: kept on the device, it lets a start without the network read what it knew. */
+    suspend fun manifestText(): String = http.fetchText("static/index.json")
+
     suspend fun localeManifest(): LocaleManifest = http.fetch("locale/index.json")
 
     /** One language's dictionary, tagged with the fingerprint the manifest gave it. */

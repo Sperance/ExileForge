@@ -7,6 +7,7 @@ import com.sperance.exileforge.core.model.command.CreateHeroCommand
 import com.sperance.exileforge.core.model.hero.CurrencyApplyResponse
 import com.sperance.exileforge.core.model.hero.HeroSummary
 import com.sperance.exileforge.core.model.hero.SellOutcome
+import com.sperance.exileforge.core.model.hero.StashState
 import com.sperance.exileforge.core.model.sync.HeroParts
 import com.sperance.exileforge.core.model.sync.HeroSnapshot
 import com.sperance.exileforge.rules.content.BenchRecipe
@@ -92,6 +93,20 @@ class HeroClient internal constructor(private val http: Transport) {
     suspend fun sell(heroId: String, itemId: String): SellOutcome {
         requireId(itemId)
         return http.post("$HERO/sell", heroQuery(heroId, "itemId" to itemId))
+    }
+
+    // ---- the stash's places and its overflow (server 1.1.0) ----
+
+    /** One more pack of stash places, for the rules' gold; never retried — a repeat would buy twice. */
+    suspend fun expandStash(heroId: String): StashState = http.post("$HERO/stash/expand", heroQuery(heroId))
+
+    /** Takes [itemId] out of the overflow into the stash — or, without it, as many as fit, in order. */
+    suspend fun claimOverflow(heroId: String, itemId: String? = null): StashState = http.post("$HERO/stash/claim", heroQuery(heroId, "itemId" to itemId))
+
+    /** Sells an item of the overflow to the merchant without taking it in. */
+    suspend fun sellOverflow(heroId: String, itemId: String): StashState {
+        requireId(itemId)
+        return http.post("$HERO/stash/sell", heroQuery(heroId, "itemId" to itemId))
     }
 
     // ---- orbs, essences, the bench ----

@@ -144,6 +144,16 @@ class ExpeditionWorld(
     /** The boss was slain within its respawn: it is not on the map this run. */
     fun bossAbsent() { boss?.alive = false }
 
+    /** The members the server already counts as killed, by token `i*[slots]+m`: they stay down, and a pack with none standing is gone. */
+    fun restore(killed: Collection<Int>, slots: Int) {
+        if (killed.isEmpty()) return
+        val dead = killed.toHashSet()
+        agents.forEach { agent ->
+            agent.pack.indices.forEach { m -> if (agent.id * slots + m in dead) agent.fallen += m }
+            if (agent.standing.isEmpty()) agent.alive = false
+        }
+    }
+
     /** The guardian summoned back for gold: it stands at its post again. */
     fun bossReturns() { boss?.let { it.alive = true; it.mode = AgentMode.IDLE; it.x = it.homeX; it.y = it.homeY } }
 

@@ -96,6 +96,12 @@ class ServerStore(private val context: Context) {
      * a chunk is fetched again only when its own fingerprint moves, so a changed table costs one file.
      */
     suspend fun chunk(server: String, file: String): Pair<String, String>? = chunks.read(server, file)
+
+    /** The server's manifest as last served (3.1.0): a cold start without the network reads its content by it. */
+    suspend fun manifest(server: String): String? = manifests.read(server)?.second
+    suspend fun saveManifest(server: String, document: String) {
+        if (manifests.read(server)?.second != document) manifests.write(server, document.hashCode().toString(), document)
+    }
     suspend fun saveChunk(server: String, file: String, hash: String, document: String) = chunks.write(server, hash, document, file)
 
     /**
@@ -111,6 +117,7 @@ class ServerStore(private val context: Context) {
     private val iconSets = Documents("icons")
     private val portraitSets = Documents("portraits")
     private val chunks = Documents("content")
+    private val manifests = Documents("manifest")
 
     /**
      * Served documents kept on the device: the body in a file, its fingerprint in DataStore.
@@ -144,11 +151,12 @@ class ServerStore(private val context: Context) {
      * Drops the bodies earlier versions kept inside the preference file (before 2.62.0): the
      * dictionaries, the icon sets and the portraits. A hash left without its file reads as a miss,
      * so each is fetched once more into a file of its own, and the preference file shrinks back to
-     * settings.
+     * settings. The whole world of 2.x (`world/`, before the content chunks of 3.0.0) goes too.
      */
     suspend fun dropLegacyDocuments() {
+        withContext(Dispatchers.IO) { File(context.filesDir, "world").takeIf { it.isDirectory }?.deleteRecursively() }
         val legacy = context.settings.data.first().asMap().keys.map { it.name }.filter { name ->
-            name.endsWith(":body") || (name.startsWith("portraits:") && !name.endsWith(":hash"))
+            name.endsWith(":body") || (name.startsWith("portraits:") && !name.endsWith(":hash")) || name.startsWith("world:")
         }
         if (legacy.isEmpty()) return
         context.settings.edit { prefs -> legacy.forEach { prefs.remove(stringPreferencesKey(it)) } }

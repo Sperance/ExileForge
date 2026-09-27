@@ -3,66 +3,67 @@ package com.sperance.exileforge.core.campaign
 import com.sperance.exileforge.core.atlas.AtlasEffects
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
+import com.sperance.exileforge.rules.content.MapStat
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.roll.MonsterEffect
 import kotlin.math.max
 import kotlin.math.roundToInt
 
-/** The stats of a map item, by name, as the client reads them; the registry's MAP group holds them all. */
+/** The stats of a map item, by name, as the client reads them: each the rules' [MapStat], checked against the registry at load. */
 object MapStats {
-    const val QUANTITY = "MAP_QUANTITY"
-    const val RARITY = "MAP_RARITY"
-    const val EXPERIENCE = "MAP_EXPERIENCE"
-    const val PACK_SIZE = "MAP_PACK_SIZE"
-    const val MONSTER_RARITY = "MAP_MONSTER_RARITY"
-    const val MAGIC_MONSTERS = "MAP_MAGIC_MONSTERS"
-    const val RARE_MONSTERS = "MAP_RARE_MONSTERS"
-    const val MONSTER_LIFE = "MAP_MONSTER_LIFE"
-    const val MONSTER_DAMAGE = "MAP_MONSTER_DAMAGE"
-    const val MONSTER_SPEED = "MAP_MONSTER_SPEED"
-    const val MONSTER_RESIST = "MAP_MONSTER_RESIST"
-    const val HERO_LIGHT = "MAP_HERO_LIGHT"
-    const val HERO_RESIST = "MAP_HERO_RESIST"
-    const val HERO_REGEN = "MAP_HERO_REGEN"
-    const val HERO_SLOW = "MAP_HERO_SLOW"
-    const val HERO_DAMAGE_TAKEN = "MAP_HERO_DAMAGE_TAKEN"
-    const val HERO_RECOVERY = "MAP_HERO_RECOVERY"
-    const val HERO_MAX_RESIST = "MAP_HERO_MAX_RESIST"
-    const val HERO_DEFENCES = "MAP_HERO_DEFENCES"
-    const val HERO_BLOCK = "MAP_HERO_BLOCK"
-    const val HERO_CRIT = "MAP_HERO_CRIT"
-    const val MONSTER_PENETRATION = "MAP_MONSTER_PENETRATION"
-    const val MONSTER_REFLECT = "MAP_MONSTER_REFLECT"
-    const val MONSTER_CRITICAL = "MAP_MONSTER_CRITICAL"
-    const val MONSTER_AILMENTS = "MAP_MONSTER_AILMENTS"
-    const val MONSTER_ARMOUR = "MAP_MONSTER_ARMOUR"
-    const val MONSTER_LEECH = "MAP_MONSTER_LEECH"
-    const val MONSTER_STUN = "MAP_MONSTER_STUN"
-    const val MONSTER_MAGIC_MIN = "MAP_MONSTER_MAGIC_MIN"
-    const val HERO_HASTE = "MAP_HERO_HASTE"
-    const val HERO_ATTACK_SPEED = "MAP_HERO_ATTACK_SPEED"
-    const val HERO_LIFE = "MAP_HERO_LIFE"
-    const val HERO_LEECH = "MAP_HERO_LEECH"
-    const val GOLD = "MAP_GOLD"
-    const val FOUNTAINS = "MAP_FOUNTAINS"
-    const val CHESTS = "MAP_CHESTS"
-    const val BOSS_POWER = "MAP_BOSS_POWER"
-    const val FLASK_CHARGES = "MAP_FLASK_CHARGES"
-    const val HERO_MANA_REGEN = "MAP_HERO_MANA_REGEN"
-    const val MONSTER_CAST = "MAP_MONSTER_CAST"
-    const val SKILL_COST = "MAP_SKILL_COST"
-    const val CRYSTALS = "MAP_CRYSTALS"
-    const val BOOKS = "MAP_BOOKS"
-    const val ABYSS_CRACKS = "MAP_ABYSS_CRACKS"
-    const val ABYSS_DEPTH = "MAP_ABYSS_DEPTH"
-    const val ABYSS_HOARD = "MAP_ABYSS_HOARD"
-    const val ABYSS_UNIQUE = "MAP_ABYSS_UNIQUE"
-    const val ABYSS_ORBS = "MAP_ABYSS_ORBS"
-    const val ABYSS_RARE = "MAP_ABYSS_RARE"
-    const val ABYSS_LIFE = "MAP_ABYSS_LIFE"
-    const val ABYSS_DAMAGE = "MAP_ABYSS_DAMAGE"
-    const val ABYSS_SWARM = "MAP_ABYSS_SWARM"
-    const val ABYSS_LEADER = "MAP_ABYSS_LEADER"
+    val QUANTITY = MapStat.QUANTITY.code
+    val RARITY = MapStat.RARITY.code
+    val EXPERIENCE = MapStat.EXPERIENCE.code
+    val PACK_SIZE = MapStat.PACK_SIZE.code
+    val MONSTER_RARITY = MapStat.MONSTER_RARITY.code
+    val MAGIC_MONSTERS = MapStat.MAGIC_MONSTERS.code
+    val RARE_MONSTERS = MapStat.RARE_MONSTERS.code
+    val MONSTER_LIFE = MapStat.MONSTER_LIFE.code
+    val MONSTER_DAMAGE = MapStat.MONSTER_DAMAGE.code
+    val MONSTER_SPEED = MapStat.MONSTER_SPEED.code
+    val MONSTER_RESIST = MapStat.MONSTER_RESIST.code
+    val HERO_LIGHT = MapStat.HERO_LIGHT.code
+    val HERO_RESIST = MapStat.HERO_RESIST.code
+    val HERO_REGEN = MapStat.HERO_REGEN.code
+    val HERO_SLOW = MapStat.HERO_SLOW.code
+    val HERO_DAMAGE_TAKEN = MapStat.HERO_DAMAGE_TAKEN.code
+    val HERO_RECOVERY = MapStat.HERO_RECOVERY.code
+    val HERO_MAX_RESIST = MapStat.HERO_MAX_RESIST.code
+    val HERO_DEFENCES = MapStat.HERO_DEFENCES.code
+    val HERO_BLOCK = MapStat.HERO_BLOCK.code
+    val HERO_CRIT = MapStat.HERO_CRIT.code
+    val MONSTER_PENETRATION = MapStat.MONSTER_PENETRATION.code
+    val MONSTER_REFLECT = MapStat.MONSTER_REFLECT.code
+    val MONSTER_CRITICAL = MapStat.MONSTER_CRITICAL.code
+    val MONSTER_AILMENTS = MapStat.MONSTER_AILMENTS.code
+    val MONSTER_ARMOUR = MapStat.MONSTER_ARMOUR.code
+    val MONSTER_LEECH = MapStat.MONSTER_LEECH.code
+    val MONSTER_STUN = MapStat.MONSTER_STUN.code
+    val MONSTER_MAGIC_MIN = MapStat.MONSTER_MAGIC_MIN.code
+    val HERO_HASTE = MapStat.HERO_HASTE.code
+    val HERO_ATTACK_SPEED = MapStat.HERO_ATTACK_SPEED.code
+    val HERO_LIFE = MapStat.HERO_LIFE.code
+    val HERO_LEECH = MapStat.HERO_LEECH.code
+    val GOLD = MapStat.GOLD.code
+    val FOUNTAINS = MapStat.FOUNTAINS.code
+    val CHESTS = MapStat.CHESTS.code
+    val BOSS_POWER = MapStat.BOSS_POWER.code
+    val FLASK_CHARGES = MapStat.FLASK_CHARGES.code
+    val HERO_MANA_REGEN = MapStat.HERO_MANA_REGEN.code
+    val MONSTER_CAST = MapStat.MONSTER_CAST.code
+    val SKILL_COST = MapStat.SKILL_COST.code
+    val CRYSTALS = MapStat.CRYSTALS.code
+    val BOOKS = MapStat.BOOKS.code
+    val ABYSS_CRACKS = MapStat.ABYSS_CRACKS.code
+    val ABYSS_DEPTH = MapStat.ABYSS_DEPTH.code
+    val ABYSS_HOARD = MapStat.ABYSS_HOARD.code
+    val ABYSS_UNIQUE = MapStat.ABYSS_UNIQUE.code
+    val ABYSS_ORBS = MapStat.ABYSS_ORBS.code
+    val ABYSS_RARE = MapStat.ABYSS_RARE.code
+    val ABYSS_LIFE = MapStat.ABYSS_LIFE.code
+    val ABYSS_DAMAGE = MapStat.ABYSS_DAMAGE.code
+    val ABYSS_SWARM = MapStat.ABYSS_SWARM.code
+    val ABYSS_LEADER = MapStat.ABYSS_LEADER.code
 
     /** The lines that give without asking. */
     val rewards: Set<String> = setOf(QUANTITY, RARITY, EXPERIENCE, GOLD, CHESTS, FOUNTAINS, HERO_HASTE, HERO_ATTACK_SPEED, HERO_LIFE, HERO_LEECH,

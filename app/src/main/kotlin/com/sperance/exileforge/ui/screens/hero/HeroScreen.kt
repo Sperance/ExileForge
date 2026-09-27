@@ -113,6 +113,7 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
                     else item(key = "bag") { BagGrid(s, sections) { stackCode = it } }
                 }
                 HeroSection.STASH -> {
+                    item(key = "places") { Column { StashPlaces(s, vm) } }
                     item {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {

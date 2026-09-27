@@ -61,6 +61,9 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     fun ensureHero() = runtime.heroViewModel.ensureHero()
     fun equip(itemId: String, slot: Slot? = null) = runtime.heroViewModel.equip(itemId, slot)
     fun unequip(itemId: String) = runtime.heroViewModel.unequip(itemId)
+    fun expandStash() = runtime.heroViewModel.expandStash()
+    fun claimOverflow(itemId: String? = null) = runtime.heroViewModel.claimOverflow(itemId)
+    fun sellOverflow(itemId: String) = runtime.heroViewModel.sellOverflow(itemId)
     /** Admin only: a named template, rolled by the server at [rarity] or the template's own. */
     fun grant(template: String, rarity: Rarity? = null) = runtime.heroViewModel.grant(template, rarity)
     fun grantRarity(value: String) = runtime.heroViewModel.grantRarity(value)

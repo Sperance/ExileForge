@@ -487,7 +487,7 @@ class ExpeditionRun(
                 phase = RunPhase.CLEARED; onCleared()
             }
             is WorldEvent.Opened -> {
-                chest = if (record(RunEventKind.CHEST, index = event.chest.id) != null) run.chest(event.chest.id).also(::earn) else null
+                chest = if (record(RunEventKind.CHEST, index = event.chest.id) != null) run.chest().also(::earn) else null
             }
             is WorldEvent.Drank -> {
                 life = (life + hero.maxLife * event.fountain.heal / 100).coerceAtMost(hero.maxLife)
@@ -546,7 +546,7 @@ class ExpeditionRun(
         val gained = when {
             spot != null -> {
                 val place = world.standingCrystals.indexOf(spot)
-                record(RunEventKind.CRYSTAL, index = place)?.let { run.crystal(place, spot.crystal) }.also { spot.freed = true }
+                record(RunEventKind.CRYSTAL, index = place)?.let { run.crystal(spot.crystal) }.also { spot.freed = true }
             }
             agent === world.boss -> if (vaal) record(RunEventKind.CORRUPT)?.let { run.corrupt() }
                 else record(RunEventKind.BOSS)?.let { bossDown = true; run.boss() }
@@ -709,13 +709,16 @@ class ExpeditionRun(
         /**
          * A run of [location] as the seed rolls it — or, [vaal], of the Vaal zone behind its portal, entered with
          * the pools the map left. [campaign] is the hero's campaign as the server holds it after the entry: the
-         * windows of chests, crystals and cracks, the boss's return, the map and the Vaal zone rolled.
+         * windows of chests, crystals and cracks, the boss's return, the map and the Vaal zone rolled; [killed],
+         * what of it the server already counted when the run is entered again.
          */
         fun start(
             index: ContentIndex, location: Zone, run: Run, journal: RunJournal, gear: HeroGear, campaign: CampaignState, now: Long,
             heroExperience: Double, heroLevel: Int, wallet: () -> Long, vaalOrbs: () -> Long, onRecorded: (RunEvent) -> Unit = {},
             vaal: Boolean = false, startPools: HeroPools? = null, onCleared: () -> Unit = {}, onFallen: () -> Unit = {},
             onLoot: (List<com.sperance.exileforge.rules.roll.ItemInstance>) -> Unit = {},
+            /** Tokens `i*8+m` the server already counts as killed: a run entered again keeps its dead dead. */
+            killed: Collection<Int> = emptyList(),
         ): ExpeditionRun {
             val zone = if (vaal) VaalZones.zone(location) ?: location else location
             val context = run.context
@@ -733,6 +736,7 @@ class ExpeditionRun(
             val portal = !vaal && !campaign.corruptionOpened && (vaalZone != null || spawns.portal(location, AtlasEffects.portalChance(index, context.atlas)))
             val world = ExpeditionWorld.create(zone, packs, stats, if (vaal) run.seed xor VAAL_SALT else run.seed, boss, portal)
             if (bossDown) world.bossAbsent()
+            world.restore(killed, Run.PACK_SLOTS)
             val fountains = AtlasEffects.fountains(index.campaign.fountains, context.atlas)
             val extraFountains = MapEffects.fountains(effects)
             world.placeFountains(fountains.count.getOrElse(0) { 0 } + extraFountains, fountains.count.getOrElse(1) { fountains.count.getOrElse(0) { 0 } } + extraFountains, fountains.heal)

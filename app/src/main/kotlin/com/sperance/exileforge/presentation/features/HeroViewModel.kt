@@ -39,6 +39,11 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     fun equip(itemId: String, slot: Slot? = null) { with(runtime) { heroCommand { id -> api.hero.equip(id, itemId, slot) } } }
     fun unequip(itemId: String) { with(runtime) { heroCommand { id -> api.hero.unequip(id, itemId) } } }
+    /** One more pack of stash places for gold (1.1.0); the snapshot with the answer carries the new count. */
+    fun expandStash() { with(runtime) { heroCommand { id -> api.hero.expandStash(id) } } }
+    /** From the overflow into the stash: [itemId], or as many as fit. */
+    fun claimOverflow(itemId: String? = null) { with(runtime) { heroCommand { id -> api.hero.claimOverflow(id, itemId) } } }
+    fun sellOverflow(itemId: String) { with(runtime) { heroCommand { id -> api.hero.sellOverflow(id, itemId) } } }
 
     /** Admin only: hand the hero a named template, rolled by the server. */
     fun grant(template: String, rarity: Rarity? = null) { with(runtime) { heroCommand { id ->
@@ -181,7 +186,7 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         val items = merged.items
         val tree = merged.tree
         val sheet = Sheets.calculate(index, info.level, info.heroClass, tree, items)
-        val view = HeroView(info, items, merged.bag, tree, merged.campaign, merged.crafts, merged.merchant, sheet)
+        val view = HeroView(info, items, merged.overflow, merged.bag, tree, merged.campaign, merged.crafts, merged.merchant, sheet)
         val now = System.currentTimeMillis()
         mutable.update { it.copy(play = it.play.copy(hero = view, heroOwner = info.userId, heroReadAt = now, heroSeenAt = now,
             selectedEquipment = it.play.selectedEquipment.takeIf { chosen -> view.items.any { item -> item.id == chosen } } ?: view.items.firstOrNull()?.id.orEmpty()),

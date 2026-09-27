@@ -16,6 +16,7 @@ import com.sperance.exileforge.rules.content.ContentLoader
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
+import com.sperance.exileforge.rules.roll.ItemBuckets
 import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunEvent
 import com.sperance.exileforge.rules.run.RunEventKind
@@ -83,7 +84,7 @@ class ServerIntegrationTest {
             assertTrue(rare.rolls.count { index.modifier(it.code)?.affix == true } >= floor, "a rare below its floor: ${rare.rolls}")
             assertEquals(Slot.RING, api.hero.equip(heroId, rare.id).slot)
             assertNotNull(delivered, "a POST with the hero brought no snapshot")
-            assertTrue(HeroParts.ITEMS in assertNotNull(delivered).parts, "equipping did not deliver the items part")
+            assertTrue(ItemBuckets.names[ItemBuckets.of(rare.id)] in assertNotNull(delivered).parts, "equipping did not deliver the ring's bucket")
 
             api.hero.grantItem(heroId, Orb.CHAOS_ORB.name, 2)
             val rerolled = assertNotNull(api.hero.applyOrb(heroId, rare.id, Orb.CHAOS_ORB.name).item)
@@ -95,6 +96,7 @@ class ServerIntegrationTest {
             val progress = api.campaign.progress(heroId)
             val zoneCode = progress.unlocked.first()
             val start = api.campaign.start(heroId, zoneCode)
+            assertEquals(start.id, api.campaign.start(heroId, zoneCode).id, "entering the zone again did not go on with its run")
             val run = Run(index, index.zone(zoneCode)!!, start.seed, start.context)
             assertEquals(run.count, start.count, "the client and the server count the zone differently")
             val kill = assertNotNull(run.kill(0, 0))

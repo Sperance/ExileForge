@@ -111,9 +111,22 @@ class GameApi(
     private val manifestLock = Mutex()
     private var manifest: StaticManifest? = null
 
-    /** `static/index.json`, read once for this server; [fresh] asks again. */
+    /** Where the last manifest this server served is kept on the device (3.1.0); none keeps nothing. */
+    var manifestCache: ManifestCache? = null
+
+    /**
+     * `static/index.json`, read once for this server; [fresh] asks again. Out of reach, the manifest the
+     * device kept stands in (3.1.0): the content chunks it names are on the device too, so a cold start
+     * without the network still has its world. A refusal of the server is not "out of reach" and is thrown.
+     */
     suspend fun manifest(fresh: Boolean = false): StaticManifest = manifestLock.withLock {
-        manifest?.takeIf { !fresh } ?: files.manifest().also { manifest = it }
+        manifest?.takeIf { !fresh } ?: try {
+            files.manifestText().also { manifestCache?.write(it) }.let { WireJson.decodeFromString(StaticManifest.serializer(), it) }
+        } catch (e: CancellationException) { throw e }
+        catch (e: ApiFailure) { throw e }
+        catch (e: Exception) {
+            manifest ?: manifestCache?.read()?.let { runCatching { WireJson.decodeFromString(StaticManifest.serializer(), it) }.getOrNull() } ?: throw e
+        }.also { manifest = it }
     }
 
     suspend fun capabilities(): ApiCapabilities = manifest().capabilities

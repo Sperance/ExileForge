@@ -48,7 +48,7 @@ fun wearable(s: ForgeState, item: ItemInstance): Boolean =
             val tone = if (line.change > 0) Vital else LifeRed
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Tipped({ Tip(statTitle(line.stat), tint = tone, facts = listOf(ui("tip.before") to statValue(line.stat, line.before),
-                    ui("tip.after") to statValue(line.stat, line.after))) }) { StatIcon(line.stat, Muted, Modifier.size(14.dp)) }
+                    ui("tip.after") to statValue(line.stat, line.after))) }) { StatIcon(line.stat, Muted, Modifier.size(14.dp), muted = true) }
                 Text(statTitle(line.stat), color = Parchment, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
                 MutedText(ui("wear.from_to", statValue(line.stat, line.before), statValue(line.stat, line.after)), style = MaterialTheme.typography.labelSmall)
                 Text((if (line.change > 0) "+" else "−") + statValue(line.stat, kotlin.math.abs(line.change)), color = tone,

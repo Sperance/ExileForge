@@ -8,6 +8,8 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
@@ -40,15 +42,22 @@ private val Lead = SolidColor(Color(0xFF0B0907))
 
 /**
  * A server sprite drawn the way its style asks: glass as it is, over a halo of [color]; mono tinted
- * by [color]. Returns false when there is nothing to draw, so the caller can put its own emblem there.
+ * by [color]. [muted] glass is grey and faint (3.7.0), for places where the figures matter more than
+ * the icon. Returns false when there is nothing to draw, so the caller can put its own emblem there.
  */
-@Composable fun SpriteIcon(sprite: IconSprite?, color: Color, modifier: Modifier = Modifier, halo: Boolean = true): Boolean {
+@Composable fun SpriteIcon(sprite: IconSprite?, color: Color, modifier: Modifier = Modifier, halo: Boolean = true, muted: Boolean = false): Boolean {
     if (sprite == null) return false
     val vector = spriteVector(sprite) ?: return false
-    if (sprite.isGlass) Image(vector, null, if (halo) modifier.rarityHalo(color) else modifier)
-    else Icon(vector, null, tint = color, modifier = modifier)
+    when {
+        !sprite.isGlass -> Icon(vector, null, tint = color, modifier = modifier)
+        muted -> Image(vector, null, modifier, alpha = MUTED_ALPHA, colorFilter = Greyscale)
+        else -> Image(vector, null, if (halo) modifier.rarityHalo(color) else modifier)
+    }
     return true
 }
+
+private const val MUTED_ALPHA = .6f
+private val Greyscale = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
 
 /** The rarity of a glass icon: a soft disc of its colour behind the panes. */
 private fun Modifier.rarityHalo(color: Color): Modifier = drawBehind {

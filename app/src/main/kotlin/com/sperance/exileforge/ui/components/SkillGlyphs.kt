@@ -11,15 +11,16 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.SkillDefinition
 import com.sperance.exileforge.rules.content.SlotCondition
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
-import com.sperance.exileforge.ui.icons.spriteVector
+import com.sperance.exileforge.ui.icons.SpriteIcon
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.LifeRed
 import com.sperance.exileforge.ui.theme.ManaBlue
 import com.sperance.exileforge.ui.theme.Rune
 
 /** A skill's drawing (2.78.0): the server's sprite it names, the grimoire's own mark without one. */
-@Composable fun SkillGlyph(icon: String, modifier: Modifier = Modifier, tint: Color = Gold) =
-    Icon(skillIcon(icon)?.let(::spriteVector) ?: ForgeGlyphs.Grimoire, null, tint = tint, modifier = modifier)
+@Composable fun SkillGlyph(icon: String, modifier: Modifier = Modifier, tint: Color = Gold) {
+    if (!SpriteIcon(skillIcon(icon), tint, modifier, halo = false)) Icon(ForgeGlyphs.Grimoire, null, tint = tint, modifier = modifier)
+}
 
 /** A flask's colour by what it brings: life red, mana blue, the rest a rune's. */
 fun flaskTint(kind: FlaskKind): Color = when (kind) {

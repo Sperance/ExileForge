@@ -93,10 +93,12 @@ object IconKey {
     const val EQUIPMENT = "equipment"
     const val ITEM = "item"
     const val STAT = "stat"
+    const val SLOT = "slot"
 
     fun equipment(code: String) = "$EQUIPMENT.$code"
     fun item(code: String) = "$ITEM.$code"
     fun stat(stat: String) = "$STAT.$stat"
+    fun slot(slot: String) = "$SLOT.$slot"
 }
 
 /**
@@ -115,6 +117,9 @@ fun skillIcon(name: String): IconSprite? = name.takeIf { it.isNotBlank() }?.let(
 
 /** The drawing of an equipment template, or null for the client's own emblem. */
 fun equipmentIcon(code: String): IconSprite? = code.takeIf { it.isNotBlank() }?.let { serverIcons[IconKey.equipment(it)] }
+
+/** An empty place of the body (3.7.0): its shadow glass, or null for the client's own emblem. */
+fun slotIcon(slot: String): IconSprite? = serverIcons[IconKey.slot(slot)]
 
 /** The drawing of a stacking item — an orb, a material, a book, an essence — or null for the client's own emblem. */
 fun itemIcon(code: String): IconSprite? = code.takeIf { it.isNotBlank() }?.let { serverIcons[IconKey.item(it)] }

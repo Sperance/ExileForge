@@ -10,6 +10,7 @@ import com.sperance.exileforge.core.display.ItemVisualKind
 import com.sperance.exileforge.core.display.equipmentIcon
 import com.sperance.exileforge.core.display.itemIcon
 import com.sperance.exileforge.core.display.itemVisualKind
+import com.sperance.exileforge.core.display.slotIcon
 import com.sperance.exileforge.rules.content.ItemTemplate
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.content.Slot
@@ -40,8 +41,10 @@ import com.sperance.exileforge.ui.theme.Gold
 }
 
 /** An empty place of the body: the emblem of what would go there. */
-@Composable fun SlotIcon(slot: Slot, color: Color, modifier: Modifier = Modifier, tint: Color? = null) =
-    ItemEmblem(slotVisualKind(slot), tint ?: color, modifier)
+@Composable fun SlotIcon(slot: Slot, color: Color, modifier: Modifier = Modifier, tint: Color? = null) {
+    // The server's shadow glass since 3.7.0; the bundled emblem when the set has none for the slot.
+    if (!SpriteIcon(slotIcon(slot.name), tint ?: color, modifier, halo = false)) ItemEmblem(slotVisualKind(slot), tint ?: color, modifier)
+}
 
 /** How an item of [slot] is drawn before there is one: the rules' own mapping over a bare template. */
 fun slotVisualKind(slot: Slot): ItemVisualKind = itemVisualKind(ItemTemplate(code = "", slot = slot))

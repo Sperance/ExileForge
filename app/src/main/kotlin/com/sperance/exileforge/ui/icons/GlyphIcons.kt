@@ -58,5 +58,8 @@ val Glyph.vector: ImageVector get() = when (this) {
  * A characteristic: the server's drawing when its icon set covers the stat, the bundled glyph for
  * its meaning otherwise — the same fallback every icon here makes.
  */
-@Composable fun StatIcon(stat: String, tint: Color, modifier: Modifier = Modifier) =
-    Icon(icon(IconKey.stat(stat))?.let(::spriteVector) ?: Glyph.ofStat(stat).vector, null, tint = tint, modifier = modifier)
+@Composable fun StatIcon(stat: String, tint: Color, modifier: Modifier = Modifier, muted: Boolean = false) {
+    // Glass keeps its own colours (3.7.0): [tint] is for the bundled glyph, [muted] greys the glass.
+    if (!SpriteIcon(icon(IconKey.stat(stat)), tint, modifier, halo = false, muted = muted))
+        Icon(Glyph.ofStat(stat).vector, null, tint = tint, modifier = modifier)
+}

@@ -1085,7 +1085,7 @@ class Battle(
         for ((slot, kitSkill) in kit.actives.withIndex()) {
             kitSkill ?: continue
             val tapped = slot in taps
-            if (time < (hero.readyAt[slotKey(slot)] ?: 0.0)) continue
+            if (time < hero.readyAt.getOrPut(slotKey(slot)) { openingReady(kitSkill) }) continue
             if (!tapped && !holds(kitSkill.condition, opened[slot])) continue
             if (foeFighters.none { it.alive }) return
             val level = kitSkill.level(hero.body)
@@ -1096,6 +1096,11 @@ class Battle(
             if (!hero.alive || outcome != null) return
         }
     }
+
+    /** When a slot is first ready in this fight (1.8.0 rules): after [CombatRules.opening] percent of its cooldown, a fight-start skill at once. */
+    private fun openingReady(kitSkill: KitSkill): Double =
+        if (kitSkill.condition == SlotCondition.FIGHT_START) time
+        else time + rules.opening / 100 * kitSkill.skill.cooldown / heroFighter.body.recovery(kitSkill.skill.spell)
 
     private fun castSlot(slot: Int, kitSkill: KitSkill, level: Int, cost: Double) {
         val hero = heroFighter

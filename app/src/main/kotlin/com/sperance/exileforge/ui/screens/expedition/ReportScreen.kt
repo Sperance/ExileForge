@@ -73,7 +73,7 @@ import java.util.Locale
         }
     }
     // Compared and worn right here (3.24.0), as on the gear sheet.
-    looked?.let { item -> LootSheet(s, vm, item) { looked = null } }
+    looked?.let { item -> LootSheet(s, vm, item, onDismiss = { looked = null }) }
 }
 
 /** The scene: the monster's round token in its rarity's ring, lit warm for a victory and red for a defeat, and the outcome in words. */

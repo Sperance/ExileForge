@@ -487,7 +487,7 @@ private const val MINIMAP_MAX = 60f
             ForgeOutlinedButton(onClick = onClose, modifier = Modifier.fillMaxWidth()) { Text(ui("common.close")) }
         }
     }
-    looked?.let { item -> HoldsRun(run); LootSheet(s, vm, item) { looked = null } }
+    looked?.let { item -> HoldsRun(run); LootSheet(s, vm, item, onDismiss = { looked = null }) }
 }
 
 // ==================== After ====================
@@ -534,7 +534,7 @@ private const val MINIMAP_MAX = 60f
         }
         ForgeButton(onClick = onDone, modifier = Modifier.fillMaxWidth().height(50.dp)) { Text(ui("expedition.back_to_camp")) }
     }
-    looked?.let { item -> LootSheet(s, vm, item) { looked = null } }
+    looked?.let { item -> LootSheet(s, vm, item, onDismiss = { looked = null }) }
 }
 
 @Composable private fun RunPanel(modifier: Modifier, accent: Color = Gold, content: @Composable ColumnScope.() -> Unit) {

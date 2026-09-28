@@ -15,6 +15,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.StatGroup
+import com.sperance.exileforge.core.display.StatLimits
 import com.sperance.exileforge.core.display.groupedStats
 import com.sperance.exileforge.core.display.statNumber
 import com.sperance.exileforge.core.display.statTitle
@@ -95,8 +96,11 @@ internal fun StatGroup.accent(): Color = when (this) {
         Text(statTitle(key, s.lang), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f))
         was?.let { Text(statValue(key, it, s.index), color = Muted, style = MaterialTheme.typography.labelSmall, textDecoration = TextDecoration.LineThrough) }
-        Text(statValue(key, value, s.index), color = if (was != null) Ember else Parchment, style = MaterialTheme.typography.labelLarge,
-            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+        // A capped figure (3.12.0) reads as the fight reads it, with its ceiling; what lies above it is greyed.
+        val limit = s.index?.campaign?.combat?.let { StatLimits.of(key, s.hero?.stats.orEmpty(), it) }
+        Text(statValue(key, limit?.effective ?: value, s.index), color = when { was != null -> Ember; (limit?.over ?: 0.0) > 0 -> Muted; else -> Parchment },
+            style = MaterialTheme.typography.labelLarge, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+        limit?.let { Text(ui("stat.cap.short", statValue(key, it.cap, s.index)), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1) }
     }
 }
 

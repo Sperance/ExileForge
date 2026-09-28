@@ -18,6 +18,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.StatGroup
+import com.sperance.exileforge.core.display.StatLimit
+import com.sperance.exileforge.core.display.StatLimits
+import com.sperance.exileforge.core.display.statValue
 import com.sperance.exileforge.core.display.statDescription
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.ui
@@ -66,6 +69,7 @@ internal fun ShareKind.color(): Color = when (this) {
                 AssistChip(onClick = { trail = trail.dropLast(1) }, label = { Text("← ${statTitle(trail[trail.size - 2], s.lang)}") })
             }
             item { Header(current, view, accent, s) }
+            s.index?.campaign?.combat?.let { StatLimits.of(current, s.hero?.stats.orEmpty(), it) }?.let { limit -> item { LimitCard(limit, s) { trail = trail + it } } }
             statDescription(current, s.lang, power).takeIf { it.isNotBlank() }?.let { text -> item { Description(text, accent) } }
             if (view.weights.values.sum() > 0) item { ShareBar(view.weights) }
             items(view.cards.size) { i -> SourceCard(view.cards[i], s) { trail = trail + it } }
@@ -87,6 +91,28 @@ internal fun ShareKind.color(): Color = when (this) {
             Text(statTitle(stat, s.lang), color = GoldBright, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         }
         Text(view.total, color = accent, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+    }
+}
+
+/**
+ * The ceiling of a capped figure (3.12.0): the rules' base limit, each raise by the stat that gives it (a tap
+ * opens that stat's own breakdown), the limit that stands and the hard ceiling; then what the fight counts
+ * and what lies above the limit for nothing.
+ */
+@Composable private fun LimitCard(limit: StatLimit, s: ForgeState, open: (String) -> Unit) {
+    val shape = RoundedCornerShape(12.dp)
+    val value = { v: Double -> statValue(limit.stat, v, s.index) }
+    Column(Modifier.fillMaxWidth().clip(shape).background(PanelRaised).border(1.dp, Bronze, shape).padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(ui("stat.cap.title"), color = Parchment, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            Text(value(limit.cap), color = Gold, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+        }
+        SourceLine(ShareRow(ui("stat.cap.base"), value(limit.base)), open)
+        limit.raises.forEach { (stat, amount) -> SourceLine(ShareRow(statTitle(stat, s.lang), (if (amount >= 0) "+" else "−") + value(kotlin.math.abs(amount)), link = stat), open) }
+        limit.hard?.let { SourceLine(ShareRow(ui("stat.cap.hard"), value(it)), open) }
+        Text(ui("stat.cap.counts", value(minOf(limit.effective, limit.cap))) + if (limit.over > 0) " · " + ui("stat.cap.over", value(limit.over)) else "",
+            color = if (limit.over > 0) Muted else Parchment, style = MaterialTheme.typography.labelSmall)
     }
 }
 

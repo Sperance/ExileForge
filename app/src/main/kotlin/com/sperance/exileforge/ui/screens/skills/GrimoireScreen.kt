@@ -309,11 +309,14 @@ private fun books(index: ContentIndex): List<Item> = index.itemsByCategory[Item.
             }
             val shown = learned.coerceAtLeast(1)
             Price(skill, shown)
-            SkillLines(SkillText.lines(skill, shown))
+            // Preparation (3.13.0) shortens with the skill's level and the hero's quick preparation.
+            val quickness = stats[PREPARATION] ?: 0.0
+            fun described(level: Int) = SkillText.lines(skill, level) + listOfNotNull(SkillText.preparation(skill, level, index.campaign.combat, quickness))
+            SkillLines(described(shown))
             if (learned in 1 until SkillRules.MAX_LEVEL) {
                 Caption(ui("skills.at_level", next))
                 Price(skill, next)
-                SkillLines(SkillText.lines(skill, next), ModBlue.copy(alpha = .75f))
+                SkillLines(described(next), ModBlue.copy(alpha = .75f))
             }
             if (learned < SkillRules.MAX_LEVEL) {
                 Text(ui("skills.requires", next, needLine(index, skill, next)), color = if (unmet.isEmpty()) Parchment else LifeRed, style = MaterialTheme.typography.bodySmall)
@@ -538,3 +541,5 @@ private fun worn(hero: HeroView, index: ContentIndex, skills: HeroSkills): List<
         }
     }
 }
+
+private const val PREPARATION = "STOCK_SKILL_PREPARATION"

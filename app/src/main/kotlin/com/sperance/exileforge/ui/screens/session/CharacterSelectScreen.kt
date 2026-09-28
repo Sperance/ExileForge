@@ -1,26 +1,18 @@
 package com.sperance.exileforge.ui.screens.session
 
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.Glyph
-import com.sperance.exileforge.core.display.classDescription
 import com.sperance.exileforge.core.display.classTitle
-import com.sperance.exileforge.core.display.statTitle
-import com.sperance.exileforge.core.display.statValue
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.HeroSummary
 import com.sperance.exileforge.presentation.ForgeViewModel
@@ -141,6 +133,7 @@ import com.sperance.exileforge.ui.theme.*
  * The class is chosen here or nowhere: it is the whole stat base and the root of the tree, and the
  * server has no route that moves a hero to another one. The classes come with the content
  * (3.0.0), and the one picked is the play state's draft, so it survives the form being redrawn.
+ * Each is shown by the carousel (3.13.0), whole, between the name and the button that seals the choice.
  */
 @Composable private fun CreateCharacterPanel(s: ForgeState, vm: ForgeViewModel, canGoBack: Boolean,
     onBack: () -> Unit, onSignOut: () -> Unit) {
@@ -148,46 +141,30 @@ import com.sperance.exileforge.ui.theme.*
     val index = s.index
     val classes = index?.classes?.classes.orEmpty()
     val heroClass = s.play.draftClass.takeIf { code -> classes.any { it.code == code } } ?: classes.firstOrNull()?.code.orEmpty()
-    // The class with the shared base folded in: what a level-one hero of it starts with.
-    val chosen = index?.heroClass(heroClass)
-    ForgePanel {
-        OutlinedTextField(name, { name = it }, enabled = !s.busy, label = { Text(ui("common.name")) },
-            supportingText = { Text(ui("chars.name_unique")) },
-            singleLine = true, modifier = Modifier.fillMaxWidth())
-        if (classes.isEmpty()) Text(ui("editor.no_classes"),
-            color = MaterialTheme.colorScheme.error)
-        // Every class as its portrait, three by four, side by side: the one chosen is framed in gold.
-        else LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            items(classes, key = { it.code }) { option ->
-                val picked = option.code == heroClass
-                val shape = RoundedCornerShape(8.dp)
-                Column(Modifier.width(96.dp).border(if (picked) 2.dp else 1.dp, if (picked) GoldBright else Bronze.copy(alpha = .5f), shape)
-                    .clip(shape).clickable(enabled = !s.busy) { vm.draftClass(option.code) }, horizontalAlignment = Alignment.CenterHorizontally) {
-                    ClassPortrait(option.code, s.world.portraits, Modifier.fillMaxWidth())
-                    Text(classTitle(option.code), color = if (picked) GoldBright else Parchment, style = MaterialTheme.typography.labelMedium,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(4.dp))
-                }
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        ForgePanel {
+            OutlinedTextField(name, { name = it }, enabled = !s.busy, label = { Text(ui("common.name")) },
+                supportingText = { Text(ui("chars.name_unique")) },
+                singleLine = true, modifier = Modifier.fillMaxWidth())
+            if (classes.isEmpty()) Text(ui("editor.no_classes"),
+                color = MaterialTheme.colorScheme.error)
+        }
+        if (index != null && heroClass.isNotBlank())
+            ClassCarousel(index, classes.map { it.code }, heroClass, s.world.portraits, enabled = !s.busy, onChoose = vm::draftClass)
+        ForgePanel {
+            ForgeButton(enabled = !s.busy && name.isNotBlank() && heroClass.isNotBlank(),
+                onClick = { vm.createCharacter(name, heroClass) }, modifier = Modifier.fillMaxWidth()) {
+                Text(ui("chars.create"))
             }
-        }
-        if (chosen != null && index != null) {
-            classDescription(chosen.code).takeIf { it.isNotBlank() }?.let { MutedText(it) }
-            val base = chosen.base.filterValues { it != 0.0 }.entries.sortedBy { index.stats.order(it.key) }
-            if (base.isNotEmpty()) Text(ui("editor.level1_base") + base.joinToString(" · ") { (stat, value) ->
-                "${statTitle(stat, s.lang)} ${statValue(stat, value)}" },
-                color = Muted, style = MaterialTheme.typography.bodySmall)
-        }
-        ForgeButton(enabled = !s.busy && name.isNotBlank() && heroClass.isNotBlank(),
-            onClick = { vm.createCharacter(name, heroClass) }, modifier = Modifier.fillMaxWidth()) {
-            Text(ui("chars.create"))
-        }
-        if (canGoBack) ForgeTextButton(enabled = !s.busy, onClick = onBack, modifier = Modifier.fillMaxWidth()) {
-            Text(ui("chars.back"))
-        }
-        // An account with no heroes has no list to go back to, and a device registration is
-        // silent — so without this the first screen a new player sees is also the only one, with
-        // no way to sign in as someone who already has an exile.
-        ForgeTextButton(enabled = !s.busy, onClick = onSignOut, modifier = Modifier.fillMaxWidth()) {
-            Text(ui("chars.other_account"))
+            if (canGoBack) ForgeTextButton(enabled = !s.busy, onClick = onBack, modifier = Modifier.fillMaxWidth()) {
+                Text(ui("chars.back"))
+            }
+            // An account with no heroes has no list to go back to, and a device registration is
+            // silent — so without this the first screen a new player sees is also the only one, with
+            // no way to sign in as someone who already has an exile.
+            ForgeTextButton(enabled = !s.busy, onClick = onSignOut, modifier = Modifier.fillMaxWidth()) {
+                Text(ui("chars.other_account"))
+            }
         }
     }
 }

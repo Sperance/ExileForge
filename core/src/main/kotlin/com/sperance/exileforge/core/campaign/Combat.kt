@@ -3,6 +3,7 @@ package com.sperance.exileforge.core.campaign
 import com.sperance.exileforge.core.character.StatLine
 import com.sperance.exileforge.rules.content.AilmentRule
 import com.sperance.exileforge.rules.content.AtlasStat
+import com.sperance.exileforge.rules.content.Ceiling
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.ManaRule
 import com.sperance.exileforge.rules.content.MonsterRarity
@@ -143,13 +144,18 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
     val damage: Map<DamageType, Double> = DamageType.entries.associateWith { max(0.0, stat(it.attack)) }
         .let { rolled -> if (rolled.values.sum() > 0) rolled else rolled + (DamageType.PHYSICAL to rules.unarmed.damage) }
     val attackSpeed = stat("STOCK_ATTACK_SPEED").takeIf { it > 0 }?.coerceIn(0.3, 5.0) ?: rules.unarmed.speed
-    val critChance = (stats["STOCK_CRITICAL_CHANCE"] ?: rules.critical.chance).coerceIn(0.0, 100.0) / 100
+    /** A limit raised by the sheet's own lines (3.13.0): block, evasion, physical reduction and critical chance, each as the resistances are. */
+    fun ceiling(limit: Ceiling): Double = limit.at(stat(limit.raise))
+    val critChance = (stats["STOCK_CRITICAL_CHANCE"] ?: rules.critical.chance).coerceIn(0.0, ceiling(rules.ceilings.critical)) / 100
     val critMultiplier = max(100.0, (stats["STOCK_CRITICAL_MULTIPLIER"] ?: rules.critical.multiplier) + stat("STOCK_CRITICAL_DAMAGE")) / 100
     val armour = max(0.0, stat("STOCK_ARMOR"))
     val evasion = max(0.0, stat("STOCK_EVASION"))
-    val block = stat("STOCK_BLOCK_CHANCE").coerceIn(0.0, rules.blockCap) / 100
-    /** Taken off physical damage after armour, under armour's own cap. */
-    val physicalReduction = percent("STOCK_PHYSICAL_REDUCTION", rules.armour.cap)
+    val block = stat("STOCK_BLOCK_CHANCE").coerceIn(0.0, ceiling(rules.ceilings.block)) / 100
+    /** The most of a blow evasion and armour can each turn aside, in shares. */
+    val evasionCap = ceiling(rules.ceilings.evasion) / 100
+    val armourCap = ceiling(rules.ceilings.physical) / 100
+    /** Taken off physical damage after armour, under the same physical ceiling. */
+    val physicalReduction = percent("STOCK_PHYSICAL_REDUCTION", ceiling(rules.ceilings.physical))
     /**
      * Chaos stands alone, as in PoE; "all resistances" and "all maximum resistances" cover the three elements.
      * [penetration] (server 0.66.0) is the striker's: it is taken off the resistance, and can push it below
@@ -845,7 +851,7 @@ class Battle(
     }
 
     private fun evasion(me: Fighter, target: Fighter): Double =
-        (target.body.evasion / (target.body.evasion + rules.evasion.base + rules.evasion.perLevel * me.body.level)).coerceAtMost(rules.evasion.cap / 100)
+        (target.body.evasion / (target.body.evasion + rules.evasion.base + rules.evasion.perLevel * me.body.level)).coerceAtMost(target.body.evasionCap)
 
     /**
      * One blow of [me] at [target] — a weapon's swing, a skill's hit, a spell: evaded unless a spell,
@@ -887,7 +893,7 @@ class Battle(
         val taken = blow.damage.filterValues { it > 0 }.mapValues { (type, base) ->
             val raw = base * (if (blow.spread) 1 + (random.nextDouble() * 2 - 1) * rules.variance / 100 else 1.0) * multiplier * against * body.damageMore
             when (type) {
-                DamageType.PHYSICAL -> raw * (1 - (target.body.armour / (target.body.armour + rules.armour.factor * raw)).coerceAtMost(rules.armour.cap / 100)) * (1 - target.body.physicalReduction)
+                DamageType.PHYSICAL -> raw * (1 - (target.body.armour / (target.body.armour + rules.armour.factor * raw)).coerceAtMost(target.body.armourCap)) * (1 - target.body.physicalReduction)
                 else -> raw * (1 - target.body.resist(type, body.penetration(type)))
             }.coerceAtLeast(0.0) * target.weakness() * lone * target.body.damageTaken(type)
         }
@@ -913,7 +919,7 @@ class Battle(
         if (me.body.reflect > 0) taken.forEach { (type, amount) -> back.merge(type, amount * me.body.reflect, Double::plus) }
         val mitigated = back.mapValues { (type, raw) ->
             when (type) {
-                DamageType.PHYSICAL -> raw * (1 - (attacker.body.armour / (attacker.body.armour + rules.armour.factor * raw)).coerceAtMost(rules.armour.cap / 100)) * (1 - attacker.body.physicalReduction)
+                DamageType.PHYSICAL -> raw * (1 - (attacker.body.armour / (attacker.body.armour + rules.armour.factor * raw)).coerceAtMost(attacker.body.armourCap)) * (1 - attacker.body.physicalReduction)
                 else -> raw * (1 - attacker.body.resist(type))
             }.coerceAtLeast(0.0) * attacker.body.damageTaken(type)
         }.filterValues { it > 0 }
@@ -1097,10 +1103,16 @@ class Battle(
         }
     }
 
-    /** When a slot is first ready in this fight (1.8.0 rules): after [CombatRules.opening] percent of its cooldown, a fight-start skill at once. */
-    private fun openingReady(kitSkill: KitSkill): Double =
-        if (kitSkill.condition == SlotCondition.FIGHT_START) time
-        else time + rules.opening / 100 * kitSkill.skill.cooldown / heroFighter.body.recovery(kitSkill.skill.spell)
+    /**
+     * When a slot is first ready in this fight: after the skill's preparation at its level — its share of the cooldown,
+     * shortened by the hero's quick preparation (3.13.0) — a fight-start skill at once.
+     */
+    private fun openingReady(kitSkill: KitSkill): Double {
+        if (kitSkill.condition == SlotCondition.FIGHT_START) return time
+        val body = heroFighter.body
+        val share = rules.preparation(kitSkill.skill, kitSkill.level(body), body[PREPARATION])
+        return time + share * kitSkill.skill.cooldown / body.recovery(kitSkill.skill.spell)
+    }
 
     private fun castSlot(slot: Int, kitSkill: KitSkill, level: Int, cost: Double) {
         val hero = heroFighter
@@ -1471,6 +1483,8 @@ class Battle(
         private const val MAX_DEPTH = 2
         /** A skill's element picked at random, and its ailment named by the element that struck (server 0.69.0). */
         private const val RANDOM = "RANDOM"
+        /** Quick preparation (3.13.0): shortens how much of a skill's cooldown still runs as a fight opens. */
+        private const val PREPARATION = "STOCK_SKILL_PREPARATION"
         private const val ELEMENT = "ELEMENT"
     }
 }

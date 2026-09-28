@@ -2,6 +2,7 @@ package com.sperance.exileforge.core.display
 
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.MonsterSkill
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.Scale
@@ -11,8 +12,10 @@ import com.sperance.exileforge.rules.content.SkillBuff
 import com.sperance.exileforge.rules.content.SkillDefinition
 import com.sperance.exileforge.rules.content.SkillHeal
 import com.sperance.exileforge.rules.content.SkillHit
+import com.sperance.exileforge.rules.content.SkillKind
 import com.sperance.exileforge.rules.content.SkillStat
 import com.sperance.exileforge.rules.content.SkillTrigger
+import com.sperance.exileforge.rules.content.SlotCondition
 import kotlin.math.abs
 
 /**
@@ -45,6 +48,18 @@ object SkillText {
             addAll(stats(skill.stats, level))
         }
         skill.trigger?.let { addAll(trigger(it, level)) }
+    }
+
+    /**
+     * How much of an active skill's cooldown still runs as a fight opens (3.13.0) at [level], and what is left of it
+     * after the hero's quick preparation [quickness]; null for a skill with no cooldown to prepare.
+     */
+    fun preparation(skill: SkillDefinition, level: Int, rules: CombatRules, quickness: Double): String? {
+        if (skill.kind != SkillKind.ACTIVE || skill.cooldown <= 0) return null
+        if (skill.condition == SlotCondition.FIGHT_START) return ui("skill.line.prepare_none")
+        val own = rules.preparation(skill, level, 0.0) * 100
+        val quick = rules.preparation(skill, level, quickness) * 100
+        return if (quick < own) ui("skill.line.prepare_quick", number(own), number(quick)) else ui("skill.line.prepare", number(own))
     }
 
     /** What a monster's skill does, for the scouting panel and the log: one sentence. */

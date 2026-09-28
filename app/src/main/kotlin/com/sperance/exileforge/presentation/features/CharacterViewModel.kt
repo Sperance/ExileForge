@@ -4,6 +4,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ForgeRuntime
 import com.sperance.exileforge.presentation.state.AppPhase
 import com.sperance.exileforge.presentation.state.GuildState
+import com.sperance.exileforge.presentation.state.QuestState
 import com.sperance.exileforge.presentation.state.MarketState
 import com.sperance.exileforge.presentation.state.PlayState
 import com.sperance.exileforge.presentation.state.Reads
@@ -40,7 +41,7 @@ class CharacterViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         expeditionViewModel.drop()
         craftsViewModel.drop()
         mutable.update { it.copy(phase = AppPhase.CHARACTERS, play = PlayState(draftClass = it.play.draftClass, selectedOrb = it.play.selectedOrb), market = MarketState(),
-            building = null, guild = GuildState()) }
+            building = null, guild = GuildState(), quests = QuestState()) }
         read(Reads.CHARACTERS) { readCharacters() }
     } }
 

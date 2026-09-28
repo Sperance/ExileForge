@@ -32,10 +32,11 @@ import com.sperance.exileforge.ui.screens.auction.AuctionScreen
 import com.sperance.exileforge.ui.screens.auction.MerchantScreen
 import com.sperance.exileforge.ui.screens.auction.untilText
 import com.sperance.exileforge.ui.screens.guild.GuildScreen
+import com.sperance.exileforge.ui.screens.quests.QuestsScreen
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * The City (3.22.0): where the auction's tab was, a square with three buildings — the merchant, the auction and the guild.
+ * The City (3.22.0): where the auction's tab was, a square of buildings — the quest board (3.23.0), the merchant, the auction and the guild.
  * Each card says in a line what waits inside; a tap goes in, and «back», on screen or the system's, comes out to the square.
  * The buildings are the screens they always were, each explaining itself on its first visit.
  */
@@ -50,6 +51,7 @@ import com.sperance.exileforge.ui.theme.*
         }
         Box(Modifier.weight(1f)) {
             when (building) {
+                Building.QUESTS -> QuestsScreen(s, vm)
                 Building.MERCHANT -> MerchantScreen(s, vm)
                 Building.AUCTION -> AuctionScreen(s, vm)
                 Building.GUILD -> GuildScreen(s, vm)
@@ -61,16 +63,25 @@ import com.sperance.exileforge.ui.theme.*
 /** The square: the three buildings and their news, read when the square opens — the merchant's comes with the hero. */
 @Composable private fun CitySquare(s: ForgeState, vm: ForgeViewModel) {
     LaunchedEffect(s.play.heroId, s.account.sessionEpoch) {
-        if (s.play.heroId.isNotBlank()) { vm.ensureHero(); vm.loadMyLots(glance = true); vm.loadGuild() }
+        if (s.play.heroId.isNotBlank()) { vm.ensureHero(); vm.loadMyLots(glance = true); vm.loadGuild(); vm.loadQuests() }
     }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Spacer(Modifier.height(12.dp))
         ScreenHeader(ui("nav.city"), ui("city.subtitle"), ForgeGlyphs.Keep, guide = Guide.CITY)
+        BuildingCard(ui("quest.title"), ForgeGlyphs.Scroll, questNews(s), accent = Vital) { vm.building(Building.QUESTS) }
         BuildingCard(ui("merchant.title"), ForgeGlyphs.Coins, merchantNews(s)) { vm.building(Building.MERCHANT) }
         BuildingCard(ui("nav.auction"), ForgeGlyphs.Orb, auctionNews(s)) { vm.building(Building.AUCTION) }
         BuildingCard(ui("guild.title"), ForgeGlyphs.Banner, guildNews(s), accent = Rune) { vm.building(Building.GUILD) }
         Spacer(Modifier.height(12.dp))
     }
+}
+
+/** How many quests wait for their reward, or how many are under way. */
+private fun questNews(s: ForgeState): String {
+    val board = s.quests.board ?: return ui("city.quests_idle")
+    val quests = board.daily + board.weekly + board.contracts + listOfNotNull(board.story)
+    val ready = quests.count { it.done && !it.claimed }
+    return if (ready > 0) ui("city.quests_ready", ready) else ui("city.quests_active", quests.count { !it.claimed })
 }
 
 private fun merchantNews(s: ForgeState): String =

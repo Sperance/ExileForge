@@ -26,6 +26,7 @@ import com.sperance.exileforge.presentation.features.CharacterViewModel
 import com.sperance.exileforge.presentation.features.CraftsViewModel
 import com.sperance.exileforge.presentation.features.ExpeditionViewModel
 import com.sperance.exileforge.presentation.features.GuildViewModel
+import com.sperance.exileforge.presentation.features.QuestViewModel
 import com.sperance.exileforge.presentation.features.HeroViewModel
 import com.sperance.exileforge.presentation.features.RedemptionViewModel
 import com.sperance.exileforge.presentation.features.SessionViewModel
@@ -34,6 +35,7 @@ import com.sperance.exileforge.presentation.state.AppMode
 import com.sperance.exileforge.presentation.state.AppPhase
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.GuildState
+import com.sperance.exileforge.presentation.state.QuestState
 import com.sperance.exileforge.presentation.state.MarketState
 import com.sperance.exileforge.presentation.state.Notice
 import com.sperance.exileforge.presentation.state.NoticeKind
@@ -77,6 +79,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
     val expeditionViewModel = ExpeditionViewModel(this)
     val craftsViewModel = CraftsViewModel(this)
     val guildViewModel = GuildViewModel(this)
+    val questViewModel = QuestViewModel(this)
 
     /**
      * A refused token is forgotten, and a player who plays by device is signed in again without being
@@ -350,7 +353,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
             account = it.account.copy(resumable = false, characters = emptyList(), charactersRead = false, signedIn = false, profile = null, sessionEpoch = it.account.sessionEpoch + 1),
             admin = it.admin.copy(redemptions = emptyList()),
             play = PlayState(draftClass = it.play.draftClass, selectedOrb = it.play.selectedOrb),
-            market = MarketState(), building = null, guild = GuildState()) }
+            market = MarketState(), building = null, guild = GuildState(), quests = QuestState()) }
     }
 
     fun close() { scope.coroutineContext[Job]?.cancel() }

@@ -25,8 +25,10 @@ import com.sperance.exileforge.core.network.FailureState
 import com.sperance.exileforge.rules.content.AtlasPoints
 import com.sperance.exileforge.rules.content.BenchRecipe
 import com.sperance.exileforge.rules.content.ContentIndex
+import com.sperance.exileforge.rules.content.GuildQuests
 import com.sperance.exileforge.rules.content.HeroClass
 import com.sperance.exileforge.rules.content.Item
+import com.sperance.exileforge.rules.content.QuestBoard
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.roll.WorkGains
 import com.sperance.exileforge.rules.sheet.SheetCalculator
@@ -60,6 +62,7 @@ data class ForgeState(
     val play: PlayState = PlayState(),
     val market: MarketState = MarketState(),
     val guild: GuildState = GuildState(),
+    val quests: QuestState = QuestState(),
     val admin: AdminState = AdminState(),
 ) {
     val isAdmin: Boolean get() = account.signedIn && account.profile?.role == "ADMIN"
@@ -192,10 +195,10 @@ data class MarketState(
 )
 
 /** The City's buildings (3.22.0): each one a screen of its own behind the square. */
-enum class Building { MERCHANT, AUCTION, GUILD }
+enum class Building { QUESTS, MERCHANT, AUCTION, GUILD }
 
 /** The guild screen's tabs; [APPLICATIONS] only for those who may answer them. */
-enum class GuildTab { MEMBERS, APPLICATIONS, CONTRIBUTE, BONUSES, LOG, CHAT, SETTINGS }
+enum class GuildTab { MEMBERS, QUESTS, APPLICATIONS, CONTRIBUTE, BONUSES, LOG, CHAT, SETTINGS }
 
 /**
  * The hero's guild as the server last answered (3.22.0): [mine] is null until it has been read; `guilds.json` comes with
@@ -210,6 +213,15 @@ data class GuildState(
     /** When the hero may speak again, by the device's clock. */
     val chatQuietUntil: Long = 0,
 )
+
+/** The quest board's sections (3.23.0). */
+enum class QuestTab { DAILY, WEEKLY, CONTRACTS, STORY }
+
+/**
+ * The hero's quests as the server last answered (3.23.0): [board] — the dailies, weeklies, contracts and the story step of the
+ * City's board; [guild] — the guild's personal and common quests. Both are null until read.
+ */
+data class QuestState(val board: QuestBoard? = null, val guild: GuildQuests? = null, val tab: QuestTab = QuestTab.DAILY)
 
 /** The administrator's tools: promo codes. */
 data class AdminState(val redemptions: List<RedemptionCode> = emptyList())
@@ -232,6 +244,8 @@ object Reads {
     const val GUILD_SEARCH = "guild_search"
     const val GUILD_LOG = "guild_log"
     const val GUILD_CHAT = "guild_chat"
+    const val QUESTS = "quests"
+    const val GUILD_QUESTS = "guild_quests"
 }
 
 /** The tabs, by name: the bottom bar a player sees, and the screens a button opens. */

@@ -1,0 +1,159 @@
+package com.sperance.exileforge.ui.screens.quests
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.display.number
+import com.sperance.exileforge.core.i18n.loc
+import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.QuestTab
+import com.sperance.exileforge.presentation.state.Reads
+import com.sperance.exileforge.rules.content.Quest
+import com.sperance.exileforge.rules.content.QuestBoard
+import com.sperance.exileforge.ui.components.*
+import com.sperance.exileforge.ui.icons.ForgeGlyphs
+import com.sperance.exileforge.ui.screens.auction.untilText
+import com.sperance.exileforge.ui.theme.*
+
+/**
+ * The quest board of the City (3.23.0): four sections — dailies, weeklies, the contract board and the story — each a
+ * ledger of rows. The server rolls and counts; a finished quest is claimed here, a daily replaced, a notice taken off
+ * the board or given up. Pulling down reads the board again.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable fun QuestsScreen(s: ForgeState, vm: ForgeViewModel) {
+    LaunchedEffect(s.play.heroId, s.account.sessionEpoch) { if (s.play.heroId.isNotBlank()) vm.loadQuests() }
+    FirstVisit(Guide.QUESTS)
+    val board = s.quests.board
+    Column(Modifier.fillMaxSize()) {
+        Column(Modifier.padding(horizontal = 16.dp)) {
+            ScreenHeader(ui("quest.title"), ui("quest.subtitle"), ForgeGlyphs.Scroll, guide = Guide.QUESTS)
+        }
+        TabRow(selectedTabIndex = s.quests.tab.ordinal, containerColor = Abyss) {
+            QuestTab.entries.forEach { tab ->
+                Tab(selected = tab == s.quests.tab, onClick = { vm.questTab(tab) },
+                    text = { Text(tabTitle(tab, board), style = MaterialTheme.typography.labelLarge, maxLines = 1) })
+            }
+        }
+        PullToRefreshBox(isRefreshing = Reads.QUESTS in s.loading, onRefresh = vm::loadQuests, modifier = Modifier.weight(1f)) {
+            LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                if (board == null) { item { MutedText(ui("quest.loading")) }; return@LazyColumn }
+                when (s.quests.tab) {
+                    QuestTab.DAILY -> daily(s, vm, board)
+                    QuestTab.WEEKLY -> weekly(s, vm, board)
+                    QuestTab.CONTRACTS -> contracts(s, vm, board)
+                    QuestTab.STORY -> story(s, vm, board)
+                }
+            }
+        }
+    }
+}
+
+/** A section's name with how many of its quests wait to be claimed. */
+private fun tabTitle(tab: QuestTab, board: QuestBoard?): String {
+    val ready = when (tab) {
+        QuestTab.DAILY -> board?.daily
+        QuestTab.WEEKLY -> board?.weekly
+        QuestTab.CONTRACTS -> board?.contracts
+        QuestTab.STORY -> listOfNotNull(board?.story)
+    }.orEmpty().count { it.done && !it.claimed }
+    val title = ui("quest.tab.${tab.name.lowercase()}")
+    return if (ready > 0) ui("quest.tab_ready", title, ready) else title
+}
+
+private fun LazyListScope.daily(s: ForgeState, vm: ForgeViewModel, board: QuestBoard) {
+    item {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            MutedText(ui("quest.resets", untilText(board.dayEndsAt)), Modifier.weight(1f))
+            MutedText(if (board.rerollPrice == 0L) ui("quest.reroll_free") else ui("quest.reroll_price", number(board.rerollPrice.toDouble())))
+        }
+    }
+    if (board.daily.isEmpty()) item { MutedText(ui("quest.none")) }
+    items(board.daily, key = { it.id }) { quest ->
+        QuestRow(quest) {
+            if (!quest.claimed && !quest.done) ForgeTextButton({ vm.rerollQuest(quest.id) }, enabled = !s.busy && (s.hero?.money ?: 0) >= board.rerollPrice) {
+                Text(ui("quest.reroll"))
+            }
+            ClaimButton(s, vm, quest)
+        }
+    }
+}
+
+private fun LazyListScope.weekly(s: ForgeState, vm: ForgeViewModel, board: QuestBoard) {
+    item { MutedText(ui("quest.resets", weekText(board.weekEndsAt))) }
+    if (board.weekly.isEmpty()) item { MutedText(ui("quest.none")) }
+    items(board.weekly, key = { it.id }) { quest -> QuestRow(quest) { ClaimButton(s, vm, quest) } }
+}
+
+private fun LazyListScope.contracts(s: ForgeState, vm: ForgeViewModel, board: QuestBoard) {
+    item { Engraved(ui("quest.contracts_taken", board.contracts.size, board.activeLimit)) }
+    if (board.contracts.isEmpty()) item { MutedText(ui("quest.contracts_none")) }
+    items(board.contracts, key = { it.id }) { quest ->
+        QuestRow(quest) {
+            if (!quest.done) ForgeTextButton({ vm.abandonContract(quest.id) }, enabled = !s.busy) { Text(ui("quest.abandon"), color = LifeRed) }
+            ClaimButton(s, vm, quest)
+        }
+    }
+    item {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Engraved(ui("quest.board"), modifier = Modifier.weight(1f))
+            if (board.nextOfferAt > 0) MutedText(ui("quest.next_offer", untilText(board.nextOfferAt)))
+        }
+    }
+    if (board.offers.isEmpty()) item { MutedText(ui("quest.board_empty")) }
+    val full = board.contracts.size >= board.activeLimit
+    items(board.offers, key = { it.id }) { offer ->
+        QuestRow(offer) {
+            ForgeButton({ vm.takeContract(offer.id) }, enabled = !s.busy && !full) { Text(ui("quest.take")) }
+        }
+    }
+    item {
+        ForgeOutlinedButton({ vm.renewQuestBoard() }, Modifier.fillMaxWidth(), enabled = !s.busy && (s.hero?.money ?: 0) >= board.refreshPrice) {
+            Text(ui("quest.renew", number(board.refreshPrice.toDouble())))
+        }
+    }
+}
+
+/** The story: the chapter's name, its steps behind and ahead, and the step at hand as a quest. */
+private fun LazyListScope.story(s: ForgeState, vm: ForgeViewModel, board: QuestBoard) {
+    val chapters = s.index?.quests?.story.orEmpty()
+    val chapter = chapters.getOrNull(board.chapter)
+    if (chapter == null) { item { ForgePanel { Engraved(ui("quest.story_done")); MutedText(ui("quest.story_done_text")) } }; return }
+    item {
+        ForgePanel {
+            Engraved(loc("quest.chapter.${chapter.region}"))
+            MutedText(ui("quest.chapter_line", loc("region.${chapter.region}.name"), board.step + 1, chapter.steps.size))
+        }
+    }
+    items(chapter.steps.withIndex().toList(), key = { it.value.code }) { (index, step) ->
+        val current = board.story?.takeIf { index == board.step && it.goal == step.code }
+        when {
+            current != null -> QuestRow(current) { ClaimButton(s, vm, current) }
+            index < board.step -> StepLine("✓ " + loc("quest.story.${step.code}.name"), Vital)
+            else -> StepLine("· " + loc("quest.story.${step.code}.name"), Muted)
+        }
+    }
+}
+
+@Composable private fun StepLine(text: String, color: androidx.compose.ui.graphics.Color) {
+    Text(text, color = color, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(horizontal = 4.dp))
+}
+
+@Composable private fun ClaimButton(s: ForgeState, vm: ForgeViewModel, quest: Quest) {
+    if (quest.done && !quest.claimed) ForgeButton({ vm.claimQuest(quest.id) }, enabled = !s.busy) { Text(ui("quest.claim")) }
+}
+
+/** Days and hours to a week's end — a week does not fit in the merchant's hours and minutes. */
+internal fun weekText(at: Long): String {
+    val hours = ((at - System.currentTimeMillis()) / 3_600_000).coerceAtLeast(0)
+    return ui("quest.days_hours", hours / 24, hours % 24)
+}

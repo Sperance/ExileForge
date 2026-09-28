@@ -20,6 +20,7 @@ import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.GuildTab
 import com.sperance.exileforge.presentation.state.Reads
 import com.sperance.exileforge.ui.components.*
+import com.sperance.exileforge.ui.screens.quests.GuildQuestsTab
 import com.sperance.exileforge.ui.theme.*
 
 /**
@@ -40,6 +41,7 @@ import com.sperance.exileforge.ui.theme.*
     PullToRefreshBox(isRefreshing = Reads.GUILD in s.loading, onRefresh = vm::loadGuild, modifier = Modifier.weight(1f)) {
         when (tab) {
             GuildTab.MEMBERS -> MembersTab(s, vm, guild, me)
+            GuildTab.QUESTS -> GuildQuestsTab(s, vm, guild)
             GuildTab.APPLICATIONS -> ApplicationsTab(s, vm, guild)
             GuildTab.CONTRIBUTE -> ContributeTab(s, vm, guild, me)
             GuildTab.BONUSES -> BonusesTab(s, guild, me)
@@ -52,6 +54,7 @@ import com.sperance.exileforge.ui.theme.*
 
 private fun tabTitle(tab: GuildTab, guild: GuildView): String = when (tab) {
     GuildTab.MEMBERS -> ui("guild.tab_members")
+    GuildTab.QUESTS -> ui("guild.tab_quests")
     GuildTab.APPLICATIONS -> if (guild.applications.isEmpty()) ui("guild.tab_applications") else ui("guild.tab_applications_n", guild.applications.size)
     GuildTab.CONTRIBUTE -> ui("guild.tab_contribute")
     GuildTab.BONUSES -> ui("guild.tab_bonuses")

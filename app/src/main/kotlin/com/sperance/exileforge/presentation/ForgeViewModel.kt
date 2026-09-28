@@ -16,6 +16,7 @@ import com.sperance.exileforge.core.network.MemberCommand
 import com.sperance.exileforge.presentation.state.AppMode
 import com.sperance.exileforge.presentation.state.Building
 import com.sperance.exileforge.presentation.state.GuildTab
+import com.sperance.exileforge.presentation.state.QuestTab
 import com.sperance.exileforge.presentation.state.ForgeSection
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
@@ -149,6 +150,17 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     fun pollGuildChat(fresh: Boolean = false) = runtime.guildViewModel.pollChat(fresh)
     fun sayInGuild(text: String) = runtime.guildViewModel.say(text)
     fun unsayInGuild(messageId: String) = runtime.guildViewModel.unsay(messageId)
+
+    // Quests (3.23.0): the City's board and the guild's quests.
+    fun loadQuests() = runtime.questViewModel.load()
+    fun questTab(tab: QuestTab) = runtime.questViewModel.tab(tab)
+    fun claimQuest(questId: String) = runtime.questViewModel.claim(questId)
+    fun rerollQuest(questId: String) = runtime.questViewModel.reroll(questId)
+    fun takeContract(offerId: String) = runtime.questViewModel.take(offerId)
+    fun abandonContract(questId: String) = runtime.questViewModel.abandon(questId)
+    fun renewQuestBoard() = runtime.questViewModel.renew()
+    fun loadGuildQuests() = runtime.questViewModel.loadGuild()
+    fun claimGuildQuest(questId: String? = null, goal: String? = null) = runtime.questViewModel.claimGuild(questId, goal)
     fun buyLot(lotId: String) = runtime.auctionViewModel.buy(lotId)
     fun buyOffer(offerId: String) = runtime.auctionViewModel.buyOffer(offerId)
     fun buyOrb(code: String) = runtime.auctionViewModel.buyOrb(code)

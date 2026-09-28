@@ -526,6 +526,7 @@
   "expedition.launch_quantity": "количество",
   "expedition.launch_rarity": "редкость",
   "expedition.launch_rarity_line": "{0} · +{1}% к количеству и редкости",
+  "expedition.launch_cost": "награда −{0}%",
   "expedition.launch_risk": "риск {0}%",
   "expedition.launch_spent": "Карта тратится при входе, её модификаторы действуют до выхода или смерти.",
   "expedition.leave": "Покинуть",

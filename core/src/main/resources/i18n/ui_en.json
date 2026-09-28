@@ -526,6 +526,7 @@
   "expedition.launch_quantity": "quantity",
   "expedition.launch_rarity": "rarity",
   "expedition.launch_rarity_line": "{0} · +{1}% quantity and rarity",
+  "expedition.launch_cost": "reward −{0}%",
   "expedition.launch_risk": "risk {0}%",
   "expedition.launch_spent": "The map is spent on entry; its modifiers last until the exit or a death.",
   "expedition.leave": "Leave",

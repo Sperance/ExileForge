@@ -251,6 +251,8 @@ private fun lines(map: ItemView, index: ContentIndex): List<MapLine> = map.lines
         Text(line.text, color = ModBlue, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
         if (line.kind == MapLineKind.HARM && line.risk > 0)
             MutedText(ui("expedition.launch_risk", number(line.risk)), style = MaterialTheme.typography.labelSmall)
+        // A hero's buff is paid for from the map's reward (3.16.0, server 1.14.0).
+        if (line.risk < 0) MutedText(ui("expedition.launch_cost", number(-line.risk)), style = MaterialTheme.typography.labelSmall)
     }
 }
 

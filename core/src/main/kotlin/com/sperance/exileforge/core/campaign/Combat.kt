@@ -111,6 +111,8 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
     /** A monster's «shield of life» (an essence, server 0.69.0) adds a share of its life to its shield. */
     val maxShield = max(0.0, stat("STOCK_ENERGY_SHIELD")) + maxLife * max(0.0, stat("STOCK_SHIELD_OF_LIFE")) / 100
     val maxMana = max(0.0, stat("STOCK_MANA"))
+    /** Immune to chaos (3.17.0, server 1.15.0): its hits and poison do nothing. */
+    val chaosImmune = stat("STOCK_CHAOS_IMMUNE") > 0
     /** Mana back a second (server 0.69.0): the rule's share of the maximum, faster by the sheet's regeneration. */
     fun manaRegen(rule: ManaRule): Double = maxMana * rule.regen / 100 * max(0.0, 1 + stat("STOCK_MANA_REGEN") / 100)
     /** Every damage it deals, as a multiplier: the sheet's "damage" (server 0.69.0), a monster's "deals more damage". */
@@ -177,8 +179,10 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
     /**
      * What a blow of [type] does to this fighter after its defences (server 0.66.0): "damage taken" of every
      * kind and of that kind together, never below a tenth so no stack of it makes a fighter untouchable.
+     * Chaos is the one exception: a keystone's immunity (3.17.0, server 1.15.0) takes none of it.
      */
     fun damageTaken(type: DamageType): Double {
+        if (type == DamageType.CHAOS && chaosImmune) return 0.0
         val own = when (type) {
             DamageType.PHYSICAL -> stat("STOCK_PHYSICAL_TAKEN")
             DamageType.CHAOS -> stat("STOCK_CHAOS_TAKEN")
@@ -822,6 +826,7 @@ class Battle(
                 me.body.ailmentTaken(active.ailment)
             if (slice <= 0 || !me.alive || me.invulnerable) return@forEach
             val chaos = active.ailment == Ailment.POISONED
+            if (chaos && me.body.chaosImmune) return@forEach
             var rest = slice
             if (me.barrier > 0) { val soaked = min(me.barrier, rest); me.barrier -= soaked; rest -= soaked }
             val absorbed = if (chaos) 0.0 else min(me.shield, rest)
@@ -1085,7 +1090,10 @@ class Battle(
         }
     }
 
-    /** The active slots in order: a ready one whose condition holds, or that was tapped, is used; one short of mana holds the rest back. */
+    /**
+     * The active slots in order: a ready one whose condition holds, or that was tapped, is used; one short of
+     * mana is passed over (3.17.0), so a cheaper heal or guard further down still answers.
+     */
     private fun useSkills() {
         val hero = heroFighter
         for ((slot, kitSkill) in kit.actives.withIndex()) {
@@ -1096,7 +1104,7 @@ class Battle(
             if (foeFighters.none { it.alive }) return
             val level = kitSkill.level(hero.body)
             val cost = cost(kitSkill, level)
-            if (hero.mana + 1e-9 < cost && !skillsFree()) { if (tapped) continue else return }
+            if (hero.mana + 1e-9 < cost && !skillsFree()) continue
             opened[slot] = true
             castSlot(slot, kitSkill, level, cost)
             if (!hero.alive || outcome != null) return

@@ -172,7 +172,7 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
     }
 
     /** What the merchant pays now, by the rules' price: base, rarity, a share per line, and `STOCK_GOLD`. */
-    fun sellPrice(stats: Map<String, Double>): Long = SellPrice.of(index, template, rarity, item.rolls.size, stats)
+    fun sellPrice(stats: Map<String, Double>): Long = SellPrice.of(index, template, item, stats)
 
     /** The item's lines summed by stat — a map's effects — as the server sums them on entry. */
     fun effects(): Map<String, Double> {

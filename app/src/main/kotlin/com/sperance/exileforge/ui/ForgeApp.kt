@@ -40,6 +40,8 @@ import com.sperance.exileforge.ui.screens.expedition.AtlasScreen
 import com.sperance.exileforge.ui.screens.expedition.ExpeditionPlay
 import com.sperance.exileforge.ui.screens.expedition.ExpeditionScreen
 import com.sperance.exileforge.ui.screens.hero.HeroScreen
+import com.sperance.exileforge.ui.screens.hero.HeroTab
+import com.sperance.exileforge.ui.screens.hero.HeroTabStrip
 import com.sperance.exileforge.ui.screens.redemption.RedemptionScreen
 import com.sperance.exileforge.ui.screens.server.ServerScreen
 import com.sperance.exileforge.ui.screens.session.AuthScreen
@@ -99,9 +101,9 @@ import com.sperance.exileforge.ui.theme.*
                     TAB_CRAFTS to ForgeGlyphs.Anvil, TAB_CITY to ForgeGlyphs.Keep, TAB_ADMIN to ForgeGlyphs.Scroll)
                 destinations.forEach { index ->
                     val label = labels.getValue(index)
-                    // The tree is the hero's (2.40.0): while it is open, the Hero tab reads as the one chosen.
+                    // The tree, the grimoire and the forge are the hero's (3.24.0): while one is open, the Hero tab reads as the one chosen.
                     // The City's tab tapped again from inside a building (3.22.0) walks back out to the square.
-                    NavigationBarItem(selected = s.tab == index || (index == TAB_HERO && (s.tab == TAB_TREE || s.tab == TAB_SKILLS)),
+                    NavigationBarItem(selected = s.tab == index || (index == TAB_HERO && HeroTab.of(s.tab) != null),
                         onClick = { if (index == TAB_CITY && s.tab == TAB_CITY) vm.building(null) else vm.tab(index) },
                         icon = { Icon(icons.getValue(index), null, modifier = Modifier.size(22.dp)) }, label = { Text(label, fontSize = 10.sp) },
                         colors = NavigationBarItemDefaults.colors(selectedIconColor = GoldBright, selectedTextColor = Gold,
@@ -116,6 +118,7 @@ import com.sperance.exileforge.ui.theme.*
             LaunchedEffect(s.play.heroId) { if (s.play.heroId.isNotBlank()) vm.loadCrafts(silent = true) }
             ForgeBanner(s, vm)
             if (s.busy || s.reading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised) else OrnateDivider(Gold)
+            HeroTab.of(s.tab)?.let { HeroTabStrip(it, vm::tab) }
             when (s.tab) {
                 TAB_ACCOUNT -> ServerScreen(s, vm, logs)
                 TAB_HERO -> HeroScreen(s, vm)

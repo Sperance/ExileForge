@@ -147,8 +147,9 @@ data class RunHud(
     /** The autorun under way, and what it has gathered (3.2.0). */
     val auto: AutoHud? = null,
     val autoReward: Reward? = null,
-    /** Events of the journal the server has not taken yet, and the ones it refused. */
+    /** Events of the journal the server has not taken yet, the number of the oldest of them, and the ones it refused. */
     val pending: Int = 0,
+    val applied: Int = 0,
     val rejected: Int = 0,
     /** The desecration on the hero, underfoot or trailing (3.4.0). */
     val desecration: DesecrationView? = null,
@@ -296,9 +297,10 @@ class ExpeditionRun(
     private var desecratedBy: Desecrated? = null
     private var trailLeft = 0.0
 
-    /** What a patch lays on this hero at this zone: its lines, cut by the hero's own guard against desecration. */
-    private fun desecrationLines(spot: Desecrated): Map<String, Double> =
-        desecration?.lines(spot.kind, zone.level, hero.stats[DesecrationRule.GUARD] ?: 0.0).orEmpty()
+    /** What a patch of [kind] lays on this hero at this zone: its lines, cut by the hero's own guard against desecration. */
+    fun desecrationLines(kind: DesecrationKind): Map<String, Double> =
+        desecration?.lines(kind, zone.level, hero.stats[DesecrationRule.GUARD] ?: 0.0).orEmpty()
+    private fun desecrationLines(spot: Desecrated): Map<String, Double> = desecrationLines(spot.kind)
 
     /** The map's lines with the desecration on the hero over them. */
     private fun effects(): Map<String, Double> = desecratedBy?.let { MapEffects.sum(mapEffects, desecrationLines(it)) } ?: mapEffects
@@ -310,6 +312,16 @@ class ExpeditionRun(
         trailLeft = if (under != null) rule.trail else (trailLeft - dt).coerceAtLeast(0.0)
         val next = under ?: desecratedBy?.takeIf { trailLeft > 0 }
         if (next !== desecratedBy) { desecratedBy = next; regear(build.gear) }
+        wound(dt)
+    }
+
+    /**
+     * The ground's degeneration on the road (3.4.0): the fight burns it in its own beat, the walk did not, so a
+     * patch laid its curses but never ate life. Off a fight it wounds to the last point: only a fight ends a run.
+     */
+    private fun wound(dt: Double) {
+        val share = hero.lifeDegenShare
+        if (share > 0 && life > 1) life = (life - hero.maxLife * share * dt).coerceAtLeast(1.0)
     }
     private var slain: RolledMonster? = null
     private var report: FightReport? = null
@@ -728,7 +740,7 @@ class ExpeditionRun(
             abyss = abyssView(), cracksLeft = world.standingCracks.size,
             bossDown = bossDown,
             auto = autopilot?.let { AutoHud(it.wave, it.waves) }, autoReward = autoReward,
-            pending = journal.pending.size, rejected = journal.rejected.size,
+            pending = journal.pending.size, applied = journal.applied, rejected = journal.rejected.size,
             desecration = desecratedBy?.let { DesecrationView(it.kind, desecrationLines(it), world.underfoot === it, trailLeft) },
         )
     }

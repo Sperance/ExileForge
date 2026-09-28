@@ -4,7 +4,9 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -24,6 +26,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
@@ -31,6 +34,7 @@ import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
@@ -41,9 +45,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.campaign.*
+import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.ItemVisualKind
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.bagVisualKind
@@ -67,6 +73,7 @@ import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.expedition.scene.Portraits
 import com.sperance.exileforge.ui.screens.skills.FlaskBottle
+import com.sperance.exileforge.ui.screens.skills.SkillFacts
 import com.sperance.exileforge.ui.theme.*
 import java.util.Locale
 import kotlin.math.PI
@@ -201,6 +208,8 @@ private const val HERO_CARD = -1
     val chosen = fight.focus ?: fight.target ?: fight.foes.firstOrNull { it.alive }?.index
     // The tiles are larger while the fight stands still; a tap on any of them opens its window at any time (2.73.0).
     val large = fight.scouting
+    // The skill whose page is open over the fight (3.24.0); the fight holds still while it is read.
+    var info by remember { mutableStateOf<SkillView?>(null) }
     fun track(key: Int) = Modifier.onGloballyPositioned { bounds[key] = it.boundsInRoot() }
     Box(Modifier.fillMaxSize().onGloballyPositioned { origin = it.positionInRoot() }) {
         Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 10.dp, vertical = 8.dp),
@@ -224,10 +233,11 @@ private const val HERO_CARD = -1
             }
             HeroCard(s, hud, fight, time, names, stance, track(HERO_CARD), large)
             // The skills and the belt (2.78.0): under the hero, over the fight's own controls.
-            if (fight.skills.any { it != null } || fight.flasks.any { it != null }) ActionBar(fight, onCommand)
+            if (fight.skills.any { it != null } || fight.flasks.any { it != null }) ActionBar(fight, onCommand) { info = it }
             Controls(fight, onCommand)
         }
         StrikeLine(fight.lunge, bounds, origin)
+        info?.let { view -> FightSkillSheet(s, view, onCommand) { info = null } }
         // A win says so in the rewards window itself (2.73.0); only a loss or a retreat is announced here.
         fight.outcome?.takeIf { it != Outcome.WIN }?.let {
             Text(ui("expedition.outcome_${it.name.lowercase()}"), color = outcomeColour(it), style = MaterialTheme.typography.headlineMedium,
@@ -315,7 +325,7 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
             CardHits(fight.hits.filter { it.target == Side.MONSTER && it.foe == foe.index })
         }
         Text(monsterTitle(foe.monster.code), color = ring, fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        LifeBar(foe.life, foe.maxLife, foe.shield, foe.maxShield, Modifier.fillMaxWidth().height(12.dp), compact = true)
+        LifeBar(foe.life, foe.maxLife, foe.shield, foe.maxShield, Modifier.fillMaxWidth().height(12.dp))
         // A caster's or a boss's mana (2.78.0), a thread under its life: what its spells are paid with.
         if (foe.maxMana > 0) Box(Modifier.fillMaxWidth().height(3.dp).background(Color(0x14FFFFFF), RoundedCornerShape(2.dp))) {
             Box(Modifier.fillMaxWidth((foe.mana / foe.maxMana.toFloat()).coerceIn(0f, 1f)).fillMaxHeight().background(ManaBlue, RoundedCornerShape(2.dp)))
@@ -382,8 +392,10 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
                 if (fight.heroTaunt) TauntSeal(time, Modifier.size(22.dp)) { tauntTip(true) }
                 fight.loneWolf?.let { rule -> LoneWolfMedal(Modifier.size(24.dp)) { loneWolfTip(rule) } }
             }
-            LifeBar(fight.heroLife, hud.heroMaxLife, fight.heroShield, hud.heroMaxShield, Modifier.fillMaxWidth().height(16.dp), barrier = fight.heroBarrier)
-            if (fight.heroMaxMana > 0) ManaBar(fight.heroMana, fight.heroMaxMana, Modifier.fillMaxWidth().height(10.dp))
+            // The pools as bars of their own (3.24.0): the shield over life, mana under it, each with its figures and share.
+            if (hud.heroMaxShield > 0) VitalBar(fight.heroShield, hud.heroMaxShield, ShieldCyan, Modifier.fillMaxWidth().height(16.dp))
+            VitalBar(fight.heroLife, hud.heroMaxLife, LifeRed, Modifier.fillMaxWidth().height(18.dp), ring = GoldBright.takeIf { fight.heroBarrier > 0 })
+            if (fight.heroMaxMana > 0) VitalBar(fight.heroMana, fight.heroMaxMana, ManaBlue, Modifier.fillMaxWidth().height(16.dp))
             SwingBar(fight.heroSwing, fight.heroHeld, Modifier.fillMaxWidth())
             StateTiles(fight.heroAilments, fight.heroHeld, fight.heroEffects)
             // The combat pet beside the hero (3.5.0): its name and life; down, it waits for the fight's end.
@@ -391,7 +403,7 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(com.sperance.exileforge.ui.screens.hero.petName(ally.species), color = if (ally.alive) Vital else Muted,
                         style = MaterialTheme.typography.labelSmall, maxLines = 1, modifier = Modifier.width(96.dp))
-                    LifeBar(ally.life, ally.maxLife, 0, 0, Modifier.weight(1f).height(8.dp), compact = true)
+                    LifeBar(ally.life, ally.maxLife, 0, 0, Modifier.weight(1f).height(10.dp))
                 }
             }
             val target = fight.target?.let(names::get)
@@ -529,40 +541,49 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
     }
 }
 
-/** A life bar with the shield laid over its top edge and the figures written across it. */
-@Composable private fun LifeBar(life: Int, maxLife: Int, shield: Int, maxShield: Int, modifier: Modifier, compact: Boolean = false, barrier: Int = 0) {
-    val shape = RoundedCornerShape(3.dp)
-    val share by animateFloatAsState(if (maxLife > 0) life / maxLife.toFloat() else 0f, label = "life")
-    // A barrier (2.78.0) rings the bar in gold-white while it soaks.
-    Box(modifier.background(Color(0xCC0A0D12), shape).border(if (barrier > 0) 2.dp else 1.dp, if (barrier > 0) GoldBright else Gold.copy(alpha = .7f), shape)) {
-        Box(Modifier.fillMaxWidth(share.coerceIn(0f, 1f)).fillMaxHeight().background(Brush.horizontalGradient(listOf(LifeRed, LifeRed.copy(alpha = .55f))), shape))
-        if (maxShield > 0) Box(Modifier.fillMaxWidth((shield / maxShield.toFloat()).coerceIn(0f, 1f)).height(4.dp).background(ShieldCyan.copy(alpha = .85f)))
-        Text(if (compact) "$life" else if (maxShield > 0) ui("expedition.vitals_shield", life, maxLife, shield) else ui("expedition.vitals", life, maxLife),
-            color = GoldBright, fontSize = if (compact) 8.sp else 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.Center))
-    }
-}
-
-/** Mana (2.78.0) under life: what the skills are paid with, and what the auras leave of it. */
-@Composable private fun ManaBar(mana: Int, maxMana: Int, modifier: Modifier) {
-    val shape = RoundedCornerShape(2.dp)
-    val share by animateFloatAsState(if (maxMana > 0) mana / maxMana.toFloat() else 0f, label = "mana")
-    Box(modifier.background(Color(0xCC0A0D12), shape).border(1.dp, ManaBlue.copy(alpha = .8f), shape)) {
-        Box(Modifier.fillMaxWidth(share.coerceIn(0f, 1f)).fillMaxHeight().background(Brush.horizontalGradient(listOf(ManaBlue, ManaBlue.copy(alpha = .5f))), shape))
-        Text(ui("fight.mana", mana, maxMana), color = GoldBright, fontSize = 8.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.Center))
+/** A foe's or a pet's life bar: the shield laid over its top edge and the life written across it. */
+@Composable private fun LifeBar(life: Int, maxLife: Int, shield: Int, maxShield: Int, modifier: Modifier) {
+    Box(modifier) {
+        VitalBar(life, maxLife, LifeRed, Modifier.fillMaxSize(), text = "$life", size = 8.sp)
+        if (maxShield > 0) Box(Modifier.padding(horizontal = 3.dp).fillMaxWidth((shield / maxShield.toFloat()).coerceIn(0f, 1f)).height(3.dp)
+            .background(ShieldCyan.copy(alpha = .9f), RoundedCornerShape(50)))
     }
 }
 
 /**
+ * One pool as a bar (3.24.0): a rounded dark track with a soft border of the pool's colour, the fill lit from above,
+ * and the figures — now / most · share — across it in a shadowed type that reads over the fill and the track alike.
+ * [ring] outlines it brighter, as a barrier (2.78.0) does the hero's life while it soaks.
+ */
+@Composable private fun VitalBar(value: Int, max: Int, tint: Color, modifier: Modifier, ring: Color? = null,
+                                 text: String = vitalFigures(value, max), size: TextUnit = 10.sp) {
+    val shape = RoundedCornerShape(50)
+    val share by animateFloatAsState(if (max > 0) (value / max.toFloat()).coerceIn(0f, 1f) else 0f, label = "vital")
+    Box(modifier.clip(shape).background(Brush.verticalGradient(listOf(Color(0xE6050709), Color(0xCC161B23))), shape)
+        .border(if (ring != null) 2.dp else 1.dp, ring ?: tint.copy(alpha = .45f), shape), contentAlignment = Alignment.Center) {
+        Box(Modifier.align(Alignment.CenterStart).fillMaxWidth(share).fillMaxHeight().clip(shape)
+            .background(Brush.verticalGradient(listOf(lerp(tint, Color.White, .35f), tint, tint.copy(alpha = .7f)))))
+        Text(text, color = Color.White, fontSize = size, lineHeight = size, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false,
+            style = LocalTextStyle.current.copy(shadow = Shadow(Color.Black, Offset(0f, 1f), 3f)))
+    }
+}
+
+/** A pool's figures on its bar: now and most, and the share as a whole percent. */
+private fun vitalFigures(value: Int, max: Int): String =
+    "$value / $max · ${if (max > 0) (value * 100f / max).roundToInt() else 0}%"
+
+/**
  * The hero's skills and belt in the fight (2.78.0): the three active slots — dark while they recover,
  * dim while the mana is short — then the three flasks, filled to their charges and ringed while one runs.
- * A tap uses a skill or drinks a flask at once, whatever its condition.
+ * A tap uses a skill or drinks a flask at once, whatever its condition; a long press on a skill, or its «i»,
+ * opens its page (3.24.0).
  */
-@Composable private fun ActionBar(fight: FightHud, onCommand: (RunCommand) -> Unit) {
+@Composable private fun ActionBar(fight: FightHud, onCommand: (RunCommand) -> Unit, onInfo: (SkillView) -> Unit) {
     val live = fight.started && fight.outcome == null && !fight.retreating
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
         fight.skills.forEach { view ->
             if (view == null) Box(Modifier.weight(1f).height(52.dp).border(1.dp, Bronze.copy(alpha = .35f), RoundedCornerShape(8.dp)))
-            else SkillButton(view, live, Modifier.weight(1f)) { onCommand(RunCommand.Cast(view.slot)) }
+            else SkillButton(view, live, Modifier.weight(1f), onInfo = { onInfo(view) }) { onCommand(RunCommand.Cast(view.slot)) }
         }
         Spacer(Modifier.width(4.dp))
         fight.flasks.forEach { view ->
@@ -572,13 +593,14 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
     }
 }
 
-@Composable private fun SkillButton(view: SkillView, live: Boolean, modifier: Modifier, onTap: () -> Unit) {
+@OptIn(ExperimentalFoundationApi::class)
+@Composable private fun SkillButton(view: SkillView, live: Boolean, modifier: Modifier, onInfo: () -> Unit, onTap: () -> Unit) {
     val shape = RoundedCornerShape(8.dp)
     val ready = view.ready >= 1f
     // A skill that can go now glows (2.80.0, «Эфир»): the light is the readiness.
     Box(modifier.height(52.dp).glow(Gold, on = ready && view.affordable, radius = 10.dp, shape = shape).clip(shape).background(PanelRaised, shape)
         .border(if (ready && view.affordable) 1.5.dp else 1.dp, if (ready && view.affordable) Gold else Bronze, shape)
-        .clickable(enabled = live && ready && view.affordable, onClick = onTap)
+        .combinedClickable(onLongClick = onInfo) { if (live && ready && view.affordable) onTap() }
         .semantics { contentDescription = SkillText.title(view.code) }) {
         SkillGlyph(view.icon, Modifier.size(26.dp).align(Alignment.Center), if (view.affordable) GoldBright else Muted)
         // What is left to recover darkens the button from the top, as a flask's charge fills it from the bottom.
@@ -589,6 +611,39 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
         if (view.condition == SlotCondition.MANUAL)
             Text("✋", fontSize = 9.sp, modifier = Modifier.align(Alignment.TopStart).padding(2.dp))
         Text("${view.level}", color = Gold, fontSize = 9.sp, modifier = Modifier.align(Alignment.TopEnd).padding(end = 3.dp))
+        Box(Modifier.align(Alignment.BottomStart).size(18.dp).clickable(onClickLabel = ui("fight.skill_info"), onClick = onInfo), contentAlignment = Alignment.Center) {
+            Text("i", color = Muted, fontSize = 9.sp, fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic,
+                modifier = Modifier.size(12.dp).border(1.dp, Muted.copy(alpha = .6f), CircleShape).wrapContentSize(Alignment.Center))
+        }
+    }
+}
+
+/**
+ * A skill's page over the fight (3.24.0): what the grimoire says of it at its level — damage, cost, cooldown,
+ * preparation and effects — with the condition its slot fires on. The fight holds while the page is open.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable private fun FightSkillSheet(s: ForgeState, view: SkillView, onCommand: (RunCommand) -> Unit, onDismiss: () -> Unit) {
+    DisposableEffect(view.slot) {
+        onCommand(RunCommand.Hold(true))
+        onDispose { onCommand(RunCommand.Hold(false)) }
+    }
+    val index = s.index
+    val skill = index?.skills?.byCode?.get(view.code)
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel) {
+        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 18.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                SkillGlyph(view.icon, Modifier.size(40.dp), GoldBright)
+                Column(Modifier.weight(1f)) {
+                    Text(SkillText.title(view.code), color = GoldBright, style = MaterialTheme.typography.titleLarge)
+                    skill?.let { Text(skillKindLine(it), color = Muted, style = MaterialTheme.typography.labelMedium) }
+                }
+                Text(ui("skills.level_short", view.level), color = Gold, style = MaterialTheme.typography.titleLarge)
+            }
+            if (index != null && skill != null) SkillFacts(index, skill, view.level, s.hero?.stats.orEmpty(), condition = view.condition)
+            else MutedText(ui("common.loading"))
+        }
     }
 }
 
@@ -796,8 +851,11 @@ private fun hitColour(hit: FloatingHit): Color = when {
 
 internal fun outcomeColour(outcome: Outcome) = when (outcome) { Outcome.WIN -> Vital; Outcome.LOSS -> LifeRed; Outcome.RETREAT -> Muted }
 
-/** What the run's seed rolled — experience, gold, orbs and items — for a kill and a chest alike; each item as its whole card (3.2.0). */
-@Composable internal fun RewardLines(s: ForgeState, reward: Reward) {
+/**
+ * What the run's seed rolled — experience, gold, orbs and items — for a kill and a chest alike; each item as its whole card (3.2.0).
+ * With [onItem] a card opens its comparison with what is worn (3.24.0).
+ */
+@Composable internal fun RewardLines(s: ForgeState, reward: Reward, onItem: ((ItemView) -> Unit)? = null) {
     Column(Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             if (reward.experience > 0) Text(ui("expedition.loot_experience", number(reward.experience)), color = Rune)
@@ -811,7 +869,10 @@ internal fun outcomeColour(outcome: Outcome) = when (outcome) { Outcome.WIN -> V
         }
         reward.equipment.forEach { instance ->
             // The whole card, not a line (3.2.0): what dropped is read where it dropped
-            s.view(instance)?.let { item -> ItemCard(item, enabled = false, detailed = true, price = s.sellPrice(instance)) }
+            s.view(instance)?.let { item ->
+                if (onItem == null) ItemCard(item, enabled = false, detailed = true, price = s.sellPrice(instance))
+                else ItemCard(item, detailed = true, actionLabel = ui("expedition.loot_compare"), action = true, price = s.sellPrice(instance)) { onItem(item) }
+            }
         }
         if (reward.items.isEmpty() && reward.equipment.isEmpty()) Text(ui("expedition.loot_nothing"), color = Muted)
     }

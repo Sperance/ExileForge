@@ -70,9 +70,14 @@ private val Medals = listOf(Color(0xFFC08457), Color(0xFFC9D1D9), Color(0xFFFFD1
                     FilterChip(selected = hero.info.title == code, enabled = !s.busy, onClick = { vm.setTitle(code) }, label = { Text(titleName(code)) })
                 }
             }
+            // Only what the hero has begun: an untouched achievement or counter is noise, not a record.
+            val begun = achievements.achievements.filter { (values[it.counter] ?: 0L) > 0L }
             Engraved(ui("chronicle.achievements"))
-            achievements.achievements.forEach { AchievementRow(it, values[it.counter] ?: 0L) }
-            Counter.SECTIONS.forEach { (section, counters) ->
+            if (begun.isEmpty()) MutedText(ui("chronicle.nothing_yet"))
+            begun.forEach { AchievementRow(it, values[it.counter] ?: 0L) }
+            Counter.SECTIONS.forEach { (section, all) ->
+                val counters = all.filter { (values[it] ?: 0L) > 0L }
+                if (counters.isEmpty()) return@forEach
                 Engraved(ui("chronicle.section.$section"))
                 counters.forEach { counter ->
                     Row(Modifier.fillMaxWidth()) {

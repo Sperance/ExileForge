@@ -11,8 +11,8 @@ android {
         applicationId = "com.sperance.exileforge"
         minSdk = 26
         targetSdk = 37
-        versionCode = 149
-        versionName = "3.23.1"
+        versionCode = 150
+        versionName = "3.24.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures { compose = true }

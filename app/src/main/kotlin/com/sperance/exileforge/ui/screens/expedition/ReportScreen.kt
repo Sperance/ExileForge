@@ -32,6 +32,7 @@ import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.recipeText
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.view
@@ -51,7 +52,7 @@ import java.util.Locale
  * what the run had gathered. The fight itself is a row of figures at the foot, and its log unfolds
  * from there. Since 3.0.0 the spoils are the run's own roll, made the moment the foe fell: nothing here waits.
  */
-@Composable internal fun ReportScreen(s: ForgeState, hud: RunHud, report: FightReport, onContinue: () -> Unit) {
+@Composable internal fun ReportScreen(s: ForgeState, vm: ForgeViewModel, hud: RunHud, report: FightReport, onContinue: () -> Unit) {
     val won = report.outcome == Outcome.WIN
     var logOpen by remember { mutableStateOf(false) }
     var looked by remember { mutableStateOf<ItemView?>(null) }
@@ -71,7 +72,8 @@ import java.util.Locale
             Text(ui(if (won) "expedition.continue" else "expedition.back_to_camp"), style = MaterialTheme.typography.titleMedium)
         }
     }
-    looked?.let { item -> LootCard(s, item) { looked = null } }
+    // Compared and worn right here (3.24.0), as on the gear sheet.
+    looked?.let { item -> LootSheet(s, vm, item) { looked = null } }
 }
 
 /** The scene: the monster's round token in its rarity's ring, lit warm for a victory and red for a defeat, and the outcome in words. */
@@ -192,16 +194,5 @@ import java.util.Locale
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         Icon(icon, null, tint = Muted, modifier = Modifier.size(13.dp))
         Text(value, color = Parchment, style = MaterialTheme.typography.labelMedium)
-    }
-}
-
-/** A piece of the spoils, compared: its card again with what wearing it would change. */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable private fun LootCard(s: ForgeState, item: ItemView, onDismiss: () -> Unit) {
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            ItemCard(item, enabled = false, detailed = true, price = s.sellPrice(item.item))
-            WearPreview(s, item.item)
-        }
     }
 }

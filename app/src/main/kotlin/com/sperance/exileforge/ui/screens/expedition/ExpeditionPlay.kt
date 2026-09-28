@@ -31,6 +31,7 @@ import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.ui.screens.expedition.scene.Palettes
+import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.sellPrice
@@ -54,12 +55,16 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import com.sperance.exileforge.core.display.Glyph
+import com.sperance.exileforge.core.display.fineNumber
+import com.sperance.exileforge.core.display.statDescription
+import com.sperance.exileforge.core.display.statPercent
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.display.statValue
-import com.sperance.exileforge.rules.content.MonsterRarity
-import com.sperance.exileforge.ui.icons.StatIcon
+import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
+import kotlinx.coroutines.delay
 
 /**
  * A run of the campaign, over the whole screen: the scene underneath, the overlay above.
@@ -94,10 +99,10 @@ import kotlin.math.floor
                 // An autorun walks by itself (3.2.0): no stick under the thumb while it runs
                 if (hud.auto == null) Stick(run)
                 MapBar(s, run, hud, onLeave = if (zone) null else ({ leaving = true }), onGear = { gear = true }, onStats = { sheet = true },
-                    onDrink = { vm.runCommand(RunCommand.Drink(it)) })
+                    onDrink = { vm.runCommand(RunCommand.Drink(it)) }, onRetry = vm::flushRun)
                 if (gear) { HoldsRun(run); GearSheet(s, vm) { gear = false } }
                 if (sheet) { HoldsRun(run); StatsSheet(s, run.mapEffects) { sheet = false } }
-                hud.chest?.let { ChestLoot(s, it) { vm.runCommand(RunCommand.DismissChest) } }
+                hud.chest?.let { ChestLoot(s, vm, run, it) { vm.runCommand(RunCommand.DismissChest) } }
                 if (leaving) ConfirmSheet(title = ui("expedition.leave_q"), confirm = ui("expedition.leave"), danger = true,
                     subtitle = mapTitle(hud.mapCode),
                     ledger = listOf(LedgerLine(ui("expedition.leave_left"), ui(if (hud.sealed) "expedition.boss_alive" else "expedition.boss_slain"), Tone.SPEND)),
@@ -105,20 +110,17 @@ import kotlin.math.floor
             }
             RunPhase.FIGHT -> hud.fight?.let { ArenaOverlay(s, hud, it, it.level.takeIf { level -> level > 0 } ?: run.zone.level, run.rules, run.stance, onCommand = vm::runCommand) }
             // The fight is over: its report — the log, what it came to, and the loot of a victory.
-            RunPhase.LOOT -> hud.report?.let { ReportScreen(s, hud, it) { vm.runCommand(RunCommand.Continue) } }
-            RunPhase.DEAD -> hud.report?.let { ReportScreen(s, hud, it) { vm.runCommand(RunCommand.Continue) } }
+            RunPhase.LOOT -> hud.report?.let { ReportScreen(s, vm, hud, it) { vm.runCommand(RunCommand.Continue) } }
+            RunPhase.DEAD -> hud.report?.let { ReportScreen(s, vm, hud, it) { vm.runCommand(RunCommand.Continue) } }
                 ?: Ending(ui("expedition.dead"), ui(if (zone) "vaal.dead_hint" else "expedition.dead_hint"), LifeRed, hud,
                     if (zone) ui("vaal.back") else ui("expedition.back_to_camp")) { vm.runCommand(RunCommand.Continue) }
             RunPhase.CLEARED -> if (zone) Ending(ui("vaal.done"), ui("vaal.done_hint"), Vital, hud, ui("vaal.back")) { vm.runCommand(RunCommand.Continue) }
-                else if (hud.autoReward != null) AutoReport(s, hud) { vm.runCommand(RunCommand.Continue) }
+                else if (hud.autoReward != null) AutoReport(s, vm, hud) { vm.runCommand(RunCommand.Continue) }
                 else Ending(ui("expedition.map_done"), ui("expedition.map_done_hint"), Vital, hud) { vm.runCommand(RunCommand.Continue) }
             RunPhase.GATE -> VaalGate(s, hud, run.zone.corrupted.takeIf { it.isNotBlank() }, onEnter = vm::enterVaal, onRefuse = vm::refuseVaal) { vm.runCommand(RunCommand.StepBack) }
             RunPhase.CRYSTAL -> hud.crystal?.let { CrystalSheet(s, it, onCommand = vm::runCommand) }
             RunPhase.ABYSS -> hud.abyss?.let { AbyssSheet(s, hud, it, onCommand = vm::runCommand) }
             RunPhase.LEFT -> Unit
-        }
-        hud.desecration?.takeIf { hud.phase == RunPhase.MAP || hud.phase == RunPhase.FIGHT }?.let {
-            DesecrationBadge(it, Modifier.align(Alignment.TopStart).statusBarsPadding().padding(start = 8.dp, top = 96.dp))
         }
         hud.auto?.takeIf { hud.phase == RunPhase.MAP || hud.phase == RunPhase.FIGHT }?.let { auto ->
             AutoBar(auto, Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 8.dp)) { vm.runCommand(RunCommand.StopAuto) }
@@ -133,10 +135,10 @@ import kotlin.math.floor
 /**
  * Life and shield, the map's name and whether its warden still lives, and the way out. Nothing
  * comes back on its own between fights (2.29.0) but a fountain. What the map still holds — foes, chests, fountains — is the walk's to find (2.56.1).
- * The journal's unsent events are counted quietly under the name; a slain guardian is not bought back (3.2.0) — it returns in its time.
+ * The journal's events the server has not taken for a while are counted under the name, a tap sends them now; a slain guardian is not bought back (3.2.0) — it returns in its time.
  */
 @Composable private fun MapBar(s: ForgeState, run: ExpeditionRun, hud: RunHud, onLeave: (() -> Unit)?, onGear: () -> Unit, onStats: () -> Unit,
-                               onDrink: (Int) -> Unit) {
+                               onDrink: (Int) -> Unit, onRetry: () -> Unit) {
     Column(Modifier.fillMaxWidth().statusBarsPadding().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             // The way out (2.56.1): a portal in a bronze ring, first thing in the corner, and it asks before it goes.
@@ -152,7 +154,9 @@ import kotlin.math.floor
                     style = MaterialTheme.typography.titleMedium, maxLines = 2)
                 Text(ui(when { zone && hud.sealed -> "vaal.guardian_alive"; zone -> "vaal.guardian_slain"; hud.sealed -> "expedition.boss_alive"; else -> "expedition.boss_slain" }),
                     color = if (hud.sealed) LifeRed else Vital, style = MaterialTheme.typography.labelMedium)
-                Journal(hud)
+                Journal(hud, onRetry)
+                // The ground on the hero, a chip right over the bars it eats (3.4.x): off the corner's buttons.
+                hud.desecration?.let { DesecrationBadge(it) }
                 // Life under the map's name (2.72.0), out of the middle of the view; the mana and the belt under it (2.78.0).
                 Vitals(hud.heroLife, hud.heroMaxLife, hud.heroShield, hud.heroMaxShield, Modifier.fillMaxWidth(), hud.heroMana, hud.heroMaxMana)
                 if (hud.flasks.any { it != null }) MapFlasks(hud.flasks, onDrink)
@@ -192,11 +196,19 @@ import kotlin.math.floor
  * The journal, quietly (3.0.0): how many events the server has not taken yet, and how many it refused.
  * Nothing while everything is counted — the run does not talk about its bookkeeping unprompted.
  */
-@Composable private fun Journal(hud: RunHud) {
-    if (hud.pending == 0 && hud.rejected == 0) return
-    Text(listOfNotNull(ui("expedition.pending", hud.pending).takeIf { hud.pending > 0 }, ui("expedition.rejected", hud.rejected).takeIf { hud.rejected > 0 }).joinToString(" · "),
-        color = if (hud.rejected > 0) LifeRed.copy(alpha = .85f) else Muted, style = MaterialTheme.typography.labelSmall)
+@Composable private fun Journal(hud: RunHud, onRetry: (() -> Unit)? = null) {
+    // Only an oldest event the server has not taken for a while is worth a word: a batch in flight is not news.
+    var overdue by remember { mutableStateOf(false) }
+    LaunchedEffect(hud.pending > 0, hud.applied) { overdue = false; if (hud.pending > 0) { delay(PENDING_GRACE); overdue = true } }
+    val waiting = hud.pending > 0 && overdue
+    if (!waiting && hud.rejected == 0) return
+    Text(listOfNotNull(ui("expedition.pending", hud.pending).takeIf { waiting }, ui("expedition.rejected", hud.rejected).takeIf { hud.rejected > 0 }).joinToString(" · "),
+        color = if (hud.rejected > 0) LifeRed.copy(alpha = .85f) else Muted, style = MaterialTheme.typography.labelSmall,
+        modifier = onRetry?.takeIf { waiting }?.let { Modifier.clickable(onClick = it) } ?: Modifier)
 }
+
+/** How long the journal's oldest unsent event waits before the run says so. */
+private const val PENDING_GRACE = 10_000L
 
 /** The run stands still for as long as this is in the composition (2.73.0): a window over the map pauses it. */
 @Composable private fun HoldsRun(run: ExpeditionRun) {
@@ -271,7 +283,7 @@ private fun DrawScope.drawExplored(world: ExpeditionWorld, origin: Offset, cell:
     world.fountains.filter { !it.used && world.explored(it.cell.x, it.cell.y) }.forEach { mark(it.cell.x + .5, it.cell.y + .5, ShieldCyan) }
     world.crystals.filter { !it.freed && world.explored(it.cell.x, it.cell.y) }.forEach { mark(it.cell.x + .5, it.cell.y + .5, CrystalViolet) }
     world.cracks.filter { !it.opened && world.explored(it.cell.x, it.cell.y) }.forEach { mark(it.cell.x + .5, it.cell.y + .5, AbyssGlow, dot * 1.2f) }
-    world.portal?.takeIf { world.explored(it.x, it.y) }?.let { mark(it.x + .5, it.y + .5, LifeRed, dot * 1.2f) }
+    world.portal?.takeIf { world.explored(it.x, it.y) }?.let { mark(it.x + .5, it.y + .5, PortalTint, dot * 1.2f) }
     if (world.explored(map.exit.x, map.exit.y)) mark(map.exit.x + .5, map.exit.y + .5, if (world.sealed) LifeRed else Vital, dot * 1.4f)
     if (monsters) world.agents.filter { it.alive && world.lit(it.x.toInt(), it.y.toInt()) }.forEach { agent ->
         mark(agent.x, agent.y, Color.Black, dot * 1.25f)
@@ -315,28 +327,28 @@ private fun DrawScope.drawExplored(world: ExpeditionWorld, origin: Offset, cell:
             }
             Engraved(ui("map.legend"))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Legend(Gold, ui("map.legend_hero")); Legend(GoldBright, ui("map.legend_chest")); Legend(ShieldCyan, ui("map.legend_fountain"))
-                Legend(Vital, ui("map.legend_exit")); Legend(LifeRed, ui("map.legend_sealed")); Legend(Color(0xFFFF8A78), ui("map.legend_portal"))
-                Legend(CrystalViolet, ui("map.legend_crystal")); Legend(AbyssGlow, ui("map.legend_abyss"))
-                MonsterRarity.entries.forEach { Legend(rarityTint(it), ui(it.key())) }
+                legendOf(world).forEach { (tint, text) -> Legend(tint, text) }
             }
             if (run.mapEffects.isNotEmpty()) {
                 Engraved(ui("map.modifiers"))
+                // Read as an item's modifiers read, a sentence under its glyph, only without a tier: the lines are the map's and the atlas's summed.
                 run.mapEffects.forEach { (stat, value) ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Tipped({ Tip(statTitle(stat), tint = ModBlue, facts = listOf(ui("tip.value") to statValue(stat, value))) }) { StatIcon(stat, Rune, Modifier.size(16.dp)) }
-                        Text(statTitle(stat), color = ModBlue, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-                        Text(statValue(stat, value), color = ModBlue, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
-                    }
+                    Tipped({ Tip(statTitle(stat), statDescription(stat), ModBlue) }) { ModifierLine(effectText(run, stat, value), Glyph.ofStat(stat)) }
                 }
             } else MutedText(ui("map.no_modifiers"))
             if (world.desecrated.isNotEmpty()) {
                 Engraved(ui("map.desecration"))
                 world.desecrated.groupingBy { it.kind }.eachCount().forEach { (kind, count) ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.size(10.dp).background(Palettes.desecration(kind.group), CircleShape))
-                        Text(loc("desecration.${kind.code}") + if (count > 1) " ×$count" else "", color = Parchment, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-                        Text(loc("desecration.group.${kind.group}"), color = Palettes.desecration(kind.group), style = MaterialTheme.typography.labelSmall)
+                    val tint = Palettes.desecration(kind.group)
+                    val name = loc("desecration.${kind.code}")
+                    // What a patch of this kind would lay on the hero right now, at this zone and under the hero's guard.
+                    Tipped({ Tip(name, loc("desecration.group.${kind.group}"), tint,
+                        listOf(ui("map.desecration_count") to "$count") + run.desecrationLines(kind).map { (stat, value) -> statTitle(stat) to statValue(stat, value) }) }) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.size(10.dp).background(tint, CircleShape))
+                            Text(name + if (count > 1) " ×$count" else "", color = Parchment, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                            Text(loc("desecration.group.${kind.group}"), color = tint, style = MaterialTheme.typography.labelSmall)
+                        }
                     }
                 }
                 MutedText(ui("map.desecration_hint"))
@@ -345,8 +357,32 @@ private fun DrawScope.drawExplored(world: ExpeditionWorld, origin: Offset, cell:
     }
 }
 
+/**
+ * The marks the whole map draws that stand on it now and are in sight: a chest found and still shut, the exit
+ * once seen in the colour it has, the monsters of each rarity in the hero's light. The hero is always there.
+ */
+private fun legendOf(world: ExpeditionWorld): List<Pair<Color, String>> = buildList {
+    add(Gold to ui("map.legend_hero"))
+    if (world.chests.any { !it.opened && world.explored(it.cell.x, it.cell.y) }) add(GoldBright to ui("map.legend_chest"))
+    if (world.fountains.any { !it.used && world.explored(it.cell.x, it.cell.y) }) add(ShieldCyan to ui("map.legend_fountain"))
+    if (world.crystals.any { !it.freed && world.explored(it.cell.x, it.cell.y) }) add(CrystalViolet to ui("map.legend_crystal"))
+    if (world.cracks.any { !it.opened && world.explored(it.cell.x, it.cell.y) }) add(AbyssGlow to ui("map.legend_abyss"))
+    if (world.portal?.let { world.explored(it.x, it.y) } == true) add(PortalTint to ui("map.legend_portal"))
+    val exit = world.map.exit
+    if (world.explored(exit.x, exit.y)) add(if (world.sealed) LifeRed to ui("map.legend_sealed") else Vital to ui("map.legend_exit"))
+    world.agents.filter { it.alive && world.lit(it.x.toInt(), it.y.toInt()) }.map { it.monster.rarity }.distinct().sorted()
+        .forEach { add(rarityTint(it) to ui(it.key())) }
+}
+
+/** «+15% Здоровье монстров карты»: a map's summed effect as a modifier's sentence, the percent where the stat counts in it. */
+private fun effectText(run: ExpeditionRun, stat: String, value: Double): String =
+    (if (value >= 0) "+" else "−") + fineNumber(abs(value)) + (if (statPercent(stat, run.index)) "%" else "") + " " + statTitle(stat)
+
+/** The Vaal portal's mark on the maps and in their legend. */
+private val PortalTint = Color(0xFFFF8A78)
+
 /** The desecration on the hero (3.4.0): its name in its group's colour, the trail left once stepped off, its lines on a touch. */
-@Composable private fun DesecrationBadge(view: DesecrationView, modifier: Modifier) {
+@Composable private fun DesecrationBadge(view: DesecrationView, modifier: Modifier = Modifier) {
     val tint = Palettes.desecration(view.kind.group)
     val name = loc("desecration.${view.kind.code}")
     Tipped({ Tip(name, tint = tint, facts = view.lines.map { (stat, value) -> statTitle(stat) to statValue(stat, value) }) }, modifier) {
@@ -439,16 +475,19 @@ private const val MINIMAP_MAX = 60f
 
 /**
  * What a chest brought (since 2.33.0), at the foot of the map while the hero walks on: the run's own
- * roll, made the moment the lid went up (3.0.0), and a button that puts it away.
+ * roll, made the moment the lid went up (3.0.0), and a button that puts it away. A piece opens its
+ * comparison with what is worn and can be worn at once (3.24.0); the map holds still while it is open.
  */
-@Composable private fun ChestLoot(s: ForgeState, reward: Reward, onClose: () -> Unit) {
+@Composable private fun ChestLoot(s: ForgeState, vm: ForgeViewModel, run: ExpeditionRun, reward: Reward, onClose: () -> Unit) {
+    var looked by remember(reward) { mutableStateOf<ItemView?>(null) }
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         RunPanel(Modifier, GoldBright) {
             Text(ui("expedition.chest"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
-            RewardLines(s, reward)
+            RewardLines(s, reward) { looked = it }
             ForgeOutlinedButton(onClick = onClose, modifier = Modifier.fillMaxWidth()) { Text(ui("common.close")) }
         }
     }
+    looked?.let { item -> HoldsRun(run); LootSheet(s, vm, item) { looked = null } }
 }
 
 // ==================== After ====================
@@ -477,8 +516,9 @@ private const val MINIMAP_MAX = 60f
 }
 
 /** The autorun is done (3.2.0): what it came to — the tally, and every stack and piece it brought, each piece as its whole card. */
-@Composable private fun AutoReport(s: ForgeState, hud: RunHud, onDone: () -> Unit) {
+@Composable private fun AutoReport(s: ForgeState, vm: ForgeViewModel, hud: RunHud, onDone: () -> Unit) {
     val reward = hud.autoReward ?: return
+    var looked by remember(reward) { mutableStateOf<ItemView?>(null) }
     Column(Modifier.fillMaxSize().background(Ink.copy(alpha = .94f)).statusBarsPadding().navigationBarsPadding().padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(ui("auto.done"), color = Vital, style = MaterialTheme.typography.headlineSmall)
@@ -486,11 +526,15 @@ private const val MINIMAP_MAX = 60f
         Journal(hud)
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             reward.items.forEach { (code, amount) -> Text(ui("expedition.loot_stack", itemTitle(code), amount), color = Parchment) }
-            reward.equipment.forEach { instance -> s.view(instance)?.let { ItemCard(it, enabled = false, detailed = true, price = s.sellPrice(instance)) } }
+            // A piece opens its comparison and «Надеть» (3.24.0), as a fight's spoils do.
+            reward.equipment.forEach { instance -> s.view(instance)?.let { item ->
+                ItemCard(item, detailed = true, actionLabel = ui("expedition.loot_compare"), action = true, price = s.sellPrice(instance)) { looked = item }
+            } }
             if (reward.items.isEmpty() && reward.equipment.isEmpty()) MutedText(ui("expedition.loot_nothing"))
         }
         ForgeButton(onClick = onDone, modifier = Modifier.fillMaxWidth().height(50.dp)) { Text(ui("expedition.back_to_camp")) }
     }
+    looked?.let { item -> LootSheet(s, vm, item) { looked = null } }
 }
 
 @Composable private fun RunPanel(modifier: Modifier, accent: Color = Gold, content: @Composable ColumnScope.() -> Unit) {

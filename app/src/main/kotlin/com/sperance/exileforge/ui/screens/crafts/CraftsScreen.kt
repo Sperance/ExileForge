@@ -31,6 +31,7 @@ import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.equipmentIcon
 import com.sperance.exileforge.core.display.equipmentTitle
+import com.sperance.exileforge.core.display.fineNumber
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.mapTitle
 import com.sperance.exileforge.core.display.number
@@ -182,7 +183,7 @@ private fun eta(millis: Long): String {
             }
             ForgeOutlinedButton(enabled = !s.busy, onClick = vm::stopWork) { Text(ui("crafts.stop")) }
         }
-        CycleBar(work.settledAt, work.cycleMillis, offset, caption = false)
+        CycleBar(work.settledAt, work.cycleMillis, offset, hourly = hourlyLine(s, work))
         levelLine(s, work, offset)?.let { Text(it, color = Vital, style = MaterialTheme.typography.labelMedium) }
         // The server's tally with the cycles this device threw ahead of its count: the rules' own sum.
         WorkTotals(work.startedAt, work.totals + s.play.craftsPending, offset)
@@ -284,13 +285,44 @@ private fun duration(millis: Long): String {
 /**
  * A cycle's bar, filled smoothly (2.47.0): it reads the device's clock every frame, set by the
  * server's through [offset], and only the bar is redrawn — the screen around it is not recomposed.
+ * Under it (3.24.0) the time the cycle has run of its whole, and what the work brings in an hour on average.
  */
-@Composable private fun CycleBar(settledAt: Long, cycleMillis: Long, offset: Long, height: Int = 6, caption: Boolean = true) {
+@Composable private fun CycleBar(settledAt: Long, cycleMillis: Long, offset: Long, height: Int = 6, hourly: String? = null) {
     val now by produceState(System.currentTimeMillis()) { while (true) withFrameMillis { value = System.currentTimeMillis() } }
     LinearProgressIndicator(progress = { if (cycleMillis > 0) ((now + offset - settledAt).toFloat() / cycleMillis).coerceIn(0f, 1f) else 0f },
         modifier = Modifier.fillMaxWidth().height(height.dp), color = Gold, trackColor = PanelRaised)
-    if (caption) MutedText(ui("crafts.cycle", number(cycleMillis / 1000.0)), style = MaterialTheme.typography.labelSmall)
+    CycleClock(settledAt, cycleMillis, offset, Modifier.fillMaxWidth())
+    hourly?.let { Text(it, color = Vital, style = MaterialTheme.typography.labelSmall) }
 }
+
+/** The running cycle as figures — «12.4 / 30 s» — a few times a second, so the text alone is redrawn, not the bar's frame. */
+@Composable private fun CycleClock(settledAt: Long, cycleMillis: Long, offset: Long, modifier: Modifier) {
+    val now by produceState(System.currentTimeMillis()) { while (true) { value = System.currentTimeMillis(); delay(CLOCK_TICK) } }
+    val elapsed = (now + offset - settledAt).coerceIn(0L, cycleMillis.coerceAtLeast(0L))
+    MutedText(ui("crafts.cycle_progress", fineNumber(elapsed / 1000.0), number(cycleMillis / 1000.0)), modifier, style = MaterialTheme.typography.labelSmall)
+}
+
+/** How often the cycle's figures are redrawn. */
+private const val CLOCK_TICK = 200L
+
+/**
+ * What the work under way brings in an hour on average (3.24.0), counted from the job as the server
+ * sends it — the cycle, the «nothing» chance and each find's chance already made of the hero's gear —
+ * and the yield bonus's extra units: the cycles an hour holds, less the empty ones, times what one brings.
+ * Display only: the server's dice decide.
+ */
+private fun hourlyLine(s: ForgeState, work: WorkView): String? {
+    val profession = s.play.crafts?.professions?.firstOrNull { it.code == work.profession } ?: return null
+    val job = profession.jobs.firstOrNull { it.code == work.job } ?: return null
+    if (work.cycleMillis <= 0) return null
+    val landed = HOUR_MILLIS / work.cycleMillis.toDouble() * (1 - job.nothing / 100).coerceAtLeast(0.0)
+    val made = jobProduct(job) to landed * (1 + profession.bonus.yield.coerceAtLeast(0.0) / 100)
+    val finds = job.extra.map { itemTitle(it.item) to landed * it.chance / 100 }
+    val figures = (listOf(made) + finds).filter { it.second > 0 }.takeIf { it.isNotEmpty() } ?: return null
+    return ui("crafts.per_hour", figures.joinToString(" · ") { (name, amount) -> ui("crafts.per_hour_item", fineNumber(amount), name) })
+}
+
+private const val HOUR_MILLIS = 3_600_000.0
 
 /** A profession as a tile, three to a row: its tool in a medallion, name, level, how far to the next one, and what stands out. */
 @Composable private fun ProfessionTile(s: ForgeState, profession: ProfessionView, working: Boolean, modifier: Modifier, onClick: () -> Unit) {
@@ -374,7 +406,7 @@ private fun share(profession: ProfessionView): Float = profession.next?.takeIf {
         if (work != null) item {
             ForgePanel(accent = GoldBright) {
                 Engraved(ui("crafts.now", jobTitle(work.job)))
-                CycleBar(work.settledAt, work.cycleMillis, offset, height = 10)
+                CycleBar(work.settledAt, work.cycleMillis, offset, height = 10, hourly = hourlyLine(s, work))
                 SessionTally(s.play.craftsTotals)
             }
         }

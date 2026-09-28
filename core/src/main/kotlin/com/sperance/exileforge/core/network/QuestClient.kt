@@ -3,6 +3,7 @@ package com.sperance.exileforge.core.network
 import com.sperance.exileforge.core.contract.requireId
 import com.sperance.exileforge.rules.content.GuildQuests
 import com.sperance.exileforge.rules.content.QuestBoard
+import com.sperance.exileforge.rules.content.QuestClaimAll
 
 /**
  * Quests (3.23.0, server 1.21.0): the hero's board — dailies, weeklies, contracts and the story — and the guild's quests.
@@ -13,15 +14,15 @@ class QuestClient internal constructor(private val http: Transport) {
     suspend fun board(heroId: String): QuestBoard = http.get("$HERO_QUESTS", heroQuery(heroId))
 
     suspend fun claim(heroId: String, questId: String): QuestBoard = onQuest("claim", heroId, questId)
-    suspend fun reroll(heroId: String, questId: String): QuestBoard = onQuest("reroll", heroId, questId)
+
+    /** Everything done handed in at once (server 1.22.0): the personal quests and the hero's share of the guild's. */
+    suspend fun claimAll(heroId: String): QuestClaimAll = http.post("$HERO_QUESTS/claimAll", heroQuery(heroId))
     suspend fun abandon(heroId: String, questId: String): QuestBoard = onQuest("abandon", heroId, questId)
 
     suspend fun take(heroId: String, offerId: String): QuestBoard {
         requireId(offerId)
         return http.post("$HERO_QUESTS/take", heroQuery(heroId, "offerId" to offerId))
     }
-
-    suspend fun renew(heroId: String): QuestBoard = http.post("$HERO_QUESTS/renew", heroQuery(heroId))
 
     suspend fun guild(heroId: String): GuildQuests = http.get("$GUILD_QUESTS", heroQuery(heroId))
 

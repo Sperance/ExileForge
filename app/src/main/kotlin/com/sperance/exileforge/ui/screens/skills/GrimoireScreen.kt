@@ -307,16 +307,10 @@ private fun books(index: ContentIndex): List<Item> = index.itemsByCategory[Item.
                 }
                 Text(if (learned > 0) ui("skills.level_short", learned) else "—", color = Gold, style = MaterialTheme.typography.titleLarge)
             }
-            val shown = learned.coerceAtLeast(1)
-            Price(skill, shown)
-            // Preparation (3.13.0) shortens with the skill's level and the hero's quick preparation.
-            val quickness = stats[PREPARATION] ?: 0.0
-            fun described(level: Int) = SkillText.lines(skill, level) + listOfNotNull(SkillText.preparation(skill, level, index.campaign.combat, quickness))
-            SkillLines(described(shown))
+            SkillFacts(index, skill, learned.coerceAtLeast(1), stats)
             if (learned in 1 until SkillRules.MAX_LEVEL) {
                 Caption(ui("skills.at_level", next))
-                Price(skill, next)
-                SkillLines(described(next), ModBlue.copy(alpha = .75f))
+                SkillFacts(index, skill, next, stats, ModBlue.copy(alpha = .75f))
             }
             if (learned < SkillRules.MAX_LEVEL) {
                 Text(ui("skills.requires", next, needLine(index, skill, next)), color = if (unmet.isEmpty()) Parchment else LifeRed, style = MaterialTheme.typography.bodySmall)
@@ -334,12 +328,24 @@ private fun books(index: ContentIndex): List<Item> = index.itemsByCategory[Item.
     }
 }
 
+/**
+ * What a skill does at [level]: its price and pace, then every line — the preparation (3.13.0) among them, shortened by
+ * the skill's level and the hero's quick preparation in [stats]. The grimoire's page and the fight's sheet (3.24.0) both
+ * read it; a slotted skill's own [condition] stands in for the page's default.
+ */
+@Composable internal fun SkillFacts(index: ContentIndex, skill: SkillDefinition, level: Int, stats: Map<String, Double>, tone: Color = ModBlue,
+                                    condition: SlotCondition? = null) {
+    Price(skill, level, condition)
+    val quickness = stats[PREPARATION] ?: 0.0
+    SkillLines(SkillText.lines(skill, level) + listOfNotNull(SkillText.preparation(skill, level, index.campaign.combat, quickness)), tone)
+}
+
 /** An active skill's price and pace, an aura's reserve: the chips over its lines. */
-@Composable private fun Price(skill: SkillDefinition, level: Int) {
+@Composable private fun Price(skill: SkillDefinition, level: Int, condition: SlotCondition? = null) {
     val chips = listOfNotNull(
         SkillText.cost(skill.mana, level)?.let { ui("skills.cost", it) },
         skill.cooldown.takeIf { it > 0 }?.let { ui("skills.cooldown", fineNumber(it)) },
-        skill.condition.takeIf { skill.kind == SkillKind.ACTIVE }?.let { ui("skills.default_condition", conditionTitle(it)) },
+        (condition ?: skill.condition).takeIf { skill.kind == SkillKind.ACTIVE }?.let { ui("skills.default_condition", conditionTitle(it)) },
     )
     if (chips.isNotEmpty()) Text(chips.joinToString(" · "), color = Rune, style = MaterialTheme.typography.labelMedium)
 }

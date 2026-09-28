@@ -1,0 +1,65 @@
+package com.sperance.exileforge.ui.screens.expedition
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.display.ItemView
+import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.sellPrice
+import com.sperance.exileforge.presentation.state.unmetFor
+import com.sperance.exileforge.ui.components.ForgeButton
+import com.sperance.exileforge.ui.components.ItemCard
+import com.sperance.exileforge.ui.components.MutedText
+import com.sperance.exileforge.ui.screens.hero.WearPreview
+import com.sperance.exileforge.ui.theme.Panel
+
+/** Where a dropped piece stands for «Надеть»: the server holds it loose, wears it already, has it on the way, or never got it. */
+private enum class LootStand { LOOSE, WORN, ARRIVING, GONE }
+
+private fun lootStand(s: ForgeState, item: ItemView): LootStand {
+    val held = s.hero?.item(item.id)
+    return when {
+        held == null -> if (s.play.runPending > 0) LootStand.ARRIVING else LootStand.GONE
+        held.equipped || held.socketed -> LootStand.WORN
+        else -> LootStand.LOOSE
+    }
+}
+
+/**
+ * A piece the run dropped, opened where it dropped (3.24.0) — a chest's lid, a fight's spoils, the gear
+ * sheet's loot: its card, what wearing it would change against what is worn, and «Надеть» right there.
+ * The drop is the run's own roll and reaches the stash with the journal, so opening the sheet sends the
+ * journal at once, and the button waits until the server holds the piece; one sold for want of room says so.
+ * [extra] is what the caller adds under the button.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable internal fun LootSheet(s: ForgeState, vm: ForgeViewModel, item: ItemView, onDismiss: () -> Unit,
+                                   extra: @Composable ColumnScope.() -> Unit = {}) {
+    val stand = lootStand(s, item)
+    LaunchedEffect(item.id, stand) { if (stand == LootStand.ARRIVING) vm.flushRun() }
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            ItemCard(item, enabled = false, detailed = true, price = s.sellPrice(item.item))
+            WearPreview(s, item.item)
+            when (stand) {
+                LootStand.WORN -> MutedText(ui("expedition.loot_worn"))
+                LootStand.GONE -> MutedText(ui("expedition.loot_gone"))
+                else -> ForgeButton(enabled = stand == LootStand.LOOSE && !s.busy && s.unmetFor(item.code).isEmpty(),
+                    onClick = { onDismiss(); vm.equip(item.id) }, modifier = Modifier.fillMaxWidth()) {
+                    Text(ui(if (stand == LootStand.ARRIVING) "expedition.loot_arriving" else "hero.equip"))
+                }
+            }
+            extra()
+        }
+    }
+}

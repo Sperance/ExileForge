@@ -72,16 +72,11 @@ fun newLoot(s: ForgeState): List<ItemView> = s.play.runLoot.mapNotNull { entry -
         }
     }
     loot.firstOrNull { it.id == looked }?.let { item ->
-        ModalBottomSheet(onDismissRequest = { looked = null }, containerColor = Panel) {
-            Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                val price = s.sellPrice(item.item)
-                ItemCard(item, enabled = false, detailed = true, price = price)
-                WearPreview(s, item.item)
-                ForgeButton(enabled = !s.busy && s.unmetFor(item.code).isEmpty(), onClick = { looked = null; vm.equip(item.id) }, modifier = Modifier.fillMaxWidth()) { Text(ui("hero.equip")) }
-                // A gilt ribbon with the coin and the price in a chip (2.73.0), held as before.
-                HoldButton(ui("expedition.loot_sell"), Gold, Modifier.fillMaxWidth(), enabled = !s.busy, icon = ForgeGlyphs.Coins,
-                    figure = price?.let { "+$it" }) { looked = null; vm.sellForGold(item.id) }
-            }
+        LootSheet(s, vm, item, onDismiss = { looked = null }) {
+            // A gilt ribbon with the coin and the price in a chip (2.73.0), held as before.
+            val price = s.sellPrice(item.item)
+            HoldButton(ui("expedition.loot_sell"), Gold, Modifier.fillMaxWidth(), enabled = !s.busy, icon = ForgeGlyphs.Coins,
+                figure = price?.let { "+$it" }) { looked = null; vm.sellForGold(item.id) }
         }
     }
     val chosen = place

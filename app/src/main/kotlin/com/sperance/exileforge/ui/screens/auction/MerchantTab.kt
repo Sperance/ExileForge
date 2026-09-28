@@ -76,7 +76,7 @@ import com.sperance.exileforge.ui.theme.*
                     MutedText(ui("merchant.orbs_note"))
                     orbs.forEach { orb ->
                         val price = s.discounted(orb.price)
-                        OrbRow(orb, price, have = s.bagAmount(orb.code), enabled = !s.busy && (money == null || money >= price)) { vm.buyOrb(orb.code) }
+                        OrbRow(orb, price, have = s.bagAmount(orb.code), enabled = !s.busy && !orb.soldOut && (money == null || money >= price)) { vm.buyOrb(orb.code) }
                     }
                 }
             }
@@ -99,6 +99,8 @@ import com.sperance.exileforge.ui.theme.*
         Column(Modifier.weight(1f)) {
             Text(itemTitle(orb.code), style = MaterialTheme.typography.bodyMedium)
             have?.let { MutedText(ui("merchant.orb_have", it)) }
+            // The window's stock (3.24.0): how many more the shelf holds, in ember once it holds none.
+            orb.left?.let { Text(ui("merchant.orb_left", it), color = if (it > 0) Muted else Ember, style = MaterialTheme.typography.labelSmall) }
         }
         ForgeOutlinedButton(enabled = enabled, onClick = onBuy) { GoldPrice(price) }
     }

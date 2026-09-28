@@ -71,21 +71,10 @@ private fun tabTitle(tab: QuestTab, board: QuestBoard?): String {
 }
 
 private fun LazyListScope.daily(s: ForgeState, vm: ForgeViewModel, board: QuestBoard) {
-    item {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            MutedText(ui("quest.resets", untilText(board.dayEndsAt)), Modifier.weight(1f))
-            MutedText(if (board.rerollPrice == 0L) ui("quest.reroll_free") else ui("quest.reroll_price", number(board.rerollPrice.toDouble())))
-        }
-    }
+    // Dailies are not swapped for gold since 3.24.0 (server 1.22.0): what the day rolled is the day's.
+    item { MutedText(ui("quest.resets", untilText(board.dayEndsAt))) }
     if (board.daily.isEmpty()) item { MutedText(ui("quest.none")) }
-    items(board.daily, key = { it.id }) { quest ->
-        QuestRow(quest) {
-            if (!quest.claimed && !quest.done) ForgeTextButton({ vm.rerollQuest(quest.id) }, enabled = !s.busy && (s.hero?.money ?: 0) >= board.rerollPrice) {
-                Text(ui("quest.reroll"))
-            }
-            ClaimButton(s, vm, quest)
-        }
-    }
+    items(board.daily, key = { it.id }) { quest -> QuestRow(quest) { ClaimButton(s, vm, quest) } }
 }
 
 private fun LazyListScope.weekly(s: ForgeState, vm: ForgeViewModel, board: QuestBoard) {
@@ -114,11 +103,6 @@ private fun LazyListScope.contracts(s: ForgeState, vm: ForgeViewModel, board: Qu
     items(board.offers, key = { it.id }) { offer ->
         QuestRow(offer) {
             ForgeButton({ vm.takeContract(offer.id) }, enabled = !s.busy && !full) { Text(ui("quest.take")) }
-        }
-    }
-    item {
-        ForgeOutlinedButton({ vm.renewQuestBoard() }, Modifier.fillMaxWidth(), enabled = !s.busy && (s.hero?.money ?: 0) >= board.refreshPrice) {
-            Text(ui("quest.renew", number(board.refreshPrice.toDouble())))
         }
     }
 }

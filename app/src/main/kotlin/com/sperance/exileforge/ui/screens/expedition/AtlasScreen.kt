@@ -14,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -135,17 +136,28 @@ private val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
     val density = LocalDensity.current
     val floor = with(density) { 240.dp.toPx() }
     val margin = with(density) { 28.dp.toPx() }
-    var scale by remember { mutableFloatStateOf(1f) }
+    // The sky opens close (3.24.0): at the nearest zoom, the start in the middle of what the sheet leaves open.
+    var scale by remember { mutableFloatStateOf(MAX_ZOOM) }
     var pan by remember { mutableStateOf(Offset.Zero) }
+    var framed by remember { mutableStateOf(false) }
     val clock by produceState(0f) { var start = 0L; while (true) withFrameNanos { if (start == 0L) start = it; value = (it - start) / 1e9f } }
     val reachable = remember(taken, graph) { nodes.filter { AtlasFog.canTake(graph, it.code, taken) }.map { it.code }.toSet() }
     // The fog (2.79.1): three links past the taken nodes; what lies beyond is neither drawn nor tappable.
     val sight = remember(taken, graph) { AtlasFog.visible(graph, taken) }
     val shown = remember(sight, nodes) { nodes.filter { it.code in sight } }
     Canvas(modifier.clipToBounds()
+        .onSizeChanged { size ->
+            if (framed || size.width == 0) return@onSizeChanged
+            val start = nodes.firstOrNull { it.kind == AtlasNodeKind.START } ?: return@onSizeChanged
+            val width = size.width.toFloat()
+            val height = size.height.toFloat()
+            val at = Placement(bounds, width, height, floor, margin, scale, Offset.Zero)(start)
+            pan = Offset(width / 2 - at.x, (height - floor) / 2 - at.y)
+            framed = true
+        }
         .pointerInput(nodes) {
             detectTransformGestures { _, drag, zoom, _ ->
-                scale = (scale * zoom).coerceIn(.5f, 3f)
+                scale = (scale * zoom).coerceIn(MIN_ZOOM, MAX_ZOOM)
                 val limit = size.width.toFloat() * scale
                 pan = Offset((pan.x + drag.x).coerceIn(-limit, limit), (pan.y + drag.y).coerceIn(-limit, limit * 2))
             }
@@ -177,6 +189,10 @@ private val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
         shown.forEach { star(it, place(it), it.code in taken, it.code in reachable, it.code == selected, clock, zoom) }
     }
 }
+
+/** How far the sky zooms out and in. */
+private const val MIN_ZOOM = .5f
+private const val MAX_ZOOM = 3f
 
 /** How much of a link into the fog is drawn before it fades. */
 private const val FOG_STUB = .3f

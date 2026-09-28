@@ -58,7 +58,7 @@ class HeroPanelTest {
             verticalArrangement = Arrangement.spacedBy(10.dp)) {
             val state = ForgeState(busy = false, account = AccountState(profile = UserProfile("owner"), signedIn = true),
                 world = WorldState(content = index, contentHash = index.hash), play = PlayState(heroId = "hero", heroOwner = "owner", hero = hero))
-            HeroHeader(state, onTree = {}) {}
+            HeroHeader(state)
             HeroSummary(state)
             EquipmentLedger(state) { place, itemId -> picked = place.code to itemId }
         } } }

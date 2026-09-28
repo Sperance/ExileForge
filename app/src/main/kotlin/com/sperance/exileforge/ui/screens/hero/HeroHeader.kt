@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.number
@@ -26,12 +27,12 @@ import com.sperance.exileforge.ui.theme.*
 /**
  * Who the hero is, above the Hero tab's sections: the one part every section shares.
  *
- * The name, then class and level as one line, then the purse and the tree as two chips, and the
- * experience as a thin bar under them — the progress a player checks at a glance, which used to be a
- * card of its own. The tree and the forge open from the corner, because it is reached from here but is not a
- * part of the hero.
+ * The name large, then class and level as one smaller line, then the purse and the tree as two chips,
+ * and the experience as a thin bar under them. The tree, the grimoire and the forge left the corner
+ * for the strip above the tab ([HeroTabStrip]); the title the chronicle opened is the chronicle's card's.
+ * A long name is cut rather than pushed into the portrait.
  */
-@Composable fun HeroHeader(s: ForgeState, onTree: () -> Unit, onSkills: () -> Unit = {}, onForge: () -> Unit) {
+@Composable fun HeroHeader(s: ForgeState) {
     val hero = s.hero ?: return
     val info = hero.info
     FirstVisit(Guide.HERO)
@@ -40,27 +41,12 @@ import com.sperance.exileforge.ui.theme.*
             // The class's portrait as the map's token (since 2.31.0).
             ClassPortrait(hero.heroClass, s.world.portraits, Modifier.size(64.dp), round = true)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(info.name, style = MaterialTheme.typography.headlineSmall, color = GoldBright, modifier = Modifier.weight(1f, fill = false))
-                    GuideButton(Guide.HERO)
-                }
-                // The title the chronicle opened (3.3.0), under the name
-                info.title.takeIf { it.isNotBlank() }?.let { Text(titleName(it), color = Gold, style = MaterialTheme.typography.labelMedium) }
+                Text(info.name, style = MaterialTheme.typography.headlineSmall, color = GoldBright, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 // The class is the base every percentage is counted from; the server owns it.
                 Text(ui("hero.class_level", hero.heroClass.takeIf { it.isNotBlank() }?.let(::classTitle) ?: ui("hero.unknown_class"), info.level),
-                    color = Rune, style = MaterialTheme.typography.labelLarge)
+                    color = Rune, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            // The tree left the bar in 2.40.0 and opens from here, beside the forge.
-            IconButton(onClick = onTree) {
-                Icon(ForgeGlyphs.Constellation, ui("nav.tree"), tint = Gold, modifier = Modifier.size(24.dp))
-            }
-            // The grimoire (2.78.0): the class's skills and the belt.
-            IconButton(onClick = onSkills) {
-                Icon(ForgeGlyphs.Grimoire, ui("nav.skills"), tint = Gold, modifier = Modifier.size(24.dp))
-            }
-            IconButton(enabled = !s.busy, onClick = onForge) {
-                Icon(ForgeGlyphs.Tome, ui("nav.craft"), tint = Gold, modifier = Modifier.size(24.dp))
-            }
+            GuideButton(Guide.HERO)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Chip(ForgeGlyphs.Coins, ui("hero.gold_chip", number(hero.money.toDouble())))

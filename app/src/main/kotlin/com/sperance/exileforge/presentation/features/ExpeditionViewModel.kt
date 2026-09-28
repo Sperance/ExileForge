@@ -52,6 +52,10 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     private var runJournal: RunJournal? = null
     private val flushes = Channel<Unit>(Channel.CONFLATED)
     private var saveJob: Job? = null
+    /** The next send of its own: a quiet stretch after the last event, or the retry after a failed send. */
+    private var sendJob: Job? = null
+    /** Sends failed in a row: each waits twice as long as the last before trying again. */
+    private var failures = 0
     /** The autorun the run under way was started with; its Vaal zone runs by itself too. */
     private var autoPlan: AutoPlan? = null
     /** The Vaal zone's tokens the server already counted when the run was entered again. */
@@ -124,7 +128,22 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         val j = runJournal ?: return
         runtime.mutable.update { it.copy(play = it.play.copy(runPending = j.pending.size)) }
         persist()
-        if (event.kind in CHECKPOINTS || j.pending.size >= BATCH) flushes.trySend(Unit)
+        if (event.kind in CHECKPOINTS || j.pending.size >= BATCH) flushes.trySend(Unit) else if (failures == 0) sendIn(QUIET_AFTER)
+    }
+
+    /**
+     * A send [after] a pause, replacing the one waiting. A plain kill used to wait for a full batch or the
+     * clock's 20 seconds, and a failed send for the clock again: the journal sat unsent for half a minute and more.
+     */
+    private fun sendIn(after: Long) { with(runtime) {
+        sendJob?.cancel()
+        sendJob = scope.launch { delay(after); flushes.trySend(Unit) }
+    } }
+
+    /** A send that did not reach the server: the next one after a doubling pause, the clock's at the longest. */
+    private fun retryLater() {
+        failures++
+        sendIn((RETRY_FIRST shl (failures - 1).coerceAtMost(RETRY_DOUBLINGS)).coerceAtMost(FLUSH_EVERY))
     }
 
     /** The journal on disk, a moment after the last event so a burst of kills is one write. */
@@ -141,6 +160,7 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         if (pending.isEmpty()) { if (j.closed) done(j); return }
         try {
             val report = api.campaign.events(j.heroId, pending)
+            failures = 0
             j.confirm(report.applied, report.rejected)
             mutable.update { it.copy(play = it.play.copy(runPending = j.pending.size, runRejected = j.rejected.size)) }
             if (report.rejected.isNotEmpty()) toast(ui("expedition.rejected", report.rejected.size))
@@ -153,16 +173,19 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             // CP_020: the world changed under the run, and the server closed it.
             if (e.code in RUN_CLOSED) done(j) else report(e, writing = true)
         }
-        catch (_: Exception) { /* offline: the journal waits for the next flush */ }
+        // Offline or timed out: tried again soon, not at the clock's next round
+        catch (_: Exception) { retryLater() }
     } }
 
     private suspend fun done(j: RunJournal) { with(runtime) {
         if (runJournal === j) runJournal = null
         store.clearJournal(j.heroId)
+        // The run is counted whole (3.24.0): whatever it finished is handed in at once.
+        questViewModel.claimAll(j.heroId)
     } }
 
     /** Sends the journal now: the app goes to the background, or the run is over. */
-    fun flushRun() { flushes.trySend(Unit) }
+    fun flushRun() { failures = 0; flushes.trySend(Unit) }
 
     /**
      * On entering a hero: a journal kept from an earlier launch is sent if the hero's run is still the one it
@@ -286,6 +309,11 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             RunEventKind.ABYSS_OPEN, RunEventKind.ABYSS_CLAIM, RunEventKind.SUMMON, RunEventKind.FALL, RunEventKind.LEAVE)
         const val BATCH = 6
         const val FLUSH_EVERY = 20_000L
+        /** A kill's batch goes out this long after the last event, if nothing sends it sooner. */
+        const val QUIET_AFTER = 3_000L
+        /** The first retry after a failed send, and how many times the pause doubles before the clock's. */
+        const val RETRY_FIRST = 2_000L
+        const val RETRY_DOUBLINGS = 3
         const val SAVE_AFTER = 800L
     }
 }

@@ -57,7 +57,7 @@ class AuctionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         val id = heroId
         val purchase = api.merchant.buyOrb(id, code)
         mutable.update { it.copy(market = it.market.copy(merchant = it.market.merchant?.let { stock ->
-            stock.copy(orbs = stock.orbs.map { orb -> if (orb.code == code) orb.copy(price = purchase.next, bought = orb.bought + 1) else orb })
+            stock.copy(orbs = stock.orbs.map { orb -> if (orb.code == code) orb.copy(price = purchase.next, bought = orb.bought + 1, left = orb.left?.let { (it - 1).coerceAtLeast(0) }) else orb })
         })) }
         gold(purchase.money)
         refreshHero(id)

@@ -183,11 +183,14 @@ import kotlin.math.sin
 
 /**
  * Which nodes are one step away: the class's own start while nothing is taken, otherwise every node
- * not yet taken that the rules call adjacent — a taken mastery opens no neighbours.
+ * not yet taken that the rules call adjacent — a taken mastery opens no neighbours, and a node kept for
+ * another class (the Scion's branches, 3.19.0) is never one.
  */
 private fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Set<String>): Set<String> =
     if (taken.isEmpty()) setOfNotNull(heroClass?.startNode)
-    else index.content.tree.nodes.mapNotNullTo(HashSet()) { node -> node.code.takeIf { it !in taken && index.tree.isAdjacentTo(it, taken) } }
+    else index.content.tree.nodes.mapNotNullTo(HashSet()) { node ->
+        node.code.takeIf { it !in taken && (heroClass == null || node.openTo(heroClass.startNode)) && index.tree.isAdjacentTo(it, taken) }
+    }
 
 /**
  * Finding a node by name.

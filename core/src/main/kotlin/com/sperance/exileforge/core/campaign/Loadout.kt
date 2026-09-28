@@ -10,6 +10,7 @@ import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.PowerBook
 import com.sperance.exileforge.rules.content.SkillBook
 import com.sperance.exileforge.rules.content.SkillDefinition
+import com.sperance.exileforge.rules.content.SkillRules
 import com.sperance.exileforge.rules.content.SkillStat
 import com.sperance.exileforge.rules.content.SkillType
 import com.sperance.exileforge.rules.content.SlotCondition
@@ -98,7 +99,7 @@ data class Flask(
 data class KitSkill(val skill: SkillDefinition, val learned: Int, val condition: SlotCondition = skill.condition) {
     /**
      * The level it acts at on [hero]: the learned one and what gear, the atlas and the map add — every
-     * skill's, its type's, and a passive's.
+     * skill's, its type's, and a passive's — never past the rules' ceiling (3.19.0).
      */
     fun level(hero: Combatant): Int {
         val type = when (skill.type) {
@@ -110,7 +111,7 @@ data class KitSkill(val skill: SkillDefinition, val learned: Int, val condition:
             SkillType.BONUS, SkillType.TRIGGER -> hero["STOCK_PASSIVE_LEVEL"]
             SkillType.HEAL, SkillType.GUARD -> 0.0
         }
-        return (learned + hero["STOCK_SKILL_LEVEL"] + type).toInt().coerceAtLeast(1)
+        return (learned + hero["STOCK_SKILL_LEVEL"] + type).toInt().coerceIn(1, SkillRules.MAX_BOOSTED_LEVEL)
     }
 }
 

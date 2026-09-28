@@ -27,7 +27,7 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Spacer(Modifier.height(12.dp))
         ScreenHeader(ui("nav.auction"),
-            ui("auction.showcase_count", s.market.showcase.totalItems), ForgeGlyphs.Orb)
+            ui("auction.showcase_count", s.market.showcase.totalItems), ForgeGlyphs.Orb, guide = Guide.AUCTION)
         // Opening the tab is what fills both lists; the hero is the one from the menu.
         // The hero comes too, and not for the bag: the sheet is what the rules read to say which
         // templates this hero can wear, and that is what marks an unwearable lot.

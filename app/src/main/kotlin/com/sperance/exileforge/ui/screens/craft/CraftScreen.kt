@@ -94,7 +94,7 @@ private val ESSENTIAL = setOf(Rarity.COMMON, Rarity.RARE)
     val section = s.play.forgeSection.takeIf { it in sections } ?: ForgeSection.ORBS
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            ScreenHeader(ui("craft.title"), ui("craft.subtitle"), ForgeGlyphs.Anvil)
+            ScreenHeader(ui("craft.title"), ui("craft.subtitle"), ForgeGlyphs.Anvil, guide = Guide.FORGE)
             if (hero == null || index == null) { InfoCard(ui("tree.no_hero"), ui("craft.hero_first")); return@Column }
             ForgeTarget(s, view) { picking = true }
             if (sections.size > 1) TabRow(selectedTabIndex = sections.indexOf(section), containerColor = Abyss) {

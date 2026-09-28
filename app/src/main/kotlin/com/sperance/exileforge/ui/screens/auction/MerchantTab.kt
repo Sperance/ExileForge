@@ -28,6 +28,7 @@ import com.sperance.exileforge.ui.theme.*
  * rules say whether this hero could wear it.
  */
 @Composable internal fun ColumnScope.MerchantTab(s: ForgeState, vm: ForgeViewModel) {
+    FirstVisit(Guide.MERCHANT)
     var chosen by remember { mutableStateOf<MerchantOffer?>(null) }
     val stock = s.market.merchant
     val money = s.hero?.money

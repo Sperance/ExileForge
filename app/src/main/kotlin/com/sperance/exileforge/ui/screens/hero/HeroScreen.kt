@@ -96,7 +96,7 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
             item {
                 // Who the character is heads every section; until the hero arrives the tab says what it is.
                 if (hero != null) HeroHeader(s, onTree = { vm.tab(TAB_TREE) }, onSkills = { vm.tab(TAB_SKILLS) }) { vm.tab(TAB_CRAFT) }
-                else ScreenHeader(ui("hero.title"), ui("hero.inventory_count", stash.size), ForgeGlyphs.Stash)
+                else ScreenHeader(ui("hero.title"), ui("hero.inventory_count", stash.size), ForgeGlyphs.Stash, guide = Guide.HERO)
             }
             item { SectionBar(section) { section = it } }
             if (hero == null) item { InfoCard(ui("common.loading"), ui("hero.stash_empty_hint")) }

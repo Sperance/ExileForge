@@ -28,6 +28,8 @@ import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeOutlinedButton
 import com.sperance.exileforge.ui.components.ForgeTextButton
 import com.sperance.exileforge.ui.components.MutedText
+import com.sperance.exileforge.ui.components.FirstVisit
+import com.sperance.exileforge.ui.components.Guide
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
 
@@ -44,6 +46,7 @@ import com.sperance.exileforge.ui.theme.*
             .background(Panel.copy(alpha = .97f), RoundedCornerShape(12.dp)).border(1.dp, AbyssGlow.copy(alpha = .7f), RoundedCornerShape(12.dp))
             .padding(16.dp).heightIn(max = 560.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                FirstVisit(Guide.ABYSS)
                 Icon(ForgeGlyphs.Rift, null, tint = AbyssGlow, modifier = Modifier.size(28.dp))
                 Text(ui("abyss.title"), color = AbyssGlow, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
                 Text(if (view.open) ui("abyss.progress", view.cleared, view.depth) else ui("abyss.depths", view.depth),

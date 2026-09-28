@@ -87,12 +87,14 @@ private fun stashMaps(s: ForgeState): List<StashMap> =
     val token = world.token(launch.mapCode) ?: return
     val index = s.index ?: return
     val zone = token.zone
+    FirstVisit(Guide.MAP_LAUNCH)
     Surface(modifier.fillMaxWidth(), color = Panel, shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp),
         border = BorderStroke(1.dp, PanelRaised), shadowElevation = 12.dp) {
         Column(Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState()).padding(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Box(Modifier.fillMaxWidth().height(28.dp)) {
                 Box(Modifier.align(Alignment.Center).size(38.dp, 4.dp).background(Color(0xFF3A414B), RoundedCornerShape(2.dp)))
+                GuideButton(Guide.MAP_LAUNCH, Modifier.align(Alignment.CenterStart))
                 IconButton(onClick = vm::closeZone, modifier = Modifier.align(Alignment.CenterEnd).size(32.dp)) {
                     Icon(Icons.Outlined.Close, ui("common.close"), tint = Muted, modifier = Modifier.size(20.dp))
                 }

@@ -42,6 +42,7 @@ private const val CARD_TOP = .48f
  */
 @Composable fun ExpeditionScreen(s: ForgeState, vm: ForgeViewModel) {
     LaunchedEffect(s.play.heroId, s.account.sessionEpoch) { vm.ensureHero(); vm.loadCampaign() }
+    FirstVisit(Guide.EXPEDITION)
     val index = s.index
     val progress = s.progress
     if (index == null || progress == null) {

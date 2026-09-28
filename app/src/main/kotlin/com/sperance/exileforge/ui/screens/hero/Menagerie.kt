@@ -35,7 +35,11 @@ fun petName(species: String): String = locOr("pet.$species", species)
     val eggs = index.pets.eggs.values.filter { hero.count(it) > 0 }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         ForgePanel {
-            Engraved(ui("pets.title", pets.pets.size, pets.cap))
+            FirstVisit(Guide.PETS)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Engraved(ui("pets.title", pets.pets.size, pets.cap), modifier = Modifier.weight(1f))
+                GuideButton(Guide.PETS)
+            }
             MutedText(ui("pets.hint"))
             if (eggs.isEmpty()) MutedText(ui("pets.no_eggs"))
             else FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

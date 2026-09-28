@@ -70,7 +70,7 @@ import kotlin.math.sin
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Spacer(Modifier.height(12.dp))
         ScreenHeader(ui("tree.title"),
-            ui("tree.node_count", s.index?.content?.tree?.nodes?.size ?: 0), ForgeGlyphs.Constellation)
+            ui("tree.node_count", s.index?.content?.tree?.nodes?.size ?: 0), ForgeGlyphs.Constellation, guide = Guide.TREE)
         SkillTreePanel(s, vm::selectNode, vm::allocateNode, vm::refundNode, vm::resetTree, vm::nodeQuery,
             onSocket = vm::socketJewel, onUnsocket = vm::unsocketJewel, onRechoose = vm::rechooseNode, modifier = Modifier.weight(1f))
         Spacer(Modifier.height(12.dp))

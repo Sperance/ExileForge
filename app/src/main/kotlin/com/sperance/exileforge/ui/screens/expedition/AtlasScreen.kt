@@ -102,6 +102,8 @@ private val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
                 Text(ui("atlas.title"), color = Color.White, style = MaterialTheme.typography.titleMedium)
                 state?.let { Text(ui("atlas.points", it.available, it.points), color = Sky.text, style = MaterialTheme.typography.labelMedium) }
             }
+            FirstVisit(Guide.ATLAS)
+            GuideButton(Guide.ATLAS)
             // The start is nobody's to give back: what was spent is every taken node but it.
             val spent = (state?.allocated?.size ?: 1) - 1
             ForgeOutlinedButton(onClick = { resetting = true }, enabled = spent > 0 && !s.busy) { Text(ui("atlas.reset"), color = Sky.text) }

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -23,6 +24,10 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.network.RequestLog
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.*
+import com.sperance.exileforge.data.settings.GuideStore
+import com.sperance.exileforge.ui.components.GuideDesk
+import com.sperance.exileforge.ui.components.GuideHost
+import com.sperance.exileforge.ui.components.LocalGuideDesk
 import com.sperance.exileforge.ui.components.OrnateDivider
 import com.sperance.exileforge.ui.components.ToastHost
 import com.sperance.exileforge.ui.components.voidBackdrop
@@ -44,6 +49,17 @@ import com.sperance.exileforge.ui.screens.tree.SkillTreeScreen
 import com.sperance.exileforge.ui.theme.*
 
 @Composable fun ForgeApp(vm: ForgeViewModel) {
+    // The first-visit guides (3.14.0): read once per device, one sheet at a time above whatever screen is open.
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val guides = remember { GuideDesk(GuideStore(context.applicationContext), scope) }
+    CompositionLocalProvider(LocalGuideDesk provides guides) {
+        ForgeScreens(vm)
+        GuideHost(guides)
+    }
+}
+
+@Composable private fun ForgeScreens(vm: ForgeViewModel) {
     val s by vm.state.collectAsStateWithLifecycle()
     val logs by vm.logs.collectAsStateWithLifecycle()
     val expedition by vm.expedition.collectAsStateWithLifecycle()

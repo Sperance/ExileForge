@@ -144,7 +144,7 @@ private fun eta(millis: Long): String {
     if (open != null) { ProfessionWindow(s, vm, open, offset); return }
     PullToRefreshBox(isRefreshing = s.refreshing(Reads.CRAFTS), onRefresh = vm::loadCrafts, modifier = Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            item { ScreenHeader(ui("crafts.title"), ui("crafts.subtitle"), ForgeGlyphs.Anvil) }
+            item { ScreenHeader(ui("crafts.title"), ui("crafts.subtitle"), ForgeGlyphs.Anvil, guide = Guide.CRAFTS) }
             if (crafts == null) { item { InfoCard(ui("common.loading"), ui("crafts.loading_hint")) }; return@LazyColumn }
             item { WorkPlaque(s, vm, offset) }
             // Gathering over crafting, with the materials flowing from one into the other (the owner's pick of five mockups, 2.44.0).

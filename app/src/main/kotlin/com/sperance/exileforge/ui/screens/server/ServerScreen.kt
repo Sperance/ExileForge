@@ -80,6 +80,10 @@ import com.sperance.exileforge.ui.theme.Panel
                 "${s.world.contentHash.take(12)} · " + ui("account.chunks", ContentFiles.ALL.size), Glyph.SERVER)
             else MutedText(ui("account.content_missing"))
             ForgeOutlinedButton(enabled = !s.busy, onClick = { vm.refreshLocale(); vm.refreshIcons() }, modifier = Modifier.fillMaxWidth()) { Text(ui("account.reread_bundles")) }
+            // The first-visit guides (3.14.0) come back on every screen once reset.
+            LocalGuideDesk.current?.let { desk ->
+                ForgeOutlinedButton(onClick = desk::reset, modifier = Modifier.fillMaxWidth()) { Text(ui("guide.reset")) }
+            }
         }
         ForgePanel {
             Engraved(ui("account.server"))

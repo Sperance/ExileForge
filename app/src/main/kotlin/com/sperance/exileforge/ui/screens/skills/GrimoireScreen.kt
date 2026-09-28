@@ -101,7 +101,7 @@ private sealed interface Pick {
             val mana = body?.maxMana ?: 0.0
             val reserved = if (body != null && book != null) Loadout.of(skills, book, classCode, emptyList()).reserved(body) else 0.0
             ScreenHeader(ui("skills.title"), listOfNotNull(classCode.takeIf { it.isNotBlank() }?.let(::classTitle), ui("skills.level", level),
-                ui("skills.mana", number(mana)) + if (reserved > 0) " " + ui("skills.reserved", number(reserved)) else "").joinToString(" · "), ForgeGlyphs.Grimoire)
+                ui("skills.mana", number(mana)) + if (reserved > 0) " " + ui("skills.reserved", number(reserved)) else "").joinToString(" · "), ForgeGlyphs.Grimoire, guide = Guide.GRIMOIRE)
         }
         item { Tabs(section) { section = it } }
         if (hero == null || body == null || index == null) item { InfoCard(ui("common.loading"), ui("skills.loading_hint")) }

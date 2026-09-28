@@ -17,6 +17,9 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.ClassPortrait
 import com.sperance.exileforge.ui.components.ForgePanel
+import com.sperance.exileforge.ui.components.FirstVisit
+import com.sperance.exileforge.ui.components.Guide
+import com.sperance.exileforge.ui.components.GuideButton
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
 
@@ -31,12 +34,16 @@ import com.sperance.exileforge.ui.theme.*
 @Composable fun HeroHeader(s: ForgeState, onTree: () -> Unit, onSkills: () -> Unit = {}, onForge: () -> Unit) {
     val hero = s.hero ?: return
     val info = hero.info
+    FirstVisit(Guide.HERO)
     ForgePanel {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             // The class's portrait as the map's token (since 2.31.0).
             ClassPortrait(hero.heroClass, s.world.portraits, Modifier.size(64.dp), round = true)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(info.name, style = MaterialTheme.typography.headlineSmall, color = GoldBright)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(info.name, style = MaterialTheme.typography.headlineSmall, color = GoldBright, modifier = Modifier.weight(1f, fill = false))
+                    GuideButton(Guide.HERO)
+                }
                 // The title the chronicle opened (3.3.0), under the name
                 info.title.takeIf { it.isNotBlank() }?.let { Text(titleName(it), color = Gold, style = MaterialTheme.typography.labelMedium) }
                 // The class is the base every percentage is counted from; the server owns it.

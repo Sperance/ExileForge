@@ -32,6 +32,8 @@ import kotlinx.serialization.Serializable
     val amount: Long = 1,
     val priceOrb: String = "",
     val price: Long = 0,
+    /** The buyer's fee in gold, on top of the orbs (3.15.0, server 1.13.0): it burns, the seller gets none. */
+    val fee: Long = 0,
     val itemCode: String = "",
     val slot: Slot? = null,
     val rarity: Rarity? = null,

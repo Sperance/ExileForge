@@ -102,22 +102,26 @@ import com.sperance.exileforge.ui.theme.*
         // What the bag keeps after paying: shown when the bag is known and can pay; when it cannot,
         // the sheet says so and the purchase is not sent (2.46.0).
         val have = s.bagAmount(lot.priceOrb)
+        val money = s.hero?.money
+        val poor = money != null && money < lot.fee
         ConfirmSheet(
             title = ui("auction.buy_q"), subtitle = lot.title,
             icon = { LotIcon(s, lot, Modifier.size(44.dp)) },
             ledger = listOfNotNull(
                 LedgerLine(ui("confirm.spend"), ui("confirm.minus", lot.price, orb), Tone.SPEND),
+                lot.fee.takeIf { it > 0 }?.let { LedgerLine(ui("auction.fee"), ui("merchant.gold_amount", it), Tone.SPEND) },
                 have?.takeIf { it >= lot.price }?.let { LedgerLine(ui("confirm.left"), ui("confirm.amount", it - lot.price, orb)) },
                 LedgerLine(ui("confirm.gain"), lot.title, Tone.GAIN),
                 LedgerLine(ui("auction.seller"), sellerName(lot)),
             ),
             warning = listOfNotNull(
                 have?.takeIf { it < lot.price }?.let { ui("confirm.short", it) },
+                ui("auction.fee_short", lot.fee).takeIf { poor },
                 blocked.takeIf { it.isNotEmpty() }?.let {
                     ui("auction.unwearable", it.joinToString(", ") { r -> requirementReason(r, s.lang) })
                 },
             ).joinToString("\n").ifBlank { null },
-            blocked = have != null && have < lot.price,
+            blocked = (have != null && have < lot.price) || poor,
             confirm = ui("auction.buy_do"),
             onDismiss = { confirmBuy = null }) { onBuy(lot.id) }
     }

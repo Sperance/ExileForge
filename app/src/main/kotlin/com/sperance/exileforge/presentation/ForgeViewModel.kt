@@ -119,6 +119,7 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     fun loadShowcase(page: Int = 0) = runtime.auctionViewModel.loadShowcase(page)
     fun buyLot(lotId: String) = runtime.auctionViewModel.buy(lotId)
     fun buyOffer(offerId: String) = runtime.auctionViewModel.buyOffer(offerId)
+    fun buyOrb(code: String) = runtime.auctionViewModel.buyOrb(code)
     fun buyLotSlot() = runtime.auctionViewModel.buySlot()
     fun cancelLot(lotId: String) = runtime.auctionViewModel.cancel(lotId)
     /** Lists a copy for [price] of the orb [priceOrb] (an item code). */

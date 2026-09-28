@@ -5,17 +5,22 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.Glyph
+import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.trade.MerchantOffer
+import com.sperance.exileforge.core.model.trade.MerchantOrb
+import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.unmetFor
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.ui.components.*
+import com.sperance.exileforge.ui.icons.OrbGlyph
 import com.sperance.exileforge.ui.screens.hero.WearPreview
 import com.sperance.exileforge.ui.theme.*
 
@@ -26,6 +31,9 @@ import com.sperance.exileforge.ui.theme.*
  *
  * An offer is a copy like any in the stash (3.0.0): its view over the content draws it, and the
  * rules say whether this hero could wear it.
+ *
+ * Under the header, the orb shelf (3.15.0, server 1.13.0): lesser orbs for gold, each one of a kind
+ * dearer than the last until the shelf renews with the wares.
  */
 @Composable internal fun ColumnScope.MerchantTab(s: ForgeState, vm: ForgeViewModel) {
     FirstVisit(Guide.MERCHANT)
@@ -41,6 +49,15 @@ import com.sperance.exileforge.ui.theme.*
                 MutedText(ui("merchant.note"))
             }
         }
+        stock?.orbs?.takeIf { it.isNotEmpty() }?.let { orbs ->
+            item {
+                ForgePanel {
+                    Engraved(ui("merchant.orbs"))
+                    MutedText(ui("merchant.orbs_note"))
+                    orbs.forEach { orb -> OrbRow(orb, have = s.bagAmount(orb.code), enabled = !s.busy && (money == null || money >= orb.price)) { vm.buyOrb(orb.code) } }
+                }
+            }
+        }
         if (stock != null && stock.offers.isEmpty()) item { InfoCard(ui("merchant.empty"), ui("merchant.empty_hint")) }
         items(stock?.offers.orEmpty(), key = { it.id }) { offer ->
             // A copy whose template the content does not hold cannot be drawn, and is not offered.
@@ -50,6 +67,18 @@ import com.sperance.exileforge.ui.theme.*
         }
     }
     chosen?.let { offer -> OfferSheet(s, offer, money, onDismiss = { chosen = null }) { chosen = null; vm.buyOffer(offer.id) } }
+}
+
+/** One orb on the shelf: its glass and name, how many the bag holds, and the button with the next price. */
+@Composable private fun OrbRow(orb: MerchantOrb, have: Long?, enabled: Boolean, onBuy: () -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        OrbGlyph(Orb.of(orb.code), Modifier.size(32.dp))
+        Column(Modifier.weight(1f)) {
+            Text(itemTitle(orb.code), style = MaterialTheme.typography.bodyMedium)
+            have?.let { MutedText(ui("merchant.orb_have", it)) }
+        }
+        ForgeOutlinedButton(enabled = enabled, onClick = onBuy) { GoldPrice(orb.price) }
+    }
 }
 
 /**

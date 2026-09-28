@@ -62,7 +62,7 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook) {
     var standing: List<StatLine> = emptyList()
         private set
 
-    private val hero get() = battle.heroFighter
+    private val hero get() = battle.current
     private fun value(power: Power) = hero.body[power.stat]
 
     /** One slice has passed: the fight's opening, the powers on a beat. */

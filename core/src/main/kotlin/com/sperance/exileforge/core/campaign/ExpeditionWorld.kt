@@ -336,6 +336,33 @@ class ExpeditionWorld(
         return null
     }
 
+    /**
+     * A guest's world (co-op, 3.25.0): the host's hero and monsters where the host says they are, what the host
+     * opened and drank. Nothing here walks by itself; crystals and cracks follow the journal's events instead.
+     */
+    fun follow(mirror: com.sperance.exileforge.core.party.WorldMirror) {
+        heroX = mirror.x
+        heroY = mirror.y
+        facingX = mirror.facingX
+        facingY = mirror.facingY
+        moving = mirror.moving
+        val standing = mirror.agents.associateBy { it.id }
+        agents.forEach { agent ->
+            val seen = standing[agent.id]
+            agent.alive = seen != null
+            if (seen == null) return@forEach
+            agent.x = seen.x.toDouble()
+            agent.y = seen.y.toDouble()
+            agent.mode = seen.mode
+            agent.fallen.clear()
+            agent.fallen += seen.fallen
+        }
+        mirror.chests.forEach { id -> chests.firstOrNull { it.id == id }?.opened = true }
+        mirror.fountains.forEach { id -> fountains.firstOrNull { it.id == id }?.used = true }
+        if (!mirror.portal) portal = null
+        light()
+    }
+
     /** Monsters still standing, the boss apart: it is counted as the exit's seal, not as one of them. */
     val alive: Int get() = agents.count { it.alive && it !== boss }
     val total: Int get() = agents.count { it !== boss }

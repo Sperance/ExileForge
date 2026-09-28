@@ -168,6 +168,15 @@ data class PlayState(
     val atlas: AtlasScreenState? = null,
     /** The run's journal: events the server has not taken yet, and the ones it refused, for the badge. */
     val runPending: Int = 0, val runRejected: Int = 0,
+    /** The co-op lobby (3.25.0). */
+    val party: PartyState = PartyState(),
+)
+
+/** The co-op lobby as this hero sees it (3.25.0): the one they are in, the guild's still gathering, and whether the link is up. */
+data class PartyState(
+    val view: com.sperance.exileforge.rules.party.PartyView? = null,
+    val guild: List<com.sperance.exileforge.rules.party.PartyView> = emptyList(),
+    val online: Boolean = false,
 )
 
 /** The atlas window: the node looked at. */

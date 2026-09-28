@@ -52,6 +52,13 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     fun allocateAtlas(code: String) = runtime.expeditionViewModel.allocateAtlas(code)
     fun refundAtlas(code: String) = runtime.expeditionViewModel.refundAtlas(code)
     fun resetAtlas() = runtime.expeditionViewModel.resetAtlas()
+    // Co-op (3.25.0): the lobby before a zone.
+    fun refreshParty() = runtime.partyViewModel.refresh()
+    fun loadGuildParties() = runtime.partyViewModel.loadGuild()
+    fun createParty(mapCode: String, itemId: String?) = runtime.partyViewModel.create(mapCode, itemId)
+    fun joinParty(code: String) = runtime.partyViewModel.join(code)
+    fun leaveParty() = runtime.partyViewModel.leave()
+    fun kickFromParty(memberId: String) = runtime.partyViewModel.kick(memberId)
     fun language(lang: Lang) = runtime.language(lang)
     fun refreshLocale() = runtime.refreshLocale()
     fun refreshIcons() = runtime.refreshIcons()

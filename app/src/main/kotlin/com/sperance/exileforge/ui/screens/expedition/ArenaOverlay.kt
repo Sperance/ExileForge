@@ -500,17 +500,22 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
     val live = fight.outcome == null
     if (!fight.started) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ForgeButton(onClick = { onCommand(RunCommand.Begin) }, modifier = Modifier.weight(1f).height(52.dp),
+            // A party's fight waits for everyone's word (3.25.0), or for its seconds to run out
+            val ready = fight.ready
+            ForgeButton(onClick = { onCommand(RunCommand.Begin) }, enabled = ready?.mine != true, modifier = Modifier.weight(1f).height(52.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Blood, contentColor = GoldBright)) {
                 Icon(ForgeGlyphs.Swords, null, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
-                Text(ui("expedition.begin"), style = MaterialTheme.typography.titleMedium)
+                Text(if (ready == null) ui("expedition.begin") else ui(if (ready.mine) "party.ready_wait" else "party.ready", ready.ready, ready.total, ready.left),
+                    style = MaterialTheme.typography.titleMedium)
             }
             // The Abyss lets nobody walk away from its wave (2.82.0).
             if (fight.escape) ForgeOutlinedButton(onClick = { onCommand(RunCommand.Retreat) }, modifier = Modifier.height(52.dp)) { Text(ui("fight.walk_away")) }
         }
         return
     }
+    // A guest fights, but the pace and the way out are the host's
+    if (!fight.lead) return
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         ForgeOutlinedButton(enabled = live && !fight.retreating, onClick = { onCommand(if (fight.paused) RunCommand.Begin else RunCommand.Pause) },
             modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 8.dp)) {

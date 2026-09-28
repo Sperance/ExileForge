@@ -97,7 +97,8 @@ import kotlinx.coroutines.delay
         when (hud.phase) {
             RunPhase.MAP -> {
                 // An autorun walks by itself (3.2.0): no stick under the thumb while it runs
-                if (hud.auto == null) Stick(run)
+                // A guest does not walk: the host does, for the whole party (3.25.0)
+                if (hud.auto == null && !hud.guest) Stick(run)
                 MapBar(s, run, hud, onLeave = if (zone) null else ({ leaving = true }), onGear = { gear = true }, onStats = { sheet = true },
                     onDrink = { vm.runCommand(RunCommand.Drink(it)) }, onRetry = vm::flushRun)
                 if (gear) { HoldsRun(run); GearSheet(s, vm) { gear = false } }
@@ -125,6 +126,8 @@ import kotlinx.coroutines.delay
         hud.auto?.takeIf { hud.phase == RunPhase.MAP || hud.phase == RunPhase.FIGHT }?.let { auto ->
             AutoBar(auto, Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 8.dp)) { vm.runCommand(RunCommand.StopAuto) }
         }
+        if (hud.phase == RunPhase.MAP || hud.phase == RunPhase.FIGHT)
+            PartyBar(hud.party, Modifier.align(Alignment.CenterStart).padding(start = 8.dp))
         // A refusal of the gear (2.40.0) has to be read here too: the run has no bar and no banner.
         ToastHost(s, vm::dismissMessage, vm::dismissNotice, Modifier.align(Alignment.TopCenter).statusBarsPadding())
     }

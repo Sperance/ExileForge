@@ -41,7 +41,7 @@ private const val CARD_TOP = .48f
  * to the frontier. A tapped token raises its card over the map's foot — the way into the zone.
  */
 @Composable fun ExpeditionScreen(s: ForgeState, vm: ForgeViewModel) {
-    LaunchedEffect(s.play.heroId, s.account.sessionEpoch) { vm.ensureHero(); vm.loadCampaign() }
+    LaunchedEffect(s.play.heroId, s.account.sessionEpoch) { vm.ensureHero(); vm.loadCampaign(); vm.refreshParty() }
     FirstVisit(Guide.EXPEDITION)
     val index = s.index
     val progress = s.progress
@@ -72,6 +72,7 @@ private const val CARD_TOP = .48f
         WorldBar(s, world, Modifier.align(Alignment.TopCenter),
             onFrontier = { scope.launch { camera.glide(world.frontier(), WorldCamera.HOME, if (launch != null) CARD_DOWN else .5f) } },
             onAtlas = vm::openAtlas)
+        PartyStrip(s, vm, Modifier.align(Alignment.TopStart).padding(top = 72.dp))
         ZoomButtons(camera, Modifier.align(Alignment.TopEnd).padding(top = 72.dp, end = 12.dp)) { factor -> scope.launch { camera.zoomBy(factor) } }
         launch?.let { ZoneCard(s, vm, world, it, Modifier.align(Alignment.BottomCenter)) }
     }

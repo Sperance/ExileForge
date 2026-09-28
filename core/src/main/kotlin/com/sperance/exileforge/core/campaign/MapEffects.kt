@@ -115,6 +115,14 @@ object MapEffects {
         effects[MapStats.MONSTER_CAST]?.let { add(MonsterEffect("STOCK_COOLDOWN_RECOVERY", Op.ADD, it)) }
     }
 
+    /** A party's monsters (co-op, 3.25.0): so many percent more life and damage for every hero past the first, by the server's rule. */
+    fun party(rule: com.sperance.exileforge.rules.content.PartyRule, size: Int): List<MonsterEffect> {
+        val life = rule.extra(rule.life, size)
+        val damage = rule.extra(rule.damage, size)
+        return listOfNotNull(MonsterEffect("STOCK_HEALTH", Op.MORE, life).takeIf { life > 0 }) +
+            if (damage > 0) (this.damage + "STOCK_ATTACK_MAGICAL").map { MonsterEffect(it, Op.MORE, damage) } else emptyList()
+    }
+
     /** A crystal's guardian beyond its rarity: so many percent more life and damage when a Vaal orb made it [stronger], and by the atlas's power of guardians. */
     fun guardianBuffs(stronger: Boolean, strongerBy: Double, effects: Map<String, Double>): List<MonsterEffect> {
         val power = (if (stronger) strongerBy else 0.0) + (effects[AtlasEffects.GUARDIAN_POWER] ?: 0.0)

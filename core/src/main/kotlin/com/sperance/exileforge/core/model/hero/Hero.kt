@@ -6,6 +6,7 @@ import com.sperance.exileforge.core.model.campaign.CampaignState
 import com.sperance.exileforge.core.model.crafts.WorkState
 import com.sperance.exileforge.core.model.trade.MerchantStock
 import com.sperance.exileforge.rules.content.Counter
+import com.sperance.exileforge.rules.content.GuildBonus
 import com.sperance.exileforge.rules.content.HeroSkills
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.TakenNode
@@ -40,6 +41,8 @@ import kotlinx.serialization.Serializable
     val counters: Map<String, Long> = emptyMap(),
     /** The title worn beside the name, or blank. */
     val title: String = "",
+    /** Guild marks earned by giving (3.22.0, server 1.20.0): they stay when the hero leaves; the shop that takes them comes later. */
+    val guildMarks: Long = 0,
 )
 
 /** The stash's places as the server counts them after a command: used, held, the ceiling, the next pack's price (0 at the ceiling), the overflow. */
@@ -78,6 +81,8 @@ data class HeroView(
     val sheet: HeroSheet = HeroSheet.EMPTY,
     /** The menagerie (3.5.0, server 1.5.0). */
     val pets: PetState = PetState(),
+    /** The guild patron's bonus on the hero (3.22.0), already in [sheet]; an empty patron outside a guild. */
+    val guild: GuildBonus = GuildBonus(),
 ) {
     val id: String get() = info.id
     val level: Int get() = info.level

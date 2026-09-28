@@ -27,21 +27,23 @@ class AuctionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         mutable.update { it.copy(market = it.market.copy(showcase = showcase)) }
     } } }
 
-    fun loadMyLots() { with(runtime) { trade(key = Reads.LOTS) {
+    /** [glance] is the City square's (3.22.0): no strip, and a hero below the auction's level is told on its card rather than by a refusal. */
+    fun loadMyLots(glance: Boolean = false) { with(runtime) { trade(key = Reads.LOTS, glance = glance) {
         val id = heroId
         val lots = api.auction.myLots(id)
         val slots = api.auction.slots(id)
         mutable.update { it.copy(market = it.market.copy(myLots = lots, slots = slots)) }
     } } }
 
-    /** The merchant's shelf: it comes with the hero snapshot, and is read afresh here when the tab opens. */
+    /** The merchant's shelf: it comes with the hero snapshot, and is read afresh here when the building opens. */
     fun loadMerchant() { with(runtime) { trade(key = Reads.MERCHANT) {
         ensureContent()
         val stock = api.merchant.stock(heroId)
         mutable.update { it.copy(market = it.market.copy(merchant = stock)) }
     } } }
 
-    fun loadAuction() { loadShowcase(0); loadMyLots(); loadMerchant() }
+    /** The auction's own two lists; the merchant is a building of its own since 3.22.0 and reads its shelf itself. */
+    fun loadAuction() { loadShowcase(0); loadMyLots() }
 
     fun buyOffer(offerId: String) { with(runtime) { trade(writing = true) {
         val id = heroId
@@ -125,12 +127,12 @@ class AuctionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     private suspend fun refreshHero(heroId: String) { if (onScreen(heroId)) runtime.heroViewModel.readHero() }
 
-    private fun trade(writing: Boolean = false, restart: Boolean = false, key: String = Reads.AUCTION, block: suspend () -> Unit) { with(runtime) {
+    private fun trade(writing: Boolean = false, restart: Boolean = false, key: String = Reads.AUCTION, glance: Boolean = false, block: suspend () -> Unit) { with(runtime) {
         if (writing) task(writing = true, touches = setOf(Reads.AUCTION, Reads.LOTS, Reads.HERO, Reads.MERCHANT)) { gated(block) }
-        else read(key, restart) { gated(block) }
+        else read(key, restart, silent = glance) { gated(block, glance) }
     } }
 
-    private suspend fun gated(block: suspend () -> Unit) { with(runtime) {
+    private suspend fun gated(block: suspend () -> Unit, glance: Boolean = false) { with(runtime) {
         check(state.value.play.heroId.isNotBlank()) { ui("auction.choose_character") }
         try {
             block()
@@ -139,7 +141,7 @@ class AuctionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         catch (e: ApiFailure) {
             if (e.code != LEVEL_GATE) throw e
             mutable.update { it.copy(market = it.market.copy(locked = locError(e.code, e.message.orEmpty()), showcase = AuctionPage(), myLots = emptyList())) }
-            throw e
+            if (!glance) throw e
         }
     } }
 }

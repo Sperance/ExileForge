@@ -33,7 +33,7 @@ import com.sperance.exileforge.ui.components.ToastHost
 import com.sperance.exileforge.ui.components.voidBackdrop
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.admin.AdminScreen
-import com.sperance.exileforge.ui.screens.auction.AuctionScreen
+import com.sperance.exileforge.ui.screens.city.CityScreen
 import com.sperance.exileforge.ui.screens.craft.CraftScreen
 import com.sperance.exileforge.ui.screens.crafts.CraftsScreen
 import com.sperance.exileforge.ui.screens.expedition.AtlasScreen
@@ -92,15 +92,17 @@ import com.sperance.exileforge.ui.theme.*
                 // Four destinations are the game; an administrator gets exactly one more, and
                 // the promo codes live behind it as a button.
                 val labels = mapOf(TAB_HERO to ui("nav.hero"), TAB_EXPEDITION to ui("nav.expedition"), TAB_CRAFTS to ui("nav.crafts"),
-                    TAB_AUCTION to ui("nav.auction"), TAB_ACCOUNT to ui("nav.account"),
+                    TAB_CITY to ui("nav.city"), TAB_ACCOUNT to ui("nav.account"),
                     TAB_ADMIN to ui("nav.admin"))
                 val destinations = PLAYER_TABS + listOfNotNull(TAB_ADMIN.takeIf { s.adminTools })
                 val icons = mapOf<Int, ImageVector>(TAB_ACCOUNT to ForgeGlyphs.Portal, TAB_HERO to ForgeGlyphs.Helm, TAB_EXPEDITION to ForgeGlyphs.Swords,
-                    TAB_CRAFTS to ForgeGlyphs.Anvil, TAB_AUCTION to ForgeGlyphs.Orb, TAB_ADMIN to ForgeGlyphs.Scroll)
+                    TAB_CRAFTS to ForgeGlyphs.Anvil, TAB_CITY to ForgeGlyphs.Keep, TAB_ADMIN to ForgeGlyphs.Scroll)
                 destinations.forEach { index ->
                     val label = labels.getValue(index)
                     // The tree is the hero's (2.40.0): while it is open, the Hero tab reads as the one chosen.
-                    NavigationBarItem(selected = s.tab == index || (index == TAB_HERO && (s.tab == TAB_TREE || s.tab == TAB_SKILLS)), onClick = { vm.tab(index) },
+                    // The City's tab tapped again from inside a building (3.22.0) walks back out to the square.
+                    NavigationBarItem(selected = s.tab == index || (index == TAB_HERO && (s.tab == TAB_TREE || s.tab == TAB_SKILLS)),
+                        onClick = { if (index == TAB_CITY && s.tab == TAB_CITY) vm.building(null) else vm.tab(index) },
                         icon = { Icon(icons.getValue(index), null, modifier = Modifier.size(22.dp)) }, label = { Text(label, fontSize = 10.sp) },
                         colors = NavigationBarItemDefaults.colors(selectedIconColor = GoldBright, selectedTextColor = Gold,
                             indicatorColor = Gold.copy(alpha = .16f), unselectedIconColor = Muted, unselectedTextColor = Muted))
@@ -121,7 +123,7 @@ import com.sperance.exileforge.ui.theme.*
                 TAB_CRAFTS -> CraftsScreen(s, vm)
                 TAB_TREE -> SkillTreeScreen(s, vm)
                 TAB_SKILLS -> GrimoireScreen(s, vm)
-                TAB_AUCTION -> AuctionScreen(s, vm)
+                TAB_CITY -> CityScreen(s, vm)
                 TAB_ADMIN -> AdminScreen(s, vm)
                 // The forge keeps no place in the bar: it opens from the Hero tab, as the promo
                 // codes open from the administrator's, and the bar is the way back out of both.

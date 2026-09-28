@@ -17,7 +17,7 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
  * The player auction.
  *
  * Three jobs live here and nowhere else: the showcase, the character's own lots and listing
- * something new. The Hero tab is left alone — an item is sold from here, not from the stash.
+ * something new. Since 3.22.0 it is a building of the City, entered from its square. The Hero tab is left alone — an item is sold from here, not from the stash.
  *
  * The auction opens at a level the server keeps to itself, so the screen does not guard the gate:
  * it asks, and turns the refusal into an explanation.
@@ -43,23 +43,20 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
         }
         val mine = s.ownLots.size
         // «Выставить» left in 2.48.0: an item is listed from its own card, a stack from the bag.
-        val tabs = listOf(ui("auction.showcase"), if (mine > 0) ui("auction.my_lots_n", mine) else ui("auction.my_lots"), ui("merchant.tab"))
-        // Three tabs share the width (2.73.0): a scrollable row left room for a fourth.
-        TabRow(selectedTabIndex = s.market.tab, containerColor = com.sperance.exileforge.ui.theme.Abyss) {
+        // The merchant moved out in 3.22.0, to a building of the City of its own.
+        val tabs = listOf(ui("auction.showcase"), if (mine > 0) ui("auction.my_lots_n", mine) else ui("auction.my_lots"))
+        val tab = s.market.tab.coerceIn(tabs.indices)
+        TabRow(selectedTabIndex = tab, containerColor = com.sperance.exileforge.ui.theme.Abyss) {
             tabs.forEachIndexed { index, title ->
-                Tab(selected = s.market.tab == index, enabled = !s.busy, onClick = { vm.auctionTab(index) },
+                Tab(selected = tab == index, enabled = !s.busy, onClick = { vm.auctionTab(index) },
                     text = { Text(title, style = MaterialTheme.typography.labelLarge) })
             }
         }
         // Every tab is refreshed the same way the hero is: by pulling it. A button competing with
         // the content was one more thing to find, and the gesture is already the habit here.
-        PullToRefreshBox(isRefreshing = s.refreshing(Reads.AUCTION) || Reads.LOTS in s.loading || Reads.MERCHANT in s.loading, onRefresh = vm::loadAuction, modifier = Modifier.weight(1f)) {
+        PullToRefreshBox(isRefreshing = s.refreshing(Reads.AUCTION) || Reads.LOTS in s.loading, onRefresh = vm::loadAuction, modifier = Modifier.weight(1f)) {
             Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                when (s.market.tab) {
-                    0 -> ShowcaseTab(s, vm)
-                    1 -> MyLotsTab(s, vm)
-                    else -> MerchantTab(s, vm)
-                }
+                if (tab == 0) ShowcaseTab(s, vm) else MyLotsTab(s, vm)
             }
         }
     }

@@ -12,6 +12,7 @@ import com.sperance.exileforge.core.model.crafts.WorkState
 import com.sperance.exileforge.core.model.hero.HeroInfo
 import com.sperance.exileforge.core.model.hero.PetState
 import com.sperance.exileforge.core.model.trade.MerchantStock
+import com.sperance.exileforge.rules.content.GuildBonus
 import com.sperance.exileforge.rules.content.TakenNode
 import com.sperance.exileforge.rules.roll.ItemBuckets
 import com.sperance.exileforge.rules.roll.ItemInstance
@@ -79,6 +80,8 @@ class HeroParts(val heroId: String, val version: String = "", private val parts:
     val crafts: WorkState get() = decode(CRAFTS, WorkState.serializer())
     val merchant: MerchantStock get() = decode(MERCHANT, MerchantStock.serializer())
     val pets: PetState get() = decode(PETS, PetState.serializer())
+    /** The guild patron's bonus on this hero (3.22.0, server 1.20.0): an empty patron outside a guild. */
+    val guild: GuildBonus get() = decode(GUILD, GuildBonus.serializer())
 
     private fun <T> decode(name: String, serializer: KSerializer<T>): T = WireJson.decodeFromJsonElement(serializer, parts.getValue(name).data)
 
@@ -92,6 +95,7 @@ class HeroParts(val heroId: String, val version: String = "", private val parts:
         const val CRAFTS = "crafts"
         const val MERCHANT = "merchant"
         const val PETS = "pets"
-        val NAMES = listOf(HERO, BAG, TREE, CAMPAIGN, CRAFTS, MERCHANT, OVERFLOW, PETS, ItemBuckets.ORDER) + ItemBuckets.names
+        const val GUILD = "guild"
+        val NAMES = listOf(HERO, BAG, TREE, CAMPAIGN, CRAFTS, MERCHANT, OVERFLOW, PETS, GUILD, ItemBuckets.ORDER) + ItemBuckets.names
     }
 }

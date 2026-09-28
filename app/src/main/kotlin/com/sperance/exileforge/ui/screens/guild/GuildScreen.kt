@@ -1,0 +1,151 @@
+package com.sperance.exileforge.ui.screens.guild
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.display.GuildText
+import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.model.guild.GuildCard
+import com.sperance.exileforge.core.model.guild.GuildInviteView
+import com.sperance.exileforge.core.model.guild.GuildMine
+import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.Reads
+import com.sperance.exileforge.rules.content.GuildMode
+import com.sperance.exileforge.ui.components.*
+import com.sperance.exileforge.ui.icons.ForgeGlyphs
+import com.sperance.exileforge.ui.theme.*
+
+/**
+ * The guild (3.22.0, server 1.20.0), a building of the City. A hero outside one finds a guild, answers an invitation or
+ * founds a guild of their own; a hero inside sees their guild under its arms, in tabs. Every rule is the server's —
+ * the screen only says in advance what a button would be refused for, from `guilds.json`.
+ */
+@Composable fun GuildScreen(s: ForgeState, vm: ForgeViewModel) {
+    LaunchedEffect(s.play.heroId, s.account.sessionEpoch) {
+        if (s.play.heroId.isNotBlank()) { vm.ensureHero(); vm.loadGuild() }
+    }
+    val mine = s.guild.mine
+    val guild = mine?.guild
+    Column(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Spacer(Modifier.height(12.dp))
+        when {
+            guild != null -> { FirstVisit(Guide.GUILD); GuildInside(s, vm, guild, mine?.me) }
+            mine != null -> {
+                ScreenHeader(ui("guild.title"), ui("guild.outside_subtitle"), ForgeGlyphs.Banner, guide = Guide.GUILD)
+                GuildOutside(s, vm, mine)
+            }
+            else -> {
+                ScreenHeader(ui("guild.title"), null, ForgeGlyphs.Banner, guide = Guide.GUILD)
+                if (Reads.GUILD in s.loading) MutedText(ui("guild.loading"))
+                else ForgeOutlinedButton(enabled = !s.busy, onClick = vm::loadGuild, modifier = Modifier.fillMaxWidth()) { Text(ui("auction.check_again")) }
+            }
+        }
+    }
+}
+
+/** Outside a guild: the wait after leaving, the invitations, the founding and the list of guilds to knock at. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable private fun ColumnScope.GuildOutside(s: ForgeState, vm: ForgeViewModel, mine: GuildMine) {
+    var founding by remember { mutableStateOf(false) }
+    LaunchedEffect(s.play.heroId) { vm.searchGuilds(0) }
+    val waiting = mine.rejoinAt?.takeIf { it > System.currentTimeMillis() }
+    PullToRefreshBox(isRefreshing = Reads.GUILD in s.loading || Reads.GUILD_SEARCH in s.loading,
+        onRefresh = { vm.loadGuild(); vm.searchGuilds(s.guild.search.page) }, modifier = Modifier.weight(1f)) {
+        LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
+            waiting?.let { item { InfoCard(ui("guild.rejoin_title"), ui("guild.rejoin_text", clockText(it))) } }
+            if (mine.invites.isNotEmpty()) item {
+                ForgePanel(accent = Rune) {
+                    Engraved(ui("guild.invites", mine.invites.size), Rune)
+                    mine.invites.forEach { InviteRow(s, it, vm) }
+                }
+            }
+            item {
+                ForgePanel {
+                    Engraved(ui("guild.found_title"))
+                    MutedText(ui("guild.found_note"))
+                    ForgeButton(enabled = !s.busy, onClick = { founding = true }, modifier = Modifier.fillMaxWidth()) { Text(ui("guild.found")) }
+                }
+            }
+            item { SearchField(s, vm) }
+            val page = s.guild.search
+            if (page.items.isEmpty() && Reads.GUILD_SEARCH !in s.loading) item { InfoCard(ui("guild.none_found"), ui("guild.none_found_hint")) }
+            items(page.items, key = { it.id }) { card -> GuildCardRow(s, card, blocked = joinBlock(s, card, waiting != null)) { vm.joinGuild(card) } }
+            if (page.totalPages > 1) item {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ForgeOutlinedButton(enabled = page.page > 0, onClick = { vm.searchGuilds(page.page - 1) }) { Text(ui("guild.back_page")) }
+                    MutedText(ui("auction.page", page.page + 1, page.totalPages), modifier = Modifier.weight(1f))
+                    ForgeOutlinedButton(enabled = page.page + 1 < page.totalPages, onClick = { vm.searchGuilds(page.page + 1) }) { Text(ui("auction.forward")) }
+                }
+            }
+        }
+    }
+    if (founding) FoundingSheet(s, onDismiss = { founding = false }) { name, tag, patron, emblem, color, mode, minLevel ->
+        founding = false
+        vm.createGuild(name, tag, patron, emblem, color, mode, minLevel)
+    }
+}
+
+@Composable private fun SearchField(s: ForgeState, vm: ForgeViewModel) {
+    OutlinedTextField(s.guild.query, vm::guildQuery, label = { Text(ui("guild.search")) }, singleLine = true,
+        leadingIcon = { Icon(Icons.Outlined.Search, null) },
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { vm.searchGuilds(0) }),
+        trailingIcon = { ForgeTextButton(onClick = { vm.searchGuilds(0) }) { Text(ui("guild.find")) } },
+        modifier = Modifier.fillMaxWidth())
+}
+
+/** Why this hero cannot get into [card] now, or null when the button may be pressed. */
+private fun joinBlock(s: ForgeState, card: GuildCard, waiting: Boolean): String? = when {
+    waiting -> ui("guild.block_rejoin")
+    card.full -> ui("guild.block_full")
+    s.heroLevel < card.minLevel -> ui("guild.block_level", card.minLevel)
+    card.mode == GuildMode.INVITE -> ui("guild.block_invite")
+    else -> null
+}
+
+/** One guild of the list: arms, name, patron and level, the roll and the way in; the button asks or joins by the guild's mode. */
+@Composable private fun GuildCardRow(s: ForgeState, card: GuildCard, blocked: String?, onJoin: () -> Unit) {
+    ForgePanel(accent = guildColor(card.color)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            GuildEmblem(card.emblem, card.color)
+            Column(Modifier.weight(1f)) {
+                Text(GuildText.title(card.name, card.tag), color = GoldBright, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                MutedText(ui("guild.card_line", GuildText.patron(card.patron), card.level))
+                MutedText(ui("guild.card_roll", card.members, card.capacity, GuildText.mode(card.mode), card.minLevel))
+            }
+        }
+        if (blocked != null) MutedText(blocked)
+        else ForgeOutlinedButton(enabled = !s.busy, onClick = onJoin, modifier = Modifier.fillMaxWidth()) {
+            Text(if (card.mode == GuildMode.OPEN) ui("guild.join") else ui("guild.apply"))
+        }
+    }
+}
+
+/** An invitation: whose guild, who sent it, and the two answers. */
+@Composable private fun InviteRow(s: ForgeState, invite: GuildInviteView, vm: ForgeViewModel) {
+    val card = invite.guild
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        GuildEmblem(card.emblem, card.color, 36.dp)
+        Column(Modifier.weight(1f)) {
+            Text(GuildText.title(card.name, card.tag), color = Parchment, style = MaterialTheme.typography.bodyMedium)
+            MutedText(listOfNotNull(ui("guild.card_line", GuildText.patron(card.patron), card.level),
+                invite.by.takeIf { it.isNotBlank() }?.let { ui("guild.invite_from", it) }).joinToString(" · "))
+        }
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        ForgeOutlinedButton(enabled = !s.busy, onClick = { vm.declineGuildInvite(card.id) }, modifier = Modifier.weight(1f)) { Text(ui("guild.decline")) }
+        ForgeButton(enabled = !s.busy, onClick = { vm.acceptGuildInvite(card.id) }, modifier = Modifier.weight(1f)) { Text(ui("guild.accept")) }
+    }
+}

@@ -39,6 +39,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.auction.*
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.discounted
 import com.sperance.exileforge.presentation.state.unmetFor
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.Orb
@@ -103,20 +104,22 @@ import com.sperance.exileforge.ui.theme.*
         // the sheet says so and the purchase is not sent (2.46.0).
         val have = s.bagAmount(lot.priceOrb)
         val money = s.hero?.money
-        val poor = money != null && money < lot.fee
+        // The guild's discount (3.22.0) comes off the fee at the purchase, as the server takes it.
+        val fee = s.discounted(lot.fee)
+        val poor = money != null && money < fee
         ConfirmSheet(
             title = ui("auction.buy_q"), subtitle = lot.title,
             icon = { LotIcon(s, lot, Modifier.size(44.dp)) },
             ledger = listOfNotNull(
                 LedgerLine(ui("confirm.spend"), ui("confirm.minus", lot.price, orb), Tone.SPEND),
-                lot.fee.takeIf { it > 0 }?.let { LedgerLine(ui("auction.fee"), ui("merchant.gold_amount", it), Tone.SPEND) },
+                fee.takeIf { it > 0 }?.let { LedgerLine(ui("auction.fee"), ui("merchant.gold_amount", it), Tone.SPEND) },
                 have?.takeIf { it >= lot.price }?.let { LedgerLine(ui("confirm.left"), ui("confirm.amount", it - lot.price, orb)) },
                 LedgerLine(ui("confirm.gain"), lot.title, Tone.GAIN),
                 LedgerLine(ui("auction.seller"), sellerName(lot)),
             ),
             warning = listOfNotNull(
                 have?.takeIf { it < lot.price }?.let { ui("confirm.short", it) },
-                ui("auction.fee_short", lot.fee).takeIf { poor },
+                ui("auction.fee_short", fee).takeIf { poor },
                 blocked.takeIf { it.isNotEmpty() }?.let {
                     ui("auction.unwearable", it.joinToString(", ") { r -> requirementReason(r, s.lang) })
                 },

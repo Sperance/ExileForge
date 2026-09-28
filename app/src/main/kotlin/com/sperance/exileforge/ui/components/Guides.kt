@@ -20,7 +20,8 @@ import kotlinx.coroutines.launch
 enum class Guide(val icon: ImageVector) {
     HERO(ForgeGlyphs.Helm), EXPEDITION(ForgeGlyphs.Swords), CRAFTS(ForgeGlyphs.Anvil), AUCTION(ForgeGlyphs.Orb),
     TREE(ForgeGlyphs.Constellation), GRIMOIRE(ForgeGlyphs.Grimoire), PETS(ForgeGlyphs.Exile), FORGE(ForgeGlyphs.Anvil), MERCHANT(ForgeGlyphs.Coins),
-    FIGHT(ForgeGlyphs.Swords), ATLAS(ForgeGlyphs.Atlas), ABYSS(ForgeGlyphs.Rift), MAP_LAUNCH(ForgeGlyphs.Scroll);
+    FIGHT(ForgeGlyphs.Swords), ATLAS(ForgeGlyphs.Atlas), ABYSS(ForgeGlyphs.Rift), MAP_LAUNCH(ForgeGlyphs.Scroll),
+    CITY(ForgeGlyphs.Keep), GUILD(ForgeGlyphs.Banner);
 
     private val key get() = "guide.${name.lowercase()}"
     val title: String get() = ui("$key.title")

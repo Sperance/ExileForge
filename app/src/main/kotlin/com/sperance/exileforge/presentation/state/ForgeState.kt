@@ -12,6 +12,10 @@ import com.sperance.exileforge.core.model.campaign.CampaignProgress
 import com.sperance.exileforge.core.model.command.RedemptionCode
 import com.sperance.exileforge.core.model.command.UserProfile
 import com.sperance.exileforge.core.model.crafts.CraftsState
+import com.sperance.exileforge.core.model.guild.GuildLogEntry
+import com.sperance.exileforge.core.model.guild.GuildMessage
+import com.sperance.exileforge.core.model.guild.GuildMine
+import com.sperance.exileforge.core.model.guild.GuildPage
 import com.sperance.exileforge.core.model.hero.HeroInfo
 import com.sperance.exileforge.core.model.hero.HeroSummary
 import com.sperance.exileforge.core.model.hero.HeroView
@@ -39,7 +43,7 @@ enum class AppPhase { AUTH, CHARACTERS, GAME }
 /**
  * The whole app, as one immutable value. What every screen needs sits at the top; everything else is
  * grouped by whose it is: [account] the session and the heroes it owns, [world] the content read once
- * per server, [play] the hero being played, [market] the auction, [admin] the administrator's promo codes.
+ * per server, [play] the hero being played, [market] the auction, [guild] the hero's guild, [admin] the administrator's promo codes.
  */
 data class ForgeState(
     val phase: AppPhase = AppPhase.AUTH,
@@ -49,10 +53,13 @@ data class ForgeState(
     /** [busy] is a command in flight — the one thing that disables controls; [loading] names the reads in flight. */
     val busy: Boolean = true, val loading: Set<String> = emptySet(), val message: String? = null, val error: Boolean = false, val notice: Notice? = null,
     val tab: Int = TAB_HERO,
+    /** The building of the City tab that is open (3.22.0); none is the square with the three of them. */
+    val building: Building? = null,
     val account: AccountState = AccountState(),
     val world: WorldState = WorldState(),
     val play: PlayState = PlayState(),
     val market: MarketState = MarketState(),
+    val guild: GuildState = GuildState(),
     val admin: AdminState = AdminState(),
 ) {
     val isAdmin: Boolean get() = account.signedIn && account.profile?.role == "ADMIN"
@@ -184,6 +191,26 @@ data class MarketState(
     val slots: AuctionSlots? = null,
 )
 
+/** The City's buildings (3.22.0): each one a screen of its own behind the square. */
+enum class Building { MERCHANT, AUCTION, GUILD }
+
+/** The guild screen's tabs; [APPLICATIONS] only for those who may answer them. */
+enum class GuildTab { MEMBERS, APPLICATIONS, CONTRIBUTE, BONUSES, LOG, CHAT, SETTINGS }
+
+/**
+ * The hero's guild as the server last answered (3.22.0): [mine] is null until it has been read; `guilds.json` comes with
+ * the content ([ContentIndex.guilds]). The journal is read page by page; the chat is polled while its tab is open.
+ */
+data class GuildState(
+    val mine: GuildMine? = null,
+    val query: String = "", val search: GuildPage = GuildPage(),
+    val tab: GuildTab = GuildTab.MEMBERS,
+    val log: List<GuildLogEntry> = emptyList(), val logPage: Int = 0, val logEnd: Boolean = false,
+    val chat: List<GuildMessage> = emptyList(),
+    /** When the hero may speak again, by the device's clock. */
+    val chatQuietUntil: Long = 0,
+)
+
 /** The administrator's tools: promo codes. */
 data class AdminState(val redemptions: List<RedemptionCode> = emptyList())
 
@@ -201,13 +228,18 @@ object Reads {
     const val HEALTH = "health"
     const val MERCHANT = "merchant"
     const val CRAFTS = "crafts"
+    const val GUILD = "guild"
+    const val GUILD_SEARCH = "guild_search"
+    const val GUILD_LOG = "guild_log"
+    const val GUILD_CHAT = "guild_chat"
 }
 
 /** The tabs, by name: the bottom bar a player sees, and the screens a button opens. */
 const val TAB_ACCOUNT = 3
 const val TAB_HERO = 4
 const val TAB_TREE = 5
-const val TAB_AUCTION = 6
+/** The City (3.22.0): the merchant, the auction and the guild, where the auction's tab was. */
+const val TAB_CITY = 6
 const val TAB_CRAFT = 7
 const val TAB_ADMIN = 8
 const val TAB_REDEMPTION = 9
@@ -215,7 +247,7 @@ const val TAB_EXPEDITION = 10
 const val TAB_CRAFTS = 11
 const val TAB_SKILLS = 12
 
-val PLAYER_TABS = listOf(TAB_HERO, TAB_EXPEDITION, TAB_CRAFTS, TAB_AUCTION)
+val PLAYER_TABS = listOf(TAB_HERO, TAB_EXPEDITION, TAB_CRAFTS, TAB_CITY)
 
 /** Screens only an administrator may open, whichever button leads to them. */
 val ADMIN_TABS = setOf(TAB_ADMIN, TAB_REDEMPTION)

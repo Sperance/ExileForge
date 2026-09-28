@@ -54,6 +54,13 @@ data class ApiCapabilities(val routes: Set<String>) {
             "GET" to "/api/v1/hero/merchant", "POST" to "/api/v1/hero/merchant/buy", "POST" to "/api/v1/hero/merchant/buyOrb",
             "GET" to "/api/v1/hero/campaign/progress", "POST" to "/api/v1/hero/campaign/start", "POST" to "/api/v1/hero/campaign/events",
             "GET" to "/api/v1/auctionlot/search", "POST" to "/api/v1/auctionlot/sell/equipment", "POST" to "/api/v1/auctionlot/buy",
+            "GET" to "/api/v1/guild/mine", "GET" to "/api/v1/guild/search", "POST" to "/api/v1/guild/create", "POST" to "/api/v1/guild/join",
+            "POST" to "/api/v1/guild/apply", "POST" to "/api/v1/guild/applications/accept", "POST" to "/api/v1/guild/applications/decline",
+            "POST" to "/api/v1/guild/invite", "POST" to "/api/v1/guild/invites/accept", "POST" to "/api/v1/guild/invites/decline",
+            "POST" to "/api/v1/guild/leave", "POST" to "/api/v1/guild/kick", "POST" to "/api/v1/guild/promote", "POST" to "/api/v1/guild/demote",
+            "POST" to "/api/v1/guild/transfer", "POST" to "/api/v1/guild/disband", "POST" to "/api/v1/guild/settings",
+            "POST" to "/api/v1/guild/contribute", "GET" to "/api/v1/guild/log", "GET" to "/api/v1/guild/chat", "POST" to "/api/v1/guild/chat",
+            "POST" to "/api/v1/guild/chat/delete",
             "POST" to "/api/v1/redemptioncodes/redeem",
             "GET" to "/content/{file}", "GET" to "/static/index.json",
         )

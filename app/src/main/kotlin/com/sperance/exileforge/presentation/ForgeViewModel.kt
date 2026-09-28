@@ -10,7 +10,12 @@ import com.sperance.exileforge.core.model.auction.AuctionFilter
 import com.sperance.exileforge.core.model.command.RedemptionCode
 import com.sperance.exileforge.core.network.RequestJournal
 import com.sperance.exileforge.data.settings.ServerStore
+import com.sperance.exileforge.core.model.guild.GuildCard
+import com.sperance.exileforge.rules.content.GuildMode
+import com.sperance.exileforge.core.network.MemberCommand
 import com.sperance.exileforge.presentation.state.AppMode
+import com.sperance.exileforge.presentation.state.Building
+import com.sperance.exileforge.presentation.state.GuildTab
 import com.sperance.exileforge.presentation.state.ForgeSection
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
@@ -117,6 +122,33 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     fun showOwnLots(show: Boolean) = runtime.auctionViewModel.showOwnLots(show)
     fun loadAuction() = runtime.auctionViewModel.loadAuction()
     fun loadShowcase(page: Int = 0) = runtime.auctionViewModel.loadShowcase(page)
+    fun loadMyLots(glance: Boolean = false) = runtime.auctionViewModel.loadMyLots(glance)
+    fun loadMerchant() = runtime.auctionViewModel.loadMerchant()
+    /** A building of the City (3.22.0), or the square for none. */
+    fun building(building: Building?) = runtime.mutable.value.let { runtime.mutable.value = it.copy(building = building, message = null, error = false) }
+    fun loadGuild() = runtime.guildViewModel.load()
+    fun guildTab(tab: GuildTab) = runtime.guildViewModel.tab(tab)
+    fun guildQuery(text: String) = runtime.guildViewModel.query(text)
+    fun searchGuilds(page: Int = 0) = runtime.guildViewModel.search(page)
+    fun createGuild(name: String, tag: String, patron: String, emblem: String, color: String, mode: GuildMode, minLevel: Int) =
+        runtime.guildViewModel.create(name, tag, patron, emblem, color, mode, minLevel)
+    fun joinGuild(card: GuildCard) = runtime.guildViewModel.join(card)
+    fun acceptGuildInvite(guildId: String) = runtime.guildViewModel.acceptInvite(guildId)
+    fun declineGuildInvite(guildId: String) = runtime.guildViewModel.declineInvite(guildId)
+    fun acceptApplicant(applicantId: String) = runtime.guildViewModel.acceptApplicant(applicantId)
+    fun declineApplicant(applicantId: String) = runtime.guildViewModel.declineApplicant(applicantId)
+    fun inviteToGuild(name: String) = runtime.guildViewModel.invite(name)
+    fun guildMember(command: MemberCommand, memberId: String) = runtime.guildViewModel.member(command, memberId)
+    fun leaveGuild() = runtime.guildViewModel.leave()
+    fun disbandGuild() = runtime.guildViewModel.disband()
+    fun guildSettings(mode: GuildMode, minLevel: Int, emblem: String, color: String, announcement: String) =
+        runtime.guildViewModel.settings(mode, minLevel, emblem, color, announcement)
+    /** Gold (`GOLD`) or an orb, by its item code, into the treasury. */
+    fun contribute(item: String, amount: Long) = runtime.guildViewModel.contribute(item, amount)
+    fun loadGuildLog(more: Boolean = false) = runtime.guildViewModel.loadLog(more)
+    fun pollGuildChat(fresh: Boolean = false) = runtime.guildViewModel.pollChat(fresh)
+    fun sayInGuild(text: String) = runtime.guildViewModel.say(text)
+    fun unsayInGuild(messageId: String) = runtime.guildViewModel.unsay(messageId)
     fun buyLot(lotId: String) = runtime.auctionViewModel.buy(lotId)
     fun buyOffer(offerId: String) = runtime.auctionViewModel.buyOffer(offerId)
     fun buyOrb(code: String) = runtime.auctionViewModel.buyOrb(code)

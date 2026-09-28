@@ -1,0 +1,151 @@
+package com.sperance.exileforge.presentation.features
+
+import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.model.guild.GuildCard
+import com.sperance.exileforge.core.model.guild.GuildMessage
+import com.sperance.exileforge.core.model.guild.GuildMine
+import com.sperance.exileforge.core.model.guild.GuildView
+import com.sperance.exileforge.core.network.MemberCommand
+import com.sperance.exileforge.presentation.ForgeRuntime
+import com.sperance.exileforge.presentation.state.GuildState
+import com.sperance.exileforge.presentation.state.GuildTab
+import com.sperance.exileforge.presentation.state.Reads
+import com.sperance.exileforge.rules.content.GuildMode
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.update
+
+/**
+ * Guilds (3.22.0, server 1.20.0). The server keeps every rule; the client names a guild or a member, prints the refusal
+ * and draws what the command answered — the hero's whole guild picture, or the guild as it now stands. A command that
+ * moves the hero (joining, leaving, giving) reads the hero after it, since the patron's lines and the gold ride on it.
+ */
+class GuildViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
+
+    fun tab(tab: GuildTab) = guild { it.copy(tab = tab) }
+    fun query(text: String) = guild { it.copy(query = text) }
+
+    /** The hero's guild; the content comes first, since `guilds.json` is what the screen reads its numbers from. */
+    fun load() { with(runtime) { read(Reads.GUILD) {
+        val id = heroId
+        check(id.isNotBlank()) { ui("auction.choose_character") }
+        ensureContent()
+        val mine = api.guild.mine(id)
+        if (onScreen(id)) guild { it.copy(mine = mine) }
+    } } }
+
+    fun search(page: Int = 0) { with(runtime) { read(Reads.GUILD_SEARCH, restart = true) {
+        val id = heroId
+        val found = api.guild.search(id, state.value.guild.query, page)
+        if (onScreen(id)) guild { it.copy(search = found) }
+    } } }
+
+    fun create(name: String, tag: String, patron: String, emblem: String, color: String, mode: GuildMode, minLevel: Int) =
+        moving(ui("guild.toast.created", name.trim())) { api.guild.create(it, name, tag, patron, emblem, color, mode, minLevel) }
+
+    /** An OPEN guild takes the hero at once; any other is asked. */
+    fun join(card: GuildCard) = if (card.mode == GuildMode.OPEN) moving(ui("guild.toast.joined", card.name)) { api.guild.join(it, card.id) }
+        else moving(ui("guild.toast.applied", card.name)) { api.guild.apply(it, card.id) }
+
+    fun acceptInvite(guildId: String) = moving(ui("guild.toast.joined", inviteName(guildId))) { api.guild.acceptInvite(it, guildId) }
+    fun declineInvite(guildId: String) = moving(ui("guild.toast.declined")) { api.guild.declineInvite(it, guildId) }
+    fun leave() = moving(ui("guild.toast.left")) { api.guild.leave(it) }
+    fun disband() = moving(ui("guild.toast.disbanded")) { api.guild.disband(it) }
+
+    fun acceptApplicant(applicantId: String) = inside(ui("guild.toast.accepted")) { api.guild.acceptApplicant(it, applicantId) }
+    fun declineApplicant(applicantId: String) = inside(ui("guild.toast.declined")) { api.guild.declineApplicant(it, applicantId) }
+    fun invite(name: String) = inside(ui("guild.toast.invited", name.trim())) { api.guild.invite(it, name) }
+    fun member(command: MemberCommand, memberId: String) = inside(ui("guild.toast.done")) { api.guild.member(it, command, memberId) }
+
+    fun settings(mode: GuildMode, minLevel: Int, emblem: String, color: String, announcement: String) =
+        inside(ui("guild.toast.saved")) { api.guild.settings(it, mode, minLevel, emblem, color, announcement) }
+
+    /** Gold or an orb into the treasury: the answer carries the guild, the hero's row and the gold left, so nothing is read again but the hero. */
+    fun contribute(item: String, amount: Long) { with(runtime) { task(writing = true, touches = setOf(Reads.GUILD, Reads.HERO)) {
+        val id = heroId
+        val given = api.guild.contribute(id, item, amount)
+        if (!onScreen(id)) return@task
+        guild { it.copy(mine = it.mine?.copy(guild = given.guild, me = given.me)) }
+        update { s -> s.copy(play = s.play.copy(hero = s.play.hero?.let { it.copy(info = it.info.copy(money = given.money)) })) }
+        toast(ui("guild.toast.contributed"))
+        after { heroViewModel.readHero() }
+    } } }
+
+    /** The journal from its newest page, or the next page after the ones shown; an empty page is the end. */
+    fun loadLog(more: Boolean = false) { with(runtime) { read(Reads.GUILD_LOG, restart = !more) {
+        val id = heroId
+        val page = if (more) state.value.guild.logPage + 1 else 0
+        val entries = api.guild.log(id, page)
+        if (onScreen(id)) guild { it.copy(log = if (more) it.log + entries else entries, logPage = page, logEnd = entries.isEmpty()) }
+    } } }
+
+    /**
+     * The chat's poll: what came after the last message held, or the whole kept history for [fresh]. It is silent — a poll
+     * every few seconds that failed would otherwise flash a refusal as often; the next one simply tries again.
+     */
+    fun pollChat(fresh: Boolean = false) { with(runtime) { read(Reads.GUILD_CHAT, restart = fresh, silent = true) {
+        val id = heroId
+        val held = if (fresh) emptyList() else state.value.guild.chat
+        val came = orNull { api.guild.chat(id, held.lastOrNull()?.at ?: 0) } ?: return@read
+        if (onScreen(id)) guild { it.copy(chat = merged(held, came)) }
+    } } }
+
+    /** The message as the server kept it joins the chat at once; the hero is quiet for the rules' seconds after. */
+    fun say(text: String) { with(runtime) { task(writing = true, touches = setOf(Reads.GUILD_CHAT)) {
+        val id = heroId
+        val said = api.guild.say(id, text)
+        val quiet = (state.value.index?.guilds?.chat?.cooldownSeconds ?: CHAT_COOLDOWN) * 1000L
+        if (onScreen(id)) guild { it.copy(chat = merged(it.chat, listOf(said)), chatQuietUntil = System.currentTimeMillis() + quiet) }
+    } } }
+
+    fun unsay(messageId: String) { with(runtime) { task(writing = true, touches = setOf(Reads.GUILD_CHAT)) {
+        api.guild.unsay(heroId, messageId)
+        guild { it.copy(chat = it.chat.filterNot { m -> m.id == messageId }) }
+    } } }
+
+    /** The chat held and what came, once each, in order, no more than the server keeps. */
+    private fun merged(held: List<GuildMessage>, came: List<GuildMessage>): List<GuildMessage> =
+        (held + came).distinctBy { it.id }.sortedBy { it.at }.takeLast(state.value.index?.guilds?.chat?.keep ?: CHAT_KEEP)
+
+    private fun inviteName(guildId: String): String = state.value.guild.mine?.invites?.firstOrNull { it.guild.id == guildId }?.guild?.name.orEmpty()
+
+    /**
+     * A command that moves the hero in or out of a guild — or answers an invitation — and answers the whole [GuildMine].
+     * The hero is read after it: the patron's lines and the gold ride on the snapshot, a 304 when the command brought it.
+     */
+    private fun moving(done: String, block: suspend (String) -> GuildMine) = command(done) { id ->
+        val mine = block(id)
+        guild { it.copy(mine = mine, tab = if (mine.guild == null) GuildTab.MEMBERS else it.tab) }
+        after { runtime.heroViewModel.readHero() }
+    }
+
+    /** A command inside the guild, answered by the guild as it now stands. */
+    private fun inside(done: String, block: suspend (String) -> GuildView) = command(done) { id ->
+        val view = block(id)
+        guild { it.copy(mine = it.mine?.let { mine -> mine.copy(guild = view, me = view.member(id) ?: mine.me) }) }
+    }
+
+    /** One guild command: one at a time — the hero cannot be swapped under it — and never retried. */
+    private fun command(done: String, block: suspend (String) -> Unit) { with(runtime) {
+        task(writing = true, touches = setOf(Reads.GUILD, Reads.HERO)) {
+            val id = heroId
+            check(id.isNotBlank()) { ui("auction.choose_character") }
+            block(id)
+            toast(done)
+        }
+    } }
+
+    /** The reads after a command the server already made: their failure is not the command's. */
+    private suspend fun after(block: suspend () -> Unit) { with(runtime) {
+        try { block() } catch (e: CancellationException) { throw e }
+        catch (_: Exception) { mutable.update { it.copy(message = ui("guild.done_refresh"), error = true) } }
+    } }
+
+    private suspend fun <T> orNull(block: suspend () -> T): T? =
+        try { block() } catch (e: CancellationException) { throw e } catch (_: Exception) { null }
+
+    private fun guild(transform: (GuildState) -> GuildState) = update { it.copy(guild = transform(it.guild)) }
+}
+
+/** The chat's rules when `guilds.json` has not been read: what the server keeps and how often a hero may speak. */
+private const val CHAT_KEEP = 100
+private const val CHAT_COOLDOWN = 3

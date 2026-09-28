@@ -1,5 +1,6 @@
 package com.sperance.exileforge.presentation.state
 
+import com.sperance.exileforge.core.display.GuildText
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.fineNumber
 import com.sperance.exileforge.core.display.nodeTitle
@@ -92,6 +93,7 @@ class StatExplainer(private val s: ForgeState) {
         SourceKind.ITEM -> hero?.item(source.ref)?.let { item -> s.view(item)?.let { view -> "${view.title} · ${slotTitle(item.slot ?: view.slot)}" } } ?: ui("stat.kind.ITEM")
         SourceKind.PET -> hero?.pets?.pet(source.ref)?.let { locOr("pet.${it.species}", it.species) } ?: ui("stat.kind.PET")
         SourceKind.POWER, SourceKind.MAP, SourceKind.ATLAS -> statTitle(source.ref)
+        SourceKind.GUILD -> ui("stat.src.guild", GuildText.patron(source.ref))
     }
 
     /** A power's shift is named by the worn items that carry it, the power's own name when none is found. */

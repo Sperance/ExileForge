@@ -90,4 +90,11 @@ object ForgeGlyphs {
 
     /** A flask — the belt's places (2.78.0). */
     val Flask = glyph("Flask", { poly(10f to 3f, 14f to 3f, 14f to 9f, 19f to 19f, 17f to 21f, 7f to 21f, 5f to 19f, 10f to 9f) }, { line(7f, 15f, 17f, 15f) })
+
+    /** A crenellated keep with its gate — the City (3.22.0). */
+    val Keep = glyph("Keep", { poly(4f to 21f, 4f to 8f, 7f to 8f, 7f to 10f, 10f to 10f, 10f to 8f, 14f to 8f, 14f to 10f, 17f to 10f, 17f to 8f, 20f to 8f, 20f to 21f) },
+        { poly(10f to 21f, 10f to 16f, 12f to 14f, 14f to 16f, 14f to 21f) }, { line(12f, 8f, 12f, 3f); poly(12f to 3f, 16f to 4.5f, 12f to 6f) })
+
+    /** A banner on its pole, swallow-tailed — the guild (3.22.0). */
+    val Banner = glyph("Banner", { line(5f, 2f, 5f, 22f) }, { poly(5f to 4f, 19f to 4f, 19f to 16f, 12f to 13f, 5f to 16f) }, { ring(12f, 9f, 2f) })
 }

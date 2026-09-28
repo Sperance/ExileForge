@@ -29,40 +29,40 @@ class GuildViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         val id = heroId
         check(id.isNotBlank()) { ui("auction.choose_character") }
         ensureContent()
-        val mine = api.guild.mine(id)
+        val mine = runtime.api.guild.mine(id)
         if (onScreen(id)) guild { it.copy(mine = mine) }
     } } }
 
     fun search(page: Int = 0) { with(runtime) { read(Reads.GUILD_SEARCH, restart = true) {
         val id = heroId
-        val found = api.guild.search(id, state.value.guild.query, page)
+        val found = runtime.api.guild.search(id, state.value.guild.query, page)
         if (onScreen(id)) guild { it.copy(search = found) }
     } } }
 
     fun create(name: String, tag: String, patron: String, emblem: String, color: String, mode: GuildMode, minLevel: Int) =
-        moving(ui("guild.toast.created", name.trim())) { api.guild.create(it, name, tag, patron, emblem, color, mode, minLevel) }
+        moving(ui("guild.toast.created", name.trim())) { runtime.api.guild.create(it, name, tag, patron, emblem, color, mode, minLevel) }
 
     /** An OPEN guild takes the hero at once; any other is asked. */
-    fun join(card: GuildCard) = if (card.mode == GuildMode.OPEN) moving(ui("guild.toast.joined", card.name)) { api.guild.join(it, card.id) }
-        else moving(ui("guild.toast.applied", card.name)) { api.guild.apply(it, card.id) }
+    fun join(card: GuildCard) = if (card.mode == GuildMode.OPEN) moving(ui("guild.toast.joined", card.name)) { runtime.api.guild.join(it, card.id) }
+        else moving(ui("guild.toast.applied", card.name)) { runtime.api.guild.apply(it, card.id) }
 
-    fun acceptInvite(guildId: String) = moving(ui("guild.toast.joined", inviteName(guildId))) { api.guild.acceptInvite(it, guildId) }
-    fun declineInvite(guildId: String) = moving(ui("guild.toast.declined")) { api.guild.declineInvite(it, guildId) }
-    fun leave() = moving(ui("guild.toast.left")) { api.guild.leave(it) }
-    fun disband() = moving(ui("guild.toast.disbanded")) { api.guild.disband(it) }
+    fun acceptInvite(guildId: String) = moving(ui("guild.toast.joined", inviteName(guildId))) { runtime.api.guild.acceptInvite(it, guildId) }
+    fun declineInvite(guildId: String) = moving(ui("guild.toast.declined")) { runtime.api.guild.declineInvite(it, guildId) }
+    fun leave() = moving(ui("guild.toast.left")) { runtime.api.guild.leave(it) }
+    fun disband() = moving(ui("guild.toast.disbanded")) { runtime.api.guild.disband(it) }
 
-    fun acceptApplicant(applicantId: String) = inside(ui("guild.toast.accepted")) { api.guild.acceptApplicant(it, applicantId) }
-    fun declineApplicant(applicantId: String) = inside(ui("guild.toast.declined")) { api.guild.declineApplicant(it, applicantId) }
-    fun invite(name: String) = inside(ui("guild.toast.invited", name.trim())) { api.guild.invite(it, name) }
-    fun member(command: MemberCommand, memberId: String) = inside(ui("guild.toast.done")) { api.guild.member(it, command, memberId) }
+    fun acceptApplicant(applicantId: String) = inside(ui("guild.toast.accepted")) { runtime.api.guild.acceptApplicant(it, applicantId) }
+    fun declineApplicant(applicantId: String) = inside(ui("guild.toast.declined")) { runtime.api.guild.declineApplicant(it, applicantId) }
+    fun invite(name: String) = inside(ui("guild.toast.invited", name.trim())) { runtime.api.guild.invite(it, name) }
+    fun member(command: MemberCommand, memberId: String) = inside(ui("guild.toast.done")) { runtime.api.guild.member(it, command, memberId) }
 
     fun settings(mode: GuildMode, minLevel: Int, emblem: String, color: String, announcement: String) =
-        inside(ui("guild.toast.saved")) { api.guild.settings(it, mode, minLevel, emblem, color, announcement) }
+        inside(ui("guild.toast.saved")) { runtime.api.guild.settings(it, mode, minLevel, emblem, color, announcement) }
 
     /** Gold or an orb into the treasury: the answer carries the guild, the hero's row and the gold left, so nothing is read again but the hero. */
     fun contribute(item: String, amount: Long) { with(runtime) { task(writing = true, touches = setOf(Reads.GUILD, Reads.HERO)) {
         val id = heroId
-        val given = api.guild.contribute(id, item, amount)
+        val given = runtime.api.guild.contribute(id, item, amount)
         if (!onScreen(id)) return@task
         guild { it.copy(mine = it.mine?.copy(guild = given.guild, me = given.me)) }
         update { s -> s.copy(play = s.play.copy(hero = s.play.hero?.let { it.copy(info = it.info.copy(money = given.money)) })) }
@@ -74,7 +74,7 @@ class GuildViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     fun loadLog(more: Boolean = false) { with(runtime) { read(Reads.GUILD_LOG, restart = !more) {
         val id = heroId
         val page = if (more) state.value.guild.logPage + 1 else 0
-        val entries = api.guild.log(id, page)
+        val entries = runtime.api.guild.log(id, page)
         if (onScreen(id)) guild { it.copy(log = if (more) it.log + entries else entries, logPage = page, logEnd = entries.isEmpty()) }
     } } }
 
@@ -85,20 +85,20 @@ class GuildViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     fun pollChat(fresh: Boolean = false) { with(runtime) { read(Reads.GUILD_CHAT, restart = fresh, silent = true) {
         val id = heroId
         val held = if (fresh) emptyList() else state.value.guild.chat
-        val came = orNull { api.guild.chat(id, held.lastOrNull()?.at ?: 0) } ?: return@read
+        val came = orNull { runtime.api.guild.chat(id, held.lastOrNull()?.at ?: 0) } ?: return@read
         if (onScreen(id)) guild { it.copy(chat = merged(held, came)) }
     } } }
 
     /** The message as the server kept it joins the chat at once; the hero is quiet for the rules' seconds after. */
     fun say(text: String) { with(runtime) { task(writing = true, touches = setOf(Reads.GUILD_CHAT)) {
         val id = heroId
-        val said = api.guild.say(id, text)
+        val said = runtime.api.guild.say(id, text)
         val quiet = (state.value.index?.guilds?.chat?.cooldownSeconds ?: CHAT_COOLDOWN) * 1000L
         if (onScreen(id)) guild { it.copy(chat = merged(it.chat, listOf(said)), chatQuietUntil = System.currentTimeMillis() + quiet) }
     } } }
 
     fun unsay(messageId: String) { with(runtime) { task(writing = true, touches = setOf(Reads.GUILD_CHAT)) {
-        api.guild.unsay(heroId, messageId)
+        runtime.api.guild.unsay(heroId, messageId)
         guild { it.copy(chat = it.chat.filterNot { m -> m.id == messageId }) }
     } } }
 

@@ -20,25 +20,25 @@ class QuestViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         val id = heroId
         check(id.isNotBlank()) { ui("auction.choose_character") }
         ensureContent()
-        val board = api.quests.board(id)
+        val board = runtime.api.quests.board(id)
         if (onScreen(id)) quests { it.copy(board = board) }
     } } }
 
     fun loadGuild() { with(runtime) { read(Reads.GUILD_QUESTS) {
         val id = heroId
         check(id.isNotBlank()) { ui("auction.choose_character") }
-        val guild = api.quests.guild(id)
+        val guild = runtime.api.quests.guild(id)
         if (onScreen(id)) quests { it.copy(guild = guild) }
     } } }
 
-    fun claim(questId: String) = board(ui("quest.toast.claimed"), rewarded = true) { api.quests.claim(it, questId) }
-    fun reroll(questId: String) = board(ui("quest.toast.rerolled"), rewarded = true) { api.quests.reroll(it, questId) }
-    fun take(offerId: String) = board(ui("quest.toast.taken")) { api.quests.take(it, offerId) }
-    fun abandon(questId: String) = board(ui("quest.toast.abandoned")) { api.quests.abandon(it, questId) }
-    fun renew() = board(ui("quest.toast.renewed"), rewarded = true) { api.quests.renew(it) }
+    fun claim(questId: String) = board(ui("quest.toast.claimed"), rewarded = true) { runtime.api.quests.claim(it, questId) }
+    fun reroll(questId: String) = board(ui("quest.toast.rerolled"), rewarded = true) { runtime.api.quests.reroll(it, questId) }
+    fun take(offerId: String) = board(ui("quest.toast.taken")) { runtime.api.quests.take(it, offerId) }
+    fun abandon(questId: String) = board(ui("quest.toast.abandoned")) { runtime.api.quests.abandon(it, questId) }
+    fun renew() = board(ui("quest.toast.renewed"), rewarded = true) { runtime.api.quests.renew(it) }
 
     fun claimGuild(questId: String? = null, goal: String? = null) = command(ui("quest.toast.claimed"), rewarded = true) { id ->
-        val guild = api.quests.claimGuild(id, questId, goal)
+        val guild = runtime.api.quests.claimGuild(id, questId, goal)
         if (onScreen(id)) quests { it.copy(guild = guild) }
         gold(guild.money)
     }

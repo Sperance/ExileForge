@@ -817,7 +817,10 @@ class ExpeditionRun(
             val zone = if (vaal) VaalZones.zone(location) ?: location else location
             val context = run.context
             val base = AtlasEffects.map(context.active?.effects.orEmpty(), context.atlas)
-            val effects = if (vaal) MapEffects.sum(base, context.vaal?.effects.orEmpty()) else base
+            // The act's resistance penalty (3.18.0, server 1.16.0) rides with the map's own "less resistances".
+            val penalty = index.campaign.resistPenalty(location.code, onMap = context.active != null)
+            val acted = if (penalty > 0) MapEffects.sum(base, mapOf(MapStats.HERO_RESIST to penalty)) else base
+            val effects = if (vaal) MapEffects.sum(acted, context.vaal?.effects.orEmpty()) else acted
             val rules = index.campaign.combat
             val build = HeroBuild(gear, effects, rules)
             val stats = build.body.stats

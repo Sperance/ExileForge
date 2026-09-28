@@ -167,7 +167,8 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
         val name = type.resist ?: return 0.0
         val chaos = name == "STOCK_RESIST_CHAOS"
         val ceiling = (rules.resistCap + stat(type.maxResist.orEmpty()) + (if (chaos) 0.0 else stat("STOCK_RESIST_MAX_ALL"))).coerceIn(0.0, rules.resistHardCap)
-        val own = (stat(name) + (if (chaos) 0.0 else stat("STOCK_RESIST_ALL"))).coerceIn(0.0, ceiling)
+        // Below zero since 3.18.0: the act's penalty and the map's curse can leave a resistance negative, as in PoE.
+        val own = (stat(name) + (if (chaos) 0.0 else stat("STOCK_RESIST_ALL"))).coerceIn(-rules.resistCap, ceiling)
         return (own - penetration).coerceIn(-rules.resistCap, ceiling) / 100
     }
     /** How much of the target's [type] resistance this fighter's blows ignore, in percent (server 0.66.0). */

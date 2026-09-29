@@ -113,7 +113,7 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
     val influence: Influence? get() = item.influence
     val quality: Int get() = item.quality
     val weaponType: WeaponType? get() = template.weaponType
-    val level: Int get() = template.level
+    val level: Int get() = item.level(template)
     val title: String get() = equipmentTitle(code)
     val description: String get() = equipmentDescription(code)
     val trade: String? get() = tradeName(code, equipment = true)

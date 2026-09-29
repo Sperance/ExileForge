@@ -39,7 +39,7 @@ private fun lootStand(s: ForgeState, item: ItemView): LootStand {
 /**
  * A piece the run dropped, opened where it dropped (3.24.0) — a chest's lid, a fight's spoils, the gear
  * sheet's loot: its card, what wearing it would change against what is worn, and «Надеть» right there.
- * The drop is the run's own roll and reaches the stash with the journal, so opening the sheet sends the
+ * The drop is the server's roll and reaches the stash with the journal's answer, so opening the sheet sends the
  * journal at once, and the button waits until the server holds the piece; one sold for want of room says so.
  * [extra] is what the caller adds under the button.
  */

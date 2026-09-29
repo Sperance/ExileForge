@@ -877,10 +877,11 @@ private fun hitColour(hit: FloatingHit): Color = when {
 internal fun outcomeColour(outcome: Outcome) = when (outcome) { Outcome.WIN -> Vital; Outcome.LOSS -> LifeRed; Outcome.RETREAT -> Muted }
 
 /**
- * What the run's seed rolled — experience, gold, orbs and items — for a kill and a chest alike; each item as its whole card (3.2.0).
+ * What the server rolled — experience, gold, orbs and items — for a kill and a chest alike; each item as its whole card (3.2.0).
+ * [awaiting]: some of it is still on its way, and the sheet says so instead of «nothing else».
  * With [onItem] a card opens its comparison with what is worn (3.24.0).
  */
-@Composable internal fun RewardLines(s: ForgeState, reward: Reward, onItem: ((ItemView) -> Unit)? = null) {
+@Composable internal fun RewardLines(s: ForgeState, reward: Reward, onItem: ((ItemView) -> Unit)? = null, awaiting: Boolean = false) {
     Column(Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             if (reward.experience > 0) Text(ui("expedition.loot_experience", number(reward.experience)), color = Rune)
@@ -896,6 +897,15 @@ internal fun outcomeColour(outcome: Outcome) = when (outcome) { Outcome.WIN -> V
             // The whole card, not a line (3.2.0): what dropped is read where it dropped
             s.view(instance)?.let { LootCard(s, it, onItem) }
         }
-        if (reward.items.isEmpty() && reward.equipment.isEmpty()) Text(ui("expedition.loot_nothing"), color = Muted)
+        if (awaiting) Receiving()
+        else if (reward.items.isEmpty() && reward.equipment.isEmpty()) Text(ui("expedition.loot_nothing"), color = Muted)
+    }
+}
+
+/** The loot on its way (server 1.30.0): the server alone rolls it, and it shows as its answers arrive — offline, once the connection is back. */
+@Composable internal fun Receiving(modifier: Modifier = Modifier) {
+    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        CircularProgressIndicator(Modifier.size(12.dp), color = Rune, strokeWidth = 2.dp)
+        Text(ui("expedition.receiving"), color = Rune, style = MaterialTheme.typography.bodySmall)
     }
 }

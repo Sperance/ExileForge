@@ -6,6 +6,7 @@ import com.sperance.exileforge.rules.content.ContentFiles
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.roll.Dice
 import com.sperance.exileforge.rules.roll.ItemFactory
+import com.sperance.exileforge.rules.run.RewardDraws
 import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunContext
 import com.sperance.exileforge.rules.run.RunEventKind
@@ -41,10 +42,11 @@ class ContentSmokeTest {
         val second = Run(index, zone, 42L, context)
         assertEquals(first.count, second.count)
         assertEquals(first.spawn(0), second.spawn(0))
-        assertEquals(first.kill(0, 0), second.kill(0, 0))
-        assertEquals(first.chest(), second.chest())
-        assertEquals(first.boss(), second.boss())
-        assertNotNull(first.kill(0, 0), "a kill pays nothing at all")
+        // Rewards roll on the server's own stream (1.30.0): the same draws pay the same, whatever the client holds.
+        assertEquals(first.kill(0, 0, false, RewardDraws(7L, 0)), second.kill(0, 0, false, RewardDraws(7L, 0)))
+        assertEquals(first.chest(RewardDraws(7L, 1)), second.chest(RewardDraws(7L, 1)))
+        assertEquals(first.boss(RewardDraws(7L, 2)), second.boss(RewardDraws(7L, 2)))
+        assertNotNull(first.kill(0, 0, false, RewardDraws(7L, 0)), "a kill pays nothing at all")
     }
 
     @Test
@@ -75,5 +77,13 @@ class ContentSmokeTest {
         assertEquals(journal.all, back.all)
         assertEquals(journal.pending, back.pending)
         assertEquals(1, back.applied)
+        // A batch whose answer was lost goes again under its own key, even after a restart; an answer frees it.
+        val sent = assertNotNull(back.outgoing { "first" }).first
+        back.record(RunEventKind.KILL, i = 1, m = 0)
+        val again = assertNotNull(assertNotNull(RunJournal.decode(back.encode())).outgoing { "second" })
+        assertEquals(sent, again.first)
+        assertEquals(1, again.second.size)
+        back.confirm(2)
+        assertEquals("second", assertNotNull(back.outgoing { "second" }).first.key)
     }
 }

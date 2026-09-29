@@ -49,7 +49,8 @@ import java.util.Locale
  * in engraved sections — «Снаряжение», a line per piece with its price, a tap opening its card;
  * «Сферы» as chips; «Награда», gold and experience — or, after a defeat, what the death cost and
  * what the run had gathered. The fight itself is a row of figures at the foot, and its log unfolds
- * from there. Since 3.0.0 the spoils are the run's own roll, made the moment the foe fell: nothing here waits.
+ * from there. The spoils are the server's roll (1.30.0): the screen opens at once, says the loot is on its way,
+ * and fills in as the answers arrive — offline, when the connection is back.
  */
 @Composable internal fun ReportScreen(s: ForgeState, vm: ForgeViewModel, hud: RunHud, report: FightReport, onContinue: () -> Unit) {
     val won = report.outcome == Outcome.WIN
@@ -113,7 +114,7 @@ import java.util.Locale
         modifier = Modifier.background(Abyss, RoundedCornerShape(3.dp)).border(1.dp, PanelRaised, RoundedCornerShape(3.dp)).padding(horizontal = 8.dp, vertical = 4.dp))
 }
 
-/** What the kill brought, by section, as the run's seed rolled it; its absence said plainly. */
+/** What the kill brought, by section, as the server's answers bring it (1.30.0); on its way, or its absence said plainly. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable private fun Spoils(s: ForgeState, hud: RunHud, onItem: (ItemView) -> Unit) {
     val reward = hud.reward ?: return
@@ -139,7 +140,8 @@ import java.util.Locale
         Chip(ui("expedition.loot_gold", reward.gold), GoldBright)
         Chip(ui("expedition.loot_experience", number(reward.experience)), Rune)
     }
-    if (reward.items.isEmpty() && reward.equipment.isEmpty()) MutedText(ui("expedition.loot_nothing"))
+    if (hud.rewardAwaiting > 0) Receiving()
+    else if (reward.items.isEmpty() && reward.equipment.isEmpty()) MutedText(ui("expedition.loot_nothing"))
 }
 
 /** A defeat: what the death cost by the rules' price — the server's answer stands — and what the run had gathered before it. */
@@ -165,7 +167,8 @@ import java.util.Locale
     hud.abyss?.takeIf { it.fallen }?.let { abyss ->
         Caption(ui("abyss.fallen"), AbyssGlow)
         val kept = abyss.hoard
-        if (kept == null || kept.items.isEmpty() && kept.equipment.isEmpty() && kept.experience <= 0) MutedText(ui("abyss.burned"))
+        if (abyss.hoardAwaiting) Receiving()
+        else if (kept == null || kept.items.isEmpty() && kept.equipment.isEmpty() && kept.experience <= 0) MutedText(ui("abyss.burned"))
         else { MutedText(ui("abyss.kept")); RewardLines(s, kept) }
     }
     Caption(ui("expedition.report_run"))
@@ -174,6 +177,7 @@ import java.util.Locale
         Chip(ui("expedition.loot_gold", hud.gold), GoldBright)
         Chip(ui("expedition.loot_experience", number(hud.experience)), Rune)
     }
+    if (hud.awaiting > 0) Receiving()
 }
 
 /** The fight as a row of figures — dealt, taken, how long, criticals — and the way into its log. */

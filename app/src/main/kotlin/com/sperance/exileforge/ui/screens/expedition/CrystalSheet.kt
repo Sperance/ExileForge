@@ -36,8 +36,8 @@ import com.sperance.exileforge.ui.theme.*
  * A crystal of essences (2.78.0, the owner's mockup A): what it holds, who guards it — the zone's monster
  * standing up rare with the modifier of every essence inside — and the choice. «Освободить» takes the
  * guardian on; «Применить сферу Ваал», one plain button greyed without an orb (3.2.0), passes over the crystal once — every essence a step higher, one of them
- * special, or a stronger guardian — and stepping away leaves it standing for later. Since 3.0.0 the orb's
- * outcome is rolled by the run's seed the moment it is spent: nothing here waits for the server.
+ * special, or a stronger guardian — and stepping away leaves it standing for later. The orb's outcome is the
+ * server's (1.30.0): the sheet waits for its answer, and the guardian with it.
  */
 @Composable internal fun CrystalSheet(s: ForgeState, view: CrystalView, onCommand: (RunCommand) -> Unit) {
     val index = s.index
@@ -64,13 +64,14 @@ import com.sperance.exileforge.ui.theme.*
             Text(ui("crystal.guardian", monsterTitle(view.guardian), traits.joinToString(", ")), color = Rune, style = MaterialTheme.typography.bodySmall)
             if (view.stronger) Text(ui("crystal.stronger", number(index?.essences?.crystals?.stronger ?: 0.0)), color = LifeRed, style = MaterialTheme.typography.bodySmall)
             view.outcome?.let { Text(ui("crystal.outcome.$it"), color = GoldBright, style = MaterialTheme.typography.bodyMedium) }
+            if (view.awaiting) Text(ui("crystal.vaal_waiting"), color = Rune, style = MaterialTheme.typography.bodySmall)
             // One plain button for the Vaal orb (3.2.0): it says what it does, and without an orb it cannot be pressed
-            if (!view.vaal) ForgeOutlinedButton(enabled = vaalOrbs > 0, onClick = { onCommand(RunCommand.VaalCrystal) }, modifier = Modifier.fillMaxWidth()) {
+            if (!view.vaal) ForgeOutlinedButton(enabled = vaalOrbs > 0 && !view.awaiting, onClick = { onCommand(RunCommand.VaalCrystal) }, modifier = Modifier.fillMaxWidth()) {
                 OrbGlyph(Orb.VAAL_ORB, Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
                 Text(ui("crystal.vaal"))
             }
-            ForgeButton(onClick = { onCommand(RunCommand.Release) }, modifier = Modifier.fillMaxWidth(),
+            ForgeButton(enabled = !view.awaiting, onClick = { onCommand(RunCommand.Release) }, modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = Blood, contentColor = GoldBright)) { Text(ui("crystal.release")) }
             ForgeTextButton(onClick = { onCommand(RunCommand.StepOff) }, modifier = Modifier.align(Alignment.CenterHorizontally)) {
                 Text(ui("crystal.later"), color = Muted, textAlign = TextAlign.Center)

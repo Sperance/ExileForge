@@ -92,20 +92,20 @@ class ServerIntegrationTest {
             assertTrue(rerolled.rolls.count { index.modifier(it.code)?.affix == true } >= floor)
             assertTrue(api.hero.sell(heroId, api.hero.unequip(heroId, rare.id).id).gold > 0)
 
-            // The run: a seed from the server, the same roll here, the journal paid on replay.
+            // The run: a seed from the server, the same zone here, the journal paid on replay — every reward rolled by the server alone.
             val progress = api.campaign.progress(heroId)
             val zoneCode = progress.unlocked.first()
             val start = api.campaign.start(heroId, zoneCode)
             assertEquals(start.id, api.campaign.start(heroId, zoneCode).id, "entering the zone again did not go on with its run")
             val run = Run(index, index.zone(zoneCode)!!, start.seed, start.context)
             assertEquals(run.count, start.count, "the client and the server count the zone differently")
-            val kill = assertNotNull(run.kill(0, 0))
             val events = listOf(RunEvent(0, RunEventKind.KILL, i = 0, m = 0), RunEvent(1, RunEventKind.BOSS), RunEvent(2, RunEventKind.LEAVE))
             val report = api.campaign.events(heroId, events)
             assertEquals(3, report.applied)
             assertEquals(emptyList(), report.rejected)
             assertTrue(!report.open, "the run stayed open after LEAVE")
-            assertTrue(report.reward.experience >= kill.experience, "the server paid less than the client rolled")
+            assertTrue(report.rewards.map { it.n }.containsAll(listOf(0, 1)), "the kill and the boss did not come back with their rewards")
+            assertTrue(report.rewards.first().reward.experience > 0, "a kill paid no experience")
             assertTrue(zoneCode in report.progress.cleared, "a slain boss did not clear the zone")
             // The run is closed: a journal sent again is refused with CP_018, which the client reads as "settled, drop it".
             assertEquals("CP_018", assertFailsWith<ApiFailure> { api.campaign.events(heroId, events) }.code)

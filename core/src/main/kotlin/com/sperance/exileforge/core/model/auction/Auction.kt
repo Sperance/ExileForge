@@ -14,8 +14,8 @@ import kotlinx.serialization.Serializable
 /** What is on offer: a copy of an item, or a stack of the bag. */
 @Serializable enum class LotKind { EQUIPMENT, ITEM }
 
-/** Where a lot stands. A closed lot never returns to the showcase; it stays as trading history. */
-@Serializable enum class LotStatus { ACTIVE, SOLD, CANCELLED }
+/** Where a lot stands. A closed lot never returns to the showcase; it stays as trading history. [EXPIRED] (server 1.30.0): its time ran out, the goods went back to the seller. */
+@Serializable enum class LotStatus { ACTIVE, SOLD, CANCELLED, EXPIRED }
 
 /**
  * One lot of the player auction. While it is on the showcase the goods live inside it: a copy leaves the
@@ -43,9 +43,13 @@ import kotlinx.serialization.Serializable
     /** When the lot was listed, as the server wrote it: an ISO date and time in UTC. */
     val createdAt: String = "",
     val closedAt: String? = null,
+    /** When the lot leaves the showcase (server 1.30.0), epoch millis UTC; 0 on a lot listed before lots expired. */
+    val expiresAt: Long = 0,
     val version: Long = 0,
 ) {
-    val onSale: Boolean get() = status == LotStatus.ACTIVE
+    val onSale: Boolean get() = status == LotStatus.ACTIVE && (expiresAt == 0L || System.currentTimeMillis() < expiresAt)
+    /** Milliseconds the lot still stands, or null when it names no end. */
+    fun timeLeft(now: Long = System.currentTimeMillis()): Long? = expiresAt.takeIf { it > 0 }?.let { (it - now).coerceAtLeast(0) }
     fun belongsTo(heroId: String): Boolean = sellerId == heroId
     /** An equipment lot names a template, a stack lot names an item of the bag. */
     val title: String get() = locOr(if (kind == LotKind.EQUIPMENT) LocaleKey.equipmentName(itemCode) else LocaleKey.itemName(itemCode), itemCode)

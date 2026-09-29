@@ -37,7 +37,7 @@ import com.sperance.exileforge.ui.theme.*
  * A crack of the Abyss (2.82.0): before the descent — how deep it leads, the first wave and the hoard at
  * its bottom; between depths — the hoard as it stands, the wave below and its leader, and the choice: take
  * the hoard and leave, or go deeper, where a fall burns it all but the atlas's share; after — what the
- * hoard brought, rolled by the run's seed the moment it was claimed (3.0.0). Between depths the hero's
+ * hoard brought, rolled by the server and shown as its answer arrives (server 1.30.0). Between depths the hero's
  * life, shield and mana are laid out, and the belt is at hand: what is left of them is what the next wave meets.
  */
 @Composable internal fun AbyssSheet(s: ForgeState, hud: RunHud, view: AbyssView, onCommand: (RunCommand) -> Unit) {
@@ -62,7 +62,8 @@ import com.sperance.exileforge.ui.theme.*
                 hoard != null -> {
                     Text(ui(if (view.fallen) "abyss.fallen" else "abyss.taken"), color = if (view.fallen) LifeRed else GoldBright,
                         style = MaterialTheme.typography.titleMedium)
-                    if (view.fallen && hoard.items.isEmpty() && hoard.equipment.isEmpty() && hoard.experience <= 0) MutedText(ui("abyss.burned"))
+                    if (view.hoardAwaiting) Receiving()
+                    else if (view.fallen && hoard.items.isEmpty() && hoard.equipment.isEmpty() && hoard.experience <= 0) MutedText(ui("abyss.burned"))
                     else RewardLines(s, hoard)
                 }
                 !view.open -> {

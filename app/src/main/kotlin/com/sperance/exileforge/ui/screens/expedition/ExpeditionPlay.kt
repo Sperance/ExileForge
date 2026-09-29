@@ -101,7 +101,7 @@ import kotlinx.coroutines.delay
                     onDrink = { vm.runCommand(RunCommand.Drink(it)) }, onRetry = vm::flushRun)
                 if (gear) { HoldsRun(run); GearSheet(s, vm) { gear = false } }
                 if (sheet) { HoldsRun(run); StatsSheet(s, run.mapEffects) { sheet = false } }
-                hud.chest?.let { ChestLoot(s, vm, run, it) { vm.runCommand(RunCommand.DismissChest) } }
+                hud.chest?.let { ChestLoot(s, vm, run, it, hud.chestAwaiting) { vm.runCommand(RunCommand.DismissChest) } }
                 if (leaving) ConfirmSheet(title = ui("expedition.leave_q"), confirm = ui("expedition.leave"), danger = true,
                     subtitle = mapTitle(hud.mapCode),
                     ledger = listOf(LedgerLine(ui("expedition.leave_left"), ui(if (hud.sealed) "expedition.boss_alive" else "expedition.boss_slain"), Tone.SPEND)),
@@ -473,16 +473,16 @@ private const val MINIMAP_MAX = 60f
 }
 
 /**
- * What a chest brought (since 2.33.0), at the foot of the map while the hero walks on: the run's own
- * roll, made the moment the lid went up (3.0.0), and a button that puts it away. A piece opens its
+ * What a chest brought (since 2.33.0), at the foot of the map while the hero walks on: the server's roll,
+ * shown as its answer arrives (server 1.30.0), and a button that puts it away. A piece opens its
  * comparison with what is worn and can be worn at once (3.24.0); the map holds still while it is open.
  */
-@Composable private fun ChestLoot(s: ForgeState, vm: ForgeViewModel, run: ExpeditionRun, reward: Reward, onClose: () -> Unit) {
+@Composable private fun ChestLoot(s: ForgeState, vm: ForgeViewModel, run: ExpeditionRun, reward: Reward, awaiting: Boolean, onClose: () -> Unit) {
     var looked by remember(reward) { mutableStateOf<ItemView?>(null) }
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         RunPanel(Modifier, GoldBright) {
             Text(ui("expedition.chest"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
-            RewardLines(s, reward) { looked = it }
+            RewardLines(s, reward, { looked = it }, awaiting)
             ForgeOutlinedButton(onClick = onClose, modifier = Modifier.fillMaxWidth()) { Text(ui("common.close")) }
         }
     }
@@ -498,6 +498,7 @@ private const val MINIMAP_MAX = 60f
             Text(title, color = accent, style = MaterialTheme.typography.headlineSmall)
             Text(hint, color = Parchment, style = MaterialTheme.typography.bodyMedium)
             MutedText(ui("expedition.summary", hud.kills, hud.gold, number(hud.experience)))
+            if (hud.awaiting > 0) Receiving()
             Journal(hud)
             ForgeButton(onClick = onDone, modifier = Modifier.fillMaxWidth()) { Text(done) }
         }
@@ -527,7 +528,8 @@ private const val MINIMAP_MAX = 60f
             reward.items.forEach { (code, amount) -> Text(ui("expedition.loot_stack", itemTitle(code), amount), color = Parchment) }
             // A piece opens its comparison and «Надеть» (3.24.0), as a fight's spoils do.
             reward.equipment.forEach { instance -> s.view(instance)?.let { LootCard(s, it) { item -> looked = item } } }
-            if (reward.items.isEmpty() && reward.equipment.isEmpty()) MutedText(ui("expedition.loot_nothing"))
+            if (hud.autoAwaiting > 0) Receiving()
+            else if (reward.items.isEmpty() && reward.equipment.isEmpty()) MutedText(ui("expedition.loot_nothing"))
         }
         ForgeButton(onClick = onDone, modifier = Modifier.fillMaxWidth().height(50.dp)) { Text(ui("expedition.back_to_camp")) }
     }

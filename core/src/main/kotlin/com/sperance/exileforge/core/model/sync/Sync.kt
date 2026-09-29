@@ -23,10 +23,10 @@ import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.JsonElement
 
 /**
- * The API revision this client is written against (server 1.28.0: the item lock — `ItemInstance.locked` and `hero/item/lock` —
- * and the `Idempotency-Key` every command carries).
+ * The API revision this client is written against (server 1.30.0: run rewards rolled by the server alone and answered per event
+ * by `campaign/events`, auction lots that expire).
  */
-const val API_REVISION = 21
+const val API_REVISION = 22
 
 /** `static/index.json` → `content`: the fingerprint of the whole world and of each of its chunks, by file name. */
 @Serializable data class ContentManifest(val hash: String = "", val chunks: Map<String, String> = emptyMap())

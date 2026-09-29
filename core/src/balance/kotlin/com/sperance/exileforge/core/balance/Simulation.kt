@@ -20,9 +20,11 @@ import com.sperance.exileforge.rules.content.WorldKind
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.RolledMonster
 import com.sperance.exileforge.rules.run.RarityBonus
+import com.sperance.exileforge.rules.run.RewardDraws
 import com.sperance.exileforge.rules.run.Reward
 import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunContext
+import com.sperance.exileforge.rules.run.RunEventKind
 import kotlin.random.Random
 
 /** One autorun of a map to its end: how long it took, whether the hero lived, and what it paid. */
@@ -38,7 +40,10 @@ class MapSimulator(private val index: ContentIndex) {
     fun run(hero: BuiltHero, zone: Zone, seed: Long): MapRun {
         val gear = hero.gear
         val run = Run(index, zone, seed, context(hero, zone))
-        val expedition = ExpeditionRun.start(index, zone, run, RunJournal("sim-$seed", "sim", zone.code), gear, CampaignState(bosses = mapOf(zone.code to Long.MAX_VALUE)), 0L,
+        val journal = RunJournal("sim-$seed", "sim", zone.code)
+        // The server's part (1.30.0): the rewards of the kills, on a stream of their own the run never sees.
+        val draws = RewardDraws(seed xor SERVER_STREAM, 0)
+        val expedition = ExpeditionRun.start(index, zone, run, journal, gear, CampaignState(bosses = mapOf(zone.code to Long.MAX_VALUE)), 0L,
             heroExperience = 0.0, heroLevel = hero.spec.level, vaalOrbs = { 0L }, auto = AutoPlan(chests = false, crystals = false, abyss = false))
         var time = 0.0
         while (time < LIMIT) {
@@ -52,11 +57,22 @@ class MapSimulator(private val index: ContentIndex) {
                 RunPhase.FIGHT -> Unit
             }
             expedition.update(STEP)
+            answer(expedition, journal, run, draws)
             time += STEP
         }
+        // The last answers land before the count is read.
+        expedition.update(0.0)
         val hud = expedition.hud.value
         val died = hud.phase == RunPhase.DEAD || time >= LIMIT
         return MapRun(time, died, hud.kills, hud.experience, hud.gold, hud.autoReward ?: Reward())
+    }
+
+    /** The journal answered as the server would: every kill paid on the server's stream, nothing else on this farm. */
+    private fun answer(expedition: ExpeditionRun, journal: RunJournal, run: Run, draws: RewardDraws) {
+        val pending = journal.pending.takeIf { it.isNotEmpty() } ?: return
+        val rewards = pending.filter { it.kind == RunEventKind.KILL }.mapNotNull { e -> run.kill(e.i, e.m, e.vaal, draws)?.let { e.n to it } }.toMap()
+        journal.confirm(pending.last().n + 1)
+        expedition.send(RunCommand.Settled(journal.applied, rewards))
     }
 
     /** What the server would hand the run: the hero's quantity, rarity, experience and gold, and the uniques' world powers. */
@@ -77,6 +93,7 @@ class MapSimulator(private val index: ContentIndex) {
 
     private companion object {
         const val STEP = 0.1
+        const val SERVER_STREAM = 0x5345525645L
         /** A run that has not ended in half an hour is stuck; it counts as lost. */
         const val LIMIT = 1800.0
     }

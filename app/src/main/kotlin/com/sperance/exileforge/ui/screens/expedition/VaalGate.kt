@@ -46,8 +46,8 @@ private object Altar {
 }
 
 /**
- * The gate before a Vaal zone (2.65.0): what the run's seed rolled for it — every modifier, and what
- * the zone adds to the loot for bearing them — and the choice. «Войти» closes the portal behind the
+ * The gate before a Vaal zone (2.65.0): what the server rolled for it (1.30.0) — every modifier, and what
+ * the zone adds to the loot for bearing them — and the choice; until its answer comes, the gate waits. «Войти» closes the portal behind the
  * hero, «Отказаться» closes it for good; the zone is never re-rolled by walking away and back.
  */
 @Composable fun VaalGate(s: ForgeState, hud: RunHud, guardian: String?, onEnter: () -> Unit, onRefuse: () -> Unit, onBack: () -> Unit) {
@@ -63,7 +63,10 @@ private object Altar {
                 color = Parchment.copy(alpha = .75f), style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) }
             if (zone != null) Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 zone.rolls.forEach { ModLine(rollText(index, it)) }
-            } else Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Altar.vein) }
+            } else Column(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+                CircularProgressIndicator(color = Altar.vein)
+                Text(ui("vaal.waiting"), color = Altar.muted, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 12.dp))
+            }
             zone?.let { Reward(it) }
             Text(ui("vaal.warning"), color = Altar.muted, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

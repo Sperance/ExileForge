@@ -10,8 +10,10 @@ import com.sperance.exileforge.core.campaign.RunCommand
 import com.sperance.exileforge.core.campaign.RunJournal
 import com.sperance.exileforge.core.campaign.VaalZones
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.model.campaign.RunReport
 import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.core.network.ApiFailure
+import com.sperance.exileforge.core.network.CommandQueue
 import com.sperance.exileforge.presentation.ForgeRuntime
 import com.sperance.exileforge.presentation.state.AtlasScreenState
 import com.sperance.exileforge.presentation.state.LootEntry
@@ -24,6 +26,7 @@ import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunEvent
 import com.sperance.exileforge.rules.run.RunEventKind
 import com.sperance.exileforge.rules.run.RunStart
+import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -38,10 +41,12 @@ import kotlinx.coroutines.launch
  * The campaign: the world map and the run on the map a player is walking.
  *
  * The run is a world the scene steps every frame; it is held here and the overlay reads its [ExpeditionRun.hud].
- * Every kill, chest and descent is an event of the run's journal, its reward rolled by the run's seed the moment
- * it happens; the journal is kept on disk and sent to the server in batches — at checkpoints, at the exit, at a
- * death, in the background — and the server's replay is the truth: what it refuses is counted, what it grants
- * comes back as the hero snapshot with its answer. A journal not sent is sent on the next launch.
+ * Every kill, chest and descent is an event of the run's journal; the journal is kept on disk and sent to the
+ * server in batches — at checkpoints, at the exit, at a death, in the background — and the server's replay is
+ * the truth. Rewards are the server's alone (1.30.0): each answer names what every event brought, and the run
+ * shows it as it arrives — offline, it waits for the connection. A batch keeps its idempotency key until it is
+ * answered, so a lost answer is asked for again and repeated, rewards and all. A journal not sent is sent on
+ * the next launch.
  */
 class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     private val mutableRun = MutableStateFlow<ExpeditionRun?>(null)
@@ -96,7 +101,12 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
                 check(j.settled || runJournal == null) { ui("expedition.unsent") }
                 store.clearJournal(id); runJournal = null
             }
-            val started = api.campaign.start(id, mapCode, picked)
+            val started = try { api.campaign.start(id, mapCode, picked) } catch (e: ApiFailure) {
+                // A new seed comes no sooner than the rules allow, whatever closed the last run (server 1.30.0): a wait, not a failure.
+                if (e.code != SEED_TOO_SOON) throw e
+                toast(ui("expedition.seed_wait", e.args.firstOrNull().orEmpty()))
+                return@task
+            }
             if (state.value.play.heroReadAt == 0L) heroViewModel.readHero()
             begin(id, started)
         }
@@ -108,13 +118,13 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         val hero = s.hero?.takeIf { it.id == id } ?: return
         val zone = index.zone(started.zone) ?: return
         val gear = gear() ?: return
-        // Entered again, the run goes on (server 1.1.0): its numbers, its dead and its rewards counted so far.
-        val run = Run(index, zone, started.seed, started.context, started.tally.copy())
+        // Entered again, the run goes on (server 1.1.0): its numbers and its dead so far.
+        val run = Run(index, zone, started.seed, started.context)
         val journal = RunJournal(started.id, id, zone.code, applied = started.applied, base = started.applied).also { runJournal = it }
         mutable.update { it.copy(play = it.play.copy(runLoot = emptyList(), launch = null, runPending = 0, runRejected = 0)) }
         mutableRun.value = ExpeditionRun.start(index, zone, run, journal, gear, hero.campaign, System.currentTimeMillis(), hero.info.experience, hero.level,
             vaalOrbs = ::vaalOrbsFree, onRecorded = ::recorded,
-            onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, onLoot = { loot(id, it) }, killed = started.killed, auto = autoPlan,
+            onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, killed = started.killed, auto = autoPlan,
             pet = hero.pets.pet(hero.pets.combat))
         vaalKilled = started.vaalKilled
         persist()
@@ -153,14 +163,21 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         saveJob = scope.launch { delay(SAVE_AFTER); store.saveJournal(j.heroId, j.encode()) }
     } }
 
-    /** Sends what the journal holds; the answer is the server's count, and the hero snapshot rides with it. */
+    /**
+     * Sends what the journal holds — the batch in flight again under its own key, or the pending events under a
+     * new one; the answer is the server's count and every event's reward, and the hero snapshot rides with it.
+     */
     private suspend fun flush() { with(runtime) {
         val j = runJournal ?: return
-        val pending = j.pending
-        if (pending.isEmpty()) { if (j.closed) done(j); return }
+        val outgoing = j.outgoing { UUID.randomUUID().toString() }
+        if (outgoing == null) { if (j.closed) done(j); return }
+        val (batch, pending) = outgoing
         try {
-            val report = api.campaign.events(j.heroId, pending)
+            // The batch's key is on disk before it leaves: an answer lost with the process is asked for again after it.
+            store.saveJournal(j.heroId, j.encode())
+            val report = api.campaign.events(j.heroId, pending, batch.key)
             failures = 0
+            settle(j, pending, report)
             j.confirm(report.applied, report.rejected)
             mutable.update { it.copy(play = it.play.copy(runPending = j.pending.size, runRejected = j.rejected.size)) }
             if (report.rejected.isNotEmpty()) toast(ui("expedition.rejected", report.rejected.size))
@@ -172,12 +189,37 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             // CP_018: the server holds no run for this hero - the journal's run is over, its last batch already settled;
             // CP_020: the world changed under the run, and the server closed it.
             if (e.code in RUN_CLOSED) done(j) else report(e, writing = true)
+            // A refusal is the server's final word, kept under the batch's key: the next send is a new request, not its repeat.
+            if (!CommandQueue.transient(e.status)) j.release()
         }
         // Offline or timed out: tried again soon, not at the clock's next round
         catch (_: Exception) { retryLater() }
     } }
 
+    /**
+     * The answer lands on the runs under way — the rewards by event, then the campaign it brought, where the Vaal
+     * zone and a crystal's Vaal orb are read — and its gear goes to the gear sheet's «Новый лут».
+     */
+    private fun settle(j: RunJournal, batch: List<RunEvent>, report: RunReport) {
+        val fell = batch.any { it.kind == RunEventKind.FALL && it.n < report.applied && it.n !in report.rejected }
+        val answer = RunCommand.Settled(report.applied, report.rewards.associate { it.n to it.reward.toReward() }, report.rejected, report.lost.takeIf { fell })
+        runs().forEach { it.send(answer) }
+        campaign()
+        loot(j.heroId, report.rewards.flatMap { it.reward.equipment })
+    }
+
+    /** The runs a journal answer concerns: the one on screen and the map a Vaal zone was entered from. */
+    private fun runs(): List<ExpeditionRun> = listOfNotNull(mutableRun.value, parent)
+
+    /** The hero's campaign as the client holds it now, to the runs under way. */
+    private fun campaign() {
+        val state = runtime.state.value.hero?.takeIf { it.id == runJournal?.heroId }?.campaign ?: return
+        runs().forEach { it.send(RunCommand.Campaign(state)) }
+    }
+
     private suspend fun done(j: RunJournal) { with(runtime) {
+        // Whatever the server never answered will not be answered now: nothing waits for it any longer.
+        if (runJournal === j) runs().forEach { it.send(RunCommand.Settled(Int.MAX_VALUE)) }
         if (runJournal === j) runJournal = null
         store.clearJournal(j.heroId)
         // The run is counted whole (3.24.0): whatever it finished is handed in at once.
@@ -231,7 +273,7 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         outer.send(RunCommand.ShutGate(entered = true))
         val inner = ExpeditionRun.start(index, outer.run.zone, outer.run, journal, gear, hero.campaign, System.currentTimeMillis(), hero.info.experience, hero.level,
             vaalOrbs = ::vaalOrbsFree, onRecorded = ::recorded, vaal = true, startPools = outer.pools,
-            onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, onLoot = { loot(hero.id, it) }, killed = vaalKilled, auto = autoPlan.takeIf { outer.hud.value.auto != null },
+            onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, killed = vaalKilled, auto = autoPlan.takeIf { outer.hud.value.auto != null },
             pet = hero.pets.pet(hero.pets.combat))
         parent = outer
         mutableRun.value = inner
@@ -267,8 +309,8 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         listOfNotNull(mutableRun.value, parent).forEach { it.send(RunCommand.Regear(gear)) }
     }
 
-    /** A new reading of the hero: nothing to do — the run reads the bag through the state. */
-    fun heroChanged(view: HeroView) { }
+    /** A new reading of the hero: the run reads the bag through the state, and takes the campaign — a Vaal zone or a crystal the server settled. */
+    fun heroChanged(view: HeroView) { if (runJournal?.heroId == view.id) runs().forEach { it.send(RunCommand.Campaign(view.campaign)) } }
 
     /**
      * The run is over or abandoned: the journal goes out, and the hero is read once more if the answers left
@@ -304,6 +346,8 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     private companion object {
         /** The server's "no run is open" and "the world changed, the run is closed" refusals: the journal has nowhere to go. */
         val RUN_CLOSED = setOf("CP_018", "CP_020")
+        /** The server's "a new seed only after a while" refusal (CP_021). */
+        const val SEED_TOO_SOON = "CP_021"
         /** Events that send the journal at once: everything that is not a plain kill or a chest. */
         val CHECKPOINTS = setOf(RunEventKind.BOSS, RunEventKind.CORRUPT, RunEventKind.CRYSTAL, RunEventKind.CRYSTAL_VAAL, RunEventKind.VAAL_OPEN, RunEventKind.VAAL_LEAVE,
             RunEventKind.ABYSS_OPEN, RunEventKind.ABYSS_CLAIM, RunEventKind.SUMMON, RunEventKind.FALL, RunEventKind.LEAVE)

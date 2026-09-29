@@ -7,7 +7,9 @@ import com.sperance.exileforge.rules.roll.ChestWindow
 import com.sperance.exileforge.rules.roll.CrystalWindow
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.roll.VaalZone
+import com.sperance.exileforge.rules.run.Reward
 import com.sperance.exileforge.rules.run.RunContext
+import com.sperance.exileforge.rules.run.RunEventKind
 import kotlinx.serialization.Serializable
 
 /**
@@ -54,7 +56,13 @@ import kotlinx.serialization.Serializable
     val items: Map<String, Long> = emptyMap(),
     val equipment: List<ItemInstance> = emptyList(),
     val recipe: String? = null,
-)
+) {
+    /** The same reward as the rules count it. */
+    fun toReward(): Reward = Reward(experience, gold, items, equipment, recipe)
+}
+
+/** What one accepted event [n] of the journal brought (server 1.30.0): the server alone rolls rewards, the client shows them. */
+@Serializable data class EventReward(val n: Int, val kind: RunEventKind, val reward: RewardView = RewardView())
 
 /**
  * The server's answer to a batch of run events: how far the journal is applied now, the numbers it
@@ -73,6 +81,8 @@ import kotlinx.serialization.Serializable
     val open: Boolean = true,
     /** Where the batch's items went (server 1.1.0): the stash, its overflow, or sold for gold past both. */
     val received: Received = Received(),
+    /** What each accepted event of the batch brought, by ascending number (server 1.30.0): the only source of the run's loot. */
+    val rewards: List<EventReward> = emptyList(),
 )
 
 /** Where items that came to the hero went: into the stash, into its overflow, or to the merchant for [gold]. */

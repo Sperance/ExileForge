@@ -250,7 +250,7 @@ private val templateSlots: List<Slot> = Slot.entries.filter { it != Slot.RING_2 
             InfoCard(ui("auction.no_lots"), ui("auction.no_lots_hint"))
         }
         items(s.ownLots, key = { it.id }) { lot ->
-            LotRow(s, lot, note = null) { openLot = lot.id }
+            LotRow(s, lot, note = lotExpiry(lot)) { openLot = lot.id }
         }
     }
     val slots = s.market.slots
@@ -267,7 +267,7 @@ private val templateSlots: List<Slot> = Slot.entries.filter { it != Slot.RING_2 
     }
     s.ownLots.firstOrNull { it.id == openLot }?.let { lot ->
         LotSheet(s, lot, action = ui("auction.withdraw"), enabled = !s.busy,
-            note = null, onDismiss = { openLot = null }) { openLot = null; vm.cancelLot(lot.id) }
+            note = lotExpiry(lot), onDismiss = { openLot = null }) { openLot = null; vm.cancelLot(lot.id) }
     }
 }
 
@@ -325,6 +325,15 @@ private val templateSlots: List<Slot> = Slot.entries.filter { it != Slot.RING_2 
 }
 
 /** Under everything: the note about the lot, and who sells it. */
+/** How long an own lot still stands (server 1.30.0): days and hours, hours and minutes on its last day; null when it names no end. */
+private fun lotExpiry(lot: AuctionLot): String? {
+    val minutes = ((lot.timeLeft() ?: return null) + 59_999) / 60_000
+    return if (minutes >= MINUTES_A_DAY) ui("auction.left_days", minutes / MINUTES_A_DAY, minutes % MINUTES_A_DAY / 60)
+    else ui("auction.left_hours", minutes / 60, minutes % 60)
+}
+
+private const val MINUTES_A_DAY = 1_440L
+
 @Composable private fun LotFooter(lot: AuctionLot, note: String?) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
         verticalAlignment = Alignment.CenterVertically) {

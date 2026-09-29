@@ -30,6 +30,6 @@ class CampaignClient internal constructor(private val http: Transport) {
      * [key]: the server repeats its stored answer, rewards and all, instead of an empty one.
      */
     suspend fun events(heroId: String, events: List<RunEvent>, key: String = UUID.randomUUID().toString()): RunReport =
-        WireJson.decodeFromJsonElement(http.request("POST", "$CAMPAIGN/events", heroQuery(heroId),
+        WireJson.decodeFromJsonElement(RunReport.serializer(), http.request("POST", "$CAMPAIGN/events", heroQuery(heroId),
             WireJson.encodeToJsonElement(ListSerializer(RunEvent.serializer()), events), authenticated = true, headers = mapOf(IDEMPOTENCY_HEADER to key)))
 }

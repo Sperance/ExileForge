@@ -142,7 +142,14 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     fun redeem(code: String) { with(runtime) { heroCommand { id -> toast(ui("redemption.redeemed")); api.hero.redeem(id, code) } } }
 
-    fun socketJewel(itemId: String, nodeCode: String) { with(runtime) { heroCommand { id -> api.hero.socket(id, itemId, nodeCode) } } }
+    fun socketJewel(itemId: String, nodeCode: String) { with(runtime) { heroCommand { id ->
+        // One unique jewel of a kind per hero (server 1.31.0): the shared rule, asked before the server refuses it.
+        val hero = state.value.hero
+        val item = hero?.item(itemId)
+        val index = state.value.index
+        if (hero != null && item != null && index != null) check(hero.jewelFree(index, item)) { ui("tree.jewel_unique_taken") }
+        api.hero.socket(id, itemId, nodeCode)
+    } } }
     fun unsocketJewel(itemId: String) { with(runtime) { heroCommand { id -> api.hero.unsocket(id, itemId) } } }
 
     /** Sells an item to a merchant: the server sets the price and pays it; the card showed the same sum beforehand. */

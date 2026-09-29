@@ -13,9 +13,9 @@ val WireJson: Json = RulesJson
 fun JsonObject.text(key: String): String = (get(key) as? JsonPrimitive)?.contentOrNull.orEmpty()
 
 /** The server this client is built against: the submodule `backend/` is pinned to this commit, and `SERVER_VERSION` is its `Constants.kt`. */
-const val SERVER_COMMIT = "8f7fb95e10b5ecbc6ed996548675c63af0984c08"
+const val SERVER_COMMIT = "d006ebe8da1050a17999f189aca58626d535eb8d"
 const val SERVER_BRANCH = "claude/tender-pasteur-a36kj2"
-const val SERVER_VERSION = "1.30.2"
+const val SERVER_VERSION = "1.31.0"
 
 /** A Mongo id: 24 hex digits. Content is named by codes, only players' things carry ids. */
 fun requireId(id: String) { require(Regex("[0-9a-fA-F]{24}").matches(id)) { ui("contract.bad_id") } }

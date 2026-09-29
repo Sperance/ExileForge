@@ -5,10 +5,13 @@ import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.model.campaign.CampaignState
 import com.sperance.exileforge.core.model.crafts.WorkState
 import com.sperance.exileforge.core.model.trade.MerchantStock
+import com.sperance.exileforge.rules.RuleViolation
+import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Counter
 import com.sperance.exileforge.rules.content.HeroSkills
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.TakenNode
+import com.sperance.exileforge.rules.content.TreeAllocation
 import com.sperance.exileforge.rules.roll.ItemInstance
 import kotlinx.serialization.Serializable
 
@@ -95,6 +98,16 @@ data class HeroView(
     val inactive: Map<String, List<String>> get() = sheet.inactive
     val takenNodes: Set<String> get() = tree.mapTo(HashSet()) { it.code }
     fun item(id: String): ItemInstance? = items.firstOrNull { it.id == id }
+    /**
+     * Whether [item] may go into a socket (3.32.0, server 1.31.0): a unique jewel is one of its kind per hero - the
+     * server's rule, asked before the command so the tree can say why rather than send a refusal (`ST_022`).
+     */
+    fun jewelFree(index: ContentIndex, item: ItemInstance): Boolean {
+        val template = index.template(item.template) ?: return true
+        return try {
+            TreeAllocation.requireUniqueJewelFree(template, jewels.values.filter { it.id != item.id }.map { it.template }); true
+        } catch (refused: RuleViolation) { false }
+    }
     fun count(code: String): Long = bag[code] ?: 0L
     /** The chronicle whole: the kept counters and the level, the zones cleared and the atlas nodes taken. */
     val chronicle: Map<String, Long> get() = Counter.values(info.counters, level, campaign.cleared.size, info.atlas.size)

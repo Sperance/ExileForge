@@ -116,6 +116,8 @@ fun fineNumber(value: Double): String =
 
 /** Why an equipped item does not count, from the rules' own words — "strength: need 30, have 14". */
 fun requirementReason(reason: String, lang: Lang = uiLanguage): String {
+    // A second copy of a unique jewel (server 1.31.0): the sheet names the jewel by its code.
+    UNIQUE_JEWEL.find(reason)?.let { return ui(lang, "req.unique_jewel", equipmentTitle(it.groupValues[1])) }
     val name = reason.substringBefore(':').trim()
     val rest = reason.substringAfter(':', "").trim()
     val title = uiOr(lang, "req.$name", displayName(name, lang))
@@ -126,5 +128,6 @@ fun requirementReason(reason: String, lang: Lang = uiLanguage): String {
 }
 
 private val CAMEL_GAP = Regex("([a-z])([A-Z])")
+private val UNIQUE_JEWEL = Regex("^unique jewel: one (\\S+) per hero")
 private val NEED = Regex("need\\s+(-?\\d+)")
 private val HAVE = Regex("have\\s+(-?\\d+)")

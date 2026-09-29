@@ -455,6 +455,8 @@ class Battle(
     private val percent: Set<String> = emptySet(),
     /** The combat pet at the hero's side (3.5.0); it stands up whole after the fight. */
     val ally: Ally? = null,
+    /** A later stage of a staged fight (3.32.0): what the stage won before it hands on; null for a fight of its own or a first stage. */
+    val stage: StageCarry? = null,
 ) {
     /** «Волк-одиночка»: the hero alone deals more and takes less of every damage, by the server's [CombatRules.loneWolf]. */
     val loneWolf: Boolean get() = party <= 1
@@ -568,7 +570,10 @@ class Battle(
     private var belowLow = false
     private var shieldUp = true
     /** The hero's powers (2.79.0): the unique items' answers to what happens here. */
-    private val powers = PowerRunner(this, kit.powers)
+    private val powers = PowerRunner(this, kit.powers, stage)
+
+    /** What this fight, won, hands the next stage of a staged fight (3.32.0). */
+    fun carry(): StageCarry = StageCarry(powers.momentum)
 
     init {
         // A draught still running from the map comes into the fight, and the belt's opening ones count as drunk.
@@ -980,7 +985,8 @@ class Battle(
                 trigger(SkillEvent.CRIT, target, taken = taken)
                 if (blow.spell) trigger(SkillEvent.SPELL_CRIT, target, taken = taken)
             }
-            powers.dealt(PowerMoment(target, taken, blow.spell), kind == HitKind.CRIT, stunned, inflicted)
+            // Momentum (3.32.0) grows its standing lines with every hit: the body for the next blow is made again now.
+            if (powers.dealt(PowerMoment(target, taken, blow.spell), kind == HitKind.CRIT, stunned, inflicted) && powers.restand()) remake(heroFighter)
         }
         if (target === heroFighter) {
             flaskCharge("FLASK_CHARGE_WHEN_HIT")

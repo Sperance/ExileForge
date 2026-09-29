@@ -382,6 +382,8 @@ class ExpeditionRun(
     /** What the stages already won leave to the one report: every foe's log, and the seconds they took. */
     private var stageHits: List<PackHit> = emptyList()
     private var stageTime = 0.0
+    /** What the stage won last hands the one under way (3.32.0): its STAGE_CLEAR powers and the momentum; null for a first stage. */
+    private var stageCarry: StageCarry? = null
     /** The strongest of every stage: it stands for the whole fight in the report. */
     private var fightStrongest: RolledMonster? = null
     /** The dice stream of the stage's battle: a draught in the pause builds the battle again on the same dice. */
@@ -573,6 +575,8 @@ class ExpeditionRun(
         /** The claim of the hoard, by its event: what it holds is the server's answer. */
         var claim: Int? = null
         var fallen = false
+        /** The last fight of the descent won (3.32.0): the next wave or depth is its next stage. */
+        var carry: StageCarry? = null
     }
 
     /** «Спуститься»: the crack is opened — its event recorded — and the first wave rises; between depths, the next. */
@@ -599,7 +603,7 @@ class ExpeditionRun(
     private fun nextFight(current: Descent) {
         val group = current.fights.firstOrNull() ?: return
         current.fights = current.fights.drop(1)
-        engage(MonsterAgent(ABYSS_AGENT - current.spot.id, group, current.spot.cell.x + 0.5, current.spot.cell.y + 0.5), current.level, abyssal = true)
+        engage(MonsterAgent(ABYSS_AGENT - current.spot.id, group, current.spot.cell.x + 0.5, current.spot.cell.y + 0.5), current.level, abyssal = true, carry = current.carry)
     }
 
     /** The descent is over: the hoard of the depths cleared — whole, or what a fall leaves of it. */
@@ -738,11 +742,12 @@ class ExpeditionRun(
      * On the map the packs standing close by are drawn in (3.26.0) and, since 3.28.0, fought one pack a stage — the
      * engaged one first, then the rest by their distance to it; the boss and a guardian always fight alone.
      */
-    private fun engage(agent: MonsterAgent, level: Int = zone.level, abyssal: Boolean = false) {
+    private fun engage(agent: MonsterAgent, level: Int = zone.level, abyssal: Boolean = false, carry: StageCarry? = null) {
         fightAgents = if (abyssal) listOf(agent) else world.gathered(agent)
         fightStrongest = fightAgents.flatMap { pack -> pack.standing.map { pack.pack[it] } }.maxByOrNull { it.rarity.ordinal }
         stageHits = emptyList()
         stageTime = 0.0
+        stageCarry = carry
         fightAgent = agent
         abyssFight = abyssal
         fightLevel = level
@@ -772,7 +777,7 @@ class ExpeditionRun(
         val monster = member.monster
         Foe(Combatant(monster.stats, fightLevel, rules), monster.ranged, monster.rarity, monster.skills.mapNotNull(this.index.skills.monsterByCode::get))
     }, rules, life, Random(Streams.mix(seed, FIGHT_STREAM, fightStream)), stance, kit = kit, model = build, pools = pools,
-        percent = build.gear.percent, ally = ally)
+        percent = build.gear.percent, ally = ally, stage = stageCarry)
 
     /** The fight is over, whichever way: nothing of it is held any longer. */
     private fun endFight() {
@@ -784,6 +789,7 @@ class ExpeditionRun(
         interlude = null
         stageHits = emptyList()
         stageTime = 0.0
+        stageCarry = null
         fightStrongest = null
     }
 
@@ -839,6 +845,7 @@ class ExpeditionRun(
             fightAgents[stage - 1].alive = false
             stageHits = pack
             stageTime = duration
+            stageCarry = battle.carry()
             pendingGear?.let { regear(it.gear) }
             pendingGear = null
             begin(stage + 1)
@@ -882,7 +889,8 @@ class ExpeditionRun(
         abyssFight = false
         if (phase != RunPhase.DEAD) pendingGear?.let { regear(it.gear) }
         pendingGear = null
-        if (outcome == Outcome.WIN && down != null) { if (down.fights.isNotEmpty()) nextFight(down) else down.cleared++ }
+        // The Abyss chains its fights (3.32.0): the next wave, or the next depth once the player descends, is the next stage.
+        if (outcome == Outcome.WIN && down != null) { down.carry = battle.carry(); if (down.fights.isNotEmpty()) nextFight(down) else down.cleared++ }
     }
 
     /** What the death costs by the rules: a share of the level's experience, never the level — on what the answers granted so far. */

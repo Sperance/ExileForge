@@ -36,6 +36,7 @@ import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.nodeDescription
 import com.sperance.exileforge.core.display.nodeTitle
 import com.sperance.exileforge.core.display.nodeTypeTitle
+import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.display.statNumber
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.display.statPercent
@@ -358,10 +359,12 @@ private fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Set
     val inside = hero.jewels[node.code]
 
     if (inside != null) {
+        // A taken socket may still hold a jewel that does nothing - a second copy of a unique one (1.31.0): the sheet's reason.
+        val idle = hero.inactive[inside.id]?.joinToString("\n") { requirementReason(it, s.lang) }
         s.view(inside)?.let { jewel ->
             ItemRow(jewel, enabled = false,
-                note = if (allocated) ui("tree.socket_working") else ui("tree.socket_locked"),
-                noteColor = if (allocated) Gold else LifeRed) { }
+                note = when { !allocated -> ui("tree.socket_locked"); idle != null -> idle; else -> ui("tree.socket_working") },
+                noteColor = if (allocated && idle == null) Gold else LifeRed) { }
         }
         ForgeOutlinedButton(enabled = enabled, onClick = { onUnsocket(inside.id) }, modifier = Modifier.fillMaxWidth()) {
             Text(ui("tree.jewel_out"))
@@ -382,7 +385,12 @@ private fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Set
     }
     Engraved(ui("tree.jewel_in"))
     free.forEach { instance ->
-        s.view(instance)?.let { jewel -> ItemRow(jewel, enabled = enabled, price = s.sellPrice(instance)) { onSocket(instance.id, node.code) } }
+        // A unique jewel already in another socket (server 1.31.0): one of its kind per hero, so this copy waits, and says why.
+        val single = hero.jewelFree(index, instance)
+        s.view(instance)?.let { jewel ->
+            ItemRow(jewel, enabled = enabled && single, price = s.sellPrice(instance),
+                note = if (single) null else ui("tree.jewel_unique_taken"), noteColor = LifeRed) { onSocket(instance.id, node.code) }
+        }
     }
 }
 

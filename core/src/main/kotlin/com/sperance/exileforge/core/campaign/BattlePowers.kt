@@ -32,6 +32,15 @@ internal class PowerMoment(
 }
 
 /**
+ * What a won stage of a staged fight hands the next one (3.32.0, server 1.31.0): the stage was cleared — the next
+ * battle answers [PowerEvent.STAGE_CLEAR] before its [PowerEvent.FIGHT_START] — and the [momentum] the hero built.
+ */
+data class StageCarry(val momentum: Int = 0)
+
+/** A hit to strike again (3.32.0): its foe, the damage, at [at]; dropped if the foe or the fight is gone by then. */
+private class Echo(val at: Double, val foe: Battle.Fighter, val damage: Map<DamageType, Double>, val spell: Boolean, val skill: String)
+
+/**
  * The hero's powers in a fight (2.79.0, server 0.70.0): the book's answers to the fight's events, read
  * off the hero's body as it stands, so a flask's power works while its draught runs and no longer.
  *
@@ -43,7 +52,7 @@ private fun Power.amount(own: Double?, value: Double): Double = own ?: if (roll 
 private fun Power.duration(own: Double?, value: Double): Double = own ?: if (roll == com.sperance.exileforge.rules.content.PowerRoll.DURATION) value else 0.0
 private fun Power.chance(value: Double): Double = chance ?: if (roll == com.sperance.exileforge.rules.content.PowerRoll.CHANCE) value else 100.0
 
-internal class PowerRunner(private val battle: Battle, book: PowerBook) {
+internal class PowerRunner(private val battle: Battle, book: PowerBook, private val stage: StageCarry? = null) {
     private val byEvent: Map<PowerEvent, List<Power>> = book.powers.filter { it.on != null }.groupBy { it.on!! }
     private val standingPowers = byEvent[PowerEvent.STANDING].orEmpty()
     private val readyAt = mutableMapOf<String, Double>()
@@ -52,6 +61,14 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook) {
     private val lastBeat = mutableMapOf<String, Double>()
     private var busy = false
     private var started = false
+    private val echoes = mutableListOf<Echo>()
+    /** Whether a standing line grows with [momentum]: only then does a hit make the hero's body again. */
+    private val momentous = standingPowers.any { power -> power.effects.any { effect -> effect.lines.any { it.scale == PowerScale.MOMENTUM } } }
+
+    /** The hero's hits in a row on one foe (3.32.0): another foe starts it over, a new stage keeps it. */
+    var momentum = stage?.momentum ?: 0
+        private set
+    private var momentumOn: Battle.Fighter? = null
 
     /** Kills of this fight, and the last blow the hero dealt and took. */
     var kills = 0
@@ -67,7 +84,12 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook) {
 
     /** One slice has passed: the fight's opening, the powers on a beat. */
     fun tick() {
-        if (!started) { started = true; fire(PowerEvent.FIGHT_START) }
+        if (!started) {
+            started = true
+            if (stage != null) fire(PowerEvent.STAGE_CLEAR)
+            fire(PowerEvent.FIGHT_START)
+        }
+        echo()
         byEvent[PowerEvent.EVERY]?.forEach { power ->
             if (value(power) == 0.0) return@forEach
             val last = lastBeat.getOrPut(power.stat) { battle.time }
@@ -75,11 +97,35 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook) {
         }
     }
 
-    fun dealt(moment: PowerMoment, crit: Boolean, stunned: Boolean, inflicted: List<Ailment>) {
+    /** The hero's hit landed; whether it moved a standing line's momentum, so the body must be made again. */
+    fun dealt(moment: PowerMoment, crit: Boolean, stunned: Boolean, inflicted: List<Ailment>): Boolean {
+        val moved = !busy && moment.target != null
+        if (moved) build(moment.target!!)
         fire(PowerEvent.HIT, moment)
         if (crit) fire(PowerEvent.CRIT, moment)
         if (stunned) fire(PowerEvent.STUN, moment)
         inflicted.forEach { fire(PowerEvent.INFLICT, PowerMoment(moment.target, moment.taken, moment.spell, it)) }
+        return moved && momentous
+    }
+
+    /** One more hit in a row on [foe], or the first on a new one; a power's own blows count for nothing. */
+    private fun build(foe: Battle.Fighter) {
+        if (momentumOn != null && momentumOn !== foe) momentum = 0
+        momentumOn = foe
+        momentum++
+    }
+
+    /** The hits due to strike again: each once, on its foe if it still stands, answering nothing. */
+    private fun echo() {
+        if (echoes.isEmpty()) return
+        val due = echoes.filter { it.at <= battle.time + 1e-9 }
+        if (due.isEmpty()) return
+        echoes.removeAll(due)
+        due.forEach { echo ->
+            if (battle.outcome != null || !hero.alive || !echo.foe.alive) return@forEach
+            busy = true
+            try { battle.strike(hero, echo.foe, Blow(echo.damage, Action.SKILL, spell = echo.spell, skill = echo.skill, spread = false)) } finally { busy = false }
+        }
     }
 
     fun taken(moment: PowerMoment, crit: Boolean) {
@@ -146,6 +192,7 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook) {
         PowerScale.SHIELD -> if (hero.body.maxShield > 0) floor(hero.shield / hero.body.maxShield * 10) else 0.0
         PowerScale.MANA -> battle.manaCap().takeIf { it > 0 }?.let { floor(hero.mana / it * 10) } ?: 0.0
         PowerScale.CHARGES -> battle.flaskCharges()
+        PowerScale.MOMENTUM -> momentum.toDouble()
     }
 
     private fun holds(check: PowerCheck, power: Power, moment: PowerMoment): Boolean {
@@ -252,8 +299,28 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook) {
             PowerAct.SPREAD -> targets(PowerTarget.OTHERS, moment).forEach { foe ->
                 moment.ailments.forEach { spread -> battle.place(foe, spread.copy(until = battle.time + spread.duration), stacks = spread.ailment.hurts) }
             }
+            PowerAct.ECHO -> {
+                val foe = moment.target?.takeIf { it.side == Side.MONSTER && it.alive } ?: return 0.0
+                val damage = share(moment.taken, amount, effect.type)
+                if (damage.values.sum() > 0) echoes += Echo(battle.time + max(duration, 0.0), foe, damage, moment.spell, power.stat)
+            }
+            PowerAct.RETALIATE -> {
+                val attacker = moment.target?.takeIf { it.side == Side.MONSTER } ?: return 0.0
+                val damage = share(moment.taken, amount, effect.type)
+                if (damage.values.sum() <= 0) return 0.0
+                battle.foeFighters.filter { it.alive && it.ranged == attacker.ranged }.forEach { foe ->
+                    battle.strike(hero, foe, Blow(damage, Action.SKILL, spell = true, skill = power.stat, spread = false))
+                }
+            }
         }
         return 0.0
+    }
+
+    /** [amount] percent of a blow's damage, split as it was, or all of element [type] when one is named. */
+    private fun share(taken: Map<DamageType, Double>, amount: Double, type: String?): Map<DamageType, Double> {
+        val part = taken.filterValues { it > 0 }.mapValues { it.value * amount / 100 }
+        val element = DamageType.element(type) ?: return part
+        return mapOf(element to part.values.sum())
     }
 
     /** A blow's damage before defences: a share of the weapon, of a pool or defence, of the last blow, or of the foe's own life. */
@@ -294,7 +361,7 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook) {
 
     private companion object {
         /** Effects that show nothing of their own in the log: a blow logs itself, a curse and an ailment land on the foe's line. */
-        val SILENT = setOf(PowerAct.DAMAGE, PowerAct.AILMENT, PowerAct.CURSE, PowerAct.SPREAD, PowerAct.DELAY, PowerAct.STUN)
+        val SILENT = setOf(PowerAct.DAMAGE, PowerAct.AILMENT, PowerAct.CURSE, PowerAct.SPREAD, PowerAct.DELAY, PowerAct.STUN, PowerAct.ECHO, PowerAct.RETALIATE)
         /** Events too frequent to log a line each. */
         val QUIET = setOf(PowerEvent.HIT, PowerEvent.HIT_TAKEN, PowerEvent.STANDING, PowerEvent.INFLICT)
     }

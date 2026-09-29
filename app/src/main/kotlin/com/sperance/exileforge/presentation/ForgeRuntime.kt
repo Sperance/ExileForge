@@ -99,6 +99,8 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
                 clearSession()
                 scope.launch {
                     store.saveToken(server, null)
+                    // The copy of the last hero belongs to the refused session: the next launch does not open it.
+                    store.saveLastHero(server, null)
                     if (store.deviceSession.first()) {
                         state.first { !it.busy }
                         if (api === created) sessionViewModel.playOnThisDevice(silent = true)

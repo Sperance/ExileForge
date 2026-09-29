@@ -425,7 +425,9 @@ class ExpeditionRun(
                 RunPhase.DEAD, RunPhase.CLEARED -> phase = RunPhase.LEFT
                 else -> Unit
             }
-            is RunCommand.Regear -> if (phase == RunPhase.FIGHT) pendingGear = command else regear(command.gear)
+            // In the pause between stages the stage has not begun: the kit changes now, and its battle is drawn again.
+            is RunCommand.Regear -> if (phase == RunPhase.FIGHT && interlude != null && !started) { pendingGear = null; regear(command.gear); fight = battle() }
+                else if (phase == RunPhase.FIGHT) pendingGear = command else regear(command.gear)
             RunCommand.DismissChest -> chest = null
             RunCommand.StepBack -> if (phase == RunPhase.GATE) closeGate()
             is RunCommand.ShutGate -> {
@@ -531,6 +533,8 @@ class ExpeditionRun(
     private fun walkAway() {
         fightAgents.filter { it.crystal == null && it.alive }.forEach(world::retreatFrom)
         endFight()
+        // No report follows: the stages already won must not bring their loot to the next fight's screen.
+        reward = null; slain = null
         phase = RunPhase.MAP
     }
 
@@ -775,7 +779,7 @@ class ExpeditionRun(
                 // Walking out of a fight takes the run back into the player's hands
                 autopilot = null
                 fightAgents.filter { it.id >= 0 && it.alive }.forEach(world::retreatFrom)
-                report = null
+                report = null; reward = null; slain = null
                 if (down != null) { phase = RunPhase.ABYSS; take(down, fallen = true) } else phase = RunPhase.MAP
             }
         }

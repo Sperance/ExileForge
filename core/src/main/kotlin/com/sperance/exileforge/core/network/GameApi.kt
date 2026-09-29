@@ -161,17 +161,17 @@ class GameApi(
     /**
      * Sends what waits, in order, each with its own key. A refusal drops that command and goes on to the
      * next — [refused] says it; "not yet" (the network, a duplicate still running) stops the pass and keeps
-     * the rest; [delivered] names each command the server has answered. Another account's commands are dropped.
+     * the rest; [delivered] names each command the server has answered. Another account's commands are dropped, and [foreign] names each.
      */
     suspend fun flushCommands(expired: (List<QueuedCommand>) -> Unit, refused: (QueuedCommand, ApiFailure) -> Unit,
-                              delivered: (QueuedCommand) -> Unit): FlushOutcome {
+                              delivered: (QueuedCommand) -> Unit, foreign: (QueuedCommand) -> Unit = {}): FlushOutcome {
         val queue = http.queue ?: return FlushOutcome.EMPTY
         while (true) {
             // No session, or one the server has not confirmed yet: the commands wait for it.
             if (http.token == null || http.holding) return FlushOutcome.SIGNED_OUT
             val next = queue.head(expired) ?: return FlushOutcome.EMPTY
             val owner = account?.id
-            if (next.account != null && owner != null && next.account != owner) { queue.remove(next.key); continue }
+            if (next.account != null && owner != null && next.account != owner) { queue.remove(next.key); foreign(next); continue }
             try {
                 http.replay(next)
                 queue.remove(next.key)

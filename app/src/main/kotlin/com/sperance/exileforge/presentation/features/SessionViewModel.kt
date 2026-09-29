@@ -92,25 +92,32 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
      */
     suspend fun fastStart(server: String, saved: String): Boolean { with(runtime) {
         val heroId = store.lastHero(server) ?: return false
-        val copy = store.heroCopy(server, heroId)?.let { text ->
-            withContext(Dispatchers.Default) { runCatching { WireJson.decodeFromString(HeroCopy.serializer(), text) }.getOrNull() }
-        } ?: return false
+        val copy = heroCopy(server, heroId) ?: return false
         if (copy.revision != API_REVISION || !contentFromDevice()) return false
         api.adopt(saved, copy.account)
         mutable.update { it.copy(mode = AppMode.PLAYER, phase = AppPhase.GAME, tab = TAB_HERO,
             account = it.account.copy(signedIn = true, resumable = false, profile = copy.account),
             play = PlayState(heroId = heroId, draftClass = it.play.draftClass, selectedOrb = it.play.selectedOrb)) }
         heroViewModel.restore(heroId, copy.snapshot)
-        if (state.value.hero == null) { clearSession(); return false }
+        val foreign = state.value.play.heroOwner.let { it.isNotEmpty() && it != copy.account.id }
+        if (state.value.hero == null || foreign) {
+            clearSession()
+            if (foreign) store.saveLastHero(server, null)
+            return false
+        }
         unconfirmed = saved
         confirm()
         return true
     } }
 
+    private suspend fun heroCopy(server: String, heroId: String): HeroCopy? = runtime.store.heroCopy(server, heroId)?.let { text ->
+        withContext(Dispatchers.Default) { runCatching { WireJson.decodeFromString(HeroCopy.serializer(), text) }.getOrNull() }
+    }
+
     /**
      * The adopted session, asked of the server in the background. Out of reach, the hero stays on screen and the
      * link's probe asks again ([restored]); a 401 is the transport's to handle; anything else — another revision,
-     * a disabled account — falls back to the usual start, which says why.
+     * a disabled account, a token that turns out to be another account's — falls back to the usual start.
      */
     private fun confirm() { with(runtime) {
         if (confirming?.isActive == true) return
@@ -121,26 +128,44 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     private suspend fun confirmNow() { with(runtime) {
         val saved = unconfirmed ?: return
-        try {
+        val adopted = api.currentUser()?.id
+        val profile = try {
             api.manifest(fresh = true).requireWorkbench()
-            val profile = api.confirm()
-            unconfirmed = null
-            mutable.update { it.copy(account = it.account.copy(profile = profile)) }
-            read(Reads.CHARACTERS, silent = true) { characterViewModel.readCharacters() }
-            read(Reads.HERO, silent = true) {
-                ensureContent(fresh = true)
-                heroViewModel.readHero()
-                expeditionViewModel.resume(heroId)
-            }
-            connectionViewModel.wake(now = true)
+            api.confirm()
         } catch (e: CancellationException) { throw e }
         catch (e: Exception) {
             when {
                 FailureState.from(e, writing = false) == FailureState.Offline -> connectionViewModel.lost()
                 e is ApiFailure && e.status == 401 -> unconfirmed = null
-                else -> { unconfirmed = null; resume(saved) }
+                else -> fallBack(saved, foreign = false)
             }
+            return
         }
+        // The kept token answered for another account than the hero drawn: that hero is not this session's.
+        if (profile.id != adopted || state.value.play.heroOwner.let { it.isNotEmpty() && it != profile.id }) return fallBack(saved, foreign = true)
+        unconfirmed = null
+        mutable.update { it.copy(account = it.account.copy(profile = profile)) }
+        read(Reads.CHARACTERS, silent = true) { characterViewModel.readCharacters() }
+        read(Reads.HERO, silent = true) {
+            ensureContent(fresh = true)
+            heroViewModel.readHero()
+            expeditionViewModel.resume(heroId)
+        }
+        connectionViewModel.wake(now = true)
+    } }
+
+    /**
+     * The fast start gives way to the usual one. The adopted session goes at once — nothing is held for it any
+     * more — and the resume waits for a running task to end instead of being refused by it; a sign-in the player
+     * made meanwhile stands. [foreign]: the last hero was another account's and is not opened again.
+     */
+    private suspend fun fallBack(saved: String, foreign: Boolean) { with(runtime) {
+        unconfirmed = null
+        val server = state.value.account.server
+        clearSession()
+        if (foreign) store.saveLastHero(server, null)
+        state.first { !it.busy }
+        if (!state.value.account.signedIn) resume(saved)
     } }
 
     /** The link came back: a session the fast start adopted is confirmed now. */
@@ -190,6 +215,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         mutable.update { it.copy(mode = AppMode.PLAYER, phase = AppPhase.CHARACTERS, tab = TAB_HERO, account = it.account.copy(signedIn = true, resumable = false, profile = profile)) }
         store.saveDeviceSession(byDevice)
         store.saveToken(state.value.account.server, api.sessionToken())
+        forgetForeignHero(state.value.account.server, profile.id)
         // What waited for a session goes out with this one; another account's commands are dropped on the way.
         connectionViewModel.wake(now = true)
         refreshLocale()
@@ -198,6 +224,12 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             launch { ensureContent() }
             runtime.characterViewModel.readCharacters(autoEnter = true)
         }
+    } }
+
+    /** The last hero of another account is not the one this account's next launch opens. */
+    private suspend fun forgetForeignHero(server: String, account: String) { with(runtime) {
+        val heroId = store.lastHero(server) ?: return
+        if (heroCopy(server, heroId)?.account?.id != account) store.saveLastHero(server, null)
     } }
 
     /** Signing out is explicit, so the next launch must not sign straight back in. */

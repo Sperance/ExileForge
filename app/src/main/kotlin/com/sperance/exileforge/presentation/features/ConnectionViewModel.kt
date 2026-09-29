@@ -13,8 +13,9 @@ import com.sperance.exileforge.presentation.state.TAB_CITY
 import com.sperance.exileforge.presentation.state.TAB_CRAFTS
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * The link to the server (3.30.0): whether it is reachable, and the commands waiting for it.
@@ -26,6 +27,8 @@ import kotlinx.coroutines.launch
 class ConnectionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     private var watcher: Job? = null
     private var loop: Job? = null
+    /** A wake for the running loop: it cuts the backoff pause or asks for one more pass — never the send in flight. */
+    private val nudge = Channel<Unit>(Channel.CONFLATED)
 
     /** A new [GameApi]: its queue is read from the device and drawn in the top bar as it changes. */
     fun attach(api: GameApi) { with(runtime) {
@@ -55,10 +58,12 @@ class ConnectionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     /**
      * The probe loop, one at a time: an offline link waits its step of the backoff first, an online one with
      * commands waiting sends them at once. It ends once the server answered and nothing waits. [now] skips the
-     * pause the loop is in — the app came back to the foreground, or the session was just confirmed.
+     * pause the loop is in — the app came back to the foreground, or the session was just confirmed. A running
+     * loop is only nudged: cancelling it could cut a command mid-flight and send its key again.
      */
     fun wake(now: Boolean = false) { with(runtime) {
-        if (loop?.isActive == true) { if (!now) return; loop?.cancel() }
+        if (loop?.isActive == true) { if (now) nudge.trySend(Unit); return }
+        nudge.tryReceive()
         loop = scope.launch {
             var step = 0
             var first = now
@@ -66,25 +71,28 @@ class ConnectionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
                 // The queue itself, not its reflection in the state, which may lag a frame behind a command just added.
                 val offline = state.value.link.offline
                 if (!offline && api.commands?.waiting?.value.isNullOrEmpty()) break
-                if (offline && !first) delay(BACKOFF_S[step.coerceAtMost(BACKOFF_S.lastIndex)] * 1_000L)
+                if (offline && !first) withTimeoutOrNull(BACKOFF_S[step.coerceAtMost(BACKOFF_S.lastIndex)] * 1_000L) { nudge.receive() }
                 first = false
                 if (!reachable()) { step++; continue }
                 val wasOffline = state.value.link.offline
                 update { it.copy(link = it.link.copy(offline = false)) }
                 if (wasOffline) sessionViewModel.restored()
                 var delivered = 0
+                var foreign = 0
                 val outcome = try {
                     api.flushCommands(
                         expired = { toast(ui("link.expired", it.size), NoticeKind.DONE) },
                         refused = { _, e -> report(e, writing = true) },
-                        delivered = { delivered++ })
+                        delivered = { delivered++ },
+                        foreign = { foreign++ })
                 } catch (e: CancellationException) { throw e }
                 catch (e: Exception) { report(e, writing = true); FlushOutcome.EMPTY }
+                if (foreign > 0) toast(ui("link.foreign", foreign), NoticeKind.DONE)
                 if (wasOffline || delivered > 0) refreshScreen()
                 when (outcome) {
                     FlushOutcome.OFFLINE -> { update { it.copy(link = it.link.copy(offline = true)) }; step++ }
-                    // No session to send them with: the sign-in wakes the loop again.
-                    FlushOutcome.SIGNED_OUT, FlushOutcome.EMPTY -> break
+                    // No session to send them with: the sign-in wakes the loop again — or already did, during this pass.
+                    FlushOutcome.SIGNED_OUT, FlushOutcome.EMPTY -> if (nudge.tryReceive().isSuccess) first = true else break
                 }
             }
         }

@@ -19,6 +19,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -88,6 +89,13 @@ private fun stashMaps(s: ForgeState): List<StashMap> =
     val index = s.index ?: return
     val zone = token.zone
     FirstVisit(Guide.MAP_LAUNCH)
+    // A locked map is kept on purpose: spending it on a run is asked about first, for either launch.
+    var askLocked by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val launchGuarded: (() -> Unit) -> Unit = { go -> if (stashMaps(s).any { it.item.id == launch.picked && it.item.locked }) askLocked = go else go() }
+    askLocked?.let { go ->
+        ConfirmSheet(title = ui("expedition.launch_locked_q"), confirm = ui("expedition.launch_locked_go"), danger = true,
+            onDismiss = { askLocked = null }) { go() }
+    }
     Surface(modifier.fillMaxWidth(), color = Panel, shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp),
         border = BorderStroke(1.dp, PanelRaised), shadowElevation = 12.dp) {
         Column(Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState()).padding(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 14.dp),
@@ -109,13 +117,13 @@ private fun stashMaps(s: ForgeState): List<StashMap> =
             index.monster(zone.boss)?.let { Guardian(s, zone, it) }
             AtlasKeys(s.atlasState?.earned.orEmpty(), zone.code)
             Maps(s, vm, index, zone, launch)
-            ForgeButton(enabled = s.hero != null && !s.busy, onClick = { vm.startRun(zone.code) },
+            ForgeButton(enabled = s.hero != null && !s.busy, onClick = { launchGuarded { vm.startRun(zone.code) } },
                 modifier = Modifier.fillMaxWidth().height(44.dp)) {
                 Icon(ForgeGlyphs.Portal, null, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(10.dp))
                 Text(ui("expedition.launch_go"), style = MaterialTheme.typography.titleMedium)
             }
-            AutoLaunch(s, vm, zone.code, launch)
+            AutoLaunch(s, vm, zone.code, launch, launchGuarded)
         }
     }
 }
@@ -125,7 +133,7 @@ private fun stashMaps(s: ForgeState): List<StashMap> =
  * waves on the arena, the guardian last. What else it takes on is chosen here; a crack of the Abyss and the
  * Vaal portal still stop it for the player's word.
  */
-@Composable private fun AutoLaunch(s: ForgeState, vm: ForgeViewModel, zone: String, launch: MapLaunchState) {
+@Composable private fun AutoLaunch(s: ForgeState, vm: ForgeViewModel, zone: String, launch: MapLaunchState, guarded: (() -> Unit) -> Unit) {
     if (s.progress?.cleared?.contains(zone) != true) return
     var chests by rememberSaveable { mutableStateOf(true) }
     var crystals by rememberSaveable { mutableStateOf(true) }
@@ -141,7 +149,7 @@ private fun stashMaps(s: ForgeState): List<StashMap> =
             }
         }
         ForgeOutlinedButton(enabled = s.hero != null && !s.busy && launch.picked != null, modifier = Modifier.fillMaxWidth(),
-            onClick = { vm.startAutoRun(zone, AutoPlan(chests, crystals, abyss)) }) {
+            onClick = { guarded { vm.startAutoRun(zone, AutoPlan(chests, crystals, abyss)) } }) {
             Text(ui(if (launch.picked == null) "auto.needs_map" else "auto.go"))
         }
     }

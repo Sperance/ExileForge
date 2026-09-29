@@ -13,7 +13,6 @@ import com.sperance.exileforge.core.model.command.RedemptionCode
 import com.sperance.exileforge.core.model.command.UserProfile
 import com.sperance.exileforge.core.model.crafts.CraftsState
 import com.sperance.exileforge.core.model.guild.GuildLogEntry
-import com.sperance.exileforge.core.model.guild.GuildMessage
 import com.sperance.exileforge.core.model.guild.GuildMine
 import com.sperance.exileforge.core.model.guild.GuildPage
 import com.sperance.exileforge.core.model.hero.HeroInfo
@@ -198,11 +197,11 @@ data class MarketState(
 enum class Building { QUESTS, MERCHANT, AUCTION, GUILD }
 
 /** The guild screen's tabs; [APPLICATIONS] only for those who may answer them. */
-enum class GuildTab { MEMBERS, QUESTS, APPLICATIONS, CONTRIBUTE, LOG, CHAT, SETTINGS }
+enum class GuildTab { MEMBERS, QUESTS, APPLICATIONS, CONTRIBUTE, LOG, SETTINGS }
 
 /**
  * The hero's guild as the server last answered (3.22.0): [mine] is null until it has been read; `guilds.json` comes with
- * the content ([ContentIndex.guilds]). The journal is read page by page; the chat is polled while its tab is open.
+ * the content ([ContentIndex.guilds]). The journal is read page by page.
  */
 data class GuildState(
     val mine: GuildMine? = null,
@@ -211,9 +210,6 @@ data class GuildState(
     val faction: String = "",
     val tab: GuildTab = GuildTab.MEMBERS,
     val log: List<GuildLogEntry> = emptyList(), val logPage: Int = 0, val logEnd: Boolean = false,
-    val chat: List<GuildMessage> = emptyList(),
-    /** When the hero may speak again, by the device's clock. */
-    val chatQuietUntil: Long = 0,
 )
 
 /** The quest board's sections (3.23.0). */
@@ -245,7 +241,6 @@ object Reads {
     const val GUILD = "guild"
     const val GUILD_SEARCH = "guild_search"
     const val GUILD_LOG = "guild_log"
-    const val GUILD_CHAT = "guild_chat"
     const val QUESTS = "quests"
     const val GUILD_QUESTS = "guild_quests"
 }

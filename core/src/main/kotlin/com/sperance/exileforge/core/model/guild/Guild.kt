@@ -65,6 +65,3 @@ val GuildRole.manages: Boolean get() = this != GuildRole.MEMBER
 
 /** One line of the guild's journal: what happened ([kind]), to whom, and the figure it carries. */
 @Serializable data class GuildLogEntry(val at: Long = 0, val kind: String = "", val heroName: String = "", val value: String = "")
-
-/** One chat message; [at] is epoch millis and the cursor the next poll asks `after`. */
-@Serializable data class GuildMessage(val id: String, val at: Long = 0, val heroId: String = "", val heroName: String = "", val text: String = "")

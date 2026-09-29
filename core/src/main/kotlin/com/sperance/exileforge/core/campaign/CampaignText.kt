@@ -3,7 +3,7 @@ package com.sperance.exileforge.core.campaign
 import com.sperance.exileforge.core.display.effectText
 import com.sperance.exileforge.core.display.effectUnit
 import com.sperance.exileforge.core.display.retired
-import com.sperance.exileforge.core.display.statNumber
+import com.sperance.exileforge.core.display.modNumber
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.ContentIndex
@@ -35,5 +35,5 @@ fun monsterLineText(line: MonsterLine, index: ContentIndex? = null): String {
 /** «монстр 20% · карта 15%»: where a summed line comes from, when both sources give it. */
 fun monsterLineSources(line: MonsterLine, index: ContentIndex? = null): String? = line.takeIf { it.split && it.stat != "STOCK_TAUNT" }?.let {
     val unit = effectUnit(it.stat, it.op, index)
-    ui("fight.line_sources", statNumber(it.stat, it.own) + unit, statNumber(it.stat, it.map) + unit)
+    ui("fight.line_sources", modNumber(it.stat, it.own) + unit, modNumber(it.stat, it.map) + unit)
 }

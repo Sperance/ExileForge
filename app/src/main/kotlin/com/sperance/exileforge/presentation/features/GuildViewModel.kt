@@ -2,7 +2,6 @@ package com.sperance.exileforge.presentation.features
 
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.guild.GuildCard
-import com.sperance.exileforge.core.model.guild.GuildMessage
 import com.sperance.exileforge.core.model.guild.GuildMine
 import com.sperance.exileforge.core.model.guild.GuildView
 import com.sperance.exileforge.core.network.MemberCommand
@@ -81,34 +80,6 @@ class GuildViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         if (onScreen(id)) guild { it.copy(log = if (more) it.log + entries else entries, logPage = page, logEnd = entries.isEmpty()) }
     } } }
 
-    /**
-     * The chat's poll: what came after the last message held, or the whole kept history for [fresh]. It is silent — a poll
-     * every few seconds that failed would otherwise flash a refusal as often; the next one simply tries again.
-     */
-    fun pollChat(fresh: Boolean = false) { with(runtime) { read(Reads.GUILD_CHAT, restart = fresh, silent = true) {
-        val id = heroId
-        val held = if (fresh) emptyList() else state.value.guild.chat
-        val came = orNull { runtime.api.guild.chat(id, held.lastOrNull()?.at ?: 0) } ?: return@read
-        if (onScreen(id)) guild { it.copy(chat = merged(held, came)) }
-    } } }
-
-    /** The message as the server kept it joins the chat at once; the hero is quiet for the rules' seconds after. */
-    fun say(text: String) { with(runtime) { task(writing = true, touches = setOf(Reads.GUILD_CHAT)) {
-        val id = heroId
-        val said = runtime.api.guild.say(id, text)
-        val quiet = (state.value.index?.guilds?.chat?.cooldownSeconds ?: CHAT_COOLDOWN) * 1000L
-        if (onScreen(id)) guild { it.copy(chat = merged(it.chat, listOf(said)), chatQuietUntil = System.currentTimeMillis() + quiet) }
-    } } }
-
-    fun unsay(messageId: String) { with(runtime) { task(writing = true, touches = setOf(Reads.GUILD_CHAT)) {
-        runtime.api.guild.unsay(heroId, messageId)
-        guild { it.copy(chat = it.chat.filterNot { m -> m.id == messageId }) }
-    } } }
-
-    /** The chat held and what came, once each, in order, no more than the server keeps. */
-    private fun merged(held: List<GuildMessage>, came: List<GuildMessage>): List<GuildMessage> =
-        (held + came).distinctBy { it.id }.sortedBy { it.at }.takeLast(state.value.index?.guilds?.chat?.keep ?: CHAT_KEEP)
-
     private fun inviteName(guildId: String): String = state.value.guild.mine?.invites?.firstOrNull { it.guild.id == guildId }?.guild?.name.orEmpty()
 
     /**
@@ -143,12 +114,5 @@ class GuildViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         catch (_: Exception) { mutable.update { it.copy(message = ui("guild.done_refresh"), error = true) } }
     } }
 
-    private suspend fun <T> orNull(block: suspend () -> T): T? =
-        try { block() } catch (e: CancellationException) { throw e } catch (_: Exception) { null }
-
     private fun guild(transform: (GuildState) -> GuildState) = update { it.copy(guild = transform(it.guild)) }
 }
-
-/** The chat's rules when `guilds.json` has not been read: what the server keeps and how often a hero may speak. */
-private const val CHAT_KEEP = 100
-private const val CHAT_COOLDOWN = 3

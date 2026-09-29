@@ -55,7 +55,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import com.sperance.exileforge.core.display.Glyph
-import com.sperance.exileforge.core.display.fineNumber
+import com.sperance.exileforge.core.display.modNumber
 import com.sperance.exileforge.core.display.statDescription
 import com.sperance.exileforge.core.display.statPercent
 import com.sperance.exileforge.core.display.statTitle
@@ -375,7 +375,7 @@ private fun legendOf(world: ExpeditionWorld): List<Pair<Color, String>> = buildL
 
 /** «+15% Здоровье монстров карты»: a map's summed effect as a modifier's sentence, the percent where the stat counts in it. */
 private fun effectText(run: ExpeditionRun, stat: String, value: Double): String =
-    (if (value >= 0) "+" else "−") + fineNumber(abs(value)) + (if (statPercent(stat, run.index)) "%" else "") + " " + statTitle(stat)
+    (if (value >= 0) "+" else "−") + modNumber(stat, abs(value)) + (if (statPercent(stat, run.index)) "%" else "") + " " + statTitle(stat)
 
 /** The Vaal portal's mark on the maps and in their legend. */
 private val PortalTint = Color(0xFFFF8A78)

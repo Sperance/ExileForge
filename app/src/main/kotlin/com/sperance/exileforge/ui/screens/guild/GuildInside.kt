@@ -45,7 +45,6 @@ import com.sperance.exileforge.ui.theme.*
             GuildTab.APPLICATIONS -> ApplicationsTab(s, vm, guild)
             GuildTab.CONTRIBUTE -> ContributeTab(s, vm, guild, me)
             GuildTab.LOG -> LogTab(s, vm)
-            GuildTab.CHAT -> ChatTab(s, vm, me)
             GuildTab.SETTINGS -> SettingsTab(s, vm, guild, me)
         }
     }
@@ -57,7 +56,6 @@ private fun tabTitle(tab: GuildTab, guild: GuildView): String = when (tab) {
     GuildTab.APPLICATIONS -> if (guild.applications.isEmpty()) ui("guild.tab_applications") else ui("guild.tab_applications_n", guild.applications.size)
     GuildTab.CONTRIBUTE -> ui("guild.tab_contribute")
     GuildTab.LOG -> ui("guild.tab_log")
-    GuildTab.CHAT -> ui("guild.tab_chat")
     GuildTab.SETTINGS -> ui("guild.tab_settings")
 }
 

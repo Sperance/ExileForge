@@ -150,9 +150,6 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     /** Gold (`GOLD`) or an orb, by its item code, into the treasury. */
     fun contribute(item: String, amount: Long) = runtime.guildViewModel.contribute(item, amount)
     fun loadGuildLog(more: Boolean = false) = runtime.guildViewModel.loadLog(more)
-    fun pollGuildChat(fresh: Boolean = false) = runtime.guildViewModel.pollChat(fresh)
-    fun sayInGuild(text: String) = runtime.guildViewModel.say(text)
-    fun unsayInGuild(messageId: String) = runtime.guildViewModel.unsay(messageId)
 
     // Quests (3.23.0): the City's board and the guild's quests.
     fun loadQuests() = runtime.questViewModel.load()

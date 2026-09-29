@@ -4,13 +4,10 @@ import com.sperance.exileforge.core.contract.requireId
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.guild.GuildContribution
 import com.sperance.exileforge.core.model.guild.GuildLogEntry
-import com.sperance.exileforge.core.model.guild.GuildMessage
 import com.sperance.exileforge.core.model.guild.GuildMine
 import com.sperance.exileforge.core.model.guild.GuildPage
 import com.sperance.exileforge.core.model.guild.GuildView
 import com.sperance.exileforge.rules.content.GuildMode
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonObject
 
 private const val GUILD = "api/v1/guild"
 
@@ -77,20 +74,6 @@ class GuildClient internal constructor(private val http: Transport) {
     suspend fun log(heroId: String, page: Int): List<GuildLogEntry> {
         requirePage(page)
         return http.get("$GUILD/log", heroQuery(heroId, "page" to page.toString()))
-    }
-
-    /** The messages after [after] (epoch millis), the last kept ones for 0. */
-    suspend fun chat(heroId: String, after: Long): List<GuildMessage> = http.get("$GUILD/chat", heroQuery(heroId, "after" to after.toString()))
-
-    /** The message as it was kept; the text travels in the body. */
-    suspend fun say(heroId: String, text: String): GuildMessage {
-        require(text.isNotBlank()) { ui("guild.api.empty_message") }
-        return http.post("$GUILD/chat", heroQuery(heroId), buildJsonObject { put("text", JsonPrimitive(text.trim())) })
-    }
-
-    suspend fun unsay(heroId: String, messageId: String): GuildMessage {
-        requireId(messageId)
-        return http.post("$GUILD/chat/delete", heroQuery(heroId, "messageId" to messageId))
     }
 
     private suspend fun onGuild(operation: String, heroId: String, guildId: String): GuildMine {

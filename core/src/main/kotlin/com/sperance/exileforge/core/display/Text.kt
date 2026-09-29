@@ -81,8 +81,8 @@ fun modifierText(index: ContentIndex): ModifierText = ModifierText(index.stats, 
 
 /** A modifier's sentence with its values in; a definition the dictionary cannot word prints its numbers and stats. */
 fun modifierLine(index: ContentIndex, def: ModifierDef, values: List<Double>): String =
-    modifierText(index).template(def)?.let { fillTemplate(it, values.mapIndexed { i, v -> statNumber(def.effects.getOrNull(i)?.stat.orEmpty(), v) }) }
-        ?: values.mapIndexed { i, v -> def.effects.getOrNull(i)?.let { "${statNumber(it.stat, v)} ${statTitle(it.stat)}" } ?: number(v) }.joinToString(" · ").ifBlank { displayName(def.code) }
+    modifierText(index).template(def)?.let { fillTemplate(it, values.mapIndexed { i, v -> modNumber(def.effects.getOrNull(i)?.stat.orEmpty(), v) }) }
+        ?: values.mapIndexed { i, v -> def.effects.getOrNull(i)?.let { "${modNumber(it.stat, v)} ${statTitle(it.stat)}" } ?: number(v) }.joinToString(" · ").ifBlank { displayName(def.code) }
 
 /** A fixed line — a base, a class's or a tree node's — as one sentence. */
 fun lineText(index: ContentIndex, line: Line): String = index.modifier(line.code)?.let { modifierLine(index, it, line.values) } ?: displayName(line.code)
@@ -105,6 +105,10 @@ fun statNumber(stat: String, value: Double): String =
     if (stat in preciseStats) String.format(java.util.Locale.ROOT, "%.2f", value) else fineNumber(value)
 
 fun number(value: Double): String = statNumber("", value)
+
+/** A modifier's figure, whatever its size, with the tenth it was rolled to: «+12.3», «+1.8», «+5» — a precise stat keeps its hundredths. */
+fun modNumber(stat: String, value: Double): String =
+    if (stat in preciseStats) statNumber(stat, value) else String.format(java.util.Locale.ROOT, "%.1f", value).removeSuffix(".0")
 
 /** A small figure with its tenth: a bleed of 0.4 a second is «0.4», not «0»; from ten up the whole number stays. */
 fun fineNumber(value: Double): String =

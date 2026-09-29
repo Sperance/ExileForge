@@ -18,6 +18,7 @@ import com.sperance.exileforge.presentation.state.Building
 import com.sperance.exileforge.presentation.state.GuildTab
 import com.sperance.exileforge.presentation.state.QuestTab
 import com.sperance.exileforge.presentation.state.ForgeSection
+import com.sperance.exileforge.presentation.state.StashSort
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
 
@@ -102,6 +103,12 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     fun socketJewel(itemId: String, nodeCode: String) = runtime.heroViewModel.socketJewel(itemId, nodeCode)
     fun unsocketJewel(itemId: String) = runtime.heroViewModel.unsocketJewel(itemId)
     fun sellForGold(itemId: String) = runtime.heroViewModel.sellForGold(itemId)
+    /** The item lock (3.30.0): a locked item is never sold, listed or auto-sold. */
+    fun lockItem(itemId: String, locked: Boolean) = runtime.heroViewModel.lockItem(itemId, locked)
+    /** The stash's order (3.30.0), kept on the device. */
+    fun stashSort(sort: StashSort) = runtime.heroViewModel.stashSort(sort)
+    /** The link's probe at once (3.30.0): the offline icon tapped. */
+    fun retryLink() = runtime.connectionViewModel.wake(now = true)
     fun mode(mode: AppMode) = runtime.sessionViewModel.mode(mode)
     fun serverDraft(value: String) = runtime.sessionViewModel.serverDraft(value)
     fun connect() = runtime.sessionViewModel.connect()

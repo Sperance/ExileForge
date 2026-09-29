@@ -4,6 +4,9 @@ package com.sperance.exileforge.ui.screens.hero
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -58,12 +61,16 @@ private const val MAP_PREFIX = "MAP_"
     val loose = !instance.equipped && !instance.socketed
     val price = s.sellPrice(instance)
     val reachable = s.unmetFor(instance.template).isEmpty()
+    // A locked item (3.30.0) is kept from the merchant and the auction; the forge still works on it.
+    val locked = instance.locked
+    val waiting = instance.id in s.link.waitingItems
     var open by remember(itemId) { mutableStateOf<ItemAction?>(null) }
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.92f)) {
             LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                item { ItemCard(view, enabled = false, detailed = true, price = price) }
+                item { ItemCard(view, enabled = false, detailed = true, price = price, waiting = waiting) }
+                if (locked) item { Text(ui("item.locked_hint"), color = Muted, style = MaterialTheme.typography.bodySmall) }
                 item { WearPreview(s, instance) }
                 // Worn but not counting: the rules' reasons, as the slot cell prints them.
                 s.hero?.inactive?.get(instance.id)?.let { reasons -> item {
@@ -87,8 +94,11 @@ private const val MAP_PREFIX = "MAP_"
                 // One way into the forge (2.51.0): its orbs and bench are its own tabs.
                 Action(ForgeGlyphs.Anvil, ui("nav.forge"), can) { onDismiss(); vm.openForge(instance.id, ForgeSection.ORBS) }
                 // A worn item cannot be listed or sold (AU_010, CH_014): the tap says so instead of doing nothing.
-                Action(ForgeGlyphs.Scales, ui("hero.action_auction"), can) { open = if (loose) ItemAction.AUCTION else ItemAction.WORN }
-                Action(ForgeGlyphs.Coins, ui("hero.action_sell"), can, LifeRed) { open = if (loose) ItemAction.SELL else ItemAction.WORN }
+                Action(if (locked) Icons.Outlined.Lock else Icons.Outlined.LockOpen, ui(if (locked) "item.unlock" else "item.lock"), can) {
+                    vm.lockItem(instance.id, !locked)
+                }
+                Action(ForgeGlyphs.Scales, ui("hero.action_auction"), can && !locked) { open = if (loose) ItemAction.AUCTION else ItemAction.WORN }
+                Action(ForgeGlyphs.Coins, ui("hero.action_sell"), can && !locked, LifeRed) { open = if (loose) ItemAction.SELL else ItemAction.WORN }
             }
         }
     }

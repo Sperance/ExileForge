@@ -7,7 +7,8 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import com.sperance.exileforge.core.i18n.ui
 import okhttp3.*
 
-internal data class HttpPayload(val status: Int, val body: String)
+/** [replayed]: the server answered a repeated `Idempotency-Key` with its stored answer (server 1.28.0). */
+internal data class HttpPayload(val status: Int, val body: String, val replayed: Boolean = false)
 /** Consume and close the body on OkHttp's worker, keeping cancellation wired through the full read. */
 internal suspend fun Call.awaitPayload(): HttpPayload = suspendCancellableCoroutine { continuation ->
     continuation.invokeOnCancellation { cancel() }
@@ -22,7 +23,7 @@ internal suspend fun Call.awaitPayload(): HttpPayload = suspendCancellableCorout
                     val limit = 2L * 1024 * 1024
                     source.request(limit + 1)
                     if (source.buffer.size > limit) throw ApiFailure(it.code, null, ui("api.too_large"))
-                    HttpPayload(it.code, source.readUtf8())
+                    HttpPayload(it.code, source.readUtf8(), it.header(REPLAY_HEADER) == "true")
                 }
                 if (!continuation.isCancelled) continuation.resume(payload)
             } catch (e: Exception) {
@@ -31,3 +32,6 @@ internal suspend fun Call.awaitPayload(): HttpPayload = suspendCancellableCorout
         }
     })
 }
+
+/** The header of an answer replayed for a repeated key: its hero snapshot is the first run's, not the hero now. */
+internal const val REPLAY_HEADER = "Idempotent-Replay"

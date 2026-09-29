@@ -97,6 +97,15 @@ class HeroClient internal constructor(private val http: Transport) {
         return http.post("$HERO/sell", heroQuery(heroId, "itemId" to itemId))
     }
 
+    /**
+     * Locks or unlocks one item, in the stash or worn (server 1.28.0): a locked item is never sold, listed or
+     * auto-sold from the overflow; orbs and the bench still work on it.
+     */
+    suspend fun lock(heroId: String, itemId: String, locked: Boolean) {
+        requireItemId(itemId)
+        http.request("POST", "$HERO/item/lock", heroQuery(heroId, "itemId" to itemId, "locked" to locked.toString()), authenticated = true)
+    }
+
     /** Wears the title [title] beside the name — one the chronicle has earned — or takes it off when blank (server 1.3.0). */
     suspend fun setTitle(heroId: String, title: String): String = http.post("$HERO/title", heroQuery(heroId, "title" to title))
 

@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -59,6 +60,10 @@ import com.sperance.exileforge.ui.theme.*
     price: Long? = null,
     /** A line below the properties — the seller of a lot, and what else belongs at the bottom. */
     footer: @Composable (ColumnScope.() -> Unit)? = null,
+    /** The padlock on the icon (3.30.0): the copy is locked against selling and listing. */
+    locked: Boolean = item.item.locked,
+    /** A command about this copy waits for the network (3.30.0). */
+    waiting: Boolean = false,
     onClick: () -> Unit) {
     val color = rarityColor(item.rarity.name)
     // The base carries the number this copy really has — its own local modifiers are already in
@@ -81,6 +86,8 @@ import com.sperance.exileforge.ui.theme.*
                 // The mark alone on a row (2.74.0): what is missing is the card's to say, or the mark's own tip.
                 if (unwearable.isNotEmpty()) Tipped({ Tip(ui("hero.inactive"), unwearable.joinToString("\n") { requirementReason(it) }, LifeRed) },
                     Modifier.align(Alignment.TopStart).padding(2.dp)) { Icon(Icons.Outlined.Block, ui("hero.inactive"), tint = LifeRed, modifier = Modifier.size(14.dp)) }
+                if (locked) Icon(Icons.Outlined.Lock, ui("item.locked"), tint = GoldBright,
+                    modifier = Modifier.align(Alignment.TopEnd).padding(2.dp).size(13.dp))
                 if (worn) Icon(Icons.Outlined.CheckCircle, ui("row.worn"), tint = Ink,
                     modifier = Modifier.align(Alignment.BottomEnd).offset(4.dp, 4.dp).background(Gold, CircleShape).padding(1.dp).size(15.dp))
             }
@@ -110,6 +117,7 @@ import com.sperance.exileforge.ui.theme.*
             if (base.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 base.forEach { value -> BaseChip(value) }
             }
+            if (waiting) PendingMark()
             // Every line it rolled, as sentences (2.72.0): a stash is read down without opening each card.
             RollTops(item.summary, rolled)
             footer?.invoke(this)

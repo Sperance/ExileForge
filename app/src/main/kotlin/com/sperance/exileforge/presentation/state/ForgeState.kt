@@ -21,6 +21,7 @@ import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.core.model.trade.MerchantStock
 import com.sperance.exileforge.core.model.tree.TreeState
 import com.sperance.exileforge.core.network.FailureState
+import com.sperance.exileforge.core.network.QueuedCommand
 import com.sperance.exileforge.rules.content.AtlasPoints
 import com.sperance.exileforge.rules.content.BenchRecipe
 import com.sperance.exileforge.rules.content.ContentIndex
@@ -63,6 +64,9 @@ data class ForgeState(
     val guild: GuildState = GuildState(),
     val quests: QuestState = QuestState(),
     val admin: AdminState = AdminState(),
+    val link: LinkState = LinkState(),
+    /** How the stash is sorted (3.30.0); kept on the device, unlike its filters, and across heroes. */
+    val stashSort: StashSort = StashSort.NEWEST,
 ) {
     val isAdmin: Boolean get() = account.signedIn && account.profile?.role == "ADMIN"
     val reading: Boolean get() = loading.isNotEmpty()
@@ -109,6 +113,15 @@ data class ForgeState(
         val calculator = SheetCalculator(i)
         TreeState(total, spent, total - spent, h.tree, calculator.contributions(calculator.expand(i.tree.lines(h.tree))))
     } }
+}
+
+/**
+ * The link to the server (3.30.0): [offline] while it cannot be reached — an icon, not the red strip — and the
+ * commands given while it could not, waiting to be sent in order. Nothing is drawn as done before the server says so.
+ */
+data class LinkState(val offline: Boolean = false, val waiting: List<QueuedCommand> = emptyList()) {
+    /** The items a waiting command is about: their cards say «ждёт отправки». */
+    val waitingItems: Set<String> get() = waiting.mapNotNullTo(HashSet()) { it.itemId }
 }
 
 /** The session: who is signed in, to which server, and which heroes they own. */
@@ -168,6 +181,11 @@ data class PlayState(
     /** The run's journal: events the server has not taken yet, and the ones it refused, for the badge. */
     val runPending: Int = 0, val runRejected: Int = 0,
 )
+
+/** The stash's orders (3.30.0): the newest first as the server keeps it, or by rarity, item level or the merchant's price. */
+enum class StashSort { NEWEST, RARITY, LEVEL, PRICE;
+    companion object { fun of(name: String?): StashSort = entries.firstOrNull { it.name == name } ?: NEWEST }
+}
 
 /** The atlas window: the node looked at. */
 data class AtlasScreenState(val selected: String = "")

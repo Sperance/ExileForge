@@ -5,6 +5,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CloudOff
+import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
@@ -168,9 +171,25 @@ import com.sperance.exileforge.ui.theme.*
                 style = MaterialTheme.typography.labelSmall, color = Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         WorkBadge(s) { vm.tab(TAB_CRAFTS) }
+        LinkBadge(s.link, vm::retryLink)
         IconButton(onClick = { vm.tab(TAB_ACCOUNT) }) {
             Icon(ForgeGlyphs.Portal, ui("nav.account"), tint = if (s.tab == TAB_ACCOUNT) GoldBright else Gold, modifier = Modifier.size(24.dp))
         }
+    }
+}
+
+/**
+ * The link to the server (3.30.0): a small crossed cloud while it cannot be reached, and how many commands wait
+ * to be sent. Nothing at all while the server answers and nothing waits. A tap asks the server again at once.
+ */
+@Composable private fun LinkBadge(link: LinkState, onRetry: () -> Unit) {
+    if (!link.offline && link.waiting.isEmpty()) return
+    val tint = if (link.offline) LifeRed else Gold
+    val label = if (link.offline) ui("link.offline") else ui("link.waiting", link.waiting.size)
+    Row(Modifier.clickable(onClickLabel = ui("link.retry"), onClick = onRetry).padding(horizontal = 6.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+        Icon(if (link.offline) Icons.Outlined.CloudOff else Icons.Outlined.CloudUpload, label, tint = tint, modifier = Modifier.size(18.dp))
+        if (link.waiting.isNotEmpty()) Text(link.waiting.size.toString(), color = tint, fontSize = 11.sp)
     }
 }
 

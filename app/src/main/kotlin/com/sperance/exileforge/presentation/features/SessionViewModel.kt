@@ -1,6 +1,9 @@
 package com.sperance.exileforge.presentation.features
 
+import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.model.sync.API_REVISION
+import com.sperance.exileforge.core.network.ApiFailure
 import com.sperance.exileforge.core.model.command.UserProfile
 import com.sperance.exileforge.core.network.FailureState
 import com.sperance.exileforge.core.network.ForgeHttp
@@ -8,11 +11,13 @@ import com.sperance.exileforge.core.network.normalizeServer
 import com.sperance.exileforge.presentation.ForgeRuntime
 import com.sperance.exileforge.presentation.state.AppMode
 import com.sperance.exileforge.presentation.state.AppPhase
+import com.sperance.exileforge.presentation.state.PlayState
 import com.sperance.exileforge.presentation.state.Reads
 import com.sperance.exileforge.presentation.state.TAB_ADMIN
 import com.sperance.exileforge.presentation.state.TAB_HERO
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
@@ -32,6 +37,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         val server = normalizeServer(state.value.account.serverDraft)
         store.save(server)
         clearSession()
+        connectionViewModel.reset()
         api = newApi(server)
         journal.clear()
         mutable.update { it.copy(account = it.account.copy(server = server, serverDraft = server, health = ui("session.checking")), world = it.world.copy(content = null, contentHash = "")) }
@@ -65,6 +71,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     /** A session kept from an earlier launch; a launch that cannot reach the server keeps the token and says so. */
     fun resume(saved: String) { with(runtime) { task {
+        unconfirmed = null
         clearSession()
         try {
             api.manifest().requireWorkbench()
@@ -74,6 +81,70 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             if (FailureState.from(e, writing = false) == FailureState.Offline) mutable.update { it.copy(account = it.account.copy(resumable = true)) }
         }
     } } }
+
+    /** The kept token the fast start drew the hero with, until the server confirms it. */
+    private var unconfirmed: String? = null
+
+    /**
+     * The fast start (3.30.0): with a kept session, the last hero played on this server opens straight from the
+     * device — their copy, the content and the dictionary — and the session is confirmed behind it; commands
+     * given meanwhile wait in the queue. No copy, another API revision or content missing: `false`, the usual start.
+     */
+    suspend fun fastStart(server: String, saved: String): Boolean { with(runtime) {
+        val heroId = store.lastHero(server) ?: return false
+        val copy = store.heroCopy(server, heroId)?.let { text ->
+            withContext(Dispatchers.Default) { runCatching { WireJson.decodeFromString(HeroCopy.serializer(), text) }.getOrNull() }
+        } ?: return false
+        if (copy.revision != API_REVISION || !contentFromDevice()) return false
+        api.adopt(saved, copy.account)
+        mutable.update { it.copy(mode = AppMode.PLAYER, phase = AppPhase.GAME, tab = TAB_HERO,
+            account = it.account.copy(signedIn = true, resumable = false, profile = copy.account),
+            play = PlayState(heroId = heroId, draftClass = it.play.draftClass, selectedOrb = it.play.selectedOrb)) }
+        heroViewModel.restore(heroId, copy.snapshot)
+        if (state.value.hero == null) { clearSession(); return false }
+        unconfirmed = saved
+        confirm()
+        return true
+    } }
+
+    /**
+     * The adopted session, asked of the server in the background. Out of reach, the hero stays on screen and the
+     * link's probe asks again ([restored]); a 401 is the transport's to handle; anything else — another revision,
+     * a disabled account — falls back to the usual start, which says why.
+     */
+    private fun confirm() { with(runtime) {
+        if (confirming?.isActive == true) return
+        confirming = scope.launch { confirmNow() }
+    } }
+
+    private var confirming: Job? = null
+
+    private suspend fun confirmNow() { with(runtime) {
+        val saved = unconfirmed ?: return
+        try {
+            api.manifest(fresh = true).requireWorkbench()
+            val profile = api.confirm()
+            unconfirmed = null
+            mutable.update { it.copy(account = it.account.copy(profile = profile)) }
+            read(Reads.CHARACTERS, silent = true) { characterViewModel.readCharacters() }
+            read(Reads.HERO, silent = true) {
+                ensureContent(fresh = true)
+                heroViewModel.readHero()
+                expeditionViewModel.resume(heroId)
+            }
+            connectionViewModel.wake(now = true)
+        } catch (e: CancellationException) { throw e }
+        catch (e: Exception) {
+            when {
+                FailureState.from(e, writing = false) == FailureState.Offline -> connectionViewModel.lost()
+                e is ApiFailure && e.status == 401 -> unconfirmed = null
+                else -> { unconfirmed = null; resume(saved) }
+            }
+        }
+    } }
+
+    /** The link came back: a session the fast start adopted is confirmed now. */
+    fun restored() { if (unconfirmed != null) confirm() }
 
     fun retryResume() { with(runtime) { scope.launch {
         val saved = store.token(state.value.account.server)
@@ -100,8 +171,10 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             val now = state.value
             when {
                 !now.account.signedIn -> if (now.account.resumable) retryResume()
-                now.failure == FailureState.Offline || stale -> {
+                now.failure == FailureState.Offline || now.link.offline || stale -> {
                     if (now.failure == FailureState.Offline) mutable.update { it.copy(failure = null, message = null, error = false) }
+                    // The probe waits no longer: the link is asked again with the screen.
+                    if (now.link.offline || now.link.waiting.isNotEmpty()) connectionViewModel.wake(now = true)
                     when (now.phase) {
                         AppPhase.GAME -> read(Reads.HERO, silent = true) { heroViewModel.readHero() }
                         AppPhase.CHARACTERS -> read(Reads.CHARACTERS, silent = true) { characterViewModel.readCharacters() }
@@ -117,6 +190,8 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         mutable.update { it.copy(mode = AppMode.PLAYER, phase = AppPhase.CHARACTERS, tab = TAB_HERO, account = it.account.copy(signedIn = true, resumable = false, profile = profile)) }
         store.saveDeviceSession(byDevice)
         store.saveToken(state.value.account.server, api.sessionToken())
+        // What waited for a session goes out with this one; another account's commands are dropped on the way.
+        connectionViewModel.wake(now = true)
         refreshLocale()
         refreshIcons()
         coroutineScope {
@@ -131,10 +206,14 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         val server = state.value.account.server
         val leaving = api
         val token = leaving.sessionToken()
+        unconfirmed = null
         clearSession()
         scope.launch {
             store.saveDeviceSession(false)
             store.saveToken(server, null)
+            store.saveLastHero(server, null)
+            // A sign-out is explicit: what this account left waiting is not sent for the next one.
+            leaving.commands?.clear()
             token?.let { leaving.revoke(it) }
         }
     } }

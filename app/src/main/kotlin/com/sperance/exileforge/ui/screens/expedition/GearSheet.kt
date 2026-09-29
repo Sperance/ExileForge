@@ -75,8 +75,11 @@ fun newLoot(s: ForgeState): List<ItemView> = s.play.runLoot.mapNotNull { entry -
         LootSheet(s, vm, item, onDismiss = { looked = null }) {
             // A gilt ribbon with the coin and the price in a chip (2.73.0), held as before.
             val price = s.sellPrice(item.item)
-            HoldButton(ui("expedition.loot_sell"), Gold, Modifier.fillMaxWidth(), enabled = !s.busy, icon = ForgeGlyphs.Coins,
+            // A locked piece (3.30.0) is not sold: the ribbon stays, dimmed, with the reason under it.
+            val locked = s.hero?.item(item.id)?.locked == true
+            HoldButton(ui("expedition.loot_sell"), Gold, Modifier.fillMaxWidth(), enabled = !s.busy && !locked, icon = ForgeGlyphs.Coins,
                 figure = price?.let { "+$it" }) { looked = null; vm.sellForGold(item.id) }
+            if (locked) MutedText(ui("item.locked_hint"))
         }
     }
     val chosen = place

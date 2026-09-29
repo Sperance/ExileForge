@@ -22,8 +22,11 @@ import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.JsonElement
 
-/** The API revision this client is written against (server 1.5.0: the menagerie — the `pets` part and `hero/pets` commands). */
-const val API_REVISION = 20
+/**
+ * The API revision this client is written against (server 1.28.0: the item lock — `ItemInstance.locked` and `hero/item/lock` —
+ * and the `Idempotency-Key` every command carries).
+ */
+const val API_REVISION = 21
 
 /** `static/index.json` → `content`: the fingerprint of the whole world and of each of its chunks, by file name. */
 @Serializable data class ContentManifest(val hash: String = "", val chunks: Map<String, String> = emptyMap())
@@ -66,6 +69,9 @@ class HeroParts(val heroId: String, val version: String = "", private val parts:
     fun header(): String = parts.entries.joinToString(",") { "${it.key}=${it.value.version}" }.ifEmpty { "none" }
 
     fun merge(snapshot: HeroSnapshot): HeroParts = HeroParts(heroId, snapshot.version, parts + snapshot.parts)
+
+    /** Every part held, as one snapshot: what the device keeps of the hero for the next launch (3.30.0). */
+    fun snapshot(): HeroSnapshot = HeroSnapshot(version, parts)
 
     val hero: HeroInfo get() = decode(HERO, HeroInfo.serializer())
     val items: List<ItemInstance> get() {

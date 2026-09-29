@@ -12,6 +12,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Sort
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
@@ -28,19 +30,21 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.BodyPlace
-import com.sperance.exileforge.core.display.ItemSearch
+import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.display.itemTitle
-import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeSection
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.Reads
+import com.sperance.exileforge.presentation.state.SlotGroup
+import com.sperance.exileforge.presentation.state.StashFilter
+import com.sperance.exileforge.presentation.state.StashSort
+import com.sperance.exileforge.presentation.state.stashShelf
 import com.sperance.exileforge.presentation.state.TAB_SKILLS
 import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.unmetFor
 import com.sperance.exileforge.presentation.state.view
-import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.auction.ListingSheet
@@ -70,9 +74,9 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
     var section by rememberSaveable(heroId) { mutableStateOf(HeroSection.CHARACTER) }
     var detailId by remember(heroId) { mutableStateOf<String?>(null) }
     var pickPlace by remember(heroId) { mutableStateOf<BodyPlace?>(null) }
-    var query by remember(heroId) { mutableStateOf("") }
+    // The filters (3.30.0) are the screen's own and go with it; the order is kept on the device.
+    var filter by remember(heroId) { mutableStateOf(StashFilter()) }
     var searching by remember { mutableStateOf(false) }
-    var slot by remember(heroId) { mutableStateOf<Slot?>(null) }
     var stackCode by remember(heroId) { mutableStateOf<String?>(null) }
     var listStack by remember(heroId) { mutableStateOf<String?>(null) }
     // The stash is two shelves since 2.56.1: gear, and the professions' tools apart from it.
@@ -84,11 +88,13 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
     // The stash holds everything (2.51.0): what is worn or socketed too, with a gold frame and a badge.
     // A copy whose template the content does not hold is left out rather than drawn blank.
     val stash = hero?.items.orEmpty().mapNotNull { s.view(it) }
-    // How many loose items each slot holds (2.47.0): a chip says it, and a slot with none has no chip.
+    // How many items each slot group holds (2.47.0, grouped since 3.30.0): a chip says it, and a group with none has no chip.
     val shelf = stash.filter { it.slot.isTool == tools }
-    val slotCounts = shelf.groupingBy { it.slot }.eachCount()
-    val slots = slotCounts.keys.toList()
-    val visible = shelf.filter { (slot == null || it.slot == slot) && ItemSearch.matches(it, query) }
+    val groupCounts = shelf.groupingBy { SlotGroup.of(it.slot) }.eachCount()
+    val groups = groupCounts.keys.toList()
+    val rarities = shelf.map { it.rarity }.distinct().sortedByDescending { it.ordinal }
+    val visible = s.stashShelf(shelf, filter)
+    val waiting = s.link.waitingItems
     PullToRefreshBox(isRefreshing = s.refreshing(Reads.HERO), onRefresh = vm::loadHero, modifier = Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
@@ -119,31 +125,41 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
                     item {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                FilterChip(selected = !tools, onClick = { tools = false; slot = null }, label = { Text(ui("hero.stash_gear")) },
+                                FilterChip(selected = !tools, onClick = { tools = false; filter = filter.copy(groups = emptySet()) }, label = { Text(ui("hero.stash_gear")) },
                                     leadingIcon = { Icon(ForgeGlyphs.Helm, null, modifier = Modifier.size(16.dp)) })
-                                FilterChip(selected = tools, onClick = { tools = true; slot = null }, label = { Text(ui("hero.stash_tools")) },
+                                FilterChip(selected = tools, onClick = { tools = true; filter = filter.copy(groups = emptySet()) }, label = { Text(ui("hero.stash_tools")) },
                                     leadingIcon = { Icon(ForgeGlyphs.Anvil, null, modifier = Modifier.size(16.dp)) })
                                 Spacer(Modifier.weight(1f))
+                                SortGlyph(s.stashSort, vm::stashSort)
                                 // The search is a glyph at the side since 2.75.0, the field behind it in a dialog.
-                                SearchGlyph(active = query.isNotBlank()) { searching = true }
+                                SearchGlyph(active = filter.query.isNotBlank()) { searching = true }
                             }
-                            if (query.isNotBlank()) InputChip(selected = true, onClick = { searching = true }, label = { Text(ui("hero.search_chip", query.trim())) },
-                                trailingIcon = { Icon(Icons.Outlined.Close, ui("hero.search_clear"), Modifier.size(16.dp).clickable { query = "" }) })
+                            if (filter.query.isNotBlank()) InputChip(selected = true, onClick = { searching = true }, label = { Text(ui("hero.search_chip", filter.query.trim())) },
+                                trailingIcon = { Icon(Icons.Outlined.Close, ui("hero.search_clear"), Modifier.size(16.dp).clickable { filter = filter.copy(query = "") }) })
                             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                item { FilterChip(selected = slot == null, onClick = { slot = null }, label = { Text(ui("hero.slot_count", ui("common.all"), shelf.size)) }) }
-                                items(slots) { key -> FilterChip(selected = slot == key, onClick = { slot = key },
-                                    label = { Text(ui("hero.slot_count", slotTitle(key, s.lang), slotCounts[key] ?: 0)) }) }
+                                item { FilterChip(selected = filter.groups.isEmpty(), onClick = { filter = filter.copy(groups = emptySet()) },
+                                    label = { Text(ui("hero.slot_count", ui("common.all"), shelf.size)) }) }
+                                items(groups, key = { it.tag }) { group -> FilterChip(selected = group in filter.groups, onClick = { filter = filter.toggle(group) },
+                                    label = { Text(ui("hero.slot_count", group.title(s.lang), groupCounts[group] ?: 0)) }) }
+                            }
+                            // Rarity and «can wear» (3.30.0): several at once, each narrowing the shelf further.
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                item { FilterChip(selected = filter.wearable, onClick = { filter = filter.copy(wearable = !filter.wearable) },
+                                    label = { Text(ui("stash.can_wear")) }) }
+                                items(rarities) { rarity -> FilterChip(selected = rarity in filter.rarities, onClick = { filter = filter.toggle(rarity) },
+                                    label = { Text(rarityTitle(rarity, s.lang), color = rarityColor(rarity.name)) }) }
                             }
                         }
                     }
-                    if (visible.isEmpty()) item { InfoCard(ui("tree.nothing_found"), ui("hero.stash_empty_hint")) }
+                    if (visible.isEmpty()) item { InfoCard(ui("tree.nothing_found"), if (filter.active) ui("stash.filter_empty") else ui("hero.stash_empty_hint")) }
                     // A line, not a card: a stash is read down, and the card is one tap behind each line.
                     items(visible, key = { it.id }) { piece ->
                         val worn = piece.equipped || piece.socketed
                         ItemRow(piece, selected = piece.id == s.play.selectedEquipment, worn = worn,
                             // The sheet added up here (2.46.0) says what the template needs, and the merchant's rule what it fetches.
                             // No rarity in words, a map's included (2.73.0): the row's frame already wears it.
-                            unwearable = s.unmetFor(piece.code), price = s.sellPrice(piece.item).takeUnless { worn }) {
+                            unwearable = s.unmetFor(piece.code), price = s.sellPrice(piece.item).takeUnless { worn },
+                            waiting = piece.id in waiting) {
                             detailId = piece.id; vm.selectEquipment(piece.id)
                         }
                     }
@@ -152,7 +168,7 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
         }
     }
     detailId?.let { id -> ItemSheet(s, vm, id) { detailId = null } }
-    if (searching) SearchDialog(query, onDismiss = { searching = false }) { query = it; searching = false }
+    if (searching) SearchDialog(filter.query, onDismiss = { searching = false }) { filter = filter.copy(query = it); searching = false }
     // The sheet is about a stack the bag still holds: listed or read away, it closes with it.
     stackCode?.let { code -> hero?.bag?.get(code)?.takeIf { it > 0 }?.let { amount ->
         BagSheet(s, BagStack(code, amount), onDismiss = { stackCode = null },
@@ -192,6 +208,24 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
             }
         }
         HorizontalDivider(color = PanelRaised)
+    }
+}
+
+/** The stash's order (3.30.0): a glyph beside the search, the four orders in a menu under it; the choice is kept on the device. */
+@Composable private fun SortGlyph(sort: StashSort, onSort: (StashSort) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    val tint = if (sort != StashSort.NEWEST) GoldBright else Muted
+    Box {
+        IconButton(onClick = { open = true }, modifier = Modifier.size(36.dp).border(1.dp, tint.copy(alpha = .6f), CircleShape)) {
+            Icon(Icons.AutoMirrored.Outlined.Sort, ui("stash.sort"), tint = tint, modifier = Modifier.size(18.dp))
+        }
+        DropdownMenu(open, onDismissRequest = { open = false }, containerColor = Panel) {
+            StashSort.entries.forEach { entry ->
+                DropdownMenuItem(text = { Text(ui("stash.sort.${entry.name.lowercase()}"), color = if (entry == sort) GoldBright else Parchment) },
+                    leadingIcon = { if (entry == sort) Icon(Icons.Outlined.Check, null, tint = GoldBright, modifier = Modifier.size(16.dp)) },
+                    onClick = { open = false; onSort(entry) })
+            }
+        }
     }
 }
 

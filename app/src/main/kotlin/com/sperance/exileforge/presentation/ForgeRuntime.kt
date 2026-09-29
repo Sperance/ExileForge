@@ -1,6 +1,9 @@
 package com.sperance.exileforge.presentation
 
+import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.display.IconBundle
+import com.sperance.exileforge.core.model.sync.API_REVISION
+import com.sperance.exileforge.core.model.sync.StaticManifest
 import com.sperance.exileforge.core.display.PortraitBundle
 import com.sperance.exileforge.core.display.PortraitSvg
 import com.sperance.exileforge.core.display.serverIcons
@@ -13,16 +16,18 @@ import com.sperance.exileforge.core.i18n.serverLocale
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.network.ApiFailure
+import com.sperance.exileforge.core.network.CommandQueued
+import com.sperance.exileforge.core.network.CommandStore
 import com.sperance.exileforge.core.network.FailureState
 import com.sperance.exileforge.core.network.GameApi
 import com.sperance.exileforge.core.network.ManifestCache
 import com.sperance.exileforge.core.network.RequestJournal
 import com.sperance.exileforge.core.network.refusalLine
-import com.sperance.exileforge.core.network.transportDetail
 import com.sperance.exileforge.data.settings.ServerStore
 import com.sperance.exileforge.data.settings.deviceLanguage
 import com.sperance.exileforge.presentation.features.AuctionViewModel
 import com.sperance.exileforge.presentation.features.CharacterViewModel
+import com.sperance.exileforge.presentation.features.ConnectionViewModel
 import com.sperance.exileforge.presentation.features.CraftsViewModel
 import com.sperance.exileforge.presentation.features.ExpeditionViewModel
 import com.sperance.exileforge.presentation.features.GuildViewModel
@@ -40,6 +45,7 @@ import com.sperance.exileforge.presentation.state.MarketState
 import com.sperance.exileforge.presentation.state.Notice
 import com.sperance.exileforge.presentation.state.NoticeKind
 import com.sperance.exileforge.presentation.state.PlayState
+import com.sperance.exileforge.presentation.state.StashSort
 import com.sperance.exileforge.presentation.state.TAB_HERO
 import com.sperance.exileforge.rules.content.ContentFiles
 import com.sperance.exileforge.rules.content.ContentLoader
@@ -80,6 +86,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
     val craftsViewModel = CraftsViewModel(this)
     val guildViewModel = GuildViewModel(this)
     val questViewModel = QuestViewModel(this)
+    val connectionViewModel = ConnectionViewModel(this)
 
     /**
      * A refused token is forgotten, and a player who plays by device is signed in again without being
@@ -104,6 +111,12 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
             override suspend fun read(): String? = store.manifest(server)
             override suspend fun write(text: String) = store.saveManifest(server, text)
         }
+        // The commands of this server that wait for the network live on the device (3.30.0).
+        created.commandStore(object : CommandStore {
+            override suspend fun read(): String? = store.commands(server)
+            override suspend fun write(text: String) = store.saveCommands(server, text)
+        })
+        connectionViewModel.attach(created)
         return created
     }
 
@@ -115,12 +128,14 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
                 val server = store.server.first()
                 api = newApi(server)
                 val known = store.languages(server).mapNotNull { Lang.byCode(it) }
-                mutable.update { it.copy(lang = language, busy = false, account = it.account.copy(server = server, serverDraft = server, deviceId = deviceId), world = it.world.copy(languages = known.ifEmpty { it.world.languages })) }
+                val sort = StashSort.of(store.stashSort.first())
+                mutable.update { it.copy(lang = language, busy = false, stashSort = sort, account = it.account.copy(server = server, serverDraft = server, deviceId = deviceId), world = it.world.copy(languages = known.ifEmpty { it.world.languages })) }
                 refreshLocale()
                 refreshIcons()
                 launch { quietly { store.dropLegacyDocuments() } }
                 val saved = store.token(server)
-                if (saved != null) sessionViewModel.resume(saved)
+                // The fast start (3.30.0): the last hero from the device at once, the session confirmed behind it.
+                if (saved != null) { if (!sessionViewModel.fastStart(server, saved)) sessionViewModel.resume(saved) }
                 else if (store.deviceSession.first()) sessionViewModel.playOnThisDevice(silent = true)
             } catch (e: CancellationException) { throw e }
             catch (e: Exception) {
@@ -305,12 +320,28 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
         mutable.update { it.copy(loading = emptySet()) }
     }
 
+    /**
+     * A failure, as the player should see it. A command that went into the queue is no failure at all; a lost
+     * connection is the top bar's icon and the probe loop (3.30.0), not the red strip — which stays for what
+     * the server refused, and for a write whose fate is unknown.
+     */
     internal fun report(e: Exception, writing: Boolean) {
+        if (e is CommandQueued) {
+            // Queued because the network failed under it: the link is down, and the icon says so.
+            if (e.cause != null && e.cause !is ApiFailure) connectionViewModel.lost()
+            connectionViewModel.queued()
+            return
+        }
         val problem = FailureState.from(e, writing)
+        if (problem == FailureState.Offline) {
+            mutable.update { it.copy(failure = problem) }
+            connectionViewModel.lost()
+            return
+        }
+        if (problem == FailureState.UncertainWrite && e !is ApiFailure) connectionViewModel.lost()
         val refusal = if (e is ApiFailure) locError(e.code, e.message.orEmpty(), e.args) else e.message.orEmpty()
         mutable.update { it.copy(failure = problem, error = true, message = when (problem) {
             FailureState.UncertainWrite -> ui("runtime.uncertain_write")
-            FailureState.Offline -> ui("runtime.offline") + transportDetail(e)
             else -> refusalLine(e, refusal.ifBlank { ui("runtime.request_failed") }, detailed = it.isAdmin)
         }) }
     }
@@ -345,6 +376,30 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
             world = it.world.copy(content = index, contentHash = manifest.hash),
             play = it.play.copy(draftClass = it.play.draftClass.ifBlank { index.classes.classes.firstOrNull()?.code.orEmpty() },
                 selectedOrb = it.play.selectedOrb.ifBlank { index.itemsByCategory[com.sperance.exileforge.rules.content.Item.CURRENCY]?.minByOrNull { o -> o.price }?.code.orEmpty() })) }
+    }
+
+    /**
+     * The content from the device alone (3.30.0), as the kept manifest names it — no request: what the fast start
+     * draws the last hero with. `false` when the manifest is of another revision or a chunk is missing or stale.
+     */
+    suspend fun contentFromDevice(): Boolean {
+        contentLock.withLock {
+            if (state.value.world.content != null) return true
+            val server = state.value.account.server
+            val manifest = store.manifest(server)?.let { text -> runCatching { WireJson.decodeFromString(StaticManifest.serializer(), text) }.getOrNull() }
+                ?: return false
+            if (manifest.revision != API_REVISION) return false
+            val texts = ContentFiles.ALL.associateWith { file ->
+                store.chunk(server, file)?.takeIf { it.first.isNotBlank() && it.first == manifest.content.chunks[file] }?.second ?: return false
+            }
+            val index = try { parsed { ContentLoader.load { texts.getValue(it) } } }
+                catch (e: CancellationException) { throw e }
+                catch (_: Exception) { return false }
+            mutable.update { it.copy(world = it.world.copy(content = index, contentHash = manifest.content.hash),
+                play = it.play.copy(draftClass = it.play.draftClass.ifBlank { index.classes.classes.firstOrNull()?.code.orEmpty() },
+                    selectedOrb = it.play.selectedOrb.ifBlank { index.itemsByCategory[com.sperance.exileforge.rules.content.Item.CURRENCY]?.minByOrNull { o -> o.price }?.code.orEmpty() })) }
+            return true
+        }
     }
 
     fun clearSession() {

@@ -58,7 +58,8 @@ import com.sperance.exileforge.ui.theme.*
                 ItemRow(piece, price = s.sellPrice(item), footer = {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         ForgeTextButton(onClick = { vm.claimOverflow(item.id) }, enabled = !full && !s.busy) { Text(ui("stash.claim")) }
-                        ForgeTextButton(onClick = { vm.sellOverflow(item.id) }, enabled = !s.busy) { Text(ui("hero.sell_do")) }
+                        // A locked piece (3.30.0) waits in the overflow: it is never sold, by hand or by the server.
+                        ForgeTextButton(onClick = { vm.sellOverflow(item.id) }, enabled = !s.busy && !item.locked) { Text(ui("hero.sell_do")) }
                     }
                 }) { }
             }

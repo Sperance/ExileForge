@@ -56,6 +56,15 @@ class Transport(
     /** A command's snapshot of the hero, or `null` when the answer came without one. */
     internal var onHero: (String, HeroSnapshot?) -> Unit = { _, _ -> }
 
+    /** Where commands wait for the network (3.30.0); none sends every command once, as before. */
+    internal var queue: CommandQueue? = null
+
+    /** A session taken from the device but not yet confirmed by the server: every command that may wait, waits. */
+    internal var holding = false
+
+    /** Whose session is signed in, so a kept command is never replayed for another account. */
+    internal var account: () -> String? = { null }
+
     /** The whole of a small, server-seeded collection. */
     internal suspend fun all(path: String): List<JsonObject> = request("GET", path, authenticated = true).jsonArray.map { it.jsonObject }
 
@@ -98,12 +107,26 @@ class Transport(
     /**
      * @param bearer a token to send instead of the session's own — only `GameApi.revoke` passes one, since
      * it speaks for a session that has already been dropped here
+     * @param replay the queued command this is a send of — it keeps its key and never queues again
+     *
+     * Every signed-in command carries an [IDEMPOTENCY_HEADER] (3.30.0). One that may wait lines up behind
+     * the commands already waiting, or joins them when the network fails under it: either way the caller
+     * gets [CommandQueued] instead of an answer, and the answer comes with the replay.
      */
     internal suspend fun request(method: String, path: String, query: Map<String, String> = emptyMap(), body: JsonElement? = null,
                                 authenticated: Boolean = false, sensitive: Boolean = false, bearer: String? = null,
-                                headers: Map<String, String> = emptyMap()): JsonElement {
+                                headers: Map<String, String> = emptyMap(), replay: QueuedCommand? = null): JsonElement {
         val credential = bearer ?: token.takeIf { authenticated }
         if (authenticated) require(credential != null) { ui("api.sign_in_tab") }
+        val command = method == "POST" && authenticated && bearer == null && !sensitive
+        val waits = queue?.takeIf { command && replay == null && CommandQueue.queues(path) }
+        val queued = replay ?: waits?.command(method, path, query, body?.toString(), account())
+        if (waits != null && queued != null && (holding || waits.busy())) {
+            waits.add(queued)
+            journal.add(RequestLog(method, path, null, 0, body?.toString().orEmpty().take(12_000), ui("net.queued"), false))
+            throw CommandQueued(queued)
+        }
+        val key = queued?.key ?: if (command) java.util.UUID.randomUUID().toString() else null
         val url = base.newBuilder().addPathSegments(path).apply { query.forEach { (k, v) -> addQueryParameter(k, v) } }.build()
         val bodyText = body?.toString().orEmpty()
         // Several commands are POSTs carrying their arguments in the query string; OkHttp still demands a body for those methods.
@@ -115,6 +138,7 @@ class Transport(
         val request = Request.Builder().url(url).header("Accept", "application/json")
             .apply { credential?.let { header("Authorization", "Bearer $it") } }
             .apply { parts?.let { header(HeroParts.HEADER, it) } }
+            .apply { key?.let { header(IDEMPOTENCY_HEADER, it) } }
             .apply { headers.forEach { (name, value) -> header(name, value) } }.method(method, payload).build()
         val start = System.nanoTime()
         var status: Int? = null
@@ -137,8 +161,9 @@ class Transport(
                     (error?.get("messageArgs") as? JsonArray).orEmpty().mapNotNull { (it as? JsonPrimitive)?.contentOrNull })
             }
             success = true
-            // The command has landed: a snapshot that cannot be read only means the hero is read again.
-            if (heroOf != null && parts != null) runCatching { onHero(heroOf, envelope["hero"]?.takeIf { it is JsonObject }
+            // The command has landed: a snapshot that cannot be read only means the hero is read again — and so
+            // does a replayed answer, whose snapshot is the hero as the first run left them.
+            if (heroOf != null && parts != null) runCatching { onHero(heroOf, envelope["hero"]?.takeIf { it is JsonObject && !answer.replayed }
                 ?.let { runCatching { WireJson.decodeFromJsonElement(HeroSnapshot.serializer(), it) }.getOrNull() }) }
             return envelope["data"] ?: JsonNull
         } catch (e: CancellationException) {
@@ -146,6 +171,9 @@ class Transport(
         } catch (e: Exception) {
             if (e is ApiFailure) status = e.status
             if (responseText.isBlank()) responseText = e.message.orEmpty()
+            // The answer never came, or the server said "not yet": the command waits with its key, and the replay is the same command.
+            val later = if (e is ApiFailure) CommandQueue.transient(e.status) else e is java.io.IOException
+            if (waits != null && queued != null && later) { waits.add(queued); throw CommandQueued(queued, e) }
             throw e
         } finally {
             journal.add(RequestLog(method, url.encodedPath + (url.encodedQuery?.let { "?${if (sensitive) ui("api.hidden") else it}" } ?: ""), status,
@@ -153,6 +181,10 @@ class Transport(
         }
     }
 }
+
+/** One waiting command sent again, with its own key: its answer lands as any command's would. */
+internal suspend fun Transport.replay(command: QueuedCommand): JsonElement =
+    request(command.method, command.path, command.query, command.body?.let(WireJson::parseToJsonElement), authenticated = true, replay = command)
 
 /** A signed-in read whose envelope `data` decodes to [T]. */
 internal suspend inline fun <reified T> Transport.get(path: String, query: Map<String, String> = emptyMap()): T =

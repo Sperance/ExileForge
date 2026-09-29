@@ -39,6 +39,8 @@ class GameApi(
     private val http = Transport(server, journal, client) { account = null; onUnauthorized() }
     private var account: UserProfile? = null
 
+    init { http.account = { account?.id } }
+
     val files = StaticClient(http)
     val hero = HeroClient(http)
     val tree = TreeClient(http)
@@ -74,6 +76,7 @@ class GameApi(
         require(session.token.isNotBlank()) { ui("api.no_token") }
         require(session.user.isActive) { ui("api.account_disabled") }
         http.token = session.token
+        http.holding = false
         account = session.user
         return session.user
     }
@@ -87,7 +90,24 @@ class GameApi(
             catch (e: Exception) { logout(); throw e }
     }
 
-    fun logout() { account = null; http.token = null }
+    /**
+     * Takes a kept token as the session before the server has confirmed it (3.30.0): the fast start draws
+     * the last hero from the device, and its commands line up in the queue until [resume] answers.
+     */
+    fun adopt(saved: String, profile: UserProfile) {
+        require(saved.isNotBlank()) { ui("api.no_token") }
+        http.token = saved
+        http.holding = true
+        account = profile
+    }
+
+    /** The adopted session, asked of the server: the account as it is now, and the commands free to go. A 401 drops it. */
+    suspend fun confirm(): UserProfile = refreshUser().also {
+        require(it.isActive) { ui("api.account_disabled") }
+        http.holding = false
+    }
+
+    fun logout() { account = null; http.token = null; http.holding = false }
     fun currentUser(): UserProfile? = account
     fun sessionToken(): String? = http.token
 
@@ -132,6 +152,41 @@ class GameApi(
     }
 
     suspend fun capabilities(): ApiCapabilities = manifest().capabilities
+
+    /** The commands waiting for this server (3.30.0); none until the app gives them a place on the device. */
+    val commands: CommandQueue? get() = http.queue
+
+    fun commandStore(store: CommandStore) { http.queue = CommandQueue(store) }
+
+    /**
+     * Sends what waits, in order, each with its own key. A refusal drops that command and goes on to the
+     * next — [refused] says it; "not yet" (the network, a duplicate still running) stops the pass and keeps
+     * the rest; [delivered] names each command the server has answered. Another account's commands are dropped.
+     */
+    suspend fun flushCommands(expired: (List<QueuedCommand>) -> Unit, refused: (QueuedCommand, ApiFailure) -> Unit,
+                              delivered: (QueuedCommand) -> Unit): FlushOutcome {
+        val queue = http.queue ?: return FlushOutcome.EMPTY
+        while (true) {
+            // No session, or one the server has not confirmed yet: the commands wait for it.
+            if (http.token == null || http.holding) return FlushOutcome.SIGNED_OUT
+            val next = queue.head(expired) ?: return FlushOutcome.EMPTY
+            val owner = account?.id
+            if (next.account != null && owner != null && next.account != owner) { queue.remove(next.key); continue }
+            try {
+                http.replay(next)
+                queue.remove(next.key)
+                delivered(next)
+            } catch (e: CancellationException) { throw e }
+            catch (e: ApiFailure) {
+                when {
+                    e.status == 401 -> return FlushOutcome.SIGNED_OUT
+                    CommandQueue.transient(e.status) -> return FlushOutcome.OFFLINE
+                    else -> { queue.remove(next.key); refused(next, e) }
+                }
+            }
+            catch (_: java.io.IOException) { return FlushOutcome.OFFLINE }
+        }
+    }
 
     /** Where commands deliver the hero: [parts] names the fingerprints held for a hero, [apply] receives the snapshot or `null`. */
     fun heroSync(parts: (String) -> String?, apply: (String, HeroSnapshot?) -> Unit) { http.heroParts = parts; http.onHero = apply }

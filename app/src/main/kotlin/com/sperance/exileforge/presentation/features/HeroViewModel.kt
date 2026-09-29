@@ -8,11 +8,21 @@ import com.sperance.exileforge.core.model.sync.HeroSnapshot
 import com.sperance.exileforge.presentation.ForgeRuntime
 import com.sperance.exileforge.presentation.state.ForgeSection
 import com.sperance.exileforge.presentation.state.Reads
+import com.sperance.exileforge.presentation.state.StashSort
 import com.sperance.exileforge.presentation.state.TAB_CRAFT
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.roll.Dice
+import com.sperance.exileforge.core.contract.WireJson
+import com.sperance.exileforge.core.model.command.UserProfile
+import com.sperance.exileforge.core.model.sync.API_REVISION
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
 
 class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
@@ -41,6 +51,13 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     fun unequip(itemId: String) { with(runtime) { heroCommand { id -> api.hero.unequip(id, itemId) } } }
     /** The title beside the name (1.3.0): one the chronicle opened, or none. */
     fun setTitle(title: String) { with(runtime) { heroCommand { id -> api.hero.setTitle(id, title) } } }
+    /** Locks or unlocks an item (3.30.0): a locked one is never sold, listed or auto-sold; the snapshot carries the flag. */
+    fun stashSort(sort: StashSort) { with(runtime) {
+        update { it.copy(stashSort = sort) }
+        scope.launch { store.saveStashSort(sort.name) }
+    } }
+
+    fun lockItem(itemId: String, locked: Boolean) { with(runtime) { heroCommand { id -> api.hero.lock(id, itemId, locked) } } }
     /** One more pack of stash places for gold (1.1.0); the snapshot with the answer carries the new count. */
     fun expandStash() { with(runtime) { heroCommand { id -> api.hero.expandStash(id) } } }
     /** From the overflow into the stash: [itemId], or as many as fit. */
@@ -156,7 +173,24 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     var snapshots = 0L
         private set
 
-    fun forget() { parts = null }
+    fun forget() { parts = null; copyJob?.cancel() }
+
+    /** The hero as the device kept them (3.30.0): drawn at once by the fast start, read again once the session is confirmed. */
+    internal fun restore(heroId: String, snapshot: HeroSnapshot) { parts = null; apply(heroId, snapshot, keep = false) }
+
+    private var copyJob: Job? = null
+
+    /** The hero on the device for the next launch, a moment after the last snapshot so a burst of commands is one write. */
+    private fun keepCopy(heroId: String, held: HeroParts) { with(runtime) {
+        val profile = state.value.account.profile ?: return
+        val server = state.value.account.server
+        copyJob?.cancel()
+        copyJob = scope.launch {
+            delay(COPY_AFTER)
+            val text = withContext(Dispatchers.Default) { WireJson.encodeToString(HeroCopy.serializer(), HeroCopy(API_REVISION, profile, held.snapshot())) }
+            store.saveHeroCopy(server, heroId, text)
+        }
+    } }
 
     /** What a command on [heroId] tells the server the client holds; `null` asks for nothing. */
     fun heldParts(heroId: String): String? =
@@ -184,12 +218,13 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     } }
 
     /** Folds a snapshot into the parts held and draws the hero from them; the sheet is added up here by the rules. */
-    private fun apply(heroId: String, snapshot: HeroSnapshot) { with(runtime) {
+    private fun apply(heroId: String, snapshot: HeroSnapshot, keep: Boolean = true) { with(runtime) {
         val merged = (parts?.takeIf { it.heroId == heroId } ?: HeroParts(heroId)).merge(snapshot)
         if (!merged.complete) { parts = null; mutable.update { it.copy(play = it.play.copy(heroReadAt = 0)) }; return }
         val index = state.value.index ?: run { mutable.update { it.copy(play = it.play.copy(heroReadAt = 0)) }; return }
         parts = merged
         snapshots++
+        if (keep) keepCopy(heroId, merged)
         val info = merged.hero
         val items = merged.items
         val tree = merged.tree
@@ -206,3 +241,10 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
 /** How long a reading of the hero is trusted without asking again. */
 private const val FRESH_FOR = 30_000L
+
+/** How long the hero's copy waits for the next snapshot before it is written. */
+private const val COPY_AFTER = 1_500L
+
+/** The hero kept on the device (3.30.0): who played them, under which API revision, and every part as last read. */
+@Serializable
+data class HeroCopy(val revision: Int, val account: UserProfile, val snapshot: HeroSnapshot)

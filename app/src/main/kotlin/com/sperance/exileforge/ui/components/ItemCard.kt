@@ -136,7 +136,12 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
     /** What the merchant pays for this copy (2.46.0); it replaces the template's bare base price. */
     price: Long? = null,
     /** Whether the card shows its [actionLabel]: a short card always, a full one only when it leads somewhere (3.2.0). */
-    action: Boolean = !detailed, onClick: () -> Unit = {}) {
+    action: Boolean = !detailed,
+    /** The padlock (3.30.0): the copy is locked against selling and listing. */
+    locked: Boolean = item.item.locked,
+    /** A command about this copy waits for the network (3.30.0). */
+    waiting: Boolean = false,
+    onClick: () -> Unit = {}) {
     val color = rarityColor(item.rarity.name)
     val base = item.base
     val states = item.states
@@ -153,6 +158,8 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
                 states.forEach {
                     Icon(stateGlyph(it), stateTitle(it), tint = stateColor(it), modifier = Modifier.size(15.dp))
                 }
+                if (locked) Icon(Icons.Outlined.Lock, ui("item.locked"), tint = GoldBright, modifier = Modifier.size(15.dp))
+                if (waiting) PendingMark()
                 Spacer(Modifier.weight(1f))
                 MutedText(kind, style = MaterialTheme.typography.labelSmall)
             }
@@ -218,3 +225,11 @@ private fun cardFacts(item: ItemView, withPrice: Boolean = true): List<String> =
         item.template.price?.takeIf { withPrice }?.let { "${ui("card.price")} $it" },
     ).joinToString(" · ").takeIf { it.isNotBlank() },
 )
+
+/** «Ждёт отправки» (3.30.0): a command about this thing waits for the network; its result comes with the server's answer. */
+@Composable fun PendingMark(modifier: Modifier = Modifier) {
+    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+        Icon(Icons.Outlined.Schedule, null, tint = Muted, modifier = Modifier.size(13.dp))
+        Text(ui("link.pending"), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1)
+    }
+}

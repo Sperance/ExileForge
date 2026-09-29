@@ -10,6 +10,7 @@ import com.sperance.exileforge.presentation.state.PlayState
 import com.sperance.exileforge.presentation.state.Reads
 import com.sperance.exileforge.presentation.state.TAB_HERO
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 /** The hero menu: the one place a hero is chosen, made or given up. Everything below the gate acts on `heroId`. */
 class CharacterViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
@@ -29,6 +30,8 @@ class CharacterViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     private suspend fun entered(id: String) { with(runtime) {
         mutable.update { it.copy(phase = AppPhase.GAME, tab = TAB_HERO, play = PlayState(heroId = id, draftClass = it.play.draftClass, selectedOrb = it.play.selectedOrb)) }
         heroViewModel.forget()
+        // The hero the next launch opens straight into (3.30.0).
+        store.saveLastHero(state.value.account.server, id)
         ensureContent(fresh = true)
         heroViewModel.readHero()
         expeditionViewModel.resume(id)
@@ -43,6 +46,7 @@ class CharacterViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         mutable.update { it.copy(phase = AppPhase.CHARACTERS, play = PlayState(draftClass = it.play.draftClass, selectedOrb = it.play.selectedOrb), market = MarketState(),
             building = null, guild = GuildState(), quests = QuestState()) }
         read(Reads.CHARACTERS) { readCharacters() }
+        scope.launch { store.saveLastHero(state.value.account.server, null) }
     } }
 
     /** Create a hero and start playing it; the class is chosen here and nowhere else. */

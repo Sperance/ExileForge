@@ -34,6 +34,11 @@ class ServerStore(private val context: Context) {
     val language = context.settings.data.map { it[languageKey] }
     suspend fun saveLanguage(value: Lang) { context.settings.edit { it[languageKey] = value.code } }
 
+    /** How the stash is sorted (3.30.0), by the name of the order; nothing is the default, newest first. */
+    private val stashSortKey = stringPreferencesKey("stash_sort")
+    val stashSort = context.settings.data.map { it[stashSortKey] }
+    suspend fun saveStashSort(value: String) { context.settings.edit { it[stashSortKey] = value } }
+
     /**
      * Which languages a server said it serves, kept so the picker is right before it answers.
      *
@@ -112,6 +117,37 @@ class ServerStore(private val context: Context) {
     suspend fun saveJournal(heroId: String, text: String) = withContext(Dispatchers.IO) { journalFile(heroId).apply { parentFile?.mkdirs() }.writeText(text) }
     suspend fun clearJournal(heroId: String) = withContext(Dispatchers.IO) { journalFile(heroId).delete(); Unit }
     private fun journalFile(heroId: String) = File(context.filesDir, "journal/$heroId.json")
+
+    /**
+     * The commands one server has not answered yet (3.30.0), in order, as text: they survive the process and
+     * go out with their own keys on the next launch. The file is replaced whole, never torn.
+     */
+    suspend fun commands(server: String): String? = withContext(Dispatchers.IO) { serverFile("commands", server).takeIf { it.isFile }?.readText() }
+    suspend fun saveCommands(server: String, text: String) = withContext(Dispatchers.IO) { replace(serverFile("commands", server), text) }
+
+    /**
+     * The last snapshot of one hero on one server, beside the API revision it was read under (3.30.0): the
+     * fast start draws the hero from it before the server answers. Another revision reads as no copy at all.
+     */
+    suspend fun heroCopy(server: String, heroId: String): String? = withContext(Dispatchers.IO) { serverFile("heroes", "$server|$heroId").takeIf { it.isFile }?.readText() }
+    suspend fun saveHeroCopy(server: String, heroId: String, text: String) = withContext(Dispatchers.IO) { replace(serverFile("heroes", "$server|$heroId"), text) }
+
+    /** The hero last played on a server: the one a launch with a kept session opens straight into. */
+    suspend fun lastHero(server: String): String? = context.settings.data.first()[lastHeroKey(server)]
+    suspend fun saveLastHero(server: String, heroId: String?) {
+        context.settings.edit { if (heroId == null) it.remove(lastHeroKey(server)) else it[lastHeroKey(server)] = heroId }
+    }
+    private fun lastHeroKey(server: String) = stringPreferencesKey("last_hero:$server")
+
+    private fun serverFile(kind: String, name: String) = File(context.filesDir, "$kind/" + UUID.nameUUIDFromBytes(name.toByteArray()) + ".json")
+
+    /** Written beside and moved over: a process killed mid-write leaves the old file, not half of the new one. */
+    private fun replace(target: File, text: String) {
+        target.parentFile?.mkdirs()
+        val temp = File(target.parentFile, target.name + ".tmp")
+        temp.writeText(text)
+        if (!temp.renameTo(target)) { target.delete(); temp.renameTo(target) }
+    }
 
     private val locales = Documents("locale")
     private val iconSets = Documents("icons")

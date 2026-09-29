@@ -7,15 +7,15 @@ import com.sperance.exileforge.rules.content.GuildMode
 import com.sperance.exileforge.rules.content.GuildRole
 
 /**
- * The words of the guilds (3.22.0). The server's dictionary names them all — patrons, ranks, arms, modes, roles and the
+ * The words of the guilds (3.22.0). The server's dictionary names them all — factions, ranks, arms, modes, roles and the
  * journal's lines; the client's own table stands in for the modes and roles until it has arrived.
  */
 /** What a contribution names gold by, where every other thing given is an orb's item code. */
 const val GUILD_GOLD = "GOLD"
 
 object GuildText {
-    fun patron(code: String): String = locOr("guild.patron.$code.name", displayName(code))
-    fun patronTheme(code: String): String = locOr("guild.patron.$code.description", "")
+    fun faction(code: String): String = locOr("guild.faction.$code.name", displayName(code))
+    fun factionLore(code: String): String = locOr("guild.faction.$code.description", "")
     fun rank(code: String): String = locOr("guild.rank.$code", displayName(code))
     fun emblem(code: String): String = locOr("guild.emblem.$code", displayName(code))
     fun mode(mode: GuildMode): String = locOr("guild.mode.${mode.name}", ui("guild.mode.${mode.name}"))

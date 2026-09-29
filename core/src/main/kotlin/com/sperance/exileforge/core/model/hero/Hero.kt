@@ -6,7 +6,6 @@ import com.sperance.exileforge.core.model.campaign.CampaignState
 import com.sperance.exileforge.core.model.crafts.WorkState
 import com.sperance.exileforge.core.model.trade.MerchantStock
 import com.sperance.exileforge.rules.content.Counter
-import com.sperance.exileforge.rules.content.GuildBonus
 import com.sperance.exileforge.rules.content.HeroSkills
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.TakenNode
@@ -81,8 +80,6 @@ data class HeroView(
     val sheet: HeroSheet = HeroSheet.EMPTY,
     /** The menagerie (3.5.0, server 1.5.0). */
     val pets: PetState = PetState(),
-    /** The guild patron's bonus on the hero (3.22.0), already in [sheet]; an empty patron outside a guild. */
-    val guild: GuildBonus = GuildBonus(),
 ) {
     val id: String get() = info.id
     val level: Int get() = info.level

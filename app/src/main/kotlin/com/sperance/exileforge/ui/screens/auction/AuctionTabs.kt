@@ -39,7 +39,6 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.auction.*
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
-import com.sperance.exileforge.presentation.state.discounted
 import com.sperance.exileforge.presentation.state.unmetFor
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.Orb
@@ -104,8 +103,7 @@ import com.sperance.exileforge.ui.theme.*
         // the sheet says so and the purchase is not sent (2.46.0).
         val have = s.bagAmount(lot.priceOrb)
         val money = s.hero?.money
-        // The guild's discount (3.22.0) comes off the fee at the purchase, as the server takes it.
-        val fee = s.discounted(lot.fee)
+        val fee = lot.fee
         val poor = money != null && money < fee
         ConfirmSheet(
             title = ui("auction.buy_q"), subtitle = lot.title,

@@ -59,12 +59,11 @@ class HeroSheet(val stats: Map<String, Double>, val active: List<String>, val in
  * the class at the level, the tree, then the worn items in slot order, each checked against what came before.
  */
 object Sheets {
-    /** [guild] is the patron's bonus as the snapshot brings it (3.22.0): ready operations, counted with the tree before the items, as the server counts them. */
     fun calculate(index: ContentIndex, level: Int, heroClass: String, tree: List<TakenNode>, items: List<ItemInstance>,
-                  pets: List<com.sperance.exileforge.rules.content.Pet> = emptyList(), guild: List<StatOperation> = emptyList()): HeroSheet {
+                  pets: List<com.sperance.exileforge.rules.content.Pet> = emptyList()): HeroSheet {
         // A helper pet's lines lie on the hero beside the tree's (3.5.0), as the server adds them.
         val lines = index.tree.sourcedLines(tree) + com.sperance.exileforge.rules.roll.Menagerie(index).helperSourced(pets)
-        val result = SheetCalculator(index).calculate(level, index.heroClass(heroClass), lines, items.filter { it.equipped }, tree.mapTo(HashSet()) { it.code }, guild)
+        val result = SheetCalculator(index).calculate(level, index.heroClass(heroClass), lines, items.filter { it.equipped }, tree.mapTo(HashSet()) { it.code })
         return HeroSheet(result.stats, result.active, result.inactive.associate { it.id to it.reasons }, SheetModel(result.base, result.operations, index))
     }
 
@@ -77,7 +76,7 @@ object Sheets {
      * two-handed weapon frees both hands, a bow pairs with a quiver. Only the characteristics that move are returned.
      */
     fun wearing(index: ContentIndex, item: ItemInstance, level: Int, heroClass: String, tree: List<TakenNode>, items: List<ItemInstance>, before: Map<String, Double>,
-                pets: List<com.sperance.exileforge.rules.content.Pet> = emptyList(), guild: List<StatOperation> = emptyList()): List<StatDelta> {
+                pets: List<com.sperance.exileforge.rules.content.Pet> = emptyList()): List<StatDelta> {
         val template = index.template(item.template) ?: return emptyList()
         val worn = items.filter { it.equipped && !it.socketed && it.id != item.id }
         val target = EquipSlots.target(template.slot, null, worn.mapNotNull { it.slot })
@@ -91,7 +90,7 @@ object Sheets {
                 else -> it
             }
         }
-        val next = calculate(index, level, heroClass, tree, after, pets, guild).stats
+        val next = calculate(index, level, heroClass, tree, after, pets).stats
         return (before.keys + next.keys).sortedBy { index.stats.order(it) }
             .map { StatDelta(it, before[it] ?: 0.0, next[it] ?: 0.0) }
             .filter { abs(it.change) >= 0.05 }

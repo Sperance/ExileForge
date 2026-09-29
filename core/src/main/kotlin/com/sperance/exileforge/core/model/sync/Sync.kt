@@ -12,7 +12,6 @@ import com.sperance.exileforge.core.model.crafts.WorkState
 import com.sperance.exileforge.core.model.hero.HeroInfo
 import com.sperance.exileforge.core.model.hero.PetState
 import com.sperance.exileforge.core.model.trade.MerchantStock
-import com.sperance.exileforge.rules.content.GuildBonus
 import com.sperance.exileforge.rules.content.TakenNode
 import com.sperance.exileforge.rules.roll.ItemBuckets
 import com.sperance.exileforge.rules.roll.ItemInstance
@@ -24,7 +23,7 @@ import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.JsonElement
 
 /** The API revision this client is written against (server 1.5.0: the menagerie — the `pets` part and `hero/pets` commands). */
-const val API_REVISION = 16
+const val API_REVISION = 18
 
 /** `static/index.json` → `content`: the fingerprint of the whole world and of each of its chunks, by file name. */
 @Serializable data class ContentManifest(val hash: String = "", val chunks: Map<String, String> = emptyMap())
@@ -80,8 +79,6 @@ class HeroParts(val heroId: String, val version: String = "", private val parts:
     val crafts: WorkState get() = decode(CRAFTS, WorkState.serializer())
     val merchant: MerchantStock get() = decode(MERCHANT, MerchantStock.serializer())
     val pets: PetState get() = decode(PETS, PetState.serializer())
-    /** The guild patron's bonus on this hero (3.22.0, server 1.20.0): an empty patron outside a guild. */
-    val guild: GuildBonus get() = decode(GUILD, GuildBonus.serializer())
 
     private fun <T> decode(name: String, serializer: KSerializer<T>): T = WireJson.decodeFromJsonElement(serializer, parts.getValue(name).data)
 
@@ -95,7 +92,6 @@ class HeroParts(val heroId: String, val version: String = "", private val parts:
         const val CRAFTS = "crafts"
         const val MERCHANT = "merchant"
         const val PETS = "pets"
-        const val GUILD = "guild"
-        val NAMES = listOf(HERO, BAG, TREE, CAMPAIGN, CRAFTS, MERCHANT, OVERFLOW, PETS, GUILD, ItemBuckets.ORDER) + ItemBuckets.names
+        val NAMES = listOf(HERO, BAG, TREE, CAMPAIGN, CRAFTS, MERCHANT, OVERFLOW, PETS, ItemBuckets.ORDER) + ItemBuckets.names
     }
 }

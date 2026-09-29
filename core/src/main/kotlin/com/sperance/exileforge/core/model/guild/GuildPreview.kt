@@ -5,7 +5,7 @@ import com.sperance.exileforge.rules.content.GuildRules
 
 /*
  * What the screens read off `guilds.json` beyond what the server computes with it (3.22.0): the form's lengths, the
- * level bar, the way to the next rank and the rank's share. The bonus itself is the rules' own [GuildRules.bonus].
+ * level bar and the way to the next rank.
  */
 
 val GuildRules.nameLength: IntRange get() = (name.getOrNull(0) ?: 3)..(name.getOrNull(1) ?: 24)
@@ -23,6 +23,3 @@ fun GuildRules.rankIndexOf(code: String): Int = ranks.indexOfFirst { it.code == 
 
 /** The rank [contribution] has not reached yet, none past the last. */
 fun GuildRules.nextRank(contribution: Long): GuildRank? = ranks.firstOrNull { contribution < it.from }
-
-/** Percent the rank at [rankIndex] adds to the patron's bonus: [GuildRules.rankBonus] for each rank above the first. */
-fun GuildRules.rankShare(rankIndex: Int): Double = rankBonus * rankIndex.coerceIn(0, (ranks.size - 1).coerceAtLeast(0))

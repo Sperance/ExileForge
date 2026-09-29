@@ -44,7 +44,6 @@ import com.sperance.exileforge.ui.theme.*
             GuildTab.QUESTS -> GuildQuestsTab(s, vm, guild)
             GuildTab.APPLICATIONS -> ApplicationsTab(s, vm, guild)
             GuildTab.CONTRIBUTE -> ContributeTab(s, vm, guild, me)
-            GuildTab.BONUSES -> BonusesTab(s, guild, me)
             GuildTab.LOG -> LogTab(s, vm)
             GuildTab.CHAT -> ChatTab(s, vm, me)
             GuildTab.SETTINGS -> SettingsTab(s, vm, guild, me)
@@ -57,7 +56,6 @@ private fun tabTitle(tab: GuildTab, guild: GuildView): String = when (tab) {
     GuildTab.QUESTS -> ui("guild.tab_quests")
     GuildTab.APPLICATIONS -> if (guild.applications.isEmpty()) ui("guild.tab_applications") else ui("guild.tab_applications_n", guild.applications.size)
     GuildTab.CONTRIBUTE -> ui("guild.tab_contribute")
-    GuildTab.BONUSES -> ui("guild.tab_bonuses")
     GuildTab.LOG -> ui("guild.tab_log")
     GuildTab.CHAT -> ui("guild.tab_chat")
     GuildTab.SETTINGS -> ui("guild.tab_settings")
@@ -71,7 +69,7 @@ private fun tabTitle(tab: GuildTab, guild: GuildView): String = when (tab) {
             GuildEmblem(guild.emblem, guild.color, 52.dp)
             Column(Modifier.weight(1f)) {
                 Text(GuildText.title(guild.name, guild.tag), color = GoldBright, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                MutedText(ui("guild.header_line", GuildText.patron(guild.patron), guild.members.size, capacity))
+                FactionLine(guild.faction, rules, ui("guild.header_line", guild.members.size, capacity))
             }
             GuideButton(Guide.GUILD)
         }

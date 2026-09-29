@@ -18,11 +18,8 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.guild.GuildMember
 import com.sperance.exileforge.core.model.guild.GuildView
 import com.sperance.exileforge.core.model.guild.nextRank
-import com.sperance.exileforge.core.model.guild.rankIndexOf
-import com.sperance.exileforge.core.model.guild.rankShare
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
-import com.sperance.exileforge.rules.content.GuildBonus
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.orbArt
@@ -102,43 +99,6 @@ import com.sperance.exileforge.ui.theme.*
                 Text(names[heroId] ?: "…${heroId.takeLast(6)}", color = if (heroId == me?.heroId) GoldBright else Parchment,
                     style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
                 GoldPrice(value)
-            }
-        }
-    }
-}
-
-/**
- * The patron's gift: what it lays on this hero now — the snapshot's own lines, as the server applies them — the rank's
- * share in it, and what the guild's next level would bring.
- */
-@Composable internal fun BonusesTab(s: ForgeState, guild: GuildView, me: GuildMember?) {
-    val rules = s.index?.guilds
-    val rankIndex = me?.let { rules?.rankIndexOf(it.rank) } ?: 0
-    // The snapshot's own bonus is what the server applies; the rules only stand in while it has not come.
-    val applied = s.hero?.guild?.takeIf { it.active }
-    val now = applied ?: rules?.bonus(guild.patron, guild.level, rankIndex) ?: GuildBonus()
-    LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
-        item {
-            ForgePanel {
-                Engraved(ui("guild.patron"))
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    rules?.patron(guild.patron)?.let { PatronIcon(it.icon, Modifier.size(24.dp)) }
-                    Text(GuildText.patron(guild.patron), color = GoldBright, style = MaterialTheme.typography.titleMedium)
-                }
-                GuildText.patronTheme(guild.patron).takeIf { it.isNotBlank() }?.let { MutedText(it) }
-            }
-        }
-        item {
-            ForgePanel(accent = Vital) {
-                Engraved(ui("guild.bonus_now", guild.level), Vital)
-                BonusLines(now, Vital)
-                if (rules != null && me != null) MutedText(ui("guild.rank_share", GuildText.rank(me.rank), number(rules.rankShare(rankIndex))))
-            }
-        }
-        if (rules != null && guild.level < rules.maxLevel) item {
-            ForgePanel {
-                Engraved(ui("guild.bonus_next", guild.level + 1))
-                BonusLines(rules.bonus(guild.patron, guild.level + 1, rankIndex))
             }
         }
     }

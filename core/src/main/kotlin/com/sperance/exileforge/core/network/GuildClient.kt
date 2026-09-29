@@ -32,10 +32,10 @@ class GuildClient internal constructor(private val http: Transport) {
         return http.get("$GUILD/search", heroQuery(heroId, "text" to text.trim().takeIf { it.isNotEmpty() }, "page" to page.toString()))
     }
 
-    suspend fun create(heroId: String, name: String, tag: String, patron: String, emblem: String, color: String, mode: GuildMode, minLevel: Int): GuildMine {
+    suspend fun create(heroId: String, name: String, tag: String, faction: String, emblem: String, color: String, mode: GuildMode, minLevel: Int): GuildMine {
         require(name.isNotBlank() && tag.isNotBlank()) { ui("guild.api.name_tag") }
-        require(patron.isNotBlank()) { ui("guild.api.patron") }
-        return http.post("$GUILD/create", heroQuery(heroId, "name" to name.trim(), "tag" to tag.trim(), "patron" to patron, "emblem" to emblem, "color" to color,
+        require(faction.isNotBlank()) { ui("guild.api.faction") }
+        return http.post("$GUILD/create", heroQuery(heroId, "name" to name.trim(), "tag" to tag.trim(), "faction" to faction, "emblem" to emblem, "color" to color,
             "mode" to mode.name, "minLevel" to minLevel.toString()))
     }
 

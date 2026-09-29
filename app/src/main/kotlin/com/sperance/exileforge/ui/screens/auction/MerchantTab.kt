@@ -19,7 +19,6 @@ import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.Reads
-import com.sperance.exileforge.presentation.state.discounted
 import com.sperance.exileforge.presentation.state.unmetFor
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.ui.components.*
@@ -75,7 +74,7 @@ import com.sperance.exileforge.ui.theme.*
                     Engraved(ui("merchant.orbs"))
                     MutedText(ui("merchant.orbs_note"))
                     orbs.forEach { orb ->
-                        val price = s.discounted(orb.price)
+                        val price = orb.price
                         OrbRow(orb, price, have = s.bagAmount(orb.code), enabled = !s.busy && !orb.soldOut && (money == null || money >= price)) { vm.buyOrb(orb.code) }
                     }
                 }
@@ -86,7 +85,7 @@ import com.sperance.exileforge.ui.theme.*
             // A copy whose template the content does not hold cannot be drawn, and is not offered.
             val view = s.view(offer.item) ?: return@items
             ItemRow(view, enabled = !s.busy, unwearable = s.unmetFor(offer.item.template),
-                trailing = { GoldPrice(s.discounted(offer.price)) }, onClick = { chosen = offer })
+                trailing = { GoldPrice(offer.price) }, onClick = { chosen = offer })
         }
     }
     chosen?.let { offer -> OfferSheet(s, offer, money, onDismiss = { chosen = null }) { chosen = null; vm.buyOffer(offer.id) } }
@@ -123,7 +122,7 @@ import com.sperance.exileforge.ui.theme.*
             OrnateDivider()
             Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 money?.let { PropertyRow(ui("merchant.gold"), number(it.toDouble()), Glyph.CURRENCY) }
-                val price = s.discounted(offer.price)
+                val price = offer.price
                 if (money != null && money < price) Text(ui("merchant.short"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
                 HoldButton(ui("merchant.buy_for", number(price.toDouble())), Gold, Modifier.fillMaxWidth(),
                     enabled = !s.busy && (money == null || money >= price), onHeld = onBuy)

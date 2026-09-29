@@ -92,9 +92,9 @@ import com.sperance.exileforge.ui.theme.*
             }
         }
     }
-    if (founding) FoundingSheet(s, onDismiss = { founding = false }) { name, tag, patron, emblem, color, mode, minLevel ->
+    if (founding) FoundingSheet(s, onDismiss = { founding = false }) { name, tag, faction, emblem, color, mode, minLevel ->
         founding = false
-        vm.createGuild(name, tag, patron, emblem, color, mode, minLevel)
+        vm.createGuild(name, tag, faction, emblem, color, mode, minLevel)
     }
 }
 
@@ -115,14 +115,14 @@ private fun joinBlock(s: ForgeState, card: GuildCard, waiting: Boolean): String?
     else -> null
 }
 
-/** One guild of the list: arms, name, patron and level, the roll and the way in; the button asks or joins by the guild's mode. */
+/** One guild of the list: arms, name, faction and level, the roll and the way in; the button asks or joins by the guild's mode. */
 @Composable private fun GuildCardRow(s: ForgeState, card: GuildCard, blocked: String?, onJoin: () -> Unit) {
     ForgePanel(accent = guildColor(card.color)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             GuildEmblem(card.emblem, card.color)
             Column(Modifier.weight(1f)) {
                 Text(GuildText.title(card.name, card.tag), color = GoldBright, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                MutedText(ui("guild.card_line", GuildText.patron(card.patron), card.level))
+                FactionLine(card.faction, s.index?.guilds, ui("guild.card_line", card.level))
                 MutedText(ui("guild.card_roll", card.members, card.capacity, GuildText.mode(card.mode), card.minLevel))
             }
         }
@@ -140,7 +140,7 @@ private fun joinBlock(s: ForgeState, card: GuildCard, waiting: Boolean): String?
         GuildEmblem(card.emblem, card.color, 36.dp)
         Column(Modifier.weight(1f)) {
             Text(GuildText.title(card.name, card.tag), color = Parchment, style = MaterialTheme.typography.bodyMedium)
-            MutedText(listOfNotNull(ui("guild.card_line", GuildText.patron(card.patron), card.level),
+            FactionLine(card.faction, s.index?.guilds, listOfNotNull(ui("guild.card_line", card.level),
                 invite.by.takeIf { it.isNotBlank() }?.let { ui("guild.invite_from", it) }).joinToString(" · "))
         }
     }

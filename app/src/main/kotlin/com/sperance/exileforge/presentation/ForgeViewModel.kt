@@ -132,8 +132,8 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     fun guildTab(tab: GuildTab) = runtime.guildViewModel.tab(tab)
     fun guildQuery(text: String) = runtime.guildViewModel.query(text)
     fun searchGuilds(page: Int = 0) = runtime.guildViewModel.search(page)
-    fun createGuild(name: String, tag: String, patron: String, emblem: String, color: String, mode: GuildMode, minLevel: Int) =
-        runtime.guildViewModel.create(name, tag, patron, emblem, color, mode, minLevel)
+    fun createGuild(name: String, tag: String, faction: String, emblem: String, color: String, mode: GuildMode, minLevel: Int) =
+        runtime.guildViewModel.create(name, tag, faction, emblem, color, mode, minLevel)
     fun joinGuild(card: GuildCard) = runtime.guildViewModel.join(card)
     fun acceptGuildInvite(guildId: String) = runtime.guildViewModel.acceptInvite(guildId)
     fun declineGuildInvite(guildId: String) = runtime.guildViewModel.declineInvite(guildId)

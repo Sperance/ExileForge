@@ -194,10 +194,8 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         val items = merged.items
         val tree = merged.tree
         val pets = merged.pets
-        // The guild patron's lines (3.22.0) arrive scaled and are laid on the sheet as they are.
-        val guild = merged.guild
-        val sheet = Sheets.calculate(index, info.level, info.heroClass, tree, items, pets.active, guild.operations())
-        val view = HeroView(info, items, merged.overflow, merged.bag, tree, merged.campaign, merged.crafts, merged.merchant, sheet, pets, guild)
+        val sheet = Sheets.calculate(index, info.level, info.heroClass, tree, items, pets.active)
+        val view = HeroView(info, items, merged.overflow, merged.bag, tree, merged.campaign, merged.crafts, merged.merchant, sheet, pets)
         val now = System.currentTimeMillis()
         mutable.update { it.copy(play = it.play.copy(hero = view, heroOwner = info.userId, heroReadAt = now, heroSeenAt = now,
             selectedEquipment = it.play.selectedEquipment.takeIf { chosen -> view.items.any { item -> item.id == chosen } } ?: view.items.firstOrNull()?.id.orEmpty()),

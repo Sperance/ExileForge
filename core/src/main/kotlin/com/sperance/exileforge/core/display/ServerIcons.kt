@@ -94,11 +94,14 @@ object IconKey {
     const val ITEM = "item"
     const val STAT = "stat"
     const val SLOT = "slot"
+    const val GUILD_FACTION = "guild.faction"
 
     fun equipment(code: String) = "$EQUIPMENT.$code"
     fun item(code: String) = "$ITEM.$code"
     fun stat(stat: String) = "$STAT.$stat"
     fun slot(slot: String) = "$SLOT.$slot"
+    /** A guild faction's sign (3.27.0), the key its rules name by default. */
+    fun guildFaction(code: String) = "$GUILD_FACTION.$code"
 }
 
 /**

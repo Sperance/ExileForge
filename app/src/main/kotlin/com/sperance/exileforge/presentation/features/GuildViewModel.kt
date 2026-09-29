@@ -17,7 +17,7 @@ import kotlinx.coroutines.flow.update
 /**
  * Guilds (3.22.0, server 1.20.0). The server keeps every rule; the client names a guild or a member, prints the refusal
  * and draws what the command answered — the hero's whole guild picture, or the guild as it now stands. A command that
- * moves the hero (joining, leaving, giving) reads the hero after it, since the patron's lines and the gold ride on it.
+ * moves the hero (joining, leaving, giving) reads the hero after it, since the gold rides on it.
  */
 class GuildViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
@@ -39,8 +39,8 @@ class GuildViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         if (onScreen(id)) guild { it.copy(search = found) }
     } } }
 
-    fun create(name: String, tag: String, patron: String, emblem: String, color: String, mode: GuildMode, minLevel: Int) =
-        moving(ui("guild.toast.created", name.trim())) { runtime.api.guild.create(it, name, tag, patron, emblem, color, mode, minLevel) }
+    fun create(name: String, tag: String, faction: String, emblem: String, color: String, mode: GuildMode, minLevel: Int) =
+        moving(ui("guild.toast.created", name.trim())) { runtime.api.guild.create(it, name, tag, faction, emblem, color, mode, minLevel) }
 
     /** An OPEN guild takes the hero at once; any other is asked. */
     fun join(card: GuildCard) = if (card.mode == GuildMode.OPEN) moving(ui("guild.toast.joined", card.name)) { runtime.api.guild.join(it, card.id) }
@@ -110,7 +110,7 @@ class GuildViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     /**
      * A command that moves the hero in or out of a guild — or answers an invitation — and answers the whole [GuildMine].
-     * The hero is read after it: the patron's lines and the gold ride on the snapshot, a 304 when the command brought it.
+     * The hero is read after it: the gold rides on the snapshot, a 304 when the command brought it.
      */
     private fun moving(done: String, block: suspend (String) -> GuildMine) = command(done) { id ->
         val mine = block(id)

@@ -5,9 +5,6 @@ import com.sperance.exileforge.core.character.StatDelta
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.rules.roll.ItemInstance
 
-/** What a list price in gold costs this hero: the guild patron's discount (3.22.0) comes off at the purchase, on the server. */
-fun ForgeState.discounted(price: Long): Long = hero?.guild?.discounted(price) ?: price
-
 /** The view of an item over the content on screen, or null before the content has been read. */
 fun ForgeState.view(item: ItemInstance): ItemView? = index?.let { ItemView.of(item, it) }
 
@@ -18,7 +15,7 @@ fun ForgeState.sellPrice(item: ItemInstance): Long? = view(item)?.sellPrice(hero
 fun ForgeState.wearDelta(item: ItemInstance): List<StatDelta> {
     val index = index ?: return emptyList()
     val hero = hero ?: return emptyList()
-    return Sheets.wearing(index, item, hero.level, hero.heroClass, hero.tree, hero.items, hero.stats, hero.pets.active, hero.guild.operations())
+    return Sheets.wearing(index, item, hero.level, hero.heroClass, hero.tree, hero.items, hero.stats, hero.pets.active)
 }
 
 /** The requirements the template [code] misses against the sheet, in the rules' words; empty means it can be worn. */

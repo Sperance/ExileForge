@@ -5,8 +5,8 @@ import com.sperance.exileforge.rules.content.GuildRole
 import kotlinx.serialization.Serializable
 
 /*
- * The guild routes' answers (3.22.0, server 1.20.0). The rules — `guilds.json`, the modes and roles, the patron's bonus
- * on the hero ([com.sperance.exileforge.rules.content.GuildBonus]) — are the shared module's; these are only the wire.
+ * The guild routes' answers (3.22.0, server 1.20.0). The rules — `guilds.json`, the modes, roles and factions
+ * ([com.sperance.exileforge.rules.content.GuildFaction], 3.27.0) — are the shared module's; these are only the wire.
  */
 
 /** Whether a role answers applications and shows members out: the leader and the officers. */
@@ -15,7 +15,7 @@ val GuildRole.manages: Boolean get() = this != GuildRole.MEMBER
 /** One row of the guild list: enough to choose and to knock. */
 @Serializable data class GuildCard(
     val id: String, val name: String = "", val tag: String = "", val emblem: String = "", val color: String = "",
-    val patron: String = "", val level: Int = 1, val members: Int = 0, val capacity: Int = 0,
+    val faction: String = "", val level: Int = 1, val members: Int = 0, val capacity: Int = 0,
     val mode: GuildMode = GuildMode.OPEN, val minLevel: Int = 1,
 ) {
     val full: Boolean get() = capacity in 1..members
@@ -43,7 +43,7 @@ val GuildRole.manages: Boolean get() = this != GuildRole.MEMBER
  */
 @Serializable data class GuildView(
     val id: String, val name: String = "", val tag: String = "", val emblem: String = "", val color: String = "",
-    val patron: String = "", val level: Int = 1, val experience: Long = 0, val next: Long = 0, val capacity: Int = 0,
+    val faction: String = "", val level: Int = 1, val experience: Long = 0, val next: Long = 0, val capacity: Int = 0,
     val mode: GuildMode = GuildMode.OPEN, val minLevel: Int = 1, val announcement: String = "",
     val treasuryGold: Long = 0, val treasuryOrbs: Map<String, Long> = emptyMap(),
     val members: List<GuildMember> = emptyList(), val applications: List<GuildApplicant> = emptyList(),

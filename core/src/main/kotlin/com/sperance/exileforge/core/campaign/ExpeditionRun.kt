@@ -222,9 +222,11 @@ sealed interface RunCommand {
     data object StopAuto : RunCommand
     /**
      * The server answered the journal up to [applied] (server 1.30.0): what each accepted event brought, by its
-     * number, the numbers it [rejected], and the experience a fall in the batch [lost].
+     * number, the numbers it [rejected], the experience a fall in the batch [lost], and the crystals Vaal orbs
+     * changed, by event number (server 1.30.2).
      */
-    data class Settled(val applied: Int, val rewards: Map<Int, Reward> = emptyMap(), val rejected: List<Int> = emptyList(), val lost: Double? = null) : RunCommand
+    data class Settled(val applied: Int, val rewards: Map<Int, Reward> = emptyMap(), val rejected: List<Int> = emptyList(), val lost: Double? = null,
+                       val crystals: Map<Int, Crystal> = emptyMap()) : RunCommand
     /** The hero's campaign as the server holds it now: the Vaal zone a portal opened and a crystal a Vaal orb changed are read from it. */
     data class Campaign(val state: CampaignState) : RunCommand
 }
@@ -324,6 +326,8 @@ class ExpeditionRun(
     /** Vaal orbs on crystals, by event, until the server tells what they did. */
     private val vaalings = HashMap<Int, Vaaling>()
     private class Vaaling(val spot: CrystalSpot, val place: Int)
+    /** The crystals the server's answers said Vaal orbs made, by event, until their orbs are resolved. */
+    private val vaaled = HashMap<Int, Crystal>()
     private var fallEvent: Int? = null
     private val desecration = index.campaign.desecration
     /** The pet as a fighter: its sheet at its level, what its role does; a new one each fight stands up whole. */
@@ -456,10 +460,14 @@ class ExpeditionRun(
             if (n in autoEvents) autoReward = (autoReward ?: Reward.NONE) + gained
         }
         if (fallEvent != null) answer.lost?.let { fall = it }
+        answer.crystals.forEach { (n, changed) -> if (n in vaalings) vaaled[n] = changed }
         resolve()
     }
 
-    /** What only the server's answer tells: the Vaal zone behind the opened portal, and what a Vaal orb did to a crystal. */
+    /**
+     * What only the server's answer tells: the Vaal zone behind the opened portal, and what a Vaal orb did to a crystal —
+     * told by the event's answer, or, from an older server, matched on the campaign it brought.
+     */
     private fun resolve() {
         val state = campaign
         gateEvent?.takeIf { vaalZone == null }?.let { n ->
@@ -480,8 +488,10 @@ class ExpeditionRun(
             if (n >= answered) continue
             val before = orb.spot.crystal
             fun changed(c: Crystal) = c.vaal && c.guardian == before.guardian && c.essences.size == before.essences.size
-            val after = if (n in refused) before else standing.getOrNull(orb.place)?.takeIf(::changed) ?: standing.firstOrNull(::changed) ?: continue
+            val after = if (n in refused) before
+                else vaaled[n] ?: standing.getOrNull(orb.place)?.takeIf(::changed) ?: standing.firstOrNull(::changed) ?: continue
             waiting.remove()
+            vaaled.remove(n)
             if (after === before) continue
             orb.spot.crystal = after
             if (crystal === orb.spot) crystalOutcome = vaalOutcome(before, after)

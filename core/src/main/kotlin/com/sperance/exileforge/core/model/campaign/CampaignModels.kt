@@ -4,6 +4,7 @@ import com.sperance.exileforge.rules.roll.AbyssRun
 import com.sperance.exileforge.rules.roll.AbyssWindow
 import com.sperance.exileforge.rules.roll.ActiveMap
 import com.sperance.exileforge.rules.roll.ChestWindow
+import com.sperance.exileforge.rules.roll.Crystal
 import com.sperance.exileforge.rules.roll.CrystalWindow
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.roll.VaalZone
@@ -61,8 +62,14 @@ import kotlinx.serialization.Serializable
     fun toReward(): Reward = Reward(experience, gold, items, equipment, recipe)
 }
 
-/** What one accepted event [n] of the journal brought (server 1.30.0): the server alone rolls rewards, the client shows them. */
-@Serializable data class EventReward(val n: Int, val kind: RunEventKind, val reward: RewardView = RewardView())
+/**
+ * What one accepted event [n] of the journal brought (server 1.30.0): the server alone rolls rewards, the client shows them.
+ * [crystal] (server 1.30.2) is what an event that changes a crystal rather than takes it (a Vaal orb) made of it; null otherwise.
+ */
+@Serializable data class EventReward(val n: Int, val kind: RunEventKind, val reward: RewardView = RewardView(), val crystal: CrystalOutcome? = null)
+
+/** A crystal after an event: its [index] in the zone's window, as the event named it, and the [crystal] it became. */
+@Serializable data class CrystalOutcome(val index: Int = 0, val crystal: Crystal)
 
 /**
  * The server's answer to a batch of run events: how far the journal is applied now, the numbers it

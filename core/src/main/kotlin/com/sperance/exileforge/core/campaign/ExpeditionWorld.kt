@@ -336,33 +336,6 @@ class ExpeditionWorld(
         return null
     }
 
-    /**
-     * A guest's world (co-op, 3.25.0): the host's hero and monsters where the host says they are, what the host
-     * opened and drank. Nothing here walks by itself; crystals and cracks follow the journal's events instead.
-     */
-    fun follow(mirror: com.sperance.exileforge.core.party.WorldMirror) {
-        heroX = mirror.x
-        heroY = mirror.y
-        facingX = mirror.facingX
-        facingY = mirror.facingY
-        moving = mirror.moving
-        val standing = mirror.agents.associateBy { it.id }
-        agents.forEach { agent ->
-            val seen = standing[agent.id]
-            agent.alive = seen != null
-            if (seen == null) return@forEach
-            agent.x = seen.x.toDouble()
-            agent.y = seen.y.toDouble()
-            agent.mode = seen.mode
-            agent.fallen.clear()
-            agent.fallen += seen.fallen
-        }
-        mirror.chests.forEach { id -> chests.firstOrNull { it.id == id }?.opened = true }
-        mirror.fountains.forEach { id -> fountains.firstOrNull { it.id == id }?.used = true }
-        if (!mirror.portal) portal = null
-        light()
-    }
-
     /** Monsters still standing, the boss apart: it is counted as the exit's seal, not as one of them. */
     val alive: Int get() = agents.count { it.alive && it !== boss }
     val total: Int get() = agents.count { it !== boss }
@@ -567,6 +540,17 @@ class ExpeditionWorld(
             .all { (ox, oy) -> map.walkable(floor(x + ox).toInt(), floor(y + oy).toInt()) }
 
     /** The hero stepped back from a fight nobody won: the monster lets them go for a while, and goes home. */
+    /**
+     * The packs a fight with [agent] draws in (3.26.0): it and every ordinary pack still standing within
+     * [GATHER_RADIUS] of it. The boss, a crystal's guardian and anything not of the map fight alone.
+     */
+    fun gathered(agent: MonsterAgent): List<MonsterAgent> {
+        if (agent === boss || agent.crystal != null || agents.none { it === agent }) return listOf(agent)
+        return listOf(agent) + agents.filter {
+            it !== agent && it !== boss && it.alive && it.crystal == null && it.standing.isNotEmpty() && hypot(it.x - agent.x, it.y - agent.y) <= GATHER_RADIUS
+        }
+    }
+
     fun retreatFrom(agent: MonsterAgent) {
         agent.calm = CALM_AFTER_RETREAT
         agent.mode = AgentMode.RETURNING
@@ -577,6 +561,8 @@ class ExpeditionWorld(
         const val HERO_RADIUS = 0.28
         const val MONSTER_RADIUS = 0.3
         const val CONTACT = 0.8
+        /** How close, in tiles, a pack must stand to the one engaged to join its fight. */
+        const val GATHER_RADIUS = 3.0
         const val EXIT_REACH = 0.7
         const val CALM_AFTER_RETREAT = 4.0
         const val CHEST_REACH = 0.7

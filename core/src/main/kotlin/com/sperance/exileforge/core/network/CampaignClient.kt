@@ -1,7 +1,7 @@
 package com.sperance.exileforge.core.network
 
 import com.sperance.exileforge.core.contract.WireJson
-import com.sperance.exileforge.core.contract.requireId
+import com.sperance.exileforge.core.contract.requireItemId
 import com.sperance.exileforge.core.model.campaign.CampaignProgress
 import com.sperance.exileforge.core.model.campaign.RunReport
 import com.sperance.exileforge.rules.run.RunEvent
@@ -19,7 +19,7 @@ class CampaignClient internal constructor(private val http: Transport) {
 
     /** Enters [mapCode], with a map item spent on it or without one. Never retried: a repeat opens another run. */
     suspend fun start(heroId: String, mapCode: String, itemId: String? = null): RunStart {
-        itemId?.let(::requireId)
+        itemId?.let(::requireItemId)
         return http.post("$CAMPAIGN/start", heroQuery(heroId, "mapCode" to mapCode, "itemId" to itemId))
     }
 

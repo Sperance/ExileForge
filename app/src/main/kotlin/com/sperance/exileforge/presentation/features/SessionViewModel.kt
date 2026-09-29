@@ -3,6 +3,7 @@ package com.sperance.exileforge.presentation.features
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.UserProfile
 import com.sperance.exileforge.core.network.FailureState
+import com.sperance.exileforge.core.network.ForgeHttp
 import com.sperance.exileforge.core.network.normalizeServer
 import com.sperance.exileforge.presentation.ForgeRuntime
 import com.sperance.exileforge.presentation.state.AppMode
@@ -11,10 +12,12 @@ import com.sperance.exileforge.presentation.state.Reads
 import com.sperance.exileforge.presentation.state.TAB_ADMIN
 import com.sperance.exileforge.presentation.state.TAB_HERO
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
@@ -75,6 +78,26 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     fun retryResume() { with(runtime) { scope.launch {
         val saved = store.token(state.value.account.server)
         if (saved == null) mutable.update { it.copy(account = it.account.copy(resumable = false)) } else resume(saved)
+    } } }
+
+    /**
+     * Back in the foreground — from the background or a locked screen: the dead sockets go, and what the
+     * last try could not reach is asked again — the kept session, or the screen the player is on.
+     */
+    fun reconnect() { with(runtime) { scope.launch {
+        withContext(Dispatchers.IO) { ForgeHttp.dropIdleConnections() }
+        val now = state.value
+        when {
+            !now.account.signedIn -> if (now.account.resumable) retryResume()
+            now.failure == FailureState.Offline -> {
+                mutable.update { it.copy(failure = null, message = null, error = false) }
+                when (now.phase) {
+                    AppPhase.GAME -> read(Reads.HERO, silent = true) { heroViewModel.readHero() }
+                    AppPhase.CHARACTERS -> characterViewModel.refresh()
+                    AppPhase.AUTH -> Unit
+                }
+            }
+        }
     } } }
 
     /** What every sign-in ends with: the account is the session, and the gate opens one step — the hero menu. */

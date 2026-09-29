@@ -34,7 +34,6 @@ import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
-import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -127,7 +126,7 @@ import java.util.Locale
     if (gear.isNotEmpty()) {
         Caption(ui("expedition.report_gear"))
         // Every piece whole (3.2.0): base, every line with its tier and range, the roll quality and the price — no tap needed to judge it
-        gear.forEach { ItemCard(it, detailed = true, actionLabel = ui("expedition.loot_compare"), action = true, price = s.sellPrice(it.item)) { onItem(it) } }
+        gear.forEach { LootCard(s, it, onItem) }
     }
     if (reward.items.isNotEmpty()) {
         Caption(ui("expedition.report_orbs"))

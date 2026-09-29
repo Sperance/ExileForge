@@ -61,8 +61,8 @@ import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.ForgeState
-import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.view
+import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.LoneWolfRule
 import com.sperance.exileforge.rules.content.MonsterRarity
@@ -228,7 +228,7 @@ private const val HERO_CARD = -1
             }
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 val shown = fight.foes.firstOrNull { it.index == chosen }
-                if (fight.scouting && shown != null) ScoutPanel(shown, fight, level, rules, stance)
+                if (fight.scouting && shown != null) ScoutPanel(shown, fight, level, rules, stance, s.index)
                 else FightFeed(fight.events, names)
             }
             HeroCard(s, hud, fight, time, names, stance, track(HERO_CARD), large)
@@ -421,7 +421,7 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
  * what happens in it, not by the foe's defence sheet.
  */
 @OptIn(ExperimentalLayoutApi::class)
-@Composable private fun ScoutPanel(foe: FoeView, fight: FightHud, level: Int, rules: CombatRules, stance: HeroStance) {
+@Composable private fun ScoutPanel(foe: FoeView, fight: FightHud, level: Int, rules: CombatRules, stance: HeroStance, index: ContentIndex?) {
     val body = remember(foe.monster) { Combatant(foe.monster.stats, level, rules) }
     val shape = RoundedCornerShape(10.dp)
     val ring = rarityTint(foe.monster.rarity)
@@ -458,9 +458,9 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
             lines.forEach { line ->
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                     Rhombus(if (line.fromMap) LifeRed else ModBlue, 4.dp)
-                    Text(monsterLineText(line), color = ModBlue, style = MaterialTheme.typography.labelSmall)
+                    Text(monsterLineText(line, index), color = ModBlue, style = MaterialTheme.typography.labelSmall)
                     // The sum first, then what each source put in it (2.73.0); a line the map alone gives is tagged.
-                    val sources = monsterLineSources(line)
+                    val sources = monsterLineSources(line, index)
                     if (sources != null) Text("($sources)", color = Muted, style = MaterialTheme.typography.labelSmall)
                     else if (line.fromMap) Text(ui("fight.line_map"), color = LifeRed, style = MaterialTheme.typography.labelSmall)
                 }
@@ -500,22 +500,17 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
     val live = fight.outcome == null
     if (!fight.started) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            // A party's fight waits for everyone's word (3.25.0), or for its seconds to run out
-            val ready = fight.ready
-            ForgeButton(onClick = { onCommand(RunCommand.Begin) }, enabled = ready?.mine != true, modifier = Modifier.weight(1f).height(52.dp),
+            ForgeButton(onClick = { onCommand(RunCommand.Begin) }, modifier = Modifier.weight(1f).height(52.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Blood, contentColor = GoldBright)) {
                 Icon(ForgeGlyphs.Swords, null, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
-                Text(if (ready == null) ui("expedition.begin") else ui(if (ready.mine) "party.ready_wait" else "party.ready", ready.ready, ready.total, ready.left),
-                    style = MaterialTheme.typography.titleMedium)
+                Text(ui("expedition.begin"), style = MaterialTheme.typography.titleMedium)
             }
             // The Abyss lets nobody walk away from its wave (2.82.0).
             if (fight.escape) ForgeOutlinedButton(onClick = { onCommand(RunCommand.Retreat) }, modifier = Modifier.height(52.dp)) { Text(ui("fight.walk_away")) }
         }
         return
     }
-    // A guest fights, but the pace and the way out are the host's
-    if (!fight.lead) return
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         ForgeOutlinedButton(enabled = live && !fight.retreating, onClick = { onCommand(if (fight.paused) RunCommand.Begin else RunCommand.Pause) },
             modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 8.dp)) {
@@ -874,10 +869,7 @@ internal fun outcomeColour(outcome: Outcome) = when (outcome) { Outcome.WIN -> V
         }
         reward.equipment.forEach { instance ->
             // The whole card, not a line (3.2.0): what dropped is read where it dropped
-            s.view(instance)?.let { item ->
-                if (onItem == null) ItemCard(item, enabled = false, detailed = true, price = s.sellPrice(instance))
-                else ItemCard(item, detailed = true, actionLabel = ui("expedition.loot_compare"), action = true, price = s.sellPrice(instance)) { onItem(item) }
-            }
+            s.view(instance)?.let { LootCard(s, it, onItem) }
         }
         if (reward.items.isEmpty() && reward.equipment.isEmpty()) Text(ui("expedition.loot_nothing"), color = Muted)
     }

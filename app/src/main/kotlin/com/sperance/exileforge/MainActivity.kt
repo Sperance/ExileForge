@@ -19,6 +19,12 @@ class MainActivity : ComponentActivity() {
         setContent { ForgeTheme { ForgeApp(viewModel) } }
     }
 
+    /** Back in the foreground — unlocked or switched to: the connection is restored without a tap. */
+    override fun onStart() {
+        super.onStart()
+        viewModel.reconnect()
+    }
+
     /** Leaving the foreground sends the run's journal at once: a process killed in the background must not take it along. */
     override fun onStop() {
         viewModel.flushRun()

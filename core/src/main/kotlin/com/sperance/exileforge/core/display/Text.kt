@@ -81,8 +81,8 @@ fun modifierText(index: ContentIndex): ModifierText = ModifierText(index.stats, 
 
 /** A modifier's sentence with its values in; a definition the dictionary cannot word prints its numbers and stats. */
 fun modifierLine(index: ContentIndex, def: ModifierDef, values: List<Double>): String =
-    modifierText(index).template(def)?.let { fillTemplate(it, values.mapIndexed { i, v -> statNumber(def.effects.getOrNull(i)?.stat.orEmpty(), v) }) }
-        ?: values.mapIndexed { i, v -> def.effects.getOrNull(i)?.let { "${statNumber(it.stat, v)} ${statTitle(it.stat)}" } ?: number(v) }.joinToString(" · ").ifBlank { displayName(def.code) }
+    modifierText(index).template(def)?.let { fillTemplate(it, values.mapIndexed { i, v -> rollNumber(def.effects.getOrNull(i)?.stat.orEmpty(), v) }) }
+        ?: values.mapIndexed { i, v -> def.effects.getOrNull(i)?.let { "${rollNumber(it.stat, v)} ${statTitle(it.stat)}" } ?: number(v) }.joinToString(" · ").ifBlank { displayName(def.code) }
 
 /** A fixed line — a base, a class's or a tree node's — as one sentence. */
 fun lineText(index: ContentIndex, line: Line): String = index.modifier(line.code)?.let { modifierLine(index, it, line.values) } ?: displayName(line.code)
@@ -102,6 +102,9 @@ fun statNumber(stat: String, value: Double): String =
     if (stat in preciseStats) String.format(java.util.Locale.ROOT, "%.2f", value) else Math.round(value).toString()
 
 fun number(value: Double): String = statNumber("", value)
+
+/** A rolled value as the sheet counts it: rolls keep their tenth, so 1.8 is «1.8», not the «2» the sheet would never add. */
+fun rollNumber(stat: String, value: Double): String = if (stat in preciseStats) statNumber(stat, value) else fineNumber(value)
 
 /** A small figure with its tenth: a bleed of 0.4 a second is «0.4», not «0»; from ten up the whole number stays. */
 fun fineNumber(value: Double): String =

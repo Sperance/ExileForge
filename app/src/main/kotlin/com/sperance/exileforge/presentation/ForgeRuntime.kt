@@ -26,7 +26,6 @@ import com.sperance.exileforge.presentation.features.CharacterViewModel
 import com.sperance.exileforge.presentation.features.CraftsViewModel
 import com.sperance.exileforge.presentation.features.ExpeditionViewModel
 import com.sperance.exileforge.presentation.features.GuildViewModel
-import com.sperance.exileforge.presentation.features.PartyViewModel
 import com.sperance.exileforge.presentation.features.QuestViewModel
 import com.sperance.exileforge.presentation.features.HeroViewModel
 import com.sperance.exileforge.presentation.features.RedemptionViewModel
@@ -81,7 +80,6 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
     val craftsViewModel = CraftsViewModel(this)
     val guildViewModel = GuildViewModel(this)
     val questViewModel = QuestViewModel(this)
-    val partyViewModel = PartyViewModel(this)
 
     /**
      * A refused token is forgotten, and a player who plays by device is signed in again without being
@@ -350,7 +348,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
     }
 
     fun clearSession() {
-        api.logout(); journal.clear(); cancelReads(); expeditionViewModel.drop(); partyViewModel.drop(); craftsViewModel.drop(); heroViewModel.forget()
+        api.logout(); journal.clear(); cancelReads(); expeditionViewModel.drop(); craftsViewModel.drop(); heroViewModel.forget()
         mutable.update { it.copy(phase = AppPhase.AUTH, tab = TAB_HERO, mode = AppMode.PLAYER, failure = null,
             account = it.account.copy(resumable = false, characters = emptyList(), charactersRead = false, signedIn = false, profile = null, sessionEpoch = it.account.sessionEpoch + 1),
             admin = it.admin.copy(redemptions = emptyList()),

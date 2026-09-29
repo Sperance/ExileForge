@@ -34,7 +34,6 @@ import com.sperance.exileforge.ui.screens.expedition.scene.Palettes
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
-import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.run.Reward
 import com.sperance.exileforge.ui.components.*
@@ -97,8 +96,7 @@ import kotlinx.coroutines.delay
         when (hud.phase) {
             RunPhase.MAP -> {
                 // An autorun walks by itself (3.2.0): no stick under the thumb while it runs
-                // A guest does not walk: the host does, for the whole party (3.25.0)
-                if (hud.auto == null && !hud.guest) Stick(run)
+                if (hud.auto == null) Stick(run)
                 MapBar(s, run, hud, onLeave = if (zone) null else ({ leaving = true }), onGear = { gear = true }, onStats = { sheet = true },
                     onDrink = { vm.runCommand(RunCommand.Drink(it)) }, onRetry = vm::flushRun)
                 if (gear) { HoldsRun(run); GearSheet(s, vm) { gear = false } }
@@ -126,8 +124,6 @@ import kotlinx.coroutines.delay
         hud.auto?.takeIf { hud.phase == RunPhase.MAP || hud.phase == RunPhase.FIGHT }?.let { auto ->
             AutoBar(auto, Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 8.dp)) { vm.runCommand(RunCommand.StopAuto) }
         }
-        if (hud.phase == RunPhase.MAP || hud.phase == RunPhase.FIGHT)
-            PartyBar(hud.party, Modifier.align(Alignment.CenterStart).padding(start = 8.dp))
         // A refusal of the gear (2.40.0) has to be read here too: the run has no bar and no banner.
         ToastHost(s, vm::dismissMessage, vm::dismissNotice, Modifier.align(Alignment.TopCenter).statusBarsPadding())
     }
@@ -530,9 +526,7 @@ private const val MINIMAP_MAX = 60f
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             reward.items.forEach { (code, amount) -> Text(ui("expedition.loot_stack", itemTitle(code), amount), color = Parchment) }
             // A piece opens its comparison and «Надеть» (3.24.0), as a fight's spoils do.
-            reward.equipment.forEach { instance -> s.view(instance)?.let { item ->
-                ItemCard(item, detailed = true, actionLabel = ui("expedition.loot_compare"), action = true, price = s.sellPrice(instance)) { looked = item }
-            } }
+            reward.equipment.forEach { instance -> s.view(instance)?.let { LootCard(s, it) { item -> looked = item } } }
             if (reward.items.isEmpty() && reward.equipment.isEmpty()) MutedText(ui("expedition.loot_nothing"))
         }
         ForgeButton(onClick = onDone, modifier = Modifier.fillMaxWidth().height(50.dp)) { Text(ui("expedition.back_to_camp")) }

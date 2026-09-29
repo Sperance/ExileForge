@@ -36,15 +36,14 @@ class AbyssWaves(private val index: ContentIndex, private val run: Run) {
     }
 
     /** The fights of depth [depth] of the crack at [place], in order; [effects] are the map's and the atlas's. */
-    fun wave(rule: AbyssRule, depth: Int, place: Int, zone: Zone, effects: Map<String, Double>, extraRareMods: Int,
-             party: List<com.sperance.exileforge.rules.roll.MonsterEffect> = emptyList()): List<List<RolledMonster>> {
+    fun wave(rule: AbyssRule, depth: Int, place: Int, zone: Zone, effects: Map<String, Double>, extraRareMods: Int): List<List<RolledMonster>> {
         val floor = rule.waves.getOrNull(depth - 1) ?: return emptyList()
         if (rule.monsters.isEmpty()) return emptyList()
         val dice = run.streams.of("abyssWave", place * 64 + depth)
         val level = zone.level + floor.level
         val swarm = 1 + (effects[MapStats.ABYSS_SWARM] ?: 0.0) / 100
         val count = (dice.between(floor.count) * swarm).roundToInt().coerceAtLeast(1)
-        val buffs = MapEffects.buffs(effects) + buffs(effects) + party
+        val buffs = MapEffects.buffs(effects) + buffs(effects)
         val pool = monsters.pool(rule.modifiers, level)
         val foes = List(count) {
             val rarity = when {

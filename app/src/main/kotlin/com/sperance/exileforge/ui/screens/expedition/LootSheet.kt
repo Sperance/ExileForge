@@ -21,6 +21,7 @@ import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ItemCard
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.screens.hero.WearPreview
+import com.sperance.exileforge.ui.screens.hero.wearable
 import com.sperance.exileforge.ui.theme.Panel
 
 /** Where a dropped piece stands for «Надеть»: the server holds it loose, wears it already, has it on the way, or never got it. */
@@ -62,4 +63,12 @@ private fun lootStand(s: ForgeState, item: ItemView): LootStand {
             extra()
         }
     }
+}
+
+/** A dropped piece, whole: only what goes on the body offers the comparison with what is worn — a map or a jewel has nothing to compare with. */
+@Composable
+internal fun LootCard(s: ForgeState, item: ItemView, onCompare: ((ItemView) -> Unit)?) {
+    val price = s.sellPrice(item.item)
+    if (onCompare == null || !wearable(s, item.item)) ItemCard(item, enabled = false, detailed = true, price = price)
+    else ItemCard(item, detailed = true, actionLabel = ui("expedition.loot_compare"), action = true, price = price) { onCompare(item) }
 }

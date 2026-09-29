@@ -215,7 +215,6 @@ private fun cardFacts(item: ItemView, withPrice: Boolean = true): List<String> =
         item.weaponType?.let { weaponTitle(it) },
         // A flask's quality (2.78.0): each percent a percent more effect or recovery.
         item.quality.takeIf { it > 0 }?.let { ui("card.quality", it) },
-        "${ui("card.durability")} ${item.template.durability}",
         item.template.price?.takeIf { withPrice }?.let { "${ui("card.price")} $it" },
     ).joinToString(" · ").takeIf { it.isNotBlank() },
 )

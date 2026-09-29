@@ -11,15 +11,7 @@ import com.sperance.exileforge.core.campaign.RunJournal
 import com.sperance.exileforge.core.campaign.VaalZones
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.HeroView
-import com.sperance.exileforge.core.model.campaign.CampaignState
 import com.sperance.exileforge.core.network.ApiFailure
-import com.sperance.exileforge.core.party.MateView
-import com.sperance.exileforge.core.party.PartyFollow
-import com.sperance.exileforge.core.party.PartyLead
-import com.sperance.exileforge.core.party.PartyMessage
-import com.sperance.exileforge.core.party.RunParty
-import com.sperance.exileforge.rules.party.PartyLaunch
-import com.sperance.exileforge.rules.party.PartyWorld
 import com.sperance.exileforge.presentation.ForgeRuntime
 import com.sperance.exileforge.presentation.state.AtlasScreenState
 import com.sperance.exileforge.presentation.state.LootEntry
@@ -68,12 +60,6 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     private var autoPlan: AutoPlan? = null
     /** The Vaal zone's tokens the server already counted when the run was entered again. */
     private var vaalKilled: List<Int> = emptyList()
-    /** The party the run under way is played in (3.25.0), shared by the map's run and its Vaal zone. */
-    private var party: RunParty? = null
-    /** A guest's campaign as the host's world set it: the windows the guest's map is built from. */
-    private var hostWorld: CampaignState? = null
-    /** Events of the host's Vaal zone that came before the guest's run entered it: they wait for it. */
-    private val early = mutableListOf<RunEvent>()
 
     init {
         runtime.scope.launch { for (signal in flushes) flush() }
@@ -95,8 +81,6 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
      */
     fun start(mapCode: String, auto: AutoPlan? = null) { with(runtime) {
         if (mutableRun.value != null || state.value.busy) return
-        // In a lobby the host sets out with everyone (3.25.0); a guest waits for the host
-        state.value.play.party.view?.let { lobby -> if (auto == null && lobby.zone == mapCode) { if (lobby.isHost(heroId)) startParty(); return } }
         val s = state.value
         val index = s.index ?: return
         if (index.zone(mapCode) == null || s.progress?.unlocked?.contains(mapCode) != true) return
@@ -118,107 +102,6 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         }
     } }
 
-    /** The host sets out with the lobby (3.25.0): the server enters everyone, and the host's run leads the party. */
-    private fun startParty() { with(runtime) {
-        task(writing = true, touches = setOf(Reads.HERO)) {
-            val id = heroId
-            runJournal?.let { j ->
-                flush()
-                check(j.settled || runJournal == null) { ui("expedition.unsent") }
-                store.clearJournal(id); runJournal = null
-            }
-            val launch = partyViewModel.start(id)
-            if (state.value.play.heroReadAt == 0L) heroViewModel.readHero()
-            val hero = state.value.hero ?: return@task
-            val index = state.value.index ?: return@task
-            autoPlan = null
-            party = PartyLead(launch.size, index.campaign.party, MateView(hero.id, hero.info.name, hero.heroClass, 0, 0)) { to, message -> partyViewModel.send(message, to) }
-            begin(id, launch.start)
-        }
-    } }
-
-    /** A guest's way in (3.25.0): the host set out, and the guest's own run in the host's zone is built from the host's world. */
-    fun follow(id: String, launch: PartyLaunch) { with(runtime) {
-        val current = mutableRun.value
-        if (current != null && runJournal?.runId == launch.start.id) return
-        val index = state.value.index ?: return
-        if (current != null) drop()
-        party = PartyFollow(launch.size, index.campaign.party) { act -> partyViewModel.send(PartyMessage.Act(act)) }
-        hostWorld = campaignOf(launch.start.zone, launch.world)
-        early.clear()
-        autoPlan = null
-        begin(id, launch.start)
-        partyViewModel.sendCard()
-    } }
-
-    private fun campaignOf(zone: String, world: PartyWorld) = CampaignState(
-        chests = world.chests?.let { mapOf(zone to it) }.orEmpty(), bosses = mapOf(zone to world.bossAt),
-        crystals = world.crystals?.let { mapOf(zone to it) }.orEmpty(), abyss = world.abyss?.let { mapOf(zone to it) }.orEmpty(),
-        vaalZone = world.vaalZone, corruptionOpened = world.corruptionOpened,
-    )
-
-    /** What a guest sent the host: their card, or what they do. */
-    fun fromGuest(heroId: String, message: PartyMessage) {
-        val lead = party as? PartyLead ?: return
-        when (message) {
-            is PartyMessage.Card -> if (message.card.heroId == heroId) lead.card(message.card)
-            is PartyMessage.Act -> listOfNotNull(mutableRun.value).forEach { it.send(RunCommand.Mate(heroId, message.act)) }
-            else -> Unit
-        }
-    }
-
-    /** A guest left the lobby: the host's fights go on without them. */
-    fun guestGone(heroId: String) { (party as? PartyLead)?.gone(heroId) }
-
-    /** What the host sent a guest: the world, a fight's pack, an event of the journal — the Vaal zone entered or left on the way. */
-    fun fromHost(message: PartyMessage) {
-        val guest = party as? PartyFollow ?: return
-        when (message) {
-            is PartyMessage.Mirror -> { guest.mirror = message; zoneAs(message.world.vaal) }
-            is PartyMessage.Setup -> guest.setup = message
-            is PartyMessage.Event -> {
-                if (!zoneAs(message.event.vaal)) { early += message.event; return }
-                mutableRun.value?.send(RunCommand.Follow(message.event))
-            }
-            else -> Unit
-        }
-    }
-
-    /**
-     * The guest's run follows the host into the Vaal zone and back. In, only once the map's run has taken the portal's
-     * event and knows the zone; true when the guest stands where [vaal] says.
-     */
-    private fun zoneAs(vaal: Boolean): Boolean { with(runtime) {
-        val current = mutableRun.value ?: return false
-        if (current.vaal == vaal) return true
-        if (!vaal) { close(); return true }
-        if (current.run.context.vaal == null) return false
-        val hero = state.value.hero ?: return false
-        val index = state.value.index ?: return false
-        val gear = gear() ?: return false
-        val journal = runJournal ?: return false
-        val inner = ExpeditionRun.start(index, current.run.zone, current.run, journal, gear, hostWorld ?: hero.campaign, System.currentTimeMillis(), hero.info.experience, hero.level,
-            vaalOrbs = ::vaalOrbsFree, onRecorded = ::recorded, vaal = true, startPools = current.pools,
-            onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, onLoot = { loot(hero.id, it) }, party = party)
-        parent = current
-        mutableRun.value = inner
-        early.forEach { inner.send(RunCommand.Follow(it)) }
-        early.clear()
-        return true
-    } }
-
-    /** The lobby is gone under a guest (3.25.0): what the journal holds goes out, and the run is over. */
-    fun partyGone() { with(runtime) {
-        if (party !is PartyFollow) { party = null; return }
-        scope.launch { flush() }
-        mutableRun.value = null
-        parent = null
-        party = null
-        hostWorld = null
-        mutable.update { it.copy(play = it.play.copy(heroReadAt = 0)) }
-        heroViewModel.ensureHero()
-    } }
-
     private fun begin(id: String, started: RunStart) { with(runtime) {
         val s = state.value
         val index = s.index ?: return
@@ -229,10 +112,10 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         val run = Run(index, zone, started.seed, started.context, started.tally.copy())
         val journal = RunJournal(started.id, id, zone.code, applied = started.applied, base = started.applied).also { runJournal = it }
         mutable.update { it.copy(play = it.play.copy(runLoot = emptyList(), launch = null, runPending = 0, runRejected = 0)) }
-        mutableRun.value = ExpeditionRun.start(index, zone, run, journal, gear, hostWorld.takeIf { party is PartyFollow } ?: hero.campaign, System.currentTimeMillis(),
-            hero.info.experience, hero.level, vaalOrbs = ::vaalOrbsFree, onRecorded = ::recorded,
+        mutableRun.value = ExpeditionRun.start(index, zone, run, journal, gear, hero.campaign, System.currentTimeMillis(), hero.info.experience, hero.level,
+            vaalOrbs = ::vaalOrbsFree, onRecorded = ::recorded,
             onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, onLoot = { loot(id, it) }, killed = started.killed, auto = autoPlan,
-            pet = hero.pets.pet(hero.pets.combat), party = party)
+            pet = hero.pets.pet(hero.pets.combat))
         vaalKilled = started.vaalKilled
         persist()
     } }
@@ -349,7 +232,7 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         val inner = ExpeditionRun.start(index, outer.run.zone, outer.run, journal, gear, hero.campaign, System.currentTimeMillis(), hero.info.experience, hero.level,
             vaalOrbs = ::vaalOrbsFree, onRecorded = ::recorded, vaal = true, startPools = outer.pools,
             onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, onLoot = { loot(hero.id, it) }, killed = vaalKilled, auto = autoPlan.takeIf { outer.hud.value.auto != null },
-            pet = hero.pets.pet(hero.pets.combat), party = party)
+            pet = hero.pets.pet(hero.pets.combat))
         parent = outer
         mutableRun.value = inner
     } }
@@ -382,8 +265,6 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     fun regear() {
         val gear = gear() ?: return
         listOfNotNull(mutableRun.value, parent).forEach { it.send(RunCommand.Regear(gear)) }
-        // A guest's gear is fought by the host: the new card goes to the host's next fight
-        if (party is PartyFollow) runtime.partyViewModel.sendCard()
     }
 
     /** A new reading of the hero: nothing to do — the run reads the bag through the state. */
@@ -407,13 +288,6 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         }
         mutableRun.value = null
         flushes.trySend(Unit)
-        // The run is over: so is its party — the journal goes out first, a guest's run closes with the lobby
-        if (party != null) {
-            party = null
-            hostWorld = null
-            early.clear()
-            with(runtime) { scope.launch { flush(); partyViewModel.quit(heroId) } }
-        }
         runtime.mutable.update { it.copy(play = it.play.copy(heroReadAt = 0)) }
         runtime.heroViewModel.ensureHero()
     }
@@ -425,7 +299,7 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     }
 
     /** Dropped without a word: the hero or the session it belonged to is gone. The journal stays on disk for the next entry. */
-    fun drop() { mutableRun.value = null; parent = null; runJournal = null; party = null; hostWorld = null; early.clear() }
+    fun drop() { mutableRun.value = null; parent = null; runJournal = null }
 
     private companion object {
         /** The server's "no run is open" and "the world changed, the run is closed" refusals: the journal has nowhere to go. */

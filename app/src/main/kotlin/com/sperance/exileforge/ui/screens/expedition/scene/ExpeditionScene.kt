@@ -79,7 +79,7 @@ private class ScenePainter {
         unit = with(scope) { 30.dp.toPx() }
         val palette = Palettes.of(run.zone.biome)
         scope.drawRect(palette.void)
-        if (run.fighting) scope.fightBackdrop(palette, time) else map(scope, run, palette)
+        if (run.fight != null) scope.fightBackdrop(palette, time) else map(scope, run, palette)
     }
 
     // ==================== The map ====================

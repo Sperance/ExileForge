@@ -56,20 +56,6 @@ class Transport(
     /** A command's snapshot of the hero, or `null` when the answer came without one. */
     internal var onHero: (String, HeroSnapshot?) -> Unit = { _, _ -> }
 
-    /**
-     * A socket to [path] under the session's token (3.25.0): OkHttp takes the http(s) address and upgrades it.
-     * Its own client never times a read out — a quiet lobby is not a dead one — and pings to keep mobile links open.
-     */
-    internal fun socket(path: String, query: Map<String, String>, listener: okhttp3.WebSocketListener): okhttp3.WebSocket {
-        val credential = token ?: error(ui("api.sign_in_tab"))
-        val url = base.newBuilder().addPathSegments(path).apply { query.forEach { (k, v) -> addQueryParameter(k, v) } }.build()
-        return sockets.newWebSocket(Request.Builder().url(url).header("Authorization", "Bearer $credential").build(), listener)
-    }
-
-    private val sockets: OkHttpClient by lazy {
-        client.newBuilder().readTimeout(0, java.util.concurrent.TimeUnit.MILLISECONDS).pingInterval(15, java.util.concurrent.TimeUnit.SECONDS).build()
-    }
-
     /** The whole of a small, server-seeded collection. */
     internal suspend fun all(path: String): List<JsonObject> = request("GET", path, authenticated = true).jsonArray.map { it.jsonObject }
 

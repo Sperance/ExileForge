@@ -109,17 +109,13 @@ private fun stashMaps(s: ForgeState): List<StashMap> =
             index.monster(zone.boss)?.let { Guardian(s, zone, it) }
             AtlasKeys(s.atlasState?.earned.orEmpty(), zone.code)
             Maps(s, vm, index, zone, launch)
-            ZoneParty(s, vm, zone.code, launch.picked)
-            val lobby = s.play.party.view?.takeIf { it.zone == zone.code }
-            // In this zone's lobby only its host sets out, and only once somebody has come
-            val mayGo = lobby == null || lobby.isHost(s.play.heroId) && lobby.members.size > 1 && lobby.members.all { it.online }
-            ForgeButton(enabled = s.hero != null && !s.busy && mayGo, onClick = { vm.startRun(zone.code) },
+            ForgeButton(enabled = s.hero != null && !s.busy, onClick = { vm.startRun(zone.code) },
                 modifier = Modifier.fillMaxWidth().height(44.dp)) {
                 Icon(ForgeGlyphs.Portal, null, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(10.dp))
                 Text(ui("expedition.launch_go"), style = MaterialTheme.typography.titleMedium)
             }
-            if (s.play.party.view == null) AutoLaunch(s, vm, zone.code, launch)
+            AutoLaunch(s, vm, zone.code, launch)
         }
     }
 }

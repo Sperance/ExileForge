@@ -229,7 +229,7 @@ fun stateTitle(state: String, lang: Lang = uiLanguage): String = uiOr(lang, "sta
 fun rangeText(def: ModifierDef, tier: Tier): String? = tier.values.mapIndexedNotNull { index, range ->
     val (low, high) = range.takeIf { it.size == 2 } ?: return@mapIndexedNotNull null
     val stat = def.effects.getOrNull(index)?.stat.orEmpty()
-    val from = statNumber(stat, low); val to = statNumber(stat, high)
+    val from = rollNumber(stat, low); val to = rollNumber(stat, high)
     if (from == to) from else "$from–$to"
 }.joinToString(" / ").ifBlank { null }
 
@@ -238,7 +238,7 @@ fun recipeText(index: ContentIndex, recipe: BenchRecipe): String {
     val def = index.modifier(recipe.modifier)
     val ranges = recipe.values.filter { it.size == 2 }.mapIndexed { i, (min, max) ->
         val stat = def?.effects?.getOrNull(i)?.stat.orEmpty()
-        val low = statNumber(stat, min); val high = statNumber(stat, max)
+        val low = rollNumber(stat, min); val high = rollNumber(stat, max)
         if (low == high) low else "($low–$high)"
     }
     val template = def?.let { modifierText(index).template(it) } ?: return ranges.joinToString(" · ").ifBlank { displayName(recipe.modifier) }
@@ -246,16 +246,20 @@ fun recipeText(index: ContentIndex, recipe: BenchRecipe): String {
 }
 
 /** A monster's or a map's summed effect as a short line: «+40% life», by operation. */
-fun effectText(stat: String, op: Op, value: Double): String {
+fun effectText(stat: String, op: Op, value: Double, index: ContentIndex? = null): String {
     val title = statTitle(stat)
     val size = statNumber(stat, value)
     return when (op) {
-        Op.ADD -> ui("fight.line_add", size, title)
+        Op.ADD -> ui("fight.line_add", size + effectUnit(stat, op, index), title)
         Op.INCREASED -> ui("fight.line_increased", size, title)
         Op.MORE -> ui("fight.line_more", size, title)
         Op.SET -> ui("fight.line_set", size, title)
     }
 }
+
+/** The sign an effect's figure carries: a percent for a relative operation, and for a flat one on a stat counted in percent. */
+fun effectUnit(stat: String, op: Op, index: ContentIndex? = null): String =
+    if (op == Op.INCREASED || op == Op.MORE || (op != Op.SET && statPercent(stat, index))) "%" else ""
 
 /** How a stacking item of the bag is drawn when the server has no icon for it: by its category. */
 fun bagVisualKind(item: com.sperance.exileforge.rules.content.Item): ItemVisualKind = when (item.category) {

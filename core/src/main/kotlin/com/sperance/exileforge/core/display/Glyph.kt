@@ -50,7 +50,7 @@ enum class Glyph {
             "level" to LEVEL, "itemLevel" to LEVEL, "requiredLevel" to LEVEL, "experience" to LEVEL,
             "requiredStrength" to ATTRIBUTE, "requiredDexterity" to EVASION, "requiredIntelligence" to MANA,
             "rarity" to RARITY, "slot" to ITEM, "weaponType" to ATTACK, "category" to ITEM, "subCategory" to ITEM,
-            "type" to ITEM, "durability" to DEFENCE, "price" to CURRENCY,
+            "type" to ITEM, "price" to CURRENCY,
             "modifierCode" to REFERENCE, "fixedModifierCodes" to REFERENCE, "modifierPools" to RULE, "entries" to RULE, "kind" to RULE, "baseParams" to RULE, "effects" to RULE,
             "stat" to RULE, "perStat" to RULE, "perAmount" to RULE, "operation" to RULE, "value" to RULE, "values" to RULE,
             "source" to RULE, "isLocal" to RULE,

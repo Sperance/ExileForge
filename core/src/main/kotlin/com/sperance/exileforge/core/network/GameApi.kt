@@ -28,7 +28,7 @@ private const val DEVICE_UNKNOWN = "US_015"
  * A sign-in answers the account *and* a token, and every other request carries that token as
  * `Authorization: Bearer`. The token lives in [Transport] and is the session; [account] is who it
  * belongs to, and [logout] drops both. The routes are grouped by what they are about — [files],
- * [hero], [campaign], [tree], [atlas], [auction], [merchant], [crafts], [guild], [quests], [party], [promo].
+ * [hero], [campaign], [tree], [atlas], [auction], [merchant], [crafts], [guild], [quests], [promo].
  */
 class GameApi(
     server: String,
@@ -50,7 +50,6 @@ class GameApi(
     val crafts = CraftsClient(http)
     val guild = GuildClient(http)
     val quests = QuestClient(http)
-    val party = PartyClient(http)
 
     /** Credentials travel in the body: a query string settles in every proxy log on the way. */
     suspend fun login(login: String, password: String): UserProfile {

@@ -2,18 +2,6 @@ package com.sperance.exileforge.core.campaign
 
 import com.sperance.exileforge.core.atlas.AtlasEffects
 import com.sperance.exileforge.core.model.campaign.CampaignState
-import com.sperance.exileforge.core.party.AgentMirror
-import com.sperance.exileforge.core.party.Mate
-import com.sperance.exileforge.core.party.MateAct
-import com.sperance.exileforge.core.party.MateHud
-import com.sperance.exileforge.core.party.MateView
-import com.sperance.exileforge.core.party.PartyFollow
-import com.sperance.exileforge.core.party.PartyLead
-import com.sperance.exileforge.core.party.PartyMessage
-import com.sperance.exileforge.core.party.ReadyView
-import com.sperance.exileforge.core.party.RunParty
-import com.sperance.exileforge.core.party.WorldMirror
-import com.sperance.exileforge.core.party.stub
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.DesecrationKind
@@ -45,20 +33,16 @@ import kotlinx.coroutines.flow.asStateFlow
 enum class RunPhase { MAP, FIGHT, LOOT, GATE, CRYSTAL, ABYSS, DEAD, CLEARED, LEFT }
 
 /** A number floating off a fighter, [age] seconds after the blow that made it; [foe] is the foe of the pack it was about. */
-@kotlinx.serialization.Serializable
 data class FloatingHit(val id: Int, val target: Side, val action: Action, val kind: HitKind, val amount: Int, val age: Double, val healed: Int,
     val type: DamageType?, val inflicted: List<Ailment>, val stunned: Boolean, val foe: Int = 0)
 
 /** The blow on screen right now, for the cards to act out. */
-@kotlinx.serialization.Serializable
 data class LungeView(val actor: Side, val action: Action, val kind: HitKind, val landed: Boolean, val progress: Float, val foe: Int = 0)
 
 /** One ailment on a fighter as its tile shows it: the share of time [left], the [stacks], the [seconds] it still holds and its [strength]. */
-@kotlinx.serialization.Serializable
 data class AilmentView(val ailment: Ailment, val left: Float, val stacks: Int, val seconds: Double = 0.0, val strength: Double = 0.0)
 
 /** One foe of the pack as its card prints it. */
-@kotlinx.serialization.Serializable
 data class FoeView(
     val index: Int,
     val monster: RolledMonster,
@@ -77,10 +61,8 @@ data class FoeView(
 
 /** The fight as the overlay prints it: the pack as cards, the hero's pools and states, what just landed, and the blows so far, newest first. */
 /** The pet in a fight as its bar shows it (3.5.0). */
-@kotlinx.serialization.Serializable
 data class AllyView(val species: String, val life: Int, val maxLife: Int, val alive: Boolean)
 
-@kotlinx.serialization.Serializable
 data class FightHud(
     val leader: RolledMonster,
     val foes: List<FoeView>,
@@ -111,10 +93,6 @@ data class FightHud(
     val level: Int = 0,
     /** Whether the hero may walk out: the Abyss lets nobody go mid-wave. */
     val escape: Boolean = true,
-    /** A party's roll call before the fight (3.25.0): who is ready and how long it waits. */
-    val ready: ReadyView? = null,
-    /** This hero leads the fight: pause, speed and retreat are theirs; a guest only fights. */
-    val lead: Boolean = true,
 ) {
     val scouting: Boolean get() = outcome == null && (!started || paused)
 }
@@ -175,10 +153,6 @@ data class RunHud(
     val rejected: Int = 0,
     /** The desecration on the hero, underfoot or trailing (3.4.0). */
     val desecration: DesecrationView? = null,
-    /** The party's heroes and their life (3.25.0); empty alone. */
-    val party: List<MateView> = emptyList(),
-    /** This hero follows a host: the map is the host's to walk, the fights the host's to begin. */
-    val guest: Boolean = false,
 )
 
 /** A desecration on the hero as the screen shows it: its kind, the lines it lays at this zone for this hero, and the trail left. */
@@ -230,10 +204,6 @@ sealed interface RunCommand {
     data object TakeHoard : RunCommand
     /** Stops the autorun: the run goes on by hand from where it stands. */
     data object StopAuto : RunCommand
-    /** A guest of the party did something (3.25.0): the host's run acts on it. */
-    data class Mate(val heroId: String, val act: MateAct) : RunCommand
-    /** An event of the host's journal reached a guest (3.25.0): the guest's run writes it into their own. */
-    data class Follow(val event: RunEvent) : RunCommand
 }
 
 /**
@@ -276,8 +246,6 @@ class ExpeditionRun(
     private var autopilot: AutoPilot? = null,
     /** The combat pet at work (3.5.0). */
     private val pet: Pet? = null,
-    /** The party the run is played in (3.25.0): led from here, or followed; null alone. */
-    val party: RunParty? = null,
 ) {
     /** The run as the rules roll it; it takes the Vaal zone's context once the portal opens. */
     var run: Run = run
@@ -325,20 +293,6 @@ class ExpeditionRun(
                 if (kind.role == PetRole.SUPPORT) pets.supportHeal(p) else 0.0, index.pets.drawFire)
         }
     }
-    private val lead: PartyLead? get() = party as? PartyLead
-    private val follower: PartyFollow? get() = party as? PartyFollow
-    /** A party's monsters stand stronger for every hero past the first (3.25.0). */
-    private val partyBuffs = MapEffects.party(index.campaign.party, run.context.party)
-    /** The guests in the fight under way, by seat: seat k is `fightMates[k - 1]`. */
-    private var fightMates: List<Mate> = emptyList()
-    /** The fight under way as the guests' caches know it. */
-    private var fightId = 0
-    /** A party's roll call before the fight: the heroes ready so far, and the seconds before it begins anyway. */
-    private var rollCall: MutableSet<String>? = null
-    private var rollLeft = 0.0
-    private var mirrorClock = 0.0
-    private var setupClock = 0.0
-
     /** The patch whose lines are on the hero: the one underfoot, or the last one stepped off within its trail. */
     private var desecratedBy: Desecrated? = null
     private var trailLeft = 0.0
@@ -371,7 +325,10 @@ class ExpeditionRun(
     }
     private var slain: RolledMonster? = null
     private var report: FightReport? = null
-    private var members: List<Int> = emptyList()
+    /** The foes of the fight in the battle's order, each with the pack it walked with. */
+    private var members: List<FightMember> = emptyList()
+    /** Every pack the fight drew in, the engaged one first. */
+    private var fightAgents: List<MonsterAgent> = emptyList()
     private var reported = 0
     private var fall: Double? = null
     private var gold = 0L
@@ -408,8 +365,6 @@ class ExpeditionRun(
 
     var fight: Battle? = null
         private set
-    /** A fight is on screen: the run's own, or the host's a guest watches. */
-    val fighting: Boolean get() = fight != null || state.value.fight != null
 
     private val state = MutableStateFlow(snapshot())
     val hud: StateFlow<RunHud> = state.asStateFlow()
@@ -418,24 +373,17 @@ class ExpeditionRun(
 
     fun update(dt: Double) {
         while (true) apply(commands.poll() ?: break)
-        follower?.let { follow(it, dt); state.value = snapshot(); return }
-        lead?.let { refreshMates(it) }
         if (holds == 0) when (phase) {
             RunPhase.MAP -> autopilot?.let { drive(it, dt) } ?: walk(dt)
             RunPhase.FIGHT -> play(dt)
             else -> Unit
         }
-        lead?.let { callRoll(dt); tell(it, dt) }
         state.value = snapshot()
     }
 
     /** One event of the journal, and the listener told: the reward it earns is the caller's to roll. */
     private fun record(kind: RunEventKind, i: Int = 0, m: Int = 0, index: Int = 0, depth: Int = 0, fallen: Boolean = false): RunEvent? =
-        journal.record(kind, i, m, index, depth, fallen, vaal)?.also { event ->
-            onRecorded(event)
-            // The host's events go to every guest, who writes the same into their own journal (3.25.0)
-            lead?.let { it.told += event; it.tell(null, PartyMessage.Event(event)) }
-        }
+        journal.record(kind, i, m, index, depth, fallen, vaal)?.also(onRecorded)
 
     private fun earn(reward: Reward?) {
         val gained = reward ?: return
@@ -446,18 +394,12 @@ class ExpeditionRun(
     }
 
     private fun apply(command: RunCommand) {
-        follower?.let { applyAsGuest(it, command); return }
         when (command) {
-            // A party fights at one pace: the guests watch it as it goes
-            RunCommand.Speed -> if (party == null) speed = if (speed >= 4) 1 else speed * 2
+            RunCommand.Speed -> speed = if (speed >= 4) 1 else speed * 2
             RunCommand.StopAuto -> autopilot = null
             RunCommand.Leave -> if (phase == RunPhase.MAP || phase == RunPhase.DEAD || phase == RunPhase.CLEARED) phase = RunPhase.LEFT
             RunCommand.Retreat -> if (abyssFight) Unit else if (fight != null && !started) walkAway() else { paused = false; fight?.retreat() }
-            RunCommand.Begin -> if (fight != null) {
-                // A party's fight waits for its roll call: the host's «В бой» is the host's «готов»
-                val call = rollCall
-                if (call != null && !started) call += lead!!.self.heroId else { started = true; paused = false }
-            }
+            RunCommand.Begin -> if (fight != null) { started = true; paused = false }
             RunCommand.Pause -> if (fight != null && started && fight?.outcome == null) paused = !paused
             is RunCommand.Focus -> fight?.focus(command.index)
             is RunCommand.Hold -> holds = (holds + if (command.on) 1 else -1).coerceAtLeast(0)
@@ -499,8 +441,6 @@ class ExpeditionRun(
             }
             RunCommand.Descend -> if (phase == RunPhase.ABYSS) descend()
             RunCommand.TakeHoard -> descent?.takeIf { phase == RunPhase.ABYSS && it.cleared > 0 && it.hoard == null }?.let { take(it, fallen = false) }
-            is RunCommand.Mate -> mateAct(command.heroId, command.act)
-            is RunCommand.Follow -> Unit
         }
     }
 
@@ -532,7 +472,7 @@ class ExpeditionRun(
     private fun wave(current: Descent, depth: Int) {
         val rule = abyssRule ?: return
         current.level = zone.level + (rule.waves.getOrNull(depth - 1)?.level ?: 0)
-        current.fights = waves.wave(rule, depth, current.spot.id, zone, mapEffects, run.context.extraRareMods, partyBuffs)
+        current.fights = waves.wave(rule, depth, current.spot.id, zone, mapEffects, run.context.extraRareMods)
         nextFight(current)
     }
 
@@ -567,9 +507,10 @@ class ExpeditionRun(
 
     /** Turning away before the fight began: nothing was struck, and the monster stays calm a while. */
     private fun walkAway() {
-        fightAgent?.let { agent -> if (agent.crystal == null) world.retreatFrom(agent) }
+        fightAgents.filter { it.crystal == null }.forEach(world::retreatFrom)
         fight = null
         fightAgent = null
+        fightAgents = emptyList()
         phase = RunPhase.MAP
     }
 
@@ -600,13 +541,6 @@ class ExpeditionRun(
                 life = (life + hero.maxLife * event.fountain.heal / 100).coerceAtMost(hero.maxLife)
                 mana = (mana + manaCap() * event.fountain.heal / 100).coerceAtMost(manaCap())
                 charges = kit.flasks.map { it?.maxCharges ?: 0.0 }
-                // A fountain refreshes the whole party
-                lead?.mates?.values?.forEach { mate ->
-                    val body = mate.build?.body ?: return@forEach
-                    mate.life = (mate.life + body.maxLife * event.fountain.heal / 100).coerceAtMost(body.maxLife)
-                    mate.mana = (mate.mana + mate.manaCap() * event.fountain.heal / 100).coerceAtMost(mate.manaCap())
-                    mate.charges = mate.build!!.gear.kit.flasks.map { it?.maxCharges ?: 0.0 }
-                }
             }
             WorldEvent.Portal -> openGate()
             is WorldEvent.Crystal -> { phase = RunPhase.CRYSTAL; crystal = event.spot; crystalOutcome = null }
@@ -675,27 +609,24 @@ class ExpeditionRun(
         phase = RunPhase.GATE
     }
 
-    /** A fight with [agent]'s pack still standing, all at once, at [level] — the zone's, or a depth's of the Abyss. */
+    /**
+     * A fight with [agent]'s pack still standing, all at once, at [level] — the zone's, or a depth's of the Abyss;
+     * on the map the packs standing close by join it (3.26.0), the boss and a guardian always fight alone.
+     */
     private fun engage(agent: MonsterAgent, level: Int = zone.level, abyssal: Boolean = false) {
-        members = agent.standing
+        fightAgents = if (abyssal) listOf(agent) else world.gathered(agent)
+        members = fightAgents.flatMap { pack -> pack.standing.map { FightMember(pack, it) } }
         reported = 0
         fightAgent = agent
         abyssFight = abyssal
         fightLevel = level
-        // The guests fight beside the host, each a seat of the fight (3.25.0)
-        fightMates = lead?.mates?.values?.filter { it.build != null }.orEmpty()
-        fightId = fights + if (vaal) VAAL_FIGHTS else 0
-        fight = Battle(hero, members.map { index ->
-            val monster = agent.pack[index]
+        fight = Battle(hero, members.map { member ->
+            val monster = member.monster
             Foe(Combatant(monster.stats, level, rules), monster.ranged, monster.rarity, monster.skills.mapNotNull(this.index.skills.monsterByCode::get))
-        }, rules, life, Random(Streams.mix(seed, FIGHT_STREAM, (fights++).toLong())), stance, party = party?.size ?: 1, kit = kit, model = build,
-            pools = HeroPools(life, mana, charges, flaskLeft), percent = build.gear.percent, ally = ally,
-            companions = fightMates.map { mate -> val b = mate.build!!; PartyHero(b.body, mate.life, b.gear.stance, b.gear.kit, b, mate.pools, mate.ally) })
+        }, rules, life, Random(Streams.mix(seed, FIGHT_STREAM, (fights++).toLong())), stance, kit = kit, model = build, pools = HeroPools(life, mana, charges, flaskLeft),
+            percent = build.gear.percent, ally = ally)
         started = false
         paused = false
-        rollCall = if (fightMates.isNotEmpty()) mutableSetOf() else null
-        rollLeft = party?.rule?.readySeconds?.toDouble() ?: 0.0
-        setupClock = 0.0
         phase = RunPhase.FIGHT
     }
 
@@ -703,7 +634,7 @@ class ExpeditionRun(
     private fun release() {
         val spot = crystal ?: return
         val extra = MapEffects.guardianBuffs(spot.crystal.stronger, index.essences.crystals.stronger, mapEffects)
-        val guardian = spawns.crystalGuardian(zone, spot.crystal, spot.id, MapEffects.buffs(mapEffects) + partyBuffs, extra) ?: return
+        val guardian = spawns.crystalGuardian(zone, spot.crystal, spot.id, MapEffects.buffs(mapEffects), extra) ?: return
         crystal = null
         crystalOutcome = null
         engage(MonsterAgent(-1 - spot.id, listOf(guardian), spot.cell.x + 0.5, spot.cell.y + 0.5, crystal = spot.id))
@@ -729,43 +660,41 @@ class ExpeditionRun(
 
     private fun play(dt: Double) {
         val battle = fight ?: return
-        val agent = fightAgent ?: return
+        fightAgent ?: return
         if (!started || paused) return
         battle.advance(dt * speed)
         // Every foe is a kill of its own, recorded the moment it falls, the fight still going.
         while (reported < battle.fallen.size) {
             val member = members[battle.fallen[reported++]]
-            agent.fallen += member
-            fell(agent, member)
+            member.agent.fallen += member.index
+            fell(member.agent, member.index)
         }
         val outcome = battle.outcome ?: return
         if (battle.time < battle.duration + AFTERMATH) return
         val out = battle.pools()
-        keepMates(battle, outcome)
         life = out.life
         mana = out.mana
         charges = out.charges
         flaskLeft = out.flaskLeft
         rates = out.rates
-        // A party that won lifts its fallen: the host too stands up with the rule's share of life
-        if (outcome == Outcome.WIN && life <= 0) party?.let { life = hero.maxLife * it.rule.reviveLife / 100 }
         rebody()
-        val pack = members.mapIndexed { index, member -> PackHit(agent.pack[member], battle.events.filter { it.foe == index }, battle.duration) }
+        val pack = members.mapIndexed { index, member -> PackHit(member.monster, battle.events.filter { it.foe == index }, battle.duration) }
+        val leader = fightLeader()
         val down = descent?.takeIf { abyssFight }
         when (outcome) {
             Outcome.WIN -> {
-                agent.alive = false
+                fightAgents.forEach { it.alive = false }
                 if (down != null) { report = null; phase = RunPhase.ABYSS }
                 // An autorun goes on without the report: what the fight brought is in its tally already
                 else if (autopilot != null) { reward = null; slain = null; report = null; phase = RunPhase.MAP }
                 else {
-                    slain = agent.monster
-                    report = FightReport(agent.monster, Outcome.WIN, pack, battle.duration)
+                    slain = leader
+                    report = FightReport(leader, Outcome.WIN, pack, battle.duration)
                     phase = RunPhase.LOOT
                 }
             }
             Outcome.LOSS -> {
-                report = FightReport(agent.monster, Outcome.LOSS, pack, battle.duration)
+                report = FightReport(leader, Outcome.LOSS, pack, battle.duration)
                 life = 0.0
                 autopilot = null
                 phase = RunPhase.DEAD
@@ -778,238 +707,18 @@ class ExpeditionRun(
             Outcome.RETREAT -> {
                 // Walking out of a fight takes the run back into the player's hands
                 autopilot = null
-                if (agent.id >= 0) world.retreatFrom(agent)
+                fightAgents.filter { it.id >= 0 }.forEach(world::retreatFrom)
                 report = null
                 if (down != null) { phase = RunPhase.ABYSS; take(down, fallen = true) } else phase = RunPhase.MAP
             }
         }
         fight = null
         fightAgent = null
+        fightAgents = emptyList()
         abyssFight = false
-        fightMates = emptyList()
-        rollCall = null
         if (phase != RunPhase.DEAD) pendingGear?.let { regear(it.gear) }
         pendingGear = null
         if (outcome == Outcome.WIN && down != null) { if (down.fights.isNotEmpty()) nextFight(down) else down.cleared++ }
-    }
-
-    // ==================== The party's host (3.25.0) ====================
-
-    /** Guests whose card changed are made again at the map's effects — between fights, never in one. */
-    private fun refreshMates(lead: PartyLead) {
-        lead.drain()
-        if (fight != null) return
-        lead.mates.values.forEach { if (it.dirty) it.rebuild(index, mapEffects, rules) }
-    }
-
-    /** The roll call before a party's fight: it begins when everyone is ready, or when the rule's seconds are out. */
-    private fun callRoll(dt: Double) {
-        val call = rollCall ?: return
-        if (fight == null || started) { rollCall = null; return }
-        rollLeft -= dt
-        val everyone = lead!!.self.heroId in call && fightMates.all { it.heroId in call }
-        if (everyone || rollLeft <= 0) { rollCall = null; started = true; paused = false }
-    }
-
-    private fun mateAct(heroId: String, act: MateAct) {
-        val lead = lead ?: return
-        val seat = fightMates.indexOfFirst { it.heroId == heroId } + 1
-        when (act) {
-            is MateAct.Cast -> if (seat > 0) fight?.useSkill(act.slot, seat)
-            is MateAct.Drink -> if (seat > 0) fight?.useFlask(act.slot, seat)
-            is MateAct.Focus -> if (seat > 0) fight?.focus(act.index, seat)
-            MateAct.Ready -> if (seat > 0) rollCall?.add(heroId)
-            is MateAct.Resend -> lead.told.filter { it.n >= act.from }.forEach { lead.tell(heroId, PartyMessage.Event(it)) }
-        }
-    }
-
-    /** The guests walk out of the fight with what it left them; a won fight stands the fallen back up. */
-    private fun keepMates(battle: Battle, outcome: Outcome) {
-        val rule = party?.rule ?: return
-        fightMates.forEachIndexed { k, mate ->
-            val out = battle.pools(k + 1)
-            mate.life = out.life
-            mate.mana = out.mana
-            mate.charges = out.charges
-            mate.flaskLeft = out.flaskLeft
-            mate.rates = out.rates
-            val body = mate.build?.body ?: return@forEachIndexed
-            if (outcome == Outcome.WIN && mate.life <= 0) mate.life = body.maxLife * rule.reviveLife / 100
-        }
-    }
-
-    /** Every guest is told the world and their own side of it; a fight's pack goes to all as it opens and now and then. */
-    private fun tell(lead: PartyLead, dt: Double) {
-        if (lead.mates.isEmpty()) return
-        mirrorClock -= dt
-        setupClock -= dt
-        val battle = fight
-        val agent = fightAgent
-        if (battle != null && agent != null && setupClock <= 0) {
-            setupClock = SETUP_EVERY
-            lead.tell(null, PartyMessage.Setup(fightId, agent.monster, members.map { agent.pack[it] }))
-        }
-        if (mirrorClock > 0) return
-        mirrorClock = MIRROR_EVERY
-        val shared = worldMirror(lead)
-        lead.mates.values.forEach { mate -> lead.tell(mate.heroId, PartyMessage.Mirror(shared, mateHud(mate, battle, agent))) }
-    }
-
-    private fun worldMirror(lead: PartyLead) = WorldMirror(
-        phase, vaal, world.heroX, world.heroY, world.facingX, world.facingY, world.moving,
-        world.agents.filter { it.alive }.map { AgentMirror(it.id, it.x.toFloat(), it.y.toFloat(), it.mode, it.fallen.toList()) },
-        world.chests.filter { it.opened }.map { it.id }, world.fountains.filter { it.used }.map { it.id }, world.portal != null,
-        partyViews(lead), journal.base, journal.base + journal.size,
-    )
-
-    /** A guest's own side: in a fight their seat's pools and view, between fights what the host keeps for them. */
-    private fun mateHud(mate: Mate, battle: Battle?, agent: MonsterAgent?): MateHud {
-        val body = mate.build?.body
-        val seat = fightMates.indexOf(mate) + 1
-        val place = battle?.takeIf { seat > 0 }?.seat(seat)
-        val fighter = place?.fighter
-        return MateHud(
-            life = (fighter?.life ?: mate.life).roundToInt(), maxLife = (body?.maxLife ?: 0.0).roundToInt(),
-            shield = (fighter?.shield ?: body?.maxShield ?: 0.0).roundToInt(), maxShield = (body?.maxShield ?: 0.0).roundToInt(),
-            mana = (fighter?.mana ?: mate.mana).roundToInt(), maxMana = (if (place != null) battle.manaCap(seat) else mate.manaCap()).roundToInt(),
-            flasks = if (place != null) battle.flaskViews(seat) else mateFlasks(mate),
-            down = (fighter?.life ?: mate.life) <= 0,
-            fight = if (place != null && agent != null) wire(fightHud(battle, agent, seat)) else null,
-            fightId = fightId,
-        )
-    }
-
-    private fun mateFlasks(mate: Mate): List<FlaskView?> {
-        val build = mate.build ?: return emptyList()
-        return build.gear.kit.flasks.mapIndexed { i, flask ->
-            flask?.let {
-                val left = mate.flaskLeft.getOrNull(i) ?: 0.0
-                FlaskView(i, it.code, it.kind, (mate.charges.getOrNull(i) ?: 0.0).toInt(), it.maxCharges.toInt(), kotlin.math.ceil(it.perUse(build.body) - 1e-9).toInt(),
-                    if (left > 0) (left / it.duration(build.body)).toFloat().coerceIn(0f, 1f) else 0f, it.condition)
-            }
-        }
-    }
-
-    /** A fight's view as it travels: the pack's monsters stubbed — the setup carries them whole — and only the latest blows. */
-    private fun wire(hud: FightHud): FightHud =
-        hud.copy(leader = hud.leader.stub(), foes = hud.foes.map { it.copy(monster = it.monster.stub()) }, events = hud.events.take(WIRE_EVENTS))
-
-    /** The party over the map: the host, then the guests, with their life now — in a fight, their seat's. */
-    private fun partyViews(lead: PartyLead): List<MateView> {
-        val battle = fight
-        val me = lead.self.copy(life = (battle?.heroLife ?: life).roundToInt(), maxLife = hero.maxLife.roundToInt(), alive = (battle?.heroLife ?: life) > 0, host = true)
-        return listOf(me) + lead.mates.values.mapNotNull { mate ->
-            val card = mate.card ?: return@mapNotNull null
-            val seat = fightMates.indexOf(mate) + 1
-            val now = battle?.takeIf { seat > 0 }?.seat(seat)?.fighter?.life ?: mate.life
-            MateView(mate.heroId, card.name, card.heroClass, now.roundToInt(), (mate.build?.body?.maxLife ?: 0.0).roundToInt(), now > 0)
-        }
-    }
-
-    // ==================== A guest of the party (3.25.0) ====================
-
-    /**
-     * A guest's run does not walk: the host's world is laid over it as the host tells it, and a gap in the host's
-     * journal is asked for again. What the guest earns is rolled here by their own seed, event by event.
-     */
-    private fun follow(guest: PartyFollow, dt: Double) {
-        val mirror = guest.mirror ?: return
-        if (mirror.world.vaal == vaal) world.follow(mirror.world)
-        val next = guest.next ?: mirror.world.journalBase.also { guest.next = it }
-        guest.wait -= dt
-        if (mirror.world.journal > next && guest.wait <= 0) { guest.wait = RESEND_AFTER; guest.act(MateAct.Resend(next)) }
-    }
-
-    private fun applyAsGuest(guest: PartyFollow, command: RunCommand) {
-        when (command) {
-            is RunCommand.Follow -> echo(guest, command.event)
-            is RunCommand.Cast -> guest.act(MateAct.Cast(command.slot))
-            is RunCommand.Drink -> guest.act(MateAct.Drink(command.slot))
-            is RunCommand.Focus -> guest.act(MateAct.Focus(command.index))
-            RunCommand.Begin -> guest.act(MateAct.Ready)
-            RunCommand.Continue -> when {
-                reward != null -> { reward = null; slain = null }
-                phase == RunPhase.DEAD || phase == RunPhase.CLEARED -> phase = RunPhase.LEFT
-            }
-            RunCommand.DismissChest -> chest = null
-            RunCommand.Leave -> phase = RunPhase.LEFT
-            is RunCommand.Hold -> holds = (holds + if (command.on) 1 else -1).coerceAtLeast(0)
-            else -> Unit
-        }
-    }
-
-    /** One event of the host's journal, in its order: written into the guest's own, and what it earns rolled by the guest's seed. */
-    private fun echo(guest: PartyFollow, event: RunEvent) {
-        val next = guest.next ?: event.n.also { guest.next = it }
-        if (event.n < next) return
-        if (event.n > next) { if (guest.wait <= 0) { guest.wait = RESEND_AFTER; guest.act(MateAct.Resend(next)) }; return }
-        guest.next = next + 1
-        guest.wait = 0.0
-        fun gain(reward: Reward?) {
-            val gained = reward ?: return
-            earn(gained)
-            this.reward = this.reward?.plus(gained) ?: gained
-        }
-        when (event.kind) {
-            RunEventKind.KILL -> record(RunEventKind.KILL, i = event.i, m = event.m)?.let {
-                kills++
-                slain = guest.setup?.leader ?: slain
-                gain(run.kill(event.i, event.m, vaal))
-            }
-            RunEventKind.CHEST -> record(RunEventKind.CHEST, index = event.index)?.let { chest = run.chest().also(::earn) }
-            RunEventKind.BOSS -> record(RunEventKind.BOSS)?.let { bossDown = true; gain(run.boss()) }
-            RunEventKind.CORRUPT -> record(RunEventKind.CORRUPT)?.let { gain(run.corrupt()) }
-            RunEventKind.CRYSTAL -> {
-                val spot = world.standingCrystals.getOrNull(event.index)
-                record(RunEventKind.CRYSTAL, index = event.index)?.let { spot?.let { gain(run.crystal(it.crystal)); it.freed = true } }
-            }
-            RunEventKind.CRYSTAL_VAAL -> world.standingCrystals.getOrNull(event.index)?.let { spot ->
-                record(RunEventKind.CRYSTAL_VAAL, index = event.index)?.let { spot.crystal = run.crystalVaal(event.index, spot.crystal).second }
-            }
-            RunEventKind.VAAL_OPEN -> record(RunEventKind.VAAL_OPEN)?.let {
-                val rolled = run.vaalZone()
-                vaalZone = rolled
-                run = Run(index, run.zone, run.seed, run.context.copy(vaal = rolled))
-            }
-            RunEventKind.VAAL_LEAVE -> record(RunEventKind.VAAL_LEAVE)?.let { vaalZone = null; corruptionOpened = true; world.closePortal() }
-            RunEventKind.ABYSS_OPEN -> record(RunEventKind.ABYSS_OPEN, index = event.index)?.let { world.standingCracks.getOrNull(event.index)?.opened = true }
-            RunEventKind.ABYSS_CLAIM -> record(RunEventKind.ABYSS_CLAIM, depth = event.depth, fallen = event.fallen)?.let { gain(run.hoard(event.depth, if (event.fallen) 0.0 else 1.0)) }
-            RunEventKind.FALL -> record(RunEventKind.FALL)?.let { fall = deathLoss(); phase = RunPhase.DEAD; onFallen() }
-            RunEventKind.LEAVE -> record(RunEventKind.LEAVE)?.let { phase = RunPhase.CLEARED; onCleared() }
-            RunEventKind.SUMMON -> Unit
-        }
-    }
-
-    /** The guest's hud: the host's world and the guest's side of it as the host tells it, the guest's own loot and journal. */
-    private fun followed(guest: PartyFollow): RunHud {
-        val mirror = guest.mirror
-        val mine = mirror?.hud
-        val fightHud = guest.fight()?.takeIf { mirror?.world?.phase == RunPhase.FIGHT && mirror.world.vaal == vaal }
-        val shown = when {
-            phase == RunPhase.DEAD || phase == RunPhase.CLEARED || phase == RunPhase.LEFT -> phase
-            fightHud != null -> RunPhase.FIGHT
-            reward != null -> RunPhase.LOOT
-            else -> RunPhase.MAP
-        }
-        return RunHud(
-            phase = shown, mapCode = zone.code,
-            heroLife = mine?.life ?: life.roundToInt(), heroMaxLife = mine?.maxLife ?: hero.maxLife.roundToInt(),
-            heroShield = mine?.shield ?: 0, heroMaxShield = mine?.maxShield ?: hero.maxShield.roundToInt(),
-            alive = world.alive, total = world.total, sealed = world.sealed,
-            fight = fightHud, reward = reward, slain = slain, fall = fall,
-            // A guest's loot has no fight of their own behind it: the report is the pack's leader and what fell
-            report = slain?.takeIf { reward != null }?.let { FightReport(it, Outcome.WIN, emptyList(), 0.0) },
-            gold = gold, experience = experience, kills = kills,
-            chestsLeft = world.chests.count { !it.opened }, chest = chest,
-            fountainsLeft = world.fountains.count { !it.used },
-            vaal = vaal,
-            heroMana = mine?.mana ?: mana.roundToInt(), heroMaxMana = mine?.maxMana ?: manaCap().roundToInt(),
-            flasks = mine?.flasks.orEmpty(),
-            crystalsLeft = world.standingCrystals.size, cracksLeft = world.standingCracks.size,
-            bossDown = bossDown,
-            pending = journal.pending.size, applied = journal.applied, rejected = journal.rejected.size,
-            party = mirror?.world?.party.orEmpty(), guest = true,
-        )
     }
 
     /** What the death costs by the rules: a share of the level's experience, never the level. */
@@ -1021,14 +730,13 @@ class ExpeditionRun(
     }
 
     private fun snapshot(): RunHud {
-        follower?.let { return followed(it) }
         val battle = fight
         return RunHud(
             phase = phase, mapCode = zone.code,
             heroLife = (battle?.heroLife ?: life).roundToInt(), heroMaxLife = hero.maxLife.roundToInt(),
             heroShield = (battle?.heroFighter?.shield ?: hero.maxShield).roundToInt(), heroMaxShield = hero.maxShield.roundToInt(),
             alive = world.alive, total = world.total, sealed = world.sealed,
-            fight = battle?.let { b -> fightAgent?.let { fightHud(b, it) } },
+            fight = battle?.takeIf { fightAgent != null }?.let(::fightHud),
             reward = reward, slain = slain, report = report,
             fall = fall,
             gold = gold, experience = experience, kills = kills,
@@ -1044,7 +752,6 @@ class ExpeditionRun(
             auto = autopilot?.let { AutoHud(it.wave, it.waves) }, autoReward = autoReward,
             pending = journal.pending.size, applied = journal.applied, rejected = journal.rejected.size,
             desecration = desecratedBy?.let { DesecrationView(it.kind, desecrationLines(it), world.underfoot === it, trailLeft) },
-            party = lead?.let { partyViews(it) }.orEmpty(),
         )
     }
 
@@ -1064,13 +771,13 @@ class ExpeditionRun(
         }
     }
 
-    /** The fight as the hero of [seat] sees it: their pools, skills and belt, the blows that were theirs or at the pack. */
-    private fun fightHud(battle: Battle, agent: MonsterAgent, seat: Int = 0): FightHud {
-        val place = battle.seats[seat]
-        val h = place.fighter
-        fun theirs(event: CombatEvent) = event.target == Side.MONSTER || event.seat == seat
+    /** The strongest of the whole fight: its portrait and its name stand for all the packs drawn in. */
+    private fun fightLeader(): RolledMonster = members.maxBy { it.monster.rarity.ordinal }.monster
+
+    private fun fightHud(battle: Battle): FightHud {
+        val h = battle.heroFighter
         val hits = battle.events.withIndex()
-            .filter { (_, event) -> theirs(event) && event.time <= battle.time && battle.time - event.time < HIT_LIFETIME && event.action != Action.RETREAT &&
+            .filter { (_, event) -> event.time <= battle.time && battle.time - event.time < HIT_LIFETIME && event.action != Action.RETREAT &&
                 (event.damage > 0 || event.healed > 0 || event.kind == HitKind.EVADED || event.kind == HitKind.BLOCKED || event.action == Action.ATTACK) }
             .map { (index, event) ->
                 FloatingHit(index, event.target, event.action, event.kind, event.damage.roundToInt(), battle.time - event.time, event.healed.roundToInt(),
@@ -1082,32 +789,27 @@ class ExpeditionRun(
                 (until - battle.time).coerceAtLeast(0.0), if (ailment.hurts) active.sumOf { it.magnitude } else active.maxOf { it.magnitude })
         }
         val foes = battle.foeFighters.map { f ->
-            FoeView(f.index, agent.pack[members[f.index]], f.life.roundToInt(), f.body.maxLife.roundToInt(), f.shield.roundToInt(), f.body.maxShield.roundToInt(),
-                battle.swing(f), ailments(f), f.held, f.alive, battle.reachable(f.index, seat = seat), f.body.taunt, battle.effects(f),
+            FoeView(f.index, members[f.index].monster, f.life.roundToInt(), f.body.maxLife.roundToInt(), f.shield.roundToInt(), f.body.maxShield.roundToInt(),
+                battle.swing(f), ailments(f), f.held, f.alive, battle.reachable(f.index), f.body.taunt, battle.effects(f),
                 f.mana.roundToInt(), f.body.maxMana.roundToInt())
         }
         return FightHud(
-            ally = place.allyFighter?.let { f -> AllyView(place.ally!!.code, f.life.roundToInt(), f.body.maxLife.roundToInt(), f.alive) },
-            leader = agent.monster, foes = foes,
+            ally = battle.allyFighter?.let { f -> AllyView(battle.ally!!.code, f.life.roundToInt(), f.body.maxLife.roundToInt(), f.alive) },
+            leader = fightLeader(), foes = foes,
             heroLife = h.life.roundToInt(), heroShield = h.shield.roundToInt(),
             hits = hits, speed = speed,
             outcome = battle.outcome,
             heroSwing = battle.swing(h), heroAilments = ailments(h), heroHeld = h.held,
             retreating = battle.retreating,
             lunge = battle.lunge()?.let { (event, progress) -> LungeView(event.actor, event.action, event.kind, event.landed, progress.toFloat(), event.foe) },
-            events = battle.events.filter(::theirs).asReversed(),
+            events = battle.events.toList().asReversed(),
             started = started, paused = paused,
-            target = battle.target(seat)?.index, focus = place.focus,
-            loneWolf = rules.loneWolf.takeIf { battle.loneWolf }, heroTaunt = place.hero.taunt,
-            heroMana = h.mana.roundToInt(), heroMaxMana = battle.manaCap(seat).roundToInt(),
-            skills = battle.skillViews(seat), flasks = battle.flaskViews(seat), heroEffects = battle.effects(h),
+            target = battle.target()?.index, focus = battle.focus,
+            loneWolf = rules.loneWolf.takeIf { battle.loneWolf }, heroTaunt = hero.taunt,
+            heroMana = h.mana.roundToInt(), heroMaxMana = battle.manaCap().roundToInt(),
+            skills = battle.skillViews(), flasks = battle.flaskViews(), heroEffects = battle.effects(h),
             heroBarrier = h.barrier.roundToInt(),
-            level = fightLevel, escape = seat == 0 && !abyssFight,
-            ready = rollCall?.let { call ->
-                val me = if (seat == 0) lead?.self?.heroId else fightMates.getOrNull(seat - 1)?.heroId
-                ReadyView(call.size, fightMates.size + 1, kotlin.math.ceil(rollLeft).toInt().coerceAtLeast(0), me in call)
-            },
-            lead = seat == 0,
+            level = fightLevel, escape = !abyssFight,
         )
     }
 
@@ -1118,15 +820,6 @@ class ExpeditionRun(
         /** The agents of the Abyss's waves are numbered down from here, out of the way of the map's and the crystals'. */
         private const val ABYSS_AGENT = -10_000
         private val FIGHT_STREAM = "fight".hashCode().toLong()
-        /** The Vaal zone's fights are numbered apart from the map's: a guest keeps the packs of both. */
-        private const val VAAL_FIGHTS = 1_000_000
-        /** How often the host tells the guests the world, and sends a fight's pack again (3.25.0). */
-        private const val MIRROR_EVERY = 0.12
-        private const val SETUP_EVERY = 2.0
-        /** The fight's latest blows a mirror carries: the whole log would be the most of it. */
-        private const val WIRE_EVENTS = 12
-        /** Seconds a guest waits for a gap of the host's journal before asking for it again. */
-        private const val RESEND_AFTER = 3.0
 
         /**
          * A run of [location] as the seed rolls it — or, [vaal], of the Vaal zone behind its portal, entered with
@@ -1145,8 +838,6 @@ class ExpeditionRun(
             auto: AutoPlan? = null,
             /** The combat pet at work (3.5.0): it fights every fight at the hero's side. */
             pet: Pet? = null,
-            /** The party the run is played in (3.25.0); a party walks by hand. */
-            party: RunParty? = null,
         ): ExpeditionRun {
             val zone = if (vaal) VaalZones.zone(location) ?: location else location
             val context = run.context
@@ -1159,7 +850,7 @@ class ExpeditionRun(
             val build = HeroBuild(gear, effects, rules)
             val stats = build.body.stats
             val spawns = Spawns(index, run)
-            val buffs = MapEffects.buffs(effects) + MapEffects.party(index.campaign.party, context.party)
+            val buffs = MapEffects.buffs(effects)
             val packs = spawns.packs(vaal, buffs)
             val boss = spawns.boss(zone, buffs, MapEffects.bossBuffs(effects))
             val bossDown = !vaal && campaign.bossDown(location.code, now)
@@ -1177,11 +868,16 @@ class ExpeditionRun(
                 world.placeCrystals(campaign.crystals[location.code]?.crystals.orEmpty())
                 world.placeCracks(campaign.abyss[location.code]?.cracks.orEmpty())
             }
-            val pilot = auto?.takeIf { party == null }?.let { AutoPilot.of(world, it, if (vaal) run.seed xor VAAL_SALT else run.seed, bossStands = world.boss?.alive == true) }
+            val pilot = auto?.let { AutoPilot.of(world, it, if (vaal) run.seed xor VAAL_SALT else run.seed, bossStands = world.boss?.alive == true) }
             return ExpeditionRun(index, zone, run, journal, world, build, rules, run.seed, effects, vaal, startPools, heroExperience, heroLevel, vaalOrbs,
-                campaign.corruptionOpened, vaalZone, bossDown, onRecorded, onCleared, onFallen, onLoot, pilot, pet, party)
+                campaign.corruptionOpened, vaalZone, bossDown, onRecorded, onCleared, onFallen, onLoot, pilot, pet)
         }
 
         private const val VAAL_SALT = 0x5661616C5A6F6E65L
     }
+}
+
+/** One foe of a fight: the pack it walked with and its place there. */
+internal class FightMember(val agent: MonsterAgent, val index: Int) {
+    val monster: RolledMonster get() = agent.pack[index]
 }

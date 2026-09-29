@@ -399,7 +399,7 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
             VitalBar(fight.heroLife, hud.heroMaxLife, LifeRed, Modifier.fillMaxWidth().height(18.dp), ring = GoldBright.takeIf { fight.heroBarrier > 0 })
             if (fight.heroMaxMana > 0) VitalBar(fight.heroMana, fight.heroMaxMana, ManaBlue, Modifier.fillMaxWidth().height(16.dp))
             SwingBar(fight.heroSwing, fight.heroHeld, Modifier.fillMaxWidth())
-            StateTiles(fight.heroAilments, fight.heroHeld, fight.heroEffects)
+            StateTiles(fight.heroAilments, fight.heroHeld, fight.heroEffects, fight.heroCharges)
             // The combat pet beside the hero (3.5.0): its name and life; down, it waits for the fight's end.
             fight.ally?.let { ally ->
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -695,13 +695,27 @@ private fun vitalFigures(value: Int, max: Int): String =
 }
 
 /** Every state on the hero as a tile of its colour whose dark fill rises as it wears off; a stun is a gold star. */
-@Composable private fun StateTiles(ailments: List<AilmentView>, held: Boolean, effects: List<EffectView> = emptyList()) {
+@Composable private fun StateTiles(ailments: List<AilmentView>, held: Boolean, effects: List<EffectView> = emptyList(), charges: List<ChargeView> = emptyList()) {
     val stunned = held && ailments.none { it.ailment == Ailment.FROZEN }
     Row(Modifier.height(30.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-        if (!stunned && ailments.isEmpty() && effects.isEmpty()) MutedText(ui("fight.no_states"), style = MaterialTheme.typography.labelSmall)
+        if (!stunned && ailments.isEmpty() && effects.isEmpty() && charges.isEmpty()) MutedText(ui("fight.no_states"), style = MaterialTheme.typography.labelSmall)
         if (stunned) StateTile(null, GoldBright, 1f, 1, ui("expedition.stunned")) { stunTip() }
         ailments.forEach { view -> StateTile(view.ailment, ailmentTint(view.ailment), view.left, view.stacks, ailmentLabel(view)) { ailmentTip(view) } }
+        charges.forEach { ChargeTile(it) }
         effects.take(4).forEach { EffectTile(it) }
+    }
+}
+
+/** A kind of the hero's charges (3.33.0): the drawing of its maximum and the count held. */
+@Composable private fun ChargeTile(view: ChargeView, side: Dp = 30.dp) {
+    val shape = RoundedCornerShape(4.dp)
+    val title = ui("fight.charge.${view.kind.name}")
+    Tipped({ Tip(title, ui("fight.charge_tip", view.count, view.max, fineNumber(view.seconds))) },
+        Modifier.size(side).clip(shape).background(Color(0xFF0B0E13)).background(Gold.copy(alpha = .16f)).border(1.dp, Gold, shape)
+            .semantics { contentDescription = "$title ${view.count}" }) {
+        com.sperance.exileforge.ui.icons.StatIcon(view.stat, Gold, Modifier.fillMaxSize().padding(side / 6))
+        Text("${view.count}", color = Parchment, fontSize = 10.sp, fontWeight = FontWeight.Bold,
+            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 2.dp))
     }
 }
 

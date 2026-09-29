@@ -1,6 +1,7 @@
 package com.sperance.exileforge.core.campaign
 
 import com.sperance.exileforge.core.character.StatLine
+import com.sperance.exileforge.rules.content.ChargeKind
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.content.Power
 import com.sperance.exileforge.rules.content.PowerAct
@@ -33,9 +34,10 @@ internal class PowerMoment(
 
 /**
  * What a won stage of a staged fight hands the next one (3.32.0, server 1.31.0): the stage was cleared — the next
- * battle answers [PowerEvent.STAGE_CLEAR] before its [PowerEvent.FIGHT_START] — and the [momentum] the hero built.
+ * battle answers [PowerEvent.STAGE_CLEAR] before its [PowerEvent.FIGHT_START] — the [momentum] the hero built and, since 3.33.0
+ * (server 1.32.0), the hero's [charges] by kind, their lives starting afresh.
  */
-@kotlinx.serialization.Serializable data class StageCarry(val momentum: Int = 0)
+@kotlinx.serialization.Serializable data class StageCarry(val momentum: Int = 0, val charges: Map<ChargeKind, Int> = emptyMap())
 
 /** A hit to strike again (3.32.0): its foe, the damage, at [at]; dropped if the foe or the fight is gone by then. */
 private class Echo(val at: Double, val foe: Battle.Fighter, val damage: Map<DamageType, Double>, val spell: Boolean, val skill: String)
@@ -143,7 +145,7 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
     fun restand(): Boolean {
         if (standingPowers.isEmpty()) return false
         val lines = standingPowers.filter { value(it) != 0.0 && it.checks.all { check -> holds(check, it, PowerMoment(battle.target())) } }
-            .flatMap { power -> power.effects.flatMap { effect -> effect.lines.map { line(power, it) } } }
+            .flatMap { power -> power.effects.flatMap { effect -> effect.lines.map { line(power, it, draw = false) } } }
         if (lines == standing) return false
         standing = lines
         return true
@@ -178,8 +180,10 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
         } finally { busy = false }
     }
 
-    private fun line(power: Power, line: PowerLine, times: Int = 1): StatLine {
-        val base = line.value ?: power.amount(null, value(power))
+    private fun line(power: Power, line: PowerLine, times: Int = 1, draw: Boolean = true): StatLine {
+        // A spread line (server 1.32.0) draws its value between `value` and `upto` as it is laid; a standing one keeps its low end.
+        val base = line.value?.let { low -> line.upto?.takeIf { draw }?.let { high -> low + battle.random.nextDouble() * (high - low).coerceAtLeast(0.0) } ?: low }
+            ?: power.amount(null, value(power))
         val count = line.scale?.let(::count)?.let { if (line.cap > 0) min(it, line.cap) else it } ?: 1.0
         return StatLine(line.stat, line.op, base * count * times)
     }
@@ -196,7 +200,13 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
         PowerScale.MANA -> battle.manaCap().takeIf { it > 0 }?.let { floor(hero.mana / it * 10) } ?: 0.0
         PowerScale.CHARGES -> battle.flaskCharges()
         PowerScale.MOMENTUM -> momentum.toDouble()
+        PowerScale.FRENZY_CHARGES -> battle.heroCharges.count(ChargeKind.FRENZY).toDouble()
+        PowerScale.POWER_CHARGES -> battle.heroCharges.count(ChargeKind.POWER).toDouble()
+        PowerScale.ENDURANCE_CHARGES -> battle.heroCharges.count(ChargeKind.ENDURANCE).toDouble()
     }
+
+    /** What an effect's number is multiplied by (server 1.32.0): its scale's count at this moment, under its cap; one without a scale. */
+    private fun scaled(effect: PowerEffect): Double = effect.scale?.let(::count)?.let { if (effect.cap > 0) min(it, effect.cap) else it } ?: 1.0
 
     private fun holds(check: PowerCheck, power: Power, moment: PowerMoment): Boolean {
         val target = moment.target?.takeIf { it.side == Side.MONSTER }
@@ -228,10 +238,11 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
             PowerCheckKind.ATTACK -> !moment.spell
             PowerCheckKind.DAMAGE_TYPE -> moment.taken.filterValues { it > 0 }.maxByOrNull { it.value }?.key?.name == check.word
             PowerCheckKind.AILMENT -> moment.ailment?.word == check.word
+            PowerCheckKind.CHARGES_AT_LEAST -> ChargeKind.of(check.word)?.let { battle.heroCharges.count(it) >= check.value } ?: false
         }
     }
 
-    /** Whom an effect reaches: the foe of the moment, every foe, one at random, the others, or none — the hero. */
+    /** Whom an effect reaches: the foe of the moment, every foe, one at random, the others, or none — the hero or the pet, each act's own. */
     private fun targets(to: PowerTarget, moment: PowerMoment): List<Battle.Fighter> {
         val alive = battle.foeFighters.filter { it.alive }
         val focus = moment.target?.takeIf { it.side == Side.MONSTER && it.alive } ?: battle.target()
@@ -240,29 +251,34 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
             PowerTarget.ALL -> alive
             PowerTarget.RANDOM -> if (alive.isEmpty()) emptyList() else listOf(alive[battle.random.nextInt(alive.size)])
             PowerTarget.OTHERS -> alive - setOfNotNull(moment.target)
-            PowerTarget.SELF -> emptyList()
+            PowerTarget.SELF, PowerTarget.PET -> emptyList()
         }
     }
 
     /** What [effect] does; the life it gave back, for the log. */
     private fun act(power: Power, effect: PowerEffect, value: Double, moment: PowerMoment): Double {
-        val amount = power.amount(effect.amount, value)
+        val amount = power.amount(effect.amount, value) * scaled(effect)
         val duration = power.duration(effect.duration, value)
         val body = hero.body
         when (effect.act) {
             PowerAct.BUFF -> {
-                val stacks = stacksOf(hero, power.stat, EffectKind.BUFF, effect.stacks)
-                battle.lay(hero, TimedEffect(EffectKind.BUFF, power.stat, effect.lines.map { line(power, it, stacks) }, battle.time + duration, duration))
+                // Movement speed matters only on the map (server 1.32.0): a fight's buff leaves it out.
+                val lines = effect.lines.filter { it.stat != MOVEMENT_SPEED }
+                if (lines.isEmpty()) return 0.0
+                val fighter = if (effect.to == PowerTarget.PET) battle.allyFighter?.takeIf { it.alive } ?: return 0.0 else hero
+                val stacks = stacksOf(fighter, power.stat, EffectKind.BUFF, effect.stacks)
+                battle.lay(fighter, TimedEffect(EffectKind.BUFF, power.stat, lines.map { line(power, it, stacks) }, battle.time + duration, duration))
             }
             PowerAct.HEX -> targets(effect.to, moment).forEach { foe ->
                 val stacks = stacksOf(foe, power.stat, EffectKind.CURSE, effect.stacks)
                 battle.lay(foe, TimedEffect(EffectKind.CURSE, power.stat, effect.lines.map { line(power, it, stacks) }, battle.time + duration, duration))
             }
-            PowerAct.HEAL -> return when (effect.of) {
+            PowerAct.HEAL -> return if (effect.to == PowerTarget.PET) { battle.healPet(amount); 0.0 } else when (effect.of) {
                 PowerBase.MANA -> { hero.mana = min(battle.manaCap(), hero.mana + battle.manaCap() * amount / 100); 0.0 }
                 PowerBase.SHIELD -> { hero.shield = min(body.maxShield, hero.shield + body.maxShield * amount / 100); 0.0 }
                 PowerBase.DEALT -> battle.restore(moment.damage * amount / 100 * body.recoveryRate)
                 PowerBase.TAKEN -> battle.restore(lastTaken * amount / 100 * body.recoveryRate)
+                PowerBase.PET_LIFE -> battle.restore(battle.petLife() * amount / 100)
                 else -> battle.restore(body.maxLife * amount / 100)
             }
             PowerAct.HURT -> when (effect.of) {
@@ -286,6 +302,8 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
             }
             PowerAct.AILMENT -> {
                 val ailment = Ailment.byWord(effect.ailment.orEmpty()) ?: Ailment.of(effect.ailment.orEmpty()) ?: return 0.0
+                // On the hero themselves (server 1.32.0): a self-ignition burns the rule's share of their life a second.
+                if (effect.to == PowerTarget.SELF) { battle.afflictSelf(ailment, duration); return 0.0 }
                 targets(effect.to, moment).forEach { foe -> battle.afflict(hero, foe, ailment, moment.taken.ifEmpty { body.damage }) }
             }
             PowerAct.CURSE -> targets(effect.to, moment).forEach(battle::hex)
@@ -307,6 +325,11 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
                 val damage = share(moment.taken, amount, effect.type)
                 if (damage.values.sum() > 0) echoes += Echo(battle.time + max(duration, 0.0), foe, damage, moment.spell, power.stat)
             }
+            PowerAct.CHARGE -> {
+                val kind = effect.charge ?: return 0.0
+                if (effect.consume) battle.consumeCharges(kind) else battle.gainCharges(kind, effect.amount?.toInt() ?: 1)
+            }
+            PowerAct.ONE_OF -> if (effect.options.isNotEmpty()) return act(power, effect.options[battle.random.nextInt(effect.options.size)], value, moment)
             PowerAct.RETALIATE -> {
                 val attacker = moment.target?.takeIf { it.side == Side.MONSTER } ?: return 0.0
                 val damage = share(moment.taken, amount, effect.type)
@@ -350,6 +373,7 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
             PowerBase.STRENGTH -> body["STOCK_STRENGTH"]
             PowerBase.AGILITY -> body["STOCK_AGILITY"]
             PowerBase.INTELLECT -> body["STOCK_INTELLECT"]
+            PowerBase.PET_LIFE -> battle.petLife()
             PowerBase.WEAPON -> 0.0
         }
         return mapOf((type ?: DamageType.PHYSICAL) to base * share)
@@ -364,8 +388,10 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
 
     private companion object {
         /** Effects that show nothing of their own in the log: a blow logs itself, a curse and an ailment land on the foe's line. */
-        val SILENT = setOf(PowerAct.DAMAGE, PowerAct.AILMENT, PowerAct.CURSE, PowerAct.SPREAD, PowerAct.DELAY, PowerAct.STUN, PowerAct.ECHO, PowerAct.RETALIATE)
+        val SILENT = setOf(PowerAct.DAMAGE, PowerAct.AILMENT, PowerAct.CURSE, PowerAct.SPREAD, PowerAct.DELAY, PowerAct.STUN, PowerAct.ECHO, PowerAct.RETALIATE,
+            PowerAct.CHARGE)
+        const val MOVEMENT_SPEED = "STOCK_MOVEMENT_SPEED"
         /** Events too frequent to log a line each. */
-        val QUIET = setOf(PowerEvent.HIT, PowerEvent.HIT_TAKEN, PowerEvent.STANDING, PowerEvent.INFLICT)
+        val QUIET = setOf(PowerEvent.HIT, PowerEvent.HIT_TAKEN, PowerEvent.STANDING, PowerEvent.INFLICT, PowerEvent.PET_HIT)
     }
 }

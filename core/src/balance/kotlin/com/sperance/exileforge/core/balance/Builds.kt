@@ -151,7 +151,7 @@ class HeroFactory(private val index: ContentIndex) {
         val equipped = items.associateBy { it.slot }
         val flasks = Slot.FLASKS.mapIndexed { i, slot -> equipped[slot]?.let { item -> index.template(item.template)?.let { Flask.of(item, it, index, skills.flasks.getOrNull(i)) } } }
         val weapon = (equipped[Slot.WEAPON_1H] ?: equipped[Slot.WEAPON_2H])?.let { index.template(it.template)?.weaponType }
-        return HeroGear(sheet.stats, level, sheet.model, HeroStance.of(heroClass, weapon), Loadout.of(skills, index.skills, heroClass, flasks, index.powers), index.stats.percent)
+        return HeroGear(sheet.stats, level, sheet.model, HeroStance.of(heroClass, weapon), Loadout.of(skills, index.skills, heroClass, flasks, index.powers, index.rules.charges), index.stats.percent)
     }
 
     private fun learnable(skill: SkillDefinition, level: Int, stats: Map<String, Double>): Int? =

@@ -2,6 +2,7 @@ package com.sperance.exileforge.core.campaign
 
 import com.sperance.exileforge.core.character.SheetModel
 import com.sperance.exileforge.core.character.StatLine
+import com.sperance.exileforge.rules.content.ChargeRules
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.HeroSkills
@@ -131,6 +132,8 @@ data class Loadout(
     val curses: List<KitSkill> = emptyList(),
     /** The book of the unique items' powers (2.79.0): which of them the hero has, their sheet says. */
     val powers: PowerBook = PowerBook(),
+    /** The rules of the hero's frenzy, power and endurance charges (3.33.0, server 1.32.0). */
+    val charges: ChargeRules = ChargeRules(),
 ) {
     /** How many percent of the maximum mana the passive auras hold, after the sheet's reservation efficiency. */
     fun reserved(hero: Combatant): Double =
@@ -156,7 +159,8 @@ data class Loadout(
          * The hero's loadout from the character's [skills] as the server keeps them, the world's [book] and
          * the flasks worn on the belt, in its order — [flasks] null where a place is empty.
          */
-        fun of(skills: HeroSkills, book: SkillBook, heroClass: String, flasks: List<Flask?>, powers: PowerBook = PowerBook()): Loadout {
+        fun of(skills: HeroSkills, book: SkillBook, heroClass: String, flasks: List<Flask?>, powers: PowerBook = PowerBook(),
+               charges: ChargeRules = ChargeRules()): Loadout {
             fun kit(code: String?, condition: SlotCondition? = null) = code?.let(book.byCode::get)
                 ?.let { KitSkill(it, skills.level(it.code).coerceAtLeast(1), condition ?: it.condition) }
             return Loadout(
@@ -165,6 +169,7 @@ data class Loadout(
                 flasks = flasks,
                 curses = book.ofClass(heroClass).filter { it.type == SkillType.CURSE }.map { KitSkill(it, skills.level(it.code).coerceAtLeast(1)) },
                 powers = powers,
+                charges = charges,
             )
         }
     }

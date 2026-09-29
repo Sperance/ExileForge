@@ -4,6 +4,7 @@ import com.sperance.exileforge.core.character.StatLine
 import com.sperance.exileforge.rules.content.AilmentRule
 import com.sperance.exileforge.rules.content.AtlasStat
 import com.sperance.exileforge.rules.content.Ceiling
+import com.sperance.exileforge.rules.content.ChargeKind
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.ManaRule
 import com.sperance.exileforge.rules.content.MonsterRarity
@@ -137,7 +138,8 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
     val manaBurn = max(0.0, stat("STOCK_MANA_BURN")) / 100
     /** How much more damage over time, a critical strike, a bleeding and a shock do to this fighter — a curse's work. */
     val dotTaken = max(0.0, 1 + stat("STOCK_DOT_TAKEN") / 100)
-    val critTaken = max(0.0, stat("STOCK_CRITICAL_TAKEN")) / 100
+    /** Extra critical multiplier this fighter takes; below zero (server 1.32.0) a critical strike hurts it no more than a hit. */
+    val critTaken = stat("STOCK_CRITICAL_TAKEN") / 100
     fun ailmentTaken(ailment: Ailment): Double = when (ailment) {
         Ailment.BLEEDING -> max(0.0, 1 + stat("STOCK_BLEED_TAKEN") / 100)
         Ailment.SHOCKED -> max(0.0, 1 + stat("STOCK_SHOCK_TAKEN") / 100)
@@ -241,6 +243,46 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
     /** What is left of [ailment]'s duration on this fighter, never less than the rule's cap allows. */
     fun ailmentDuration(ailment: Ailment) = 1 - percent("STOCK_${ailment.word}_DURATION_ON_SELF", rules.ailmentDurationCap)
     val lifeOnHit = max(0.0, stat("STOCK_HEALTH_ON_HIT"))
+
+    // ==================== Keystones and uniques of server 1.32.0 (3.33.0) ====================
+
+    /** The share of the damage bound for life that mana takes first. */
+    val manaBeforeLife = percent("STOCK_MANA_BEFORE_LIFE")
+    /** Life leech restores the shield instead. */
+    val leechToShield: Boolean get() = stat("STOCK_LEECH_TO_SHIELD") > 0
+    /** The shield lost a second as a share of its maximum. */
+    val shieldDegenShare = max(0.0, stat("STOCK_SHIELD_DEGEN_PERCENT")) / 100
+    /** The share of damage to life dealt over [lifeDelay] seconds instead of at once. */
+    val lifeDelayed = percent("STOCK_LIFE_DAMAGE_DELAYED")
+    val lifeDelay: Double get() = stat("STOCK_LIFE_DAMAGE_DELAY").takeIf { it > 0 } ?: DEFAULT_LIFE_DELAY
+    /** Physical damage of hits taken as an element instead, share by element; the shares together never pass the whole. */
+    val physicalTakenAs: Map<DamageType, Double> = DamageType.ELEMENTS.mapNotNull { type ->
+        stat("STOCK_PHYSICAL_TAKEN_AS_${type.name}").takeIf { it > 0 }?.let { type to it / 100 }
+    }.toMap().let { shares -> val sum = shares.values.sum(); if (sum > 1) shares.mapValues { it.value / sum } else shares }
+    /** Each of its hits deals all its damage as one random element. */
+    val randomElementHits: Boolean get() = stat("STOCK_RANDOM_ELEMENT_HITS") > 0
+    /** Elemental damage taken meets its highest elemental resistance. */
+    val highestResistTaken: Boolean get() = stat("STOCK_HIGHEST_RESIST_TAKEN") > 0
+    /** More or less damage taken of the element it resists most, in percent. */
+    val highestResistElementTaken: Double get() = stat("STOCK_HIGHEST_RESIST_ELEMENT_TAKEN")
+    /** Its damage of the element its target resists least penetrates this much. */
+    val lowestResistPenetrate: Double get() = max(0.0, stat("STOCK_LOWEST_RESIST_PENETRATE"))
+    /** Its ignites burn as chaos. */
+    val igniteAsChaos: Boolean get() = stat("STOCK_IGNITE_AS_CHAOS") > 0
+    /** Its critical chance is rolled twice. */
+    val luckyCrit: Boolean get() = stat("STOCK_LUCKY_CRIT") > 0
+    /** Its hits that are not critical strikes, as a multiplier (−40 — 40% less). */
+    val nonCritMore: Double get() = max(0.0, 1 + stat("STOCK_NON_CRIT_DAMAGE") / 100)
+    /** Every flask of the belt is drunk as a fight opens, for no charges. */
+    val flasksAuto: Boolean get() = stat("STOCK_FLASKS_AUTO") > 0
+
+    /** Its resistance to a blow of [type]: the highest elemental one for an element when it takes elements so. */
+    fun resistTo(type: DamageType, penetration: Double = 0.0): Double =
+        if (highestResistTaken && type in DamageType.ELEMENTS) DamageType.ELEMENTS.maxOf { resist(it, penetration) } else resist(type, penetration)
+
+    private companion object {
+        const val DEFAULT_LIFE_DELAY = 4.0
+    }
     val lifeOnKill = max(0.0, stat("STOCK_HEALTH_ON_KILL"))
     /** Taunts (since server 0.62.0): while it stands, its foes must strike it first, past any row. */
     val taunt: Boolean get() = stat("STOCK_TAUNT") > 0
@@ -256,7 +298,9 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
  */
 data class ActiveAilment(val ailment: Ailment, val until: Double, val magnitude: Double, val duration: Double, val source: Side, val foe: Int = 0,
     /** Put there by a spell (2.78.0): a kill by it is a spell's kill. */
-    val spell: Boolean = false)
+    val spell: Boolean = false,
+    /** Burns as chaos (3.33.0): an ignite of a striker whose ignites deal chaos goes around the shield. */
+    val chaos: Boolean = false)
 
 /**
  * One foe of the pack as the fight takes it (2.70.0): its sheet and its row — a [ranged] foe
@@ -405,6 +449,9 @@ internal class Blow(
     /** A weapon's blow: attacks, not spells, bring life on hit. */
     val weapon: Boolean get() = !spell && (action == Action.ATTACK || action == Action.SKILL)
 }
+
+/** Life damage the hero takes a second until [until] (3.33.0): the delayed share of a hit. */
+private class Delayed(val rate: Double, val until: Double)
 
 /** Life and mana a draught gives a second until [until] (2.78.0). */
 private class Recovery(val life: Double, val mana: Double, val until: Double, val slot: Int)
@@ -573,9 +620,20 @@ class Battle(
     private var shieldUp = true
     /** The hero's powers (2.79.0): the unique items' answers to what happens here. */
     private val powers = PowerRunner(this, kit.powers, stage)
+    /** The hero's frenzy, power and endurance charges (3.33.0, server 1.32.0): none as a fight opens, a stage's from the one before. */
+    internal val heroCharges = HeroCharges(kit.charges, stage?.charges.orEmpty())
+    /** The delayed life damage still to come (3.33.0). */
+    private val delayed = mutableListOf<Delayed>()
+    /** The flasks a hero drinks all at once as the fight opens (3.33.0) are behind them. */
+    private var autoDrunk = false
+    /** The pet stood at the last look (3.33.0): its fall is a power's event once. */
+    private var petStood = true
 
-    /** What this fight, won, hands the next stage of a staged fight (3.32.0). */
-    fun carry(): StageCarry = StageCarry(powers.momentum)
+    /** What this fight, won, hands the next stage of a staged fight (3.32.0): the momentum and, since 3.33.0, the charges. */
+    fun carry(): StageCarry = StageCarry(powers.momentum, heroCharges.snapshot())
+
+    /** The hero's charges as their counters draw them (3.33.0). */
+    fun chargeViews(): List<ChargeView> = heroCharges.views(time, heroFighter.body.stats)
 
     init {
         // A draught still running from the map comes into the fight, and the belt's opening ones count as drunk.
@@ -588,7 +646,8 @@ class Battle(
             pools?.rates?.getOrNull(i)?.takeIf { it.flows }?.let { recoveries += Recovery(it.life, it.mana, left, i) }
             flaskOpened[i] = true
         }
-        if (heroFighter.effects.isNotEmpty()) remake(heroFighter)
+        if (heroCharges.any) heroCharges.start(time, heroFighter.body.stats)
+        if (heroFighter.effects.isNotEmpty() || heroCharges.any) remake(heroFighter)
         heroFighter.mana = (pools?.mana ?: Double.MAX_VALUE).coerceIn(0.0, manaCap())
         shieldUp = heroFighter.shield > 0
     }
@@ -741,6 +800,10 @@ class Battle(
         val hero = heroFighter
         // A draught goes down even stunned; a skill waits until the hero can move again.
         if (hero.alive && !retreating) {
+            if (!autoDrunk) {
+                autoDrunk = true
+                if (hero.body.flasksAuto) kit.flasks.forEachIndexed { i, flask -> if (flask != null && draughtOf(i) == null) { flaskOpened[i] = true; drink(i, flask, free = true) } }
+            }
             useFlasks()
             if (!hero.held) useSkills()
         }
@@ -776,11 +839,12 @@ class Battle(
 
     /** What ran out this slice goes: buffs, curses, draughts, a barrier, and the body is made again without them. */
     private fun expire() {
-        (listOf(heroFighter) + foeFighters).forEach { fighter ->
+        (listOf(heroFighter) + listOfNotNull(allyFighter) + foeFighters).forEach { fighter ->
             if (fighter.barrier > 0 && fighter.barrierUntil <= time) fighter.barrier = 0.0
             if (fighter.effects.removeAll { it.until <= time }) remake(fighter)
         }
         recoveries.removeAll { it.until <= time }
+        if (heroCharges.expire(time)) remake(heroFighter)
     }
 
     /** Edges the hero's passives answer — low life, a broken shield — and the low-life lines of either side. */
@@ -799,16 +863,25 @@ class Battle(
             if (low != hero.low && model.lowLife.isNotEmpty()) { hero.low = low; remake(hero) }
             if (powers.restand()) remake(hero)
         }
+        petWatch()
         foeFighters.forEach { foe ->
             val low = foe.alive && foe.life < foe.body.maxLife / 2
             if (low != foe.low && foe.model.body(emptyList())["STOCK_LOW_LIFE_SPEED"] > 0) { foe.low = low; remake(foe) }
         }
     }
 
+    /** The pet fell since the last look (3.33.0): the powers answering its death hear of it once. */
+    private fun petWatch(killer: Fighter? = null) {
+        val pet = allyFighter ?: return
+        if (pet.alive || !petStood) return
+        petStood = false
+        powers.fire(PowerEvent.PET_DEATH, PowerMoment(killer))
+    }
+
     /** [fighter]'s body made again from its sheet with what lies on it — and the hero's under the auras of the foes still standing. */
     private fun remake(fighter: Fighter) {
         val lines = fighter.effects.flatMap { it.lines }
-        if (fighter === heroFighter) fighter.rebody(model.body((if (fighter.low) model.lowLife else emptyList()) + powers.standing + lines).under(auras()))
+        if (fighter === heroFighter) fighter.rebody(model.body((if (fighter.low) model.lowLife else emptyList()) + powers.standing + heroCharges.lines() + lines).under(auras()))
         else {
             val speed = fighter.model.body(emptyList())["STOCK_LOW_LIFE_SPEED"]
             fighter.rebody(fighter.model.body(lines + if (fighter.low && speed > 0) listOf(StatLine("STOCK_ATTACK_SPEED", Op.INCREASED, speed)) else emptyList()))
@@ -817,13 +890,19 @@ class Battle(
 
     /** The hero's body for one blow: what lies on them and [extra], a skill's own lines. */
     private fun heroBody(extra: List<StatLine>): Combatant = model.body((if (heroFighter.low) model.lowLife else emptyList()) +
-        powers.standing + heroFighter.effects.flatMap { it.lines } + extra).under(auras())
+        powers.standing + heroCharges.lines() + heroFighter.effects.flatMap { it.lines } + extra).under(auras())
 
     /** Desecrated ground eats life (3.4.0): a share of the maximum a second, past the shield, and it can kill. */
     private fun degenerate(me: Fighter, dt: Double) {
+        if (!me.alive || me.invulnerable) return
+        // The shield wastes away (3.33.0), and the delayed share of the hero's hits comes due.
+        if (me.body.shieldDegenShare > 0) me.shield = max(0.0, me.shield - me.body.maxShield * me.body.shieldDegenShare * dt)
+        if (me === heroFighter && delayed.isNotEmpty()) {
+            delayed.forEach { me.life = max(0.0, me.life - it.rate * min(dt, it.until - (time - dt)).coerceAtLeast(0.0)) }
+            delayed.removeAll { it.until <= time }
+        }
         val share = me.body.lifeDegenShare
-        if (share <= 0 || !me.alive || me.invulnerable) return
-        me.life = max(0.0, me.life - me.body.maxLife * share * dt)
+        if (share > 0) me.life = max(0.0, me.life - me.body.maxLife * share * dt)
         if (!me.alive) fell(me)
     }
 
@@ -835,7 +914,7 @@ class Battle(
             val slice = active.magnitude * min(dt, active.until - (time - dt)).coerceAtLeast(0.0) * me.weakness() * me.body.dotTaken *
                 me.body.ailmentTaken(active.ailment)
             if (slice <= 0 || !me.alive || me.invulnerable) return@forEach
-            val chaos = active.ailment == Ailment.POISONED
+            val chaos = active.ailment == Ailment.POISONED || active.chaos
             if (chaos && me.body.chaosImmune) return@forEach
             var rest = slice
             if (me.barrier > 0) { val soaked = min(me.barrier, rest); me.barrier -= soaked; rest -= soaked }
@@ -856,7 +935,7 @@ class Battle(
                 if (amount > 0) {
                     val active = (me.ailments + expired).firstOrNull { it.ailment == ailment }
                     val source = active?.source ?: me.side.other
-                    val type = ruleOf[ailment]?.second
+                    val type = if (active?.chaos == true) DamageType.CHAOS else ruleOf[ailment]?.second
                     record(source, Action.TICK, HitKind.HIT, amount, type, 0.0, false, emptyList(), null,
                         if (me.side == Side.MONSTER) me.index else active?.foe ?: 0)
                 }
@@ -872,16 +951,16 @@ class Battle(
      * One blow of [me] at [target] — a weapon's swing, a skill's hit, a spell: evaded unless a spell,
      * blocked, or landed and maybe critical; then armour, resistance, shock and the lone wolf's share.
      */
-    internal fun strike(me: Fighter, target: Fighter, blow: Blow) {
+    internal fun strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
         val body = blow.body ?: me.body
         val foe = if (me.side == Side.MONSTER) me.index else target.index
-        if (target.invulnerable) { record(me.side, blow.action, HitKind.BLOCKED, 0.0, null, 0.0, false, emptyList(), null, foe, blow.skill); return }
+        if (target.invulnerable) { record(me.side, blow.action, HitKind.BLOCKED, 0.0, null, 0.0, false, emptyList(), null, foe, blow.skill); return false }
         val sure = me === heroFighter && nextCrit
         val kind = when {
-            target.frozen() -> if (sure || random.nextDouble() < body.critChance) HitKind.CRIT else HitKind.HIT
+            target.frozen() -> if (sure || crit(body)) HitKind.CRIT else HitKind.HIT
             !blow.spell && random.nextDouble() < evasion(me, target) -> HitKind.EVADED
             random.nextDouble() < target.body.block -> HitKind.BLOCKED
-            sure || random.nextDouble() < body.critChance -> HitKind.CRIT
+            sure || crit(body) -> HitKind.CRIT
             else -> HitKind.HIT
         }
         if (sure && kind == HitKind.CRIT) nextCrit = false
@@ -893,7 +972,7 @@ class Battle(
                 powers.fire(if (kind == HitKind.EVADED) PowerEvent.EVADE else PowerEvent.BLOCK, PowerMoment(me))
                 if (kind == HitKind.BLOCKED) counter(me)
             }
-            return
+            return false
         }
         // The lone wolf's share rides the blow itself, so the ailments it brings carry it once and no more.
         val lone = when {
@@ -901,19 +980,45 @@ class Battle(
             me.side == Side.HERO -> 1 + rules.loneWolf.dealt / 100
             else -> 1 - rules.loneWolf.taken / 100
         }
-        val multiplier = if (kind == HitKind.CRIT) body.critMultiplier + target.body.critTaken else 1.0
+        // Server 1.32.0: a critical strike no heavier than a hit on one who takes none, and the non-critical ones more or less.
+        val multiplier = if (kind == HitKind.CRIT) max(1.0, body.critMultiplier + target.body.critTaken) else body.nonCritMore
         // Server 0.66.0: a penetrating blow ignores part of the resistance, an ailed target takes more, and
         // "damage taken" of the target scales what got through; server 0.69.0: so does a curse on it.
         val against = body.damageAgainst(target.ailments.map { it.ailment }) * (if (target.cursed) 1 + max(0.0, body["STOCK_DAMAGE_VS_CURSED"]) / 100 else 1.0)
-        val taken = blow.damage.filterValues { it > 0 }.mapValues { (type, base) ->
+        // Server 1.32.0: the element the target resists least is pierced deeper, the one it resists most may hurt it less.
+        val weakest = if (body.lowestResistPenetrate > 0) DamageType.ELEMENTS.minBy { target.body.resistTo(it) } else null
+        val strongest = if (target.body.highestResistElementTaken != 0.0) DamageType.ELEMENTS.maxBy { target.body.resistTo(it) } else null
+        val taken = converted(body, target.body, blow.damage.filterValues { it > 0 }).mapValues { (type, base) ->
             val raw = base * (if (blow.spread) 1 + (random.nextDouble() * 2 - 1) * rules.variance / 100 else 1.0) * multiplier * against * body.damageMore
+            val pierce = body.penetration(type) + if (type == weakest) body.lowestResistPenetrate else 0.0
             when (type) {
                 DamageType.PHYSICAL -> raw * (1 - (target.body.armour / (target.body.armour + rules.armour.factor * raw)).coerceAtMost(target.body.armourCap)) * (1 - target.body.physicalReduction)
-                else -> raw * (1 - target.body.resist(type, body.penetration(type)))
-            }.coerceAtLeast(0.0) * target.weakness() * lone * target.body.damageTaken(type)
+                else -> raw * (1 - target.body.resistTo(type, pierce))
+            }.coerceAtLeast(0.0) * target.weakness() * lone * target.body.damageTaken(type) *
+                (if (type == strongest) max(0.0, 1 + target.body.highestResistElementTaken / 100) else 1.0)
         }
         land(me, target, kind, taken, foe, blow, body)
         if (me.alive && target.body.thorns + target.body.reflect > 0) reflect(target, me, taken, foe)
+        return true
+    }
+
+    /** A critical roll of [body]'s chance; a lucky one (server 1.32.0) gets a second. */
+    private fun crit(body: Combatant): Boolean = random.nextDouble() < body.critChance || body.luckyCrit && random.nextDouble() < body.critChance
+
+    /**
+     * A blow's damage by type as it meets the target (server 1.32.0): the striker's whole hit turned to one random element,
+     * then the target's physical damage taken as elements.
+     */
+    private fun converted(body: Combatant, target: Combatant, damage: Map<DamageType, Double>): Map<DamageType, Double> {
+        var out = damage
+        if (body.randomElementHits && out.isNotEmpty()) out = mapOf(DamageType.ELEMENTS[random.nextInt(DamageType.ELEMENTS.size)] to out.values.sum())
+        val physical = out[DamageType.PHYSICAL] ?: 0.0
+        val shares = target.physicalTakenAs
+        if (physical <= 0 || shares.isEmpty()) return out
+        val moved = out.toMutableMap()
+        moved[DamageType.PHYSICAL] = physical * (1 - shares.values.sum()).coerceAtLeast(0.0)
+        shares.forEach { (type, share) -> moved.merge(type, physical * share, Double::plus) }
+        return moved.filterValues { it > 0 }
     }
 
     /** A block under a riposte (2.78.0): the hero strikes the attacker back with that share of the weapon. */
@@ -946,7 +1051,7 @@ class Battle(
         attacker.life = max(0.0, attacker.life - (shielded - absorbed) - chaos)
         attacker.lastHit = time
         record(me.side, Action.REFLECT, HitKind.HIT, mitigated.values.sum(), mitigated.maxBy { it.value }.key, 0.0, false, emptyList(), null, foe)
-        if (!attacker.alive) fell(attacker)
+        if (!attacker.alive) fell(attacker, killer = me)
     }
 
     /**
@@ -961,11 +1066,14 @@ class Battle(
         val shielded = rest - chaos
         val absorbed = min(target.shield, shielded)
         target.shield -= absorbed
-        target.life = max(0.0, target.life - (shielded - absorbed) - chaos)
+        target.life = max(0.0, target.life - toLife(target, shielded - absorbed + chaos))
         target.lastHit = time
         val physical = taken[DamageType.PHYSICAL] ?: 0.0
-        val healed = (physical * body.leechPhysical + dealt * body.leechAll +
-            (if (kind == HitKind.CRIT) dealt * body.critLeech else 0.0) + (if (blow.weapon) body.lifeOnHit else 0.0)) * body.recoveryRate
+        val leech = (physical * body.leechPhysical + dealt * body.leechAll + (if (kind == HitKind.CRIT) dealt * body.critLeech else 0.0)) * body.recoveryRate
+        val onHit = (if (blow.weapon) body.lifeOnHit else 0.0) * body.recoveryRate
+        // Life leech into the shield (server 1.32.0): what it restores is not life.
+        if (body.leechToShield) me.shield = min(me.body.maxShield, me.shield + leech)
+        val healed = if (body.leechToShield) onHit else leech + onHit
         me.life = min(me.body.maxLife, me.life + healed)
         // Mana (server 0.69.0): leeched and gained on hit; a burning blow takes the struck one's.
         if (me.body.maxMana > 0) me.mana = min(manaCap(me), me.mana + dealt * body.leechMana + if (blow.weapon) body.manaOnHit else 0.0)
@@ -990,6 +1098,9 @@ class Battle(
             // Momentum (3.32.0) grows its standing lines with every hit: the body for the next blow is made again now.
             if (powers.dealt(PowerMoment(target, taken, blow.spell), kind == HitKind.CRIT, stunned, inflicted, blow.primary) && powers.restand()) remake(heroFighter)
         }
+        // The pet's blow (3.33.0, server 1.32.0): the powers answering it hear of its damage and its foe.
+        if (me === allyFighter) powers.fire(PowerEvent.PET_HIT, PowerMoment(target, taken, blow.spell))
+        if (target === allyFighter) petWatch(me)
         if (target === heroFighter) {
             flaskCharge("FLASK_CHARGE_WHEN_HIT")
             trigger(SkillEvent.HIT_TAKEN, me)
@@ -999,7 +1110,24 @@ class Battle(
             if (chance > 0 && me.alive && random.nextDouble() * 100 < chance) curseOf()?.let { curse(it, listOf(me)) }
             watch()
         }
-        if (!target.alive) fell(target, blow.spell)
+        if (!target.alive) fell(target, blow.spell, me)
+    }
+
+    /**
+     * What of [amount] bound for [target]'s life reaches it now (server 1.32.0): mana takes its share first, and the hero's
+     * delayed share runs over the next seconds instead.
+     */
+    private fun toLife(target: Fighter, amount: Double): Double {
+        var rest = amount
+        val share = target.body.manaBeforeLife
+        if (share > 0 && rest > 0) { val paid = min(target.mana, rest * share); target.mana -= paid; rest -= paid }
+        val later = target.body.lifeDelayed
+        if (target === heroFighter && later > 0 && rest > 0) {
+            val seconds = target.body.lifeDelay
+            delayed += Delayed(rest * later / seconds, time + seconds)
+            rest *= 1 - later
+        }
+        return rest
     }
 
     /**
@@ -1035,7 +1163,8 @@ class Battle(
         val amount = (taken[type] ?: 0.0).takeIf { it > 0 } ?: taken.values.sum()
         val duration = rule.duration * target.body.ailmentDuration(ailment) * me.body.ailmentDurationOnFoes(ailment)
         val magnitude = if (ailment.hurts) amount * rule.magnitude / 100 / rule.duration * me.body.ailmentDamage(ailment) else rule.magnitude
-        place(target, ActiveAilment(ailment, time + duration, magnitude, duration, me.side, me.index.coerceAtLeast(0), spell), rule.stacks)
+        place(target, ActiveAilment(ailment, time + duration, magnitude, duration, me.side, me.index.coerceAtLeast(0), spell,
+            chaos = ailment == Ailment.BURNING && me.body.igniteAsChaos), rule.stacks)
         if (target === heroFighter) powers.fire(PowerEvent.AILED, PowerMoment(me, taken, ailment = ailment))
         return ailment
     }
@@ -1054,7 +1183,7 @@ class Battle(
     }
 
     /** A foe down: a kill to report, life and mana on kill and the flasks' charges for the hero (2.78.0), its aura lifted, and a focus on it let go. */
-    private fun fell(fighter: Fighter, spell: Boolean = false) {
+    private fun fell(fighter: Fighter, spell: Boolean = false, killer: Fighter? = null) {
         if (fighter.side != Side.MONSTER || fighter.index in fallenOrder) return
         val ailing = fighter.ailments.toList()
         fighter.ailments.clear()
@@ -1079,6 +1208,7 @@ class Battle(
         trigger(SkillEvent.KILL)
         if (spell) trigger(SkillEvent.SPELL_KILL)
         powers.killed(PowerMoment(fighter, spell = spell, ailments = ailing))
+        if (killer != null && killer === allyFighter) powers.fire(PowerEvent.PET_KILL, PowerMoment(fighter, spell = spell, ailments = ailing))
     }
 
     // ==================== Skills, flasks and answers (2.78.0) ====================
@@ -1149,9 +1279,15 @@ class Battle(
     private fun perform(kitSkill: KitSkill, level: Int) {
         val hero = heroFighter
         val skill = kitSkill.skill
-        skill.hit?.let { heroHit(it, level, skill.code, skill.spell, skill.type == SkillType.ATTACK) }
+        // Charges (3.33.0, server 1.32.0): a spender takes every charge of its kind as it is used, and its blow grows by each.
+        val charged = skill.charges
+        val spent = if (charged?.consume == true) consumeCharges(charged.kind) else 0
+        val bonus = 1 + (charged?.perCharge?.at(level) ?: 0.0) * spent / 100
+        val landed = skill.hit?.let { heroHit(it, level, skill.code, skill.spell, skill.type == SkillType.ATTACK, bonus = bonus) } ?: false
         skill.dot?.let { heroDot(it, level, skill.code, skill.spell) }
         skill.curse?.let { curse(kitSkill, targets(it.targets, spell = true), level) }
+        // A generator gives its charges once its blow lands on a foe — or, with no blow, a warcry's, on use.
+        charged?.gain?.let { gain -> if (skill.hit == null || landed) gainCharges(charged.kind, gain.at(level).roundToInt()) }
         if (skill.hit != null || skill.dot != null || skill.curse != null) return
         val warcry = skill.type == SkillType.WARCRY
         skill.buff?.let { buff ->
@@ -1168,7 +1304,7 @@ class Battle(
     }
 
     /** A class skill's blow at its targets — a passive's answer at [only] — each struck [SkillHit.hits] times. */
-    private fun heroHit(hit: SkillHit, level: Int, code: String, spell: Boolean, attack: Boolean, only: Fighter? = null) {
+    private fun heroHit(hit: SkillHit, level: Int, code: String, spell: Boolean, attack: Boolean, only: Fighter? = null, bonus: Double = 1.0): Boolean {
         val hero = heroFighter
         val own = hit.stats.lines(level)
         val body = if (own.isEmpty()) hero.body else heroBody(own)
@@ -1177,15 +1313,17 @@ class Battle(
         val element = hit.element?.let { if (it == RANDOM) DamageType.ELEMENTS.random(random) else DamageType.element(it) }
         val lines = hero.effects.flatMap { it.lines } + own
         val primary = struck.firstOrNull()
+        var landed = false
         struck.forEach { target ->
             repeat(hit.hits.coerceAtLeast(1)) {
                 if (!target.alive || !hero.alive || outcome != null) return@repeat
-                val damage = heroDamage(hit, level, body, target, element, lines)
+                val damage = heroDamage(hit, level, body, target, element, lines).let { own -> if (bonus == 1.0) own else own.mapValues { it.value * bonus } }
                 val leading = damage.maxByOrNull { it.value }?.key ?: DamageType.PHYSICAL
-                strike(hero, target, Blow(damage, Action.SKILL, spell, code, body, spread = hit.spell == null, stun = hit.stun?.at(level) ?: 0.0,
-                    ailments = hit.ailments.mapNotNull { resolve(it, element ?: leading, level) }, primary = target === primary))
+                if (strike(hero, target, Blow(damage, Action.SKILL, spell, code, body, spread = hit.spell == null, stun = hit.stun?.at(level) ?: 0.0,
+                    ailments = hit.ailments.mapNotNull { resolve(it, element ?: leading, level) }, primary = target === primary))) landed = true
             }
         }
+        return landed
     }
 
     /**
@@ -1237,7 +1375,8 @@ class Battle(
             val inflicted = mutableListOf<Ailment>()
             if (mitigated > 0 && !target.body.immune(ailment)) {
                 val duration = dot.duration * hero.body.ailmentDurationOnFoes(ailment)
-                place(target, ActiveAilment(ailment, time + duration, mitigated / duration * hero.body.ailmentDamage(ailment), duration, Side.HERO, 0, spell), stacks = true)
+                place(target, ActiveAilment(ailment, time + duration, mitigated / duration * hero.body.ailmentDamage(ailment), duration, Side.HERO, 0, spell,
+                    chaos = ailment == Ailment.BURNING && hero.body.igniteAsChaos), stacks = true)
                 inflicted += ailment
             }
             dot.ailments.mapNotNull { resolve(it, type, level) }.filter { it.first != ailment }.forEach { (other, chance) ->
@@ -1367,11 +1506,12 @@ class Battle(
         }
     }
 
-    private fun drink(slot: Int, flask: Flask) {
+    private fun drink(slot: Int, flask: Flask, free: Boolean = false) {
         val hero = heroFighter
-        val keep = flask.own("FLASK_NO_CHARGE_CHANCE").let { it > 0 && random.nextDouble() * 100 < it }
+        val keep = !free && flask.own("FLASK_NO_CHARGE_CHANCE").let { it > 0 && random.nextDouble() * 100 < it }
         val draught = flask.draught(hero.body, hero.life, manaCap())
         charges[slot] = when {
+            free -> charges[slot]
             flask.usesAll -> 0.0
             keep -> charges[slot]
             else -> (charges[slot] - flask.perUse(hero.body)).coerceAtLeast(0.0)
@@ -1462,6 +1602,35 @@ class Battle(
     /** [amount] charges to every flask of the belt, up to each one's maximum. */
     internal fun chargeFlasks(amount: Double) = kit.flasks.forEachIndexed { i, flask -> flask?.let { charges[i] = min(it.maxCharges, charges[i] + amount) } }
 
+    /** [amount] charges of [kind] for the hero (3.33.0): the body is made again with them. */
+    internal fun gainCharges(kind: ChargeKind, amount: Int) {
+        if (heroCharges.gain(kind, amount, time, heroFighter.body.stats, random)) remake(heroFighter)
+    }
+
+    /** Every charge of [kind] taken (3.33.0); how many there were. */
+    internal fun consumeCharges(kind: ChargeKind): Int = heroCharges.consume(kind).also { if (it > 0) remake(heroFighter) }
+
+    /** The pet's maximum life (3.33.0), zero without one. */
+    internal fun petLife(): Double = allyFighter?.body?.maxLife ?: 0.0
+
+    /** [share] percent of the pet's life back while it stands (3.33.0). */
+    internal fun healPet(share: Double) {
+        val pet = allyFighter?.takeIf { it.alive } ?: return
+        pet.life = min(pet.body.maxLife, pet.life + pet.body.maxLife * share / 100)
+    }
+
+    /**
+     * [ailment] on the hero by their own power for [duration] seconds (3.33.0, server 1.32.0): a damage over time burns
+     * [SELF_BURN] of their life a second, the rest are the rule's magnitude.
+     */
+    internal fun afflictSelf(ailment: Ailment, duration: Double) {
+        val hero = heroFighter
+        val (rule, _) = ruleOf[ailment] ?: return
+        if (duration <= 0 || hero.body.immune(ailment)) return
+        val magnitude = if (ailment.hurts) hero.body.maxLife * SELF_BURN else rule.magnitude
+        place(hero, ActiveAilment(ailment, time + duration, magnitude, duration, Side.MONSTER), rule.stacks)
+    }
+
     /** A foe finished off by a power: down at once, a kill as any other. */
     internal fun slay(foe: Fighter) {
         if (!foe.alive) return
@@ -1522,5 +1691,7 @@ class Battle(
         /** Quick preparation (3.13.0): shortens how much of a skill's cooldown still runs as a fight opens. */
         private const val PREPARATION = "STOCK_SKILL_PREPARATION"
         private const val ELEMENT = "ELEMENT"
+        /** The share of the hero's life a self-inflicted burning takes a second (server 1.32.0). */
+        private const val SELF_BURN = 0.01
     }
 }

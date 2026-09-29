@@ -9,6 +9,7 @@ import com.sperance.exileforge.rules.content.Scale
 import com.sperance.exileforge.rules.content.SkillAilment
 import com.sperance.exileforge.rules.content.SkillBarrier
 import com.sperance.exileforge.rules.content.SkillBuff
+import com.sperance.exileforge.rules.content.SkillCharges
 import com.sperance.exileforge.rules.content.SkillDefinition
 import com.sperance.exileforge.rules.content.SkillHeal
 import com.sperance.exileforge.rules.content.SkillHit
@@ -17,6 +18,7 @@ import com.sperance.exileforge.rules.content.SkillStat
 import com.sperance.exileforge.rules.content.SkillTrigger
 import com.sperance.exileforge.rules.content.SlotCondition
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 /**
  * A skill in the player's words (2.78.0, server 0.69.0). The server names a skill and nothing more; what it
@@ -48,6 +50,14 @@ object SkillText {
             addAll(stats(skill.stats, level))
         }
         skill.trigger?.let { addAll(trigger(it, level)) }
+        skill.charges?.let { addAll(charges(it, level)) }
+    }
+
+    /** What a skill does with the hero's charges (3.33.0, server 1.32.0): gives some of a kind, or spends all for a heavier blow. */
+    private fun charges(charges: SkillCharges, level: Int): List<String> = buildList {
+        val kind = ui("fight.charge.${charges.kind.name}")
+        charges.gain?.let { add(ui("skill.line.charge_gain", it.at(level).roundToInt(), kind)) }
+        if (charges.consume) add(ui("skill.line.charge_consume", kind, number(charges.perCharge?.at(level) ?: 0.0)))
     }
 
     /**

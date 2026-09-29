@@ -91,6 +91,8 @@ data class FightHud(
     val skills: List<SkillView?> = emptyList(),
     val flasks: List<FlaskView?> = emptyList(),
     val heroEffects: List<EffectView> = emptyList(),
+    /** The hero's frenzy, power and endurance charges (3.33.0), a counter per kind held. */
+    val heroCharges: List<ChargeView> = emptyList(),
     val heroBarrier: Int = 0,
     /** The level the foes stand at: a depth of the Abyss stands deeper than its zone. */
     val level: Int = 0,
@@ -330,14 +332,25 @@ class ExpeditionRun(
     private val vaaled = HashMap<Int, Crystal>()
     private var fallEvent: Int? = null
     private val desecration = index.campaign.desecration
-    /** The pet as a fighter: its sheet at its level, what its role does; a new one each fight stands up whole. */
-    private val ally: Ally? by lazy {
-        pet?.let { p ->
-            val pets = Menagerie(index)
-            val kind = pets.species(p.species) ?: return@let null
-            Ally(p.species, Combatant(pets.sheet(p), p.level, rules), kind.role == PetRole.TANK,
-                if (kind.role == PetRole.SUPPORT) pets.supportHeal(p) else 0.0, index.pets.drawFire)
+    /**
+     * The pet as a fighter: its sheet at its level, what its role does; a new one each fight stands up whole. Since 3.33.0
+     * (server 1.32.0) the hero's sheet reaches it — its levels, damage, life, speed, armour and resistances — made again
+     * only when those change.
+     */
+    private var allyMade: Pair<Map<String, Double>, Ally?>? = null
+    private val menagerie by lazy { Menagerie(index) }
+    private fun ally(): Ally? {
+        val boons = PetBoons.of(hero.stats)
+        allyMade?.takeIf { it.first == boons }?.let { return it.second }
+        val made = pet?.let { own ->
+            val kind = menagerie.species(own.species) ?: return@let null
+            val levels = (boons[PetBoons.LEVEL] ?: 0.0).toInt()
+            val p = if (levels != 0) own.copy(level = (own.level + levels).coerceAtLeast(1)) else own
+            Ally(p.species, Combatant(PetBoons.apply(menagerie.sheet(p), boons), p.level, rules), kind.role == PetRole.TANK,
+                if (kind.role == PetRole.SUPPORT) menagerie.supportHeal(p) else 0.0, index.pets.drawFire)
         }
+        allyMade = boons to made
+        return made
     }
     /** The patch whose lines are on the hero: the one underfoot, or the last one stepped off within its trail. */
     private var desecratedBy: Desecrated? = null
@@ -783,7 +796,7 @@ class ExpeditionRun(
         val monster = member.monster
         Foe(Combatant(monster.stats, fightLevel, rules), monster.ranged, monster.rarity, monster.skills.mapNotNull(this.index.skills.monsterByCode::get))
     }, rules, life, Random(Streams.mix(seed, FIGHT_STREAM, fightStream)), stance, kit = kit, model = build, pools = pools,
-        percent = build.gear.percent, ally = ally, stage = stageCarry)
+        percent = build.gear.percent, ally = ally(), stage = stageCarry)
 
     /** The fight is over, whichever way: nothing of it is held any longer. */
     private fun endFight() {
@@ -990,7 +1003,7 @@ class ExpeditionRun(
             target = battle.target()?.index, focus = battle.focus,
             loneWolf = rules.loneWolf.takeIf { battle.loneWolf }, heroTaunt = hero.taunt,
             heroMana = h.mana.roundToInt(), heroMaxMana = battle.manaCap().roundToInt(),
-            skills = battle.skillViews(), flasks = battle.flaskViews(), heroEffects = battle.effects(h),
+            skills = battle.skillViews(), flasks = battle.flaskViews(), heroEffects = battle.effects(h), heroCharges = battle.chargeViews(),
             heroBarrier = h.barrier.roundToInt(),
             level = fightLevel, escape = !abyssFight,
             stage = stage, stages = fightAgents.size, interlude = interlude,

@@ -263,7 +263,7 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         val hero = s.hero ?: return null
         val conditions = hero.skills.flasks
         val flasks = Slot.FLASKS.mapIndexed { i, slot -> hero.equipped[slot]?.let { item -> index.template(item.template)?.let { Flask.of(item, it, index, conditions.getOrNull(i)) } } }
-        return HeroGear(hero.stats, hero.level, hero.sheet.model, stance(), Loadout.of(hero.skills, index.skills, hero.heroClass, flasks, index.powers), index.stats.percent)
+        return HeroGear(hero.stats, hero.level, hero.sheet.model, stance(), Loadout.of(hero.skills, index.skills, hero.heroClass, flasks, index.powers, index.rules.charges), index.stats.percent)
     } }
 
     fun send(command: RunCommand) { mutableRun.value?.send(command) }

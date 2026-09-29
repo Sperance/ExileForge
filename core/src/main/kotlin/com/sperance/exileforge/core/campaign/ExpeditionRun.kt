@@ -382,8 +382,13 @@ class ExpeditionRun(
     /** What the stages already won leave to the one report: every foe's log, and the seconds they took. */
     private var stageHits: List<PackHit> = emptyList()
     private var stageTime = 0.0
-    /** What the stage won last hands the one under way (3.32.0): its STAGE_CLEAR powers and the momentum; null for a first stage. */
-    private var stageCarry: StageCarry? = null
+    /**
+     * What the stage won last hands the one under way (3.32.0): its STAGE_CLEAR powers and the momentum; null for a first stage.
+     * Held by the journal (3.32.1), so a run entered again after a restart mid-fight hands it to its next fight.
+     */
+    private var stageCarry: StageCarry?
+        get() = journal.carry
+        set(value) { journal.carry = value }
     /** The strongest of every stage: it stands for the whole fight in the report. */
     private var fightStrongest: RolledMonster? = null
     /** The dice stream of the stage's battle: a draught in the pause builds the battle again on the same dice. */
@@ -747,7 +752,8 @@ class ExpeditionRun(
         fightStrongest = fightAgents.flatMap { pack -> pack.standing.map { pack.pack[it] } }.maxByOrNull { it.rarity.ordinal }
         stageHits = emptyList()
         stageTime = 0.0
-        stageCarry = carry
+        // Every fight's end drops the carry: one still held here is the journal's, kept over a restart mid-fight.
+        stageCarry = carry ?: stageCarry
         fightAgent = agent
         abyssFight = abyssal
         fightLevel = level

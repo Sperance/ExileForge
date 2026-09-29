@@ -8,6 +8,7 @@ import com.sperance.exileforge.core.campaign.HeroStance
 import com.sperance.exileforge.core.campaign.Loadout
 import com.sperance.exileforge.core.campaign.RunCommand
 import com.sperance.exileforge.core.campaign.RunJournal
+import com.sperance.exileforge.core.campaign.StageCarry
 import com.sperance.exileforge.core.campaign.VaalZones
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.campaign.RunReport
@@ -95,6 +96,8 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         autoPlan = auto
         task(writing = true, touches = setOf(Reads.HERO)) {
             val id = heroId
+            // The stage carry of a fight cut short by a restart goes on in the same run entered again.
+            val kept = runJournal?.let { it.runId to it.carry }
             // A journal the server has not taken yet is not dropped for a new run: its kills are the hero's.
             runJournal?.let { j ->
                 flush()
@@ -108,11 +111,11 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
                 return@task
             }
             if (state.value.play.heroReadAt == 0L) heroViewModel.readHero()
-            begin(id, started)
+            begin(id, started, kept?.takeIf { it.first == started.id }?.second)
         }
     } }
 
-    private fun begin(id: String, started: RunStart) { with(runtime) {
+    private fun begin(id: String, started: RunStart, carry: StageCarry? = null) { with(runtime) {
         val s = state.value
         val index = s.index ?: return
         val hero = s.hero?.takeIf { it.id == id } ?: return
@@ -120,7 +123,8 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         val gear = gear() ?: return
         // Entered again, the run goes on (server 1.1.0): its numbers and its dead so far.
         val run = Run(index, zone, started.seed, started.context)
-        val journal = RunJournal(started.id, id, zone.code, applied = started.applied, base = started.applied).also { runJournal = it }
+        val journal = RunJournal(started.id, id, zone.code, applied = started.applied, base = started.applied, carry = carry).also { runJournal = it }
+        journal.onCarry = ::persist
         mutable.update { it.copy(play = it.play.copy(runLoot = emptyList(), launch = null, runPending = 0, runRejected = 0)) }
         mutableRun.value = ExpeditionRun.start(index, zone, run, journal, gear, hero.campaign, System.currentTimeMillis(), hero.info.experience, hero.level,
             vaalOrbs = ::vaalOrbsFree, onRecorded = ::recorded,
@@ -237,8 +241,10 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     suspend fun resume(id: String) { with(runtime) {
         val kept = store.journal(id)?.let(RunJournal::decode) ?: return
         val open = state.value.hero?.takeIf { it.id == id }?.campaign?.run
-        if (open?.id != kept.runId || kept.settled) { store.clearJournal(id); return }
+        // A settled journal still holding a stage carry stays: the run entered again takes it up.
+        if (open?.id != kept.runId || kept.settled && kept.carry == null) { store.clearJournal(id); return }
         runJournal = kept
+        kept.onCarry = ::persist
         mutable.update { it.copy(play = it.play.copy(runPending = kept.pending.size, runRejected = kept.rejected.size)) }
         flush()
     } }

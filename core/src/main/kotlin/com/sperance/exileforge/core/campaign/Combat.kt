@@ -399,6 +399,8 @@ internal class Blow(
     val spread: Boolean = true,
     val stun: Double = 0.0,
     val ailments: List<Pair<Ailment, Double>> = emptyList(),
+    /** Whether [Battle.strike]'s target is the blow's primary one: an area skill's other foes neither build nor break momentum. */
+    val primary: Boolean = true,
 ) {
     /** A weapon's blow: attacks, not spells, bring life on hit. */
     val weapon: Boolean get() = !spell && (action == Action.ATTACK || action == Action.SKILL)
@@ -986,7 +988,7 @@ class Battle(
                 if (blow.spell) trigger(SkillEvent.SPELL_CRIT, target, taken = taken)
             }
             // Momentum (3.32.0) grows its standing lines with every hit: the body for the next blow is made again now.
-            if (powers.dealt(PowerMoment(target, taken, blow.spell), kind == HitKind.CRIT, stunned, inflicted) && powers.restand()) remake(heroFighter)
+            if (powers.dealt(PowerMoment(target, taken, blow.spell), kind == HitKind.CRIT, stunned, inflicted, blow.primary) && powers.restand()) remake(heroFighter)
         }
         if (target === heroFighter) {
             flaskCharge("FLASK_CHARGE_WHEN_HIT")
@@ -1174,13 +1176,14 @@ class Battle(
         val struck = only?.let { listOf(it) } ?: targets(if (hit.targets <= 0) 0 else hit.targets + more, spell)
         val element = hit.element?.let { if (it == RANDOM) DamageType.ELEMENTS.random(random) else DamageType.element(it) }
         val lines = hero.effects.flatMap { it.lines } + own
+        val primary = struck.firstOrNull()
         struck.forEach { target ->
             repeat(hit.hits.coerceAtLeast(1)) {
                 if (!target.alive || !hero.alive || outcome != null) return@repeat
                 val damage = heroDamage(hit, level, body, target, element, lines)
                 val leading = damage.maxByOrNull { it.value }?.key ?: DamageType.PHYSICAL
                 strike(hero, target, Blow(damage, Action.SKILL, spell, code, body, spread = hit.spell == null, stun = hit.stun?.at(level) ?: 0.0,
-                    ailments = hit.ailments.mapNotNull { resolve(it, element ?: leading, level) }))
+                    ailments = hit.ailments.mapNotNull { resolve(it, element ?: leading, level) }, primary = target === primary))
             }
         }
     }

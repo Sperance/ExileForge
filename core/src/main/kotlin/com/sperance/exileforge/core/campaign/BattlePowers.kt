@@ -35,7 +35,7 @@ internal class PowerMoment(
  * What a won stage of a staged fight hands the next one (3.32.0, server 1.31.0): the stage was cleared — the next
  * battle answers [PowerEvent.STAGE_CLEAR] before its [PowerEvent.FIGHT_START] — and the [momentum] the hero built.
  */
-data class StageCarry(val momentum: Int = 0)
+@kotlinx.serialization.Serializable data class StageCarry(val momentum: Int = 0)
 
 /** A hit to strike again (3.32.0): its foe, the damage, at [at]; dropped if the foe or the fight is gone by then. */
 private class Echo(val at: Double, val foe: Battle.Fighter, val damage: Map<DamageType, Double>, val spell: Boolean, val skill: String)
@@ -97,9 +97,12 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
         }
     }
 
-    /** The hero's hit landed; whether it moved a standing line's momentum, so the body must be made again. */
-    fun dealt(moment: PowerMoment, crit: Boolean, stunned: Boolean, inflicted: List<Ailment>): Boolean {
-        val moved = !busy && moment.target != null
+    /**
+     * The hero's hit landed; whether it moved a standing line's momentum, so the body must be made again.
+     * Only a [primary] target counts: an area blow's other foes leave the streak as it was.
+     */
+    fun dealt(moment: PowerMoment, crit: Boolean, stunned: Boolean, inflicted: List<Ailment>, primary: Boolean = true): Boolean {
+        val moved = !busy && primary && moment.target != null
         if (moved) build(moment.target!!)
         fire(PowerEvent.HIT, moment)
         if (crit) fire(PowerEvent.CRIT, moment)

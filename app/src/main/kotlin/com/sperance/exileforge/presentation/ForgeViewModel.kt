@@ -110,6 +110,7 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     fun playOnThisDevice() = runtime.sessionViewModel.playOnThisDevice()
     fun retryResume() = runtime.sessionViewModel.retryResume()
     fun reconnect() = runtime.sessionViewModel.reconnect()
+    fun away() = runtime.sessionViewModel.away()
     fun enterCharacter(id: String) = runtime.characterViewModel.enter(id)
     fun leaveGame() = runtime.characterViewModel.leaveGame()
     fun createCharacter(name: String, heroClass: String) = runtime.characterViewModel.create(name, heroClass)
@@ -131,6 +132,7 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     fun loadGuild() = runtime.guildViewModel.load()
     fun guildTab(tab: GuildTab) = runtime.guildViewModel.tab(tab)
     fun guildQuery(text: String) = runtime.guildViewModel.query(text)
+    fun guildFaction(code: String) = runtime.guildViewModel.filterFaction(code)
     fun searchGuilds(page: Int = 0) = runtime.guildViewModel.search(page)
     fun createGuild(name: String, tag: String, faction: String, emblem: String, color: String, mode: GuildMode, minLevel: Int) =
         runtime.guildViewModel.create(name, tag, faction, emblem, color, mode, minLevel)

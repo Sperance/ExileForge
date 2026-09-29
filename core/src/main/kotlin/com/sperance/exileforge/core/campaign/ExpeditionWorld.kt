@@ -539,18 +539,20 @@ class ExpeditionWorld(
         listOf(-radius to -radius, radius to -radius, -radius to radius, radius to radius)
             .all { (ox, oy) -> map.walkable(floor(x + ox).toInt(), floor(y + oy).toInt()) }
 
-    /** The hero stepped back from a fight nobody won: the monster lets them go for a while, and goes home. */
     /**
      * The packs a fight with [agent] draws in (3.26.0): it and every ordinary pack still standing within
-     * [GATHER_RADIUS] of it. The boss, a crystal's guardian and anything not of the map fight alone.
+     * [GATHER_RADIUS] of it — since 3.28.0 in the order they are fought, [agent] first, then the rest nearest first.
+     * The boss, a crystal's guardian and anything not of the map fight alone.
      */
     fun gathered(agent: MonsterAgent): List<MonsterAgent> {
         if (agent === boss || agent.crystal != null || agents.none { it === agent }) return listOf(agent)
+        fun distance(other: MonsterAgent) = hypot(other.x - agent.x, other.y - agent.y)
         return listOf(agent) + agents.filter {
-            it !== agent && it !== boss && it.alive && it.crystal == null && it.standing.isNotEmpty() && hypot(it.x - agent.x, it.y - agent.y) <= GATHER_RADIUS
-        }
+            it !== agent && it !== boss && it.alive && it.crystal == null && it.standing.isNotEmpty() && distance(it) <= GATHER_RADIUS
+        }.sortedBy(::distance)
     }
 
+    /** The hero stepped back from a fight nobody won: the monster lets them go for a while, and goes home. */
     fun retreatFrom(agent: MonsterAgent) {
         agent.calm = CALM_AFTER_RETREAT
         agent.mode = AgentMode.RETURNING

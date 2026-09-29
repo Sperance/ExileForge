@@ -229,7 +229,7 @@ fun stateTitle(state: String, lang: Lang = uiLanguage): String = uiOr(lang, "sta
 fun rangeText(def: ModifierDef, tier: Tier): String? = tier.values.mapIndexedNotNull { index, range ->
     val (low, high) = range.takeIf { it.size == 2 } ?: return@mapIndexedNotNull null
     val stat = def.effects.getOrNull(index)?.stat.orEmpty()
-    val from = rollNumber(stat, low); val to = rollNumber(stat, high)
+    val from = statNumber(stat, low); val to = statNumber(stat, high)
     if (from == to) from else "$from–$to"
 }.joinToString(" / ").ifBlank { null }
 
@@ -238,7 +238,7 @@ fun recipeText(index: ContentIndex, recipe: BenchRecipe): String {
     val def = index.modifier(recipe.modifier)
     val ranges = recipe.values.filter { it.size == 2 }.mapIndexed { i, (min, max) ->
         val stat = def?.effects?.getOrNull(i)?.stat.orEmpty()
-        val low = rollNumber(stat, min); val high = rollNumber(stat, max)
+        val low = statNumber(stat, min); val high = statNumber(stat, max)
         if (low == high) low else "($low–$high)"
     }
     val template = def?.let { modifierText(index).template(it) } ?: return ranges.joinToString(" · ").ifBlank { displayName(recipe.modifier) }

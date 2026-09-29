@@ -2,6 +2,7 @@ package com.sperance.exileforge.ui.screens.guild
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -24,6 +25,7 @@ import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.Reads
 import com.sperance.exileforge.rules.content.GuildMode
+import com.sperance.exileforge.rules.content.GuildRules
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
@@ -80,6 +82,7 @@ import com.sperance.exileforge.ui.theme.*
                 }
             }
             item { SearchField(s, vm) }
+            s.index?.guilds?.takeIf { it.factions.isNotEmpty() }?.let { rules -> item { FactionFilter(s.guild.faction, rules, !s.busy, vm::guildFaction) } }
             val page = s.guild.search
             if (page.items.isEmpty() && Reads.GUILD_SEARCH !in s.loading) item { InfoCard(ui("guild.none_found"), ui("guild.none_found_hint")) }
             items(page.items, key = { it.id }) { card -> GuildCardRow(s, card, blocked = joinBlock(s, card, waiting != null)) { vm.joinGuild(card) } }
@@ -104,6 +107,18 @@ import com.sperance.exileforge.ui.theme.*
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { vm.searchGuilds(0) }),
         trailingIcon = { ForgeTextButton(onClick = { vm.searchGuilds(0) }) { Text(ui("guild.find")) } },
         modifier = Modifier.fillMaxWidth())
+}
+
+/** The list's faction chips (3.28.0): all, then each faction under its sign and name in its colour. */
+@Composable private fun FactionFilter(chosen: String, rules: GuildRules, enabled: Boolean, onChoose: (String) -> Unit) {
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        item { FilterChip(selected = chosen.isBlank(), enabled = enabled, onClick = { onChoose("") }, label = { Text(ui("common.all")) }) }
+        items(rules.factions, key = { it.code }) { faction ->
+            FilterChip(selected = chosen == faction.code, enabled = enabled, onClick = { onChoose(faction.code) },
+                leadingIcon = { FactionIcon(faction.code, rules, Modifier.size(18.dp)) },
+                label = { Text(GuildText.faction(faction.code), color = factionColor(faction)) })
+        }
+    }
 }
 
 /** Why this hero cannot get into [card] now, or null when the button may be pressed. */

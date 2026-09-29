@@ -94,7 +94,6 @@ class QuestViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         val parts = listOfNotNull(
             rewards.sumOf { it.gold }.takeIf { it > 0 }?.let { ui("quest.toast.gold", number(it.toDouble())) },
             rewards.sumOf { it.experience }.takeIf { it > 0 }?.let { ui("quest.toast.experience", number(it)) },
-            rewards.sumOf { it.marks }.takeIf { it > 0 }?.let { ui("quest.toast.marks", number(it.toDouble())) },
         ) + orbs.map { (code, amount) -> ui("quest.toast.orb", itemTitle(code), amount) }
         return ui("quest.toast.claimed_all", claimed.size, named) + parts.joinToString(" · ").takeIf { it.isNotBlank() }?.let { "\n$it" }.orEmpty()
     }

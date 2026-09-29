@@ -25,8 +25,12 @@ class MainActivity : ComponentActivity() {
         viewModel.reconnect()
     }
 
-    /** Leaving the foreground sends the run's journal at once: a process killed in the background must not take it along. */
+    /**
+     * Leaving the foreground sends the run's journal at once: a process killed in the background must not take it along.
+     * The moment is noted, so a long absence refreshes the screen on return.
+     */
     override fun onStop() {
+        viewModel.away()
         viewModel.flushRun()
         super.onStop()
     }

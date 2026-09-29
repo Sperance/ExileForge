@@ -207,6 +207,8 @@ enum class GuildTab { MEMBERS, QUESTS, APPLICATIONS, CONTRIBUTE, LOG, CHAT, SETT
 data class GuildState(
     val mine: GuildMine? = null,
     val query: String = "", val search: GuildPage = GuildPage(),
+    /** The faction the list is narrowed to (3.28.0), blank for all. */
+    val faction: String = "",
     val tab: GuildTab = GuildTab.MEMBERS,
     val log: List<GuildLogEntry> = emptyList(), val logPage: Int = 0, val logEnd: Boolean = false,
     val chat: List<GuildMessage> = emptyList(),

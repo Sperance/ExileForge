@@ -80,25 +80,37 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         if (saved == null) mutable.update { it.copy(account = it.account.copy(resumable = false)) } else resume(saved)
     } } }
 
+    /** When the app left the foreground, by the monotonic clock; null while it is in front. */
+    @Volatile private var awaySince: Long? = null
+
+    /** Leaving the foreground (3.28.0): the moment is kept, so the return knows how long the screen stood still. */
+    fun away() { awaySince = System.nanoTime() }
+
     /**
      * Back in the foreground — from the background or a locked screen: the dead sockets go, and what the
-     * last try could not reach is asked again — the kept session, or the screen the player is on.
+     * last try could not reach is asked again — the kept session, or the screen the player is on. Since 3.28.0 a
+     * return after more than [STALE_AWAY_MS] re-reads the screen quietly even without a failure: the session is
+     * checked by that very read, and the screen shows what happened while the app was away.
      */
-    fun reconnect() { with(runtime) { scope.launch {
-        withContext(Dispatchers.IO) { ForgeHttp.dropIdleConnections() }
-        val now = state.value
-        when {
-            !now.account.signedIn -> if (now.account.resumable) retryResume()
-            now.failure == FailureState.Offline -> {
-                mutable.update { it.copy(failure = null, message = null, error = false) }
-                when (now.phase) {
-                    AppPhase.GAME -> read(Reads.HERO, silent = true) { heroViewModel.readHero() }
-                    AppPhase.CHARACTERS -> characterViewModel.refresh()
-                    AppPhase.AUTH -> Unit
+    fun reconnect() { with(runtime) {
+        val stale = awaySince?.let { (System.nanoTime() - it) / 1_000_000 > STALE_AWAY_MS } == true
+        awaySince = null
+        scope.launch {
+            withContext(Dispatchers.IO) { ForgeHttp.dropIdleConnections() }
+            val now = state.value
+            when {
+                !now.account.signedIn -> if (now.account.resumable) retryResume()
+                now.failure == FailureState.Offline || stale -> {
+                    if (now.failure == FailureState.Offline) mutable.update { it.copy(failure = null, message = null, error = false) }
+                    when (now.phase) {
+                        AppPhase.GAME -> read(Reads.HERO, silent = true) { heroViewModel.readHero() }
+                        AppPhase.CHARACTERS -> read(Reads.CHARACTERS, silent = true) { characterViewModel.readCharacters() }
+                        AppPhase.AUTH -> Unit
+                    }
                 }
             }
         }
-    } } }
+    } }
 
     /** What every sign-in ends with: the account is the session, and the gate opens one step — the hero menu. */
     private suspend fun signedIn(profile: UserProfile, byDevice: Boolean) { with(runtime) {
@@ -131,4 +143,9 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         require(current.isNotEmpty() && replacement.isNotEmpty()) { ui("api.credentials") }
         api.changePassword(current, replacement)
     } } }
+
+    private companion object {
+        /** How long away makes the screen stale enough to read again on return. */
+        const val STALE_AWAY_MS = 30_000L
+    }
 }

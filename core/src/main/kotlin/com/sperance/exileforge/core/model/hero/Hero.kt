@@ -40,8 +40,6 @@ import kotlinx.serialization.Serializable
     val counters: Map<String, Long> = emptyMap(),
     /** The title worn beside the name, or blank. */
     val title: String = "",
-    /** Guild marks earned by giving (3.22.0, server 1.20.0): they stay when the hero leaves; the shop that takes them comes later. */
-    val guildMarks: Long = 0,
 )
 
 /** The stash's places as the server counts them after a command: used, held, the ceiling, the next pack's price (0 at the ceiling), the overflow. */

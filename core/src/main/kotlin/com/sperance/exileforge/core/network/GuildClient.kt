@@ -27,9 +27,11 @@ enum class MemberCommand(val path: String) { KICK("kick"), PROMOTE("promote"), D
 class GuildClient internal constructor(private val http: Transport) {
     suspend fun mine(heroId: String): GuildMine = http.get("$GUILD/mine", heroQuery(heroId))
 
-    suspend fun search(heroId: String, text: String, page: Int): GuildPage {
+    /** The guilds by name or tag; a blank [faction] lists every faction's, a code only that faction's (3.28.0, server 1.26.0). */
+    suspend fun search(heroId: String, text: String, page: Int, faction: String = ""): GuildPage {
         requirePage(page)
-        return http.get("$GUILD/search", heroQuery(heroId, "text" to text.trim().takeIf { it.isNotEmpty() }, "page" to page.toString()))
+        return http.get("$GUILD/search", heroQuery(heroId, "text" to text.trim().takeIf { it.isNotEmpty() },
+            "faction" to faction.takeIf { it.isNotBlank() }, "page" to page.toString()))
     }
 
     suspend fun create(heroId: String, name: String, tag: String, faction: String, emblem: String, color: String, mode: GuildMode, minLevel: Int): GuildMine {

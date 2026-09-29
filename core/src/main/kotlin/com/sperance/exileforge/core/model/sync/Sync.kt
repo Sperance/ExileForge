@@ -23,7 +23,7 @@ import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.JsonElement
 
 /** The API revision this client is written against (server 1.5.0: the menagerie — the `pets` part and `hero/pets` commands). */
-const val API_REVISION = 18
+const val API_REVISION = 19
 
 /** `static/index.json` → `content`: the fingerprint of the whole world and of each of its chunks, by file name. */
 @Serializable data class ContentManifest(val hash: String = "", val chunks: Map<String, String> = emptyMap())

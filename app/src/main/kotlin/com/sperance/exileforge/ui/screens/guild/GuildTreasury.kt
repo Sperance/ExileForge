@@ -74,7 +74,6 @@ import com.sperance.exileforge.ui.theme.*
         PropertyRow(ui("guild.rank"), GuildText.rank(me.rank), Glyph.RARITY)
         PropertyRow(ui("guild.contribution_all"), number(me.contribution.toDouble()), Glyph.CURRENCY)
         PropertyRow(ui("guild.contribution_week"), number(me.weekContribution.toDouble()), Glyph.CURRENCY)
-        s.heroInfo?.let { PropertyRow(ui("guild.marks"), number(it.guildMarks.toDouble()), Glyph.RARITY) }
         val next = rules?.nextRank(me.contribution)
         if (rules != null && next != null) {
             val from = rules.rankFor(me.contribution).from

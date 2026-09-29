@@ -1,9 +1,7 @@
 package com.sperance.exileforge.presentation.state
 
 import com.sperance.exileforge.core.display.classTitle
-import com.sperance.exileforge.core.display.fineNumber
 import com.sperance.exileforge.core.display.nodeTitle
-import com.sperance.exileforge.core.display.preciseStats
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.display.statNumber
 import com.sperance.exileforge.core.display.statPercent
@@ -76,9 +74,9 @@ class StatExplainer(private val s: ForgeState) {
     private fun row(stat: String, share: Share, percent: Boolean): ShareRow {
         val value = fmt(stat, share.value, share.op, percent)
         val per = share.perStat ?: return ShareRow(sourceTitle(share.source), value, localNote(share.local))
-        val rule = ui("stat.per", fmt(stat, share.each, share.op, percent), number(per, share.per), statTitle(per))
+        val rule = ui("stat.per", fmt(stat, share.each, share.op, percent), statNumber(per, share.per), statTitle(per))
         val by = share.source?.takeIf { it.kind != SourceKind.CLASS }?.let { "${sourceTitle(it)}: " }.orEmpty()
-        return ShareRow("${statTitle(per)} ${number(per, share.perValue)}", value, by + rule, link = per)
+        return ShareRow("${statTitle(per)} ${statNumber(per, share.perValue)}", value, by + rule, link = per)
     }
 
     /** The local lines an item folded into this figure: «локально: +200, +40%». */
@@ -159,16 +157,13 @@ class StatExplainer(private val s: ForgeState) {
     /** A figure with its operation: «+20», «+10%», «×1.10», «= 1»; a percent stat carries its sign on the flat too. */
     private fun fmt(stat: String, value: Double, op: Op, percent: Boolean, sign: Boolean = true): String {
         val unit = if (percent || statPercent(stat, index)) "%" else ""
-        val size = number(stat, abs(value))
+        val size = statNumber(stat, abs(value))
         val mark = if (!sign && value >= 0) "" else if (value < 0) "−" else "+"
         return when (op) {
             Op.ADD -> "$mark$size$unit"
             Op.INCREASED -> if (percent) "$mark$size$unit" else "$mark$size%"
             Op.MORE -> "×${factor(1 + value / 100)}"
-            Op.SET -> "= ${number(stat, value)}$unit"
+            Op.SET -> "= ${statNumber(stat, value)}$unit"
         }
     }
-
-    /** A share keeps its tenth where a sheet cell would round it away: a regeneration of 0.4 is not 0. */
-    private fun number(stat: String, value: Double): String = if (stat in preciseStats) statNumber(stat, value) else fineNumber(value)
 }

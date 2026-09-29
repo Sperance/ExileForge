@@ -77,6 +77,7 @@ import com.sperance.exileforge.ui.screens.skills.SkillFacts
 import com.sperance.exileforge.ui.theme.*
 import java.util.Locale
 import kotlin.math.PI
+import kotlin.math.ceil
 import kotlin.math.roundToInt
 import kotlin.math.sin
 
@@ -204,7 +205,7 @@ private const val HERO_CARD = -1
     val time by rememberClock()
     val bounds = remember { mutableStateMapOf<Int, Rect>() }
     var origin by remember { mutableStateOf(Offset.Zero) }
-    val names = remember(fight.foes.size, fight.leader) { fight.foes.associate { it.index to monsterTitle(it.monster.code) } }
+    val names = remember(fight.foes.size, fight.leader, fight.stage) { fight.foes.associate { it.index to monsterTitle(it.monster.code) } }
     val chosen = fight.focus ?: fight.target ?: fight.foes.firstOrNull { it.alive }?.index
     // The tiles are larger while the fight stands still; a tap on any of them opens its window at any time (2.73.0).
     val large = fight.scouting
@@ -215,7 +216,7 @@ private const val HERO_CARD = -1
         Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 10.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)) {
             PackHeader(fight, level)
-            val (back, front) = fight.foes.partition { it.ranged }
+            val (back, front) = fight.foes.partition { it.back }
             listOf(back to "fight.row_back", front to "fight.row_front").filter { it.first.isNotEmpty() }.forEach { (row, title) ->
                 Caption(ui(title))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)) {
@@ -246,15 +247,16 @@ private const val HERO_CARD = -1
     }
 }
 
-/** The pack's leader by name and what the pack is: its rarity, the map's level, how many are left standing. */
+/** The pack's leader by name and what the pack is: its rarity, the map's level, the stage of a gathered fight, how many are left standing. */
 @Composable private fun PackHeader(fight: FightHud, level: Int) {
     val leader = fight.leader
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Text(monsterTitle(leader.code), color = rarityTint(leader.rarity), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
             maxLines = 1, overflow = TextOverflow.Ellipsis)
-        val line = ui("expedition.monster_line", ui(leader.rarity.key()), level)
-        Text(if (fight.foes.size > 1) "$line · " + ui("expedition.pack_left", fight.foes.count { it.alive }, fight.foes.size) else line,
-            color = Muted, style = MaterialTheme.typography.labelSmall)
+        val line = listOfNotNull(ui("expedition.monster_line", ui(leader.rarity.key()), level),
+            ui("fight.stage", fight.stage, fight.stages).takeIf { fight.stages > 1 },
+            ui("expedition.pack_left", fight.foes.count { it.alive }, fight.foes.size).takeIf { fight.foes.size > 1 }).joinToString(" · ")
+        Text(line, color = Muted, style = MaterialTheme.typography.labelSmall)
     }
 }
 
@@ -498,6 +500,7 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
  */
 @Composable private fun Controls(fight: FightHud, onCommand: (RunCommand) -> Unit) {
     val live = fight.outcome == null
+    fight.interlude?.takeIf { !fight.started }?.let { StageBreak(fight, it, onCommand); return }
     if (!fight.started) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ForgeButton(onClick = { onCommand(RunCommand.Begin) }, modifier = Modifier.weight(1f).height(52.dp),
@@ -522,6 +525,26 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
         if (fight.escape) ForgeOutlinedButton(enabled = live && !fight.retreating, onClick = { onCommand(RunCommand.Retreat) }, modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(horizontal = 8.dp)) {
             Text(ui(if (fight.retreating) "expedition.retreating" else "expedition.retreat"), style = MaterialTheme.typography.labelMedium)
+        }
+    }
+}
+
+/**
+ * The pause between the stages of a gathered fight (3.28.0): which stage stands up next, the seconds before it does
+ * by itself, «Дальше» to begin at once and the way back; the belt above stays open for a draught.
+ */
+@Composable private fun StageBreak(fight: FightHud, left: Double, onCommand: (RunCommand) -> Unit) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(ui("fight.stage", fight.stage, fight.stages), color = GoldBright, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text(ui("fight.stage_countdown", ceil(left).toInt()), color = Muted, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ForgeButton(onClick = { onCommand(RunCommand.Begin) }, modifier = Modifier.weight(1f).height(52.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Blood, contentColor = GoldBright)) {
+                Icon(ForgeGlyphs.Swords, null, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(ui("fight.stage_next"), style = MaterialTheme.typography.titleMedium)
+            }
+            if (fight.escape) ForgeOutlinedButton(onClick = { onCommand(RunCommand.Retreat) }, modifier = Modifier.height(52.dp)) { Text(ui("fight.walk_away")) }
         }
     }
 }
@@ -580,6 +603,8 @@ private fun vitalFigures(value: Int, max: Int): String =
  */
 @Composable private fun ActionBar(fight: FightHud, onCommand: (RunCommand) -> Unit, onInfo: (SkillView) -> Unit) {
     val live = fight.started && fight.outcome == null && !fight.retreating
+    // Between stages the belt is open (3.28.0): a draught then is drunk as on the road.
+    val drinkable = live || (!fight.started && fight.interlude != null)
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
         fight.skills.forEach { view ->
             if (view == null) Box(Modifier.weight(1f).height(52.dp).border(1.dp, Bronze.copy(alpha = .35f), RoundedCornerShape(8.dp)))
@@ -588,7 +613,7 @@ private fun vitalFigures(value: Int, max: Int): String =
         Spacer(Modifier.width(4.dp))
         fight.flasks.forEach { view ->
             if (view == null) Box(Modifier.size(44.dp).border(1.dp, Bronze.copy(alpha = .35f), CircleShape))
-            else FlaskButton(view, live) { onCommand(RunCommand.Drink(view.slot)) }
+            else FlaskButton(view, drinkable) { onCommand(RunCommand.Drink(view.slot)) }
         }
     }
 }

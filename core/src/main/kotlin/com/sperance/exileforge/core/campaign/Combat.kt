@@ -415,6 +415,8 @@ private class Recovery(val life: Double, val mana: Double, val until: Double, va
  * hero at its own speed from the first second, and the hero at one foe of the rows its weapon
  * reaches — the back row only with a bow or a wand, or once the front has fallen. Whom is the
  * player's [focus] when given, the class's [TargetRule] otherwise, chosen afresh at every swing.
+ * Since 3.28.0 a row holds at most [ROW] foes: the melee stand in front, the ranged behind, and a row
+ * over the bound sends its last to the other ([rows]).
  *
  * Each swing can be evaded (evasion against the attacker's level), blocked, or land; a landing hit
  * rolls the rule's variance per damage type, may be a critical strike, and is reduced by armour
@@ -508,7 +510,7 @@ class Battle(
         fun stacks(ailment: Ailment) = ailments.count { it.ailment == ailment }
     }
 
-    val foeFighters: List<Fighter> = foes.mapIndexed { i, foe -> Fighter(Side.MONSTER, foe.body, foe.body.maxLife, i, foe.ranged) }
+    val foeFighters: List<Fighter> = rows(foes.map { it.ranged }).let { back -> foes.mapIndexed { i, foe -> Fighter(Side.MONSTER, foe.body, foe.body.maxLife, i, back[i]) } }
     val heroFighter = Fighter(Side.HERO, hero.under(auras()), heroLife)
     /** The pet fighting beside the hero (3.5.0): it strikes the hero's target and draws blows meant for the hero. */
     val allyFighter: Fighter? = ally?.let { Fighter(Side.HERO, it.body, it.body.maxLife, ALLY) }
@@ -1488,6 +1490,22 @@ class Battle(
         const val LUNGE = 0.16
         /** The pet's place in the fight: neither the hero's -1 nor a monster's. */
         const val ALLY = -2
+        /** How many foes a row holds. */
+        const val ROW = 3
+
+        /**
+         * The row of each foe, true for the back (3.28.0): by its kind — [ranged] behind, melee in front — and a row
+         * over [ROW] sends its last to the other while that one has room.
+         */
+        fun rows(ranged: List<Boolean>): List<Boolean> {
+            val back = ranged.toMutableList()
+            listOf(false, true).forEach { row ->
+                val over = back.count { it == row } - ROW
+                val room = ROW - back.count { it != row }
+                if (over > 0 && room > 0) back.indices.filter { back[it] == row }.takeLast(minOf(over, room)).forEach { back[it] = !row }
+            }
+            return back
+        }
         /** How deep a passive's answer may set off another's. */
         private const val MAX_DEPTH = 2
         /** A skill's element picked at random, and its ailment named by the element that struck (server 0.69.0). */

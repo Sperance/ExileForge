@@ -52,14 +52,13 @@ internal fun questRarity(rarity: Rarity): String = ui("quest.rarity.${rarity.nam
         modifier = Modifier.border(1.dp, color.copy(alpha = .6f), RoundedCornerShape(10.dp)).padding(horizontal = 8.dp, vertical = 1.dp))
 }
 
-/** The reward as chips: gold, experience, orbs, and for a guild's quest its marks and the guild's experience. */
+/** The reward as chips: gold, experience, orbs, and for a guild's quest the guild's experience. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable internal fun RewardChips(reward: QuestReward) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Chip { GoldPrice(reward.gold) }
         if (reward.experience > 0) Chip { Text(ui("quest.reward_xp", number(reward.experience)), color = Vital, style = MaterialTheme.typography.labelMedium) }
         reward.orbs.forEach { (code, amount) -> Chip { Text(ui("quest.reward_orb", itemTitle(code), amount), color = Parchment, style = MaterialTheme.typography.labelMedium) } }
-        if (reward.marks > 0) Chip { Text(ui("quest.reward_marks", number(reward.marks.toDouble())), color = Rune, style = MaterialTheme.typography.labelMedium) }
         if (reward.guildExperience > 0) Chip { Text(ui("quest.reward_guild_xp", number(reward.guildExperience.toDouble())), color = Rune, style = MaterialTheme.typography.labelMedium) }
     }
 }

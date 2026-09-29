@@ -2,6 +2,8 @@ package com.sperance.exileforge.core.display
 
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.i18n.uiLanguage
+import com.sperance.exileforge.core.i18n.uiOr
 import com.sperance.exileforge.core.model.guild.GuildLogEntry
 import com.sperance.exileforge.rules.content.GuildMode
 import com.sperance.exileforge.rules.content.GuildRole
@@ -14,8 +16,9 @@ import com.sperance.exileforge.rules.content.GuildRole
 const val GUILD_GOLD = "GOLD"
 
 object GuildText {
-    fun faction(code: String): String = locOr("guild.faction.$code.name", displayName(code))
-    fun factionLore(code: String): String = locOr("guild.faction.$code.description", "")
+    /** A faction's name and word (3.28.0): the server's dictionary first, the app's own table for the three it ships with, then the code. */
+    fun faction(code: String): String = locOr("guild.faction.$code.name", uiOr(uiLanguage, "guild.faction.$code.name", displayName(code)))
+    fun factionLore(code: String): String = locOr("guild.faction.$code.description", uiOr(uiLanguage, "guild.faction.$code.description", ""))
     fun rank(code: String): String = locOr("guild.rank.$code", displayName(code))
     fun emblem(code: String): String = locOr("guild.emblem.$code", displayName(code))
     fun mode(mode: GuildMode): String = locOr("guild.mode.${mode.name}", ui("guild.mode.${mode.name}"))

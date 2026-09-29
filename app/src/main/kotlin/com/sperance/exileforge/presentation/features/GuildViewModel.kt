@@ -24,6 +24,9 @@ class GuildViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     fun tab(tab: GuildTab) = guild { it.copy(tab = tab) }
     fun query(text: String) = guild { it.copy(query = text) }
 
+    /** Narrows the list to one faction, or to none with a blank code, and reads it again from the first page. */
+    fun filterFaction(code: String) { guild { it.copy(faction = code) }; search(0) }
+
     /** The hero's guild; the content comes first, since `guilds.json` is what the screen reads its numbers from. */
     fun load() { with(runtime) { read(Reads.GUILD) {
         val id = heroId
@@ -35,7 +38,7 @@ class GuildViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     fun search(page: Int = 0) { with(runtime) { read(Reads.GUILD_SEARCH, restart = true) {
         val id = heroId
-        val found = runtime.api.guild.search(id, state.value.guild.query, page)
+        val found = state.value.guild.let { runtime.api.guild.search(id, it.query, page, it.faction) }
         if (onScreen(id)) guild { it.copy(search = found) }
     } } }
 

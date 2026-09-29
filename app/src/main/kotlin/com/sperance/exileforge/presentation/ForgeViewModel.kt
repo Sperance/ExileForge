@@ -97,6 +97,8 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     fun draftClass(value: String) = runtime.mutable.value.let { runtime.mutable.value = it.copy(play = it.play.copy(draftClass = value)) }
     /** An orb on one item, by the orb's item code. */
     fun applyOrb(itemId: String, orb: String) = runtime.heroViewModel.applyOrb(itemId, orb)
+    fun selectOmen(value: String) = runtime.heroViewModel.selectOmen(value)
+    fun unveil(itemId: String, choice: Int) = runtime.heroViewModel.unveil(itemId, choice)
     fun craft(itemId: String, recipe: String) = runtime.heroViewModel.craft(itemId, recipe)
     fun uncraft(itemId: String) = runtime.heroViewModel.uncraft(itemId)
     fun redeem(code: String) = runtime.heroViewModel.redeem(code)

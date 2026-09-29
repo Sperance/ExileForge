@@ -133,10 +133,17 @@ class HeroClient internal constructor(private val http: Transport) {
     // ---- orbs, essences, the bench ----
 
     /** Spends one orb of the bag on one item; [orb] is the orb's item code. */
-    suspend fun applyOrb(heroId: String, itemId: String, orb: String): CurrencyApplyResponse {
+    /** An orb on an item, with an [omen] (3.36.0) spent along with it when given. */
+    suspend fun applyOrb(heroId: String, itemId: String, orb: String, omen: String? = null): CurrencyApplyResponse {
         requireItemId(itemId)
         require(orb.isNotBlank()) { ui("api.choose_orb") }
-        return http.post("$HERO/orb", heroQuery(heroId, "itemId" to itemId, "orb" to orb))
+        return http.post("$HERO/orb", heroQuery(heroId, "itemId" to itemId, "orb" to orb, "omen" to omen?.takeIf { it.isNotBlank() }))
+    }
+
+    /** The unveiling's choice (3.36.0): which of the offered modifiers takes the veiled one's place. */
+    suspend fun unveil(heroId: String, itemId: String, choice: Int): CurrencyApplyResponse {
+        requireItemId(itemId)
+        return http.post("$HERO/unveil", heroQuery(heroId, "itemId" to itemId, "choice" to choice.toString()))
     }
 
     suspend fun applyEssence(heroId: String, itemId: String, essence: String): CurrencyApplyResponse {

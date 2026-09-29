@@ -45,7 +45,7 @@ enum class BagCategory(val key: String) {
 fun bagSections(s: ForgeState): List<Pair<BagCategory, List<BagStack>>> {
     val index = s.index
     fun category(code: String) = when (index?.item(code)?.category) {
-        Item.CURRENCY -> BagCategory.ORBS
+        Item.CURRENCY, Item.OMEN -> BagCategory.ORBS
         Item.ESSENCE -> BagCategory.ESSENCES
         Item.BOOK -> BagCategory.BOOKS
         Item.MATERIAL -> BagCategory.MATERIALS

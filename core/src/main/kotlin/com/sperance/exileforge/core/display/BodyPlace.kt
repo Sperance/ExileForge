@@ -28,5 +28,5 @@ val bodyPlaces: List<BodyPlace> = listOf(
     BodyPlace(BodyPlace.OFF_HAND, listOf(Slot.SHIELD, Slot.QUIVER)),
 ) + listOf(Slot.HELMET, Slot.BODY, Slot.GLOVES, Slot.BOOTS, Slot.AMULET).map { BodyPlace(it.name, listOf(it)) } +
     listOf(BodyPlace(Slot.RING.name, listOf(Slot.RING), Slot.RING), BodyPlace(Slot.RING_2.name, listOf(Slot.RING), Slot.RING_2)) +
-    listOf(Slot.BELT, Slot.WINGS).map { BodyPlace(it.name, listOf(it)) } +
+    listOf(Slot.BELT, Slot.WINGS, Slot.COLLAR).map { BodyPlace(it.name, listOf(it)) } +
     Slot.FLASKS.map { BodyPlace(it.name, listOf(Slot.FLASK), it) }

@@ -86,6 +86,18 @@ private val art = mapOf(
     Orb.ESSENCE_ORB to OrbArt(0xFFB07FE0, Emblem.CRYSTAL),
     Orb.SCRIBE_ORB to OrbArt(0xFFD8C8A0, Emblem.BOOK),
     Orb.GLASSBLOWERS_BAUBLE to OrbArt(0xFF9FD8E8, Emblem.FLASK),
+    // 3.36.0: quality, catalysts and the unveiling.
+    Orb.WHETSTONE to OrbArt(0xFFB8B0A0, Emblem.CRACK),
+    Orb.ARMOURERS_SCRAP to OrbArt(0xFF98A4B0, Emblem.HEX),
+    Orb.UNVEILING_ORB to OrbArt(0xFFC0A0F0, Emblem.EYE, rays = true),
+    Orb.CATALYST_LIFE to OrbArt(0xFFE06070, Emblem.DROP),
+    Orb.CATALYST_DEFENCE to OrbArt(0xFF90A8C0, Emblem.DROP),
+    Orb.CATALYST_ELEMENTAL to OrbArt(0xFF70C8E8, Emblem.DROP),
+    Orb.CATALYST_PHYSICAL to OrbArt(0xFFC09070, Emblem.DROP),
+    Orb.CATALYST_CHAOS to OrbArt(0xFF80C060, Emblem.DROP),
+    Orb.CATALYST_SPEED to OrbArt(0xFFE8D070, Emblem.DROP),
+    Orb.CATALYST_ATTRIBUTE to OrbArt(0xFFD0A0E0, Emblem.DROP),
+    Orb.CATALYST_CASTER to OrbArt(0xFF8090F0, Emblem.DROP),
 )
 
 /** An orb the client has no art for — one the server added later — is plain gold glass with a gem. */

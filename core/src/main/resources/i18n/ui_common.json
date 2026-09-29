@@ -34,5 +34,16 @@
   "enum.orb.WEAPON_SCROLL.trade": "Weapon Scroll",
   "enum.orb.ESSENCE_ORB.trade": "Essence Orb",
   "enum.orb.SCRIBE_ORB.trade": "Scribe Orb",
-  "enum.orb.GLASSBLOWERS_BAUBLE.trade": "Glassblower's Bauble"
+  "enum.orb.GLASSBLOWERS_BAUBLE.trade": "Glassblower's Bauble",
+  "enum.orb.WHETSTONE.trade": "Blacksmith's Whetstone",
+  "enum.orb.ARMOURERS_SCRAP.trade": "Armourer's Scrap",
+  "enum.orb.UNVEILING_ORB.trade": "Unveiling Orb",
+  "enum.orb.CATALYST_LIFE.trade": "Vivid Catalyst",
+  "enum.orb.CATALYST_DEFENCE.trade": "Fertile Catalyst",
+  "enum.orb.CATALYST_ELEMENTAL.trade": "Prismatic Catalyst",
+  "enum.orb.CATALYST_PHYSICAL.trade": "Abrasive Catalyst",
+  "enum.orb.CATALYST_CHAOS.trade": "Noxious Catalyst",
+  "enum.orb.CATALYST_SPEED.trade": "Turbulent Catalyst",
+  "enum.orb.CATALYST_ATTRIBUTE.trade": "Intrinsic Catalyst",
+  "enum.orb.CATALYST_CASTER.trade": "Imbued Catalyst"
 }

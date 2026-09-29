@@ -96,13 +96,21 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         api.hero.grantItem(id, code, amount)
     } } }
 
-    fun selectOrb(value: String) = update { it.copy(play = it.play.copy(selectedOrb = value)) }
+    fun selectOrb(value: String) = update { it.copy(play = it.play.copy(selectedOrb = value, selectedOmen = "")) }
+    fun selectOmen(value: String) = update { it.copy(play = it.play.copy(selectedOmen = value)) }
     fun selectEssence(value: String) = update { it.copy(play = it.play.copy(selectedEssence = value)) }
 
     /** Spends one orb on one item: whether it applies and what it rerolls is the rules'; the sentence comes back. */
     fun applyOrb(itemId: String, orb: String) { with(runtime) { forgeCommand { id ->
-        val outcome = api.hero.applyOrb(id, itemId, orb)
-        mutable.update { it.copy(play = it.play.copy(forgeLine = outcome.message, selectedEquipment = outcome.created?.id ?: outcome.item.id)) }
+        val omen = mutable.value.play.selectedOmen
+        val outcome = api.hero.applyOrb(id, itemId, orb, omen)
+        // An omen is spent with its orb: the next use starts without one.
+        mutable.update { it.copy(play = it.play.copy(forgeLine = outcome.message, selectedEquipment = outcome.created?.id ?: outcome.item.id, selectedOmen = "")) }
+    } } }
+
+    fun unveil(itemId: String, choice: Int) { with(runtime) { forgeCommand { id ->
+        val outcome = api.hero.unveil(id, itemId, choice)
+        mutable.update { it.copy(play = it.play.copy(forgeLine = outcome.message)) }
     } } }
 
     fun craft(itemId: String, recipe: String) { with(runtime) { forgeCommand { id ->

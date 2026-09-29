@@ -30,6 +30,7 @@ import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Item
+import com.sperance.exileforge.rules.content.Omen
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
@@ -104,7 +105,11 @@ private val ESSENTIAL = setOf(Rarity.COMMON, Rarity.RARE)
                 }
             }
             when (section) {
-                ForgeSection.ORBS -> OrbLedger(s, accepted, vm::selectOrb)
+                ForgeSection.ORBS -> {
+                    instance?.let { UnveilChoice(s, it, enabled, vm::unveil) }
+                    OrbLedger(s, accepted, vm::selectOrb)
+                    if (instance != null && view != null) OmenLedger(s, instance, view, vm::selectOmen)
+                }
                 ForgeSection.BENCH -> view?.let { BenchLedger(s, index, hero, it, benchLine) { line -> benchLine = line } }
                 ForgeSection.ESSENCES -> EssenceLedger(s, accepted, vm::selectEssence)
             }
@@ -236,6 +241,41 @@ private val ForgeSection.title get() = when (this) {
     HorizontalDivider(color = PanelRaised)
 }
 
+/**
+ * The omens the bag holds for the chosen orb (3.36.0): one may be laid on the next use, the one that goes on the item.
+ * Chosen again, it is taken off.
+ */
+@Composable private fun OmenLedger(s: ForgeState, instance: ItemInstance, view: ItemView, onSelect: (String) -> Unit) {
+    val hero = s.hero ?: return
+    val index = s.index ?: return
+    val orb = Orb.of(s.play.selectedOrb) ?: return
+    val applier = remember(index) { OrbApplier(index) }
+    val omens = index.itemsByCategory[Item.OMEN].orEmpty().mapNotNull { item -> Omen.of(item.code)?.takeIf { it.orb == orb && hero.count(item.code) > 0 } }
+        .filter { applier.accepts(orb, instance, view.template, it) }
+    if (omens.isEmpty()) return
+    Text(ui("forge.omen"), color = Rune, style = MaterialTheme.typography.titleSmall)
+    Column {
+        omens.forEach { omen ->
+            val chosen = omen.code == s.play.selectedOmen
+            LedgerRow(ForgeGlyphs.Sigil, Rune, itemTitle(omen.code), itemDescription(omen.code), hero.count(omen.code).toString(),
+                selected = chosen) { onSelect(if (chosen) "" else omen.code) }
+        }
+    }
+}
+
+/** The unveiling's offer (3.36.0): each modifier the veiled one may become, one tap keeps it and the rest are lost. */
+@Composable private fun UnveilChoice(s: ForgeState, instance: ItemInstance, enabled: Boolean, onChoose: (String, Int) -> Unit) {
+    if (instance.unveil.isEmpty()) return
+    Column(Modifier.fillMaxWidth().border(1.dp, Rune, MaterialTheme.shapes.small).padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(ui("forge.unveil_title"), color = Rune, style = MaterialTheme.typography.titleMedium)
+        MutedText(ui("forge.unveil_hint"))
+        instance.unveil.forEachIndexed { i, option ->
+            val text = s.view(instance.copy(rolls = listOf(option), unveil = emptyList()))?.lines?.firstOrNull()?.text.orEmpty()
+            LedgerRow(ForgeGlyphs.Sigil, Rune, text, "", "T${option.tier}", selected = false, ink = ModBlue) { if (enabled) onChoose(instance.id, i) }
+        }
+    }
+}
+
 /** The chosen orb over the navigation: what it does, what the bag keeps, and the button that is held. */
 @Composable fun OrbBar(s: ForgeState, instance: ItemInstance, enabled: Boolean, accepted: (String) -> Boolean, onApply: (String, String) -> Unit) {
     val code = s.play.selectedOrb
@@ -243,7 +283,8 @@ private val ForgeSection.title get() = when (this) {
     val orb = s.orbs.firstOrNull { it.code == code && owned > 0 && accepted(code) }
     ForgeBar {
         if (orb == null) { Text(ui("forge.pick_orb"), color = Muted); return@ForgeBar }
-        BarTitle(ForgeGlyphs.Orb, Gold, itemTitle(orb.code), stock(owned, 1), orb = Orb.of(orb.code))
+        BarTitle(ForgeGlyphs.Orb, Gold, itemTitle(orb.code) + s.play.selectedOmen.takeIf { it.isNotBlank() }?.let { " + ${itemTitle(it)}" }.orEmpty(),
+            stock(owned, 1), orb = Orb.of(orb.code))
         HoldButton(ui("confirm.hold", ui("forge.apply_orb")), Gold, enabled = enabled && !instance.corrupted, rearm = true) {
             onApply(instance.id, orb.code)
         }

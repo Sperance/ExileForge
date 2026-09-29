@@ -112,6 +112,8 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
     val mirrored: Boolean get() = item.mirrored
     val influence: Influence? get() = item.influence
     val quality: Int get() = item.quality
+    /** The kind of quality (3.36.0): a catalyst's, or the base's when null. */
+    val catalyst: com.sperance.exileforge.rules.content.Catalyst? get() = item.catalyst
     val weaponType: WeaponType? get() = template.weaponType
     val level: Int get() = item.level(template)
     val title: String get() = equipmentTitle(code)
@@ -214,7 +216,7 @@ fun itemVisualKind(template: ItemTemplate): ItemVisualKind = when {
     else -> when (template.slot) {
         Slot.HELMET -> ItemVisualKind.HELMET; Slot.BODY -> ItemVisualKind.ARMOR
         Slot.GLOVES -> ItemVisualKind.GLOVES; Slot.BOOTS -> ItemVisualKind.BOOTS
-        Slot.RING, Slot.RING_2 -> ItemVisualKind.RING; Slot.AMULET -> ItemVisualKind.AMULET
+        Slot.RING, Slot.RING_2 -> ItemVisualKind.RING; Slot.AMULET, Slot.COLLAR -> ItemVisualKind.AMULET
         Slot.BELT -> ItemVisualKind.BELT; Slot.SHIELD -> ItemVisualKind.SHIELD; Slot.WINGS -> ItemVisualKind.WINGS
         Slot.JEWEL -> ItemVisualKind.GEM; Slot.MAP -> ItemVisualKind.MAP
         Slot.FLASK, Slot.FLASK_2, Slot.FLASK_3 -> ItemVisualKind.SCROLL

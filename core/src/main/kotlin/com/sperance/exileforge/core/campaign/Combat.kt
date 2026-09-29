@@ -1,11 +1,14 @@
 package com.sperance.exileforge.core.campaign
 
 import com.sperance.exileforge.core.character.StatLine
+import com.sperance.exileforge.rules.content.AccuracyRule
 import com.sperance.exileforge.rules.content.AilmentRule
 import com.sperance.exileforge.rules.content.AtlasStat
+import com.sperance.exileforge.rules.content.BuffKind
 import com.sperance.exileforge.rules.content.Ceiling
 import com.sperance.exileforge.rules.content.ChargeKind
 import com.sperance.exileforge.rules.content.CombatRules
+import com.sperance.exileforge.rules.content.Condition
 import com.sperance.exileforge.rules.content.ManaRule
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.content.MonsterSkill
@@ -284,6 +287,49 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
         const val DEFAULT_LIFE_DELAY = 4.0
     }
     val lifeOnKill = max(0.0, stat("STOCK_HEALTH_ON_KILL"))
+
+    // ==================== Server 1.34.0 (3.35.0): accuracy, buffs, defences of PoE ====================
+
+    /** Its accuracy against an evasive target: the rule's base by level and dexterity, and the sheet's own. */
+    fun accuracy(rule: AccuracyRule): Double = max(0.0, rule.base + rule.perLevel * level + rule.perDexterity * stat("STOCK_AGILITY") + stat("STOCK_ACCURACY"))
+    /** The shares of its physical damage it deals again as other types, by type. */
+    val extraAs: Map<DamageType, Double> = DamageType.entries.filter { it != DamageType.PHYSICAL }
+        .mapNotNull { type -> stat("STOCK_PHYSICAL_AS_EXTRA_${type.name}").takeIf { it > 0 }?.let { type to it / 100 } }.toMap()
+    /** Flat damage of [type] its spells add. */
+    fun spellAdded(type: DamageType): Double = max(0.0, stat("STOCK_SPELL_ADD_${type.name}"))
+    /** Its critical chance with a spell: the spells' own increase on top. */
+    fun critChance(spell: Boolean): Double = if (spell) (critChance * (1 + max(0.0, stat("STOCK_SPELL_CRITICAL_CHANCE")) / 100)).coerceAtMost(ceiling(rules.ceilings.critical) / 100) else critChance
+    val doubleDamage = percent("STOCK_DOUBLE_DAMAGE")
+    /** A foe it hits left under this share of its life dies. */
+    val culling = percent("STOCK_CULLING")
+    /** Increased damage for each charge of [kind] it holds. */
+    fun perCharge(kind: ChargeKind): Double = stat("STOCK_DAMAGE_PER_${kind.name}")
+    val shockEffect = max(0.0, 1 + stat("STOCK_SHOCK_EFFECT") / 100)
+    val chillEffect = max(0.0, 1 + stat("STOCK_CHILL_EFFECT") / 100)
+    /** How much faster its damaging ailments run their damage, as a share. */
+    val fasterAilments = max(0.0, stat("STOCK_FASTER_AILMENTS")) / 100
+    fun buffChance(kind: BuffKind): Double = percent(kind.chance)
+    /** It wears [kind] always: a monster's modifier or a map's. */
+    fun wears(kind: BuffKind): Boolean = stat(kind.always) > 0
+    val buffDuration = max(0.1, 1 + stat(BuffKind.DURATION) / 100)
+    /** Damage taken from hits, not over time: Fortify's work. */
+    val hitTaken = max(0.1, 1 + stat("STOCK_HIT_TAKEN") / 100)
+    val suppression = percent("STOCK_SPELL_SUPPRESSION", rules.defence.suppressionCap)
+    val deflection = percent("STOCK_DEFLECTION", rules.defence.deflectionCap)
+    /** Its chance to block a spell: the block, and the spell block on top, under the same ceiling. */
+    val spellBlock = (stat("STOCK_BLOCK_CHANCE") + stat("STOCK_SPELL_BLOCK")).coerceIn(0.0, ceiling(rules.ceilings.block)) / 100
+    val lifeOnBlock = max(0.0, stat("STOCK_HEALTH_ON_BLOCK"))
+    val manaOnBlock = max(0.0, stat("STOCK_MANA_ON_BLOCK"))
+    val shieldOnBlock = max(0.0, stat("STOCK_SHIELD_ON_BLOCK"))
+    /** The share of its maximum life a kill gives back. */
+    val lifeOnKillShare = percent("STOCK_HEALTH_ON_KILL_PERCENT")
+    val shieldOnKill = max(0.0, stat("STOCK_SHIELD_ON_KILL"))
+    /** The share of damage taken that comes back as life over the rule's seconds. */
+    val recoup = percent("STOCK_LIFE_RECOUP")
+    /** The share of its armour that meets elemental hits too. */
+    val armourElemental = percent("STOCK_ARMOUR_ELEMENTAL")
+    /** How much sooner its shield starts to recharge after a hit. */
+    val rechargeStart = max(0.1, 1 + stat("STOCK_SHIELD_RECHARGE_START") / 100)
     /** Taunts (since server 0.62.0): while it stands, its foes must strike it first, past any row. */
     val taunt: Boolean get() = stat("STOCK_TAUNT") > 0
     /** How hard it presses, before anyone's defences: its damage per swing times its swings per second. */
@@ -354,7 +400,7 @@ data class FlaskView(val slot: Int, val code: String, val kind: FlaskKind, val c
 }
 
 /** A buff or a curse on a fighter as its tile shows it (2.78.0): what, of which kind, and how much of it is left. */
-data class EffectView(val source: String, val kind: EffectKind, val left: Float, val seconds: Double, val icon: String = "")
+data class EffectView(val source: String, val kind: EffectKind, val left: Float, val seconds: Double, val icon: String = "", val buff: BuffKind? = null)
 
 /**
  * Whom the hero strikes when the player has not said (2.70.0), by class — the owner's table: a
@@ -628,6 +674,13 @@ class Battle(
     private var autoDrunk = false
     /** The pet stood at the last look (3.33.0): its fall is a power's event once. */
     private var petStood = true
+    /** When the hero last killed, blocked and struck critically (3.35.0): what «recently» of a conditional line reads. */
+    private var killedAt = NEVER
+    private var blockedAt = NEVER
+    private var critAt = NEVER
+    /** Whether the sheet has conditional lines at all, and the hero's conditions at the last look (3.35.0). */
+    private val conditioned = model.conditional(Condition.entries.toSet()).isNotEmpty()
+    private var conditions: Set<Condition> = emptySet()
 
     /** What this fight, won, hands the next stage of a staged fight (3.32.0): the momentum and, since 3.33.0, the charges. */
     fun carry(): StageCarry = StageCarry(powers.momentum, heroCharges.snapshot())
@@ -647,7 +700,10 @@ class Battle(
             flaskOpened[i] = true
         }
         if (heroCharges.any) heroCharges.start(time, heroFighter.body.stats)
-        if (heroFighter.effects.isNotEmpty() || heroCharges.any) remake(heroFighter)
+        // Buffs worn from the start (3.35.0): a monster's modifier or the map's.
+        (listOf(heroFighter) + listOfNotNull(allyFighter) + foeFighters).forEach(::wear)
+        if (conditioned) conditions = heroConditions()
+        if (heroFighter.effects.isNotEmpty() || heroCharges.any || conditions.isNotEmpty()) remake(heroFighter)
         heroFighter.mana = (pools?.mana ?: Double.MAX_VALUE).coerceIn(0.0, manaCap())
         shieldUp = heroFighter.shield > 0
     }
@@ -696,7 +752,8 @@ class Battle(
 
     /** What lies on [fighter], for its tiles. */
     fun effects(fighter: Fighter): List<EffectView> = fighter.effects.filter { it.kind != EffectKind.FLASK }.map {
-        EffectView(it.source, it.kind, ((it.until - time) / it.duration).toFloat().coerceIn(0f, 1f), (it.until - time).coerceAtLeast(0.0), icons[it.source].orEmpty())
+        EffectView(it.source, it.kind, ((it.until - time) / it.duration).toFloat().coerceIn(0f, 1f), (it.until - time).coerceAtLeast(0.0), icons[it.source].orEmpty(),
+            BuffKind.of(it.source))
     }
 
     /** The drawings of every skill in this fight, by code: the hero's and the foes'. */
@@ -827,7 +884,7 @@ class Battle(
     private fun regenerate(me: Fighter, dt: Double) {
         if (!me.alive) return
         me.life = min(me.body.maxLife, me.life + (me.body.lifeRegen + me.body.maxLife * me.body.lifeRegenShare) * me.body.recoveryRate * dt)
-        val recharge = if (time - me.lastHit >= rules.shield.rechargeDelay) me.body.maxShield * rules.shield.rechargePerSecond / 100 * me.body.shieldRecharge else 0.0
+        val recharge = if (time - me.lastHit >= rules.shield.rechargeDelay / me.body.rechargeStart) me.body.maxShield * rules.shield.rechargePerSecond / 100 * me.body.shieldRecharge else 0.0
         me.shield = min(me.body.maxShield, me.shield + (me.body.shieldRegen * me.body.recoveryRate + recharge) * dt)
         me.mana = min(manaCap(me), me.mana + me.body.manaRegen(rules.mana) * dt)
         if (me === heroFighter) recoveries.forEach { draught ->
@@ -862,6 +919,7 @@ class Battle(
             val low = hero.life < hero.body.maxLife / 2
             if (low != hero.low && model.lowLife.isNotEmpty()) { hero.low = low; remake(hero) }
             if (powers.restand()) remake(hero)
+            if (conditioned) heroConditions().let { now -> if (now != conditions) { conditions = now; remake(hero) } }
         }
         petWatch()
         foeFighters.forEach { foe ->
@@ -881,7 +939,8 @@ class Battle(
     /** [fighter]'s body made again from its sheet with what lies on it — and the hero's under the auras of the foes still standing. */
     private fun remake(fighter: Fighter) {
         val lines = fighter.effects.flatMap { it.lines }
-        if (fighter === heroFighter) fighter.rebody(model.body((if (fighter.low) model.lowLife else emptyList()) + powers.standing + heroCharges.lines() + lines).under(auras()))
+        if (fighter === heroFighter) fighter.rebody(model.body((if (fighter.low) model.lowLife else emptyList()) + powers.standing + heroCharges.lines() + chargeLines() +
+            model.conditional(conditions) + lines).under(auras()))
         else {
             val speed = fighter.model.body(emptyList())["STOCK_LOW_LIFE_SPEED"]
             fighter.rebody(fighter.model.body(lines + if (fighter.low && speed > 0) listOf(StatLine("STOCK_ATTACK_SPEED", Op.INCREASED, speed)) else emptyList()))
@@ -890,7 +949,72 @@ class Battle(
 
     /** The hero's body for one blow: what lies on them and [extra], a skill's own lines. */
     private fun heroBody(extra: List<StatLine>): Combatant = model.body((if (heroFighter.low) model.lowLife else emptyList()) +
-        powers.standing + heroCharges.lines() + heroFighter.effects.flatMap { it.lines } + extra).under(auras())
+        powers.standing + heroCharges.lines() + chargeLines() + model.conditional(conditions) + heroFighter.effects.flatMap { it.lines } + extra).under(auras())
+
+    /** The hero's damage for the charges held (3.35.0): so many percent increased for each of a kind, by the sheet. */
+    private fun chargeLines(): List<StatLine> = ChargeKind.REAL.mapNotNull { kind ->
+        val per = heroFighter.body.perCharge(kind)
+        val count = heroCharges.count(kind)
+        if (per == 0.0 || count == 0) null else StatLine(StatLines.DAMAGE, Op.INCREASED, per * count)
+    }
+
+    /** What holds for the hero now (3.35.0): the states their conditional lines wait for. */
+    private fun heroConditions(): Set<Condition> {
+        val hero = heroFighter
+        val body = hero.body
+        fun recent(at: Double) = time - at <= Condition.RECENT
+        return buildSet {
+            if (hero.life < body.maxLife * LOW_LIFE) add(Condition.LOW_LIFE)
+            if (hero.life >= body.maxLife - 0.5) add(Condition.FULL_LIFE)
+            if (body.maxShield > 0 && hero.shield >= body.maxShield - 0.5) add(Condition.FULL_SHIELD)
+            if (recent(killedAt)) add(Condition.RECENT_KILL)
+            if (recent(hero.lastHit)) add(Condition.RECENT_HIT_TAKEN)
+            if (recent(blockedAt)) add(Condition.RECENT_BLOCK)
+            if (recent(critAt)) add(Condition.RECENT_CRIT)
+            BuffKind.entries.forEach { kind -> kind.condition?.let { if (hero.effects.any { e -> e.source == kind.source }) add(it) } }
+            if (heroCharges.count(ChargeKind.FRENZY) > 0) add(Condition.FRENZY_CHARGE)
+            if (heroCharges.count(ChargeKind.POWER) > 0) add(Condition.POWER_CHARGE)
+            if (heroCharges.count(ChargeKind.ENDURANCE) > 0) add(Condition.ENDURANCE_CHARGE)
+            if (hero.effects.any { it.kind == EffectKind.FLASK && it.until > time }) add(Condition.FLASK_ACTIVE)
+            if (allyFighter?.alive == true) add(Condition.PET_ALIVE)
+        }
+    }
+
+    /** How the hero's lines waiting for a target's state see [target] (3.35.0). */
+    private fun states(target: Fighter): Set<Condition> {
+        if (target.side != Side.MONSTER) return emptySet()
+        val rarity = foes[target.index].rarity
+        return buildSet {
+            if (rarity >= MonsterRarity.RARE) add(Condition.VS_RARE)
+            if (rarity == MonsterRarity.UNIQUE) add(Condition.VS_UNIQUE)
+            if (target.life >= target.body.maxLife - 0.5) add(Condition.VS_FULL_LIFE)
+        }
+    }
+
+    /** [kind] laid on [fighter] for the rule's time, longer by its buff duration (3.35.0). */
+    private fun gainBuff(fighter: Fighter, kind: BuffKind) {
+        val rule = rules.buffs[kind]
+        buff(fighter, kind.source, rule.lines.map { StatLine(it.stat, it.op, it.value) }, rule.duration * fighter.body.buffDuration)
+    }
+
+    /** The hero's chance at [kind]: drawn only when there is one, so a sheet without it plays the same seed as before. */
+    private fun chanceBuff(kind: BuffKind) {
+        val chance = heroFighter.body.buffChance(kind)
+        if (chance > 0 && random.nextDouble() < chance) gainBuff(heroFighter, kind)
+    }
+
+    /** The buffs [fighter] wears for the whole fight (3.35.0). */
+    private fun wear(fighter: Fighter) = BuffKind.entries.filter { fighter.body.wears(it) }.forEach { kind ->
+        lay(fighter, TimedEffect(EffectKind.BUFF, kind.source, rules.buffs[kind].lines.map { StatLine(it.stat, it.op, it.value) }, FOREVER, FOREVER))
+    }
+
+    /** What of a hit on [target] its spell suppression or deflection lets through (3.35.0); drawn only for a target with a chance. */
+    private fun eased(target: Fighter, blow: Blow): Double {
+        val rule = rules.defence
+        val chance = if (blow.spell) target.body.suppression else target.body.deflection
+        if (chance <= 0 || random.nextDouble() >= chance) return 1.0
+        return 1 - (if (blow.spell) rule.suppressed else rule.deflected) / 100
+    }
 
     /** Desecrated ground eats life (3.4.0): a share of the maximum a second, past the shield, and it can kill. */
     private fun degenerate(me: Fighter, dt: Double) {
@@ -944,8 +1068,9 @@ class Battle(
         if (wasAlive && !me.alive) fell(me, bySpell)
     }
 
+    /** Accuracy against evasion (3.35.0, server 1.34.0), as in PoE, under the target's ceiling. */
     private fun evasion(me: Fighter, target: Fighter): Double =
-        (target.body.evasion / (target.body.evasion + rules.evasion.base + rules.evasion.perLevel * me.body.level)).coerceAtMost(target.body.evasionCap)
+        rules.accuracy.evaded(me.body.accuracy(rules.accuracy), target.body.evasion).coerceAtMost(target.body.evasionCap)
 
     /**
      * One blow of [me] at [target] — a weapon's swing, a skill's hit, a spell: evaded unless a spell,
@@ -957,16 +1082,17 @@ class Battle(
         if (target.invulnerable) { record(me.side, blow.action, HitKind.BLOCKED, 0.0, null, 0.0, false, emptyList(), null, foe, blow.skill); return false }
         val sure = me === heroFighter && nextCrit
         val kind = when {
-            target.frozen() -> if (sure || crit(body)) HitKind.CRIT else HitKind.HIT
+            target.frozen() -> if (sure || crit(body, blow.spell)) HitKind.CRIT else HitKind.HIT
             !blow.spell && random.nextDouble() < evasion(me, target) -> HitKind.EVADED
-            random.nextDouble() < target.body.block -> HitKind.BLOCKED
-            sure || crit(body) -> HitKind.CRIT
+            random.nextDouble() < (if (blow.spell) target.body.spellBlock else target.body.block) -> HitKind.BLOCKED
+            sure || crit(body, blow.spell) -> HitKind.CRIT
             else -> HitKind.HIT
         }
         if (sure && kind == HitKind.CRIT) nextCrit = false
         if (me.side == Side.MONSTER) lastStriker = me.index
         if (kind == HitKind.EVADED || kind == HitKind.BLOCKED) {
             record(me.side, blow.action, kind, 0.0, null, 0.0, false, emptyList(), null, foe, blow.skill)
+            if (kind == HitKind.BLOCKED) blocked(target)
             if (target === heroFighter) {
                 trigger(if (kind == HitKind.EVADED) SkillEvent.EVADE else SkillEvent.BLOCK, me)
                 powers.fire(if (kind == HitKind.EVADED) PowerEvent.EVADE else PowerEvent.BLOCK, PowerMoment(me))
@@ -982,6 +1108,10 @@ class Battle(
         }
         // Server 1.32.0: a critical strike no heavier than a hit on one who takes none, and the non-critical ones more or less.
         val multiplier = if (kind == HitKind.CRIT) max(1.0, body.critMultiplier + target.body.critTaken) else body.nonCritMore
+        // 3.35.0: a double blow, the hero's lines against the target's state, and what suppression or deflection lets through.
+        val doubled = if (body.doubleDamage > 0 && random.nextDouble() < body.doubleDamage) 2.0 else 1.0
+        val versus = if (me === heroFighter) 1 + max(0.0, model.against(states(target))) / 100 else 1.0
+        val eased = eased(target, blow) * target.body.hitTaken
         // Server 0.66.0: a penetrating blow ignores part of the resistance, an ailed target takes more, and
         // "damage taken" of the target scales what got through; server 0.69.0: so does a curse on it.
         val against = body.damageAgainst(target.ailments.map { it.ailment }) * (if (target.cursed) 1 + max(0.0, body["STOCK_DAMAGE_VS_CURSED"]) / 100 else 1.0)
@@ -989,12 +1119,12 @@ class Battle(
         val weakest = if (body.lowestResistPenetrate > 0) DamageType.ELEMENTS.minBy { target.body.resistTo(it) } else null
         val strongest = if (target.body.highestResistElementTaken != 0.0) DamageType.ELEMENTS.maxBy { target.body.resistTo(it) } else null
         val taken = converted(body, target.body, blow.damage.filterValues { it > 0 }).mapValues { (type, base) ->
-            val raw = base * (if (blow.spread) 1 + (random.nextDouble() * 2 - 1) * rules.variance / 100 else 1.0) * multiplier * against * body.damageMore
+            val raw = base * (if (blow.spread) 1 + (random.nextDouble() * 2 - 1) * rules.variance / 100 else 1.0) * multiplier * against * body.damageMore * doubled * versus
             val pierce = body.penetration(type) + if (type == weakest) body.lowestResistPenetrate else 0.0
             when (type) {
                 DamageType.PHYSICAL -> raw * (1 - (target.body.armour / (target.body.armour + rules.armour.factor * raw)).coerceAtMost(target.body.armourCap)) * (1 - target.body.physicalReduction)
-                else -> raw * (1 - target.body.resistTo(type, pierce))
-            }.coerceAtLeast(0.0) * target.weakness() * lone * target.body.damageTaken(type) *
+                else -> raw * (1 - elementalArmour(target.body, type, raw)) * (1 - target.body.resistTo(type, pierce))
+            }.coerceAtLeast(0.0) * target.weakness() * lone * target.body.damageTaken(type) * eased *
                 (if (type == strongest) max(0.0, 1 + target.body.highestResistElementTaken / 100) else 1.0)
         }
         land(me, target, kind, taken, foe, blow, body)
@@ -1002,8 +1132,26 @@ class Battle(
         return true
     }
 
-    /** A critical roll of [body]'s chance; a lucky one (server 1.32.0) gets a second. */
-    private fun crit(body: Combatant): Boolean = random.nextDouble() < body.critChance || body.luckyCrit && random.nextDouble() < body.critChance
+    /** A critical roll of [body]'s chance — a spell's with its own increase (3.35.0); a lucky one (server 1.32.0) gets a second. */
+    private fun crit(body: Combatant, spell: Boolean = false): Boolean {
+        val chance = body.critChance(spell)
+        return random.nextDouble() < chance || body.luckyCrit && random.nextDouble() < chance
+    }
+
+    /** The share of an elemental hit of [raw] the armour turns aside where some of it applies to elements (3.35.0). */
+    private fun elementalArmour(target: Combatant, type: DamageType, raw: Double): Double {
+        if (target.armourElemental <= 0 || type !in DamageType.ELEMENTS || raw <= 0) return 0.0
+        return (target.armour / (target.armour + rules.armour.factor * raw)).coerceAtMost(target.armourCap) * target.armourElemental
+    }
+
+    /** A block by [target] (3.35.0): life, mana and shield on block, and the hero's «blocked recently». */
+    private fun blocked(target: Fighter) {
+        val body = target.body
+        target.life = min(body.maxLife, target.life + body.lifeOnBlock * body.recoveryRate)
+        target.mana = min(manaCap(target), target.mana + body.manaOnBlock)
+        target.shield = min(body.maxShield, target.shield + body.shieldOnBlock)
+        if (target === heroFighter) blockedAt = time
+    }
 
     /**
      * A blow's damage by type as it meets the target (server 1.32.0): the striker's whole hit turned to one random element,
@@ -1012,6 +1160,9 @@ class Battle(
     private fun converted(body: Combatant, target: Combatant, damage: Map<DamageType, Double>): Map<DamageType, Double> {
         var out = damage
         if (body.randomElementHits && out.isNotEmpty()) out = mapOf(DamageType.ELEMENTS[random.nextInt(DamageType.ELEMENTS.size)] to out.values.sum())
+        // 3.35.0: a share of the striker's physical damage dealt again as other types.
+        val own = out[DamageType.PHYSICAL] ?: 0.0
+        if (own > 0 && body.extraAs.isNotEmpty()) out = out.toMutableMap().also { extra -> body.extraAs.forEach { (type, share) -> extra.merge(type, own * share, Double::plus) } }
         val physical = out[DamageType.PHYSICAL] ?: 0.0
         val shares = target.physicalTakenAs
         if (physical <= 0 || shares.isEmpty()) return out
@@ -1068,6 +1219,10 @@ class Battle(
         target.shield -= absorbed
         target.life = max(0.0, target.life - toLife(target, shielded - absorbed + chaos))
         target.lastHit = time
+        // 3.35.0: the hero's recoup gives a share of the hit back over the rule's seconds; a culling blow finishes a foe left low.
+        if (target === heroFighter && target.alive && target.body.recoup > 0 && dealt > 0)
+            recoveries += Recovery(dealt * target.body.recoup / rules.defence.recoup, 0.0, time + rules.defence.recoup, -1)
+        if (target.alive && !target.invulnerable && body.culling > 0 && target.life < target.body.maxLife * body.culling) target.life = 0.0
         val physical = taken[DamageType.PHYSICAL] ?: 0.0
         val leech = (physical * body.leechPhysical + dealt * body.leechAll + (if (kind == HitKind.CRIT) dealt * body.critLeech else 0.0)) * body.recoveryRate
         val onHit = (if (blow.weapon) body.lifeOnHit else 0.0) * body.recoveryRate
@@ -1090,6 +1245,8 @@ class Battle(
         record(me.side, blow.action, kind, dealt, taken.maxByOrNull { it.value }?.key, healed, stunned, inflicted, null, foe, blow.skill)
         if (me === heroFighter) {
             if (target.alive && hexing()) hex(target)
+            if (blow.weapon) chanceBuff(BuffKind.FORTIFY)
+            if (kind == HitKind.CRIT) critAt = time
             if (kind == HitKind.CRIT) {
                 flaskCharge("FLASK_CHARGE_ON_CRIT")
                 trigger(SkillEvent.CRIT, target, taken = taken)
@@ -1161,8 +1318,14 @@ class Battle(
         val avoid = target.body.avoid(ailment)
         if (avoid > 0 && random.nextDouble() < avoid) return null
         val amount = (taken[type] ?: 0.0).takeIf { it > 0 } ?: taken.values.sum()
-        val duration = rule.duration * target.body.ailmentDuration(ailment) * me.body.ailmentDurationOnFoes(ailment)
-        val magnitude = if (ailment.hurts) amount * rule.magnitude / 100 / rule.duration * me.body.ailmentDamage(ailment) else rule.magnitude
+        // 3.35.0: a faster damaging ailment deals the same in less time; the striker's shock and chill are stronger by their effect.
+        val faster = if (ailment.hurts) 1 + me.body.fasterAilments else 1.0
+        val duration = rule.duration * target.body.ailmentDuration(ailment) * me.body.ailmentDurationOnFoes(ailment) / faster
+        val magnitude = if (ailment.hurts) amount * rule.magnitude / 100 / rule.duration * me.body.ailmentDamage(ailment) * faster else rule.magnitude * when (ailment) {
+            Ailment.SHOCKED -> me.body.shockEffect
+            Ailment.CHILLED -> me.body.chillEffect
+            else -> 1.0
+        }
         place(target, ActiveAilment(ailment, time + duration, magnitude, duration, me.side, me.index.coerceAtLeast(0), spell,
             chaos = ailment == Ailment.BURNING && me.body.igniteAsChaos), rule.stacks)
         if (target === heroFighter) powers.fire(PowerEvent.AILED, PowerMoment(me, taken, ailment = ailment))
@@ -1194,8 +1357,11 @@ class Battle(
         if (fighter.body.auras.isNotEmpty()) remake(heroFighter)
         val hero = heroFighter
         if (!hero.alive) return
-        hero.life = min(hero.body.maxLife, hero.life + hero.body.lifeOnKill * hero.body.recoveryRate)
+        hero.life = min(hero.body.maxLife, hero.life + (hero.body.lifeOnKill + hero.body.maxLife * hero.body.lifeOnKillShare) * hero.body.recoveryRate)
         hero.mana = min(manaCap(), hero.mana + hero.body.manaOnKill)
+        hero.shield = min(hero.body.maxShield, hero.shield + hero.body.shieldOnKill)
+        killedAt = time
+        BuffKind.entries.filterNot { it.onHit }.forEach(::chanceBuff)
         val rarity = foes[fighter.index].rarity
         val base = (rules.flasks.perKill[rarity] ?: 1.0) + if (rarity >= MonsterRarity.RARE) hero.body[AtlasStat.FLASK_RARE.code] else 0.0
         kit.flasks.forEachIndexed { i, flask ->
@@ -1344,6 +1510,11 @@ class Battle(
             val base = low + random.nextDouble() * (spell.max.at(level) - low).coerceAtLeast(0.0)
             val increase = model.increased(type.attack, lines) + body["STOCK_SPELL_DAMAGE"] + body["STOCK_SKILL_DAMAGE"]
             damage.merge(type, base * max(0.0, 1 + increase / 100), Double::plus)
+            // 3.35.0: the flat damage the sheet adds to spells, each type grown by its own increases.
+            DamageType.ELEMENTS.forEach { added ->
+                val flat = body.spellAdded(added)
+                if (flat > 0) damage.merge(added, flat * max(0.0, 1 + (model.increased(added.attack, lines) + body["STOCK_SPELL_DAMAGE"] + body["STOCK_SKILL_DAMAGE"]) / 100), Double::plus)
+            }
         }
         val convert = (hit.convert?.at(level) ?: 0.0).coerceIn(0.0, 100.0) / 100
         if (element != null && convert > 0) {
@@ -1670,6 +1841,10 @@ class Battle(
         const val ALLY = -2
         /** How many foes a row holds. */
         const val ROW = 3
+        /** A time long gone (3.35.0): nothing happened «recently» at the fight's start. */
+        const val NEVER = -1e9
+        /** A buff worn the whole fight (3.35.0). */
+        const val FOREVER = 1e9
 
         /**
          * The row of each foe, true for the back (3.28.0): by its kind — [ranged] behind, melee in front — and a row

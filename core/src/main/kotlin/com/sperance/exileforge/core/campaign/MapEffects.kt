@@ -1,6 +1,7 @@
 package com.sperance.exileforge.core.campaign
 
 import com.sperance.exileforge.core.atlas.AtlasEffects
+import com.sperance.exileforge.rules.content.BuffKind
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.MapStat
@@ -113,6 +114,10 @@ object MapEffects {
         effects[MapStats.MONSTER_LEECH]?.let { add(MonsterEffect("STOCK_LEECH_ALL", Op.ADD, it)) }
         effects[MapStats.MONSTER_STUN]?.let { add(MonsterEffect("STOCK_AVOID_STUN", Op.ADD, it)) }
         effects[MapStats.MONSTER_CAST]?.let { add(MonsterEffect("STOCK_COOLDOWN_RECOVERY", Op.ADD, it)) }
+        // 3.35.0 (server 1.34.0): buffs the pack wears from the start, and a share of its physical damage added as the elements.
+        effects[MapStat.MONSTER_ONSLAUGHT.code]?.takeIf { it > 0 }?.let { add(MonsterEffect(BuffKind.ONSLAUGHT.always, Op.ADD, 1.0)) }
+        effects[MapStat.MONSTER_FORTIFY.code]?.takeIf { it > 0 }?.let { add(MonsterEffect(BuffKind.FORTIFY.always, Op.ADD, 1.0)) }
+        effects[MapStat.MONSTER_EXTRA_ELEMENTAL.code]?.let { v -> DamageType.ELEMENTS.forEach { add(MonsterEffect("STOCK_PHYSICAL_AS_EXTRA_${it.name}", Op.ADD, v / DamageType.ELEMENTS.size)) } }
     }
 
     /** A crystal's guardian beyond its rarity: so many percent more life and damage when a Vaal orb made it [stronger], and by the atlas's power of guardians. */
@@ -151,6 +156,11 @@ object MapEffects {
         effects[MapStats.HERO_MANA_REGEN]?.let { v -> sheet["STOCK_MANA_REGEN"] = (100 + (sheet["STOCK_MANA_REGEN"] ?: 0.0)) * max(0.0, 1 - v / 100) - 100 }
         effects[MapStats.SKILL_COST]?.let { add("STOCK_SKILL_COST", -it) }
         effects[MapStats.FLASK_CHARGES]?.let { add("STOCK_FLASK_CHARGES_GAINED", -it) }
+        // 3.35.0 (server 1.34.0): the map's curses and prohibitions.
+        effects[MapStat.HERO_ENFEEBLE.code]?.let { v -> sheet["STOCK_DAMAGE"] = (100 + (sheet["STOCK_DAMAGE"] ?: 0.0)) * max(0.0, 1 - v / 100) - 100 }
+        effects[MapStat.HERO_VULNERABILITY.code]?.let { add("STOCK_PHYSICAL_TAKEN", it) }
+        effects[MapStat.HERO_FLASK_EFFECT.code]?.let { add("STOCK_FLASK_EFFECT", -it) }
+        effects[MapStat.HERO_BUFF_DURATION.code]?.let { add(BuffKind.DURATION, -it) }
         AtlasEffects.hero.forEach { (atlas, stat) -> effects[atlas]?.let { add(stat, it) } }
         return sheet
     }

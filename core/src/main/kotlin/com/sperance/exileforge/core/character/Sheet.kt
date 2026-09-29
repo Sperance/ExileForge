@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.character
 
+import com.sperance.exileforge.rules.content.Condition
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.EquipSlots
 import com.sperance.exileforge.rules.content.Op
@@ -40,9 +41,20 @@ class SheetModel(private val base: Map<String, Double>, private val ops: List<St
         return stats
     }
 
+    /** The sheet's conditional lines (3.35.0, server 1.34.0): kept out of the sheet, laid on by a fight while they hold. */
+    private val conditional: List<StatOperation> = ops.filter { it.condition != null }
+
+    /** The hero's own conditional lines that hold under [active], as lines a fight lays on. */
+    fun conditional(active: Set<Condition>): List<StatLine> =
+        conditional.filter { it.condition in active && it.condition?.target == false }.map { StatLine(it.stat, it.op, it.value) }
+
+    /** How much more damage the lines waiting for a target's state give against a target in [states], in percent increased. */
+    fun against(states: Set<Condition>): Double =
+        conditional.filter { it.condition in states && it.condition?.target == true }.sumOf { it.value }
+
     /** The increases of [stat] summed, [lines] among them: what a spell of that element is multiplied by. */
     fun increased(stat: String, lines: List<StatLine> = emptyList()): Double =
-        ops.filter { it.stat == stat && it.op == Op.INCREASED }.sumOf { op -> op.resolve(op.perStat?.let { plain[it] } ?: 0.0) } +
+        ops.filter { it.stat == stat && it.op == Op.INCREASED && it.condition == null }.sumOf { op -> op.resolve(op.perStat?.let { plain[it] } ?: 0.0) } +
             lines.filter { it.stat == stat && it.op == Op.INCREASED }.sumOf { it.value }
 
     override fun equals(other: Any?): Boolean = other is SheetModel && other.plain == plain

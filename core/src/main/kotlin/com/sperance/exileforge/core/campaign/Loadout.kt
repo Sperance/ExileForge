@@ -4,6 +4,7 @@ import com.sperance.exileforge.core.character.SheetModel
 import com.sperance.exileforge.core.character.StatLine
 import com.sperance.exileforge.rules.content.ChargeRules
 import com.sperance.exileforge.rules.content.CombatRules
+import com.sperance.exileforge.rules.content.Condition
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.HeroSkills
 import com.sperance.exileforge.rules.content.ItemTemplate
@@ -248,6 +249,9 @@ class HeroBuild(val gear: HeroGear, private val mapEffects: Map<String, Double>,
 
     /** The increases of [stat] on the sheet, [lines] among them: a spell of that element is multiplied by them. */
     override fun increased(stat: String, lines: List<StatLine>): Double = gear.model?.increased(stat, passives + lines) ?: 0.0
+
+    override fun conditional(active: Set<Condition>): List<StatLine> = gear.model?.conditional(active).orEmpty()
+    override fun against(states: Set<Condition>): Double = gear.model?.against(states) ?: 0.0
 }
 
 /**
@@ -257,6 +261,10 @@ class HeroBuild(val gear: HeroGear, private val mapEffects: Map<String, Double>,
 interface HeroModel : BodyModel {
     val lowLife: List<StatLine>
     fun increased(stat: String, lines: List<StatLine>): Double
+    /** The conditional lines of the sheet (3.35.0) that hold under [active]. */
+    fun conditional(active: Set<Condition>): List<StatLine> = emptyList()
+    /** The increased damage the sheet's lines give against a target in [states]. */
+    fun against(states: Set<Condition>): Double = 0.0
 
     companion object {
         fun of(body: Combatant): HeroModel = object : HeroModel {

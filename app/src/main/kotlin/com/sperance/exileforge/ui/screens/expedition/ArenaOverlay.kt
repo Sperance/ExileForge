@@ -723,11 +723,14 @@ private fun vitalFigures(value: Int, max: Int): String =
 @Composable private fun EffectTile(view: EffectView, side: Dp = 30.dp) {
     val tint = if (view.kind == EffectKind.CURSE) LifeRed else Gold
     val shape = RoundedCornerShape(4.dp)
-    val title = SkillText.title(view.source)
+    // A buff of the rules (3.35.0) — Onslaught, Fortify — is named and drawn by its kind, a skill's by the skill.
+    val buff = view.buff
+    val title = buff?.let { ui("fight.buff.${it.name}") } ?: SkillText.title(view.source)
     Tipped({ Tip(title, ui(if (view.kind == EffectKind.CURSE) "fight.effect_curse" else "fight.effect_buff", fineNumber(view.seconds))) },
         Modifier.size(side).clip(shape).background(Color(0xFF0B0E13)).background(tint.copy(alpha = .16f)).border(1.dp, tint, shape)
             .semantics { contentDescription = title }) {
-        SkillGlyph(view.icon, Modifier.fillMaxSize().padding(side / 6), tint)
+        if (buff != null) com.sperance.exileforge.ui.icons.StatIcon(buff.icon, tint, Modifier.fillMaxSize().padding(side / 6))
+        else SkillGlyph(view.icon, Modifier.fillMaxSize().padding(side / 6), tint)
         Box(Modifier.fillMaxWidth().fillMaxHeight((1 - view.left).coerceIn(0f, 1f)).background(Color.Black.copy(alpha = .55f)))
     }
 }

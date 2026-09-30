@@ -134,11 +134,10 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
 
     private val text by lazy { modifierText(index) }
 
-    /** Every roll on the copy as a line, the retired ones left out, in the order they lie on the copy. */
+    /** Every roll on the copy as a line, in the order they lie on the copy. */
     val lines: List<ItemLine> by lazy {
-        item.rolls.mapNotNull { roll ->
+        item.rolls.map { roll ->
             val def = index.modifier(roll.code)
-            if (def?.retired() == true) return@mapNotNull null
             val values = def?.let(roll::values).orEmpty()
             val words = def?.let { modifierLine(index, it, values) } ?: displayName(roll.code)
             ItemLine(roll, def, values, words, AffixMarks.of(def, roll))
@@ -148,16 +147,17 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
     /** The lines that hold affix places (prefixes and suffixes, the bench's among them). */
     val affixes: List<ItemLine> get() = lines.filter { it.affix }
 
-    /** The base of the item with every local line already folded into it: a helmet of 100 armour with «20% increased armour» wears 120. */
+    /**
+     * The base of the item with every local line and its quality folded into it, by the rules' own fold (server 1.57.0) — the
+     * one the sheet and the fight wear: a helmet of 100 armour with «+20 armour» and «20% increased armour» wears 144.
+     */
     val base: List<BaseProperty> by lazy {
         if (template.base.isEmpty()) emptyList() else {
             val calc = SheetCalculator(index)
-            val baseOps = calc.expand(template.base)
-            val baseTotals = calc.compute(emptyMap(), baseOps)
-            val totals = calc.compute(emptyMap(), baseOps + calc.expandRolls(item.rolls.filter { index.modifier(it.code)?.local == true }))
+            val baseTotals = calc.compute(emptyMap(), calc.expand(template.base))
+            val totals = calc.itemBase(template, item.rolls, item.quality, item.catalyst)
             template.base.mapNotNull { line ->
                 val def = index.modifier(line.code) ?: return@mapNotNull null
-                if (def.retired()) return@mapNotNull null
                 val values = line.values.mapIndexed { i, own -> val stat = def.effects.getOrNull(i)?.stat.orEmpty(); PropertyValue(stat, baseTotals[stat] ?: own, totals[stat] ?: own) }
                 BaseProperty(line.code, text.template(def).orEmpty(), values)
             }.filter { it.values.isNotEmpty() }

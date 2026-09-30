@@ -56,10 +56,13 @@ class SheetModel(private val base: Map<String, Double>, private val ops: List<St
     fun against(states: Set<Condition>): Double =
         conditional.filter { it.condition in states && it.condition?.target == true }.sumOf { it.value }
 
-    /** The increases of [stat] summed, [lines] among them: what a spell of that element is multiplied by. */
+    /**
+     * The increases of [stat] summed, [lines] among them: what a spell of that element is multiplied by. The damage in
+     * general (server 1.57.0) is an increase of every type of damage, as the sheet adds it up.
+     */
     fun increased(stat: String, lines: List<StatLine> = emptyList()): Double =
-        ops.filter { it.stat == stat && it.op == Op.INCREASED && it.condition == null }.sumOf { op -> op.resolve(op.perStat?.let { plain[it] } ?: 0.0) } +
-            lines.filter { it.stat == stat && it.op == Op.INCREASED }.sumOf { it.value }
+        (ops.filter { it.condition == null } + lines.map { StatOperation(it.stat, it.op, it.value) }).flatMap(calculator::spread)
+            .filter { it.stat == stat && it.op == Op.INCREASED }.sumOf { op -> op.resolve(op.perStat?.let { plain[it] } ?: 0.0) }
 
     override fun equals(other: Any?): Boolean = other is SheetModel && other.plain == plain
     override fun hashCode(): Int = plain.hashCode()

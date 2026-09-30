@@ -3,7 +3,6 @@ package com.sperance.exileforge.core.campaign
 import com.sperance.exileforge.core.atlas.AtlasEffects
 import com.sperance.exileforge.rules.content.BuffKind
 import com.sperance.exileforge.rules.content.ContentIndex
-import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.MapStat
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.roll.MonsterEffect
@@ -27,10 +26,8 @@ object MapStats {
     val MONSTER_DAMAGE = MapStat.MONSTER_DAMAGE.code
     val MONSTER_SPEED = MapStat.MONSTER_SPEED.code
     val MONSTER_RESIST = MapStat.MONSTER_RESIST.code
-    val HERO_LIGHT = MapStat.HERO_LIGHT.code
     val HERO_RESIST = MapStat.HERO_RESIST.code
     val HERO_REGEN = MapStat.HERO_REGEN.code
-    val HERO_SLOW = MapStat.HERO_SLOW.code
     val HERO_DAMAGE_TAKEN = MapStat.HERO_DAMAGE_TAKEN.code
     val HERO_RECOVERY = MapStat.HERO_RECOVERY.code
     val HERO_MAX_RESIST = MapStat.HERO_MAX_RESIST.code
@@ -135,10 +132,8 @@ object MapEffects {
     fun hero(stats: Map<String, Double>, effects: Map<String, Double>): Map<String, Double> {
         if (effects.isEmpty()) return stats
         val sheet = stats.toMutableMap()
-        effects[MapStats.HERO_LIGHT]?.let { v -> sheet[CoreStat.LIGHT_RADIUS.code] = (stats[CoreStat.LIGHT_RADIUS.code]?.takeIf { it > 0 } ?: ExpeditionWorld.DEFAULT_LIGHT) * (1 - v / 100) }
         effects[MapStats.HERO_RESIST]?.let { v -> resists.forEach { sheet[it] = (stats[it] ?: 0.0) - v } }
         effects[MapStats.HERO_REGEN]?.let { v -> sheet["STOCK_HEALTH_REGEN"] = (stats["STOCK_HEALTH_REGEN"] ?: 0.0) * max(0.0, 1 - v / 100) }
-        effects[MapStats.HERO_SLOW]?.let { v -> sheet["STOCK_MOVEMENT_SPEED"] = (stats["STOCK_MOVEMENT_SPEED"] ?: 0.0) - v }
         fun add(stat: String, v: Double) { sheet[stat] = (sheet[stat] ?: 0.0) + v }
         fun scale(stat: String, share: Double) { sheet[stat] = (sheet[stat] ?: 0.0) * max(0.0, 1 + share / 100) }
         effects[MapStats.HERO_DAMAGE_TAKEN]?.let { add("STOCK_DAMAGE_TAKEN", it) }

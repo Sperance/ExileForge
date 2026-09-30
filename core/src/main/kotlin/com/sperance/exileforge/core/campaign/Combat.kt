@@ -71,6 +71,15 @@ enum class DamageType(val attack: String, val resist: String?) {
 }
 
 /**
+ * [value] that [increase] percent increased made, grown by [extra] percent more of increase beside it (server 1.57.0):
+ * increases add up before they multiply, as in PoE — `(100 + increase + extra) / (100 + increase)`.
+ */
+internal fun regrow(value: Double, increase: Double, extra: Double): Double {
+    val before = 100 + increase
+    return if (extra == 0.0 || before <= 0) value else value * max(0.0, before + extra) / before
+}
+
+/**
  * The six ailments the server rules (its `EnumStatBool` without the prefix). Which damage brings which is the rule's, not ours.
  * [word] is how the sheet's stats name it since server 0.36.0 — `STOCK_IGNITE_CHANCE`, `STOCK_AVOID_IGNITE`,
  * `STOCK_IGNITE_DURATION_ON_SELF` — and [damage] the stat that makes its damage over time heavier.
@@ -156,13 +165,17 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
     /** A limit raised by the sheet's own lines (3.13.0): block, evasion, physical reduction and critical chance, each as the resistances are. */
     fun ceiling(limit: Ceiling): Double = limit.at(stat(limit.raise))
     val critChance = (stats[CRIT_CHANCE] ?: rules.critical.chance).coerceIn(0.0, ceiling(rules.ceilings.critical)) / 100
-    val critMultiplier = max(100.0, (stats[CRIT_MULTIPLIER] ?: rules.critical.multiplier) + stat("STOCK_CRITICAL_DAMAGE")) / 100
+    /**
+     * The critical multiplier with the critical strike damage (server 1.57.0): that damage — 100 at base, on the hero's sheet
+     * and on a monster's — grows the crit's bonus over a hit, 150% at 140 striking for 170%; at 0 a crit hits as a hit.
+     */
+    val critMultiplier = rules.critical.effective(stats[CRIT_MULTIPLIER] ?: rules.critical.multiplier, stats[CRIT_DAMAGE]) / 100
     /**
      * A spell's own critical chance and multiplier (server 1.56.0): the attacks' lines do nothing to it. The hero's sheet
      * always holds both from the rule's base; a fighter without them — a monster — casts with its attacks' figures.
      */
     val spellCritChance = stats[SPELL_CRIT_CHANCE]?.let { it.coerceIn(0.0, ceiling(rules.ceilings.critical)) / 100 } ?: critChance
-    val spellCritMultiplier = stats[SPELL_CRIT_MULTIPLIER]?.let { max(100.0, it) / 100 } ?: critMultiplier
+    val spellCritMultiplier = stats[SPELL_CRIT_MULTIPLIER]?.let { rules.critical.effective(it, stats[CRIT_DAMAGE]) / 100 } ?: critMultiplier
     val armour = max(0.0, stat("STOCK_ARMOR"))
     val evasion = max(0.0, stat("STOCK_EVASION"))
     val block = stat("STOCK_BLOCK_CHANCE").coerceIn(0.0, ceiling(rules.ceilings.block)) / 100
@@ -298,6 +311,7 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
         const val DEFAULT_LIFE_DELAY = 4.0
         const val CRIT_CHANCE = "STOCK_CRITICAL_CHANCE"
         const val CRIT_MULTIPLIER = "STOCK_CRITICAL_MULTIPLIER"
+        const val CRIT_DAMAGE = "STOCK_CRITICAL_DAMAGE"
         const val SPELL_CRIT_CHANCE = "STOCK_SPELL_CRITICAL_CHANCE"
         const val SPELL_CRIT_MULTIPLIER = "STOCK_SPELL_CRITICAL_MULTIPLIER"
     }
@@ -513,6 +527,11 @@ internal class Blow(
     val ailments: List<Pair<Ailment, Double>> = emptyList(),
     /** Whether [Battle.strike]'s target is the blow's primary one: an area skill's other foes neither build nor break momentum. */
     val primary: Boolean = true,
+    /**
+     * The increases in percent the hero's [damage] was grown by, by type (server 1.57.0): an increase the blow meets later —
+     * against the target's state — adds to them instead of multiplying. Null: the sheet's own increases of each type.
+     */
+    val increase: Map<DamageType, Double>? = null,
 ) {
     /** A weapon's blow: attacks, not spells, bring life on hit. */
     val weapon: Boolean get() = !spell && (action == Action.ATTACK || action == Action.SKILL)
@@ -978,8 +997,7 @@ class Battle(
     /** [fighter]'s body made again from its sheet with what lies on it — and the hero's under the auras of the foes still standing. */
     private fun remake(fighter: Fighter) {
         val lines = fighter.effects.flatMap { it.lines }
-        if (fighter === heroFighter) fighter.rebody(model.body((if (fighter.low) model.lowLife else emptyList()) + powers.standing + heroCharges.lines() + chargeLines() +
-            model.conditional(conditions) + lines).under(auras()))
+        if (fighter === heroFighter) fighter.rebody(heroBody(emptyList()))
         else {
             val speed = fighter.model.body(emptyList())["STOCK_LOW_LIFE_SPEED"]
             fighter.rebody(fighter.model.body(lines + if (fighter.low && speed > 0) listOf(StatLine("STOCK_ATTACK_SPEED", Op.INCREASED, speed)) else emptyList()))
@@ -987,10 +1005,26 @@ class Battle(
     }
 
     /** The hero's body for one blow: what lies on them and [extra], a skill's own lines. */
-    private fun heroBody(extra: List<StatLine>): Combatant = model.body((if (heroFighter.low) model.lowLife else emptyList()) +
-        powers.standing + heroCharges.lines() + chargeLines() + model.conditional(conditions) + heroFighter.effects.flatMap { it.lines } + extra).under(auras())
+    private fun heroBody(extra: List<StatLine>): Combatant = model.body(heroLines() + extra).under(auras())
 
-    /** The hero's damage for the charges held (3.35.0): so many percent increased for each of a kind, by the sheet. */
+    /** What lies on the hero now: low life's lines, the standing powers', the charges', the conditions' and the effects'. */
+    private fun heroLines(): List<StatLine> = (if (heroFighter.low) model.lowLife else emptyList()) +
+        powers.standing + heroCharges.lines() + chargeLines() + model.conditional(conditions) + heroFighter.effects.flatMap { it.lines }
+
+    /**
+     * The increases of [type] a hero's blow is grown by now, in percent (server 1.57.0): the sheet's own, the damage in
+     * general among them, and those of the lines on the hero and [extra] — the conditions', the charges', a flask's.
+     */
+    private fun heroIncrease(type: DamageType, extra: List<StatLine> = emptyList()): Double = model.increased(type.attack, heroLines() + extra)
+
+    /** How much a hero's [blow] grows by [facing] percent increased beside its own increases, over all its damage. */
+    private fun versus(blow: Blow, facing: Double): Double {
+        val total = blow.damage.values.sum()
+        if (facing == 0.0 || total <= 0) return 1.0
+        return blow.damage.entries.sumOf { (type, value) -> regrow(value, blow.increase?.get(type) ?: heroIncrease(type), facing) } / total
+    }
+
+    /** The hero's damage for the charges held (3.35.0): so many percent increased for each of a kind, by the sheet — beside the other increases (server 1.57.0). */
     private fun chargeLines(): List<StatLine> = ChargeKind.REAL.mapNotNull { kind ->
         val per = heroFighter.body.perCharge(kind)
         val count = heroCharges.count(kind)
@@ -1178,7 +1212,9 @@ class Battle(
         val multiplier = if (kind == HitKind.CRIT) max(1.0, body.critMultiplier(blow.spell) + target.body.critTaken) else body.nonCritMore
         // 3.35.0: a double blow, the hero's lines against the target's state, and what suppression or deflection lets through.
         val doubled = if (body.doubleDamage > 0 && draw(RollKey.DOUBLE, body.doubleDamage) < body.doubleDamage) 2.0 else 1.0
-        val versus = if (me === heroFighter) 1 + max(0.0, model.against(states(target))) / 100 else 1.0
+        // Server 1.57.0: the lines against the target's state are increases beside the blow's own, not a multiplier of their own.
+        val facing = if (me === heroFighter) max(0.0, model.against(states(target))) else 0.0
+        val versus = versus(blow, facing)
         val eased = eased(target, blow) * target.body.hitTaken
         // Server 0.66.0: a penetrating blow ignores part of the resistance, an ailed target takes more, and
         // "damage taken" of the target scales what got through; server 0.69.0: so does a curse on it.
@@ -1218,7 +1254,7 @@ class Battle(
                 DamageType.entries.filter { it != DamageType.PHYSICAL }.map { "STOCK_PHYSICAL_AS_EXTRA_${it.name}" }, DamageType.ELEMENTS.map { "STOCK_PHYSICAL_TAKEN_AS_${it.name}" }))
             if (blow.spread && baseSum > 0) add(FactorTrace(FactorKey.SPREAD, spreadSum / baseSum))
             if (kind == HitKind.CRIT) add(FactorTrace(FactorKey.CRIT, multiplier,
-                if (blow.spell) listOf("STOCK_SPELL_CRITICAL_MULTIPLIER") else listOf("STOCK_CRITICAL_MULTIPLIER", "STOCK_CRITICAL_DAMAGE"), listOf("STOCK_CRITICAL_TAKEN")))
+                listOf(if (blow.spell) "STOCK_SPELL_CRITICAL_MULTIPLIER" else "STOCK_CRITICAL_MULTIPLIER", "STOCK_CRITICAL_DAMAGE"), listOf("STOCK_CRITICAL_TAKEN")))
             else if (multiplier != 1.0) add(FactorTrace(FactorKey.NON_CRIT, multiplier, listOf("STOCK_NON_CRIT_DAMAGE")))
             add(FactorTrace(FactorKey.DAMAGE, body.damageMore, listOf(StatLines.DAMAGE)))
             if (against != 1.0) add(FactorTrace(FactorKey.AGAINST, against, listOf("STOCK_DAMAGE_VS_AILED", "STOCK_DAMAGE_VS_CURSED") + Ailment.entries.map { it.against }))
@@ -1421,8 +1457,8 @@ class Battle(
             flaskCharge("FLASK_CHARGE_WHEN_HIT")
             trigger(SkillEvent.HIT_TAKEN, me)
             powers.taken(PowerMoment(me, taken, blow.spell), kind == HitKind.CRIT)
-            // «Horror» (an essence): struck, the hero may lay their own curse on the one who struck.
-            val chance = target.body["STOCK_CURSE_ON_HIT"]
+            // «Horror» (an essence) and the curse-when-hit essence (server 1.57.0): struck, the hero may lay their own curse on the one who struck.
+            val chance = target.body["STOCK_CURSE_ON_HIT"] + target.body["STOCK_CURSE_WHEN_HIT"]
             if (chance > 0 && me.alive && random.nextDouble() * 100 < chance) curseOf()?.let { curse(it, listOf(me)) }
             watch()
         }
@@ -1639,44 +1675,56 @@ class Battle(
         val more = if (attack && hit.targets > 0) body["STOCK_SKILL_TARGETS"].toInt().coerceAtLeast(0) else 0
         val struck = only?.let { listOf(it) } ?: targets(if (hit.targets <= 0) 0 else hit.targets + more, spell)
         val element = hit.element?.let { if (it == RANDOM) DamageType.ELEMENTS.random(random) else DamageType.element(it) }
-        val lines = hero.effects.flatMap { it.lines } + own
         val primary = struck.firstOrNull()
         var landed = false
         struck.forEach { target ->
             repeat(hit.hits.coerceAtLeast(1)) {
                 if (!target.alive || !hero.alive || outcome != null) return@repeat
-                val damage = heroDamage(hit, level, body, target, element, lines).let { own -> if (bonus == 1.0) own else own.mapValues { it.value * bonus } }
+                val grown = heroDamage(hit, level, body, target, element, own)
+                val damage = if (bonus == 1.0) grown.damage else grown.damage.mapValues { it.value * bonus }
                 val leading = damage.maxByOrNull { it.value }?.key ?: DamageType.PHYSICAL
                 if (strike(hero, target, Blow(damage, Action.SKILL, spell, code, body, spread = hit.spell == null, stun = hit.stun?.at(level) ?: 0.0,
-                    ailments = hit.ailments.mapNotNull { resolve(it, element ?: leading, level) }, primary = target === primary))) landed = true
+                    ailments = hit.ailments.mapNotNull { resolve(it, element ?: leading, level) }, primary = target === primary, increase = grown.increase))) landed = true
             }
         }
         return landed
     }
 
+    /** A hero skill's damage by type, and the increases in percent each type was grown by (server 1.57.0). */
+    private class Grown(val damage: Map<DamageType, Double>, val increase: Map<DamageType, Double>)
+
     /**
-     * A class skill's damage before defences: a share of the weapon — a finisher's larger one on a target
-     * ailing or nearly dead — more by the skill damage; or a spell's own, grown by the increases of its
-     * element, of spells and of skills; and a share of all of it turned to the skill's element.
+     * A class skill's damage before defences: a share of the weapon — a finisher's larger one on a target ailing or nearly
+     * dead — or a spell's own; and a share of all of it turned to the skill's element. Since server 1.57.0 every increase
+     * adds up before it multiplies, as in PoE: the skill damage joins the weapon's increases of each type, a spell grows
+     * by the increases of its element — the damage in general, the conditions' and the charges' among them — of spells and of skills.
      */
-    private fun heroDamage(hit: SkillHit, level: Int, body: Combatant, target: Fighter, element: DamageType?, lines: List<StatLine>): Map<DamageType, Double> {
+    private fun heroDamage(hit: SkillHit, level: Int, body: Combatant, target: Fighter, element: DamageType?, own: List<StatLine>): Grown {
         val damage = mutableMapOf<DamageType, Double>()
+        val increase = mutableMapOf<DamageType, Double>()
+        val skill = body["STOCK_SKILL_DAMAGE"]
         hit.weapon?.let { weapon ->
             val finisher = hit.finisher?.takeIf { target.ailments.isNotEmpty() || target.life < target.body.maxLife * 0.3 }
-            val share = (finisher ?: weapon).at(level) / 100 * max(0.0, 1 + body["STOCK_SKILL_DAMAGE"] / 100)
-            body.damage.forEach { (type, value) -> damage.merge(type, value * share, Double::plus) }
+            val share = (finisher ?: weapon).at(level) / 100
+            body.damage.forEach { (type, value) ->
+                val grown = heroIncrease(type, own)
+                damage.merge(type, regrow(value, grown, skill) * share, Double::plus)
+                increase[type] = grown + skill
+            }
         }
         hit.spell?.let { spell ->
             val type = DamageType.element(spell.element) ?: DamageType.FIRE
             val low = spell.min.at(level)
             val base = low + random.nextDouble() * (spell.max.at(level) - low).coerceAtLeast(0.0)
-            val increase = model.increased(type.attack, lines) + body["STOCK_SPELL_DAMAGE"] + body["STOCK_SKILL_DAMAGE"]
-            damage.merge(type, base * max(0.0, 1 + increase / 100), Double::plus)
-            // 3.35.0: the flat damage the sheet adds to spells, each type grown by its own increases.
-            DamageType.ELEMENTS.forEach { added ->
-                val flat = body.spellAdded(added)
-                if (flat > 0) damage.merge(added, flat * max(0.0, 1 + (model.increased(added.attack, lines) + body["STOCK_SPELL_DAMAGE"] + body["STOCK_SKILL_DAMAGE"]) / 100), Double::plus)
+            val spells = body["STOCK_SPELL_DAMAGE"] + skill
+            fun grow(of: DamageType, value: Double) {
+                val grown = heroIncrease(of, own) + spells
+                damage.merge(of, value * max(0.0, 1 + grown / 100), Double::plus)
+                increase[of] = grown
             }
+            grow(type, base)
+            // 3.35.0: the flat damage the sheet adds to spells, each type grown by its own increases.
+            DamageType.ELEMENTS.forEach { added -> body.spellAdded(added).takeIf { it > 0 }?.let { grow(added, it) } }
         }
         val convert = (hit.convert?.at(level) ?: 0.0).coerceIn(0.0, 100.0) / 100
         if (element != null && convert > 0) {
@@ -1684,7 +1732,7 @@ class Battle(
             damage.replaceAll { _, value -> value * (1 - convert) }
             damage.merge(element, total * convert, Double::plus)
         }
-        return damage
+        return Grown(damage, increase)
     }
 
     /** A skill's chance of an ailment: `ELEMENT` is the one [element] brings. */
@@ -1699,7 +1747,7 @@ class Battle(
         val hero = heroFighter
         val type = DamageType.element(dot.element) ?: DamageType.CHAOS
         val ailment = Ailment.of(type).takeIf { it.hurts } ?: Ailment.POISONED
-        val increase = model.increased(type.attack, hero.effects.flatMap { it.lines }) + hero.body["STOCK_SPELL_DAMAGE"] + hero.body["STOCK_SKILL_DAMAGE"]
+        val increase = heroIncrease(type) + hero.body["STOCK_SPELL_DAMAGE"] + hero.body["STOCK_SKILL_DAMAGE"]
         val lone = if (loneWolf) 1 + rules.loneWolf.dealt / 100 else 1.0
         targets(dot.targets, spell).forEach { target ->
             val low = dot.min.at(level)

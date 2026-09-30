@@ -2,7 +2,6 @@ package com.sperance.exileforge.core.campaign
 
 import com.sperance.exileforge.core.display.effectText
 import com.sperance.exileforge.core.display.effectUnit
-import com.sperance.exileforge.core.display.retired
 import com.sperance.exileforge.core.display.modNumber
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.ui
@@ -19,7 +18,6 @@ data class MonsterLine(val stat: String, val op: Op, val own: Double, val map: D
 /** A monster's modifiers and its map's buffs as one list, summed per stat and operation — the same sum the fight folds; display only. */
 fun monsterLines(monster: RolledMonster): List<MonsterLine> =
     (monster.modifiers.flatMap { it.effects }.map { it to false } + monster.mapBuffs.map { it to true })
-        .filterNot { (effect, _) -> retired(effect.stat) }
         .groupBy { (effect, _) -> effect.stat to effect.op }
         .map { (key, parts) ->
             val (map, own) = parts.partition { it.second }

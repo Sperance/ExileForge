@@ -43,7 +43,7 @@ enum class StatGroup {
  * The counts of what is worn (server 1.32.0) are the powers' own reading of the sheet, not a figure of the hero: not shown.
  */
 fun groupedStats(stats: Map<String, Double>, registry: StatRegistry? = null): List<Pair<StatGroup, List<Pair<String, Double>>>> =
-    stats.entries.filterNot { retired(it.key) || it.key.startsWith(WORN) }.groupBy { StatGroup.of(it.key) }.toSortedMap()
+    stats.entries.filterNot { it.key.startsWith(WORN) }.groupBy { StatGroup.of(it.key) }.toSortedMap()
         .map { (group, entries) -> group to entries.sortedWith(compareBy({ registry?.order(it.key) ?: Int.MAX_VALUE }, { it.key })).map { it.key to it.value } }
 
 /** The prefix of the sheet's counts of what is worn (server 1.32.0). */

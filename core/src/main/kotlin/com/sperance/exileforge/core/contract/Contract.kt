@@ -15,7 +15,7 @@ fun JsonObject.text(key: String): String = (get(key) as? JsonPrimitive)?.content
 /** The server this client is built against: the submodule `backend/` is pinned to this commit, and `SERVER_VERSION` is its `Constants.kt`. */
 const val SERVER_COMMIT = "1d0ccd01206e1b32f86c2a7e0af1f8eafdceb755"
 const val SERVER_BRANCH = "claude/tender-pasteur-a36kj2"
-const val SERVER_VERSION = "1.56.0"
+const val SERVER_VERSION = "1.57.0"
 
 /** A Mongo id: 24 hex digits. Content is named by codes, only players' things carry ids. */
 fun requireId(id: String) { require(Regex("[0-9a-fA-F]{24}").matches(id)) { ui("contract.bad_id") } }

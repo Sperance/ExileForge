@@ -257,7 +257,7 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     } }
 
     /** The hero as a run takes them: the sheet and what it was added up from, their stance, and what they bring beyond the sheet. */
-    private fun gear(): HeroGear? { with(runtime) {
+    internal fun gear(): HeroGear? { with(runtime) {
         val s = state.value
         val index = s.index ?: return null
         val hero = s.hero ?: return null

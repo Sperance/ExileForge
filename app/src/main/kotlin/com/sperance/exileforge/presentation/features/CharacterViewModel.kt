@@ -42,6 +42,7 @@ class CharacterViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         if (state.value.busy) return
         cancelReads()
         expeditionViewModel.drop()
+        trialViewModel.drop()
         craftsViewModel.drop()
         mutable.update { it.copy(phase = AppPhase.CHARACTERS, play = PlayState(draftClass = it.play.draftClass, selectedOrb = it.play.selectedOrb), market = MarketState(),
             building = null, guild = GuildState(), quests = QuestState()) }

@@ -44,6 +44,7 @@ import com.sperance.exileforge.ui.screens.crafts.CraftsScreen
 import com.sperance.exileforge.ui.screens.expedition.AtlasScreen
 import com.sperance.exileforge.ui.screens.expedition.ExpeditionPlay
 import com.sperance.exileforge.ui.screens.expedition.ExpeditionScreen
+import com.sperance.exileforge.ui.screens.expedition.TrialScreen
 import com.sperance.exileforge.ui.screens.hero.HeroScreen
 import com.sperance.exileforge.ui.screens.hero.HeroTab
 import com.sperance.exileforge.ui.screens.hero.HeroTabStrip
@@ -70,6 +71,7 @@ import com.sperance.exileforge.ui.theme.*
     val s by vm.state.collectAsStateWithLifecycle()
     val logs by vm.logs.collectAsStateWithLifecycle()
     val expedition by vm.expedition.collectAsStateWithLifecycle()
+    val trial by vm.trial.collectAsStateWithLifecycle()
     // Language is part of the key: every cached label is rebuilt in the chosen tongue.
     // The dictionary arrives after the first frame, so its size joins the key: when the server's
     // names land, every screen that printed a bare code is drawn again.
@@ -85,6 +87,8 @@ import com.sperance.exileforge.ui.theme.*
                 // A campaign run takes the whole screen: no banner and no bar, the scene is the game.
                 // The zone's card (2.76.0) lies on the world map in the tab itself.
                 AppPhase.GAME -> expedition?.let { ExpeditionPlay(s, vm, it) }
+                    // A trial (3.49.0) is an arena of its own, over the whole screen too.
+                    ?: trial?.let { TrialScreen(s, vm, it) }
                     // The atlas (2.68.0) is a sky of its own, above the tabs.
                     ?: s.play.atlas?.let { AtlasScreen(s, vm) }
                     ?: GameScaffold(s, vm, logs) { bugOpen = true }

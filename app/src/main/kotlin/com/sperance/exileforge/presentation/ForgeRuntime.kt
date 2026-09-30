@@ -30,6 +30,7 @@ import com.sperance.exileforge.presentation.features.CharacterViewModel
 import com.sperance.exileforge.presentation.features.ConnectionViewModel
 import com.sperance.exileforge.presentation.features.CraftsViewModel
 import com.sperance.exileforge.presentation.features.ExpeditionViewModel
+import com.sperance.exileforge.presentation.features.TrialViewModel
 import com.sperance.exileforge.presentation.features.GuildViewModel
 import com.sperance.exileforge.presentation.features.QuestViewModel
 import com.sperance.exileforge.presentation.features.HeroViewModel
@@ -83,6 +84,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
     val redemptionViewModel = RedemptionViewModel(this)
     val characterViewModel = CharacterViewModel(this)
     val expeditionViewModel = ExpeditionViewModel(this)
+    val trialViewModel = TrialViewModel(this)
     val craftsViewModel = CraftsViewModel(this)
     val guildViewModel = GuildViewModel(this)
     val questViewModel = QuestViewModel(this)
@@ -408,7 +410,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
     }
 
     fun clearSession() {
-        api.logout(); journal.clear(); cancelReads(); expeditionViewModel.drop(); craftsViewModel.drop(); heroViewModel.forget()
+        api.logout(); journal.clear(); cancelReads(); expeditionViewModel.drop(); trialViewModel.drop(); craftsViewModel.drop(); heroViewModel.forget()
         mutable.update { it.copy(phase = AppPhase.AUTH, tab = TAB_HERO, mode = AppMode.PLAYER, failure = null,
             account = it.account.copy(resumable = false, characters = emptyList(), charactersRead = false, signedIn = false, profile = null, sessionEpoch = it.account.sessionEpoch + 1),
             admin = it.admin.copy(redemptions = emptyList()),

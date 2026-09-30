@@ -1,5 +1,8 @@
 package com.sperance.exileforge.core.model.campaign
 
+import com.sperance.exileforge.rules.content.TrialEventKind
+import com.sperance.exileforge.rules.content.TrialProgress
+import com.sperance.exileforge.rules.content.TrialRun
 import com.sperance.exileforge.rules.roll.AbyssRun
 import com.sperance.exileforge.rules.roll.AbyssWindow
 import com.sperance.exileforge.rules.roll.ActiveMap
@@ -30,6 +33,8 @@ import kotlinx.serialization.Serializable
     val recipeRolled: Boolean = false,
     val corruptionOpened: Boolean = false,
     val run: RunState? = null,
+    /** The trials (server 1.47.0): the one open, the tower's record, the rush's best times and cleared regions. */
+    val trials: TrialProgress = TrialProgress(),
 ) {
     /** The boss of [mapCode] is slain and not yet back. */
     fun bossDown(mapCode: String, now: Long): Boolean = (bosses[mapCode] ?: 0L) > now
@@ -94,3 +99,21 @@ import kotlinx.serialization.Serializable
 
 /** Where items that came to the hero went: into the stash, into its overflow, or to the merchant for [gold]. */
 @Serializable data class Received(val stashed: Int = 0, val overflowed: Int = 0, val sold: Int = 0, val gold: Long = 0)
+
+/** A trial entered (server 1.47.0): the trial itself and the hero's context frozen on entry, the monsters stood up by it. */
+@Serializable data class TrialStart(val run: TrialRun, val context: RunContext)
+
+/** What one accepted event of a trial brought. */
+@Serializable data class TrialReward(val n: Int, val kind: TrialEventKind, val reward: RewardView = RewardView())
+
+/** The server's answer to a trial's events: how far applied, what refused, what each brought, the hero's trials and where the hero stands. */
+@Serializable data class TrialReport(
+    val applied: Int = 0,
+    val rejected: List<Int> = emptyList(),
+    val rewards: List<TrialReward> = emptyList(),
+    val trials: TrialProgress = TrialProgress(),
+    val level: Int = 1,
+    val experience: Double = 0.0,
+    val money: Long = 0,
+    val received: Received = Received(),
+)

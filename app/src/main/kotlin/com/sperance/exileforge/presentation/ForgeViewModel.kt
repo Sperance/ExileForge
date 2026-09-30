@@ -46,6 +46,13 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() 
     fun closeZone() = runtime.expeditionViewModel.closeZone()
     fun pickMap(itemId: String?) = runtime.expeditionViewModel.pickMap(itemId)
     fun runCommand(command: RunCommand) = runtime.expeditionViewModel.send(command)
+    /** The trial on screen (3.49.0), if any: an arena the screen steps and reads. */
+    val trial = runtime.trialViewModel.arena
+    fun enterRush(region: String) = runtime.trialViewModel.rush(region)
+    fun enterTower() = runtime.trialViewModel.tower()
+    fun abandonTrial() = runtime.trialViewModel.abandon()
+    fun trialCommand(command: RunCommand) = runtime.trialViewModel.send(command)
+    fun closeTrial() = runtime.trialViewModel.close()
     fun closeRun() = runtime.expeditionViewModel.close()
     /** The run's journal goes out now: the app leaves the foreground. */
     fun flushRun() = runtime.expeditionViewModel.flushRun()

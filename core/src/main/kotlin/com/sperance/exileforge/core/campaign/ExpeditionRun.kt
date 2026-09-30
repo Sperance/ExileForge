@@ -7,8 +7,6 @@ import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.DesecrationKind
 import com.sperance.exileforge.rules.content.DesecrationRule
 import com.sperance.exileforge.rules.content.Pet
-import com.sperance.exileforge.rules.content.PetRole
-import com.sperance.exileforge.rules.roll.Menagerie
 import com.sperance.exileforge.rules.content.LoneWolfRule
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.AbyssRifts
@@ -334,26 +332,9 @@ class ExpeditionRun(
     private val vaaled = HashMap<Int, Crystal>()
     private var fallEvent: Int? = null
     private val desecration = index.campaign.desecration
-    /**
-     * The pet as a fighter: its sheet at its level, what its role does; a new one each fight stands up whole. Since 3.33.0
-     * (server 1.32.0) the hero's sheet reaches it — its levels, damage, life, speed, armour and resistances — made again
-     * only when those change.
-     */
-    private var allyMade: Pair<Map<String, Double>, Ally?>? = null
-    private val menagerie by lazy { Menagerie(index) }
-    private fun ally(): Ally? {
-        val boons = PetBoons.of(hero.stats)
-        allyMade?.takeIf { it.first == boons }?.let { return it.second }
-        val made = pet?.let { own ->
-            val kind = menagerie.species(own.species) ?: return@let null
-            val levels = (boons[PetBoons.LEVEL] ?: 0.0).toInt()
-            val p = if (levels != 0) own.copy(level = (own.level + levels).coerceAtLeast(1)) else own
-            Ally(p.species, Combatant(PetBoons.apply(menagerie.sheet(p), boons), p.level, rules), kind.role == PetRole.TANK,
-                if (kind.role == PetRole.SUPPORT) menagerie.supportHeal(p) else 0.0, index.pets.drawFire)
-        }
-        allyMade = boons to made
-        return made
-    }
+    /** The pet as a fighter (3.5.0), made again only when the hero's sheet that reaches it changes. */
+    private val allies = PetAllies(index, pet, rules)
+    private fun ally(): Ally? = allies.of(hero.stats)
     /** The patch whose lines are on the hero: the one underfoot, or the last one stepped off within its trail. */
     private var desecratedBy: Desecrated? = null
     private var trailLeft = 0.0
@@ -978,45 +959,8 @@ class ExpeditionRun(
     /** The strongest of the stage: its portrait and its name head the pack fought now. */
     private fun fightLeader(): RolledMonster = members.maxBy { it.monster.rarity.ordinal }.monster
 
-    private fun fightHud(battle: Battle): FightHud {
-        val h = battle.heroFighter
-        val hits = battle.events.withIndex()
-            .filter { (_, event) -> event.time <= battle.time && battle.time - event.time < HIT_LIFETIME && event.action != Action.RETREAT &&
-                (event.damage > 0 || event.healed > 0 || event.kind == HitKind.EVADED || event.kind == HitKind.BLOCKED || event.action == Action.ATTACK) }
-            .map { (index, event) ->
-                FloatingHit(index, event.target, event.action, event.kind, event.damage.roundToInt(), battle.time - event.time, event.healed.roundToInt(),
-                    event.type, event.inflicted, event.stunned, event.foe)
-            }
-        fun ailments(f: Battle.Fighter) = f.ailments.groupBy { it.ailment }.map { (ailment, active) ->
-            val until = active.maxOf { it.until }
-            AilmentView(ailment, ((until - battle.time) / active.first().duration).toFloat().coerceIn(0f, 1f), active.size,
-                (until - battle.time).coerceAtLeast(0.0), if (ailment.hurts) active.sumOf { it.magnitude } else active.maxOf { it.magnitude })
-        }
-        val foes = battle.foeFighters.map { f ->
-            FoeView(f.index, members[f.index].monster, f.life.roundToInt(), f.body.maxLife.roundToInt(), f.shield.roundToInt(), f.body.maxShield.roundToInt(),
-                battle.swing(f), ailments(f), f.held, f.alive, battle.reachable(f.index), f.body.taunt, battle.effects(f),
-                f.mana.roundToInt(), f.body.maxMana.roundToInt(), back = f.ranged)
-        }
-        return FightHud(
-            ally = battle.allyFighter?.let { f -> AllyView(battle.ally!!.code, f.life.roundToInt(), f.body.maxLife.roundToInt(), f.alive) },
-            leader = fightLeader(), foes = foes,
-            heroLife = h.life.roundToInt(), heroShield = h.shield.roundToInt(),
-            hits = hits, speed = speed,
-            outcome = battle.outcome,
-            heroSwing = battle.swing(h), heroAilments = ailments(h), heroHeld = h.held,
-            retreating = battle.retreating,
-            lunge = battle.lunge()?.let { (event, progress) -> LungeView(event.actor, event.action, event.kind, event.landed, progress.toFloat(), event.foe) },
-            events = battle.events.toList().asReversed(),
-            started = started, paused = paused,
-            target = battle.target()?.index, focus = battle.focus,
-            loneWolf = rules.loneWolf.takeIf { battle.loneWolf }, heroTaunt = hero.taunt,
-            heroMana = h.mana.roundToInt(), heroMaxMana = battle.manaCap().roundToInt(),
-            skills = battle.skillViews(), flasks = battle.flaskViews(), heroEffects = battle.effects(h), heroCharges = battle.chargeViews(),
-            heroBarrier = h.barrier.roundToInt(),
-            level = fightLevel, escape = !abyssFight,
-            stage = stage, stages = fightAgents.size, interlude = interlude,
-        )
-    }
+    private fun fightHud(battle: Battle): FightHud = battle.hud(members.map { it.monster }, fightLeader(), speed, started, paused, hero.taunt,
+        level = fightLevel, escape = !abyssFight, stage = stage, stages = fightAgents.size, interlude = interlude)
 
     companion object {
         /** How long the fight's last blow hangs before the scene moves on. */

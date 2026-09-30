@@ -1027,6 +1027,7 @@
   "api.choose_item": "Choose an item",
   "api.no_rights": "Not allowed",
   "cmd.stale_revision": "The server speaks API revision {0}, but {1} is needed. Update ktor-bestgame.",
+  "cmd.stale_rules": "The server runs rules version {0}, but this client has {1}. Update the app.",
   "vaal.eyebrow": "Vaal zone · corrupted",
   "vaal.title": "Vaal zone · {0}",
   "vaal.level": "Level {0}",

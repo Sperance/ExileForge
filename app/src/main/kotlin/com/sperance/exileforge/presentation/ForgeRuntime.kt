@@ -3,6 +3,7 @@ package com.sperance.exileforge.presentation
 import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.display.IconBundle
 import com.sperance.exileforge.core.model.sync.API_REVISION
+import com.sperance.exileforge.rules.content.RULES_VERSION
 import com.sperance.exileforge.core.model.sync.StaticManifest
 import com.sperance.exileforge.core.display.PortraitBundle
 import com.sperance.exileforge.core.display.PortraitSvg
@@ -394,7 +395,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
             val server = state.value.account.server
             val manifest = store.manifest(server)?.let { text -> runCatching { WireJson.decodeFromString(StaticManifest.serializer(), text) }.getOrNull() }
                 ?: return false
-            if (manifest.revision != API_REVISION) return false
+            if (manifest.revision != API_REVISION || manifest.rules != RULES_VERSION) return false
             val texts = ContentFiles.ALL.associateWith { file ->
                 store.chunk(server, file)?.takeIf { it.first.isNotBlank() && it.first == manifest.content.chunks[file] }?.second ?: return false
             }

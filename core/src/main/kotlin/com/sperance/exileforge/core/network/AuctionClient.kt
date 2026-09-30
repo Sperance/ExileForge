@@ -14,9 +14,11 @@ private const val AUCTION = "api/v1/auctionlot"
 /** The player auction: the showcase, a hero's own lots, listing, buying and withdrawing. */
 class AuctionClient internal constructor(private val http: Transport) {
     /** The showcase, narrowed and paged by the server: every field the filter compares is a snapshot the lot carries. */
-    suspend fun search(heroId: String, filter: AuctionFilter, page: Int): AuctionPage {
-        requirePage(page)
-        return http.get("$AUCTION/search", heroQuery(heroId, "page" to page.toString(), "size" to AUCTION_PAGE_SIZE.toString()) + filter.query())
+    /** The showcase page after the lot [after] ("" — from the start), by cursor: [cursors] are the trail kept for «back». */
+    suspend fun search(heroId: String, filter: AuctionFilter, cursors: List<String>): AuctionPage {
+        val after = cursors.lastOrNull().orEmpty()
+        val page: AuctionPage = http.get("$AUCTION/search", heroQuery(heroId, "after" to after, "size" to AUCTION_PAGE_SIZE.toString()) + filter.query())
+        return page.copy(page = cursors.size - 1, cursors = cursors.ifEmpty { listOf("") })
     }
 
     suspend fun slots(heroId: String): AuctionSlots = http.get("$AUCTION/slots", heroQuery(heroId))

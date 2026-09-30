@@ -116,7 +116,7 @@ class ServerIntegrationTest {
             val held = chaos()
             val lot = api.auction.sellItem(heroId, Orb.CHAOS_ORB.name, 1, Orb.CHAOS_ORB.name, 1)
             assertEquals(LotStatus.ACTIVE, lot.status)
-            assertTrue(api.auction.search(heroId, AuctionFilter(), 0).items.any { it.id == lot.id })
+            assertTrue(api.auction.search(heroId, AuctionFilter(), listOf("")).items.any { it.id == lot.id })
             assertEquals(LotStatus.CANCELLED, api.auction.cancel(heroId, lot.id).status)
             assertEquals(held, chaos())
 

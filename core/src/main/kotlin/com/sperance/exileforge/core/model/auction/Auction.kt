@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.model.auction
 
+import com.sperance.exileforge.core.model.command.AUCTION_PAGE_SIZE
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.display.mapItemTitle
 import com.sperance.exileforge.core.i18n.locOr
@@ -106,7 +107,23 @@ import kotlinx.serialization.Serializable
 enum class FilterField { KIND, SLOT, RARITY, MIN_LEVEL, MAX_LEVEL, ORB, MAX_PRICE, SELLER }
 
 /** One page of the showcase, as the server pages it. */
-@Serializable data class AuctionPage(val items: List<AuctionLot> = emptyList(), val page: Int = 0, val totalItems: Long = 0, val totalPages: Int = 0)
+/**
+ * A showcase page by cursor (server 1.62.0): [next] opens the following page, `null` — nothing further. [page] and [cursors] are the
+ * client's own: the cursor each visited page began at (the first — ""), so «back» asks the server for the same page again.
+ */
+@Serializable data class AuctionPage(
+    val items: List<AuctionLot> = emptyList(), val next: String? = null, val totalItems: Long = 0,
+    val page: Int = 0, val cursors: List<String> = listOf(""),
+) {
+    val totalPages: Int get() = ((totalItems + AUCTION_PAGE_SIZE - 1) / AUCTION_PAGE_SIZE).toInt()
+
+    /** The cursors leading to [target] from this page: back along the trail, one step forward by [next], else from the start. */
+    fun trailTo(target: Int): List<String> = when {
+        target in 0..page -> cursors.take(target + 1)
+        target == page + 1 && next != null -> cursors + next
+        else -> listOf("")
+    }
+}
 
 fun lotKindTitle(kind: LotKind, lang: Lang = uiLanguage): String = ui(lang, "enum.lot.${kind.name}")
 

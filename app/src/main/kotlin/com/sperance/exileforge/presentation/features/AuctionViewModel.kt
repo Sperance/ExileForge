@@ -23,7 +23,7 @@ class AuctionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     fun loadShowcase(page: Int = 0) { with(runtime) { trade(restart = true) {
         val id = heroId
         val filter = state.value.market.filter.copy(excludeSellerId = if (state.value.market.showOwnLots) "" else id, lang = state.value.lang.code)
-        val showcase = api.auction.search(id, filter, page)
+        val showcase = api.auction.search(id, filter, state.value.market.showcase.trailTo(page))
         mutable.update { it.copy(market = it.market.copy(showcase = showcase)) }
     } } }
 
@@ -74,7 +74,7 @@ class AuctionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         afterTrade {
             refreshHero(id)
             val filter = state.value.market.filter.copy(excludeSellerId = if (state.value.market.showOwnLots) "" else id, lang = state.value.lang.code)
-            val showcase = api.auction.search(id, filter, state.value.market.showcase.page)
+            val showcase = api.auction.search(id, filter, state.value.market.showcase.cursors)
             mutable.update { it.copy(market = it.market.copy(showcase = showcase)) }
         }
     } } }

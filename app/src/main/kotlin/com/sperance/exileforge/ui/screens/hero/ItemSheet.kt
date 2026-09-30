@@ -37,7 +37,6 @@ import com.sperance.exileforge.ui.theme.*
 private enum class ItemAction { AUCTION, SELL, WORN }
 
 /** The template a zone's map is named after: `MAP_<zone code>`; the card's map action walks it back. */
-private const val MAP_PREFIX = "MAP_"
 
 /**
  * One item of the stash: its card, and what can be done with it.
@@ -87,7 +86,7 @@ private const val MAP_PREFIX = "MAP_"
                     instance.equipped -> Action(ForgeGlyphs.Helm, ui("hero.unequip"), can) { onDismiss(); vm.unequip(instance.id) }
                     // A map is not worn (2.37.0): it goes into its zone's launch window, picked.
                     view.slot == Slot.MAP -> Action(ForgeGlyphs.Portal, ui("hero.action_map"), can, GoldBright) {
-                        onDismiss(); vm.tab(TAB_EXPEDITION); vm.selectZone(view.code.removePrefix(MAP_PREFIX)); vm.pickMap(instance.id)
+                        onDismiss(); vm.tab(TAB_EXPEDITION); vm.selectZone(instance.mapZone); vm.pickMap(instance.id)
                     }
                     else -> Action(ForgeGlyphs.Helm, ui("hero.equip"), can && reachable, GoldBright) { onDismiss(); vm.equip(instance.id, null) }
                 }

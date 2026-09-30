@@ -36,7 +36,7 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     fun selectZone(mapCode: String) = runtime.expeditionViewModel.selectZone(mapCode)
     fun loadCrafts(silent: Boolean = false) = runtime.craftsViewModel.load(silent)
     fun openProfession(code: String) = runtime.craftsViewModel.openProfession(code)
-    fun startWork(job: String, additives: List<String> = emptyList()) = runtime.craftsViewModel.start(job, additives)
+    fun startWork(job: String, choice: String = "", additives: List<String> = emptyList()) = runtime.craftsViewModel.start(job, choice, additives)
     fun stopWork() = runtime.craftsViewModel.stop()
     fun equipTool(itemId: String) = runtime.craftsViewModel.equipTool(itemId)
     fun closeZone() = runtime.expeditionViewModel.closeZone()

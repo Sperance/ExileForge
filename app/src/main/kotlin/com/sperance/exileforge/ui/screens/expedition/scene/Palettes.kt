@@ -61,7 +61,6 @@ object Palettes {
         DesecrationGroup.POISON -> Color(0xFF7BC44A)
         DesecrationGroup.DEFENCE -> Color(0xFF9AA7B4)
         DesecrationGroup.WEAKNESS -> Color(0xFF5B4A8C)
-        DesecrationGroup.CURSE -> Color(0xFFC04BC8)
     }
     val magic = Color(0xFF8888FF)
     val rare = Color(0xFFFFFF77)

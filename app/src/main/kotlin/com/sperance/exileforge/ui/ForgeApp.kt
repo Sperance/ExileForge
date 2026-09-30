@@ -22,7 +22,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.sperance.exileforge.core.display.jobTitle
+import com.sperance.exileforge.core.display.workTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.network.RequestLog
 import com.sperance.exileforge.presentation.ForgeViewModel
@@ -202,7 +202,7 @@ import com.sperance.exileforge.ui.theme.*
     Column(Modifier.widthIn(max = 120.dp).clickable(onClick = onClick).padding(horizontal = 6.dp, vertical = 2.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             Icon(ForgeGlyphs.Anvil, null, tint = Gold, modifier = Modifier.size(12.dp))
-            Text(jobTitle(work.job), color = Parchment, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(workTitle(work.job, work.choice), color = Parchment, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         LinearProgressIndicator(progress = { if (work.cycleMillis > 0) ((now + offset - work.settledAt).toFloat() / work.cycleMillis).coerceIn(0f, 1f) else 0f },
             modifier = Modifier.fillMaxWidth().height(2.dp).padding(top = 1.dp), color = Gold, trackColor = PanelRaised)

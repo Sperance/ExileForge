@@ -28,10 +28,15 @@ import kotlinx.serialization.Serializable
     val kind: JobKind = JobKind.ITEM,
     val inputs: List<JobInput> = emptyList(),
     val band: List<Int> = emptyList(),
-    val map: String = "",
+    /** A cartographer's chart (3.45.0): the region whose open zones it maps, one at random. */
+    val region: String = "",
     val additives: Boolean = false,
-    /** A cartographer's chart: whether the hero has opened its zone. */
+    /** Whether the hero may take it: a chart needs an open zone of its region, a choosing work a variant. */
     val open: Boolean = true,
+    /** A variant of a choosing work (3.45.0): what was chosen — the item it makes; blank on the work itself. */
+    val choice: String = "",
+    /** The variants of a choosing work — a condensed essence, a skill book of the hero's class — each a plain work of its own. */
+    val options: List<JobView> = emptyList(),
 )
 
 /** A profession of the hero: its level and experience, the tool in its slot, its bonus and works. */
@@ -58,7 +63,13 @@ import kotlinx.serialization.Serializable
     val cycle: Long = 0,
     val startedAt: Long = 0,
     val totals: WorkTally = WorkTally(),
+    /** The variant chosen (3.45.0), blank for a work without a choice. */
+    val choice: String = "",
 )
+
+/** The work [code] as the hero runs it: the chosen variant of a choosing work, else the work itself. */
+fun ProfessionView.job(code: String, choice: String = ""): JobView? =
+    jobs.firstOrNull { it.code == code }?.let { job -> job.options.firstOrNull { it.choice == choice } ?: job.takeIf { choice.isEmpty() } }
 
 /** The crafts of a hero, whole: every answer of the crafts routes is this. */
 @Serializable data class CraftsState(
@@ -71,3 +82,6 @@ import kotlinx.serialization.Serializable
     val additives: Map<String, String> = emptyMap(),
     val maxAdditives: Int = 0,
 )
+
+/** The work under way, as its profession lists it: the chosen variant when it has one. */
+val CraftsState.running: JobView? get() = work?.let { w -> professions.firstOrNull { it.code == w.profession }?.job(w.job, w.choice) }

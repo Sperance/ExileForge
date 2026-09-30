@@ -1,6 +1,7 @@
 package com.sperance.exileforge.core.display
 
 import com.sperance.exileforge.core.i18n.Lang
+import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.serverLocale
 import com.sperance.exileforge.core.i18n.ui
@@ -39,6 +40,8 @@ fun tradeName(code: String, equipment: Boolean): String? =
 
 fun monsterTitle(code: String): String = locOr(LocaleKey.monsterName(code), displayName(code))
 fun mapTitle(code: String): String = locOr(LocaleKey.mapName(code), displayName(code))
+/** A map item by its zone: «Tidal Shore Map». */
+fun mapItemTitle(zone: String): String = loc(LocaleKey.mapItemName(), listOf(mapTitle(zone)))
 fun mapDescription(code: String): String = locOr(LocaleKey.mapDescription(code), "")
 fun regionTitle(code: String): String = locOr(LocaleKey.regionName(code), displayName(code))
 fun classTitle(code: String): String = locOr(LocaleKey.className(code), displayName(code))
@@ -49,6 +52,8 @@ fun atlasNodeTitle(code: String): String = locOr(LocaleKey.atlasNodeName(code), 
 fun professionTitle(code: String): String = locOr(LocaleKey.professionName(code), displayName(code))
 fun professionDescription(code: String): String = locOr(LocaleKey.professionDescription(code), "")
 fun jobTitle(code: String): String = locOr(LocaleKey.jobName(code), displayName(code))
+/** A work with its choice (3.45.0): «Condense Essence · Weeping Essence of Greed». */
+fun workTitle(code: String, choice: String): String = if (choice.isEmpty()) jobTitle(code) else "${jobTitle(code)} · ${itemTitle(choice)}"
 
 /**
  * Title of a stat: the client's own table first (it takes an explicit language), then the server's label

@@ -28,12 +28,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.Glyph
-import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.equipmentIcon
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.fineNumber
 import com.sperance.exileforge.core.display.itemTitle
-import com.sperance.exileforge.core.display.mapTitle
+import com.sperance.exileforge.core.display.regionTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.professionDescription
 import com.sperance.exileforge.core.display.professionTitle
@@ -45,6 +44,8 @@ import androidx.compose.foundation.verticalScroll
 import com.sperance.exileforge.core.model.crafts.JobView
 import com.sperance.exileforge.core.model.crafts.ProfessionView
 import com.sperance.exileforge.core.model.crafts.WorkView
+import com.sperance.exileforge.core.model.crafts.job
+import com.sperance.exileforge.core.model.crafts.running
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.Reads
@@ -64,6 +65,9 @@ import kotlinx.coroutines.delay
 /** The dictionary's name of a work; the tab bar's badge (ForgeApp) names it by this package, so it stays here. */
 fun jobTitle(code: String): String = com.sperance.exileforge.core.display.jobTitle(code)
 
+/** The work under way by name, with its choice. */
+fun workTitle(work: WorkView): String = com.sperance.exileforge.core.display.workTitle(work.job, work.choice)
+
 /**
  * What an answer brought, as one line: «+2 Iron Ore, +1 Bark», the pieces a smith or a cartographer
  * made, that the bag ran dry, or that the cycles came up empty.
@@ -81,10 +85,11 @@ fun bagCount(s: ForgeState, code: String): Long = s.bagAmount(code) ?: 0L
 fun jobProduct(job: JobView): String = when (job.kind) {
     JobKind.ITEM -> itemTitle(job.output)
     JobKind.EQUIPMENT -> ui("crafts.kind_equipment", job.band.getOrElse(0) { 1 }, job.band.getOrElse(1) { 1 })
-    JobKind.MAP -> ui("crafts.kind_map", mapTitle(job.map))
-    // Server 0.69.0: a flask of the output's base, and a book of the output's class opened up to the band's level.
+    JobKind.MAP -> ui("crafts.kind_map", regionTitle(job.region))
     JobKind.FLASK -> equipmentTitle(job.output)
-    JobKind.BOOK -> ui("crafts.kind_book", classTitle(job.output), job.band.getOrElse(0) { 1 })
+    // Choosing works (3.45.0): the variant picked in the sheet is a plain ITEM work.
+    JobKind.BOOK -> ui("crafts.kind_book", job.band.getOrElse(0) { 1 })
+    JobKind.CONDENSE -> ui("crafts.kind_condense")
 }
 
 /** A crafting profession spends materials; a gathering one only brings them. The works say which, not a list of codes. */
@@ -111,7 +116,7 @@ fun stockLine(s: ForgeState, work: WorkView, job: JobView): String? {
 @Composable private fun levelLine(s: ForgeState, work: WorkView, offset: Long): String? {
     val profession = s.play.crafts?.professions?.firstOrNull { it.code == work.profession } ?: return null
     val next = profession.next ?: return ui("crafts.level_top")
-    val job = profession.jobs.firstOrNull { it.code == work.job } ?: return null
+    val job = profession.job(work.job, work.choice) ?: return null
     val perCycle = job.experience * (1 + profession.bonus.experience.coerceAtLeast(0.0) / 100) * (1 - job.nothing / 100)
     if (perCycle <= 0 || work.cycleMillis <= 0) return null
     val now by produceState(System.currentTimeMillis()) { while (true) { delay(1000); value = System.currentTimeMillis() } }
@@ -178,7 +183,7 @@ private fun eta(millis: Long): String {
         if (work == null) { MutedText(ui("crafts.idle"), style = MaterialTheme.typography.bodyMedium); return@ForgePanel }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(jobTitle(work.job), color = GoldBright, style = MaterialTheme.typography.titleMedium)
+                Text(workTitle(work), color = GoldBright, style = MaterialTheme.typography.titleMedium)
                 Text(ui("crafts.work_line", professionTitle(work.profession), number(work.cycleMillis / 1000.0)), color = Rune, style = MaterialTheme.typography.labelMedium)
             }
             ForgeOutlinedButton(enabled = !s.busy, onClick = vm::stopWork) { Text(ui("crafts.stop")) }
@@ -188,8 +193,7 @@ private fun eta(millis: Long): String {
         // The server's tally with the cycles this device threw ahead of its count: the rules' own sum.
         WorkTotals(work.startedAt, work.totals + s.play.craftsPending, offset)
         s.play.craftsLast?.let { Text(gainsLine(it), color = Parchment, style = MaterialTheme.typography.bodySmall) }
-        s.play.crafts?.professions?.firstOrNull { it.code == work.profession }?.jobs?.firstOrNull { it.code == work.job }
-            ?.let { stockLine(s, work, it) }?.let { MutedText(it, style = MaterialTheme.typography.labelSmall) }
+        s.play.crafts?.running?.let { stockLine(s, work, it) }?.let { MutedText(it, style = MaterialTheme.typography.labelSmall) }
     }
 }
 
@@ -313,7 +317,7 @@ private const val CLOCK_TICK = 200L
  */
 private fun hourlyLine(s: ForgeState, work: WorkView): String? {
     val profession = s.play.crafts?.professions?.firstOrNull { it.code == work.profession } ?: return null
-    val job = profession.jobs.firstOrNull { it.code == work.job } ?: return null
+    val job = profession.job(work.job, work.choice) ?: return null
     if (work.cycleMillis <= 0) return null
     val landed = HOUR_MILLIS / work.cycleMillis.toDouble() * (1 - job.nothing / 100).coerceAtLeast(0.0)
     val made = jobProduct(job) to landed * (1 + profession.bonus.yield.coerceAtLeast(0.0) / 100)
@@ -405,7 +409,7 @@ private fun share(profession: ProfessionView): Float = profession.next?.takeIf {
         }
         if (work != null) item {
             ForgePanel(accent = GoldBright) {
-                Engraved(ui("crafts.now", jobTitle(work.job)))
+                Engraved(ui("crafts.now", workTitle(work)))
                 CycleBar(work.settledAt, work.cycleMillis, offset, height = 10, hourly = hourlyLine(s, work))
                 SessionTally(s.play.craftsTotals)
             }
@@ -473,13 +477,26 @@ private fun share(profession: ProfessionView): Float = profession.next?.takeIf {
 
 /** A work, opened: what it brings, how long, how often in vain, what it teaches and finds on the side — and its button. */
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
-@Composable private fun JobSheet(s: ForgeState, vm: ForgeViewModel, profession: ProfessionView, job: JobView, current: Boolean, onDismiss: () -> Unit) {
+@Composable private fun JobSheet(s: ForgeState, vm: ForgeViewModel, profession: ProfessionView, work: JobView, current: Boolean, onDismiss: () -> Unit) {
     val crafts = s.play.crafts
-    var additives by remember(job.code) { mutableStateOf(emptyList<String>()) }
+    var additives by remember(work.code) { mutableStateOf(emptyList<String>()) }
+    // A choosing work (3.45.0) is started as one of its variants: the sheet shows the one picked.
+    val choices = choices(s, profession, work)
+    var picked by remember(work.code) { mutableStateOf(choices.firstOrNull()?.choice.orEmpty()) }
+    val job = work.options.firstOrNull { it.choice == picked } ?: work
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(jobTitle(job.code), color = GoldBright, style = MaterialTheme.typography.titleLarge)
             Text(professionTitle(profession.code), color = Rune, style = MaterialTheme.typography.labelMedium)
+            if (work.options.isNotEmpty()) {
+                Engraved(ui("crafts.choose"))
+                if (choices.isEmpty()) MutedText(ui("crafts.no_choice"))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    choices.forEach { option ->
+                        FilterChip(selected = option.choice == picked, onClick = { picked = option.choice }, label = { Text(itemTitle(option.output)) })
+                    }
+                }
+            }
             PropertyRow(ui("crafts.output"), jobProduct(job), Glyph.ITEM)
             if (job.inputs.isNotEmpty()) {
                 Engraved(ui("crafts.inputs"))
@@ -507,11 +524,12 @@ private fun share(profession: ProfessionView): Float = profession.next?.takeIf {
             Spacer(Modifier.height(4.dp))
             when {
                 job.level > profession.level -> Text(ui("crafts.needs_level", job.level), color = LifeRed, style = MaterialTheme.typography.bodyMedium)
+                job.kind.chosen -> Text(ui("crafts.no_choice"), color = LifeRed, style = MaterialTheme.typography.bodyMedium)
                 !job.open -> Text(ui("crafts.locked_map"), color = LifeRed, style = MaterialTheme.typography.bodyMedium)
                 current -> ForgeOutlinedButton(enabled = !s.busy, onClick = { onDismiss(); vm.stopWork() }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text(ui("crafts.stop")) }
                 // A cycle the bag cannot feed is not started (2.46.0): the chips above say what is short.
                 job.inputs.any { bagCount(s, it.item) < it.amount } -> Text(ui("crafts.short_inputs"), color = LifeRed, style = MaterialTheme.typography.bodyMedium)
-                else -> ForgeButton(enabled = !s.busy, onClick = { onDismiss(); vm.startWork(job.code, additives) }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text(ui("crafts.start")) }
+                else -> ForgeButton(enabled = !s.busy, onClick = { onDismiss(); vm.startWork(job.code, job.choice, additives) }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text(ui("crafts.start")) }
             }
             if (profession.equipped == null && job.level <= profession.level) Text(ui("crafts.no_tool"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
         }
@@ -536,3 +554,10 @@ private fun share(profession: ProfessionView): Float = profession.next?.takeIf {
 }
 
 private const val TILES = 3
+
+/**
+ * The variants a choosing work offers now: those the profession's level reaches — and, for the condensing,
+ * only the essences the bag can feed a cycle of, else a hundred and forty chips would bury the few that can run.
+ */
+private fun choices(s: ForgeState, profession: ProfessionView, work: JobView): List<JobView> =
+    work.options.filter { option -> option.level <= profession.level && (work.kind != JobKind.CONDENSE || option.inputs.all { bagCount(s, it.item) >= it.amount }) }

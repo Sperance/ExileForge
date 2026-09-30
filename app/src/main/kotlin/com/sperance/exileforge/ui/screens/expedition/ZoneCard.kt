@@ -71,7 +71,7 @@ private data class StashMap(val item: ItemInstance, val view: ItemView)
 private data class MapLine(val text: String, val kind: MapLineKind, val risk: Double)
 
 /** The stash's loose maps, zone by zone: the world map marks each token with how many wait for it. */
-fun stashCounts(s: ForgeState): Map<String, Int> = stashMaps(s).groupingBy { it.view.code.removePrefix(MapStats.templateCode("")) }.eachCount()
+fun stashCounts(s: ForgeState): Map<String, Int> = stashMaps(s).groupingBy { it.item.mapZone }.eachCount()
 
 private fun stashMaps(s: ForgeState): List<StashMap> =
     s.hero?.stash.orEmpty().mapNotNull { item -> s.view(item)?.takeIf { it.slot == Slot.MAP }?.let { StashMap(item, it) } }
@@ -221,8 +221,7 @@ private fun stashMaps(s: ForgeState): List<StashMap> =
  * share of risk it pays, blue the content, gold a reward. Every number is the rules' own.
  */
 @Composable private fun Maps(s: ForgeState, vm: ForgeViewModel, index: ContentIndex, zone: Zone, launch: MapLaunchState) {
-    val template = MapStats.templateCode(zone.code)
-    val maps = stashMaps(s).filter { it.view.code == template }
+    val maps = stashMaps(s).filter { it.item.mapZone == zone.code }
     if (maps.isEmpty()) { MutedText(ui("expedition.launch_no_maps", zone.level)); return }
     val picked = maps.firstOrNull { it.item.id == launch.picked }
     MapRibbon(maps, picked, enabled = !s.busy, onPick = vm::pickMap)

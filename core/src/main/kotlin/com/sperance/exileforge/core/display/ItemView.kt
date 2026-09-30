@@ -115,8 +115,9 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
     val catalyst: com.sperance.exileforge.rules.content.Catalyst? get() = item.catalyst
     val weaponType: WeaponType? get() = template.weaponType
     val level: Int get() = item.level(template)
-    /** The map's tier past level 98 (3.43.0, server 1.41.0) rides the name: «Last Throne Map · tier 7». */
-    val title: String get() = equipmentTitle(code).let { name -> if (item.mapTier > 0) ui("card.map_tier_title", name, item.mapTier) else name }
+    /** A map names its zone (3.45.0: one template for every zone), and its tier past level 98 rides the name: «Last Throne Map · tier 7». */
+    val title: String get() = (if (item.mapZone.isNotEmpty()) mapItemTitle(item.mapZone) else equipmentTitle(code))
+        .let { name -> if (item.mapTier > 0) ui("card.map_tier_title", name, item.mapTier) else name }
     val description: String get() = equipmentDescription(code)
     val trade: String? get() = tradeName(code, equipment = true)
     val requirements: List<String> get() = itemRequirements(template)

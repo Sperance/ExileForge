@@ -83,9 +83,6 @@ object MapStats {
 
     /** How many percent one rolled value of [stat] pays, by the rules' weight; zero for what is not a risk. */
     fun riskOf(index: ContentIndex, stat: String, value: Double): Double = value * (index.campaign.maps.risk[stat] ?: 0.0)
-
-    /** The template a zone's map is: `MAP_<zone code>`. */
-    fun templateCode(mapCode: String) = "MAP_$mapCode"
 }
 
 /** What a line of a map is, as the launch window marks it. */

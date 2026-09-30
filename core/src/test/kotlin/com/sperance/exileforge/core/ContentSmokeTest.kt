@@ -54,7 +54,7 @@ class ContentSmokeTest {
         val factory = ItemFactory(index)
         var checked = 0
         index.templates.values.filterNot { it.unique }.forEach { template ->
-            listOf(Rarity.UNCOMMON, Rarity.RARE).forEach { rarity ->
+            listOf(Rarity.MAGIC, Rarity.RARE).forEach { rarity ->
                 (1L..3L).forEach { seed ->
                     val item = factory.create("item", template, rarity, Dice(seed))
                     val affixes = item.rolls.count { index.modifier(it.code)?.affix == true }

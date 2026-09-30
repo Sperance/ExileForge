@@ -4,6 +4,7 @@ import com.sperance.exileforge.core.crafts.CraftCycle
 import com.sperance.exileforge.core.crafts.minus
 import com.sperance.exileforge.core.crafts.plus
 import com.sperance.exileforge.core.model.crafts.CraftsState
+import com.sperance.exileforge.core.model.crafts.job
 import com.sperance.exileforge.presentation.ForgeRuntime
 import com.sperance.exileforge.presentation.state.Reads
 import com.sperance.exileforge.rules.roll.WorkGains
@@ -43,7 +44,7 @@ class CraftsViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         val play = state.value.play
         val work = play.crafts?.work
         val profession = play.crafts?.professions?.firstOrNull { it.code == work?.profession }
-        val job = profession?.jobs?.firstOrNull { it.code == work?.job }
+        val job = work?.let { profession?.job(it.job, it.choice) }
         val bag = play.hero?.bag
         var thrown = false
         if (work != null && profession != null && job != null && bag != null) {
@@ -70,10 +71,10 @@ class CraftsViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     fun openProfession(code: String) { runtime.mutable.update { it.copy(play = it.play.copy(craftsProfession = code)) } }
 
-    fun start(job: String, additives: List<String> = emptyList()) { with(runtime) { task(writing = true, touches = setOf(Reads.CRAFTS)) {
+    fun start(job: String, choice: String = "", additives: List<String> = emptyList()) { with(runtime) { task(writing = true, touches = setOf(Reads.CRAFTS)) {
         val id = state.value.play.heroId
         val before = heroViewModel.snapshots
-        land(id, api.crafts.start(id, job, additives), heroViewModel.snapshots != before)
+        land(id, api.crafts.start(id, job, choice, additives), heroViewModel.snapshots != before)
     } } }
 
     fun stop() { with(runtime) { task(writing = true, touches = setOf(Reads.CRAFTS)) {
@@ -99,7 +100,7 @@ class CraftsViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             val pending = s.play.craftsPending
             val local = s.play.crafts?.work
             val remote = answer.work
-            val behind = local != null && remote != null && remote.job == local.job && remote.cycle < local.cycle
+            val behind = local != null && remote != null && remote.job == local.job && remote.choice == local.choice && remote.cycle < local.cycle
             if (bagFromServer) s.copy(play = s.play.copy(crafts = answer, craftsAt = System.currentTimeMillis(),
                 craftsPending = WorkGains(), craftsLast = if (answer.gains.cycles > 0) answer.gains else s.play.craftsLast,
                 craftsTotals = if (behind) s.play.craftsTotals else s.play.craftsTotals + (answer.gains - pending).copy(equipment = answer.gains.equipment)))

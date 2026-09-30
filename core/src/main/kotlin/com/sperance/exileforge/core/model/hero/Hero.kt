@@ -109,8 +109,8 @@ data class HeroView(
         } catch (refused: RuleViolation) { false }
     }
     fun count(code: String): Long = bag[code] ?: 0L
-    /** The chronicle whole: the kept counters and the level, the zones cleared and the atlas nodes taken. */
-    val chronicle: Map<String, Long> get() = Counter.values(info.counters, level, campaign.cleared.size, info.atlas.size)
+    /** The chronicle whole: the kept counters, and the level, zones, atlas and tree nodes at their record. */
+    val chronicle: Map<String, Long> get() = Counter.values(info.counters, Counter.derived(level, campaign.cleared.size, info.atlas.size, tree.size))
 }
 
 /** The menagerie as the server keeps it: the pets, the combat one and the helper at work by id, and the ceiling. */

@@ -45,7 +45,7 @@ import com.sperance.exileforge.ui.theme.*
 private const val UNCRAFT = "-"
 
 /** The bench takes a modifier only from Magic rarity up (2.51.0), same as the rules: a common item has no affix places and a fixed rarity's are closed. */
-private val BENCHABLE = setOf(Rarity.UNCOMMON, Rarity.RARE)
+private val BENCHABLE = setOf(Rarity.MAGIC, Rarity.RARE)
 
 /** An essence (2.78.0) takes a common item to rare, or rolls a rare anew. */
 private val ESSENTIAL = setOf(Rarity.COMMON, Rarity.RARE)

@@ -68,7 +68,7 @@ val Reading = FontFamily(
 
 /** Item frames follow Path of Exile rarity colours; unknown values stay bone white. */
 fun rarityColor(value: String) = when (value) {
-    "UNCOMMON" -> Color(0xFF8888FF)
+    "MAGIC" -> Color(0xFF8888FF)
     "RARE" -> Color(0xFFFFFF77)
     "UNIQUE" -> Color(0xFFAF6025)
     "MYTHICAL" -> Color(0xFFE05A4E)

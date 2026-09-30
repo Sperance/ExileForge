@@ -1,6 +1,7 @@
 package com.sperance.exileforge.core.model.auction
 
 import com.sperance.exileforge.core.i18n.Lang
+import com.sperance.exileforge.core.display.mapItemTitle
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
@@ -52,7 +53,8 @@ import kotlinx.serialization.Serializable
     fun timeLeft(now: Long = System.currentTimeMillis()): Long? = expiresAt.takeIf { it > 0 }?.let { (it - now).coerceAtLeast(0) }
     fun belongsTo(heroId: String): Boolean = sellerId == heroId
     /** An equipment lot names a template, a stack lot names an item of the bag. */
-    val title: String get() = locOr(if (kind == LotKind.EQUIPMENT) LocaleKey.equipmentName(itemCode) else LocaleKey.itemName(itemCode), itemCode)
+    val title: String get() = equipment?.mapZone?.takeIf { it.isNotEmpty() }?.let(::mapItemTitle)
+        ?: locOr(if (kind == LotKind.EQUIPMENT) LocaleKey.equipmentName(itemCode) else LocaleKey.itemName(itemCode), itemCode)
 }
 
 /** The showcase filter, as `GET /api/v1/auctionlot/search` reads it from the query string. A blank field means "do not filter by it". */

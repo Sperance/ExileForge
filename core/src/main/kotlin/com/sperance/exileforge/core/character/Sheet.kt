@@ -45,8 +45,11 @@ class SheetModel(private val base: Map<String, Double>, private val ops: List<St
     private val conditional: List<StatOperation> = ops.filter { it.condition != null }
 
     /** The hero's own conditional lines that hold under [active], as lines a fight lays on. */
-    fun conditional(active: Set<Condition>): List<StatLine> =
-        conditional.filter { it.condition in active && it.condition?.target == false }.map { StatLine(it.stat, it.op, it.value) }
+    fun conditional(active: Set<Condition>): List<StatLine> = conditionalSourced(active).map { it.second }
+
+    /** The same lines with the condition each waits for (3.37.0), for the log's card. */
+    fun conditionalSourced(active: Set<Condition>): List<Pair<Condition, StatLine>> =
+        conditional.filter { it.condition in active && it.condition?.target == false }.map { it.condition!! to StatLine(it.stat, it.op, it.value) }
 
     /** How much more damage the lines waiting for a target's state give against a target in [states], in percent increased. */
     fun against(states: Set<Condition>): Double =

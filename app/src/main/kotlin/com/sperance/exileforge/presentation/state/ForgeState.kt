@@ -67,6 +67,8 @@ data class ForgeState(
     val link: LinkState = LinkState(),
     /** How the stash is sorted (3.30.0); kept on the device, unlike its filters, and across heroes. */
     val stashSort: StashSort = StashSort.NEWEST,
+    /** The shelves of the fight's log shown (3.37.0). */
+    val logFilter: Set<com.sperance.exileforge.core.campaign.LogKind> = com.sperance.exileforge.core.campaign.LogKind.DEFAULT,
 ) {
     val isAdmin: Boolean get() = account.signedIn && account.profile?.role == "ADMIN"
     val reading: Boolean get() = loading.isNotEmpty()

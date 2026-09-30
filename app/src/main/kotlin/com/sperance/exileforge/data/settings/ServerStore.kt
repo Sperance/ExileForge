@@ -39,6 +39,11 @@ class ServerStore(private val context: Context) {
     val stashSort = context.settings.data.map { it[stashSortKey] }
     suspend fun saveStashSort(value: String) { context.settings.edit { it[stashSortKey] = value } }
 
+    /** Which shelves of the fight's log are shown (3.37.0), by their names; nothing is the default, blows and ailments. */
+    private val logFilterKey = stringPreferencesKey("log_filter")
+    val logFilter = context.settings.data.map { it[logFilterKey] }
+    suspend fun saveLogFilter(value: String) { context.settings.edit { it[logFilterKey] = value } }
+
     /**
      * Which languages a server said it serves, kept so the picker is right before it answers.
      *

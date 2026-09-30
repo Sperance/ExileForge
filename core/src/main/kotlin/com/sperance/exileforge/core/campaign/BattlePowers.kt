@@ -177,6 +177,8 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
                 shown = shown || effect.act !in SILENT
             }
             if (shown && power.on !in QUIET) battle.powerShown(power.stat, healed)
+            // 3.37.0: a power that fired without a line of its own is a note the log's «events» show.
+            else battle.note(battle.heroFighter, NoteKind.POWER, power.stat, value)
         } finally { busy = false }
     }
 

@@ -21,6 +21,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.campaign.CombatEvent
 import com.sperance.exileforge.core.campaign.FightReport
 import com.sperance.exileforge.core.campaign.Outcome
 import com.sperance.exileforge.core.campaign.RunHud
@@ -55,6 +56,7 @@ import java.util.Locale
 @Composable internal fun ReportScreen(s: ForgeState, vm: ForgeViewModel, hud: RunHud, report: FightReport, onContinue: () -> Unit) {
     val won = report.outcome == Outcome.WIN
     var logOpen by remember { mutableStateOf(false) }
+    var line by remember { mutableStateOf<Pair<CombatEvent, String>?>(null) }
     var looked by remember { mutableStateOf<ItemView?>(null) }
     Column(Modifier.fillMaxSize().background(Ink.copy(alpha = .94f)).statusBarsPadding().navigationBarsPadding().padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -63,7 +65,10 @@ import java.util.Locale
             if (won) Spoils(s, hud) { looked = it } else DeathPrice(s, hud)
             if (logOpen) Box(Modifier.fillMaxWidth().height(260.dp).background(Panel, RoundedCornerShape(8.dp))
                 .border(1.dp, Bronze.copy(alpha = .4f), RoundedCornerShape(8.dp)).padding(horizontal = 10.dp, vertical = 8.dp)) {
-                FightLog(report.pack, Modifier.fillMaxSize())
+                Column {
+                    LogShelves(s.logFilter, vm::logFilter)
+                    FightLog(report.pack, Modifier.fillMaxSize(), s.logFilter) { event, name -> line = event to name }
+                }
             }
         }
         FightFigures(report, logOpen) { logOpen = !logOpen }
@@ -72,6 +77,8 @@ import java.util.Locale
             Text(ui(if (won) "expedition.continue" else "expedition.back_to_camp"), style = MaterialTheme.typography.titleMedium)
         }
     }
+    // A line of the log opened (3.37.0): its card over the report.
+    line?.let { (event, name) -> CombatDetailSheet(s, event, name) { line = null } }
     // Compared and worn right here (3.24.0), as on the gear sheet.
     looked?.let { item -> LootSheet(s, vm, item, onDismiss = { looked = null }) }
 }

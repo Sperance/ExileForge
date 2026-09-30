@@ -794,7 +794,7 @@ class ExpeditionRun(
     /** The stage's battle on the hero's pools now, at the fight's level, on its own dice. */
     private fun battle(): Battle = Battle(hero, members.map { member ->
         val monster = member.monster
-        Foe(Combatant(monster.stats, fightLevel, rules), monster.ranged, monster.rarity, monster.skills.mapNotNull(this.index.skills.monsterByCode::get))
+        Foe(Combatant(monster.stats, fightLevel, rules), monster.ranged, monster.rarity, monster.skills.mapNotNull(this.index.skills.monsterByCode::get), monster, fightLevel)
     }, rules, life, Random(Streams.mix(seed, FIGHT_STREAM, fightStream)), stance, kit = kit, model = build, pools = pools,
         percent = build.gear.percent, ally = ally(), stage = stageCarry)
 

@@ -57,6 +57,12 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         scope.launch { store.saveStashSort(sort.name) }
     } }
 
+    /** The fight log's shelves (3.37.0), kept on the device. */
+    fun logFilter(kinds: Set<com.sperance.exileforge.core.campaign.LogKind>) { with(runtime) {
+        update { it.copy(logFilter = kinds) }
+        scope.launch { store.saveLogFilter(com.sperance.exileforge.core.campaign.LogKind.write(kinds)) }
+    } }
+
     fun lockItem(itemId: String, locked: Boolean) { with(runtime) { heroCommand { id -> api.hero.lock(id, itemId, locked) } } }
     /** One more pack of stash places for gold (1.1.0); the snapshot with the answer carries the new count. */
     fun expandStash() { with(runtime) { heroCommand { id -> api.hero.expandStash(id) } } }

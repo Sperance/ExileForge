@@ -56,6 +56,8 @@ import com.sperance.exileforge.core.display.bagVisualKind
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.fineNumber
+import com.sperance.exileforge.core.i18n.locOr
+import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.display.number
@@ -201,7 +203,7 @@ private const val HERO_CARD = -1
  * strike — is laid open, its numbers held against the hero's.
  */
 @Composable internal fun ArenaOverlay(s: ForgeState, hud: RunHud, fight: FightHud, level: Int, rules: CombatRules, stance: HeroStance,
-                                      onCommand: (RunCommand) -> Unit) {
+                                      onCommand: (RunCommand) -> Unit, onLogFilter: (Set<LogKind>) -> Unit = {}) {
     val time by rememberClock()
     val bounds = remember { mutableStateMapOf<Int, Rect>() }
     var origin by remember { mutableStateOf(Offset.Zero) }
@@ -230,7 +232,7 @@ private const val HERO_CARD = -1
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 val shown = fight.foes.firstOrNull { it.index == chosen }
                 if (fight.scouting && shown != null) ScoutPanel(shown, fight, level, rules, stance, s.index)
-                else FightFeed(fight.events, names)
+                else FightFeed(s, fight, names, onCommand, onLogFilter)
             }
             HeroCard(s, hud, fight, time, names, stance, track(HERO_CARD), large)
             // The skills and the belt (2.78.0): under the hero, over the fight's own controls.
@@ -486,11 +488,39 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
 }
 
 /** The latest blows while the fight runs, newest on top, each under the name of the foe it was about. */
-@Composable private fun FightFeed(events: List<CombatEvent>, names: Map<Int, String>) {
+/**
+ * The live log (3.37.0): its shelves as chips over it, and a line tapped opens its card — the fight holds still while
+ * it is read, and goes on as it was when the card is closed.
+ */
+@Composable private fun FightFeed(s: ForgeState, fight: FightHud, names: Map<Int, String>, onCommand: (RunCommand) -> Unit, onLogFilter: (Set<LogKind>) -> Unit) {
     val shape = RoundedCornerShape(10.dp)
-    Box(Modifier.fillMaxSize().background(Panel.copy(alpha = .75f), shape).border(1.dp, Bronze.copy(alpha = .4f), shape).padding(horizontal = 10.dp, vertical = 6.dp)) {
-        if (events.isEmpty()) MutedText(ui("expedition.log"), style = MaterialTheme.typography.labelSmall)
-        FightLog(events, names)
+    var open by remember { mutableStateOf<CombatEvent?>(null) }
+    var held by remember { mutableStateOf(false) }
+    Column(Modifier.fillMaxSize().background(Panel.copy(alpha = .75f), shape).border(1.dp, Bronze.copy(alpha = .4f), shape).padding(horizontal = 10.dp, vertical = 6.dp)) {
+        LogShelves(s.logFilter, onLogFilter)
+        if (fight.events.isEmpty()) MutedText(ui("expedition.log"), style = MaterialTheme.typography.labelSmall)
+        FightLog(fight.events.filter { LogKind.of(it) in s.logFilter }, names) { event ->
+            if (fight.started && !fight.paused && fight.outcome == null) { onCommand(RunCommand.Pause); held = true }
+            open = event
+        }
+    }
+    open?.let { event ->
+        CombatDetailSheet(s, event, names[event.foe].orEmpty()) {
+            open = null
+            if (held) { onCommand(RunCommand.Pause); held = false }
+        }
+    }
+}
+
+/** The log's shelves as chips (3.37.0): each on or off, the choice kept on the device. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable internal fun LogShelves(shown: Set<LogKind>, onChange: (Set<LogKind>) -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        LogKind.entries.forEach { kind ->
+            val on = kind in shown
+            FilterChip(selected = on, onClick = { onChange(if (on) shown - kind else shown + kind) },
+                label = { Text(ui("fight.log_shelf.${kind.name}"), style = MaterialTheme.typography.labelSmall) }, modifier = Modifier.height(26.dp))
+        }
     }
 }
 
@@ -791,9 +821,9 @@ internal fun washAmount(ailment: Ailment): Float = when (ailment) {
 }
 
 /** The blows so far, newest first: when, who, and what came of it, coloured by what it was. */
-@Composable internal fun FightLog(events: List<CombatEvent>, names: Map<Int, String>, modifier: Modifier = Modifier) {
+@Composable internal fun FightLog(events: List<CombatEvent>, names: Map<Int, String>, modifier: Modifier = Modifier, onOpen: ((CombatEvent) -> Unit)? = null) {
     LazyColumn(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-        items(events) { EventRow(it, names[it.foe].orEmpty()) }
+        items(events) { EventRow(it, names[it.foe].orEmpty(), onOpen) }
     }
 }
 
@@ -802,18 +832,21 @@ internal fun washAmount(ailment: Ailment): Float = when (ailment) {
  * pack's «they hit» lines would otherwise all say the wrong name. A caption between them names which
  * of the pack it was, only when there was more than one.
  */
-@Composable internal fun FightLog(pack: List<PackHit>, modifier: Modifier = Modifier) {
+@Composable internal fun FightLog(pack: List<PackHit>, modifier: Modifier = Modifier, shown: Set<LogKind> = LogKind.DEFAULT,
+                                  onOpen: ((CombatEvent, String) -> Unit)? = null) {
     LazyColumn(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(1.dp)) {
         pack.forEachIndexed { index, hit ->
             val name = monsterTitle(hit.monster.code)
             if (pack.size > 1) item { Caption(ui("expedition.report_pack_enemy", index + 1, pack.size, name)) }
-            items(hit.events) { EventRow(it, name) }
+            items(hit.events.filter { LogKind.of(it) in shown }) { EventRow(it, name, onOpen?.let { open -> { event: CombatEvent -> open(event, name) } }) }
         }
     }
 }
 
-@Composable private fun EventRow(event: CombatEvent, monster: String) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+@Composable private fun EventRow(event: CombatEvent, monster: String, onOpen: ((CombatEvent) -> Unit)? = null) {
+    // A line with a trace opens its card (3.37.0); an older one without stays a line.
+    val tap = if (onOpen != null && event.trace != null) Modifier.clickable { onOpen(event) } else Modifier
+    Row(tap.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(ui("expedition.log_time", String.format(Locale.ROOT, "%.1f", event.time)), color = Muted,
             style = MaterialTheme.typography.labelSmall, modifier = Modifier.width(40.dp))
         Text(logLine(event, monster), color = logColour(event), style = MaterialTheme.typography.bodySmall,
@@ -855,6 +888,8 @@ private fun logLine(event: CombatEvent, monster: String): String {
         }
         Action.FLASK -> ui("expedition.log_flask", equipmentTitle(event.skill.orEmpty())) +
             (if (event.healed >= 1) " · +${event.healed.roundToInt()}" else "")
+        // A note (3.37.0): what happened without a blow, by the trace that carries it.
+        Action.NOTE -> noteLine(event, monster)
     }
     // The blow's leading element and what it left behind, as words after the sentence.
     val marks = buildList {
@@ -865,7 +900,20 @@ private fun logLine(event: CombatEvent, monster: String): String {
     return if (marks.isEmpty()) line else "$line · ${marks.joinToString(" · ")}"
 }
 
+internal fun noteLine(event: CombatEvent, monster: String): String {
+    val note = event.trace as? NoteTrace ?: return ""
+    return when (note.kind) {
+        NoteKind.BUFF -> ui("expedition.log_note_buff", ui("fight.buff.${note.ref}"), fineNumber(note.value))
+        NoteKind.CHARGE -> ui("expedition.log_note_charge", ui("fight.charge.${note.ref}"), note.value.roundToInt())
+        NoteKind.POWER -> ui("expedition.log_note_power", statTitle(note.ref))
+        NoteKind.CONDITION_ON -> ui("expedition.log_note_condition_on", locOr("condition.${note.ref}", note.ref))
+        NoteKind.CONDITION_OFF -> ui("expedition.log_note_condition_off", locOr("condition.${note.ref}", note.ref))
+        NoteKind.KILL -> ui("expedition.log_note_kill", monster) + (if (note.value >= 1) " · +${note.value.roundToInt()}" else "")
+    }
+}
+
 private fun logColour(event: CombatEvent): Color = when {
+    event.action == Action.NOTE -> Rune
     event.action == Action.RETREAT -> Muted
     event.action == Action.FLASK -> Vital
     event.action == Action.SKILL && event.damage <= 0 && event.landed -> if (event.actor == Side.HERO) Gold else Color(0xFFE9A0A0)

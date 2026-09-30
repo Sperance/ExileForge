@@ -17,6 +17,8 @@ import com.sperance.exileforge.rules.content.SkillStat
 import com.sperance.exileforge.rules.content.SkillType
 import com.sperance.exileforge.rules.content.SlotCondition
 import com.sperance.exileforge.rules.roll.ItemInstance
+import com.sperance.exileforge.rules.sheet.SheetExplainer
+import com.sperance.exileforge.rules.sheet.Shift
 import kotlin.math.max
 
 /** What a flask does when drunk (2.78.0), by its base: brings life back, brings mana back, or only lays its lines for a while. */
@@ -251,6 +253,10 @@ class HeroBuild(val gear: HeroGear, private val mapEffects: Map<String, Double>,
     override fun increased(stat: String, lines: List<StatLine>): Double = gear.model?.increased(stat, passives + lines) ?: 0.0
 
     override fun conditional(active: Set<Condition>): List<StatLine> = gear.model?.conditional(active).orEmpty()
+    override fun conditionalSourced(active: Set<Condition>): List<Pair<Condition, StatLine>> = gear.model?.conditionalSourced(active).orEmpty()
+    override val explainer: SheetExplainer? get() = gear.model?.explainer
+    override val passiveLines: List<StatLine> get() = passives
+    override fun shifts(): Map<String, List<Shift>> = MapEffects.heroShifts(sheet(passives), mapEffects)
     override fun against(states: Set<Condition>): Double = gear.model?.against(states) ?: 0.0
 }
 
@@ -263,6 +269,14 @@ interface HeroModel : BodyModel {
     fun increased(stat: String, lines: List<StatLine>): Double
     /** The conditional lines of the sheet (3.35.0) that hold under [active]. */
     fun conditional(active: Set<Condition>): List<StatLine> = emptyList()
+    /** The same lines with the condition each waits for (3.37.0). */
+    fun conditionalSourced(active: Set<Condition>): List<Pair<Condition, StatLine>> = emptyList()
+    /** The sheet taken apart by source (3.37.0): what the log's card lays a hero's stat out with; null for a bare body. */
+    val explainer: SheetExplainer? get() = null
+    /** The passives' lines laid over the sheet in a run (3.37.0). */
+    val passiveLines: List<StatLine> get() = emptyList()
+    /** What the map and the atlas moved on the sheet, by stat (3.37.0). */
+    fun shifts(): Map<String, List<Shift>> = emptyMap()
     /** The increased damage the sheet's lines give against a target in [states]. */
     fun against(states: Set<Condition>): Double = 0.0
 

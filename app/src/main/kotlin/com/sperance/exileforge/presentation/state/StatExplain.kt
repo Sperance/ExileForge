@@ -155,7 +155,7 @@ class StatExplainer(private val s: ForgeState) {
     private fun signed(stat: String, value: Double, percent: Boolean): String = fmt(stat, value, Op.ADD, percent)
 
     /** A figure with its operation: «+20», «+10%», «×1.10», «= 1»; a percent stat carries its sign on the flat too. */
-    private fun fmt(stat: String, value: Double, op: Op, percent: Boolean, sign: Boolean = true): String {
+    fun fmt(stat: String, value: Double, op: Op, percent: Boolean, sign: Boolean = true): String {
         val unit = if (percent || statPercent(stat, index)) "%" else ""
         val size = statNumber(stat, abs(value))
         val mark = if (!sign && value >= 0) "" else if (value < 0) "−" else "+"

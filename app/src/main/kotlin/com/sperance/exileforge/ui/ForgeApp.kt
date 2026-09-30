@@ -28,6 +28,8 @@ import com.sperance.exileforge.core.network.RequestLog
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.*
 import com.sperance.exileforge.data.settings.GuideStore
+import com.sperance.exileforge.ui.components.BugButton
+import com.sperance.exileforge.ui.components.BugSheet
 import com.sperance.exileforge.ui.components.GuideDesk
 import com.sperance.exileforge.ui.components.GuideHost
 import com.sperance.exileforge.ui.components.LocalGuideDesk
@@ -71,24 +73,31 @@ import com.sperance.exileforge.ui.theme.*
     // Language is part of the key: every cached label is rebuilt in the chosen tongue.
     // The dictionary arrives after the first frame, so its size joins the key: when the server's
     // names land, every screen that printed a bare code is drawn again.
+    // The beetle (3.48.0): in the banner of the game, floating over the screens without one.
+    var bugOpen by remember { mutableStateOf(false) }
     key(s.account.server, s.account.sessionEpoch, s.lang, s.world.localeStrings) {
-        // The two screens above the tabs carry no banner and no bottom bar: there is no character to
-        // name in the one and no tab to reach from the other.
-        when (s.phase) {
-            AppPhase.AUTH -> AuthScreen(s, vm)
-            AppPhase.CHARACTERS -> CharacterSelectScreen(s, vm)
-            // A campaign run takes the whole screen: no banner and no bar, the scene is the game.
-            // The zone's card (2.76.0) lies on the world map in the tab itself.
-            AppPhase.GAME -> expedition?.let { ExpeditionPlay(s, vm, it) }
-                // The atlas (2.68.0) is a sky of its own, above the tabs.
-                ?: s.play.atlas?.let { AtlasScreen(s, vm) }
-                ?: GameScaffold(s, vm, logs)
+        Box(Modifier.fillMaxSize()) {
+            // The two screens above the tabs carry no banner and no bottom bar: there is no character to
+            // name in the one and no tab to reach from the other.
+            when (s.phase) {
+                AppPhase.AUTH -> AuthScreen(s, vm)
+                AppPhase.CHARACTERS -> CharacterSelectScreen(s, vm)
+                // A campaign run takes the whole screen: no banner and no bar, the scene is the game.
+                // The zone's card (2.76.0) lies on the world map in the tab itself.
+                AppPhase.GAME -> expedition?.let { ExpeditionPlay(s, vm, it) }
+                    // The atlas (2.68.0) is a sky of its own, above the tabs.
+                    ?: s.play.atlas?.let { AtlasScreen(s, vm) }
+                    ?: GameScaffold(s, vm, logs) { bugOpen = true }
+            }
+            val banner = s.phase == AppPhase.GAME && expedition == null && s.play.atlas == null
+            if (!banner) BugButton(Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(4.dp)) { bugOpen = true }
         }
     }
+    if (bugOpen) BugSheet(s, expedition, logs, onDismiss = { bugOpen = false }, onSend = vm::reportBug)
 }
 
 /** The game proper: the banner, the destinations and whichever tab is open. */
-@Composable private fun GameScaffold(s: ForgeState, vm: ForgeViewModel, logs: List<RequestLog>) {
+@Composable private fun GameScaffold(s: ForgeState, vm: ForgeViewModel, logs: List<RequestLog>, onBug: () -> Unit) {
     Scaffold(
         containerColor = Ink,
         bottomBar = {
@@ -125,7 +134,7 @@ import com.sperance.exileforge.ui.theme.*
         Column(Modifier.fillMaxSize().voidBackdrop()) {
             // The craft under way is read with the game, so the banner's plaque knows it from the start.
             LaunchedEffect(s.play.heroId) { if (s.play.heroId.isNotBlank()) vm.loadCrafts(silent = true) }
-            ForgeBanner(s, vm)
+            ForgeBanner(s, vm, onBug)
             if (s.busy || s.reading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised) else OrnateDivider(Gold)
             HeroTab.of(s.tab)?.let { HeroTabStrip(it, vm::tab) }
             when (s.tab) {
@@ -162,7 +171,7 @@ import com.sperance.exileforge.ui.theme.*
  * Since 2.48.0 the hero's class is gone from it, a short plaque of the craft under way opens the
  * crafts, and the account sits in its corner — it left the bottom bar.
  */
-@Composable private fun ForgeBanner(s: ForgeState, vm: ForgeViewModel) {
+@Composable private fun ForgeBanner(s: ForgeState, vm: ForgeViewModel, onBug: () -> Unit) {
     Row(Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Gold.copy(alpha = .10f), Color.Transparent, Gold.copy(alpha = .06f))))
         .padding(horizontal = 18.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(40.dp).border(1.dp, Gold.copy(alpha = .5f), RoundedCornerShape(9.dp)), contentAlignment = Alignment.Center) {
@@ -178,6 +187,7 @@ import com.sperance.exileforge.ui.theme.*
         }
         WorkBadge(s) { vm.tab(TAB_CRAFTS) }
         LinkBadge(s.link, vm::retryLink)
+        BugButton(tint = Gold, onClick = onBug)
         IconButton(onClick = { vm.tab(TAB_ACCOUNT) }) {
             Icon(ForgeGlyphs.Portal, ui("nav.account"), tint = if (s.tab == TAB_ACCOUNT) GoldBright else Gold, modifier = Modifier.size(24.dp))
         }

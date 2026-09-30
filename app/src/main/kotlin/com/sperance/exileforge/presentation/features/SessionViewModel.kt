@@ -65,7 +65,10 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         clearSession()
         try {
             api.manifest().requireWorkbench()
-            signedIn(api.loginByDevice(state.value.account.deviceId), byDevice = true)
+            val server = state.value.account.server
+            val profile = api.loginByDevice(store.deviceSecret(server))
+            api.deviceSecret?.let { store.saveDeviceSecret(server, it) }
+            signedIn(profile, byDevice = true)
         } catch (e: CancellationException) { throw e }
         catch (e: Exception) { if (!silent) throw e }
     } } }

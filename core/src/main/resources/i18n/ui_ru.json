@@ -3165,5 +3165,14 @@
   "merchant.group.JEWELLERY": "Бижутерия",
   "merchant.group.FLASK": "Фляги",
   "merchant.group.JEWEL": "Самоцветы",
-  "merchant.group.MAP": "Карты"
+  "merchant.group.MAP": "Карты",
+  "bug.open": "Сообщить об ошибке",
+  "bug.title": "Сообщить об ошибке",
+  "bug.where": "Где: {0}",
+  "bug.text": "Что пошло не так?",
+  "bug.count": "{0} / {1}",
+  "bug.send": "Отправить отчёт",
+  "bug.context": "Отправится вместе с ним",
+  "bug.journal": "И последние {0} запросов к серверу — без паролей и токенов.",
+  "bug.sent": "Спасибо — отчёт отправлен"
 }

@@ -4,6 +4,7 @@ import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.contract.requireId
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.ApiCapabilities
+import com.sperance.exileforge.core.model.command.BugReportRequest
 import com.sperance.exileforge.core.model.command.DeviceCredentials
 import com.sperance.exileforge.core.model.command.LoginCredentials
 import com.sperance.exileforge.core.model.command.PasswordChange
@@ -60,18 +61,31 @@ class GameApi(
         return signedIn(http.request("POST", "api/v1/user/login", body = WireJson.encodeToJsonElement(LoginCredentials(login, password)), sensitive = true))
     }
 
-    /** Sign in with the device's own identifier, and register on the first try: `US_015` is the whole registration handshake. */
-    suspend fun loginByDevice(deviceId: String): UserProfile {
+    /**
+     * Sign in with the secret of the device (server 1.46.0), or register when there is none or the server no longer
+     * knows it (`US_015`): the server issues a fresh secret, and [deviceSecret] holds it until the caller keeps it.
+     */
+    suspend fun loginByDevice(secret: String?): UserProfile {
         logout()
-        require(deviceId.isNotBlank()) { ui("api.no_device") }
-        val body = WireJson.encodeToJsonElement(DeviceCredentials(deviceId))
-        val answer = try { http.request("POST", "api/v1/user/login/byDeviceId", body = body, sensitive = true) }
-            catch (e: ApiFailure) { if (e.code == DEVICE_UNKNOWN) http.request("POST", "api/v1/user/byDeviceId", body = body, sensitive = true) else throw e }
+        val answer = secret?.let {
+            try { http.request("POST", "api/v1/user/login/byDeviceId", body = WireJson.encodeToJsonElement(DeviceCredentials(it)), sensitive = true) }
+            catch (e: ApiFailure) { if (e.code == DEVICE_UNKNOWN) null else throw e }
+        } ?: http.request("POST", "api/v1/user/byDeviceId", body = WireJson.encodeToJsonElement(DeviceCredentials("")), sensitive = true)
         return signedIn(answer)
     }
 
+    /** Files a bug report (server 1.46.0): open before the sign-in too, signed when there is a session. */
+    suspend fun reportBug(report: BugReportRequest) {
+        http.request("POST", "api/v1/bugreport", body = WireJson.encodeToJsonElement(report), authenticated = http.token != null)
+    }
+
+    /** The secret a device registration just brought, or null: read once and kept by the app. */
+    var deviceSecret: String? = null
+        private set
+
     private fun signedIn(answer: JsonElement): UserProfile {
         val session = WireJson.decodeFromJsonElement<SignedIn>(answer)
+        deviceSecret = session.deviceSecret
         requireId(session.user.id)
         require(session.token.isNotBlank()) { ui("api.no_token") }
         require(session.user.isActive) { ui("api.account_disabled") }

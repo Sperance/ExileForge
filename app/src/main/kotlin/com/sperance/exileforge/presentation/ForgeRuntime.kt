@@ -67,7 +67,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
-class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val deviceId: String = "") {
+class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     val mutable = MutableStateFlow(ForgeState())
     val state = mutable.asStateFlow()
@@ -132,7 +132,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
                 val known = store.languages(server).mapNotNull { Lang.byCode(it) }
                 val sort = StashSort.of(store.stashSort.first())
                 val logFilter = com.sperance.exileforge.core.campaign.LogKind.parse(store.logFilter.first())
-                mutable.update { it.copy(lang = language, busy = false, stashSort = sort, logFilter = logFilter, account = it.account.copy(server = server, serverDraft = server, deviceId = deviceId), world = it.world.copy(languages = known.ifEmpty { it.world.languages })) }
+                mutable.update { it.copy(lang = language, busy = false, stashSort = sort, logFilter = logFilter, account = it.account.copy(server = server, serverDraft = server), world = it.world.copy(languages = known.ifEmpty { it.world.languages })) }
                 refreshLocale()
                 refreshIcons()
                 val saved = store.token(server)
@@ -276,6 +276,9 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
      * A command: one at a time, and the only thing that disables controls. [writing] marks a mutation, so
      * an IO error becomes [FailureState.UncertainWrite]; [touches] names the reads the command redoes itself.
      */
+    /** Files a bug report and says so (3.48.0). */
+    fun reportBug(report: com.sperance.exileforge.core.model.command.BugReportRequest) = task { api.reportBug(report); toast(ui("bug.sent")) }
+
     fun task(writing: Boolean = false, touches: Set<String> = emptySet(), block: suspend () -> Unit) {
         if (state.value.busy) return
         touches.forEach { reads.remove(it)?.cancel() }

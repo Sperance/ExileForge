@@ -2,6 +2,7 @@ package com.sperance.exileforge.data.settings
 
 import android.content.Context
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.sperance.exileforge.core.contract.WireJson
@@ -199,15 +200,24 @@ class ServerStore(private val context: Context) {
     val deviceSession = context.settings.data.map { it[deviceKey] == "true" }
     suspend fun saveDeviceSession(value: Boolean) { context.settings.edit { it[deviceKey] = value.toString() } }
 
-    /**
-     * The session token for one server. It is a secret, but on this device it is the account's own:
-     * losing it costs a sign-in, and DataStore lives in the app's private storage.
-     */
-    suspend fun token(server: String): String? = context.settings.data.first()[tokenKey(server)]
-    suspend fun saveToken(server: String, value: String?) {
-        context.settings.edit { if (value == null) it.remove(tokenKey(server)) else it[tokenKey(server)] = value }
-    }
+    /** The session token for one server, sealed by the Keystore ([SecretBox], 3.48.0). */
+    suspend fun token(server: String): String? = secret(tokenKey(server))
+    suspend fun saveToken(server: String, value: String?) = saveSecret(tokenKey(server), value)
     private fun tokenKey(server: String) = stringPreferencesKey("token:$server")
+
+    /**
+     * The device's own secret on one server (3.48.0): the server issued it at registration and knows only its hash — the
+     * account of this device is whoever holds it. Sealed like the token; losing it (a data wipe) means a new account.
+     */
+    suspend fun deviceSecret(server: String): String? = secret(deviceSecretKey(server))
+    suspend fun saveDeviceSecret(server: String, value: String?) = saveSecret(deviceSecretKey(server), value)
+    private fun deviceSecretKey(server: String) = stringPreferencesKey("device:$server")
+
+    private suspend fun secret(key: Preferences.Key<String>): String? = context.settings.data.first()[key]?.let(SecretBox::open)
+    private suspend fun saveSecret(key: Preferences.Key<String>, value: String?) {
+        val sealed = value?.let(SecretBox::seal)
+        context.settings.edit { if (sealed == null) it.remove(key) else it[key] = sealed }
+    }
 
     private companion object {
         const val PORTRAITS_HASH = "set"

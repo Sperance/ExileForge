@@ -121,8 +121,8 @@ import com.sperance.exileforge.ui.components.ForgeButton
                 Text(ui("account.save_connect"))
             }
             MutedText(s.account.health)
-            // The identifier is not a secret, and naming an account in a support log needs it.
-            MutedText(ui("auth.device", s.account.deviceId.takeLast(12)), style = MaterialTheme.typography.labelSmall)
+            // The id of the account names it in a support log; the secret of the device is never shown (3.48.0).
+            s.account.profile?.id?.let { MutedText(ui("auth.device", it.takeLast(12)), style = MaterialTheme.typography.labelSmall) }
         }
     }
 }

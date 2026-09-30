@@ -88,7 +88,7 @@ data class ForgeState(
     /** An account nobody named: a device registration leaves `name` and `login` empty. */
     val accountTitle: String get() = account.profile?.name?.takeIf { it.isNotBlank() }
         ?: account.profile?.login?.takeIf { it.isNotBlank() }
-        ?: ui("session.guest") + " · …${account.deviceId.takeLast(6)}"
+        ?: ui("session.guest") + " · …${account.profile?.id.orEmpty().takeLast(6)}"
     val ownLots: List<AuctionLot> get() = market.myLots.filter { it.onSale }
     /** The class the shown hero belongs to, with the shared base folded in. */
     val heroClass: HeroClass? get() = index?.let { i -> hero?.let { i.heroClass(it.heroClass) } }
@@ -134,7 +134,6 @@ data class AccountState(
     /** A kept session the server could not be reached to confirm: the sign-in screen offers to try again. */
     val resumable: Boolean = false,
     val server: String = "http://10.0.2.2:8080/", val serverDraft: String = "http://10.0.2.2:8080/",
-    val deviceId: String = "",
     /** The account's heroes and whether they have been read yet: "none" and "not asked yet" must differ. */
     val characters: List<HeroSummary> = emptyList(), val charactersRead: Boolean = false,
     val health: String = ui("runtime.not_checked"),

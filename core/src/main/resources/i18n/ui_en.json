@@ -3165,5 +3165,14 @@
   "merchant.group.JEWELLERY": "Jewellery",
   "merchant.group.FLASK": "Flasks",
   "merchant.group.JEWEL": "Jewels",
-  "merchant.group.MAP": "Maps"
+  "merchant.group.MAP": "Maps",
+  "bug.open": "Report a bug",
+  "bug.title": "Report a bug",
+  "bug.where": "Where: {0}",
+  "bug.text": "What went wrong?",
+  "bug.count": "{0} / {1}",
+  "bug.send": "Send the report",
+  "bug.context": "Sent along",
+  "bug.journal": "And the last {0} requests to the server — no passwords or tokens.",
+  "bug.sent": "Thank you — the report is sent"
 }

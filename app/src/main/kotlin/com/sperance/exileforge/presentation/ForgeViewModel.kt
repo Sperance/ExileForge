@@ -23,8 +23,8 @@ import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
 
 /** Lifecycle owner and compatibility facade; screen actions live in feature models. */
-class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: String) : ViewModel() {
-    private val runtime = ForgeRuntime(store, journal, deviceId)
+class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() {
+    private val runtime = ForgeRuntime(store, journal)
     val state = runtime.state
     val logs = runtime.logs
     fun tab(tab: Int) = runtime.tab(tab)
@@ -36,6 +36,8 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     fun selectZone(mapCode: String) = runtime.expeditionViewModel.selectZone(mapCode)
     fun loadCrafts(silent: Boolean = false) = runtime.craftsViewModel.load(silent)
     fun openProfession(code: String) = runtime.craftsViewModel.openProfession(code)
+    /** A bug report from the beetle (3.48.0): sent at once, whether signed in or not. */
+    fun reportBug(report: com.sperance.exileforge.core.model.command.BugReportRequest) = runtime.reportBug(report)
     fun planTree(nodes: List<com.sperance.exileforge.rules.content.TakenNode>) = runtime.heroViewModel.planTree(nodes)
     fun autoSell(rarity: com.sperance.exileforge.rules.content.Rarity, groups: Set<com.sperance.exileforge.rules.content.SlotGroup>) = runtime.heroViewModel.autoSell(rarity, groups)
     fun startWork(job: String, choice: String = "", additives: List<String> = emptyList()) = runtime.craftsViewModel.start(job, choice, additives)
@@ -189,7 +191,7 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             require(modelClass.isAssignableFrom(ForgeViewModel::class.java))
             @Suppress("UNCHECKED_CAST")
-            return ForgeViewModel(app.serverStore, app.journal, app.deviceId) as T
+            return ForgeViewModel(app.serverStore, app.journal) as T
         }
     }
 }

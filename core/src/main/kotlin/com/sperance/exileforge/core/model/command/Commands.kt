@@ -21,7 +21,8 @@ const val AUCTION_PAGE_SIZE = 20
 )
 
 /** What every sign-in answers: the account and the token that stands for it. */
-@Serializable data class SignedIn(val user: UserProfile, val token: String)
+/** The answer to a sign-in; a device registration (server 1.46.0) also brings the secret of the device, once. */
+@Serializable data class SignedIn(val user: UserProfile, val token: String, val deviceSecret: String? = null)
 @Serializable data class LoginCredentials(val login: String, val password: String)
 @Serializable data class DeviceCredentials(val deviceId: String)
 @Serializable data class PasswordChange(val password: String, val newPassword: String)
@@ -68,3 +69,6 @@ data class ApiCapabilities(val routes: Set<String>) {
         fun of(routes: List<RouteInfo>) = ApiCapabilities(routes.mapTo(HashSet()) { "${it.verb} ${it.path}" })
     }
 }
+
+/** A bug report (server 1.46.0): the words of the player, where they were, and the tail of the request journal. */
+@Serializable data class BugReportRequest(val text: String, val screen: String, val context: Map<String, String>, val requests: List<String>)

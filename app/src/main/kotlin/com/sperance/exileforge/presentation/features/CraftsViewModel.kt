@@ -49,8 +49,9 @@ class CraftsViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         var thrown = false
         if (work != null && profession != null && job != null && bag != null) {
             val spent = CraftCycle.spent(job, work.additives)
-            // A cycle the bag cannot pay for is the server's to stop: nothing is thrown for it here.
-            if (spent.all { (code, amount) -> (bag[code] ?: 0L) >= amount }) {
+            // A cycle the bag cannot pay for is the server's to stop: nothing is thrown for it here. Without a seed
+            // (server 1.53.0 keeps the dice to itself) nothing is thrown either: the server's answer is the cycle.
+            if (work.seed != 0L && spent.all { (code, amount) -> (bag[code] ?: 0L) >= amount }) {
                 val gains = CraftCycle.roll(work.seed, work.cycle, job, profession.bonus, work.additives)
                 mutable.update { s -> s.copy(play = s.play.copy(
                     hero = s.play.hero?.let { it.copy(bag = patched(it.bag, gains)) },

@@ -4,6 +4,11 @@ plugins {
     // @Serializable records of this module (pending commands, the icon cache) need generated serializers.
     id("org.jetbrains.kotlin.plugin.serialization")
 }
+composeCompiler {
+    // Models of the shared rules and the wire are immutable (3.55.0): named stable, an unchanged slice skips recomposition.
+    stabilityConfigurationFiles.add(layout.projectDirectory.file("compose_stability.conf"))
+}
+
 android {
     namespace = "com.sperance.exileforge"
     compileSdk = 37
@@ -11,8 +16,8 @@ android {
         applicationId = "com.sperance.exileforge"
         minSdk = 26
         targetSdk = 37
-        versionCode = 192
-        versionName = "3.54.1"
+        versionCode = 193
+        versionName = "3.55.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures { compose = true; buildConfig = true }

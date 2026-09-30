@@ -107,14 +107,22 @@ class CommandQueue(private val store: CommandStore?, private val clock: () -> Lo
     private suspend fun persist() { store?.write(WireJson.encodeToString(Codec, entries.value)) }
 
     companion object {
-        /** How long a key is honoured by the server, and so how long a command may wait. */
-        const val TTL_MS = 24 * 60 * 60 * 1000L
+        /** How long a key is honoured by the server (server 1.53.0: an hour), and so how long a command may wait. */
+        const val TTL_MS = 60 * 60 * 1000L
         private val Codec = ListSerializer(QueuedCommand.serializer())
 
         /** The commands that never wait here: the session's own, and the run's journal, which keeps its own retry. */
         private val OWN_RETRY = listOf("api/v1/user/", "api/v1/hero/campaign/")
 
-        fun queues(path: String): Boolean = OWN_RETRY.none { path.startsWith(it) }
+        /**
+         * Commands whose outcome is rolled (3.55.0): an orb, an essence, an unveiling, a bench craft, a hatching, a
+         * pet's orb, a job started. Offline they are refused rather than kept: a second press would act on an item
+         * the player has not yet seen, and the whole row would land blind once the link is back.
+         */
+        private val ROLLED = listOf("api/v1/hero/orb", "api/v1/hero/essence", "api/v1/hero/unveil", "api/v1/hero/craft",
+            "api/v1/hero/pets/hatch", "api/v1/hero/pets/orb", "api/v1/hero/crafts/start")
+
+        fun queues(path: String): Boolean = OWN_RETRY.none { path.startsWith(it) } && ROLLED.none { path.startsWith(it) && !path.startsWith("api/v1/hero/crafts/stop") }
 
         /**
          * Whether an answer means "not yet" rather than "no": a duplicate still running (409), a throttle or

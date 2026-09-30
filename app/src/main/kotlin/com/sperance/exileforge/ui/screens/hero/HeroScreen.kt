@@ -87,13 +87,14 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
     val hero = s.hero
     // The stash holds everything (2.51.0): what is worn or socketed too, with a gold frame and a badge.
     // A copy whose template the content does not hold is left out rather than drawn blank.
-    val stash = hero?.items.orEmpty().mapNotNull { s.view(it) }
+    // Remembered (3.55.0): a thousand views, the filter and the sort by price were rebuilt on every tick of the state.
+    val stash = remember(hero, s.index, s.world) { hero?.items.orEmpty().mapNotNull { s.view(it) } }
     // How many items each slot group holds (2.47.0, grouped since 3.30.0): a chip says it, and a group with none has no chip.
-    val shelf = stash.filter { it.slot.isTool == tools }
-    val groupCounts = shelf.groupingBy { SlotGroup.of(it.slot) }.eachCount()
+    val shelf = remember(stash, tools) { stash.filter { it.slot.isTool == tools } }
+    val groupCounts = remember(shelf) { shelf.groupingBy { SlotGroup.of(it.slot) }.eachCount() }
     val groups = groupCounts.keys.toList()
-    val rarities = shelf.map { it.rarity }.distinct().sortedByDescending { it.ordinal }
-    val visible = s.stashShelf(shelf, filter)
+    val rarities = remember(shelf) { shelf.map { it.rarity }.distinct().sortedByDescending { it.ordinal } }
+    val visible = remember(shelf, filter, s.stashSort, hero, s.world) { s.stashShelf(shelf, filter) }
     val waiting = s.link.waitingItems
     PullToRefreshBox(isRefreshing = s.refreshing(Reads.HERO), onRefresh = vm::loadHero, modifier = Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {

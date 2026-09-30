@@ -1,11 +1,12 @@
 # Контракт Exile Forge 3.0
 
-Сервер: ветка `claude/tender-pasteur-a36kj2`, коммит `369094b30a912d0d218ab17d75f2dfc55d4f80fa` (ktor-bestgame 1.0.1),
+Сервер: ветка `claude/tender-pasteur-a36kj2`, коммит `74f9cdcd72dcc9cccdcc3286aefe7f22c7d41e4c` (ktor-bestgame 1.53.0),
 подключён подмодулем `backend/`; клиент собирается против его модуля `backend/rules` (`includeBuild`) и
-закрепляет коммит и версию в `core/.../contract/Contract.kt`. Ревизия API — 14 (`API_REVISION`): клиент
+закрепляет коммит и версию в `core/.../contract/Contract.kt`. Ревизия API — 35 (`API_REVISION`): клиент
 требует от манифеста ровно её.
 
-Конверт: успех `{"success":true,"data":...}`, ошибка `{"success":false,"error":{"message","errorClass","errorMethod","errorCode","messageArgs"}}`.
+Конверт: успех `{"success":true,"data":...}`, ошибка `{"success":false,"error":{"message","errorCode","messageArgs"}}` (с 1.53.0 без имён классов и методов сервера).
+Повтор команды по `Idempotency-Key` (заголовок `Idempotent-Replay: true`) отвечает `{"success":true,"data":null}` без снимка: клиент перечитывает героя сам.
 Клиент показывает `error.<errorCode>` из словаря сервера, подставляя `messageArgs`; `message` — запасной текст.
 Ответ команды героя несёт ещё `hero` — снимок (ниже).
 

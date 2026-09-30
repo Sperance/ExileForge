@@ -254,20 +254,32 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         parts = merged
         snapshots++
         if (keep) keepCopy(heroId, merged)
-        val info = merged.hero
-        val items = merged.items
-        val tree = merged.tree
-        val pets = merged.pets
-        val sheet = Sheets.calculate(index, info.level, info.heroClass, tree, items, pets.active)
-        val view = HeroView(info, items, merged.overflow, merged.bag, tree, merged.campaign, merged.crafts, merged.merchant, sheet, pets)
-        val now = System.currentTimeMillis()
-        mutable.update { it.copy(play = it.play.copy(hero = view, heroOwner = info.userId, heroReadAt = now, heroSeenAt = now,
-            selectedEquipment = it.play.selectedEquipment.takeIf { chosen -> view.items.any { item -> item.id == chosen } } ?: view.items.firstOrNull()?.id.orEmpty()),
-            market = it.market.copy(merchant = view.merchant)) }
-        expeditionViewModel.heroChanged(view)
-        // A new atlas point (3.47.0) is said out loud: the tree is easy to forget behind the world map's button.
-        earnedBefore?.let { before -> (info.earned.size - before.size).takeIf { it > 0 }?.let { toast(ui("atlas.point_earned", it), NoticeKind.ATLAS) } }
+        // The parts are decoded and the sheet added up off the main thread (3.55.0): a hero of a thousand items froze
+        // the frame after every command. Snapshots land in order: one overtaken by a newer merge is dropped.
+        val ticket = ++drawing
+        scope.launch {
+            val view = withContext(Dispatchers.Default) {
+                val info = merged.hero
+                val items = merged.items
+                val tree = merged.tree
+                val pets = merged.pets
+                val sheet = Sheets.calculate(index, info.level, info.heroClass, tree, items, pets.active)
+                HeroView(info, items, merged.overflow, merged.bag, tree, merged.campaign, merged.crafts, merged.merchant, sheet, pets)
+            }
+            if (ticket != drawing || parts !== merged) return@launch
+            val info = view.info
+            val now = System.currentTimeMillis()
+            mutable.update { it.copy(play = it.play.copy(hero = view, heroOwner = info.userId, heroReadAt = now, heroSeenAt = now,
+                selectedEquipment = it.play.selectedEquipment.takeIf { chosen -> view.items.any { item -> item.id == chosen } } ?: view.items.firstOrNull()?.id.orEmpty()),
+                market = it.market.copy(merchant = view.merchant)) }
+            expeditionViewModel.heroChanged(view)
+            // A new atlas point (3.47.0) is said out loud: the tree is easy to forget behind the world map's button.
+            earnedBefore?.let { before -> (info.earned.size - before.size).takeIf { it > 0 }?.let { toast(ui("atlas.point_earned", it), NoticeKind.ATLAS) } }
+        }
     } }
+
+    /** The number of the latest merge whose drawing is under way; an older one landing later is dropped. */
+    private var drawing = 0L
 }
 
 /** How long a reading of the hero is trusted without asking again. */

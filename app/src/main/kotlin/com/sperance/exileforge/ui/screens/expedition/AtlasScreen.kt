@@ -71,6 +71,7 @@ private fun AtlasBranch.hue(): Color = when (this) {
     AtlasBranch.EXPEDITION -> Color(0xFF7FC8A0)
     AtlasBranch.CRAFT -> Color(0xFFE8A05A)
     AtlasBranch.POWER -> Color(0xFFD24A43)
+    AtlasBranch.INFLUENCE -> Color(0xFF9FD2F0)
     AtlasBranch.ROOT -> Color.White
 }
 
@@ -151,6 +152,7 @@ private val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
     // The fog (2.79.1): three links past the taken nodes; what lies beyond is neither drawn nor tappable.
     val sight = remember(taken, graph) { AtlasFog.visible(graph, taken) }
     val shown = remember(sight, nodes) { nodes.filter { it.code in sight } }
+    val glows = remember(nodes) { Glow.of(nodes) }
     Canvas(modifier.clipToBounds()
         .onSizeChanged { size ->
             if (framed || size.width == 0) return@onSizeChanged
@@ -178,6 +180,13 @@ private val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
         }) {
         val place = Placement(bounds, size.width, size.height, floor, margin, scale, pan)
         stars(clock)
+        // The constellations (3.53.0): a soft glow of its mechanic's hue under every one the fog has reached.
+        glows.forEach { glow ->
+            if (glow.codes.none { it in sight }) return@forEach
+            val c = place(glow.center)
+            val r = glow.radius * placeScale(place)
+            drawCircle(Brush.radialGradient(listOf(glow.hue.copy(alpha = .16f), Color.Transparent), c, r), r, c)
+        }
         nodes.forEach { node -> node.parents.forEach { parent ->
             val from = graph.node(parent) ?: return@forEach
             val near = parent in sight
@@ -208,6 +217,7 @@ private const val FOG_STUB = .3f
 private class Placement(private val b: SkyBounds, private val width: Float, private val height: Float, private val floor: Float,
                         margin: Float, private val scale: Float, private val pan: Offset) {
     private val fit = min((width - margin * 2) / b.spanX, (height - floor - margin * 3) / b.spanY)
+    val unit: Float get() = fit * scale
     operator fun invoke(node: AtlasNode) = Offset(width / 2 + ((node.x - b.midX) * fit * scale).toFloat() + pan.x,
         height - floor - (node.y * fit * scale).toFloat() + pan.y)
 }
@@ -299,3 +309,19 @@ private fun effectLines(index: ContentIndex, line: Line): List<String> {
 
 /** How far down the view the atlas's start is framed: its branches rise above it. */
 private const val START_DOWN = .8f
+
+/** A constellation's glow (3.53.0): its middle, how far it spreads in atlas units, its mechanic's hue and its nodes. */
+private class Glow(val center: AtlasNode, val radius: Float, val hue: Color, val codes: Set<String>) {
+    companion object {
+        fun of(nodes: List<AtlasNode>): List<Glow> = nodes.groupBy { AtlasFog.constellation(it.code) }.mapNotNull { (key, members) ->
+            key ?: return@mapNotNull null
+            val x = members.sumOf { it.x } / members.size
+            val y = members.sumOf { it.y } / members.size
+            val spread = members.maxOf { kotlin.math.hypot(it.x - x, it.y - y) }.toFloat() + 2f
+            Glow(members.first().copy(x = x, y = y), spread, members.first().branch.hue(), members.mapTo(HashSet()) { it.code })
+        }
+    }
+}
+
+/** Screen pixels per atlas unit at the placement's fit and zoom. */
+private fun placeScale(place: Placement): Float = place.unit

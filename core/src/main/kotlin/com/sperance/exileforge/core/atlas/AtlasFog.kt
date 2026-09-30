@@ -28,12 +28,22 @@ object AtlasFog {
 
     /** Which of the ten branches a node belongs to, read off its code: `ATLAS_<BRANCH>_…`. */
     fun branch(code: String): AtlasBranch = AtlasBranch.entries.firstOrNull { code.startsWith("ATLAS_${it.prefix}") } ?: AtlasBranch.ROOT
+
+    /**
+     * The constellation a node belongs to (3.53.0, server 1.51.0): `ATLAS_<mechanic>_<tier letter><n>` — the mechanic and the tier;
+     * a starlane's node (`P<n>`) and the start belong to none.
+     */
+    fun constellation(code: String): String? {
+        val tail = code.substringAfterLast('_')
+        if (branch(code) == AtlasBranch.ROOT || tail.isEmpty() || tail[0] == 'P') return null
+        return code.substringBeforeLast('_') + "_" + tail[0]
+    }
 }
 
 /** The branches of the tree (3.43.0, server 1.41.0: ten, each in its own wedge); [ROOT] is the start alone. */
 enum class AtlasBranch(val prefix: String) {
     LOOT("LOOT_"), MAPS("MAPS_"), TIERS("TIERS_"), BOSSES("BOSSES_"), ABYSS("ABYSS_"), VAAL("VAAL_"), CRYSTALS("CRYSTALS_"),
-    EXPEDITION("EXPEDITION_"), CRAFT("CRAFT_"), POWER("POWER_"), ROOT("START"),
+    EXPEDITION("EXPEDITION_"), CRAFT("CRAFT_"), POWER("POWER_"), INFLUENCE("INFLUENCE_"), ROOT("START"),
 }
 
 /**

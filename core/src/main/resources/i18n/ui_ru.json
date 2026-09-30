@@ -3241,5 +3241,6 @@
   "enum.stat.ATLAS_INFLUENCE_POWER": "Атлас: сила захваченных карт",
   "enum.stat.ATLAS_INFLUENCE_SHAPER": "Атлас: только Создатель",
   "enum.stat.ATLAS_INFLUENCE_ELDER": "Атлас: только Древний",
-  "expedition.launch_influence": "Захвачена: {0} — монстры +{1}% здоровья и урона, вещи с её влиянием ({2}%), босс роняет редкую вещь влияния"
+  "expedition.launch_influence": "Захвачена: {0} — монстры +{1}% здоровья и урона, вещи с её влиянием ({2}%), босс роняет редкую вещь влияния",
+  "atlas.branch.INFLUENCE": "Влияние"
 }

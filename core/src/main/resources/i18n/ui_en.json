@@ -3241,5 +3241,6 @@
   "enum.stat.ATLAS_INFLUENCE_POWER": "Atlas: Influenced Map Power",
   "enum.stat.ATLAS_INFLUENCE_SHAPER": "Atlas: Shaper Only",
   "enum.stat.ATLAS_INFLUENCE_ELDER": "Atlas: Elder Only",
-  "expedition.launch_influence": "Influenced: {0} — monsters +{1}% life and damage, items with its influence ({2}%), the boss drops a rare influenced item"
+  "expedition.launch_influence": "Influenced: {0} — monsters +{1}% life and damage, items with its influence ({2}%), the boss drops a rare influenced item",
+  "atlas.branch.INFLUENCE": "Influence"
 }

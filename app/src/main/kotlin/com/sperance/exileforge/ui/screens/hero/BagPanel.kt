@@ -126,7 +126,6 @@ internal fun compactCount(amount: Long): String = when {
  * server refuses it on an item (`CR_009`), so it has no way in. The auction takes any stack.
  * Every callback gets the stack's code, but [onRead], which gets the skill's.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable fun BagSheet(s: ForgeState, stack: BagStack, onDismiss: () -> Unit, onForge: (String) -> Unit, onAuction: (String) -> Unit,
                          /** A skill book of the class read at once (2.78.0), by the skill's code. */
                          onRead: (String) -> Unit = {},
@@ -138,36 +137,54 @@ internal fun compactCount(amount: Long): String = when {
     val skill = s.index?.skills?.byBook(code)
     val readable = skill != null && skill.heroClass == s.hero?.heroClass
     val essence = s.index?.essence(code) != null
-    val title = itemTitle(code)
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel) {
-        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).navigationBarsPadding()) {
-            RaritySpine(Gold, 4.dp)
-            Column(Modifier.weight(1f).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    StackIcon(s, code, 56)
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(title, color = GoldBright, style = MaterialTheme.typography.titleLarge)
-                        // The English trade name (2.51.0), under the translated one.
-                        tradeName(code, equipment = false)?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelMedium, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic) }
-                        MutedText(ui("bag.owned", stack.amount), style = MaterialTheme.typography.labelSmall)
-                    }
-                }
-                itemDescription(code).takeIf { it.isNotBlank() }?.let { Text(it, color = Parchment, style = MaterialTheme.typography.bodyMedium) }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (forgeable) ForgeButton(enabled = !s.busy, onClick = { onForge(code) }, modifier = Modifier.weight(1f)) {
-                        Text(ui("bag.to_forge"))
-                    }
-                    if (essence) ForgeButton(enabled = !s.busy, onClick = { onEssence(code) }, modifier = Modifier.weight(1f)) {
-                        Text(ui("bag.to_forge"))
-                    }
-                    if (readable && skill != null) ForgeButton(enabled = !s.busy, onClick = { onRead(skill.code) }, modifier = Modifier.weight(1f)) {
-                        Text(ui(if ((s.hero?.skills?.level(skill.code) ?: 0) > 0) "bag.read_book" else "bag.learn_book"))
-                    }
-                    ForgeOutlinedButton(enabled = !s.busy, onClick = { onAuction(code) }, modifier = Modifier.weight(1f)) {
-                        Text(ui("hero.action_auction"))
-                    }
-                }
+    StackPanel(onDismiss) {
+        StackFace(s, code, stack.amount)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (forgeable) ForgeButton(enabled = !s.busy, onClick = { onForge(code) }, modifier = Modifier.weight(1f)) {
+                Text(ui("bag.to_forge"))
+            }
+            if (essence) ForgeButton(enabled = !s.busy, onClick = { onEssence(code) }, modifier = Modifier.weight(1f)) {
+                Text(ui("bag.to_forge"))
+            }
+            if (readable && skill != null) ForgeButton(enabled = !s.busy, onClick = { onRead(skill.code) }, modifier = Modifier.weight(1f)) {
+                Text(ui(if ((s.hero?.skills?.level(skill.code) ?: 0) > 0) "bag.read_book" else "bag.learn_book"))
+            }
+            ForgeOutlinedButton(enabled = !s.busy, onClick = { onAuction(code) }, modifier = Modifier.weight(1f)) {
+                Text(ui("hero.action_auction"))
             }
         }
     }
+}
+
+/**
+ * A stack seen away from the bag — a fight's spoils: its face alone, with no way on, since the run is still underway.
+ * [code] is the stack's item code; the count is what the hero holds now.
+ */
+@Composable fun StackInfoSheet(s: ForgeState, code: String, onDismiss: () -> Unit) {
+    StackPanel(onDismiss) { StackFace(s, code, s.hero?.bag?.get(code) ?: 0L) }
+}
+
+/** The sheet a stack opens in: the gold spine along its edge and [content] beside it. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable private fun StackPanel(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel) {
+        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).navigationBarsPadding()) {
+            RaritySpine(Gold, 4.dp)
+            Column(Modifier.weight(1f).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
+        }
+    }
+}
+
+/** A stack's face: its icon, name and English trade name, how many the hero holds, and what it is for. */
+@Composable private fun StackFace(s: ForgeState, code: String, owned: Long) {
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        StackIcon(s, code, 56)
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(itemTitle(code), color = GoldBright, style = MaterialTheme.typography.titleLarge)
+            // The English trade name (2.51.0), under the translated one.
+            tradeName(code, equipment = false)?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelMedium, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic) }
+            MutedText(ui("bag.owned", owned), style = MaterialTheme.typography.labelSmall)
+        }
+    }
+    itemDescription(code).takeIf { it.isNotBlank() }?.let { Text(it, color = Parchment, style = MaterialTheme.typography.bodyMedium) }
 }

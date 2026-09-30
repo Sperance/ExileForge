@@ -3,6 +3,7 @@ package com.sperance.exileforge.ui.components
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
@@ -15,6 +16,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -25,8 +29,8 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.ItemLine
@@ -35,29 +39,28 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * The trade table (2.60.0): an item's lines as rows of a ledger — the badge, the sentence in its
- * kind's colour and the tier's range. One row per line and nothing between them but a hairline, so
- * seven affixes read as one block. The bar of where a value landed left in 2.72.0: the figures say it.
- * Since 3.0.0 the lines come ready from the item's view: the words, the marks and the range are its.
+ * The trade table (2.60.0): an item's lines as rows of a ledger — the badge and the sentence in its
+ * kind's colour. One row per line and nothing between them but a hairline, so seven affixes read as one block.
+ * Since 3.0.0 the lines come ready from the item's view. An [interactive] line opens [ModifierInfoSheet] on a
+ * tap: the tier, its range and where the roll landed live there, not on the row.
  */
-@Composable fun TradeTable(lines: List<ItemLine>) {
+@Composable fun TradeTable(lines: List<ItemLine>, interactive: Boolean = true) {
+    var opened by remember { mutableStateOf<ItemLine?>(null) }
     Column(Modifier.fillMaxWidth()) {
         lines.forEachIndexed { index, line ->
             if (index > 0) HorizontalDivider(thickness = .5.dp, color = PanelRaised)
-            TradeLine(line)
+            TradeLine(line, if (interactive) ({ opened = line }) else null)
         }
     }
+    opened?.let { ModifierInfoSheet(it) { opened = null } }
 }
 
-@Composable private fun TradeLine(line: ItemLine) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), horizontalArrangement = Arrangement.spacedBy(6.dp),
+@Composable private fun TradeLine(line: ItemLine, onClick: (() -> Unit)?) {
+    val tap = if (onClick == null) Modifier else Modifier.clickable(role = Role.Button, onClickLabel = line.text, onClick = onClick)
+    Row(Modifier.fillMaxWidth().then(tap).padding(vertical = 3.dp), horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically) {
         AffixBadge(line.marks)
         Text(line.text, color = ModBlue, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
-        line.range?.let {
-            Text(it, color = Muted, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.End, maxLines = 1,
-                modifier = Modifier.widthIn(min = 34.dp))
-        }
     }
 }
 

@@ -252,13 +252,16 @@ private const val HERO_CARD = -1
 /** The pack's leader by name and what the pack is: its rarity, the map's level, the stage of a gathered fight, how many are left standing. */
 @Composable private fun PackHeader(fight: FightHud, level: Int) {
     val leader = fight.leader
-    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+    Box(Modifier.fillMaxWidth()) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 44.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Text(monsterTitle(leader.code), color = rarityTint(leader.rarity), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
             maxLines = 1, overflow = TextOverflow.Ellipsis)
         val line = listOfNotNull(ui("expedition.monster_line", ui(leader.rarity.key()), level),
             ui("fight.stage", fight.stage, fight.stages).takeIf { fight.stages > 1 },
             ui("expedition.pack_left", fight.foes.count { it.alive }, fight.foes.size).takeIf { fight.foes.size > 1 }).joinToString(" · ")
         Text(line, color = Muted, style = MaterialTheme.typography.labelSmall)
+    }
+    BugAction(Modifier.align(Alignment.TopEnd))
     }
 }
 

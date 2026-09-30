@@ -6,12 +6,13 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -141,21 +142,21 @@ import kotlin.math.sin
     val query = s.play.nodeQuery.trim()
     val found = remember(index, query, s.lang) { if (query.length < 2) emptySet() else nodesMatching(index, query) }
     val highlight = remember(index, tag, found) { tag?.let { nodesTagged(index, it) }.orEmpty() + found }
+    // Both live behind the toolbar's search icon, so the map keeps the height; while either is on, the icon
+    // turns green and wears the number of nodes lit.
+    var filtersOpen by remember { mutableStateOf(false) }
+    val filtering = tag != null || query.length >= 2
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(ui("tree.points", tree.available, tree.total),
                 color = Gold, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+            BadgedBox(badge = { if (filtering) Badge(containerColor = Vital, contentColor = Ink) { Text(highlight.size.toString(), fontSize = 9.sp) } }) {
+                IconButton(onClick = { filtersOpen = true }, modifier = Modifier.size(36.dp)) {
+                    Icon(Icons.Outlined.Search, ui("tree.search_filters"), tint = if (filtering) Vital else Gold)
+                }
+            }
             ForgeTextButton(onClick = { totalsOpen = true }) { Text(ui("tree.totals_button")) }
             ForgeTextButton(onClick = { detailsOpen = true }) { Text(ui("tree.details")) }
-        }
-        OutlinedTextField(s.play.nodeQuery, onQuery, placeholder = { Text(ui("tree.search_hint")) }, singleLine = true,
-            modifier = Modifier.fillMaxWidth(), textStyle = MaterialTheme.typography.bodySmall,
-            trailingIcon = { if (query.length >= 2) Text(ui("tree.search_found", found.size), color = Vital, style = MaterialTheme.typography.labelSmall,
-                modifier = Modifier.padding(end = 10.dp)) })
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            TREE_TAGS.forEach { code ->
-                FilterChip(selected = tag == code, onClick = { tag = if (tag == code) null else code }, label = { Text(ui("tree.tag.$code")) })
-            }
         }
         // A tap opens a small window about that one node, so the map stays in sight; everything
         // about the tree as a whole lives behind "Подробно".
@@ -178,6 +179,10 @@ import kotlin.math.sin
             PlanControl(index, heroClass, taken, plan, index.tree.node(selected), enabled) { nodeOpen = false; onPlan(it) }
             Spacer(Modifier.height(8.dp))
         }
+    }
+
+    if (filtersOpen) ModalBottomSheet(onDismissRequest = { filtersOpen = false }, containerColor = Panel) {
+        TreeFilters(s.play.nodeQuery, onQuery, found.size.takeIf { query.length >= 2 }, tag, onTag = { tag = it })
     }
 
     TreeConfirmations(s, confirmReset, onClear = { confirmReset = false }, onReset = onReset)
@@ -246,6 +251,32 @@ private fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Set
 }
 
 /**
+ * The search and the tag filter, in a sheet of their own.
+ *
+ * Both only light nodes up on the map, so they are set once and then read off the tree rather than
+ * kept on screen beside it. [found] is the search's match count, null while the query is too short.
+ */
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
+@Composable private fun TreeFilters(query: String, onQuery: (String) -> Unit, found: Int?, tag: String?, onTag: (String?) -> Unit) {
+    Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Engraved(ui("tree.search_filters"))
+        OutlinedTextField(query, onQuery, placeholder = { Text(ui("tree.search_hint")) }, singleLine = true,
+            modifier = Modifier.fillMaxWidth(), textStyle = MaterialTheme.typography.bodySmall,
+            leadingIcon = { Icon(Icons.Outlined.Search, null) },
+            trailingIcon = { found?.let { Text(ui("tree.search_found", it), color = Vital, style = MaterialTheme.typography.labelSmall,
+                modifier = Modifier.padding(end = 10.dp)) } })
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            TREE_TAGS.forEach { code ->
+                FilterChip(selected = tag == code, onClick = { onTag(if (tag == code) null else code) }, label = { Text(ui("tree.tag.$code")) })
+            }
+        }
+        if (query.isNotBlank() || tag != null) ForgeOutlinedButton(onClick = { onQuery(""); onTag(null) }, modifier = Modifier.fillMaxWidth()) {
+            Text(ui("tree.filters_clear"))
+        }
+    }
+}
+
+/**
  * The graph, drawn from the coordinates the content seeded.
  *
  * Panning and zooming are the only interaction beyond a tap: the layout is fixed data, so the
@@ -261,23 +292,42 @@ private fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Set
     var scale by remember { mutableFloatStateOf(1f) }
     val labels = rememberTextMeasurer()
     var pan by remember { mutableStateOf(Offset.Zero) }
+    val select by rememberUpdatedState(onSelect)
+    // The zoom is about a point — the pinch's centre, the double tap — so what is under the fingers stays there.
+    fun zoomAt(focus: Offset, factor: Float, drag: Offset, width: Float, height: Float) {
+        val next = (scale * factor).coerceIn(MIN_ZOOM, MAX_ZOOM)
+        val centre = Offset(width / 2, height / 2)
+        val moved = focus - centre - (focus - centre - pan) * (next / scale) + drag
+        val limit = panLimit(bounds, width, height, next)
+        scale = next
+        pan = Offset(moved.x.coerceIn(-limit.x, limit.x), moved.y.coerceIn(-limit.y, limit.y))
+    }
     Box(modifier.fillMaxWidth()) {
+        // Both detectors are keyed on the graph alone and read the view as it is now. Keyed on the zoom and
+        // the pan, the tap detector restarted on every frame of a drag and took the second finger's touch
+        // for a fresh tap, consuming it — and a consumed touch cancels the pinch before it begins.
         Canvas(Modifier.fillMaxSize().clipToBounds()
             .pointerInput(nodes) {
-                detectTransformGestures { _, drag, zoom, _ ->
-                    scale = (scale * zoom).coerceIn(.4f, MAX_ZOOM)
-                    val limit = panLimit(bounds, size.width.toFloat(), size.height.toFloat(), scale)
-                    pan = Offset((pan.x + drag.x).coerceIn(-limit.x, limit.x), (pan.y + drag.y).coerceIn(-limit.y, limit.y))
+                detectTransformGestures { centroid, drag, zoom, _ ->
+                    zoomAt(centroid, zoom, drag, size.width.toFloat(), size.height.toFloat())
                 }
             }
-            .pointerInput(nodes, scale, pan) {
-                detectTapGestures { tap ->
-                    // The nearest node wins, but only within its own circle: a tap on bare canvas changes nothing.
-                    val width = size.width.toFloat()
-                    val height = size.height.toFloat()
-                    val hit = nodes.minByOrNull { (place(it, bounds, width, height, scale, pan) - tap).getDistanceSquared() }
-                    if (hit != null && (place(hit, bounds, width, height, scale, pan) - tap).getDistance() <= radius(hit) * scale * 2f) onSelect(hit.code)
-                }
+            .pointerInput(nodes) {
+                detectTapGestures(
+                    // A double tap steps in towards the spot, and from the closest zoom back to the whole tree.
+                    onDoubleTap = { at ->
+                        if (scale >= MAX_ZOOM - .01f) { scale = 1f; pan = Offset.Zero }
+                        else zoomAt(at, DOUBLE_TAP_ZOOM, Offset.Zero, size.width.toFloat(), size.height.toFloat())
+                    },
+                    onTap = { tap ->
+                        // The nearest node wins, but only within its own circle — never smaller than a finger: a tap on bare canvas changes nothing.
+                        val width = size.width.toFloat()
+                        val height = size.height.toFloat()
+                        nodes.minByOrNull { (place(it, bounds, width, height, scale, pan) - tap).getDistanceSquared() }?.let { hit ->
+                            val reach = max(radius(hit) * scale.coerceIn(.5f, 2.2f) * 2f, MIN_TOUCH.toPx())
+                            if ((place(hit, bounds, width, height, scale, pan) - tap).getDistance() <= reach) select(hit.code)
+                        }
+                    })
             }) {
             val width = size.width
             val height = size.height
@@ -402,11 +452,16 @@ private fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Set
             val cost = path.sumOf { index.tree.node(it)?.cost ?: 0 }
             PropertyRow(ui("tree.path"), ui("tree.path_value", path.size, cost), Glyph.TREE)
             ForgeButton(enabled = enabled && cost <= available && (!choosing || picked != null), onClick = { onPath(node.code, picked) },
-                modifier = Modifier.fillMaxWidth()) { Text(ui("tree.path_take", cost)) }
+                modifier = Modifier.fillMaxWidth()) { Text(if (cost > available) ui("tree.not_enough_points") else ui("tree.path_take", cost)) }
             if (cost > available) MutedText(ui("tree.path_short", cost, available))
-        } else if (node.code in reachable || taken.isEmpty()) ForgeButton(enabled = enabled && (!choosing || picked != null),
-            onClick = { onAllocate(node.code, picked) }, modifier = Modifier.fillMaxWidth()) {
-            Text(ui("tree.allocate"))
+        } else if (node.code in reachable || taken.isEmpty()) {
+            // Short of points the button says so and stays grey: the server would only refuse (ST_008).
+            val short = node.cost > available
+            ForgeButton(enabled = enabled && !short && (!choosing || picked != null),
+                onClick = { onAllocate(node.code, picked) }, modifier = Modifier.fillMaxWidth()) {
+                Text(if (short) ui("tree.not_enough_points") else ui("tree.allocate"))
+            }
+            if (short) MutedText(ui("tree.path_short", node.cost, available))
         } else MutedText(ui("tree.path_none"))
         if (node.type == SkillNodeType.START) Text(ui("tree.start_note"), color = Muted, style = MaterialTheme.typography.bodySmall)
     }
@@ -533,7 +588,12 @@ private data class Bounds(val minX: Float, val maxX: Float, val minY: Float, val
 }
 
 private const val MARGIN = 28f
-private const val MAX_ZOOM = 10f
+private const val MIN_ZOOM = .5f
+private const val MAX_ZOOM = 3f
+/** How much closer one double tap brings the map. */
+private const val DOUBLE_TAP_ZOOM = 2f
+/** The smallest circle a tap finds a node in, however far the map is zoomed out. */
+private val MIN_TOUCH = 18.dp
 /** From this zoom a notable's and a keystone's name is written under it. */
 private const val LABEL_ZOOM = 2.6f
 

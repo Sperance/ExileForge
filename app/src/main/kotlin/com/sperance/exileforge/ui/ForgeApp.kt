@@ -30,6 +30,7 @@ import com.sperance.exileforge.presentation.state.*
 import com.sperance.exileforge.data.settings.GuideStore
 import com.sperance.exileforge.ui.components.BugButton
 import com.sperance.exileforge.ui.components.BugSheet
+import com.sperance.exileforge.ui.components.LocalBugReport
 import com.sperance.exileforge.ui.components.WarmupScreen
 import com.sperance.exileforge.ui.components.GuideDesk
 import com.sperance.exileforge.ui.components.GuideHost
@@ -92,10 +93,11 @@ private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, erro
     // Language is part of the key: every cached label is rebuilt in the chosen tongue.
     // The dictionary arrives after the first frame, so its size joins the key: when the server's
     // names land, every screen that printed a bare code is drawn again.
-    // The beetle (3.48.0): in the banner of the game, floating over the screens without one.
+    // The beetle (3.48.0): in the banner of the game; since 3.57.0 in the own header of every screen without one.
     var bugOpen by remember { mutableStateOf(false) }
     LaunchedEffect(s.phase, s.play.heroId) { if (s.phase == AppPhase.GAME && s.play.heroId.isNotBlank()) vm.warmUp() }
     key(s.account.server, s.account.sessionEpoch, s.lang, s.world.localeStrings) {
+        CompositionLocalProvider(LocalBugReport provides { bugOpen = true }) {
         Box(Modifier.fillMaxSize()) {
             // The two screens above the tabs carry no banner and no bottom bar: there is no character to
             // name in the one and no tab to reach from the other.
@@ -113,8 +115,7 @@ private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, erro
                     ?: s.play.atlas?.let { AtlasScreen(s.sliced(*s.common, *s.toasts), vm) }
                     ?: GameScaffold(s, vm, logs) { bugOpen = true }
             }
-            val banner = s.phase == AppPhase.GAME && expedition == null && s.play.atlas == null
-            if (!banner) BugButton(Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(4.dp)) { bugOpen = true }
+        }
         }
     }
     if (bugOpen) BugSheet(s, expedition, logs, onDismiss = { bugOpen = false }, onSend = vm::reportBug)

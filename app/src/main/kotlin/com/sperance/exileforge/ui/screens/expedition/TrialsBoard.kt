@@ -24,6 +24,7 @@ import com.sperance.exileforge.rules.content.TrialKind
 import com.sperance.exileforge.rules.content.TrialRules
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.BagIcon
+import com.sperance.exileforge.ui.screens.hero.compactCount
 import com.sperance.exileforge.ui.theme.*
 
 /**
@@ -41,11 +42,7 @@ import com.sperance.exileforge.ui.theme.*
     val seals = hero.bag[TrialRules.SEAL] ?: 0L
     val idle = !s.busy
     Column(modifier.verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Key(TrialRules.CREST, crests)
-            Key(TrialRules.KEY, keys)
-            Key(TrialRules.SEAL, seals)
-        }
+        KeyGrid(listOf(TrialRules.CREST to crests, TrialRules.KEY to keys, TrialRules.SEAL to seals))
         trials.run?.let { open ->
             Plate(LifeRed) {
                 Text(ui("trials.open_title"), color = LifeRed, style = MaterialTheme.typography.titleSmall)
@@ -94,12 +91,28 @@ import com.sperance.exileforge.ui.theme.*
     }
 }
 
-@Composable private fun Key(code: String, count: Long) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        BagIcon(code, Modifier.size(22.dp))
-        Text(ui("expedition.loot_stack", itemTitle(code), count), color = Parchment, style = MaterialTheme.typography.labelLarge)
+/** The keys at hand as a compact grid: an icon and its count, [KEYS_PER_ROW] to a row, a tap names the key. */
+@Composable private fun KeyGrid(stacks: List<Pair<String, Long>>) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        stacks.chunked(KEYS_PER_ROW).forEach { row ->
+            Row(Modifier.fillMaxWidth()) {
+                row.forEach { (code, count) -> Key(code, count, Modifier.weight(1f)) }
+                repeat(KEYS_PER_ROW - row.size) { Spacer(Modifier.weight(1f)) }
+            }
+        }
     }
 }
+
+@Composable private fun Key(code: String, count: Long, modifier: Modifier) {
+    Tipped({ Tip(itemTitle(code)) }, modifier) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            BagIcon(code, Modifier.size(22.dp))
+            Text(compactCount(count), color = Parchment, style = MaterialTheme.typography.labelLarge)
+        }
+    }
+}
+
+private const val KEYS_PER_ROW = 4
 
 @Composable private fun Plate(accent: Color, content: @Composable ColumnScope.() -> Unit) {
     val shape = RoundedCornerShape(12.dp)

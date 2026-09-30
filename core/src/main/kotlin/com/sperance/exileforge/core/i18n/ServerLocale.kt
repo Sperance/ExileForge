@@ -102,5 +102,8 @@ fun locError(code: String?, message: String, args: List<String> = emptyList()): 
     // A hole left unfilled means the server sent fewer arguments than the template wants, and half
     // a sentence is worse than the server's own. This is now rare: since 0.17.0 the envelope
     // carries what it interpolated.
-    return if (text.contains("{0}")) message else text
+    return if (HOLE.containsMatchIn(text)) message else text
 }
+
+/** A placeholder the arguments left unfilled: `{0}`, `{1}`... */
+private val HOLE = Regex("""\{\d+}""")

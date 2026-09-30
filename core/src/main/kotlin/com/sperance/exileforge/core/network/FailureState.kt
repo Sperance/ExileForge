@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.network
 
+import com.sperance.exileforge.core.i18n.locError
 import com.sperance.exileforge.core.i18n.ui
 
 sealed interface FailureState {
@@ -59,9 +60,18 @@ fun transportDetail(error: Throwable): String = when {
 /**
  * The line a refusal is shown as.
  *
- * A player reads the sentence and nothing else: `HTTP 403 AUTH_004` is not something they can act
- * on. An administrator gets the status and the code in front of it, because that is what they look
- * up. The request journal keeps both for everyone either way.
+ * A player reads the sentence and nothing else: `HTTP 403 AUTH_004` is not something anyone can act
+ * on, an administrator included, so the status and the code stay in the request journal and never
+ * reach the strip. The sentence is the server's template for the code in the player's language; a
+ * refusal the dictionary has no template for, and whose own text is nothing but that code and its
+ * arguments (a rules refusal), reads as the plain "the server rejected the request" instead.
  */
-fun refusalLine(error: Throwable, sentence: String, detailed: Boolean): String =
-    if (detailed && error is ApiFailure) "HTTP ${error.status ?: "—"} ${error.code.orEmpty()}: $sentence" else sentence
+fun refusalLine(error: Throwable): String {
+    val code = (error as? ApiFailure)?.code
+    val text = if (error is ApiFailure) locError(code, error.message.orEmpty(), error.args) else error.message.orEmpty()
+    return when {
+        text.isBlank() -> ui("runtime.request_failed")
+        !code.isNullOrBlank() && code in text -> ui("net.rejected")
+        else -> text
+    }
+}

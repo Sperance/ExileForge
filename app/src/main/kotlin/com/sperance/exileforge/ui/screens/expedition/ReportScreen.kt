@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.expedition
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -40,6 +41,7 @@ import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.screens.expedition.scene.Portraits
+import com.sperance.exileforge.ui.screens.hero.StackInfoSheet
 import com.sperance.exileforge.ui.screens.hero.WearPreview
 import com.sperance.exileforge.ui.theme.*
 import java.util.Locale
@@ -51,18 +53,25 @@ import java.util.Locale
  * «Сферы» as chips; «Награда», gold and experience — or, after a defeat, what the death cost and
  * what the run had gathered. The fight itself is a row of figures at the foot, and its log unfolds
  * from there. The spoils are the server's roll (1.30.0): the screen opens at once, says the loot is on its way,
- * and fills in as the answers arrive — offline, when the connection is back.
+ * and fills in as the answers arrive — offline, when the connection is back. Until they have, there is no way on:
+ * neither the button nor the system back leaves, so nothing the fight brought is walked past unseen.
  */
 @Composable internal fun ReportScreen(s: ForgeState, vm: ForgeViewModel, hud: RunHud, report: FightReport, onContinue: () -> Unit) {
     val won = report.outcome == Outcome.WIN
     var logOpen by remember { mutableStateOf(false) }
     var line by remember { mutableStateOf<Pair<CombatEvent, String>?>(null) }
     var looked by remember { mutableStateOf<ItemView?>(null) }
+    var stack by remember { mutableStateOf<String?>(null) }
+    // The spoils still on the way — a victory's, or the Abyss hoard a fall there keeps; the answers are asked for at once,
+    // and the back gesture is held while they are on the way.
+    val receiving = if (won) hud.rewardAwaiting > 0 else hud.abyss?.let { it.fallen && it.hoardAwaiting } == true
+    LaunchedEffect(receiving) { if (receiving) vm.flushRun() }
+    BackHandler(enabled = receiving) {}
     Column(Modifier.fillMaxSize().background(Ink.copy(alpha = .94f)).statusBarsPadding().navigationBarsPadding().padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)) {
         FieldHead(report, won)
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (won) Spoils(s, hud) { looked = it } else DeathPrice(s, hud)
+            if (won) Spoils(s, hud, onStack = { stack = it }) { looked = it } else DeathPrice(s, hud)
             if (logOpen) Box(Modifier.fillMaxWidth().height(260.dp).background(Panel, RoundedCornerShape(8.dp))
                 .border(1.dp, Bronze.copy(alpha = .4f), RoundedCornerShape(8.dp)).padding(horizontal = 10.dp, vertical = 8.dp)) {
                 Column {
@@ -72,7 +81,7 @@ import java.util.Locale
             }
         }
         FightFigures(report, logOpen) { logOpen = !logOpen }
-        ForgeButton(onClick = onContinue, modifier = Modifier.fillMaxWidth().height(50.dp),
+        ForgeButton(enabled = !receiving, onClick = onContinue, modifier = Modifier.fillMaxWidth().height(50.dp),
             colors = ButtonDefaults.buttonColors(containerColor = if (won) Gold else LifeRed, contentColor = if (won) Ink else Parchment)) {
             Text(ui(if (won) "expedition.continue" else "expedition.back_to_camp"), style = MaterialTheme.typography.titleMedium)
         }
@@ -81,6 +90,8 @@ import java.util.Locale
     line?.let { (event, name) -> CombatDetailSheet(s, event, name) { line = null } }
     // Compared and worn right here (3.24.0), as on the gear sheet.
     looked?.let { item -> LootSheet(s, vm, item, onDismiss = { looked = null }) }
+    // A stack of the spoils opened: what it is, what it is for, and how many the hero holds.
+    stack?.let { code -> StackInfoSheet(s, code) { stack = null } }
 }
 
 /** The scene: the monster's round token in its rarity's ring, lit warm for a victory and red for a defeat, and the outcome in words. */
@@ -90,8 +101,6 @@ import java.util.Locale
     val glow = if (won) Color(0xFF3B2A17) else Color(0xFF3B1717)
     Box(Modifier.fillMaxWidth().height(140.dp).clip(RoundedCornerShape(8.dp)).background(Brush.radialGradient(listOf(glow, Ink))),
         contentAlignment = Alignment.Center) {
-        Icon(if (won) ForgeGlyphs.Swords else ForgeGlyphs.Skull, null, tint = if (won) Gold else LifeRed,
-            modifier = Modifier.align(Alignment.TopEnd).padding(10.dp).size(20.dp))
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Box(Modifier.size(68.dp).clip(CircleShape).background(Color.Black).border(3.dp, rarityTint(monster.rarity), CircleShape),
                 contentAlignment = Alignment.TopCenter) {
@@ -105,6 +114,7 @@ import java.util.Locale
             // A pack (since 2.54.0) says its size under the outcome.
             if (report.packSize > 1) MutedText(ui("expedition.report_pack", report.packSize), style = MaterialTheme.typography.labelSmall)
         }
+        BugAction(Modifier.align(Alignment.TopEnd))
     }
 }
 
@@ -116,21 +126,25 @@ import java.util.Locale
     }
 }
 
-@Composable private fun Chip(text: String, tone: Color = Parchment) {
+@Composable private fun Chip(text: String, tone: Color = Parchment, onClick: (() -> Unit)? = null) {
+    val shape = RoundedCornerShape(3.dp)
     Text(text, color = tone, style = MaterialTheme.typography.labelMedium,
-        modifier = Modifier.background(Abyss, RoundedCornerShape(3.dp)).border(1.dp, PanelRaised, RoundedCornerShape(3.dp)).padding(horizontal = 8.dp, vertical = 4.dp))
+        modifier = Modifier.clip(shape).background(Abyss, shape).border(1.dp, if (onClick != null) Bronze.copy(alpha = .6f) else PanelRaised, shape)
+            .then(onClick?.let { Modifier.clickable(role = Role.Button, onClick = it) } ?: Modifier)
+            .padding(horizontal = 8.dp, vertical = 4.dp))
 }
 
 /** What the kill brought, by section, as the server's answers bring it (1.30.0); on its way, or its absence said plainly. */
 @OptIn(ExperimentalLayoutApi::class)
-@Composable private fun Spoils(s: ForgeState, hud: RunHud, onItem: (ItemView) -> Unit) {
+@Composable private fun Spoils(s: ForgeState, hud: RunHud, onStack: (String) -> Unit, onItem: (ItemView) -> Unit) {
     val reward = hud.reward ?: return
     val index = s.index
     reward.recipe?.let { code ->
         Caption(ui("expedition.report_recipe"))
         Chip(index?.let { i -> i.recipe(code)?.let { recipeText(i, it) } } ?: displayName(code), Rune)
     }
-    val gear = reward.equipment.mapNotNull { s.view(it) }
+    // A piece put on from here (3.24.0) leaves the list: it is worn now, no longer loot.
+    val gear = reward.equipment.filterNot { s.hero?.item(it.id)?.let { held -> held.equipped || held.socketed } == true }.mapNotNull { s.view(it) }
     if (gear.isNotEmpty()) {
         Caption(ui("expedition.report_gear"))
         // Every piece whole (3.2.0): base, every line with its tier and range, the roll quality and the price — no tap needed to judge it
@@ -139,7 +153,7 @@ import java.util.Locale
     if (reward.items.isNotEmpty()) {
         Caption(ui("expedition.report_orbs"))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            reward.items.forEach { (code, amount) -> Chip(ui("expedition.loot_stack", itemTitle(code), amount)) }
+            reward.items.forEach { (code, amount) -> Chip(ui("expedition.loot_stack", itemTitle(code), amount)) { onStack(code) } }
         }
     }
     Caption(ui("expedition.report_reward"))

@@ -4,6 +4,10 @@ import com.sperance.exileforge.rules.content.SlotGroup
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.AutoSell
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
@@ -11,6 +15,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.itemTitle
@@ -60,6 +65,7 @@ import com.sperance.exileforge.ui.theme.*
 
 @Composable private fun ColumnScope.MerchantTab(s: ForgeState, vm: ForgeViewModel) {
     var chosen by remember { mutableStateOf<MerchantOffer?>(null) }
+    var filtering by remember { mutableStateOf(false) }
     val stock = s.market.merchant
     val money = s.hero?.money
     LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
@@ -69,9 +75,9 @@ import com.sperance.exileforge.ui.theme.*
                 money?.let { PropertyRow(ui("merchant.gold"), number(it.toDouble()), Glyph.CURRENCY) }
                 stock?.let { MutedText(ui("merchant.renews", untilText(it.refreshAt))) }
                 MutedText(ui("merchant.note"))
+                s.hero?.info?.autoSell?.let { filter -> AutoSellButton(filter) { filtering = true } }
             }
         }
-        s.hero?.info?.autoSell?.let { filter -> item { AutoSellPanel(filter, enabled = !s.busy, onChange = vm::autoSell) } }
         stock?.orbs?.takeIf { it.isNotEmpty() }?.let { orbs ->
             item {
                 ForgePanel {
@@ -93,6 +99,10 @@ import com.sperance.exileforge.ui.theme.*
         }
     }
     chosen?.let { offer -> OfferSheet(s, offer, money, onDismiss = { chosen = null }) { chosen = null; vm.buyOffer(offer.id) } }
+    // Read from the snapshot on every pass, so a chip turns as soon as the server has the new filter.
+    if (filtering) s.hero?.info?.autoSell?.let { filter ->
+        AutoSellSheet(filter, enabled = !s.busy, onChange = vm::autoSell, onDismiss = { filtering = false })
+    }
 }
 
 /** One orb on the shelf: its glass and name, how many the bag holds, and the button with the next price. */
@@ -141,22 +151,40 @@ internal fun untilText(at: Long): String {
     return ui("merchant.time", minutes / 60, minutes % 60)
 }
 
+/** The loot filter's door in the header: its name and how many marks are on; the marks themselves wait in [AutoSellSheet]. */
+@Composable private fun AutoSellButton(filter: AutoSell, onClick: () -> Unit) {
+    val marks = filter.sell.values.sumOf { it.size }
+    ForgeOutlinedButton(onClick = onClick) {
+        Icon(Icons.Outlined.FilterList, null, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(6.dp))
+        Text(ui("merchant.autosell"))
+        if (marks > 0) {
+            Spacer(Modifier.width(6.dp))
+            Text(marks.toString(), color = GoldBright, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
 /**
  * The loot filter (3.47.0, server 1.45.0): a row per rarity, a chip per slot group — what is on, the merchant takes from a
  * run's loot before it reaches the stash. A unique, an influenced, corrupted, fractured or locked piece never goes.
+ * A sheet behind the header's button, so the shelf is not pushed down by it.
  */
-@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
-@Composable private fun AutoSellPanel(filter: AutoSell, enabled: Boolean, onChange: (Rarity, Set<SlotGroup>) -> Unit) {
-    ForgePanel {
-        Engraved(ui("merchant.autosell"))
-        MutedText(ui("merchant.autosell_note"))
-        AutoSell.SELLABLE.forEach { rarity ->
-            val on = filter.sell[rarity].orEmpty()
-            Text(ui("enum.rarity.${rarity.name}"), color = rarityColor(rarity.name), style = MaterialTheme.typography.labelLarge)
-            androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                SlotGroup.entries.forEach { group ->
-                    FilterChip(selected = group in on, enabled = enabled, onClick = { onChange(rarity, if (group in on) on - group else on + group) },
-                        label = { Text(ui("merchant.group.${group.name}")) })
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable private fun AutoSellSheet(filter: AutoSell, enabled: Boolean, onChange: (Rarity, Set<SlotGroup>) -> Unit, onDismiss: () -> Unit) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Engraved(ui("merchant.autosell"))
+            MutedText(ui("merchant.autosell_note"))
+            AutoSell.SELLABLE.forEach { rarity ->
+                val on = filter.sell[rarity].orEmpty()
+                Text(ui("enum.rarity.${rarity.name}"), color = rarityColor(rarity.name), style = MaterialTheme.typography.labelLarge)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    SlotGroup.entries.forEach { group ->
+                        FilterChip(selected = group in on, enabled = enabled, onClick = { onChange(rarity, if (group in on) on - group else on + group) },
+                            label = { Text(ui("merchant.group.${group.name}")) })
+                    }
                 }
             }
         }

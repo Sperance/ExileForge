@@ -37,7 +37,7 @@ fun petName(species: String): String = locOr("pet.$species", species)
         ForgePanel {
             FirstVisit(Guide.PETS)
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Engraved(ui("pets.title", pets.pets.size, pets.cap), modifier = Modifier.weight(1f))
+                Engraved(ui("pets.title", pets.pets.size), modifier = Modifier.weight(1f))
                 GuideButton(Guide.PETS)
             }
             MutedText(ui("pets.hint"))

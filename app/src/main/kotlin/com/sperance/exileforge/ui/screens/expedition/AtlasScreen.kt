@@ -117,6 +117,7 @@ private val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
             }
             FirstVisit(Guide.ATLAS)
             GuideButton(Guide.ATLAS)
+            BugAction(tint = Sky.text)
             ForgeOutlinedButton(onClick = { summary = true }, enabled = (state?.allocated?.size ?: 0) > 1) { Text(ui("atlas.summary"), color = Sky.text) }
             // The start is nobody's to give back: what was spent is every taken node but it.
             val spent = (state?.allocated?.size ?: 1) - 1
@@ -186,7 +187,7 @@ private val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
         .pointerInput(nodes) {
             detectTransformGestures { _, drag, zoom, _ ->
                 scale = (scale * zoom).coerceIn(MIN_ZOOM, MAX_ZOOM)
-                val limit = size.width.toFloat() * scale
+                val limit = size.width.toFloat() * scale * SPREAD
                 pan = Offset((pan.x + drag.x).coerceIn(-limit, limit), (pan.y + drag.y).coerceIn(-limit, limit * 2))
             }
         }
@@ -248,10 +249,13 @@ private const val CLOCK_STEP_NS = 1_000_000_000L / CLOCK_FPS
 private const val MIN_ZOOM = .5f
 private const val MAX_ZOOM = 3f
 
+/** How far apart the stars sit against the fitted sky: the shape is kept, the nodes stop crowding each other. */
+private const val SPREAD = 1.5f
+
 /** Where a node lands on screen: the start at the bottom middle above the sheet, y up, fitted to the width. */
 private class Placement(private val b: SkyBounds, private val width: Float, private val height: Float, private val floor: Float,
                         margin: Float, private val scale: Float, private val pan: Offset) {
-    private val fit = min((width - margin * 2) / b.spanX, (height - floor - margin * 3) / b.spanY)
+    private val fit = min((width - margin * 2) / b.spanX, (height - floor - margin * 3) / b.spanY) * SPREAD
     val unit: Float get() = fit * scale
     operator fun invoke(node: AtlasNode) = Offset(width / 2 + ((node.x - b.midX) * fit * scale).toFloat() + pan.x,
         height - floor - (node.y * fit * scale).toFloat() + pan.y)

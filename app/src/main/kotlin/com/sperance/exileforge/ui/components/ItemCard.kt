@@ -182,10 +182,10 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
             // The base first, as figures: the biggest is what the item is bought for.
             base.forEachIndexed { index, property -> BannerStat(property, big = index == 0) }
             // Then what this copy rolled, as a trade table (2.60.0): the figures a trader weighs it by,
-            // then a row per line with how high it landed inside its tier.
+            // then a row per line; a tap on one (detailed card) opens its tier, range and where it landed.
             if (rolled.isNotEmpty()) {
                 if (detailed) RollScore(item.summary)
-                TradeTable(rolled.take(if (detailed) rolled.size else 3))
+                TradeTable(rolled.take(if (detailed) rolled.size else 3), interactive = detailed)
             }
             if (!detailed && rolled.size > 3) MutedText(ui("card.more_properties", rolled.size - 3), style = MaterialTheme.typography.labelMedium)
             if (detailed) item.description.takeIf { it.isNotBlank() }?.let {

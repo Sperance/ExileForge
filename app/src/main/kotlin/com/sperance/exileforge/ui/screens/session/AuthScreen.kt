@@ -27,6 +27,7 @@ import com.sperance.exileforge.ui.components.voidBackdrop
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
 import com.sperance.exileforge.ui.components.ForgeButton
+import com.sperance.exileforge.ui.components.BugAction
 
 /**
  * The way in, and the first screen the app ever shows.
@@ -42,7 +43,10 @@ import com.sperance.exileforge.ui.components.ForgeButton
         Column(Modifier.fillMaxSize().padding(padding).imePadding().voidBackdrop()
             .verticalScroll(rememberScrollState()).padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { LanguageCorner(s.lang, s.world.languages, vm::language) }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+                BugAction()
+                LanguageCorner(s.lang, s.world.languages, vm::language)
+            }
             Spacer(Modifier.height(8.dp))
             Box(Modifier.size(84.dp).border(1.dp, Gold.copy(alpha = .5f), RoundedCornerShape(18.dp)), contentAlignment = Alignment.Center) {
                 Icon(ForgeGlyphs.Sigil, null, tint = Gold, modifier = Modifier.size(48.dp))

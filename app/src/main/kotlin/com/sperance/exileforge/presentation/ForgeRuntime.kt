@@ -11,7 +11,6 @@ import com.sperance.exileforge.core.display.serverPortraits
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.LocaleBundle
 import com.sperance.exileforge.core.i18n.LocaleManifest
-import com.sperance.exileforge.core.i18n.locError
 import com.sperance.exileforge.core.i18n.serverLocale
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
@@ -347,10 +346,9 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
             return
         }
         if (problem == FailureState.UncertainWrite && e !is ApiFailure) connectionViewModel.lost()
-        val refusal = if (e is ApiFailure) locError(e.code, e.message.orEmpty(), e.args) else e.message.orEmpty()
         mutable.update { it.copy(failure = problem, error = true, message = when (problem) {
             FailureState.UncertainWrite -> ui("runtime.uncertain_write")
-            else -> refusalLine(e, refusal.ifBlank { ui("runtime.request_failed") }, detailed = it.isAdmin)
+            else -> refusalLine(e)
         }) }
     }
 

@@ -100,7 +100,8 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
                 // Who the character is heads every section; until the hero arrives the tab says what it is.
-                if (hero != null) HeroHeader(s)
+                // The stash's count rides the header as a button (the places and their price behind it).
+                if (hero != null) HeroHeader(s) { if (section == HeroSection.STASH) StashPlacesButton(s, vm) }
                 else ScreenHeader(ui("hero.title"), ui("hero.inventory_count", stash.size), ForgeGlyphs.Stash, guide = Guide.HERO)
             }
             item { SectionBar(section) { section = it } }
@@ -122,7 +123,7 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
                 }
                 HeroSection.PETS -> item(key = "pets") { MenagerieSection(s, vm) }
                 HeroSection.STASH -> {
-                    item(key = "places") { Column { StashPlaces(s, vm) } }
+                    if (hero.overflow.isNotEmpty()) item(key = "overflow") { StashOverflow(s, vm) }
                     item {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {

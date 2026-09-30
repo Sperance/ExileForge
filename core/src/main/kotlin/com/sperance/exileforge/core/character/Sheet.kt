@@ -12,6 +12,7 @@ import com.sperance.exileforge.rules.sheet.SheetCalculator
 import com.sperance.exileforge.rules.sheet.SheetExplainer
 import com.sperance.exileforge.rules.sheet.sourcedLines
 import com.sperance.exileforge.rules.sheet.StatOperation
+import com.sperance.exileforge.rules.sheet.WornCount
 import kotlin.math.abs
 
 /** A line laid on a sheet for a while — a buff, a curse, a flask, a passive skill — shaped as a modifier's effect. */
@@ -106,7 +107,8 @@ object Sheets {
             }
         }
         val next = calculate(index, level, heroClass, tree, after, pets).stats
-        return (before.keys + next.keys).sortedBy { index.stats.order(it) }
+        // The counts of what is worn (empty slots, uniques…) are the powers' reading of the sheet, not a figure to compare.
+        return (before.keys + next.keys).filterNot { it in WornCount.STATS }.sortedBy { index.stats.order(it) }
             .map { StatDelta(it, before[it] ?: 0.0, next[it] ?: 0.0) }
             .filter { abs(it.change) >= 0.05 }
     }

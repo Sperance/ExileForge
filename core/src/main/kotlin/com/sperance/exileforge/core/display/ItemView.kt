@@ -70,9 +70,17 @@ data class ItemLine(val roll: Roll, val definition: ModifierDef?, val values: Li
     val code: String get() = roll.code
     val affix: Boolean get() = definition?.affix == true
     /** 0 the bottom of the tier, 1 its top; a fixed range is perfect; null for a line with no tier. */
-    val quality: Double? get() = definition?.tier(roll.tier)?.let { tier -> if (tier.values.all { it[1] <= it[0] }) 1.0 else roll.share }
+    val quality: Double? get() = definition?.tier(roll.tier)?.let { if (fixed) 1.0 else roll.share }
+    /** The tier's every range is a single number: there is nowhere inside it to land. */
+    val fixed: Boolean get() = definition?.tier(roll.tier)?.values?.all { it[1] <= it[0] } == true
     /** The tier's ranges as the card prints them: "70–79", a fixed one as its single number, effects split by " / ". */
     val range: String? get() = definition?.let { def -> def.tier(roll.tier)?.let { rangeText(def, it) } }
+    /** How many tiers the modifier has; 0 for a line with none. */
+    val tierCount: Int get() = definition?.tiers?.size ?: 0
+    /** Where the definition puts the line — prefix, suffix, implicit…; a fracture and the bench are [marks], not a place. */
+    val placement: AffixKind? get() = AffixKind.of(definition?.source, crafted = false, fractured = false)
+    /** The characteristics the line moves, each once, in its effects' order. */
+    val stats: List<String> get() = definition?.effects?.map { it.stat }?.distinct().orEmpty()
 }
 
 /** What the head of a card reads before any line: how well the item rolled on average, how many affix places are still open, and its best tier. */
@@ -118,7 +126,8 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
     /** A map names its zone (3.45.0: one template for every zone), and its tier past level 98 rides the name: «Last Throne Map · tier 7». */
     val title: String get() = (if (item.mapZone.isNotEmpty()) mapItemTitle(item.mapZone) else equipmentTitle(code))
         .let { name -> if (item.mapTier > 0) ui("card.map_tier_title", name, item.mapTier) else name }
-    val description: String get() = equipmentDescription(code)
+    /** A unique's or mythic's lore; a base carries no description. */
+    val description: String get() = if (template.unique) equipmentDescription(code) else ""
     val trade: String? get() = tradeName(code, equipment = true)
     val requirements: List<String> get() = itemRequirements(template)
     val visualKind: ItemVisualKind get() = itemVisualKind(template)

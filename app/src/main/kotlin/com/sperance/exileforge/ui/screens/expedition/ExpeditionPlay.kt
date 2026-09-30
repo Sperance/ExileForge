@@ -146,6 +146,7 @@ import kotlinx.coroutines.delay
                 onLeave?.let { RoundButton(ForgeGlyphs.Portal, ui("expedition.leave"), onClick = it) }
                 RoundButton(ForgeGlyphs.Helm, ui("expedition.gear"), onClick = onGear)
                 RoundButton(ForgeGlyphs.Scroll, ui("expedition.stats_hero"), onClick = onStats)
+                BugAction()
             }
             Column(Modifier.weight(1f).padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 val zone = VaalZones.isZone(run.zone)

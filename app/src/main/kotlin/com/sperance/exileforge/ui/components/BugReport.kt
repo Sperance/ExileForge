@@ -26,6 +26,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -43,6 +44,14 @@ import com.sperance.exileforge.ui.theme.*
 /** The beetle (3.48.0): a bug report from wherever the player is. */
 @Composable fun BugButton(modifier: Modifier = Modifier, tint: Color = Muted, onClick: () -> Unit) {
     IconButton(onClick = onClick, modifier = modifier) { Icon(Icons.Outlined.BugReport, ui("bug.open"), tint = tint, modifier = Modifier.size(22.dp)) }
+}
+
+/** Who opens the report sheet (3.57.0): the app hands it down, so a screen's own header carries the beetle instead of a button floating over it. */
+val LocalBugReport = staticCompositionLocalOf<(() -> Unit)?> { null }
+
+/** The beetle in a screen's header; nothing where no report can be opened. */
+@Composable fun BugAction(modifier: Modifier = Modifier, tint: Color = Muted) {
+    LocalBugReport.current?.let { BugButton(modifier, tint, it) }
 }
 
 /**

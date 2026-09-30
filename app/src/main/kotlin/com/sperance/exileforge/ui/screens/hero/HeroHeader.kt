@@ -30,9 +30,9 @@ import com.sperance.exileforge.ui.theme.*
  * The name large, then class and level as one smaller line, then the purse and the tree as two chips,
  * and the experience as a thin bar under them. The tree, the grimoire and the forge left the corner
  * for the strip above the tab ([HeroTabStrip]); the title the chronicle opened is the chronicle's card's.
- * A long name is cut rather than pushed into the portrait.
+ * A long name is cut rather than pushed into the portrait. A section may add its own chips after them ([extra]).
  */
-@Composable fun HeroHeader(s: ForgeState) {
+@Composable fun HeroHeader(s: ForgeState, extra: @Composable RowScope.() -> Unit = {}) {
     val hero = s.hero ?: return
     val info = hero.info
     FirstVisit(Guide.HERO)
@@ -48,10 +48,11 @@ import com.sperance.exileforge.ui.theme.*
             }
             GuideButton(Guide.HERO)
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Chip(ForgeGlyphs.Coins, ui("hero.gold_chip", number(hero.money.toDouble())))
             // The tree's balance is counted here by the rules (3.0.0), so it waits for the content.
             s.treeState?.let { Chip(ForgeGlyphs.Constellation, ui("hero.tree_chip", it.available, it.total)) }
+            extra()
         }
         ExperienceLine(s, info.level, info.experience)
     }

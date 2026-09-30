@@ -88,6 +88,7 @@ import com.sperance.exileforge.ui.theme.*
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(s.accountTitle, color = Muted, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
+                BugAction()
                 ForgeTextButton(enabled = !s.busy, onClick = onLogout) { Text(ui("chars.sign_out")) }
             }
         }

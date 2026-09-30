@@ -93,7 +93,7 @@ internal fun StatGroup.accent(): Color = when (this) {
         .padding(horizontal = 6.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         Tipped({ Tip(statTitle(key, s.lang), tint = accent, facts = listOf(ui("tip.value") to statValue(key, value, s.index))) }) { StatIcon(key, accent, Modifier.size(12.dp)) }
-        Text(statTitle(key, s.lang), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
+        Text(statTitle(key, s.lang), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 2, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f))
         was?.let { Text(statValue(key, it, s.index), color = Muted, style = MaterialTheme.typography.labelSmall, textDecoration = TextDecoration.LineThrough) }
         // A capped figure (3.12.0) reads as the fight reads it, with its ceiling; what lies above it is greyed.

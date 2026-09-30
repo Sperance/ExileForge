@@ -44,7 +44,7 @@ import com.sperance.exileforge.ui.theme.*
                 Text(info.name, style = MaterialTheme.typography.headlineSmall, color = GoldBright, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 // The class is the base every percentage is counted from; the server owns it.
                 Text(ui("hero.class_level", hero.heroClass.takeIf { it.isNotBlank() }?.let(::classTitle) ?: ui("hero.unknown_class"), info.level),
-                    color = Rune, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    color = Rune, style = MaterialTheme.typography.labelLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
             GuideButton(Guide.HERO)
         }

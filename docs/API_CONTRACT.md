@@ -1,6 +1,6 @@
 # Контракт Exile Forge 3.0
 
-Сервер: ветка `claude/tender-pasteur-a36kj2`, коммит `74f9cdcd72dcc9cccdcc3286aefe7f22c7d41e4c` (ktor-bestgame 1.53.0),
+Сервер: ветка `claude/tender-pasteur-a36kj2`, коммит `1d0ccd01206e1b32f86c2a7e0af1f8eafdceb755` (ktor-bestgame 1.53.1),
 подключён подмодулем `backend/`; клиент собирается против его модуля `backend/rules` (`includeBuild`) и
 закрепляет коммит и версию в `core/.../contract/Contract.kt`. Ревизия API — 35 (`API_REVISION`): клиент
 требует от манифеста ровно её.

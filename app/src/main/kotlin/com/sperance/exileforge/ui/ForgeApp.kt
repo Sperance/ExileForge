@@ -68,6 +68,22 @@ import com.sperance.exileforge.ui.theme.*
     }
 }
 
+/**
+ * The state as one screen reads it (3.56.0): the very same instance is handed down while the parts the screen draws are
+ * unchanged, so Compose skips the screen on a tick that only moved a toast, a refusal strip, another tab's reads or the
+ * phase. [reads] names those parts — everything the screen and what it opens read, derived getters included (`index`
+ * is `world`, `hero` is `play`, `isAdmin` is `account`, `refreshing` is `busy` and `loading`). A part left out would
+ * be shown stale, so the lists below err on the wide side: the common slice is every part but the toasts and the tabs
+ * of other screens.
+ */
+@Composable private fun ForgeState.sliced(vararg reads: Any?): ForgeState = remember(*reads) { this }
+
+/** The parts every screen may read: the account, the world, the play, the link, the language, the mode and the command in flight. */
+private val ForgeState.common: Array<Any?> get() = arrayOf(busy, loading, lang, mode, account, world, play, link, stashSort)
+
+/** A screen with its own toasts reads the notice and the refusal too. */
+private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, error)
+
 @Composable private fun ForgeScreens(vm: ForgeViewModel) {
     val s by vm.state.collectAsStateWithLifecycle()
     val logs by vm.logs.collectAsStateWithLifecycle()
@@ -84,17 +100,17 @@ import com.sperance.exileforge.ui.theme.*
             // The two screens above the tabs carry no banner and no bottom bar: there is no character to
             // name in the one and no tab to reach from the other.
             when (s.phase) {
-                AppPhase.AUTH -> AuthScreen(s, vm)
-                AppPhase.CHARACTERS -> CharacterSelectScreen(s, vm)
+                AppPhase.AUTH -> AuthScreen(s.sliced(*s.common, *s.toasts), vm)
+                AppPhase.CHARACTERS -> CharacterSelectScreen(s.sliced(*s.common, *s.toasts), vm)
                 // A campaign run takes the whole screen: no banner and no bar, the scene is the game.
                 // The zone's card (2.76.0) lies on the world map in the tab itself.
                 // The warm-up (3.54.0): entering a hero, the loading screen stands until everything is read.
                 AppPhase.GAME -> s.play.warmup?.takeIf { !it.finished }?.let { WarmupScreen(it) }
-                    ?: expedition?.let { ExpeditionPlay(s, vm, it) }
+                    ?: expedition?.let { ExpeditionPlay(s.sliced(*s.common, *s.toasts, s.logFilter), vm, it) }
                     // A trial (3.49.0) is an arena of its own, over the whole screen too.
-                    ?: trial?.let { TrialScreen(s, vm, it) }
+                    ?: trial?.let { TrialScreen(s.sliced(*s.common, *s.toasts, s.logFilter), vm, it) }
                     // The atlas (2.68.0) is a sky of its own, above the tabs.
-                    ?: s.play.atlas?.let { AtlasScreen(s, vm) }
+                    ?: s.play.atlas?.let { AtlasScreen(s.sliced(*s.common, *s.toasts), vm) }
                     ?: GameScaffold(s, vm, logs) { bugOpen = true }
             }
             val banner = s.phase == AppPhase.GAME && expedition == null && s.play.atlas == null
@@ -145,19 +161,20 @@ import com.sperance.exileforge.ui.theme.*
             ForgeBanner(s, vm, onBug)
             if (s.busy || s.reading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised) else OrnateDivider(Gold)
             HeroTab.of(s.tab)?.let { HeroTabStrip(it, vm::tab) }
+            // Each tab is handed its slice (3.56.0): a toast, a refusal or another tab's reads no longer redraw it.
             when (s.tab) {
-                TAB_ACCOUNT -> ServerScreen(s, vm, logs)
-                TAB_HERO -> HeroScreen(s, vm)
-                TAB_EXPEDITION -> ExpeditionScreen(s, vm)
-                TAB_CRAFTS -> CraftsScreen(s, vm)
-                TAB_TREE -> SkillTreeScreen(s, vm)
-                TAB_SKILLS -> GrimoireScreen(s, vm)
-                TAB_CITY -> CityScreen(s, vm)
-                TAB_ADMIN -> AdminScreen(s, vm)
+                TAB_ACCOUNT -> ServerScreen(s.sliced(*s.common), vm, logs)
+                TAB_HERO -> HeroScreen(s.sliced(*s.common), vm)
+                TAB_EXPEDITION -> ExpeditionScreen(s.sliced(*s.common, s.logFilter), vm)
+                TAB_CRAFTS -> CraftsScreen(s.sliced(*s.common), vm)
+                TAB_TREE -> SkillTreeScreen(s.sliced(*s.common), vm)
+                TAB_SKILLS -> GrimoireScreen(s.sliced(*s.common), vm)
+                TAB_CITY -> CityScreen(s.sliced(*s.common, s.building, s.guild, s.quests, s.market), vm)
+                TAB_ADMIN -> AdminScreen(s.sliced(*s.common, s.admin), vm)
                 // The forge keeps no place in the bar: it opens from the Hero tab, as the promo
                 // codes open from the administrator's, and the bar is the way back out of both.
-                TAB_CRAFT -> CraftScreen(s, vm)
-                TAB_REDEMPTION -> RedemptionScreen(s, vm)
+                TAB_CRAFT -> CraftScreen(s.sliced(*s.common), vm)
+                TAB_REDEMPTION -> RedemptionScreen(s.sliced(*s.common, s.admin), vm)
             }
         }
         // The toasts float over the screen, under the banner (2.80.0).

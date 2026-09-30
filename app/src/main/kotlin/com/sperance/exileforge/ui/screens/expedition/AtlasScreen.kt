@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
@@ -153,12 +154,25 @@ private val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
     var scale by remember { mutableFloatStateOf(MAX_ZOOM) }
     var pan by remember { mutableStateOf(Offset.Zero) }
     var framed by remember { mutableStateOf(false) }
-    val clock by produceState(0f) { var start = 0L; while (true) withFrameNanos { if (start == 0L) start = it; value = (it - start) / 1e9f } }
+    // The clock (3.56.0) ticks [CLOCK_FPS] times a second, not on every frame: a twinkle needs no 120 Hz, and only the
+    // layers that breathe are drawn on its tick — the glows, threads and rings are drawn again on a pan, a zoom or a take.
+    val clock by produceState(0f) {
+        var start = 0L
+        var last = 0L
+        while (true) withFrameNanos { now ->
+            if (start == 0L) start = now
+            if (now - last >= CLOCK_STEP_NS) { last = now; value = (now - start) / 1e9f }
+        }
+    }
     val reachable = remember(taken, graph) { nodes.filter { AtlasFog.canTake(graph, it.code, taken) }.map { it.code }.toSet() }
     // No fog (3.54.0): the whole sky is drawn and tappable; what cannot be taken yet is only dim.
     val shown = nodes
     val glows = remember(nodes) { Glow.of(nodes) }
-    Canvas(modifier.clipToBounds()
+    // The threads once (3.56.0): both ends of every link, not a graph lookup per link per frame.
+    val strands = remember(nodes, graph) { nodes.flatMap { node -> node.parents.mapNotNull { parent -> graph.node(parent)?.let { Strand(it, node) } } } }
+    val brushes = remember(nodes) { SkyBrushes() }
+    // The tap reads the zoom and the pan as they are when the finger lands (3.56.0): the gesture is not restarted on every frame of a drag.
+    Box(modifier.clipToBounds()
         .onSizeChanged { size ->
             if (framed || size.width == 0) return@onSizeChanged
             val start = nodes.firstOrNull { it.kind == AtlasNodeKind.START } ?: return@onSizeChanged
@@ -176,30 +190,59 @@ private val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
                 pan = Offset((pan.x + drag.x).coerceIn(-limit, limit), (pan.y + drag.y).coerceIn(-limit, limit * 2))
             }
         }
-        .pointerInput(shown, scale, pan) {
+        .pointerInput(shown) {
             detectTapGestures { tap ->
                 val place = Placement(bounds, size.width.toFloat(), size.height.toFloat(), floor, margin, scale, pan)
                 val hit = shown.minByOrNull { (place(it) - tap).getDistanceSquared() } ?: return@detectTapGestures
                 if ((place(hit) - tap).getDistance() <= 28.dp.toPx()) onSelect(hit.code)
             }
         }) {
-        val place = Placement(bounds, size.width, size.height, floor, margin, scale, pan)
-        stars(clock)
-        // The constellations (3.53.0): a soft glow of its mechanic's hue under every one.
-        glows.forEach { glow ->
-            val c = place(glow.center)
-            val r = glow.radius * placeScale(place)
-            drawCircle(Brush.radialGradient(listOf(glow.hue.copy(alpha = .16f), Color.Transparent), c, r), r, c)
+        // The far stars breathe on their own layer, behind everything.
+        Canvas(Modifier.matchParentSize()) { stars(clock) }
+        // The still sky: the glows, the threads, the rings and the cores of what is taken or dim — no clock is read here,
+        // so this layer is drawn again only when the view, the taken set or the choice moves.
+        Canvas(Modifier.matchParentSize()) {
+            val place = Placement(bounds, size.width, size.height, floor, margin, scale, pan)
+            // The constellations (3.53.0): a soft glow of its mechanic's hue under every one.
+            glows.forEach { glow ->
+                val c = place(glow.center)
+                val r = glow.radius * placeScale(place)
+                translate(c.x, c.y) { drawCircle(brushes.glow(glow.hue, r), r, Offset.Zero) }
+            }
+            strands.forEach { strand ->
+                val lit = strand.node.code in taken && strand.parent.code in taken
+                drawLine(if (lit) strand.node.branch.hue() else Sky.faint.copy(alpha = .22f), place(strand.parent), place(strand.node), (if (lit) 2.dp else 1.dp).toPx())
+            }
+            val zoom = scale.coerceIn(.8f, 1.6f)
+            shown.forEach { starStill(it, place(it), it.code in taken, it.code in reachable, it.code == selected, zoom, brushes) }
         }
-        nodes.forEach { node -> node.parents.forEach { parent ->
-            val from = graph.node(parent) ?: return@forEach
-            val lit = node.code in taken && parent in taken
-            drawLine(if (lit) node.branch.hue() else Sky.faint.copy(alpha = .22f), place(from), place(node), (if (lit) 2.dp else 1.dp).toPx())
-        } }
-        val zoom = scale.coerceIn(.8f, 1.6f)
-        shown.forEach { star(it, place(it), it.code in taken, it.code in reachable, it.code == selected, clock, zoom) }
+        // The breathing layer: the twinkle of what a point could take and the keystones' orbiting motes.
+        Canvas(Modifier.matchParentSize()) {
+            val place = Placement(bounds, size.width, size.height, floor, margin, scale, pan)
+            val zoom = scale.coerceIn(.8f, 1.6f)
+            shown.forEach { starLive(it, place(it), it.code in taken, it.code in reachable, clock, zoom) }
+        }
     }
 }
+
+/** One thread of the sky: a node and the parent it hangs from. */
+private class Strand(val parent: AtlasNode, val node: AtlasNode)
+
+/** The gradients of the sky, made once per hue and radius (3.56.0): a shader was built for every glow and halo on every frame. */
+private class SkyBrushes {
+    private val glows = HashMap<Pair<Color, Float>, Brush>()
+    private val halos = HashMap<Pair<Color, Float>, Brush>()
+
+    /** A constellation's glow of [hue] spreading [r] pixels, centred at the origin: drawn under a translation. */
+    fun glow(hue: Color, r: Float): Brush = glows.getOrPut(hue to r) { Brush.radialGradient(listOf(hue.copy(alpha = .16f), Color.Transparent), Offset.Zero, r) }
+
+    /** A taken or chosen star's halo of [hue] reaching [r] pixels, centred at the origin. */
+    fun halo(hue: Color, r: Float): Brush = halos.getOrPut(hue to r) { Brush.radialGradient(listOf(hue.copy(alpha = .55f), Color.Transparent), Offset.Zero, r) }
+}
+
+/** How often the sky's clock ticks. */
+private const val CLOCK_FPS = 20
+private const val CLOCK_STEP_NS = 1_000_000_000L / CLOCK_FPS
 
 /** How far the sky zooms out and in. */
 private const val MIN_ZOOM = .5f
@@ -232,23 +275,35 @@ private fun DrawScope.stars(clock: Float) {
     }
 }
 
+/** A star's radius on screen by its kind at [zoom]. */
+private fun DrawScope.starRadius(node: AtlasNode, zoom: Float): Float =
+    when (node.kind) { AtlasNodeKind.KEYSTONE -> 13.dp; AtlasNodeKind.NOTABLE -> 9.dp; AtlasNodeKind.START -> 11.dp; AtlasNodeKind.SMALL -> 5.dp }.toPx() * zoom
+
 /**
- * One node: a burning white core once taken, a twinkle while a point could take it, dim otherwise.
- * A notable wears a ring, a keystone six orbiting motes; the selected one a dashed halo.
+ * The still part of one node (3.56.0): a halo once taken or chosen, a burning white core once taken, a dim core while
+ * no point could take it, a ring on a notable, a dashed halo on the chosen one. The twinkle and the motes are [starLive]'s.
  */
-private fun DrawScope.star(node: AtlasNode, at: Offset, taken: Boolean, open: Boolean, selected: Boolean, clock: Float, zoom: Float) {
-    val r = when (node.kind) { AtlasNodeKind.KEYSTONE -> 13.dp; AtlasNodeKind.NOTABLE -> 9.dp; AtlasNodeKind.START -> 11.dp; AtlasNodeKind.SMALL -> 5.dp }.toPx() * zoom
+private fun DrawScope.starStill(node: AtlasNode, at: Offset, taken: Boolean, open: Boolean, selected: Boolean, zoom: Float, brushes: SkyBrushes) {
+    val r = starRadius(node, zoom)
     val hue = node.branch.hue()
-    if (taken || selected) drawCircle(Brush.radialGradient(listOf(hue.copy(alpha = .55f), Color.Transparent), at, r * 3), r * 3, at)
-    val core = when { taken -> Color.White; open -> Color.White.copy(alpha = .45f + .35f * sin(clock * 4f + node.code.hashCode() % 7)); else -> Sky.faint.copy(alpha = .45f) }
-    drawCircle(core, r * .55f, at)
+    if (taken || selected) translate(at.x, at.y) { drawCircle(brushes.halo(hue, r * 3), r * 3, Offset.Zero) }
+    if (taken || !open) drawCircle(if (taken) Color.White else Sky.faint.copy(alpha = .45f), r * .55f, at)
     val rim = if (taken) hue else Sky.faint.copy(alpha = .5f)
     if (node.kind != AtlasNodeKind.SMALL) drawCircle(rim, r, at, style = Stroke(1.5.dp.toPx()))
-    if (node.kind == AtlasNodeKind.KEYSTONE) repeat(6) { k ->
-        val a = k * PI / 3 + clock * .3f
-        drawCircle(rim, 1.6.dp.toPx() * zoom, Offset(at.x + (cos(a) * r * 1.5f).toFloat(), at.y + (sin(a) * r * 1.5f).toFloat()))
-    }
     if (selected) drawCircle(Color.White, r + 6.dp.toPx(), at, style = Stroke(1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 3.dp.toPx()))))
+}
+
+/** The breathing part of one node: a twinkling core while a point could take it, six orbiting motes on a keystone. */
+private fun DrawScope.starLive(node: AtlasNode, at: Offset, taken: Boolean, open: Boolean, clock: Float, zoom: Float) {
+    val r = starRadius(node, zoom)
+    if (open && !taken) drawCircle(Color.White.copy(alpha = .45f + .35f * sin(clock * 4f + node.code.hashCode() % 7)), r * .55f, at)
+    if (node.kind == AtlasNodeKind.KEYSTONE) {
+        val rim = if (taken) node.branch.hue() else Sky.faint.copy(alpha = .5f)
+        repeat(6) { k ->
+            val a = k * PI / 3 + clock * .3f
+            drawCircle(rim, 1.6.dp.toPx() * zoom, Offset(at.x + (cos(a) * r * 1.5f).toFloat(), at.y + (sin(a) * r * 1.5f).toFloat()))
+        }
+    }
 }
 
 /** The chosen star: what it is, what it gives, and the one command the server would accept for it. */

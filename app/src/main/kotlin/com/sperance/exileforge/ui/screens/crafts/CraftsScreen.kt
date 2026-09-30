@@ -28,6 +28,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.Glyph
+import com.sperance.exileforge.core.display.choiceTitle
 import com.sperance.exileforge.core.display.equipmentIcon
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.fineNumber
@@ -90,6 +91,8 @@ fun jobProduct(job: JobView): String = when (job.kind) {
     // Choosing works (3.45.0): the variant picked in the sheet is a plain ITEM work.
     JobKind.BOOK -> ui("crafts.kind_book", job.band.getOrElse(0) { 1 })
     JobKind.CONDENSE -> ui("crafts.kind_condense")
+    JobKind.REFINE -> ui("crafts.kind_refine")
+    JobKind.JEWEL -> ui("crafts.kind_jewel", job.band.getOrElse(0) { 1 }, job.band.getOrElse(1) { 1 })
 }
 
 /** A crafting profession spends materials; a gathering one only brings them. The works say which, not a list of codes. */
@@ -493,7 +496,7 @@ private fun share(profession: ProfessionView): Float = profession.next?.takeIf {
                 if (choices.isEmpty()) MutedText(ui("crafts.no_choice"))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     choices.forEach { option ->
-                        FilterChip(selected = option.choice == picked, onClick = { picked = option.choice }, label = { Text(itemTitle(option.output)) })
+                        FilterChip(selected = option.choice == picked, onClick = { picked = option.choice }, label = { Text(choiceTitle(option.choice)) })
                     }
                 }
             }

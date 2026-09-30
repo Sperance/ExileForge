@@ -28,7 +28,7 @@ import kotlinx.serialization.json.JsonElement
  * unique jewels refused twice with `ST_022`, `atlasNodes` in the run context; 24 - server 1.32.0: frenzy, power and endurance charges,
  * the pet's power events, slot powers and the sheet's worn counts, rules version 4).
  */
-const val API_REVISION = 26
+const val API_REVISION = 27
 
 /** `static/index.json` → `content`: the fingerprint of the whole world and of each of its chunks, by file name. */
 @Serializable data class ContentManifest(val hash: String = "", val chunks: Map<String, String> = emptyMap())

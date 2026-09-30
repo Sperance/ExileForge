@@ -52,8 +52,10 @@ fun atlasNodeTitle(code: String): String = locOr(LocaleKey.atlasNodeName(code), 
 fun professionTitle(code: String): String = locOr(LocaleKey.professionName(code), displayName(code))
 fun professionDescription(code: String): String = locOr(LocaleKey.professionDescription(code), "")
 fun jobTitle(code: String): String = locOr(LocaleKey.jobName(code), displayName(code))
+/** What a choosing work was told to make: the item, or the smith's group and attribute (3.46.0). */
+fun choiceTitle(choice: String): String = locOr(LocaleKey.itemName(choice), locOr(LocaleKey.choiceName(choice), displayName(choice)))
 /** A work with its choice (3.45.0): «Condense Essence · Weeping Essence of Greed». */
-fun workTitle(code: String, choice: String): String = if (choice.isEmpty()) jobTitle(code) else "${jobTitle(code)} · ${itemTitle(choice)}"
+fun workTitle(code: String, choice: String): String = if (choice.isEmpty()) jobTitle(code) else "${jobTitle(code)} · ${choiceTitle(choice)}"
 
 /**
  * Title of a stat: the client's own table first (it takes an explicit language), then the server's label

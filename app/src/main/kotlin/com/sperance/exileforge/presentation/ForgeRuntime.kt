@@ -85,6 +85,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
     val characterViewModel = CharacterViewModel(this)
     val expeditionViewModel = ExpeditionViewModel(this)
     val trialViewModel = TrialViewModel(this)
+    val warmupViewModel = com.sperance.exileforge.presentation.features.WarmupViewModel(this)
     val craftsViewModel = CraftsViewModel(this)
     val guildViewModel = GuildViewModel(this)
     val questViewModel = QuestViewModel(this)

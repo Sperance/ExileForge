@@ -184,6 +184,14 @@ class UiStringsTest {
             listOf(EssenceBook.VAAL_UPGRADE, EssenceBook.VAAL_SPECIAL, EssenceBook.VAAL_STRONGER).forEach { add("crystal.outcome.$it") }
             listOf("requiredLevel", "requiredStrength", "requiredDexterity", "requiredIntelligence").forEach { add("req.short.$it") }
             listOf("corrupted", "mirrored", "equipped", "socketed").forEach { add("state.$it") }
+            // The chronicle (3.54.0): every counter and section, every statistic and group the server writes.
+            com.sperance.exileforge.rules.content.Counter.SECTIONS.forEach { (section, counters) ->
+                add("chronicle.section.$section"); counters.forEach { add("chronicle.counter.$it") }
+            }
+            add("chronicle.section.FIGHT")
+            com.sperance.exileforge.rules.content.Stat.COMBAT.forEach { add("stats.$it") }
+            com.sperance.exileforge.rules.content.Stat.GROUPS.forEach { add("stats.group.$it") }
+            com.sperance.exileforge.rules.content.QuestCondition.entries.forEach { add("quest.condition.${it.name}") }
         }
 
         val known = UiStrings.keys(Lang.RU)

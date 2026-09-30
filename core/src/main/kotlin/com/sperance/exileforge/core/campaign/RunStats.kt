@@ -79,6 +79,9 @@ object FightFigures {
             millis = (duration * 1000).roundToLong(),
             maxHit = mine.maxOfOrNull { it.damage }?.roundToLong() ?: 0,
             boss = boss, won = won,
+            // The foe whose blow ended a lost fight (3.54.0, server 1.52.0): the hero's statistics count deaths by who dealt them.
+            killer = if (won) null else pack.flatMap { hit -> hit.events.map { it to hit.monster } }
+                .filter { (event, _) -> event.actor == Side.MONSTER && event.damage > 0 && !event.onSelf }.maxByOrNull { (event, _) -> event.time }?.second?.code,
         )
     }
 }

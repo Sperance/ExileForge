@@ -156,6 +156,8 @@ data class WorldState(
 /** The hero being played, and what the player has picked on its screens. */
 data class PlayState(
     val heroId: String = "", val heroOwner: String = "", val hero: HeroView? = null,
+    /** The warm-up of the hero entered (3.54.0): the loading screen stands until it is finished. */
+    val warmup: com.sperance.exileforge.presentation.features.Warmup? = null,
     /** When the hero was last read whole, as epoch millis; 0 means "never, or known to be stale". */
     val heroReadAt: Long = 0,
     val heroSeenAt: Long = 0,

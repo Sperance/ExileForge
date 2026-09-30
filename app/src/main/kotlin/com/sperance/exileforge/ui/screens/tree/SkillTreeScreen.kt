@@ -78,7 +78,7 @@ import kotlin.math.sin
         ScreenHeader(ui("tree.title"),
             ui("tree.node_count", s.index?.content?.tree?.nodes?.size ?: 0), ForgeGlyphs.Constellation, guide = Guide.TREE)
         SkillTreePanel(s, vm::selectNode, vm::allocateNode, vm::refundNode, vm::resetTree, vm::nodeQuery, onPath = vm::allocatePath,
-            onSocket = vm::socketJewel, onUnsocket = vm::unsocketJewel, onRechoose = vm::rechooseNode, onPlan = vm::planTree, modifier = Modifier.weight(1f))
+            onSocket = vm::socketJewel, onUnsocket = vm::unsocketJewel, onRechoose = vm::rechooseNode, onPlan = vm::planTree, onRefundBranch = vm::refundBranch, modifier = Modifier.weight(1f))
         Spacer(Modifier.height(12.dp))
     }
 }
@@ -99,11 +99,13 @@ import kotlin.math.sin
     onRefund: (String) -> Unit, onReset: () -> Unit, onQuery: (String) -> Unit = {},
     onSocket: (String, String) -> Unit = { _, _ -> }, onUnsocket: (String) -> Unit = {},
     onRechoose: (String, Int) -> Unit = { _, _ -> }, onPath: (String, Int?) -> Unit = { _, _ -> },
-    onPlan: (List<TakenNode>) -> Unit = {}, modifier: Modifier = Modifier) {
+    onPlan: (List<TakenNode>) -> Unit = {}, onRefundBranch: (String) -> Unit = {}, modifier: Modifier = Modifier) {
     val hero = s.hero
     val index = s.index
     val tree = s.treeState
     var detailsOpen by remember { mutableStateOf(false) }
+    // «Итого» (3.54.0): the tree's bonuses at once, without the rest of the details.
+    var totalsOpen by remember { mutableStateOf(false) }
     var nodeOpen by remember { mutableStateOf(false) }
     // The node's own window is the question (2.72.0): taking or giving back a node acts at once from
     // it, the price written beside the button. Only the whole tree's reset is still asked twice.
@@ -135,13 +137,21 @@ import kotlin.math.sin
     val planned = remember(plan) { plan.mapTo(HashSet()) { it.code } }
     // The tag filter (3.47.0): every node whose lines carry the tag lights up.
     var tag by remember { mutableStateOf<String?>(null) }
-    val highlight = remember(index, tag) { tag?.let { nodesTagged(index, it) }.orEmpty() }
+    // The search (3.54.0): by a node's name or the stats it gives; every match lights up with the tag's.
+    val query = s.play.nodeQuery.trim()
+    val found = remember(index, query, s.lang) { if (query.length < 2) emptySet() else nodesMatching(index, query) }
+    val highlight = remember(index, tag, found) { tag?.let { nodesTagged(index, it) }.orEmpty() + found }
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(ui("tree.points", tree.available, tree.total),
                 color = Gold, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+            ForgeTextButton(onClick = { totalsOpen = true }) { Text(ui("tree.totals_button")) }
             ForgeTextButton(onClick = { detailsOpen = true }) { Text(ui("tree.details")) }
         }
+        OutlinedTextField(s.play.nodeQuery, onQuery, placeholder = { Text(ui("tree.search_hint")) }, singleLine = true,
+            modifier = Modifier.fillMaxWidth(), textStyle = MaterialTheme.typography.bodySmall,
+            trailingIcon = { if (query.length >= 2) Text(ui("tree.search_found", found.size), color = Vital, style = MaterialTheme.typography.labelSmall,
+                modifier = Modifier.padding(end = 10.dp)) })
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             TREE_TAGS.forEach { code ->
                 FilterChip(selected = tag == code, onClick = { tag = if (tag == code) null else code }, label = { Text(ui("tree.tag.$code")) })
@@ -161,6 +171,7 @@ import kotlin.math.sin
                 onAllocate = { code, choice -> nodeOpen = false; onAllocate(code, choice) },
                 onPath = { code, choice -> nodeOpen = false; onPath(code, choice) },
                 onRefund = { nodeOpen = false; onRefund(it) },
+                onRefundBranch = { nodeOpen = false; onRefundBranch(it) },
                 onRechoose = { code, choice -> nodeOpen = false; onRechoose(code, choice) },
                 onSocket = { instance, code -> nodeOpen = false; onSocket(instance, code) },
                 onUnsocket = { nodeOpen = false; onUnsocket(it) })
@@ -170,6 +181,10 @@ import kotlin.math.sin
     }
 
     TreeConfirmations(s, confirmReset, onClear = { confirmReset = false }, onReset = onReset)
+
+    if (totalsOpen) ModalBottomSheet(onDismissRequest = { totalsOpen = false }, containerColor = Panel) {
+        Column(Modifier.fillMaxWidth().heightIn(max = 560.dp).verticalScroll(rememberScrollState()).padding(16.dp)) { TreeTotals(s, tree) }
+    }
 
     if (detailsOpen) ModalBottomSheet(onDismissRequest = { detailsOpen = false }, containerColor = Panel,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
@@ -182,21 +197,9 @@ import kotlin.math.sin
                     PropertyRow(ui("tree.points_available"), tree.available.toString(), Glyph.LEVEL)
                 }
             }
-            item {
-                ForgePanel(accent = Rune) {
-                    Engraved(ui("tree.totals_title"), Rune)
-                    if (tree.totals.isEmpty()) Text(ui("tree.totals_empty"), color = Muted)
-                    // The rules sum this: two INCREASED add up while two MORE multiply, so
-                    // adding the snapshots here would lie exactly where a player is choosing.
-                    // It is the tree's contribution, not the character's total — which is why a
-                    // percentage stays a percentage and is written with its sign.
-                    tree.totals.forEach { total ->
-                        PropertyRow(statTitle(total.stat, s.lang), contributionText(total), stat = total.stat)
-                    }
-                }
-            }
+            item { TreeTotals(s, tree) }
             if (plan.isNotEmpty()) item { PlanPanel(s, index, taken, plan, enabled) { detailsOpen = false; onPlan(emptyList()) } }
-            item { TreeSearch(s, nodes, onQuery) { code -> onSelect(code); detailsOpen = false; nodeOpen = true } }
+            item { TreeSearch(s, nodes) { code -> onSelect(code); detailsOpen = false; nodeOpen = true } }
             item {
                 ForgeOutlinedButton(enabled = enabled && hero.tree.size > 1, onClick = { detailsOpen = false; confirmReset = true },
                     modifier = Modifier.fillMaxWidth()) { Text(ui("tree.reset_all")) }
@@ -223,17 +226,16 @@ private fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Set
  * The tree is over a hundred nodes across seven class areas, so panning to one by eye is no longer
  * realistic. A match selects the node, which is what the map draws a ring around.
  */
-@Composable private fun TreeSearch(s: ForgeState, nodes: List<TreeNode>, onQuery: (String) -> Unit, onSelect: (String) -> Unit) {
+@Composable private fun TreeSearch(s: ForgeState, nodes: List<TreeNode>, onSelect: (String) -> Unit) {
     val matches = remember(nodes, s.play.nodeQuery, s.lang) {
         val query = s.play.nodeQuery.trim()
         if (query.isBlank()) emptyList()
         else nodes.filter { nodeTitle(it.code).contains(query, true) || it.code.contains(query, true) }.take(8)
     }
+    if (s.play.nodeQuery.isBlank()) return
     ForgePanel {
         Engraved(ui("tree.find_node"))
-        OutlinedTextField(s.play.nodeQuery, onQuery, label = { Text(ui("tree.node_name")) },
-            singleLine = true, modifier = Modifier.fillMaxWidth())
-        if (s.play.nodeQuery.isNotBlank() && matches.isEmpty()) Text(ui("tree.nothing_found"), color = Muted)
+        if (matches.isEmpty()) Text(ui("tree.nothing_found"), color = Muted)
         matches.forEach { node ->
             ForgeTextButton(onClick = { onSelect(node.code) }, modifier = Modifier.fillMaxWidth()) {
                 Text("${nodeTitle(node.code)} · ${nodeTypeTitle(node.type, s.lang)}",
@@ -330,6 +332,7 @@ private fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Set
  */
 @Composable private fun NodeDetails(s: ForgeState, index: ContentIndex, node: TreeNode?, taken: Set<String>, reachable: Set<String>, enabled: Boolean,
     path: List<String>?, available: Int, onAllocate: (String, Int?) -> Unit, onPath: (String, Int?) -> Unit, onRefund: (String) -> Unit,
+    onRefundBranch: (String) -> Unit = {},
     onSocket: (String, String) -> Unit = { _, _ -> }, onUnsocket: (String) -> Unit = {}, onRechoose: (String, Int) -> Unit = { _, _ -> }) {
     if (node == null) {
         InfoCard(ui("tree.no_selection"), ui("tree.no_selection_hint"))
@@ -381,8 +384,19 @@ private fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Set
         }
 
         OrnateDivider()
-        if (allocated) ForgeOutlinedButton(enabled = enabled && node.type != SkillNodeType.START, onClick = { onRefund(node.code) }, modifier = Modifier.fillMaxWidth()) {
-            Text(ui("tree.refund"))
+        if (allocated) {
+            ForgeOutlinedButton(enabled = enabled && node.type != SkillNodeType.START, onClick = { onRefund(node.code) }, modifier = Modifier.fillMaxWidth()) {
+                Text(ui("tree.refund"))
+            }
+            // The branch (3.54.0, server 1.52.0): this node and everything that would hang loose without it, an Orb of Regret each.
+            val branch = remember(node.code, taken) { runCatching { TreeAllocation.branch(index.tree, node, taken) }.getOrNull().orEmpty() }
+            if (branch.size > 1) {
+                val owned = s.bagAmount(Orb.ORB_OF_REGRET.name) ?: 0L
+                ForgeOutlinedButton(enabled = enabled && owned >= branch.size, onClick = { onRefundBranch(node.code) }, modifier = Modifier.fillMaxWidth()) {
+                    Text(ui("tree.refund_branch", branch.size))
+                }
+                MutedText(ui("tree.refund_branch_note", branch.size, owned))
+            }
         } else if (path != null) {
             // A far node (3.39.0): the whole way at once, for the sum of its steps; short of points, the button says so.
             val cost = path.sumOf { index.tree.node(it)?.cost ?: 0 }
@@ -643,6 +657,23 @@ private fun DrawScope.medallion(node: TreeNode, centre: Offset, scale: Float, ta
 private val TREE_TAGS = listOf("life", "defences", "critical", "fire", "cold", "lightning", "chaos", "physical", "elemental", "attack", "caster", "speed", "mana")
 
 /** Every node whose lines — or any of its options — carry [tag]. */
+/** The tree's bonuses as the rules sum them (3.54.0: behind «Итого» as well as in the details). */
+@Composable private fun TreeTotals(s: ForgeState, tree: com.sperance.exileforge.core.model.tree.TreeState) {
+    ForgePanel(accent = Rune) {
+        Engraved(ui("tree.totals_title"), Rune)
+        if (tree.totals.isEmpty()) Text(ui("tree.totals_empty"), color = Muted)
+        // The rules sum this: two INCREASED add up while two MORE multiply, so adding the snapshots here would lie exactly
+        // where a player is choosing. It is the tree's contribution, not the character's total.
+        tree.totals.forEach { total -> PropertyRow(statTitle(total.stat, s.lang), contributionText(total), stat = total.stat) }
+    }
+}
+
+/** Nodes whose name, or any stat they give, holds [query] (3.54.0). */
+private fun nodesMatching(index: ContentIndex, query: String): Set<String> = index.content.tree.nodes.mapNotNullTo(HashSet()) { node ->
+    val stats = (node.lines + node.options.flatten()).flatMap { line -> index.modifier(line.code)?.effects?.map { statTitle(it.stat) }.orEmpty() }
+    node.code.takeIf { nodeTitle(it).contains(query, true) || stats.any { stat -> stat.contains(query, true) } }
+}
+
 private fun nodesTagged(index: ContentIndex, tag: String): Set<String> = index.content.tree.nodes.mapNotNullTo(HashSet()) { node ->
     node.code.takeIf { (node.lines + node.options.flatten()).any { line -> index.modifier(line.code)?.tags?.contains(tag) == true } }
 }

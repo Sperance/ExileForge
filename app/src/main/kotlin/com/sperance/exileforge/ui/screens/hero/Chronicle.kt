@@ -16,6 +16,7 @@ import androidx.compose.foundation.clickable
 import com.sperance.exileforge.core.campaign.FightFigures
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.jobTitle
+import com.sperance.exileforge.core.display.mapTitle
 import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.loc
@@ -130,7 +131,13 @@ private val Medals = listOf(Color(0xFFC08457), Color(0xFFC9D1D9), Color(0xFFFFD1
             Text(number(entries.sumOf { it.second }.toDouble()), color = GoldBright, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
         }
         if (open) entries.forEach { (code, value) ->
-            val name = when (group) { Stat.KILL, Stat.BOSS -> monsterTitle(code); Stat.JOB -> jobTitle(code); else -> itemTitle(code) }
+            val name = when (group) {
+                Stat.KILL, Stat.BOSS, Stat.KILLER -> monsterTitle(code)
+                Stat.JOB -> jobTitle(code)
+                Stat.RARITY -> ui("enum.monster_rarity.$code")
+                Stat.ZONE_RUNS, Stat.ZONE_DEATHS, Stat.ZONE_CHESTS -> mapTitle(code)
+                else -> itemTitle(code)
+            }
             Figure(name, number(value.toDouble()), indent = true)
         }
     }

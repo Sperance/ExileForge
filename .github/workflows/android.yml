@@ -55,6 +55,8 @@ jobs:
         run: python3 -c "import base64,pathlib; print('DESIGN_IMAGE_START'); print(base64.b64encode(pathlib.Path('design-preview/arsenal.jpg').read_bytes()).decode()); print('DESIGN_IMAGE_END')"
       - name: Hero preview in verification log
         run: python3 -c "import base64,pathlib; print('HERO_IMAGE_START'); print(base64.b64encode(pathlib.Path('design-preview/hero.jpg').read_bytes()).decode()); print('HERO_IMAGE_END')"
+      - name: Narrow screen preview in verification log
+        run: python3 -c "import base64,pathlib; print('NARROW_IMAGE_START'); print(base64.b64encode(pathlib.Path('design-preview/narrow.jpg').read_bytes()).decode()); print('NARROW_IMAGE_END')"
   client-server:
     runs-on: ubuntu-latest
     timeout-minutes: 25

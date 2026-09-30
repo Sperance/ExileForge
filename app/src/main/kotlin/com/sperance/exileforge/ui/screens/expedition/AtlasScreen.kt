@@ -7,6 +7,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
@@ -93,6 +95,8 @@ private val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
     var resetting by remember { mutableStateOf(false) }
     // A node given back asks first, held to confirm (3.2.0): the points come back, the gold does not
     var refunding by remember { mutableStateOf<String?>(null) }
+    // «Итого» (3.54.0): every taken node's lines added up, by mechanic.
+    var summary by remember { mutableStateOf(false) }
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Sky.deep, Sky.night, Sky.dawn)))) {
         if (index == null || state == null) CircularProgressIndicator(Modifier.align(Alignment.Center), color = Sky.text)
         else {
@@ -112,6 +116,7 @@ private val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
             }
             FirstVisit(Guide.ATLAS)
             GuideButton(Guide.ATLAS)
+            ForgeOutlinedButton(onClick = { summary = true }, enabled = (state?.allocated?.size ?: 0) > 1) { Text(ui("atlas.summary"), color = Sky.text) }
             // The start is nobody's to give back: what was spent is every taken node but it.
             val spent = (state?.allocated?.size ?: 1) - 1
             ForgeOutlinedButton(onClick = { resetting = true }, enabled = spent > 0 && !s.busy) { Text(ui("atlas.reset"), color = Sky.text) }
@@ -131,6 +136,7 @@ private val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
                 ledger = listOf(LedgerLine(ui("atlas.reset_cost"), ui("atlas.gold", cost), Tone.SPEND), LedgerLine(ui("atlas.reset_back"), "1", Tone.GAIN)),
                 blocked = money < cost, warning = if (money < cost) ui("atlas.no_gold") else null) { refunding = null; vm.refundAtlas(code) }
         } }
+        if (summary && index != null && state != null) AtlasSummary(index, state.allocated.toSet()) { summary = false }
         ToastHost(s, vm::dismissMessage, vm::dismissNotice, Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 64.dp))
     }
 }
@@ -149,9 +155,8 @@ private val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
     var framed by remember { mutableStateOf(false) }
     val clock by produceState(0f) { var start = 0L; while (true) withFrameNanos { if (start == 0L) start = it; value = (it - start) / 1e9f } }
     val reachable = remember(taken, graph) { nodes.filter { AtlasFog.canTake(graph, it.code, taken) }.map { it.code }.toSet() }
-    // The fog (2.79.1): three links past the taken nodes; what lies beyond is neither drawn nor tappable.
-    val sight = remember(taken, graph) { AtlasFog.visible(graph, taken) }
-    val shown = remember(sight, nodes) { nodes.filter { it.code in sight } }
+    // No fog (3.54.0): the whole sky is drawn and tappable; what cannot be taken yet is only dim.
+    val shown = nodes
     val glows = remember(nodes) { Glow.of(nodes) }
     Canvas(modifier.clipToBounds()
         .onSizeChanged { size ->
@@ -180,26 +185,16 @@ private val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
         }) {
         val place = Placement(bounds, size.width, size.height, floor, margin, scale, pan)
         stars(clock)
-        // The constellations (3.53.0): a soft glow of its mechanic's hue under every one the fog has reached.
+        // The constellations (3.53.0): a soft glow of its mechanic's hue under every one.
         glows.forEach { glow ->
-            if (glow.codes.none { it in sight }) return@forEach
             val c = place(glow.center)
             val r = glow.radius * placeScale(place)
             drawCircle(Brush.radialGradient(listOf(glow.hue.copy(alpha = .16f), Color.Transparent), c, r), r, c)
         }
         nodes.forEach { node -> node.parents.forEach { parent ->
             val from = graph.node(parent) ?: return@forEach
-            val near = parent in sight
-            if (!near && node.code !in sight) return@forEach
             val lit = node.code in taken && parent in taken
-            val a = place(from)
-            val b = place(node)
-            // A link into the fog is only its first stretch, fading out where the unseen begins.
-            if (near != (node.code in sight)) {
-                val (seen, hidden) = if (near) a to b else b to a
-                val end = seen + (hidden - seen) * FOG_STUB
-                drawLine(Brush.linearGradient(listOf(Sky.faint.copy(alpha = .3f), Color.Transparent), seen, end), seen, end, 1.dp.toPx())
-            } else drawLine(if (lit) node.branch.hue() else Sky.faint.copy(alpha = .22f), a, b, (if (lit) 2.dp else 1.dp).toPx())
+            drawLine(if (lit) node.branch.hue() else Sky.faint.copy(alpha = .22f), place(from), place(node), (if (lit) 2.dp else 1.dp).toPx())
         } }
         val zoom = scale.coerceIn(.8f, 1.6f)
         shown.forEach { star(it, place(it), it.code in taken, it.code in reachable, it.code == selected, clock, zoom) }
@@ -209,9 +204,6 @@ private val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
 /** How far the sky zooms out and in. */
 private const val MIN_ZOOM = .5f
 private const val MAX_ZOOM = 3f
-
-/** How much of a link into the fog is drawn before it fades. */
-private const val FOG_STUB = .3f
 
 /** Where a node lands on screen: the start at the bottom middle above the sheet, y up, fitted to the width. */
 private class Placement(private val b: SkyBounds, private val width: Float, private val height: Float, private val floor: Float,
@@ -270,8 +262,19 @@ private fun DrawScope.star(node: AtlasNode, at: Offset, taken: Boolean, open: Bo
         Text(if (node.branch == AtlasBranch.ROOT) kind else ui("atlas.kind_branch", kind, ui("atlas.branch.${node.branch.name}")).uppercase(),
             color = Sky.text.copy(alpha = .75f), style = MaterialTheme.typography.labelSmall)
         Text(atlasNodeTitle(node.code), color = Color.White, style = MaterialTheme.typography.titleMedium)
-        node.lines.flatMap { effectLines(index, it) }.forEach { Text("•  $it", color = ModBlue, style = MaterialTheme.typography.bodySmall) }
         val isTaken = node.code in taken
+        // «Было → станет» (3.54.0): each line beside the atlas's whole of its modifier now and with this node taken.
+        val totals = remember(taken) { AtlasTotals.of(index, taken) }
+        node.lines.forEach { line ->
+            effectLines(index, line).forEach { Text("•  $it", color = ModBlue, style = MaterialTheme.typography.bodySmall) }
+            if (node.kind != AtlasNodeKind.START) {
+                val now = totals[line.code]?.firstOrNull() ?: 0.0
+                val value = line.values.firstOrNull() ?: 0.0
+                val after = if (isTaken) now - value else now + value
+                Text(ui(if (isTaken) "atlas.compare_refund" else "atlas.compare_take", number(now), number(after)), color = Sky.text.copy(alpha = .7f),
+                    style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(start = 14.dp))
+            }
+        }
         val canTake = AtlasFog.canTake(graph, node.code, taken)
         val canRefund = AtlasFog.canRefund(graph, node.code, taken)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -325,3 +328,32 @@ private class Glow(val center: AtlasNode, val radius: Float, val hue: Color, val
 
 /** Screen pixels per atlas unit at the placement's fit and zoom. */
 private fun placeScale(place: Placement): Float = place.unit
+
+/** The atlas's lines added up (3.54.0): by modifier code, value by value, over every taken node. */
+private object AtlasTotals {
+    fun of(index: ContentIndex, taken: Set<String>): Map<String, List<Double>> = sum(index.atlas.nodes.filter { it.code in taken }.flatMap { it.lines })
+
+    fun sum(lines: List<Line>): Map<String, List<Double>> = lines.groupBy { it.code }.mapValues { (_, same) ->
+        List(same.maxOf { it.values.size }) { i -> same.sumOf { it.values.getOrElse(i) { 0.0 } } }
+    }
+}
+
+/** «Итого» (3.54.0): what the taken nodes give, added up and grouped by mechanic. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable private fun AtlasSummary(index: ContentIndex, taken: Set<String>, onDismiss: () -> Unit) {
+    val groups = remember(taken) {
+        index.atlas.nodes.filter { it.code in taken }.groupBy { it.branch }
+            .mapValues { (_, nodes) -> AtlasTotals.sum(nodes.flatMap { it.lines }) }.filterValues { it.isNotEmpty() }
+    }
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color(0xF20A0E18), sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(ui("atlas.summary_title"), color = Color.White, style = MaterialTheme.typography.titleMedium)
+            if (groups.isEmpty()) Text(ui("atlas.summary_empty"), color = Sky.text, style = MaterialTheme.typography.bodySmall)
+            groups.forEach { (branch, totals) ->
+                Text(ui("atlas.branch.${branch.name}").uppercase(), color = branch.hue(), style = MaterialTheme.typography.labelMedium)
+                totals.forEach { (code, values) -> effectLines(index, Line(code, values)).forEach { Text("•  $it", color = ModBlue, style = MaterialTheme.typography.bodySmall) } }
+            }
+        }
+    }
+}

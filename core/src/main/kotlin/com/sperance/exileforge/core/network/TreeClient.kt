@@ -14,6 +14,8 @@ class TreeClient internal constructor(private val http: Transport) {
     /** The shortest path to [nodeCode] at once (server 1.37.0): the rules' path, its summed cost; [choice] is the target's own option. */
     suspend fun path(heroId: String, nodeCode: String, choice: Int? = null): TreeState = node("path", heroId, nodeCode, choice)
     suspend fun refund(heroId: String, nodeCode: String): TreeState = node("refund", heroId, nodeCode)
+    /** The node and everything that hangs on it (server 1.52.0), an Orb of Regret each. */
+    suspend fun refundBranch(heroId: String, nodeCode: String): TreeState = node("refundBranch", heroId, nodeCode)
     /** Another option of a taken ATTRIBUTE node, paid with one Chaos Orb; the node stays taken. */
     suspend fun rechoose(heroId: String, nodeCode: String, choice: Int): TreeState = node("rechoose", heroId, nodeCode, choice)
     suspend fun reset(heroId: String): TreeState = http.post("$TREE/reset", heroQuery(heroId))

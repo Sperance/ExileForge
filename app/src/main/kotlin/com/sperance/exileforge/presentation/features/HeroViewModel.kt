@@ -149,6 +149,7 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     fun allocateNode(code: String, choice: Int? = null) { with(runtime) { heroCommand { id -> api.tree.allocate(id, code, choice) } } }
     fun allocatePath(code: String, choice: Int? = null) { with(runtime) { heroCommand { id -> api.tree.path(id, code, choice) } } }
     fun refundNode(code: String) { with(runtime) { heroCommand { id -> api.tree.refund(id, code) } } }
+    fun refundBranch(code: String) { with(runtime) { heroCommand { id -> api.tree.refundBranch(id, code) } } }
     fun rechooseNode(code: String, choice: Int) { with(runtime) { heroCommand { id -> api.tree.rechoose(id, code, choice) } } }
     fun resetTree() { with(runtime) { heroCommand { id -> api.tree.reset(id) } } }
     fun planTree(nodes: List<TakenNode>) { with(runtime) { heroCommand { id -> api.tree.plan(id, nodes) } } }

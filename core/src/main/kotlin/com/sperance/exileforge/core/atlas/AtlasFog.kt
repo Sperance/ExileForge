@@ -7,24 +7,14 @@ import com.sperance.exileforge.rules.content.FountainRule
 import com.sperance.exileforge.rules.content.MapStat
 
 /**
- * The atlas as the screen reads it: which nodes a tap could take or give back, and what the fog leaves
- * in sight. The server decides every command; this only draws the same rule in advance.
+ * The atlas as the screen reads it: which nodes a tap could take or give back. The whole sky is shown (3.54.0: no fog);
+ * the server decides every command, this only draws the same rule in advance.
  */
 object AtlasFog {
-    /** How many links ahead of the taken nodes the atlas shows. */
-    const val SIGHT = 3
-
     fun canTake(graph: AtlasGraph, code: String, taken: Set<String>): Boolean = code !in taken && code != graph.start && graph.isAdjacentTo(code, taken)
 
     fun canRefund(graph: AtlasGraph, code: String, taken: Set<String>): Boolean = code in taken && code != graph.start && graph.isConnected(taken - code)
 
-    /** Every node no more than [depth] links from one already taken, or from the start; the rest of the tree is not drawn. */
-    fun visible(graph: AtlasGraph, taken: Set<String>, depth: Int = SIGHT): Set<String> {
-        val seen = (taken + graph.start).filterTo(LinkedHashSet()) { it in graph.byCode }
-        var frontier = seen.toList()
-        repeat(depth) { frontier = frontier.flatMap(graph::neighbours).filter(seen::add) }
-        return seen
-    }
 
     /** Which of the ten branches a node belongs to, read off its code: `ATLAS_<BRANCH>_…`. */
     fun branch(code: String): AtlasBranch = AtlasBranch.entries.firstOrNull { code.startsWith("ATLAS_${it.prefix}") } ?: AtlasBranch.ROOT

@@ -48,6 +48,8 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() 
     fun runCommand(command: RunCommand) = runtime.expeditionViewModel.send(command)
     /** The trial on screen (3.49.0), if any: an arena the screen steps and reads. */
     val trial = runtime.trialViewModel.arena
+    /** The warm-up on entering a hero (3.54.0). */
+    fun warmUp() = runtime.warmupViewModel.start()
     fun enterRush(region: String) = runtime.trialViewModel.rush(region)
     fun enterTower() = runtime.trialViewModel.tower()
     fun forgeRushKey() = runtime.trialViewModel.forgeKey()
@@ -106,6 +108,7 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() 
     fun allocateNode(code: String, choice: Int? = null) = runtime.heroViewModel.allocateNode(code, choice)
     fun allocatePath(code: String, choice: Int? = null) = runtime.heroViewModel.allocatePath(code, choice)
     fun refundNode(code: String) = runtime.heroViewModel.refundNode(code)
+    fun refundBranch(code: String) = runtime.heroViewModel.refundBranch(code)
     fun rechooseNode(code: String, choice: Int) = runtime.heroViewModel.rechooseNode(code, choice)
     fun resetTree() = runtime.heroViewModel.resetTree()
     fun addExperience(amount: Double) = runtime.heroViewModel.addExperience(amount)

@@ -30,6 +30,7 @@ import com.sperance.exileforge.presentation.state.*
 import com.sperance.exileforge.data.settings.GuideStore
 import com.sperance.exileforge.ui.components.BugButton
 import com.sperance.exileforge.ui.components.BugSheet
+import com.sperance.exileforge.ui.components.WarmupScreen
 import com.sperance.exileforge.ui.components.GuideDesk
 import com.sperance.exileforge.ui.components.GuideHost
 import com.sperance.exileforge.ui.components.LocalGuideDesk
@@ -77,6 +78,7 @@ import com.sperance.exileforge.ui.theme.*
     // names land, every screen that printed a bare code is drawn again.
     // The beetle (3.48.0): in the banner of the game, floating over the screens without one.
     var bugOpen by remember { mutableStateOf(false) }
+    LaunchedEffect(s.phase, s.play.heroId) { if (s.phase == AppPhase.GAME && s.play.heroId.isNotBlank()) vm.warmUp() }
     key(s.account.server, s.account.sessionEpoch, s.lang, s.world.localeStrings) {
         Box(Modifier.fillMaxSize()) {
             // The two screens above the tabs carry no banner and no bottom bar: there is no character to
@@ -86,7 +88,9 @@ import com.sperance.exileforge.ui.theme.*
                 AppPhase.CHARACTERS -> CharacterSelectScreen(s, vm)
                 // A campaign run takes the whole screen: no banner and no bar, the scene is the game.
                 // The zone's card (2.76.0) lies on the world map in the tab itself.
-                AppPhase.GAME -> expedition?.let { ExpeditionPlay(s, vm, it) }
+                // The warm-up (3.54.0): entering a hero, the loading screen stands until everything is read.
+                AppPhase.GAME -> s.play.warmup?.takeIf { !it.finished }?.let { WarmupScreen(it) }
+                    ?: expedition?.let { ExpeditionPlay(s, vm, it) }
                     // A trial (3.49.0) is an arena of its own, over the whole screen too.
                     ?: trial?.let { TrialScreen(s, vm, it) }
                     // The atlas (2.68.0) is a sky of its own, above the tabs.

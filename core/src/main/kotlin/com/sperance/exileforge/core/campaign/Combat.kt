@@ -458,13 +458,13 @@ enum class TargetRule {
 
 /**
  * The hero's side of a fight beyond the sheet (2.70.0): whom they pick by [rule], and whether
- * their weapon reaches the back row while the front still stands — a bow or a wand does, a blade
- * or bare hands do not.
+ * their weapon reaches the back row while the front still stands — a bow or a spell weapon (a wand,
+ * a staff, a sceptre) does, a blade or bare hands do not.
  */
 data class HeroStance(val rule: TargetRule = TargetRule.THREAT, val ranged: Boolean = false) {
     companion object {
-        private val reaching = setOf(WeaponType.BOW, WeaponType.WAND)
-        fun of(classCode: String?, weaponType: WeaponType?) = HeroStance(TargetRule.of(classCode), weaponType in reaching)
+        fun reaches(weaponType: WeaponType?): Boolean = weaponType == WeaponType.BOW || weaponType?.spell == true
+        fun of(classCode: String?, weaponType: WeaponType?) = HeroStance(TargetRule.of(classCode), reaches(weaponType))
     }
 }
 

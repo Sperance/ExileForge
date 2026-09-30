@@ -219,6 +219,8 @@ fun itemRequirements(template: ItemTemplate, lang: Lang = uiLanguage): List<Stri
 fun itemVisualKind(template: ItemTemplate): ItemVisualKind = when {
     template.weaponType == WeaponType.BOW || template.slot == Slot.QUIVER -> ItemVisualKind.BOW
     template.weaponType == WeaponType.WAND -> ItemVisualKind.WAND
+    template.weaponType == WeaponType.STAFF -> ItemVisualKind.STAFF
+    template.weaponType == WeaponType.SCEPTRE -> ItemVisualKind.MACE
     template.weaponType == WeaponType.AXE || template.weaponType == WeaponType.DOUBLEAXE -> ItemVisualKind.AXE
     template.weaponType == WeaponType.BLADE -> ItemVisualKind.DAGGER
     template.weaponType == WeaponType.LONGSWORD || template.weaponType == WeaponType.DOUBLESWORD -> ItemVisualKind.STAFF

@@ -26,12 +26,15 @@ object AtlasFog {
         return seen
     }
 
-    /** Which of the four trunks a node belongs to, read off its code: `ATLAS_<BRANCH>_…`. */
+    /** Which of the ten branches a node belongs to, read off its code: `ATLAS_<BRANCH>_…`. */
     fun branch(code: String): AtlasBranch = AtlasBranch.entries.firstOrNull { code.startsWith("ATLAS_${it.prefix}") } ?: AtlasBranch.ROOT
 }
 
-/** The trunks of the tree (the owner's four directions); [ROOT] is the start alone. */
-enum class AtlasBranch(val prefix: String) { LOOT("LOOT"), VAAL("VAAL"), CONTENT("CONT"), BOSS("BOSS"), ROOT("START") }
+/** The branches of the tree (3.43.0, server 1.41.0: ten, each in its own wedge); [ROOT] is the start alone. */
+enum class AtlasBranch(val prefix: String) {
+    LOOT("LOOT_"), MAPS("MAPS_"), TIERS("TIERS_"), BOSSES("BOSSES_"), ABYSS("ABYSS_"), VAAL("VAAL_"), CRYSTALS("CRYSTALS_"),
+    EXPEDITION("EXPEDITION_"), CRAFT("CRAFT_"), POWER("POWER_"), ROOT("START"),
+}
 
 /**
  * The atlas bonuses the client rolls with itself: the pack and the rare monsters as a map item's effects,

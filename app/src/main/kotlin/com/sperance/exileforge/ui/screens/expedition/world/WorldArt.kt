@@ -178,12 +178,16 @@ class WorldArt private constructor(
             "CITADEL" -> SketchKind.TOWER
             "ABYSS" -> SketchKind.CHASM
             "BLIGHT" -> SketchKind.SPORE
-            "SKYREACH", "GODHALL" -> SketchKind.TOWER
-            "GLASSWASTE" -> SketchKind.DUNE
-            "STORMPEAK" -> SketchKind.MESA
-            "SUNKEN", "TIDEVAULT" -> SketchKind.COLUMN
-            "CORAL" -> SketchKind.MOUND
-            "ASTRAL" -> SketchKind.CRYSTAL_HILL
+            // The lands 71–100 (3.43.0): floating isles, glass spires, storm peaks, drowned arches, coral, the vaults'
+            // columns, golden shrines, stars and the chasm of oblivion.
+            "SKYREACH" -> SketchKind.ISLE
+            "GLASSWASTE" -> SketchKind.SPIRE
+            "STORMPEAK" -> SketchKind.STORM
+            "SUNKEN" -> SketchKind.ARCH
+            "CORAL" -> SketchKind.CORAL
+            "TIDEVAULT" -> SketchKind.COLUMN
+            "GODHALL" -> SketchKind.SHRINE
+            "ASTRAL" -> SketchKind.STAR
             "OBLIVION" -> SketchKind.CHASM
             else -> null
         }
@@ -192,7 +196,8 @@ class WorldArt private constructor(
     /** What a biome's land is sketched with, how many a zone gets and how much room each wants. */
     private enum class SketchKind(val count: Int, val room: Float) {
         CRYSTAL_HILL(6, 52f), SNOW_HILL(6, 52f), CINDER_HILL(6, 52f), TREE(10, 30f), REED(10, 28f), COLUMN(7, 26f), TOMB(7, 26f), ROCK(7, 28f),
-        DUNE(8, 40f), MESA(5, 56f), MOUND(7, 30f), TOWER(6, 30f), CHASM(5, 44f), SPORE(9, 28f)
+        DUNE(8, 40f), MESA(5, 56f), MOUND(7, 30f), TOWER(6, 30f), CHASM(5, 44f), SPORE(9, 28f),
+        ISLE(6, 40f), SPIRE(8, 30f), STORM(5, 52f), ARCH(6, 34f), CORAL(9, 28f), SHRINE(5, 40f), STAR(8, 30f)
     }
 
     /** The sketches gathered into one path per ink, so the whole land is drawn in a handful of calls. */
@@ -215,6 +220,9 @@ class WorldArt private constructor(
         private val voidEdge = Path()
         private val caps = Path()
         private val glints = Path()
+        private val clouds = Path()
+        private val bolts = Path()
+        private val coral = Path()
 
         fun crowded(p: Offset, room: Float) = spots.any { hypot(it.x - p.x, it.y - p.y) < room }
 
@@ -283,6 +291,49 @@ class WorldArt private constructor(
                     }
                     voids.addPath(crack); voidEdge.addPath(crack)
                 }
+                SketchKind.ISLE -> {
+                    val s = 9 * size
+                    val rock = Path().apply { moveTo(p.x - s, p.y - s * .4f); lineTo(p.x + s, p.y - s * .4f); lineTo(p.x + s * .3f, p.y + s * .5f); lineTo(p.x - s * .2f, p.y + s * .3f); close() }
+                    stones.addPath(rock); stoneEdge.addPath(rock)
+                    clouds.addOval(Rect(p.x - s * 1.3f, p.y - s * .2f, p.x - s * .2f, p.y + s * .35f)); clouds.addOval(Rect(p.x + s * .1f, p.y - s * .1f, p.x + s * 1.4f, p.y + s * .45f))
+                }
+                SketchKind.SPIRE -> {
+                    val h = 10 + 7 * size
+                    crystals.moveTo(p.x - 3, p.y); crystals.lineTo(p.x, p.y - h); crystals.lineTo(p.x + 3, p.y); crystals.close()
+                    crystals.moveTo(p.x + 4, p.y); crystals.lineTo(p.x + 6, p.y - h * .55f); crystals.lineTo(p.x + 8, p.y); crystals.close()
+                    stoneEdge.moveTo(p.x, p.y - h); stoneEdge.lineTo(p.x, p.y)
+                }
+                SketchKind.STORM -> {
+                    hill(SketchKind.SNOW_HILL, p, 13 * size)
+                    val c = Offset(p.x + 4, p.y - 22 * size)
+                    clouds.addOval(Rect(c.x - 11, c.y - 4, c.x + 11, c.y + 4))
+                    bolts.moveTo(c.x, c.y + 3); bolts.lineTo(c.x - 3, c.y + 9); bolts.lineTo(c.x + 1, c.y + 9); bolts.lineTo(c.x - 2, c.y + 15)
+                }
+                SketchKind.ARCH -> {
+                    val arch = Path().apply { moveTo(p.x - 7, p.y); lineTo(p.x - 7, p.y - 8); quadraticTo(p.x, p.y - 16, p.x + 7, p.y - 8); lineTo(p.x + 7, p.y)
+                        lineTo(p.x + 4, p.y); lineTo(p.x + 4, p.y - 7); quadraticTo(p.x, p.y - 12, p.x - 4, p.y - 7); lineTo(p.x - 4, p.y); close() }
+                    stones.addPath(arch); stoneEdge.addPath(arch)
+                    dunes.moveTo(p.x - 11, p.y - 2); dunes.quadraticTo(p.x - 5, p.y - 5, p.x, p.y - 2); dunes.quadraticTo(p.x + 5, p.y + 1, p.x + 11, p.y - 2)
+                }
+                SketchKind.CORAL -> {
+                    val s = 6 * size
+                    coral.moveTo(p.x, p.y); coral.lineTo(p.x, p.y - s * 1.6f)
+                    coral.moveTo(p.x, p.y - s * .6f); coral.lineTo(p.x - s * .8f, p.y - s * 1.3f); coral.lineTo(p.x - s * .8f, p.y - s * 1.8f)
+                    coral.moveTo(p.x, p.y - s * .9f); coral.lineTo(p.x + s * .7f, p.y - s * 1.5f); coral.lineTo(p.x + s * .9f, p.y - s * 2f)
+                }
+                SketchKind.SHRINE -> {
+                    val w = 8 + 3 * size
+                    val shrine = Path().apply { moveTo(p.x - w, p.y); lineTo(p.x - w, p.y - 6); lineTo(p.x - w - 2, p.y - 6); lineTo(p.x, p.y - 13 - 2 * size)
+                        lineTo(p.x + w + 2, p.y - 6); lineTo(p.x + w, p.y - 6); lineTo(p.x + w, p.y); close() }
+                    stones.addPath(shrine); stoneEdge.addPath(shrine)
+                    glints.addOval(Rect(Offset(p.x, p.y - 9), 1.8f))
+                }
+                SketchKind.STAR -> {
+                    val r = 4 + 3 * size
+                    glints.moveTo(p.x, p.y - r * 2); glints.lineTo(p.x + r * .3f, p.y - r * 1.3f); glints.lineTo(p.x + r, p.y - r)
+                    glints.lineTo(p.x + r * .3f, p.y - r * .7f); glints.lineTo(p.x, p.y); glints.lineTo(p.x - r * .3f, p.y - r * .7f)
+                    glints.lineTo(p.x - r, p.y - r); glints.lineTo(p.x - r * .3f, p.y - r * 1.3f); glints.close()
+                }
                 SketchKind.SPORE -> {
                     val s = 5 * size
                     trunks.moveTo(p.x, p.y); trunks.lineTo(p.x, p.y - s)
@@ -340,6 +391,9 @@ class WorldArt private constructor(
                 Sketch(dunes, Color(0xFFD8B070).copy(alpha = .45f), fill = false, width = 1.2f),
                 Sketch(voids, Color(0xF207050C), fill = true),
                 Sketch(voidEdge, Color(0xFFA070FF).copy(alpha = .45f), fill = false),
+                Sketch(clouds, Color(0xFFDDE8F2).copy(alpha = .35f), fill = true),
+                Sketch(bolts, Color(0xFFF2D03A).copy(alpha = .8f), fill = false, width = 1.4f),
+                Sketch(coral, Color(0xFFE86A7A).copy(alpha = .7f), fill = false, width = 1.6f),
             )
         }
     }

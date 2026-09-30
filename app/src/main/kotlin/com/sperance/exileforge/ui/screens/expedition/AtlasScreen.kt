@@ -62,9 +62,15 @@ private object Sky {
 /** Each trunk's own light, so a player reads which direction a star belongs to before its name. */
 private fun AtlasBranch.hue(): Color = when (this) {
     AtlasBranch.LOOT -> Color(0xFFE8CF94)
+    AtlasBranch.MAPS -> Color(0xFF8EC5FF)
+    AtlasBranch.TIERS -> Color(0xFFBFE3EF)
+    AtlasBranch.BOSSES -> Color(0xFFB48CFF)
+    AtlasBranch.ABYSS -> Color(0xFFA070FF)
     AtlasBranch.VAAL -> Color(0xFFFF5A46)
-    AtlasBranch.CONTENT -> Color(0xFF7FC8A0)
-    AtlasBranch.BOSS -> Color(0xFFB48CFF)
+    AtlasBranch.CRYSTALS -> Color(0xFF9FD8E8)
+    AtlasBranch.EXPEDITION -> Color(0xFF7FC8A0)
+    AtlasBranch.CRAFT -> Color(0xFFE8A05A)
+    AtlasBranch.POWER -> Color(0xFFD24A43)
     AtlasBranch.ROOT -> Color.White
 }
 

@@ -1,5 +1,7 @@
 package com.sperance.exileforge.core.campaign
 
+import com.sperance.exileforge.rules.roll.RolledMonster
+
 /**
  * A run's figures (3.47.0), gathered fight by fight from the combat's own events: what the hero dealt by damage
  * type and by skill, what was taken by type, and the seconds spent fighting. A hit carries its trace, which splits

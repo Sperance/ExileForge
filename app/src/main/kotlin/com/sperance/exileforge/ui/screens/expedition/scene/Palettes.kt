@@ -1,7 +1,6 @@
 package com.sperance.exileforge.ui.screens.expedition.scene
 
 import androidx.compose.ui.graphics.Color
-import com.sperance.exileforge.rules.content.DesecrationGroup
 
 /** One biome's colours: the void around the map, the ground, the rock, and what grows on it. */
 class Palette(val void: Color, val floor: Color, val wallTop: Color, val wallSide: Color, val decor: Color, val accent: Color)
@@ -54,14 +53,6 @@ object Palettes {
     val bronze = Color(0xFF8A6A3A)
     /** The warm light of a torch or a brazier. */
     val torch = Color(0xFFFFB060)
-
-    /** The stain of desecrated ground by its group (3.4.0). */
-    fun desecration(group: DesecrationGroup): Color = when (group) {
-        DesecrationGroup.ELEMENTAL -> Color(0xFFFF6A3D)
-        DesecrationGroup.POISON -> Color(0xFF7BC44A)
-        DesecrationGroup.DEFENCE -> Color(0xFF9AA7B4)
-        DesecrationGroup.WEAKNESS -> Color(0xFF5B4A8C)
-    }
     val magic = Color(0xFF8888FF)
     val rare = Color(0xFFFFFF77)
     /** A boss (server 0.32.0), in the unique items' brown-orange. */

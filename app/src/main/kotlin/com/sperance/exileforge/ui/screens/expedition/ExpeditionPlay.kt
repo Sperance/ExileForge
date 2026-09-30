@@ -27,8 +27,6 @@ import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.campaign.*
 import com.sperance.exileforge.core.display.mapTitle
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.i18n.loc
-import com.sperance.exileforge.ui.screens.expedition.scene.Palettes
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
@@ -57,7 +55,6 @@ import com.sperance.exileforge.core.display.modNumber
 import com.sperance.exileforge.core.display.statDescription
 import com.sperance.exileforge.core.display.statPercent
 import com.sperance.exileforge.core.display.statTitle
-import com.sperance.exileforge.core.display.statValue
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
@@ -156,8 +153,6 @@ import kotlinx.coroutines.delay
                 Text(ui(when { zone && hud.sealed -> "vaal.guardian_alive"; zone -> "vaal.guardian_slain"; hud.sealed -> "expedition.boss_alive"; else -> "expedition.boss_slain" }),
                     color = if (hud.sealed) LifeRed else Vital, style = MaterialTheme.typography.labelMedium)
                 Journal(hud, onRetry)
-                // The ground on the hero, a chip right over the bars it eats (3.4.x): off the corner's buttons.
-                hud.desecration?.let { DesecrationBadge(it) }
                 // Life under the map's name (2.72.0), out of the middle of the view; the mana and the belt under it (2.78.0).
                 Vitals(hud.heroLife, hud.heroMaxLife, hud.heroShield, hud.heroMaxShield, Modifier.fillMaxWidth(), hud.heroMana, hud.heroMaxMana)
                 if (hud.flasks.any { it != null }) MapFlasks(hud.flasks, onDrink)
@@ -337,23 +332,6 @@ private fun DrawScope.drawExplored(world: ExpeditionWorld, origin: Offset, cell:
                     Tipped({ Tip(statTitle(stat), statDescription(stat), ModBlue) }) { ModifierLine(effectText(run, stat, value), Glyph.ofStat(stat)) }
                 }
             } else MutedText(ui("map.no_modifiers"))
-            if (world.desecrated.isNotEmpty()) {
-                Engraved(ui("map.desecration"))
-                world.desecrated.groupingBy { it.kind }.eachCount().forEach { (kind, count) ->
-                    val tint = Palettes.desecration(kind.group)
-                    val name = loc("desecration.${kind.code}")
-                    // What a patch of this kind would lay on the hero right now, at this zone and under the hero's guard.
-                    Tipped({ Tip(name, loc("desecration.group.${kind.group}"), tint,
-                        listOf(ui("map.desecration_count") to "$count") + run.desecrationLines(kind).map { (stat, value) -> statTitle(stat) to statValue(stat, value) }) }) {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Box(Modifier.size(10.dp).background(tint, CircleShape))
-                            Text(name + if (count > 1) " ×$count" else "", color = Parchment, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-                            Text(loc("desecration.group.${kind.group}"), color = tint, style = MaterialTheme.typography.labelSmall)
-                        }
-                    }
-                }
-                MutedText(ui("map.desecration_hint"))
-            }
         }
     }
 }
@@ -381,15 +359,6 @@ private fun effectText(run: ExpeditionRun, stat: String, value: Double): String 
 
 /** The Vaal portal's mark on the maps and in their legend. */
 private val PortalTint = Color(0xFFFF8A78)
-
-/** The desecration on the hero (3.4.0): its name in its group's colour, the trail left once stepped off, its lines on a touch. */
-@Composable private fun DesecrationBadge(view: DesecrationView, modifier: Modifier = Modifier) {
-    val tint = Palettes.desecration(view.kind.group)
-    val name = loc("desecration.${view.kind.code}")
-    Tipped({ Tip(name, tint = tint, facts = view.lines.map { (stat, value) -> statTitle(stat) to statValue(stat, value) }) }, modifier) {
-        Counter(if (view.underfoot) name else ui("expedition.desecration_trail", name, view.trail.toInt() + 1), tint)
-    }
-}
 
 @Composable private fun Counter(text: String, tint: Color) {
     Text(text, color = tint, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold,

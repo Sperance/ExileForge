@@ -4,8 +4,6 @@ import com.sperance.exileforge.core.atlas.AtlasEffects
 import com.sperance.exileforge.core.model.campaign.CampaignState
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.ContentIndex
-import com.sperance.exileforge.rules.content.DesecrationKind
-import com.sperance.exileforge.rules.content.DesecrationRule
 import com.sperance.exileforge.rules.content.Pet
 import com.sperance.exileforge.rules.content.LoneWolfRule
 import com.sperance.exileforge.rules.content.Zone
@@ -178,14 +176,9 @@ data class RunHud(
     val pending: Int = 0,
     val applied: Int = 0,
     val rejected: Int = 0,
-    /** The desecration on the hero, underfoot or trailing (3.4.0). */
-    val desecration: DesecrationView? = null,
     /** What the map came to so far: its summary before the camp. */
     val tally: MapTally = MapTally(),
 )
-
-/** A desecration on the hero as the screen shows it: its kind, the lines it lays at this zone for this hero, and the trail left. */
-data class DesecrationView(val kind: DesecrationKind, val lines: Map<String, Double>, val underfoot: Boolean, val trail: Double)
 
 /** The Abyss as its sheet shows it: how many depths the crack leads down, how many are cleared, every depth's wave and hoard, and the share a fall keeps. */
 data class AbyssView(val depth: Int, val cleared: Int, val open: Boolean, val depths: List<AbyssDepth>,
@@ -343,35 +336,12 @@ class ExpeditionRun(
     /** The crystals the server's answers said Vaal orbs made, by event, until their orbs are resolved. */
     private val vaaled = HashMap<Int, Crystal>()
     private var fallEvent: Int? = null
-    private val desecration = index.campaign.desecration
     /** The pet as a fighter (3.5.0), made again only when the hero's sheet that reaches it changes. */
     private val allies = PetAllies(index, pet, rules)
     private fun ally(): Ally? = allies.of(hero.stats)
-    /** The patch whose lines are on the hero: the one underfoot, or the last one stepped off within its trail. */
-    private var desecratedBy: Desecrated? = null
-    private var trailLeft = 0.0
-
-    /** What a patch of [kind] lays on this hero at this zone: its lines, cut by the hero's own guard against desecration. */
-    fun desecrationLines(kind: DesecrationKind): Map<String, Double> =
-        desecration?.lines(kind, zone.level, hero.stats[DesecrationRule.GUARD] ?: 0.0).orEmpty()
-    private fun desecrationLines(spot: Desecrated): Map<String, Double> = desecrationLines(spot.kind)
-
-    /** The map's lines with the desecration on the hero over them. */
-    private fun effects(): Map<String, Double> = desecratedBy?.let { MapEffects.sum(mapEffects, desecrationLines(it)) } ?: mapEffects
-
-    /** A step on desecrated ground or off it: the patch's lines come on at once and stay for the trail after it. */
-    private fun desecrate(dt: Double) {
-        val rule = desecration ?: return
-        val under = world.underfoot
-        trailLeft = if (under != null) rule.trail else (trailLeft - dt).coerceAtLeast(0.0)
-        val next = under ?: desecratedBy?.takeIf { trailLeft > 0 }
-        if (next !== desecratedBy) { desecratedBy = next; regear(build.gear) }
-        wound(dt)
-    }
-
     /**
-     * The ground's degeneration on the road (3.4.0): the fight burns it in its own beat, the walk did not, so a
-     * patch laid its curses but never ate life. Off a fight it wounds to the last point: only a fight ends a run.
+     * The hero's degeneration on the road (3.4.0): the fight burns it in its own beat, the walk did not.
+     * Off a fight it wounds to the last point: only a fight ends a run.
      */
     private fun wound(dt: Double) {
         val share = hero.lifeDegenShare
@@ -420,7 +390,7 @@ class ExpeditionRun(
     private fun manaCap(): Double = hero.maxMana * (1 - kit.reserved(hero) / 100)
 
     private fun regear(gear: HeroGear) {
-        val next = HeroBuild(gear, effects(), rules)
+        val next = HeroBuild(gear, mapEffects, rules)
         val before = hero
         build = next
         rebody()
@@ -679,7 +649,7 @@ class ExpeditionRun(
 
     private fun walk(dt: Double) {
         recover(dt)
-        desecrate(dt)
+        wound(dt)
         val (x, y) = ExpeditionWorld.screenToWorld(stickX, stickY)
         when (val event = world.step(dt, x, y)) {
             is WorldEvent.Encounter -> engage(event.agent)
@@ -958,7 +928,6 @@ class ExpeditionRun(
             bossDown = bossDown,
             auto = autopilot?.let { AutoHud(it.wave, it.waves) }, autoReward = autoReward, autoAwaiting = autoEvents.count(::awaits),
             pending = journal.pending.size, applied = journal.applied, rejected = journal.rejected.size,
-            desecration = desecratedBy?.let { DesecrationView(it.kind, desecrationLines(it), world.underfoot === it, trailLeft) },
             summary = figures, recap = recap,
             tally = MapTally(end, seconds, kills, bosses, deaths, granted, figures, awaiting),
         )
@@ -1059,7 +1028,6 @@ class ExpeditionRun(
             val fountains = AtlasEffects.fountains(index.campaign.fountains, context.atlas)
             val extraFountains = MapEffects.fountains(effects)
             world.placeFountains(fountains.count.getOrElse(0) { 0 } + extraFountains, fountains.count.getOrElse(1) { fountains.count.getOrElse(0) { 0 } } + extraFountains, fountains.heal)
-            index.campaign.desecration?.let { rule -> world.placeDesecration(rule.roll(zone.level, if (vaal) run.seed xor VAAL_SALT else run.seed), rule.radius) }
             if (!vaal) {
                 world.placeChests(campaign.chests[location.code]?.left ?: 0)
                 world.placeCrystals(campaign.crystals[location.code]?.crystals.orEmpty())

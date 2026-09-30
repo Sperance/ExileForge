@@ -227,7 +227,7 @@ private fun sideLabel(shot: FighterShot, attacker: FighterShot): String = if (sh
     }
 }
 
-private val ATTACKER_STATS = listOf("STOCK_ACCURACY", "STOCK_CRITICAL_CHANCE", "STOCK_ATTACK_SPEED", "STOCK_CAST_SPEED")
+private val ATTACKER_STATS = listOf("STOCK_ACCURACY", "STOCK_CRITICAL_CHANCE", "STOCK_SPELL_CRITICAL_CHANCE", "STOCK_ATTACK_SPEED", "STOCK_CAST_SPEED")
 private val TARGET_STATS = listOf("STOCK_HEALTH", "STOCK_ENERGY_SHIELD", "STOCK_EVASION", "STOCK_BLOCK_CHANCE", "STOCK_SPELL_BLOCK", "STOCK_ARMOR")
 
 @Composable private fun Stats(shot: FighterShot, stats: List<String>, origin: TraceOrigin, explainer: TraceExplainer) {

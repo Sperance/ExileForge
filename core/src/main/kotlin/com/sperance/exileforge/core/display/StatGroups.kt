@@ -23,7 +23,7 @@ enum class StatGroup {
         private val ailment = setOf("STOCK_IGNITE_CHANCE", "STOCK_FREEZE_CHANCE", "STOCK_SHOCK_CHANCE", "STOCK_POISON_CHANCE", "STOCK_BLEED_CHANCE",
             "STOCK_BURNING_DAMAGE", "STOCK_POISON_DAMAGE", "STOCK_BLEED_DAMAGE", "STOCK_AILMENT_DURATION")
         private val attribute = setOf("STOCK_STRENGTH", "STOCK_AGILITY", "STOCK_INTELLECT", "STOCK_CONSTITUTION")
-        private val attack = setOf("STOCK_CAST_SPEED")
+        private val attack = setOf("STOCK_CAST_SPEED", "STOCK_SPELL_CRITICAL_CHANCE", "STOCK_SPELL_CRITICAL_MULTIPLIER")
 
         fun of(stat: String): StatGroup = when {
             stat in reserve -> RESERVE

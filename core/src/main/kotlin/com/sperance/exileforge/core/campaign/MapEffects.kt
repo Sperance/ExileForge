@@ -96,6 +96,8 @@ enum class MapLineKind { HARM, CONTENT, REWARD }
 object MapEffects {
     private val damage = DamageType.entries.map { it.attack }
     private val resists = DamageType.entries.mapNotNull { it.resist }
+    /** The hero's critical chances a map lowers together: the attacks' and the spells' own (server 1.56.0). */
+    private val criticalChances = listOf("STOCK_CRITICAL_CHANCE", "STOCK_SPELL_CRITICAL_CHANCE")
 
     /** What a map adds to every monster on it, as effects folded by the same formula as a modifier. */
     fun buffs(effects: Map<String, Double>): List<MonsterEffect> = buildList {
@@ -144,7 +146,7 @@ object MapEffects {
         effects[MapStats.HERO_MAX_RESIST]?.let { v -> add("STOCK_RESIST_MAX_ALL", -v); add("STOCK_RESIST_MAX_CHAOS", -v) }
         effects[MapStats.HERO_DEFENCES]?.let { v -> listOf("STOCK_ARMOR", "STOCK_EVASION", "STOCK_ENERGY_SHIELD").forEach { scale(it, -v) } }
         effects[MapStats.HERO_BLOCK]?.let { add("STOCK_BLOCK_CHANCE", -it) }
-        effects[MapStats.HERO_CRIT]?.let { scale("STOCK_CRITICAL_CHANCE", -it) }
+        effects[MapStats.HERO_CRIT]?.let { v -> criticalChances.filter { it in sheet }.forEach { scale(it, -v) } }
         effects[MapStats.HERO_HASTE]?.let { add("STOCK_MOVEMENT_SPEED", it) }
         effects[MapStats.HERO_ATTACK_SPEED]?.let { scale("STOCK_ATTACK_SPEED", it) }
         effects[MapStats.HERO_LIFE]?.let { scale("STOCK_HEALTH", it) }

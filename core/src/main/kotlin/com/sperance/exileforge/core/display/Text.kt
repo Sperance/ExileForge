@@ -101,7 +101,7 @@ fun fillTemplate(template: String, values: List<String>): String =
 /** Characteristics whose meaning lives in the fraction: rounding them destroys them. */
 val preciseStats = setOf(
     "STOCK_ATTACK_SPEED", "STOCK_CAST_SPEED", "STOCK_CRITICAL_CHANCE", "STOCK_CRITICAL_MULTIPLIER", "STOCK_MOVEMENT_SPEED",
-    "STOCK_LEECH_PHYSICAL", "STOCK_LEECH_ALL", "STOCK_CRITICAL_VAMPIRE",
+    "STOCK_LEECH_PHYSICAL", "STOCK_LEECH_ALL", "STOCK_CRITICAL_VAMPIRE", "STOCK_SPELL_CRITICAL_CHANCE", "STOCK_SPELL_CRITICAL_MULTIPLIER",
 )
 
 /**

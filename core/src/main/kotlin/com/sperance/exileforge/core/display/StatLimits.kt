@@ -30,6 +30,7 @@ object StatLimits {
     private fun ceilings(rules: CombatRules): Map<String, Ceiling> = mapOf(
         "STOCK_BLOCK_CHANCE" to rules.ceilings.block,
         "STOCK_CRITICAL_CHANCE" to rules.ceilings.critical,
+        "STOCK_SPELL_CRITICAL_CHANCE" to rules.ceilings.critical,
         "STOCK_PHYSICAL_REDUCTION" to rules.ceilings.physical,
     )
 

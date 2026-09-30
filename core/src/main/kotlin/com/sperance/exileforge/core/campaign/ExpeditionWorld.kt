@@ -1,7 +1,6 @@
 package com.sperance.exileforge.core.campaign
 
 import com.sperance.exileforge.rules.content.BehaviourRule
-import com.sperance.exileforge.rules.content.DesecrationKind
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.Crystal
 import com.sperance.exileforge.rules.roll.RolledMonster
@@ -72,11 +71,6 @@ class CrystalSpot(val id: Int, val cell: Cell, var crystal: Crystal) { var freed
  * the map entered, and whether it was opened. [id] is its place among the zone's cracks at the entry.
  */
 class AbyssSpot(val id: Int, val cell: Cell, val depth: Int) { var opened = false }
-
-/** A desecrated patch of ground (3.4.0, server 1.4.0): its middle, its reach in cells and what it lays on the hero. */
-class Desecrated(val id: Int, val x: Double, val y: Double, val radius: Double, val kind: DesecrationKind) {
-    fun covers(px: Double, py: Double): Boolean = hypot(px - x, py - y) <= radius
-}
 
 /** What a step of the world ran into. */
 sealed interface WorldEvent {
@@ -268,26 +262,6 @@ class ExpeditionWorld(
             if (apart) cracks += AbyssSpot(cracks.size, cell, depths[cracks.size])
         }
     }
-
-    /** The desecrated patches of the zone (3.4.0). */
-    val desecrated = mutableListOf<Desecrated>()
-
-    /**
-     * Lays the zone's desecration down, once (3.4.0): the kinds are the rule's roll, where each lies the
-     * seed's — off the start and apart; they may well lie where monsters stand, that is the point.
-     */
-    fun placeDesecration(kinds: List<DesecrationKind>, radius: Double) {
-        if (kinds.isEmpty() || desecrated.isNotEmpty()) return
-        val placing = Random(seed * 4271 + 29)
-        val candidates = distances(map.start, Int.MAX_VALUE).filter { (cell, steps) -> steps >= CHEST_STEPS && cell != map.exit }.keys.shuffled(placing)
-        for (cell in candidates) {
-            if (desecrated.size >= kinds.size) break
-            if (desecrated.all { hypot(it.x - cell.x - 0.5, it.y - cell.y - 0.5) >= radius * 2 + 1 }) desecrated += Desecrated(desecrated.size, cell.x + 0.5, cell.y + 0.5, radius, kinds[desecrated.size])
-        }
-    }
-
-    /** The patch under the hero, if any. */
-    val underfoot: Desecrated? get() = desecrated.firstOrNull { it.covers(heroX, heroY) }
 
     /** The cracks not yet opened, in the server's order: a crack's place among them is what the server names it by. */
     val standingCracks: List<AbyssSpot> get() = cracks.filterNot { it.opened }

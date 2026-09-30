@@ -134,7 +134,7 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
     val immuneStun: Boolean get() = stat("STOCK_IMMUNE_STUN") > 0
     /** Life back a second as a share of the maximum (server 0.69.0), beside the flat regeneration. */
     val lifeRegenShare = max(0.0, stat("STOCK_LIFE_REGEN_PERCENT")) / 100
-    /** Life lost a second as a share of the maximum: desecrated ground (3.4.0). */
+    /** Life lost a second as a share of the maximum (3.4.0). */
     val lifeDegenShare = max(0.0, stat("STOCK_LIFE_DEGEN_PERCENT")) / 100
     val leechMana = max(0.0, stat("STOCK_LEECH_MANA")) / 100
     val manaOnHit = max(0.0, stat("STOCK_MANA_ON_HIT"))
@@ -155,8 +155,14 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
     val attackSpeed = stat("STOCK_ATTACK_SPEED").takeIf { it > 0 }?.coerceIn(0.3, 5.0) ?: rules.unarmed.speed
     /** A limit raised by the sheet's own lines (3.13.0): block, evasion, physical reduction and critical chance, each as the resistances are. */
     fun ceiling(limit: Ceiling): Double = limit.at(stat(limit.raise))
-    val critChance = (stats["STOCK_CRITICAL_CHANCE"] ?: rules.critical.chance).coerceIn(0.0, ceiling(rules.ceilings.critical)) / 100
-    val critMultiplier = max(100.0, (stats["STOCK_CRITICAL_MULTIPLIER"] ?: rules.critical.multiplier) + stat("STOCK_CRITICAL_DAMAGE")) / 100
+    val critChance = (stats[CRIT_CHANCE] ?: rules.critical.chance).coerceIn(0.0, ceiling(rules.ceilings.critical)) / 100
+    val critMultiplier = max(100.0, (stats[CRIT_MULTIPLIER] ?: rules.critical.multiplier) + stat("STOCK_CRITICAL_DAMAGE")) / 100
+    /**
+     * A spell's own critical chance and multiplier (server 1.56.0): the attacks' lines do nothing to it. The hero's sheet
+     * always holds both from the rule's base; a fighter without them — a monster — casts with its attacks' figures.
+     */
+    val spellCritChance = stats[SPELL_CRIT_CHANCE]?.let { it.coerceIn(0.0, ceiling(rules.ceilings.critical)) / 100 } ?: critChance
+    val spellCritMultiplier = stats[SPELL_CRIT_MULTIPLIER]?.let { max(100.0, it) / 100 } ?: critMultiplier
     val armour = max(0.0, stat("STOCK_ARMOR"))
     val evasion = max(0.0, stat("STOCK_EVASION"))
     val block = stat("STOCK_BLOCK_CHANCE").coerceIn(0.0, ceiling(rules.ceilings.block)) / 100
@@ -225,7 +231,10 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
         val sheet = stats.toMutableMap()
         // Server 0.69.0, the essences: weaker blows, fewer criticals and slower skills near their guardian.
         auras["AURA_WEAKEN"]?.let { v -> sheet["STOCK_DAMAGE"] = (100 + (stats["STOCK_DAMAGE"] ?: 0.0)) * max(0.0, 1 - v / 100) - 100 }
-        auras["AURA_CRIT"]?.let { v -> sheet["STOCK_CRITICAL_CHANCE"] = critChance * 100 * max(0.0, 1 - v / 100) }
+        auras["AURA_CRIT"]?.let { v ->
+            sheet[CRIT_CHANCE] = critChance * 100 * max(0.0, 1 - v / 100)
+            if (SPELL_CRIT_CHANCE in stats) sheet[SPELL_CRIT_CHANCE] = spellCritChance * 100 * max(0.0, 1 - v / 100)
+        }
         auras["AURA_COOLDOWN"]?.let { v -> sheet["STOCK_COOLDOWN_RECOVERY"] = (stats["STOCK_COOLDOWN_RECOVERY"] ?: 0.0) - v }
         auras["AURA_RESIST"]?.let { v -> sheet["STOCK_RESIST_ALL"] = (stats["STOCK_RESIST_ALL"] ?: 0.0) - v; sheet["STOCK_RESIST_CHAOS"] = (stats["STOCK_RESIST_CHAOS"] ?: 0.0) - v }
         auras["AURA_DAMAGE_TAKEN"]?.let { v -> sheet["STOCK_DAMAGE_TAKEN"] = (stats["STOCK_DAMAGE_TAKEN"] ?: 0.0) + v }
@@ -287,6 +296,10 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
 
     private companion object {
         const val DEFAULT_LIFE_DELAY = 4.0
+        const val CRIT_CHANCE = "STOCK_CRITICAL_CHANCE"
+        const val CRIT_MULTIPLIER = "STOCK_CRITICAL_MULTIPLIER"
+        const val SPELL_CRIT_CHANCE = "STOCK_SPELL_CRITICAL_CHANCE"
+        const val SPELL_CRIT_MULTIPLIER = "STOCK_SPELL_CRITICAL_MULTIPLIER"
     }
     val lifeOnKill = max(0.0, stat("STOCK_HEALTH_ON_KILL"))
 
@@ -299,8 +312,9 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
         .mapNotNull { type -> stat("STOCK_PHYSICAL_AS_EXTRA_${type.name}").takeIf { it > 0 }?.let { type to it / 100 } }.toMap()
     /** Flat damage of [type] its spells add. */
     fun spellAdded(type: DamageType): Double = max(0.0, stat("STOCK_SPELL_ADD_${type.name}"))
-    /** Its critical chance with a spell: the spells' own increase on top. */
-    fun critChance(spell: Boolean): Double = if (spell) (critChance * (1 + max(0.0, stat("STOCK_SPELL_CRITICAL_CHANCE")) / 100)).coerceAtMost(ceiling(rules.ceilings.critical) / 100) else critChance
+    /** Its critical chance and multiplier for a blow: a spell's are its own (server 1.56.0), an attack's the rest. */
+    fun critChance(spell: Boolean): Double = if (spell) spellCritChance else critChance
+    fun critMultiplier(spell: Boolean): Double = if (spell) spellCritMultiplier else critMultiplier
     val doubleDamage = percent("STOCK_DOUBLE_DAMAGE")
     /** A foe it hits left under this share of its life dies. */
     val culling = percent("STOCK_CULLING")
@@ -1042,7 +1056,7 @@ class Battle(
         return 1 - (if (blow.spell) rule.suppressed else rule.deflected) / 100
     }
 
-    /** Desecrated ground eats life (3.4.0): a share of the maximum a second, past the shield, and it can kill. */
+    /** Degeneration eats life (3.4.0): a share of the maximum a second, past the shield, and it can kill. */
     private fun degenerate(me: Fighter, dt: Double) {
         if (!me.alive || me.invulnerable) return
         // The shield wastes away (3.33.0), and the delayed share of the hero's hits comes due.
@@ -1161,7 +1175,7 @@ class Battle(
             else -> 1 - rules.loneWolf.taken / 100
         }
         // Server 1.32.0: a critical strike no heavier than a hit on one who takes none, and the non-critical ones more or less.
-        val multiplier = if (kind == HitKind.CRIT) max(1.0, body.critMultiplier + target.body.critTaken) else body.nonCritMore
+        val multiplier = if (kind == HitKind.CRIT) max(1.0, body.critMultiplier(blow.spell) + target.body.critTaken) else body.nonCritMore
         // 3.35.0: a double blow, the hero's lines against the target's state, and what suppression or deflection lets through.
         val doubled = if (body.doubleDamage > 0 && draw(RollKey.DOUBLE, body.doubleDamage) < body.doubleDamage) 2.0 else 1.0
         val versus = if (me === heroFighter) 1 + max(0.0, model.against(states(target))) / 100 else 1.0
@@ -1203,7 +1217,8 @@ class Battle(
             add(FactorTrace(FactorKey.BASE, baseSum, DamageType.entries.map { it.attack } + listOf("STOCK_SKILL_DAMAGE", "STOCK_SPELL_DAMAGE") +
                 DamageType.entries.filter { it != DamageType.PHYSICAL }.map { "STOCK_PHYSICAL_AS_EXTRA_${it.name}" }, DamageType.ELEMENTS.map { "STOCK_PHYSICAL_TAKEN_AS_${it.name}" }))
             if (blow.spread && baseSum > 0) add(FactorTrace(FactorKey.SPREAD, spreadSum / baseSum))
-            if (kind == HitKind.CRIT) add(FactorTrace(FactorKey.CRIT, multiplier, listOf("STOCK_CRITICAL_MULTIPLIER", "STOCK_CRITICAL_DAMAGE"), listOf("STOCK_CRITICAL_TAKEN")))
+            if (kind == HitKind.CRIT) add(FactorTrace(FactorKey.CRIT, multiplier,
+                if (blow.spell) listOf("STOCK_SPELL_CRITICAL_MULTIPLIER") else listOf("STOCK_CRITICAL_MULTIPLIER", "STOCK_CRITICAL_DAMAGE"), listOf("STOCK_CRITICAL_TAKEN")))
             else if (multiplier != 1.0) add(FactorTrace(FactorKey.NON_CRIT, multiplier, listOf("STOCK_NON_CRIT_DAMAGE")))
             add(FactorTrace(FactorKey.DAMAGE, body.damageMore, listOf(StatLines.DAMAGE)))
             if (against != 1.0) add(FactorTrace(FactorKey.AGAINST, against, listOf("STOCK_DAMAGE_VS_AILED", "STOCK_DAMAGE_VS_CURSED") + Ailment.entries.map { it.against }))
@@ -1223,7 +1238,7 @@ class Battle(
         return true
     }
 
-    /** A critical roll of [body]'s chance — a spell's with its own increase (3.35.0); a lucky one (server 1.32.0) gets a second. */
+    /** A critical roll of [body]'s chance — a spell's own (server 1.56.0); a lucky one (server 1.32.0) gets a second. */
     private fun crit(body: Combatant, spell: Boolean = false): Boolean {
         val chance = body.critChance(spell)
         return draw(RollKey.CRIT, chance) < chance || body.luckyCrit && draw(RollKey.CRIT_LUCKY, chance) < chance

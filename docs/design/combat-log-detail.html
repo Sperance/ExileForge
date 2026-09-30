@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Разбор строки лога</title>
+<style>
+:root{--abyss:#0A0E12;--panel:#0F161B;--raised:#16212A;--gold:#3FB67A;--bright:#EEF8F1;--bronze:#1F2C35;--parch:#D5E0E6;--muted:#7A8D99;--rune:#8FD3FF;--mod:#8EC5FF;--red:#D24A43;--vital:#7BE0A6;--fire:#EF6A3A;--cold:#6FC8F0;--light:#F2D03A;--chaos:#A77BCF}
+*{box-sizing:border-box}
+body{margin:0;background:var(--abyss);color:var(--parch);font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+h1{font-size:18px;margin:20px 16px 4px;color:var(--bright)}
+.lead{margin:0 16px 16px;color:var(--muted);max-width:900px}
+.wrap{display:flex;flex-wrap:wrap;gap:24px;padding:0 16px 32px}
+.variant{flex:1 1 360px;max-width:420px}
+.vtitle{color:var(--gold);font-weight:600;margin:0 0 4px}
+.vnote{color:var(--muted);font-size:12px;margin:0 0 10px}
+.phone{background:var(--panel);border:1px solid var(--bronze);border-radius:18px;overflow:hidden;box-shadow:0 8px 30px #0008}
+.log{padding:8px 12px;border-bottom:1px solid var(--bronze);font-size:12px}
+.log div{display:flex;gap:8px;padding:2px 0;color:var(--muted)}
+.log .sel{background:var(--raised);color:var(--bright);border-radius:4px;margin:0 -4px;padding:2px 4px}
+.log b{color:var(--light)}
+.sheet{padding:12px 14px 16px}
+.grab{width:36px;height:4px;background:var(--bronze);border-radius:2px;margin:0 auto 10px}
+.head{display:flex;justify-content:space-between;align-items:baseline}
+.big{font-size:28px;font-weight:700;color:var(--light)}
+.sub{color:var(--muted);font-size:12px}
+.tag{display:inline-block;border:1px solid var(--bronze);border-radius:10px;padding:0 8px;font-size:11px;color:var(--rune);margin:2px 4px 2px 0}
+.sec{margin-top:12px;border-top:1px solid var(--bronze);padding-top:8px}
+.sec>.t{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-bottom:4px}
+.row{display:flex;justify-content:space-between;gap:8px;padding:3px 0}
+.row .k{color:var(--parch)}.row .v{color:var(--bright);font-variant-numeric:tabular-nums;white-space:nowrap}
+.src{padding:1px 0 1px 14px;display:flex;justify-content:space-between;color:var(--muted);font-size:12px}
+.src .v{color:var(--mod)}
+.minus{color:var(--red)!important}.plus{color:var(--vital)!important}
+details{border-bottom:1px solid #ffffff08}
+summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;padding:5px 0}
+summary::-webkit-details-marker{display:none}
+summary .k::before{content:"▸ ";color:var(--muted)}
+details[open] summary .k::before{content:"▾ "}
+.bar{height:6px;background:var(--raised);border-radius:3px;overflow:hidden;margin:4px 0}
+.bar i{display:block;height:100%}
+.roll{position:relative;height:18px;background:var(--raised);border-radius:4px;margin:4px 0 2px}
+.roll .zone{position:absolute;top:0;bottom:0;background:#D24A4355}
+.roll .mark{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--bright)}
+.chain{display:flex;flex-wrap:wrap;gap:4px;align-items:center;font-variant-numeric:tabular-nums}
+.chip{background:var(--raised);border:1px solid var(--bronze);border-radius:6px;padding:2px 6px;font-size:12px;cursor:pointer}
+.chip.on{border-color:var(--gold);color:var(--bright)}
+.chip small{display:block;color:var(--muted);font-size:10px}
+.op{color:var(--muted)}
+.tabs{display:flex;border-bottom:1px solid var(--bronze);margin:8px -14px 0}
+.tabs span{flex:1;text-align:center;padding:8px 0;font-size:12px;color:var(--muted)}
+.tabs .on{color:var(--bright);border-bottom:2px solid var(--gold)}
+.split{display:flex;gap:8px;margin-top:8px}
+.card{flex:1;background:var(--raised);border-radius:8px;padding:8px}
+.card .t{font-size:11px;color:var(--muted)}
+.water{margin-top:6px}
+.water .step{display:grid;grid-template-columns:1fr 70px 56px;gap:6px;align-items:center;font-size:12px;padding:2px 0}
+.water .b{height:10px;border-radius:2px}
+@media (max-width:420px){.variant{max-width:none}}
+</style>
+</head>
+<body>
+<h1>Разбор строки лога боя — 3 варианта</h1>
+<p class="lead">Пример: «Вы бьёте Скелета-лучника крит 412 · огонь · поджог». Нажатие на строку открывает разбор: формула удара, броски, защита цели и источники каждого стата со значениями.</p>
+<div class="wrap">
+
+<!-- ============ ВАРИАНТ 1 ============ -->
+<section class="variant">
+<p class="vtitle">1 · Нижний лист с раскрывашками</p>
+<p class="vnote">Итог сверху, дальше разделы; каждая строка раскрывается в источники. Всё в одной прокрутке.</p>
+<div class="phone">
+ <div class="log">
+  <div><span>12.3</span><span>Скелет-лучник бьёт 38</span></div>
+  <div class="sel"><span>12.6</span><span>Вы: крит <b>412</b> · огонь · поджог</span></div>
+  <div><span>13.1</span><span>Скелет-лучник уклоняется</span></div>
+ </div>
+ <div class="sheet">
+  <div class="grab"></div>
+  <div class="head"><div><div class="big">412</div><div class="sub">урона · 12.6 с · удар оружием</div></div>
+   <div style="text-align:right"><span class="tag">крит</span><span class="tag">поджог</span><br><span class="sub">цель: 1 180 → 768 ЗД</span></div></div>
+
+  <div class="sec"><div class="t">Броски</div>
+   <div class="row"><span class="k">Попадание</span><span class="v">92% · выпало 0.41 ✓</span></div>
+   <div class="row"><span class="k">Блок цели</span><span class="v">0% · —</span></div>
+   <div class="row"><span class="k">Критический удар</span><span class="v">31% · выпало 0.22 ✓</span></div>
+   <div class="row"><span class="k">Поджог</span><span class="v">45% · выпало 0.08 ✓</span></div>
+  </div>
+
+  <div class="sec"><div class="t">Урон по типам</div>
+   <details open><summary><span class="k">Физический</span><span class="v">180 → 121</span></summary>
+    <div class="src"><span>База оружия (Стальной меч)</span><span class="v">42–68</span></div>
+    <div class="src"><span>Разброс ±20%</span><span class="v">×1.07</span></div>
+    <div class="src"><span>Крит. множитель 185%</span><span class="v">×1.85</span></div>
+    <div class="src"><span>Броня цели 320</span><span class="v minus">−33%</span></div>
+   </details>
+   <details open><summary><span class="k" style="color:var(--fire)">Огонь</span><span class="v">310 → 291</span></summary>
+    <div class="src"><span>Доп. урон от огня: Кольцо «Жар»</span><span class="v">+18–31</span></div>
+    <div class="src"><span>Физ. как доп. огонь 15%: перчатки</span><span class="v">+27</span></div>
+    <div class="src"><span>Сопротивление цели 20% − пробивание 14%</span><span class="v minus">−6%</span></div>
+   </details>
+  </div>
+
+  <div class="sec"><div class="t">Множители</div>
+   <details><summary><span class="k">Урон ×</span><span class="v">×1.42</span></summary>
+    <div class="src"><span>Дерево: «Грубая сила»</span><span class="v">+20%</span></div>
+    <div class="src"><span>Натиск убийцы (усл.: недавно убивали)</span><span class="v">+12%</span></div>
+    <div class="src"><span>Заряды ярости ×2 (5% за заряд)</span><span class="v">+10%</span></div>
+   </details>
+   <details><summary><span class="k">Против подожжённых</span><span class="v">×1.15</span></summary>
+    <div class="src"><span>Амулет «Пепельный знак»</span><span class="v">+15%</span></div></details>
+   <details><summary><span class="k">Шок на цели</span><span class="v">×1.20</span></summary>
+    <div class="src"><span>Ваш шок 20% (эффект +0%)</span><span class="v">+20%</span></div></details>
+  </div>
+
+  <div class="sec"><div class="t">Куда ушло</div>
+   <div class="row"><span class="k">Энергощит цели</span><span class="v">0</span></div>
+   <div class="row"><span class="k">Здоровье цели</span><span class="v">412</span></div>
+   <div class="row"><span class="k">Вампиризм вам</span><span class="v plus">+8</span></div>
+  </div>
+ </div>
+</div>
+</section>
+
+<!-- ============ ВАРИАНТ 2 ============ -->
+<section class="variant">
+<p class="vtitle">2 · Цепочка формулы + вкладки сторон</p>
+<p class="vnote">Формула — строкой из чипов; нажатие на чип показывает его источники. Ниже вкладки: атакующий / цель / состояния.</p>
+<div class="phone">
+ <div class="log">
+  <div class="sel"><span>12.6</span><span>Вы: крит <b>412</b> · огонь · поджог</span></div>
+ </div>
+ <div class="sheet">
+  <div class="grab"></div>
+  <div class="chain">
+   <span class="chip">490<small>база</small></span><span class="op">×</span>
+   <span class="chip">1.07<small>разброс</small></span><span class="op">×</span>
+   <span class="chip on">1.85<small>крит</small></span><span class="op">×</span>
+   <span class="chip">1.42<small>урон</small></span><span class="op">×</span>
+   <span class="chip">1.15<small>vs поджог</small></span><span class="op">×</span>
+   <span class="chip">0.78<small>защита</small></span><span class="op">×</span>
+   <span class="chip">1.20<small>шок</small></span><span class="op">=</span>
+   <span class="chip on" style="color:var(--light)">412<small>итог</small></span>
+  </div>
+  <div class="sec"><div class="t">Крит. множитель 185% — откуда</div>
+   <div class="src"><span>База</span><span class="v">150%</span></div>
+   <div class="src"><span>Кольцо «Жар»</span><span class="v">+20%</span></div>
+   <div class="src"><span>Условие: недавно был крит</span><span class="v">+15%</span></div>
+   <div class="src"><span>Цель: меньше урона от критов</span><span class="v minus">−0%</span></div>
+  </div>
+  <div class="tabs"><span class="on">Вы</span><span>Цель</span><span>Состояния</span></div>
+  <div class="sec" style="border:0">
+   <div class="row"><span class="k">Меткость</span><span class="v">412</span></div>
+   <div class="bar"><i style="width:92%;background:var(--gold)"></i></div>
+   <div class="src"><span>База 20 + 3×ур. 34</span><span class="v">122</span></div>
+   <div class="src"><span>Ловкость 88 × 0.5</span><span class="v">44</span></div>
+   <div class="src"><span>Перчатки «+246 к меткости»</span><span class="v">246</span></div>
+   <div class="row"><span class="k">Шанс крита</span><span class="v">31%</span></div>
+   <div class="src"><span>Оружие 7% · +340% увеличения</span><span class="v">31%</span></div>
+   <div class="row"><span class="k">Активно в момент удара</span><span class="v"></span></div>
+   <div class="src"><span>Натиск · 2.1 с осталось</span><span class="v">+20% ск. атаки</span></div>
+   <div class="src"><span>Заряды ярости · 2 шт.</span><span class="v">+10% урона</span></div>
+  </div>
+ </div>
+</div>
+</section>
+
+<!-- ============ ВАРИАНТ 3 ============ -->
+<section class="variant">
+<p class="vtitle">3 · Водопад урона + броски на шкале</p>
+<p class="vnote">Урон как «водопад»: что прибавило и что срезало, полосками. Броски шансов — на шкале с отметкой выпавшего числа.</p>
+<div class="phone">
+ <div class="log">
+  <div class="sel"><span>12.6</span><span>Вы: крит <b>412</b> · огонь · поджог</span></div>
+ </div>
+ <div class="sheet">
+  <div class="grab"></div>
+  <div class="head"><div class="big">412</div><div class="sub">Скелет-лучник · редкий · ур. 35</div></div>
+  <div class="split">
+   <div class="card"><div class="t">Уклонение цели</div>8% · выпало 0.41<div class="roll"><span class="zone" style="left:0;width:8%"></span><span class="mark" style="left:41%"></span></div></div>
+   <div class="card"><div class="t">Крит</div>31% · выпало 0.22<div class="roll"><span class="zone" style="left:0;width:31%;background:#3FB67A55"></span><span class="mark" style="left:22%"></span></div></div>
+  </div>
+  <div class="sec"><div class="t">Водопад урона</div>
+   <div class="water">
+    <div class="step"><span>База (оружие + доп. огонь)</span><span class="b" style="background:var(--parch);width:70px"></span><span>490</span></div>
+    <div class="step"><span>Крит ×1.85</span><span class="b" style="background:var(--vital);width:60px"></span><span class="plus">+416</span></div>
+    <div class="step"><span>Урон ×1.42 (3 источника)</span><span class="b" style="background:var(--vital);width:48px"></span><span class="plus">+381</span></div>
+    <div class="step"><span>vs поджог ×1.15</span><span class="b" style="background:var(--vital);width:20px"></span><span class="plus">+194</span></div>
+    <div class="step"><span>Броня цели (физ.)</span><span class="b" style="background:var(--red);width:40px"></span><span class="minus">−390</span></div>
+    <div class="step"><span>Сопротивление огню</span><span class="b" style="background:var(--red);width:10px"></span><span class="minus">−61</span></div>
+    <div class="step"><span>Шок ×1.20</span><span class="b" style="background:var(--vital);width:14px"></span><span class="plus">+69</span></div>
+    <div class="step"><span>Урон по цели ×0.25 (укрепление)</span><span class="b" style="background:var(--red);width:52px"></span><span class="minus">−677</span></div>
+    <div class="step" style="font-weight:700"><span>Итог</span><span class="b" style="background:var(--light);width:30px"></span><span>412</span></div>
+   </div>
+  </div>
+  <div class="sec"><div class="t">Нажмите на шаг — источники</div>
+   <div class="src"><span>Урон ×1.42: Дерево «Грубая сила»</span><span class="v">+20%</span></div>
+   <div class="src"><span>Урон ×1.42: усл. «недавно убивали»</span><span class="v">+12%</span></div>
+   <div class="src"><span>Урон ×1.42: заряды ярости ×2</span><span class="v">+10%</span></div>
+  </div>
+ </div>
+</div>
+</section>
+
+</div>
+</body>
+</html>

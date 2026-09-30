@@ -54,10 +54,16 @@ data class FoeView(
     val taunt: Boolean = false,
     val effects: List<EffectView> = emptyList(),
     val mana: Int = 0, val maxMana: Int = 0,
-    /** The row it stands in (3.28.0): the back, or the front — by its kind, unless its own row was full. */
+    /** The row it stands in (3.28.0): the back, or the front — by its kind. */
     val back: Boolean = monster.ranged,
+    /** Its place on the field, of [FoeWindow.SIZE]; -1 while it waits its turn or once the next took its place. */
+    val place: Int = index,
+    /** Still in line: not in the fight yet, but still to be beaten. */
+    val waiting: Boolean = false,
 ) {
     val ranged: Boolean get() = monster.ranged
+    /** Its card is on the field: it fights there, or fell there and nobody stepped in yet. */
+    val onField: Boolean get() = place >= 0
 }
 
 /** The fight as the overlay prints it: the pack as cards, the hero's pools and states, what just landed, and the blows so far, newest first. */
@@ -102,6 +108,10 @@ data class FightHud(
     val interlude: Double? = null,
 ) {
     val scouting: Boolean get() = outcome == null && (!started || paused)
+    /** The foes on the field, by their places: at most [FoeWindow.SIZE] cards whatever the pack. */
+    val field: List<FoeView> get() = foes.filter { it.onField }.sortedBy { it.place }
+    /** How many of the whole pack are still to be beaten: those standing and those waiting their turn. */
+    val standing: Int get() = foes.count { it.alive || it.waiting }
 }
 
 /** One member of a pack fought and its own log. */
@@ -170,6 +180,8 @@ data class RunHud(
     val rejected: Int = 0,
     /** The desecration on the hero, underfoot or trailing (3.4.0). */
     val desecration: DesecrationView? = null,
+    /** What the map came to so far: its summary before the camp. */
+    val tally: MapTally = MapTally(),
 )
 
 /** A desecration on the hero as the screen shows it: its kind, the lines it lays at this zone for this hero, and the trail left. */
@@ -205,7 +217,7 @@ sealed interface RunCommand {
     /** The gate is decided: [entered] the zone, or refused it — a refused zone closes for good. */
     data class ShutGate(val entered: Boolean) : RunCommand
     /** Back from the Vaal zone with [life] left, and the mana and flasks it left. */
-    data class Returned(val life: Double, val pools: HeroPools? = null) : RunCommand
+    data class Returned(val life: Double, val pools: HeroPools? = null, val zone: ZoneShare? = null) : RunCommand
     /** The gear changed on the map: it lands between fights, and life keeps its share. */
     data class Regear(val gear: HeroGear) : RunCommand
     data class Cast(val slot: Int) : RunCommand
@@ -392,6 +404,11 @@ class ExpeditionRun(
     private var reported = 0
     private var fall: Double? = null
     private var kills = 0
+    /** The map's summary (see [MapTally]): how it ended, the seconds on it, the guardians slain and the deaths. */
+    private var end: MapEnd? = null
+    private var seconds = 0.0
+    private var bosses = 0
+    private var deaths = 0
     /** The run's figures (3.47.0) and, after a fall, its last blows. */
     private val stats = RunStats()
     private var recap: List<DeathHit> = emptyList()
@@ -433,6 +450,7 @@ class ExpeditionRun(
 
     fun update(dt: Double) {
         while (true) apply(commands.poll() ?: break)
+        if (phase != RunPhase.DEAD && phase != RunPhase.CLEARED && phase != RunPhase.LEFT) seconds += dt
         if (holds == 0) when (phase) {
             RunPhase.MAP -> autopilot?.let { drive(it, dt) } ?: walk(dt)
             RunPhase.FIGHT -> play(dt)
@@ -516,7 +534,7 @@ class ExpeditionRun(
         when (command) {
             RunCommand.Speed -> speed = if (speed >= 4) 1 else speed * 2
             RunCommand.StopAuto -> autopilot = null
-            RunCommand.Leave -> if (phase == RunPhase.MAP || phase == RunPhase.DEAD || phase == RunPhase.CLEARED) phase = RunPhase.LEFT
+            RunCommand.Leave -> if (phase == RunPhase.MAP || phase == RunPhase.DEAD || phase == RunPhase.CLEARED) { if (phase == RunPhase.MAP) end = MapEnd.LEFT; phase = RunPhase.LEFT }
             RunCommand.Retreat -> if (abyssFight) Unit else if (fight != null && !started) walkAway() else { paused = false; fight?.retreat() }
             RunCommand.Begin -> if (fight != null) { started = true; paused = false; interlude = null }
             RunCommand.Pause -> if (fight != null && started && fight?.outcome == null) paused = !paused
@@ -538,6 +556,7 @@ class ExpeditionRun(
                 world.closePortal(); closeGate()
             }
             is RunCommand.Returned -> {
+                command.zone?.let(::adopt)
                 life = command.life.coerceIn(0.0, hero.maxLife)
                 command.pools?.let { mana = it.mana.coerceIn(0.0, manaCap()); charges = it.charges.ifEmpty { charges }; flaskLeft = it.flaskLeft.ifEmpty { flaskLeft }; rates = it.rates.ifEmpty { rates }; rebody() }
                 // The zone is closed either way: its guardian fell, or the hero did.
@@ -681,6 +700,7 @@ class ExpeditionRun(
     /** The way out: the Vaal zone's exit leads back to the map; the zone's own records the leaving, the boss passed. */
     private fun exit() {
         if (!vaal) record(RunEventKind.LEAVE)
+        end = MapEnd.CLEARED
         phase = RunPhase.CLEARED; onCleared()
     }
 
@@ -812,6 +832,7 @@ class ExpeditionRun(
     /** A foe of the fight fell: the event by what it was; its reward comes with the server's answer. */
     private fun fell(agent: MonsterAgent, member: Int) {
         kills++
+        if (agent === world.boss) bosses++
         if (abyssFight) return
         val spot = agent.crystal?.let { id -> world.crystals.firstOrNull { it.id == id } }
         val event = when {
@@ -880,6 +901,7 @@ class ExpeditionRun(
                 life = 0.0
                 autopilot = null
                 phase = RunPhase.DEAD
+                deaths++; end = MapEnd.FELL
                 // A fall in the Abyss burns its hoard, but for the atlas's share; then the zone's own price.
                 down?.let { take(it, fallen = true) }
                 if (vaal) record(RunEventKind.VAAL_LEAVE) else record(RunEventKind.FALL)?.let { fallEvent = it.n; fall = deathLoss() }
@@ -913,6 +935,8 @@ class ExpeditionRun(
 
     private fun snapshot(): RunHud {
         val battle = fight
+        val figures = stats.summary(kills)
+        val awaiting = mine.count(::awaits)
         return RunHud(
             phase = phase, mapCode = zone.code,
             heroLife = (battle?.heroLife ?: life).roundToInt(), heroMaxLife = hero.maxLife.roundToInt(),
@@ -921,7 +945,7 @@ class ExpeditionRun(
             fight = battle?.takeIf { fightAgent != null }?.let(::fightHud),
             reward = reward, rewardAwaiting = fightEvents.count(::awaits), slain = slain, report = report,
             fall = fall,
-            gold = granted.gold, experience = granted.experience, kills = kills, awaiting = mine.count(::awaits),
+            gold = granted.gold, experience = granted.experience, kills = kills, awaiting = awaiting,
             chestsLeft = world.chests.count { !it.opened },
             chest = chestEvent?.let { earned[it] ?: Reward.NONE }, chestAwaiting = chestEvent?.let(::awaits) == true,
             fountainsLeft = world.fountains.count { !it.used },
@@ -935,7 +959,8 @@ class ExpeditionRun(
             auto = autopilot?.let { AutoHud(it.wave, it.waves) }, autoReward = autoReward, autoAwaiting = autoEvents.count(::awaits),
             pending = journal.pending.size, applied = journal.applied, rejected = journal.rejected.size,
             desecration = desecratedBy?.let { DesecrationView(it.kind, desecrationLines(it), world.underfoot === it, trailLeft) },
-            summary = stats.summary(kills), recap = recap,
+            summary = figures, recap = recap,
+            tally = MapTally(end, seconds, kills, bosses, deaths, granted, figures, awaiting),
         )
     }
 
@@ -946,6 +971,25 @@ class ExpeditionRun(
         val claim = down?.claim
         return AbyssView(down?.depth ?: spot.depth, down?.cleared ?: 0, down != null, waves.depths(rule, zone),
             claim?.let { earned[it] ?: Reward.NONE }, down?.fallen == true, claim?.let(::awaits) == true)
+    }
+
+    /** What this run hands the map it was entered from, a Vaal zone over: its rewarding events and its own counts. */
+    fun share(): ZoneShare = ZoneShare(mine.associateWith { earned[it] }, seconds, kills, bosses, deaths, stats.summary(kills))
+
+    /**
+     * A Vaal zone's share taken into the map's: what the server granted for its events is the map's loot now, and
+     * the answers still to come for the rest land here, as this run's own do.
+     */
+    private fun adopt(zone: ZoneShare) {
+        zone.events.forEach { (n, gained) ->
+            if (!mine.add(n) || n in earned) return@forEach
+            gained?.let { earned[n] = it; granted += it }
+        }
+        seconds += zone.seconds
+        kills += zone.kills
+        bosses += zone.bosses
+        deaths += zone.deaths
+        stats.add(zone.figures)
     }
 
     /** Event [n] is not answered yet. */

@@ -88,6 +88,8 @@ class TrialArena(
     private var pools = HeroPools(hero.maxLife, manaCap(), kit.flasks.map { it?.maxCharges ?: 0.0 }, kit.flasks.map { 0.0 }, kit.flasks.map { DraughtRate() })
 
     private var phase = TrialPhase.FIGHT
+    /** When the trial ended, by [clock]: the clock stops there, and the ending prints a time that no longer runs. */
+    private var endedAt: Long? = null
     /** The rush's boss under way (from 0), or the tower's floor. */
     private var step = if (trial.kind == TrialKind.RUSH) trial.killed else trial.floor
     private var floor: TowerFloor? = null
@@ -271,6 +273,7 @@ class TrialArena(
     private fun finish(fallen: Boolean) {
         if (phase != TrialPhase.FIGHT) return
         record(TrialEventKind.END, fallen = fallen)
+        endedAt = clock()
         battle = null
         phase = if (fallen) TrialPhase.DEAD else TrialPhase.DONE
     }
@@ -287,7 +290,7 @@ class TrialArena(
         return TrialHud(
             kind = trial.kind, phase = phase, run = runHud, fight = fightHud,
             step = if (trial.kind == TrialKind.RUSH) (step + 1).coerceAtMost(plan?.size ?: 0) else step, steps = plan?.size ?: 0,
-            level = level, elapsed = (clock() - trial.startedAt) / 1000.0, limit = plan?.let { trials.rush.seconds * it.size } ?: 0.0,
+            level = level, elapsed = ((endedAt ?: clock()) - trial.startedAt) / 1000.0, limit = plan?.let { trials.rush.seconds * it.size } ?: 0.0,
             mods = floor?.mods.orEmpty(), cleared = cleared, gained = gained, awaiting = (next - answered).coerceAtLeast(0), lastHoard = lastHoard,
             summary = stats.summary(kills),
         )

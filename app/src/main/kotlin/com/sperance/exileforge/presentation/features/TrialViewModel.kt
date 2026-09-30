@@ -64,6 +64,7 @@ class TrialViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             val id = heroId
             val started = call(id)
             if (state.value.play.heroReadAt == 0L) heroViewModel.readHero()
+            heroViewModel.drawn()
             begin(id, started)
         }
     } }

@@ -518,8 +518,8 @@ private class Recovery(val life: Double, val mana: Double, val until: Double, va
  * hero at its own speed from the first second, and the hero at one foe of the rows its weapon
  * reaches — the back row only with a bow or a wand, or once the front has fallen. Whom is the
  * player's [focus] when given, the class's [TargetRule] otherwise, chosen afresh at every swing.
- * Since 3.28.0 a row holds at most [ROW] foes: the melee stand in front, the ranged behind, and a row
- * over the bound sends its last to the other ([rows]).
+ * The melee stand in front, the ranged behind. Only [FoeWindow.SIZE] of the pack fight at once: the rest wait in
+ * line and step in, each into the place of one that fell ([window]); a foe waiting is not [Fighter.alive].
  *
  * Each swing can be evaded (evasion against the attacker's level), blocked, or land; a landing hit
  * rolls the rule's variance per damage type, may be a critical strike, and is reduced by armour
@@ -574,7 +574,7 @@ class Battle(
         var shield = body.maxShield
         /** Mana (2.78.0): the hero's comes in from the fight before, a monster's is full. */
         var mana = body.maxMana
-        var nextAttack = if (side == Side.HERO) 0.35 else 0.55 + index * 0.13
+        var nextAttack = if (side == Side.HERO) 0.35 else ENTRY + index * STAGGER
         var attackInterval = 1 / body.attackSpeed
         /** A new sheet mid-fight: the pools keep their share, the swing keeps its pace from the next one. */
         fun rebody(next: Combatant) {
@@ -603,7 +603,12 @@ class Battle(
         /** Its low-life lines are on (2.78.0). */
         var low = false
 
-        val alive: Boolean get() = life > 0
+        /** On the field: the hero's side always, a foe once the [window] lets it in — one waiting its turn is not in the fight yet. */
+        var engaged: Boolean = side == Side.HERO
+            private set
+        /** A foe steps onto the field at [place]: a moment to close in before its first swing, a little longer the further its place. */
+        fun enter(place: Int, at: Double) { engaged = true; nextAttack = at + ENTRY + place * STAGGER }
+        val alive: Boolean get() = engaged && life > 0
         val held: Boolean get() = heldUntil > time
         val cursed: Boolean get() = effects.any { it.kind == EffectKind.CURSE }
         val invulnerable: Boolean get() = invulnerableUntil > time
@@ -615,7 +620,10 @@ class Battle(
         fun stacks(ailment: Ailment) = ailments.count { it.ailment == ailment }
     }
 
-    val foeFighters: List<Fighter> = rows(foes.map { it.ranged }).let { back -> foes.mapIndexed { i, foe -> Fighter(Side.MONSTER, foe.body, foe.body.maxLife, i, back[i]) } }
+    /** Who of the pack is on the field: at most [FoeWindow.SIZE] at once, the strongest first, the rest stepping in as they fall. */
+    val window = FoeWindow(FoeWindow.order(foes.map { it.rarity }))
+    val foeFighters: List<Fighter> = foes.mapIndexed { i, foe -> Fighter(Side.MONSTER, foe.body, foe.body.maxLife, i, foe.ranged) }
+        .also { all -> window.field.forEachIndexed { place, i -> all[i].enter(place, 0.0) } }
     val heroFighter = Fighter(Side.HERO, hero.under(auras()), heroLife)
     /** The pet fighting beside the hero (3.5.0): it strikes the hero's target and draws blows meant for the hero. */
     val allyFighter: Fighter? = ally?.let { Fighter(Side.HERO, it.body, it.body.maxLife, ALLY) }
@@ -1044,7 +1052,7 @@ class Battle(
             delayed.removeAll { it.until <= time }
         }
         val share = me.body.lifeDegenShare
-        if (share > 0) me.life = max(0.0, me.life - me.body.maxLife * share * dt)
+        if (share > 0) me.life = max(0.0, me.life - max(me.body.maxLife * share, MIN_DOT / TICK) * dt)
         if (!me.alive) fell(me)
     }
 
@@ -1053,16 +1061,14 @@ class Battle(
         if (me.ailments.isEmpty()) return
         val wasAlive = me.alive
         me.ailments.filter { it.ailment.hurts }.forEach { active ->
-            val slice = active.magnitude * min(dt, active.until - (time - dt)).coerceAtLeast(0.0) * me.weakness() * me.body.dotTaken *
-                me.body.ailmentTaken(active.ailment)
+            val span = min(dt, active.until - (time - dt)).coerceAtLeast(0.0)
+            val rate = active.magnitude * me.weakness() * me.body.dotTaken * me.body.ailmentTaken(active.ailment)
+            // Whatever deals damage at all deals at least [MIN_DOT] a tick, however it is taken.
+            val slice = (if (active.magnitude > 0) max(rate, MIN_DOT / TICK) else rate) * span
             if (slice <= 0 || !me.alive || me.invulnerable) return@forEach
             val chaos = active.ailment == Ailment.POISONED || active.chaos
             if (chaos && me.body.chaosImmune) return@forEach
-            var rest = slice
-            if (me.barrier > 0) { val soaked = min(me.barrier, rest); me.barrier -= soaked; rest -= soaked }
-            val absorbed = if (chaos) 0.0 else min(me.shield, rest)
-            me.shield -= absorbed
-            me.life = max(0.0, me.life - (rest - absorbed))
+            wound(me, slice, chaos)
             me.ticking.merge(active.ailment, slice, Double::plus)
         }
         val expired = me.ailments.filter { it.until <= time }
@@ -1072,10 +1078,12 @@ class Battle(
             val since = me.tickedAt[ailment] ?: time.also { me.tickedAt[ailment] = it }
             val due = time - since >= TICK - 1e-9
             if (due || expired.any { it.ailment == ailment } || !me.alive) {
-                val amount = me.ticking.remove(ailment) ?: 0.0
+                var amount = me.ticking.remove(ailment) ?: 0.0
                 me.tickedAt[ailment] = time
                 if (amount > 0) {
                     val active = (me.ailments + expired).firstOrNull { it.ailment == ailment }
+                    // A tick cut short — the ailment ran out or the target fell mid-beat — still deals its [MIN_DOT].
+                    if (amount < MIN_DOT && me.alive && !me.invulnerable) { wound(me, MIN_DOT - amount, ailment == Ailment.POISONED || active?.chaos == true); amount = MIN_DOT }
                     val source = active?.source ?: me.side.other
                     val type = if (active?.chaos == true) DamageType.CHAOS else ruleOf[ailment]?.second
                     // 3.37.0: the tick names its ailment and carries how strong it runs and what grows it.
@@ -1096,6 +1104,15 @@ class Battle(
             }
         }
         if (wasAlive && !me.alive) fell(me, bySpell)
+    }
+
+    /** Damage over time on [me]: a barrier soaks it first, then the shield — unless it is [chaos] — then life. */
+    private fun wound(me: Fighter, amount: Double, chaos: Boolean) {
+        var rest = amount
+        if (me.barrier > 0) { val soaked = min(me.barrier, rest); me.barrier -= soaked; rest -= soaked }
+        val absorbed = if (chaos) 0.0 else min(me.shield, rest)
+        me.shield -= absorbed
+        me.life = max(0.0, me.life - (rest - absorbed))
     }
 
     /** Accuracy against evasion (3.35.0, server 1.34.0), as in PoE, under the target's ceiling. */
@@ -1481,7 +1498,8 @@ class Battle(
         fallenOrder += fighter.index
         if (focus == fighter.index) focus = null
         if (lastStriker == fighter.index) lastStriker = null
-        if (fighter.body.auras.isNotEmpty()) remake(heroFighter)
+        val stepped = stepIn()
+        if (fighter.body.auras.isNotEmpty() || stepped) remake(heroFighter)
         val hero = heroFighter
         if (!hero.alive) return
         val lifeBefore = hero.life
@@ -1943,8 +1961,14 @@ class Battle(
         fell(foe)
     }
 
+    /** The next in line take the places of the fallen; whether one brought an aura the hero now stands under. */
+    private fun stepIn(): Boolean = window.refill { !foeFighters[it].alive }
+        .onEach { foeFighters[it].enter(window.place(it), time) }
+        .any { foeFighters[it].body.auras.isNotEmpty() }
+
     private fun finished(): Boolean {
         if (outcome != null) return true
+        if (stepIn()) remake(heroFighter)
         // A power may answer the hero's fall (2.79.0) and stand them back up.
         if (!heroFighter.alive) powers.fire(PowerEvent.DEATH)
         when {
@@ -1981,29 +2005,19 @@ class Battle(
         const val STEP = 1.0 / 60
         /** How often an ailment's damage is written into the log. */
         const val TICK = 1.0
+        /** The least a tick of damage over time deals — a bleeding, a poison, a burning, the ground's degeneration — once it deals any. */
+        const val MIN_DOT = 1.0
         const val LUNGE = 0.16
         /** The pet's place in the fight: neither the hero's -1 nor a monster's. */
         const val ALLY = -2
-        /** How many foes a row holds. */
-        const val ROW = 3
+        /** How long a foe that stepped onto the field closes in before its first swing, and how much later each further place. */
+        const val ENTRY = 0.55
+        const val STAGGER = 0.13
         /** A time long gone (3.35.0): nothing happened «recently» at the fight's start. */
         const val NEVER = -1e9
         /** A buff worn the whole fight (3.35.0). */
         const val FOREVER = 1e9
 
-        /**
-         * The row of each foe, true for the back (3.28.0): by its kind — [ranged] behind, melee in front — and a row
-         * over [ROW] sends its last to the other while that one has room.
-         */
-        fun rows(ranged: List<Boolean>): List<Boolean> {
-            val back = ranged.toMutableList()
-            listOf(false, true).forEach { row ->
-                val over = back.count { it == row } - ROW
-                val room = ROW - back.count { it != row }
-                if (over > 0 && room > 0) back.indices.filter { back[it] == row }.takeLast(minOf(over, room)).forEach { back[it] = !row }
-            }
-            return back
-        }
         /** How deep a passive's answer may set off another's. */
         private const val MAX_DEPTH = 2
         /** A skill's element picked at random, and its ailment named by the element that struck (server 0.69.0). */

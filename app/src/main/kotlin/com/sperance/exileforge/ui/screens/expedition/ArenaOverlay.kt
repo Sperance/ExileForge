@@ -208,7 +208,7 @@ private const val HERO_CARD = -1
     val bounds = remember { mutableStateMapOf<Int, Rect>() }
     var origin by remember { mutableStateOf(Offset.Zero) }
     val names = remember(fight.foes.size, fight.leader, fight.stage) { fight.foes.associate { it.index to monsterTitle(it.monster.code) } }
-    val chosen = fight.focus ?: fight.target ?: fight.foes.firstOrNull { it.alive }?.index
+    val chosen = fight.focus ?: fight.target ?: fight.field.firstOrNull { it.alive }?.index
     // The tiles are larger while the fight stands still; a tap on any of them opens its window at any time (2.73.0).
     val large = fight.scouting
     // The skill whose page is open over the fight (3.24.0); the fight holds still while it is read.
@@ -218,19 +218,20 @@ private const val HERO_CARD = -1
         Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 10.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)) {
             PackHeader(fight, level)
-            val (back, front) = fight.foes.partition { it.back }
+            val (back, front) = fight.field.partition { it.back }
             listOf(back to "fight.row_back", front to "fight.row_front").filter { it.first.isNotEmpty() }.forEach { (row, title) ->
                 Caption(ui(title))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)) {
-                    row.forEach { foe ->
+                    // Keyed by the foe: one stepping into a fallen one's place is a card of its own.
+                    row.forEach { foe -> key(foe.index) {
                         FoeCard(foe, fight, time, chosen == foe.index && fight.scouting, track(foe.index).weight(1f, fill = false).widthIn(max = 120.dp), large) {
                             onCommand(RunCommand.Focus(foe.index))
                         }
-                    }
+                    } }
                 }
             }
             Box(Modifier.weight(1f).fillMaxWidth()) {
-                val shown = fight.foes.firstOrNull { it.index == chosen }
+                val shown = fight.field.firstOrNull { it.index == chosen }
                 if (fight.scouting && shown != null) ScoutPanel(shown, fight, level, rules, stance, s.index)
                 else FightFeed(s, fight, names, onCommand, onLogFilter)
             }
@@ -258,7 +259,7 @@ private const val HERO_CARD = -1
             maxLines = 1, overflow = TextOverflow.Ellipsis)
         val line = listOfNotNull(ui("expedition.monster_line", ui(leader.rarity.key()), level),
             ui("fight.stage", fight.stage, fight.stages).takeIf { fight.stages > 1 },
-            ui("expedition.pack_left", fight.foes.count { it.alive }, fight.foes.size).takeIf { fight.foes.size > 1 }).joinToString(" · ")
+            ui("expedition.pack_left", fight.standing, fight.foes.size).takeIf { fight.foes.size > 1 }).joinToString(" · ")
         Text(line, color = Muted, style = MaterialTheme.typography.labelSmall)
     }
     BugAction(Modifier.align(Alignment.TopEnd))

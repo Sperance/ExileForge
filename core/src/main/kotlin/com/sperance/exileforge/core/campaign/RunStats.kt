@@ -24,6 +24,14 @@ class RunStats {
         }
     }
 
+    /** Another run's figures summed into these: a Vaal zone's, back on the map it was entered from. */
+    fun add(other: RunSummary) {
+        seconds += other.seconds
+        other.dealt.forEach { (type, amount) -> dealt.merge(type, amount, Double::plus) }
+        other.bySkill.forEach { (skill, amount) -> bySkill.merge(skill, amount, Double::plus) }
+        other.taken.forEach { (type, amount) -> taken.merge(type, amount, Double::plus) }
+    }
+
     fun summary(kills: Int): RunSummary = RunSummary(dealt.toMap(), bySkill.toMap(), taken.toMap(), seconds, kills)
 
     companion object {

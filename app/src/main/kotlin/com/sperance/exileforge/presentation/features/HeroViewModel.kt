@@ -186,6 +186,8 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         check(state.value.ownsCharacter || state.value.isAdmin) { ui("hero.owner_only") }
         block(id)
         if (state.value.play.heroReadAt == 0L) readHero()
+        // The snapshot is drawn off the main thread: a run takes the new gear only once the hero it is read from is the new one.
+        drawn()
         expeditionViewModel.regear()
     } } }
 
@@ -257,7 +259,7 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         // The parts are decoded and the sheet added up off the main thread (3.55.0): a hero of a thousand items froze
         // the frame after every command. Snapshots land in order: one overtaken by a newer merge is dropped.
         val ticket = ++drawing
-        scope.launch {
+        draw = scope.launch {
             val view = withContext(Dispatchers.Default) {
                 val info = merged.hero
                 val items = merged.items
@@ -280,6 +282,14 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     /** The number of the latest merge whose drawing is under way; an older one landing later is dropped. */
     private var drawing = 0L
+
+    /** The drawing of the latest merge: a command waits for it before the run under way takes the hero's gear. */
+    @Volatile private var draw: Job? = null
+
+    /** Waits until the latest snapshot is drawn into the state; a drawing overtaken by a newer merge waits for that one. */
+    internal suspend fun drawn() {
+        while (true) { val job = draw ?: return; job.join(); if (draw === job) return }
+    }
 }
 
 /** How long a reading of the hero is trusted without asking again. */

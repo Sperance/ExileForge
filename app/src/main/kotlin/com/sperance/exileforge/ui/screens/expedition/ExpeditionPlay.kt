@@ -25,9 +25,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.campaign.*
-import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.mapTitle
-import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.ui.screens.expedition.scene.Palettes
@@ -83,13 +81,18 @@ import kotlinx.coroutines.delay
     var leaving by remember { mutableStateOf(false) }
     // A Vaal zone (2.65.0) has no way out but its guardian or a death: back does nothing on its map.
     val zone = VaalZones.isZone(run.zone)
+    // The map is over — the portal out, the exit, a fall once its fight's report is read: its summary stands before the camp,
+    // and closing it closes the run, once.
+    val summary = hud.phase == RunPhase.LEFT || hud.phase == RunPhase.CLEARED || hud.phase == RunPhase.DEAD && hud.report == null
+    var closed by remember(run) { mutableStateOf(false) }
+    val close: () -> Unit = { if (!closed) { closed = true; vm.closeRun() } }
     BackHandler { when {
+        summary -> close()
         hud.phase == RunPhase.GATE -> vm.runCommand(RunCommand.StepBack)
         hud.phase == RunPhase.CRYSTAL || hud.phase == RunPhase.ABYSS -> vm.runCommand(RunCommand.StepOff)
         hud.phase == RunPhase.MAP -> if (!zone) leaving = true
         else -> vm.runCommand(RunCommand.Leave)
     } }
-    LaunchedEffect(hud.phase) { if (hud.phase == RunPhase.LEFT) vm.closeRun() }
 
     Box(Modifier.fillMaxSize().background(Ink)) {
         ExpeditionScene(run, s.heroClass?.code, Modifier.fillMaxSize())
@@ -110,16 +113,14 @@ import kotlinx.coroutines.delay
             RunPhase.FIGHT -> hud.fight?.let { ArenaOverlay(s, hud, it, it.level.takeIf { level -> level > 0 } ?: run.zone.level, run.rules, run.stance, onCommand = vm::runCommand, onLogFilter = vm::logFilter) }
             // The fight is over: its report — the log, what it came to, and the loot of a victory.
             RunPhase.LOOT -> hud.report?.let { ReportScreen(s, vm, hud, it) { vm.runCommand(RunCommand.Continue) } }
+            // A fall: the fight's report first, then the map's summary (its «Вернуться» leaves the map).
             RunPhase.DEAD -> hud.report?.let { ReportScreen(s, vm, hud, it) { vm.runCommand(RunCommand.Continue) } }
-                ?: Ending(ui("expedition.dead"), ui(if (zone) "vaal.dead_hint" else "expedition.dead_hint"), LifeRed, hud,
-                    if (zone) ui("vaal.back") else ui("expedition.back_to_camp")) { vm.runCommand(RunCommand.Continue) }
-            RunPhase.CLEARED -> if (zone) Ending(ui("vaal.done"), ui("vaal.done_hint"), Vital, hud, ui("vaal.back")) { vm.runCommand(RunCommand.Continue) }
-                else if (hud.autoReward != null) AutoReport(s, vm, hud) { vm.runCommand(RunCommand.Continue) }
-                else Ending(ui("expedition.map_done"), ui("expedition.map_done_hint"), Vital, hud) { vm.runCommand(RunCommand.Continue) }
+                ?: MapSummary(s, vm, hud, onDone = close)
+            RunPhase.CLEARED -> MapSummary(s, vm, hud, onDone = close)
             RunPhase.GATE -> VaalGate(s, hud, run.zone.corrupted.takeIf { it.isNotBlank() }, onEnter = vm::enterVaal, onRefuse = vm::refuseVaal) { vm.runCommand(RunCommand.StepBack) }
             RunPhase.CRYSTAL -> hud.crystal?.let { CrystalSheet(s, it, onCommand = vm::runCommand) }
             RunPhase.ABYSS -> hud.abyss?.let { AbyssSheet(s, hud, it, onCommand = vm::runCommand) }
-            RunPhase.LEFT -> Unit
+            RunPhase.LEFT -> MapSummary(s, vm, hud, onDone = close)
         }
         hud.auto?.takeIf { hud.phase == RunPhase.MAP || hud.phase == RunPhase.FIGHT }?.let { auto ->
             AutoBar(auto, Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 8.dp)) { vm.runCommand(RunCommand.StopAuto) }
@@ -492,22 +493,6 @@ private const val MINIMAP_MAX = 60f
 
 // ==================== After ====================
 
-/** A run that ended — by death or by the exit — and what it brought all told. */
-@Composable private fun Ending(title: String, hint: String, accent: Color, hud: RunHud, done: String = ui("expedition.back_to_camp"), onDone: () -> Unit) {
-    Box(Modifier.fillMaxSize().background(Ink.copy(alpha = .72f)), contentAlignment = Alignment.Center) {
-        RunPanel(Modifier, accent) {
-            Text(title, color = accent, style = MaterialTheme.typography.headlineSmall)
-            Text(hint, color = Parchment, style = MaterialTheme.typography.bodyMedium)
-            MutedText(ui("expedition.summary", hud.kills, hud.gold, number(hud.experience)))
-            if (hud.awaiting > 0) Receiving()
-            DeathRecap(hud.recap)
-            RunFigures(hud.summary)
-            Journal(hud)
-            ForgeButton(onClick = onDone, modifier = Modifier.fillMaxWidth()) { Text(done) }
-        }
-    }
-}
-
 /** The autorun's plate (3.2.0): the wave under way of how many, and a stop that hands the run back to the stick. */
 @Composable private fun AutoBar(auto: AutoHud, modifier: Modifier, onStop: () -> Unit) {
     val shape = RoundedCornerShape(50)
@@ -516,28 +501,6 @@ private const val MINIMAP_MAX = 60f
         Text(ui("auto.wave", auto.wave, auto.waves), color = GoldBright, style = MaterialTheme.typography.labelLarge)
         ForgeTextButton(onClick = onStop) { Text(ui("auto.stop"), color = LifeRed) }
     }
-}
-
-/** The autorun is done (3.2.0): what it came to — the tally, and every stack and piece it brought, each piece as its whole card. */
-@Composable private fun AutoReport(s: ForgeState, vm: ForgeViewModel, hud: RunHud, onDone: () -> Unit) {
-    val reward = hud.autoReward ?: return
-    var looked by remember(reward) { mutableStateOf<ItemView?>(null) }
-    Column(Modifier.fillMaxSize().background(Ink.copy(alpha = .94f)).statusBarsPadding().navigationBarsPadding().padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(ui("auto.done"), color = Vital, style = MaterialTheme.typography.headlineSmall)
-        MutedText(ui("expedition.summary", hud.kills, hud.gold, number(hud.experience)))
-        Journal(hud)
-        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            RunFigures(hud.summary)
-            reward.items.forEach { (code, amount) -> Text(ui("expedition.loot_stack", itemTitle(code), amount), color = Parchment) }
-            // A piece opens its comparison and «Надеть» (3.24.0), as a fight's spoils do.
-            reward.equipment.forEach { instance -> s.view(instance)?.let { LootCard(s, it) { item -> looked = item } } }
-            if (hud.autoAwaiting > 0) Receiving()
-            else if (reward.items.isEmpty() && reward.equipment.isEmpty()) MutedText(ui("expedition.loot_nothing"))
-        }
-        ForgeButton(onClick = onDone, modifier = Modifier.fillMaxWidth().height(50.dp)) { Text(ui("expedition.back_to_camp")) }
-    }
-    looked?.let { item -> LootSheet(s, vm, item, onDismiss = { looked = null }) }
 }
 
 @Composable private fun RunPanel(modifier: Modifier, accent: Color = Gold, content: @Composable ColumnScope.() -> Unit) {

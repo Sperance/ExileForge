@@ -60,6 +60,8 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     private var saveJob: Job? = null
     /** The next send of its own: a quiet stretch after the last event, or the retry after a failed send. */
     private var sendJob: Job? = null
+    /** A loot-bearing event's send, [PROMPT_AFTER] after the first of a burst; later events join it, nothing postpones it. */
+    private var promptJob: Job? = null
     /** Sends failed in a row: each waits twice as long as the last before trying again. */
     private var failures = 0
     /** The autorun the run under way was started with; its Vaal zone runs by itself too. */
@@ -111,6 +113,7 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
                 return@task
             }
             if (state.value.play.heroReadAt == 0L) heroViewModel.readHero()
+            heroViewModel.drawn()
             begin(id, started, kept?.takeIf { it.first == started.id }?.second)
         }
     } }
@@ -137,13 +140,29 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     /** Vaal orbs at hand, the ones the journal has spent but the server not yet counted taken out. */
     private fun vaalOrbsFree(): Long = (state.value.hero?.bag?.get(Orb.VAAL_ORB.name) ?: 0L) - (runJournal?.pending?.count { it.kind == RunEventKind.CRYSTAL_VAAL } ?: 0)
 
-    /** One event more: the journal is written, and a checkpoint or a full batch sends it. */
+    /**
+     * One event more: the journal is written, and a checkpoint or a full batch sends it. A kill or a chest of a
+     * fight played by hand goes out at once: its loot is on the way while the fight still plays, and the
+     * report no longer opens on a batch that only then leaves. An autorun's waits for the quiet stretch — nobody
+     * waits on its report, and the server is not asked once a kill. A failing link keeps to the retry's pause.
+     */
     private fun recorded(event: RunEvent) {
         val j = runJournal ?: return
         runtime.mutable.update { it.copy(play = it.play.copy(runPending = j.pending.size)) }
         persist()
-        if (event.kind in CHECKPOINTS || j.pending.size >= BATCH) flushes.trySend(Unit) else if (failures == 0) sendIn(QUIET_AFTER)
+        when {
+            event.kind in CHECKPOINTS || j.pending.size >= BATCH -> flushes.trySend(Unit)
+            failures > 0 -> Unit
+            event.kind in LOOT && mutableRun.value?.hud?.value?.auto == null -> sendSoon()
+            else -> sendIn(QUIET_AFTER)
+        }
     }
+
+    /** A send [PROMPT_AFTER] from now, unless one is already due sooner: the foes a single blow fells leave as one batch. */
+    private fun sendSoon() { with(runtime) {
+        if (promptJob?.isActive == true) return
+        promptJob = scope.launch { delay(PROMPT_AFTER); flushes.trySend(Unit) }
+    } }
 
     /**
      * A send [after] a pause, replacing the one waiting. A plain kill used to wait for a full batch or the
@@ -329,7 +348,7 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         val zone = mutableRun.value
         if (outer != null && zone != null) {
             val share = if (zone.heroLife <= 0) VaalZones.WAKE_LIFE else zone.heroLife / zone.hero.maxLife
-            outer.send(RunCommand.Returned(outer.hero.maxLife * share, zone.pools))
+            outer.send(RunCommand.Returned(outer.hero.maxLife * share, zone.pools, zone.share()))
             parent = null
             mutableRun.value = outer
             flushes.trySend(Unit)
@@ -362,6 +381,10 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         const val FLUSH_EVERY = 20_000L
         /** A kill's batch goes out this long after the last event, if nothing sends it sooner. */
         const val QUIET_AFTER = 3_000L
+        /** Events that bring loot and are sent the moment they happen in a fight played by hand. */
+        val LOOT = setOf(RunEventKind.KILL, RunEventKind.CHEST)
+        /** How long a loot event waits for the rest of its burst: one frame's kills, one request. */
+        const val PROMPT_AFTER = 120L
         /** The first retry after a failed send, and how many times the pause doubles before the clock's. */
         const val RETRY_FIRST = 2_000L
         const val RETRY_DOUBLINGS = 3

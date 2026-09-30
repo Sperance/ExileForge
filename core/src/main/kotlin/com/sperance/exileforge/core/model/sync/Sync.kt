@@ -26,9 +26,9 @@ import kotlinx.serialization.json.JsonElement
  * The API revision this client is written against (server 1.30.0: run rewards rolled by the server alone and answered per event
  * by `campaign/events`, auction lots that expire; 23 - server 1.31.0: the powers' `STAGE_CLEAR`, `MOMENTUM`, `ECHO` and `RETALIATE`,
  * unique jewels refused twice with `ST_022`, `atlasNodes` in the run context; 24 - server 1.32.0: frenzy, power and endurance charges,
- * the pet's power events, slot powers and the sheet's worn counts, rules version 4); 30 - server 1.47.0: the trials; 31 - server 1.48.0: the rush key; 32 - server 1.49.0: fight tallies and the hero's statistics.
+ * the pet's power events, slot powers and the sheet's worn counts, rules version 4); 30 - server 1.47.0: the trials; 31 - server 1.48.0: the rush key; 32 - server 1.49.0: fight tallies and the hero's statistics; 33 - server 1.50.0: influenced maps and the fanned atlas.
  */
-const val API_REVISION = 32
+const val API_REVISION = 33
 
 /** `static/index.json` → `content`: the fingerprint of the whole world and of each of its chunks, by file name. */
 @Serializable data class ContentManifest(val hash: String = "", val chunks: Map<String, String> = emptyMap())

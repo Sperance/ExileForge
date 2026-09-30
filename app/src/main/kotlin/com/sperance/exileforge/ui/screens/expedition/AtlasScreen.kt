@@ -158,7 +158,8 @@ private val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
             val width = size.width.toFloat()
             val height = size.height.toFloat()
             val at = Placement(bounds, width, height, floor, margin, scale, Offset.Zero)(start)
-            pan = Offset(width / 2 - at.x, (height - floor) / 2 - at.y)
+            // The atlas grows upward from its start (3.52.0): the start sits low, the branches fan out above it.
+            pan = Offset(width / 2 - at.x, (height - floor) * START_DOWN - at.y)
             framed = true
         }
         .pointerInput(nodes) {
@@ -295,3 +296,6 @@ private fun effectLines(index: ContentIndex, line: Line): List<String> {
         "$sign${number(abs(value))}$unit ${statTitle(effect.stat).substringAfter(": ")}"
     }
 }
+
+/** How far down the view the atlas's start is framed: its branches rise above it. */
+private const val START_DOWN = .8f

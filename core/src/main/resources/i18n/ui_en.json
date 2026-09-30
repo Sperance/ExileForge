@@ -3235,5 +3235,11 @@
   "chronicle.counter.ORBS_FOUND": "Orbs found",
   "chronicle.counter.ESSENCES_FOUND": "Essences found",
   "chronicle.counter.MAPS_FOUND": "Maps found",
-  "chronicle.counter.MYTHICS": "Mythical items"
+  "chronicle.counter.MYTHICS": "Mythical items",
+  "enum.stat.ATLAS_MAP_INFLUENCE": "Atlas: Influenced Maps",
+  "enum.stat.ATLAS_INFLUENCE_ITEMS": "Atlas: Influenced Items",
+  "enum.stat.ATLAS_INFLUENCE_POWER": "Atlas: Influenced Map Power",
+  "enum.stat.ATLAS_INFLUENCE_SHAPER": "Atlas: Shaper Only",
+  "enum.stat.ATLAS_INFLUENCE_ELDER": "Atlas: Elder Only",
+  "expedition.launch_influence": "Influenced: {0} — monsters +{1}% life and damage, items with its influence ({2}%), the boss drops a rare influenced item"
 }

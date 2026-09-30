@@ -106,4 +106,4 @@ fun locError(code: String?, message: String, args: List<String> = emptyList()): 
 }
 
 /** A placeholder the arguments left unfilled: `{0}`, `{1}`... */
-private val HOLE = Regex("""\{\d+}""")
+private val HOLE = Regex("""\{\d+\}""")

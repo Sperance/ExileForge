@@ -189,10 +189,3 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
         Text(ui("expedition.loot_stack", itemTitle(code), amount), color = Parchment, style = MaterialTheme.typography.labelMedium)
     }
 }
-
-/** The time on the map as a clock: «4:07», «1:02:33». */
-private fun clock(seconds: Double): String {
-    val total = seconds.toLong().coerceAtLeast(0)
-    val (h, m, sec) = Triple(total / 3600, total % 3600 / 60, total % 60)
-    return if (h > 0) "%d:%02d:%02d".format(h, m, sec) else "%d:%02d".format(m, sec)
-}

@@ -21,9 +21,19 @@ admin_password = 'P32543254'
 player_login, player_password = 'test1', 'P123456'
 
 
-def request(path):
-    with urllib.request.urlopen('http://localhost:8080' + path, timeout=10) as response:
+def request(path, token=None, body=None):
+    headers = {'Content-Type': 'application/json'}
+    if token:
+        headers['Authorization'] = 'Bearer ' + token
+    data = json.dumps(body).encode() if body is not None else None
+    call = urllib.request.Request('http://localhost:8080' + path, data=data, headers=headers, method='POST' if data else 'GET')
+    with urllib.request.urlopen(call, timeout=10) as response:
         return json.load(response)['data']
+
+
+def admin_token():
+    # The route map is the administrator's since backend 1.46.0: sign in as the seeded one to read it.
+    return request('/api/v1/user/login', body={'login': 'admin', 'password': admin_password})['token']
 
 
 (root / 'build').mkdir(exist_ok=True)
@@ -40,7 +50,7 @@ with (root / 'build/client-server.log').open('w') as log:
                 raise RuntimeError('Backend exited; inspect client-server.log')
             try:
                 # Ktor prints the selector, so the method arrives as "(GET)".
-                routes = {''.join(c for c in route['method'] if c.isalpha()) + ' ' + route['path'] for route in request('/system/routes')}
+                routes = {''.join(c for c in route['method'] if c.isalpha()) + ' ' + route['path'] for route in request('/system/routes', token=admin_token())}
                 for route in ('GET /static/index.json', 'GET /content/{file}', 'POST /api/v1/user/login', 'GET /api/v1/hero/view',
                               'POST /api/v1/hero/orb', 'POST /api/v1/hero/campaign/start', 'POST /api/v1/hero/campaign/events',
                               'POST /api/v1/hero/skilltree/allocate', 'POST /api/v1/auctionlot/buy', 'POST /api/v1/redemptioncodes/redeem'):

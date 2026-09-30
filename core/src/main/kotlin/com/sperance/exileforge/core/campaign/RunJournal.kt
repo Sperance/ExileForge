@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.campaign
 
+import com.sperance.exileforge.rules.content.FightTally
 import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.rules.run.RunEvent
 import com.sperance.exileforge.rules.run.RunEventKind
@@ -51,9 +52,10 @@ class RunJournal(val runId: String, val heroId: String, val zone: String, events
     val closed: Boolean get() = events.any { it.kind == RunEventKind.FALL || it.kind == RunEventKind.LEAVE }
 
     /** Records one event with the next number; a closed journal records nothing more. */
-    fun record(kind: RunEventKind, i: Int = 0, m: Int = 0, index: Int = 0, depth: Int = 0, fallen: Boolean = false, vaal: Boolean = false): RunEvent? {
+    fun record(kind: RunEventKind, i: Int = 0, m: Int = 0, index: Int = 0, depth: Int = 0, fallen: Boolean = false, vaal: Boolean = false,
+               fight: FightTally? = null): RunEvent? {
         if (closed) return null
-        return RunEvent(end, kind, i, m, index, depth, fallen, vaal).also { events += it }
+        return RunEvent(end, kind, i, m, index, depth, fallen, vaal, fight).also { events += it }
     }
 
     /**

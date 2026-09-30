@@ -1,6 +1,8 @@
 package com.sperance.exileforge.core.campaign
 
+import com.sperance.exileforge.rules.content.FightTally
 import com.sperance.exileforge.rules.roll.RolledMonster
+import kotlin.math.roundToLong
 
 /**
  * A run's figures (3.47.0), gathered fight by fight from the combat's own events: what the hero dealt by damage
@@ -43,9 +45,41 @@ class RunStats {
             else -> ATTACK
         }
 
-        private fun split(event: CombatEvent): Map<DamageType, Double> =
+        internal fun split(event: CombatEvent): Map<DamageType, Double> =
             (event.trace as? HitTrace)?.types?.filter { it.dealt > 0 }?.associate { it.type to it.dealt }?.takeIf { it.isNotEmpty() }
                 ?: mapOf((event.type ?: DamageType.PHYSICAL) to event.damage)
+    }
+}
+
+/**
+ * One fight as the hero's statistics count it (3.51.0, server 1.49.0): damage by type dealt, taken and leeched, the
+ * outcomes of the hero's blows and of the foes', ailments laid, the seconds and the hardest blow. Sent with the journal's
+ * `FIGHT` event; the server only adds it up.
+ */
+object FightFigures {
+    /** The damage types in the order the chronicle lists them. */
+    val types: List<String> = DamageType.entries.map { it.name }
+
+    fun of(pack: List<PackHit>, duration: Double, boss: Boolean, won: Boolean): FightTally {
+        val events = pack.flatMap { it.events }.filter { !it.onSelf }
+        val mine = events.filter { it.actor == Side.HERO && (it.action == Action.ATTACK || it.action == Action.SKILL || it.action == Action.TICK || it.action == Action.REFLECT) }
+        val theirs = events.filter { it.actor == Side.MONSTER && (it.action == Action.ATTACK || it.action == Action.SKILL) }
+        val dealt = mutableMapOf<String, Double>()
+        mine.filter { it.damage > 0 }.forEach { event -> RunStats.split(event).forEach { (type, amount) -> dealt.merge(type.name, amount, Double::plus) } }
+        return FightTally(
+            dealt = dealt.mapValues { it.value.roundToLong() }.filterValues { it > 0 },
+            taken = events.filter { it.actor == Side.MONSTER && it.damage > 0 }.sumOf { it.damage }.roundToLong(),
+            healed = events.filter { it.actor == Side.HERO }.sumOf { it.healed }.roundToLong(),
+            hits = mine.count { it.action != Action.TICK && it.action != Action.REFLECT && (it.kind == HitKind.HIT || it.kind == HitKind.CRIT) },
+            crits = mine.count { it.kind == HitKind.CRIT },
+            misses = mine.count { it.kind == HitKind.EVADED },
+            blocked = theirs.count { it.kind == HitKind.BLOCKED },
+            evaded = theirs.count { it.kind == HitKind.EVADED },
+            ailments = mine.sumOf { it.inflicted.size },
+            millis = (duration * 1000).roundToLong(),
+            maxHit = mine.maxOfOrNull { it.damage }?.roundToLong() ?: 0,
+            boss = boss, won = won,
+        )
     }
 }
 

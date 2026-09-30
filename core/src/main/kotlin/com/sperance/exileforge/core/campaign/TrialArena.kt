@@ -2,6 +2,7 @@ package com.sperance.exileforge.core.campaign
 
 import com.sperance.exileforge.core.atlas.AtlasEffects
 import com.sperance.exileforge.rules.content.ContentIndex
+import com.sperance.exileforge.rules.content.FightTally
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.Pet
 import com.sperance.exileforge.rules.content.RushPlan
@@ -142,9 +143,9 @@ class TrialArena(
         }
     }
 
-    private fun record(kind: TrialEventKind, index: Int = 0, fallen: Boolean = false): Int {
+    private fun record(kind: TrialEventKind, index: Int = 0, fallen: Boolean = false, fight: FightTally? = null): Int {
         val n = next++
-        onEvent(TrialEvent(n, kind, index, fallen))
+        onEvent(TrialEvent(n, kind, index, fallen, fight))
         return n
     }
 
@@ -235,6 +236,7 @@ class TrialArena(
         stageTime += fight.duration
         if (outcome != Outcome.WIN) {
             stats.add(pack, stageTime)
+            record(TrialEventKind.FIGHT, fight = FightFigures.of(pack, stageTime, trial.kind == TrialKind.RUSH, won = false))
             battle = null
             finish(fallen = true)
             return
@@ -247,6 +249,7 @@ class TrialArena(
     /** A boss or a whole floor won: its event, the rush's breath between bosses, and the next one — or the end of the rush. */
     private fun won(pack: List<PackHit>) {
         stats.add(pack, stageTime)
+        record(TrialEventKind.FIGHT, fight = FightFigures.of(pack, stageTime, trial.kind == TrialKind.RUSH, won = true))
         cleared++
         when (trial.kind) {
             TrialKind.RUSH -> {

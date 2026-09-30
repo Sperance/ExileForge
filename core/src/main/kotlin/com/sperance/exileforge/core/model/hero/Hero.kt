@@ -136,3 +136,6 @@ data class HeroView(
     val money: Long = 0,
     val title: String = "",
 )
+
+/** The hero's statistics (server 1.49.0): key — value, only what is not zero; the keys are [com.sperance.exileforge.rules.content.Stat]'s. */
+@kotlinx.serialization.Serializable data class HeroStatsView(val values: Map<String, Long> = emptyMap())

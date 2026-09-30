@@ -42,6 +42,9 @@ class HeroClient internal constructor(private val http: Transport) {
         return if (answer is JsonNull) null else WireJson.decodeFromJsonElement(HeroSnapshot.serializer(), answer)
     }
 
+    /** Every figure of the hero's statistics (server 1.49.0): only what is not zero. */
+    suspend fun stats(heroId: String): com.sperance.exileforge.core.model.hero.HeroStatsView = http.get("$HERO/stats", heroQuery(heroId))
+
     /** The heroes one account owns — what the hero menu offers. */
     suspend fun heroesOf(userId: String): List<HeroSummary> {
         requireId(userId)

@@ -442,8 +442,9 @@ class ExpeditionRun(
     }
 
     /** One event of the journal, and the listener told. */
-    private fun record(kind: RunEventKind, i: Int = 0, m: Int = 0, index: Int = 0, depth: Int = 0, fallen: Boolean = false): RunEvent? =
-        journal.record(kind, i, m, index, depth, fallen, vaal)?.also(onRecorded)
+    private fun record(kind: RunEventKind, i: Int = 0, m: Int = 0, index: Int = 0, depth: Int = 0, fallen: Boolean = false,
+                       fight: com.sperance.exileforge.rules.content.FightTally? = null): RunEvent? =
+        journal.record(kind, i, m, index, depth, fallen, vaal, fight)?.also(onRecorded)
 
     /** A rewarding event recorded: what it brings comes with the server's answer, into the run's count, the autorun's and, [fought], the fight's report. */
     private fun rewarding(event: RunEvent?, fought: Boolean = false): RunEvent? = event?.also {
@@ -857,6 +858,8 @@ class ExpeditionRun(
             return
         }
         stats.add(pack, duration)
+        // The fight's figures (3.51.0): only the hero's statistics, before a fall closes the journal.
+        record(RunEventKind.FIGHT, fight = FightFigures.of(pack, duration, boss = fightAgents.any { it === world.boss }, won = outcome == Outcome.WIN))
         val leader = fightStrongest ?: fightLeader()
         val down = descent?.takeIf { abyssFight }
         when (outcome) {

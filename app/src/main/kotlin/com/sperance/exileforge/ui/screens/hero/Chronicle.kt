@@ -12,6 +12,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.clickable
+import com.sperance.exileforge.core.campaign.FightFigures
+import com.sperance.exileforge.core.display.itemTitle
+import com.sperance.exileforge.core.display.jobTitle
+import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.locOr
@@ -20,6 +25,7 @@ import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.rules.content.Achievement
 import com.sperance.exileforge.rules.content.Counter
+import com.sperance.exileforge.rules.content.Stat
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.theme.*
 
@@ -59,6 +65,8 @@ private val Medals = listOf(Color(0xFFC08457), Color(0xFFC9D1D9), Color(0xFFFFD1
     val hero = s.hero ?: return
     val achievements = s.index?.achievements ?: return
     val titles = achievements.titles(values)
+    // The statistics (3.51.0) are read apart, when the sheet opens: hundreds of figures ride with no hero snapshot.
+    val stats by produceState<Map<String, Long>?>(null, hero.id) { value = vm.heroStats(hero.id) }
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -79,15 +87,63 @@ private val Medals = listOf(Color(0xFFC08457), Color(0xFFC9D1D9), Color(0xFFFFD1
                 val counters = all.filter { (values[it] ?: 0L) > 0L }
                 if (counters.isEmpty()) return@forEach
                 Engraved(ui("chronicle.section.$section"))
-                counters.forEach { counter ->
-                    Row(Modifier.fillMaxWidth()) {
-                        Text(ui("chronicle.counter.$counter"), color = Parchment, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-                        Text(number((values[counter] ?: 0L).toDouble()), color = GoldBright, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
-                    }
-                }
+                counters.forEach { counter -> Figure(ui("chronicle.counter.$counter"), number((values[counter] ?: 0L).toDouble())) }
+            }
+            stats?.let { StatSections(it) }
+        }
+    }
+}
+
+/** One line of the chronicle: what, and how much. */
+@Composable private fun Figure(label: String, value: String, indent: Boolean = false) {
+    Row(Modifier.fillMaxWidth().padding(start = if (indent) 14.dp else 0.dp)) {
+        Text(label, color = if (indent) Muted else Parchment, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+        Text(value, color = GoldBright, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+    }
+}
+
+/**
+ * The hero's statistics (3.51.0, server 1.49.0): the fights' figures — what the server was told of every fight — and the
+ * breakdowns by kind, each a group folded under its total that a tap opens. Nothing that is zero is shown, at either level.
+ */
+@Composable private fun StatSections(stats: Map<String, Long>) {
+    val combat = Stat.COMBAT.filter { (stats[it] ?: 0L) > 0L }
+    if (combat.isNotEmpty()) {
+        Engraved(ui("chronicle.section.FIGHT"))
+        combat.forEach { key ->
+            val value = stats.getValue(key)
+            Figure(ui("stats.$key"), if (key in SECONDS) clock(value) else number(value.toDouble()))
+            if (key == Stat.DEALT) FightFigures.types.forEach { type ->
+                stats[Stat.dealt(type)]?.takeIf { it > 0 }?.let { Figure(ui("enum.damage.$type").replaceFirstChar { c -> c.uppercase() }, number(it.toDouble()), indent = true) }
             }
         }
     }
+    Stat.GROUPS.forEach { group ->
+        val prefix = "$group:"
+        val entries = stats.filter { (key, value) -> key.startsWith(prefix) && value > 0 }.map { (key, value) -> key.removePrefix(prefix) to value }
+            .sortedByDescending { it.second }
+        if (entries.isEmpty()) return@forEach
+        var open by remember(group) { mutableStateOf(false) }
+        Row(Modifier.fillMaxWidth().clickable { open = !open }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text((if (open) "▾ " else "▸ ") + ui("stats.group.$group", entries.size), color = GoldBright, style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.weight(1f))
+            Text(number(entries.sumOf { it.second }.toDouble()), color = GoldBright, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+        }
+        if (open) entries.forEach { (code, value) ->
+            val name = when (group) { Stat.KILL, Stat.BOSS -> monsterTitle(code); Stat.JOB -> jobTitle(code); else -> itemTitle(code) }
+            Figure(name, number(value.toDouble()), indent = true)
+        }
+    }
+}
+
+private val SECONDS = setOf(Stat.FIGHT_SECONDS, Stat.FIGHT_LONGEST, Stat.BOSS_FASTEST)
+
+/** Seconds as `h:mm:ss`, or `m:ss` under an hour. */
+private fun clock(seconds: Long): String {
+    val h = seconds / 3600
+    val m = seconds % 3600 / 60
+    val s = (seconds % 60).toString().padStart(2, '0')
+    return if (h > 0) "$h:${m.toString().padStart(2, '0')}:$s" else "$m:$s"
 }
 
 /** An achievement: its name, what the next step asks and how far it is, and a medal for each step taken. */

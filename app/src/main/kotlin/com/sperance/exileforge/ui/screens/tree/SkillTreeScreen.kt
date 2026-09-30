@@ -22,6 +22,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
@@ -52,6 +53,7 @@ import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.content.SkillNodeType
 import com.sperance.exileforge.rules.content.Slot
+import com.sperance.exileforge.rules.content.TreeAllocation
 import com.sperance.exileforge.rules.content.TreeNode
 import com.sperance.exileforge.rules.sheet.StatContribution
 import com.sperance.exileforge.ui.components.*
@@ -72,7 +74,7 @@ import kotlin.math.sin
         Spacer(Modifier.height(12.dp))
         ScreenHeader(ui("tree.title"),
             ui("tree.node_count", s.index?.content?.tree?.nodes?.size ?: 0), ForgeGlyphs.Constellation, guide = Guide.TREE)
-        SkillTreePanel(s, vm::selectNode, vm::allocateNode, vm::refundNode, vm::resetTree, vm::nodeQuery,
+        SkillTreePanel(s, vm::selectNode, vm::allocateNode, vm::refundNode, vm::resetTree, vm::nodeQuery, onPath = vm::allocatePath,
             onSocket = vm::socketJewel, onUnsocket = vm::unsocketJewel, onRechoose = vm::rechooseNode, modifier = Modifier.weight(1f))
         Spacer(Modifier.height(12.dp))
     }
@@ -93,7 +95,7 @@ import kotlin.math.sin
 @Composable fun SkillTreePanel(s: ForgeState, onSelect: (String) -> Unit, onAllocate: (String, Int?) -> Unit,
     onRefund: (String) -> Unit, onReset: () -> Unit, onQuery: (String) -> Unit = {},
     onSocket: (String, String) -> Unit = { _, _ -> }, onUnsocket: (String) -> Unit = {},
-    onRechoose: (String, Int) -> Unit = { _, _ -> },
+    onRechoose: (String, Int) -> Unit = { _, _ -> }, onPath: (String, Int?) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier) {
     val hero = s.hero
     val index = s.index
@@ -120,6 +122,11 @@ import kotlin.math.sin
     // nothing is taken yet. The server still decides — this only says where to look on 122 nodes.
     val heroClass = s.heroClass
     val reachable = remember(index, heroClass, taken) { reachableFrom(index, heroClass, taken) }
+    // The way to a far node (3.39.0): the rules' shortest path from what is taken, drawn dashed and taken at once.
+    val selected = s.play.selectedNode
+    val path = remember(index, heroClass, taken, selected) {
+        heroClass?.startNode?.takeIf { taken.isNotEmpty() && selected !in reachable }?.let { TreeAllocation.path(index.tree, taken, it, selected) }
+    }
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(ui("tree.points", tree.available, tree.total),
@@ -128,7 +135,7 @@ import kotlin.math.sin
         }
         // A tap opens a small window about that one node, so the map stays in sight; everything
         // about the tree as a whole lives behind "Подробно".
-        TreeCanvas(nodes, s.play.selectedNode, taken, reachable, Modifier.weight(1f)) { code -> onSelect(code); nodeOpen = true }
+        TreeCanvas(nodes, selected, taken, reachable, path.orEmpty(), Modifier.weight(1f)) { code -> onSelect(code); nodeOpen = true }
         MutedText(ui("tree.gesture_hint"))
     }
     // The small window about the chosen node: what it gives, and the one command over it. It is
@@ -136,8 +143,9 @@ import kotlin.math.sin
     if (nodeOpen) ModalBottomSheet(onDismissRequest = { nodeOpen = false }, containerColor = Panel) {
         Column(Modifier.fillMaxWidth().heightIn(max = 520.dp).verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            NodeDetails(s, index, index.tree.node(s.play.selectedNode), taken, reachable, enabled,
+            NodeDetails(s, index, index.tree.node(selected), taken, reachable, enabled, path, tree.available,
                 onAllocate = { code, choice -> nodeOpen = false; onAllocate(code, choice) },
+                onPath = { code, choice -> nodeOpen = false; onPath(code, choice) },
                 onRefund = { nodeOpen = false; onRefund(it) },
                 onRechoose = { code, choice -> nodeOpen = false; onRechoose(code, choice) },
                 onSocket = { instance, code -> nodeOpen = false; onSocket(instance, code) },
@@ -228,7 +236,7 @@ private fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Set
  * pan is held to the tree's own half-extent, so a stray flick cannot drag the whole graph away and
  * leave an empty rectangle with no way back but the reset.
  */
-@Composable private fun TreeCanvas(nodes: List<TreeNode>, selected: String, taken: Set<String>, reachable: Set<String>,
+@Composable private fun TreeCanvas(nodes: List<TreeNode>, selected: String, taken: Set<String>, reachable: Set<String>, path: List<String>,
     modifier: Modifier = Modifier, onSelect: (String) -> Unit) {
     val byCode = remember(nodes) { nodes.associateBy { it.code } }
     val bounds = remember(nodes) { Bounds.of(nodes) }
@@ -239,7 +247,7 @@ private fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Set
         Canvas(Modifier.fillMaxSize().clipToBounds()
             .pointerInput(nodes) {
                 detectTransformGestures { _, drag, zoom, _ ->
-                    scale = (scale * zoom).coerceIn(.4f, 8f)
+                    scale = (scale * zoom).coerceIn(.4f, MAX_ZOOM)
                     val limit = panLimit(bounds, size.width.toFloat(), size.height.toFloat(), scale)
                     pan = Offset((pan.x + drag.x).coerceIn(-limit.x, limit.x), (pan.y + drag.y).coerceIn(-limit.y, limit.y))
                 }
@@ -267,8 +275,23 @@ private fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Set
                         from, place(other, bounds, width, height, scale, pan), (if (both) 3f else 2f) * scale.coerceIn(.6f, 1.6f))
                 }
             }
+            if (path.isNotEmpty()) {
+                // The dashed way to the chosen node: from the taken node it leaves, through every step it would take.
+                val anchor = byCode[path.first()]?.connections.orEmpty().plus(nodes.filter { path.first() in it.connections }.map { it.code })
+                    .firstOrNull { it in taken && byCode[it]?.type != SkillNodeType.MASTERY }
+                val points = (listOfNotNull(anchor) + path).mapNotNull { byCode[it] }.map { place(it, bounds, width, height, scale, pan) }
+                val dash = PathEffect.dashPathEffect(floatArrayOf(10f, 7f).map { it * scale.coerceIn(.6f, 1.6f) }.toFloatArray())
+                points.zipWithNext { a, b -> drawLine(GoldBright, a, b, 3f * scale.coerceIn(.6f, 1.6f), pathEffect = dash) }
+            }
             nodes.forEach { node -> medallion(node, place(node, bounds, width, height, scale, pan), scale, node.code in taken,
-                node.code in reachable, node.code == selected) }
+                node.code in reachable || node.code in path, node.code == selected) }
+            // Names at zoom (3.39.0): a notable's and a keystone's title under it, once the map is close enough to read.
+            if (scale >= LABEL_ZOOM) nodes.filter { it.type == SkillNodeType.NOTABLE || it.type == SkillNodeType.KEYSTONE }.forEach { node ->
+                val at = place(node, bounds, width, height, scale, pan)
+                if (at.x !in -80f..width + 80f || at.y !in -40f..height + 40f) return@forEach
+                val layout = labels.measure(nodeTitle(node.code), TextStyle(color = Parchment.copy(alpha = .85f), fontSize = 10.sp))
+                drawText(layout, topLeft = at + Offset(-layout.size.width / 2f, radius(node) * scale.coerceIn(.5f, 2.2f) + 3f))
+            }
         }
         Row(Modifier.align(Alignment.BottomStart).padding(8.dp), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -285,7 +308,7 @@ private fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Set
  * the command there is to put one in or take it out.
  */
 @Composable private fun NodeDetails(s: ForgeState, index: ContentIndex, node: TreeNode?, taken: Set<String>, reachable: Set<String>, enabled: Boolean,
-    onAllocate: (String, Int?) -> Unit, onRefund: (String) -> Unit,
+    path: List<String>?, available: Int, onAllocate: (String, Int?) -> Unit, onPath: (String, Int?) -> Unit, onRefund: (String) -> Unit,
     onSocket: (String, String) -> Unit = { _, _ -> }, onUnsocket: (String) -> Unit = {}, onRechoose: (String, Int) -> Unit = { _, _ -> }) {
     if (node == null) {
         InfoCard(ui("tree.no_selection"), ui("tree.no_selection_hint"))
@@ -316,7 +339,7 @@ private fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Set
                 style = MaterialTheme.typography.labelMedium)
             node.options.forEachIndexed { at, option ->
                 val on = when { picked != null -> at == picked; allocated -> at == chosen; else -> false }
-                OptionCard(on, enabled = (!allocated && node.code in reachable) || (rechoosable && enabled), onClick = { picked = at }) {
+                OptionCard(on, enabled = (!allocated && (node.code in reachable || path != null)) || (rechoosable && enabled), onClick = { picked = at }) {
                     option.forEach { line -> ModifierLine(index, line) }
                 }
             }
@@ -339,9 +362,17 @@ private fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Set
         OrnateDivider()
         if (allocated) ForgeOutlinedButton(enabled = enabled && node.type != SkillNodeType.START, onClick = { onRefund(node.code) }, modifier = Modifier.fillMaxWidth()) {
             Text(ui("tree.refund"))
-        } else ForgeButton(enabled = enabled && (!choosing || picked != null), onClick = { onAllocate(node.code, picked) }, modifier = Modifier.fillMaxWidth()) {
+        } else if (path != null) {
+            // A far node (3.39.0): the whole way at once, for the sum of its steps; short of points, the button says so.
+            val cost = path.sumOf { index.tree.node(it)?.cost ?: 0 }
+            PropertyRow(ui("tree.path"), ui("tree.path_value", path.size, cost), Glyph.TREE)
+            ForgeButton(enabled = enabled && cost <= available && (!choosing || picked != null), onClick = { onPath(node.code, picked) },
+                modifier = Modifier.fillMaxWidth()) { Text(ui("tree.path_take", cost)) }
+            if (cost > available) MutedText(ui("tree.path_short", cost, available))
+        } else if (node.code in reachable || taken.isEmpty()) ForgeButton(enabled = enabled && (!choosing || picked != null),
+            onClick = { onAllocate(node.code, picked) }, modifier = Modifier.fillMaxWidth()) {
             Text(ui("tree.allocate"))
-        }
+        } else MutedText(ui("tree.path_none"))
         if (node.type == SkillNodeType.START) Text(ui("tree.start_note"), color = Muted, style = MaterialTheme.typography.bodySmall)
     }
 }
@@ -467,6 +498,9 @@ private data class Bounds(val minX: Float, val maxX: Float, val minY: Float, val
 }
 
 private const val MARGIN = 28f
+private const val MAX_ZOOM = 10f
+/** From this zoom a notable's and a keystone's name is written under it. */
+private const val LABEL_ZOOM = 2.6f
 
 /** How many pixels of the seeded graph one pixel of canvas is worth, before the zoom. */
 private fun fitFactor(bounds: Bounds, width: Float, height: Float): Float =

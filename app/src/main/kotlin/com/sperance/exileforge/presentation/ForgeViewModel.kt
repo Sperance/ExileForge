@@ -90,6 +90,7 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     fun forgeSection(section: ForgeSection) = runtime.heroViewModel.forgeSection(section)
     fun selectNode(code: String) = runtime.heroViewModel.selectNode(code)
     fun allocateNode(code: String, choice: Int? = null) = runtime.heroViewModel.allocateNode(code, choice)
+    fun allocatePath(code: String, choice: Int? = null) = runtime.heroViewModel.allocatePath(code, choice)
     fun refundNode(code: String) = runtime.heroViewModel.refundNode(code)
     fun rechooseNode(code: String, choice: Int) = runtime.heroViewModel.rechooseNode(code, choice)
     fun resetTree() = runtime.heroViewModel.resetTree()

@@ -49,6 +49,7 @@ data class ApiCapabilities(val routes: Set<String>) {
             "POST" to "/api/v1/hero/equip", "POST" to "/api/v1/hero/orb", "POST" to "/api/v1/hero/sell",
             "GET" to "/api/v1/hero/bench", "POST" to "/api/v1/hero/craft",
             "GET" to "/api/v1/hero/skilltree/state", "POST" to "/api/v1/hero/skilltree/allocate",
+            "POST" to "/api/v1/hero/skilltree/path",
             "GET" to "/api/v1/hero/atlas/state", "POST" to "/api/v1/hero/skills/learn",
             "GET" to "/api/v1/hero/crafts", "POST" to "/api/v1/hero/crafts/start",
             "GET" to "/api/v1/hero/merchant", "POST" to "/api/v1/hero/merchant/buy", "POST" to "/api/v1/hero/merchant/buyOrb",

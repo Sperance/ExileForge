@@ -144,6 +144,7 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     /** Skill tree: take a node, give it back, or drop the whole tree. Every rule is the server's. */
     fun allocateNode(code: String, choice: Int? = null) { with(runtime) { heroCommand { id -> api.tree.allocate(id, code, choice) } } }
+    fun allocatePath(code: String, choice: Int? = null) { with(runtime) { heroCommand { id -> api.tree.path(id, code, choice) } } }
     fun refundNode(code: String) { with(runtime) { heroCommand { id -> api.tree.refund(id, code) } } }
     fun rechooseNode(code: String, choice: Int) { with(runtime) { heroCommand { id -> api.tree.rechoose(id, code, choice) } } }
     fun resetTree() { with(runtime) { heroCommand { id -> api.tree.reset(id) } } }

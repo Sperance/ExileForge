@@ -27,8 +27,8 @@ import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * «Испытания» (3.49.0): the tab of the expedition beside the world map. The keys at hand — crest fragments and tower
- * seals — the tower with its record and the floor the next entry starts at, and every region: the rush of a region is
+ * «Испытания» (3.49.0): the tab of the expedition beside the world map. The keys at hand — crest fragments, the rush keys
+ * forged of them (3.50.0) and tower seals — the tower with its record and the floor the next entry starts at, and every region: the rush of a region is
  * open once each of its zones is cleared. A trial the app lost mid-fight is ended here, what it brought kept.
  */
 @Composable fun TrialsBoard(s: ForgeState, vm: ForgeViewModel, modifier: Modifier = Modifier) {
@@ -37,11 +37,13 @@ import com.sperance.exileforge.ui.theme.*
     val hero = s.hero ?: return
     val trials = hero.campaign.trials
     val crests = hero.bag[TrialRules.CREST] ?: 0L
+    val keys = hero.bag[TrialRules.KEY] ?: 0L
     val seals = hero.bag[TrialRules.SEAL] ?: 0L
     val idle = !s.busy
     Column(modifier.verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Key(TrialRules.CREST, crests)
+            Key(TrialRules.KEY, keys)
             Key(TrialRules.SEAL, seals)
         }
         trials.run?.let { open ->
@@ -66,6 +68,9 @@ import com.sperance.exileforge.ui.theme.*
         Plate(GoldBright) {
             Text(ui("trials.rush_title"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
             MutedText(ui("trials.rush_hint", rules.rush.key, rules.rush.life.toInt(), rules.rush.seconds.toInt()))
+            ForgeOutlinedButton(onClick = vm::forgeRushKey, enabled = idle && crests >= rules.rush.key, modifier = Modifier.fillMaxWidth()) {
+                Text(ui("trials.key_forge", rules.rush.key))
+            }
         }
         val cleared = hero.campaign.cleared
         index.campaign.regions.forEach { region ->
@@ -80,7 +85,7 @@ import com.sperance.exileforge.ui.theme.*
                             ui("trials.rush_cleared").takeIf { region.code in trials.rushCleared },
                             ui("trials.rush_locked", region.zones.count { it.code in cleared }, region.zones.size).takeIf { !open }).joinToString(" · "))
                     }
-                    ForgeOutlinedButton(onClick = { vm.enterRush(region.code) }, enabled = idle && open && crests >= rules.rush.key && trials.run == null) {
+                    ForgeOutlinedButton(onClick = { vm.enterRush(region.code) }, enabled = idle && open && keys >= 1 && trials.run == null) {
                         Text(ui("trials.rush_enter"))
                     }
                 }

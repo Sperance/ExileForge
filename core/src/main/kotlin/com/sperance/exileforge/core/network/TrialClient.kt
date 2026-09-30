@@ -15,8 +15,11 @@ private const val TRIALS = "api/v1/hero/trials"
  * the server, each number once, and the answer names what each event brought.
  */
 class TrialClient internal constructor(private val http: Transport) {
-    /** Enters the rush of [region]: five crest fragments are spent. Never retried: a repeat spends another key. */
+    /** Enters the rush of [region]: a rush key is spent. Never retried: a repeat spends another key. */
     suspend fun rush(heroId: String, region: String): TrialStart = http.post("$TRIALS/rush", heroQuery(heroId, "region" to region))
+
+    /** Forges a rush key from five crest fragments (server 1.48.0); the hero's bag comes back with it. */
+    suspend fun forgeKey(heroId: String): Map<String, Long> = http.post("$TRIALS/key", heroQuery(heroId))
 
     /** Enters the tower from its last checkpoint: a tower seal is spent. */
     suspend fun tower(heroId: String): TrialStart = http.post("$TRIALS/tower", heroQuery(heroId))

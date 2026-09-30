@@ -50,6 +50,7 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() 
     val trial = runtime.trialViewModel.arena
     fun enterRush(region: String) = runtime.trialViewModel.rush(region)
     fun enterTower() = runtime.trialViewModel.tower()
+    fun forgeRushKey() = runtime.trialViewModel.forgeKey()
     fun abandonTrial() = runtime.trialViewModel.abandon()
     fun trialCommand(command: RunCommand) = runtime.trialViewModel.send(command)
     fun closeTrial() = runtime.trialViewModel.close()

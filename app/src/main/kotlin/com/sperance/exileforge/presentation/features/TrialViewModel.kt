@@ -42,8 +42,18 @@ class TrialViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     init { runtime.scope.launch { for (signal in sends) flush() } }
 
-    /** «Раш»: five crest fragments are spent on the rush of [region]. */
+    /** «Раш»: a rush key is spent on the rush of [region]. */
     fun rush(region: String) = enter { runtime.api.trials.rush(it, region) }
+
+    /** «Собрать ключ» (3.50.0): five crest fragments become a rush key. */
+    fun forgeKey() { with(runtime) {
+        if (state.value.busy) return
+        task(writing = true, touches = setOf(Reads.HERO)) {
+            api.trials.forgeKey(heroId)
+            toast(ui("trials.key_forged"))
+            if (state.value.play.heroReadAt == 0L) heroViewModel.readHero()
+        }
+    } }
 
     /** «Башня»: a seal is spent, and the tower begins at the last checkpoint. */
     fun tower() = enter { runtime.api.trials.tower(it) }

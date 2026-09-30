@@ -3188,7 +3188,7 @@
   "trials.tower_record": "Record: floor {0} · entry at floor {1}",
   "trials.tower_enter": "Enter — {0}",
   "trials.rush_title": "Boss Rush",
-  "trials.rush_hint": "Every boss of a cleared region in a row, at your level. The key is {0} crest fragments. Between bosses +{1}% life and a flask charge; a death ends the rush, the chest counts the bosses felled; faster than {2} s a boss earns a bonus",
+  "trials.rush_hint": "Every boss of a cleared region in a row, at your level. The entry is a rush key, forged from {0} crest fragments. Between bosses +{1}% life and a flask charge; a death ends the rush, the chest counts the bosses felled; faster than {2} s a boss earns a bonus",
   "trials.rush_bosses": "Bosses: {0}",
   "trials.rush_best": "best: {0}",
   "trials.rush_cleared": "cleared",
@@ -3202,5 +3202,7 @@
   "trials.rush_result": "Bosses slain: {0} of {1} · time {2}",
   "trials.tower_result": "Floors cleared: {0} · time {1}",
   "chronicle.counter.TOWER_FLOOR": "Tower floor (record)",
-  "chronicle.counter.RUSH_CLEARS": "Regions cleared in the rush"
+  "chronicle.counter.RUSH_CLEARS": "Regions cleared in the rush",
+  "trials.key_forge": "Forge a rush key — {0} fragments",
+  "trials.key_forged": "Rush key forged"
 }

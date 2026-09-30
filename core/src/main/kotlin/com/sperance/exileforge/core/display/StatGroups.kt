@@ -16,19 +16,19 @@ enum class StatGroup {
 
     companion object {
         private val reserve = setOf("STOCK_HEALTH", "STOCK_MANA", "STOCK_ENERGY_SHIELD", "STOCK_ENERGY", "STOCK_HEALTH_REGEN", "STOCK_MANA_REGEN",
-            "STOCK_ENERGY_REGEN", "STOCK_HEALTH_ON_KILL", "STOCK_HEALTH_ON_HIT")
+            "STOCK_ENERGY_REGEN", "STOCK_ENERGY_REGEN_PERCENT", "STOCK_HEALTH_ON_KILL", "STOCK_HEALTH_ON_HIT")
         private val defence = setOf("STOCK_ARMOR", "STOCK_EVASION", "STOCK_BLOCK_CHANCE", "STOCK_STUN_THRESHOLD", "STOCK_SPELL_BLOCK",
             "STOCK_PHYSICAL_REDUCTION", "STOCK_AVOID_STUN", "STOCK_DAMAGE_TAKEN", "STOCK_PHYSICAL_TAKEN", "STOCK_ELEMENTAL_TAKEN", "STOCK_CHAOS_TAKEN",
             "STOCK_RECOVERY_RATE", "STOCK_SHIELD_RECHARGE", "STOCK_THORNS", "STOCK_REFLECT")
         private val ailment = setOf("STOCK_IGNITE_CHANCE", "STOCK_FREEZE_CHANCE", "STOCK_SHOCK_CHANCE", "STOCK_POISON_CHANCE", "STOCK_BLEED_CHANCE",
             "STOCK_BURNING_DAMAGE", "STOCK_POISON_DAMAGE", "STOCK_BLEED_DAMAGE", "STOCK_AILMENT_DURATION")
-        private val attribute = setOf("STOCK_STRENGTH", "STOCK_AGILITY", "STOCK_INTELLECT", "STOCK_CONSTITUTION")
-        private val attack = setOf("STOCK_CAST_SPEED", "STOCK_SPELL_CRITICAL_CHANCE", "STOCK_SPELL_CRITICAL_MULTIPLIER")
+        private val attribute = setOf("STOCK_STRENGTH", "STOCK_AGILITY", "STOCK_INTELLECT", "STOCK_ALL_ATTRIBUTES")
+        private val attack = setOf("STOCK_ELEMENTAL_DAMAGE", "STOCK_CAST_SPEED", "STOCK_SPELL_CRITICAL_CHANCE", "STOCK_SPELL_CRITICAL_MULTIPLIER")
 
         fun of(stat: String): StatGroup = when {
             stat in reserve -> RESERVE
             stat in defence -> DEFENCE
-            stat.startsWith("STOCK_RESIST_") -> RESISTANCE
+            stat.startsWith("STOCK_RESIST_") || stat == "STOCK_ALL_RESISTANCES" -> RESISTANCE
             stat in ailment || stat.startsWith("STOCK_AVOID_") || stat.endsWith("_DURATION_ON_SELF") || stat.endsWith("_DURATION") -> AILMENT
             stat in attribute -> ATTRIBUTE
             stat.startsWith("STOCK_ATTACK_") || stat.startsWith("STOCK_CRITICAL_") || stat.startsWith("STOCK_LEECH_") || stat in attack ||

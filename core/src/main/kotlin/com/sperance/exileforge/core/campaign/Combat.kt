@@ -143,6 +143,8 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
     val immuneStun: Boolean get() = stat("STOCK_IMMUNE_STUN") > 0
     /** Life back a second as a share of the maximum (server 0.69.0), beside the flat regeneration. */
     val lifeRegenShare = max(0.0, stat("STOCK_LIFE_REGEN_PERCENT")) / 100
+    /** Energy shield back a second as a share of the maximum (server 1.58.0), beside the flat regeneration. */
+    val shieldRegenShare = max(0.0, stat("STOCK_ENERGY_REGEN_PERCENT")) / 100
     /** Life lost a second as a share of the maximum (3.4.0). */
     val lifeDegenShare = max(0.0, stat("STOCK_LIFE_DEGEN_PERCENT")) / 100
     val leechMana = max(0.0, stat("STOCK_LEECH_MANA")) / 100
@@ -934,7 +936,7 @@ class Battle(
         if (!me.alive) return
         me.life = min(me.body.maxLife, me.life + (me.body.lifeRegen + me.body.maxLife * me.body.lifeRegenShare) * me.body.recoveryRate * dt)
         val recharge = if (time - me.lastHit >= rules.shield.rechargeDelay / me.body.rechargeStart) me.body.maxShield * rules.shield.rechargePerSecond / 100 * me.body.shieldRecharge else 0.0
-        me.shield = min(me.body.maxShield, me.shield + (me.body.shieldRegen * me.body.recoveryRate + recharge) * dt)
+        me.shield = min(me.body.maxShield, me.shield + ((me.body.shieldRegen + me.body.maxShield * me.body.shieldRegenShare) * me.body.recoveryRate + recharge) * dt)
         me.mana = min(manaCap(me), me.mana + me.body.manaRegen(rules.mana) * dt)
         if (me === heroFighter) recoveries.forEach { draught ->
             val slice = min(dt, draught.until - (time - dt)).coerceAtLeast(0.0)

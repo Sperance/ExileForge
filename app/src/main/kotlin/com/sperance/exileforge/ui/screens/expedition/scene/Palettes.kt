@@ -33,6 +33,16 @@ object Palettes {
         "CITADEL" to Palette(Color(0xFF070405), Color(0xFF3A2A2A), Color(0xFF5A3E3A), Color(0xFF2E1E1E), Color(0xFF8A3030), Color(0xFFFF6A3A)),
         "ABYSS" to Palette(Color(0xFF020104), Color(0xFF1E1A2A), Color(0xFF2E2640), Color(0xFF161222), Color(0xFF6A3AA0), Color(0xFFA070FF)),
         "BLIGHT" to Palette(Color(0xFF050604), Color(0xFF2E3022), Color(0xFF3A3A28), Color(0xFF22241A), Color(0xFF7A8A30), Color(0xFFB0D040)),
+        // The lands 71–100 (3.42.0, server 1.40.0): the broken sky, the drowned empire, the halls of the gods.
+        "SKYREACH" to Palette(Color(0xFF060A10), Color(0xFF4A5868), Color(0xFF6E8298), Color(0xFF3A4656), Color(0xFFBFE3EF), Color(0xFFE8F4FF)),
+        "GLASSWASTE" to Palette(Color(0xFF050A0B), Color(0xFF3E5A5C), Color(0xFF5E8A8E), Color(0xFF304A4C), Color(0xFF9FD8E8), Color(0xFFCFF4FF)),
+        "STORMPEAK" to Palette(Color(0xFF05050A), Color(0xFF2E3040), Color(0xFF454860), Color(0xFF22243A), Color(0xFF8A6AE0), Color(0xFFD0C0FF)),
+        "SUNKEN" to Palette(Color(0xFF02070A), Color(0xFF1E3A40), Color(0xFF2A4E56), Color(0xFF14292E), Color(0xFF3A8A9A), Color(0xFF6FE0E8)),
+        "CORAL" to Palette(Color(0xFF07040A), Color(0xFF4A2A36), Color(0xFF6A3A48), Color(0xFF3A2028), Color(0xFFE86A7A), Color(0xFFFFB0A0)),
+        "TIDEVAULT" to Palette(Color(0xFF030808), Color(0xFF263A36), Color(0xFF3A5650), Color(0xFF1C2A28), Color(0xFFB8964A), Color(0xFF38B8B0)),
+        "GODHALL" to Palette(Color(0xFF0A0804), Color(0xFF5A5040), Color(0xFF8A7A5A), Color(0xFF4A4232), Color(0xFFE8C860), Color(0xFFFFF0B0)),
+        "ASTRAL" to Palette(Color(0xFF020210), Color(0xFF1E1E40), Color(0xFF2E2E60), Color(0xFF16163A), Color(0xFF5A62E0), Color(0xFFB0B8FF)),
+        "OBLIVION" to Palette(Color(0xFF030303), Color(0xFF26262A), Color(0xFF38383E), Color(0xFF1A1A1E), Color(0xFF6A6A78), Color(0xFFD8D8E8)),
         // The Vaal zones (2.65.0): black obsidian and scarlet, whatever map the portal stood on.
         "VAAL" to Palette(Color(0xFF050102), Color(0xFF1E1416), Color(0xFF3A2A2C), Color(0xFF2A1D1F), Color(0xFF5A1A1A), Color(0xFFFF3C28)),
     )
@@ -76,6 +86,11 @@ object Palettes {
         "INSECT" -> Color(0xFF6A7A2A)
         "DEMON" -> Color(0xFF8A2E22)
         "FUNGUS" -> Color(0xFF8A4A7A)
+        // The forms of the lands 71–100 (3.42.0): the gods' constructs, beasts of crystal, fallen angels and dragons.
+        "CONSTRUCT" -> Color(0xFFB8A880)
+        "CRYSTAL" -> Color(0xFF9FB8E8)
+        "ANGEL" -> Color(0xFFE8E0C8)
+        "DRAGON" -> Color(0xFF9A3A2A)
         else -> Color(0xFF7E8A6A)
     }
 }

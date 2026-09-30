@@ -85,10 +85,10 @@ internal object MapStyles {
 
     fun of(biome: String): MapStyle = when (biome) {
         com.sperance.exileforge.core.campaign.VaalZones.BIOME -> altar
-        "CRYPT", "TEMPLE", "ABYSS" -> runes
-        "ASH", "VOLCANO" -> ash
-        "FOREST", "MIRE", "JUNGLE", "HIVE", "BLIGHT" -> moss
-        "DESERT", "CANYON" -> dunes
+        "CRYPT", "TEMPLE", "ABYSS", "SKYREACH", "TIDEVAULT", "GODHALL", "ASTRAL" -> runes
+        "ASH", "VOLCANO", "OBLIVION" -> ash
+        "FOREST", "MIRE", "JUNGLE", "HIVE", "BLIGHT", "CORAL" -> moss
+        "DESERT", "CANYON", "GLASSWASTE" -> dunes
         else -> wet
     }
 }

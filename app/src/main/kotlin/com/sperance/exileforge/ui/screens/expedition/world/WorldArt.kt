@@ -154,6 +154,12 @@ class WorldArt private constructor(
             "DESERT", "CANYON" -> Color(0xFFD8B070).copy(alpha = .1f)
             "JUNGLE", "HIVE" -> Color(0xFF3A8A3E).copy(alpha = .12f)
             "ABYSS", "BLIGHT" -> Color(0xFF6A3AA0).copy(alpha = .12f)
+            "SKYREACH", "GLASSWASTE" -> Color(0xFF9FD8E8).copy(alpha = .12f)
+            "STORMPEAK", "ASTRAL" -> Color(0xFF5A62E0).copy(alpha = .12f)
+            "SUNKEN", "TIDEVAULT" -> Color(0xFF38B8B0).copy(alpha = .12f)
+            "CORAL" -> Color(0xFFE86A7A).copy(alpha = .1f)
+            "GODHALL" -> Color(0xFFE8C860).copy(alpha = .1f)
+            "OBLIVION" -> Color(0xFF6A6A78).copy(alpha = .12f)
             else -> Color(0xFF805E38).copy(alpha = .2f)
         }
 
@@ -172,6 +178,13 @@ class WorldArt private constructor(
             "CITADEL" -> SketchKind.TOWER
             "ABYSS" -> SketchKind.CHASM
             "BLIGHT" -> SketchKind.SPORE
+            "SKYREACH", "GODHALL" -> SketchKind.TOWER
+            "GLASSWASTE" -> SketchKind.DUNE
+            "STORMPEAK" -> SketchKind.MESA
+            "SUNKEN", "TIDEVAULT" -> SketchKind.COLUMN
+            "CORAL" -> SketchKind.MOUND
+            "ASTRAL" -> SketchKind.CRYSTAL_HILL
+            "OBLIVION" -> SketchKind.CHASM
             else -> null
         }
     }

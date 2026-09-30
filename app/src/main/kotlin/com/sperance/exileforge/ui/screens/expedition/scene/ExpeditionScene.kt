@@ -282,6 +282,17 @@ private class ScenePainter {
             "CITADEL" -> when (kind) { 1 -> column(); 2 -> flame(); else -> stone() }
             "ABYSS" -> when (kind) { 1 -> shard(); 2 -> bones(); else -> puddle() }
             "BLIGHT" -> when (kind) { 1 -> mushroom(); 2 -> puddle(); else -> tuft() }
+            // The lands 71–100 (3.42.0): sky pillars and beacons, glass shards, storm-split rock, drowned columns,
+            // coral growths, the vaults' brass, golden braziers, fallen stars and what oblivion leaves.
+            "SKYREACH" -> when (kind) { 1 -> column(); 2 -> flame(); else -> shard() }
+            "GLASSWASTE" -> when (kind) { 1 -> shard(); 2 -> stone(); else -> bones() }
+            "STORMPEAK" -> when (kind) { 1 -> stone(); 2 -> shard(); else -> embers() }
+            "SUNKEN" -> when (kind) { 1 -> column(); 2 -> puddle(); else -> bones() }
+            "CORAL" -> when (kind) { 1 -> mushroom(); 2 -> tuft(); else -> shard() }
+            "TIDEVAULT" -> when (kind) { 1 -> column(); 2 -> puddle(); else -> flame() }
+            "GODHALL" -> when (kind) { 1 -> column(); 2 -> flame(); else -> stone() }
+            "ASTRAL" -> when (kind) { 1 -> shard(); 2 -> flame(); else -> puddle() }
+            "OBLIVION" -> when (kind) { 1 -> bones(); 2 -> shard(); else -> stone() }
             "TEMPLE" -> when (kind) { 1 -> column(); 2 -> flame(); else -> { pen.color = glowing; pen.circle(cx, cy, u * 1.3f); pen.color = tone(palette.floor, light); pen.circle(cx, cy, u * .8f) } }
             else -> when (kind) { 1 -> stone(); 2 -> tuft(); else -> shard() }
         }

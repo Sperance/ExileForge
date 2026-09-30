@@ -108,7 +108,13 @@ import com.sperance.exileforge.ui.theme.*
                     // The City's tab tapped again from inside a building (3.22.0) walks back out to the square.
                     NavigationBarItem(selected = s.tab == index || (index == TAB_HERO && HeroTab.of(s.tab) != null),
                         onClick = { if (index == TAB_CITY && s.tab == TAB_CITY) vm.building(null) else vm.tab(index) },
-                        icon = { Icon(icons.getValue(index), null, modifier = Modifier.size(22.dp)) }, label = { Text(label, fontSize = 10.sp) },
+                        icon = {
+                            // Free atlas points (3.47.0) mark the expedition's tab: the atlas opens from its world map.
+                            val free = if (index == TAB_EXPEDITION) s.atlasState?.available ?: 0 else 0
+                            BadgedBox(badge = { if (free > 0) Badge(containerColor = GoldBright, contentColor = Ink) { Text(free.toString(), fontSize = 9.sp) } }) {
+                                Icon(icons.getValue(index), null, modifier = Modifier.size(22.dp))
+                            }
+                        }, label = { Text(label, fontSize = 10.sp) },
                         colors = NavigationBarItemDefaults.colors(selectedIconColor = GoldBright, selectedTextColor = Gold,
                             indicatorColor = Gold.copy(alpha = .16f), unselectedIconColor = Muted, unselectedTextColor = Muted))
                 }

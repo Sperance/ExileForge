@@ -36,6 +36,8 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     fun selectZone(mapCode: String) = runtime.expeditionViewModel.selectZone(mapCode)
     fun loadCrafts(silent: Boolean = false) = runtime.craftsViewModel.load(silent)
     fun openProfession(code: String) = runtime.craftsViewModel.openProfession(code)
+    fun planTree(nodes: List<com.sperance.exileforge.rules.content.TakenNode>) = runtime.heroViewModel.planTree(nodes)
+    fun autoSell(rarity: com.sperance.exileforge.rules.content.Rarity, groups: Set<com.sperance.exileforge.rules.content.SlotGroup>) = runtime.heroViewModel.autoSell(rarity, groups)
     fun startWork(job: String, choice: String = "", additives: List<String> = emptyList()) = runtime.craftsViewModel.start(job, choice, additives)
     fun stopWork() = runtime.craftsViewModel.stop()
     fun equipTool(itemId: String) = runtime.craftsViewModel.equipTool(itemId)
@@ -173,7 +175,6 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, deviceId: Stri
     fun buyLot(lotId: String) = runtime.auctionViewModel.buy(lotId)
     fun buyOffer(offerId: String) = runtime.auctionViewModel.buyOffer(offerId)
     fun buyOrb(code: String) = runtime.auctionViewModel.buyOrb(code)
-    fun buyLotSlot() = runtime.auctionViewModel.buySlot()
     fun cancelLot(lotId: String) = runtime.auctionViewModel.cancel(lotId)
     /** Lists a copy for [price] of the orb [priceOrb] (an item code). */
     fun sellEquipment(itemId: String, priceOrb: String, price: Long) = runtime.auctionViewModel.sellEquipment(itemId, priceOrb, price)

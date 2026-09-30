@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
@@ -54,7 +55,9 @@ import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.content.SkillNodeType
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.TreeAllocation
+import com.sperance.exileforge.rules.content.TakenNode
 import com.sperance.exileforge.rules.content.TreeNode
+import com.sperance.exileforge.rules.sheet.SheetCalculator
 import com.sperance.exileforge.rules.sheet.StatContribution
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -75,7 +78,7 @@ import kotlin.math.sin
         ScreenHeader(ui("tree.title"),
             ui("tree.node_count", s.index?.content?.tree?.nodes?.size ?: 0), ForgeGlyphs.Constellation, guide = Guide.TREE)
         SkillTreePanel(s, vm::selectNode, vm::allocateNode, vm::refundNode, vm::resetTree, vm::nodeQuery, onPath = vm::allocatePath,
-            onSocket = vm::socketJewel, onUnsocket = vm::unsocketJewel, onRechoose = vm::rechooseNode, modifier = Modifier.weight(1f))
+            onSocket = vm::socketJewel, onUnsocket = vm::unsocketJewel, onRechoose = vm::rechooseNode, onPlan = vm::planTree, modifier = Modifier.weight(1f))
         Spacer(Modifier.height(12.dp))
     }
 }
@@ -96,7 +99,7 @@ import kotlin.math.sin
     onRefund: (String) -> Unit, onReset: () -> Unit, onQuery: (String) -> Unit = {},
     onSocket: (String, String) -> Unit = { _, _ -> }, onUnsocket: (String) -> Unit = {},
     onRechoose: (String, Int) -> Unit = { _, _ -> }, onPath: (String, Int?) -> Unit = { _, _ -> },
-    modifier: Modifier = Modifier) {
+    onPlan: (List<TakenNode>) -> Unit = {}, modifier: Modifier = Modifier) {
     val hero = s.hero
     val index = s.index
     val tree = s.treeState
@@ -127,15 +130,26 @@ import kotlin.math.sin
     val path = remember(index, heroClass, taken, selected) {
         heroClass?.startNode?.takeIf { taken.isNotEmpty() && selected !in reachable }?.let { TreeAllocation.path(index.tree, taken, it, selected) }
     }
+    // The build planner (3.47.0): the plan lives on the server, which takes its nodes itself as the points come.
+    val plan = hero.info.plannedTree
+    val planned = remember(plan) { plan.mapTo(HashSet()) { it.code } }
+    // The tag filter (3.47.0): every node whose lines carry the tag lights up.
+    var tag by remember { mutableStateOf<String?>(null) }
+    val highlight = remember(index, tag) { tag?.let { nodesTagged(index, it) }.orEmpty() }
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(ui("tree.points", tree.available, tree.total),
                 color = Gold, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
             ForgeTextButton(onClick = { detailsOpen = true }) { Text(ui("tree.details")) }
         }
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            TREE_TAGS.forEach { code ->
+                FilterChip(selected = tag == code, onClick = { tag = if (tag == code) null else code }, label = { Text(ui("tree.tag.$code")) })
+            }
+        }
         // A tap opens a small window about that one node, so the map stays in sight; everything
         // about the tree as a whole lives behind "Подробно".
-        TreeCanvas(nodes, selected, taken, reachable, path.orEmpty(), Modifier.weight(1f)) { code -> onSelect(code); nodeOpen = true }
+        TreeCanvas(nodes, selected, taken, reachable, path.orEmpty(), planned, highlight, Modifier.weight(1f)) { code -> onSelect(code); nodeOpen = true }
         MutedText(ui("tree.gesture_hint"))
     }
     // The small window about the chosen node: what it gives, and the one command over it. It is
@@ -150,6 +164,7 @@ import kotlin.math.sin
                 onRechoose = { code, choice -> nodeOpen = false; onRechoose(code, choice) },
                 onSocket = { instance, code -> nodeOpen = false; onSocket(instance, code) },
                 onUnsocket = { nodeOpen = false; onUnsocket(it) })
+            PlanControl(index, heroClass, taken, plan, index.tree.node(selected), enabled) { nodeOpen = false; onPlan(it) }
             Spacer(Modifier.height(8.dp))
         }
     }
@@ -180,6 +195,7 @@ import kotlin.math.sin
                     }
                 }
             }
+            if (plan.isNotEmpty()) item { PlanPanel(s, index, taken, plan, enabled) { detailsOpen = false; onPlan(emptyList()) } }
             item { TreeSearch(s, nodes, onQuery) { code -> onSelect(code); detailsOpen = false; nodeOpen = true } }
             item {
                 ForgeOutlinedButton(enabled = enabled && hero.tree.size > 1, onClick = { detailsOpen = false; confirmReset = true },
@@ -237,7 +253,7 @@ private fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Set
  * leave an empty rectangle with no way back but the reset.
  */
 @Composable private fun TreeCanvas(nodes: List<TreeNode>, selected: String, taken: Set<String>, reachable: Set<String>, path: List<String>,
-    modifier: Modifier = Modifier, onSelect: (String) -> Unit) {
+    planned: Set<String>, highlight: Set<String>, modifier: Modifier = Modifier, onSelect: (String) -> Unit) {
     val byCode = remember(nodes) { nodes.associateBy { it.code } }
     val bounds = remember(nodes) { Bounds.of(nodes) }
     var scale by remember { mutableFloatStateOf(1f) }
@@ -285,6 +301,11 @@ private fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Set
             }
             nodes.forEach { node -> medallion(node, place(node, bounds, width, height, scale, pan), scale, node.code in taken,
                 node.code in reachable || node.code in path, node.code == selected) }
+            // The plan's nodes wear a rune ring, the filter's a green one - over the medallion, never instead of it.
+            nodes.forEach { node ->
+                val ring = when { node.code in highlight -> Vital; node.code in planned && node.code !in taken -> Rune; else -> return@forEach }
+                drawCircle(ring, radius(node) * scale.coerceIn(.5f, 2.2f) + 5f, place(node, bounds, width, height, scale, pan), style = Stroke(2.5f))
+            }
             // Names at zoom (3.39.0): a notable's and a keystone's title under it, once the map is close enough to read.
             if (scale >= LABEL_ZOOM) nodes.filter { it.type == SkillNodeType.NOTABLE || it.type == SkillNodeType.KEYSTONE }.forEach { node ->
                 val at = place(node, bounds, width, height, scale, pan)
@@ -616,4 +637,50 @@ private fun DrawScope.medallion(node: TreeNode, centre: Offset, scale: Float, ta
         SkillNodeType.SMALL -> { drawCircle(if (taken) Gold else Color(0xFF1A1F27), r, centre); drawCircle(edge, r, centre, style = Stroke(width)) }
     }
     if (selected) drawCircle(GoldBright, r + 5.dp.toPx(), centre, style = Stroke(2.dp.toPx()))
+}
+
+/** The tags the tree's filter offers (3.47.0): the ones its lines carry most. */
+private val TREE_TAGS = listOf("life", "defences", "critical", "fire", "cold", "lightning", "chaos", "physical", "elemental", "attack", "caster", "speed", "mana")
+
+/** Every node whose lines — or any of its options — carry [tag]. */
+private fun nodesTagged(index: ContentIndex, tag: String): Set<String> = index.content.tree.nodes.mapNotNullTo(HashSet()) { node ->
+    node.code.takeIf { (node.lines + node.options.flatten()).any { line -> index.modifier(line.code)?.tags?.contains(tag) == true } }
+}
+
+/**
+ * The chosen node against the plan (3.47.0): out of it, or the rules' shortest way to it — from what is taken and
+ * what is planned already — added to its end. A node with options is taken by hand: its choice is the player's.
+ */
+@Composable private fun PlanControl(index: ContentIndex, heroClass: HeroClass?, taken: Set<String>, plan: List<TakenNode>, node: TreeNode?,
+    enabled: Boolean, onPlan: (List<TakenNode>) -> Unit) {
+    node ?: return
+    if (node.code in taken) return
+    if (plan.any { it.code == node.code }) {
+        ForgeOutlinedButton(enabled = enabled, onClick = { onPlan(plan.filterNot { it.code == node.code }) }, modifier = Modifier.fillMaxWidth()) { Text(ui("tree.plan_remove")) }
+        return
+    }
+    if (node.options.isNotEmpty()) { MutedText(ui("tree.plan_choice")); return }
+    val start = heroClass?.startNode ?: return
+    val way = remember(index, taken, plan, node.code) {
+        val from = taken + plan.map { it.code }
+        if (from.isEmpty()) null else TreeAllocation.path(index.tree, from, start, node.code)
+    }
+    if (way == null) { MutedText(ui("tree.plan_no_way")); return }
+    ForgeOutlinedButton(enabled = enabled, onClick = { onPlan(plan + way.map { TakenNode(it) }) }, modifier = Modifier.fillMaxWidth()) {
+        Text(ui("tree.plan_add", way.size))
+    }
+}
+
+/** The plan as a whole (3.47.0): how many nodes are still to take, what they cost, and what they will give. */
+@Composable private fun PlanPanel(s: ForgeState, index: ContentIndex, taken: Set<String>, plan: List<TakenNode>, enabled: Boolean, onClear: () -> Unit) {
+    val left = plan.filter { it.code !in taken }
+    val cost = left.sumOf { index.tree.node(it.code)?.cost ?: 0 }
+    val totals = remember(index, left) { SheetCalculator(index).let { it.contributions(it.expand(index.tree.lines(left))) } }
+    ForgePanel(accent = Rune) {
+        Engraved(ui("tree.plan_title"), Rune)
+        PropertyRow(ui("tree.plan_left"), ui("tree.plan_cost", left.size, cost), Glyph.LEVEL)
+        MutedText(ui("tree.plan_note"))
+        totals.forEach { total -> PropertyRow(statTitle(total.stat, s.lang), contributionText(total), stat = total.stat) }
+        ForgeOutlinedButton(enabled = enabled, onClick = onClear, modifier = Modifier.fillMaxWidth()) { Text(ui("tree.plan_clear")) }
+    }
 }

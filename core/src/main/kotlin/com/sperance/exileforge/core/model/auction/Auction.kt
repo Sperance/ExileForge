@@ -110,7 +110,7 @@ enum class FilterField { KIND, SLOT, RARITY, MIN_LEVEL, MAX_LEVEL, ORB, MAX_PRIC
 
 fun lotKindTitle(kind: LotKind, lang: Lang = uiLanguage): String = ui(lang, "enum.lot.${kind.name}")
 
-/** The hero's lot places: [used] of [limit] taken, up to [max] bought one at a time for [price] gold (0 once none can be bought). */
-@Serializable data class AuctionSlots(val used: Int = 0, val limit: Int = 5, val max: Int = 20, val price: Long = 0, val money: Long = 0) {
+/** The hero's lot places: [used] of [limit] taken — the same for every hero (3.47.0). */
+@Serializable data class AuctionSlots(val used: Int = 0, val limit: Int = 12) {
     val full: Boolean get() = used >= limit
 }

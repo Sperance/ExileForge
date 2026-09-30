@@ -1,5 +1,8 @@
 package com.sperance.exileforge.ui.screens.auction
 
+import com.sperance.exileforge.rules.content.SlotGroup
+import com.sperance.exileforge.rules.content.Rarity
+import com.sperance.exileforge.rules.content.AutoSell
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -68,6 +71,7 @@ import com.sperance.exileforge.ui.theme.*
                 MutedText(ui("merchant.note"))
             }
         }
+        s.hero?.info?.autoSell?.let { filter -> item { AutoSellPanel(filter, enabled = !s.busy, onChange = vm::autoSell) } }
         stock?.orbs?.takeIf { it.isNotEmpty() }?.let { orbs ->
             item {
                 ForgePanel {
@@ -135,4 +139,26 @@ import com.sperance.exileforge.ui.theme.*
 internal fun untilText(at: Long): String {
     val minutes = ((at - System.currentTimeMillis()) / 60_000).coerceAtLeast(0)
     return ui("merchant.time", minutes / 60, minutes % 60)
+}
+
+/**
+ * The loot filter (3.47.0, server 1.45.0): a row per rarity, a chip per slot group — what is on, the merchant takes from a
+ * run's loot before it reaches the stash. A unique, an influenced, corrupted, fractured or locked piece never goes.
+ */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable private fun AutoSellPanel(filter: AutoSell, enabled: Boolean, onChange: (Rarity, Set<SlotGroup>) -> Unit) {
+    ForgePanel {
+        Engraved(ui("merchant.autosell"))
+        MutedText(ui("merchant.autosell_note"))
+        AutoSell.SELLABLE.forEach { rarity ->
+            val on = filter.sell[rarity].orEmpty()
+            Text(ui("enum.rarity.${rarity.name}"), color = rarityColor(rarity.name), style = MaterialTheme.typography.labelLarge)
+            androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                SlotGroup.entries.forEach { group ->
+                    FilterChip(selected = group in on, enabled = enabled, onClick = { onChange(rarity, if (group in on) on - group else on + group) },
+                        label = { Text(ui("merchant.group.${group.name}")) })
+                }
+            }
+        }
+    }
 }

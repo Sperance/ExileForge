@@ -1,5 +1,8 @@
 package com.sperance.exileforge.presentation.features
 
+import com.sperance.exileforge.presentation.state.NoticeKind
+import com.sperance.exileforge.rules.content.SlotGroup
+import com.sperance.exileforge.rules.content.TakenNode
 import com.sperance.exileforge.core.character.Sheets
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.HeroView
@@ -148,6 +151,8 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     fun refundNode(code: String) { with(runtime) { heroCommand { id -> api.tree.refund(id, code) } } }
     fun rechooseNode(code: String, choice: Int) { with(runtime) { heroCommand { id -> api.tree.rechoose(id, code, choice) } } }
     fun resetTree() { with(runtime) { heroCommand { id -> api.tree.reset(id) } } }
+    fun planTree(nodes: List<TakenNode>) { with(runtime) { heroCommand { id -> api.tree.plan(id, nodes) } } }
+    fun autoSell(rarity: Rarity, groups: Set<SlotGroup>) { with(runtime) { heroCommand { id -> api.hero.autoSell(id, rarity, groups) } } }
 
     /** Admin only: hand the hero experience and let the server decide about the level. */
     fun addExperience(amount: Double) { with(runtime) { heroCommand { id ->
@@ -241,6 +246,7 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     /** Folds a snapshot into the parts held and draws the hero from them; the sheet is added up here by the rules. */
     private fun apply(heroId: String, snapshot: HeroSnapshot, keep: Boolean = true) { with(runtime) {
+        val earnedBefore = parts?.takeIf { it.heroId == heroId && it.complete }?.hero?.earned
         val merged = (parts?.takeIf { it.heroId == heroId } ?: HeroParts(heroId)).merge(snapshot)
         if (!merged.complete) { parts = null; mutable.update { it.copy(play = it.play.copy(heroReadAt = 0)) }; return }
         val index = state.value.index ?: run { mutable.update { it.copy(play = it.play.copy(heroReadAt = 0)) }; return }
@@ -258,6 +264,8 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             selectedEquipment = it.play.selectedEquipment.takeIf { chosen -> view.items.any { item -> item.id == chosen } } ?: view.items.firstOrNull()?.id.orEmpty()),
             market = it.market.copy(merchant = view.merchant)) }
         expeditionViewModel.heroChanged(view)
+        // A new atlas point (3.47.0) is said out loud: the tree is easy to forget behind the world map's button.
+        earnedBefore?.let { before -> (info.earned.size - before.size).takeIf { it > 0 }?.let { toast(ui("atlas.point_earned", it), NoticeKind.ATLAS) } }
     } }
 }
 

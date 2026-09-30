@@ -34,8 +34,6 @@ import kotlinx.serialization.Serializable
     val earned: List<String> = emptyList(),
     /** Bench recipes found on maps; the rest of the bench stays hidden. */
     val recipes: List<String> = emptyList(),
-    /** Auction places bought beyond the rules' base. */
-    val auctionSlots: Int = 0,
     val version: Long = 0,
     /** Packs of stash places bought beyond the rules' base (1.1.0). */
     val stashSlots: Int = 0,
@@ -43,6 +41,10 @@ import kotlinx.serialization.Serializable
     val counters: Map<String, Long> = emptyMap(),
     /** The title worn beside the name, or blank. */
     val title: String = "",
+    /** The loot filter (3.47.0): which rarities of which slot groups the merchant takes from a run's loot at once. */
+    val autoSell: com.sperance.exileforge.rules.content.AutoSell = com.sperance.exileforge.rules.content.AutoSell(),
+    /** The tree's plan (3.47.0): the server takes its nodes by itself as the points come. */
+    val plannedTree: List<com.sperance.exileforge.rules.content.TakenNode> = emptyList(),
 )
 
 /** The stash's places as the server counts them after a command: used, held, the ceiling, the next pack's price (0 at the ceiling), the overflow. */

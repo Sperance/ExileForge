@@ -37,7 +37,7 @@ import com.sperance.exileforge.rules.sheet.SheetCalculator
 enum class AppMode { PLAYER, ADMIN }
 
 /** What a toast says had happened: its kind picks the colour, [at] tells two equal texts apart. */
-enum class NoticeKind { DONE, LOOT, CRAFT }
+enum class NoticeKind { DONE, LOOT, CRAFT, ATLAS }
 data class Notice(val text: String, val kind: NoticeKind = NoticeKind.DONE, val at: Long = System.nanoTime())
 
 /** Which of the three screens the app is on, above the tabs: the tabs only make sense once there is an account and a hero. */

@@ -185,6 +185,8 @@ import java.util.Locale
         Chip(ui("expedition.loot_experience", number(hud.experience)), Rune)
     }
     if (hud.awaiting > 0) Receiving()
+    DeathRecap(hud.recap)
+    RunFigures(hud.summary)
 }
 
 /** The fight as a row of figures — dealt, taken, how long, criticals — and the way into its log. */

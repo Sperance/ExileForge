@@ -232,17 +232,13 @@ private val templateSlots: List<Slot> = Slot.entries.filter { it != Slot.RING_2 
 /** The hero's own lots that are still on sale; withdrawn and sold lots leave this list. */
 @Composable internal fun ColumnScope.MyLotsTab(s: ForgeState, vm: ForgeViewModel) {
     var openLot by remember { mutableStateOf<String?>(null) }
-    var buyingSlot by remember { mutableStateOf(false) }
     LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
-        // Lot places (0.34.0): five to start with, one more at a time for gold, up to the server's ceiling.
+        // Lot places (3.47.0): the same for every hero, never bought.
         s.market.slots?.let { slots ->
             item {
                 ForgePanel {
-                    PropertyRow(ui("auction.slots"), ui("auction.slots_value", slots.used, slots.limit, slots.max), Glyph.ITEM)
+                    PropertyRow(ui("auction.slots"), ui("auction.slots_value", slots.used, slots.limit), Glyph.ITEM)
                     if (slots.full) Text(ui("auction.slots_full"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
-                    if (slots.price > 0) ForgeOutlinedButton(enabled = !s.busy, onClick = { buyingSlot = true }, modifier = Modifier.fillMaxWidth()) {
-                        Text(ui("auction.slot_buy", slots.price))
-                    }
                 }
             }
         }
@@ -251,18 +247,6 @@ private val templateSlots: List<Slot> = Slot.entries.filter { it != Slot.RING_2 
         }
         items(s.ownLots, key = { it.id }) { lot ->
             LotRow(s, lot, note = lotExpiry(lot)) { openLot = lot.id }
-        }
-    }
-    val slots = s.market.slots
-    if (buyingSlot && slots != null) {
-        val money = s.hero?.money
-        ConfirmSheet(title = ui("auction.slot_q"), confirm = ui("auction.slot_confirm"), onDismiss = { buyingSlot = false },
-            ledger = listOfNotNull(LedgerLine(ui("confirm.spend"), ui("merchant.gold_amount", slots.price), Tone.SPEND),
-                LedgerLine(ui("confirm.gain"), ui("auction.slots_value", slots.used, slots.limit + 1, slots.max), Tone.GAIN),
-                money?.let { it - slots.price }?.takeIf { it >= 0 }?.let { LedgerLine(ui("confirm.left"), ui("merchant.gold_amount", it)) }),
-            warning = money?.takeIf { it < slots.price }?.let { ui("merchant.short") }, blocked = money != null && money < slots.price) {
-            buyingSlot = false
-            vm.buyLotSlot()
         }
     }
     s.ownLots.firstOrNull { it.id == openLot }?.let { lot ->

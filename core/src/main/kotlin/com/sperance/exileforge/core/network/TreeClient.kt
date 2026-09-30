@@ -2,6 +2,7 @@ package com.sperance.exileforge.core.network
 
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.tree.TreeState
+import com.sperance.exileforge.rules.content.TakenNode
 
 private const val TREE = "api/v1/hero/skilltree"
 
@@ -16,6 +17,9 @@ class TreeClient internal constructor(private val http: Transport) {
     /** Another option of a taken ATTRIBUTE node, paid with one Chaos Orb; the node stays taken. */
     suspend fun rechoose(heroId: String, nodeCode: String, choice: Int): TreeState = node("rechoose", heroId, nodeCode, choice)
     suspend fun reset(heroId: String): TreeState = http.post("$TREE/reset", heroQuery(heroId))
+    /** The build plan (server 1.45.0): nodes in order, `code` or `code:choice`; the server takes what the points allow at once. */
+    suspend fun plan(heroId: String, nodes: List<TakenNode>): TreeState =
+        http.post("$TREE/plan", heroQuery(heroId, "nodes" to nodes.joinToString(",") { node -> node.choice?.let { "${node.code}:$it" } ?: node.code }))
 
     private suspend fun node(operation: String, heroId: String, nodeCode: String, choice: Int? = null): TreeState {
         require(nodeCode.isNotBlank()) { ui("api.choose_node") }

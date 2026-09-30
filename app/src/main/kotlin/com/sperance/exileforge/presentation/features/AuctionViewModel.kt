@@ -63,12 +63,6 @@ class AuctionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         refreshHero(id)
     } } }
 
-    fun buySlot() { with(runtime) { trade(writing = true) {
-        val slots = api.auction.buySlot(heroId)
-        mutable.update { it.copy(market = it.market.copy(slots = slots)) }
-        gold(slots.money)
-    } } }
-
     private fun gold(money: Long) { with(runtime) {
         mutable.update { s -> s.copy(play = s.play.copy(hero = s.play.hero?.let { it.copy(info = it.info.copy(money = money)) })) }
     } }

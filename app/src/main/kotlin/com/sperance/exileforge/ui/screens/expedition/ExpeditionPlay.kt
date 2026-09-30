@@ -499,6 +499,8 @@ private const val MINIMAP_MAX = 60f
             Text(hint, color = Parchment, style = MaterialTheme.typography.bodyMedium)
             MutedText(ui("expedition.summary", hud.kills, hud.gold, number(hud.experience)))
             if (hud.awaiting > 0) Receiving()
+            DeathRecap(hud.recap)
+            RunFigures(hud.summary)
             Journal(hud)
             ForgeButton(onClick = onDone, modifier = Modifier.fillMaxWidth()) { Text(done) }
         }
@@ -525,6 +527,7 @@ private const val MINIMAP_MAX = 60f
         MutedText(ui("expedition.summary", hud.kills, hud.gold, number(hud.experience)))
         Journal(hud)
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            RunFigures(hud.summary)
             reward.items.forEach { (code, amount) -> Text(ui("expedition.loot_stack", itemTitle(code), amount), color = Parchment) }
             // A piece opens its comparison and «Надеть» (3.24.0), as a fight's spoils do.
             reward.equipment.forEach { instance -> s.view(instance)?.let { LootCard(s, it) { item -> looked = item } } }

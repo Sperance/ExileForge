@@ -1,5 +1,7 @@
 package com.sperance.exileforge.core.network
 
+import com.sperance.exileforge.rules.content.SlotGroup
+import com.sperance.exileforge.rules.content.AutoSell
 import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.contract.requireId
 import com.sperance.exileforge.core.contract.requireItemId
@@ -105,6 +107,10 @@ class HeroClient internal constructor(private val http: Transport) {
         requireItemId(itemId)
         http.request("POST", "$HERO/item/lock", heroQuery(heroId, "itemId" to itemId, "locked" to locked.toString()), authenticated = true)
     }
+
+    /** One row of the loot filter (server 1.45.0): the slot groups of [rarity] the merchant takes at once; none clears it. */
+    suspend fun autoSell(heroId: String, rarity: Rarity, groups: Set<SlotGroup>): AutoSell =
+        http.post("$HERO/autosell", heroQuery(heroId, "rarity" to rarity.name, "groups" to groups.joinToString(",") { it.name }))
 
     /** Wears the title [title] beside the name — one the chronicle has earned — or takes it off when blank (server 1.3.0). */
     suspend fun setTitle(heroId: String, title: String): String = http.post("$HERO/title", heroQuery(heroId, "title" to title))

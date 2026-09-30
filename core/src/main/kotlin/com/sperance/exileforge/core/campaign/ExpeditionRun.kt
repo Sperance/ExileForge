@@ -143,6 +143,8 @@ data class RunHud(
     val fall: Double? = null,
     /** The run's gold and experience as the server's answers granted them; [awaiting] of its rewarding events are not answered yet. */
     val gold: Long = 0, val experience: Double = 0.0, val kills: Int = 0,
+    /** The run's figures (3.47.0) and the blows that ended it. */
+    val summary: RunSummary = RunSummary(), val recap: List<DeathHit> = emptyList(),
     val awaiting: Int = 0,
     val chestsLeft: Int = 0,
     val chest: Reward? = null,
@@ -409,6 +411,9 @@ class ExpeditionRun(
     private var reported = 0
     private var fall: Double? = null
     private var kills = 0
+    /** The run's figures (3.47.0) and, after a fall, its last blows. */
+    private val stats = RunStats()
+    private var recap: List<DeathHit> = emptyList()
     private var fightAgent: MonsterAgent? = null
     private var pendingGear: RunCommand.Regear? = null
     private val waves get() = AbyssWaves(index, run)
@@ -870,6 +875,7 @@ class ExpeditionRun(
             begin(stage + 1)
             return
         }
+        stats.add(pack, duration)
         val leader = fightStrongest ?: fightLeader()
         val down = descent?.takeIf { abyssFight }
         when (outcome) {
@@ -886,6 +892,7 @@ class ExpeditionRun(
             }
             Outcome.LOSS -> {
                 report = FightReport(leader, Outcome.LOSS, pack, duration)
+                recap = RunStats.recap(pack)
                 life = 0.0
                 autopilot = null
                 phase = RunPhase.DEAD
@@ -944,6 +951,7 @@ class ExpeditionRun(
             auto = autopilot?.let { AutoHud(it.wave, it.waves) }, autoReward = autoReward, autoAwaiting = autoEvents.count(::awaits),
             pending = journal.pending.size, applied = journal.applied, rejected = journal.rejected.size,
             desecration = desecratedBy?.let { DesecrationView(it.kind, desecrationLines(it), world.underfoot === it, trailLeft) },
+            summary = stats.summary(kills), recap = recap,
         )
     }
 

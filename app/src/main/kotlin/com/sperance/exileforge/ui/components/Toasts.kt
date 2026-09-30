@@ -57,6 +57,7 @@ private fun NoticeKind.tint(): Color = when (this) {
     NoticeKind.DONE -> Gold
     NoticeKind.LOOT -> rarityColor("RARE")
     NoticeKind.CRAFT -> Rune
+    NoticeKind.ATLAS -> GoldBright
 }
 
 @Composable private fun ToastCard(toast: Toast) {

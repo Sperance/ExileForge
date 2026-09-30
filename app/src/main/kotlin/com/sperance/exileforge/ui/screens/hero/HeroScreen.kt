@@ -42,8 +42,6 @@ import com.sperance.exileforge.presentation.state.StashFilter
 import com.sperance.exileforge.presentation.state.StashSort
 import com.sperance.exileforge.presentation.state.stashShelf
 import com.sperance.exileforge.presentation.state.TAB_SKILLS
-import com.sperance.exileforge.presentation.state.sellPrice
-import com.sperance.exileforge.presentation.state.unmetFor
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -88,20 +86,26 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
     // The stash holds everything (2.51.0): what is worn or socketed too, with a gold frame and a badge.
     // A copy whose template the content does not hold is left out rather than drawn blank.
     // Remembered (3.55.0): a thousand views, the filter and the sort by price were rebuilt on every tick of the state.
-    val stash = remember(hero, s.index, s.world) { hero?.items.orEmpty().mapNotNull { s.view(it) } }
+    // Keyed by the copies rather than the hero (3.66.0): a view rebuilt for a changed purse would redraw every line.
+    val stash = remember(hero?.items, s.index, s.world) { hero?.items.orEmpty().mapNotNull { s.view(it) } }
     // How many items each slot group holds (2.47.0, grouped since 3.30.0): a chip says it, and a group with none has no chip.
     val shelf = remember(stash, tools) { stash.filter { it.slot.isTool == tools } }
     val groupCounts = remember(shelf) { shelf.groupingBy { SlotGroup.of(it.slot) }.eachCount() }
     val groups = groupCounts.keys.toList()
     val rarities = remember(shelf) { shelf.map { it.rarity }.distinct().sortedByDescending { it.ordinal } }
-    val visible = remember(shelf, filter, s.stashSort, hero, s.world) { s.stashShelf(shelf, filter) }
-    val waiting = s.link.waitingItems
+    // The shelf reads the sheet (what can be worn, what the merchant pays), not the rest of the hero.
+    val visible = remember(shelf, filter, s.stashSort, hero?.level, hero?.stats, s.world) { s.stashShelf(shelf, filter) }
+    // Each part is handed its own cut (3.66.0): a changed purse redraws the header, not the ledger or the stash.
+    val header = rememberHeroHeader(s)
+    val equipment = rememberEquipment(s)
+    val lines = rememberStashLines(s, visible)
+    val selected = s.play.selectedEquipment
     PullToRefreshBox(isRefreshing = s.refreshing(Reads.HERO), onRefresh = vm::loadHero, modifier = Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
                 // Who the character is heads every section; until the hero arrives the tab says what it is.
                 // The stash's count rides the header as a button (the places and their price behind it).
-                if (hero != null) HeroHeader(s) { if (section == HeroSection.STASH) StashPlacesButton(s, vm) }
+                if (header != null) HeroHeader(header) { if (section == HeroSection.STASH) StashPlacesButton(s, vm) }
                 else ScreenHeader(ui("hero.title"), ui("hero.inventory_count", stash.size), ForgeGlyphs.Stash, guide = Guide.HERO)
             }
             item { SectionBar(section) { section = it } }
@@ -113,7 +117,7 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
                 }
                 HeroSection.EQUIPMENT -> {
                     item { HeroVitals(s) }
-                    item { EquipmentLedger(s) { place, worn -> if (worn != null) detailId = worn else pickPlace = place } }
+                    item { equipment?.let { EquipmentLedger(it) { place, worn -> if (worn != null) detailId = worn else pickPlace = place } } }
                 }
                 HeroSection.BAG -> {
                     val sections = bagSections(s)
@@ -155,13 +159,11 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
                     }
                     if (visible.isEmpty()) item { InfoCard(ui("tree.nothing_found"), if (filter.active) ui("stash.filter_empty") else ui("hero.stash_empty_hint")) }
                     // A line, not a card: a stash is read down, and the card is one tap behind each line.
-                    items(visible, key = { it.id }) { piece ->
-                        val worn = piece.equipped || piece.socketed
-                        ItemRow(piece, selected = piece.id == s.play.selectedEquipment, worn = worn,
-                            // The sheet added up here (2.46.0) says what the template needs, and the merchant's rule what it fetches.
-                            // No rarity in words, a map's included (2.73.0): the row's frame already wears it.
-                            unwearable = s.unmetFor(piece.code), price = s.sellPrice(piece.item).takeUnless { worn },
-                            waiting = piece.id in waiting) {
+                    items(lines, key = { it.piece.id }) { line ->
+                        val piece = line.piece
+                        // No rarity in words, a map's included (2.73.0): the row's frame already wears it.
+                        ItemRow(piece, selected = piece.id == selected, worn = line.worn, unwearable = line.unwearable, price = line.price,
+                            waiting = line.waiting) {
                             detailId = piece.id; vm.selectEquipment(piece.id)
                         }
                     }

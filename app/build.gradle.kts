@@ -16,8 +16,8 @@ android {
         applicationId = "com.sperance.exileforge"
         minSdk = 26
         targetSdk = 37
-        versionCode = 204
-        versionName = "3.65.0"
+        versionCode = 205
+        versionName = "3.66.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures { compose = true; buildConfig = true }
@@ -35,7 +35,18 @@ android {
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
+        // The release build under instrumentation (`-PminifiedTests`): R8 shrinks it as it ships, the smoke test runs over it.
+        // Signed with the debug key so the emulator takes it; the test rules keep only what the test APK calls into.
+        create("minifiedTest") {
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("release")
+            proguardFile("proguard-test-rules.pro")
+            testProguardFiles("proguard-test-rules.pro")
+        }
     }
+    // The debug UI checks stay the default; the shrunk build is tested only when asked for.
+    testBuildType = if (project.hasProperty("minifiedTests")) "minifiedTest" else "debug"
 }
 
 dependencies {
@@ -53,4 +64,5 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+    "minifiedTestImplementation"("androidx.compose.ui:ui-test-manifest")
 }

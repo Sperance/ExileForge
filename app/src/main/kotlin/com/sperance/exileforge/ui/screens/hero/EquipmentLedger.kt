@@ -20,10 +20,9 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.BodyPlace
-import com.sperance.exileforge.core.display.ItemView
-import com.sperance.exileforge.core.display.bodyPlaces
 import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.display.slotTitle
+import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.*
@@ -40,15 +39,14 @@ import com.sperance.exileforge.ui.theme.*
  * tap. [onPlace] gets the place and the worn item's id, or null.
  */
 @Composable fun EquipmentLedger(s: ForgeState, onPlace: (place: BodyPlace, itemId: String?) -> Unit) {
-    val hero = s.hero ?: return
-    val index = s.index ?: return
-    // How many loose items of each slot lie in the stash (2.48.0): each place says what it could take.
-    val loose = hero.stash.filter { !it.socketed }.mapNotNull { index.template(it.template)?.slot }.groupingBy { it }.eachCount()
+    rememberEquipment(s)?.let { EquipmentLedger(it, onPlace) }
+}
+
+/** The ledger over its own cut of the state (3.66.0): the purse moving does not redraw what is worn. */
+@Composable fun EquipmentLedger(equipment: EquipmentState, onPlace: (place: BodyPlace, itemId: String?) -> Unit) {
     Column(Modifier.fillMaxWidth()) {
-        bodyPlaces.forEach { place ->
-            val worn = place.wornIn(hero.equipped)
-            PlaceLine(s, place, worn?.let { s.view(it) }, blocked = place.blockedBy(hero.equipped),
-                reasons = worn?.let { hero.inactive[it.id] }, spare = place.fits.sumOf { loose[it] ?: 0 }) { onPlace(place, worn?.id) }
+        equipment.places.forEach { line ->
+            PlaceLine(line, equipment.lang, equipment.signedIn) { onPlace(line.place, line.wornId) }
             HorizontalDivider(color = PanelRaised)
         }
     }
@@ -64,10 +62,12 @@ import com.sperance.exileforge.ui.theme.*
  * so in red with the rules' first reason.
  */
 @OptIn(ExperimentalLayoutApi::class)
-@Composable private fun PlaceLine(s: ForgeState, place: BodyPlace, worn: ItemView?, blocked: Boolean,
-    reasons: List<String>?, spare: Int = 0, onClick: () -> Unit) {
-    val title = slotTitle(place.code, s.lang)
-    val click = Modifier.fillMaxWidth().clickable(enabled = s.account.signedIn, role = Role.Button, onClickLabel = title, onClick = onClick)
+@Composable private fun PlaceLine(line: PlaceState, lang: Lang, signedIn: Boolean, onClick: () -> Unit) {
+    val place = line.place
+    val worn = line.worn
+    val reasons = line.reasons
+    val title = slotTitle(place.code, lang)
+    val click = Modifier.fillMaxWidth().clickable(enabled = signedIn, role = Role.Button, onClickLabel = title, onClick = onClick)
     if (worn == null) {
         Row(click.padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             val frame = RoundedCornerShape(4.dp)
@@ -75,9 +75,9 @@ import com.sperance.exileforge.ui.theme.*
                 SlotIcon(place.fits.first(), PanelRaised, Modifier.size(14.dp), tint = Muted.copy(alpha = .5f))
             }
             Text(title, color = Gold, style = MaterialTheme.typography.labelMedium, maxLines = 1, modifier = Modifier.width(96.dp))
-            Text(ui(if (blocked) "hero.off_hand_taken" else "hero.empty_slot"), color = Muted, style = MaterialTheme.typography.labelMedium,
+            Text(ui(if (line.blocked) "hero.off_hand_taken" else "hero.empty_slot"), color = Muted, style = MaterialTheme.typography.labelMedium,
                 maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-            if (spare > 0) Text(ui("hero.place_spare", spare), color = GoldBright, style = MaterialTheme.typography.labelSmall,
+            if (line.spare > 0) Text(ui("hero.place_spare", line.spare), color = GoldBright, style = MaterialTheme.typography.labelSmall,
                 modifier = Modifier.background(Abyss, RoundedCornerShape(4.dp)).padding(horizontal = 6.dp, vertical = 2.dp))
         }
         return
@@ -96,7 +96,7 @@ import com.sperance.exileforge.ui.theme.*
                     overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 // An idle piece is a mark on the line (2.74.0); why is in its card, or behind the mark.
                 if (reasons != null) Tipped({
-                    Tip(ui("hero.inactive"), reasons.joinToString("\n") { requirementReason(it, s.lang) }, LifeRed)
+                    Tip(ui("hero.inactive"), reasons.joinToString("\n") { requirementReason(it, lang) }, LifeRed)
                 }) { Icon(Icons.Outlined.Block, ui("hero.inactive"), tint = LifeRed, modifier = Modifier.size(14.dp)) }
                 Text(title, color = Gold, style = MaterialTheme.typography.labelSmall, maxLines = 1)
             }

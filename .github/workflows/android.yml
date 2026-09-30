@@ -24,6 +24,8 @@ jobs:
       # The release build is shrunk by R8, which removes what it cannot see being used; building it
       # here is what catches a serializer or a class R8 took away. The APK is not published.
       - run: ./gradlew :app:assembleRelease
+      # The same shrunk build with its instrumentation APK: the smoke test below runs over what R8 left.
+      - run: ./gradlew :app:assembleMinifiedTest :app:assembleMinifiedTestAndroidTest -PminifiedTests
       - uses: actions/upload-artifact@v4
         with:
           name: exile-forge-debug
@@ -43,6 +45,10 @@ jobs:
             adb shell am instrument -w com.sperance.exileforge.test/androidx.test.runner.AndroidJUnitRunner | tee ui-results.txt
             python3 -c "import pathlib,re; text=pathlib.Path('ui-results.txt').read_text(); assert re.search(r'OK \(\d+ tests?\)', text), text"
             adb pull /sdcard/Android/data/com.sperance.exileforge/files/design design-preview
+            adb install -r app/build/outputs/apk/minifiedTest/app-minifiedTest.apk
+            adb install -r app/build/outputs/apk/androidTest/minifiedTest/app-minifiedTest-androidTest.apk
+            adb shell am instrument -w -e class com.sperance.exileforge.ui.ReleaseSmokeTest com.sperance.exileforge.test/androidx.test.runner.AndroidJUnitRunner | tee release-smoke.txt
+            python3 -c "import pathlib; text=pathlib.Path('release-smoke.txt').read_text(); assert 'OK (1 test)' in text, text"
       - name: Upload UI reports and preview
         if: always()
         uses: actions/upload-artifact@v4
@@ -50,6 +56,7 @@ jobs:
           name: exile-forge-ui
           path: |
             ui-results.txt
+            release-smoke.txt
             design-preview
       - name: Preview image in verification log
         run: python3 -c "import base64,pathlib; print('DESIGN_IMAGE_START'); print(base64.b64encode(pathlib.Path('design-preview/arsenal.jpg').read_bytes()).decode()); print('DESIGN_IMAGE_END')"

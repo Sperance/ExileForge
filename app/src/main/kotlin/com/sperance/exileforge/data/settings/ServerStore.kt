@@ -189,21 +189,6 @@ class ServerStore(private val context: Context) {
     }
 
     /**
-     * Drops the bodies earlier versions kept inside the preference file (before 2.62.0): the
-     * dictionaries, the icon sets and the portraits. A hash left without its file reads as a miss,
-     * so each is fetched once more into a file of its own, and the preference file shrinks back to
-     * settings. The whole world of 2.x (`world/`, before the content chunks of 3.0.0) goes too.
-     */
-    suspend fun dropLegacyDocuments() {
-        withContext(Dispatchers.IO) { File(context.filesDir, "world").takeIf { it.isDirectory }?.deleteRecursively() }
-        val legacy = context.settings.data.first().asMap().keys.map { it.name }.filter { name ->
-            name.endsWith(":body") || (name.startsWith("portraits:") && !name.endsWith(":hash")) || name.startsWith("world:")
-        }
-        if (legacy.isEmpty()) return
-        context.settings.edit { prefs -> legacy.forEach { prefs.remove(stringPreferencesKey(it)) } }
-    }
-
-    /**
      * Whether the last session was played on this device's own account.
      *
      * A kept token restores a session; this bit says that one may also be *made* silently when the

@@ -1,5 +1,6 @@
 package com.sperance.exileforge.presentation.features
 
+import com.sperance.exileforge.BuildConfig
 import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.sync.API_REVISION
@@ -27,7 +28,7 @@ import kotlinx.coroutines.withContext
 class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     fun mode(mode: AppMode) { with(runtime) {
-        if (state.value.busy || mode == AppMode.ADMIN && !state.value.isAdmin) return
+        if (state.value.busy || mode == AppMode.ADMIN && !(BuildConfig.DEBUG && state.value.isAdmin)) return
         mutable.update { it.copy(mode = mode, tab = if (mode == AppMode.ADMIN) TAB_ADMIN else TAB_HERO) }
     } }
 

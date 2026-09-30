@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.server
 
+import com.sperance.exileforge.BuildConfig
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -52,7 +53,7 @@ import com.sperance.exileforge.ui.theme.Panel
         }
         // Every administrator tool moved to its own tab in 2.3.0. What stays here is the way back
         // into it: turning the tools off hides that tab, so the switch cannot live only inside it.
-        if (s.isAdmin && !s.adminTools) ForgePanel {
+        if (BuildConfig.DEBUG && s.isAdmin && !s.adminTools) ForgePanel {
             Engraved(ui("account.administrator"))
             MutedText(ui("account.tools_hidden"))
             ForgeOutlinedButton(enabled = !s.busy, onClick = { vm.mode(AppMode.ADMIN) }, modifier = Modifier.fillMaxWidth()) {

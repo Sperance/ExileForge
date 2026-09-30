@@ -1,5 +1,6 @@
 package com.sperance.exileforge.presentation.state
 
+import com.sperance.exileforge.BuildConfig
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
@@ -91,7 +92,8 @@ data class ForgeState(
     val ownLots: List<AuctionLot> get() = market.myLots.filter { it.onSale }
     /** The class the shown hero belongs to, with the shared base folded in. */
     val heroClass: HeroClass? get() = index?.let { i -> hero?.let { i.heroClass(it.heroClass) } }
-    val adminTools: Boolean get() = isAdmin && mode == AppMode.ADMIN
+    /** Инструменты администратора - только в отладочной сборке (3.44.0). */
+    val adminTools: Boolean get() = BuildConfig.DEBUG && isAdmin && mode == AppMode.ADMIN
     val ownsCharacter: Boolean get() = account.signedIn && account.profile?.id == play.heroOwner
     /** The refusal to print where the action was taken; a success is never shown. */
     val refusal: String? get() = message.takeIf { error }

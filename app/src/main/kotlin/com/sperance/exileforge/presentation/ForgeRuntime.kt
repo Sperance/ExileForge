@@ -135,7 +135,6 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val devi
                 mutable.update { it.copy(lang = language, busy = false, stashSort = sort, logFilter = logFilter, account = it.account.copy(server = server, serverDraft = server, deviceId = deviceId), world = it.world.copy(languages = known.ifEmpty { it.world.languages })) }
                 refreshLocale()
                 refreshIcons()
-                launch { quietly { store.dropLegacyDocuments() } }
                 val saved = store.token(server)
                 // The fast start (3.30.0): the last hero from the device at once, the session confirmed behind it.
                 if (saved != null) { if (!sessionViewModel.fastStart(server, saved)) sessionViewModel.resume(saved) }

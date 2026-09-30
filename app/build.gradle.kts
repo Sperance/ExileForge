@@ -11,11 +11,11 @@ android {
         applicationId = "com.sperance.exileforge"
         minSdk = 26
         targetSdk = 37
-        versionCode = 178
-        versionName = "3.43.0"
+        versionCode = 179
+        versionName = "3.44.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
-    buildFeatures { compose = true }
+    buildFeatures { compose = true; buildConfig = true }
     // The instrumentation tests draw real items: the pinned server's content and dictionaries ride in the test APK.
     sourceSets.getByName("androidTest").assets.srcDir("../backend/src/main/resources")
     compileOptions {

@@ -38,7 +38,6 @@ import com.sperance.exileforge.ui.theme.*
 fun affixTint(kind: AffixKind?): Color = when (kind) {
     AffixKind.PREFIX, AffixKind.SUFFIX, null -> Rune
     AffixKind.IMPLICIT -> Parchment
-    AffixKind.ENCHANTMENT -> Color(0xFFB8DAF2)
     AffixKind.CRAFTED -> Crafted
     AffixKind.HANDCRAFTED -> Handcrafted
     AffixKind.FRACTURED -> Fractured

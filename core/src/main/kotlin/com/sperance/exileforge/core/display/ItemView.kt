@@ -23,11 +23,11 @@ import kotlin.math.round
 
 /**
  * What put a line on an item, lettered as Path of Exile's trade site letters it: P prefix, S suffix,
- * I implicit, E enchantment, C the bench, F fractured, U unique — and this game's own H for the smith's
+ * I implicit, C the bench, F fractured, U unique — and this game's own H for the smith's
  * handcraft, V for a corruption, A for a map's alchemy, X for a special essence's line.
  */
 enum class AffixKind(val letter: Char) {
-    PREFIX('P'), SUFFIX('S'), IMPLICIT('I'), ENCHANTMENT('E'), CRAFTED('C'), HANDCRAFTED('H'),
+    PREFIX('P'), SUFFIX('S'), IMPLICIT('I'), CRAFTED('C'), HANDCRAFTED('H'),
     FRACTURED('F'), CORRUPTION('V'), ALCHEMY('A'), UNIQUE('U'), ESSENCE('X');
 
     companion object {
@@ -39,7 +39,6 @@ enum class AffixKind(val letter: Char) {
                 Source.PREFIX -> PREFIX
                 Source.SUFFIX -> SUFFIX
                 Source.IMPLICIT -> IMPLICIT
-                Source.ENCHANTMENT -> ENCHANTMENT
                 Source.HANDCRAFTED -> HANDCRAFTED
                 Source.CORRUPTION -> CORRUPTION
                 Source.ALCHEMY -> ALCHEMY

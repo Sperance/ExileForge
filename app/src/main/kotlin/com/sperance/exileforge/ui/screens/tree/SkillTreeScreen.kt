@@ -583,9 +583,12 @@ private const val DOUBLE_TAP_ZOOM = 2f
 /** The smallest circle a tap finds a node in, however far the map is zoomed out. */
 private val MIN_TOUCH = 18.dp
 
+/** How far apart the nodes sit against the fitted tree: the shape and the node sizes are kept, the nodes stop crowding each other. */
+private const val SPREAD = 1.3f
+
 /** How many pixels of the seeded graph one pixel of canvas is worth, before the zoom. */
 private fun fitFactor(bounds: Bounds, width: Float, height: Float): Float =
-    min((width - MARGIN * 2) / bounds.spanX, (height - MARGIN * 2) / bounds.spanY)
+    min((width - MARGIN * 2) / bounds.spanX, (height - MARGIN * 2) / bounds.spanY) * SPREAD
 
 /**
  * How far the map may be dragged: the tree's own half-extent on screen.

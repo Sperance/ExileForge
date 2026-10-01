@@ -16,8 +16,8 @@ android {
         applicationId = "com.sperance.exileforge"
         minSdk = 26
         targetSdk = 37
-        versionCode = 207
-        versionName = "3.66.2"
+        versionCode = 208
+        versionName = "3.66.3"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures { compose = true; buildConfig = true }
@@ -45,10 +45,16 @@ android {
             testProguardFiles("proguard-test-rules.pro")
         }
     }
-    // The shrunk build ships release code: its own source set takes release's player-only screens (admin, redemption).
-    sourceSets.getByName("minifiedTest").java.srcDir("src/release/kotlin")
     // The debug UI checks stay the default; the shrunk build is tested only when asked for.
     testBuildType = if (project.hasProperty("minifiedTests")) "minifiedTest" else "debug"
+}
+
+// The shrunk build ships release code: it takes release's player-only screens (admin, redemption) through the variant API,
+// the source set DSL does not reach the built-in Kotlin compilation.
+androidComponents {
+    onVariants(selector().withBuildType("minifiedTest")) { variant ->
+        variant.sources.kotlin?.addStaticSourceDirectory("src/release/kotlin")
+    }
 }
 
 dependencies {

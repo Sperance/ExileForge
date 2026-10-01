@@ -192,8 +192,8 @@ private val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
     val density = LocalDensity.current
     val floor = with(density) { 240.dp.toPx() }
     val margin = with(density) { 28.dp.toPx() }
-    // The sky opens close (3.24.0): at the nearest zoom, the start in the middle of what the sheet leaves open.
-    var scale by remember { mutableFloatStateOf(MAX_ZOOM) }
+    // The sky opens close (3.24.0): at [OPEN_ZOOM], the start in the middle of what the sheet leaves open.
+    var scale by remember { mutableFloatStateOf(OPEN_ZOOM) }
     var pan by remember { mutableStateOf(Offset.Zero) }
     var framed by remember { mutableStateOf(false) }
     // The clock (3.56.0) ticks [CLOCK_FPS] times a second, not on every frame: a twinkle needs no 120 Hz, and only the
@@ -226,17 +226,22 @@ private val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
             framed = true
         }
         .pointerInput(nodes) {
-            detectTransformGestures { _, drag, zoom, _ ->
-                scale = (scale * zoom).coerceIn(MIN_ZOOM, MAX_ZOOM)
-                val limit = size.width.toFloat() * scale * SPREAD
-                pan = Offset((pan.x + drag.x).coerceIn(-limit, limit), (pan.y + drag.y).coerceIn(-limit, limit * 2))
+            detectTransformGestures { centroid, drag, zoom, _ ->
+                val width = size.width.toFloat()
+                val height = size.height.toFloat()
+                val next = (scale * zoom).coerceIn(MIN_ZOOM, MAX_ZOOM)
+                // A pinch zooms about the fingers — the point under them stays there — and the drag pans on top of it.
+                val anchor = Offset(width / 2, height - floor)
+                val moved = centroid - anchor - (centroid - anchor - pan) * (next / scale) + drag
+                scale = next
+                pan = Placement(bounds, width, height, floor, margin, next, moved).held()
             }
         }
         .pointerInput(shown) {
             detectTapGestures { tap ->
                 val place = Placement(bounds, size.width.toFloat(), size.height.toFloat(), floor, margin, scale, pan)
                 val hit = shown.minByOrNull { (place(it) - tap).getDistanceSquared() } ?: return@detectTapGestures
-                if ((place(hit) - tap).getDistance() <= 28.dp.toPx()) onSelect(hit.code)
+                if ((place(hit) - tap).getDistance() <= TAP_RADIUS.toPx()) onSelect(hit.code)
             }
         }) {
         // The far stars breathe on their own layer, behind everything.
@@ -255,14 +260,12 @@ private val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
                 val lit = strand.node.code in taken && strand.parent.code in taken
                 drawLine(if (lit) strand.node.branch.hue() else Sky.faint.copy(alpha = .22f), place(strand.parent), place(strand.node), (if (lit) 2.dp else 1.dp).toPx())
             }
-            val zoom = scale.coerceIn(.8f, 1.6f)
-            shown.forEach { starStill(it, place(it), it.code in taken, it.code in reachable, it.code == selected, zoom, brushes) }
+            shown.forEach { starStill(it, place(it), it.code in taken, it.code in reachable, it.code == selected, brushes) }
         }
         // The breathing layer: the twinkle of what a point could take and the keystones' orbiting motes.
         Canvas(Modifier.matchParentSize()) {
             val place = Placement(bounds, size.width, size.height, floor, margin, scale, pan)
-            val zoom = scale.coerceIn(.8f, 1.6f)
-            shown.forEach { starLive(it, place(it), it.code in taken, it.code in reachable, clock, zoom) }
+            shown.forEach { starLive(it, place(it), it.code in taken, it.code in reachable, clock) }
         }
     }
 }
@@ -286,12 +289,19 @@ private class SkyBrushes {
 private const val CLOCK_FPS = 20
 private const val CLOCK_STEP_NS = 1_000_000_000L / CLOCK_FPS
 
-/** How far the sky zooms out and in. */
-private const val MIN_ZOOM = .5f
-private const val MAX_ZOOM = 3f
+/**
+ * How far the sky zooms out and in, and where it opens. With [SPREAD] the closest pair of the server's atlas (4.6 units,
+ * server 1.65.0) is some 30 dp apart at [OPEN_ZOOM] on a phone and a hundred at [MAX_ZOOM]; [MIN_ZOOM] shows the whole sky.
+ */
+private const val MIN_ZOOM = .4f
+private const val OPEN_ZOOM = 1.5f
+private const val MAX_ZOOM = 5f
 
 /** How far apart the stars sit against the fitted sky: the shape is kept, the nodes stop crowding each other. */
-private const val SPREAD = 1.5f
+private const val SPREAD = 3f
+
+/** How far from a star a tap still picks it: no more than the closest pair's spacing at [OPEN_ZOOM]. */
+private val TAP_RADIUS = 20.dp
 
 /** Where a node lands on screen: the start at the bottom middle above the sheet, y up, fitted to the width. */
 private class Placement(private val b: SkyBounds, private val width: Float, private val height: Float, private val floor: Float,
@@ -300,6 +310,16 @@ private class Placement(private val b: SkyBounds, private val width: Float, priv
     val unit: Float get() = fit * scale
     operator fun invoke(node: AtlasNode) = Offset(width / 2 + ((node.x - b.midX) * fit * scale).toFloat() + pan.x,
         height - floor - (node.y * fit * scale).toFloat() + pan.y)
+
+    /**
+     * The pan held so the sky never leaves the view: any star can be brought to the middle of what the sheet leaves open
+     * — the farthest left, right, the start, the top — and no further.
+     */
+    fun held(): Offset {
+        val halfX = b.spanX / 2 * unit
+        val middle = (height - floor) / 2 - (height - floor)
+        return Offset(pan.x.coerceIn(-halfX, halfX), pan.y.coerceIn(middle, middle + b.spanY * unit))
+    }
 }
 
 private class SkyBounds(val midX: Double, val spanX: Float, val spanY: Float) {
@@ -320,16 +340,16 @@ private fun DrawScope.stars(clock: Float) {
     }
 }
 
-/** A star's radius on screen by its kind at [zoom]. */
-private fun DrawScope.starRadius(node: AtlasNode, zoom: Float): Float =
-    when (node.kind) { AtlasNodeKind.KEYSTONE -> 13.dp; AtlasNodeKind.NOTABLE -> 9.dp; AtlasNodeKind.START -> 11.dp; AtlasNodeKind.SMALL -> 5.dp }.toPx() * zoom
+/** A star's radius on screen by its kind: the same at every zoom, so a closer look parts the stars instead of swelling them. */
+private fun DrawScope.starRadius(node: AtlasNode): Float =
+    when (node.kind) { AtlasNodeKind.KEYSTONE -> 13.dp; AtlasNodeKind.NOTABLE -> 9.dp; AtlasNodeKind.START -> 11.dp; AtlasNodeKind.SMALL -> 5.dp }.toPx()
 
 /**
  * The still part of one node (3.56.0): a halo once taken or chosen, a burning white core once taken, a dim core while
  * no point could take it, a ring on a notable, a dashed halo on the chosen one. The twinkle and the motes are [starLive]'s.
  */
-private fun DrawScope.starStill(node: AtlasNode, at: Offset, taken: Boolean, open: Boolean, selected: Boolean, zoom: Float, brushes: SkyBrushes) {
-    val r = starRadius(node, zoom)
+private fun DrawScope.starStill(node: AtlasNode, at: Offset, taken: Boolean, open: Boolean, selected: Boolean, brushes: SkyBrushes) {
+    val r = starRadius(node)
     val hue = node.branch.hue()
     if (taken || selected) translate(at.x, at.y) { drawCircle(brushes.halo(hue, r * 3), r * 3, Offset.Zero) }
     if (taken || !open) drawCircle(if (taken) Color.White else Sky.faint.copy(alpha = .45f), r * .55f, at)
@@ -339,14 +359,14 @@ private fun DrawScope.starStill(node: AtlasNode, at: Offset, taken: Boolean, ope
 }
 
 /** The breathing part of one node: a twinkling core while a point could take it, six orbiting motes on a keystone. */
-private fun DrawScope.starLive(node: AtlasNode, at: Offset, taken: Boolean, open: Boolean, clock: Float, zoom: Float) {
-    val r = starRadius(node, zoom)
+private fun DrawScope.starLive(node: AtlasNode, at: Offset, taken: Boolean, open: Boolean, clock: Float) {
+    val r = starRadius(node)
     if (open && !taken) drawCircle(Color.White.copy(alpha = .45f + .35f * sin(clock * 4f + node.code.hashCode() % 7)), r * .55f, at)
     if (node.kind == AtlasNodeKind.KEYSTONE) {
         val rim = if (taken) node.branch.hue() else Sky.faint.copy(alpha = .5f)
         repeat(6) { k ->
             val a = k * PI / 3 + clock * .3f
-            drawCircle(rim, 1.6.dp.toPx() * zoom, Offset(at.x + (cos(a) * r * 1.5f).toFloat(), at.y + (sin(a) * r * 1.5f).toFloat()))
+            drawCircle(rim, 1.6.dp.toPx(), Offset(at.x + (cos(a) * r * 1.5f).toFloat(), at.y + (sin(a) * r * 1.5f).toFloat()))
         }
     }
 }

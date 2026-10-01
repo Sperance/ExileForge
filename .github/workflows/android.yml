@@ -114,7 +114,7 @@ jobs:
             core/build/test-results
             build/client-server.log
   # After both checks pass on a push, a versionName with no release yet is built, signed and published (3.68.2):
-  # tag v<versionName> on this commit, the release APK attached, the notes from the top entry of CHANGELOG.md.
+  # tag v<versionName> on this commit, the release APK attached, the notes from RELEASE_NOTES.md (3.69.0).
   release:
     needs: [build, client-server]
     if: github.event_name == 'push'
@@ -174,7 +174,7 @@ jobs:
           tag=${{ steps.version.outputs.tag }}
           apk="ExileForge-$tag.apk"
           cp app/build/outputs/apk/release/app-release.apk "$apk"
-          # The notes: the first «## » entry of the changelog, which must be this version's.
-          awk '/^## /{n++} n==1' CHANGELOG.md > notes.md
-          head -1 notes.md | grep -q "^## ${tag#v} " || { echo "::error::CHANGELOG.md top entry is not ${tag#v}"; exit 1; }
-          gh release create "$tag" "$apk" --target "$GITHUB_SHA" --title "ExileForge ${tag#v}" --notes-file notes.md --latest
+          # The notes: RELEASE_NOTES.md holds only this version's, under its first heading «## <versionName>».
+          heading=$(grep -m1 '^## ' RELEASE_NOTES.md | sed 's/[[:space:]]*$//')
+          [ "$heading" = "## ${tag#v}" ] || { echo "::error::RELEASE_NOTES.md first heading is '$heading', not '## ${tag#v}'"; exit 1; }
+          gh release create "$tag" "$apk" --target "$GITHUB_SHA" --title "ExileForge ${tag#v}" --notes-file RELEASE_NOTES.md --latest

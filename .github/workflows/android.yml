@@ -113,3 +113,59 @@ jobs:
             core/build/reports/tests
             core/build/test-results
             build/client-server.log
+  # After both checks pass on a push, a versionName with no release yet is built, signed and published (3.68.2):
+  # tag v<versionName> on this commit, the release APK attached, the notes from the top entry of CHANGELOG.md.
+  release:
+    needs: [build, client-server]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: release
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - id: version
+        run: |
+          version=$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' app/build.gradle.kts | head -1)
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+          if gh release view "v$version" >/dev/null 2>&1; then echo "exists=true" >> "$GITHUB_OUTPUT"; else echo "exists=false" >> "$GITHUB_OUTPUT"; fi
+      - if: steps.version.outputs.exists == 'false'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - if: steps.version.outputs.exists == 'false'
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools'
+      - if: steps.version.outputs.exists == 'false'
+        uses: gradle/actions/setup-gradle@v4
+      - if: steps.version.outputs.exists == 'false'
+        name: Build signed release APK
+        env:
+          RELEASE_KEYSTORE: ${{ secrets.RELEASE_KEYSTORE }}
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          if [ -n "$RELEASE_KEYSTORE" ]; then
+            echo "$RELEASE_KEYSTORE" | base64 -d > "$RUNNER_TEMP/release.jks"
+            export RELEASE_KEYSTORE_PATH="$RUNNER_TEMP/release.jks"
+          fi
+          chmod +x gradlew
+          ./gradlew :app:assembleRelease
+      - if: steps.version.outputs.exists == 'false'
+        name: Publish release
+        run: |
+          tag=${{ steps.version.outputs.tag }}
+          apk="ExileForge-$tag.apk"
+          cp "$(ls app/build/outputs/apk/release/*.apk | head -1)" "$apk"
+          # The notes: the first «## » entry of the changelog, up to the next one.
+          awk '/^## /{n++} n==1' CHANGELOG.md > notes.md
+          gh release create "$tag" "$apk" --target "$GITHUB_SHA" --title "ExileForge ${tag#v}" --notes-file notes.md

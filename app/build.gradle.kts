@@ -27,8 +27,20 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+    // The published APK (3.68.2): signed with the key from the CI secrets, so each release installs over the last;
+    // without them it falls back to the debug key and still installs, though not over a release-key build.
+    val releaseKey = System.getenv("RELEASE_KEYSTORE_PATH")?.let { file(it) }?.takeIf { it.exists() }
+    signingConfigs {
+        if (releaseKey != null) create("release") {
+            storeFile = releaseKey
+            storePassword = System.getenv("RELEASE_KEYSTORE_PASSWORD")
+            keyAlias = System.getenv("RELEASE_KEY_ALIAS")
+            keyPassword = System.getenv("RELEASE_KEY_PASSWORD")
+        }
+    }
     buildTypes {
         release {
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
             // R8 shrinks the extended icon set and the rest to what the app draws; CI builds this
             // variant so a class it removes by mistake fails there rather than on a phone.
             isMinifyEnabled = true

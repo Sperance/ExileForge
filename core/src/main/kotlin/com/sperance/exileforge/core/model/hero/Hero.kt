@@ -115,13 +115,38 @@ data class HeroView(
     val chronicle: Map<String, Long> get() = Counter.values(info.counters, Counter.derived(level, campaign.cleared.size, info.atlas.size, tree.size))
 }
 
-/** The menagerie as the server keeps it: the pets, the combat one and the helper at work by id, and the ceiling. */
+/** The menagerie as the server keeps it: the pets, the combat one and the helper at work by id, the ceiling and the incubator (server 1.67.0). */
 @kotlinx.serialization.Serializable data class PetState(
     val pets: List<com.sperance.exileforge.rules.content.Pet> = emptyList(), val combat: String = "", val helper: String = "", val cap: Int = 0,
+    val incubator: IncubatorState = IncubatorState(),
 ) {
     val active: List<com.sperance.exileforge.rules.content.Pet> get() = pets.filter { it.id == combat || it.id == helper }
     fun pet(id: String) = pets.firstOrNull { it.id == id }
     fun isActive(id: String) = id == combat || id == helper
+}
+
+/**
+ * The incubator (server 1.67.0): [slots] places open by the hero's sheet, [max] at most, the places shown in [entries]
+ * (open ones and any busy one past them) and the server's clock [now] when it was read, so a countdown runs on its time.
+ */
+@kotlinx.serialization.Serializable data class IncubatorState(
+    val slots: Int = 0, val max: Int = 0, val entries: List<IncubatorSlot> = emptyList(), val now: Long = 0,
+) {
+    fun slot(index: Int): IncubatorSlot? = entries.firstOrNull { it.slot == index }
+    val ready: Int get() = entries.count { it.busy && it.ready }
+    val incubating: Int get() = entries.count { it.busy && !it.ready }
+    /** The first open place with no egg, or null when every one is taken. */
+    val free: IncubatorSlot? get() = entries.firstOrNull { it.open && !it.busy }
+}
+
+/** A place of the incubator: empty when [egg] is blank; otherwise the egg's settled [rarity] and [level] and its term, epoch ms. */
+@kotlinx.serialization.Serializable data class IncubatorSlot(
+    val slot: Int, val open: Boolean = true, val egg: String = "", val rarity: com.sperance.exileforge.rules.content.Rarity? = null, val level: Int = 0,
+    val startedAt: Long = 0, val readyAt: Long = 0, val remainingSeconds: Long = 0, val ready: Boolean = false,
+) {
+    val busy: Boolean get() = egg.isNotBlank()
+    /** Ripeness 0..1 at server time [now]. */
+    fun progress(now: Long): Float = if (!busy || readyAt <= startedAt) 1f else ((now - startedAt).toFloat() / (readyAt - startedAt)).coerceIn(0f, 1f)
 }
 
 /** A hero of the account's list (`GET /hero/byUser`, the raw document): enough for the menu, the rest comes with the view. */

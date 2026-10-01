@@ -120,7 +120,11 @@ class HeroClient internal constructor(private val http: Transport) {
 
     // ---- the menagerie (server 1.5.0); none retried: a repeat would spend a second egg or orb ----
 
-    suspend fun hatchPet(heroId: String, egg: String): PetState = http.post("$HERO/pets/hatch", heroQuery(heroId, "egg" to egg))
+    /** Lays [egg] into the incubator (server 1.67.0): place [slot], or the first free one; its rarity and level are rolled now. */
+    suspend fun incubatePet(heroId: String, egg: String, slot: Int? = null): PetState =
+        http.post("$HERO/pets/incubate", heroQuery(heroId, "egg" to egg, "slot" to slot?.toString()))
+    /** Takes the ripe egg of place [slot] out of the incubator: the pet hatches, its species and lines rolled now. */
+    suspend fun collectPet(heroId: String, slot: Int): PetState = http.post("$HERO/pets/collect", heroQuery(heroId, "slot" to slot.toString()))
     /** Any crafting orb on a pet (server 1.65.0), with an [omen] spent along with it when given; the pets' own growth orb too. */
     suspend fun petOrb(heroId: String, petId: String, orb: String, omen: String? = null): PetState =
         http.post("$HERO/pets/orb", heroQuery(heroId, "petId" to petId.also(::requireItemId), "orb" to orb, "omen" to omen?.takeIf { it.isNotBlank() }))

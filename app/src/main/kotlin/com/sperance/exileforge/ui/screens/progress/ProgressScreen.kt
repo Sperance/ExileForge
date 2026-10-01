@@ -74,8 +74,11 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
     val tiles = run {
         val orbs = hero?.let { h -> s.orbs.sumOf { h.count(it.code) } } ?: 0L
         val pets = hero?.pets
-        val eggs = if (hero != null && index != null && pets != null && pets.pets.size < pets.cap)
-            index.pets.eggs.values.toSet().sumOf { hero.count(it) } else 0L
+        // The incubator (server 1.67.0): ripe eggs first, then the ones ripening, then eggs of the bag a free place waits for.
+        val incubator = pets?.incubator
+        val ready = incubator?.ready ?: 0
+        val incubating = incubator?.incubating ?: 0
+        val eggs = if (hero != null && index != null && incubator?.free != null) index.pets.eggs.values.toSet().sumOf { hero.count(it) } else 0L
         val atlas = s.atlasState
         val rules = index?.campaign?.trials
         val keys = hero?.count(TrialRules.KEY) ?: 0L
@@ -85,8 +88,13 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
             ProgressTile(ui("nav.forge"), ForgeGlyphs.Anvil, Ember, ui("progress.forge_note"),
                 ui("progress.forge_orbs", orbs).takeIf { orbs > 0 }, 0) { vm.tab(TAB_CRAFT) },
             ProgressTile(ui("progress.pets"), ForgeGlyphs.Exile, Vital, ui("progress.pets_note", pets?.pets?.size ?: 0, pets?.cap ?: 0),
-                if (eggs > 0) ui("progress.pets_hatch", eggs) else ui("progress.pets_work", pets?.active?.size ?: 0, PETS_AT_WORK),
-                eggs.toInt()) { vm.tab(TAB_PETS) },
+                when {
+                    ready > 0 -> ui("progress.pets_ready", ready)
+                    incubating > 0 -> ui("progress.pets_incubating", incubating)
+                    eggs > 0 -> ui("progress.pets_lay", eggs)
+                    else -> ui("progress.pets_work", pets?.active?.size ?: 0, PETS_AT_WORK)
+                },
+                if (ready > 0) ready else eggs.toInt()) { vm.tab(TAB_PETS) },
             ProgressTile(ui("atlas.title"), ForgeGlyphs.Atlas, Rune, ui("progress.atlas_note", ((atlas?.allocated?.size ?: 1) - 1).coerceAtLeast(0)),
                 atlas?.let { ui("atlas.points", it.available, it.points) }, atlas?.available ?: 0, vm::openAtlas),
             ProgressTile(ui("trials.title"), ForgeGlyphs.Skull, AbyssGlow, ui("progress.trials_note", hero?.campaign?.trials?.towerBest ?: 0),

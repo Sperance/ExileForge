@@ -46,7 +46,7 @@ fun petName(species: String): String = locOr("pet.$species", species)
 }
 
 /**
- * The menagerie (3.5.0, server 1.5.0): eggs from the bag hatch here, and every pet shows what it is, its
+ * The menagerie (3.5.0, server 1.5.0): eggs from the bag ripen in the incubator (server 1.67.0), and every pet shows what it is, its
  * level and its lines; one combat pet and one helper go to work, an orb changes one, a spare one is let go for gold.
  * Since server 1.65.0 a pet takes the crafting orbs of items — rarity, lines, quality, a fractured line, corruption — and the
  * Omen of Choice's lines wait on it for the player's pick, as an item's do in the forge.
@@ -54,9 +54,8 @@ fun petName(species: String): String = locOr("pet.$species", species)
 @OptIn(ExperimentalLayoutApi::class)
 @Composable fun MenagerieSection(s: ForgeState, vm: ForgeViewModel) {
     val hero = s.hero ?: return
-    val index = s.index ?: return
+    if (s.index == null) return
     val pets = hero.pets
-    val eggs = index.pets.eggs.values.filter { hero.count(it) > 0 }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         ForgePanel {
             FirstVisit(Guide.PETS)
@@ -65,14 +64,7 @@ fun petName(species: String): String = locOr("pet.$species", species)
                 GuideButton(Guide.PETS)
             }
             MutedText(ui("pets.hint"))
-            if (eggs.isEmpty()) MutedText(ui("pets.no_eggs"))
-            else FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                eggs.forEach { egg ->
-                    ForgeOutlinedButton(onClick = { vm.hatchPet(egg) }, enabled = !s.busy && pets.pets.size < pets.cap) {
-                        Text(ui("pets.hatch", itemTitle(egg), hero.count(egg)))
-                    }
-                }
-            }
+            IncubatorPanel(s, vm)
         }
         if (pets.pets.isEmpty()) InfoCard(ui("pets.empty"), ui("pets.empty_hint"))
         pets.pets.sortedWith(compareBy({ !pets.isActive(it.id) }, { -it.rarity.ordinal }, { -it.level })).forEach { pet -> PetCard(s, vm, pet) }

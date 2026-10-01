@@ -89,7 +89,8 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     fun sellOverflow(itemId: String) { with(runtime) { heroCommand { id -> api.hero.sellOverflow(id, itemId) } } }
 
     // The menagerie (3.5.0): the snapshot with each answer carries the pets and the bag.
-    fun hatchPet(egg: String) { with(runtime) { heroCommand { id -> api.hero.hatchPet(id, egg) } } }
+    fun incubatePet(egg: String, slot: Int? = null) { with(runtime) { heroCommand { id -> api.hero.incubatePet(id, egg, slot) } } }
+    fun collectPet(slot: Int) { with(runtime) { heroCommand { id -> api.hero.collectPet(id, slot) } } }
     /** A crafting orb on a pet (server 1.65.0), with an omen when one is laid on it. */
     fun petOrb(petId: String, orb: String, omen: String? = null) { with(runtime) { heroCommand { id -> api.hero.petOrb(id, petId, orb, omen) } } }
     fun choosePetLine(petId: String, choice: Int) { with(runtime) { heroCommand { id -> api.hero.choosePetLine(id, petId, choice) } } }

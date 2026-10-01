@@ -244,7 +244,7 @@ private fun eta(millis: Long): String {
 }
 
 /** How long a work runs: «2 ч 05 мин», «14 мин 03 с», «42 с». */
-private fun duration(millis: Long): String {
+internal fun duration(millis: Long): String {
     val seconds = (millis / 1000).coerceAtLeast(0)
     return when {
         seconds >= 3600 -> ui("crafts.duration_hours", seconds / 3600, "%02d".format(seconds % 3600 / 60))

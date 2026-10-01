@@ -56,11 +56,16 @@ import com.sperance.exileforge.ui.theme.*
         Plate(Rune) {
             Text(ui("trials.tower_title"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
             MutedText(ui("trials.tower_hint", tower.growth.toInt(), tower.hoardEvery, tower.modEvery, tower.checkpoint))
-            Text(ui("trials.tower_record", trials.towerBest, tower.start(trials.towerBest)), color = Parchment, style = MaterialTheme.typography.bodyMedium)
-            tower.mods(tower.start(trials.towerBest) + tower.modEvery - 1).takeIf { it.isNotEmpty() }?.let { mods ->
-                mods.forEach { Text(SkillText.statLine(it.stat, it.op, it.value), color = LifeRed, style = MaterialTheme.typography.labelSmall) }
+            // Conquered (3.71.0): past the last floor there is nothing to enter, and no seal is spent on it
+            val conquered = tower.start(trials.towerBest) > tower.maxFloor
+            if (conquered) Text(ui("trials.tower_conquered", tower.maxFloor), color = GoldBright, style = MaterialTheme.typography.bodyMedium)
+            else {
+                Text(ui("trials.tower_record", trials.towerBest, tower.start(trials.towerBest)), color = Parchment, style = MaterialTheme.typography.bodyMedium)
+                tower.mods(tower.start(trials.towerBest) + tower.modEvery - 1).takeIf { it.isNotEmpty() }?.let { mods ->
+                    mods.forEach { Text(SkillText.statLine(it.stat, it.op, it.value), color = LifeRed, style = MaterialTheme.typography.labelSmall) }
+                }
             }
-            ForgeButton(onClick = vm::enterTower, enabled = idle && seals >= 1 && trials.run == null, modifier = Modifier.fillMaxWidth()) {
+            ForgeButton(onClick = vm::enterTower, enabled = idle && seals >= 1 && trials.run == null && !conquered, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("trials.tower_enter", itemTitle(TrialRules.SEAL)))
             }
         }

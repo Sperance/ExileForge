@@ -60,11 +60,11 @@ class RunJournal(val runId: String, val heroId: String, val zone: String, events
 
     /**
      * What to send now, and the key to send it with: the batch in flight again, the same events under the same
-     * key, or — none in flight — everything pending under a [fresh] key. Null when nothing is pending.
+     * key, or — none in flight — up to [MAX_BATCH] pending under a [fresh] key, the rest after it. Null when nothing is pending.
      */
     fun outgoing(fresh: () -> String): Pair<JournalBatch, List<RunEvent>>? {
         if (settled) return null
-        val sent = batch ?: JournalBatch(fresh(), end).also { batch = it }
+        val sent = batch ?: JournalBatch(fresh(), minOf(end, applied + MAX_BATCH)).also { batch = it }
         return sent to events.subList(applied - base, sent.end - base).toList()
     }
 
@@ -82,6 +82,9 @@ class RunJournal(val runId: String, val heroId: String, val zone: String, events
     fun encode(): String = WireJson.encodeToString(JournalState.serializer(), snapshot())
 
     companion object {
+        /** The most events one batch carries: the server refuses a longer journal whole (CP_022, server 1.53.0). */
+        const val MAX_BATCH = 64
+
         fun of(state: JournalState): RunJournal = RunJournal(state.runId, state.heroId, state.zone, state.events, state.applied, state.base, state.batch, state.carry)
         fun decode(text: String): RunJournal? = runCatching { of(WireJson.decodeFromString(JournalState.serializer(), text)) }.getOrNull()
     }

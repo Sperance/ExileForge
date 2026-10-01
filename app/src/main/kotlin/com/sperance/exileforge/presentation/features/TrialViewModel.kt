@@ -1,6 +1,7 @@
 package com.sperance.exileforge.presentation.features
 
 import com.sperance.exileforge.core.campaign.RunCommand
+import com.sperance.exileforge.core.campaign.RunJournal
 import com.sperance.exileforge.core.campaign.TrialArena
 import com.sperance.exileforge.core.campaign.TrialPhase
 import com.sperance.exileforge.core.i18n.ui
@@ -33,6 +34,8 @@ class TrialViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     private val mutableArena = MutableStateFlow<TrialArena?>(null)
     val arena: StateFlow<TrialArena?> = mutableArena.asStateFlow()
     private var owner = ""
+    /** The trial the journal belongs to (server 1.68.0): a batch names it, and the server takes no other trial's. */
+    private var runId = ""
     private val pending = mutableListOf<TrialEvent>()
     /** The batch in flight and its key: sent again as it was until the server answers it. */
     private var batch: Pair<String, List<TrialEvent>>? = null
@@ -74,6 +77,7 @@ class TrialViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         val hero = state.value.hero?.takeIf { it.id == id } ?: return
         val gear = expeditionViewModel.gear() ?: return
         owner = id
+        runId = started.run.id
         synchronized(pending) { pending.clear(); batch = null }
         mutableArena.value = TrialArena(index, started.run, started.context, gear, hero.pets.pet(hero.pets.combat), onEvent = ::recorded)
     } }
@@ -86,8 +90,8 @@ class TrialViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         val open = state.value.hero?.campaign?.trials?.run ?: return
         if (mutableArena.value != null) return
         task(writing = true, touches = setOf(Reads.HERO)) {
-            val report = api.trials.events(heroId, listOf(TrialEvent(open.applied, TrialEventKind.END)))
-            report.received.takeIf { it.overflowed > 0 || it.sold > 0 }?.let { toast(ui("stash.received", it.overflowed, it.sold, it.gold)) }
+            val report = api.trials.events(heroId, open.id, listOf(TrialEvent(open.applied, TrialEventKind.END)))
+            report?.received?.takeIf { it.overflowed > 0 || it.sold > 0 }?.let { toast(ui("stash.received", it.overflowed, it.sold, it.gold)) }
             toast(ui("trials.abandoned"))
             if (state.value.play.heroReadAt == 0L) heroViewModel.readHero()
         }
@@ -103,12 +107,20 @@ class TrialViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     /** Sends the batch in flight again, or the events pending under a new key; the answer lands on the arena. */
     private suspend fun flush() { with(runtime) {
         val (key, events) = synchronized(pending) {
-            batch ?: pending.toList().takeIf { it.isNotEmpty() }?.let { (UUID.randomUUID().toString() to it).also { made -> batch = made; pending.removeAll(it) } }
+            // At most a batch's worth at once (3.71.0): the server refuses a longer journal whole, and the rest goes after it
+            batch ?: pending.take(RunJournal.MAX_BATCH).takeIf { it.isNotEmpty() }?.let { (UUID.randomUUID().toString() to it).also { made -> batch = made; pending.removeAll(it) } }
         } ?: return
         try {
-            val report = api.trials.events(owner, events, key)
+            val report = api.trials.events(owner, runId, events, key)
             failures = 0
             synchronized(pending) { batch = null }
+            if (report == null) {
+                // Landed, its report not kept: the batch is taken, and its loot comes with the hero read again
+                mutableArena.value?.settle(events.last().n + 1, emptyMap())
+                heroViewModel.readHero()
+                if (synchronized(pending) { pending.isNotEmpty() }) sends.trySend(Unit)
+                return
+            }
             mutableArena.value?.settle(report.applied, report.rewards.associate { it.n to it.reward.toReward() })
             if (report.rejected.isNotEmpty()) toast(ui("expedition.rejected", report.rejected.size))
             report.received.takeIf { it.overflowed > 0 || it.sold > 0 }?.let { toast(ui("stash.received", it.overflowed, it.sold, it.gold)) }
@@ -116,8 +128,10 @@ class TrialViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             if (synchronized(pending) { pending.isNotEmpty() }) sends.trySend(Unit)
         } catch (e: CancellationException) { throw e }
         catch (e: ApiFailure) {
-            // A refusal is the server's last word on the batch: the trial is closed there, nothing of it waits any longer.
-            if (!CommandQueue.transient(e.status)) { synchronized(pending) { batch = null; pending.clear() }; mutableArena.value?.settle(Int.MAX_VALUE, emptyMap()) }
+            // The trial is closed there, or the journal is of another trial: nothing of it waits any longer.
+            if (e.code in TRIAL_CLOSED) { synchronized(pending) { batch = null; pending.clear() }; mutableArena.value?.settle(Int.MAX_VALUE, emptyMap()) }
+            // Any other refusal leaves the events unsent, not settled (3.71.0): they go again under a new key a while later.
+            else if (!CommandQueue.transient(e.status)) { synchronized(pending) { batch?.let { pending.addAll(0, it.second) }; batch = null }; retryLater() }
             report(e, writing = true)
         }
         catch (_: Exception) { retryLater() }
@@ -145,5 +159,7 @@ class TrialViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     private companion object {
         const val RETRY_FIRST = 2_000L
         const val RETRY_DOUBLINGS = 3
+        /** No trial is open (CP_023), or the journal is of another one (CP_026). */
+        val TRIAL_CLOSED = setOf("CP_023", "CP_026")
     }
 }

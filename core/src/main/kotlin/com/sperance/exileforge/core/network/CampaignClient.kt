@@ -8,6 +8,7 @@ import com.sperance.exileforge.rules.run.RunEvent
 import com.sperance.exileforge.rules.run.RunStart
 import java.util.UUID
 import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.JsonNull
 
 private const val CAMPAIGN = "api/v1/hero/campaign"
 
@@ -25,11 +26,13 @@ class CampaignClient internal constructor(private val http: Transport) {
     }
 
     /**
-     * A batch of the run's journal, in order; safe to repeat — numbers already applied are skipped. The answer
-     * carries every event's reward (server 1.30.0), so a batch whose answer was lost is sent again with the same
-     * [key]: the server repeats its stored answer, rewards and all, instead of an empty one.
+     * A batch of the journal of run [runId], in order; safe to repeat — numbers already applied are skipped, and a batch
+     * of another run is refused (CP_026, server 1.68.0). The answer carries every event's reward (server 1.30.0), so a
+     * batch whose answer was lost is sent again with the same [key]: the server repeats its stored report. Null - the
+     * batch landed, but its report was not kept: the hero is read again, and the batch's loot is in it.
      */
-    suspend fun events(heroId: String, events: List<RunEvent>, key: String = UUID.randomUUID().toString()): RunReport =
-        WireJson.decodeFromJsonElement(RunReport.serializer(), http.request("POST", "$CAMPAIGN/events", heroQuery(heroId),
-            WireJson.encodeToJsonElement(ListSerializer(RunEvent.serializer()), events), authenticated = true, headers = mapOf(IDEMPOTENCY_HEADER to key)))
+    suspend fun events(heroId: String, runId: String, events: List<RunEvent>, key: String = UUID.randomUUID().toString()): RunReport? =
+        http.request("POST", "$CAMPAIGN/events", heroQuery(heroId, "runId" to runId),
+            WireJson.encodeToJsonElement(ListSerializer(RunEvent.serializer()), events), authenticated = true, headers = mapOf(IDEMPOTENCY_HEADER to key))
+            .takeIf { it !is JsonNull }?.let { WireJson.decodeFromJsonElement(RunReport.serializer(), it) }
 }

@@ -73,7 +73,6 @@ class Spawns(private val index: ContentIndex, private val run: Run) {
     }
 
     /** Whether this run hides a Vaal portal: [chance] of it, on a zone with a guardian of corruption to stand at the zone's end. */
-    fun portal(zone: Zone, chance: Double): Boolean = zone.corrupted.isNotBlank() && run.streams.of("portal").chance(chance)
 
     companion object { private const val BORROWED_MANA = 40.0 }
 }

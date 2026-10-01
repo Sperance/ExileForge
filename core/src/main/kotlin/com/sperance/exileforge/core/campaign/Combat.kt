@@ -185,6 +185,13 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
     val armourCap = ceiling(rules.ceilings.physical) / 100
     /** Taken off physical damage after armour, under the same physical ceiling. */
     val physicalReduction = percent("STOCK_PHYSICAL_REDUCTION", ceiling(rules.ceilings.physical))
+
+    /**
+     * The share of a physical blow of [raw] that armour and then the flat reduction take, together under the physical
+     * ceiling (3.71.0): the ceiling is the whole of physical mitigation, not each half's, so the two never stack past it.
+     */
+    fun physicalMitigation(raw: Double, factor: Double): Double =
+        (1 - (1 - (armour / (armour + factor * raw)).coerceAtMost(armourCap)) * (1 - physicalReduction)).coerceAtMost(armourCap)
     /**
      * Chaos stands alone, as in PoE; "all resistances" and "all maximum resistances" cover the three elements.
      * [penetration] (server 0.66.0) is the striker's: it is taken off the resistance, and can push it below
@@ -622,7 +629,7 @@ class Battle(
             body = next
             attackInterval = 1 / next.attackSpeed
         }
-        /** Stunned or frozen until then: nothing is swung before it. */
+        /** Stunned until then: nothing is swung before it. A freeze holds by its own ailment (3.71.0), so lifting it frees at once. */
         var heldUntil = 0.0
         var lastHit = -1e9
         val ailments = mutableListOf<ActiveAilment>()
@@ -646,7 +653,7 @@ class Battle(
         /** A foe steps onto the field at [place]: a moment to close in before its first swing, a little longer the further its place. */
         fun enter(place: Int, at: Double) { engaged = true; nextAttack = at + ENTRY + place * STAGGER }
         val alive: Boolean get() = engaged && life > 0
-        val held: Boolean get() = heldUntil > time
+        val held: Boolean get() = heldUntil > time || ailments.any { it.ailment == Ailment.FROZEN && it.until > time }
         val cursed: Boolean get() = effects.any { it.kind == EffectKind.CURSE }
         val invulnerable: Boolean get() = invulnerableUntil > time
         fun frozen() = ailments.any { it.ailment == Ailment.FROZEN }
@@ -1116,6 +1123,9 @@ class Battle(
     private fun burn(me: Fighter, dt: Double) {
         if (me.ailments.isEmpty()) return
         val wasAlive = me.alive
+        // The kill goes to the ailment that dealt the most this slice (3.71.0): a spell's burn beside an attack's bleed takes no one else's kill
+        var heaviest: ActiveAilment? = null
+        var heaviestSlice = 0.0
         me.ailments.filter { it.ailment.hurts }.forEach { active ->
             val span = min(dt, active.until - (time - dt)).coerceAtLeast(0.0)
             val rate = active.magnitude * me.weakness() * me.body.dotTaken * me.body.ailmentTaken(active.ailment)
@@ -1126,9 +1136,10 @@ class Battle(
             if (chaos && me.body.chaosImmune) return@forEach
             wound(me, slice, chaos)
             me.ticking.merge(active.ailment, slice, Double::plus)
+            if (slice > heaviestSlice) { heaviest = active; heaviestSlice = slice }
         }
         val expired = me.ailments.filter { it.until <= time }
-        val bySpell = me.ailments.any { it.spell && it.source == Side.HERO }
+        val bySpell = heaviest?.let { it.spell && it.source == Side.HERO } == true
         me.ailments.removeAll(expired)
         me.ticking.keys.toList().forEach { ailment ->
             val since = me.tickedAt[ailment] ?: time.also { me.tickedAt[ailment] = it }
@@ -1240,7 +1251,7 @@ class Battle(
             val raw = base * spread * multiplier * against * body.damageMore * doubled * versus
             val pierce = body.penetration(type) + if (type == weakest) body.lowestResistPenetrate else 0.0
             val armour = when (type) {
-                DamageType.PHYSICAL -> 1 - (1 - (target.body.armour / (target.body.armour + rules.armour.factor * raw)).coerceAtMost(target.body.armourCap)) * (1 - target.body.physicalReduction)
+                DamageType.PHYSICAL -> target.body.physicalMitigation(raw, rules.armour.factor)
                 else -> elementalArmour(target.body, type, raw)
             }
             val resist = if (type == DamageType.PHYSICAL) 0.0 else target.body.resistTo(type, pierce)
@@ -1386,11 +1397,11 @@ class Battle(
         // Per type (3.70.0): what came back, the armour's and the resistance's shares it lost on the attacker, and what landed.
         val types = back.map { (type, raw) ->
             val armour = if (type == DamageType.PHYSICAL)
-                1 - (1 - (attacker.body.armour / (attacker.body.armour + rules.armour.factor * raw)).coerceAtMost(attacker.body.armourCap)) * (1 - attacker.body.physicalReduction)
+                attacker.body.physicalMitigation(raw, rules.armour.factor)
                 else 0.0
             val resist = if (type == DamageType.PHYSICAL) 0.0 else attacker.body.resist(type)
             val defended = when (type) {
-                DamageType.PHYSICAL -> raw * (1 - (attacker.body.armour / (attacker.body.armour + rules.armour.factor * raw)).coerceAtMost(attacker.body.armourCap)) * (1 - attacker.body.physicalReduction)
+                DamageType.PHYSICAL -> raw * (1 - attacker.body.physicalMitigation(raw, rules.armour.factor))
                 else -> raw * (1 - attacker.body.resist(type))
             }.coerceAtLeast(0.0)
             TypeTrace(type, raw, raw, armour, resist, 0.0, defended * attacker.body.damageTaken(type)) to defended
@@ -1464,7 +1475,7 @@ class Battle(
             stunned = true
             target.heldUntil = max(target.heldUntil, time + rules.stun.duration)
         }
-        val inflicted = if (target.alive) inflict(me, target, taken, blow.ailments) else emptyList()
+        val inflicted = if (target.alive) inflict(me, target, taken, blow.ailments, blow.spell) else emptyList()
         val trace = pendingHit?.copy(rolls = takeTape(), landing = Landing(soakedBarrier, absorbed, manaPaid, bound - toLifeNow - manaPaid,
             toLifeNow, if (body.leechToShield) 0.0 else leech, onHit, recouped, culled))
         pendingHit = null
@@ -1520,17 +1531,17 @@ class Battle(
      * the target may avoid it, be immune to it (2.78.0) and shortens it by its own gear, and the damage over time
      * runs heavier by the striker's. A skill's own chances ([extra], in percent) roll after the rules'.
      */
-    private fun inflict(me: Fighter, target: Fighter, taken: Map<DamageType, Double>, extra: List<Pair<Ailment, Double>>): List<Ailment> {
+    private fun inflict(me: Fighter, target: Fighter, taken: Map<DamageType, Double>, extra: List<Pair<Ailment, Double>>, spell: Boolean): List<Ailment> {
         val rolled = ailmentRules.mapNotNull { (rule, what) ->
             val (ailment, type) = what
             val amount = taken[type] ?: 0.0
             val base = if (me.side == Side.HERO) rule.heroChance ?: rule.chance else rule.chance
             val chance = (base + me.body.inflictChance(ailment)).coerceAtMost(100.0) / 100
             if (amount <= 0 || chance <= 0 || amount < target.body.maxLife * rule.threshold / 100 || draw(RollKey.AILMENT, chance, ailment) >= chance) return@mapNotNull null
-            afflict(me, target, ailment, taken)
+            afflict(me, target, ailment, taken, spell)
         }
         val forced = extra.filter { it.first !in rolled && it.second > 0 }.mapNotNull { (ailment, chance) ->
-            if (draw(RollKey.AILMENT, chance / 100, ailment) * 100 < chance) afflict(me, target, ailment, taken) else null
+            if (draw(RollKey.AILMENT, chance / 100, ailment) * 100 < chance) afflict(me, target, ailment, taken, spell) else null
         }
         return rolled + forced
     }
@@ -1569,7 +1580,6 @@ class Battle(
             existing.maxOf { it.magnitude } <= fresh.magnitude -> { target.ailments.removeAll(existing); target.ailments += fresh }
             else -> { val kept = existing.maxBy { it.magnitude }; target.ailments.remove(kept); target.ailments += kept.copy(until = max(kept.until, fresh.until)) }
         }
-        if (ailment == Ailment.FROZEN) target.heldUntil = max(target.heldUntil, fresh.until)
     }
 
     /** A foe down: a kill to report, life and mana on kill and the flasks' charges for the hero (2.78.0), its aura lifted, and a focus on it let go. */
@@ -1983,7 +1993,9 @@ class Battle(
                 damage.merge(element, total * convert, Double::plus)
             }
             val leading = damage.maxByOrNull { it.value }?.key ?: DamageType.PHYSICAL
-            strike(me, hero, Blow(damage, Action.SKILL, skill.spell, skill.code, stun = hit.stun?.at(1) ?: 0.0,
+            // A single-target hit picks its target as a swing does (3.71.0): a tanking pet takes it; a hit on several lands on the hero
+            val target = if (hit.targets <= 1) foeTarget() else hero
+            strike(me, target, Blow(damage, Action.SKILL, skill.spell, skill.code, stun = hit.stun?.at(1) ?: 0.0,
                 ailments = hit.ailments.mapNotNull { resolve(it, element ?: leading, 1) }))
         }
         skill.buff?.let { buff ->

@@ -100,7 +100,7 @@ class ServerIntegrationTest {
             val run = Run(index, index.zone(zoneCode)!!, start.seed, start.context)
             assertEquals(run.count, start.count, "the client and the server count the zone differently")
             val events = listOf(RunEvent(0, RunEventKind.KILL, i = 0, m = 0), RunEvent(1, RunEventKind.BOSS), RunEvent(2, RunEventKind.LEAVE))
-            val report = api.campaign.events(heroId, events)
+            val report = assertNotNull(api.campaign.events(heroId, start.id, events))
             assertEquals(3, report.applied)
             assertEquals(emptyList(), report.rejected)
             assertTrue(!report.open, "the run stayed open after LEAVE")
@@ -108,7 +108,7 @@ class ServerIntegrationTest {
             assertTrue(report.rewards.first().reward.experience > 0, "a kill paid no experience")
             assertTrue(zoneCode in report.progress.cleared, "a slain boss did not clear the zone")
             // The run is closed: a journal sent again is refused with CP_018, which the client reads as "settled, drop it".
-            assertEquals("CP_018", assertFailsWith<ApiFailure> { api.campaign.events(heroId, events) }.code)
+            assertEquals("CP_018", assertFailsWith<ApiFailure> { api.campaign.events(heroId, start.id, events) }.code)
 
             // The auction takes the item out of the hero and gives it back on cancel: the starter set and the run's loot
             // hold chaos orbs too, so the count is compared with itself before the lot, not with a fixed figure.

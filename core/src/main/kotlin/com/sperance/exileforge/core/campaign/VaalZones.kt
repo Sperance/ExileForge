@@ -12,9 +12,6 @@ object VaalZones {
     private const val SHARE = 0.6
     private const val MIN_SIZE = 32
 
-    /** Share of full life a hero who fell in the zone wakes with by the portal. */
-    const val WAKE_LIFE = 0.3
-
     fun isZone(zone: Zone) = zone.biome == BIOME
 
     /** The zone's map, cut from [location]: or null for a location with no guardian to stand at its end. */

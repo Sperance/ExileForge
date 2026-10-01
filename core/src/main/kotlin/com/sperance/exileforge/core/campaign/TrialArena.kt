@@ -266,13 +266,16 @@ class TrialArena(
                 val n = record(TrialEventKind.FLOOR, step)
                 if (floor?.hoard == true) hoards += n
                 step++
+                // The tower's last floor won (3.71.0): the server closes the trial with it, so no end is sent after it
+                if (step > trials.tower.maxFloor) finish(fallen = false, ended = true)
             }
         }
     }
 
-    private fun finish(fallen: Boolean) {
+    /** The trial over; [ended] - the server closed it already, and no end of it is recorded. */
+    private fun finish(fallen: Boolean, ended: Boolean = false) {
         if (phase != TrialPhase.FIGHT) return
-        record(TrialEventKind.END, fallen = fallen)
+        if (!ended) record(TrialEventKind.END, fallen = fallen)
         endedAt = clock()
         battle = null
         phase = if (fallen) TrialPhase.DEAD else TrialPhase.DONE

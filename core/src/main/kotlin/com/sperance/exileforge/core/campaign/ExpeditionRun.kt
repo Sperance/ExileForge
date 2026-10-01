@@ -907,7 +907,8 @@ class ExpeditionRun(
                 deaths++; end = MapEnd.FELL
                 // A fall in the Abyss burns its hoard, but for the atlas's share; then the zone's own price.
                 down?.let { take(it, fallen = true) }
-                if (vaal) record(RunEventKind.VAAL_LEAVE) else record(RunEventKind.FALL)?.let { fallEvent = it.n; fall = deathLoss() }
+                // A fall in the Vaal zone is a death as any (3.71.0, server 1.68.0): the same price, and the whole run is over
+                record(RunEventKind.FALL)?.let { fallEvent = it.n; fall = deathLoss() }
                 onFallen()
             }
             // Nothing already looted is lost, but there is no report for a fight cut short: the packs of the stages won stay dead,
@@ -1056,7 +1057,7 @@ class ExpeditionRun(
             val boss = spawns.boss(zone, buffs, MapEffects.bossBuffs(effects))
             val bossDown = !vaal && campaign.bossDown(location.code, now)
             val vaalZone = campaign.vaalZone?.takeIf { it.mapCode == location.code }
-            val portal = !vaal && !campaign.corruptionOpened && (vaalZone != null || spawns.portal(location, AtlasEffects.portalChance(index, context.atlas)))
+            val portal = !vaal && !campaign.corruptionOpened && (vaalZone != null || run.portal)
             val world = ExpeditionWorld.create(zone, packs, stats, if (vaal) run.seed xor VAAL_SALT else run.seed, boss, portal)
             if (bossDown) world.bossAbsent()
             world.restore(killed, Run.PACK_SLOTS)

@@ -93,6 +93,7 @@ enum class MapLineKind { HARM, CONTENT, REWARD }
 object MapEffects {
     private val damage = DamageType.entries.map { it.attack }
     private val resists = DamageType.entries.mapNotNull { it.resist }
+    private val lifeRegen = listOf("STOCK_HEALTH_REGEN", "STOCK_LIFE_REGEN_PERCENT")
     /** The hero's critical chances a map lowers together: the attacks' and the spells' own (server 1.56.0). */
     private val criticalChances = listOf("STOCK_CRITICAL_CHANCE", "STOCK_SPELL_CRITICAL_CHANCE")
 
@@ -133,7 +134,8 @@ object MapEffects {
         if (effects.isEmpty()) return stats
         val sheet = stats.toMutableMap()
         effects[MapStats.HERO_RESIST]?.let { v -> resists.forEach { sheet[it] = (stats[it] ?: 0.0) - v } }
-        effects[MapStats.HERO_REGEN]?.let { v -> sheet["STOCK_HEALTH_REGEN"] = (stats["STOCK_HEALTH_REGEN"] ?: 0.0) * max(0.0, 1 - v / 100) }
+        // "Less regeneration" takes both halves of life regen: the flat one and the share of maximum life (3.71.0)
+        effects[MapStats.HERO_REGEN]?.let { v -> lifeRegen.forEach { sheet[it] = (stats[it] ?: 0.0) * max(0.0, 1 - v / 100) } }
         fun add(stat: String, v: Double) { sheet[stat] = (sheet[stat] ?: 0.0) + v }
         fun scale(stat: String, share: Double) { sheet[stat] = (sheet[stat] ?: 0.0) * max(0.0, 1 + share / 100) }
         effects[MapStats.HERO_DAMAGE_TAKEN]?.let { add("STOCK_DAMAGE_TAKEN", it) }

@@ -95,6 +95,8 @@ import kotlinx.serialization.Serializable
     val received: Received = Received(),
     /** What each accepted event of the batch brought, by ascending number (server 1.30.0): the only source of the run's loot. */
     val rewards: List<EventReward> = emptyList(),
+    /** The run the report is about (server 1.68.0). */
+    val runId: String = "",
 )
 
 /** Where items that came to the hero went: into the stash, into its overflow, or to the merchant for [gold]. */
@@ -116,4 +118,6 @@ import kotlinx.serialization.Serializable
     val experience: Double = 0.0,
     val money: Long = 0,
     val received: Received = Received(),
+    /** The trial the report is about (server 1.68.0). */
+    val runId: String = "",
 )

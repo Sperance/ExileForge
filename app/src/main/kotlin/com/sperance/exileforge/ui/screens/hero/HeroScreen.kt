@@ -87,8 +87,7 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
                 // Who the character is heads every section; until the hero arrives the tab says what it is.
-                // The stash's count rides the header as a button (the places and their price behind it).
-                if (header != null) HeroHeader(header) { if (section == HeroSection.STASH) StashPlacesButton(s, vm) }
+                if (header != null) HeroHeader(header)
                 else ScreenHeader(ui("hero.title"), ui("hero.inventory_count", stash.size), ForgeGlyphs.Stash, guide = Guide.HERO)
             }
             item { SectionBar(section) { section = it } }
@@ -117,6 +116,8 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
                             FilterChip(selected = tools, onClick = { tools = true; filter = filter.copy(groups = emptySet()) }, label = { Text(ui("hero.stash_tools")) },
                                 leadingIcon = { Icon(ForgeGlyphs.Anvil, null, modifier = Modifier.size(16.dp)) })
                             Spacer(Modifier.weight(1f))
+                            // The places held of how many, and a «+» for the next pack.
+                            StashFill(s, vm)
                             // Search, order and filters live behind one glyph since 3.67.0: the shelf keeps the screen.
                             StashFilterButton(stashTweaks(filter, s.stashSort)) { filtering = true }
                         }

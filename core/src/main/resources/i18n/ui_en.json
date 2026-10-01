@@ -664,6 +664,8 @@
   "stash.claim": "Take",
   "stash.claim_all": "Take all",
   "stash.expand": "Buy {0} places",
+  "stash.buy": "Buy",
+  "stash.no_gold": "Not enough gold",
   "stash.full_hint": "The stash is full: new items wait in the overflow (up to {0}), past it the merchant buys them at once.",
   "stash.overflow": "Overflow {0}/{1}",
   "stash.overflow_hint": "Items the stash had no room for. Take them in once there is space, or sell them.",

@@ -1,13 +1,13 @@
 package com.sperance.exileforge.ui.screens.hero
 
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,7 +22,6 @@ import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.ui.components.*
-import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
 
 /**
@@ -31,40 +30,40 @@ import com.sperance.exileforge.ui.theme.*
  * taken in or sold. Past the overflow the merchant buys a drop himself; the rules say how far each goes.
  * Only items count against the places: orbs and the rest of the bag stack without a limit.
  *
- * The count is a small button in the header, the pack and the ceiling a dialog behind it; the overflow
- * stays in the list, since it is items to act on.
+ * The fill is a compact bar beside the shelf's switch, in the error colour once full; its «+» asks for the
+ * next pack with its price. The overflow stays in the list, since it is items to act on.
  */
-@Composable fun StashPlacesButton(s: ForgeState, vm: ForgeViewModel) {
+@Composable fun StashFill(s: ForgeState, vm: ForgeViewModel) {
     val hero = s.hero ?: return
     val rules = s.index?.rules?.stash ?: return
     val capacity = rules.capacity(hero.info.stashSlots)
-    val full = hero.items.size >= capacity
+    val held = hero.items.size
+    val full = held >= capacity
     val tint = if (full) MaterialTheme.colorScheme.error else Gold
-    var open by remember { mutableStateOf(false) }
-    val label = ui("stash.places", hero.items.size, capacity)
-    Surface(onClick = { open = true }, shape = RoundedCornerShape(50), color = tint.copy(alpha = .14f),
-        border = BorderStroke(1.dp, tint.copy(alpha = .6f)), modifier = Modifier.semantics { contentDescription = label }) {
-        Row(Modifier.padding(start = 10.dp, end = 6.dp, top = 4.dp, bottom = 4.dp),
-            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Icon(ForgeGlyphs.Stash, null, tint = tint, modifier = Modifier.size(14.dp))
-            Text(ui("stash.places_chip", hero.items.size, capacity), color = GoldBright, fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.labelMedium)
-            Icon(Icons.Outlined.ChevronRight, null, tint = tint, modifier = Modifier.size(16.dp))
+    val price = rules.price(hero.info.stashSlots)
+    val label = ui("stash.places", held, capacity)
+    var buying by remember { mutableStateOf(false) }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(Modifier.semantics(mergeDescendants = true) { contentDescription = label },
+            horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(ui("stash.places_chip", held, capacity), color = if (full) tint else GoldBright, fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.labelSmall, maxLines = 1)
+            Box(Modifier.width(44.dp).height(4.dp).background(PanelRaised, RoundedCornerShape(2.dp))) {
+                Box(Modifier.fillMaxWidth(if (capacity > 0) (held.toFloat() / capacity).coerceIn(0f, 1f) else 1f).fillMaxHeight()
+                    .background(tint, RoundedCornerShape(2.dp)))
+            }
+        }
+        if (price > 0) IconButton(onClick = { buying = true }, modifier = Modifier.size(28.dp)) {
+            Icon(Icons.Outlined.Add, ui("stash.expand", minOf(rules.slotStep, rules.maxSlots - capacity)), tint = tint, modifier = Modifier.size(18.dp))
         }
     }
-    if (open) ForgeDialog(ui("hero.section_stash"), onDismiss = { open = false }) {
-        val price = rules.price(hero.info.stashSlots)
-        Text(label, color = if (full) MaterialTheme.colorScheme.error else GoldBright, fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.titleSmall)
-        MutedText(ui("stash.ceiling", rules.maxSlots))
-        MutedText(ui("stash.places_note"))
-        if (price > 0) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ForgeOutlinedButton(onClick = vm::expandStash, enabled = hero.money >= price && !s.busy) {
-                Text(ui("stash.expand", minOf(rules.slotStep, rules.maxSlots - capacity)))
-            }
-            GoldPrice(price)
-        }
-        if (full) MutedText(ui("stash.full_hint", rules.overflowSlots))
+    if (buying) {
+        val short = hero.money < price
+        ConfirmSheet(title = ui("stash.expand", minOf(rules.slotStep, rules.maxSlots - capacity)), confirm = ui("stash.buy"),
+            subtitle = "$label · ${ui("stash.ceiling", rules.maxSlots)}", onDismiss = { buying = false },
+            ledger = listOf(LedgerLine(ui("confirm.spend"), ui("merchant.gold_amount", price), Tone.SPEND)),
+            note = listOfNotNull(ui("stash.places_note"), ui("stash.full_hint", rules.overflowSlots).takeIf { full }).joinToString("\n"),
+            blocked = short || s.busy, warning = ui("stash.no_gold").takeIf { short }) { buying = false; vm.expandStash() }
     }
 }
 

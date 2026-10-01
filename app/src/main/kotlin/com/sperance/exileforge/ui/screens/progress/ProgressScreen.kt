@@ -11,6 +11,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -63,6 +64,7 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
  * holds and, in its colour, what waits; a badge counts what asks to be done.
  */
 @Composable fun ProgressScreen(s: ForgeState, vm: ForgeViewModel) {
+    LaunchedEffect(s.play.heroId, s.account.sessionEpoch) { vm.ensureHero() }
     val hero = s.hero
     val index = s.index
     val tiles = run {
@@ -134,6 +136,8 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
  * sheet as well, and «back» from it comes here too — the hub is where it lives now.
  */
 @Composable fun ProgressPlaceScreen(place: ProgressPlace, s: ForgeState, vm: ForgeViewModel) {
+    // The forge reads the hero itself; the menagerie and the trials have only this.
+    LaunchedEffect(s.play.heroId, s.account.sessionEpoch) { vm.ensureHero() }
     Column(Modifier.fillMaxSize()) {
         BackRow("${ui("nav.progress")} · ${place.label}") { vm.tab(TAB_PROGRESS) }
         Box(Modifier.weight(1f).fillMaxWidth()) {

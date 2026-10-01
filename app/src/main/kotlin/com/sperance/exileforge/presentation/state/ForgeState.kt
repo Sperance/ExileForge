@@ -282,8 +282,12 @@ const val TAB_REDEMPTION = 9
 const val TAB_EXPEDITION = 10
 const val TAB_CRAFTS = 11
 const val TAB_SKILLS = 12
+/** «Развитие»: the hub of the forge ([TAB_CRAFT]), the menagerie, the atlas and the trials. */
+const val TAB_PROGRESS = 13
+const val TAB_PETS = 14
+const val TAB_TRIALS = 15
 
-val PLAYER_TABS = listOf(TAB_HERO, TAB_EXPEDITION, TAB_CRAFTS, TAB_CITY)
+val PLAYER_TABS = listOf(TAB_HERO, TAB_EXPEDITION, TAB_CRAFTS, TAB_PROGRESS, TAB_CITY)
 
 /** Screens only an administrator may open, whichever button leads to them. */
 val ADMIN_TABS = setOf(TAB_ADMIN, TAB_REDEMPTION)

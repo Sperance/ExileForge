@@ -16,7 +16,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.state.TAB_CRAFT
 import com.sperance.exileforge.presentation.state.TAB_HERO
 import com.sperance.exileforge.presentation.state.TAB_SKILLS
 import com.sperance.exileforge.presentation.state.TAB_TREE
@@ -24,13 +23,13 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * The screens the Hero tab holds (3.24.0): the gear, the tree, the grimoire and the forge. They were
- * buttons in the header's corner; a strip over all four says where the player is and reaches the rest
+ * The screens the Hero tab holds (3.24.0): the gear, the tree and the grimoire — the forge moved to «Развитие». They were
+ * buttons in the header's corner; a strip over them says where the player is and reaches the rest
  * in one tap, and the bottom bar's «Hero» stays lit for each.
  */
 enum class HeroTab(val tab: Int, private val title: String, val icon: ImageVector) {
     GEAR(TAB_HERO, "hero.tab_gear", ForgeGlyphs.Helm), TREE(TAB_TREE, "nav.tree", ForgeGlyphs.Constellation),
-    GRIMOIRE(TAB_SKILLS, "nav.skills", ForgeGlyphs.Grimoire), FORGE(TAB_CRAFT, "hero.tab_forge", ForgeGlyphs.Tome);
+    GRIMOIRE(TAB_SKILLS, "nav.skills", ForgeGlyphs.Grimoire);
 
     val label: String get() = ui(title)
 

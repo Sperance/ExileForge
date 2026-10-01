@@ -1,6 +1,5 @@
 package com.sperance.exileforge.ui.screens.city
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -9,7 +8,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -43,12 +41,8 @@ import com.sperance.exileforge.ui.theme.*
 @Composable fun CityScreen(s: ForgeState, vm: ForgeViewModel) {
     val building = s.building
     if (building == null) { CitySquare(s, vm); return }
-    BackHandler { vm.building(null) }
     Column(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxWidth().padding(start = 4.dp, top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { vm.building(null) }) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, ui("common.back"), tint = Gold) }
-            MutedText(ui("nav.city"), style = MaterialTheme.typography.labelLarge)
-        }
+        BackRow(ui("nav.city")) { vm.building(null) }
         Box(Modifier.weight(1f)) {
             when (building) {
                 Building.QUESTS -> QuestsScreen(s, vm)

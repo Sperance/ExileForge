@@ -4,11 +4,9 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -58,16 +56,6 @@ private const val CARD_TOP = .48f
     val scope = rememberCoroutineScope()
     val launch = s.play.launch?.takeIf { world.token(it.mapCode) != null }
     val stash = remember(s.hero?.items, index) { stashCounts(s) }
-    // «Испытания» (3.49.0): the expedition's second tab, over the map while it is open.
-    var trials by rememberSaveable { mutableStateOf(false) }
-    BackHandler(trials) { trials = false }
-    if (trials) {
-        Column(Modifier.fillMaxSize()) {
-            TrialsBar { trials = false }
-            TrialsBoard(s, vm, Modifier.weight(1f).fillMaxWidth())
-        }
-        return
-    }
     BackHandler(launch != null) { vm.closeZone() }
     // The map opens on the frontier; a zone picked elsewhere — a map's sheet in the stash — is flown to above its card.
     LaunchedEffect(camera, camera.viewport) {
@@ -80,16 +68,15 @@ private const val CARD_TOP = .48f
     }
     Box(Modifier.fillMaxSize()) {
         WorldCanvas(world, art, camera, launch?.mapCode, stash, Modifier.fillMaxSize()) { code -> if (code == null) vm.closeZone() else vm.selectZone(code) }
-        WorldBar(s, world, Modifier.align(Alignment.TopCenter),
-            onFrontier = { scope.launch { camera.glide(world.frontier(), WorldCamera.HOME, if (launch != null) CARD_DOWN else .5f) } },
-            onAtlas = vm::openAtlas, onTrials = { trials = true })
+        WorldBar(world, Modifier.align(Alignment.TopCenter),
+            onFrontier = { scope.launch { camera.glide(world.frontier(), WorldCamera.HOME, if (launch != null) CARD_DOWN else .5f) } })
         ZoomButtons(camera, Modifier.align(Alignment.TopEnd).padding(top = 72.dp, end = 12.dp)) { factor -> scope.launch { camera.zoomBy(factor) } }
         launch?.let { ZoneCard(s, vm, world, it, Modifier.align(Alignment.BottomCenter)) }
     }
 }
 
-/** The map's head: how much of the world is passed, the way back to the frontier and the atlas with its free points. */
-@Composable private fun WorldBar(s: ForgeState, world: WorldMap, modifier: Modifier, onFrontier: () -> Unit, onAtlas: () -> Unit, onTrials: () -> Unit) {
+/** The map's head: how much of the world is passed and the way back to the frontier; the atlas and the trials live in «Развитие». */
+@Composable private fun WorldBar(world: WorldMap, modifier: Modifier, onFrontier: () -> Unit) {
     Row(modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Ink.copy(alpha = .92f), Ink.copy(alpha = 0f))))
         .padding(start = 16.dp, end = 12.dp, top = 8.dp, bottom = 16.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -97,34 +84,9 @@ private const val CARD_TOP = .48f
             Text(ui("expedition.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
             Text(ui("expedition.passed", world.passedCount, world.total), color = Muted, style = MaterialTheme.typography.labelMedium)
         }
-        OutlinedIconButton(onClick = onTrials, border = androidx.compose.foundation.BorderStroke(1.dp, Gold.copy(alpha = .4f)), modifier = Modifier.size(38.dp)) {
-            Icon(ForgeGlyphs.Swords, ui("trials.title"), tint = GoldBright, modifier = Modifier.size(20.dp))
-        }
         OutlinedIconButton(onClick = onFrontier, border = androidx.compose.foundation.BorderStroke(1.dp, Gold.copy(alpha = .4f)), modifier = Modifier.size(38.dp)) {
             Icon(ForgeGlyphs.Target, ui("expedition.frontier"), tint = GoldBright, modifier = Modifier.size(20.dp))
         }
-        val free = s.atlasState?.available ?: 0
-        ForgeOutlinedButton(onClick = onAtlas, enabled = !s.busy,
-            contentPadding = PaddingValues(start = 12.dp, end = if (free > 0) 8.dp else 12.dp), modifier = Modifier.height(38.dp)) {
-            Icon(ForgeGlyphs.Constellation, null, tint = GoldBright, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(6.dp))
-            Text(ui("atlas.open"), color = GoldBright, style = MaterialTheme.typography.labelLarge)
-            if (free > 0) {
-                Spacer(Modifier.width(6.dp))
-                Box(Modifier.background(Gold, CircleShape).padding(horizontal = 6.dp, vertical = 1.dp)) {
-                    Text(free.toString(), color = Ink, style = MaterialTheme.typography.labelSmall)
-                }
-            }
-        }
-    }
-}
-
-/** The trials tab's head: its title and the way back to the map. */
-@Composable private fun TrialsBar(onMap: () -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 12.dp, top = 8.dp, bottom = 4.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(ui("trials.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-        ForgeOutlinedButton(onClick = onMap, modifier = Modifier.height(38.dp)) { Text(ui("trials.to_map"), color = GoldBright) }
     }
 }
 

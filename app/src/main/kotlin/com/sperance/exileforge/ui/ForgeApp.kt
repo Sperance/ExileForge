@@ -41,7 +41,6 @@ import com.sperance.exileforge.ui.components.voidBackdrop
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.admin.AdminScreen
 import com.sperance.exileforge.ui.screens.city.CityScreen
-import com.sperance.exileforge.ui.screens.craft.CraftScreen
 import com.sperance.exileforge.ui.screens.crafts.CraftsScreen
 import com.sperance.exileforge.ui.screens.expedition.AtlasScreen
 import com.sperance.exileforge.ui.screens.expedition.ExpeditionPlay
@@ -50,6 +49,9 @@ import com.sperance.exileforge.ui.screens.expedition.TrialScreen
 import com.sperance.exileforge.ui.screens.hero.HeroScreen
 import com.sperance.exileforge.ui.screens.hero.HeroTab
 import com.sperance.exileforge.ui.screens.hero.HeroTabStrip
+import com.sperance.exileforge.ui.screens.progress.ProgressPlace
+import com.sperance.exileforge.ui.screens.progress.ProgressPlaceScreen
+import com.sperance.exileforge.ui.screens.progress.ProgressScreen
 import com.sperance.exileforge.ui.screens.redemption.RedemptionScreen
 import com.sperance.exileforge.ui.screens.server.ServerScreen
 import com.sperance.exileforge.ui.screens.session.AuthScreen
@@ -128,23 +130,25 @@ private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, erro
         bottomBar = {
             NavigationBar(containerColor = Abyss, tonalElevation = 0.dp,
                 modifier = Modifier.drawBehind { drawLine(Brush.horizontalGradient(listOf(Color.Transparent, Gold.copy(alpha = .4f), Color.Transparent)), Offset(0f, 0f), Offset(size.width, 0f), 1f) }) {
-                // Four destinations are the game; an administrator gets exactly one more, and
+                // Five destinations are the game; an administrator gets exactly one more, and
                 // the promo codes live behind it as a button.
                 val labels = mapOf(TAB_HERO to ui("nav.hero"), TAB_EXPEDITION to ui("nav.expedition"), TAB_CRAFTS to ui("nav.crafts"),
-                    TAB_CITY to ui("nav.city"), TAB_ACCOUNT to ui("nav.account"),
+                    TAB_PROGRESS to ui("nav.progress"), TAB_CITY to ui("nav.city"), TAB_ACCOUNT to ui("nav.account"),
                     TAB_ADMIN to ui("nav.admin"))
                 val destinations = PLAYER_TABS + listOfNotNull(TAB_ADMIN.takeIf { s.adminTools })
                 val icons = mapOf<Int, ImageVector>(TAB_ACCOUNT to ForgeGlyphs.Portal, TAB_HERO to ForgeGlyphs.Helm, TAB_EXPEDITION to ForgeGlyphs.Swords,
-                    TAB_CRAFTS to ForgeGlyphs.Anvil, TAB_CITY to ForgeGlyphs.Keep, TAB_ADMIN to ForgeGlyphs.Scroll)
+                    TAB_CRAFTS to ForgeGlyphs.Anvil, TAB_PROGRESS to ForgeGlyphs.Sigil, TAB_CITY to ForgeGlyphs.Keep, TAB_ADMIN to ForgeGlyphs.Scroll)
                 destinations.forEach { index ->
                     val label = labels.getValue(index)
-                    // The tree, the grimoire and the forge are the hero's (3.24.0): while one is open, the Hero tab reads as the one chosen.
-                    // The City's tab tapped again from inside a building (3.22.0) walks back out to the square.
-                    NavigationBarItem(selected = s.tab == index || (index == TAB_HERO && HeroTab.of(s.tab) != null),
+                    // The tree and the grimoire are the hero's (3.24.0), the forge, the menagerie and the trials the hub's: while one is
+                    // open, its tab reads as the one chosen. The City's tab tapped again from inside a building (3.22.0) walks back out
+                    // to the square, as «Развитие» tapped again from a tile's screen walks back to its hub.
+                    NavigationBarItem(selected = s.tab == index || (index == TAB_HERO && HeroTab.of(s.tab) != null) ||
+                        (index == TAB_PROGRESS && ProgressPlace.of(s.tab) != null),
                         onClick = { if (index == TAB_CITY && s.tab == TAB_CITY) vm.building(null) else vm.tab(index) },
                         icon = {
-                            // Free atlas points (3.47.0) mark the expedition's tab: the atlas opens from its world map.
-                            val free = if (index == TAB_EXPEDITION) s.atlasState?.available ?: 0 else 0
+                            // Free atlas points (3.47.0) mark the tab the atlas opens from: «Развитие».
+                            val free = if (index == TAB_PROGRESS) s.atlasState?.available ?: 0 else 0
                             BadgedBox(badge = { if (free > 0) Badge(containerColor = GoldBright, contentColor = Ink) { Text(free.toString(), fontSize = 9.sp) } }) {
                                 Icon(icons.getValue(index), null, modifier = Modifier.size(22.dp))
                             }
@@ -168,14 +172,14 @@ private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, erro
                 TAB_HERO -> HeroScreen(s.sliced(*s.common), vm)
                 TAB_EXPEDITION -> ExpeditionScreen(s.sliced(*s.common, s.logFilter), vm)
                 TAB_CRAFTS -> CraftsScreen(s.sliced(*s.common), vm)
+                TAB_PROGRESS -> ProgressScreen(s.sliced(*s.common), vm)
                 TAB_TREE -> SkillTreeScreen(s.sliced(*s.common), vm)
                 TAB_SKILLS -> GrimoireScreen(s.sliced(*s.common), vm)
                 TAB_CITY -> CityScreen(s.sliced(*s.common, s.building, s.guild, s.quests, s.market), vm)
                 TAB_ADMIN -> AdminScreen(s.sliced(*s.common, s.admin), vm)
-                // The forge keeps no place in the bar: it opens from the Hero tab, as the promo
-                // codes open from the administrator's, and the bar is the way back out of both.
-                TAB_CRAFT -> CraftScreen(s.sliced(*s.common), vm)
                 TAB_REDEMPTION -> RedemptionScreen(s.sliced(*s.common, s.admin), vm)
+                // The forge, the menagerie and the trials open from the hub of «Развитие», «back» leading to it.
+                else -> ProgressPlace.of(s.tab)?.let { ProgressPlaceScreen(it, s.sliced(*s.common), vm) }
             }
         }
         // The toasts float over the screen, under the banner (2.80.0).

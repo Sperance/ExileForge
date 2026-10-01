@@ -18,7 +18,7 @@ import kotlinx.coroutines.launch
 
 /** A screen that explains itself on the first visit (3.14.0): its title and lines are `guide.<name>.title/text` in the dictionary. */
 enum class Guide(val icon: ImageVector) {
-    HERO(ForgeGlyphs.Helm), EXPEDITION(ForgeGlyphs.Swords), CRAFTS(ForgeGlyphs.Anvil), AUCTION(ForgeGlyphs.Orb),
+    HERO(ForgeGlyphs.Helm), EXPEDITION(ForgeGlyphs.Swords), CRAFTS(ForgeGlyphs.Anvil), PROGRESS(ForgeGlyphs.Sigil), AUCTION(ForgeGlyphs.Orb),
     TREE(ForgeGlyphs.Constellation), GRIMOIRE(ForgeGlyphs.Grimoire), PETS(ForgeGlyphs.Exile), FORGE(ForgeGlyphs.Anvil), MERCHANT(ForgeGlyphs.Coins),
     FIGHT(ForgeGlyphs.Swords), ATLAS(ForgeGlyphs.Atlas), ABYSS(ForgeGlyphs.Rift), MAP_LAUNCH(ForgeGlyphs.Scroll),
     CITY(ForgeGlyphs.Keep), GUILD(ForgeGlyphs.Banner), QUESTS(ForgeGlyphs.Scroll);

@@ -32,10 +32,10 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.auction.ListingSheet
 import com.sperance.exileforge.ui.theme.*
 
-/** The Hero tab's sections (the menagerie since 3.5.0), in the order a player reaches for them. */
+/** The Hero tab's sections, in the order a player reaches for them; the menagerie (3.5.0) moved to «Развитие». */
 private enum class HeroSection(val title: String, val icon: ImageVector) {
     CHARACTER("hero.section_character", ForgeGlyphs.Exile), EQUIPMENT("hero.section_equipment", ForgeGlyphs.Helm),
-    STASH("hero.section_stash", ForgeGlyphs.Stash), BAG("hero.section_bag", ForgeGlyphs.Orb), PETS("hero.section_pets", ForgeGlyphs.Sigil)
+    STASH("hero.section_stash", ForgeGlyphs.Stash), BAG("hero.section_bag", ForgeGlyphs.Orb)
 }
 
 /**
@@ -106,7 +106,6 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
                     // A table since 2.75.0: icon and count per cell, everything else behind the tap.
                     else item(key = "bag") { BagGrid(s, sections) { stackCode = it } }
                 }
-                HeroSection.PETS -> item(key = "pets") { MenagerieSection(s, vm) }
                 HeroSection.STASH -> {
                     if (hero.overflow.isNotEmpty()) item(key = "overflow") { StashOverflow(s, vm) }
                     item {

@@ -92,6 +92,7 @@ import com.sperance.exileforge.ui.theme.*
                     modifier = Modifier.align(Alignment.BottomEnd).offset(4.dp, 4.dp).background(Gold, CircleShape).padding(1.dp).size(15.dp))
             }
             MutedText(ui("row.level", item.level), style = MaterialTheme.typography.labelSmall)
+            QualityBadge(item, compact = true)
             // States as symbols, three to a row under the icon: words about corruption and sockets
             // would push the properties off the line.
             states.chunked(3).forEach { three ->

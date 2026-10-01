@@ -176,6 +176,7 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
                         MutedText(it, style = MaterialTheme.typography.labelSmall)
                     }
                 }
+                QualityBadge(item)
                 // How well it rolled, as a ring beside the name (a full card only): a tap says what the figure means.
                 if (detailed && rolled.isNotEmpty()) item.summary.quality?.let { RollRing(it) }
                 if (selected) Icon(Icons.Outlined.CheckCircle, ui("card.selected"), tint = GoldBright, modifier = Modifier.size(22.dp))
@@ -219,8 +220,6 @@ private fun cardFacts(item: ItemView, withPrice: Boolean = true): List<String> =
     ).joinToString(" · ").takeIf { it.isNotBlank() },
     listOfNotNull(
         item.weaponType?.let { weaponTitle(it) },
-        // A flask's quality (2.78.0): each percent a percent more effect or recovery.
-        item.quality.takeIf { it > 0 }?.let { q -> item.catalyst?.let { ui("item.quality_catalyst", q, ui("enum.catalyst.${it.name}")) } ?: ui("card.quality", q) },
         item.template.price?.takeIf { withPrice }?.let { "${ui("card.price")} $it" },
     ).joinToString(" · ").takeIf { it.isNotBlank() },
 )

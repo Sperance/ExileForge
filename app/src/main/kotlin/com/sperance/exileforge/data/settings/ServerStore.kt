@@ -40,6 +40,11 @@ class ServerStore(private val context: Context) {
     val stashSort = context.settings.data.map { it[stashSortKey] }
     suspend fun saveStashSort(value: String) { context.settings.edit { it[stashSortKey] = value } }
 
+    /** Whether the gear shelf hides what the hero wears (3.69.0); nothing is the default, everything shown. */
+    private val hideWornKey = stringPreferencesKey("stash_hide_worn")
+    val stashHideWorn = context.settings.data.map { it[hideWornKey] == "true" }
+    suspend fun saveStashHideWorn(value: Boolean) { context.settings.edit { it[hideWornKey] = value.toString() } }
+
     /** Which shelves of the fight's log are shown (3.37.0), by their names; nothing is the default, blows and ailments. */
     private val logFilterKey = stringPreferencesKey("log_filter")
     val logFilter = context.settings.data.map { it[logFilterKey] }

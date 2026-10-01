@@ -77,7 +77,10 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
     val groupCounts = remember(shelf) { shelf.groupingBy { SlotGroup.of(it.slot) }.eachCount() }
     val rarities = remember(shelf) { shelf.map { it.rarity }.distinct().sortedByDescending { it.ordinal } }
     // The shelf reads the sheet (what can be worn, what the merchant pays), not the rest of the hero.
-    val visible = remember(shelf, filter, s.stashSort, hero?.level, hero?.stats, s.world) { s.stashShelf(shelf, filter) }
+    // «Hide equipped» (3.69.0) is the gear shelf's: a tool shelf shows everything it holds.
+    val hideWorn = s.stashHideWorn && !tools
+    val visible = remember(shelf, filter, s.stashSort, hideWorn, hero?.level, hero?.stats, s.world) { s.stashShelf(shelf, filter, hideWorn) }
+    val tweaks = stashTweaks(filter, s.stashSort, hideWorn)
     // Each part is handed its own cut (3.66.0): a changed purse redraws the header, not the ledger or the stash.
     val header = rememberHeroHeader(s)
     val equipment = rememberEquipment(s)
@@ -121,12 +124,17 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
                                     leadingIcon = { Icon(ForgeGlyphs.Anvil, null, modifier = Modifier.size(16.dp)) })
                             }
                             // Search, order and filters live behind one glyph since 3.67.0: the shelf keeps the screen.
-                            StashFilterButton(stashTweaks(filter, s.stashSort)) { filtering = true }
+                            StashFilterButton(tweaks) { filtering = true }
                         }
                     }
                     // The places held of how many across the whole width, and a «+» for the next pack.
-                    item(key = "fill") { StashFill(s, vm, Modifier.fillMaxWidth()) }
-                    if (visible.isEmpty()) item { InfoCard(ui("tree.nothing_found"), if (filter.active) ui("stash.filter_empty") else ui("hero.stash_empty_hint")) }
+                    item(key = "fill") {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            StashFill(s, vm, Modifier.weight(1f))
+                            if (!tools) HideWornChip(s.stashHideWorn, vm::stashHideWorn)
+                        }
+                    }
+                    if (visible.isEmpty()) item { InfoCard(ui("tree.nothing_found"), if (filter.active || hideWorn) ui("stash.filter_empty") else ui("hero.stash_empty_hint")) }
                     // A line, not a card: a stash is read down, and the card is one tap behind each line.
                     items(lines, key = { it.piece.id }) { line ->
                         val piece = line.piece
@@ -142,7 +150,7 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
     }
     detailId?.let { id -> ItemSheet(s, vm, id) { detailId = null } }
     if (filtering) StashFilterSheet(filter, s.stashSort, s.lang, shelf.size, groupCounts, rarities, onFilter = { filter = it },
-        onSort = vm::stashSort, onDismiss = { filtering = false })
+        onSort = vm::stashSort, hideWorn = s.stashHideWorn.takeUnless { tools }, onHideWorn = vm::stashHideWorn, onDismiss = { filtering = false })
     // The sheet is about a stack the bag still holds: listed or read away, it closes with it.
     stackCode?.let { code -> hero?.bag?.get(code)?.takeIf { it > 0 }?.let { amount ->
         BagSheet(s, BagStack(code, amount), onDismiss = { stackCode = null },

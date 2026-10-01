@@ -664,6 +664,7 @@
   "stash.places_note": "Only items take places: orbs and the rest of the bag pile up without a limit.",
   "stash.received": "Stash full: {0} to the overflow, {1} sold to the merchant for {2} gold",
   "stash.can_wear": "Can wear",
+  "stash.hide_worn": "Hide equipped",
   "stash.filter_empty": "Nothing matches these filters — clear some of them.",
   "stash.group.flask": "Flasks",
   "stash.group.ring": "Rings",

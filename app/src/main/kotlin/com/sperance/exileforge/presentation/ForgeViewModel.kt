@@ -129,6 +129,8 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() 
     fun lockItem(itemId: String, locked: Boolean) = runtime.heroViewModel.lockItem(itemId, locked)
     /** The stash's order (3.30.0), kept on the device. */
     fun stashSort(sort: StashSort) = runtime.heroViewModel.stashSort(sort)
+    /** «Hide equipped» on the gear shelf (3.69.0), kept on the device. */
+    fun stashHideWorn(hide: Boolean) = runtime.heroViewModel.stashHideWorn(hide)
     fun logFilter(kinds: Set<com.sperance.exileforge.core.campaign.LogKind>) = runtime.heroViewModel.logFilter(kinds)
     /** The link's probe at once (3.30.0): the offline icon tapped. */
     fun retryLink() = runtime.connectionViewModel.wake(now = true)

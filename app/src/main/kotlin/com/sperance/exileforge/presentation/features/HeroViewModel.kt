@@ -60,6 +60,12 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         scope.launch { store.saveStashSort(sort.name) }
     } }
 
+    /** «Hide equipped» on the gear shelf (3.69.0), kept on the device. */
+    fun stashHideWorn(hide: Boolean) { with(runtime) {
+        update { it.copy(stashHideWorn = hide) }
+        scope.launch { store.saveStashHideWorn(hide) }
+    } }
+
     /** The fight log's shelves (3.37.0), kept on the device. */
     fun logFilter(kinds: Set<com.sperance.exileforge.core.campaign.LogKind>) { with(runtime) {
         update { it.copy(logFilter = kinds) }

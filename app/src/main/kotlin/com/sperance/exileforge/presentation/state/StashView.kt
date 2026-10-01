@@ -29,7 +29,7 @@ import com.sperance.exileforge.rules.content.Slot
 
 /**
  * The stash's filters (3.30.0): slot groups, rarities, «can wear» and a text query. Empty sets let everything
- * through; they are the screen's own and reset when it is left — only the [StashSort] is kept on the device.
+ * through; they are the screen's own and reset when it is left — only the [StashSort] and «hide equipped» are kept on the device.
  */
 data class StashFilter(
     val groups: Set<SlotGroup> = emptySet(),
@@ -66,6 +66,11 @@ fun StashSort.order(pieces: List<ItemView>, price: (ItemView) -> Long?): List<It
     }
 }
 
-/** The stash, filtered and ordered as the screen shows it. */
-fun ForgeState.stashShelf(pieces: List<ItemView>, filter: StashFilter): List<ItemView> =
-    stashSort.order(pieces.filter { piece -> filter.admits(piece) { code -> unmetFor(code) } }) { sellPrice(it.item) }
+/** The stash, filtered and ordered as the screen shows it; [hideWorn] leaves out what is worn or socketed (3.69.0). */
+fun ForgeState.stashShelf(pieces: List<ItemView>, filter: StashFilter, hideWorn: Boolean = false): List<ItemView> =
+    stashSort.order(pieces.filter { piece ->
+        !(hideWorn && piece.isWorn) && filter.admits(piece) { code -> unmetFor(code) }
+    }) { sellPrice(it.item) }
+
+/** Whether the hero wears this copy, on the body or in a socket. */
+val ItemView.isWorn: Boolean get() = equipped || socketed

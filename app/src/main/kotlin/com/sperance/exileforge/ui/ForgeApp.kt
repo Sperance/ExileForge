@@ -82,7 +82,7 @@ import com.sperance.exileforge.ui.theme.*
 @Composable private fun ForgeState.sliced(vararg reads: Any?): ForgeState = remember(*reads) { this }
 
 /** The parts every screen may read: the account, the world, the play, the link, the language, the mode and the command in flight. */
-private val ForgeState.common: Array<Any?> get() = arrayOf(busy, loading, lang, mode, account, world, play, link, stashSort)
+private val ForgeState.common: Array<Any?> get() = arrayOf(busy, loading, lang, mode, account, world, play, link, stashSort, stashHideWorn)
 
 /** A screen with its own toasts reads the notice and the refusal too. */
 private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, error)

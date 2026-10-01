@@ -134,8 +134,9 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
                 api = newApi(server)
                 val known = store.languages(server).mapNotNull { Lang.byCode(it) }
                 val sort = StashSort.of(store.stashSort.first())
+                val hideWorn = store.stashHideWorn.first()
                 val logFilter = com.sperance.exileforge.core.campaign.LogKind.parse(store.logFilter.first())
-                mutable.update { it.copy(lang = language, busy = false, stashSort = sort, logFilter = logFilter, account = it.account.copy(server = server, serverDraft = server), world = it.world.copy(languages = known.ifEmpty { it.world.languages })) }
+                mutable.update { it.copy(lang = language, busy = false, stashSort = sort, stashHideWorn = hideWorn, logFilter = logFilter, account = it.account.copy(server = server, serverDraft = server), world = it.world.copy(languages = known.ifEmpty { it.world.languages })) }
                 refreshLocale()
                 refreshIcons()
                 val saved = store.token(server)

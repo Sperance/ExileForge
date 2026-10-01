@@ -8,6 +8,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
@@ -17,7 +20,8 @@ import com.sperance.exileforge.core.display.ItemVisualKind
 import com.sperance.exileforge.core.display.bagVisualKind
 import com.sperance.exileforge.core.display.chanceText
 import com.sperance.exileforge.core.display.essenceGuarantees
-import com.sperance.exileforge.core.display.itemSources
+import com.sperance.exileforge.core.display.ItemSource
+import com.sperance.exileforge.core.display.itemSourceIndex
 import com.sperance.exileforge.core.display.title
 import com.sperance.exileforge.core.display.itemDescription
 import com.sperance.exileforge.core.display.itemTitle
@@ -33,6 +37,8 @@ import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.theme.*
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeOutlinedButton
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /** One stack of the bag: the item's code and how many the hero holds. */
 data class BagStack(val code: String, val amount: Long)
@@ -198,8 +204,12 @@ internal fun compactCount(amount: Long): String = when {
 
 /** What the content says of a stack under its description: an essence's guaranteed line by kind of item, then where it is found. */
 @Composable private fun StackLore(index: ContentIndex, code: String) {
-    val guarantees = essenceGuarantees(index, code)
-    val sources = itemSources(index, code).take(MAX_SOURCES)
+    val guarantees = remember(index, code) { essenceGuarantees(index, code) }
+    // The reverse of the whole content, built once per content off the main thread; the card shows none until it is.
+    val sourceIndex by produceState<Map<String, List<ItemSource>>>(emptyMap(), index) {
+        value = withContext(Dispatchers.Default) { itemSourceIndex(index) }
+    }
+    val sources = sourceIndex[code].orEmpty().take(MAX_SOURCES)
     if (guarantees.isNotEmpty()) Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Engraved(ui("bag.essence_guarantee"))
         guarantees.forEach { guarantee ->

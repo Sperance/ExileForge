@@ -5,6 +5,7 @@ import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Essence
 import com.sperance.exileforge.rules.content.EssenceBook
 import com.sperance.exileforge.rules.content.JobKind
+import com.sperance.exileforge.rules.content.JobRecipes
 import com.sperance.exileforge.rules.content.TrialRules
 import com.sperance.exileforge.rules.table.Ref
 import com.sperance.exileforge.rules.table.TableKind
@@ -54,9 +55,15 @@ enum class SourceKind { WORK, MONSTERS, BOSSES, CHESTS, CORRUPTED, CRYSTALS, VAA
 data class ItemSource(val kind: SourceKind, val levels: IntRange? = null, val chance: Double? = null, val ref: String = "", val detail: String = "", val level: Int = 0)
 
 /** The sources of [code], merged by kind and in a card's order; empty for a stack the content never hands out. */
-fun itemSources(index: ContentIndex, code: String): List<ItemSource> = synchronized(sourceCache) {
+fun itemSources(index: ContentIndex, code: String): List<ItemSource> = itemSourceIndex(index)[code].orEmpty()
+
+/**
+ * Every stack's sources, read once per loaded content. The first call walks the whole content — a caller on the main
+ * thread should make it off it and keep the map.
+ */
+fun itemSourceIndex(index: ContentIndex): Map<String, List<ItemSource>> = synchronized(sourceCache) {
     sourceCache.getOrPut(index) { SourceIndex(index).build() }
-}[code].orEmpty()
+}
 
 /** The sources by stack, once per loaded content: a new content is a new index and so a new key. */
 private val sourceCache = WeakHashMap<ContentIndex, Map<String, List<ItemSource>>>()
@@ -75,6 +82,9 @@ fun ItemSource.chanceText(): String? = chance?.takeIf { it > 0 }?.let { ui("sour
 /** The reverse of the content: every table, monster, zone, work, egg and shelf, read once into stack → sources. */
 private class SourceIndex(private val index: ContentIndex) {
     private val found = HashMap<String, MutableList<ItemSource>>()
+
+    /** Each table's stacks, read once: a zone's table is shared by many monsters and chests. */
+    private val tables = HashMap<String, Map<String, Double?>>()
 
     fun build(): Map<String, List<ItemSource>> {
         monsters(); chests(); crystals(); works(); eggs(); trials()
@@ -115,6 +125,7 @@ private class SourceIndex(private val index: ContentIndex) {
     /** What the professions make: a work's product, what a work finds on the side, the condensed essences and the copied books. */
     private fun works() {
         val book = index.essences
+        val recipes = JobRecipes(index)
         index.professions.professions.forEach { profession ->
             profession.jobs.forEach { job ->
                 val work = { code: String, level: Int -> add(code, ItemSource(SourceKind.WORK, ref = profession.code, detail = job.code, level = level)) }
@@ -124,6 +135,7 @@ private class SourceIndex(private val index: ContentIndex) {
                         (2..book.tiers.size).forEach { tier -> work(EssenceBook.code(kind.code, tier, special = false), book.condense.levels.getOrElse(tier - 2) { job.level }) }
                     }
                     JobKind.BOOK -> index.skills.skills.filter { it.unlock <= (job.band.singleOrNull() ?: 0) }.forEach { work(it.book, job.level) }
+                    JobKind.REFINE -> recipes.options(job, heroClass = "").forEach { work(it.job.output, it.job.level) }
                     else -> Unit
                 }
                 job.extra.forEach { add(it.item, ItemSource(SourceKind.FIND, chance = it.chance, ref = profession.code, detail = job.code)) }
@@ -153,6 +165,11 @@ private class SourceIndex(private val index: ContentIndex) {
      */
     private fun stacks(tag: String, seen: Set<String> = emptySet()): Map<String, Double?> {
         if (tag in seen) return emptyMap()
+        tables[tag]?.let { return it }
+        return table(tag, seen).also { tables[tag] = it }
+    }
+
+    private fun table(tag: String, seen: Set<String>): Map<String, Double?> {
         val kind = index.tables.kind(tag) ?: return emptyMap()
         val out = HashMap<String, Double?>()
         index.tables.members(tag).values.filter { it.weight > 0 }.forEach { entry ->

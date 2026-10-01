@@ -3230,7 +3230,7 @@
   "trials.rush_bosses": "Bosses: {0}",
   "trials.rush_best": "best: {0}",
   "trials.rush_cleared": "cleared",
-  "trials.rush_locked": "zones cleared {0}/{1}",
+  "trials.rush_none": "A boss rush opens once every zone of a region is cleared",
   "trials.rush_enter": "Rush",
   "trials.boss_of": "Boss {0} of {1}",
   "trials.floor": "Floor {0}",

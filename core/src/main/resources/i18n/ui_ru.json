@@ -3230,7 +3230,7 @@
   "trials.rush_bosses": "Боссов: {0}",
   "trials.rush_best": "лучшее: {0}",
   "trials.rush_cleared": "зачищен",
-  "trials.rush_locked": "зачищено зон {0}/{1}",
+  "trials.rush_none": "Босс-раш откроется после зачистки всех зон региона",
   "trials.rush_enter": "Раш",
   "trials.boss_of": "Босс {0} из {1}",
   "trials.floor": "Этаж {0}",

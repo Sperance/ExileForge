@@ -70,19 +70,20 @@ import com.sperance.exileforge.ui.theme.*
             }
         }
         val cleared = hero.campaign.cleared
-        index.campaign.regions.forEach { region ->
-            val open = RushPlan.open(region, cleared)
+        // A rush still locked is not shown (3.67.0): the board lists only what can be run, or says when one opens.
+        val unlocked = index.campaign.regions.filter { RushPlan.open(it, cleared) }
+        if (unlocked.isEmpty()) MutedText(ui("trials.rush_none"))
+        unlocked.forEach { region ->
             val best = trials.rushBest[region.code]
-            Plate(if (open) Gold else Muted) {
+            Plate(Gold) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text(regionTitle(region.code), color = if (open) Parchment else Muted, style = MaterialTheme.typography.titleSmall)
+                        Text(regionTitle(region.code), color = Parchment, style = MaterialTheme.typography.titleSmall)
                         MutedText(listOfNotNull(ui("trials.rush_bosses", region.zones.size),
                             best?.let { ui("trials.rush_best", clock(it.toDouble())) },
-                            ui("trials.rush_cleared").takeIf { region.code in trials.rushCleared },
-                            ui("trials.rush_locked", region.zones.count { it.code in cleared }, region.zones.size).takeIf { !open }).joinToString(" · "))
+                            ui("trials.rush_cleared").takeIf { region.code in trials.rushCleared }).joinToString(" · "))
                     }
-                    ForgeOutlinedButton(onClick = { vm.enterRush(region.code) }, enabled = idle && open && keys >= 1 && trials.run == null) {
+                    ForgeOutlinedButton(onClick = { vm.enterRush(region.code) }, enabled = idle && keys >= 1 && trials.run == null) {
                         Text(ui("trials.rush_enter"))
                     }
                 }

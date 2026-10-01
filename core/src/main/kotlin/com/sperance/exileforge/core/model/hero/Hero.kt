@@ -131,7 +131,11 @@ data class HeroView(
  */
 @kotlinx.serialization.Serializable data class IncubatorState(
     val slots: Int = 0, val max: Int = 0, val entries: List<IncubatorSlot> = emptyList(), val now: Long = 0,
+    /** The local clock when this was read off the server's answer: [now] belongs to that moment, not to when it is drawn. */
+    @kotlinx.serialization.Transient val receivedAt: Long = System.currentTimeMillis(),
 ) {
+    /** How far the server's clock runs ahead of the local one, measured when this was read; 0 when the server sent no clock. */
+    val clockOffset: Long get() = if (now > 0) now - receivedAt else 0L
     fun slot(index: Int): IncubatorSlot? = entries.firstOrNull { it.slot == index }
     val ready: Int get() = entries.count { it.busy && it.ready }
     val incubating: Int get() = entries.count { it.busy && !it.ready }

@@ -57,9 +57,9 @@ import kotlinx.coroutines.delay
     }
 }
 
-/** The server's clock, ticking each second on the local one from the moment this [incubator] was first drawn. */
+/** The server's clock, ticking each second on the local one, set by the moment this [incubator] was read off the server. */
 @Composable private fun rememberServerNow(incubator: IncubatorState): Long {
-    val offset = remember(incubator.now) { if (incubator.now > 0) incubator.now - System.currentTimeMillis() else 0L }
+    val offset = incubator.clockOffset
     val local by produceState(System.currentTimeMillis()) { while (true) { value = System.currentTimeMillis(); delay(1_000) } }
     return local + offset
 }

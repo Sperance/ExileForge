@@ -131,6 +131,12 @@ private val ESSENTIAL = setOf(Rarity.COMMON, Rarity.RARE)
     picking?.let { shelf -> TargetPicker(s, recent, shelf, onDismiss = { picking = null }) { vm.selectEquipment(it); picking = null } }
 }
 
+private val ForgeSection.title get() = when (this) {
+    ForgeSection.ORBS -> "forge.section_orbs"
+    ForgeSection.BENCH -> "forge.section_bench"
+    ForgeSection.ESSENCES -> "forge.section_essences"
+}
+
 /** The anvil's tool socket: the orb, the essence or the bench line the section lays on the item, when one is chosen and fits. */
 private fun toolSocket(s: ForgeState, section: ForgeSection, index: ContentIndex, benchLine: String, accepted: (String) -> Boolean): Socket = when (section) {
     ForgeSection.ORBS -> {

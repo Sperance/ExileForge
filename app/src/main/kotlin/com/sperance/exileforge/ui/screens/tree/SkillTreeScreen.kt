@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.tree
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -9,9 +10,13 @@ import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Functions
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -27,7 +32,10 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.display.Glyph
@@ -68,16 +76,12 @@ import kotlin.math.min
 import kotlin.math.sin
 
 @Composable fun SkillTreeScreen(s: ForgeState, vm: ForgeViewModel) {
-    // No scrolling column here: the map owns the height, and everything that used to sit under it
-    // lives in the sheet. A pannable canvas inside a scroll fights the scroll for every drag.
-    Column(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Spacer(Modifier.height(12.dp))
-        ScreenHeader(ui("tree.title"),
-            ui("tree.node_count", s.index?.content?.tree?.nodes?.size ?: 0), ForgeGlyphs.Constellation, guide = Guide.TREE)
-        SkillTreePanel(s, vm::selectNode, vm::allocateNode, vm::refundNode, vm::resetTree, vm::nodeQuery, onPath = vm::allocatePath,
-            onSocket = vm::socketJewel, onUnsocket = vm::unsocketJewel, onRechoose = vm::rechooseNode, onPlan = vm::planTree, onRefundBranch = vm::refundBranch, modifier = Modifier.weight(1f))
-        Spacer(Modifier.height(12.dp))
-    }
+    // «Карта на весь экран» (variant A): no header and no scrolling column — the map owns everything between the Hero
+    // strip and the bar, and the rest floats over it. A pannable canvas inside a scroll fights the scroll for every drag.
+    FirstVisit(Guide.TREE)
+    SkillTreePanel(s, vm::selectNode, vm::allocateNode, vm::refundNode, vm::resetTree, vm::nodeQuery, onPath = vm::allocatePath,
+        onSocket = vm::socketJewel, onUnsocket = vm::unsocketJewel, onRechoose = vm::rechooseNode, onPlan = vm::planTree, onRefundBranch = vm::refundBranch,
+        modifier = Modifier.fillMaxSize())
 }
 
 /**
@@ -87,9 +91,9 @@ import kotlin.math.sin
  * which node may be taken next is decided by `allocate` on the server rather than guessed at here. The
  * panel draws what it was given and sends one node code at a time.
  *
- * The map takes the whole panel and everything else — the point balance, the search, the chosen
- * node and its two commands — opens as a sheet over it. A hundred and twenty nodes need the room,
- * and the details are read one node at a time rather than alongside.
+ * The map takes the whole panel. The point balance is a plaque in its corner; the search, «Итого» and «Ещё»
+ * (the details, the plan, the reset) are round buttons down its right edge, the way back to the whole tree under
+ * them; a chosen node rises as a card over the map's foot rather than a sheet, so the branch stays in sight.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun SkillTreePanel(s: ForgeState, onSelect: (String) -> Unit, onAllocate: (String, Int?) -> Unit,
@@ -103,18 +107,19 @@ import kotlin.math.sin
     var detailsOpen by remember { mutableStateOf(false) }
     // «Итого» (3.54.0): the tree's bonuses at once, without the rest of the details.
     var totalsOpen by remember { mutableStateOf(false) }
+    var planOpen by remember { mutableStateOf(false) }
+    var menuOpen by remember { mutableStateOf(false) }
     var nodeOpen by remember { mutableStateOf(false) }
-    // The node's own window is the question (2.72.0): taking or giving back a node acts at once from
+    // The node's own card is the question (2.72.0): taking or giving back a node acts at once from
     // it, the price written beside the button. Only the whole tree's reset is still asked twice.
     var confirmReset by remember { mutableStateOf(false) }
+    val view = remember { TreeView() }
     if (hero == null) {
-        InfoCard(ui("tree.no_hero"),
-            ui("tree.no_hero_hint"))
+        Box(modifier.padding(16.dp)) { InfoCard(ui("tree.no_hero"), ui("tree.no_hero_hint")) }
         return
     }
     if (index == null || tree == null || index.content.tree.nodes.isEmpty()) {
-        InfoCard(ui("tree.not_loaded"),
-            ui("tree.not_loaded_hint"))
+        Box(modifier.padding(16.dp)) { InfoCard(ui("tree.not_loaded"), ui("tree.not_loaded_hint")) }
         return
     }
     val nodes = index.content.tree.nodes
@@ -138,42 +143,54 @@ import kotlin.math.sin
     val query = s.play.nodeQuery.trim()
     val found = remember(index, query, s.lang) { if (query.length < 2) emptySet() else nodesMatching(index, query) }
     val highlight = remember(index, tag, found) { tag?.let { nodesTagged(index, it) }.orEmpty() + found }
-    // Both live behind the toolbar's search icon, so the map keeps the height; while either is on, the icon
+    // Both live behind the search button, so the map keeps the height; while either is on, the button
     // turns green and wears the number of nodes lit.
     var filtersOpen by remember { mutableStateOf(false) }
     val filtering = tag != null || query.length >= 2
-    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(ui("tree.points", tree.available, tree.total),
-                color = Gold, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
-            BadgedBox(badge = { if (filtering) Badge(containerColor = Vital, contentColor = Ink) { Text(highlight.size.toString(), fontSize = 9.sp) } }) {
-                IconButton(onClick = { filtersOpen = true }, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.Outlined.Search, ui("tree.search_filters"), tint = if (filtering) Vital else Gold)
+    BackHandler(nodeOpen) { nodeOpen = false }
+    Box(modifier) {
+        TreeCanvas(nodes, selected, taken, reachable, path.orEmpty(), planned, highlight, view, Modifier.fillMaxSize()) { code -> onSelect(code); nodeOpen = true }
+        Text(ui("tree.points", tree.available, tree.total), color = Gold, style = MaterialTheme.typography.labelLarge,
+            modifier = Modifier.align(Alignment.TopStart).padding(8.dp).background(Abyss.copy(alpha = .85f), PILL)
+                .border(1.dp, Bronze, PILL).padding(horizontal = 12.dp, vertical = 6.dp))
+        Column(Modifier.align(Alignment.TopEnd).padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            MapButton(Icons.Outlined.Search, ui("tree.search_filters"), tint = if (filtering) Vital else Gold,
+                badge = highlight.size.takeIf { filtering }) { filtersOpen = true }
+            MapButton(Icons.Outlined.Functions, ui("tree.totals_button")) { totalsOpen = true }
+            Box {
+                MapButton(Icons.Outlined.MoreVert, ui("common.more")) { menuOpen = true }
+                DropdownMenu(menuOpen, onDismissRequest = { menuOpen = false }, containerColor = PanelRaised) {
+                    DropdownMenuItem(text = { Text(ui("tree.details")) }, onClick = { menuOpen = false; detailsOpen = true })
+                    if (plan.isNotEmpty()) DropdownMenuItem(text = { Text(ui("tree.plan_title")) }, onClick = { menuOpen = false; planOpen = true })
+                    DropdownMenuItem(text = { Text(ui("tree.reset_all"), color = if (enabled && hero.tree.size > 1) LifeRed else Muted) },
+                        enabled = enabled && hero.tree.size > 1, onClick = { menuOpen = false; confirmReset = true })
+                    LocalGuideDesk.current?.let { desk ->
+                        DropdownMenuItem(text = { Text(ui("guide.help")) }, onClick = { menuOpen = false; desk.show(Guide.TREE) })
+                    }
                 }
             }
-            ForgeTextButton(onClick = { totalsOpen = true }) { Text(ui("tree.totals_button")) }
-            ForgeTextButton(onClick = { detailsOpen = true }) { Text(ui("tree.details")) }
+            Spacer(Modifier.height(16.dp))
+            MapButton(ForgeGlyphs.Target, ui("tree.reset_view"), tint = Muted, size = 34.dp, onClick = view::reset)
         }
-        // A tap opens a small window about that one node, so the map stays in sight; everything
-        // about the tree as a whole lives behind "Подробно".
-        TreeCanvas(nodes, selected, taken, reachable, path.orEmpty(), planned, highlight, Modifier.weight(1f)) { code -> onSelect(code); nodeOpen = true }
-        MutedText(ui("tree.gesture_hint"))
-    }
-    // The small window about the chosen node: what it gives, and the one command over it. It is
-    // deliberately not expanded to full height — half the point is seeing where the branch leads.
-    if (nodeOpen) ModalBottomSheet(onDismissRequest = { nodeOpen = false }, containerColor = Panel) {
-        Column(Modifier.fillMaxWidth().heightIn(max = 520.dp).verticalScroll(rememberScrollState()).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            NodeDetails(s, index, index.tree.node(selected), taken, reachable, enabled, path, tree.available,
-                onAllocate = { code, choice -> nodeOpen = false; onAllocate(code, choice) },
-                onPath = { code, choice -> nodeOpen = false; onPath(code, choice) },
-                onRefund = { nodeOpen = false; onRefund(it) },
-                onRefundBranch = { nodeOpen = false; onRefundBranch(it) },
-                onRechoose = { code, choice -> nodeOpen = false; onRechoose(code, choice) },
-                onSocket = { instance, code -> nodeOpen = false; onSocket(instance, code) },
-                onUnsocket = { nodeOpen = false; onUnsocket(it) })
-            PlanControl(index, heroClass, taken, plan, index.tree.node(selected), enabled) { nodeOpen = false; onPlan(it) }
-            Spacer(Modifier.height(8.dp))
+        // The card about the chosen node: what it gives, and the commands over it. It holds the map's foot only, so
+        // half the point — seeing where the branch leads — is kept.
+        if (nodeOpen) {
+            val shape = RoundedCornerShape(12.dp)
+            Column(Modifier.align(Alignment.BottomCenter).padding(8.dp).fillMaxWidth().heightIn(max = 380.dp)
+                .background(Panel, shape).border(1.dp, Bronze, shape).verticalScroll(rememberScrollState()).padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                NodeDetails(s, index, heroClass, index.tree.node(selected), taken, reachable, enabled, path, tree.available, plan,
+                    onClose = { nodeOpen = false },
+                    onAllocate = { code, choice -> nodeOpen = false; onAllocate(code, choice) },
+                    onPath = { code, choice -> nodeOpen = false; onPath(code, choice) },
+                    onRefund = { nodeOpen = false; onRefund(it) },
+                    onRefundBranch = { nodeOpen = false; onRefundBranch(it) },
+                    onRechoose = { code, choice -> nodeOpen = false; onRechoose(code, choice) },
+                    onSocket = { instance, code -> nodeOpen = false; onSocket(instance, code) },
+                    onUnsocket = { nodeOpen = false; onUnsocket(it) },
+                    onPlan = { nodeOpen = false; onPlan(it) })
+            }
         }
     }
 
@@ -187,6 +204,12 @@ import kotlin.math.sin
         Column(Modifier.fillMaxWidth().heightIn(max = 560.dp).verticalScroll(rememberScrollState()).padding(16.dp)) { TreeTotals(s, tree) }
     }
 
+    if (planOpen && plan.isNotEmpty()) ModalBottomSheet(onDismissRequest = { planOpen = false }, containerColor = Panel) {
+        Column(Modifier.fillMaxWidth().heightIn(max = 560.dp).verticalScroll(rememberScrollState()).padding(16.dp)) {
+            PlanPanel(s, index, taken, plan, enabled) { planOpen = false; onPlan(emptyList()) }
+        }
+    }
+
     if (detailsOpen) ModalBottomSheet(onDismissRequest = { detailsOpen = false }, containerColor = Panel,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.9f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -196,16 +219,29 @@ import kotlin.math.sin
                     PropertyRow(ui("tree.points_total"), tree.total.toString(), Glyph.LEVEL)
                     PropertyRow(ui("tree.points_spent"), tree.spent.toString(), Glyph.LEVEL)
                     PropertyRow(ui("tree.points_available"), tree.available.toString(), Glyph.LEVEL)
+                    PropertyRow(ui("tree.taken_reachable_label"), ui("tree.taken_reachable", taken.size, reachable.size), Glyph.TREE)
                 }
             }
             item { TreeTotals(s, tree) }
-            if (plan.isNotEmpty()) item { PlanPanel(s, index, taken, plan, enabled) { detailsOpen = false; onPlan(emptyList()) } }
             item { TreeSearch(s, nodes) { code -> onSelect(code); detailsOpen = false; nodeOpen = true } }
-            item {
-                ForgeOutlinedButton(enabled = enabled && hero.tree.size > 1, onClick = { detailsOpen = false; confirmReset = true },
-                    modifier = Modifier.fillMaxWidth()) { Text(ui("tree.reset_all")) }
-                MutedText(ui("tree.reset_note"))
-            }
+        }
+    }
+}
+
+/** Where the map looks: the zoom and the pan, held by the panel so its «back to the whole tree» button can reset them. */
+@Stable private class TreeView {
+    var scale by mutableFloatStateOf(1f)
+    var pan by mutableStateOf(Offset.Zero)
+    fun reset() { scale = 1f; pan = Offset.Zero }
+}
+
+private val PILL = RoundedCornerShape(16.dp)
+
+/** A round button floating over the map, with a count in its corner when [badge] is given. */
+@Composable private fun MapButton(icon: ImageVector, label: String, tint: Color = Gold, badge: Int? = null, size: Dp = 40.dp, onClick: () -> Unit) {
+    BadgedBox(badge = { badge?.let { Badge(containerColor = Vital, contentColor = Ink) { Text(it.toString(), fontSize = 9.sp) } } }) {
+        IconButton(onClick = onClick, modifier = Modifier.size(size).background(Panel.copy(alpha = .9f), CircleShape).border(1.dp, Bronze, CircleShape)) {
+            Icon(icon, label, tint = tint, modifier = Modifier.size(20.dp))
         }
     }
 }
@@ -282,20 +318,18 @@ private fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Set
  * leave an empty rectangle with no way back but the reset.
  */
 @Composable private fun TreeCanvas(nodes: List<TreeNode>, selected: String, taken: Set<String>, reachable: Set<String>, path: List<String>,
-    planned: Set<String>, highlight: Set<String>, modifier: Modifier = Modifier, onSelect: (String) -> Unit) {
+    planned: Set<String>, highlight: Set<String>, view: TreeView, modifier: Modifier = Modifier, onSelect: (String) -> Unit) {
     val byCode = remember(nodes) { nodes.associateBy { it.code } }
     val bounds = remember(nodes) { Bounds.of(nodes) }
-    var scale by remember { mutableFloatStateOf(1f) }
-    var pan by remember { mutableStateOf(Offset.Zero) }
     val select by rememberUpdatedState(onSelect)
     // The zoom is about a point — the pinch's centre, the double tap — so what is under the fingers stays there.
     fun zoomAt(focus: Offset, factor: Float, drag: Offset, width: Float, height: Float) {
-        val next = (scale * factor).coerceIn(MIN_ZOOM, MAX_ZOOM)
+        val next = (view.scale * factor).coerceIn(MIN_ZOOM, MAX_ZOOM)
         val centre = Offset(width / 2, height / 2)
-        val moved = focus - centre - (focus - centre - pan) * (next / scale) + drag
+        val moved = focus - centre - (focus - centre - view.pan) * (next / view.scale) + drag
         val limit = panLimit(bounds, width, height, next)
-        scale = next
-        pan = Offset(moved.x.coerceIn(-limit.x, limit.x), moved.y.coerceIn(-limit.y, limit.y))
+        view.scale = next
+        view.pan = Offset(moved.x.coerceIn(-limit.x, limit.x), moved.y.coerceIn(-limit.y, limit.y))
     }
     Box(modifier.fillMaxWidth()) {
         // Both detectors are keyed on the graph alone and read the view as it is now. Keyed on the zoom and
@@ -311,69 +345,70 @@ private fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Set
                 detectTapGestures(
                     // A double tap steps in towards the spot, and from the closest zoom back to the whole tree.
                     onDoubleTap = { at ->
-                        if (scale >= MAX_ZOOM - .01f) { scale = 1f; pan = Offset.Zero }
+                        if (view.scale >= MAX_ZOOM - .01f) view.reset()
                         else zoomAt(at, DOUBLE_TAP_ZOOM, Offset.Zero, size.width.toFloat(), size.height.toFloat())
                     },
                     onTap = { tap ->
                         // The nearest node wins, but only within its own circle — never smaller than a finger: a tap on bare canvas changes nothing.
                         val width = size.width.toFloat()
                         val height = size.height.toFloat()
-                        nodes.minByOrNull { (place(it, bounds, width, height, scale, pan) - tap).getDistanceSquared() }?.let { hit ->
-                            val reach = max(radius(hit) * scale.coerceIn(.5f, 2.2f) * 2f, MIN_TOUCH.toPx())
-                            if ((place(hit, bounds, width, height, scale, pan) - tap).getDistance() <= reach) select(hit.code)
+                        nodes.minByOrNull { (place(it, bounds, width, height, view.scale, view.pan) - tap).getDistanceSquared() }?.let { hit ->
+                            val reach = max(radius(hit) * view.scale.coerceIn(.5f, 2.2f) * 2f, MIN_TOUCH.toPx())
+                            if ((place(hit, bounds, width, height, view.scale, view.pan) - tap).getDistance() <= reach) select(hit.code)
                         }
                     })
             }) {
             val width = size.width
             val height = size.height
-            wheel(nodes, bounds, width, height, scale, pan)
+            wheel(nodes, bounds, width, height, view.scale, view.pan)
             // Edges first, so a node always sits on top of the lines that reach it.
             nodes.forEach { node ->
-                val from = place(node, bounds, width, height, scale, pan)
+                val from = place(node, bounds, width, height, view.scale, view.pan)
                 node.connections.forEach { code ->
                     val other = byCode[code] ?: return@forEach
                     val both = node.code in taken && code in taken
                     val open = (node.code in taken && code in reachable) || (code in taken && node.code in reachable)
                     drawLine(when { both -> Gold; open -> Gold.copy(alpha = .35f); else -> Bronze },
-                        from, place(other, bounds, width, height, scale, pan), (if (both) 3f else 2f) * scale.coerceIn(.6f, 1.6f))
+                        from, place(other, bounds, width, height, view.scale, view.pan), (if (both) 3f else 2f) * view.scale.coerceIn(.6f, 1.6f))
                 }
             }
             if (path.isNotEmpty()) {
                 // The dashed way to the chosen node: from the taken node it leaves, through every step it would take.
                 val anchor = byCode[path.first()]?.connections.orEmpty().plus(nodes.filter { path.first() in it.connections }.map { it.code })
                     .firstOrNull { it in taken && byCode[it]?.type != SkillNodeType.MASTERY }
-                val points = (listOfNotNull(anchor) + path).mapNotNull { byCode[it] }.map { place(it, bounds, width, height, scale, pan) }
-                val dash = PathEffect.dashPathEffect(floatArrayOf(10f, 7f).map { it * scale.coerceIn(.6f, 1.6f) }.toFloatArray())
-                points.zipWithNext { a, b -> drawLine(GoldBright, a, b, 3f * scale.coerceIn(.6f, 1.6f), pathEffect = dash) }
+                val points = (listOfNotNull(anchor) + path).mapNotNull { byCode[it] }.map { place(it, bounds, width, height, view.scale, view.pan) }
+                val dash = PathEffect.dashPathEffect(floatArrayOf(10f, 7f).map { it * view.scale.coerceIn(.6f, 1.6f) }.toFloatArray())
+                points.zipWithNext { a, b -> drawLine(GoldBright, a, b, 3f * view.scale.coerceIn(.6f, 1.6f), pathEffect = dash) }
             }
-            nodes.forEach { node -> medallion(node, place(node, bounds, width, height, scale, pan), scale, node.code in taken,
+            nodes.forEach { node -> medallion(node, place(node, bounds, width, height, view.scale, view.pan), view.scale, node.code in taken,
                 node.code in reachable || node.code in path, node.code == selected) }
             // The plan's nodes wear a rune ring, the filter's a green one - over the medallion, never instead of it.
             nodes.forEach { node ->
                 val ring = when { node.code in highlight -> Vital; node.code in planned && node.code !in taken -> Rune; else -> return@forEach }
-                drawCircle(ring, radius(node) * scale.coerceIn(.5f, 2.2f) + 5f, place(node, bounds, width, height, scale, pan), style = Stroke(2.5f))
+                drawCircle(ring, radius(node) * view.scale.coerceIn(.5f, 2.2f) + 5f, place(node, bounds, width, height, view.scale, view.pan), style = Stroke(2.5f))
             }
-        }
-        Row(Modifier.align(Alignment.BottomStart).padding(8.dp), verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            ForgeTextButton(onClick = { scale = 1f; pan = Offset.Zero }) { Text(ui("tree.reset_view")) }
-            MutedText(ui("tree.taken_reachable", taken.size, reachable.size), style = MaterialTheme.typography.labelMedium)
         }
     }
 }
 
 /**
- * The chosen node: what it gives, and the one command the server accepts for it.
+ * The chosen node: what it gives, and the commands the server accepts for it — the plan's beside the one that takes.
  *
  * A socket is the exception, because it gives nothing by itself — what it holds is a jewel, and
  * the command there is to put one in or take it out.
  */
-@Composable private fun NodeDetails(s: ForgeState, index: ContentIndex, node: TreeNode?, taken: Set<String>, reachable: Set<String>, enabled: Boolean,
-    path: List<String>?, available: Int, onAllocate: (String, Int?) -> Unit, onPath: (String, Int?) -> Unit, onRefund: (String) -> Unit,
-    onRefundBranch: (String) -> Unit = {},
-    onSocket: (String, String) -> Unit = { _, _ -> }, onUnsocket: (String) -> Unit = {}, onRechoose: (String, Int) -> Unit = { _, _ -> }) {
+@Composable private fun NodeDetails(s: ForgeState, index: ContentIndex, heroClass: HeroClass?, node: TreeNode?, taken: Set<String>, reachable: Set<String>,
+    enabled: Boolean, path: List<String>?, available: Int, plan: List<TakenNode>, onClose: () -> Unit,
+    onAllocate: (String, Int?) -> Unit, onPath: (String, Int?) -> Unit, onRefund: (String) -> Unit, onRefundBranch: (String) -> Unit,
+    onSocket: (String, String) -> Unit, onUnsocket: (String) -> Unit, onRechoose: (String, Int) -> Unit, onPlan: (List<TakenNode>) -> Unit) {
     if (node == null) {
-        InfoCard(ui("tree.no_selection"), ui("tree.no_selection_hint"))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(ui("tree.no_selection"), color = GoldBright, style = MaterialTheme.typography.titleSmall)
+                MutedText(ui("tree.no_selection_hint"))
+            }
+            CloseButton(onClose)
+        }
         return
     }
     val allocated = node.code in taken
@@ -381,78 +416,106 @@ private fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Set
     // The option the hero took is theirs: it is read from the snapshot, not from the tree.
     val chosen = s.hero?.tree?.firstOrNull { it.code == node.code }?.choice
     var picked by remember(node.code) { mutableStateOf<Int?>(null) }
-    ForgePanel(accent = nodeColour(node, true)) {
-        // The node's name is this panel's title, so it keeps its own casing rather than being
-        // shouted as an Engraved caption the way a section heading is.
-        Text(nodeTitle(node.code), color = nodeColour(node, true), style = MaterialTheme.typography.titleMedium)
-        PropertyRow(ui("tree.node_type"), nodeTypeTitle(node.type, s.lang), Glyph.TREE)
-        PropertyRow(ui("tree.cost"), node.cost.toString(), Glyph.LEVEL)
-        PropertyRow(ui("card.state"), if (allocated) ui("tree.taken") else ui("tree.not_taken"), Glyph.TREE)
-        nodeDescription(node.code).takeIf { it.isNotBlank() }?.let { MutedText(it) }
-
-        OrnateDivider()
-        if (node.type == SkillNodeType.JEWEL_SOCKET) {
-            SocketContents(s, index, node, allocated, enabled, onSocket, onUnsocket)
-        } else if (choosing) {
-            // A mastery or an attribute node (server 0.52.0): one option, chosen when it is taken. A taken
-            // attribute node may change it for a Chaos Orb (2.72.0, server 0.63.0); a mastery may not.
-            val rechoosable = allocated && node.type == SkillNodeType.ATTRIBUTE
-            MutedText(ui(when { rechoosable -> "tree.option_rechoose"; allocated -> "tree.option_chosen"; else -> "tree.option_pick" }),
-                style = MaterialTheme.typography.labelMedium)
-            node.options.forEachIndexed { at, option ->
-                val on = when { picked != null -> at == picked; allocated -> at == chosen; else -> false }
-                OptionCard(on, enabled = (!allocated && (node.code in reachable || path != null)) || (rechoosable && enabled), onClick = { picked = at }) {
-                    option.forEach { line -> ModifierLine(index, line) }
-                }
-            }
-            if (rechoosable) {
-                val owned = s.bagAmount(Orb.CHAOS_ORB.name) ?: 0L
-                ForgeButton(enabled = enabled && picked != null && picked != chosen && owned > 0, onClick = { picked?.let { onRechoose(node.code, it) } },
-                    modifier = Modifier.fillMaxWidth()) {
-                    OrbGlyph(Orb.CHAOS_ORB, Modifier.size(20.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(ui("tree.rechoose", owned))
-                }
-            }
-            if (node.type == SkillNodeType.MASTERY && !allocated && node.code !in reachable)
-                MutedText(ui("tree.mastery_locked"))
-        } else {
-            if (node.lines.isEmpty()) Text(ui("tree.no_bonuses"), color = Muted)
-            node.lines.forEach { line -> ModifierLine(index, line) }
+    val planning = remember(index, heroClass, taken, plan, node.code) { planOption(index, heroClass, taken, plan, node) }
+    // The node's name heads the card in its own colour, with its kind, its price and whether it is taken under it.
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(nodeTitle(node.code), color = nodeColour(node, true), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            MutedText(listOf(nodeTypeTitle(node.type, s.lang), "${ui("tree.cost")} ${node.cost}",
+                ui(if (allocated) "tree.taken" else "tree.not_taken")).joinToString(" · "))
         }
+        CloseButton(onClose)
+    }
+    nodeDescription(node.code).takeIf { it.isNotBlank() }?.let { MutedText(it) }
+    if (node.type == SkillNodeType.JEWEL_SOCKET) {
+        SocketContents(s, index, node, allocated, enabled, onSocket, onUnsocket)
+    } else if (choosing) {
+        // A mastery or an attribute node (server 0.52.0): one option, chosen when it is taken. A taken
+        // attribute node may change it for a Chaos Orb (2.72.0, server 0.63.0); a mastery may not.
+        val rechoosable = allocated && node.type == SkillNodeType.ATTRIBUTE
+        MutedText(ui(when { rechoosable -> "tree.option_rechoose"; allocated -> "tree.option_chosen"; else -> "tree.option_pick" }),
+            style = MaterialTheme.typography.labelMedium)
+        node.options.forEachIndexed { at, option ->
+            val on = when { picked != null -> at == picked; allocated -> at == chosen; else -> false }
+            OptionCard(on, enabled = (!allocated && (node.code in reachable || path != null)) || (rechoosable && enabled), onClick = { picked = at }) {
+                option.forEach { line -> ModifierLine(index, line) }
+            }
+        }
+        if (rechoosable) {
+            val owned = s.bagAmount(Orb.CHAOS_ORB.name) ?: 0L
+            ForgeButton(enabled = enabled && picked != null && picked != chosen && owned > 0, onClick = { picked?.let { onRechoose(node.code, it) } },
+                modifier = Modifier.fillMaxWidth()) {
+                OrbGlyph(Orb.CHAOS_ORB, Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(ui("tree.rechoose", owned))
+            }
+        }
+        if (node.type == SkillNodeType.MASTERY && !allocated && node.code !in reachable)
+            MutedText(ui("tree.mastery_locked"))
+    } else {
+        if (node.lines.isEmpty()) Text(ui("tree.no_bonuses"), color = Muted)
+        node.lines.forEach { line -> ModifierLine(index, line) }
+    }
 
-        OrnateDivider()
-        if (allocated) {
-            ForgeOutlinedButton(enabled = enabled && node.type != SkillNodeType.START, onClick = { onRefund(node.code) }, modifier = Modifier.fillMaxWidth()) {
-                Text(ui("tree.refund"))
+    if (allocated) {
+        ForgeOutlinedButton(enabled = enabled && node.type != SkillNodeType.START, onClick = { onRefund(node.code) }, modifier = Modifier.fillMaxWidth()) {
+            Text(ui("tree.refund"))
+        }
+        // The branch (3.54.0, server 1.52.0): this node and everything that would hang loose without it, an Orb of Regret each.
+        val branch = remember(node.code, taken) { runCatching { TreeAllocation.branch(index.tree, node, taken) }.getOrNull().orEmpty() }
+        if (branch.size > 1) {
+            val owned = s.bagAmount(Orb.ORB_OF_REGRET.name) ?: 0L
+            ForgeOutlinedButton(enabled = enabled && owned >= branch.size, onClick = { onRefundBranch(node.code) }, modifier = Modifier.fillMaxWidth()) {
+                Text(ui("tree.refund_branch", branch.size))
             }
-            // The branch (3.54.0, server 1.52.0): this node and everything that would hang loose without it, an Orb of Regret each.
-            val branch = remember(node.code, taken) { runCatching { TreeAllocation.branch(index.tree, node, taken) }.getOrNull().orEmpty() }
-            if (branch.size > 1) {
-                val owned = s.bagAmount(Orb.ORB_OF_REGRET.name) ?: 0L
-                ForgeOutlinedButton(enabled = enabled && owned >= branch.size, onClick = { onRefundBranch(node.code) }, modifier = Modifier.fillMaxWidth()) {
-                    Text(ui("tree.refund_branch", branch.size))
-                }
-                MutedText(ui("tree.refund_branch_note", branch.size, owned))
-            }
-        } else if (path != null) {
-            // A far node (3.39.0): the whole way at once, for the sum of its steps; short of points, the button says so.
-            val cost = path.sumOf { index.tree.node(it)?.cost ?: 0 }
-            PropertyRow(ui("tree.path"), ui("tree.path_value", path.size, cost), Glyph.TREE)
+            MutedText(ui("tree.refund_branch_note", branch.size, owned))
+        }
+    } else if (path != null) {
+        // A far node (3.39.0): the whole way at once, for the sum of its steps; short of points, the button says so.
+        val cost = path.sumOf { index.tree.node(it)?.cost ?: 0 }
+        MutedText("${ui("tree.path")}: ${ui("tree.path_value", path.size, cost)}")
+        NodeActions(planning, enabled, plan, onPlan) {
             ForgeButton(enabled = enabled && cost <= available && (!choosing || picked != null), onClick = { onPath(node.code, picked) },
-                modifier = Modifier.fillMaxWidth()) { Text(if (cost > available) ui("tree.not_enough_points") else ui("tree.path_take", cost)) }
-            if (cost > available) MutedText(ui("tree.path_short", cost, available))
-        } else if (node.code in reachable || taken.isEmpty()) {
-            // Short of points the button says so and stays grey: the server would only refuse (ST_008).
-            val short = node.cost > available
+                modifier = Modifier.weight(1f)) { Text(if (cost > available) ui("tree.not_enough_points") else ui("tree.path_take", cost)) }
+        }
+        if (cost > available) MutedText(ui("tree.path_short", cost, available))
+    } else if (node.code in reachable || taken.isEmpty()) {
+        // Short of points the button says so and stays grey: the server would only refuse (ST_008).
+        val short = node.cost > available
+        NodeActions(planning, enabled, plan, onPlan) {
             ForgeButton(enabled = enabled && !short && (!choosing || picked != null),
-                onClick = { onAllocate(node.code, picked) }, modifier = Modifier.fillMaxWidth()) {
+                onClick = { onAllocate(node.code, picked) }, modifier = Modifier.weight(1f)) {
                 Text(if (short) ui("tree.not_enough_points") else ui("tree.allocate"))
             }
-            if (short) MutedText(ui("tree.path_short", node.cost, available))
-        } else MutedText(ui("tree.path_none"))
-        if (node.type == SkillNodeType.START) Text(ui("tree.start_note"), color = Muted, style = MaterialTheme.typography.bodySmall)
+        }
+        if (short) MutedText(ui("tree.path_short", node.cost, available))
+    } else {
+        NodeActions(planning, enabled, plan, onPlan) {}
+        MutedText(ui("tree.path_none"))
     }
+    (planning as? PlanOption.Note)?.key?.let { MutedText(ui(it)) }
+    if (node.type == SkillNodeType.START) MutedText(ui("tree.start_note"))
+}
+
+/** The plan's button, when the node has one, beside the command that takes it. */
+@Composable private fun NodeActions(planning: PlanOption, enabled: Boolean, plan: List<TakenNode>, onPlan: (List<TakenNode>) -> Unit,
+    take: @Composable RowScope.() -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        when (planning) {
+            is PlanOption.Remove -> ForgeOutlinedButton(enabled = enabled, onClick = { onPlan(plan.filterNot { it.code == planning.code }) }) {
+                Text(ui("tree.plan_remove"))
+            }
+            is PlanOption.Add -> ForgeOutlinedButton(enabled = enabled, onClick = { onPlan(plan + planning.way.map { TakenNode(it) }) }) {
+                Text(ui("tree.plan_add", planning.way.size))
+            }
+            is PlanOption.Note -> Unit
+        }
+        take()
+    }
+}
+
+@Composable private fun CloseButton(onClose: () -> Unit) {
+    IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) { Icon(Icons.Outlined.Close, ui("common.close"), tint = Muted, modifier = Modifier.size(18.dp)) }
 }
 
 /**
@@ -725,24 +788,21 @@ private fun nodesTagged(index: ContentIndex, tag: String): Set<String> = index.c
  * The chosen node against the plan (3.47.0): out of it, or the rules' shortest way to it — from what is taken and
  * what is planned already — added to its end. A node with options is taken by hand: its choice is the player's.
  */
-@Composable private fun PlanControl(index: ContentIndex, heroClass: HeroClass?, taken: Set<String>, plan: List<TakenNode>, node: TreeNode?,
-    enabled: Boolean, onPlan: (List<TakenNode>) -> Unit) {
-    node ?: return
-    if (node.code in taken) return
-    if (plan.any { it.code == node.code }) {
-        ForgeOutlinedButton(enabled = enabled, onClick = { onPlan(plan.filterNot { it.code == node.code }) }, modifier = Modifier.fillMaxWidth()) { Text(ui("tree.plan_remove")) }
-        return
-    }
-    if (node.options.isNotEmpty()) { MutedText(ui("tree.plan_choice")); return }
-    val start = heroClass?.startNode ?: return
-    val way = remember(index, taken, plan, node.code) {
-        val from = taken + plan.map { it.code }
-        if (from.isEmpty()) null else TreeAllocation.path(index.tree, from, start, node.code)
-    }
-    if (way == null) { MutedText(ui("tree.plan_no_way")); return }
-    ForgeOutlinedButton(enabled = enabled, onClick = { onPlan(plan + way.map { TakenNode(it) }) }, modifier = Modifier.fillMaxWidth()) {
-        Text(ui("tree.plan_add", way.size))
-    }
+private sealed interface PlanOption {
+    data class Remove(val code: String) : PlanOption
+    data class Add(val way: List<String>) : PlanOption
+    /** No button: a [key] of the dictionary says why, or nothing at all when the node is taken. */
+    data class Note(val key: String?) : PlanOption
+}
+
+private fun planOption(index: ContentIndex, heroClass: HeroClass?, taken: Set<String>, plan: List<TakenNode>, node: TreeNode): PlanOption {
+    if (node.code in taken) return PlanOption.Note(null)
+    if (plan.any { it.code == node.code }) return PlanOption.Remove(node.code)
+    if (node.options.isNotEmpty()) return PlanOption.Note("tree.plan_choice")
+    val start = heroClass?.startNode ?: return PlanOption.Note(null)
+    val from = taken + plan.map { it.code }
+    val way = if (from.isEmpty()) null else TreeAllocation.path(index.tree, from, start, node.code)
+    return way?.let { PlanOption.Add(it) } ?: PlanOption.Note("tree.plan_no_way")
 }
 
 /** The plan as a whole (3.47.0): how many nodes are still to take, what they cost, and what they will give. */

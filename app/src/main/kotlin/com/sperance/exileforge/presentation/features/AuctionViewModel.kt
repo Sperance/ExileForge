@@ -20,12 +20,25 @@ class AuctionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     fun auctionFilter(filter: AuctionFilter) = update { it.copy(market = it.market.copy(filter = filter)) }
     fun showOwnLots(show: Boolean) = update { it.copy(market = it.market.copy(showOwnLots = show)) }
 
-    fun loadShowcase(page: Int = 0) { with(runtime) { trade(restart = true) {
-        val id = heroId
-        val filter = state.value.market.filter.copy(excludeSellerId = if (state.value.market.showOwnLots) "" else id, lang = state.value.lang.code)
-        val showcase = api.auction.search(id, filter, state.value.market.showcase.trailTo(page))
+    /** The showcase from its first page, under the filter as it stands. */
+    fun loadShowcase() { with(runtime) { trade(restart = true) {
+        val showcase = api.auction.search(heroId, showcaseFilter(), listOf(""))
         mutable.update { it.copy(market = it.market.copy(showcase = showcase)) }
     } } }
+
+    /** «Показать ещё»: the next page by its cursor, added under the lots shown. */
+    fun moreShowcase() { with(runtime) { trade(restart = true) {
+        val shown = state.value.market.showcase
+        val trail = shown.nextTrail ?: return@trade
+        val more = api.auction.search(heroId, showcaseFilter(), trail)
+        mutable.update { it.copy(market = it.market.copy(showcase = it.market.showcase.followedBy(more))) }
+    } } }
+
+    /** The filter as the server reads it: the hero's own lots dropped unless asked for, the names in the language on screen. */
+    private fun showcaseFilter(): AuctionFilter { with(runtime) {
+        val market = state.value.market
+        return market.filter.copy(excludeSellerId = if (market.showOwnLots) "" else heroId, lang = state.value.lang.code)
+    } }
 
     /** [glance] is the City square's (3.22.0): no strip, and a hero below the auction's level is told on its card rather than by a refusal. */
     fun loadMyLots(glance: Boolean = false) { with(runtime) { trade(key = Reads.LOTS, glance = glance) {
@@ -43,7 +56,7 @@ class AuctionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     } } }
 
     /** The auction's own two lists; the merchant is a building of its own since 3.22.0 and reads its shelf itself. */
-    fun loadAuction() { loadShowcase(0); loadMyLots() }
+    fun loadAuction() { loadShowcase(); loadMyLots() }
 
     fun buyOffer(offerId: String) { with(runtime) { trade(writing = true) {
         val id = heroId
@@ -71,12 +84,9 @@ class AuctionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         val id = heroId
         val lot = api.auction.buy(id, lotId)
         toast(ui("toast.bought", lot.title))
-        afterTrade {
-            refreshHero(id)
-            val filter = state.value.market.filter.copy(excludeSellerId = if (state.value.market.showOwnLots) "" else id, lang = state.value.lang.code)
-            val showcase = api.auction.search(id, filter, state.value.market.showcase.cursors)
-            mutable.update { it.copy(market = it.market.copy(showcase = showcase)) }
-        }
+        // The bought lot leaves the showcase; the pages added under it by «Показать ещё» stay as they are.
+        mutable.update { it.copy(market = it.market.copy(showcase = it.market.showcase.without(lotId))) }
+        afterTrade { refreshHero(id) }
     } } }
 
     /** Lists a copy for a price in orbs — [priceOrb] the currency's item code. */

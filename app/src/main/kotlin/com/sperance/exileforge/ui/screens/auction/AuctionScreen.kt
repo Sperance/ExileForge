@@ -11,7 +11,6 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.*
-import com.sperance.exileforge.ui.icons.ForgeGlyphs
 
 /**
  * The player auction.
@@ -25,9 +24,8 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun AuctionScreen(s: ForgeState, vm: ForgeViewModel) {
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Spacer(Modifier.height(12.dp))
-        ScreenHeader(ui("nav.auction"),
-            ui("auction.showcase_count", s.market.showcase.totalItems), ForgeGlyphs.Orb, guide = Guide.AUCTION)
+        // No header (variant A): the City's row above already names the building, and the tabs carry its «?».
+        FirstVisit(Guide.AUCTION)
         // Opening the tab is what fills both lists; the hero is the one from the menu.
         // The hero comes too, and not for the bag: the sheet is what the rules read to say which
         // templates this hero can wear, and that is what marks an unwearable lot.
@@ -46,12 +44,7 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
         // The merchant moved out in 3.22.0, to a building of the City of its own.
         val tabs = listOf(ui("auction.showcase"), if (mine > 0) ui("auction.my_lots_n", mine) else ui("auction.my_lots"))
         val tab = s.market.tab.coerceIn(tabs.indices)
-        TabRow(selectedTabIndex = tab, containerColor = com.sperance.exileforge.ui.theme.Abyss) {
-            tabs.forEachIndexed { index, title ->
-                Tab(selected = tab == index, enabled = !s.busy, onClick = { vm.auctionTab(index) },
-                    text = { Text(title, style = MaterialTheme.typography.labelLarge) })
-            }
-        }
+        PillTabs(tabs, tab, vm::auctionTab, enabled = !s.busy) { GuideButton(Guide.AUCTION) }
         // Every tab is refreshed the same way the hero is: by pulling it. A button competing with
         // the content was one more thing to find, and the gesture is already the habit here.
         PullToRefreshBox(isRefreshing = s.refreshing(Reads.AUCTION) || Reads.LOTS in s.loading, onRefresh = vm::loadAuction, modifier = Modifier.weight(1f)) {

@@ -125,7 +125,6 @@
   "auction.seller": "Seller",
   "auction.show_mine": "Show my own lots",
   "auction.showcase": "Showcase",
-  "auction.showcase_count": "{0} lots on the showcase",
   "auction.showcase_empty": "No lot on the showcase matches this filter.",
   "auction.slots": "Lot places",
   "auction.slots_full": "Every place is taken: no new lot until one frees up.",
@@ -3357,5 +3356,6 @@
   "progress.trials_crests": "Rush key: {0} of {1}",
   "guide.progress.title": "Progress",
   "guide.progress.text": "What grows between runs lives here: the forge, the menagerie, the Atlas and the trials.\nEach tile sums itself up and shows a number when something waits: free Atlas points, eggs, rush keys.\nTap a tile to go in; «back» brings you here.",
-  "tree.taken_reachable_label": "Nodes"
+  "tree.taken_reachable_label": "Nodes",
+  "auction.more": "Show more · {0} of {1}"
 }

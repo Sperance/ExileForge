@@ -1,13 +1,12 @@
 package com.sperance.exileforge.ui.screens.auction
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -19,12 +18,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.Glyph
-import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.ItemVisualKind
 import com.sperance.exileforge.core.display.bagVisualKind
 import com.sperance.exileforge.core.display.equipmentIcon
@@ -34,7 +33,6 @@ import com.sperance.exileforge.core.display.itemVisualKind
 import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.display.slotTitle
-import com.sperance.exileforge.core.display.weaponTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.auction.*
 import com.sperance.exileforge.presentation.ForgeViewModel
@@ -55,11 +53,11 @@ import com.sperance.exileforge.ui.theme.*
 
 /** The showcase: the server's own search, so the page and the filter both belong to it. */
 @Composable internal fun ColumnScope.ShowcaseTab(s: ForgeState, vm: ForgeViewModel) {
-    ShowcaseList(s, header = { ShowcaseHeader(s, vm) }, onBuy = vm::buyLot, onPage = vm::loadShowcase)
+    ShowcaseList(s, header = { ShowcaseHeader(s, vm) }, onBuy = vm::buyLot, onMore = vm::moreShowcase)
 }
 
 /**
- * The lots themselves, with the paging the server reported.
+ * The lots themselves, the next page added under them by «Показать ещё» while the server has one.
  *
  * The filter travels in as a header so the list can be driven without a view model: what is worth
  * checking here is which lot offers a Buy button and what the price says, not the form wiring.
@@ -69,7 +67,7 @@ import com.sperance.exileforge.ui.theme.*
  * the extra tap that guarantees the item was looked at.
  */
 @Composable internal fun ColumnScope.ShowcaseList(s: ForgeState, header: @Composable () -> Unit = {},
-    onBuy: (String) -> Unit, onPage: (Int) -> Unit) {
+    onBuy: (String) -> Unit, onMore: () -> Unit) {
     var openLot by remember { mutableStateOf<String?>(null) }
     var confirmBuy by remember { mutableStateOf<String?>(null) }
     LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
@@ -80,13 +78,12 @@ import com.sperance.exileforge.ui.theme.*
         }
         items(s.market.showcase.items, key = { it.id }) { lot ->
             // A seller cannot buy their own lot, and the server says so; the sheet does not offer it.
-            LotRow(s, lot, note = if (lot.belongsTo(s.play.heroId)) ui("auction.your_lot") else null) { openLot = lot.id }
+            LotRow(s, lot, mark = if (lot.belongsTo(s.play.heroId)) ui("auction.your_lot") else null) { openLot = lot.id }
         }
-        if (s.market.showcase.totalPages > 1) item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                ForgeOutlinedButton(enabled = !s.busy && s.market.showcase.page > 0, onClick = { onPage(s.market.showcase.page - 1) }) { Text(ui("common.back")) }
-                Text(ui("auction.page", s.market.showcase.page + 1, s.market.showcase.totalPages), color = Muted)
-                ForgeOutlinedButton(enabled = !s.busy && s.market.showcase.page + 1 < s.market.showcase.totalPages, onClick = { onPage(s.market.showcase.page + 1) }) { Text(ui("auction.forward")) }
+        val showcase = s.market.showcase
+        if (showcase.next != null) item {
+            ForgeOutlinedButton(enabled = !s.busy, onClick = onMore, modifier = Modifier.fillMaxWidth()) {
+                Text(ui("auction.more", showcase.items.size, showcase.totalItems))
             }
         }
     }
@@ -137,7 +134,6 @@ import com.sperance.exileforge.ui.theme.*
  * and a chip's cross do. A chip is one filter the server understands, named as the player set it,
  * and its cross drops that filter and asks again — the quickest way back from "nothing found".
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable private fun ShowcaseHeader(s: ForgeState, vm: ForgeViewModel) {
     var sheet by remember { mutableStateOf(false) }
     val f = s.market.filter
@@ -146,21 +142,22 @@ import com.sperance.exileforge.ui.theme.*
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(f.title, { vm.auctionFilter(f.copy(title = it)) }, placeholder = { Text(ui("auction.name")) },
                 leadingIcon = { Icon(Icons.Outlined.Search, null) }, singleLine = true, modifier = Modifier.weight(1f),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { vm.loadShowcase(0) }))
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { vm.loadShowcase() }))
             ForgeOutlinedButton(onClick = { sheet = true }, enabled = !s.busy, contentPadding = PaddingValues(horizontal = 12.dp)) {
                 Icon(Icons.Outlined.FilterList, ui("auction.filters"), modifier = Modifier.size(18.dp))
                 if (count > 0) { Spacer(Modifier.width(6.dp)); Text(count.toString()) }
             }
         }
-        if (count > 0) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        // The filters set are one line of chips that scrolls sideways, never a block growing down over the lots.
+        if (count > 0) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             f.active().forEach { field ->
-                ActiveFilter(chipLabel(s, field, f.value(field))) { vm.auctionFilter(f.without(field)); vm.loadShowcase(0) }
+                ActiveFilter(chipLabel(s, field, f.value(field))) { vm.auctionFilter(f.without(field)); vm.loadShowcase() }
             }
-            if (s.market.showOwnLots) ActiveFilter(ui("auction.show_mine")) { vm.showOwnLots(false); vm.loadShowcase(0) }
+            if (s.market.showOwnLots) ActiveFilter(ui("auction.show_mine")) { vm.showOwnLots(false); vm.loadShowcase() }
         }
     }
     if (sheet) FilterSheet(s, onDismiss = { sheet = false }) { filter, mine ->
-        sheet = false; vm.auctionFilter(filter); vm.showOwnLots(mine); vm.loadShowcase(0)
+        sheet = false; vm.auctionFilter(filter); vm.showOwnLots(mine); vm.loadShowcase()
     }
 }
 
@@ -247,7 +244,7 @@ private val templateSlots: List<Slot> = Slot.entries.filter { it != Slot.RING_2 
             InfoCard(ui("auction.no_lots"), ui("auction.no_lots_hint"))
         }
         items(s.ownLots, key = { it.id }) { lot ->
-            LotRow(s, lot, note = lotExpiry(lot)) { openLot = lot.id }
+            LotRow(s, lot, mark = lotExpiry(lot), withSeller = false) { openLot = lot.id }
         }
     }
     s.ownLots.firstOrNull { it.id == openLot }?.let { lot ->
@@ -257,64 +254,38 @@ private val templateSlots: List<Slot> = Slot.entries.filter { it != Slot.RING_2 
 }
 
 /**
- * One lot as a line: everything a trader decides on without opening it.
- *
- * A copy is drawn by the same [ItemRow] the stash draws, because a lot and a stash line are the same
- * question asked twice — what is it and what did it roll. A stack has no copy to read rolls from, so
- * its line is the lot's own: the item's icon, its name and how many. What the auction adds is the
- * same on both: the price opposite the name, where it is weighed with it, and the seller at the bottom.
+ * One lot as a line (variant A): everything a trader decides on without opening it — what it is, every line it
+ * rolled, who sells it, and the price opposite. A copy is read through its view as the stash reads it; a stack has
+ * no rolls, and its line is the lot's own: the item's icon, its name and how many.
  *
  * Rarity is not written anywhere: it is the frame of the icon and the colour of the name.
  */
-@Composable private fun LotRow(s: ForgeState, lot: AuctionLot, note: String?, onClick: () -> Unit) {
+@Composable private fun LotRow(s: ForgeState, lot: AuctionLot, mark: String?, withSeller: Boolean = true, onClick: () -> Unit) {
     var orbInfo by remember { mutableStateOf(false) }
     if (orbInfo) StackInfoSheet(s, lot.priceOrb) { orbInfo = false }
+    val price: @Composable ColumnScope.() -> Unit = { LotPrice(lot) { orbInfo = true } }
+    val seller = listOfNotNull(sellerName(lot).takeIf { withSeller })
     val view = lot.equipment?.let { s.view(it) }
-    if (view != null) ItemRow(view, enabled = !s.busy,
-        facts = lotFacts(s, lot, view),
-        // The rules' verdict on the template, as the stash marks it: a lot the buyer cannot wear yet.
-        unwearable = lotUnmet(s, lot),
-        trailing = { LotPrice(lot) { orbInfo = true } },
-        footer = { LotFooter(lot, note) },
-        onClick = onClick)
-    else StackLotRow(s, lot, facts = lotFacts(s, lot, null), trailing = { LotPrice(lot) { orbInfo = true } }, footer = { LotFooter(lot, note) }, onClick = onClick)
-}
-
-/** A stack lot — or a copy whose template the content no longer holds — as a line framed like a stash row. */
-@Composable private fun StackLotRow(s: ForgeState, lot: AuctionLot, facts: List<String>, trailing: @Composable () -> Unit,
-    footer: @Composable ColumnScope.() -> Unit, onClick: () -> Unit) {
-    val color = lotColor(lot)
-    val frame = RoundedCornerShape(6.dp)
-    val card = RoundedCornerShape(10.dp)
-    Row(Modifier.fillMaxWidth().background(Panel, card).border(1.dp, Bronze, card).clickable(enabled = !s.busy, onClick = onClick).padding(10.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Box(Modifier.size(54.dp).background(color.copy(alpha = .08f), frame).border(1.dp, color, frame), contentAlignment = Alignment.Center) {
-            LotIcon(s, lot, Modifier.size(34.dp))
-        }
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(lot.title, color = color, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                trailing()
-            }
-            if (facts.isNotEmpty()) MutedText(facts.joinToString(" · "))
-            footer()
-        }
-    }
+    // The rules' verdict on the template, as the stash marks it: a lot the buyer cannot wear yet says why instead of its facts.
+    if (view != null) ItemTradeRow(view, enabled = !s.busy, unmet = lotUnmet(s, lot), extra = seller, mark = mark, onClick = onClick, price = price)
+    else TradeRow(lot.title, lotColor(lot), stackFacts(s, lot) + seller, emptyList(), enabled = !s.busy, mark = mark, onClick = onClick,
+        icon = { LotIcon(s, lot, Modifier.size(28.dp)) }, price = price)
 }
 
 /**
- * The price opposite the name: the orb in its own glass (2.69.0), the plain glyph for one the client has no art for, and the count —
- * no orb name, so the item's keeps the width; a tap on a known orb's glass opens it.
+ * The price opposite the name: the count and the orb in its own glass (2.69.0) — the plain glyph for one the client has no art
+ * for — and the orb's name under them, since the glasses of the lesser orbs look alike; a tap on a known orb's glass opens it.
  */
 @Composable private fun LotPrice(lot: AuctionLot, onOrb: () -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-        Orb.of(lot.priceOrb)?.let { OrbGlyph(it, Modifier.clickable(onClickLabel = orbTitle(lot), onClick = onOrb).padding(3.dp).size(18.dp)) }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(lot.price.toString(), color = Vital, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1)
+        Orb.of(lot.priceOrb)?.let { OrbGlyph(it, Modifier.clickable(onClickLabel = orbTitle(lot), onClick = onOrb).padding(2.dp).size(16.dp)) }
             ?: Icon(ForgeGlyphs.Orb, orbTitle(lot), tint = Gold, modifier = Modifier.size(15.dp))
-        Text(lot.price.toString(), color = GoldBright, style = MaterialTheme.typography.labelLarge, maxLines = 1)
     }
+    Text(orbTitle(lot), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.widthIn(max = 96.dp))
 }
 
-/** Under everything: the note about the lot, and who sells it. */
 /** How long an own lot still stands (server 1.30.0): days and hours, hours and minutes on its last day; null when it names no end. */
 private fun lotExpiry(lot: AuctionLot): String? {
     val minutes = ((lot.timeLeft() ?: return null) + 59_999) / 60_000
@@ -323,15 +294,6 @@ private fun lotExpiry(lot: AuctionLot): String? {
 }
 
 private const val MINUTES_A_DAY = 1_440L
-
-@Composable private fun LotFooter(lot: AuctionLot, note: String?) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-        verticalAlignment = Alignment.CenterVertically) {
-        note?.let { Text(it, color = Rune, style = MaterialTheme.typography.labelSmall) }
-        Text(sellerName(lot), color = Muted,
-            style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-    }
-}
 
 /**
  * The lot's drawing: the server's sprite for its code, the bundled emblem of its kind otherwise — a
@@ -355,19 +317,9 @@ private fun sellerName(lot: AuctionLot): String = lot.sellerName.ifBlank { "…$
 /** The requirements the lot's template misses against the hero's sheet; empty for a stack, and for a wearable copy. */
 private fun lotUnmet(s: ForgeState, lot: AuctionLot): List<String> = lot.equipment?.let { s.unmetFor(it.template) }.orEmpty()
 
-/**
- * What the row adds about a lot, after what it already says itself.
- *
- * [ItemRow] prints the slot and the item level off the view, so repeating them here would read
- * "Шлем · ур. 30 · Шлем". The kind is only worth a word when there is no slot to print —
- * a stack lot, which has none.
- */
-private fun lotFacts(s: ForgeState, lot: AuctionLot, view: ItemView?): List<String> {
-    val kind = if (lot.slot == null) lotKindTitle(lot.kind, s.lang) else null
-    val weapon = view?.weaponType?.let { weaponTitle(it, s.lang) }
-    val amount = if (lot.kind == LotKind.ITEM && lot.amount > 1) ui("auction.pieces", lot.amount) else null
-    return listOfNotNull(kind, weapon, amount)
-}
+/** A stack lot's facts: how many, or what kind of goods when it is one. */
+private fun stackFacts(s: ForgeState, lot: AuctionLot): List<String> =
+    listOf(if (lot.amount > 1) ui("auction.pieces", lot.amount) else lotKindTitle(lot.kind, s.lang))
 
 /**
  * One lot in full, with the goods drawn as the stash draws them.

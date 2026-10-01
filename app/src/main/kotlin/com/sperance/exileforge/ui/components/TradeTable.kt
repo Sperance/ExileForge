@@ -128,9 +128,12 @@ private val Prism = listOf(Color(0xFFFF6B6B), Color(0xFFFFD166), Color(0xFF7BE0A
  */
 @Composable fun RollTops(summary: RollSummary, lines: List<ItemLine> = emptyList()) {
     summary.quality?.let { RollPill(it) }
-    lines.forEach { line ->
-        Text(line.text, color = ModBlue, style = MaterialTheme.typography.labelSmall)
-    }
+    ItemLines(lines)
+}
+
+/** Every line an item carries, a sentence each in the modifiers' blue: a list line's rolls, read down without opening the card. */
+@Composable fun ItemLines(lines: List<ItemLine>) {
+    lines.forEach { line -> Text(line.text, color = ModBlue, style = MaterialTheme.typography.labelSmall) }
 }
 
 /** «роллы 87%» as a pill in its step's dress (2.73.0, steps since 3.2.0): the one figure a list line is judged by. */

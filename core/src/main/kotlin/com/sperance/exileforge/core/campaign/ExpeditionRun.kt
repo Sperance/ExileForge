@@ -853,6 +853,8 @@ class ExpeditionRun(
         while (reported < battle.fallen.size) {
             val member = members[battle.fallen[reported++]]
             member.agent.fallen += member.index
+            // A pack of a merged stage can be wiped out while the stage still runs: it is gone at once, not a ghost after a retreat.
+            if (member.agent.standing.isEmpty()) member.agent.alive = false
             fell(member.agent, member.index)
         }
         val outcome = battle.outcome ?: return

@@ -28,10 +28,6 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.text.TextMeasurer
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.drawText
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.display.Glyph
@@ -290,7 +286,6 @@ private fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Set
     val byCode = remember(nodes) { nodes.associateBy { it.code } }
     val bounds = remember(nodes) { Bounds.of(nodes) }
     var scale by remember { mutableFloatStateOf(1f) }
-    val labels = rememberTextMeasurer()
     var pan by remember { mutableStateOf(Offset.Zero) }
     val select by rememberUpdatedState(onSelect)
     // The zoom is about a point — the pinch's centre, the double tap — so what is under the fingers stays there.
@@ -331,7 +326,7 @@ private fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Set
             }) {
             val width = size.width
             val height = size.height
-            wheel(nodes, bounds, width, height, scale, pan, labels)
+            wheel(nodes, bounds, width, height, scale, pan)
             // Edges first, so a node always sits on top of the lines that reach it.
             nodes.forEach { node ->
                 val from = place(node, bounds, width, height, scale, pan)
@@ -357,13 +352,6 @@ private fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Set
             nodes.forEach { node ->
                 val ring = when { node.code in highlight -> Vital; node.code in planned && node.code !in taken -> Rune; else -> return@forEach }
                 drawCircle(ring, radius(node) * scale.coerceIn(.5f, 2.2f) + 5f, place(node, bounds, width, height, scale, pan), style = Stroke(2.5f))
-            }
-            // Names at zoom (3.39.0): a notable's and a keystone's title under it, once the map is close enough to read.
-            if (scale >= LABEL_ZOOM) nodes.filter { it.type == SkillNodeType.NOTABLE || it.type == SkillNodeType.KEYSTONE }.forEach { node ->
-                val at = place(node, bounds, width, height, scale, pan)
-                if (at.x !in -80f..width + 80f || at.y !in -40f..height + 40f) return@forEach
-                val layout = labels.measure(nodeTitle(node.code), TextStyle(color = Parchment.copy(alpha = .85f), fontSize = 10.sp))
-                drawText(layout, topLeft = at + Offset(-layout.size.width / 2f, radius(node) * scale.coerceIn(.5f, 2.2f) + 3f))
             }
         }
         Row(Modifier.align(Alignment.BottomStart).padding(8.dp), verticalAlignment = Alignment.CenterVertically,
@@ -594,8 +582,6 @@ private const val MAX_ZOOM = 3f
 private const val DOUBLE_TAP_ZOOM = 2f
 /** The smallest circle a tap finds a node in, however far the map is zoomed out. */
 private val MIN_TOUCH = 18.dp
-/** From this zoom a notable's and a keystone's name is written under it. */
-private const val LABEL_ZOOM = 2.6f
 
 /** How many pixels of the seeded graph one pixel of canvas is worth, before the zoom. */
 private fun fitFactor(bounds: Bounds, width: Float, height: Float): Float =
@@ -636,11 +622,10 @@ private fun classTint(code: String): Color = when (code.removeSuffix("_START")) 
 
 /**
  * The wheel under the graph (2.59.0, the owner's pick «Колесо PoE»): a stone disc with its rings,
- * each class's sector washed in its colour and named at the rim. The sectors are read off the start
+ * each class's sector washed in its colour. The sectors are read off the start
  * nodes' positions, so the wheel turns with whatever tree the content seeds.
  */
-private fun DrawScope.wheel(nodes: List<TreeNode>, bounds: Bounds, width: Float, height: Float, scale: Float, pan: Offset,
-    labels: TextMeasurer) {
+private fun DrawScope.wheel(nodes: List<TreeNode>, bounds: Bounds, width: Float, height: Float, scale: Float, pan: Offset) {
     drawRect(Color(0xFF0B0D11))
     val fit = fitFactor(bounds, width, height) * scale
     val centre = Offset(width / 2 + (-bounds.minX - bounds.spanX / 2) * fit + pan.x, height / 2 + (-bounds.minY - bounds.spanY / 2) * fit + pan.y)
@@ -651,11 +636,6 @@ private fun DrawScope.wheel(nodes: List<TreeNode>, bounds: Bounds, width: Float,
         val angle = Math.toDegrees(atan2(start.y.toDouble(), start.x.toDouble())).toFloat()
         val tint = classTint(start.code)
         drawArc(tint.copy(alpha = .06f), angle - 30f, 60f, true, centre - Offset(rim, rim), Size(rim * 2, rim * 2))
-        if (scale > .55f) {
-            val layout = labels.measure(nodeTitle(start.code), TextStyle(color = tint.copy(alpha = .85f), fontSize = (11 * scale.coerceAtMost(1.6f)).sp))
-            val at = centre + Offset(cos(Math.toRadians(angle.toDouble())).toFloat(), sin(Math.toRadians(angle.toDouble())).toFloat()) * rim * 1.0f
-            drawText(layout, topLeft = at - Offset(layout.size.width / 2f, layout.size.height / 2f))
-        }
     }
 }
 

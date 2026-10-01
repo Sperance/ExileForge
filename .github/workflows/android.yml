@@ -125,7 +125,9 @@ jobs:
       group: release
       cancel-in-progress: false
     env:
-      GH_TOKEN: ${{ github.token }}
+      # Publishing needs write access: the RELEASE_TOKEN secret (a token with Contents: write) if set, else the workflow
+      # token — which works only when Settings → Actions → General → Workflow permissions is «Read and write».
+      GH_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
     steps:
       - uses: actions/checkout@v4
         with:

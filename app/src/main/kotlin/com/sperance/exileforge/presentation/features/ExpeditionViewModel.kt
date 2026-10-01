@@ -271,8 +271,7 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     private fun stance(): HeroStance { with(runtime) {
         val s = state.value
         val hero = s.hero ?: return HeroStance()
-        val weapon = hero.equipped[Slot.WEAPON_1H] ?: hero.equipped[Slot.WEAPON_2H]
-        return HeroStance.of(hero.heroClass, weapon?.let { s.index?.template(it.template)?.weaponType })
+        return HeroStance.of(hero.heroClass)
     } }
 
     /** The hero as a run takes them: the sheet and what it was added up from, their stance, and what they bring beyond the sheet. */

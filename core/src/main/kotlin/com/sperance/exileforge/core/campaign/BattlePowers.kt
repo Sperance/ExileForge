@@ -333,10 +333,11 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
             }
             PowerAct.ONE_OF -> if (effect.options.isNotEmpty()) return act(power, effect.options[battle.random.nextInt(effect.options.size)], value, moment)
             PowerAct.RETALIATE -> {
-                val attacker = moment.target?.takeIf { it.side == Side.MONSTER } ?: return 0.0
+                if (moment.target?.side != Side.MONSTER) return 0.0
                 val damage = share(moment.taken, amount, effect.type)
                 if (damage.values.sum() <= 0) return 0.0
-                battle.foeFighters.filter { it.alive && it.ranged == attacker.ranged }.forEach { foe ->
+                // A foe's blow comes back at every foe on screen: the fight has no rows.
+                battle.foeFighters.filter { it.alive }.forEach { foe ->
                     battle.strike(hero, foe, Blow(damage, Action.SKILL, spell = true, skill = power.stat, spread = false))
                 }
             }

@@ -193,8 +193,8 @@ private fun Modifier.tauntAura(shape: Shape, time: Float) = drawBehind {
 private const val HERO_CARD = -1
 
 /**
- * The fight as cards (2.70.0, the owner's mockup B «карточки против карточек»): the pack across the
- * top in two rows — ranged behind, melee in front — the hero's card at the foot, and between them
+ * The fight as cards (2.70.0, the owner's mockup B «карточки против карточек»): the foes on screen across the
+ * top in one line — any of them is in reach of any weapon — the hero's card at the foot, and between them
  * either the scouting panel or the latest blows. Whoever swings is lifted toward the other side and
  * lit — gold for the hero, blood for a foe — and a line runs from them to whom they struck. A tap on
  * a foe singles it out as the hero's target; the same tap again gives the choice back to the class.
@@ -218,17 +218,13 @@ private const val HERO_CARD = -1
         Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 10.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)) {
             PackHeader(fight, level)
-            val (back, front) = fight.field.partition { it.back }
-            listOf(back to "fight.row_back", front to "fight.row_front").filter { it.first.isNotEmpty() }.forEach { (row, title) ->
-                Caption(ui(title))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)) {
-                    // Keyed by the foe: one stepping into a fallen one's place is a card of its own.
-                    row.forEach { foe -> key(foe.index) {
-                        FoeCard(foe, fight, time, chosen == foe.index && fight.scouting, track(foe.index).weight(1f, fill = false).widthIn(max = 120.dp), large) {
-                            onCommand(RunCommand.Focus(foe.index))
-                        }
-                    } }
-                }
+            if (fight.field.isNotEmpty()) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)) {
+                // Keyed by the foe: one stepping into a fallen one's place is a card of its own.
+                fight.field.forEach { foe -> key(foe.index) {
+                    FoeCard(foe, fight, time, chosen == foe.index && fight.scouting, track(foe.index).weight(1f, fill = false).widthIn(max = 120.dp), large) {
+                        onCommand(RunCommand.Focus(foe.index))
+                    }
+                } }
             }
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 val shown = fight.field.firstOrNull { it.index == chosen }
@@ -326,10 +322,8 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
             if (fight.target == foe.index && foe.alive && fight.outcome == null)
                 Text(if (focused) "◉" else "◎", color = GoldBright, fontSize = 14.sp, modifier = Modifier.align(Alignment.TopEnd).padding(3.dp))
             if (foe.taunt && foe.alive) TauntSeal(time, Modifier.align(Alignment.TopStart).padding(3.dp).size(22.dp)) { tauntTip(false) }
-            if (!foe.alive) Text(ui("fight.fallen"), color = Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.Center))
             // A card behind a taunter says nothing (2.73.0): the taunter's seal already tells why.
-            else if (!foe.reachable && fight.foes.none { it.alive && it.taunt }) Text(ui("fight.out_of_reach_short"),
-                color = Muted, fontSize = 9.sp, modifier = Modifier.align(Alignment.BottomCenter).background(Ink.copy(alpha = .8f)).padding(horizontal = 4.dp))
+            if (!foe.alive) Text(ui("fight.fallen"), color = Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.Center))
             CardHits(fight.hits.filter { it.target == Side.MONSTER && it.foe == foe.index })
         }
         Text(monsterTitle(foe.monster.code), color = ring, fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -436,7 +430,7 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
     Column(Modifier.fillMaxSize().background(Panel.copy(alpha = .95f), shape).border(1.dp, ring.copy(alpha = .8f), shape)
         .verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(monsterTitle(foe.monster.code), color = ring, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-        Text(listOf(ui(foe.monster.rarity.key()), ui("fight.level", level), ui(if (foe.ranged) "fight.ranged" else "fight.melee")).joinToString(" · "),
+        Text(listOf(ui(foe.monster.rarity.key()), ui("fight.level", level)).joinToString(" · "),
             color = Muted, style = MaterialTheme.typography.labelSmall)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Fact(ui("fight.stat_life"), number(body.maxLife), LifeRed)
@@ -458,7 +452,6 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
         when {
             foe.taunt -> Hint(ui("fight.taunt_hint"), LifeRed)
             taunting -> Hint(ui("fight.behind_taunt"), LifeRed)
-            !foe.reachable -> Hint(ui("fight.out_of_reach"), LifeRed)
         }
         Hint(if (fight.focus == foe.index) ui("fight.focus_on") else ui("fight.focus_off", ui("fight.rule.${stance.rule.name}")), GoldBright)
         monsterLines(foe.monster).takeIf { it.isNotEmpty() }?.let { lines ->

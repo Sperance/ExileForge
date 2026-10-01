@@ -24,7 +24,6 @@ import com.sperance.exileforge.rules.content.SkillHit
 import com.sperance.exileforge.rules.content.SkillTrigger
 import com.sperance.exileforge.rules.content.SkillType
 import com.sperance.exileforge.rules.content.SlotCondition
-import com.sperance.exileforge.rules.content.WeaponType
 import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
@@ -362,7 +361,7 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
     val armourElemental = percent("STOCK_ARMOUR_ELEMENTAL")
     /** How much sooner its shield starts to recharge after a hit. */
     val rechargeStart = max(0.1, 1 + stat("STOCK_SHIELD_RECHARGE_START") / 100)
-    /** Taunts (since server 0.62.0): while it stands, its foes must strike it first, past any row. */
+    /** Taunts (since server 0.62.0): while it stands, its foes must strike it first. */
     val taunt: Boolean get() = stat("STOCK_TAUNT") > 0
     /** How hard it presses, before anyone's defences: its damage per swing times its swings per second. */
     val threat: Double get() = damage.values.sum() * attackSpeed
@@ -381,9 +380,8 @@ data class ActiveAilment(val ailment: Ailment, val until: Double, val magnitude:
     val chaos: Boolean = false)
 
 /**
- * One foe of the pack as the fight takes it (2.70.0): its sheet and its row — a [ranged] foe
- * stands in the back and strikes from the first second; a melee one stands in front of it. Since
- * 2.78.0 its [rarity] tells a skill waiting for a rare or a boss, and its [skills] are what it casts
+ * One foe of the pack as the fight takes it (2.70.0): its sheet; every foe on screen strikes from the first
+ * second and can be struck by any weapon — there are no rows. Since 2.78.0 its [rarity] tells a skill waiting for a rare or a boss, and its [skills] are what it casts
  * for its mana — a boss's own, a caster's spell of its element, one a mad essence borrowed.
  */
 /**
@@ -392,7 +390,7 @@ data class ActiveAilment(val ailment: Ailment, val until: Double, val magnitude:
  */
 class Ally(val code: String, val body: Combatant, val tank: Boolean, val heal: Double, val drawFire: Double)
 
-data class Foe(val body: Combatant, val ranged: Boolean = false, val rarity: MonsterRarity = MonsterRarity.NORMAL,
+data class Foe(val body: Combatant, val rarity: MonsterRarity = MonsterRarity.NORMAL,
                val skills: List<MonsterSkill> = emptyList(),
                /** Its roll at the fight's [level] (3.37.0): what the log's card lays its stats out with. */
                val origin: com.sperance.exileforge.rules.roll.RolledMonster? = null, val level: Int = 0)
@@ -457,14 +455,12 @@ enum class TargetRule {
 }
 
 /**
- * The hero's side of a fight beyond the sheet (2.70.0): whom they pick by [rule], and whether
- * their weapon reaches the back row while the front still stands — a bow or a spell weapon (a wand,
- * a staff, a sceptre) does, a blade or bare hands do not.
+ * The hero's side of a fight beyond the sheet (2.70.0): whom they pick by [rule]. Any weapon reaches every
+ * foe on screen — the fight has no rows.
  */
-data class HeroStance(val rule: TargetRule = TargetRule.THREAT, val ranged: Boolean = false) {
+data class HeroStance(val rule: TargetRule = TargetRule.THREAT) {
     companion object {
-        fun reaches(weaponType: WeaponType?): Boolean = weaponType == WeaponType.BOW || weaponType?.spell == true
-        fun of(classCode: String?, weaponType: WeaponType?) = HeroStance(TargetRule.of(classCode), reaches(weaponType))
+        fun of(classCode: String?) = HeroStance(TargetRule.of(classCode))
     }
 }
 
@@ -549,11 +545,10 @@ private class Recovery(val life: Double, val mana: Double, val until: Double, va
  * The fight, alive: stepped in fixed slices of time so that the same seed is the same fight on any
  * screen, and open to the player while it runs — a retreat can be begun, a foe can be singled out.
  *
- * Since 2.70.0 it is the hero against the whole pack at once, in two rows: every foe swings at the
- * hero at its own speed from the first second, and the hero at one foe of the rows its weapon
- * reaches — the back row only with a bow or a wand, or once the front has fallen. Whom is the
- * player's [focus] when given, the class's [TargetRule] otherwise, chosen afresh at every swing.
- * The melee stand in front, the ranged behind. Only [FoeWindow.SIZE] of the pack fight at once: the rest wait in
+ * Since 2.70.0 it is the hero against the whole pack at once: every foe swings at the hero at its own
+ * speed from the first second, and the hero at any one foe on screen, whatever the weapon. Whom is the
+ * player's [focus] when given, the class's [TargetRule] otherwise, chosen afresh at every swing; a taunter
+ * comes first. Only [FoeWindow.SIZE] of the pack fight at once: the rest wait in
  * line and step in, each into the place of one that fell ([window]); a foe waiting is not [Fighter.alive].
  *
  * Each swing can be evaded (evasion against the attacker's level), blocked, or land; a landing hit
@@ -599,7 +594,7 @@ class Battle(
     /** «Волк-одиночка»: the hero alone deals more and takes less of every damage, by the server's [CombatRules.loneWolf]. */
     val loneWolf: Boolean get() = party <= 1
     /** One side in motion: its pools, its clocks and what is on it; [index] is its place in the pack, -1 for the hero. */
-    inner class Fighter(val side: Side, body: Combatant, life: Double, val index: Int = -1, val ranged: Boolean = false) {
+    inner class Fighter(val side: Side, body: Combatant, life: Double, val index: Int = -1) {
         /** The sheet as it stands: the hero's changes under the auras of the foes still standing (2.75.0) and with what lies on them (2.78.0). */
         var body: Combatant = body
             private set
@@ -657,7 +652,7 @@ class Battle(
 
     /** Who of the pack is on the field: at most [FoeWindow.SIZE] at once, the strongest first, the rest stepping in as they fall. */
     val window = FoeWindow(FoeWindow.order(foes.map { it.rarity }))
-    val foeFighters: List<Fighter> = foes.mapIndexed { i, foe -> Fighter(Side.MONSTER, foe.body, foe.body.maxLife, i, foe.ranged) }
+    val foeFighters: List<Fighter> = foes.mapIndexed { i, foe -> Fighter(Side.MONSTER, foe.body, foe.body.maxLife, i) }
         .also { all -> window.field.forEachIndexed { place, i -> all[i].enter(place, 0.0) } }
     val heroFighter = Fighter(Side.HERO, hero.under(auras()), heroLife)
     /** The pet fighting beside the hero (3.5.0): it strikes the hero's target and draws blows meant for the hero. */
@@ -844,18 +839,17 @@ class Battle(
     private fun taunters() = foeFighters.filter { it.alive && it.body.taunt }
 
     /**
-     * Whether the hero can strike foe [index] right now: a taunter always, past any row (2.71.0),
-     * and while one stands nobody else; otherwise as the weapon reaches — a spell reaches every row (2.78.0).
+     * Whether the hero can strike foe [index] right now: any foe on screen, by any weapon; a taunter (2.71.0)
+     * always, and while one stands nobody else.
      */
-    fun reachable(index: Int, spell: Boolean = false): Boolean {
+    fun reachable(index: Int): Boolean {
         val foe = foeFighters.getOrNull(index)?.takeIf { it.alive } ?: return false
-        if (taunters().isNotEmpty()) return foe.body.taunt
-        return spell || stance.ranged || !foe.ranged || foeFighters.none { it.alive && !it.ranged }
+        return taunters().isEmpty() || foe.body.taunt
     }
 
     /**
      * The foe the hero's next swing goes to: the focus while it can be struck, else the class's
-     * pick among those that can. A focus behind the front, or behind a taunter, waits its turn.
+     * pick among those that can. A focus behind a taunter waits its turn.
      */
     fun target(): Fighter? {
         val reach = foeFighters.filter { reachable(it.index) }
@@ -873,9 +867,9 @@ class Battle(
         }
     }
 
-    /** Whom a skill of [count] targets strikes: the hero's target first, then the others it reaches; zero is all of them. */
-    private fun targets(count: Int, spell: Boolean): List<Fighter> {
-        val reach = foeFighters.filter { reachable(it.index, spell) }
+    /** Whom a skill of [count] targets strikes: the hero's target first, then the others on screen; zero is all of them. */
+    private fun targets(count: Int): List<Fighter> {
+        val reach = foeFighters.filter { reachable(it.index) }
         if (reach.isEmpty()) return emptyList()
         val first = target()?.takeIf { it in reach } ?: reach.first()
         val order = listOf(first) + (reach - first)
@@ -1654,7 +1648,7 @@ class Battle(
         val bonus = 1 + (charged?.perCharge?.at(level) ?: 0.0) * spent / 100
         val landed = skill.hit?.let { heroHit(it, level, skill.code, skill.spell, skill.type == SkillType.ATTACK, bonus = bonus) } ?: false
         skill.dot?.let { heroDot(it, level, skill.code, skill.spell) }
-        skill.curse?.let { curse(kitSkill, targets(it.targets, spell = true), level) }
+        skill.curse?.let { curse(kitSkill, targets(it.targets), level) }
         // A generator gives its charges once its blow lands on a foe — or, with no blow, a warcry's, on use.
         charged?.gain?.let { gain -> if (skill.hit == null || landed) gainCharges(charged.kind, gain.at(level).roundToInt()) }
         if (skill.hit != null || skill.dot != null || skill.curse != null) return
@@ -1678,7 +1672,7 @@ class Battle(
         val own = hit.stats.lines(level)
         val body = if (own.isEmpty()) hero.body else heroBody(own)
         val more = if (attack && hit.targets > 0) body["STOCK_SKILL_TARGETS"].toInt().coerceAtLeast(0) else 0
-        val struck = only?.let { listOf(it) } ?: targets(if (hit.targets <= 0) 0 else hit.targets + more, spell)
+        val struck = only?.let { listOf(it) } ?: targets(if (hit.targets <= 0) 0 else hit.targets + more)
         val element = hit.element?.let { if (it == RANDOM) DamageType.ELEMENTS.random(random) else DamageType.element(it) }
         val primary = struck.firstOrNull()
         var landed = false
@@ -1754,7 +1748,7 @@ class Battle(
         val ailment = Ailment.of(type).takeIf { it.hurts } ?: Ailment.POISONED
         val increase = heroIncrease(type) + hero.body["STOCK_SPELL_DAMAGE"] + hero.body["STOCK_SKILL_DAMAGE"]
         val lone = if (loneWolf) 1 + rules.loneWolf.dealt / 100 else 1.0
-        targets(dot.targets, spell).forEach { target ->
+        targets(dot.targets).forEach { target ->
             val low = dot.min.at(level)
             val total = (low + random.nextDouble() * (dot.max.at(level) - low).coerceAtLeast(0.0)) * max(0.0, 1 + increase / 100) * hero.body.damageMore * lone
             val mitigated = total * (1 - target.body.resist(type, hero.body.penetration(type))) * target.body.damageTaken(type)

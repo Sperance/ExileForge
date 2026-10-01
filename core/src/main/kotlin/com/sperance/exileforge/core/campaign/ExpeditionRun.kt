@@ -52,14 +52,11 @@ data class FoeView(
     val taunt: Boolean = false,
     val effects: List<EffectView> = emptyList(),
     val mana: Int = 0, val maxMana: Int = 0,
-    /** The row it stands in (3.28.0): the back, or the front — by its kind. */
-    val back: Boolean = monster.ranged,
     /** Its place on the field, of [FoeWindow.SIZE]; -1 while it waits its turn or once the next took its place. */
     val place: Int = index,
     /** Still in line: not in the fight yet, but still to be beaten. */
     val waiting: Boolean = false,
 ) {
-    val ranged: Boolean get() = monster.ranged
     /** Its card is on the field: it fights there, or fell there and nobody stepped in yet. */
     val onField: Boolean get() = place >= 0
 }
@@ -773,7 +770,7 @@ class ExpeditionRun(
     /** The stage's battle on the hero's pools now, at the fight's level, on its own dice. */
     private fun battle(): Battle = Battle(hero, members.map { member ->
         val monster = member.monster
-        Foe(Combatant(monster.stats, fightLevel, rules), monster.ranged, monster.rarity, monster.skills.mapNotNull(this.index.skills.monsterByCode::get), monster, fightLevel)
+        Foe(Combatant(monster.stats, fightLevel, rules), monster.rarity, monster.skills.mapNotNull(this.index.skills.monsterByCode::get), monster, fightLevel)
     }, rules, life, Random(Streams.mix(seed, FIGHT_STREAM, fightStream)), stance, kit = kit, model = build, pools = pools,
         percent = build.gear.percent, ally = ally(), stage = stageCarry)
 

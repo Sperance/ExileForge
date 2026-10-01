@@ -2,7 +2,9 @@ package com.sperance.exileforge.ui
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
@@ -32,9 +34,10 @@ import org.junit.Test
  * The app as it ships, run with `-PminifiedTests` against the `minifiedTest` build — the release one, shrunk by R8.
  * It walks what a class R8 took away breaks first: the activity starting, the content parsed through the rules'
  * serializers, a hero and an item through the wire's, and an item's card and a modifier's line drawn.
+ * The card is drawn in an activity of its own (3.66.4): the rule's host activity did not outlive MainActivity's start.
  */
 class ReleaseSmokeTest {
-    @get:Rule val compose = createComposeRule()
+    @get:Rule val compose = createEmptyComposeRule()
 
     @Before fun dictionary() { serverLocale = TestWorld.russian }
     @After fun forget() { serverLocale = LocaleBundle() }
@@ -50,11 +53,13 @@ class ReleaseSmokeTest {
         val view = checkNotNull(ItemView.of(item, index))
         // A rare copy always carries a modifier: its line is the one drawn on its own under the card
         val line = view.lines.first().let { Line(it.code, it.values) }
-        compose.setContent { ForgeTheme { Column {
-            ItemCard(view, detailed = true)
-            ModifierLine(index, line)
-        } } }
-        compose.onNodeWithText(view.title).assertIsDisplayed()
-        compose.onAllNodesWithText(lineText(index, line)).onFirst().assertExists()
+        ActivityScenario.launch(ComponentActivity::class.java).use { scenario ->
+            scenario.onActivity { it.setContent { ForgeTheme { Column {
+                ItemCard(view, detailed = true)
+                ModifierLine(index, line)
+            } } } }
+            compose.onNodeWithText(view.title).assertIsDisplayed()
+            compose.onAllNodesWithText(lineText(index, line)).onFirst().assertExists()
+        }
     }
 }

@@ -153,19 +153,26 @@ jobs:
           RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
           RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        # A published APK is always signed with the release key, so each one installs over the last: no key, no release.
         run: |
-          if [ -n "$RELEASE_KEYSTORE" ]; then
-            echo "$RELEASE_KEYSTORE" | base64 -d > "$RUNNER_TEMP/release.jks"
-            export RELEASE_KEYSTORE_PATH="$RUNNER_TEMP/release.jks"
-          fi
+          if [ -z "$RELEASE_KEYSTORE" ]; then echo "::error::RELEASE_KEYSTORE secret is missing"; exit 1; fi
+          echo "$RELEASE_KEYSTORE" | base64 -d > "$RUNNER_TEMP/release.jks"
+          export RELEASE_KEYSTORE_PATH="$RUNNER_TEMP/release.jks"
           chmod +x gradlew
           ./gradlew :app:assembleRelease
+          apk=app/build/outputs/apk/release/app-release.apk
+          signer=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/apksigner
+          "$signer" verify --print-certs "$apk" | tee signer.txt
+          expected=$(keytool -list -v -keystore "$RUNNER_TEMP/release.jks" -storepass "$RELEASE_KEYSTORE_PASSWORD" -alias "$RELEASE_KEY_ALIAS" | sed -n 's/.*SHA256: *//p' | tr -d ':' | tr 'A-F' 'a-f')
+          grep -qi "SHA-256 digest: $expected" signer.txt || { echo "::error::APK is not signed with the release key"; exit 1; }
+          rm -f "$RUNNER_TEMP/release.jks"
       - if: steps.version.outputs.exists == 'false'
         name: Publish release
         run: |
           tag=${{ steps.version.outputs.tag }}
           apk="ExileForge-$tag.apk"
-          cp "$(ls app/build/outputs/apk/release/*.apk | head -1)" "$apk"
-          # The notes: the first «## » entry of the changelog, up to the next one.
+          cp app/build/outputs/apk/release/app-release.apk "$apk"
+          # The notes: the first «## » entry of the changelog, which must be this version's.
           awk '/^## /{n++} n==1' CHANGELOG.md > notes.md
-          gh release create "$tag" "$apk" --target "$GITHUB_SHA" --title "ExileForge ${tag#v}" --notes-file notes.md
+          head -1 notes.md | grep -q "^## ${tag#v} " || { echo "::error::CHANGELOG.md top entry is not ${tag#v}"; exit 1; }
+          gh release create "$tag" "$apk" --target "$GITHUB_SHA" --title "ExileForge ${tag#v}" --notes-file notes.md --latest

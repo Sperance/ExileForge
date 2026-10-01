@@ -33,6 +33,7 @@ import com.sperance.exileforge.core.atlas.AtlasBranch
 import com.sperance.exileforge.core.atlas.AtlasEffects
 import com.sperance.exileforge.core.atlas.AtlasFog
 import com.sperance.exileforge.core.display.atlasNodeTitle
+import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.lineText
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.statTitle
@@ -43,6 +44,7 @@ import com.sperance.exileforge.rules.content.AtlasNode
 import com.sperance.exileforge.rules.content.AtlasNodeKind
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Line
+import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.theme.*
 import kotlin.math.PI
@@ -122,24 +124,37 @@ private val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
             FirstVisit(Guide.ATLAS)
             AtlasMenu(summary = spent > 0, reset = spent > 0 && !s.busy, onSummary = { summary = true }, onReset = { resetting = true })
         }
+        val money = s.hero?.money ?: 0L
+        val regrets = s.hero?.count(Orb.ORB_OF_REGRET.name) ?: 0L
         if (resetting && index != null && state != null) {
             val nodes = state.allocated.size - 1
-            val cost = index.atlas.respec.price(s.heroLevel, nodes)
-            val money = s.hero?.money ?: 0L
-            ConfirmSheet(title = ui("atlas.reset_q"), confirm = ui("atlas.reset"), danger = true, onDismiss = { resetting = false },
-                ledger = listOf(LedgerLine(ui("atlas.reset_cost"), ui("atlas.gold", cost), Tone.SPEND), LedgerLine(ui("atlas.reset_back"), nodes.toString(), Tone.GAIN)),
-                blocked = money < cost, warning = if (money < cost) ui("atlas.no_gold") else null) { resetting = false; vm.resetAtlas() }
+            RespecSheet(ui("atlas.reset_q"), null, ui("atlas.reset"), nodes, index.atlas.respec.price(s.heroLevel, nodes), money, regrets,
+                onDismiss = { resetting = false }) { regret -> resetting = false; vm.resetAtlas(regret) }
         }
         refunding?.let { code -> if (index != null) {
-            val cost = index.atlas.respec.price(s.heroLevel, 1)
-            val money = s.hero?.money ?: 0L
-            ConfirmSheet(title = ui("atlas.refund_q"), subtitle = atlasNodeTitle(code), confirm = ui("atlas.refund"), danger = true, onDismiss = { refunding = null },
-                ledger = listOf(LedgerLine(ui("atlas.reset_cost"), ui("atlas.gold", cost), Tone.SPEND), LedgerLine(ui("atlas.reset_back"), "1", Tone.GAIN)),
-                blocked = money < cost, warning = if (money < cost) ui("atlas.no_gold") else null) { refunding = null; vm.refundAtlas(code) }
+            RespecSheet(ui("atlas.refund_q"), atlasNodeTitle(code), ui("atlas.refund"), 1, index.atlas.respec.price(s.heroLevel, 1), money, regrets,
+                onDismiss = { refunding = null }) { regret -> refunding = null; vm.refundAtlas(code, regret) }
         } }
         if (summary && index != null && state != null) AtlasSummary(index, state.allocated.toSet()) { summary = false }
         ToastHost(s, vm::dismissMessage, vm::dismissNotice, Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 64.dp))
     }
+}
+
+/**
+ * Giving [nodes] atlas nodes back: [gold] at the respec price or, since server 1.65.0 and when the bag holds [regrets],
+ * an Orb of Regret per node — the player picks; a payment the hero cannot make keeps the button off and says why.
+ */
+@Composable private fun RespecSheet(title: String, subtitle: String?, confirm: String, nodes: Int, gold: Long, money: Long, regrets: Long,
+    onDismiss: () -> Unit, onConfirm: (regret: Boolean) -> Unit) {
+    var regret by remember { mutableStateOf(false) }
+    val short = if (regret) regrets < nodes else money < gold
+    val cost = if (regret) "$nodes × ${itemTitle(Orb.ORB_OF_REGRET.name)}" else ui("atlas.gold", gold)
+    ConfirmSheet(title = title, subtitle = subtitle, confirm = confirm, danger = true, onDismiss = onDismiss,
+        ledger = listOf(LedgerLine(ui("atlas.reset_cost"), cost, Tone.SPEND), LedgerLine(ui("atlas.reset_back"), nodes.toString(), Tone.GAIN)),
+        blocked = short, warning = when { !short -> null; regret -> ui("atlas.no_regret"); else -> ui("atlas.no_gold") },
+        options = if (regrets > 0) ({
+            PillTabs(listOf(ui("atlas.pay_gold"), ui("atlas.pay_regret", regrets, nodes)), if (regret) 1 else 0, { regret = it == 1 }, segmented = true)
+        }) else null) { onConfirm(regret) }
 }
 
 /** «Доступно очков: X из Y», a pill floating over the bottom of the sky. */

@@ -73,6 +73,8 @@ data class LedgerLine(val label: String, val value: String, val tone: Tone = Ton
     /** The client already knows the action cannot go through (2.46.0): the [warning] says why and the button stays off. */
     blocked: Boolean = false,
     icon: (@Composable () -> Unit)? = null,
+    /** A choice under the ledger (the atlas's payment, server 1.65.0): drawn as given, between the ledger and the note. */
+    options: (@Composable () -> Unit)? = null,
     onConfirm: () -> Unit,
 ) {
     val accent = if (danger) LifeRed else Gold
@@ -92,6 +94,7 @@ data class LedgerLine(val label: String, val value: String, val tone: Tone = Ton
                     }
                 }
                 if (ledger.isNotEmpty()) Ledger(ledger)
+                options?.invoke()
                 note?.let { MutedText(it) }
                 warning?.let {
                     Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {

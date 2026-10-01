@@ -318,8 +318,9 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     /** A command of the atlas: the hero snapshot with its answer carries the new nodes and points. */
     fun allocateAtlas(code: String) = atlasCommand { id -> runtime.api.atlas.allocate(id, code) }
-    fun refundAtlas(code: String) = atlasCommand { id -> runtime.api.atlas.refund(id, code) }
-    fun resetAtlas() = atlasCommand { id -> runtime.api.atlas.reset(id) }
+    /** Gold or, with [regret] (server 1.65.0), an Orb of Regret per node. */
+    fun refundAtlas(code: String, regret: Boolean = false) = atlasCommand { id -> runtime.api.atlas.refund(id, code, regret) }
+    fun resetAtlas(regret: Boolean = false) = atlasCommand { id -> runtime.api.atlas.reset(id, regret) }
 
     private fun atlasCommand(call: suspend (String) -> Unit) { with(runtime) {
         task(writing = true, touches = setOf(Reads.HERO)) {

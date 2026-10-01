@@ -10,12 +10,15 @@ class AtlasClient internal constructor(private val http: Transport) {
     suspend fun state(heroId: String): AtlasState = http.get("$ATLAS/state", heroQuery(heroId))
     /** Never retried: a repeat would spend a second point. */
     suspend fun allocate(heroId: String, nodeCode: String): AtlasState = node("allocate", heroId, nodeCode)
-    /** Costs gold (the respec price). Never retried. */
-    suspend fun refund(heroId: String, nodeCode: String): AtlasState = node("refund", heroId, nodeCode)
-    suspend fun reset(heroId: String): AtlasState = http.post("$ATLAS/reset", heroQuery(heroId))
+    /** Costs gold (the respec price) or, with [regret] (server 1.65.0), an Orb of Regret per node. Never retried. */
+    suspend fun refund(heroId: String, nodeCode: String, regret: Boolean = false): AtlasState = node("refund", heroId, nodeCode, payment(regret))
+    suspend fun reset(heroId: String, regret: Boolean = false): AtlasState = http.post("$ATLAS/reset", heroQuery(heroId, payment(regret)))
 
-    private suspend fun node(operation: String, heroId: String, nodeCode: String): AtlasState {
+    private suspend fun node(operation: String, heroId: String, nodeCode: String, vararg more: Pair<String, String?>): AtlasState {
         require(nodeCode.isNotBlank()) { ui("api.choose_node") }
-        return http.post("$ATLAS/$operation", heroQuery(heroId, "nodeCode" to nodeCode))
+        return http.post("$ATLAS/$operation", heroQuery(heroId, "nodeCode" to nodeCode, *more))
     }
+
+    /** The payment in Orbs of Regret as a query pair; gold, the default, sends nothing. */
+    private fun payment(regret: Boolean): Pair<String, String?> = "regret" to "true".takeIf { regret }
 }

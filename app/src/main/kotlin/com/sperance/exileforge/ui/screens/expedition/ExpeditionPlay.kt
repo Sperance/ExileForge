@@ -35,6 +35,9 @@ import com.sperance.exileforge.rules.run.Reward
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.expedition.scene.ExpeditionScene
+import com.sperance.exileforge.ui.screens.expedition.scene.SCENE_UNIT
+import com.sperance.exileforge.ui.screens.expedition.scene.sceneToWorld
+import kotlin.math.roundToInt
 import com.sperance.exileforge.ui.theme.*
 import kotlin.math.hypot
 import androidx.compose.ui.draw.clip
@@ -86,7 +89,7 @@ import kotlinx.coroutines.delay
     BackHandler { when {
         summary -> close()
         hud.phase == RunPhase.GATE -> vm.runCommand(RunCommand.StepBack)
-        hud.phase == RunPhase.CRYSTAL || hud.phase == RunPhase.ABYSS -> vm.runCommand(RunCommand.StepOff)
+        hud.phase == RunPhase.CRYSTAL || hud.phase == RunPhase.ABYSS || hud.phase == RunPhase.MAP && hud.fountain != null -> vm.runCommand(RunCommand.StepOff)
         hud.phase == RunPhase.MAP -> if (!zone) leaving = true
         else -> vm.runCommand(RunCommand.Leave)
     } }
@@ -96,11 +99,12 @@ import kotlinx.coroutines.delay
         when (hud.phase) {
             RunPhase.MAP -> {
                 // An autorun walks by itself (3.2.0): no stick under the thumb while it runs
-                if (hud.auto == null) Stick(run)
+                if (hud.auto == null) Stick(run) { vm.runCommand(RunCommand.OfferFountain(it)) }
                 MapBar(s, run, hud, onLeave = if (zone) null else ({ leaving = true }), onGear = { gear = true }, onStats = { sheet = true },
                     onDrink = { vm.runCommand(RunCommand.Drink(it)) }, onRetry = vm::flushRun)
                 if (gear) { HoldsRun(run); GearSheet(s, vm) { gear = false } }
                 if (sheet) { HoldsRun(run); StatsSheet(s, run.mapEffects) { sheet = false } }
+                hud.fountain?.let { FountainOffer(it, onTake = { vm.runCommand(RunCommand.TakeFountain) }) { vm.runCommand(RunCommand.StepOff) } }
                 hud.chest?.let { ChestLoot(s, vm, run, it, hud.chestAwaiting) { vm.runCommand(RunCommand.DismissChest) } }
                 if (leaving) ConfirmSheet(title = ui("expedition.leave_q"), confirm = ui("expedition.leave"), danger = true,
                     subtitle = mapTitle(hud.mapCode),
@@ -407,35 +411,42 @@ private const val MINIMAP_MAX = 60f
 
 /**
  * The stick: wherever the thumb lands in the lower part of the screen, dragging from there walks.
- * The direction is sent in screen axes; the run turns it into the map's.
+ * The direction is sent in screen axes; the run turns it into the map's. A tap anywhere that does not
+ * drag (3.70.0) lands on the map: on a fountain still full, it names it to [onFountain].
  */
-@Composable private fun Stick(run: ExpeditionRun) {
+@Composable private fun Stick(run: ExpeditionRun, onFountain: (Int) -> Unit) {
     var centre by remember { mutableStateOf<Offset?>(null) }
     var knob by remember { mutableStateOf(Offset.Zero) }
     var area by remember { mutableStateOf(IntSize.Zero) }
     val radius = with(LocalDensity.current) { 56.dp.toPx() }
+    val unit = with(LocalDensity.current) { SCENE_UNIT.toPx() }
+    val tap by rememberUpdatedState { at: Offset ->
+        val (x, y) = sceneToWorld(run, at, area, unit)
+        run.world.fountains.firstOrNull { !it.used && hypot(it.cell.x + .5 - x, it.cell.y + .5 - y) < FOUNTAIN_TAP }?.let { onFountain(it.id) }
+    }
     // A fight can start under a thumb still on the glass; the hero must not walk off after it.
     DisposableEffect(run) { onDispose { run.stickX = 0.0; run.stickY = 0.0 } }
     Box(Modifier.fillMaxSize().onSizeChanged { area = it }.pointerInput(run) {
         awaitEachGesture {
             val down = awaitFirstDown()
-            if (down.position.y < area.height * .35f) return@awaitEachGesture
-            centre = down.position
-            knob = down.position
+            val walks = down.position.y >= area.height * .35f
+            if (walks) { centre = down.position; knob = down.position }
+            var dragged = false
             do {
                 val event = awaitPointerEvent()
                 val change = event.changes.firstOrNull { it.id == down.id } ?: break
                 val delta = change.position - down.position
                 val length = hypot(delta.x, delta.y)
+                if (length > viewConfiguration.touchSlop) dragged = true
+                if (!walks) continue
                 val clamped = if (length > radius) delta * (radius / length) else delta
                 knob = down.position + clamped
                 run.stickX = (clamped.x / radius).toDouble()
                 run.stickY = (clamped.y / radius).toDouble()
                 change.consume()
             } while (change.pressed)
-            run.stickX = 0.0
-            run.stickY = 0.0
-            centre = null
+            if (walks) { run.stickX = 0.0; run.stickY = 0.0; centre = null }
+            if (!dragged) tap(down.position)
         }
     }) {
         centre?.let { c ->
@@ -465,6 +476,25 @@ private const val MINIMAP_MAX = 60f
         }
     }
     looked?.let { item -> HoldsRun(run); LootSheet(s, vm, item, onDismiss = { looked = null }) }
+}
+
+/** How near, in tiles, a tap must land to a fountain to name it. */
+private const val FOUNTAIN_TAP = .9
+
+/**
+ * A fountain offered (3.70.0), walked onto or tapped on the map: what it gives, and the choice — drink it now,
+ * or step away and leave it standing for later. The map holds still until the answer.
+ */
+@Composable private fun FountainOffer(fountain: FountainView, onTake: () -> Unit, onLeave: () -> Unit) {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+        RunPanel(Modifier, ShieldCyan) {
+            Text(ui("fountain.offer", fountain.heal.roundToInt()), color = ShieldCyan, style = MaterialTheme.typography.titleMedium)
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                ForgeOutlinedButton(onClick = onLeave, modifier = Modifier.weight(1f)) { Text(ui("fountain.leave")) }
+                ForgeButton(onClick = onTake, modifier = Modifier.weight(1f)) { Text(ui("fountain.take")) }
+            }
+        }
+    }
 }
 
 // ==================== After ====================

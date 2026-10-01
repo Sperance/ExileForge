@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.campaign.AgentMode
 import com.sperance.exileforge.core.campaign.ExpeditionMap
@@ -59,6 +60,19 @@ import kotlin.math.sin
     Canvas(modifier) { painter.draw(this, run, clock, classCode) }
 }
 
+/** Half a tile's width on screen; the tile is twice as wide as it is tall. */
+internal val SCENE_UNIT = 30.dp
+
+/**
+ * Where a point of the scene of [size] falls on the map, in tiles, with the tile's half-width [unit] in pixels —
+ * the inverse of the painter's camera, which keeps the hero a little below the middle (3.70.0).
+ */
+internal fun sceneToWorld(run: ExpeditionRun, at: Offset, size: IntSize, unit: Float): Pair<Double, Double> {
+    val across = (at.x - size.width / 2f) / unit
+    val down = (at.y - size.height * .55f - unit) * 2 / unit
+    return run.world.heroX + (across + down) / 2 to run.world.heroY + (down - across) / 2
+}
+
 /** How bright a cell the hero saw once but does not see now is, against one in full light. */
 private const val REMEMBERED = .32f
 
@@ -76,7 +90,7 @@ private class ScenePainter {
         this.time = time
         this.classCode = classCode
         pen.scope = scope
-        unit = with(scope) { 30.dp.toPx() }
+        unit = with(scope) { SCENE_UNIT.toPx() }
         val palette = Palettes.of(run.zone.biome)
         scope.drawRect(palette.void)
         if (run.fight != null) scope.fightBackdrop(palette, time) else map(scope, run, palette)

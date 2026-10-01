@@ -76,7 +76,8 @@ class AbyssSpot(val id: Int, val cell: Cell, val depth: Int) { var opened = fals
 sealed interface WorldEvent {
     data class Encounter(val agent: MonsterAgent) : WorldEvent
     data class Opened(val chest: Chest) : WorldEvent
-    data class Drank(val fountain: Fountain) : WorldEvent
+    /** The hero stepped up to a fountain still full (3.70.0): it is offered, not drunk underfoot. */
+    data class AtFountain(val fountain: Fountain) : WorldEvent
     /** The hero stepped up to a crystal of essences (2.78.0). */
     data class Crystal(val spot: CrystalSpot) : WorldEvent
     /** The hero stepped up to a crack of the Abyss (2.82.0). */
@@ -182,6 +183,8 @@ class ExpeditionWorld(
     val chests = mutableListOf<Chest>()
     /** The fountains, placed by [placeFountains]. */
     val fountains = mutableListOf<Fountain>()
+    /** The fountain the hero stands at, until they step off it: one turned down is not offered again underfoot. */
+    private var atFountain: Fountain? = null
     /** The crystals of essences (2.78.0), placed by [placeCrystals]. */
     val crystals = mutableListOf<CrystalSpot>()
     /** The crystal the hero stands at, until they step off it: it does not open again underfoot. */
@@ -263,6 +266,9 @@ class ExpeditionWorld(
         }
     }
 
+    /** A fountain still full the hero can see now, by its [id]: one tapped on the map is offered from where the hero stands. */
+    fun fountainInSight(id: Int): Fountain? = fountains.firstOrNull { it.id == id && !it.used && lit(it.cell.x, it.cell.y) }
+
     /** The cracks not yet opened, in the server's order: a crack's place among them is what the server names it by. */
     val standingCracks: List<AbyssSpot> get() = cracks.filterNot { it.opened }
 
@@ -285,10 +291,9 @@ class ExpeditionWorld(
             chest.opened = true
             return WorldEvent.Opened(chest)
         }
-        fountains.firstOrNull { !it.used && hypot(it.cell.x + 0.5 - heroX, it.cell.y + 0.5 - heroY) < CHEST_REACH }?.let { fountain ->
-            fountain.used = true
-            return WorldEvent.Drank(fountain)
-        }
+        val fountain = fountains.firstOrNull { !it.used && hypot(it.cell.x + 0.5 - heroX, it.cell.y + 0.5 - heroY) < CHEST_REACH }
+        if (fountain == null) atFountain = null
+        else if (fountain !== atFountain) { atFountain = fountain; return WorldEvent.AtFountain(fountain) }
         val crystal = crystals.firstOrNull { !it.freed && hypot(it.cell.x + 0.5 - heroX, it.cell.y + 0.5 - heroY) < CHEST_REACH }
         if (crystal == null) atCrystal = null
         else if (crystal !== atCrystal) { atCrystal = crystal; return WorldEvent.Crystal(crystal) }

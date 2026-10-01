@@ -154,6 +154,8 @@ data class RunHud(
     val chest: Reward? = null,
     val chestAwaiting: Boolean = false,
     val fountainsLeft: Int = 0,
+    /** The fountain offered (3.70.0): the map waits for the player's word — drink, or step away and leave it standing. */
+    val fountain: FountainView? = null,
     /** The Vaal zone behind the portal the hero stands at. */
     val gate: VaalZone? = null,
     /** This run is a Vaal zone: no way out but its guardian or a death, and a death is not the map's end. */
@@ -185,6 +187,9 @@ data class AbyssView(val depth: Int, val cleared: Int, val open: Boolean, val de
     val current: AbyssDepth? get() = depths.getOrNull(cleared - 1)
     val next: AbyssDepth? get() = if (cleared < depth) depths.getOrNull(cleared) else null
 }
+
+/** A fountain as its offer reads: which one, and the share of life and mana it gives back. */
+data class FountainView(val id: Int, val heal: Double)
 
 /** A crystal of essences as its sheet shows it, what a Vaal orb on it did, and whether that orb's outcome is still the server's to tell. */
 data class CrystalView(val id: Int, val essences: List<String>, val guardian: String, val stronger: Boolean, val vaal: Boolean, val outcome: String? = null,
@@ -220,6 +225,10 @@ sealed interface RunCommand {
     data object VaalCrystal : RunCommand
     /** Steps away from a crystal or a crack undecided. */
     data object StepOff : RunCommand
+    /** A fountain tapped on the map (3.70.0): offered as if the hero stood at it. */
+    data class OfferFountain(val id: Int) : RunCommand
+    /** The fountain offered is drunk: life and mana back by its share, the flasks full. */
+    data object TakeFountain : RunCommand
     /** At a crack of the Abyss: opens it, or goes a depth deeper from the sheet between depths. */
     data object Descend : RunCommand
     /** Takes the hoard of the depths cleared and leaves the Abyss. */
@@ -300,6 +309,8 @@ class ExpeditionRun(
     val pools: HeroPools get() = HeroPools(life, mana, charges, flaskLeft, rates)
     private var gate: VaalZone? = null
     private var crystal: CrystalSpot? = null
+    /** The fountain offered (3.70.0), until it is drunk or turned down. */
+    private var fountain: Fountain? = null
     private var crystalOutcome: String? = null
     private var rift: AbyssSpot? = null
     private var descent: Descent? = null
@@ -423,7 +434,8 @@ class ExpeditionRun(
         while (true) apply(commands.poll() ?: break)
         if (phase != RunPhase.DEAD && phase != RunPhase.CLEARED && phase != RunPhase.LEFT) seconds += dt
         if (holds == 0) when (phase) {
-            RunPhase.MAP -> autopilot?.let { drive(it, dt) } ?: walk(dt)
+            // A fountain offered holds the walk until the player answers.
+            RunPhase.MAP -> autopilot?.let { drive(it, dt) } ?: run { if (fountain == null) walk(dt) }
             RunPhase.FIGHT -> play(dt)
             else -> Unit
         }
@@ -545,7 +557,10 @@ class ExpeditionRun(
                 val place = world.standingCrystals.indexOf(spot)
                 record(RunEventKind.CRYSTAL_VAAL, index = place)?.let { vaalings[it.n] = Vaaling(spot, place); crystalOutcome = null }
             }
+            is RunCommand.OfferFountain -> if (phase == RunPhase.MAP && autopilot == null) world.fountainInSight(command.id)?.let { fountain = it }
+            RunCommand.TakeFountain -> fountain?.takeIf { phase == RunPhase.MAP && !it.used }?.let(::drink)
             RunCommand.StepOff -> when {
+                fountain != null -> fountain = null
                 phase == RunPhase.CRYSTAL -> closeCrystal()
                 // A crack is left unopened, or once its hoard is in — never mid-descent with the hoard at stake.
                 phase == RunPhase.ABYSS && (descent == null || descent?.claim != null) -> closeRift()
@@ -656,16 +671,21 @@ class ExpeditionRun(
             is WorldEvent.Encounter -> engage(event.agent)
             WorldEvent.Exit -> exit()
             is WorldEvent.Opened -> chestEvent = rewarding(record(RunEventKind.CHEST, index = event.chest.id))?.n
-            is WorldEvent.Drank -> {
-                life = (life + hero.maxLife * event.fountain.heal / 100).coerceAtMost(hero.maxLife)
-                mana = (mana + manaCap() * event.fountain.heal / 100).coerceAtMost(manaCap())
-                charges = kit.flasks.map { it?.maxCharges ?: 0.0 }
-            }
+            is WorldEvent.AtFountain -> fountain = event.fountain
             WorldEvent.Portal -> openGate()
             is WorldEvent.Crystal -> { phase = RunPhase.CRYSTAL; crystal = event.spot; crystalOutcome = null }
             is WorldEvent.Abyss -> { phase = RunPhase.ABYSS; rift = event.spot; descent = null }
             null -> Unit
         }
+    }
+
+    /** A fountain drunk dry: its share of life and mana back, and every flask full. */
+    private fun drink(spring: Fountain) {
+        spring.used = true
+        fountain = null
+        life = (life + hero.maxLife * spring.heal / 100).coerceAtMost(hero.maxLife)
+        mana = (mana + manaCap() * spring.heal / 100).coerceAtMost(manaCap())
+        charges = kit.flasks.map { it?.maxCharges ?: 0.0 }
     }
 
     /** The way out: the Vaal zone's exit leads back to the map; the zone's own records the leaving, the boss passed. */
@@ -921,6 +941,7 @@ class ExpeditionRun(
             chestsLeft = world.chests.count { !it.opened },
             chest = chestEvent?.let { earned[it] ?: Reward.NONE }, chestAwaiting = chestEvent?.let(::awaits) == true,
             fountainsLeft = world.fountains.count { !it.used },
+            fountain = fountain?.let { FountainView(it.id, it.heal) },
             gate = gate, vaal = vaal,
             heroMana = (battle?.heroMana ?: mana).roundToInt(), heroMaxMana = (battle?.manaCap() ?: manaCap()).roundToInt(),
             heroReserved = (battle?.manaReserved() ?: (hero.maxMana - manaCap())).roundToInt(),

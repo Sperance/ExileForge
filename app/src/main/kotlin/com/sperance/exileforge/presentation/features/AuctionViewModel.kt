@@ -26,12 +26,21 @@ class AuctionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         mutable.update { it.copy(market = it.market.copy(showcase = showcase)) }
     } } }
 
-    /** «Показать ещё»: the next page by its cursor, added under the lots shown. */
-    fun moreShowcase() { with(runtime) { trade(restart = true) {
+    /**
+     * «Показать ещё»: the next page by its cursor, added under the lots shown. It never restarts the read on its way —
+     * that would drop a fresh first page — and its page is kept only while the filter and the pages shown are still the
+     * ones it was asked under.
+     */
+    fun moreShowcase() { with(runtime) { trade {
         val shown = state.value.market.showcase
         val trail = shown.nextTrail ?: return@trade
-        val more = api.auction.search(heroId, showcaseFilter(), trail)
-        mutable.update { it.copy(market = it.market.copy(showcase = it.market.showcase.followedBy(more))) }
+        val filter = showcaseFilter()
+        val more = api.auction.search(heroId, filter, trail)
+        mutable.update {
+            val showcase = it.market.showcase
+            if (showcase.cursors != shown.cursors || showcase.next != shown.next || showcaseFilter() != filter) it
+            else it.copy(market = it.market.copy(showcase = showcase.followedBy(more)))
+        }
     } } }
 
     /** The filter as the server reads it: the hero's own lots dropped unless asked for, the names in the language on screen. */

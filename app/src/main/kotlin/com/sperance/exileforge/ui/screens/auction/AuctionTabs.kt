@@ -37,6 +37,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.auction.*
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.Reads
 import com.sperance.exileforge.presentation.state.unmetFor
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.Orb
@@ -82,7 +83,7 @@ import com.sperance.exileforge.ui.theme.*
         }
         val showcase = s.market.showcase
         if (showcase.next != null) item {
-            ForgeOutlinedButton(enabled = !s.busy, onClick = onMore, modifier = Modifier.fillMaxWidth()) {
+            ForgeOutlinedButton(enabled = !s.busy && Reads.AUCTION !in s.loading, onClick = onMore, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("auction.more", showcase.items.size, showcase.totalItems))
             }
         }

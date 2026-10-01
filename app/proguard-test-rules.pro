@@ -21,6 +21,8 @@
 -keep class com.sperance.exileforge.core.contract.ContractKt { *; }
 -keep class com.sperance.exileforge.core.display.TextKt { *; }
 -keep class com.sperance.exileforge.core.display.ItemView* { public *; }
+-keep class com.sperance.exileforge.core.display.ItemLine { public *; }
+-keep class com.sperance.exileforge.rules.roll.Roll { public *; }
 -keep class com.sperance.exileforge.core.i18n.ServerLocaleKt { *; }
 -keep class com.sperance.exileforge.core.i18n.LocaleBundle* { public *; }
 -keep class com.sperance.exileforge.core.model.hero.HeroInfo* { public *; }

@@ -181,8 +181,12 @@ class GameApi(
         return served().also { it.requireWorkbench() }
     }
 
+    /** The manifest as served now; kept, on the device and in memory, only when it is this client's revision — a deploy midway is not. */
     private suspend fun served(): StaticManifest = manifestLock.withLock {
-        files.manifestText().also { manifestCache?.write(it) }.let { WireJson.decodeFromString(StaticManifest.serializer(), it) }.also { manifest = it }
+        val text = files.manifestText()
+        WireJson.decodeFromString(StaticManifest.serializer(), text).also {
+            if (it.matchesClient) { manifestCache?.write(text); manifest = it }
+        }
     }
 
     suspend fun capabilities(): ApiCapabilities = manifest().capabilities

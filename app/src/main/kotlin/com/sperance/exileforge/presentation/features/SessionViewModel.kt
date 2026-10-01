@@ -56,7 +56,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     /** A sign-in answers the account and a token; the token is kept per server for the next launch. */
     fun login(login: String, password: String) { with(runtime) { task {
         clearSession()
-        api.manifest().requireWorkbench()
+        api.workbench()
         signedIn(api.login(login, password), byDevice = false)
     } } }
 
@@ -64,7 +64,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     fun playOnThisDevice(silent: Boolean = false) { with(runtime) { task {
         clearSession()
         try {
-            api.manifest().requireWorkbench()
+            api.workbench()
             val server = state.value.account.server
             val profile = api.loginByDevice(store.deviceSecret(server))
             api.deviceSecret?.let { store.saveDeviceSecret(server, it) }
@@ -78,7 +78,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         unconfirmed = null
         clearSession()
         try {
-            api.manifest().requireWorkbench()
+            api.workbench()
             signedIn(api.resume(saved), byDevice = store.deviceSession.first())
         } catch (e: CancellationException) { throw e }
         catch (e: Exception) {
@@ -134,7 +134,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         val saved = unconfirmed ?: return
         val adopted = api.currentUser()?.id
         val profile = try {
-            api.manifest(fresh = true).requireWorkbench()
+            api.workbench()
             api.confirm()
         } catch (e: CancellationException) { throw e }
         catch (e: Exception) {

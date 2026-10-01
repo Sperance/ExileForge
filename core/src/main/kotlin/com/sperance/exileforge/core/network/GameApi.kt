@@ -13,6 +13,7 @@ import com.sperance.exileforge.core.model.command.UserProfile
 import com.sperance.exileforge.core.model.sync.HeroSnapshot
 import com.sperance.exileforge.core.model.sync.StaticManifest
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.JsonElement
@@ -21,6 +22,8 @@ import kotlinx.serialization.json.encodeToJsonElement
 import okhttp3.OkHttpClient
 
 /** "No account for this device yet" — the server's way of saying "register it". */
+private const val REVISION_RETRIES = 2
+private const val REVISION_RETRY_DELAY_MS = 1_500L
 private const val DEVICE_UNKNOWN = "US_015"
 
 /**
@@ -164,6 +167,22 @@ class GameApi(
         catch (e: Exception) {
             manifest ?: manifestCache?.read()?.let { runCatching { WireJson.decodeFromString(StaticManifest.serializer(), it) }.getOrNull() } ?: throw e
         }.also { manifest = it }
+    }
+
+    /**
+     * The manifest the sign-in checks against: always asked of the server, never the device's copy. Another
+     * revision may be a deploy midway, so it is asked [REVISION_RETRIES] more times before the client refuses it.
+     */
+    suspend fun workbench(): StaticManifest {
+        repeat(REVISION_RETRIES) {
+            served().takeIf { it.matchesClient }?.let { it.requireWorkbench(); return it }
+            delay(REVISION_RETRY_DELAY_MS)
+        }
+        return served().also { it.requireWorkbench() }
+    }
+
+    private suspend fun served(): StaticManifest = manifestLock.withLock {
+        files.manifestText().also { manifestCache?.write(it) }.let { WireJson.decodeFromString(StaticManifest.serializer(), it) }.also { manifest = it }
     }
 
     suspend fun capabilities(): ApiCapabilities = manifest().capabilities

@@ -48,6 +48,9 @@ const val API_REVISION = 36
 ) {
     val capabilities: ApiCapabilities get() = ApiCapabilities.of(routes)
 
+    /** The server speaks this client's wire and rules; another one may be mid-deploy. */
+    val matchesClient: Boolean get() = revision == API_REVISION && rules == RULES_VERSION
+
     /** A server of another revision speaks another wire: the client refuses it rather than misreading it. */
     fun requireWorkbench() {
         require(revision == API_REVISION) { ui("cmd.stale_revision", revision, API_REVISION) }

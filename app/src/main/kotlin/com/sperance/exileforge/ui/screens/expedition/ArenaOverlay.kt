@@ -10,6 +10,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -830,18 +831,40 @@ internal fun washAmount(ailment: Ailment): Float = when (ailment) {
     }
 }
 
+/** A row of a pack's log: a caption naming one of the pack, or one of its lines under that name. */
+private sealed interface PackRow {
+    data class Head(val text: String) : PackRow
+    data class Line(val event: CombatEvent, val name: String) : PackRow
+}
+
 /**
  * The log of a whole pack (since 2.54.0): one list, each foe's blows under its own name — a mixed
  * pack's «they hit» lines would otherwise all say the wrong name. A caption between them names which
- * of the pack it was, only when there was more than one.
+ * of the pack it was, only when there was more than one. [toDeath] (3.70.0) opens it on the blow that
+ * felled the hero, or at its end.
  */
 @Composable internal fun FightLog(pack: List<PackHit>, modifier: Modifier = Modifier, shown: Set<LogKind> = LogKind.DEFAULT,
-                                  onOpen: ((CombatEvent, String) -> Unit)? = null) {
-    LazyColumn(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-        pack.forEachIndexed { index, hit ->
-            val name = monsterTitle(hit.monster.code)
-            if (pack.size > 1) item { Caption(ui("expedition.report_pack_enemy", index + 1, pack.size, name)) }
-            items(hit.events.filter { LogKind.of(it) in shown }) { EventRow(it, name, onOpen?.let { open -> { event: CombatEvent -> open(event, name) } }) }
+                                  toDeath: Boolean = false, onOpen: ((CombatEvent, String) -> Unit)? = null) {
+    val rows = remember(pack, shown) {
+        buildList {
+            pack.forEachIndexed { index, hit ->
+                val name = monsterTitle(hit.monster.code)
+                if (pack.size > 1) add(PackRow.Head(ui("expedition.report_pack_enemy", index + 1, pack.size, name)))
+                hit.events.filter { LogKind.of(it) in shown }.forEach { add(PackRow.Line(it, name)) }
+            }
+        }
+    }
+    val state = rememberLazyListState()
+    if (toDeath) LaunchedEffect(rows) {
+        val death = rows.indexOfFirst { it is PackRow.Line && it.event.heroLife <= 0 }
+        if (rows.isNotEmpty()) state.scrollToItem(if (death >= 0) death else rows.lastIndex)
+    }
+    LazyColumn(modifier.fillMaxWidth(), state = state, verticalArrangement = Arrangement.spacedBy(1.dp)) {
+        items(rows) { row ->
+            when (row) {
+                is PackRow.Head -> Caption(row.text)
+                is PackRow.Line -> EventRow(row.event, row.name, onOpen?.let { open -> { event: CombatEvent -> open(event, row.name) } })
+            }
         }
     }
 }

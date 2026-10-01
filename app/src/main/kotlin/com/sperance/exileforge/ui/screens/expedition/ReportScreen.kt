@@ -57,7 +57,8 @@ import java.util.Locale
  */
 @Composable internal fun ReportScreen(s: ForgeState, vm: ForgeViewModel, hud: RunHud, report: FightReport, onContinue: () -> Unit) {
     val won = report.outcome == Outcome.WIN
-    var logOpen by remember { mutableStateOf(false) }
+    // A fall opens on the fatal fight's log (3.70.0): every line of it, down to the blow that ended it.
+    var logOpen by remember { mutableStateOf(!won) }
     var line by remember { mutableStateOf<Pair<CombatEvent, String>?>(null) }
     var looked by remember { mutableStateOf<ItemView?>(null) }
     var stack by remember { mutableStateOf<String?>(null) }
@@ -72,11 +73,11 @@ import java.util.Locale
         FieldHead(report, won)
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (won) Spoils(s, hud, onStack = { stack = it }, onRecipe = { recipe = it }) { looked = it } else DeathPrice(s, hud)
-            if (logOpen) Box(Modifier.fillMaxWidth().height(260.dp).background(Panel, RoundedCornerShape(8.dp))
+            if (logOpen) Box(Modifier.fillMaxWidth().height(if (won) 260.dp else 420.dp).background(Panel, RoundedCornerShape(8.dp))
                 .border(1.dp, Bronze.copy(alpha = .4f), RoundedCornerShape(8.dp)).padding(horizontal = 10.dp, vertical = 8.dp)) {
                 Column {
                     LogShelves(s.logFilter, vm::logFilter)
-                    FightLog(report.pack, Modifier.fillMaxSize(), s.logFilter) { event, name -> line = event to name }
+                    FightLog(report.pack, Modifier.fillMaxSize(), s.logFilter, toDeath = !won) { event, name -> line = event to name }
                 }
             }
         }
@@ -201,8 +202,6 @@ import java.util.Locale
         Chip(ui("expedition.loot_experience", number(hud.experience)), Rune)
     }
     if (hud.awaiting > 0) Receiving()
-    DeathRecap(hud.recap)
-    RunFigures(hud.summary)
 }
 
 /** The fight as a row of figures — dealt, taken, how long, criticals — and the way into its log. */

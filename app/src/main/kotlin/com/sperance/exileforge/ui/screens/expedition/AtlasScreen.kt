@@ -12,6 +12,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -103,25 +104,23 @@ private val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
         else {
             val taken = state.allocated.toSet()
             Sky(index, taken, atlas.selected, Modifier.fillMaxSize(), onSelect = vm::selectAtlasNode)
-            index.atlasGraph.node(atlas.selected)?.let { node ->
-                NodeSheet(index, node, taken, state.available, index.atlas.respec.price(s.heroLevel, 1), enabled = !s.busy,
-                    onTake = { vm.allocateAtlas(node.code) }, onRefund = { refunding = node.code },
-                    modifier = Modifier.align(Alignment.BottomCenter))
+            // The points float over the sky, stacked above the node's sheet so neither hides the other.
+            Column(Modifier.align(Alignment.BottomCenter), horizontalAlignment = Alignment.CenterHorizontally) {
+                val node = index.atlasGraph.node(atlas.selected)
+                PointsPill(state.available, state.points, if (node == null) Modifier.navigationBarsPadding().padding(bottom = 16.dp) else Modifier)
+                node?.let {
+                    NodeSheet(index, it, taken, state.available, index.atlas.respec.price(s.heroLevel, 1), enabled = !s.busy,
+                        onTake = { vm.allocateAtlas(it.code) }, onRefund = { refunding = it.code }, modifier = Modifier)
+                }
             }
         }
-        Row(Modifier.fillMaxWidth().statusBarsPadding().padding(12.dp), verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        // The start is nobody's to give back: what was spent is every taken node but it.
+        val spent = (state?.allocated?.size ?: 1) - 1
+        Row(Modifier.fillMaxWidth().statusBarsPadding().padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             IconButton(onClick = vm::closeAtlas) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, ui("common.close"), tint = Sky.text) }
-            Column(Modifier.weight(1f)) {
-                Text(ui("atlas.title"), color = Color.White, style = MaterialTheme.typography.titleMedium)
-                state?.let { Text(ui("atlas.points", it.available, it.points), color = Sky.text, style = MaterialTheme.typography.labelMedium) }
-            }
+            Text(ui("atlas.title"), color = Color.White, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
             FirstVisit(Guide.ATLAS)
-            GuideButton(Guide.ATLAS)
-            BugAction(tint = Sky.text)
-            ForgeOutlinedButton(onClick = { summary = true }, enabled = (state?.allocated?.size ?: 0) > 1) { Text(ui("atlas.summary"), color = Sky.text) }
-            // The start is nobody's to give back: what was spent is every taken node but it.
-            val spent = (state?.allocated?.size ?: 1) - 1
-            ForgeOutlinedButton(onClick = { resetting = true }, enabled = spent > 0 && !s.busy) { Text(ui("atlas.reset"), color = Sky.text) }
+            AtlasMenu(summary = spent > 0, reset = spent > 0 && !s.busy, onSummary = { summary = true }, onReset = { resetting = true })
         }
         if (resetting && index != null && state != null) {
             val nodes = state.allocated.size - 1
@@ -140,6 +139,33 @@ private val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
         } }
         if (summary && index != null && state != null) AtlasSummary(index, state.allocated.toSet()) { summary = false }
         ToastHost(s, vm::dismissMessage, vm::dismissNotice, Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 64.dp))
+    }
+}
+
+/** «Доступно очков: X из Y», a pill floating over the bottom of the sky. */
+@Composable private fun PointsPill(available: Int, points: Int, modifier: Modifier) {
+    val shape = RoundedCornerShape(50)
+    Text(ui("atlas.points", available, points), color = if (available > 0) Color.White else Sky.text, style = MaterialTheme.typography.labelLarge,
+        modifier = modifier.background(Color(0xE6080C16), shape).border(1.dp, Sky.line, shape).padding(horizontal = 16.dp, vertical = 8.dp))
+}
+
+/** The header's ⋮: the totals, the reset, the guide and the bug report, so the title keeps the bar. */
+@Composable private fun AtlasMenu(summary: Boolean, reset: Boolean, onSummary: () -> Unit, onReset: () -> Unit) {
+    val guides = LocalGuideDesk.current
+    val bug = LocalBugReport.current
+    var open by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { open = true }) { Icon(Icons.Outlined.MoreVert, ui("common.more"), tint = Sky.text) }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            val entries = listOfNotNull(
+                Triple(ui("atlas.summary"), summary, onSummary),
+                Triple(ui("atlas.reset"), reset, onReset),
+                guides?.let { desk -> Triple(ui("guide.help"), true) { desk.show(Guide.ATLAS) } },
+                bug?.let { Triple(ui("bug.open"), true, it) })
+            entries.forEach { (label, enabled, action) ->
+                DropdownMenuItem(text = { Text(label) }, enabled = enabled, onClick = { open = false; action() })
+            }
+        }
     }
 }
 

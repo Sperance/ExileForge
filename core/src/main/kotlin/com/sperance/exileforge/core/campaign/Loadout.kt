@@ -148,6 +148,9 @@ data class Loadout(
      */
     fun passiveLines(hero: Combatant): List<StatLine> = passives.filterNot { it.skill.lowLife }.flatMap { lines(it, hero) }
 
+    /** Each passive with the lines it lays on [hero], the low-life bonuses among them: a figure's window names them one by one. */
+    fun passiveSources(hero: Combatant): List<Pair<KitSkill, List<StatLine>>> = passives.map { it to lines(it, hero) }
+
     /** What the low-life bonuses lay on while the hero's life is under half. */
     fun lowLifeLines(hero: Combatant): List<StatLine> = passives.filter { it.skill.lowLife }.flatMap { lines(it, hero) }
 

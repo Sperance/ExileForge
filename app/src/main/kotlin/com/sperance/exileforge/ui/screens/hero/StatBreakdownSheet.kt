@@ -27,6 +27,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.ManaReserve
 import com.sperance.exileforge.presentation.state.manaReserve
+import com.sperance.exileforge.presentation.state.passiveShares
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.presentation.state.ShareCard
 import com.sperance.exileforge.presentation.state.ShareKind
@@ -44,6 +45,7 @@ internal fun ShareKind.color(): Color = when (this) {
     ShareKind.NODE -> Rune
     ShareKind.ITEM -> Color(0xFFFFFF77)
     ShareKind.PET -> Elder
+    ShareKind.SKILL -> ManaBlue
     ShareKind.OTHER -> Parchment
     ShareKind.AFTER -> Handcrafted
 }
@@ -60,8 +62,8 @@ internal fun ShareKind.color(): Color = when (this) {
     val explainer = s.hero?.sheet?.model?.explainer ?: run { LaunchedEffect(stat) { onDismiss() }; return }
     var trail by remember(stat) { mutableStateOf(listOf(stat)) }
     val current = trail.last()
-    val view = remember(current, explainer, shifts, s.lang) {
-        StatExplainer(s).explain(explainer.explain(current).shifted(shifts[current].orEmpty()), explainer.grants(current), explainer::holders)
+    val view = remember(current, explainer, shifts, s.lang, s.hero?.skills) {
+        StatExplainer(s).explain(explainer.explain(current).shifted(shifts[current].orEmpty()), explainer.grants(current), explainer::holders, s.passiveShares(current))
     }
     val power = s.index?.stats?.get(current)?.group == com.sperance.exileforge.rules.content.StatGroup.POWER
     val accent = StatGroup.of(current).accent()

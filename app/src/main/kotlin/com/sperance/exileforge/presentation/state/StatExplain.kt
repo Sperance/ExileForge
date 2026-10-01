@@ -1,5 +1,7 @@
 package com.sperance.exileforge.presentation.state
 
+import com.sperance.exileforge.core.character.StatLine
+import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.nodeTitle
 import com.sperance.exileforge.core.display.slotTitle
@@ -19,10 +21,16 @@ import kotlin.math.abs
 import kotlin.math.ln
 
 /** The cards of a figure's window, in the order they are read; the colour is the UI's, keyed by the kind. */
-enum class ShareKind { BASE, ATTRIBUTE, CLASS, NODE, ITEM, PET, OTHER, AFTER }
+enum class ShareKind { BASE, ATTRIBUTE, CLASS, NODE, ITEM, PET, SKILL, OTHER, AFTER }
 
 /** One source on a card: what it is, what it gives, a grey line under it, and the stat a tap goes to. */
 data class ShareRow(val title: String, val value: String, val note: String? = null, val link: String? = null)
+
+/**
+ * A passive skill's [lines] on a figure and what they add to it: the passives are laid on in a fight, not on the
+ * sheet, so their [gain] is the sheet's figure with them less without; a [lowLife] bonus holds only at low life.
+ */
+data class PassiveShare(val skill: String, val lines: List<StatLine>, val gain: Double, val lowLife: Boolean)
 
 /** A card of one kind of source: its rows and what they give together, one figure per operation. */
 data class ShareCard(val kind: ShareKind, val rows: List<ShareRow>, val summary: String)
@@ -44,7 +52,7 @@ class StatExplainer(private val s: ForgeState) {
     private val hero = s.hero
     private val index = s.index
 
-    fun explain(breakdown: StatBreakdown, grants: List<Grant>, holders: (String) -> List<StatSource>): StatExplanation {
+    fun explain(breakdown: StatBreakdown, grants: List<Grant>, holders: (String) -> List<StatSource>, passives: List<PassiveShare> = emptyList()): StatExplanation {
         val stat = breakdown.stat
         val cards = mutableListOf<ShareCard>()
         if (breakdown.base != 0.0) cards += ShareCard(ShareKind.BASE,
@@ -53,6 +61,10 @@ class StatExplainer(private val s: ForgeState) {
         breakdown.shares.groupBy(::kindOf).toSortedMap().forEach { (kind, shares) ->
             cards += ShareCard(kind, shares.map { row(stat, it, breakdown.percent) }, summary(stat, shares, breakdown.percent))
         }
+        // Every passive that names the figure has its row, an increase with nothing to increase too: «+10% · в бою: +0».
+        if (passives.isNotEmpty()) cards += ShareCard(ShareKind.SKILL,
+            passives.map { ShareRow(SkillText.title(it.skill), it.lines.joinToString(", ") { line -> fmt(stat, line.value, line.op, breakdown.percent) }, passiveNote(stat, it, breakdown)) },
+            signed(stat, passives.filterNot { it.lowLife }.sumOf { it.gain }, breakdown.percent))
         if (breakdown.shifts.isNotEmpty()) cards += ShareCard(ShareKind.AFTER,
             breakdown.shifts.map { ShareRow(shiftTitle(it.source, holders), signed(stat, it.delta, breakdown.percent), it.from?.let { from -> ui("stat.from", statTitle(from)) }) },
             signed(stat, breakdown.shifts.sumOf { it.delta }, breakdown.percent))
@@ -77,6 +89,13 @@ class StatExplainer(private val s: ForgeState) {
         val rule = ui("stat.per", fmt(stat, share.each, share.op, percent), statNumber(per, share.per), statTitle(per))
         val by = share.source?.takeIf { it.kind != SourceKind.CLASS }?.let { "${sourceTitle(it)}: " }.orEmpty()
         return ShareRow("${statTitle(per)} ${statNumber(per, share.perValue)}", value, by + rule, link = per)
+    }
+
+    /** What a passive adds in a fight; an increase or a «more» over no base says why it adds nothing. */
+    private fun passiveNote(stat: String, passive: PassiveShare, b: StatBreakdown): String {
+        val idle = abs(passive.gain) < 0.05 && b.flatSum == 0.0 && passive.lines.any { it.op == Op.INCREASED || it.op == Op.MORE }
+        val gain = ui(if (idle) "stat.passive.idle" else "stat.passive.gain", signed(stat, passive.gain, b.percent))
+        return if (passive.lowLife) "${ui("stat.passive.low_life")} · $gain" else gain
     }
 
     /** The local lines an item folded into this figure: «локально: +200, +40%». */

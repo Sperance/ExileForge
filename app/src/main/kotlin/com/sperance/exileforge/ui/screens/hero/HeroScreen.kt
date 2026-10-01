@@ -99,7 +99,6 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
                     item { HeroSummary(s) }
                 }
                 HeroSection.EQUIPMENT -> {
-                    item { HeroVitals(s) }
                     item { equipment?.let { EquipmentLedger(it) { place, worn -> if (worn != null) detailId = worn else pickPlace = place } } }
                 }
                 HeroSection.BAG -> {

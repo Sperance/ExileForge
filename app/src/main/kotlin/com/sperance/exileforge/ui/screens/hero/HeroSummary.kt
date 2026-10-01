@@ -17,7 +17,6 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.StatGroup
 import com.sperance.exileforge.core.display.StatLimits
 import com.sperance.exileforge.core.display.groupedStats
-import com.sperance.exileforge.core.display.statNumber
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.display.statValue
 import com.sperance.exileforge.core.i18n.ui
@@ -50,7 +49,6 @@ import com.sperance.exileforge.ui.theme.*
     // A figure opens its own window (3.11.0): what it is and what it is made of.
     var open by remember { mutableStateOf<String?>(null) }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        HeroVitals(stats) { open = it }
         if (stats.isEmpty()) Text(ui("hero.no_stats"), color = Muted)
         // The registry's order inside a group, once the content is here; the code's before that.
         groupedStats(stats, s.index?.stats).forEach { (group, figures) -> StatGroupCard(group, figures, s, before) { open = it } }
@@ -96,39 +94,9 @@ internal fun StatGroup.accent(): Color = when (this) {
         Text(statTitle(key, s.lang), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 2, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f))
         was?.let { Text(statValue(key, it, s.index), color = Muted, style = MaterialTheme.typography.labelSmall, textDecoration = TextDecoration.LineThrough) }
-        // A capped figure (3.12.0) reads as the fight reads it, with its ceiling; what lies above it is greyed.
+        // A capped figure (3.12.0) reads as the fight reads it, greyed when it lies above; the ceiling is in the figure's window.
         val limit = s.index?.campaign?.combat?.let { StatLimits.of(key, s.hero?.stats.orEmpty(), it) }
         Text(statValue(key, limit?.effective ?: value, s.index), color = when { was != null -> Ember; (limit?.over ?: 0.0) > 0 -> Muted; else -> Parchment },
             style = MaterialTheme.typography.labelLarge, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
-        limit?.let { Text(ui("stat.cap.short", statValue(key, it.cap, s.index)), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1) }
-    }
-}
-
-/**
- * Life and shield as figures, not bars: the sheet carries a maximum and no current value, so a bar
- * could only ever be full. Mana left the game in 2.48.0.
- */
-@Composable fun HeroVitals(s: ForgeState) {
-    var open by remember { mutableStateOf<String?>(null) }
-    HeroVitals(s.hero?.stats ?: return) { open = it }
-    open?.let { StatBreakdownSheet(s, it, emptyMap()) { open = null } }
-}
-
-@Composable private fun HeroVitals(stats: Map<String, Double>, open: (String) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        listOf(Triple("STOCK_HEALTH", ui("hero.hp"), LifeRed), Triple("STOCK_ENERGY_SHIELD", ui("hero.es"), ShieldCyan)).forEach { (key, title, color) ->
-            VitalTile(title, statNumber(key, stats[key] ?: 0.0), color, Modifier.weight(1f).clip(RoundedCornerShape(6.dp)).clickable { open(key) })
-        }
-    }
-}
-
-/** One vital: its name in its own colour over the figure the server sent. */
-@Composable private fun VitalTile(title: String, value: String, color: Color, modifier: Modifier = Modifier) {
-    val shape = RoundedCornerShape(6.dp)
-    Column(modifier.background(Color.Black.copy(alpha = .22f), shape).border(1.dp, color.copy(alpha = .45f), shape)
-        .padding(vertical = 6.dp, horizontal = 8.dp), horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(1.dp)) {
-        Text(title, color = color, style = MaterialTheme.typography.labelSmall)
-        Text(value, color = Parchment, style = MaterialTheme.typography.titleMedium)
     }
 }

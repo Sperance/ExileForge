@@ -28,7 +28,6 @@ import com.sperance.exileforge.core.campaign.Outcome
 import com.sperance.exileforge.core.campaign.RunHud
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.displayName
-import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.recipeText
@@ -126,12 +125,10 @@ import java.util.Locale
     }
 }
 
-@Composable private fun Chip(text: String, tone: Color = Parchment, onClick: (() -> Unit)? = null) {
+@Composable private fun Chip(text: String, tone: Color = Parchment) {
     val shape = RoundedCornerShape(3.dp)
     Text(text, color = tone, style = MaterialTheme.typography.labelMedium,
-        modifier = Modifier.clip(shape).background(Abyss, shape).border(1.dp, if (onClick != null) Bronze.copy(alpha = .6f) else PanelRaised, shape)
-            .then(onClick?.let { Modifier.clickable(role = Role.Button, onClick = it) } ?: Modifier)
-            .padding(horizontal = 8.dp, vertical = 4.dp))
+        modifier = Modifier.clip(shape).background(Abyss, shape).border(1.dp, PanelRaised, shape).padding(horizontal = 8.dp, vertical = 4.dp))
 }
 
 /** What the kill brought, by section, as the server's answers bring it (1.30.0); on its way, or its absence said plainly. */
@@ -147,13 +144,13 @@ import java.util.Locale
     val gear = reward.equipment.filterNot { s.hero?.item(it.id)?.let { held -> held.equipped || held.socketed } == true }.mapNotNull { s.view(it) }
     if (gear.isNotEmpty()) {
         Caption(ui("expedition.report_gear"))
-        // Every piece whole (3.2.0): base, every line with its tier and range, the roll quality and the price — no tap needed to judge it
-        gear.forEach { LootCard(s, it, onItem) }
+        // A line a piece, as the map's summary has it: the whole card is one tap behind each.
+        gear.forEach { PieceLine(it) { onItem(it) } }
     }
     if (reward.items.isNotEmpty()) {
         Caption(ui("expedition.report_orbs"))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            reward.items.forEach { (code, amount) -> Chip(ui("expedition.loot_stack", itemTitle(code), amount)) { onStack(code) } }
+            reward.items.forEach { (code, amount) -> StackChip(s, code, amount) { onStack(code) } }
         }
     }
     Caption(ui("expedition.report_reward"))

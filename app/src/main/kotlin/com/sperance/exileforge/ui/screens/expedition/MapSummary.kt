@@ -158,15 +158,15 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
     loot.equipment.mapNotNull { s.view(it) }.forEach { PieceLine(it) { onItem(it) } }
     if (loot.items.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         loot.items.entries.sortedByDescending { it.value }.forEach { (code, amount) ->
-            StackChip(code, amount, s.index?.item(code)?.let(::bagVisualKind) ?: ItemVisualKind.ITEM) { onStack(code) }
+            StackChip(s, code, amount) { onStack(code) }
         }
     }
     if (tally.receiving) Receiving()
     else if (tally.empty) MutedText(ui("summary.loot_none"))
 }
 
-/** A piece in one line: its icon in its rarity's frame and its name in that colour. */
-@Composable private fun PieceLine(item: ItemView, onClick: () -> Unit) {
+/** A piece in one line: its icon in its rarity's frame and its name in that colour; the whole card is one tap behind it. */
+@Composable internal fun PieceLine(item: ItemView, onClick: () -> Unit) {
     val color = rarityColor(item.rarity.name)
     val frame = RoundedCornerShape(5.dp)
     Row(Modifier.fillMaxWidth().clip(frame).background(Panel, frame).border(1.dp, Bronze.copy(alpha = .5f), frame)
@@ -180,7 +180,9 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
     }
 }
 
-@Composable private fun StackChip(code: String, amount: Long, kind: ItemVisualKind, onClick: () -> Unit) {
+/** A stack of the bag as a chip: its icon, its name and how many. */
+@Composable internal fun StackChip(s: ForgeState, code: String, amount: Long, onClick: () -> Unit) {
+    val kind = s.index?.item(code)?.let(::bagVisualKind) ?: ItemVisualKind.ITEM
     val shape = RoundedCornerShape(3.dp)
     Row(Modifier.clip(shape).background(Abyss, shape).border(1.dp, Bronze.copy(alpha = .6f), shape)
         .clickable(role = Role.Button, onClick = onClick).padding(horizontal = 6.dp, vertical = 4.dp),

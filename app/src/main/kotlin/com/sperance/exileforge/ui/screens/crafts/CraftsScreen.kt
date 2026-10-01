@@ -23,7 +23,12 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -56,7 +61,9 @@ import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.roll.WorkGains
 import com.sperance.exileforge.rules.roll.WorkTally
 import com.sperance.exileforge.ui.components.*
+import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
+import com.sperance.exileforge.ui.icons.GlyphIcon
 import com.sperance.exileforge.ui.icons.ItemEmblem
 import com.sperance.exileforge.ui.icons.SpriteIcon
 import com.sperance.exileforge.ui.theme.*
@@ -322,12 +329,22 @@ private fun hourlyLine(s: ForgeState, work: WorkView): String? {
     val profession = s.play.crafts?.professions?.firstOrNull { it.code == work.profession } ?: return null
     val job = profession.job(work.job, work.choice) ?: return null
     if (work.cycleMillis <= 0) return null
-    val landed = HOUR_MILLIS / work.cycleMillis.toDouble() * (1 - job.nothing / 100).coerceAtLeast(0.0)
-    val made = jobProduct(job) to landed * (1 + profession.bonus.yield.coerceAtLeast(0.0) / 100)
+    val landed = landed(work.cycleMillis, job)
+    val made = jobProduct(job) to landed * yieldFactor(profession)
     val finds = job.extra.map { itemTitle(it.item) to landed * it.chance / 100 }
     val figures = (listOf(made) + finds).filter { it.second > 0 }.takeIf { it.isNotEmpty() } ?: return null
     return ui("crafts.per_hour", figures.joinToString(" · ") { (name, amount) -> ui("crafts.per_hour_item", fineNumber(amount), name) })
 }
+
+/** The cycles an hour of [cycleMillis] brings that do not come back empty. */
+private fun landed(cycleMillis: Long, job: JobView): Double = HOUR_MILLIS / cycleMillis.toDouble() * (1 - job.nothing / 100).coerceAtLeast(0.0)
+
+/** The profession's chance to double a cycle's yield, as the factor it multiplies the average by. */
+private fun yieldFactor(profession: ProfessionView): Double = 1 + profession.bonus.yield.coerceAtLeast(0.0) / 100
+
+/** About how many of its product a work brings an hour, by its own cycle; null for one that has no cycle yet. */
+private fun perHour(job: JobView, profession: ProfessionView): Double? =
+    job.cycleMillis.takeIf { it > 0 }?.let { landed(it, job) * yieldFactor(profession) }
 
 private const val HOUR_MILLIS = 3_600_000.0
 
@@ -422,7 +439,7 @@ private fun share(profession: ProfessionView): Float = profession.next?.takeIf {
         val locked = { job: JobView -> job.level > profession.level || !job.open }
         val next = profession.jobs.firstOrNull(locked)
         items(profession.jobs.filter { !locked(it) || it == next }, key = { it.code }) { job ->
-            JobRow(s, job, locked = locked(job), current = work?.job == job.code) { if (!locked(job)) chosen = job }
+            JobRow(s, profession, job, locked = locked(job), current = work?.job == job.code) { if (!locked(job)) chosen = job }
         }
     }
     chosen?.let { job -> JobSheet(s, vm, profession, job, current = work?.job == job.code) { chosen = null } }
@@ -444,37 +461,72 @@ private fun share(profession: ProfessionView): Float = profession.next?.takeIf {
     }
 }
 
-/** A material a cycle spends against what the bag holds: green while one cycle is paid for, red when it is not. */
-@Composable private fun InputChip(s: ForgeState, input: JobInput) {
-    val have = bagCount(s, input.item)
-    val tone = if (have >= input.amount) Vital else LifeRed
-    val shape = RoundedCornerShape(2.dp)
-    Row(Modifier.background(Panel, shape).border(1.dp, tone.copy(alpha = .6f), shape).padding(horizontal = 7.dp, vertical = 2.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(itemTitle(input.item), color = Parchment, style = MaterialTheme.typography.labelSmall)
-        Text(ui("crafts.ratio", have, input.amount), color = tone, style = MaterialTheme.typography.labelSmall)
+/**
+ * A work as a card: what it makes under its name, then three figures to compare works by — about how much an hour
+ * brings, how long a cycle runs, and how a cycle may turn out (doubled, in vain, or sure) — and at the foot what a
+ * cycle costs against the bag and what it teaches. A work the profession has not reached is a dimmed «???» with its level.
+ */
+@Composable private fun JobRow(s: ForgeState, profession: ProfessionView, job: JobView, locked: Boolean, current: Boolean, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(6.dp)
+    Column(Modifier.fillMaxWidth().alpha(if (locked) .5f else 1f).background(Panel, shape).border(if (current) 2.dp else 1.dp, if (current) GoldBright else PanelRaised, shape)
+        .clickable(role = Role.Button, onClick = onClick).padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Box(Modifier.size(40.dp).background(Abyss, RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
+                if (locked) Icon(Icons.Outlined.Lock, null, tint = Muted, modifier = Modifier.size(20.dp)) else JobIcon(job, Modifier.size(28.dp))
+            }
+            Column(Modifier.weight(1f)) {
+                Text(if (locked) ui("expedition.hidden") else jobTitle(job.code), color = if (locked) Muted else GoldBright, style = MaterialTheme.typography.titleSmall)
+                MutedText(if (locked) ui("crafts.opens_at", job.level) else "→ ${jobProduct(job)}", style = MaterialTheme.typography.labelMedium)
+            }
+            if (current) Text(ui("crafts.running"), color = Ink, style = MaterialTheme.typography.labelSmall,
+                modifier = Modifier.background(Gold, RoundedCornerShape(50)).padding(horizontal = 8.dp, vertical = 2.dp))
+        }
+        if (locked) return@Column
+        val double = profession.bonus.yield.coerceAtLeast(0.0)
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            val cell = Modifier.weight(1f)
+            JobMetric(perHour(job, profession)?.let { ui("crafts.about", fineNumber(it)) } ?: "—", ui("crafts.metric_hour"), Parchment, cell)
+            JobMetric(ui("crafts.duration_seconds", number(job.cycleMillis / 1000.0)), ui("crafts.metric_cycle"), Parchment, cell)
+            when {
+                double > 0 -> JobMetric(ui("crafts.percent", number(double)), ui("crafts.metric_double"), Vital, cell)
+                job.nothing > 0 -> JobMetric(ui("crafts.percent", number(job.nothing)), ui("crafts.metric_waste"), LifeRed, cell)
+                else -> JobMetric("✓", ui("crafts.metric_sure"), Vital, cell)
+            }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(cycleCost(s, job), style = MaterialTheme.typography.labelMedium, color = Muted, modifier = Modifier.weight(1f))
+            Text(ui("crafts.experience_gain", number(job.experience)), color = Rune, style = MaterialTheme.typography.labelMedium)
+        }
     }
 }
 
-@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
-@Composable private fun JobRow(s: ForgeState, job: JobView, locked: Boolean, current: Boolean, onClick: () -> Unit) {
-    val shape = RoundedCornerShape(4.dp)
-    Row(Modifier.fillMaxWidth().alpha(if (locked) .5f else 1f).background(Panel, shape).border(if (current) 2.dp else 1.dp, if (current) GoldBright else PanelRaised, shape)
-        .clickable(role = Role.Button, onClick = onClick).padding(12.dp), verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(if (locked) ui("expedition.hidden") else jobTitle(job.code), color = if (locked) Muted else GoldBright, style = MaterialTheme.typography.titleSmall)
-            // Gathering never comes back empty (2.73.0): its line drops the wasted share.
-            if (!locked) MutedText(if (job.nothing > 0) ui("crafts.job_line", jobProduct(job), number(job.cycleMillis / 1000.0), number(job.nothing))
-                else ui("crafts.job_line_sure", jobProduct(job), number(job.cycleMillis / 1000.0)))
-            if (!locked && job.inputs.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                job.inputs.forEach { InputChip(s, it) }
-            }
+/** A figure of a work's card: the number large, what it is small under it. */
+@Composable private fun JobMetric(value: String, label: String, tint: Color, modifier: Modifier) {
+    Column(modifier.background(Abyss, RoundedCornerShape(6.dp)).padding(vertical = 8.dp, horizontal = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(value, color = tint, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1)
+        MutedText(label, style = MaterialTheme.typography.labelSmall)
+    }
+}
+
+/** What a work makes, drawn: a stack's glass, an equipment's sprite, or the glyph of the kind when it makes something unnamed. */
+@Composable private fun JobIcon(job: JobView, modifier: Modifier) {
+    when (job.kind) {
+        JobKind.ITEM, JobKind.CONDENSE, JobKind.REFINE -> if (job.output.isNotBlank()) BagIcon(job.output, modifier) else GlyphIcon(Glyph.CRAFT, Gold, modifier)
+        JobKind.FLASK, JobKind.EQUIPMENT, JobKind.JEWEL -> if (!SpriteIcon(equipmentIcon(job.output), Gold, modifier, halo = false)) GlyphIcon(Glyph.ITEM, Gold, modifier)
+        JobKind.MAP -> GlyphIcon(Glyph.MAP, Gold, modifier)
+        JobKind.BOOK -> GlyphIcon(Glyph.TEXT, Gold, modifier)
+    }
+}
+
+/** A cycle's price against the bag: each material as have/need, short ones in red; «бесплатно» for a work that spends nothing. */
+private fun cycleCost(s: ForgeState, job: JobView): AnnotatedString = buildAnnotatedString {
+    if (job.inputs.isEmpty()) { append(ui("crafts.free")); return@buildAnnotatedString }
+    job.inputs.forEachIndexed { i, input ->
+        if (i > 0) append(" + ")
+        val have = bagCount(s, input.item)
+        withStyle(SpanStyle(color = if (have >= input.amount) Parchment else LifeRed)) {
+            append("${itemTitle(input.item)} ${ui("crafts.ratio", have, input.amount)}")
         }
-        if (locked) Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Outlined.Lock, null, tint = Muted, modifier = Modifier.size(16.dp))
-            MutedText(ui("crafts.level", job.level), style = MaterialTheme.typography.labelMedium)
-        } else if (current) Text(ui("crafts.working"), color = Gold, style = MaterialTheme.typography.labelMedium)
     }
 }
 

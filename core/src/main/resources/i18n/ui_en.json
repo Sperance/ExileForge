@@ -2822,7 +2822,6 @@
   "quest.tab.weekly": "Weekly",
   "quest.tab.contracts": "Contracts",
   "quest.tab.story": "Story",
-  "quest.tab_ready": "{0} · {1}",
   "quest.resets": "Resets in {0}",
   "quest.days_hours": "{0} d {1} h",
   "quest.claim": "Turn in",

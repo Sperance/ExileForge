@@ -147,7 +147,9 @@ import com.sperance.exileforge.ui.theme.*
             OutlinedTextField(name, { name = it }, enabled = !s.busy, label = { Text(ui("common.name")) },
                 supportingText = { Text(ui("chars.name_unique")) },
                 singleLine = true, modifier = Modifier.fillMaxWidth())
-            if (classes.isEmpty()) Text(ui("editor.no_classes"),
+            // The classes arrive with the content, which is read after the form opens: an empty
+            // list is only an error once that read has finished (the app bar shows its progress).
+            if (classes.isEmpty() && index != null && Reads.CONTENT !in s.loading) Text(ui("editor.no_classes"),
                 color = MaterialTheme.colorScheme.error)
         }
         if (index != null && heroClass.isNotBlank())

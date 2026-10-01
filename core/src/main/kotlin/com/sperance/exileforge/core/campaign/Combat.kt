@@ -1373,20 +1373,42 @@ class Battle(
         val back = mutableMapOf<DamageType, Double>()
         if (me.body.thorns > 0) back[DamageType.PHYSICAL] = me.body.thorns
         if (me.body.reflect > 0) taken.forEach { (type, amount) -> back.merge(type, amount * me.body.reflect, Double::plus) }
-        val mitigated = back.mapValues { (type, raw) ->
-            when (type) {
+        // Per type (3.70.0): what came back, the armour's and the resistance's shares it lost on the attacker, and what landed.
+        val types = back.map { (type, raw) ->
+            val armour = if (type == DamageType.PHYSICAL)
+                1 - (1 - (attacker.body.armour / (attacker.body.armour + rules.armour.factor * raw)).coerceAtMost(attacker.body.armourCap)) * (1 - attacker.body.physicalReduction)
+                else 0.0
+            val resist = if (type == DamageType.PHYSICAL) 0.0 else attacker.body.resist(type)
+            val defended = when (type) {
                 DamageType.PHYSICAL -> raw * (1 - (attacker.body.armour / (attacker.body.armour + rules.armour.factor * raw)).coerceAtMost(attacker.body.armourCap)) * (1 - attacker.body.physicalReduction)
                 else -> raw * (1 - attacker.body.resist(type))
-            }.coerceAtLeast(0.0) * attacker.body.damageTaken(type)
-        }.filterValues { it > 0 }
+            }.coerceAtLeast(0.0)
+            TypeTrace(type, raw, raw, armour, resist, 0.0, defended * attacker.body.damageTaken(type)) to defended
+        }
+        val mitigated = types.associate { (trace, _) -> trace.type to trace.dealt }.filterValues { it > 0 }
         if (mitigated.isEmpty()) return
+        val striker = shot(me)
+        val struck = shot(attacker)
         val chaos = mitigated[DamageType.CHAOS] ?: 0.0
         val shielded = mitigated.values.sum() - chaos
         val absorbed = min(attacker.shield, shielded)
         attacker.shield -= absorbed
         attacker.life = max(0.0, attacker.life - (shielded - absorbed) - chaos)
         attacker.lastHit = time
-        record(me.side, Action.REFLECT, HitKind.HIT, mitigated.values.sum(), mitigated.maxBy { it.value }.key, 0.0, false, emptyList(), null, foe)
+        val rawSum = back.values.sum()
+        val defendedSum = types.sumOf { it.second }
+        val total = mitigated.values.sum()
+        val factors = buildList {
+            add(FactorTrace(FactorKey.BASE, rawSum, listOf("STOCK_THORNS", "STOCK_REFLECT")))
+            if (rawSum > 0) add(FactorTrace(FactorKey.DEFENCE, defendedSum / rawSum,
+                target = listOf("STOCK_ARMOR", "STOCK_PHYSICAL_REDUCTION", "STOCK_RESIST_ALL", "STOCK_RESIST_MAX_ALL") + DamageType.entries.mapNotNull { it.resist }))
+            if (defendedSum > 0 && total != defendedSum) add(FactorTrace(FactorKey.TAKEN, total / defendedSum,
+                target = listOf("STOCK_DAMAGE_TAKEN", "STOCK_PHYSICAL_TAKEN", "STOCK_ELEMENTAL_TAKEN", "STOCK_CHAOS_TAKEN")))
+            add(FactorTrace(FactorKey.TOTAL, total))
+        }
+        val landing = Landing(0.0, absorbed, 0.0, 0.0, shielded - absorbed + chaos, 0.0, 0.0, 0.0, false)
+        record(me.side, Action.REFLECT, HitKind.HIT, total, mitigated.maxBy { it.value }.key, 0.0, false, emptyList(), null, foe,
+            trace = HitTrace(striker, struck, emptyList(), factors, types.map { it.first }, landing, origin))
         if (!attacker.alive) fell(attacker, killer = me)
     }
 

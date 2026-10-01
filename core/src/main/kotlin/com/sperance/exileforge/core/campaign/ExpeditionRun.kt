@@ -98,7 +98,7 @@ data class FightHud(
     val level: Int = 0,
     /** Whether the hero may walk out: the Abyss lets nobody go mid-wave. */
     val escape: Boolean = true,
-    /** The stage of a gathered fight (3.28.0), from 1, of [stages]: one pack a stage. */
+    /** The stage of a gathered fight (3.28.0), from 1, of [stages]: small packs in a row share one (3.70.0). */
     val stage: Int = 1, val stages: Int = 1,
     /** Seconds left of the pause before this stage begins by itself; null when there is none. */
     val interlude: Double? = null,
@@ -350,9 +350,11 @@ class ExpeditionRun(
     private var report: FightReport? = null
     /** The foes of the stage in the battle's order, each with the pack it walked with. */
     private var members: List<FightMember> = emptyList()
-    /** Every pack the fight drew in, one a stage: the engaged one first, then the rest by their distance to it. */
+    /** Every pack the fight drew in: the engaged one first, then the rest by their distance to it. */
     private var fightAgents: List<MonsterAgent> = emptyList()
-    /** The stage under way, from 1 (3.28.0): the pack of [fightAgents] it fights. */
+    /** [fightAgents] as the stages they are fought in: small packs in a row merge into one (3.70.0). */
+    private var fightStages: List<List<MonsterAgent>> = emptyList()
+    /** The stage under way, from 1 (3.28.0): the packs of [fightStages] it fights. */
     private var stage = 0
     /** Seconds of the pause before a later stage begins on its own; null outside that pause. */
     private var interlude: Double? = null
@@ -733,11 +735,12 @@ class ExpeditionRun(
 
     /**
      * A fight with [agent]'s pack still standing, all at once, at [level] — the zone's, or a depth's of the Abyss.
-     * On the map the packs standing close by are drawn in (3.26.0) and, since 3.28.0, fought one pack a stage — the
-     * engaged one first, then the rest by their distance to it; the boss and a guardian always fight alone.
+     * On the map the packs standing close by are drawn in (3.26.0) and, since 3.28.0, fought a stage at a time — small packs in a row merged into one (3.70.0):
+     * the engaged one first, then the rest by their distance to it; the boss and a guardian always fight alone.
      */
     private fun engage(agent: MonsterAgent, level: Int = zone.level, abyssal: Boolean = false, carry: StageCarry? = null) {
         fightAgents = if (abyssal) listOf(agent) else world.gathered(agent)
+        fightStages = if (abyssal) listOf(fightAgents) else world.stages(fightAgents)
         fightStrongest = fightAgents.flatMap { pack -> pack.standing.map { pack.pack[it] } }.maxByOrNull { it.rarity.ordinal }
         stageHits = emptyList()
         stageTime = 0.0
@@ -755,8 +758,7 @@ class ExpeditionRun(
      */
     private fun begin(number: Int) {
         stage = number
-        val pack = fightAgents[number - 1]
-        members = pack.standing.map { FightMember(pack, it) }
+        members = fightStages[number - 1].flatMap { pack -> pack.standing.map { FightMember(pack, it) } }
         reported = 0
         fightStream = (fights++).toLong()
         fight = battle()
@@ -779,6 +781,7 @@ class ExpeditionRun(
         fight = null
         fightAgent = null
         fightAgents = emptyList()
+        fightStages = emptyList()
         members = emptyList()
         stage = 0
         interlude = null
@@ -837,8 +840,8 @@ class ExpeditionRun(
         val pack = stageHits + members.mapIndexed { index, member -> PackHit(member.monster, battle.events.filter { it.foe == index }, battle.duration) }
         val duration = stageTime + battle.duration
         // A stage won with packs still waiting: the next one stands up, and the report waits for the last.
-        if (outcome == Outcome.WIN && stage < fightAgents.size) {
-            fightAgents[stage - 1].alive = false
+        if (outcome == Outcome.WIN && stage < fightStages.size) {
+            fightStages[stage - 1].forEach { it.alive = false }
             stageHits = pack
             stageTime = duration
             stageCarry = battle.carry()
@@ -976,7 +979,7 @@ class ExpeditionRun(
     private fun fightLeader(): RolledMonster = members.maxBy { it.monster.rarity.ordinal }.monster
 
     private fun fightHud(battle: Battle): FightHud = battle.hud(members.map { it.monster }, fightLeader(), speed, started, paused, hero.taunt,
-        level = fightLevel, escape = !abyssFight, stage = stage, stages = fightAgents.size, interlude = interlude)
+        level = fightLevel, escape = !abyssFight, stage = stage, stages = fightStages.size, interlude = interlude)
 
     companion object {
         /** How long the fight's last blow hangs before the scene moves on. */

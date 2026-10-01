@@ -526,6 +526,16 @@ class ExpeditionWorld(
         }.sortedBy(::distance)
     }
 
+    /**
+     * The gathered packs as the stages they are fought in (3.70.0): packs in a row share a stage while the stage holds
+     * no more than [STAGE_MONSTERS] monsters — 1+1 and 1+2 fight together, 2+2 stay two stages; a pack too big stands alone.
+     */
+    fun stages(packs: List<MonsterAgent>): List<List<MonsterAgent>> = packs.fold(mutableListOf<MutableList<MonsterAgent>>()) { stages, pack ->
+        val last = stages.lastOrNull()
+        if (last != null && last.sumOf { it.standing.size } + pack.standing.size <= STAGE_MONSTERS) last += pack else stages += mutableListOf(pack)
+        stages
+    }
+
     /** The hero stepped back from a fight nobody won: the monster lets them go for a while, and goes home. */
     fun retreatFrom(agent: MonsterAgent) {
         agent.calm = CALM_AFTER_RETREAT
@@ -539,6 +549,8 @@ class ExpeditionWorld(
         const val CONTACT = 0.8
         /** How close, in tiles, a pack must stand to the one engaged to join its fight. */
         const val GATHER_RADIUS = 3.0
+        /** The most monsters gathered packs put in one stage of a fight when they merge (3.70.0). */
+        const val STAGE_MONSTERS = 3
         const val EXIT_REACH = 0.7
         const val CALM_AFTER_RETREAT = 4.0
         const val CHEST_REACH = 0.7

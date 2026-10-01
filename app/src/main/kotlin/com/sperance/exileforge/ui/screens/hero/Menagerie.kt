@@ -128,7 +128,7 @@ fun petName(species: String): String = locOr("pet.$species", species)
     if (hiring) ConfirmSheet(title = ui("pets.work_q"), confirm = ui("pets.work"), subtitle = petName(pet.species), note = helps,
         onDismiss = { hiring = false }) { hiring = false; vm.activatePet(pet.id) }
     if (releasing) ConfirmSheet(title = ui("pets.release_q"), confirm = ui("pets.release"), danger = true, subtitle = petName(pet.species),
-        ledger = listOf(LedgerLine(ui("pets.release_gold"), number(index.rules.pets.releasePrice(pet.rarity, pet.level).toDouble()), Tone.GAIN)),
+        ledger = listOf(LedgerLine(ui("pets.release_gold"), number(index.rules.pets.releasePrice(pet).toDouble()), Tone.GAIN)),
         onDismiss = { releasing = false }) { releasing = false; vm.releasePet(pet.id) }
 }
 

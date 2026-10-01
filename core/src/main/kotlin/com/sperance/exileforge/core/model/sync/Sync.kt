@@ -29,7 +29,7 @@ import kotlinx.serialization.json.JsonElement
  * unique jewels refused twice with `ST_022`, `atlasNodes` in the run context; 24 - server 1.32.0: frenzy, power and endurance charges,
  * the pet's power events, slot powers and the sheet's worn counts, rules version 4); 30 - server 1.47.0: the trials; 31 - server 1.48.0: the rush key; 32 - server 1.49.0: fight tallies and the hero's statistics; 33 - server 1.50.0: influenced maps and the fanned atlas; 34 - server 1.52.0: quests without zones, the branch refund; 35 - server 1.53.0: replayed commands answer without `data`, journals of at most 64 events, 503 when the database is away, the crafting seed withheld, the tower's last floor; 36 - server 1.62.0: the auction showcase by cursor, `rules` in the manifest, the merchant's resale cap.
  */
-const val API_REVISION = 39
+const val API_REVISION = 40
 
 /** `static/index.json` → `content`: the fingerprint of the whole world and of each of its chunks, by file name. */
 @Serializable data class ContentManifest(val hash: String = "", val chunks: Map<String, String> = emptyMap())

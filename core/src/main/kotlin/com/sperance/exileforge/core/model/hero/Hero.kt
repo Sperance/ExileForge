@@ -137,8 +137,10 @@ data class HeroView(
     /** How far the server's clock runs ahead of the local one, measured when this was read; 0 when the server sent no clock. */
     val clockOffset: Long get() = if (now > 0) now - receivedAt else 0L
     fun slot(index: Int): IncubatorSlot? = entries.firstOrNull { it.slot == index }
-    val ready: Int get() = entries.count { it.busy && it.ready }
-    val incubating: Int get() = entries.count { it.busy && !it.ready }
+    /** The server's clock now, as the local one reads it: the part is resent only on real changes, so ripeness is counted here. */
+    val serverNow: Long get() = System.currentTimeMillis() + clockOffset
+    val ready: Int get() = serverNow.let { at -> entries.count { it.busy && it.ripe(at) } }
+    val incubating: Int get() = serverNow.let { at -> entries.count { it.busy && !it.ripe(at) } }
     /** The first open place with no egg, or null when every one is taken. */
     val free: IncubatorSlot? get() = entries.firstOrNull { it.open && !it.busy }
 }
@@ -149,6 +151,8 @@ data class HeroView(
     val startedAt: Long = 0, val readyAt: Long = 0, val remainingSeconds: Long = 0, val ready: Boolean = false,
 ) {
     val busy: Boolean get() = egg.isNotBlank()
+    /** Hatched by server time [at]: the flag the server sent, or the term passed since. */
+    fun ripe(at: Long): Boolean = ready || (busy && readyAt in 1..at)
     /** Ripeness 0..1 at server time [now]. */
     fun progress(now: Long): Float = if (!busy || readyAt <= startedAt) 1f else ((now - startedAt).toFloat() / (readyAt - startedAt)).coerceIn(0f, 1f)
 }

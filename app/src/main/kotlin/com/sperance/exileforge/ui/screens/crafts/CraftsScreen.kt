@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -395,13 +396,15 @@ private fun share(profession: ProfessionView): Float = profession.next?.takeIf {
 @Composable private fun ProfessionWindow(s: ForgeState, vm: ForgeViewModel, profession: ProfessionView, offset: Long) {
     BackHandler { vm.openProfession("") }
     var picking by remember { mutableStateOf(false) }
+    var toolOpen by remember { mutableStateOf(false) }
     var chosen by remember { mutableStateOf<JobView?>(null) }
     val work = s.play.crafts?.work?.takeIf { it.profession == profession.code }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = { vm.openProfession("") }) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, ui("common.back"), tint = Gold) }
-                Text(professionTitle(profession.code), color = GoldBright, style = MaterialTheme.typography.headlineSmall)
+                Text(professionTitle(profession.code), color = GoldBright, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
+                ToolButton(s, profession) { toolOpen = true }
             }
         }
         item {
@@ -410,21 +413,6 @@ private fun share(profession: ProfessionView): Float = profession.next?.takeIf {
                 Text(profession.next?.let { ui("crafts.level_progress", profession.level, number(profession.experience), number(it)) } ?: ui("crafts.level_last", profession.level),
                     color = Rune, style = MaterialTheme.typography.labelLarge)
                 LinearProgressIndicator(progress = { share(profession) }, modifier = Modifier.fillMaxWidth().height(5.dp), color = Vital, trackColor = PanelRaised)
-            }
-        }
-        item {
-            ForgePanel {
-                Engraved(ui("crafts.tool"))
-                val tool = profession.equipped
-                val view = tool?.let { s.view(it) }
-                when {
-                    tool == null -> Text(ui("crafts.no_tool"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
-                    view != null -> ItemRow(view, enabled = !s.busy, price = s.sellPrice(view.item)) { picking = true }
-                    // A tool whose template the content does not hold yet: its name, and nothing to open.
-                    else -> Text(equipmentTitle(tool.template), color = Parchment, style = MaterialTheme.typography.bodyMedium)
-                }
-                ForgeOutlinedButton(enabled = !s.busy, onClick = { picking = true }, modifier = Modifier.fillMaxWidth()) { Text(ui("crafts.change_tool")) }
-                BonusChips(profession)
             }
         }
         if (work != null) item {
@@ -443,7 +431,45 @@ private fun share(profession: ProfessionView): Float = profession.next?.takeIf {
         }
     }
     chosen?.let { job -> JobSheet(s, vm, profession, job, current = work?.job == job.code) { chosen = null } }
+    if (toolOpen) ToolSheet(s, profession, onDismiss = { toolOpen = false }) { toolOpen = false; picking = true }
     if (picking) ToolPicker(s, profession, onDismiss = { picking = false }) { id -> picking = false; vm.equipTool(id) }
+}
+
+/** The tool in the window's header: its icon in a frame of its rarity, or an empty «+» cell for none. */
+@Composable private fun ToolButton(s: ForgeState, profession: ProfessionView, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(8.dp)
+    val view = profession.equipped?.let { s.view(it) }
+    val frame = when {
+        profession.equipped == null -> LifeRed
+        view != null -> rarityColor(view.rarity.name)
+        else -> Bronze
+    }
+    Box(Modifier.size(44.dp).background(Abyss, shape).border(1.dp, frame, shape)
+        .clickable(role = Role.Button, onClickLabel = ui("crafts.tool"), onClick = onClick), contentAlignment = Alignment.Center) {
+        if (profession.equipped == null) Icon(Icons.Outlined.Add, ui("crafts.tool"), tint = LifeRed, modifier = Modifier.size(22.dp))
+        else ToolIcon(s, profession, 30)
+    }
+}
+
+/** The tool behind the header's button: its full card, what it and the tree give, and the way to another. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable private fun ToolSheet(s: ForgeState, profession: ProfessionView, onDismiss: () -> Unit, onChange: () -> Unit) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Engraved(ui("crafts.tool"))
+            val tool = profession.equipped
+            val view = tool?.let { s.view(it) }
+            when {
+                tool == null -> Text(ui("crafts.no_tool"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
+                view != null -> ItemCard(view, detailed = true, price = s.sellPrice(view.item))
+                // A tool whose template the content does not hold yet: its name, and nothing to open.
+                else -> Text(equipmentTitle(tool.template), color = Parchment, style = MaterialTheme.typography.bodyMedium)
+            }
+            BonusChips(profession)
+            ForgeButton(enabled = !s.busy, onClick = onChange, modifier = Modifier.fillMaxWidth()) { Text(ui("crafts.change_tool")) }
+        }
+    }
 }
 
 /** What the tool and the tree give this profession, a chip per figure that is not zero. */

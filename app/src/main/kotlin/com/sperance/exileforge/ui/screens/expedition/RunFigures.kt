@@ -39,6 +39,7 @@ import com.sperance.exileforge.ui.theme.*
         Figure(ui("run.taken"), number(summary.totalTaken))
         Figure(ui("run.kpm"), number(summary.killsPerMinute))
     }
+    if (summary.petTaken >= 1) MutedText(ui("fight.pet_taken", number(summary.petTaken)), style = MaterialTheme.typography.labelSmall)
     ForgeTextButton(onClick = { open = !open }) { Text(ui(if (open) "run.less" else "run.more")) }
     if (open) {
         Split(ui("run.dealt_by_type"), summary.dealt.mapKeys { typeTitle(it.key) }, summary.totalDealt)

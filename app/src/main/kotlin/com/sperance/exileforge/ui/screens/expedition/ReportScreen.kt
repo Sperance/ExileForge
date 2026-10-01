@@ -210,6 +210,8 @@ import java.util.Locale
         horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
         Figure(ForgeGlyphs.Swords, report.dealt.toString())
         Figure(ForgeGlyphs.Helm, report.taken.toString())
+        // The combat pet's share (3.70.0): what it took is its own, not the hero's damage taken.
+        report.petTaken.takeIf { it > 0 }?.let { Text(ui("fight.pet_taken", it), color = Muted, style = MaterialTheme.typography.labelMedium) }
         Figure(ForgeGlyphs.Portal, ui("expedition.log_time", String.format(Locale.ROOT, "%.1f", report.duration)))
         Figure(ForgeGlyphs.Sigil, report.crits.toString())
         Text(ui(if (logOpen) "expedition.log_less" else "expedition.log"), color = Rune, style = MaterialTheme.typography.labelMedium,

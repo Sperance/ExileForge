@@ -13,11 +13,14 @@ class RunStats {
     private val dealt = mutableMapOf<DamageType, Double>()
     private val bySkill = mutableMapOf<String, Double>()
     private val taken = mutableMapOf<DamageType, Double>()
+    /** What the combat pet took (3.70.0): apart, the hero's [taken] is the hero's own. */
+    private var petTaken = 0.0
     private var seconds = 0.0
 
     fun add(pack: List<PackHit>, duration: Double) {
         seconds += duration
         pack.flatMap { it.events }.filter { it.damage > 0 && !it.onSelf }.forEach { event ->
+            if (event.atPet) { petTaken += event.damage; return@forEach }
             val into = if (event.actor == Side.HERO) dealt else taken
             split(event).forEach { (type, amount) -> into.merge(type, amount, Double::plus) }
             if (event.actor == Side.HERO) bySkill.merge(skillKey(event), event.damage, Double::plus)
@@ -30,9 +33,10 @@ class RunStats {
         other.dealt.forEach { (type, amount) -> dealt.merge(type, amount, Double::plus) }
         other.bySkill.forEach { (skill, amount) -> bySkill.merge(skill, amount, Double::plus) }
         other.taken.forEach { (type, amount) -> taken.merge(type, amount, Double::plus) }
+        petTaken += other.petTaken
     }
 
-    fun summary(kills: Int): RunSummary = RunSummary(dealt.toMap(), bySkill.toMap(), taken.toMap(), seconds, kills)
+    fun summary(kills: Int): RunSummary = RunSummary(dealt.toMap(), bySkill.toMap(), taken.toMap(), seconds, kills, petTaken)
 
     companion object {
         /** A plain swing, an ailment's tick and a reflection have no skill of their own: they are named by what they are. */
@@ -43,7 +47,7 @@ class RunStats {
         /** The last [count] blows the hero took before the fall, oldest first, each with who struck it. */
         fun recap(pack: List<PackHit>, count: Int = 5): List<DeathHit> =
             pack.flatMap { hit -> hit.events.map { it to hit.monster } }
-                .filter { (event, _) -> event.actor == Side.MONSTER && !event.onSelf && event.damage > 0 }
+                .filter { (event, _) -> event.actor == Side.MONSTER && !event.onSelf && !event.atPet && event.damage > 0 }
                 .sortedBy { (event, _) -> event.time }.takeLast(count)
                 .map { (event, monster) -> DeathHit(monster, event.damage, event.type, skillKey(event), event.kind == HitKind.CRIT, event.heroLife) }
 
@@ -69,7 +73,8 @@ object FightFigures {
     val types: List<String> = DamageType.entries.map { it.name }
 
     fun of(pack: List<PackHit>, duration: Double, boss: Boolean, won: Boolean): FightTally {
-        val events = pack.flatMap { it.events }.filter { !it.onSelf }
+        // The pet's own blows taken (3.70.0) are not the hero's: neither damage taken, nor a blow blocked or evaded, nor the killer.
+        val events = pack.flatMap { it.events }.filter { !it.onSelf && !it.atPet }
         val mine = events.filter { it.actor == Side.HERO && (it.action == Action.ATTACK || it.action == Action.SKILL || it.action == Action.TICK || it.action == Action.REFLECT) }
         val theirs = events.filter { it.actor == Side.MONSTER && (it.action == Action.ATTACK || it.action == Action.SKILL) }
         val dealt = mutableMapOf<String, Double>()
@@ -89,7 +94,7 @@ object FightFigures {
             boss = boss, won = won,
             // The foe whose blow ended a lost fight (3.54.0, server 1.52.0): the hero's statistics count deaths by who dealt them.
             killer = if (won) null else pack.flatMap { hit -> hit.events.map { it to hit.monster } }
-                .filter { (event, _) -> event.actor == Side.MONSTER && event.damage > 0 && !event.onSelf }.maxByOrNull { (event, _) -> event.time }?.second?.code,
+                .filter { (event, _) -> event.actor == Side.MONSTER && event.damage > 0 && !event.onSelf && !event.atPet }.maxByOrNull { (event, _) -> event.time }?.second?.code,
         )
     }
 }
@@ -101,6 +106,8 @@ data class RunSummary(
     val taken: Map<DamageType, Double> = emptyMap(),
     val seconds: Double = 0.0,
     val kills: Int = 0,
+    /** What the combat pet took (3.70.0), apart from the hero's [taken]. */
+    val petTaken: Double = 0.0,
 ) {
     val totalDealt: Double get() = dealt.values.sum()
     val totalTaken: Double get() = taken.values.sum()

@@ -507,6 +507,8 @@ data class CombatEvent(
 
     /** Who the number floats off. */
     val target: Side get() = if (onSelf) actor else actor.other
+    /** A monster's line at the combat pet (3.70.0): a blow, a tick or a blow back it took — the pet's, never the hero's damage taken. */
+    val atPet: Boolean get() = pet != null && actor == Side.MONSTER
     val landed: Boolean get() = kind == HitKind.HIT || kind == HitKind.CRIT
 }
 

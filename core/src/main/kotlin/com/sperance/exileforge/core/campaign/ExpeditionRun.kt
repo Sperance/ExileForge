@@ -122,9 +122,11 @@ data class FightReport(val monster: RolledMonster, val outcome: Outcome, val pac
     val events: List<CombatEvent> get() = pack.flatMap { it.events }
     val packSize: Int get() = pack.size
     private fun mine() = events.filter { it.actor == Side.HERO }
-    private fun theirs() = events.filter { it.actor == Side.MONSTER }
+    private fun theirs() = events.filter { it.actor == Side.MONSTER && !it.atPet }
     val dealt: Int get() = mine().sumOf { it.damage }.roundToInt()
     val taken: Int get() = theirs().sumOf { it.damage }.roundToInt()
+    /** What the combat pet took (3.70.0), apart from the hero's [taken]. */
+    val petTaken: Int get() = events.filter { it.atPet }.sumOf { it.damage }.roundToInt()
     val crits: Int get() = mine().count { it.kind == HitKind.CRIT }
     val blocked: Int get() = mine().count { it.kind == HitKind.BLOCKED }
     val inflicted: List<Ailment> get() = mine().flatMap { it.inflicted }.distinct()

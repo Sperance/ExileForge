@@ -3202,6 +3202,7 @@
   "run.figures": "The run in figures",
   "run.dps": "damage a second",
   "run.taken": "damage taken",
+  "fight.pet_taken": "Pet took {0}",
   "run.kpm": "kills a minute",
   "run.more": "Split by type and skill",
   "run.less": "Hide the split",

@@ -724,6 +724,8 @@
   "fight.taunt": "Провокация",
   "fight.taunt_hint": "Провокация: пока жив, бить можно только его",
   "fight.behind_taunt": "Пока жив провокатор, этого врага не выбрать",
+  "fight.out_of_reach": "Вне досягаемости: пока жив провокатор, удары уходят ему",
+  "fight.out_of_reach_short": "вне досягаемости",
   "fight.fallen": "Пал",
   "fight.target_line": "Цель: {0} · {1}",
   "fight.target_yours": "выбрана вами",

@@ -322,8 +322,10 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
             if (fight.target == foe.index && foe.alive && fight.outcome == null)
                 Text(if (focused) "◉" else "◎", color = GoldBright, fontSize = 14.sp, modifier = Modifier.align(Alignment.TopEnd).padding(3.dp))
             if (foe.taunt && foe.alive) TauntSeal(time, Modifier.align(Alignment.TopStart).padding(3.dp).size(22.dp)) { tauntTip(false) }
-            // A card behind a taunter says nothing (2.73.0): the taunter's seal already tells why.
             if (!foe.alive) Text(ui("fight.fallen"), color = Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.Center))
+            // A foe singled out behind a standing taunter: the focus holds, the blows go to the taunter.
+            else if (focused && !foe.reachable) Text(ui("fight.out_of_reach_short"), color = Muted, fontSize = 9.sp, maxLines = 1,
+                overflow = TextOverflow.Ellipsis, modifier = Modifier.align(Alignment.BottomCenter).background(Ink.copy(alpha = .8f)).padding(horizontal = 4.dp))
             CardHits(fight.hits.filter { it.target == Side.MONSTER && it.foe == foe.index })
         }
         Text(monsterTitle(foe.monster.code), color = ring, fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -451,6 +453,7 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
         val taunting = fight.foes.any { it.alive && it.taunt }
         when {
             foe.taunt -> Hint(ui("fight.taunt_hint"), LifeRed)
+            fight.focus == foe.index && !foe.reachable -> Hint(ui("fight.out_of_reach"), LifeRed)
             taunting -> Hint(ui("fight.behind_taunt"), LifeRed)
         }
         Hint(if (fight.focus == foe.index) ui("fight.focus_on") else ui("fight.focus_off", ui("fight.rule.${stance.rule.name}")), GoldBright)

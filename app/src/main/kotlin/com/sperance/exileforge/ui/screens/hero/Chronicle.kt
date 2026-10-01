@@ -36,62 +36,52 @@ fun titleName(code: String): String = locOr("title.$code", code)
 /** The three steps of an achievement: bronze, silver, gold — a single one-off step is gold. */
 private val Medals = listOf(Color(0xFFC08457), Color(0xFFC9D1D9), Color(0xFFFFD166))
 
+/** How many of the content's achievements the hero has complete, of how many; null until the hero and the content are read. */
+fun ForgeState.chronicleDone(): Pair<Int, Int>? {
+    val hero = hero ?: return null
+    val achievements = index?.achievements?.achievements ?: return null
+    return achievements.count { it.complete(hero.chronicle[it.counter] ?: 0L) } to achievements.size
+}
+
 /**
  * The chronicle (3.3.0, server 1.3.0): the hero's title, and a way into all they have done — the
  * counters by section, the achievements with their steps and the titles they open. Only what the
  * server counts is counted; the level, the zones and the atlas are read off the hero.
+ *
+ * A page of the «Развитие» tab since 3.69.0, opened from its tile; it was a card and a sheet on the Hero tab.
  */
-@Composable fun ChronicleCard(s: ForgeState, vm: ForgeViewModel) {
-    val hero = s.hero ?: return
-    val achievements = s.index?.achievements ?: return
-    var open by remember { mutableStateOf(false) }
-    val values = hero.chronicle
-    val done = achievements.achievements.count { it.complete(values[it.counter] ?: 0L) }
-    ForgePanel {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Engraved(ui("chronicle.title"))
-                Text(hero.info.title.takeIf { it.isNotBlank() }?.let(::titleName) ?: ui("chronicle.no_title"),
-                    color = if (hero.info.title.isNotBlank()) GoldBright else Muted, style = MaterialTheme.typography.titleSmall)
-                MutedText(ui("chronicle.done", done, achievements.achievements.size))
-            }
-            ForgeOutlinedButton(onClick = { open = true }) { Text(ui("chronicle.open")) }
-        }
-    }
-    if (open) ChronicleSheet(s, vm, values) { open = false }
-}
-
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
-@Composable private fun ChronicleSheet(s: ForgeState, vm: ForgeViewModel, values: Map<String, Long>, onDismiss: () -> Unit) {
+@Composable fun ChronicleScreen(s: ForgeState, vm: ForgeViewModel) {
     val hero = s.hero ?: return
     val achievements = s.index?.achievements ?: return
+    val values = hero.chronicle
     val titles = achievements.titles(values)
-    // The statistics (3.51.0) are read apart, when the sheet opens: hundreds of figures ride with no hero snapshot.
+    // The statistics (3.51.0) are read apart, when the page opens: hundreds of figures ride with no hero snapshot.
     val stats by produceState<Map<String, Long>?>(null, hero.id) { value = vm.heroStats(hero.id) }
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Engraved(ui("chronicle.titles"))
-            if (titles.isEmpty()) MutedText(ui("chronicle.no_titles"))
-            else FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                FilterChip(selected = hero.info.title.isBlank(), enabled = !s.busy, onClick = { vm.setTitle("") }, label = { Text(ui("chronicle.no_title")) })
-                titles.forEach { code ->
-                    FilterChip(selected = hero.info.title == code, enabled = !s.busy, onClick = { vm.setTitle(code) }, label = { Text(titleName(code)) })
-                }
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(hero.info.title.takeIf { it.isNotBlank() }?.let(::titleName) ?: ui("chronicle.no_title"),
+            color = if (hero.info.title.isNotBlank()) GoldBright else Muted, style = MaterialTheme.typography.titleMedium)
+        s.chronicleDone()?.let { (done, all) -> MutedText(ui("chronicle.done", done, all)) }
+        Engraved(ui("chronicle.titles"))
+        if (titles.isEmpty()) MutedText(ui("chronicle.no_titles"))
+        else FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            FilterChip(selected = hero.info.title.isBlank(), enabled = !s.busy, onClick = { vm.setTitle("") }, label = { Text(ui("chronicle.no_title")) })
+            titles.forEach { code ->
+                FilterChip(selected = hero.info.title == code, enabled = !s.busy, onClick = { vm.setTitle(code) }, label = { Text(titleName(code)) })
             }
-            // Only what the hero has begun: an untouched achievement or counter is noise, not a record.
-            val begun = achievements.achievements.filter { (values[it.counter] ?: 0L) > 0L }
-            Engraved(ui("chronicle.achievements"))
-            if (begun.isEmpty()) MutedText(ui("chronicle.nothing_yet"))
-            begun.forEach { AchievementRow(it, values[it.counter] ?: 0L) }
-            Counter.SECTIONS.forEach { (section, all) ->
-                val counters = all.filter { (values[it] ?: 0L) > 0L }
-                if (counters.isEmpty()) return@forEach
-                Engraved(ui("chronicle.section.$section"))
-                counters.forEach { counter -> Figure(ui("chronicle.counter.$counter"), number((values[counter] ?: 0L).toDouble())) }
-            }
-            stats?.let { StatSections(it) }
         }
+        // Only what the hero has begun: an untouched achievement or counter is noise, not a record.
+        val begun = achievements.achievements.filter { (values[it.counter] ?: 0L) > 0L }
+        Engraved(ui("chronicle.achievements"))
+        if (begun.isEmpty()) MutedText(ui("chronicle.nothing_yet"))
+        begun.forEach { AchievementRow(it, values[it.counter] ?: 0L) }
+        Counter.SECTIONS.forEach { (section, all) ->
+            val counters = all.filter { (values[it] ?: 0L) > 0L }
+            if (counters.isEmpty()) return@forEach
+            Engraved(ui("chronicle.section.$section"))
+            counters.forEach { counter -> Figure(ui("chronicle.counter.$counter"), number((values[counter] ?: 0L).toDouble())) }
+        }
+        stats?.let { StatSections(it) }
     }
 }
 

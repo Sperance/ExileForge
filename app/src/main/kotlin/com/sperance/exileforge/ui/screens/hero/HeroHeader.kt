@@ -30,7 +30,7 @@ import com.sperance.exileforge.ui.theme.*
  *
  * The name large, then class and level as one smaller line, then the purse and the tree as two chips,
  * and the experience as a thin bar under them. The tree, the grimoire and the forge left the corner
- * for the strip above the tab ([HeroTabStrip]); the title the chronicle opened is the chronicle's card's.
+ * for the strip above the tab ([HeroTabStrip]); the title the chronicle opened is chosen on its page under «Развитие».
  * A long name is cut rather than pushed into the portrait. A section may add its own chips after them ([extra]).
  */
 @Composable fun HeroHeader(s: ForgeState, extra: @Composable RowScope.() -> Unit = {}) {

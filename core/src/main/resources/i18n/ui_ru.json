@@ -13,7 +13,6 @@
   "account.dictionary_missing": "Словарь сервера не загружен: названия предметов будут показаны кодами.",
   "account.do_change_password": "Сменить пароль",
   "account.enter_promo": "Ввести промокод",
-  "account.exile": "Изгнанник",
   "account.icons": "Иконки сервера",
   "account.icons_count": "кодов: {0}, рисунков: {1}",
   "account.icons_missing": "Набор иконок не загружен: предметы рисуются встроенными эмблемами.",
@@ -2771,7 +2770,6 @@
   "guild.announcement": "Объявление главы",
   "guild.tab_members": "Состав",
   "guild.tab_applications": "Заявки",
-  "guild.tab_applications_n": "Заявки · {0}",
   "guild.tab_contribute": "Вклад",
   "guild.tab_log": "Журнал",
   "guild.tab_settings": "Настройки",
@@ -3360,5 +3358,11 @@
   "auction.more": "Показать ещё · {0} из {1}",
   "merchant.notes": "О торговце",
   "merchant.wares_n": "Товар · {0}",
-  "merchant.orbs_n": "Сферы · {0}"
+  "merchant.orbs_n": "Сферы · {0}",
+  "account.group_game": "Игра",
+  "account.client": "О клиенте",
+  "account.online": "в сети",
+  "account.offline": "не в сети",
+  "account.signed_out": "вход не выполнен",
+  "guild.applications_new": "новых: {0}"
 }

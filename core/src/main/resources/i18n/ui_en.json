@@ -13,7 +13,6 @@
   "account.dictionary_missing": "The server dictionary was not loaded: items will be shown by their codes.",
   "account.do_change_password": "Change password",
   "account.enter_promo": "Enter a promo code",
-  "account.exile": "Exile",
   "account.icons": "Server icons",
   "account.icons_count": "{0} codes, {1} drawings",
   "account.icons_missing": "The icon set was not loaded: items are drawn with the bundled emblems.",
@@ -2771,7 +2770,6 @@
   "guild.announcement": "Leader's announcement",
   "guild.tab_members": "Members",
   "guild.tab_applications": "Applications",
-  "guild.tab_applications_n": "Applications · {0}",
   "guild.tab_contribute": "Contribution",
   "guild.tab_log": "Journal",
   "guild.tab_settings": "Settings",
@@ -3360,5 +3358,11 @@
   "auction.more": "Show more · {0} of {1}",
   "merchant.notes": "About the merchant",
   "merchant.wares_n": "Wares · {0}",
-  "merchant.orbs_n": "Orbs · {0}"
+  "merchant.orbs_n": "Orbs · {0}",
+  "account.group_game": "Game",
+  "account.client": "About the client",
+  "account.online": "online",
+  "account.offline": "offline",
+  "account.signed_out": "not signed in",
+  "guild.applications_new": "new: {0}"
 }

@@ -159,7 +159,7 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() 
     /** A building of the City (3.22.0), or the square for none. */
     fun building(building: Building?) = runtime.mutable.value.let { runtime.mutable.value = it.copy(building = building, message = null, error = false) }
     fun loadGuild() = runtime.guildViewModel.load()
-    fun guildTab(tab: GuildTab) = runtime.guildViewModel.tab(tab)
+    fun guildTab(tab: GuildTab?) = runtime.guildViewModel.tab(tab)
     fun guildQuery(text: String) = runtime.guildViewModel.query(text)
     fun guildFaction(code: String) = runtime.guildViewModel.filterFaction(code)
     fun searchGuilds(page: Int = 0) = runtime.guildViewModel.search(page)

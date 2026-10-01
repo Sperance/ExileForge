@@ -221,7 +221,7 @@ data class MarketState(
 /** The City's buildings (3.22.0): each one a screen of its own behind the square. */
 enum class Building { QUESTS, MERCHANT, AUCTION, GUILD }
 
-/** The guild screen's tabs; [APPLICATIONS] only for those who may answer them. */
+/** The guild's sections, each a tile of its hub; [APPLICATIONS] only for those who may answer them. */
 enum class GuildTab { MEMBERS, QUESTS, APPLICATIONS, CONTRIBUTE, LOG, SETTINGS }
 
 /**
@@ -233,7 +233,8 @@ data class GuildState(
     val query: String = "", val search: GuildPage = GuildPage(),
     /** The faction the list is narrowed to (3.28.0), blank for all. */
     val faction: String = "",
-    val tab: GuildTab = GuildTab.MEMBERS,
+    /** The section open over the guild's hub; null — the hub itself. */
+    val tab: GuildTab? = null,
     val log: List<GuildLogEntry> = emptyList(), val logPage: Int = 0, val logEnd: Boolean = false,
 )
 

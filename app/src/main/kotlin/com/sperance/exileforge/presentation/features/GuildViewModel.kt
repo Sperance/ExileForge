@@ -20,7 +20,7 @@ import kotlinx.coroutines.flow.update
  */
 class GuildViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
-    fun tab(tab: GuildTab) = guild { it.copy(tab = tab) }
+    fun tab(tab: GuildTab?) = guild { it.copy(tab = tab) }
     fun query(text: String) = guild { it.copy(query = text) }
 
     /** Narrows the list to one faction, or to none with a blank code, and reads it again from the first page. */
@@ -88,7 +88,7 @@ class GuildViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
      */
     private fun moving(done: String, block: suspend (String) -> GuildMine) = command(done) { id ->
         val mine = block(id)
-        guild { it.copy(mine = mine, tab = if (mine.guild == null) GuildTab.MEMBERS else it.tab) }
+        guild { it.copy(mine = mine, tab = if (mine.guild == null) null else it.tab) }
         after { runtime.heroViewModel.readHero() }
     }
 

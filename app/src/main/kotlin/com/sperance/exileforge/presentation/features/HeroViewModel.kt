@@ -97,9 +97,16 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     fun activatePet(petId: String) { with(runtime) { heroCommand { id -> api.hero.activatePet(id, petId) } } }
     fun releasePet(petId: String) { with(runtime) { heroCommand { id -> api.hero.releasePet(id, petId) } } }
 
-    /** Admin only: hand the hero a named template, rolled by the server. */
+    /** The testing window (3.73.0): one grant of `/hero/grant/` for the hero in play. */
+    fun testerGrant(what: String, vararg params: Pair<String, String?>) { with(runtime) { heroCommand { id ->
+        check(state.value.isTester) { ui("hero.grant_admin_only") }
+        api.hero.grant(id, what, *params)
+        readHero()
+    } } }
+
+    /** Tester or admin: hand the hero a named template, rolled by the server. */
     fun grant(template: String, rarity: Rarity? = null) { with(runtime) { heroCommand { id ->
-        check(state.value.isAdmin) { ui("hero.grant_admin_only") }
+        check(state.value.isTester) { ui("hero.grant_admin_only") }
         api.hero.grantEquipment(id, template, rarity)
     } } }
 
@@ -108,7 +115,7 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     /** Admin only: a random template of the chosen rarity and slot — picked here from the content, rolled by the server. */
     fun grantRandom() { with(runtime) { heroCommand { id ->
-        check(state.value.isAdmin) { ui("hero.grant_admin_only") }
+        check(state.value.isTester) { ui("hero.grant_admin_only") }
         val index = state.value.index ?: error(ui("runtime.request_failed"))
         val rarity = Rarity.of(state.value.play.grantRarity)
         val slot = Slot.of(state.value.play.grantSlot)
@@ -119,7 +126,7 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     /** Admin only: a stack into the bag. */
     fun grantItem(code: String, amount: Long) { with(runtime) { heroCommand { id ->
-        check(state.value.isAdmin) { ui("hero.bag_admin_only") }
+        check(state.value.isTester) { ui("hero.bag_admin_only") }
         api.hero.grantItem(id, code, amount)
     } } }
 

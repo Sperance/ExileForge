@@ -34,6 +34,27 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     fun serverDraft(value: String) = update { it.copy(account = it.account.copy(serverDraft = value)) }
 
+    // ---- the administrator's testers (3.73.0) ----
+
+    fun loadTesters() { with(runtime) { task {
+        check(state.value.isAdmin) { ui("hero.grant_admin_only") }
+        val testers = api.admin.testers()
+        mutable.update { it.copy(account = it.account.copy(testers = testers)) }
+    } } }
+
+    /** A new tester: the server picks the password and says it once, so the window keeps it on screen to be copied. */
+    fun createTester(login: String) = testerCommand { api.admin.createTester(login) }
+    fun resetTester(id: String) = testerCommand { api.admin.resetTester(id) }
+    fun setTesterActive(id: String, active: Boolean) = testerCommand { api.admin.setTesterActive(id, active) }
+    fun closeShownTester() = update { it.copy(account = it.account.copy(shownTester = null)) }
+
+    private fun testerCommand(block: suspend ForgeRuntime.() -> com.sperance.exileforge.core.network.TesterAccount) { with(runtime) { task(writing = true) {
+        check(state.value.isAdmin) { ui("hero.grant_admin_only") }
+        val account = block()
+        val testers = api.admin.testers()
+        mutable.update { it.copy(account = it.account.copy(testers = testers, shownTester = account.takeIf { a -> a.password != null })) }
+    } } }
+
     fun connect() { with(runtime) { task {
         val server = normalizeServer(state.value.account.serverDraft)
         store.save(server)

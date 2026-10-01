@@ -1,5 +1,6 @@
 package com.sperance.exileforge.presentation.state
 
+import com.sperance.exileforge.core.network.TesterAccount
 import com.sperance.exileforge.BuildConfig
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.ui
@@ -74,6 +75,8 @@ data class ForgeState(
     val logFilter: Set<com.sperance.exileforge.core.campaign.LogKind> = com.sperance.exileforge.core.campaign.LogKind.DEFAULT,
 ) {
     val isAdmin: Boolean get() = account.signedIn && account.profile?.role == "ADMIN"
+    /** The testing window (3.73.0): a tester's, and an administrator's too. */
+    val isTester: Boolean get() = isAdmin || (account.signedIn && account.profile?.role == "TESTER")
     val reading: Boolean get() = loading.isNotEmpty()
     fun refreshing(read: String): Boolean = busy || read in loading
     /** The content this server serves, once it has been read; every card and every roll is drawn from it. */
@@ -116,7 +119,7 @@ data class ForgeState(
     } }
     /** The hero's tree as the rules count it: the point balance and what the taken nodes give. */
     val treeState: TreeState? get() = index?.let { i -> hero?.let { h ->
-        val total = i.classes.pointsTotal(h.level)
+        val total = i.classes.pointsTotal(h.level) + h.info.bonusPoints
         val spent = i.tree.spent(h.tree)
         val calculator = SheetCalculator(i)
         TreeState(total, spent, total - spent, h.tree, calculator.contributions(calculator.expand(i.tree.lines(h.tree))))
@@ -141,6 +144,8 @@ data class AccountState(
     /** The account's heroes and whether they have been read yet: "none" and "not asked yet" must differ. */
     val characters: List<HeroSummary> = emptyList(), val charactersRead: Boolean = false,
     val health: String = ui("runtime.not_checked"),
+    /** The administrator's testers (3.73.0), and the account whose password was just shown — once, to be copied. */
+    val testers: List<TesterAccount> = emptyList(), val shownTester: TesterAccount? = null,
 )
 
 /** The world as this server serves it: the content, read once per server and kept on the device by chunk, and the static files. */

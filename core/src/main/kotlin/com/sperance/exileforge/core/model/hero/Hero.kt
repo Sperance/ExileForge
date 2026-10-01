@@ -45,6 +45,8 @@ import kotlinx.serialization.Serializable
     val autoSell: com.sperance.exileforge.rules.content.AutoSell = com.sperance.exileforge.rules.content.AutoSell(),
     /** The tree's plan (3.47.0): the server takes its nodes by itself as the points come. */
     val plannedTree: List<com.sperance.exileforge.rules.content.TakenNode> = emptyList(),
+    /** Tree points beyond the level (3.73.0, server 1.69.0): only the testing window gives them. */
+    val bonusPoints: Int = 0,
 )
 
 /** The stash's places as the server counts them after a command: used, held, the ceiling, the next pack's price (0 at the ceiling), the overflow. */

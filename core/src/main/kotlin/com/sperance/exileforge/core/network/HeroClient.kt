@@ -81,6 +81,14 @@ class HeroClient internal constructor(private val http: Transport) {
         return http.post("$HERO/grant/equipment", heroQuery(heroId, "template" to template, "rarity" to rarity?.name))
     }
 
+    /**
+     * The testing window (3.73.0, server 1.69.0): one grant [what] of `/hero/grant/` — gold, level, points, zones, rares, a map,
+     * professions, recipes, a reset — for a tester's own hero or by an administrator; the server answers with the hero's level.
+     */
+    suspend fun grant(heroId: String, what: String, vararg params: Pair<String, String?>) {
+        http.request("POST", "$HERO/grant/$what", heroQuery(heroId, *params), authenticated = true)
+    }
+
     // ---- wearing ----
 
     /** Puts an item on; [slot] names which ring or flask place to take, the server picks a free one without it. */

@@ -14,6 +14,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.AdminPanelSettings
 import androidx.compose.material.icons.outlined.CardGiftcard
+import androidx.compose.material.icons.outlined.Group
+import androidx.compose.material.icons.outlined.Science
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Dns
 import androidx.compose.material.icons.outlined.Info
@@ -53,7 +55,8 @@ import com.sperance.exileforge.ui.theme.*
 
 /** The screens behind the account's rows: each a page of its own, «back» leading to the list. */
 private enum class AccountPage(val title: String) {
-    SIGN_IN("account.signin_section"), LANGUAGE("account.language"), SERVER("account.server"), CLIENT("account.client"), JOURNAL("account.journal")
+    SIGN_IN("account.signin_section"), LANGUAGE("account.language"), SERVER("account.server"), CLIENT("account.client"), JOURNAL("account.journal"),
+    TESTING("tester.window"), TESTERS("tester.accounts")
 }
 
 /**
@@ -80,6 +83,8 @@ private enum class AccountPage(val title: String) {
                 AccountPage.SERVER -> ServerPage(s, vm)
                 AccountPage.CLIENT -> ClientPage(s, vm)
                 AccountPage.JOURNAL -> RequestJournalPanel(vm, logs)
+                AccountPage.TESTING -> TestingPage(s, vm)
+                AccountPage.TESTERS -> TestersPage(s, vm)
             }
         }
     }
@@ -101,6 +106,9 @@ private enum class AccountPage(val title: String) {
                 value = if (s.account.signedIn) s.accountTitle else ui("account.signed_out")) { onPage(AccountPage.SIGN_IN) }
             // The first-visit guides (3.14.0) come back on every screen once reset.
             LocalGuideDesk.current?.let { desk -> AccountRow(Icons.Outlined.Lightbulb, ui("guide.reset"), chevron = false, onClick = desk::reset) }
+            // The testing window (3.73.0) for testers and administrators; the testers' accounts for an administrator.
+            if (s.isTester) AccountRow(Icons.Outlined.Science, ui("tester.window"), enabled = !s.busy) { onPage(AccountPage.TESTING) }
+            if (s.isAdmin) AccountRow(Icons.Outlined.Group, ui("tester.accounts"), enabled = !s.busy) { onPage(AccountPage.TESTERS) }
             // Every administrator tool moved to its own tab in 2.3.0. What stays here is the way back
             // into it: turning the tools off hides that tab, so the switch cannot live only inside it.
             if (BuildConfig.DEBUG && s.isAdmin && !s.adminTools)
@@ -126,7 +134,7 @@ private enum class AccountPage(val title: String) {
             if (s.heroName.isNotBlank()) Text(s.heroName + ui("app.hero_level", s.heroLevel), color = GoldBright, style = MaterialTheme.typography.titleMedium,
                 maxLines = 1, overflow = TextOverflow.Ellipsis)
             classCode?.takeIf { it.isNotBlank() }?.let { MutedText(classTitle(it)) }
-            if (s.account.signedIn) MutedText("${s.accountTitle} · ${ui(if (s.isAdmin) "account.administrator" else "account.player")}")
+            if (s.account.signedIn) MutedText("${s.accountTitle} · ${ui(when { s.isAdmin -> "account.administrator"; s.isTester -> "account.tester"; else -> "account.player" })}")
         }
     }
 }

@@ -100,13 +100,16 @@ object MonsterBreakdown {
 
 /** The log's shelves (3.37.0): blows, the ticks of ailments, and the notes of what happened without a blow. */
 enum class LogKind {
-    HITS, AILMENTS, EVENTS;
+    HITS, AILMENTS, EVENTS,
+    /** The combat pet's lines (3.70.0): its blows and healing, and the blows it took. */
+    PET;
 
     companion object {
-        val DEFAULT: Set<LogKind> = setOf(HITS, AILMENTS)
-        fun of(event: CombatEvent): LogKind = when (event.action) {
-            Action.TICK -> AILMENTS
-            Action.NOTE -> EVENTS
+        val DEFAULT: Set<LogKind> = setOf(HITS, AILMENTS, PET)
+        fun of(event: CombatEvent): LogKind = when {
+            event.pet != null -> PET
+            event.action == Action.TICK -> AILMENTS
+            event.action == Action.NOTE -> EVENTS
             else -> HITS
         }
         fun parse(value: String?): Set<LogKind> = value?.split(',')?.mapNotNull { name -> entries.firstOrNull { it.name == name } }?.toSet() ?: DEFAULT

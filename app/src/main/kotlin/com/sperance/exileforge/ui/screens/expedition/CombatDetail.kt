@@ -43,6 +43,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.StatTrace
 import com.sperance.exileforge.presentation.state.TraceExplainer
+import com.sperance.exileforge.ui.screens.hero.petName
 import com.sperance.exileforge.ui.theme.*
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -79,11 +80,20 @@ import kotlin.math.roundToInt
 @Composable private fun Header(event: CombatEvent, monster: String) {
     val sentence = when (event.action) {
         Action.NOTE -> noteLine(event, monster)
-        else -> listOfNotNull(
-            if (event.actor == Side.HERO) ui("trace.you") else monster,
-            event.skill?.let { if (event.action == Action.FLASK) equipmentTitle(it) else SkillText.title(it) },
-            if (event.target == Side.HERO && event.actor != Side.HERO) ui("trace.at_you") else if (event.actor == Side.HERO && !event.onSelf) "→ $monster" else null,
-        ).joinToString(" ")
+        else -> {
+            // The combat pet's line (3.70.0) names it: its blow, its healing, or the blow it took.
+            val pet = event.pet?.let(::petName)
+            listOfNotNull(
+                if (event.actor == Side.HERO) pet ?: ui("trace.you") else monster,
+                event.skill?.let { if (event.action == Action.FLASK) equipmentTitle(it) else SkillText.title(it) },
+                when {
+                    event.target == Side.HERO && event.actor != Side.HERO -> pet?.let { "→ $it" } ?: ui("trace.at_you")
+                    event.actor == Side.HERO && !event.onSelf -> "→ $monster"
+                    pet != null && event.onSelf -> ui("trace.pet_heals")
+                    else -> null
+                },
+            ).joinToString(" ")
+        }
     }
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Column {

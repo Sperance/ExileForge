@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -75,6 +76,8 @@ import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.expedition.scene.Portraits
+import com.sperance.exileforge.ui.screens.hero.PetIcon
+import com.sperance.exileforge.ui.screens.hero.petName
 import com.sperance.exileforge.ui.screens.skills.FlaskBottle
 import com.sperance.exileforge.ui.screens.skills.SkillFacts
 import com.sperance.exileforge.ui.theme.*
@@ -370,7 +373,8 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
 @Composable private fun HeroCard(s: ForgeState, hud: RunHud, fight: FightHud, time: Float, names: Map<Int, String>, stance: HeroStance, modifier: Modifier,
                                   large: Boolean) {
     val hero = s.heroInfo
-    val lunge = fight.lunge
+    // The pet's blows and the blows at it are its own card's (3.70.0).
+    val lunge = fight.lunge?.takeIf { !it.pet }
     val acting = reach(lunge, Side.HERO, null)
     val hit = struck(lunge, Side.MONSTER, null)
     val shape = RoundedCornerShape(10.dp)
@@ -387,7 +391,7 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
             Canvas(Modifier.fillMaxSize()) {
                 Portraits.hero(this, s.heroClass?.code, time, wash?.let(::ailmentTint), wash?.let(::washAmount) ?: 0f, flash(lunge, Side.HERO, null))
             }
-            CardHits(fight.hits.filter { it.target == Side.HERO })
+            CardHits(fight.hits.filter { it.target == Side.HERO && (!it.pet || it.mend) })
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -404,21 +408,55 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
             if (fight.heroMaxMana + fight.heroReserved.coerceAtLeast(0) > 0) VitalBar(fight.heroMana, fight.heroMaxMana, ManaBlue, Modifier.fillMaxWidth().height(16.dp), reserved = fight.heroReserved)
             SwingBar(fight.heroSwing, fight.heroHeld, Modifier.fillMaxWidth())
             StateTiles(fight.heroAilments, fight.heroHeld, fight.heroEffects, fight.heroCharges)
-            // The combat pet beside the hero (3.5.0): its name and life; down, it waits for the fight's end.
-            fight.ally?.let { ally ->
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(com.sperance.exileforge.ui.screens.hero.petName(ally.species), color = if (ally.alive) Vital else Muted,
-                        style = MaterialTheme.typography.labelSmall, maxLines = 1, modifier = Modifier.width(96.dp))
-                    LifeBar(ally.life, ally.maxLife, 0, 0, Modifier.weight(1f).height(10.dp))
-                }
-            }
             val target = fight.target?.let(names::get)
             if (target != null && fight.outcome == null) Text(
                 ui("fight.target_line", target, if (fight.focus != null) ui("fight.target_yours") else ui("fight.rule.${stance.rule.name}")),
                 color = if (fight.focus != null) GoldBright else Parchment, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
+        // The combat pet beside the hero (3.5.0; a card of its own since 3.70.0).
+        fight.ally?.let { PetCard(s, it, fight.lunge?.takeIf { lunge -> lunge.pet }, fight.hits.filter { hit -> hit.pet }, time) }
     }
 }
+
+/** A support pet's healing of the hero: no blow, only life given back. */
+private val FloatingHit.mend: Boolean get() = pet && target == Side.HERO && amount == 0 && healed > 0
+
+/**
+ * The combat pet's card (3.70.0): its sprite, name and life. It lifts in gold as it strikes, shakes red as it is struck
+ * and glows green as it mends the hero; the blows it takes float over it. Down, it greys and waits for the fight's end.
+ */
+@Composable private fun PetCard(s: ForgeState, ally: AllyView, lunge: LungeView?, hits: List<FloatingHit>, time: Float) {
+    val acting = reach(lunge, Side.HERO, null)
+    val hit = struck(lunge, Side.HERO, null)
+    val mending = hits.any { it.mend && it.age < PET_PULSE }
+    val ring = when {
+        !ally.alive -> Muted.copy(alpha = .5f)
+        acting > 0f -> GoldBright
+        hit -> LifeRed
+        mending -> Vital
+        else -> Gold.copy(alpha = .5f)
+    }
+    val shape = RoundedCornerShape(8.dp)
+    Column(Modifier.width(76.dp).graphicsLayer {
+            translationY = -acting * 6.dp.toPx()
+            translationX = if (hit) sin(time * 60f) * 2.dp.toPx() else 0f
+            alpha = if (ally.alive) 1f else .55f
+        }
+        .background(if (acting > 0f) PanelRaised else Abyss, shape)
+        .border(if (acting > 0f || hit || mending) 2.dp else 1.dp, ring, shape)
+        .padding(5.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) {
+            PetIcon(s, ally.species, 34)
+            CardHits(hits.filter { it.target == Side.HERO && !it.mend })
+        }
+        Text(petName(ally.species), color = if (ally.alive) Vital else Muted, style = MaterialTheme.typography.labelSmall,
+            maxLines = 1, overflow = TextOverflow.Ellipsis)
+        LifeBar(ally.life, ally.maxLife, 0, 0, Modifier.fillMaxWidth().height(10.dp))
+    }
+}
+
+/** How long, in seconds, the pet's card glows after it mends the hero. */
+private const val PET_PULSE = .5
 
 /**
  * The scouting panel (2.70.0): one foe while nothing moves — what it is and where it stands, its
@@ -517,7 +555,7 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
 /** The log's shelves as chips (3.37.0): each on or off, the choice kept on the device. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable internal fun LogShelves(shown: Set<LogKind>, onChange: (Set<LogKind>) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         LogKind.entries.forEach { kind ->
             val on = kind in shown
             FilterChip(selected = on, onClick = { onChange(if (on) shown - kind else shown + kind) },
@@ -884,7 +922,7 @@ private sealed interface PackRow {
 private fun logLine(event: CombatEvent, monster: String): String {
     val damage = event.damage.roundToInt()
     val hero = event.actor == Side.HERO
-    val line = when (event.action) {
+    val line = event.pet?.let { petLine(event, monster, petName(it), damage) } ?: when (event.action) {
         Action.RETREAT -> ui("expedition.log_retreat")
         // Thorns and reflect (2.75.0): the one who was struck gives a blow back.
         Action.REFLECT -> if (hero) ui("expedition.log_reflect_you", monster, damage) else ui("expedition.log_reflect_they", monster, damage)
@@ -924,6 +962,24 @@ private fun logLine(event: CombatEvent, monster: String): String {
         event.inflicted.forEach { add(ui(it.key())) }
     }
     return if (marks.isEmpty()) line else "$line · ${marks.joinToString(" · ")}"
+}
+
+/**
+ * A line of the combat pet (3.70.0), named: its blow at [monster], the blow it took from one, the healing it gave the hero;
+ * null for anything the hero's own sentences say well enough.
+ */
+private fun petLine(event: CombatEvent, monster: String, pet: String, damage: Int): String? {
+    val (doer, done) = if (event.actor == Side.HERO) pet to monster else monster to pet
+    return when {
+        event.actor == Side.HERO && event.onSelf -> event.healed.takeIf { it >= 1 }?.let { ui("expedition.log_pet_heal", pet, it.roundToInt()) }
+        event.action == Action.TICK -> ui("expedition.log_tick_they", pet, damage, event.ailment?.let { ui(it.key()) }.orEmpty())
+        event.action == Action.REFLECT -> ui("expedition.log_returns", doer, done, damage)
+        event.action != Action.ATTACK && event.action != Action.SKILL -> null
+        event.kind == HitKind.EVADED -> ui("expedition.log_evades", done, doer)
+        event.kind == HitKind.BLOCKED -> ui("expedition.log_blocks", done, doer)
+        event.damage > 0 -> ui(if (event.kind == HitKind.CRIT) "expedition.log_strikes_crit" else "expedition.log_strikes", doer, done, damage)
+        else -> null
+    }
 }
 
 internal fun noteLine(event: CombatEvent, monster: String): String {

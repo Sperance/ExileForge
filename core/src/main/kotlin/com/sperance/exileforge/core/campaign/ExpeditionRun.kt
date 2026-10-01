@@ -31,10 +31,14 @@ enum class RunPhase { MAP, FIGHT, LOOT, GATE, CRYSTAL, ABYSS, DEAD, CLEARED, LEF
 
 /** A number floating off a fighter, [age] seconds after the blow that made it; [foe] is the foe of the pack it was about. */
 data class FloatingHit(val id: Int, val target: Side, val action: Action, val kind: HitKind, val amount: Int, val age: Double, val healed: Int,
-    val type: DamageType?, val inflicted: List<Ailment>, val stunned: Boolean, val foe: Int = 0)
+    val type: DamageType?, val inflicted: List<Ailment>, val stunned: Boolean, val foe: Int = 0,
+    /** The combat pet's line (3.70.0): it struck, healed, or was struck — its card pulses with it. */
+    val pet: Boolean = false)
 
 /** The blow on screen right now, for the cards to act out. */
-data class LungeView(val actor: Side, val action: Action, val kind: HitKind, val landed: Boolean, val progress: Float, val foe: Int = 0)
+data class LungeView(val actor: Side, val action: Action, val kind: HitKind, val landed: Boolean, val progress: Float, val foe: Int = 0,
+    /** The combat pet's blow, or a blow at it (3.70.0): its card acts it out, not the hero's. */
+    val pet: Boolean = false)
 
 /** One ailment on a fighter as its tile shows it: the share of time [left], the [stacks], the [seconds] it still holds and its [strength]. */
 data class AilmentView(val ailment: Ailment, val left: Float, val stacks: Int, val seconds: Double = 0.0, val strength: Double = 0.0)
@@ -283,8 +287,8 @@ class ExpeditionRun(
     private val onFallen: () -> Unit,
     /** The autorun that drives this run instead of the stick (3.2.0); null walks by hand. */
     private var autopilot: AutoPilot? = null,
-    /** The combat pet at work (3.5.0). */
-    private val pet: Pet? = null,
+    /** The combat pet at work (3.5.0), read again as each fight begins (3.70.0): one put to work mid-run joins the next. */
+    private val pet: () -> Pet? = { null },
 ) {
     /** The run as the rules roll it; it takes the Vaal zone's context once the portal opens. */
     var run: Run = run
@@ -347,8 +351,10 @@ class ExpeditionRun(
     private val vaaled = HashMap<Int, Crystal>()
     private var fallEvent: Int? = null
     /** The pet as a fighter (3.5.0), made again only when the hero's sheet that reaches it changes. */
-    private val allies = PetAllies(index, pet, rules)
-    private fun ally(): Ally? = allies.of(hero.stats)
+    private val allies = PetAllies(index, rules)
+    /** The pet of the fight under way, taken as it began: a change mid-fight waits for the next. */
+    private var fightPet: Pet? = null
+    private fun ally(): Ally? = allies.of(hero.stats, fightPet)
     /**
      * The hero's degeneration on the road (3.4.0): the fight burns it in its own beat, the walk did not.
      * Off a fight it wounds to the last point: only a fight ends a run.
@@ -759,6 +765,7 @@ class ExpeditionRun(
      * the engaged one first, then the rest by their distance to it; the boss and a guardian always fight alone.
      */
     private fun engage(agent: MonsterAgent, level: Int = zone.level, abyssal: Boolean = false, carry: StageCarry? = null) {
+        fightPet = pet()
         fightAgents = if (abyssal) listOf(agent) else world.gathered(agent)
         fightStages = if (abyssal) listOf(fightAgents) else world.stages(fightAgents)
         fightStrongest = fightAgents.flatMap { pack -> pack.standing.map { pack.pack[it] } }.maxByOrNull { it.rarity.ordinal }
@@ -1026,8 +1033,8 @@ class ExpeditionRun(
             killed: Collection<Int> = emptyList(),
             /** An autorun instead of the stick (3.2.0). */
             auto: AutoPlan? = null,
-            /** The combat pet at work (3.5.0): it fights every fight at the hero's side. */
-            pet: Pet? = null,
+            /** The combat pet at work (3.5.0): it fights every fight at the hero's side, read again as each begins (3.70.0). */
+            pet: () -> Pet? = { null },
         ): ExpeditionRun {
             val zone = if (vaal) VaalZones.zone(location) ?: location else location
             val context = run.context

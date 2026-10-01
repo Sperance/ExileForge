@@ -66,7 +66,7 @@ class TrialArena(
     val trial: TrialRun,
     context: RunContext,
     gear: HeroGear,
-    pet: Pet?,
+    private val pet: Pet?,
     private val onEvent: (TrialEvent) -> Unit,
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
@@ -77,7 +77,7 @@ class TrialArena(
     private val waves = AbyssWaves(index, run)
     private val atlas = AtlasEffects.map(emptyMap(), context.atlas)
     private val plan = trial.region.takeIf { trial.kind == TrialKind.RUSH }?.let { code -> index.campaign.regions.firstOrNull { it.code == code } }?.let(::RushPlan)
-    private val allies = PetAllies(index, pet, rules)
+    private val allies = PetAllies(index, rules)
     private val commands = ConcurrentLinkedQueue<RunCommand>()
 
     private var gear = gear
@@ -205,7 +205,7 @@ class TrialArena(
     private fun battle(foes: List<RolledMonster>): Battle = Battle(hero, foes.map { monster ->
         Foe(Combatant(monster.stats, level, rules), monster.rarity, monster.skills.mapNotNull(index.skills.monsterByCode::get), monster, level)
     }, rules, pools.life, Random(Streams.mix(trial.seed, FIGHT_STREAM, fought++)), gear.stance, kit = kit, model = build, pools = pools,
-        percent = gear.percent, ally = allies.of(hero.stats), stage = carry)
+        percent = gear.percent, ally = allies.of(hero.stats, pet), stage = carry)
 
     /** The floor's lines and the atlas over the hero and the monsters, as a map's. */
     private fun effects(): Map<String, Double> =

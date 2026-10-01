@@ -122,7 +122,7 @@ internal fun compactCount(amount: Long): String = when {
  * An orb is its stained glass since 2.69.0; anything else is the server's sprite when the set has one,
  * the bundled glyph of its category otherwise — muted for a code the content does not know.
  */
-@Composable private fun StackIcon(s: ForgeState, code: String, size: Int) {
+@Composable internal fun StackIcon(s: ForgeState, code: String, size: Int) {
     if (Orb.of(code) != null) { BagIcon(code, Modifier.size(size.dp)); return }
     val frame = RoundedCornerShape(6.dp)
     val known = s.index?.item(code)

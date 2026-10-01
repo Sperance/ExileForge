@@ -495,6 +495,11 @@ data class CombatEvent(
     val onSelf: Boolean = false,
     /** The hero's mana after it (2.78.0). */
     val heroMana: Double = 0.0,
+    /**
+     * The combat pet on the hero's side of this line (3.70.0), by species: it struck, healed or gave a blow back when the
+     * [actor] is the hero's side, it was struck when the actor is a monster. The figures count as they always did.
+     */
+    val pet: String? = null,
 ) {
     /** How this line came about (3.37.0), for its card; outside the event's identity, so two fights of one seed still compare equal. */
     var trace: Trace? = null
@@ -896,7 +901,9 @@ class Battle(
         (listOf(heroFighter) + listOfNotNull(allyFighter) + foeFighters).forEach { regenerate(it, dt); degenerate(it, dt); burn(it, dt) }
         // A support pet mends the hero while it stands (3.5.0).
         allyFighter?.takeIf { it.alive && heroFighter.alive && ally!!.heal > 0 }?.let {
+            val before = heroFighter.life
             heroFighter.life = min(heroFighter.body.maxLife, heroFighter.life + heroFighter.body.maxLife * ally!!.heal / 100 * dt)
+            mended(heroFighter.life - before)
         }
         expire()
         if (finished()) return
@@ -1146,7 +1153,7 @@ class Battle(
                         if (me.side == Side.MONSTER) me.index else active?.foe ?: 0,
                         trace = TickTrace(ailment, base * me.weakness() * me.body.dotTaken * me.body.ailmentTaken(ailment),
                             (own.maxOfOrNull { it.until } ?: time) - time, own.maxOfOrNull { it.duration } ?: 0.0, own.size, shot(me), factors, origin,
-                            (if (source == Side.HERO) heroFighter else foeFighters.getOrNull(active?.foe ?: -1))?.let { shot(it) }))
+                            (if (source == Side.HERO) heroFighter else foeFighters.getOrNull(active?.foe ?: -1))?.let { shot(it) }), pet = isPet(me))
                 }
             }
         }
@@ -1173,7 +1180,8 @@ class Battle(
     internal fun strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
         val body = blow.body ?: me.body
         val foe = if (me.side == Side.MONSTER) me.index else target.index
-        if (target.invulnerable) { record(me.side, blow.action, HitKind.BLOCKED, 0.0, null, 0.0, false, emptyList(), null, foe, blow.skill); return false }
+        val petLine = isPet(me) || isPet(target)
+        if (target.invulnerable) { record(me.side, blow.action, HitKind.BLOCKED, 0.0, null, 0.0, false, emptyList(), null, foe, blow.skill, pet = petLine); return false }
         val sure = me === heroFighter && nextCrit
         // 3.37.0: every draw of this blow goes on its tape, and the shots are taken before anything changes.
         tape = mutableListOf()
@@ -1192,7 +1200,7 @@ class Battle(
         if (me.side == Side.MONSTER) lastStriker = me.index
         if (kind == HitKind.EVADED || kind == HitKind.BLOCKED) {
             record(me.side, blow.action, kind, 0.0, null, 0.0, false, emptyList(), null, foe, blow.skill,
-                trace = HitTrace(striker, struck, takeTape(), emptyList(), emptyList(), null, origin))
+                trace = HitTrace(striker, struck, takeTape(), emptyList(), emptyList(), null, origin), pet = petLine)
             if (kind == HitKind.BLOCKED) blocked(target)
             if (target === heroFighter) {
                 trigger(if (kind == HitKind.EVADED) SkillEvent.EVADE else SkillEvent.BLOCK, me)
@@ -1408,7 +1416,7 @@ class Battle(
         }
         val landing = Landing(0.0, absorbed, 0.0, 0.0, shielded - absorbed + chaos, 0.0, 0.0, 0.0, false)
         record(me.side, Action.REFLECT, HitKind.HIT, total, mitigated.maxBy { it.value }.key, 0.0, false, emptyList(), null, foe,
-            trace = HitTrace(striker, struck, emptyList(), factors, types.map { it.first }, landing, origin))
+            trace = HitTrace(striker, struck, emptyList(), factors, types.map { it.first }, landing, origin), pet = isPet(me) || isPet(attacker))
         if (!attacker.alive) fell(attacker, killer = me)
     }
 
@@ -1458,7 +1466,8 @@ class Battle(
         val trace = pendingHit?.copy(rolls = takeTape(), landing = Landing(soakedBarrier, absorbed, manaPaid, bound - toLifeNow - manaPaid,
             toLifeNow, if (body.leechToShield) 0.0 else leech, onHit, recouped, culled))
         pendingHit = null
-        record(me.side, blow.action, kind, dealt, taken.maxByOrNull { it.value }?.key, healed, stunned, inflicted, null, foe, blow.skill, trace = trace)
+        record(me.side, blow.action, kind, dealt, taken.maxByOrNull { it.value }?.key, healed, stunned, inflicted, null, foe, blow.skill, trace = trace,
+            pet = isPet(me) || isPet(target))
         if (me === heroFighter) {
             if (target.alive && hexing()) hex(target)
             if (blow.weapon) chanceBuff(BuffKind.FORTIFY)
@@ -2066,10 +2075,32 @@ class Battle(
     private fun end(how: Outcome) { outcome = how; duration = time }
 
     private fun record(actor: Side, action: Action, kind: HitKind, damage: Double, type: DamageType?, healed: Double, stunned: Boolean,
-                       inflicted: List<Ailment>, ailment: Ailment?, foe: Int, skill: String? = null, onSelf: Boolean = false, trace: Trace? = null) {
+                       inflicted: List<Ailment>, ailment: Ailment?, foe: Int, skill: String? = null, onSelf: Boolean = false, trace: Trace? = null,
+                       pet: Boolean = false) {
         val m = foeFighters.getOrNull(foe)
         log += CombatEvent(time, actor, action, kind, damage, type, healed, stunned, inflicted, ailment, heroFighter.life, heroFighter.shield,
-            m?.life ?: 0.0, m?.shield ?: 0.0, foe, skill, onSelf, heroFighter.mana).also { it.trace = trace ?: skillTrace(actor, action, foe, skill, onSelf, healed) }
+            m?.life ?: 0.0, m?.shield ?: 0.0, foe, skill, onSelf, heroFighter.mana, ally?.code?.takeIf { pet })
+            .also { it.trace = trace ?: skillTrace(actor, action, foe, skill, onSelf, healed) }
+    }
+
+    /** [fighter] is the combat pet. */
+    private fun isPet(fighter: Fighter): Boolean = allyFighter != null && fighter === allyFighter
+
+    /**
+     * What a support pet mended since its last line (3.70.0): its healing runs every slice, so the log gathers it into a
+     * line a [PET_MEND_EVERY]. The line is the hero's own, on themselves — the figures leave it out, as they always did.
+     */
+    private var petMend = 0.0
+    private var petMendFrom = 0.0
+
+    private fun mended(amount: Double) {
+        petMend += amount
+        val pet = allyFighter ?: return
+        if (time - petMendFrom < PET_MEND_EVERY) return
+        if (petMend >= 1) record(Side.HERO, Action.SKILL, HitKind.HIT, 0.0, null, petMend, false, emptyList(), null, target()?.index ?: 0, onSelf = true,
+            trace = EffectTrace(EffectKind.BUFF, ally!!.code, emptyList(), time - petMendFrom, petMend, 1.0, shot(pet), origin), pet = true)
+        petMend = 0.0
+        petMendFrom = time
     }
 
     /**
@@ -2094,6 +2125,8 @@ class Battle(
         const val LUNGE = 0.16
         /** The pet's place in the fight: neither the hero's -1 nor a monster's. */
         const val ALLY = -2
+        /** How often, in seconds, a support pet's healing is written as a line of the log (3.70.0). */
+        const val PET_MEND_EVERY = 1.0
         /** How long a foe that stepped onto the field closes in before its first swing, and how much later each further place. */
         const val ENTRY = 0.55
         const val STAGGER = 0.13

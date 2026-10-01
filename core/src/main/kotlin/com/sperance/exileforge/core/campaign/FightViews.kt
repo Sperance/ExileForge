@@ -13,13 +13,14 @@ import kotlin.math.roundToInt
  * (server 1.32.0) the hero's sheet reaches it — its levels, damage, life, speed, armour and resistances — made again only
  * when those change. Shared by the map's runs and the trials (3.49.0).
  */
-internal class PetAllies(private val index: ContentIndex, private val pet: Pet?, private val rules: CombatRules) {
-    private var made: Pair<Map<String, Double>, Ally?>? = null
+internal class PetAllies(private val index: ContentIndex, private val rules: CombatRules) {
+    private var made: Triple<Pet?, Map<String, Double>, Ally?>? = null
     private val menagerie by lazy { Menagerie(index) }
 
-    fun of(heroStats: Map<String, Double>): Ally? {
+    /** [pet] as a fighter under the hero's [heroStats]; since 3.70.0 the pet is the caller's, so one put to work mid-run joins the next fight. */
+    fun of(heroStats: Map<String, Double>, pet: Pet?): Ally? {
         val boons = PetBoons.of(heroStats)
-        made?.takeIf { it.first == boons }?.let { return it.second }
+        made?.takeIf { it.first == pet && it.second == boons }?.let { return it.third }
         val ally = pet?.let { own ->
             val kind = menagerie.species(own.species) ?: return@let null
             val levels = (boons[PetBoons.LEVEL] ?: 0.0).toInt()
@@ -27,7 +28,7 @@ internal class PetAllies(private val index: ContentIndex, private val pet: Pet?,
             Ally(p.species, Combatant(PetBoons.apply(menagerie.sheet(p), boons), p.level, rules), kind.role == PetRole.TANK,
                 if (kind.role == PetRole.SUPPORT) menagerie.supportHeal(p) else 0.0, index.pets.drawFire)
         }
-        made = boons to ally
+        made = Triple(pet, boons, ally)
         return ally
     }
 }
@@ -47,7 +48,7 @@ internal fun Battle.hud(
             (event.damage > 0 || event.healed > 0 || event.kind == HitKind.EVADED || event.kind == HitKind.BLOCKED || event.action == Action.ATTACK) }
         .map { (index, event) ->
             FloatingHit(index, event.target, event.action, event.kind, event.damage.roundToInt(), time - event.time, event.healed.roundToInt(),
-                event.type, event.inflicted, event.stunned, event.foe)
+                event.type, event.inflicted, event.stunned, event.foe, event.pet != null)
         }
     fun ailments(f: Battle.Fighter) = f.ailments.groupBy { it.ailment }.map { (ailment, active) ->
         val until = active.maxOf { it.until }
@@ -67,7 +68,7 @@ internal fun Battle.hud(
         outcome = outcome,
         heroSwing = swing(h), heroAilments = ailments(h), heroHeld = h.held,
         retreating = retreating,
-        lunge = lunge()?.let { (event, progress) -> LungeView(event.actor, event.action, event.kind, event.landed, progress.toFloat(), event.foe) },
+        lunge = lunge()?.let { (event, progress) -> LungeView(event.actor, event.action, event.kind, event.landed, progress.toFloat(), event.foe, event.pet != null) },
         events = events.toList().asReversed(),
         started = started, paused = paused,
         target = target()?.index, focus = focus,

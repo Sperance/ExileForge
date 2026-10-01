@@ -27,6 +27,7 @@ import com.sperance.exileforge.rules.content.PetLine
 import com.sperance.exileforge.rules.roll.Menagerie
 import com.sperance.exileforge.rules.roll.OrbApplier
 import com.sperance.exileforge.rules.roll.OrbTarget
+import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.OrbGlyph
 import com.sperance.exileforge.ui.screens.craft.ChoiceFrame
 import com.sperance.exileforge.ui.screens.craft.ChoiceRow
@@ -36,6 +37,13 @@ import com.sperance.exileforge.ui.theme.*
 
 /** A species as the dictionary names it. */
 fun petName(species: String): String = locOr("pet.$species", species)
+
+/** A species' sprite (3.70.0): the egg of its biome, framed as a stack of the bag is; the menagerie's glyph for one the content does not know. */
+@Composable fun PetIcon(s: ForgeState, species: String, size: Int) {
+    val egg = s.index?.pets?.let { pets -> pets.species.firstOrNull { it.code == species }?.let { pets.eggs[it.biome] } }
+    if (egg != null) StackIcon(s, egg, size)
+    else Icon(ForgeGlyphs.Exile, null, tint = Gold, modifier = Modifier.size(size.dp))
+}
 
 /**
  * The menagerie (3.5.0, server 1.5.0): eggs from the bag hatch here, and every pet shows what it is, its
@@ -80,6 +88,9 @@ fun petName(species: String): String = locOr("pet.$species", species)
     val active = hero.pets.isActive(pet.id)
     var orbs by remember(pet.id) { mutableStateOf(false) }
     var releasing by remember(pet.id) { mutableStateOf(false) }
+    var hiring by remember(pet.id) { mutableStateOf(false) }
+    // A helper does not fight (3.70.0): what it gives instead is said on its card and before it goes to work.
+    val helps = if (kind.kind == PetKind.HELPER) ui("pets.helper_hint", menagerie.lines(pet).joinToString(", ") { lineText(index, it) }.ifBlank { "—" }) else null
     ForgePanel {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -93,6 +104,7 @@ fun petName(species: String): String = locOr("pet.$species", species)
             Text(ui("pets.level", pet.level), color = GoldBright, style = MaterialTheme.typography.labelMedium)
         }
         if (active) Text(ui("pets.at_work"), color = Vital, style = MaterialTheme.typography.labelSmall)
+        helps?.let { MutedText(it) }
         if (pet.corrupted) Text(ui("pets.corrupted"), color = LifeRed, style = MaterialTheme.typography.labelSmall)
         if (pet.quality > 0) Text(ui("pets.quality", pet.quality), color = GoldBright, style = MaterialTheme.typography.labelSmall)
         // Line by line, so a fractured one (server 1.65.0) is told apart: it stays through every orb.
@@ -113,12 +125,16 @@ fun petName(species: String): String = locOr("pet.$species", species)
             MutedText(ui("pets.sheet", number(sheet["STOCK_HEALTH"] ?: 0.0), number(sheet["STOCK_ATTACK_${kind.element}"] ?: 0.0)))
         }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            ForgeButton(onClick = { vm.activatePet(pet.id) }, enabled = !s.busy) { Text(ui(if (active) "pets.rest" else "pets.work")) }
+            ForgeButton(onClick = { if (helps != null && !active) hiring = true else vm.activatePet(pet.id) }, enabled = !s.busy) {
+                Text(ui(if (active) "pets.rest" else "pets.work"))
+            }
             ForgeOutlinedButton(onClick = { orbs = true }, enabled = !s.busy) { Text(ui("pets.orbs")) }
             ForgeTextButton(onClick = { releasing = true }, enabled = !s.busy) { Text(ui("pets.release")) }
         }
     }
     if (orbs) PetOrbs(s, vm, pet) { orbs = false }
+    if (hiring) ConfirmSheet(title = ui("pets.work_q"), confirm = ui("pets.work"), subtitle = petName(pet.species), note = helps,
+        onDismiss = { hiring = false }) { hiring = false; vm.activatePet(pet.id) }
     if (releasing) ConfirmSheet(title = ui("pets.release_q"), confirm = ui("pets.release"), danger = true, subtitle = petName(pet.species),
         ledger = listOf(LedgerLine(ui("pets.release_gold"), number(index.rules.pets.releasePrice(pet.rarity, pet.level).toDouble()), Tone.GAIN)),
         onDismiss = { releasing = false }) { releasing = false; vm.releasePet(pet.id) }

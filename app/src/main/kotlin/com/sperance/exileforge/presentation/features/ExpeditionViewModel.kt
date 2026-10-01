@@ -21,6 +21,7 @@ import com.sperance.exileforge.presentation.state.LootEntry
 import com.sperance.exileforge.presentation.state.MapLaunchState
 import com.sperance.exileforge.presentation.state.Reads
 import com.sperance.exileforge.rules.content.Orb
+import com.sperance.exileforge.rules.content.Pet
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.run.Run
@@ -132,10 +133,13 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         mutableRun.value = ExpeditionRun.start(index, zone, run, journal, gear, hero.campaign, System.currentTimeMillis(), hero.info.experience, hero.level,
             vaalOrbs = ::vaalOrbsFree, onRecorded = ::recorded,
             onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, killed = started.killed, auto = autoPlan,
-            pet = hero.pets.pet(hero.pets.combat))
+            pet = ::combatPet)
         vaalKilled = started.vaalKilled
         persist()
     } }
+
+    /** The hero's combat pet at work now (3.70.0): a run reads it as each fight begins, so «В дело» mid-run counts from the next fight. */
+    private fun combatPet(): Pet? = runtime.state.value.hero?.let { it.pets.pet(it.pets.combat) }
 
     /** Vaal orbs at hand, the ones the journal has spent but the server not yet counted taken out. */
     private fun vaalOrbsFree(): Long = (state.value.hero?.bag?.get(Orb.VAAL_ORB.name) ?: 0L) - (runJournal?.pending?.count { it.kind == RunEventKind.CRYSTAL_VAAL } ?: 0)
@@ -299,7 +303,7 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         val inner = ExpeditionRun.start(index, outer.run.zone, outer.run, journal, gear, hero.campaign, System.currentTimeMillis(), hero.info.experience, hero.level,
             vaalOrbs = ::vaalOrbsFree, onRecorded = ::recorded, vaal = true, startPools = outer.pools,
             onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, killed = vaalKilled, auto = autoPlan.takeIf { outer.hud.value.auto != null },
-            pet = hero.pets.pet(hero.pets.combat))
+            pet = ::combatPet)
         parent = outer
         mutableRun.value = inner
     } }

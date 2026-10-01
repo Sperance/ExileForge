@@ -766,6 +766,9 @@ class Battle(
 
     /** The hero's mana the auras leave free (2.78.0). */
     fun manaCap(): Double = heroFighter.body.maxMana * (1 - kit.reserved(heroFighter.body) / 100)
+
+    /** The hero's mana the auras hold: the rest of the pool past [manaCap]. */
+    fun manaReserved(): Double = heroFighter.body.maxMana - manaCap()
     private fun manaCap(fighter: Fighter): Double = if (fighter === heroFighter) manaCap() else fighter.body.maxMana
 
     /** Uses the skill of active slot [slot] at the next slice, if it is ready and the mana is there — its condition aside. */

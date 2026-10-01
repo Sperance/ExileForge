@@ -89,7 +89,8 @@ data class FightHud(
     /** The pet beside the hero (3.5.0). */
     val ally: AllyView? = null,
     val heroTaunt: Boolean = false,
-    val heroMana: Int = 0, val heroMaxMana: Int = 0,
+    /** [heroMaxMana] is the mana the auras leave free; [heroReserved] what they hold past it. */
+    val heroMana: Int = 0, val heroMaxMana: Int = 0, val heroReserved: Int = 0,
     val skills: List<SkillView?> = emptyList(),
     val flasks: List<FlaskView?> = emptyList(),
     val heroEffects: List<EffectView> = emptyList(),
@@ -160,7 +161,8 @@ data class RunHud(
     val gate: VaalZone? = null,
     /** This run is a Vaal zone: no way out but its guardian or a death, and a death is not the map's end. */
     val vaal: Boolean = false,
-    val heroMana: Int = 0, val heroMaxMana: Int = 0,
+    /** [heroMaxMana] is the mana the auras leave free; [heroReserved] what they hold past it. */
+    val heroMana: Int = 0, val heroMaxMana: Int = 0, val heroReserved: Int = 0,
     val flasks: List<FlaskView?> = emptyList(),
     val crystal: CrystalView? = null,
     val crystalsLeft: Int = 0,
@@ -921,6 +923,7 @@ class ExpeditionRun(
             fountainsLeft = world.fountains.count { !it.used },
             gate = gate, vaal = vaal,
             heroMana = (battle?.heroMana ?: mana).roundToInt(), heroMaxMana = (battle?.manaCap() ?: manaCap()).roundToInt(),
+            heroReserved = (battle?.manaReserved() ?: (hero.maxMana - manaCap())).roundToInt(),
             flasks = battle?.flaskViews() ?: mapFlasks(),
             crystal = crystal?.let { CrystalView(it.id, it.crystal.essences, it.crystal.guardian, it.crystal.stronger, it.crystal.vaal, crystalOutcome, vaaling(it)) },
             crystalsLeft = world.standingCrystals.size,

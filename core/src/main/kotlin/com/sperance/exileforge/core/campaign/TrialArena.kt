@@ -282,7 +282,8 @@ class TrialArena(
         val fight = battle
         val life = (fight?.heroLife ?: pools.life).roundToInt()
         val runHud = RunHud(RunPhase.FIGHT, "", life, hero.maxLife.roundToInt(), (fight?.heroFighter?.shield ?: hero.maxShield).roundToInt(), hero.maxShield.roundToInt(),
-            alive = 0, total = 0, heroMana = (fight?.heroMana ?: pools.mana).roundToInt(), heroMaxMana = manaCap().roundToInt(), kills = kills)
+            alive = 0, total = 0, heroMana = (fight?.heroMana ?: pools.mana).roundToInt(), heroMaxMana = manaCap().roundToInt(),
+            heroReserved = (hero.maxMana - manaCap()).roundToInt(), kills = kills)
         val leader = monsters.maxByOrNull { it.rarity.ordinal }
         val fightHud = if (fight != null && leader != null) fight.hud(monsters, leader, speed, started, paused, hero.taunt, level, escape = !started,
             stage = if (trial.kind == TrialKind.RUSH) step + 1 else stage, stages = if (trial.kind == TrialKind.RUSH) plan?.size ?: 1 else stages,

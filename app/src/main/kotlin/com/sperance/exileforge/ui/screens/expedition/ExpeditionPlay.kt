@@ -154,7 +154,7 @@ import kotlinx.coroutines.delay
                     color = if (hud.sealed) LifeRed else Vital, style = MaterialTheme.typography.labelMedium)
                 Journal(hud, onRetry)
                 // Life under the map's name (2.72.0), out of the middle of the view; the mana and the belt under it (2.78.0).
-                Vitals(hud.heroLife, hud.heroMaxLife, hud.heroShield, hud.heroMaxShield, Modifier.fillMaxWidth(), hud.heroMana, hud.heroMaxMana)
+                Vitals(hud.heroLife, hud.heroMaxLife, hud.heroShield, hud.heroMaxShield, Modifier.fillMaxWidth(), hud.heroMana, hud.heroMaxMana, hud.heroReserved)
                 if (hud.flasks.any { it != null }) MapFlasks(hud.flasks, onDrink)
             }
             // The minimap (2.51.0), opened as the map is explored; round and around the hero since 2.56.1,
@@ -381,8 +381,12 @@ private const val MINIMAP_CELLS = 22f
 private const val MINIMAP_MIN = 10f
 private const val MINIMAP_MAX = 60f
 
-/** A life bar with the shield laid over it, and the figure in words; the mana under it since 2.78.0. */
-@Composable internal fun Vitals(life: Int, maxLife: Int, shield: Int, maxShield: Int, modifier: Modifier = Modifier, mana: Int = 0, maxMana: Int = 0) {
+/**
+ * A life bar with the shield laid over it, and the figure in words; the mana under it since 2.78.0,
+ * its [reserved] part past [maxMana] a hatched tail.
+ */
+@Composable internal fun Vitals(life: Int, maxLife: Int, shield: Int, maxShield: Int, modifier: Modifier = Modifier, mana: Int = 0, maxMana: Int = 0,
+                                reserved: Int = 0) {
     val shape = RoundedCornerShape(3.dp)
     val lifeShare by animateFloatAsState(if (maxLife > 0) life / maxLife.toFloat() else 0f, label = "life")
     Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -390,8 +394,9 @@ private const val MINIMAP_MAX = 60f
             Box(Modifier.fillMaxWidth(lifeShare.coerceIn(0f, 1f)).fillMaxHeight().background(Brush.horizontalGradient(listOf(LifeRed, LifeRed.copy(alpha = .55f))), shape))
             if (maxShield > 0) Box(Modifier.fillMaxWidth((shield / maxShield.toFloat()).coerceIn(0f, 1f)).height(4.dp).align(Alignment.TopStart).background(ShieldCyan.copy(alpha = .85f)))
         }
-        if (maxMana > 0) Box(Modifier.fillMaxWidth().height(6.dp).background(Color(0xCC0A0D12), shape).border(1.dp, ManaBlue.copy(alpha = .8f), shape)) {
-            Box(Modifier.fillMaxWidth((mana / maxMana.toFloat()).coerceIn(0f, 1f)).fillMaxHeight().background(ManaBlue, shape))
+        if (maxMana > 0) Box(Modifier.fillMaxWidth().height(6.dp).clip(shape).background(Color(0xCC0A0D12), shape)
+            .reservedTail(reservedShare(maxMana, reserved), ManaBlue).border(1.dp, ManaBlue.copy(alpha = .8f), shape)) {
+            Box(Modifier.fillMaxWidth((mana / (maxMana + reserved.coerceAtLeast(0)).toFloat()).coerceIn(0f, 1f)).fillMaxHeight().background(ManaBlue, shape))
         }
         Text((if (maxShield > 0) ui("expedition.vitals_shield", life, maxLife, shield) else ui("expedition.vitals", life, maxLife)) +
             (if (maxMana > 0) " · " + ui("expedition.vitals_mana", mana, maxMana) else ""), color = Parchment, style = MaterialTheme.typography.labelSmall)

@@ -403,7 +403,7 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
             // The pools as bars of their own (3.24.0): the shield over life, mana under it, each with its figures and share.
             if (hud.heroMaxShield > 0) VitalBar(fight.heroShield, hud.heroMaxShield, ShieldCyan, Modifier.fillMaxWidth().height(16.dp))
             VitalBar(fight.heroLife, hud.heroMaxLife, LifeRed, Modifier.fillMaxWidth().height(18.dp), ring = GoldBright.takeIf { fight.heroBarrier > 0 })
-            if (fight.heroMaxMana > 0) VitalBar(fight.heroMana, fight.heroMaxMana, ManaBlue, Modifier.fillMaxWidth().height(16.dp))
+            if (fight.heroMaxMana > 0) VitalBar(fight.heroMana, fight.heroMaxMana, ManaBlue, Modifier.fillMaxWidth().height(16.dp), reserved = fight.heroReserved)
             SwingBar(fight.heroSwing, fight.heroHeld, Modifier.fillMaxWidth())
             StateTiles(fight.heroAilments, fight.heroHeld, fight.heroEffects, fight.heroCharges)
             // The combat pet beside the hero (3.5.0): its name and life; down, it waits for the fight's end.
@@ -610,14 +610,16 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
 /**
  * One pool as a bar (3.24.0): a rounded dark track with a soft border of the pool's colour, the fill lit from above,
  * and the figures — now / most · share — across it in a shadowed type that reads over the fill and the track alike.
- * [ring] outlines it brighter, as a barrier (2.78.0) does the hero's life while it soaks.
+ * [ring] outlines it brighter, as a barrier (2.78.0) does the hero's life while it soaks. [reserved] past [max] is
+ * the mana the auras hold: the bar's hatched tail, the fill running up to it.
  */
 @Composable private fun VitalBar(value: Int, max: Int, tint: Color, modifier: Modifier, ring: Color? = null,
-                                 text: String = vitalFigures(value, max), size: TextUnit = 10.sp) {
+                                 text: String = vitalFigures(value, max), size: TextUnit = 10.sp, reserved: Int = 0) {
     val shape = RoundedCornerShape(50)
-    val share by animateFloatAsState(if (max > 0) (value / max.toFloat()).coerceIn(0f, 1f) else 0f, label = "vital")
+    val whole = max + reserved.coerceAtLeast(0)
+    val share by animateFloatAsState(if (whole > 0) (value / whole.toFloat()).coerceIn(0f, 1f) else 0f, label = "vital")
     Box(modifier.clip(shape).background(Brush.verticalGradient(listOf(Color(0xE6050709), Color(0xCC161B23))), shape)
-        .border(if (ring != null) 2.dp else 1.dp, ring ?: tint.copy(alpha = .45f), shape), contentAlignment = Alignment.Center) {
+        .reservedTail(reservedShare(max, reserved), tint).border(if (ring != null) 2.dp else 1.dp, ring ?: tint.copy(alpha = .45f), shape), contentAlignment = Alignment.Center) {
         Box(Modifier.align(Alignment.CenterStart).fillMaxWidth(share).fillMaxHeight().clip(shape)
             .background(Brush.verticalGradient(listOf(lerp(tint, Color.White, .35f), tint, tint.copy(alpha = .7f)))))
         Text(text, color = Color.White, fontSize = size, lineHeight = size, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false,

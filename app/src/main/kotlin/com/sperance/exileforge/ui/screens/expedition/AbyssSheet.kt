@@ -55,7 +55,7 @@ import com.sperance.exileforge.ui.theme.*
             val hoard = view.hoard
             // Between depths (2.82.0): the hero as the last wave left them, and a draught before the next.
             if (view.open && hoard == null && !view.fallen) {
-                Vitals(hud.heroLife, hud.heroMaxLife, hud.heroShield, hud.heroMaxShield, Modifier.fillMaxWidth(), hud.heroMana, hud.heroMaxMana)
+                Vitals(hud.heroLife, hud.heroMaxLife, hud.heroShield, hud.heroMaxShield, Modifier.fillMaxWidth(), hud.heroMana, hud.heroMaxMana, hud.heroReserved)
                 if (hud.flasks.any { it != null }) MapFlasks(hud.flasks) { onCommand(RunCommand.Drink(it)) }
             }
             when {

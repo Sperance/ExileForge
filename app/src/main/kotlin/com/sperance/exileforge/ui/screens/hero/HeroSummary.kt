@@ -23,6 +23,8 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.components.Tip
 import com.sperance.exileforge.ui.components.Tipped
 import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.manaReserve
+import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.ui.icons.StatIcon
 import com.sperance.exileforge.rules.sheet.Shift
 import com.sperance.exileforge.ui.theme.*
@@ -91,8 +93,12 @@ internal fun StatGroup.accent(): Color = when (this) {
         .padding(horizontal = 6.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         Tipped({ Tip(statTitle(key, s.lang), tint = accent, facts = listOf(ui("tip.value") to statValue(key, value, s.index))) }) { StatIcon(key, accent, Modifier.size(12.dp)) }
-        Text(statTitle(key, s.lang), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 2, overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f))
+        // The mana's share the auras hold reads under its name: the figure on the right is the whole pool.
+        val reserve = if (key == MANA_STAT) remember(s.hero, s.index) { s.manaReserve() }?.takeIf { it.percent > 0 } else null
+        Column(Modifier.weight(1f)) {
+            Text(statTitle(key, s.lang), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            reserve?.let { Text(ui("hero.mana_reserved", number(it.percent)), color = ManaBlue, style = MaterialTheme.typography.labelSmall, maxLines = 1) }
+        }
         was?.let { Text(statValue(key, it, s.index), color = Muted, style = MaterialTheme.typography.labelSmall, textDecoration = TextDecoration.LineThrough) }
         // A capped figure (3.12.0) reads as the fight reads it, greyed when it lies above; the ceiling is in the figure's window.
         val limit = s.index?.campaign?.combat?.let { StatLimits.of(key, s.hero?.stats.orEmpty(), it) }
@@ -100,3 +106,5 @@ internal fun StatGroup.accent(): Color = when (this) {
             style = MaterialTheme.typography.labelLarge, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
     }
 }
+
+internal const val MANA_STAT = "STOCK_MANA"

@@ -25,6 +25,9 @@ import com.sperance.exileforge.core.display.statDescription
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.ManaReserve
+import com.sperance.exileforge.presentation.state.manaReserve
+import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.presentation.state.ShareCard
 import com.sperance.exileforge.presentation.state.ShareKind
 import com.sperance.exileforge.presentation.state.ShareRow
@@ -70,6 +73,7 @@ internal fun ShareKind.color(): Color = when (this) {
             }
             item { Header(current, view, accent, s) }
             s.index?.campaign?.combat?.let { StatLimits.of(current, s.hero?.stats.orEmpty(), it) }?.let { limit -> item { LimitCard(limit, s) { trail = trail + it } } }
+            if (current == MANA_STAT) s.manaReserve()?.takeIf { it.percent > 0 }?.let { reserve -> item { ReserveCard(reserve, s) } }
             statDescription(current, s.lang, power).takeIf { it.isNotBlank() }?.let { text -> item { Description(text, accent) } }
             if (view.weights.values.sum() > 0) item { ShareBar(view.weights) }
             items(view.cards.size) { i -> SourceCard(view.cards[i], s) { trail = trail + it } }
@@ -113,6 +117,18 @@ internal fun ShareKind.color(): Color = when (this) {
         limit.hard?.let { SourceLine(ShareRow(ui("stat.cap.hard"), value(it)), open) }
         Text(ui("stat.cap.counts", value(minOf(limit.effective, limit.cap))) + if (limit.over > 0) " · " + ui("stat.cap.over", value(limit.over)) else "",
             color = if (limit.over > 0) Muted else Parchment, style = MaterialTheme.typography.labelSmall)
+    }
+}
+
+/** What the passive auras hold of the mana: their share and amount, and the mana left free to spend. */
+@Composable private fun ReserveCard(reserve: ManaReserve, s: ForgeState) {
+    val shape = RoundedCornerShape(12.dp)
+    val value = { v: Double -> statValue(MANA_STAT, v, s.index) }
+    Column(Modifier.fillMaxWidth().clip(shape).background(PanelRaised).border(1.dp, ManaBlue.copy(alpha = .45f), shape).padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(ui("stat.reserve.title"), color = Parchment, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+        SourceLine(ShareRow(ui("stat.reserve.held", number(reserve.percent)), "−" + value(reserve.held))) {}
+        SourceLine(ShareRow(ui("stat.reserve.free"), value(reserve.free))) {}
     }
 }
 

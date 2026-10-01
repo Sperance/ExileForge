@@ -10,7 +10,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -28,14 +27,31 @@ import com.sperance.exileforge.ui.theme.*
 val LocalUpdates = staticCompositionLocalOf<UpdateViewModel?> { null }
 
 /**
- * The update gate (3.72.0), over everything: until a check succeeds the game is closed, and a newer build found is
- * required — its window cannot be dismissed. [busy] - a run or a trial is under way: the window waits for its end.
+ * The update gate (3.72.0), over everything: a newer build found is required — its window cannot be dismissed. [busy] - a
+ * run or a trial is under way: the window waits for its end. Since 3.73.0 the check itself is unseen, and the first start
+ * asks once to allow installing from this game, so the update later goes in without a detour.
  */
 @Composable fun UpdateGate(updates: UpdateViewModel, busy: Boolean) {
     val s by updates.state.collectAsStateWithLifecycle()
     when {
-        !s.verified -> Locked { UnverifiedBody(s, updates::retry) }
         s.update != null && !busy -> Locked { UpdateBody(s, updates) }
+        s.askSources -> SourcesPrompt(updates)
+    }
+}
+
+/** The first start (3.73.0): why the game wants «install unknown apps», the way to the setting, and «later». */
+@Composable private fun SourcesPrompt(updates: UpdateViewModel) {
+    val context = LocalContext.current
+    Dialog(onDismissRequest = updates::sourcesAsked) {
+        Column(Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(12.dp)).border(1.dp, Gold.copy(alpha = .4f), RoundedCornerShape(12.dp))
+            .padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(ui("update.sources_title"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
+            MutedText(ui("update.sources_note"))
+            ForgeButton(onClick = { context.startActivity(UpdateInstaller.permissionScreen(context)); updates.sourcesAsked() }, modifier = Modifier.fillMaxWidth()) {
+                Text(ui("update.open_settings"))
+            }
+            ForgeOutlinedButton(onClick = updates::sourcesAsked, modifier = Modifier.fillMaxWidth()) { Text(ui("update.later")) }
+        }
     }
 }
 
@@ -46,15 +62,6 @@ val LocalUpdates = staticCompositionLocalOf<UpdateViewModel?> { null }
             .border(1.dp, Gold.copy(alpha = .4f), RoundedCornerShape(12.dp)).padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
     }
-}
-
-/** The check at start has not succeeded yet: it runs, or it failed and is tried again by hand. */
-@Composable private fun ColumnScope.UnverifiedBody(s: UpdateState, onRetry: () -> Unit) {
-    Text(ui("update.checking_title"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
-    if (s.checking) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised)
-    s.failure?.let { InfoCard(ui("update.check_failed_title"), it, failure = true) }
-    if (!s.checking) ForgeButton(onClick = onRetry, modifier = Modifier.fillMaxWidth()) { Text(ui("update.retry")) }
-    VersionLabel(Modifier.align(Alignment.CenterHorizontally))
 }
 
 /** The build to take: from what to what, what is new, and the download into the installer. */

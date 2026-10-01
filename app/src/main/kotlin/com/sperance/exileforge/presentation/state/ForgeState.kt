@@ -101,6 +101,8 @@ data class ForgeState(
     fun bagAmount(code: String): Long? = hero?.let { it.bag[code] ?: 0L }
     /** The orbs of the world, in the order of their price: what the forge and the auction offer. */
     val orbs: List<Item> get() = index?.itemsByCategory?.get(Item.CURRENCY).orEmpty().sortedBy { it.price }
+    /** The auction's money (server 1.65.0): the base orbs a lot is priced, bought and filtered in, cheapest first. */
+    val currencies: List<Item> get() = index?.let { i -> orbs.filter { i.rules.auction.trades(it.code) } }.orEmpty()
     /** The bench lines the hero has found; the rest of the bench stays hidden. */
     val bench: List<BenchRecipe> get() = index?.let { i -> hero?.let { h -> i.bench.filter { it.code in h.info.recipes } } }.orEmpty()
     /** Which zones the hero has passed and which are open: derived from the hero, no request. */

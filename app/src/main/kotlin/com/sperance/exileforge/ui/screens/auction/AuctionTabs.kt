@@ -206,9 +206,9 @@ private val templateSlots: List<Slot> = Slot.entries.filter { it != Slot.RING_2 
                 OutlinedTextField(draft.maxItemLevel, { draft = draft.copy(maxItemLevel = it.filter(Char::isDigit)) }, label = { Text(ui("auction.ilvl_to")) },
                     singleLine = true, keyboardOptions = digits, modifier = Modifier.weight(1f))
             }
-            // The price's orb is an item code (3.0.0): the content's currencies, in the order of their price.
+            // The price's orb is an item code (3.0.0): the auction's currencies, in the order of their price.
             Spinner(ui("auction.priced_in"), draft.priceOrb,
-                mapOf("" to any) + orbOptions(s), true, glyph = Glyph.CURRENCY, optionArt = orbArt(s.orbs)) { draft = draft.copy(priceOrb = it) }
+                mapOf("" to any) + orbOptions(s), true, glyph = Glyph.CURRENCY, optionArt = orbArt(s.currencies)) { draft = draft.copy(priceOrb = it) }
             OutlinedTextField(draft.maxPrice, { draft = draft.copy(maxPrice = it.filter(Char::isDigit)) }, label = { Text(ui("auction.price_max")) },
                 singleLine = true, keyboardOptions = digits, modifier = Modifier.fillMaxWidth())
             // A seller is named by the hero's id: there is no catalogue of heroes to pick one from.

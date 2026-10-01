@@ -3357,5 +3357,8 @@
   "guide.progress.title": "Progress",
   "guide.progress.text": "What grows between runs lives here: the forge, the menagerie, the Atlas and the trials.\nEach tile sums itself up and shows a number when something waits: free Atlas points, eggs, rush keys.\nTap a tile to go in; «back» brings you here.",
   "tree.taken_reachable_label": "Nodes",
-  "auction.more": "Show more · {0} of {1}"
+  "auction.more": "Show more · {0} of {1}",
+  "merchant.notes": "About the merchant",
+  "merchant.wares_n": "Wares · {0}",
+  "merchant.orbs_n": "Orbs · {0}"
 }

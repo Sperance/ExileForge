@@ -42,7 +42,7 @@ import kotlin.math.roundToInt
             Text(line.text, color = ModBlue, style = MaterialTheme.typography.bodyMedium)
             Column(Modifier.fillMaxWidth().background(Abyss, RoundedCornerShape(6.dp)).padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Fact(ui("modinfo.kind"), line.kindText())
-                if (line.roll.tier > 0 && line.tierCount > 0) Fact(ui("modinfo.tier"), ui("modinfo.tier_of", line.roll.tier, line.tierCount))
+                if (line.roll.tier > 0 && line.tierCount > 0) TierScale(line.roll.tier, line.tierOpen)
                 line.range?.let { Fact(ui("modinfo.range"), it) }
                 line.quality?.takeIf { line.range != null }?.let { share ->
                     if (line.fixed) Fact(ui("modinfo.position"), ui("modinfo.fixed"))
@@ -64,6 +64,29 @@ import kotlin.math.roundToInt
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
         MutedText(label, Modifier.weight(1f), MaterialTheme.typography.labelMedium)
         Text(value, color = Parchment, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+    }
+}
+
+/**
+ * The tier among its modifier's tiers, T1 the best: «T3 · худший из 3», then a segment per tier, best first, the
+ * line's own lit and those the item's level does not reach dimmed.
+ */
+@Composable private fun TierScale(tier: Int, open: List<Boolean>) {
+    val count = open.size
+    val key = when (tier) { 1 -> "modinfo.tier_best"; count -> "modinfo.tier_worst"; else -> "modinfo.tier_of" }
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Fact(ui("modinfo.tier"), ui(key, tier, count))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+            open.forEachIndexed { at, reached ->
+                val color = when {
+                    at + 1 == tier -> Gold
+                    reached -> PanelRaised
+                    else -> PanelRaised.copy(alpha = .35f)
+                }
+                Box(Modifier.weight(1f).height(6.dp).background(color, RoundedCornerShape(3.dp)))
+            }
+        }
+        MutedText(ui("modinfo.tier_caption"), style = MaterialTheme.typography.labelSmall)
     }
 }
 

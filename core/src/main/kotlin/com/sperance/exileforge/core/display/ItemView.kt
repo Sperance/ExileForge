@@ -66,8 +66,12 @@ data class AffixMarks(val tier: Int, val crafted: Boolean, val fractured: Boolea
     }
 }
 
-/** One line of an item as a card draws it: the roll, its words, its badge, and how well it rolled inside its tier. */
-data class ItemLine(val roll: Roll, val definition: ModifierDef?, val values: List<Double>, val text: String, val marks: AffixMarks) {
+/**
+ * One line of an item as a card draws it: the roll, its words, its badge, and how well it rolled inside its tier;
+ * [itemLevel] is the copy's level the tiers are gated by, 0 when unknown.
+ */
+data class ItemLine(val roll: Roll, val definition: ModifierDef?, val values: List<Double>, val text: String, val marks: AffixMarks,
+                    val itemLevel: Int = 0) {
     val code: String get() = roll.code
     val affix: Boolean get() = definition?.affix == true
     /** 0 the bottom of the tier, 1 its top; a fixed range is perfect; null for a line with no tier. */
@@ -78,6 +82,8 @@ data class ItemLine(val roll: Roll, val definition: ModifierDef?, val values: Li
     val range: String? get() = definition?.let { def -> def.tier(roll.tier)?.let { rangeText(def, it) } }
     /** How many tiers the modifier has; 0 for a line with none. */
     val tierCount: Int get() = definition?.tiers?.size ?: 0
+    /** Per tier, best (T1) first, whether the copy's level reaches it; every tier when the level is unknown. */
+    val tierOpen: List<Boolean> get() = definition?.tiers?.map { itemLevel <= 0 || it.level <= itemLevel }.orEmpty()
     /** Where the definition puts the line — prefix, suffix, implicit…; a fracture and the bench are [marks], not a place. */
     val placement: AffixKind? get() = AffixKind.of(definition?.source, crafted = false, fractured = false)
     /** The characteristics the line moves, each once, in its effects' order. */
@@ -141,7 +147,7 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
             val def = index.modifier(roll.code)
             val values = def?.let(roll::values).orEmpty()
             val words = def?.let { modifierLine(index, it, values) } ?: displayName(roll.code)
-            ItemLine(roll, def, values, words, AffixMarks.of(def, roll))
+            ItemLine(roll, def, values, words, AffixMarks.of(def, roll), level)
         }
     }
 

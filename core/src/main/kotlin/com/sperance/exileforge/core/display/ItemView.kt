@@ -4,6 +4,7 @@ import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.i18n.uiOr
+import com.sperance.exileforge.rules.content.BaseVariance
 import com.sperance.exileforge.rules.content.BenchRecipe
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Influence
@@ -161,14 +162,20 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
     val base: List<BaseProperty> by lazy {
         if (template.base.isEmpty()) emptyList() else {
             val calc = SheetCalculator(index)
-            val baseTotals = calc.compute(emptyMap(), calc.expand(template.base))
-            val totals = calc.itemBase(template, item.rolls, item.quality, item.catalyst)
+            // The copy's own base (server 1.67.0): its base quality and item level scale the template's lines before anything else.
+            val baseTotals = calc.compute(emptyMap(), calc.expand(index.rules.loot.baseVariance.base(template, calc.baseScale(template, item))))
+            val totals = calc.itemBase(template, item)
             template.base.mapNotNull { line ->
                 val def = index.modifier(line.code) ?: return@mapNotNull null
                 val values = line.values.mapIndexed { i, own -> val stat = def.effects.getOrNull(i)?.stat.orEmpty(); PropertyValue(stat, baseTotals[stat] ?: own, totals[stat] ?: own) }
                 BaseProperty(line.code, text.template(def).orEmpty(), values)
             }.filter { it.values.isNotEmpty() }
         }
+    }
+
+    /** The copy's base quality in percent (server 1.67.0), or null when it is neutral or the template has no line it scales. */
+    val baseQuality: Int? get() = item.baseQuality.takeIf { quality ->
+        quality > 0 && quality != BaseVariance.NEUTRAL && template.base.any { it.code in index.rules.loot.baseVariance.lines }
     }
 
     val summary: RollSummary by lazy {

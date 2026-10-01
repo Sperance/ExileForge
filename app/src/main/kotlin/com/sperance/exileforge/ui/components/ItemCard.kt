@@ -216,6 +216,7 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
 private fun cardFacts(item: ItemView, withPrice: Boolean = true): List<String> = listOfNotNull(
     listOfNotNull(
         ui("row.level", item.level),
+        item.baseQuality?.let { ui("card.base_quality", it) },
         item.requirements.takeIf { it.isNotEmpty() }?.let { ui("auction.needs", it.joinToString(", ")) },
     ).joinToString(" · ").takeIf { it.isNotBlank() },
     listOfNotNull(

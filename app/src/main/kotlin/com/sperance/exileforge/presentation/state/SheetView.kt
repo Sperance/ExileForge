@@ -45,14 +45,16 @@ fun ForgeState.manaReserve(): ManaReserve? {
  * The hero's passive skills whose lines name [stat], each with what it adds to the sheet's figure: they are laid on in
  * a fight, not on the sheet, so a figure's window lists them apart. Empty until the hero and the content are here.
  */
-fun ForgeState.passiveShares(stat: String): List<PassiveShare> {
-    val index = index ?: return emptyList()
-    val hero = hero ?: return emptyList()
-    val model = hero.sheet.model ?: return emptyList()
+fun ForgeState.passiveShares(stat: String): PassiveShares {
+    val index = index ?: return PassiveShares()
+    val hero = hero ?: return PassiveShares()
+    val model = hero.sheet.model ?: return PassiveShares()
     val before = model.plain[stat] ?: 0.0
     val body = Combatant(hero.stats, hero.level, index.campaign.combat)
-    return Loadout.of(hero.skills, index.skills, hero.heroClass, emptyList()).passiveSources(body).mapNotNull { (kit, lines) ->
+    val rows = Loadout.of(hero.skills, index.skills, hero.heroClass, emptyList()).passiveSources(body).mapNotNull { (kit, lines) ->
         val own = lines.filter { it.stat == stat }.ifEmpty { return@mapNotNull null }
         PassiveShare(kit.skill.code, own, (model.with(own)[stat] ?: 0.0) - before, kit.skill.lowLife)
     }
+    val steady = rows.filterNot { it.lowLife }.flatMap { it.lines }
+    return PassiveShares(rows, if (steady.isEmpty()) 0.0 else (model.with(steady)[stat] ?: 0.0) - before)
 }

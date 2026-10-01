@@ -32,6 +32,12 @@ data class ShareRow(val title: String, val value: String, val note: String? = nu
  */
 data class PassiveShare(val skill: String, val lines: List<StatLine>, val gain: Double, val lowLife: Boolean)
 
+/**
+ * The passives on one figure: a row each, and the [total] they give together outside low life — the lines laid on at
+ * once, since an increase multiplies what the others add and a sum of each one's own gain would miss it.
+ */
+data class PassiveShares(val rows: List<PassiveShare> = emptyList(), val total: Double = 0.0)
+
 /** A card of one kind of source: its rows and what they give together, one figure per operation. */
 data class ShareCard(val kind: ShareKind, val rows: List<ShareRow>, val summary: String)
 
@@ -52,7 +58,7 @@ class StatExplainer(private val s: ForgeState) {
     private val hero = s.hero
     private val index = s.index
 
-    fun explain(breakdown: StatBreakdown, grants: List<Grant>, holders: (String) -> List<StatSource>, passives: List<PassiveShare> = emptyList()): StatExplanation {
+    fun explain(breakdown: StatBreakdown, grants: List<Grant>, holders: (String) -> List<StatSource>, passives: PassiveShares = PassiveShares()): StatExplanation {
         val stat = breakdown.stat
         val cards = mutableListOf<ShareCard>()
         if (breakdown.base != 0.0) cards += ShareCard(ShareKind.BASE,
@@ -62,9 +68,9 @@ class StatExplainer(private val s: ForgeState) {
             cards += ShareCard(kind, shares.map { row(stat, it, breakdown.percent) }, summary(stat, shares, breakdown.percent))
         }
         // Every passive that names the figure has its row, an increase with nothing to increase too: «+10% · в бою: +0».
-        if (passives.isNotEmpty()) cards += ShareCard(ShareKind.SKILL,
-            passives.map { ShareRow(SkillText.title(it.skill), it.lines.joinToString(", ") { line -> fmt(stat, line.value, line.op, breakdown.percent) }, passiveNote(stat, it, breakdown)) },
-            signed(stat, passives.filterNot { it.lowLife }.sumOf { it.gain }, breakdown.percent))
+        if (passives.rows.isNotEmpty()) cards += ShareCard(ShareKind.SKILL,
+            passives.rows.map { ShareRow(SkillText.title(it.skill), it.lines.joinToString(", ") { line -> fmt(stat, line.value, line.op, breakdown.percent) }, passiveNote(stat, it, breakdown)) },
+            signed(stat, passives.total, breakdown.percent))
         if (breakdown.shifts.isNotEmpty()) cards += ShareCard(ShareKind.AFTER,
             breakdown.shifts.map { ShareRow(shiftTitle(it.source, holders), signed(stat, it.delta, breakdown.percent), it.from?.let { from -> ui("stat.from", statTitle(from)) }) },
             signed(stat, breakdown.shifts.sumOf { it.delta }, breakdown.percent))

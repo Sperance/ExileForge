@@ -394,12 +394,14 @@ private const val MINIMAP_MAX = 60f
             Box(Modifier.fillMaxWidth(lifeShare.coerceIn(0f, 1f)).fillMaxHeight().background(Brush.horizontalGradient(listOf(LifeRed, LifeRed.copy(alpha = .55f))), shape))
             if (maxShield > 0) Box(Modifier.fillMaxWidth((shield / maxShield.toFloat()).coerceIn(0f, 1f)).height(4.dp).align(Alignment.TopStart).background(ShieldCyan.copy(alpha = .85f)))
         }
-        if (maxMana > 0) Box(Modifier.fillMaxWidth().height(6.dp).clip(shape).background(Color(0xCC0A0D12), shape)
+        // A pool the auras hold whole is still drawn: a full hatched bar.
+        val pooled = maxMana + reserved.coerceAtLeast(0) > 0
+        if (pooled) Box(Modifier.fillMaxWidth().height(6.dp).clip(shape).background(Color(0xCC0A0D12), shape)
             .reservedTail(reservedShare(maxMana, reserved), ManaBlue).border(1.dp, ManaBlue.copy(alpha = .8f), shape)) {
             Box(Modifier.fillMaxWidth((mana / (maxMana + reserved.coerceAtLeast(0)).toFloat()).coerceIn(0f, 1f)).fillMaxHeight().background(ManaBlue, shape))
         }
         Text((if (maxShield > 0) ui("expedition.vitals_shield", life, maxLife, shield) else ui("expedition.vitals", life, maxLife)) +
-            (if (maxMana > 0) " · " + ui("expedition.vitals_mana", mana, maxMana) else ""), color = Parchment, style = MaterialTheme.typography.labelSmall)
+            (if (pooled) " · " + ui("expedition.vitals_mana", mana, maxMana) else ""), color = Parchment, style = MaterialTheme.typography.labelSmall)
     }
 }
 

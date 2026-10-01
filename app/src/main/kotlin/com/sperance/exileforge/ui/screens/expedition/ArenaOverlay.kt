@@ -399,7 +399,8 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
             // The pools as bars of their own (3.24.0): the shield over life, mana under it, each with its figures and share.
             if (hud.heroMaxShield > 0) VitalBar(fight.heroShield, hud.heroMaxShield, ShieldCyan, Modifier.fillMaxWidth().height(16.dp))
             VitalBar(fight.heroLife, hud.heroMaxLife, LifeRed, Modifier.fillMaxWidth().height(18.dp), ring = GoldBright.takeIf { fight.heroBarrier > 0 })
-            if (fight.heroMaxMana > 0) VitalBar(fight.heroMana, fight.heroMaxMana, ManaBlue, Modifier.fillMaxWidth().height(16.dp), reserved = fight.heroReserved)
+            // A pool the auras hold whole is still drawn: a full hatched bar.
+            if (fight.heroMaxMana + fight.heroReserved.coerceAtLeast(0) > 0) VitalBar(fight.heroMana, fight.heroMaxMana, ManaBlue, Modifier.fillMaxWidth().height(16.dp), reserved = fight.heroReserved)
             SwingBar(fight.heroSwing, fight.heroHeld, Modifier.fillMaxWidth())
             StateTiles(fight.heroAilments, fight.heroHeld, fight.heroEffects, fight.heroCharges)
             // The combat pet beside the hero (3.5.0): its name and life; down, it waits for the fight's end.

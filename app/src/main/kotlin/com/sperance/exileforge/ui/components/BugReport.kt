@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.components
 
+import com.sperance.exileforge.core.model.feedback.FeedbackKind
 import android.os.Build
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -60,18 +61,27 @@ val LocalBugReport = staticCompositionLocalOf<(() -> Unit)?> { null }
  * by the journal itself; no token is ever in it.
  */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun BugSheet(s: ForgeState, run: ExpeditionRun?, logs: List<RequestLog>, onDismiss: () -> Unit, onSend: (BugReportRequest) -> Unit) {
+@Composable fun BugSheet(s: ForgeState, run: ExpeditionRun?, logs: List<RequestLog>, onDismiss: () -> Unit, onSuggestions: () -> Unit,
+                         onSend: (BugReportRequest) -> Unit) {
     val screen = remember { bugScreen(s, run) }
     val context = remember { bugContext(s, run) }
     var text by remember { mutableStateOf("") }
+    // A bug or a suggestion (3.73.0): the player picks; a suggestion goes into the public list, so it needs an account.
+    var kind by remember { mutableStateOf(FeedbackKind.BUG) }
+    val limit = if (kind == FeedbackKind.SUGGESTION) s.inputs.suggestion else s.inputs.report
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(ui("bug.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
-            Text(ui("bug.where", screen), color = Rune, style = MaterialTheme.typography.labelLarge)
-            OutlinedTextField(text, { text = it.take(MAX_TEXT) }, label = { Text(ui("bug.text")) }, minLines = 4,
-                supportingText = { Text(ui("bug.count", text.length, MAX_TEXT)) }, modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp))
-            ForgeButton(enabled = text.isNotBlank() && !s.busy, modifier = Modifier.fillMaxWidth(),
-                onClick = { onSend(BugReportRequest(text.trim(), screen, context, journalTail(logs))); onDismiss() }) { Text(ui("bug.send")) }
+            PillTabs(listOf(kindTitle(FeedbackKind.BUG), kindTitle(FeedbackKind.SUGGESTION)), kind.ordinal, { kind = FeedbackKind.entries[it] }, segmented = true)
+            if (kind == FeedbackKind.BUG) Text(ui("bug.where", screen), color = Rune, style = MaterialTheme.typography.labelLarge)
+            else MutedText(ui(if (s.account.signedIn) "feedback.suggestion_hint" else "feedback.sign_in_first"))
+            OutlinedTextField(text, { text = it.take(limit) }, label = { Text(ui(if (kind == FeedbackKind.BUG) "bug.text" else "feedback.text")) }, minLines = 4,
+                supportingText = { Text(ui("bug.count", text.length, limit)) }, modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp))
+            ForgeButton(enabled = text.isNotBlank() && !s.busy && (kind == FeedbackKind.BUG || s.account.signedIn), modifier = Modifier.fillMaxWidth(),
+                onClick = { onSend(BugReportRequest(text.trim().take(limit), screen, context, journalTail(logs), kind)); onDismiss() }) { Text(ui("bug.send")) }
+            // Everyone's suggestions, to read and vote on, and one's own reports with how they stand.
+            if (s.account.signedIn) ForgeOutlinedButton(onClick = { onDismiss(); onSuggestions() }, modifier = Modifier.fillMaxWidth()) { Text(ui("feedback.open")) }
+            if (kind == FeedbackKind.SUGGESTION) return@Column
             Engraved(ui("bug.context"))
             context.forEach { (key, value) ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -84,7 +94,6 @@ val LocalBugReport = staticCompositionLocalOf<(() -> Unit)?> { null }
     }
 }
 
-private const val MAX_TEXT = 2000
 private const val JOURNAL = 20
 
 /** The place, as one line: the phase, the tab or the building, the open sheet of the game. */

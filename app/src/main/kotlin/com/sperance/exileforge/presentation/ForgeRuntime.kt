@@ -28,6 +28,7 @@ import com.sperance.exileforge.data.settings.deviceLanguage
 import com.sperance.exileforge.presentation.features.AuctionViewModel
 import com.sperance.exileforge.presentation.features.CharacterViewModel
 import com.sperance.exileforge.presentation.features.ConnectionViewModel
+import com.sperance.exileforge.presentation.features.FeedbackViewModel
 import com.sperance.exileforge.presentation.features.CraftsViewModel
 import com.sperance.exileforge.presentation.features.ExpeditionViewModel
 import com.sperance.exileforge.presentation.features.TrialViewModel
@@ -88,6 +89,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
     val warmupViewModel = com.sperance.exileforge.presentation.features.WarmupViewModel(this)
     val craftsViewModel = CraftsViewModel(this)
     val guildViewModel = GuildViewModel(this)
+    val feedbackViewModel = FeedbackViewModel(this)
     val questViewModel = QuestViewModel(this)
     val connectionViewModel = ConnectionViewModel(this)
 

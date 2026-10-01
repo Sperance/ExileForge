@@ -31,6 +31,10 @@ import com.sperance.exileforge.presentation.state.*
 import com.sperance.exileforge.data.settings.GuideStore
 import com.sperance.exileforge.ui.components.BugButton
 import com.sperance.exileforge.ui.components.BugSheet
+import com.sperance.exileforge.ui.components.LocalMailOpen
+import com.sperance.exileforge.ui.components.MailButton
+import com.sperance.exileforge.ui.components.MailSheet
+import com.sperance.exileforge.ui.components.SuggestionsSheet
 import com.sperance.exileforge.ui.components.LocalBugReport
 import com.sperance.exileforge.ui.components.WarmupScreen
 import com.sperance.exileforge.ui.components.GuideDesk
@@ -105,9 +109,12 @@ private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, erro
     // names land, every screen that printed a bare code is drawn again.
     // The beetle (3.48.0): in the banner of the game; since 3.57.0 in the own header of every screen without one.
     var bugOpen by remember { mutableStateOf(false) }
+    // Players' suggestions and the inbox (3.73.0): sheets over everything, like the beetle's.
+    var suggestionsOpen by remember { mutableStateOf(false) }
+    var mailOpen by remember { mutableStateOf(false) }
     LaunchedEffect(s.phase, s.play.heroId) { if (s.phase == AppPhase.GAME && s.play.heroId.isNotBlank()) vm.warmUp() }
     key(s.account.server, s.account.sessionEpoch, s.lang, s.world.localeStrings) {
-        CompositionLocalProvider(LocalBugReport provides { bugOpen = true }) {
+        CompositionLocalProvider(LocalBugReport provides { bugOpen = true }, LocalMailOpen provides { mailOpen = true }) {
         Box(Modifier.fillMaxSize()) {
             // The two screens above the tabs carry no banner and no bottom bar: there is no character to
             // name in the one and no tab to reach from the other.
@@ -128,7 +135,13 @@ private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, erro
         }
         }
     }
-    if (bugOpen) BugSheet(s, expedition, logs, onDismiss = { bugOpen = false }, onSend = vm::reportBug)
+    if (bugOpen) BugSheet(s, expedition, logs, onDismiss = { bugOpen = false }, onSuggestions = { suggestionsOpen = true }, onSend = vm::reportBug)
+    if (suggestionsOpen) SuggestionsSheet(s, vm) { suggestionsOpen = false }
+    if (mailOpen) MailSheet(s, vm) { mailOpen = false }
+    // The inbox (3.73.0) is asked at sign-in and every few minutes after, quietly: the envelope counts the unread.
+    LaunchedEffect(s.account.signedIn, s.account.sessionEpoch) {
+        while (s.account.signedIn) { vm.loadMail(); kotlinx.coroutines.delay(MAIL_POLL_MS) }
+    }
     // «Пока вас не было» (3.69.0): the crafts catch-up of an absence, once, over whatever the game shows after the warm-up.
     if (s.phase == AppPhase.GAME && s.play.warmup?.finished != false) CraftsAwayHost(s, vm)
 }
@@ -227,6 +240,7 @@ private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, erro
         }
         WorkBadge(s) { vm.tab(TAB_CRAFTS) }
         LinkBadge(s.link, vm::retryLink)
+        LocalMailOpen.current?.let { MailButton(s.feedback.unread, it) }
         BugButton(tint = Gold, onClick = onBug)
         IconButton(onClick = { vm.tab(TAB_ACCOUNT) }) {
             Icon(ForgeGlyphs.Portal, ui("nav.account"), tint = if (s.tab == TAB_ACCOUNT) GoldBright else Gold, modifier = Modifier.size(24.dp))
@@ -264,3 +278,6 @@ private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, erro
             modifier = Modifier.fillMaxWidth().height(2.dp).padding(top = 1.dp), color = Gold, trackColor = PanelRaised)
     }
 }
+
+/** How often the inbox is asked again while signed in (3.73.0). */
+private const val MAIL_POLL_MS = 5 * 60_000L

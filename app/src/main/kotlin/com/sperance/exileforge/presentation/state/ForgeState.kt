@@ -1,5 +1,9 @@
 package com.sperance.exileforge.presentation.state
 
+import com.sperance.exileforge.core.model.feedback.AdminReport
+import com.sperance.exileforge.core.model.feedback.Mail
+import com.sperance.exileforge.core.model.feedback.OwnReport
+import com.sperance.exileforge.core.model.feedback.Suggestion
 import com.sperance.exileforge.core.network.TesterAccount
 import com.sperance.exileforge.BuildConfig
 import com.sperance.exileforge.core.i18n.Lang
@@ -64,6 +68,7 @@ data class ForgeState(
     val play: PlayState = PlayState(),
     val market: MarketState = MarketState(),
     val guild: GuildState = GuildState(),
+    val feedback: FeedbackState = FeedbackState(),
     val quests: QuestState = QuestState(),
     val admin: AdminState = AdminState(),
     val link: LinkState = LinkState(),
@@ -147,6 +152,16 @@ data class AccountState(
     /** The administrator's testers (3.73.0), and the account whose password was just shown — once, to be copied. */
     val testers: List<TesterAccount> = emptyList(), val shownTester: TesterAccount? = null,
 )
+
+/** Players' voices and the account's mail (3.73.0): suggestions, one's own reports, the administrator's reading, the inbox. */
+data class FeedbackState(
+    val suggestions: List<Suggestion> = emptyList(),
+    val mine: List<OwnReport> = emptyList(),
+    val reports: List<AdminReport> = emptyList(),
+    val mail: List<Mail> = emptyList(),
+) {
+    val unread: Int get() = mail.count { !it.read }
+}
 
 /** The world as this server serves it: the content, read once per server and kept on the device by chunk, and the static files. */
 data class WorldState(
@@ -266,6 +281,8 @@ const val MAX_CHARACTERS = 3
 
 /** What a read reads. One read per name runs at a time, and a command names the reads it will redo itself. */
 object Reads {
+    const val FEEDBACK = "feedback"
+    const val MAIL = "mail"
     const val HERO = "hero"
     const val CHARACTERS = "characters"
     const val AUCTION = "auction"

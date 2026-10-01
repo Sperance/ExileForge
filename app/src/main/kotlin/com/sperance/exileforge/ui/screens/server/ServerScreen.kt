@@ -15,6 +15,8 @@ import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.AdminPanelSettings
 import androidx.compose.material.icons.outlined.CardGiftcard
 import androidx.compose.material.icons.outlined.Group
+import androidx.compose.material.icons.outlined.BugReport
+import androidx.compose.material.icons.outlined.Mail
 import androidx.compose.material.icons.outlined.Science
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Dns
@@ -56,7 +58,7 @@ import com.sperance.exileforge.ui.theme.*
 /** The screens behind the account's rows: each a page of its own, «back» leading to the list. */
 private enum class AccountPage(val title: String) {
     SIGN_IN("account.signin_section"), LANGUAGE("account.language"), SERVER("account.server"), CLIENT("account.client"), JOURNAL("account.journal"),
-    TESTING("tester.window"), TESTERS("tester.accounts")
+    TESTING("tester.window"), TESTERS("tester.accounts"), FEEDBACK("feedback.admin"), MAIL("mail.compose")
 }
 
 /**
@@ -85,6 +87,8 @@ private enum class AccountPage(val title: String) {
                 AccountPage.JOURNAL -> RequestJournalPanel(vm, logs)
                 AccountPage.TESTING -> TestingPage(s, vm)
                 AccountPage.TESTERS -> TestersPage(s, vm)
+                AccountPage.FEEDBACK -> FeedbackAdminPage(s, vm)
+                AccountPage.MAIL -> MailComposePage(s, vm)
             }
         }
     }
@@ -109,6 +113,8 @@ private enum class AccountPage(val title: String) {
             // The testing window (3.73.0) for testers and administrators; the testers' accounts for an administrator.
             if (s.isTester) AccountRow(Icons.Outlined.Science, ui("tester.window"), enabled = !s.busy) { onPage(AccountPage.TESTING) }
             if (s.isAdmin) AccountRow(Icons.Outlined.Group, ui("tester.accounts"), enabled = !s.busy) { onPage(AccountPage.TESTERS) }
+            if (s.isAdmin) AccountRow(Icons.Outlined.BugReport, ui("feedback.admin"), enabled = !s.busy) { onPage(AccountPage.FEEDBACK) }
+            if (s.isAdmin) AccountRow(Icons.Outlined.Mail, ui("mail.compose"), enabled = !s.busy) { onPage(AccountPage.MAIL) }
             // Every administrator tool moved to its own tab in 2.3.0. What stays here is the way back
             // into it: turning the tools off hides that tab, so the switch cannot live only inside it.
             if (BuildConfig.DEBUG && s.isAdmin && !s.adminTools)

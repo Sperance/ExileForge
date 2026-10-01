@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.model.command
 
+import com.sperance.exileforge.core.model.feedback.FeedbackKind
 import com.sperance.exileforge.core.i18n.ui
 import kotlinx.serialization.Serializable
 
@@ -72,4 +73,6 @@ data class ApiCapabilities(val routes: Set<String>) {
 }
 
 /** A bug report (server 1.46.0): the words of the player, where they were, and the tail of the request journal. */
-@Serializable data class BugReportRequest(val text: String, val screen: String, val context: Map<String, String>, val requests: List<String>)
+@Serializable data class BugReportRequest(val text: String, val screen: String, val context: Map<String, String>, val requests: List<String>,
+    /** A bug or a player's suggestion (3.73.0, server 1.69.0). */
+    val kind: FeedbackKind = FeedbackKind.BUG)

@@ -58,6 +58,8 @@ class GameApi(
     val guild = GuildClient(http)
     val quests = QuestClient(http)
     val admin = AdminClient(http)
+    val feedback = FeedbackClient(http)
+    val mail = MailClient(http)
 
     /** Credentials travel in the body: a query string settles in every proxy log on the way. */
     suspend fun login(login: String, password: String): UserProfile {

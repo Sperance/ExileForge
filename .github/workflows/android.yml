@@ -177,4 +177,14 @@ jobs:
           # The notes: RELEASE_NOTES.md holds only this version's, under its first heading «## <versionName>».
           heading=$(grep -m1 '^## ' RELEASE_NOTES.md | sed 's/[[:space:]]*$//')
           [ "$heading" = "## ${tag#v}" ] || { echo "::error::RELEASE_NOTES.md first heading is '$heading', not '## ${tag#v}'"; exit 1; }
-          gh release create "$tag" "$apk" --target "$GITHUB_SHA" --title "ExileForge ${tag#v}" --notes-file RELEASE_NOTES.md --latest
+          # update.json (3.72.0): what the app's updater reads — the build, the wire and rules it speaks, the APK and its SHA-256.
+          code=$(sed -n 's/.*versionCode = \([0-9]*\).*/\1/p' app/build.gradle.kts | head -1)
+          api=$(sed -n 's/^const val API_REVISION = \([0-9]*\).*/\1/p' core/src/main/kotlin/com/sperance/exileforge/core/model/sync/Sync.kt)
+          rules=$(sed -n 's/^const val RULES_VERSION = \([0-9]*\).*/\1/p' backend/rules/src/main/kotlin/com/sperance/exileforge/rules/content/Content.kt)
+          [ -n "$code" ] && [ -n "$api" ] && [ -n "$rules" ] || { echo "::error::update.json: versionCode '$code', API '$api' or rules '$rules' not found"; exit 1; }
+          sha=$(sha256sum "$apk" | cut -d' ' -f1)
+          size=$(stat -c %s "$apk")
+          printf '{"versionCode":%s,"versionName":"%s","apiRevision":%s,"rules":%s,"apk":"%s","size":%s,"sha256":"%s"}\n' \
+            "$code" "${tag#v}" "$api" "$rules" "$apk" "$size" "$sha" > update.json
+          cat update.json
+          gh release create "$tag" "$apk" update.json --target "$GITHUB_SHA" --title "ExileForge ${tag#v}" --notes-file RELEASE_NOTES.md --latest

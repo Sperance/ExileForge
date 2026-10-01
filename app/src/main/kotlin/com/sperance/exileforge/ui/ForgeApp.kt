@@ -60,15 +60,22 @@ import com.sperance.exileforge.ui.screens.session.CharacterSelectScreen
 import com.sperance.exileforge.ui.screens.skills.GrimoireScreen
 import com.sperance.exileforge.ui.screens.tree.SkillTreeScreen
 import com.sperance.exileforge.ui.theme.*
+import com.sperance.exileforge.presentation.features.UpdateViewModel
+import com.sperance.exileforge.ui.components.LocalUpdates
+import com.sperance.exileforge.ui.components.UpdateGate
 
-@Composable fun ForgeApp(vm: ForgeViewModel) {
+@Composable fun ForgeApp(vm: ForgeViewModel, updates: UpdateViewModel) {
     // The first-visit guides (3.14.0): read once per device, one sheet at a time above whatever screen is open.
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val guides = remember { GuideDesk(GuideStore(context.applicationContext), scope) }
-    CompositionLocalProvider(LocalGuideDesk provides guides) {
+    val expedition by vm.expedition.collectAsStateWithLifecycle()
+    val trial by vm.trial.collectAsStateWithLifecycle()
+    CompositionLocalProvider(LocalGuideDesk provides guides, LocalUpdates provides updates) {
         ForgeScreens(vm)
         GuideHost(guides)
+        // Updates (3.72.0): over everything; a run or a trial under way is finished first.
+        UpdateGate(updates, busy = expedition != null || trial != null)
     }
 }
 

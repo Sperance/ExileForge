@@ -16,9 +16,11 @@ android {
         applicationId = "com.sperance.exileforge"
         minSdk = 26
         targetSdk = 37
-        versionCode = 219
-        versionName = "3.71.0"
+        versionCode = 220
+        versionName = "3.72.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Updates from GitHub Releases (3.72.0) close the game until checked: only the published build does that.
+        buildConfigField("boolean", "UPDATES", "false")
     }
     buildFeatures { compose = true; buildConfig = true }
     // The instrumentation tests draw real items: the pinned server's content and dictionaries ride in the test APK.
@@ -46,12 +48,14 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            buildConfigField("boolean", "UPDATES", "true")
         }
         // The release build under instrumentation (`-PminifiedTests`): R8 shrinks it as it ships, the smoke test runs over it.
         // Signed with the debug key so the emulator takes it; the test rules keep only what the test APK calls into.
         create("minifiedTest") {
             initWith(getByName("release"))
             signingConfig = signingConfigs.getByName("debug")
+            buildConfigField("boolean", "UPDATES", "false")
             matchingFallbacks += listOf("release")
             proguardFile("proguard-test-rules.pro")
             testProguardFiles("proguard-test-rules.pro")

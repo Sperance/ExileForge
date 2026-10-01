@@ -28,6 +28,7 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.BugAction
+import com.sperance.exileforge.ui.components.VersionLabel
 
 /**
  * The way in, and the first screen the app ever shows.
@@ -70,6 +71,8 @@ import com.sperance.exileforge.ui.components.BugAction
             ServerPanel(s, vm)
 
             s.refusal?.let { InfoCard(ui("auth.failed"), it, failure = true) }
+            // The build, dim at the foot of the way in (3.72.0).
+            VersionLabel()
         }
     }
 }

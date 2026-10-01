@@ -193,6 +193,8 @@ private enum class AccountPage(val title: String) {
         else MutedText(ui("account.content_missing"))
         ForgeOutlinedButton(enabled = !s.busy, onClick = { vm.refreshLocale(); vm.refreshIcons() }, modifier = Modifier.fillMaxWidth()) { Text(ui("account.reread_bundles")) }
     }
+    // The build and its updates (3.72.0): the version, and a check by hand.
+    UpdateCard()
     // The wire this client speaks: the API revision it refuses to differ from, and the server it was built against.
     InfoCard(ui("account.contract"),
         "API $API_REVISION · $SERVER_VERSION · $SERVER_BRANCH · ${SERVER_COMMIT.take(12)}\n" +

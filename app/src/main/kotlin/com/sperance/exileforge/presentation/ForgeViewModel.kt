@@ -145,6 +145,9 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() 
     fun login(login: String, password: String) = runtime.sessionViewModel.login(login, password)
     fun playOnThisDevice() = runtime.sessionViewModel.playOnThisDevice()
     fun retryResume() = runtime.sessionViewModel.retryResume()
+    /** The live server's manifest for the update check (3.72.0); null while no server answers. */
+    suspend fun serverManifest(): com.sperance.exileforge.core.model.sync.StaticManifest? =
+        try { runtime.api.manifest() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null }
     fun reconnect() = runtime.sessionViewModel.reconnect()
     fun away() = runtime.sessionViewModel.away()
     fun enterCharacter(id: String) = runtime.characterViewModel.enter(id)

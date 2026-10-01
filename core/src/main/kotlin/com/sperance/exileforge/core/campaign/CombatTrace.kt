@@ -112,7 +112,20 @@ enum class LogKind {
             event.action == Action.NOTE -> EVENTS
             else -> HITS
         }
-        fun parse(value: String?): Set<LogKind> = value?.split(',')?.mapNotNull { name -> entries.firstOrNull { it.name == name } }?.toSet() ?: DEFAULT
-        fun write(kinds: Set<LogKind>): String = kinds.joinToString(",") { it.name }
+        /** The shelves a save before 3.70.0 knew of: it wrote only the shown ones, without the known ones after a `;`. */
+        private val LEGACY: Set<LogKind> = setOf(HITS, AILMENTS, EVENTS)
+
+        /**
+         * The saved shelves: the shown ones, and after a `;` every shelf the save knew of (3.70.0) — a shelf added since
+         * opens as [DEFAULT] has it, so a player who once changed the filter still sees a new default-on shelf.
+         */
+        fun parse(value: String?): Set<LogKind> {
+            if (value == null) return DEFAULT
+            val (shown, known) = value.split(';', limit = 2).let { it[0] to it.getOrNull(1) }
+            fun names(list: String) = list.split(',').mapNotNull { name -> entries.firstOrNull { it.name == name } }.toSet()
+            val seen = known?.let(::names) ?: LEGACY
+            return names(shown) + DEFAULT.filterNot { it in seen }
+        }
+        fun write(kinds: Set<LogKind>): String = kinds.joinToString(",") { it.name } + ";" + entries.joinToString(",") { it.name }
     }
 }

@@ -61,6 +61,7 @@ import java.util.Locale
     var line by remember { mutableStateOf<Pair<CombatEvent, String>?>(null) }
     var looked by remember { mutableStateOf<ItemView?>(null) }
     var stack by remember { mutableStateOf<String?>(null) }
+    var recipe by remember { mutableStateOf<String?>(null) }
     // The spoils still on the way — a victory's, or the Abyss hoard a fall there keeps; the answers are asked for at once,
     // and the back gesture is held while they are on the way.
     val receiving = if (won) hud.rewardAwaiting > 0 else hud.abyss?.let { it.fallen && it.hoardAwaiting } == true
@@ -70,7 +71,7 @@ import java.util.Locale
         verticalArrangement = Arrangement.spacedBy(10.dp)) {
         FieldHead(report, won)
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (won) Spoils(s, hud, onStack = { stack = it }) { looked = it } else DeathPrice(s, hud)
+            if (won) Spoils(s, hud, onStack = { stack = it }, onRecipe = { recipe = it }) { looked = it } else DeathPrice(s, hud)
             if (logOpen) Box(Modifier.fillMaxWidth().height(260.dp).background(Panel, RoundedCornerShape(8.dp))
                 .border(1.dp, Bronze.copy(alpha = .4f), RoundedCornerShape(8.dp)).padding(horizontal = 10.dp, vertical = 8.dp)) {
                 Column {
@@ -91,6 +92,8 @@ import java.util.Locale
     looked?.let { item -> LootSheet(s, vm, item, onDismiss = { looked = null }) }
     // A stack of the spoils opened: what it is, what it is for, and how many the hero holds.
     stack?.let { code -> StackInfoSheet(s, code) { stack = null } }
+    // The recipe the kill turned up: what it does and the way to the bench.
+    recipe?.let { code -> RecipeSheet(s, vm, code) { recipe = null } }
 }
 
 /** The scene: the monster's round token in its rarity's ring, lit warm for a victory and red for a defeat, and the outcome in words. */
@@ -125,20 +128,22 @@ import java.util.Locale
     }
 }
 
-@Composable private fun Chip(text: String, tone: Color = Parchment) {
+@Composable private fun Chip(text: String, tone: Color = Parchment, onClick: (() -> Unit)? = null) {
     val shape = RoundedCornerShape(3.dp)
     Text(text, color = tone, style = MaterialTheme.typography.labelMedium,
-        modifier = Modifier.clip(shape).background(Abyss, shape).border(1.dp, PanelRaised, shape).padding(horizontal = 8.dp, vertical = 4.dp))
+        modifier = Modifier.clip(shape).let { if (onClick != null) it.clickable(role = Role.Button, onClick = onClick) else it }
+            .background(Abyss, shape).border(1.dp, if (onClick != null) tone.copy(alpha = .6f) else PanelRaised, shape)
+            .padding(horizontal = 8.dp, vertical = 4.dp))
 }
 
 /** What the kill brought, by section, as the server's answers bring it (1.30.0); on its way, or its absence said plainly. */
 @OptIn(ExperimentalLayoutApi::class)
-@Composable private fun Spoils(s: ForgeState, hud: RunHud, onStack: (String) -> Unit, onItem: (ItemView) -> Unit) {
+@Composable private fun Spoils(s: ForgeState, hud: RunHud, onStack: (String) -> Unit, onRecipe: (String) -> Unit, onItem: (ItemView) -> Unit) {
     val reward = hud.reward ?: return
     val index = s.index
     reward.recipe?.let { code ->
         Caption(ui("expedition.report_recipe"))
-        Chip(index?.let { i -> i.recipe(code)?.let { recipeText(i, it) } } ?: displayName(code), Rune)
+        Chip(index?.let { i -> i.recipe(code)?.let { recipeText(i, it) } } ?: displayName(code), Rune) { onRecipe(code) }
     }
     // A piece put on from here (3.24.0) leaves the list: it is worn now, no longer loot.
     val gear = reward.equipment.filterNot { s.hero?.item(it.id)?.let { held -> held.equipped || held.socketed } == true }.mapNotNull { s.view(it) }

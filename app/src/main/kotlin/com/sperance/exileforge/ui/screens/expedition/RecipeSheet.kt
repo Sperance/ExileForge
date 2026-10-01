@@ -1,0 +1,64 @@
+package com.sperance.exileforge.ui.screens.expedition
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.display.displayName
+import com.sperance.exileforge.core.display.itemTitle
+import com.sperance.exileforge.core.display.recipeText
+import com.sperance.exileforge.core.display.slotTitle
+import com.sperance.exileforge.core.display.statTitle
+import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.state.ForgeSection
+import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.ui.components.ForgeButton
+import com.sperance.exileforge.ui.components.MutedText
+import com.sperance.exileforge.ui.components.RaritySpine
+import com.sperance.exileforge.ui.icons.ForgeGlyphs
+import com.sperance.exileforge.ui.theme.*
+
+/**
+ * A bench recipe the run turned up, behind a tap on its chip: what it is called, the line it puts on an item — the
+ * bench's own sentence, with the tier's range — where it is used, what it costs, and the way to the bench itself.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable internal fun RecipeSheet(s: ForgeState, vm: ForgeViewModel, code: String, onDismiss: () -> Unit) {
+    val index = s.index
+    val recipe = index?.recipe(code)
+    val title = recipe?.let { r -> index?.modifier(r.modifier)?.effects?.map { statTitle(it.stat) }?.distinct()?.joinToString(" / ") }
+        ?.ifBlank { null } ?: displayName(recipe?.modifier ?: code)
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).navigationBarsPadding()) {
+            RaritySpine(Crafted, 4.dp)
+            Column(Modifier.weight(1f).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Icon(ForgeGlyphs.Anvil, null, tint = Crafted, modifier = Modifier.size(32.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(title, color = GoldBright, style = MaterialTheme.typography.titleLarge)
+                        MutedText(ui("expedition.report_recipe") + (recipe?.let { " · T${it.tier}" } ?: ""), style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+                if (recipe != null && index != null) {
+                    Column(Modifier.fillMaxWidth().background(Abyss, RoundedCornerShape(6.dp)).padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(recipeText(index, recipe), color = ModBlue, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                        MutedText(ui("bench.cost_line", itemTitle(recipe.orb.name), recipe.amount, s.hero?.count(recipe.orb.name) ?: 0L),
+                            style = MaterialTheme.typography.bodySmall)
+                        if (recipe.slots.isNotEmpty()) MutedText(ui("recipe.slots", recipe.slots.joinToString(", ") { slotTitle(it) }),
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+                Text(ui("recipe.applies"), color = Parchment, style = MaterialTheme.typography.bodyMedium)
+                ForgeButton(onClick = { onDismiss(); vm.openForge(null, ForgeSection.BENCH) }, modifier = Modifier.fillMaxWidth()) {
+                    Text(ui("recipe.open_forge"), style = MaterialTheme.typography.titleSmall)
+                }
+            }
+        }
+    }
+}

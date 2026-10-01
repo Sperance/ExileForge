@@ -303,10 +303,14 @@ private const val SPREAD = 3f
 /** How far from a star a tap still picks it: no more than the closest pair's spacing at [OPEN_ZOOM]. */
 private val TAP_RADIUS = 20.dp
 
+/** The least pixels per sky unit, whatever room the view leaves. */
+private const val MIN_FIT = .5f
+
 /** Where a node lands on screen: the start at the bottom middle above the sheet, y up, fitted to the width. */
 private class Placement(private val b: SkyBounds, private val width: Float, private val height: Float, private val floor: Float,
                         margin: Float, private val scale: Float, private val pan: Offset) {
-    private val fit = min((width - margin * 2) / b.spanX, (height - floor - margin * 3) / b.spanY) * SPREAD
+    /** Kept above [MIN_FIT]: a sky shorter than the sheet and margins would turn it negative and flip the pan limits. */
+    private val fit = (min((width - margin * 2) / b.spanX, (height - floor - margin * 3) / b.spanY) * SPREAD).coerceAtLeast(MIN_FIT)
     val unit: Float get() = fit * scale
     operator fun invoke(node: AtlasNode) = Offset(width / 2 + ((node.x - b.midX) * fit * scale).toFloat() + pan.x,
         height - floor - (node.y * fit * scale).toFloat() + pan.y)
@@ -316,9 +320,10 @@ private class Placement(private val b: SkyBounds, private val width: Float, priv
      * — the farthest left, right, the start, the top — and no further.
      */
     fun held(): Offset {
-        val halfX = b.spanX / 2 * unit
+        val halfX = abs(b.spanX / 2 * unit)
         val middle = (height - floor) / 2 - (height - floor)
-        return Offset(pan.x.coerceIn(-halfX, halfX), pan.y.coerceIn(middle, middle + b.spanY * unit))
+        val top = middle + b.spanY * unit
+        return Offset(pan.x.coerceIn(-halfX, halfX), pan.y.coerceIn(minOf(middle, top), maxOf(middle, top)))
     }
 }
 

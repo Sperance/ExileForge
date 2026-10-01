@@ -68,7 +68,7 @@ private fun commandsOn(me: GuildMember?, target: GuildMember, officersFull: Bool
     ForgePanel {
         Engraved(ui("guild.invite_title"))
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(name, { name = it }, label = { Text(ui("guild.hero_name")) }, singleLine = true, modifier = Modifier.weight(1f))
+            OutlinedTextField(name, { name = it.take(s.inputs.heroName) }, label = { Text(ui("guild.hero_name")) }, singleLine = true, modifier = Modifier.weight(1f))
             ForgeButton(enabled = !s.busy && name.isNotBlank(), onClick = { vm.inviteToGuild(name); name = "" }) { Text(ui("guild.invite")) }
         }
     }

@@ -46,8 +46,14 @@ import kotlinx.serialization.Serializable
     val closedAt: String? = null,
     /** When the lot leaves the showcase (server 1.30.0), epoch millis UTC; 0 on a lot listed before lots expired. */
     val expiresAt: Long = 0,
+    /** The deal (3.73.0, server 1.69.0): who bought, when (epoch millis UTC) and the copy as it was sold — the history's. */
+    val buyerName: String = "",
+    val soldAt: Long = 0,
+    val sold: ItemInstance? = null,
     val version: Long = 0,
 ) {
+    /** The deal as the history shows it: the copy that was sold in place of the one the lot no longer holds. */
+    val deal: AuctionLot get() = if (sold != null && equipment == null) copy(equipment = sold) else this
     val onSale: Boolean get() = status == LotStatus.ACTIVE && (expiresAt == 0L || System.currentTimeMillis() < expiresAt)
     /** Milliseconds the lot still stands, or null when it names no end. */
     fun timeLeft(now: Long = System.currentTimeMillis()): Long? = expiresAt.takeIf { it > 0 }?.let { (it - now).coerceAtLeast(0) }

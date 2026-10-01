@@ -216,6 +216,8 @@ data class MarketState(
     val showcase: AuctionPage = AuctionPage(), val filter: AuctionFilter = AuctionFilter(),
     val showOwnLots: Boolean = false,
     val myLots: List<AuctionLot> = emptyList(),
+    /** The hero's deals of the last days (3.73.0), newest first. */
+    val history: List<AuctionLot> = emptyList(),
     /** Why the auction is closed to this hero, in the server's own words. */
     val locked: String? = null,
     val merchant: MerchantStock? = null,

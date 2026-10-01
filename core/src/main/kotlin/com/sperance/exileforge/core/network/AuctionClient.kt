@@ -24,6 +24,8 @@ class AuctionClient internal constructor(private val http: Transport) {
     suspend fun slots(heroId: String): AuctionSlots = http.get("$AUCTION/slots", heroQuery(heroId))
     /** Buys one more lot place for gold. Never retried. */
     suspend fun myLots(heroId: String): List<AuctionLot> = http.get("$AUCTION/my", heroQuery(heroId))
+    /** The hero's deals of the last days (3.73.0): what they sold and what they bought, newest first. */
+    suspend fun history(heroId: String): List<AuctionLot> = http.get("$AUCTION/history", heroQuery(heroId))
 
     /** Lists a copy; the price is in orbs, [priceOrb] the currency's item code. The copy has to be off the hero first. */
     suspend fun sellEquipment(heroId: String, itemId: String, priceOrb: String, price: Long): AuctionLot {

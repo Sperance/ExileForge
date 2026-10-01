@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.craft
 
+import com.sperance.exileforge.ui.components.DefaultInputs
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -75,7 +76,7 @@ internal enum class TargetFilter(val title: String, val glyph: ImageVector) {
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.85f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item { Engraved(ui("forge.pick_item")) }
             item {
-                OutlinedTextField(query, { query = it }, placeholder = { Text(ui("hero.search_hint")) },
+                OutlinedTextField(query, { query = it.take(DefaultInputs.search) }, placeholder = { Text(ui("hero.search_hint")) },
                     leadingIcon = { Icon(Icons.Outlined.Search, null) },
                     trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Outlined.Close, null) } },
                     singleLine = true, keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), modifier = Modifier.fillMaxWidth())

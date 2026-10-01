@@ -163,7 +163,7 @@ private enum class AccountPage(val title: String) {
 /** The server: where it is, the way to connect and to ask after its health, and the answer. */
 @Composable private fun ServerPage(s: ForgeState, vm: ForgeViewModel) {
     ForgePanel {
-        OutlinedTextField(s.account.serverDraft, vm::serverDraft, enabled = !s.busy, label = { Text(ui("account.server_address")) },
+        OutlinedTextField(s.account.serverDraft, { vm.serverDraft(it.take(s.inputs.server)) }, enabled = !s.busy, label = { Text(ui("account.server_address")) },
             supportingText = { Text(ui("account.address_hint")) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
         ForgeButton(enabled = !s.busy, onClick = vm::connect, modifier = Modifier.fillMaxWidth()) { Text(ui("account.save_connect")) }
         ForgeOutlinedButton(enabled = !s.busy, onClick = vm::health, modifier = Modifier.fillMaxWidth()) { Text(ui("account.check_health")) }
@@ -214,8 +214,8 @@ private enum class AccountPage(val title: String) {
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 MutedText(ui("account.promo_target", s.heroName))
-                OutlinedTextField(code, { code = it.take(100) }, label = { Text(ui("account.code")) },
-                    singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(code, { code = it.take(s.inputs.code) }, label = { Text(ui("account.code")) },
+                    supportingText = { LengthCounter(code, s.inputs.code) }, singleLine = true, modifier = Modifier.fillMaxWidth())
             }
         },
         confirmButton = { ForgeTextButton(enabled = !s.busy && code.isNotBlank(), onClick = { onRedeem(code) }) {

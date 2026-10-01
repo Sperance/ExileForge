@@ -102,7 +102,7 @@ import com.sperance.exileforge.ui.theme.*
 }
 
 @Composable private fun SearchField(s: ForgeState, vm: ForgeViewModel) {
-    OutlinedTextField(s.guild.query, vm::guildQuery, label = { Text(ui("guild.search")) }, singleLine = true,
+    OutlinedTextField(s.guild.query, { vm.guildQuery(it.take(s.inputs.search)) }, label = { Text(ui("guild.search")) }, singleLine = true,
         leadingIcon = { Icon(Icons.Outlined.Search, null) },
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { vm.searchGuilds(0) }),
         trailingIcon = { ForgeTextButton(onClick = { vm.searchGuilds(0) }) { Text(ui("guild.find")) } },

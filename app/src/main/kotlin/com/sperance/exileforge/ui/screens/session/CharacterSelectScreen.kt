@@ -144,8 +144,8 @@ import com.sperance.exileforge.ui.theme.*
     val heroClass = s.play.draftClass.takeIf { code -> classes.any { it.code == code } } ?: classes.firstOrNull()?.code.orEmpty()
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         ForgePanel {
-            OutlinedTextField(name, { name = it }, enabled = !s.busy, label = { Text(ui("common.name")) },
-                supportingText = { Text(ui("chars.name_unique")) },
+            OutlinedTextField(name, { name = it.take(s.inputs.heroName) }, enabled = !s.busy, label = { Text(ui("common.name")) },
+                supportingText = { Text(ui("chars.name_unique") + " · ${name.length}/${s.inputs.heroName}") },
                 singleLine = true, modifier = Modifier.fillMaxWidth())
             // The classes arrive with the content, which is read after the form opens: an empty
             // list is only an error once that read has finished (the app bar shows its progress).

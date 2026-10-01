@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.server
 
+import com.sperance.exileforge.ui.components.inputs
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -29,14 +30,14 @@ import com.sperance.exileforge.ui.components.ForgeTextButton
         var newPassword by remember { mutableStateOf("") }
         ForgeTextButton(onClick = { change = !change; oldPassword = ""; newPassword = "" }) { Text(ui("account.change_password")) }
         if(change) {
-            OutlinedTextField(oldPassword, { oldPassword = it }, label = { Text(ui("account.current_password")) }, visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(newPassword, { newPassword = it }, label = { Text(ui("account.new_password")) }, visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(oldPassword, { oldPassword = it.take(s.inputs.password) }, label = { Text(ui("account.current_password")) }, visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(newPassword, { newPassword = it.take(s.inputs.password) }, label = { Text(ui("account.new_password")) }, visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth())
             ForgeButton(enabled = !s.busy && oldPassword.isNotEmpty() && newPassword.isNotEmpty(), onClick = { vm.changePassword(oldPassword, newPassword); oldPassword = ""; newPassword = ""; change = false }) { Text(ui("account.do_change_password")) }
         }
         ForgeOutlinedButton(enabled = !s.busy, onClick = vm::logout) { Text(ui("account.sign_out")) }
     } else {
-        OutlinedTextField(login, { login = it }, enabled = !s.busy, label = { Text(ui("account.login")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(password, { password = it }, enabled = !s.busy, label = { Text(ui("account.password")) }, singleLine = true, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(login, { login = it.take(s.inputs.login) }, enabled = !s.busy, label = { Text(ui("account.login")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(password, { password = it.take(s.inputs.password) }, enabled = !s.busy, label = { Text(ui("account.password")) }, singleLine = true, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
         ForgeButton(enabled = !s.busy && login.isNotBlank() && password.isNotEmpty(), onClick = { vm.login(login, password); password = "" }, modifier = Modifier.fillMaxWidth()) { Text(ui("account.sign_in")) }
     }
 }

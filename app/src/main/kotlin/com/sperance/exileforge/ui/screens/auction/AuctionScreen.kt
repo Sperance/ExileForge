@@ -42,14 +42,18 @@ import com.sperance.exileforge.ui.components.*
         val mine = s.ownLots.size
         // «Выставить» left in 2.48.0: an item is listed from its own card, a stack from the bag.
         // The merchant moved out in 3.22.0, to a building of the City of its own.
-        val tabs = listOf(ui("auction.showcase"), if (mine > 0) ui("auction.my_lots_n", mine) else ui("auction.my_lots"))
+        val tabs = listOf(ui("auction.showcase"), if (mine > 0) ui("auction.my_lots_n", mine) else ui("auction.my_lots"), ui("auction.history"))
         val tab = s.market.tab.coerceIn(tabs.indices)
         PillTabs(tabs, tab, vm::auctionTab, enabled = !s.busy) { GuideButton(Guide.AUCTION) }
         // Every tab is refreshed the same way the hero is: by pulling it. A button competing with
         // the content was one more thing to find, and the gesture is already the habit here.
         PullToRefreshBox(isRefreshing = s.refreshing(Reads.AUCTION) || Reads.LOTS in s.loading, onRefresh = vm::loadAuction, modifier = Modifier.weight(1f)) {
             Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                if (tab == 0) ShowcaseTab(s, vm) else MyLotsTab(s, vm)
+                when (tab) {
+                    0 -> ShowcaseTab(s, vm)
+                    1 -> MyLotsTab(s, vm)
+                    else -> HistoryTab(s)
+                }
             }
         }
     }

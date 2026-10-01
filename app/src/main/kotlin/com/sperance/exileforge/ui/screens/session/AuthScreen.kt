@@ -1,5 +1,7 @@
 package com.sperance.exileforge.ui.screens.session
 
+import com.sperance.exileforge.ui.components.inputs
+import com.sperance.exileforge.ui.components.LengthCounter
 import androidx.compose.foundation.background
 import com.sperance.exileforge.ui.components.MutedText
 import androidx.compose.foundation.border
@@ -91,9 +93,9 @@ import com.sperance.exileforge.ui.components.VersionLabel
             Text(if (open) "−" else "+", color = Gold, style = MaterialTheme.typography.titleMedium)
         }
         if (open) {
-            OutlinedTextField(login, { login = it }, enabled = !s.busy, label = { Text(ui("account.login")) },
-                singleLine = true, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(password, { password = it }, enabled = !s.busy, label = { Text(ui("account.password")) },
+            OutlinedTextField(login, { login = it.take(s.inputs.login) }, enabled = !s.busy, label = { Text(ui("account.login")) },
+                supportingText = { LengthCounter(login, s.inputs.login) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(password, { password = it.take(s.inputs.password) }, enabled = !s.busy, label = { Text(ui("account.password")) },
                 singleLine = true, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
             ForgeButton(enabled = !s.busy && login.isNotBlank() && password.isNotEmpty(),
                 onClick = { vm.login(login, password); password = "" }, modifier = Modifier.fillMaxWidth()) {
@@ -120,7 +122,7 @@ import com.sperance.exileforge.ui.components.VersionLabel
             Text(if (open) "−" else "+", color = Gold, style = MaterialTheme.typography.titleMedium)
         }
         if (open) {
-            OutlinedTextField(s.account.serverDraft, vm::serverDraft, enabled = !s.busy,
+            OutlinedTextField(s.account.serverDraft, { vm.serverDraft(it.take(s.inputs.server)) }, enabled = !s.busy,
                 label = { Text(ui("account.server_address")) },
                 supportingText = { Text(ui("account.address_hint")) },
                 singleLine = true, modifier = Modifier.fillMaxWidth())

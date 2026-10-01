@@ -292,7 +292,7 @@ private fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Set
 @Composable private fun TreeFilters(query: String, onQuery: (String) -> Unit, found: Int?, tag: String?, onTag: (String?) -> Unit) {
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Engraved(ui("tree.search_filters"))
-        OutlinedTextField(query, onQuery, placeholder = { Text(ui("tree.search_hint")) }, singleLine = true,
+        OutlinedTextField(query, { onQuery(it.take(DefaultInputs.search)) }, placeholder = { Text(ui("tree.search_hint")) }, singleLine = true,
             modifier = Modifier.fillMaxWidth(), textStyle = MaterialTheme.typography.bodySmall,
             leadingIcon = { Icon(Icons.Outlined.Search, null) },
             trailingIcon = { found?.let { Text(ui("tree.search_found", it), color = Vital, style = MaterialTheme.typography.labelSmall,

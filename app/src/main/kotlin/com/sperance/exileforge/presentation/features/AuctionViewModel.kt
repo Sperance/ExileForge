@@ -54,7 +54,8 @@ class AuctionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         val id = heroId
         val lots = api.auction.myLots(id)
         val slots = api.auction.slots(id)
-        mutable.update { it.copy(market = it.market.copy(myLots = lots, slots = slots)) }
+        val history = if (glance) state.value.market.history else api.auction.history(id)
+        mutable.update { it.copy(market = it.market.copy(myLots = lots, slots = slots, history = history)) }
     } } }
 
     /** The merchant's shelf: it comes with the hero snapshot, and is read afresh here when the building opens. */

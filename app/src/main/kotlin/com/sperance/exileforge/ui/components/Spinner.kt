@@ -36,7 +36,7 @@ import com.sperance.exileforge.ui.theme.Muted
         Icon(Icons.Outlined.ExpandMore, null, tint = Gold)
     }
     if(expanded) ForgeDialog(label, onDismiss = { expanded = false }) {
-        OutlinedTextField(search, { search = it }, label = { Text(ui("common.find_option")) }, leadingIcon = { Icon(Icons.Outlined.Search, null) }, singleLine = true)
+        OutlinedTextField(search, { search = it.take(DefaultInputs.search) }, label = { Text(ui("common.find_option")) }, leadingIcon = { Icon(Icons.Outlined.Search, null) }, singleLine = true)
         val filtered = options.filter { (key, title) -> key.contains(search, true) || title.contains(search, true) }.toList()
         if(filtered.isEmpty()) Text(ui("common.no_options"), color = Muted)
         LazyColumn(Modifier.fillMaxWidth().heightIn(max = 400.dp)) {

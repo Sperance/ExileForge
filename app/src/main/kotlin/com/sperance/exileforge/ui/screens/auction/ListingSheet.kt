@@ -38,11 +38,11 @@ internal fun orbOptions(s: ForgeState): Map<String, String> = s.currencies.assoc
         Column(Modifier.fillMaxWidth().padding(16.dp).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Engraved(ui("sell.list"))
             Text(name, color = Parchment, style = MaterialTheme.typography.titleMedium)
-            if (owned != null) OutlinedTextField(amount, { value -> amount = value.filter(Char::isDigit) }, label = { Text(ui("sell.amount_owned", owned)) },
+            if (owned != null) OutlinedTextField(amount, { value -> amount = value.filter(Char::isDigit).take(s.inputs.number) }, label = { Text(ui("sell.amount_owned", owned)) },
                 singleLine = true, keyboardOptions = digits, modifier = Modifier.fillMaxWidth())
             if (s.currencies.isEmpty()) Text(ui("orb.none"), color = Muted)
             else Spinner(ui("orb.orb"), orb, orbOptions(s), !s.busy, glyph = Glyph.CURRENCY, optionArt = orbArt(s.currencies)) { orb = it }
-            OutlinedTextField(price, { value -> price = value.filter(Char::isDigit) }, label = { Text(ui("sell.price")) },
+            OutlinedTextField(price, { value -> price = value.filter(Char::isDigit).take(s.inputs.number) }, label = { Text(ui("sell.price")) },
                 singleLine = true, keyboardOptions = digits, modifier = Modifier.fillMaxWidth())
             MutedText(ui("sell.note"))
             ForgeButton(enabled = !s.busy && orb.isNotBlank() && cost > 0 && count > 0, onClick = { onList(orb, cost, count) }, modifier = Modifier.fillMaxWidth()) {

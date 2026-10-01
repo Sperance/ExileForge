@@ -59,7 +59,7 @@ internal fun stashTweaks(filter: StashFilter, sort: StashSort, hideWorn: Boolean
         Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(ui("stash.filters"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
-            OutlinedTextField(filter.query, { onFilter(filter.copy(query = it)) }, placeholder = { Text(ui("hero.search_hint")) },
+            OutlinedTextField(filter.query, { onFilter(filter.copy(query = it.take(DefaultInputs.search))) }, placeholder = { Text(ui("hero.search_hint")) },
                 label = { Text(ui("hero.find_item")) }, leadingIcon = { Icon(Icons.Outlined.Search, null) },
                 trailingIcon = { if (filter.query.isNotEmpty()) IconButton(onClick = { onFilter(filter.copy(query = "")) }) { Icon(Icons.Outlined.Close, null) } },
                 singleLine = true, keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { onDismiss() }),

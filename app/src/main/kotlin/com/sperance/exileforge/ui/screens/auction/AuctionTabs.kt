@@ -50,6 +50,7 @@ import com.sperance.exileforge.ui.icons.ItemEmblem
 import com.sperance.exileforge.ui.icons.OrbGlyph
 import com.sperance.exileforge.ui.icons.orbArt
 import com.sperance.exileforge.ui.icons.SpriteIcon
+import com.sperance.exileforge.ui.screens.hero.StackInfoSheet
 import com.sperance.exileforge.ui.theme.*
 
 /** The showcase: the server's own search, so the page and the filter both belong to it. */
@@ -266,15 +267,17 @@ private val templateSlots: List<Slot> = Slot.entries.filter { it != Slot.RING_2 
  * Rarity is not written anywhere: it is the frame of the icon and the colour of the name.
  */
 @Composable private fun LotRow(s: ForgeState, lot: AuctionLot, note: String?, onClick: () -> Unit) {
+    var orbInfo by remember { mutableStateOf(false) }
+    if (orbInfo) StackInfoSheet(s, lot.priceOrb) { orbInfo = false }
     val view = lot.equipment?.let { s.view(it) }
     if (view != null) ItemRow(view, enabled = !s.busy,
         facts = lotFacts(s, lot, view),
         // The rules' verdict on the template, as the stash marks it: a lot the buyer cannot wear yet.
         unwearable = lotUnmet(s, lot),
-        trailing = { LotPrice(lot) },
+        trailing = { LotPrice(lot) { orbInfo = true } },
         footer = { LotFooter(lot, note) },
         onClick = onClick)
-    else StackLotRow(s, lot, facts = lotFacts(s, lot, null), trailing = { LotPrice(lot) }, footer = { LotFooter(lot, note) }, onClick = onClick)
+    else StackLotRow(s, lot, facts = lotFacts(s, lot, null), trailing = { LotPrice(lot) { orbInfo = true } }, footer = { LotFooter(lot, note) }, onClick = onClick)
 }
 
 /** A stack lot — or a copy whose template the content no longer holds — as a line framed like a stash row. */
@@ -299,12 +302,15 @@ private val templateSlots: List<Slot> = Slot.entries.filter { it != Slot.RING_2 
     }
 }
 
-/** The price opposite the name: the orb in its own glass (2.69.0), the plain glyph for one the client has no art for, and the count. */
-@Composable private fun LotPrice(lot: AuctionLot) {
+/**
+ * The price opposite the name: the orb in its own glass (2.69.0), the plain glyph for one the client has no art for, and the count —
+ * no orb name, so the item's keeps the width; a tap on a known orb's glass opens it.
+ */
+@Composable private fun LotPrice(lot: AuctionLot, onOrb: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-        Orb.of(lot.priceOrb)?.let { OrbGlyph(it, Modifier.size(18.dp)) }
-            ?: Icon(ForgeGlyphs.Orb, null, tint = Gold, modifier = Modifier.size(15.dp))
-        Text(orbPrice(lot), color = GoldBright, style = MaterialTheme.typography.labelLarge, maxLines = 1)
+        Orb.of(lot.priceOrb)?.let { OrbGlyph(it, Modifier.clickable(onClickLabel = orbTitle(lot), onClick = onOrb).padding(3.dp).size(18.dp)) }
+            ?: Icon(ForgeGlyphs.Orb, orbTitle(lot), tint = Gold, modifier = Modifier.size(15.dp))
+        Text(lot.price.toString(), color = GoldBright, style = MaterialTheme.typography.labelLarge, maxLines = 1)
     }
 }
 

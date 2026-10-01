@@ -23,6 +23,7 @@ import com.sperance.exileforge.rules.content.Omen
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.content.Pet
 import com.sperance.exileforge.rules.content.PetKind
+import com.sperance.exileforge.rules.content.PetLine
 import com.sperance.exileforge.rules.roll.Menagerie
 import com.sperance.exileforge.rules.roll.OrbApplier
 import com.sperance.exileforge.rules.roll.OrbTarget
@@ -104,7 +105,7 @@ fun petName(species: String): String = locOr("pet.$species", species)
         if (pet.offer.isNotEmpty()) ChoiceFrame("forge.choice_title", "forge.choice_hint") {
             pet.offer.forEachIndexed { i, option ->
                 val text = menagerie.lines(pet.copy(lines = listOf(option), offer = emptyList())).firstOrNull()?.let { lineText(index, it) } ?: displayName(option.code)
-                ChoiceRow(text, "") { if (!s.busy) vm.choosePetLine(pet.id, i) }
+                ChoiceRow(text, "T${option.tier}") { if (!s.busy) vm.choosePetLine(pet.id, i) }
             }
         }
         if (kind.kind == PetKind.COMBAT) {
@@ -176,3 +177,8 @@ fun petName(species: String): String = locOr("pet.$species", species)
         ForgeOutlinedButton(onClick = onSpend, enabled = enabled) { Text("× ${number(held.toDouble())}") }
     }
 }
+
+/** A pet line has no tiers of its own; its rolls read as five steps, T1 the best, as an item's tiers do. */
+private val PetLine.tier: Int get() = PET_TIERS - (shares.average().takeIf { it.isFinite() } ?: 0.0).times(PET_TIERS).toInt().coerceIn(0, PET_TIERS - 1)
+
+private const val PET_TIERS = 5

@@ -36,6 +36,8 @@ import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.roll.OrbApplier
+import com.sperance.exileforge.rules.roll.OrbTarget
+import com.sperance.exileforge.rules.roll.Roll
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.OrbGlyph
@@ -80,13 +82,16 @@ private val ESSENTIAL = setOf(Rarity.COMMON, Rarity.RARE)
     val benchable = instance != null && instance.rarity in BENCHABLE
     // An essence works on gear alone: not a map, a jewel, a flask or a tool.
     val essential = slot != null && !slot.isJewelLike && !slot.isFlask && !slot.isTool && instance != null && instance.rarity in ESSENTIAL
+    // The omens in the bag: an orb that goes on this item only with one of them (a catalyst's Orb of Quality on a ring) is offered too.
+    val omens: List<Omen> = remember(index, hero?.bag) { if (hero == null || index == null) emptyList() else heldOmens(index, hero) }
     // Only what goes on this item is offered (3.2.0): each orb and essence tried over a copy by the rules, a refusal left out
-    val refused: Set<String> = remember(instance, view, index) {
+    val refused: Set<String> = remember(instance, view, index, omens) {
         val item = instance
         val target = view?.template
         if (index == null || item == null || target == null) emptySet() else {
             val applier = OrbApplier(index)
-            Orb.entries.filterNot { applier.accepts(it, item, target) }.map { it.name }.toSet() +
+            val gear = OrbTarget.Gear(item, target)
+            Orb.entries.filterNot { orb -> applier.accepts(orb, gear) || omens.any { it.fits(orb) && applier.accepts(orb, gear, it) } }.map { it.name }.toSet() +
                 index.essences.essences.values.filterNot { applier.accepts(it, item, target) }.map { it.code }
         }
     }
@@ -106,9 +111,12 @@ private val ESSENTIAL = setOf(Rarity.COMMON, Rarity.RARE)
             }
             when (section) {
                 ForgeSection.ORBS -> {
-                    instance?.let { UnveilChoice(s, it, enabled, vm::unveil) }
+                    instance?.let {
+                        LineChoice(s, it, it.unveil, "forge.unveil_title", "forge.unveil_hint", enabled, vm::unveil)
+                        LineChoice(s, it, it.offer, "forge.choice_title", "forge.choice_hint", enabled, vm::choose)
+                    }
                     OrbLedger(s, accepted, vm::selectOrb)
-                    if (instance != null && view != null) OmenLedger(s, instance, view, vm::selectOmen)
+                    if (instance != null && view != null) OmenLedger(s, OrbTarget.Gear(instance, view.template), omens, vm::selectOmen)
                 }
                 ForgeSection.BENCH -> view?.let { BenchLedger(s, index, hero, it, benchLine) { line -> benchLine = line } }
                 ForgeSection.ESSENCES -> EssenceLedger(s, accepted, vm::selectEssence)
@@ -241,17 +249,20 @@ private val ForgeSection.title get() = when (this) {
     HorizontalDivider(color = PanelRaised)
 }
 
+/** The omens the bag holds (3.36.0; server 1.65.0: the catalysts are omens of the Orb of Quality), in the content's order. */
+internal fun heldOmens(index: ContentIndex, hero: HeroView): List<Omen> =
+    index.itemsByCategory[Item.OMEN].orEmpty().mapNotNull { item -> Omen.of(item.code)?.takeIf { hero.count(item.code) > 0 } }
+
 /**
- * The omens the bag holds for the chosen orb (3.36.0): one may be laid on the next use, the one that goes on the item.
- * Chosen again, it is taken off.
+ * The omens the bag holds for the chosen orb (3.36.0): one may be laid on the next use, the one that goes on the [target] -
+ * an item or, since server 1.65.0, a pet. Chosen again, it is taken off.
  */
-@Composable private fun OmenLedger(s: ForgeState, instance: ItemInstance, view: ItemView, onSelect: (String) -> Unit) {
+@Composable fun OmenLedger(s: ForgeState, target: OrbTarget, held: List<Omen>, onSelect: (String) -> Unit) {
     val hero = s.hero ?: return
     val index = s.index ?: return
     val orb = Orb.of(s.play.selectedOrb) ?: return
     val applier = remember(index) { OrbApplier(index) }
-    val omens = index.itemsByCategory[Item.OMEN].orEmpty().mapNotNull { item -> Omen.of(item.code)?.takeIf { it.orb == orb && hero.count(item.code) > 0 } }
-        .filter { applier.accepts(orb, instance, view.template, it) }
+    val omens = remember(applier, orb, target, held) { held.filter { it.fits(orb) && applier.accepts(orb, target, it) } }
     if (omens.isEmpty()) return
     Text(ui("forge.omen"), color = Rune, style = MaterialTheme.typography.titleSmall)
     Column {
@@ -263,18 +274,33 @@ private val ForgeSection.title get() = when (this) {
     }
 }
 
-/** The unveiling's offer (3.36.0): each modifier the veiled one may become, one tap keeps it and the rest are lost. */
-@Composable private fun UnveilChoice(s: ForgeState, instance: ItemInstance, enabled: Boolean, onChoose: (String, Int) -> Unit) {
-    if (instance.unveil.isEmpty()) return
-    Column(Modifier.fillMaxWidth().border(1.dp, Rune, MaterialTheme.shapes.small).padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(ui("forge.unveil_title"), color = Rune, style = MaterialTheme.typography.titleMedium)
-        MutedText(ui("forge.unveil_hint"))
-        instance.unveil.forEachIndexed { i, option ->
-            val text = s.view(instance.copy(rolls = listOf(option), unveil = emptyList()))?.lines?.firstOrNull()?.text.orEmpty()
-            LedgerRow(ForgeGlyphs.Sigil, Rune, text, "", "T${option.tier}", selected = false, ink = ModBlue) { if (enabled) onChoose(instance.id, i) }
+/**
+ * A choice of lines waiting on the item: the unveiling's offer (3.36.0) — each modifier the veiled one may become — or the
+ * Omen of Choice's (server 1.65.0) — each line an Orb of Alchemy or an Exalted Orb may add. One tap keeps it and the rest are lost.
+ */
+@Composable private fun LineChoice(s: ForgeState, instance: ItemInstance, options: List<Roll>, title: String, hint: String, enabled: Boolean,
+    onChoose: (String, Int) -> Unit) {
+    if (options.isEmpty()) return
+    ChoiceFrame(title, hint) {
+        options.forEachIndexed { i, option ->
+            val text = s.view(instance.copy(rolls = listOf(option), unveil = emptyList(), offer = emptyList()))?.lines?.firstOrNull()?.text.orEmpty()
+            ChoiceRow(text, "T${option.tier}") { if (enabled) onChoose(instance.id, i) }
         }
     }
 }
+
+/** The frame of a choice of lines — an item's or a pet's: the title, how it works, and the options under them. */
+@Composable fun ChoiceFrame(title: String, hint: String, options: @Composable ColumnScope.() -> Unit) {
+    Column(Modifier.fillMaxWidth().border(1.dp, Rune, MaterialTheme.shapes.small).padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(ui(title), color = Rune, style = MaterialTheme.typography.titleMedium)
+        MutedText(ui(hint))
+        options()
+    }
+}
+
+/** One option of a [ChoiceFrame]: the line as it would read, and a figure beside it. */
+@Composable fun ChoiceRow(text: String, figure: String, onClick: () -> Unit) =
+    LedgerRow(ForgeGlyphs.Sigil, Rune, text, "", figure, selected = false, ink = ModBlue, onClick = onClick)
 
 /** The chosen orb over the navigation: what it does, what the bag keeps, and the button that is held. */
 @Composable fun OrbBar(s: ForgeState, instance: ItemInstance, enabled: Boolean, accepted: (String) -> Boolean, onApply: (String, String) -> Unit) {

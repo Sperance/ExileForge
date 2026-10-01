@@ -232,13 +232,14 @@ private fun stashMaps(s: ForgeState): List<StashMap> =
     val own = index.campaign.maps.rarityBonus[rarity] ?: 0.0
     Text(if (own > 0) ui("expedition.launch_rarity_line", rarityTitle(rarity, s.lang), number(own)) else rarityTitle(rarity, s.lang),
         color = rarityColor(rarity.name), style = MaterialTheme.typography.labelMedium)
-    // A map taken by an influence (3.52.0, server 1.50.0): stronger monsters — the risk pays for them — its influence on the loot.
-    val influence = picked.item.influence?.takeIf { it in index.campaign.maps.influence.kinds }
+    // A map taken by an influence (3.52.0, server 1.50.0): stronger monsters — the risk pays for them — its influence on the loot;
+    // the Abyss (server 1.65.0) only from its orb, with its cracks besides.
+    val influence = picked.item.influence?.takeIf { index.campaign.maps.influence.accepts(it) }
     val bonus = LootRoller(index).activeMap(zone.code, picked.view.effects(), rarity, influence = influence)
     influence?.let {
         val rule = index.campaign.maps.influence
         Text(ui("expedition.launch_influence", com.sperance.exileforge.core.i18n.loc("enum.EnumInfluence.${it.name}"), number(rule.power), number(rule.items)),
-            color = if (it == com.sperance.exileforge.rules.content.Influence.SHAPER) Shaper else Elder, style = MaterialTheme.typography.labelMedium)
+            color = stateColor(it.name.lowercase()), style = MaterialTheme.typography.labelMedium)
     }
     Row(Modifier.fillMaxWidth().background(Abyss).border(1.dp, PanelRaised).padding(vertical = 10.dp), horizontalArrangement = Arrangement.SpaceAround) {
         Figure(bonus.quantity, ui("expedition.launch_quantity"))

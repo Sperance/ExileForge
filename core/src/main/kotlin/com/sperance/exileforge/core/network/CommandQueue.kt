@@ -115,12 +115,12 @@ class CommandQueue(private val store: CommandStore?, private val clock: () -> Lo
         private val OWN_RETRY = listOf("api/v1/user/", "api/v1/hero/campaign/")
 
         /**
-         * Commands whose outcome is rolled (3.55.0): an orb, an essence, an unveiling, a bench craft, a hatching, a
-         * pet's orb, a job started. Offline they are refused rather than kept: a second press would act on an item
+         * Commands whose outcome is rolled (3.55.0): an orb, an essence, an unveiling or a chosen line, a bench craft, a
+         * hatching, a pet's orb or chosen line, a job started. Offline they are refused rather than kept: a second press would act on an item
          * the player has not yet seen, and the whole row would land blind once the link is back.
          */
-        private val ROLLED = listOf("api/v1/hero/orb", "api/v1/hero/essence", "api/v1/hero/unveil", "api/v1/hero/craft",
-            "api/v1/hero/pets/hatch", "api/v1/hero/pets/orb", "api/v1/hero/crafts/start")
+        private val ROLLED = listOf("api/v1/hero/orb", "api/v1/hero/essence", "api/v1/hero/unveil", "api/v1/hero/choose", "api/v1/hero/craft",
+            "api/v1/hero/pets/hatch", "api/v1/hero/pets/orb", "api/v1/hero/pets/choose", "api/v1/hero/crafts/start")
 
         fun queues(path: String): Boolean = OWN_RETRY.none { path.startsWith(it) } && ROLLED.none { path.startsWith(it) && !path.startsWith("api/v1/hero/crafts/stop") }
 

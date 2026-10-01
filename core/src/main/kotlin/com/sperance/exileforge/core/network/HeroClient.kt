@@ -121,7 +121,12 @@ class HeroClient internal constructor(private val http: Transport) {
     // ---- the menagerie (server 1.5.0); none retried: a repeat would spend a second egg or orb ----
 
     suspend fun hatchPet(heroId: String, egg: String): PetState = http.post("$HERO/pets/hatch", heroQuery(heroId, "egg" to egg))
-    suspend fun petOrb(heroId: String, petId: String, orb: String): PetState = http.post("$HERO/pets/orb", heroQuery(heroId, "petId" to petId.also(::requireItemId), "orb" to orb))
+    /** Any crafting orb on a pet (server 1.65.0), with an [omen] spent along with it when given; the pets' own growth orb too. */
+    suspend fun petOrb(heroId: String, petId: String, orb: String, omen: String? = null): PetState =
+        http.post("$HERO/pets/orb", heroQuery(heroId, "petId" to petId.also(::requireItemId), "orb" to orb, "omen" to omen?.takeIf { it.isNotBlank() }))
+    /** The Omen of Choice's line kept on a pet (server 1.65.0): [choice] of the ones it offers. */
+    suspend fun choosePetLine(heroId: String, petId: String, choice: Int): PetState =
+        http.post("$HERO/pets/choose", heroQuery(heroId, "petId" to petId.also(::requireItemId), "choice" to choice.toString()))
     suspend fun activatePet(heroId: String, petId: String): PetState = http.post("$HERO/pets/activate", heroQuery(heroId, "petId" to petId.also(::requireItemId)))
     suspend fun releasePet(heroId: String, petId: String): PetState = http.post("$HERO/pets/release", heroQuery(heroId, "petId" to petId.also(::requireItemId)))
 
@@ -153,6 +158,12 @@ class HeroClient internal constructor(private val http: Transport) {
     suspend fun unveil(heroId: String, itemId: String, choice: Int): CurrencyApplyResponse {
         requireItemId(itemId)
         return http.post("$HERO/unveil", heroQuery(heroId, "itemId" to itemId, "choice" to choice.toString()))
+    }
+
+    /** The Omen of Choice's line kept (server 1.65.0): [choice] of the ones an Orb of Alchemy or an Exalted Orb offered. */
+    suspend fun choose(heroId: String, itemId: String, choice: Int): CurrencyApplyResponse {
+        requireItemId(itemId)
+        return http.post("$HERO/choose", heroQuery(heroId, "itemId" to itemId, "choice" to choice.toString()))
     }
 
     suspend fun applyEssence(heroId: String, itemId: String, essence: String): CurrencyApplyResponse {

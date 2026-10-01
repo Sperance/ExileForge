@@ -69,31 +69,9 @@ private val art = mapOf(
     Orb.ELDER_ORB to OrbArt(0xFFB080E0, Emblem.TENTACLE, rays = true),
     Orb.ABYSS_ORB to OrbArt(0xFF8A4FE8, Emblem.RIFT, rays = true),
     Orb.ORB_OF_REGRET to OrbArt(0xFF9AA8B8, Emblem.MOON),
-    Orb.EMPOWERING_ORB to OrbArt(0xFFF08040, Emblem.FLAME),
-    Orb.MERCY_ORB to OrbArt(0xFF80E0C0, Emblem.HEART),
-    Orb.PERIL_ORB to OrbArt(0xFFE05060, Emblem.SKULL),
-    Orb.HORDE_ORB to OrbArt(0xFFC09060, Emblem.DOTS),
-    Orb.MAGUS_ORB to OrbArt(0xFF8888FF, Emblem.RUNE),
-    Orb.ELITE_ORB to OrbArt(0xFFFFFF77, Emblem.GEM),
-    Orb.BOUNTY_ORB to OrbArt(0xFFE8CF94, Emblem.COIN),
-    Orb.TREASURE_ORB to OrbArt(0xFFD8B060, Emblem.GEM),
-    Orb.GILDED_ORB to OrbArt(0xFFF0D060, Emblem.COIN, rays = true),
-    Orb.WARDEN_ORB to OrbArt(0xFFB05050, Emblem.CROWN),
-    Orb.ESSENCE_ORB to OrbArt(0xFFB07FE0, Emblem.CRYSTAL),
-    Orb.SCRIBE_ORB to OrbArt(0xFFD8C8A0, Emblem.BOOK),
-    Orb.GLASSBLOWERS_BAUBLE to OrbArt(0xFF9FD8E8, Emblem.FLASK),
-    // 3.36.0: quality, catalysts and the unveiling.
-    Orb.WHETSTONE to OrbArt(0xFFB8B0A0, Emblem.CRACK),
-    Orb.ARMOURERS_SCRAP to OrbArt(0xFF98A4B0, Emblem.HEX),
+    // 3.36.0: the unveiling; server 1.65.0: one Orb of Quality for every kind of quality, its catalysts are omens now.
     Orb.UNVEILING_ORB to OrbArt(0xFFC0A0F0, Emblem.EYE, rays = true),
-    Orb.CATALYST_LIFE to OrbArt(0xFFE06070, Emblem.DROP),
-    Orb.CATALYST_DEFENCE to OrbArt(0xFF90A8C0, Emblem.DROP),
-    Orb.CATALYST_ELEMENTAL to OrbArt(0xFF70C8E8, Emblem.DROP),
-    Orb.CATALYST_PHYSICAL to OrbArt(0xFFC09070, Emblem.DROP),
-    Orb.CATALYST_CHAOS to OrbArt(0xFF80C060, Emblem.DROP),
-    Orb.CATALYST_SPEED to OrbArt(0xFFE8D070, Emblem.DROP),
-    Orb.CATALYST_ATTRIBUTE to OrbArt(0xFFD0A0E0, Emblem.DROP),
-    Orb.CATALYST_CASTER to OrbArt(0xFF8090F0, Emblem.DROP),
+    Orb.QUALITY_ORB to OrbArt(0xFFD8A070, Emblem.FLAME),
 )
 
 /** An orb the client has no art for — one the server added later — is plain gold glass with a gem. */
@@ -121,14 +99,7 @@ private enum class Emblem(val d: String, val filled: Boolean) {
     TENTACLE("M36 74 Q30 50 44 40 Q56 32 50 24 M50 74 Q50 54 60 46 Q70 38 64 28 M64 74 Q70 58 76 52", false),
     MOON("M58 26 A24 24 0 1 0 58 74 A18 18 0 1 1 58 26 Z", true),
     FLAME("M50 24 Q66 42 60 56 Q70 52 66 64 A16 16 0 0 1 34 62 Q30 50 42 44 Q42 54 48 54 Q40 38 50 24 Z", true),
-    HEART("M50 72 L30 52 A11 11 0 0 1 50 36 A11 11 0 0 1 70 52 Z", true),
-    SKULL("M34 48 A16 16 0 1 1 66 48 V58 H60 V66 H40 V58 H34 Z M42 46 a4 4 0 1 1 -0.1 0 Z M58 46 a4 4 0 1 1 -0.1 0 Z", true),
-    DOTS("M40 40 a6 6 0 1 1 -0.1 0 Z M60 40 a6 6 0 1 1 -0.1 0 Z M50 58 a6 6 0 1 1 -0.1 0 Z M34 60 a4 4 0 1 1 -0.1 0 Z M66 60 a4 4 0 1 1 -0.1 0 Z", true),
-    RUNE("M50 24 V76 M50 36 L64 26 M50 50 L36 40 M50 50 L64 62", false),
     GEM("M36 36 H64 L74 48 L50 76 L26 48 Z M26 48 H74 M42 36 L38 48 L50 76 L62 48 L58 36", true),
-    COIN("M50 30 a20 20 0 1 1 -0.1 0 Z M50 38 V62 M44 42 H55 Q60 42 60 47 Q60 50 50 50 Q40 50 40 55 Q40 58 45 58 H56", false),
-    CRYSTAL("M50 22 L64 40 L58 76 H42 L36 40 Z M36 40 H64 M50 22 L46 40 L50 76", true),
-    BOOK("M28 32 Q40 28 50 34 Q60 28 72 32 V70 Q60 66 50 72 Q40 66 28 70 Z M50 34 V72", false),
 }
 
 private val lead = SolidColor(Color(0xFF111111))

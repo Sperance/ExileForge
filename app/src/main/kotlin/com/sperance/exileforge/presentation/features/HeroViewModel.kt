@@ -75,7 +75,9 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     // The menagerie (3.5.0): the snapshot with each answer carries the pets and the bag.
     fun hatchPet(egg: String) { with(runtime) { heroCommand { id -> api.hero.hatchPet(id, egg) } } }
-    fun petOrb(petId: String, orb: String) { with(runtime) { heroCommand { id -> api.hero.petOrb(id, petId, orb) } } }
+    /** A crafting orb on a pet (server 1.65.0), with an omen when one is laid on it. */
+    fun petOrb(petId: String, orb: String, omen: String? = null) { with(runtime) { heroCommand { id -> api.hero.petOrb(id, petId, orb, omen) } } }
+    fun choosePetLine(petId: String, choice: Int) { with(runtime) { heroCommand { id -> api.hero.choosePetLine(id, petId, choice) } } }
     fun activatePet(petId: String) { with(runtime) { heroCommand { id -> api.hero.activatePet(id, petId) } } }
     fun releasePet(petId: String) { with(runtime) { heroCommand { id -> api.hero.releasePet(id, petId) } } }
 
@@ -119,6 +121,12 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     fun unveil(itemId: String, choice: Int) { with(runtime) { forgeCommand { id ->
         val outcome = api.hero.unveil(id, itemId, choice)
+        mutable.update { it.copy(play = it.play.copy(forgeLine = outcome.message)) }
+    } } }
+
+    /** The Omen of Choice's line kept (server 1.65.0). */
+    fun choose(itemId: String, choice: Int) { with(runtime) { forgeCommand { id ->
+        val outcome = api.hero.choose(id, itemId, choice)
         mutable.update { it.copy(play = it.play.copy(forgeLine = outcome.message)) }
     } } }
 

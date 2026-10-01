@@ -617,6 +617,7 @@
   "recipe.applies": "Used at: Forge → Bench, on magic and rare items (not maps)",
   "recipe.slots": "Slots: {0}",
   "recipe.open_forge": "Open in the Forge",
+  "recipe.after_run": "Available at the Forge after the run",
   "expedition.report_gear": "Gear",
   "expedition.report_kills": "Slain: {0}",
   "expedition.report_orbs": "Orbs",

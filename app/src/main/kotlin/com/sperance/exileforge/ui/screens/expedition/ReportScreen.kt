@@ -93,8 +93,8 @@ import java.util.Locale
     looked?.let { item -> LootSheet(s, vm, item, onDismiss = { looked = null }) }
     // A stack of the spoils opened: what it is, what it is for, and how many the hero holds.
     stack?.let { code -> StackInfoSheet(s, code) { stack = null } }
-    // The recipe the kill turned up: what it does and the way to the bench.
-    recipe?.let { code -> RecipeSheet(s, vm, code) { recipe = null } }
+    // The recipe the kill turned up: what it does, and that the bench waits for the run's end.
+    recipe?.let { code -> RecipeSheet(s, vm, code, inRun = true) { recipe = null } }
 }
 
 /** The scene: the monster's round token in its rarity's ring, lit warm for a victory and red for a defeat, and the outcome in words. */

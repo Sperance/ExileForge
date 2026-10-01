@@ -26,10 +26,11 @@ import com.sperance.exileforge.ui.theme.*
 
 /**
  * A bench recipe the run turned up, behind a tap on its chip: what it is called, the line it puts on an item — the
- * bench's own sentence, with the tier's range — where it is used, what it costs, and the way to the bench itself.
+ * bench's own sentence, with the tier's range — where it is used, what it costs, and the way to the bench itself. During a
+ * run ([inRun]) the run holds the whole screen, so the way to the bench is only named, for after it.
  */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable internal fun RecipeSheet(s: ForgeState, vm: ForgeViewModel, code: String, onDismiss: () -> Unit) {
+@Composable internal fun RecipeSheet(s: ForgeState, vm: ForgeViewModel, code: String, inRun: Boolean = false, onDismiss: () -> Unit) {
     val index = s.index
     val recipe = index?.recipe(code)
     val title = recipe?.let { r -> index?.modifier(r.modifier)?.effects?.map { statTitle(it.stat) }?.distinct()?.joinToString(" / ") }
@@ -55,7 +56,8 @@ import com.sperance.exileforge.ui.theme.*
                     }
                 }
                 Text(ui("recipe.applies"), color = Parchment, style = MaterialTheme.typography.bodyMedium)
-                ForgeButton(onClick = { onDismiss(); vm.openForge(null, ForgeSection.BENCH) }, modifier = Modifier.fillMaxWidth()) {
+                if (inRun) MutedText(ui("recipe.after_run"), style = MaterialTheme.typography.bodyMedium)
+                else ForgeButton(onClick = { onDismiss(); vm.openForge(null, ForgeSection.BENCH) }, modifier = Modifier.fillMaxWidth()) {
                     Text(ui("recipe.open_forge"), style = MaterialTheme.typography.titleSmall)
                 }
             }

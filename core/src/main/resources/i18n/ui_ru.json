@@ -617,6 +617,7 @@
   "recipe.applies": "Применяется: Кузница → Верстак, на волшебных и редких предметах (не картах)",
   "recipe.slots": "Слоты: {0}",
   "recipe.open_forge": "Открыть в Кузнице",
+  "recipe.after_run": "Доступно в Кузнице после забега",
   "expedition.report_gear": "Снаряжение",
   "expedition.report_kills": "Убито: {0}",
   "expedition.report_orbs": "Сферы",

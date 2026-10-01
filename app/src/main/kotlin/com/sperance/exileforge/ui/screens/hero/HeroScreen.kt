@@ -108,19 +108,24 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
                 }
                 HeroSection.STASH -> {
                     if (hero.overflow.isNotEmpty()) item(key = "overflow") { StashOverflow(s, vm) }
-                    item {
+                    // Two rows since 3.69.0: the count beside the switch squeezed the filter glyph off its shape.
+                    // The switch takes what is left after the glyph, never the other way round.
+                    item(key = "shelf") {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            FilterChip(selected = !tools, onClick = { tools = false; filter = filter.copy(groups = emptySet()) }, label = { Text(ui("hero.stash_gear")) },
-                                leadingIcon = { Icon(ForgeGlyphs.Helm, null, modifier = Modifier.size(16.dp)) })
-                            FilterChip(selected = tools, onClick = { tools = true; filter = filter.copy(groups = emptySet()) }, label = { Text(ui("hero.stash_tools")) },
-                                leadingIcon = { Icon(ForgeGlyphs.Anvil, null, modifier = Modifier.size(16.dp)) })
-                            Spacer(Modifier.weight(1f))
-                            // The places held of how many, and a «+» for the next pack.
-                            StashFill(s, vm)
+                            Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                FilterChip(selected = !tools, onClick = { tools = false; filter = filter.copy(groups = emptySet()) },
+                                    label = { Text(ui("hero.stash_gear"), maxLines = 1) },
+                                    leadingIcon = { Icon(ForgeGlyphs.Helm, null, modifier = Modifier.size(16.dp)) })
+                                FilterChip(selected = tools, onClick = { tools = true; filter = filter.copy(groups = emptySet()) },
+                                    label = { Text(ui("hero.stash_tools"), maxLines = 1) },
+                                    leadingIcon = { Icon(ForgeGlyphs.Anvil, null, modifier = Modifier.size(16.dp)) })
+                            }
                             // Search, order and filters live behind one glyph since 3.67.0: the shelf keeps the screen.
                             StashFilterButton(stashTweaks(filter, s.stashSort)) { filtering = true }
                         }
                     }
+                    // The places held of how many across the whole width, and a «+» for the next pack.
+                    item(key = "fill") { StashFill(s, vm, Modifier.fillMaxWidth()) }
                     if (visible.isEmpty()) item { InfoCard(ui("tree.nothing_found"), if (filter.active) ui("stash.filter_empty") else ui("hero.stash_empty_hint")) }
                     // A line, not a card: a stash is read down, and the card is one tap behind each line.
                     items(lines, key = { it.piece.id }) { line ->

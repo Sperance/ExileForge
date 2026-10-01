@@ -30,10 +30,10 @@ import com.sperance.exileforge.ui.theme.*
  * taken in or sold. Past the overflow the merchant buys a drop himself; the rules say how far each goes.
  * Only items count against the places: orbs and the rest of the bag stack without a limit.
  *
- * The fill is a compact bar beside the shelf's switch, in the error colour once full; its «+» asks for the
- * next pack with its price. The overflow stays in the list, since it is items to act on.
+ * The fill is a thin bar under the shelf's switch (3.69.0), across the width, in the error colour once full; its «+»
+ * asks for the next pack with its price. The overflow stays in the list, since it is items to act on.
  */
-@Composable fun StashFill(s: ForgeState, vm: ForgeViewModel) {
+@Composable fun StashFill(s: ForgeState, vm: ForgeViewModel, modifier: Modifier = Modifier) {
     val hero = s.hero ?: return
     val rules = s.index?.rules?.stash ?: return
     val capacity = rules.capacity(hero.info.stashSlots)
@@ -43,15 +43,15 @@ import com.sperance.exileforge.ui.theme.*
     val price = rules.price(hero.info.stashSlots)
     val label = ui("stash.places", held, capacity)
     var buying by remember { mutableStateOf(false) }
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        Column(Modifier.semantics(mergeDescendants = true) { contentDescription = label },
-            horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(ui("stash.places_chip", held, capacity), color = if (full) tint else GoldBright, fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.labelSmall, maxLines = 1)
-            Box(Modifier.width(44.dp).height(4.dp).background(PanelRaised, RoundedCornerShape(2.dp))) {
+    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.weight(1f).semantics(mergeDescendants = true) { contentDescription = label },
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Box(Modifier.weight(1f).height(4.dp).background(PanelRaised, RoundedCornerShape(2.dp))) {
                 Box(Modifier.fillMaxWidth(if (capacity > 0) (held.toFloat() / capacity).coerceIn(0f, 1f) else 1f).fillMaxHeight()
                     .background(tint, RoundedCornerShape(2.dp)))
             }
+            Text(ui("stash.places_chip", held, capacity), color = if (full) tint else GoldBright, fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.labelSmall, maxLines = 1, softWrap = false)
         }
         if (price > 0) IconButton(onClick = { buying = true }, modifier = Modifier.size(28.dp)) {
             Icon(Icons.Outlined.Add, ui("stash.expand", minOf(rules.slotStep, rules.maxSlots - capacity)), tint = tint, modifier = Modifier.size(18.dp))

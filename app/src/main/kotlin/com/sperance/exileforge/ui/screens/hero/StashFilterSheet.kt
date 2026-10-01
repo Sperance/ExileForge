@@ -32,11 +32,11 @@ internal fun stashTweaks(filter: StashFilter, sort: StashSort): Int =
     filter.groups.size + filter.rarities.size + (if (filter.wearable) 1 else 0) + (if (filter.query.isNotBlank()) 1 else 0) +
         (if (sort != StashSort.NEWEST) 1 else 0)
 
-/** The stash's one filter glyph: lit and badged with the count of what narrows the shelf. */
+/** The stash's one filter glyph: lit and badged with the count of what narrows the shelf; its size is required, so no row squeezes it. */
 @Composable internal fun StashFilterButton(tweaks: Int, onClick: () -> Unit) {
     val tint = if (tweaks > 0) GoldBright else Muted
-    BadgedBox(badge = { if (tweaks > 0) Badge(containerColor = Vital, contentColor = Ink) { Text(tweaks.toString(), fontSize = 9.sp) } }) {
-        IconButton(onClick = onClick, modifier = Modifier.size(36.dp).border(1.dp, tint.copy(alpha = .6f), CircleShape)) {
+    BadgedBox(badge = { if (tweaks > 0) Badge(containerColor = Vital, contentColor = Ink) { Text(tweaks.toString(), fontSize = 9.sp, maxLines = 1) } }) {
+        IconButton(onClick = onClick, modifier = Modifier.requiredSize(36.dp).border(1.dp, tint.copy(alpha = .6f), CircleShape)) {
             Icon(Icons.Outlined.FilterList, ui("stash.filters"), tint = tint, modifier = Modifier.size(18.dp))
         }
     }

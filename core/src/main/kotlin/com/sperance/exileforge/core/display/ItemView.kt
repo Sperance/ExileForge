@@ -10,6 +10,7 @@ import com.sperance.exileforge.rules.content.Influence
 import com.sperance.exileforge.rules.content.ItemTemplate
 import com.sperance.exileforge.rules.content.ModifierDef
 import com.sperance.exileforge.rules.content.Op
+import com.sperance.exileforge.rules.content.Range
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.Source
@@ -248,14 +249,17 @@ fun rangeText(def: ModifierDef, tier: Tier): String? = tier.values.mapIndexedNot
 }.joinToString(" / ").ifBlank { null }
 
 /** A bench line as the sentence it would add, with the tier's range where the roll will land: "+(70–79) to maximum Life". */
-fun recipeText(index: ContentIndex, recipe: BenchRecipe): String {
-    val def = index.modifier(recipe.modifier)
-    val ranges = recipe.values.filter { it.size == 2 }.mapIndexed { i, (min, max) ->
+fun recipeText(index: ContentIndex, recipe: BenchRecipe): String = rangedLine(index, recipe.modifier, recipe.values)
+
+/** A modifier's sentence with each value as its range: "+(70–79) to maximum Life" — a bench line, an essence's guarantee. */
+fun rangedLine(index: ContentIndex, modifier: String, values: List<Range>): String {
+    val def = index.modifier(modifier)
+    val ranges = values.filter { it.size == 2 }.mapIndexed { i, (min, max) ->
         val stat = def?.effects?.getOrNull(i)?.stat.orEmpty()
         val low = modNumber(stat, min); val high = modNumber(stat, max)
         if (low == high) low else "($low–$high)"
     }
-    val template = def?.let { modifierText(index).template(it) } ?: return ranges.joinToString(" · ").ifBlank { displayName(recipe.modifier) }
+    val template = def?.let { modifierText(index).template(it) } ?: return ranges.joinToString(" · ").ifBlank { displayName(modifier) }
     return fillTemplate(template, ranges)
 }
 

@@ -15,13 +15,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.ItemVisualKind
 import com.sperance.exileforge.core.display.bagVisualKind
+import com.sperance.exileforge.core.display.chanceText
+import com.sperance.exileforge.core.display.essenceGuarantees
+import com.sperance.exileforge.core.display.itemSources
+import com.sperance.exileforge.core.display.title
 import com.sperance.exileforge.core.display.itemDescription
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.tradeName
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Item
 import com.sperance.exileforge.rules.content.Orb
+import com.sperance.exileforge.ui.components.Engraved
 import com.sperance.exileforge.ui.components.RaritySpine
 import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.theme.*
@@ -187,4 +193,32 @@ internal fun compactCount(amount: Long): String = when {
         }
     }
     itemDescription(code).takeIf { it.isNotBlank() }?.let { Text(it, color = Parchment, style = MaterialTheme.typography.bodyMedium) }
+    s.index?.let { StackLore(it, code) }
 }
+
+/** What the content says of a stack under its description: an essence's guaranteed line by kind of item, then where it is found. */
+@Composable private fun StackLore(index: ContentIndex, code: String) {
+    val guarantees = essenceGuarantees(index, code)
+    val sources = itemSources(index, code).take(MAX_SOURCES)
+    if (guarantees.isNotEmpty()) Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Engraved(ui("bag.essence_guarantee"))
+        guarantees.forEach { guarantee ->
+            Column {
+                MutedText(guarantee.slots, style = MaterialTheme.typography.labelSmall)
+                Text(guarantee.line, color = ModBlue, style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+    }
+    if (sources.isNotEmpty()) Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Engraved(ui("bag.sources"))
+        sources.forEach { source ->
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(source.title(), color = Parchment, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                source.chanceText()?.let { MutedText(it, style = MaterialTheme.typography.labelSmall) }
+            }
+        }
+    }
+}
+
+/** A card lists this many sources at most: the first by kind — works, monsters, bosses, chests — say enough. */
+private const val MAX_SOURCES = 5

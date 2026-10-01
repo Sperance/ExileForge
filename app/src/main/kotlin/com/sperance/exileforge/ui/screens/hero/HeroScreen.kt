@@ -74,7 +74,6 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
     // How many items each slot group holds (2.47.0, grouped since 3.30.0): a chip says it, and a group with none has no chip.
     val shelf = remember(stash, tools) { stash.filter { it.slot.isTool == tools } }
     val groupCounts = remember(shelf) { shelf.groupingBy { SlotGroup.of(it.slot) }.eachCount() }
-    val groups = groupCounts.keys.toList()
     val rarities = remember(shelf) { shelf.map { it.rarity }.distinct().sortedByDescending { it.ordinal } }
     // The shelf reads the sheet (what can be worn, what the merchant pays), not the rest of the hero.
     val visible = remember(shelf, filter, s.stashSort, hero?.level, hero?.stats, s.world) { s.stashShelf(shelf, filter) }

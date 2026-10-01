@@ -143,6 +143,11 @@ class ServerStore(private val context: Context) {
     suspend fun heroCopy(server: String, heroId: String): String? = withContext(Dispatchers.IO) { serverFile("heroes", "$server|$heroId").takeIf { it.isFile }?.readText() }
     suspend fun saveHeroCopy(server: String, heroId: String, text: String) = withContext(Dispatchers.IO) { replace(serverFile("heroes", "$server|$heroId"), text) }
 
+    /** The `until` of the last «Пока вас не было» shown for a hero on a server (3.69.0): each catch-up is shown once. */
+    suspend fun craftsAwaySeen(server: String, heroId: String): Long = context.settings.data.first()[awayKey(server, heroId)]?.toLongOrNull() ?: 0L
+    suspend fun saveCraftsAwaySeen(server: String, heroId: String, until: Long) { context.settings.edit { it[awayKey(server, heroId)] = until.toString() } }
+    private fun awayKey(server: String, heroId: String) = stringPreferencesKey("crafts_away:$server|$heroId")
+
     /** The hero last played on a server: the one a launch with a kept session opens straight into. */
     suspend fun lastHero(server: String): String? = context.settings.data.first()[lastHeroKey(server)]
     suspend fun saveLastHero(server: String, heroId: String?) {

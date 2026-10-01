@@ -129,6 +129,9 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() 
     fun lockItem(itemId: String, locked: Boolean) = runtime.heroViewModel.lockItem(itemId, locked)
     /** The stash's order (3.30.0), kept on the device. */
     fun stashSort(sort: StashSort) = runtime.heroViewModel.stashSort(sort)
+    /** «Пока вас не было» (3.69.0): the last catch-up shown for a hero, and marking one shown. */
+    suspend fun craftsAwaySeen(heroId: String): Long = runtime.heroViewModel.craftsAwaySeen(heroId)
+    fun markCraftsAwaySeen(heroId: String, until: Long) = runtime.heroViewModel.markCraftsAwaySeen(heroId, until)
     /** «Hide equipped» on the gear shelf (3.69.0), kept on the device. */
     fun stashHideWorn(hide: Boolean) = runtime.heroViewModel.stashHideWorn(hide)
     fun logFilter(kinds: Set<com.sperance.exileforge.core.campaign.LogKind>) = runtime.heroViewModel.logFilter(kinds)

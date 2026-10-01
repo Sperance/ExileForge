@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui
 
+import com.sperance.exileforge.ui.screens.crafts.CraftsAwayHost
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -121,6 +122,8 @@ private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, erro
         }
     }
     if (bugOpen) BugSheet(s, expedition, logs, onDismiss = { bugOpen = false }, onSend = vm::reportBug)
+    // «Пока вас не было» (3.69.0): the crafts catch-up of an absence, once, over whatever the game shows after the warm-up.
+    if (s.phase == AppPhase.GAME && s.play.warmup?.finished != false) CraftsAwayHost(s, vm)
 }
 
 /** The game proper: the banner, the destinations and whichever tab is open. */

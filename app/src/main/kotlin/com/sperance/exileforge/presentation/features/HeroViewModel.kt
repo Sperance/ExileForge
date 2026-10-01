@@ -66,6 +66,15 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         scope.launch { store.saveStashHideWorn(hide) }
     } }
 
+    /** The `until` of the last crafts catch-up shown for [heroId] (3.69.0); 0 when none was. */
+    suspend fun craftsAwaySeen(heroId: String): Long = with(runtime) { store.craftsAwaySeen(state.value.account.server, heroId) }
+
+    /** The catch-up up to [until] was shown for [heroId] (3.69.0): it is not shown again, on this launch or the next. */
+    fun markCraftsAwaySeen(heroId: String, until: Long) { with(runtime) {
+        val server = state.value.account.server
+        scope.launch { store.saveCraftsAwaySeen(server, heroId, until) }
+    } }
+
     /** The fight log's shelves (3.37.0), kept on the device. */
     fun logFilter(kinds: Set<com.sperance.exileforge.core.campaign.LogKind>) { with(runtime) {
         update { it.copy(logFilter = kinds) }

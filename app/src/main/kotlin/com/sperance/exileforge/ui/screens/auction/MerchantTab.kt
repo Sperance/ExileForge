@@ -3,6 +3,7 @@ package com.sperance.exileforge.ui.screens.auction
 import com.sperance.exileforge.rules.content.SlotGroup
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.AutoSell
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -32,6 +33,7 @@ import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.OrbGlyph
+import com.sperance.exileforge.ui.screens.hero.StackInfoSheet
 import com.sperance.exileforge.ui.screens.hero.WearPreview
 import com.sperance.exileforge.ui.theme.*
 
@@ -66,6 +68,8 @@ import com.sperance.exileforge.ui.theme.*
 @Composable private fun ColumnScope.MerchantTab(s: ForgeState, vm: ForgeViewModel) {
     var chosen by remember { mutableStateOf<MerchantOffer?>(null) }
     var filtering by remember { mutableStateOf(false) }
+    // The orb a tap on its glass or name opened: what it is for, before it is bought.
+    var info by remember { mutableStateOf<String?>(null) }
     val stock = s.market.merchant
     val money = s.hero?.money
     LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
@@ -85,7 +89,8 @@ import com.sperance.exileforge.ui.theme.*
                     MutedText(ui("merchant.orbs_note"))
                     orbs.forEach { orb ->
                         val price = orb.price
-                        OrbRow(orb, price, have = s.bagAmount(orb.code), enabled = !s.busy && !orb.soldOut && (money == null || money >= price)) { vm.buyOrb(orb.code) }
+                        OrbRow(orb, price, have = s.bagAmount(orb.code), enabled = !s.busy && !orb.soldOut && (money == null || money >= price),
+                            onInfo = { info = orb.code }) { vm.buyOrb(orb.code) }
                     }
                 }
             }
@@ -98,6 +103,7 @@ import com.sperance.exileforge.ui.theme.*
                 trailing = { GoldPrice(offer.price) }, onClick = { chosen = offer })
         }
     }
+    info?.let { code -> StackInfoSheet(s, code) { info = null } }
     chosen?.let { offer -> OfferSheet(s, offer, money, onDismiss = { chosen = null }) { chosen = null; vm.buyOffer(offer.id) } }
     // Read from the snapshot on every pass, so a chip turns as soon as the server has the new filter.
     if (filtering) s.hero?.info?.autoSell?.let { filter ->
@@ -105,15 +111,18 @@ import com.sperance.exileforge.ui.theme.*
     }
 }
 
-/** One orb on the shelf: its glass and name, how many the bag holds, and the button with the next price. */
-@Composable private fun OrbRow(orb: MerchantOrb, price: Long, have: Long?, enabled: Boolean, onBuy: () -> Unit) {
+/** One orb on the shelf: its glass and name (a tap on them opens the orb), how many the bag holds, and the button with the next price. */
+@Composable private fun OrbRow(orb: MerchantOrb, price: Long, have: Long?, enabled: Boolean, onInfo: () -> Unit, onBuy: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        OrbGlyph(Orb.of(orb.code), Modifier.size(32.dp))
-        Column(Modifier.weight(1f)) {
-            Text(itemTitle(orb.code), style = MaterialTheme.typography.bodyMedium)
-            have?.let { MutedText(ui("merchant.orb_have", it)) }
-            // The window's stock (3.24.0): how many more the shelf holds, in ember once it holds none.
-            orb.left?.let { Text(ui("merchant.orb_left", it), color = if (it > 0) Muted else Ember, style = MaterialTheme.typography.labelSmall) }
+        Row(Modifier.weight(1f).clickable(onClickLabel = itemTitle(orb.code), onClick = onInfo), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            OrbGlyph(Orb.of(orb.code), Modifier.size(32.dp))
+            Column(Modifier.weight(1f)) {
+                Text(itemTitle(orb.code), style = MaterialTheme.typography.bodyMedium)
+                have?.let { MutedText(ui("merchant.orb_have", it)) }
+                // The window's stock (3.24.0): how many more the shelf holds, in ember once it holds none.
+                orb.left?.let { Text(ui("merchant.orb_left", it), color = if (it > 0) Muted else Ember, style = MaterialTheme.typography.labelSmall) }
+            }
         }
         ForgeOutlinedButton(enabled = enabled, onClick = onBuy) { GoldPrice(price) }
     }

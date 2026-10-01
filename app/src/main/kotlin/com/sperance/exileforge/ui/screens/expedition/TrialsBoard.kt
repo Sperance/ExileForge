@@ -2,13 +2,14 @@ package com.sperance.exileforge.ui.screens.expedition
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -24,6 +25,7 @@ import com.sperance.exileforge.rules.content.TrialKind
 import com.sperance.exileforge.rules.content.TrialRules
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.BagIcon
+import com.sperance.exileforge.ui.screens.hero.StackInfoSheet
 import com.sperance.exileforge.ui.screens.hero.compactCount
 import com.sperance.exileforge.ui.theme.*
 
@@ -42,7 +44,7 @@ import com.sperance.exileforge.ui.theme.*
     val seals = hero.bag[TrialRules.SEAL] ?: 0L
     val idle = !s.busy
     Column(modifier.verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        KeyGrid(listOf(TrialRules.CREST to crests, TrialRules.KEY to keys, TrialRules.SEAL to seals))
+        KeyGrid(s, listOf(TrialRules.CREST to crests, TrialRules.KEY to keys, TrialRules.SEAL to seals))
         trials.run?.let { open ->
             Plate(LifeRed) {
                 Text(ui("trials.open_title"), color = LifeRed, style = MaterialTheme.typography.titleSmall)
@@ -92,20 +94,22 @@ import com.sperance.exileforge.ui.theme.*
     }
 }
 
-/** The keys at hand as a compact grid: an icon and its count, [KEYS_PER_ROW] to a row, a tap names the key. */
-@Composable private fun KeyGrid(stacks: List<Pair<String, Long>>) {
+/** The keys at hand as a compact grid: an icon and its count, [KEYS_PER_ROW] to a row, a tap opens the key's sheet. */
+@Composable private fun KeyGrid(s: ForgeState, stacks: List<Pair<String, Long>>) {
+    var info by remember { mutableStateOf<String?>(null) }
+    info?.let { code -> StackInfoSheet(s, code) { info = null } }
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         stacks.chunked(KEYS_PER_ROW).forEach { row ->
             Row(Modifier.fillMaxWidth()) {
-                row.forEach { (code, count) -> Key(code, count, Modifier.weight(1f)) }
+                row.forEach { (code, count) -> Key(code, count, Modifier.weight(1f)) { info = code } }
                 repeat(KEYS_PER_ROW - row.size) { Spacer(Modifier.weight(1f)) }
             }
         }
     }
 }
 
-@Composable private fun Key(code: String, count: Long, modifier: Modifier) {
-    Tipped({ Tip(itemTitle(code)) }, modifier) {
+@Composable private fun Key(code: String, count: Long, modifier: Modifier, onClick: () -> Unit) {
+    Box(modifier.clickable(onClickLabel = itemTitle(code), onClick = onClick)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             BagIcon(code, Modifier.size(22.dp))
             Text(compactCount(count), color = Parchment, style = MaterialTheme.typography.labelLarge)

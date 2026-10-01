@@ -176,6 +176,8 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
                         MutedText(it, style = MaterialTheme.typography.labelSmall)
                     }
                 }
+                // How well it rolled, as a ring beside the name (a full card only): a tap says what the figure means.
+                if (detailed && rolled.isNotEmpty()) item.summary.quality?.let { RollRing(it) }
                 if (selected) Icon(Icons.Outlined.CheckCircle, ui("card.selected"), tint = GoldBright, modifier = Modifier.size(22.dp))
             }
 
@@ -183,10 +185,7 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
             base.forEachIndexed { index, property -> BannerStat(property, big = index == 0) }
             // Then what this copy rolled, as a trade table (2.60.0): the figures a trader weighs it by,
             // then a row per line; a tap on one (detailed card) opens its tier, range and where it landed.
-            if (rolled.isNotEmpty()) {
-                if (detailed) RollScore(item.summary)
-                TradeTable(rolled.take(if (detailed) rolled.size else 3), interactive = detailed)
-            }
+            if (rolled.isNotEmpty()) TradeTable(rolled.take(if (detailed) rolled.size else 3), interactive = detailed)
             if (!detailed && rolled.size > 3) MutedText(ui("card.more_properties", rolled.size - 3), style = MaterialTheme.typography.labelMedium)
             if (detailed) item.description.takeIf { it.isNotBlank() }?.let {
                 Text(it, color = Muted, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Start)

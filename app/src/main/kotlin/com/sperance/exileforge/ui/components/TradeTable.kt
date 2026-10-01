@@ -10,6 +10,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -101,31 +102,22 @@ private val Prism = listOf(Color(0xFFFF6B6B), Color(0xFFFFD166), Color(0xFF7BE0A
 }
 
 /**
- * How well the item rolled (2.72.0): a gauge filling its ring to the share, the figure in the
- * middle, and a word for it beside — superb, good, fair, poor — in that word's colour.
+ * How well the item rolled (2.72.0; a ring in the card's head since this version): a gauge filling its
+ * ring to the share with the figure inside, in its step's colour; a tap names the step and what it measures.
  */
-@Composable fun RollScore(summary: RollSummary) {
-    val quality = summary.quality ?: return
+@Composable fun RollRing(quality: Int, modifier: Modifier = Modifier) {
     val tier = RollTier.of(quality)
     val tint = tier.tint
-    val verdict = ui(tier.key)
-    val shape = RoundedCornerShape(8.dp)
-    Row(Modifier.fillMaxWidth().rollShine(tier, shape).padding(horizontal = 12.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(46.dp), contentAlignment = Alignment.Center) {
+    Tipped({ Tip("${ui(tier.key)} · $quality%", ui("card.roll_quality_hint"), tint = tint) }, modifier) {
+        Box(Modifier.size(34.dp).glow(tint, on = tier.glow > 0.dp, radius = tier.glow / 2, shape = CircleShape), contentAlignment = Alignment.Center) {
             Canvas(Modifier.fillMaxSize()) {
-                val width = 4.dp.toPx()
+                val width = 3.5.dp.toPx()
                 val arc = Size(size.width - width, size.height - width)
                 val corner = Offset(width / 2, width / 2)
-                drawArc(PanelRaised, 135f, 270f, false, corner, arc, style = Stroke(width, cap = StrokeCap.Round))
-                drawArc(tint, 135f, 270f * quality / 100f, false, corner, arc, style = Stroke(width, cap = StrokeCap.Round))
+                drawArc(PanelRaised, -90f, 360f, false, corner, arc, style = Stroke(width))
+                drawArc(tint, -90f, 360f * quality / 100f, false, corner, arc, style = Stroke(width, cap = StrokeCap.Round))
             }
-            Text("$quality%", color = tint, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
-        }
-        Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-            Text(ui("card.roll_quality"), color = Muted, style = MaterialTheme.typography.labelSmall)
-            Text(verdict, color = tint, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
-            Text(ui("card.roll_quality_hint"), color = Muted, style = MaterialTheme.typography.labelSmall)
+            Text("$quality", color = tint, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
         }
     }
 }

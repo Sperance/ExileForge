@@ -6,6 +6,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -14,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.campaign.Action
 import com.sperance.exileforge.core.campaign.CombatEvent
@@ -27,6 +30,8 @@ import com.sperance.exileforge.core.campaign.NoteTrace
 import com.sperance.exileforge.core.campaign.RollTrace
 import com.sperance.exileforge.core.campaign.Side
 import com.sperance.exileforge.core.campaign.TickTrace
+import com.sperance.exileforge.core.campaign.Trace
+import com.sperance.exileforge.core.campaign.TypeTrace
 import com.sperance.exileforge.core.campaign.TraceOrigin
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.equipmentTitle
@@ -43,19 +48,24 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
- * A line of the fight's log, laid open (3.37.0): the formula as a chain of chips — a chip tapped lays out the stats it
- * reads by source — the dice it drew, the damage by type and where it went; then tabs of the striker, the target and
+ * A line of the fight's log, laid open (3.37.0): first the outcome — the figure, what marked the blow, and per damage type
+ * what it was, what landed and what cut it; «Полный расчёт» lays out the rest — the formula as a chain of chips (a chip
+ * tapped lays out the stats it reads by source), the dice, where the damage went, and tabs of the striker, the target and
  * what lay on both at that moment. Every figure is the fight's own.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable internal fun CombatDetailSheet(s: ForgeState, event: CombatEvent, monster: String, onDismiss: () -> Unit) {
     val trace = event.trace ?: run { LaunchedEffect(event) { onDismiss() }; return }
     val explainer = remember(s.index, s.lang) { TraceExplainer(s) }
+    var full by remember(event) { mutableStateOf(false) }
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.9f).navigationBarsPadding(), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, 16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)) {
             item { Header(event, monster) }
-            when (trace) {
+            item { Marks(event, trace) }
+            if (trace is HitTrace) items(trace.types.filter { it.raw > 0.05 || it.dealt > 0.05 }) { TypeRow(it) }
+            item { FullToggle(full) { full = !full } }
+            if (full) when (trace) {
                 is HitTrace -> hitItems(trace, explainer, s)
                 is TickTrace -> tickItems(trace, explainer, s)
                 is EffectTrace -> effectItems(trace, explainer, s)
@@ -65,6 +75,7 @@ import kotlin.math.roundToInt
     }
 }
 
+/** Who did what to whom and when, then the line's figure large, with what it is. */
 @Composable private fun Header(event: CombatEvent, monster: String) {
     val sentence = when (event.action) {
         Action.NOTE -> noteLine(event, monster)
@@ -74,26 +85,77 @@ import kotlin.math.roundToInt
             if (event.target == Side.HERO && event.actor != Side.HERO) ui("trace.at_you") else if (event.actor == Side.HERO && !event.onSelf) "→ $monster" else null,
         ).joinToString(" ")
     }
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column {
             Text(sentence, color = GoldBright, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            Text(ui("trace.at_time", String.format(Locale.ROOT, "%.1f", event.time)) + tags(event), color = Muted, style = MaterialTheme.typography.labelSmall)
+            Text(ui("trace.at_time", String.format(Locale.ROOT, "%.1f", event.time)), color = Muted, style = MaterialTheme.typography.labelSmall)
         }
         val figure = when {
-            event.damage > 0 -> event.damage.roundToInt().toString()
-            event.healed >= 1 -> "+${event.healed.roundToInt()}"
+            event.damage > 0 -> event.damage.roundToInt().toString() to ui(if (event.target == Side.HERO) "trace.figure.taken" else "trace.figure.dealt")
+            event.healed >= 1 -> "+${event.healed.roundToInt()}" to ui("trace.effect.healed")
             else -> null
         }
-        figure?.let { Text(it, color = if (event.damage > 0) GoldBright else Vital, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold) }
+        figure?.let { (value, caption) ->
+            Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(value, color = if (event.damage > 0) GoldBright else Vital, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                Text(caption, color = Muted, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(bottom = 4.dp))
+            }
+        }
     }
 }
 
-private fun tags(event: CombatEvent): String = buildList {
-    when (event.kind) { HitKind.CRIT -> add(ui("trace.tag.crit")); HitKind.EVADED -> add(ui("trace.tag.evaded")); HitKind.BLOCKED -> add(ui("trace.tag.blocked")); else -> Unit }
-    if (event.stunned) add(ui("expedition.stunned"))
-    event.inflicted.forEach { add(ui(it.key())) }
-    event.ailment?.let { add(ui(it.key())) }
-}.joinToString("") { " · $it" }
+/** What marked the line, as small chips: a crit and its multiplier, a block, a dodge, a stun, the ailments, what the shield took. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable private fun Marks(event: CombatEvent, trace: Trace) {
+    val hit = trace as? HitTrace
+    val crit = event.kind == HitKind.CRIT
+    val marks = buildList {
+        when (event.kind) {
+            HitKind.CRIT -> add(hit?.factors?.firstOrNull { it.key == FactorKey.CRIT }?.let { ui("trace.tag.crit_by", fineNumber(it.value)) } ?: ui("trace.tag.crit"))
+            HitKind.EVADED -> add(ui("trace.tag.evaded"))
+            HitKind.BLOCKED -> add(ui("trace.tag.blocked"))
+            else -> Unit
+        }
+        if (event.stunned) add(ui("expedition.stunned"))
+        event.inflicted.forEach { add(ui(it.key())) }
+        event.ailment?.let { add(ui(it.key())) }
+        hit?.landing?.shield?.takeIf { it >= 1 }?.let { add(ui("trace.tag.shield", it.roundToInt())) }
+    }
+    if (marks.isEmpty()) return
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        marks.forEachIndexed { i, mark ->
+            val lit = crit && i == 0
+            Text(mark, color = if (lit) Ember else Parchment, style = MaterialTheme.typography.labelSmall,
+                modifier = Modifier.clip(RoundedCornerShape(50)).background(if (lit) Ember.copy(alpha = .2f) else PanelRaised).padding(horizontal = 8.dp, vertical = 2.dp))
+        }
+    }
+}
+
+/** A damage type on one row: its colour, its name, and what it was against what landed, with what cut it. */
+@Composable private fun TypeRow(type: TypeTrace) {
+    val figures = listOf("${fineNumber(type.raw)} → ${fineNumber(type.dealt)}") + cuts(type)
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(Abyss).padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Box(Modifier.size(8.dp).clip(CircleShape).background(damageTint(type.type)))
+        Text(ui(type.type.key()), color = Parchment, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+        Text(figures.joinToString(" · "), color = Muted, style = MaterialTheme.typography.labelMedium)
+    }
+}
+
+/** What cut a damage type on its way in: the armour's share, the resistance, the penetration that pierced it. */
+private fun cuts(type: TypeTrace): List<String> = listOfNotNull(
+    type.armour.takeIf { it > 0 }?.let { ui("trace.cut.armour", pct(it)) },
+    type.resist.takeIf { it != 0.0 }?.let { ui("trace.cut.resist", pct(it)) },
+    type.penetration.takeIf { it > 0 }?.let { ui("trace.cut.penetration", fineNumber(it)) },
+)
+
+/** «Полный расчёт ▾»: the formula, the dice and the sides, folded until asked for. */
+@Composable private fun FullToggle(open: Boolean, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(8.dp)
+    Text(ui(if (open) "trace.full.hide" else "trace.full.show") + if (open) " ▴" else " ▾", color = Gold, style = MaterialTheme.typography.labelLarge,
+        fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth().clip(shape).border(1.dp, Bronze, shape).clickable(onClick = onClick).padding(vertical = 9.dp))
+}
 
 // ==================== A blow ====================
 
@@ -104,12 +166,7 @@ private fun LazyListScope.hitItems(trace: HitTrace, explainer: TraceExplainer, s
         Section(ui("trace.section.types")) {
             trace.types.forEach { type ->
                 Line(ui(type.type.key()), "${fineNumber(type.base)} → ${fineNumber(type.raw)} → ${fineNumber(type.dealt)}")
-                val cuts = listOfNotNull(
-                    type.armour.takeIf { it > 0 }?.let { ui("trace.cut.armour", pct(it)) },
-                    type.resist.takeIf { it != 0.0 }?.let { ui("trace.cut.resist", pct(it)) },
-                    type.penetration.takeIf { it > 0 }?.let { ui("trace.cut.penetration", fineNumber(it)) },
-                )
-                if (cuts.isNotEmpty()) Note(cuts.joinToString(" · "))
+                cuts(type).takeIf { it.isNotEmpty() }?.let { Note(it.joinToString(" · ")) }
             }
         }
     }

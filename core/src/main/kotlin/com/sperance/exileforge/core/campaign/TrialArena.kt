@@ -203,7 +203,8 @@ class TrialArena(
     }
 
     private fun battle(foes: List<RolledMonster>): Battle = Battle(hero, foes.map { monster ->
-        Foe(Combatant(monster.stats, level, rules), monster.rarity, monster.skills.mapNotNull(index.skills.monsterByCode::get), monster, level)
+        Foe(Combatant(monster.stats, level, rules), monster.rarity, monster.skills.mapNotNull(index.skills.monsterByCode::get), monster, level,
+            monster.traitsIn(index), index.campaign.traits.power(monster.rarity))
     }, rules, pools.life, Random(Streams.mix(trial.seed, FIGHT_STREAM, fought++)), gear.stance, kit = kit, model = build, pools = pools,
         percent = gear.percent, ally = allies.of(hero.stats, pet), stage = carry)
 

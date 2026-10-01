@@ -52,9 +52,11 @@ private fun lootStand(s: ForgeState, item: ItemView): LootStand {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             ItemCard(item, enabled = false, detailed = true, price = s.sellPrice(item.item))
             WearPreview(s, item.item)
-            when (stand) {
-                LootStand.WORN -> MutedText(ui("expedition.loot_worn"))
-                LootStand.GONE -> MutedText(ui("expedition.loot_gone"))
+            when {
+                stand == LootStand.WORN -> MutedText(ui("expedition.loot_worn"))
+                stand == LootStand.GONE -> MutedText(ui("expedition.loot_gone"))
+                // A map or a jewel is not worn (3.73.0): no «Надеть» under it.
+                item.slot.isJewelLike -> Unit
                 else -> ForgeButton(enabled = stand == LootStand.LOOSE && !s.busy && s.unmetFor(item.code).isEmpty(),
                     onClick = { onDismiss(); vm.equip(item.id) }, modifier = Modifier.fillMaxWidth()) {
                     Text(ui(if (stand == LootStand.ARRIVING) "expedition.loot_arriving" else "hero.equip"))

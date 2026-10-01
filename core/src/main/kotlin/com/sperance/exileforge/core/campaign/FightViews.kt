@@ -58,7 +58,8 @@ internal fun Battle.hud(
     val foes = foeFighters.map { f ->
         FoeView(f.index, monsters[f.index], f.life.roundToInt(), f.body.maxLife.roundToInt(), f.shield.roundToInt(), f.body.maxShield.roundToInt(),
             swing(f), ailments(f), f.held, f.alive, reachable(f.index), f.body.taunt, effects(f),
-            f.mana.roundToInt(), f.body.maxMana.roundToInt(), place = window.place(f.index), waiting = window.waits(f.index))
+            f.mana.roundToInt(), f.body.maxMana.roundToInt(), place = window.place(f.index), waiting = window.waits(f.index),
+            reinforce = window.place(f.index).takeIf { it >= 0 }?.let(::reinforceIn), reinforceDelay = rules.reinforceDelay)
     }
     return FightHud(
         ally = allyFighter?.let { f -> AllyView(ally!!.code, f.life.roundToInt(), f.body.maxLife.roundToInt(), f.alive) },

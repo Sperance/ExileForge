@@ -12,6 +12,7 @@ import com.sperance.exileforge.rules.content.Condition
 import com.sperance.exileforge.rules.content.ManaRule
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.content.MonsterSkill
+import com.sperance.exileforge.rules.content.MonsterTrait
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.PowerEvent
 import com.sperance.exileforge.rules.content.SkillAilment
@@ -24,6 +25,8 @@ import com.sperance.exileforge.rules.content.SkillHit
 import com.sperance.exileforge.rules.content.SkillTrigger
 import com.sperance.exileforge.rules.content.SkillType
 import com.sperance.exileforge.rules.content.SlotCondition
+import com.sperance.exileforge.rules.content.TraitAct
+import com.sperance.exileforge.rules.content.TraitLine
 import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
@@ -397,10 +400,16 @@ data class ActiveAilment(val ailment: Ailment, val until: Double, val magnitude:
  */
 class Ally(val code: String, val body: Combatant, val tank: Boolean, val heal: Double, val drawFire: Double)
 
+/** The traits of this roll (3.73.0), as the content names them. */
+fun com.sperance.exileforge.rules.roll.RolledMonster.traitsIn(index: com.sperance.exileforge.rules.content.ContentIndex): List<MonsterTrait> =
+    traits.mapNotNull(index.campaign.traits.byCode::get)
+
 data class Foe(val body: Combatant, val rarity: MonsterRarity = MonsterRarity.NORMAL,
                val skills: List<MonsterSkill> = emptyList(),
                /** Its roll at the fight's [level] (3.37.0): what the log's card lays its stats out with. */
-               val origin: com.sperance.exileforge.rules.roll.RolledMonster? = null, val level: Int = 0)
+               val origin: com.sperance.exileforge.rules.roll.RolledMonster? = null, val level: Int = 0,
+               /** Its traits (3.73.0) and their strength for its rarity: their lines are on [body] already, their answers the fight plays. */
+               val traits: List<MonsterTrait> = emptyList(), val traitPower: Double = 1.0)
 
 /** What lies on a fighter for a while (2.78.0). */
 enum class EffectKind { BUFF, CURSE, FLASK }
@@ -936,7 +945,7 @@ class Battle(
         (listOf(heroFighter) + listOfNotNull(allyFighter) + foeFighters).sortedBy { it.nextAttack }.forEach { me ->
             if (!me.alive || me.held || (me.side == Side.HERO && retreating) || me.nextAttack > time) return@forEach
             val target = if (me.side == Side.HERO) target() else foeTarget()
-            if (target != null) strike(me, target, Blow(me.body.damage))
+            if (target != null) strike(me, target, Blow(firstStrike(me)))
             me.nextAttack = time + me.attackInterval * me.slow()
             if (finished()) return
         }
@@ -995,6 +1004,7 @@ class Battle(
             }
         }
         petWatch()
+        foeFighters.forEach { foe -> if (foe.alive) enrage(foe) }
         foeFighters.forEach { foe ->
             val low = foe.alive && foe.life < foe.body.maxLife / 2
             if (low != foe.low && foe.model.body(emptyList())["STOCK_LOW_LIFE_SPEED"] > 0) { foe.low = low; remake(foe) }
@@ -1615,6 +1625,64 @@ class Battle(
         if (spell) trigger(SkillEvent.SPELL_KILL)
         powers.killed(PowerMoment(fighter, spell = spell, ailments = ailing))
         if (killer != null && killer === allyFighter) powers.fire(PowerEvent.PET_KILL, PowerMoment(fighter, spell = spell, ailments = ailing))
+        lastWords(fighter)
+    }
+
+    // ==================== Monster traits (3.73.0) ====================
+
+    /** The traits of [fighter] whose answer is [act], with the strength of its rarity. */
+    private fun traits(fighter: Fighter, act: TraitAct): List<Pair<MonsterTrait, Double>> =
+        if (fighter.side != Side.MONSTER) emptyList()
+        else foes[fighter.index].let { foe -> foe.traits.filter { it.trigger?.act == act }.map { it to foe.traitPower } }
+
+    private fun List<TraitLine>.lines(power: Double): List<StatLine> =
+        map { StatLine(it.stat, it.op, if (it.op == Op.SET) it.value else it.value * power) }
+
+    /** The foes that have swung once already: an ambusher's first blow is the heavier one. */
+    private val swung = mutableSetOf<Int>()
+
+    /** [me]'s weapon damage for this swing: a monster's first one grows by its first-strike traits. */
+    private fun firstStrike(me: Fighter): Map<DamageType, Double> {
+        if (me.side != Side.MONSTER || !swung.add(me.index)) return me.body.damage
+        val more = traits(me, TraitAct.FIRST_STRIKE).sumOf { (trait, power) -> trait.trigger!!.value * power }
+        if (more <= 0) return me.body.damage
+        traits(me, TraitAct.FIRST_STRIKE).forEach { (trait, _) -> note(me, NoteKind.TRAIT, trait.code, more) }
+        return me.body.damage.mapValues { it.value * (1 + more / 100) }
+    }
+
+    /** Foes whose rage has been lit, and by which trait: it lights once and holds to the end of the fight. */
+    private val enraged = mutableSetOf<Pair<Int, String>>()
+
+    private fun enrage(foe: Fighter) = traits(foe, TraitAct.ENRAGE).forEach { (trait, power) ->
+        val rule = trait.trigger!!
+        if (foe.life >= foe.body.maxLife * rule.threshold / 100 || !enraged.add(foe.index to trait.code)) return@forEach
+        buff(foe, trait.code, rule.lines.lines(power), FOREVER)
+        note(foe, NoteKind.TRAIT, trait.code)
+    }
+
+    /** What a fallen foe's traits do as it falls: a burst at the hero, a rallying of the pack, a mending of it. */
+    private fun lastWords(fallen: Fighter) {
+        if (outcome != null) return
+        val pack = foeFighters.filter { it.alive && it !== fallen }
+        traits(fallen, TraitAct.RALLY).forEach { (trait, power) ->
+            val rule = trait.trigger!!
+            pack.forEach { buff(it, trait.code, rule.lines.lines(power), rule.duration) }
+            if (pack.isNotEmpty()) note(fallen, NoteKind.TRAIT, trait.code)
+        }
+        traits(fallen, TraitAct.MEND).forEach { (trait, power) ->
+            val share = trait.trigger!!.value * power / 100
+            pack.forEach { it.life = min(it.body.maxLife, it.life + it.body.maxLife * share) }
+            if (pack.isNotEmpty()) note(fallen, NoteKind.TRAIT, trait.code, share * 100)
+        }
+        traits(fallen, TraitAct.BURST).forEach { (trait, power) ->
+            val rule = trait.trigger!!
+            val type = DamageType.element(rule.element) ?: DamageType.PHYSICAL
+            if (heroFighter.alive) strike(fallen, foeTarget(), Blow(mapOf(type to fallen.body.maxLife * rule.value * power / 100), Action.SKILL,
+                spell = true, skill = trait.code, spread = false, primary = false))
+            // The blast heals nobody: whatever its leech gave back, the fallen stays down.
+            fallen.life = 0.0
+            fallen.shield = 0.0
+        }
     }
 
     // ==================== Skills, flasks and answers (2.78.0) ====================
@@ -2068,10 +2136,27 @@ class Battle(
         fell(foe)
     }
 
-    /** The next in line take the places of the fallen; whether one brought an aura the hero now stands under. */
-    private fun stepIn(): Boolean = window.refill { !foeFighters[it].alive }
-        .onEach { foeFighters[it].enter(window.place(it), time) }
-        .any { foeFighters[it].body.auras.isNotEmpty() }
+    /** When each fallen foe of the field was first seen down (3.73.0): its place waits [CombatRules.reinforceDelay] from then. */
+    private val downSince = mutableMapOf<Int, Double>()
+
+    /**
+     * The next in line take the places of the fallen once each place has stood empty for the rule's delay (3.73.0); whether
+     * one brought an aura the hero now stands under.
+     */
+    private fun stepIn(): Boolean {
+        if (window.waiting == 0) return false
+        window.field.forEach { if (!foeFighters[it].alive) downSince.getOrPut(it) { time } }
+        return window.refill { !foeFighters[it].alive && time - (downSince[it] ?: time) >= rules.reinforceDelay - 1e-9 }
+            .onEach { foeFighters[it].enter(window.place(it), time) }
+            .any { foeFighters[it].body.auras.isNotEmpty() }
+    }
+
+    /** Seconds until a foe steps into [place], or null when nobody waits for it or its foe still stands (3.73.0). */
+    fun reinforceIn(place: Int): Double? {
+        if (window.waiting == 0 || outcome != null) return null
+        val foe = window.field.getOrNull(place)?.takeIf { !foeFighters[it].alive } ?: return null
+        return (rules.reinforceDelay - (time - (downSince[foe] ?: time))).coerceAtLeast(0.0)
+    }
 
     private fun finished(): Boolean {
         if (outcome != null) return true
@@ -2080,7 +2165,7 @@ class Battle(
         if (!heroFighter.alive) powers.fire(PowerEvent.DEATH)
         when {
             !heroFighter.alive -> end(Outcome.LOSS)
-            foeFighters.none { it.alive } -> end(Outcome.WIN)
+            foeFighters.none { it.alive } && window.waiting == 0 -> end(Outcome.WIN)
             else -> return false
         }
         return true

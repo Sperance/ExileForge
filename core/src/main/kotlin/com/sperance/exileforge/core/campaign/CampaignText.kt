@@ -4,6 +4,8 @@ import com.sperance.exileforge.core.display.effectText
 import com.sperance.exileforge.core.display.effectUnit
 import com.sperance.exileforge.core.display.modNumber
 import com.sperance.exileforge.core.display.statTitle
+import com.sperance.exileforge.core.display.traitText
+import com.sperance.exileforge.core.display.traitTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Op
@@ -34,4 +36,20 @@ fun monsterLineText(line: MonsterLine, index: ContentIndex? = null): String {
 fun monsterLineSources(line: MonsterLine, index: ContentIndex? = null): String? = line.takeIf { it.split && it.stat != "STOCK_TAUNT" }?.let {
     val unit = effectUnit(it.stat, it.op, index)
     ui("fight.line_sources", modNumber(it.stat, it.own) + unit, modNumber(it.stat, it.map) + unit)
+}
+
+/** A monster's trait as the scout panel reads it (3.73.0): its drawing, name, what it does and its lines, at the roll's strength. */
+data class TraitView(val code: String, val icon: String, val title: String, val text: String, val lines: List<String>)
+
+fun traitViews(monster: RolledMonster, index: ContentIndex): List<TraitView> {
+    val rules = index.campaign.traits
+    val power = rules.power(monster.rarity)
+    return monster.traitsIn(index).map { trait ->
+        val trigger = trait.trigger
+        val lines = (trait.lines + trigger?.lines.orEmpty()).map { line ->
+            monsterLineText(MonsterLine(line.stat, line.op, rules.scaled(line, power), 0.0, false), index)
+        }
+        val value = trigger?.value?.times(power) ?: trait.lines.firstOrNull()?.let { rules.scaled(it, power) } ?: 0.0
+        TraitView(trait.code, trait.icon, traitTitle(trait.code), traitText(trait.code, value, trigger?.threshold ?: 0.0, trigger?.duration ?: 0.0), lines)
+    }
 }

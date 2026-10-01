@@ -84,5 +84,5 @@ private fun typeTitle(type: DamageType): String = ui("enum.damage.${type.name}")
 
 private fun skillTitle(code: String): String = when (code) {
     RunStats.ATTACK, RunStats.TICK, RunStats.REFLECT -> ui("run.skill.$code")
-    else -> locOr(LocaleKey.skillName(code), code)
+    else -> locOr(LocaleKey.skillName(code), locOr(LocaleKey.traitName(code), code))
 }

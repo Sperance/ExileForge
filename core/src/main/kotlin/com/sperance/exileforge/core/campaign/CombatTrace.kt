@@ -71,7 +71,7 @@ data class EffectTrace(
 /** Something that happened without a blow: a buff or a charge gained, a power, a condition, what a kill brought. */
 data class NoteTrace(val kind: NoteKind, val ref: String, val value: Double, val actor: FighterShot, val origin: TraceOrigin) : Trace
 
-enum class NoteKind { BUFF, CHARGE, POWER, CONDITION_ON, CONDITION_OFF, KILL }
+enum class NoteKind { BUFF, CHARGE, POWER, CONDITION_ON, CONDITION_OFF, KILL, TRAIT }
 
 /**
  * What the card needs beyond the numbers: the hero's sheet, to lay a stat out by source, and each foe's roll with the

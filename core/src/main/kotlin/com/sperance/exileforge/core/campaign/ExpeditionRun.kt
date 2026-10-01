@@ -60,6 +60,8 @@ data class FoeView(
     val place: Int = index,
     /** Still in line: not in the fight yet, but still to be beaten. */
     val waiting: Boolean = false,
+    /** Fallen with the next still in line (3.73.0): seconds until that one steps into its place, of [reinforceDelay]. */
+    val reinforce: Double? = null, val reinforceDelay: Double = 0.0,
 ) {
     /** Its card is on the field: it fights there, or fell there and nobody stepped in yet. */
     val onField: Boolean get() = place >= 0
@@ -801,7 +803,10 @@ class ExpeditionRun(
     /** The stage's battle on the hero's pools now, at the fight's level, on its own dice. */
     private fun battle(): Battle = Battle(hero, members.map { member ->
         val monster = member.monster
-        Foe(Combatant(monster.stats, fightLevel, rules), monster.rarity, monster.skills.mapNotNull(this.index.skills.monsterByCode::get), monster, fightLevel)
+        // Its own level on a map (3.73.0), the fight's otherwise.
+        val level = monster.level.takeIf { it > 0 } ?: fightLevel
+        Foe(Combatant(monster.stats, level, rules), monster.rarity, monster.skills.mapNotNull(this.index.skills.monsterByCode::get), monster, level,
+            monster.traitsIn(this.index), this.index.campaign.traits.power(monster.rarity))
     }, rules, life, Random(Streams.mix(seed, FIGHT_STREAM, fightStream)), stance, kit = kit, model = build, pools = pools,
         percent = build.gear.percent, ally = ally(), stage = stageCarry)
 

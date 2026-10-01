@@ -39,6 +39,10 @@ fun tradeName(code: String, equipment: Boolean): String? =
     locOr(if (equipment) LocaleKey.equipmentTrade(code) else LocaleKey.itemTrade(code), "").takeIf { it.isNotBlank() && it != (if (equipment) equipmentTitle(code) else itemTitle(code)) }
 
 fun monsterTitle(code: String): String = locOr(LocaleKey.monsterName(code), displayName(code))
+/** A monster's trait (3.73.0): its name, and what it does with `{0}` its strength, `{1}` the life threshold, `{2}` the seconds. */
+fun traitTitle(code: String): String = locOr(LocaleKey.traitName(code), displayName(code))
+fun traitText(code: String, value: Double = 0.0, threshold: Double = 0.0, seconds: Double = 0.0): String =
+    loc(LocaleKey.traitDescription(code), listOf(fineNumber(value), fineNumber(threshold), fineNumber(seconds)))
 fun mapTitle(code: String): String = locOr(LocaleKey.mapName(code), displayName(code))
 /** A map item by its zone: «Tidal Shore Map». */
 fun mapItemTitle(zone: String): String = loc(LocaleKey.mapItemName(), listOf(mapTitle(zone)))

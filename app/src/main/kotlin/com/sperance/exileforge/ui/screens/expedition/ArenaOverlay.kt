@@ -62,6 +62,7 @@ import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.monsterTitle
+import com.sperance.exileforge.core.display.traitTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.ForgeState
@@ -212,6 +213,10 @@ private const val HERO_CARD = -1
     val bounds = remember { mutableStateMapOf<Int, Rect>() }
     var origin by remember { mutableStateOf(Offset.Zero) }
     val names = remember(fight.foes.size, fight.leader, fight.stage) { fight.foes.associate { it.index to monsterTitle(it.monster.code) } }
+    // Each foe's traits (3.73.0): seals on its card, their whole text in its window.
+    val traits = remember(fight.foes.size, fight.leader, fight.stage, s.index) {
+        fight.foes.associate { foe -> foe.index to (s.index?.let { traitViews(foe.monster, it) } ?: emptyList()) }
+    }
     val chosen = fight.focus ?: fight.target ?: fight.field.firstOrNull { it.alive }?.index
     // The tiles are larger while the fight stands still; a tap on any of them opens its window at any time (2.73.0).
     val large = fight.scouting
@@ -225,14 +230,16 @@ private const val HERO_CARD = -1
             if (fight.field.isNotEmpty()) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)) {
                 // Keyed by the foe: one stepping into a fallen one's place is a card of its own.
                 fight.field.forEach { foe -> key(foe.index) {
-                    FoeCard(foe, fight, time, chosen == foe.index && fight.scouting, track(foe.index).weight(1f, fill = false).widthIn(max = 120.dp), large) {
+                    FoeCard(foe, fight, time, chosen == foe.index && fight.scouting, track(foe.index).weight(1f, fill = false).widthIn(max = 120.dp), large,
+                        traits[foe.index].orEmpty()) {
                         onCommand(RunCommand.Focus(foe.index))
                     }
                 } }
             }
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 val shown = fight.field.firstOrNull { it.index == chosen }
-                if (fight.scouting && shown != null) ScoutPanel(shown, fight, level, rules, stance, s.index)
+                if (fight.scouting && shown != null) ScoutPanel(shown, fight, shown.monster.level.takeIf { it > 0 } ?: level, rules, stance, s.index,
+                    traits[shown.index].orEmpty())
                 else FightFeed(s, fight, names, onCommand, onLogFilter)
             }
             HeroCard(s, hud, fight, time, names, stance, track(HERO_CARD), large)
@@ -294,7 +301,7 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
  * The fallen go dark; one the hero's weapon cannot reach yet is dimmed.
  */
 @Composable private fun FoeCard(foe: FoeView, fight: FightHud, time: Float, open: Boolean, modifier: Modifier,
-                                 large: Boolean, onTap: () -> Unit) {
+                                 large: Boolean, traits: List<TraitView>, onTap: () -> Unit) {
     val lunge = fight.lunge
     val ring = rarityTint(foe.monster.rarity)
     val acting = reach(lunge, Side.MONSTER, foe.index)
@@ -326,13 +333,20 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
             if (fight.target == foe.index && foe.alive && fight.outcome == null)
                 Text(if (focused) "◉" else "◎", color = GoldBright, fontSize = 14.sp, modifier = Modifier.align(Alignment.TopEnd).padding(3.dp))
             if (foe.taunt && foe.alive) TauntSeal(time, Modifier.align(Alignment.TopStart).padding(3.dp).size(22.dp)) { tauntTip(false) }
-            if (!foe.alive) Text(ui("fight.fallen"), color = Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.Center))
+            if (!foe.alive) foe.reinforce?.let { left -> ReinforceRing(left, foe.reinforceDelay, Modifier.align(Alignment.Center).size(40.dp)) }
+                ?: Text(ui("fight.fallen"), color = Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.Center))
             // A foe singled out behind a standing taunter: the focus holds, the blows go to the taunter.
             else if (focused && !foe.reachable) Text(ui("fight.out_of_reach_short"), color = Muted, fontSize = 9.sp, maxLines = 1,
                 overflow = TextOverflow.Ellipsis, modifier = Modifier.align(Alignment.BottomCenter).background(Ink.copy(alpha = .8f)).padding(horizontal = 4.dp))
             CardHits(fight.hits.filter { it.target == Side.MONSTER && it.foe == foe.index })
         }
         Text(monsterTitle(foe.monster.code), color = ring, fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        // Its own level (3.73.0): on a map a foe may stand a little above or below the map.
+        if (foe.monster.level > 0) Text(ui("fight.level_short", foe.monster.level), color = Muted, fontSize = 9.sp, maxLines = 1)
+        // Its traits (3.73.0) as seals; a tap on the card opens what they do.
+        if (traits.isNotEmpty() && foe.alive) Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+            traits.forEach { trait -> SkillGlyph(trait.icon, Modifier.size(if (large) 16.dp else 12.dp), Color(0xFFE8B06A)) }
+        }
         LifeBar(foe.life, foe.maxLife, foe.shield, foe.maxShield, Modifier.fillMaxWidth().height(12.dp))
         // A caster's or a boss's mana (2.78.0), a thread under its life: what its spells are paid with.
         if (foe.maxMana > 0) Box(Modifier.fillMaxWidth().height(3.dp).background(Color(0x14FFFFFF), RoundedCornerShape(2.dp))) {
@@ -350,6 +364,18 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
             }
             foe.effects.take(3).forEach { EffectTile(it, tile) }
         }
+    }
+}
+
+/** The place of a fallen foe while the next of the line closes in (3.73.0): a ring running down and the seconds left. */
+@Composable private fun ReinforceRing(left: Double, delay: Double, modifier: Modifier) {
+    val share = if (delay > 0) (left / delay).toFloat().coerceIn(0f, 1f) else 0f
+    Box(modifier, contentAlignment = Alignment.Center) {
+        Canvas(Modifier.fillMaxSize()) {
+            drawCircle(Muted.copy(alpha = .25f), style = Stroke(3.dp.toPx()))
+            drawArc(GoldBright, -90f, 360f * share, useCenter = false, style = Stroke(3.dp.toPx()))
+        }
+        Text(ceil(left).toInt().toString(), color = GoldBright, fontSize = 13.sp, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -465,7 +491,8 @@ private const val PET_PULSE = .5
  * what happens in it, not by the foe's defence sheet.
  */
 @OptIn(ExperimentalLayoutApi::class)
-@Composable private fun ScoutPanel(foe: FoeView, fight: FightHud, level: Int, rules: CombatRules, stance: HeroStance, index: ContentIndex?) {
+@Composable private fun ScoutPanel(foe: FoeView, fight: FightHud, level: Int, rules: CombatRules, stance: HeroStance, index: ContentIndex?,
+                                    traits: List<TraitView>) {
     val body = remember(foe.monster) { Combatant(foe.monster.stats, level, rules) }
     val shape = RoundedCornerShape(10.dp)
     val ring = rarityTint(foe.monster.rarity)
@@ -489,6 +516,20 @@ private const val PET_PULSE = .5
         // What it casts for its mana (2.78.0): a boss's own skills, a caster's spell, a borrowed one.
         if (foe.monster.skills.isNotEmpty()) Text(ui("fight.skills", foe.monster.skills.joinToString(", ") { SkillText.title(it) }),
             color = Rune, style = MaterialTheme.typography.labelSmall)
+        // Its traits (3.73.0): what its kind and its form do, at its rarity's strength.
+        if (traits.isNotEmpty()) {
+            Caption(ui("fight.traits", traits.size))
+            traits.forEach { trait ->
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.Top) {
+                    SkillGlyph(trait.icon, Modifier.size(18.dp), Color(0xFFE8B06A))
+                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                        Text(trait.title, color = Color(0xFFE8B06A), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                        Text(trait.text, color = Parchment, style = MaterialTheme.typography.labelSmall)
+                        trait.lines.forEach { Text(it, color = ModBlue, style = MaterialTheme.typography.labelSmall) }
+                    }
+                }
+            }
+        }
         // What it means for this hero.
         val taunting = fight.foes.any { it.alive && it.taunt }
         when {
@@ -991,6 +1032,7 @@ internal fun noteLine(event: CombatEvent, monster: String): String {
         NoteKind.CONDITION_ON -> ui("expedition.log_note_condition_on", locOr("condition.${note.ref}", note.ref))
         NoteKind.CONDITION_OFF -> ui("expedition.log_note_condition_off", locOr("condition.${note.ref}", note.ref))
         NoteKind.KILL -> ui("expedition.log_note_kill", monster) + (if (note.value >= 1) " · +${note.value.roundToInt()}" else "")
+        NoteKind.TRAIT -> ui("expedition.log_note_trait", monster, traitTitle(note.ref))
     }
 }
 

@@ -26,6 +26,9 @@ class FeedbackClient internal constructor(private val http: Transport) {
 
     suspend fun setStatus(id: String, status: ReportStatus, reason: String): AdminReport =
         http.post("$ADMIN/feedback/status", mapOf("id" to id, "status" to status.name, "reason" to reason))
+
+    /** To Asana (3.75.0, server 1.70.0): a task of it, its link kept on the report, the status «in progress». */
+    suspend fun toAsana(id: String): AdminReport = http.post("$ADMIN/feedback/asana", mapOf("id" to id))
 }
 
 /** The account's mail (3.73.0, server 1.69.0): the inbox, reading, taking an attachment with a hero, deleting; the administrator's sending. */

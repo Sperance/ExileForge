@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.hero
 
+import com.sperance.exileforge.ui.components.ForgeSheet
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -156,7 +157,7 @@ fun petName(species: String): String = locOr("pet.$species", species)
     // An omen spent to the last one, or one the pet no longer takes, falls away by itself.
     val omen = picked?.takeIf { it in omens }
     val growth = index.pets.orbs.keys.toList()
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Engraved(ui("pets.orbs_of", petName(pet.species)))

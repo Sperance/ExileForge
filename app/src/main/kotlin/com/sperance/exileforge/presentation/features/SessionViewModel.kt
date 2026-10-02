@@ -9,6 +9,7 @@ import com.sperance.exileforge.core.model.command.UserProfile
 import com.sperance.exileforge.core.network.FailureState
 import com.sperance.exileforge.core.network.ForgeHttp
 import com.sperance.exileforge.core.network.normalizeServer
+import com.sperance.exileforge.data.settings.DEFAULT_SERVER
 import com.sperance.exileforge.presentation.ForgeRuntime
 import com.sperance.exileforge.presentation.state.AppMode
 import com.sperance.exileforge.presentation.state.AppPhase
@@ -55,9 +56,14 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         mutable.update { it.copy(account = it.account.copy(testers = testers, shownTester = account.takeIf { a -> a.password != null })) }
     } } }
 
-    fun connect() { with(runtime) { task {
-        val server = normalizeServer(state.value.account.serverDraft)
-        store.save(server)
+    fun connect() = connect(normalizeServer(state.value.account.serverDraft))
+
+    /** Back to the one server (3.75.0): the administrator's address is forgotten, not overwritten with the default. */
+    fun resetServer() = connect(null)
+
+    private fun connect(override: String?) { with(runtime) { task {
+        store.save(override)
+        val server = override ?: DEFAULT_SERVER
         clearSession()
         connectionViewModel.reset()
         api = newApi(server)

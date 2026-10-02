@@ -50,7 +50,7 @@ private const val CARD_TOP = .48f
     }
     val campaign = index.campaign
     val world = remember(index, progress) { WorldMap(campaign, index.world, progress) }
-    val art = remember(campaign) { WorldArt.of(campaign) }
+    val art by produceState(WorldArt.cached(campaign), campaign) { value = WorldArt.of(campaign) }
     val density = LocalDensity.current.density
     val camera = remember(campaign.world, density) { WorldCamera(campaign.world, density) }
     val scope = rememberCoroutineScope()

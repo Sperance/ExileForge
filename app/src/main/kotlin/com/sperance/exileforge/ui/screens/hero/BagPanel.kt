@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.hero
 
+import com.sperance.exileforge.ui.components.ForgeSheet
 import androidx.compose.foundation.background
 import com.sperance.exileforge.ui.components.MutedText
 import androidx.compose.foundation.border
@@ -179,7 +180,7 @@ internal fun compactCount(amount: Long): String = when {
 /** The sheet a stack opens in: the gold spine along its edge and [content] beside it. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable private fun StackPanel(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel) {
+    ForgeSheet(onDismissRequest = onDismiss) {
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).navigationBarsPadding()) {
             RaritySpine(Gold, 4.dp)
             Column(Modifier.weight(1f).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp), content = content)

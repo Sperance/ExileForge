@@ -1,12 +1,11 @@
 package com.sperance.exileforge.ui.screens.expedition
 
+import com.sperance.exileforge.ui.components.ForgeSheet
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
@@ -48,7 +47,7 @@ private fun lootStand(s: ForgeState, item: ItemView): LootStand {
                                    extra: @Composable ColumnScope.() -> Unit = {}) {
     val stand = lootStand(s, item)
     LaunchedEffect(item.id, stand) { if (stand == LootStand.ARRIVING) vm.flushRun() }
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             ItemCard(item, enabled = false, detailed = true, price = s.sellPrice(item.item))
             WearPreview(s, item.item)

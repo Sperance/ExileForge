@@ -30,7 +30,9 @@ import kotlinx.serialization.Serializable
 @Serializable data class FullReport(@SerialName("_id") val id: String, val text: String, val screen: String = "", val context: Map<String, String> = emptyMap(),
                                     val requests: List<String> = emptyList(), val userId: String? = null, val status: ReportStatus = ReportStatus.NEW,
                                     val kind: FeedbackKind = FeedbackKind.BUG, val likes: List<String> = emptyList(), val dislikes: List<String> = emptyList(),
-                                    val reason: String = "", val createdAt: String = "")
+                                    val reason: String = "", val createdAt: String = "",
+                                    /** The task in Asana once the administrator exported it (3.75.0, server 1.70.0); blank before. */
+                                    val asanaUrl: String = "")
 
 @Serializable data class AdminReport(val report: FullReport, val login: String? = null)
 

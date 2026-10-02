@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.expedition
 
+import com.sperance.exileforge.ui.components.ForgeSheet
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -768,7 +769,7 @@ private fun vitalFigures(value: Int, max: Int): String =
     }
     val index = s.index
     val skill = index?.skills?.byCode?.get(view.code)
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel) {
+    ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 18.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {

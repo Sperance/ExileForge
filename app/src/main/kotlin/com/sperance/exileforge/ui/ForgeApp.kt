@@ -6,8 +6,12 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.CloudOff
+import androidx.compose.material.icons.outlined.Mail
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,6 +23,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -29,10 +34,10 @@ import com.sperance.exileforge.core.network.RequestLog
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.*
 import com.sperance.exileforge.data.settings.GuideStore
-import com.sperance.exileforge.ui.components.BugButton
+import com.sperance.exileforge.data.settings.DraftStore
+import com.sperance.exileforge.ui.screens.expedition.world.WorldArt
 import com.sperance.exileforge.ui.components.BugSheet
 import com.sperance.exileforge.ui.components.LocalMailOpen
-import com.sperance.exileforge.ui.components.MailButton
 import com.sperance.exileforge.ui.components.MailSheet
 import com.sperance.exileforge.ui.components.SuggestionsSheet
 import com.sperance.exileforge.ui.components.LocalBugReport
@@ -109,10 +114,16 @@ private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, erro
     // names land, every screen that printed a bare code is drawn again.
     // The beetle (3.48.0): in the banner of the game; since 3.57.0 in the own header of every screen without one.
     var bugOpen by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val draftScope = rememberCoroutineScope()
+    val drafts = remember { DraftStore(context.applicationContext, draftScope) }
     // Players' suggestions and the inbox (3.73.0): sheets over everything, like the beetle's.
     var suggestionsOpen by remember { mutableStateOf(false) }
     var mailOpen by remember { mutableStateOf(false) }
     LaunchedEffect(s.phase, s.play.heroId) { if (s.phase == AppPhase.GAME && s.play.heroId.isNotBlank()) vm.warmUp() }
+    // The world map's art is built as soon as the campaign arrives (3.75.0), away from the main thread: the tab opens on it.
+    val campaign = s.index?.campaign
+    LaunchedEffect(campaign) { campaign?.let { WorldArt.of(it) } }
     key(s.account.server, s.account.sessionEpoch, s.lang, s.world.localeStrings) {
         CompositionLocalProvider(LocalBugReport provides { bugOpen = true }, LocalMailOpen provides { mailOpen = true }) {
         Box(Modifier.fillMaxSize()) {
@@ -135,7 +146,8 @@ private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, erro
         }
         }
     }
-    if (bugOpen) BugSheet(s, expedition, logs, onDismiss = { bugOpen = false }, onSuggestions = { suggestionsOpen = true }, onSend = vm::reportBug)
+    if (bugOpen) BugSheet(s, expedition, logs, drafts, onDismiss = { bugOpen = false }, onSuggestions = { suggestionsOpen = true },
+        onSend = { report -> vm.reportBug(report) { drafts.clear(report.kind) } })
     if (suggestionsOpen) SuggestionsSheet(s, vm) { suggestionsOpen = false }
     if (mailOpen) MailSheet(s, vm) { mailOpen = false }
     // The inbox (3.73.0) is asked at sign-in and every few minutes after, quietly: the envelope counts the unread.
@@ -222,7 +234,8 @@ private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, erro
  * sees on every tab. The language runes went the same way in 2.4.0, to the Account tab and to the
  * sign-in screen: with a third language they were a crowd, and a language is a setting, not an act.
  * Since 2.48.0 the hero's class is gone from it, a short plaque of the craft under way opens the
- * crafts, and the account sits in its corner — it left the bottom bar.
+ * crafts, and the account sits in its corner — it left the bottom bar. Since 3.75.0 the inbox, the beetle and the
+ * account share one «⋮»: with every badge up the name of the game no longer fit.
  */
 @Composable private fun ForgeBanner(s: ForgeState, vm: ForgeViewModel, onBug: () -> Unit) {
     Row(Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Gold.copy(alpha = .10f), Color.Transparent, Gold.copy(alpha = .06f))))
@@ -232,7 +245,7 @@ private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, erro
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text("EXILE FORGE", style = MaterialTheme.typography.titleLarge, color = GoldBright)
+            Text("EXILE FORGE", style = MaterialTheme.typography.titleLarge, color = GoldBright, maxLines = 1, softWrap = false)
             // The loaded hero names themself; before the snapshot lands, the menu's row does.
             val named = s.heroInfo != null || s.heroRow != null
             Text(if (named) s.heroName + ui("app.hero_level", s.heroLevel) else ui("app.title"),
@@ -240,10 +253,34 @@ private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, erro
         }
         WorkBadge(s) { vm.tab(TAB_CRAFTS) }
         LinkBadge(s.link, vm::retryLink)
-        LocalMailOpen.current?.let { MailButton(s.feedback.unread, it) }
-        BugButton(tint = Gold, onClick = onBug)
-        IconButton(onClick = { vm.tab(TAB_ACCOUNT) }) {
-            Icon(ForgeGlyphs.Portal, ui("nav.account"), tint = if (s.tab == TAB_ACCOUNT) GoldBright else Gold, modifier = Modifier.size(24.dp))
+        BannerMenu(s.feedback.unread, accountOpen = s.tab == TAB_ACCOUNT, onMail = LocalMailOpen.current, onBug = onBug) { vm.tab(TAB_ACCOUNT) }
+    }
+}
+
+/**
+ * The banner's «⋮» (3.75.0, the owner's pick «B» of three mockups): the inbox, the beetle and the account behind one button,
+ * so the name of the game fits beside the badges. A letter unread marks the button itself with a dot.
+ */
+@Composable private fun BannerMenu(unread: Int, accountOpen: Boolean, onMail: (() -> Unit)?, onBug: () -> Unit, onAccount: () -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { open = true }) {
+            Box {
+                Icon(Icons.Outlined.MoreVert, ui("common.more"), tint = if (accountOpen) GoldBright else Gold, modifier = Modifier.size(24.dp))
+                if (unread > 0) Box(Modifier.align(Alignment.TopEnd).size(8.dp).background(LifeRed, CircleShape))
+            }
+        }
+        DropdownMenu(open, onDismissRequest = { open = false }, containerColor = PanelRaised) {
+            fun pick(action: () -> Unit) { open = false; action() }
+            onMail?.let { mail ->
+                DropdownMenuItem(text = { Text(ui("mail.title")) }, onClick = { pick(mail) },
+                    leadingIcon = { Icon(Icons.Outlined.Mail, null, tint = Gold) },
+                    trailingIcon = { if (unread > 0) Text(if (unread > 9) "9+" else unread.toString(), color = Ink, fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                        modifier = Modifier.background(LifeRed, CircleShape).padding(horizontal = 6.dp)) })
+            }
+            DropdownMenuItem(text = { Text(ui("bug.open")) }, onClick = { pick(onBug) }, leadingIcon = { Icon(Icons.Outlined.BugReport, null, tint = Gold) })
+            DropdownMenuItem(text = { Text(ui("nav.account"), color = if (accountOpen) GoldBright else Parchment) }, onClick = { pick(onAccount) },
+                leadingIcon = { Icon(ForgeGlyphs.Portal, null, tint = Gold) })
         }
     }
 }

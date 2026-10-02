@@ -1,5 +1,6 @@
 package com.sperance.exileforge.presentation.state
 
+import com.sperance.exileforge.data.settings.DEFAULT_SERVER
 import com.sperance.exileforge.core.model.feedback.AdminReport
 import com.sperance.exileforge.core.model.feedback.Mail
 import com.sperance.exileforge.core.model.feedback.OwnReport
@@ -145,7 +146,7 @@ data class AccountState(
     val profile: UserProfile? = null, val signedIn: Boolean = false, val sessionEpoch: Int = 0,
     /** A kept session the server could not be reached to confirm: the sign-in screen offers to try again. */
     val resumable: Boolean = false,
-    val server: String = "http://10.0.2.2:8080/", val serverDraft: String = "http://10.0.2.2:8080/",
+    val server: String = DEFAULT_SERVER, val serverDraft: String = DEFAULT_SERVER,
     /** The account's heroes and whether they have been read yet: "none" and "not asked yet" must differ. */
     val characters: List<HeroSummary> = emptyList(), val charactersRead: Boolean = false,
     val health: String = ui("runtime.not_checked"),

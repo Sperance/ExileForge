@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.tree
 
+import com.sperance.exileforge.ui.components.ForgeSheet
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -194,24 +195,23 @@ import kotlin.math.sin
         }
     }
 
-    if (filtersOpen) ModalBottomSheet(onDismissRequest = { filtersOpen = false }, containerColor = Panel) {
+    if (filtersOpen) ForgeSheet(onDismissRequest = { filtersOpen = false }) {
         TreeFilters(s.play.nodeQuery, onQuery, found.size.takeIf { query.length >= 2 }, tag, onTag = { tag = it })
     }
 
     TreeConfirmations(s, confirmReset, onClear = { confirmReset = false }, onReset = onReset)
 
-    if (totalsOpen) ModalBottomSheet(onDismissRequest = { totalsOpen = false }, containerColor = Panel) {
+    if (totalsOpen) ForgeSheet(onDismissRequest = { totalsOpen = false }) {
         Column(Modifier.fillMaxWidth().heightIn(max = 560.dp).verticalScroll(rememberScrollState()).padding(16.dp)) { TreeTotals(s, tree) }
     }
 
-    if (planOpen && plan.isNotEmpty()) ModalBottomSheet(onDismissRequest = { planOpen = false }, containerColor = Panel) {
+    if (planOpen && plan.isNotEmpty()) ForgeSheet(onDismissRequest = { planOpen = false }) {
         Column(Modifier.fillMaxWidth().heightIn(max = 560.dp).verticalScroll(rememberScrollState()).padding(16.dp)) {
             PlanPanel(s, index, taken, plan, enabled) { planOpen = false; onPlan(emptyList()) }
         }
     }
 
-    if (detailsOpen) ModalBottomSheet(onDismissRequest = { detailsOpen = false }, containerColor = Panel,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    if (detailsOpen) ForgeSheet(onDismissRequest = { detailsOpen = false }) {
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.9f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
                 ForgePanel {

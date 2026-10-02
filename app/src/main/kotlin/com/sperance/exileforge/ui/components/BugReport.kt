@@ -14,22 +14,25 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.BugReport
+import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.BuildConfig
 import com.sperance.exileforge.core.campaign.ExpeditionRun
@@ -38,6 +41,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.BugReportRequest
 import com.sperance.exileforge.core.model.sync.API_REVISION
 import com.sperance.exileforge.core.network.RequestLog
+import com.sperance.exileforge.data.settings.DraftStore
 import com.sperance.exileforge.presentation.state.AppPhase
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.theme.*
@@ -61,22 +65,34 @@ val LocalBugReport = staticCompositionLocalOf<(() -> Unit)?> { null }
  * by the journal itself; no token is ever in it.
  */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun BugSheet(s: ForgeState, run: ExpeditionRun?, logs: List<RequestLog>, onDismiss: () -> Unit, onSuggestions: () -> Unit,
+@Composable fun BugSheet(s: ForgeState, run: ExpeditionRun?, logs: List<RequestLog>, drafts: DraftStore, onDismiss: () -> Unit, onSuggestions: () -> Unit,
                          onSend: (BugReportRequest) -> Unit) {
     val screen = remember { bugScreen(s, run) }
     val context = remember { bugContext(s, run) }
-    var text by remember { mutableStateOf("") }
     // A bug or a suggestion (3.73.0): the player picks; a suggestion goes into the public list, so it needs an account.
+    // The words of each and the kind last open come back from the device (3.75.0) and are kept as they are typed.
     var kind by remember { mutableStateOf(FeedbackKind.BUG) }
+    val texts = remember { mutableStateMapOf<FeedbackKind, String>() }
+    LaunchedEffect(Unit) {
+        val draft = drafts.read()
+        if (texts.isEmpty()) kind = draft.kind
+        draft.texts.forEach { (k, v) -> if (k !in texts) texts[k] = v }
+    }
+    val text = texts[kind].orEmpty()
+    val clipboard = LocalClipboardManager.current
     val limit = if (kind == FeedbackKind.SUGGESTION) s.inputs.suggestion else s.inputs.report
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(ui("bug.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
-            PillTabs(listOf(kindTitle(FeedbackKind.BUG), kindTitle(FeedbackKind.SUGGESTION)), kind.ordinal, { kind = FeedbackKind.entries[it] }, segmented = true)
+            PillTabs(listOf(kindTitle(FeedbackKind.BUG), kindTitle(FeedbackKind.SUGGESTION)), kind.ordinal, { kind = FeedbackKind.entries[it]; drafts.save(kind, texts[kind].orEmpty()) }, segmented = true)
             if (kind == FeedbackKind.BUG) Text(ui("bug.where", screen), color = Rune, style = MaterialTheme.typography.labelLarge)
             else MutedText(ui(if (s.account.signedIn) "feedback.suggestion_hint" else "feedback.sign_in_first"))
-            OutlinedTextField(text, { text = it.take(limit) }, label = { Text(ui(if (kind == FeedbackKind.BUG) "bug.text" else "feedback.text")) }, minLines = 4,
-                supportingText = { Text(ui("bug.count", text.length, limit)) }, modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp))
+            OutlinedTextField(text, { texts[kind] = it.take(limit); drafts.save(kind, texts[kind].orEmpty()) }, label = { Text(ui(if (kind == FeedbackKind.BUG) "bug.text" else "feedback.text")) }, minLines = 4,
+                supportingText = { Text(ui("bug.count", text.length, limit)) },
+                // The words alone to the clipboard (3.75.0), to keep or pass on elsewhere.
+                trailingIcon = { IconButton(onClick = { clipboard.setText(AnnotatedString(text)) }, enabled = text.isNotBlank()) {
+                    Icon(Icons.Outlined.ContentCopy, ui("bug.copy"), tint = if (text.isNotBlank()) Gold else Muted, modifier = Modifier.size(20.dp)) } },
+                modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp))
             ForgeButton(enabled = text.isNotBlank() && !s.busy && (kind == FeedbackKind.BUG || s.account.signedIn), modifier = Modifier.fillMaxWidth(),
                 onClick = { onSend(BugReportRequest(text.trim().take(limit), screen, context, journalTail(logs), kind)); onDismiss() }) { Text(ui("bug.send")) }
             // Everyone's suggestions, to read and vote on, and one's own reports with how they stand.

@@ -37,9 +37,12 @@ class WorldCamera(val world: WorldRule, private val density: Float) {
     /** Pixels per world unit. */
     val unit: Float get() = density * scale
 
-    /** As far out as shows the whole world, never nearer than [HOME]. */
+    /**
+     * As far out as the world's width fills the screen, never nearer than [HOME]. Since 3.75.0 not the whole height too: on a
+     * tall world that left a strip of crumbs; the rest is a drag away.
+     */
     val minScale: Float get() =
-        if (viewport == IntSize.Zero) MIN else minOf(viewport.width / (world.width * density), viewport.height / (world.height * density), HOME)
+        if (viewport == IntSize.Zero) MIN else minOf(viewport.width / (world.width * density), HOME)
 
     fun toScreen(x: Float, y: Float): Offset = Offset(offset.x + x * unit, offset.y + (world.height - y) * unit)
 

@@ -23,6 +23,7 @@ import com.sperance.exileforge.core.network.GameApi
 import com.sperance.exileforge.core.network.ManifestCache
 import com.sperance.exileforge.core.network.RequestJournal
 import com.sperance.exileforge.core.network.refusalLine
+import com.sperance.exileforge.data.settings.DEFAULT_SERVER
 import com.sperance.exileforge.data.settings.ServerStore
 import com.sperance.exileforge.data.settings.deviceLanguage
 import com.sperance.exileforge.presentation.features.AuctionViewModel
@@ -153,7 +154,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
                 else if (store.deviceSession.first()) sessionViewModel.playOnThisDevice(silent = true)
             } catch (e: CancellationException) { throw e }
             catch (e: Exception) {
-                api = newApi("http://10.0.2.2:8080/")
+                api = newApi(DEFAULT_SERVER)
                 apiReady.complete(Unit)
                 mutable.update { it.copy(busy = false, error = true, message = e.message) }
             }
@@ -290,7 +291,9 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
      * an IO error becomes [FailureState.UncertainWrite]; [touches] names the reads the command redoes itself.
      */
     /** Files a bug report and says so (3.48.0). */
-    fun reportBug(report: com.sperance.exileforge.core.model.command.BugReportRequest) = task { api.reportBug(report); toast(ui("bug.sent")) }
+    /** The report, and [onSent] once the server has taken it (3.75.0: the draft goes only then). */
+    fun reportBug(report: com.sperance.exileforge.core.model.command.BugReportRequest, onSent: suspend () -> Unit = {}) =
+        task { api.reportBug(report); onSent(); toast(ui("bug.sent")) }
 
     fun task(writing: Boolean = false, touches: Set<String> = emptySet(), block: suspend () -> Unit) {
         if (state.value.busy) return

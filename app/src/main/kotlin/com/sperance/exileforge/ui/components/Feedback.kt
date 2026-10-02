@@ -63,7 +63,7 @@ fun statusTint(status: ReportStatus): Color = when (status) {
 @Composable fun SuggestionsSheet(s: ForgeState, vm: ForgeViewModel, onDismiss: () -> Unit) {
     LaunchedEffect(Unit) { vm.loadSuggestions() }
     var tab by remember { mutableIntStateOf(0) }
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.9f).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(ui("feedback.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
             PillTabs(listOf(ui("feedback.all"), ui("feedback.mine")), tab, { tab = it })
@@ -156,7 +156,7 @@ fun attachmentLines(mail: Mail): List<String> = buildList {
 @Composable fun MailSheet(s: ForgeState, vm: ForgeViewModel, onDismiss: () -> Unit) {
     LaunchedEffect(Unit) { vm.loadMail() }
     var open by remember { mutableStateOf<String?>(null) }
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.9f).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(ui("mail.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
             MutedText(ui("mail.keep"))

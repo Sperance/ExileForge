@@ -177,13 +177,16 @@ private enum class AccountPage(val title: String) {
 /** The server: where it is, the way to connect and to ask after its health, and the answer. */
 @Composable private fun ServerPage(s: ForgeState, vm: ForgeViewModel) {
     ForgePanel {
-        OutlinedTextField(s.account.serverDraft, { vm.serverDraft(it.take(s.inputs.server)) }, enabled = !s.busy, label = { Text(ui("account.server_address")) },
-            supportingText = { Text(ui("account.address_hint")) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-        ForgeButton(enabled = !s.busy, onClick = vm::connect, modifier = Modifier.fillMaxWidth()) { Text(ui("account.save_connect")) }
+        // The address is fixed for players (3.75.0); only an administrator points the device at another server.
+        if (s.isAdmin) {
+            OutlinedTextField(s.account.serverDraft, { vm.serverDraft(it.take(s.inputs.server)) }, enabled = !s.busy, label = { Text(ui("account.server_address")) },
+                supportingText = { Text(ui("account.address_hint")) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            ForgeButton(enabled = !s.busy, onClick = vm::connect, modifier = Modifier.fillMaxWidth()) { Text(ui("account.save_connect")) }
+        } else PropertyRow(ui("account.server_address"), s.account.server, Glyph.TEXT)
         ForgeOutlinedButton(enabled = !s.busy, onClick = vm::health, modifier = Modifier.fillMaxWidth()) { Text(ui("account.check_health")) }
     }
     InfoCard(ui("account.server_state"), s.account.health)
-    InfoCard(ui("account.local_dev"), ui("account.local_dev_note"))
+    if (s.isAdmin) InfoCard(ui("account.local_dev"), ui("account.local_dev_note"))
 }
 
 /** What the client holds of the server: the dictionary, the drawings, the world's tables and the contract it speaks. */

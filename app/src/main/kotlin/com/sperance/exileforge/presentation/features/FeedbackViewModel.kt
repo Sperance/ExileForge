@@ -1,6 +1,7 @@
 package com.sperance.exileforge.presentation.features
 
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.model.feedback.AdminReport
 import com.sperance.exileforge.core.model.feedback.FeedbackKind
 import com.sperance.exileforge.core.model.feedback.MailRequest
 import com.sperance.exileforge.core.model.feedback.ReportStatus
@@ -35,10 +36,15 @@ class FeedbackViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         feedback { it.copy(reports = reports) }
     } } }
 
-    fun setReportStatus(id: String, status: ReportStatus, reason: String) { with(runtime) { task(writing = true) {
-        val answered = api.feedback.setStatus(id, status, reason)
-        feedback { f -> f.copy(reports = f.reports.map { if (it.report.id == id) answered else it }) }
-        toast(ui("feedback.status_saved"))
+    fun setReportStatus(id: String, status: ReportStatus, reason: String) = answer(ui("feedback.status_saved")) { api.feedback.setStatus(id, status, reason) }
+
+    /** The report to Asana (3.75.0): the server makes the task and answers with the report as it now stands. */
+    fun reportToAsana(id: String) = answer(ui("feedback.asana_done")) { api.feedback.toAsana(id) }
+
+    private fun answer(done: String, call: suspend ForgeRuntime.() -> AdminReport) { with(runtime) { task(writing = true) {
+        val answered = call()
+        feedback { f -> f.copy(reports = f.reports.map { if (it.report.id == answered.report.id) answered else it }) }
+        toast(done)
     } } }
 
     /** The inbox, quietly: the envelope in the banner counts what is unread. */

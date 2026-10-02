@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.auction
 
+import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.rules.content.SlotGroup
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.AutoSell
@@ -140,7 +141,7 @@ import com.sperance.exileforge.ui.theme.*
 /** The merchant's two notes — how the shelf renews and is priced, how the orbs grow dearer — behind the header's (i). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable private fun MerchantNotes(onDismiss: () -> Unit) {
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel) {
+    ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Engraved(ui("merchant.title"))
             Text(ui("merchant.note"), color = Parchment, style = MaterialTheme.typography.bodyMedium)
@@ -175,7 +176,7 @@ import com.sperance.exileforge.ui.theme.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable private fun OfferSheet(s: ForgeState, offer: MerchantOffer, money: Long?, onDismiss: () -> Unit, onBuy: () -> Unit) {
     val view = s.view(offer.item)
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.92f)) {
             LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (view != null) item { ItemCard(view, enabled = false, detailed = true) }
@@ -214,7 +215,7 @@ internal fun untilText(at: Long): String {
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable private fun AutoSellSheet(filter: AutoSell, enabled: Boolean, onChange: (Rarity, Set<SlotGroup>) -> Unit, onDismiss: () -> Unit) {
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Engraved(ui("merchant.autosell"))

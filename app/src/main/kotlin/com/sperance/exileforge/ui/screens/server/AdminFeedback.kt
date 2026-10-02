@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.server
 
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -75,6 +76,15 @@ import com.sperance.exileforge.ui.theme.*
                 supportingText = { LengthCounter(reason, REASON) }, modifier = Modifier.fillMaxWidth())
             ForgeButton(enabled = !s.busy && (chosen != report.status || reason != report.reason), onClick = { vm.setReportStatus(report.id, chosen, reason) },
                 modifier = Modifier.fillMaxWidth()) { Text(ui("feedback.save_status")) }
+            // Asana (3.75.0): the picked report becomes a task there; once exported, the link to it instead.
+            if (report.asanaUrl.isBlank()) ForgeOutlinedButton(enabled = !s.busy, onClick = { vm.reportToAsana(report.id) }, modifier = Modifier.fillMaxWidth()) {
+                Text(ui("feedback.to_asana"))
+            } else {
+                val uri = LocalUriHandler.current
+                ForgeTextButton(enabled = report.asanaUrl.startsWith("http"), onClick = { uri.openUri(report.asanaUrl) }, modifier = Modifier.fillMaxWidth()) {
+                    Text(ui("feedback.in_asana"))
+                }
+            }
         }
     }
 }

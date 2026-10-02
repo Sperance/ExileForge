@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.hero
 
+import com.sperance.exileforge.ui.components.ForgeSheet
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -67,7 +68,7 @@ internal fun ShareKind.color(): Color = when (this) {
     }
     val power = s.index?.stats?.get(current)?.group == com.sperance.exileforge.rules.content.StatGroup.POWER
     val accent = StatGroup.of(current).accent()
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ForgeSheet(onDismissRequest = onDismiss) {
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.9f).navigationBarsPadding(), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, 16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (trail.size > 1) item {

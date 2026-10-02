@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.crafts
 
+import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.unmetFor
 import com.sperance.exileforge.presentation.state.view
@@ -454,7 +455,7 @@ private fun share(profession: ProfessionView): Float = profession.next?.takeIf {
 /** The tool behind the header's button: its full card, what it and the tree give, and the way to another. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable private fun ToolSheet(s: ForgeState, profession: ProfessionView, onDismiss: () -> Unit, onChange: () -> Unit) {
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Engraved(ui("crafts.tool"))
@@ -565,7 +566,7 @@ private fun cycleCost(s: ForgeState, job: JobView): AnnotatedString = buildAnnot
     val choices = choices(s, profession, work)
     var picked by remember(work.code) { mutableStateOf(choices.firstOrNull()?.choice.orEmpty()) }
     val job = work.options.firstOrNull { it.choice == picked } ?: work
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(jobTitle(job.code), color = GoldBright, style = MaterialTheme.typography.titleLarge)
             Text(professionTitle(profession.code), color = Rune, style = MaterialTheme.typography.labelMedium)
@@ -623,7 +624,7 @@ private fun cycleCost(s: ForgeState, job: JobView): AnnotatedString = buildAnnot
     val slot = Slot.of(profession.tool)
     val tools = s.hero?.stash.orEmpty().filter { !it.socketed }
         .mapNotNull { instance -> s.view(instance)?.takeIf { slot != null && it.slot == slot }?.let { instance to it } }
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ForgeSheet(onDismissRequest = onDismiss) {
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.7f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item { Engraved(ui("crafts.pick_tool")) }
             if (tools.isEmpty()) item { InfoCard(ui("crafts.no_tools"), ui("crafts.no_tools_hint")) }

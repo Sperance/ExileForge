@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.expedition
 
+import com.sperance.exileforge.ui.components.ForgeSheet
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -59,7 +60,7 @@ import kotlin.math.roundToInt
     val trace = event.trace ?: run { LaunchedEffect(event) { onDismiss() }; return }
     val explainer = remember(s.index, s.lang) { TraceExplainer(s) }
     var full by remember(event) { mutableStateOf(false) }
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ForgeSheet(onDismissRequest = onDismiss) {
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.9f).navigationBarsPadding(), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, 16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)) {
             item { Header(event, monster) }

@@ -78,8 +78,7 @@ data class LedgerLine(val label: String, val value: String, val tone: Tone = Ton
     onConfirm: () -> Unit,
 ) {
     val accent = if (danger) LifeRed else Gold
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel, shape = RectangleShape,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), dragHandle = null) {
+    ForgeSheet(onDismissRequest = onDismiss, shape = RectangleShape, dragHandle = null) {
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
             RaritySpine(accent, 5.dp)
             Column(Modifier.weight(1f).padding(start = 18.dp, end = 18.dp, top = 10.dp, bottom = 22.dp),

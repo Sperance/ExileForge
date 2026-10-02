@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.expedition
 
+import com.sperance.exileforge.ui.components.ForgeSheet
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -35,7 +36,7 @@ import com.sperance.exileforge.ui.theme.*
     val recipe = index?.recipe(code)
     val title = recipe?.let { r -> index?.modifier(r.modifier)?.effects?.map { statTitle(it.stat) }?.distinct()?.joinToString(" / ") }
         ?.ifBlank { null } ?: displayName(recipe?.modifier ?: code)
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ForgeSheet(onDismissRequest = onDismiss) {
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).navigationBarsPadding()) {
             RaritySpine(Crafted, 4.dp)
             Column(Modifier.weight(1f).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {

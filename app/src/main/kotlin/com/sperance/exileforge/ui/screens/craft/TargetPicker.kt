@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.craft
 
+import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.DefaultInputs
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -72,7 +73,7 @@ internal enum class TargetFilter(val title: String, val glyph: ImageVector) {
         stash.filter { filter.admits(it, recent) && ItemSearch.matches(it, query) }
             .sortedWith(compareBy<ItemView>({ recent.indexOf(it.id).let { at -> if (at < 0) Int.MAX_VALUE else at } }, { -it.rarity.ordinal }, { -it.level }))
     }
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel) {
+    ForgeSheet(onDismissRequest = onDismiss) {
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.85f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item { Engraved(ui("forge.pick_item")) }
             item {

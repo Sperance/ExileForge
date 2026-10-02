@@ -20,10 +20,15 @@ import java.util.UUID
 
 private val Context.settings by preferencesDataStore("server_settings")
 
+/** The one server every player plays on (3.75.0): there is no address to type before the gate. */
+const val DEFAULT_SERVER = "https://147.45.219.84.sslip.io/"
+
 class ServerStore(private val context: Context) {
-    private val key = stringPreferencesKey("base_url")
-    val server = context.settings.data.map { it[key] ?: "http://10.0.2.2:8080/" }
-    suspend fun save(value: String) { context.settings.edit { it[key] = value } }
+    // A new key (3.75.0): an address typed before it is left behind, only an administrator's choice from the Server page counts.
+    private val key = stringPreferencesKey("server_override")
+    val server = context.settings.data.map { it[key] ?: DEFAULT_SERVER }
+    /** The administrator's address, or none — back to [DEFAULT_SERVER]. */
+    suspend fun save(value: String?) { context.settings.edit { if (value == null || value == DEFAULT_SERVER) it.remove(key) else { it[key] = value } } }
 
     /**
      * The language the player chose, or nothing at all.

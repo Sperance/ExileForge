@@ -89,7 +89,7 @@ val LocalGuideDesk = staticCompositionLocalOf<GuideDesk?> { null }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun GuideHost(desk: GuideDesk) {
     val guide = desk.open ?: return
-    ModalBottomSheet(onDismissRequest = desk::close, containerColor = Panel, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ForgeSheet(onDismissRequest = desk::close) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 20.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Icon(guide.icon, null, tint = Gold, modifier = Modifier.size(32.dp))

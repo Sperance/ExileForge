@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.guild
 
+import com.sperance.exileforge.ui.components.ForgeSheet
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -54,7 +55,7 @@ internal typealias Founding = (String, String, String, String, String, GuildMode
         faction.isBlank() -> ui("guild.api.faction")
         else -> null
     }
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp).navigationBarsPadding(),
             verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Engraved(ui("guild.found_title"))

@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.expedition
 
+import com.sperance.exileforge.ui.components.ForgeSheet
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -470,7 +471,7 @@ private object AtlasTotals {
         index.atlas.nodes.filter { it.code in taken }.groupBy { it.branch }
             .mapValues { (_, nodes) -> AtlasTotals.sum(nodes.flatMap { it.lines }) }.filterValues { it.isNotEmpty() }
     }
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color(0xF20A0E18), sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ForgeSheet(onDismissRequest = onDismiss, containerColor = Color(0xF20A0E18)) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(ui("atlas.summary_title"), color = Color.White, style = MaterialTheme.typography.titleMedium)

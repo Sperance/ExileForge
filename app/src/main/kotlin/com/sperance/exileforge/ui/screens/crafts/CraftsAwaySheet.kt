@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.crafts
 
+import com.sperance.exileforge.ui.components.ForgeSheet
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -48,7 +49,7 @@ import com.sperance.exileforge.ui.theme.*
 @Composable private fun CraftsAwaySheet(s: ForgeState, away: CraftsAway, onDismiss: () -> Unit) {
     val offlineHours = s.index?.professions?.rules?.offlineHours
     val cap = offlineHours?.let { (it * 3_600_000).toLong() } ?: Long.MAX_VALUE
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(ui("away.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)

@@ -18,6 +18,10 @@ import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.sin
 import kotlin.random.Random
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
 /**
  * The parchment the world map is drawn on (2.76.0, the owner's pick «Пергамент»): a dark chart with
@@ -85,7 +89,22 @@ class WorldArt private constructor(
         /** Where the sea meets the land at [y] (down): a slow swell over a quick ripple. */
         fun coastAt(y: Float): Float = (95 + 26 * sin(y / 70.0) + 12 * sin(y / 29.0 + 1)).toFloat()
 
-        fun of(campaign: CampaignFile): WorldArt {
+        /** The one world's art, built once per process (3.75.0): a return to the tab finds it ready. */
+        @Volatile private var cache: Pair<CampaignFile, WorldArt>? = null
+        private val building = Mutex()
+
+        /** The art if it is built already, for the first frame. */
+        fun cached(campaign: CampaignFile): WorldArt? = cache?.takeIf { it.first === campaign }?.second
+
+        /**
+         * The art, built away from the main thread (3.75.0): hundreds of sketches and grains took the tab a second to open.
+         * It is warmed as soon as the campaign arrives, so the map seldom waits for it at all.
+         */
+        suspend fun of(campaign: CampaignFile): WorldArt = cached(campaign) ?: building.withLock {
+            cached(campaign) ?: withContext(Dispatchers.Default) { build(campaign) }.also { cache = campaign to it }
+        }
+
+        private fun build(campaign: CampaignFile): WorldArt {
             val width = campaign.world.width.toFloat()
             val height = campaign.world.height.toFloat()
             val random = Random(campaign.regions.sumOf { it.code.hashCode() } xor campaign.world.height)

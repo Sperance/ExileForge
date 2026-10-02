@@ -15,6 +15,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Brush
@@ -63,7 +64,7 @@ import kotlin.math.hypot
  * units under one transform; the words are laid out once and only scaled.
  */
 @Composable
-fun WorldCanvas(world: WorldMap, art: WorldArt, camera: WorldCamera, selected: String?, stash: Map<String, Int>,
+fun WorldCanvas(world: WorldMap, art: WorldArt?, camera: WorldCamera, selected: String?, stash: Map<String, Int>,
                 modifier: Modifier = Modifier, onTap: (String?) -> Unit) {
     val measurer = rememberTextMeasurer()
     val motion = rememberInfiniteTransition(label = "world")
@@ -81,7 +82,8 @@ fun WorldCanvas(world: WorldMap, art: WorldArt, camera: WorldCamera, selected: S
         .pointerInput(camera) { detectTransformGestures { centroid, pan, zoom, _ -> camera.transform(centroid, pan, zoom) } }
         .pointerInput(camera, world) { detectTapGestures { point -> tap(hit(world, camera, point)) } }) {
         withTransform({ translate(camera.offset.x, camera.offset.y); scale(camera.unit, camera.unit, Offset.Zero) }) {
-            art.draw(this)
+            // Until the art is built (3.75.0), the bare parchment: the roads and the tokens are there at once.
+            art?.draw(this) ?: drawRect(BARE, size = Size(camera.world.width.toFloat(), height))
             fog(world, camera.world.width.toFloat(), height)
             val dash = PathEffect.dashPathEffect(floatArrayOf(7f, 6f), march)
             val dots = PathEffect.dashPathEffect(floatArrayOf(1f, 7f))
@@ -189,38 +191,39 @@ private fun radius(token: WorldToken): Float = if (token.zone.finale) FINALE_RAD
 
 /**
  * The map's words, laid out once per world and only scaled with the zoom: each token's level and
- * name, the regions the hero knows with their levels, and «Неизведанное» in the fog.
+ * name, the regions the hero knows with their levels, and «Неизведанное» in the fog. Since 3.75.0 a token's words are
+ * laid out the first time it comes on screen, and one off screen is not drawn: the map opens without measuring the world.
  */
 private class Words(private val world: WorldMap, private val measurer: TextMeasurer) {
-    private val levels: Map<String, TextLayoutResult>
-    private val names: Map<String, TextLayoutResult>
-    private val regions: List<Triple<Offset, TextLayoutResult, TextLayoutResult>>
-    private val unknown: TextLayoutResult
-
-    init {
-        val shade = Shadow(Color.Black, Offset(0f, 1f), 6f)
-        levels = world.tokens.associate { token ->
-            token.zone.code to measurer.measure(token.zone.level.toString(), TextStyle(
-                color = if (token.state == TokenState.LOCKED) Color(0xFFA4A9AE) else GoldBright,
-                fontFamily = FontFamily.Serif, fontWeight = FontWeight.Bold, fontSize = if (token.zone.finale) 21.sp else 17.sp,
-                shadow = Shadow(Color.Black.copy(alpha = .9f), Offset(0f, 1f), 2f)))
-        }
-        names = world.tokens.associate { token ->
-            token.zone.code to measurer.measure(if (token.state == TokenState.LOCKED) ui("expedition.hidden") else mapTitle(token.zone.code), TextStyle(
-                color = if (token.state == TokenState.LOCKED) Color(0xFFA4A9AE) else Parchment,
-                fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp, shadow = shade))
-        }
-        regions = world.knownRegions.map { region ->
-            val levels = region.zones.map { it.level }
-            val name = measurer.measure(regionTitle(region.code).uppercase(), TextStyle(color = Parchment.copy(alpha = .45f), fontFamily = FontFamily.Serif,
-                fontStyle = FontStyle.Italic, fontWeight = FontWeight.SemiBold, fontSize = 21.sp, letterSpacing = 5.sp))
-            val span = measurer.measure(ui("expedition.region_levels", levels.min(), levels.max()).uppercase(), TextStyle(color = Gold.copy(alpha = .6f),
-                fontWeight = FontWeight.Medium, fontSize = 11.sp, letterSpacing = 3.sp))
-            Triple(Offset(region.label.x.toFloat(), region.label.y.toFloat()), name, span)
-        }
-        unknown = measurer.measure(ui("expedition.fog").uppercase(), TextStyle(color = Muted.copy(alpha = .7f), fontFamily = FontFamily.Serif,
-            fontStyle = FontStyle.Italic, fontWeight = FontWeight.SemiBold, fontSize = 19.sp, letterSpacing = 6.sp))
+    private val shade = Shadow(Color.Black, Offset(0f, 1f), 6f)
+    private val levels = HashMap<String, TextLayoutResult>()
+    private val names = HashMap<String, TextLayoutResult>()
+    private val counts = HashMap<Int, TextLayoutResult>()
+    private val regions: List<Triple<Offset, TextLayoutResult, TextLayoutResult>> = world.knownRegions.map { region ->
+        val levels = region.zones.map { it.level }
+        val name = measurer.measure(regionTitle(region.code).uppercase(), TextStyle(color = Parchment.copy(alpha = .45f), fontFamily = FontFamily.Serif,
+            fontStyle = FontStyle.Italic, fontWeight = FontWeight.SemiBold, fontSize = 21.sp, letterSpacing = 5.sp))
+        val span = measurer.measure(ui("expedition.region_levels", levels.min(), levels.max()).uppercase(), TextStyle(color = Gold.copy(alpha = .6f),
+            fontWeight = FontWeight.Medium, fontSize = 11.sp, letterSpacing = 3.sp))
+        Triple(Offset(region.label.x.toFloat(), region.label.y.toFloat()), name, span)
     }
+    private val unknown: TextLayoutResult = measurer.measure(ui("expedition.fog").uppercase(), TextStyle(color = Muted.copy(alpha = .7f), fontFamily = FontFamily.Serif,
+        fontStyle = FontStyle.Italic, fontWeight = FontWeight.SemiBold, fontSize = 19.sp, letterSpacing = 6.sp))
+
+    private fun level(token: WorldToken) = levels.getOrPut(token.zone.code) {
+        measurer.measure(token.zone.level.toString(), TextStyle(
+            color = if (token.state == TokenState.LOCKED) Color(0xFFA4A9AE) else GoldBright,
+            fontFamily = FontFamily.Serif, fontWeight = FontWeight.Bold, fontSize = if (token.zone.finale) 21.sp else 17.sp,
+            shadow = Shadow(Color.Black.copy(alpha = .9f), Offset(0f, 1f), 2f)))
+    }
+
+    private fun name(token: WorldToken) = names.getOrPut(token.zone.code) {
+        measurer.measure(if (token.state == TokenState.LOCKED) ui("expedition.hidden") else mapTitle(token.zone.code), TextStyle(
+            color = if (token.state == TokenState.LOCKED) Color(0xFFA4A9AE) else Parchment,
+            fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp, shadow = shade))
+    }
+
+    private fun count(maps: Int) = counts.getOrPut(maps) { measurer.measure("×$maps", TextStyle(color = ModBlue, fontWeight = FontWeight.Bold, fontSize = 10.sp)) }
 
     fun draw(scope: DrawScope, camera: WorldCamera, stash: Map<String, Int>) = with(scope) {
         val zoom = camera.scale
@@ -232,16 +235,16 @@ private class Words(private val world: WorldMap, private val measurer: TextMeasu
         }
         val fogAt = world.fogLine + FOG_WORD
         if (fogAt < camera.world.height) place(unknown, camera.toScreen(camera.world.width / 2f, fogAt.toFloat()), zoom, 1f, centreY = true)
+        val margin = OFFSCREEN_MARGIN * camera.unit
         world.tokens.forEach { token ->
             val zone = token.zone
+            val centre = camera.toScreen(zone.x.toFloat(), zone.y.toFloat())
+            if (centre.x < -margin || centre.x > size.width + margin || centre.y < -margin || centre.y > size.height + margin) return@forEach
             val r = radius(token)
-            levels[zone.code]?.let { place(it, camera.toScreen(zone.x.toFloat(), zone.y.toFloat()), zoom, 1f, centreY = true) }
-            if (nameAlpha > 0f) names[zone.code]?.let { place(it, camera.toScreen(zone.x.toFloat(), zone.y - r - 5), zoom, nameAlpha) }
+            place(level(token), centre, zoom, 1f, centreY = true)
+            if (nameAlpha > 0f) place(name(token), camera.toScreen(zone.x.toFloat(), zone.y - r - 5), zoom, nameAlpha)
             val maps = stash[zone.code] ?: 0
-            if (maps > 0) {
-                val count = measurer.measure("×$maps", TextStyle(color = ModBlue, fontWeight = FontWeight.Bold, fontSize = 10.sp))
-                place(count, camera.toScreen(zone.x + r * .55f + 12.5f, zone.y + r - 3), zoom, 1f, centreY = true)
-            }
+            if (maps > 0) place(count(maps), camera.toScreen(zone.x + r * .55f + 12.5f, zone.y + r - 3), zoom, 1f, centreY = true)
         }
     }
 
@@ -253,10 +256,13 @@ private class Words(private val world: WorldMap, private val measurer: TextMeasu
     }
 }
 
+private val BARE = Color(0xFF1B150D)
 private val ROAD_INK = Color(0xD9120D07)
 private val ROAD_GOLD = Color(0xFFB89A62)
 private val FOG = Color(0xF7080A0D)
 private const val TOKEN_RADIUS = 23f
+/** How far past the screen's edge, in world units, a token's words are still drawn: a name is wider than its medallion. */
+private const val OFFSCREEN_MARGIN = 120f
 private const val FINALE_RADIUS = 29f
 /** How far from a token's centre a tap still takes it, in world units, and at least this many dp on the screen. */
 private const val TOKEN_REACH = 34f

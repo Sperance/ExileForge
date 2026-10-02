@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.guild
 
+import com.sperance.exileforge.ui.components.ForgeSheet
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -97,7 +98,7 @@ private fun roleColor(role: GuildRole) = when (role) { GuildRole.LEADER -> Gold;
 /** A member's card with the commands this hero may give about them; each one asks again before it goes. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable private fun MemberSheet(s: ForgeState, member: GuildMember, commands: List<MemberCommand>, onDismiss: () -> Unit, onCommand: (MemberCommand) -> Unit) {
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel) {
+    ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(member.name, color = GoldBright, style = MaterialTheme.typography.titleLarge)
             MutedText(ui("guild.member_line", GuildText.role(member.role), GuildText.rank(member.rank), member.level, classTitle(member.heroClass)))

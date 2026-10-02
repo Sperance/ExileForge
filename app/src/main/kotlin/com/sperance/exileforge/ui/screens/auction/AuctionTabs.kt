@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.auction
 
+import com.sperance.exileforge.ui.components.ForgeSheet
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -193,7 +194,7 @@ private val templateSlots: List<Slot> = Slot.entries.filter { it != Slot.RING_2 
     var mine by remember { mutableStateOf(s.market.showOwnLots) }
     val any = ui("common.all")
     val digits = KeyboardOptions(keyboardType = KeyboardType.Number)
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp).navigationBarsPadding(),
             verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Engraved(ui("auction.filters"))
@@ -385,8 +386,7 @@ private fun stackFacts(s: ForgeState, lot: AuctionLot): List<String> =
 @Composable private fun LotSheet(s: ForgeState, lot: AuctionLot, action: String?, enabled: Boolean, note: String?,
     onDismiss: () -> Unit, onAction: () -> Unit = {}) {
     val view = lot.equipment?.let { s.view(it) }
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ForgeSheet(onDismissRequest = onDismiss) {
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.9f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (view != null) item {
                 ItemCard(view, enabled = false, detailed = true, actionLabel = ui("auction.lot") + " · ${lot.id.takeLast(6)}")

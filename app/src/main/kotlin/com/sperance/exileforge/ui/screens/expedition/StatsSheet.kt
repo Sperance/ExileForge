@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.expedition
 
+import com.sperance.exileforge.ui.components.ForgeSheet
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.*
@@ -26,7 +27,7 @@ import com.sperance.exileforge.ui.theme.*
     val shifts = remember(own, mapEffects) { MapEffects.heroShifts(own, mapEffects) }
     val changed = remember(own, onMap) { onMap.count { (key, value) -> (own[key] ?: 0.0) != value } }
     var mapTab by remember { mutableStateOf(false) }
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.85f).navigationBarsPadding()) {
             LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 item { Engraved(ui(if (mapTab) "expedition.stats_map" else "expedition.stats_hero")) }

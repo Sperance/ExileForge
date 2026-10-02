@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.expedition
 
+import com.sperance.exileforge.ui.components.ForgeSheet
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -49,7 +50,7 @@ fun newLoot(s: ForgeState): List<ItemView> = s.play.runLoot.mapNotNull { entry -
     var lootTab by remember { mutableStateOf(false) }
     var looked by remember { mutableStateOf<String?>(null) }
     val loot = newLoot(s)
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.85f).navigationBarsPadding()) {
             LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (!lootTab) {
@@ -85,7 +86,7 @@ fun newLoot(s: ForgeState): List<ItemView> = s.play.runLoot.mapNotNull { entry -
     val chosen = place
     val instance = worn?.let { id -> s.hero?.item(id) }
     if (chosen != null && instance != null) {
-        ModalBottomSheet(onDismissRequest = { place = null; worn = null }, containerColor = Panel) {
+        ForgeSheet(onDismissRequest = { place = null; worn = null }) {
             Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 s.view(instance)?.let { ItemCard(it, enabled = false, detailed = true, price = s.sellPrice(instance)) }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {

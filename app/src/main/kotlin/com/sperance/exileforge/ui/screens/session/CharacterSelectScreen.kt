@@ -99,7 +99,8 @@ import com.sperance.exileforge.ui.theme.*
 /** The creation form on its own page: there is nothing to choose between while it is open. */
 @Composable private fun ColumnScope.CreatingColumn(s: ForgeState, vm: ForgeViewModel, onBack: () -> Unit, onSignOut: () -> Unit) {
     LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item { ScreenHeader(ui("chars.new"), ui("chars.name_and_class"), ForgeGlyphs.Exile) }
+        // The beetle on the creation form too (3.75.0): it is the one page before the game without a way to report.
+        item { ScreenHeader(ui("chars.new"), ui("chars.name_and_class"), ForgeGlyphs.Exile) { BugAction() } }
         item { CreateCharacterPanel(s, vm, canGoBack = s.account.characters.isNotEmpty(), onBack = onBack, onSignOut = onSignOut) }
     }
 }

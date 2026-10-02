@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.hero
 
+import com.sperance.exileforge.ui.components.ForgeSheet
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -64,8 +65,7 @@ private enum class ItemAction { AUCTION, SELL, WORN }
     val locked = instance.locked
     val waiting = instance.id in s.link.waitingItems
     var open by remember(itemId) { mutableStateOf<ItemAction?>(null) }
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.92f)) {
             LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 item { ItemCard(view, enabled = false, detailed = true, price = price, waiting = waiting) }

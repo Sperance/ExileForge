@@ -31,6 +31,8 @@ import com.sperance.exileforge.ui.theme.*
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.BugAction
 import com.sperance.exileforge.ui.components.VersionLabel
+import com.sperance.exileforge.ui.components.ForgeOutlinedButton
+import com.sperance.exileforge.data.settings.DEFAULT_SERVER
 
 /**
  * The way in, and the first screen the app ever shows.
@@ -38,8 +40,8 @@ import com.sperance.exileforge.ui.components.VersionLabel
  * Two doors, side by side: the device's own account, which needs nothing typed, and a login for
  * whoever has one. The first is the game; the second is how an administrator reaches the tools.
  *
- * The server's address lives here too, and that is not a convenience. Everything below this screen
- * is gated on a session, so a wrong address would otherwise lock the app with no way to correct it.
+ * The server is fixed since 3.75.0; only the way back to it lives here, so an administrator's wrong address never
+ * locks the app behind a gate that needs a session.
  */
 @Composable fun AuthScreen(s: ForgeState, vm: ForgeViewModel) {
     Scaffold(containerColor = Ink) { padding ->
@@ -70,11 +72,13 @@ import com.sperance.exileforge.ui.components.VersionLabel
             MutedText(ui("auth.device_note"))
 
             LoginPanel(s, vm)
-            ServerPanel(s, vm)
+            ServerReset(s, vm)
 
             s.refusal?.let { InfoCard(ui("auth.failed"), it, failure = true) }
             // The build, dim at the foot of the way in (3.72.0).
             VersionLabel()
+            // The id of the account names it in a support log; the secret of the device is never shown (3.48.0).
+            s.account.profile?.id?.let { MutedText(ui("auth.device", it.takeLast(12)), style = MaterialTheme.typography.labelSmall) }
         }
     }
 }
@@ -107,33 +111,14 @@ import com.sperance.exileforge.ui.components.VersionLabel
     }
 }
 
-/** The address, reachable before the gate so a wrong one never locks the app. */
-@Composable private fun ServerPanel(s: ForgeState, vm: ForgeViewModel) {
-    var open by rememberSaveable { mutableStateOf(false) }
-    ForgePanel {
-        Row(Modifier.fillMaxWidth().clickable(enabled = !s.busy) { open = !open },
-            verticalAlignment = Alignment.CenterVertically) {
-            Icon(ForgeGlyphs.Portal, null, tint = Gold, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(10.dp))
-            Column(Modifier.weight(1f)) {
-                Text(ui("account.server"))
-                Text(s.account.server, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1)
-            }
-            Text(if (open) "−" else "+", color = Gold, style = MaterialTheme.typography.titleMedium)
-        }
-        if (open) {
-            OutlinedTextField(s.account.serverDraft, { vm.serverDraft(it.take(s.inputs.server)) }, enabled = !s.busy,
-                label = { Text(ui("account.server_address")) },
-                supportingText = { Text(ui("account.address_hint")) },
-                singleLine = true, modifier = Modifier.fillMaxWidth())
-            ForgeButton(enabled = !s.busy, onClick = vm::connect, modifier = Modifier.fillMaxWidth()) {
-                Text(ui("account.save_connect"))
-            }
-            MutedText(s.account.health)
-            // The id of the account names it in a support log; the secret of the device is never shown (3.48.0).
-            s.account.profile?.id?.let { MutedText(ui("auth.device", it.takeLast(12)), style = MaterialTheme.typography.labelSmall) }
-        }
-    }
+/**
+ * The way back to the one server (3.75.0): there is no address to type before the gate, but an administrator who pointed
+ * the device elsewhere from the Server page must not be locked out by a wrong one. Nothing while the device is on it.
+ */
+@Composable private fun ServerReset(s: ForgeState, vm: ForgeViewModel) {
+    if (s.account.server == DEFAULT_SERVER) return
+    MutedText(ui("auth.other_server", s.account.server), style = MaterialTheme.typography.labelSmall)
+    ForgeOutlinedButton(enabled = !s.busy, onClick = vm::resetServer, modifier = Modifier.fillMaxWidth()) { Text(ui("auth.server_reset")) }
 }
 
 /** The language switch, which on this screen has no banner to live in. */

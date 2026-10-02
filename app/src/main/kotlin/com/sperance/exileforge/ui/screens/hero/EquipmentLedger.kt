@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.hero
 
+import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.presentation.state.unmetFor
 import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.view
@@ -119,8 +120,7 @@ import com.sperance.exileforge.ui.theme.*
 @Composable fun SlotPicker(s: ForgeState, place: BodyPlace, onDismiss: () -> Unit, onEquip: (String) -> Unit) {
     val hero = s.hero ?: return
     val fitting = hero.stash.filter { !it.socketed }.mapNotNull { s.view(it) }.filter { place.takes(it.slot) }
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ForgeSheet(onDismissRequest = onDismiss) {
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.8f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item { Engraved(ui("hero.slot_pick", slotTitle(place.code, s.lang))) }
             if (fitting.isEmpty()) item { InfoCard(ui("hero.slot_pick_empty"), ui("hero.slot_pick_hint")) }

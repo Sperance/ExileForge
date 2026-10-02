@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.auction
 
+import com.sperance.exileforge.ui.components.ForgeSheet
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
@@ -34,7 +35,7 @@ internal fun orbOptions(s: ForgeState): Map<String, String> = s.currencies.assoc
     val cost = price.toLongOrNull() ?: 0L
     val count = if (owned == null) 1L else amount.toLongOrNull() ?: 0L
     val digits = KeyboardOptions(keyboardType = KeyboardType.Number)
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel) {
+    ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().padding(16.dp).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Engraved(ui("sell.list"))
             Text(name, color = Parchment, style = MaterialTheme.typography.titleMedium)

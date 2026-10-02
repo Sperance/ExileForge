@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.skills
 
+import com.sperance.exileforge.ui.components.ForgeSheet
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -296,7 +297,7 @@ private fun books(index: ContentIndex): List<Item> = index.itemsByCategory[Item.
     val books = bookCount(s, skill.code)
     val next = (learned + 1).coerceAtMost(SkillRules.MAX_LEVEL)
     val unmet = index.skillRules.unmet(skill, next, heroLevel, stats)
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel) {
+    ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 18.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -383,7 +384,7 @@ private fun books(index: ContentIndex): List<Item> = index.itemsByCategory[Item.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable private fun SkillPicker(s: ForgeState, pick: Pick.Slot, skills: HeroSkills, pages: List<SkillDefinition>, onDismiss: () -> Unit, onPick: (String?) -> Unit) {
     val offered = pages.filter { it.kind == pick.kind && skills.level(it.code) > 0 }
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel) {
+    ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(ui(if (pick.kind == SkillKind.ACTIVE) "skills.pick_active" else "skills.pick_passive", pick.index + 1), color = GoldBright,
@@ -408,7 +409,7 @@ private fun books(index: ContentIndex): List<Item> = index.itemsByCategory[Item.
 /** When a slot fires, or a flask is drunk, by itself: every condition — a flask's own kind's too, and the mana's only for a flask. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable private fun ConditionPicker(title: String, current: SlotCondition?, flask: Boolean, onDismiss: () -> Unit, onPick: (SlotCondition?) -> Unit) {
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel) {
+    ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(title, color = GoldBright, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 6.dp))
@@ -515,7 +516,7 @@ private fun worn(hero: HeroView, index: ContentIndex, skills: HeroSkills): List<
     var target by remember { mutableStateOf<String?>(null) }
     val price = rule.goldPerLevel * hero.level
     val money = hero.money
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel) {
+    ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(ui("skills.exchange_title"), color = GoldBright, style = MaterialTheme.typography.titleMedium)

@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.hero
 
+import com.sperance.exileforge.ui.components.ForgeSheet
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -55,7 +56,7 @@ internal fun stashTweaks(filter: StashFilter, sort: StashSort, hideWorn: Boolean
 @Composable internal fun StashFilterSheet(filter: StashFilter, sort: StashSort, lang: Lang, shelfSize: Int, groupCounts: Map<SlotGroup, Int>,
     rarities: List<Rarity>, onFilter: (StashFilter) -> Unit, onSort: (StashSort) -> Unit, hideWorn: Boolean?, onHideWorn: (Boolean) -> Unit,
     onDismiss: () -> Unit) {
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Panel, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(ui("stash.filters"), color = GoldBright, style = MaterialTheme.typography.titleLarge)

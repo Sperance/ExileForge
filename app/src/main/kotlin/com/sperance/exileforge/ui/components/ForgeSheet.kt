@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.components
 
+import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -45,7 +46,9 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -75,11 +78,14 @@ import kotlin.math.roundToInt
     val scope = rememberCoroutineScope()
     val sheet = remember { SheetMotion() }
     val close: () -> Unit = { scope.launch { sheet.close { dismiss() } } }
+    // The app's window, read before the dialog: inside it the window is the dialog's own, of no size until laid out, and a
+    // limit taken from it held every sheet at zero height, so none ever opened (3.75.4).
+    val limit = with(LocalDensity.current) { (LocalWindowInfo.current.containerSize.height * MAX_SHARE).toDp() }
     Dialog(onDismissRequest = close, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         // The scrim is drawn here, so the window's own dimming goes.
         val window = (LocalView.current.parent as? DialogWindowProvider)?.window
-        SideEffect { window?.setDimAmount(0f) }
-        val limit = with(LocalDensity.current) { (LocalWindowInfo.current.containerSize.height * MAX_SHARE).toDp() }
+        // The whole screen is the dialog's, so the scrim covers it and the sheet stands at its foot.
+        SideEffect { window?.run { setDimAmount(0f); setLayout(MATCH_PARENT, MATCH_PARENT) } }
         Box(Modifier.fillMaxSize()) {
             Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = SCRIM * sheet.shown))
                 .clickable(remember { MutableInteractionSource() }, indication = null, onClick = close))
@@ -90,7 +96,7 @@ import kotlin.math.roundToInt
                 .offset { IntOffset(0, sheet.offset.value.roundToInt()) }
                 .onSizeChanged { sheet.height = it.height }
                 .fillMaxWidth()
-                .heightIn(max = limit)
+                .heightIn(max = limit.takeIf { it > 0.dp } ?: Dp.Infinity)
                 .clip(shape)
                 .background(containerColor)
                 // Under the gesture bar the sheet's colour, above it the content; a sheet that pads itself pads nothing twice.
@@ -110,7 +116,8 @@ import kotlin.math.roundToInt
 
 /** Where the sheet stands: [offset] pixels below its rest, 0 open, [height] gone. */
 private class SheetMotion {
-    val offset = Animatable(Float.MAX_VALUE / 4)
+    /** Far below the screen until the sheet's height is known and it slides in. */
+    val offset = Animatable(HIDDEN_PX)
     var height by mutableIntStateOf(0)
     private var opened by mutableStateOf(false)
     private var closing = false
@@ -166,6 +173,7 @@ private class SheetMotion {
     }
 
     private companion object {
+        const val HIDDEN_PX = 100_000f
         const val OPEN_MS = 220
         const val SETTLE_MS = 180
         const val CLOSE_MS = 180

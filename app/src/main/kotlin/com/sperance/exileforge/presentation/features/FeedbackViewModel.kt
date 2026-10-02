@@ -39,7 +39,16 @@ class FeedbackViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     fun setReportStatus(id: String, status: ReportStatus, reason: String) = answer(ui("feedback.status_saved")) { api.feedback.setStatus(id, status, reason) }
 
     /** The report to Asana (3.75.0): the server makes the task and answers with the report as it now stands. */
-    fun reportToAsana(id: String) = answer(ui("feedback.asana_done")) { api.feedback.toAsana(id) }
+    fun reportToAsana(id: String) = answer(ui("feedback.asana_done")) {
+        // 3.75.1: a server older than 1.70.0 has no such route and answered «update the app» — the server is the one to update.
+        val live = api.manifest(fresh = true)
+        check(live.capabilities.has("POST", ASANA_ROUTE)) { ui("feedback.asana_stale_server", live.version.ifBlank { "?" }) }
+        api.feedback.toAsana(id)
+    }
+
+    private companion object {
+        const val ASANA_ROUTE = "/api/v1/admin/feedback/asana"
+    }
 
     private fun answer(done: String, call: suspend ForgeRuntime.() -> AdminReport) { with(runtime) { task(writing = true) {
         val answered = call()

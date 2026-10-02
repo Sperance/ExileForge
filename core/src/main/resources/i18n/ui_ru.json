@@ -3504,6 +3504,7 @@
   "feedback.to_asana": "В Asana",
   "feedback.in_asana": "Открыть задачу в Asana",
   "feedback.asana_done": "Задача в Asana создана, отчёт в работе",
+  "feedback.asana_stale_server": "Сервер {0} не умеет выгружать в Asana — обновите сервер до 1.70.0",
   "mail.title": "Почта",
   "mail.keep": "Письма хранятся 30 дней.",
   "mail.empty": "Писем нет.",

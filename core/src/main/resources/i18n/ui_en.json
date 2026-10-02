@@ -3504,6 +3504,7 @@
   "feedback.to_asana": "To Asana",
   "feedback.in_asana": "Open the task in Asana",
   "feedback.asana_done": "Asana task created, the report is in progress",
+  "feedback.asana_stale_server": "Server {0} cannot export to Asana — update the server to 1.70.0",
   "mail.title": "Mail",
   "mail.keep": "Letters keep for 30 days.",
   "mail.empty": "No letters.",

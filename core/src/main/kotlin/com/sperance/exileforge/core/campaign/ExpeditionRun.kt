@@ -62,12 +62,20 @@ data class FoeView(
     val waiting: Boolean = false,
     /** Fallen with the next still in line (3.73.0): seconds until that one steps into its place, of [reinforceDelay]. */
     val reinforce: Double? = null, val reinforceDelay: Double = 0.0,
+    /** Its buildups (3.78.0), null while the rules have none. */
+    val buildup: BuildupView? = null,
 ) {
     /** Its card is on the field: it fights there, or fell there and nobody stepped in yet. */
     val onField: Boolean get() = place >= 0
 }
 
 /** The fight as the overlay prints it: the pack as cards, the hero's pools and states, what just landed, and the blows so far, newest first. */
+/**
+ * A fighter's buildups as its card shows them (3.78.0): the fullest bar and its share, every bar's share by [Buildup] order
+ * for its window, and which went off and holds it now.
+ */
+data class BuildupView(val leading: Buildup?, val share: Float, val bars: List<Float>, val stunned: Boolean, val frozen: Boolean, val electrocuted: Boolean)
+
 /** The pet in a fight as its bar shows it (3.5.0). */
 data class AllyView(val species: String, val life: Int, val maxLife: Int, val alive: Boolean)
 
@@ -81,6 +89,8 @@ data class FightHud(
     val heroSwing: Float = 0f,
     val heroAilments: List<AilmentView> = emptyList(),
     val heroHeld: Boolean = false,
+    /** The hero's buildups (3.78.0). */
+    val heroBuildup: BuildupView? = null,
     val retreating: Boolean = false,
     val lunge: LungeView? = null,
     val events: List<CombatEvent> = emptyList(),

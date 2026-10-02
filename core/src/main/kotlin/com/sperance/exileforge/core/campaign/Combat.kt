@@ -5,6 +5,7 @@ import com.sperance.exileforge.rules.content.AccuracyRule
 import com.sperance.exileforge.rules.content.AilmentRule
 import com.sperance.exileforge.rules.content.AtlasStat
 import com.sperance.exileforge.rules.content.BuffKind
+import com.sperance.exileforge.rules.content.BuildupRule
 import com.sperance.exileforge.rules.content.Ceiling
 import com.sperance.exileforge.rules.content.ChargeKind
 import com.sperance.exileforge.rules.content.CombatRules
@@ -86,6 +87,15 @@ internal fun regrow(value: Double, increase: Double, extra: Double): Double {
  * [word] is how the sheet's stats name it since server 0.36.0 — `STOCK_IGNITE_CHANCE`, `STOCK_AVOID_IGNITE`,
  * `STOCK_IGNITE_DURATION_ON_SELF` — and [damage] the stat that makes its damage over time heavier.
  */
+/**
+ * The buildups of server 1.73.0 (3.78.0, as in PoE2): a blow fills a bar on the struck one and a full bar sets it off.
+ * [gain] is the striker's line that fills it faster — the old «chance to freeze» fills the freeze — and [avoid] the struck
+ * one's that fills it slower.
+ */
+enum class Buildup(val gain: String, val avoid: String?) {
+    STUN("STOCK_STUN_BUILDUP", "STOCK_AVOID_STUN"), FREEZE("STOCK_FREEZE_CHANCE", "STOCK_AVOID_FREEZE"), ELECTROCUTE("STOCK_ELECTROCUTE_BUILDUP", null)
+}
+
 enum class Ailment(val word: String, val damage: String? = null) {
     BURNING("IGNITE", "STOCK_BURNING_DAMAGE"), CHILLED("CHILL"), FROZEN("FREEZE"), SHOCKED("SHOCK"),
     POISONED("POISON", "STOCK_POISON_DAMAGE"), BLEEDING("BLEED", "STOCK_BLEED_DAMAGE");
@@ -143,6 +153,18 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
     fun immune(ailment: Ailment): Boolean = stat("STOCK_IMMUNE_${ailment.word}") > 0 || (ailment == Ailment.CHILLED && stat("STOCK_IMMUNE_FREEZE") > 0)
     val immuneCurse: Boolean get() = stat("STOCK_IMMUNE_CURSE") > 0
     val immuneStun: Boolean get() = stat("STOCK_IMMUNE_STUN") > 0
+    /** How much faster this striker fills [kind] on others (3.78.0). */
+    fun buildupGain(kind: Buildup) = max(0.0, 1 + stat(kind.gain) / 100)
+    /** How much of [kind] reaches this fighter's bar: its avoidance takes a share off. */
+    fun buildupTaken(kind: Buildup) = 1 - (kind.avoid?.let { percent(it) } ?: 0.0)
+    /** The stun bar's own size against the rule's: «Непоколебимый» doubles it. */
+    val stunPool = max(.1, 1 + stat("STOCK_STUN_POOL") / 100)
+    /** Never fills [kind] at all. */
+    fun immuneTo(kind: Buildup) = when (kind) {
+        Buildup.STUN -> immuneStun
+        Buildup.FREEZE -> immune(Ailment.FROZEN)
+        Buildup.ELECTROCUTE -> stat("STOCK_IMMUNE_ELECTROCUTE") > 0
+    }
     /** Life back a second as a share of the maximum (server 0.69.0), beside the flat regeneration. */
     val lifeRegenShare = max(0.0, stat("STOCK_LIFE_REGEN_PERCENT")) / 100
     /** Energy shield back a second as a share of the maximum (server 1.58.0), beside the flat regeneration. */
@@ -655,6 +677,16 @@ class Battle(
         val readyAt = mutableMapOf<String, Double>()
         /** Its low-life lines are on (2.78.0). */
         var low = false
+        /** The buildups (3.78.0): each bar's fill from 0 to 1, when a blow last filled one, and how long each is shut after going off. */
+        val buildup = DoubleArray(Buildup.entries.size)
+        var builtAt = -1e9
+        val buildupShutUntil = DoubleArray(Buildup.entries.size)
+        /** A full stun bar: every damage heavier until then; a full freeze bar: the blow that breaks the ice is heavier; electrocuted: lightning heavier. */
+        var stunnedUntil = 0.0
+        var shatter = false
+        var electrocutedUntil = 0.0
+        /** The fullest bar, for the card: which and how full. */
+        fun leading(): Pair<Buildup, Double>? = Buildup.entries.map { it to buildup[it.ordinal] }.filter { it.second > 0.005 }.maxByOrNull { it.second }
 
         /** On the field: the hero's side always, a foe once the [window] lets it in — one waiting its turn is not in the fight yet. */
         var engaged: Boolean = side == Side.HERO
@@ -956,6 +988,8 @@ class Battle(
 
     private fun regenerate(me: Fighter, dt: Double) {
         if (!me.alive) return
+        // The bars melt once no blow has filled them for the rule's delay (3.78.0).
+        rules.buildup?.let { rule -> if (time - me.builtAt >= rule.decayDelay) for (i in me.buildup.indices) me.buildup[i] = max(0.0, me.buildup[i] - rule.decayPerSecond * dt) }
         me.life = min(me.body.maxLife, me.life + (me.body.lifeRegen + me.body.maxLife * me.body.lifeRegenShare) * me.body.recoveryRate * dt)
         val recharge = if (time - me.lastHit >= rules.shield.rechargeDelay / me.body.rechargeStart) me.body.maxShield * rules.shield.rechargePerSecond / 100 * me.body.shieldRecharge else 0.0
         me.shield = min(me.body.maxShield, me.shield + ((me.body.shieldRegen + me.body.maxShield * me.body.shieldRegenShare) * me.body.recoveryRate + recharge) * dt)
@@ -1270,7 +1304,7 @@ class Battle(
                 else -> raw * (1 - armour) * (1 - resist)
             }.coerceAtLeast(0.0)
             val typeTaken = target.body.damageTaken(type) * (if (type == strongest) max(0.0, 1 + target.body.highestResistElementTaken / 100) else 1.0)
-            val dealt = defence * target.weakness() * lone * typeTaken * eased
+            val dealt = defence * target.weakness() * lone * typeTaken * eased * exposure(target, type)
             spreadSum += base * spread
             takenSum += defence * typeTaken
             defended += defence
@@ -1462,6 +1496,8 @@ class Battle(
         val manaPaid = manaBefore - target.mana
         target.life = max(0.0, target.life - toLifeNow)
         target.lastHit = time
+        // The blow that breaks a buildup's ice (3.78.0): heavier, and the fighter thaws.
+        if (target.shatter) { target.shatter = false; target.ailments.removeAll { it.ailment == Ailment.FROZEN } }
         // 3.35.0: the hero's recoup gives a share of the hit back over the rule's seconds; a culling blow finishes a foe left low.
         val recouped = if (target === heroFighter && target.alive && target.body.recoup > 0 && dealt > 0) dealt * target.body.recoup else 0.0
         if (recouped > 0) recoveries += Recovery(recouped / rules.defence.recoup, 0.0, time + rules.defence.recoup, -1)
@@ -1479,8 +1515,10 @@ class Battle(
         if (body.manaBurn > 0) target.mana = max(0.0, target.mana - target.body.maxMana * body.manaBurn)
 
         var stunned = false
+        val bars = rules.buildup
+        if (bars != null && target.alive) stunned = buildUp(bars, me, target, taken, kind == HitKind.CRIT, blow.stun)
         // Only a fighter with a chance to avoid draws for it, so a sheet without one plays the same seed as before.
-        if (target.alive && !target.body.immuneStun && (dealt >= target.body.maxLife * rules.stun.share / 100 + target.body.stunThreshold &&
+        else if (target.alive && !target.body.immuneStun && (dealt >= target.body.maxLife * rules.stun.share / 100 + target.body.stunThreshold &&
                 !(target.body.avoidStun > 0 && draw(RollKey.AVOID_STUN, target.body.avoidStun) < target.body.avoidStun) || blow.stun > 0 && draw(RollKey.STUN, blow.stun / 100) * 100 < blow.stun)) {
             stunned = true
             target.heldUntil = max(target.heldUntil, time + rules.stun.duration)
@@ -1541,9 +1579,61 @@ class Battle(
      * the target may avoid it, be immune to it (2.78.0) and shortens it by its own gear, and the damage over time
      * runs heavier by the striker's. A skill's own chances ([extra], in percent) roll after the rules'.
      */
+    /**
+     * The bars a landed blow fills (3.78.0): stun by its physical part whole and the rest by the rule's share (a critical
+     * strike more), freeze by its cold, electrocute by its lightning, each against the struck one's pool — its life by its
+     * rarity's share, the stun pool grown by the threshold — and a skill's stun chance straight onto the stun bar. A full
+     * bar goes off and is shut for a while. True if the blow stunned.
+     */
+    private fun buildUp(rule: BuildupRule, me: Fighter, target: Fighter, taken: Map<DamageType, Double>, crit: Boolean, skillStun: Double): Boolean {
+        val rarity = if (target.side == Side.MONSTER) foes[target.index].rarity else null
+        val pool = target.body.maxLife * (rarity?.let { rule.pools[it] } ?: rule.heroPool)
+        if (pool <= 0) return false
+        val physical = taken[DamageType.PHYSICAL] ?: 0.0
+        val rest = taken.values.sum() - physical
+        val fills = mapOf(
+            Buildup.STUN to (physical + rest * rule.stunOther) * (if (crit) rule.stunCrit else 1.0) / (pool * target.body.stunPool + target.body.stunThreshold) + skillStun / 100,
+            Buildup.FREEZE to (taken[DamageType.COLD] ?: 0.0) / pool,
+            Buildup.ELECTROCUTE to (taken[DamageType.LIGHTNING] ?: 0.0) / pool,
+        )
+        var stunned = false
+        fills.forEach { (kind, fill) ->
+            val i = kind.ordinal
+            if (fill <= 0 || target.buildupShutUntil[i] > time || target.body.immuneTo(kind)) return@forEach
+            target.buildup[i] += fill * me.body.buildupGain(kind) * target.body.buildupTaken(kind)
+            target.builtAt = time
+            if (target.buildup[i] < 1) return@forEach
+            target.buildup[i] = 0.0
+            target.buildupShutUntil[i] = time + rule.immunity
+            val effect = when (kind) { Buildup.STUN -> rule.stun; Buildup.FREEZE -> rule.freeze; Buildup.ELECTROCUTE -> rule.electrocute }
+            val held = if (rarity == MonsterRarity.UNIQUE) effect.bossDuration else effect.duration
+            when (kind) {
+                Buildup.STUN -> { target.heldUntil = max(target.heldUntil, time + held); target.stunnedUntil = time + held; stunned = true }
+                Buildup.FREEZE -> {
+                    place(target, ActiveAilment(Ailment.FROZEN, time + held, 0.0, held, me.side, me.index.coerceAtLeast(0), false), false)
+                    target.shatter = true
+                }
+                Buildup.ELECTROCUTE -> { target.heldUntil = max(target.heldUntil, time + held); target.electrocutedUntil = time + held }
+            }
+        }
+        return stunned
+    }
+
+    /** What a buildup gone off adds to a blow of [type] on [target] (3.78.0): stunned - all, frozen - the ice-breaker, electrocuted - lightning. */
+    private fun exposure(target: Fighter, type: DamageType): Double {
+        val rule = rules.buildup ?: return 1.0
+        var more = 0.0
+        if (target.stunnedUntil > time) more += rule.stun.bonus
+        if (target.shatter) more += rule.freeze.bonus
+        if (type == DamageType.LIGHTNING && target.electrocutedUntil > time) more += rule.electrocute.bonus
+        return 1 + more / 100
+    }
+
     private fun inflict(me: Fighter, target: Fighter, taken: Map<DamageType, Double>, extra: List<Pair<Ailment, Double>>, spell: Boolean): List<Ailment> {
         val rolled = ailmentRules.mapNotNull { (rule, what) ->
             val (ailment, type) = what
+            // The freeze is a bar since 3.78.0: no chance to roll for it while the rule's bars are on.
+            if (ailment == Ailment.FROZEN && rules.buildup != null) return@mapNotNull null
             val amount = taken[type] ?: 0.0
             val base = if (me.side == Side.HERO) rule.heroChance ?: rule.chance else rule.chance
             val chance = (base + me.body.inflictChance(ailment)).coerceAtMost(100.0) / 100

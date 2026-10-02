@@ -329,6 +329,8 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
     Column(modifier.graphicsLayer {
             translationY = acting * 10.dp.toPx()
             translationX = if (hit && foe.alive) sin(time * 60f) * 2.dp.toPx() else 0f
+            // A stun gone off (3.78.0) tilts the card while it holds.
+            rotationZ = if (foe.alive && foe.buildup?.stunned == true) -3f else 0f
             alpha = when { !foe.alive -> .35f; !foe.reachable && fight.started -> .7f; else -> 1f }
         }
         .background(if (acting > 0f) Blood.copy(alpha = .35f) else Panel.copy(alpha = .9f), shape)
@@ -349,6 +351,7 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
             // A foe singled out behind a standing taunter: the focus holds, the blows go to the taunter.
             else if (focused && !foe.reachable) Text(ui("fight.out_of_reach_short"), color = Muted, fontSize = 9.sp, maxLines = 1,
                 overflow = TextOverflow.Ellipsis, modifier = Modifier.align(Alignment.BottomCenter).background(Ink.copy(alpha = .8f)).padding(horizontal = 4.dp))
+            if (foe.alive) foe.buildup?.let { BuildupMark(it, time) }
             CardHits(fight.hits.filter { it.target == Side.MONSTER && it.foe == foe.index })
         }
         Text(monsterTitle(foe.monster.code), color = ring, fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -363,6 +366,7 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
         if (foe.maxMana > 0) Box(Modifier.fillMaxWidth().height(3.dp).background(Color(0x14FFFFFF), RoundedCornerShape(2.dp))) {
             Box(Modifier.fillMaxWidth((foe.mana / foe.maxMana.toFloat()).coerceIn(0f, 1f)).fillMaxHeight().background(ManaBlue, RoundedCornerShape(2.dp)))
         }
+        if (foe.alive) foe.buildup?.let { BuildupBar(it, Modifier.fillMaxWidth()) }
         SwingBar(foe.swing, foe.held, Modifier.fillMaxWidth(), if (acting > 0f) LifeRed else LifeRed.copy(alpha = .7f))
         if (foe.taunt && foe.alive) Text(ui("fight.taunt"), color = Color(0xFFE8B06A), fontSize = 9.sp, fontStyle = FontStyle.Italic, maxLines = 1)
         // What is on it: small tiles while it runs, larger while paused; a tap on one opens its window.
@@ -449,6 +453,8 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
             VitalBar(fight.heroLife, hud.heroMaxLife, LifeRed, Modifier.fillMaxWidth().height(18.dp), ring = GoldBright.takeIf { fight.heroBarrier > 0 })
             // A pool the auras hold whole is still drawn: a full hatched bar.
             if (fight.heroMaxMana + fight.heroReserved.coerceAtLeast(0) > 0) VitalBar(fight.heroMana, fight.heroMaxMana, ManaBlue, Modifier.fillMaxWidth().height(16.dp), reserved = fight.heroReserved)
+            // The hero's own buildups (3.78.0): the foes stun and freeze by the same bars.
+            fight.heroBuildup?.let { BuildupBar(it, Modifier.fillMaxWidth()) }
             SwingBar(fight.heroSwing, fight.heroHeld, Modifier.fillMaxWidth())
             StateTiles(fight.heroAilments, fight.heroHeld, fight.heroEffects, fight.heroCharges)
             val target = fight.target?.let(names::get)
@@ -528,6 +534,17 @@ private const val PET_PULSE = .5
             Text(ui("fight.stat_damage"), color = Muted, style = MaterialTheme.typography.labelSmall)
             body.damage.filterValues { it > 0 }.forEach { (type, amount) ->
                 Text("${ui(type.key())} ${number(amount)}", color = damageTint(type), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+            }
+        }
+        // Every buildup on it (3.78.0): the card shows only the fullest.
+        foe.buildup?.let { view ->
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Buildup.entries.forEach { kind ->
+                    Text(buildupGlyph(kind), color = buildupTint(kind), fontSize = 10.sp)
+                    Box(Modifier.weight(1f).height(4.dp).background(Color(0x1FFFFFFF), RoundedCornerShape(2.dp))) {
+                        Box(Modifier.fillMaxWidth(view.bars.getOrElse(kind.ordinal) { 0f }).fillMaxHeight().background(buildupTint(kind), RoundedCornerShape(2.dp)))
+                    }
+                }
             }
         }
         // What it casts for its mana (2.78.0): a boss's own skills, a caster's spell, a borrowed one.
@@ -1124,3 +1141,47 @@ internal fun outcomeColour(outcome: Outcome) = when (outcome) { Outcome.WIN -> V
 
 /** The life share under which the phone warns of danger (3.77.0). */
 private const val DANGER_SHARE = .3f
+
+/** The colour and glyph of a buildup (3.78.0, variant A «Тонкая полоса со значком»): stun gold, freeze ice, electrocute violet. */
+internal fun buildupTint(kind: Buildup): Color = when (kind) {
+    Buildup.STUN -> Color(0xFFF2D23A)
+    Buildup.FREEZE -> Color(0xFF8FD3FF)
+    Buildup.ELECTROCUTE -> Color(0xFFB07CFF)
+}
+internal fun buildupGlyph(kind: Buildup): String = when (kind) { Buildup.STUN -> "✦"; Buildup.FREEZE -> "❄"; Buildup.ELECTROCUTE -> "ϟ" }
+
+/** The fullest buildup under the life: a 3-dp thread in its colour with its glyph in front; nothing while every bar is empty. */
+@Composable internal fun BuildupBar(view: BuildupView, modifier: Modifier) {
+    val kind = view.leading ?: return
+    val tint = buildupTint(kind)
+    Row(modifier.height(9.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+        Text(buildupGlyph(kind), color = tint, fontSize = 8.sp, lineHeight = 8.sp)
+        Box(Modifier.weight(1f).height(3.dp).background(Color(0x1FFFFFFF), RoundedCornerShape(2.dp))) {
+            Box(Modifier.fillMaxWidth(view.share).fillMaxHeight().background(tint, RoundedCornerShape(2.dp)))
+        }
+    }
+}
+
+/** A buildup gone off, on the portrait: stars over a stunned one, a crust of ice over a frozen one, sparks over an electrocuted one, and the word. */
+@Composable internal fun BoxScope.BuildupMark(view: BuildupView, time: Float) {
+    val (kind, word) = when {
+        view.frozen -> Buildup.FREEZE to "fight.buildup.frozen"
+        view.electrocuted -> Buildup.ELECTROCUTE to "fight.buildup.electrocuted"
+        view.stunned -> Buildup.STUN to "fight.buildup.stunned"
+        else -> return
+    }
+    val tint = buildupTint(kind)
+    when (kind) {
+        Buildup.FREEZE -> Box(Modifier.matchParentSize().background(Brush.linearGradient(listOf(tint.copy(alpha = .35f), tint.copy(alpha = .08f))))
+            .border(2.dp, tint.copy(alpha = .8f), RoundedCornerShape(4.dp)))
+        Buildup.ELECTROCUTE -> Canvas(Modifier.matchParentSize().graphicsLayer { alpha = if (sin(time * 40f) > 0) 1f else .25f }) {
+            val w = size.width; val h = size.height
+            val bolt = Path().apply { moveTo(w * .2f, h * .1f); lineTo(w * .42f, h * .45f); lineTo(w * .3f, h * .48f); lineTo(w * .62f, h * .9f) }
+            drawPath(bolt, tint, style = Stroke(2.dp.toPx()))
+        }
+        Buildup.STUN -> Text("✦ ✦ ✦", color = tint, fontSize = 11.sp, modifier = Modifier.align(Alignment.TopCenter).padding(top = 3.dp)
+            .graphicsLayer { translationY = sin(time * 6f) * 2.dp.toPx() })
+    }
+    Text(ui(word), color = tint, fontSize = 8.sp, fontWeight = FontWeight.Bold, maxLines = 1,
+        modifier = Modifier.align(Alignment.BottomCenter).background(Ink.copy(alpha = .75f)).padding(horizontal = 3.dp))
+}

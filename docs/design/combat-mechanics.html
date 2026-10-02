@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Новые механики боя</title>
+<style>
+:root{--bg:#0C1115;--panel:#141B22;--raised:#1B242D;--line:#24313B;--muted:#7A8D99;--text:#D5E0E6;--bright:#EEF8F1;--gold:#3FB67A;--goldb:#57E39A;--red:#D24A43;--blue:#5B8DEF;--cyan:#38b8b0;--fire:#ef8a3a;--ice:#8FD3FF;--storm:#f2d23a;--violet:#9b59d6}
+*{box-sizing:border-box;margin:0}body{background:var(--bg);color:var(--text);font-family:system-ui,sans-serif;padding:24px 16px}
+h1{font-size:18px;color:var(--bright);margin-bottom:6px}.lead{color:var(--muted);font-size:13px;margin-bottom:20px;max-width:980px;line-height:1.45}
+.grid{display:flex;flex-wrap:wrap;gap:26px}.v{width:320px;max-width:100%}.v h2{font-size:15px;color:var(--gold);margin-bottom:8px}
+.v p{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.45}.v p b{color:var(--text)}
+.arena{position:relative;height:420px;background:linear-gradient(#10161c,#0b0f13);border:1px solid var(--line);border-radius:18px;overflow:hidden;padding:12px}
+.foes{display:flex;gap:6px;justify-content:center}
+.foe{position:relative;width:86px;height:104px;background:var(--panel);border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.foe .ic{font-size:28px}.foe .nm{font-size:10px;color:var(--muted)}
+.bar{width:74px;height:6px;background:#2a3640;border-radius:3px;overflow:hidden}.bar i{display:block;height:100%;background:var(--red)}
+.hero{position:absolute;left:12px;right:12px;bottom:58px;height:96px;background:var(--panel);border:1px solid var(--line);border-radius:12px;display:flex;align-items:center;gap:10px;padding:10px}
+.hero .ic{font-size:34px}.hero .col{flex:1;display:flex;flex-direction:column;gap:5px}.hero .nm{font-size:12px;color:var(--bright)}
+.hb{height:8px;background:#2a3640;border-radius:4px;overflow:hidden}.hb i{display:block;height:100%;background:var(--red);width:80%}
+.mb i{background:var(--blue);width:60%}
+.ctrl{position:absolute;left:12px;right:12px;bottom:12px;display:flex;gap:6px}
+.btn{flex:1;text-align:center;border:1px solid #3FB67A88;color:var(--goldb);border-radius:9px;padding:8px 0;font-size:12px;background:#3FB67A10}
+.btn.hot{background:var(--gold);color:#0C1115;font-weight:700}
+.tag{position:absolute;font-size:11px;font-weight:700;letter-spacing:.04em;white-space:nowrap}
+.dmg{position:absolute;font-weight:900;font-size:18px;opacity:0}
+/* 1 parry */
+.tele{position:absolute;inset:-4px;border:2px solid var(--red);border-radius:12px;opacity:0;animation:tele 4s infinite}
+@keyframes tele{0%,20%{opacity:0;transform:scale(1)}30%{opacity:1}55%{opacity:1;transform:scale(1.05)}60%,100%{opacity:0}}
+.ring{position:absolute;left:50%;top:50%;width:120px;height:120px;margin:-60px 0 0 -60px;border:3px solid var(--red);border-radius:50%;opacity:0;animation:ring 4s infinite}
+@keyframes ring{0%,25%{opacity:0;transform:scale(1.6)}30%{opacity:1}55%{transform:scale(.55);opacity:1;border-color:var(--goldb)}60%,100%{opacity:0;transform:scale(.4)}}
+.parry{animation:parry 4s infinite}@keyframes parry{0%,48%{background:#3FB67A10;color:var(--goldb)}52%,62%{background:var(--goldb);color:#0C1115;box-shadow:0 0 18px var(--goldb)}70%,100%{background:#3FB67A10;color:var(--goldb)}}
+.p1{left:50%;top:150px;transform:translateX(-50%);color:var(--goldb);opacity:0;animation:pop 4s infinite;animation-delay:2.15s}
+@keyframes pop{0%{opacity:0;transform:translate(-50%,8px)}10%{opacity:1;transform:translate(-50%,0)}35%{opacity:1}50%,100%{opacity:0;transform:translate(-50%,-16px)}}
+.stun{animation:stun 4s infinite}@keyframes stun{0%,55%{transform:none;filter:none}60%,90%{transform:rotate(-4deg);filter:saturate(.3) brightness(.8)}100%{transform:none}}
+/* 2 rage */
+.rage{position:absolute;left:12px;right:12px;bottom:160px;height:14px;background:#2a1414;border:1px solid #5a2020;border-radius:7px;overflow:hidden}
+.rage i{display:block;height:100%;background:linear-gradient(90deg,#8a1a1a,var(--red),#ff8a3a);animation:fill 5s infinite}
+@keyframes fill{0%{width:5%}70%{width:100%}78%{width:100%;filter:brightness(1.8)}85%,100%{width:0}}
+.ult{animation:ult 5s infinite}@keyframes ult{0%,68%{opacity:.35}72%,80%{opacity:1;background:var(--red);color:#fff;box-shadow:0 0 22px var(--red)}86%,100%{opacity:.35}}
+.slash{position:absolute;left:-30%;top:40px;width:160%;height:6px;background:linear-gradient(90deg,transparent,#fff,var(--fire),transparent);transform:rotate(-12deg);opacity:0;animation:slash 5s infinite}
+@keyframes slash{0%,79%{opacity:0;transform:translateX(-60%) rotate(-12deg)}82%{opacity:1}88%{opacity:0;transform:translateX(60%) rotate(-12deg)}100%{opacity:0}}
+.allhit{animation:allhit 5s infinite}@keyframes allhit{0%,80%{transform:none}83%{transform:translateX(6px)}86%{transform:translateX(-5px)}89%,100%{transform:none}}
+/* 3 stagger */
+.stag{width:74px;height:5px;background:#2a3640;border-radius:3px;overflow:hidden}.stag i{display:block;height:100%;background:var(--storm);animation:stag 6s infinite}
+@keyframes stag{0%{width:0}55%{width:100%}60%,85%{width:100%;background:#fff}90%,100%{width:0}}
+.broken{animation:brk 6s infinite}@keyframes brk{0%,56%{border-color:var(--line);box-shadow:none}60%,85%{border-color:var(--storm);box-shadow:0 0 18px #f2d23a88}90%,100%{border-color:var(--line)}}
+.crack{position:absolute;inset:0;opacity:0;animation:crack 6s infinite}
+@keyframes crack{0%,57%{opacity:0}60%,85%{opacity:1}90%,100%{opacity:0}}
+.mult{left:50%;top:6px;transform:translateX(-50%);color:var(--storm);opacity:0;animation:crack 6s infinite;font-size:12px}
+/* 4 combos */
+.dot{position:absolute;width:16px;height:16px;border-radius:50%;opacity:0}
+.d1{background:var(--fire);box-shadow:0 0 10px var(--fire);animation:d1 5s infinite}
+.d2{background:var(--storm);box-shadow:0 0 10px var(--storm);animation:d2 5s infinite}
+@keyframes d1{0%{opacity:0;left:50%;top:330px}8%{opacity:1}22%{left:47%;top:70px;opacity:1}26%,100%{opacity:0}}
+@keyframes d2{0%,30%{opacity:0;left:50%;top:330px}38%{opacity:1}52%{left:52%;top:70px;opacity:1}56%,100%{opacity:0}}
+.badge{position:absolute;top:4px;font-size:13px;opacity:0}
+.b1{left:6px;animation:b1 5s infinite}.b2{right:6px;animation:b2 5s infinite}
+@keyframes b1{0%,22%{opacity:0}26%,58%{opacity:1}62%,100%{opacity:0}}@keyframes b2{0%,52%{opacity:0}56%,58%{opacity:1}62%,100%{opacity:0}}
+.boom{position:absolute;left:50%;top:62px;width:20px;height:20px;margin-left:-10px;border-radius:50%;background:radial-gradient(#fff,var(--storm),var(--fire),transparent 70%);opacity:0;animation:boom 5s infinite}
+@keyframes boom{0%,58%{opacity:0;transform:scale(.2)}62%{opacity:1;transform:scale(5)}74%,100%{opacity:0;transform:scale(9)}}
+.combo{left:50%;top:150px;transform:translateX(-50%);color:var(--storm);opacity:0;animation:cmb 5s infinite}
+@keyframes cmb{0%,60%{opacity:0}64%,86%{opacity:1}92%,100%{opacity:0}}
+.splash{animation:spl 5s infinite}@keyframes spl{0%,61%{filter:none}63%,70%{filter:brightness(1.8) saturate(1.5)}74%,100%{filter:none}}
+/* 5 ranks */
+.rows{display:flex;flex-direction:column;gap:6px;align-items:center}
+.rowlbl{font-size:9px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase}
+.back{display:flex;gap:6px;opacity:.85}.back .foe{width:70px;height:76px}.back .foe .ic{font-size:22px}
+.arrow{position:absolute;width:4px;height:22px;background:linear-gradient(var(--fire),transparent);left:30%;top:80px;opacity:0;animation:arr 4.5s infinite}
+@keyframes arr{0%,10%{opacity:0;top:80px}12%{opacity:1}30%{top:250px;opacity:1}33%,100%{opacity:0}}
+.pull{animation:pull 4.5s infinite}@keyframes pull{0%,50%{transform:none}62%,90%{transform:translateY(84px) scale(1.15)}100%{transform:none}}
+.hook{position:absolute;left:50%;width:2px;background:var(--goldb);top:120px;height:0;opacity:0;animation:hook 4.5s infinite}
+@keyframes hook{0%,40%{height:0;opacity:0}44%{opacity:1;height:130px;top:120px}52%{height:40px;top:120px}58%,100%{opacity:0}}
+.guard{left:8px;top:136px;color:var(--cyan);font-size:10px}
+.legend{font-size:11px;color:var(--muted);margin-top:6px}
+</style></head><body>
+<h1>Новые механики боя — 5 макетов</h1>
+<p class="lead">Всё на привычной арене: карточки врагов сверху, герой снизу, ряд кнопок. Каждая механика ложится поверх автобоя: игрок вмешивается коротким нажатием, а без него бой идёт как раньше. Анимации зациклены.</p>
+<div class="grid">
+
+<div class="v"><h2>1 · Парирование</h2>
+<div class="arena">
+ <div class="foes"><div class="foe stun"><div class="tele"></div><div class="ic">👹</div><div class="nm">Палач</div><div class="bar"><i style="width:70%"></i></div></div></div>
+ <div class="ring"></div>
+ <div class="tag p1">ПАРИРОВАНО! · оглушение 2с</div>
+ <div class="hero"><div class="ic">🛡️</div><div class="col"><div class="nm">Изгнанник · ур. 34</div><div class="hb"><i></i></div><div class="hb mb"><i></i></div></div></div>
+ <div class="ctrl"><div class="btn">Пауза</div><div class="btn parry">Парировать</div><div class="btn">×2</div></div>
+</div>
+<p><b>Как работает:</b> сильный удар врага подсвечивается красным, кольцо сжимается. Нажатие, пока кольцо зелёное (~0,4 с), отменяет удар, оглушает врага и даёт контратаку. Промах — полный урон. Влияют блок и ловкость (шире окно). Боссы телеграфируют чаще.</p></div>
+
+<div class="v"><h2>2 · Ярость и Прорыв</h2>
+<div class="arena">
+ <div class="foes allhit"><div class="foe"><div class="ic">🐺</div><div class="nm">Волк</div><div class="bar"><i style="width:60%"></i></div></div><div class="foe"><div class="ic">🧟</div><div class="nm">Упырь</div><div class="bar"><i style="width:80%"></i></div></div><div class="foe"><div class="ic">🦇</div><div class="nm">Нетопырь</div><div class="bar"><i style="width:45%"></i></div></div></div>
+ <div class="slash"></div>
+ <div class="rage"><i></i></div><div class="tag" style="left:14px;bottom:178px;color:#ff8a3a">ЯРОСТЬ</div>
+ <div class="hero"><div class="ic">⚔️</div><div class="col"><div class="nm">Дикарь · ур. 34</div><div class="hb"><i></i></div><div class="hb mb"><i></i></div></div></div>
+ <div class="ctrl"><div class="btn">Пауза</div><div class="btn ult">Прорыв</div><div class="btn">×2</div></div>
+</div>
+<p><b>Как работает:</b> полоса Ярости копится от полученного и нанесённого урона. Полная — кнопка «Прорыв»: удар класса по всем врагам (у Дикаря — рассечение, у Ведьмы — буря, у Следопыта — залп). Ярость гаснет вне боя. Пассивки и уникалки меняют её рост и силу Прорыва.</p></div>
+
+<div class="v"><h2>3 · Слом стойки</h2>
+<div class="arena">
+ <div class="foes"><div class="foe broken" style="width:150px;height:150px"><div class="tag mult">УЯЗВИМ · урон ×1,5</div><div class="ic" style="font-size:52px">🗿</div><div class="nm">Страж руин</div><div class="bar" style="width:130px"><i style="width:65%"></i></div><div class="stag" style="width:130px"><i></i></div>
+  <svg class="crack" viewBox="0 0 150 150"><path d="M30 20 L60 60 L45 85 L80 120 M60 60 L100 50 L120 75" stroke="#f2d23a" stroke-width="2.5" fill="none"/></svg></div></div>
+ <div class="hero"><div class="ic">🔨</div><div class="col"><div class="nm">Храмовник · ур. 34</div><div class="hb"><i></i></div><div class="hb mb"><i></i></div></div></div>
+ <div class="ctrl"><div class="btn">Пауза</div><div class="btn">Навык</div><div class="btn">×2</div></div>
+</div>
+<p><b>Как работает:</b> у редких и боссов под здоровьем жёлтая полоса стойки. Её копят тяжёлые удары, оглушения, крит и холод. Полная — стойка сломана: враг 3 с не бьёт и получает ×1,5 урона. Хорошо ложится на сильные навыки по таймеру — придержать удар до слома.</p></div>
+
+<div class="v"><h2>4 · Стихийные реакции</h2>
+<div class="arena">
+ <div class="foes splash"><div class="foe"><div class="badge b1">🔥</div><div class="badge b2">⚡</div><div class="ic">🧌</div><div class="nm">Тролль</div><div class="bar"><i style="width:75%"></i></div></div><div class="foe"><div class="ic">🦂</div><div class="nm">Скорпион</div><div class="bar"><i style="width:55%"></i></div></div></div>
+ <div class="dot d1"></div><div class="dot d2"></div><div class="boom"></div>
+ <div class="tag combo">ПЕРЕГРУЗКА · взрыв по всем</div>
+ <div class="hero"><div class="ic">🔮</div><div class="col"><div class="nm">Ведьма · ур. 34</div><div class="hb"><i></i></div><div class="hb mb"><i></i></div></div></div>
+ <div class="ctrl"><div class="btn">Огонь</div><div class="btn">Молния</div><div class="btn">Холод</div></div>
+</div>
+<p><b>Как работает:</b> два разных состояния на враге дают реакцию: поджог + шок = <b>Перегрузка</b> (взрыв по всем), холод + шок = <b>Раскол</b> (крит по замёрзшему), поджог + холод = <b>Пар</b> (ослепление), яд + поджог = <b>Чума</b> (яд перекидывается). Награда за смешение стихий в навыках и экипировке.</p></div>
+
+<div class="v"><h2>5 · Ряды: авангард и тыл</h2>
+<div class="arena">
+ <div class="rows">
+  <div class="rowlbl">тыл</div>
+  <div class="back"><div class="foe"><div class="ic">🏹</div><div class="nm">Лучник</div><div class="bar" style="width:58px"><i style="width:80%"></i></div></div><div class="foe pull"><div class="ic">🧙</div><div class="nm">Шаман</div><div class="bar" style="width:58px"><i style="width:90%"></i></div></div></div>
+  <div class="rowlbl">авангард</div>
+  <div class="foes"><div class="foe"><div class="ic">🛡️</div><div class="nm">Щитоносец</div><div class="bar"><i style="width:85%"></i></div></div><div class="foe"><div class="ic">🐗</div><div class="nm">Вепрь</div><div class="bar"><i style="width:70%"></i></div></div></div>
+ </div>
+ <div class="arrow"></div><div class="hook"></div>
+ <div class="tag guard">тыл прикрыт: −50% урона ближнего боя</div>
+ <div class="hero"><div class="ic">🗡️</div><div class="col"><div class="nm">Дуэлянт · ур. 34</div><div class="hb"><i></i></div><div class="hb mb"><i></i></div></div></div>
+ <div class="ctrl"><div class="btn">Пауза</div><div class="btn hot">Крюк</div><div class="btn">×2</div></div>
+</div>
+<p><b>Как работает:</b> стая встаёт в два ряда. Лучники и шаманы стоят в тылу: ближний бой по ним слабее, пока жив авангард, а снаряды и чары бьют куда угодно. Навыки «Крюк» и «Рывок» вытягивают врага из тыла или пробивают строй. Добавляет смысл выбору цели и дальнему бою.</p></div>
+
+</div></body></html>

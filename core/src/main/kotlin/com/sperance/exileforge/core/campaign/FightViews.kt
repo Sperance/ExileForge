@@ -55,11 +55,16 @@ internal fun Battle.hud(
         AilmentView(ailment, ((until - battle.time) / active.first().duration).toFloat().coerceIn(0f, 1f), active.size,
             (until - battle.time).coerceAtLeast(0.0), if (ailment.hurts) active.sumOf { it.magnitude } else active.maxOf { it.magnitude })
     }
+    fun buildup(f: Battle.Fighter) = rules.buildup?.let {
+        val lead = f.leading()
+        BuildupView(lead?.first, (lead?.second ?: 0.0).toFloat().coerceIn(0f, 1f), f.buildup.map { it.toFloat().coerceIn(0f, 1f) },
+            f.stunnedUntil > battle.time, f.shatter, f.electrocutedUntil > battle.time)
+    }
     val foes = foeFighters.map { f ->
         FoeView(f.index, monsters[f.index], f.life.roundToInt(), f.body.maxLife.roundToInt(), f.shield.roundToInt(), f.body.maxShield.roundToInt(),
             swing(f), ailments(f), f.held, f.alive, reachable(f.index), f.body.taunt, effects(f),
             f.mana.roundToInt(), f.body.maxMana.roundToInt(), place = window.place(f.index), waiting = window.waits(f.index),
-            reinforce = window.place(f.index).takeIf { it >= 0 }?.let(::reinforceIn), reinforceDelay = rules.reinforceDelay)
+            reinforce = window.place(f.index).takeIf { it >= 0 }?.let(::reinforceIn), reinforceDelay = rules.reinforceDelay, buildup = buildup(f))
     }
     return FightHud(
         ally = allyFighter?.let { f -> AllyView(ally!!.code, f.life.roundToInt(), f.body.maxLife.roundToInt(), f.alive) },
@@ -67,7 +72,7 @@ internal fun Battle.hud(
         heroLife = h.life.roundToInt(), heroShield = h.shield.roundToInt(),
         hits = hits, speed = speed,
         outcome = outcome,
-        heroSwing = swing(h), heroAilments = ailments(h), heroHeld = h.held,
+        heroSwing = swing(h), heroAilments = ailments(h), heroHeld = h.held, heroBuildup = buildup(h),
         retreating = retreating,
         lunge = lunge()?.let { (event, progress) -> LungeView(event.actor, event.action, event.kind, event.landed, progress.toFloat(), event.foe, event.pet != null) },
         events = events.toList().asReversed(),

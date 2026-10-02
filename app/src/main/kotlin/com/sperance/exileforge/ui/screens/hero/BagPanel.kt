@@ -153,7 +153,7 @@ internal fun compactCount(amount: Long): String = when {
     val skill = s.index?.skills?.byBook(code)
     val readable = skill != null && skill.heroClass == s.hero?.heroClass
     val essence = s.index?.essence(code) != null
-    // A loot chest (3.76.0) is opened, never sold: no auction for it.
+    // A loot chest (3.76.0) is opened here; since 3.77.0 it may also go to the auction, never to the merchant.
     val chest = s.index?.item(code)?.category == Item.CHEST
     StackPanel(onDismiss) {
         StackFace(s, code, stack.amount)
@@ -169,7 +169,8 @@ internal fun compactCount(amount: Long): String = when {
             }
             if (chest) ForgeButton(enabled = !s.busy, onClick = { onOpenChest(code) }, modifier = Modifier.weight(1f)) {
                 Text(ui("chest.open"))
-            } else ForgeOutlinedButton(enabled = !s.busy, onClick = { onAuction(code) }, modifier = Modifier.weight(1f)) {
+            }
+            ForgeOutlinedButton(enabled = !s.busy, onClick = { onAuction(code) }, modifier = Modifier.weight(1f)) {
                 Text(ui("hero.action_auction"))
             }
         }

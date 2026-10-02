@@ -101,9 +101,9 @@ import kotlin.math.roundToInt
                 .background(containerColor)
                 // Under the gesture bar the sheet's colour, above it the content; a sheet that pads itself pads nothing twice.
                 .windowInsetsPadding(WindowInsets.navigationBars)
-                // A tap on the sheet itself is not a tap on the scrim.
-                .clickable(remember { MutableInteractionSource() }, indication = null) {}
                 .nestedScroll(remember(sheet, scope) { sheet.connection(scope, close) })
+                // The drag's pointer input also keeps a tap on the sheet from reaching the scrim under it; no clickable here,
+                // which would merge the whole content into one node for TalkBack.
                 .draggable(rememberDraggableState { sheet.dragBy(it, scope) }, Orientation.Vertical,
                     onDragStopped = { velocity -> sheet.settle(velocity, close) })) {
                 dragHandle?.let { Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { it() } }

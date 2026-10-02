@@ -44,17 +44,17 @@ class ForgeSheetTest {
         compose.waitForIdle()
     }
 
-    private fun top() = compose.onNodeWithTag(BODY).getBoundsInRoot().top.value
+    private fun top() = compose.onNodeWithTag(BODY, useUnmergedTree = true).getBoundsInRoot().top.value
 
     @Test fun opens() {
         open()
-        compose.onNodeWithTag(BODY).assertIsDisplayed()
+        compose.onNodeWithTag(BODY, useUnmergedTree = true).assertIsDisplayed()
     }
 
     @Test fun aFlingUpLeavesItAtRest() {
         open()
         val rest = top()
-        compose.onNodeWithTag(BODY).performTouchInput { swipeUp(durationMillis = 80) }
+        compose.onNodeWithTag(BODY, useUnmergedTree = true).performTouchInput { swipeUp(durationMillis = 80) }
         compose.waitForIdle()
         assertEquals(rest, top(), 1f)
         assertEquals(0, dismissed)
@@ -63,7 +63,7 @@ class ForgeSheetTest {
     @Test fun aShortDragSpringsBack() {
         open()
         val rest = top()
-        compose.onNodeWithTag(BODY).performTouchInput { swipeDown(startY = centerY, endY = centerY + height * .1f, durationMillis = 1_000) }
+        compose.onNodeWithTag(BODY, useUnmergedTree = true).performTouchInput { swipeDown(startY = centerY, endY = centerY + height * .1f, durationMillis = 1_000) }
         compose.waitForIdle()
         assertEquals(rest, top(), 1f)
         assertEquals(0, dismissed)
@@ -71,10 +71,10 @@ class ForgeSheetTest {
 
     @Test fun aLongDragClosesItOnce() {
         open()
-        compose.onNodeWithTag(BODY).performTouchInput { swipeDown(startY = top + 1f, endY = bottom + height, durationMillis = 300) }
+        compose.onNodeWithTag(BODY, useUnmergedTree = true).performTouchInput { swipeDown(startY = top + 1f, endY = bottom + height, durationMillis = 300) }
         compose.waitForIdle()
         assertEquals(1, dismissed)
-        assertTrue(compose.onAllNodes(hasTestTag(BODY)).fetchSemanticsNodes().isEmpty())
+        assertTrue(compose.onAllNodes(hasTestTag(BODY), useUnmergedTree = true).fetchSemanticsNodes().isEmpty())
     }
 
     private companion object {

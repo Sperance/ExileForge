@@ -22,6 +22,9 @@ import com.sperance.exileforge.presentation.state.GuildTab
 import com.sperance.exileforge.presentation.state.QuestTab
 import com.sperance.exileforge.presentation.state.ForgeSection
 import com.sperance.exileforge.presentation.state.StashSort
+import com.sperance.exileforge.presentation.state.GameSettings
+import com.sperance.exileforge.presentation.state.Buzz
+import com.sperance.exileforge.presentation.state.TAB_SETTINGS
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
 
@@ -29,9 +32,18 @@ import com.sperance.exileforge.rules.content.Slot
 class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() {
     private val runtime = ForgeRuntime(store, journal)
     val state = runtime.state
+    /** What the phone buzzes for (3.77.0), already filtered by the settings. */
+    val buzzes: kotlinx.coroutines.flow.SharedFlow<Buzz> = runtime.buzzes
+    fun buzz(kind: Buzz) = runtime.buzz(kind)
     val logs = runtime.logs
     /** A tab the hero's level has not opened (3.76.0) says when it will instead of opening. */
     fun tab(tab: Int) { if (gate(Feature.ofTab(tab))) runtime.tab(tab) }
+
+    /** «Настройки» (3.77.0) over the tab on screen; closing them returns to it. */
+    fun openSettings() { with(runtime) { if (state.value.tab != TAB_SETTINGS) settingsReturn = state.value.tab; tab(TAB_SETTINGS) } }
+    fun closeSettings() = runtime.tab(runtime.settingsReturn)
+    /** A setting changed: on screen at once, kept on the device behind it. */
+    fun settings(value: GameSettings) = runtime.saveSettings(value)
 
     /** A line in the toasts, from the screens (3.76.0: a place opened by the level). */
     fun announce(text: String) = runtime.toast(text)

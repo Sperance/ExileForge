@@ -28,10 +28,13 @@ import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.theme.*
 
-/** How many of the shelf's narrowings are on: each filter chip, the query, «hide equipped» and an order other than the newest first. */
-internal fun stashTweaks(filter: StashFilter, sort: StashSort, hideWorn: Boolean = false): Int =
+/**
+ * How many of the shelf's settings differ from its default: each filter chip, the query, the worn gear shown ([showsWorn]:
+ * hidden is the default since 3.77.0) and an order other than the newest first.
+ */
+internal fun stashTweaks(filter: StashFilter, sort: StashSort, showsWorn: Boolean = false): Int =
     filter.groups.size + filter.rarities.size + (if (filter.wearable) 1 else 0) + (if (filter.query.isNotBlank()) 1 else 0) +
-        (if (hideWorn) 1 else 0) + (if (sort != StashSort.NEWEST) 1 else 0)
+        (if (showsWorn) 1 else 0) + (if (sort != StashSort.NEWEST) 1 else 0)
 
 /** «Hide equipped» (3.69.0): the gear shelf without what the hero wears or has socketed; the same chip sits in the sheet. */
 @Composable internal fun HideWornChip(on: Boolean, onToggle: (Boolean) -> Unit) {
@@ -91,8 +94,8 @@ internal fun stashTweaks(filter: StashFilter, sort: StashSort, hideWorn: Boolean
                         label = { Text(rarityTitle(rarity, lang), color = rarityColor(rarity.name)) })
                 }
             }
-            ForgeOutlinedButton(onClick = { onFilter(StashFilter()); onSort(StashSort.NEWEST); if (hideWorn == true) onHideWorn(false) },
-                enabled = stashTweaks(filter, sort, hideWorn == true) > 0,
+            ForgeOutlinedButton(onClick = { onFilter(StashFilter()); onSort(StashSort.NEWEST); if (hideWorn == false) onHideWorn(true) },
+                enabled = stashTweaks(filter, sort, showsWorn = hideWorn == false) > 0,
                 modifier = Modifier.fillMaxWidth()) { Text(ui("stash.reset")) }
         }
     }

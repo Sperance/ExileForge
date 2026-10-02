@@ -3,6 +3,8 @@ package com.sperance.exileforge.ui.screens.hero
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -40,14 +42,15 @@ enum class HeroTab(val tab: Int, private val title: String, val icon: ImageVecto
 }
 
 /** The strip over the Hero tab's screens: a glyph over a short label each, the open one underlined in gold. */
-@Composable fun HeroTabStrip(selected: HeroTab, onSelect: (Int) -> Unit) {
+@Composable fun HeroTabStrip(selected: HeroTab, locked: (Int) -> Boolean = { false }, onSelect: (Int) -> Unit) {
     Column {
         Row(Modifier.fillMaxWidth().background(Abyss)) {
             HeroTab.entries.forEach { entry ->
                 val on = entry == selected
                 Column(Modifier.weight(1f).selectable(selected = on, role = Role.Tab, onClick = { if (!on) onSelect(entry.tab) }).padding(top = 6.dp),
                     horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Icon(entry.icon, null, tint = if (on) Gold else Muted, modifier = Modifier.size(18.dp))
+                    // A page the hero's level has not opened yet (3.77.0) shows a lock; the tap explains when it opens.
+                    Icon(if (locked(entry.tab)) Icons.Outlined.Lock else entry.icon, null, tint = if (on) Gold else Muted, modifier = Modifier.size(18.dp))
                     Text(entry.label, color = if (on) GoldBright else Muted, style = MaterialTheme.typography.labelSmall,
                         maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Box(Modifier.fillMaxWidth().height(2.dp).background(if (on) Gold else Color.Transparent))

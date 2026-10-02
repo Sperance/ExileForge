@@ -56,21 +56,17 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
 
 /** The screens behind the account's rows: each a page of its own, «back» leading to the list. */
-private enum class AccountPage(val title: String) {
-    SIGN_IN("account.signin_section"), LANGUAGE("account.language"), SERVER("account.server"), CLIENT("account.client"), JOURNAL("account.journal"),
-    TESTING("tester.window"), TESTERS("tester.accounts"), FEEDBACK("feedback.admin"), MAIL("mail.compose")
-}
+private enum class AccountPage(val title: String) { SIGN_IN("account.signin_section") }
 
 /**
- * «Врата мира» (variant A, «Списки и плитки»): who is playing, then grouped rows with chevrons — the game on top, the
- * server and the technical parts below, each a page of its own. Everything is in sight without scrolling; a setting
- * is one tap further than it was.
+ * «Врата мира» (variant A, «Списки и плитки»): who is playing, then the hero's and the account's rows. Since 3.77.0 it
+ * opens from the game's sigil in the banner, and the language, the guides and the developers' tools live in «Настройки».
  */
-@Composable internal fun ServerScreen(s: ForgeState, vm: ForgeViewModel, logs: List<RequestLog> = emptyList()) {
+@Composable internal fun ServerScreen(s: ForgeState, vm: ForgeViewModel) {
     var page by rememberSaveable { mutableStateOf<AccountPage?>(null) }
     var promoOpen by remember { mutableStateOf(false) }
     val open = page
-    if (open == null) AccountHome(s, vm, logs, onPage = { page = it }, onPromo = { promoOpen = true })
+    if (open == null) AccountHome(s, vm, onPage = { page = it }, onPromo = { promoOpen = true })
     else Column(Modifier.fillMaxSize()) {
         BackRow(ui("account.title")) { page = null }
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
@@ -78,24 +74,13 @@ private enum class AccountPage(val title: String) {
             Text(ui(open.title), color = GoldBright, style = MaterialTheme.typography.titleLarge)
             when (open) {
                 AccountPage.SIGN_IN -> SignInPage(s, vm)
-                AccountPage.LANGUAGE -> ForgePanel {
-                    LanguagePicker(s.lang, s.world.languages, enabled = !s.busy, onLanguage = vm::language)
-                    MutedText(ui("account.language_note"))
-                }
-                AccountPage.SERVER -> ServerPage(s, vm)
-                AccountPage.CLIENT -> ClientPage(s, vm)
-                AccountPage.JOURNAL -> RequestJournalPanel(vm, logs)
-                AccountPage.TESTING -> TestingPage(s, vm)
-                AccountPage.TESTERS -> TestersPage(s, vm)
-                AccountPage.FEEDBACK -> FeedbackAdminPage(s, vm)
-                AccountPage.MAIL -> MailComposePage(s, vm)
             }
         }
     }
     if (promoOpen) PromoCodeDialog(s, onDismiss = { promoOpen = false }) { code -> promoOpen = false; vm.redeem(code) }
 }
 
-@Composable private fun AccountHome(s: ForgeState, vm: ForgeViewModel, logs: List<RequestLog>, onPage: (AccountPage) -> Unit, onPromo: () -> Unit) {
+@Composable private fun AccountHome(s: ForgeState, vm: ForgeViewModel, onPage: (AccountPage) -> Unit, onPromo: () -> Unit) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         ScreenHeader(ui("account.title"), ui("account.subtitle"), ForgeGlyphs.Portal)
         ProfileCard(s)
@@ -105,26 +90,9 @@ private enum class AccountPage(val title: String) {
             AccountRow(Icons.Outlined.SwapHoriz, ui("account.change_character"), enabled = !s.busy, onClick = vm::leaveGame)
             // A reward is paid to a hero, not to an account, so the dialog names the hero being played.
             AccountRow(Icons.Outlined.CardGiftcard, ui("account.enter_promo"), enabled = !s.busy && s.play.heroId.isNotBlank(), onClick = onPromo)
-            AccountRow(Icons.Outlined.Language, ui("account.language"), value = s.lang.title) { onPage(AccountPage.LANGUAGE) }
             AccountRow(Icons.Outlined.Person, ui("account.signin_section"),
                 value = if (s.account.signedIn) s.accountTitle else ui("account.signed_out")) { onPage(AccountPage.SIGN_IN) }
-            // The first-visit guides (3.14.0) come back on every screen once reset.
-            LocalGuideDesk.current?.let { desk -> AccountRow(Icons.Outlined.Lightbulb, ui("guide.reset"), chevron = false, onClick = desk::reset) }
-            // The testing window (3.73.0) for testers and administrators; the testers' accounts for an administrator.
-            if (s.isTester) AccountRow(Icons.Outlined.Science, ui("tester.window"), enabled = !s.busy) { onPage(AccountPage.TESTING) }
-            if (s.isAdmin) AccountRow(Icons.Outlined.Group, ui("tester.accounts"), enabled = !s.busy) { onPage(AccountPage.TESTERS) }
-            if (s.isAdmin) AccountRow(Icons.Outlined.BugReport, ui("feedback.admin"), enabled = !s.busy) { onPage(AccountPage.FEEDBACK) }
-            if (s.isAdmin) AccountRow(Icons.Outlined.Mail, ui("mail.compose"), enabled = !s.busy) { onPage(AccountPage.MAIL) }
-            // Every administrator tool moved to its own tab in 2.3.0. What stays here is the way back
-            // into it: turning the tools off hides that tab, so the switch cannot live only inside it.
-            if (BuildConfig.DEBUG && s.isAdmin && !s.adminTools)
-                AccountRow(Icons.Outlined.AdminPanelSettings, ui("account.tools_back"), enabled = !s.busy, chevron = false) { vm.mode(AppMode.ADMIN) }
-        }
-        RowGroup(ui("account.server")) {
-            AccountRow(Icons.Outlined.Dns, ui("account.server"), value = ui(if (s.link.offline) "account.offline" else "account.online"),
-                dot = if (s.link.offline) LifeRed else Vital) { onPage(AccountPage.SERVER) }
-            AccountRow(Icons.Outlined.Info, ui("account.client"), value = "API $API_REVISION") { onPage(AccountPage.CLIENT) }
-            AccountRow(Icons.AutoMirrored.Outlined.ReceiptLong, ui("account.journal"), value = logs.size.toString()) { onPage(AccountPage.JOURNAL) }
+            AccountRow(ForgeGlyphs.Sigil, ui("settings.title")) { vm.openSettings() }
         }
     }
 }
@@ -146,7 +114,7 @@ private enum class AccountPage(val title: String) {
 }
 
 /** Rows under a small caption, in one rounded panel, hairlines between them. */
-@Composable private fun RowGroup(title: String, rows: @Composable ColumnScope.() -> Unit) {
+@Composable internal fun RowGroup(title: String, rows: @Composable ColumnScope.() -> Unit) {
     val shape = RoundedCornerShape(12.dp)
     Column(Modifier.fillMaxWidth().clip(shape).background(Panel, shape).border(1.dp, PanelRaised, shape)) {
         Engraved(title, Muted, Modifier.padding(start = 12.dp, top = 9.dp, bottom = 2.dp))
@@ -155,7 +123,7 @@ private enum class AccountPage(val title: String) {
 }
 
 /** One row of a group: the glyph, the name, a value on the right — with a status dot when given — and a chevron where it opens a page. */
-@Composable private fun AccountRow(icon: ImageVector, label: String, value: String? = null, dot: Color? = null, enabled: Boolean = true,
+@Composable internal fun AccountRow(icon: ImageVector, label: String, value: String? = null, dot: Color? = null, enabled: Boolean = true,
     chevron: Boolean = true, onClick: () -> Unit) {
     Row(Modifier.fillMaxWidth().clickable(enabled = enabled, onClick = onClick).padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -175,7 +143,7 @@ private enum class AccountPage(val title: String) {
 }
 
 /** The server: where it is, the way to connect and to ask after its health, and the answer. */
-@Composable private fun ServerPage(s: ForgeState, vm: ForgeViewModel) {
+@Composable internal fun ServerPage(s: ForgeState, vm: ForgeViewModel) {
     ForgePanel {
         // The address is fixed for players (3.75.0); only an administrator points the device at another server.
         if (s.isAdmin) {
@@ -190,7 +158,7 @@ private enum class AccountPage(val title: String) {
 }
 
 /** What the client holds of the server: the dictionary, the drawings, the world's tables and the contract it speaks. */
-@Composable private fun ClientPage(s: ForgeState, vm: ForgeViewModel) {
+@Composable internal fun ClientPage(s: ForgeState, vm: ForgeViewModel) {
     ForgePanel {
         // Names of things belong to the server since 0.14.0: without its dictionary the screens
         // print codes, so how much of it arrived is worth saying out loud.
@@ -246,7 +214,7 @@ private enum class AccountPage(val title: String) {
  * A broken connection is exactly when nothing else on screen can be reached, so every failed
  * attempt is readable here, before any sign-in: method, path, status and both bodies.
  */
-@Composable private fun RequestJournalPanel(vm: ForgeViewModel, logs: List<RequestLog>) {
+@Composable internal fun RequestJournalPanel(vm: ForgeViewModel, logs: List<RequestLog>) {
     ForgePanel {
         MutedText(ui("account.journal_note", logs.size))
         ForgeTextButton(enabled = logs.isNotEmpty(), onClick = vm::clearLogs) { Text(ui("common.clear")) }

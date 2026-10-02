@@ -132,7 +132,7 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         mutableRun.value = ExpeditionRun.start(index, zone, run, journal, gear, hero.campaign, System.currentTimeMillis(), hero.info.experience, hero.level,
             vaalOrbs = ::vaalOrbsFree, onRecorded = ::recorded,
             onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, killed = started.killed, auto = autoPlan,
-            pet = ::combatPet)
+            pet = ::combatPet).also { r -> repeat(speedSteps) { r.send(RunCommand.Speed) } }
         vaalKilled = started.vaalKilled
         persist()
     } }
@@ -319,7 +319,7 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         val inner = ExpeditionRun.start(index, outer.run.zone, outer.run, journal, gear, hero.campaign, System.currentTimeMillis(), hero.info.experience, hero.level,
             vaalOrbs = ::vaalOrbsFree, onRecorded = ::recorded, vaal = true, startPools = outer.pools,
             onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, killed = vaalKilled, auto = autoPlan.takeIf { outer.hud.value.auto != null },
-            pet = ::combatPet)
+            pet = ::combatPet).also { r -> repeat(speedSteps) { r.send(RunCommand.Speed) } }
         parent = outer
         mutableRun.value = inner
     } }

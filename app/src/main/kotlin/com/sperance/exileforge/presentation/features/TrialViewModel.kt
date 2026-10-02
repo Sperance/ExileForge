@@ -80,6 +80,7 @@ class TrialViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         runId = started.run.id
         synchronized(pending) { pending.clear(); batch = null }
         mutableArena.value = TrialArena(index, started.run, started.context, gear, hero.pets.pet(hero.pets.combat), onEvent = ::recorded)
+            .also { a -> repeat(speedSteps) { a.send(RunCommand.Speed) } }
     } }
 
     /**

@@ -49,6 +49,9 @@ import com.sperance.exileforge.presentation.state.Notice
 import com.sperance.exileforge.presentation.state.NoticeKind
 import com.sperance.exileforge.presentation.state.PlayState
 import com.sperance.exileforge.presentation.state.StashSort
+import com.sperance.exileforge.presentation.state.GameSettings
+import com.sperance.exileforge.presentation.state.Buzz
+import com.sperance.exileforge.presentation.state.TAB_SETTINGS
 import com.sperance.exileforge.presentation.state.TAB_HERO
 import com.sperance.exileforge.rules.content.ContentFiles
 import com.sperance.exileforge.rules.content.ContentLoader
@@ -144,8 +147,9 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
                 val known = store.languages(server).mapNotNull { Lang.byCode(it) }
                 val sort = StashSort.of(store.stashSort.first())
                 val hideWorn = store.stashHideWorn.first()
+                val settings = store.gameSettings.first()
                 val logFilter = com.sperance.exileforge.core.campaign.LogKind.parse(store.logFilter.first())
-                mutable.update { it.copy(lang = language, busy = false, stashSort = sort, stashHideWorn = hideWorn, logFilter = logFilter, account = it.account.copy(server = server, serverDraft = server), world = it.world.copy(languages = known.ifEmpty { it.world.languages })) }
+                mutable.update { it.copy(lang = language, busy = false, stashSort = sort, stashHideWorn = hideWorn, settings = settings, logFilter = logFilter, account = it.account.copy(server = server, serverDraft = server), world = it.world.copy(languages = known.ifEmpty { it.world.languages })) }
                 refreshLocale()
                 refreshIcons()
                 val saved = store.token(server)
@@ -279,6 +283,24 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
     fun tab(tab: Int) {
         if (!state.value.adminTools && tab in ADMIN_TABS) return
         mutable.update { it.copy(tab = tab, message = null, error = false) }
+    }
+
+    /** How many presses of the fight's speed button reach the settings' speed (3.77.0): 1 → 2 → 4. */
+    val speedSteps: Int get() = GameSettings.SPEEDS.indexOf(state.value.settings.fightSpeed).coerceAtLeast(0)
+
+    /** The tab «Настройки» were opened over (3.77.0). */
+    var settingsReturn: Int = TAB_HERO
+
+    fun saveSettings(value: GameSettings) {
+        mutable.update { it.copy(settings = value) }
+        scope.launch { store.saveGameSettings(value) }
+    }
+
+    /** What the phone buzzes for, sent to the screen that holds the view (3.77.0); a switched-off kind is dropped here. */
+    val buzzes = kotlinx.coroutines.flow.MutableSharedFlow<Buzz>(extraBufferCapacity = 4)
+    fun buzz(kind: Buzz) {
+        val set = state.value.settings
+        if (if (kind == Buzz.DANGER) set.buzzDanger else set.buzzButtons) buzzes.tryEmit(kind)
     }
 
     fun dismissMessage() { mutable.update { it.copy(message = null, error = false) } }

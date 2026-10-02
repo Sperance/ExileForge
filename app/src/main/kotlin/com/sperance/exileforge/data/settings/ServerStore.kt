@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.i18n.Lang
+import com.sperance.exileforge.presentation.state.GameSettings
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -46,9 +47,17 @@ class ServerStore(private val context: Context) {
     suspend fun saveStashSort(value: String) { context.settings.edit { it[stashSortKey] = value } }
 
     /** Whether the gear shelf hides what the hero wears (3.69.0); nothing is the default, everything shown. */
-    private val hideWornKey = stringPreferencesKey("stash_hide_worn")
-    val stashHideWorn = context.settings.data.map { it[hideWornKey] == "true" }
+    private val hideWornKey = stringPreferencesKey("stash_worn_hidden")
+    // Hidden unless the player shows it (3.77.0): the key is now "stash_worn_hidden", so an older «shown» is not kept.
+    val stashHideWorn = context.settings.data.map { it[hideWornKey] != "false" }
     suspend fun saveStashHideWorn(value: Boolean) { context.settings.edit { it[hideWornKey] = value.toString() } }
+
+    /** The player's settings (3.77.0) as one document; an unreadable one falls back to the defaults. */
+    private val gameSettingsKey = stringPreferencesKey("game_settings")
+    val gameSettings = context.settings.data.map { prefs ->
+        prefs[gameSettingsKey]?.let { runCatching { WireJson.decodeFromString(GameSettings.serializer(), it) }.getOrNull() } ?: GameSettings()
+    }
+    suspend fun saveGameSettings(value: GameSettings) { context.settings.edit { it[gameSettingsKey] = WireJson.encodeToString(GameSettings.serializer(), value) } }
 
     /** Which shelves of the fight's log are shown (3.37.0), by their names; nothing is the default, blows and ailments. */
     private val logFilterKey = stringPreferencesKey("log_filter")

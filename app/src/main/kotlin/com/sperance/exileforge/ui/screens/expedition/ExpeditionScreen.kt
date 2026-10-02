@@ -49,7 +49,10 @@ private const val CARD_TOP = .48f
         return
     }
     val campaign = index.campaign
-    val world = remember(index, progress) { WorldMap(campaign, index.world, progress) }
+    val world = remember(index, progress.cleared, progress.unlocked) { WorldMap(campaign, index.world, progress) }
+    // The tab answers the tap at once (3.77.0): its first frame is the bare chart, the map is laid out on the next.
+    var settled by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { withFrameNanos { }; settled = true }
     val art by produceState(WorldArt.cached(campaign), campaign) { value = WorldArt.of(campaign) }
     val density = LocalDensity.current.density
     val camera = remember(campaign.world, density) { WorldCamera(campaign.world, density) }
@@ -67,7 +70,8 @@ private const val CARD_TOP = .48f
         if (camera.placed && !camera.sees(at, 48f, CARD_TOP)) camera.glide(at, maxOf(camera.scale, WorldCamera.HOME), CARD_DOWN)
     }
     Box(Modifier.fillMaxSize()) {
-        WorldCanvas(world, art, camera, launch?.mapCode, stash, Modifier.fillMaxSize()) { code -> if (code == null) vm.closeZone() else vm.selectZone(code) }
+        if (!settled) Box(Modifier.fillMaxSize().background(CHART_BARE))
+        else WorldCanvas(world, art, camera, launch?.mapCode, stash, Modifier.fillMaxSize()) { code -> if (code == null) vm.closeZone() else vm.selectZone(code) }
         WorldBar(world, Modifier.align(Alignment.TopCenter),
             onFrontier = { scope.launch { camera.glide(world.frontier(), WorldCamera.HOME, if (launch != null) CARD_DOWN else .5f) } })
         ZoomButtons(camera, Modifier.align(Alignment.TopEnd).padding(top = 72.dp, end = 12.dp)) { factor -> scope.launch { camera.zoomBy(factor) } }
@@ -105,3 +109,6 @@ private const val CARD_TOP = .48f
 }
 
 private const val ZOOM_STEP = 1.35f
+
+/** The chart's own colour, shown for the one frame before the map is laid out. */
+private val CHART_BARE = androidx.compose.ui.graphics.Color(0xFF1B150D)

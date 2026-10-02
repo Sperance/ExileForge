@@ -39,7 +39,7 @@ import com.sperance.exileforge.ui.theme.*
     BackHandler { if (hud.phase == TrialPhase.FIGHT) vm.trialCommand(com.sperance.exileforge.core.campaign.RunCommand.Leave) else vm.closeTrial() }
     Box(Modifier.fillMaxSize().background(Ink)) {
         hud.fight?.takeIf { hud.phase == TrialPhase.FIGHT }?.let { fight ->
-            ArenaOverlay(s, hud.run, fight, hud.level, arena.rules, arena.stance, onCommand = vm::trialCommand, onLogFilter = vm::logFilter)
+            ArenaOverlay(s, hud.run, fight, hud.level, arena.rules, arena.stance, onCommand = vm::trialCommand, onLogFilter = vm::logFilter, onBuzz = vm::buzz)
         }
         if (hud.phase == TrialPhase.FIGHT) TrialPlate(hud, Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = 44.dp, end = 8.dp))
         else TrialEnding(s, vm, hud)

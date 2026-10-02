@@ -13,12 +13,14 @@ import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Mail
 import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -67,6 +69,7 @@ import com.sperance.exileforge.ui.screens.progress.ProgressPlaceScreen
 import com.sperance.exileforge.ui.screens.progress.ProgressScreen
 import com.sperance.exileforge.ui.screens.redemption.RedemptionScreen
 import com.sperance.exileforge.ui.screens.server.ServerScreen
+import com.sperance.exileforge.ui.screens.server.SettingsScreen
 import com.sperance.exileforge.ui.screens.session.AuthScreen
 import com.sperance.exileforge.ui.screens.session.CharacterSelectScreen
 import com.sperance.exileforge.ui.screens.skills.GrimoireScreen
@@ -75,6 +78,14 @@ import com.sperance.exileforge.ui.theme.*
 import com.sperance.exileforge.presentation.features.UpdateViewModel
 import com.sperance.exileforge.ui.components.LocalUpdates
 import com.sperance.exileforge.ui.components.UpdateGate
+import android.view.HapticFeedbackConstants
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.Density
+import com.sperance.exileforge.ui.components.LocalMotion
+import com.sperance.exileforge.ui.components.LocalSettings
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 
 @Composable fun ForgeApp(vm: ForgeViewModel, updates: UpdateViewModel) {
     // The first-visit guides (3.14.0): read once per device, one sheet at a time above whatever screen is open.
@@ -83,7 +94,19 @@ import com.sperance.exileforge.ui.components.UpdateGate
     val guides = remember { GuideDesk(GuideStore(context.applicationContext), scope) }
     val expedition by vm.expedition.collectAsStateWithLifecycle()
     val trial by vm.trial.collectAsStateWithLifecycle()
-    CompositionLocalProvider(LocalGuideDesk provides guides, LocalUpdates provides updates) {
+    // The settings (3.77.0) that reach every screen: the text's size, the motion, the lit screen and the phone's buzz.
+    val settings by remember(vm) { vm.state.map { it.settings }.distinctUntilChanged() }.collectAsStateWithLifecycle(GameSettings())
+    val base = LocalDensity.current
+    val view = LocalView.current
+    val lit = when (settings.keepScreen) { KeepScreen.ALWAYS -> true; KeepScreen.NEVER -> false; KeepScreen.EXPEDITION -> expedition != null || trial != null }
+    DisposableEffect(view, lit) { view.keepScreenOn = lit; onDispose { view.keepScreenOn = false } }
+    LaunchedEffect(vm, view) {
+        vm.buzzes.collect { kind ->
+            view.performHapticFeedback(if (kind == Buzz.DANGER) HapticFeedbackConstants.LONG_PRESS else HapticFeedbackConstants.VIRTUAL_KEY)
+        }
+    }
+    CompositionLocalProvider(LocalGuideDesk provides guides, LocalUpdates provides updates, LocalMotion provides settings.animations,
+        LocalSettings provides settings, LocalDensity provides Density(base.density, base.fontScale * settings.textSize.scale)) {
         ForgeScreens(vm)
         GuideHost(guides)
         // Updates (3.72.0): over everything; a run or a trial under way is finished first.
@@ -216,10 +239,11 @@ private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, erro
             LaunchedEffect(s.play.heroId) { if (s.play.heroId.isNotBlank()) vm.loadCrafts(silent = true) }
             ForgeBanner(s, vm, onBug)
             if (s.busy || s.reading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised) else OrnateDivider(Gold)
-            HeroTab.of(s.tab)?.let { HeroTabStrip(it, vm::tab) }
+            HeroTab.of(s.tab)?.let { HeroTabStrip(it, locked = { tab -> !s.unlocked(Feature.ofTab(tab)) }, onSelect = vm::tab) }
             // Each tab is handed its slice (3.56.0): a toast, a refusal or another tab's reads no longer redraw it.
             when (s.tab) {
-                TAB_ACCOUNT -> ServerScreen(s.sliced(*s.common), vm, logs)
+                TAB_ACCOUNT -> ServerScreen(s.sliced(*s.common), vm)
+                TAB_SETTINGS -> SettingsScreen(s.sliced(*s.common, s.settings), vm, logs)
                 TAB_HERO -> HeroScreen(s.sliced(*s.common), vm)
                 TAB_EXPEDITION -> ExpeditionScreen(s.sliced(*s.common, s.logFilter), vm)
                 TAB_CRAFTS -> CraftsScreen(s.sliced(*s.common), vm)
@@ -256,8 +280,11 @@ private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, erro
 @Composable private fun ForgeBanner(s: ForgeState, vm: ForgeViewModel, onBug: () -> Unit) {
     Row(Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Gold.copy(alpha = .10f), Color.Transparent, Gold.copy(alpha = .06f))))
         .padding(horizontal = 18.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(40.dp).border(1.dp, Gold.copy(alpha = .5f), RoundedCornerShape(9.dp)), contentAlignment = Alignment.Center) {
-            Icon(ForgeGlyphs.Sigil, null, tint = Gold, modifier = Modifier.size(24.dp))
+        // The game's sigil opens the account (3.77.0), where the menu's row was.
+        val accountOpen = s.tab == TAB_ACCOUNT
+        Box(Modifier.size(40.dp).clip(RoundedCornerShape(9.dp)).border(1.dp, (if (accountOpen) GoldBright else Gold).copy(alpha = .5f), RoundedCornerShape(9.dp))
+            .clickable(onClickLabel = ui("nav.account")) { vm.tab(TAB_ACCOUNT) }, contentAlignment = Alignment.Center) {
+            Icon(ForgeGlyphs.Sigil, ui("nav.account"), tint = if (accountOpen) GoldBright else Gold, modifier = Modifier.size(24.dp))
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
@@ -269,7 +296,7 @@ private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, erro
         }
         WorkBadge(s) { vm.tab(TAB_CRAFTS) }
         LinkBadge(s.link, vm::retryLink)
-        BannerMenu(s.feedback.unread, accountOpen = s.tab == TAB_ACCOUNT, onMail = LocalMailOpen.current, onBug = onBug) { vm.tab(TAB_ACCOUNT) }
+        BannerMenu(s.feedback.unread, settingsOpen = s.tab == TAB_SETTINGS, onMail = LocalMailOpen.current, onBug = onBug, onSettings = vm::openSettings)
     }
 }
 
@@ -277,12 +304,12 @@ private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, erro
  * The banner's «⋮» (3.75.0, the owner's pick «B» of three mockups): the inbox, the beetle and the account behind one button,
  * so the name of the game fits beside the badges. A letter unread marks the button itself with a dot.
  */
-@Composable private fun BannerMenu(unread: Int, accountOpen: Boolean, onMail: (() -> Unit)?, onBug: () -> Unit, onAccount: () -> Unit) {
+@Composable private fun BannerMenu(unread: Int, settingsOpen: Boolean, onMail: (() -> Unit)?, onBug: () -> Unit, onSettings: () -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { open = true }) {
             Box {
-                Icon(Icons.Outlined.MoreVert, ui("common.more"), tint = if (accountOpen) GoldBright else Gold, modifier = Modifier.size(24.dp))
+                Icon(Icons.Outlined.MoreVert, ui("common.more"), tint = if (settingsOpen) GoldBright else Gold, modifier = Modifier.size(24.dp))
                 if (unread > 0) Box(Modifier.align(Alignment.TopEnd).size(8.dp).background(LifeRed, CircleShape))
             }
         }
@@ -295,8 +322,8 @@ private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, erro
                         modifier = Modifier.background(LifeRed, CircleShape).padding(horizontal = 6.dp)) })
             }
             DropdownMenuItem(text = { Text(ui("bug.open")) }, onClick = { pick(onBug) }, leadingIcon = { Icon(Icons.Outlined.BugReport, null, tint = Gold) })
-            DropdownMenuItem(text = { Text(ui("nav.account"), color = if (accountOpen) GoldBright else Parchment) }, onClick = { pick(onAccount) },
-                leadingIcon = { Icon(ForgeGlyphs.Portal, null, tint = Gold) })
+            DropdownMenuItem(text = { Text(ui("settings.title"), color = if (settingsOpen) GoldBright else Parchment) }, onClick = { pick(onSettings) },
+                leadingIcon = { Icon(Icons.Outlined.Settings, null, tint = Gold) })
         }
     }
 }

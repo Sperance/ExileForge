@@ -338,8 +338,10 @@ private fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Set
         view.pan = Offset(moved.x.coerceIn(-limit.x, limit.x), moved.y.coerceIn(-limit.y, limit.y))
     }
     // The reachable nodes breathe (3.76.0, «Неон»): their glow swells and fades, drawn again on the draw pass alone.
-    val pulse by rememberInfiniteTransition(label = "tree").animateFloat(PULSE_LOW, 1f,
-        infiniteRepeatable(tween(PULSE_MS, easing = LinearEasing), RepeatMode.Reverse), label = "pulse")
+    // With the animations off in the settings (3.77.0) they glow steadily.
+    val breathing: State<Float> = if (LocalMotion.current) rememberInfiniteTransition(label = "tree").animateFloat(PULSE_LOW, 1f,
+        infiniteRepeatable(tween(PULSE_MS, easing = LinearEasing), RepeatMode.Reverse), label = "pulse") else remember { mutableFloatStateOf(1f) }
+    val pulse by breathing
     Box(modifier.fillMaxWidth()) {
         // Both detectors are keyed on the graph alone and read the view as it is now. Keyed on the zoom and
         // the pan, the tap detector restarted on every frame of a drag and took the second finger's touch
@@ -719,15 +721,16 @@ private fun DrawScope.wheel(nodes: List<TreeNode>, bounds: Bounds, width: Float,
  * an attribute's triangle, a socket's hollow ring and a start's octagon. Since 3.76.0 («Неон», the owner's pick of three
  * mockups) every node shines in its kind's colour so the tree reads at a glance: one out of reach is a dark stone with a
  * bright rim and a faint halo, one a step away is ringed thicker and breathes ([pulse]), a taken one is filled with its
- * colour under a light rim and a strong halo.
+ * colour under a light rim and a strong halo. Since 3.77.0 a node out of reach is grey and unlit: only what can be taken
+ * and what is taken keep their colour.
  */
 private fun DrawScope.medallion(node: TreeNode, centre: Offset, scale: Float, taken: Boolean, next: Boolean, selected: Boolean, pulse: Float) {
     val r = radius(node) * scale.coerceIn(.5f, 2.2f)
     val tint = if (node.type == SkillNodeType.START) classTint(node.code) else nodeColour(node, false)
-    val glow = when { taken -> TAKEN_GLOW; next -> NEXT_GLOW * pulse; else -> FAR_GLOW }
-    drawCircle(Brush.radialGradient(listOf(tint.copy(alpha = glow), Color.Transparent), centre, r * 2.6f), r * 2.6f, centre)
+    val glow = when { taken -> TAKEN_GLOW; next -> NEXT_GLOW * pulse; else -> 0f }
+    if (glow > 0f) drawCircle(Brush.radialGradient(listOf(tint.copy(alpha = glow), Color.Transparent), centre, r * 2.6f), r * 2.6f, centre)
     val fill = if (taken) tint else NEON_STONE
-    val edge = when { taken -> NEON_RIM; next -> tint; else -> tint.copy(alpha = .85f) }
+    val edge = when { taken -> NEON_RIM; next -> tint; else -> FAR_RIM }
     val width = (if (node.type == SkillNodeType.SMALL) 1.6f else 2.2f) * (if (next && !taken) 1.35f else 1f) * scale.coerceIn(.6f, 1.6f)
     fun polygon(sides: Int, radius: Float, turn: Float) = Path().apply {
         repeat(sides) { i ->
@@ -756,7 +759,7 @@ private val NEON_STONE = Color(0xFF10151B)
 private val NEON_RIM = Color(0xFFEEF8F1)
 private val NEON_LINE = Color(0xFF57E39A)
 private val FAR_LINE = Color(0xFF3C4D5A)
-private const val FAR_GLOW = .14f
+private val FAR_RIM = Color(0xFF6E7C86)
 private const val NEXT_GLOW = .45f
 private const val TAKEN_GLOW = .7f
 private const val PULSE_LOW = .4f

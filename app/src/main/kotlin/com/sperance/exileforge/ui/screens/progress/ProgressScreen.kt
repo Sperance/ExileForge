@@ -110,7 +110,7 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
                 }, keys.toInt(), s.lockOf(Feature.TRIALS)) { vm.tab(TAB_TRIALS) },
             ProgressTile(ui("chronicle.title"), ForgeGlyphs.Scroll, GoldBright,
                 chronicle?.let { (done, all) -> ui("chronicle.done", done, all) } ?: ui("common.loading"),
-                title?.let(::titleName), 0) { vm.tab(TAB_CHRONICLE) },
+                title?.let(::titleName), 0, s.lockOf(Feature.CHRONICLE)) { vm.tab(TAB_CHRONICLE) },
         )
     }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {

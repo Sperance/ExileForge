@@ -1,5 +1,6 @@
 package com.sperance.exileforge.presentation.features
 
+import com.sperance.exileforge.presentation.state.Buzz
 import com.sperance.exileforge.core.crafts.CraftCycle
 import com.sperance.exileforge.core.crafts.minus
 import com.sperance.exileforge.core.crafts.plus
@@ -72,7 +73,7 @@ class CraftsViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     fun openProfession(code: String) { runtime.mutable.update { it.copy(play = it.play.copy(craftsProfession = code)) } }
 
-    fun start(job: String, choice: String = "", additives: List<String> = emptyList()) { with(runtime) { task(writing = true, touches = setOf(Reads.CRAFTS)) {
+    fun start(job: String, choice: String = "", additives: List<String> = emptyList()) { with(runtime) { buzz(Buzz.BUTTON); task(writing = true, touches = setOf(Reads.CRAFTS)) {
         val id = state.value.play.heroId
         val before = heroViewModel.snapshots
         land(id, api.crafts.start(id, job, choice, additives), heroViewModel.snapshots != before)

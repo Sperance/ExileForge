@@ -11,6 +11,8 @@ import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableFloatStateOf
+import com.sperance.exileforge.ui.components.LocalMotion
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -28,6 +30,9 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.semantics.contentDescription
@@ -68,11 +73,17 @@ fun WorldCanvas(world: WorldMap, art: WorldArt?, camera: WorldCamera, selected: 
                 modifier: Modifier = Modifier, onTap: (String?) -> Unit) {
     val measurer = rememberTextMeasurer()
     val motion = rememberInfiniteTransition(label = "world")
-    val pulse by motion.animateFloat(0f, 1f, infiniteRepeatable(tween(PULSE_MS, easing = LinearEasing)), label = "pulse")
-    val march by motion.animateFloat(0f, -DASH_PERIOD, infiniteRepeatable(tween(MARCH_MS, easing = LinearEasing)), label = "march")
+    // With the animations off in the settings (3.77.0) the tokens and the roads stand still.
+    val moving = LocalMotion.current
+    val pulse by if (moving) motion.animateFloat(0f, 1f, infiniteRepeatable(tween(PULSE_MS, easing = LinearEasing)), label = "pulse") else remember { mutableFloatStateOf(.5f) }
+    val march by if (moving) motion.animateFloat(0f, -DASH_PERIOD, infiniteRepeatable(tween(MARCH_MS, easing = LinearEasing)), label = "march") else remember { mutableFloatStateOf(0f) }
     val height = camera.world.height.toFloat()
     val roads = remember(world) { world.roads.map { it.state to road(it.from.zone.x, height - it.from.zone.y, it.to.zone.x, height - it.to.zone.y, it.from.zone.code + it.to.zone.code) } }
     val words = remember(world, measurer) { Words(world, measurer) }
+    // The parchment is recorded once into its own layer (3.77.0) and replayed under the camera: hundreds of sketches and
+    // grains are no longer laid out again on every frame of the tokens' pulse.
+    val artLayer = rememberGraphicsLayer()
+    val recorded = remember { arrayOfNulls<WorldArt>(1) }
     val tap by rememberUpdatedState(onTap)
     val description = ui("expedition.world_map")
     Canvas(modifier
@@ -83,7 +94,14 @@ fun WorldCanvas(world: WorldMap, art: WorldArt?, camera: WorldCamera, selected: 
         .pointerInput(camera, world) { detectTapGestures { point -> tap(hit(world, camera, point)) } }) {
         withTransform({ translate(camera.offset.x, camera.offset.y); scale(camera.unit, camera.unit, Offset.Zero) }) {
             // Until the art is built (3.75.0), the bare parchment: the roads and the tokens are there at once.
-            art?.draw(this) ?: drawRect(BARE, size = Size(camera.world.width.toFloat(), height))
+            if (art == null) drawRect(BARE, size = Size(camera.world.width.toFloat(), height))
+            else {
+                if (recorded[0] !== art) {
+                    artLayer.record(IntSize(camera.world.width, camera.world.height)) { art.draw(this) }
+                    recorded[0] = art
+                }
+                drawLayer(artLayer)
+            }
             fog(world, camera.world.width.toFloat(), height)
             val dash = PathEffect.dashPathEffect(floatArrayOf(7f, 6f), march)
             val dots = PathEffect.dashPathEffect(floatArrayOf(1f, 7f))

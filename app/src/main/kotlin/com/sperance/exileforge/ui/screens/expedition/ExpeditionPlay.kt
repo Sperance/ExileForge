@@ -111,7 +111,7 @@ import kotlinx.coroutines.delay
                     ledger = listOf(LedgerLine(ui("expedition.leave_left"), ui(if (hud.sealed) "expedition.boss_alive" else "expedition.boss_slain"), Tone.SPEND)),
                     note = ui("expedition.leave_note"), onDismiss = { leaving = false }) { vm.runCommand(RunCommand.Leave) }
             }
-            RunPhase.FIGHT -> hud.fight?.let { ArenaOverlay(s, hud, it, it.level.takeIf { level -> level > 0 } ?: run.zone.level, run.rules, run.stance, onCommand = vm::runCommand, onLogFilter = vm::logFilter) }
+            RunPhase.FIGHT -> hud.fight?.let { ArenaOverlay(s, hud, it, it.level.takeIf { level -> level > 0 } ?: run.zone.level, run.rules, run.stance, onCommand = vm::runCommand, onLogFilter = vm::logFilter, onBuzz = vm::buzz) }
             // The fight is over: its report — the log, what it came to, and the loot of a victory.
             RunPhase.LOOT -> hud.report?.let { ReportScreen(s, vm, hud, it) { vm.runCommand(RunCommand.Continue) } }
             // A fall: the fight's report first, then the map's summary (its «Вернуться» leaves the map).
@@ -123,7 +123,8 @@ import kotlinx.coroutines.delay
             RunPhase.ABYSS -> hud.abyss?.let { AbyssSheet(s, hud, it, onCommand = vm::runCommand) }
             RunPhase.LEFT -> MapSummary(s, vm, hud, onDone = close)
         }
-        hud.auto?.takeIf { hud.phase == RunPhase.MAP || hud.phase == RunPhase.FIGHT }?.let { auto ->
+        // In a fight the arena's own row carries the autorun (3.77.0); the plate floats only over the map.
+        hud.auto?.takeIf { hud.phase == RunPhase.MAP }?.let { auto ->
             AutoBar(auto, Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 8.dp)) { vm.runCommand(RunCommand.StopAuto) }
         }
         // A refusal of the gear (2.40.0) has to be read here too: the run has no bar and no banner.

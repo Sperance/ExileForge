@@ -68,6 +68,8 @@ import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.view
+import com.sperance.exileforge.presentation.state.Buzz
+import com.sperance.exileforge.presentation.state.DamageNumbers
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.LoneWolfRule
@@ -209,8 +211,16 @@ private const val HERO_CARD = -1
  * strike — is laid open, its numbers held against the hero's.
  */
 @Composable internal fun ArenaOverlay(s: ForgeState, hud: RunHud, fight: FightHud, level: Int, rules: CombatRules, stance: HeroStance,
-                                      onCommand: (RunCommand) -> Unit, onLogFilter: (Set<LogKind>) -> Unit = {}) {
+                                      onCommand: (RunCommand) -> Unit, onLogFilter: (Set<LogKind>) -> Unit = {}, onBuzz: (Buzz) -> Unit = {}) {
     val time by rememberClock()
+    // The settings' pause and buzz (3.77.0): each once as the hero's life falls through its line, the buzz again at a fall.
+    val settings = LocalSettings.current
+    val share = if (hud.heroMaxLife > 0) fight.heroLife / hud.heroMaxLife.toFloat() else 1f
+    val low = share * 100 < settings.autoPause
+    val danger = share < DANGER_SHARE
+    LaunchedEffect(low) { if (low && fight.started && !fight.paused && fight.outcome == null) onCommand(RunCommand.Pause) }
+    LaunchedEffect(danger) { if (danger && fight.outcome == null) onBuzz(Buzz.DANGER) }
+    LaunchedEffect(fight.outcome) { if (fight.outcome == Outcome.LOSS) onBuzz(Buzz.DANGER) }
     val bounds = remember { mutableStateMapOf<Int, Rect>() }
     var origin by remember { mutableStateOf(Offset.Zero) }
     val names = remember(fight.foes.size, fight.leader, fight.stage) { fight.foes.associate { it.index to monsterTitle(it.monster.code) } }
@@ -246,7 +256,7 @@ private const val HERO_CARD = -1
             HeroCard(s, hud, fight, time, names, stance, track(HERO_CARD), large)
             // The skills and the belt (2.78.0): under the hero, over the fight's own controls.
             if (fight.skills.any { it != null } || fight.flasks.any { it != null }) ActionBar(fight, onCommand) { info = it }
-            Controls(fight, onCommand)
+            Controls(fight, hud.auto, onCommand)
         }
         StrikeLine(fight.lunge, bounds, origin)
         info?.let { view -> FightSkillSheet(s, view, onCommand) { info = null } }
@@ -382,7 +392,13 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
 
 /** The numbers rising off a card: the blows that reached it in the last second. */
 @Composable private fun BoxScope.CardHits(hits: List<FloatingHit>) {
-    hits.takeLast(3).forEach { hit ->
+    // The settings (3.77.0) choose which numbers rise: all, the critical strikes alone, or none.
+    val shown = when (LocalSettings.current.damageNumbers) {
+        DamageNumbers.ALL -> hits
+        DamageNumbers.CRITS -> hits.filter { it.kind == HitKind.CRIT }
+        DamageNumbers.OFF -> return
+    }
+    shown.takeLast(3).forEach { hit ->
         val rise = (hit.age / ExpeditionRun.HIT_LIFETIME).toFloat().coerceIn(0f, 1f)
         Text(hitText(hit), color = hitColour(hit).copy(alpha = 1 - rise), textAlign = TextAlign.Center,
             fontSize = when { hit.kind == HitKind.CRIT -> 20.sp; hit.action == Action.TICK -> 12.sp; else -> 16.sp },
@@ -608,9 +624,10 @@ private const val PET_PULSE = .5
 
 /**
  * Under the hero: before «В бой» the call to fight and the way back; once it runs, pause and go on,
- * the speed, and the retreat.
+ * the speed, and the retreat. Under an autorun (3.77.0) its wave reads above the row and its stop joins it, so
+ * nothing floats over the speed.
  */
-@Composable private fun Controls(fight: FightHud, onCommand: (RunCommand) -> Unit) {
+@Composable private fun Controls(fight: FightHud, auto: AutoHud?, onCommand: (RunCommand) -> Unit) {
     val live = fight.outcome == null
     fight.interlude?.takeIf { !fight.started }?.let { StageBreak(fight, it, onCommand); return }
     if (!fight.started) {
@@ -626,6 +643,8 @@ private const val PET_PULSE = .5
         }
         return
     }
+    auto?.let { Text(ui("auto.wave", it.wave, it.waves), color = GoldBright, style = MaterialTheme.typography.labelMedium,
+        modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp), textAlign = TextAlign.Center) }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         ForgeOutlinedButton(enabled = live && !fight.retreating, onClick = { onCommand(if (fight.paused) RunCommand.Begin else RunCommand.Pause) },
             modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 8.dp)) {
@@ -637,6 +656,9 @@ private const val PET_PULSE = .5
         if (fight.escape) ForgeOutlinedButton(enabled = live && !fight.retreating, onClick = { onCommand(RunCommand.Retreat) }, modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(horizontal = 8.dp)) {
             Text(ui(if (fight.retreating) "expedition.retreating" else "expedition.retreat"), style = MaterialTheme.typography.labelMedium)
+        }
+        if (auto != null) ForgeOutlinedButton(onClick = { onCommand(RunCommand.StopAuto) }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 8.dp)) {
+            Text(ui("auto.stop"), color = LifeRed, style = MaterialTheme.typography.labelMedium)
         }
     }
 }
@@ -1099,3 +1121,6 @@ internal fun outcomeColour(outcome: Outcome) = when (outcome) { Outcome.WIN -> V
         Text(ui("expedition.receiving"), color = Rune, style = MaterialTheme.typography.bodySmall)
     }
 }
+
+/** The life share under which the phone warns of danger (3.77.0). */
+private const val DANGER_SHARE = .3f

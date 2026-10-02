@@ -80,7 +80,7 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
     // «Hide equipped» (3.69.0) is the gear shelf's: a tool shelf shows everything it holds.
     val hideWorn = s.stashHideWorn && !tools
     val visible = remember(shelf, filter, s.stashSort, hideWorn, hero?.level, hero?.stats, s.world) { s.stashShelf(shelf, filter, hideWorn) }
-    val tweaks = stashTweaks(filter, s.stashSort, hideWorn)
+    val tweaks = stashTweaks(filter, s.stashSort, showsWorn = !s.stashHideWorn && !tools)
     // Each part is handed its own cut (3.66.0): a changed purse redraws the header, not the ledger or the stash.
     val header = rememberHeroHeader(s)
     val equipment = rememberEquipment(s)

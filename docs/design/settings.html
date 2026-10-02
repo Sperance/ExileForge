@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Настройки — макеты</title>
+<style>
+:root{--bg:#0C1115;--panel:#141B22;--raised:#1B242D;--line:#24313B;--muted:#7A8D99;--text:#D5E0E6;--bright:#EEF8F1;--gold:#3FB67A;--goldb:#57E39A;--red:#D24A43}
+*{box-sizing:border-box;margin:0}body{background:var(--bg);color:var(--text);font-family:system-ui,sans-serif;padding:24px 16px}
+h1{font-size:18px;color:var(--bright);margin-bottom:6px}.lead{color:var(--muted);font-size:13px;margin-bottom:20px;max-width:900px}
+.grid{display:flex;flex-wrap:wrap;gap:28px}.v{width:340px;max-width:100%}.v h2{font-size:15px;color:var(--gold);margin-bottom:8px}
+.v p.d{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.45}
+.phone{background:var(--bg);border:1px solid var(--line);border-radius:22px;overflow:hidden;height:640px;display:flex;flex-direction:column}
+.top{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line);background:linear-gradient(90deg,#3FB67A1a,transparent)}
+.top b{color:var(--bright);font-size:16px}.back{color:var(--gold);font-size:18px}
+.body{flex:1;overflow:auto;padding:12px 14px}
+.sec{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin:14px 4px 6px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.row{display:flex;align-items:center;gap:10px;padding:11px 12px;border-top:1px solid var(--line);font-size:14px}
+.row:first-child{border-top:none}.row .t{flex:1}.row small{display:block;color:var(--muted);font-size:11px;margin-top:2px}
+.ic{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;font-size:14px;background:#3FB67A22;color:var(--goldb)}
+.val{color:var(--muted);font-size:13px}.chev{color:var(--muted)}
+.sw{width:38px;height:22px;border-radius:11px;background:#2A3640;position:relative}.sw.on{background:var(--gold)}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#EEF8F1;transition:.2s}.sw.on::after{left:19px}
+.seg{display:flex;background:var(--raised);border-radius:8px;padding:2px}.seg span{padding:4px 9px;font-size:12px;border-radius:6px;color:var(--muted)}
+.seg span.on{background:var(--gold);color:#0C1115;font-weight:600}
+.btn{border:1px solid #3FB67A88;color:var(--goldb);border-radius:8px;padding:5px 10px;font-size:12px}
+.dev .ic{background:#D24A4322;color:#F08A84}
+.chips{display:flex;gap:6px;overflow:auto;padding:10px 14px;border-bottom:1px solid var(--line)}
+.chip{white-space:nowrap;padding:6px 12px;border-radius:16px;border:1px solid var(--line);font-size:12px;color:var(--muted)}
+.chip.on{border-color:var(--gold);color:var(--bright);background:#3FB67A22}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;min-height:104px;display:flex;flex-direction:column;gap:6px}
+.tile .ic{width:36px;height:36px;font-size:18px}.tile b{color:var(--bright);font-size:14px}.tile small{color:var(--muted);font-size:11px;line-height:1.35}
+.tile.dev{border-style:dashed}
+.big{display:flex;flex-direction:column;gap:8px;padding:12px;background:var(--panel);border:1px solid var(--line);border-radius:12px;margin-bottom:10px}
+.big .h{display:flex;align-items:center;gap:10px}.big .h .t{flex:1;font-size:14px}.big small{color:var(--muted);font-size:11px}
+.prev{font-size:12px;color:var(--muted);background:var(--raised);border-radius:8px;padding:8px;text-align:center}
+</style></head><body>
+<h1>Окно «Настройки» — 3 варианта</h1>
+<p class="lead">Открывается из меню ⋮ в шапке. Состав одинаковый во всех вариантах: Общее (язык, экран не гаснет, проверка обновлений, сброс подсказок), Бой и Поход (скорость по умолчанию, цифры урона, автопауза), Интерфейс (размер текста, анимации), Вибрация (опасность в бою, кнопки и ремесло), «Для разработчиков» — только админу/тестеру.</p>
+<div class="grid">
+
+<div class="v"><h2>A · Список с группами</h2>
+<div class="phone"><div class="top"><span class="back">←</span><b>Настройки</b></div><div class="body">
+<div class="sec">Общее</div><div class="card">
+ <div class="row"><div class="ic">🌐</div><div class="t">Язык</div><span class="val">Русский</span><span class="chev">›</span></div>
+ <div class="row"><div class="ic">☀</div><div class="t">Экран не гаснет</div><span class="val">В Походе</span><span class="chev">›</span></div>
+ <div class="row"><div class="ic">⟳</div><div class="t">Обновления<small>Версия 3.77.0 · последняя</small></div><span class="btn">Проверить</span></div>
+ <div class="row"><div class="ic">?</div><div class="t">Показать подсказки заново</div><span class="chev">›</span></div></div>
+<div class="sec">Бой и Поход</div><div class="card">
+ <div class="row"><div class="ic">»</div><div class="t">Скорость боя</div><div class="seg"><span>×1</span><span class="on">×2</span><span>×3</span></div></div>
+ <div class="row"><div class="ic">✦</div><div class="t">Цифры урона</div><div class="seg"><span class="on">Все</span><span>Криты</span><span>Выкл</span></div></div>
+ <div class="row"><div class="ic">❚❚</div><div class="t">Автопауза<small>при низком здоровье</small></div><div class="seg"><span>Выкл</span><span class="on">30%</span><span>50%</span></div></div></div>
+<div class="sec">Интерфейс</div><div class="card">
+ <div class="row"><div class="ic">Aa</div><div class="t">Размер текста</div><div class="seg"><span>S</span><span class="on">M</span><span>L</span></div></div>
+ <div class="row"><div class="ic">◌</div><div class="t">Анимации<small>пульсация, свечение, переходы</small></div><div class="sw on"></div></div></div>
+<div class="sec">Вибрация</div><div class="card">
+ <div class="row"><div class="ic">♥</div><div class="t">Опасность в бою</div><div class="sw on"></div></div>
+ <div class="row"><div class="ic">⚒</div><div class="t">Кнопки и ремесло</div><div class="sw"></div></div></div>
+<div class="sec" style="color:#F08A84">Для разработчиков</div><div class="card dev">
+ <div class="row"><div class="ic">⌂</div><div class="t">Сервер</div><span class="chev">›</span></div>
+ <div class="row"><div class="ic">▣</div><div class="t">Клиент</div><span class="chev">›</span></div>
+ <div class="row"><div class="ic">≡</div><div class="t">Журнал запросов</div><span class="chev">›</span></div>
+ <div class="row"><div class="ic">⚑</div><div class="t">Окно тестера</div><span class="chev">›</span></div></div>
+</div></div>
+<p class="d">Всё на одном экране, переключатели прямо в строках. Привычно, быстро найти любой пункт, ничего не прячется. Длинный скролл.</p></div>
+
+<div class="v"><h2>B · Вкладки-чипы</h2>
+<div class="phone"><div class="top"><span class="back">←</span><b>Настройки</b></div>
+<div class="chips"><span class="chip">Общее</span><span class="chip on">Бой</span><span class="chip">Интерфейс</span><span class="chip">Вибрация</span><span class="chip" style="color:#F08A84">Dev</span></div>
+<div class="body">
+ <div class="big"><div class="h"><div class="ic">»</div><div class="t">Скорость боя по умолчанию</div></div><div class="seg"><span style="flex:1;text-align:center">×1</span><span class="on" style="flex:1;text-align:center">×2</span><span style="flex:1;text-align:center">×3</span></div><small>С неё начинается каждый бой; кнопка в бою меняет только текущий.</small></div>
+ <div class="big"><div class="h"><div class="ic">✦</div><div class="t">Цифры урона</div></div><div class="seg"><span class="on" style="flex:1;text-align:center">Все</span><span style="flex:1;text-align:center">Только криты</span><span style="flex:1;text-align:center">Выкл</span></div><div class="prev">−128 &nbsp; <b style="color:#FFD36B">−412!</b> &nbsp; −96</div></div>
+ <div class="big"><div class="h"><div class="ic">❚❚</div><div class="t">Автопауза при низком здоровье</div></div><div class="seg"><span style="flex:1;text-align:center">Выкл</span><span class="on" style="flex:1;text-align:center">30%</span><span style="flex:1;text-align:center">50%</span></div><small>Бой встанет на паузу, когда здоровье героя опустится ниже порога.</small></div>
+</div></div>
+<p class="d">Один раздел за раз, у каждой настройки крупная карточка с пояснением и превью (цифры урона видно сразу). Чище и нагляднее, но пункт надо искать по вкладкам.</p></div>
+
+<div class="v"><h2>C · Плитки-хаб</h2>
+<div class="phone"><div class="top"><span class="back">←</span><b>Настройки</b></div><div class="body">
+ <div class="tiles">
+  <div class="tile"><div class="ic">⚙</div><b>Общее</b><small>Русский · экран в Походе · v3.77.0</small></div>
+  <div class="tile"><div class="ic">⚔</div><b>Бой и Поход</b><small>×2 · все цифры · пауза 30%</small></div>
+  <div class="tile"><div class="ic">Aa</div><b>Интерфейс</b><small>Текст M · анимации вкл</small></div>
+  <div class="tile"><div class="ic">≋</div><b>Вибрация</b><small>Опасность вкл · кнопки выкл</small></div>
+  <div class="tile dev" style="grid-column:span 2"><div class="ic" style="background:#D24A4322;color:#F08A84">⚑</div><b>Для разработчиков</b><small>Сервер · клиент · журнал · окно тестера</small></div>
+ </div>
+ <div class="sec">Открытая плитка «Интерфейс»</div><div class="card">
+  <div class="row"><div class="ic">Aa</div><div class="t">Размер текста</div><div class="seg"><span>S</span><span class="on">M</span><span>L</span></div></div>
+  <div class="row"><div class="ic">◌</div><div class="t">Анимации</div><div class="sw on"></div></div></div>
+</div></div>
+<p class="d">Как «Развитие»: плитки с текущими значениями, внутри — короткий список. Сразу видно состояние всех групп, в стиле игры; на один тап больше до переключателя.</p></div>
+
+</div></body></html>

@@ -76,7 +76,9 @@ data class ForgeState(
     /** How the stash is sorted (3.30.0); kept on the device, unlike its filters, and across heroes. */
     val stashSort: StashSort = StashSort.NEWEST,
     /** Whether the gear shelf hides what the hero wears (3.69.0); kept on the device like the order. */
-    val stashHideWorn: Boolean = false,
+    val stashHideWorn: Boolean = true,
+    /** The player's settings (3.77.0). */
+    val settings: GameSettings = GameSettings(),
     /** The shelves of the fight's log shown (3.37.0). */
     val logFilter: Set<com.sperance.exileforge.core.campaign.LogKind> = com.sperance.exileforge.core.campaign.LogKind.DEFAULT,
 ) {
@@ -320,6 +322,8 @@ const val TAB_PETS = 14
 const val TAB_TRIALS = 15
 /** The chronicle (3.69.0): a page of «Развитие», where the Hero tab's card was. */
 const val TAB_CHRONICLE = 16
+/** «Настройки» (3.77.0): from the banner's menu, «back» leading to the tab it was opened over. */
+const val TAB_SETTINGS = 17
 
 val PLAYER_TABS = listOf(TAB_HERO, TAB_EXPEDITION, TAB_CRAFTS, TAB_PROGRESS, TAB_CITY)
 

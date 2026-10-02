@@ -1,5 +1,6 @@
 package com.sperance.exileforge.presentation.features
 
+import com.sperance.exileforge.presentation.state.Buzz
 import com.sperance.exileforge.presentation.state.NoticeKind
 import com.sperance.exileforge.rules.content.SlotGroup
 import com.sperance.exileforge.rules.content.TakenNode
@@ -50,7 +51,7 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         read(Reads.HERO) { readHero() }
     } }
 
-    fun equip(itemId: String, slot: Slot? = null) { with(runtime) { heroCommand { id -> api.hero.equip(id, itemId, slot) } } }
+    fun equip(itemId: String, slot: Slot? = null) { with(runtime) { buzz(Buzz.BUTTON); heroCommand { id -> api.hero.equip(id, itemId, slot) } } }
     fun unequip(itemId: String) { with(runtime) { heroCommand { id -> api.hero.unequip(id, itemId) } } }
     /** The title beside the name (1.3.0): one the chronicle opened, or none. */
     fun setTitle(title: String) { with(runtime) { heroCommand { id -> api.hero.setTitle(id, title) } } }
@@ -229,9 +230,13 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     } } }
 
     /** A command of the forge: the previous sentence goes the moment another command starts. */
-    private fun forgeCommand(block: suspend (String) -> Unit) = heroCommand { id ->
-        runtime.mutable.update { it.copy(play = it.play.copy(forgeLine = "")) }
-        block(id)
+    // Every touch of the forge buzzes when the settings ask (3.77.0).
+    private fun forgeCommand(block: suspend (String) -> Unit) {
+        runtime.buzz(Buzz.BUTTON)
+        heroCommand { id ->
+            runtime.mutable.update { it.copy(play = it.play.copy(forgeLine = "")) }
+            block(id)
+        }
     }
 
     private var parts: HeroParts? = null

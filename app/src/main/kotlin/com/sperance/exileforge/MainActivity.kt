@@ -14,7 +14,7 @@ class MainActivity : ComponentActivity() {
     /** The one model of the activity, owned here rather than by the composition so the lifecycle can reach it too. */
     private val viewModel: ForgeViewModel by viewModels { ForgeViewModel.Factory(application as ForgeApplication) }
     /** Updates from GitHub Releases (3.72.0): checked against the server the game model is connected to. */
-    private val updates: UpdateViewModel by viewModels { UpdateViewModel.Factory(application) { viewModel.serverManifest() } }
+    private val updates: UpdateViewModel by viewModels { UpdateViewModel.Factory(application, viewModel.newerServer) { viewModel.serverManifest() } }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

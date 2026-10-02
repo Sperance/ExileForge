@@ -1,5 +1,7 @@
 package com.sperance.exileforge.core.network
 
+import com.sperance.exileforge.rules.content.RULES_VERSION
+import com.sperance.exileforge.core.model.sync.API_REVISION
 import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.contract.requireId
 import com.sperance.exileforge.core.i18n.ui
@@ -181,8 +183,14 @@ class GameApi(
             served().takeIf { it.matchesClient }?.let { it.requireWorkbench(); return it }
             delay(REVISION_RETRY_DELAY_MS)
         }
-        return served().also { it.requireWorkbench() }
+        return served().also { if (it.revision > API_REVISION || it.rules > RULES_VERSION) onNewerServer(); it.requireWorkbench() }
     }
+
+    /** The server speaks a newer wire than this build (3.74.0): the app looks for the build that speaks it at once. */
+    var onNewerServer: () -> Unit = {}
+
+    /** `static/index.json` as served right now (3.74.0): never the kept copy, and kept nowhere — what the update check compares against. */
+    suspend fun liveManifest(): StaticManifest = WireJson.decodeFromString(StaticManifest.serializer(), files.manifestText())
 
     /** The manifest as served now; kept, on the device and in memory, only when it is this client's revision — a deploy midway is not. */
     private suspend fun served(): StaticManifest = manifestLock.withLock {

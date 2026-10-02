@@ -75,6 +75,10 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
     val state = mutable.asStateFlow()
     val logs = journal.entries
     lateinit var api: GameApi
+    /** The first [api] is made (3.74.0): the update check waits for it rather than asking no server at all. */
+    val apiReady = kotlinx.coroutines.CompletableDeferred<Unit>()
+    /** A sign-in met a server newer than this build (3.74.0): the update check runs at once. */
+    val newerServer = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     var localeJob: Job? = null
     private val reads = mutableMapOf<String, Job>()
     private var touching: Set<String> = emptySet()
@@ -114,6 +118,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
             }
         })
         created.heroSync(heroViewModel::heldParts, heroViewModel::delivered)
+        created.onNewerServer = { newerServer.tryEmit(Unit) }
         created.manifestCache = object : ManifestCache {
             override suspend fun read(): String? = store.manifest(server)
             override suspend fun write(text: String) = store.saveManifest(server, text)
@@ -134,6 +139,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
                 uiLanguage = language
                 val server = store.server.first()
                 api = newApi(server)
+                apiReady.complete(Unit)
                 val known = store.languages(server).mapNotNull { Lang.byCode(it) }
                 val sort = StashSort.of(store.stashSort.first())
                 val hideWorn = store.stashHideWorn.first()
@@ -148,6 +154,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
             } catch (e: CancellationException) { throw e }
             catch (e: Exception) {
                 api = newApi("http://10.0.2.2:8080/")
+                apiReady.complete(Unit)
                 mutable.update { it.copy(busy = false, error = true, message = e.message) }
             }
         }

@@ -50,7 +50,8 @@ data class UpdateState(
  * one that speaks the live server's wire. Any such build is required: the game stays closed until it is installed. Since
  * 3.73.0 the check runs unseen: the game opens at once, and a check that fails is quietly tried again a minute later.
  */
-class UpdateViewModel(app: Application, private val server: suspend () -> StaticManifest?) : AndroidViewModel(app) {
+class UpdateViewModel(app: Application, private val server: suspend () -> StaticManifest?,
+                      newerServer: kotlinx.coroutines.flow.Flow<Unit> = kotlinx.coroutines.flow.emptyFlow()) : AndroidViewModel(app) {
     private val updates = Updates()
     // A build that does not update itself (debug, the tested shrunk one) is never closed: only a check by hand runs.
     private val mutable = MutableStateFlow(if (BuildConfig.UPDATES) UpdateState() else UpdateState(checking = false, verified = true))
@@ -62,6 +63,8 @@ class UpdateViewModel(app: Application, private val server: suspend () -> Static
 
     init {
         if (BuildConfig.UPDATES) viewModelScope.launch { while (true) delay(if (check()) Updates.PERIOD_MS else RETRY_MS) }
+        // A server newer than this build refused the sign-in (3.74.0): its build is looked for now, not in an hour.
+        if (BuildConfig.UPDATES) viewModelScope.launch { newerServer.collect { check() } }
         if (BuildConfig.UPDATES && !UpdateInstaller.allowed(app)) viewModelScope.launch {
             if (SOURCES !in guides.read.first()) mutable.update { it.copy(askSources = true) }
         }
@@ -125,9 +128,10 @@ class UpdateViewModel(app: Application, private val server: suspend () -> Static
     /** The permission screen was left: the player tries again. */
     fun permissionAsked() = mutable.update { it.copy(needsPermission = false) }
 
-    class Factory(private val app: Application, private val server: suspend () -> StaticManifest?) : ViewModelProvider.Factory {
+    class Factory(private val app: Application, private val newerServer: kotlinx.coroutines.flow.Flow<Unit>,
+                  private val server: suspend () -> StaticManifest?) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = UpdateViewModel(app, server) as T
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = UpdateViewModel(app, server, newerServer) as T
     }
 
     private companion object {

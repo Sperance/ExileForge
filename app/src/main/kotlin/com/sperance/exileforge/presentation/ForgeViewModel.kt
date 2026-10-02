@@ -164,7 +164,14 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() 
     fun retryResume() = runtime.sessionViewModel.retryResume()
     /** The live server's manifest for the update check (3.72.0); null while no server answers. */
     suspend fun serverManifest(): com.sperance.exileforge.core.model.sync.StaticManifest? =
-        try { runtime.api.manifest() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null }
+        try {
+            // 3.74.0: after the app has its server, and as that server serves it now - a kept manifest of an older deploy hid every update.
+            kotlinx.coroutines.withTimeoutOrNull(API_WAIT_MS) { runtime.apiReady.await() }
+            runtime.api.liveManifest()
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null }
+
+    /** A sign-in met a newer server (3.74.0). */
+    val newerServer: kotlinx.coroutines.flow.Flow<Unit> get() = runtime.newerServer
     fun reconnect() = runtime.sessionViewModel.reconnect()
     fun away() = runtime.sessionViewModel.away()
     fun enterCharacter(id: String) = runtime.characterViewModel.enter(id)
@@ -237,3 +244,6 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() 
         }
     }
 }
+
+/** How long the update check waits for the app to have its server. */
+private const val API_WAIT_MS = 10_000L

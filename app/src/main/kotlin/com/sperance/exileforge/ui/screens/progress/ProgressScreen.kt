@@ -101,7 +101,7 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
                 },
                 if (ready > 0) ready else eggs.toInt(), s.lockOf(Feature.PETS)) { vm.tab(TAB_PETS) },
             ProgressTile(ui("atlas.title"), ForgeGlyphs.Atlas, Rune, ui("progress.atlas_note", ((atlas?.allocated?.size ?: 1) - 1).coerceAtLeast(0)),
-                atlas?.let { ui("atlas.points", it.available, it.points) }, atlas?.available ?: 0, vm::openAtlas),
+                atlas?.let { ui("atlas.points", it.available, it.points) }, atlas?.available ?: 0, onOpen = vm::openAtlas),
             ProgressTile(ui("trials.title"), ForgeGlyphs.Skull, AbyssGlow, ui("progress.trials_note", hero?.campaign?.trials?.towerBest ?: 0),
                 when {
                     keys > 0 -> ui("progress.trials_keys", keys)

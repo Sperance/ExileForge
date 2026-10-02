@@ -15,6 +15,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.BuildConfig
 import com.sperance.exileforge.core.i18n.ui
@@ -33,9 +35,27 @@ val LocalUpdates = staticCompositionLocalOf<UpdateViewModel?> { null }
  */
 @Composable fun UpdateGate(updates: UpdateViewModel, busy: Boolean) {
     val s by updates.state.collectAsStateWithLifecycle()
+    // Back in the app (3.76.0): the releases are asked again, unless a run is under way.
+    val idle by rememberUpdatedState(!busy)
+    LifecycleEventEffect(Lifecycle.Event.ON_START) { if (idle) updates.resumed() }
     when {
         s.update != null && !busy -> Locked { UpdateBody(s, updates) }
+        // The start waits for one check to pass (3.76.0): the game does not open on a build that may be stale.
+        !s.verified -> Locked { CheckingBody(s, updates) }
         s.askSources -> SourcesPrompt(updates)
+    }
+}
+
+/** The start's gate (3.76.0): the check under way, or why it failed and «Повторить»; it tries again by itself too. */
+@Composable private fun ColumnScope.CheckingBody(s: UpdateState, updates: UpdateViewModel) {
+    Text(ui("update.gate_title"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
+    if (s.checking || s.failure == null) {
+        LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised)
+        MutedText(ui("update.checking"))
+    } else {
+        InfoCard(ui("update.gate_failed"), s.failure, failure = true)
+        MutedText(ui("update.gate_auto"))
+        ForgeButton(onClick = updates::retry, modifier = Modifier.fillMaxWidth()) { Text(ui("update.retry")) }
     }
 }
 

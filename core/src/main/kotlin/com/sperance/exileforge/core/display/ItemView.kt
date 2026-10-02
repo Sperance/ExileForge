@@ -228,6 +228,8 @@ fun itemRequirements(template: ItemTemplate, lang: Lang = uiLanguage): List<Stri
     template.requiredStrength.takeIf { it > 0 }?.let { "$it ${ui(lang, "req.short.requiredStrength")}" },
     template.requiredDexterity.takeIf { it > 0 }?.let { "$it ${ui(lang, "req.short.requiredDexterity")}" },
     template.requiredIntelligence.takeIf { it > 0 }?.let { "$it ${ui(lang, "req.short.requiredIntelligence")}" },
+    // A class's unique (3.76.0, server 1.71.0): only that class wears it.
+    template.heroClass?.let { ui(lang, "req.short.heroClass", classTitle(it)) },
 )
 
 fun itemVisualKind(template: ItemTemplate): ItemVisualKind = when {

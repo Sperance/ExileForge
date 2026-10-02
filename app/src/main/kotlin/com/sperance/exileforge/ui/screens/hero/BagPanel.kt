@@ -46,7 +46,7 @@ data class BagStack(val code: String, val amount: Long)
 
 /** A shelf of the bag (2.75.0): each has its heading over its own run of cells; books and essences since 2.78.0. */
 enum class BagCategory(val key: String) {
-    ORBS("bag.section_orbs"), ESSENCES("bag.section_essences"), BOOKS("bag.section_books"), MATERIALS("bag.section_materials"), PETS("bag.section_pets"),
+    CHESTS("bag.section_chests"), ORBS("bag.section_orbs"), ESSENCES("bag.section_essences"), BOOKS("bag.section_books"), MATERIALS("bag.section_materials"), PETS("bag.section_pets"),
     OTHER("bag.section_other")
 }
 
@@ -63,6 +63,7 @@ fun bagSections(s: ForgeState): List<Pair<BagCategory, List<BagStack>>> {
         Item.BOOK -> BagCategory.BOOKS
         Item.MATERIAL -> BagCategory.MATERIALS
         Item.PET -> BagCategory.PETS
+        Item.CHEST -> BagCategory.CHESTS
         else -> BagCategory.OTHER
     }
     fun worth(code: String) = index?.item(code)?.price ?: 0L
@@ -143,13 +144,17 @@ internal fun compactCount(amount: Long): String = when {
                          /** A skill book of the class read at once (2.78.0), by the skill's code. */
                          onRead: (String) -> Unit = {},
                          /** An essence taken to the forge (2.78.0). */
-                         onEssence: (String) -> Unit = {}) {
+                         onEssence: (String) -> Unit = {},
+                         /** A loot chest opened where it lies (3.76.0). */
+                         onOpenChest: (String) -> Unit = {}) {
     val code = stack.code
     val orb = Orb.of(code)
     val forgeable = orb != null && orb != Orb.ORB_OF_REGRET
     val skill = s.index?.skills?.byBook(code)
     val readable = skill != null && skill.heroClass == s.hero?.heroClass
     val essence = s.index?.essence(code) != null
+    // A loot chest (3.76.0) is opened, never sold: no auction for it.
+    val chest = s.index?.item(code)?.category == Item.CHEST
     StackPanel(onDismiss) {
         StackFace(s, code, stack.amount)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -162,7 +167,9 @@ internal fun compactCount(amount: Long): String = when {
             if (readable && skill != null) ForgeButton(enabled = !s.busy, onClick = { onRead(skill.code) }, modifier = Modifier.weight(1f)) {
                 Text(ui(if ((s.hero?.skills?.level(skill.code) ?: 0) > 0) "bag.read_book" else "bag.learn_book"))
             }
-            ForgeOutlinedButton(enabled = !s.busy, onClick = { onAuction(code) }, modifier = Modifier.weight(1f)) {
+            if (chest) ForgeButton(enabled = !s.busy, onClick = { onOpenChest(code) }, modifier = Modifier.weight(1f)) {
+                Text(ui("chest.open"))
+            } else ForgeOutlinedButton(enabled = !s.busy, onClick = { onAuction(code) }, modifier = Modifier.weight(1f)) {
                 Text(ui("hero.action_auction"))
             }
         }

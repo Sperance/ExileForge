@@ -71,10 +71,15 @@ private data class StashMap(val item: ItemInstance, val view: ItemView)
 private data class MapLine(val text: String, val kind: MapLineKind, val risk: Double)
 
 /** The stash's loose maps, zone by zone: the world map marks each token with how many wait for it. */
-fun stashCounts(s: ForgeState): Map<String, Int> = stashMaps(s).groupingBy { it.item.mapZone }.eachCount()
+/**
+ * How many maps of each zone the stash holds. Read off the items' zone alone (3.76.0): building a full view of every
+ * thing in the stash on each opening of the tab froze the tap.
+ */
+fun stashCounts(s: ForgeState): Map<String, Int> =
+    s.hero?.stash.orEmpty().filter { it.mapZone.isNotEmpty() }.groupingBy { it.mapZone }.eachCount()
 
-private fun stashMaps(s: ForgeState): List<StashMap> =
-    s.hero?.stash.orEmpty().mapNotNull { item -> s.view(item)?.takeIf { it.slot == Slot.MAP }?.let { StashMap(item, it) } }
+private fun stashMaps(s: ForgeState): List<StashMap> = s.hero?.stash.orEmpty()
+    .filter { it.mapZone.isNotEmpty() }.mapNotNull { item -> s.view(item)?.takeIf { it.slot == Slot.MAP }?.let { StashMap(item, it) } }
 
 /**
  * A zone's card on the world map (2.76.0, in place of the launch window): it rises over the map's

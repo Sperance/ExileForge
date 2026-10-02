@@ -15,6 +15,9 @@ import com.sperance.exileforge.rules.content.GuildMode
 import com.sperance.exileforge.core.network.MemberCommand
 import com.sperance.exileforge.presentation.state.AppMode
 import com.sperance.exileforge.presentation.state.Building
+import com.sperance.exileforge.presentation.state.Feature
+import com.sperance.exileforge.presentation.state.unlocked
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.GuildTab
 import com.sperance.exileforge.presentation.state.QuestTab
 import com.sperance.exileforge.presentation.state.ForgeSection
@@ -27,7 +30,17 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() 
     private val runtime = ForgeRuntime(store, journal)
     val state = runtime.state
     val logs = runtime.logs
-    fun tab(tab: Int) = runtime.tab(tab)
+    /** A tab the hero's level has not opened (3.76.0) says when it will instead of opening. */
+    fun tab(tab: Int) { if (gate(Feature.ofTab(tab))) runtime.tab(tab) }
+
+    /** A line in the toasts, from the screens (3.76.0: a place opened by the level). */
+    fun announce(text: String) = runtime.toast(text)
+
+    private fun gate(feature: Feature?): Boolean {
+        if (runtime.state.value.unlocked(feature)) return true
+        feature?.let { runtime.toast(ui("unlock.locked", ui(it.title), it.level)) }
+        return false
+    }
     /** The campaign run on screen, if any: a world the scene steps and the overlay reads. */
     val expedition = runtime.expeditionViewModel.run
     fun loadCampaign() = runtime.expeditionViewModel.loadCampaign()
@@ -77,6 +90,8 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() 
     fun applyEssence(itemId: String, essence: String) = runtime.heroViewModel.applyEssence(itemId, essence)
     fun selectEssence(value: String) = runtime.heroViewModel.selectEssence(value)
     fun learnSkill(code: String) = runtime.heroViewModel.learnSkill(code)
+    fun openChest(code: String) = runtime.heroViewModel.openChest(code)
+    fun dismissChest() = runtime.heroViewModel.dismissChest()
     fun slotSkill(kind: String, index: Int, code: String?, condition: String? = null) = runtime.heroViewModel.slotSkill(kind, index, code, condition)
     fun flaskCondition(index: Int, condition: String?) = runtime.heroViewModel.flaskCondition(index, condition)
     fun exchangeBooks(books: List<String>, code: String) = runtime.heroViewModel.exchangeBooks(books, code)
@@ -194,7 +209,9 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() 
     fun loadMyLots(glance: Boolean = false) = runtime.auctionViewModel.loadMyLots(glance)
     fun loadMerchant() = runtime.auctionViewModel.loadMerchant()
     /** A building of the City (3.22.0), or the square for none. */
-    fun building(building: Building?) = runtime.mutable.value.let { runtime.mutable.value = it.copy(building = building, message = null, error = false) }
+    fun building(building: Building?) {
+        if (gate(Feature.ofBuilding(building))) runtime.mutable.value.let { runtime.mutable.value = it.copy(building = building, message = null, error = false) }
+    }
     fun loadGuild() = runtime.guildViewModel.load()
     fun guildTab(tab: GuildTab?) = runtime.guildViewModel.tab(tab)
     fun guildQuery(text: String) = runtime.guildViewModel.query(text)

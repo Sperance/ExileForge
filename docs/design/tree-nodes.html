@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ноды дерева</title>
+<style>
+:root{--bg:#0C1115;--muted:#7A8D99;--bright:#EEF8F1;--gold:#3FB67A}
+*{box-sizing:border-box;margin:0}body{background:var(--bg);color:#D5E0E6;font-family:system-ui,sans-serif;padding:24px 16px}
+h1{font-size:18px;color:var(--bright);margin-bottom:6px}.lead{color:var(--muted);font-size:13px;margin-bottom:20px}
+.grid{display:flex;flex-wrap:wrap;gap:24px}.v{width:360px;max-width:100%}.v h2{font-size:15px;color:var(--gold);margin-bottom:6px}
+.v p{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.45}svg{width:100%;border-radius:14px;display:block}
+.legend{font-size:11px;color:var(--muted);margin-top:6px}
+</style></head><body>
+<h1>Ноды дерева навыков — как сделать заметнее</h1>
+<p class="lead">Один и тот же кусок дерева: взятые (слева от старта), доступные для взятия (рядом) и недоступные (дальше). Типы: малые, атрибуты, notable, keystone, гнездо.</p>
+<div class="grid" id="grid"></div>
+<script>
+const nodes=[
+ {x:180,y:250,t:'start',s:'taken'},
+ {x:140,y:205,t:'small',s:'taken'},{x:110,y:160,t:'notable',s:'taken'},{x:150,y:120,t:'attr',s:'taken'},
+ {x:220,y:205,t:'small',s:'next'},{x:105,y:240,t:'small',s:'next'},{x:190,y:110,t:'small',s:'next'},
+ {x:260,y:165,t:'attr',s:'far'},{x:300,y:125,t:'notable',s:'far'},{x:250,y:85,t:'small',s:'far'},{x:320,y:205,t:'keystone',s:'far'},
+ {x:70,y:110,t:'socket',s:'far'},{x:60,y:200,t:'small',s:'far'},{x:210,y:55,t:'keystone',s:'far'}];
+const links=[[0,1],[1,2],[2,3],[0,4],[0,5],[3,6],[4,7],[7,8],[6,9],[7,10],[2,11],[5,12],[9,13]];
+const R={start:12,small:6,attr:7,notable:10,keystone:13,socket:11};
+const TINT={small:'#8FD3FF',attr:'#7BE0A6',notable:'#3FB67A',keystone:'#D24A43',socket:'#5B8DEF',start:'#63B7C4'};
+const variants=[
+ {name:'A · Свет и контур',desc:'Недоступные — светлый тонкий контур своего цвета (а не тёмно-бронзовый) и чуть светлее камень; доступные — яркий контур и мягкое свечение; взятые — полная заливка цветом и ореол. Минимальная правка.',
+  far:(t)=>({fill:'#1E2630',stroke:t,sw:1.6,so:.7,glow:0}),next:(t)=>({fill:'#232D38',stroke:t,sw:2.4,so:1,glow:.25}),taken:(t)=>({fill:t,stroke:'#EEF8F1',sw:1.6,so:.9,glow:.45}),
+  line:{taken:'#3FB67A',next:'#3FB67A88',far:'#3A4A57'}},
+ {name:'B · Цветной камень',desc:'Каждый тип всегда виден своим цветом: недоступные — заливка цвета на 35% с контуром, доступные — 60% и пунктир-кольцо, взятые — 100% с белым кантом. Тип узла читается сразу, даже издалека.',
+  far:(t)=>({fill:t,fo:.35,stroke:t,sw:1.4,so:.8,glow:0}),next:(t)=>({fill:t,fo:.6,stroke:t,sw:2,so:1,glow:.2,ring:true}),taken:(t)=>({fill:t,fo:1,stroke:'#FFFFFF',sw:1.8,so:1,glow:.5}),
+  line:{taken:'#3FB67A',next:'#7BE0A6aa',far:'#45566380'}},
+ {name:'C · Неоновый',desc:'Тёмный фон колеса светлее (#141A21), у всех узлов свечение: недоступные — тусклое, доступные — среднее с пульсацией, взятые — сильное. Связи взятых светятся. Самое «игровое», но плотнее по нагрузке.',
+  far:(t)=>({fill:'#10151B',stroke:t,sw:1.8,so:.85,glow:.12}),next:(t)=>({fill:'#10151B',stroke:t,sw:2.6,so:1,glow:.35,pulse:true}),taken:(t)=>({fill:t,stroke:'#EEF8F1',sw:1.4,so:1,glow:.7}),
+  line:{taken:'#57E39A',next:'#57E39A99',far:'#3C4D5A'},bg:'#141A21'}];
+const grid=document.getElementById('grid');
+variants.forEach((v,i)=>{
+ let s=`<svg viewBox="0 0 380 300"><defs>`;
+ nodes.forEach((n,k)=>{s+=`<radialGradient id="g${i}_${k}"><stop offset="0" stop-color="${TINT[n.t]}" stop-opacity="1"/><stop offset="1" stop-color="${TINT[n.t]}" stop-opacity="0"/></radialGradient>`});
+ s+=`</defs><rect width="380" height="300" fill="${v.bg||'#0B0D11'}"/>`;
+ for(let r=1;r<=4;r++)s+=`<circle cx="180" cy="250" r="${r*60}" fill="none" stroke="#1F2C35" stroke-opacity=".5"/>`;
+ links.forEach(([a,b])=>{const A=nodes[a],B=nodes[b];const st=(A.s==='taken'&&B.s==='taken')?'taken':(A.s==='taken'||B.s==='taken')?'next':'far';
+  s+=`<line x1="${A.x}" y1="${A.y}" x2="${B.x}" y2="${B.y}" stroke="${v.line[st]}" stroke-width="${st==='taken'?3:2}"/>`});
+ nodes.forEach((n,k)=>{const t=TINT[n.t];const st=n.s==='taken'?v.taken(t):n.s==='next'?v.next(t):v.far(t);const r=R[n.t];
+  if(st.glow)s+=`<circle cx="${n.x}" cy="${n.y}" r="${r*2.6}" fill="url(#g${i}_${k})" opacity="${st.glow}">${st.pulse?'<animate attributeName="opacity" values="'+st.glow+';'+(st.glow*.4)+';'+st.glow+'" dur="1.6s" repeatCount="indefinite"/>':''}</circle>`;
+  if(st.ring)s+=`<circle cx="${n.x}" cy="${n.y}" r="${r+5}" fill="none" stroke="${t}" stroke-dasharray="3 3" stroke-opacity=".8"/>`;
+  const shape=n.t==='keystone'?`<rect x="${n.x-r}" y="${n.y-r}" width="${r*2}" height="${r*2}" transform="rotate(45 ${n.x} ${n.y})"`:n.t==='notable'?`<polygon points="${[0,1,2,3,4,5].map(j=>{const a=Math.PI/3*j;return (n.x+r*Math.cos(a))+','+(n.y+r*Math.sin(a))}).join(' ')}"`:`<circle cx="${n.x}" cy="${n.y}" r="${r}"`;
+  s+=`${shape} fill="${st.fill}" fill-opacity="${st.fo??1}" stroke="${st.stroke}" stroke-opacity="${st.so}" stroke-width="${st.sw}"/>`});
+ s+=`</svg>`;
+ grid.insertAdjacentHTML('beforeend',`<div class="v"><h2>${v.name}</h2>${s}<div class="legend">слева — взятые · рядом — доступные · справа и выше — недоступные</div><p>${v.desc}</p></div>`);
+});
+</script></body></html>

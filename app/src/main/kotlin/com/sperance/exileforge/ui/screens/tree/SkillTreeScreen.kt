@@ -1,5 +1,11 @@
 package com.sperance.exileforge.ui.screens.tree
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import com.sperance.exileforge.ui.components.ForgeSheet
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
@@ -331,6 +337,9 @@ private fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Set
         view.scale = next
         view.pan = Offset(moved.x.coerceIn(-limit.x, limit.x), moved.y.coerceIn(-limit.y, limit.y))
     }
+    // The reachable nodes breathe (3.76.0, «Неон»): their glow swells and fades, drawn again on the draw pass alone.
+    val pulse by rememberInfiniteTransition(label = "tree").animateFloat(PULSE_LOW, 1f,
+        infiniteRepeatable(tween(PULSE_MS, easing = LinearEasing), RepeatMode.Reverse), label = "pulse")
     Box(modifier.fillMaxWidth()) {
         // Both detectors are keyed on the graph alone and read the view as it is now. Keyed on the zoom and
         // the pan, the tap detector restarted on every frame of a drag and took the second finger's touch
@@ -368,7 +377,7 @@ private fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Set
                     val other = byCode[code] ?: return@forEach
                     val both = node.code in taken && code in taken
                     val open = (node.code in taken && code in reachable) || (code in taken && node.code in reachable)
-                    drawLine(when { both -> Gold; open -> Gold.copy(alpha = .35f); else -> Bronze },
+                    drawLine(when { both -> NEON_LINE; open -> NEON_LINE.copy(alpha = .6f); else -> FAR_LINE },
                         from, place(other, bounds, width, height, view.scale, view.pan), (if (both) 3f else 2f) * view.scale.coerceIn(.6f, 1.6f))
                 }
             }
@@ -381,7 +390,7 @@ private fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Set
                 points.zipWithNext { a, b -> drawLine(GoldBright, a, b, 3f * view.scale.coerceIn(.6f, 1.6f), pathEffect = dash) }
             }
             nodes.forEach { node -> medallion(node, place(node, bounds, width, height, view.scale, view.pan), view.scale, node.code in taken,
-                node.code in reachable || node.code in path, node.code == selected) }
+                node.code in reachable || node.code in path, node.code == selected, pulse) }
             // The plan's nodes wear a rune ring, the filter's a green one - over the medallion, never instead of it.
             nodes.forEach { node ->
                 val ring = when { node.code in highlight -> Vital; node.code in planned && node.code !in taken -> Rune; else -> return@forEach }
@@ -692,12 +701,12 @@ private fun classTint(code: String): Color = when (code.removeSuffix("_START")) 
  * nodes' positions, so the wheel turns with whatever tree the content seeds.
  */
 private fun DrawScope.wheel(nodes: List<TreeNode>, bounds: Bounds, width: Float, height: Float, scale: Float, pan: Offset) {
-    drawRect(Color(0xFF0B0D11))
+    drawRect(WHEEL_BG)
     val fit = fitFactor(bounds, width, height) * scale
     val centre = Offset(width / 2 + (-bounds.minX - bounds.spanX / 2) * fit + pan.x, height / 2 + (-bounds.minY - bounds.spanY / 2) * fit + pan.y)
     val rim = max(bounds.spanX, bounds.spanY) / 2 * fit
-    drawCircle(Brush.radialGradient(listOf(Color(0xFF1A1E25), Color(0xFF0E1015)), centre, rim * 1.05f), rim * 1.05f, centre)
-    for (ring in 1..8) drawCircle(Bronze.copy(alpha = if (ring % 3 == 0) .2f else .08f), rim * ring / 8f, centre, style = Stroke(1f))
+    drawCircle(Brush.radialGradient(listOf(Color(0xFF1E252E), Color(0xFF141A21)), centre, rim * 1.05f), rim * 1.05f, centre)
+    for (ring in 1..8) drawCircle(FAR_LINE.copy(alpha = if (ring % 3 == 0) .35f else .15f), rim * ring / 8f, centre, style = Stroke(1f))
     nodes.filter { it.type == SkillNodeType.START && it.code != "SCION_START" }.forEach { start ->
         val angle = Math.toDegrees(atan2(start.y.toDouble(), start.x.toDouble())).toFloat()
         val tint = classTint(start.code)
@@ -706,17 +715,20 @@ private fun DrawScope.wheel(nodes: List<TreeNode>, bounds: Bounds, width: Float,
 }
 
 /**
- * One node as a medallion of its kind: a small disc, a notable's double ring, a keystone's
- * hexagon, a mastery's violet diamond, an attribute's green triangle, a socket's hollow ring and a
- * start's octagon in its class's colour. Taken is gold and glows, one step away is ringed in dull
- * gold, the rest is stone.
+ * One node as a medallion of its kind: a small disc, a notable's double ring, a keystone's hexagon, a mastery's diamond,
+ * an attribute's triangle, a socket's hollow ring and a start's octagon. Since 3.76.0 («Неон», the owner's pick of three
+ * mockups) every node shines in its kind's colour so the tree reads at a glance: one out of reach is a dark stone with a
+ * bright rim and a faint halo, one a step away is ringed thicker and breathes ([pulse]), a taken one is filled with its
+ * colour under a light rim and a strong halo.
  */
-private fun DrawScope.medallion(node: TreeNode, centre: Offset, scale: Float, taken: Boolean, next: Boolean, selected: Boolean) {
+private fun DrawScope.medallion(node: TreeNode, centre: Offset, scale: Float, taken: Boolean, next: Boolean, selected: Boolean, pulse: Float) {
     val r = radius(node) * scale.coerceIn(.5f, 2.2f)
-    val edge = when { taken -> Gold; next -> Gold.copy(alpha = .55f); else -> Bronze }
-    val width = (if (node.type == SkillNodeType.SMALL) 1.5f else 2.2f) * scale.coerceIn(.6f, 1.6f)
-    if (taken && node.type != SkillNodeType.SMALL)
-        drawCircle(Brush.radialGradient(listOf(nodeColour(node, true).copy(alpha = .35f), Color.Transparent), centre, r * 2.6f), r * 2.6f, centre)
+    val tint = if (node.type == SkillNodeType.START) classTint(node.code) else nodeColour(node, false)
+    val glow = when { taken -> TAKEN_GLOW; next -> NEXT_GLOW * pulse; else -> FAR_GLOW }
+    drawCircle(Brush.radialGradient(listOf(tint.copy(alpha = glow), Color.Transparent), centre, r * 2.6f), r * 2.6f, centre)
+    val fill = if (taken) tint else NEON_STONE
+    val edge = when { taken -> NEON_RIM; next -> tint; else -> tint.copy(alpha = .85f) }
+    val width = (if (node.type == SkillNodeType.SMALL) 1.6f else 2.2f) * (if (next && !taken) 1.35f else 1f) * scale.coerceIn(.6f, 1.6f)
     fun polygon(sides: Int, radius: Float, turn: Float) = Path().apply {
         repeat(sides) { i ->
             val a = turn + i * 2 * PI.toFloat() / sides
@@ -725,39 +737,30 @@ private fun DrawScope.medallion(node: TreeNode, centre: Offset, scale: Float, ta
         }
         close()
     }
-    val stone = Color(0xFF161A21)
+    fun shape(path: Path) { drawPath(path, fill); drawPath(path, edge, style = Stroke(width)) }
     when (node.type) {
-        SkillNodeType.START -> {
-            val tint = classTint(node.code)
-            val shape = polygon(8, r, PI.toFloat() / 8)
-            drawPath(shape, if (taken) tint.copy(alpha = .55f) else stone); drawPath(shape, tint, style = Stroke(width))
-        }
-        SkillNodeType.KEYSTONE -> {
-            val shape = polygon(6, r, 0f)
-            drawPath(shape, if (taken) LifeRed.copy(alpha = .5f) else Color(0xFF141820)); drawPath(shape, if (taken) Gold else edge, style = Stroke(width * 1.2f))
-            drawPath(polygon(6, r * .55f, PI.toFloat() / 6), edge, style = Stroke(width))
-        }
-        SkillNodeType.NOTABLE -> {
-            drawCircle(if (taken) Gold.copy(alpha = .6f) else stone, r, centre); drawCircle(edge, r, centre, style = Stroke(width))
-            drawCircle(edge, r * .55f, centre, style = Stroke(width))
-        }
-        SkillNodeType.MASTERY -> {
-            val shape = polygon(4, r, 0f)
-            drawPath(shape, if (taken) Elder.copy(alpha = .6f) else Color(0xFF15131C))
-            drawPath(shape, Elder.copy(alpha = if (taken) 1f else if (next) .9f else .35f), style = Stroke(width))
-        }
-        SkillNodeType.ATTRIBUTE -> {
-            val shape = polygon(3, r, -PI.toFloat() / 2)
-            drawPath(shape, if (taken) Vital.copy(alpha = .7f) else stone); drawPath(shape, if (taken) Vital else edge, style = Stroke(width))
-        }
-        SkillNodeType.JEWEL_SOCKET -> {
-            drawCircle(edge, r, centre, style = Stroke(width * 1.2f))
-            drawCircle(if (taken) ShieldCyan.copy(alpha = .5f) else Color(0xFF0B0E13), r * .6f, centre)
-        }
-        SkillNodeType.SMALL -> { drawCircle(if (taken) Gold else Color(0xFF1A1F27), r, centre); drawCircle(edge, r, centre, style = Stroke(width)) }
+        SkillNodeType.START -> shape(polygon(8, r, PI.toFloat() / 8))
+        SkillNodeType.KEYSTONE -> { shape(polygon(6, r, 0f)); drawPath(polygon(6, r * .55f, PI.toFloat() / 6), edge, style = Stroke(width)) }
+        SkillNodeType.NOTABLE -> { drawCircle(fill, r, centre); drawCircle(edge, r, centre, style = Stroke(width)); drawCircle(edge, r * .55f, centre, style = Stroke(width)) }
+        SkillNodeType.MASTERY -> shape(polygon(4, r, 0f))
+        SkillNodeType.ATTRIBUTE -> shape(polygon(3, r, -PI.toFloat() / 2))
+        SkillNodeType.JEWEL_SOCKET -> { drawCircle(edge, r, centre, style = Stroke(width * 1.2f)); drawCircle(if (taken) tint else NEON_STONE, r * .6f, centre) }
+        SkillNodeType.SMALL -> { drawCircle(fill, r, centre); drawCircle(edge, r, centre, style = Stroke(width)) }
     }
     if (selected) drawCircle(GoldBright, r + 5.dp.toPx(), centre, style = Stroke(2.dp.toPx()))
 }
+
+/** «Неон» (3.76.0): the wheel a shade lighter, so a dark stone with a bright rim stands off it. */
+private val WHEEL_BG = Color(0xFF141A21)
+private val NEON_STONE = Color(0xFF10151B)
+private val NEON_RIM = Color(0xFFEEF8F1)
+private val NEON_LINE = Color(0xFF57E39A)
+private val FAR_LINE = Color(0xFF3C4D5A)
+private const val FAR_GLOW = .14f
+private const val NEXT_GLOW = .45f
+private const val TAKEN_GLOW = .7f
+private const val PULSE_LOW = .4f
+private const val PULSE_MS = 800
 
 /** The tags the tree's filter offers (3.47.0): the ones its lines carry most. */
 private val TREE_TAGS = listOf("life", "defences", "critical", "fire", "cold", "lightning", "chaos", "physical", "elemental", "attack", "caster", "speed", "mana")

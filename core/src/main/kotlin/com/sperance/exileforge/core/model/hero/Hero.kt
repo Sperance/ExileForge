@@ -174,3 +174,8 @@ data class HeroView(
 
 /** The hero's statistics (server 1.49.0): key — value, only what is not zero; the keys are [com.sperance.exileforge.rules.content.Stat]'s. */
 @kotlinx.serialization.Serializable data class HeroStatsView(val values: Map<String, Long> = emptyMap())
+
+/** A loot chest opened (3.76.0, server 1.71.0): what it gave — gold, stacks, things (already in the stash or its overflow). */
+@kotlinx.serialization.Serializable
+data class ChestOpening(val code: String, val gold: Long = 0, val items: Map<String, Long> = emptyMap(),
+                        val equipment: List<com.sperance.exileforge.rules.roll.ItemInstance> = emptyList())

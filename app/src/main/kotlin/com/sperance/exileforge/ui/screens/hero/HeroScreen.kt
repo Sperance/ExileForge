@@ -157,8 +157,10 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
             onAuction = { stack -> stackCode = null; listStack = stack },
             // A book is read where it lies, and its page opens in the grimoire (2.78.0); an essence goes to the forge.
             onRead = { skill -> stackCode = null; vm.learnSkill(skill); vm.tab(TAB_SKILLS) },
-            onEssence = { essence -> stackCode = null; vm.selectEssence(essence); vm.openForge(null, ForgeSection.ESSENCES) })
+            onEssence = { essence -> stackCode = null; vm.selectEssence(essence); vm.openForge(null, ForgeSection.ESSENCES) },
+            onOpenChest = { chest -> stackCode = null; vm.openChest(chest) })
     } }
+    s.play.chestOpening?.let { opening -> ChestOpenedSheet(s, opening, vm::dismissChest) }
     listStack?.let { code ->
         ListingSheet(s, itemTitle(code), owned = s.bagAmount(code) ?: 0L, onDismiss = { listStack = null }) { orb, price, amount ->
             listStack = null; vm.sellItem(code, amount, orb, price)

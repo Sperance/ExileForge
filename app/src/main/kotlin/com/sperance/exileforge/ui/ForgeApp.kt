@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.CloudOff
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Mail
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.CloudUpload
@@ -35,6 +36,8 @@ import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.*
 import com.sperance.exileforge.data.settings.GuideStore
 import com.sperance.exileforge.data.settings.DraftStore
+import com.sperance.exileforge.presentation.state.Feature
+import com.sperance.exileforge.presentation.state.unlocked
 import com.sperance.exileforge.ui.screens.expedition.world.WorldArt
 import com.sperance.exileforge.ui.components.BugSheet
 import com.sperance.exileforge.ui.components.LocalMailOpen
@@ -121,6 +124,14 @@ private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, erro
     var suggestionsOpen by remember { mutableStateOf(false) }
     var mailOpen by remember { mutableStateOf(false) }
     LaunchedEffect(s.phase, s.play.heroId) { if (s.phase == AppPhase.GAME && s.play.heroId.isNotBlank()) vm.warmUp() }
+    // A level that opens a place says so once (3.76.0): the level is remembered per hero, the first reading only sets it.
+    val level = s.heroInfo?.level
+    var seen by remember(s.play.heroId) { mutableStateOf<Int?>(null) }
+    LaunchedEffect(s.play.heroId, level) {
+        if (level == null) return@LaunchedEffect
+        seen?.let { before -> if (!s.isTester) Feature.gained(before, level).forEach { vm.announce(ui("unlock.opened", ui(it.title))) } }
+        seen = level
+    }
     // The world map's art is built as soon as the campaign arrives (3.75.0), away from the main thread: the tab opens on it.
     val campaign = s.index?.campaign
     LaunchedEffect(campaign) { campaign?.let { WorldArt.of(it) } }
@@ -146,7 +157,7 @@ private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, erro
         }
         }
     }
-    if (bugOpen) BugSheet(s, expedition, logs, drafts, onDismiss = { bugOpen = false }, onSuggestions = { suggestionsOpen = true },
+    if (bugOpen) BugSheet(s, expedition, drafts, onDismiss = { bugOpen = false }, onSuggestions = { suggestionsOpen = true },
         onSend = { report -> vm.reportBug(report) { drafts.clear(report.kind) } })
     if (suggestionsOpen) SuggestionsSheet(s, vm) { suggestionsOpen = false }
     if (mailOpen) MailSheet(s, vm) { mailOpen = false }
@@ -184,7 +195,12 @@ private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, erro
                         icon = {
                             // Free atlas points (3.47.0) mark the tab the atlas opens from: «Развитие».
                             val free = if (index == TAB_PROGRESS) s.atlasState?.available ?: 0 else 0
-                            BadgedBox(badge = { if (free > 0) Badge(containerColor = GoldBright, contentColor = Ink) { Text(free.toString(), fontSize = 9.sp) } }) {
+                            // A tab the hero's level has not opened wears a lock (3.76.0).
+                            val locked = !s.unlocked(Feature.ofTab(index))
+                            BadgedBox(badge = {
+                                if (locked) Icon(Icons.Outlined.Lock, null, tint = Muted, modifier = Modifier.size(12.dp))
+                                else if (free > 0) Badge(containerColor = GoldBright, contentColor = Ink) { Text(free.toString(), fontSize = 9.sp) }
+                            }) {
                                 Icon(icons.getValue(index), null, modifier = Modifier.size(22.dp))
                             }
                         }, label = { Text(label, fontSize = 10.sp) },

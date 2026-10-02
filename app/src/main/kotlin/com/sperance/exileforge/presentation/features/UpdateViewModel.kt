@@ -62,7 +62,8 @@ class UpdateViewModel(app: Application, private val server: suspend () -> Static
     private val guides = GuideStore(app)
 
     init {
-        if (BuildConfig.UPDATES) viewModelScope.launch { while (true) delay(if (check()) Updates.PERIOD_MS else RETRY_MS) }
+        // Until one check has passed the game stays shut (3.76.0), so a failed one is tried again soon; after that, hourly.
+        if (BuildConfig.UPDATES) viewModelScope.launch { while (true) delay(if (check()) Updates.PERIOD_MS else if (state.value.verified) RETRY_MS else FIRST_RETRY_MS) }
         // A server newer than this build refused the sign-in (3.74.0): its build is looked for now, not in an hour.
         if (BuildConfig.UPDATES) viewModelScope.launch { newerServer.collect { check() } }
         if (BuildConfig.UPDATES && !UpdateInstaller.allowed(app)) viewModelScope.launch {
@@ -81,6 +82,20 @@ class UpdateViewModel(app: Application, private val server: suspend () -> Static
     /** «Проверить обновления»: asked by hand, the answer is said either way. */
     fun checkNow() { viewModelScope.launch { check(manual = true) } }
 
+    /** «Повторить» on the start's gate (3.76.0): one more check at once. */
+    fun retry() { viewModelScope.launch { check() } }
+
+    /**
+     * The player came back to the app (3.76.0): the releases are asked again, at most once a minute — a build that came
+     * out meanwhile locks the game at once. The caller does not ask during a run.
+     */
+    fun resumed() {
+        if (!BuildConfig.UPDATES || System.currentTimeMillis() - lastCheck < RESUME_GAP_MS) return
+        viewModelScope.launch { check() }
+    }
+
+    @Volatile private var lastCheck = 0L
+
     /** The first-start question about unknown sources is answered, either way: it is not asked again. */
     fun sourcesAsked() {
         mutable.update { it.copy(askSources = false) }
@@ -89,6 +104,7 @@ class UpdateViewModel(app: Application, private val server: suspend () -> Static
 
     /** One check; whether it reached GitHub. */
     private suspend fun check(manual: Boolean = false): Boolean = checks.withLock {
+        lastCheck = System.currentTimeMillis()
         mutable.update { it.copy(checking = true, upToDate = false) }
         try {
             val found = updates.check(BuildConfig.VERSION_CODE, BuildConfig.VERSION_NAME, server())
@@ -138,6 +154,10 @@ class UpdateViewModel(app: Application, private val server: suspend () -> Static
         const val DIR = "updates"
         /** A failed check is tried again this soon, unseen. */
         const val RETRY_MS = 60_000L
+        /** Before the first check has passed, with the game shut behind it: tried again this soon. */
+        const val FIRST_RETRY_MS = 10_000L
+        /** Coming back to the app asks again no sooner than this after the last check. */
+        const val RESUME_GAP_MS = 60_000L
         /** The first-start question about unknown sources, as the device's guides remember it. */
         const val SOURCES = "install_sources"
     }

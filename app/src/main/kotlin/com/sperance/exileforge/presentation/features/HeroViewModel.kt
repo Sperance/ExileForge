@@ -169,6 +169,12 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     /** The grimoire: a book read, a skill slotted or taken out, a slot's or a flask's condition, books traded for one. */
     fun learnSkill(code: String) { with(runtime) { heroCommand { id -> api.hero.learnSkill(id, code) } } }
+    /** A loot chest opened (3.76.0): the spoils stay on screen until dismissed. */
+    fun openChest(code: String) { with(runtime) { heroCommand { id ->
+        val opening = api.hero.openChest(id, code)
+        update { it.copy(play = it.play.copy(chestOpening = opening)) }
+    } } }
+    fun dismissChest() = update { it.copy(play = it.play.copy(chestOpening = null)) }
     fun slotSkill(kind: String, index: Int, code: String?, condition: String? = null) { with(runtime) { heroCommand { id -> api.hero.slotSkill(id, kind, index, code, condition) } } }
     fun flaskCondition(index: Int, condition: String?) { with(runtime) { heroCommand { id -> api.hero.flaskCondition(id, index, condition) } } }
     fun exchangeBooks(books: List<String>, code: String) { with(runtime) { heroCommand { id -> api.hero.exchangeBooks(id, books, code) } } }

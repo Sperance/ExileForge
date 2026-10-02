@@ -13,7 +13,7 @@ val WireJson: Json = RulesJson
 fun JsonObject.text(key: String): String = (get(key) as? JsonPrimitive)?.contentOrNull.orEmpty()
 
 /** The server this client is built against: the submodule `backend/` is pinned to this commit, and `SERVER_VERSION` is its `Constants.kt`. */
-const val SERVER_COMMIT = "59a3fc3877774d5057caa940b141984b5d9c12ab"
+const val SERVER_COMMIT = "f0de26d1480a33416d75a60bcfb970e8e72209f2"
 const val SERVER_BRANCH = "claude/tender-pasteur-a36kj2"
 const val SERVER_VERSION = "1.72.0"
 

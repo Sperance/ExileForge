@@ -71,7 +71,6 @@ import com.sperance.exileforge.ui.screens.tree.SkillTreeScreen
 import com.sperance.exileforge.ui.theme.*
 import com.sperance.exileforge.presentation.features.UpdateViewModel
 import com.sperance.exileforge.ui.components.LocalUpdates
-import com.sperance.exileforge.ui.components.SheetHostLayer
 import com.sperance.exileforge.ui.components.UpdateGate
 
 @Composable fun ForgeApp(vm: ForgeViewModel, updates: UpdateViewModel) {
@@ -81,13 +80,12 @@ import com.sperance.exileforge.ui.components.UpdateGate
     val guides = remember { GuideDesk(GuideStore(context.applicationContext), scope) }
     val expedition by vm.expedition.collectAsStateWithLifecycle()
     val trial by vm.trial.collectAsStateWithLifecycle()
-    // Every bottom sheet is drawn in the layer over the screens (3.75.5), in the app's own window.
-    CompositionLocalProvider(LocalGuideDesk provides guides, LocalUpdates provides updates) { SheetHostLayer {
+    CompositionLocalProvider(LocalGuideDesk provides guides, LocalUpdates provides updates) {
         ForgeScreens(vm)
         GuideHost(guides)
         // Updates (3.72.0): over everything; a run or a trial under way is finished first.
         UpdateGate(updates, busy = expedition != null || trial != null)
-    } }
+    }
 }
 
 /**

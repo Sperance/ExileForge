@@ -1,89 +1,53 @@
 package com.sperance.exileforge.ui.components
 
-import androidx.activity.compose.BackHandler
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.staticCompositionLocalOf
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.Velocity
+import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.ui.theme.Panel
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
 
 /**
- * Where the app's sheets are drawn (3.75.5): one layer over everything in the app's own window. A sheet is no longer a
- * window of its own — Material's sheet bounced between its stops, the dialog of 3.75.3–3.75.4 showed nothing on a phone
- * while passing on the emulator — so nothing the window manager does can hide it or move it.
- */
-@Stable
-class SheetHost {
-    internal val sheets = mutableStateListOf<SheetEntry>()
-}
-
-val LocalSheetHost = staticCompositionLocalOf<SheetHost?> { null }
-
-/** The app's screens with the sheet layer above them; [ForgeSheet] anywhere inside lands here. */
-@Composable fun SheetHostLayer(content: @Composable () -> Unit) {
-    val host = remember { SheetHost() }
-    CompositionLocalProvider(LocalSheetHost provides host) {
-        Box(Modifier.fillMaxSize()) {
-            content()
-            host.sheets.forEach { entry -> key(entry) { SheetLayer(entry, top = entry === host.sheets.lastOrNull()) } }
-        }
-    }
-}
-
-/**
- * Every bottom sheet of the app, one way: it has one rest — open — and a drag only ever takes it down. A short one springs
- * back, a long or a fast one closes it. Content that scrolls scrolls first; past its top the drag moves the sheet. The
- * scrim, «back» and the drag close it alike, and the caller hears of it once. No sheet is taller than [MAX_SHARE] of the
- * screen. Called from anywhere, it is drawn by the nearest [SheetHostLayer]; without one, in place.
+ * Every bottom sheet of the app: Material's own `ModalBottomSheet` (back since 3.75.5), held in by three bounds.
+ *
+ * - **One rest.** No half-open stop (`skipPartiallyExpanded`): with content near half the screen the two stops nearly met
+ *   and a fling tossed the sheet between them.
+ * - **Never near the top.** The content is at most [MAX_SHARE] of the app's window, read outside the sheet's own window,
+ *   so the open sheet never reaches the status bar; and the sheet adds no insets of its own (`contentWindowInsets` none),
+ *   so no inset can switch on and off as it moves. A sheet as tall as the screen took the status bar's inset as padding at
+ *   the top, grew, slid back, lost it — and rocked between the two without a touch. The gesture bar and the keyboard are
+ *   padded here, once, inside the sheet's colour.
+ * - **A fling stays in the list.** What a fling in scrolling content leaves over at the list's top is eaten here, not
+ *   handed to the sheet: on material3 1.4 that velocity dragged the sheet toward dismissal and back, a jitter. A drag by
+ *   the finger still reaches the sheet, so pulling down from the list's top closes it as before.
+ *
+ * The dismissal reaches the caller once, however many times the gesture, the scrim and «back» report it.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun ForgeSheet(
@@ -94,145 +58,45 @@ val LocalSheetHost = staticCompositionLocalOf<SheetHost?> { null }
     dragHandle: (@Composable () -> Unit)? = { BottomSheetDefaults.DragHandle() },
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val entry = remember { SheetEntry(onDismissRequest, modifier, shape, containerColor, dragHandle, content) }
-    // The caller's latest words: the sheet's content is the caller's lambda, read again on every recomposition there.
-    SideEffect { entry.update(onDismissRequest, modifier, shape, containerColor, dragHandle, content) }
-    val host = LocalSheetHost.current
-    if (host == null) { SheetLayer(entry, top = true); return }
-    DisposableEffect(host, entry) {
-        host.sheets += entry
-        onDispose { host.sheets -= entry }
-    }
-}
-
-/** One sheet as its caller last described it, and where it stands. */
-@Stable
-internal class SheetEntry(
-    onDismiss: () -> Unit,
-    modifier: Modifier,
-    shape: Shape,
-    color: Color,
-    handle: (@Composable () -> Unit)?,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    var onDismiss by mutableStateOf(onDismiss)
-    var modifier by mutableStateOf(modifier)
-    var shape by mutableStateOf(shape)
-    var color by mutableStateOf(color)
-    var handle by mutableStateOf(handle)
-    var content by mutableStateOf(content)
-    val motion = SheetMotion()
-
-    fun update(onDismiss: () -> Unit, modifier: Modifier, shape: Shape, color: Color, handle: (@Composable () -> Unit)?,
-               content: @Composable ColumnScope.() -> Unit) {
-        this.onDismiss = onDismiss; this.modifier = modifier; this.shape = shape; this.color = color; this.handle = handle; this.content = content
-    }
-}
-
-@Composable private fun SheetLayer(entry: SheetEntry, top: Boolean) {
-    val scope = rememberCoroutineScope()
-    val sheet = entry.motion
-    val close: () -> Unit = { scope.launch { sheet.close { entry.onDismiss() } } }
-    BackHandler(enabled = top, onBack = close)
-    BoxWithConstraints(Modifier.fillMaxSize()) {
-        val limit = maxHeight * MAX_SHARE
-        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = SCRIM * sheet.shown))
-            .clickable(remember { MutableInteractionSource() }, indication = null, onClick = close))
-        Column(entry.modifier
-            .align(Alignment.BottomCenter)
-            .windowInsetsPadding(WindowInsets.statusBars)
-            .imePadding()
-            .offset { IntOffset(0, sheet.offset.value.roundToInt()) }
-            .onSizeChanged { sheet.height = it.height }
+    val dismiss by rememberUpdatedState(onDismissRequest)
+    var dismissed by remember { mutableStateOf(false) }
+    val window = LocalWindowInfo.current.containerSize.height
+    val limit: Dp = with(LocalDensity.current) { if (window > 0) (window * MAX_SHARE).toDp() else Dp.Infinity }
+    ModalBottomSheet(
+        onDismissRequest = { if (!dismissed) { dismissed = true; dismiss() } },
+        modifier = modifier,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        shape = shape,
+        containerColor = containerColor,
+        dragHandle = dragHandle,
+        contentWindowInsets = { WindowInsets(0.dp) },
+    ) {
+        Column(Modifier
             .fillMaxWidth()
             .heightIn(max = limit)
-            .clip(entry.shape)
-            .background(entry.color)
-            // Under the gesture bar the sheet's colour, above it the content; a sheet that pads itself pads nothing twice.
-            .windowInsetsPadding(WindowInsets.navigationBars)
-            .nestedScroll(remember(sheet, scope) { sheet.connection(scope, close) })
-            // The drag's pointer input also keeps a tap on the sheet from reaching the scrim under it.
-            .draggable(rememberDraggableState { sheet.dragBy(it, scope) }, Orientation.Vertical,
-                onDragStopped = { velocity -> sheet.settle(velocity, close) })) {
-            entry.handle?.let { Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { it() } }
-            entry.content(this)
-        }
-    }
-    LaunchedEffect(sheet.height) { if (sheet.height > 0) sheet.open() }
-}
-
-/** Where the sheet stands: [offset] pixels below its rest, 0 open, [height] gone. */
-internal class SheetMotion {
-    /** Far below the screen until the sheet's height is known and it slides in. */
-    val offset = Animatable(HIDDEN_PX)
-    var height by mutableIntStateOf(0)
-    private var opened by mutableStateOf(false)
-    private var closing = false
-
-    /** How much of the sheet is out, for the scrim. */
-    val shown: Float get() = if (height == 0 || !opened) 0f else (1f - offset.value / height).coerceIn(0f, 1f)
-
-    suspend fun open() {
-        if (opened || closing) return
-        offset.snapTo(height.toFloat())
-        opened = true
-        offset.animateTo(0f, tween(OPEN_MS))
-    }
-
-    /** Never above the rest: an upward drag stops at it. */
-    fun dragBy(delta: Float, scope: CoroutineScope) {
-        if (closing || !opened) return
-        scope.launch { offset.snapTo((offset.value + delta).coerceIn(0f, height.toFloat())) }
-    }
-
-    suspend fun settle(velocity: Float, close: () -> Unit) {
-        if (closing || !opened) return
-        if (velocity > FLING_PX_S || offset.value > height * CLOSE_SHARE) close() else offset.animateTo(0f, tween(SETTLE_MS))
-    }
-
-    suspend fun close(then: () -> Unit) {
-        if (closing) return
-        closing = true
-        offset.animateTo(height.toFloat(), tween(CLOSE_MS))
-        then()
-    }
-
-    /** Content scrolls first; what it leaves of a downward drag moves the sheet, and an upward one takes the sheet back first. */
-    fun connection(scope: CoroutineScope, close: () -> Unit) = object : NestedScrollConnection {
-        override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-            if (source != NestedScrollSource.UserInput || available.y >= 0f || offset.value <= 0f) return Offset.Zero
-            val taken = maxOf(available.y, -offset.value)
-            dragBy(taken, scope)
-            return Offset(0f, taken)
-        }
-
-        override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
-            if (source != NestedScrollSource.UserInput || available.y <= 0f) return Offset.Zero
-            dragBy(available.y, scope)
-            return Offset(0f, available.y)
-        }
-
-        override suspend fun onPreFling(available: Velocity): Velocity {
-            if (offset.value <= 0f) return Velocity.Zero
-            settle(available.y, close)
-            return available
-        }
-    }
-
-    private companion object {
-        const val HIDDEN_PX = 100_000f
-        const val OPEN_MS = 220
-        const val SETTLE_MS = 180
-        const val CLOSE_MS = 180
-        /** A drag past this share of the sheet's height closes it. */
-        const val CLOSE_SHARE = .3f
-        /** A downward fling faster than this, in pixels a second, closes it however short. */
-        const val FLING_PX_S = 1800f
+            .windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.ime))
+            .nestedScroll(remember { FlingStaysInList() }),
+            content = content)
     }
 }
 
-/** The most of the screen's height a sheet may take, its handle included: well clear of the status bar. */
-private const val MAX_SHARE = .88f
+/**
+ * Eats what a fling leaves over at the content's edge; a finger's drag passes on to the sheet untouched. A release after
+ * the finger moved the sheet passes its velocity on too, so the sheet settles — back open or closed — instead of stopping
+ * half-way; a fling that only scrolled the list ends in the list.
+ */
+private class FlingStaysInList : NestedScrollConnection {
+    private var sheetMoved = false
 
-/** How dark the scrim is with the sheet fully out. */
-private const val SCRIM = .5f
+    override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset = when {
+        source == NestedScrollSource.SideEffect -> available
+        available.y != 0f -> { sheetMoved = true; Offset.Zero }
+        else -> Offset.Zero
+    }
+
+    override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity =
+        if (sheetMoved) { sheetMoved = false; Velocity.Zero } else available
+}
+
+/** The most of the app window's height a sheet's content may take: well clear of the status bar. */
+private const val MAX_SHARE = .85f

@@ -3632,5 +3632,9 @@
   "path.boss.text": "Defeat a zone guardian",
   "path.orb.title": "Forge",
   "path.orb.text": "Use an orb on an item in the Forge",
-  "guide.more": "More"
+  "guide.more": "More",
+  "toast.extended": "Lot extended: {0}",
+  "auction.extend": "Extend by {0} days",
+  "auction.extend_now": "can be extended",
+  "sell.price_hint": "Recently sold for {0} × {1} ({2} deals) — use it"
 }

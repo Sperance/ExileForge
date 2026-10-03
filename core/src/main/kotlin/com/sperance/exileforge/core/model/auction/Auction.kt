@@ -57,6 +57,8 @@ import kotlinx.serialization.Serializable
     val onSale: Boolean get() = status == LotStatus.ACTIVE && (expiresAt == 0L || System.currentTimeMillis() < expiresAt)
     /** Milliseconds the lot still stands, or null when it names no end. */
     fun timeLeft(now: Long = System.currentTimeMillis()): Long? = expiresAt.takeIf { it > 0 }?.let { (it - now).coerceAtLeast(0) }
+    /** Whether its author may extend it now (3.79.0, server 1.74.0): on sale, with no more than [window] ms left. */
+    fun extendable(window: Long, now: Long = System.currentTimeMillis()): Boolean = onSale && timeLeft(now)?.let { it in 1..window } == true
     fun belongsTo(heroId: String): Boolean = sellerId == heroId
     /** An equipment lot names a template, a stack lot names an item of the bag. */
     val title: String get() = equipment?.mapZone?.takeIf { it.isNotEmpty() }?.let(::mapItemTitle)
@@ -139,3 +141,6 @@ fun lotKindTitle(kind: LotKind, lang: Lang = uiLanguage): String = ui(lang, "enu
 @Serializable data class AuctionSlots(val used: Int = 0, val limit: Int = 12) {
     val full: Boolean get() = used >= limit
 }
+
+/** The price hint (3.79.0, server 1.74.0): the median [price] a piece in [priceOrb] over [sales] recent deals of the like. */
+@kotlinx.serialization.Serializable data class PriceHint(val priceOrb: String = "", val price: Long = 0, val sales: Int = 0)

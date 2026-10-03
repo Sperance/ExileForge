@@ -246,12 +246,17 @@ private val templateSlots: List<Slot> = Slot.entries.filter { it != Slot.RING_2 
             InfoCard(ui("auction.no_lots"), ui("auction.no_lots_hint"))
         }
         items(s.ownLots, key = { it.id }) { lot ->
-            LotRow(s, lot, mark = lotExpiry(lot), withSeller = false) { openLot = lot.id }
+            val window = s.index?.rules?.auction?.extendWindowMillis ?: 0L
+            LotRow(s, lot, mark = lotExpiry(lot)?.let { if (lot.extendable(window)) it + " · " + ui("auction.extend_now") else it }, withSeller = false) { openLot = lot.id }
         }
     }
     s.ownLots.firstOrNull { it.id == openLot }?.let { lot ->
+        // On its last day the author may give it another week (3.79.0), as often as they like.
+        val extendable = s.index?.rules?.auction?.let { lot.extendable(it.extendWindowMillis) } == true
         LotSheet(s, lot, action = ui("auction.withdraw"), enabled = !s.busy,
-            note = lotExpiry(lot), onDismiss = { openLot = null }) { openLot = null; vm.cancelLot(lot.id) }
+            note = lotExpiry(lot), onDismiss = { openLot = null },
+            extra = if (extendable) ({ ForgeOutlinedButton(enabled = !s.busy, onClick = { openLot = null; vm.extendLot(lot.id) }, modifier = Modifier.fillMaxWidth()) {
+                Text(ui("auction.extend", s.index?.rules?.auction?.lotDays ?: 7)) } }) else null) { openLot = null; vm.cancelLot(lot.id) }
     }
 }
 
@@ -384,7 +389,7 @@ private fun stackFacts(s: ForgeState, lot: AuctionLot): List<String> =
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable private fun LotSheet(s: ForgeState, lot: AuctionLot, action: String?, enabled: Boolean, note: String?,
-    onDismiss: () -> Unit, onAction: () -> Unit = {}) {
+    onDismiss: () -> Unit, extra: (@Composable () -> Unit)? = null, onAction: () -> Unit = {}) {
     val view = lot.equipment?.let { s.view(it) }
     ForgeSheet(onDismissRequest = onDismiss) {
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.9f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -401,6 +406,7 @@ private fun stackFacts(s: ForgeState, lot: AuctionLot): List<String> =
                     PropertyRow(ui("auction.seller"), sellerName(lot), Glyph.CHARACTER)
                     listedAt(lot.createdAt)?.let { PropertyRow(ui("auction.listed_at"), it, Glyph.LEVEL) }
                     note?.let { MutedText(it, style = MaterialTheme.typography.labelMedium) }
+                    extra?.invoke()
                     action?.let { ForgeButton(enabled = enabled, onClick = onAction, modifier = Modifier.fillMaxWidth()) { Text(it) } }
                 }
             }

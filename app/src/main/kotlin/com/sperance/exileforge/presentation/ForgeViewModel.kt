@@ -259,6 +259,8 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() 
     fun buyOffer(offerId: String) = runtime.auctionViewModel.buyOffer(offerId)
     fun buyOrb(code: String) = runtime.auctionViewModel.buyOrb(code)
     fun cancelLot(lotId: String) = runtime.auctionViewModel.cancel(lotId)
+    fun extendLot(lotId: String) = runtime.auctionViewModel.extend(lotId)
+    suspend fun priceHint(itemCode: String, rarity: com.sperance.exileforge.rules.content.Rarity?, itemLevel: Int) = runtime.auctionViewModel.priceHint(itemCode, rarity, itemLevel)
     /** Lists a copy for [price] of the orb [priceOrb] (an item code). */
     fun sellEquipment(itemId: String, priceOrb: String, price: Long) = runtime.auctionViewModel.sellEquipment(itemId, priceOrb, price)
     /** Lists [amount] of the stack [code]. */

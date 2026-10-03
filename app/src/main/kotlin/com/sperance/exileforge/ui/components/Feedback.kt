@@ -131,8 +131,12 @@ fun mailSubject(mail: Mail): String = if (mail.kind == MailKind.SYSTEM) systemLi
 fun mailBody(mail: Mail): String = if (mail.kind == MailKind.SYSTEM) listOf(systemLine(mail, "body"),
     mail.args.getOrNull(3)?.takeIf { it.isNotBlank() }?.let { loc("${mail.key}.reason", listOf(it)) }).filterNotNull().joinToString("\n\n") else mail.body
 
-/** `mail.feedback_status`: its args are the kind, the status, an excerpt of the report and the administrator's word. */
+/**
+ * `mail.feedback_status`: its args are the kind, the status, an excerpt of the report and the administrator's word. The
+ * auction's letters (3.79.0, server 1.74.0) name the lot's item by its code and its amount.
+ */
 private fun systemLine(mail: Mail, part: String): String {
+    if (mail.key in AUCTION_MAIL) return loc("${mail.key}.$part", listOf(mail.args.getOrNull(0)?.let(::lotItemTitle).orEmpty(), mail.args.getOrNull(1).orEmpty()))
     val kind = mail.args.getOrNull(0)?.let { name -> FeedbackKind.entries.firstOrNull { it.name == name } }?.let(::kindTitle).orEmpty()
     val status = mail.args.getOrNull(1)?.let { name -> ReportStatus.entries.firstOrNull { it.name == name } }?.let(::statusTitle).orEmpty()
     return when (part) {
@@ -145,6 +149,7 @@ private fun systemLine(mail: Mail, part: String): String {
 fun attachmentLines(mail: Mail): List<String> = buildList {
     if (mail.attachment.gold > 0) add(ui("mail.gold", mail.attachment.gold))
     mail.attachment.items.forEach { (code, amount) -> add("${itemTitle(code)} × $amount") }
+    mail.attachment.instances.forEach { add(equipmentTitle(it.template) + " · " + ui("enum.rarity.${it.rarity.name}")) }
     mail.attachment.equipment.forEach { add(equipmentTitle(it.template) + (it.rarity?.let { r -> " · " + ui("enum.rarity.${r.name}") } ?: "")) }
 }
 
@@ -200,3 +205,10 @@ fun attachmentLines(mail: Mail): List<String> = buildList {
         }
     }
 }
+
+/** The auction's system letters (3.79.0): a lot come back, a lot about to leave. */
+private val AUCTION_MAIL = setOf("mail.auction_expired", "mail.auction_expiring")
+
+/** A lot's item by its code: an equipment template or a stack of the bag. */
+private fun lotItemTitle(code: String): String =
+    if (com.sperance.exileforge.core.i18n.serverLocale.contains(com.sperance.exileforge.rules.text.LocaleKey.equipmentName(code))) equipmentTitle(code) else itemTitle(code)

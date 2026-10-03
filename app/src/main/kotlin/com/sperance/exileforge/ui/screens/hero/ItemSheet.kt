@@ -102,7 +102,9 @@ private enum class ItemAction { AUCTION, SELL, WORN }
         }
     }
     when (open) {
-        ItemAction.AUCTION -> ListingSheet(s, name, onDismiss = { open = null }) { orb, price, _ ->
+        ItemAction.AUCTION -> ListingSheet(s, name, onDismiss = { open = null }, hint = {
+            vm.priceHint(instance.template, instance.rarity, s.index?.template(instance.template)?.let(instance::level) ?: 0)
+        }) { orb, price, _ ->
             open = null; onDismiss(); vm.sellEquipment(instance.id, orb, price)
         }
         // Selling is final and takes the rolls with it, so it is asked about by name, with the sum

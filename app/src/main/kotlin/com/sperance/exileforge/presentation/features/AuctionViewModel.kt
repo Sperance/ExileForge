@@ -114,6 +114,22 @@ class AuctionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         listed(id)
     } } }
 
+    /** Another week for the hero's own lot on its last day (3.79.0). */
+    fun extend(lotId: String) { with(runtime) { trade(writing = true) {
+        val id = heroId
+        toast(ui("toast.extended", api.auction.extend(id, lotId).title))
+        afterTrade {
+            val lots = api.auction.myLots(id)
+            mutable.update { it.copy(market = it.market.copy(myLots = lots)) }
+        }
+    } } }
+
+    /** The price hint for what the hero is about to list (3.79.0): read quietly, a failure is just no hint. */
+    suspend fun priceHint(itemCode: String, rarity: com.sperance.exileforge.rules.content.Rarity?, itemLevel: Int): com.sperance.exileforge.core.model.auction.PriceHint? =
+        try { runtime.api.auction.priceHint(runtime.heroId, itemCode, rarity, itemLevel) }
+        catch (e: CancellationException) { throw e }
+        catch (_: Exception) { null }
+
     fun cancel(lotId: String) { with(runtime) { trade(writing = true) {
         val id = heroId
         toast(ui("toast.withdrawn", api.auction.cancel(id, lotId).title))

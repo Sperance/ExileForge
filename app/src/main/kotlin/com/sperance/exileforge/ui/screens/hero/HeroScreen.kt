@@ -162,7 +162,7 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
     } }
     s.play.chestOpening?.let { opening -> ChestOpenedSheet(s, opening, vm::dismissChest) }
     listStack?.let { code ->
-        ListingSheet(s, itemTitle(code), owned = s.bagAmount(code) ?: 0L, onDismiss = { listStack = null }) { orb, price, amount ->
+        ListingSheet(s, itemTitle(code), owned = s.bagAmount(code) ?: 0L, onDismiss = { listStack = null }, hint = { vm.priceHint(code, null, 0) }) { orb, price, amount ->
             listStack = null; vm.sellItem(code, amount, orb, price)
         }
     }

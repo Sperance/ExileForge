@@ -40,8 +40,10 @@ import kotlinx.serialization.Serializable
 @Serializable data class MailEquipment(val template: String, val rarity: Rarity? = null)
 
 /** What a letter carries: gold, stacks of the bag by code, things; one hero of the account takes it, once. */
-@Serializable data class MailAttachment(val gold: Long = 0, val items: Map<String, Long> = emptyMap(), val equipment: List<MailEquipment> = emptyList()) {
-    val empty: Boolean get() = gold <= 0 && items.isEmpty() && equipment.isEmpty()
+@Serializable data class MailAttachment(val gold: Long = 0, val items: Map<String, Long> = emptyMap(), val equipment: List<MailEquipment> = emptyList(),
+    /** Items as they are (server 1.74.0): an expired lot's goods come back by mail with their rolls. */
+    val instances: List<com.sperance.exileforge.rules.roll.ItemInstance> = emptyList()) {
+    val empty: Boolean get() = gold <= 0 && items.isEmpty() && equipment.isEmpty() && instances.isEmpty()
 }
 
 @Serializable enum class MailKind { SYSTEM, ADMIN }

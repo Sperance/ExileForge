@@ -11,6 +11,7 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.model.auction.PriceHint
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.orbArt
@@ -28,13 +29,15 @@ internal fun orbOptions(s: ForgeState): Map<String, String> = s.currencies.assoc
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun ListingSheet(s: ForgeState, name: String, owned: Long? = null, onDismiss: () -> Unit,
-    onList: (orb: String, price: Long, amount: Long) -> Unit) {
+    hint: (suspend () -> PriceHint?)? = null, onList: (orb: String, price: Long, amount: Long) -> Unit) {
     var orb by remember { mutableStateOf(s.currencies.firstOrNull()?.code.orEmpty()) }
     var price by remember { mutableStateOf("1") }
     var amount by remember { mutableStateOf("1") }
     val cost = price.toLongOrNull() ?: 0L
     val count = if (owned == null) 1L else amount.toLongOrNull() ?: 0L
     val digits = KeyboardOptions(keyboardType = KeyboardType.Number)
+    // What the like sold for lately (3.79.0): the median of recent deals, shown only with enough of them; a tap takes it.
+    val recent by produceState<PriceHint?>(null, hint) { value = hint?.invoke() }
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().padding(16.dp).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Engraved(ui("sell.list"))
@@ -45,6 +48,11 @@ internal fun orbOptions(s: ForgeState): Map<String, String> = s.currencies.assoc
             else Spinner(ui("orb.orb"), orb, orbOptions(s), !s.busy, glyph = Glyph.CURRENCY, optionArt = orbArt(s.currencies)) { orb = it }
             OutlinedTextField(price, { value -> price = value.filter(Char::isDigit).take(s.inputs.number) }, label = { Text(ui("sell.price")) },
                 singleLine = true, keyboardOptions = digits, modifier = Modifier.fillMaxWidth())
+            recent?.let { h ->
+                TextButton(onClick = { orb = h.priceOrb; price = (h.price * count.coerceAtLeast(1)).toString() }, contentPadding = PaddingValues(0.dp)) {
+                    Text(ui("sell.price_hint", h.price, itemTitle(h.priceOrb), h.sales), color = Gold, style = MaterialTheme.typography.bodySmall)
+                }
+            }
             MutedText(ui("sell.note"))
             ForgeButton(enabled = !s.busy && orb.isNotBlank() && cost > 0 && count > 0, onClick = { onList(orb, cost, count) }, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("sell.list"))

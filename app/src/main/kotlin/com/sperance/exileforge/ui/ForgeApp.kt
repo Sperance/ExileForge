@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -42,6 +43,10 @@ import com.sperance.exileforge.presentation.state.Feature
 import com.sperance.exileforge.presentation.state.unlocked
 import com.sperance.exileforge.ui.screens.expedition.world.WorldArt
 import com.sperance.exileforge.ui.components.BugSheet
+import com.sperance.exileforge.ui.components.ExilePathPlate
+import com.sperance.exileforge.ui.components.pathStep
+import com.sperance.exileforge.ui.components.pulse
+import com.sperance.exileforge.ui.components.destination
 import com.sperance.exileforge.ui.components.LocalMailOpen
 import com.sperance.exileforge.ui.components.MailSheet
 import com.sperance.exileforge.ui.components.SuggestionsSheet
@@ -207,6 +212,9 @@ private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, erro
                 val destinations = PLAYER_TABS + listOfNotNull(TAB_ADMIN.takeIf { s.adminTools })
                 val icons = mapOf<Int, ImageVector>(TAB_ACCOUNT to ForgeGlyphs.Portal, TAB_HERO to ForgeGlyphs.Helm, TAB_EXPEDITION to ForgeGlyphs.Swords,
                     TAB_CRAFTS to ForgeGlyphs.Anvil, TAB_PROGRESS to ForgeGlyphs.Sigil, TAB_CITY to ForgeGlyphs.Keep, TAB_ADMIN to ForgeGlyphs.Scroll)
+                // The tab the Exile's Path sends the player to next pulses while its step waits (3.79.0).
+                val beckons = s.pathStep()?.takeIf { !it.second }?.first?.check?.destination
+                val beat = pulse(1.18f)
                 destinations.forEach { index ->
                     val label = labels.getValue(index)
                     // The tree and the grimoire are the hero's (3.24.0), the forge, the menagerie and the trials the hub's: while one is
@@ -224,7 +232,8 @@ private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, erro
                                 if (locked) Icon(Icons.Outlined.Lock, null, tint = Muted, modifier = Modifier.size(12.dp))
                                 else if (free > 0) Badge(containerColor = GoldBright, contentColor = Ink) { Text(free.toString(), fontSize = 9.sp) }
                             }) {
-                                Icon(icons.getValue(index), null, modifier = Modifier.size(22.dp))
+                                Icon(icons.getValue(index), null, tint = if (index == beckons && s.tab != index) GoldBright else LocalContentColor.current,
+                                    modifier = Modifier.size(22.dp).scale(if (index == beckons && s.tab != index) beat else 1f))
                             }
                         }, label = { Text(label, fontSize = 10.sp) },
                         colors = NavigationBarItemDefaults.colors(selectedIconColor = GoldBright, selectedTextColor = Gold,
@@ -239,6 +248,8 @@ private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, erro
             LaunchedEffect(s.play.heroId) { if (s.play.heroId.isNotBlank()) vm.loadCrafts(silent = true) }
             ForgeBanner(s, vm, onBug)
             if (s.busy || s.reading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised) else OrnateDivider(Gold)
+            // The Exile's Path (3.79.0): the first hour's next step, under the banner on every tab until it is walked.
+            ExilePathPlate(s, onGo = vm::tab, onClaim = vm::claimPath)
             HeroTab.of(s.tab)?.let { HeroTabStrip(it, locked = { tab -> !s.unlocked(Feature.ofTab(tab)) }, onSelect = vm::tab) }
             // Each tab is handed its slice (3.56.0): a toast, a refusal or another tab's reads no longer redraw it.
             when (s.tab) {

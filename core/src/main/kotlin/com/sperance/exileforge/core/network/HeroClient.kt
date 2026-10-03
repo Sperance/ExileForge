@@ -123,6 +123,9 @@ class HeroClient internal constructor(private val http: Transport) {
     suspend fun autoSell(heroId: String, rarity: Rarity, groups: Set<SlotGroup>): AutoSell =
         http.post("$HERO/autosell", heroQuery(heroId, "rarity" to rarity.name, "groups" to groups.joinToString(",") { it.name }))
 
+    /** Claims the Exile's Path step the hero stands on (server 1.74.0): refused (`PR_007`) while it is not done. */
+    suspend fun claimPath(heroId: String): com.sperance.exileforge.core.model.hero.PathClaimed = http.post("$HERO/path/claim", heroQuery(heroId))
+
     /** Wears the title [title] beside the name — one the chronicle has earned — or takes it off when blank (server 1.3.0). */
     suspend fun setTitle(heroId: String, title: String): String = http.post("$HERO/title", heroQuery(heroId, "title" to title))
 

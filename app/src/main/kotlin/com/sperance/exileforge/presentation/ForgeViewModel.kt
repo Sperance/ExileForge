@@ -112,6 +112,7 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() 
     fun equip(itemId: String, slot: Slot? = null) = runtime.heroViewModel.equip(itemId, slot)
     fun unequip(itemId: String) = runtime.heroViewModel.unequip(itemId)
     fun expandStash() = runtime.heroViewModel.expandStash()
+    fun claimPath() = runtime.heroViewModel.claimPath()
     fun setTitle(title: String) = runtime.heroViewModel.setTitle(title)
     /** The hero's statistics (3.51.0), read when the chronicle opens; null when the read failed. */
     suspend fun heroStats(heroId: String): Map<String, Long>? = runCatching { runtime.api.hero.stats(heroId).values }.getOrNull()

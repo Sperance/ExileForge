@@ -54,6 +54,11 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     fun equip(itemId: String, slot: Slot? = null) { with(runtime) { buzz(Buzz.BUTTON); heroCommand { id -> api.hero.equip(id, itemId, slot) } } }
     fun unequip(itemId: String) { with(runtime) { heroCommand { id -> api.hero.unequip(id, itemId) } } }
     /** The title beside the name (1.3.0): one the chronicle opened, or none. */
+    /** The Exile's Path (3.79.0): the step done is claimed, its reward named in a toast. */
+    fun claimPath() { with(runtime) { heroCommand { id ->
+        val claimed = api.hero.claimPath(id)
+        toast(ui("path.claimed", ui("path.${claimed.step.lowercase()}.title")), NoticeKind.LOOT)
+    } } }
     fun setTitle(title: String) { with(runtime) { heroCommand { id -> api.hero.setTitle(id, title) } } }
     /** Locks or unlocks an item (3.30.0): a locked one is never sold, listed or auto-sold; the snapshot carries the flag. */
     fun stashSort(sort: StashSort) { with(runtime) {

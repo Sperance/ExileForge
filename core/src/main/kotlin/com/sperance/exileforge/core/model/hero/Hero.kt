@@ -47,7 +47,13 @@ import kotlinx.serialization.Serializable
     val plannedTree: List<com.sperance.exileforge.rules.content.TakenNode> = emptyList(),
     /** Tree points beyond the level (3.73.0, server 1.69.0): only the testing window gives them. */
     val bonusPoints: Int = 0,
+    /** The Exile's Path (3.79.0, server 1.74.0): steps claimed, and whether the hero has put an item on by themself. */
+    val pathStep: Int = 0,
+    val pathEquipped: Boolean = false,
 )
+
+/** A step of the Exile's Path claimed (server 1.74.0): its code and the next step's place. */
+@Serializable data class PathClaimed(val step: String = "", val next: Int = 0)
 
 /** The stash's places as the server counts them after a command: used, held, the ceiling, the next pack's price (0 at the ceiling), the overflow. */
 @Serializable data class StashState(val used: Int = 0, val capacity: Int = 0, val max: Int = 0, val price: Long = 0, val overflow: Int = 0, val overflowMax: Int = 0, val money: Long = 0)
@@ -115,6 +121,10 @@ data class HeroView(
     fun count(code: String): Long = bag[code] ?: 0L
     /** The chronicle whole: the kept counters, and the level, zones, atlas and tree nodes at their record. */
     val chronicle: Map<String, Long> get() = Counter.values(info.counters, Counter.derived(level, campaign.cleared.size, info.atlas.size, tree.size))
+    /** What the hero has done as the Exile's Path asks it: the server pays by the same facts. */
+    val pathFacts: com.sperance.exileforge.rules.content.PathFacts get() = chronicle.let {
+        com.sperance.exileforge.rules.content.PathFacts(it[Counter.ZONES] ?: 0, info.pathEquipped, tree.size, info.skills, it[Counter.BOSSES] ?: 0, it[Counter.ORBS_USED] ?: 0)
+    }
 }
 
 /** The menagerie as the server keeps it: the pets, the combat one and the helper at work by id, the ceiling and the incubator (server 1.67.0). */

@@ -13,24 +13,30 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.guild.GuildView
-import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.quests.QuestViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.rules.content.GuildGoalView
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.auction.untilText
 import com.sperance.exileforge.ui.theme.*
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * The guild's quests (3.23.0): the hero's own two for the day, then the common goals of the day and of the week. A common
  * goal fills with every member's counters; once it is full, each member who gave at least the threshold claims a share,
  * and the first claim brings the guild its experience. Under a goal, who gave most.
  */
-@Composable internal fun GuildQuestsTab(s: ForgeState, vm: ForgeViewModel, guild: GuildView) {
-    LaunchedEffect(s.play.heroId, guild.id) { vm.loadGuildQuests() }
-    val quests = s.quests.guild
+@Composable internal fun GuildQuestsTab(s: ForgeState, guild: GuildView) {
+    val vm = koinViewModel<QuestViewModel>()
+    val boards by vm.quests.collectAsStateWithLifecycle()
+    val activity by vm.activity.collectAsStateWithLifecycle()
+    val busy = activity.busy
+    LaunchedEffect(s.play.heroId, guild.id) { vm.loadGuild() }
+    val quests = boards.guild
     val names = guild.members.associate { it.heroId to it.name }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         if (quests == null) {
@@ -41,11 +47,11 @@ import com.sperance.exileforge.ui.theme.*
         if (quests.personal.isEmpty()) item { MutedText(ui("quest.none")) }
         items(quests.personal, key = { it.id }) { quest ->
             QuestRow(quest) {
-                if (quest.done && !quest.claimed) ForgeButton({ vm.claimGuildQuest(questId = quest.id) }, enabled = !s.busy) { Text(ui("quest.claim")) }
+                if (quest.done && !quest.claimed) ForgeButton({ vm.claimGuild(questId = quest.id) }, enabled = !busy) { Text(ui("quest.claim")) }
             }
         }
-        goals(s, vm, ui("quest.guild_daily"), ui("quest.resets", untilText(quests.dayEndsAt)), quests.daily, names)
-        goals(s, vm, ui("quest.guild_weekly"), ui("quest.resets", weekText(quests.weekEndsAt)), quests.weekly, names)
+        goals(s.play.heroId, vm, busy, ui("quest.guild_daily"), ui("quest.resets", untilText(quests.dayEndsAt)), quests.daily, names)
+        goals(s.play.heroId, vm, busy, ui("quest.guild_weekly"), ui("quest.resets", weekText(quests.weekEndsAt)), quests.weekly, names)
     }
 }
 
@@ -56,14 +62,14 @@ import com.sperance.exileforge.ui.theme.*
     }
 }
 
-private fun LazyListScope.goals(s: ForgeState, vm: ForgeViewModel, title: String, note: String, goals: List<GuildGoalView>, names: Map<String, String>) {
+private fun LazyListScope.goals(me: String, vm: QuestViewModel, busy: Boolean, title: String, note: String, goals: List<GuildGoalView>, names: Map<String, String>) {
     item { Section(title, note) }
     if (goals.isEmpty()) item { MutedText(ui("quest.none")) }
-    items(goals, key = { it.goal.key }) { GoalRow(s, vm, it, names) }
+    items(goals, key = { it.goal.key }) { GoalRow(me, vm, busy, it, names) }
 }
 
 /** A common goal: the whole guild's bar, the hero's part against the threshold, the share and the best givers. */
-@Composable private fun GoalRow(s: ForgeState, vm: ForgeViewModel, view: GuildGoalView, names: Map<String, String>) {
+@Composable private fun GoalRow(me: String, vm: QuestViewModel, busy: Boolean, view: GuildGoalView, names: Map<String, String>) {
     val goal = view.goal
     val color = rarityColor(goal.rarity.name)
     val shape = RoundedCornerShape(8.dp)
@@ -88,7 +94,7 @@ private fun LazyListScope.goals(s: ForgeState, vm: ForgeViewModel, title: String
                     MutedText("${place + 1}.")
                     Text(
                         names[heroId] ?: "—",
-                        color = if (heroId == s.play.heroId) Gold else Parchment,
+                        color = if (heroId == me) Gold else Parchment,
                         style = MaterialTheme.typography.bodySmall,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -100,7 +106,7 @@ private fun LazyListScope.goals(s: ForgeState, vm: ForgeViewModel, title: String
             Row(horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 when {
                     view.claimed -> Text(ui("quest.claimed"), color = Vital, style = MaterialTheme.typography.labelMedium)
-                    done && view.mine >= view.need -> ForgeButton({ vm.claimGuildQuest(goal = goal.key) }, enabled = !s.busy) { Text(ui("quest.claim_share")) }
+                    done && view.mine >= view.need -> ForgeButton({ vm.claimGuild(goal = goal.key) }, enabled = !busy) { Text(ui("quest.claim_share")) }
                     done -> MutedText(ui("quest.guild_short"))
                 }
             }

@@ -106,7 +106,7 @@ class GuildViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
                 val given = runtime.api.guild.contribute(id, item, amount)
                 if (!onScreen(id)) return@task
                 guild { it.copy(mine = it.mine?.copy(guild = given.guild, me = given.me)) }
-                update { s -> s.copy(play = s.play.copy(hero = s.play.hero?.let { it.copy(info = it.info.copy(money = given.money)) })) }
+                heroes.money(given.money)
                 toast(ui("guild.toast.contributed"))
                 after { heroViewModel.readHero() }
             }

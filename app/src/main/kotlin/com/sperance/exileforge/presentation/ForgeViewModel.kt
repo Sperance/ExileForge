@@ -18,7 +18,6 @@ import com.sperance.exileforge.presentation.state.Feature
 import com.sperance.exileforge.presentation.state.ForgeSection
 import com.sperance.exileforge.presentation.state.GameSettings
 import com.sperance.exileforge.presentation.state.GuildTab
-import com.sperance.exileforge.presentation.state.QuestTab
 import com.sperance.exileforge.presentation.state.StashSort
 import com.sperance.exileforge.presentation.state.TAB_SETTINGS
 import com.sperance.exileforge.presentation.state.unlocked
@@ -40,8 +39,12 @@ class ForgeViewModel(
     notices: com.sperance.exileforge.core.session.Notices,
     feedbacks: com.sperance.exileforge.core.feedback.FeedbackRepository,
     events: com.sperance.exileforge.core.session.GameEvents,
+    heroes: com.sperance.exileforge.core.hero.HeroRepository,
+    boards: com.sperance.exileforge.core.quests.QuestRepository,
+    quests: com.sperance.exileforge.presentation.quests.QuestActions,
+    content: com.sperance.exileforge.core.world.ContentLoader,
 ) : ViewModel() {
-    private val runtime = ForgeRuntime(store, journal, prefs, sessions, world, connection, commands, hub, notices, feedbacks, events)
+    private val runtime = ForgeRuntime(store, journal, prefs, sessions, world, connection, commands, hub, notices, feedbacks, events, heroes, boards, quests, content)
     val state = runtime.state
 
     /** What the phone buzzes for (3.77.0), already filtered by the settings. */
@@ -285,14 +288,6 @@ class ForgeViewModel(
     fun contribute(item: String, amount: Long) = runtime.guildViewModel.contribute(item, amount)
     fun loadGuildLog(more: Boolean = false) = runtime.guildViewModel.loadLog(more)
 
-    // Quests (3.23.0): the City's board and the guild's quests.
-    fun loadQuests() = runtime.questViewModel.load()
-    fun questTab(tab: QuestTab) = runtime.questViewModel.tab(tab)
-    fun claimQuest(questId: String) = runtime.questViewModel.claim(questId)
-    fun takeContract(offerId: String) = runtime.questViewModel.take(offerId)
-    fun abandonContract(questId: String) = runtime.questViewModel.abandon(questId)
-    fun loadGuildQuests() = runtime.questViewModel.loadGuild()
-    fun claimGuildQuest(questId: String? = null, goal: String? = null) = runtime.questViewModel.claimGuild(questId, goal)
     fun buyLot(lotId: String) = runtime.auctionViewModel.buy(lotId)
     fun buyOffer(offerId: String) = runtime.auctionViewModel.buyOffer(offerId)
     fun buyOrb(code: String) = runtime.auctionViewModel.buyOrb(code)

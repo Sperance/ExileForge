@@ -47,7 +47,7 @@ class WarmupViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
                         launch { step(id, WarmStep.HERO) { if (state.value.play.heroReadAt == 0L) heroViewModel.readHero() } }
                     }
                     step(id, WarmStep.WORLD) {
-                        questViewModel.load()
+                        quests.load()
                         craftsViewModel.load(silent = true)
                         auctionViewModel.loadMerchant()
                     }

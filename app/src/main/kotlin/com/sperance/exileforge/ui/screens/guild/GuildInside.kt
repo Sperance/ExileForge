@@ -76,7 +76,7 @@ internal fun ColumnScope.GuildInside(s: ForgeState, vm: ForgeViewModel, guild: G
     PullToRefreshBox(isRefreshing = Reads.GUILD in s.loading, onRefresh = vm::loadGuild, modifier = Modifier.weight(1f)) {
         when (tab) {
             GuildTab.MEMBERS -> MembersTab(s, vm, guild, me)
-            GuildTab.QUESTS -> GuildQuestsTab(s, vm, guild)
+            GuildTab.QUESTS -> GuildQuestsTab(s, guild)
             GuildTab.TREE -> TreeTab(s, vm, guild, me)
             GuildTab.STASH -> StashTab(s, vm, me)
             GuildTab.APPLICATIONS -> ApplicationsTab(s, vm, guild)

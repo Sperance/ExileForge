@@ -319,13 +319,9 @@ data class GuildState(
 )
 
 /** The quest board's sections (3.23.0). */
-enum class QuestTab { DAILY, WEEKLY, CONTRACTS, STORY }
 
-/**
- * The hero's quests as the server last answered (3.23.0): [board] — the dailies, weeklies, contracts and the story step of the
- * City's board; [guild] — the guild's personal and common quests. Both are null until read.
- */
-data class QuestState(val board: QuestBoard? = null, val guild: GuildQuests? = null, val tab: QuestTab = QuestTab.DAILY)
+/** Квесты героя - срез `QuestRepository` из :core (3.80.10). */
+typealias QuestState = com.sperance.exileforge.core.quests.Quests
 
 /** The administrator's tools: promo codes. */
 data class AdminState(val redemptions: List<RedemptionCode> = emptyList())

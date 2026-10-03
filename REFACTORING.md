@@ -16,7 +16,8 @@
 - [ ] Истина в `:core`: `StateFlow`/`Flow`, без Android. ForgeState лишь отражает потоки для ещё не переведённых экранов.
   - [x] `SessionRepository` (сервер, аккаунт, герои аккаунта, здоровье сервера) и `WorldRepository` (контент, словарь, иконки, портреты).
   - [x] `FeedbackRepository` (предложения, отчёты, почта); `Notices` (тосты) и `GameEvents` (сигнал «герой изменился») в `:core`.
-  - [ ] `HeroRepository` (герой, снимки, синк), `MarketRepository`, `GuildRepository`, `QuestRepository`.
+  - [x] `HeroRepository` (id героя и `HeroView`; кошелёк и сумка правятся только через него), `QuestRepository`, `ContentLoader` (делегат `ensureContent`).
+  - [ ] `HeroRepository`: снимки и синк из `HeroViewModel`; `MarketRepository`, `GuildRepository`.
   - [x] Команды и чтения (`task`/`read`, busy/loading/failure, строка отказа) - `CommandRunner` в `:core`; `Phrase` тоже в `:core`.
   - [x] Текущий `GameApi` - `ServerConnection` в `:core`; `Reads` (ключи чтений) там же.
 - [ ] `ForgeState` распадается на срезы этих репозиториев; `sliced()` удалён.
@@ -30,6 +31,7 @@
   - [x] Server (аккаунт/сервер/клиент): `ServerViewModel` над `SessionRepository` и `WorldRepository`; команды пока через общую модель.
   - [x] Settings: `PreferencesRepository` (единственный источник настроек устройства) + `SettingsViewModel`; `ForgeState.settings` лишь отражает поток для ещё не переведённых экранов.
   - [x] Feedback/Mail: `FeedbackViewModel` над `FeedbackRepository`, `ServerConnection`, `CommandRunner`; листы и админ-страницы берут модель из Koin, `ForgeViewModel` фидбэка не знает.
+  - [x] Quests (доска Города и вкладка гильдии): `QuestActions` (общие действия, зовут их и прогрев, и конец похода) + `QuestViewModel`; раздел доски - состояние модели экрана.
 - [ ] По ходу: файлы UI не длиннее ~400 строк (SkillTreeScreen, CraftsScreen, MapStyles, GrimoireScreen, ExpeditionScene, WorldArt, AtlasScreen, AuctionTabs).
 - [ ] `ForgeViewModel`, `ForgeRuntime`, `FeatureViewModel` удалены.
 

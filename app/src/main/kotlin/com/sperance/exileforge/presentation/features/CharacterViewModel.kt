@@ -35,6 +35,8 @@ class CharacterViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     private suspend fun entered(id: String) {
         with(runtime) {
+            heroes.select(id)
+            boards.clear()
             mutable.update { it.copy(phase = AppPhase.GAME, tab = TAB_HERO, play = PlayState(heroId = id, draftClass = it.play.draftClass, selectedOrb = it.play.selectedOrb)) }
             heroViewModel.forget()
             // The hero the next launch opens straight into (3.30.0).
@@ -53,6 +55,8 @@ class CharacterViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             expeditionViewModel.drop()
             trialViewModel.drop()
             craftsViewModel.drop()
+            heroes.clear()
+            boards.clear()
             mutable.update {
                 it.copy(
                     phase = AppPhase.CHARACTERS,

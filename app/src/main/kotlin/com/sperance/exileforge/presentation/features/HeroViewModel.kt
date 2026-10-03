@@ -510,10 +510,10 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
                 if (ticket != drawing || parts !== merged) return@launch
                 val info = view.info
                 val now = System.currentTimeMillis()
+                heroes.set(view)
                 mutable.update {
                     it.copy(
                         play = it.play.copy(
-                            hero = view,
                             heroOwner = info.userId,
                             heroReadAt = now,
                             heroSeenAt = now,

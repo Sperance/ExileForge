@@ -12,19 +12,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.quests.QuestTab
 import com.sperance.exileforge.core.session.Reads
-import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.quests.QuestViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
-import com.sperance.exileforge.presentation.state.QuestTab
 import com.sperance.exileforge.rules.content.Quest
 import com.sperance.exileforge.rules.content.QuestBoard
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.auction.untilText
 import com.sperance.exileforge.ui.theme.*
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * The quest board of the City (3.23.0): four sections — dailies, weeklies, the contract board and the story — each a
@@ -33,21 +35,26 @@ import com.sperance.exileforge.ui.theme.*
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun QuestsScreen(s: ForgeState, vm: ForgeViewModel) {
-    LaunchedEffect(s.play.heroId, s.account.sessionEpoch) { if (s.play.heroId.isNotBlank()) vm.loadQuests() }
+fun QuestsScreen(s: ForgeState) {
+    val vm = koinViewModel<QuestViewModel>()
+    val quests by vm.quests.collectAsStateWithLifecycle()
+    val activity by vm.activity.collectAsStateWithLifecycle()
+    val current by vm.tab.collectAsStateWithLifecycle()
+    LaunchedEffect(s.play.heroId, s.account.sessionEpoch) { if (s.play.heroId.isNotBlank()) vm.load() }
     FirstVisit(Guide.QUESTS)
-    val board = s.quests.board
+    val board = quests.board
+    val busy = activity.busy
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.padding(horizontal = 16.dp)) {
             ScreenHeader(ui("quest.title"), ui("quest.subtitle"), ForgeGlyphs.Scroll, guide = Guide.QUESTS)
         }
-        TabRow(selectedTabIndex = s.quests.tab.ordinal, containerColor = Abyss) {
+        TabRow(selectedTabIndex = current.ordinal, containerColor = Abyss) {
             QuestTab.entries.forEach { tab ->
                 val ready = readyCount(tab, board)
                 // A glyph over a short word, the ready count a badge on the glyph: four long titles did not fit a row.
                 Tab(
-                    selected = tab == s.quests.tab,
-                    onClick = { vm.questTab(tab) },
+                    selected = tab == current,
+                    onClick = { vm.tab(tab) },
                     icon = {
                         BadgedBox(badge = { if (ready > 0) Badge(containerColor = Vital, contentColor = Ink) { Text(ready.toString(), fontSize = 9.sp) } }) {
                             Icon(tab.glyph, null, modifier = Modifier.size(20.dp))
@@ -57,17 +64,17 @@ fun QuestsScreen(s: ForgeState, vm: ForgeViewModel) {
                 )
             }
         }
-        PullToRefreshBox(isRefreshing = Reads.QUESTS in s.loading, onRefresh = vm::loadQuests, modifier = Modifier.weight(1f)) {
+        PullToRefreshBox(isRefreshing = Reads.QUESTS in activity.loading, onRefresh = vm::load, modifier = Modifier.weight(1f)) {
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (board == null) {
                     item { MutedText(ui("quest.loading")) }
                     return@LazyColumn
                 }
-                when (s.quests.tab) {
-                    QuestTab.DAILY -> daily(s, vm, board)
-                    QuestTab.WEEKLY -> weekly(s, vm, board)
-                    QuestTab.CONTRACTS -> contracts(s, vm, board)
-                    QuestTab.STORY -> story(s, vm, board)
+                when (current) {
+                    QuestTab.DAILY -> daily(vm, busy, board)
+                    QuestTab.WEEKLY -> weekly(vm, busy, board)
+                    QuestTab.CONTRACTS -> contracts(vm, busy, board)
+                    QuestTab.STORY -> story(s, vm, busy, board)
                 }
             }
         }
@@ -89,26 +96,26 @@ private val QuestTab.glyph: ImageVector get() = when (this) {
     QuestTab.STORY -> ForgeGlyphs.Tome
 }
 
-private fun LazyListScope.daily(s: ForgeState, vm: ForgeViewModel, board: QuestBoard) {
+private fun LazyListScope.daily(vm: QuestViewModel, busy: Boolean, board: QuestBoard) {
     // Dailies are not swapped for gold since 3.24.0 (server 1.22.0): what the day rolled is the day's.
     item { MutedText(ui("quest.resets", untilText(board.dayEndsAt))) }
     if (board.daily.isEmpty()) item { MutedText(ui("quest.none")) }
-    items(board.daily, key = { it.id }) { quest -> QuestRow(quest) { ClaimButton(s, vm, quest) } }
+    items(board.daily, key = { it.id }) { quest -> QuestRow(quest) { ClaimButton(vm, busy, quest) } }
 }
 
-private fun LazyListScope.weekly(s: ForgeState, vm: ForgeViewModel, board: QuestBoard) {
+private fun LazyListScope.weekly(vm: QuestViewModel, busy: Boolean, board: QuestBoard) {
     item { MutedText(ui("quest.resets", weekText(board.weekEndsAt))) }
     if (board.weekly.isEmpty()) item { MutedText(ui("quest.none")) }
-    items(board.weekly, key = { it.id }) { quest -> QuestRow(quest) { ClaimButton(s, vm, quest) } }
+    items(board.weekly, key = { it.id }) { quest -> QuestRow(quest) { ClaimButton(vm, busy, quest) } }
 }
 
-private fun LazyListScope.contracts(s: ForgeState, vm: ForgeViewModel, board: QuestBoard) {
+private fun LazyListScope.contracts(vm: QuestViewModel, busy: Boolean, board: QuestBoard) {
     item { Engraved(ui("quest.contracts_taken", board.contracts.size, board.activeLimit)) }
     if (board.contracts.isEmpty()) item { MutedText(ui("quest.contracts_none")) }
     items(board.contracts, key = { it.id }) { quest ->
         QuestRow(quest) {
-            if (!quest.done) ForgeTextButton({ vm.abandonContract(quest.id) }, enabled = !s.busy) { Text(ui("quest.abandon"), color = LifeRed) }
-            ClaimButton(s, vm, quest)
+            if (!quest.done) ForgeTextButton({ vm.abandon(quest.id) }, enabled = !busy) { Text(ui("quest.abandon"), color = LifeRed) }
+            ClaimButton(vm, busy, quest)
         }
     }
     item {
@@ -121,13 +128,13 @@ private fun LazyListScope.contracts(s: ForgeState, vm: ForgeViewModel, board: Qu
     val full = board.contracts.size >= board.activeLimit
     items(board.offers, key = { it.id }) { offer ->
         QuestRow(offer) {
-            ForgeButton({ vm.takeContract(offer.id) }, enabled = !s.busy && !full) { Text(ui("quest.take")) }
+            ForgeButton({ vm.take(offer.id) }, enabled = !busy && !full) { Text(ui("quest.take")) }
         }
     }
 }
 
 /** The story: the chapter's name, its steps behind and ahead, and the step at hand as a quest. */
-private fun LazyListScope.story(s: ForgeState, vm: ForgeViewModel, board: QuestBoard) {
+private fun LazyListScope.story(s: ForgeState, vm: QuestViewModel, busy: Boolean, board: QuestBoard) {
     val chapters = s.index?.quests?.story.orEmpty()
     val chapter = chapters.getOrNull(board.chapter)
     if (chapter == null) {
@@ -148,7 +155,7 @@ private fun LazyListScope.story(s: ForgeState, vm: ForgeViewModel, board: QuestB
     items(chapter.steps.withIndex().toList(), key = { it.value.code }) { (index, step) ->
         val current = board.story?.takeIf { index == board.step && it.goal == step.code }
         when {
-            current != null -> QuestRow(current) { ClaimButton(s, vm, current) }
+            current != null -> QuestRow(current) { ClaimButton(vm, busy, current) }
             index < board.step -> StepLine("✓ " + loc("quest.story.${step.code}.name"), Vital)
             else -> StepLine("· " + loc("quest.story.${step.code}.name"), Muted)
         }
@@ -159,8 +166,8 @@ private fun LazyListScope.story(s: ForgeState, vm: ForgeViewModel, board: QuestB
     Text(text, color = color, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(horizontal = 4.dp))
 }
 
-@Composable private fun ClaimButton(s: ForgeState, vm: ForgeViewModel, quest: Quest) {
-    if (quest.done && !quest.claimed) ForgeButton({ vm.claimQuest(quest.id) }, enabled = !s.busy) { Text(ui("quest.claim")) }
+@Composable private fun ClaimButton(vm: QuestViewModel, busy: Boolean, quest: Quest) {
+    if (quest.done && !quest.claimed) ForgeButton({ vm.claim(quest.id) }, enabled = !busy) { Text(ui("quest.claim")) }
 }
 
 /** Days and hours to a week's end — a week does not fit in the merchant's hours and minutes. */

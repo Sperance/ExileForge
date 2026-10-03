@@ -64,10 +64,10 @@ class CraftsViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
                 // (server 1.53.0 keeps the dice to itself) nothing is thrown either: the server's answer is the cycle.
                 if (work.seed != 0L && spent.all { (code, amount) -> (bag[code] ?: 0L) >= amount }) {
                     val gains = CraftCycle.roll(work.seed, work.cycle, job, profession.bonus, work.additives)
+                    heroes.patch { it.copy(bag = patched(it.bag, gains)) }
                     mutable.update { s ->
                         s.copy(
                             play = s.play.copy(
-                                hero = s.play.hero?.let { it.copy(bag = patched(it.bag, gains)) },
                                 crafts = s.play.crafts?.copy(work = work.copy(settledAt = work.settledAt + work.cycleMillis, nextAt = work.nextAt + work.cycleMillis, cycle = work.cycle + 1)),
                                 craftsTotals = s.play.craftsTotals + gains,
                                 craftsLast = gains,

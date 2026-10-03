@@ -355,7 +355,7 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             if (runJournal === j) runJournal = null
             store.clearJournal(j.heroId)
             // The run is counted whole (3.24.0): whatever it finished is handed in at once.
-            questViewModel.claimAll(j.heroId)
+            quests.claimAll(j.heroId)
         }
     }
 

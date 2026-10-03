@@ -1,13 +1,16 @@
 package com.sperance.exileforge.di
 
 import com.sperance.exileforge.core.feedback.FeedbackRepository
+import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.network.RequestJournal
+import com.sperance.exileforge.core.quests.QuestRepository
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.ConnectionEventsHub
 import com.sperance.exileforge.core.session.GameEvents
 import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.core.session.SessionRepository
+import com.sperance.exileforge.core.world.ContentLoader
 import com.sperance.exileforge.core.world.WorldRepository
 import com.sperance.exileforge.data.settings.DEFAULT_SERVER
 import com.sperance.exileforge.data.settings.DraftStore
@@ -17,6 +20,8 @@ import com.sperance.exileforge.data.settings.ServerStore
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.features.UpdateViewModel
 import com.sperance.exileforge.presentation.feedback.FeedbackViewModel
+import com.sperance.exileforge.presentation.quests.QuestActions
+import com.sperance.exileforge.presentation.quests.QuestViewModel
 import com.sperance.exileforge.presentation.server.ServerViewModel
 import com.sperance.exileforge.presentation.settings.SettingsViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -24,7 +29,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import org.koin.android.ext.koin.androidApplication
 import org.koin.android.ext.koin.androidContext
+import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModel
+import org.koin.core.module.dsl.viewModelOf
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
 
@@ -50,8 +57,13 @@ val appModule = module {
     single { Notices() }
     single { GameEvents() }
     single { FeedbackRepository() }
-    viewModel { ForgeViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
-    viewModel { FeedbackViewModel(get(), get(), get(), get(), get(), get()) }
+    single { HeroRepository() }
+    single { QuestRepository() }
+    single { ContentLoader() }
+    single { QuestActions(get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
+    viewModelOf(::ForgeViewModel)
+    viewModelOf(::FeedbackViewModel)
+    viewModelOf(::QuestViewModel)
     viewModel { SettingsViewModel(get()) }
     viewModel { ServerViewModel(get(), get()) }
     // Проверка обновлений ждёт сервер игровой модели: поток и манифест приходят параметрами из активности.

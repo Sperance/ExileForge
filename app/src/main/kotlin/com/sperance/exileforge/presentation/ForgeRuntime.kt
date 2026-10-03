@@ -33,7 +33,6 @@ import com.sperance.exileforge.presentation.features.CraftsViewModel
 import com.sperance.exileforge.presentation.features.ExpeditionViewModel
 import com.sperance.exileforge.presentation.features.GuildViewModel
 import com.sperance.exileforge.presentation.features.HeroViewModel
-import com.sperance.exileforge.presentation.features.QuestViewModel
 import com.sperance.exileforge.presentation.features.RedemptionViewModel
 import com.sperance.exileforge.presentation.features.SessionViewModel
 import com.sperance.exileforge.presentation.features.TrialViewModel
@@ -87,6 +86,10 @@ class ForgeRuntime(
     val notices: com.sperance.exileforge.core.session.Notices,
     val feedbacks: com.sperance.exileforge.core.feedback.FeedbackRepository,
     val events: com.sperance.exileforge.core.session.GameEvents,
+    val heroes: com.sperance.exileforge.core.hero.HeroRepository,
+    val boards: com.sperance.exileforge.core.quests.QuestRepository,
+    val quests: com.sperance.exileforge.presentation.quests.QuestActions,
+    private val content: com.sperance.exileforge.core.world.ContentLoader,
 ) {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     val mutable = MutableStateFlow(ForgeState())
@@ -113,7 +116,6 @@ class ForgeRuntime(
     val warmupViewModel = com.sperance.exileforge.presentation.features.WarmupViewModel(this)
     val craftsViewModel = CraftsViewModel(this)
     val guildViewModel = GuildViewModel(this)
-    val questViewModel = QuestViewModel(this)
     val connectionViewModel = ConnectionViewModel(this)
 
     /**
@@ -182,7 +184,19 @@ class ForgeRuntime(
         }
         scope.launch { notices.state.collect { value -> mutable.update { it.copy(notice = value) } } }
         scope.launch { feedbacks.state.collect { value -> mutable.update { it.copy(feedback = value) } } }
-        scope.launch { events.heroChanged.collect { heroViewModel.readHero() } }
+        scope.launch { heroes.state.collect { h -> mutable.update { it.copy(play = it.play.copy(heroId = h.heroId, hero = h.hero)) } } }
+        scope.launch { boards.state.collect { value -> mutable.update { it.copy(quests = value) } } }
+        content.delegate = { fresh -> ensureContent(fresh) }
+        // Герой изменился на сервере по чужой команде: перечитывается тихо, отказ остаётся команде, что его просила.
+        scope.launch {
+            events.heroChanged.collect {
+                try {
+                    heroViewModel.readHero()
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (_: Exception) { }
+            }
+        }
         scope.launch {
             try {
                 val language = Lang.byCode(store.language.first()) ?: deviceLanguage()
@@ -469,6 +483,8 @@ class ForgeRuntime(
         heroViewModel.forget()
         sessions.clear()
         feedbacks.clear()
+        heroes.clear()
+        boards.clear()
         commands.clearFailure()
         mutable.update {
             it.copy(

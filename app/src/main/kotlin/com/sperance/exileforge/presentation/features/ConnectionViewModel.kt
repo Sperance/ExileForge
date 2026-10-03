@@ -158,7 +158,7 @@ class ConnectionViewModel(runtime: ForgeRuntime) :
                         TAB_CRAFTS -> craftsViewModel.load(silent = true)
 
                         TAB_CITY -> when (now.building) {
-                            Building.QUESTS -> questViewModel.load()
+                            Building.QUESTS -> quests.load()
                             Building.MERCHANT -> auctionViewModel.loadMerchant()
                             Building.AUCTION -> auctionViewModel.loadAuction()
                             Building.GUILD -> guildViewModel.load()

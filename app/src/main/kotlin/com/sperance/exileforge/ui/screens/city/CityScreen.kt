@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.GuildText
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.quests.QuestViewModel
 import com.sperance.exileforge.presentation.state.Building
 import com.sperance.exileforge.presentation.state.Feature
 import com.sperance.exileforge.presentation.state.ForgeState
@@ -36,6 +37,7 @@ import com.sperance.exileforge.ui.screens.auction.untilText
 import com.sperance.exileforge.ui.screens.guild.GuildScreen
 import com.sperance.exileforge.ui.screens.quests.QuestsScreen
 import com.sperance.exileforge.ui.theme.*
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * The City (3.22.0): where the auction's tab was, a square of buildings — the quest board (3.23.0), the merchant, the auction and the guild.
@@ -52,7 +54,7 @@ import com.sperance.exileforge.ui.theme.*
         BackRow(ui("nav.city")) { vm.building(null) }
         Box(Modifier.weight(1f)) {
             when (building) {
-                Building.QUESTS -> QuestsScreen(s, vm)
+                Building.QUESTS -> QuestsScreen(s)
                 Building.MERCHANT -> MerchantScreen(s, vm)
                 Building.AUCTION -> AuctionScreen(s, vm)
                 Building.GUILD -> GuildScreen(s, vm)
@@ -63,12 +65,13 @@ import com.sperance.exileforge.ui.theme.*
 
 /** The square: the three buildings and their news, read when the square opens — the merchant's comes with the hero. */
 @Composable private fun CitySquare(s: ForgeState, vm: ForgeViewModel) {
+    val quests = koinViewModel<QuestViewModel>()
     LaunchedEffect(s.play.heroId, s.account.sessionEpoch) {
         if (s.play.heroId.isNotBlank()) {
             vm.ensureHero()
             vm.loadMyLots(glance = true)
             vm.loadGuild()
-            vm.loadQuests()
+            quests.load()
         }
     }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {

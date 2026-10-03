@@ -127,7 +127,7 @@ class AuctionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     private fun gold(money: Long) {
         with(runtime) {
-            mutable.update { s -> s.copy(play = s.play.copy(hero = s.play.hero?.let { it.copy(info = it.info.copy(money = money)) })) }
+            heroes.money(money)
         }
     }
 

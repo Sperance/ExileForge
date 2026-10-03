@@ -167,6 +167,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             if (copy.revision != API_REVISION || !contentFromDevice()) return false
             api.adopt(saved, copy.account)
             sessions.update { it.copy(signedIn = true, resumable = false, profile = copy.account) }
+            heroes.select(heroId)
             mutable.update {
                 it.copy(
                     mode = AppMode.PLAYER,

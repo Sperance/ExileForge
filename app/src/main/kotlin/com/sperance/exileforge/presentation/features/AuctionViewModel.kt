@@ -126,7 +126,7 @@ class AuctionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     /** The price hint for what the hero is about to list (3.79.0): read quietly, a failure is just no hint. */
     suspend fun priceHint(itemCode: String, rarity: com.sperance.exileforge.rules.content.Rarity?, itemLevel: Int): com.sperance.exileforge.core.model.auction.PriceHint? =
-        try { runtime.api.auction.priceHint(runtime.heroId, itemCode, rarity, itemLevel) }
+        try { runtime.api.auction.priceHint(heroId, itemCode, rarity, itemLevel) }
         catch (e: CancellationException) { throw e }
         catch (_: Exception) { null }
 

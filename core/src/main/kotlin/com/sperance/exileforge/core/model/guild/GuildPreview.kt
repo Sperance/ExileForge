@@ -18,8 +18,5 @@ fun GuildRules.levelProgress(level: Int, experience: Long): Float {
     return if (next <= start) 1f else ((experience - start).toFloat() / (next - start)).coerceIn(0f, 1f)
 }
 
-/** The place of the rank [code] among the ranks; an unknown one is the first. */
-fun GuildRules.rankIndexOf(code: String): Int = ranks.indexOfFirst { it.code == code }.coerceAtLeast(0)
-
 /** The rank [contribution] has not reached yet, none past the last. */
 fun GuildRules.nextRank(contribution: Long): GuildRank? = ranks.firstOrNull { contribution < it.from }

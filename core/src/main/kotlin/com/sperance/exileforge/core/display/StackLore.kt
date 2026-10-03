@@ -59,9 +59,6 @@ enum class SourceKind { WORK, MONSTERS, BOSSES, CHESTS, CORRUPTED, CRYSTALS, VAA
  */
 data class ItemSource(val kind: SourceKind, val levels: IntRange? = null, val chance: Double? = null, val ref: String = "", val detail: String = "", val level: Int = 0)
 
-/** The sources of [code], merged by kind and in a card's order; empty for a stack the content never hands out. */
-fun itemSources(index: ContentIndex, code: String): List<ItemSource> = itemSourceIndex(index)[code].orEmpty()
-
 /**
  * Every stack's sources, read once per loaded content. The first call walks the whole content — a caller on the main
  * thread should make it off it and keep the map.

@@ -51,7 +51,6 @@ fun mapItemTitle(zone: String): String = loc(LocaleKey.mapItemName(), listOf(map
 fun mapDescription(code: String): String = locOr(LocaleKey.mapDescription(code), "")
 fun regionTitle(code: String): String = locOr(LocaleKey.regionName(code), displayName(code))
 fun classTitle(code: String): String = locOr(LocaleKey.className(code), displayName(code))
-fun classDescription(code: String): String = locOr(LocaleKey.classDescription(code), "")
 fun nodeTitle(code: String): String = locOr(LocaleKey.skillNodeName(code), displayName(code))
 fun nodeDescription(code: String): String = locOr(LocaleKey.skillNodeDescription(code), "")
 fun atlasNodeTitle(code: String): String = locOr(LocaleKey.atlasNodeName(code), displayName(code))

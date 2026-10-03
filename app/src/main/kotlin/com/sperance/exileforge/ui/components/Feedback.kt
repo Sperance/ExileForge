@@ -131,24 +131,6 @@ fun SuggestionsSheet(onDismiss: () -> Unit) {
     }
 }
 
-/** The envelope of the banner (3.73.0): the unread count on it, the inbox under a tap. */
-@Composable fun MailButton(unread: Int, onClick: () -> Unit) {
-    IconButton(onClick = onClick) {
-        Box {
-            Icon(Icons.Outlined.Mail, ui("mail.title"), tint = Gold, modifier = Modifier.size(22.dp))
-            if (unread > 0) {
-                Text(
-                    if (unread > 9) "9+" else unread.toString(),
-                    color = Ink,
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.align(Alignment.TopEnd).offset(x = 6.dp, y = (-4).dp).background(LifeRed, CircleShape).padding(horizontal = 4.dp),
-                )
-            }
-        }
-    }
-}
-
 /** A letter's subject and body in the player's language: a system letter is the dictionary's, the administrator's as written. */
 fun mailSubject(mail: Mail): String = if (mail.kind == MailKind.SYSTEM) systemLine(mail, "subject") else mail.subject
 fun mailBody(mail: Mail): String = if (mail.kind == MailKind.SYSTEM) {

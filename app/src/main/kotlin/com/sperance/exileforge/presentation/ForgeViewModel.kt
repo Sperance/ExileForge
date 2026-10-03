@@ -46,6 +46,10 @@ class ForgeViewModel(
     market: com.sperance.exileforge.presentation.market.MarketActions,
 ) : ViewModel() {
     private val runtime = ForgeRuntime(store, journal, prefs, sessions, world, connection, commands, hub, notices, feedbacks, events, heroes, boards, quests, content, markets, market)
+
+    init {
+        runtime.start()
+    }
     val state = runtime.state
 
     /** What the phone buzzes for (3.77.0), already filtered by the settings. */

@@ -97,7 +97,6 @@ private val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
 @Composable fun AtlasScreen(s: ForgeState, vm: ForgeViewModel) {
     val model = koinViewModel<ExpeditionViewModel>()
     val atlas = s.play.atlas ?: return
-    BackHandler(onBack = model::closeAtlas)
     val index = s.index
     val state = s.atlasState
     var resetting by remember { mutableStateOf(false) }

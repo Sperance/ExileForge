@@ -170,14 +170,8 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             sessions.update { it.copy(signedIn = true, resumable = false, profile = copy.account) }
             heroes.select(heroId)
             expeditions.clear()
-            mutable.update {
-                it.copy(
-                    mode = AppMode.PLAYER,
-                    phase = AppPhase.GAME,
-                    tab = TAB_HERO,
-                    play = PlayState(heroId = heroId, draftClass = it.play.draftClass),
-                )
-            }
+            navigator.reset(com.sperance.exileforge.presentation.nav.Route.Hero)
+            mutable.update { it.copy(mode = AppMode.PLAYER, play = PlayState(heroId = heroId, draftClass = it.play.draftClass)) }
             heroSync.restore(heroId, copy.snapshot)
             val foreign = state.value.play.heroOwner.let { it.isNotEmpty() && it != copy.account.id }
             if (state.value.hero == null || foreign) {
@@ -319,7 +313,8 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     private suspend fun signedIn(profile: UserProfile, byDevice: Boolean) {
         with(runtime) {
             sessions.update { it.copy(signedIn = true, resumable = false, profile = profile) }
-            mutable.update { it.copy(mode = AppMode.PLAYER, phase = AppPhase.CHARACTERS, tab = TAB_HERO) }
+            navigator.reset(com.sperance.exileforge.presentation.nav.Route.Characters)
+            mutable.update { it.copy(mode = AppMode.PLAYER) }
             store.saveDeviceSession(byDevice)
             store.saveToken(sessions.state.value.server, api.sessionToken())
             forgetForeignHero(sessions.state.value.server, profile.id)

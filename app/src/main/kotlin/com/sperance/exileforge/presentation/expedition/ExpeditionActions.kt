@@ -31,6 +31,8 @@ import com.sperance.exileforge.core.world.WorldRepository
 import com.sperance.exileforge.data.settings.PreferencesRepository
 import com.sperance.exileforge.data.settings.ServerStore
 import com.sperance.exileforge.presentation.hero.HeroSync
+import com.sperance.exileforge.presentation.nav.Navigator
+import com.sperance.exileforge.presentation.nav.Route
 import com.sperance.exileforge.presentation.quests.QuestActions
 import com.sperance.exileforge.presentation.state.GameSettings
 import com.sperance.exileforge.rules.content.ContentIndex
@@ -78,6 +80,7 @@ class ExpeditionActions(
     private val quests: QuestActions,
     private val prefs: PreferencesRepository,
     private val store: ServerStore,
+    private val navigator: Navigator,
     private val scope: CoroutineScope,
 ) {
     private val api: GameApi get() = connection.api
@@ -425,9 +428,14 @@ class ExpeditionActions(
     fun openAtlas() {
         val last = index?.let { i -> hero?.let { h -> (listOf(i.atlasGraph.start) + h.info.atlas).lastOrNull() } }.orEmpty()
         expedition { it.copy(atlas = it.atlas ?: AtlasWindow(selected = last)) }
+        navigator.open(Route.Atlas)
         heroSync.ensure()
     }
-    fun closeAtlas() = expedition { it.copy(atlas = null) }
+
+    fun closeAtlas() {
+        navigator.back()
+        expedition { it.copy(atlas = null) }
+    }
     fun selectAtlasNode(code: String) = expedition { it.copy(atlas = it.atlas?.copy(selected = code)) }
 
     /** Команда атласа: снимок героя с её ответом несёт новые узлы и очки. */

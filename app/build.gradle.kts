@@ -16,8 +16,8 @@ android {
         applicationId = "com.sperance.exileforge"
         minSdk = 26
         targetSdk = 37
-        versionCode = 256
-        versionName = "3.80.22"
+        versionCode = 257
+        versionName = "3.80.23"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Updates from GitHub Releases (3.72.0) close the game until checked: only the published build does that.
         buildConfigField("boolean", "UPDATES", "false")
@@ -86,6 +86,9 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")
+    // Navigation 3 (3.80.23): стек экранов принадлежит приложению, ключи типизированы.
+    implementation("androidx.navigation3:navigation3-runtime:1.2.0")
+    implementation("androidx.navigation3:navigation3-ui:1.2.0")
     implementation("androidx.datastore:datastore-preferences:1.2.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")

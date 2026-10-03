@@ -38,7 +38,8 @@ class CharacterViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             heroes.select(id)
             boards.clear()
             expeditions.clear()
-            mutable.update { it.copy(phase = AppPhase.GAME, tab = TAB_HERO, play = PlayState(heroId = id, draftClass = it.play.draftClass)) }
+            navigator.reset(com.sperance.exileforge.presentation.nav.Route.Hero)
+            mutable.update { it.copy(play = PlayState(heroId = id, draftClass = it.play.draftClass)) }
             heroSync.forget()
             // The hero the next launch opens straight into (3.30.0).
             store.saveLastHero(sessions.state.value.server, id)
@@ -60,12 +61,11 @@ class CharacterViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             boards.clear()
             markets.clear()
             guilds.clear()
+            navigator.reset(com.sperance.exileforge.presentation.nav.Route.Characters)
             mutable.update {
                 it.copy(
-                    phase = AppPhase.CHARACTERS,
                     play = PlayState(draftClass = it.play.draftClass),
                     market = MarketState(),
-                    building = null,
                     guild = GuildState(),
                     quests = QuestState(),
                 )

@@ -1,6 +1,9 @@
 package com.sperance.exileforge.ui
 
 import android.view.HapticFeedbackConstants
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -35,6 +38,9 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
+import androidx.navigation3.ui.NavDisplay
 import com.sperance.exileforge.core.display.workTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.network.RequestLog
@@ -43,6 +49,8 @@ import com.sperance.exileforge.data.settings.GuideStore
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.features.UpdateViewModel
 import com.sperance.exileforge.presentation.feedback.FeedbackViewModel
+import com.sperance.exileforge.presentation.nav.Navigator
+import com.sperance.exileforge.presentation.nav.Route
 import com.sperance.exileforge.presentation.state.*
 import com.sperance.exileforge.presentation.state.Feature
 import com.sperance.exileforge.presentation.state.unlocked
@@ -156,12 +164,13 @@ private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, erro
     val logs by vm.logs.collectAsStateWithLifecycle()
     val expedition by vm.expedition.collectAsStateWithLifecycle()
     val trial by vm.trial.collectAsStateWithLifecycle()
+    val navigator = koinInject<Navigator>()
+    val route by navigator.current.collectAsStateWithLifecycle()
     // Language is part of the key: every cached label is rebuilt in the chosen tongue.
     // The dictionary arrives after the first frame, so its size joins the key: when the server's
     // names land, every screen that printed a bare code is drawn again.
     // The beetle (3.48.0): in the banner of the game; since 3.57.0 in the own header of every screen without one.
     var bugOpen by remember { mutableStateOf(false) }
-    val context = LocalContext.current
     val drafts = koinInject<DraftStore>()
     // Players' suggestions and the inbox (3.73.0): sheets over everything, like the beetle's.
     var suggestionsOpen by remember { mutableStateOf(false) }
@@ -181,23 +190,15 @@ private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, erro
     key(s.account.server, s.account.sessionEpoch, s.lang, s.world.localeStrings) {
         CompositionLocalProvider(LocalBugReport provides { bugOpen = true }, LocalMailOpen provides { mailOpen = true }) {
             Box(Modifier.fillMaxSize()) {
-                // The two screens above the tabs carry no banner and no bottom bar: there is no character to
-                // name in the one and no tab to reach from the other.
-                when (s.phase) {
-                    AppPhase.AUTH -> AuthScreen(s.sliced(*s.common, *s.toasts))
-
-                    AppPhase.CHARACTERS -> CharacterSelectScreen(s.sliced(*s.common, *s.toasts))
-
-                    // A campaign run takes the whole screen: no banner and no bar, the scene is the game.
-                    // The zone's card (2.76.0) lies on the world map in the tab itself.
-                    // The warm-up (3.54.0): entering a hero, the loading screen stands until everything is read.
-                    AppPhase.GAME -> s.play.warmup?.takeIf { !it.finished }?.let { WarmupScreen(it) }
-                        ?: expedition?.let { ExpeditionPlay(s.sliced(*s.common, *s.toasts, s.logFilter), vm, it) }
-                        // A trial (3.49.0) is an arena of its own, over the whole screen too.
-                        ?: trial?.let { TrialScreen(s.sliced(*s.common, *s.toasts, s.logFilter), vm, it) }
-                        // The atlas (2.68.0) is a sky of its own, above the tabs.
-                        ?: s.play.atlas?.let { AtlasScreen(s.sliced(*s.common, *s.toasts), vm) }
-                        ?: GameScaffold(s, vm, logs) { bugOpen = true }
+                // Прогрев (3.54.0), поход и испытание (3.49.0) - не экраны стека, а состояния игры: они накрывают всё, пока идут.
+                val warmup = s.play.warmup?.takeIf { s.phase == AppPhase.GAME && !it.finished }
+                val run = expedition
+                val arena = trial
+                when {
+                    warmup != null -> WarmupScreen(warmup)
+                    run != null -> ExpeditionPlay(s.sliced(*s.common, *s.toasts, s.logFilter), vm, run)
+                    arena != null -> TrialScreen(s.sliced(*s.common, *s.toasts, s.logFilter), vm, arena)
+                    else -> Shell(s, vm, logs, route, navigator) { bugOpen = true }
                 }
             }
         }
@@ -226,82 +227,54 @@ private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, erro
     if (s.phase == AppPhase.GAME && s.play.warmup?.finished != false) CraftsAwayHost(s, vm)
 }
 
-/** The game proper: the banner, the destinations and whichever tab is open. */
-@Composable private fun GameScaffold(s: ForgeState, vm: ForgeViewModel, logs: List<RequestLog>, onBug: () -> Unit) {
-    Scaffold(
-        containerColor = Ink,
-        bottomBar = {
-            NavigationBar(
-                containerColor = Abyss,
-                tonalElevation = 0.dp,
-                modifier = Modifier.drawBehind { drawLine(Brush.horizontalGradient(listOf(Color.Transparent, Gold.copy(alpha = .4f), Color.Transparent)), Offset(0f, 0f), Offset(size.width, 0f), 1f) },
-            ) {
-                // Five destinations are the game; an administrator gets exactly one more, and
-                // the promo codes live behind it as a button.
-                val labels = mapOf(
-                    TAB_HERO to ui("nav.hero"),
-                    TAB_EXPEDITION to ui("nav.expedition"),
-                    TAB_CRAFTS to ui("nav.crafts"),
-                    TAB_PROGRESS to ui("nav.progress"),
-                    TAB_CITY to ui("nav.city"),
-                    TAB_ACCOUNT to ui("nav.account"),
-                    TAB_ADMIN to ui("nav.admin"),
-                )
-                val destinations = PLAYER_TABS + listOfNotNull(TAB_ADMIN.takeIf { s.adminTools })
-                val icons = mapOf<Int, ImageVector>(
-                    TAB_ACCOUNT to ForgeGlyphs.Portal,
-                    TAB_HERO to ForgeGlyphs.Helm,
-                    TAB_EXPEDITION to ForgeGlyphs.Swords,
-                    TAB_CRAFTS to ForgeGlyphs.Anvil,
-                    TAB_PROGRESS to ForgeGlyphs.Sigil,
-                    TAB_CITY to ForgeGlyphs.Keep,
-                    TAB_ADMIN to ForgeGlyphs.Scroll,
-                )
-                // The tab the Exile's Path sends the player to next pulses while its step waits (3.79.0).
-                val beckons = s.pathStep()?.takeIf { !it.second }?.first?.check?.destination
-                val beat = pulse(1.18f)
-                destinations.forEach { index ->
-                    val label = labels.getValue(index)
-                    // The tree and the grimoire are the hero's (3.24.0), the forge, the menagerie and the trials the hub's: while one is
-                    // open, its tab reads as the one chosen. The City's tab tapped again from inside a building (3.22.0) walks back out
-                    // to the square, as «Развитие» tapped again from a tile's screen walks back to its hub.
-                    NavigationBarItem(
-                        selected = s.tab == index || (index == TAB_HERO && HeroTab.of(s.tab) != null) ||
-                            (index == TAB_PROGRESS && ProgressPlace.of(s.tab) != null),
-                        onClick = { if (index == TAB_CITY && s.tab == TAB_CITY) vm.building(null) else vm.tab(index) },
-                        icon = {
-                            // Free atlas points (3.47.0) mark the tab the atlas opens from: «Развитие».
-                            val free = if (index == TAB_PROGRESS) s.atlasState?.available ?: 0 else 0
-                            // A tab the hero's level has not opened wears a lock (3.76.0).
-                            val locked = !s.unlocked(Feature.ofTab(index))
-                            BadgedBox(badge = {
-                                if (locked) {
-                                    Icon(Icons.Outlined.Lock, null, tint = Muted, modifier = Modifier.size(12.dp))
-                                } else if (free > 0) {
-                                    Badge(containerColor = GoldBright, contentColor = Ink) { Text(free.toString(), fontSize = 9.sp) }
-                                }
-                            }) {
-                                Icon(
-                                    icons.getValue(index),
-                                    null,
-                                    tint = if (index == beckons && s.tab != index) GoldBright else LocalContentColor.current,
-                                    modifier = Modifier.size(22.dp).scale(if (index == beckons && s.tab != index) beat else 1f),
-                                )
-                            }
-                        },
-                        label = { Text(label, fontSize = 10.sp) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = GoldBright,
-                            selectedTextColor = Gold,
-                            indicatorColor = Gold.copy(alpha = .16f),
-                            unselectedIconColor = Muted,
-                            unselectedTextColor = Muted,
-                        ),
-                    )
-                }
-            }
-        },
-    ) { padding ->
+/**
+ * Стек экранов (3.80.23): `NavDisplay` над стеком навигатора. Экраны игры стоят в оболочке - шапка, полоса команды,
+ * Путь Изгнанника, полоска героя и нижняя панель; вход, меню героев и атлас - без неё.
+ */
+@Composable private fun Shell(s: ForgeState, vm: ForgeViewModel, logs: List<RequestLog>, route: Route, navigator: Navigator, onBug: () -> Unit) {
+    val screens: @Composable (Modifier) -> Unit = { modifier ->
+        NavDisplay(
+            backStack = navigator.stack,
+            modifier = modifier,
+            onBack = { navigator.back() },
+            entryDecorators = listOf(rememberSaveableStateHolderNavEntryDecorator()),
+            transitionSpec = { fadeIn() togetherWith fadeOut() },
+            popTransitionSpec = { fadeIn() togetherWith fadeOut() },
+            predictivePopTransitionSpec = { _ -> fadeIn() togetherWith fadeOut() },
+            entryProvider = entryProvider {
+                entry<Route.Auth> { AuthScreen(s.sliced(*s.common, *s.toasts)) }
+                entry<Route.Characters> { CharacterSelectScreen(s.sliced(*s.common, *s.toasts)) }
+                entry<Route.Account> { ServerScreen(s.sliced(*s.common), vm) }
+                entry<Route.Settings> { SettingsScreen(s.sliced(*s.common), vm, logs) }
+                entry<Route.Hero> { HeroScreen(s.sliced(*s.common), vm) }
+                entry<Route.Tree> { SkillTreeScreen(s.sliced(*s.common)) }
+                entry<Route.Grimoire> { GrimoireScreen(s.sliced(*s.common)) }
+                entry<Route.Expedition> { ExpeditionScreen(s.sliced(*s.common, s.logFilter)) }
+                entry<Route.Crafts> { CraftsScreen(s.sliced(*s.common), vm) }
+                entry<Route.Progress> { ProgressScreen(s.sliced(*s.common), vm) }
+                // The forge, the menagerie and the trials open from the hub of «Развитие», «back» leading to it.
+                entry<Route.Forge> { ProgressPlaceScreen(ProgressPlace.FORGE, s.sliced(*s.common), vm) }
+                entry<Route.Pets> { ProgressPlaceScreen(ProgressPlace.PETS, s.sliced(*s.common), vm) }
+                entry<Route.Trials> { ProgressPlaceScreen(ProgressPlace.TRIALS, s.sliced(*s.common), vm) }
+                entry<Route.Chronicle> { ProgressPlaceScreen(ProgressPlace.CHRONICLE, s.sliced(*s.common), vm) }
+                // The atlas (2.68.0) is a sky of its own, above the tabs.
+                entry<Route.Atlas> { AtlasScreen(s.sliced(*s.common, *s.toasts), vm) }
+                // The City's square and its buildings are one screen that reads which building is open.
+                entry<Route.City> { CityScreen(s.sliced(*s.common, s.building, s.guild, s.quests, s.market), vm) }
+                entry<Route.Quests> { CityScreen(s.sliced(*s.common, s.building, s.guild, s.quests, s.market), vm) }
+                entry<Route.Merchant> { CityScreen(s.sliced(*s.common, s.building, s.guild, s.quests, s.market), vm) }
+                entry<Route.Auction> { CityScreen(s.sliced(*s.common, s.building, s.guild, s.quests, s.market), vm) }
+                entry<Route.Guild> { CityScreen(s.sliced(*s.common, s.building, s.guild, s.quests, s.market), vm) }
+                entry<Route.Admin> { AdminScreen(s.sliced(*s.common, s.admin), vm) }
+                entry<Route.Redemption> { RedemptionScreen(s.sliced(*s.common, s.admin), vm) }
+            },
+        )
+    }
+    if (!route.bars) {
+        screens(Modifier.fillMaxSize())
+        return
+    }
+    Scaffold(containerColor = Ink, bottomBar = { GameBar(s, vm) }) { padding ->
         Box(Modifier.fillMaxSize().padding(padding).imePadding()) {
             Column(Modifier.fillMaxSize().voidBackdrop()) {
                 // The craft under way is read with the game, so the banner's plaque knows it from the start.
@@ -311,36 +284,83 @@ private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, erro
                 // The Exile's Path (3.79.0): the first hour's next step, under the banner on every tab until it is walked.
                 ExilePathPlate(s, onGo = vm::tab, onClaim = vm::claimPath)
                 HeroTab.of(s.tab)?.let { HeroTabStrip(it, locked = { tab -> !s.unlocked(Feature.ofTab(tab)) }, onSelect = vm::tab) }
-                // Each tab is handed its slice (3.56.0): a toast, a refusal or another tab's reads no longer redraw it.
-                when (s.tab) {
-                    TAB_ACCOUNT -> ServerScreen(s.sliced(*s.common), vm)
-
-                    TAB_SETTINGS -> SettingsScreen(s.sliced(*s.common), vm, logs)
-
-                    TAB_HERO -> HeroScreen(s.sliced(*s.common), vm)
-
-                    TAB_EXPEDITION -> ExpeditionScreen(s.sliced(*s.common, s.logFilter))
-
-                    TAB_CRAFTS -> CraftsScreen(s.sliced(*s.common), vm)
-
-                    TAB_PROGRESS -> ProgressScreen(s.sliced(*s.common), vm)
-
-                    TAB_TREE -> SkillTreeScreen(s.sliced(*s.common))
-
-                    TAB_SKILLS -> GrimoireScreen(s.sliced(*s.common))
-
-                    TAB_CITY -> CityScreen(s.sliced(*s.common, s.building, s.guild, s.quests, s.market), vm)
-
-                    TAB_ADMIN -> AdminScreen(s.sliced(*s.common, s.admin), vm)
-
-                    TAB_REDEMPTION -> RedemptionScreen(s.sliced(*s.common, s.admin), vm)
-
-                    // The forge, the menagerie and the trials open from the hub of «Развитие», «back» leading to it.
-                    else -> ProgressPlace.of(s.tab)?.let { ProgressPlaceScreen(it, s.sliced(*s.common), vm) }
-                }
+                screens(Modifier.weight(1f).fillMaxWidth())
             }
             // The toasts float over the screen, under the banner (2.80.0).
             ToastHost(s, vm::dismissMessage, vm::dismissNotice, Modifier.align(Alignment.TopCenter).padding(top = 60.dp))
+        }
+    }
+}
+
+/** The bottom bar: five destinations are the game; an administrator gets exactly one more. A tab tapped again walks back to its root. */
+@Composable private fun GameBar(s: ForgeState, vm: ForgeViewModel) {
+    NavigationBar(
+        containerColor = Abyss,
+        tonalElevation = 0.dp,
+        modifier = Modifier.drawBehind { drawLine(Brush.horizontalGradient(listOf(Color.Transparent, Gold.copy(alpha = .4f), Color.Transparent)), Offset(0f, 0f), Offset(size.width, 0f), 1f) },
+    ) {
+        // Five destinations are the game; an administrator gets exactly one more, and
+        // the promo codes live behind it as a button.
+        val labels = mapOf(
+            TAB_HERO to ui("nav.hero"),
+            TAB_EXPEDITION to ui("nav.expedition"),
+            TAB_CRAFTS to ui("nav.crafts"),
+            TAB_PROGRESS to ui("nav.progress"),
+            TAB_CITY to ui("nav.city"),
+            TAB_ACCOUNT to ui("nav.account"),
+            TAB_ADMIN to ui("nav.admin"),
+        )
+        val destinations = PLAYER_TABS + listOfNotNull(TAB_ADMIN.takeIf { s.adminTools })
+        val icons = mapOf<Int, ImageVector>(
+            TAB_ACCOUNT to ForgeGlyphs.Portal,
+            TAB_HERO to ForgeGlyphs.Helm,
+            TAB_EXPEDITION to ForgeGlyphs.Swords,
+            TAB_CRAFTS to ForgeGlyphs.Anvil,
+            TAB_PROGRESS to ForgeGlyphs.Sigil,
+            TAB_CITY to ForgeGlyphs.Keep,
+            TAB_ADMIN to ForgeGlyphs.Scroll,
+        )
+        // The tab the Exile's Path sends the player to next pulses while its step waits (3.79.0).
+        val beckons = s.pathStep()?.takeIf { !it.second }?.first?.check?.destination
+        val beat = pulse(1.18f)
+        destinations.forEach { index ->
+            val label = labels.getValue(index)
+            // The tree and the grimoire are the hero's (3.24.0), the forge, the menagerie and the trials the hub's: while one is
+            // open, its tab reads as the one chosen. The City's tab tapped again from inside a building (3.22.0) walks back out
+            // to the square, as «Развитие» tapped again from a tile's screen walks back to its hub.
+            NavigationBarItem(
+                selected = s.tab == index || (index == TAB_HERO && HeroTab.of(s.tab) != null) ||
+                    (index == TAB_PROGRESS && ProgressPlace.of(s.tab) != null),
+                onClick = { vm.tab(index) },
+                icon = {
+                    // Free atlas points (3.47.0) mark the tab the atlas opens from: «Развитие».
+                    val free = if (index == TAB_PROGRESS) s.atlasState?.available ?: 0 else 0
+                    // A tab the hero's level has not opened wears a lock (3.76.0).
+                    val locked = !s.unlocked(Feature.ofTab(index))
+                    BadgedBox(badge = {
+                        if (locked) {
+                            Icon(Icons.Outlined.Lock, null, tint = Muted, modifier = Modifier.size(12.dp))
+                        } else if (free > 0) {
+                            Badge(containerColor = GoldBright, contentColor = Ink) { Text(free.toString(), fontSize = 9.sp) }
+                        }
+                    }) {
+                        Icon(
+                            icons.getValue(index),
+                            null,
+                            tint = if (index == beckons && s.tab != index) GoldBright else LocalContentColor.current,
+                            modifier = Modifier.size(22.dp).scale(if (index == beckons && s.tab != index) beat else 1f),
+                        )
+                    }
+                },
+                label = { Text(label, fontSize = 10.sp) },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = GoldBright,
+                    selectedTextColor = Gold,
+                    indicatorColor = Gold.copy(alpha = .16f),
+                    unselectedIconColor = Muted,
+                    unselectedTextColor = Muted,
+                ),
+            )
         }
     }
 }

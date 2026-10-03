@@ -46,14 +46,12 @@ class ForgeViewModel(private val runtime: ForgeRuntime) : ViewModel() {
         if (gate(Feature.ofTab(tab))) runtime.tab(tab)
     }
 
-    /** «Настройки» (3.77.0) over the tab on screen; closing them returns to it. */
+    /** «Настройки» (3.77.0) поверх открытой вкладки; закрытие возвращает на неё. */
     fun openSettings() {
-        with(runtime) {
-            if (state.value.tab != TAB_SETTINGS) settingsReturn = state.value.tab
-            tab(TAB_SETTINGS)
-        }
+        runtime.commands.dismissMessage()
+        runtime.navigator.open(com.sperance.exileforge.presentation.nav.Route.Settings)
     }
-    fun closeSettings() = runtime.tab(runtime.settingsReturn)
+    fun closeSettings() = runtime.navigator.back()
 
     /** A line in the toasts, from the screens (3.76.0: a place opened by the level). */
     fun announce(text: String) = runtime.toast(text)
@@ -232,7 +230,7 @@ class ForgeViewModel(private val runtime: ForgeRuntime) : ViewModel() {
     fun building(building: Building?) {
         if (gate(Feature.ofBuilding(building))) {
             runtime.commands.dismissMessage()
-            runtime.mutable.update { it.copy(building = building) }
+            runtime.navigator.tab(com.sperance.exileforge.presentation.nav.Route.ofBuilding(building))
         }
     }
 

@@ -84,6 +84,7 @@ class ForgeRuntime(
     private val buzzer: com.sperance.exileforge.core.session.Buzzes,
     private val repositories: Repositories,
     private val actions: Actions,
+    val navigator: com.sperance.exileforge.presentation.nav.Navigator,
 ) {
     val sessions get() = repositories.sessions
     val world get() = repositories.world
@@ -226,6 +227,8 @@ class ForgeRuntime(
         scope.launch {
             craftsRepository.state.collect { c -> mutable.update { it.copy(play = it.play.copy(crafts = c.state, craftsAt = c.readAt, craftsTotals = c.totals, craftsLast = c.last, craftsPending = c.pending)) } }
         }
+        // Фаза, вкладка и здание - отражение стека навигатора для экранов, что ещё читают их из общего состояния.
+        scope.launch { navigator.current.collect { r -> mutable.update { it.copy(phase = r.phase, tab = r.tab, building = r.building) } } }
         buzzer.allowed = { kind -> state.value.settings.let { if (kind == Buzz.DANGER) it.buzzDanger else it.buzzButtons } }
         content.delegate = { fresh -> ensureContent(fresh) }
         // Герой изменился на сервере по чужой команде: перечитывается тихо, отказ остаётся команде, что его просила.
@@ -395,18 +398,15 @@ class ForgeRuntime(
         world.update { it.copy(localeLanguage = bundle.language, localeStrings = bundle.size) }
     }
 
-    /** Opens a tab, refusing the ones a player has no business on. A refusal belongs to the screen it happened on. */
+    /** Открывает вкладку по прежнему номеру, отказывая игроку в административных. Отказ принадлежит экрану, где случился. */
     fun tab(tab: Int) {
         if (!state.value.adminTools && tab in ADMIN_TABS) return
         commands.dismissMessage()
-        mutable.update { it.copy(tab = tab) }
+        navigator.tab(com.sperance.exileforge.presentation.nav.Route.ofTab(tab))
     }
 
     /** How many presses of the fight's speed button reach the settings' speed (3.77.0): 1 → 2 → 4. */
     val speedSteps: Int get() = GameSettings.SPEEDS.indexOf(state.value.settings.fightSpeed).coerceAtLeast(0)
-
-    /** The tab «Настройки» were opened over (3.77.0). */
-    var settingsReturn: Int = TAB_HERO
 
     fun saveSettings(value: GameSettings) {
         scope.launch { prefs.saveSettings(value) }
@@ -511,6 +511,7 @@ class ForgeRuntime(
 
     fun clearSession() {
         api.logout()
+        navigator.reset(com.sperance.exileforge.presentation.nav.Route.Auth)
         journal.clear()
         cancelReads()
         expedition.drop()
@@ -526,10 +527,12 @@ class ForgeRuntime(
         commands.clearFailure()
         mutable.update {
             it.copy(
-                phase = AppPhase.AUTH, tab = TAB_HERO, mode = AppMode.PLAYER,
+                mode = AppMode.PLAYER,
                 admin = it.admin.copy(redemptions = emptyList()),
                 play = PlayState(draftClass = it.play.draftClass),
-                market = MarketState(), building = null, guild = GuildState(), quests = QuestState(),
+                market = MarketState(),
+                guild = GuildState(),
+                quests = QuestState(),
             )
         }
     }

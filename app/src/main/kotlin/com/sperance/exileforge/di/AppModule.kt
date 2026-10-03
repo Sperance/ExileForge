@@ -41,6 +41,7 @@ import com.sperance.exileforge.presentation.hero.HeroSync
 import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.market.MarketActions
 import com.sperance.exileforge.presentation.market.MarketViewModel
+import com.sperance.exileforge.presentation.nav.Navigator
 import com.sperance.exileforge.presentation.quests.QuestActions
 import com.sperance.exileforge.presentation.quests.QuestViewModel
 import com.sperance.exileforge.presentation.server.ServerViewModel
@@ -77,6 +78,7 @@ val appModule = module {
     single { SessionRepository(DEFAULT_SERVER) }
     single { WorldRepository() }
     single { ServerConnection() }
+    single { Navigator() }
     single { ConnectionEventsHub() }
     single { CommandRunner(get(named(APP_SCOPE)), get<ConnectionEventsHub>()) }
     single { Notices() }
@@ -92,7 +94,7 @@ val appModule = module {
     single { HeroSync(get(), get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     singleOf(::HeroActions)
     single { ExpeditionRepository() }
-    single { ExpeditionActions(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
+    single { ExpeditionActions(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     single { TrialActions(get(), get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     single { CraftsRepository() }
     single { CraftsActions(get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }

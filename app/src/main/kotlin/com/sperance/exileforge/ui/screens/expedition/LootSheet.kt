@@ -11,7 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.unmetFor
@@ -46,7 +46,7 @@ private fun lootStand(s: ForgeState, item: ItemView): LootStand {
 @Composable
 internal fun LootSheet(
     s: ForgeState,
-    vm: ForgeViewModel,
+    vm: ExpeditionViewModel,
     item: ItemView,
     onDismiss: () -> Unit,
     extra: @Composable ColumnScope.() -> Unit = {},

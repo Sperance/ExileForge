@@ -28,6 +28,7 @@ import com.sperance.exileforge.presentation.Repositories
 import com.sperance.exileforge.presentation.crafts.CraftsActions
 import com.sperance.exileforge.presentation.crafts.CraftsViewModel
 import com.sperance.exileforge.presentation.expedition.ExpeditionActions
+import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.expedition.TrialActions
 import com.sperance.exileforge.presentation.features.UpdateViewModel
 import com.sperance.exileforge.presentation.feedback.FeedbackViewModel
@@ -106,6 +107,7 @@ val appModule = module {
     viewModelOf(::HeroViewModel)
     viewModelOf(::SmithyViewModel)
     viewModelOf(::GrimoireViewModel)
+    viewModelOf(::ExpeditionViewModel)
     viewModel { SettingsViewModel(get()) }
     viewModel { ServerViewModel(get(), get()) }
     // Проверка обновлений ждёт сервер игровой модели: поток и манифест приходят параметрами из активности.

@@ -1,0 +1,60 @@
+package com.sperance.exileforge.presentation.expedition
+
+import androidx.lifecycle.ViewModel
+import com.sperance.exileforge.core.campaign.AutoPlan
+import com.sperance.exileforge.core.campaign.Expedition
+import com.sperance.exileforge.core.campaign.ExpeditionRepository
+import com.sperance.exileforge.core.campaign.ExpeditionRun
+import com.sperance.exileforge.core.campaign.RunCommand
+import com.sperance.exileforge.core.campaign.TrialArena
+import com.sperance.exileforge.core.session.Activity
+import com.sperance.exileforge.core.session.CommandRunner
+import com.sperance.exileforge.presentation.hero.HeroActions
+import com.sperance.exileforge.presentation.hero.HeroSync
+import com.sperance.exileforge.rules.content.Slot
+import kotlinx.coroutines.flow.StateFlow
+
+/** Экраны похода (3.80.21): карта мира, карточка зоны, бег похода, испытания и атлас - над общими действиями. */
+class ExpeditionViewModel(
+    private val expedition: ExpeditionActions,
+    private val trial: TrialActions,
+    private val hero: HeroActions,
+    private val sync: HeroSync,
+    repository: ExpeditionRepository,
+    commands: CommandRunner,
+) : ViewModel() {
+    val state: StateFlow<Expedition> = repository.state
+    val run: StateFlow<ExpeditionRun?> = expedition.run
+    val arena: StateFlow<TrialArena?> = trial.arena
+    val activity: StateFlow<Activity> = commands.state
+
+    fun ensureHero() = sync.ensure()
+    fun loadCampaign() = expedition.loadCampaign()
+    fun selectZone(mapCode: String) = expedition.selectZone(mapCode)
+    fun closeZone() = expedition.closeZone()
+    fun pickMap(itemId: String?) = expedition.pickMap(itemId)
+    fun pickPotion(code: String?) = expedition.pickPotion(code)
+    fun toggleScarab(code: String, add: Boolean) = expedition.toggleScarab(code, add)
+    fun startRun(mapCode: String) = expedition.start(mapCode)
+    fun startAutoRun(mapCode: String, plan: AutoPlan) = expedition.start(mapCode, plan)
+    fun runCommand(command: RunCommand) = expedition.send(command)
+    fun flushRun() = expedition.flushRun()
+    fun enterVaal() = expedition.enterVaal()
+    fun refuseVaal() = expedition.refuseVaal()
+    fun closeRun() = expedition.close()
+    fun openAtlas() = expedition.openAtlas()
+    fun closeAtlas() = expedition.closeAtlas()
+    fun selectAtlasNode(code: String) = expedition.selectAtlasNode(code)
+    fun allocateAtlas(code: String) = expedition.allocateAtlas(code)
+    fun refundAtlas(code: String, regret: Boolean = false) = expedition.refundAtlas(code, regret)
+    fun resetAtlas(regret: Boolean = false) = expedition.resetAtlas(regret)
+    fun enterRush(region: String) = trial.rush(region)
+    fun enterTower() = trial.tower()
+    fun forgeRushKey() = trial.forgeKey()
+    fun abandonTrial() = trial.abandon()
+    fun trialCommand(command: RunCommand) = trial.send(command)
+    fun closeTrial() = trial.close()
+    fun equip(itemId: String, slot: Slot? = null) = hero.equip(itemId, slot)
+    fun unequip(itemId: String) = hero.unequip(itemId)
+    fun sellForGold(itemId: String) = hero.sellForGold(itemId)
+}

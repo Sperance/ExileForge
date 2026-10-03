@@ -34,6 +34,7 @@ import com.sperance.exileforge.core.display.recipeText
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.ui.components.*
@@ -60,7 +61,7 @@ import java.util.Locale
  * and fills in as the answers arrive — offline, when the connection is back. Until they have, there is no way on:
  * neither the button nor the system back leaves, so nothing the fight brought is walked past unseen.
  */
-@Composable internal fun ReportScreen(s: ForgeState, vm: ForgeViewModel, hud: RunHud, report: FightReport, onContinue: () -> Unit) {
+@Composable internal fun ReportScreen(s: ForgeState, vm: ForgeViewModel, model: ExpeditionViewModel, hud: RunHud, report: FightReport, onContinue: () -> Unit) {
     val won = report.outcome == Outcome.WIN
     // A fall opens on the fatal fight's log (3.70.0): every line of it, down to the blow that ended it.
     var logOpen by remember { mutableStateOf(!won) }
@@ -71,7 +72,7 @@ import java.util.Locale
     // The spoils still on the way — a victory's, or the Abyss hoard a fall there keeps; the answers are asked for at once,
     // and the back gesture is held while they are on the way.
     val receiving = if (won) hud.rewardAwaiting > 0 else hud.abyss?.let { it.fallen && it.hoardAwaiting } == true
-    LaunchedEffect(receiving) { if (receiving) vm.flushRun() }
+    LaunchedEffect(receiving) { if (receiving) model.flushRun() }
     BackHandler(enabled = receiving) {}
     Column(
         Modifier.fillMaxSize().background(Ink.copy(alpha = .94f)).statusBarsPadding().navigationBarsPadding().padding(14.dp),
@@ -105,7 +106,7 @@ import java.util.Locale
     // A line of the log opened (3.37.0): its card over the report.
     line?.let { (event, name) -> CombatDetailSheet(s, event, name) { line = null } }
     // Compared and worn right here (3.24.0), as on the gear sheet.
-    looked?.let { item -> LootSheet(s, vm, item, onDismiss = { looked = null }) }
+    looked?.let { item -> LootSheet(s, model, item, onDismiss = { looked = null }) }
     // A stack of the spoils opened: what it is, what it is for, and how many the hero holds.
     stack?.let { code -> StackInfoSheet(s, code) { stack = null } }
     // The recipe the kill turned up: what it does, and that the bench waits for the run's end.

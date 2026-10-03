@@ -319,7 +319,7 @@ private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, erro
 
                     TAB_HERO -> HeroScreen(s.sliced(*s.common), vm)
 
-                    TAB_EXPEDITION -> ExpeditionScreen(s.sliced(*s.common, s.logFilter), vm)
+                    TAB_EXPEDITION -> ExpeditionScreen(s.sliced(*s.common, s.logFilter))
 
                     TAB_CRAFTS -> CraftsScreen(s.sliced(*s.common), vm)
 

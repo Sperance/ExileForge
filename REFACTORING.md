@@ -44,7 +44,7 @@
   - [x] Grimoire: `GrimoireViewModel` над `HeroActions`; экран разбит на три файла.
   - [ ] Progress: своя модель; выдачи тестера (`grant*`) - в модель отладочной панели.
   - [x] Expedition/Atlas/Trials, ядро: `ExpeditionRepository` (карточка зоны, добыча похода, окно атласа, счётчики журнала) в `:core`; `ExpeditionActions` и `TrialActions` в `presentation/expedition`; `ExpeditionViewModel`/`TrialViewModel` из `features` удалены.
-  - [ ] Expedition/Atlas/Trials, экраны: модель экрана похода над действиями; экраны похода перестают получать `ForgeViewModel`.
+  - [x] Expedition/Atlas/Trials, экраны: `ExpeditionViewModel` над действиями похода, испытаний и героя; карта мира, карточка зоны, доска испытаний и листы снаряжения/добычи только на ней, оверлеи похода/испытания/атласа - ещё и на `ForgeViewModel` ради фильтра журнала, тостов и вибрации.
 - [ ] По ходу: файлы UI не длиннее ~400 строк (SkillTreeScreen, CraftsScreen, MapStyles, GrimoireScreen, ExpeditionScene, WorldArt, AtlasScreen, AuctionTabs).
 - [ ] `ForgeViewModel`, `ForgeRuntime`, `FeatureViewModel` удалены.
 

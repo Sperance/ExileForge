@@ -12,7 +12,7 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.BodyPlace
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.unmetFor
@@ -45,7 +45,7 @@ fun newLoot(s: ForgeState): List<ItemView> = s.play.runLoot.mapNotNull { entry -
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GearSheet(s: ForgeState, vm: ForgeViewModel, onDismiss: () -> Unit) {
+fun GearSheet(s: ForgeState, vm: ExpeditionViewModel, onDismiss: () -> Unit) {
     var place by remember { mutableStateOf<BodyPlace?>(null) }
     var worn by remember { mutableStateOf<String?>(null) }
     var lootTab by remember { mutableStateOf(false) }

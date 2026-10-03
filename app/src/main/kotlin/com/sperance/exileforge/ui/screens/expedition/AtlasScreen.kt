@@ -39,6 +39,7 @@ import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.rules.content.AtlasNode
 import com.sperance.exileforge.rules.content.AtlasNodeKind
@@ -48,6 +49,7 @@ import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.theme.*
+import org.koin.compose.viewmodel.koinViewModel
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
@@ -93,8 +95,9 @@ private val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
  * sheet takes or gives it.
  */
 @Composable fun AtlasScreen(s: ForgeState, vm: ForgeViewModel) {
+    val model = koinViewModel<ExpeditionViewModel>()
     val atlas = s.play.atlas ?: return
-    BackHandler(onBack = vm::closeAtlas)
+    BackHandler(onBack = model::closeAtlas)
     val index = s.index
     val state = s.atlasState
     var resetting by remember { mutableStateOf(false) }
@@ -107,7 +110,7 @@ private val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
             CircularProgressIndicator(Modifier.align(Alignment.Center), color = Sky.text)
         } else {
             val taken = state.allocated.toSet()
-            Sky(index, taken, atlas.selected, Modifier.fillMaxSize(), onSelect = vm::selectAtlasNode)
+            Sky(index, taken, atlas.selected, Modifier.fillMaxSize(), onSelect = model::selectAtlasNode)
             // The points float over the sky, stacked above the node's sheet so neither hides the other.
             Column(Modifier.align(Alignment.BottomCenter), horizontalAlignment = Alignment.CenterHorizontally) {
                 val node = index.atlasGraph.node(atlas.selected)
@@ -115,7 +118,7 @@ private val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
                 node?.let {
                     NodeSheet(
                         index, it, taken, state.available, index.atlas.respec.price(s.heroLevel, 1), enabled = !s.busy,
-                        onTake = { vm.allocateAtlas(it.code) }, onRefund = { refunding = it.code }, modifier = Modifier,
+                        onTake = { model.allocateAtlas(it.code) }, onRefund = { refunding = it.code }, modifier = Modifier,
                     )
                 }
             }
@@ -123,7 +126,7 @@ private val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
         // The start is nobody's to give back: what was spent is every taken node but it.
         val spent = (state?.allocated?.size ?: 1) - 1
         Row(Modifier.fillMaxWidth().statusBarsPadding().padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            IconButton(onClick = vm::closeAtlas) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, ui("common.close"), tint = Sky.text) }
+            IconButton(onClick = model::closeAtlas) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, ui("common.close"), tint = Sky.text) }
             Text(ui("atlas.title"), color = Color.White, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
             FirstVisit(Guide.ATLAS)
             AtlasMenu(summary = spent > 0, reset = spent > 0 && !s.busy, onSummary = { summary = true }, onReset = { resetting = true })
@@ -143,7 +146,7 @@ private val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
                 onDismiss = { resetting = false },
             ) { regret ->
                 resetting = false
-                vm.resetAtlas(regret)
+                model.resetAtlas(regret)
             }
         }
         refunding?.let { code ->
@@ -159,7 +162,7 @@ private val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
                     onDismiss = { refunding = null },
                 ) { regret ->
                     refunding = null
-                    vm.refundAtlas(code, regret)
+                    model.refundAtlas(code, regret)
                 }
             }
         }

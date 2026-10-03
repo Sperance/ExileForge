@@ -217,7 +217,7 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
             when (place) {
                 ProgressPlace.FORGE -> CraftScreen(s)
                 ProgressPlace.PETS -> PetsPlace(s)
-                ProgressPlace.TRIALS -> TrialsBoard(s, vm, Modifier.fillMaxSize())
+                ProgressPlace.TRIALS -> TrialsBoard(s, koinViewModel(), Modifier.fillMaxSize())
                 ProgressPlace.CHRONICLE -> ChronicleScreen(s, koinViewModel())
             }
         }

@@ -34,7 +34,7 @@ import com.sperance.exileforge.core.display.mapTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.recipeText
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.ui.components.ForgeButton
@@ -75,7 +75,7 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
  * while some of it is on its way the screen says so, asks for it at once and fills in as the answers arrive.
  * A piece opens its comparison with what is worn, a stack its description.
  */
-@Composable internal fun MapSummary(s: ForgeState, vm: ForgeViewModel, hud: RunHud, head: SummaryHead = SummaryHead.of(hud), onDone: () -> Unit) {
+@Composable internal fun MapSummary(s: ForgeState, vm: ExpeditionViewModel, hud: RunHud, head: SummaryHead = SummaryHead.of(hud), onDone: () -> Unit) {
     val tally = hud.tally
     var looked by remember { mutableStateOf<ItemView?>(null) }
     var stack by remember { mutableStateOf<String?>(null) }

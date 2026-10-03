@@ -19,11 +19,13 @@ import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.rules.content.TrialKind
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.expedition.arena.ArenaOverlay
 import com.sperance.exileforge.ui.theme.*
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * A trial over the whole screen (3.49.0): the arena's cards as in any fight, a plate on top with the boss or the floor, the
@@ -31,6 +33,7 @@ import com.sperance.exileforge.ui.theme.*
  * at a time; back walks away between two fights, and closes the screen once the trial is over.
  */
 @Composable fun TrialScreen(s: ForgeState, vm: ForgeViewModel, arena: TrialArena) {
+    val model = koinViewModel<ExpeditionViewModel>()
     val hud by arena.hud.collectAsState()
     LaunchedEffect(arena) {
         var last = 0L
@@ -41,15 +44,15 @@ import com.sperance.exileforge.ui.theme.*
             }
         }
     }
-    BackHandler { if (hud.phase == TrialPhase.FIGHT) vm.trialCommand(com.sperance.exileforge.core.campaign.RunCommand.Leave) else vm.closeTrial() }
+    BackHandler { if (hud.phase == TrialPhase.FIGHT) model.trialCommand(com.sperance.exileforge.core.campaign.RunCommand.Leave) else model.closeTrial() }
     Box(Modifier.fillMaxSize().background(Ink)) {
         hud.fight?.takeIf { hud.phase == TrialPhase.FIGHT }?.let { fight ->
-            ArenaOverlay(s, hud.run, fight, hud.level, arena.rules, arena.stance, onCommand = vm::trialCommand, onLogFilter = vm::logFilter, onBuzz = vm::buzz)
+            ArenaOverlay(s, hud.run, fight, hud.level, arena.rules, arena.stance, onCommand = model::trialCommand, onLogFilter = vm::logFilter, onBuzz = vm::buzz)
         }
         if (hud.phase == TrialPhase.FIGHT) {
             TrialPlate(hud, Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = 44.dp, end = 8.dp))
         } else {
-            TrialEnding(s, vm, hud)
+            TrialEnding(s, vm, model, hud)
         }
     }
 }
@@ -78,7 +81,7 @@ import com.sperance.exileforge.ui.theme.*
 }
 
 /** The trial over — fallen, finished or left: how far it went, the clock, and what the server's answers brought all told. */
-@Composable private fun TrialEnding(s: ForgeState, vm: ForgeViewModel, hud: TrialHud) {
+@Composable private fun TrialEnding(s: ForgeState, vm: ForgeViewModel, model: ExpeditionViewModel, hud: TrialHud) {
     var looked by remember(hud.gained) { mutableStateOf<ItemView?>(null) }
     val fallen = hud.phase == TrialPhase.DEAD
     Column(
@@ -97,9 +100,9 @@ import com.sperance.exileforge.ui.theme.*
             RunFigures(hud.summary)
             RewardLines(s, hud.gained, { looked = it }, awaiting = hud.awaiting > 0)
         }
-        ForgeButton(onClick = vm::closeTrial, modifier = Modifier.fillMaxWidth().height(50.dp)) { Text(ui("expedition.back_to_camp")) }
+        ForgeButton(onClick = model::closeTrial, modifier = Modifier.fillMaxWidth().height(50.dp)) { Text(ui("expedition.back_to_camp")) }
     }
-    looked?.let { item -> LootSheet(s, vm, item, onDismiss = { looked = null }) }
+    looked?.let { item -> LootSheet(s, model, item, onDismiss = { looked = null }) }
 }
 
 /** Seconds as a clock: `m:ss`, from an hour on `h:mm:ss`. */

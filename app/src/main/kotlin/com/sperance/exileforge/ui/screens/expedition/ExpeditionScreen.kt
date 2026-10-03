@@ -15,7 +15,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.campaign.WorldMap
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.rules.content.WorldPoint
 import com.sperance.exileforge.ui.components.*
@@ -25,6 +25,7 @@ import com.sperance.exileforge.ui.screens.expedition.world.WorldCamera
 import com.sperance.exileforge.ui.screens.expedition.world.WorldCanvas
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.launch
+import org.koin.compose.viewmodel.koinViewModel
 
 /** Where a picked zone's token is flown to while its card covers the map's foot: this share down the screen. */
 private const val CARD_DOWN = .28f
@@ -40,7 +41,8 @@ private const val CARD_TOP = .48f
  * map opens on the frontier; it drags and pinches, «+» and «−» zoom it and the crosshair flies back
  * to the frontier. A tapped token raises its card over the map's foot — the way into the zone.
  */
-@Composable fun ExpeditionScreen(s: ForgeState, vm: ForgeViewModel) {
+@Composable fun ExpeditionScreen(s: ForgeState) {
+    val vm = koinViewModel<ExpeditionViewModel>()
     LaunchedEffect(s.play.heroId, s.account.sessionEpoch) {
         vm.ensureHero()
         vm.loadCampaign()

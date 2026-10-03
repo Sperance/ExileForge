@@ -49,7 +49,7 @@ import com.sperance.exileforge.core.display.regionTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.i18n.uiOr
-import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.MapLaunchState
 import com.sperance.exileforge.presentation.state.view
@@ -93,7 +93,7 @@ private fun stashMaps(s: ForgeState): List<StashMap> = s.hero?.stash.orEmpty()
  * «Войти в портал». A «???» zone says only whose guardian opens it. The rules and the content are the
  * index's; the windows of the zone — its guardian's return — are the hero's own campaign.
  */
-@Composable fun ZoneCard(s: ForgeState, vm: ForgeViewModel, world: WorldMap, launch: MapLaunchState, modifier: Modifier = Modifier) {
+@Composable fun ZoneCard(s: ForgeState, vm: ExpeditionViewModel, world: WorldMap, launch: MapLaunchState, modifier: Modifier = Modifier) {
     val token = world.token(launch.mapCode) ?: return
     val index = s.index ?: return
     val zone = token.zone
@@ -157,7 +157,7 @@ private fun stashMaps(s: ForgeState): List<StashMap> = s.hero?.stash.orEmpty()
  * waves on the arena, the guardian last. What else it takes on is chosen here; a crack of the Abyss and the
  * Vaal portal still stop it for the player's word.
  */
-@Composable private fun AutoLaunch(s: ForgeState, vm: ForgeViewModel, zone: String, launch: MapLaunchState, guarded: (() -> Unit) -> Unit) {
+@Composable private fun AutoLaunch(s: ForgeState, vm: ExpeditionViewModel, zone: String, launch: MapLaunchState, guarded: (() -> Unit) -> Unit) {
     if (s.progress?.cleared?.contains(zone) != true) return
     var chests by rememberSaveable { mutableStateOf(true) }
     var crystals by rememberSaveable { mutableStateOf(true) }
@@ -267,7 +267,7 @@ private fun AtlasKeys(earned: List<String>, zone: String) {
  * picked map's rarity, the three figures it pays and its lines marked by kind — red a harm with the
  * share of risk it pays, blue the content, gold a reward. Every number is the rules' own.
  */
-@Composable private fun Maps(s: ForgeState, vm: ForgeViewModel, index: ContentIndex, zone: Zone, launch: MapLaunchState) {
+@Composable private fun Maps(s: ForgeState, vm: ExpeditionViewModel, index: ContentIndex, zone: Zone, launch: MapLaunchState) {
     val maps = stashMaps(s).filter { it.item.mapZone == zone.code }
     if (maps.isEmpty()) {
         MutedText(ui("expedition.launch_no_maps", zone.level))
@@ -350,7 +350,7 @@ private fun lines(map: ItemView, index: ContentIndex): List<MapLine> = map.lines
  * The crafts' gifts to the run (3.79.0): one potion of the bag drunk on entering, and with a map up to two scarabs
  * spent with it. A tap picks, a tap again puts back; what each does is the item's own line.
  */
-@Composable private fun Brews(s: ForgeState, vm: ForgeViewModel, launch: MapLaunchState) {
+@Composable private fun Brews(s: ForgeState, vm: ExpeditionViewModel, launch: MapLaunchState) {
     val brews = s.index?.rules?.brews ?: return
     val potions = brews.potions.keys.filter { (s.bagAmount(it) ?: 0L) > 0 }
     val scarabs = brews.scarabs.keys.filter { (s.bagAmount(it) ?: 0L) > 0 }

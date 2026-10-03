@@ -47,6 +47,7 @@ import com.sperance.exileforge.core.display.statPercent
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.run.Reward
@@ -60,6 +61,7 @@ import com.sperance.exileforge.ui.screens.expedition.scene.SCENE_UNIT
 import com.sperance.exileforge.ui.screens.expedition.scene.sceneToWorld
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.delay
+import org.koin.compose.viewmodel.koinViewModel
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
@@ -75,6 +77,7 @@ import kotlin.math.roundToInt
  * lower part of the screen sets it, and letting go stops the hero.
  */
 @Composable fun ExpeditionPlay(s: ForgeState, vm: ForgeViewModel, run: ExpeditionRun) {
+    val model = koinViewModel<ExpeditionViewModel>()
     val hud by run.hud.collectAsState()
     // The first run explains the fight before the first pack is met (3.14.0).
     FirstVisit(Guide.FIGHT)
@@ -91,16 +94,16 @@ import kotlin.math.roundToInt
     val close: () -> Unit = {
         if (!closed) {
             closed = true
-            vm.closeRun()
+            model.closeRun()
         }
     }
     BackHandler {
         when {
             summary -> close()
-            hud.phase == RunPhase.GATE -> vm.runCommand(RunCommand.StepBack)
-            hud.phase == RunPhase.CRYSTAL || hud.phase == RunPhase.ABYSS || hud.phase == RunPhase.MAP && hud.fountain != null -> vm.runCommand(RunCommand.StepOff)
+            hud.phase == RunPhase.GATE -> model.runCommand(RunCommand.StepBack)
+            hud.phase == RunPhase.CRYSTAL || hud.phase == RunPhase.ABYSS || hud.phase == RunPhase.MAP && hud.fountain != null -> model.runCommand(RunCommand.StepOff)
             hud.phase == RunPhase.MAP -> if (!zone) leaving = true
-            else -> vm.runCommand(RunCommand.Leave)
+            else -> model.runCommand(RunCommand.Leave)
         }
     }
 
@@ -109,7 +112,7 @@ import kotlin.math.roundToInt
         when (hud.phase) {
             RunPhase.MAP -> {
                 // An autorun walks by itself (3.2.0): no stick under the thumb while it runs
-                if (hud.auto == null) Stick(run) { vm.runCommand(RunCommand.OfferFountain(it)) }
+                if (hud.auto == null) Stick(run) { model.runCommand(RunCommand.OfferFountain(it)) }
                 MapBar(
                     s,
                     run,
@@ -117,19 +120,19 @@ import kotlin.math.roundToInt
                     onLeave = if (zone) null else ({ leaving = true }),
                     onGear = { gear = true },
                     onStats = { sheet = true },
-                    onDrink = { vm.runCommand(RunCommand.Drink(it)) },
-                    onRetry = vm::flushRun,
+                    onDrink = { model.runCommand(RunCommand.Drink(it)) },
+                    onRetry = model::flushRun,
                 )
                 if (gear) {
                     HoldsRun(run)
-                    GearSheet(s, vm) { gear = false }
+                    GearSheet(s, model) { gear = false }
                 }
                 if (sheet) {
                     HoldsRun(run)
                     StatsSheet(s, run.mapEffects) { sheet = false }
                 }
-                hud.fountain?.let { FountainOffer(it, onTake = { vm.runCommand(RunCommand.TakeFountain) }) { vm.runCommand(RunCommand.StepOff) } }
-                hud.chest?.let { ChestLoot(s, vm, run, it, hud.chestAwaiting) { vm.runCommand(RunCommand.DismissChest) } }
+                hud.fountain?.let { FountainOffer(it, onTake = { model.runCommand(RunCommand.TakeFountain) }) { model.runCommand(RunCommand.StepOff) } }
+                hud.chest?.let { ChestLoot(s, model, run, it, hud.chestAwaiting) { model.runCommand(RunCommand.DismissChest) } }
                 if (leaving) {
                     ConfirmSheet(
                         title = ui("expedition.leave_q"),
@@ -139,32 +142,32 @@ import kotlin.math.roundToInt
                         ledger = listOf(LedgerLine(ui("expedition.leave_left"), ui(if (hud.sealed) "expedition.boss_alive" else "expedition.boss_slain"), Tone.SPEND)),
                         note = ui("expedition.leave_note"),
                         onDismiss = { leaving = false },
-                    ) { vm.runCommand(RunCommand.Leave) }
+                    ) { model.runCommand(RunCommand.Leave) }
                 }
             }
 
-            RunPhase.FIGHT -> hud.fight?.let { ArenaOverlay(s, hud, it, it.level.takeIf { level -> level > 0 } ?: run.zone.level, run.rules, run.stance, onCommand = vm::runCommand, onLogFilter = vm::logFilter, onBuzz = vm::buzz) }
+            RunPhase.FIGHT -> hud.fight?.let { ArenaOverlay(s, hud, it, it.level.takeIf { level -> level > 0 } ?: run.zone.level, run.rules, run.stance, onCommand = model::runCommand, onLogFilter = vm::logFilter, onBuzz = vm::buzz) }
 
             // The fight is over: its report — the log, what it came to, and the loot of a victory.
-            RunPhase.LOOT -> hud.report?.let { ReportScreen(s, vm, hud, it) { vm.runCommand(RunCommand.Continue) } }
+            RunPhase.LOOT -> hud.report?.let { ReportScreen(s, vm, model, hud, it) { model.runCommand(RunCommand.Continue) } }
 
             // A fall: the fight's report first, then the map's summary (its «Вернуться» leaves the map).
-            RunPhase.DEAD -> hud.report?.let { ReportScreen(s, vm, hud, it) { vm.runCommand(RunCommand.Continue) } }
-                ?: MapSummary(s, vm, hud, onDone = close)
+            RunPhase.DEAD -> hud.report?.let { ReportScreen(s, vm, model, hud, it) { model.runCommand(RunCommand.Continue) } }
+                ?: MapSummary(s, model, hud, onDone = close)
 
-            RunPhase.CLEARED -> MapSummary(s, vm, hud, onDone = close)
+            RunPhase.CLEARED -> MapSummary(s, model, hud, onDone = close)
 
-            RunPhase.GATE -> VaalGate(s, hud, run.zone.corrupted.takeIf { it.isNotBlank() }, onEnter = vm::enterVaal, onRefuse = vm::refuseVaal) { vm.runCommand(RunCommand.StepBack) }
+            RunPhase.GATE -> VaalGate(s, hud, run.zone.corrupted.takeIf { it.isNotBlank() }, onEnter = model::enterVaal, onRefuse = model::refuseVaal) { model.runCommand(RunCommand.StepBack) }
 
-            RunPhase.CRYSTAL -> hud.crystal?.let { CrystalSheet(s, it, onCommand = vm::runCommand) }
+            RunPhase.CRYSTAL -> hud.crystal?.let { CrystalSheet(s, it, onCommand = model::runCommand) }
 
-            RunPhase.ABYSS -> hud.abyss?.let { AbyssSheet(s, hud, it, onCommand = vm::runCommand) }
+            RunPhase.ABYSS -> hud.abyss?.let { AbyssSheet(s, hud, it, onCommand = model::runCommand) }
 
-            RunPhase.LEFT -> MapSummary(s, vm, hud, onDone = close)
+            RunPhase.LEFT -> MapSummary(s, model, hud, onDone = close)
         }
         // In a fight the arena's own row carries the autorun (3.77.0); the plate floats only over the map.
         hud.auto?.takeIf { hud.phase == RunPhase.MAP }?.let { auto ->
-            AutoBar(auto, Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 8.dp)) { vm.runCommand(RunCommand.StopAuto) }
+            AutoBar(auto, Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 8.dp)) { model.runCommand(RunCommand.StopAuto) }
         }
         // A refusal of the gear (2.40.0) has to be read here too: the run has no bar and no banner.
         ToastHost(s, vm::dismissMessage, vm::dismissNotice, Modifier.align(Alignment.TopCenter).statusBarsPadding())
@@ -602,7 +605,7 @@ private const val MINIMAP_MAX = 60f
  * shown as its answer arrives (server 1.30.0), and a button that puts it away. A piece opens its
  * comparison with what is worn and can be worn at once (3.24.0); the map holds still while it is open.
  */
-@Composable private fun ChestLoot(s: ForgeState, vm: ForgeViewModel, run: ExpeditionRun, reward: Reward, awaiting: Boolean, onClose: () -> Unit) {
+@Composable private fun ChestLoot(s: ForgeState, vm: ExpeditionViewModel, run: ExpeditionRun, reward: Reward, awaiting: Boolean, onClose: () -> Unit) {
     var looked by remember(reward) { mutableStateOf<ItemView?>(null) }
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         RunPanel(Modifier, GoldBright) {

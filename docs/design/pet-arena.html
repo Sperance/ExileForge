@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Питомец на арене</title>
+<style>
+:root{--bg:#0C1115;--panel:#141B22;--line:#24313B;--muted:#7A8D99;--text:#D5E0E6;--bright:#EEF8F1;--gold:#3FB67A;--red:#D24A43;--blue:#5B8DEF;--pet:#4fd18a}
+*{box-sizing:border-box;margin:0}body{background:var(--bg);color:var(--text);font-family:system-ui,sans-serif;padding:24px 16px}
+h1{font-size:18px;color:var(--bright);margin-bottom:6px}.lead{color:var(--muted);font-size:13px;margin-bottom:20px;max-width:980px;line-height:1.45}
+.grid{display:flex;flex-wrap:wrap;gap:26px}.v{width:340px;max-width:100%}.v h2{font-size:15px;color:var(--gold);margin-bottom:8px}
+.v p{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.45}
+.arena{position:relative;background:linear-gradient(#10161c,#0b0f13);border:1px solid var(--line);border-radius:18px;padding:10px;height:480px;display:flex;flex-direction:column;gap:8px;overflow:hidden}
+.foes{display:flex;gap:6px}.card{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:5px;display:flex;flex-direction:column;gap:3px;align-items:center;position:relative}
+.por{width:100%;aspect-ratio:1;background:radial-gradient(circle at 50% 40%,#2a3640,#0b0e13);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:28px;position:relative}
+.hp{width:100%;height:8px;background:#2a3640;border-radius:3px;overflow:hidden}.hp i{display:block;height:100%;background:var(--red)}
+.nm{font-size:10px;font-weight:700}
+.feed{flex:1;background:#0f1419;border:1px solid var(--line);border-radius:10px;padding:8px;font-size:11px;color:var(--muted);line-height:1.7}
+.feed .p{color:var(--pet)}
+.hero{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px;display:flex;gap:8px;align-items:center}
+.hero .ic{font-size:30px}.hero .col{flex:1;display:flex;flex-direction:column;gap:4px}.hero .t{font-size:12px;color:var(--bright)}
+.hb{height:8px;background:#2a3640;border-radius:4px;overflow:hidden}.hb i{display:block;height:100%;background:var(--red)}
+.pb i{background:var(--pet)}
+.dmg{position:absolute;font-weight:900;font-size:15px;color:var(--pet);animation:rise 1.6s infinite;opacity:0}
+@keyframes rise{0%{opacity:0;transform:translateY(6px)}15%{opacity:1}80%{opacity:1;transform:translateY(-18px)}100%{opacity:0}}
+.line{position:absolute;height:2px;background:linear-gradient(90deg,var(--pet),transparent);transform-origin:left;animation:lun 1.6s infinite;opacity:0}
+@keyframes lun{0%,10%{opacity:0}20%,40%{opacity:1}55%,100%{opacity:0}}
+.pcard{background:var(--panel);border:1px solid #4fd18a66;border-radius:12px;padding:6px;display:flex;gap:6px;align-items:center;width:44%}
+.pcard .ic{font-size:24px;width:40px;height:40px;border-radius:8px;background:#1d2a24;display:flex;align-items:center;justify-content:center}
+.sw{height:3px;background:#2a3640;border-radius:2px;overflow:hidden}.sw i{display:block;height:100%;background:var(--pet);animation:swing 1.6s infinite linear}
+@keyframes swing{from{width:0}to{width:100%}}
+.badge{position:absolute;right:-6px;top:-6px;width:38px;height:38px;border-radius:50%;background:#1d2a24;border:2px solid var(--pet);display:flex;align-items:center;justify-content:center;font-size:20px}
+.ring{position:absolute;right:-8px;top:-8px;width:42px;height:42px;border-radius:50%;background:conic-gradient(var(--pet) 0 70%,#2a3640 0);-webkit-mask:radial-gradient(circle,transparent 17px,#000 18px);mask:radial-gradient(circle,transparent 17px,#000 18px)}
+.row{display:flex;gap:6px;align-items:stretch}
+</style></head><body>
+<h1>Питомец на арене — 3 варианта</h1>
+<p class="lead">Сейчас питомец — только полоска. Во всех вариантах удары питомца — зелёные цифры на карточке врага и зелёные строки в ленте боя; отличается место и вес самого питомца.</p>
+<div class="grid">
+
+<div class="v"><h2>A · Мини-карточка рядом с героем</h2>
+<div class="arena">
+ <div class="foes"><div class="card"><div class="por">🐺<div class="dmg" style="left:30%;top:20%">42</div></div><div class="nm">Волк</div><div class="hp"><i style="width:60%"></i></div></div><div class="card"><div class="por">🧟</div><div class="nm">Упырь</div><div class="hp"><i style="width:85%"></i></div></div><div class="card"><div class="por">🗿</div><div class="nm">Страж</div><div class="hp"><i style="width:50%"></i></div></div></div>
+ <div class="line" style="left:24%;top:265px;width:60px;transform:rotate(-80deg)"></div>
+ <div class="feed"><span class="p">Пантера</span> кусает Волка: 42<br>Удар по Волку: 64<br>Упырь бьёт <span class="p">Пантеру</span>: 12<br><span class="p">Пантера</span> кусает Волка: 39</div>
+ <div class="row"><div class="pcard"><div class="ic">🐆</div><div style="flex:1;display:flex;flex-direction:column;gap:3px"><div style="font-size:11px;color:var(--pet)">Пантера · 24</div><div class="hb pb"><i style="width:75%"></i></div><div class="sw"><i></i></div></div></div>
+ <div class="hero" style="flex:1"><div class="ic">⚔️</div><div class="col"><div class="t">Дикарь</div><div class="hb"><i></i></div></div></div></div>
+</div>
+<p>Своя маленькая карточка слева от героя: портрет, имя, уровень, здоровье, взмах. Хорошо видно, кого бьют и когда питомец атакует. Герой становится уже.</p></div>
+
+<div class="v"><h2>B · Значок на карточке героя</h2>
+<div class="arena">
+ <div class="foes"><div class="card"><div class="por">🐺<div class="dmg" style="left:30%;top:20%">42</div></div><div class="nm">Волк</div><div class="hp"><i style="width:60%"></i></div></div><div class="card"><div class="por">🧟</div><div class="nm">Упырь</div><div class="hp"><i style="width:85%"></i></div></div><div class="card"><div class="por">🗿</div><div class="nm">Страж</div><div class="hp"><i style="width:50%"></i></div></div></div>
+ <div class="feed"><span class="p">Пантера</span> кусает Волка: 42<br>Удар по Волку: 64<br>Упырь бьёт <span class="p">Пантеру</span>: 12<br><span class="p">Пантера</span> кусает Волка: 39<br>Удар по Волку: 61</div>
+ <div class="hero" style="position:relative"><div class="ring"></div><div class="badge">🐆</div><div class="ic">⚔️</div><div class="col"><div class="t">Дикарь · ур. 34</div><div class="hb"><i></i></div><div class="hb" style="background:#2a3640"><i style="background:var(--blue);width:60%"></i></div></div></div>
+</div>
+<p>Компактно: круглый портрет питомца в углу карточки героя, кольцо вокруг — его здоровье. Тап открывает подробности. Места почти не занимает, но взмах питомца не виден.</p></div>
+
+<div class="v"><h2>C · Питомец в ряду врагов, по нашу сторону</h2>
+<div class="arena">
+ <div class="foes"><div class="card"><div class="por">🐺<div class="dmg" style="left:30%;top:20%">42</div></div><div class="nm">Волк</div><div class="hp"><i style="width:60%"></i></div></div><div class="card"><div class="por">🧟</div><div class="nm">Упырь</div><div class="hp"><i style="width:85%"></i></div></div><div class="card"><div class="por">🗿</div><div class="nm">Страж</div><div class="hp"><i style="width:50%"></i></div></div></div>
+ <div style="display:flex;justify-content:center"><div class="card" style="flex:none;width:34%;border-color:#4fd18a88"><div class="por" style="background:radial-gradient(circle,#1d3a2c,#0b0e13)">🐆</div><div class="nm" style="color:var(--pet)">Пантера · 24</div><div class="hp"><i style="width:75%;background:var(--pet)"></i></div><div class="sw" style="width:100%"><i></i></div></div></div>
+ <div class="feed"><span class="p">Пантера</span> кусает Волка: 42<br>Удар по Волку: 64<br>Упырь бьёт <span class="p">Пантеру</span>: 12</div>
+ <div class="hero"><div class="ic">⚔️</div><div class="col"><div class="t">Дикарь · ур. 34</div><div class="hb"><i></i></div></div></div>
+</div>
+<p>Питомец — такая же карточка, как у врагов, между стаей и героем, в зелёной рамке. Он «на передовой» и выглядит как боец. Ест место ленты боя.</p></div>
+
+</div></body></html>

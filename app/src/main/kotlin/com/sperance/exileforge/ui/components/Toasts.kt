@@ -43,7 +43,7 @@ private const val TOAST_MS = 4_000L
  * and leaves by itself; a tap sends it away sooner. A refusal outranks a success.
  */
 @Composable fun ToastHost(s: ForgeState, onRefusal: () -> Unit, onNotice: () -> Unit, modifier: Modifier = Modifier) {
-    val toast = s.refusal?.let { Toast(it, LifeRed, it, onRefusal) }
+    val toast = s.refusal?.let { Toast(it.read(), LifeRed, it, onRefusal) }
         ?: s.notice?.let { Toast(it.text, it.kind.tint(), it.at, onNotice) }
     toast?.let { LaunchedEffect(it.key) { delay(TOAST_MS); it.onDismiss() } }
     AnimatedContent(toast, modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), label = "toast",

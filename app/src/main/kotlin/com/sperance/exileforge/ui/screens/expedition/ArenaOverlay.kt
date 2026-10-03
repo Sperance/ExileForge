@@ -338,7 +338,7 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
         .border(if (focused || acting > 0f) 2.dp else 1.dp, border, shape)
         .clip(shape).clickable(enabled = foe.alive && fight.outcome == null, onClick = onTap)
         .padding(5.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
-        Box(Modifier.fillMaxWidth().aspectRatio(.75f).clip(RoundedCornerShape(4.dp)).background(Color(0xFF0B0E13))) {
+        Box(Modifier.fillMaxWidth().aspectRatio(if (large) .75f else 1f).clip(RoundedCornerShape(4.dp)).background(Color(0xFF0B0E13))) {
             Canvas(Modifier.fillMaxSize()) {
                 Portraits.monster(this, foe.monster.code, foe.monster.form, ring, time, wash?.let(::ailmentTint), wash?.let(::washAmount) ?: 0f,
                     flash(lunge, Side.MONSTER, foe.index))
@@ -1073,10 +1073,15 @@ internal fun noteLine(event: CombatEvent, monster: String): String {
         NoteKind.CONDITION_OFF -> ui("expedition.log_note_condition_off", locOr("condition.${note.ref}", note.ref))
         NoteKind.KILL -> ui("expedition.log_note_kill", monster) + (if (note.value >= 1) " · +${note.value.roundToInt()}" else "")
         NoteKind.TRAIT -> ui("expedition.log_note_trait", monster, traitTitle(note.ref))
+        NoteKind.RECOVER_FLASK -> ui("expedition.log_note_recover_flask", equipmentTitle(note.ref), note.value.roundToInt())
+        NoteKind.RECOVER_RECOUP -> ui("expedition.log_note_recover_recoup", note.value.roundToInt())
+        NoteKind.RECOVER_WASTE -> ui("expedition.log_note_recover_waste", note.value.roundToInt())
+        NoteKind.REGEN -> ui("expedition.log_note_regen", note.value.roundToInt())
     }
 }
 
 private fun logColour(event: CombatEvent): Color = when {
+    (event.trace as? NoteTrace)?.kind?.recovery == true -> Vital
     event.action == Action.NOTE -> Rune
     event.action == Action.RETREAT -> Muted
     event.action == Action.FLASK -> Vital

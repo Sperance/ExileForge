@@ -3582,5 +3582,20 @@
   "enum.stat.STOCK_IMMUNE_ELECTROCUTE": "Невосприимчивость к электрошоку",
   "enum.stat_desc.STOCK_IMMUNE_ELECTROCUTE": "Шкала электрошока на носителе не копится.",
   "enum.stat.STOCK_STUN_POOL": "Шкала оглушения",
-  "enum.stat_desc.STOCK_STUN_POOL": "На столько процентов больше шкала оглушения носителя."
+  "enum.stat_desc.STOCK_STUN_POOL": "На столько процентов больше шкала оглушения носителя.",
+  "fight.log_shelf.RECOVERY": "Восстановление",
+  "expedition.log_note_recover_flask": "{0}: восстановлено {1}",
+  "expedition.log_note_recover_recoup": "Возмещение: восстановлено {0}",
+  "expedition.log_note_recover_waste": "В перелив ушло {0}",
+  "expedition.log_note_regen": "Регенерация: +{0}",
+  "net.outage.no_network": "Нет интернета",
+  "net.outage.timeout": "Сервер не отвечает",
+  "net.outage.maintenance": "Сервер перезапускается",
+  "net.outage.bad_answer": "Сервер ответил непонятно",
+  "net.outage_hint.no_network": "Проверьте Wi-Fi или мобильные данные.",
+  "net.outage_hint.timeout": "Сервер занят или связь слишком медленная — подождите немного.",
+  "net.outage_hint.maintenance": "Идёт обновление или техническое обслуживание. Обычно это занимает пару минут.",
+  "net.outage_hint.bad_answer": "Вместо ответа игры пришло что-то другое — возможно, сеть перехватывает запросы (публичный Wi-Fi) или сервер обновляется.",
+  "link.auto_retry": "Игра сама переподключится, как только сервер ответит.",
+  "link.retry_now": "Повторить"
 }

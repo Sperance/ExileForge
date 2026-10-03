@@ -5,10 +5,19 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -45,6 +54,27 @@ import com.sperance.exileforge.ui.theme.*
                 Text(option.title, style = MaterialTheme.typography.labelLarge, color = if (active) Parchment else Muted,
                     modifier = Modifier.weight(1f))
                 if (active) Icon(ForgeGlyphs.Sigil, null, tint = Gold, modifier = Modifier.size(16.dp))
+            }
+        }
+    }
+}
+
+/**
+ * The language behind a globe (3.79.0): «🌐 RU» in a screen's corner, the list of the offered languages under it. For the
+ * screens before the game — the hero's choice — where the settings are out of reach.
+ */
+@Composable fun LanguageButton(current: Lang, offered: List<Lang>, modifier: Modifier = Modifier, enabled: Boolean = true, onLanguage: (Lang) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    Box(modifier) {
+        TextButton(onClick = { open = true }, enabled = enabled) {
+            Icon(Icons.Outlined.Language, null, tint = Gold, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(current.short, color = Parchment, style = MaterialTheme.typography.labelLarge)
+        }
+        DropdownMenu(open, onDismissRequest = { open = false }, containerColor = PanelRaised) {
+            offered.forEach { option ->
+                DropdownMenuItem(text = { Text(option.title, color = if (option == current) GoldBright else Parchment) },
+                    onClick = { open = false; if (option != current) onLanguage(option) })
             }
         }
     }

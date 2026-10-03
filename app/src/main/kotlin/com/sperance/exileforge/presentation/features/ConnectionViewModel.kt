@@ -2,11 +2,14 @@ package com.sperance.exileforge.presentation.features
 
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.network.ApiFailure
+import com.sperance.exileforge.core.network.Outage
+import com.sperance.exileforge.core.network.transportDetail
 import com.sperance.exileforge.core.network.FlushOutcome
 import com.sperance.exileforge.core.network.GameApi
 import com.sperance.exileforge.presentation.ForgeRuntime
 import com.sperance.exileforge.presentation.state.AppPhase
 import com.sperance.exileforge.presentation.state.Building
+import com.sperance.exileforge.presentation.state.LinkState
 import com.sperance.exileforge.presentation.state.NoticeKind
 import com.sperance.exileforge.presentation.state.Reads
 import com.sperance.exileforge.presentation.state.TAB_CITY
@@ -43,11 +46,15 @@ class ConnectionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         }
     } }
 
-    /** The network failed under a read or a command: the icon goes up, and the server is asked again. */
-    fun lost() {
-        update { it.copy(link = it.link.copy(offline = true)) }
+    /** The network failed under a read or a command: the icon goes up with [error]'s cause, and the server is asked again. */
+    fun lost(error: Throwable? = null) {
+        update { it.copy(link = it.link.down(error)) }
         wake()
     }
+
+    /** The link marked down by [error] (3.79.0): its outage for the player, the transport's words for an administrator. */
+    private fun LinkState.down(error: Throwable?): LinkState =
+        copy(offline = true, outage = error?.let(Outage::of) ?: outage ?: Outage.NO_NETWORK, detail = error?.let(::transportDetail) ?: detail)
 
     /** A command joined the queue: it goes out as soon as the server can be reached. */
     fun queued() {
@@ -73,9 +80,10 @@ class ConnectionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
                 if (!offline && api.commands?.waiting?.value.isNullOrEmpty()) break
                 if (offline && !first) withTimeoutOrNull(BACKOFF_S[step.coerceAtMost(BACKOFF_S.lastIndex)] * 1_000L) { nudge.receive() }
                 first = false
-                if (!reachable()) { step++; continue }
+                val probe = probe()
+                if (probe != null) { update { it.copy(link = it.link.down(probe)) }; step++; continue }
                 val wasOffline = state.value.link.offline
-                update { it.copy(link = it.link.copy(offline = false)) }
+                update { it.copy(link = it.link.copy(offline = false, outage = null, detail = null)) }
                 if (wasOffline) sessionViewModel.restored()
                 var delivered = 0
                 var foreign = 0
@@ -90,7 +98,7 @@ class ConnectionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
                 if (foreign > 0) toast(ui("link.foreign", foreign), NoticeKind.DONE)
                 if (wasOffline || delivered > 0) refreshScreen()
                 when (outcome) {
-                    FlushOutcome.OFFLINE -> { update { it.copy(link = it.link.copy(offline = true)) }; step++ }
+                    FlushOutcome.OFFLINE -> { update { it.copy(link = it.link.down(null)) }; step++ }
                     // No session to send them with: the sign-in wakes the loop again — or already did, during this pass.
                     FlushOutcome.SIGNED_OUT, FlushOutcome.EMPTY -> if (nudge.tryReceive().isSuccess) first = true else break
                 }
@@ -98,11 +106,14 @@ class ConnectionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         }
     } }
 
-    /** The probe: the health route, cheap and unauthenticated. Any answer — even a refusal — means the server is there. */
-    private suspend fun reachable(): Boolean = try { runtime.api.health(); true }
+    /**
+     * The probe: the health route, cheap and unauthenticated. Any answer of the game — even a refusal — means the
+     * server is there; null then, else what stood in the way (a proxy's 502 is the server restarting, not an answer).
+     */
+    private suspend fun probe(): Throwable? = try { runtime.api.health(); null }
         catch (e: CancellationException) { throw e }
-        catch (_: ApiFailure) { true }
-        catch (_: Exception) { false }
+        catch (e: ApiFailure) { e.takeIf { Outage.of(it) != null } }
+        catch (e: Exception) { e }
 
     /** What the player looks at, read again quietly: the hero always, and the tab's own data where it has any. */
     fun refreshScreen() { with(runtime) {

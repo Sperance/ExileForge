@@ -91,7 +91,7 @@ class Transport(
             if (status !in 200..299) throw ApiFailure(status, null, ui("api.file_not_served", status))
             if (validate) try { withContext(Dispatchers.Default) { WireJson.parseToJsonElement(payload.body) } }
                 catch (e: CancellationException) { throw e }
-                catch (_: Exception) { throw ApiFailure(status, null, ui("api.malformed_json_at", path)) }
+                catch (_: Exception) { throw ApiFailure(status, null, ui("api.malformed_json_at", path), malformed = true) }
             success = true
             return payload.body
         } catch (e: CancellationException) { throw e }
@@ -153,7 +153,8 @@ class Transport(
             responseText = raw.take(12_000)
             val envelope = try { withContext(Dispatchers.Default) { WireJson.parseToJsonElement(raw).jsonObject } }
                 catch (e: CancellationException) { throw e }
-                catch (_: Exception) { throw ApiFailure(status, null, if (status == 401) ui("api.session_expired") else if (status == 403) ui("api.no_rights") else ui("api.bad_json", status)) }
+                catch (_: Exception) { throw ApiFailure(status, null, if (status == 401) ui("api.session_expired") else if (status == 403) ui("api.no_rights") else ui("api.bad_json", status),
+                    malformed = status != 401 && status != 403) }
             if (status !in 200..299 || (envelope["success"] as? JsonPrimitive)?.booleanOrNull != true) {
                 val error = envelope["error"] as? JsonObject
                 throw ApiFailure(status, error?.text("errorCode"),

@@ -154,6 +154,13 @@ class ExpeditionWorld(
         }
     }
 
+    /**
+     * The cells of these with floor on all four sides (3.79.0): a fountain, a chest, a crystal or a portal set against a wall
+     * hid behind it in the scene's perspective. Should none be roomy, all of them.
+     */
+    private fun Set<Cell>.roomy(): Set<Cell> = filter { (x, y) -> map.walkable(x - 1, y) && map.walkable(x + 1, y) && map.walkable(x, y - 1) && map.walkable(x, y + 1) }
+        .toSet().ifEmpty { this }
+
     /** Where the guardian stands: the floor nearest the exit, a step or two from it. */
     private fun guardPost(): Cell? {
         val near = distances(map.exit, 3)
@@ -164,7 +171,7 @@ class ExpeditionWorld(
     private fun portalPost(): Cell? {
         val placing = Random(seed * 15485863 + 53)
         val taken = map.spawns.toSet() + map.exit + map.start
-        return distances(map.start, Int.MAX_VALUE).filter { (cell, steps) -> steps >= CHEST_STEPS && cell !in taken }.keys.shuffled(placing).firstOrNull()
+        return distances(map.start, Int.MAX_VALUE).filter { (cell, steps) -> steps >= CHEST_STEPS && cell !in taken }.keys.roomy().shuffled(placing).firstOrNull()
     }
     var heroX = map.start.x + 0.5
     var heroY = map.start.y + 0.5
@@ -206,7 +213,7 @@ class ExpeditionWorld(
         val placing = Random(seed * 7919 + 17)
         val taken = map.spawns.toSet() + map.exit + map.start + fountains.map { it.cell }
         fun nook(cell: Cell) = STEPS.count { (dx, dy) -> !map.walkable(cell.x + dx, cell.y + dy) }
-        val candidates = distances(map.start, Int.MAX_VALUE).filter { (cell, steps) -> steps >= CHEST_STEPS && cell !in taken }.keys
+        val candidates = distances(map.start, Int.MAX_VALUE).filter { (cell, steps) -> steps >= CHEST_STEPS && cell !in taken }.keys.roomy()
             .shuffled(placing).sortedByDescending(::nook)
         for (cell in candidates) {
             if (chests.size >= count) break
@@ -225,7 +232,7 @@ class ExpeditionWorld(
         val count = low + placing.nextInt(high - low + 1)
         if (count <= 0) return
         val taken = map.spawns.toSet() + map.exit + map.start + chests.map { it.cell }
-        val candidates = distances(map.start, Int.MAX_VALUE).filter { (cell, steps) -> steps >= FOUNTAIN_STEPS && cell !in taken }.keys.shuffled(placing)
+        val candidates = distances(map.start, Int.MAX_VALUE).filter { (cell, steps) -> steps >= FOUNTAIN_STEPS && cell !in taken }.keys.roomy().shuffled(placing)
         for (cell in candidates) {
             if (fountains.size >= count) break
             if (fountains.all { hypot((it.cell.x - cell.x).toDouble(), (it.cell.y - cell.y).toDouble()) >= FOUNTAIN_SPACING }) fountains += Fountain(fountains.size, cell, heal)
@@ -240,7 +247,7 @@ class ExpeditionWorld(
         if (held.isEmpty() || crystals.isNotEmpty()) return
         val placing = Random(seed * 7727 + 97)
         val taken = map.spawns.toSet() + map.exit + map.start + chests.map { it.cell } + fountains.map { it.cell } + listOfNotNull(portal)
-        val candidates = distances(map.start, Int.MAX_VALUE).filter { (cell, steps) -> steps >= CHEST_STEPS && cell !in taken }.keys.shuffled(placing)
+        val candidates = distances(map.start, Int.MAX_VALUE).filter { (cell, steps) -> steps >= CHEST_STEPS && cell !in taken }.keys.roomy().shuffled(placing)
         for (cell in candidates) {
             if (crystals.size >= held.size) break
             if (crystals.all { hypot((it.cell.x - cell.x).toDouble(), (it.cell.y - cell.y).toDouble()) >= CHEST_SPACING }) crystals += CrystalSpot(crystals.size, cell, held[crystals.size])
@@ -258,7 +265,7 @@ class ExpeditionWorld(
         if (depths.isEmpty() || cracks.isNotEmpty()) return
         val placing = Random(seed * 6151 + 53)
         val taken = map.spawns.toSet() + map.exit + map.start + chests.map { it.cell } + fountains.map { it.cell } + crystals.map { it.cell } + listOfNotNull(portal)
-        val candidates = distances(map.start, Int.MAX_VALUE).filter { (cell, steps) -> steps >= CHEST_STEPS && cell !in taken }.keys.shuffled(placing)
+        val candidates = distances(map.start, Int.MAX_VALUE).filter { (cell, steps) -> steps >= CHEST_STEPS && cell !in taken }.keys.roomy().shuffled(placing)
         for (cell in candidates) {
             if (cracks.size >= depths.size) break
             val apart = (cracks.map { it.cell } + crystals.map { it.cell }).all { hypot((it.x - cell.x).toDouble(), (it.y - cell.y).toDouble()) >= CHEST_SPACING }

@@ -61,7 +61,9 @@ import com.sperance.exileforge.data.settings.DEFAULT_SERVER
             if (s.busy || s.reading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised) else OrnateDivider(Gold)
 
             if (s.account.resumable) {
-                InfoCard(ui("auth.offline_title"), ui("auth.offline_note"), failure = true)
+                // By its cause (3.79.0): no network, a slow server, a restart, an answer not the game's; the server is asked again by itself.
+                val outage = s.link.outage
+                InfoCard(outage?.title ?: ui("auth.offline_title"), listOfNotNull(outage?.hint, ui("auth.offline_note"), s.link.detail?.takeIf { s.isAdmin }).joinToString("\n"), failure = true)
                 ForgeButton(enabled = !s.busy, onClick = vm::retryResume, modifier = Modifier.fillMaxWidth()) { Text(ui("auth.retry")) }
             }
 
@@ -74,7 +76,7 @@ import com.sperance.exileforge.data.settings.DEFAULT_SERVER
             LoginPanel(s, vm)
             ServerReset(s, vm)
 
-            s.refusal?.let { InfoCard(ui("auth.failed"), it, failure = true) }
+            s.refusal?.let { InfoCard(ui("auth.failed"), it.read(), failure = true) }
             // The build, dim at the foot of the way in (3.72.0).
             VersionLabel()
             // The id of the account names it in a support log; the secret of the device is never shown (3.48.0).

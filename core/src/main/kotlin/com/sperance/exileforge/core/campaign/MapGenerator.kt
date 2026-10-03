@@ -61,7 +61,10 @@ object MapGenerator {
         val fromStart = distances(grid, size, start)
         // Whatever the start cannot reach is filled back in: nothing may stand where no one can walk.
         for (i in grid.indices) if (fromStart[i] < 0) grid[i] = Tile.WALL
-        val exitIndex = grid.indices.filter { grid[it] == Tile.FLOOR }.maxBy { fromStart[it] }
+        // The exit stands in the open (3.79.0): off the walls, where the perspective of the scene does not hide it.
+        fun roomy(i: Int) = grid[i] == Tile.FLOOR && i % size in 1 until size - 1 && i / size in 1 until size - 1 &&
+            grid[i - 1] == Tile.FLOOR && grid[i + 1] == Tile.FLOOR && grid[i - size] == Tile.FLOOR && grid[i + size] == Tile.FLOOR
+        val exitIndex = (grid.indices.filter(::roomy).ifEmpty { grid.indices.filter { grid[it] == Tile.FLOOR } }).maxBy { fromStart[it] }
         val exit = Cell(exitIndex % size, exitIndex / size)
         val fromExit = distances(grid, size, exit)
 

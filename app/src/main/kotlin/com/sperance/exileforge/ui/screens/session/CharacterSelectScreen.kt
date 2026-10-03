@@ -45,6 +45,8 @@ import com.sperance.exileforge.ui.theme.*
             else CharacterMenu(s, onPlay = vm::enterCharacter, onDelete = { pendingDelete = it },
                 onCreate = { creating = true }, onRefresh = vm::refreshCharacters, onLogout = vm::logout)
         }
+        // The language before the game (3.79.0): the settings are out of reach until a hero is chosen.
+        LanguageButton(s.lang, s.world.languages, Modifier.align(Alignment.TopEnd).padding(top = 6.dp, end = 6.dp), enabled = !s.busy, onLanguage = vm::language)
         ToastHost(s, vm::dismissMessage, vm::dismissNotice, Modifier.align(Alignment.TopCenter).padding(top = 12.dp))
         }
     }

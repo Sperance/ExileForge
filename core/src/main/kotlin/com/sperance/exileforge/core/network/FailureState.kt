@@ -3,8 +3,39 @@ package com.sperance.exileforge.core.network
 import com.sperance.exileforge.core.i18n.locError
 import com.sperance.exileforge.core.i18n.ui
 
+/**
+ * Why the server cannot be reached (3.79.0), as a player can act on it: no network on the device, a server too slow
+ * to answer, a server restarting or down for maintenance (the proxy answers in its place, or the port is closed),
+ * or an answer that is not the game's. The technical text stays for administrators: see [transportDetail].
+ */
+enum class Outage {
+    NO_NETWORK, TIMEOUT, MAINTENANCE, BAD_ANSWER;
+
+    val title: String get() = ui("net.outage.${name.lowercase()}")
+    val hint: String get() = ui("net.outage_hint.${name.lowercase()}")
+
+    companion object {
+        /** The proxy's statuses: the game itself never answers with these, so the request did not reach it. */
+        private val GATEWAY = setOf(502, 503)
+
+        /** The outage behind [error], or null where the server did answer as itself. */
+        fun of(error: Throwable): Outage? = when (error) {
+            is ApiFailure -> when {
+                error.code == null && error.status in GATEWAY -> MAINTENANCE
+                error.code == null && error.status == 504 -> TIMEOUT
+                error.malformed -> BAD_ANSWER
+                else -> null
+            }
+            is java.net.SocketTimeoutException -> TIMEOUT
+            is java.net.ConnectException -> MAINTENANCE
+            is java.io.IOException -> NO_NETWORK
+            else -> null
+        }
+    }
+}
+
 sealed interface FailureState {
-    data object Offline : FailureState
+    data class Offline(val cause: Outage) : FailureState
     data object SessionExpired : FailureState
     data object Conflict : FailureState
     data object Forbidden : FailureState
@@ -19,6 +50,9 @@ sealed interface FailureState {
          * report every 4xx as "offline" and hide what the server actually said.
          */
         fun from(error: Exception, writing: Boolean): FailureState = when {
+            // An unreadable answer to a write that went through may still have done it: that is uncertain, not offline.
+            writing && error is ApiFailure && error.malformed && error.status in 200..299 -> UncertainWrite
+            error is ApiFailure && Outage.of(error) != null -> Offline(Outage.of(error)!!)
             error is ApiFailure -> when {
                 error.status == 401 -> SessionExpired
                 error.status == 403 -> Forbidden
@@ -27,7 +61,7 @@ sealed interface FailureState {
                 else -> Rejected(error.message ?: ui("net.rejected"))
             }
             writing && error is java.io.IOException -> UncertainWrite
-            error is java.io.IOException -> Offline
+            error is java.io.IOException -> Offline(Outage.of(error) ?: Outage.NO_NETWORK)
             else -> Rejected(error.message ?: ui("net.failed"))
         }
     }

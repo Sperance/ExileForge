@@ -3582,5 +3582,20 @@
   "enum.stat.STOCK_IMMUNE_ELECTROCUTE": "Electrocute Immunity",
   "enum.stat_desc.STOCK_IMMUNE_ELECTROCUTE": "No electrocute buildup on the bearer.",
   "enum.stat.STOCK_STUN_POOL": "Stun Bar",
-  "enum.stat_desc.STOCK_STUN_POOL": "The bearer's stun bar is this much larger."
+  "enum.stat_desc.STOCK_STUN_POOL": "The bearer's stun bar is this much larger.",
+  "fight.log_shelf.RECOVERY": "Recovery",
+  "expedition.log_note_recover_flask": "{0}: restored {1}",
+  "expedition.log_note_recover_recoup": "Recoup: restored {0}",
+  "expedition.log_note_recover_waste": "Overflow wasted {0}",
+  "expedition.log_note_regen": "Regeneration: +{0}",
+  "net.outage.no_network": "No internet",
+  "net.outage.timeout": "The server is not answering",
+  "net.outage.maintenance": "The server is restarting",
+  "net.outage.bad_answer": "The server sent a strange answer",
+  "net.outage_hint.no_network": "Check your Wi-Fi or mobile data.",
+  "net.outage_hint.timeout": "The server is busy or the connection is too slow — wait a little.",
+  "net.outage_hint.maintenance": "An update or maintenance is under way. It usually takes a couple of minutes.",
+  "net.outage_hint.bad_answer": "Something other than the game answered — the network may be intercepting requests (public Wi-Fi), or the server is updating.",
+  "link.auto_retry": "The game reconnects by itself as soon as the server answers.",
+  "link.retry_now": "Retry"
 }

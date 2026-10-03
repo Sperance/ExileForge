@@ -1,5 +1,6 @@
 package com.sperance.exileforge.presentation.state
 
+import com.sperance.exileforge.core.network.Outage
 import com.sperance.exileforge.data.settings.DEFAULT_SERVER
 import com.sperance.exileforge.core.model.feedback.AdminReport
 import com.sperance.exileforge.core.model.feedback.Mail
@@ -44,6 +45,12 @@ enum class AppMode { PLAYER, ADMIN }
 
 /** What a toast says had happened: its kind picks the colour, [at] tells two equal texts apart. */
 enum class NoticeKind { DONE, LOOT, CRAFT, ATLAS }
+/** A line read in the player's language when it is shown, not when it was made (3.79.0): a language switch re-reads it. */
+fun interface Phrase { fun read(): String }
+
+/** A [Phrase] of the dictionary: [key] with [args], looked up anew each time it is read. */
+fun phrase(key: String, vararg args: Any?): Phrase = Phrase { com.sperance.exileforge.core.i18n.ui(key, *args) }
+
 data class Notice(val text: String, val kind: NoticeKind = NoticeKind.DONE, val at: Long = System.nanoTime())
 
 /** Which of the three screens the app is on, above the tabs: the tabs only make sense once there is an account and a hero. */
@@ -60,7 +67,7 @@ data class ForgeState(
     val mode: AppMode = AppMode.PLAYER,
     val failure: FailureState? = null,
     /** [busy] is a command in flight — the one thing that disables controls; [loading] names the reads in flight. */
-    val busy: Boolean = true, val loading: Set<String> = emptySet(), val message: String? = null, val error: Boolean = false, val notice: Notice? = null,
+    val busy: Boolean = true, val loading: Set<String> = emptySet(), val message: Phrase? = null, val error: Boolean = false, val notice: Notice? = null,
     val tab: Int = TAB_HERO,
     /** The building of the City tab that is open (3.22.0); none is the square with the three of them. */
     val building: Building? = null,
@@ -109,7 +116,7 @@ data class ForgeState(
     val adminTools: Boolean get() = BuildConfig.DEBUG && isAdmin && mode == AppMode.ADMIN
     val ownsCharacter: Boolean get() = account.signedIn && account.profile?.id == play.heroOwner
     /** The refusal to print where the action was taken; a success is never shown. */
-    val refusal: String? get() = message.takeIf { error }
+    val refusal: Phrase? get() = message.takeIf { error }
     /** How many of one stacking item the hero holds, or null while the hero has not been read. */
     fun bagAmount(code: String): Long? = hero?.let { it.bag[code] ?: 0L }
     /** The orbs of the world, in the order of their price: what the forge and the auction offer. */
@@ -138,7 +145,13 @@ data class ForgeState(
  * The link to the server (3.30.0): [offline] while it cannot be reached — an icon, not the red strip — and the
  * commands given while it could not, waiting to be sent in order. Nothing is drawn as done before the server says so.
  */
-data class LinkState(val offline: Boolean = false, val waiting: List<QueuedCommand> = emptyList()) {
+data class LinkState(
+    val offline: Boolean = false,
+    val waiting: List<QueuedCommand> = emptyList(),
+    /** Why the server is not answering (3.79.0), and the transport's own words for an administrator. */
+    val outage: Outage? = null,
+    val detail: String? = null,
+) {
     /** The items a waiting command is about: their cards say «ждёт отправки». */
     val waitingItems: Set<String> get() = waiting.mapNotNullTo(HashSet()) { it.itemId }
 }

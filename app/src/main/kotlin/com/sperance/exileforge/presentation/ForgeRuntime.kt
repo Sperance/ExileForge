@@ -1,5 +1,7 @@
 package com.sperance.exileforge.presentation
 
+import com.sperance.exileforge.presentation.state.Phrase
+import com.sperance.exileforge.presentation.state.phrase
 import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.display.IconBundle
 import com.sperance.exileforge.core.model.sync.API_REVISION
@@ -117,7 +119,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
                     if (store.deviceSession.first()) {
                         state.first { !it.busy }
                         if (api === created) sessionViewModel.playOnThisDevice(silent = true)
-                    } else mutable.update { it.copy(message = ui("runtime.session_expired"), error = true) }
+                    } else mutable.update { it.copy(message = phrase("runtime.session_expired"), error = true) }
                 }
             }
         })
@@ -160,7 +162,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
             catch (e: Exception) {
                 api = newApi(DEFAULT_SERVER)
                 apiReady.complete(Unit)
-                mutable.update { it.copy(busy = false, error = true, message = e.message) }
+                mutable.update { it.copy(busy = false, error = true, message = Phrase { refusalLine(e) }) }
             }
         }
     }
@@ -376,15 +378,17 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
             return
         }
         val problem = FailureState.from(e, writing)
-        if (problem == FailureState.Offline) {
+        if (problem is FailureState.Offline) {
             mutable.update { it.copy(failure = problem) }
-            connectionViewModel.lost()
+            connectionViewModel.lost(e)
+            // A write that met a dead server did not happen: it is said, by its cause, rather than lost without a word.
+            if (writing) mutable.update { it.copy(error = true, message = Phrase { problem.cause.title + ". " + problem.cause.hint }) }
             return
         }
-        if (problem == FailureState.UncertainWrite && e !is ApiFailure) connectionViewModel.lost()
+        if (problem == FailureState.UncertainWrite && e !is ApiFailure) connectionViewModel.lost(e)
         mutable.update { it.copy(failure = problem, error = true, message = when (problem) {
-            FailureState.UncertainWrite -> ui("runtime.uncertain_write")
-            else -> refusalLine(e)
+            FailureState.UncertainWrite -> phrase("runtime.uncertain_write")
+            else -> Phrase { refusalLine(e) }
         }) }
     }
 

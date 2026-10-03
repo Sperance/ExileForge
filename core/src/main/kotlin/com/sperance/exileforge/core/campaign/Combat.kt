@@ -584,7 +584,14 @@ internal class Blow(
 private class Delayed(val rate: Double, val until: Double)
 
 /** Life and mana a draught gives a second until [until] (2.78.0). */
-private class Recovery(val life: Double, val mana: Double, val until: Double, val slot: Int)
+/**
+ * A recovery running over time: a draught's (its belt [slot]) or a recoup's (slot -1). A pure life draught
+ * stops once life is full, as in PoE (3.79.0); [restored] and [wasted] go to the log's recovery shelf.
+ */
+private class Recovery(val life: Double, val mana: Double, var until: Double, val slot: Int, val stopsAtFull: Boolean = false) {
+    var restored = 0.0
+    var wasted = 0.0
+}
 
 /**
  * The fight, alive: stepped in fixed slices of time so that the same seed is the same fight on any
@@ -759,6 +766,9 @@ class Battle(
     private val drinks = mutableSetOf<Int>()
     private val triggerReady = mutableMapOf<String, Double>()
     private val recoveries = mutableListOf<Recovery>()
+    /** The hero's regeneration since the last recovery line: summed into one line a second (3.79.0). */
+    private var regenLogged = 0.0
+    private var regenLoggedAt = 0.0
     /** The next blow of the hero is a critical strike (a cloak of shadows). */
     internal var nextCrit = false
     /** How deep in answers the fight is: an answer may set off one more, never a chain. */
@@ -797,7 +807,7 @@ class Battle(
             val draught = flask.draught(heroFighter.body, heroFighter.life, 0.0)
             heroFighter.effects += TimedEffect(EffectKind.FLASK, flask.code, draught.lines, left, draught.duration, slot = i)
             // Its recovery comes along with it (2.81.0): before, the draught's buff ran on but its healing stopped.
-            pools?.rates?.getOrNull(i)?.takeIf { it.flows }?.let { recoveries += Recovery(it.life, it.mana, left, i) }
+            pools?.rates?.getOrNull(i)?.takeIf { it.flows }?.let { recoveries += Recovery(it.life, it.mana, left, i, draught.lifeOnly) }
             flaskOpened[i] = true
         }
         if (heroCharges.any) heroCharges.start(time, heroFighter.body.stats)
@@ -990,15 +1000,42 @@ class Battle(
         if (!me.alive) return
         // The bars melt once no blow has filled them for the rule's delay (3.78.0).
         rules.buildup?.let { rule -> if (time - me.builtAt >= rule.decayDelay) for (i in me.buildup.indices) me.buildup[i] = max(0.0, me.buildup[i] - rule.decayPerSecond * dt) }
-        me.life = min(me.body.maxLife, me.life + (me.body.lifeRegen + me.body.maxLife * me.body.lifeRegenShare) * me.body.recoveryRate * dt)
+        val regenerated = min(me.body.maxLife, me.life + (me.body.lifeRegen + me.body.maxLife * me.body.lifeRegenShare) * me.body.recoveryRate * dt)
+        if (me === heroFighter) regenLogged += regenerated - me.life
+        me.life = regenerated
         val recharge = if (time - me.lastHit >= rules.shield.rechargeDelay / me.body.rechargeStart) me.body.maxShield * rules.shield.rechargePerSecond / 100 * me.body.shieldRecharge else 0.0
         me.shield = min(me.body.maxShield, me.shield + ((me.body.shieldRegen + me.body.maxShield * me.body.shieldRegenShare) * me.body.recoveryRate + recharge) * dt)
         me.mana = min(manaCap(me), me.mana + me.body.manaRegen(rules.mana) * dt)
-        if (me === heroFighter) recoveries.forEach { draught ->
-            val slice = min(dt, draught.until - (time - dt)).coerceAtLeast(0.0)
-            me.life = min(me.body.maxLife, me.life + draught.life * slice)
-            me.mana = min(manaCap(), me.mana + draught.mana * slice)
+        if (me === heroFighter) {
+            recoveries.forEach { draught ->
+                val slice = min(dt, draught.until - (time - dt)).coerceAtLeast(0.0)
+                val gain = draught.life * slice
+                val life = min(me.body.maxLife, me.life + gain)
+                draught.restored += life - me.life
+                draught.wasted += gain - (life - me.life)
+                me.life = life
+                me.mana = min(manaCap(), me.mana + draught.mana * slice)
+                if (draught.stopsAtFull && me.life >= me.body.maxLife) stopDraught(draught)
+            }
+            if (time - regenLoggedAt >= 1.0) {
+                if (regenLogged >= 1) note(me, NoteKind.REGEN, "", regenLogged)
+                regenLogged = 0.0
+                regenLoggedAt = time
+            }
         }
+    }
+
+    /** A pure life draught ends at full life (3.79.0): its buff goes with it, so the belt may drink it again when life falls. */
+    private fun stopDraught(draught: Recovery) {
+        draught.until = time
+        draughtOf(draught.slot)?.let { running -> heroFighter.effects[heroFighter.effects.indexOf(running)] = running.copy(until = time) }
+    }
+
+    /** The recovery shelf's line for a draught or a recoup that ran out: what it gave back, and what spilled over a full bar. */
+    private fun logRecovery(recovery: Recovery) {
+        val code = kit.flasks.getOrNull(recovery.slot)?.code
+        if (recovery.restored >= 1) note(heroFighter, if (code != null) NoteKind.RECOVER_FLASK else NoteKind.RECOVER_RECOUP, code.orEmpty(), recovery.restored)
+        if (recovery.wasted >= 1) note(heroFighter, NoteKind.RECOVER_WASTE, code.orEmpty(), recovery.wasted)
     }
 
     /** What ran out this slice goes: buffs, curses, draughts, a barrier, and the body is made again without them. */
@@ -1007,7 +1044,7 @@ class Battle(
             if (fighter.barrier > 0 && fighter.barrierUntil <= time) fighter.barrier = 0.0
             if (fighter.effects.removeAll { it.until <= time }) remake(fighter)
         }
-        recoveries.removeAll { it.until <= time }
+        recoveries.removeAll { recovery -> (recovery.until <= time).also { if (it) logRecovery(recovery) } }
         if (heroCharges.expire(time)) remake(heroFighter)
     }
 
@@ -2082,6 +2119,8 @@ class Battle(
             val auto = flask.own("FLASK_AUTO_LOW_LIFE").let { it > 0 && hero.life < hero.body.maxLife * it / 100 }
             if (i !in drinks && !auto && !holds(flask.condition, flaskOpened[i])) return@forEachIndexed
             if (charges[i] + 1e-9 < flask.perUse(hero.body)) return@forEachIndexed
+            // As in PoE (3.79.0): a draught that only gives life back is not wasted on a full bar.
+            if (hero.life >= hero.body.maxLife && flask.draught(hero.body, hero.life, manaCap()).lifeOnly) return@forEachIndexed
             flaskOpened[i] = true
             drink(i, flask)
         }
@@ -2102,7 +2141,7 @@ class Battle(
         hero.ailments.removeAll { hero.body.immune(it.ailment) }
         hero.mana = min(manaCap(), hero.mana + draught.mana)
         hero.shield = min(hero.body.maxShield, hero.shield + draught.shield)
-        if (draught.lifeRate > 0 || draught.manaRate > 0) recoveries += Recovery(draught.lifeRate, draught.manaRate, time + draught.duration, slot)
+        if (draught.lifeRate > 0 || draught.manaRate > 0) recoveries += Recovery(draught.lifeRate, draught.manaRate, time + draught.duration, slot, draught.lifeOnly)
         if (draught.invulnerable > 0) hero.invulnerableUntil = time + draught.invulnerable
         val before = hero.life
         hero.life = min(hero.body.maxLife, hero.life + draught.life)

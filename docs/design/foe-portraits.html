@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Портреты врагов</title>
+<style>
+:root{--bg:#0C1115;--panel:#141B22;--line:#24313B;--muted:#7A8D99;--text:#D5E0E6;--bright:#EEF8F1;--gold:#3FB67A;--red:#D24A43;--blue:#5B8DEF;--stun:#f2d23a;--magic:#5B8DEF;--rare:#e8c547}
+*{box-sizing:border-box;margin:0}body{background:var(--bg);color:var(--text);font-family:system-ui,sans-serif;padding:24px 16px}
+h1{font-size:18px;color:var(--bright);margin-bottom:6px}.lead{color:var(--muted);font-size:13px;margin-bottom:20px;max-width:980px;line-height:1.45}
+.grid{display:flex;flex-wrap:wrap;gap:26px}.v{width:340px;max-width:100%}.v h2{font-size:15px;color:var(--gold);margin-bottom:8px}
+.v p{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.45}
+.arena{background:linear-gradient(#10161c,#0b0f13);border:1px solid var(--line);border-radius:18px;padding:10px;height:560px;display:flex;flex-direction:column;gap:8px}
+.por{background:radial-gradient(circle at 50% 40%,#2a3640,#0b0e13);display:flex;align-items:center;justify-content:center;border-radius:4px}
+.hp{height:10px;background:#2a3640;border-radius:3px;overflow:hidden;position:relative}.hp i{display:block;height:100%;background:var(--red)}
+.hp span{position:absolute;inset:0;font-size:8px;line-height:10px;text-align:center;color:#fff}
+.sw{height:3px;background:#2a3640;border-radius:2px;overflow:hidden}.sw i{display:block;height:100%;background:#d24a43aa}
+.bu{height:3px;background:#2a3640;border-radius:2px;overflow:hidden}.bu i{display:block;height:100%;background:var(--stun)}
+.nm{font-size:10px;font-weight:700}.lv{font-size:9px;color:var(--muted)}
+.tiles{display:flex;gap:2px}.tiles b{width:10px;height:10px;border-radius:2px;display:inline-block}
+.feed{flex:1;background:#0f1419;border:1px solid var(--line);border-radius:10px;padding:8px;font-size:11px;color:var(--muted);line-height:1.7;overflow:hidden}
+.feed b{color:var(--text)}.feed .c{color:var(--stun)}
+.hero{height:96px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px;font-size:12px;color:var(--bright)}
+.lbl{font-size:10px;color:var(--muted);text-align:right}
+/* A */
+.a .foes{display:flex;gap:6px}.a .card{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:5px;display:flex;flex-direction:column;gap:3px;align-items:center}
+.a .por{width:100%;aspect-ratio:1;font-size:30px}
+/* B */
+.b .foes{display:flex;flex-direction:column;gap:5px}.b .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:5px;display:flex;gap:8px;align-items:center}
+.b .por{width:48px;height:48px;font-size:26px;flex:none}.b .col{flex:1;display:flex;flex-direction:column;gap:3px}
+.b .row{display:flex;justify-content:space-between;align-items:baseline}
+/* C */
+.c .foes{display:flex;gap:6px}.c .card{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px;display:flex;flex-direction:column;gap:4px}
+.c .top{display:flex;gap:6px;align-items:center}.c .por{width:34px;height:34px;border-radius:50%;font-size:18px;flex:none;border:2px solid}
+.c .top .t{min-width:0}.c .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+</style></head><body>
+<h1>Портреты врагов в бою — 3 варианта</h1>
+<p class="lead">Одна и та же стая из трёх врагов: имя, уровень, здоровье, взмах, шкала накопления, состояния. Цель — меньше места под картинку и больше под ленту боя.</p>
+<div class="grid">
+
+<div class="v"><h2>A · Квадратный портрет</h2>
+<div class="arena a">
+ <div class="foes">
+  <div class="card"><div class="por">🐺</div><div class="nm" style="color:var(--magic)">Волк</div><div class="lv">ур. 12</div><div class="hp" style="width:100%"><i style="width:70%"></i><span>210/300</span></div><div class="bu" style="width:100%"><i style="width:40%"></i></div><div class="sw" style="width:100%"><i style="width:60%"></i></div><div class="tiles"><b style="background:#8FD3FF"></b><b style="background:#ef8a3a"></b></div></div>
+  <div class="card"><div class="por">🧟</div><div class="nm">Упырь</div><div class="lv">ур. 11</div><div class="hp" style="width:100%"><i style="width:90%"></i><span>180/200</span></div><div class="sw" style="width:100%"><i style="width:30%"></i></div></div>
+  <div class="card"><div class="por">🗿</div><div class="nm" style="color:var(--rare)">Страж</div><div class="lv">ур. 13</div><div class="hp" style="width:100%"><i style="width:55%"></i><span>880/1600</span></div><div class="bu" style="width:100%"><i style="width:75%"></i></div><div class="sw" style="width:100%"><i style="width:80%"></i></div></div>
+ </div>
+ <div class="feed"><b>Удар</b> по Волку: 64<br><span class="c">Крит</span> по Стражу: 211<br>Упырь бьёт вас: 18<br><b>Удар</b> по Волку: 58<br>Волк уклоняется<br>Страж бьёт вас: 41<br><b>Огненный шар</b>: 120 · поджог<br>Упырь бьёт вас: 17</div>
+ <div class="hero">Герой · здоровье / мана / навыки</div>
+</div>
+<p>Самая малая правка: портрет 1:1 вместо 3:4 (на ~25% ниже), остальное не меняется. Лента боя становится на 2–3 строки длиннее.</p></div>
+
+<div class="v"><h2>B · Строки: портрет слева</h2>
+<div class="arena b">
+ <div class="foes">
+  <div class="card"><div class="por">🐺</div><div class="col"><div class="row"><span class="nm" style="color:var(--magic)">Волк</span><span class="lv">ур. 12 · 🔥❄</span></div><div class="hp"><i style="width:70%"></i><span>210/300</span></div><div class="bu"><i style="width:40%"></i></div><div class="sw"><i style="width:60%"></i></div></div></div>
+  <div class="card"><div class="por">🧟</div><div class="col"><div class="row"><span class="nm">Упырь</span><span class="lv">ур. 11</span></div><div class="hp"><i style="width:90%"></i><span>180/200</span></div><div class="sw"><i style="width:30%"></i></div></div></div>
+  <div class="card"><div class="por">🗿</div><div class="col"><div class="row"><span class="nm" style="color:var(--rare)">Страж руин</span><span class="lv">ур. 13 · Непоколебимый</span></div><div class="hp"><i style="width:55%"></i><span>880/1600</span></div><div class="bu"><i style="width:75%"></i></div><div class="sw"><i style="width:80%"></i></div></div></div>
+ </div>
+ <div class="feed"><b>Удар</b> по Волку: 64<br><span class="c">Крит</span> по Стражу: 211<br>Упырь бьёт вас: 18<br><b>Удар</b> по Волку: 58<br>Волк уклоняется<br>Страж бьёт вас: 41</div>
+ <div class="hero">Герой · здоровье / мана / навыки</div>
+</div>
+<p>Каждый враг — строка: маленький портрет 48 dp, справа широкие полосы и полное имя, уровень, состояния, черты. Полосы длинные и точные, имя не обрезается. Высота зависит от числа врагов.</p></div>
+
+<div class="v"><h2>C · Круглый аватар</h2>
+<div class="arena c">
+ <div class="foes">
+  <div class="card"><div class="top"><div class="por" style="border-color:var(--magic)">🐺</div><div class="t"><div class="nm" style="color:var(--magic)">Волк</div><div class="lv">ур. 12</div></div></div><div class="hp"><i style="width:70%"></i><span>210/300</span></div><div class="bu"><i style="width:40%"></i></div><div class="sw"><i style="width:60%"></i></div><div class="tiles"><b style="background:#8FD3FF"></b><b style="background:#ef8a3a"></b></div></div>
+  <div class="card"><div class="top"><div class="por" style="border-color:#7A8D99">🧟</div><div class="t"><div class="nm">Упырь</div><div class="lv">ур. 11</div></div></div><div class="hp"><i style="width:90%"></i><span>180/200</span></div><div class="sw"><i style="width:30%"></i></div></div>
+  <div class="card"><div class="top"><div class="por" style="border-color:var(--rare)">🗿</div><div class="t"><div class="nm" style="color:var(--rare)">Страж руин</div><div class="lv">ур. 13</div></div></div><div class="hp"><i style="width:55%"></i><span>880/1600</span></div><div class="bu"><i style="width:75%"></i></div><div class="sw"><i style="width:80%"></i></div></div>
+ </div>
+ <div class="feed"><b>Удар</b> по Волку: 64<br><span class="c">Крит</span> по Стражу: 211<br>Упырь бьёт вас: 18<br><b>Удар</b> по Волку: 58<br>Волк уклоняется<br>Страж бьёт вас: 41<br><b>Огненный шар</b>: 120 · поджог<br>Упырь бьёт вас: 17<br><b>Удар</b> по Упырю: 61</div>
+ <div class="hero">Герой · здоровье / мана / навыки</div>
+</div>
+<p>Карточки остаются в ряд, но портрет — кружок 34 dp с рамкой цвета редкости у имени. Самые низкие карточки, лента боя длиннее всех. Минус: мелкий портрет, хуже видны анимации удара.</p></div>
+
+</div></body></html>

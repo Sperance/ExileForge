@@ -295,7 +295,7 @@ private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, erro
                 style = MaterialTheme.typography.labelSmall, color = Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         WorkBadge(s) { vm.tab(TAB_CRAFTS) }
-        LinkBadge(s.link, vm::retryLink)
+        LinkBadge(s.link, admin = s.isAdmin, onRetry = vm::retryLink)
         BannerMenu(s.feedback.unread, settingsOpen = s.tab == TAB_SETTINGS, onMail = LocalMailOpen.current, onBug = onBug, onSettings = vm::openSettings)
     }
 }
@@ -330,16 +330,31 @@ private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, erro
 
 /**
  * The link to the server (3.30.0): a small crossed cloud while it cannot be reached, and how many commands wait
- * to be sent. Nothing at all while the server answers and nothing waits. A tap asks the server again at once.
+ * to be sent. Nothing at all while the server answers and nothing waits. A tap on a cloud that only waits asks
+ * the server again at once; on a crossed one (3.79.0) it says why — by cause, with the transport's words for an
+ * administrator — and offers «Повторить». The server is asked again by itself meanwhile.
  */
-@Composable private fun LinkBadge(link: LinkState, onRetry: () -> Unit) {
+@Composable private fun LinkBadge(link: LinkState, admin: Boolean, onRetry: () -> Unit) {
     if (!link.offline && link.waiting.isEmpty()) return
     val tint = if (link.offline) LifeRed else Gold
-    val label = if (link.offline) ui("link.offline") else ui("link.waiting", link.waiting.size)
-    Row(Modifier.clickable(onClickLabel = ui("link.retry"), onClick = onRetry).padding(horizontal = 6.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-        Icon(if (link.offline) Icons.Outlined.CloudOff else Icons.Outlined.CloudUpload, label, tint = tint, modifier = Modifier.size(18.dp))
-        if (link.waiting.isNotEmpty()) Text(link.waiting.size.toString(), color = tint, fontSize = 11.sp)
+    val label = if (link.offline) link.outage?.title ?: ui("link.offline") else ui("link.waiting", link.waiting.size)
+    var open by remember { mutableStateOf(false) }
+    Box {
+        Row(Modifier.clickable(onClickLabel = ui("link.retry")) { if (link.offline) open = true else onRetry() }.padding(horizontal = 6.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+            Icon(if (link.offline) Icons.Outlined.CloudOff else Icons.Outlined.CloudUpload, label, tint = tint, modifier = Modifier.size(18.dp))
+            if (link.waiting.isNotEmpty()) Text(link.waiting.size.toString(), color = tint, fontSize = 11.sp)
+        }
+        DropdownMenu(open && link.offline, onDismissRequest = { open = false }, containerColor = PanelRaised) {
+            Column(Modifier.widthIn(max = 280.dp).padding(horizontal = 14.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(label, color = LifeRed, style = MaterialTheme.typography.titleSmall)
+                link.outage?.let { Text(it.hint, color = Parchment, style = MaterialTheme.typography.bodySmall) }
+                Text(ui("link.auto_retry"), color = Muted, style = MaterialTheme.typography.labelSmall)
+                if (link.waiting.isNotEmpty()) Text(ui("link.waiting", link.waiting.size), color = Gold, style = MaterialTheme.typography.labelSmall)
+                if (admin) link.detail?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelSmall) }
+                TextButton(onClick = { open = false; onRetry() }) { Text(ui("link.retry_now"), color = GoldBright) }
+            }
+        }
     }
 }
 

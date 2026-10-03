@@ -1,5 +1,6 @@
 package com.sperance.exileforge.presentation.features
 
+import com.sperance.exileforge.presentation.state.phrase
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.guild.GuildCard
 import com.sperance.exileforge.core.model.guild.GuildMine
@@ -111,7 +112,7 @@ class GuildViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     /** The reads after a command the server already made: their failure is not the command's. */
     private suspend fun after(block: suspend () -> Unit) { with(runtime) {
         try { block() } catch (e: CancellationException) { throw e }
-        catch (_: Exception) { mutable.update { it.copy(message = ui("guild.done_refresh"), error = true) } }
+        catch (_: Exception) { mutable.update { it.copy(message = phrase("guild.done_refresh"), error = true) } }
     } }
 
     private fun guild(transform: (GuildState) -> GuildState) = update { it.copy(guild = transform(it.guild)) }

@@ -13,4 +13,6 @@ class ApiFailure(
      * printing the server's English. Empty when the server is older, and then the sentence stands.
      */
     val args: List<String> = emptyList(),
+    /** The answer was not the game's envelope (3.79.0): an HTML page, a cut body — shown as an outage, not as its text. */
+    val malformed: Boolean = false,
 ) : IOException(message)

@@ -1,5 +1,6 @@
 package com.sperance.exileforge.presentation.features
 
+import com.sperance.exileforge.presentation.state.phrase
 import com.sperance.exileforge.core.i18n.locError
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.auction.AuctionFilter
@@ -136,7 +137,7 @@ class AuctionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     /** The reads after a trade the server already made: their failure is not the trade's. */
     private suspend fun afterTrade(block: suspend () -> Unit) { with(runtime) {
         try { block() } catch (e: CancellationException) { throw e }
-        catch (_: Exception) { mutable.update { it.copy(message = ui("auction.done_refresh"), error = true) } }
+        catch (_: Exception) { mutable.update { it.copy(message = phrase("auction.done_refresh"), error = true) } }
     } }
 
     private suspend fun refreshHero(heroId: String) { if (onScreen(heroId)) runtime.heroViewModel.readHero() }

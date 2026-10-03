@@ -109,7 +109,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             signedIn(api.resume(saved), byDevice = store.deviceSession.first())
         } catch (e: CancellationException) { throw e }
         catch (e: Exception) {
-            if (FailureState.from(e, writing = false) == FailureState.Offline) mutable.update { it.copy(account = it.account.copy(resumable = true)) }
+            if (FailureState.from(e, writing = false) is FailureState.Offline) { mutable.update { it.copy(account = it.account.copy(resumable = true)) }; connectionViewModel.lost(e) }
         }
     } } }
 
@@ -166,7 +166,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         } catch (e: CancellationException) { throw e }
         catch (e: Exception) {
             when {
-                FailureState.from(e, writing = false) == FailureState.Offline -> connectionViewModel.lost()
+                FailureState.from(e, writing = false) is FailureState.Offline -> connectionViewModel.lost(e)
                 e is ApiFailure && e.status == 401 -> unconfirmed = null
                 else -> fallBack(saved, foreign = false)
             }
@@ -200,7 +200,11 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     } }
 
     /** The link came back: a session the fast start adopted is confirmed now. */
-    fun restored() { if (unconfirmed != null) confirm() }
+    /** The server answers again: the session waiting for it is confirmed, or a kept one that could not resume is tried again (3.79.0). */
+    fun restored() {
+        if (unconfirmed != null) confirm()
+        else with(runtime.state.value) { if (!account.signedIn && account.resumable && !busy) retryResume() }
+    }
 
     fun retryResume() { with(runtime) { scope.launch {
         val saved = store.token(state.value.account.server)
@@ -227,8 +231,8 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             val now = state.value
             when {
                 !now.account.signedIn -> if (now.account.resumable) retryResume()
-                now.failure == FailureState.Offline || now.link.offline || stale -> {
-                    if (now.failure == FailureState.Offline) mutable.update { it.copy(failure = null, message = null, error = false) }
+                now.failure is FailureState.Offline || now.link.offline || stale -> {
+                    if (now.failure is FailureState.Offline) mutable.update { it.copy(failure = null, message = null, error = false) }
                     // The probe waits no longer: the link is asked again with the screen.
                     if (now.link.offline || now.link.waiting.isNotEmpty()) connectionViewModel.wake(now = true)
                     when (now.phase) {

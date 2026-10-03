@@ -298,7 +298,10 @@ interface HeroModel : BodyModel {
  * runs, the lines it lays on for [duration] seconds, and the seconds nothing touches the hero.
  */
 data class Draught(val life: Double, val mana: Double, val shield: Double, val lifeRate: Double, val manaRate: Double,
-                   val lines: List<StatLine>, val duration: Double, val invulnerable: Double)
+                   val lines: List<StatLine>, val duration: Double, val invulnerable: Double) {
+    /** Gives nothing but life (3.79.0): such a draught stops at full life and is not drunk on a full bar. */
+    val lifeOnly: Boolean get() = (life > 0 || lifeRate > 0) && mana <= 0 && manaRate <= 0 && shield <= 0 && lines.isEmpty() && invulnerable <= 0
+}
 
 /**
  * A draught of this flask by [hero] at [life], mana up to [manaCap]: the recovery grows at low life by

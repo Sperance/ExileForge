@@ -71,7 +71,14 @@ data class EffectTrace(
 /** Something that happened without a blow: a buff or a charge gained, a power, a condition, what a kill brought. */
 data class NoteTrace(val kind: NoteKind, val ref: String, val value: Double, val actor: FighterShot, val origin: TraceOrigin) : Trace
 
-enum class NoteKind { BUFF, CHARGE, POWER, CONDITION_ON, CONDITION_OFF, KILL, TRAIT }
+enum class NoteKind {
+    BUFF, CHARGE, POWER, CONDITION_ON, CONDITION_OFF, KILL, TRAIT,
+    /** The recovery shelf (3.79.0): a draught's total, a recoup's, healing spilled over a full bar, regeneration a second. */
+    RECOVER_FLASK, RECOVER_RECOUP, RECOVER_WASTE, REGEN;
+
+    val recovery: Boolean get() = this in RECOVERY
+    private companion object { val RECOVERY = setOf(RECOVER_FLASK, RECOVER_RECOUP, RECOVER_WASTE, REGEN) }
+}
 
 /**
  * What the card needs beyond the numbers: the hero's sheet, to lay a stat out by source, and each foe's roll with the
@@ -102,13 +109,17 @@ object MonsterBreakdown {
 enum class LogKind {
     HITS, AILMENTS, EVENTS,
     /** The combat pet's lines (3.70.0): its blows and healing, and the blows it took. */
-    PET;
+    PET,
+    /** Recovery (3.79.0): draughts, life on kill, recoup, spilled healing and regeneration. */
+    RECOVERY;
 
     companion object {
-        val DEFAULT: Set<LogKind> = setOf(HITS, AILMENTS, PET)
+        val DEFAULT: Set<LogKind> = setOf(HITS, AILMENTS, PET, RECOVERY)
         fun of(event: CombatEvent): LogKind = when {
             event.pet != null -> PET
             event.action == Action.TICK -> AILMENTS
+            event.action == Action.FLASK -> RECOVERY
+            (event.trace as? NoteTrace)?.kind?.let { it.recovery || it == NoteKind.KILL } == true -> RECOVERY
             event.action == Action.NOTE -> EVENTS
             else -> HITS
         }

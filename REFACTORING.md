@@ -28,7 +28,8 @@
 ## Этап 3 - навигация
 - [x] Navigation 3 (`navigation3-runtime/ui` 1.2.0, вместо Navigation Compose: стек у приложения, без NavController): `presentation/nav/Route` - типизированные ключи Auth, Characters, Hero, Tree, Grimoire, Expedition, Crafts, Progress, Forge, Pets, Trials, Chronicle, City, Quests, Merchant, Auction, Guild, Account, Settings, Admin, Redemption, Atlas; `Navigator` - стек (вкладка сбрасывает до корня, подэкран ложится над корнем, аккаунт и настройки - поверх любого). Прогрев, поход и испытание - состояния игры поверх стека, не маршруты (их открывают и закрывают команды, не игрок). Разделы гильдии и квестов - состояние своих моделей, не стек.
 - [x] Фичи не пишут `phase`/`tab`/`building` - просят навигатор; `ForgeState` лишь отражает его верх для экранов, что ещё читают номера вкладок. `settingsReturn` и `BackHandler` атласа удалены; системный «назад» снимает экран со стека.
-- [ ] Гейтинг `Feature.ofTab` - guard в навигаторе (пока в `ForgeViewModel.tab`/`building`). Оставшиеся `BackHandler` - локальные окна экранов (карточка зоны, окно профессии, карточка узла): закрыть или сделать маршрутами.
+- [x] Гейтинг уровня - `Navigator.gate`: закрытый экран не открывается, тост говорит, с какого уровня.
+- [ ] Оставшиеся `BackHandler` - локальные окна экранов (карточка зоны, окно профессии, карточка узла): оставить как локальное состояние или сделать маршрутами.
 
 ## Этап 4 - экраны
 - [ ] Каждый экран - свой androidx `ViewModel` из Koin + `UiState`; экран не получает `ForgeViewModel`/`ForgeState`. Порядок (решение владельца): простые сначала - Settings → Server → Feedback/Mail → City (Quests, Merchant, Auction, Guild) → Crafts/Progress → Tree/Grimoire → Hero → Expedition/Atlas → Session/Characters; пуш после каждого экрана.

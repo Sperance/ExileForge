@@ -2,15 +2,25 @@ package com.sperance.exileforge.presentation.nav
 
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import com.sperance.exileforge.core.hero.HeroRepository
+import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.session.Notices
+import com.sperance.exileforge.core.session.SessionRepository
+import com.sperance.exileforge.presentation.state.Feature
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Стек экранов (3.80.23): один на приложение, его рисует `NavDisplay`, а меняют только фичи - через этот класс.
  * Вкладка нижней панели сбрасывает стек до своего корня; экран с корнем ложится над ним; аккаунт и настройки -
- * поверх чего угодно. Системный «назад» снимает верх, пока в стеке больше одного экрана.
+ * поверх чего угодно. Системный «назад» снимает верх, пока в стеке больше одного экрана. Экран, закрытый уровнем
+ * героя (3.76.0), не открывается: тост говорит, с какого уровня; тестеры и администраторы проходят.
  */
-class Navigator {
+class Navigator(
+    private val heroes: HeroRepository,
+    private val sessions: SessionRepository,
+    private val notices: Notices,
+) {
     val stack: SnapshotStateList<Route> = mutableStateListOf(Route.Auth)
 
     private val mutable = MutableStateFlow<Route>(Route.Auth)
@@ -23,8 +33,20 @@ class Navigator {
 
     /** Вкладка или экран под ней: корень и, если это не он сам, экран над корнем; без корня - поверх открытого. */
     fun tab(route: Route) {
+        if (!gate(route)) return
         val root = route.root ?: return open(route)
         replace(if (route == root) listOf(root) else listOf(root, route))
+    }
+
+    /** Открыт ли экран уровню героя; закрытый отвечает тостом. */
+    fun gate(route: Route): Boolean {
+        val feature = Feature.ofBuilding(route.building) ?: Feature.ofTab(route.tab) ?: return true
+        if (sessions.state.value.isTester) return true
+        val holding = heroes.state.value
+        val level = holding.hero?.level ?: sessions.state.value.characters.firstOrNull { it.id == holding.heroId }?.level ?: 1
+        if (level >= feature.level) return true
+        notices.toast(ui("unlock.locked", ui(feature.title), feature.level))
+        return false
     }
 
     /** Экран поверх открытого, если он уже не сверху. */

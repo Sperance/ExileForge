@@ -78,7 +78,7 @@ val appModule = module {
     single { SessionRepository(DEFAULT_SERVER) }
     single { WorldRepository() }
     single { ServerConnection() }
-    single { Navigator() }
+    singleOf(::Navigator)
     single { ConnectionEventsHub() }
     single { CommandRunner(get(named(APP_SCOPE)), get<ConnectionEventsHub>()) }
     single { Notices() }

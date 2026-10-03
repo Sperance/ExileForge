@@ -41,10 +41,8 @@ class ForgeViewModel(private val runtime: ForgeRuntime) : ViewModel() {
     fun buzz(kind: Buzz) = runtime.buzz(kind)
     val logs = runtime.logs
 
-    /** A tab the hero's level has not opened (3.76.0) says when it will instead of opening. */
-    fun tab(tab: Int) {
-        if (gate(Feature.ofTab(tab))) runtime.tab(tab)
-    }
+    /** Вкладка по прежнему номеру; закрытую уровнем героя навигатор не откроет и скажет, с какого. */
+    fun tab(tab: Int) = runtime.tab(tab)
 
     /** «Настройки» (3.77.0) поверх открытой вкладки; закрытие возвращает на неё. */
     fun openSettings() {
@@ -55,12 +53,6 @@ class ForgeViewModel(private val runtime: ForgeRuntime) : ViewModel() {
 
     /** A line in the toasts, from the screens (3.76.0: a place opened by the level). */
     fun announce(text: String) = runtime.toast(text)
-
-    private fun gate(feature: Feature?): Boolean {
-        if (runtime.state.value.unlocked(feature)) return true
-        feature?.let { runtime.toast(ui("unlock.locked", ui(it.title), it.level)) }
-        return false
-    }
 
     /** The campaign run on screen, if any: a world the scene steps and the overlay reads. */
     val expedition = runtime.expedition.run
@@ -78,7 +70,6 @@ class ForgeViewModel(private val runtime: ForgeRuntime) : ViewModel() {
     fun pickMap(itemId: String?) = runtime.expedition.pickMap(itemId)
     fun pickPotion(code: String?) = runtime.expedition.pickPotion(code)
     fun toggleScarab(code: String, add: Boolean) = runtime.expedition.toggleScarab(code, add)
-    fun runCommand(command: RunCommand) = runtime.expedition.send(command)
 
     /** The trial on screen (3.49.0), if any: an arena the screen steps and reads. */
     val trial = runtime.trial.arena
@@ -89,20 +80,10 @@ class ForgeViewModel(private val runtime: ForgeRuntime) : ViewModel() {
     fun enterTower() = runtime.trial.tower()
     fun forgeRushKey() = runtime.trial.forgeKey()
     fun abandonTrial() = runtime.trial.abandon()
-    fun trialCommand(command: RunCommand) = runtime.trial.send(command)
-    fun closeTrial() = runtime.trial.close()
-    fun closeRun() = runtime.expedition.close()
 
     /** The run's journal goes out now: the app leaves the foreground. */
     fun flushRun() = runtime.expedition.flushRun()
-    fun enterVaal() = runtime.expedition.enterVaal()
-    fun refuseVaal() = runtime.expedition.refuseVaal()
     fun openAtlas() = runtime.expedition.openAtlas()
-    fun closeAtlas() = runtime.expedition.closeAtlas()
-    fun selectAtlasNode(code: String) = runtime.expedition.selectAtlasNode(code)
-    fun allocateAtlas(code: String) = runtime.expedition.allocateAtlas(code)
-    fun refundAtlas(code: String, regret: Boolean = false) = runtime.expedition.refundAtlas(code, regret)
-    fun resetAtlas(regret: Boolean = false) = runtime.expedition.resetAtlas(regret)
     fun language(lang: Lang) = runtime.language(lang)
     fun refreshLocale() = runtime.refreshLocale()
     fun refreshIcons() = runtime.refreshIcons()
@@ -116,7 +97,6 @@ class ForgeViewModel(private val runtime: ForgeRuntime) : ViewModel() {
     fun slotSkill(kind: String, index: Int, code: String?, condition: String? = null) = runtime.hero.slotSkill(kind, index, code, condition)
     fun flaskCondition(index: Int, condition: String?) = runtime.hero.flaskCondition(index, condition)
     fun exchangeBooks(books: List<String>, code: String) = runtime.hero.exchangeBooks(books, code)
-    fun loadHero() = runtime.heroSync.load()
     fun ensureHero() = runtime.heroSync.ensure()
     fun equip(itemId: String, slot: Slot? = null) = runtime.hero.equip(itemId, slot)
     fun unequip(itemId: String) = runtime.hero.unequip(itemId)
@@ -228,16 +208,10 @@ class ForgeViewModel(private val runtime: ForgeRuntime) : ViewModel() {
 
     /** A building of the City (3.22.0), or the square for none. */
     fun building(building: Building?) {
-        if (gate(Feature.ofBuilding(building))) {
-            runtime.commands.dismissMessage()
-            runtime.navigator.tab(com.sperance.exileforge.presentation.nav.Route.ofBuilding(building))
-        }
+        runtime.commands.dismissMessage()
+        runtime.navigator.tab(com.sperance.exileforge.presentation.nav.Route.ofBuilding(building))
     }
 
-    // Продажа из сундука героя (экран героя ещё на общей модели): действия рынка.
-    suspend fun priceHint(itemCode: String, rarity: com.sperance.exileforge.rules.content.Rarity?, itemLevel: Int) = runtime.market.priceHint(itemCode, rarity, itemLevel)
-    fun sellEquipment(itemId: String, priceOrb: String, price: Long) = runtime.market.sellEquipment(itemId, priceOrb, price)
-    fun sellItem(code: String, amount: Long, priceOrb: String, price: Long) = runtime.market.sellItem(code, amount, priceOrb, price)
     fun clearLogs() = runtime.journal.clear()
     fun loadRedemptions() = runtime.redemptionViewModel.load()
     fun createRedemption(code: RedemptionCode) = runtime.redemptionViewModel.create(code)

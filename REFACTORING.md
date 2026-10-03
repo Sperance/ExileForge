@@ -3,7 +3,8 @@
 Временный документ: этапы и прогресс. Читай в начале каждой задачи по рефакторингу, отмечай сделанное, удали по завершении. Пуш и подъём версии - по завершённым этапам; клиент закрепляет сервер после его этапа. Решения зафиксированы в `RULES.md`.
 
 ## Этап 0 - защита
-- [ ] Golden-тесты в `:core`: лог боя (`Battle`) и забега (`ExpeditionRun`) на фиксированных seed и контенте; перезаписываются только при смене `RULES_VERSION`.
+- [x] Golden-тест боя в `:core` (`CombatGoldenTest`, снимки в `core/src/test/resources/golden/`): четыре боя на фиксированных seed; перезапись `GOLDEN_UPDATE=1` только при осознанной смене правил.
+- [ ] Golden-тест забега (`ExpeditionRun`) - перед распилом `ExpeditionRun.kt` (этап 5).
 
 ## Этап 1 - Koin
 - [ ] `koin-core`, `koin-android`, `koin-androidx-compose`. Модули: stores (DataStore), network (`Transport`, `GameApi`, клиенты), repositories, viewModels.

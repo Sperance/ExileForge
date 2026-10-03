@@ -161,7 +161,7 @@ class ConnectionViewModel(runtime: ForgeRuntime) :
                             Building.QUESTS -> quests.load()
                             Building.MERCHANT -> market.loadMerchant()
                             Building.AUCTION -> market.loadAuction()
-                            Building.GUILD -> guildViewModel.load()
+                            Building.GUILD -> guild.load()
                             null -> Unit
                         }
                     }

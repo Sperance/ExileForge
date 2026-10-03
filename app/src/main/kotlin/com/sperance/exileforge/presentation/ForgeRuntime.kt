@@ -30,7 +30,6 @@ import com.sperance.exileforge.presentation.features.CharacterViewModel
 import com.sperance.exileforge.presentation.features.ConnectionViewModel
 import com.sperance.exileforge.presentation.features.CraftsViewModel
 import com.sperance.exileforge.presentation.features.ExpeditionViewModel
-import com.sperance.exileforge.presentation.features.GuildViewModel
 import com.sperance.exileforge.presentation.features.HeroViewModel
 import com.sperance.exileforge.presentation.features.RedemptionViewModel
 import com.sperance.exileforge.presentation.features.SessionViewModel
@@ -91,6 +90,8 @@ class ForgeRuntime(
     private val content: com.sperance.exileforge.core.world.ContentLoader,
     val markets: com.sperance.exileforge.core.market.MarketRepository,
     val market: com.sperance.exileforge.presentation.market.MarketActions,
+    val guilds: com.sperance.exileforge.core.guild.GuildRepository,
+    val guild: com.sperance.exileforge.presentation.guild.GuildActions,
 ) {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     val mutable = MutableStateFlow(ForgeState())
@@ -115,7 +116,6 @@ class ForgeRuntime(
     val trialViewModel = TrialViewModel(this)
     val warmupViewModel = com.sperance.exileforge.presentation.features.WarmupViewModel(this)
     val craftsViewModel = CraftsViewModel(this)
-    val guildViewModel = GuildViewModel(this)
     val connectionViewModel = ConnectionViewModel(this)
 
     /**
@@ -191,6 +191,7 @@ class ForgeRuntime(
         scope.launch { heroes.state.collect { h -> mutable.update { it.copy(play = it.play.copy(heroId = h.heroId, hero = h.hero)) } } }
         scope.launch { boards.state.collect { value -> mutable.update { it.copy(quests = value) } } }
         scope.launch { markets.state.collect { value -> mutable.update { it.copy(market = value) } } }
+        scope.launch { guilds.state.collect { value -> mutable.update { it.copy(guild = value) } } }
         content.delegate = { fresh -> ensureContent(fresh) }
         // Герой изменился на сервере по чужой команде: перечитывается тихо, отказ остаётся команде, что его просила.
         scope.launch {
@@ -491,6 +492,7 @@ class ForgeRuntime(
         heroes.clear()
         boards.clear()
         markets.clear()
+        guilds.clear()
         commands.clearFailure()
         mutable.update {
             it.copy(

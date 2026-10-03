@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.GuildText
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.number
@@ -20,7 +21,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.guild.GuildMember
 import com.sperance.exileforge.core.model.guild.GuildStashEntry
 import com.sperance.exileforge.core.model.guild.GuildView
-import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.guild.GuildViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.GuildBranch
@@ -36,7 +37,7 @@ import com.sperance.exileforge.ui.theme.*
  * spent by the leader, the second row open once the branch holds the rules' points. Combat and loot ride on every member's
  * runs, economy on the guild itself. A reset gives every point back, free once a week.
  */
-@Composable internal fun TreeTab(s: ForgeState, vm: ForgeViewModel, guild: GuildView, me: GuildMember?) {
+@Composable internal fun TreeTab(s: ForgeState, vm: GuildViewModel, guild: GuildView, me: GuildMember?) {
     val rule = s.index?.guilds?.tree ?: return
     val leader = me?.role == GuildRole.LEADER
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
@@ -46,7 +47,7 @@ import com.sperance.exileforge.ui.theme.*
                 MutedText(ui(if (leader) "guild.tree_hint_leader" else "guild.tree_hint"), style = MaterialTheme.typography.bodySmall)
                 if (leader) {
                     val free = System.currentTimeMillis() >= guild.respecAt
-                    ForgeOutlinedButton(enabled = !s.busy && free && guild.tree.isNotEmpty(), onClick = vm::resetGuildTree, modifier = Modifier.fillMaxWidth()) {
+                    ForgeOutlinedButton(enabled = !s.busy && free && guild.tree.isNotEmpty(), onClick = vm::resetTree, modifier = Modifier.fillMaxWidth()) {
                         Text(if (free) ui("guild.tree_reset") else ui("guild.tree_reset_at", java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT).format(java.util.Date(guild.respecAt))))
                     }
                 }
@@ -62,7 +63,7 @@ import com.sperance.exileforge.ui.theme.*
                             guild.tree[node.code] ?: 0,
                             open = node.row <= 1 || rule.inBranch(guild.tree, branch) >= rule.rowGate,
                             canTake = leader && !s.busy && rule.canTake(guild.tree, guild.level, node.code),
-                        ) { vm.takeGuildNode(node.code) }
+                        ) { vm.takeNode(node.code) }
                     }
                 }
             }
@@ -95,9 +96,10 @@ import com.sperance.exileforge.ui.theme.*
  * The guild stash (3.79.0, server 1.74.0): tabs of the rules' places; anyone puts in, taking needs the tab's rank and,
  * for a member, one of the day's takes — a stack is one take. What lies here is the guild's.
  */
-@Composable internal fun StashTab(s: ForgeState, vm: ForgeViewModel, me: GuildMember?) {
-    LaunchedEffect(Unit) { vm.loadGuildStash() }
-    val stash = s.guild.stash ?: return
+@Composable internal fun StashTab(s: ForgeState, vm: GuildViewModel, me: GuildMember?) {
+    val guilds by vm.guilds.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) { vm.loadStash() }
+    val stash = guilds.stash ?: return
     val ranks = s.index?.guilds?.ranks.orEmpty()
     var tab by remember { mutableIntStateOf(0) }
     var depositing by remember { mutableStateOf(false) }
@@ -118,19 +120,19 @@ import com.sperance.exileforge.ui.theme.*
                 Text(if (stash.takesLeft < 0) ui("guild.stash_takes_free") else ui("guild.stash_takes", stash.takesLeft), color = Muted, style = MaterialTheme.typography.bodySmall)
                 if (me?.role == GuildRole.LEADER && ranks.isNotEmpty()) {
                     Spinner(ui("guild.stash_rank_set"), minRank.toString(), ranks.indices.associate { it.toString() to GuildText.rank(ranks[it].code) }, !s.busy) {
-                        vm.guildTabRank(tab, it.toInt())
+                        vm.tabRank(tab, it.toInt())
                     }
                 }
                 ForgeButton(enabled = !s.busy && shown.size < stash.tabSize, onClick = { depositing = true }, modifier = Modifier.fillMaxWidth()) { Text(ui("guild.stash_put")) }
             }
         }
         if (shown.isEmpty()) item { MutedText(ui("guild.stash_empty")) }
-        items(shown, key = { it.id }) { entry -> EntryRow(s, entry, enabled = !s.busy && stash.takesLeft != 0) { vm.takeFromGuild(entry.id) } }
+        items(shown, key = { it.id }) { entry -> EntryRow(s, entry, enabled = !s.busy && stash.takesLeft != 0) { vm.take(entry.id) } }
     }
     if (depositing) {
         DepositSheet(s, onDismiss = { depositing = false }) { itemId, code, amount ->
             depositing = false
-            vm.depositToGuild(tab, itemId, code, amount)
+            vm.deposit(tab, itemId, code, amount)
         }
     }
 }

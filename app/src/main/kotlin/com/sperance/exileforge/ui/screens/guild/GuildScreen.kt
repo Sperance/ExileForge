@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.GuildText
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.guild.GuildCard
@@ -23,26 +24,30 @@ import com.sperance.exileforge.core.model.guild.GuildInviteView
 import com.sperance.exileforge.core.model.guild.GuildMine
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.guild.GuildViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.rules.content.GuildMode
 import com.sperance.exileforge.rules.content.GuildRules
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * The guild (3.22.0, server 1.20.0), a building of the City. A hero outside one finds a guild, answers an invitation or
  * founds a guild of their own; a hero inside sees their guild under its arms, in tabs. Every rule is the server's —
  * the screen only says in advance what a button would be refused for, from `guilds.json`.
  */
-@Composable fun GuildScreen(s: ForgeState, vm: ForgeViewModel) {
+@Composable fun GuildScreen(s: ForgeState, hero: ForgeViewModel) {
+    val vm = koinViewModel<GuildViewModel>()
+    val guilds by vm.guilds.collectAsStateWithLifecycle()
     LaunchedEffect(s.play.heroId, s.account.sessionEpoch) {
         if (s.play.heroId.isNotBlank()) {
-            vm.ensureHero()
-            vm.loadGuild()
+            hero.ensureHero()
+            vm.load()
         }
     }
-    val mine = s.guild.mine
+    val mine = guilds.mine
     val guild = mine?.guild
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Spacer(Modifier.height(12.dp))
@@ -62,7 +67,7 @@ import com.sperance.exileforge.ui.theme.*
                 if (Reads.GUILD in s.loading) {
                     MutedText(ui("guild.loading"))
                 } else {
-                    ForgeOutlinedButton(enabled = !s.busy, onClick = vm::loadGuild, modifier = Modifier.fillMaxWidth()) { Text(ui("auction.check_again")) }
+                    ForgeOutlinedButton(enabled = !s.busy, onClick = vm::load, modifier = Modifier.fillMaxWidth()) { Text(ui("auction.check_again")) }
                 }
             }
         }
@@ -72,15 +77,16 @@ import com.sperance.exileforge.ui.theme.*
 /** Outside a guild: the wait after leaving, the invitations, the founding and the list of guilds to knock at. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ColumnScope.GuildOutside(s: ForgeState, vm: ForgeViewModel, mine: GuildMine) {
+private fun ColumnScope.GuildOutside(s: ForgeState, vm: GuildViewModel, mine: GuildMine) {
+    val guilds by vm.guilds.collectAsStateWithLifecycle()
     var founding by remember { mutableStateOf(false) }
-    LaunchedEffect(s.play.heroId) { vm.searchGuilds(0) }
+    LaunchedEffect(s.play.heroId) { vm.search(0) }
     val waiting = mine.rejoinAt?.takeIf { it > System.currentTimeMillis() }
     PullToRefreshBox(
         isRefreshing = Reads.GUILD in s.loading || Reads.GUILD_SEARCH in s.loading,
         onRefresh = {
-            vm.loadGuild()
-            vm.searchGuilds(s.guild.search.page)
+            vm.load()
+            vm.search(guilds.search.page)
         },
         modifier = Modifier.weight(1f),
     ) {
@@ -102,16 +108,16 @@ private fun ColumnScope.GuildOutside(s: ForgeState, vm: ForgeViewModel, mine: Gu
                 }
             }
             item { SearchField(s, vm) }
-            s.index?.guilds?.takeIf { it.factions.isNotEmpty() }?.let { rules -> item { FactionFilter(s.guild.faction, rules, !s.busy, vm::guildFaction) } }
-            val page = s.guild.search
+            s.index?.guilds?.takeIf { it.factions.isNotEmpty() }?.let { rules -> item { FactionFilter(guilds.faction, rules, !s.busy, vm::filterFaction) } }
+            val page = guilds.search
             if (page.items.isEmpty() && Reads.GUILD_SEARCH !in s.loading) item { InfoCard(ui("guild.none_found"), ui("guild.none_found_hint")) }
-            items(page.items, key = { it.id }) { card -> GuildCardRow(s, card, blocked = joinBlock(s, card, waiting != null)) { vm.joinGuild(card) } }
+            items(page.items, key = { it.id }) { card -> GuildCardRow(s, card, blocked = joinBlock(s, card, waiting != null)) { vm.join(card) } }
             if (page.totalPages > 1) {
                 item {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        ForgeOutlinedButton(enabled = page.page > 0, onClick = { vm.searchGuilds(page.page - 1) }) { Text(ui("guild.back_page")) }
+                        ForgeOutlinedButton(enabled = page.page > 0, onClick = { vm.search(page.page - 1) }) { Text(ui("guild.back_page")) }
                         MutedText(ui("auction.page", page.page + 1, page.totalPages), modifier = Modifier.weight(1f))
-                        ForgeOutlinedButton(enabled = page.page + 1 < page.totalPages, onClick = { vm.searchGuilds(page.page + 1) }) { Text(ui("auction.forward")) }
+                        ForgeOutlinedButton(enabled = page.page + 1 < page.totalPages, onClick = { vm.search(page.page + 1) }) { Text(ui("auction.forward")) }
                     }
                 }
             }
@@ -120,17 +126,18 @@ private fun ColumnScope.GuildOutside(s: ForgeState, vm: ForgeViewModel, mine: Gu
     if (founding) {
         FoundingSheet(s, onDismiss = { founding = false }) { name, tag, faction, emblem, color, mode, minLevel ->
             founding = false
-            vm.createGuild(name, tag, faction, emblem, color, mode, minLevel)
+            vm.create(name, tag, faction, emblem, color, mode, minLevel)
         }
     }
 }
 
-@Composable private fun SearchField(s: ForgeState, vm: ForgeViewModel) {
+@Composable private fun SearchField(s: ForgeState, vm: GuildViewModel) {
+    val guilds by vm.guilds.collectAsStateWithLifecycle()
     OutlinedTextField(
-        s.guild.query, { vm.guildQuery(it.take(s.inputs.search)) }, label = { Text(ui("guild.search")) }, singleLine = true,
+        guilds.query, { vm.query(it.take(s.inputs.search)) }, label = { Text(ui("guild.search")) }, singleLine = true,
         leadingIcon = { Icon(Icons.Outlined.Search, null) },
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { vm.searchGuilds(0) }),
-        trailingIcon = { ForgeTextButton(onClick = { vm.searchGuilds(0) }) { Text(ui("guild.find")) } },
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { vm.search(0) }),
+        trailingIcon = { ForgeTextButton(onClick = { vm.search(0) }) { Text(ui("guild.find")) } },
         modifier = Modifier.fillMaxWidth(),
     )
 }
@@ -182,7 +189,7 @@ private fun joinBlock(s: ForgeState, card: GuildCard, waiting: Boolean): String?
 }
 
 /** An invitation: whose guild, who sent it, and the two answers. */
-@Composable private fun InviteRow(s: ForgeState, invite: GuildInviteView, vm: ForgeViewModel) {
+@Composable private fun InviteRow(s: ForgeState, invite: GuildInviteView, vm: GuildViewModel) {
     val card = invite.guild
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         GuildEmblem(card.emblem, card.color, 36.dp)
@@ -199,7 +206,7 @@ private fun joinBlock(s: ForgeState, card: GuildCard, waiting: Boolean): String?
         }
     }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        ForgeOutlinedButton(enabled = !s.busy, onClick = { vm.declineGuildInvite(card.id) }, modifier = Modifier.weight(1f)) { Text(ui("guild.decline")) }
-        ForgeButton(enabled = !s.busy, onClick = { vm.acceptGuildInvite(card.id) }, modifier = Modifier.weight(1f)) { Text(ui("guild.accept")) }
+        ForgeOutlinedButton(enabled = !s.busy, onClick = { vm.declineInvite(card.id) }, modifier = Modifier.weight(1f)) { Text(ui("guild.decline")) }
+        ForgeButton(enabled = !s.busy, onClick = { vm.acceptInvite(card.id) }, modifier = Modifier.weight(1f)) { Text(ui("guild.accept")) }
     }
 }

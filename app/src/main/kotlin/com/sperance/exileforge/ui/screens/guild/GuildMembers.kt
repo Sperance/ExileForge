@@ -10,6 +10,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.GuildText
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.number
@@ -18,7 +19,7 @@ import com.sperance.exileforge.core.model.guild.GuildMember
 import com.sperance.exileforge.core.model.guild.GuildView
 import com.sperance.exileforge.core.model.guild.manages
 import com.sperance.exileforge.core.network.MemberCommand
-import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.guild.GuildViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.rules.content.GuildRole
 import com.sperance.exileforge.ui.components.*
@@ -46,7 +47,7 @@ private fun commandsOn(me: GuildMember?, target: GuildMember, officersFull: Bool
 }
 
 /** The roll: the leader first, then the officers, each group by contribution; an officer or the leader may invite by name. */
-@Composable internal fun MembersTab(s: ForgeState, vm: ForgeViewModel, guild: GuildView, me: GuildMember?) {
+@Composable internal fun MembersTab(s: ForgeState, vm: GuildViewModel, guild: GuildView, me: GuildMember?) {
     var chosen by remember { mutableStateOf<GuildMember?>(null) }
     var pending by remember { mutableStateOf<Pair<GuildMember, MemberCommand>?>(null) }
     val officersFull = guild.officers >= (s.index?.guilds?.officers ?: MAX_OFFICERS)
@@ -73,18 +74,18 @@ private fun commandsOn(me: GuildMember?, target: GuildMember, officersFull: Bool
             note = confirmNote(command),
             danger = command == MemberCommand.KICK || command == MemberCommand.TRANSFER,
             blocked = s.busy,
-        ) { vm.guildMember(command, member.heroId) }
+        ) { vm.member(command, member.heroId) }
     }
 }
 
-@Composable private fun InviteField(s: ForgeState, vm: ForgeViewModel) {
+@Composable private fun InviteField(s: ForgeState, vm: GuildViewModel) {
     var name by remember { mutableStateOf("") }
     ForgePanel {
         Engraved(ui("guild.invite_title"))
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(name, { name = it.take(s.inputs.heroName) }, label = { Text(ui("guild.hero_name")) }, singleLine = true, modifier = Modifier.weight(1f))
             ForgeButton(enabled = !s.busy && name.isNotBlank(), onClick = {
-                vm.inviteToGuild(name)
+                vm.invite(name)
                 name = ""
             }) { Text(ui("guild.invite")) }
         }
@@ -157,7 +158,7 @@ private fun confirmNote(command: MemberCommand): String? = when (command) {
 }
 
 /** Those asking in: who, of what class and level, since when; the leader and the officers take them in or turn them away. */
-@Composable internal fun ApplicationsTab(s: ForgeState, vm: ForgeViewModel, guild: GuildView) {
+@Composable internal fun ApplicationsTab(s: ForgeState, vm: GuildViewModel, guild: GuildView) {
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
         if (guild.applications.isEmpty()) item { InfoCard(ui("guild.no_applications"), ui("guild.no_applications_hint")) }
         items(guild.applications, key = { it.heroId }) { applicant ->

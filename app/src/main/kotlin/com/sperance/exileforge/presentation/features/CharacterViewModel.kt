@@ -58,6 +58,7 @@ class CharacterViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             heroes.clear()
             boards.clear()
             markets.clear()
+            guilds.clear()
             mutable.update {
                 it.copy(
                     phase = AppPhase.CHARACTERS,

@@ -286,27 +286,8 @@ typealias MarketState = com.sperance.exileforge.core.market.Market
 /** The City's buildings (3.22.0): each one a screen of its own behind the square. */
 enum class Building { QUESTS, MERCHANT, AUCTION, GUILD }
 
-/** The guild's sections, each a tile of its hub; [APPLICATIONS] only for those who may answer them. */
-enum class GuildTab { MEMBERS, QUESTS, TREE, STASH, APPLICATIONS, CONTRIBUTE, LOG, SETTINGS }
-
-/**
- * The hero's guild as the server last answered (3.22.0): [mine] is null until it has been read; `guilds.json` comes with
- * the content ([ContentIndex.guilds]). The journal is read page by page.
- */
-data class GuildState(
-    val mine: GuildMine? = null,
-    val query: String = "",
-    val search: GuildPage = GuildPage(),
-    /** The faction the list is narrowed to (3.28.0), blank for all. */
-    val faction: String = "",
-    /** The section open over the guild's hub; null — the hub itself. */
-    val tab: GuildTab? = null,
-    val log: List<GuildLogEntry> = emptyList(),
-    val logPage: Int = 0,
-    val logEnd: Boolean = false,
-    /** The guild stash (3.79.0), read when its section opens. */
-    val stash: com.sperance.exileforge.core.model.guild.GuildStashView? = null,
-)
+/** Гильдия - срез `GuildRepository` из :core (3.80.13). */
+typealias GuildState = com.sperance.exileforge.core.guild.Guilds
 
 /** The quest board's sections (3.23.0). */
 

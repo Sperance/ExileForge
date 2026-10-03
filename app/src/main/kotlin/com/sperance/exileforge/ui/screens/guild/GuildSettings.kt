@@ -6,11 +6,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.GuildText
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.guild.GuildMember
 import com.sperance.exileforge.core.model.guild.GuildView
-import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.guild.GuildViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.rules.content.GuildRole
 import com.sperance.exileforge.ui.components.*
@@ -23,7 +24,7 @@ private enum class Exit { LEAVE, DISBAND }
  * The guild's settings: the leader changes the way in, the level to join, the arms and the word to all; everyone else
  * sees them read-only. At the bottom the way out — leaving for a member, disbanding for the leader, each asked again.
  */
-@Composable internal fun SettingsTab(s: ForgeState, vm: ForgeViewModel, guild: GuildView, me: GuildMember?) {
+@Composable internal fun SettingsTab(s: ForgeState, vm: GuildViewModel, guild: GuildView, me: GuildMember?) {
     val rules = s.index?.guilds
     val leader = me?.role == GuildRole.LEADER
     var mode by remember(guild.mode) { mutableStateOf(guild.mode) }
@@ -65,7 +66,7 @@ private enum class Exit { LEAVE, DISBAND }
                 )
                 if (leader) {
                     ForgeButton(enabled = !s.busy, onClick = {
-                        vm.guildSettings(mode, (minLevel.toIntOrNull() ?: 1).coerceAtLeast(1), emblem, color, announcement.trim())
+                        vm.settings(mode, (minLevel.toIntOrNull() ?: 1).coerceAtLeast(1), emblem, color, announcement.trim())
                     }, modifier = Modifier.fillMaxWidth()) { Text(ui("guild.save")) }
                 }
             }
@@ -94,7 +95,7 @@ private enum class Exit { LEAVE, DISBAND }
                 note = ui("guild.leave_note", rules?.rejoinHours ?: 24),
                 danger = true,
                 blocked = s.busy,
-                onConfirm = vm::leaveGuild,
+                onConfirm = vm::leave,
             )
 
             Exit.DISBAND -> ConfirmSheet(
@@ -105,7 +106,7 @@ private enum class Exit { LEAVE, DISBAND }
                 note = ui("guild.disband_note"),
                 danger = true,
                 blocked = s.busy,
-                onConfirm = vm::disbandGuild,
+                onConfirm = vm::disband,
             )
         }
     }

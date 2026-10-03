@@ -16,7 +16,6 @@ import com.sperance.exileforge.presentation.state.Buzz
 import com.sperance.exileforge.presentation.state.Feature
 import com.sperance.exileforge.presentation.state.ForgeSection
 import com.sperance.exileforge.presentation.state.GameSettings
-import com.sperance.exileforge.presentation.state.GuildTab
 import com.sperance.exileforge.presentation.state.StashSort
 import com.sperance.exileforge.presentation.state.TAB_SETTINGS
 import com.sperance.exileforge.presentation.state.unlocked
@@ -44,8 +43,10 @@ class ForgeViewModel(
     content: com.sperance.exileforge.core.world.ContentLoader,
     markets: com.sperance.exileforge.core.market.MarketRepository,
     market: com.sperance.exileforge.presentation.market.MarketActions,
+    guilds: com.sperance.exileforge.core.guild.GuildRepository,
+    guild: com.sperance.exileforge.presentation.guild.GuildActions,
 ) : ViewModel() {
-    private val runtime = ForgeRuntime(store, journal, prefs, sessions, world, connection, commands, hub, notices, feedbacks, events, heroes, boards, quests, content, markets, market)
+    private val runtime = ForgeRuntime(store, journal, prefs, sessions, world, connection, commands, hub, notices, feedbacks, events, heroes, boards, quests, content, markets, market, guilds, guild)
 
     init {
         runtime.start()
@@ -258,32 +259,6 @@ class ForgeViewModel(
             runtime.mutable.update { it.copy(building = building) }
         }
     }
-    fun loadGuild() = runtime.guildViewModel.load()
-    fun guildTab(tab: GuildTab?) = runtime.guildViewModel.tab(tab)
-    fun takeGuildNode(node: String) = runtime.guildViewModel.takeNode(node)
-    fun resetGuildTree() = runtime.guildViewModel.resetTree()
-    fun loadGuildStash() = runtime.guildViewModel.loadStash()
-    fun depositToGuild(tab: Int, itemId: String?, code: String?, amount: Long) = runtime.guildViewModel.deposit(tab, itemId, code, amount)
-    fun takeFromGuild(entryId: String) = runtime.guildViewModel.take(entryId)
-    fun guildTabRank(tab: Int, minRank: Int) = runtime.guildViewModel.tabRank(tab, minRank)
-    fun guildQuery(text: String) = runtime.guildViewModel.query(text)
-    fun guildFaction(code: String) = runtime.guildViewModel.filterFaction(code)
-    fun searchGuilds(page: Int = 0) = runtime.guildViewModel.search(page)
-    fun createGuild(name: String, tag: String, faction: String, emblem: String, color: String, mode: GuildMode, minLevel: Int) = runtime.guildViewModel.create(name, tag, faction, emblem, color, mode, minLevel)
-    fun joinGuild(card: GuildCard) = runtime.guildViewModel.join(card)
-    fun acceptGuildInvite(guildId: String) = runtime.guildViewModel.acceptInvite(guildId)
-    fun declineGuildInvite(guildId: String) = runtime.guildViewModel.declineInvite(guildId)
-    fun acceptApplicant(applicantId: String) = runtime.guildViewModel.acceptApplicant(applicantId)
-    fun declineApplicant(applicantId: String) = runtime.guildViewModel.declineApplicant(applicantId)
-    fun inviteToGuild(name: String) = runtime.guildViewModel.invite(name)
-    fun guildMember(command: MemberCommand, memberId: String) = runtime.guildViewModel.member(command, memberId)
-    fun leaveGuild() = runtime.guildViewModel.leave()
-    fun disbandGuild() = runtime.guildViewModel.disband()
-    fun guildSettings(mode: GuildMode, minLevel: Int, emblem: String, color: String, announcement: String) = runtime.guildViewModel.settings(mode, minLevel, emblem, color, announcement)
-
-    /** Gold (`GOLD`) or an orb, by its item code, into the treasury. */
-    fun contribute(item: String, amount: Long) = runtime.guildViewModel.contribute(item, amount)
-    fun loadGuildLog(more: Boolean = false) = runtime.guildViewModel.loadLog(more)
 
     // Продажа из сундука героя (экран героя ещё на общей модели): действия рынка.
     suspend fun priceHint(itemCode: String, rarity: com.sperance.exileforge.rules.content.Rarity?, itemLevel: Int) = runtime.market.priceHint(itemCode, rarity, itemLevel)

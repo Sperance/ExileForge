@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.GuildText
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.guild.GuildViewModel
 import com.sperance.exileforge.presentation.market.MarketViewModel
 import com.sperance.exileforge.presentation.quests.QuestViewModel
 import com.sperance.exileforge.presentation.state.Building
@@ -68,11 +69,12 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable private fun CitySquare(s: ForgeState, vm: ForgeViewModel) {
     val quests = koinViewModel<QuestViewModel>()
     val market = koinViewModel<MarketViewModel>()
+    val guild = koinViewModel<GuildViewModel>()
     LaunchedEffect(s.play.heroId, s.account.sessionEpoch) {
         if (s.play.heroId.isNotBlank()) {
             vm.ensureHero()
             market.loadMyLots(glance = true)
-            vm.loadGuild()
+            guild.load()
             quests.load()
         }
     }

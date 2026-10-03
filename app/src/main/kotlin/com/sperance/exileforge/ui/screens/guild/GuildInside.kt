@@ -23,17 +23,18 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.GuildText
 import com.sperance.exileforge.core.display.number
+import com.sperance.exileforge.core.guild.GuildTab
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.guild.GuildMember
 import com.sperance.exileforge.core.model.guild.GuildView
 import com.sperance.exileforge.core.model.guild.levelProgress
 import com.sperance.exileforge.core.model.guild.manages
 import com.sperance.exileforge.core.session.Reads
-import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.guild.GuildViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
-import com.sperance.exileforge.presentation.state.GuildTab
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.quests.GuildQuestsTab
@@ -47,12 +48,13 @@ import com.sperance.exileforge.ui.theme.*
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun ColumnScope.GuildInside(s: ForgeState, vm: ForgeViewModel, guild: GuildView, me: GuildMember?) {
+internal fun ColumnScope.GuildInside(s: ForgeState, vm: GuildViewModel, guild: GuildView, me: GuildMember?) {
+    val guilds by vm.guilds.collectAsStateWithLifecycle()
     val manages = me?.role?.manages == true
     val tabs = GuildTab.entries.filter { it != GuildTab.APPLICATIONS || manages }
-    val tab = s.guild.tab?.takeIf { it in tabs }
+    val tab = guilds.tab?.takeIf { it in tabs }
     if (tab == null) {
-        PullToRefreshBox(isRefreshing = Reads.GUILD in s.loading, onRefresh = vm::loadGuild, modifier = Modifier.weight(1f)) {
+        PullToRefreshBox(isRefreshing = Reads.GUILD in s.loading, onRefresh = vm::load, modifier = Modifier.weight(1f)) {
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 GuildHeader(s, guild)
                 tabs.chunked(3).forEach { row ->
@@ -63,7 +65,7 @@ internal fun ColumnScope.GuildInside(s: ForgeState, vm: ForgeViewModel, guild: G
                                 sectionFigure(each, guild, me),
                                 badge = if (each == GuildTab.APPLICATIONS) guild.applications.size else 0,
                                 modifier = Modifier.weight(1f),
-                            ) { vm.guildTab(each) }
+                            ) { vm.tab(each) }
                         }
                         repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
                     }
@@ -72,8 +74,8 @@ internal fun ColumnScope.GuildInside(s: ForgeState, vm: ForgeViewModel, guild: G
         }
         return
     }
-    BackRow("${GuildText.title(guild.name, guild.tag)} · ${tabTitle(tab)}") { vm.guildTab(null) }
-    PullToRefreshBox(isRefreshing = Reads.GUILD in s.loading, onRefresh = vm::loadGuild, modifier = Modifier.weight(1f)) {
+    BackRow("${GuildText.title(guild.name, guild.tag)} · ${tabTitle(tab)}") { vm.tab(null) }
+    PullToRefreshBox(isRefreshing = Reads.GUILD in s.loading, onRefresh = vm::load, modifier = Modifier.weight(1f)) {
         when (tab) {
             GuildTab.MEMBERS -> MembersTab(s, vm, guild, me)
             GuildTab.QUESTS -> GuildQuestsTab(s, guild)

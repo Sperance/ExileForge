@@ -37,7 +37,7 @@ class CharacterViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         with(runtime) {
             heroes.select(id)
             boards.clear()
-            mutable.update { it.copy(phase = AppPhase.GAME, tab = TAB_HERO, play = PlayState(heroId = id, draftClass = it.play.draftClass, selectedOrb = it.play.selectedOrb)) }
+            mutable.update { it.copy(phase = AppPhase.GAME, tab = TAB_HERO, play = PlayState(heroId = id, draftClass = it.play.draftClass)) }
             heroSync.forget()
             // The hero the next launch opens straight into (3.30.0).
             store.saveLastHero(sessions.state.value.server, id)
@@ -62,7 +62,7 @@ class CharacterViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             mutable.update {
                 it.copy(
                     phase = AppPhase.CHARACTERS,
-                    play = PlayState(draftClass = it.play.draftClass, selectedOrb = it.play.selectedOrb),
+                    play = PlayState(draftClass = it.play.draftClass),
                     market = MarketState(),
                     building = null,
                     guild = GuildState(),

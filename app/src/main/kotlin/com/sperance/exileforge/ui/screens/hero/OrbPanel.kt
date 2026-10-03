@@ -5,6 +5,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.itemDescription
@@ -12,6 +13,7 @@ import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.forge.SmithyViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.Orb
@@ -22,6 +24,7 @@ import com.sperance.exileforge.ui.icons.orbArt
 import com.sperance.exileforge.ui.theme.LifeRed
 import com.sperance.exileforge.ui.theme.Muted
 import com.sperance.exileforge.ui.theme.Rune
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * The administrator's orb panel: one currency orb on one item, with a top-up beside it.
@@ -38,6 +41,7 @@ import com.sperance.exileforge.ui.theme.Rune
 @Composable fun OrbPanel(
     s: ForgeState,
     itemId: String,
+    selected: String,
     onSelect: (String) -> Unit,
     onApply: (String, String) -> Unit,
     onGrant: ((String) -> Unit)? = null,
@@ -45,7 +49,6 @@ import com.sperance.exileforge.ui.theme.Rune
     val hero = s.hero ?: return
     val instance = hero.item(itemId)
     val orbs = s.orbs
-    val selected = s.play.selectedOrb
     val orb = orbs.firstOrNull { it.code == selected }
     val enabled = !s.busy && s.account.signedIn && (s.ownsCharacter || s.isAdmin)
     Engraved(ui("orb.title"))
@@ -103,6 +106,8 @@ const val ORB_TOP_UP = 10L
  * repeatedly without leaving the panel.
  */
 @Composable fun AdminOrbPanel(s: ForgeState, vm: ForgeViewModel) {
+    val smithy = koinViewModel<SmithyViewModel>()
+    val chosen by smithy.smithy.collectAsStateWithLifecycle()
     val hero = s.hero ?: return
     val targets = hero.items.associate { instance ->
         instance.id to "${s.view(instance)?.title ?: equipmentTitle(instance.template)} · ${rarityTitle(instance.rarity, s.lang)}"
@@ -111,6 +116,6 @@ const val ORB_TOP_UP = 10L
         Text(ui("orb.empty_inventory"), color = Muted)
         return
     }
-    Spinner(ui("orb.target"), s.play.selectedEquipment, targets, !s.busy, glyph = Glyph.ITEM, onChange = vm::selectEquipment)
-    OrbPanel(s, s.play.selectedEquipment, vm::selectOrb, vm::applyOrb) { orb -> vm.grantItem(orb, ORB_TOP_UP) }
+    Spinner(ui("orb.target"), s.play.selectedEquipment, targets, !s.busy, glyph = Glyph.ITEM, onChange = smithy::selectEquipment)
+    OrbPanel(s, s.play.selectedEquipment, chosen.orb, smithy::selectOrb, smithy::applyOrb) { orb -> vm.grantItem(orb, ORB_TOP_UP) }
 }

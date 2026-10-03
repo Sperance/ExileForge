@@ -16,14 +16,17 @@ import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.forge.SmithyViewModel
 import com.sperance.exileforge.presentation.state.ForgeSection
 import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.TAB_CRAFT
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.RaritySpine
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * A bench recipe the run turned up, behind a tap on its chip: what it is called, the line it puts on an item — the
@@ -33,6 +36,7 @@ import com.sperance.exileforge.ui.theme.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun RecipeSheet(s: ForgeState, vm: ForgeViewModel, code: String, inRun: Boolean = false, onDismiss: () -> Unit) {
+    val smithy = koinViewModel<SmithyViewModel>()
     val index = s.index
     val recipe = index?.recipe(code)
     val title = recipe?.let { r -> index?.modifier(r.modifier)?.effects?.map { statTitle(it.stat) }?.distinct()?.joinToString(" / ") }
@@ -69,7 +73,8 @@ internal fun RecipeSheet(s: ForgeState, vm: ForgeViewModel, code: String, inRun:
                 } else {
                     ForgeButton(onClick = {
                         onDismiss()
-                        vm.openForge(null, ForgeSection.BENCH)
+                        smithy.open(null, ForgeSection.BENCH)
+                        vm.tab(TAB_CRAFT)
                     }, modifier = Modifier.fillMaxWidth()) {
                         Text(ui("recipe.open_forge"), style = MaterialTheme.typography.titleSmall)
                     }

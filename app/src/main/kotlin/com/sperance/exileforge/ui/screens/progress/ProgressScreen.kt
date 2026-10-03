@@ -215,7 +215,7 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
         BackRow("${ui("nav.progress")} · ${place.label}") { vm.tab(TAB_PROGRESS) }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when (place) {
-                ProgressPlace.FORGE -> CraftScreen(s, vm)
+                ProgressPlace.FORGE -> CraftScreen(s)
                 ProgressPlace.PETS -> PetsPlace(s)
                 ProgressPlace.TRIALS -> TrialsBoard(s, vm, Modifier.fillMaxSize())
                 ProgressPlace.CHRONICLE -> ChronicleScreen(s, koinViewModel())

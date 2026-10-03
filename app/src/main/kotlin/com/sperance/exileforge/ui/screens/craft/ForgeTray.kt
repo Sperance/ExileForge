@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.display.itemDescription
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.presentation.forge.Smithy
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.rules.content.Omen
 import com.sperance.exileforge.rules.content.Orb
@@ -119,10 +120,10 @@ private const val ONE_ROW = 6
 }
 
 /** The orbs of the tray: the bag's, Regret left out (it is spent on the tree), each one the item takes by the rules. */
-@Composable internal fun OrbTray(s: ForgeState, accepted: (String) -> Boolean, needsOmen: (String) -> Boolean, onSelect: (String) -> Unit) {
+@Composable internal fun OrbTray(s: ForgeState, smithy: Smithy, accepted: (String) -> Boolean, needsOmen: (String) -> Boolean, onSelect: (String) -> Unit) {
     val hero = s.hero ?: return
     val orbs = s.orbs.filter { hero.count(it.code) > 0 && it.code != Orb.ORB_OF_REGRET.name && accepted(it.code) }.map { it.code }
-    val chosen = s.play.selectedOrb
+    val chosen = smithy.orb
     ForgeTray(
         s,
         ui("forge.tray_orbs"),
@@ -131,14 +132,14 @@ private const val ONE_ROW = 6
         ui("forge.no_orbs_fit"),
         Gold,
         onSelect,
-        note = ui("forge.needs_omen").takeIf { chosen in orbs && needsOmen(chosen) && s.play.selectedOmen.isBlank() },
+        note = ui("forge.needs_omen").takeIf { chosen in orbs && needsOmen(chosen) && smithy.omen.isBlank() },
     ) { code ->
         OrbGlyph(Orb.of(code), Modifier.fillMaxSize())
     }
 }
 
 /** The essences of the tray (2.78.0): the bag's that the item takes, the special ones last and the higher tiers first. */
-@Composable internal fun EssenceTray(s: ForgeState, accepted: (String) -> Boolean, onSelect: (String) -> Unit) {
+@Composable internal fun EssenceTray(s: ForgeState, chosen: String, accepted: (String) -> Boolean, onSelect: (String) -> Unit) {
     val hero = s.hero ?: return
     val index = s.index ?: return
     val essences = index.itemsByCategory[com.sperance.exileforge.rules.content.Item.ESSENCE].orEmpty()
@@ -148,7 +149,7 @@ private const val ONE_ROW = 6
         s,
         ui("forge.tray_essences"),
         essences,
-        s.play.selectedEssence,
+        chosen,
         ui("forge.no_essences"),
         Elder,
         onSelect,
@@ -162,16 +163,16 @@ private const val ONE_ROW = 6
  * The omens the bag holds for the chosen orb (3.36.0): one may be laid on the next use, the one that goes on the [target] -
  * an item or, since server 1.65.0, a pet. Chosen again, it is taken off. Each is the orb's pair on the anvil (mockup B).
  */
-@Composable fun OmenLedger(s: ForgeState, target: OrbTarget, held: List<Omen>, onSelect: (String) -> Unit) {
+@Composable fun OmenLedger(s: ForgeState, orbCode: String, chosenOmen: String, target: OrbTarget, held: List<Omen>, onSelect: (String) -> Unit) {
     val hero = s.hero ?: return
     val index = s.index ?: return
-    val orb = Orb.of(s.play.selectedOrb) ?: return
+    val orb = Orb.of(orbCode) ?: return
     val applier = remember(index) { OrbApplier(index) }
     val omens = remember(applier, orb, target, held) { held.filter { it.fits(orb) && applier.accepts(orb, target, it) } }
     if (omens.isEmpty()) return
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         omens.forEach { omen ->
-            val chosen = omen.code == s.play.selectedOmen
+            val chosen = omen.code == chosenOmen
             val shape = RoundedCornerShape(10.dp)
             Row(
                 Modifier.fillMaxWidth().clip(shape).background(if (chosen) Rune.copy(alpha = .10f) else Panel, shape)

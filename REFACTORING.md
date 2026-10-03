@@ -40,7 +40,8 @@
   - [x] Crafts: `CraftsActions` (будильник цикла, посадка ответа) + `CraftsViewModel` (окно профессии); экран разбит на четыре файла ≤300 строк.
   - [x] Tree: `TreeViewModel` (узел под курсором, поиск) над `HeroActions`; экран разбит на четыре файла ≤~400 строк.
   - [x] Hero (сундук, снаряжение, сумка, зверинец, хроника): `HeroViewModel` над `HeroActions`/`HeroSync`/`MarketActions`; переходы и выбор кузницы пока через `ForgeViewModel`.
-  - [ ] Forge (кузница) и Progress: свои модели; выбор кузницы (`PlayState.selected*`, `grant*`) - в модель кузницы.
+  - [x] Forge (кузница): `SmithyViewModel` (сфера, эссенция, предзнаменование, раздел; сфера по умолчанию - из контента) над `HeroActions`; `PlayState` больше не хранит выбор кузницы.
+  - [ ] Progress: своя модель; выдачи тестера (`grant*`) - в модель отладочной панели.
 - [ ] По ходу: файлы UI не длиннее ~400 строк (SkillTreeScreen, CraftsScreen, MapStyles, GrimoireScreen, ExpeditionScene, WorldArt, AtlasScreen, AuctionTabs).
 - [ ] `ForgeViewModel`, `ForgeRuntime`, `FeatureViewModel` удалены.
 

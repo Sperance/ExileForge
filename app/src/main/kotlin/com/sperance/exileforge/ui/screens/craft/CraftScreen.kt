@@ -16,12 +16,14 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.recipeText
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.HeroView
-import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.forge.Smithy
+import com.sperance.exileforge.presentation.forge.SmithyViewModel
 import com.sperance.exileforge.presentation.state.ForgeSection
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.view
@@ -40,6 +42,7 @@ import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.OrbGlyph
 import com.sperance.exileforge.ui.theme.*
+import org.koin.compose.viewmodel.koinViewModel
 
 /** A bench "line" that is not a recipe: taking the crafted modifier back off. */
 private const val UNCRAFT = "-"
@@ -60,9 +63,11 @@ private val ESSENTIAL = setOf(Rarity.COMMON, Rarity.RARE)
  * Every rule is the server's. The client sends the pair of codes and prints the sentence that comes back on the anvil — including
  * a refusal, which costs nothing — and the hero comes back with it. What an item takes is the rules' own [OrbApplier.accepts].
  */
-@Composable fun CraftScreen(s: ForgeState, vm: ForgeViewModel) {
+@Composable fun CraftScreen(s: ForgeState) {
+    val vm = koinViewModel<SmithyViewModel>()
+    val smithy by vm.smithy.collectAsStateWithLifecycle()
     // Orbs and ingredients are read off the bag, so the forge opens on a hero that is not stale.
-    LaunchedEffect(s.play.heroId, s.account.sessionEpoch) { vm.ensureHero() }
+    LaunchedEffect(s.play.heroId, s.account.sessionEpoch) { vm.ensure() }
     val hero = s.hero
     val index = s.index
     val instance = hero?.item(s.play.selectedEquipment)
@@ -102,7 +107,7 @@ private val ESSENTIAL = setOf(Rarity.COMMON, Rarity.RARE)
     }
     val accepted: (String) -> Boolean = { it !in refused }
     val sections = listOfNotNull(ForgeSection.ORBS, ForgeSection.BENCH.takeIf { !isMap && benchable }, ForgeSection.ESSENCES.takeIf { essential })
-    val section = s.play.forgeSection.takeIf { it in sections } ?: ForgeSection.ORBS
+    val section = smithy.section.takeIf { it in sections } ?: ForgeSection.ORBS
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             ScreenHeader(ui("craft.title"), ui("craft.subtitle"), ForgeGlyphs.Anvil, guide = Guide.FORGE)
@@ -110,14 +115,14 @@ private val ESSENTIAL = setOf(Rarity.COMMON, Rarity.RARE)
                 InfoCard(ui("tree.no_hero"), ui("craft.hero_first"))
                 return@Column
             }
-            if (sections.size > 1) PillTabs(sections.map { ui(it.title) }, sections.indexOf(section), { vm.forgeSection(sections[it]) }, segmented = true)
+            if (sections.size > 1) PillTabs(sections.map { ui(it.title) }, sections.indexOf(section), { vm.section(sections[it]) }, segmented = true)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TargetRail(s, recent.mapNotNull { id -> hero.item(id)?.let { s.view(it) } }, instance?.id, { picking = it }, vm::selectEquipment)
                 Anvil(
                     s,
                     view,
-                    toolSocket(s, section, index, benchLine, accepted),
-                    omenSocket(s, section, vm::selectOmen),
+                    toolSocket(s, smithy, section, index, benchLine, accepted),
+                    omenSocket(s, smithy, section, vm::selectOmen),
                     onPick = { picking = TargetFilter.ALL },
                     modifier = Modifier.weight(1f),
                 )
@@ -128,20 +133,20 @@ private val ESSENTIAL = setOf(Rarity.COMMON, Rarity.RARE)
                         LineChoice(s, it, it.unveil, "forge.unveil_title", "forge.unveil_hint", enabled, vm::unveil)
                         LineChoice(s, it, it.offer, "forge.choice_title", "forge.choice_hint", enabled, vm::choose)
                     }
-                    gear?.let { OmenLedger(s, it, omens, vm::selectOmen) }
-                    if (instance != null) OrbTray(s, accepted, { it in omenOnly }, vm::selectOrb)
+                    gear?.let { OmenLedger(s, smithy.orb, smithy.omen, it, omens, vm::selectOmen) }
+                    if (instance != null) OrbTray(s, smithy, accepted, { it in omenOnly }, vm::selectOrb)
                 }
 
                 ForgeSection.BENCH -> view?.let { BenchLedger(s, index, hero, it, benchLine) { line -> benchLine = line } }
 
-                ForgeSection.ESSENCES -> EssenceTray(s, accepted, vm::selectEssence)
+                ForgeSection.ESSENCES -> EssenceTray(s, smithy.essence, accepted, vm::selectEssence)
             }
         }
         if (hero != null && instance != null) {
             when (section) {
-                ForgeSection.ORBS -> OrbBar(s, instance, enabled, accepted, { it in omenOnly }, vm::applyOrb)
+                ForgeSection.ORBS -> OrbBar(s, smithy, instance, enabled, accepted, { it in omenOnly }, vm::applyOrb)
                 ForgeSection.BENCH -> BenchBar(s, vm, instance, benchLine, enabled)
-                ForgeSection.ESSENCES -> EssenceBar(s, instance, enabled, accepted, vm::applyEssence)
+                ForgeSection.ESSENCES -> EssenceBar(s, smithy.essence, instance, enabled, accepted, vm::applyEssence)
             }
         }
     }
@@ -160,9 +165,9 @@ private val ForgeSection.title get() = when (this) {
 }
 
 /** The anvil's tool socket: the orb, the essence or the bench line the section lays on the item, when one is chosen and fits. */
-private fun toolSocket(s: ForgeState, section: ForgeSection, index: ContentIndex, benchLine: String, accepted: (String) -> Boolean): Socket = when (section) {
+private fun toolSocket(s: ForgeState, smithy: Smithy, section: ForgeSection, index: ContentIndex, benchLine: String, accepted: (String) -> Boolean): Socket = when (section) {
     ForgeSection.ORBS -> {
-        val orb = Orb.of(s.play.selectedOrb)?.takeIf { (s.bagAmount(it.name) ?: 0L) > 0 && accepted(it.name) }
+        val orb = Orb.of(smithy.orb)?.takeIf { (s.bagAmount(it.name) ?: 0L) > 0 && accepted(it.name) }
         val glyph: (@Composable () -> Unit)? = if (orb == null) {
             null
         } else {
@@ -172,7 +177,7 @@ private fun toolSocket(s: ForgeState, section: ForgeSection, index: ContentIndex
     }
 
     ForgeSection.ESSENCES -> {
-        val code = s.play.selectedEssence.takeIf { index.essence(it) != null && (s.bagAmount(it) ?: 0L) > 0 && accepted(it) }
+        val code = smithy.essence.takeIf { index.essence(it) != null && (s.bagAmount(it) ?: 0L) > 0 && accepted(it) }
         val glyph: (@Composable () -> Unit)? = if (code == null) {
             null
         } else {
@@ -192,9 +197,9 @@ private fun toolSocket(s: ForgeState, section: ForgeSection, index: ContentIndex
 }
 
 /** The omen's socket beside an orb: the omen laid with it, a tap taking it off; none for the bench or an essence. */
-private fun omenSocket(s: ForgeState, section: ForgeSection, onSelect: (String) -> Unit): Socket? {
+private fun omenSocket(s: ForgeState, smithy: Smithy, section: ForgeSection, onSelect: (String) -> Unit): Socket? {
     if (section != ForgeSection.ORBS) return null
-    val omen = s.play.selectedOmen.takeIf { it.isNotBlank() && (s.bagAmount(it) ?: 0L) > 0 }
+    val omen = smithy.omen.takeIf { it.isNotBlank() && (s.bagAmount(it) ?: 0L) > 0 }
     val glyph: (@Composable () -> Unit)? = if (omen == null) {
         null
     } else {
@@ -213,8 +218,7 @@ private fun omenSocket(s: ForgeState, section: ForgeSection, onSelect: (String) 
 }
 
 /** The chosen essence over the navigation, with the held button: a common item becomes rare, a rare one is rolled anew. */
-@Composable private fun EssenceBar(s: ForgeState, instance: ItemInstance, enabled: Boolean, accepted: (String) -> Boolean, onApply: (String, String) -> Unit) {
-    val code = s.play.selectedEssence
+@Composable private fun EssenceBar(s: ForgeState, code: String, instance: ItemInstance, enabled: Boolean, accepted: (String) -> Boolean, onApply: (String, String) -> Unit) {
     val owned = s.bagAmount(code) ?: 0L
     val essence = s.index?.essence(code)?.takeIf { owned > 0 && accepted(code) }
     ForgeBar {
@@ -338,13 +342,14 @@ internal fun heldOmens(index: ContentIndex, hero: HeroView): List<Omen> = index.
 /** The chosen orb over the navigation: what it does, what the bag keeps, and the button that is held. */
 @Composable internal fun OrbBar(
     s: ForgeState,
+    smithy: Smithy,
     instance: ItemInstance,
     enabled: Boolean,
     accepted: (String) -> Boolean,
     needsOmen: (String) -> Boolean,
     onApply: (String, String) -> Unit,
 ) {
-    val code = s.play.selectedOrb
+    val code = smithy.orb
     val owned = s.bagAmount(code) ?: 0L
     val orb = s.orbs.firstOrNull { it.code == code && owned > 0 && accepted(code) }
     ForgeBar {
@@ -353,11 +358,11 @@ internal fun heldOmens(index: ContentIndex, hero: HeroView): List<Omen> = index.
             return@ForgeBar
         }
         // An orb the item takes only under an omen (a catalyst's Orb of Quality) waits for one: alone the server would refuse it.
-        val waiting = needsOmen(orb.code) && s.play.selectedOmen.isBlank()
+        val waiting = needsOmen(orb.code) && smithy.omen.isBlank()
         BarTitle(
             ForgeGlyphs.Orb,
             Gold,
-            itemTitle(orb.code) + s.play.selectedOmen.takeIf { it.isNotBlank() }?.let { " + ${itemTitle(it)}" }.orEmpty(),
+            itemTitle(orb.code) + smithy.omen.takeIf { it.isNotBlank() }?.let { " + ${itemTitle(it)}" }.orEmpty(),
             if (waiting) ui("forge.needs_omen") to true else stock(owned, 1),
             orb = Orb.of(orb.code),
         )
@@ -368,7 +373,7 @@ internal fun heldOmens(index: ContentIndex, hero: HeroView): List<Omen> = index.
 }
 
 /** The chosen bench line over the navigation, priced, with the same held button. */
-@Composable private fun BenchBar(s: ForgeState, vm: ForgeViewModel, instance: ItemInstance, chosen: String, enabled: Boolean) {
+@Composable private fun BenchBar(s: ForgeState, vm: SmithyViewModel, instance: ItemInstance, chosen: String, enabled: Boolean) {
     val index = s.index ?: return
     val recipe = s.bench.firstOrNull { it.code == chosen }
     ForgeBar {

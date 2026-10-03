@@ -219,12 +219,6 @@ data class PlayState(
     val heroReadAt: Long = 0,
     val heroSeenAt: Long = 0,
     val selectedEquipment: String = "",
-    /** The codes of the orb and the essence picked in the forge. */
-    val selectedOrb: String = "",
-    val selectedEssence: String = "",
-    /** The omen spent with the next orb (3.36.0); blank for none. */
-    val selectedOmen: String = "",
-    val forgeSection: ForgeSection = ForgeSection.ORBS,
     val forgeLine: String = "",
     /** What the admin's random grant asks for: a rarity and a slot, blank meaning "any". */
     val grantRarity: String = "",

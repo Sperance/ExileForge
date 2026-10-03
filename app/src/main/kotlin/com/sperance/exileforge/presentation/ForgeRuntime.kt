@@ -466,7 +466,6 @@ class ForgeRuntime(
             it.copy(
                 play = it.play.copy(
                     draftClass = it.play.draftClass.ifBlank { index.classes.classes.firstOrNull()?.code.orEmpty() },
-                    selectedOrb = it.play.selectedOrb.ifBlank { index.itemsByCategory[com.sperance.exileforge.rules.content.Item.CURRENCY]?.minByOrNull { o -> o.price }?.code.orEmpty() },
                 ),
             )
         }
@@ -498,7 +497,6 @@ class ForgeRuntime(
                 it.copy(
                     play = it.play.copy(
                         draftClass = it.play.draftClass.ifBlank { index.classes.classes.firstOrNull()?.code.orEmpty() },
-                        selectedOrb = it.play.selectedOrb.ifBlank { index.itemsByCategory[com.sperance.exileforge.rules.content.Item.CURRENCY]?.minByOrNull { o -> o.price }?.code.orEmpty() },
                     ),
                 )
             }
@@ -525,7 +523,7 @@ class ForgeRuntime(
             it.copy(
                 phase = AppPhase.AUTH, tab = TAB_HERO, mode = AppMode.PLAYER,
                 admin = it.admin.copy(redemptions = emptyList()),
-                play = PlayState(draftClass = it.play.draftClass, selectedOrb = it.play.selectedOrb),
+                play = PlayState(draftClass = it.play.draftClass),
                 market = MarketState(), building = null, guild = GuildState(), quests = QuestState(),
             )
         }

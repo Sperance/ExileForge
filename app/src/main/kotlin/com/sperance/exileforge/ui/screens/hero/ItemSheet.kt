@@ -20,9 +20,11 @@ import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.forge.SmithyViewModel
 import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.state.ForgeSection
 import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.TAB_CRAFT
 import com.sperance.exileforge.presentation.state.TAB_EXPEDITION
 import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.unmetFor
@@ -34,6 +36,7 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.screens.auction.ListingSheet
 import com.sperance.exileforge.ui.theme.*
+import org.koin.compose.viewmodel.koinViewModel
 
 /** What the action row opened on top of the sheet, if anything. */
 private enum class ItemAction { AUCTION, SELL, WORN }
@@ -53,6 +56,7 @@ private enum class ItemAction { AUCTION, SELL, WORN }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ItemSheet(s: ForgeState, vm: ForgeViewModel, model: HeroViewModel, itemId: String, onDismiss: () -> Unit) {
+    val smithy = koinViewModel<SmithyViewModel>()
     val instance = s.hero?.item(itemId)
     val view = instance?.let { s.view(it) }
     // The item can leave while its sheet is open — sold, listed, rolled into a copy — and then the
@@ -135,7 +139,8 @@ fun ItemSheet(s: ForgeState, vm: ForgeViewModel, model: HeroViewModel, itemId: S
                 // One way into the forge (2.51.0): its orbs and bench are its own tabs.
                 Action(ForgeGlyphs.Anvil, ui("nav.forge"), can) {
                     onDismiss()
-                    vm.openForge(instance.id, ForgeSection.ORBS)
+                    smithy.open(instance.id, ForgeSection.ORBS)
+                    vm.tab(TAB_CRAFT)
                 }
                 // A worn item cannot be listed or sold (AU_010, CH_014): the tap says so instead of doing nothing.
                 Action(if (locked) Icons.Outlined.Lock else Icons.Outlined.LockOpen, ui(if (locked) "item.unlock" else "item.lock"), can) {

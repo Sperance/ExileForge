@@ -127,9 +127,6 @@ class ForgeViewModel(
     fun dismissNotice() = runtime.dismissNotice()
     fun selectEquipment(value: String) = runtime.heroes.selectEquipment(value)
 
-    /** An essence on one item, by the essence's item code. */
-    fun applyEssence(itemId: String, essence: String) = runtime.hero.applyEssence(itemId, essence)
-    fun selectEssence(value: String) = play { it.copy(selectedEssence = value) }
     fun learnSkill(code: String) = runtime.hero.learnSkill(code)
     fun openChest(code: String) = runtime.hero.openChest(code)
     fun dismissChest() = runtime.hero.dismissChest()
@@ -165,15 +162,6 @@ class ForgeViewModel(
 
     /** Admin only: a stack into the bag, by the item's code. */
     fun grantItem(code: String, amount: Long) = runtime.hero.grantItem(code, amount)
-    fun selectOrb(value: String) = play { it.copy(selectedOrb = value, selectedOmen = "") }
-
-    /** Кузница над одним предметом, на разделе, за которым пришёл игрок; `null` оставляет её предмет. */
-    fun openForge(itemId: String?, section: ForgeSection) {
-        itemId?.let { runtime.heroes.selectEquipment(it) }
-        play { it.copy(forgeSection = section) }
-        runtime.tab(TAB_CRAFT)
-    }
-    fun forgeSection(section: ForgeSection) = play { it.copy(forgeSection = section) }
     fun allocateNode(code: String, choice: Int? = null) = runtime.hero.allocateNode(code, choice)
     fun allocatePath(code: String, choice: Int? = null) = runtime.hero.allocatePath(code, choice)
     fun refundNode(code: String) = runtime.hero.refundNode(code)
@@ -183,13 +171,6 @@ class ForgeViewModel(
     fun addExperience(amount: Double) = runtime.hero.addExperience(amount)
     fun draftClass(value: String) = runtime.mutable.value.let { runtime.mutable.value = it.copy(play = it.play.copy(draftClass = value)) }
 
-    /** An orb on one item, by the orb's item code. */
-    fun applyOrb(itemId: String, orb: String) = runtime.hero.applyOrb(itemId, orb, state.value.play.selectedOmen) { play { it.copy(selectedOmen = "") } }
-    fun selectOmen(value: String) = play { it.copy(selectedOmen = value) }
-    fun unveil(itemId: String, choice: Int) = runtime.hero.unveil(itemId, choice)
-    fun choose(itemId: String, choice: Int) = runtime.hero.choose(itemId, choice)
-    fun craft(itemId: String, recipe: String) = runtime.hero.craft(itemId, recipe)
-    fun uncraft(itemId: String) = runtime.hero.uncraft(itemId)
     fun redeem(code: String) = runtime.hero.redeem(code)
     fun socketJewel(itemId: String, nodeCode: String) = runtime.hero.socketJewel(itemId, nodeCode)
     fun unsocketJewel(itemId: String) = runtime.hero.unsocketJewel(itemId)

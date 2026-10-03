@@ -174,7 +174,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
                     mode = AppMode.PLAYER,
                     phase = AppPhase.GAME,
                     tab = TAB_HERO,
-                    play = PlayState(heroId = heroId, draftClass = it.play.draftClass, selectedOrb = it.play.selectedOrb),
+                    play = PlayState(heroId = heroId, draftClass = it.play.draftClass),
                 )
             }
             heroSync.restore(heroId, copy.snapshot)

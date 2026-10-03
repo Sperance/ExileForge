@@ -20,11 +20,13 @@ import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.forge.SmithyViewModel
 import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.state.ForgeSection
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.SlotGroup
 import com.sperance.exileforge.presentation.state.StashFilter
+import com.sperance.exileforge.presentation.state.TAB_CRAFT
 import com.sperance.exileforge.presentation.state.TAB_SKILLS
 import com.sperance.exileforge.presentation.state.stashShelf
 import com.sperance.exileforge.presentation.state.view
@@ -58,6 +60,7 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
 @Composable
 fun HeroScreen(s: ForgeState, vm: ForgeViewModel) {
     val model = koinViewModel<HeroViewModel>()
+    val smithy = koinViewModel<SmithyViewModel>()
     val heroId = s.play.heroId
     var section by rememberSaveable(heroId) { mutableStateOf(HeroSection.CHARACTER) }
     var detailId by remember(heroId) { mutableStateOf<String?>(null) }
@@ -200,8 +203,9 @@ fun HeroScreen(s: ForgeState, vm: ForgeViewModel) {
                 onDismiss = { stackCode = null },
                 onForge = { orb ->
                     stackCode = null
-                    vm.selectOrb(orb)
-                    vm.openForge(null, ForgeSection.ORBS)
+                    smithy.selectOrb(orb)
+                    smithy.open(null, ForgeSection.ORBS)
+                    vm.tab(TAB_CRAFT)
                 },
                 onAuction = { stack ->
                     stackCode = null
@@ -215,8 +219,9 @@ fun HeroScreen(s: ForgeState, vm: ForgeViewModel) {
                 },
                 onEssence = { essence ->
                     stackCode = null
-                    vm.selectEssence(essence)
-                    vm.openForge(null, ForgeSection.ESSENCES)
+                    smithy.selectEssence(essence)
+                    smithy.open(null, ForgeSection.ESSENCES)
+                    vm.tab(TAB_CRAFT)
                 },
                 onOpenChest = { chest ->
                     stackCode = null

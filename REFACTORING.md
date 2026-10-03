@@ -20,7 +20,7 @@
   - [x] `MarketRepository` (витрина, свои лоты, сделки, полка торговца).
   - [x] `GuildRepository` (своя гильдия, поиск, журнал, хранилище).
   - [x] `CraftsRepository` (ремёсла, итоги сеанса, предсказанные циклы); `Buzzes` (вибрации) в `:core`.
-  - [ ] `HeroRepository`: снимки и синк из `HeroViewModel`.
+  - [x] `HeroRepository` держит владельца, свежесть чтения, предмет под кузницей, её фразу и вскрытый сундук; `HeroSync` (части, снимки, лист, копия на устройстве) и `HeroActions` (все команды героя) - в `presentation/hero`; `HeroViewModel` из `features` удалён.
   - [x] Команды и чтения (`task`/`read`, busy/loading/failure, строка отказа) - `CommandRunner` в `:core`; `Phrase` тоже в `:core`.
   - [x] Текущий `GameApi` - `ServerConnection` в `:core`; `Reads` (ключи чтений) там же.
 - [ ] `ForgeState` распадается на срезы этих репозиториев; `sliced()` удалён.
@@ -38,6 +38,7 @@
   - [x] Merchant и Auction: `MarketActions` + `MarketViewModel`; продажа из сундука героя пока через `ForgeViewModel` → `MarketActions`, `ensureHero`/`autoSell` - до переноса экрана героя.
   - [x] Guild (зал и все разделы): `GuildActions` + `GuildViewModel`; `ensureHero` на входе - до переноса экрана героя.
   - [x] Crafts: `CraftsActions` (будильник цикла, посадка ответа) + `CraftsViewModel` (окно профессии); экран разбит на четыре файла ≤300 строк.
+  - [ ] Progress, Tree, Hero: свои модели над `HeroActions`/`HeroSync`; выбор кузницы и древа (`PlayState.selected*`, `grant*`, `nodeQuery`) - в модели экранов.
 - [ ] По ходу: файлы UI не длиннее ~400 строк (SkillTreeScreen, CraftsScreen, MapStyles, GrimoireScreen, ExpeditionScene, WorldArt, AtlasScreen, AuctionTabs).
 - [ ] `ForgeViewModel`, `ForgeRuntime`, `FeatureViewModel` удалены.
 

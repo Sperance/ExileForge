@@ -12,6 +12,7 @@ import com.sperance.exileforge.core.network.normalizeServer
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.data.settings.DEFAULT_SERVER
 import com.sperance.exileforge.presentation.ForgeRuntime
+import com.sperance.exileforge.presentation.hero.HeroCopy
 import com.sperance.exileforge.presentation.state.AppMode
 import com.sperance.exileforge.presentation.state.AppPhase
 import com.sperance.exileforge.presentation.state.PlayState
@@ -176,7 +177,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
                     play = PlayState(heroId = heroId, draftClass = it.play.draftClass, selectedOrb = it.play.selectedOrb),
                 )
             }
-            heroViewModel.restore(heroId, copy.snapshot)
+            heroSync.restore(heroId, copy.snapshot)
             val foreign = state.value.play.heroOwner.let { it.isNotEmpty() && it != copy.account.id }
             if (state.value.hero == null || foreign) {
                 clearSession()
@@ -231,7 +232,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             read(Reads.CHARACTERS, silent = true) { characterViewModel.readCharacters() }
             read(Reads.HERO, silent = true) {
                 ensureContent(fresh = true)
-                heroViewModel.readHero()
+                heroSync.readHero()
                 expeditionViewModel.resume(heroId)
             }
             connectionViewModel.wake(now = true)
@@ -303,7 +304,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
                         // The probe waits no longer: the link is asked again with the screen.
                         if (now.link.offline || now.link.waiting.isNotEmpty()) connectionViewModel.wake(now = true)
                         when (now.phase) {
-                            AppPhase.GAME -> read(Reads.HERO, silent = true) { heroViewModel.readHero() }
+                            AppPhase.GAME -> read(Reads.HERO, silent = true) { heroSync.readHero() }
                             AppPhase.CHARACTERS -> read(Reads.CHARACTERS, silent = true) { characterViewModel.readCharacters() }
                             AppPhase.AUTH -> Unit
                         }

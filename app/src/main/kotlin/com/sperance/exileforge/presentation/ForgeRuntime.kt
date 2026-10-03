@@ -29,7 +29,6 @@ import com.sperance.exileforge.data.settings.deviceLanguage
 import com.sperance.exileforge.presentation.features.CharacterViewModel
 import com.sperance.exileforge.presentation.features.ConnectionViewModel
 import com.sperance.exileforge.presentation.features.ExpeditionViewModel
-import com.sperance.exileforge.presentation.features.HeroViewModel
 import com.sperance.exileforge.presentation.features.RedemptionViewModel
 import com.sperance.exileforge.presentation.features.SessionViewModel
 import com.sperance.exileforge.presentation.features.TrialViewModel
@@ -64,7 +63,10 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -75,26 +77,30 @@ class ForgeRuntime(
     val store: ServerStore,
     val journal: RequestJournal,
     val prefs: com.sperance.exileforge.data.settings.PreferencesRepository,
-    val sessions: com.sperance.exileforge.core.session.SessionRepository,
-    val world: com.sperance.exileforge.core.world.WorldRepository,
     val connection: com.sperance.exileforge.core.session.ServerConnection,
     val commands: CommandRunner,
     private val connectionHub: com.sperance.exileforge.core.session.ConnectionEventsHub,
     val notices: com.sperance.exileforge.core.session.Notices,
-    val feedbacks: com.sperance.exileforge.core.feedback.FeedbackRepository,
     val events: com.sperance.exileforge.core.session.GameEvents,
-    val heroes: com.sperance.exileforge.core.hero.HeroRepository,
-    val boards: com.sperance.exileforge.core.quests.QuestRepository,
-    val quests: com.sperance.exileforge.presentation.quests.QuestActions,
     private val content: com.sperance.exileforge.core.world.ContentLoader,
-    val markets: com.sperance.exileforge.core.market.MarketRepository,
-    val market: com.sperance.exileforge.presentation.market.MarketActions,
-    val guilds: com.sperance.exileforge.core.guild.GuildRepository,
-    val guild: com.sperance.exileforge.presentation.guild.GuildActions,
-    val craftsRepository: com.sperance.exileforge.core.crafts.CraftsRepository,
-    val crafts: com.sperance.exileforge.presentation.crafts.CraftsActions,
     private val buzzer: com.sperance.exileforge.core.session.Buzzes,
+    private val repositories: Repositories,
+    private val actions: Actions,
 ) {
+    val sessions get() = repositories.sessions
+    val world get() = repositories.world
+    val heroes get() = repositories.heroes
+    val boards get() = repositories.boards
+    val markets get() = repositories.markets
+    val guilds get() = repositories.guilds
+    val feedbacks get() = repositories.feedbacks
+    val craftsRepository get() = repositories.crafts
+    val quests get() = actions.quests
+    val market get() = actions.market
+    val guild get() = actions.guild
+    val crafts get() = actions.crafts
+    val hero get() = actions.hero
+    val heroSync get() = actions.heroSync
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     val mutable = MutableStateFlow(ForgeState())
     val state = mutable.asStateFlow()
@@ -110,7 +116,6 @@ class ForgeRuntime(
     val newerServer = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     var localeJob: Job? = null
     var iconJob: Job? = null
-    val heroViewModel = HeroViewModel(this)
     val sessionViewModel = SessionViewModel(this)
     val redemptionViewModel = RedemptionViewModel(this)
     val characterViewModel = CharacterViewModel(this)
@@ -141,7 +146,7 @@ class ForgeRuntime(
                 }
             }
         })
-        created.heroSync(heroViewModel::heldParts, heroViewModel::delivered)
+        created.heroSync(heroSync::heldParts, heroSync::delivered)
         created.onNewerServer = { newerServer.tryEmit(Unit) }
         created.manifestCache = object : ManifestCache {
             override suspend fun read(): String? = store.manifest(server)
@@ -189,7 +194,27 @@ class ForgeRuntime(
         }
         scope.launch { notices.state.collect { value -> mutable.update { it.copy(notice = value) } } }
         scope.launch { feedbacks.state.collect { value -> mutable.update { it.copy(feedback = value) } } }
-        scope.launch { heroes.state.collect { h -> mutable.update { it.copy(play = it.play.copy(heroId = h.heroId, hero = h.hero)) } } }
+        scope.launch {
+            heroes.state.collect { h ->
+                mutable.update {
+                    it.copy(
+                        play = it.play.copy(
+                            heroId = h.heroId,
+                            hero = h.hero,
+                            heroOwner = h.owner,
+                            heroReadAt = h.readAt,
+                            heroSeenAt = h.seenAt,
+                            selectedEquipment = h.selectedEquipment,
+                            forgeLine = h.forgeLine,
+                            chestOpening = h.chest,
+                        ),
+                    )
+                }
+            }
+        }
+        // Новое чтение героя: поход берёт кампанию - зону Ваал или кристалл, что сервер решил.
+        scope.launch { heroes.state.map { it.hero }.distinctUntilChanged { a, b -> a === b }.filterNotNull().collect { expeditionViewModel.heroChanged(it) } }
+        scope.launch { events.regear.collect { expeditionViewModel.regear() } }
         scope.launch { boards.state.collect { value -> mutable.update { it.copy(quests = value) } } }
         scope.launch { markets.state.collect { value -> mutable.update { it.copy(market = value) } } }
         scope.launch { guilds.state.collect { value -> mutable.update { it.copy(guild = value) } } }
@@ -202,7 +227,7 @@ class ForgeRuntime(
         scope.launch {
             events.heroChanged.collect {
                 try {
-                    heroViewModel.readHero()
+                    heroSync.readHero()
                 } catch (e: kotlinx.coroutines.CancellationException) {
                     throw e
                 } catch (_: Exception) { }
@@ -488,7 +513,7 @@ class ForgeRuntime(
         expeditionViewModel.drop()
         trialViewModel.drop()
         crafts.drop()
-        heroViewModel.forget()
+        heroSync.forget()
         sessions.clear()
         feedbacks.clear()
         heroes.clear()

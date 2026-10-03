@@ -89,7 +89,7 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     /** The world map reads nothing of its own: progress and the atlas are the hero's. */
     fun loadCampaign() {
-        runtime.heroViewModel.ensureHero()
+        runtime.heroSync.ensure()
     }
 
     fun selectZone(mapCode: String) {
@@ -166,8 +166,8 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
                     toast(ui("expedition.seed_wait", e.args.firstOrNull().orEmpty()))
                     return@task
                 }
-                if (state.value.play.heroReadAt == 0L) heroViewModel.readHero()
-                heroViewModel.drawn()
+                if (heroes.state.value.readAt == 0L) heroSync.readHero()
+                heroSync.drawn()
                 begin(id, started, kept?.takeIf { it.first == started.id }?.second)
             }
         }
@@ -291,7 +291,7 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
                 if (report.rejected.isNotEmpty()) toast(ui("expedition.rejected", report.rejected.size))
                 report.received.takeIf { it.overflowed > 0 || it.sold > 0 }?.let { toast(ui("stash.received", it.overflowed, it.sold, it.gold)) }
                 if (!report.open && j.settled) done(j) else store.saveJournal(j.heroId, j.encode())
-                if (state.value.play.heroReadAt == 0L && onScreen(j.heroId)) heroViewModel.readHero()
+                if (heroes.state.value.readAt == 0L && onScreen(j.heroId)) heroSync.readHero()
                 // A journal longer than one batch goes on at once, part by part
                 if (report.open && !j.settled) flushes.trySend(Unit)
             } catch (e: CancellationException) {
@@ -320,7 +320,7 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             j.confirm(end)
             mutable.update { it.copy(play = it.play.copy(runPending = j.pending.size, runRejected = j.rejected.size)) }
             if (j.closed && j.settled) done(j) else store.saveJournal(j.heroId, j.encode())
-            heroViewModel.readHero()
+            heroSync.readHero()
             campaign()
             if (!j.settled) flushes.trySend(Unit)
         }
@@ -441,7 +441,7 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     fun openAtlas() {
         with(runtime) {
             mutable.update { s -> s.copy(play = s.play.copy(atlas = s.play.atlas ?: AtlasScreenState(selected = s.atlasState?.allocated?.lastOrNull().orEmpty()))) }
-            heroViewModel.ensureHero()
+            heroSync.ensure()
         }
     }
     fun closeAtlas() {
@@ -462,7 +462,7 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         with(runtime) {
             task(writing = true, touches = setOf(Reads.HERO)) {
                 call(heroId)
-                if (state.value.play.heroReadAt == 0L) heroViewModel.readHero()
+                if (heroes.state.value.readAt == 0L) heroSync.readHero()
             }
         }
     }
@@ -496,8 +496,8 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         parent = null
         mutableRun.value = null
         flushes.trySend(Unit)
-        runtime.mutable.update { it.copy(play = it.play.copy(heroReadAt = 0)) }
-        runtime.heroViewModel.ensureHero()
+        runtime.heroes.stale()
+        runtime.heroSync.ensure()
     }
 
     private fun loot(heroId: String, equipment: List<ItemInstance>) {

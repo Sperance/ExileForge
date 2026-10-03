@@ -21,13 +21,17 @@ import com.sperance.exileforge.data.settings.DraftStore
 import com.sperance.exileforge.data.settings.GuideStore
 import com.sperance.exileforge.data.settings.PreferencesRepository
 import com.sperance.exileforge.data.settings.ServerStore
+import com.sperance.exileforge.presentation.Actions
 import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.Repositories
 import com.sperance.exileforge.presentation.crafts.CraftsActions
 import com.sperance.exileforge.presentation.crafts.CraftsViewModel
 import com.sperance.exileforge.presentation.features.UpdateViewModel
 import com.sperance.exileforge.presentation.feedback.FeedbackViewModel
 import com.sperance.exileforge.presentation.guild.GuildActions
 import com.sperance.exileforge.presentation.guild.GuildViewModel
+import com.sperance.exileforge.presentation.hero.HeroActions
+import com.sperance.exileforge.presentation.hero.HeroSync
 import com.sperance.exileforge.presentation.market.MarketActions
 import com.sperance.exileforge.presentation.market.MarketViewModel
 import com.sperance.exileforge.presentation.quests.QuestActions
@@ -74,10 +78,14 @@ val appModule = module {
     single { GuildRepository() }
     singleOf(::GuildActions)
     single { Buzzes() }
+    single { HeroSync(get(), get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
+    singleOf(::HeroActions)
     single { CraftsRepository() }
     single { CraftsActions(get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     single { ContentLoader() }
     single { QuestActions(get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
+    singleOf(::Repositories)
+    singleOf(::Actions)
     viewModelOf(::ForgeViewModel)
     viewModelOf(::FeedbackViewModel)
     viewModelOf(::QuestViewModel)

@@ -58,11 +58,19 @@ class Notices {
     }
 }
 
-/** События игры между моделями (3.80.9): герой изменился на сервере - кто его держит, перечитывает. */
+/**
+ * События игры между моделями (3.80.9): герой изменился на сервере - кто его держит, перечитывает; герой
+ * перечитан после смены снаряжения - поход берёт новый лист между боями ([regear]).
+ */
 class GameEvents {
     val heroChanged = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val regear = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
     fun heroChanged() {
         heroChanged.tryEmit(Unit)
+    }
+
+    fun regear() {
+        regear.tryEmit(Unit)
     }
 }

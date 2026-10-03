@@ -17,39 +17,34 @@ import com.sperance.exileforge.presentation.state.Feature
 import com.sperance.exileforge.presentation.state.ForgeSection
 import com.sperance.exileforge.presentation.state.GameSettings
 import com.sperance.exileforge.presentation.state.StashSort
+import com.sperance.exileforge.presentation.state.TAB_CRAFT
 import com.sperance.exileforge.presentation.state.TAB_SETTINGS
 import com.sperance.exileforge.presentation.state.unlocked
 import com.sperance.exileforge.rules.content.GuildMode
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 /** Lifecycle owner and compatibility facade; screen actions live in feature models. */
 class ForgeViewModel(
     store: ServerStore,
     journal: RequestJournal,
     prefs: com.sperance.exileforge.data.settings.PreferencesRepository,
-    sessions: com.sperance.exileforge.core.session.SessionRepository,
-    world: com.sperance.exileforge.core.world.WorldRepository,
     connection: com.sperance.exileforge.core.session.ServerConnection,
     commands: com.sperance.exileforge.core.session.CommandRunner,
     hub: com.sperance.exileforge.core.session.ConnectionEventsHub,
     notices: com.sperance.exileforge.core.session.Notices,
-    feedbacks: com.sperance.exileforge.core.feedback.FeedbackRepository,
     events: com.sperance.exileforge.core.session.GameEvents,
-    heroes: com.sperance.exileforge.core.hero.HeroRepository,
-    boards: com.sperance.exileforge.core.quests.QuestRepository,
-    quests: com.sperance.exileforge.presentation.quests.QuestActions,
     content: com.sperance.exileforge.core.world.ContentLoader,
-    markets: com.sperance.exileforge.core.market.MarketRepository,
-    market: com.sperance.exileforge.presentation.market.MarketActions,
-    guilds: com.sperance.exileforge.core.guild.GuildRepository,
-    guild: com.sperance.exileforge.presentation.guild.GuildActions,
-    craftsRepository: com.sperance.exileforge.core.crafts.CraftsRepository,
-    crafts: com.sperance.exileforge.presentation.crafts.CraftsActions,
     buzzer: com.sperance.exileforge.core.session.Buzzes,
+    repositories: Repositories,
+    actions: Actions,
 ) : ViewModel() {
-    private val runtime = ForgeRuntime(store, journal, prefs, sessions, world, connection, commands, hub, notices, feedbacks, events, heroes, boards, quests, content, markets, market, guilds, guild, craftsRepository, crafts, buzzer)
+    /** Выбор на экранах героя, ещё живущий в общем состоянии: кузница, выдачи, древо. */
+    private fun play(transform: (com.sperance.exileforge.presentation.state.PlayState) -> com.sperance.exileforge.presentation.state.PlayState) = runtime.mutable.update { it.copy(play = transform(it.play)) }
+
+    private val runtime = ForgeRuntime(store, journal, prefs, connection, commands, hub, notices, events, content, buzzer, repositories, actions)
 
     init {
         runtime.start()
@@ -94,8 +89,8 @@ class ForgeViewModel(
 
     /** A bug report from the beetle (3.48.0): sent at once, whether signed in or not. */
     fun reportBug(report: com.sperance.exileforge.core.model.command.BugReportRequest, onSent: suspend () -> Unit = {}) = runtime.reportBug(report, onSent)
-    fun planTree(nodes: List<com.sperance.exileforge.rules.content.TakenNode>) = runtime.heroViewModel.planTree(nodes)
-    fun autoSell(rarity: com.sperance.exileforge.rules.content.Rarity, groups: Set<com.sperance.exileforge.rules.content.SlotGroup>) = runtime.heroViewModel.autoSell(rarity, groups)
+    fun planTree(nodes: List<com.sperance.exileforge.rules.content.TakenNode>) = runtime.hero.planTree(nodes)
+    fun autoSell(rarity: com.sperance.exileforge.rules.content.Rarity, groups: Set<com.sperance.exileforge.rules.content.SlotGroup>) = runtime.hero.autoSell(rarity, groups)
     fun closeZone() = runtime.expeditionViewModel.closeZone()
     fun pickMap(itemId: String?) = runtime.expeditionViewModel.pickMap(itemId)
     fun pickPotion(code: String?) = runtime.expeditionViewModel.pickPotion(code)
@@ -130,84 +125,102 @@ class ForgeViewModel(
     fun refreshIcons() = runtime.refreshIcons()
     fun dismissMessage() = runtime.dismissMessage()
     fun dismissNotice() = runtime.dismissNotice()
-    fun selectEquipment(value: String) = runtime.heroViewModel.selectEquipment(value)
+    fun selectEquipment(value: String) = runtime.heroes.selectEquipment(value)
 
     /** An essence on one item, by the essence's item code. */
-    fun applyEssence(itemId: String, essence: String) = runtime.heroViewModel.applyEssence(itemId, essence)
-    fun selectEssence(value: String) = runtime.heroViewModel.selectEssence(value)
-    fun learnSkill(code: String) = runtime.heroViewModel.learnSkill(code)
-    fun openChest(code: String) = runtime.heroViewModel.openChest(code)
-    fun dismissChest() = runtime.heroViewModel.dismissChest()
-    fun slotSkill(kind: String, index: Int, code: String?, condition: String? = null) = runtime.heroViewModel.slotSkill(kind, index, code, condition)
-    fun flaskCondition(index: Int, condition: String?) = runtime.heroViewModel.flaskCondition(index, condition)
-    fun exchangeBooks(books: List<String>, code: String) = runtime.heroViewModel.exchangeBooks(books, code)
-    fun loadHero() = runtime.heroViewModel.loadHero()
-    fun ensureHero() = runtime.heroViewModel.ensureHero()
-    fun equip(itemId: String, slot: Slot? = null) = runtime.heroViewModel.equip(itemId, slot)
-    fun unequip(itemId: String) = runtime.heroViewModel.unequip(itemId)
-    fun expandStash() = runtime.heroViewModel.expandStash()
-    fun claimPath() = runtime.heroViewModel.claimPath()
-    fun temper(itemId: String) = runtime.heroViewModel.temper(itemId)
-    fun setTitle(title: String) = runtime.heroViewModel.setTitle(title)
+    fun applyEssence(itemId: String, essence: String) = runtime.hero.applyEssence(itemId, essence)
+    fun selectEssence(value: String) = play { it.copy(selectedEssence = value) }
+    fun learnSkill(code: String) = runtime.hero.learnSkill(code)
+    fun openChest(code: String) = runtime.hero.openChest(code)
+    fun dismissChest() = runtime.hero.dismissChest()
+    fun slotSkill(kind: String, index: Int, code: String?, condition: String? = null) = runtime.hero.slotSkill(kind, index, code, condition)
+    fun flaskCondition(index: Int, condition: String?) = runtime.hero.flaskCondition(index, condition)
+    fun exchangeBooks(books: List<String>, code: String) = runtime.hero.exchangeBooks(books, code)
+    fun loadHero() = runtime.heroSync.load()
+    fun ensureHero() = runtime.heroSync.ensure()
+    fun equip(itemId: String, slot: Slot? = null) = runtime.hero.equip(itemId, slot)
+    fun unequip(itemId: String) = runtime.hero.unequip(itemId)
+    fun expandStash() = runtime.hero.expandStash()
+    fun claimPath() = runtime.hero.claimPath()
+    fun temper(itemId: String) = runtime.hero.temper(itemId)
+    fun setTitle(title: String) = runtime.hero.setTitle(title)
 
     /** The hero's statistics (3.51.0), read when the chronicle opens; null when the read failed. */
     suspend fun heroStats(heroId: String): Map<String, Long>? = runCatching { runtime.api.hero.stats(heroId).values }.getOrNull()
-    fun claimOverflow(itemId: String? = null) = runtime.heroViewModel.claimOverflow(itemId)
-    fun sellOverflow(itemId: String) = runtime.heroViewModel.sellOverflow(itemId)
-    fun incubatePet(egg: String, slot: Int? = null) = runtime.heroViewModel.incubatePet(egg, slot)
-    fun collectPet(slot: Int) = runtime.heroViewModel.collectPet(slot)
-    fun petOrb(petId: String, orb: String, omen: String? = null) = runtime.heroViewModel.petOrb(petId, orb, omen)
-    fun choosePetLine(petId: String, choice: Int) = runtime.heroViewModel.choosePetLine(petId, choice)
-    fun activatePet(petId: String) = runtime.heroViewModel.activatePet(petId)
-    fun releasePet(petId: String) = runtime.heroViewModel.releasePet(petId)
-    fun breedPets(first: String, second: String) = runtime.heroViewModel.breedPets(first, second)
+    fun claimOverflow(itemId: String? = null) = runtime.hero.claimOverflow(itemId)
+    fun sellOverflow(itemId: String) = runtime.hero.sellOverflow(itemId)
+    fun incubatePet(egg: String, slot: Int? = null) = runtime.hero.incubatePet(egg, slot)
+    fun collectPet(slot: Int) = runtime.hero.collectPet(slot)
+    fun petOrb(petId: String, orb: String, omen: String? = null) = runtime.hero.petOrb(petId, orb, omen)
+    fun choosePetLine(petId: String, choice: Int) = runtime.hero.choosePetLine(petId, choice)
+    fun activatePet(petId: String) = runtime.hero.activatePet(petId)
+    fun releasePet(petId: String) = runtime.hero.releasePet(petId)
+    fun breedPets(first: String, second: String) = runtime.hero.breedPets(first, second)
 
     /** Admin only: a named template, rolled by the server at [rarity] or the template's own. */
-    fun grant(template: String, rarity: Rarity? = null) = runtime.heroViewModel.grant(template, rarity)
-    fun grantRarity(value: String) = runtime.heroViewModel.grantRarity(value)
-    fun grantSlot(value: String) = runtime.heroViewModel.grantSlot(value)
-    fun grantRandom() = runtime.heroViewModel.grantRandom()
+    fun grant(template: String, rarity: Rarity? = null) = runtime.hero.grant(template, rarity)
+    fun grantRarity(value: String) = play { it.copy(grantRarity = value) }
+    fun grantSlot(value: String) = play { it.copy(grantSlot = value) }
+    fun grantRandom() = state.value.play.let { runtime.hero.grantRandom(it.grantRarity, it.grantSlot) }
 
     /** Admin only: a stack into the bag, by the item's code. */
-    fun grantItem(code: String, amount: Long) = runtime.heroViewModel.grantItem(code, amount)
-    fun selectOrb(value: String) = runtime.heroViewModel.selectOrb(value)
-    fun openForge(itemId: String?, section: ForgeSection) = runtime.heroViewModel.openForge(itemId, section)
-    fun forgeSection(section: ForgeSection) = runtime.heroViewModel.forgeSection(section)
-    fun selectNode(code: String) = runtime.heroViewModel.selectNode(code)
-    fun allocateNode(code: String, choice: Int? = null) = runtime.heroViewModel.allocateNode(code, choice)
-    fun allocatePath(code: String, choice: Int? = null) = runtime.heroViewModel.allocatePath(code, choice)
-    fun refundNode(code: String) = runtime.heroViewModel.refundNode(code)
-    fun refundBranch(code: String) = runtime.heroViewModel.refundBranch(code)
-    fun rechooseNode(code: String, choice: Int) = runtime.heroViewModel.rechooseNode(code, choice)
-    fun resetTree() = runtime.heroViewModel.resetTree()
-    fun addExperience(amount: Double) = runtime.heroViewModel.addExperience(amount)
+    fun grantItem(code: String, amount: Long) = runtime.hero.grantItem(code, amount)
+    fun selectOrb(value: String) = play { it.copy(selectedOrb = value, selectedOmen = "") }
+
+    /** Кузница над одним предметом, на разделе, за которым пришёл игрок; `null` оставляет её предмет. */
+    fun openForge(itemId: String?, section: ForgeSection) {
+        itemId?.let { runtime.heroes.selectEquipment(it) }
+        play { it.copy(forgeSection = section) }
+        runtime.tab(TAB_CRAFT)
+    }
+    fun forgeSection(section: ForgeSection) = play { it.copy(forgeSection = section) }
+    fun selectNode(code: String) = play { it.copy(selectedNode = code) }
+    fun allocateNode(code: String, choice: Int? = null) = runtime.hero.allocateNode(code, choice)
+    fun allocatePath(code: String, choice: Int? = null) = runtime.hero.allocatePath(code, choice)
+    fun refundNode(code: String) = runtime.hero.refundNode(code)
+    fun refundBranch(code: String) = runtime.hero.refundBranch(code)
+    fun rechooseNode(code: String, choice: Int) = runtime.hero.rechooseNode(code, choice)
+    fun resetTree() = runtime.hero.resetTree()
+    fun addExperience(amount: Double) = runtime.hero.addExperience(amount)
     fun draftClass(value: String) = runtime.mutable.value.let { runtime.mutable.value = it.copy(play = it.play.copy(draftClass = value)) }
 
     /** An orb on one item, by the orb's item code. */
-    fun applyOrb(itemId: String, orb: String) = runtime.heroViewModel.applyOrb(itemId, orb)
-    fun selectOmen(value: String) = runtime.heroViewModel.selectOmen(value)
-    fun unveil(itemId: String, choice: Int) = runtime.heroViewModel.unveil(itemId, choice)
-    fun choose(itemId: String, choice: Int) = runtime.heroViewModel.choose(itemId, choice)
-    fun craft(itemId: String, recipe: String) = runtime.heroViewModel.craft(itemId, recipe)
-    fun uncraft(itemId: String) = runtime.heroViewModel.uncraft(itemId)
-    fun redeem(code: String) = runtime.heroViewModel.redeem(code)
-    fun socketJewel(itemId: String, nodeCode: String) = runtime.heroViewModel.socketJewel(itemId, nodeCode)
-    fun unsocketJewel(itemId: String) = runtime.heroViewModel.unsocketJewel(itemId)
-    fun sellForGold(itemId: String) = runtime.heroViewModel.sellForGold(itemId)
+    fun applyOrb(itemId: String, orb: String) = runtime.hero.applyOrb(itemId, orb, state.value.play.selectedOmen) { play { it.copy(selectedOmen = "") } }
+    fun selectOmen(value: String) = play { it.copy(selectedOmen = value) }
+    fun unveil(itemId: String, choice: Int) = runtime.hero.unveil(itemId, choice)
+    fun choose(itemId: String, choice: Int) = runtime.hero.choose(itemId, choice)
+    fun craft(itemId: String, recipe: String) = runtime.hero.craft(itemId, recipe)
+    fun uncraft(itemId: String) = runtime.hero.uncraft(itemId)
+    fun redeem(code: String) = runtime.hero.redeem(code)
+    fun socketJewel(itemId: String, nodeCode: String) = runtime.hero.socketJewel(itemId, nodeCode)
+    fun unsocketJewel(itemId: String) = runtime.hero.unsocketJewel(itemId)
+    fun sellForGold(itemId: String) = runtime.hero.sellForGold(itemId)
 
     /** The item lock (3.30.0): a locked item is never sold, listed or auto-sold. */
-    fun lockItem(itemId: String, locked: Boolean) = runtime.heroViewModel.lockItem(itemId, locked)
+    fun lockItem(itemId: String, locked: Boolean) = runtime.hero.lockItem(itemId, locked)
 
     /** The stash's order (3.30.0), kept on the device. */
-    fun stashSort(sort: StashSort) = runtime.heroViewModel.stashSort(sort)
+    fun stashSort(sort: StashSort) {
+        runtime.mutable.update { it.copy(stashSort = sort) }
+        runtime.scope.launch { runtime.store.saveStashSort(sort.name) }
+    }
 
     /** «Пока вас не было» (3.69.0): the last catch-up shown for a hero, and marking one shown. */
-    suspend fun craftsAwaySeen(heroId: String): Long = runtime.heroViewModel.craftsAwaySeen(heroId)
-    fun markCraftsAwaySeen(heroId: String, until: Long) = runtime.heroViewModel.markCraftsAwaySeen(heroId, until)
+    suspend fun craftsAwaySeen(heroId: String): Long = runtime.store.craftsAwaySeen(runtime.sessions.state.value.server, heroId)
+    fun markCraftsAwaySeen(heroId: String, until: Long) {
+        val server = runtime.sessions.state.value.server
+        runtime.scope.launch { runtime.store.saveCraftsAwaySeen(server, heroId, until) }
+    }
 
     /** «Hide equipped» on the gear shelf (3.69.0), kept on the device. */
-    fun stashHideWorn(hide: Boolean) = runtime.heroViewModel.stashHideWorn(hide)
-    fun logFilter(kinds: Set<com.sperance.exileforge.core.campaign.LogKind>) = runtime.heroViewModel.logFilter(kinds)
+    fun stashHideWorn(hide: Boolean) {
+        runtime.mutable.update { it.copy(stashHideWorn = hide) }
+        runtime.scope.launch { runtime.store.saveStashHideWorn(hide) }
+    }
+    fun logFilter(kinds: Set<com.sperance.exileforge.core.campaign.LogKind>) {
+        runtime.mutable.update { it.copy(logFilter = kinds) }
+        runtime.scope.launch { runtime.store.saveLogFilter(com.sperance.exileforge.core.campaign.LogKind.write(kinds)) }
+    }
 
     /** The link's probe at once (3.30.0): the offline icon tapped. */
     fun retryLink() = runtime.connectionViewModel.wake(now = true)
@@ -218,7 +231,7 @@ class ForgeViewModel(
     fun resetTester(id: String) = runtime.sessionViewModel.resetTester(id)
     fun setTesterActive(id: String, active: Boolean) = runtime.sessionViewModel.setTesterActive(id, active)
     fun closeShownTester() = runtime.sessionViewModel.closeShownTester()
-    fun testerGrant(what: String, vararg params: Pair<String, String?>) = runtime.heroViewModel.testerGrant(what, *params)
+    fun testerGrant(what: String, vararg params: Pair<String, String?>) = runtime.hero.testerGrant(what, *params)
     fun connect() = runtime.sessionViewModel.connect()
     fun resetServer() = runtime.sessionViewModel.resetServer()
     fun health() = runtime.sessionViewModel.health()
@@ -249,7 +262,7 @@ class ForgeViewModel(
     fun ensureClasses() = runtime.characterViewModel.ensureClasses()
     fun logout() = runtime.sessionViewModel.logout()
     fun changePassword(current: String, replacement: String) = runtime.sessionViewModel.changePassword(current, replacement)
-    fun nodeQuery(value: String) = runtime.heroViewModel.nodeQuery(value)
+    fun nodeQuery(value: String) = play { it.copy(nodeQuery = value) }
 
     /** A building of the City (3.22.0), or the square for none. */
     fun building(building: Building?) {

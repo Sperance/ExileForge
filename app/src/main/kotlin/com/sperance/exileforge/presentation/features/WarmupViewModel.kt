@@ -44,7 +44,7 @@ class WarmupViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
                                 }
                             }
                         }
-                        launch { step(id, WarmStep.HERO) { if (state.value.play.heroReadAt == 0L) heroViewModel.readHero() } }
+                        launch { step(id, WarmStep.HERO) { if (heroes.state.value.readAt == 0L) heroSync.readHero() } }
                     }
                     step(id, WarmStep.WORLD) {
                         quests.load()

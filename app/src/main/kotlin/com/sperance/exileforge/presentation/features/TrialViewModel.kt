@@ -59,7 +59,7 @@ class TrialViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             task(writing = true, touches = setOf(Reads.HERO)) {
                 api.trials.forgeKey(heroId)
                 toast(ui("trials.key_forged"))
-                if (state.value.play.heroReadAt == 0L) heroViewModel.readHero()
+                if (heroes.state.value.readAt == 0L) heroSync.readHero()
             }
         }
     }
@@ -73,8 +73,8 @@ class TrialViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             task(writing = true, touches = setOf(Reads.HERO)) {
                 val id = heroId
                 val started = call(id)
-                if (state.value.play.heroReadAt == 0L) heroViewModel.readHero()
-                heroViewModel.drawn()
+                if (heroes.state.value.readAt == 0L) heroSync.readHero()
+                heroSync.drawn()
                 begin(id, started)
             }
         }
@@ -108,7 +108,7 @@ class TrialViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
                 val report = api.trials.events(heroId, open.id, listOf(TrialEvent(open.applied, TrialEventKind.END)))
                 report?.received?.takeIf { it.overflowed > 0 || it.sold > 0 }?.let { toast(ui("stash.received", it.overflowed, it.sold, it.gold)) }
                 toast(ui("trials.abandoned"))
-                if (state.value.play.heroReadAt == 0L) heroViewModel.readHero()
+                if (heroes.state.value.readAt == 0L) heroSync.readHero()
             }
         }
     }
@@ -141,14 +141,14 @@ class TrialViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
                 if (report == null) {
                     // Landed, its report not kept: the batch is taken, and its loot comes with the hero read again
                     mutableArena.value?.settle(events.last().n + 1, emptyMap())
-                    heroViewModel.readHero()
+                    heroSync.readHero()
                     if (synchronized(pending) { pending.isNotEmpty() }) sends.trySend(Unit)
                     return
                 }
                 mutableArena.value?.settle(report.applied, report.rewards.associate { it.n to it.reward.toReward() })
                 if (report.rejected.isNotEmpty()) toast(ui("expedition.rejected", report.rejected.size))
                 report.received.takeIf { it.overflowed > 0 || it.sold > 0 }?.let { toast(ui("stash.received", it.overflowed, it.sold, it.gold)) }
-                if (state.value.play.heroReadAt == 0L && onScreen(owner)) heroViewModel.readHero()
+                if (heroes.state.value.readAt == 0L && onScreen(owner)) heroSync.readHero()
                 if (synchronized(pending) { pending.isNotEmpty() }) sends.trySend(Unit)
             } catch (e: CancellationException) {
                 throw e
@@ -194,7 +194,7 @@ class TrialViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         if (arena.hud.value.phase == TrialPhase.FIGHT) arena.send(RunCommand.Leave).also { arena.update(0.0) }
         mutableArena.value = null
         sends.trySend(Unit)
-        runtime.heroViewModel.ensureHero()
+        runtime.heroSync.ensure()
     }
 
     /** Dropped without a word: the hero or the session it belonged to is gone. */

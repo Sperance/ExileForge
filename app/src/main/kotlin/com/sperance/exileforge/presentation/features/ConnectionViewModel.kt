@@ -153,7 +153,7 @@ class ConnectionViewModel(runtime: ForgeRuntime) :
                 AppPhase.CHARACTERS -> read(Reads.CHARACTERS, silent = true) { characterViewModel.readCharacters() }
 
                 AppPhase.GAME -> {
-                    read(Reads.HERO, silent = true) { heroViewModel.readHero() }
+                    read(Reads.HERO, silent = true) { heroSync.readHero() }
                     when (now.tab) {
                         TAB_CRAFTS -> crafts.load(silent = true)
 

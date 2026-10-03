@@ -14,8 +14,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.sperance.exileforge.core.campaign.CrystalView
-import com.sperance.exileforge.core.campaign.RunCommand
+import com.sperance.exileforge.core.campaign.run.CrystalView
+import com.sperance.exileforge.core.campaign.run.RunCommand
 import com.sperance.exileforge.core.display.displayName
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.monsterTitle

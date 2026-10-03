@@ -16,7 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.sperance.exileforge.core.campaign.RunHud
+import com.sperance.exileforge.core.campaign.run.RunHud
 import com.sperance.exileforge.core.display.displayName
 import com.sperance.exileforge.core.display.mapTitle
 import com.sperance.exileforge.core.display.modifierLine

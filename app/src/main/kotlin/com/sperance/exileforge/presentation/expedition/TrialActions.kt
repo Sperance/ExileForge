@@ -1,9 +1,9 @@
 package com.sperance.exileforge.presentation.expedition
 
-import com.sperance.exileforge.core.campaign.RunCommand
 import com.sperance.exileforge.core.campaign.RunJournal
 import com.sperance.exileforge.core.campaign.TrialArena
 import com.sperance.exileforge.core.campaign.TrialPhase
+import com.sperance.exileforge.core.campaign.run.RunCommand
 import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.campaign.TrialStart

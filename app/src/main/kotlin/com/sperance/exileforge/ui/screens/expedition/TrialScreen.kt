@@ -44,7 +44,7 @@ import org.koin.compose.viewmodel.koinViewModel
             }
         }
     }
-    BackHandler { if (hud.phase == TrialPhase.FIGHT) model.trialCommand(com.sperance.exileforge.core.campaign.RunCommand.Leave) else model.closeTrial() }
+    BackHandler { if (hud.phase == TrialPhase.FIGHT) model.trialCommand(com.sperance.exileforge.core.campaign.run.RunCommand.Leave) else model.closeTrial() }
     Box(Modifier.fillMaxSize().background(Ink)) {
         hud.fight?.takeIf { hud.phase == TrialPhase.FIGHT }?.let { fight ->
             ArenaOverlay(s, hud.run, fight, hud.level, arena.rules, arena.stance, onCommand = model::trialCommand, onLogFilter = vm::logFilter, onBuzz = vm::buzz)

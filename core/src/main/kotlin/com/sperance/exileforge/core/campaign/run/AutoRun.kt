@@ -1,4 +1,4 @@
-package com.sperance.exileforge.core.campaign
+package com.sperance.exileforge.core.campaign.run
 
 import com.sperance.exileforge.rules.roll.Streams
 

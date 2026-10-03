@@ -5,6 +5,7 @@ import com.sperance.exileforge.core.campaign.combat.CombatEvent
 import com.sperance.exileforge.core.campaign.combat.DamageType
 import com.sperance.exileforge.core.campaign.combat.HitKind
 import com.sperance.exileforge.core.campaign.combat.Side
+import com.sperance.exileforge.core.campaign.run.PackHit
 import com.sperance.exileforge.rules.content.FightTally
 import com.sperance.exileforge.rules.roll.RolledMonster
 import kotlin.math.roundToLong

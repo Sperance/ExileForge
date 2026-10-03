@@ -56,7 +56,7 @@
 - [x] `Combat.kt` → пакет `core/campaign/combat/`: модель (Combatant, Foe, Ally, эффекты), `Battle` по секциям (views, tick, strike/land, skills, monsters, reach, log).
 - [ ] Константы боя (`Battle.Companion`, файловые константы секций) - из контента.
 - [x] `ArenaOverlay.kt` → пакет `ui/screens/expedition/arena/` (FightPalette, FightMarks, ArenaOverlay, FoeCard, HeroCard, ScoutPanel, FightFeed, Controls, VitalBars, ActionBar, StateTiles, FightLog общий с Report/CombatDetail).
-- [ ] `ExpeditionRun.kt`, `ExpeditionWorld.kt` - по тем же правилам.
+- [x] `ExpeditionRun.kt`, `ExpeditionWorld.kt`, `AutoRun.kt` → пакет `core/campaign/run/`: виды и команды (RunViews, RunCommand), `ExpeditionRun` по секциям (commands/answers, abyss, walk, fights, snapshot), `ExpeditionWorld` по секциям (agents, monsters, grid); golden-тесты забега не сдвинулись.
 
 ## Этап 6 - баланс и чистка
 - [x] Правила сервера 1.74.5: окно «недавнего» события, пределы скорости атаки и потолок уровня умения читаются из контента (`CombatRules`, `SkillBookRules`), констант в `rules` больше нет.

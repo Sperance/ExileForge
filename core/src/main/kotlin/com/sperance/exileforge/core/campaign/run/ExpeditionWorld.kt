@@ -1,5 +1,8 @@
-package com.sperance.exileforge.core.campaign
+package com.sperance.exileforge.core.campaign.run
 
+import com.sperance.exileforge.core.campaign.Cell
+import com.sperance.exileforge.core.campaign.ExpeditionMap
+import com.sperance.exileforge.core.campaign.MapGenerator
 import com.sperance.exileforge.rules.content.BehaviourRule
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.Crystal
@@ -8,107 +11,6 @@ import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.hypot
 import kotlin.random.Random
-
-/** What a monster is doing on the map, between fights. */
-enum class AgentMode { IDLE, ASLEEP, LURKING, CHASING, HUNTING, RETURNING }
-
-/**
- * A monster walking the map: where it lives, where it is going, and whether it is still there.
- *
- * [pack] is one or more (2.54.0): a jetton is usually a single foe, sometimes a pack of up to
- * three, fought all at once since 2.70.0. [monster] — the map token, its walking behaviour and its
- * portrait on the ground — is always the strongest of the pack; [fallen] are those already killed.
- */
-class MonsterAgent(
-    val id: Int,
-    val pack: List<RolledMonster>,
-    val homeX: Double,
-    val homeY: Double,
-    /** The guardian of a crystal of essences: which one of the map's, by its place; null for everyone else. */
-    val crystal: Int? = null,
-) {
-    val monster: RolledMonster = pack.maxBy { it.rarity.ordinal }
-    val rule: BehaviourRule get() = monster.behaviour
-
-    /** Members of [pack] already killed (2.70.0): a pack the hero walked away from keeps its dead dead. */
-    val fallen = mutableSetOf<Int>()
-
-    /** Members still standing, by their place in [pack]. */
-    val standing: List<Int> get() = pack.indices.filterNot { it in fallen }
-    var x = homeX
-    var y = homeY
-    var targetX = homeX
-    var targetY = homeY
-    var idle = 0.0
-
-    /** Seconds it will neither chase nor fight: a monster the hero ran from does not pounce at once. */
-    var calm = 0.0
-    var alive = true
-    var mode = when (monster.behaviour.type) {
-        Behaviours.AMBUSH -> AgentMode.LURKING
-        Behaviours.SLEEP -> AgentMode.ASLEEP
-        else -> AgentMode.IDLE
-    }
-
-    /** Seconds since it last saw the hero it is hunting. */
-    var unseen = 0.0
-
-    /** Where it last saw the hero: a hunt goes there before it gives up. */
-    var lastX = homeX
-    var lastY = homeY
-
-    /** The far end of a patrol, or null for a monster that does not patrol. */
-    var patrol: Cell? = null
-    var outbound = true
-    internal var path: List<Cell> = emptyList()
-    internal var pathTo: Cell? = null
-    internal var repath = 0.0
-}
-
-/** A chest on the map (since 2.33.0): where it stands and whether the hero has opened it. */
-class Chest(val id: Int, val cell: Cell) {
-    var opened = false
-}
-
-/** A fountain on the map (since 2.48.0): where it stands, how much life it gives back, and whether it was drunk dry. */
-class Fountain(val id: Int, val cell: Cell, val heal: Double) {
-    var used = false
-}
-
-/**
- * A crystal of essences on the map (2.78.0, server 0.69.0): where it stands, what it holds as the server
- * last said, and whether its guardian was slain. [id] is its place among the zone's crystals at the entry.
- */
-class CrystalSpot(val id: Int, val cell: Cell, var crystal: Crystal) {
-    var freed = false
-}
-
-/**
- * A crack of the Abyss on the map (2.82.0, server 0.72.0): where it gapes, how many depths it leads down with
- * the map entered, and whether it was opened. [id] is its place among the zone's cracks at the entry.
- */
-class AbyssSpot(val id: Int, val cell: Cell, val depth: Int) {
-    var opened = false
-}
-
-/** What a step of the world ran into. */
-sealed interface WorldEvent {
-    data class Encounter(val agent: MonsterAgent) : WorldEvent
-    data class Opened(val chest: Chest) : WorldEvent
-
-    /** The hero stepped up to a fountain still full (3.70.0): it is offered, not drunk underfoot. */
-    data class AtFountain(val fountain: Fountain) : WorldEvent
-
-    /** The hero stepped up to a crystal of essences (2.78.0). */
-    data class Crystal(val spot: CrystalSpot) : WorldEvent
-
-    /** The hero stepped up to a crack of the Abyss (2.82.0). */
-    data class Abyss(val spot: AbyssSpot) : WorldEvent
-
-    /** The hero reached the Vaal portal (since 2.65.0). */
-    data object Portal : WorldEvent
-    data object Exit : WorldEvent
-}
 
 /**
  * The map in motion — positions in tile units, stepped by the scene every frame.
@@ -129,22 +31,22 @@ class ExpeditionWorld(
     /** One entry per spawn, usually of one monster — a pack (since 2.54.0) is more than one. */
     packs: List<List<RolledMonster>>,
     heroSpeed: Double,
-    private val seed: Long,
+    internal val seed: Long,
     lightRadius: Double = DEFAULT_LIGHT,
     bossMonster: RolledMonster? = null,
     hasPortal: Boolean = false,
 ) {
     /** The hero's pace and sight; both follow the gear when it is changed on the map (since 2.40.0). */
-    private var heroSpeed = heroSpeed
+    internal var heroSpeed = heroSpeed
     var lightRadius = lightRadius
-        private set
+        internal set
 
     fun regear(speed: Double, light: Double) {
         heroSpeed = speed
         lightRadius = light
     }
 
-    private val random = Random(seed)
+    internal val random = Random(seed)
 
     /** The map's boss (since 2.34.0): the guardian of the exit, standing beside it; none from an older server. */
     val boss: MonsterAgent? = bossMonster?.let { monster -> guardPost()?.let { cell -> MonsterAgent(packs.size, listOf(monster), cell.x + 0.5, cell.y + 0.5) } }
@@ -154,7 +56,7 @@ class ExpeditionWorld(
      * exit. Touching it opens the gate; it is gone once the zone was entered or refused.
      */
     var portal: Cell? = if (hasPortal) portalPost() else null
-        private set
+        internal set
 
     /** The portal is spent: entered, refused, or its zone closed. */
     fun closePortal() {
@@ -162,7 +64,7 @@ class ExpeditionWorld(
     }
 
     /** Stepping off the portal a refused gate left the hero on: it does not open again underfoot. */
-    private var portalArmed = true
+    internal var portalArmed = true
     val agents: List<MonsterAgent> = packs.take(map.spawns.size).zip(map.spawns).mapIndexed { index, (pack, cell) ->
         MonsterAgent(index, pack, cell.x + 0.5, cell.y + 0.5).also { agent ->
             if (agent.monster.behaviour.type == Behaviours.PATROL) agent.patrol = patrolEnd(cell, agent.monster.behaviour.wanderRadius)
@@ -191,17 +93,17 @@ class ExpeditionWorld(
      * The cells of these with floor on all four sides (3.79.0): a fountain, a chest, a crystal or a portal set against a wall
      * hid behind it in the scene's perspective. Should none be roomy, all of them.
      */
-    private fun Set<Cell>.roomy(): Set<Cell> = filter { (x, y) -> map.walkable(x - 1, y) && map.walkable(x + 1, y) && map.walkable(x, y - 1) && map.walkable(x, y + 1) }
+    internal fun Set<Cell>.roomy(): Set<Cell> = filter { (x, y) -> map.walkable(x - 1, y) && map.walkable(x + 1, y) && map.walkable(x, y - 1) && map.walkable(x, y + 1) }
         .toSet().ifEmpty { this }
 
     /** Where the guardian stands: the floor nearest the exit, a step or two from it. */
-    private fun guardPost(): Cell? {
+    internal fun guardPost(): Cell? {
         val near = distances(map.exit, 3)
         return near.entries.filter { it.value in 1..2 && it.key !in map.spawns }.maxByOrNull { it.value }?.key
     }
 
     /** Where the Vaal portal stands: far from the start, off the exit and the spawns, by the seed. */
-    private fun portalPost(): Cell? {
+    internal fun portalPost(): Cell? {
         val placing = Random(seed * 15485863 + 53)
         val taken = map.spawns.toSet() + map.exit + map.start
         return distances(map.start, Int.MAX_VALUE).filter { (cell, steps) -> steps >= CHEST_STEPS && cell !in taken }.keys.roomy().shuffled(placing).firstOrNull()
@@ -219,7 +121,7 @@ class ExpeditionWorld(
 
     /** The cells the hero sees right now. */
     val lit = BooleanArray(map.width * map.height)
-    private var litFrom: Cell? = null
+    internal var litFrom: Cell? = null
 
     /** The chests the server says stand on this map, placed by [placeChests]. */
     val chests = mutableListOf<Chest>()
@@ -228,19 +130,19 @@ class ExpeditionWorld(
     val fountains = mutableListOf<Fountain>()
 
     /** The fountain the hero stands at, until they step off it: one turned down is not offered again underfoot. */
-    private var atFountain: Fountain? = null
+    internal var atFountain: Fountain? = null
 
     /** The crystals of essences (2.78.0), placed by [placeCrystals]. */
     val crystals = mutableListOf<CrystalSpot>()
 
     /** The crystal the hero stands at, until they step off it: it does not open again underfoot. */
-    private var atCrystal: CrystalSpot? = null
+    internal var atCrystal: CrystalSpot? = null
 
     /** The cracks of the Abyss (2.82.0), placed by [placeCracks]. */
     val cracks = mutableListOf<AbyssSpot>()
 
     /** The crack the hero stands at, until they step off it. */
-    private var atCrack: AbyssSpot? = null
+    internal var atCrack: AbyssSpot? = null
 
     init {
         light()
@@ -384,262 +286,6 @@ class ExpeditionWorld(
     val alive: Int get() = agents.count { it.alive && it !== boss }
     val total: Int get() = agents.count { it !== boss }
 
-    // ==================== Monsters ====================
-
-    private fun think(agent: MonsterAgent, toHero: Double, dt: Double) {
-        val rule = agent.rule
-        val sees = agent.calm <= 0 && toHero <= rule.sight && sight(agent.x, agent.y, heroX, heroY)
-        when (agent.mode) {
-            // A sleeper and an ambusher only stir when the hero is right there.
-            AgentMode.ASLEEP, AgentMode.LURKING -> if (sees && toHero <= rule.wake) agent.mode = AgentMode.CHASING
-
-            else -> if (sees) agent.mode = AgentMode.CHASING
-        }
-        when (agent.mode) {
-            AgentMode.ASLEEP, AgentMode.LURKING -> Unit
-
-            AgentMode.CHASING -> {
-                agent.lastX = heroX
-                agent.lastY = heroY
-                agent.unseen = 0.0
-                if (!sees) agent.mode = AgentMode.HUNTING
-                go(agent, heroX, heroY, rule.chaseSpeed, dt)
-            }
-
-            AgentMode.HUNTING -> {
-                agent.unseen += dt
-                if (agent.unseen >= rule.giveUp) {
-                    agent.mode = AgentMode.RETURNING
-                } else {
-                    go(agent, agent.lastX, agent.lastY, rule.chaseSpeed, dt)
-                }
-            }
-
-            AgentMode.RETURNING -> if (!go(agent, agent.homeX, agent.homeY, rule.wanderSpeed.coerceAtLeast(MIN_WALK), dt)) {
-                agent.mode = if (rule.type == Behaviours.AMBUSH) AgentMode.LURKING else AgentMode.IDLE
-            }
-
-            AgentMode.IDLE -> roam(agent, rule, dt)
-        }
-    }
-
-    /** Wandering round home, or walking a patrol: the monster's own business while nobody is near. */
-    private fun roam(agent: MonsterAgent, rule: BehaviourRule, dt: Double) {
-        if (rule.wanderSpeed <= 0 || rule.type == Behaviours.AMBUSH) return
-        if (agent.idle > 0) {
-            agent.idle -= dt
-            return
-        }
-        val patrol = agent.patrol
-        if (patrol != null) {
-            val (tx, ty) = if (agent.outbound) patrol.x + 0.5 to patrol.y + 0.5 else agent.homeX to agent.homeY
-            if (!go(agent, tx, ty, rule.wanderSpeed, dt)) {
-                agent.outbound = !agent.outbound
-                agent.idle = 0.8 + random.nextDouble()
-            }
-            return
-        }
-        if (!walk(agent, rule.wanderSpeed, dt)) {
-            agent.idle = 1 + random.nextDouble() * 2.5
-            pickWanderTarget(agent, rule.wanderRadius)
-        }
-    }
-
-    /**
-     * Heads for ([tx], [ty]): straight when nothing is in the way, along a path round the rock
-     * otherwise. False once it has arrived or has no way there.
-     */
-    private fun go(agent: MonsterAgent, tx: Double, ty: Double, speed: Double, dt: Double): Boolean {
-        if (hypot(tx - agent.x, ty - agent.y) < 0.1) return false
-        if (sight(agent.x, agent.y, tx, ty)) {
-            agent.targetX = tx
-            agent.targetY = ty
-            // A corner can still catch a body wider than the line: then the path takes over.
-            if (walk(agent, speed, dt)) {
-                agent.path = emptyList()
-                return true
-            }
-        }
-        val goal = Cell(floor(tx).toInt(), floor(ty).toInt())
-        agent.repath -= dt
-        if (agent.pathTo != goal || agent.repath <= 0 || agent.path.isEmpty()) {
-            agent.path = path(Cell(floor(agent.x).toInt(), floor(agent.y).toInt()), goal).drop(1)
-            agent.pathTo = goal
-            agent.repath = REPATH
-        }
-        val next = agent.path.firstOrNull() ?: return false
-        agent.targetX = next.x + 0.5
-        agent.targetY = next.y + 0.5
-        if (hypot(agent.targetX - agent.x, agent.targetY - agent.y) < 0.2) agent.path = agent.path.drop(1)
-        walk(agent, speed, dt)
-        return true
-    }
-
-    /** Moves toward the target; false once it has arrived or a wall stopped it. */
-    private fun walk(agent: MonsterAgent, speed: Double, dt: Double): Boolean {
-        val dx = agent.targetX - agent.x
-        val dy = agent.targetY - agent.y
-        val distance = hypot(dx, dy)
-        if (distance < 0.05) return false
-        val stepLength = (speed * dt).coerceAtMost(distance)
-        val (nx, ny) = slide(agent.x, agent.y, dx / distance * stepLength, dy / distance * stepLength, MONSTER_RADIUS)
-        val moved = hypot(nx - agent.x, ny - agent.y) > stepLength * 0.2
-        agent.x = nx
-        agent.y = ny
-        return moved
-    }
-
-    private fun pickWanderTarget(agent: MonsterAgent, radius: Double) {
-        repeat(8) {
-            val tx = agent.homeX + (random.nextDouble() * 2 - 1) * radius
-            val ty = agent.homeY + (random.nextDouble() * 2 - 1) * radius
-            if (map.walkable(floor(tx).toInt(), floor(ty).toInt())) {
-                agent.targetX = tx
-                agent.targetY = ty
-                return
-            }
-        }
-    }
-
-    /** The far end of a patrol: the reachable floor furthest from home within [radius] steps. */
-    private fun patrolEnd(home: Cell, radius: Double): Cell? {
-        val limit = ceil(radius).toInt().coerceAtLeast(1)
-        val distance = distances(home, limit)
-        return distance.entries.filter { it.value == limit }.map { it.key }.let { far -> if (far.isEmpty()) null else far[random.nextInt(far.size)] }
-    }
-
-    // ==================== The grid ====================
-
-    /**
-     * The shortest way from [from] to [to] over floor, eight ways, never cutting a corner of rock;
-     * empty when there is none. Both ends are included.
-     */
-    fun path(from: Cell, to: Cell): List<Cell> {
-        if (!map.walkable(to.x, to.y) || !map.walkable(from.x, from.y)) return emptyList()
-        if (from == to) return listOf(from)
-        val previous = IntArray(map.width * map.height) { -1 }
-        val start = from.y * map.width + from.x
-        val goal = to.y * map.width + to.x
-        previous[start] = start
-        val queue = ArrayDeque<Int>().apply { add(start) }
-        while (queue.isNotEmpty()) {
-            val index = queue.removeFirst()
-            if (index == goal) break
-            val x = index % map.width
-            val y = index / map.width
-            for ((dx, dy) in STEPS) {
-                val nx = x + dx
-                val ny = y + dy
-                if (!map.walkable(nx, ny) || (dx != 0 && dy != 0 && !(map.walkable(x + dx, y) && map.walkable(x, y + dy)))) continue
-                val next = ny * map.width + nx
-                if (previous[next] >= 0) continue
-                previous[next] = index
-                queue.add(next)
-            }
-        }
-        if (previous[goal] < 0) return emptyList()
-        val cells = ArrayList<Cell>()
-        var index = goal
-        while (index != start) {
-            cells += Cell(index % map.width, index / map.width)
-            index = previous[index]
-        }
-        cells += from
-        return cells.reversed()
-    }
-
-    /** Steps from [from] to every floor cell within [limit] steps, four ways. */
-    private fun distances(from: Cell, limit: Int): Map<Cell, Int> {
-        val seen = mutableMapOf(from to 0)
-        val queue = ArrayDeque<Cell>().apply { add(from) }
-        while (queue.isNotEmpty()) {
-            val cell = queue.removeFirst()
-            val d = seen.getValue(cell)
-            if (d == limit) continue
-            for ((dx, dy) in STEPS.take(4)) {
-                val next = Cell(cell.x + dx, cell.y + dy)
-                if (map.walkable(next.x, next.y) && next !in seen) {
-                    seen[next] = d + 1
-                    queue.add(next)
-                }
-            }
-        }
-        return seen
-    }
-
-    /** Whether a straight line from one point to another crosses no rock. */
-    fun sight(ax: Double, ay: Double, bx: Double, by: Double): Boolean {
-        val distance = hypot(bx - ax, by - ay)
-        val steps = ceil(distance / SIGHT_STEP).toInt()
-        for (i in 1 until steps) {
-            val t = i.toDouble() / steps
-            if (!map.walkable(floor(ax + (bx - ax) * t).toInt(), floor(ay + (by - ay) * t).toInt())) return false
-        }
-        return true
-    }
-
-    /** What the hero sees from the cell they stand in, worked out again only when they leave it. */
-    private fun light() {
-        val here = Cell(floor(heroX).toInt(), floor(heroY).toInt())
-        if (here == litFrom) return
-        litFrom = here
-        lit.fill(false)
-        val reach = ceil(lightRadius).toInt()
-        for (y in here.y - reach..here.y + reach) {
-            for (x in here.x - reach..here.x + reach) {
-                if (x !in 0 until map.width || y !in 0 until map.height) continue
-                if (hypot(x - here.x.toDouble(), y - here.y.toDouble()) > lightRadius) continue
-                // A rock face is seen when the line reaches it; what is behind it is not.
-                val cx = x + 0.5
-                val cy = y + 0.5
-                val toward = hypot(cx - heroX, cy - heroY).coerceAtLeast(1e-6)
-                val near = (toward - 0.75).coerceAtLeast(0.0) / toward
-                if (!sight(heroX, heroY, heroX + (cx - heroX) * near, heroY + (cy - heroY) * near)) continue
-                lit[y * map.width + x] = true
-                explored[y * map.width + x] = true
-            }
-        }
-    }
-
-    /** A move that slides along walls: each axis is tried on its own, so a diagonal into a wall still glides. */
-    private fun slide(x: Double, y: Double, dx: Double, dy: Double, radius: Double): Pair<Double, Double> {
-        val nx = if (free(x + dx, y, radius)) x + dx else x
-        val ny = if (free(nx, y + dy, radius)) y + dy else y
-        return nx to ny
-    }
-
-    private fun free(x: Double, y: Double, radius: Double): Boolean = listOf(-radius to -radius, radius to -radius, -radius to radius, radius to radius)
-        .all { (ox, oy) -> map.walkable(floor(x + ox).toInt(), floor(y + oy).toInt()) }
-
-    /**
-     * The packs a fight with [agent] draws in (3.26.0): it and every ordinary pack still standing within
-     * [GATHER_RADIUS] of it — since 3.28.0 in the order they are fought, [agent] first, then the rest nearest first.
-     * The boss, a crystal's guardian and anything not of the map fight alone.
-     */
-    fun gathered(agent: MonsterAgent): List<MonsterAgent> {
-        if (agent === boss || agent.crystal != null || agents.none { it === agent }) return listOf(agent)
-        fun distance(other: MonsterAgent) = hypot(other.x - agent.x, other.y - agent.y)
-        return listOf(agent) + agents.filter {
-            it !== agent && it !== boss && it.alive && it.crystal == null && it.standing.isNotEmpty() && distance(it) <= GATHER_RADIUS
-        }.sortedBy(::distance)
-    }
-
-    /**
-     * The gathered packs as the stages they are fought in (3.70.0): packs in a row share a stage while the stage holds
-     * no more than [STAGE_MONSTERS] monsters — 1+1 and 1+2 fight together, 2+2 stay two stages; a pack too big stands alone.
-     */
-    fun stages(packs: List<MonsterAgent>): List<List<MonsterAgent>> = packs.fold(mutableListOf<MutableList<MonsterAgent>>()) { stages, pack ->
-        val last = stages.lastOrNull()
-        if (last != null && last.sumOf { it.standing.size } + pack.standing.size <= STAGE_MONSTERS) last += pack else stages += mutableListOf(pack)
-        stages
-    }
-
-    /** The hero stepped back from a fight nobody won: the monster lets them go for a while, and goes home. */
-    fun retreatFrom(agent: MonsterAgent) {
-        agent.calm = CALM_AFTER_RETREAT
-        agent.mode = AgentMode.RETURNING
-    }
-
     companion object {
         const val HERO_SPEED = 3.2
         const val HERO_RADIUS = 0.28
@@ -665,10 +311,10 @@ class ExpeditionWorld(
 
         /** What a hero sees by when the server has not said: the level-1 base since server 0.30.0. */
         const val DEFAULT_LIGHT = 5.0
-        private const val MIN_WALK = 0.8
-        private const val REPATH = 0.4
-        private const val SIGHT_STEP = 0.25
-        private val STEPS = listOf(1 to 0, -1 to 0, 0 to 1, 0 to -1, 1 to 1, 1 to -1, -1 to 1, -1 to -1)
+        internal const val MIN_WALK = 0.8
+        internal const val REPATH = 0.4
+        internal const val SIGHT_STEP = 0.25
+        internal val STEPS = listOf(1 to 0, -1 to 0, 0 to 1, 0 to -1, 1 to 1, 1 to -1, -1 to 1, -1 to -1)
 
         /**
          * The stick's direction on screen, turned into world axes.
@@ -704,11 +350,4 @@ class ExpeditionWorld(
         const val MIN_LIGHT = 2.0
         const val MAX_LIGHT = 14.0
     }
-}
-
-/** The kinds of behaviour the campaign names: how a monster walks the map before a fight. */
-object Behaviours {
-    const val PATROL = "PATROL"
-    const val AMBUSH = "AMBUSH"
-    const val SLEEP = "SLEEP"
 }

@@ -31,7 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
-import com.sperance.exileforge.core.campaign.ExpeditionRun
+import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.BugReportRequest
 import com.sperance.exileforge.core.model.feedback.FeedbackKind

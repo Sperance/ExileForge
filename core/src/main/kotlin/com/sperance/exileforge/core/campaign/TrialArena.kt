@@ -11,6 +11,12 @@ import com.sperance.exileforge.core.campaign.combat.HeroStance
 import com.sperance.exileforge.core.campaign.combat.Outcome
 import com.sperance.exileforge.core.campaign.combat.pools
 import com.sperance.exileforge.core.campaign.combat.traitsIn
+import com.sperance.exileforge.core.campaign.run.ExpeditionRun
+import com.sperance.exileforge.core.campaign.run.FightHud
+import com.sperance.exileforge.core.campaign.run.PackHit
+import com.sperance.exileforge.core.campaign.run.RunCommand
+import com.sperance.exileforge.core.campaign.run.RunHud
+import com.sperance.exileforge.core.campaign.run.RunPhase
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.FightTally
 import com.sperance.exileforge.rules.content.Op

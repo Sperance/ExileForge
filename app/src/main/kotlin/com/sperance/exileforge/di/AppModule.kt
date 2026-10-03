@@ -38,6 +38,7 @@ import com.sperance.exileforge.presentation.quests.QuestActions
 import com.sperance.exileforge.presentation.quests.QuestViewModel
 import com.sperance.exileforge.presentation.server.ServerViewModel
 import com.sperance.exileforge.presentation.settings.SettingsViewModel
+import com.sperance.exileforge.presentation.tree.TreeViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -92,6 +93,7 @@ val appModule = module {
     viewModelOf(::MarketViewModel)
     viewModelOf(::GuildViewModel)
     viewModelOf(::CraftsViewModel)
+    viewModelOf(::TreeViewModel)
     viewModel { SettingsViewModel(get()) }
     viewModel { ServerViewModel(get(), get()) }
     // Проверка обновлений ждёт сервер игровой модели: поток и манифест приходят параметрами из активности.

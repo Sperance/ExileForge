@@ -174,7 +174,6 @@ class ForgeViewModel(
         runtime.tab(TAB_CRAFT)
     }
     fun forgeSection(section: ForgeSection) = play { it.copy(forgeSection = section) }
-    fun selectNode(code: String) = play { it.copy(selectedNode = code) }
     fun allocateNode(code: String, choice: Int? = null) = runtime.hero.allocateNode(code, choice)
     fun allocatePath(code: String, choice: Int? = null) = runtime.hero.allocatePath(code, choice)
     fun refundNode(code: String) = runtime.hero.refundNode(code)
@@ -262,7 +261,6 @@ class ForgeViewModel(
     fun ensureClasses() = runtime.characterViewModel.ensureClasses()
     fun logout() = runtime.sessionViewModel.logout()
     fun changePassword(current: String, replacement: String) = runtime.sessionViewModel.changePassword(current, replacement)
-    fun nodeQuery(value: String) = play { it.copy(nodeQuery = value) }
 
     /** A building of the City (3.22.0), or the square for none. */
     fun building(building: Building?) {

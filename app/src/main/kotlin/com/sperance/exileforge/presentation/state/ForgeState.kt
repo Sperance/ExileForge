@@ -229,10 +229,8 @@ data class PlayState(
     /** What the admin's random grant asks for: a rarity and a slot, blank meaning "any". */
     val grantRarity: String = "",
     val grantSlot: String = "",
-    /** The class a new hero is being created with, and the tree node under the cursor. */
+    /** The class a new hero is being created with. */
     val draftClass: String = "",
-    val selectedNode: String = "",
-    val nodeQuery: String = "",
     /** The zone whose card is open on the world map, and the map picked for it. */
     val launch: MapLaunchState? = null,
     /** The crafts as the server last answered, with the device's clock at that moment; the profession whose window is open. */

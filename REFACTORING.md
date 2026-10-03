@@ -38,7 +38,8 @@
   - [x] Merchant и Auction: `MarketActions` + `MarketViewModel`; продажа из сундука героя пока через `ForgeViewModel` → `MarketActions`, `ensureHero`/`autoSell` - до переноса экрана героя.
   - [x] Guild (зал и все разделы): `GuildActions` + `GuildViewModel`; `ensureHero` на входе - до переноса экрана героя.
   - [x] Crafts: `CraftsActions` (будильник цикла, посадка ответа) + `CraftsViewModel` (окно профессии); экран разбит на четыре файла ≤300 строк.
-  - [ ] Progress, Tree, Hero: свои модели над `HeroActions`/`HeroSync`; выбор кузницы и древа (`PlayState.selected*`, `grant*`, `nodeQuery`) - в модели экранов.
+  - [x] Tree: `TreeViewModel` (узел под курсором, поиск) над `HeroActions`; экран разбит на четыре файла ≤~400 строк.
+  - [ ] Progress, Hero: свои модели над `HeroActions`/`HeroSync`; выбор кузницы (`PlayState.selected*`, `grant*`) - в модели экранов.
 - [ ] По ходу: файлы UI не длиннее ~400 строк (SkillTreeScreen, CraftsScreen, MapStyles, GrimoireScreen, ExpeditionScene, WorldArt, AtlasScreen, AuctionTabs).
 - [ ] `ForgeViewModel`, `ForgeRuntime`, `FeatureViewModel` удалены.
 

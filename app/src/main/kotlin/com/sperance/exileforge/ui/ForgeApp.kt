@@ -325,7 +325,7 @@ private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, erro
 
                     TAB_PROGRESS -> ProgressScreen(s.sliced(*s.common), vm)
 
-                    TAB_TREE -> SkillTreeScreen(s.sliced(*s.common), vm)
+                    TAB_TREE -> SkillTreeScreen(s.sliced(*s.common))
 
                     TAB_SKILLS -> GrimoireScreen(s.sliced(*s.common), vm)
 

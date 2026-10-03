@@ -42,7 +42,7 @@ env = dict(os.environ, JAVA_HOME=os.environ['JAVA_HOME_21_X64'], ADMIN_PASSWORD=
            TEST_PLAYER_PASSWORD=player_password)
 java = str(Path(env['JAVA_HOME']) / 'bin/java')
 with (root / 'build/client-server.log').open('w') as log:
-    process = subprocess.Popen([java, '-cp', classpath, 'ApplicationKt'], cwd=backend, env=env, stdout=log, stderr=subprocess.STDOUT)
+    process = subprocess.Popen([java, '-cp', classpath, 'ru.descend.exileforge.ApplicationKt'], cwd=backend, env=env, stdout=log, stderr=subprocess.STDOUT)
     try:
         deadline = time.monotonic() + 180
         while True:

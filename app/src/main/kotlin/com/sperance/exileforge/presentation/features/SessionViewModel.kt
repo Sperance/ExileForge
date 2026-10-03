@@ -298,7 +298,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
                     !now.account.signedIn -> if (now.account.resumable) retryResume()
 
                     now.failure is FailureState.Offline || now.link.offline || stale -> {
-                        if (now.failure is FailureState.Offline) mutable.update { it.copy(failure = null, message = null, error = false) }
+                        commands.clearOffline()
                         // The probe waits no longer: the link is asked again with the screen.
                         if (now.link.offline || now.link.waiting.isNotEmpty()) connectionViewModel.wake(now = true)
                         when (now.phase) {

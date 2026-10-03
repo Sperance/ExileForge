@@ -27,7 +27,9 @@ import kotlinx.coroutines.withTimeoutOrNull
  * server is asked again by itself — after [BACKOFF_S] seconds, the last step repeating — until it answers.
  * Then the waiting commands go out in order, and the screen the player is on is read again.
  */
-class ConnectionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
+class ConnectionViewModel(runtime: ForgeRuntime) :
+    FeatureViewModel(runtime),
+    com.sperance.exileforge.core.session.ConnectionEvents {
     private var watcher: Job? = null
     private var loop: Job? = null
 
@@ -50,7 +52,7 @@ class ConnectionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     }
 
     /** The network failed under a read or a command: the icon goes up with [error]'s cause, and the server is asked again. */
-    fun lost(error: Throwable? = null) {
+    override fun lost(error: Throwable?) {
         update { it.copy(link = it.link.down(error)) }
         wake()
     }
@@ -59,7 +61,7 @@ class ConnectionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     private fun LinkState.down(error: Throwable?): LinkState = copy(offline = true, outage = error?.let(Outage::of) ?: outage ?: Outage.NO_NETWORK, detail = error?.let(::transportDetail) ?: detail)
 
     /** A command joined the queue: it goes out as soon as the server can be reached. */
-    fun queued() {
+    override fun queued() {
         runtime.toast(ui(if (state.value.link.offline) "link.queued" else "link.queued_later"), NoticeKind.DONE)
         wake()
     }

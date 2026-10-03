@@ -163,7 +163,7 @@ class GuildViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
-                mutable.update { it.copy(message = phrase("guild.done_refresh"), error = true) }
+                runtime.commands.refuse(phrase("guild.done_refresh"))
             }
         }
     }

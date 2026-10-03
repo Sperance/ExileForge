@@ -22,6 +22,7 @@ import com.sperance.exileforge.core.network.GameApi
 import com.sperance.exileforge.core.network.ManifestCache
 import com.sperance.exileforge.core.network.RequestJournal
 import com.sperance.exileforge.core.network.refusalLine
+import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.data.settings.DEFAULT_SERVER
 import com.sperance.exileforge.data.settings.ServerStore
 import com.sperance.exileforge.data.settings.deviceLanguage
@@ -94,8 +95,6 @@ class ForgeRuntime(
     /** A sign-in met a server newer than this build (3.74.0): the update check runs at once. */
     val newerServer = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     var localeJob: Job? = null
-    private val reads = mutableMapOf<String, Job>()
-    private var touching: Set<String> = emptySet()
     var iconJob: Job? = null
     val heroViewModel = HeroViewModel(this)
     val sessionViewModel = SessionViewModel(this)
@@ -172,6 +171,9 @@ class ForgeRuntime(
         }
         scope.launch { world.state.collect { value -> mutable.update { it.copy(world = value) } } }
         scope.launch {
+            commands.state.collect { a -> mutable.update { it.copy(busy = a.busy, loading = a.loading, failure = a.failure, message = a.message, error = a.error) } }
+        }
+        scope.launch {
             try {
                 val language = Lang.byCode(store.language.first()) ?: deviceLanguage()
                 uiLanguage = language
@@ -185,7 +187,8 @@ class ForgeRuntime(
                 val logFilter = com.sperance.exileforge.core.campaign.LogKind.parse(store.logFilter.first())
                 sessions.update { it.copy(server = server) }
                 world.update { it.copy(languages = known.ifEmpty { it.languages }) }
-                mutable.update { it.copy(lang = language, busy = false, stashSort = sort, stashHideWorn = hideWorn, settings = settings, logFilter = logFilter, account = it.account.copy(serverDraft = server)) }
+                commands.ready()
+                mutable.update { it.copy(lang = language, stashSort = sort, stashHideWorn = hideWorn, settings = settings, logFilter = logFilter, account = it.account.copy(serverDraft = server)) }
                 refreshLocale()
                 refreshIcons()
                 val saved = store.token(server)
@@ -200,7 +203,8 @@ class ForgeRuntime(
             } catch (e: Exception) {
                 api = newApi(DEFAULT_SERVER)
                 apiReady.complete(Unit)
-                mutable.update { it.copy(busy = false, error = true, message = Phrase { refusalLine(e) }) }
+                commands.ready()
+                commands.refuse(Phrase { refusalLine(e) })
             }
         }
     }
@@ -329,7 +333,8 @@ class ForgeRuntime(
     /** Opens a tab, refusing the ones a player has no business on. A refusal belongs to the screen it happened on. */
     fun tab(tab: Int) {
         if (!state.value.adminTools && tab in ADMIN_TABS) return
-        mutable.update { it.copy(tab = tab, message = null, error = false) }
+        commands.dismissMessage()
+        mutable.update { it.copy(tab = tab) }
     }
 
     /** How many presses of the fight's speed button reach the settings' speed (3.77.0): 1 → 2 → 4. */
@@ -349,9 +354,7 @@ class ForgeRuntime(
         if (if (kind == Buzz.DANGER) set.buzzDanger else set.buzzButtons) buzzes.tryEmit(kind)
     }
 
-    fun dismissMessage() {
-        mutable.update { it.copy(message = null, error = false) }
-    }
+    fun dismissMessage() = commands.dismissMessage()
 
     /** A success worth a toast: it replaces the one showing and leaves by itself. */
     fun toast(text: String, kind: NoticeKind = NoticeKind.DONE) {
@@ -361,10 +364,6 @@ class ForgeRuntime(
         mutable.update { it.copy(notice = null) }
     }
 
-    /**
-     * A command: one at a time, and the only thing that disables controls. [writing] marks a mutation, so
-     * an IO error becomes [FailureState.UncertainWrite]; [touches] names the reads the command redoes itself.
-     */
     /** Files a bug report and says so (3.48.0). */
 
     /** The report, and [onSent] once the server has taken it (3.75.0: the draft goes only then). */
@@ -374,96 +373,16 @@ class ForgeRuntime(
         toast(ui("bug.sent"))
     }
 
-    fun task(writing: Boolean = false, touches: Set<String> = emptySet(), block: suspend () -> Unit) {
-        if (state.value.busy) return
-        touches.forEach { reads.remove(it)?.cancel() }
-        touching = touches
-        mutable.update { it.copy(busy = true, loading = reads.keys.toSet(), message = null, error = false, failure = null) }
-        scope.launch {
-            try {
-                block()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                report(e, writing)
-            } finally {
-                touching = emptySet()
-                mutable.update { it.copy(busy = false) }
-            }
-        }
-    }
+    /** Шина команд и чтений (3.80.8) - в :core; здесь лишь точки входа для старых моделей. */
+    val commands = CommandRunner(scope) { connectionViewModel }
 
-    /**
-     * A read: it never waits for a command and never holds one up. One per [key] at a time; [restart] drops
-     * the one on its way; [silent] shows no strip and no spinner.
-     */
-    fun read(key: String, restart: Boolean = false, silent: Boolean = false, block: suspend () -> Unit) {
-        if (key in touching) return
-        if (restart) reads.remove(key)?.cancel()
-        if (reads[key]?.isActive == true) return
-        if (silent) quiet += key else quiet -= key
-        val job = scope.launch(start = CoroutineStart.LAZY) {
-            try {
-                block()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                report(e, writing = false)
-            } finally {
-                if (reads[key] === coroutineContext[Job]) {
-                    reads.remove(key)
-                    quiet -= key
-                }
-                mutable.update { it.copy(loading = loading()) }
-            }
-        }
-        reads[key] = job
-        mutable.update { it.copy(loading = loading()) }
-        job.start()
-    }
+    fun task(writing: Boolean = false, touches: Set<String> = emptySet(), block: suspend () -> Unit) = commands.task(writing, touches, block)
 
-    private fun loading(): Set<String> = reads.keys.filterNotTo(HashSet()) { it in quiet }
+    fun read(key: String, restart: Boolean = false, silent: Boolean = false, block: suspend () -> Unit) = commands.read(key, restart, silent, block)
 
-    private val quiet = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+    fun cancelReads() = commands.cancelReads()
 
-    fun cancelReads() {
-        reads.values.forEach { it.cancel() }
-        reads.clear()
-        mutable.update { it.copy(loading = emptySet()) }
-    }
-
-    /**
-     * A failure, as the player should see it. A command that went into the queue is no failure at all; a lost
-     * connection is the top bar's icon and the probe loop (3.30.0), not the red strip — which stays for what
-     * the server refused, and for a write whose fate is unknown.
-     */
-    internal fun report(e: Exception, writing: Boolean) {
-        if (e is CommandQueued) {
-            // Queued because the network failed under it: the link is down, and the icon says so.
-            if (e.cause != null && e.cause !is ApiFailure) connectionViewModel.lost()
-            connectionViewModel.queued()
-            return
-        }
-        val problem = FailureState.from(e, writing)
-        if (problem is FailureState.Offline) {
-            mutable.update { it.copy(failure = problem) }
-            connectionViewModel.lost(e)
-            // A write that met a dead server did not happen: it is said, by its cause, rather than lost without a word.
-            if (writing) mutable.update { it.copy(error = true, message = Phrase { problem.cause.title + ". " + problem.cause.hint }) }
-            return
-        }
-        if (problem == FailureState.UncertainWrite && e !is ApiFailure) connectionViewModel.lost(e)
-        mutable.update {
-            it.copy(
-                failure = problem,
-                error = true,
-                message = when (problem) {
-                    FailureState.UncertainWrite -> phrase("runtime.uncertain_write")
-                    else -> Phrase { refusalLine(e) }
-                },
-            )
-        }
-    }
+    internal fun report(e: Exception, writing: Boolean) = commands.report(e, writing)
 
     private val contentLock = Mutex()
     private var contentStale = false
@@ -545,9 +464,10 @@ class ForgeRuntime(
         craftsViewModel.drop()
         heroViewModel.forget()
         sessions.clear()
+        commands.clearFailure()
         mutable.update {
             it.copy(
-                phase = AppPhase.AUTH, tab = TAB_HERO, mode = AppMode.PLAYER, failure = null,
+                phase = AppPhase.AUTH, tab = TAB_HERO, mode = AppMode.PLAYER,
                 admin = it.admin.copy(redemptions = emptyList()),
                 play = PlayState(draftClass = it.play.draftClass, selectedOrb = it.play.selectedOrb),
                 market = MarketState(), building = null, guild = GuildState(), quests = QuestState(),

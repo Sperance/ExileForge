@@ -16,7 +16,8 @@
 - [ ] Истина в `:core`: `StateFlow`/`Flow`, без Android. ForgeState лишь отражает потоки для ещё не переведённых экранов.
   - [x] `SessionRepository` (сервер, аккаунт, герои аккаунта, здоровье сервера) и `WorldRepository` (контент, словарь, иконки, портреты).
   - [ ] `HeroRepository` (герой, снимки, синк), `MarketRepository`, `GuildRepository`, `QuestRepository`, `FeedbackRepository`.
-  - [ ] Команды и чтения (`task`/`read`, busy/loading/failure, смена `GameApi`) - в `:core` (`CommandRunner`), чтобы модели экранов не зависели от `ForgeRuntime`.
+  - [x] Команды и чтения (`task`/`read`, busy/loading/failure, строка отказа) - `CommandRunner` в `:core`; `Phrase` тоже в `:core`.
+  - [ ] Текущий `GameApi` - `ServerConnection` в `:core`, чтобы модели экранов не зависели от `ForgeRuntime`.
 - [ ] `ForgeState` распадается на срезы этих репозиториев; `sliced()` удалён.
 
 ## Этап 3 - навигация

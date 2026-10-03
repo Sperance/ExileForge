@@ -46,13 +46,10 @@ enum class AppMode { PLAYER, ADMIN }
 /** What a toast says had happened: its kind picks the colour, [at] tells two equal texts apart. */
 enum class NoticeKind { DONE, LOOT, CRAFT, ATLAS }
 
-/** A line read in the player's language when it is shown, not when it was made (3.79.0): a language switch re-reads it. */
-fun interface Phrase {
-    fun read(): String
-}
+/** Строка на языке игрока в момент показа - из :core (3.80.8). */
+typealias Phrase = com.sperance.exileforge.core.i18n.Phrase
 
-/** A [Phrase] of the dictionary: [key] with [args], looked up anew each time it is read. */
-fun phrase(key: String, vararg args: Any?): Phrase = Phrase { com.sperance.exileforge.core.i18n.ui(key, *args) }
+fun phrase(key: String, vararg args: Any?): Phrase = com.sperance.exileforge.core.i18n.phrase(key, *args)
 
 data class Notice(val text: String, val kind: NoticeKind = NoticeKind.DONE, val at: Long = System.nanoTime())
 

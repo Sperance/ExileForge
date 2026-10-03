@@ -25,6 +25,7 @@ import com.sperance.exileforge.presentation.state.unlocked
 import com.sperance.exileforge.rules.content.GuildMode
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
+import kotlinx.coroutines.flow.update
 
 /** Lifecycle owner and compatibility facade; screen actions live in feature models. */
 class ForgeViewModel(
@@ -256,7 +257,10 @@ class ForgeViewModel(
 
     /** A building of the City (3.22.0), or the square for none. */
     fun building(building: Building?) {
-        if (gate(Feature.ofBuilding(building))) runtime.mutable.value.let { runtime.mutable.value = it.copy(building = building, message = null, error = false) }
+        if (gate(Feature.ofBuilding(building))) {
+            runtime.commands.dismissMessage()
+            runtime.mutable.update { it.copy(building = building) }
+        }
     }
     fun loadGuild() = runtime.guildViewModel.load()
     fun guildTab(tab: GuildTab?) = runtime.guildViewModel.tab(tab)

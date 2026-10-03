@@ -13,6 +13,7 @@ abstract class FeatureViewModel(protected val runtime: ForgeRuntime) {
     protected val state: StateFlow<ForgeState> get() = runtime.state
     protected val sessions get() = runtime.sessions
     protected val world get() = runtime.world
+    protected val commands get() = runtime.commands
 
     /** The hero on screen, as every hero route names it. */
     protected val heroId: String get() = state.value.play.heroId.trim()

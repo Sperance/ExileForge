@@ -49,8 +49,10 @@ import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.sync.API_REVISION
 import com.sperance.exileforge.core.network.RequestLog
-import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.ShellViewModel
+import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.server.ServerViewModel
+import com.sperance.exileforge.presentation.session.SessionViewModel
 import com.sperance.exileforge.presentation.state.AppMode
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.rules.content.ContentFiles
@@ -66,12 +68,13 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
  * «Врата мира» (variant A, «Списки и плитки»): who is playing, then the hero's and the account's rows. Since 3.77.0 it
  * opens from the game's sigil in the banner, and the language, the guides and the developers' tools live in «Настройки».
  */
-@Composable internal fun ServerScreen(s: ForgeState, vm: ForgeViewModel) {
+@Composable internal fun ServerScreen(s: ForgeState) {
+    val heroModel: HeroViewModel = koinViewModel()
     var page by rememberSaveable { mutableStateOf<AccountPage?>(null) }
     var promoOpen by remember { mutableStateOf(false) }
     val open = page
     if (open == null) {
-        AccountHome(s, vm, onPage = { page = it }, onPromo = { promoOpen = true })
+        AccountHome(s, onPage = { page = it }, onPromo = { promoOpen = true })
     } else {
         Column(Modifier.fillMaxSize()) {
             BackRow(ui("account.title")) { page = null }
@@ -81,7 +84,7 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
             ) {
                 Text(ui(open.title), color = GoldBright, style = MaterialTheme.typography.titleLarge)
                 when (open) {
-                    AccountPage.SIGN_IN -> SignInPage(s, vm)
+                    AccountPage.SIGN_IN -> SignInPage(s)
                 }
             }
         }
@@ -89,19 +92,21 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
     if (promoOpen) {
         PromoCodeDialog(s, onDismiss = { promoOpen = false }) { code ->
             promoOpen = false
-            vm.redeem(code)
+            heroModel.redeem(code)
         }
     }
 }
 
-@Composable private fun AccountHome(s: ForgeState, vm: ForgeViewModel, onPage: (AccountPage) -> Unit, onPromo: () -> Unit) {
+@Composable private fun AccountHome(s: ForgeState, onPage: (AccountPage) -> Unit, onPromo: () -> Unit) {
+    val sessionModel: SessionViewModel = koinViewModel()
+    val shell: ShellViewModel = koinViewModel()
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         ScreenHeader(ui("account.title"), ui("account.subtitle"), ForgeGlyphs.Portal)
         ProfileCard(s)
         RowGroup(ui("account.group_game")) {
             // A hero is swapped by leaving the game, never from inside a tab: every button elsewhere is
             // bound to the one chosen in the menu, and this is the way back to it.
-            AccountRow(Icons.Outlined.SwapHoriz, ui("account.change_character"), enabled = !s.busy, onClick = vm::leaveGame)
+            AccountRow(Icons.Outlined.SwapHoriz, ui("account.change_character"), enabled = !s.busy, onClick = sessionModel::leaveGame)
             // A reward is paid to a hero, not to an account, so the dialog names the hero being played.
             AccountRow(Icons.Outlined.CardGiftcard, ui("account.enter_promo"), enabled = !s.busy && s.play.heroId.isNotBlank(), onClick = onPromo)
             AccountRow(
@@ -109,7 +114,7 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
                 ui("account.signin_section"),
                 value = if (s.account.signedIn) s.accountTitle else ui("account.signed_out"),
             ) { onPage(AccountPage.SIGN_IN) }
-            AccountRow(ForgeGlyphs.Sigil, ui("settings.title")) { vm.openSettings() }
+            AccountRow(ForgeGlyphs.Sigil, ui("settings.title")) { shell.openSettings() }
         }
     }
 }
@@ -194,13 +199,14 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
 }
 
 /** The account: signing in, the password, signing out — and how the server keeps a session. */
-@Composable private fun SignInPage(s: ForgeState, vm: ForgeViewModel) {
-    ForgePanel { LoginForm(s, vm) }
+@Composable private fun SignInPage(s: ForgeState) {
+    ForgePanel { LoginForm(s) }
     InfoCard(ui("account.signin_section"), ui("account.signin_note"))
 }
 
 /** The server: where it is, the way to connect and to ask after its health, and the answer. */
-@Composable internal fun ServerPage(s: ForgeState, vm: ForgeViewModel) {
+@Composable internal fun ServerPage(s: ForgeState) {
+    val sessionModel: SessionViewModel = koinViewModel()
     val model = koinViewModel<ServerViewModel>()
     val session by model.session.collectAsStateWithLifecycle()
     ForgePanel {
@@ -208,25 +214,26 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
         if (session.isAdmin) {
             OutlinedTextField(
                 s.account.serverDraft,
-                { vm.serverDraft(it.take(s.inputs.server)) },
+                { sessionModel.serverDraft(it.take(s.inputs.server)) },
                 enabled = !s.busy,
                 label = { Text(ui("account.server_address")) },
                 supportingText = { Text(ui("account.address_hint")) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
             )
-            ForgeButton(enabled = !s.busy, onClick = vm::connect, modifier = Modifier.fillMaxWidth()) { Text(ui("account.save_connect")) }
+            ForgeButton(enabled = !s.busy, onClick = sessionModel::connect, modifier = Modifier.fillMaxWidth()) { Text(ui("account.save_connect")) }
         } else {
             PropertyRow(ui("account.server_address"), session.server, Glyph.TEXT)
         }
-        ForgeOutlinedButton(enabled = !s.busy, onClick = vm::health, modifier = Modifier.fillMaxWidth()) { Text(ui("account.check_health")) }
+        ForgeOutlinedButton(enabled = !s.busy, onClick = sessionModel::health, modifier = Modifier.fillMaxWidth()) { Text(ui("account.check_health")) }
     }
     InfoCard(ui("account.server_state"), session.health)
     if (session.isAdmin) InfoCard(ui("account.local_dev"), ui("account.local_dev_note"))
 }
 
 /** What the client holds of the server: the dictionary, the drawings, the world's tables and the contract it speaks. */
-@Composable internal fun ClientPage(s: ForgeState, vm: ForgeViewModel) {
+@Composable internal fun ClientPage(s: ForgeState) {
+    val sessionModel: SessionViewModel = koinViewModel()
     val model = koinViewModel<ServerViewModel>()
     val world by model.world.collectAsStateWithLifecycle()
     ForgePanel {
@@ -265,8 +272,8 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
             MutedText(ui("account.content_missing"))
         }
         ForgeOutlinedButton(enabled = !s.busy, onClick = {
-            vm.refreshLocale()
-            vm.refreshIcons()
+            sessionModel.refreshLocale()
+            sessionModel.refreshIcons()
         }, modifier = Modifier.fillMaxWidth()) { Text(ui("account.reread_bundles")) }
     }
     // The build and its updates (3.72.0): the version, and a check by hand.
@@ -320,10 +327,11 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
  * A broken connection is exactly when nothing else on screen can be reached, so every failed
  * attempt is readable here, before any sign-in: method, path, status and both bodies.
  */
-@Composable internal fun RequestJournalPanel(vm: ForgeViewModel, logs: List<RequestLog>) {
+@Composable internal fun RequestJournalPanel(logs: List<RequestLog>) {
+    val shell: ShellViewModel = koinViewModel()
     ForgePanel {
         MutedText(ui("account.journal_note", logs.size))
-        ForgeTextButton(enabled = logs.isNotEmpty(), onClick = vm::clearLogs) { Text(ui("common.clear")) }
+        ForgeTextButton(enabled = logs.isNotEmpty(), onClick = shell::clearLogs) { Text(ui("common.clear")) }
         if (logs.isEmpty()) Text(ui("account.journal_empty"), color = Muted)
         logs.take(12).forEach { LogCard(it) }
     }

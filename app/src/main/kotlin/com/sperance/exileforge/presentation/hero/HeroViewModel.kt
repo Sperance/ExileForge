@@ -10,6 +10,7 @@ import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.presentation.market.MarketActions
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
+import com.sperance.exileforge.rules.content.SlotGroup
 import kotlinx.coroutines.flow.StateFlow
 
 /** Экран героя (3.80.17): сундук, снаряжение, сумка, зверинец и хроника; команды - общие действия героя и рынка. */
@@ -54,4 +55,13 @@ class HeroViewModel(
     suspend fun priceHint(itemCode: String, rarity: Rarity?, itemLevel: Int): PriceHint? = market.priceHint(itemCode, rarity, itemLevel)
     fun sellEquipment(itemId: String, priceOrb: String, price: Long) = market.sellEquipment(itemId, priceOrb, price)
     fun sellItem(code: String, amount: Long, priceOrb: String, price: Long) = market.sellItem(code, amount, priceOrb, price)
+
+    /** Выдачи администратора и тестера (3.80.30) и код награды, как их просят страницы настроек. */
+    fun grant(template: String, rarity: Rarity? = null) = hero.grant(template, rarity)
+    fun grantItem(code: String, amount: Long) = hero.grantItem(code, amount)
+    fun testerGrant(what: String, vararg params: Pair<String, String?>) = hero.testerGrant(what, *params)
+    fun redeem(code: String) = hero.redeem(code)
+
+    fun claimPath() = hero.claimPath()
+    fun autoSell(rarity: Rarity, groups: Set<SlotGroup>) = hero.autoSell(rarity, groups)
 }

@@ -24,7 +24,9 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.ShellViewModel
+import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
+import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.state.Feature
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.TAB_CHRONICLE
@@ -84,8 +86,11 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
  * the atlas, the trials and the chronicle (3.69.0), which lay about the Hero tab and the world map before. Each tile says in a line what it
  * holds and, in its colour, what waits; a badge counts what asks to be done.
  */
-@Composable fun ProgressScreen(s: ForgeState, vm: ForgeViewModel) {
-    LaunchedEffect(s.play.heroId, s.account.sessionEpoch) { vm.ensureHero() }
+@Composable fun ProgressScreen(s: ForgeState) {
+    val expedition: ExpeditionViewModel = koinViewModel()
+    val shell: ShellViewModel = koinViewModel()
+    val heroModel: HeroViewModel = koinViewModel()
+    LaunchedEffect(s.play.heroId, s.account.sessionEpoch) { heroModel.ensure() }
     val hero = s.hero
     val index = s.index
     val tiles = run {
@@ -110,7 +115,7 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
                 ui("progress.forge_orbs", orbs).takeIf { orbs > 0 },
                 0,
                 s.lockOf(Feature.FORGE),
-            ) { vm.tab(TAB_CRAFT) },
+            ) { shell.tab(TAB_CRAFT) },
             ProgressTile(
                 ui("progress.pets"),
                 ForgeGlyphs.Exile,
@@ -124,7 +129,7 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
                 },
                 if (ready > 0) ready else eggs.toInt(),
                 s.lockOf(Feature.PETS),
-            ) { vm.tab(TAB_PETS) },
+            ) { shell.tab(TAB_PETS) },
             ProgressTile(
                 ui("atlas.title"),
                 ForgeGlyphs.Atlas,
@@ -132,7 +137,7 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
                 ui("progress.atlas_note", ((atlas?.allocated?.size ?: 1) - 1).coerceAtLeast(0)),
                 atlas?.let { ui("atlas.points", it.available, it.points) },
                 atlas?.available ?: 0,
-                onOpen = vm::openAtlas,
+                onOpen = expedition::openAtlas,
             ),
             ProgressTile(
                 ui("trials.title"),
@@ -146,7 +151,7 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
                 },
                 keys.toInt(),
                 s.lockOf(Feature.TRIALS),
-            ) { vm.tab(TAB_TRIALS) },
+            ) { shell.tab(TAB_TRIALS) },
             ProgressTile(
                 ui("chronicle.title"),
                 ForgeGlyphs.Scroll,
@@ -155,7 +160,7 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
                 title?.let(::titleName),
                 0,
                 s.lockOf(Feature.CHRONICLE),
-            ) { vm.tab(TAB_CHRONICLE) },
+            ) { shell.tab(TAB_CHRONICLE) },
         )
     }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -208,11 +213,13 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
  * A screen of the hub with its way back: the forge, the menagerie, the trials or the chronicle. The forge is reached from an item's
  * sheet as well, and «back» from it comes here too — the hub is where it lives now.
  */
-@Composable fun ProgressPlaceScreen(place: ProgressPlace, s: ForgeState, vm: ForgeViewModel) {
+@Composable fun ProgressPlaceScreen(place: ProgressPlace, s: ForgeState) {
+    val shell: ShellViewModel = koinViewModel()
+    val heroModel: HeroViewModel = koinViewModel()
     // The forge reads the hero itself; the menagerie and the trials have only this.
-    LaunchedEffect(s.play.heroId, s.account.sessionEpoch) { vm.ensureHero() }
+    LaunchedEffect(s.play.heroId, s.account.sessionEpoch) { heroModel.ensure() }
     Column(Modifier.fillMaxSize()) {
-        BackRow("${ui("nav.progress")} · ${place.label}") { vm.tab(TAB_PROGRESS) }
+        BackRow("${ui("nav.progress")} · ${place.label}") { shell.tab(TAB_PROGRESS) }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when (place) {
                 ProgressPlace.FORGE -> CraftScreen(s)

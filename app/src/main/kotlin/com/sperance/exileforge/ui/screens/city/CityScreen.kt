@@ -23,8 +23,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.GuildText
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.guild.GuildViewModel
+import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.market.MarketViewModel
 import com.sperance.exileforge.presentation.quests.QuestViewModel
 import com.sperance.exileforge.presentation.state.Building
@@ -46,33 +47,36 @@ import org.koin.compose.viewmodel.koinViewModel
  * Each card says in a line what waits inside; a tap goes in, and «back», on screen or the system's, comes out to the square.
  * The buildings are the screens they always were, each explaining itself on its first visit.
  */
-@Composable fun CityScreen(s: ForgeState, vm: ForgeViewModel) {
+@Composable fun CityScreen(s: ForgeState) {
+    val shell: ShellViewModel = koinViewModel()
     val building = s.building
     if (building == null) {
-        CitySquare(s, vm)
+        CitySquare(s)
         return
     }
     Column(Modifier.fillMaxSize()) {
-        BackRow(ui("nav.city")) { vm.building(null) }
+        BackRow(ui("nav.city")) { shell.building(null) }
         Box(Modifier.weight(1f)) {
             when (building) {
                 Building.QUESTS -> QuestsScreen(s)
-                Building.MERCHANT -> MerchantScreen(s, vm)
-                Building.AUCTION -> AuctionScreen(s, vm)
-                Building.GUILD -> GuildScreen(s, vm)
+                Building.MERCHANT -> MerchantScreen(s)
+                Building.AUCTION -> AuctionScreen(s)
+                Building.GUILD -> GuildScreen(s)
             }
         }
     }
 }
 
 /** The square: the three buildings and their news, read when the square opens — the merchant's comes with the hero. */
-@Composable private fun CitySquare(s: ForgeState, vm: ForgeViewModel) {
+@Composable private fun CitySquare(s: ForgeState) {
+    val shell: ShellViewModel = koinViewModel()
+    val heroModel: HeroViewModel = koinViewModel()
     val quests = koinViewModel<QuestViewModel>()
     val market = koinViewModel<MarketViewModel>()
     val guild = koinViewModel<GuildViewModel>()
     LaunchedEffect(s.play.heroId, s.account.sessionEpoch) {
         if (s.play.heroId.isNotBlank()) {
-            vm.ensureHero()
+            heroModel.ensure()
             market.loadMyLots(glance = true)
             guild.load()
             quests.load()
@@ -81,10 +85,10 @@ import org.koin.compose.viewmodel.koinViewModel
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Spacer(Modifier.height(12.dp))
         ScreenHeader(ui("nav.city"), ui("city.subtitle"), ForgeGlyphs.Keep, guide = Guide.CITY)
-        BuildingCard(ui("quest.title"), ForgeGlyphs.Scroll, questNews(s), s.lockOf(Building.QUESTS), accent = Vital) { vm.building(Building.QUESTS) }
-        BuildingCard(ui("merchant.title"), ForgeGlyphs.Coins, merchantNews(s), s.lockOf(Building.MERCHANT)) { vm.building(Building.MERCHANT) }
-        BuildingCard(ui("nav.auction"), ForgeGlyphs.Orb, auctionNews(s), s.lockOf(Building.AUCTION)) { vm.building(Building.AUCTION) }
-        BuildingCard(ui("guild.title"), ForgeGlyphs.Banner, guildNews(s), s.lockOf(Building.GUILD), accent = Rune) { vm.building(Building.GUILD) }
+        BuildingCard(ui("quest.title"), ForgeGlyphs.Scroll, questNews(s), s.lockOf(Building.QUESTS), accent = Vital) { shell.building(Building.QUESTS) }
+        BuildingCard(ui("merchant.title"), ForgeGlyphs.Coins, merchantNews(s), s.lockOf(Building.MERCHANT)) { shell.building(Building.MERCHANT) }
+        BuildingCard(ui("nav.auction"), ForgeGlyphs.Orb, auctionNews(s), s.lockOf(Building.AUCTION)) { shell.building(Building.AUCTION) }
+        BuildingCard(ui("guild.title"), ForgeGlyphs.Banner, guildNews(s), s.lockOf(Building.GUILD), accent = Rune) { shell.building(Building.GUILD) }
         Spacer(Modifier.height(12.dp))
     }
 }

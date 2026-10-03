@@ -38,7 +38,7 @@ import com.sperance.exileforge.core.display.lineText
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.rules.content.AtlasNode
@@ -94,7 +94,8 @@ internal val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
  * shows no button. The sky is dragged and pinched; a tap picks the nearest star within reach, and its
  * sheet takes or gives it.
  */
-@Composable fun AtlasScreen(s: ForgeState, vm: ForgeViewModel) {
+@Composable fun AtlasScreen(s: ForgeState) {
+    val shell: ShellViewModel = koinViewModel()
     val model = koinViewModel<ExpeditionViewModel>()
     val atlas = s.play.atlas ?: return
     val index = s.index
@@ -166,7 +167,7 @@ internal val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
             }
         }
         if (summary && index != null && state != null) AtlasSummary(index, state.allocated.toSet()) { summary = false }
-        ToastHost(s, vm::dismissMessage, vm::dismissNotice, Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 64.dp))
+        ToastHost(s, shell::dismissMessage, shell::dismissNotice, Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 64.dp))
     }
 }
 

@@ -1,4 +1,5 @@
 package com.sperance.exileforge.ui.screens.expedition
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -18,7 +19,7 @@ import com.sperance.exileforge.core.campaign.TrialPhase
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.rules.content.TrialKind
@@ -32,7 +33,8 @@ import org.koin.compose.viewmodel.koinViewModel
  * foes' level, the clock and the floor's lines, and — once it is over — what it came to. The arena is stepped here, a frame
  * at a time; back walks away between two fights, and closes the screen once the trial is over.
  */
-@Composable fun TrialScreen(s: ForgeState, vm: ForgeViewModel, arena: TrialArena) {
+@Composable fun TrialScreen(s: ForgeState, arena: TrialArena) {
+    val shell: ShellViewModel = koinViewModel()
     val model = koinViewModel<ExpeditionViewModel>()
     val hud by arena.hud.collectAsState()
     LaunchedEffect(arena) {
@@ -47,12 +49,12 @@ import org.koin.compose.viewmodel.koinViewModel
     BackHandler { if (hud.phase == TrialPhase.FIGHT) model.trialCommand(com.sperance.exileforge.core.campaign.run.RunCommand.Leave) else model.closeTrial() }
     Box(Modifier.fillMaxSize().background(Ink)) {
         hud.fight?.takeIf { hud.phase == TrialPhase.FIGHT }?.let { fight ->
-            ArenaOverlay(s, hud.run, fight, hud.level, arena.rules, arena.stance, onCommand = model::trialCommand, onLogFilter = vm::logFilter, onBuzz = vm::buzz)
+            ArenaOverlay(s, hud.run, fight, hud.level, arena.rules, arena.stance, onCommand = model::trialCommand, onLogFilter = shell::logFilter, onBuzz = shell::buzz)
         }
         if (hud.phase == TrialPhase.FIGHT) {
             TrialPlate(hud, Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = 44.dp, end = 8.dp))
         } else {
-            TrialEnding(s, vm, model, hud)
+            TrialEnding(s, model, hud)
         }
     }
 }
@@ -81,7 +83,8 @@ import org.koin.compose.viewmodel.koinViewModel
 }
 
 /** The trial over — fallen, finished or left: how far it went, the clock, and what the server's answers brought all told. */
-@Composable private fun TrialEnding(s: ForgeState, vm: ForgeViewModel, model: ExpeditionViewModel, hud: TrialHud) {
+@Composable private fun TrialEnding(s: ForgeState, model: ExpeditionViewModel, hud: TrialHud) {
+    val expedition: ExpeditionViewModel = koinViewModel()
     var looked by remember(hud.gained) { mutableStateOf<ItemView?>(null) }
     val fallen = hud.phase == TrialPhase.DEAD
     Column(

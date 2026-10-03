@@ -15,7 +15,8 @@ import com.sperance.exileforge.core.display.recipeText
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.ShellViewModel
+import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.forge.SmithyViewModel
 import com.sperance.exileforge.presentation.state.ForgeSection
 import com.sperance.exileforge.presentation.state.ForgeState
@@ -35,7 +36,9 @@ import org.koin.compose.viewmodel.koinViewModel
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun RecipeSheet(s: ForgeState, vm: ForgeViewModel, code: String, inRun: Boolean = false, onDismiss: () -> Unit) {
+internal fun RecipeSheet(s: ForgeState, code: String, inRun: Boolean = false, onDismiss: () -> Unit) {
+    val shell: ShellViewModel = koinViewModel()
+    val expedition: ExpeditionViewModel = koinViewModel()
     val smithy = koinViewModel<SmithyViewModel>()
     val index = s.index
     val recipe = index?.recipe(code)
@@ -74,7 +77,7 @@ internal fun RecipeSheet(s: ForgeState, vm: ForgeViewModel, code: String, inRun:
                     ForgeButton(onClick = {
                         onDismiss()
                         smithy.open(null, ForgeSection.BENCH)
-                        vm.tab(TAB_CRAFT)
+                        shell.tab(TAB_CRAFT)
                     }, modifier = Modifier.fillMaxWidth()) {
                         Text(ui("recipe.open_forge"), style = MaterialTheme.typography.titleSmall)
                     }

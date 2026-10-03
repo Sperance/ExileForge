@@ -9,7 +9,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.session.Reads
-import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.market.MarketViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.*
@@ -26,7 +26,8 @@ import org.koin.compose.viewmodel.koinViewModel
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AuctionScreen(s: ForgeState, vm: ForgeViewModel) {
+fun AuctionScreen(s: ForgeState) {
+    val heroModel: HeroViewModel = koinViewModel()
     val model = koinViewModel<MarketViewModel>()
     val market by model.market.collectAsStateWithLifecycle()
     val activity by model.activity.collectAsStateWithLifecycle()
@@ -39,7 +40,7 @@ fun AuctionScreen(s: ForgeState, vm: ForgeViewModel) {
         // templates this hero can wear, and that is what marks an unwearable lot.
         LaunchedEffect(s.play.heroId, s.account.sessionEpoch) {
             if (s.play.heroId.isNotBlank()) {
-                vm.ensureHero()
+                heroModel.ensure()
                 model.loadAuction()
             }
         }

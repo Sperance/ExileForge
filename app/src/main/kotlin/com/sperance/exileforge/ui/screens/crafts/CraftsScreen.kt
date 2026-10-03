@@ -53,8 +53,8 @@ import com.sperance.exileforge.core.model.crafts.WorkView
 import com.sperance.exileforge.core.model.crafts.job
 import com.sperance.exileforge.core.model.crafts.running
 import com.sperance.exileforge.core.session.Reads
-import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.crafts.CraftsViewModel
+import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.unmetFor
@@ -85,14 +85,15 @@ import kotlin.math.ceil
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CraftsScreen(s: ForgeState, hero: ForgeViewModel) {
+fun CraftsScreen(s: ForgeState) {
+    val heroModel: HeroViewModel = koinViewModel()
     val vm = koinViewModel<CraftsViewModel>()
     val held by vm.crafts.collectAsStateWithLifecycle()
     val activity by vm.activity.collectAsStateWithLifecycle()
     val openCode by vm.profession.collectAsStateWithLifecycle()
     // A screen already holding the crafts asks again in silence: the cycle's alarm is the actions' (2.56.1).
     LaunchedEffect(s.play.heroId, s.account.sessionEpoch) {
-        hero.ensureHero()
+        heroModel.ensure()
         vm.load(silent = held.state != null)
     }
     val crafts = held.state

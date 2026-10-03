@@ -19,7 +19,7 @@ import com.sperance.exileforge.core.display.BodyPlace
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.session.Reads
-import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.forge.SmithyViewModel
 import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.state.ForgeSection
@@ -58,7 +58,8 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HeroScreen(s: ForgeState, vm: ForgeViewModel) {
+fun HeroScreen(s: ForgeState) {
+    val shell: ShellViewModel = koinViewModel()
     val model = koinViewModel<HeroViewModel>()
     val smithy = koinViewModel<SmithyViewModel>()
     val heroId = s.play.heroId
@@ -162,7 +163,7 @@ fun HeroScreen(s: ForgeState, vm: ForgeViewModel) {
                         item(key = "fill") {
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                                 StashFill(s, model, Modifier.weight(1f))
-                                if (!tools) HideWornChip(s.stashHideWorn, vm::stashHideWorn)
+                                if (!tools) HideWornChip(s.stashHideWorn, shell::stashHideWorn)
                             }
                         }
                         if (visible.isEmpty()) item { InfoCard(ui("tree.nothing_found"), if (filter.active || hideWorn) ui("stash.filter_empty") else ui("hero.stash_empty_hint")) }
@@ -187,11 +188,11 @@ fun HeroScreen(s: ForgeState, vm: ForgeViewModel) {
             }
         }
     }
-    detailId?.let { id -> ItemSheet(s, vm, model, id) { detailId = null } }
+    detailId?.let { id -> ItemSheet(s, model, id) { detailId = null } }
     if (filtering) {
         StashFilterSheet(
             filter, s.stashSort, s.lang, shelf.size, groupCounts, rarities, onFilter = { filter = it },
-            onSort = vm::stashSort, hideWorn = s.stashHideWorn.takeUnless { tools }, onHideWorn = vm::stashHideWorn, onDismiss = { filtering = false },
+            onSort = shell::stashSort, hideWorn = s.stashHideWorn.takeUnless { tools }, onHideWorn = shell::stashHideWorn, onDismiss = { filtering = false },
         )
     }
     // The sheet is about a stack the bag still holds: listed or read away, it closes with it.
@@ -205,7 +206,7 @@ fun HeroScreen(s: ForgeState, vm: ForgeViewModel) {
                     stackCode = null
                     smithy.selectOrb(orb)
                     smithy.open(null, ForgeSection.ORBS)
-                    vm.tab(TAB_CRAFT)
+                    shell.tab(TAB_CRAFT)
                 },
                 onAuction = { stack ->
                     stackCode = null
@@ -215,13 +216,13 @@ fun HeroScreen(s: ForgeState, vm: ForgeViewModel) {
                 onRead = { skill ->
                     stackCode = null
                     model.learnSkill(skill)
-                    vm.tab(TAB_SKILLS)
+                    shell.tab(TAB_SKILLS)
                 },
                 onEssence = { essence ->
                     stackCode = null
                     smithy.selectEssence(essence)
                     smithy.open(null, ForgeSection.ESSENCES)
-                    vm.tab(TAB_CRAFT)
+                    shell.tab(TAB_CRAFT)
                 },
                 onOpenChest = { chest ->
                     stackCode = null

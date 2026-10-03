@@ -19,7 +19,8 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.ShellViewModel
+import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.forge.SmithyViewModel
 import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.state.ForgeSection
@@ -55,7 +56,9 @@ private enum class ItemAction { AUCTION, SELL, WORN }
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ItemSheet(s: ForgeState, vm: ForgeViewModel, model: HeroViewModel, itemId: String, onDismiss: () -> Unit) {
+fun ItemSheet(s: ForgeState, model: HeroViewModel, itemId: String, onDismiss: () -> Unit) {
+    val shell: ShellViewModel = koinViewModel()
+    val expedition: ExpeditionViewModel = koinViewModel()
     val smithy = koinViewModel<SmithyViewModel>()
     val instance = s.hero?.item(itemId)
     val view = instance?.let { s.view(it) }
@@ -126,9 +129,9 @@ fun ItemSheet(s: ForgeState, vm: ForgeViewModel, model: HeroViewModel, itemId: S
                     // A map is not worn (2.37.0): it goes into its zone's launch window, picked.
                     view.slot == Slot.MAP -> Action(ForgeGlyphs.Portal, ui("hero.action_map"), can, GoldBright) {
                         onDismiss()
-                        vm.tab(TAB_EXPEDITION)
-                        vm.selectZone(instance.mapZone)
-                        vm.pickMap(instance.id)
+                        shell.tab(TAB_EXPEDITION)
+                        expedition.selectZone(instance.mapZone)
+                        expedition.pickMap(instance.id)
                     }
 
                     else -> Action(ForgeGlyphs.Helm, ui("hero.equip"), can && reachable, GoldBright) {
@@ -140,7 +143,7 @@ fun ItemSheet(s: ForgeState, vm: ForgeViewModel, model: HeroViewModel, itemId: S
                 Action(ForgeGlyphs.Anvil, ui("nav.forge"), can) {
                     onDismiss()
                     smithy.open(instance.id, ForgeSection.ORBS)
-                    vm.tab(TAB_CRAFT)
+                    shell.tab(TAB_CRAFT)
                 }
                 // A worn item cannot be listed or sold (AU_010, CH_014): the tap says so instead of doing nothing.
                 Action(if (locked) Icons.Outlined.Lock else Icons.Outlined.LockOpen, ui(if (locked) "item.unlock" else "item.lock"), can) {

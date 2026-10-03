@@ -23,8 +23,8 @@ import com.sperance.exileforge.core.model.guild.GuildCard
 import com.sperance.exileforge.core.model.guild.GuildInviteView
 import com.sperance.exileforge.core.model.guild.GuildMine
 import com.sperance.exileforge.core.session.Reads
-import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.guild.GuildViewModel
+import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.rules.content.GuildMode
 import com.sperance.exileforge.rules.content.GuildRules
@@ -38,12 +38,13 @@ import org.koin.compose.viewmodel.koinViewModel
  * founds a guild of their own; a hero inside sees their guild under its arms, in tabs. Every rule is the server's —
  * the screen only says in advance what a button would be refused for, from `guilds.json`.
  */
-@Composable fun GuildScreen(s: ForgeState, hero: ForgeViewModel) {
+@Composable fun GuildScreen(s: ForgeState) {
+    val heroModel: HeroViewModel = koinViewModel()
     val vm = koinViewModel<GuildViewModel>()
     val guilds by vm.guilds.collectAsStateWithLifecycle()
     LaunchedEffect(s.play.heroId, s.account.sessionEpoch) {
         if (s.play.heroId.isNotBlank()) {
-            hero.ensureHero()
+            heroModel.ensure()
             vm.load()
         }
     }

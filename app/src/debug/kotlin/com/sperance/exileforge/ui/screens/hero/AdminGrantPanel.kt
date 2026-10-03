@@ -64,7 +64,7 @@ import com.sperance.exileforge.ui.icons.orbArt
         OrnateDivider()
         Engraved(ui("grant.orbs"))
         MutedText(ui("grant.orbs_note"))
-        AdminOrbPanel(s, vm)
+        AdminOrbPanel(s)
 
         OrnateDivider()
         Engraved(ui("grant.experience"))

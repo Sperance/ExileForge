@@ -12,8 +12,8 @@ import com.sperance.exileforge.core.display.itemDescription
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.forge.SmithyViewModel
+import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.Orb
@@ -105,7 +105,8 @@ const val ORB_TOP_UP = 10L
  * The target is picked here rather than in the stash, so an orb can be run over the same item
  * repeatedly without leaving the panel.
  */
-@Composable fun AdminOrbPanel(s: ForgeState, vm: ForgeViewModel) {
+@Composable fun AdminOrbPanel(s: ForgeState) {
+    val heroModel: HeroViewModel = koinViewModel()
     val smithy = koinViewModel<SmithyViewModel>()
     val chosen by smithy.smithy.collectAsStateWithLifecycle()
     val hero = s.hero ?: return
@@ -117,5 +118,5 @@ const val ORB_TOP_UP = 10L
         return
     }
     Spinner(ui("orb.target"), s.play.selectedEquipment, targets, !s.busy, glyph = Glyph.ITEM, onChange = smithy::selectEquipment)
-    OrbPanel(s, s.play.selectedEquipment, chosen.orb, smithy::selectOrb, smithy::applyOrb) { orb -> vm.grantItem(orb, ORB_TOP_UP) }
+    OrbPanel(s, s.play.selectedEquipment, chosen.orb, smithy::selectOrb, smithy::applyOrb) { orb -> heroModel.grantItem(orb, ORB_TOP_UP) }
 }

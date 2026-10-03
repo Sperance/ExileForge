@@ -50,7 +50,7 @@
   - [x] Expedition/Atlas/Trials, экраны: `ExpeditionViewModel` над действиями похода, испытаний и героя; карта мира, карточка зоны, доска испытаний и листы снаряжения/добычи только на ней, оверлеи похода/испытания/атласа - ещё и на `ForgeViewModel` ради фильтра журнала, тостов и вибрации.
 - [x] Файлы UI не длиннее ~400 строк: SkillTreeScreen, CraftsScreen, GrimoireScreen, AuctionTabs, AtlasScreen, ExpeditionPlay, ZoneCard, CraftScreen, CombatDetail, ForgeApp (шапка в `ui/Banner.kt`) разбиты.
 - [x] Файлы сцены похода: стили биомов (StoneStyles, WildStyles, SkyStyles), `ScenePainter` с секциями декора и объектов карты (SceneDecor, SceneSpots), наброски пергамента (`WorldSketches`) - в своих файлах.
-- [ ] `ForgeViewModel`, `ForgeRuntime`, `FeatureViewModel` удалены.
+- [ ] `ForgeViewModel`, `ForgeRuntime`, `FeatureViewModel` удалены. Сделано (3.80.30): ни один экран не получает `ForgeViewModel` - оболочка (вкладки, здания, настройки, тосты, журнал, настройки устройства) в `ShellViewModel`, выдачи и код награды в `HeroViewModel`, тестовые учётки и связь в `SessionViewModel`; фасад остался только корню `ForgeApp`, `MainActivity` и отладочным экранам администратора.
 
 ## Этап 5 - бой
 - [x] `Combat.kt` → пакет `core/campaign/combat/`: модель (Combatant, Foe, Ally, эффекты), `Battle` по секциям (views, tick, strike/land, skills, monsters, reach, log).

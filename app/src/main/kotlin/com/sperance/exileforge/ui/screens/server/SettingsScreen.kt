@@ -42,7 +42,8 @@ import com.sperance.exileforge.BuildConfig
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.sync.API_REVISION
 import com.sperance.exileforge.core.network.RequestLog
-import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.ShellViewModel
+import com.sperance.exileforge.presentation.session.SessionViewModel
 import com.sperance.exileforge.presentation.settings.SettingsViewModel
 import com.sperance.exileforge.presentation.state.*
 import com.sperance.exileforge.ui.components.*
@@ -66,33 +67,35 @@ private enum class SettingsPage(val title: String) {
  * ones, the fight, the interface, the vibration — with its switch in its row; the developers' tools at the foot for a
  * tester or an administrator only. «Back» returns to the tab the settings were opened over.
  */
-@Composable internal fun SettingsScreen(s: ForgeState, vm: ForgeViewModel, logs: List<RequestLog> = emptyList()) {
+@Composable internal fun SettingsScreen(s: ForgeState, logs: List<RequestLog> = emptyList()) {
+    val sessionModel: SessionViewModel = koinViewModel()
+    val shell: ShellViewModel = koinViewModel()
     var page by rememberSaveable { mutableStateOf<SettingsPage?>(null) }
     val open = page
     Column(Modifier.fillMaxSize()) {
-        BackRow(ui(if (open == null) "common.back" else "settings.title")) { if (open == null) vm.closeSettings() else page = null }
+        BackRow(ui(if (open == null) "common.back" else "settings.title")) { if (open == null) shell.closeSettings() else page = null }
         Column(
             Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Text(ui(open?.title ?: "settings.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
             when (open) {
-                null -> SettingsList(s, vm, logs) { page = it }
+                null -> SettingsList(s, logs) { page = it }
 
                 SettingsPage.LANGUAGE -> ForgePanel {
-                    LanguagePicker(s.lang, s.world.languages, enabled = !s.busy, onLanguage = vm::language)
+                    LanguagePicker(s.lang, s.world.languages, enabled = !s.busy, onLanguage = sessionModel::language)
                     MutedText(ui("account.language_note"))
                 }
 
-                SettingsPage.SERVER -> ServerPage(s, vm)
+                SettingsPage.SERVER -> ServerPage(s)
 
-                SettingsPage.CLIENT -> ClientPage(s, vm)
+                SettingsPage.CLIENT -> ClientPage(s)
 
-                SettingsPage.JOURNAL -> RequestJournalPanel(vm, logs)
+                SettingsPage.JOURNAL -> RequestJournalPanel(logs)
 
-                SettingsPage.TESTING -> TestingPage(s, vm)
+                SettingsPage.TESTING -> TestingPage(s)
 
-                SettingsPage.TESTERS -> TestersPage(s, vm)
+                SettingsPage.TESTERS -> TestersPage(s)
 
                 SettingsPage.FEEDBACK -> FeedbackAdminPage(s)
 
@@ -102,11 +105,15 @@ private enum class SettingsPage(val title: String) {
     }
 }
 
-@Composable private fun SettingsList(s: ForgeState, vm: ForgeViewModel, logs: List<RequestLog>, onPage: (SettingsPage) -> Unit) {
+@Composable private fun SettingsList(s: ForgeState, logs: List<RequestLog>, onPage: (SettingsPage) -> Unit) {
+    val shell: ShellViewModel = koinViewModel()
+    val sessionModel: SessionViewModel = koinViewModel()
     val settingsModel = koinViewModel<SettingsViewModel>()
     val set by settingsModel.settings.collectAsStateWithLifecycle()
     fun change(edit: GameSettings.() -> GameSettings) = settingsModel.change(edit)
     RowGroup(ui("settings.general")) {
+        val shell: ShellViewModel = koinViewModel()
+        val sessionModel: SessionViewModel = koinViewModel()
         AccountRow(Icons.Outlined.Language, ui("account.language"), value = s.lang.title) { onPage(SettingsPage.LANGUAGE) }
         ChoiceRow(Icons.Outlined.LightMode, ui("settings.keep_screen"), KeepScreen.entries, set.keepScreen, { ui("settings.keep.${it.name}") }) {
             change { copy(keepScreen = it) }
@@ -115,7 +122,7 @@ private enum class SettingsPage(val title: String) {
         LocalGuideDesk.current?.let { desk ->
             AccountRow(Icons.Outlined.Lightbulb, ui("guide.reset"), chevron = false) {
                 desk.reset()
-                vm.announce(ui("settings.hints_done"))
+                shell.announce(ui("settings.hints_done"))
             }
         }
     }
@@ -158,7 +165,7 @@ private enum class SettingsPage(val title: String) {
             if (s.isAdmin) AccountRow(Icons.Outlined.Mail, ui("mail.compose"), enabled = !s.busy) { onPage(SettingsPage.MAIL) }
             // Turning the administrator's tools off hides their tab, so the way back cannot live only inside it.
             if (BuildConfig.DEBUG && s.isAdmin && !s.adminTools) {
-                AccountRow(Icons.Outlined.AdminPanelSettings, ui("account.tools_back"), enabled = !s.busy, chevron = false) { vm.mode(AppMode.ADMIN) }
+                AccountRow(Icons.Outlined.AdminPanelSettings, ui("account.tools_back"), enabled = !s.busy, chevron = false) { sessionModel.mode(AppMode.ADMIN) }
             }
         }
     }

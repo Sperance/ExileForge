@@ -47,8 +47,11 @@ import com.sperance.exileforge.core.network.RequestLog
 import com.sperance.exileforge.data.settings.DraftStore
 import com.sperance.exileforge.data.settings.GuideStore
 import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.ShellViewModel
+import com.sperance.exileforge.presentation.crafts.CraftsViewModel
 import com.sperance.exileforge.presentation.features.UpdateViewModel
 import com.sperance.exileforge.presentation.feedback.FeedbackViewModel
+import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.nav.Navigator
 import com.sperance.exileforge.presentation.nav.Route
 import com.sperance.exileforge.presentation.state.*
@@ -160,6 +163,7 @@ internal val ForgeState.common: Array<Any?> get() = arrayOf(busy, loading, lang,
 internal val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, error)
 
 @Composable internal fun ForgeScreens(vm: ForgeViewModel) {
+    val shell: ShellViewModel = koinViewModel()
     val s by vm.state.collectAsStateWithLifecycle()
     val logs by vm.logs.collectAsStateWithLifecycle()
     val expedition by vm.expedition.collectAsStateWithLifecycle()
@@ -181,7 +185,7 @@ internal val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, err
     var seen by remember(s.play.heroId) { mutableStateOf<Int?>(null) }
     LaunchedEffect(s.play.heroId, level) {
         if (level == null) return@LaunchedEffect
-        seen?.let { before -> if (!s.isTester) Feature.gained(before, level).forEach { vm.announce(ui("unlock.opened", ui(it.title))) } }
+        seen?.let { before -> if (!s.isTester) Feature.gained(before, level).forEach { shell.announce(ui("unlock.opened", ui(it.title))) } }
         seen = level
     }
     // The world map's art is built as soon as the campaign arrives (3.75.0), away from the main thread: the tab opens on it.
@@ -196,8 +200,8 @@ internal val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, err
                 val arena = trial
                 when {
                     warmup != null -> WarmupScreen(warmup)
-                    run != null -> ExpeditionPlay(s.sliced(*s.common, *s.toasts, s.logFilter), vm, run)
-                    arena != null -> TrialScreen(s.sliced(*s.common, *s.toasts, s.logFilter), vm, arena)
+                    run != null -> ExpeditionPlay(s.sliced(*s.common, *s.toasts, s.logFilter), run)
+                    arena != null -> TrialScreen(s.sliced(*s.common, *s.toasts, s.logFilter), arena)
                     else -> Shell(s, vm, logs, route, navigator) { bugOpen = true }
                 }
             }
@@ -224,7 +228,7 @@ internal val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, err
         }
     }
     // «Пока вас не было» (3.69.0): the crafts catch-up of an absence, once, over whatever the game shows after the warm-up.
-    if (s.phase == AppPhase.GAME && s.play.warmup?.finished != false) CraftsAwayHost(s, vm)
+    if (s.phase == AppPhase.GAME && s.play.warmup?.finished != false) CraftsAwayHost(s)
 }
 
 /**
@@ -232,6 +236,9 @@ internal val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, err
  * Путь Изгнанника, полоска героя и нижняя панель; вход, меню героев и атлас - без неё.
  */
 @Composable internal fun Shell(s: ForgeState, vm: ForgeViewModel, logs: List<RequestLog>, route: Route, navigator: Navigator, onBug: () -> Unit) {
+    val shell: ShellViewModel = koinViewModel()
+    val heroModel: HeroViewModel = koinViewModel()
+    val craftsModel: CraftsViewModel = koinViewModel()
     val screens: @Composable (Modifier) -> Unit = { modifier ->
         NavDisplay(
             backStack = navigator.stack,
@@ -244,27 +251,27 @@ internal val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, err
             entryProvider = entryProvider {
                 entry<Route.Auth> { AuthScreen(s.sliced(*s.common, *s.toasts)) }
                 entry<Route.Characters> { CharacterSelectScreen(s.sliced(*s.common, *s.toasts)) }
-                entry<Route.Account> { ServerScreen(s.sliced(*s.common), vm) }
-                entry<Route.Settings> { SettingsScreen(s.sliced(*s.common), vm, logs) }
-                entry<Route.Hero> { HeroScreen(s.sliced(*s.common), vm) }
+                entry<Route.Account> { ServerScreen(s.sliced(*s.common)) }
+                entry<Route.Settings> { SettingsScreen(s.sliced(*s.common), logs) }
+                entry<Route.Hero> { HeroScreen(s.sliced(*s.common)) }
                 entry<Route.Tree> { SkillTreeScreen(s.sliced(*s.common)) }
                 entry<Route.Grimoire> { GrimoireScreen(s.sliced(*s.common)) }
                 entry<Route.Expedition> { ExpeditionScreen(s.sliced(*s.common, s.logFilter)) }
-                entry<Route.Crafts> { CraftsScreen(s.sliced(*s.common), vm) }
-                entry<Route.Progress> { ProgressScreen(s.sliced(*s.common), vm) }
+                entry<Route.Crafts> { CraftsScreen(s.sliced(*s.common)) }
+                entry<Route.Progress> { ProgressScreen(s.sliced(*s.common)) }
                 // The forge, the menagerie and the trials open from the hub of «Развитие», «back» leading to it.
-                entry<Route.Forge> { ProgressPlaceScreen(ProgressPlace.FORGE, s.sliced(*s.common), vm) }
-                entry<Route.Pets> { ProgressPlaceScreen(ProgressPlace.PETS, s.sliced(*s.common), vm) }
-                entry<Route.Trials> { ProgressPlaceScreen(ProgressPlace.TRIALS, s.sliced(*s.common), vm) }
-                entry<Route.Chronicle> { ProgressPlaceScreen(ProgressPlace.CHRONICLE, s.sliced(*s.common), vm) }
+                entry<Route.Forge> { ProgressPlaceScreen(ProgressPlace.FORGE, s.sliced(*s.common)) }
+                entry<Route.Pets> { ProgressPlaceScreen(ProgressPlace.PETS, s.sliced(*s.common)) }
+                entry<Route.Trials> { ProgressPlaceScreen(ProgressPlace.TRIALS, s.sliced(*s.common)) }
+                entry<Route.Chronicle> { ProgressPlaceScreen(ProgressPlace.CHRONICLE, s.sliced(*s.common)) }
                 // The atlas (2.68.0) is a sky of its own, above the tabs.
-                entry<Route.Atlas> { AtlasScreen(s.sliced(*s.common, *s.toasts), vm) }
+                entry<Route.Atlas> { AtlasScreen(s.sliced(*s.common, *s.toasts)) }
                 // The City's square and its buildings are one screen that reads which building is open.
-                entry<Route.City> { CityScreen(s.sliced(*s.common, s.building, s.guild, s.quests, s.market), vm) }
-                entry<Route.Quests> { CityScreen(s.sliced(*s.common, s.building, s.guild, s.quests, s.market), vm) }
-                entry<Route.Merchant> { CityScreen(s.sliced(*s.common, s.building, s.guild, s.quests, s.market), vm) }
-                entry<Route.Auction> { CityScreen(s.sliced(*s.common, s.building, s.guild, s.quests, s.market), vm) }
-                entry<Route.Guild> { CityScreen(s.sliced(*s.common, s.building, s.guild, s.quests, s.market), vm) }
+                entry<Route.City> { CityScreen(s.sliced(*s.common, s.building, s.guild, s.quests, s.market)) }
+                entry<Route.Quests> { CityScreen(s.sliced(*s.common, s.building, s.guild, s.quests, s.market)) }
+                entry<Route.Merchant> { CityScreen(s.sliced(*s.common, s.building, s.guild, s.quests, s.market)) }
+                entry<Route.Auction> { CityScreen(s.sliced(*s.common, s.building, s.guild, s.quests, s.market)) }
+                entry<Route.Guild> { CityScreen(s.sliced(*s.common, s.building, s.guild, s.quests, s.market)) }
                 entry<Route.Admin> { AdminScreen(s.sliced(*s.common, s.admin), vm) }
                 entry<Route.Redemption> { RedemptionScreen(s.sliced(*s.common, s.admin), vm) }
             },
@@ -274,26 +281,27 @@ internal val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, err
         screens(Modifier.fillMaxSize())
         return
     }
-    Scaffold(containerColor = Ink, bottomBar = { GameBar(s, vm) }) { padding ->
+    Scaffold(containerColor = Ink, bottomBar = { GameBar(s) }) { padding ->
         Box(Modifier.fillMaxSize().padding(padding).imePadding()) {
             Column(Modifier.fillMaxSize().voidBackdrop()) {
                 // The craft under way is read with the game, so the banner's plaque knows it from the start.
-                LaunchedEffect(s.play.heroId) { if (s.play.heroId.isNotBlank()) vm.loadCrafts(silent = true) }
-                ForgeBanner(s, vm, onBug)
+                LaunchedEffect(s.play.heroId) { if (s.play.heroId.isNotBlank()) craftsModel.load(silent = true) }
+                ForgeBanner(s, onBug)
                 if (s.busy || s.reading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised) else OrnateDivider(Gold)
                 // The Exile's Path (3.79.0): the first hour's next step, under the banner on every tab until it is walked.
-                ExilePathPlate(s, onGo = vm::tab, onClaim = vm::claimPath)
-                HeroTab.of(s.tab)?.let { HeroTabStrip(it, locked = { tab -> !s.unlocked(Feature.ofTab(tab)) }, onSelect = vm::tab) }
+                ExilePathPlate(s, onGo = shell::tab, onClaim = heroModel::claimPath)
+                HeroTab.of(s.tab)?.let { HeroTabStrip(it, locked = { tab -> !s.unlocked(Feature.ofTab(tab)) }, onSelect = shell::tab) }
                 screens(Modifier.weight(1f).fillMaxWidth())
             }
             // The toasts float over the screen, under the banner (2.80.0).
-            ToastHost(s, vm::dismissMessage, vm::dismissNotice, Modifier.align(Alignment.TopCenter).padding(top = 60.dp))
+            ToastHost(s, shell::dismissMessage, shell::dismissNotice, Modifier.align(Alignment.TopCenter).padding(top = 60.dp))
         }
     }
 }
 
 /** The bottom bar: five destinations are the game; an administrator gets exactly one more. A tab tapped again walks back to its root. */
-@Composable internal fun GameBar(s: ForgeState, vm: ForgeViewModel) {
+@Composable internal fun GameBar(s: ForgeState) {
+    val shell: ShellViewModel = koinViewModel()
     NavigationBar(
         containerColor = Abyss,
         tonalElevation = 0.dp,
@@ -331,7 +339,7 @@ internal val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, err
             NavigationBarItem(
                 selected = s.tab == index || (index == TAB_HERO && HeroTab.of(s.tab) != null) ||
                     (index == TAB_PROGRESS && ProgressPlace.of(s.tab) != null),
-                onClick = { vm.tab(index) },
+                onClick = { shell.tab(index) },
                 icon = {
                     // Free atlas points (3.47.0) mark the tab the atlas opens from: «Развитие».
                     val free = if (index == TAB_PROGRESS) s.atlasState?.available ?: 0 else 0

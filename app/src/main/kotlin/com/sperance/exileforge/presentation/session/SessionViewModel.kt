@@ -5,6 +5,7 @@ import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.Session
 import com.sperance.exileforge.presentation.ForgeRuntime
+import com.sperance.exileforge.presentation.state.AppMode
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -23,4 +24,21 @@ class SessionViewModel(private val runtime: ForgeRuntime) : ViewModel() {
     fun language(lang: Lang) = runtime.language(lang)
     fun dismissMessage() = runtime.commands.dismissMessage()
     fun dismissNotice() = runtime.notices.dismiss()
+
+    fun changePassword(current: String, replacement: String) = runtime.sessionViewModel.changePassword(current, replacement)
+    fun serverDraft(value: String) = runtime.sessionViewModel.serverDraft(value)
+    fun mode(mode: AppMode) = runtime.sessionViewModel.mode(mode)
+
+    /** Тестовые учётки администратора (3.80.30), как их просят страницы настроек. */
+    fun loadTesters() = runtime.sessionViewModel.loadTesters()
+    fun createTester(login: String) = runtime.sessionViewModel.createTester(login)
+    fun resetTester(id: String) = runtime.sessionViewModel.resetTester(id)
+    fun setTesterActive(id: String, active: Boolean) = runtime.sessionViewModel.setTesterActive(id, active)
+    fun refreshLocale() = runtime.refreshLocale()
+    fun refreshIcons() = runtime.refreshIcons()
+
+    fun connect() = runtime.sessionViewModel.connect()
+    fun health() = runtime.sessionViewModel.health()
+    fun leaveGame() = runtime.characterViewModel.leaveGame()
+    fun closeShownTester() = runtime.sessionViewModel.closeShownTester()
 }

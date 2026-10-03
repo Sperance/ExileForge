@@ -29,7 +29,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.trade.MerchantOffer
 import com.sperance.exileforge.core.model.trade.MerchantOrb
 import com.sperance.exileforge.core.session.Reads
-import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.market.MarketViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.unmetFor
@@ -60,17 +60,18 @@ import org.koin.compose.viewmodel.koinViewModel
  *
  * It left the auction's tabs in 3.22.0 for a building of the City of its own.
  */
-@Composable fun MerchantScreen(s: ForgeState, vm: ForgeViewModel) {
+@Composable fun MerchantScreen(s: ForgeState) {
+    val heroModel: HeroViewModel = koinViewModel()
     val market = koinViewModel<MarketViewModel>()
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         // The shelf rides on the hero's snapshot; entering reads it afresh all the same.
         LaunchedEffect(s.play.heroId, s.account.sessionEpoch) {
             if (s.play.heroId.isNotBlank()) {
-                vm.ensureHero()
+                heroModel.ensure()
                 market.loadMerchant()
             }
         }
-        MerchantTab(s, vm, market)
+        MerchantTab(s, market)
     }
 }
 
@@ -80,7 +81,8 @@ import org.koin.compose.viewmodel.koinViewModel
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ColumnScope.MerchantTab(s: ForgeState, vm: ForgeViewModel, market: MarketViewModel) {
+private fun ColumnScope.MerchantTab(s: ForgeState, market: MarketViewModel) {
+    val heroModel: HeroViewModel = koinViewModel()
     val shelf by market.market.collectAsStateWithLifecycle()
     val activity by market.activity.collectAsStateWithLifecycle()
     val busy = activity.busy
@@ -147,7 +149,7 @@ private fun ColumnScope.MerchantTab(s: ForgeState, vm: ForgeViewModel, market: M
     // Read from the snapshot on every pass, so a chip turns as soon as the server has the new filter.
     if (filtering) {
         s.hero?.info?.autoSell?.let { filter ->
-            AutoSellSheet(filter, enabled = !s.busy, onChange = vm::autoSell, onDismiss = { filtering = false })
+            AutoSellSheet(filter, enabled = !s.busy, onChange = heroModel::autoSell, onDismiss = { filtering = false })
         }
     }
 }

@@ -46,7 +46,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.network.RequestLog
 import com.sperance.exileforge.data.settings.DraftStore
 import com.sperance.exileforge.data.settings.GuideStore
-import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.features.UpdateViewModel
 import com.sperance.exileforge.presentation.feedback.FeedbackViewModel
 import com.sperance.exileforge.presentation.nav.Navigator
@@ -118,7 +118,8 @@ import org.koin.compose.viewmodel.koinViewModel
  * crafts, and the account sits in its corner — it left the bottom bar. Since 3.75.0 the inbox, the beetle and the
  * account share one «⋮»: with every badge up the name of the game no longer fit.
  */
-@Composable internal fun ForgeBanner(s: ForgeState, vm: ForgeViewModel, onBug: () -> Unit) {
+@Composable internal fun ForgeBanner(s: ForgeState, onBug: () -> Unit) {
+    val shell: ShellViewModel = koinViewModel()
     Row(
         Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Gold.copy(alpha = .10f), Color.Transparent, Gold.copy(alpha = .06f))))
             .padding(horizontal = 18.dp, vertical = 10.dp),
@@ -128,7 +129,7 @@ import org.koin.compose.viewmodel.koinViewModel
         val accountOpen = s.tab == TAB_ACCOUNT
         Box(
             Modifier.size(40.dp).clip(RoundedCornerShape(9.dp)).border(1.dp, (if (accountOpen) GoldBright else Gold).copy(alpha = .5f), RoundedCornerShape(9.dp))
-                .clickable(onClickLabel = ui("nav.account")) { vm.tab(TAB_ACCOUNT) },
+                .clickable(onClickLabel = ui("nav.account")) { shell.tab(TAB_ACCOUNT) },
             contentAlignment = Alignment.Center,
         ) {
             Icon(ForgeGlyphs.Sigil, ui("nav.account"), tint = if (accountOpen) GoldBright else Gold, modifier = Modifier.size(24.dp))
@@ -146,9 +147,9 @@ import org.koin.compose.viewmodel.koinViewModel
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        WorkBadge(s) { vm.tab(TAB_CRAFTS) }
-        LinkBadge(s.link, admin = s.isAdmin, onRetry = vm::retryLink)
-        BannerMenu(s.feedback.unread, settingsOpen = s.tab == TAB_SETTINGS, onMail = LocalMailOpen.current, onBug = onBug, onSettings = vm::openSettings)
+        WorkBadge(s) { shell.tab(TAB_CRAFTS) }
+        LinkBadge(s.link, admin = s.isAdmin, onRetry = shell::retryLink)
+        BannerMenu(s.feedback.unread, settingsOpen = s.tab == TAB_SETTINGS, onMail = LocalMailOpen.current, onBug = onBug, onSettings = shell::openSettings)
     }
 }
 

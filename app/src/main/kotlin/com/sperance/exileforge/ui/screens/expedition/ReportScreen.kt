@@ -1,4 +1,5 @@
 package com.sperance.exileforge.ui.screens.expedition
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -33,7 +34,7 @@ import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.recipeText
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.view
@@ -49,6 +50,7 @@ import com.sperance.exileforge.ui.screens.expedition.scene.Portraits
 import com.sperance.exileforge.ui.screens.hero.StackInfoSheet
 import com.sperance.exileforge.ui.screens.hero.WearPreview
 import com.sperance.exileforge.ui.theme.*
+import org.koin.compose.viewmodel.koinViewModel
 import java.util.Locale
 
 /**
@@ -61,7 +63,9 @@ import java.util.Locale
  * and fills in as the answers arrive — offline, when the connection is back. Until they have, there is no way on:
  * neither the button nor the system back leaves, so nothing the fight brought is walked past unseen.
  */
-@Composable internal fun ReportScreen(s: ForgeState, vm: ForgeViewModel, model: ExpeditionViewModel, hud: RunHud, report: FightReport, onContinue: () -> Unit) {
+@Composable internal fun ReportScreen(s: ForgeState, model: ExpeditionViewModel, hud: RunHud, report: FightReport, onContinue: () -> Unit) {
+    val shell: ShellViewModel = koinViewModel()
+    val expedition: ExpeditionViewModel = koinViewModel()
     val won = report.outcome == Outcome.WIN
     // A fall opens on the fatal fight's log (3.70.0): every line of it, down to the blow that ended it.
     var logOpen by remember { mutableStateOf(!won) }
@@ -87,7 +91,7 @@ import java.util.Locale
                         .border(1.dp, Bronze.copy(alpha = .4f), RoundedCornerShape(8.dp)).padding(horizontal = 10.dp, vertical = 8.dp),
                 ) {
                     Column {
-                        LogShelves(s.logFilter, vm::logFilter)
+                        LogShelves(s.logFilter, shell::logFilter)
                         FightLog(report.pack, Modifier.fillMaxSize(), s.logFilter, toDeath = !won) { event, name -> line = event to name }
                     }
                 }
@@ -110,11 +114,12 @@ import java.util.Locale
     // A stack of the spoils opened: what it is, what it is for, and how many the hero holds.
     stack?.let { code -> StackInfoSheet(s, code) { stack = null } }
     // The recipe the kill turned up: what it does, and that the bench waits for the run's end.
-    recipe?.let { code -> RecipeSheet(s, vm, code, inRun = true) { recipe = null } }
+    recipe?.let { code -> RecipeSheet(s, code, inRun = true) { recipe = null } }
 }
 
 /** The scene: the monster's round token in its rarity's ring, lit warm for a victory and red for a defeat, and the outcome in words. */
 @Composable private fun FieldHead(report: FightReport, won: Boolean) {
+    val expedition: ExpeditionViewModel = koinViewModel()
     val monster = report.monster
     val time by rememberClock()
     val glow = if (won) Color(0xFF3B2A17) else Color(0xFF3B1717)
@@ -168,6 +173,7 @@ import java.util.Locale
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun Spoils(s: ForgeState, hud: RunHud, onStack: (String) -> Unit, onRecipe: (String) -> Unit, onItem: (ItemView) -> Unit) {
+    val expedition: ExpeditionViewModel = koinViewModel()
     val reward = hud.reward ?: return
     val index = s.index
     reward.recipe?.let { code ->
@@ -201,6 +207,7 @@ private fun Spoils(s: ForgeState, hud: RunHud, onStack: (String) -> Unit, onReci
 
 /** A defeat: what the death cost by the rules' price — the server's answer stands — and what the run had gathered before it. */
 @Composable private fun DeathPrice(s: ForgeState, hud: RunHud) {
+    val expedition: ExpeditionViewModel = koinViewModel()
     Caption(ui("expedition.report_death"), LifeRed)
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Box(Modifier.size(40.dp).border(1.dp, LifeRed, RoundedCornerShape(6.dp)), contentAlignment = Alignment.Center) {
@@ -247,6 +254,7 @@ private fun Spoils(s: ForgeState, hud: RunHud, onStack: (String) -> Unit, onReci
 
 /** The fight as a row of figures — dealt, taken, how long, criticals — and the way into its log. */
 @Composable private fun FightFigures(report: FightReport, logOpen: Boolean, onLog: () -> Unit) {
+    val expedition: ExpeditionViewModel = koinViewModel()
     Row(
         Modifier.fillMaxWidth().background(Abyss, RoundedCornerShape(4.dp)).padding(horizontal = 10.dp, vertical = 7.dp),
         horizontalArrangement = Arrangement.SpaceBetween,

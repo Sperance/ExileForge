@@ -18,7 +18,7 @@ import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.workTitle
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.crafts.CraftsViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.rules.roll.AwayStop
 import com.sperance.exileforge.rules.roll.CraftsAway
@@ -29,6 +29,7 @@ import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.theme.*
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * «Пока вас не было» (3.69.0, server 1.66.0): the crafts catch-up of an absence of five minutes or more, once.
@@ -37,14 +38,15 @@ import com.sperance.exileforge.ui.theme.*
  * showed last, per hero, so a recomposition, a tab or a relaunch does not bring the same one back. Until that mark
  * is read nothing is shown, rather than a sheet that flashes and goes.
  */
-@Composable fun CraftsAwayHost(s: ForgeState, vm: ForgeViewModel) {
+@Composable fun CraftsAwayHost(s: ForgeState) {
+    val craftsModel: CraftsViewModel = koinViewModel()
     val heroId = s.play.heroId
     var seen by remember(heroId) { mutableStateOf<Long?>(null) }
-    LaunchedEffect(heroId) { if (heroId.isNotBlank()) seen = vm.craftsAwaySeen(heroId) }
+    LaunchedEffect(heroId) { if (heroId.isNotBlank()) seen = craftsModel.craftsAwaySeen(heroId) }
     val away = s.hero?.crafts?.away?.takeIf { away -> seen.let { it != null && away.until > it } } ?: return
     CraftsAwaySheet(s, away) {
         seen = away.until
-        vm.markCraftsAwaySeen(heroId, away.until)
+        craftsModel.markCraftsAwaySeen(heroId, away.until)
     }
 }
 

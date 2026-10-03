@@ -1,4 +1,5 @@
 package com.sperance.exileforge.ui.screens.expedition
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
@@ -47,7 +48,7 @@ import com.sperance.exileforge.core.display.statDescription
 import com.sperance.exileforge.core.display.statPercent
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.view
@@ -77,7 +78,9 @@ import kotlin.math.roundToInt
  * app's dictionary and theme, laid over it. The stick is the overlay's too: a thumb anywhere in the
  * lower part of the screen sets it, and letting go stops the hero.
  */
-@Composable fun ExpeditionPlay(s: ForgeState, vm: ForgeViewModel, run: ExpeditionRun) {
+@Composable fun ExpeditionPlay(s: ForgeState, run: ExpeditionRun) {
+    val shell: ShellViewModel = koinViewModel()
+    val expedition: ExpeditionViewModel = koinViewModel()
     val model = koinViewModel<ExpeditionViewModel>()
     val hud by run.hud.collectAsState()
     // The first run explains the fight before the first pack is met (3.14.0).
@@ -147,13 +150,13 @@ import kotlin.math.roundToInt
                 }
             }
 
-            RunPhase.FIGHT -> hud.fight?.let { ArenaOverlay(s, hud, it, it.level.takeIf { level -> level > 0 } ?: run.zone.level, run.rules, run.stance, onCommand = model::runCommand, onLogFilter = vm::logFilter, onBuzz = vm::buzz) }
+            RunPhase.FIGHT -> hud.fight?.let { ArenaOverlay(s, hud, it, it.level.takeIf { level -> level > 0 } ?: run.zone.level, run.rules, run.stance, onCommand = model::runCommand, onLogFilter = shell::logFilter, onBuzz = shell::buzz) }
 
             // The fight is over: its report — the log, what it came to, and the loot of a victory.
-            RunPhase.LOOT -> hud.report?.let { ReportScreen(s, vm, model, hud, it) { model.runCommand(RunCommand.Continue) } }
+            RunPhase.LOOT -> hud.report?.let { ReportScreen(s, model, hud, it) { model.runCommand(RunCommand.Continue) } }
 
             // A fall: the fight's report first, then the map's summary (its «Вернуться» leaves the map).
-            RunPhase.DEAD -> hud.report?.let { ReportScreen(s, vm, model, hud, it) { model.runCommand(RunCommand.Continue) } }
+            RunPhase.DEAD -> hud.report?.let { ReportScreen(s, model, hud, it) { model.runCommand(RunCommand.Continue) } }
                 ?: MapSummary(s, model, hud, onDone = close)
 
             RunPhase.CLEARED -> MapSummary(s, model, hud, onDone = close)
@@ -171,7 +174,7 @@ import kotlin.math.roundToInt
             AutoBar(auto, Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 8.dp)) { model.runCommand(RunCommand.StopAuto) }
         }
         // A refusal of the gear (2.40.0) has to be read here too: the run has no bar and no banner.
-        ToastHost(s, vm::dismissMessage, vm::dismissNotice, Modifier.align(Alignment.TopCenter).statusBarsPadding())
+        ToastHost(s, shell::dismissMessage, shell::dismissNotice, Modifier.align(Alignment.TopCenter).statusBarsPadding())
     }
 }
 
@@ -192,6 +195,7 @@ import kotlin.math.roundToInt
     onDrink: (Int) -> Unit,
     onRetry: () -> Unit,
 ) {
+    val expedition: ExpeditionViewModel = koinViewModel()
     Column(Modifier.fillMaxWidth().statusBarsPadding().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             // The way out (2.56.1): a portal in a bronze ring, first thing in the corner, and it asks before it goes.
@@ -239,6 +243,7 @@ import kotlin.math.roundToInt
  * utility flask's lines run as the hero walks. A flask is filled to its charges and ringed while it runs.
  */
 @Composable internal fun MapFlasks(flasks: List<FlaskView?>, onDrink: (Int) -> Unit) {
+    val expedition: ExpeditionViewModel = koinViewModel()
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
         flasks.forEach { view ->
             if (view == null) return@forEach
@@ -265,6 +270,7 @@ import kotlin.math.roundToInt
  * Nothing while everything is counted — the run does not talk about its bookkeeping unprompted.
  */
 @Composable internal fun Journal(hud: RunHud, onRetry: (() -> Unit)? = null) {
+    val expedition: ExpeditionViewModel = koinViewModel()
     // Only an oldest event the server has not taken for a while is worth a word: a batch in flight is not news.
     var overdue by remember { mutableStateOf(false) }
     LaunchedEffect(hud.pending > 0, hud.applied) {
@@ -308,6 +314,7 @@ internal const val PENDING_GRACE = 10_000L
  * comparison with what is worn and can be worn at once (3.24.0); the map holds still while it is open.
  */
 @Composable internal fun ChestLoot(s: ForgeState, vm: ExpeditionViewModel, run: ExpeditionRun, reward: Reward, awaiting: Boolean, onClose: () -> Unit) {
+    val expedition: ExpeditionViewModel = koinViewModel()
     var looked by remember(reward) { mutableStateOf<ItemView?>(null) }
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         RunPanel(Modifier, GoldBright) {

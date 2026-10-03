@@ -26,6 +26,7 @@ import com.sperance.exileforge.presentation.Actions
 import com.sperance.exileforge.presentation.ForgeRuntime
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.Repositories
+import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.crafts.CraftsActions
 import com.sperance.exileforge.presentation.crafts.CraftsViewModel
 import com.sperance.exileforge.presentation.expedition.ExpeditionActions
@@ -105,6 +106,7 @@ val appModule = module {
     // Рантайм игры один на процесс (3.80.22): модели экранов входа и меню героев берут его отсюда до переезда навигации.
     singleOf(::ForgeRuntime)
     viewModelOf(::ForgeViewModel)
+    viewModelOf(::ShellViewModel)
     viewModelOf(::SessionViewModel)
     viewModelOf(::CharactersViewModel)
     viewModelOf(::FeedbackViewModel)

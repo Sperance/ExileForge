@@ -5,7 +5,6 @@ import com.sperance.exileforge.core.campaign.AutoPlan
 import com.sperance.exileforge.core.campaign.RunCommand
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.model.auction.AuctionFilter
 import com.sperance.exileforge.core.model.command.RedemptionCode
 import com.sperance.exileforge.core.model.guild.GuildCard
 import com.sperance.exileforge.core.network.MemberCommand
@@ -43,8 +42,10 @@ class ForgeViewModel(
     boards: com.sperance.exileforge.core.quests.QuestRepository,
     quests: com.sperance.exileforge.presentation.quests.QuestActions,
     content: com.sperance.exileforge.core.world.ContentLoader,
+    markets: com.sperance.exileforge.core.market.MarketRepository,
+    market: com.sperance.exileforge.presentation.market.MarketActions,
 ) : ViewModel() {
-    private val runtime = ForgeRuntime(store, journal, prefs, sessions, world, connection, commands, hub, notices, feedbacks, events, heroes, boards, quests, content)
+    private val runtime = ForgeRuntime(store, journal, prefs, sessions, world, connection, commands, hub, notices, feedbacks, events, heroes, boards, quests, content, markets, market)
     val state = runtime.state
 
     /** What the phone buzzes for (3.77.0), already filtered by the settings. */
@@ -245,14 +246,6 @@ class ForgeViewModel(
     fun logout() = runtime.sessionViewModel.logout()
     fun changePassword(current: String, replacement: String) = runtime.sessionViewModel.changePassword(current, replacement)
     fun nodeQuery(value: String) = runtime.heroViewModel.nodeQuery(value)
-    fun auctionTab(tab: Int) = runtime.auctionViewModel.auctionTab(tab)
-    fun auctionFilter(filter: AuctionFilter) = runtime.auctionViewModel.auctionFilter(filter)
-    fun showOwnLots(show: Boolean) = runtime.auctionViewModel.showOwnLots(show)
-    fun loadAuction() = runtime.auctionViewModel.loadAuction()
-    fun loadShowcase() = runtime.auctionViewModel.loadShowcase()
-    fun moreShowcase() = runtime.auctionViewModel.moreShowcase()
-    fun loadMyLots(glance: Boolean = false) = runtime.auctionViewModel.loadMyLots(glance)
-    fun loadMerchant() = runtime.auctionViewModel.loadMerchant()
 
     /** A building of the City (3.22.0), or the square for none. */
     fun building(building: Building?) {
@@ -288,18 +281,10 @@ class ForgeViewModel(
     fun contribute(item: String, amount: Long) = runtime.guildViewModel.contribute(item, amount)
     fun loadGuildLog(more: Boolean = false) = runtime.guildViewModel.loadLog(more)
 
-    fun buyLot(lotId: String) = runtime.auctionViewModel.buy(lotId)
-    fun buyOffer(offerId: String) = runtime.auctionViewModel.buyOffer(offerId)
-    fun buyOrb(code: String) = runtime.auctionViewModel.buyOrb(code)
-    fun cancelLot(lotId: String) = runtime.auctionViewModel.cancel(lotId)
-    fun extendLot(lotId: String) = runtime.auctionViewModel.extend(lotId)
-    suspend fun priceHint(itemCode: String, rarity: com.sperance.exileforge.rules.content.Rarity?, itemLevel: Int) = runtime.auctionViewModel.priceHint(itemCode, rarity, itemLevel)
-
-    /** Lists a copy for [price] of the orb [priceOrb] (an item code). */
-    fun sellEquipment(itemId: String, priceOrb: String, price: Long) = runtime.auctionViewModel.sellEquipment(itemId, priceOrb, price)
-
-    /** Lists [amount] of the stack [code]. */
-    fun sellItem(code: String, amount: Long, priceOrb: String, price: Long) = runtime.auctionViewModel.sellItem(code, amount, priceOrb, price)
+    // Продажа из сундука героя (экран героя ещё на общей модели): действия рынка.
+    suspend fun priceHint(itemCode: String, rarity: com.sperance.exileforge.rules.content.Rarity?, itemLevel: Int) = runtime.market.priceHint(itemCode, rarity, itemLevel)
+    fun sellEquipment(itemId: String, priceOrb: String, price: Long) = runtime.market.sellEquipment(itemId, priceOrb, price)
+    fun sellItem(code: String, amount: Long, priceOrb: String, price: Long) = runtime.market.sellItem(code, amount, priceOrb, price)
     fun clearLogs() = runtime.journal.clear()
     fun loadRedemptions() = runtime.redemptionViewModel.load()
     fun createRedemption(code: RedemptionCode) = runtime.redemptionViewModel.create(code)

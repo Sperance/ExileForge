@@ -2,6 +2,7 @@ package com.sperance.exileforge.di
 
 import com.sperance.exileforge.core.feedback.FeedbackRepository
 import com.sperance.exileforge.core.hero.HeroRepository
+import com.sperance.exileforge.core.market.MarketRepository
 import com.sperance.exileforge.core.network.RequestJournal
 import com.sperance.exileforge.core.quests.QuestRepository
 import com.sperance.exileforge.core.session.CommandRunner
@@ -20,6 +21,8 @@ import com.sperance.exileforge.data.settings.ServerStore
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.features.UpdateViewModel
 import com.sperance.exileforge.presentation.feedback.FeedbackViewModel
+import com.sperance.exileforge.presentation.market.MarketActions
+import com.sperance.exileforge.presentation.market.MarketViewModel
 import com.sperance.exileforge.presentation.quests.QuestActions
 import com.sperance.exileforge.presentation.quests.QuestViewModel
 import com.sperance.exileforge.presentation.server.ServerViewModel
@@ -59,11 +62,14 @@ val appModule = module {
     single { FeedbackRepository() }
     single { HeroRepository() }
     single { QuestRepository() }
+    single { MarketRepository() }
+    singleOf(::MarketActions)
     single { ContentLoader() }
     single { QuestActions(get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     viewModelOf(::ForgeViewModel)
     viewModelOf(::FeedbackViewModel)
     viewModelOf(::QuestViewModel)
+    viewModelOf(::MarketViewModel)
     viewModel { SettingsViewModel(get()) }
     viewModel { ServerViewModel(get(), get()) }
     // Проверка обновлений ждёт сервер игровой модели: поток и манифест приходят параметрами из активности.

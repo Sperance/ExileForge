@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.GuildText
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.market.MarketViewModel
 import com.sperance.exileforge.presentation.quests.QuestViewModel
 import com.sperance.exileforge.presentation.state.Building
 import com.sperance.exileforge.presentation.state.Feature
@@ -66,10 +67,11 @@ import org.koin.compose.viewmodel.koinViewModel
 /** The square: the three buildings and their news, read when the square opens — the merchant's comes with the hero. */
 @Composable private fun CitySquare(s: ForgeState, vm: ForgeViewModel) {
     val quests = koinViewModel<QuestViewModel>()
+    val market = koinViewModel<MarketViewModel>()
     LaunchedEffect(s.play.heroId, s.account.sessionEpoch) {
         if (s.play.heroId.isNotBlank()) {
             vm.ensureHero()
-            vm.loadMyLots(glance = true)
+            market.loadMyLots(glance = true)
             vm.loadGuild()
             quests.load()
         }

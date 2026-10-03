@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.number
@@ -29,6 +30,7 @@ import com.sperance.exileforge.core.model.trade.MerchantOffer
 import com.sperance.exileforge.core.model.trade.MerchantOrb
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.market.MarketViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.unmetFor
 import com.sperance.exileforge.presentation.state.view
@@ -43,6 +45,7 @@ import com.sperance.exileforge.ui.icons.OrbGlyph
 import com.sperance.exileforge.ui.screens.hero.StackInfoSheet
 import com.sperance.exileforge.ui.screens.hero.WearPreview
 import com.sperance.exileforge.ui.theme.*
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * The merchant (since 2.36.0, server 0.34.0): a shelf of items the server rolled for this hero,
@@ -58,15 +61,16 @@ import com.sperance.exileforge.ui.theme.*
  * It left the auction's tabs in 3.22.0 for a building of the City of its own.
  */
 @Composable fun MerchantScreen(s: ForgeState, vm: ForgeViewModel) {
+    val market = koinViewModel<MarketViewModel>()
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         // The shelf rides on the hero's snapshot; entering reads it afresh all the same.
         LaunchedEffect(s.play.heroId, s.account.sessionEpoch) {
             if (s.play.heroId.isNotBlank()) {
                 vm.ensureHero()
-                vm.loadMerchant()
+                market.loadMerchant()
             }
         }
-        MerchantTab(s, vm)
+        MerchantTab(s, vm, market)
     }
 }
 
@@ -76,14 +80,17 @@ import com.sperance.exileforge.ui.theme.*
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ColumnScope.MerchantTab(s: ForgeState, vm: ForgeViewModel) {
+private fun ColumnScope.MerchantTab(s: ForgeState, vm: ForgeViewModel, market: MarketViewModel) {
+    val shelf by market.market.collectAsStateWithLifecycle()
+    val activity by market.activity.collectAsStateWithLifecycle()
+    val busy = activity.busy
     var chosen by remember { mutableStateOf<MerchantOffer?>(null) }
     var filtering by remember { mutableStateOf(false) }
     var notes by remember { mutableStateOf(false) }
     var orbsShelf by rememberSaveable { mutableStateOf(false) }
     // The orb a tap on its glass or name opened: what it is for, before it is bought.
     var info by remember { mutableStateOf<String?>(null) }
-    val stock = s.market.merchant
+    val stock = shelf.merchant
     val money = s.hero?.money
     // A copy whose template the content does not hold cannot be drawn, and is not offered.
     val offers = remember(stock?.offers, s.index, s.world) { stock?.offers.orEmpty().mapNotNull { offer -> s.view(offer.item)?.let { offer to it } } }
@@ -104,7 +111,7 @@ private fun ColumnScope.MerchantTab(s: ForgeState, vm: ForgeViewModel) {
             segmented = true,
         )
     }
-    PullToRefreshBox(isRefreshing = Reads.MERCHANT in s.loading, onRefresh = vm::loadMerchant, modifier = Modifier.weight(1f)) {
+    PullToRefreshBox(isRefreshing = Reads.MERCHANT in activity.loading, onRefresh = market::loadMerchant, modifier = Modifier.weight(1f)) {
         LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(bottom = 10.dp)) {
             if (orbsShelf && orbs.isNotEmpty()) {
                 item {
@@ -115,16 +122,16 @@ private fun ColumnScope.MerchantTab(s: ForgeState, vm: ForgeViewModel) {
                                 orb,
                                 price,
                                 have = s.bagAmount(orb.code),
-                                enabled = !s.busy && !orb.soldOut && (money == null || money >= price),
+                                enabled = !busy && !orb.soldOut && (money == null || money >= price),
                                 onInfo = { info = orb.code },
-                            ) { vm.buyOrb(orb.code) }
+                            ) { market.buyOrb(orb.code) }
                         }
                     }
                 }
             } else {
                 if (stock != null && offers.isEmpty()) item { InfoCard(ui("merchant.empty"), ui("merchant.empty_hint")) }
                 items(offers, key = { it.first.id }) { (offer, view) ->
-                    ItemTradeRow(view, enabled = !s.busy, unmet = s.unmetFor(offer.item.template), onClick = { chosen = offer }) { GoldPrice(offer.price) }
+                    ItemTradeRow(view, enabled = !busy, unmet = s.unmetFor(offer.item.template), onClick = { chosen = offer }) { GoldPrice(offer.price) }
                 }
             }
         }
@@ -134,7 +141,7 @@ private fun ColumnScope.MerchantTab(s: ForgeState, vm: ForgeViewModel) {
     chosen?.let { offer ->
         OfferSheet(s, offer, money, onDismiss = { chosen = null }) {
             chosen = null
-            vm.buyOffer(offer.id)
+            market.buyOffer(offer.id)
         }
     }
     // Read from the snapshot on every pass, so a chip turns as soon as the server has the new filter.

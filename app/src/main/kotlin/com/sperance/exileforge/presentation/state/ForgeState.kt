@@ -279,19 +279,9 @@ data class MapLaunchState(val mapCode: String, val picked: String? = null, val p
 enum class ForgeSection { ORBS, BENCH, ESSENCES }
 
 /** The auction, as this hero sees it. */
-data class MarketState(
-    val tab: Int = 0,
-    val showcase: AuctionPage = AuctionPage(),
-    val filter: AuctionFilter = AuctionFilter(),
-    val showOwnLots: Boolean = false,
-    val myLots: List<AuctionLot> = emptyList(),
-    /** The hero's deals of the last days (3.73.0), newest first. */
-    val history: List<AuctionLot> = emptyList(),
-    /** Why the auction is closed to this hero, in the server's own words. */
-    val locked: String? = null,
-    val merchant: MerchantStock? = null,
-    val slots: AuctionSlots? = null,
-)
+
+/** Рынок - срез `MarketRepository` из :core (3.80.11). */
+typealias MarketState = com.sperance.exileforge.core.market.Market
 
 /** The City's buildings (3.22.0): each one a screen of its own behind the square. */
 enum class Building { QUESTS, MERCHANT, AUCTION, GUILD }

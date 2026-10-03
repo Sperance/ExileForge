@@ -49,7 +49,7 @@ class WarmupViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
                     step(id, WarmStep.WORLD) {
                         quests.load()
                         craftsViewModel.load(silent = true)
-                        auctionViewModel.loadMerchant()
+                        market.loadMerchant()
                     }
                 }
                 update { s -> s.play.warmup?.takeIf { it.heroId == id }?.let { s.copy(play = s.play.copy(warmup = it.copy(finished = true))) } ?: s }

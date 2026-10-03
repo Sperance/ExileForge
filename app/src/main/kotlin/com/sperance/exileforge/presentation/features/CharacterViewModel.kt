@@ -57,6 +57,7 @@ class CharacterViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             craftsViewModel.drop()
             heroes.clear()
             boards.clear()
+            markets.clear()
             mutable.update {
                 it.copy(
                     phase = AppPhase.CHARACTERS,

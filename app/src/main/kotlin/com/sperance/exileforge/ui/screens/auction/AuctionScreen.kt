@@ -6,11 +6,14 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.market.MarketViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.*
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * The player auction.
@@ -24,6 +27,10 @@ import com.sperance.exileforge.ui.components.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AuctionScreen(s: ForgeState, vm: ForgeViewModel) {
+    val model = koinViewModel<MarketViewModel>()
+    val market by model.market.collectAsStateWithLifecycle()
+    val activity by model.activity.collectAsStateWithLifecycle()
+    val busy = activity.busy
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         // No header (variant A): the City's row above already names the building, and the tabs carry its «?».
         FirstVisit(Guide.AUCTION)
@@ -33,30 +40,30 @@ fun AuctionScreen(s: ForgeState, vm: ForgeViewModel) {
         LaunchedEffect(s.play.heroId, s.account.sessionEpoch) {
             if (s.play.heroId.isNotBlank()) {
                 vm.ensureHero()
-                vm.loadAuction()
+                model.loadAuction()
             }
         }
-        s.market.locked?.let { locked ->
+        market.locked?.let { locked ->
             InfoCard(ui("auction.closed"), locked, failure = true)
-            ForgeOutlinedButton(enabled = !s.busy, onClick = vm::loadAuction, modifier = Modifier.fillMaxWidth()) {
+            ForgeOutlinedButton(enabled = !busy, onClick = model::loadAuction, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("auction.check_again"))
             }
             return@Column
         }
-        val mine = s.ownLots.size
+        val mine = market.ownLots.size
         // «Выставить» left in 2.48.0: an item is listed from its own card, a stack from the bag.
         // The merchant moved out in 3.22.0, to a building of the City of its own.
         val tabs = listOf(ui("auction.showcase"), if (mine > 0) ui("auction.my_lots_n", mine) else ui("auction.my_lots"), ui("auction.history"))
-        val tab = s.market.tab.coerceIn(tabs.indices)
-        PillTabs(tabs, tab, vm::auctionTab, enabled = !s.busy) { GuideButton(Guide.AUCTION) }
+        val tab = market.tab.coerceIn(tabs.indices)
+        PillTabs(tabs, tab, model::tab, enabled = !busy) { GuideButton(Guide.AUCTION) }
         // Every tab is refreshed the same way the hero is: by pulling it. A button competing with
         // the content was one more thing to find, and the gesture is already the habit here.
-        PullToRefreshBox(isRefreshing = s.refreshing(Reads.AUCTION) || Reads.LOTS in s.loading, onRefresh = vm::loadAuction, modifier = Modifier.weight(1f)) {
+        PullToRefreshBox(isRefreshing = busy || Reads.AUCTION in activity.loading || Reads.LOTS in activity.loading, onRefresh = model::loadAuction, modifier = Modifier.weight(1f)) {
             Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 when (tab) {
-                    0 -> ShowcaseTab(s, vm)
-                    1 -> MyLotsTab(s, vm)
-                    else -> HistoryTab(s)
+                    0 -> ShowcaseTab(s, market, model)
+                    1 -> MyLotsTab(s, market, model)
+                    else -> HistoryTab(s, market)
                 }
             }
         }

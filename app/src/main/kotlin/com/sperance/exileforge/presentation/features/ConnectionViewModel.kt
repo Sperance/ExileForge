@@ -159,8 +159,8 @@ class ConnectionViewModel(runtime: ForgeRuntime) :
 
                         TAB_CITY -> when (now.building) {
                             Building.QUESTS -> quests.load()
-                            Building.MERCHANT -> auctionViewModel.loadMerchant()
-                            Building.AUCTION -> auctionViewModel.loadAuction()
+                            Building.MERCHANT -> market.loadMerchant()
+                            Building.AUCTION -> market.loadAuction()
                             Building.GUILD -> guildViewModel.load()
                             null -> Unit
                         }

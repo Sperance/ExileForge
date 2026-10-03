@@ -34,9 +34,10 @@ import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.market.Market
 import com.sperance.exileforge.core.model.auction.*
 import com.sperance.exileforge.core.session.Reads
-import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.market.MarketViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.unmetFor
 import com.sperance.exileforge.presentation.state.view
@@ -54,8 +55,8 @@ import com.sperance.exileforge.ui.screens.hero.StackInfoSheet
 import com.sperance.exileforge.ui.theme.*
 
 /** The showcase: the server's own search, so the page and the filter both belong to it. */
-@Composable internal fun ColumnScope.ShowcaseTab(s: ForgeState, vm: ForgeViewModel) {
-    ShowcaseList(s, header = { ShowcaseHeader(s, vm) }, onBuy = vm::buyLot, onMore = vm::moreShowcase)
+@Composable internal fun ColumnScope.ShowcaseTab(s: ForgeState, market: Market, vm: MarketViewModel) {
+    ShowcaseList(s, market, header = { ShowcaseHeader(s, market, vm) }, onBuy = vm::buy, onMore = vm::moreShowcase)
 }
 
 /**
@@ -70,6 +71,7 @@ import com.sperance.exileforge.ui.theme.*
  */
 @Composable internal fun ColumnScope.ShowcaseList(
     s: ForgeState,
+    market: Market,
     header: @Composable () -> Unit = {},
     onBuy: (String) -> Unit,
     onMore: () -> Unit,
@@ -78,7 +80,7 @@ import com.sperance.exileforge.ui.theme.*
     var confirmBuy by remember { mutableStateOf<String?>(null) }
     LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
         item { header() }
-        if (s.market.showcase.items.isEmpty()) {
+        if (market.showcase.items.isEmpty()) {
             item {
                 InfoCard(
                     ui("tree.nothing_found"),
@@ -86,11 +88,11 @@ import com.sperance.exileforge.ui.theme.*
                 )
             }
         }
-        items(s.market.showcase.items, key = { it.id }) { lot ->
+        items(market.showcase.items, key = { it.id }) { lot ->
             // A seller cannot buy their own lot, and the server says so; the sheet does not offer it.
             LotRow(s, lot, mark = if (lot.belongsTo(s.play.heroId)) ui("auction.your_lot") else null) { openLot = lot.id }
         }
-        val showcase = s.market.showcase
+        val showcase = market.showcase
         if (showcase.next != null) {
             item {
                 ForgeOutlinedButton(enabled = !s.busy && Reads.AUCTION !in s.loading, onClick = onMore, modifier = Modifier.fillMaxWidth()) {
@@ -99,7 +101,7 @@ import com.sperance.exileforge.ui.theme.*
             }
         }
     }
-    s.market.showcase.items.firstOrNull { it.id == openLot }?.let { lot ->
+    market.showcase.items.firstOrNull { it.id == openLot }?.let { lot ->
         LotSheet(
             s,
             lot,
@@ -114,7 +116,7 @@ import com.sperance.exileforge.ui.theme.*
     }
     // A purchase cannot be undone, so it is asked about — and an item the hero cannot wear
     // is said so in the same breath, because that is exactly the mistake worth catching.
-    s.market.showcase.items.firstOrNull { it.id == confirmBuy }?.let { lot ->
+    market.showcase.items.firstOrNull { it.id == confirmBuy }?.let { lot ->
         val blocked = lotUnmet(s, lot)
         val orb = orbTitle(lot)
         // What the bag keeps after paying: shown when the bag is known and can pay; when it cannot,
@@ -156,15 +158,15 @@ import com.sperance.exileforge.ui.theme.*
  * and a chip's cross do. A chip is one filter the server understands, named as the player set it,
  * and its cross drops that filter and asks again — the quickest way back from "nothing found".
  */
-@Composable private fun ShowcaseHeader(s: ForgeState, vm: ForgeViewModel) {
+@Composable private fun ShowcaseHeader(s: ForgeState, market: Market, vm: MarketViewModel) {
     var sheet by remember { mutableStateOf(false) }
-    val f = s.market.filter
-    val count = f.active().size + if (s.market.showOwnLots) 1 else 0
+    val f = market.filter
+    val count = f.active().size + if (market.showOwnLots) 1 else 0
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
                 f.title,
-                { vm.auctionFilter(f.copy(title = it.take(s.inputs.search))) },
+                { vm.filter(f.copy(title = it.take(s.inputs.search))) },
                 placeholder = { Text(ui("auction.name")) },
                 leadingIcon = { Icon(Icons.Outlined.Search, null) },
                 singleLine = true,
@@ -185,11 +187,11 @@ import com.sperance.exileforge.ui.theme.*
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 f.active().forEach { field ->
                     ActiveFilter(chipLabel(s, field, f.value(field))) {
-                        vm.auctionFilter(f.without(field))
+                        vm.filter(f.without(field))
                         vm.loadShowcase()
                     }
                 }
-                if (s.market.showOwnLots) {
+                if (market.showOwnLots) {
                     ActiveFilter(ui("auction.show_mine")) {
                         vm.showOwnLots(false)
                         vm.loadShowcase()
@@ -199,9 +201,9 @@ import com.sperance.exileforge.ui.theme.*
         }
     }
     if (sheet) {
-        FilterSheet(s, onDismiss = { sheet = false }) { filter, mine ->
+        FilterSheet(s, market, onDismiss = { sheet = false }) { filter, mine ->
             sheet = false
-            vm.auctionFilter(filter)
+            vm.filter(filter)
             vm.showOwnLots(mine)
             vm.loadShowcase()
         }
@@ -239,9 +241,9 @@ private val templateSlots: List<Slot> = Slot.entries.filter { it != Slot.RING_2 
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun FilterSheet(s: ForgeState, onDismiss: () -> Unit, onApply: (AuctionFilter, Boolean) -> Unit) {
-    var draft by remember { mutableStateOf(s.market.filter) }
-    var mine by remember { mutableStateOf(s.market.showOwnLots) }
+private fun FilterSheet(s: ForgeState, market: Market, onDismiss: () -> Unit, onApply: (AuctionFilter, Boolean) -> Unit) {
+    var draft by remember { mutableStateOf(market.filter) }
+    var mine by remember { mutableStateOf(market.showOwnLots) }
     val any = ui("common.all")
     val digits = KeyboardOptions(keyboardType = KeyboardType.Number)
     ForgeSheet(onDismissRequest = onDismiss) {
@@ -319,11 +321,11 @@ private fun FilterSheet(s: ForgeState, onDismiss: () -> Unit, onApply: (AuctionF
 }
 
 /** The hero's own lots that are still on sale; withdrawn and sold lots leave this list. */
-@Composable internal fun ColumnScope.MyLotsTab(s: ForgeState, vm: ForgeViewModel) {
+@Composable internal fun ColumnScope.MyLotsTab(s: ForgeState, market: Market, vm: MarketViewModel) {
     var openLot by remember { mutableStateOf<String?>(null) }
     LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
         // Lot places (3.47.0): the same for every hero, never bought.
-        s.market.slots?.let { slots ->
+        market.slots?.let { slots ->
             item {
                 ForgePanel {
                     PropertyRow(ui("auction.slots"), ui("auction.slots_value", slots.used, slots.limit), Glyph.ITEM)
@@ -331,17 +333,17 @@ private fun FilterSheet(s: ForgeState, onDismiss: () -> Unit, onApply: (AuctionF
                 }
             }
         }
-        if (s.ownLots.isEmpty()) {
+        if (market.ownLots.isEmpty()) {
             item {
                 InfoCard(ui("auction.no_lots"), ui("auction.no_lots_hint"))
             }
         }
-        items(s.ownLots, key = { it.id }) { lot ->
+        items(market.ownLots, key = { it.id }) { lot ->
             val window = s.index?.rules?.auction?.extendWindowMillis ?: 0L
             LotRow(s, lot, mark = lotExpiry(lot)?.let { if (lot.extendable(window)) it + " · " + ui("auction.extend_now") else it }, withSeller = false) { openLot = lot.id }
         }
     }
-    s.ownLots.firstOrNull { it.id == openLot }?.let { lot ->
+    market.ownLots.firstOrNull { it.id == openLot }?.let { lot ->
         // On its last day the author may give it another week (3.79.0), as often as they like.
         val extendable = s.index?.rules?.auction?.let { lot.extendable(it.extendWindowMillis) } == true
         LotSheet(
@@ -356,7 +358,7 @@ private fun FilterSheet(s: ForgeState, onDismiss: () -> Unit, onApply: (AuctionF
                     {
                         ForgeOutlinedButton(enabled = !s.busy, onClick = {
                             openLot = null
-                            vm.extendLot(lot.id)
+                            vm.extend(lot.id)
                         }, modifier = Modifier.fillMaxWidth()) {
                             Text(ui("auction.extend", s.index?.rules?.auction?.lotDays ?: 7))
                         }
@@ -367,7 +369,7 @@ private fun FilterSheet(s: ForgeState, onDismiss: () -> Unit, onApply: (AuctionF
             },
         ) {
             openLot = null
-            vm.cancelLot(lot.id)
+            vm.cancel(lot.id)
         }
     }
 }
@@ -379,11 +381,11 @@ private enum class DealFilter { ALL, SOLD, BOUGHT }
  * The hero's deals of the last days (3.73.0): what they sold and to whom, what they bought and from whom, the copy as it
  * changed hands a tap away, and the orbs earned and spent summed on top.
  */
-@Composable internal fun ColumnScope.HistoryTab(s: ForgeState) {
+@Composable internal fun ColumnScope.HistoryTab(s: ForgeState, market: Market) {
     var filter by remember { mutableStateOf(DealFilter.ALL) }
     var openLot by remember { mutableStateOf<String?>(null) }
     val heroId = s.play.heroId
-    val deals = s.market.history.map { it.deal }
+    val deals = market.history.map { it.deal }
     val shown = deals.filter { deal ->
         when (filter) {
             DealFilter.ALL -> true

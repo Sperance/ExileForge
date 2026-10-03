@@ -511,6 +511,7 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
                 val info = view.info
                 val now = System.currentTimeMillis()
                 heroes.set(view)
+                markets.update { it.copy(merchant = view.merchant) }
                 mutable.update {
                     it.copy(
                         play = it.play.copy(
@@ -519,7 +520,6 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
                             heroSeenAt = now,
                             selectedEquipment = it.play.selectedEquipment.takeIf { chosen -> view.items.any { item -> item.id == chosen } } ?: view.items.firstOrNull()?.id.orEmpty(),
                         ),
-                        market = it.market.copy(merchant = view.merchant),
                     )
                 }
                 expeditionViewModel.heroChanged(view)

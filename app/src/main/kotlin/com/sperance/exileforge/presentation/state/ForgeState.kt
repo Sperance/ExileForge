@@ -43,15 +43,14 @@ import com.sperance.exileforge.rules.sheet.SheetCalculator
 
 enum class AppMode { PLAYER, ADMIN }
 
-/** What a toast says had happened: its kind picks the colour, [at] tells two equal texts apart. */
-enum class NoticeKind { DONE, LOOT, CRAFT, ATLAS }
+typealias NoticeKind = com.sperance.exileforge.core.session.NoticeKind
 
 /** Строка на языке игрока в момент показа - из :core (3.80.8). */
 typealias Phrase = com.sperance.exileforge.core.i18n.Phrase
 
 fun phrase(key: String, vararg args: Any?): Phrase = com.sperance.exileforge.core.i18n.phrase(key, *args)
 
-data class Notice(val text: String, val kind: NoticeKind = NoticeKind.DONE, val at: Long = System.nanoTime())
+typealias Notice = com.sperance.exileforge.core.session.Notice
 
 /** Which of the three screens the app is on, above the tabs: the tabs only make sense once there is an account and a hero. */
 enum class AppPhase { AUTH, CHARACTERS, GAME }
@@ -202,15 +201,7 @@ data class AccountState(
     val shownTester: TesterAccount? = null,
 )
 
-/** Players' voices and the account's mail (3.73.0): suggestions, one's own reports, the administrator's reading, the inbox. */
-data class FeedbackState(
-    val suggestions: List<Suggestion> = emptyList(),
-    val mine: List<OwnReport> = emptyList(),
-    val reports: List<AdminReport> = emptyList(),
-    val mail: List<Mail> = emptyList(),
-) {
-    val unread: Int get() = mail.count { !it.read }
-}
+typealias FeedbackState = com.sperance.exileforge.core.feedback.Feedback
 
 /** Мир сервера: единственный источник - `WorldRepository`, здесь его копия для экранов. */
 typealias WorldState = com.sperance.exileforge.core.world.World
@@ -341,26 +332,6 @@ data class AdminState(val redemptions: List<RedemptionCode> = emptyList())
 
 /** How many heroes one account may hold when the rules have not been read yet. */
 const val MAX_CHARACTERS = 3
-
-/** What a read reads. One read per name runs at a time, and a command names the reads it will redo itself. */
-object Reads {
-    const val FEEDBACK = "feedback"
-    const val MAIL = "mail"
-    const val HERO = "hero"
-    const val CHARACTERS = "characters"
-    const val AUCTION = "auction"
-    const val LOTS = "lots"
-    const val CONTENT = "content"
-    const val REDEMPTIONS = "redemptions"
-    const val HEALTH = "health"
-    const val MERCHANT = "merchant"
-    const val CRAFTS = "crafts"
-    const val GUILD = "guild"
-    const val GUILD_SEARCH = "guild_search"
-    const val GUILD_LOG = "guild_log"
-    const val QUESTS = "quests"
-    const val GUILD_QUESTS = "guild_quests"
-}
 
 /** The tabs, by name: the bottom bar a player sees, and the screens a button opens. */
 const val TAB_ACCOUNT = 3

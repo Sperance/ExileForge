@@ -34,8 +34,14 @@ class ForgeViewModel(
     prefs: com.sperance.exileforge.data.settings.PreferencesRepository,
     sessions: com.sperance.exileforge.core.session.SessionRepository,
     world: com.sperance.exileforge.core.world.WorldRepository,
+    connection: com.sperance.exileforge.core.session.ServerConnection,
+    commands: com.sperance.exileforge.core.session.CommandRunner,
+    hub: com.sperance.exileforge.core.session.ConnectionEventsHub,
+    notices: com.sperance.exileforge.core.session.Notices,
+    feedbacks: com.sperance.exileforge.core.feedback.FeedbackRepository,
+    events: com.sperance.exileforge.core.session.GameEvents,
 ) : ViewModel() {
-    private val runtime = ForgeRuntime(store, journal, prefs, sessions, world)
+    private val runtime = ForgeRuntime(store, journal, prefs, sessions, world, connection, commands, hub, notices, feedbacks, events)
     val state = runtime.state
 
     /** What the phone buzzes for (3.77.0), already filtered by the settings. */
@@ -199,16 +205,6 @@ class ForgeViewModel(
     fun retryLink() = runtime.connectionViewModel.wake(now = true)
     fun mode(mode: AppMode) = runtime.sessionViewModel.mode(mode)
     fun serverDraft(value: String) = runtime.sessionViewModel.serverDraft(value)
-    fun loadSuggestions() = runtime.feedbackViewModel.loadSuggestions()
-    fun vote(id: String, vote: com.sperance.exileforge.core.model.feedback.Vote) = runtime.feedbackViewModel.vote(id, vote)
-    fun loadReports(kind: com.sperance.exileforge.core.model.feedback.FeedbackKind?, status: com.sperance.exileforge.core.model.feedback.ReportStatus?) = runtime.feedbackViewModel.loadReports(kind, status)
-    fun setReportStatus(id: String, status: com.sperance.exileforge.core.model.feedback.ReportStatus, reason: String) = runtime.feedbackViewModel.setReportStatus(id, status, reason)
-    fun reportToAsana(id: String) = runtime.feedbackViewModel.reportToAsana(id)
-    fun loadMail() = runtime.feedbackViewModel.loadMail()
-    fun readMail(id: String) = runtime.feedbackViewModel.readMail(id)
-    fun claimMail(id: String) = runtime.feedbackViewModel.claimMail(id)
-    fun deleteMail(id: String) = runtime.feedbackViewModel.deleteMail(id)
-    fun sendMail(request: com.sperance.exileforge.core.model.feedback.MailRequest) = runtime.feedbackViewModel.sendMail(request)
     fun loadTesters() = runtime.sessionViewModel.loadTesters()
     fun createTester(login: String) = runtime.sessionViewModel.createTester(login)
     fun resetTester(id: String) = runtime.sessionViewModel.resetTester(id)

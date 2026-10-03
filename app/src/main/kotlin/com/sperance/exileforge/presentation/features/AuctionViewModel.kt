@@ -5,8 +5,8 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.auction.AuctionFilter
 import com.sperance.exileforge.core.model.auction.AuctionPage
 import com.sperance.exileforge.core.network.ApiFailure
+import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.ForgeRuntime
-import com.sperance.exileforge.presentation.state.Reads
 import com.sperance.exileforge.presentation.state.phrase
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.update

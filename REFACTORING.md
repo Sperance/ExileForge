@@ -15,9 +15,10 @@
 ## Этап 2 - репозитории :core
 - [ ] Истина в `:core`: `StateFlow`/`Flow`, без Android. ForgeState лишь отражает потоки для ещё не переведённых экранов.
   - [x] `SessionRepository` (сервер, аккаунт, герои аккаунта, здоровье сервера) и `WorldRepository` (контент, словарь, иконки, портреты).
-  - [ ] `HeroRepository` (герой, снимки, синк), `MarketRepository`, `GuildRepository`, `QuestRepository`, `FeedbackRepository`.
+  - [x] `FeedbackRepository` (предложения, отчёты, почта); `Notices` (тосты) и `GameEvents` (сигнал «герой изменился») в `:core`.
+  - [ ] `HeroRepository` (герой, снимки, синк), `MarketRepository`, `GuildRepository`, `QuestRepository`.
   - [x] Команды и чтения (`task`/`read`, busy/loading/failure, строка отказа) - `CommandRunner` в `:core`; `Phrase` тоже в `:core`.
-  - [ ] Текущий `GameApi` - `ServerConnection` в `:core`, чтобы модели экранов не зависели от `ForgeRuntime`.
+  - [x] Текущий `GameApi` - `ServerConnection` в `:core`; `Reads` (ключи чтений) там же.
 - [ ] `ForgeState` распадается на срезы этих репозиториев; `sliced()` удалён.
 
 ## Этап 3 - навигация
@@ -28,6 +29,7 @@
 - [ ] Каждый экран - свой androidx `ViewModel` из Koin + `UiState`; экран не получает `ForgeViewModel`/`ForgeState`. Порядок (решение владельца): простые сначала - Settings → Server → Feedback/Mail → City (Quests, Merchant, Auction, Guild) → Crafts/Progress → Tree/Grimoire → Hero → Expedition/Atlas → Session/Characters; пуш после каждого экрана.
   - [x] Server (аккаунт/сервер/клиент): `ServerViewModel` над `SessionRepository` и `WorldRepository`; команды пока через общую модель.
   - [x] Settings: `PreferencesRepository` (единственный источник настроек устройства) + `SettingsViewModel`; `ForgeState.settings` лишь отражает поток для ещё не переведённых экранов.
+  - [x] Feedback/Mail: `FeedbackViewModel` над `FeedbackRepository`, `ServerConnection`, `CommandRunner`; листы и админ-страницы берут модель из Koin, `ForgeViewModel` фидбэка не знает.
 - [ ] По ходу: файлы UI не длиннее ~400 строк (SkillTreeScreen, CraftsScreen, MapStyles, GrimoireScreen, ExpeditionScene, WorldArt, AtlasScreen, AuctionTabs).
 - [ ] `ForgeViewModel`, `ForgeRuntime`, `FeatureViewModel` удалены.
 

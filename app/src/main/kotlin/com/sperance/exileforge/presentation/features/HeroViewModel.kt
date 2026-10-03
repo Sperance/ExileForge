@@ -9,11 +9,11 @@ import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.core.model.sync.API_REVISION
 import com.sperance.exileforge.core.model.sync.HeroParts
 import com.sperance.exileforge.core.model.sync.HeroSnapshot
+import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.ForgeRuntime
 import com.sperance.exileforge.presentation.state.Buzz
 import com.sperance.exileforge.presentation.state.ForgeSection
 import com.sperance.exileforge.presentation.state.NoticeKind
-import com.sperance.exileforge.presentation.state.Reads
 import com.sperance.exileforge.presentation.state.StashSort
 import com.sperance.exileforge.presentation.state.TAB_CRAFT
 import com.sperance.exileforge.rules.content.Rarity

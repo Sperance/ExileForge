@@ -4,10 +4,10 @@ import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.ForgeRuntime
 import com.sperance.exileforge.presentation.state.QuestState
 import com.sperance.exileforge.presentation.state.QuestTab
-import com.sperance.exileforge.presentation.state.Reads
 import com.sperance.exileforge.rules.content.QuestBoard
 import com.sperance.exileforge.rules.content.QuestClaimed
 import com.sperance.exileforge.rules.content.QuestKind

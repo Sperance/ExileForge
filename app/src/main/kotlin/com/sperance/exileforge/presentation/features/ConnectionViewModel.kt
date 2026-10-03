@@ -6,12 +6,12 @@ import com.sperance.exileforge.core.network.FlushOutcome
 import com.sperance.exileforge.core.network.GameApi
 import com.sperance.exileforge.core.network.Outage
 import com.sperance.exileforge.core.network.transportDetail
+import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.ForgeRuntime
 import com.sperance.exileforge.presentation.state.AppPhase
 import com.sperance.exileforge.presentation.state.Building
 import com.sperance.exileforge.presentation.state.LinkState
 import com.sperance.exileforge.presentation.state.NoticeKind
-import com.sperance.exileforge.presentation.state.Reads
 import com.sperance.exileforge.presentation.state.TAB_CITY
 import com.sperance.exileforge.presentation.state.TAB_CRAFTS
 import kotlinx.coroutines.CancellationException

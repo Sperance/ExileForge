@@ -14,11 +14,11 @@ import com.sperance.exileforge.core.model.campaign.RunReport
 import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.core.network.ApiFailure
 import com.sperance.exileforge.core.network.CommandQueue
+import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.ForgeRuntime
 import com.sperance.exileforge.presentation.state.AtlasScreenState
 import com.sperance.exileforge.presentation.state.LootEntry
 import com.sperance.exileforge.presentation.state.MapLaunchState
-import com.sperance.exileforge.presentation.state.Reads
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.content.Pet
 import com.sperance.exileforge.rules.content.Slot

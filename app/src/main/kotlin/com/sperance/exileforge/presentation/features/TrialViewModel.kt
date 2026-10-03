@@ -8,8 +8,8 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.campaign.TrialStart
 import com.sperance.exileforge.core.network.ApiFailure
 import com.sperance.exileforge.core.network.CommandQueue
+import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.ForgeRuntime
-import com.sperance.exileforge.presentation.state.Reads
 import com.sperance.exileforge.rules.content.TrialEvent
 import com.sperance.exileforge.rules.content.TrialEventKind
 import kotlinx.coroutines.CancellationException

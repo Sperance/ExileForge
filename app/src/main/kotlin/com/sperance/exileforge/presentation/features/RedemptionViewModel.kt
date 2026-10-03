@@ -2,8 +2,8 @@ package com.sperance.exileforge.presentation.features
 
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.RedemptionCode
+import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.ForgeRuntime
-import com.sperance.exileforge.presentation.state.Reads
 import kotlinx.coroutines.flow.update
 
 /**

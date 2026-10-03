@@ -13,6 +13,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.i18n.ui
@@ -22,17 +23,20 @@ import com.sperance.exileforge.core.model.feedback.MailAttachment
 import com.sperance.exileforge.core.model.feedback.MailEquipment
 import com.sperance.exileforge.core.model.feedback.MailRequest
 import com.sperance.exileforge.core.model.feedback.ReportStatus
-import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.feedback.FeedbackViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.theme.*
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * The administrator's reading of players' reports (3.73.0): bugs and suggestions apart, filtered by status, each with its
  * author, where it was written and the journal tail; a new status with a word for the author, who gets a letter about it.
  */
-@Composable internal fun FeedbackAdminPage(s: ForgeState, vm: ForgeViewModel) {
+@Composable internal fun FeedbackAdminPage(s: ForgeState) {
+    val vm = koinViewModel<FeedbackViewModel>()
+    val feedback by vm.feedback.collectAsStateWithLifecycle()
     var kind by remember { mutableStateOf(FeedbackKind.BUG) }
     var status by remember { mutableStateOf<ReportStatus?>(null) }
     LaunchedEffect(kind, status) { vm.loadReports(kind, status) }
@@ -41,11 +45,11 @@ import com.sperance.exileforge.ui.theme.*
         FilterChip(selected = status == null, onClick = { status = null }, label = { Text(ui("feedback.all")) })
         ReportStatus.entries.forEach { st -> FilterChip(selected = status == st, onClick = { status = st }, label = { Text(statusTitle(st)) }) }
     }
-    if (s.feedback.reports.isEmpty()) MutedText(ui("feedback.none"))
-    s.feedback.reports.forEach { ReportCard(s, vm, it) }
+    if (feedback.reports.isEmpty()) MutedText(ui("feedback.none"))
+    feedback.reports.forEach { ReportCard(s, vm, it) }
 }
 
-@Composable private fun ReportCard(s: ForgeState, vm: ForgeViewModel, entry: AdminReport) {
+@Composable private fun ReportCard(s: ForgeState, vm: FeedbackViewModel, entry: AdminReport) {
     val report = entry.report
     var open by remember(report.id) { mutableStateOf(false) }
     var reason by remember(report.id, report.reason) { mutableStateOf(report.reason) }
@@ -110,8 +114,9 @@ private const val REASON = 400
  * The administrator's letter (3.73.0): to one account by login or, blank, to every account; a subject, a text, and what it
  * carries — gold, stacks of any item, things of any template at a chosen rarity — built line by line.
  */
-@Composable internal fun MailComposePage(s: ForgeState, vm: ForgeViewModel) {
+@Composable internal fun MailComposePage(s: ForgeState) {
     val index = s.index ?: return
+    val vm = koinViewModel<FeedbackViewModel>()
     var login by remember { mutableStateOf("") }
     var subject by remember { mutableStateOf("") }
     var body by remember { mutableStateOf("") }

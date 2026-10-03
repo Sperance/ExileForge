@@ -15,10 +15,10 @@ import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.HeroSummary
+import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.MAX_CHARACTERS
-import com.sperance.exileforge.presentation.state.Reads
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*

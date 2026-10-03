@@ -44,7 +44,21 @@ interface ConnectionEvents {
  * кнопки; чтение - одно на ключ, никогда не ждёт команду и не держит её. Беда превращается в
  * [Activity.failure] и строку для игрока; ушедшая в очередь команда - не беда вовсе.
  */
-class CommandRunner(private val scope: CoroutineScope, private val connection: () -> ConnectionEvents) {
+
+/** Вести о связи уходят тому, кто слушает сейчас: модель связи подключается после старта. */
+class ConnectionEventsHub : ConnectionEvents {
+    var delegate: ConnectionEvents? = null
+
+    override fun lost(error: Throwable?) {
+        delegate?.lost(error)
+    }
+
+    override fun queued() {
+        delegate?.queued()
+    }
+}
+
+class CommandRunner(private val scope: CoroutineScope, private val connection: ConnectionEvents) {
     private val mutable = MutableStateFlow(Activity())
     val state: StateFlow<Activity> = mutable
     private val reads = mutableMapOf<String, Job>()
@@ -111,18 +125,18 @@ class CommandRunner(private val scope: CoroutineScope, private val connection: (
     /** Беда, как её увидит игрок: очередь - не беда, пропавшая связь - значок и зонд, а не красная полоса. */
     fun report(e: Exception, writing: Boolean) {
         if (e is CommandQueued) {
-            if (e.cause != null && e.cause !is ApiFailure) connection().lost()
-            connection().queued()
+            if (e.cause != null && e.cause !is ApiFailure) connection.lost()
+            connection.queued()
             return
         }
         val problem = FailureState.from(e, writing)
         if (problem is FailureState.Offline) {
             mutable.update { it.copy(failure = problem) }
-            connection().lost(e)
+            connection.lost(e)
             if (writing) mutable.update { it.copy(error = true, message = Phrase { problem.cause.title + ". " + problem.cause.hint }) }
             return
         }
-        if (problem == FailureState.UncertainWrite && e !is ApiFailure) connection().lost(e)
+        if (problem == FailureState.UncertainWrite && e !is ApiFailure) connection.lost(e)
         mutable.update {
             it.copy(
                 failure = problem,

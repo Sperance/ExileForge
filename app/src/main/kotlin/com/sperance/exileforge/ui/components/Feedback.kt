@@ -14,12 +14,14 @@ import androidx.compose.material.icons.outlined.ThumbDown
 import androidx.compose.material.icons.outlined.ThumbUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.i18n.loc
@@ -32,8 +34,10 @@ import com.sperance.exileforge.core.model.feedback.ReportStatus
 import com.sperance.exileforge.core.model.feedback.Suggestion
 import com.sperance.exileforge.core.model.feedback.Vote
 import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.feedback.FeedbackViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.theme.*
+import org.koin.compose.viewmodel.koinViewModel
 
 /** Who opens the inbox (3.73.0): the app hands it down to the banner's envelope. */
 val LocalMailOpen = staticCompositionLocalOf<(() -> Unit)?> { null }
@@ -66,8 +70,11 @@ fun statusTint(status: ReportStatus): Color = when (status) {
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SuggestionsSheet(s: ForgeState, vm: ForgeViewModel, onDismiss: () -> Unit) {
-    LaunchedEffect(Unit) { vm.loadSuggestions() }
+fun SuggestionsSheet(onDismiss: () -> Unit) {
+    val model = koinViewModel<FeedbackViewModel>()
+    val feedback by model.feedback.collectAsStateWithLifecycle()
+    val activity by model.activity.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) { model.loadSuggestions() }
     var tab by remember { mutableIntStateOf(0) }
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.9f).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -75,11 +82,11 @@ fun SuggestionsSheet(s: ForgeState, vm: ForgeViewModel, onDismiss: () -> Unit) {
             PillTabs(listOf(ui("feedback.all"), ui("feedback.mine")), tab, { tab = it })
             LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(bottom = 16.dp)) {
                 if (tab == 0) {
-                    if (s.feedback.suggestions.isEmpty()) item { MutedText(ui("feedback.none")) }
-                    items(s.feedback.suggestions, key = { it.id }) { SuggestionCard(it, enabled = !s.busy, onVote = { v -> vm.vote(it.id, v) }) }
+                    if (feedback.suggestions.isEmpty()) item { MutedText(ui("feedback.none")) }
+                    items(feedback.suggestions, key = { it.id }) { SuggestionCard(it, enabled = !activity.busy, onVote = { v -> model.vote(it.id, v) }) }
                 } else {
-                    if (s.feedback.mine.isEmpty()) item { MutedText(ui("feedback.none_mine")) }
-                    items(s.feedback.mine, key = { it.id }) { own ->
+                    if (feedback.mine.isEmpty()) item { MutedText(ui("feedback.none_mine")) }
+                    items(feedback.mine, key = { it.id }) { own ->
                         ForgePanel {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Text(kindTitle(own.kind), color = Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f))
@@ -181,24 +188,27 @@ fun attachmentLines(mail: Mail): List<String> = buildList {
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MailSheet(s: ForgeState, vm: ForgeViewModel, onDismiss: () -> Unit) {
-    LaunchedEffect(Unit) { vm.loadMail() }
+fun MailSheet(s: ForgeState, onDismiss: () -> Unit) {
+    val model = koinViewModel<FeedbackViewModel>()
+    val feedback by model.feedback.collectAsStateWithLifecycle()
+    val activity by model.activity.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) { model.loadMail() }
     var open by remember { mutableStateOf<String?>(null) }
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.9f).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(ui("mail.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
             MutedText(ui("mail.keep"))
-            val letter = s.feedback.mail.firstOrNull { it.id == open }
+            val letter = feedback.mail.firstOrNull { it.id == open }
             if (letter != null) {
-                LetterView(s, vm, letter) { open = null }
+                LetterView(s, model, activity.busy, letter) { open = null }
             } else {
                 LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(bottom = 16.dp)) {
-                    if (s.feedback.mail.isEmpty()) item { MutedText(ui("mail.empty")) }
-                    items(s.feedback.mail, key = { it.id }) { mail ->
+                    if (feedback.mail.isEmpty()) item { MutedText(ui("mail.empty")) }
+                    items(feedback.mail, key = { it.id }) { mail ->
                         ForgePanel(
                             Modifier.clickable {
                                 open = mail.id
-                                if (!mail.read) vm.readMail(mail.id)
+                                if (!mail.read) model.readMail(mail.id)
                             },
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -221,7 +231,7 @@ fun MailSheet(s: ForgeState, vm: ForgeViewModel, onDismiss: () -> Unit) {
     }
 }
 
-@Composable private fun LetterView(s: ForgeState, vm: ForgeViewModel, mail: Mail, onBack: () -> Unit) {
+@Composable private fun LetterView(s: ForgeState, model: FeedbackViewModel, busy: Boolean, mail: Mail, onBack: () -> Unit) {
     ForgeTextButton(onClick = onBack) { Text(ui("mail.back")) }
     ForgePanel {
         Text(mailSubject(mail), color = GoldBright, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -231,15 +241,15 @@ fun MailSheet(s: ForgeState, vm: ForgeViewModel, onDismiss: () -> Unit) {
             Engraved(ui("mail.attachment"))
             lines.forEach { Text(it, color = Vital, style = MaterialTheme.typography.labelLarge) }
             if (mail.claimable) {
-                ForgeButton(enabled = !s.busy && s.play.heroId.isNotBlank(), onClick = { vm.claimMail(mail.id) }, modifier = Modifier.fillMaxWidth()) {
+                ForgeButton(enabled = !busy && s.play.heroId.isNotBlank(), onClick = { model.claimMail(mail.id, s.play.heroId) }, modifier = Modifier.fillMaxWidth()) {
                     Text(ui("mail.claim", s.heroName))
                 }
             } else {
                 MutedText(ui("mail.claimed_already"))
             }
         }
-        ForgeOutlinedButton(enabled = !s.busy, onClick = {
-            vm.deleteMail(mail.id)
+        ForgeOutlinedButton(enabled = !busy, onClick = {
+            model.deleteMail(mail.id)
             onBack()
         }, modifier = Modifier.fillMaxWidth()) {
             Icon(Icons.Outlined.Delete, null, tint = LifeRed, modifier = Modifier.size(18.dp))

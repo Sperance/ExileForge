@@ -31,7 +31,6 @@ import com.sperance.exileforge.presentation.features.CharacterViewModel
 import com.sperance.exileforge.presentation.features.ConnectionViewModel
 import com.sperance.exileforge.presentation.features.CraftsViewModel
 import com.sperance.exileforge.presentation.features.ExpeditionViewModel
-import com.sperance.exileforge.presentation.features.FeedbackViewModel
 import com.sperance.exileforge.presentation.features.GuildViewModel
 import com.sperance.exileforge.presentation.features.HeroViewModel
 import com.sperance.exileforge.presentation.features.QuestViewModel
@@ -82,12 +81,20 @@ class ForgeRuntime(
     val prefs: com.sperance.exileforge.data.settings.PreferencesRepository,
     val sessions: com.sperance.exileforge.core.session.SessionRepository,
     val world: com.sperance.exileforge.core.world.WorldRepository,
+    val connection: com.sperance.exileforge.core.session.ServerConnection,
+    val commands: CommandRunner,
+    private val connectionHub: com.sperance.exileforge.core.session.ConnectionEventsHub,
+    val notices: com.sperance.exileforge.core.session.Notices,
+    val feedbacks: com.sperance.exileforge.core.feedback.FeedbackRepository,
+    val events: com.sperance.exileforge.core.session.GameEvents,
 ) {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     val mutable = MutableStateFlow(ForgeState())
     val state = mutable.asStateFlow()
     val logs = journal.entries
-    lateinit var api: GameApi
+    var api: GameApi
+        get() = connection.api
+        set(value) = connection.set(value)
 
     /** The first [api] is made (3.74.0): the update check waits for it rather than asking no server at all. */
     val apiReady = kotlinx.coroutines.CompletableDeferred<Unit>()
@@ -106,7 +113,6 @@ class ForgeRuntime(
     val warmupViewModel = com.sperance.exileforge.presentation.features.WarmupViewModel(this)
     val craftsViewModel = CraftsViewModel(this)
     val guildViewModel = GuildViewModel(this)
-    val feedbackViewModel = FeedbackViewModel(this)
     val questViewModel = QuestViewModel(this)
     val connectionViewModel = ConnectionViewModel(this)
 
@@ -117,7 +123,7 @@ class ForgeRuntime(
     fun newApi(server: String): GameApi {
         lateinit var created: GameApi
         created = GameApi(server, journal, onUnauthorized = {
-            if (::api.isInitialized && api === created) {
+            if (connection.ready && api === created) {
                 clearSession()
                 scope.launch {
                     store.saveToken(server, null)
@@ -170,9 +176,13 @@ class ForgeRuntime(
             }
         }
         scope.launch { world.state.collect { value -> mutable.update { it.copy(world = value) } } }
+        connectionHub.delegate = connectionViewModel
         scope.launch {
             commands.state.collect { a -> mutable.update { it.copy(busy = a.busy, loading = a.loading, failure = a.failure, message = a.message, error = a.error) } }
         }
+        scope.launch { notices.state.collect { value -> mutable.update { it.copy(notice = value) } } }
+        scope.launch { feedbacks.state.collect { value -> mutable.update { it.copy(feedback = value) } } }
+        scope.launch { events.heroChanged.collect { heroViewModel.readHero() } }
         scope.launch {
             try {
                 val language = Lang.byCode(store.language.first()) ?: deviceLanguage()
@@ -357,12 +367,9 @@ class ForgeRuntime(
     fun dismissMessage() = commands.dismissMessage()
 
     /** A success worth a toast: it replaces the one showing and leaves by itself. */
-    fun toast(text: String, kind: NoticeKind = NoticeKind.DONE) {
-        mutable.update { it.copy(notice = Notice(text, kind)) }
-    }
-    fun dismissNotice() {
-        mutable.update { it.copy(notice = null) }
-    }
+    fun toast(text: String, kind: NoticeKind = NoticeKind.DONE) = notices.toast(text, kind)
+
+    fun dismissNotice() = notices.dismiss()
 
     /** Files a bug report and says so (3.48.0). */
 
@@ -372,9 +379,6 @@ class ForgeRuntime(
         onSent()
         toast(ui("bug.sent"))
     }
-
-    /** Шина команд и чтений (3.80.8) - в :core; здесь лишь точки входа для старых моделей. */
-    val commands = CommandRunner(scope) { connectionViewModel }
 
     fun task(writing: Boolean = false, touches: Set<String> = emptySet(), block: suspend () -> Unit) = commands.task(writing, touches, block)
 
@@ -464,6 +468,7 @@ class ForgeRuntime(
         craftsViewModel.drop()
         heroViewModel.forget()
         sessions.clear()
+        feedbacks.clear()
         commands.clearFailure()
         mutable.update {
             it.copy(

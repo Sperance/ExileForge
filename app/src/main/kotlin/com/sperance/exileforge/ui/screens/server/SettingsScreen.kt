@@ -94,9 +94,9 @@ private enum class SettingsPage(val title: String) {
 
                 SettingsPage.TESTERS -> TestersPage(s, vm)
 
-                SettingsPage.FEEDBACK -> FeedbackAdminPage(s, vm)
+                SettingsPage.FEEDBACK -> FeedbackAdminPage(s)
 
-                SettingsPage.MAIL -> MailComposePage(s, vm)
+                SettingsPage.MAIL -> MailComposePage(s)
             }
         }
     }

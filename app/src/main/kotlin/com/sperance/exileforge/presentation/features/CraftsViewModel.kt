@@ -5,9 +5,9 @@ import com.sperance.exileforge.core.crafts.minus
 import com.sperance.exileforge.core.crafts.plus
 import com.sperance.exileforge.core.model.crafts.CraftsState
 import com.sperance.exileforge.core.model.crafts.job
+import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.ForgeRuntime
 import com.sperance.exileforge.presentation.state.Buzz
-import com.sperance.exileforge.presentation.state.Reads
 import com.sperance.exileforge.rules.roll.WorkGains
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay

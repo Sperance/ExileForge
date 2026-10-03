@@ -21,9 +21,9 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.guild.GuildCard
 import com.sperance.exileforge.core.model.guild.GuildInviteView
 import com.sperance.exileforge.core.model.guild.GuildMine
+import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
-import com.sperance.exileforge.presentation.state.Reads
 import com.sperance.exileforge.rules.content.GuildMode
 import com.sperance.exileforge.rules.content.GuildRules
 import com.sperance.exileforge.ui.components.*

@@ -42,6 +42,7 @@ import com.sperance.exileforge.data.settings.DraftStore
 import com.sperance.exileforge.data.settings.GuideStore
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.features.UpdateViewModel
+import com.sperance.exileforge.presentation.feedback.FeedbackViewModel
 import com.sperance.exileforge.presentation.state.*
 import com.sperance.exileforge.presentation.state.Feature
 import com.sperance.exileforge.presentation.state.unlocked
@@ -92,6 +93,7 @@ import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import org.koin.compose.koinInject
+import org.koin.compose.viewmodel.koinViewModel
 
 @Composable fun ForgeApp(vm: ForgeViewModel, updates: UpdateViewModel) {
     // The first-visit guides (3.14.0): read once per device, one sheet at a time above whatever screen is open.
@@ -210,12 +212,13 @@ private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, erro
             onSend = { report -> vm.reportBug(report) { drafts.clear(report.kind) } },
         )
     }
-    if (suggestionsOpen) SuggestionsSheet(s, vm) { suggestionsOpen = false }
-    if (mailOpen) MailSheet(s, vm) { mailOpen = false }
+    if (suggestionsOpen) SuggestionsSheet { suggestionsOpen = false }
+    if (mailOpen) MailSheet(s) { mailOpen = false }
     // The inbox (3.73.0) is asked at sign-in and every few minutes after, quietly: the envelope counts the unread.
+    val mailbox = koinViewModel<FeedbackViewModel>()
     LaunchedEffect(s.account.signedIn, s.account.sessionEpoch) {
         while (s.account.signedIn) {
-            vm.loadMail()
+            mailbox.loadMail()
             kotlinx.coroutines.delay(MAIL_POLL_MS)
         }
     }

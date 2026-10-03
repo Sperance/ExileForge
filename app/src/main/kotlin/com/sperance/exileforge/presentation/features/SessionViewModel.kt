@@ -9,12 +9,12 @@ import com.sperance.exileforge.core.network.ApiFailure
 import com.sperance.exileforge.core.network.FailureState
 import com.sperance.exileforge.core.network.ForgeHttp
 import com.sperance.exileforge.core.network.normalizeServer
+import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.data.settings.DEFAULT_SERVER
 import com.sperance.exileforge.presentation.ForgeRuntime
 import com.sperance.exileforge.presentation.state.AppMode
 import com.sperance.exileforge.presentation.state.AppPhase
 import com.sperance.exileforge.presentation.state.PlayState
-import com.sperance.exileforge.presentation.state.Reads
 import com.sperance.exileforge.presentation.state.TAB_ADMIN
 import com.sperance.exileforge.presentation.state.TAB_HERO
 import kotlinx.coroutines.CancellationException

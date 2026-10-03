@@ -30,10 +30,10 @@ import com.sperance.exileforge.core.model.guild.GuildMember
 import com.sperance.exileforge.core.model.guild.GuildView
 import com.sperance.exileforge.core.model.guild.levelProgress
 import com.sperance.exileforge.core.model.guild.manages
+import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.GuildTab
-import com.sperance.exileforge.presentation.state.Reads
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.quests.GuildQuestsTab

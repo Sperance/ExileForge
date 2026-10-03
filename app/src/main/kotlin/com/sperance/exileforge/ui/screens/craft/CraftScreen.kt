@@ -45,13 +45,13 @@ import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
 /** A bench "line" that is not a recipe: taking the crafted modifier back off. */
-private const val UNCRAFT = "-"
+internal const val UNCRAFT = "-"
 
 /** The bench takes a modifier only from Magic rarity up (2.51.0), same as the rules: a common item has no affix places and a fixed rarity's are closed. */
-private val BENCHABLE = setOf(Rarity.MAGIC, Rarity.RARE)
+internal val BENCHABLE = setOf(Rarity.MAGIC, Rarity.RARE)
 
 /** An essence (2.78.0) takes a common item to rare, or rolls a rare anew. */
-private val ESSENTIAL = setOf(Rarity.COMMON, Rarity.RARE)
+internal val ESSENTIAL = setOf(Rarity.COMMON, Rarity.RARE)
 
 /**
  * The forge as an anvil (the owner's mockup B, 3.x): a rail of the stash's shelves and the items worked on lately beside the anvil,
@@ -158,14 +158,14 @@ private val ESSENTIAL = setOf(Rarity.COMMON, Rarity.RARE)
     }
 }
 
-private val ForgeSection.title get() = when (this) {
+internal val ForgeSection.title get() = when (this) {
     ForgeSection.ORBS -> "forge.section_orbs"
     ForgeSection.BENCH -> "forge.section_bench"
     ForgeSection.ESSENCES -> "forge.section_essences"
 }
 
 /** The anvil's tool socket: the orb, the essence or the bench line the section lays on the item, when one is chosen and fits. */
-private fun toolSocket(s: ForgeState, smithy: Smithy, section: ForgeSection, index: ContentIndex, benchLine: String, accepted: (String) -> Boolean): Socket = when (section) {
+internal fun toolSocket(s: ForgeState, smithy: Smithy, section: ForgeSection, index: ContentIndex, benchLine: String, accepted: (String) -> Boolean): Socket = when (section) {
     ForgeSection.ORBS -> {
         val orb = Orb.of(smithy.orb)?.takeIf { (s.bagAmount(it.name) ?: 0L) > 0 && accepted(it.name) }
         val glyph: (@Composable () -> Unit)? = if (orb == null) {
@@ -197,7 +197,7 @@ private fun toolSocket(s: ForgeState, smithy: Smithy, section: ForgeSection, ind
 }
 
 /** The omen's socket beside an orb: the omen laid with it, a tap taking it off; none for the bench or an essence. */
-private fun omenSocket(s: ForgeState, smithy: Smithy, section: ForgeSection, onSelect: (String) -> Unit): Socket? {
+internal fun omenSocket(s: ForgeState, smithy: Smithy, section: ForgeSection, onSelect: (String) -> Unit): Socket? {
     if (section != ForgeSection.ORBS) return null
     val omen = smithy.omen.takeIf { it.isNotBlank() && (s.bagAmount(it) ?: 0L) > 0 }
     val glyph: (@Composable () -> Unit)? = if (omen == null) {
@@ -215,212 +215,4 @@ private fun omenSocket(s: ForgeState, smithy: Smithy, section: ForgeSection, onS
             { onSelect("") }
         },
     )
-}
-
-/** The chosen essence over the navigation, with the held button: a common item becomes rare, a rare one is rolled anew. */
-@Composable private fun EssenceBar(s: ForgeState, code: String, instance: ItemInstance, enabled: Boolean, accepted: (String) -> Boolean, onApply: (String, String) -> Unit) {
-    val owned = s.bagAmount(code) ?: 0L
-    val essence = s.index?.essence(code)?.takeIf { owned > 0 && accepted(code) }
-    ForgeBar {
-        if (essence == null) {
-            Text(ui("forge.pick_essence"), color = Muted)
-            return@ForgeBar
-        }
-        BarTitle(ForgeGlyphs.Shard, Elder, itemTitle(code), stock(owned, 1))
-        HoldButton(ui("confirm.hold", ui("forge.apply_essence")), Elder, enabled = enabled && !instance.corrupted, rearm = true) {
-            onApply(instance.id, code)
-        }
-    }
-}
-
-/**
- * The bench lines for this item's slot, and the crafted modifier it already carries, if any.
- * Only the recipes the hero has found are offered (3.0.0); the rest of the bench stays hidden.
- */
-@Composable private fun BenchLedger(s: ForgeState, index: ContentIndex, hero: HeroView, item: ItemView, chosen: String, onChoose: (String) -> Unit) {
-    val recipes = s.bench.filter { it.fits(item.slot) }.sortedWith(compareBy({ it.source }, { it.modifier }, { -it.tier }))
-    val crafted = item.lines.firstOrNull { it.marks.crafted }
-    val scouring = index.rules.bench.uncraftOrb
-    Column {
-        crafted?.let {
-            LedgerRow(
-                ForgeGlyphs.Anvil,
-                Crafted,
-                it.text,
-                ui("bench.current") + " · " + ui("bench.cost_line", itemTitle(scouring.name), 1, hero.count(scouring.name)),
-                "×",
-                selected = chosen == UNCRAFT,
-                ink = ModBlue,
-            ) { onChoose(UNCRAFT) }
-        }
-        recipes.forEach { recipe ->
-            LedgerRow(
-                ForgeGlyphs.Anvil,
-                Crafted,
-                recipeText(index, recipe),
-                ui("bench.cost_line", itemTitle(recipe.orb.name), recipe.amount, hero.count(recipe.orb.name)),
-                "T${recipe.tier}",
-                selected = chosen == recipe.code,
-                ink = ModBlue,
-            ) { onChoose(recipe.code) }
-        }
-    }
-    if (recipes.isEmpty()) Text(ui("bench.none"), color = Muted)
-}
-
-/** One line of a forge ledger: a spine lit when chosen, a drawing, a name over what it means, and a figure. */
-@Composable private fun LedgerRow(
-    icon: ImageVector,
-    accent: Color,
-    title: String,
-    subtitle: String,
-    figure: String,
-    selected: Boolean,
-    orb: Orb? = null,
-    ink: Color = Parchment,
-    onClick: () -> Unit,
-) {
-    Row(
-        Modifier.fillMaxWidth().height(IntrinsicSize.Min).clickable(role = Role.Button, onClick = onClick)
-            .background(if (selected) Panel else Color.Transparent),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        RaritySpine(if (selected) GoldBright else accent.copy(alpha = .35f), 3.dp)
-        // An orb's line wears its stained glass (2.69.0); the bench and the rest keep their glyph.
-        if (orb != null) {
-            OrbGlyph(orb, Modifier.size(28.dp))
-        } else {
-            Icon(icon, null, tint = accent, modifier = Modifier.size(24.dp))
-        }
-        Column(Modifier.weight(1f).padding(vertical = 9.dp)) {
-            Text(title, color = if (selected) GoldBright else ink, style = MaterialTheme.typography.bodyLarge)
-            Text(subtitle, color = Muted, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
-        }
-        Text(figure, color = GoldBright, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(end = 4.dp))
-    }
-    HorizontalDivider(color = PanelRaised)
-}
-
-/** The omens the bag holds (3.36.0; server 1.65.0: the catalysts are omens of the Orb of Quality), in the content's order. */
-internal fun heldOmens(index: ContentIndex, hero: HeroView): List<Omen> = index.itemsByCategory[Item.OMEN].orEmpty().mapNotNull { item -> Omen.of(item.code)?.takeIf { hero.count(item.code) > 0 } }
-
-/**
- * A choice of lines waiting on the item: the unveiling's offer (3.36.0) — each modifier the veiled one may become — or the
- * Omen of Choice's (server 1.65.0) — each line an Orb of Alchemy or an Exalted Orb may add. One tap keeps it and the rest are lost.
- */
-@Composable private fun LineChoice(
-    s: ForgeState,
-    instance: ItemInstance,
-    options: List<Roll>,
-    title: String,
-    hint: String,
-    enabled: Boolean,
-    onChoose: (String, Int) -> Unit,
-) {
-    if (options.isEmpty()) return
-    ChoiceFrame(title, hint) {
-        options.forEachIndexed { i, option ->
-            val text = s.view(instance.copy(rolls = listOf(option), unveil = emptyList(), offer = emptyList()))?.lines?.firstOrNull()?.text.orEmpty()
-            ChoiceRow(text, "T${option.tier}") { if (enabled) onChoose(instance.id, i) }
-        }
-    }
-}
-
-/** The frame of a choice of lines — an item's or a pet's: the title, how it works, and the options under them. */
-@Composable fun ChoiceFrame(title: String, hint: String, options: @Composable ColumnScope.() -> Unit) {
-    Column(Modifier.fillMaxWidth().border(1.dp, Rune, MaterialTheme.shapes.small).padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(ui(title), color = Rune, style = MaterialTheme.typography.titleMedium)
-        MutedText(ui(hint))
-        options()
-    }
-}
-
-/** One option of a [ChoiceFrame]: the line as it would read, and a figure beside it. */
-@Composable fun ChoiceRow(text: String, figure: String, onClick: () -> Unit) = LedgerRow(ForgeGlyphs.Sigil, Rune, text, "", figure, selected = false, ink = ModBlue, onClick = onClick)
-
-/** The chosen orb over the navigation: what it does, what the bag keeps, and the button that is held. */
-@Composable internal fun OrbBar(
-    s: ForgeState,
-    smithy: Smithy,
-    instance: ItemInstance,
-    enabled: Boolean,
-    accepted: (String) -> Boolean,
-    needsOmen: (String) -> Boolean,
-    onApply: (String, String) -> Unit,
-) {
-    val code = smithy.orb
-    val owned = s.bagAmount(code) ?: 0L
-    val orb = s.orbs.firstOrNull { it.code == code && owned > 0 && accepted(code) }
-    ForgeBar {
-        if (orb == null) {
-            Text(ui("forge.pick_orb"), color = Muted)
-            return@ForgeBar
-        }
-        // An orb the item takes only under an omen (a catalyst's Orb of Quality) waits for one: alone the server would refuse it.
-        val waiting = needsOmen(orb.code) && smithy.omen.isBlank()
-        BarTitle(
-            ForgeGlyphs.Orb,
-            Gold,
-            itemTitle(orb.code) + smithy.omen.takeIf { it.isNotBlank() }?.let { " + ${itemTitle(it)}" }.orEmpty(),
-            if (waiting) ui("forge.needs_omen") to true else stock(owned, 1),
-            orb = Orb.of(orb.code),
-        )
-        HoldButton(ui("confirm.hold", ui("forge.apply_orb")), Gold, enabled = enabled && !instance.corrupted && !waiting, rearm = true) {
-            onApply(instance.id, orb.code)
-        }
-    }
-}
-
-/** The chosen bench line over the navigation, priced, with the same held button. */
-@Composable private fun BenchBar(s: ForgeState, vm: SmithyViewModel, instance: ItemInstance, chosen: String, enabled: Boolean) {
-    val index = s.index ?: return
-    val recipe = s.bench.firstOrNull { it.code == chosen }
-    ForgeBar {
-        when {
-            chosen == UNCRAFT -> {
-                val scouring = index.rules.bench.uncraftOrb
-                val owned = s.bagAmount(scouring.name) ?: 0L
-                BarTitle(ForgeGlyphs.Anvil, Crafted, ui("bench.remove"), stock(owned, 1))
-                HoldButton(ui("confirm.hold", ui("forge.remove_bench")), Crafted, enabled = enabled && owned >= 1, rearm = true) { vm.uncraft(instance.id) }
-            }
-
-            recipe != null -> {
-                val owned = s.bagAmount(recipe.orb.name) ?: 0L
-                BarTitle(ForgeGlyphs.Anvil, Crafted, recipeText(index, recipe), stock(owned, recipe.amount))
-                HoldButton(ui("confirm.hold", ui("forge.apply_bench")), Crafted, enabled = enabled && owned >= recipe.amount, rearm = true) { vm.craft(instance.id, recipe.code) }
-            }
-
-            else -> Text(ui("forge.pick_line"), color = Muted)
-        }
-    }
-}
-
-/**
- * What the bag keeps after one use. It is printed only when the bag can pay; when it cannot, the
- * bar says so in red and the button stays off (2.46.0).
- */
-private fun stock(have: Long, need: Long): Pair<String, Boolean> = if (have >= need) ui("forge.orb_left", have, have - need) to false else ui("forge.short", have) to true
-
-@Composable private fun ForgeBar(content: @Composable ColumnScope.() -> Unit) {
-    HorizontalDivider(color = Bronze)
-    Column(
-        Modifier.fillMaxWidth().background(Abyss).padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-        content = content,
-    )
-}
-
-@Composable private fun BarTitle(icon: ImageVector, accent: Color, title: String, stock: Pair<String, Boolean>, orb: Orb? = null) {
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-        if (orb != null) {
-            OrbGlyph(orb, Modifier.size(34.dp))
-        } else {
-            Icon(icon, null, tint = accent, modifier = Modifier.size(30.dp))
-        }
-        Column(Modifier.weight(1f)) {
-            Text(title, color = GoldBright, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Text(stock.first, color = if (stock.second) LifeRed else Muted, style = MaterialTheme.typography.labelMedium)
-        }
-    }
 }

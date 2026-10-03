@@ -90,7 +90,7 @@ internal fun CombatDetailSheet(s: ForgeState, event: CombatEvent, monster: Strin
 }
 
 /** Who did what to whom and when, then the line's figure large, with what it is. */
-@Composable private fun Header(event: CombatEvent, monster: String) {
+@Composable internal fun Header(event: CombatEvent, monster: String) {
     val sentence = when (event.action) {
         Action.NOTE -> noteLine(event, monster)
 
@@ -131,7 +131,7 @@ internal fun CombatDetailSheet(s: ForgeState, event: CombatEvent, monster: Strin
 /** What marked the line, as small chips: a crit and its multiplier, a block, a dodge, a stun, the ailments, what the shield took. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun Marks(event: CombatEvent, trace: Trace) {
+internal fun Marks(event: CombatEvent, trace: Trace) {
     val hit = trace as? HitTrace
     val crit = event.kind == HitKind.CRIT
     val marks = buildList {
@@ -161,7 +161,7 @@ private fun Marks(event: CombatEvent, trace: Trace) {
 }
 
 /** A damage type on one row: its colour, its name, and what it was against what landed, with what cut it. */
-@Composable private fun TypeRow(type: TypeTrace) {
+@Composable internal fun TypeRow(type: TypeTrace) {
     val figures = listOf("${fineNumber(type.raw)} → ${fineNumber(type.dealt)}") + cuts(type)
     Row(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(Abyss).padding(horizontal = 10.dp, vertical = 8.dp),
@@ -175,14 +175,14 @@ private fun Marks(event: CombatEvent, trace: Trace) {
 }
 
 /** What cut a damage type on its way in: the armour's share, the resistance, the penetration that pierced it. */
-private fun cuts(type: TypeTrace): List<String> = listOfNotNull(
+internal fun cuts(type: TypeTrace): List<String> = listOfNotNull(
     type.armour.takeIf { it > 0 }?.let { ui("trace.cut.armour", pct(it)) },
     type.resist.takeIf { it != 0.0 }?.let { ui("trace.cut.resist", pct(it)) },
     type.penetration.takeIf { it > 0 }?.let { ui("trace.cut.penetration", fineNumber(it)) },
 )
 
 /** «Полный расчёт ▾»: the formula, the dice and the sides, folded until asked for. */
-@Composable private fun FullToggle(open: Boolean, onClick: () -> Unit) {
+@Composable internal fun FullToggle(open: Boolean, onClick: () -> Unit) {
     val shape = RoundedCornerShape(8.dp)
     Text(
         ui(if (open) "trace.full.hide" else "trace.full.show") + if (open) " ▴" else " ▾",
@@ -196,7 +196,7 @@ private fun cuts(type: TypeTrace): List<String> = listOfNotNull(
 
 // ==================== A blow ====================
 
-private fun LazyListScope.hitItems(trace: HitTrace, explainer: TraceExplainer, s: ForgeState) {
+internal fun LazyListScope.hitItems(trace: HitTrace, explainer: TraceExplainer, s: ForgeState) {
     if (trace.factors.isNotEmpty()) item { Chain(trace.factors, trace.attacker, trace.target, trace.origin, explainer, s) }
     if (trace.rolls.isNotEmpty()) item { Rolls(trace.rolls) }
     if (trace.types.isNotEmpty()) {
@@ -225,7 +225,7 @@ private fun LazyListScope.hitItems(trace: HitTrace, explainer: TraceExplainer, s
 
 // ==================== An ailment's tick ====================
 
-private fun LazyListScope.tickItems(trace: TickTrace, explainer: TraceExplainer, s: ForgeState) {
+internal fun LazyListScope.tickItems(trace: TickTrace, explainer: TraceExplainer, s: ForgeState) {
     item {
         Section(ui("trace.section.ailment")) {
             Line(ui("trace.tick.per_second"), fineNumber(trace.perSecond))
@@ -240,7 +240,7 @@ private fun LazyListScope.tickItems(trace: TickTrace, explainer: TraceExplainer,
 
 // ==================== A draught, a buff, a curse ====================
 
-private fun LazyListScope.effectItems(trace: EffectTrace, explainer: TraceExplainer, s: ForgeState) {
+internal fun LazyListScope.effectItems(trace: EffectTrace, explainer: TraceExplainer, s: ForgeState) {
     item {
         Section(ui("trace.section.effect")) {
             if (trace.duration > 0) Line(ui("trace.tick.duration"), ui("trace.seconds", fineNumber(trace.duration)))
@@ -255,158 +255,9 @@ private fun LazyListScope.effectItems(trace: EffectTrace, explainer: TraceExplai
 
 // ==================== A note ====================
 
-private fun LazyListScope.noteItems(trace: NoteTrace, explainer: TraceExplainer, s: ForgeState) {
+internal fun LazyListScope.noteItems(trace: NoteTrace, explainer: TraceExplainer, s: ForgeState) {
     if (trace.value != 0.0) item { Section(ui("trace.section.note")) { Line(ui("trace.note.value.${trace.kind.name}"), fineNumber(trace.value)) } }
     item { States(listOf(trace.actor), explainer) }
 }
 
 // ==================== The chain of the formula ====================
-
-/** The formula as chips; the one tapped lays out every stat it reads, of the striker and of the target, by source. */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun Chain(factors: List<FactorTrace>, attacker: FighterShot, target: FighterShot, origin: TraceOrigin, explainer: TraceExplainer, s: ForgeState) {
-    var chosen by remember(factors) { mutableStateOf(factors.firstOrNull { it.key == FactorKey.CRIT } ?: factors.first()) }
-    Section(ui("trace.section.formula")) {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            factors.forEachIndexed { i, f ->
-                if (i > 0) Text(if (f.key == FactorKey.TOTAL) "=" else "×", color = Muted, modifier = Modifier.align(Alignment.CenterVertically))
-                Chip(f, f == chosen) { chosen = f }
-            }
-        }
-        val stats = chosen.attacker.map { attacker to it } + chosen.target.map { target to it }
-        val shown = stats.map { (shot, stat) -> shot to explainer.stat(shot, stat, origin) }
-            .filter { (shot, trace) -> (shot.stats[trace.stat] ?: 0.0) != 0.0 || trace.rows.isNotEmpty() }
-        Spacer(Modifier.height(6.dp))
-        Text(ui("trace.factor.${chosen.key.name}.about"), color = Muted, style = MaterialTheme.typography.bodySmall)
-        shown.forEach { (shot, trace) -> StatBlock(trace, sideLabel(shot, attacker)) }
-        if (shown.isEmpty() && chosen.key != FactorKey.TOTAL) Note(ui("trace.factor.no_stats"))
-    }
-}
-
-@Composable private fun Chip(f: FactorTrace, on: Boolean, onClick: () -> Unit) {
-    val shape = RoundedCornerShape(6.dp)
-    val value = when (f.key) {
-        FactorKey.BASE, FactorKey.TOTAL -> fineNumber(f.value)
-        else -> factor(f.value)
-    }
-    Column(Modifier.clip(shape).background(PanelRaised).border(1.dp, if (on) Gold else Bronze, shape).clickable(onClick = onClick).padding(horizontal = 6.dp, vertical = 2.dp)) {
-        Text(value, color = if (f.key == FactorKey.TOTAL) GoldBright else Parchment, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
-        Text(ui("trace.factor.${f.key.name}"), color = Muted, style = MaterialTheme.typography.labelSmall)
-    }
-}
-
-private fun sideLabel(shot: FighterShot, attacker: FighterShot): String = if (shot === attacker) ui("trace.side.attacker") else ui("trace.side.target")
-
-// ==================== The dice ====================
-
-@Composable private fun Rolls(rolls: List<RollTrace>) = Section(ui("trace.section.rolls")) {
-    rolls.forEach { roll ->
-        val title = ui("trace.roll.${roll.key.name}") + (roll.ailment?.let { " · ${ui(it.key())}" } ?: "")
-        Line(
-            title,
-            ui("trace.roll.value", pct(roll.chance), String.format(Locale.ROOT, "%.2f", roll.rolled)) + if (roll.success) " ✓" else " ✗",
-            if (roll.success) Vital else Muted,
-        )
-    }
-}
-
-// ==================== The sides ====================
-
-/** The striker, the target and what lay on both, as tabs; a stat tapped opens its sources. */
-@Composable private fun Sides(attacker: FighterShot, target: FighterShot, origin: TraceOrigin, explainer: TraceExplainer, s: ForgeState, factors: List<FactorTrace>) {
-    var tab by remember { mutableIntStateOf(0) }
-    Column {
-        TabRow(selectedTabIndex = tab, containerColor = Panel) {
-            listOf("trace.side.attacker", "trace.side.target", "trace.side.states").forEachIndexed { i, key ->
-                Tab(selected = tab == i, onClick = { tab = i }, text = { Text(ui(key), style = MaterialTheme.typography.labelLarge) })
-            }
-        }
-        Spacer(Modifier.height(8.dp))
-        when (tab) {
-            0 -> Stats(attacker, (factors.flatMap { it.attacker } + ATTACKER_STATS).distinct(), origin, explainer)
-            1 -> Stats(target, (factors.flatMap { it.target } + TARGET_STATS).distinct(), origin, explainer)
-            else -> States(listOfNotNull(attacker, target.takeIf { it !== attacker }), explainer)
-        }
-    }
-}
-
-private val ATTACKER_STATS = listOf("STOCK_ACCURACY", "STOCK_CRITICAL_CHANCE", "STOCK_SPELL_CRITICAL_CHANCE", "STOCK_ATTACK_SPEED", "STOCK_CAST_SPEED")
-private val TARGET_STATS = listOf("STOCK_HEALTH", "STOCK_ENERGY_SHIELD", "STOCK_EVASION", "STOCK_BLOCK_CHANCE", "STOCK_SPELL_BLOCK", "STOCK_ARMOR")
-
-@Composable private fun Stats(shot: FighterShot, stats: List<String>, origin: TraceOrigin, explainer: TraceExplainer) {
-    val shown = stats.filter { (shot.stats[it] ?: 0.0) != 0.0 }
-    if (shown.isEmpty()) {
-        Note(ui("trace.factor.no_stats"))
-        return
-    }
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) { shown.forEach { stat -> StatBlock(explainer.stat(shot, stat, origin), null, collapsed = true) } }
-}
-
-/** What lay on the fighters at that moment: the fight's lines by what laid them, their ailments and the hero's conditions. */
-@Composable private fun States(shots: List<FighterShot>, explainer: TraceExplainer) = Section(ui("trace.section.states")) {
-    shots.forEach { shot ->
-        val groups = shot.lines.groupBy { explainer.lineTitle(it) }
-        groups.forEach { (title, lines) ->
-            Line(title, "")
-            lines.forEach { Note("${statTitle(it.line.stat)} ${explainer.fmt(it.line.stat, it.line.value, it.line.op)}") }
-        }
-        shot.ailments.groupBy { it.ailment }.forEach { (ailment, active) ->
-            Line(ui(ailment.key()), ui("trace.ailment.state", fineNumber(active.sumOf { it.magnitude }), active.size))
-        }
-        shot.conditions.forEach { Line(locOr("condition.${it.name}", it.name), "✓", Rune) }
-        if (groups.isEmpty() && shot.ailments.isEmpty() && shot.conditions.isEmpty()) Note(ui("trace.states.none"))
-        Note(ui("trace.pools", fineNumber(shot.life), fineNumber(shot.maxLife), fineNumber(shot.shield)))
-    }
-}
-
-/** A stat of a side: its figure then, its sources under it — folded until tapped where many are listed. */
-@Composable private fun StatBlock(trace: StatTrace, side: String?, collapsed: Boolean = false) {
-    var open by remember(trace.stat) { mutableStateOf(!collapsed) }
-    Column(Modifier.fillMaxWidth().clickable { open = !open }.padding(vertical = 3.dp)) {
-        Row {
-            Text(
-                (if (open) "▾ " else "▸ ") + listOfNotNull(side, trace.title).joinToString(" · "),
-                color = Parchment,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.weight(1f),
-            )
-            Text(trace.total, color = GoldBright, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-        }
-        if (open) {
-            if (trace.rows.isEmpty()) Note(ui("trace.src.none"))
-            trace.rows.forEach { row ->
-                Row(Modifier.padding(start = 14.dp)) {
-                    Column(Modifier.weight(1f)) {
-                        Text(row.title, color = Muted, style = MaterialTheme.typography.bodySmall)
-                        row.note?.let { Text(it, color = Muted.copy(alpha = .7f), style = MaterialTheme.typography.labelSmall) }
-                    }
-                    Text(row.value, color = ModBlue, style = MaterialTheme.typography.bodySmall)
-                }
-            }
-        }
-    }
-}
-
-// ==================== Pieces ====================
-
-@Composable private fun Section(title: String, content: @Composable ColumnScope.() -> Unit) {
-    val shape = RoundedCornerShape(10.dp)
-    Column(
-        Modifier.fillMaxWidth().clip(shape).background(PanelRaised).border(1.dp, Bronze, shape).padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(3.dp),
-    ) {
-        Text(title.uppercase(), color = Gold, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
-        content()
-    }
-}
-
-@Composable private fun Line(title: String, value: String, tint: Color = GoldBright) = Row(Modifier.fillMaxWidth()) {
-    Text(title, color = Parchment, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-    Text(value, color = tint, style = MaterialTheme.typography.bodySmall)
-}
-
-@Composable private fun Note(text: String) = Text(text, color = Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(start = 8.dp))
-
-private fun pct(share: Double): String = "${fineNumber(share * 100)}%"
-private fun factor(value: Double): String = String.format(Locale.ROOT, "%.2f", value)

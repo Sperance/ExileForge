@@ -181,7 +181,7 @@ import kotlin.math.roundToInt
  * comes back on its own between fights (2.29.0) but a fountain. What the map still holds — foes, chests, fountains — is the walk's to find (2.56.1).
  * The journal's events the server has not taken for a while are counted under the name, a tap sends them now; a slain guardian is not bought back (3.2.0) — it returns in its time.
  */
-@Composable private fun MapBar(
+@Composable internal fun MapBar(
     s: ForgeState,
     run: ExpeditionRun,
     hud: RunHud,
@@ -263,7 +263,7 @@ import kotlin.math.roundToInt
  * The journal, quietly (3.0.0): how many events the server has not taken yet, and how many it refused.
  * Nothing while everything is counted — the run does not talk about its bookkeeping unprompted.
  */
-@Composable private fun Journal(hud: RunHud, onRetry: (() -> Unit)? = null) {
+@Composable internal fun Journal(hud: RunHud, onRetry: (() -> Unit)? = null) {
     // Only an oldest event the server has not taken for a while is worth a word: a batch in flight is not news.
     var overdue by remember { mutableStateOf(false) }
     LaunchedEffect(hud.pending > 0, hud.applied) {
@@ -284,10 +284,10 @@ import kotlin.math.roundToInt
 }
 
 /** How long the journal's oldest unsent event waits before the run says so. */
-private const val PENDING_GRACE = 10_000L
+internal const val PENDING_GRACE = 10_000L
 
 /** The run stands still for as long as this is in the composition (2.73.0): a window over the map pauses it. */
-@Composable private fun HoldsRun(run: ExpeditionRun) {
+@Composable internal fun HoldsRun(run: ExpeditionRun) {
     DisposableEffect(run) {
         run.send(RunCommand.Hold(true))
         onDispose { run.send(RunCommand.Hold(false)) }
@@ -295,308 +295,9 @@ private const val PENDING_GRACE = 10_000L
 }
 
 /** A glyph in a bronze ring on dark glass: the map's buttons share one look (2.56.1). */
-@Composable private fun RoundButton(icon: ImageVector, label: String, onClick: () -> Unit) {
+@Composable internal fun RoundButton(icon: ImageVector, label: String, onClick: () -> Unit) {
     IconButton(onClick = onClick, modifier = Modifier.size(44.dp).background(Color(0xE60A0D12), CircleShape).border(1.5.dp, Bronze, CircleShape)) {
         Icon(icon, label, tint = GoldBright, modifier = Modifier.size(24.dp))
-    }
-}
-
-/**
- * The map in small: round, framed in bronze, the hero at its centre and the explored ground moving
- * under them (2.56.1) — rock darker than floor, the exit once seen, the chests and fountains still
- * standing. Two small buttons under it zoom in and out (2.72.0), and a tap opens the whole map.
- * It redraws a few times a second on its own tick — the scene's clock is the scene's.
- */
-@Composable private fun MiniMap(run: ExpeditionRun, hud: RunHud) {
-    val world = run.world
-    var tick by remember(world) { mutableIntStateOf(0) }
-    var cells by rememberSaveable { mutableFloatStateOf(MINIMAP_CELLS) }
-    var full by remember { mutableStateOf(false) }
-    LaunchedEffect(world) {
-        while (true) {
-            kotlinx.coroutines.delay(200)
-            tick++
-        }
-    }
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Canvas(Modifier.size(150.dp).clip(CircleShape).background(Color(0xE60A0D12)).clickable { full = true }) {
-            if (tick < 0) return@Canvas
-            val cell = size.width / cells
-            drawExplored(world, Offset(size.width / 2 - world.heroX.toFloat() * cell, size.height / 2 - world.heroY.toFloat() * cell), cell, monsters = false)
-            val centre = Offset(size.width / 2, size.height / 2)
-            val radius = size.width / 2
-            drawCircle(Brush.radialGradient(listOf(Color.Transparent, Color.Transparent, Color(0xB30A0D12)), centre, radius), radius, centre)
-            drawCircle(Bronze, radius - 1.5.dp.toPx(), centre, style = Stroke(3.dp.toPx()))
-            drawCircle(GoldBright.copy(alpha = .35f), radius - 5.dp.toPx(), centre, style = Stroke(1.dp.toPx()))
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ZoomButton("−", ui("expedition.zoom_out")) { cells = (cells * 1.4f).coerceAtMost(MINIMAP_MAX) }
-            ZoomButton("+", ui("expedition.zoom_in")) { cells = (cells / 1.4f).coerceAtLeast(MINIMAP_MIN) }
-        }
-    }
-    if (full) {
-        HoldsRun(run)
-        FullMap(run, hud, tick) { full = false }
-    }
-}
-
-@Composable private fun ZoomButton(sign: String, label: String, onClick: () -> Unit) {
-    Box(
-        Modifier.size(28.dp).clip(CircleShape).background(Color(0xE60A0D12)).border(1.dp, Bronze, CircleShape)
-            .clickable(onClick = onClick).semantics { contentDescription = label },
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(sign, color = GoldBright, style = MaterialTheme.typography.titleMedium)
-    }
-}
-
-/**
- * The explored ground from [origin] at [cell] pixels a cell, only what falls on the canvas: floor
- * lighter where lit, rock dark, the chests, fountains, portal and exit, the hero — and, on the whole
- * map, the monsters standing in the hero's light, in their rarity's colour.
- */
-private fun DrawScope.drawExplored(world: ExpeditionWorld, origin: Offset, cell: Float, monsters: Boolean) {
-    val map = world.map
-    val square = Size(cell, cell)
-    val xs = (floor(-origin.x / cell).toInt() - 1).coerceAtLeast(0)..(ceil((size.width - origin.x) / cell).toInt() + 1).coerceAtMost(map.width - 1)
-    val ys = (floor(-origin.y / cell).toInt() - 1).coerceAtLeast(0)..(ceil((size.height - origin.y) / cell).toInt() + 1).coerceAtMost(map.height - 1)
-    for (y in ys) {
-        for (x in xs) {
-            if (!world.explored(x, y)) continue
-            drawRect(if (map.walkable(x, y)) Parchment.copy(alpha = if (world.lit(x, y)) .55f else .3f) else Color(0xFF2A2B33), Offset(origin.x + x * cell, origin.y + y * cell), square)
-        }
-    }
-    val dot = (cell * .5f).coerceAtLeast(2.5f)
-    fun mark(x: Double, y: Double, color: Color, size: Float = dot) = drawCircle(color, size, Offset(origin.x + x.toFloat() * cell, origin.y + y.toFloat() * cell))
-    world.chests.filter { !it.opened && world.explored(it.cell.x, it.cell.y) }.forEach { mark(it.cell.x + .5, it.cell.y + .5, GoldBright) }
-    world.fountains.filter { !it.used && world.explored(it.cell.x, it.cell.y) }.forEach { mark(it.cell.x + .5, it.cell.y + .5, ShieldCyan) }
-    world.crystals.filter { !it.freed && world.explored(it.cell.x, it.cell.y) }.forEach { mark(it.cell.x + .5, it.cell.y + .5, CrystalViolet) }
-    world.cracks.filter { !it.opened && world.explored(it.cell.x, it.cell.y) }.forEach { mark(it.cell.x + .5, it.cell.y + .5, AbyssGlow, dot * 1.2f) }
-    world.portal?.takeIf { world.explored(it.x, it.y) }?.let { mark(it.x + .5, it.y + .5, PortalTint, dot * 1.2f) }
-    if (world.explored(map.exit.x, map.exit.y)) mark(map.exit.x + .5, map.exit.y + .5, if (world.sealed) LifeRed else Vital, dot * 1.4f)
-    if (monsters) {
-        world.agents.filter { it.alive && world.lit(it.x.toInt(), it.y.toInt()) }.forEach { agent ->
-            mark(agent.x, agent.y, Color.Black, dot * 1.25f)
-            mark(agent.x, agent.y, rarityTint(agent.monster.rarity), dot)
-        }
-    }
-    mark(world.heroX, world.heroY, Gold, dot * 1.4f)
-    mark(world.heroX, world.heroY, Ink, dot * .5f)
-}
-
-/**
- * The whole map (2.72.0), over everything: all the explored ground fitted to the screen, the
- * monsters in the hero's light, a legend of what each mark is, what the map still holds, and what
- * the map item and the atlas lay on it.
- */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun FullMap(run: ExpeditionRun, hud: RunHud, tick: Int, onClose: () -> Unit) {
-    val world = run.world
-    val map = world.map
-    androidx.compose.ui.window.Dialog(onDismissRequest = onClose, properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
-        Column(
-            Modifier.fillMaxSize().background(Ink.copy(alpha = .96f)).statusBarsPadding().navigationBarsPadding().padding(12.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(mapTitle(hud.mapCode), color = GoldBright, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-                IconButton(onClick = onClose) { Icon(Icons.Outlined.Close, ui("common.close"), tint = Gold) }
-            }
-            Canvas(
-                Modifier.fillMaxWidth().aspectRatio(map.width / map.height.toFloat()).background(Color(0xFF07090C), RoundedCornerShape(8.dp))
-                    .border(1.dp, Bronze, RoundedCornerShape(8.dp)),
-            ) {
-                if (tick < 0) return@Canvas
-                drawExplored(world, Offset.Zero, minOf(size.width / map.width, size.height / map.height), monsters = true)
-            }
-            val explored = (0 until map.height).sumOf { y -> (0 until map.width).count { x -> map.walkable(x, y) && world.explored(x, y) } }
-            val floorCells = (0 until map.height).sumOf { y -> (0 until map.width).count { x -> map.walkable(x, y) } }.coerceAtLeast(1)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Counter(ui("map.monsters_left", hud.alive, hud.total), LifeRed)
-                Counter(ui("map.chests_left", hud.chestsLeft), GoldBright)
-                Counter(ui("map.fountains_left", hud.fountainsLeft), ShieldCyan)
-                if (hud.crystalsLeft > 0) Counter(ui("map.crystals_left", hud.crystalsLeft), CrystalViolet)
-                if (hud.cracksLeft > 0) Counter(ui("map.cracks_left", hud.cracksLeft), AbyssGlow)
-                Counter(ui(if (hud.sealed) "expedition.boss_alive" else "expedition.boss_slain"), if (hud.sealed) LifeRed else Vital)
-                Counter(ui("map.explored", explored * 100 / floorCells), Parchment)
-            }
-            Engraved(ui("map.legend"))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                legendOf(world).forEach { (tint, text) -> Legend(tint, text) }
-            }
-            if (run.mapEffects.isNotEmpty()) {
-                Engraved(ui("map.modifiers"))
-                // Read as an item's modifiers read, a sentence under its glyph, only without a tier: the lines are the map's and the atlas's summed.
-                run.mapEffects.forEach { (stat, value) ->
-                    Tipped({ Tip(statTitle(stat), statDescription(stat), ModBlue) }) { ModifierLine(effectText(run, stat, value), Glyph.ofStat(stat)) }
-                }
-            } else {
-                MutedText(ui("map.no_modifiers"))
-            }
-        }
-    }
-}
-
-/**
- * The marks the whole map draws that stand on it now and are in sight: a chest found and still shut, the exit
- * once seen in the colour it has, the monsters of each rarity in the hero's light. The hero is always there.
- */
-private fun legendOf(world: ExpeditionWorld): List<Pair<Color, String>> = buildList {
-    add(Gold to ui("map.legend_hero"))
-    if (world.chests.any { !it.opened && world.explored(it.cell.x, it.cell.y) }) add(GoldBright to ui("map.legend_chest"))
-    if (world.fountains.any { !it.used && world.explored(it.cell.x, it.cell.y) }) add(ShieldCyan to ui("map.legend_fountain"))
-    if (world.crystals.any { !it.freed && world.explored(it.cell.x, it.cell.y) }) add(CrystalViolet to ui("map.legend_crystal"))
-    if (world.cracks.any { !it.opened && world.explored(it.cell.x, it.cell.y) }) add(AbyssGlow to ui("map.legend_abyss"))
-    if (world.portal?.let { world.explored(it.x, it.y) } == true) add(PortalTint to ui("map.legend_portal"))
-    val exit = world.map.exit
-    if (world.explored(exit.x, exit.y)) add(if (world.sealed) LifeRed to ui("map.legend_sealed") else Vital to ui("map.legend_exit"))
-    world.agents.filter { it.alive && world.lit(it.x.toInt(), it.y.toInt()) }.map { it.monster.rarity }.distinct().sorted()
-        .forEach { add(rarityTint(it) to ui(it.key())) }
-}
-
-/** «+15% Здоровье монстров карты»: a map's summed effect as a modifier's sentence, the percent where the stat counts in it. */
-private fun effectText(run: ExpeditionRun, stat: String, value: Double): String = (if (value >= 0) "+" else "−") + modNumber(stat, abs(value)) + (if (statPercent(stat, run.index)) "%" else "") + " " + statTitle(stat)
-
-/** The Vaal portal's mark on the maps and in their legend. */
-private val PortalTint = Color(0xFFFF8A78)
-
-@Composable private fun Counter(text: String, tint: Color) {
-    Text(
-        text,
-        color = tint,
-        style = MaterialTheme.typography.labelMedium,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.background(tint.copy(alpha = .1f), RoundedCornerShape(6.dp)).border(1.dp, tint.copy(alpha = .4f), RoundedCornerShape(6.dp))
-            .padding(horizontal = 8.dp, vertical = 3.dp),
-    )
-}
-
-@Composable private fun Legend(tint: Color, text: String) {
-    Row(horizontalArrangement = Arrangement.spacedBy(5.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(10.dp).background(tint, CircleShape))
-        Text(text, color = Parchment, style = MaterialTheme.typography.labelSmall)
-    }
-}
-
-/** A crystal of essences on the maps and its sheet (2.78.0): the violet of its glass. */
-internal val CrystalViolet = Color(0xFFB07FE0)
-
-/** How many cells the minimap shows across by default, and how near and how far its zoom goes. */
-private const val MINIMAP_CELLS = 22f
-private const val MINIMAP_MIN = 10f
-private const val MINIMAP_MAX = 60f
-
-/**
- * A life bar with the shield laid over it, and the figure in words; the mana under it since 2.78.0,
- * its [reserved] part past [maxMana] a hatched tail.
- */
-@Composable internal fun Vitals(
-    life: Int,
-    maxLife: Int,
-    shield: Int,
-    maxShield: Int,
-    modifier: Modifier = Modifier,
-    mana: Int = 0,
-    maxMana: Int = 0,
-    reserved: Int = 0,
-) {
-    val shape = RoundedCornerShape(3.dp)
-    val lifeShare by animateFloatAsState(if (maxLife > 0) life / maxLife.toFloat() else 0f, label = "life")
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Box(Modifier.fillMaxWidth().height(12.dp).background(Color(0xCC0A0D12), shape).border(1.dp, LifeRed.copy(alpha = .8f), shape)) {
-            Box(Modifier.fillMaxWidth(lifeShare.coerceIn(0f, 1f)).fillMaxHeight().background(Brush.horizontalGradient(listOf(LifeRed, LifeRed.copy(alpha = .55f))), shape))
-            if (maxShield > 0) Box(Modifier.fillMaxWidth((shield / maxShield.toFloat()).coerceIn(0f, 1f)).height(4.dp).align(Alignment.TopStart).background(ShieldCyan.copy(alpha = .85f)))
-        }
-        // A pool the auras hold whole is still drawn: a full hatched bar.
-        val pooled = maxMana + reserved.coerceAtLeast(0) > 0
-        if (pooled) {
-            Box(
-                Modifier.fillMaxWidth().height(6.dp).clip(shape).background(Color(0xCC0A0D12), shape)
-                    .reservedTail(reservedShare(maxMana, reserved), ManaBlue).border(1.dp, ManaBlue.copy(alpha = .8f), shape),
-            ) {
-                Box(Modifier.fillMaxWidth((mana / (maxMana + reserved.coerceAtLeast(0)).toFloat()).coerceIn(0f, 1f)).fillMaxHeight().background(ManaBlue, shape))
-            }
-        }
-        Text(
-            (if (maxShield > 0) ui("expedition.vitals_shield", life, maxLife, shield) else ui("expedition.vitals", life, maxLife)) +
-                (if (pooled) " · " + ui("expedition.vitals_mana", mana, maxMana) else ""),
-            color = Parchment,
-            style = MaterialTheme.typography.labelSmall,
-        )
-    }
-}
-
-/**
- * The stick: wherever the thumb lands in the lower part of the screen, dragging from there walks.
- * The direction is sent in screen axes; the run turns it into the map's. A tap anywhere that does not
- * drag (3.70.0) lands on the map: on a fountain still full, it names it to [onFountain].
- */
-@Composable private fun Stick(run: ExpeditionRun, onFountain: (Int) -> Unit) {
-    var centre by remember { mutableStateOf<Offset?>(null) }
-    var knob by remember { mutableStateOf(Offset.Zero) }
-    var area by remember { mutableStateOf(IntSize.Zero) }
-    val radius = with(LocalDensity.current) { 56.dp.toPx() }
-    val unit = with(LocalDensity.current) { SCENE_UNIT.toPx() }
-    val tap by rememberUpdatedState { at: Offset ->
-        val (x, y) = sceneToWorld(run, at, area, unit)
-        run.world.fountains.firstOrNull { !it.used && hypot(it.cell.x + .5 - x, it.cell.y + .5 - y) < FOUNTAIN_TAP }?.let { onFountain(it.id) }
-    }
-    // A fight can start under a thumb still on the glass; the hero must not walk off after it.
-    DisposableEffect(run) {
-        onDispose {
-            run.stickX = 0.0
-            run.stickY = 0.0
-        }
-    }
-    Box(
-        Modifier.fillMaxSize().onSizeChanged { area = it }.pointerInput(run) {
-            awaitEachGesture {
-                val down = awaitFirstDown()
-                val walks = down.position.y >= area.height * .35f
-                if (walks) {
-                    centre = down.position
-                    knob = down.position
-                }
-                var dragged = false
-                do {
-                    val event = awaitPointerEvent()
-                    val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                    val delta = change.position - down.position
-                    val length = hypot(delta.x, delta.y)
-                    if (length > viewConfiguration.touchSlop) dragged = true
-                    if (!walks) continue
-                    val clamped = if (length > radius) delta * (radius / length) else delta
-                    knob = down.position + clamped
-                    run.stickX = (clamped.x / radius).toDouble()
-                    run.stickY = (clamped.y / radius).toDouble()
-                    change.consume()
-                } while (change.pressed)
-                if (walks) {
-                    run.stickX = 0.0
-                    run.stickY = 0.0
-                    centre = null
-                }
-                if (!dragged) tap(down.position)
-            }
-        },
-    ) {
-        centre?.let { c ->
-            Canvas(Modifier.fillMaxSize()) {
-                drawCircle(Gold.copy(alpha = .18f), radius, c)
-                drawCircle(Gold.copy(alpha = .5f), radius, c, style = Stroke(2.dp.toPx()))
-                drawCircle(GoldBright.copy(alpha = .75f), radius * .4f, knob)
-            }
-        }
-        if (centre == null) {
-            Text(
-                ui("expedition.stick_hint"),
-                color = Muted.copy(alpha = .8f),
-                style = MaterialTheme.typography.labelMedium,
-                modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 24.dp),
-            )
-        }
     }
 }
 
@@ -605,7 +306,7 @@ private const val MINIMAP_MAX = 60f
  * shown as its answer arrives (server 1.30.0), and a button that puts it away. A piece opens its
  * comparison with what is worn and can be worn at once (3.24.0); the map holds still while it is open.
  */
-@Composable private fun ChestLoot(s: ForgeState, vm: ExpeditionViewModel, run: ExpeditionRun, reward: Reward, awaiting: Boolean, onClose: () -> Unit) {
+@Composable internal fun ChestLoot(s: ForgeState, vm: ExpeditionViewModel, run: ExpeditionRun, reward: Reward, awaiting: Boolean, onClose: () -> Unit) {
     var looked by remember(reward) { mutableStateOf<ItemView?>(null) }
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         RunPanel(Modifier, GoldBright) {
@@ -621,13 +322,13 @@ private const val MINIMAP_MAX = 60f
 }
 
 /** How near, in tiles, a tap must land to a fountain to name it. */
-private const val FOUNTAIN_TAP = .9
+internal const val FOUNTAIN_TAP = .9
 
 /**
  * A fountain offered (3.70.0), walked onto or tapped on the map: what it gives, and the choice — drink it now,
  * or step away and leave it standing for later. The map holds still until the answer.
  */
-@Composable private fun FountainOffer(fountain: FountainView, onTake: () -> Unit, onLeave: () -> Unit) {
+@Composable internal fun FountainOffer(fountain: FountainView, onTake: () -> Unit, onLeave: () -> Unit) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         RunPanel(Modifier, ShieldCyan) {
             Text(ui("fountain.offer", fountain.heal.roundToInt()), color = ShieldCyan, style = MaterialTheme.typography.titleMedium)
@@ -642,7 +343,7 @@ private const val FOUNTAIN_TAP = .9
 // ==================== After ====================
 
 /** The autorun's plate (3.2.0): the wave under way of how many, and a stop that hands the run back to the stick. */
-@Composable private fun AutoBar(auto: AutoHud, modifier: Modifier, onStop: () -> Unit) {
+@Composable internal fun AutoBar(auto: AutoHud, modifier: Modifier, onStop: () -> Unit) {
     val shape = RoundedCornerShape(50)
     Row(
         modifier.background(Panel.copy(alpha = .92f), shape).border(1.dp, Gold.copy(alpha = .5f), shape).padding(start = 14.dp, end = 4.dp),
@@ -654,7 +355,7 @@ private const val FOUNTAIN_TAP = .9
     }
 }
 
-@Composable private fun RunPanel(modifier: Modifier, accent: Color = Gold, content: @Composable ColumnScope.() -> Unit) {
+@Composable internal fun RunPanel(modifier: Modifier, accent: Color = Gold, content: @Composable ColumnScope.() -> Unit) {
     val shape = RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp, bottomStart = 14.dp, bottomEnd = 14.dp)
     Row(modifier.navigationBarsPadding().padding(12.dp).fillMaxWidth().height(IntrinsicSize.Min).background(Panel, shape).border(1.dp, accent.copy(alpha = .5f), shape)) {
         RaritySpine(accent, 4.dp)

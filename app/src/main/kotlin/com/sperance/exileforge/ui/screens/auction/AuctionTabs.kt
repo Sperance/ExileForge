@@ -54,381 +54,6 @@ import com.sperance.exileforge.ui.icons.orbArt
 import com.sperance.exileforge.ui.screens.hero.StackInfoSheet
 import com.sperance.exileforge.ui.theme.*
 
-/** The showcase: the server's own search, so the page and the filter both belong to it. */
-@Composable internal fun ColumnScope.ShowcaseTab(s: ForgeState, market: Market, vm: MarketViewModel) {
-    ShowcaseList(s, market, header = { ShowcaseHeader(s, market, vm) }, onBuy = vm::buy, onMore = vm::moreShowcase)
-}
-
-/**
- * The lots themselves, the next page added under them by «Показать ещё» while the server has one.
- *
- * The filter travels in as a header so the list can be driven without a view model: what is worth
- * checking here is which lot offers a Buy button and what the price says, not the form wiring.
- *
- * Buying happens in the lot's own sheet and nowhere else. A line in a list is not enough to decide
- * on — the rolls are what a trader is paying for — and a purchase is irreversible, so it is worth
- * the extra tap that guarantees the item was looked at.
- */
-@Composable internal fun ColumnScope.ShowcaseList(
-    s: ForgeState,
-    market: Market,
-    header: @Composable () -> Unit = {},
-    onBuy: (String) -> Unit,
-    onMore: () -> Unit,
-) {
-    var openLot by remember { mutableStateOf<String?>(null) }
-    var confirmBuy by remember { mutableStateOf<String?>(null) }
-    LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
-        item { header() }
-        if (market.showcase.items.isEmpty()) {
-            item {
-                InfoCard(
-                    ui("tree.nothing_found"),
-                    ui("auction.showcase_empty"),
-                )
-            }
-        }
-        items(market.showcase.items, key = { it.id }) { lot ->
-            // A seller cannot buy their own lot, and the server says so; the sheet does not offer it.
-            LotRow(s, lot, mark = if (lot.belongsTo(s.play.heroId)) ui("auction.your_lot") else null) { openLot = lot.id }
-        }
-        val showcase = market.showcase
-        if (showcase.next != null) {
-            item {
-                ForgeOutlinedButton(enabled = !s.busy && Reads.AUCTION !in s.loading, onClick = onMore, modifier = Modifier.fillMaxWidth()) {
-                    Text(ui("auction.more", showcase.items.size, showcase.totalItems))
-                }
-            }
-        }
-    }
-    market.showcase.items.firstOrNull { it.id == openLot }?.let { lot ->
-        LotSheet(
-            s,
-            lot,
-            action = ui("auction.buy"),
-            enabled = !s.busy && !lot.belongsTo(s.play.heroId),
-            note = if (lot.belongsTo(s.play.heroId)) ui("auction.own_lot") else null,
-            onDismiss = { openLot = null },
-        ) {
-            openLot = null
-            confirmBuy = lot.id
-        }
-    }
-    // A purchase cannot be undone, so it is asked about — and an item the hero cannot wear
-    // is said so in the same breath, because that is exactly the mistake worth catching.
-    market.showcase.items.firstOrNull { it.id == confirmBuy }?.let { lot ->
-        val blocked = lotUnmet(s, lot)
-        val orb = orbTitle(lot)
-        // What the bag keeps after paying: shown when the bag is known and can pay; when it cannot,
-        // the sheet says so and the purchase is not sent (2.46.0).
-        val have = s.bagAmount(lot.priceOrb)
-        val money = s.hero?.money
-        val fee = lot.fee
-        val poor = money != null && money < fee
-        ConfirmSheet(
-            title = ui("auction.buy_q"),
-            subtitle = lot.title,
-            icon = { LotIcon(s, lot, Modifier.size(44.dp)) },
-            ledger = listOfNotNull(
-                LedgerLine(ui("confirm.spend"), ui("confirm.minus", lot.price, orb), Tone.SPEND),
-                fee.takeIf { it > 0 }?.let { LedgerLine(ui("auction.fee"), ui("merchant.gold_amount", it), Tone.SPEND) },
-                have?.takeIf { it >= lot.price }?.let { LedgerLine(ui("confirm.left"), ui("confirm.amount", it - lot.price, orb)) },
-                LedgerLine(ui("confirm.gain"), lot.title, Tone.GAIN),
-                LedgerLine(ui("auction.seller"), sellerName(lot)),
-            ),
-            warning = listOfNotNull(
-                have?.takeIf { it < lot.price }?.let { ui("confirm.short", it) },
-                ui("auction.fee_short", fee).takeIf { poor },
-                blocked.takeIf { it.isNotEmpty() }?.let {
-                    ui("auction.unwearable", it.joinToString(", ") { r -> requirementReason(r, s.lang) })
-                },
-            ).joinToString("\n").ifBlank { null },
-            blocked = (have != null && have < lot.price) || poor,
-            confirm = ui("auction.buy_do"),
-            onDismiss = { confirmBuy = null },
-        ) { onBuy(lot.id) }
-    }
-}
-
-/**
- * The showcase's head: the name to search for, the button to every other filter, and the filters
- * already set as chips.
- *
- * Nothing here asks the server on its own: the search key of the keyboard, «Показать» in the sheet
- * and a chip's cross do. A chip is one filter the server understands, named as the player set it,
- * and its cross drops that filter and asks again — the quickest way back from "nothing found".
- */
-@Composable private fun ShowcaseHeader(s: ForgeState, market: Market, vm: MarketViewModel) {
-    var sheet by remember { mutableStateOf(false) }
-    val f = market.filter
-    val count = f.active().size + if (market.showOwnLots) 1 else 0
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(
-                f.title,
-                { vm.filter(f.copy(title = it.take(s.inputs.search))) },
-                placeholder = { Text(ui("auction.name")) },
-                leadingIcon = { Icon(Icons.Outlined.Search, null) },
-                singleLine = true,
-                modifier = Modifier.weight(1f),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = { vm.loadShowcase() }),
-            )
-            ForgeOutlinedButton(onClick = { sheet = true }, enabled = !s.busy, contentPadding = PaddingValues(horizontal = 12.dp)) {
-                Icon(Icons.Outlined.FilterList, ui("auction.filters"), modifier = Modifier.size(18.dp))
-                if (count > 0) {
-                    Spacer(Modifier.width(6.dp))
-                    Text(count.toString())
-                }
-            }
-        }
-        // The filters set are one line of chips that scrolls sideways, never a block growing down over the lots.
-        if (count > 0) {
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                f.active().forEach { field ->
-                    ActiveFilter(chipLabel(s, field, f.value(field))) {
-                        vm.filter(f.without(field))
-                        vm.loadShowcase()
-                    }
-                }
-                if (market.showOwnLots) {
-                    ActiveFilter(ui("auction.show_mine")) {
-                        vm.showOwnLots(false)
-                        vm.loadShowcase()
-                    }
-                }
-            }
-        }
-    }
-    if (sheet) {
-        FilterSheet(s, market, onDismiss = { sheet = false }) { filter, mine ->
-            sheet = false
-            vm.filter(filter)
-            vm.showOwnLots(mine)
-            vm.loadShowcase()
-        }
-    }
-}
-
-/** A filter that is set, named by its value, with a cross that drops it. */
-@Composable private fun ActiveFilter(label: String, onClear: () -> Unit) {
-    InputChip(
-        selected = true,
-        onClick = onClear,
-        label = { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-        trailingIcon = { Icon(Icons.Outlined.Close, ui("auction.remove_filter"), modifier = Modifier.size(16.dp)) },
-        colors = InputChipDefaults.inputChipColors(selectedContainerColor = Gold, selectedLabelColor = Ink, selectedTrailingIconColor = Ink),
-    )
-}
-
-private fun chipLabel(s: ForgeState, field: FilterField, value: String): String = when (field) {
-    FilterField.KIND -> LotKind.entries.firstOrNull { it.name == value }?.let { lotKindTitle(it, s.lang) } ?: value
-    FilterField.SLOT -> slotTitle(value, s.lang)
-    FilterField.RARITY -> rarityTitle(value, s.lang)
-    FilterField.MIN_LEVEL -> ui("auction.chip_ilvl_from", value)
-    FilterField.MAX_LEVEL -> ui("auction.chip_ilvl_to", value)
-    FilterField.ORB -> ui("auction.chip_orb", itemTitle(value))
-    FilterField.MAX_PRICE -> ui("auction.chip_max_price", value)
-    FilterField.SELLER -> ui("auction.chip_seller", value.takeLast(6))
-}
-
-/** The slots a template may have: the second ring and the belt's other flasks are places of the worn, never of a lot. */
-private val templateSlots: List<Slot> = Slot.entries.filter { it != Slot.RING_2 && it != Slot.FLASK_2 && it != Slot.FLASK_3 }
-
-/**
- * Every filter the server understands, on a draft: nothing reaches the showcase until «Показать»,
- * so trying a combination costs no request, and «Сбросить» clears all but the typed name.
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun FilterSheet(s: ForgeState, market: Market, onDismiss: () -> Unit, onApply: (AuctionFilter, Boolean) -> Unit) {
-    var draft by remember { mutableStateOf(market.filter) }
-    var mine by remember { mutableStateOf(market.showOwnLots) }
-    val any = ui("common.all")
-    val digits = KeyboardOptions(keyboardType = KeyboardType.Number)
-    ForgeSheet(onDismissRequest = onDismiss) {
-        Column(
-            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp).navigationBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Engraved(ui("auction.filters"))
-            Spinner(
-                ui("auction.what_sold"),
-                draft.kind,
-                mapOf("" to any) + LotKind.entries.associate { it.name to lotKindTitle(it, s.lang) },
-                true,
-                glyph = Glyph.ITEM,
-            ) { draft = draft.copy(kind = it) }
-            Spinner(ui("common.slot"), draft.slot, mapOf("" to any) + templateSlots.associate { it.name to slotTitle(it, s.lang) }, true, glyph = Glyph.ITEM) { draft = draft.copy(slot = it) }
-            Spinner(ui("common.rarity"), draft.rarity, mapOf("" to any) + Rarity.entries.associate { it.name to rarityTitle(it, s.lang) }, true, glyph = Glyph.RARITY) { draft = draft.copy(rarity = it) }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    draft.minItemLevel,
-                    { draft = draft.copy(minItemLevel = it.filter(Char::isDigit).take(3)) },
-                    label = { Text(ui("auction.ilvl_from")) },
-                    singleLine = true,
-                    keyboardOptions = digits,
-                    modifier = Modifier.weight(1f),
-                )
-                OutlinedTextField(
-                    draft.maxItemLevel,
-                    { draft = draft.copy(maxItemLevel = it.filter(Char::isDigit).take(3)) },
-                    label = { Text(ui("auction.ilvl_to")) },
-                    singleLine = true,
-                    keyboardOptions = digits,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-            // The price's orb is an item code (3.0.0): the auction's currencies, in the order of their price.
-            Spinner(
-                ui("auction.priced_in"),
-                draft.priceOrb,
-                mapOf("" to any) + orbOptions(s),
-                true,
-                glyph = Glyph.CURRENCY,
-                optionArt = orbArt(s.currencies),
-            ) { draft = draft.copy(priceOrb = it) }
-            OutlinedTextField(
-                draft.maxPrice,
-                { draft = draft.copy(maxPrice = it.filter(Char::isDigit).take(s.inputs.number)) },
-                label = { Text(ui("auction.price_max")) },
-                singleLine = true,
-                keyboardOptions = digits,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            // A seller is named by the hero's id: there is no catalogue of heroes to pick one from.
-            OutlinedTextField(
-                draft.sellerId,
-                { draft = draft.copy(sellerId = it.trim().take(s.inputs.code)) },
-                label = { Text(ui("auction.seller")) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            // Own lots cannot be bought, so they are dropped unless a seller wants to compare prices.
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(ui("auction.show_mine"), modifier = Modifier.weight(1f))
-                Switch(checked = mine, onCheckedChange = { mine = it })
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ForgeOutlinedButton(onClick = {
-                    draft = draft.cleared()
-                    mine = false
-                }, modifier = Modifier.weight(1f)) { Text(ui("auction.reset")) }
-                ForgeButton(enabled = !s.busy, onClick = { onApply(draft, mine) }, modifier = Modifier.weight(1f)) { Text(ui("auction.apply")) }
-            }
-        }
-    }
-}
-
-/** The hero's own lots that are still on sale; withdrawn and sold lots leave this list. */
-@Composable internal fun ColumnScope.MyLotsTab(s: ForgeState, market: Market, vm: MarketViewModel) {
-    var openLot by remember { mutableStateOf<String?>(null) }
-    LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
-        // Lot places (3.47.0): the same for every hero, never bought.
-        market.slots?.let { slots ->
-            item {
-                ForgePanel {
-                    PropertyRow(ui("auction.slots"), ui("auction.slots_value", slots.used, slots.limit), Glyph.ITEM)
-                    if (slots.full) Text(ui("auction.slots_full"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
-                }
-            }
-        }
-        if (market.ownLots.isEmpty()) {
-            item {
-                InfoCard(ui("auction.no_lots"), ui("auction.no_lots_hint"))
-            }
-        }
-        items(market.ownLots, key = { it.id }) { lot ->
-            val window = s.index?.rules?.auction?.extendWindowMillis ?: 0L
-            LotRow(s, lot, mark = lotExpiry(lot)?.let { if (lot.extendable(window)) it + " · " + ui("auction.extend_now") else it }, withSeller = false) { openLot = lot.id }
-        }
-    }
-    market.ownLots.firstOrNull { it.id == openLot }?.let { lot ->
-        // On its last day the author may give it another week (3.79.0), as often as they like.
-        val extendable = s.index?.rules?.auction?.let { lot.extendable(it.extendWindowMillis) } == true
-        LotSheet(
-            s,
-            lot,
-            action = ui("auction.withdraw"),
-            enabled = !s.busy,
-            note = lotExpiry(lot),
-            onDismiss = { openLot = null },
-            extra = if (extendable) {
-                (
-                    {
-                        ForgeOutlinedButton(enabled = !s.busy, onClick = {
-                            openLot = null
-                            vm.extend(lot.id)
-                        }, modifier = Modifier.fillMaxWidth()) {
-                            Text(ui("auction.extend", s.index?.rules?.auction?.lotDays ?: 7))
-                        }
-                    }
-                    )
-            } else {
-                null
-            },
-        ) {
-            openLot = null
-            vm.cancel(lot.id)
-        }
-    }
-}
-
-/** Which deals the history shows (3.73.0). */
-private enum class DealFilter { ALL, SOLD, BOUGHT }
-
-/**
- * The hero's deals of the last days (3.73.0): what they sold and to whom, what they bought and from whom, the copy as it
- * changed hands a tap away, and the orbs earned and spent summed on top.
- */
-@Composable internal fun ColumnScope.HistoryTab(s: ForgeState, market: Market) {
-    var filter by remember { mutableStateOf(DealFilter.ALL) }
-    var openLot by remember { mutableStateOf<String?>(null) }
-    val heroId = s.play.heroId
-    val deals = market.history.map { it.deal }
-    val shown = deals.filter { deal ->
-        when (filter) {
-            DealFilter.ALL -> true
-            DealFilter.SOLD -> deal.belongsTo(heroId)
-            DealFilter.BOUGHT -> !deal.belongsTo(heroId)
-        }
-    }
-    LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
-        item {
-            ForgePanel {
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    DealFilter.entries.forEach { f ->
-                        FilterChip(selected = filter == f, onClick = { filter = f }, label = { Text(ui("auction.history_${f.name.lowercase()}")) })
-                    }
-                }
-                orbTotals(deals.filter { it.belongsTo(heroId) }).takeIf { it.isNotBlank() }?.let { PropertyRow(ui("auction.history_earned"), it, Glyph.CURRENCY) }
-                orbTotals(deals.filterNot { it.belongsTo(heroId) }).takeIf { it.isNotBlank() }?.let { PropertyRow(ui("auction.history_spent"), it, Glyph.CURRENCY) }
-                MutedText(ui("auction.history_note"), style = MaterialTheme.typography.labelMedium)
-            }
-        }
-        if (shown.isEmpty()) item { InfoCard(ui("auction.history_empty"), ui("auction.history_empty_hint")) }
-        items(shown, key = { it.id }) { deal ->
-            LotRow(s, deal, mark = dealMark(deal, heroId), withSeller = false) { openLot = deal.id }
-        }
-    }
-    shown.firstOrNull { it.id == openLot }?.let { deal ->
-        LotSheet(s, deal, action = null, enabled = false, note = dealMark(deal, heroId), onDismiss = { openLot = null })
-    }
-}
-
-/** «Продано: Имя · 12.10 14:30» or «Куплено у Имя · …». */
-private fun dealMark(deal: AuctionLot, heroId: String): String {
-    val at = java.text.SimpleDateFormat("dd.MM HH:mm", java.util.Locale.ROOT).format(java.util.Date(deal.soldAt))
-    return if (deal.belongsTo(heroId)) {
-        ui("auction.history_sold_to", deal.buyerName.ifBlank { "…" }, at)
-    } else {
-        ui("auction.history_bought_from", sellerName(deal), at)
-    }
-}
-
-/** The orbs of [deals] summed per orb: «12 × Сфера хаоса, 3 × Сфера соединения». */
-private fun orbTotals(deals: List<AuctionLot>): String = deals.groupBy { it.priceOrb }.entries.joinToString(", ") { (orb, of) -> "${of.sumOf { it.price }} × ${orbTitle(of.first())}" }
-
 /**
  * One lot as a line (variant A): everything a trader decides on without opening it — what it is, every line it
  * rolled, who sells it, and the price opposite. A copy is read through its view as the stash reads it; a stack has
@@ -436,7 +61,7 @@ private fun orbTotals(deals: List<AuctionLot>): String = deals.groupBy { it.pric
  *
  * Rarity is not written anywhere: it is the frame of the icon and the colour of the name.
  */
-@Composable private fun LotRow(s: ForgeState, lot: AuctionLot, mark: String?, withSeller: Boolean = true, onClick: () -> Unit) {
+@Composable internal fun LotRow(s: ForgeState, lot: AuctionLot, mark: String?, withSeller: Boolean = true, onClick: () -> Unit) {
     var orbInfo by remember { mutableStateOf(false) }
     if (orbInfo) StackInfoSheet(s, lot.priceOrb) { orbInfo = false }
     val price: @Composable ColumnScope.() -> Unit = { LotPrice(lot) { orbInfo = true } }
@@ -457,7 +82,7 @@ private fun orbTotals(deals: List<AuctionLot>): String = deals.groupBy { it.pric
  * The price opposite the name: the count and the orb in its own glass (2.69.0) — the plain glyph for one the client has no art
  * for — and the orb's name under them, since the glasses of the lesser orbs look alike; a tap on a known orb's glass opens it.
  */
-@Composable private fun LotPrice(lot: AuctionLot, onOrb: () -> Unit) {
+@Composable internal fun LotPrice(lot: AuctionLot, onOrb: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(lot.price.toString(), color = Vital, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1)
         Orb.of(lot.priceOrb)?.let { OrbGlyph(it, Modifier.clickable(onClickLabel = orbTitle(lot), onClick = onOrb).padding(2.dp).size(16.dp)) }
@@ -474,7 +99,7 @@ private fun orbTotals(deals: List<AuctionLot>): String = deals.groupBy { it.pric
 }
 
 /** How long an own lot still stands (server 1.30.0): days and hours, hours and minutes on its last day; null when it names no end. */
-private fun lotExpiry(lot: AuctionLot): String? {
+internal fun lotExpiry(lot: AuctionLot): String? {
     val minutes = ((lot.timeLeft() ?: return null) + 59_999) / 60_000
     return if (minutes >= MINUTES_A_DAY) {
         ui("auction.left_days", minutes / MINUTES_A_DAY, minutes % MINUTES_A_DAY / 60)
@@ -483,32 +108,32 @@ private fun lotExpiry(lot: AuctionLot): String? {
     }
 }
 
-private const val MINUTES_A_DAY = 1_440L
+internal const val MINUTES_A_DAY = 1_440L
 
 /**
  * The lot's drawing: the server's sprite for its code, the bundled emblem of its kind otherwise — a
  * copy by its template, a stack by the item of the bag it is a stack of.
  */
-@Composable private fun LotIcon(s: ForgeState, lot: AuctionLot, modifier: Modifier) {
+@Composable internal fun LotIcon(s: ForgeState, lot: AuctionLot, modifier: Modifier) {
     val sprite = if (lot.kind == LotKind.EQUIPMENT) equipmentIcon(lot.itemCode) else itemIcon(lot.itemCode)
     if (!SpriteIcon(sprite, lotColor(lot), modifier, halo = lot.kind == LotKind.EQUIPMENT)) ItemEmblem(lotVisualKind(s, lot), lotColor(lot), modifier)
 }
 
-private fun lotVisualKind(s: ForgeState, lot: AuctionLot): ItemVisualKind = when (lot.kind) {
+internal fun lotVisualKind(s: ForgeState, lot: AuctionLot): ItemVisualKind = when (lot.kind) {
     LotKind.EQUIPMENT -> s.index?.template(lot.itemCode)?.let(::itemVisualKind) ?: ItemVisualKind.ITEM
     LotKind.ITEM -> s.index?.item(lot.itemCode)?.let(::bagVisualKind) ?: ItemVisualKind.ITEM
 }
 
 /** The rarity's colour for a copy; a stack has none and keeps bone white. */
-private fun lotColor(lot: AuctionLot) = rarityColor(lot.rarity?.name.orEmpty())
+internal fun lotColor(lot: AuctionLot) = rarityColor(lot.rarity?.name.orEmpty())
 
-private fun sellerName(lot: AuctionLot): String = lot.sellerName.ifBlank { "…${lot.sellerId.takeLast(6)}" }
+internal fun sellerName(lot: AuctionLot): String = lot.sellerName.ifBlank { "…${lot.sellerId.takeLast(6)}" }
 
 /** The requirements the lot's template misses against the hero's sheet; empty for a stack, and for a wearable copy. */
-private fun lotUnmet(s: ForgeState, lot: AuctionLot): List<String> = lot.equipment?.let { s.unmetFor(it.template) }.orEmpty()
+internal fun lotUnmet(s: ForgeState, lot: AuctionLot): List<String> = lot.equipment?.let { s.unmetFor(it.template) }.orEmpty()
 
 /** A stack lot's facts: how many, or what kind of goods when it is one. */
-private fun stackFacts(s: ForgeState, lot: AuctionLot): List<String> = listOf(if (lot.amount > 1) ui("auction.pieces", lot.amount) else lotKindTitle(lot.kind, s.lang))
+internal fun stackFacts(s: ForgeState, lot: AuctionLot): List<String> = listOf(if (lot.amount > 1) ui("auction.pieces", lot.amount) else lotKindTitle(lot.kind, s.lang))
 
 /**
  * One lot in full, with the goods drawn as the stash draws them.
@@ -518,7 +143,7 @@ private fun stackFacts(s: ForgeState, lot: AuctionLot): List<String> = listOf(if
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun LotSheet(
+internal fun LotSheet(
     s: ForgeState,
     lot: AuctionLot,
     action: String?,
@@ -561,7 +186,7 @@ private fun LotSheet(
  * `TimeZone.UTC` — so it carries no zone of its own and this is the one place that gives it one.
  * A stamp that will not parse is simply not shown: a wrong time is worse than no time.
  */
-private fun listedAt(stamp: String): String? {
+internal fun listedAt(stamp: String): String? {
     if (stamp.isBlank()) return null
     return try {
         java.time.LocalDateTime.parse(stamp)
@@ -574,6 +199,6 @@ private fun listedAt(stamp: String): String? {
 }
 
 /** A lot's price, in the orb it was set in; an orb the rules do not know keeps its tail as a name. */
-private fun orbPrice(lot: AuctionLot): String = ui("confirm.amount", lot.price, orbTitle(lot))
+internal fun orbPrice(lot: AuctionLot): String = ui("confirm.amount", lot.price, orbTitle(lot))
 
-private fun orbTitle(lot: AuctionLot): String = if (Orb.of(lot.priceOrb) != null) itemTitle(lot.priceOrb) else ui("auction.orb_id", lot.priceOrb.takeLast(6))
+internal fun orbTitle(lot: AuctionLot): String = if (Orb.of(lot.priceOrb) != null) itemTitle(lot.priceOrb) else ui("auction.orb_id", lot.priceOrb.takeLast(6))

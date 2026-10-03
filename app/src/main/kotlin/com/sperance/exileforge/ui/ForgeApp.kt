@@ -151,15 +151,15 @@ import org.koin.compose.viewmodel.koinViewModel
  * be shown stale, so the lists below err on the wide side: the common slice is every part but the toasts and the tabs
  * of other screens.
  */
-@Composable private fun ForgeState.sliced(vararg reads: Any?): ForgeState = remember(*reads) { this }
+@Composable internal fun ForgeState.sliced(vararg reads: Any?): ForgeState = remember(*reads) { this }
 
 /** The parts every screen may read: the account, the world, the play, the link, the language, the mode and the command in flight. */
-private val ForgeState.common: Array<Any?> get() = arrayOf(busy, loading, lang, mode, account, world, play, link, stashSort, stashHideWorn)
+internal val ForgeState.common: Array<Any?> get() = arrayOf(busy, loading, lang, mode, account, world, play, link, stashSort, stashHideWorn)
 
 /** A screen with its own toasts reads the notice and the refusal too. */
-private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, error)
+internal val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, error)
 
-@Composable private fun ForgeScreens(vm: ForgeViewModel) {
+@Composable internal fun ForgeScreens(vm: ForgeViewModel) {
     val s by vm.state.collectAsStateWithLifecycle()
     val logs by vm.logs.collectAsStateWithLifecycle()
     val expedition by vm.expedition.collectAsStateWithLifecycle()
@@ -231,7 +231,7 @@ private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, erro
  * Стек экранов (3.80.23): `NavDisplay` над стеком навигатора. Экраны игры стоят в оболочке - шапка, полоса команды,
  * Путь Изгнанника, полоска героя и нижняя панель; вход, меню героев и атлас - без неё.
  */
-@Composable private fun Shell(s: ForgeState, vm: ForgeViewModel, logs: List<RequestLog>, route: Route, navigator: Navigator, onBug: () -> Unit) {
+@Composable internal fun Shell(s: ForgeState, vm: ForgeViewModel, logs: List<RequestLog>, route: Route, navigator: Navigator, onBug: () -> Unit) {
     val screens: @Composable (Modifier) -> Unit = { modifier ->
         NavDisplay(
             backStack = navigator.stack,
@@ -293,7 +293,7 @@ private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, erro
 }
 
 /** The bottom bar: five destinations are the game; an administrator gets exactly one more. A tab tapped again walks back to its root. */
-@Composable private fun GameBar(s: ForgeState, vm: ForgeViewModel) {
+@Composable internal fun GameBar(s: ForgeState, vm: ForgeViewModel) {
     NavigationBar(
         containerColor = Abyss,
         tonalElevation = 0.dp,
@@ -365,155 +365,5 @@ private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, erro
     }
 }
 
-/**
- * Title banner: the sigil, the character being played, and the one switch an exile keeps at hand.
- *
- * The subtitle names the character rather than the league, because every button on every tab acts
- * on that one and nothing on screen would otherwise say which.
- *
- * The administrator's mode switch used to sit here too. It moved to the administrator's own tab in
- * 2.3.0: it is not something a player has, and the banner is the one thing on screen every player
- * sees on every tab. The language runes went the same way in 2.4.0, to the Account tab and to the
- * sign-in screen: with a third language they were a crowd, and a language is a setting, not an act.
- * Since 2.48.0 the hero's class is gone from it, a short plaque of the craft under way opens the
- * crafts, and the account sits in its corner — it left the bottom bar. Since 3.75.0 the inbox, the beetle and the
- * account share one «⋮»: with every badge up the name of the game no longer fit.
- */
-@Composable private fun ForgeBanner(s: ForgeState, vm: ForgeViewModel, onBug: () -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Gold.copy(alpha = .10f), Color.Transparent, Gold.copy(alpha = .06f))))
-            .padding(horizontal = 18.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        // The game's sigil opens the account (3.77.0), where the menu's row was.
-        val accountOpen = s.tab == TAB_ACCOUNT
-        Box(
-            Modifier.size(40.dp).clip(RoundedCornerShape(9.dp)).border(1.dp, (if (accountOpen) GoldBright else Gold).copy(alpha = .5f), RoundedCornerShape(9.dp))
-                .clickable(onClickLabel = ui("nav.account")) { vm.tab(TAB_ACCOUNT) },
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(ForgeGlyphs.Sigil, ui("nav.account"), tint = if (accountOpen) GoldBright else Gold, modifier = Modifier.size(24.dp))
-        }
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            Text("EXILE FORGE", style = MaterialTheme.typography.titleLarge, color = GoldBright, maxLines = 1, softWrap = false)
-            // The loaded hero names themself; before the snapshot lands, the menu's row does.
-            val named = s.heroInfo != null || s.heroRow != null
-            Text(
-                if (named) s.heroName + ui("app.hero_level", s.heroLevel) else ui("app.title"),
-                style = MaterialTheme.typography.labelSmall,
-                color = Muted,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-        WorkBadge(s) { vm.tab(TAB_CRAFTS) }
-        LinkBadge(s.link, admin = s.isAdmin, onRetry = vm::retryLink)
-        BannerMenu(s.feedback.unread, settingsOpen = s.tab == TAB_SETTINGS, onMail = LocalMailOpen.current, onBug = onBug, onSettings = vm::openSettings)
-    }
-}
-
-/**
- * The banner's «⋮» (3.75.0, the owner's pick «B» of three mockups): the inbox, the beetle and the account behind one button,
- * so the name of the game fits beside the badges. A letter unread marks the button itself with a dot.
- */
-@Composable private fun BannerMenu(unread: Int, settingsOpen: Boolean, onMail: (() -> Unit)?, onBug: () -> Unit, onSettings: () -> Unit) {
-    var open by remember { mutableStateOf(false) }
-    Box {
-        IconButton(onClick = { open = true }) {
-            Box {
-                Icon(Icons.Outlined.MoreVert, ui("common.more"), tint = if (settingsOpen) GoldBright else Gold, modifier = Modifier.size(24.dp))
-                if (unread > 0) Box(Modifier.align(Alignment.TopEnd).size(8.dp).background(LifeRed, CircleShape))
-            }
-        }
-        DropdownMenu(open, onDismissRequest = { open = false }, containerColor = PanelRaised) {
-            fun pick(action: () -> Unit) {
-                open = false
-                action()
-            }
-            onMail?.let { mail ->
-                DropdownMenuItem(
-                    text = { Text(ui("mail.title")) },
-                    onClick = { pick(mail) },
-                    leadingIcon = { Icon(Icons.Outlined.Mail, null, tint = Gold) },
-                    trailingIcon = {
-                        if (unread > 0) {
-                            Text(
-                                if (unread > 9) "9+" else unread.toString(),
-                                color = Ink,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.background(LifeRed, CircleShape).padding(horizontal = 6.dp),
-                            )
-                        }
-                    },
-                )
-            }
-            DropdownMenuItem(text = { Text(ui("bug.open")) }, onClick = { pick(onBug) }, leadingIcon = { Icon(Icons.Outlined.BugReport, null, tint = Gold) })
-            DropdownMenuItem(
-                text = { Text(ui("settings.title"), color = if (settingsOpen) GoldBright else Parchment) },
-                onClick = { pick(onSettings) },
-                leadingIcon = { Icon(Icons.Outlined.Settings, null, tint = Gold) },
-            )
-        }
-    }
-}
-
-/**
- * The link to the server (3.30.0): a small crossed cloud while it cannot be reached, and how many commands wait
- * to be sent. Nothing at all while the server answers and nothing waits. A tap on a cloud that only waits asks
- * the server again at once; on a crossed one (3.79.0) it says why — by cause, with the transport's words for an
- * administrator — and offers «Повторить». The server is asked again by itself meanwhile.
- */
-@Composable private fun LinkBadge(link: LinkState, admin: Boolean, onRetry: () -> Unit) {
-    if (!link.offline && link.waiting.isEmpty()) return
-    val tint = if (link.offline) LifeRed else Gold
-    val label = if (link.offline) link.outage?.title ?: ui("link.offline") else ui("link.waiting", link.waiting.size)
-    var open by remember { mutableStateOf(false) }
-    Box {
-        Row(
-            Modifier.clickable(onClickLabel = ui("link.retry")) { if (link.offline) open = true else onRetry() }.padding(horizontal = 6.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(3.dp),
-        ) {
-            Icon(if (link.offline) Icons.Outlined.CloudOff else Icons.Outlined.CloudUpload, label, tint = tint, modifier = Modifier.size(18.dp))
-            if (link.waiting.isNotEmpty()) Text(link.waiting.size.toString(), color = tint, fontSize = 11.sp)
-        }
-        DropdownMenu(open && link.offline, onDismissRequest = { open = false }, containerColor = PanelRaised) {
-            Column(Modifier.widthIn(max = 280.dp).padding(horizontal = 14.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(label, color = LifeRed, style = MaterialTheme.typography.titleSmall)
-                link.outage?.let { Text(it.hint, color = Parchment, style = MaterialTheme.typography.bodySmall) }
-                Text(ui("link.auto_retry"), color = Muted, style = MaterialTheme.typography.labelSmall)
-                if (link.waiting.isNotEmpty()) Text(ui("link.waiting", link.waiting.size), color = Gold, style = MaterialTheme.typography.labelSmall)
-                if (admin) link.detail?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelSmall) }
-                TextButton(onClick = {
-                    open = false
-                    onRetry()
-                }) { Text(ui("link.retry_now"), color = GoldBright) }
-            }
-        }
-    }
-}
-
-/** The craft under way, very short: its name and the cycle filling, every frame. Nothing when the hero works at nothing. */
-@Composable private fun WorkBadge(s: ForgeState, onClick: () -> Unit) {
-    val crafts = s.play.crafts ?: return
-    val work = crafts.work ?: return
-    val offset = crafts.now - s.play.craftsAt
-    val now by produceState(System.currentTimeMillis()) { while (true) withFrameMillis { value = System.currentTimeMillis() } }
-    Column(Modifier.widthIn(max = 120.dp).clickable(onClick = onClick).padding(horizontal = 6.dp, vertical = 2.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            Icon(ForgeGlyphs.Anvil, null, tint = Gold, modifier = Modifier.size(12.dp))
-            Text(workTitle(work.job, work.choice), color = Parchment, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-        LinearProgressIndicator(
-            progress = { if (work.cycleMillis > 0) ((now + offset - work.settledAt).toFloat() / work.cycleMillis).coerceIn(0f, 1f) else 0f },
-            modifier = Modifier.fillMaxWidth().height(2.dp).padding(top = 1.dp),
-            color = Gold,
-            trackColor = PanelRaised,
-        )
-    }
-}
-
 /** How often the inbox is asked again while signed in (3.73.0). */
-private const val MAIL_POLL_MS = 5 * 60_000L
+internal const val MAIL_POLL_MS = 5 * 60_000L

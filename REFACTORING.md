@@ -47,7 +47,8 @@
   - [ ] Progress: своя модель; выдачи тестера (`grant*`) - в модель отладочной панели.
   - [x] Expedition/Atlas/Trials, ядро: `ExpeditionRepository` (карточка зоны, добыча похода, окно атласа, счётчики журнала) в `:core`; `ExpeditionActions` и `TrialActions` в `presentation/expedition`; `ExpeditionViewModel`/`TrialViewModel` из `features` удалены.
   - [x] Expedition/Atlas/Trials, экраны: `ExpeditionViewModel` над действиями похода, испытаний и героя; карта мира, карточка зоны, доска испытаний и листы снаряжения/добычи только на ней, оверлеи похода/испытания/атласа - ещё и на `ForgeViewModel` ради фильтра журнала, тостов и вибрации.
-- [ ] По ходу: файлы UI не длиннее ~400 строк (SkillTreeScreen, CraftsScreen, MapStyles, GrimoireScreen, ExpeditionScene, WorldArt, AtlasScreen, AuctionTabs).
+- [x] Файлы UI не длиннее ~400 строк: SkillTreeScreen, CraftsScreen, GrimoireScreen, AuctionTabs, AtlasScreen, ExpeditionPlay, ZoneCard, CraftScreen, CombatDetail, ForgeApp (шапка в `ui/Banner.kt`) разбиты.
+- [ ] Файлы сцены похода (MapStyles, ExpeditionScene, WorldArt) - с распилом `ExpeditionWorld` (этап 5).
 - [ ] `ForgeViewModel`, `ForgeRuntime`, `FeatureViewModel` удалены.
 
 ## Этап 5 - бой

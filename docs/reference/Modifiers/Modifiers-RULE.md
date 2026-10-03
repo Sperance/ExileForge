@@ -1,0 +1,25 @@
+# Модификаторы · RULE
+
+Тир 1 — верхний. Уровень — порог **уровня предмета**, не героя. Вес — относительный вес тира среди разрешённых; он не является процентом выпадения предмета.
+
+## RARITY_STOCK_HEALTH_MORE <a href="#rarity_stock_health_more" id="rarity_stock_health_more"></a>
+
+
+| Параметр | Значение |
+| --- | --- |
+| Источник · `source` | `RULE` |
+| Теги · `tags` | `rarity` |
+
+
+- {v}% больше максимума здоровья · [Здоровье](../Stats/Stats-HERO.md#stock_health)
+
+### NATURAL <a href="#natural" id="natural"></a>
+
+
+| Тир | Мин. ilvl | Вес | Диапазоны эффектов |
+| --- | --- | --- | --- |
+
+---
+Основание: [актуальный исходник](https://github.com/Sperance/ktor-bestgame/blob/fa8c3991681e20ef4d62548bf954d0b031a905a5/src/main/resources/content/modifiers.json), срез `fa8c399` / клиент `9faca17`, 03.10.2026.
+
+[↑ На главную](../../README.md) · [Все страницы](../../Catalogs.md)

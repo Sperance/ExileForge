@@ -1,0 +1,207 @@
+# Особые силы · Q
+
+## POWER_QUENCH_RETURN <a href="#power_quench_return" id="power_quench_return"></a>
+
+### Возврат закалки <a href="#возврат-закалки" id="возврат-закалки"></a>
+
+**Чтение свойства** (`{v}` — значение):
+
+| Операция | Игровой текст |
+| --- | --- |
+| ADD | Глоток из фляги даёт {v} зарядов всем флягам |
+
+
+| Параметр | Значение |
+| --- | --- |
+| Характеристика · `stat` | [Возврат закалки](../Stats/Stats-POWER.md#power_quench_return) |
+| Событие · `on` | `FLASK` |
+| Эффекты · `effects` | Действие: `CHARGES` |
+
+
+## POWER_QUENCH <a href="#power_quench" id="power_quench"></a>
+
+### Закалка водой <a href="#закалка-водой" id="закалка-водой"></a>
+
+**Чтение свойства** (`{v}` — значение):
+
+| Операция | Игровой текст |
+| --- | --- |
+| ADD | Поджог с шансом {v}% снимает с вас все состояния |
+
+
+| Параметр | Значение |
+| --- | --- |
+| Характеристика · `stat` | [Закалка водой](../Stats/Stats-POWER.md#power_quench) |
+| Тип броска · `roll` | `CHANCE` |
+| Событие · `on` | `AILED` |
+| checks | check: `AILMENT`; word: `IGNITE` |
+| Эффекты · `effects` | Действие: `CLEANSE` |
+
+
+## POWER_QUEENS_PRECISION <a href="#power_queens_precision" id="power_queens_precision"></a>
+
+### Точность королевы <a href="#точность-королевы" id="точность-королевы"></a>
+
+**Чтение свойства** (`{v}` — значение):
+
+| Операция | Игровой текст |
+| --- | --- |
+| ADD | {v}% увеличения шанса крита против редких и уникальных врагов |
+
+
+| Параметр | Значение |
+| --- | --- |
+| Характеристика · `stat` | [Точность королевы](../Stats/Stats-POWER.md#power_queens_precision) |
+| Событие · `on` | `STANDING` |
+| checks | check: `TARGET_RARE` |
+| Эффекты · `effects` | Действие: `BUFF`; Свойства: Характеристика: [Шанс критического удара](../Stats/Stats-HERO.md#stock_critical_chance); Операция: `INCREASED` |
+
+
+## POWER_QUEENS_THIRST <a href="#power_queens_thirst" id="power_queens_thirst"></a>
+
+### Жажда королевы <a href="#жажда-королевы" id="жажда-королевы"></a>
+
+**Чтение свойства** (`{v}` — значение):
+
+| Операция | Игровой текст |
+| --- | --- |
+| ADD | Во время действия убийство восстанавливает {v}% максимума здоровья |
+
+
+| Параметр | Значение |
+| --- | --- |
+| Характеристика · `stat` | [Жажда королевы](../Stats/Stats-POWER.md#power_queens_thirst) |
+| Событие · `on` | `KILL` |
+| Эффекты · `effects` | Действие: `HEAL`; of: `LIFE` |
+
+
+## POWER_QUICK_DRAW <a href="#power_quick_draw" id="power_quick_draw"></a>
+
+### Быстрая рука <a href="#быстрая-рука" id="быстрая-рука"></a>
+
+**Чтение свойства** (`{v}` — значение):
+
+| Операция | Игровой текст |
+| --- | --- |
+| ADD | С шансом {v}% первая атака в бою - сразу же, без замаха |
+
+
+| Параметр | Значение |
+| --- | --- |
+| Характеристика · `stat` | [Быстрая рука](../Stats/Stats-POWER.md#power_quick_draw) |
+| Тип броска · `roll` | `CHANCE` |
+| Событие · `on` | `FIGHT_START` |
+| Эффекты · `effects` | Действие: `RUSH` |
+
+
+## POWER_QUENCH_TEMPO <a href="#power_quench_tempo" id="power_quench_tempo"></a>
+
+### Темп закалки <a href="#темп-закалки" id="темп-закалки"></a>
+
+**Чтение свойства** (`{v}` — значение):
+
+| Операция | Игровой текст |
+| --- | --- |
+| ADD | Оглушение врага даёт {v}% увеличения скорости атаки на 3 с |
+
+
+| Параметр | Значение |
+| --- | --- |
+| Характеристика · `stat` | [Темп закалки](../Stats/Stats-POWER.md#power_quench_tempo) |
+| Событие · `on` | `STUN` |
+| Эффекты · `effects` | Действие: `BUFF`; Свойства: Характеристика: [Скорость атаки](../Stats/Stats-HERO.md#stock_attack_speed); Операция: `INCREASED`; Длительность: 3 |
+
+
+## POWER_QUENCHED_SKIN <a href="#power_quenched_skin" id="power_quenched_skin"></a>
+
+### Закалённая кожа <a href="#закалённая-кожа" id="закалённая-кожа"></a>
+
+**Чтение свойства** (`{v}` — значение):
+
+| Операция | Игровой текст |
+| --- | --- |
+| ADD | Физический удар по вам даёт {v}% увеличения брони на 4 с, не чаще раза в 4 с |
+
+
+| Параметр | Значение |
+| --- | --- |
+| Характеристика · `stat` | [Закалённая кожа](../Stats/Stats-POWER.md#power_quenched_skin) |
+| Событие · `on` | `HIT_TAKEN` |
+| checks | check: `DAMAGE_TYPE`; word: `PHYSICAL` |
+| Перезарядка, с · `cooldown` | 4 |
+| Эффекты · `effects` | Действие: `BUFF`; Свойства: Характеристика: [Броня](../Stats/Stats-HERO.md#stock_armor); Операция: `INCREASED`; Длительность: 4 |
+
+
+## POWER_QUEEN_BARE_BARK <a href="#power_queen_bare_bark" id="power_queen_bare_bark"></a>
+
+### Голая кора <a href="#голая-кора" id="голая-кора"></a>
+
+**Чтение свойства** (`{v}` — значение):
+
+| Операция | Игровой текст |
+| --- | --- |
+| ADD | У вас нет брони |
+
+
+| Параметр | Значение |
+| --- | --- |
+| Характеристика · `stat` | [Голая кора](../Stats/Stats-POWER.md#power_queen_bare_bark) |
+| sheet | Операция: `SET`; to: [Броня](../Stats/Stats-HERO.md#stock_armor); Значение: 0 |
+
+
+## POWER_QUARRY_SOLUTION <a href="#power_quarry_solution" id="power_quarry_solution"></a>
+
+### Решение каменотёса <a href="#решение-каменотёса" id="решение-каменотёса"></a>
+
+**Чтение свойства** (`{v}` — значение):
+
+| Операция | Игровой текст |
+| --- | --- |
+| ADD | {v}% Силы засчитывается и как Интеллект (маны не даёт) |
+
+
+| Параметр | Значение |
+| --- | --- |
+| Характеристика · `stat` | [Решение каменотёса](../Stats/Stats-POWER.md#power_quarry_solution) |
+| sheet | Операция: `GAIN`; Предшествующие зоны: [Сила](../Stats/Stats-HERO.md#stock_strength); to: [Интеллект](../Stats/Stats-HERO.md#stock_intellect) |
+
+
+## POWER_QUARRY_GRIT <a href="#power_quarry_grit" id="power_quarry_grit"></a>
+
+### Выдержка <a href="#выдержка" id="выдержка"></a>
+
+**Чтение свойства** (`{v}` — значение):
+
+| Операция | Игровой текст |
+| --- | --- |
+| ADD | +{v} к броне за каждые 5 Силы |
+
+
+| Параметр | Значение |
+| --- | --- |
+| Характеристика · `stat` | [Выдержка](../Stats/Stats-POWER.md#power_quarry_grit) |
+| sheet | Операция: `PER`; Предшествующие зоны: [Сила](../Stats/Stats-HERO.md#stock_strength); to: [Броня](../Stats/Stats-HERO.md#stock_armor); per: 5 |
+
+
+## POWER_QUICK_ROT <a href="#power_quick_rot" id="power_quick_rot"></a>
+
+### Быстрая гниль <a href="#быстрая-гниль" id="быстрая-гниль"></a>
+
+**Чтение свойства** (`{v}` — значение):
+
+| Операция | Игровой текст |
+| --- | --- |
+| ADD | Отравление врага ускоряет урон состояний на {v}% на 4 с |
+
+
+| Параметр | Значение |
+| --- | --- |
+| Характеристика · `stat` | [Быстрая гниль](../Stats/Stats-POWER.md#power_quick_rot) |
+| Событие · `on` | `INFLICT` |
+| checks | check: `AILMENT`; word: `POISON` |
+| Эффекты · `effects` | Действие: `BUFF`; Свойства: Характеристика: [Ускорение урона состояний](../Stats/Stats-HERO.md#stock_faster_ailments); Длительность: 4 |
+
+---
+Основание: [актуальный исходник](https://github.com/Sperance/ktor-bestgame/blob/fa8c3991681e20ef4d62548bf954d0b031a905a5/src/main/resources/content/powers.json), срез `fa8c399` / клиент `9faca17`, 03.10.2026.
+
+[↑ На главную](../../README.md) · [Все страницы](../../Catalogs.md)

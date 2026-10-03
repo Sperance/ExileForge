@@ -4,9 +4,9 @@
 
 Общая база на первом уровне: **38 здоровья**, радиус света **5**. Общий прирост за уровень выше первого: **12 здоровья**, **5 маны**. Собственные значения класса накладываются на общую базу. Свойства конверсии атрибутов затем участвуют в расчёте листа героя.
 
-## MARAUDER
+## MARAUDER <a href="#marauder" id="marauder"></a>
 
-### Мародёр (Marauder)
+### Мародёр (Marauder) <a href="#мародёр-marauder" id="мародёр-marauder"></a>
 
 Сила: больше здоровья и физического урона
 
@@ -19,19 +19,19 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Код · `code` | [Мародёр (Marauder)](Classes.md#marauder) |
+| Код · `code` | [Мародёр (Marauder)](#marauder) |
 | difficulty | 1 |
-| startNode | [Мародёр](Tree-START.md#str_start) |
+| startNode | [Мародёр](Tree/Tree-START.md#str_start) |
 | Базовые свойства · `base` | STOCK_STRENGTH: 32; STOCK_AGILITY: 14; STOCK_INTELLECT: 14; STOCK_MANA: 35 |
-| Урон оружия · `weapon` | [Stone Axe](Equipment-WEAPON_2H.md#stone_axe) |
-| armour | [Iron Hat](Equipment-HELMET.md#iron_hat); [Plate Vest](Equipment-BODY.md#plate_vest); [Iron Greaves](Equipment-BOOTS.md#iron_greaves) |
+| Урон оружия · `weapon` | [Stone Axe](Equipment/Equipment-WEAPON_2H.md#stone_axe) |
+| armour | [Iron Hat](Equipment/Equipment-HELMET.md#iron_hat); [Plate Vest](Equipment/Equipment-BODY.md#plate_vest); [Iron Greaves](Equipment/Equipment-BOOTS.md#iron_greaves) |
 
 
-[Умения класса](Skills-MARAUDER.md)
+[Умения класса](Skills/Skills-MARAUDER.md)
 
-## RANGER
+## RANGER <a href="#ranger" id="ranger"></a>
 
-### Охотница (Ranger)
+### Охотница (Ranger) <a href="#охотница-ranger" id="охотница-ranger"></a>
 
 Ловкость: уклонение и скорость
 
@@ -44,19 +44,19 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Код · `code` | [Охотница (Ranger)](Classes.md#ranger) |
+| Код · `code` | [Охотница (Ranger)](#ranger) |
 | difficulty | 2 |
-| startNode | [Следопыт](Tree-START.md#dex_start) |
+| startNode | [Следопыт](Tree/Tree-START.md#dex_start) |
 | Базовые свойства · `base` | STOCK_STRENGTH: 14; STOCK_AGILITY: 32; STOCK_INTELLECT: 14; STOCK_MANA: 45 |
-| Урон оружия · `weapon` | [Crude Bow](Equipment-WEAPON_1H.md#crude_bow) |
-| armour | [Leather Cap](Equipment-HELMET.md#leather_cap); [Scale Vest](Equipment-BODY.md#scale_vest); [Rawhide Boots](Equipment-BOOTS.md#rawhide_boots) |
+| Урон оружия · `weapon` | [Crude Bow](Equipment/Equipment-WEAPON_1H.md#crude_bow) |
+| armour | [Leather Cap](Equipment/Equipment-HELMET.md#leather_cap); [Scale Vest](Equipment/Equipment-BODY.md#scale_vest); [Rawhide Boots](Equipment/Equipment-BOOTS.md#rawhide_boots) |
 
 
-[Умения класса](Skills-RANGER.md)
+[Умения класса](Skills/Skills-RANGER.md)
 
-## WITCH
+## WITCH <a href="#witch" id="witch"></a>
 
-### Ведьма (Witch)
+### Ведьма (Witch) <a href="#ведьма-witch" id="ведьма-witch"></a>
 
 Интеллект: энергощит и стихии
 
@@ -69,19 +69,19 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Код · `code` | [Ведьма (Witch)](Classes.md#witch) |
+| Код · `code` | [Ведьма (Witch)](#witch) |
 | difficulty | 3 |
-| startNode | [Ведьма](Tree-START.md#int_start) |
+| startNode | [Ведьма](Tree/Tree-START.md#int_start) |
 | Базовые свойства · `base` | STOCK_STRENGTH: 14; STOCK_AGILITY: 14; STOCK_INTELLECT: 32; STOCK_MANA: 65 |
-| Урон оружия · `weapon` | [Driftwood Wand](Equipment-WEAPON_1H.md#driftwood_wand) |
-| armour | [Vine Circlet](Equipment-HELMET.md#vine_circlet); [Simple Robe](Equipment-BODY.md#simple_robe); [Wool Shoes](Equipment-BOOTS.md#wool_shoes) |
+| Урон оружия · `weapon` | [Driftwood Wand](Equipment/Equipment-WEAPON_1H.md#driftwood_wand) |
+| armour | [Vine Circlet](Equipment/Equipment-HELMET.md#vine_circlet); [Simple Robe](Equipment/Equipment-BODY.md#simple_robe); [Wool Shoes](Equipment/Equipment-BOOTS.md#wool_shoes) |
 
 
-[Умения класса](Skills-WITCH.md)
+[Умения класса](Skills/Skills-WITCH.md)
 
-## DUELIST
+## DUELIST <a href="#duelist" id="duelist"></a>
 
-### Дуэлянт (Duelist)
+### Дуэлянт (Duelist) <a href="#дуэлянт-duelist" id="дуэлянт-duelist"></a>
 
 Сила и ловкость: ближний бой, блок и скорость атаки
 
@@ -94,19 +94,19 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Код · `code` | [Дуэлянт (Duelist)](Classes.md#duelist) |
+| Код · `code` | [Дуэлянт (Duelist)](#duelist) |
 | difficulty | 2 |
-| startNode | [Дуэлянт](Tree-START.md#str_dex_start) |
+| startNode | [Дуэлянт](Tree/Tree-START.md#str_dex_start) |
 | Базовые свойства · `base` | STOCK_STRENGTH: 23; STOCK_AGILITY: 23; STOCK_INTELLECT: 14; STOCK_MANA: 40 |
-| Урон оружия · `weapon` | [Rusted Sword](Equipment-WEAPON_1H.md#rusted_sword) |
-| armour | [Battered Helm](Equipment-HELMET.md#battered_helm); [Scale Vest](Equipment-BODY.md#scale_vest); [Leatherscale Boots](Equipment-BOOTS.md#leatherscale_boots) |
+| Урон оружия · `weapon` | [Rusted Sword](Equipment/Equipment-WEAPON_1H.md#rusted_sword) |
+| armour | [Battered Helm](Equipment/Equipment-HELMET.md#battered_helm); [Scale Vest](Equipment/Equipment-BODY.md#scale_vest); [Leatherscale Boots](Equipment/Equipment-BOOTS.md#leatherscale_boots) |
 
 
-[Умения класса](Skills-DUELIST.md)
+[Умения класса](Skills/Skills-DUELIST.md)
 
-## TEMPLAR
+## TEMPLAR <a href="#templar" id="templar"></a>
 
-### Храмовник (Templar)
+### Храмовник (Templar) <a href="#храмовник-templar" id="храмовник-templar"></a>
 
 Сила и интеллект: броня, энергощит и стихии
 
@@ -119,19 +119,19 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Код · `code` | [Храмовник (Templar)](Classes.md#templar) |
+| Код · `code` | [Храмовник (Templar)](#templar) |
 | difficulty | 2 |
-| startNode | [Храмовник](Tree-START.md#str_int_start) |
+| startNode | [Храмовник](Tree/Tree-START.md#str_int_start) |
 | Базовые свойства · `base` | STOCK_STRENGTH: 23; STOCK_AGILITY: 14; STOCK_INTELLECT: 23; STOCK_MANA: 55 |
-| Урон оружия · `weapon` | [Rusted Hatchet](Equipment-WEAPON_1H.md#rusted_hatchet) |
-| armour | [Iron Hat](Equipment-HELMET.md#iron_hat); [Chainmail Vest](Equipment-BODY.md#chainmail_vest); [Iron Greaves](Equipment-BOOTS.md#iron_greaves) |
+| Урон оружия · `weapon` | [Rusted Hatchet](Equipment/Equipment-WEAPON_1H.md#rusted_hatchet) |
+| armour | [Iron Hat](Equipment/Equipment-HELMET.md#iron_hat); [Chainmail Vest](Equipment/Equipment-BODY.md#chainmail_vest); [Iron Greaves](Equipment/Equipment-BOOTS.md#iron_greaves) |
 
 
-[Умения класса](Skills-TEMPLAR.md)
+[Умения класса](Skills/Skills-TEMPLAR.md)
 
-## SHADOW
+## SHADOW <a href="#shadow" id="shadow"></a>
 
-### Тень (Shadow)
+### Тень (Shadow) <a href="#тень-shadow" id="тень-shadow"></a>
 
 Ловкость и интеллект: криты, уклонение и хаос
 
@@ -144,19 +144,19 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Код · `code` | [Тень (Shadow)](Classes.md#shadow) |
+| Код · `code` | [Тень (Shadow)](#shadow) |
 | difficulty | 3 |
-| startNode | [Тень](Tree-START.md#dex_int_start) |
+| startNode | [Тень](Tree/Tree-START.md#dex_int_start) |
 | Базовые свойства · `base` | STOCK_STRENGTH: 14; STOCK_AGILITY: 23; STOCK_INTELLECT: 23; STOCK_MANA: 55 |
-| Урон оружия · `weapon` | [Rusted Spike](Equipment-WEAPON_1H.md#rusted_spike) |
-| armour | [Scare Mask](Equipment-HELMET.md#scare_mask); [Padded Vest](Equipment-BODY.md#padded_vest); [Rawhide Boots](Equipment-BOOTS.md#rawhide_boots) |
+| Урон оружия · `weapon` | [Rusted Spike](Equipment/Equipment-WEAPON_1H.md#rusted_spike) |
+| armour | [Scare Mask](Equipment/Equipment-HELMET.md#scare_mask); [Padded Vest](Equipment/Equipment-BODY.md#padded_vest); [Rawhide Boots](Equipment/Equipment-BOOTS.md#rawhide_boots) |
 
 
-[Умения класса](Skills-SHADOW.md)
+[Умения класса](Skills/Skills-SHADOW.md)
 
-## SCION
+## SCION <a href="#scion" id="scion"></a>
 
-### Скион (Scion)
+### Скион (Scion) <a href="#скион-scion" id="скион-scion"></a>
 
 Универсал: ровно по двадцать каждого атрибута и выход в любую ветку дерева
 
@@ -169,23 +169,23 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Код · `code` | [Скион (Scion)](Classes.md#scion) |
+| Код · `code` | [Скион (Scion)](#scion) |
 | difficulty | 3 |
-| startNode | [Потомок](Tree-START.md#scion_start) |
+| startNode | [Потомок](Tree/Tree-START.md#scion_start) |
 | Базовые свойства · `base` | STOCK_STRENGTH: 20; STOCK_AGILITY: 20; STOCK_INTELLECT: 20; STOCK_MANA: 50 |
-| Урон оружия · `weapon` | [Corroded Blade](Equipment-WEAPON_2H.md#corroded_blade) |
-| armour | [Battered Helm](Equipment-HELMET.md#battered_helm); [Chainmail Vest](Equipment-BODY.md#chainmail_vest); [Leatherscale Boots](Equipment-BOOTS.md#leatherscale_boots) |
+| Урон оружия · `weapon` | [Corroded Blade](Equipment/Equipment-WEAPON_2H.md#corroded_blade) |
+| armour | [Battered Helm](Equipment/Equipment-HELMET.md#battered_helm); [Chainmail Vest](Equipment/Equipment-BODY.md#chainmail_vest); [Leatherscale Boots](Equipment/Equipment-BOOTS.md#leatherscale_boots) |
 
 
-[Умения класса](Skills-SCION.md)
+[Умения класса](Skills/Skills-SCION.md)
 
-## Общие конверсии
+## Общие конверсии <a href="#общие-конверсии" id="общие-конверсии"></a>
 
-- +1 к максимуму здоровья за каждые 2 Сила · [Здоровье](Stats-HERO.md#stock_health)
-- +1 к уклонению за каждые 1 Ловкость · [Уклонение](Stats-HERO.md#stock_evasion)
-- 1% увеличение энергетического щита за каждые 5 Интеллект · [Энергетический щит](Stats-HERO.md#stock_energy_shield)
-- 1% увеличение физического урона за каждые 5 Сила · [Физический урон](Stats-HERO.md#stock_attack_physical)
-- +1 к максимуму маны за каждые 2 Интеллект · [Мана](Stats-HERO.md#stock_mana)
+- +1 к максимуму здоровья за каждые 2 Сила · [Здоровье](reference/Stats/Stats-HERO.md#stock_health)
+- +1 к уклонению за каждые 1 Ловкость · [Уклонение](reference/Stats/Stats-HERO.md#stock_evasion)
+- 1% увеличение энергетического щита за каждые 5 Интеллект · [Энергетический щит](reference/Stats/Stats-HERO.md#stock_energy_shield)
+- 1% увеличение физического урона за каждые 5 Сила · [Физический урон](reference/Stats/Stats-HERO.md#stock_attack_physical)
+- +1 к максимуму маны за каждые 2 Интеллект · [Мана](reference/Stats/Stats-HERO.md#stock_mana)
 
 ---
 Основание: [актуальный исходник](https://github.com/Sperance/ktor-bestgame/blob/fa8c3991681e20ef4d62548bf954d0b031a905a5/src/main/resources/content/classes.json), срез `fa8c399` / клиент `9faca17`, 03.10.2026.

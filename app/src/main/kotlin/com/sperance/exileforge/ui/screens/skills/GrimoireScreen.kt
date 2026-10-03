@@ -32,10 +32,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.sperance.exileforge.core.campaign.Combatant
 import com.sperance.exileforge.core.campaign.Flask
 import com.sperance.exileforge.core.campaign.FlaskKind
 import com.sperance.exileforge.core.campaign.Loadout
+import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.core.campaign.draught
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.SkillText

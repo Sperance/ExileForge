@@ -21,10 +21,11 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.sperance.exileforge.core.campaign.CombatEvent
 import com.sperance.exileforge.core.campaign.FightReport
-import com.sperance.exileforge.core.campaign.Outcome
 import com.sperance.exileforge.core.campaign.RunHud
+import com.sperance.exileforge.core.campaign.combat.*
+import com.sperance.exileforge.core.campaign.combat.CombatEvent
+import com.sperance.exileforge.core.campaign.combat.Outcome
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.displayName
 import com.sperance.exileforge.core.display.monsterTitle

@@ -1,5 +1,7 @@
 package com.sperance.exileforge.core.campaign
 
+import com.sperance.exileforge.core.campaign.combat.Combatant
+import com.sperance.exileforge.core.campaign.combat.HeroStance
 import com.sperance.exileforge.core.character.SheetModel
 import com.sperance.exileforge.core.character.StatLine
 import com.sperance.exileforge.rules.content.ChargeRules

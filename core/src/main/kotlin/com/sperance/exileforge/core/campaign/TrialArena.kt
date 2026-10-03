@@ -1,6 +1,16 @@
 package com.sperance.exileforge.core.campaign
 
 import com.sperance.exileforge.core.atlas.AtlasEffects
+import com.sperance.exileforge.core.campaign.combat.Battle
+import com.sperance.exileforge.core.campaign.combat.Combatant
+import com.sperance.exileforge.core.campaign.combat.DamageType
+import com.sperance.exileforge.core.campaign.combat.DraughtRate
+import com.sperance.exileforge.core.campaign.combat.Foe
+import com.sperance.exileforge.core.campaign.combat.HeroPools
+import com.sperance.exileforge.core.campaign.combat.HeroStance
+import com.sperance.exileforge.core.campaign.combat.Outcome
+import com.sperance.exileforge.core.campaign.combat.pools
+import com.sperance.exileforge.core.campaign.combat.traitsIn
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.FightTally
 import com.sperance.exileforge.rules.content.Op

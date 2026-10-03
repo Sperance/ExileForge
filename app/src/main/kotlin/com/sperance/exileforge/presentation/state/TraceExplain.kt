@@ -1,13 +1,13 @@
 package com.sperance.exileforge.presentation.state
 
-import com.sperance.exileforge.core.campaign.Battle
 import com.sperance.exileforge.core.campaign.FighterShot
 import com.sperance.exileforge.core.campaign.LineKind
 import com.sperance.exileforge.core.campaign.LineSource
 import com.sperance.exileforge.core.campaign.MonsterBreakdown
 import com.sperance.exileforge.core.campaign.MonsterShareKind
-import com.sperance.exileforge.core.campaign.Side
 import com.sperance.exileforge.core.campaign.TraceOrigin
+import com.sperance.exileforge.core.campaign.combat.Battle
+import com.sperance.exileforge.core.campaign.combat.Side
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.modifierLine

@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.campaign
 
+import com.sperance.exileforge.core.campaign.combat.traitsIn
 import com.sperance.exileforge.core.display.effectText
 import com.sperance.exileforge.core.display.effectUnit
 import com.sperance.exileforge.core.display.modNumber

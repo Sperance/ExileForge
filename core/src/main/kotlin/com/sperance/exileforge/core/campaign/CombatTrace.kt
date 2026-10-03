@@ -1,5 +1,13 @@
 package com.sperance.exileforge.core.campaign
 
+import com.sperance.exileforge.core.campaign.combat.Action
+import com.sperance.exileforge.core.campaign.combat.ActiveAilment
+import com.sperance.exileforge.core.campaign.combat.Ailment
+import com.sperance.exileforge.core.campaign.combat.CombatEvent
+import com.sperance.exileforge.core.campaign.combat.DamageType
+import com.sperance.exileforge.core.campaign.combat.EffectKind
+import com.sperance.exileforge.core.campaign.combat.Foe
+import com.sperance.exileforge.core.campaign.combat.Side
 import com.sperance.exileforge.core.character.StatLine
 import com.sperance.exileforge.rules.content.Condition
 import com.sperance.exileforge.rules.content.MonsterRarity

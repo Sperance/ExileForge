@@ -1,11 +1,11 @@
 package com.sperance.exileforge.core
 
-import com.sperance.exileforge.core.campaign.Battle
-import com.sperance.exileforge.core.campaign.Combatant
-import com.sperance.exileforge.core.campaign.Foe
 import com.sperance.exileforge.core.campaign.MapEffects
 import com.sperance.exileforge.core.campaign.Spawns
-import com.sperance.exileforge.core.campaign.traitsIn
+import com.sperance.exileforge.core.campaign.combat.Battle
+import com.sperance.exileforge.core.campaign.combat.Combatant
+import com.sperance.exileforge.core.campaign.combat.Foe
+import com.sperance.exileforge.core.campaign.combat.traitsIn
 import com.sperance.exileforge.core.character.Sheets
 import com.sperance.exileforge.rules.content.TakenNode
 import com.sperance.exileforge.rules.run.Run

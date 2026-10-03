@@ -4,11 +4,11 @@ import com.sperance.exileforge.core.campaign.AutoPlan
 import com.sperance.exileforge.core.campaign.ExpeditionRun
 import com.sperance.exileforge.core.campaign.Flask
 import com.sperance.exileforge.core.campaign.HeroGear
-import com.sperance.exileforge.core.campaign.HeroStance
 import com.sperance.exileforge.core.campaign.Loadout
 import com.sperance.exileforge.core.campaign.RunCommand
 import com.sperance.exileforge.core.campaign.RunJournal
 import com.sperance.exileforge.core.campaign.StageCarry
+import com.sperance.exileforge.core.campaign.combat.HeroStance
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.campaign.RunReport
 import com.sperance.exileforge.core.model.hero.HeroView

@@ -1,6 +1,7 @@
 package com.sperance.exileforge.core.campaign
 
 import com.sperance.exileforge.core.atlas.AtlasEffects
+import com.sperance.exileforge.core.campaign.combat.DamageType
 import com.sperance.exileforge.rules.content.AbyssRule
 import com.sperance.exileforge.rules.content.AbyssWave
 import com.sperance.exileforge.rules.content.ContentIndex

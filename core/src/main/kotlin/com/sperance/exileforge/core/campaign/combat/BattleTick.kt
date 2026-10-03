@@ -9,7 +9,6 @@ import com.sperance.exileforge.core.campaign.RollKey
 import com.sperance.exileforge.core.campaign.StatLines
 import com.sperance.exileforge.core.campaign.TickTrace
 import com.sperance.exileforge.core.campaign.combat.Battle.Companion.FOREVER
-import com.sperance.exileforge.core.campaign.combat.Battle.Companion.MIN_DOT
 import com.sperance.exileforge.core.campaign.combat.Battle.Companion.TICK
 import com.sperance.exileforge.core.campaign.combat.Battle.Fighter
 import com.sperance.exileforge.core.character.StatLine
@@ -291,7 +290,7 @@ private fun Battle.degenerate(me: Fighter, dt: Double) {
         delayed.removeAll { it.until <= time }
     }
     val share = me.body.lifeDegenShare
-    if (share > 0) me.life = max(0.0, me.life - max(me.body.maxLife * share, MIN_DOT / TICK) * dt)
+    if (share > 0) me.life = max(0.0, me.life - max(me.body.maxLife * share, rules.minDot / TICK) * dt)
     if (!me.alive) fell(me)
 }
 
@@ -305,8 +304,8 @@ private fun Battle.burn(me: Fighter, dt: Double) {
     me.ailments.filter { it.ailment.hurts }.forEach { active ->
         val span = min(dt, active.until - (time - dt)).coerceAtLeast(0.0)
         val rate = active.magnitude * me.weakness() * me.body.dotTaken * me.body.ailmentTaken(active.ailment)
-        // Whatever deals damage at all deals at least [MIN_DOT] a tick, however it is taken.
-        val slice = (if (active.magnitude > 0) max(rate, MIN_DOT / TICK) else rate) * span
+        // Whatever deals damage at all deals at least [CombatRules.minDot] a tick, however it is taken.
+        val slice = (if (active.magnitude > 0) max(rate, rules.minDot / TICK) else rate) * span
         if (slice <= 0 || !me.alive || me.invulnerable) return@forEach
         val chaos = active.ailment == Ailment.POISONED || active.chaos
         if (chaos && me.body.chaosImmune) return@forEach
@@ -328,10 +327,10 @@ private fun Battle.burn(me: Fighter, dt: Double) {
             me.tickedAt[ailment] = time
             if (amount > 0) {
                 val active = (me.ailments + expired).firstOrNull { it.ailment == ailment }
-                // A tick cut short — the ailment ran out or the target fell mid-beat — still deals its [MIN_DOT].
-                if (amount < MIN_DOT && me.alive && !me.invulnerable) {
-                    wound(me, MIN_DOT - amount, ailment == Ailment.POISONED || active?.chaos == true)
-                    amount = MIN_DOT
+                // A tick cut short — the ailment ran out or the target fell mid-beat — still deals its [CombatRules.minDot].
+                if (amount < rules.minDot && me.alive && !me.invulnerable) {
+                    wound(me, rules.minDot - amount, ailment == Ailment.POISONED || active?.chaos == true)
+                    amount = rules.minDot
                 }
                 val source = active?.source ?: me.side.other
                 val type = if (active?.chaos == true) DamageType.CHAOS else ruleOf[ailment]?.second

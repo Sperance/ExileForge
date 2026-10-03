@@ -54,12 +54,16 @@
 
 ## Этап 5 - бой
 - [x] `Combat.kt` → пакет `core/campaign/combat/`: модель (Combatant, Foe, Ally, эффекты), `Battle` по секциям (views, tick, strike/land, skills, monsters, reach, log).
-- [ ] Константы боя (`Battle.Companion`, файловые константы секций) - из контента.
+- [x] Константы боя из контента (сервер 1.74.6, клиент 3.80.31): `campaign.combat` - lunge, entry, stagger, minDot, petMendEvery, lifeDelay, selfBurn; технические STEP/TICK/NEVER/FOREVER и визуальный HIT_LIFETIME остаются кодом.
 - [x] `ArenaOverlay.kt` → пакет `ui/screens/expedition/arena/` (FightPalette, FightMarks, ArenaOverlay, FoeCard, HeroCard, ScoutPanel, FightFeed, Controls, VitalBars, ActionBar, StateTiles, FightLog общий с Report/CombatDetail).
 - [x] `ExpeditionRun.kt`, `ExpeditionWorld.kt`, `AutoRun.kt` → пакет `core/campaign/run/`: виды и команды (RunViews, RunCommand), `ExpeditionRun` по секциям (commands/answers, abyss, walk, fights, snapshot), `ExpeditionWorld` по секциям (agents, monsters, grid); golden-тесты забега не сдвинулись.
 
 ## Этап 6 - баланс и чистка
 - [x] Правила сервера 1.74.5: окно «недавнего» события, пределы скорости атаки и потолок уровня умения читаются из контента (`CombatRules`, `SkillBookRules`), констант в `rules` больше нет.
-- [ ] Константы боя и мира (LUNGE, ENTRY, STAGGER, HERO_SPEED, GATHER_RADIUS, LOW_LIFE, AUTO-RUN волны, …) - из `content/rules.json` через `rules`.
+- [x] Константы мира из контента (сервер 1.74.6, клиент 3.80.31): `campaign.expedition` (шаг и радиусы героя и монстров, дистанции, сундуки и источники, свет, волны и шаг автозабега, aftermath и stagePause) через `ExpeditionRules`; `ExpeditionWorld` и `AutoPilot` получают их конструктором.
 - [x] Удалено неиспользуемое: `MailButton`, `classDescription`, `itemSources`, `rankIndexOf`.
 - [ ] Удалить этот файл.
+
+## Где остановились (3.80.31, сервер 1.74.6)
+- Сделано в этой сессии: golden-тест забега, распил `ExpeditionRun`/`ExpeditionWorld` в `core/campaign/run/`, файлы сцены, мёртвый код, `ShellViewModel` вместо фасада на экранах, константы боя и мира в контент.
+- Следующий шаг: `ForgeState` распадается на срезы репозиториев (92 файла UI читают `s.busy`, `s.index`, `s.hero`, `s.play`, `s.lang`, `s.account`), затем `ForgeViewModel`/`ForgeRuntime`/`FeatureViewModel` удаляются; потом серверный этап 3.

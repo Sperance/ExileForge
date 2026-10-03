@@ -106,7 +106,7 @@ internal fun ExpeditionRun.drive(pilot: AutoPilot, dt: Double) {
     recover(dt)
     pilot.rest -= dt * speed
     if (pilot.rest > 0) return
-    pilot.rest = AutoPilot.BEAT
+    pilot.rest = pace.autoBeat
     while (phase == RunPhase.MAP) {
         when (val step = pilot.next()) {
             null -> {

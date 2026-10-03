@@ -44,6 +44,7 @@ import com.sperance.exileforge.core.model.campaign.CampaignState
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.EssenceBook
+import com.sperance.exileforge.rules.content.ExpeditionRules
 import com.sperance.exileforge.rules.content.LoneWolfRule
 import com.sperance.exileforge.rules.content.Pet
 import com.sperance.exileforge.rules.content.Zone
@@ -123,6 +124,9 @@ class ExpeditionRun(
     internal var life = startPools?.life?.coerceIn(0.0, hero.maxLife) ?: hero.maxLife
     val heroLife: Double get() = life
     internal val kit: Loadout get() = build.gear.kit
+
+    /** Темп похода из контента (3.80.31): паузы боя, шаг автозабега. */
+    internal val pace: ExpeditionRules get() = index.campaign.expedition
     internal var mana = startPools?.mana?.coerceIn(0.0, manaCap()) ?: manaCap()
     internal var charges: List<Double> = kit.flasks.mapIndexed { i, flask -> flask?.let { startPools?.charges?.getOrNull(i)?.coerceIn(0.0, it.maxCharges) ?: it.maxCharges } ?: 0.0 }
     internal var flaskLeft: List<Double> = kit.flasks.indices.map { startPools?.flaskLeft?.getOrNull(it) ?: 0.0 }
@@ -267,7 +271,7 @@ class ExpeditionRun(
             .flatMap { (_, flask) -> flask!!.draught(build.body, life, 0.0).lines }
         hero = if (lines.isEmpty()) build.body else build.body(lines)
         mana = mana.coerceIn(0.0, manaCap())
-        world.regear(ExpeditionWorld.heroSpeed(hero.stats), ExpeditionWorld.lightRadius(hero.stats, zone.light))
+        world.regear(ExpeditionWorld.heroSpeed(pace, hero.stats), ExpeditionWorld.lightRadius(pace, hero.stats, zone.light))
     }
 
     var fight: Battle? = null
@@ -332,11 +336,9 @@ class ExpeditionRun(
 
     companion object {
         /** How long the fight's last blow hangs before the scene moves on. */
-        const val AFTERMATH = 0.8
         const val HIT_LIFETIME = 1.0
 
         /** Seconds between the stages of a fight before the next begins on its own. */
-        const val STAGE_PAUSE = 3.0
 
         /** The agents of the Abyss's waves are numbered down from here, out of the way of the map's and the crystals'. */
         internal const val ABYSS_AGENT = -10_000
@@ -388,7 +390,7 @@ class ExpeditionRun(
             val bossDown = !vaal && campaign.bossDown(location.code, now)
             val vaalZone = campaign.vaalZone?.takeIf { it.mapCode == location.code }
             val portal = !vaal && !campaign.corruptionOpened && (vaalZone != null || run.portal)
-            val world = ExpeditionWorld.create(zone, packs, stats, if (vaal) run.seed xor VAAL_SALT else run.seed, boss, portal)
+            val world = ExpeditionWorld.create(index.campaign.expedition, zone, packs, stats, if (vaal) run.seed xor VAAL_SALT else run.seed, boss, portal)
             if (bossDown) world.bossAbsent()
             world.restore(killed, Run.PACK_SLOTS)
             val fountains = AtlasEffects.fountains(index.campaign.fountains, context.atlas)
@@ -399,7 +401,7 @@ class ExpeditionRun(
                 world.placeCrystals(campaign.crystals[location.code]?.crystals.orEmpty())
                 world.placeCracks(campaign.abyss[location.code]?.cracks.orEmpty())
             }
-            val pilot = auto?.let { AutoPilot.of(world, it, if (vaal) run.seed xor VAAL_SALT else run.seed, bossStands = world.boss?.alive == true) }
+            val pilot = auto?.let { AutoPilot.of(index.campaign.expedition, world, it, if (vaal) run.seed xor VAAL_SALT else run.seed, bossStands = world.boss?.alive == true) }
             return ExpeditionRun(
                 index, zone, run, journal, world, build, rules, run.seed, effects, vaal, startPools, heroExperience, heroLevel, vaalOrbs,
                 campaign.corruptionOpened, vaalZone, bossDown, onRecorded, onCleared, onFallen, pilot, pet,

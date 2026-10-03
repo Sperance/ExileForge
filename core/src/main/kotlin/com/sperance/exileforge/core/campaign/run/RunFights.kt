@@ -75,7 +75,7 @@ internal fun ExpeditionRun.engage(agent: MonsterAgent, level: Int = zone.level, 
 
 /**
  * Stage [number] of the fight stands up, the hero as the last one left them — life, mana, charges and the draughts
- * running, no ailment. A later stage waits [ExpeditionRun.STAGE_PAUSE] seconds, or the player's word, and an autorun not at all.
+ * running, no ailment. A later stage waits `expedition.stagePause` seconds, or the player's word, and an autorun not at all.
  */
 internal fun ExpeditionRun.begin(number: Int) {
     stage = number
@@ -85,7 +85,7 @@ internal fun ExpeditionRun.begin(number: Int) {
     fight = battle()
     // An autorun goes straight on; the player gets the pause.
     started = number > 1 && autopilot != null
-    interlude = ExpeditionRun.STAGE_PAUSE.takeIf { number > 1 && !started }
+    interlude = pace.stagePause.takeIf { number > 1 && !started }
     paused = false
     phase = RunPhase.FIGHT
 }
@@ -175,7 +175,7 @@ internal fun ExpeditionRun.play(dt: Double) {
         fell(member.agent, member.index)
     }
     val outcome = battle.outcome ?: return
-    if (battle.time < battle.duration + ExpeditionRun.AFTERMATH) return
+    if (battle.time < battle.duration + pace.aftermath) return
     val out = battle.pools()
     life = out.life
     mana = out.mana

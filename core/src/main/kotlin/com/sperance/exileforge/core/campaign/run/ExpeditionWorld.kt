@@ -4,6 +4,7 @@ import com.sperance.exileforge.core.campaign.Cell
 import com.sperance.exileforge.core.campaign.ExpeditionMap
 import com.sperance.exileforge.core.campaign.MapGenerator
 import com.sperance.exileforge.rules.content.BehaviourRule
+import com.sperance.exileforge.rules.content.ExpeditionRules
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.Crystal
 import com.sperance.exileforge.rules.roll.RolledMonster
@@ -27,12 +28,14 @@ import kotlin.random.Random
  * and go home after `giveUp` seconds; an ambusher waits until the hero is close, a sleeper wakes.
  */
 class ExpeditionWorld(
+    /** Шаг, радиусы и дистанции карты - из контента (3.80.31). */
+    val rules: ExpeditionRules,
     val map: ExpeditionMap,
     /** One entry per spawn, usually of one monster — a pack (since 2.54.0) is more than one. */
     packs: List<List<RolledMonster>>,
     heroSpeed: Double,
     internal val seed: Long,
-    lightRadius: Double = DEFAULT_LIGHT,
+    lightRadius: Double = rules.defaultLight,
     bossMonster: RolledMonster? = null,
     hasPortal: Boolean = false,
 ) {
@@ -106,7 +109,7 @@ class ExpeditionWorld(
     internal fun portalPost(): Cell? {
         val placing = Random(seed * 15485863 + 53)
         val taken = map.spawns.toSet() + map.exit + map.start
-        return distances(map.start, Int.MAX_VALUE).filter { (cell, steps) -> steps >= CHEST_STEPS && cell !in taken }.keys.roomy().shuffled(placing).firstOrNull()
+        return distances(map.start, Int.MAX_VALUE).filter { (cell, steps) -> steps >= rules.chestSteps && cell !in taken }.keys.roomy().shuffled(placing).firstOrNull()
     }
     var heroX = map.start.x + 0.5
     var heroY = map.start.y + 0.5
@@ -158,11 +161,11 @@ class ExpeditionWorld(
         val placing = Random(seed * 7919 + 17)
         val taken = map.spawns.toSet() + map.exit + map.start + fountains.map { it.cell }
         fun nook(cell: Cell) = STEPS.count { (dx, dy) -> !map.walkable(cell.x + dx, cell.y + dy) }
-        val candidates = distances(map.start, Int.MAX_VALUE).filter { (cell, steps) -> steps >= CHEST_STEPS && cell !in taken }.keys.roomy()
+        val candidates = distances(map.start, Int.MAX_VALUE).filter { (cell, steps) -> steps >= rules.chestSteps && cell !in taken }.keys.roomy()
             .shuffled(placing).sortedByDescending(::nook)
         for (cell in candidates) {
             if (chests.size >= count) break
-            if (chests.all { hypot((it.cell.x - cell.x).toDouble(), (it.cell.y - cell.y).toDouble()) >= CHEST_SPACING }) chests += Chest(chests.size, cell)
+            if (chests.all { hypot((it.cell.x - cell.x).toDouble(), (it.cell.y - cell.y).toDouble()) >= rules.chestSpacing }) chests += Chest(chests.size, cell)
         }
     }
 
@@ -177,10 +180,10 @@ class ExpeditionWorld(
         val count = low + placing.nextInt(high - low + 1)
         if (count <= 0) return
         val taken = map.spawns.toSet() + map.exit + map.start + chests.map { it.cell }
-        val candidates = distances(map.start, Int.MAX_VALUE).filter { (cell, steps) -> steps >= FOUNTAIN_STEPS && cell !in taken }.keys.roomy().shuffled(placing)
+        val candidates = distances(map.start, Int.MAX_VALUE).filter { (cell, steps) -> steps >= rules.fountainSteps && cell !in taken }.keys.roomy().shuffled(placing)
         for (cell in candidates) {
             if (fountains.size >= count) break
-            if (fountains.all { hypot((it.cell.x - cell.x).toDouble(), (it.cell.y - cell.y).toDouble()) >= FOUNTAIN_SPACING }) fountains += Fountain(fountains.size, cell, heal)
+            if (fountains.all { hypot((it.cell.x - cell.x).toDouble(), (it.cell.y - cell.y).toDouble()) >= rules.fountainSpacing }) fountains += Fountain(fountains.size, cell, heal)
         }
     }
 
@@ -192,10 +195,10 @@ class ExpeditionWorld(
         if (held.isEmpty() || crystals.isNotEmpty()) return
         val placing = Random(seed * 7727 + 97)
         val taken = map.spawns.toSet() + map.exit + map.start + chests.map { it.cell } + fountains.map { it.cell } + listOfNotNull(portal)
-        val candidates = distances(map.start, Int.MAX_VALUE).filter { (cell, steps) -> steps >= CHEST_STEPS && cell !in taken }.keys.roomy().shuffled(placing)
+        val candidates = distances(map.start, Int.MAX_VALUE).filter { (cell, steps) -> steps >= rules.chestSteps && cell !in taken }.keys.roomy().shuffled(placing)
         for (cell in candidates) {
             if (crystals.size >= held.size) break
-            if (crystals.all { hypot((it.cell.x - cell.x).toDouble(), (it.cell.y - cell.y).toDouble()) >= CHEST_SPACING }) crystals += CrystalSpot(crystals.size, cell, held[crystals.size])
+            if (crystals.all { hypot((it.cell.x - cell.x).toDouble(), (it.cell.y - cell.y).toDouble()) >= rules.chestSpacing }) crystals += CrystalSpot(crystals.size, cell, held[crystals.size])
         }
     }
 
@@ -210,10 +213,10 @@ class ExpeditionWorld(
         if (depths.isEmpty() || cracks.isNotEmpty()) return
         val placing = Random(seed * 6151 + 53)
         val taken = map.spawns.toSet() + map.exit + map.start + chests.map { it.cell } + fountains.map { it.cell } + crystals.map { it.cell } + listOfNotNull(portal)
-        val candidates = distances(map.start, Int.MAX_VALUE).filter { (cell, steps) -> steps >= CHEST_STEPS && cell !in taken }.keys.roomy().shuffled(placing)
+        val candidates = distances(map.start, Int.MAX_VALUE).filter { (cell, steps) -> steps >= rules.chestSteps && cell !in taken }.keys.roomy().shuffled(placing)
         for (cell in candidates) {
             if (cracks.size >= depths.size) break
-            val apart = (cracks.map { it.cell } + crystals.map { it.cell }).all { hypot((it.x - cell.x).toDouble(), (it.y - cell.y).toDouble()) >= CHEST_SPACING }
+            val apart = (cracks.map { it.cell } + crystals.map { it.cell }).all { hypot((it.x - cell.x).toDouble(), (it.y - cell.y).toDouble()) >= rules.chestSpacing }
             if (apart) cracks += AbyssSpot(cracks.size, cell, depths[cracks.size])
         }
     }
@@ -234,30 +237,30 @@ class ExpeditionWorld(
             val speed = heroSpeed * length.coerceAtMost(1.0)
             facingX = stickX / length
             facingY = stickY / length
-            val (nx, ny) = slide(heroX, heroY, facingX * speed * dt, facingY * speed * dt, HERO_RADIUS)
+            val (nx, ny) = slide(heroX, heroY, facingX * speed * dt, facingY * speed * dt, rules.heroRadius)
             heroX = nx
             heroY = ny
         }
         light()
-        chests.firstOrNull { !it.opened && hypot(it.cell.x + 0.5 - heroX, it.cell.y + 0.5 - heroY) < CHEST_REACH }?.let { chest ->
+        chests.firstOrNull { !it.opened && hypot(it.cell.x + 0.5 - heroX, it.cell.y + 0.5 - heroY) < rules.chestReach }?.let { chest ->
             chest.opened = true
             return WorldEvent.Opened(chest)
         }
-        val fountain = fountains.firstOrNull { !it.used && hypot(it.cell.x + 0.5 - heroX, it.cell.y + 0.5 - heroY) < CHEST_REACH }
+        val fountain = fountains.firstOrNull { !it.used && hypot(it.cell.x + 0.5 - heroX, it.cell.y + 0.5 - heroY) < rules.chestReach }
         if (fountain == null) {
             atFountain = null
         } else if (fountain !== atFountain) {
             atFountain = fountain
             return WorldEvent.AtFountain(fountain)
         }
-        val crystal = crystals.firstOrNull { !it.freed && hypot(it.cell.x + 0.5 - heroX, it.cell.y + 0.5 - heroY) < CHEST_REACH }
+        val crystal = crystals.firstOrNull { !it.freed && hypot(it.cell.x + 0.5 - heroX, it.cell.y + 0.5 - heroY) < rules.chestReach }
         if (crystal == null) {
             atCrystal = null
         } else if (crystal !== atCrystal) {
             atCrystal = crystal
             return WorldEvent.Crystal(crystal)
         }
-        val crack = cracks.firstOrNull { !it.opened && hypot(it.cell.x + 0.5 - heroX, it.cell.y + 0.5 - heroY) < CHEST_REACH }
+        val crack = cracks.firstOrNull { !it.opened && hypot(it.cell.x + 0.5 - heroX, it.cell.y + 0.5 - heroY) < rules.chestReach }
         if (crack == null) {
             atCrack = null
         } else if (crack !== atCrack) {
@@ -265,7 +268,7 @@ class ExpeditionWorld(
             return WorldEvent.Abyss(crack)
         }
         portal?.let { cell ->
-            val near = hypot(cell.x + 0.5 - heroX, cell.y + 0.5 - heroY) < CHEST_REACH
+            val near = hypot(cell.x + 0.5 - heroX, cell.y + 0.5 - heroY) < rules.chestReach
             if (near && portalArmed) {
                 portalArmed = false
                 return WorldEvent.Portal
@@ -275,10 +278,10 @@ class ExpeditionWorld(
         agents.filter { it.alive }.forEach { agent ->
             agent.calm = (agent.calm - dt).coerceAtLeast(0.0)
             val toHero = hypot(heroX - agent.x, heroY - agent.y)
-            if (agent.calm <= 0 && toHero < CONTACT) return WorldEvent.Encounter(agent)
+            if (agent.calm <= 0 && toHero < rules.contact) return WorldEvent.Encounter(agent)
             think(agent, toHero, dt)
         }
-        if (!sealed && hypot(heroX - (map.exit.x + 0.5), heroY - (map.exit.y + 0.5)) < EXIT_REACH) return WorldEvent.Exit
+        if (!sealed && hypot(heroX - (map.exit.x + 0.5), heroY - (map.exit.y + 0.5)) < rules.exitReach) return WorldEvent.Exit
         return null
     }
 
@@ -287,30 +290,16 @@ class ExpeditionWorld(
     val total: Int get() = agents.count { it !== boss }
 
     companion object {
-        const val HERO_SPEED = 3.2
-        const val HERO_RADIUS = 0.28
-        const val MONSTER_RADIUS = 0.3
-        const val CONTACT = 0.8
 
         /** How close, in tiles, a pack must stand to the one engaged to join its fight. */
-        const val GATHER_RADIUS = 3.0
 
         /** The most monsters gathered packs put in one stage of a fight when they merge (3.70.0). */
-        const val STAGE_MONSTERS = 3
-        const val EXIT_REACH = 0.7
-        const val CALM_AFTER_RETREAT = 4.0
-        const val CHEST_REACH = 0.7
 
         /** A chest stands at least this many steps from the start and this far from another chest. */
-        const val CHEST_STEPS = 8
-        const val CHEST_SPACING = 5.0
 
         /** A fountain stands at least this many steps from the start and this far from another one. */
-        const val FOUNTAIN_STEPS = 6
-        const val FOUNTAIN_SPACING = 8.0
 
         /** What a hero sees by when the server has not said: the level-1 base since server 0.30.0. */
-        const val DEFAULT_LIGHT = 5.0
         internal const val MIN_WALK = 0.8
         internal const val REPATH = 0.4
         internal const val SIGHT_STEP = 0.25
@@ -336,18 +325,15 @@ class ExpeditionWorld(
          * A new world of [zone]: the ground carved from [seed], one spawn per pack of [packs] (the run's own
          * rolls), the boss at the exit and, [hasPortal], a Vaal portal.
          */
-        fun create(zone: Zone, packs: List<List<RolledMonster>>, heroStats: Map<String, Double>, seed: Long, boss: RolledMonster?, hasPortal: Boolean): ExpeditionWorld {
+        fun create(rules: ExpeditionRules, zone: Zone, packs: List<List<RolledMonster>>, heroStats: Map<String, Double>, seed: Long, boss: RolledMonster?, hasPortal: Boolean): ExpeditionWorld {
             val layout = MapGenerator.generate(seed, zone.biome, packs.size, zone.size)
-            return ExpeditionWorld(layout, packs, heroSpeed(heroStats), seed, lightRadius(heroStats, zone.light), boss, hasPortal)
+            return ExpeditionWorld(rules, layout, packs, heroSpeed(rules, heroStats), seed, lightRadius(rules, heroStats, zone.light), boss, hasPortal)
         }
 
         /** The hero's pace, sped up by movement speed from the sheet. */
-        fun heroSpeed(stats: Map<String, Double>): Double = HERO_SPEED * (1 + (stats["STOCK_MOVEMENT_SPEED"] ?: 0.0) / 100).coerceIn(0.5, 2.5)
+        fun heroSpeed(rules: ExpeditionRules, stats: Map<String, Double>): Double = rules.heroSpeed * (1 + (stats["STOCK_MOVEMENT_SPEED"] ?: 0.0) / 100).coerceIn(0.5, 2.5)
 
         /** How far the hero sees: the sheet's light radius — the base, if the server sent none — times the biome's light. */
-        fun lightRadius(stats: Map<String, Double>, biomeLight: Double): Double = ((stats["STOCK_LIGHT_RADIUS"]?.takeIf { it > 0 } ?: DEFAULT_LIGHT) * biomeLight).coerceIn(MIN_LIGHT, MAX_LIGHT)
-
-        const val MIN_LIGHT = 2.0
-        const val MAX_LIGHT = 14.0
+        fun lightRadius(rules: ExpeditionRules, stats: Map<String, Double>, biomeLight: Double): Double = ((stats["STOCK_LIGHT_RADIUS"]?.takeIf { it > 0 } ?: rules.defaultLight) * biomeLight).coerceIn(rules.minLight, rules.maxLight)
     }
 }

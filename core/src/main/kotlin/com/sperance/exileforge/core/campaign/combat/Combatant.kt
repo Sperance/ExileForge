@@ -243,7 +243,7 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
 
     /** The share of damage to life dealt over [lifeDelay] seconds instead of at once. */
     val lifeDelayed = percent("STOCK_LIFE_DAMAGE_DELAYED")
-    val lifeDelay: Double get() = stat("STOCK_LIFE_DAMAGE_DELAY").takeIf { it > 0 } ?: DEFAULT_LIFE_DELAY
+    val lifeDelay: Double get() = stat("STOCK_LIFE_DAMAGE_DELAY").takeIf { it > 0 } ?: rules.lifeDelay
 
     /** Physical damage of hits taken as an element instead, share by element; the shares together never pass the whole. */
     val physicalTakenAs: Map<DamageType, Double> = DamageType.ELEMENTS.mapNotNull { type ->
@@ -281,7 +281,6 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
     fun resistTo(type: DamageType, penetration: Double = 0.0): Double = if (highestResistTaken && type in DamageType.ELEMENTS) DamageType.ELEMENTS.maxOf { resist(it, penetration) } else resist(type, penetration)
 
     private companion object {
-        const val DEFAULT_LIFE_DELAY = 4.0
         const val CRIT_CHANCE = "STOCK_CRITICAL_CHANCE"
         const val CRIT_MULTIPLIER = "STOCK_CRITICAL_MULTIPLIER"
         const val CRIT_DAMAGE = "STOCK_CRITICAL_DAMAGE"

@@ -8,7 +8,6 @@ import kotlin.math.min
 // ==================== What the powers reach (2.79.0) ====================
 
 /** The share of the hero's life a self-inflicted burning takes a second (server 1.32.0). */
-private const val SELF_BURN = 0.01
 
 /** A power that did something of its own, for the log and the number over the hero's card. */
 internal fun Battle.powerShown(code: String, healed: Double) = self(code, healed)
@@ -41,13 +40,13 @@ internal fun Battle.healPet(share: Double) {
 
 /**
  * [ailment] on the hero by their own power for [duration] seconds (3.33.0, server 1.32.0): a damage over time burns
- * [SELF_BURN] of their life a second, the rest are the rule's magnitude.
+ * [CombatRules.selfBurn] of their life a second, the rest are the rule's magnitude.
  */
 internal fun Battle.afflictSelf(ailment: Ailment, duration: Double) {
     val hero = heroFighter
     val (rule, _) = ruleOf[ailment] ?: return
     if (duration <= 0 || hero.body.immune(ailment)) return
-    val magnitude = if (ailment.hurts) hero.body.maxLife * SELF_BURN else rule.magnitude
+    val magnitude = if (ailment.hurts) hero.body.maxLife * rules.selfBurn else rule.magnitude
     place(hero, ActiveAilment(ailment, time + duration, magnitude, duration, Side.MONSTER), rule.stacks)
 }
 

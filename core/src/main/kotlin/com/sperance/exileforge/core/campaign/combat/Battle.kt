@@ -84,7 +84,7 @@ class Battle(
 
         /** Mana (2.78.0): the hero's comes in from the fight before, a monster's is full. */
         var mana = body.maxMana
-        var nextAttack = if (side == Side.HERO) 0.35 else ENTRY + index * STAGGER
+        var nextAttack = if (side == Side.HERO) 0.35 else rules.entry + index * rules.stagger
         var attackInterval = 1 / body.attackSpeed
 
         /** A new sheet mid-fight: the pools keep their share, the swing keeps its pace from the next one. */
@@ -140,7 +140,7 @@ class Battle(
         /** A foe steps onto the field at [place]: a moment to close in before its first swing, a little longer the further its place. */
         fun enter(place: Int, at: Double) {
             engaged = true
-            nextAttack = at + ENTRY + place * STAGGER
+            nextAttack = at + rules.entry + place * rules.stagger
         }
         val alive: Boolean get() = engaged && life > 0
         val held: Boolean get() = heldUntil > time || ailments.any { it.ailment == Ailment.FROZEN && it.until > time }
@@ -377,8 +377,8 @@ class Battle(
     /** The blow whose lunge is on screen right now, and how far into it the scene is (0..1). */
     fun lunge(): Pair<CombatEvent, Double>? = log.lastOrNull {
         it.action != Action.TICK && it.action != Action.REFLECT && it.action != Action.FLASK && !it.onSelf &&
-            time - it.time in -LUNGE..LUNGE
-    }?.let { it to ((time - it.time + LUNGE) / (2 * LUNGE)).coerceIn(0.0, 1.0) }
+            time - it.time in -rules.lunge..rules.lunge
+    }?.let { it to ((time - it.time + rules.lunge) / (2 * rules.lunge)).coerceIn(0.0, 1.0) }
 
     /** How far [fighter] is into its next swing, 0 just after one and 1 as the next lands. */
     fun swing(fighter: Fighter): Float = when {
@@ -409,7 +409,7 @@ class Battle(
 
     /**
      * What a support pet mended since its last line (3.70.0): its healing runs every slice, so the log gathers it into a
-     * line a [PET_MEND_EVERY]. The line is the hero's own, on themselves — the figures leave it out, as they always did.
+     * line a [CombatRules.petMendEvery]. The line is the hero's own, on themselves — the figures leave it out, as they always did.
      */
     internal var petMend = 0.0
 
@@ -430,18 +430,13 @@ class Battle(
         const val TICK = 1.0
 
         /** The least a tick of damage over time deals — a bleeding, a poison, a burning, the ground's degeneration — once it deals any. */
-        const val MIN_DOT = 1.0
-        const val LUNGE = 0.16
 
         /** The pet's place in the fight: neither the hero's -1 nor a monster's. */
         const val ALLY = -2
 
         /** How often, in seconds, a support pet's healing is written as a line of the log (3.70.0). */
-        const val PET_MEND_EVERY = 1.0
 
         /** How long a foe that stepped onto the field closes in before its first swing, and how much later each further place. */
-        const val ENTRY = 0.55
-        const val STAGGER = 0.13
 
         /** A time long gone (3.35.0): nothing happened «recently» at the fight's start. */
         const val NEVER = -1e9

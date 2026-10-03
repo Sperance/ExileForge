@@ -9,7 +9,6 @@ import com.sperance.exileforge.core.campaign.NoteTrace
 import com.sperance.exileforge.core.campaign.RollKey
 import com.sperance.exileforge.core.campaign.RollTrace
 import com.sperance.exileforge.core.campaign.Trace
-import com.sperance.exileforge.core.campaign.combat.Battle.Companion.PET_MEND_EVERY
 import com.sperance.exileforge.core.campaign.combat.Battle.Fighter
 import com.sperance.exileforge.core.campaign.lines
 import com.sperance.exileforge.core.character.StatLine
@@ -91,7 +90,7 @@ internal fun Battle.isPet(fighter: Fighter): Boolean = allyFighter != null && fi
 internal fun Battle.mended(amount: Double) {
     petMend += amount
     val pet = allyFighter ?: return
-    if (time - petMendFrom < PET_MEND_EVERY) return
+    if (time - petMendFrom < rules.petMendEvery) return
     if (petMend >= 1) {
         record(
             Side.HERO, Action.SKILL, HitKind.HIT, 0.0, null, petMend, false, emptyList(), null, target()?.index ?: 0, onSelf = true,

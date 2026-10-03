@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.campaign.run
 
+import com.sperance.exileforge.rules.content.ExpeditionRules
 import com.sperance.exileforge.rules.roll.Streams
 
 /** What an autorun takes on besides the monsters and the guardian, chosen before it starts (3.2.0). */
@@ -43,16 +44,13 @@ class AutoPilot(private val steps: ArrayDeque<AutoStep>, val waves: Int) {
     fun next(): AutoStep? = steps.removeFirstOrNull()?.also { if (it is AutoStep.Wave) wave = it.number }
 
     companion object {
-        const val MIN_WAVES = 8
-        const val MAX_WAVES = 15
 
         /** The beat between two steps, in seconds of the run's pace. */
-        const val BEAT = .6
 
         /** The steps of an autorun over [world], its number of waves drawn from the run's [seed]. */
-        fun of(world: ExpeditionWorld, plan: AutoPlan, seed: Long, bossStands: Boolean): AutoPilot {
+        fun of(rules: ExpeditionRules, world: ExpeditionWorld, plan: AutoPlan, seed: Long, bossStands: Boolean): AutoPilot {
             val packs = world.agents.filter { it !== world.boss && it.alive }.sortedBy { it.id }
-            val waves = Streams(seed).of("autoWaves").between(MIN_WAVES, MAX_WAVES).coerceIn(1, packs.size.coerceAtLeast(1))
+            val waves = Streams(seed).of("autoWaves").between(rules.autoWavesMin, rules.autoWavesMax).coerceIn(1, packs.size.coerceAtLeast(1))
             val chests = if (plan.chests) ArrayDeque(world.chests.filterNot { it.opened }) else ArrayDeque()
             val crystals = if (plan.crystals) ArrayDeque(world.standingCrystals) else ArrayDeque()
             val cracks = if (plan.abyss) ArrayDeque(world.standingCracks) else ArrayDeque()

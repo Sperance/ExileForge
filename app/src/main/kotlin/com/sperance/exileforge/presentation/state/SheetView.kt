@@ -1,7 +1,7 @@
 package com.sperance.exileforge.presentation.state
 
-import com.sperance.exileforge.core.campaign.Combatant
 import com.sperance.exileforge.core.campaign.Loadout
+import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.core.character.Sheets
 import com.sperance.exileforge.core.character.StatDelta
 import com.sperance.exileforge.core.display.ItemView

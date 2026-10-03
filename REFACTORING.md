@@ -26,7 +26,8 @@
 - [ ] `ForgeViewModel`, `ForgeRuntime`, `FeatureViewModel` удалены.
 
 ## Этап 5 - бой
-- [ ] `Combat.kt` → пакет `core/campaign/combat/`: модель (Combatant, Foe, Ally, эффекты), `Battle` по секциям (skills, tick, strike/land, traits, powers, log), константы - из контента.
+- [x] `Combat.kt` → пакет `core/campaign/combat/`: модель (Combatant, Foe, Ally, эффекты), `Battle` по секциям (views, tick, strike/land, skills, monsters, reach, log).
+- [ ] Константы боя (`Battle.Companion`, файловые константы секций) - из контента.
 - [ ] `ArenaOverlay.kt` → компоненты (FoeCard, HeroCard, FightFeed, Controls, FightLog общий с Report/CombatDetail).
 - [ ] `ExpeditionRun.kt`, `ExpeditionWorld.kt` - по тем же правилам.
 

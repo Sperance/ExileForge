@@ -1,6 +1,27 @@
 package com.sperance.exileforge.core.campaign
 
 import com.sperance.exileforge.core.atlas.AtlasEffects
+import com.sperance.exileforge.core.campaign.combat.Action
+import com.sperance.exileforge.core.campaign.combat.Ailment
+import com.sperance.exileforge.core.campaign.combat.Ally
+import com.sperance.exileforge.core.campaign.combat.Battle
+import com.sperance.exileforge.core.campaign.combat.Buildup
+import com.sperance.exileforge.core.campaign.combat.CombatEvent
+import com.sperance.exileforge.core.campaign.combat.Combatant
+import com.sperance.exileforge.core.campaign.combat.DamageType
+import com.sperance.exileforge.core.campaign.combat.DraughtRate
+import com.sperance.exileforge.core.campaign.combat.EffectView
+import com.sperance.exileforge.core.campaign.combat.FlaskView
+import com.sperance.exileforge.core.campaign.combat.Foe
+import com.sperance.exileforge.core.campaign.combat.HeroPools
+import com.sperance.exileforge.core.campaign.combat.HeroStance
+import com.sperance.exileforge.core.campaign.combat.HitKind
+import com.sperance.exileforge.core.campaign.combat.Outcome
+import com.sperance.exileforge.core.campaign.combat.Side
+import com.sperance.exileforge.core.campaign.combat.SkillView
+import com.sperance.exileforge.core.campaign.combat.flaskViews
+import com.sperance.exileforge.core.campaign.combat.pools
+import com.sperance.exileforge.core.campaign.combat.traitsIn
 import com.sperance.exileforge.core.model.campaign.CampaignState
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.ContentIndex

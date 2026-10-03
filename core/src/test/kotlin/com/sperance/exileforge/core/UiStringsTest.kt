@@ -1,10 +1,10 @@
 package com.sperance.exileforge.core
 
 import com.sperance.exileforge.core.atlas.AtlasBranch
-import com.sperance.exileforge.core.campaign.Ailment
-import com.sperance.exileforge.core.campaign.DamageType
-import com.sperance.exileforge.core.campaign.Outcome
-import com.sperance.exileforge.core.campaign.TargetRule
+import com.sperance.exileforge.core.campaign.combat.Ailment
+import com.sperance.exileforge.core.campaign.combat.DamageType
+import com.sperance.exileforge.core.campaign.combat.Outcome
+import com.sperance.exileforge.core.campaign.combat.TargetRule
 import com.sperance.exileforge.core.display.AffixKind
 import com.sperance.exileforge.core.display.StatGroup
 import com.sperance.exileforge.core.display.bodyPlaces

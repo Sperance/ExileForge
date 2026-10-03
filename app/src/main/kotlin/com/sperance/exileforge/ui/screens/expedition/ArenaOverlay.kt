@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.campaign.*
+import com.sperance.exileforge.core.campaign.combat.*
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.ItemVisualKind
 import com.sperance.exileforge.core.display.SkillText

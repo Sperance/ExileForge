@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.campaign
 
+import com.sperance.exileforge.core.campaign.combat.DamageType
 import com.sperance.exileforge.core.character.StatLine
 import com.sperance.exileforge.rules.content.ChargeKind
 import com.sperance.exileforge.rules.content.ChargeRules

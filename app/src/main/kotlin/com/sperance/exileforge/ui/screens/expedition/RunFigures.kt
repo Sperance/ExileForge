@@ -13,10 +13,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.sperance.exileforge.core.campaign.DamageType
 import com.sperance.exileforge.core.campaign.DeathHit
 import com.sperance.exileforge.core.campaign.RunStats
 import com.sperance.exileforge.core.campaign.RunSummary
+import com.sperance.exileforge.core.campaign.combat.DamageType
 import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.locOr

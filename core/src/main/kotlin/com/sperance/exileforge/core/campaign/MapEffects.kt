@@ -1,6 +1,8 @@
 package com.sperance.exileforge.core.campaign
 
 import com.sperance.exileforge.core.atlas.AtlasEffects
+import com.sperance.exileforge.core.campaign.combat.Ailment
+import com.sperance.exileforge.core.campaign.combat.DamageType
 import com.sperance.exileforge.rules.content.BrewStat
 import com.sperance.exileforge.rules.content.BuffKind
 import com.sperance.exileforge.rules.content.ContentIndex

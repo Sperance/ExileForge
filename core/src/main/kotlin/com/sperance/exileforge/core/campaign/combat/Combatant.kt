@@ -1,0 +1,358 @@
+package com.sperance.exileforge.core.campaign.combat
+
+import com.sperance.exileforge.rules.content.AccuracyRule
+import com.sperance.exileforge.rules.content.BuffKind
+import com.sperance.exileforge.rules.content.Ceiling
+import com.sperance.exileforge.rules.content.ChargeKind
+import com.sperance.exileforge.rules.content.CombatRules
+import com.sperance.exileforge.rules.content.ManaRule
+import kotlin.math.max
+
+/**
+ * One side of a fight, read off a stat table — the hero's sheet or a rolled monster — under the
+ * server's [rules].
+ *
+ * Every number here is one the server sent; the fight only decides what they do to each other. A
+ * hero with no weapon still swings — unarmed, as in PoE — and a missing critical chance is the one
+ * every attack has. Mana came back in 2.78.0 (server 0.69.0) with the class skills and the monsters'
+ * spells: it is what a skill is paid with, and it comes back by the rule's share a second.
+ */
+data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: CombatRules) {
+    private fun stat(name: String) = stats[name] ?: 0.0
+    private fun percent(name: String, cap: Double = 100.0) = stat(name).coerceIn(0.0, cap) / 100
+
+    /** A stat of the sheet as it stands, zero when it has none. */
+    operator fun get(name: String): Double = stat(name)
+
+    val maxLife = max(1.0, stat("STOCK_HEALTH"))
+
+    /** A monster's «shield of life» (an essence, server 0.69.0) adds a share of its life to its shield. */
+    val maxShield = max(0.0, stat("STOCK_ENERGY_SHIELD")) + maxLife * max(0.0, stat("STOCK_SHIELD_OF_LIFE")) / 100
+    val maxMana = max(0.0, stat("STOCK_MANA"))
+
+    /** Immune to chaos (3.17.0, server 1.15.0): its hits and poison do nothing. */
+    val chaosImmune = stat("STOCK_CHAOS_IMMUNE") > 0
+
+    /** Mana back a second (server 0.69.0): the rule's share of the maximum, faster by the sheet's regeneration. */
+    fun manaRegen(rule: ManaRule): Double = maxMana * rule.regen / 100 * max(0.0, 1 + stat("STOCK_MANA_REGEN") / 100)
+
+    /** Every damage it deals, as a multiplier: the sheet's "damage" (server 0.69.0), a monster's "deals more damage". */
+    val damageMore = max(0.0, 1 + stat("STOCK_DAMAGE") / 100)
+
+    /** How fast its skills recover: the cooldown recovery, and a spell's cast speed on top. */
+    fun recovery(spell: Boolean): Double = max(0.1, 1 + (stat("STOCK_COOLDOWN_RECOVERY") + if (spell) stat("STOCK_CAST_SPEED") else 0.0) / 100)
+
+    /** What is left of a skill's price in mana. */
+    val skillCost = max(0.0, 1 - stat("STOCK_SKILL_COST") / 100)
+    val skillHealing = max(0.0, 1 + stat("STOCK_SKILL_HEALING") / 100)
+
+    /** Immune to [ailment] (a flask's suffix, server 0.69.0); an immunity to freezing keeps the cold's chill off too. */
+    fun immune(ailment: Ailment): Boolean = stat("STOCK_IMMUNE_${ailment.word}") > 0 || (ailment == Ailment.CHILLED && stat("STOCK_IMMUNE_FREEZE") > 0)
+    val immuneCurse: Boolean get() = stat("STOCK_IMMUNE_CURSE") > 0
+    val immuneStun: Boolean get() = stat("STOCK_IMMUNE_STUN") > 0
+
+    /** How much faster this striker fills [kind] on others (3.78.0). */
+    fun buildupGain(kind: Buildup) = max(0.0, 1 + stat(kind.gain) / 100)
+
+    /** How much of [kind] reaches this fighter's bar: its avoidance takes a share off. */
+    fun buildupTaken(kind: Buildup) = 1 - (kind.avoid?.let { percent(it) } ?: 0.0)
+
+    /** The stun bar's own size against the rule's: «Непоколебимый» doubles it. */
+    val stunPool = max(.1, 1 + stat("STOCK_STUN_POOL") / 100)
+
+    /** Never fills [kind] at all. */
+    fun immuneTo(kind: Buildup) = when (kind) {
+        Buildup.STUN -> immuneStun
+        Buildup.FREEZE -> immune(Ailment.FROZEN)
+        Buildup.ELECTROCUTE -> stat("STOCK_IMMUNE_ELECTROCUTE") > 0
+    }
+
+    /** Life back a second as a share of the maximum (server 0.69.0), beside the flat regeneration. */
+    val lifeRegenShare = max(0.0, stat("STOCK_LIFE_REGEN_PERCENT")) / 100
+
+    /** Energy shield back a second as a share of the maximum (server 1.58.0), beside the flat regeneration. */
+    val shieldRegenShare = max(0.0, stat("STOCK_ENERGY_REGEN_PERCENT")) / 100
+
+    /** Life lost a second as a share of the maximum (3.4.0). */
+    val lifeDegenShare = max(0.0, stat("STOCK_LIFE_DEGEN_PERCENT")) / 100
+    val leechMana = max(0.0, stat("STOCK_LEECH_MANA")) / 100
+    val manaOnHit = max(0.0, stat("STOCK_MANA_ON_HIT"))
+    val manaOnKill = max(0.0, stat("STOCK_MANA_ON_KILL"))
+
+    /** The share of the struck one's maximum mana its blows burn (a monster's essence). */
+    val manaBurn = max(0.0, stat("STOCK_MANA_BURN")) / 100
+
+    /** How much more damage over time, a critical strike, a bleeding and a shock do to this fighter — a curse's work. */
+    val dotTaken = max(0.0, 1 + stat("STOCK_DOT_TAKEN") / 100)
+
+    /** Extra critical multiplier this fighter takes; below zero (server 1.32.0) a critical strike hurts it no more than a hit. */
+    val critTaken = stat("STOCK_CRITICAL_TAKEN") / 100
+    fun ailmentTaken(ailment: Ailment): Double = when (ailment) {
+        Ailment.BLEEDING -> max(0.0, 1 + stat("STOCK_BLEED_TAKEN") / 100)
+        Ailment.SHOCKED -> max(0.0, 1 + stat("STOCK_SHOCK_TAKEN") / 100)
+        else -> 1.0
+    }
+    val damage: Map<DamageType, Double> = DamageType.entries.associateWith { max(0.0, stat(it.attack)) }
+        .let { rolled -> if (rolled.values.sum() > 0) rolled else rolled + (DamageType.PHYSICAL to rules.unarmed.damage) }
+    val attackSpeed = stat("STOCK_ATTACK_SPEED").takeIf { it > 0 }?.coerceIn(0.3, 5.0) ?: rules.unarmed.speed
+
+    /** A limit raised by the sheet's own lines (3.13.0): block, evasion, physical reduction and critical chance, each as the resistances are. */
+    fun ceiling(limit: Ceiling): Double = limit.at(stat(limit.raise))
+    val critChance = (stats[CRIT_CHANCE] ?: rules.critical.chance).coerceIn(0.0, ceiling(rules.ceilings.critical)) / 100
+
+    /**
+     * The critical multiplier with the critical strike damage (server 1.57.0): that damage — 100 at base, on the hero's sheet
+     * and on a monster's — grows the crit's bonus over a hit, 150% at 140 striking for 170%; at 0 a crit hits as a hit.
+     */
+    val critMultiplier = rules.critical.effective(stats[CRIT_MULTIPLIER] ?: rules.critical.multiplier, stats[CRIT_DAMAGE]) / 100
+
+    /**
+     * A spell's own critical chance and multiplier (server 1.56.0): the attacks' lines do nothing to it. The hero's sheet
+     * always holds both from the rule's base; a fighter without them — a monster — casts with its attacks' figures.
+     */
+    val spellCritChance = stats[SPELL_CRIT_CHANCE]?.let { it.coerceIn(0.0, ceiling(rules.ceilings.critical)) / 100 } ?: critChance
+    val spellCritMultiplier = stats[SPELL_CRIT_MULTIPLIER]?.let { rules.critical.effective(it, stats[CRIT_DAMAGE]) / 100 } ?: critMultiplier
+    val armour = max(0.0, stat("STOCK_ARMOR"))
+    val evasion = max(0.0, stat("STOCK_EVASION"))
+    val block = stat("STOCK_BLOCK_CHANCE").coerceIn(0.0, ceiling(rules.ceilings.block)) / 100
+
+    /** The most of a blow evasion and armour can each turn aside, in shares. */
+    val evasionCap = ceiling(rules.ceilings.evasion) / 100
+    val armourCap = ceiling(rules.ceilings.physical) / 100
+
+    /** Taken off physical damage after armour, under the same physical ceiling. */
+    val physicalReduction = percent("STOCK_PHYSICAL_REDUCTION", ceiling(rules.ceilings.physical))
+
+    /**
+     * The share of a physical blow of [raw] that armour and then the flat reduction take, together under the physical
+     * ceiling (3.71.0): the ceiling is the whole of physical mitigation, not each half's, so the two never stack past it.
+     */
+    fun physicalMitigation(raw: Double, factor: Double): Double = (1 - (1 - (armour / (armour + factor * raw)).coerceAtMost(armourCap)) * (1 - physicalReduction)).coerceAtMost(armourCap)
+
+    /**
+     * Chaos stands alone, as in PoE; "all resistances" and "all maximum resistances" cover the three elements.
+     * [penetration] (server 0.66.0) is the striker's: it is taken off the resistance, and can push it below
+     * zero down to minus the cap, so a monster without resistance is still hurt more by a penetrating blow.
+     */
+    fun resist(type: DamageType, penetration: Double = 0.0): Double {
+        val name = type.resist ?: return 0.0
+        val chaos = name == "STOCK_RESIST_CHAOS"
+        val ceiling = (rules.resistCap + stat(type.maxResist.orEmpty()) + (if (chaos) 0.0 else stat("STOCK_RESIST_MAX_ALL"))).coerceIn(0.0, rules.resistHardCap)
+        // Below zero since 3.18.0: the act's penalty and the map's curse can leave a resistance negative, as in PoE.
+        val own = (stat(name) + (if (chaos) 0.0 else stat("STOCK_RESIST_ALL"))).coerceIn(-rules.resistCap, ceiling)
+        return (own - penetration).coerceIn(-rules.resistCap, ceiling) / 100
+    }
+
+    /** How much of the target's [type] resistance this fighter's blows ignore, in percent (server 0.66.0). */
+    fun penetration(type: DamageType): Double = when (type) {
+        DamageType.PHYSICAL -> 0.0
+        DamageType.CHAOS -> max(0.0, stat("STOCK_PENETRATE_CHAOS"))
+        else -> max(0.0, stat("STOCK_PENETRATE_${type.name}")) + max(0.0, stat("STOCK_PENETRATE_ELEMENTAL"))
+    }
+
+    /**
+     * What a blow of [type] does to this fighter after its defences (server 0.66.0): "damage taken" of every
+     * kind and of that kind together, never below a tenth so no stack of it makes a fighter untouchable.
+     * Chaos is the one exception: a keystone's immunity (3.17.0, server 1.15.0) takes none of it.
+     */
+    fun damageTaken(type: DamageType): Double {
+        if (type == DamageType.CHAOS && chaosImmune) return 0.0
+        val own = when (type) {
+            DamageType.PHYSICAL -> stat("STOCK_PHYSICAL_TAKEN")
+            DamageType.CHAOS -> stat("STOCK_CHAOS_TAKEN")
+            else -> stat("STOCK_ELEMENTAL_TAKEN")
+        }
+        return ((1 + stat("STOCK_DAMAGE_TAKEN") / 100) * (1 + own / 100)).coerceAtLeast(0.1)
+    }
+
+    /** How much harder this fighter hits a target under [ailments]: any ailment counts once, each named one on top. */
+    fun damageAgainst(ailments: Collection<Ailment>): Double {
+        if (ailments.isEmpty()) return 1.0
+        val named = ailments.toSet().sumOf { max(0.0, stat(it.against)) }
+        return 1 + (max(0.0, stat("STOCK_DAMAGE_VS_AILED")) + named) / 100
+    }
+
+    /** How much longer the ailments this fighter inflicts last on its foes. */
+    fun ailmentDurationOnFoes(ailment: Ailment): Double = 1 + (max(0.0, stat("STOCK_AILMENT_DURATION")) + max(0.0, stat("STOCK_${ailment.word}_DURATION"))) / 100
+
+    /** The pace of everything that gives life or shield back: regeneration, leech, on hit and on kill (server 0.66.0). */
+    val recoveryRate = max(0.0, 1 + stat("STOCK_RECOVERY_RATE") / 100)
+
+    /** The pace of the shield's recharge after the rule's delay. */
+    val shieldRecharge = max(0.0, 1 + stat("STOCK_SHIELD_RECHARGE") / 100)
+
+    /** Flat physical damage every attacker takes on hit, and the share of any damage taken given back the same way. */
+    val thorns = max(0.0, stat("STOCK_THORNS"))
+    val reflect = max(0.0, stat("STOCK_REFLECT")) / 100
+
+    /** What this fighter's presence does to its foes while it stands (server 0.66.0): the `AURA_*` stats, if any. */
+    val auras: Map<String, Double> = stats.filterKeys { it.startsWith("AURA_") }.filterValues { it > 0 }
+
+    /**
+     * This fighter under the [auras] of the foes still standing: fewer resistances, more damage taken, slower
+     * swings and slower recovery. The same sheet with the auras written into it, so every reading stays one.
+     */
+    fun under(auras: Map<String, Double>): Combatant {
+        if (auras.isEmpty()) return this
+        val sheet = stats.toMutableMap()
+        // Server 0.69.0, the essences: weaker blows, fewer criticals and slower skills near their guardian.
+        auras["AURA_WEAKEN"]?.let { v -> sheet["STOCK_DAMAGE"] = (100 + (stats["STOCK_DAMAGE"] ?: 0.0)) * max(0.0, 1 - v / 100) - 100 }
+        auras["AURA_CRIT"]?.let { v ->
+            sheet[CRIT_CHANCE] = critChance * 100 * max(0.0, 1 - v / 100)
+            if (SPELL_CRIT_CHANCE in stats) sheet[SPELL_CRIT_CHANCE] = spellCritChance * 100 * max(0.0, 1 - v / 100)
+        }
+        auras["AURA_COOLDOWN"]?.let { v -> sheet["STOCK_COOLDOWN_RECOVERY"] = (stats["STOCK_COOLDOWN_RECOVERY"] ?: 0.0) - v }
+        auras["AURA_RESIST"]?.let { v ->
+            sheet["STOCK_RESIST_ALL"] = (stats["STOCK_RESIST_ALL"] ?: 0.0) - v
+            sheet["STOCK_RESIST_CHAOS"] = (stats["STOCK_RESIST_CHAOS"] ?: 0.0) - v
+        }
+        auras["AURA_DAMAGE_TAKEN"]?.let { v -> sheet["STOCK_DAMAGE_TAKEN"] = (stats["STOCK_DAMAGE_TAKEN"] ?: 0.0) + v }
+        auras["AURA_SLOW"]?.let { v -> sheet["STOCK_ATTACK_SPEED"] = attackSpeed * max(0.1, 1 - v / 100) }
+        auras["AURA_RECOVERY"]?.let { v -> sheet["STOCK_RECOVERY_RATE"] = (stats["STOCK_RECOVERY_RATE"] ?: 0.0) - v }
+        return Combatant(sheet, level, rules)
+    }
+    val lifeRegen = max(0.0, stat("STOCK_HEALTH_REGEN"))
+    val shieldRegen = max(0.0, stat("STOCK_ENERGY_REGEN"))
+    val leechPhysical = max(0.0, stat("STOCK_LEECH_PHYSICAL")) / 100
+    val leechAll = max(0.0, stat("STOCK_LEECH_ALL")) / 100
+    val critLeech = max(0.0, stat("STOCK_CRITICAL_VAMPIRE")) / 100
+    val stunThreshold = max(0.0, stat("STOCK_STUN_THRESHOLD"))
+    val avoidStun = percent("STOCK_AVOID_STUN")
+
+    /** What gear adds to the rule's chance to inflict [ailment], in percent; chill has no such stat. */
+    fun inflictChance(ailment: Ailment) = max(0.0, stat("STOCK_${ailment.word}_CHANCE"))
+
+    /** How much heavier [ailment]'s damage over time runs. */
+    fun ailmentDamage(ailment: Ailment) = 1 + max(0.0, ailment.damage?.let(::stat) ?: 0.0) / 100
+    fun avoid(ailment: Ailment) = percent("STOCK_AVOID_${ailment.word}")
+
+    /** What is left of [ailment]'s duration on this fighter, never less than the rule's cap allows. */
+    fun ailmentDuration(ailment: Ailment) = 1 - percent("STOCK_${ailment.word}_DURATION_ON_SELF", rules.ailmentDurationCap)
+    val lifeOnHit = max(0.0, stat("STOCK_HEALTH_ON_HIT"))
+
+    // ==================== Keystones and uniques of server 1.32.0 (3.33.0) ====================
+
+    /** The share of the damage bound for life that mana takes first. */
+    val manaBeforeLife = percent("STOCK_MANA_BEFORE_LIFE")
+
+    /** Life leech restores the shield instead. */
+    val leechToShield: Boolean get() = stat("STOCK_LEECH_TO_SHIELD") > 0
+
+    /** The shield lost a second as a share of its maximum. */
+    val shieldDegenShare = max(0.0, stat("STOCK_SHIELD_DEGEN_PERCENT")) / 100
+
+    /** The share of damage to life dealt over [lifeDelay] seconds instead of at once. */
+    val lifeDelayed = percent("STOCK_LIFE_DAMAGE_DELAYED")
+    val lifeDelay: Double get() = stat("STOCK_LIFE_DAMAGE_DELAY").takeIf { it > 0 } ?: DEFAULT_LIFE_DELAY
+
+    /** Physical damage of hits taken as an element instead, share by element; the shares together never pass the whole. */
+    val physicalTakenAs: Map<DamageType, Double> = DamageType.ELEMENTS.mapNotNull { type ->
+        stat("STOCK_PHYSICAL_TAKEN_AS_${type.name}").takeIf { it > 0 }?.let { type to it / 100 }
+    }.toMap().let { shares ->
+        val sum = shares.values.sum()
+        if (sum > 1) shares.mapValues { it.value / sum } else shares
+    }
+
+    /** Each of its hits deals all its damage as one random element. */
+    val randomElementHits: Boolean get() = stat("STOCK_RANDOM_ELEMENT_HITS") > 0
+
+    /** Elemental damage taken meets its highest elemental resistance. */
+    val highestResistTaken: Boolean get() = stat("STOCK_HIGHEST_RESIST_TAKEN") > 0
+
+    /** More or less damage taken of the element it resists most, in percent. */
+    val highestResistElementTaken: Double get() = stat("STOCK_HIGHEST_RESIST_ELEMENT_TAKEN")
+
+    /** Its damage of the element its target resists least penetrates this much. */
+    val lowestResistPenetrate: Double get() = max(0.0, stat("STOCK_LOWEST_RESIST_PENETRATE"))
+
+    /** Its ignites burn as chaos. */
+    val igniteAsChaos: Boolean get() = stat("STOCK_IGNITE_AS_CHAOS") > 0
+
+    /** Its critical chance is rolled twice. */
+    val luckyCrit: Boolean get() = stat("STOCK_LUCKY_CRIT") > 0
+
+    /** Its hits that are not critical strikes, as a multiplier (−40 — 40% less). */
+    val nonCritMore: Double get() = max(0.0, 1 + stat("STOCK_NON_CRIT_DAMAGE") / 100)
+
+    /** Every flask of the belt is drunk as a fight opens, for no charges. */
+    val flasksAuto: Boolean get() = stat("STOCK_FLASKS_AUTO") > 0
+
+    /** Its resistance to a blow of [type]: the highest elemental one for an element when it takes elements so. */
+    fun resistTo(type: DamageType, penetration: Double = 0.0): Double = if (highestResistTaken && type in DamageType.ELEMENTS) DamageType.ELEMENTS.maxOf { resist(it, penetration) } else resist(type, penetration)
+
+    private companion object {
+        const val DEFAULT_LIFE_DELAY = 4.0
+        const val CRIT_CHANCE = "STOCK_CRITICAL_CHANCE"
+        const val CRIT_MULTIPLIER = "STOCK_CRITICAL_MULTIPLIER"
+        const val CRIT_DAMAGE = "STOCK_CRITICAL_DAMAGE"
+        const val SPELL_CRIT_CHANCE = "STOCK_SPELL_CRITICAL_CHANCE"
+        const val SPELL_CRIT_MULTIPLIER = "STOCK_SPELL_CRITICAL_MULTIPLIER"
+    }
+    val lifeOnKill = max(0.0, stat("STOCK_HEALTH_ON_KILL"))
+
+    // ==================== Server 1.34.0 (3.35.0): accuracy, buffs, defences of PoE ====================
+
+    /** Its accuracy against an evasive target: the rule's base by level and dexterity, and the sheet's own. */
+    fun accuracy(rule: AccuracyRule): Double = max(0.0, rule.base + rule.perLevel * level + rule.perDexterity * stat("STOCK_AGILITY") + stat("STOCK_ACCURACY"))
+
+    /** The shares of its physical damage it deals again as other types, by type. */
+    val extraAs: Map<DamageType, Double> = DamageType.entries.filter { it != DamageType.PHYSICAL }
+        .mapNotNull { type -> stat("STOCK_PHYSICAL_AS_EXTRA_${type.name}").takeIf { it > 0 }?.let { type to it / 100 } }.toMap()
+
+    /** Flat damage of [type] its spells add. */
+    fun spellAdded(type: DamageType): Double = max(0.0, stat("STOCK_SPELL_ADD_${type.name}"))
+
+    /** Its critical chance and multiplier for a blow: a spell's are its own (server 1.56.0), an attack's the rest. */
+    fun critChance(spell: Boolean): Double = if (spell) spellCritChance else critChance
+    fun critMultiplier(spell: Boolean): Double = if (spell) spellCritMultiplier else critMultiplier
+    val doubleDamage = percent("STOCK_DOUBLE_DAMAGE")
+
+    /** A foe it hits left under this share of its life dies. */
+    val culling = percent("STOCK_CULLING")
+
+    /** Increased damage for each charge of [kind] it holds. */
+    fun perCharge(kind: ChargeKind): Double = stat("STOCK_DAMAGE_PER_${kind.name}")
+    val shockEffect = max(0.0, 1 + stat("STOCK_SHOCK_EFFECT") / 100)
+    val chillEffect = max(0.0, 1 + stat("STOCK_CHILL_EFFECT") / 100)
+
+    /** How much faster its damaging ailments run their damage, as a share. */
+    val fasterAilments = max(0.0, stat("STOCK_FASTER_AILMENTS")) / 100
+    fun buffChance(kind: BuffKind): Double = percent(kind.chance)
+
+    /** It wears [kind] always: a monster's modifier or a map's. */
+    fun wears(kind: BuffKind): Boolean = stat(kind.always) > 0
+    val buffDuration = max(0.1, 1 + stat(BuffKind.DURATION) / 100)
+
+    /** Damage taken from hits, not over time: Fortify's work. */
+    val hitTaken = max(0.1, 1 + stat("STOCK_HIT_TAKEN") / 100)
+    val suppression = percent("STOCK_SPELL_SUPPRESSION", rules.defence.suppressionCap)
+    val deflection = percent("STOCK_DEFLECTION", rules.defence.deflectionCap)
+
+    /** Its chance to block a spell: the block, and the spell block on top, under the same ceiling. */
+    val spellBlock = (stat("STOCK_BLOCK_CHANCE") + stat("STOCK_SPELL_BLOCK")).coerceIn(0.0, ceiling(rules.ceilings.block)) / 100
+    val lifeOnBlock = max(0.0, stat("STOCK_HEALTH_ON_BLOCK"))
+    val manaOnBlock = max(0.0, stat("STOCK_MANA_ON_BLOCK"))
+    val shieldOnBlock = max(0.0, stat("STOCK_SHIELD_ON_BLOCK"))
+
+    /** The share of its maximum life a kill gives back. */
+    val lifeOnKillShare = percent("STOCK_HEALTH_ON_KILL_PERCENT")
+    val shieldOnKill = max(0.0, stat("STOCK_SHIELD_ON_KILL"))
+
+    /** The share of damage taken that comes back as life over the rule's seconds. */
+    val recoup = percent("STOCK_LIFE_RECOUP")
+
+    /** The share of its armour that meets elemental hits too. */
+    val armourElemental = percent("STOCK_ARMOUR_ELEMENTAL")
+
+    /** How much sooner its shield starts to recharge after a hit. */
+    val rechargeStart = max(0.1, 1 + stat("STOCK_SHIELD_RECHARGE_START") / 100)
+
+    /** Taunts (since server 0.62.0): while it stands, its foes must strike it first. */
+    val taunt: Boolean get() = stat("STOCK_TAUNT") > 0
+
+    /** How hard it presses, before anyone's defences: its damage per swing times its swings per second. */
+    val threat: Double get() = damage.values.sum() * attackSpeed
+
+    /** The damage type most of its blow is made of. */
+    val leading: DamageType get() = damage.maxBy { it.value }.key
+}

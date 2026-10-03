@@ -16,6 +16,8 @@ import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.lineText
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.locOr
+import com.sperance.exileforge.rules.content.hybridOf
+import com.sperance.exileforge.ui.icons.SpriteIcon
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
@@ -41,6 +43,8 @@ fun petName(species: String): String = locOr("pet.$species", species)
 
 /** A species' sprite (3.70.0): the egg of its biome, framed as a stack of the bag is; the menagerie's glyph for one the content does not know. */
 @Composable fun PetIcon(s: ForgeState, species: String, size: Int) {
+    // A hybrid (3.79.0) has a portrait of its own, not its biome's egg.
+    if (SpriteIcon(com.sperance.exileforge.core.display.icon("pet.$species"), Gold, Modifier.size(size.dp), halo = false)) return
     val egg = s.index?.pets?.let { pets -> pets.species.firstOrNull { it.code == species }?.let { pets.eggs[it.biome] } }
     if (egg != null) StackIcon(s, egg, size)
     else Icon(ForgeGlyphs.Exile, null, tint = Gold, modifier = Modifier.size(size.dp))
@@ -66,6 +70,7 @@ fun petName(species: String): String = locOr("pet.$species", species)
             }
             MutedText(ui("pets.hint"))
             IncubatorPanel(s, vm)
+            BreedingPanel(s, vm)
         }
         if (pets.pets.isEmpty()) InfoCard(ui("pets.empty"), ui("pets.empty_hint"))
         pets.pets.sortedWith(compareBy({ !pets.isActive(it.id) }, { -it.rarity.ordinal }, { -it.level })).forEach { pet -> PetCard(s, vm, pet) }
@@ -89,7 +94,8 @@ fun petName(species: String): String = locOr("pet.$species", species)
             Column(Modifier.weight(1f)) {
                 Text(petName(pet.species), color = rarityColor(pet.rarity.name), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                 val what = when (kind.kind) {
-                    PetKind.COMBAT -> listOfNotNull(kind.role?.let { locOr("pet.role.$it", it.name) }, kind.element?.let { locOr("pet.element.$it", it) })
+                    PetKind.COMBAT -> listOfNotNull((pet.role ?: kind.role)?.let { locOr("pet.role.$it", it.name) },
+                        listOfNotNull(kind.element, kind.element2).joinToString(" + ") { locOr("pet.element.$it", it) }.ifBlank { null })
                     PetKind.HELPER -> listOfNotNull(kind.focus?.let { locOr("pet.focus.$it", it.name) })
                 }
                 MutedText((listOf(locOr("pet.kind.${kind.kind}", kind.kind.name)) + what).joinToString(" · "))
@@ -97,6 +103,8 @@ fun petName(species: String): String = locOr("pet.$species", species)
             Text(ui("pets.level", pet.level), color = GoldBright, style = MaterialTheme.typography.labelMedium)
         }
         if (active) Text(ui("pets.at_work"), color = Vital, style = MaterialTheme.typography.labelSmall)
+        if (kind.element2 != null) Text(ui("pets.hybrid"), color = GoldBright, style = MaterialTheme.typography.labelSmall)
+        if (pet.tiredUntil > System.currentTimeMillis()) Text(ui("pets.tired"), color = Muted, style = MaterialTheme.typography.labelSmall)
         helps?.let { MutedText(it) }
         if (pet.corrupted) Text(ui("pets.corrupted"), color = LifeRed, style = MaterialTheme.typography.labelSmall)
         if (pet.quality > 0) Text(ui("pets.quality", pet.quality), color = GoldBright, style = MaterialTheme.typography.labelSmall)
@@ -115,7 +123,7 @@ fun petName(species: String): String = locOr("pet.$species", species)
         }
         if (kind.kind == PetKind.COMBAT) {
             val sheet = menagerie.sheet(pet)
-            MutedText(ui("pets.sheet", number(sheet["STOCK_HEALTH"] ?: 0.0), number(sheet["STOCK_ATTACK_${kind.element}"] ?: 0.0)))
+            MutedText(ui("pets.sheet", number(sheet["STOCK_HEALTH"] ?: 0.0), number(listOfNotNull(kind.element, kind.element2).sumOf { sheet["STOCK_ATTACK_$it"] ?: 0.0 })))
         }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             ForgeButton(onClick = { if (helps != null && !active) hiring = true else vm.activatePet(pet.id) }, enabled = !s.busy) {
@@ -191,3 +199,35 @@ fun petName(species: String): String = locOr("pet.$species", species)
 private val PetLine.tier: Int get() = PET_TIERS - (shares.average().takeIf { it.isFinite() } ?: 0.0).times(PET_TIERS).toInt().coerceIn(0, PET_TIERS - 1)
 
 private const val PET_TIERS = 5
+
+/**
+ * Breeding (3.79.0, server 1.74.0): two combat pets of the rules' level, rested, and an Orb of Breeding; a hybrid of their two
+ * elements is born with the rules' chance, an egg of a parent's kind otherwise. Both parents rest for the rules' hours.
+ */
+@Composable private fun BreedingPanel(s: ForgeState, vm: ForgeViewModel) {
+    val index = s.index ?: return
+    val hero = s.hero ?: return
+    val rule = index.pets.breeding
+    val menagerie = remember(index) { Menagerie(index) }
+    val now = System.currentTimeMillis()
+    val fit = hero.pets.pets.filter { menagerie.species(it.species)?.kind == PetKind.COMBAT && it.level >= rule.minLevel && it.tiredUntil <= now }
+    var first by remember { mutableStateOf<String?>(null) }
+    var second by remember { mutableStateOf<String?>(null) }
+    val orbs = s.bagAmount(rule.orb) ?: 0L
+    Engraved(ui("pets.breed_title"))
+    MutedText(ui("pets.breed_hint", rule.minLevel, (rule.hybridChance * 100).toInt(), rule.restHours))
+    if (fit.size < 2) { MutedText(ui("pets.breed_none", rule.minLevel)); return }
+    val options = fit.associate { it.id to "${petName(it.species)} · ${ui("pets.level", it.level)}" }
+    Spinner(ui("pets.breed_first"), first.orEmpty(), options, !s.busy) { first = it }
+    Spinner(ui("pets.breed_second"), second.orEmpty(), options - first.orEmpty(), !s.busy) { second = it }
+    val pair = listOfNotNull(first, second).mapNotNull { id -> fit.firstOrNull { it.id == id }?.let { menagerie.species(it.species) } }
+    if (pair.size == 2) {
+        val hybrid = index.pets.species.hybridOf(pair[0].element.orEmpty(), pair[1].element.orEmpty())
+        if (hybrid != null) Text(ui("pets.breed_may", petName(hybrid.code)), color = GoldBright, style = MaterialTheme.typography.bodySmall)
+        else MutedText(ui("pets.breed_same"))
+    }
+    ForgeButton(enabled = !s.busy && first != null && second != null && first != second && orbs > 0,
+        onClick = { vm.breedPets(first!!, second!!); first = null; second = null }) {
+        Text(ui("pets.breed_go", itemTitle(rule.orb), orbs))
+    }
+}

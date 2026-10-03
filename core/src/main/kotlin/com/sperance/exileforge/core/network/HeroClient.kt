@@ -143,6 +143,9 @@ class HeroClient internal constructor(private val http: Transport) {
     suspend fun choosePetLine(heroId: String, petId: String, choice: Int): PetState =
         http.post("$HERO/pets/choose", heroQuery(heroId, "petId" to petId.also(::requireItemId), "choice" to choice.toString()))
     suspend fun activatePet(heroId: String, petId: String): PetState = http.post("$HERO/pets/activate", heroQuery(heroId, "petId" to petId.also(::requireItemId)))
+    /** Breeds two combat pets with the Orb of Breeding (server 1.74.0): a hybrid joins, or an egg of a parent goes to the bag. Never retried. */
+    suspend fun breedPets(heroId: String, first: String, second: String): PetState =
+        http.post("$HERO/pets/breed", heroQuery(heroId, "first" to first.also(::requireItemId), "second" to second.also(::requireItemId)))
     suspend fun releasePet(heroId: String, petId: String): PetState = http.post("$HERO/pets/release", heroQuery(heroId, "petId" to petId.also(::requireItemId)))
 
     // ---- the stash's places and its overflow (server 1.1.0) ----

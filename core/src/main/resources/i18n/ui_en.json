@@ -3668,5 +3668,17 @@
   "guild.stash_put": "Put in",
   "guild.stash_take": "Take",
   "guild.stash_empty": "The tab is empty.",
-  "guild.stash_by": "put by {0}"
+  "guild.stash_by": "put by {0}",
+  "pets.hybrid": "Hybrid: two elements, power ×1.2",
+  "pets.tired": "Resting after breeding",
+  "pets.bred_hybrid": "A hybrid is born: {0}!",
+  "pets.bred_egg": "No hybrid this time — an egg of a parent is in the bag",
+  "pets.breed_title": "Breeding",
+  "pets.breed_hint": "Two combat pets of level {0}+ and an Orb of Breeding: a {1}% chance of a hybrid of their elements, otherwise an egg. Parents rest {2} h.",
+  "pets.breed_none": "You need two rested combat pets of level {0}+.",
+  "pets.breed_first": "First parent",
+  "pets.breed_second": "Second parent",
+  "pets.breed_may": "May be born: {0}",
+  "pets.breed_same": "The parents share an element — no hybrid, only an egg.",
+  "pets.breed_go": "Breed: {0} (have {1})"
 }

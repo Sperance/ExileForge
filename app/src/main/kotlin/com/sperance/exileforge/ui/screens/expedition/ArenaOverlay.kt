@@ -462,8 +462,8 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
                 ui("fight.target_line", target, if (fight.focus != null) ui("fight.target_yours") else ui("fight.rule.${stance.rule.name}")),
                 color = if (fight.focus != null) GoldBright else Parchment, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        // The combat pet beside the hero (3.5.0; a card of its own since 3.70.0).
-        fight.ally?.let { PetCard(s, it, fight.lunge?.takeIf { lunge -> lunge.pet }, fight.hits.filter { hit -> hit.pet }, time) }
+        // The combat pet (3.79.0, variant B): a round badge on the hero's card, its life a ring around it.
+        fight.ally?.let { PetBadge(s, it, fight.lunge?.takeIf { lunge -> lunge.pet }, fight.hits.filter { hit -> hit.pet }, time) }
     }
 }
 
@@ -471,36 +471,36 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
 private val FloatingHit.mend: Boolean get() = pet && target == Side.HERO && amount == 0 && healed > 0
 
 /**
- * The combat pet's card (3.70.0): its sprite, name and life. It lifts in gold as it strikes, shakes red as it is struck
- * and glows green as it mends the hero; the blows it takes float over it. Down, it greys and waits for the fight's end.
+ * The combat pet's badge (3.79.0, variant B «Значок на карточке героя»): its sprite in a circle, its life a ring around it.
+ * The ring flashes gold as it strikes, red as it is struck, green as it mends the hero; the blows it takes float over it.
+ * Its own blows rise green on the foes' cards and its lines are green in the log. Down, it greys.
  */
-@Composable private fun PetCard(s: ForgeState, ally: AllyView, lunge: LungeView?, hits: List<FloatingHit>, time: Float) {
+@Composable private fun PetBadge(s: ForgeState, ally: AllyView, lunge: LungeView?, hits: List<FloatingHit>, time: Float) {
     val acting = reach(lunge, Side.HERO, null)
     val hit = struck(lunge, Side.HERO, null)
     val mending = hits.any { it.mend && it.age < PET_PULSE }
     val ring = when {
-        !ally.alive -> Muted.copy(alpha = .5f)
+        !ally.alive -> Muted
         acting > 0f -> GoldBright
         hit -> LifeRed
-        mending -> Vital
-        else -> Gold.copy(alpha = .5f)
+        else -> Vital
     }
-    val shape = RoundedCornerShape(8.dp)
-    Column(Modifier.width(76.dp).graphicsLayer {
-            translationY = -acting * 6.dp.toPx()
+    val share = if (ally.maxLife > 0) (ally.life.toFloat() / ally.maxLife).coerceIn(0f, 1f) else 0f
+    Box(Modifier.size(48.dp).graphicsLayer {
+            translationY = -acting * 4.dp.toPx()
             translationX = if (hit) sin(time * 60f) * 2.dp.toPx() else 0f
             alpha = if (ally.alive) 1f else .55f
+        }, contentAlignment = Alignment.Center) {
+        Canvas(Modifier.fillMaxSize()) {
+            val stroke = 4.dp.toPx()
+            val inset = androidx.compose.ui.geometry.Size(size.width - stroke, size.height - stroke)
+            val at = androidx.compose.ui.geometry.Offset(stroke / 2, stroke / 2)
+            drawCircle(Abyss)
+            drawArc(PanelRaised, 0f, 360f, false, at, inset, style = androidx.compose.ui.graphics.drawscope.Stroke(stroke))
+            drawArc(if (mending) Vital else ring, -90f, 360f * share, false, at, inset, style = androidx.compose.ui.graphics.drawscope.Stroke(stroke))
         }
-        .background(if (acting > 0f) PanelRaised else Abyss, shape)
-        .border(if (acting > 0f || hit || mending) 2.dp else 1.dp, ring, shape)
-        .padding(5.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
-        Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) {
-            PetIcon(s, ally.species, 34)
-            CardHits(hits.filter { it.target == Side.HERO && !it.mend })
-        }
-        Text(petName(ally.species), color = if (ally.alive) Vital else Muted, style = MaterialTheme.typography.labelSmall,
-            maxLines = 1, overflow = TextOverflow.Ellipsis)
-        LifeBar(ally.life, ally.maxLife, 0, 0, Modifier.fillMaxWidth().height(10.dp))
+        PetIcon(s, ally.species, 30)
+        CardHits(hits.filter { it.target == Side.HERO && !it.mend })
     }
 }
 
@@ -1081,6 +1081,7 @@ internal fun noteLine(event: CombatEvent, monster: String): String {
 }
 
 private fun logColour(event: CombatEvent): Color = when {
+    event.pet != null -> Vital
     (event.trace as? NoteTrace)?.kind?.recovery == true -> Vital
     event.action == Action.NOTE -> Rune
     event.action == Action.RETREAT -> Muted
@@ -1103,6 +1104,8 @@ private fun hitText(hit: FloatingHit): String = when {
 
 private fun hitColour(hit: FloatingHit): Color = when {
     hit.amount == 0 && hit.healed > 0 -> Vital
+    // The pet's blows rise green on the foe (3.79.0).
+    hit.pet && hit.target == Side.MONSTER && hit.amount > 0 -> Vital
     hit.kind == HitKind.EVADED || hit.kind == HitKind.BLOCKED -> Muted
     hit.kind == HitKind.CRIT -> Color(0xFFFFD34A)
     else -> damageTint(hit.type, onHero = hit.target == Side.HERO)

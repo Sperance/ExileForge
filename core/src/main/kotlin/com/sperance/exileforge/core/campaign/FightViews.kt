@@ -25,8 +25,8 @@ internal class PetAllies(private val index: ContentIndex, private val rules: Com
             val kind = menagerie.species(own.species) ?: return@let null
             val levels = (boons[PetBoons.LEVEL] ?: 0.0).toInt()
             val p = if (levels != 0) own.copy(level = (own.level + levels).coerceAtLeast(1)) else own
-            Ally(p.species, Combatant(PetBoons.apply(menagerie.sheet(p), boons), p.level, rules), kind.role == PetRole.TANK,
-                if (kind.role == PetRole.SUPPORT) menagerie.supportHeal(p) else 0.0, index.pets.drawFire)
+            Ally(p.species, Combatant(PetBoons.apply(menagerie.sheet(p), boons), p.level, rules), (p.role ?: kind.role) == PetRole.TANK,
+                if ((p.role ?: kind.role) == PetRole.SUPPORT) menagerie.supportHeal(p) else 0.0, index.pets.drawFire)
         }
         made = Triple(pet, boons, ally)
         return ally

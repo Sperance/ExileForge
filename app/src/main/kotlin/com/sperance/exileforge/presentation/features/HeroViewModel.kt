@@ -6,6 +6,7 @@ import com.sperance.exileforge.rules.content.SlotGroup
 import com.sperance.exileforge.rules.content.TakenNode
 import com.sperance.exileforge.core.character.Sheets
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.core.model.sync.HeroParts
 import com.sperance.exileforge.core.model.sync.HeroSnapshot
@@ -102,6 +103,14 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     fun choosePetLine(petId: String, choice: Int) { with(runtime) { heroCommand { id -> api.hero.choosePetLine(id, petId, choice) } } }
     fun activatePet(petId: String) { with(runtime) { heroCommand { id -> api.hero.activatePet(id, petId) } } }
     fun releasePet(petId: String) { with(runtime) { heroCommand { id -> api.hero.releasePet(id, petId) } } }
+
+    /** Breeding (3.79.0): what was born is named — a hybrid by its species, else the egg that went to the bag. */
+    fun breedPets(first: String, second: String) { with(runtime) { heroCommand { id ->
+        val before = state.value.hero?.pets?.pets?.map { it.id }?.toSet().orEmpty()
+        val after = api.hero.breedPets(id, first, second)
+        val born = after.pets.firstOrNull { it.id !in before }
+        toast(born?.let { ui("pets.bred_hybrid", locOr("pet.${it.species}", it.species)) } ?: ui("pets.bred_egg"), NoticeKind.LOOT)
+    } } }
 
     /** The testing window (3.73.0): one grant of `/hero/grant/` for the hero in play. */
     fun testerGrant(what: String, vararg params: Pair<String, String?>) { with(runtime) { heroCommand { id ->

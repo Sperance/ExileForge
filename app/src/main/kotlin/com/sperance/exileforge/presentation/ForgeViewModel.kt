@@ -127,6 +127,7 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() 
     fun choosePetLine(petId: String, choice: Int) = runtime.heroViewModel.choosePetLine(petId, choice)
     fun activatePet(petId: String) = runtime.heroViewModel.activatePet(petId)
     fun releasePet(petId: String) = runtime.heroViewModel.releasePet(petId)
+    fun breedPets(first: String, second: String) = runtime.heroViewModel.breedPets(first, second)
     /** Admin only: a named template, rolled by the server at [rarity] or the template's own. */
     fun grant(template: String, rarity: Rarity? = null) = runtime.heroViewModel.grant(template, rarity)
     fun grantRarity(value: String) = runtime.heroViewModel.grantRarity(value)

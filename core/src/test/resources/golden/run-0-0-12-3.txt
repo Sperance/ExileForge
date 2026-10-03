@@ -1,0 +1,74 @@
+hero=MARAUDER zone=C1_TIDAL_SHORE level=12 seed=3 skill=HEAVY_STRIKE
+phase=DEAD life=0.0000 seconds=176.2000 kills=37 bosses=0 deaths=1 events=72
+0 KILL 0 0 0 0 false false
+1 FIGHT 0 0 0 0 false false fight=4/0/0/0/0/0 taken=3 healed=0 max=7 dealt={PHYSICAL=15}
+2 KILL 1 0 0 0 false false
+3 FIGHT 0 0 0 0 false false fight=3/0/0/0/0/0 taken=5 healed=0 max=8 dealt={PHYSICAL=18}
+4 KILL 2 0 0 0 false false
+5 KILL 2 1 0 0 false false
+6 FIGHT 0 0 0 0 false false fight=9/1/0/0/0/0 taken=17 healed=0 max=6 dealt={PHYSICAL=30}
+7 KILL 3 0 0 0 false false
+8 FIGHT 0 0 0 0 false false fight=5/0/0/0/0/0 taken=8 healed=0 max=6 dealt={PHYSICAL=15}
+9 KILL 4 0 0 0 false false
+10 FIGHT 0 0 0 0 false false fight=3/1/0/0/0/0 taken=4 healed=0 max=14 dealt={PHYSICAL=23}
+11 CHEST 0 0 0 0 false false
+12 KILL 5 0 0 0 false false
+13 FIGHT 0 0 0 0 false false fight=16/1/0/0/0/0 taken=49 healed=0 max=6 dealt={PHYSICAL=43}
+14 KILL 6 0 0 0 false false
+15 FIGHT 0 0 0 0 false false fight=4/0/0/0/0/0 taken=3 healed=0 max=6 dealt={PHYSICAL=15}
+16 KILL 7 0 0 0 false false
+17 FIGHT 0 0 0 0 false false fight=4/1/0/0/0/0 taken=3 healed=0 max=6 dealt={PHYSICAL=16}
+18 KILL 8 0 0 0 false false
+19 FIGHT 0 0 0 0 false false fight=3/0/0/0/0/0 taken=4 healed=0 max=9 dealt={PHYSICAL=19}
+20 KILL 9 0 0 0 false false
+21 FIGHT 0 0 0 0 false false fight=4/0/0/0/0/0 taken=5 healed=0 max=8 dealt={PHYSICAL=24}
+22 CHEST 0 0 1 0 false false
+23 KILL 10 0 0 0 false false
+24 FIGHT 0 0 0 0 false false fight=5/0/0/0/0/0 taken=9 healed=0 max=5 dealt={PHYSICAL=16}
+25 KILL 11 0 0 0 false false
+26 FIGHT 0 0 0 0 false false fight=6/0/0/0/0/0 taken=10 healed=0 max=4 dealt={PHYSICAL=16}
+27 KILL 12 0 0 0 false false
+28 KILL 12 1 0 0 false false
+29 FIGHT 0 0 0 0 false false fight=9/1/0/0/0/0 taken=35 healed=0 max=7 dealt={PHYSICAL=37}
+30 KILL 13 0 0 0 false false
+31 FIGHT 0 0 0 0 false false fight=6/0/0/0/0/0 taken=10 healed=0 max=5 dealt={PHYSICAL=16}
+32 KILL 14 0 0 0 false false
+33 FIGHT 0 0 0 0 false false fight=5/0/0/0/0/0 taken=5 healed=0 max=6 dealt={PHYSICAL=15}
+34 KILL 15 0 0 0 false false
+35 KILL 15 1 0 0 false false
+36 KILL 15 2 0 0 false false
+37 KILL 15 3 0 0 false false
+38 FIGHT 0 0 0 0 false false fight=18/1/0/0/0/0 taken=122 healed=0 max=10 dealt={PHYSICAL=79}
+39 KILL 16 0 0 0 false false
+40 FIGHT 0 0 0 0 false false fight=5/0/0/0/0/0 taken=5 healed=0 max=6 dealt={PHYSICAL=15}
+41 KILL 17 0 0 0 false false
+42 FIGHT 0 0 0 0 false false fight=4/0/0/0/0/0 taken=4 healed=0 max=8 dealt={PHYSICAL=22}
+43 KILL 18 0 0 0 false false
+44 FIGHT 0 0 0 0 false false fight=6/0/0/0/0/0 taken=9 healed=0 max=4 dealt={PHYSICAL=17}
+45 KILL 19 0 0 0 false false
+46 FIGHT 0 0 0 0 false false fight=4/0/0/0/0/0 taken=9 healed=0 max=6 dealt={PHYSICAL=19}
+47 KILL 20 0 0 0 false false
+48 FIGHT 0 0 0 0 false false fight=5/0/0/0/0/0 taken=5 healed=0 max=5 dealt={PHYSICAL=15}
+49 KILL 21 0 0 0 false false
+50 KILL 21 1 0 0 false false
+51 FIGHT 0 0 0 0 false false fight=8/0/0/0/0/0 taken=23 healed=0 max=11 dealt={PHYSICAL=49}
+52 KILL 22 0 0 0 false false
+53 FIGHT 0 0 0 0 false false fight=6/0/0/0/0/0 taken=9 healed=0 max=8 dealt={PHYSICAL=20}
+54 KILL 23 0 0 0 false false
+55 FIGHT 0 0 0 0 false false fight=6/0/0/0/0/0 taken=8 healed=0 max=8 dealt={PHYSICAL=18}
+56 KILL 24 0 0 0 false false
+57 KILL 24 1 0 0 false false
+58 KILL 24 2 0 0 false false
+59 FIGHT 0 0 0 0 false false fight=17/1/0/0/0/0 taken=83 healed=0 max=8 dealt={PHYSICAL=50}
+60 KILL 25 0 0 0 false false
+61 FIGHT 0 0 0 0 false false fight=5/0/0/0/0/0 taken=8 healed=0 max=5 dealt={PHYSICAL=14}
+62 KILL 26 0 0 0 false false
+63 FIGHT 0 0 0 0 false false fight=4/0/0/0/0/0 taken=4 healed=0 max=9 dealt={PHYSICAL=23}
+64 KILL 27 0 0 0 false false
+65 FIGHT 0 0 0 0 false false fight=6/0/0/0/0/0 taken=17 healed=0 max=8 dealt={PHYSICAL=17}
+66 VAAL_OPEN 0 0 0 0 false false
+67 VAAL_LEAVE 0 0 0 0 false false
+68 KILL 28 0 0 0 false false
+69 FIGHT 0 0 0 0 false false fight=5/0/0/0/0/0 taken=12 healed=0 max=8 dealt={PHYSICAL=17}
+70 FIGHT 0 0 0 0 false false fight=8/1/0/0/0/0 taken=55 healed=0 max=7 dealt={PHYSICAL=19}
+71 FALL 0 0 0 0 false false

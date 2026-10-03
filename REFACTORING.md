@@ -4,7 +4,7 @@
 
 ## Этап 0 - защита
 - [x] Golden-тест боя в `:core` (`CombatGoldenTest`, снимки в `core/src/test/resources/golden/`): четыре боя на фиксированных seed; перезапись `GOLDEN_UPDATE=1` только при осознанной смене правил.
-- [ ] Golden-тест забега (`ExpeditionRun`) - перед распилом `ExpeditionRun.kt` (этап 5).
+- [x] Golden-тест забега в `:core` (`ExpeditionGoldenTest`, снимки `run-*.txt`): три автозабега на фиксированных seed и шаге - смерть, сундуки, босс и выход; перезапись `GOLDEN_UPDATE=1`.
 
 ## Этап 1 - Koin
 - [x] `koin-android`, `koin-androidx-compose`; `di/AppModule.kt`: сторы DataStore, журнал, область приложения, `ForgeViewModel`, `UpdateViewModel`.

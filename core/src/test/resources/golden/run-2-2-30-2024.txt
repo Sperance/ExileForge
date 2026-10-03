@@ -1,0 +1,160 @@
+hero=WITCH zone=C1_BRINE_CAVES level=30 seed=2024 skill=FIREBALL
+phase=CLEARED life=255.1155 seconds=297.0000 kills=103 bosses=1 deaths=0 events=158
+0 KILL 0 0 0 0 false false
+1 FIGHT 0 0 0 0 false false fight=2/0/0/0/0/0 taken=0 healed=0 max=445 dealt={FIRE=445, PHYSICAL=4}
+2 KILL 1 0 0 0 false false
+3 FIGHT 0 0 0 0 false false fight=2/0/0/0/0/0 taken=0 healed=0 max=408 dealt={FIRE=408, PHYSICAL=5}
+4 KILL 2 0 0 0 false false
+5 FIGHT 0 0 0 0 false false fight=2/1/0/0/0/0 taken=0 healed=0 max=355 dealt={FIRE=355, PHYSICAL=6}
+6 KILL 3 0 0 0 false false
+7 FIGHT 0 0 0 0 false false fight=2/0/0/0/0/0 taken=0 healed=0 max=355 dealt={FIRE=355, PHYSICAL=2}
+8 KILL 4 0 0 0 false false
+9 FIGHT 0 0 0 0 false false fight=2/0/0/0/0/0 taken=0 healed=0 max=321 dealt={FIRE=321, PHYSICAL=5}
+10 KILL 5 0 0 0 false false
+11 FIGHT 0 0 0 0 false false fight=2/1/0/0/0/0 taken=0 healed=0 max=612 dealt={FIRE=612, PHYSICAL=4}
+12 CHEST 0 0 0 0 false false
+13 KILL 6 0 0 0 false false
+14 KILL 6 1 0 0 false false
+15 KILL 6 3 0 0 false false
+16 KILL 6 2 0 0 false false
+17 KILL 6 4 0 0 false false
+18 FIGHT 0 0 0 0 false false fight=14/1/0/0/0/0 taken=86 healed=0 max=450 dealt={FIRE=1919, PHYSICAL=40}
+19 KILL 7 0 0 0 false false
+20 FIGHT 0 0 0 0 false false fight=2/1/0/0/0/0 taken=0 healed=0 max=371 dealt={FIRE=371, PHYSICAL=3}
+21 KILL 8 0 0 0 false false
+22 FIGHT 0 0 0 0 false false fight=2/0/0/0/0/0 taken=0 healed=0 max=335 dealt={FIRE=335, PHYSICAL=2}
+23 KILL 9 0 0 0 false false
+24 FIGHT 0 0 0 0 false false fight=2/0/0/0/0/0 taken=0 healed=0 max=324 dealt={FIRE=324, PHYSICAL=2}
+25 KILL 10 0 0 0 false false
+26 KILL 10 1 0 0 false false
+27 KILL 10 2 0 0 false false
+28 FIGHT 0 0 0 0 false false fight=10/0/0/0/0/0 taken=62 healed=0 max=447 dealt={FIRE=1165, PHYSICAL=30}
+29 KILL 11 0 0 0 false false
+30 FIGHT 0 0 0 0 false false fight=3/0/0/0/0/0 taken=6 healed=0 max=5 dealt={PHYSICAL=15}
+31 CHEST 0 0 1 0 false false
+32 KILL 12 0 0 0 false false
+33 FIGHT 0 0 0 0 false false fight=2/0/0/0/0/0 taken=0 healed=0 max=405 dealt={FIRE=405, PHYSICAL=5}
+34 KILL 13 0 0 0 false false
+35 FIGHT 0 0 0 0 false false fight=3/0/0/0/0/0 taken=6 healed=0 max=559 dealt={FIRE=559, PHYSICAL=8}
+36 KILL 14 0 0 0 false false
+37 FIGHT 0 0 0 0 false false fight=3/0/0/0/0/0 taken=6 healed=0 max=5 dealt={PHYSICAL=15}
+38 KILL 15 0 0 0 false false
+39 FIGHT 0 0 0 0 false false fight=2/0/0/0/0/0 taken=0 healed=0 max=346 dealt={FIRE=346, PHYSICAL=5}
+40 KILL 16 0 0 0 false false
+41 KILL 16 2 0 0 false false
+42 KILL 16 1 0 0 false false
+43 KILL 16 3 0 0 false false
+44 FIGHT 0 0 0 0 false false fight=13/0/0/0/0/0 taken=105 healed=0 max=460 dealt={FIRE=1260, PHYSICAL=38}
+45 KILL 17 0 0 0 false false
+46 KILL 17 2 0 0 false false
+47 KILL 17 4 0 0 false false
+48 KILL 17 1 0 0 false false
+49 KILL 17 5 0 0 false false
+50 KILL 17 3 0 0 false false
+51 FIGHT 0 0 0 0 false false fight=24/0/0/0/0/0 taken=201 healed=0 max=423 dealt={FIRE=1846, PHYSICAL=51}
+52 KILL 18 0 0 0 false false
+53 FIGHT 0 0 0 0 false false fight=4/1/0/0/0/0 taken=24 healed=0 max=339 dealt={FIRE=339, PHYSICAL=16}
+54 KILL 19 0 0 0 false false
+55 FIGHT 0 0 0 0 false false fight=4/0/0/0/0/0 taken=16 healed=0 max=534 dealt={FIRE=534, PHYSICAL=14}
+56 KILL 20 0 0 0 false false
+57 FIGHT 0 0 0 0 false false fight=3/0/0/0/0/0 taken=7 healed=0 max=5 dealt={PHYSICAL=14}
+58 KILL 21 1 0 0 false false
+59 KILL 21 4 0 0 false false
+60 KILL 21 0 0 0 false false
+61 KILL 21 3 0 0 false false
+62 KILL 21 2 0 0 false false
+63 KILL 21 5 0 0 false false
+64 FIGHT 0 0 0 0 false false fight=20/1/0/0/0/0 taken=339 healed=0 max=437 dealt={FIRE=2077, PHYSICAL=57}
+65 KILL 22 1 0 0 false false
+66 KILL 22 4 0 0 false false
+67 KILL 22 0 0 0 false false
+68 KILL 22 3 0 0 false false
+69 KILL 22 2 0 0 false false
+70 FIGHT 0 0 0 0 false false fight=19/0/0/0/0/0 taken=160 healed=0 max=440 dealt={FIRE=1477, PHYSICAL=44}
+71 KILL 23 0 0 0 false false
+72 FIGHT 0 0 0 0 false false fight=4/0/0/0/0/0 taken=21 healed=0 max=365 dealt={FIRE=365, PHYSICAL=17}
+73 KILL 24 0 0 0 false false
+74 FIGHT 0 0 0 0 false false fight=4/0/0/0/0/0 taken=12 healed=0 max=435 dealt={FIRE=435, PHYSICAL=13}
+75 KILL 25 0 0 0 false false
+76 FIGHT 0 0 0 0 false false fight=4/1/0/0/0/0 taken=11 healed=0 max=366 dealt={FIRE=366, PHYSICAL=7}
+77 KILL 26 0 0 0 false false
+78 FIGHT 0 0 0 0 false false fight=3/0/0/0/0/0 taken=7 healed=0 max=5 dealt={PHYSICAL=15}
+79 KILL 27 2 0 0 false false
+80 KILL 27 1 0 0 false false
+81 KILL 27 0 0 0 false false
+82 FIGHT 0 0 0 0 false false fight=6/1/0/0/0/0 taken=40 healed=0 max=663 dealt={FIRE=1111, PHYSICAL=16}
+83 KILL 28 0 0 0 false false
+84 FIGHT 0 0 0 0 false false fight=3/0/0/0/0/0 taken=5 healed=0 max=6 dealt={PHYSICAL=15}
+85 KILL 29 0 0 0 false false
+86 KILL 29 1 0 0 false false
+87 FIGHT 0 0 0 0 false false fight=5/0/0/0/0/0 taken=9 healed=0 max=332 dealt={FIRE=332, PHYSICAL=19}
+88 KILL 30 0 0 0 false false
+89 FIGHT 0 0 0 0 false false fight=2/0/0/0/0/0 taken=0 healed=0 max=381 dealt={FIRE=381, PHYSICAL=5}
+90 KILL 31 0 0 0 false false
+91 FIGHT 0 0 0 0 false false fight=4/1/0/0/0/0 taken=7 healed=0 max=408 dealt={FIRE=408, PHYSICAL=15}
+92 KILL 32 0 0 0 false false
+93 KILL 32 2 0 0 false false
+94 KILL 32 4 0 0 false false
+95 KILL 32 3 0 0 false false
+96 KILL 32 1 0 0 false false
+97 FIGHT 0 0 0 0 false false fight=18/0/0/0/0/0 taken=283 healed=0 max=498 dealt={FIRE=1615, PHYSICAL=57}
+98 KILL 33 0 0 0 false false
+99 FIGHT 0 0 0 0 false false fight=3/0/0/0/0/0 taken=7 healed=0 max=6 dealt={PHYSICAL=14}
+100 KILL 34 0 0 0 false false
+101 FIGHT 0 0 0 0 false false fight=2/0/0/0/0/0 taken=0 healed=0 max=350 dealt={FIRE=350, PHYSICAL=5}
+102 KILL 35 0 0 0 false false
+103 FIGHT 0 0 0 0 false false fight=4/0/0/0/0/0 taken=15 healed=0 max=321 dealt={FIRE=321, PHYSICAL=3}
+104 KILL 36 1 0 0 false false
+105 KILL 36 0 0 0 false false
+106 KILL 36 3 0 0 false false
+107 KILL 36 5 0 0 false false
+108 KILL 36 4 0 0 false false
+109 KILL 36 2 0 0 false false
+110 FIGHT 0 0 0 0 false false fight=18/2/0/0/0/0 taken=207 healed=0 max=441 dealt={FIRE=1628, PHYSICAL=59}
+111 KILL 37 0 0 0 false false
+112 FIGHT 0 0 0 0 false false fight=4/1/0/0/0/0 taken=20 healed=0 max=320 dealt={FIRE=320, PHYSICAL=17}
+113 KILL 38 0 0 0 false false
+114 FIGHT 0 0 0 0 false false fight=4/0/0/0/0/0 taken=10 healed=0 max=427 dealt={FIRE=427, PHYSICAL=6}
+115 KILL 39 0 0 0 false false
+116 KILL 39 2 0 0 false false
+117 KILL 39 1 0 0 false false
+118 FIGHT 0 0 0 0 false false fight=9/1/0/0/0/0 taken=59 healed=0 max=415 dealt={FIRE=800, PHYSICAL=34}
+119 KILL 40 2 0 0 false false
+120 KILL 40 0 0 0 false false
+121 KILL 40 1 0 0 false false
+122 KILL 40 3 0 0 false false
+123 KILL 40 4 0 0 false false
+124 KILL 40 5 0 0 false false
+125 FIGHT 0 0 0 0 false false fight=22/1/0/0/0/0 taken=174 healed=0 max=753 dealt={FIRE=1940, PHYSICAL=76}
+126 KILL 41 0 0 0 false false
+127 FIGHT 0 0 0 0 false false fight=2/0/0/0/0/0 taken=7 healed=0 max=433 dealt={FIRE=433, PHYSICAL=4}
+128 KILL 42 0 0 0 false false
+129 KILL 42 1 0 0 false false
+130 KILL 42 2 0 0 false false
+131 KILL 42 3 0 0 false false
+132 FIGHT 0 0 0 0 false false fight=10/0/0/0/0/0 taken=40 healed=0 max=404 dealt={FIRE=781, PHYSICAL=31}
+133 KILL 43 0 0 0 false false
+134 FIGHT 0 0 0 0 false false fight=4/0/0/0/0/0 taken=35 healed=0 max=378 dealt={FIRE=378, PHYSICAL=15}
+135 KILL 44 0 0 0 false false
+136 FIGHT 0 0 0 0 false false fight=3/0/0/0/0/0 taken=5 healed=0 max=5 dealt={PHYSICAL=14}
+137 KILL 45 0 0 0 false false
+138 KILL 45 2 0 0 false false
+139 KILL 45 1 0 0 false false
+140 FIGHT 0 0 0 0 false false fight=9/1/0/0/0/0 taken=29 healed=0 max=420 dealt={FIRE=820, PHYSICAL=24}
+141 KILL 46 0 0 0 false false
+142 FIGHT 0 0 0 0 false false fight=2/0/0/0/0/0 taken=4 healed=0 max=428 dealt={FIRE=428, PHYSICAL=2}
+143 KILL 47 0 0 0 false false
+144 FIGHT 0 0 0 0 false false fight=4/0/0/0/0/0 taken=14 healed=0 max=392 dealt={FIRE=392, PHYSICAL=13}
+145 KILL 48 0 0 0 false false
+146 KILL 48 1 0 0 false false
+147 KILL 48 2 0 0 false false
+148 KILL 48 4 0 0 false false
+149 KILL 48 3 0 0 false false
+150 FIGHT 0 0 0 0 false false fight=17/1/0/0/0/0 taken=120 healed=0 max=479 dealt={FIRE=1274, PHYSICAL=55}
+151 KILL 49 0 0 0 false false
+152 FIGHT 0 0 0 0 false false fight=2/0/0/0/0/0 taken=3 healed=0 max=370 dealt={FIRE=370, PHYSICAL=4}
+153 KILL 50 0 0 0 false false
+154 FIGHT 0 0 0 0 false false fight=4/0/0/0/0/0 taken=14 healed=0 max=453 dealt={FIRE=453, PHYSICAL=13}
+155 BOSS 0 0 0 0 false false
+156 FIGHT 0 0 0 0 false false fight=6/0/0/0/0/1 taken=120 healed=0 max=269 dealt={FIRE=275, PHYSICAL=6}
+157 LEAVE 0 0 0 0 false false

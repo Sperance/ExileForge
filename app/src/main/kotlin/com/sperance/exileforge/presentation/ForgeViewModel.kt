@@ -27,24 +27,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /** Lifecycle owner and compatibility facade; screen actions live in feature models. */
-class ForgeViewModel(
-    store: ServerStore,
-    journal: RequestJournal,
-    prefs: com.sperance.exileforge.data.settings.PreferencesRepository,
-    connection: com.sperance.exileforge.core.session.ServerConnection,
-    commands: com.sperance.exileforge.core.session.CommandRunner,
-    hub: com.sperance.exileforge.core.session.ConnectionEventsHub,
-    notices: com.sperance.exileforge.core.session.Notices,
-    events: com.sperance.exileforge.core.session.GameEvents,
-    content: com.sperance.exileforge.core.world.ContentLoader,
-    buzzer: com.sperance.exileforge.core.session.Buzzes,
-    repositories: Repositories,
-    actions: Actions,
-) : ViewModel() {
+class ForgeViewModel(private val runtime: ForgeRuntime) : ViewModel() {
     /** Выбор на экранах героя, ещё живущий в общем состоянии: кузница, выдачи, древо. */
     private fun play(transform: (com.sperance.exileforge.presentation.state.PlayState) -> com.sperance.exileforge.presentation.state.PlayState) = runtime.mutable.update { it.copy(play = transform(it.play)) }
-
-    private val runtime = ForgeRuntime(store, journal, prefs, connection, commands, hub, notices, events, content, buzzer, repositories, actions)
 
     init {
         runtime.start()

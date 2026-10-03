@@ -42,6 +42,7 @@
   - [x] Hero (сундук, снаряжение, сумка, зверинец, хроника): `HeroViewModel` над `HeroActions`/`HeroSync`/`MarketActions`; переходы и выбор кузницы пока через `ForgeViewModel`.
   - [x] Forge (кузница): `SmithyViewModel` (сфера, эссенция, предзнаменование, раздел; сфера по умолчанию - из контента) над `HeroActions`; `PlayState` больше не хранит выбор кузницы.
   - [x] Grimoire: `GrimoireViewModel` над `HeroActions`; экран разбит на три файла.
+  - [x] Session/Characters: `SessionViewModel` и `CharactersViewModel` над `ForgeRuntime` (он теперь Koin-single, один на процесс); сама логика входа и фаз уедет с навигацией.
   - [ ] Progress: своя модель; выдачи тестера (`grant*`) - в модель отладочной панели.
   - [x] Expedition/Atlas/Trials, ядро: `ExpeditionRepository` (карточка зоны, добыча похода, окно атласа, счётчики журнала) в `:core`; `ExpeditionActions` и `TrialActions` в `presentation/expedition`; `ExpeditionViewModel`/`TrialViewModel` из `features` удалены.
   - [x] Expedition/Atlas/Trials, экраны: `ExpeditionViewModel` над действиями похода, испытаний и героя; карта мира, карточка зоны, доска испытаний и листы снаряжения/добычи только на ней, оверлеи похода/испытания/атласа - ещё и на `ForgeViewModel` ради фильтра журнала, тостов и вибрации.

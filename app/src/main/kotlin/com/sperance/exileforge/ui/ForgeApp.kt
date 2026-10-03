@@ -184,9 +184,9 @@ private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, erro
                 // The two screens above the tabs carry no banner and no bottom bar: there is no character to
                 // name in the one and no tab to reach from the other.
                 when (s.phase) {
-                    AppPhase.AUTH -> AuthScreen(s.sliced(*s.common, *s.toasts), vm)
+                    AppPhase.AUTH -> AuthScreen(s.sliced(*s.common, *s.toasts))
 
-                    AppPhase.CHARACTERS -> CharacterSelectScreen(s.sliced(*s.common, *s.toasts), vm)
+                    AppPhase.CHARACTERS -> CharacterSelectScreen(s.sliced(*s.common, *s.toasts))
 
                     // A campaign run takes the whole screen: no banner and no bar, the scene is the game.
                     // The zone's card (2.76.0) lies on the world map in the tab itself.

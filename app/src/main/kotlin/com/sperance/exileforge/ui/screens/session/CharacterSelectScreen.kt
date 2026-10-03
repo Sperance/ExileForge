@@ -16,12 +16,13 @@ import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.HeroSummary
 import com.sperance.exileforge.core.session.Reads
-import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.session.CharactersViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.MAX_CHARACTERS
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * Choosing who to play, and the only place that choice is ever made.
@@ -32,7 +33,8 @@ import com.sperance.exileforge.ui.theme.*
  * An account with nothing to choose between does not get a chooser: the creation form opens
  * straight away, because an empty list is not a decision.
  */
-@Composable fun CharacterSelectScreen(s: ForgeState, vm: ForgeViewModel) {
+@Composable fun CharacterSelectScreen(s: ForgeState) {
+    val vm = koinViewModel<CharactersViewModel>()
     val empty = s.account.charactersRead && s.account.characters.isEmpty()
     var creating by rememberSaveable(empty) { mutableStateOf(empty) }
     var pendingDelete by remember { mutableStateOf<HeroSummary?>(null) }
@@ -119,7 +121,7 @@ import com.sperance.exileforge.ui.theme.*
 }
 
 /** The creation form on its own page: there is nothing to choose between while it is open. */
-@Composable private fun ColumnScope.CreatingColumn(s: ForgeState, vm: ForgeViewModel, onBack: () -> Unit, onSignOut: () -> Unit) {
+@Composable private fun ColumnScope.CreatingColumn(s: ForgeState, vm: CharactersViewModel, onBack: () -> Unit, onSignOut: () -> Unit) {
     LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         // The beetle on the creation form too (3.75.0): it is the one page before the game without a way to report.
         item { ScreenHeader(ui("chars.new"), ui("chars.name_and_class"), ForgeGlyphs.Exile) { BugAction() } }
@@ -161,7 +163,7 @@ import com.sperance.exileforge.ui.theme.*
  */
 @Composable private fun CreateCharacterPanel(
     s: ForgeState,
-    vm: ForgeViewModel,
+    vm: CharactersViewModel,
     canGoBack: Boolean,
     onBack: () -> Unit,
     onSignOut: () -> Unit,

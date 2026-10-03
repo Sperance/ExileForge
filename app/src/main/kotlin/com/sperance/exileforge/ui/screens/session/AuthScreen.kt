@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.data.settings.DEFAULT_SERVER
-import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.session.SessionViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.BugAction
 import com.sperance.exileforge.ui.components.ForgeButton
@@ -33,6 +33,7 @@ import com.sperance.exileforge.ui.components.inputs
 import com.sperance.exileforge.ui.components.voidBackdrop
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * The way in, and the first screen the app ever shows.
@@ -43,7 +44,8 @@ import com.sperance.exileforge.ui.theme.*
  * The server is fixed since 3.75.0; only the way back to it lives here, so an administrator's wrong address never
  * locks the app behind a gate that needs a session.
  */
-@Composable fun AuthScreen(s: ForgeState, vm: ForgeViewModel) {
+@Composable fun AuthScreen(s: ForgeState) {
+    val vm = koinViewModel<SessionViewModel>()
     Scaffold(containerColor = Ink) { padding ->
         Column(
             Modifier.fillMaxSize().padding(padding).imePadding().voidBackdrop()
@@ -90,7 +92,7 @@ import com.sperance.exileforge.ui.theme.*
 }
 
 /** The login half: an administrator's way in, and anyone who was given credentials. */
-@Composable private fun LoginPanel(s: ForgeState, vm: ForgeViewModel) {
+@Composable private fun LoginPanel(s: ForgeState, vm: SessionViewModel) {
     var open by rememberSaveable { mutableStateOf(false) }
     var login by rememberSaveable { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -143,7 +145,7 @@ import com.sperance.exileforge.ui.theme.*
  * The way back to the one server (3.75.0): there is no address to type before the gate, but an administrator who pointed
  * the device elsewhere from the Server page must not be locked out by a wrong one. Nothing while the device is on it.
  */
-@Composable private fun ServerReset(s: ForgeState, vm: ForgeViewModel) {
+@Composable private fun ServerReset(s: ForgeState, vm: SessionViewModel) {
     if (s.account.server == DEFAULT_SERVER) return
     MutedText(ui("auth.other_server", s.account.server), style = MaterialTheme.typography.labelSmall)
     ForgeOutlinedButton(enabled = !s.busy, onClick = vm::resetServer, modifier = Modifier.fillMaxWidth()) { Text(ui("auth.server_reset")) }

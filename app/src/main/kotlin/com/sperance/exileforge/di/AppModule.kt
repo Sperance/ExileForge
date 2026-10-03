@@ -23,6 +23,7 @@ import com.sperance.exileforge.data.settings.GuideStore
 import com.sperance.exileforge.data.settings.PreferencesRepository
 import com.sperance.exileforge.data.settings.ServerStore
 import com.sperance.exileforge.presentation.Actions
+import com.sperance.exileforge.presentation.ForgeRuntime
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.Repositories
 import com.sperance.exileforge.presentation.crafts.CraftsActions
@@ -43,6 +44,8 @@ import com.sperance.exileforge.presentation.market.MarketViewModel
 import com.sperance.exileforge.presentation.quests.QuestActions
 import com.sperance.exileforge.presentation.quests.QuestViewModel
 import com.sperance.exileforge.presentation.server.ServerViewModel
+import com.sperance.exileforge.presentation.session.CharactersViewModel
+import com.sperance.exileforge.presentation.session.SessionViewModel
 import com.sperance.exileforge.presentation.settings.SettingsViewModel
 import com.sperance.exileforge.presentation.skills.GrimoireViewModel
 import com.sperance.exileforge.presentation.tree.TreeViewModel
@@ -97,7 +100,11 @@ val appModule = module {
     single { QuestActions(get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     singleOf(::Repositories)
     singleOf(::Actions)
+    // Рантайм игры один на процесс (3.80.22): модели экранов входа и меню героев берут его отсюда до переезда навигации.
+    singleOf(::ForgeRuntime)
     viewModelOf(::ForgeViewModel)
+    viewModelOf(::SessionViewModel)
+    viewModelOf(::CharactersViewModel)
     viewModelOf(::FeedbackViewModel)
     viewModelOf(::QuestViewModel)
     viewModelOf(::MarketViewModel)

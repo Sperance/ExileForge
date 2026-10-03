@@ -3,9 +3,11 @@ package com.sperance.exileforge.di
 import com.sperance.exileforge.core.network.RequestJournal
 import com.sperance.exileforge.data.settings.DraftStore
 import com.sperance.exileforge.data.settings.GuideStore
+import com.sperance.exileforge.data.settings.PreferencesRepository
 import com.sperance.exileforge.data.settings.ServerStore
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.features.UpdateViewModel
+import com.sperance.exileforge.presentation.settings.SettingsViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -28,7 +30,9 @@ val appModule = module {
     single { ServerStore(androidContext()) }
     single { GuideStore(androidContext()) }
     single { DraftStore(androidContext(), get(named(APP_SCOPE))) }
-    viewModel { ForgeViewModel(get(), get()) }
+    single { PreferencesRepository(get(), get(named(APP_SCOPE))) }
+    viewModel { ForgeViewModel(get(), get(), get()) }
+    viewModel { SettingsViewModel(get()) }
     // Проверка обновлений ждёт сервер игровой модели: поток и манифест приходят параметрами из активности.
     viewModel { params -> UpdateViewModel(androidApplication(), params.get(1), params.get(0), get()) }
 }

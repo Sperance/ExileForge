@@ -312,7 +312,7 @@ private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, erro
                 when (s.tab) {
                     TAB_ACCOUNT -> ServerScreen(s.sliced(*s.common), vm)
 
-                    TAB_SETTINGS -> SettingsScreen(s.sliced(*s.common, s.settings), vm, logs)
+                    TAB_SETTINGS -> SettingsScreen(s.sliced(*s.common), vm, logs)
 
                     TAB_HERO -> HeroScreen(s.sliced(*s.common), vm)
 

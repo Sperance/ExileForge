@@ -75,7 +75,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
-class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
+class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val prefs: com.sperance.exileforge.data.settings.PreferencesRepository) {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     val mutable = MutableStateFlow(ForgeState())
     val state = mutable.asStateFlow()
@@ -143,6 +143,8 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
     }
 
     init {
+        // Настройки игрока живут в репозитории (3.80.6): общее состояние лишь отражает их для экранов, ещё не переведённых.
+        scope.launch { prefs.settings.collect { value -> mutable.update { it.copy(settings = value) } } }
         scope.launch {
             try {
                 val language = Lang.byCode(store.language.first()) ?: deviceLanguage()
@@ -307,8 +309,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
     var settingsReturn: Int = TAB_HERO
 
     fun saveSettings(value: GameSettings) {
-        mutable.update { it.copy(settings = value) }
-        scope.launch { store.saveGameSettings(value) }
+        scope.launch { prefs.saveSettings(value) }
     }
 
     /** What the phone buzzes for, sent to the screen that holds the view (3.77.0); a switched-off kind is dropped here. */

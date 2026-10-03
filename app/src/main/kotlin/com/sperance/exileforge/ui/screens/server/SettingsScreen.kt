@@ -28,6 +28,7 @@ import androidx.compose.material.icons.outlined.Vibration
 import androidx.compose.material.icons.outlined.Whatshot
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,9 +43,11 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.sync.API_REVISION
 import com.sperance.exileforge.core.network.RequestLog
 import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.settings.SettingsViewModel
 import com.sperance.exileforge.presentation.state.*
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.theme.*
+import org.koin.compose.viewmodel.koinViewModel
 
 /** The pages behind the settings' rows: the language and the developers' tools, each with «back» to the list. */
 private enum class SettingsPage(val title: String) {
@@ -100,8 +103,9 @@ private enum class SettingsPage(val title: String) {
 }
 
 @Composable private fun SettingsList(s: ForgeState, vm: ForgeViewModel, logs: List<RequestLog>, onPage: (SettingsPage) -> Unit) {
-    val set = s.settings
-    fun change(edit: GameSettings.() -> GameSettings) = vm.settings(set.edit())
+    val settingsModel = koinViewModel<SettingsViewModel>()
+    val set by settingsModel.settings.collectAsStateWithLifecycle()
+    fun change(edit: GameSettings.() -> GameSettings) = settingsModel.change(edit)
     RowGroup(ui("settings.general")) {
         AccountRow(Icons.Outlined.Language, ui("account.language"), value = s.lang.title) { onPage(SettingsPage.LANGUAGE) }
         ChoiceRow(Icons.Outlined.LightMode, ui("settings.keep_screen"), KeepScreen.entries, set.keepScreen, { ui("settings.keep.${it.name}") }) {

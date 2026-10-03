@@ -21,7 +21,8 @@
 - [ ] Гейтинг `Feature.ofTab` - guard при переходе. Фичи не пишут `tab`/`building`, а просят навигатор. Системный back работает везде; `settingsReturn` и ручные `BackHandler` удалены.
 
 ## Этап 4 - экраны
-- [ ] Каждый экран - свой androidx `ViewModel` из Koin + `UiState`; экран не получает `ForgeViewModel`/`ForgeState`. Порядок: Session/Characters → Hero → Expedition/Atlas → Crafts/Progress → Tree/Grimoire → City (Quests, Merchant, Auction, Guild) → Server/Settings → Admin/Redemption.
+- [ ] Каждый экран - свой androidx `ViewModel` из Koin + `UiState`; экран не получает `ForgeViewModel`/`ForgeState`. Порядок (решение владельца): простые сначала - Settings → Server → Feedback/Mail → City (Quests, Merchant, Auction, Guild) → Crafts/Progress → Tree/Grimoire → Hero → Expedition/Atlas → Session/Characters; пуш после каждого экрана.
+  - [x] Settings: `PreferencesRepository` (единственный источник настроек устройства) + `SettingsViewModel`; `ForgeState.settings` лишь отражает поток для ещё не переведённых экранов.
 - [ ] По ходу: файлы UI не длиннее ~400 строк (SkillTreeScreen, CraftsScreen, MapStyles, GrimoireScreen, ExpeditionScene, WorldArt, AtlasScreen, AuctionTabs).
 - [ ] `ForgeViewModel`, `ForgeRuntime`, `FeatureViewModel` удалены.
 

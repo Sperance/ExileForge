@@ -28,7 +28,6 @@ import com.sperance.exileforge.data.settings.ServerStore
 import com.sperance.exileforge.data.settings.deviceLanguage
 import com.sperance.exileforge.presentation.features.CharacterViewModel
 import com.sperance.exileforge.presentation.features.ConnectionViewModel
-import com.sperance.exileforge.presentation.features.CraftsViewModel
 import com.sperance.exileforge.presentation.features.ExpeditionViewModel
 import com.sperance.exileforge.presentation.features.HeroViewModel
 import com.sperance.exileforge.presentation.features.RedemptionViewModel
@@ -92,6 +91,9 @@ class ForgeRuntime(
     val market: com.sperance.exileforge.presentation.market.MarketActions,
     val guilds: com.sperance.exileforge.core.guild.GuildRepository,
     val guild: com.sperance.exileforge.presentation.guild.GuildActions,
+    val craftsRepository: com.sperance.exileforge.core.crafts.CraftsRepository,
+    val crafts: com.sperance.exileforge.presentation.crafts.CraftsActions,
+    private val buzzer: com.sperance.exileforge.core.session.Buzzes,
 ) {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     val mutable = MutableStateFlow(ForgeState())
@@ -115,7 +117,6 @@ class ForgeRuntime(
     val expeditionViewModel = ExpeditionViewModel(this)
     val trialViewModel = TrialViewModel(this)
     val warmupViewModel = com.sperance.exileforge.presentation.features.WarmupViewModel(this)
-    val craftsViewModel = CraftsViewModel(this)
     val connectionViewModel = ConnectionViewModel(this)
 
     /**
@@ -192,6 +193,10 @@ class ForgeRuntime(
         scope.launch { boards.state.collect { value -> mutable.update { it.copy(quests = value) } } }
         scope.launch { markets.state.collect { value -> mutable.update { it.copy(market = value) } } }
         scope.launch { guilds.state.collect { value -> mutable.update { it.copy(guild = value) } } }
+        scope.launch {
+            craftsRepository.state.collect { c -> mutable.update { it.copy(play = it.play.copy(crafts = c.state, craftsAt = c.readAt, craftsTotals = c.totals, craftsLast = c.last, craftsPending = c.pending)) } }
+        }
+        buzzer.allowed = { kind -> state.value.settings.let { if (kind == Buzz.DANGER) it.buzzDanger else it.buzzButtons } }
         content.delegate = { fresh -> ensureContent(fresh) }
         // Герой изменился на сервере по чужой команде: перечитывается тихо, отказ остаётся команде, что его просила.
         scope.launch {
@@ -377,12 +382,9 @@ class ForgeRuntime(
         scope.launch { prefs.saveSettings(value) }
     }
 
-    /** What the phone buzzes for, sent to the screen that holds the view (3.77.0); a switched-off kind is dropped here. */
-    val buzzes = kotlinx.coroutines.flow.MutableSharedFlow<Buzz>(extraBufferCapacity = 4)
-    fun buzz(kind: Buzz) {
-        val set = state.value.settings
-        if (if (kind == Buzz.DANGER) set.buzzDanger else set.buzzButtons) buzzes.tryEmit(kind)
-    }
+    /** Вибрации (3.77.0) идут экрану с видом; выключенный вид отбрасывает [buzzer]. */
+    val buzzes: kotlinx.coroutines.flow.SharedFlow<Buzz> get() = buzzer.flow
+    fun buzz(kind: Buzz) = buzzer.buzz(kind)
 
     fun dismissMessage() = commands.dismissMessage()
 
@@ -485,7 +487,7 @@ class ForgeRuntime(
         cancelReads()
         expeditionViewModel.drop()
         trialViewModel.drop()
-        craftsViewModel.drop()
+        crafts.drop()
         heroViewModel.forget()
         sessions.clear()
         feedbacks.clear()

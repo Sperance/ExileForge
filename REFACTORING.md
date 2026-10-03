@@ -19,6 +19,7 @@
   - [x] `HeroRepository` (id героя и `HeroView`; кошелёк и сумка правятся только через него), `QuestRepository`, `ContentLoader` (делегат `ensureContent`).
   - [x] `MarketRepository` (витрина, свои лоты, сделки, полка торговца).
   - [x] `GuildRepository` (своя гильдия, поиск, журнал, хранилище).
+  - [x] `CraftsRepository` (ремёсла, итоги сеанса, предсказанные циклы); `Buzzes` (вибрации) в `:core`.
   - [ ] `HeroRepository`: снимки и синк из `HeroViewModel`.
   - [x] Команды и чтения (`task`/`read`, busy/loading/failure, строка отказа) - `CommandRunner` в `:core`; `Phrase` тоже в `:core`.
   - [x] Текущий `GameApi` - `ServerConnection` в `:core`; `Reads` (ключи чтений) там же.
@@ -36,6 +37,7 @@
   - [x] Quests (доска Города и вкладка гильдии): `QuestActions` (общие действия, зовут их и прогрев, и конец похода) + `QuestViewModel`; раздел доски - состояние модели экрана.
   - [x] Merchant и Auction: `MarketActions` + `MarketViewModel`; продажа из сундука героя пока через `ForgeViewModel` → `MarketActions`, `ensureHero`/`autoSell` - до переноса экрана героя.
   - [x] Guild (зал и все разделы): `GuildActions` + `GuildViewModel`; `ensureHero` на входе - до переноса экрана героя.
+  - [x] Crafts: `CraftsActions` (будильник цикла, посадка ответа) + `CraftsViewModel` (окно профессии); экран разбит на четыре файла ≤300 строк.
 - [ ] По ходу: файлы UI не длиннее ~400 строк (SkillTreeScreen, CraftsScreen, MapStyles, GrimoireScreen, ExpeditionScene, WorldArt, AtlasScreen, AuctionTabs).
 - [ ] `ForgeViewModel`, `ForgeRuntime`, `FeatureViewModel` удалены.
 

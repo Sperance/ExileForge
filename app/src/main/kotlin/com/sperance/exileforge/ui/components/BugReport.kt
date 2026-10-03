@@ -133,5 +133,5 @@ private fun bugScreen(s: ForgeState, run: ExpeditionRun?): String = when {
     s.phase != AppPhase.GAME -> s.phase.name
     run != null -> "RUN:${run.zone.code}"
     s.play.atlas != null -> "ATLAS"
-    else -> listOfNotNull("TAB:${s.tab}", s.building?.name, s.play.craftsProfession.takeIf { it.isNotBlank() }).joinToString("/")
+    else -> listOfNotNull("TAB:${s.tab}", s.building?.name).joinToString("/")
 }

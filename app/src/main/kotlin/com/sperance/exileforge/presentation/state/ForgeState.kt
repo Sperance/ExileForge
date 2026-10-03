@@ -238,7 +238,6 @@ data class PlayState(
     /** The crafts as the server last answered, with the device's clock at that moment; the profession whose window is open. */
     val crafts: CraftsState? = null,
     val craftsAt: Long = 0,
-    val craftsProfession: String = "",
     val craftsTotals: WorkGains = WorkGains(),
     val craftsLast: WorkGains? = null,
     val craftsPending: WorkGains = WorkGains(),

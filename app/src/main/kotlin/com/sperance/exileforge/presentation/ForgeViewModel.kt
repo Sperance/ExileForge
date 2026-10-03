@@ -45,8 +45,11 @@ class ForgeViewModel(
     market: com.sperance.exileforge.presentation.market.MarketActions,
     guilds: com.sperance.exileforge.core.guild.GuildRepository,
     guild: com.sperance.exileforge.presentation.guild.GuildActions,
+    craftsRepository: com.sperance.exileforge.core.crafts.CraftsRepository,
+    crafts: com.sperance.exileforge.presentation.crafts.CraftsActions,
+    buzzer: com.sperance.exileforge.core.session.Buzzes,
 ) : ViewModel() {
-    private val runtime = ForgeRuntime(store, journal, prefs, sessions, world, connection, commands, hub, notices, feedbacks, events, heroes, boards, quests, content, markets, market, guilds, guild)
+    private val runtime = ForgeRuntime(store, journal, prefs, sessions, world, connection, commands, hub, notices, feedbacks, events, heroes, boards, quests, content, markets, market, guilds, guild, craftsRepository, crafts, buzzer)
 
     init {
         runtime.start()
@@ -87,16 +90,12 @@ class ForgeViewModel(
     fun startRun(mapCode: String) = runtime.expeditionViewModel.start(mapCode)
     fun startAutoRun(mapCode: String, plan: AutoPlan) = runtime.expeditionViewModel.start(mapCode, plan)
     fun selectZone(mapCode: String) = runtime.expeditionViewModel.selectZone(mapCode)
-    fun loadCrafts(silent: Boolean = false) = runtime.craftsViewModel.load(silent)
-    fun openProfession(code: String) = runtime.craftsViewModel.openProfession(code)
+    fun loadCrafts(silent: Boolean = false) = runtime.crafts.load(silent)
 
     /** A bug report from the beetle (3.48.0): sent at once, whether signed in or not. */
     fun reportBug(report: com.sperance.exileforge.core.model.command.BugReportRequest, onSent: suspend () -> Unit = {}) = runtime.reportBug(report, onSent)
     fun planTree(nodes: List<com.sperance.exileforge.rules.content.TakenNode>) = runtime.heroViewModel.planTree(nodes)
     fun autoSell(rarity: com.sperance.exileforge.rules.content.Rarity, groups: Set<com.sperance.exileforge.rules.content.SlotGroup>) = runtime.heroViewModel.autoSell(rarity, groups)
-    fun startWork(job: String, choice: String = "", additives: List<String> = emptyList()) = runtime.craftsViewModel.start(job, choice, additives)
-    fun stopWork() = runtime.craftsViewModel.stop()
-    fun equipTool(itemId: String) = runtime.craftsViewModel.equipTool(itemId)
     fun closeZone() = runtime.expeditionViewModel.closeZone()
     fun pickMap(itemId: String?) = runtime.expeditionViewModel.pickMap(itemId)
     fun pickPotion(code: String?) = runtime.expeditionViewModel.pickPotion(code)

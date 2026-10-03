@@ -48,7 +48,7 @@ class WarmupViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
                     }
                     step(id, WarmStep.WORLD) {
                         quests.load()
-                        craftsViewModel.load(silent = true)
+                        crafts.load(silent = true)
                         market.loadMerchant()
                     }
                 }

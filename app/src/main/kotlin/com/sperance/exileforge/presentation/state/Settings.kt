@@ -36,5 +36,5 @@ enum class DamageNumbers { ALL, CRITS, OFF }
 /** The game's text against the phone's own size. */
 enum class TextSize(val scale: Float) { S(.9f), M(1f), L(1.15f) }
 
-/** What the phone buzzes for, each switched on its own. */
-enum class Buzz { DANGER, BUTTON }
+/** Вибрации - из :core (3.80.14). */
+typealias Buzz = com.sperance.exileforge.core.session.Buzz

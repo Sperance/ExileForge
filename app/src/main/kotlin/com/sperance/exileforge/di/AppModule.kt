@@ -1,11 +1,13 @@
 package com.sperance.exileforge.di
 
+import com.sperance.exileforge.core.crafts.CraftsRepository
 import com.sperance.exileforge.core.feedback.FeedbackRepository
 import com.sperance.exileforge.core.guild.GuildRepository
 import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.market.MarketRepository
 import com.sperance.exileforge.core.network.RequestJournal
 import com.sperance.exileforge.core.quests.QuestRepository
+import com.sperance.exileforge.core.session.Buzzes
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.ConnectionEventsHub
 import com.sperance.exileforge.core.session.GameEvents
@@ -20,6 +22,8 @@ import com.sperance.exileforge.data.settings.GuideStore
 import com.sperance.exileforge.data.settings.PreferencesRepository
 import com.sperance.exileforge.data.settings.ServerStore
 import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.crafts.CraftsActions
+import com.sperance.exileforge.presentation.crafts.CraftsViewModel
 import com.sperance.exileforge.presentation.features.UpdateViewModel
 import com.sperance.exileforge.presentation.feedback.FeedbackViewModel
 import com.sperance.exileforge.presentation.guild.GuildActions
@@ -69,6 +73,9 @@ val appModule = module {
     singleOf(::MarketActions)
     single { GuildRepository() }
     singleOf(::GuildActions)
+    single { Buzzes() }
+    single { CraftsRepository() }
+    single { CraftsActions(get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     single { ContentLoader() }
     single { QuestActions(get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     viewModelOf(::ForgeViewModel)
@@ -76,6 +83,7 @@ val appModule = module {
     viewModelOf(::QuestViewModel)
     viewModelOf(::MarketViewModel)
     viewModelOf(::GuildViewModel)
+    viewModelOf(::CraftsViewModel)
     viewModel { SettingsViewModel(get()) }
     viewModel { ServerViewModel(get(), get()) }
     // Проверка обновлений ждёт сервер игровой модели: поток и манифест приходят параметрами из активности.

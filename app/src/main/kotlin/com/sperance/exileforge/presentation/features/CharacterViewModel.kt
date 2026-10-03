@@ -54,7 +54,7 @@ class CharacterViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             cancelReads()
             expeditionViewModel.drop()
             trialViewModel.drop()
-            craftsViewModel.drop()
+            crafts.drop()
             heroes.clear()
             boards.clear()
             markets.clear()

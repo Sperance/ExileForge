@@ -25,7 +25,14 @@ class HeroRepository {
     /** Новый герой входит в игру: прежний забыт. */
     fun select(heroId: String) = mutable.update { HeroHolding(heroId = heroId) }
 
-    fun set(hero: HeroView) = mutable.update { it.copy(hero = hero) }
+    /** Сколько раз герой был нарисован заново; команда сравнивает до и после, чтобы знать, принёс ли ответ снимок. */
+    var version: Long = 0
+        private set
+
+    fun set(hero: HeroView) {
+        version++
+        mutable.update { it.copy(hero = hero) }
+    }
 
     fun patch(transform: (HeroView) -> HeroView) = mutable.update { h -> h.copy(hero = h.hero?.let(transform)) }
 

@@ -16,13 +16,16 @@ android {
         applicationId = "com.sperance.exileforge"
         minSdk = 26
         targetSdk = 37
-        versionCode = 234
-        versionName = "3.80.0"
+        versionCode = 235
+        versionName = "3.80.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Updates from GitHub Releases (3.72.0) close the game until checked: only the published build does that.
         buildConfigField("boolean", "UPDATES", "false")
     }
-    buildFeatures { compose = true; buildConfig = true }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
     // The instrumentation tests draw real items: the pinned server's content and dictionaries ride in the test APK.
     sourceSets.getByName("androidTest").assets.srcDir("../backend/src/main/resources")
     compileOptions {
@@ -33,11 +36,13 @@ android {
     // without them it falls back to the debug key and still installs, though not over a release-key build.
     val releaseKey = System.getenv("RELEASE_KEYSTORE_PATH")?.let { file(it) }?.takeIf { it.exists() }
     signingConfigs {
-        if (releaseKey != null) create("release") {
-            storeFile = releaseKey
-            storePassword = System.getenv("RELEASE_KEYSTORE_PASSWORD")
-            keyAlias = System.getenv("RELEASE_KEY_ALIAS")
-            keyPassword = System.getenv("RELEASE_KEY_PASSWORD")
+        if (releaseKey != null) {
+            create("release") {
+                storeFile = releaseKey
+                storePassword = System.getenv("RELEASE_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("RELEASE_KEY_ALIAS")
+                keyPassword = System.getenv("RELEASE_KEY_PASSWORD")
+            }
         }
     }
     buildTypes {

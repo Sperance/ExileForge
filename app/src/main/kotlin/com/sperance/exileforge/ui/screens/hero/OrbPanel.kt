@@ -1,12 +1,11 @@
 package com.sperance.exileforge.ui.screens.hero
 
-import com.sperance.exileforge.core.display.Glyph
-
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.itemDescription
 import com.sperance.exileforge.core.display.itemTitle
@@ -36,8 +35,13 @@ import com.sperance.exileforge.ui.theme.Rune
  *
  * [onGrant] adds the administrator's top-up button, so an orb can be tried without farming it first.
  */
-@Composable fun OrbPanel(s: ForgeState, itemId: String, onSelect: (String) -> Unit,
-    onApply: (String, String) -> Unit, onGrant: ((String) -> Unit)? = null) {
+@Composable fun OrbPanel(
+    s: ForgeState,
+    itemId: String,
+    onSelect: (String) -> Unit,
+    onApply: (String, String) -> Unit,
+    onGrant: ((String) -> Unit)? = null,
+) {
     val hero = s.hero ?: return
     val instance = hero.item(itemId)
     val orbs = s.orbs
@@ -45,26 +49,47 @@ import com.sperance.exileforge.ui.theme.Rune
     val orb = orbs.firstOrNull { it.code == selected }
     val enabled = !s.busy && s.account.signedIn && (s.ownsCharacter || s.isAdmin)
     Engraved(ui("orb.title"))
-    if (orbs.isEmpty()) { Text(ui("orb.none"), color = Muted); return }
-    Spinner(ui("orb.orb"), selected,
-        orbs.associate { it.code to "${itemTitle(it.code)} · ${hero.count(it.code)}" }, enabled, glyph = Glyph.CURRENCY,
-        optionArt = orbArt(orbs), onChange = onSelect)
+    if (orbs.isEmpty()) {
+        Text(ui("orb.none"), color = Muted)
+        return
+    }
+    Spinner(
+        ui("orb.orb"),
+        selected,
+        orbs.associate { it.code to "${itemTitle(it.code)} · ${hero.count(it.code)}" },
+        enabled,
+        glyph = Glyph.CURRENCY,
+        optionArt = orbArt(orbs),
+        onChange = onSelect,
+    )
     // An orb the client has no translation for still explains itself: the server's dictionary has one.
     orb?.let { itemDescription(it.code).takeIf { rule -> rule.isNotBlank() } }?.let { MutedText(it) }
-    if (instance == null) { Text(ui("orb.choose_item"), color = Muted); return }
+    if (instance == null) {
+        Text(ui("orb.choose_item"), color = Muted)
+        return
+    }
     PropertyRow(ui("common.item"), s.view(instance)?.title ?: equipmentTitle(instance.template), Glyph.ITEM)
     PropertyRow(ui("orb.copy_rarity"), rarityTitle(instance.rarity, s.lang), Glyph.RARITY)
     if (instance.corrupted) Text(ui("orb.corrupted"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
-    ForgeButton(enabled = enabled && !instance.corrupted && selected.isNotBlank(),
-        onClick = { onApply(instance.id, selected) }, modifier = Modifier.fillMaxWidth()) {
-        Orb.of(selected)?.let { OrbGlyph(it, Modifier.size(22.dp)) } ?: Icon(ForgeGlyphs.Orb, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp))
+    ForgeButton(
+        enabled = enabled && !instance.corrupted && selected.isNotBlank(),
+        onClick = { onApply(instance.id, selected) },
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Orb.of(selected)?.let { OrbGlyph(it, Modifier.size(22.dp)) } ?: Icon(ForgeGlyphs.Orb, null, Modifier.size(18.dp))
+        Spacer(Modifier.width(8.dp))
         Text(ui("orb.apply"))
     }
     // The server's sentence about the last orb, as the forge prints it under its item.
     s.play.forgeLine.takeIf { it.isNotBlank() }?.let { Text(it, color = Rune, style = MaterialTheme.typography.bodyMedium) }
-    if (onGrant != null) ForgeOutlinedButton(enabled = enabled && s.isAdmin && selected.isNotBlank(),
-        onClick = { onGrant(selected) }, modifier = Modifier.fillMaxWidth()) {
-        Text(ui("orb.top_up", ORB_TOP_UP))
+    if (onGrant != null) {
+        ForgeOutlinedButton(
+            enabled = enabled && s.isAdmin && selected.isNotBlank(),
+            onClick = { onGrant(selected) },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(ui("orb.top_up", ORB_TOP_UP))
+        }
     }
 }
 
@@ -82,7 +107,10 @@ const val ORB_TOP_UP = 10L
     val targets = hero.items.associate { instance ->
         instance.id to "${s.view(instance)?.title ?: equipmentTitle(instance.template)} · ${rarityTitle(instance.rarity, s.lang)}"
     }
-    if (targets.isEmpty()) { Text(ui("orb.empty_inventory"), color = Muted); return }
+    if (targets.isEmpty()) {
+        Text(ui("orb.empty_inventory"), color = Muted)
+        return
+    }
     Spinner(ui("orb.target"), s.play.selectedEquipment, targets, !s.busy, glyph = Glyph.ITEM, onChange = vm::selectEquipment)
     OrbPanel(s, s.play.selectedEquipment, vm::selectOrb, vm::applyOrb) { orb -> vm.grantItem(orb, ORB_TOP_UP) }
 }

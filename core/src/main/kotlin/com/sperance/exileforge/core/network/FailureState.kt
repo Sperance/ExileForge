@@ -9,7 +9,11 @@ import com.sperance.exileforge.core.i18n.ui
  * or an answer that is not the game's. The technical text stays for administrators: see [transportDetail].
  */
 enum class Outage {
-    NO_NETWORK, TIMEOUT, MAINTENANCE, BAD_ANSWER;
+    NO_NETWORK,
+    TIMEOUT,
+    MAINTENANCE,
+    BAD_ANSWER,
+    ;
 
     val title: String get() = ui("net.outage.${name.lowercase()}")
     val hint: String get() = ui("net.outage_hint.${name.lowercase()}")
@@ -26,9 +30,13 @@ enum class Outage {
                 error.malformed -> BAD_ANSWER
                 else -> null
             }
+
             is java.net.SocketTimeoutException -> TIMEOUT
+
             is java.net.ConnectException -> MAINTENANCE
+
             is java.io.IOException -> NO_NETWORK
+
             else -> null
         }
     }
@@ -52,7 +60,9 @@ sealed interface FailureState {
         fun from(error: Exception, writing: Boolean): FailureState = when {
             // An unreadable answer to a write that went through may still have done it: that is uncertain, not offline.
             writing && error is ApiFailure && error.malformed && error.status in 200..299 -> UncertainWrite
+
             error is ApiFailure && Outage.of(error) != null -> Offline(Outage.of(error)!!)
+
             error is ApiFailure -> when {
                 error.status == 401 -> SessionExpired
                 error.status == 403 -> Forbidden
@@ -60,8 +70,11 @@ sealed interface FailureState {
                 writing && (error.status ?: 500) >= 500 -> UncertainWrite
                 else -> Rejected(error.message ?: ui("net.rejected"))
             }
+
             writing && error is java.io.IOException -> UncertainWrite
+
             error is java.io.IOException -> Offline(Outage.of(error) ?: Outage.NO_NETWORK)
+
             else -> Rejected(error.message ?: ui("net.failed"))
         }
     }
@@ -78,16 +91,21 @@ fun transportDetail(error: Throwable): String = when {
     // Android blocks plain HTTP unless the manifest allows it; only the debug build does.
     error is java.net.UnknownServiceException || error.message?.contains("CLEARTEXT", ignoreCase = true) == true ->
         ui("net.cleartext")
+
     error is java.net.UnknownHostException ->
         ui("net.unknown_host", error.message)
+
     // OkHttp raises the same exception for a dead handshake and a silent server; only the text tells
     // them apart, and they point at opposite things: a dropped SYN is a firewall, not a slow server.
     error is java.net.SocketTimeoutException && error.message?.startsWith("failed to connect") == true ->
         ui("net.no_route", error.message)
+
     error is java.net.SocketTimeoutException ->
         ui("net.timeout", error.message)
+
     error is java.net.ConnectException ->
         ui("net.refused", error.message)
+
     else -> error.message ?: error::class.java.simpleName
 }
 

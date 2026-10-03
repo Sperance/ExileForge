@@ -44,16 +44,39 @@ import com.sperance.exileforge.ui.theme.*
         item {
             ForgePanel {
                 Engraved(ui("guild.give"))
-                Spinner(ui("guild.give_what"), item, mapOf(GUILD_GOLD to ui("guild.gold")) + (orbs + materials).associate { it.code to itemTitle(it.code) }, !s.busy,
-                    glyph = Glyph.CURRENCY, optionArt = orbArt(s.orbs)) { item = it; amount = "" }
-                OutlinedTextField(amount, { amount = it.filter(Char::isDigit).take(12) }, label = { Text(ui("auction.amount")) }, singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(),
-                    supportingText = { have?.let { Text(ui("guild.give_have", number(it.toDouble()))) } })
+                Spinner(
+                    ui("guild.give_what"),
+                    item,
+                    mapOf(GUILD_GOLD to ui("guild.gold")) + (orbs + materials).associate { it.code to itemTitle(it.code) },
+                    !s.busy,
+                    glyph = Glyph.CURRENCY,
+                    optionArt = orbArt(s.orbs),
+                ) {
+                    item = it
+                    amount = ""
+                }
+                OutlinedTextField(
+                    amount,
+                    { amount = it.filter(Char::isDigit).take(12) },
+                    label = { Text(ui("auction.amount")) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(),
+                    supportingText = { have?.let { Text(ui("guild.give_have", number(it.toDouble()))) } },
+                )
                 if (item != GUILD_GOLD && count > 0) PropertyRow(ui("guild.give_worth"), number((count * price).toDouble()), Glyph.CURRENCY)
                 rules?.let { PropertyRow(ui("guild.daily_limit"), number(it.dailyLimit(s.heroLevel).toDouble()), Glyph.LEVEL) }
                 if (have != null && count > have) Text(ui("guild.give_short"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
-                HoldButton(ui("guild.give_do"), Gold, Modifier.fillMaxWidth(), enabled = !s.busy && count > 0 && (have == null || count <= have),
-                    icon = ForgeGlyphs.Coins) { vm.contribute(item, count); amount = "" }
+                HoldButton(
+                    ui("guild.give_do"),
+                    Gold,
+                    Modifier.fillMaxWidth(),
+                    enabled = !s.busy && count > 0 && (have == null || count <= have),
+                    icon = ForgeGlyphs.Coins,
+                ) {
+                    vm.contribute(item, count)
+                    amount = ""
+                }
             }
         }
         me?.let { item { RankPanel(s, it) } }
@@ -79,10 +102,16 @@ import com.sperance.exileforge.ui.theme.*
         val next = rules?.nextRank(me.contribution)
         if (rules != null && next != null) {
             val from = rules.rankFor(me.contribution).from
-            LinearProgressIndicator(progress = { ((me.contribution - from).toFloat() / (next.from - from).coerceAtLeast(1)).coerceIn(0f, 1f) },
-                modifier = Modifier.fillMaxWidth().height(5.dp), color = Rune, trackColor = PanelRaised)
+            LinearProgressIndicator(
+                progress = { ((me.contribution - from).toFloat() / (next.from - from).coerceAtLeast(1)).coerceIn(0f, 1f) },
+                modifier = Modifier.fillMaxWidth().height(5.dp),
+                color = Rune,
+                trackColor = PanelRaised,
+            )
             MutedText(ui("guild.rank_next", GuildText.rank(next.code), number((next.from - me.contribution).toDouble())))
-        } else if (rules != null) MutedText(ui("guild.rank_top"))
+        } else if (rules != null) {
+            MutedText(ui("guild.rank_top"))
+        }
     }
 }
 
@@ -97,8 +126,12 @@ import com.sperance.exileforge.ui.theme.*
         week.forEachIndexed { place, (heroId, value) ->
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("${place + 1}.", color = Muted, style = MaterialTheme.typography.labelLarge, modifier = Modifier.width(28.dp))
-                Text(names[heroId] ?: "…${heroId.takeLast(6)}", color = if (heroId == me?.heroId) GoldBright else Parchment,
-                    style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                Text(
+                    names[heroId] ?: "…${heroId.takeLast(6)}",
+                    color = if (heroId == me?.heroId) GoldBright else Parchment,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f),
+                )
                 GoldPrice(value)
             }
         }

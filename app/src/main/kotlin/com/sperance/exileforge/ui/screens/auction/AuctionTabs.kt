@@ -1,12 +1,11 @@
 package com.sperance.exileforge.ui.screens.auction
 
-import com.sperance.exileforge.ui.components.ForgeSheet
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -45,11 +44,12 @@ import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.ui.components.*
+import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.ItemEmblem
 import com.sperance.exileforge.ui.icons.OrbGlyph
-import com.sperance.exileforge.ui.icons.orbArt
 import com.sperance.exileforge.ui.icons.SpriteIcon
+import com.sperance.exileforge.ui.icons.orbArt
 import com.sperance.exileforge.ui.screens.hero.StackInfoSheet
 import com.sperance.exileforge.ui.theme.*
 
@@ -68,31 +68,49 @@ import com.sperance.exileforge.ui.theme.*
  * on — the rolls are what a trader is paying for — and a purchase is irreversible, so it is worth
  * the extra tap that guarantees the item was looked at.
  */
-@Composable internal fun ColumnScope.ShowcaseList(s: ForgeState, header: @Composable () -> Unit = {},
-    onBuy: (String) -> Unit, onMore: () -> Unit) {
+@Composable internal fun ColumnScope.ShowcaseList(
+    s: ForgeState,
+    header: @Composable () -> Unit = {},
+    onBuy: (String) -> Unit,
+    onMore: () -> Unit,
+) {
     var openLot by remember { mutableStateOf<String?>(null) }
     var confirmBuy by remember { mutableStateOf<String?>(null) }
     LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
         item { header() }
-        if (s.market.showcase.items.isEmpty()) item {
-            InfoCard(ui("tree.nothing_found"),
-                ui("auction.showcase_empty"))
+        if (s.market.showcase.items.isEmpty()) {
+            item {
+                InfoCard(
+                    ui("tree.nothing_found"),
+                    ui("auction.showcase_empty"),
+                )
+            }
         }
         items(s.market.showcase.items, key = { it.id }) { lot ->
             // A seller cannot buy their own lot, and the server says so; the sheet does not offer it.
             LotRow(s, lot, mark = if (lot.belongsTo(s.play.heroId)) ui("auction.your_lot") else null) { openLot = lot.id }
         }
         val showcase = s.market.showcase
-        if (showcase.next != null) item {
-            ForgeOutlinedButton(enabled = !s.busy && Reads.AUCTION !in s.loading, onClick = onMore, modifier = Modifier.fillMaxWidth()) {
-                Text(ui("auction.more", showcase.items.size, showcase.totalItems))
+        if (showcase.next != null) {
+            item {
+                ForgeOutlinedButton(enabled = !s.busy && Reads.AUCTION !in s.loading, onClick = onMore, modifier = Modifier.fillMaxWidth()) {
+                    Text(ui("auction.more", showcase.items.size, showcase.totalItems))
+                }
             }
         }
     }
     s.market.showcase.items.firstOrNull { it.id == openLot }?.let { lot ->
-        LotSheet(s, lot, action = ui("auction.buy"), enabled = !s.busy && !lot.belongsTo(s.play.heroId),
+        LotSheet(
+            s,
+            lot,
+            action = ui("auction.buy"),
+            enabled = !s.busy && !lot.belongsTo(s.play.heroId),
             note = if (lot.belongsTo(s.play.heroId)) ui("auction.own_lot") else null,
-            onDismiss = { openLot = null }) { openLot = null; confirmBuy = lot.id }
+            onDismiss = { openLot = null },
+        ) {
+            openLot = null
+            confirmBuy = lot.id
+        }
     }
     // A purchase cannot be undone, so it is asked about — and an item the hero cannot wear
     // is said so in the same breath, because that is exactly the mistake worth catching.
@@ -106,7 +124,8 @@ import com.sperance.exileforge.ui.theme.*
         val fee = lot.fee
         val poor = money != null && money < fee
         ConfirmSheet(
-            title = ui("auction.buy_q"), subtitle = lot.title,
+            title = ui("auction.buy_q"),
+            subtitle = lot.title,
             icon = { LotIcon(s, lot, Modifier.size(44.dp)) },
             ledger = listOfNotNull(
                 LedgerLine(ui("confirm.spend"), ui("confirm.minus", lot.price, orb), Tone.SPEND),
@@ -124,7 +143,8 @@ import com.sperance.exileforge.ui.theme.*
             ).joinToString("\n").ifBlank { null },
             blocked = (have != null && have < lot.price) || poor,
             confirm = ui("auction.buy_do"),
-            onDismiss = { confirmBuy = null }) { onBuy(lot.id) }
+            onDismiss = { confirmBuy = null },
+        ) { onBuy(lot.id) }
     }
 }
 
@@ -142,32 +162,61 @@ import com.sperance.exileforge.ui.theme.*
     val count = f.active().size + if (s.market.showOwnLots) 1 else 0
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(f.title, { vm.auctionFilter(f.copy(title = it.take(s.inputs.search))) }, placeholder = { Text(ui("auction.name")) },
-                leadingIcon = { Icon(Icons.Outlined.Search, null) }, singleLine = true, modifier = Modifier.weight(1f),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { vm.loadShowcase() }))
+            OutlinedTextField(
+                f.title,
+                { vm.auctionFilter(f.copy(title = it.take(s.inputs.search))) },
+                placeholder = { Text(ui("auction.name")) },
+                leadingIcon = { Icon(Icons.Outlined.Search, null) },
+                singleLine = true,
+                modifier = Modifier.weight(1f),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = { vm.loadShowcase() }),
+            )
             ForgeOutlinedButton(onClick = { sheet = true }, enabled = !s.busy, contentPadding = PaddingValues(horizontal = 12.dp)) {
                 Icon(Icons.Outlined.FilterList, ui("auction.filters"), modifier = Modifier.size(18.dp))
-                if (count > 0) { Spacer(Modifier.width(6.dp)); Text(count.toString()) }
+                if (count > 0) {
+                    Spacer(Modifier.width(6.dp))
+                    Text(count.toString())
+                }
             }
         }
         // The filters set are one line of chips that scrolls sideways, never a block growing down over the lots.
-        if (count > 0) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            f.active().forEach { field ->
-                ActiveFilter(chipLabel(s, field, f.value(field))) { vm.auctionFilter(f.without(field)); vm.loadShowcase() }
+        if (count > 0) {
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                f.active().forEach { field ->
+                    ActiveFilter(chipLabel(s, field, f.value(field))) {
+                        vm.auctionFilter(f.without(field))
+                        vm.loadShowcase()
+                    }
+                }
+                if (s.market.showOwnLots) {
+                    ActiveFilter(ui("auction.show_mine")) {
+                        vm.showOwnLots(false)
+                        vm.loadShowcase()
+                    }
+                }
             }
-            if (s.market.showOwnLots) ActiveFilter(ui("auction.show_mine")) { vm.showOwnLots(false); vm.loadShowcase() }
         }
     }
-    if (sheet) FilterSheet(s, onDismiss = { sheet = false }) { filter, mine ->
-        sheet = false; vm.auctionFilter(filter); vm.showOwnLots(mine); vm.loadShowcase()
+    if (sheet) {
+        FilterSheet(s, onDismiss = { sheet = false }) { filter, mine ->
+            sheet = false
+            vm.auctionFilter(filter)
+            vm.showOwnLots(mine)
+            vm.loadShowcase()
+        }
     }
 }
 
 /** A filter that is set, named by its value, with a cross that drops it. */
 @Composable private fun ActiveFilter(label: String, onClear: () -> Unit) {
-    InputChip(selected = true, onClick = onClear, label = { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+    InputChip(
+        selected = true,
+        onClick = onClear,
+        label = { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         trailingIcon = { Icon(Icons.Outlined.Close, ui("auction.remove_filter"), modifier = Modifier.size(16.dp)) },
-        colors = InputChipDefaults.inputChipColors(selectedContainerColor = Gold, selectedLabelColor = Ink, selectedTrailingIconColor = Ink))
+        colors = InputChipDefaults.inputChipColors(selectedContainerColor = Gold, selectedLabelColor = Ink, selectedTrailingIconColor = Ink),
+    )
 }
 
 private fun chipLabel(s: ForgeState, field: FilterField, value: String): String = when (field) {
@@ -189,40 +238,80 @@ private val templateSlots: List<Slot> = Slot.entries.filter { it != Slot.RING_2 
  * so trying a combination costs no request, and «Сбросить» clears all but the typed name.
  */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable private fun FilterSheet(s: ForgeState, onDismiss: () -> Unit, onApply: (AuctionFilter, Boolean) -> Unit) {
+@Composable
+private fun FilterSheet(s: ForgeState, onDismiss: () -> Unit, onApply: (AuctionFilter, Boolean) -> Unit) {
     var draft by remember { mutableStateOf(s.market.filter) }
     var mine by remember { mutableStateOf(s.market.showOwnLots) }
     val any = ui("common.all")
     val digits = KeyboardOptions(keyboardType = KeyboardType.Number)
     ForgeSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp).navigationBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(
+            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp).navigationBarsPadding(),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
             Engraved(ui("auction.filters"))
-            Spinner(ui("auction.what_sold"), draft.kind,
-                mapOf("" to any) + LotKind.entries.associate { it.name to lotKindTitle(it, s.lang) }, true, glyph = Glyph.ITEM) { draft = draft.copy(kind = it) }
+            Spinner(
+                ui("auction.what_sold"),
+                draft.kind,
+                mapOf("" to any) + LotKind.entries.associate { it.name to lotKindTitle(it, s.lang) },
+                true,
+                glyph = Glyph.ITEM,
+            ) { draft = draft.copy(kind = it) }
             Spinner(ui("common.slot"), draft.slot, mapOf("" to any) + templateSlots.associate { it.name to slotTitle(it, s.lang) }, true, glyph = Glyph.ITEM) { draft = draft.copy(slot = it) }
             Spinner(ui("common.rarity"), draft.rarity, mapOf("" to any) + Rarity.entries.associate { it.name to rarityTitle(it, s.lang) }, true, glyph = Glyph.RARITY) { draft = draft.copy(rarity = it) }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(draft.minItemLevel, { draft = draft.copy(minItemLevel = it.filter(Char::isDigit).take(3)) }, label = { Text(ui("auction.ilvl_from")) },
-                    singleLine = true, keyboardOptions = digits, modifier = Modifier.weight(1f))
-                OutlinedTextField(draft.maxItemLevel, { draft = draft.copy(maxItemLevel = it.filter(Char::isDigit).take(3)) }, label = { Text(ui("auction.ilvl_to")) },
-                    singleLine = true, keyboardOptions = digits, modifier = Modifier.weight(1f))
+                OutlinedTextField(
+                    draft.minItemLevel,
+                    { draft = draft.copy(minItemLevel = it.filter(Char::isDigit).take(3)) },
+                    label = { Text(ui("auction.ilvl_from")) },
+                    singleLine = true,
+                    keyboardOptions = digits,
+                    modifier = Modifier.weight(1f),
+                )
+                OutlinedTextField(
+                    draft.maxItemLevel,
+                    { draft = draft.copy(maxItemLevel = it.filter(Char::isDigit).take(3)) },
+                    label = { Text(ui("auction.ilvl_to")) },
+                    singleLine = true,
+                    keyboardOptions = digits,
+                    modifier = Modifier.weight(1f),
+                )
             }
             // The price's orb is an item code (3.0.0): the auction's currencies, in the order of their price.
-            Spinner(ui("auction.priced_in"), draft.priceOrb,
-                mapOf("" to any) + orbOptions(s), true, glyph = Glyph.CURRENCY, optionArt = orbArt(s.currencies)) { draft = draft.copy(priceOrb = it) }
-            OutlinedTextField(draft.maxPrice, { draft = draft.copy(maxPrice = it.filter(Char::isDigit).take(s.inputs.number)) }, label = { Text(ui("auction.price_max")) },
-                singleLine = true, keyboardOptions = digits, modifier = Modifier.fillMaxWidth())
+            Spinner(
+                ui("auction.priced_in"),
+                draft.priceOrb,
+                mapOf("" to any) + orbOptions(s),
+                true,
+                glyph = Glyph.CURRENCY,
+                optionArt = orbArt(s.currencies),
+            ) { draft = draft.copy(priceOrb = it) }
+            OutlinedTextField(
+                draft.maxPrice,
+                { draft = draft.copy(maxPrice = it.filter(Char::isDigit).take(s.inputs.number)) },
+                label = { Text(ui("auction.price_max")) },
+                singleLine = true,
+                keyboardOptions = digits,
+                modifier = Modifier.fillMaxWidth(),
+            )
             // A seller is named by the hero's id: there is no catalogue of heroes to pick one from.
-            OutlinedTextField(draft.sellerId, { draft = draft.copy(sellerId = it.trim().take(s.inputs.code)) }, label = { Text(ui("auction.seller")) },
-                singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(
+                draft.sellerId,
+                { draft = draft.copy(sellerId = it.trim().take(s.inputs.code)) },
+                label = { Text(ui("auction.seller")) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
             // Own lots cannot be bought, so they are dropped unless a seller wants to compare prices.
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(ui("auction.show_mine"), modifier = Modifier.weight(1f))
                 Switch(checked = mine, onCheckedChange = { mine = it })
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ForgeOutlinedButton(onClick = { draft = draft.cleared(); mine = false }, modifier = Modifier.weight(1f)) { Text(ui("auction.reset")) }
+                ForgeOutlinedButton(onClick = {
+                    draft = draft.cleared()
+                    mine = false
+                }, modifier = Modifier.weight(1f)) { Text(ui("auction.reset")) }
                 ForgeButton(enabled = !s.busy, onClick = { onApply(draft, mine) }, modifier = Modifier.weight(1f)) { Text(ui("auction.apply")) }
             }
         }
@@ -242,8 +331,10 @@ private val templateSlots: List<Slot> = Slot.entries.filter { it != Slot.RING_2 
                 }
             }
         }
-        if (s.ownLots.isEmpty()) item {
-            InfoCard(ui("auction.no_lots"), ui("auction.no_lots_hint"))
+        if (s.ownLots.isEmpty()) {
+            item {
+                InfoCard(ui("auction.no_lots"), ui("auction.no_lots_hint"))
+            }
         }
         items(s.ownLots, key = { it.id }) { lot ->
             val window = s.index?.rules?.auction?.extendWindowMillis ?: 0L
@@ -253,10 +344,31 @@ private val templateSlots: List<Slot> = Slot.entries.filter { it != Slot.RING_2 
     s.ownLots.firstOrNull { it.id == openLot }?.let { lot ->
         // On its last day the author may give it another week (3.79.0), as often as they like.
         val extendable = s.index?.rules?.auction?.let { lot.extendable(it.extendWindowMillis) } == true
-        LotSheet(s, lot, action = ui("auction.withdraw"), enabled = !s.busy,
-            note = lotExpiry(lot), onDismiss = { openLot = null },
-            extra = if (extendable) ({ ForgeOutlinedButton(enabled = !s.busy, onClick = { openLot = null; vm.extendLot(lot.id) }, modifier = Modifier.fillMaxWidth()) {
-                Text(ui("auction.extend", s.index?.rules?.auction?.lotDays ?: 7)) } }) else null) { openLot = null; vm.cancelLot(lot.id) }
+        LotSheet(
+            s,
+            lot,
+            action = ui("auction.withdraw"),
+            enabled = !s.busy,
+            note = lotExpiry(lot),
+            onDismiss = { openLot = null },
+            extra = if (extendable) {
+                (
+                    {
+                        ForgeOutlinedButton(enabled = !s.busy, onClick = {
+                            openLot = null
+                            vm.extendLot(lot.id)
+                        }, modifier = Modifier.fillMaxWidth()) {
+                            Text(ui("auction.extend", s.index?.rules?.auction?.lotDays ?: 7))
+                        }
+                    }
+                    )
+            } else {
+                null
+            },
+        ) {
+            openLot = null
+            vm.cancelLot(lot.id)
+        }
     }
 }
 
@@ -305,13 +417,15 @@ private enum class DealFilter { ALL, SOLD, BOUGHT }
 /** «Продано: Имя · 12.10 14:30» or «Куплено у Имя · …». */
 private fun dealMark(deal: AuctionLot, heroId: String): String {
     val at = java.text.SimpleDateFormat("dd.MM HH:mm", java.util.Locale.ROOT).format(java.util.Date(deal.soldAt))
-    return if (deal.belongsTo(heroId)) ui("auction.history_sold_to", deal.buyerName.ifBlank { "…" }, at)
-    else ui("auction.history_bought_from", sellerName(deal), at)
+    return if (deal.belongsTo(heroId)) {
+        ui("auction.history_sold_to", deal.buyerName.ifBlank { "…" }, at)
+    } else {
+        ui("auction.history_bought_from", sellerName(deal), at)
+    }
 }
 
 /** The orbs of [deals] summed per orb: «12 × Сфера хаоса, 3 × Сфера соединения». */
-private fun orbTotals(deals: List<AuctionLot>): String =
-    deals.groupBy { it.priceOrb }.entries.joinToString(", ") { (orb, of) -> "${of.sumOf { it.price }} × ${orbTitle(of.first())}" }
+private fun orbTotals(deals: List<AuctionLot>): String = deals.groupBy { it.priceOrb }.entries.joinToString(", ") { (orb, of) -> "${of.sumOf { it.price }} × ${orbTitle(of.first())}" }
 
 /**
  * One lot as a line (variant A): everything a trader decides on without opening it — what it is, every line it
@@ -327,9 +441,14 @@ private fun orbTotals(deals: List<AuctionLot>): String =
     val seller = listOfNotNull(sellerName(lot).takeIf { withSeller })
     val view = lot.equipment?.let { s.view(it) }
     // The rules' verdict on the template, as the stash marks it: a lot the buyer cannot wear yet says why instead of its facts.
-    if (view != null) ItemTradeRow(view, enabled = !s.busy, unmet = lotUnmet(s, lot), extra = seller, mark = mark, onClick = onClick, price = price)
-    else TradeRow(lot.title, lotColor(lot), stackFacts(s, lot) + seller, emptyList(), enabled = !s.busy, mark = mark, onClick = onClick,
-        icon = { LotIcon(s, lot, Modifier.size(28.dp)) }, price = price)
+    if (view != null) {
+        ItemTradeRow(view, enabled = !s.busy, unmet = lotUnmet(s, lot), extra = seller, mark = mark, onClick = onClick, price = price)
+    } else {
+        TradeRow(
+            lot.title, lotColor(lot), stackFacts(s, lot) + seller, emptyList(), enabled = !s.busy, mark = mark, onClick = onClick,
+            icon = { LotIcon(s, lot, Modifier.size(28.dp)) }, price = price,
+        )
+    }
 }
 
 /**
@@ -342,15 +461,24 @@ private fun orbTotals(deals: List<AuctionLot>): String =
         Orb.of(lot.priceOrb)?.let { OrbGlyph(it, Modifier.clickable(onClickLabel = orbTitle(lot), onClick = onOrb).padding(2.dp).size(16.dp)) }
             ?: Icon(ForgeGlyphs.Orb, orbTitle(lot), tint = Gold, modifier = Modifier.size(15.dp))
     }
-    Text(orbTitle(lot), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.widthIn(max = 96.dp))
+    Text(
+        orbTitle(lot),
+        color = Muted,
+        style = MaterialTheme.typography.labelSmall,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.widthIn(max = 96.dp),
+    )
 }
 
 /** How long an own lot still stands (server 1.30.0): days and hours, hours and minutes on its last day; null when it names no end. */
 private fun lotExpiry(lot: AuctionLot): String? {
     val minutes = ((lot.timeLeft() ?: return null) + 59_999) / 60_000
-    return if (minutes >= MINUTES_A_DAY) ui("auction.left_days", minutes / MINUTES_A_DAY, minutes % MINUTES_A_DAY / 60)
-    else ui("auction.left_hours", minutes / 60, minutes % 60)
+    return if (minutes >= MINUTES_A_DAY) {
+        ui("auction.left_days", minutes / MINUTES_A_DAY, minutes % MINUTES_A_DAY / 60)
+    } else {
+        ui("auction.left_hours", minutes / 60, minutes % 60)
+    }
 }
 
 private const val MINUTES_A_DAY = 1_440L
@@ -378,8 +506,7 @@ private fun sellerName(lot: AuctionLot): String = lot.sellerName.ifBlank { "…$
 private fun lotUnmet(s: ForgeState, lot: AuctionLot): List<String> = lot.equipment?.let { s.unmetFor(it.template) }.orEmpty()
 
 /** A stack lot's facts: how many, or what kind of goods when it is one. */
-private fun stackFacts(s: ForgeState, lot: AuctionLot): List<String> =
-    listOf(if (lot.amount > 1) ui("auction.pieces", lot.amount) else lotKindTitle(lot.kind, s.lang))
+private fun stackFacts(s: ForgeState, lot: AuctionLot): List<String> = listOf(if (lot.amount > 1) ui("auction.pieces", lot.amount) else lotKindTitle(lot.kind, s.lang))
 
 /**
  * One lot in full, with the goods drawn as the stash draws them.
@@ -388,13 +515,24 @@ private fun stackFacts(s: ForgeState, lot: AuctionLot): List<String> =
  * reads once: looking at a lot costs no request at all.
  */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable private fun LotSheet(s: ForgeState, lot: AuctionLot, action: String?, enabled: Boolean, note: String?,
-    onDismiss: () -> Unit, extra: (@Composable () -> Unit)? = null, onAction: () -> Unit = {}) {
+@Composable
+private fun LotSheet(
+    s: ForgeState,
+    lot: AuctionLot,
+    action: String?,
+    enabled: Boolean,
+    note: String?,
+    onDismiss: () -> Unit,
+    extra: (@Composable () -> Unit)? = null,
+    onAction: () -> Unit = {},
+) {
     val view = lot.equipment?.let { s.view(it) }
     ForgeSheet(onDismissRequest = onDismiss) {
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.9f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (view != null) item {
-                ItemCard(view, enabled = false, detailed = true, actionLabel = ui("auction.lot") + " · ${lot.id.takeLast(6)}")
+            if (view != null) {
+                item {
+                    ItemCard(view, enabled = false, detailed = true, actionLabel = ui("auction.lot") + " · ${lot.id.takeLast(6)}")
+                }
             }
             item {
                 ForgePanel {
@@ -428,11 +566,12 @@ private fun listedAt(stamp: String): String? {
             .atZone(java.time.ZoneOffset.UTC)
             .withZoneSameInstant(java.time.ZoneId.systemDefault())
             .format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"))
-    } catch (_: Exception) { null }
+    } catch (_: Exception) {
+        null
+    }
 }
 
 /** A lot's price, in the orb it was set in; an orb the rules do not know keeps its tail as a name. */
 private fun orbPrice(lot: AuctionLot): String = ui("confirm.amount", lot.price, orbTitle(lot))
 
-private fun orbTitle(lot: AuctionLot): String =
-    if (Orb.of(lot.priceOrb) != null) itemTitle(lot.priceOrb) else ui("auction.orb_id", lot.priceOrb.takeLast(6))
+private fun orbTitle(lot: AuctionLot): String = if (Orb.of(lot.priceOrb) != null) itemTitle(lot.priceOrb) else ui("auction.orb_id", lot.priceOrb.takeLast(6))

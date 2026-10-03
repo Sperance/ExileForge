@@ -72,17 +72,34 @@ fun ForgeState.pathStep(): Pair<PathStep, Boolean>? {
     val total = s.index?.rules?.path?.steps?.size ?: return
     val at = s.hero?.info?.pathStep ?: return
     val shape = RoundedCornerShape(10.dp)
-    Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 4.dp).background(PanelRaised, shape)
-        .border(1.dp, (if (done) GoldBright else Gold).copy(alpha = .4f), shape).padding(start = 10.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 4.dp).background(PanelRaised, shape)
+            .border(1.dp, (if (done) GoldBright else Gold).copy(alpha = .4f), shape).padding(start = 10.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
         androidx.compose.material3.Icon(ForgeGlyphs.Sigil, null, tint = Gold, modifier = Modifier.size(18.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(ui("path.title", at + 1, total) + " · " + ui("path.${step.code.lowercase()}.title"), color = GoldBright, fontSize = 12.sp,
-                maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(if (done) ui("path.done") else ui("path.${step.code.lowercase()}.text"), color = Parchment, style = MaterialTheme.typography.labelSmall,
-                maxLines = 1, overflow = TextOverflow.Ellipsis)
-            LinearProgressIndicator(progress = { (at + if (done) 1 else 0).toFloat() / total }, modifier = Modifier.fillMaxWidth().height(2.dp),
-                color = Gold, trackColor = Abyss)
+            Text(
+                ui("path.title", at + 1, total) + " · " + ui("path.${step.code.lowercase()}.title"),
+                color = GoldBright,
+                fontSize = 12.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                if (done) ui("path.done") else ui("path.${step.code.lowercase()}.text"),
+                color = Parchment,
+                style = MaterialTheme.typography.labelSmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            LinearProgressIndicator(
+                progress = { (at + if (done) 1 else 0).toFloat() / total },
+                modifier = Modifier.fillMaxWidth().height(2.dp),
+                color = Gold,
+                trackColor = Abyss,
+            )
         }
         TextButton(onClick = { if (done) onClaim() else onGo(step.check.tab) }, enabled = !s.busy, modifier = Modifier.scale(pulse())) {
             Text(ui(if (done) "path.claim" else "path.go"), color = if (done) GoldBright else Gold)

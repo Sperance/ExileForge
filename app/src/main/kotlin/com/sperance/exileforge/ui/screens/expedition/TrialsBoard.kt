@@ -36,7 +36,10 @@ import com.sperance.exileforge.ui.theme.*
  */
 @Composable fun TrialsBoard(s: ForgeState, vm: ForgeViewModel, modifier: Modifier = Modifier) {
     val index = s.index ?: return
-    val rules = index.campaign.trials ?: run { Box(modifier.padding(16.dp)) { InfoCard(ui("trials.title"), ui("trials.none")) }; return }
+    val rules = index.campaign.trials ?: run {
+        Box(modifier.padding(16.dp)) { InfoCard(ui("trials.title"), ui("trials.none")) }
+        return
+    }
     val hero = s.hero ?: return
     val trials = hero.campaign.trials
     val crests = hero.bag[TrialRules.CREST] ?: 0L
@@ -58,8 +61,9 @@ import com.sperance.exileforge.ui.theme.*
             MutedText(ui("trials.tower_hint", tower.growth.toInt(), tower.hoardEvery, tower.modEvery, tower.checkpoint))
             // Conquered (3.71.0): past the last floor there is nothing to enter, and no seal is spent on it
             val conquered = tower.start(trials.towerBest) > tower.maxFloor
-            if (conquered) Text(ui("trials.tower_conquered", tower.maxFloor), color = GoldBright, style = MaterialTheme.typography.bodyMedium)
-            else {
+            if (conquered) {
+                Text(ui("trials.tower_conquered", tower.maxFloor), color = GoldBright, style = MaterialTheme.typography.bodyMedium)
+            } else {
                 Text(ui("trials.tower_record", trials.towerBest, tower.start(trials.towerBest)), color = Parchment, style = MaterialTheme.typography.bodyMedium)
                 tower.mods(tower.start(trials.towerBest) + tower.modEvery - 1).takeIf { it.isNotEmpty() }?.let { mods ->
                     mods.forEach { Text(SkillText.statLine(it.stat, it.op, it.value), color = LifeRed, style = MaterialTheme.typography.labelSmall) }
@@ -86,9 +90,13 @@ import com.sperance.exileforge.ui.theme.*
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text(regionTitle(region.code), color = Parchment, style = MaterialTheme.typography.titleSmall)
-                        MutedText(listOfNotNull(ui("trials.rush_bosses", region.zones.size),
-                            best?.let { ui("trials.rush_best", clock(it.toDouble())) },
-                            ui("trials.rush_cleared").takeIf { region.code in trials.rushCleared }).joinToString(" · "))
+                        MutedText(
+                            listOfNotNull(
+                                ui("trials.rush_bosses", region.zones.size),
+                                best?.let { ui("trials.rush_best", clock(it.toDouble())) },
+                                ui("trials.rush_cleared").takeIf { region.code in trials.rushCleared },
+                            ).joinToString(" · "),
+                        )
                     }
                     ForgeOutlinedButton(onClick = { vm.enterRush(region.code) }, enabled = idle && keys >= 1 && trials.run == null) {
                         Text(ui("trials.rush_enter"))
@@ -126,6 +134,9 @@ private const val KEYS_PER_ROW = 4
 
 @Composable private fun Plate(accent: Color, content: @Composable ColumnScope.() -> Unit) {
     val shape = RoundedCornerShape(12.dp)
-    Column(Modifier.fillMaxWidth().background(Panel, shape).border(1.dp, accent.copy(alpha = .45f), shape).padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp), content = content)
+    Column(
+        Modifier.fillMaxWidth().background(Panel, shape).border(1.dp, accent.copy(alpha = .45f), shape).padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+        content = content,
+    )
 }

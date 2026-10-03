@@ -11,8 +11,10 @@ import com.sperance.exileforge.rules.content.Slot
 data class BodyPlace(val code: String, val fits: List<Slot>, val place: Slot? = null) {
     /** What is worn here, out of the hero's items keyed by the slot they are worn in. */
     fun <T> wornIn(equipped: Map<Slot, T>): T? = if (place != null) equipped[place] else fits.firstNotNullOfOrNull { equipped[it] }
+
     /** The off hand is taken whenever a two-handed weapon is. */
     fun blockedBy(equipped: Map<Slot, *>): Boolean = code == OFF_HAND && Slot.WEAPON_2H in equipped
+
     /** Whether an item of [slot] goes here. */
     fun takes(slot: Slot): Boolean = slot in fits
 

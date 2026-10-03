@@ -9,8 +9,8 @@ object ItemSearch {
     fun matches(item: ItemView, query: String): Boolean {
         val wanted = fold(query)
         if (wanted.isEmpty()) return true
-        return listOfNotNull(item.title, item.trade, displayName(item.code)).any { fold(it).contains(wanted) }
-            || item.lines.any { fold(it.text).contains(wanted) }
+        return listOfNotNull(item.title, item.trade, displayName(item.code)).any { fold(it).contains(wanted) } ||
+            item.lines.any { fold(it.text).contains(wanted) }
     }
 
     /** The same for a stacking item of the bag, by its code. */

@@ -25,8 +25,13 @@ internal class PetAllies(private val index: ContentIndex, private val rules: Com
             val kind = menagerie.species(own.species) ?: return@let null
             val levels = (boons[PetBoons.LEVEL] ?: 0.0).toInt()
             val p = if (levels != 0) own.copy(level = (own.level + levels).coerceAtLeast(1)) else own
-            Ally(p.species, Combatant(PetBoons.apply(menagerie.sheet(p), boons), p.level, rules), (p.role ?: kind.role) == PetRole.TANK,
-                if ((p.role ?: kind.role) == PetRole.SUPPORT) menagerie.supportHeal(p) else 0.0, index.pets.drawFire)
+            Ally(
+                p.species,
+                Combatant(PetBoons.apply(menagerie.sheet(p), boons), p.level, rules),
+                (p.role ?: kind.role) == PetRole.TANK,
+                if ((p.role ?: kind.role) == PetRole.SUPPORT) menagerie.supportHeal(p) else 0.0,
+                index.pets.drawFire,
+            )
         }
         made = Triple(pet, boons, ally)
         return ally
@@ -38,33 +43,59 @@ internal class PetAllies(private val index: ContentIndex, private val rules: Com
  * what just landed, and the blows so far, newest first. Shared by the map's runs and the trials (3.49.0).
  */
 internal fun Battle.hud(
-    monsters: List<RolledMonster>, leader: RolledMonster, speed: Int, started: Boolean, paused: Boolean, heroTaunt: Boolean,
-    level: Int, escape: Boolean, stage: Int, stages: Int, interlude: Double?,
+    monsters: List<RolledMonster>,
+    leader: RolledMonster,
+    speed: Int,
+    started: Boolean,
+    paused: Boolean,
+    heroTaunt: Boolean,
+    level: Int,
+    escape: Boolean,
+    stage: Int,
+    stages: Int,
+    interlude: Double?,
 ): FightHud {
     val battle = this
     val h = heroFighter
     val hits = events.withIndex()
-        .filter { (_, event) -> event.time <= time && time - event.time < ExpeditionRun.HIT_LIFETIME && event.action != Action.RETREAT &&
-            (event.damage > 0 || event.healed > 0 || event.kind == HitKind.EVADED || event.kind == HitKind.BLOCKED || event.action == Action.ATTACK) }
+        .filter { (_, event) ->
+            event.time <= time && time - event.time < ExpeditionRun.HIT_LIFETIME && event.action != Action.RETREAT &&
+                (event.damage > 0 || event.healed > 0 || event.kind == HitKind.EVADED || event.kind == HitKind.BLOCKED || event.action == Action.ATTACK)
+        }
         .map { (index, event) ->
-            FloatingHit(index, event.target, event.action, event.kind, event.damage.roundToInt(), time - event.time, event.healed.roundToInt(),
-                event.type, event.inflicted, event.stunned, event.foe, event.pet != null)
+            FloatingHit(
+                index, event.target, event.action, event.kind, event.damage.roundToInt(), time - event.time, event.healed.roundToInt(),
+                event.type, event.inflicted, event.stunned, event.foe, event.pet != null,
+            )
         }
     fun ailments(f: Battle.Fighter) = f.ailments.groupBy { it.ailment }.map { (ailment, active) ->
         val until = active.maxOf { it.until }
-        AilmentView(ailment, ((until - battle.time) / active.first().duration).toFloat().coerceIn(0f, 1f), active.size,
-            (until - battle.time).coerceAtLeast(0.0), if (ailment.hurts) active.sumOf { it.magnitude } else active.maxOf { it.magnitude })
+        AilmentView(
+            ailment,
+            ((until - battle.time) / active.first().duration).toFloat().coerceIn(0f, 1f),
+            active.size,
+            (until - battle.time).coerceAtLeast(0.0),
+            if (ailment.hurts) active.sumOf { it.magnitude } else active.maxOf { it.magnitude },
+        )
     }
     fun buildup(f: Battle.Fighter) = rules.buildup?.let {
         val lead = f.leading()
-        BuildupView(lead?.first, (lead?.second ?: 0.0).toFloat().coerceIn(0f, 1f), f.buildup.map { it.toFloat().coerceIn(0f, 1f) },
-            f.stunnedUntil > battle.time, f.shatter, f.electrocutedUntil > battle.time)
+        BuildupView(
+            lead?.first,
+            (lead?.second ?: 0.0).toFloat().coerceIn(0f, 1f),
+            f.buildup.map { it.toFloat().coerceIn(0f, 1f) },
+            f.stunnedUntil > battle.time,
+            f.shatter,
+            f.electrocutedUntil > battle.time,
+        )
     }
     val foes = foeFighters.map { f ->
-        FoeView(f.index, monsters[f.index], f.life.roundToInt(), f.body.maxLife.roundToInt(), f.shield.roundToInt(), f.body.maxShield.roundToInt(),
+        FoeView(
+            f.index, monsters[f.index], f.life.roundToInt(), f.body.maxLife.roundToInt(), f.shield.roundToInt(), f.body.maxShield.roundToInt(),
             swing(f), ailments(f), f.held, f.alive, reachable(f.index), f.body.taunt, effects(f),
             f.mana.roundToInt(), f.body.maxMana.roundToInt(), place = window.place(f.index), waiting = window.waits(f.index),
-            reinforce = window.place(f.index).takeIf { it >= 0 }?.let(::reinforceIn), reinforceDelay = rules.reinforceDelay, buildup = buildup(f))
+            reinforce = window.place(f.index).takeIf { it >= 0 }?.let(::reinforceIn), reinforceDelay = rules.reinforceDelay, buildup = buildup(f),
+        )
     }
     return FightHud(
         ally = allyFighter?.let { f -> AllyView(ally!!.code, f.life.roundToInt(), f.body.maxLife.roundToInt(), f.alive) },

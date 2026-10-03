@@ -13,6 +13,7 @@ class RunStats {
     private val dealt = mutableMapOf<DamageType, Double>()
     private val bySkill = mutableMapOf<String, Double>()
     private val taken = mutableMapOf<DamageType, Double>()
+
     /** What the combat pet took (3.70.0): apart, the hero's [taken] is the hero's own. */
     private var petTaken = 0.0
     private var seconds = 0.0
@@ -20,7 +21,10 @@ class RunStats {
     fun add(pack: List<PackHit>, duration: Double) {
         seconds += duration
         pack.flatMap { it.events }.filter { it.damage > 0 && !it.onSelf }.forEach { event ->
-            if (event.atPet) { petTaken += event.damage; return@forEach }
+            if (event.atPet) {
+                petTaken += event.damage
+                return@forEach
+            }
             val into = if (event.actor == Side.HERO) dealt else taken
             split(event).forEach { (type, amount) -> into.merge(type, amount, Double::plus) }
             if (event.actor == Side.HERO) bySkill.merge(skillKey(event), event.damage, Double::plus)
@@ -45,11 +49,10 @@ class RunStats {
         const val REFLECT = "REFLECT"
 
         /** The last [count] blows the hero took before the fall, oldest first, each with who struck it. */
-        fun recap(pack: List<PackHit>, count: Int = 5): List<DeathHit> =
-            pack.flatMap { hit -> hit.events.map { it to hit.monster } }
-                .filter { (event, _) -> event.actor == Side.MONSTER && !event.onSelf && !event.atPet && event.damage > 0 }
-                .sortedBy { (event, _) -> event.time }.takeLast(count)
-                .map { (event, monster) -> DeathHit(monster, event.damage, event.type, skillKey(event), event.kind == HitKind.CRIT, event.heroLife) }
+        fun recap(pack: List<PackHit>, count: Int = 5): List<DeathHit> = pack.flatMap { hit -> hit.events.map { it to hit.monster } }
+            .filter { (event, _) -> event.actor == Side.MONSTER && !event.onSelf && !event.atPet && event.damage > 0 }
+            .sortedBy { (event, _) -> event.time }.takeLast(count)
+            .map { (event, monster) -> DeathHit(monster, event.damage, event.type, skillKey(event), event.kind == HitKind.CRIT, event.heroLife) }
 
         private fun skillKey(event: CombatEvent): String = event.skill ?: when (event.action) {
             Action.TICK -> TICK
@@ -57,9 +60,8 @@ class RunStats {
             else -> ATTACK
         }
 
-        internal fun split(event: CombatEvent): Map<DamageType, Double> =
-            (event.trace as? HitTrace)?.types?.filter { it.dealt > 0 }?.associate { it.type to it.dealt }?.takeIf { it.isNotEmpty() }
-                ?: mapOf((event.type ?: DamageType.PHYSICAL) to event.damage)
+        internal fun split(event: CombatEvent): Map<DamageType, Double> = (event.trace as? HitTrace)?.types?.filter { it.dealt > 0 }?.associate { it.type to it.dealt }?.takeIf { it.isNotEmpty() }
+            ?: mapOf((event.type ?: DamageType.PHYSICAL) to event.damage)
     }
 }
 
@@ -93,8 +95,12 @@ object FightFigures {
             maxHit = mine.maxOfOrNull { it.damage }?.roundToLong() ?: 0,
             boss = boss, won = won,
             // The foe whose blow ended a lost fight (3.54.0, server 1.52.0): the hero's statistics count deaths by who dealt them.
-            killer = if (won) null else pack.flatMap { hit -> hit.events.map { it to hit.monster } }
-                .filter { (event, _) -> event.actor == Side.MONSTER && event.damage > 0 && !event.onSelf && !event.atPet }.maxByOrNull { (event, _) -> event.time }?.second?.code,
+            killer = if (won) {
+                null
+            } else {
+                pack.flatMap { hit -> hit.events.map { it to hit.monster } }
+                    .filter { (event, _) -> event.actor == Side.MONSTER && event.damage > 0 && !event.onSelf && !event.atPet }.maxByOrNull { (event, _) -> event.time }?.second?.code
+            },
         )
     }
 }
@@ -111,6 +117,7 @@ data class RunSummary(
 ) {
     val totalDealt: Double get() = dealt.values.sum()
     val totalTaken: Double get() = taken.values.sum()
+
     /** Damage a second of fighting — the walking between fights is not the hero's damage. */
     val dps: Double get() = if (seconds > 0) totalDealt / seconds else 0.0
     val killsPerMinute: Double get() = if (seconds > 0) kills / seconds * 60 else 0.0

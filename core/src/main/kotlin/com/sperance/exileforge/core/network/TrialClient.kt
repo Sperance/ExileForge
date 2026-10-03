@@ -4,9 +4,9 @@ import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.model.campaign.TrialReport
 import com.sperance.exileforge.core.model.campaign.TrialStart
 import com.sperance.exileforge.rules.content.TrialEvent
-import java.util.UUID
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.JsonNull
+import java.util.UUID
 
 private const val TRIALS = "api/v1/hero/trials"
 
@@ -29,8 +29,13 @@ class TrialClient internal constructor(private val http: Transport) {
      * A batch of the journal of trial [runId], in order; a lost answer is asked for again under the same [key], and the
      * server repeats its stored report. Null - the batch landed, but its report was not kept.
      */
-    suspend fun events(heroId: String, runId: String, events: List<TrialEvent>, key: String = UUID.randomUUID().toString()): TrialReport? =
-        http.request("POST", "$TRIALS/events", heroQuery(heroId, "runId" to runId),
-            WireJson.encodeToJsonElement(ListSerializer(TrialEvent.serializer()), events), authenticated = true, headers = mapOf(IDEMPOTENCY_HEADER to key))
-            .takeIf { it !is JsonNull }?.let { WireJson.decodeFromJsonElement(TrialReport.serializer(), it) }
+    suspend fun events(heroId: String, runId: String, events: List<TrialEvent>, key: String = UUID.randomUUID().toString()): TrialReport? = http.request(
+        "POST",
+        "$TRIALS/events",
+        heroQuery(heroId, "runId" to runId),
+        WireJson.encodeToJsonElement(ListSerializer(TrialEvent.serializer()), events),
+        authenticated = true,
+        headers = mapOf(IDEMPOTENCY_HEADER to key),
+    )
+        .takeIf { it !is JsonNull }?.let { WireJson.decodeFromJsonElement(TrialReport.serializer(), it) }
 }

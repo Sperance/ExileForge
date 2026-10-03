@@ -49,6 +49,7 @@ private class Echo(val at: Double, val foe: Battle.Fighter, val damage: Map<Dama
  * A power never answers a power: what one strikes or lays sets off no other. Chances are drawn only
  * for a power the hero carries, so a fight without any plays its seed as before.
  */
+
 /** The roll [value] where a power puts it, or the effect's own number. */
 private fun Power.amount(own: Double?, value: Double): Double = own ?: if (roll == com.sperance.exileforge.rules.content.PowerRoll.AMOUNT) value else 0.0
 private fun Power.duration(own: Double?, value: Double): Double = own ?: if (roll == com.sperance.exileforge.rules.content.PowerRoll.DURATION) value else 0.0
@@ -64,6 +65,7 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
     private var busy = false
     private var started = false
     private val echoes = mutableListOf<Echo>()
+
     /** Whether a standing line grows with [momentum]: only then does a hit make the hero's body again. */
     private val momentous = standingPowers.any { power -> power.effects.any { effect -> effect.lines.any { it.scale == PowerScale.MOMENTUM } } }
 
@@ -95,7 +97,10 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
         byEvent[PowerEvent.EVERY]?.forEach { power ->
             if (value(power) == 0.0) return@forEach
             val last = lastBeat.getOrPut(power.stat) { battle.time }
-            if (battle.time - last >= power.every - 1e-9) { lastBeat[power.stat] = battle.time; run(power, PowerMoment()) }
+            if (battle.time - last >= power.every - 1e-9) {
+                lastBeat[power.stat] = battle.time
+                run(power, PowerMoment())
+            }
         }
     }
 
@@ -129,7 +134,11 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
         due.forEach { echo ->
             if (battle.outcome != null || !hero.alive || !echo.foe.alive) return@forEach
             busy = true
-            try { battle.strike(hero, echo.foe, Blow(echo.damage, Action.SKILL, spell = echo.spell, skill = echo.skill, spread = false)) } finally { busy = false }
+            try {
+                battle.strike(hero, echo.foe, Blow(echo.damage, Action.SKILL, spell = echo.spell, skill = echo.skill, spread = false))
+            } finally {
+                busy = false
+            }
         }
     }
 
@@ -139,7 +148,10 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
         if (crit) fire(PowerEvent.CRIT_TAKEN, moment)
     }
 
-    fun killed(moment: PowerMoment) { kills++; fire(PowerEvent.KILL, moment) }
+    fun killed(moment: PowerMoment) {
+        kills++
+        fire(PowerEvent.KILL, moment)
+    }
 
     /** Whether the standing lines changed since the last look: the hero's body is made again when they do. */
     fun restand(): Boolean {
@@ -176,10 +188,15 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
                 healed += act(power, effect, value, moment)
                 shown = shown || effect.act !in SILENT
             }
-            if (shown && power.on !in QUIET) battle.powerShown(power.stat, healed)
-            // 3.37.0: a power that fired without a line of its own is a note the log's «events» show.
-            else battle.note(battle.heroFighter, NoteKind.POWER, power.stat, value)
-        } finally { busy = false }
+            if (shown && power.on !in QUIET) {
+                battle.powerShown(power.stat, healed)
+            } // 3.37.0: a power that fired without a line of its own is a note the log's «events» show.
+            else {
+                battle.note(battle.heroFighter, NoteKind.POWER, power.stat, value)
+            }
+        } finally {
+            busy = false
+        }
     }
 
     private fun line(power: Power, line: PowerLine, times: Int = 1, draw: Boolean = true): StatLine {
@@ -271,27 +288,48 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
                 val stacks = stacksOf(fighter, power.stat, EffectKind.BUFF, effect.stacks)
                 battle.lay(fighter, TimedEffect(EffectKind.BUFF, power.stat, lines.map { line(power, it, stacks) }, battle.time + duration, duration))
             }
+
             PowerAct.HEX -> targets(effect.to, moment).forEach { foe ->
                 val stacks = stacksOf(foe, power.stat, EffectKind.CURSE, effect.stacks)
                 battle.lay(foe, TimedEffect(EffectKind.CURSE, power.stat, effect.lines.map { line(power, it, stacks) }, battle.time + duration, duration))
             }
-            PowerAct.HEAL -> return if (effect.to == PowerTarget.PET) { battle.healPet(amount); 0.0 } else when (effect.of) {
-                PowerBase.MANA -> { hero.mana = min(battle.manaCap(), hero.mana + battle.manaCap() * amount / 100); 0.0 }
-                PowerBase.SHIELD -> { hero.shield = min(body.maxShield, hero.shield + body.maxShield * amount / 100); 0.0 }
-                PowerBase.DEALT -> battle.restore(moment.damage * amount / 100 * body.recoveryRate)
-                PowerBase.TAKEN -> battle.restore(lastTaken * amount / 100 * body.recoveryRate)
-                PowerBase.PET_LIFE -> battle.restore(battle.petLife() * amount / 100)
-                else -> battle.restore(body.maxLife * amount / 100)
+
+            PowerAct.HEAL -> return if (effect.to == PowerTarget.PET) {
+                battle.healPet(amount)
+                0.0
+            } else {
+                when (effect.of) {
+                    PowerBase.MANA -> {
+                        hero.mana = min(battle.manaCap(), hero.mana + battle.manaCap() * amount / 100)
+                        0.0
+                    }
+
+                    PowerBase.SHIELD -> {
+                        hero.shield = min(body.maxShield, hero.shield + body.maxShield * amount / 100)
+                        0.0
+                    }
+
+                    PowerBase.DEALT -> battle.restore(moment.damage * amount / 100 * body.recoveryRate)
+
+                    PowerBase.TAKEN -> battle.restore(lastTaken * amount / 100 * body.recoveryRate)
+
+                    PowerBase.PET_LIFE -> battle.restore(battle.petLife() * amount / 100)
+
+                    else -> battle.restore(body.maxLife * amount / 100)
+                }
             }
+
             PowerAct.HURT -> when (effect.of) {
                 PowerBase.MANA -> hero.mana = max(0.0, hero.mana - battle.manaCap() * amount / 100)
                 PowerBase.SHIELD -> hero.shield = max(0.0, hero.shield - body.maxShield * amount / 100)
                 else -> hero.life = max(1.0, hero.life - body.maxLife * amount / 100)
             }
+
             PowerAct.BARRIER -> {
                 hero.barrier = max(hero.barrier, body.maxLife * amount / 100)
                 hero.barrierUntil = battle.time + duration
             }
+
             PowerAct.DAMAGE -> {
                 var dealt = 0.0
                 targets(effect.to, moment).forEach { foe ->
@@ -302,36 +340,56 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
                 }
                 if (effect.leech > 0) return battle.restore(dealt * effect.leech / 100 * body.recoveryRate)
             }
+
             PowerAct.AILMENT -> {
                 val ailment = Ailment.byWord(effect.ailment.orEmpty()) ?: Ailment.of(effect.ailment.orEmpty()) ?: return 0.0
                 // On the hero themselves (server 1.32.0): a self-ignition burns the rule's share of their life a second.
-                if (effect.to == PowerTarget.SELF) { battle.afflictSelf(ailment, duration); return 0.0 }
+                if (effect.to == PowerTarget.SELF) {
+                    battle.afflictSelf(ailment, duration)
+                    return 0.0
+                }
                 targets(effect.to, moment).forEach { foe -> battle.afflict(hero, foe, ailment, moment.taken.ifEmpty { body.damage }) }
             }
+
             PowerAct.CURSE -> targets(effect.to, moment).forEach(battle::hex)
-            PowerAct.EXECUTE -> targets(effect.to, moment).filter { battle.foes[it.index].rarity < MonsterRarity.UNIQUE && it.life < it.body.maxLife * amount / 100 }
-                .forEach(battle::slay)
+
+            PowerAct.EXECUTE ->
+                targets(effect.to, moment).filter { battle.foes[it.index].rarity < MonsterRarity.UNIQUE && it.life < it.body.maxLife * amount / 100 }
+                    .forEach(battle::slay)
+
             PowerAct.STUN -> targets(effect.to, moment).forEach { it.heldUntil = max(it.heldUntil, battle.time + duration) }
+
             PowerAct.DELAY -> targets(effect.to, moment).forEach { it.nextAttack += duration }
+
             PowerAct.RUSH -> hero.nextAttack = min(hero.nextAttack, battle.time)
+
             PowerAct.CHARGES -> battle.chargeFlasks(amount)
+
             PowerAct.COOLDOWNS -> hero.readyAt.replaceAll { _, at -> at - amount }
+
             PowerAct.NEXT_CRIT -> battle.nextCrit = true
+
             PowerAct.INVULNERABLE -> hero.invulnerableUntil = max(hero.invulnerableUntil, battle.time + duration)
+
             PowerAct.CLEANSE -> hero.ailments.clear()
+
             PowerAct.SPREAD -> targets(PowerTarget.OTHERS, moment).forEach { foe ->
                 moment.ailments.forEach { spread -> battle.place(foe, spread.copy(until = battle.time + spread.duration), stacks = spread.ailment.hurts) }
             }
+
             PowerAct.ECHO -> {
                 val foe = moment.target?.takeIf { it.side == Side.MONSTER && it.alive } ?: return 0.0
                 val damage = share(moment.taken, amount, effect.type)
                 if (damage.values.sum() > 0) echoes += Echo(battle.time + max(duration, 0.0), foe, damage, moment.spell, power.stat)
             }
+
             PowerAct.CHARGE -> {
                 val kind = effect.charge ?: return 0.0
                 if (effect.consume) battle.consumeCharges(kind) else battle.gainCharges(kind, effect.amount?.toInt() ?: 1)
             }
+
             PowerAct.ONE_OF -> if (effect.options.isNotEmpty()) return act(power, effect.options[battle.random.nextInt(effect.options.size)], value, moment)
+
             PowerAct.RETALIATE -> {
                 if (moment.target?.side != Side.MONSTER) return 0.0
                 val damage = share(moment.taken, amount, effect.type)
@@ -363,20 +421,32 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
         }
         val base = when (effect.of) {
             PowerBase.LIFE -> body.maxLife
+
             PowerBase.SHIELD -> body.maxShield
+
             PowerBase.MANA -> body.maxMana
+
             PowerBase.ARMOUR -> body.armour
+
             PowerBase.EVASION -> body.evasion
+
             PowerBase.TAKEN -> lastTaken
+
             PowerBase.DEALT -> moment.damage
+
             // The foe of the moment's life — the one struck, or the one that fell — a fifth of it for a boss.
             PowerBase.TARGET_LIFE -> (moment.target?.takeIf { it.side == Side.MONSTER } ?: foe).let { of ->
                 of.body.maxLife * if (battle.foes[of.index].rarity >= MonsterRarity.UNIQUE) 0.2 else 1.0
             }
+
             PowerBase.STRENGTH -> body["STOCK_STRENGTH"]
+
             PowerBase.AGILITY -> body["STOCK_AGILITY"]
+
             PowerBase.INTELLECT -> body["STOCK_INTELLECT"]
+
             PowerBase.PET_LIFE -> battle.petLife()
+
             PowerBase.WEAPON -> 0.0
         }
         return mapOf((type ?: DamageType.PHYSICAL) to base * share)
@@ -391,9 +461,12 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
 
     private companion object {
         /** Effects that show nothing of their own in the log: a blow logs itself, a curse and an ailment land on the foe's line. */
-        val SILENT = setOf(PowerAct.DAMAGE, PowerAct.AILMENT, PowerAct.CURSE, PowerAct.SPREAD, PowerAct.DELAY, PowerAct.STUN, PowerAct.ECHO, PowerAct.RETALIATE,
-            PowerAct.CHARGE)
+        val SILENT = setOf(
+            PowerAct.DAMAGE, PowerAct.AILMENT, PowerAct.CURSE, PowerAct.SPREAD, PowerAct.DELAY, PowerAct.STUN, PowerAct.ECHO, PowerAct.RETALIATE,
+            PowerAct.CHARGE,
+        )
         const val MOVEMENT_SPEED = "STOCK_MOVEMENT_SPEED"
+
         /** Events too frequent to log a line each. */
         val QUIET = setOf(PowerEvent.HIT, PowerEvent.HIT_TAKEN, PowerEvent.STANDING, PowerEvent.INFLICT, PowerEvent.PET_HIT)
     }

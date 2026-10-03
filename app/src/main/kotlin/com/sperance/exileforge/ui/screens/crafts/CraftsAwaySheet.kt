@@ -1,6 +1,5 @@
 package com.sperance.exileforge.ui.screens.crafts
 
-import com.sperance.exileforge.ui.components.ForgeSheet
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -25,6 +24,7 @@ import com.sperance.exileforge.rules.roll.AwayStop
 import com.sperance.exileforge.rules.roll.CraftsAway
 import com.sperance.exileforge.ui.components.Engraved
 import com.sperance.exileforge.ui.components.ForgeButton
+import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.icons.ItemIcon
@@ -42,16 +42,22 @@ import com.sperance.exileforge.ui.theme.*
     var seen by remember(heroId) { mutableStateOf<Long?>(null) }
     LaunchedEffect(heroId) { if (heroId.isNotBlank()) seen = vm.craftsAwaySeen(heroId) }
     val away = s.hero?.crafts?.away?.takeIf { away -> seen.let { it != null && away.until > it } } ?: return
-    CraftsAwaySheet(s, away) { seen = away.until; vm.markCraftsAwaySeen(heroId, away.until) }
+    CraftsAwaySheet(s, away) {
+        seen = away.until
+        vm.markCraftsAwaySeen(heroId, away.until)
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable private fun CraftsAwaySheet(s: ForgeState, away: CraftsAway, onDismiss: () -> Unit) {
+@Composable
+private fun CraftsAwaySheet(s: ForgeState, away: CraftsAway, onDismiss: () -> Unit) {
     val offlineHours = s.index?.professions?.rules?.offlineHours
     val cap = offlineHours?.let { (it * 3_600_000).toLong() } ?: Long.MAX_VALUE
     ForgeSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(
+            Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
             Text(ui("away.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 AwayFigure(ui("away.time"), clock(minOf(away.until - away.since, cap)), Modifier.weight(1f))
@@ -61,18 +67,25 @@ import com.sperance.exileforge.ui.theme.*
             Text(workTitle(away.job, away.choice), color = Parchment, style = MaterialTheme.typography.titleSmall)
             if (away.levels > 0) Text(ui("away.levels", away.levels), color = Vital, style = MaterialTheme.typography.labelMedium)
             Engraved(ui("away.gained"))
-            if (away.gained.isEmpty()) MutedText(ui("away.nothing"))
-            else AwayStacks(s, away.gained, "+", Vital)
+            if (away.gained.isEmpty()) {
+                MutedText(ui("away.nothing"))
+            } else {
+                AwayStacks(s, away.gained, "+", Vital)
+            }
             if (away.spent.isNotEmpty()) {
                 Engraved(ui("away.spent"), accent = LifeRed)
                 AwayStacks(s, away.spent, "−", LifeRed)
             }
             away.stopReason?.let { stop ->
-                Text(when (stop) {
-                    AwayStop.INPUTS -> ui("away.stop.inputs")
-                    AwayStop.CAP -> ui("away.stop.cap", offlineHours?.let(::number) ?: "?")
-                    AwayStop.FULL -> ui("away.stop.full")
-                }, color = LifeRed, style = MaterialTheme.typography.bodySmall)
+                Text(
+                    when (stop) {
+                        AwayStop.INPUTS -> ui("away.stop.inputs")
+                        AwayStop.CAP -> ui("away.stop.cap", offlineHours?.let(::number) ?: "?")
+                        AwayStop.FULL -> ui("away.stop.full")
+                    },
+                    color = LifeRed,
+                    style = MaterialTheme.typography.bodySmall,
+                )
             }
             ForgeButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text(ui("away.ok")) }
         }
@@ -98,11 +111,19 @@ private fun clock(millis: Long): String {
         stacks.entries.sortedByDescending { it.value }.forEach { (code, amount) ->
             val template = s.index?.template(code)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (template != null) ItemIcon(template, Gold, Modifier.size(24.dp))
-                else BagIcon(code, Modifier.size(24.dp), kind = s.index?.item(code)?.let(::bagVisualKind) ?: ItemVisualKind.ITEM)
+                if (template != null) {
+                    ItemIcon(template, Gold, Modifier.size(24.dp))
+                } else {
+                    BagIcon(code, Modifier.size(24.dp), kind = s.index?.item(code)?.let(::bagVisualKind) ?: ItemVisualKind.ITEM)
+                }
                 Text("$sign$amount", color = tone, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-                Text(if (template != null) equipmentTitle(code) else itemTitle(code), color = Parchment, style = MaterialTheme.typography.bodySmall,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    if (template != null) equipmentTitle(code) else itemTitle(code),
+                    color = Parchment,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }

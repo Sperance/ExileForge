@@ -8,12 +8,12 @@ import android.content.pm.PackageInstaller
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
-import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.withContext
+import java.io.File
 
 /**
  * The downloaded APK into the system installer (3.72.0): a [PackageInstaller] session, so no file is shared with another
@@ -28,8 +28,7 @@ object UpdateInstaller {
     fun allowed(context: Context): Boolean = context.packageManager.canRequestPackageInstalls()
 
     /** The system screen that lets this app install packages. */
-    fun permissionScreen(context: Context): Intent =
-        Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${context.packageName}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    fun permissionScreen(context: Context): Intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${context.packageName}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
     /** Hands [apk] to the system installer; the answer comes as [results]. */
     suspend fun install(context: Context, apk: File) = withContext(Dispatchers.IO) {
@@ -48,13 +47,16 @@ object UpdateInstaller {
         }
     }
 
-    internal fun post(result: InstallResult) { mutableResults.tryEmit(result) }
+    internal fun post(result: InstallResult) {
+        mutableResults.tryEmit(result)
+    }
 }
 
 /** What the system installer answered. */
 sealed interface InstallResult {
     /** Installed: the process is about to be replaced. */
     data object Done : InstallResult
+
     /** The player closed the confirmation, or the system refused; [message] is the system's own words. */
     data class Failed(val message: String) : InstallResult
 }
@@ -64,13 +66,22 @@ class UpdateReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         when (val status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)) {
             PackageInstaller.STATUS_PENDING_USER_ACTION -> {
-                val confirm = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) intent.getParcelableExtra(Intent.EXTRA_INTENT, Intent::class.java)
-                    else @Suppress("DEPRECATION") intent.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)
+                val confirm = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    intent.getParcelableExtra(Intent.EXTRA_INTENT, Intent::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    intent.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)
+                }
                 // The receiver is not exported: only the system installer's own confirmation reaches it.
-                if (confirm != null) context.startActivity(confirm.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                else UpdateInstaller.post(InstallResult.Failed("no confirmation"))
+                if (confirm != null) {
+                    context.startActivity(confirm.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                } else {
+                    UpdateInstaller.post(InstallResult.Failed("no confirmation"))
+                }
             }
+
             PackageInstaller.STATUS_SUCCESS -> UpdateInstaller.post(InstallResult.Done)
+
             else -> UpdateInstaller.post(InstallResult.Failed(intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE) ?: "status $status"))
         }
     }

@@ -68,22 +68,32 @@ import java.util.Locale
     val receiving = if (won) hud.rewardAwaiting > 0 else hud.abyss?.let { it.fallen && it.hoardAwaiting } == true
     LaunchedEffect(receiving) { if (receiving) vm.flushRun() }
     BackHandler(enabled = receiving) {}
-    Column(Modifier.fillMaxSize().background(Ink.copy(alpha = .94f)).statusBarsPadding().navigationBarsPadding().padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(
+        Modifier.fillMaxSize().background(Ink.copy(alpha = .94f)).statusBarsPadding().navigationBarsPadding().padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
         FieldHead(report, won)
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (won) Spoils(s, hud, onStack = { stack = it }, onRecipe = { recipe = it }) { looked = it } else DeathPrice(s, hud)
-            if (logOpen) Box(Modifier.fillMaxWidth().height(if (won) 260.dp else 420.dp).background(Panel, RoundedCornerShape(8.dp))
-                .border(1.dp, Bronze.copy(alpha = .4f), RoundedCornerShape(8.dp)).padding(horizontal = 10.dp, vertical = 8.dp)) {
-                Column {
-                    LogShelves(s.logFilter, vm::logFilter)
-                    FightLog(report.pack, Modifier.fillMaxSize(), s.logFilter, toDeath = !won) { event, name -> line = event to name }
+            if (logOpen) {
+                Box(
+                    Modifier.fillMaxWidth().height(if (won) 260.dp else 420.dp).background(Panel, RoundedCornerShape(8.dp))
+                        .border(1.dp, Bronze.copy(alpha = .4f), RoundedCornerShape(8.dp)).padding(horizontal = 10.dp, vertical = 8.dp),
+                ) {
+                    Column {
+                        LogShelves(s.logFilter, vm::logFilter)
+                        FightLog(report.pack, Modifier.fillMaxSize(), s.logFilter, toDeath = !won) { event, name -> line = event to name }
+                    }
                 }
             }
         }
         FightFigures(report, logOpen) { logOpen = !logOpen }
-        ForgeButton(enabled = !receiving, onClick = onContinue, modifier = Modifier.fillMaxWidth().height(50.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = if (won) Gold else LifeRed, contentColor = if (won) Ink else Parchment)) {
+        ForgeButton(
+            enabled = !receiving,
+            onClick = onContinue,
+            modifier = Modifier.fillMaxWidth().height(50.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = if (won) Gold else LifeRed, contentColor = if (won) Ink else Parchment),
+        ) {
             Text(ui(if (won) "expedition.continue" else "expedition.back_to_camp"), style = MaterialTheme.typography.titleMedium)
         }
     }
@@ -102,18 +112,25 @@ import java.util.Locale
     val monster = report.monster
     val time by rememberClock()
     val glow = if (won) Color(0xFF3B2A17) else Color(0xFF3B1717)
-    Box(Modifier.fillMaxWidth().height(140.dp).clip(RoundedCornerShape(8.dp)).background(Brush.radialGradient(listOf(glow, Ink))),
-        contentAlignment = Alignment.Center) {
+    Box(
+        Modifier.fillMaxWidth().height(140.dp).clip(RoundedCornerShape(8.dp)).background(Brush.radialGradient(listOf(glow, Ink))),
+        contentAlignment = Alignment.Center,
+    ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Box(Modifier.size(68.dp).clip(CircleShape).background(Color.Black).border(3.dp, rarityTint(monster.rarity), CircleShape),
-                contentAlignment = Alignment.TopCenter) {
+            Box(
+                Modifier.size(68.dp).clip(CircleShape).background(Color.Black).border(3.dp, rarityTint(monster.rarity), CircleShape),
+                contentAlignment = Alignment.TopCenter,
+            ) {
                 Canvas(Modifier.requiredSize(68.dp, 91.dp).offset(y = 12.dp)) {
                     Portraits.monster(this, monster.code, monster.form, rarityTint(monster.rarity), time)
                     if (won) drawRect(Ink.copy(alpha = .35f))
                 }
             }
-            Text(if (won) ui("expedition.report_slain", monsterTitle(monster.code)) else ui("expedition.report_fallen"),
-                color = outcomeColour(report.outcome), style = MaterialTheme.typography.titleLarge)
+            Text(
+                if (won) ui("expedition.report_slain", monsterTitle(monster.code)) else ui("expedition.report_fallen"),
+                color = outcomeColour(report.outcome),
+                style = MaterialTheme.typography.titleLarge,
+            )
             // A pack (since 2.54.0) says its size under the outcome.
             if (report.packSize > 1) MutedText(ui("expedition.report_pack", report.packSize), style = MaterialTheme.typography.labelSmall)
         }
@@ -131,15 +148,20 @@ import java.util.Locale
 
 @Composable private fun Chip(text: String, tone: Color = Parchment, onClick: (() -> Unit)? = null) {
     val shape = RoundedCornerShape(3.dp)
-    Text(text, color = tone, style = MaterialTheme.typography.labelMedium,
+    Text(
+        text,
+        color = tone,
+        style = MaterialTheme.typography.labelMedium,
         modifier = Modifier.clip(shape).let { if (onClick != null) it.clickable(role = Role.Button, onClick = onClick) else it }
             .background(Abyss, shape).border(1.dp, if (onClick != null) tone.copy(alpha = .6f) else PanelRaised, shape)
-            .padding(horizontal = 8.dp, vertical = 4.dp))
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+    )
 }
 
 /** What the kill brought, by section, as the server's answers bring it (1.30.0); on its way, or its absence said plainly. */
 @OptIn(ExperimentalLayoutApi::class)
-@Composable private fun Spoils(s: ForgeState, hud: RunHud, onStack: (String) -> Unit, onRecipe: (String) -> Unit, onItem: (ItemView) -> Unit) {
+@Composable
+private fun Spoils(s: ForgeState, hud: RunHud, onStack: (String) -> Unit, onRecipe: (String) -> Unit, onItem: (ItemView) -> Unit) {
     val reward = hud.reward ?: return
     val index = s.index
     reward.recipe?.let { code ->
@@ -164,8 +186,11 @@ import java.util.Locale
         Chip(ui("expedition.loot_gold", reward.gold), GoldBright)
         Chip(ui("expedition.loot_experience", number(reward.experience)), Rune)
     }
-    if (hud.rewardAwaiting > 0) Receiving()
-    else if (reward.items.isEmpty() && reward.equipment.isEmpty()) MutedText(ui("expedition.loot_nothing"))
+    if (hud.rewardAwaiting > 0) {
+        Receiving()
+    } else if (reward.items.isEmpty() && reward.equipment.isEmpty()) {
+        MutedText(ui("expedition.loot_nothing"))
+    }
 }
 
 /** A defeat: what the death cost by the rules' price — the server's answer stands — and what the run had gathered before it. */
@@ -179,9 +204,14 @@ import java.util.Locale
         Column(Modifier.weight(1f)) {
             when {
                 // A fall in a Vaal zone costs no experience; a fall the journal could not record is priced when the hero is read.
-                fall == null -> if (hud.vaal) MutedText(ui("expedition.fall_free"), style = MaterialTheme.typography.bodyMedium)
-                    else Text(ui("expedition.fall_failed"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
+                fall == null -> if (hud.vaal) {
+                    MutedText(ui("expedition.fall_free"), style = MaterialTheme.typography.bodyMedium)
+                } else {
+                    Text(ui("expedition.fall_failed"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
+                }
+
                 fall > 0 -> Text(ui("expedition.fall_lost", number(fall)), color = LifeRed, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+
                 else -> MutedText(ui("expedition.fall_free"), style = MaterialTheme.typography.bodyMedium)
             }
             MutedText(ui(if (hud.vaal) "vaal.dead_hint" else "expedition.dead_hint"), style = MaterialTheme.typography.labelSmall)
@@ -191,9 +221,14 @@ import java.util.Locale
     hud.abyss?.takeIf { it.fallen }?.let { abyss ->
         Caption(ui("abyss.fallen"), AbyssGlow)
         val kept = abyss.hoard
-        if (abyss.hoardAwaiting) Receiving()
-        else if (kept == null || kept.items.isEmpty() && kept.equipment.isEmpty() && kept.experience <= 0) MutedText(ui("abyss.burned"))
-        else { MutedText(ui("abyss.kept")); RewardLines(s, kept) }
+        if (abyss.hoardAwaiting) {
+            Receiving()
+        } else if (kept == null || kept.items.isEmpty() && kept.equipment.isEmpty() && kept.experience <= 0) {
+            MutedText(ui("abyss.burned"))
+        } else {
+            MutedText(ui("abyss.kept"))
+            RewardLines(s, kept)
+        }
     }
     Caption(ui("expedition.report_run"))
     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -206,16 +241,23 @@ import java.util.Locale
 
 /** The fight as a row of figures — dealt, taken, how long, criticals — and the way into its log. */
 @Composable private fun FightFigures(report: FightReport, logOpen: Boolean, onLog: () -> Unit) {
-    Row(Modifier.fillMaxWidth().background(Abyss, RoundedCornerShape(4.dp)).padding(horizontal = 10.dp, vertical = 7.dp),
-        horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        Modifier.fillMaxWidth().background(Abyss, RoundedCornerShape(4.dp)).padding(horizontal = 10.dp, vertical = 7.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         Figure(ForgeGlyphs.Swords, report.dealt.toString())
         Figure(ForgeGlyphs.Helm, report.taken.toString())
         // The combat pet's share (3.70.0): what it took is its own, not the hero's damage taken.
         report.petTaken.takeIf { it > 0 }?.let { Text(ui("fight.pet_taken", it), color = Muted, style = MaterialTheme.typography.labelMedium) }
         Figure(ForgeGlyphs.Portal, ui("expedition.log_time", String.format(Locale.ROOT, "%.1f", report.duration)))
         Figure(ForgeGlyphs.Sigil, report.crits.toString())
-        Text(ui(if (logOpen) "expedition.log_less" else "expedition.log"), color = Rune, style = MaterialTheme.typography.labelMedium,
-            modifier = Modifier.clickable(role = Role.Button, onClick = onLog).padding(4.dp))
+        Text(
+            ui(if (logOpen) "expedition.log_less" else "expedition.log"),
+            color = Rune,
+            style = MaterialTheme.typography.labelMedium,
+            modifier = Modifier.clickable(role = Role.Button, onClick = onLog).padding(4.dp),
+        )
     }
 }
 

@@ -26,22 +26,29 @@ import java.io.File
 class DesignPreviewTest {
     @get:Rule val compose = createComposeRule()
 
-    @Before fun dictionary() { serverLocale = TestWorld.russian }
-    @After fun forget() { serverLocale = LocaleBundle() }
+    @Before fun dictionary() {
+        serverLocale = TestWorld.russian
+    }
+
+    @After fun forget() {
+        serverLocale = LocaleBundle()
+    }
 
     @Test fun cardsDisplayIconsPropertiesAndActions() {
         val index = TestWorld.index
         val ring = checkNotNull(ItemView.of(TestWorld.roll("ring", Slot.RING, Rarity.RARE), index))
         val boots = checkNotNull(ItemView.of(TestWorld.roll("boots", Slot.BOOTS, Rarity.RARE, seed = 2L), index))
-        compose.setContent { ForgeTheme {
-            Column(Modifier.fillMaxSize().background(Ink).padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                Text("EXILE FORGE", color = Gold, style = MaterialTheme.typography.labelLarge)
-                Text("Арсенал героя", style = MaterialTheme.typography.headlineLarge)
-                Text("Снаряжение, которое меняет игру", color = Muted)
-                ItemCard(ring, selected = true, detailed = true, actionLabel = "Свойства")
-                ItemCard(boots, actionLabel = "Свойства")
+        compose.setContent {
+            ForgeTheme {
+                Column(Modifier.fillMaxSize().background(Ink).padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Text("EXILE FORGE", color = Gold, style = MaterialTheme.typography.labelLarge)
+                    Text("Арсенал героя", style = MaterialTheme.typography.headlineLarge)
+                    Text("Снаряжение, которое меняет игру", color = Muted)
+                    ItemCard(ring, selected = true, detailed = true, actionLabel = "Свойства")
+                    ItemCard(boots, actionLabel = "Свойства")
+                }
             }
-        } }
+        }
         compose.onNodeWithText(ring.title).assertIsDisplayed()
         compose.onNodeWithText(boots.title).assertIsDisplayed()
         // The label is drawn in capitals, and only on the short card: a full one is a page, not a way in

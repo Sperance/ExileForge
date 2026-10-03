@@ -33,7 +33,10 @@ import com.sperance.exileforge.ui.theme.*
     val quests = s.quests.guild
     val names = guild.members.associate { it.heroId to it.name }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        if (quests == null) { item { MutedText(ui("quest.loading")) }; return@LazyColumn }
+        if (quests == null) {
+            item { MutedText(ui("quest.loading")) }
+            return@LazyColumn
+        }
         item { Section(ui("quest.guild_personal"), ui("quest.resets", untilText(quests.dayEndsAt))) }
         if (quests.personal.isEmpty()) item { MutedText(ui("quest.none")) }
         items(quests.personal, key = { it.id }) { quest ->
@@ -74,14 +77,23 @@ private fun LazyListScope.goals(s: ForgeState, vm: ForgeViewModel, title: String
             }
             QuestBar(view.progress, goal.target, color)
             MutedText(ui("quest.progress", number(view.progress.coerceAtMost(goal.target).toDouble()), number(goal.target.toDouble())))
-            Text(ui("quest.guild_mine", number(view.mine.toDouble()), number(view.need.toDouble())),
-                color = if (view.mine >= view.need) Vital else Parchment, style = MaterialTheme.typography.bodySmall)
+            Text(
+                ui("quest.guild_mine", number(view.mine.toDouble()), number(view.need.toDouble())),
+                color = if (view.mine >= view.need) Vital else Parchment,
+                style = MaterialTheme.typography.bodySmall,
+            )
             RewardChips(view.reward.copy(guildExperience = goal.guildExperience))
             view.contributions.entries.sortedByDescending { it.value }.take(TOP).forEachIndexed { place, (heroId, amount) ->
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     MutedText("${place + 1}.")
-                    Text(names[heroId] ?: "—", color = if (heroId == s.play.heroId) Gold else Parchment, style = MaterialTheme.typography.bodySmall,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    Text(
+                        names[heroId] ?: "—",
+                        color = if (heroId == s.play.heroId) Gold else Parchment,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
                     MutedText(number(amount.toDouble()))
                 }
             }

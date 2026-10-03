@@ -8,5 +8,4 @@ import androidx.compose.ui.text.TextStyle
 import com.sperance.exileforge.ui.theme.Muted
 
 /** Secondary text — a hint, a caption, a count: muted, and small unless [style] says otherwise. */
-@Composable internal fun MutedText(text: String, modifier: Modifier = Modifier, style: TextStyle = MaterialTheme.typography.bodySmall) =
-    Text(text, modifier, color = Muted, style = style)
+@Composable internal fun MutedText(text: String, modifier: Modifier = Modifier, style: TextStyle = MaterialTheme.typography.bodySmall) = Text(text, modifier, color = Muted, style = style)

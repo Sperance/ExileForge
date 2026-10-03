@@ -30,8 +30,10 @@ import com.sperance.exileforge.ui.theme.*
  * in one tap, and the bottom bar's «Hero» stays lit for each.
  */
 enum class HeroTab(val tab: Int, private val title: String, val icon: ImageVector) {
-    GEAR(TAB_HERO, "hero.tab_gear", ForgeGlyphs.Helm), TREE(TAB_TREE, "nav.tree", ForgeGlyphs.Constellation),
-    GRIMOIRE(TAB_SKILLS, "nav.skills", ForgeGlyphs.Grimoire);
+    GEAR(TAB_HERO, "hero.tab_gear", ForgeGlyphs.Helm),
+    TREE(TAB_TREE, "nav.tree", ForgeGlyphs.Constellation),
+    GRIMOIRE(TAB_SKILLS, "nav.skills", ForgeGlyphs.Grimoire),
+    ;
 
     val label: String get() = ui(title)
 
@@ -47,12 +49,20 @@ enum class HeroTab(val tab: Int, private val title: String, val icon: ImageVecto
         Row(Modifier.fillMaxWidth().background(Abyss)) {
             HeroTab.entries.forEach { entry ->
                 val on = entry == selected
-                Column(Modifier.weight(1f).selectable(selected = on, role = Role.Tab, onClick = { if (!on) onSelect(entry.tab) }).padding(top = 6.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Column(
+                    Modifier.weight(1f).selectable(selected = on, role = Role.Tab, onClick = { if (!on) onSelect(entry.tab) }).padding(top = 6.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(3.dp),
+                ) {
                     // A page the hero's level has not opened yet (3.77.0) shows a lock; the tap explains when it opens.
                     Icon(if (locked(entry.tab)) Icons.Outlined.Lock else entry.icon, null, tint = if (on) Gold else Muted, modifier = Modifier.size(18.dp))
-                    Text(entry.label, color = if (on) GoldBright else Muted, style = MaterialTheme.typography.labelSmall,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        entry.label,
+                        color = if (on) GoldBright else Muted,
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                     Box(Modifier.fillMaxWidth().height(2.dp).background(if (on) Gold else Color.Transparent))
                 }
             }

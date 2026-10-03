@@ -37,13 +37,21 @@ import com.sperance.exileforge.ui.theme.*
 /** Each kind of line in the colour Path of Exile writes it in; the game's own kinds take the tone they already had. */
 fun affixTint(kind: AffixKind?): Color = when (kind) {
     AffixKind.PREFIX, AffixKind.SUFFIX, null -> Rune
+
     AffixKind.IMPLICIT -> Parchment
+
     AffixKind.CRAFTED -> Crafted
+
     AffixKind.HANDCRAFTED -> Handcrafted
+
     AffixKind.FRACTURED -> Fractured
+
     AffixKind.CORRUPTION -> Color(0xFFD20000)
+
     AffixKind.ALCHEMY -> Vital
+
     AffixKind.UNIQUE -> Color(0xFFAF6025)
+
     // A special essence (2.78.0), violet as its crystal.
     AffixKind.ESSENCE -> Color(0xFFB07FE0)
 }
@@ -56,17 +64,28 @@ fun affixTint(kind: AffixKind?): Color = when (kind) {
  */
 @Composable fun AffixBadge(marks: AffixMarks) {
     val kind = marks.kind
-    if (kind == null) { Rhombus(); return }
+    if (kind == null) {
+        Rhombus()
+        return
+    }
     val badge = marks.badge.orEmpty()
     val tint = affixTint(kind)
     val title = ui("mod.kind.${kind.name}")
     var explained by remember { mutableStateOf(false) }
-    Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically,
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.semantics { contentDescription = title }
-            .pointerInput(kind) { detectTapGestures(onLongPress = { explained = !explained }) }) {
+            .pointerInput(kind) { detectTapGestures(onLongPress = { explained = !explained }) },
+    ) {
         Box(Modifier.widthIn(min = 22.dp).height(18.dp).drawBehind { glass(tint) }, contentAlignment = Alignment.Center) {
-            Text(badge, color = if (tint.luminance() < .25f) Color.White else Lead, fontSize = 10.sp, fontWeight = FontWeight.Black,
-                modifier = Modifier.padding(horizontal = 6.dp))
+            Text(
+                badge,
+                color = if (tint.luminance() < .25f) Color.White else Lead,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Black,
+                modifier = Modifier.padding(horizontal = 6.dp),
+            )
         }
         if (explained) Text(title, color = tint, style = MaterialTheme.typography.labelSmall)
     }
@@ -79,9 +98,23 @@ private fun DrawScope.glass(tint: Color) {
     val w = size.width
     val h = size.height
     val cut = h * .32f
-    val hex = Path().apply { moveTo(cut, 0f); lineTo(w - cut, 0f); lineTo(w, h / 2); lineTo(w - cut, h); lineTo(cut, h); lineTo(0f, h / 2); close() }
+    val hex = Path().apply {
+        moveTo(cut, 0f)
+        lineTo(w - cut, 0f)
+        lineTo(w, h / 2)
+        lineTo(w - cut, h)
+        lineTo(cut, h)
+        lineTo(0f, h / 2)
+        close()
+    }
     drawPath(hex, tint)
-    val facet = Path().apply { moveTo(cut, 0f); lineTo(w - cut, 0f); lineTo(w, h / 2); lineTo(0f, h / 2); close() }
+    val facet = Path().apply {
+        moveTo(cut, 0f)
+        lineTo(w - cut, 0f)
+        lineTo(w, h / 2)
+        lineTo(0f, h / 2)
+        close()
+    }
     drawPath(facet, Color.White.copy(alpha = .22f))
     drawPath(hex, Lead, style = Stroke(1.5.dp.toPx(), join = StrokeJoin.Round))
 }

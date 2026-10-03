@@ -23,7 +23,9 @@ internal class HeroCharges(private val rules: ChargeRules, carried: Map<ChargeKi
     private val counts = EnumMap<ChargeKind, Int>(ChargeKind::class.java)
     private val until = EnumMap<ChargeKind, Double>(ChargeKind::class.java)
 
-    init { carried.forEach { (kind, count) -> if (kind.real && count > 0) counts[kind] = count } }
+    init {
+        carried.forEach { (kind, count) -> if (kind.real && count > 0) counts[kind] = count }
+    }
 
     val any: Boolean get() = counts.values.any { it > 0 }
 
@@ -68,7 +70,10 @@ internal class HeroCharges(private val rules: ChargeRules, carried: Map<ChargeKi
     fun expire(now: Double): Boolean {
         val gone = until.filterValues { it <= now + 1e-9 }.keys
         if (gone.isEmpty()) return false
-        gone.forEach { counts.remove(it); until.remove(it) }
+        gone.forEach {
+            counts.remove(it)
+            until.remove(it)
+        }
         return true
     }
 

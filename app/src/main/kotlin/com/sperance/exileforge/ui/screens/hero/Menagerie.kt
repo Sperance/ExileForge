@@ -1,6 +1,5 @@
 package com.sperance.exileforge.ui.screens.hero
 
-import com.sperance.exileforge.ui.components.ForgeSheet
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -16,8 +15,6 @@ import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.lineText
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.locOr
-import com.sperance.exileforge.rules.content.hybridOf
-import com.sperance.exileforge.ui.icons.SpriteIcon
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
@@ -27,15 +24,18 @@ import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.content.Pet
 import com.sperance.exileforge.rules.content.PetKind
 import com.sperance.exileforge.rules.content.PetLine
+import com.sperance.exileforge.rules.content.hybridOf
 import com.sperance.exileforge.rules.roll.Menagerie
 import com.sperance.exileforge.rules.roll.OrbApplier
 import com.sperance.exileforge.rules.roll.OrbTarget
+import com.sperance.exileforge.ui.components.*
+import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.OrbGlyph
+import com.sperance.exileforge.ui.icons.SpriteIcon
 import com.sperance.exileforge.ui.screens.craft.ChoiceFrame
 import com.sperance.exileforge.ui.screens.craft.ChoiceRow
 import com.sperance.exileforge.ui.screens.craft.heldOmens
-import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.theme.*
 
 /** A species as the dictionary names it. */
@@ -46,8 +46,11 @@ fun petName(species: String): String = locOr("pet.$species", species)
     // A hybrid (3.79.0) has a portrait of its own, not its biome's egg.
     if (SpriteIcon(com.sperance.exileforge.core.display.icon("pet.$species"), Gold, Modifier.size(size.dp), halo = false)) return
     val egg = s.index?.pets?.let { pets -> pets.species.firstOrNull { it.code == species }?.let { pets.eggs[it.biome] } }
-    if (egg != null) StackIcon(s, egg, size)
-    else Icon(ForgeGlyphs.Exile, null, tint = Gold, modifier = Modifier.size(size.dp))
+    if (egg != null) {
+        StackIcon(s, egg, size)
+    } else {
+        Icon(ForgeGlyphs.Exile, null, tint = Gold, modifier = Modifier.size(size.dp))
+    }
 }
 
 /**
@@ -57,7 +60,8 @@ fun petName(species: String): String = locOr("pet.$species", species)
  * Omen of Choice's lines wait on it for the player's pick, as an item's do in the forge.
  */
 @OptIn(ExperimentalLayoutApi::class)
-@Composable fun MenagerieSection(s: ForgeState, vm: ForgeViewModel) {
+@Composable
+fun MenagerieSection(s: ForgeState, vm: ForgeViewModel) {
     val hero = s.hero ?: return
     if (s.index == null) return
     val pets = hero.pets
@@ -78,7 +82,8 @@ fun petName(species: String): String = locOr("pet.$species", species)
 }
 
 @OptIn(ExperimentalLayoutApi::class)
-@Composable private fun PetCard(s: ForgeState, vm: ForgeViewModel, pet: Pet) {
+@Composable
+private fun PetCard(s: ForgeState, vm: ForgeViewModel, pet: Pet) {
     val hero = s.hero ?: return
     val index = s.index ?: return
     val menagerie = remember(index) { Menagerie(index) }
@@ -94,8 +99,11 @@ fun petName(species: String): String = locOr("pet.$species", species)
             Column(Modifier.weight(1f)) {
                 Text(petName(pet.species), color = rarityColor(pet.rarity.name), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                 val what = when (kind.kind) {
-                    PetKind.COMBAT -> listOfNotNull((pet.role ?: kind.role)?.let { locOr("pet.role.$it", it.name) },
-                        listOfNotNull(kind.element, kind.element2).joinToString(" + ") { locOr("pet.element.$it", it) }.ifBlank { null })
+                    PetKind.COMBAT -> listOfNotNull(
+                        (pet.role ?: kind.role)?.let { locOr("pet.role.$it", it.name) },
+                        listOfNotNull(kind.element, kind.element2).joinToString(" + ") { locOr("pet.element.$it", it) }.ifBlank { null },
+                    )
+
                     PetKind.HELPER -> listOfNotNull(kind.focus?.let { locOr("pet.focus.$it", it.name) })
                 }
                 MutedText((listOf(locOr("pet.kind.${kind.kind}", kind.kind.name)) + what).joinToString(" · "))
@@ -115,10 +123,12 @@ fun petName(species: String): String = locOr("pet.$species", species)
                 Text(if (line.fractured) "$text · ${ui("pets.fractured")}" else text, color = if (line.fractured) Gold else ModBlue, style = MaterialTheme.typography.bodySmall)
             }
         }
-        if (pet.offer.isNotEmpty()) ChoiceFrame("forge.choice_title", "forge.choice_hint") {
-            pet.offer.forEachIndexed { i, option ->
-                val text = menagerie.lines(pet.copy(lines = listOf(option), offer = emptyList())).firstOrNull()?.let { lineText(index, it) } ?: displayName(option.code)
-                ChoiceRow(text, "T${option.tier}") { if (!s.busy) vm.choosePetLine(pet.id, i) }
+        if (pet.offer.isNotEmpty()) {
+            ChoiceFrame("forge.choice_title", "forge.choice_hint") {
+                pet.offer.forEachIndexed { i, option ->
+                    val text = menagerie.lines(pet.copy(lines = listOf(option), offer = emptyList())).firstOrNull()?.let { lineText(index, it) } ?: displayName(option.code)
+                    ChoiceRow(text, "T${option.tier}") { if (!s.busy) vm.choosePetLine(pet.id, i) }
+                }
             }
         }
         if (kind.kind == PetKind.COMBAT) {
@@ -134,11 +144,31 @@ fun petName(species: String): String = locOr("pet.$species", species)
         }
     }
     if (orbs) PetOrbs(s, vm, pet) { orbs = false }
-    if (hiring) ConfirmSheet(title = ui("pets.work_q"), confirm = ui("pets.work"), subtitle = petName(pet.species), note = helps,
-        onDismiss = { hiring = false }) { hiring = false; vm.activatePet(pet.id) }
-    if (releasing) ConfirmSheet(title = ui("pets.release_q"), confirm = ui("pets.release"), danger = true, subtitle = petName(pet.species),
-        ledger = listOf(LedgerLine(ui("pets.release_gold"), number(index.rules.pets.releasePrice(pet).toDouble()), Tone.GAIN)),
-        onDismiss = { releasing = false }) { releasing = false; vm.releasePet(pet.id) }
+    if (hiring) {
+        ConfirmSheet(
+            title = ui("pets.work_q"),
+            confirm = ui("pets.work"),
+            subtitle = petName(pet.species),
+            note = helps,
+            onDismiss = { hiring = false },
+        ) {
+            hiring = false
+            vm.activatePet(pet.id)
+        }
+    }
+    if (releasing) {
+        ConfirmSheet(
+            title = ui("pets.release_q"),
+            confirm = ui("pets.release"),
+            danger = true,
+            subtitle = petName(pet.species),
+            ledger = listOf(LedgerLine(ui("pets.release_gold"), number(index.rules.pets.releasePrice(pet).toDouble()), Tone.GAIN)),
+            onDismiss = { releasing = false },
+        ) {
+            releasing = false
+            vm.releasePet(pet.id)
+        }
+    }
 }
 
 /**
@@ -147,7 +177,8 @@ fun petName(species: String): String = locOr("pet.$species", species)
  * next one — the Omen of Choice, of Corruption — is picked above them; the pets' own growth orb follows.
  */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable private fun PetOrbs(s: ForgeState, vm: ForgeViewModel, pet: Pet, onDismiss: () -> Unit) {
+@Composable
+private fun PetOrbs(s: ForgeState, vm: ForgeViewModel, pet: Pet, onDismiss: () -> Unit) {
     val hero = s.hero ?: return
     val index = s.index ?: return
     val applier = remember(index) { OrbApplier(index) }
@@ -166,8 +197,10 @@ fun petName(species: String): String = locOr("pet.$species", species)
     val omen = picked?.takeIf { it in omens }
     val growth = index.pets.orbs.keys.toList()
     ForgeSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(
+            Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             Engraved(ui("pets.orbs_of", petName(pet.species)))
             if (omens.isNotEmpty()) {
                 Text(ui("forge.omen"), color = Rune, style = MaterialTheme.typography.titleSmall)
@@ -216,18 +249,30 @@ private const val PET_TIERS = 5
     val orbs = s.bagAmount(rule.orb) ?: 0L
     Engraved(ui("pets.breed_title"))
     MutedText(ui("pets.breed_hint", rule.minLevel, (rule.hybridChance * 100).toInt(), rule.restHours))
-    if (fit.size < 2) { MutedText(ui("pets.breed_none", rule.minLevel)); return }
+    if (fit.size < 2) {
+        MutedText(ui("pets.breed_none", rule.minLevel))
+        return
+    }
     val options = fit.associate { it.id to "${petName(it.species)} · ${ui("pets.level", it.level)}" }
     Spinner(ui("pets.breed_first"), first.orEmpty(), options, !s.busy) { first = it }
     Spinner(ui("pets.breed_second"), second.orEmpty(), options - first.orEmpty(), !s.busy) { second = it }
     val pair = listOfNotNull(first, second).mapNotNull { id -> fit.firstOrNull { it.id == id }?.let { menagerie.species(it.species) } }
     if (pair.size == 2) {
         val hybrid = index.pets.species.hybridOf(pair[0].element.orEmpty(), pair[1].element.orEmpty())
-        if (hybrid != null) Text(ui("pets.breed_may", petName(hybrid.code)), color = GoldBright, style = MaterialTheme.typography.bodySmall)
-        else MutedText(ui("pets.breed_same"))
+        if (hybrid != null) {
+            Text(ui("pets.breed_may", petName(hybrid.code)), color = GoldBright, style = MaterialTheme.typography.bodySmall)
+        } else {
+            MutedText(ui("pets.breed_same"))
+        }
     }
-    ForgeButton(enabled = !s.busy && first != null && second != null && first != second && orbs > 0,
-        onClick = { vm.breedPets(first!!, second!!); first = null; second = null }) {
+    ForgeButton(
+        enabled = !s.busy && first != null && second != null && first != second && orbs > 0,
+        onClick = {
+            vm.breedPets(first!!, second!!)
+            first = null
+            second = null
+        },
+    ) {
         Text(ui("pets.breed_go", itemTitle(rule.orb), orbs))
     }
 }

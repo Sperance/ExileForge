@@ -75,8 +75,14 @@ import com.sperance.exileforge.rules.content.ClassesFile
         val equipped = hero.equipped
         val places = bodyPlaces.map { place ->
             val worn = place.wornIn(equipped)
-            PlaceState(place, worn?.id, worn?.let { s.view(it) }, blocked = place.blockedBy(equipped),
-                reasons = worn?.let { hero.inactive[it.id] }, spare = place.fits.sumOf { loose[it] ?: 0 })
+            PlaceState(
+                place,
+                worn?.id,
+                worn?.let { s.view(it) },
+                blocked = place.blockedBy(equipped),
+                reasons = worn?.let { hero.inactive[it.id] },
+                spare = place.fits.sumOf { loose[it] ?: 0 },
+            )
         }
         EquipmentState(places, s.lang, s.account.signedIn)
     }

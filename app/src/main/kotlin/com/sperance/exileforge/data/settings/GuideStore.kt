@@ -15,7 +15,11 @@ class GuideStore(private val context: Context) {
 
     val read: Flow<Set<String>> = context.guides.data.map { it[key].orEmpty() }
 
-    suspend fun markRead(guide: String) { context.guides.edit { it[key] = it[key].orEmpty() + guide } }
+    suspend fun markRead(guide: String) {
+        context.guides.edit { it[key] = it[key].orEmpty() + guide }
+    }
 
-    suspend fun reset() { context.guides.edit { it.remove(key) } }
+    suspend fun reset() {
+        context.guides.edit { it.remove(key) }
+    }
 }

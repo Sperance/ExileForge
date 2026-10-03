@@ -27,14 +27,22 @@ import kotlin.math.roundToInt
  * what each characteristic it moves does. The range lives here, not on the line.
  */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun ModifierInfoSheet(line: ItemLine, onDismiss: () -> Unit) {
+@Composable
+fun ModifierInfoSheet(line: ItemLine, onDismiss: () -> Unit) {
     ForgeSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(
+            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 AffixBadge(line.marks)
-                Text(line.title(), color = GoldBright, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.weight(1f))
+                Text(
+                    line.title(),
+                    color = GoldBright,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f),
+                )
             }
             Text(line.text, color = ModBlue, style = MaterialTheme.typography.bodyMedium)
             Column(Modifier.fillMaxWidth().background(Abyss, RoundedCornerShape(6.dp)).padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -42,8 +50,11 @@ import kotlin.math.roundToInt
                 if (line.roll.tier > 0 && line.tierCount > 0) TierScale(line.roll.tier, line.tierOpen)
                 line.range?.let { Fact(ui("modinfo.range"), it) }
                 line.quality?.takeIf { line.range != null }?.let { share ->
-                    if (line.fixed) Fact(ui("modinfo.position"), ui("modinfo.fixed"))
-                    else Position((share * 100).roundToInt().coerceIn(0, 100))
+                    if (line.fixed) {
+                        Fact(ui("modinfo.position"), ui("modinfo.fixed"))
+                    } else {
+                        Position((share * 100).roundToInt().coerceIn(0, 100))
+                    }
                 }
             }
             line.stats.forEach { stat ->
@@ -70,7 +81,11 @@ import kotlin.math.roundToInt
  */
 @Composable private fun TierScale(tier: Int, open: List<Boolean>) {
     val count = open.size
-    val key = when (tier) { 1 -> "modinfo.tier_best"; count -> "modinfo.tier_worst"; else -> "modinfo.tier_of" }
+    val key = when (tier) {
+        1 -> "modinfo.tier_best"
+        count -> "modinfo.tier_worst"
+        else -> "modinfo.tier_of"
+    }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Fact(ui("modinfo.tier"), ui(key, tier, count))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {

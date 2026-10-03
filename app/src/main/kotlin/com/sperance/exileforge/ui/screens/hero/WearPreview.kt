@@ -1,9 +1,6 @@
 package com.sperance.exileforge.ui.screens.hero
 
 import androidx.compose.foundation.layout.*
-import com.sperance.exileforge.ui.components.MutedText
-import com.sperance.exileforge.ui.components.Tip
-import com.sperance.exileforge.ui.components.Tipped
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,12 +17,14 @@ import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.unmetFor
 import com.sperance.exileforge.presentation.state.wearDelta
 import com.sperance.exileforge.rules.roll.ItemInstance
+import com.sperance.exileforge.ui.components.MutedText
+import com.sperance.exileforge.ui.components.Tip
+import com.sperance.exileforge.ui.components.Tipped
 import com.sperance.exileforge.ui.icons.StatIcon
 import com.sperance.exileforge.ui.theme.*
 
 /** Whether an item goes on the body at all: a map, a tool and a jewel are placed elsewhere. */
-fun wearable(s: ForgeState, item: ItemInstance): Boolean =
-    s.index?.template(item.template)?.slot?.let { !it.isJewelLike && !it.isTool } == true
+fun wearable(s: ForgeState, item: ItemInstance): Boolean = s.index?.template(item.template)?.slot?.let { !it.isJewelLike && !it.isTool } == true
 
 /**
  * «Если надеть» (2.46.0): what the sheet would become with this item on, added up here by the
@@ -47,12 +46,24 @@ fun wearable(s: ForgeState, item: ItemInstance): Boolean =
         delta.forEach { line ->
             val tone = if (line.change > 0) Vital else LifeRed
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Tipped({ Tip(statTitle(line.stat), tint = tone, facts = listOf(ui("tip.before") to statValue(line.stat, line.before),
-                    ui("tip.after") to statValue(line.stat, line.after))) }) { StatIcon(line.stat, Muted, Modifier.size(14.dp), muted = true) }
+                Tipped({
+                    Tip(
+                        statTitle(line.stat),
+                        tint = tone,
+                        facts = listOf(
+                            ui("tip.before") to statValue(line.stat, line.before),
+                            ui("tip.after") to statValue(line.stat, line.after),
+                        ),
+                    )
+                }) { StatIcon(line.stat, Muted, Modifier.size(14.dp), muted = true) }
                 Text(statTitle(line.stat), color = Parchment, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
                 MutedText(ui("wear.from_to", statValue(line.stat, line.before), statValue(line.stat, line.after)), style = MaterialTheme.typography.labelSmall)
-                Text((if (line.change > 0) "+" else "−") + statValue(line.stat, kotlin.math.abs(line.change)), color = tone,
-                    fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+                Text(
+                    (if (line.change > 0) "+" else "−") + statValue(line.stat, kotlin.math.abs(line.change)),
+                    color = tone,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.labelMedium,
+                )
             }
         }
     }

@@ -1,6 +1,7 @@
 package com.sperance.exileforge.ui.screens.hero
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -12,7 +13,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.clickable
 import com.sperance.exileforge.core.campaign.FightFigures
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.jobTitle
@@ -51,7 +51,8 @@ fun ForgeState.chronicleDone(): Pair<Int, Int>? {
  * A page of the «Развитие» tab since 3.69.0, opened from its tile; it was a card and a sheet on the Hero tab.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
-@Composable fun ChronicleScreen(s: ForgeState, vm: ForgeViewModel) {
+@Composable
+fun ChronicleScreen(s: ForgeState, vm: ForgeViewModel) {
     val hero = s.hero ?: return
     val achievements = s.index?.achievements ?: return
     val values = hero.chronicle
@@ -59,15 +60,21 @@ fun ForgeState.chronicleDone(): Pair<Int, Int>? {
     // The statistics (3.51.0) are read apart, when the page opens: hundreds of figures ride with no hero snapshot.
     val stats by produceState<Map<String, Long>?>(null, hero.id) { value = vm.heroStats(hero.id) }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(hero.info.title.takeIf { it.isNotBlank() }?.let(::titleName) ?: ui("chronicle.no_title"),
-            color = if (hero.info.title.isNotBlank()) GoldBright else Muted, style = MaterialTheme.typography.titleMedium)
+        Text(
+            hero.info.title.takeIf { it.isNotBlank() }?.let(::titleName) ?: ui("chronicle.no_title"),
+            color = if (hero.info.title.isNotBlank()) GoldBright else Muted,
+            style = MaterialTheme.typography.titleMedium,
+        )
         s.chronicleDone()?.let { (done, all) -> MutedText(ui("chronicle.done", done, all)) }
         Engraved(ui("chronicle.titles"))
-        if (titles.isEmpty()) MutedText(ui("chronicle.no_titles"))
-        else FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            FilterChip(selected = hero.info.title.isBlank(), enabled = !s.busy, onClick = { vm.setTitle("") }, label = { Text(ui("chronicle.no_title")) })
-            titles.forEach { code ->
-                FilterChip(selected = hero.info.title == code, enabled = !s.busy, onClick = { vm.setTitle(code) }, label = { Text(titleName(code)) })
+        if (titles.isEmpty()) {
+            MutedText(ui("chronicle.no_titles"))
+        } else {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                FilterChip(selected = hero.info.title.isBlank(), enabled = !s.busy, onClick = { vm.setTitle("") }, label = { Text(ui("chronicle.no_title")) })
+                titles.forEach { code ->
+                    FilterChip(selected = hero.info.title == code, enabled = !s.busy, onClick = { vm.setTitle(code) }, label = { Text(titleName(code)) })
+                }
             }
         }
         // Only what the hero has begun: an untouched achievement or counter is noise, not a record.
@@ -104,8 +111,10 @@ fun ForgeState.chronicleDone(): Pair<Int, Int>? {
         combat.forEach { key ->
             val value = stats.getValue(key)
             Figure(ui("stats.$key"), if (key in SECONDS) clock(value) else number(value.toDouble()))
-            if (key == Stat.DEALT) FightFigures.types.forEach { type ->
-                stats[Stat.dealt(type)]?.takeIf { it > 0 }?.let { Figure(ui("enum.damage.$type").replaceFirstChar { c -> c.uppercase() }, number(it.toDouble()), indent = true) }
+            if (key == Stat.DEALT) {
+                FightFigures.types.forEach { type ->
+                    stats[Stat.dealt(type)]?.takeIf { it > 0 }?.let { Figure(ui("enum.damage.$type").replaceFirstChar { c -> c.uppercase() }, number(it.toDouble()), indent = true) }
+                }
             }
         }
     }
@@ -116,19 +125,25 @@ fun ForgeState.chronicleDone(): Pair<Int, Int>? {
         if (entries.isEmpty()) return@forEach
         var open by remember(group) { mutableStateOf(false) }
         Row(Modifier.fillMaxWidth().clickable { open = !open }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text((if (open) "▾ " else "▸ ") + ui("stats.group.$group", entries.size), color = GoldBright, style = MaterialTheme.typography.titleSmall,
-                modifier = Modifier.weight(1f))
+            Text(
+                (if (open) "▾ " else "▸ ") + ui("stats.group.$group", entries.size),
+                color = GoldBright,
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.weight(1f),
+            )
             Text(number(entries.sumOf { it.second }.toDouble()), color = GoldBright, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
         }
-        if (open) entries.forEach { (code, value) ->
-            val name = when (group) {
-                Stat.KILL, Stat.BOSS, Stat.KILLER -> monsterTitle(code)
-                Stat.JOB -> jobTitle(code)
-                Stat.RARITY -> ui("enum.monster_rarity.$code")
-                Stat.ZONE_RUNS, Stat.ZONE_DEATHS, Stat.ZONE_CHESTS -> mapTitle(code)
-                else -> itemTitle(code)
+        if (open) {
+            entries.forEach { (code, value) ->
+                val name = when (group) {
+                    Stat.KILL, Stat.BOSS, Stat.KILLER -> monsterTitle(code)
+                    Stat.JOB -> jobTitle(code)
+                    Stat.RARITY -> ui("enum.monster_rarity.$code")
+                    Stat.ZONE_RUNS, Stat.ZONE_DEATHS, Stat.ZONE_CHESTS -> mapTitle(code)
+                    else -> itemTitle(code)
+                }
+                Figure(name, number(value.toDouble()), indent = true)
             }
-            Figure(name, number(value.toDouble()), indent = true)
         }
     }
 }
@@ -150,18 +165,29 @@ private fun clock(seconds: Long): String {
     val target = next ?: achievement.tiers.last()
     Column(Modifier.fillMaxWidth().background(PanelRaised, MaterialTheme.shapes.small).padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(loc("achievement.${achievement.code}.name"), color = if (next == null) GoldBright else Parchment, style = MaterialTheme.typography.titleSmall,
-                modifier = Modifier.weight(1f))
+            Text(
+                loc("achievement.${achievement.code}.name"),
+                color = if (next == null) GoldBright else Parchment,
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.weight(1f),
+            )
             val medals = if (achievement.tiers.size == 1) listOf(Medals.last()) else Medals.take(achievement.tiers.size)
             medals.forEachIndexed { i, medal ->
                 Box(Modifier.size(12.dp).background(if (i < reached) medal else medal.copy(alpha = .18f), CircleShape))
             }
         }
         MutedText(loc("achievement.${achievement.code}.desc", listOf(number(target.toDouble()))))
-        LinearProgressIndicator(progress = { (value.toFloat() / target).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth(),
-            color = if (next == null) GoldBright else Gold, trackColor = Abyss)
-        Text(ui("chronicle.progress", number(value.coerceAtMost(target).toDouble()), number(target.toDouble())) +
-            (achievement.title.takeIf { it.isNotBlank() }?.let { " · " + ui("chronicle.opens", titleName(it)) } ?: ""),
-            color = Muted, style = MaterialTheme.typography.labelSmall)
+        LinearProgressIndicator(
+            progress = { (value.toFloat() / target).coerceIn(0f, 1f) },
+            modifier = Modifier.fillMaxWidth(),
+            color = if (next == null) GoldBright else Gold,
+            trackColor = Abyss,
+        )
+        Text(
+            ui("chronicle.progress", number(value.coerceAtMost(target).toDouble()), number(target.toDouble())) +
+                (achievement.title.takeIf { it.isNotBlank() }?.let { " · " + ui("chronicle.opens", titleName(it)) } ?: ""),
+            color = Muted,
+            style = MaterialTheme.typography.labelSmall,
+        )
     }
 }

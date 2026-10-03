@@ -30,7 +30,10 @@ import com.sperance.exileforge.ui.theme.*
 @Composable internal fun TestingPage(s: ForgeState, vm: ForgeViewModel) {
     val index = s.index
     val enabled = !s.busy && s.play.heroId.isNotBlank()
-    if (s.play.heroId.isBlank()) { InfoCard(ui("tester.no_hero"), ui("tester.no_hero_hint")); return }
+    if (s.play.heroId.isBlank()) {
+        InfoCard(ui("tester.no_hero"), ui("tester.no_hero_hint"))
+        return
+    }
     MutedText(ui("tester.for_hero", s.heroName))
     ForgePanel {
         Engraved(ui("tester.currency"))
@@ -67,8 +70,13 @@ import com.sperance.exileforge.ui.theme.*
     ForgePanel {
         Engraved(ui("tester.crafts"))
         var profession by remember { mutableStateOf("") }
-        Spinner(ui("tester.profession"), profession, mapOf("" to ui("tester.all_professions")) +
-            index.professions.professions.associate { it.code to professionTitle(it.code) }, enabled) { profession = it }
+        Spinner(
+            ui("tester.profession"),
+            profession,
+            mapOf("" to ui("tester.all_professions")) +
+                index.professions.professions.associate { it.code to professionTitle(it.code) },
+            enabled,
+        ) { profession = it }
         NumberGrant(ui("tester.profession_level"), index.professions.rules.maxLevel.toString(), 3, enabled) {
             vm.testerGrant("profession", "code" to profession, "level" to it)
         }
@@ -91,15 +99,24 @@ import com.sperance.exileforge.ui.theme.*
 @Composable private fun NumberGrant(label: String, initial: String, limit: Int, enabled: Boolean, onGrant: (String) -> Unit) {
     var value by remember { mutableStateOf(initial) }
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedTextField(value, { value = it.filter(Char::isDigit).take(limit) }, label = { Text(label) }, singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f))
+        OutlinedTextField(
+            value,
+            { value = it.filter(Char::isDigit).take(limit) },
+            label = { Text(label) },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.weight(1f),
+        )
         ForgeButton(enabled = enabled && value.isNotBlank(), onClick = { onGrant(value) }) { Text(ui("tester.give")) }
     }
 }
 
 @Composable private fun GrantButton(label: String, enabled: Boolean, danger: Boolean = false, onClick: () -> Unit) {
-    if (danger) ForgeOutlinedButton(enabled = enabled, onClick = onClick, modifier = Modifier.fillMaxWidth()) { Text(label, color = LifeRed) }
-    else ForgeOutlinedButton(enabled = enabled, onClick = onClick, modifier = Modifier.fillMaxWidth()) { Text(label) }
+    if (danger) {
+        ForgeOutlinedButton(enabled = enabled, onClick = onClick, modifier = Modifier.fillMaxWidth()) { Text(label, color = LifeRed) }
+    } else {
+        ForgeOutlinedButton(enabled = enabled, onClick = onClick, modifier = Modifier.fillMaxWidth()) { Text(label) }
+    }
 }
 
 private val RESETS = listOf("TREE", "ATLAS", "BAG", "STASH", "CAMPAIGN")
@@ -113,9 +130,18 @@ private val RESETS = listOf("TREE", "ATLAS", "BAG", "STASH", "CAMPAIGN")
     var login by remember { mutableStateOf("") }
     ForgePanel {
         Engraved(ui("tester.new"))
-        OutlinedTextField(login, { login = it.filterNot(Char::isWhitespace).take(s.inputs.login) }, label = { Text(ui("account.login")) },
-            supportingText = { LengthCounter(login, s.inputs.login) }, singleLine = true, modifier = Modifier.fillMaxWidth())
-        ForgeButton(enabled = !s.busy && login.isNotBlank(), onClick = { vm.createTester(login); login = "" }, modifier = Modifier.fillMaxWidth()) {
+        OutlinedTextField(
+            login,
+            { login = it.filterNot(Char::isWhitespace).take(s.inputs.login) },
+            label = { Text(ui("account.login")) },
+            supportingText = { LengthCounter(login, s.inputs.login) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        ForgeButton(enabled = !s.busy && login.isNotBlank(), onClick = {
+            vm.createTester(login)
+            login = ""
+        }, modifier = Modifier.fillMaxWidth()) {
             Text(ui("tester.create"))
         }
     }
@@ -129,8 +155,12 @@ private val RESETS = listOf("TREE", "ATLAS", "BAG", "STASH", "CAMPAIGN")
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(tester.login, color = if (tester.active) GoldBright else Muted, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                MutedText(listOfNotNull(ui(if (tester.active) "tester.active" else "tester.blocked"),
-                    tester.lastLogin?.let { ui("tester.last_login", it.replace('T', ' ').take(16)) }).joinToString(" · "))
+                MutedText(
+                    listOfNotNull(
+                        ui(if (tester.active) "tester.active" else "tester.blocked"),
+                        tester.lastLogin?.let { ui("tester.last_login", it.replace('T', ' ').take(16)) },
+                    ).joinToString(" · "),
+                )
             }
             Switch(checked = tester.active, enabled = !s.busy, onCheckedChange = { vm.setTesterActive(tester.id, it) })
         }
@@ -141,7 +171,9 @@ private val RESETS = listOf("TREE", "ATLAS", "BAG", "STASH", "CAMPAIGN")
 /** The login and the password of a new or reset account, each copied by a tap: the password is never shown again. */
 @Composable private fun CredentialsDialog(account: TesterAccount, onDismiss: () -> Unit) {
     val clipboard = LocalClipboardManager.current
-    AlertDialog(onDismissRequest = onDismiss, containerColor = Panel,
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Panel,
         title = { Text(ui("tester.credentials"), color = GoldBright) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -158,5 +190,6 @@ private val RESETS = listOf("TREE", "ATLAS", "BAG", "STASH", "CAMPAIGN")
                 MutedText(ui("tester.credentials_note"))
             }
         },
-        confirmButton = { ForgeButton(onClick = onDismiss) { Text(ui("tester.ok")) } })
+        confirmButton = { ForgeButton(onClick = onDismiss) { Text(ui("tester.ok")) } },
+    )
 }

@@ -48,8 +48,10 @@ class TraceExplainer(private val s: ForgeState) {
 
     private fun hero(stat: String, origin: TraceOrigin, rows: MutableList<TraceRow>) {
         val explainer = origin.hero.explainer
-        if (explainer != null) sheet.explain(explainer.explain(stat).shifted(origin.hero.shifts()[stat].orEmpty()), emptyList(), explainer::holders).cards
-            .forEach { card -> card.rows.forEach { rows += TraceRow(it.title, it.value, it.note) } }
+        if (explainer != null) {
+            sheet.explain(explainer.explain(stat).shifted(origin.hero.shifts()[stat].orEmpty()), emptyList(), explainer::holders).cards
+                .forEach { card -> card.rows.forEach { rows += TraceRow(it.title, it.value, it.note) } }
+        }
         val percent = index?.stats?.isPercent(stat) == true
         origin.hero.passiveLines.filter { it.stat == stat }.forEach { rows += TraceRow(ui("trace.src.passive"), sheet.fmt(stat, it.value, it.op, percent)) }
     }
@@ -63,9 +65,13 @@ class TraceExplainer(private val s: ForgeState) {
         MonsterBreakdown.explain(roller, rarity, index.monster(monster.code), monster, entry.level, stat).forEach { share ->
             val title = when (share.kind) {
                 MonsterShareKind.BASE -> ui("trace.src.monster_base", monsterTitle(share.ref), entry.level)
+
                 MonsterShareKind.RARITY -> ui("trace.src.rarity", ui("trace.rarity.${share.ref}"))
+
                 MonsterShareKind.MODIFIER -> index.modifier(share.ref)?.let { def ->
-                    monster.modifiers.firstOrNull { it.code == share.ref }?.let { mod -> modifierLine(index, def, mod.effects.map { it.value }) } } ?: share.ref
+                    monster.modifiers.firstOrNull { it.code == share.ref }?.let { mod -> modifierLine(index, def, mod.effects.map { it.value }) }
+                } ?: share.ref
+
                 MonsterShareKind.MAP -> ui("stat.src.map")
             }
             rows += TraceRow(title, sheet.fmt(stat, share.value, share.op, percent))

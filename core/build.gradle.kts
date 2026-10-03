@@ -1,4 +1,8 @@
-plugins { kotlin("jvm"); `java-library`; id("org.jetbrains.kotlin.plugin.serialization") }
+plugins {
+    kotlin("jvm")
+    `java-library`
+    id("org.jetbrains.kotlin.plugin.serialization")
+}
 
 dependencies {
     // Общие правила сервера и клиента (сабмодуль backend/rules): контент, роллы, лист, заход по семени.

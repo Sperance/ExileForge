@@ -1,7 +1,7 @@
 package com.sperance.exileforge.core.model.auction
 
-import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.display.mapItemTitle
+import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
@@ -55,11 +55,14 @@ import kotlinx.serialization.Serializable
     /** The deal as the history shows it: the copy that was sold in place of the one the lot no longer holds. */
     val deal: AuctionLot get() = if (sold != null && equipment == null) copy(equipment = sold) else this
     val onSale: Boolean get() = status == LotStatus.ACTIVE && (expiresAt == 0L || System.currentTimeMillis() < expiresAt)
+
     /** Milliseconds the lot still stands, or null when it names no end. */
     fun timeLeft(now: Long = System.currentTimeMillis()): Long? = expiresAt.takeIf { it > 0 }?.let { (it - now).coerceAtLeast(0) }
+
     /** Whether its author may extend it now (3.79.0, server 1.74.0): on sale, with no more than [window] ms left. */
     fun extendable(window: Long, now: Long = System.currentTimeMillis()): Boolean = onSale && timeLeft(now)?.let { it in 1..window } == true
     fun belongsTo(heroId: String): Boolean = sellerId == heroId
+
     /** An equipment lot names a template, a stack lot names an item of the bag. */
     val title: String get() = equipment?.mapZone?.takeIf { it.isNotEmpty() }?.let(::mapItemTitle)
         ?: locOr(if (kind == LotKind.EQUIPMENT) LocaleKey.equipmentName(itemCode) else LocaleKey.itemName(itemCode), itemCode)
@@ -84,10 +87,16 @@ import kotlinx.serialization.Serializable
     val isEmpty: Boolean get() = query().keys.none { it != "lang" }
 
     fun query(): Map<String, String> = buildMap {
-        put("kind", kind); put("title", title.trim()); put("slot", slot); put("rarity", rarity)
-        put("minItemLevel", minItemLevel.trim()); put("maxItemLevel", maxItemLevel.trim())
-        put("priceOrb", priceOrb); put("maxPrice", maxPrice.trim())
-        put("sellerId", sellerId); put("excludeSellerId", excludeSellerId)
+        put("kind", kind)
+        put("title", title.trim())
+        put("slot", slot)
+        put("rarity", rarity)
+        put("minItemLevel", minItemLevel.trim())
+        put("maxItemLevel", maxItemLevel.trim())
+        put("priceOrb", priceOrb)
+        put("maxPrice", maxPrice.trim())
+        put("sellerId", sellerId)
+        put("excludeSellerId", excludeSellerId)
         if (title.isNotBlank()) put("lang", lang)
     }.filterValues { it.isNotBlank() }
 
@@ -95,15 +104,25 @@ import kotlinx.serialization.Serializable
     fun active(): List<FilterField> = FilterField.entries.filter { value(it).isNotBlank() }
 
     fun value(field: FilterField): String = when (field) {
-        FilterField.KIND -> kind; FilterField.SLOT -> slot; FilterField.RARITY -> rarity
-        FilterField.MIN_LEVEL -> minItemLevel.trim(); FilterField.MAX_LEVEL -> maxItemLevel.trim()
-        FilterField.ORB -> priceOrb; FilterField.MAX_PRICE -> maxPrice.trim(); FilterField.SELLER -> sellerId
+        FilterField.KIND -> kind
+        FilterField.SLOT -> slot
+        FilterField.RARITY -> rarity
+        FilterField.MIN_LEVEL -> minItemLevel.trim()
+        FilterField.MAX_LEVEL -> maxItemLevel.trim()
+        FilterField.ORB -> priceOrb
+        FilterField.MAX_PRICE -> maxPrice.trim()
+        FilterField.SELLER -> sellerId
     }
 
     fun without(field: FilterField): AuctionFilter = when (field) {
-        FilterField.KIND -> copy(kind = ""); FilterField.SLOT -> copy(slot = ""); FilterField.RARITY -> copy(rarity = "")
-        FilterField.MIN_LEVEL -> copy(minItemLevel = ""); FilterField.MAX_LEVEL -> copy(maxItemLevel = "")
-        FilterField.ORB -> copy(priceOrb = ""); FilterField.MAX_PRICE -> copy(maxPrice = ""); FilterField.SELLER -> copy(sellerId = "")
+        FilterField.KIND -> copy(kind = "")
+        FilterField.SLOT -> copy(slot = "")
+        FilterField.RARITY -> copy(rarity = "")
+        FilterField.MIN_LEVEL -> copy(minItemLevel = "")
+        FilterField.MAX_LEVEL -> copy(maxItemLevel = "")
+        FilterField.ORB -> copy(priceOrb = "")
+        FilterField.MAX_PRICE -> copy(maxPrice = "")
+        FilterField.SELLER -> copy(sellerId = "")
     }
 
     /** Every filter off, the name kept. */
@@ -118,8 +137,11 @@ enum class FilterField { KIND, SLOT, RARITY, MIN_LEVEL, MAX_LEVEL, ORB, MAX_PRIC
  * client's own: the cursor each page read began at (the first — ""). «Показать ещё» adds each next page under the lots shown.
  */
 @Serializable data class AuctionPage(
-    val items: List<AuctionLot> = emptyList(), val next: String? = null, val totalItems: Long = 0,
-    val page: Int = 0, val cursors: List<String> = listOf(""),
+    val items: List<AuctionLot> = emptyList(),
+    val next: String? = null,
+    val totalItems: Long = 0,
+    val page: Int = 0,
+    val cursors: List<String> = listOf(""),
 ) {
     /** The cursors to the page after the last one read, or null when there is none. */
     val nextTrail: List<String>? get() = next?.let { cursors + it }
@@ -131,8 +153,7 @@ enum class FilterField { KIND, SLOT, RARITY, MIN_LEVEL, MAX_LEVEL, ORB, MAX_PRIC
     }
 
     /** The showcase without a lot that left it — bought — the count down by one. */
-    fun without(lotId: String): AuctionPage =
-        if (items.none { it.id == lotId }) this else copy(items = items.filterNot { it.id == lotId }, totalItems = (totalItems - 1).coerceAtLeast(0))
+    fun without(lotId: String): AuctionPage = if (items.none { it.id == lotId }) this else copy(items = items.filterNot { it.id == lotId }, totalItems = (totalItems - 1).coerceAtLeast(0))
 }
 
 fun lotKindTitle(kind: LotKind, lang: Lang = uiLanguage): String = ui(lang, "enum.lot.${kind.name}")

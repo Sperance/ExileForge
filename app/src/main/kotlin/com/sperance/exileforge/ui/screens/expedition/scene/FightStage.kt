@@ -47,9 +47,12 @@ private fun DrawScope.stalactites(colour: Color, shift: Float) {
         moveTo(-40f, 0f)
         for (i in 0..14) {
             val x = -40f + (w + 80f) * i / 14 + shift
-            lineTo(x - 7.dp.toPx(), 0f); lineTo(x, size.height * (.03f + lane(i + 50) * .14f)); lineTo(x + 7.dp.toPx(), 0f)
+            lineTo(x - 7.dp.toPx(), 0f)
+            lineTo(x, size.height * (.03f + lane(i + 50) * .14f))
+            lineTo(x + 7.dp.toPx(), 0f)
         }
-        lineTo(w + 40f, 0f); close()
+        lineTo(w + 40f, 0f)
+        close()
     }
     drawPath(path, colour)
 }
@@ -60,7 +63,8 @@ private fun DrawScope.ridge(seed: Int, top: Float, amplitude: Float, colour: Col
     val path = Path().apply {
         moveTo(-60f, size.height)
         for (i in 0..16) lineTo(-60f + (w + 120f) * i / 16 + shift, top - lane(seed + i) * amplitude)
-        lineTo(w + 60f, size.height); close()
+        lineTo(w + 60f, size.height)
+        close()
     }
     drawPath(path, colour)
 }
@@ -74,8 +78,10 @@ private fun DrawScope.torch(x: Float, y: Float, time: Float, seed: Int) {
     drawRect(Palettes.bronze, Offset(x - 5.dp.toPx(), y - 2.dp.toPx()), Size(10.dp.toPx(), 4.dp.toPx()))
     val s = 6.dp.toPx()
     val flame = Path().apply {
-        moveTo(x - s * .5f, y); quadraticTo(x - s * .6f, y - s * 1.1f * flicker, x + sin(time * 9 + seed) * s * .2f, y - s * 2.1f * flicker)
-        quadraticTo(x + s * .6f, y - s * 1.1f * flicker, x + s * .5f, y); close()
+        moveTo(x - s * .5f, y)
+        quadraticTo(x - s * .6f, y - s * 1.1f * flicker, x + sin(time * 9 + seed) * s * .2f, y - s * 2.1f * flicker)
+        quadraticTo(x + s * .6f, y - s * 1.1f * flicker, x + s * .5f, y)
+        close()
     }
     drawPath(flame, Brush.verticalGradient(listOf(Color(0x00F0E2C0), Color(0xFFF0E2C0), Palettes.torch), y - s * 2.1f, y))
 }
@@ -87,10 +93,16 @@ private fun DrawScope.ground(floor: Float, palette: Palette, sway: Float) {
     drawRect(Brush.verticalGradient(listOf(tone(palette.floor, .9f), palette.void), floor, h), Offset(0f, floor), Size(w, h - floor))
     val seam = Palettes.bronze.copy(alpha = .16f)
     for (i in -7..7) drawLine(seam, Offset(w / 2 + i * w * .06f + sway * .8f, floor), Offset(w / 2 + i * w * .2f + sway, h), 1f)
-    for (k in 1..4) { val y = floor + (h - floor) * (k / 5f).let { it * it }; drawLine(seam, Offset(0f, y), Offset(w, y), 1f) }
+    for (k in 1..4) {
+        val y = floor + (h - floor) * (k / 5f).let { it * it }
+        drawLine(seam, Offset(0f, y), Offset(w, y), 1f)
+    }
     drawLine(Brush.horizontalGradient(listOf(Color.Transparent, Palettes.bronze.copy(alpha = .6f), Color.Transparent)), Offset(0f, floor), Offset(w, floor), 1.4f)
     withTransform({ scale(3f, 1f, Offset(w / 2, floor + (h - floor) * .25f)) }) {
-        drawCircle(Brush.radialGradient(listOf(palette.accent.copy(alpha = .05f), Color.Transparent), Offset(w / 2 + sway, floor + (h - floor) * .25f), w * .2f),
-            w * .2f, Offset(w / 2 + sway, floor + (h - floor) * .25f))
+        drawCircle(
+            Brush.radialGradient(listOf(palette.accent.copy(alpha = .05f), Color.Transparent), Offset(w / 2 + sway, floor + (h - floor) * .25f), w * .2f),
+            w * .2f,
+            Offset(w / 2 + sway, floor + (h - floor) * .25f),
+        )
     }
 }

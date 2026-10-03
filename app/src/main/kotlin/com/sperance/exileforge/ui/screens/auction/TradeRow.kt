@@ -32,20 +32,40 @@ import com.sperance.exileforge.ui.theme.*
  * name in its colour on one line, the facts under it — or, in red, why the hero could not wear it — then every line the
  * item carries, and the price opposite. [mark] closes the facts in rune blue: «your lot», a lot's time left.
  */
-@Composable internal fun TradeRow(title: String, color: Color, facts: List<String>, lines: List<ItemLine>, enabled: Boolean,
-    unmet: List<String> = emptyList(), mark: String? = null, onClick: () -> Unit,
-    icon: @Composable BoxScope.() -> Unit, price: @Composable ColumnScope.() -> Unit) {
+@Composable internal fun TradeRow(
+    title: String,
+    color: Color,
+    facts: List<String>,
+    lines: List<ItemLine>,
+    enabled: Boolean,
+    unmet: List<String> = emptyList(),
+    mark: String? = null,
+    onClick: () -> Unit,
+    icon: @Composable BoxScope.() -> Unit,
+    price: @Composable ColumnScope.() -> Unit,
+) {
     val card = RoundedCornerShape(12.dp)
     val frame = RoundedCornerShape(10.dp)
-    Row(Modifier.fillMaxWidth().background(Panel, card).border(1.dp, Bronze, card).clickable(enabled = enabled, onClick = onClick).padding(10.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    Row(
+        Modifier.fillMaxWidth().background(Panel, card).border(1.dp, Bronze, card).clickable(enabled = enabled, onClick = onClick).padding(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
         Box(Modifier.size(44.dp).background(Abyss, frame).border(1.dp, color.copy(alpha = .6f), frame), contentAlignment = Alignment.Center, content = icon)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(title, color = color, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold,
-                maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                title,
+                color = color,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
             val line = buildAnnotatedString {
-                if (unmet.isNotEmpty()) withStyle(SpanStyle(color = LifeRed)) { append(unmet.joinToString(", ") { requirementReason(it) }) }
-                else append(facts.joinToString(" · "))
+                if (unmet.isNotEmpty()) {
+                    withStyle(SpanStyle(color = LifeRed)) { append(unmet.joinToString(", ") { requirementReason(it) }) }
+                } else {
+                    append(facts.joinToString(" · "))
+                }
                 mark?.let {
                     if (length > 0) append(" · ")
                     withStyle(SpanStyle(color = Rune)) { append(it) }
@@ -59,9 +79,18 @@ import com.sperance.exileforge.ui.theme.*
 }
 
 /** A copy of an item as a [TradeRow]: its slot, item level and weapon kind for facts, its own drawing for the icon. */
-@Composable internal fun ItemTradeRow(view: ItemView, enabled: Boolean, unmet: List<String>, extra: List<String> = emptyList(),
-    mark: String? = null, onClick: () -> Unit, price: @Composable ColumnScope.() -> Unit) {
+@Composable internal fun ItemTradeRow(
+    view: ItemView,
+    enabled: Boolean,
+    unmet: List<String>,
+    extra: List<String> = emptyList(),
+    mark: String? = null,
+    onClick: () -> Unit,
+    price: @Composable ColumnScope.() -> Unit,
+) {
     val color = rarityColor(view.rarity.name)
-    TradeRow(view.title, color, listOfNotNull(slotTitle(view.slot), ui("row.level", view.level), view.weaponType?.let { weaponTitle(it) }) + extra,
-        view.lines, enabled, unmet, mark, onClick, icon = { ItemIcon(view, color, Modifier.size(28.dp)) }, price = price)
+    TradeRow(
+        view.title, color, listOfNotNull(slotTitle(view.slot), ui("row.level", view.level), view.weaponType?.let { weaponTitle(it) }) + extra,
+        view.lines, enabled, unmet, mark, onClick, icon = { ItemIcon(view, color, Modifier.size(28.dp)) }, price = price,
+    )
 }

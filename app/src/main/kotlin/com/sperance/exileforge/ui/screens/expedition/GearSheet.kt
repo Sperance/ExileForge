@@ -1,6 +1,5 @@
 package com.sperance.exileforge.ui.screens.expedition
 
-import com.sperance.exileforge.ui.components.ForgeSheet
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -20,6 +19,7 @@ import com.sperance.exileforge.presentation.state.unmetFor
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.ui.components.*
+import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.hero.EquipmentLedger
 import com.sperance.exileforge.ui.screens.hero.SlotPicker
@@ -44,7 +44,8 @@ fun newLoot(s: ForgeState): List<ItemView> = s.play.runLoot.mapNotNull { entry -
  * sheet before its next fight — life and mana keep their share.
  */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun GearSheet(s: ForgeState, vm: ForgeViewModel, onDismiss: () -> Unit) {
+@Composable
+fun GearSheet(s: ForgeState, vm: ForgeViewModel, onDismiss: () -> Unit) {
     var place by remember { mutableStateOf<BodyPlace?>(null) }
     var worn by remember { mutableStateOf<String?>(null) }
     var lootTab by remember { mutableStateOf(false) }
@@ -56,7 +57,12 @@ fun newLoot(s: ForgeState): List<ItemView> = s.play.runLoot.mapNotNull { entry -
                 if (!lootTab) {
                     item { Engraved(ui("expedition.gear")) }
                     item { MutedText(ui("expedition.gear_hint")) }
-                    item { EquipmentLedger(s) { p, w -> place = p; worn = w } }
+                    item {
+                        EquipmentLedger(s) { p, w ->
+                            place = p
+                            worn = w
+                        }
+                    }
                 } else {
                     item { Engraved(ui("expedition.loot_tab")) }
                     if (loot.isEmpty()) item { MutedText(ui("expedition.loot_empty")) }
@@ -78,19 +84,35 @@ fun newLoot(s: ForgeState): List<ItemView> = s.play.runLoot.mapNotNull { entry -
             val price = s.sellPrice(item.item)
             // A locked piece (3.30.0) is not sold: the ribbon stays, dimmed, with the reason under it.
             val locked = s.hero?.item(item.id)?.locked == true
-            HoldButton(ui("expedition.loot_sell"), Gold, Modifier.fillMaxWidth(), enabled = !s.busy && !locked, icon = ForgeGlyphs.Coins,
-                figure = price?.let { "+$it" }) { looked = null; vm.sellForGold(item.id) }
+            HoldButton(
+                ui("expedition.loot_sell"),
+                Gold,
+                Modifier.fillMaxWidth(),
+                enabled = !s.busy && !locked,
+                icon = ForgeGlyphs.Coins,
+                figure = price?.let { "+$it" },
+            ) {
+                looked = null
+                vm.sellForGold(item.id)
+            }
             if (locked) MutedText(ui("item.locked_hint"))
         }
     }
     val chosen = place
     val instance = worn?.let { id -> s.hero?.item(id) }
     if (chosen != null && instance != null) {
-        ForgeSheet(onDismissRequest = { place = null; worn = null }) {
+        ForgeSheet(onDismissRequest = {
+            place = null
+            worn = null
+        }) {
             Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 s.view(instance)?.let { ItemCard(it, enabled = false, detailed = true, price = s.sellPrice(instance)) }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    ForgeOutlinedButton(enabled = !s.busy, onClick = { vm.unequip(instance.id); place = null; worn = null }, modifier = Modifier.weight(1f)) {
+                    ForgeOutlinedButton(enabled = !s.busy, onClick = {
+                        vm.unequip(instance.id)
+                        place = null
+                        worn = null
+                    }, modifier = Modifier.weight(1f)) {
                         Text(ui("hero.unequip"))
                     }
                     ForgeButton(enabled = !s.busy, onClick = { worn = null }, modifier = Modifier.weight(1f)) { Text(ui("expedition.gear_replace")) }

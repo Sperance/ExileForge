@@ -10,7 +10,9 @@ import com.sperance.exileforge.rules.content.MonsterRarity
  * It holds indices into the pack only: who fights and how is the [Battle]'s.
  */
 class FoeWindow(order: List<Int>, val size: Int = SIZE) {
-    init { require(size > 0) { "a field holds at least one foe" } }
+    init {
+        require(size > 0) { "a field holds at least one foe" }
+    }
 
     private val places: MutableList<Int> = order.take(size).toMutableList()
     private val line: ArrayDeque<Int> = ArrayDeque(order.drop(size))

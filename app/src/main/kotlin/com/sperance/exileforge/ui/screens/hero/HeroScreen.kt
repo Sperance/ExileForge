@@ -24,8 +24,8 @@ import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.Reads
 import com.sperance.exileforge.presentation.state.SlotGroup
 import com.sperance.exileforge.presentation.state.StashFilter
-import com.sperance.exileforge.presentation.state.stashShelf
 import com.sperance.exileforge.presentation.state.TAB_SKILLS
+import com.sperance.exileforge.presentation.state.stashShelf
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -34,8 +34,10 @@ import com.sperance.exileforge.ui.theme.*
 
 /** The Hero tab's sections, in the order a player reaches for them; the menagerie (3.5.0) moved to «Развитие». */
 private enum class HeroSection(val title: String, val icon: ImageVector) {
-    CHARACTER("hero.section_character", ForgeGlyphs.Exile), EQUIPMENT("hero.section_equipment", ForgeGlyphs.Helm),
-    STASH("hero.section_stash", ForgeGlyphs.Stash), BAG("hero.section_bag", ForgeGlyphs.Orb)
+    CHARACTER("hero.section_character", ForgeGlyphs.Exile),
+    EQUIPMENT("hero.section_equipment", ForgeGlyphs.Helm),
+    STASH("hero.section_stash", ForgeGlyphs.Stash),
+    BAG("hero.section_bag", ForgeGlyphs.Orb),
 }
 
 /**
@@ -51,7 +53,8 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
  * every copy is read through its view over the content on the device, and the bag is keyed by item code.
  */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun HeroScreen(s: ForgeState, vm: ForgeViewModel) {
+@Composable
+fun HeroScreen(s: ForgeState, vm: ForgeViewModel) {
     val heroId = s.play.heroId
     var section by rememberSaveable(heroId) { mutableStateOf(HeroSection.CHARACTER) }
     var detailId by remember(heroId) { mutableStateOf<String?>(null) }
@@ -90,57 +93,88 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
                 // Who the character is heads every section; until the hero arrives the tab says what it is.
-                if (header != null) HeroHeader(header)
-                else ScreenHeader(ui("hero.title"), ui("hero.inventory_count", stash.size), ForgeGlyphs.Stash, guide = Guide.HERO)
+                if (header != null) {
+                    HeroHeader(header)
+                } else {
+                    ScreenHeader(ui("hero.title"), ui("hero.inventory_count", stash.size), ForgeGlyphs.Stash, guide = Guide.HERO)
+                }
             }
             item { SectionBar(section) { section = it } }
-            if (hero == null) item { InfoCard(ui("common.loading"), ui("hero.stash_empty_hint")) }
-            else when (section) {
-                HeroSection.CHARACTER -> {
-                    item { HeroSummary(s) }
-                }
-                HeroSection.EQUIPMENT -> {
-                    item { equipment?.let { EquipmentLedger(it) { place, worn -> if (worn != null) detailId = worn else pickPlace = place } } }
-                }
-                HeroSection.BAG -> {
-                    val sections = bagSections(s)
-                    if (sections.isEmpty()) item { InfoCard(ui("hero.bag_empty"), ui("bag.empty_hint")) }
-                    // A table since 2.75.0: icon and count per cell, everything else behind the tap.
-                    else item(key = "bag") { BagGrid(s, sections) { stackCode = it } }
-                }
-                HeroSection.STASH -> {
-                    if (hero.overflow.isNotEmpty()) item(key = "overflow") { StashOverflow(s, vm) }
-                    // Two rows since 3.69.0: the count beside the switch squeezed the filter glyph off its shape.
-                    // The switch takes what is left after the glyph, never the other way round.
-                    item(key = "shelf") {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                FilterChip(selected = !tools, onClick = { tools = false; filter = filter.copy(groups = emptySet()) },
-                                    label = { Text(ui("hero.stash_gear"), maxLines = 1) },
-                                    leadingIcon = { Icon(ForgeGlyphs.Helm, null, modifier = Modifier.size(16.dp)) })
-                                FilterChip(selected = tools, onClick = { tools = true; filter = filter.copy(groups = emptySet()) },
-                                    label = { Text(ui("hero.stash_tools"), maxLines = 1) },
-                                    leadingIcon = { Icon(ForgeGlyphs.Anvil, null, modifier = Modifier.size(16.dp)) })
+            if (hero == null) {
+                item { InfoCard(ui("common.loading"), ui("hero.stash_empty_hint")) }
+            } else {
+                when (section) {
+                    HeroSection.CHARACTER -> {
+                        item { HeroSummary(s) }
+                    }
+
+                    HeroSection.EQUIPMENT -> {
+                        item { equipment?.let { EquipmentLedger(it) { place, worn -> if (worn != null) detailId = worn else pickPlace = place } } }
+                    }
+
+                    HeroSection.BAG -> {
+                        val sections = bagSections(s)
+                        if (sections.isEmpty()) {
+                            item { InfoCard(ui("hero.bag_empty"), ui("bag.empty_hint")) }
+                        } // A table since 2.75.0: icon and count per cell, everything else behind the tap.
+                        else {
+                            item(key = "bag") { BagGrid(s, sections) { stackCode = it } }
+                        }
+                    }
+
+                    HeroSection.STASH -> {
+                        if (hero.overflow.isNotEmpty()) item(key = "overflow") { StashOverflow(s, vm) }
+                        // Two rows since 3.69.0: the count beside the switch squeezed the filter glyph off its shape.
+                        // The switch takes what is left after the glyph, never the other way round.
+                        item(key = "shelf") {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    FilterChip(
+                                        selected = !tools,
+                                        onClick = {
+                                            tools = false
+                                            filter = filter.copy(groups = emptySet())
+                                        },
+                                        label = { Text(ui("hero.stash_gear"), maxLines = 1) },
+                                        leadingIcon = { Icon(ForgeGlyphs.Helm, null, modifier = Modifier.size(16.dp)) },
+                                    )
+                                    FilterChip(
+                                        selected = tools,
+                                        onClick = {
+                                            tools = true
+                                            filter = filter.copy(groups = emptySet())
+                                        },
+                                        label = { Text(ui("hero.stash_tools"), maxLines = 1) },
+                                        leadingIcon = { Icon(ForgeGlyphs.Anvil, null, modifier = Modifier.size(16.dp)) },
+                                    )
+                                }
+                                // Search, order and filters live behind one glyph since 3.67.0: the shelf keeps the screen.
+                                StashFilterButton(tweaks) { filtering = true }
                             }
-                            // Search, order and filters live behind one glyph since 3.67.0: the shelf keeps the screen.
-                            StashFilterButton(tweaks) { filtering = true }
                         }
-                    }
-                    // The places held of how many across the whole width, and a «+» for the next pack.
-                    item(key = "fill") {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            StashFill(s, vm, Modifier.weight(1f))
-                            if (!tools) HideWornChip(s.stashHideWorn, vm::stashHideWorn)
+                        // The places held of how many across the whole width, and a «+» for the next pack.
+                        item(key = "fill") {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                StashFill(s, vm, Modifier.weight(1f))
+                                if (!tools) HideWornChip(s.stashHideWorn, vm::stashHideWorn)
+                            }
                         }
-                    }
-                    if (visible.isEmpty()) item { InfoCard(ui("tree.nothing_found"), if (filter.active || hideWorn) ui("stash.filter_empty") else ui("hero.stash_empty_hint")) }
-                    // A line, not a card: a stash is read down, and the card is one tap behind each line.
-                    items(lines, key = { it.piece.id }) { line ->
-                        val piece = line.piece
-                        // No rarity in words, a map's included (2.73.0): the row's frame already wears it.
-                        ItemRow(piece, selected = piece.id == selected, worn = line.worn, unwearable = line.unwearable, price = line.price,
-                            waiting = line.waiting) {
-                            detailId = piece.id; vm.selectEquipment(piece.id)
+                        if (visible.isEmpty()) item { InfoCard(ui("tree.nothing_found"), if (filter.active || hideWorn) ui("stash.filter_empty") else ui("hero.stash_empty_hint")) }
+                        // A line, not a card: a stash is read down, and the card is one tap behind each line.
+                        items(lines, key = { it.piece.id }) { line ->
+                            val piece = line.piece
+                            // No rarity in words, a map's included (2.73.0): the row's frame already wears it.
+                            ItemRow(
+                                piece,
+                                selected = piece.id == selected,
+                                worn = line.worn,
+                                unwearable = line.unwearable,
+                                price = line.price,
+                                waiting = line.waiting,
+                            ) {
+                                detailId = piece.id
+                                vm.selectEquipment(piece.id)
+                            }
                         }
                     }
                 }
@@ -148,22 +182,51 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
         }
     }
     detailId?.let { id -> ItemSheet(s, vm, id) { detailId = null } }
-    if (filtering) StashFilterSheet(filter, s.stashSort, s.lang, shelf.size, groupCounts, rarities, onFilter = { filter = it },
-        onSort = vm::stashSort, hideWorn = s.stashHideWorn.takeUnless { tools }, onHideWorn = vm::stashHideWorn, onDismiss = { filtering = false })
+    if (filtering) {
+        StashFilterSheet(
+            filter, s.stashSort, s.lang, shelf.size, groupCounts, rarities, onFilter = { filter = it },
+            onSort = vm::stashSort, hideWorn = s.stashHideWorn.takeUnless { tools }, onHideWorn = vm::stashHideWorn, onDismiss = { filtering = false },
+        )
+    }
     // The sheet is about a stack the bag still holds: listed or read away, it closes with it.
-    stackCode?.let { code -> hero?.bag?.get(code)?.takeIf { it > 0 }?.let { amount ->
-        BagSheet(s, BagStack(code, amount), onDismiss = { stackCode = null },
-            onForge = { orb -> stackCode = null; vm.selectOrb(orb); vm.openForge(null, ForgeSection.ORBS) },
-            onAuction = { stack -> stackCode = null; listStack = stack },
-            // A book is read where it lies, and its page opens in the grimoire (2.78.0); an essence goes to the forge.
-            onRead = { skill -> stackCode = null; vm.learnSkill(skill); vm.tab(TAB_SKILLS) },
-            onEssence = { essence -> stackCode = null; vm.selectEssence(essence); vm.openForge(null, ForgeSection.ESSENCES) },
-            onOpenChest = { chest -> stackCode = null; vm.openChest(chest) })
-    } }
+    stackCode?.let { code ->
+        hero?.bag?.get(code)?.takeIf { it > 0 }?.let { amount ->
+            BagSheet(
+                s,
+                BagStack(code, amount),
+                onDismiss = { stackCode = null },
+                onForge = { orb ->
+                    stackCode = null
+                    vm.selectOrb(orb)
+                    vm.openForge(null, ForgeSection.ORBS)
+                },
+                onAuction = { stack ->
+                    stackCode = null
+                    listStack = stack
+                },
+                // A book is read where it lies, and its page opens in the grimoire (2.78.0); an essence goes to the forge.
+                onRead = { skill ->
+                    stackCode = null
+                    vm.learnSkill(skill)
+                    vm.tab(TAB_SKILLS)
+                },
+                onEssence = { essence ->
+                    stackCode = null
+                    vm.selectEssence(essence)
+                    vm.openForge(null, ForgeSection.ESSENCES)
+                },
+                onOpenChest = { chest ->
+                    stackCode = null
+                    vm.openChest(chest)
+                },
+            )
+        }
+    }
     s.play.chestOpening?.let { opening -> ChestOpenedSheet(s, opening, vm::dismissChest) }
     listStack?.let { code ->
         ListingSheet(s, itemTitle(code), owned = s.bagAmount(code) ?: 0L, onDismiss = { listStack = null }, hint = { vm.priceHint(code, null, 0) }) { orb, price, amount ->
-            listStack = null; vm.sellItem(code, amount, orb, price)
+            listStack = null
+            vm.sellItem(code, amount, orb, price)
         }
     }
     // The place goes with the pick: a ring chosen for the second line lands in the second ring, a flask in its own bay.
@@ -181,11 +244,19 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
         Row(Modifier.fillMaxWidth().background(Abyss)) {
             HeroSection.entries.forEach { entry ->
                 val on = entry == selected
-                Column(Modifier.weight(1f).selectable(selected = on, role = Role.Tab, onClick = { onSelect(entry) }).padding(top = 8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Column(
+                    Modifier.weight(1f).selectable(selected = on, role = Role.Tab, onClick = { onSelect(entry) }).padding(top = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
                     Icon(entry.icon, null, tint = if (on) Gold else Muted, modifier = Modifier.size(20.dp))
-                    Text(ui(entry.title), color = if (on) GoldBright else Muted, style = MaterialTheme.typography.labelSmall,
-                        maxLines = 1, softWrap = false)
+                    Text(
+                        ui(entry.title),
+                        color = if (on) GoldBright else Muted,
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1,
+                        softWrap = false,
+                    )
                     Box(Modifier.fillMaxWidth().height(2.dp).background(if (on) Gold else Color.Transparent))
                 }
             }

@@ -76,8 +76,13 @@ object MapGenerator {
             if (spawns.none { abs(it.x - cell.x) + abs(it.y - cell.y) < 5 }) spawns += cell
         }
         val decor = IntArray(size * size) { index ->
-            if (grid[index] != Tile.FLOOR || fromStart[index] < 2 || index == exitIndex) 0
-            else if (random.nextDouble() < 0.07) 1 + random.nextInt(3) else 0
+            if (grid[index] != Tile.FLOOR || fromStart[index] < 2 || index == exitIndex) {
+                0
+            } else if (random.nextDouble() < 0.07) {
+                1 + random.nextInt(3)
+            } else {
+                0
+            }
         }
         return ExpeditionMap(size, size, grid, decor, start, exit, spawns)
     }
@@ -92,7 +97,10 @@ object MapGenerator {
             repeat(size * size) {
                 if (open >= target) return@repeat
                 val index = y * size + x
-                if (grid[index] == Tile.WALL) { grid[index] = Tile.FLOOR; open++ }
+                if (grid[index] == Tile.WALL) {
+                    grid[index] = Tile.FLOOR
+                    open++
+                }
                 when (random.nextInt(4)) {
                     0 -> x = (x + 1).coerceIn(2, size - 3)
                     1 -> x = (x - 1).coerceIn(2, size - 3)
@@ -104,9 +112,11 @@ object MapGenerator {
         // One pass of the cellular rule: a wall mostly surrounded by ground crumbles, and the
         // single-cell stubs a walker leaves behind stop reading as noise.
         val copy = grid.copyOf()
-        for (y in 1 until size - 1) for (x in 1 until size - 1) {
-            val around = (-1..1).sumOf { dy -> (-1..1).count { dx -> copy[(y + dy) * size + x + dx] == Tile.FLOOR } }
-            if (copy[y * size + x] == Tile.WALL && around >= 6) grid[y * size + x] = Tile.FLOOR
+        for (y in 1 until size - 1) {
+            for (x in 1 until size - 1) {
+                val around = (-1..1).sumOf { dy -> (-1..1).count { dx -> copy[(y + dy) * size + x + dx] == Tile.FLOOR } }
+                if (copy[y * size + x] == Tile.WALL && around >= 6) grid[y * size + x] = Tile.FLOOR
+            }
         }
     }
 
@@ -144,8 +154,7 @@ object MapGenerator {
         dig(corner, to)
     }
 
-    private fun nearest(grid: Array<Tile>, size: Int, cell: Cell): Cell =
-        grid.indices.filter { grid[it] == Tile.FLOOR }.minBy { abs(it % size - cell.x) + abs(it / size - cell.y) }.let { Cell(it % size, it / size) }
+    private fun nearest(grid: Array<Tile>, size: Int, cell: Cell): Cell = grid.indices.filter { grid[it] == Tile.FLOOR }.minBy { abs(it % size - cell.x) + abs(it / size - cell.y) }.let { Cell(it % size, it / size) }
 
     /** Steps from [from] to every cell, or -1 where it cannot be reached. */
     fun distances(grid: Array<Tile>, size: Int, from: Cell): IntArray {

@@ -24,14 +24,27 @@ class DraftStore(private val context: Context, private val scope: CoroutineScope
 
     suspend fun read(): FeedbackDraft {
         val prefs = context.drafts.data.first()
-        return FeedbackDraft(FeedbackKind.entries.firstOrNull { it.name == prefs[kindKey] } ?: FeedbackKind.BUG,
-            FeedbackKind.entries.associateWith { prefs[textKey(it)].orEmpty() })
+        return FeedbackDraft(
+            FeedbackKind.entries.firstOrNull { it.name == prefs[kindKey] } ?: FeedbackKind.BUG,
+            FeedbackKind.entries.associateWith { prefs[textKey(it)].orEmpty() },
+        )
     }
 
     /** Kept on the app's scope, not the sheet's: the last keystroke before the sheet closes is written too. */
     fun save(kind: FeedbackKind, text: String) {
-        scope.launch { context.drafts.edit { it[kindKey] = kind.name; if (text.isEmpty()) it.remove(textKey(kind)) else { it[textKey(kind)] = text } } }
+        scope.launch {
+            context.drafts.edit {
+                it[kindKey] = kind.name
+                if (text.isEmpty()) {
+                    it.remove(textKey(kind))
+                } else {
+                    it[textKey(kind)] = text
+                }
+            }
+        }
     }
 
-    suspend fun clear(kind: FeedbackKind) { context.drafts.edit { it.remove(textKey(kind)) } }
+    suspend fun clear(kind: FeedbackKind) {
+        context.drafts.edit { it.remove(textKey(kind)) }
+    }
 }

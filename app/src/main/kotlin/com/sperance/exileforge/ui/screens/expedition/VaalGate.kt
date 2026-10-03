@@ -53,27 +53,52 @@ private object Altar {
 @Composable fun VaalGate(s: ForgeState, hud: RunHud, guardian: String?, onEnter: () -> Unit, onRefuse: () -> Unit, onBack: () -> Unit) {
     val index = s.index
     Box(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(Altar.glow, Altar.night, Altar.deep), radius = 1600f)), contentAlignment = Alignment.Center) {
-        Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 18.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(
+            Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 18.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
             Text(ui("vaal.eyebrow"), color = Altar.vein, style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
-            Text(mapTitle(hud.mapCode), color = Altar.title, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth(),
-                style = MaterialTheme.typography.headlineSmall.copy(shadow = Shadow(Altar.vein.copy(alpha = .55f), blurRadius = 18f)))
+            Text(
+                mapTitle(hud.mapCode),
+                color = Altar.title,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+                style = MaterialTheme.typography.headlineSmall.copy(shadow = Shadow(Altar.vein.copy(alpha = .55f), blurRadius = 18f)),
+            )
             val zone = hud.gate
-            zone?.let { Text(guardian?.let { g -> ui("vaal.level_guardian", it.level, monsterTitle(g)) } ?: ui("vaal.level", it.level),
-                color = Parchment.copy(alpha = .75f), style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) }
-            if (zone != null) Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                zone.rolls.forEach { ModLine(rollText(index, it)) }
-            } else Column(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-                CircularProgressIndicator(color = Altar.vein)
-                Text(ui("vaal.waiting"), color = Altar.muted, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 12.dp))
+            zone?.let {
+                Text(
+                    guardian?.let { g -> ui("vaal.level_guardian", it.level, monsterTitle(g)) } ?: ui("vaal.level", it.level),
+                    color = Parchment.copy(alpha = .75f),
+                    style = MaterialTheme.typography.labelMedium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            if (zone != null) {
+                Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    zone.rolls.forEach { ModLine(rollText(index, it)) }
+                }
+            } else {
+                Column(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator(color = Altar.vein)
+                    Text(ui("vaal.waiting"), color = Altar.muted, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 12.dp))
+                }
             }
             zone?.let { Reward(it) }
             Text(ui("vaal.warning"), color = Altar.muted, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ForgeOutlinedButton(onClick = if (zone != null) onRefuse else onBack, modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Altar.muted)) { Text(ui(if (zone != null) "vaal.refuse" else "common.close")) }
-                ForgeButton(onClick = onEnter, enabled = zone != null, modifier = Modifier.weight(1.4f),
-                    colors = ButtonDefaults.buttonColors(containerColor = Altar.deed, contentColor = Color.White)) { Text(ui("vaal.enter")) }
+                ForgeOutlinedButton(
+                    onClick = if (zone != null) onRefuse else onBack,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Altar.muted),
+                ) { Text(ui(if (zone != null) "vaal.refuse" else "common.close")) }
+                ForgeButton(
+                    onClick = onEnter,
+                    enabled = zone != null,
+                    modifier = Modifier.weight(1.4f),
+                    colors = ButtonDefaults.buttonColors(containerColor = Altar.deed, contentColor = Color.White),
+                ) { Text(ui("vaal.enter")) }
             }
             ForgeTextButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterHorizontally)) { Text(ui("vaal.later"), color = Altar.muted) }
         }
@@ -81,14 +106,16 @@ private object Altar {
 }
 
 /** A rolled line of the zone as its sentence; a code the content does not know reads as the code. */
-private fun rollText(index: ContentIndex?, roll: Roll): String =
-    index?.let { i -> i.modifier(roll.code)?.let { modifierLine(i, it, roll.values(it)) } } ?: displayName(roll.code)
+private fun rollText(index: ContentIndex?, roll: Roll): String = index?.let { i -> i.modifier(roll.code)?.let { modifierLine(i, it, roll.values(it)) } } ?: displayName(roll.code)
 
 /** One modifier: a scarlet rhombus and its sentence on a dark red strip, a vein down its edge. */
 @Composable private fun ModLine(text: String) {
     val shape = RoundedCornerShape(topEnd = 4.dp, bottomEnd = 4.dp)
-    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).background(Altar.line.copy(alpha = .22f), shape),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+    Row(
+        Modifier.fillMaxWidth().height(IntrinsicSize.Min).background(Altar.line.copy(alpha = .22f), shape),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(9.dp),
+    ) {
         Box(Modifier.width(2.dp).fillMaxHeight().background(Altar.line))
         Box(Modifier.size(7.dp).rotate(45f).background(Altar.vein))
         Text(text, color = ModBlue, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f).padding(vertical = 7.dp, horizontal = 2.dp))

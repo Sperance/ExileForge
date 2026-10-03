@@ -61,12 +61,16 @@ import com.sperance.exileforge.ui.theme.Muted
 
     pendingDelete?.let { doomed ->
         ConfirmSheet(
-            title = ui("redemption.delete_q"), subtitle = doomed.code, danger = true,
+            title = ui("redemption.delete_q"),
+            subtitle = doomed.code,
+            danger = true,
             icon = { Icon(ForgeGlyphs.Scroll, null, tint = LifeRed, modifier = Modifier.size(40.dp)) },
             note = ui("redemption.delete_text"),
             confirm = ui("common.delete"),
-            onDismiss = { pendingDelete = null }) {
-            vm.deleteRedemption(doomed.id); pendingDelete = null
+            onDismiss = { pendingDelete = null },
+        ) {
+            vm.deleteRedemption(doomed.id)
+            pendingDelete = null
         }
     }
 }
@@ -115,8 +119,10 @@ private fun rewardOptions(s: ForgeState, kind: RedemptionKind): Map<String, Stri
     return when (kind) {
         RedemptionKind.ITEM -> index.items.values.sortedWith(compareBy({ it.category }, { itemTitle(it.code) }))
             .associate { it.code to itemTitle(it.code) }
+
         RedemptionKind.EQUIPMENT -> index.templates.values.sortedWith(compareBy({ it.slot }, { it.level }))
             .associate { it.code to "${equipmentTitle(it.code)} · ${slotTitle(it.slot, s.lang)} · ${it.level}" }
+
         RedemptionKind.EXPERIENCE, RedemptionKind.GOLD -> emptyMap()
     }
 }
@@ -140,29 +146,55 @@ private fun rewardOptions(s: ForgeState, kind: RedemptionKind): Map<String, Stri
 
     ForgePanel {
         Engraved(ui("redemption.new"))
-        OutlinedTextField(code, { code = it }, label = { Text(ui("account.code")) },
-            singleLine = true, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(description, { description = it }, label = { Text(ui("form.description")) },
-            singleLine = true, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(
+            code,
+            { code = it },
+            label = { Text(ui("account.code")) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            description,
+            { description = it },
+            label = { Text(ui("form.description")) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
 
         OrnateDivider(Gold)
         Engraved(ui("redemption.reward"))
-        Spinner(ui("redemption.kind"), kind.name,
-            RedemptionKind.entries.associate { it.name to ui("enum.reward.${it.name}") }, !s.busy, glyph = Glyph.CURRENCY) {
-            kind = RedemptionKind.valueOf(it); item = ""
+        Spinner(
+            ui("redemption.kind"),
+            kind.name,
+            RedemptionKind.entries.associate { it.name to ui("enum.reward.${it.name}") },
+            !s.busy,
+            glyph = Glyph.CURRENCY,
+        ) {
+            kind = RedemptionKind.valueOf(it)
+            item = ""
         }
         // The goods are picked from the content the hero reads (3.0.0): a stack of the bag or a template, by code.
         if (needsCode) Spinner(ui("enum.reward.${kind.name}"), item, rewardOptions(s, kind), !s.busy, glyph = Glyph.ITEM) { item = it }
-        OutlinedTextField(amount, { amount = it }, label = { Text(ui("auction.amount")) }, singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(
+            amount,
+            { amount = it },
+            label = { Text(ui("auction.amount")) },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth(),
+        )
 
-        ForgeOutlinedButton(enabled = !s.busy && (!needsCode || item.isNotBlank()) && amount.toDoubleOrNull() != null,
+        ForgeOutlinedButton(
+            enabled = !s.busy && (!needsCode || item.isNotBlank()) && amount.toDoubleOrNull() != null,
             modifier = Modifier.fillMaxWidth(),
             onClick = {
                 rewards = rewards + RedemptionReward(kind, item, amount.toDoubleOrNull() ?: 0.0)
-                item = ""; amount = "1"
-            }) {
-            Icon(Icons.Outlined.Add, null); Text(ui("redemption.add_reward"))
+                item = ""
+                amount = "1"
+            },
+        ) {
+            Icon(Icons.Outlined.Add, null)
+            Text(ui("redemption.add_reward"))
         }
 
         if (rewards.isEmpty()) MutedText(ui("redemption.no_rewards"))
@@ -175,12 +207,22 @@ private fun rewardOptions(s: ForgeState, kind: RedemptionKind): Map<String, Stri
             }
         }
 
-        ForgeButton(enabled = !s.busy && code.isNotBlank() && rewards.isNotEmpty(), modifier = Modifier.fillMaxWidth(),
+        ForgeButton(
+            enabled = !s.busy && code.isNotBlank() && rewards.isNotEmpty(),
+            modifier = Modifier.fillMaxWidth(),
             onClick = {
-                vm.createRedemption(RedemptionCode(code = code.trim(),
-                    description = description.takeIf { it.isNotBlank() }, treasure = rewards))
-                code = ""; description = ""; rewards = emptyList()
-            }) {
+                vm.createRedemption(
+                    RedemptionCode(
+                        code = code.trim(),
+                        description = description.takeIf { it.isNotBlank() },
+                        treasure = rewards,
+                    ),
+                )
+                code = ""
+                description = ""
+                rewards = emptyList()
+            },
+        ) {
             Text(ui("redemption.create"))
         }
     }

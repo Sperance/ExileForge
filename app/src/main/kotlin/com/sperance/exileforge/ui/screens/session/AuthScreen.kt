@@ -1,9 +1,6 @@
 package com.sperance.exileforge.ui.screens.session
 
-import com.sperance.exileforge.ui.components.inputs
-import com.sperance.exileforge.ui.components.LengthCounter
 import androidx.compose.foundation.background
-import com.sperance.exileforge.ui.components.MutedText
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -20,19 +17,22 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.data.settings.DEFAULT_SERVER
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.ui.components.BugAction
+import com.sperance.exileforge.ui.components.ForgeButton
+import com.sperance.exileforge.ui.components.ForgeOutlinedButton
 import com.sperance.exileforge.ui.components.ForgePanel
 import com.sperance.exileforge.ui.components.InfoCard
+import com.sperance.exileforge.ui.components.LengthCounter
+import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.OrnateDivider
+import com.sperance.exileforge.ui.components.VersionLabel
+import com.sperance.exileforge.ui.components.inputs
 import com.sperance.exileforge.ui.components.voidBackdrop
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
-import com.sperance.exileforge.ui.components.ForgeButton
-import com.sperance.exileforge.ui.components.BugAction
-import com.sperance.exileforge.ui.components.VersionLabel
-import com.sperance.exileforge.ui.components.ForgeOutlinedButton
-import com.sperance.exileforge.data.settings.DEFAULT_SERVER
 
 /**
  * The way in, and the first screen the app ever shows.
@@ -45,9 +45,12 @@ import com.sperance.exileforge.data.settings.DEFAULT_SERVER
  */
 @Composable fun AuthScreen(s: ForgeState, vm: ForgeViewModel) {
     Scaffold(containerColor = Ink) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).imePadding().voidBackdrop()
-            .verticalScroll(rememberScrollState()).padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(
+            Modifier.fillMaxSize().padding(padding).imePadding().voidBackdrop()
+                .verticalScroll(rememberScrollState()).padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
                 BugAction()
                 LanguageCorner(s.lang, s.world.languages, vm::language)
@@ -68,7 +71,8 @@ import com.sperance.exileforge.data.settings.DEFAULT_SERVER
             }
 
             ForgeButton(enabled = !s.busy, onClick = vm::playOnThisDevice, modifier = Modifier.fillMaxWidth().height(56.dp)) {
-                Icon(ForgeGlyphs.Portal, null, Modifier.size(20.dp)); Spacer(Modifier.width(10.dp))
+                Icon(ForgeGlyphs.Portal, null, Modifier.size(20.dp))
+                Spacer(Modifier.width(10.dp))
                 Text(ui("auth.play"), style = MaterialTheme.typography.titleMedium)
             }
             MutedText(ui("auth.device_note"))
@@ -91,20 +95,42 @@ import com.sperance.exileforge.data.settings.DEFAULT_SERVER
     var login by rememberSaveable { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     ForgePanel {
-        Row(Modifier.fillMaxWidth().clickable(enabled = !s.busy) { open = !open },
-            verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            Modifier.fillMaxWidth().clickable(enabled = !s.busy) { open = !open },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Icon(ForgeGlyphs.Exile, null, tint = Gold, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(10.dp))
             Text(ui("auth.by_login"), modifier = Modifier.weight(1f))
             Text(if (open) "−" else "+", color = Gold, style = MaterialTheme.typography.titleMedium)
         }
         if (open) {
-            OutlinedTextField(login, { login = it.take(s.inputs.login) }, enabled = !s.busy, label = { Text(ui("account.login")) },
-                supportingText = { LengthCounter(login, s.inputs.login) }, singleLine = true, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(password, { password = it.take(s.inputs.password) }, enabled = !s.busy, label = { Text(ui("account.password")) },
-                singleLine = true, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
-            ForgeButton(enabled = !s.busy && login.isNotBlank() && password.isNotEmpty(),
-                onClick = { vm.login(login, password); password = "" }, modifier = Modifier.fillMaxWidth()) {
+            OutlinedTextField(
+                login,
+                { login = it.take(s.inputs.login) },
+                enabled = !s.busy,
+                label = { Text(ui("account.login")) },
+                supportingText = { LengthCounter(login, s.inputs.login) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                password,
+                { password = it.take(s.inputs.password) },
+                enabled = !s.busy,
+                label = { Text(ui("account.password")) },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            ForgeButton(
+                enabled = !s.busy && login.isNotBlank() && password.isNotEmpty(),
+                onClick = {
+                    vm.login(login, password)
+                    password = ""
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
                 Text(ui("account.sign_in"))
             }
             // Where the password goes and how long the session lasts are worth saying out loud.
@@ -128,10 +154,14 @@ import com.sperance.exileforge.data.settings.DEFAULT_SERVER
     Row(Modifier.border(1.dp, Gold.copy(alpha = .35f), RoundedCornerShape(6.dp)), verticalAlignment = Alignment.CenterVertically) {
         offered.forEach { option ->
             val active = option == lang
-            Text(option.short, color = if (active) Ink else Muted, style = MaterialTheme.typography.labelSmall,
+            Text(
+                option.short,
+                color = if (active) Ink else Muted,
+                style = MaterialTheme.typography.labelSmall,
                 modifier = Modifier.background(if (active) Gold else Color.Transparent)
                     .clickable(enabled = !active) { onLanguage(option) }
-                    .padding(horizontal = 9.dp, vertical = 6.dp))
+                    .padding(horizontal = 9.dp, vertical = 6.dp),
+            )
         }
     }
 }

@@ -60,14 +60,23 @@ import kotlinx.coroutines.delay
 /** The server's clock, ticking each second on the local one, set by the moment this [incubator] was read off the server. */
 @Composable private fun rememberServerNow(incubator: IncubatorState): Long {
     val offset = incubator.clockOffset
-    val local by produceState(System.currentTimeMillis()) { while (true) { value = System.currentTimeMillis(); delay(1_000) } }
+    val local by produceState(System.currentTimeMillis()) {
+        while (true) {
+            value = System.currentTimeMillis()
+            delay(1_000)
+        }
+    }
     return local + offset
 }
 
 @Composable private fun SlotFrame(accent: Color, modifier: Modifier = Modifier, content: @Composable RowScope.() -> Unit) {
     val shape = RoundedCornerShape(6.dp)
-    Row(modifier.fillMaxWidth().background(Abyss, shape).border(1.dp, accent.copy(alpha = .55f), shape).padding(10.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp), content = content)
+    Row(
+        modifier.fillMaxWidth().background(Abyss, shape).border(1.dp, accent.copy(alpha = .55f), shape).padding(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        content = content,
+    )
 }
 
 @Composable private fun LockedSlot() = SlotFrame(Bronze, Modifier.alpha(.55f)) {
@@ -79,26 +88,43 @@ import kotlinx.coroutines.delay
 }
 
 @OptIn(ExperimentalLayoutApi::class)
-@Composable private fun EmptySlot(s: ForgeState, eggs: List<String>, enabled: Boolean, onLay: (String) -> Unit) {
+@Composable
+private fun EmptySlot(s: ForgeState, eggs: List<String>, enabled: Boolean, onLay: (String) -> Unit) {
     val hero = s.hero ?: return
     var picking by remember { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         SlotFrame(Gold) {
             Box(Modifier.size(40.dp).border(1.dp, Gold.copy(alpha = .3f), RoundedCornerShape(6.dp)))
             Text(ui("incubator.empty"), color = Muted, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
-            if (eggs.isEmpty()) MutedText(ui("pets.no_eggs"), style = MaterialTheme.typography.labelSmall)
-            else ForgeOutlinedButton(onClick = { if (eggs.size == 1) onLay(eggs.single()) else picking = !picking }, enabled = enabled) {
-                Text(ui("incubator.lay"))
+            if (eggs.isEmpty()) {
+                MutedText(ui("pets.no_eggs"), style = MaterialTheme.typography.labelSmall)
+            } else {
+                ForgeOutlinedButton(onClick = { if (eggs.size == 1) onLay(eggs.single()) else picking = !picking }, enabled = enabled) {
+                    Text(ui("incubator.lay"))
+                }
             }
         }
-        if (picking && eggs.size > 1) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            eggs.forEach { egg ->
-                val shape = RoundedCornerShape(6.dp)
-                Row(Modifier.background(Panel, shape).border(1.dp, Bronze, shape).clickable(enabled = enabled) { picking = false; onLay(egg) }.padding(6.dp),
-                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    StackIcon(s, egg, 28)
-                    Text(ui("incubator.egg", itemTitle(egg), hero.count(egg)), color = Parchment, style = MaterialTheme.typography.labelMedium,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+        if (picking && eggs.size > 1) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                eggs.forEach { egg ->
+                    val shape = RoundedCornerShape(6.dp)
+                    Row(
+                        Modifier.background(Panel, shape).border(1.dp, Bronze, shape).clickable(enabled = enabled) {
+                            picking = false
+                            onLay(egg)
+                        }.padding(6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        StackIcon(s, egg, 28)
+                        Text(
+                            ui("incubator.egg", itemTitle(egg), hero.count(egg)),
+                            color = Parchment,
+                            style = MaterialTheme.typography.labelMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
             }
         }
@@ -113,12 +139,16 @@ import kotlinx.coroutines.delay
         StackIcon(s, slot.egg, 40)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(itemTitle(slot.egg), color = tint, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            MutedText(listOfNotNull(slot.rarity?.let { ui("enum.rarity.${it.name}") }, ui("pets.level", slot.level)).joinToString(" · "),
-                style = MaterialTheme.typography.labelSmall)
+            MutedText(
+                listOfNotNull(slot.rarity?.let { ui("enum.rarity.${it.name}") }, ui("pets.level", slot.level)).joinToString(" · "),
+                style = MaterialTheme.typography.labelSmall,
+            )
             if (!ready) {
                 LinearProgressIndicator(progress = { slot.progress(now) }, modifier = Modifier.fillMaxWidth().height(4.dp), color = tint, trackColor = Panel)
                 Text(ui("incubator.left", duration(left)), color = Parchment, style = MaterialTheme.typography.labelSmall)
-            } else if (!slot.open) MutedText(ui("incubator.closed"), style = MaterialTheme.typography.labelSmall)
+            } else if (!slot.open) {
+                MutedText(ui("incubator.closed"), style = MaterialTheme.typography.labelSmall)
+            }
         }
         if (ready) ForgeButton(onClick = onCollect, enabled = collectable) { Text(ui("incubator.collect")) }
     }

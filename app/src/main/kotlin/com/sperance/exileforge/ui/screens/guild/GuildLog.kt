@@ -27,9 +27,11 @@ import com.sperance.exileforge.ui.theme.*
                 Text(GuildText.log(entry), color = Parchment, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
             }
         }
-        if (log.isNotEmpty() && !s.guild.logEnd) item {
-            ForgeOutlinedButton(enabled = Reads.GUILD_LOG !in s.loading, onClick = { vm.loadGuildLog(more = true) }, modifier = Modifier.fillMaxWidth()) {
-                Text(ui("guild.log_more"))
+        if (log.isNotEmpty() && !s.guild.logEnd) {
+            item {
+                ForgeOutlinedButton(enabled = Reads.GUILD_LOG !in s.loading, onClick = { vm.loadGuildLog(more = true) }, modifier = Modifier.fillMaxWidth()) {
+                    Text(ui("guild.log_more"))
+                }
             }
         }
     }

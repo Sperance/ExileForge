@@ -22,8 +22,10 @@ class AuctionClient internal constructor(private val http: Transport) {
     }
 
     suspend fun slots(heroId: String): AuctionSlots = http.get("$AUCTION/slots", heroQuery(heroId))
+
     /** Buys one more lot place for gold. Never retried. */
     suspend fun myLots(heroId: String): List<AuctionLot> = http.get("$AUCTION/my", heroQuery(heroId))
+
     /** The hero's deals of the last days (3.73.0): what they sold and what they bought, newest first. */
     suspend fun history(heroId: String): List<AuctionLot> = http.get("$AUCTION/history", heroQuery(heroId))
 
@@ -48,12 +50,12 @@ class AuctionClient internal constructor(private val http: Transport) {
     /** Payment, delivery and closing the lot are one server transaction. Never retried. */
     suspend fun buy(heroId: String, lotId: String): AuctionLot = lot("buy", heroId, lotId)
     suspend fun cancel(heroId: String, lotId: String): AuctionLot = lot("cancel", heroId, lotId)
+
     /** Another week on the showcase (server 1.74.0): only the author, only on the lot's last day. Never retried. */
     suspend fun extend(heroId: String, lotId: String): AuctionLot = lot("extend", heroId, lotId)
 
     /** What the like of a lot sold for lately (server 1.74.0): null with fewer deals than the rules ask. */
-    suspend fun priceHint(heroId: String, itemCode: String, rarity: com.sperance.exileforge.rules.content.Rarity?, itemLevel: Int): com.sperance.exileforge.core.model.auction.PriceHint? =
-        http.get("$AUCTION/price", heroQuery(heroId, "itemCode" to itemCode, "rarity" to rarity?.name, "itemLevel" to itemLevel.toString()))
+    suspend fun priceHint(heroId: String, itemCode: String, rarity: com.sperance.exileforge.rules.content.Rarity?, itemLevel: Int): com.sperance.exileforge.core.model.auction.PriceHint? = http.get("$AUCTION/price", heroQuery(heroId, "itemCode" to itemCode, "rarity" to rarity?.name, "itemLevel" to itemLevel.toString()))
 
     private suspend fun lot(operation: String, heroId: String, lotId: String): AuctionLot {
         requireId(lotId)

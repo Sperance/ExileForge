@@ -24,19 +24,34 @@ private val prepared = ConcurrentHashMap<Portrait, List<Prepared>>()
 
 private fun brush(paint: PortraitPaint?): Brush? = when (paint) {
     null -> null
+
     is PortraitPaint.Solid -> SolidColor(Color(paint.argb))
-    is PortraitPaint.Linear -> Brush.linearGradient(*paint.stops.map { it.offset to Color(it.argb) }.toTypedArray(),
-        start = Offset(paint.x1, paint.y1), end = Offset(paint.x2, paint.y2))
-    is PortraitPaint.Radial -> Brush.radialGradient(*paint.stops.map { it.offset to Color(it.argb) }.toTypedArray(),
-        center = Offset(paint.cx, paint.cy), radius = paint.r.coerceAtLeast(.01f))
+
+    is PortraitPaint.Linear -> Brush.linearGradient(
+        *paint.stops.map { it.offset to Color(it.argb) }.toTypedArray(),
+        start = Offset(paint.x1, paint.y1),
+        end = Offset(paint.x2, paint.y2),
+    )
+
+    is PortraitPaint.Radial -> Brush.radialGradient(
+        *paint.stops.map { it.offset to Color(it.argb) }.toTypedArray(),
+        center = Offset(paint.cx, paint.cy),
+        radius = paint.r.coerceAtLeast(.01f),
+    )
 }
 
 /** A shape whose outline will not parse costs itself alone; the rest of the portrait still draws. */
 private fun prepare(portrait: Portrait): List<Prepared> = prepared.getOrPut(portrait) {
     portrait.shapes.mapNotNull { shape ->
         runCatching {
-            Prepared(PathParser().parsePathString(shape.d).toPath(), brush(shape.fill), shape.fillAlpha, brush(shape.stroke), shape.strokeAlpha,
-                Stroke(shape.strokeWidth, cap = if (shape.round) StrokeCap.Round else StrokeCap.Butt, join = if (shape.round) StrokeJoin.Round else StrokeJoin.Miter))
+            Prepared(
+                PathParser().parsePathString(shape.d).toPath(),
+                brush(shape.fill),
+                shape.fillAlpha,
+                brush(shape.stroke),
+                shape.strokeAlpha,
+                Stroke(shape.strokeWidth, cap = if (shape.round) StrokeCap.Round else StrokeCap.Butt, join = if (shape.round) StrokeJoin.Round else StrokeJoin.Miter),
+            )
         }.getOrNull()
     }
 }
@@ -49,7 +64,10 @@ fun DrawScope.drawPortrait(portrait: Portrait, lift: Float = 0f) {
     val scale = maxOf(size.width / portrait.width, size.height / portrait.height)
     val dx = (size.width - portrait.width * scale) / 2
     val dy = (size.height - portrait.height * scale) / 2 + lift
-    withTransform({ translate(dx, dy); scale(scale, scale, Offset.Zero) }) {
+    withTransform({
+        translate(dx, dy)
+        scale(scale, scale, Offset.Zero)
+    }) {
         prepare(portrait).forEach { shape ->
             shape.fill?.let { drawPath(shape.path, it, alpha = shape.fillAlpha) }
             shape.stroke?.let { drawPath(shape.path, it, alpha = shape.strokeAlpha, style = shape.style) }

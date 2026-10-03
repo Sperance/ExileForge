@@ -1,8 +1,6 @@
 package com.sperance.exileforge.ui.screens.hero
 
-import com.sperance.exileforge.ui.components.ForgeSheet
 import androidx.compose.foundation.background
-import com.sperance.exileforge.ui.components.MutedText
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -17,15 +15,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.display.ItemSource
 import com.sperance.exileforge.core.display.ItemVisualKind
 import com.sperance.exileforge.core.display.bagVisualKind
 import com.sperance.exileforge.core.display.chanceText
 import com.sperance.exileforge.core.display.essenceGuarantees
-import com.sperance.exileforge.core.display.ItemSource
-import com.sperance.exileforge.core.display.itemSourceIndex
-import com.sperance.exileforge.core.display.title
 import com.sperance.exileforge.core.display.itemDescription
+import com.sperance.exileforge.core.display.itemSourceIndex
 import com.sperance.exileforge.core.display.itemTitle
+import com.sperance.exileforge.core.display.title
 import com.sperance.exileforge.core.display.tradeName
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.ForgeState
@@ -33,11 +31,13 @@ import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Item
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.ui.components.Engraved
+import com.sperance.exileforge.ui.components.ForgeButton
+import com.sperance.exileforge.ui.components.ForgeOutlinedButton
+import com.sperance.exileforge.ui.components.ForgeSheet
+import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.RaritySpine
 import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.theme.*
-import com.sperance.exileforge.ui.components.ForgeButton
-import com.sperance.exileforge.ui.components.ForgeOutlinedButton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -46,8 +46,13 @@ data class BagStack(val code: String, val amount: Long)
 
 /** A shelf of the bag (2.75.0): each has its heading over its own run of cells; books and essences since 2.78.0. */
 enum class BagCategory(val key: String) {
-    CHESTS("bag.section_chests"), ORBS("bag.section_orbs"), ESSENCES("bag.section_essences"), BOOKS("bag.section_books"), MATERIALS("bag.section_materials"), PETS("bag.section_pets"),
-    OTHER("bag.section_other")
+    CHESTS("bag.section_chests"),
+    ORBS("bag.section_orbs"),
+    ESSENCES("bag.section_essences"),
+    BOOKS("bag.section_books"),
+    MATERIALS("bag.section_materials"),
+    PETS("bag.section_pets"),
+    OTHER("bag.section_other"),
 }
 
 /**
@@ -104,11 +109,19 @@ private val GAP = 6.dp
 @Composable private fun BagCell(s: ForgeState, stack: BagStack, modifier: Modifier, onClick: () -> Unit) {
     val shape = RoundedCornerShape(6.dp)
     val title = itemTitle(stack.code)
-    Box(modifier.aspectRatio(1f).background(Panel, shape).border(1.dp, PanelRaised, shape)
-        .clickable(role = Role.Button, onClickLabel = title, onClick = onClick), contentAlignment = Alignment.Center) {
+    Box(
+        modifier.aspectRatio(1f).background(Panel, shape).border(1.dp, PanelRaised, shape)
+            .clickable(role = Role.Button, onClickLabel = title, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
         StackIcon(s, stack.code, 36)
-        Text(compactCount(stack.amount), color = GoldBright, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelSmall,
-            modifier = Modifier.align(Alignment.BottomEnd).padding(horizontal = 4.dp, vertical = 2.dp))
+        Text(
+            compactCount(stack.amount),
+            color = GoldBright,
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.align(Alignment.BottomEnd).padding(horizontal = 4.dp, vertical = 2.dp),
+        )
     }
 }
 
@@ -125,7 +138,10 @@ internal fun compactCount(amount: Long): String = when {
  * the bundled glyph of its category otherwise — muted for a code the content does not know.
  */
 @Composable internal fun StackIcon(s: ForgeState, code: String, size: Int) {
-    if (Orb.of(code) != null) { BagIcon(code, Modifier.size(size.dp)); return }
+    if (Orb.of(code) != null) {
+        BagIcon(code, Modifier.size(size.dp))
+        return
+    }
     val frame = RoundedCornerShape(6.dp)
     val known = s.index?.item(code)
     Box(Modifier.size(size.dp).background(Gold.copy(alpha = .08f), frame).border(1.dp, Gold.copy(alpha = .55f), frame), contentAlignment = Alignment.Center) {
@@ -140,13 +156,19 @@ internal fun compactCount(amount: Long): String = when {
  * server refuses it on an item (`CR_009`), so it has no way in. The auction takes any stack.
  * Every callback gets the stack's code, but [onRead], which gets the skill's.
  */
-@Composable fun BagSheet(s: ForgeState, stack: BagStack, onDismiss: () -> Unit, onForge: (String) -> Unit, onAuction: (String) -> Unit,
-                         /** A skill book of the class read at once (2.78.0), by the skill's code. */
-                         onRead: (String) -> Unit = {},
-                         /** An essence taken to the forge (2.78.0). */
-                         onEssence: (String) -> Unit = {},
-                         /** A loot chest opened where it lies (3.76.0). */
-                         onOpenChest: (String) -> Unit = {}) {
+@Composable fun BagSheet(
+    s: ForgeState,
+    stack: BagStack,
+    onDismiss: () -> Unit,
+    onForge: (String) -> Unit,
+    onAuction: (String) -> Unit,
+    /** A skill book of the class read at once (2.78.0), by the skill's code. */
+    onRead: (String) -> Unit = {},
+    /** An essence taken to the forge (2.78.0). */
+    onEssence: (String) -> Unit = {},
+    /** A loot chest opened where it lies (3.76.0). */
+    onOpenChest: (String) -> Unit = {},
+) {
     val code = stack.code
     val orb = Orb.of(code)
     val forgeable = orb != null && orb != Orb.ORB_OF_REGRET
@@ -158,17 +180,25 @@ internal fun compactCount(amount: Long): String = when {
     StackPanel(onDismiss) {
         StackFace(s, code, stack.amount)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (forgeable) ForgeButton(enabled = !s.busy, onClick = { onForge(code) }, modifier = Modifier.weight(1f)) {
-                Text(ui("bag.to_forge"))
+            if (forgeable) {
+                ForgeButton(enabled = !s.busy, onClick = { onForge(code) }, modifier = Modifier.weight(1f)) {
+                    Text(ui("bag.to_forge"))
+                }
             }
-            if (essence) ForgeButton(enabled = !s.busy, onClick = { onEssence(code) }, modifier = Modifier.weight(1f)) {
-                Text(ui("bag.to_forge"))
+            if (essence) {
+                ForgeButton(enabled = !s.busy, onClick = { onEssence(code) }, modifier = Modifier.weight(1f)) {
+                    Text(ui("bag.to_forge"))
+                }
             }
-            if (readable && skill != null) ForgeButton(enabled = !s.busy, onClick = { onRead(skill.code) }, modifier = Modifier.weight(1f)) {
-                Text(ui(if ((s.hero?.skills?.level(skill.code) ?: 0) > 0) "bag.read_book" else "bag.learn_book"))
+            if (readable && skill != null) {
+                ForgeButton(enabled = !s.busy, onClick = { onRead(skill.code) }, modifier = Modifier.weight(1f)) {
+                    Text(ui(if ((s.hero?.skills?.level(skill.code) ?: 0) > 0) "bag.read_book" else "bag.learn_book"))
+                }
             }
-            if (chest) ForgeButton(enabled = !s.busy, onClick = { onOpenChest(code) }, modifier = Modifier.weight(1f)) {
-                Text(ui("chest.open"))
+            if (chest) {
+                ForgeButton(enabled = !s.busy, onClick = { onOpenChest(code) }, modifier = Modifier.weight(1f)) {
+                    Text(ui("chest.open"))
+                }
             }
             ForgeOutlinedButton(enabled = !s.busy, onClick = { onAuction(code) }, modifier = Modifier.weight(1f)) {
                 Text(ui("hero.action_auction"))
@@ -187,7 +217,8 @@ internal fun compactCount(amount: Long): String = when {
 
 /** The sheet a stack opens in: the gold spine along its edge and [content] beside it. */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable private fun StackPanel(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+@Composable
+private fun StackPanel(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
     ForgeSheet(onDismissRequest = onDismiss) {
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).navigationBarsPadding()) {
             RaritySpine(Gold, 4.dp)
@@ -219,21 +250,25 @@ internal fun compactCount(amount: Long): String = when {
         value = withContext(Dispatchers.Default) { itemSourceIndex(index) }
     }
     val sources = sourceIndex[code].orEmpty().take(MAX_SOURCES)
-    if (guarantees.isNotEmpty()) Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Engraved(ui("bag.essence_guarantee"))
-        guarantees.forEach { guarantee ->
-            Column {
-                MutedText(guarantee.slots, style = MaterialTheme.typography.labelSmall)
-                Text(guarantee.line, color = ModBlue, style = MaterialTheme.typography.bodyMedium)
+    if (guarantees.isNotEmpty()) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Engraved(ui("bag.essence_guarantee"))
+            guarantees.forEach { guarantee ->
+                Column {
+                    MutedText(guarantee.slots, style = MaterialTheme.typography.labelSmall)
+                    Text(guarantee.line, color = ModBlue, style = MaterialTheme.typography.bodyMedium)
+                }
             }
         }
     }
-    if (sources.isNotEmpty()) Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Engraved(ui("bag.sources"))
-        sources.forEach { source ->
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(source.title(), color = Parchment, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-                source.chanceText()?.let { MutedText(it, style = MaterialTheme.typography.labelSmall) }
+    if (sources.isNotEmpty()) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Engraved(ui("bag.sources"))
+            sources.forEach { source ->
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(source.title(), color = Parchment, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                    source.chanceText()?.let { MutedText(it, style = MaterialTheme.typography.labelSmall) }
+                }
             }
         }
     }

@@ -1,6 +1,5 @@
 package com.sperance.exileforge.core.model.sync
 
-import com.sperance.exileforge.rules.content.RULES_VERSION
 import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.display.IconManifest
 import com.sperance.exileforge.core.display.PortraitManifest
@@ -13,6 +12,7 @@ import com.sperance.exileforge.core.model.crafts.WorkState
 import com.sperance.exileforge.core.model.hero.HeroInfo
 import com.sperance.exileforge.core.model.hero.PetState
 import com.sperance.exileforge.core.model.trade.MerchantStock
+import com.sperance.exileforge.rules.content.RULES_VERSION
 import com.sperance.exileforge.rules.content.TakenNode
 import com.sperance.exileforge.rules.roll.ItemBuckets
 import com.sperance.exileforge.rules.roll.ItemInstance

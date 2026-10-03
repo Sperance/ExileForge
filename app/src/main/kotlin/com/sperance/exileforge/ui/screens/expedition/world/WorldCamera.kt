@@ -26,10 +26,12 @@ import com.sperance.exileforge.rules.content.WorldRule
 class WorldCamera(val world: WorldRule, private val density: Float) {
     var scale by mutableFloatStateOf(1f)
         private set
+
     /** Where the world's top-left corner is on the screen, in pixels. */
     var offset by mutableStateOf(Offset.Zero)
         private set
     var viewport by mutableStateOf(IntSize.Zero)
+
     /** Whether the camera has been put anywhere yet: the first look goes to the frontier. */
     var placed by mutableStateOf(false)
         private set
@@ -110,6 +112,7 @@ class WorldCamera(val world: WorldRule, private val density: Float) {
         private const val MIN = .3f
         private const val EPSILON = .001f
         private const val GLIDE_MS = 550
+
         /** Below this nearness a token's name would be a smudge: names fade out. */
         const val NAMES_FROM = .6f
     }

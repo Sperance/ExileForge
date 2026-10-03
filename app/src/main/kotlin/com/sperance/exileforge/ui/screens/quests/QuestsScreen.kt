@@ -32,7 +32,8 @@ import com.sperance.exileforge.ui.theme.*
  * the board or given up. Pulling down reads the board again.
  */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun QuestsScreen(s: ForgeState, vm: ForgeViewModel) {
+@Composable
+fun QuestsScreen(s: ForgeState, vm: ForgeViewModel) {
     LaunchedEffect(s.play.heroId, s.account.sessionEpoch) { if (s.play.heroId.isNotBlank()) vm.loadQuests() }
     FirstVisit(Guide.QUESTS)
     val board = s.quests.board
@@ -44,18 +45,24 @@ import com.sperance.exileforge.ui.theme.*
             QuestTab.entries.forEach { tab ->
                 val ready = readyCount(tab, board)
                 // A glyph over a short word, the ready count a badge on the glyph: four long titles did not fit a row.
-                Tab(selected = tab == s.quests.tab, onClick = { vm.questTab(tab) },
+                Tab(
+                    selected = tab == s.quests.tab,
+                    onClick = { vm.questTab(tab) },
                     icon = {
                         BadgedBox(badge = { if (ready > 0) Badge(containerColor = Vital, contentColor = Ink) { Text(ready.toString(), fontSize = 9.sp) } }) {
                             Icon(tab.glyph, null, modifier = Modifier.size(20.dp))
                         }
                     },
-                    text = { Text(ui("quest.tab.${tab.name.lowercase()}"), style = MaterialTheme.typography.labelSmall, maxLines = 1, softWrap = false) })
+                    text = { Text(ui("quest.tab.${tab.name.lowercase()}"), style = MaterialTheme.typography.labelSmall, maxLines = 1, softWrap = false) },
+                )
             }
         }
         PullToRefreshBox(isRefreshing = Reads.QUESTS in s.loading, onRefresh = vm::loadQuests, modifier = Modifier.weight(1f)) {
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                if (board == null) { item { MutedText(ui("quest.loading")) }; return@LazyColumn }
+                if (board == null) {
+                    item { MutedText(ui("quest.loading")) }
+                    return@LazyColumn
+                }
                 when (s.quests.tab) {
                     QuestTab.DAILY -> daily(s, vm, board)
                     QuestTab.WEEKLY -> weekly(s, vm, board)
@@ -123,7 +130,15 @@ private fun LazyListScope.contracts(s: ForgeState, vm: ForgeViewModel, board: Qu
 private fun LazyListScope.story(s: ForgeState, vm: ForgeViewModel, board: QuestBoard) {
     val chapters = s.index?.quests?.story.orEmpty()
     val chapter = chapters.getOrNull(board.chapter)
-    if (chapter == null) { item { ForgePanel { Engraved(ui("quest.story_done")); MutedText(ui("quest.story_done_text")) } }; return }
+    if (chapter == null) {
+        item {
+            ForgePanel {
+                Engraved(ui("quest.story_done"))
+                MutedText(ui("quest.story_done_text"))
+            }
+        }
+        return
+    }
     item {
         ForgePanel {
             Engraved(loc("quest.chapter.${chapter.region}"))

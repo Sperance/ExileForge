@@ -1,15 +1,15 @@
 package com.sperance.exileforge.ui.components
 
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
@@ -27,8 +27,8 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -58,8 +58,11 @@ import com.sperance.exileforge.ui.theme.*
 
 @Composable private fun TradeLine(line: ItemLine, onClick: (() -> Unit)?) {
     val tap = if (onClick == null) Modifier else Modifier.clickable(role = Role.Button, onClickLabel = line.text, onClick = onClick)
-    Row(Modifier.fillMaxWidth().then(tap).padding(vertical = 3.dp), horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        Modifier.fillMaxWidth().then(tap).padding(vertical = 3.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         AffixBadge(line.marks)
         Text(line.text, color = ModBlue, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
     }
@@ -75,7 +78,8 @@ private enum class RollTier(val key: String, val tint: Color, val fill: Float, v
     FAIR("card.roll_fair", Rune, .18f, .55f, 2.dp),
     GOOD("card.roll_good", Vital, .24f, .75f, 5.dp),
     SUPERB("card.roll_superb", GoldBright, .3f, .95f, 9.dp),
-    PERFECT("card.roll_perfect", GoldBright, .32f, 1f, 12.dp);
+    PERFECT("card.roll_perfect", GoldBright, .32f, 1f, 12.dp),
+    ;
 
     companion object {
         fun of(quality: Int): RollTier = if (quality >= 100) PERFECT else entries[(quality / 20).coerceIn(0, SUPERB.ordinal)]
@@ -87,8 +91,12 @@ private val Prism = listOf(Color(0xFFFF6B6B), Color(0xFFFFD166), Color(0xFF7BE0A
 
 /** A perfect roll's light: a band of every colour sliding along, for its frame and its figure. */
 @Composable private fun prismBrush(): Brush {
-    val shift by rememberInfiniteTransition(label = "prism").animateFloat(0f, 1f,
-        infiniteRepeatable(tween(2400, easing = LinearEasing)), label = "prism")
+    val shift by rememberInfiniteTransition(label = "prism").animateFloat(
+        0f,
+        1f,
+        infiniteRepeatable(tween(2400, easing = LinearEasing)),
+        label = "prism",
+    )
     val span = 240f
     return Brush.linearGradient(Prism, start = Offset(shift * span * 2 - span, 0f), end = Offset(shift * span * 2, span / 3), tileMode = TileMode.Mirror)
 }
@@ -96,9 +104,12 @@ private val Prism = listOf(Color(0xFFFF6B6B), Color(0xFFFFD166), Color(0xFF7BE0A
 /** The frame, fill and glow a roll quality wears on [shape]; a perfect one is [solid]ly prismatic on a pill, framed on a card. */
 @Composable private fun Modifier.rollShine(tier: RollTier, shape: Shape, solid: Boolean = false): Modifier {
     val base = glow(tier.tint, on = tier.glow > 0.dp, radius = tier.glow, shape = shape)
-    return if (tier == RollTier.PERFECT) base.background(if (solid) prismBrush() else Brush.horizontalGradient(listOf(PanelRaised, Abyss)), shape).border(1.5.dp, prismBrush(), shape)
-    else base.background(Brush.horizontalGradient(listOf(tier.tint.copy(alpha = tier.fill), tier.tint.copy(alpha = tier.fill / 3))), shape)
-        .border(1.dp, tier.tint.copy(alpha = tier.edge), shape)
+    return if (tier == RollTier.PERFECT) {
+        base.background(if (solid) prismBrush() else Brush.horizontalGradient(listOf(PanelRaised, Abyss)), shape).border(1.5.dp, prismBrush(), shape)
+    } else {
+        base.background(Brush.horizontalGradient(listOf(tier.tint.copy(alpha = tier.fill), tier.tint.copy(alpha = tier.fill / 3))), shape)
+            .border(1.dp, tier.tint.copy(alpha = tier.edge), shape)
+    }
 }
 
 /**
@@ -140,6 +151,11 @@ private val Prism = listOf(Color(0xFFFF6B6B), Color(0xFFFFD166), Color(0xFF7BE0A
 @Composable fun RollPill(quality: Int) {
     val tier = RollTier.of(quality)
     val shape = RoundedCornerShape(50)
-    Text(ui("row.rolls", quality), color = if (tier == RollTier.PERFECT) Ink else tier.tint, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelSmall,
-        modifier = Modifier.rollShine(tier, shape, solid = true).padding(horizontal = 8.dp, vertical = 1.dp))
+    Text(
+        ui("row.rolls", quality),
+        color = if (tier == RollTier.PERFECT) Ink else tier.tint,
+        fontWeight = FontWeight.Bold,
+        style = MaterialTheme.typography.labelSmall,
+        modifier = Modifier.rollShine(tier, shape, solid = true).padding(horizontal = 8.dp, vertical = 1.dp),
+    )
 }

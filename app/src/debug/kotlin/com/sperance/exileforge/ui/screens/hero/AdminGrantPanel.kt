@@ -1,12 +1,11 @@
 package com.sperance.exileforge.ui.screens.hero
 
-import com.sperance.exileforge.core.display.Glyph
-
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.rarityTitle
@@ -50,7 +49,8 @@ import com.sperance.exileforge.ui.icons.orbArt
         Spinner(ui("common.rarity"), s.play.grantRarity, mapOf("" to any) + Rarity.entries.associate { it.name to rarityTitle(it, s.lang) }, enabled, glyph = Glyph.RARITY, onChange = vm::grantRarity)
         Spinner(ui("grant.category"), s.play.grantSlot, mapOf("" to any) + Slot.entries.associate { it.name to slotTitle(it, s.lang) }, enabled, glyph = Glyph.ITEM, onChange = vm::grantSlot)
         ForgeButton(enabled = enabled, onClick = vm::grantRandom, modifier = Modifier.fillMaxWidth()) {
-            Icon(ForgeGlyphs.Anvil, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp))
+            Icon(ForgeGlyphs.Anvil, null, Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
             Text(ui("grant.roll"))
         }
         MutedText(ui("grant.roll_note"))
@@ -69,21 +69,35 @@ import com.sperance.exileforge.ui.icons.orbArt
         OrnateDivider()
         Engraved(ui("grant.experience"))
         var experience by remember(s.play.heroId) { mutableStateOf("100") }
-        OutlinedTextField(experience, { experience = it }, label = { Text(ui("grant.grant_xp")) },
+        OutlinedTextField(
+            experience,
+            { experience = it },
+            label = { Text(ui("grant.grant_xp")) },
             supportingText = { Text(ui("grant.xp_note")) },
-            singleLine = true, modifier = Modifier.fillMaxWidth())
-        ForgeButton(enabled = enabled && experience.toDoubleOrNull()?.let { it > 0 && it.isFinite() } == true,
-            onClick = { vm.addExperience(experience.toDouble()) }) { Text(ui("grant.grant")) }
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        ForgeButton(
+            enabled = enabled && experience.toDoubleOrNull()?.let { it > 0 && it.isFinite() } == true,
+            onClick = { vm.addExperience(experience.toDouble()) },
+        ) { Text(ui("grant.grant")) }
 
         OrnateDivider()
         Engraved(ui("grant.stacking"))
         var code by remember(s.play.heroId) { mutableStateOf("") }
         var amount by remember(s.play.heroId) { mutableStateOf("1") }
         Spinner(ui("common.item"), code, stacks, enabled && stacks.isNotEmpty(), glyph = Glyph.CURRENCY, optionArt = orbArt(s.orbs)) { code = it }
-        OutlinedTextField(amount, { value -> amount = value.filter(Char::isDigit) }, label = { Text(ui("auction.amount")) },
-            singleLine = true, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(
+            amount,
+            { value -> amount = value.filter(Char::isDigit) },
+            label = { Text(ui("auction.amount")) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
         // A positive amount only: the server hands stacks out and never takes them back (3.0.0).
-        ForgeButton(enabled = enabled && code in stacks && amount.toLongOrNull()?.let { it > 0L } == true,
-            onClick = { vm.grantItem(code, amount.toLong()) }) { Text(ui("grant.chosen_item")) }
+        ForgeButton(
+            enabled = enabled && code in stacks && amount.toLongOrNull()?.let { it > 0L } == true,
+            onClick = { vm.grantItem(code, amount.toLong()) },
+        ) { Text(ui("grant.chosen_item")) }
     }
 }

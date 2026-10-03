@@ -4,20 +4,20 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.compositeOver
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.text.font.Font
-import androidx.compose.ui.unit.Dp
-import com.sperance.exileforge.R
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sperance.exileforge.R
 
 /*
  * «Эфир» (2.80.0, the owner's pick of six mockups): thin lines over dark basalt, air between things,
@@ -28,42 +28,55 @@ val Ink = Color(0xFF0C1115)
 val Abyss = Color(0xFF0A0E12)
 val Panel = Color(0xFF0F161B)
 val PanelRaised = Color(0xFF16212A)
+
 /** The accent (2.81.0, the owner's choice): a deep emerald green, bright enough to read on basalt. */
 val Gold = Color(0xFF3FB67A)
+
 /** Titles and the lit state of the accent. */
 val GoldBright = Color(0xFFEEF8F1)
+
 /** Hairlines and frames. */
 val Bronze = Color(0xFF1F2C35)
+
 /** Reading text. */
 val Parchment = Color(0xFFD5E0E6)
 val Muted = Color(0xFF7A8D99)
+
 /** Frost: a second, cooler light for secondary marks. */
 val Rune = Color(0xFF8FD3FF)
+
 /** Every modifier's sentence — item, monster, map or atlas — in one sky blue (2.73.0). */
 val ModBlue = Color(0xFF8EC5FF)
 val LifeRed = Color(0xFFD24A43)
 val ManaBlue = Color(0xFF6FB6FF)
 val ShieldCyan = Color(0xFF63B7C4)
 val Blood = Color(0xFF8A2E2E)
+
 /** Regeneration and success. */
 val Vital = Color(0xFF7BE0A6)
+
 /** Fire and other burning damage on the arena stage. */
 val Ember = Color(0xFFD9642E)
+
 /** The colours Path of Exile gives a crafted and a fractured modifier, and the two influences. */
 val Crafted = Color(0xFFB4B4FF)
 val Fractured = Color(0xFFA29162)
+
 /** The smith's handcrafted lines (2.42.0): forge copper. A map's alchemy lines read in `Vital`. */
 val Handcrafted = Color(0xFFD08A4E)
 val Shaper = Color(0xFF9FD2F0)
 val Elder = Color(0xFFA77BCF)
+
 /** The Abyss (2.82.0): its cracks on the map, its sheet, and the influence of what it gives. */
 val AbyssGlow = Color(0xFFA26BFF)
 
 /** The three faces of «Эфир»: a wide display for titles, a quiet grotesque to read, a mono for numbers. */
 val Display = FontFamily(Font(R.font.unbounded_medium, FontWeight.Medium))
 val Reading = FontFamily(
-    Font(R.font.onest_regular, FontWeight.Normal), Font(R.font.onest_medium, FontWeight.Medium),
-    Font(R.font.onest_semibold, FontWeight.SemiBold), Font(R.font.onest_semibold, FontWeight.Bold),
+    Font(R.font.onest_regular, FontWeight.Normal),
+    Font(R.font.onest_medium, FontWeight.Medium),
+    Font(R.font.onest_semibold, FontWeight.SemiBold),
+    Font(R.font.onest_semibold, FontWeight.Bold),
 )
 
 /** Item frames follow Path of Exile rarity colours; unknown values stay bone white. */
@@ -83,22 +96,25 @@ fun voidBrush() = Brush.verticalGradient(listOf(Color(0xFF0E151A), Ink, Abyss))
  * Light around what is alive (2.80.0): a coloured halo under the shape, nothing drawn when [on] is false.
  * On Android 9+ the halo takes the colour; below it falls back to a soft dark shadow.
  */
-fun Modifier.glow(color: Color = Gold, on: Boolean = true, radius: Dp = 10.dp, shape: Shape = RoundedCornerShape(8.dp)): Modifier =
-    if (!on) this else this.shadow(radius, shape, clip = false, ambientColor = color, spotColor = color)
+fun Modifier.glow(color: Color = Gold, on: Boolean = true, radius: Dp = 10.dp, shape: Shape = RoundedCornerShape(8.dp)): Modifier = if (!on) this else this.shadow(radius, shape, clip = false, ambientColor = color, spotColor = color)
 
 @Composable fun ForgeTheme(content: @Composable () -> Unit) {
-    fun text(family: FontFamily, size: Float, weight: FontWeight = FontWeight.Normal, tracking: Float = 0f, line: Float = size * 1.35f) =
-        TextStyle(fontFamily = family, fontSize = size.sp, fontWeight = weight, letterSpacing = tracking.sp, lineHeight = line.sp)
+    fun text(family: FontFamily, size: Float, weight: FontWeight = FontWeight.Normal, tracking: Float = 0f, line: Float = size * 1.35f) = TextStyle(fontFamily = family, fontSize = size.sp, fontWeight = weight, letterSpacing = tracking.sp, lineHeight = line.sp)
     MaterialTheme(
-        colorScheme = darkColorScheme(primary = Gold, onPrimary = Color(0xFF04210F), secondary = Rune, onSecondary = Ink,
+        colorScheme = darkColorScheme(
+            primary = Gold, onPrimary = Color(0xFF04210F), secondary = Rune, onSecondary = Ink,
             secondaryContainer = PanelRaised, onSecondaryContainer = Parchment, tertiary = GoldBright,
             background = Ink, surface = Panel, surfaceVariant = PanelRaised, surfaceContainerHighest = PanelRaised,
             surfaceContainer = Panel, surfaceContainerHigh = PanelRaised, surfaceContainerLow = Panel,
             onSurface = Parchment, onSurfaceVariant = Muted, onBackground = Parchment,
-            outline = Bronze, outlineVariant = Color(0xFF18232B), error = LifeRed, onError = Ink),
+            outline = Bronze, outlineVariant = Color(0xFF18232B), error = LifeRed, onError = Ink,
+        ),
         shapes = Shapes(
-            extraSmall = RoundedCornerShape(6.dp), small = RoundedCornerShape(8.dp), medium = RoundedCornerShape(10.dp),
-            large = RoundedCornerShape(14.dp), extraLarge = RoundedCornerShape(18.dp)
+            extraSmall = RoundedCornerShape(6.dp),
+            small = RoundedCornerShape(8.dp),
+            medium = RoundedCornerShape(10.dp),
+            large = RoundedCornerShape(14.dp),
+            extraLarge = RoundedCornerShape(18.dp),
         ),
         typography = Typography(
             displaySmall = text(Display, 24f, FontWeight.Medium, .5f),
@@ -114,8 +130,9 @@ fun Modifier.glow(color: Color = Gold, on: Boolean = true, radius: Dp = 10.dp, s
             labelLarge = text(Reading, 13f, FontWeight.Medium, .4f),
             labelMedium = text(Reading, 12f, FontWeight.Medium, .3f),
             labelSmall = text(Reading, 10.5f, FontWeight.SemiBold, .8f),
-        ), content = {
+        ),
+        content = {
             CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onBackground, content = content)
-        }
+        },
     )
 }

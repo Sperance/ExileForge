@@ -14,7 +14,8 @@ enum class Feature(val level: Int, val title: String, val tab: Int? = null, val 
     AUCTION(8, "nav.auction", building = Building.AUCTION),
     TRIALS(10, "trials.title", tab = TAB_TRIALS),
     PETS(10, "progress.pets", tab = TAB_PETS),
-    GUILD(12, "guild.title", building = Building.GUILD);
+    GUILD(12, "guild.title", building = Building.GUILD),
+    ;
 
     companion object {
         fun ofTab(tab: Int): Feature? = entries.firstOrNull { it.tab == tab }

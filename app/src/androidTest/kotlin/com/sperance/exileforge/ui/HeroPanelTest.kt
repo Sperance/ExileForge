@@ -39,8 +39,13 @@ class HeroPanelTest {
     @get:Rule val compose = createComposeRule()
 
     /** The server's dictionary, as the app always has it by the time a screen is drawn: a panel without it would print codes. */
-    @Before fun dictionary() { serverLocale = TestWorld.russian }
-    @After fun forget() { serverLocale = LocaleBundle() }
+    @Before fun dictionary() {
+        serverLocale = TestWorld.russian
+    }
+
+    @After fun forget() {
+        serverLocale = LocaleBundle()
+    }
 
     /**
      * The header, the character section and the equipment ledger, as the Hero tab draws them over
@@ -54,14 +59,24 @@ class HeroPanelTest {
         val info = HeroInfo("hero", "owner", "Изгнанник", heroClass = heroClass, level = 10)
         val hero = HeroView(info, listOf(ring), sheet = Sheets.calculate(index, 10, heroClass, emptyList(), listOf(ring)))
         var picked: Pair<String, String?>? = null
-        compose.setContent { ForgeTheme { Column(Modifier.background(Ink).verticalScroll(rememberScrollState()).padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            val state = ForgeState(busy = false, account = AccountState(profile = UserProfile("owner"), signedIn = true),
-                world = WorldState(content = index, contentHash = index.hash), play = PlayState(heroId = "hero", heroOwner = "owner", hero = hero))
-            HeroHeader(state)
-            HeroSummary(state)
-            EquipmentLedger(state) { place, itemId -> picked = place.code to itemId }
-        } } }
+        compose.setContent {
+            ForgeTheme {
+                Column(
+                    Modifier.background(Ink).verticalScroll(rememberScrollState()).padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    val state = ForgeState(
+                        busy = false,
+                        account = AccountState(profile = UserProfile("owner"), signedIn = true),
+                        world = WorldState(content = index, contentHash = index.hash),
+                        play = PlayState(heroId = "hero", heroOwner = "owner", hero = hero),
+                    )
+                    HeroHeader(state)
+                    HeroSummary(state)
+                    EquipmentLedger(state) { place, itemId -> picked = place.code to itemId }
+                }
+            }
+        }
         compose.onNodeWithText("Изгнанник").assertIsDisplayed()
         compose.onAllNodesWithText(equipmentTitle(ring.template), substring = true).onFirst().assertExists()
         val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()

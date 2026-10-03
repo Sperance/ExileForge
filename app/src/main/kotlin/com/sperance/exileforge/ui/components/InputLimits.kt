@@ -15,5 +15,4 @@ val ForgeState.inputs: InputLimits get() = index?.rules?.inputs ?: DefaultInputs
 val DefaultInputs = InputLimits()
 
 /** «12/24» under a field: how much of its limit is used, red once it is reached. */
-@Composable fun LengthCounter(value: String, limit: Int) =
-    Text("${value.length}/$limit", color = if (value.length >= limit) LifeRed else Muted, style = MaterialTheme.typography.labelSmall)
+@Composable fun LengthCounter(value: String, limit: Int) = Text("${value.length}/$limit", color = if (value.length >= limit) LifeRed else Muted, style = MaterialTheme.typography.labelSmall)

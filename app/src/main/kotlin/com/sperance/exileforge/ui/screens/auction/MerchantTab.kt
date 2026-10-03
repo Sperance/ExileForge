@@ -1,22 +1,18 @@
 package com.sperance.exileforge.ui.screens.auction
 
-import com.sperance.exileforge.ui.components.ForgeSheet
-import com.sperance.exileforge.rules.content.SlotGroup
-import com.sperance.exileforge.rules.content.Rarity
-import com.sperance.exileforge.rules.content.AutoSell
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Schedule
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
@@ -31,13 +27,17 @@ import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.trade.MerchantOffer
 import com.sperance.exileforge.core.model.trade.MerchantOrb
-import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.Reads
 import com.sperance.exileforge.presentation.state.unmetFor
 import com.sperance.exileforge.presentation.state.view
+import com.sperance.exileforge.rules.content.AutoSell
+import com.sperance.exileforge.rules.content.Orb
+import com.sperance.exileforge.rules.content.Rarity
+import com.sperance.exileforge.rules.content.SlotGroup
 import com.sperance.exileforge.ui.components.*
+import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.OrbGlyph
 import com.sperance.exileforge.ui.screens.hero.StackInfoSheet
@@ -61,7 +61,10 @@ import com.sperance.exileforge.ui.theme.*
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         // The shelf rides on the hero's snapshot; entering reads it afresh all the same.
         LaunchedEffect(s.play.heroId, s.account.sessionEpoch) {
-            if (s.play.heroId.isNotBlank()) { vm.ensureHero(); vm.loadMerchant() }
+            if (s.play.heroId.isNotBlank()) {
+                vm.ensureHero()
+                vm.loadMerchant()
+            }
         }
         MerchantTab(s, vm)
     }
@@ -72,7 +75,8 @@ import com.sperance.exileforge.ui.theme.*
  * the header's (i); the wares and the orbs as two halves of one switch, so the first item is in sight at once.
  */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable private fun ColumnScope.MerchantTab(s: ForgeState, vm: ForgeViewModel) {
+@Composable
+private fun ColumnScope.MerchantTab(s: ForgeState, vm: ForgeViewModel) {
     var chosen by remember { mutableStateOf<MerchantOffer?>(null) }
     var filtering by remember { mutableStateOf(false) }
     var notes by remember { mutableStateOf(false) }
@@ -92,16 +96,29 @@ import com.sperance.exileforge.ui.theme.*
     }
     FirstVisit(Guide.MERCHANT)
     MerchantStrip(money, stock?.refreshAt?.takeIf { it > 0 }, s.hero?.info?.autoSell) { filtering = true }
-    if (orbs.isNotEmpty()) PillTabs(listOf(ui("merchant.wares_n", offers.size), ui("merchant.orbs_n", orbs.size)), if (orbsShelf) 1 else 0,
-        { orbsShelf = it == 1 }, segmented = true)
+    if (orbs.isNotEmpty()) {
+        PillTabs(
+            listOf(ui("merchant.wares_n", offers.size), ui("merchant.orbs_n", orbs.size)),
+            if (orbsShelf) 1 else 0,
+            { orbsShelf = it == 1 },
+            segmented = true,
+        )
+    }
     PullToRefreshBox(isRefreshing = Reads.MERCHANT in s.loading, onRefresh = vm::loadMerchant, modifier = Modifier.weight(1f)) {
         LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(bottom = 10.dp)) {
-            if (orbsShelf && orbs.isNotEmpty()) item {
-                ForgePanel {
-                    orbs.forEach { orb ->
-                        val price = orb.price
-                        OrbRow(orb, price, have = s.bagAmount(orb.code), enabled = !s.busy && !orb.soldOut && (money == null || money >= price),
-                            onInfo = { info = orb.code }) { vm.buyOrb(orb.code) }
+            if (orbsShelf && orbs.isNotEmpty()) {
+                item {
+                    ForgePanel {
+                        orbs.forEach { orb ->
+                            val price = orb.price
+                            OrbRow(
+                                orb,
+                                price,
+                                have = s.bagAmount(orb.code),
+                                enabled = !s.busy && !orb.soldOut && (money == null || money >= price),
+                                onInfo = { info = orb.code },
+                            ) { vm.buyOrb(orb.code) }
+                        }
                     }
                 }
             } else {
@@ -114,24 +131,39 @@ import com.sperance.exileforge.ui.theme.*
     }
     if (notes) MerchantNotes { notes = false }
     info?.let { code -> StackInfoSheet(s, code) { info = null } }
-    chosen?.let { offer -> OfferSheet(s, offer, money, onDismiss = { chosen = null }) { chosen = null; vm.buyOffer(offer.id) } }
+    chosen?.let { offer ->
+        OfferSheet(s, offer, money, onDismiss = { chosen = null }) {
+            chosen = null
+            vm.buyOffer(offer.id)
+        }
+    }
     // Read from the snapshot on every pass, so a chip turns as soon as the server has the new filter.
-    if (filtering) s.hero?.info?.autoSell?.let { filter ->
-        AutoSellSheet(filter, enabled = !s.busy, onChange = vm::autoSell, onDismiss = { filtering = false })
+    if (filtering) {
+        s.hero?.info?.autoSell?.let { filter ->
+            AutoSellSheet(filter, enabled = !s.busy, onChange = vm::autoSell, onDismiss = { filtering = false })
+        }
     }
 }
 
 /** The strip under the header: the purse, when the shelf renews, and the loot filter's door with the number of marks on. */
 @Composable private fun MerchantStrip(money: Long?, refreshAt: Long?, filter: AutoSell?, onFilter: () -> Unit) {
     val shape = RoundedCornerShape(12.dp)
-    Row(Modifier.fillMaxWidth().background(Panel, shape).border(1.dp, PanelRaised, shape).padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Row(
+        Modifier.fillMaxWidth().background(Panel, shape).border(1.dp, PanelRaised, shape).padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
         money?.let { GoldPrice(it) }
         Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
             refreshAt?.let {
                 Icon(Icons.Outlined.Schedule, null, tint = Muted, modifier = Modifier.size(14.dp))
-                Text(ui("merchant.renews", untilText(it)), color = Muted, style = MaterialTheme.typography.labelMedium,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    ui("merchant.renews", untilText(it)),
+                    color = Muted,
+                    style = MaterialTheme.typography.labelMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
         filter?.let { AutoSellButton(it, onFilter) }
@@ -140,7 +172,8 @@ import com.sperance.exileforge.ui.theme.*
 
 /** The merchant's two notes — how the shelf renews and is priced, how the orbs grow dearer — behind the header's (i). */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable private fun MerchantNotes(onDismiss: () -> Unit) {
+@Composable
+private fun MerchantNotes(onDismiss: () -> Unit) {
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Engraved(ui("merchant.title"))
@@ -154,8 +187,11 @@ import com.sperance.exileforge.ui.theme.*
 /** One orb on the shelf: its glass and name (a tap on them opens the orb), how many the bag holds, and the button with the next price. */
 @Composable private fun OrbRow(orb: MerchantOrb, price: Long, have: Long?, enabled: Boolean, onInfo: () -> Unit, onBuy: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(Modifier.weight(1f).clickable(onClickLabel = itemTitle(orb.code), onClick = onInfo), verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(
+            Modifier.weight(1f).clickable(onClickLabel = itemTitle(orb.code), onClick = onInfo),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
             OrbGlyph(Orb.of(orb.code), Modifier.size(32.dp))
             Column(Modifier.weight(1f)) {
                 Text(itemTitle(orb.code), style = MaterialTheme.typography.bodyMedium)
@@ -174,7 +210,8 @@ import com.sperance.exileforge.ui.theme.*
  * stays off (2.46.0); what wearing it would change is added up here, as on a stash card.
  */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable private fun OfferSheet(s: ForgeState, offer: MerchantOffer, money: Long?, onDismiss: () -> Unit, onBuy: () -> Unit) {
+@Composable
+private fun OfferSheet(s: ForgeState, offer: MerchantOffer, money: Long?, onDismiss: () -> Unit, onBuy: () -> Unit) {
     val view = s.view(offer.item)
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.92f)) {
@@ -187,8 +224,13 @@ import com.sperance.exileforge.ui.theme.*
                 money?.let { PropertyRow(ui("merchant.gold"), number(it.toDouble()), Glyph.CURRENCY) }
                 val price = offer.price
                 if (money != null && money < price) Text(ui("merchant.short"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
-                HoldButton(ui("merchant.buy_for", number(price.toDouble())), Gold, Modifier.fillMaxWidth(),
-                    enabled = !s.busy && (money == null || money >= price), onHeld = onBuy)
+                HoldButton(
+                    ui("merchant.buy_for", number(price.toDouble())),
+                    Gold,
+                    Modifier.fillMaxWidth(),
+                    enabled = !s.busy && (money == null || money >= price),
+                    onHeld = onBuy,
+                )
             }
         }
     }
@@ -214,10 +256,13 @@ internal fun untilText(at: Long): String {
  * A sheet behind the header's button, so the shelf is not pushed down by it.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
-@Composable private fun AutoSellSheet(filter: AutoSell, enabled: Boolean, onChange: (Rarity, Set<SlotGroup>) -> Unit, onDismiss: () -> Unit) {
+@Composable
+private fun AutoSellSheet(filter: AutoSell, enabled: Boolean, onChange: (Rarity, Set<SlotGroup>) -> Unit, onDismiss: () -> Unit) {
     ForgeSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(
+            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             Engraved(ui("merchant.autosell"))
             MutedText(ui("merchant.autosell_note"))
             AutoSell.SELLABLE.forEach { rarity ->
@@ -225,8 +270,12 @@ internal fun untilText(at: Long): String {
                 Text(ui("enum.rarity.${rarity.name}"), color = rarityColor(rarity.name), style = MaterialTheme.typography.labelLarge)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     SlotGroup.entries.forEach { group ->
-                        FilterChip(selected = group in on, enabled = enabled, onClick = { onChange(rarity, if (group in on) on - group else on + group) },
-                            label = { Text(ui("merchant.group.${group.name}")) })
+                        FilterChip(
+                            selected = group in on,
+                            enabled = enabled,
+                            onClick = { onChange(rarity, if (group in on) on - group else on + group) },
+                            label = { Text(ui("merchant.group.${group.name}")) },
+                        )
                     }
                 }
             }

@@ -46,15 +46,22 @@ data class Flask(
     val maxCharges: Double get() = max(1.0, own("FLASK_CHARGES"))
     fun perUse(hero: Combatant): Double = own("FLASK_CHARGES_PER_USE") * max(0.0, 1 - (own("STOCK_FLASK_CHARGES_USED") + hero["STOCK_FLASK_CHARGES_USED"]) / 100)
     fun duration(hero: Combatant): Double = max(0.5, own("FLASK_DURATION") * (1 + (inc("STOCK_FLASK_DURATION") + hero["STOCK_FLASK_DURATION"]) / 100))
+
     /** How much stronger its lines are: its own and the hero's increase, and a utility flask's quality. */
-    fun effect(hero: Combatant): Double =
-        max(0.0, 1 + (inc("STOCK_FLASK_EFFECT") + hero["STOCK_FLASK_EFFECT"] + if (kind == FlaskKind.UTILITY) quality.toDouble() else 0.0) / 100)
+    fun effect(hero: Combatant): Double = max(0.0, 1 + (inc("STOCK_FLASK_EFFECT") + hero["STOCK_FLASK_EFFECT"] + if (kind == FlaskKind.UTILITY) quality.toDouble() else 0.0) / 100)
+
     /** How much more it brings back: its own and the hero's increase, life flasks' own, and a recovery flask's quality. */
-    fun recovery(hero: Combatant): Double = max(0.0, 1 + (inc("STOCK_FLASK_RECOVERY") + hero["STOCK_FLASK_RECOVERY"] +
-        (if (kind == FlaskKind.LIFE) hero["STOCK_FLASK_LIFE_RECOVERY"] else 0.0) + (if (kind != FlaskKind.UTILITY) quality.toDouble() else 0.0)) / 100)
+    fun recovery(hero: Combatant): Double = max(
+        0.0,
+        1 + (
+            inc("STOCK_FLASK_RECOVERY") + hero["STOCK_FLASK_RECOVERY"] +
+                (if (kind == FlaskKind.LIFE) hero["STOCK_FLASK_LIFE_RECOVERY"] else 0.0) + (if (kind != FlaskKind.UTILITY) quality.toDouble() else 0.0)
+            ) / 100,
+    )
+
     /** The charges a kill of [base] brings: the rule's, more by its own and the hero's increase, plus both flat additions. */
-    fun gained(base: Double, hero: Combatant): Double =
-        max(0.0, base * (1 + (inc("STOCK_FLASK_CHARGES_GAINED") + hero["STOCK_FLASK_CHARGES_GAINED"]) / 100) + own("STOCK_FLASK_CHARGES_PER_KILL") + hero["STOCK_FLASK_CHARGES_PER_KILL"])
+    fun gained(base: Double, hero: Combatant): Double = max(0.0, base * (1 + (inc("STOCK_FLASK_CHARGES_GAINED") + hero["STOCK_FLASK_CHARGES_GAINED"]) / 100) + own("STOCK_FLASK_CHARGES_PER_KILL") + hero["STOCK_FLASK_CHARGES_PER_KILL"])
+
     /** The share of its recovery that comes at once; the rest runs over its duration. */
     val instant: Double get() = (own("FLASK_INSTANT") / 100).coerceIn(0.0, 1.0)
     val usesAll: Boolean get() = own("FLASK_USES_ALL") > 0
@@ -139,8 +146,7 @@ data class Loadout(
     val charges: ChargeRules = ChargeRules(),
 ) {
     /** How many percent of the maximum mana the passive auras hold, after the sheet's reservation efficiency. */
-    fun reserved(hero: Combatant): Double =
-        (passives.filter { it.skill.type == SkillType.AURA }.sumOf { it.skill.reserve } / max(0.1, 1 + hero["STOCK_RESERVATION"] / 100)).coerceIn(0.0, 100.0)
+    fun reserved(hero: Combatant): Double = (passives.filter { it.skill.type == SkillType.AURA }.sumOf { it.skill.reserve } / max(0.1, 1 + hero["STOCK_RESERVATION"] / 100)).coerceIn(0.0, 100.0)
 
     /**
      * What the passives lay on the sheet all the time: an aura's lines stronger by the aura effect, a bonus's
@@ -156,8 +162,11 @@ data class Loadout(
 
     private fun lines(passive: KitSkill, hero: Combatant): List<StatLine> {
         val level = passive.level(hero)
-        return if (passive.skill.type == SkillType.AURA) passive.skill.stats.lines(level, 1 + hero["STOCK_AURA_EFFECT"] / 100)
-        else passive.skill.stats.lines(level)
+        return if (passive.skill.type == SkillType.AURA) {
+            passive.skill.stats.lines(level, 1 + hero["STOCK_AURA_EFFECT"] / 100)
+        } else {
+            passive.skill.stats.lines(level)
+        }
     }
 
     companion object {
@@ -165,8 +174,14 @@ data class Loadout(
          * The hero's loadout from the character's [skills] as the server keeps them, the world's [book] and
          * the flasks worn on the belt, in its order — [flasks] null where a place is empty.
          */
-        fun of(skills: HeroSkills, book: SkillBook, heroClass: String, flasks: List<Flask?>, powers: PowerBook = PowerBook(),
-               charges: ChargeRules = ChargeRules()): Loadout {
+        fun of(
+            skills: HeroSkills,
+            book: SkillBook,
+            heroClass: String,
+            flasks: List<Flask?>,
+            powers: PowerBook = PowerBook(),
+            charges: ChargeRules = ChargeRules(),
+        ): Loadout {
             fun kit(code: String?, condition: SlotCondition? = null) = code?.let(book.byCode::get)
                 ?.let { KitSkill(it, skills.level(it.code).coerceAtLeast(1), condition ?: it.condition) }
             return Loadout(
@@ -209,9 +224,11 @@ object StatLines {
             val added = (stats[stat] ?: 0.0) + own.filter { it.op == Op.ADD }.sumOf { it.value }
             val increase = own.filter { it.op == Op.INCREASED }.sumOf { it.value }
             val more = own.filter { it.op == Op.MORE }
-            result[stat] = own.lastOrNull { it.op == Op.SET }?.value ?: if (stat in percent || stat == DAMAGE)
+            result[stat] = own.lastOrNull { it.op == Op.SET }?.value ?: if (stat in percent || stat == DAMAGE) {
                 more.fold(added + increase) { value, line -> (100 + value) * (1 + line.value / 100) - 100 }
-            else more.fold(added * (1 + increase / 100)) { value, line -> value * (1 + line.value / 100) }
+            } else {
+                more.fold(added * (1 + increase / 100)) { value, line -> value * (1 + line.value / 100) }
+            }
         }
         return result
     }
@@ -244,6 +261,7 @@ class HeroBuild(val gear: HeroGear, private val mapEffects: Map<String, Double>,
     /** The body without passives: what the passives' levels and the auras' effect are read off. */
     val bare: Combatant by lazy { Combatant(MapEffects.hero(sheet(emptyList()), mapEffects), gear.level, rules) }
     private val passives: List<StatLine> by lazy { gear.kit.passiveLines(bare) }
+
     /** The body between fights: the passives on, the lines of a flask still running on top. */
     val body: Combatant by lazy { body(emptyList()) }
 
@@ -270,16 +288,22 @@ class HeroBuild(val gear: HeroGear, private val mapEffects: Map<String, Double>,
 interface HeroModel : BodyModel {
     val lowLife: List<StatLine>
     fun increased(stat: String, lines: List<StatLine>): Double
+
     /** The conditional lines of the sheet (3.35.0) that hold under [active]. */
     fun conditional(active: Set<Condition>): List<StatLine> = emptyList()
+
     /** The same lines with the condition each waits for (3.37.0). */
     fun conditionalSourced(active: Set<Condition>): List<Pair<Condition, StatLine>> = emptyList()
+
     /** The sheet taken apart by source (3.37.0): what the log's card lays a hero's stat out with; null for a bare body. */
     val explainer: SheetExplainer? get() = null
+
     /** The passives' lines laid over the sheet in a run (3.37.0). */
     val passiveLines: List<StatLine> get() = emptyList()
+
     /** What the map and the atlas moved on the sheet, by stat (3.37.0). */
     fun shifts(): Map<String, List<Shift>> = emptyMap()
+
     /** The increased damage the sheet's lines give against a target in [states]. */
     fun against(states: Set<Condition>): Double = 0.0
 
@@ -297,8 +321,16 @@ interface HeroModel : BodyModel {
  * What one draught gives (2.78.0): life, mana and shield at once, life and mana a second while it
  * runs, the lines it lays on for [duration] seconds, and the seconds nothing touches the hero.
  */
-data class Draught(val life: Double, val mana: Double, val shield: Double, val lifeRate: Double, val manaRate: Double,
-                   val lines: List<StatLine>, val duration: Double, val invulnerable: Double) {
+data class Draught(
+    val life: Double,
+    val mana: Double,
+    val shield: Double,
+    val lifeRate: Double,
+    val manaRate: Double,
+    val lines: List<StatLine>,
+    val duration: Double,
+    val invulnerable: Double,
+) {
     /** Gives nothing but life (3.79.0): such a draught stops at full life and is not drunk on a full bar. */
     val lifeOnly: Boolean get() = (life > 0 || lifeRate > 0) && mana <= 0 && manaRate <= 0 && shield <= 0 && lines.isEmpty() && invulnerable <= 0
 }

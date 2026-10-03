@@ -1,16 +1,12 @@
 package com.sperance.exileforge.ui.screens.hero
 
-import com.sperance.exileforge.ui.components.ForgeSheet
-import com.sperance.exileforge.presentation.state.unmetFor
-import com.sperance.exileforge.presentation.state.sellPrice
-import com.sperance.exileforge.presentation.state.view
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material3.*
@@ -26,7 +22,11 @@ import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.sellPrice
+import com.sperance.exileforge.presentation.state.unmetFor
+import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.ui.components.*
+import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.icons.SlotIcon
 import com.sperance.exileforge.ui.theme.*
@@ -63,7 +63,8 @@ import com.sperance.exileforge.ui.theme.*
  * so in red with the rules' first reason.
  */
 @OptIn(ExperimentalLayoutApi::class)
-@Composable private fun PlaceLine(line: PlaceState, lang: Lang, signedIn: Boolean, onClick: () -> Unit) {
+@Composable
+private fun PlaceLine(line: PlaceState, lang: Lang, signedIn: Boolean, onClick: () -> Unit) {
     val place = line.place
     val worn = line.worn
     val reasons = line.reasons
@@ -76,10 +77,22 @@ import com.sperance.exileforge.ui.theme.*
                 SlotIcon(place.fits.first(), PanelRaised, Modifier.size(14.dp), tint = Muted.copy(alpha = .5f))
             }
             Text(title, color = Gold, style = MaterialTheme.typography.labelMedium, maxLines = 1, modifier = Modifier.width(96.dp))
-            Text(ui(if (line.blocked) "hero.off_hand_taken" else "hero.empty_slot"), color = Muted, style = MaterialTheme.typography.labelMedium,
-                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-            if (line.spare > 0) Text(ui("hero.place_spare", line.spare), color = GoldBright, style = MaterialTheme.typography.labelSmall,
-                modifier = Modifier.background(Abyss, RoundedCornerShape(4.dp)).padding(horizontal = 6.dp, vertical = 2.dp))
+            Text(
+                ui(if (line.blocked) "hero.off_hand_taken" else "hero.empty_slot"),
+                color = Muted,
+                style = MaterialTheme.typography.labelMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            if (line.spare > 0) {
+                Text(
+                    ui("hero.place_spare", line.spare),
+                    color = GoldBright,
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.background(Abyss, RoundedCornerShape(4.dp)).padding(horizontal = 6.dp, vertical = 2.dp),
+                )
+            }
         }
         return
     }
@@ -93,16 +106,26 @@ import com.sperance.exileforge.ui.theme.*
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(worn.title, color = color, style = MaterialTheme.typography.titleSmall, maxLines = 1,
-                    overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                Text(
+                    worn.title,
+                    color = color,
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
                 // An idle piece is a mark on the line (2.74.0); why is in its card, or behind the mark.
-                if (reasons != null) Tipped({
-                    Tip(ui("hero.inactive"), reasons.joinToString("\n") { requirementReason(it, lang) }, LifeRed)
-                }) { Icon(Icons.Outlined.Block, ui("hero.inactive"), tint = LifeRed, modifier = Modifier.size(14.dp)) }
+                if (reasons != null) {
+                    Tipped({
+                        Tip(ui("hero.inactive"), reasons.joinToString("\n") { requirementReason(it, lang) }, LifeRed)
+                    }) { Icon(Icons.Outlined.Block, ui("hero.inactive"), tint = LifeRed, modifier = Modifier.size(14.dp)) }
+                }
                 Text(title, color = Gold, style = MaterialTheme.typography.labelSmall, maxLines = 1)
             }
-            if (base.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(5.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                base.forEach { BaseChip(it) }
+            if (base.isNotEmpty()) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(5.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    base.forEach { BaseChip(it) }
+                }
             }
             if (rolled.isNotEmpty()) TradeTable(rolled)
         }
@@ -117,7 +140,8 @@ import com.sperance.exileforge.ui.theme.*
  * The ring place goes with it, so a ring picked for the second line lands in the second ring.
  */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun SlotPicker(s: ForgeState, place: BodyPlace, onDismiss: () -> Unit, onEquip: (String) -> Unit) {
+@Composable
+fun SlotPicker(s: ForgeState, place: BodyPlace, onDismiss: () -> Unit, onEquip: (String) -> Unit) {
     val hero = s.hero ?: return
     val fitting = hero.stash.filter { !it.socketed }.mapNotNull { s.view(it) }.filter { place.takes(it.slot) }
     ForgeSheet(onDismissRequest = onDismiss) {
@@ -126,9 +150,14 @@ import com.sperance.exileforge.ui.theme.*
             if (fitting.isEmpty()) item { InfoCard(ui("hero.slot_pick_empty"), ui("hero.slot_pick_hint")) }
             items(fitting, key = { it.id }) { piece ->
                 val unmet = s.unmetFor(piece.code)
-                ItemRow(piece, enabled = !s.busy && (s.ownsCharacter || s.isAdmin) && unmet.isEmpty(),
-                    unwearable = unmet, price = s.sellPrice(piece.item)) {
-                    onDismiss(); onEquip(piece.id)
+                ItemRow(
+                    piece,
+                    enabled = !s.busy && (s.ownsCharacter || s.isAdmin) && unmet.isEmpty(),
+                    unwearable = unmet,
+                    price = s.sellPrice(piece.item),
+                ) {
+                    onDismiss()
+                    onEquip(piece.id)
                 }
             }
         }

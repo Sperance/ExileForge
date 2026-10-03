@@ -1,6 +1,5 @@
 package com.sperance.exileforge.ui.screens.expedition
 
-import com.sperance.exileforge.ui.components.ForgeSheet
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -9,8 +8,8 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.MoreVert
@@ -18,7 +17,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -28,6 +26,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.atlas.AtlasBranch
@@ -47,6 +46,7 @@ import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Line
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.ui.components.*
+import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.theme.*
 import kotlin.math.PI
 import kotlin.math.abs
@@ -103,8 +103,9 @@ private val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
     // «Итого» (3.54.0): every taken node's lines added up, by mechanic.
     var summary by remember { mutableStateOf(false) }
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Sky.deep, Sky.night, Sky.dawn)))) {
-        if (index == null || state == null) CircularProgressIndicator(Modifier.align(Alignment.Center), color = Sky.text)
-        else {
+        if (index == null || state == null) {
+            CircularProgressIndicator(Modifier.align(Alignment.Center), color = Sky.text)
+        } else {
             val taken = state.allocated.toSet()
             Sky(index, taken, atlas.selected, Modifier.fillMaxSize(), onSelect = vm::selectAtlasNode)
             // The points float over the sky, stacked above the node's sheet so neither hides the other.
@@ -112,8 +113,10 @@ private val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
                 val node = index.atlasGraph.node(atlas.selected)
                 PointsPill(state.available, state.points, if (node == null) Modifier.navigationBarsPadding().padding(bottom = 16.dp) else Modifier)
                 node?.let {
-                    NodeSheet(index, it, taken, state.available, index.atlas.respec.price(s.heroLevel, 1), enabled = !s.busy,
-                        onTake = { vm.allocateAtlas(it.code) }, onRefund = { refunding = it.code }, modifier = Modifier)
+                    NodeSheet(
+                        index, it, taken, state.available, index.atlas.respec.price(s.heroLevel, 1), enabled = !s.busy,
+                        onTake = { vm.allocateAtlas(it.code) }, onRefund = { refunding = it.code }, modifier = Modifier,
+                    )
                 }
             }
         }
@@ -129,13 +132,37 @@ private val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
         val regrets = s.hero?.count(Orb.ORB_OF_REGRET.name) ?: 0L
         if (resetting && index != null && state != null) {
             val nodes = state.allocated.size - 1
-            RespecSheet(ui("atlas.reset_q"), null, ui("atlas.reset"), nodes, index.atlas.respec.price(s.heroLevel, nodes), money, regrets,
-                onDismiss = { resetting = false }) { regret -> resetting = false; vm.resetAtlas(regret) }
+            RespecSheet(
+                ui("atlas.reset_q"),
+                null,
+                ui("atlas.reset"),
+                nodes,
+                index.atlas.respec.price(s.heroLevel, nodes),
+                money,
+                regrets,
+                onDismiss = { resetting = false },
+            ) { regret ->
+                resetting = false
+                vm.resetAtlas(regret)
+            }
         }
-        refunding?.let { code -> if (index != null) {
-            RespecSheet(ui("atlas.refund_q"), atlasNodeTitle(code), ui("atlas.refund"), 1, index.atlas.respec.price(s.heroLevel, 1), money, regrets,
-                onDismiss = { refunding = null }) { regret -> refunding = null; vm.refundAtlas(code, regret) }
-        } }
+        refunding?.let { code ->
+            if (index != null) {
+                RespecSheet(
+                    ui("atlas.refund_q"),
+                    atlasNodeTitle(code),
+                    ui("atlas.refund"),
+                    1,
+                    index.atlas.respec.price(s.heroLevel, 1),
+                    money,
+                    regrets,
+                    onDismiss = { refunding = null },
+                ) { regret ->
+                    refunding = null
+                    vm.refundAtlas(code, regret)
+                }
+            }
+        }
         if (summary && index != null && state != null) AtlasSummary(index, state.allocated.toSet()) { summary = false }
         ToastHost(s, vm::dismissMessage, vm::dismissNotice, Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 64.dp))
     }
@@ -145,24 +172,50 @@ private val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
  * Giving [nodes] atlas nodes back: [gold] at the respec price or, since server 1.65.0 and when the bag holds [regrets],
  * an Orb of Regret per node — the player picks; a payment the hero cannot make keeps the button off and says why.
  */
-@Composable private fun RespecSheet(title: String, subtitle: String?, confirm: String, nodes: Int, gold: Long, money: Long, regrets: Long,
-    onDismiss: () -> Unit, onConfirm: (regret: Boolean) -> Unit) {
+@Composable private fun RespecSheet(
+    title: String,
+    subtitle: String?,
+    confirm: String,
+    nodes: Int,
+    gold: Long,
+    money: Long,
+    regrets: Long,
+    onDismiss: () -> Unit,
+    onConfirm: (regret: Boolean) -> Unit,
+) {
     var regret by remember { mutableStateOf(false) }
     val short = if (regret) regrets < nodes else money < gold
     val cost = if (regret) "$nodes × ${itemTitle(Orb.ORB_OF_REGRET.name)}" else ui("atlas.gold", gold)
-    ConfirmSheet(title = title, subtitle = subtitle, confirm = confirm, danger = true, onDismiss = onDismiss,
+    ConfirmSheet(
+        title = title, subtitle = subtitle, confirm = confirm, danger = true, onDismiss = onDismiss,
         ledger = listOf(LedgerLine(ui("atlas.reset_cost"), cost, Tone.SPEND), LedgerLine(ui("atlas.reset_back"), nodes.toString(), Tone.GAIN)),
-        blocked = short, warning = when { !short -> null; regret -> ui("atlas.no_regret"); else -> ui("atlas.no_gold") },
-        options = if (regrets > 0) ({
-            PillTabs(listOf(ui("atlas.pay_gold"), ui("atlas.pay_regret", regrets, nodes)), if (regret) 1 else 0, { regret = it == 1 }, segmented = true)
-        }) else null) { onConfirm(regret) }
+        blocked = short,
+        warning = when {
+            !short -> null
+            regret -> ui("atlas.no_regret")
+            else -> ui("atlas.no_gold")
+        },
+        options = if (regrets > 0) {
+            (
+                {
+                    PillTabs(listOf(ui("atlas.pay_gold"), ui("atlas.pay_regret", regrets, nodes)), if (regret) 1 else 0, { regret = it == 1 }, segmented = true)
+                }
+                )
+        } else {
+            null
+        },
+    ) { onConfirm(regret) }
 }
 
 /** «Доступно очков: X из Y», a pill floating over the bottom of the sky. */
 @Composable private fun PointsPill(available: Int, points: Int, modifier: Modifier) {
     val shape = RoundedCornerShape(50)
-    Text(ui("atlas.points", available, points), color = if (available > 0) Color.White else Sky.text, style = MaterialTheme.typography.labelLarge,
-        modifier = modifier.background(Color(0xE6080C16), shape).border(1.dp, Sky.line, shape).padding(horizontal = 16.dp, vertical = 8.dp))
+    Text(
+        ui("atlas.points", available, points),
+        color = if (available > 0) Color.White else Sky.text,
+        style = MaterialTheme.typography.labelLarge,
+        modifier = modifier.background(Color(0xE6080C16), shape).border(1.dp, Sky.line, shape).padding(horizontal = 16.dp, vertical = 8.dp),
+    )
 }
 
 /** The header's ⋮: the totals, the reset, the guide and the bug report, so the title keeps the bar. */
@@ -177,9 +230,13 @@ private val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
                 Triple(ui("atlas.summary"), summary, onSummary),
                 Triple(ui("atlas.reset"), reset, onReset),
                 guides?.let { desk -> Triple(ui("guide.help"), true) { desk.show(Guide.ATLAS) } },
-                bug?.let { Triple(ui("bug.open"), true, it) })
+                bug?.let { Triple(ui("bug.open"), true, it) },
+            )
             entries.forEach { (label, enabled, action) ->
-                DropdownMenuItem(text = { Text(label) }, enabled = enabled, onClick = { open = false; action() })
+                DropdownMenuItem(text = { Text(label) }, enabled = enabled, onClick = {
+                    open = false
+                    action()
+                })
             }
         }
     }
@@ -202,9 +259,14 @@ private val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
     val clock by produceState(0f) {
         var start = 0L
         var last = 0L
-        while (true) withFrameNanos { now ->
-            if (start == 0L) start = now
-            if (now - last >= CLOCK_STEP_NS) { last = now; value = (now - start) / 1e9f }
+        while (true) {
+            withFrameNanos { now ->
+                if (start == 0L) start = now
+                if (now - last >= CLOCK_STEP_NS) {
+                    last = now
+                    value = (now - start) / 1e9f
+                }
+            }
         }
     }
     val reachable = remember(taken, graph) { nodes.filter { AtlasFog.canTake(graph, it.code, taken) }.map { it.code }.toSet() }
@@ -215,36 +277,38 @@ private val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
     val strands = remember(nodes, graph) { nodes.flatMap { node -> node.parents.mapNotNull { parent -> graph.node(parent)?.let { Strand(it, node) } } } }
     val brushes = remember(nodes) { SkyBrushes() }
     // The tap reads the zoom and the pan as they are when the finger lands (3.56.0): the gesture is not restarted on every frame of a drag.
-    Box(modifier.clipToBounds()
-        .onSizeChanged { size ->
-            if (framed || size.width == 0) return@onSizeChanged
-            val start = nodes.firstOrNull { it.kind == AtlasNodeKind.START } ?: return@onSizeChanged
-            val width = size.width.toFloat()
-            val height = size.height.toFloat()
-            val at = Placement(bounds, width, height, floor, margin, scale, Offset.Zero)(start)
-            // The atlas grows upward from its start (3.52.0): the start sits low, the branches fan out above it.
-            pan = Offset(width / 2 - at.x, (height - floor) * START_DOWN - at.y)
-            framed = true
-        }
-        .pointerInput(nodes) {
-            detectTransformGestures { centroid, drag, zoom, _ ->
+    Box(
+        modifier.clipToBounds()
+            .onSizeChanged { size ->
+                if (framed || size.width == 0) return@onSizeChanged
+                val start = nodes.firstOrNull { it.kind == AtlasNodeKind.START } ?: return@onSizeChanged
                 val width = size.width.toFloat()
                 val height = size.height.toFloat()
-                val next = (scale * zoom).coerceIn(MIN_ZOOM, MAX_ZOOM)
-                // A pinch zooms about the fingers — the point under them stays there — and the drag pans on top of it.
-                val anchor = Offset(width / 2, height - floor)
-                val moved = centroid - anchor - (centroid - anchor - pan) * (next / scale) + drag
-                scale = next
-                pan = Placement(bounds, width, height, floor, margin, next, moved).held()
+                val at = Placement(bounds, width, height, floor, margin, scale, Offset.Zero)(start)
+                // The atlas grows upward from its start (3.52.0): the start sits low, the branches fan out above it.
+                pan = Offset(width / 2 - at.x, (height - floor) * START_DOWN - at.y)
+                framed = true
             }
-        }
-        .pointerInput(shown) {
-            detectTapGestures { tap ->
-                val place = Placement(bounds, size.width.toFloat(), size.height.toFloat(), floor, margin, scale, pan)
-                val hit = shown.minByOrNull { (place(it) - tap).getDistanceSquared() } ?: return@detectTapGestures
-                if ((place(hit) - tap).getDistance() <= TAP_RADIUS.toPx()) onSelect(hit.code)
+            .pointerInput(nodes) {
+                detectTransformGestures { centroid, drag, zoom, _ ->
+                    val width = size.width.toFloat()
+                    val height = size.height.toFloat()
+                    val next = (scale * zoom).coerceIn(MIN_ZOOM, MAX_ZOOM)
+                    // A pinch zooms about the fingers — the point under them stays there — and the drag pans on top of it.
+                    val anchor = Offset(width / 2, height - floor)
+                    val moved = centroid - anchor - (centroid - anchor - pan) * (next / scale) + drag
+                    scale = next
+                    pan = Placement(bounds, width, height, floor, margin, next, moved).held()
+                }
             }
-        }) {
+            .pointerInput(shown) {
+                detectTapGestures { tap ->
+                    val place = Placement(bounds, size.width.toFloat(), size.height.toFloat(), floor, margin, scale, pan)
+                    val hit = shown.minByOrNull { (place(it) - tap).getDistanceSquared() } ?: return@detectTapGestures
+                    if ((place(hit) - tap).getDistance() <= TAP_RADIUS.toPx()) onSelect(hit.code)
+                }
+            },
+    ) {
         // The far stars breathe on their own layer, behind everything.
         Canvas(Modifier.matchParentSize()) { stars(clock) }
         // The still sky: the glows, the threads, the rings and the cores of what is taken or dim — no clock is read here,
@@ -308,13 +372,22 @@ private val TAP_RADIUS = 20.dp
 private const val MIN_FIT = .5f
 
 /** Where a node lands on screen: the start at the bottom middle above the sheet, y up, fitted to the width. */
-private class Placement(private val b: SkyBounds, private val width: Float, private val height: Float, private val floor: Float,
-                        margin: Float, private val scale: Float, private val pan: Offset) {
+private class Placement(
+    private val b: SkyBounds,
+    private val width: Float,
+    private val height: Float,
+    private val floor: Float,
+    margin: Float,
+    private val scale: Float,
+    private val pan: Offset,
+) {
     /** Kept above [MIN_FIT]: a sky shorter than the sheet and margins would turn it negative and flip the pan limits. */
     private val fit = (min((width - margin * 2) / b.spanX, (height - floor - margin * 3) / b.spanY) * SPREAD).coerceAtLeast(MIN_FIT)
     val unit: Float get() = fit * scale
-    operator fun invoke(node: AtlasNode) = Offset(width / 2 + ((node.x - b.midX) * fit * scale).toFloat() + pan.x,
-        height - floor - (node.y * fit * scale).toFloat() + pan.y)
+    operator fun invoke(node: AtlasNode) = Offset(
+        width / 2 + ((node.x - b.midX) * fit * scale).toFloat() + pan.x,
+        height - floor - (node.y * fit * scale).toFloat() + pan.y,
+    )
 
     /**
      * The pan held so the sky never leaves the view: any star can be brought to the middle of what the sheet leaves open
@@ -347,8 +420,12 @@ private fun DrawScope.stars(clock: Float) {
 }
 
 /** A star's radius on screen by its kind: the same at every zoom, so a closer look parts the stars instead of swelling them. */
-private fun DrawScope.starRadius(node: AtlasNode): Float =
-    when (node.kind) { AtlasNodeKind.KEYSTONE -> 13.dp; AtlasNodeKind.NOTABLE -> 9.dp; AtlasNodeKind.START -> 11.dp; AtlasNodeKind.SMALL -> 5.dp }.toPx()
+private fun DrawScope.starRadius(node: AtlasNode): Float = when (node.kind) {
+    AtlasNodeKind.KEYSTONE -> 13.dp
+    AtlasNodeKind.NOTABLE -> 9.dp
+    AtlasNodeKind.START -> 11.dp
+    AtlasNodeKind.SMALL -> 5.dp
+}.toPx()
 
 /**
  * The still part of one node (3.56.0): a halo once taken or chosen, a burning white core once taken, a dim core while
@@ -378,15 +455,30 @@ private fun DrawScope.starLive(node: AtlasNode, at: Offset, taken: Boolean, open
 }
 
 /** The chosen star: what it is, what it gives, and the one command the server would accept for it. */
-@Composable private fun NodeSheet(index: ContentIndex, node: AtlasNode, taken: Set<String>, available: Int, price: Long, enabled: Boolean,
-                                  onTake: () -> Unit, onRefund: () -> Unit, modifier: Modifier) {
+@Composable private fun NodeSheet(
+    index: ContentIndex,
+    node: AtlasNode,
+    taken: Set<String>,
+    available: Int,
+    price: Long,
+    enabled: Boolean,
+    onTake: () -> Unit,
+    onRefund: () -> Unit,
+    modifier: Modifier,
+) {
     val graph = index.atlasGraph
     val shape = RoundedCornerShape(12.dp)
-    Column(modifier.navigationBarsPadding().padding(10.dp).fillMaxWidth().background(Color(0xE6080C16), shape).border(1.dp, Sky.line, shape)
-        .padding(horizontal = 14.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(
+        modifier.navigationBarsPadding().padding(10.dp).fillMaxWidth().background(Color(0xE6080C16), shape).border(1.dp, Sky.line, shape)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
         val kind = ui("atlas.kind.${node.kind.name}")
-        Text(if (node.branch == AtlasBranch.ROOT) kind else ui("atlas.kind_branch", kind, ui("atlas.branch.${node.branch.name}")).uppercase(),
-            color = Sky.text.copy(alpha = .75f), style = MaterialTheme.typography.labelSmall)
+        Text(
+            if (node.branch == AtlasBranch.ROOT) kind else ui("atlas.kind_branch", kind, ui("atlas.branch.${node.branch.name}")).uppercase(),
+            color = Sky.text.copy(alpha = .75f),
+            style = MaterialTheme.typography.labelSmall,
+        )
         Text(atlasNodeTitle(node.code), color = Color.White, style = MaterialTheme.typography.titleMedium)
         val isTaken = node.code in taken
         // «Было → станет» (3.54.0): each line beside the atlas's whole of its modifier now and with this node taken.
@@ -397,24 +489,36 @@ private fun DrawScope.starLive(node: AtlasNode, at: Offset, taken: Boolean, open
                 val now = totals[line.code]?.firstOrNull() ?: 0.0
                 val value = line.values.firstOrNull() ?: 0.0
                 val after = if (isTaken) now - value else now + value
-                Text(ui(if (isTaken) "atlas.compare_refund" else "atlas.compare_take", number(now), number(after)), color = Sky.text.copy(alpha = .7f),
-                    style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(start = 14.dp))
+                Text(
+                    ui(if (isTaken) "atlas.compare_refund" else "atlas.compare_take", number(now), number(after)),
+                    color = Sky.text.copy(alpha = .7f),
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.padding(start = 14.dp),
+                )
             }
         }
         val canTake = AtlasFog.canTake(graph, node.code, taken)
         val canRefund = AtlasFog.canRefund(graph, node.code, taken)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            MutedText(when {
-                node.kind == AtlasNodeKind.START -> ui("atlas.start_hint")
-                isTaken && canRefund -> ui("atlas.refund_hint", price)
-                isTaken -> ui("atlas.holds_hint")
-                canTake && available <= 0 -> ui("atlas.no_points")
-                canTake -> ui("atlas.take_hint")
-                else -> ui("atlas.far_hint")
-            }, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
+            MutedText(
+                when {
+                    node.kind == AtlasNodeKind.START -> ui("atlas.start_hint")
+                    isTaken && canRefund -> ui("atlas.refund_hint", price)
+                    isTaken -> ui("atlas.holds_hint")
+                    canTake && available <= 0 -> ui("atlas.no_points")
+                    canTake -> ui("atlas.take_hint")
+                    else -> ui("atlas.far_hint")
+                },
+                style = MaterialTheme.typography.labelMedium,
+                modifier = Modifier.weight(1f),
+            )
             when {
-                canTake -> ForgeButton(onClick = onTake, enabled = enabled && available > 0,
-                    colors = ButtonDefaults.buttonColors(containerColor = Sky.take, contentColor = Color.White)) { Text(ui("atlas.take")) }
+                canTake -> ForgeButton(
+                    onClick = onTake,
+                    enabled = enabled && available > 0,
+                    colors = ButtonDefaults.buttonColors(containerColor = Sky.take, contentColor = Color.White),
+                ) { Text(ui("atlas.take")) }
+
                 canRefund -> ForgeOutlinedButton(onClick = onRefund, enabled = enabled) { Text(ui("atlas.refund"), color = Sky.text) }
             }
         }
@@ -466,14 +570,17 @@ private object AtlasTotals {
 
 /** «Итого» (3.54.0): what the taken nodes give, added up and grouped by mechanic. */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable private fun AtlasSummary(index: ContentIndex, taken: Set<String>, onDismiss: () -> Unit) {
+@Composable
+private fun AtlasSummary(index: ContentIndex, taken: Set<String>, onDismiss: () -> Unit) {
     val groups = remember(taken) {
         index.atlas.nodes.filter { it.code in taken }.groupBy { it.branch }
             .mapValues { (_, nodes) -> AtlasTotals.sum(nodes.flatMap { it.lines }) }.filterValues { it.isNotEmpty() }
     }
     ForgeSheet(onDismissRequest = onDismiss, containerColor = Color(0xF20A0E18)) {
-        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(
+            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
             Text(ui("atlas.summary_title"), color = Color.White, style = MaterialTheme.typography.titleMedium)
             if (groups.isEmpty()) Text(ui("atlas.summary_empty"), color = Sky.text, style = MaterialTheme.typography.bodySmall)
             groups.forEach { (branch, totals) ->

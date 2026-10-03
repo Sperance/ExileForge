@@ -19,13 +19,20 @@ enum class AgentMode { IDLE, ASLEEP, LURKING, CHASING, HUNTING, RETURNING }
  * three, fought all at once since 2.70.0. [monster] — the map token, its walking behaviour and its
  * portrait on the ground — is always the strongest of the pack; [fallen] are those already killed.
  */
-class MonsterAgent(val id: Int, val pack: List<RolledMonster>, val homeX: Double, val homeY: Double,
-                   /** The guardian of a crystal of essences: which one of the map's, by its place; null for everyone else. */
-                   val crystal: Int? = null) {
+class MonsterAgent(
+    val id: Int,
+    val pack: List<RolledMonster>,
+    val homeX: Double,
+    val homeY: Double,
+    /** The guardian of a crystal of essences: which one of the map's, by its place; null for everyone else. */
+    val crystal: Int? = null,
+) {
     val monster: RolledMonster = pack.maxBy { it.rarity.ordinal }
     val rule: BehaviourRule get() = monster.behaviour
+
     /** Members of [pack] already killed (2.70.0): a pack the hero walked away from keeps its dead dead. */
     val fallen = mutableSetOf<Int>()
+
     /** Members still standing, by their place in [pack]. */
     val standing: List<Int> get() = pack.indices.filterNot { it in fallen }
     var x = homeX
@@ -33,6 +40,7 @@ class MonsterAgent(val id: Int, val pack: List<RolledMonster>, val homeX: Double
     var targetX = homeX
     var targetY = homeY
     var idle = 0.0
+
     /** Seconds it will neither chase nor fight: a monster the hero ran from does not pounce at once. */
     var calm = 0.0
     var alive = true
@@ -41,11 +49,14 @@ class MonsterAgent(val id: Int, val pack: List<RolledMonster>, val homeX: Double
         Behaviours.SLEEP -> AgentMode.ASLEEP
         else -> AgentMode.IDLE
     }
+
     /** Seconds since it last saw the hero it is hunting. */
     var unseen = 0.0
+
     /** Where it last saw the hero: a hunt goes there before it gives up. */
     var lastX = homeX
     var lastY = homeY
+
     /** The far end of a patrol, or null for a monster that does not patrol. */
     var patrol: Cell? = null
     var outbound = true
@@ -55,33 +66,45 @@ class MonsterAgent(val id: Int, val pack: List<RolledMonster>, val homeX: Double
 }
 
 /** A chest on the map (since 2.33.0): where it stands and whether the hero has opened it. */
-class Chest(val id: Int, val cell: Cell) { var opened = false }
+class Chest(val id: Int, val cell: Cell) {
+    var opened = false
+}
 
 /** A fountain on the map (since 2.48.0): where it stands, how much life it gives back, and whether it was drunk dry. */
-class Fountain(val id: Int, val cell: Cell, val heal: Double) { var used = false }
+class Fountain(val id: Int, val cell: Cell, val heal: Double) {
+    var used = false
+}
 
 /**
  * A crystal of essences on the map (2.78.0, server 0.69.0): where it stands, what it holds as the server
  * last said, and whether its guardian was slain. [id] is its place among the zone's crystals at the entry.
  */
-class CrystalSpot(val id: Int, val cell: Cell, var crystal: Crystal) { var freed = false }
+class CrystalSpot(val id: Int, val cell: Cell, var crystal: Crystal) {
+    var freed = false
+}
 
 /**
  * A crack of the Abyss on the map (2.82.0, server 0.72.0): where it gapes, how many depths it leads down with
  * the map entered, and whether it was opened. [id] is its place among the zone's cracks at the entry.
  */
-class AbyssSpot(val id: Int, val cell: Cell, val depth: Int) { var opened = false }
+class AbyssSpot(val id: Int, val cell: Cell, val depth: Int) {
+    var opened = false
+}
 
 /** What a step of the world ran into. */
 sealed interface WorldEvent {
     data class Encounter(val agent: MonsterAgent) : WorldEvent
     data class Opened(val chest: Chest) : WorldEvent
+
     /** The hero stepped up to a fountain still full (3.70.0): it is offered, not drunk underfoot. */
     data class AtFountain(val fountain: Fountain) : WorldEvent
+
     /** The hero stepped up to a crystal of essences (2.78.0). */
     data class Crystal(val spot: CrystalSpot) : WorldEvent
+
     /** The hero stepped up to a crack of the Abyss (2.82.0). */
     data class Abyss(val spot: AbyssSpot) : WorldEvent
+
     /** The hero reached the Vaal portal (since 2.65.0). */
     data object Portal : WorldEvent
     data object Exit : WorldEvent
@@ -116,11 +139,16 @@ class ExpeditionWorld(
     var lightRadius = lightRadius
         private set
 
-    fun regear(speed: Double, light: Double) { heroSpeed = speed; lightRadius = light }
+    fun regear(speed: Double, light: Double) {
+        heroSpeed = speed
+        lightRadius = light
+    }
 
     private val random = Random(seed)
+
     /** The map's boss (since 2.34.0): the guardian of the exit, standing beside it; none from an older server. */
     val boss: MonsterAgent? = bossMonster?.let { monster -> guardPost()?.let { cell -> MonsterAgent(packs.size, listOf(monster), cell.x + 0.5, cell.y + 0.5) } }
+
     /**
      * The Vaal portal (since 2.65.0), if this run rolled one — away from the everyday spawns and the
      * exit. Touching it opens the gate; it is gone once the zone was entered or refused.
@@ -129,7 +157,10 @@ class ExpeditionWorld(
         private set
 
     /** The portal is spent: entered, refused, or its zone closed. */
-    fun closePortal() { portal = null }
+    fun closePortal() {
+        portal = null
+    }
+
     /** Stepping off the portal a refused gate left the hero on: it does not open again underfoot. */
     private var portalArmed = true
     val agents: List<MonsterAgent> = packs.take(map.spawns.size).zip(map.spawns).mapIndexed { index, (pack, cell) ->
@@ -142,7 +173,9 @@ class ExpeditionWorld(
     val sealed: Boolean get() = boss?.alive == true
 
     /** The boss was slain within its respawn: it is not on the map this run. */
-    fun bossAbsent() { boss?.alive = false }
+    fun bossAbsent() {
+        boss?.alive = false
+    }
 
     /** The members the server already counts as killed, by token `i*[slots]+m`: they stay down, and a pack with none standing is gone. */
     fun restore(killed: Collection<Int>, slots: Int) {
@@ -175,6 +208,7 @@ class ExpeditionWorld(
     }
     var heroX = map.start.x + 0.5
     var heroY = map.start.y + 0.5
+
     /** The last direction the hero moved in, for the drawing to face. */
     var facingX = 1.0
     var facingY = 0.0
@@ -182,26 +216,35 @@ class ExpeditionWorld(
 
     /** Every cell the hero has ever seen, floor and rock alike. */
     val explored = BooleanArray(map.width * map.height)
+
     /** The cells the hero sees right now. */
     val lit = BooleanArray(map.width * map.height)
     private var litFrom: Cell? = null
 
     /** The chests the server says stand on this map, placed by [placeChests]. */
     val chests = mutableListOf<Chest>()
+
     /** The fountains, placed by [placeFountains]. */
     val fountains = mutableListOf<Fountain>()
+
     /** The fountain the hero stands at, until they step off it: one turned down is not offered again underfoot. */
     private var atFountain: Fountain? = null
+
     /** The crystals of essences (2.78.0), placed by [placeCrystals]. */
     val crystals = mutableListOf<CrystalSpot>()
+
     /** The crystal the hero stands at, until they step off it: it does not open again underfoot. */
     private var atCrystal: CrystalSpot? = null
+
     /** The cracks of the Abyss (2.82.0), placed by [placeCracks]. */
     val cracks = mutableListOf<AbyssSpot>()
+
     /** The crack the hero stands at, until they step off it. */
     private var atCrack: AbyssSpot? = null
 
-    init { light() }
+    init {
+        light()
+    }
 
     /**
      * Puts [count] chests on the map, once: far from the start, off the exit and the monsters'
@@ -299,17 +342,32 @@ class ExpeditionWorld(
             return WorldEvent.Opened(chest)
         }
         val fountain = fountains.firstOrNull { !it.used && hypot(it.cell.x + 0.5 - heroX, it.cell.y + 0.5 - heroY) < CHEST_REACH }
-        if (fountain == null) atFountain = null
-        else if (fountain !== atFountain) { atFountain = fountain; return WorldEvent.AtFountain(fountain) }
+        if (fountain == null) {
+            atFountain = null
+        } else if (fountain !== atFountain) {
+            atFountain = fountain
+            return WorldEvent.AtFountain(fountain)
+        }
         val crystal = crystals.firstOrNull { !it.freed && hypot(it.cell.x + 0.5 - heroX, it.cell.y + 0.5 - heroY) < CHEST_REACH }
-        if (crystal == null) atCrystal = null
-        else if (crystal !== atCrystal) { atCrystal = crystal; return WorldEvent.Crystal(crystal) }
+        if (crystal == null) {
+            atCrystal = null
+        } else if (crystal !== atCrystal) {
+            atCrystal = crystal
+            return WorldEvent.Crystal(crystal)
+        }
         val crack = cracks.firstOrNull { !it.opened && hypot(it.cell.x + 0.5 - heroX, it.cell.y + 0.5 - heroY) < CHEST_REACH }
-        if (crack == null) atCrack = null
-        else if (crack !== atCrack) { atCrack = crack; return WorldEvent.Abyss(crack) }
+        if (crack == null) {
+            atCrack = null
+        } else if (crack !== atCrack) {
+            atCrack = crack
+            return WorldEvent.Abyss(crack)
+        }
         portal?.let { cell ->
             val near = hypot(cell.x + 0.5 - heroX, cell.y + 0.5 - heroY) < CHEST_REACH
-            if (near && portalArmed) { portalArmed = false; return WorldEvent.Portal }
+            if (near && portalArmed) {
+                portalArmed = false
+                return WorldEvent.Portal
+            }
             if (!near) portalArmed = true
         }
         agents.filter { it.alive }.forEach { agent ->
@@ -334,10 +392,12 @@ class ExpeditionWorld(
         when (agent.mode) {
             // A sleeper and an ambusher only stir when the hero is right there.
             AgentMode.ASLEEP, AgentMode.LURKING -> if (sees && toHero <= rule.wake) agent.mode = AgentMode.CHASING
+
             else -> if (sees) agent.mode = AgentMode.CHASING
         }
         when (agent.mode) {
             AgentMode.ASLEEP, AgentMode.LURKING -> Unit
+
             AgentMode.CHASING -> {
                 agent.lastX = heroX
                 agent.lastY = heroY
@@ -345,14 +405,20 @@ class ExpeditionWorld(
                 if (!sees) agent.mode = AgentMode.HUNTING
                 go(agent, heroX, heroY, rule.chaseSpeed, dt)
             }
+
             AgentMode.HUNTING -> {
                 agent.unseen += dt
-                if (agent.unseen >= rule.giveUp) agent.mode = AgentMode.RETURNING
-                else go(agent, agent.lastX, agent.lastY, rule.chaseSpeed, dt)
+                if (agent.unseen >= rule.giveUp) {
+                    agent.mode = AgentMode.RETURNING
+                } else {
+                    go(agent, agent.lastX, agent.lastY, rule.chaseSpeed, dt)
+                }
             }
+
             AgentMode.RETURNING -> if (!go(agent, agent.homeX, agent.homeY, rule.wanderSpeed.coerceAtLeast(MIN_WALK), dt)) {
                 agent.mode = if (rule.type == Behaviours.AMBUSH) AgentMode.LURKING else AgentMode.IDLE
             }
+
             AgentMode.IDLE -> roam(agent, rule, dt)
         }
     }
@@ -360,11 +426,17 @@ class ExpeditionWorld(
     /** Wandering round home, or walking a patrol: the monster's own business while nobody is near. */
     private fun roam(agent: MonsterAgent, rule: BehaviourRule, dt: Double) {
         if (rule.wanderSpeed <= 0 || rule.type == Behaviours.AMBUSH) return
-        if (agent.idle > 0) { agent.idle -= dt; return }
+        if (agent.idle > 0) {
+            agent.idle -= dt
+            return
+        }
         val patrol = agent.patrol
         if (patrol != null) {
             val (tx, ty) = if (agent.outbound) patrol.x + 0.5 to patrol.y + 0.5 else agent.homeX to agent.homeY
-            if (!go(agent, tx, ty, rule.wanderSpeed, dt)) { agent.outbound = !agent.outbound; agent.idle = 0.8 + random.nextDouble() }
+            if (!go(agent, tx, ty, rule.wanderSpeed, dt)) {
+                agent.outbound = !agent.outbound
+                agent.idle = 0.8 + random.nextDouble()
+            }
             return
         }
         if (!walk(agent, rule.wanderSpeed, dt)) {
@@ -383,7 +455,10 @@ class ExpeditionWorld(
             agent.targetX = tx
             agent.targetY = ty
             // A corner can still catch a body wider than the line: then the path takes over.
-            if (walk(agent, speed, dt)) { agent.path = emptyList(); return true }
+            if (walk(agent, speed, dt)) {
+                agent.path = emptyList()
+                return true
+            }
         }
         val goal = Cell(floor(tx).toInt(), floor(ty).toInt())
         agent.repath -= dt
@@ -418,7 +493,11 @@ class ExpeditionWorld(
         repeat(8) {
             val tx = agent.homeX + (random.nextDouble() * 2 - 1) * radius
             val ty = agent.homeY + (random.nextDouble() * 2 - 1) * radius
-            if (map.walkable(floor(tx).toInt(), floor(ty).toInt())) { agent.targetX = tx; agent.targetY = ty; return }
+            if (map.walkable(floor(tx).toInt(), floor(ty).toInt())) {
+                agent.targetX = tx
+                agent.targetY = ty
+                return
+            }
         }
     }
 
@@ -461,7 +540,10 @@ class ExpeditionWorld(
         if (previous[goal] < 0) return emptyList()
         val cells = ArrayList<Cell>()
         var index = goal
-        while (index != start) { cells += Cell(index % map.width, index / map.width); index = previous[index] }
+        while (index != start) {
+            cells += Cell(index % map.width, index / map.width)
+            index = previous[index]
+        }
         cells += from
         return cells.reversed()
     }
@@ -476,7 +558,10 @@ class ExpeditionWorld(
             if (d == limit) continue
             for ((dx, dy) in STEPS.take(4)) {
                 val next = Cell(cell.x + dx, cell.y + dy)
-                if (map.walkable(next.x, next.y) && next !in seen) { seen[next] = d + 1; queue.add(next) }
+                if (map.walkable(next.x, next.y) && next !in seen) {
+                    seen[next] = d + 1
+                    queue.add(next)
+                }
             }
         }
         return seen
@@ -500,17 +585,19 @@ class ExpeditionWorld(
         litFrom = here
         lit.fill(false)
         val reach = ceil(lightRadius).toInt()
-        for (y in here.y - reach..here.y + reach) for (x in here.x - reach..here.x + reach) {
-            if (x !in 0 until map.width || y !in 0 until map.height) continue
-            if (hypot(x - here.x.toDouble(), y - here.y.toDouble()) > lightRadius) continue
-            // A rock face is seen when the line reaches it; what is behind it is not.
-            val cx = x + 0.5
-            val cy = y + 0.5
-            val toward = hypot(cx - heroX, cy - heroY).coerceAtLeast(1e-6)
-            val near = (toward - 0.75).coerceAtLeast(0.0) / toward
-            if (!sight(heroX, heroY, heroX + (cx - heroX) * near, heroY + (cy - heroY) * near)) continue
-            lit[y * map.width + x] = true
-            explored[y * map.width + x] = true
+        for (y in here.y - reach..here.y + reach) {
+            for (x in here.x - reach..here.x + reach) {
+                if (x !in 0 until map.width || y !in 0 until map.height) continue
+                if (hypot(x - here.x.toDouble(), y - here.y.toDouble()) > lightRadius) continue
+                // A rock face is seen when the line reaches it; what is behind it is not.
+                val cx = x + 0.5
+                val cy = y + 0.5
+                val toward = hypot(cx - heroX, cy - heroY).coerceAtLeast(1e-6)
+                val near = (toward - 0.75).coerceAtLeast(0.0) / toward
+                if (!sight(heroX, heroY, heroX + (cx - heroX) * near, heroY + (cy - heroY) * near)) continue
+                lit[y * map.width + x] = true
+                explored[y * map.width + x] = true
+            }
         }
     }
 
@@ -521,9 +608,8 @@ class ExpeditionWorld(
         return nx to ny
     }
 
-    private fun free(x: Double, y: Double, radius: Double): Boolean =
-        listOf(-radius to -radius, radius to -radius, -radius to radius, radius to radius)
-            .all { (ox, oy) -> map.walkable(floor(x + ox).toInt(), floor(y + oy).toInt()) }
+    private fun free(x: Double, y: Double, radius: Double): Boolean = listOf(-radius to -radius, radius to -radius, -radius to radius, radius to radius)
+        .all { (ox, oy) -> map.walkable(floor(x + ox).toInt(), floor(y + oy).toInt()) }
 
     /**
      * The packs a fight with [agent] draws in (3.26.0): it and every ordinary pack still standing within
@@ -559,19 +645,24 @@ class ExpeditionWorld(
         const val HERO_RADIUS = 0.28
         const val MONSTER_RADIUS = 0.3
         const val CONTACT = 0.8
+
         /** How close, in tiles, a pack must stand to the one engaged to join its fight. */
         const val GATHER_RADIUS = 3.0
+
         /** The most monsters gathered packs put in one stage of a fight when they merge (3.70.0). */
         const val STAGE_MONSTERS = 3
         const val EXIT_REACH = 0.7
         const val CALM_AFTER_RETREAT = 4.0
         const val CHEST_REACH = 0.7
+
         /** A chest stands at least this many steps from the start and this far from another chest. */
         const val CHEST_STEPS = 8
         const val CHEST_SPACING = 5.0
+
         /** A fountain stands at least this many steps from the start and this far from another one. */
         const val FOUNTAIN_STEPS = 6
         const val FOUNTAIN_SPACING = 8.0
+
         /** What a hero sees by when the server has not said: the level-1 base since server 0.30.0. */
         const val DEFAULT_LIGHT = 5.0
         private const val MIN_WALK = 0.8
@@ -608,8 +699,7 @@ class ExpeditionWorld(
         fun heroSpeed(stats: Map<String, Double>): Double = HERO_SPEED * (1 + (stats["STOCK_MOVEMENT_SPEED"] ?: 0.0) / 100).coerceIn(0.5, 2.5)
 
         /** How far the hero sees: the sheet's light radius — the base, if the server sent none — times the biome's light. */
-        fun lightRadius(stats: Map<String, Double>, biomeLight: Double): Double =
-            ((stats["STOCK_LIGHT_RADIUS"]?.takeIf { it > 0 } ?: DEFAULT_LIGHT) * biomeLight).coerceIn(MIN_LIGHT, MAX_LIGHT)
+        fun lightRadius(stats: Map<String, Double>, biomeLight: Double): Double = ((stats["STOCK_LIGHT_RADIUS"]?.takeIf { it > 0 } ?: DEFAULT_LIGHT) * biomeLight).coerceIn(MIN_LIGHT, MAX_LIGHT)
 
         const val MIN_LIGHT = 2.0
         const val MAX_LIGHT = 14.0

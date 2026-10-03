@@ -16,8 +16,7 @@ import kotlin.math.max
  */
 object CraftCycle {
     /** What a cycle spends: the work's inputs and one of each additive. */
-    fun spent(job: JobView, additives: List<String>): Map<String, Long> =
-        (job.inputs.map { it.item to it.amount } + additives.map { it to 1L }).groupBy({ it.first }, { it.second }).mapValues { it.value.sum() }
+    fun spent(job: JobView, additives: List<String>): Map<String, Long> = (job.inputs.map { it.item to it.amount } + additives.map { it to 1L }).groupBy({ it.first }, { it.second }).mapValues { it.value.sum() }
 
     fun roll(seed: Long, index: Long, job: JobView, bonus: WorkBonus, additives: List<String> = emptyList()): WorkGains {
         val dice = Work.cycleDice(seed, index)
@@ -48,5 +47,4 @@ operator fun WorkGains.minus(other: WorkGains): WorkGains = WorkGains(
     spent = merge(spent, other.spent, -1), made = made - other.made, starved = starved, equipment = equipment,
 )
 
-private fun merge(a: Map<String, Long>, b: Map<String, Long>, sign: Long): Map<String, Long> =
-    (a.keys + b.keys).associateWith { (a[it] ?: 0) + sign * (b[it] ?: 0) }.filterValues { it != 0L }
+private fun merge(a: Map<String, Long>, b: Map<String, Long>, sign: Long): Map<String, Long> = (a.keys + b.keys).associateWith { (a[it] ?: 0) + sign * (b[it] ?: 0) }.filterValues { it != 0L }

@@ -1,7 +1,6 @@
 package com.sperance.exileforge.ui.screens.auction
 
 import androidx.compose.foundation.layout.*
-import com.sperance.exileforge.presentation.state.Reads
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
@@ -10,6 +9,7 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.Reads
 import com.sperance.exileforge.ui.components.*
 
 /**
@@ -22,7 +22,8 @@ import com.sperance.exileforge.ui.components.*
  * it asks, and turns the refusal into an explanation.
  */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun AuctionScreen(s: ForgeState, vm: ForgeViewModel) {
+@Composable
+fun AuctionScreen(s: ForgeState, vm: ForgeViewModel) {
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         // No header (variant A): the City's row above already names the building, and the tabs carry its «?».
         FirstVisit(Guide.AUCTION)
@@ -30,7 +31,10 @@ import com.sperance.exileforge.ui.components.*
         // The hero comes too, and not for the bag: the sheet is what the rules read to say which
         // templates this hero can wear, and that is what marks an unwearable lot.
         LaunchedEffect(s.play.heroId, s.account.sessionEpoch) {
-            if (s.play.heroId.isNotBlank()) { vm.ensureHero(); vm.loadAuction() }
+            if (s.play.heroId.isNotBlank()) {
+                vm.ensureHero()
+                vm.loadAuction()
+            }
         }
         s.market.locked?.let { locked ->
             InfoCard(ui("auction.closed"), locked, failure = true)

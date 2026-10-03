@@ -53,8 +53,7 @@ class Spawns(private val index: ContentIndex, private val run: Run) {
     }
 
     /** The map's [buffs] folded into the monster's stats and kept apart, so the arena can say which is which. */
-    fun buffed(monster: RolledMonster, buffs: List<MonsterEffect>): RolledMonster =
-        if (buffs.isEmpty()) monster else monster.copy(stats = monsters.fold(monster.stats, buffs), mapBuffs = monster.mapBuffs + buffs)
+    fun buffed(monster: RolledMonster, buffs: List<MonsterEffect>): RolledMonster = if (buffs.isEmpty()) monster else monster.copy(stats = monsters.fold(monster.stats, buffs), mapBuffs = monster.mapBuffs + buffs)
 
     /**
      * What a monster casts: a boss its own skills; a monster with mana and none of its own, the casters' spell
@@ -74,5 +73,7 @@ class Spawns(private val index: ContentIndex, private val run: Run) {
 
     /** Whether this run hides a Vaal portal: [chance] of it, on a zone with a guardian of corruption to stand at the zone's end. */
 
-    companion object { private const val BORROWED_MANA = 40.0 }
+    companion object {
+        private const val BORROWED_MANA = 40.0
+    }
 }

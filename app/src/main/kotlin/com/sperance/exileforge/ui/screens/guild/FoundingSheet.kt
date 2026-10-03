@@ -1,6 +1,5 @@
 package com.sperance.exileforge.ui.screens.guild
 
-import com.sperance.exileforge.ui.components.ForgeSheet
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -21,10 +20,11 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.guild.nameLength
 import com.sperance.exileforge.core.model.guild.tagLength
 import com.sperance.exileforge.presentation.state.ForgeState
-import com.sperance.exileforge.rules.content.GuildMode
 import com.sperance.exileforge.rules.content.GuildFaction
+import com.sperance.exileforge.rules.content.GuildMode
 import com.sperance.exileforge.rules.content.GuildRules
 import com.sperance.exileforge.ui.components.*
+import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
 
@@ -37,7 +37,8 @@ internal typealias Founding = (String, String, String, String, String, GuildMode
  * the rules' lengths refuse, the button stays off and says why. It is held, as every purchase of gold is.
  */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable internal fun FoundingSheet(s: ForgeState, onDismiss: () -> Unit, onFound: Founding) {
+@Composable
+internal fun FoundingSheet(s: ForgeState, onDismiss: () -> Unit, onFound: Founding) {
     val rules = s.index?.guilds ?: GuildRules()
     var name by remember { mutableStateOf("") }
     var tag by remember { mutableStateOf("") }
@@ -56,13 +57,27 @@ internal typealias Founding = (String, String, String, String, String, GuildMode
         else -> null
     }
     ForgeSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp).navigationBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(
+            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp).navigationBarsPadding(),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
             Engraved(ui("guild.found_title"))
-            OutlinedTextField(name, { name = it.take(rules.nameLength.last) }, label = { Text(ui("guild.name")) }, singleLine = true,
-                supportingText = { Text("${name.trim().length}/${rules.nameLength.last}") }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(tag, { tag = it.filter(Char::isLetterOrDigit).uppercase().take(rules.tagLength.last) }, label = { Text(ui("guild.tag")) },
-                singleLine = true, supportingText = { Text(ui("guild.tag_hint", rules.tagLength.first, rules.tagLength.last)) }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(
+                name,
+                { name = it.take(rules.nameLength.last) },
+                label = { Text(ui("guild.name")) },
+                singleLine = true,
+                supportingText = { Text("${name.trim().length}/${rules.nameLength.last}") },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                tag,
+                { tag = it.filter(Char::isLetterOrDigit).uppercase().take(rules.tagLength.last) },
+                label = { Text(ui("guild.tag")) },
+                singleLine = true,
+                supportingText = { Text(ui("guild.tag_hint", rules.tagLength.first, rules.tagLength.last)) },
+                modifier = Modifier.fillMaxWidth(),
+            )
             Engraved(ui("guild.faction"))
             MutedText(ui("guild.faction_forever"))
             rules.factions.forEach { FactionCard(it, rules, chosen = it.code == faction) { faction = it.code } }
@@ -76,8 +91,13 @@ internal typealias Founding = (String, String, String, String, String, GuildMode
             PropertyRow(ui("guild.found_level_row"), rules.create.level.toString(), Glyph.LEVEL)
             money?.let { PropertyRow(ui("merchant.gold"), number(it.toDouble()), Glyph.CURRENCY) }
             refusal?.let { Text(it, color = LifeRed, style = MaterialTheme.typography.bodySmall) }
-            HoldButton(ui("guild.found_for", number(rules.create.gold.toDouble())), Gold, Modifier.fillMaxWidth(), enabled = !s.busy && refusal == null,
-                icon = ForgeGlyphs.Banner) {
+            HoldButton(
+                ui("guild.found_for", number(rules.create.gold.toDouble())),
+                Gold,
+                Modifier.fillMaxWidth(),
+                enabled = !s.busy && refusal == null,
+                icon = ForgeGlyphs.Banner,
+            ) {
                 onFound(name.trim(), tag, faction, emblem, color, mode, (minLevel.toIntOrNull() ?: 1).coerceAtLeast(1))
             }
         }
@@ -88,10 +108,12 @@ internal typealias Founding = (String, String, String, String, String, GuildMode
 @Composable private fun FactionCard(faction: GuildFaction, rules: GuildRules, chosen: Boolean, onChoose: () -> Unit) {
     val tint = factionColor(faction)
     val shape = RoundedCornerShape(10.dp)
-    Column(Modifier.fillMaxWidth().background(if (chosen) tint.copy(alpha = .14f) else Color.Transparent, shape)
-        .border(if (chosen) 2.dp else 1.dp, if (chosen) tint else tint.copy(alpha = .45f), shape)
-        .clickable(onClickLabel = GuildText.faction(faction.code), onClick = onChoose).padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(
+        Modifier.fillMaxWidth().background(if (chosen) tint.copy(alpha = .14f) else Color.Transparent, shape)
+            .border(if (chosen) 2.dp else 1.dp, if (chosen) tint else tint.copy(alpha = .45f), shape)
+            .clickable(onClickLabel = GuildText.faction(faction.code), onClick = onChoose).padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             FactionIcon(faction.code, rules, Modifier.size(28.dp))
             Text(GuildText.faction(faction.code), color = tint, style = MaterialTheme.typography.titleSmall)

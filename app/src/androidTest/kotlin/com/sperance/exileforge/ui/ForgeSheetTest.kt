@@ -44,7 +44,12 @@ class ForgeSheetTest {
         compose.setContent {
             ForgeTheme {
                 var shown by remember { mutableStateOf(true) }
-                if (shown) ForgeSheet(onDismissRequest = { dismissed++; shown = false }, content = body)
+                if (shown) {
+                    ForgeSheet(onDismissRequest = {
+                        dismissed++
+                        shown = false
+                    }, content = body)
+                }
             }
         }
         compose.waitForIdle()

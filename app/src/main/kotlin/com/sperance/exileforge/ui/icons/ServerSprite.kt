@@ -79,22 +79,37 @@ fun spriteVector(sprite: IconSprite): ImageVector? {
         // back empty rather than throwing. Treating both the same keeps the fallback predictable.
         if (outlines.any { (_, nodes) -> nodes.isEmpty() }) return null
         val built = ImageVector.Builder(
-            defaultWidth = 24.dp, defaultHeight = 24.dp,
-            viewportWidth = sprite.viewBox, viewportHeight = sprite.viewBox,
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = sprite.viewBox,
+            viewportHeight = sprite.viewBox,
         ).apply {
-            if (sprite.isGlass) { glass(sprite.viewBox, outlines); return@apply }
+            if (sprite.isGlass) {
+                glass(sprite.viewBox, outlines)
+                return@apply
+            }
             // Every outline is filled and also traced (2.72.0): a sprite drawn with bare lines — the
             // snowflake of cold, a slash, a row of bars — has no area to fill and was invisible.
             val line = sprite.viewBox * STROKE_SHARE
             outlines.forEach { (path, nodes) ->
                 val alpha = path.alpha.coerceIn(0f, 1f)
-                addPath(nodes, fill = SolidColor(Color.Black), fillAlpha = alpha, stroke = SolidColor(Color.Black), strokeAlpha = alpha,
-                    strokeLineWidth = line, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round)
+                addPath(
+                    nodes,
+                    fill = SolidColor(Color.Black),
+                    fillAlpha = alpha,
+                    stroke = SolidColor(Color.Black),
+                    strokeAlpha = alpha,
+                    strokeLineWidth = line,
+                    strokeLineCap = StrokeCap.Round,
+                    strokeLineJoin = StrokeJoin.Round,
+                )
             }
         }.build()
         parsed[sprite] = built
         built
-    } catch (_: Exception) { null }
+    } catch (_: Exception) {
+        null
+    }
 }
 
 /**
@@ -104,8 +119,13 @@ fun spriteVector(sprite: IconSprite): ImageVector? {
  */
 private fun ImageVector.Builder.glass(box: Float, outlines: List<Pair<IconPath, List<PathNode>>>) {
     val lead = box * LEAD_SHARE
-    val sheen = Brush.linearGradient(0f to Color.White.copy(alpha = .45f), .5f to Color.Transparent, 1f to Color.Black.copy(alpha = .35f),
-        start = Offset.Zero, end = Offset(box, box))
+    val sheen = Brush.linearGradient(
+        0f to Color.White.copy(alpha = .45f),
+        .5f to Color.Transparent,
+        1f to Color.Black.copy(alpha = .35f),
+        start = Offset.Zero,
+        end = Offset(box, box),
+    )
     outlines.forEach { (path, nodes) ->
         val paint = SolidColor(hexColor(path.color))
         val fill = if (path.evenOdd) PathFillType.EvenOdd else PathFillType.NonZero
@@ -114,7 +134,9 @@ private fun ImageVector.Builder.glass(box: Float, outlines: List<Pair<IconPath, 
                 addPath(nodes, stroke = Lead, strokeLineWidth = path.line + lead * .66f, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round)
                 addPath(nodes, stroke = paint, strokeLineWidth = path.line * .55f, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round)
             }
+
             path.alpha < 1f -> addPath(nodes, pathFillType = fill, fill = paint, fillAlpha = path.alpha.coerceIn(0f, 1f))
+
             else -> {
                 addPath(nodes, pathFillType = fill, fill = paint)
                 addPath(nodes, pathFillType = fill, fill = sheen)
@@ -125,5 +147,4 @@ private fun ImageVector.Builder.glass(box: Float, outlines: List<Pair<IconPath, 
 }
 
 /** `#rrggbb` as a colour; anything unreadable is white glass rather than a failed icon. */
-private fun hexColor(hex: String?): Color =
-    hex?.removePrefix("#")?.takeIf { it.length == 6 }?.toLongOrNull(16)?.let { Color(0xFF000000 or it) } ?: Color.White
+private fun hexColor(hex: String?): Color = hex?.removePrefix("#")?.takeIf { it.length == 6 }?.toLongOrNull(16)?.let { Color(0xFF000000 or it) } ?: Color.White

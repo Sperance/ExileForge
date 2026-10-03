@@ -38,15 +38,29 @@ import kotlin.random.Random
 internal val SkillDefinition.spell: Boolean get() = type == SkillType.SPELL
 
 /** Who acted. */
-enum class Side { HERO, MONSTER; val other: Side get() = if (this == HERO) MONSTER else HERO }
+enum class Side {
+    HERO,
+    MONSTER,
+    ;
+
+    val other: Side get() = if (this == HERO) MONSTER else HERO
+}
 
 /**
  * What a fighter did: swung a weapon, let an ailment burn on, gave a blow back (thorns and reflect, 2.75.0),
  * turned to leave, used a skill — a class's, a passive's answer or a monster's — or drank a flask (2.78.0).
  */
-enum class Action { ATTACK, TICK, REFLECT, RETREAT, SKILL, FLASK,
+enum class Action {
+    ATTACK,
+    TICK,
+    REFLECT,
+    RETREAT,
+    SKILL,
+    FLASK,
+
     /** Something that happened without a blow (3.37.0): a buff, a charge, a power, a condition, a kill's reward. */
-    NOTE }
+    NOTE,
+}
 
 /** How a blow ended: it landed, landed hard, or never reached. */
 enum class HitKind { HIT, CRIT, EVADED, BLOCKED }
@@ -60,13 +74,15 @@ enum class DamageType(val attack: String, val resist: String?) {
     FIRE("STOCK_ATTACK_FIRE", "STOCK_RESIST_FIRE"),
     COLD("STOCK_ATTACK_COLD", "STOCK_RESIST_COLD"),
     LIGHTNING("STOCK_ATTACK_LIGHTNING", "STOCK_RESIST_LIGHTNING"),
-    CHAOS("STOCK_ATTACK_CHAOS", "STOCK_RESIST_CHAOS");
+    CHAOS("STOCK_ATTACK_CHAOS", "STOCK_RESIST_CHAOS"),
+    ;
 
     /** The stat that lifts this resistance's ceiling (since server 0.36.0). */
     val maxResist: String? get() = resist?.replace("STOCK_RESIST_", "STOCK_RESIST_MAX_")
 
     companion object {
         fun of(stat: String) = entries.firstOrNull { it.attack == stat }
+
         /** A skill's element by its name (server 0.69.0): `FIRE`, `COLD`, `LIGHTNING`, `CHAOS` or `PHYSICAL`. */
         fun element(name: String?) = entries.firstOrNull { it.name == name }
         val ELEMENTS = listOf(FIRE, COLD, LIGHTNING)
@@ -87,26 +103,38 @@ internal fun regrow(value: Double, increase: Double, extra: Double): Double {
  * [word] is how the sheet's stats name it since server 0.36.0 — `STOCK_IGNITE_CHANCE`, `STOCK_AVOID_IGNITE`,
  * `STOCK_IGNITE_DURATION_ON_SELF` — and [damage] the stat that makes its damage over time heavier.
  */
+
 /**
  * The buildups of server 1.73.0 (3.78.0, as in PoE2): a blow fills a bar on the struck one and a full bar sets it off.
  * [gain] is the striker's line that fills it faster — the old «chance to freeze» fills the freeze — and [avoid] the struck
  * one's that fills it slower.
  */
 enum class Buildup(val gain: String, val avoid: String?) {
-    STUN("STOCK_STUN_BUILDUP", "STOCK_AVOID_STUN"), FREEZE("STOCK_FREEZE_CHANCE", "STOCK_AVOID_FREEZE"), ELECTROCUTE("STOCK_ELECTROCUTE_BUILDUP", null)
+    STUN("STOCK_STUN_BUILDUP", "STOCK_AVOID_STUN"),
+    FREEZE("STOCK_FREEZE_CHANCE", "STOCK_AVOID_FREEZE"),
+    ELECTROCUTE("STOCK_ELECTROCUTE_BUILDUP", null),
 }
 
 enum class Ailment(val word: String, val damage: String? = null) {
-    BURNING("IGNITE", "STOCK_BURNING_DAMAGE"), CHILLED("CHILL"), FROZEN("FREEZE"), SHOCKED("SHOCK"),
-    POISONED("POISON", "STOCK_POISON_DAMAGE"), BLEEDING("BLEED", "STOCK_BLEED_DAMAGE");
+    BURNING("IGNITE", "STOCK_BURNING_DAMAGE"),
+    CHILLED("CHILL"),
+    FROZEN("FREEZE"),
+    SHOCKED("SHOCK"),
+    POISONED("POISON", "STOCK_POISON_DAMAGE"),
+    BLEEDING("BLEED", "STOCK_BLEED_DAMAGE"),
+    ;
+
     /** Deals damage over time, as opposed to slowing, weakening or stopping. */
     val hurts: Boolean get() = this == BURNING || this == POISONED || this == BLEEDING
+
     /** The sheet's "increased damage against X enemies" stat for this ailment (server 0.66.0). */
     val against: String get() = "STOCK_DAMAGE_VS_$name"
     companion object {
         fun of(name: String) = entries.firstOrNull { it.name == name }
+
         /** An ailment as a skill names it (server 0.69.0): `IGNITE`, `CHILL`, `FREEZE`, `SHOCK`, `POISON`, `BLEED`. */
         fun byWord(word: String) = entries.firstOrNull { it.word == word }
+
         /** The ailment a damage brings by nature: fire burns, cold chills, lightning shocks, chaos poisons, a blade bleeds. */
         fun of(type: DamageType) = when (type) {
             DamageType.PHYSICAL -> BLEEDING
@@ -135,49 +163,66 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
     operator fun get(name: String): Double = stat(name)
 
     val maxLife = max(1.0, stat("STOCK_HEALTH"))
+
     /** A monster's «shield of life» (an essence, server 0.69.0) adds a share of its life to its shield. */
     val maxShield = max(0.0, stat("STOCK_ENERGY_SHIELD")) + maxLife * max(0.0, stat("STOCK_SHIELD_OF_LIFE")) / 100
     val maxMana = max(0.0, stat("STOCK_MANA"))
+
     /** Immune to chaos (3.17.0, server 1.15.0): its hits and poison do nothing. */
     val chaosImmune = stat("STOCK_CHAOS_IMMUNE") > 0
+
     /** Mana back a second (server 0.69.0): the rule's share of the maximum, faster by the sheet's regeneration. */
     fun manaRegen(rule: ManaRule): Double = maxMana * rule.regen / 100 * max(0.0, 1 + stat("STOCK_MANA_REGEN") / 100)
+
     /** Every damage it deals, as a multiplier: the sheet's "damage" (server 0.69.0), a monster's "deals more damage". */
     val damageMore = max(0.0, 1 + stat("STOCK_DAMAGE") / 100)
+
     /** How fast its skills recover: the cooldown recovery, and a spell's cast speed on top. */
     fun recovery(spell: Boolean): Double = max(0.1, 1 + (stat("STOCK_COOLDOWN_RECOVERY") + if (spell) stat("STOCK_CAST_SPEED") else 0.0) / 100)
+
     /** What is left of a skill's price in mana. */
     val skillCost = max(0.0, 1 - stat("STOCK_SKILL_COST") / 100)
     val skillHealing = max(0.0, 1 + stat("STOCK_SKILL_HEALING") / 100)
+
     /** Immune to [ailment] (a flask's suffix, server 0.69.0); an immunity to freezing keeps the cold's chill off too. */
     fun immune(ailment: Ailment): Boolean = stat("STOCK_IMMUNE_${ailment.word}") > 0 || (ailment == Ailment.CHILLED && stat("STOCK_IMMUNE_FREEZE") > 0)
     val immuneCurse: Boolean get() = stat("STOCK_IMMUNE_CURSE") > 0
     val immuneStun: Boolean get() = stat("STOCK_IMMUNE_STUN") > 0
+
     /** How much faster this striker fills [kind] on others (3.78.0). */
     fun buildupGain(kind: Buildup) = max(0.0, 1 + stat(kind.gain) / 100)
+
     /** How much of [kind] reaches this fighter's bar: its avoidance takes a share off. */
     fun buildupTaken(kind: Buildup) = 1 - (kind.avoid?.let { percent(it) } ?: 0.0)
+
     /** The stun bar's own size against the rule's: «Непоколебимый» doubles it. */
     val stunPool = max(.1, 1 + stat("STOCK_STUN_POOL") / 100)
+
     /** Never fills [kind] at all. */
     fun immuneTo(kind: Buildup) = when (kind) {
         Buildup.STUN -> immuneStun
         Buildup.FREEZE -> immune(Ailment.FROZEN)
         Buildup.ELECTROCUTE -> stat("STOCK_IMMUNE_ELECTROCUTE") > 0
     }
+
     /** Life back a second as a share of the maximum (server 0.69.0), beside the flat regeneration. */
     val lifeRegenShare = max(0.0, stat("STOCK_LIFE_REGEN_PERCENT")) / 100
+
     /** Energy shield back a second as a share of the maximum (server 1.58.0), beside the flat regeneration. */
     val shieldRegenShare = max(0.0, stat("STOCK_ENERGY_REGEN_PERCENT")) / 100
+
     /** Life lost a second as a share of the maximum (3.4.0). */
     val lifeDegenShare = max(0.0, stat("STOCK_LIFE_DEGEN_PERCENT")) / 100
     val leechMana = max(0.0, stat("STOCK_LEECH_MANA")) / 100
     val manaOnHit = max(0.0, stat("STOCK_MANA_ON_HIT"))
     val manaOnKill = max(0.0, stat("STOCK_MANA_ON_KILL"))
+
     /** The share of the struck one's maximum mana its blows burn (a monster's essence). */
     val manaBurn = max(0.0, stat("STOCK_MANA_BURN")) / 100
+
     /** How much more damage over time, a critical strike, a bleeding and a shock do to this fighter — a curse's work. */
     val dotTaken = max(0.0, 1 + stat("STOCK_DOT_TAKEN") / 100)
+
     /** Extra critical multiplier this fighter takes; below zero (server 1.32.0) a critical strike hurts it no more than a hit. */
     val critTaken = stat("STOCK_CRITICAL_TAKEN") / 100
     fun ailmentTaken(ailment: Ailment): Double = when (ailment) {
@@ -188,14 +233,17 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
     val damage: Map<DamageType, Double> = DamageType.entries.associateWith { max(0.0, stat(it.attack)) }
         .let { rolled -> if (rolled.values.sum() > 0) rolled else rolled + (DamageType.PHYSICAL to rules.unarmed.damage) }
     val attackSpeed = stat("STOCK_ATTACK_SPEED").takeIf { it > 0 }?.coerceIn(0.3, 5.0) ?: rules.unarmed.speed
+
     /** A limit raised by the sheet's own lines (3.13.0): block, evasion, physical reduction and critical chance, each as the resistances are. */
     fun ceiling(limit: Ceiling): Double = limit.at(stat(limit.raise))
     val critChance = (stats[CRIT_CHANCE] ?: rules.critical.chance).coerceIn(0.0, ceiling(rules.ceilings.critical)) / 100
+
     /**
      * The critical multiplier with the critical strike damage (server 1.57.0): that damage — 100 at base, on the hero's sheet
      * and on a monster's — grows the crit's bonus over a hit, 150% at 140 striking for 170%; at 0 a crit hits as a hit.
      */
     val critMultiplier = rules.critical.effective(stats[CRIT_MULTIPLIER] ?: rules.critical.multiplier, stats[CRIT_DAMAGE]) / 100
+
     /**
      * A spell's own critical chance and multiplier (server 1.56.0): the attacks' lines do nothing to it. The hero's sheet
      * always holds both from the rule's base; a fighter without them — a monster — casts with its attacks' figures.
@@ -205,9 +253,11 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
     val armour = max(0.0, stat("STOCK_ARMOR"))
     val evasion = max(0.0, stat("STOCK_EVASION"))
     val block = stat("STOCK_BLOCK_CHANCE").coerceIn(0.0, ceiling(rules.ceilings.block)) / 100
+
     /** The most of a blow evasion and armour can each turn aside, in shares. */
     val evasionCap = ceiling(rules.ceilings.evasion) / 100
     val armourCap = ceiling(rules.ceilings.physical) / 100
+
     /** Taken off physical damage after armour, under the same physical ceiling. */
     val physicalReduction = percent("STOCK_PHYSICAL_REDUCTION", ceiling(rules.ceilings.physical))
 
@@ -215,8 +265,8 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
      * The share of a physical blow of [raw] that armour and then the flat reduction take, together under the physical
      * ceiling (3.71.0): the ceiling is the whole of physical mitigation, not each half's, so the two never stack past it.
      */
-    fun physicalMitigation(raw: Double, factor: Double): Double =
-        (1 - (1 - (armour / (armour + factor * raw)).coerceAtMost(armourCap)) * (1 - physicalReduction)).coerceAtMost(armourCap)
+    fun physicalMitigation(raw: Double, factor: Double): Double = (1 - (1 - (armour / (armour + factor * raw)).coerceAtMost(armourCap)) * (1 - physicalReduction)).coerceAtMost(armourCap)
+
     /**
      * Chaos stands alone, as in PoE; "all resistances" and "all maximum resistances" cover the three elements.
      * [penetration] (server 0.66.0) is the striker's: it is taken off the resistance, and can push it below
@@ -230,12 +280,14 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
         val own = (stat(name) + (if (chaos) 0.0 else stat("STOCK_RESIST_ALL"))).coerceIn(-rules.resistCap, ceiling)
         return (own - penetration).coerceIn(-rules.resistCap, ceiling) / 100
     }
+
     /** How much of the target's [type] resistance this fighter's blows ignore, in percent (server 0.66.0). */
     fun penetration(type: DamageType): Double = when (type) {
         DamageType.PHYSICAL -> 0.0
         DamageType.CHAOS -> max(0.0, stat("STOCK_PENETRATE_CHAOS"))
         else -> max(0.0, stat("STOCK_PENETRATE_${type.name}")) + max(0.0, stat("STOCK_PENETRATE_ELEMENTAL"))
     }
+
     /**
      * What a blow of [type] does to this fighter after its defences (server 0.66.0): "damage taken" of every
      * kind and of that kind together, never below a tenth so no stack of it makes a fighter untouchable.
@@ -250,24 +302,30 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
         }
         return ((1 + stat("STOCK_DAMAGE_TAKEN") / 100) * (1 + own / 100)).coerceAtLeast(0.1)
     }
+
     /** How much harder this fighter hits a target under [ailments]: any ailment counts once, each named one on top. */
     fun damageAgainst(ailments: Collection<Ailment>): Double {
         if (ailments.isEmpty()) return 1.0
         val named = ailments.toSet().sumOf { max(0.0, stat(it.against)) }
         return 1 + (max(0.0, stat("STOCK_DAMAGE_VS_AILED")) + named) / 100
     }
+
     /** How much longer the ailments this fighter inflicts last on its foes. */
-    fun ailmentDurationOnFoes(ailment: Ailment): Double =
-        1 + (max(0.0, stat("STOCK_AILMENT_DURATION")) + max(0.0, stat("STOCK_${ailment.word}_DURATION"))) / 100
+    fun ailmentDurationOnFoes(ailment: Ailment): Double = 1 + (max(0.0, stat("STOCK_AILMENT_DURATION")) + max(0.0, stat("STOCK_${ailment.word}_DURATION"))) / 100
+
     /** The pace of everything that gives life or shield back: regeneration, leech, on hit and on kill (server 0.66.0). */
     val recoveryRate = max(0.0, 1 + stat("STOCK_RECOVERY_RATE") / 100)
+
     /** The pace of the shield's recharge after the rule's delay. */
     val shieldRecharge = max(0.0, 1 + stat("STOCK_SHIELD_RECHARGE") / 100)
+
     /** Flat physical damage every attacker takes on hit, and the share of any damage taken given back the same way. */
     val thorns = max(0.0, stat("STOCK_THORNS"))
     val reflect = max(0.0, stat("STOCK_REFLECT")) / 100
+
     /** What this fighter's presence does to its foes while it stands (server 0.66.0): the `AURA_*` stats, if any. */
     val auras: Map<String, Double> = stats.filterKeys { it.startsWith("AURA_") }.filterValues { it > 0 }
+
     /**
      * This fighter under the [auras] of the foes still standing: fewer resistances, more damage taken, slower
      * swings and slower recovery. The same sheet with the auras written into it, so every reading stays one.
@@ -282,7 +340,10 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
             if (SPELL_CRIT_CHANCE in stats) sheet[SPELL_CRIT_CHANCE] = spellCritChance * 100 * max(0.0, 1 - v / 100)
         }
         auras["AURA_COOLDOWN"]?.let { v -> sheet["STOCK_COOLDOWN_RECOVERY"] = (stats["STOCK_COOLDOWN_RECOVERY"] ?: 0.0) - v }
-        auras["AURA_RESIST"]?.let { v -> sheet["STOCK_RESIST_ALL"] = (stats["STOCK_RESIST_ALL"] ?: 0.0) - v; sheet["STOCK_RESIST_CHAOS"] = (stats["STOCK_RESIST_CHAOS"] ?: 0.0) - v }
+        auras["AURA_RESIST"]?.let { v ->
+            sheet["STOCK_RESIST_ALL"] = (stats["STOCK_RESIST_ALL"] ?: 0.0) - v
+            sheet["STOCK_RESIST_CHAOS"] = (stats["STOCK_RESIST_CHAOS"] ?: 0.0) - v
+        }
         auras["AURA_DAMAGE_TAKEN"]?.let { v -> sheet["STOCK_DAMAGE_TAKEN"] = (stats["STOCK_DAMAGE_TAKEN"] ?: 0.0) + v }
         auras["AURA_SLOW"]?.let { v -> sheet["STOCK_ATTACK_SPEED"] = attackSpeed * max(0.1, 1 - v / 100) }
         auras["AURA_RECOVERY"]?.let { v -> sheet["STOCK_RECOVERY_RATE"] = (stats["STOCK_RECOVERY_RATE"] ?: 0.0) - v }
@@ -295,11 +356,14 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
     val critLeech = max(0.0, stat("STOCK_CRITICAL_VAMPIRE")) / 100
     val stunThreshold = max(0.0, stat("STOCK_STUN_THRESHOLD"))
     val avoidStun = percent("STOCK_AVOID_STUN")
+
     /** What gear adds to the rule's chance to inflict [ailment], in percent; chill has no such stat. */
     fun inflictChance(ailment: Ailment) = max(0.0, stat("STOCK_${ailment.word}_CHANCE"))
+
     /** How much heavier [ailment]'s damage over time runs. */
     fun ailmentDamage(ailment: Ailment) = 1 + max(0.0, ailment.damage?.let(::stat) ?: 0.0) / 100
     fun avoid(ailment: Ailment) = percent("STOCK_AVOID_${ailment.word}")
+
     /** What is left of [ailment]'s duration on this fighter, never less than the rule's cap allows. */
     fun ailmentDuration(ailment: Ailment) = 1 - percent("STOCK_${ailment.word}_DURATION_ON_SELF", rules.ailmentDurationCap)
     val lifeOnHit = max(0.0, stat("STOCK_HEALTH_ON_HIT"))
@@ -308,37 +372,51 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
 
     /** The share of the damage bound for life that mana takes first. */
     val manaBeforeLife = percent("STOCK_MANA_BEFORE_LIFE")
+
     /** Life leech restores the shield instead. */
     val leechToShield: Boolean get() = stat("STOCK_LEECH_TO_SHIELD") > 0
+
     /** The shield lost a second as a share of its maximum. */
     val shieldDegenShare = max(0.0, stat("STOCK_SHIELD_DEGEN_PERCENT")) / 100
+
     /** The share of damage to life dealt over [lifeDelay] seconds instead of at once. */
     val lifeDelayed = percent("STOCK_LIFE_DAMAGE_DELAYED")
     val lifeDelay: Double get() = stat("STOCK_LIFE_DAMAGE_DELAY").takeIf { it > 0 } ?: DEFAULT_LIFE_DELAY
+
     /** Physical damage of hits taken as an element instead, share by element; the shares together never pass the whole. */
     val physicalTakenAs: Map<DamageType, Double> = DamageType.ELEMENTS.mapNotNull { type ->
         stat("STOCK_PHYSICAL_TAKEN_AS_${type.name}").takeIf { it > 0 }?.let { type to it / 100 }
-    }.toMap().let { shares -> val sum = shares.values.sum(); if (sum > 1) shares.mapValues { it.value / sum } else shares }
+    }.toMap().let { shares ->
+        val sum = shares.values.sum()
+        if (sum > 1) shares.mapValues { it.value / sum } else shares
+    }
+
     /** Each of its hits deals all its damage as one random element. */
     val randomElementHits: Boolean get() = stat("STOCK_RANDOM_ELEMENT_HITS") > 0
+
     /** Elemental damage taken meets its highest elemental resistance. */
     val highestResistTaken: Boolean get() = stat("STOCK_HIGHEST_RESIST_TAKEN") > 0
+
     /** More or less damage taken of the element it resists most, in percent. */
     val highestResistElementTaken: Double get() = stat("STOCK_HIGHEST_RESIST_ELEMENT_TAKEN")
+
     /** Its damage of the element its target resists least penetrates this much. */
     val lowestResistPenetrate: Double get() = max(0.0, stat("STOCK_LOWEST_RESIST_PENETRATE"))
+
     /** Its ignites burn as chaos. */
     val igniteAsChaos: Boolean get() = stat("STOCK_IGNITE_AS_CHAOS") > 0
+
     /** Its critical chance is rolled twice. */
     val luckyCrit: Boolean get() = stat("STOCK_LUCKY_CRIT") > 0
+
     /** Its hits that are not critical strikes, as a multiplier (−40 — 40% less). */
     val nonCritMore: Double get() = max(0.0, 1 + stat("STOCK_NON_CRIT_DAMAGE") / 100)
+
     /** Every flask of the belt is drunk as a fight opens, for no charges. */
     val flasksAuto: Boolean get() = stat("STOCK_FLASKS_AUTO") > 0
 
     /** Its resistance to a blow of [type]: the highest elemental one for an element when it takes elements so. */
-    fun resistTo(type: DamageType, penetration: Double = 0.0): Double =
-        if (highestResistTaken && type in DamageType.ELEMENTS) DamageType.ELEMENTS.maxOf { resist(it, penetration) } else resist(type, penetration)
+    fun resistTo(type: DamageType, penetration: Double = 0.0): Double = if (highestResistTaken && type in DamageType.ELEMENTS) DamageType.ELEMENTS.maxOf { resist(it, penetration) } else resist(type, penetration)
 
     private companion object {
         const val DEFAULT_LIFE_DELAY = 4.0
@@ -354,49 +432,65 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
 
     /** Its accuracy against an evasive target: the rule's base by level and dexterity, and the sheet's own. */
     fun accuracy(rule: AccuracyRule): Double = max(0.0, rule.base + rule.perLevel * level + rule.perDexterity * stat("STOCK_AGILITY") + stat("STOCK_ACCURACY"))
+
     /** The shares of its physical damage it deals again as other types, by type. */
     val extraAs: Map<DamageType, Double> = DamageType.entries.filter { it != DamageType.PHYSICAL }
         .mapNotNull { type -> stat("STOCK_PHYSICAL_AS_EXTRA_${type.name}").takeIf { it > 0 }?.let { type to it / 100 } }.toMap()
+
     /** Flat damage of [type] its spells add. */
     fun spellAdded(type: DamageType): Double = max(0.0, stat("STOCK_SPELL_ADD_${type.name}"))
+
     /** Its critical chance and multiplier for a blow: a spell's are its own (server 1.56.0), an attack's the rest. */
     fun critChance(spell: Boolean): Double = if (spell) spellCritChance else critChance
     fun critMultiplier(spell: Boolean): Double = if (spell) spellCritMultiplier else critMultiplier
     val doubleDamage = percent("STOCK_DOUBLE_DAMAGE")
+
     /** A foe it hits left under this share of its life dies. */
     val culling = percent("STOCK_CULLING")
+
     /** Increased damage for each charge of [kind] it holds. */
     fun perCharge(kind: ChargeKind): Double = stat("STOCK_DAMAGE_PER_${kind.name}")
     val shockEffect = max(0.0, 1 + stat("STOCK_SHOCK_EFFECT") / 100)
     val chillEffect = max(0.0, 1 + stat("STOCK_CHILL_EFFECT") / 100)
+
     /** How much faster its damaging ailments run their damage, as a share. */
     val fasterAilments = max(0.0, stat("STOCK_FASTER_AILMENTS")) / 100
     fun buffChance(kind: BuffKind): Double = percent(kind.chance)
+
     /** It wears [kind] always: a monster's modifier or a map's. */
     fun wears(kind: BuffKind): Boolean = stat(kind.always) > 0
     val buffDuration = max(0.1, 1 + stat(BuffKind.DURATION) / 100)
+
     /** Damage taken from hits, not over time: Fortify's work. */
     val hitTaken = max(0.1, 1 + stat("STOCK_HIT_TAKEN") / 100)
     val suppression = percent("STOCK_SPELL_SUPPRESSION", rules.defence.suppressionCap)
     val deflection = percent("STOCK_DEFLECTION", rules.defence.deflectionCap)
+
     /** Its chance to block a spell: the block, and the spell block on top, under the same ceiling. */
     val spellBlock = (stat("STOCK_BLOCK_CHANCE") + stat("STOCK_SPELL_BLOCK")).coerceIn(0.0, ceiling(rules.ceilings.block)) / 100
     val lifeOnBlock = max(0.0, stat("STOCK_HEALTH_ON_BLOCK"))
     val manaOnBlock = max(0.0, stat("STOCK_MANA_ON_BLOCK"))
     val shieldOnBlock = max(0.0, stat("STOCK_SHIELD_ON_BLOCK"))
+
     /** The share of its maximum life a kill gives back. */
     val lifeOnKillShare = percent("STOCK_HEALTH_ON_KILL_PERCENT")
     val shieldOnKill = max(0.0, stat("STOCK_SHIELD_ON_KILL"))
+
     /** The share of damage taken that comes back as life over the rule's seconds. */
     val recoup = percent("STOCK_LIFE_RECOUP")
+
     /** The share of its armour that meets elemental hits too. */
     val armourElemental = percent("STOCK_ARMOUR_ELEMENTAL")
+
     /** How much sooner its shield starts to recharge after a hit. */
     val rechargeStart = max(0.1, 1 + stat("STOCK_SHIELD_RECHARGE_START") / 100)
+
     /** Taunts (since server 0.62.0): while it stands, its foes must strike it first. */
     val taunt: Boolean get() = stat("STOCK_TAUNT") > 0
+
     /** How hard it presses, before anyone's defences: its damage per swing times its swings per second. */
     val threat: Double get() = damage.values.sum() * attackSpeed
+
     /** The damage type most of its blow is made of. */
     val leading: DamageType get() = damage.maxBy { it.value }.key
 }
@@ -405,17 +499,25 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
  * An ailment on a fighter: what, until when, how hard, and who put it there — the side and, for a
  * monster's, which foe of the pack ([foe], since 2.70.0).
  */
-data class ActiveAilment(val ailment: Ailment, val until: Double, val magnitude: Double, val duration: Double, val source: Side, val foe: Int = 0,
+data class ActiveAilment(
+    val ailment: Ailment,
+    val until: Double,
+    val magnitude: Double,
+    val duration: Double,
+    val source: Side,
+    val foe: Int = 0,
     /** Put there by a spell (2.78.0): a kill by it is a spell's kill. */
     val spell: Boolean = false,
     /** Burns as chaos (3.33.0): an ignite of a striker whose ignites deal chaos goes around the shield. */
-    val chaos: Boolean = false)
+    val chaos: Boolean = false,
+)
 
 /**
  * One foe of the pack as the fight takes it (2.70.0): its sheet; every foe on screen strikes from the first
  * second and can be struck by any weapon — there are no rows. Since 2.78.0 its [rarity] tells a skill waiting for a rare or a boss, and its [skills] are what it casts
  * for its mana — a boss's own, a caster's spell of its element, one a mad essence borrowed.
  */
+
 /**
  * A combat pet in a fight (3.5.0): [code] its species, [body] its sheet, a [tank] holds every blow on itself,
  * [heal] mends the hero so many percent of their life a second, [drawFire] the share of blows it draws otherwise.
@@ -423,15 +525,19 @@ data class ActiveAilment(val ailment: Ailment, val until: Double, val magnitude:
 class Ally(val code: String, val body: Combatant, val tank: Boolean, val heal: Double, val drawFire: Double)
 
 /** The traits of this roll (3.73.0), as the content names them. */
-fun com.sperance.exileforge.rules.roll.RolledMonster.traitsIn(index: com.sperance.exileforge.rules.content.ContentIndex): List<MonsterTrait> =
-    traits.mapNotNull(index.campaign.traits.byCode::get)
+fun com.sperance.exileforge.rules.roll.RolledMonster.traitsIn(index: com.sperance.exileforge.rules.content.ContentIndex): List<MonsterTrait> = traits.mapNotNull(index.campaign.traits.byCode::get)
 
-data class Foe(val body: Combatant, val rarity: MonsterRarity = MonsterRarity.NORMAL,
-               val skills: List<MonsterSkill> = emptyList(),
-               /** Its roll at the fight's [level] (3.37.0): what the log's card lays its stats out with. */
-               val origin: com.sperance.exileforge.rules.roll.RolledMonster? = null, val level: Int = 0,
-               /** Its traits (3.73.0) and their strength for its rarity: their lines are on [body] already, their answers the fight plays. */
-               val traits: List<MonsterTrait> = emptyList(), val traitPower: Double = 1.0)
+data class Foe(
+    val body: Combatant,
+    val rarity: MonsterRarity = MonsterRarity.NORMAL,
+    val skills: List<MonsterSkill> = emptyList(),
+    /** Its roll at the fight's [level] (3.37.0): what the log's card lays its stats out with. */
+    val origin: com.sperance.exileforge.rules.roll.RolledMonster? = null,
+    val level: Int = 0,
+    /** Its traits (3.73.0) and their strength for its rarity: their lines are on [body] already, their answers the fight plays. */
+    val traits: List<MonsterTrait> = emptyList(),
+    val traitPower: Double = 1.0,
+)
 
 /** What lies on a fighter for a while (2.78.0). */
 enum class EffectKind { BUFF, CURSE, FLASK }
@@ -441,15 +547,27 @@ enum class EffectKind { BUFF, CURSE, FLASK }
  * [source] — a skill's code or a flask's. [counter] strikes back at a blocked blow with that percent of
  * the weapon; [slot] is a flask's place on the belt.
  */
-data class TimedEffect(val kind: EffectKind, val source: String, val lines: List<StatLine>, val until: Double, val duration: Double,
-                       val counter: Double = 0.0, val slot: Int = -1)
+data class TimedEffect(
+    val kind: EffectKind,
+    val source: String,
+    val lines: List<StatLine>,
+    val until: Double,
+    val duration: Double,
+    val counter: Double = 0.0,
+    val slot: Int = -1,
+)
 
 /**
  * What the hero carries from fight to fight (2.78.0): life, mana, each flask's charges and how long
  * its draught still runs, in seconds.
  */
-data class HeroPools(val life: Double, val mana: Double, val charges: List<Double> = emptyList(), val flaskLeft: List<Double> = emptyList(),
-                     val rates: List<DraughtRate> = emptyList())
+data class HeroPools(
+    val life: Double,
+    val mana: Double,
+    val charges: List<Double> = emptyList(),
+    val flaskLeft: List<Double> = emptyList(),
+    val rates: List<DraughtRate> = emptyList(),
+)
 
 /**
  * How much life and mana a running draught still gives each second (2.81.0). It rides with the draught's
@@ -460,12 +578,29 @@ data class DraughtRate(val life: Double = 0.0, val mana: Double = 0.0) {
 }
 
 /** An active slot as the fight's buttons draw it (2.78.0): how far it has recovered (1 ready), and whether the mana is there. */
-data class SkillView(val slot: Int, val code: String, val icon: String, val level: Int, val cost: Int, val ready: Float, val affordable: Boolean,
-                     val condition: SlotCondition, val seconds: Double = 0.0)
+data class SkillView(
+    val slot: Int,
+    val code: String,
+    val icon: String,
+    val level: Int,
+    val cost: Int,
+    val ready: Float,
+    val affordable: Boolean,
+    val condition: SlotCondition,
+    val seconds: Double = 0.0,
+)
 
 /** A flask of the belt as its button draws it (2.78.0): charges, the price of a draught, and how much of one is left (0 none). */
-data class FlaskView(val slot: Int, val code: String, val kind: FlaskKind, val charges: Int, val maxCharges: Int, val perUse: Int, val active: Float,
-                     val condition: SlotCondition) {
+data class FlaskView(
+    val slot: Int,
+    val code: String,
+    val kind: FlaskKind,
+    val charges: Int,
+    val maxCharges: Int,
+    val perUse: Int,
+    val active: Float,
+    val condition: SlotCondition,
+) {
     val usable: Boolean get() = charges >= perUse && active <= 0f
 }
 
@@ -479,7 +614,12 @@ data class EffectView(val source: String, val kind: EffectKind, val left: Float,
  * struck last, a Scion finishes the weakest while healthy and answers when hurt.
  */
 enum class TargetRule {
-    THREAT, WEAKEST, EXPOSED, AVENGE, ADAPTIVE;
+    THREAT,
+    WEAKEST,
+    EXPOSED,
+    AVENGE,
+    ADAPTIVE,
+    ;
 
     companion object {
         fun of(classCode: String?): TargetRule = when (classCode) {
@@ -545,6 +685,7 @@ data class CombatEvent(
 
     /** Who the number floats off. */
     val target: Side get() = if (onSelf) actor else actor.other
+
     /** A monster's line at the combat pet (3.70.0): a blow, a tick or a blow back it took — the pet's, never the hero's damage taken. */
     val atPet: Boolean get() = pet != null && actor == Side.MONSTER
     val landed: Boolean get() = kind == HitKind.HIT || kind == HitKind.CRIT
@@ -584,6 +725,7 @@ internal class Blow(
 private class Delayed(val rate: Double, val until: Double)
 
 /** Life and mana a draught gives a second until [until] (2.78.0). */
+
 /**
  * A recovery running over time: a draught's (its belt [slot]) or a recoup's (slot -1). A pure life draught
  * stops once life is full, as in PoE (3.79.0); [restored] and [wasted] go to the log's recovery shelf.
@@ -645,19 +787,23 @@ class Battle(
 ) {
     /** «Волк-одиночка»: the hero alone deals more and takes less of every damage, by the server's [CombatRules.loneWolf]. */
     val loneWolf: Boolean get() = party <= 1
+
     /** One side in motion: its pools, its clocks and what is on it; [index] is its place in the pack, -1 for the hero. */
     inner class Fighter(val side: Side, body: Combatant, life: Double, val index: Int = -1) {
         /** The sheet as it stands: the hero's changes under the auras of the foes still standing (2.75.0) and with what lies on them (2.78.0). */
         var body: Combatant = body
             private set
+
         /** A monster's sheet taking the lines laid on it (2.78.0). */
         val model: BodyModel = BodyModel.of(body, percent)
         var life = life.coerceIn(0.0, body.maxLife)
         var shield = body.maxShield
+
         /** Mana (2.78.0): the hero's comes in from the fight before, a monster's is full. */
         var mana = body.maxMana
         var nextAttack = if (side == Side.HERO) 0.35 else ENTRY + index * STAGGER
         var attackInterval = 1 / body.attackSpeed
+
         /** A new sheet mid-fight: the pools keep their share, the swing keeps its pace from the next one. */
         fun rebody(next: Combatant) {
             if (next === body) return
@@ -667,46 +813,61 @@ class Battle(
             body = next
             attackInterval = 1 / next.attackSpeed
         }
+
         /** Stunned until then: nothing is swung before it. A freeze holds by its own ailment (3.71.0), so lifting it frees at once. */
         var heldUntil = 0.0
         var lastHit = -1e9
         val ailments = mutableListOf<ActiveAilment>()
+
         /** Damage over time gathered per ailment since its last tick was logged, and when that was. */
         val ticking = mutableMapOf<Ailment, Double>()
         val tickedAt = mutableMapOf<Ailment, Double>()
+
         /** Buffs, curses and draughts on it (2.78.0). */
         val effects = mutableListOf<TimedEffect>()
+
         /** What a barrier still soaks, and until when (2.78.0). */
         var barrier = 0.0
         var barrierUntil = 0.0
         var invulnerableUntil = -1.0
+
         /** When each of its skills is ready again, by code for a monster and by slot for the hero (2.78.0). */
         val readyAt = mutableMapOf<String, Double>()
+
         /** Its low-life lines are on (2.78.0). */
         var low = false
+
         /** The buildups (3.78.0): each bar's fill from 0 to 1, when a blow last filled one, and how long each is shut after going off. */
         val buildup = DoubleArray(Buildup.entries.size)
         var builtAt = -1e9
         val buildupShutUntil = DoubleArray(Buildup.entries.size)
+
         /** A full stun bar: every damage heavier until then; a full freeze bar: the blow that breaks the ice is heavier; electrocuted: lightning heavier. */
         var stunnedUntil = 0.0
         var shatter = false
         var electrocutedUntil = 0.0
+
         /** The fullest bar, for the card: which and how full. */
         fun leading(): Pair<Buildup, Double>? = Buildup.entries.map { it to buildup[it.ordinal] }.filter { it.second > 0.005 }.maxByOrNull { it.second }
 
         /** On the field: the hero's side always, a foe once the [window] lets it in — one waiting its turn is not in the fight yet. */
         var engaged: Boolean = side == Side.HERO
             private set
+
         /** A foe steps onto the field at [place]: a moment to close in before its first swing, a little longer the further its place. */
-        fun enter(place: Int, at: Double) { engaged = true; nextAttack = at + ENTRY + place * STAGGER }
+        fun enter(place: Int, at: Double) {
+            engaged = true
+            nextAttack = at + ENTRY + place * STAGGER
+        }
         val alive: Boolean get() = engaged && life > 0
         val held: Boolean get() = heldUntil > time || ailments.any { it.ailment == Ailment.FROZEN && it.until > time }
         val cursed: Boolean get() = effects.any { it.kind == EffectKind.CURSE }
         val invulnerable: Boolean get() = invulnerableUntil > time
         fun frozen() = ailments.any { it.ailment == Ailment.FROZEN }
+
         /** Chill slows every action; the strongest chill counts. */
         fun slow() = 1 + (ailments.filter { it.ailment == Ailment.CHILLED }.maxOfOrNull { it.magnitude } ?: 0.0) / 100
+
         /** Shock makes every hit heavier; a curse can make it heavier still (2.78.0). */
         fun weakness() = 1 + (ailments.filter { it.ailment == Ailment.SHOCKED }.maxOfOrNull { it.magnitude } ?: 0.0) * body.ailmentTaken(Ailment.SHOCKED) / 100
         fun stacks(ailment: Ailment) = ailments.count { it.ailment == ailment }
@@ -717,6 +878,7 @@ class Battle(
     val foeFighters: List<Fighter> = foes.mapIndexed { i, foe -> Fighter(Side.MONSTER, foe.body, foe.body.maxLife, i) }
         .also { all -> window.field.forEachIndexed { place, i -> all[i].enter(place, 0.0) } }
     val heroFighter = Fighter(Side.HERO, hero.under(auras()), heroLife)
+
     /** The pet fighting beside the hero (3.5.0): it strikes the hero's target and draws blows meant for the hero. */
     val allyFighter: Fighter? = ally?.let { Fighter(Side.HERO, it.body, it.body.maxLife, ALLY) }
 
@@ -738,14 +900,17 @@ class Battle(
 
     var time = 0.0
         private set
+
     /** When the fight ended; equals [time] then, and stays. */
     var duration = 0.0
         private set
     var outcome: Outcome? = null
         private set
+
     /** The foe the player singled out, until it falls or is tapped again. */
     var focus: Int? = null
         private set
+
     /** The foe that struck the hero last — the Templar's answer. */
     private var lastStriker: Int? = null
     private var retreatAt = Double.NaN
@@ -753,6 +918,7 @@ class Battle(
     private val log = mutableListOf<CombatEvent>()
     val events: List<CombatEvent> get() = log
     private val fallenOrder = mutableListOf<Int>()
+
     /** The foes that fell, in the order they fell: each is a kill to report the moment it happens. */
     val fallen: List<Int> get() = fallenOrder
 
@@ -766,29 +932,39 @@ class Battle(
     private val drinks = mutableSetOf<Int>()
     private val triggerReady = mutableMapOf<String, Double>()
     private val recoveries = mutableListOf<Recovery>()
+
     /** The hero's regeneration since the last recovery line: summed into one line a second (3.79.0). */
     private var regenLogged = 0.0
     private var regenLoggedAt = 0.0
+
     /** The next blow of the hero is a critical strike (a cloak of shadows). */
     internal var nextCrit = false
+
     /** How deep in answers the fight is: an answer may set off one more, never a chain. */
     private var depth = 0
     private var belowLow = false
     private var shieldUp = true
+
     /** The hero's powers (2.79.0): the unique items' answers to what happens here. */
     private val powers = PowerRunner(this, kit.powers, stage)
+
     /** The hero's frenzy, power and endurance charges (3.33.0, server 1.32.0): none as a fight opens, a stage's from the one before. */
     internal val heroCharges = HeroCharges(kit.charges, stage?.charges.orEmpty())
+
     /** The delayed life damage still to come (3.33.0). */
     private val delayed = mutableListOf<Delayed>()
+
     /** The flasks a hero drinks all at once as the fight opens (3.33.0) are behind them. */
     private var autoDrunk = false
+
     /** The pet stood at the last look (3.33.0): its fall is a power's event once. */
     private var petStood = true
+
     /** When the hero last killed, blocked and struck critically (3.35.0): what «recently» of a conditional line reads. */
     private var killedAt = NEVER
     private var blockedAt = NEVER
     private var critAt = NEVER
+
     /** Whether the sheet has conditional lines at all, and the hero's conditions at the last look (3.35.0). */
     private val conditioned = model.conditional(Condition.entries.toSet()).isNotEmpty()
     private var conditions: Set<Condition> = emptySet()
@@ -832,15 +1008,23 @@ class Battle(
     private fun manaCap(fighter: Fighter): Double = if (fighter === heroFighter) manaCap() else fighter.body.maxMana
 
     /** Uses the skill of active slot [slot] at the next slice, if it is ready and the mana is there — its condition aside. */
-    fun useSkill(slot: Int) { if (kit.actives.getOrNull(slot) != null) taps += slot }
+    fun useSkill(slot: Int) {
+        if (kit.actives.getOrNull(slot) != null) taps += slot
+    }
 
     /** Drinks the flask of belt place [slot] at the next slice, if it has the charges and is not running already. */
-    fun useFlask(slot: Int) { if (kit.flasks.getOrNull(slot) != null) drinks += slot }
+    fun useFlask(slot: Int) {
+        if (kit.flasks.getOrNull(slot) != null) drinks += slot
+    }
 
     /** What the hero walks out with: life, mana, the flasks' charges and the seconds each draught still runs. */
-    fun pools(): HeroPools = HeroPools(heroFighter.life, heroFighter.mana, charges.toList(),
+    fun pools(): HeroPools = HeroPools(
+        heroFighter.life,
+        heroFighter.mana,
+        charges.toList(),
         kit.flasks.indices.map { i -> draughtOf(i)?.let { (it.until - time).coerceAtLeast(0.0) } ?: 0.0 },
-        kit.flasks.indices.map { i -> recoveries.firstOrNull { it.slot == i && it.until > time }?.let { DraughtRate(it.life, it.mana) } ?: DraughtRate() })
+        kit.flasks.indices.map { i -> recoveries.firstOrNull { it.slot == i && it.until > time }?.let { DraughtRate(it.life, it.mana) } ?: DraughtRate() },
+    )
 
     /** The active slots as their buttons draw them; null where a slot is empty. */
     fun skillViews(): List<SkillView?> = kit.actives.mapIndexed { slot, kitSkill ->
@@ -850,8 +1034,10 @@ class Battle(
             val cost = cost(it, level)
             val cooldown = it.skill.cooldown / body.recovery(it.skill.spell)
             val left = ((heroFighter.readyAt[slotKey(slot)] ?: 0.0) - time).coerceAtLeast(0.0)
-            SkillView(slot, it.skill.code, it.skill.icon, level, cost.roundToInt(), if (cooldown > 0) (1 - left / cooldown).toFloat().coerceIn(0f, 1f) else 1f,
-                skillsFree() || heroFighter.mana + 1e-9 >= cost, it.condition, left)
+            SkillView(
+                slot, it.skill.code, it.skill.icon, level, cost.roundToInt(), if (cooldown > 0) (1 - left / cooldown).toFloat().coerceIn(0f, 1f) else 1f,
+                skillsFree() || heroFighter.mana + 1e-9 >= cost, it.condition, left,
+            )
         }
     }
 
@@ -859,15 +1045,29 @@ class Battle(
     fun flaskViews(): List<FlaskView?> = kit.flasks.mapIndexed { i, flask ->
         flask?.let {
             val running = draughtOf(i)
-            FlaskView(i, it.code, it.kind, charges[i].toInt(), it.maxCharges.toInt(), ceil(it.perUse(heroFighter.body) - 1e-9).toInt(),
-                running?.let { d -> ((d.until - time) / d.duration).toFloat().coerceIn(0f, 1f) } ?: 0f, it.condition)
+            FlaskView(
+                i,
+                it.code,
+                it.kind,
+                charges[i].toInt(),
+                it.maxCharges.toInt(),
+                ceil(it.perUse(heroFighter.body) - 1e-9).toInt(),
+                running?.let { d -> ((d.until - time) / d.duration).toFloat().coerceIn(0f, 1f) } ?: 0f,
+                it.condition,
+            )
         }
     }
 
     /** What lies on [fighter], for its tiles. */
     fun effects(fighter: Fighter): List<EffectView> = fighter.effects.filter { it.kind != EffectKind.FLASK }.map {
-        EffectView(it.source, it.kind, ((it.until - time) / it.duration).toFloat().coerceIn(0f, 1f), (it.until - time).coerceAtLeast(0.0), icons[it.source].orEmpty(),
-            BuffKind.of(it.source))
+        EffectView(
+            it.source,
+            it.kind,
+            ((it.until - time) / it.duration).toFloat().coerceIn(0f, 1f),
+            (it.until - time).coerceAtLeast(0.0),
+            icons[it.source].orEmpty(),
+            BuffKind.of(it.source),
+        )
     }
 
     /** The drawings of every skill in this fight, by code: the hero's and the foes'. */
@@ -882,9 +1082,15 @@ class Battle(
     /** Moves the fight on by [dt] seconds in fixed slices, so a frame's length never changes what happens. */
     fun advance(dt: Double) {
         // Once it is over the clock still runs, so the last blow's lunge and fade can play out.
-        if (outcome != null) { time += dt; return }
+        if (outcome != null) {
+            time += dt
+            return
+        }
         carry += dt
-        while (carry >= STEP - 1e-12 && outcome == null) { carry -= STEP; step(STEP) }
+        while (carry >= STEP - 1e-12 && outcome == null) {
+            carry -= STEP
+            step(STEP)
+        }
     }
 
     /** Turns to leave: the hero stops swinging, the pack gets the rule's delay of free swings, then the fight is over. */
@@ -942,8 +1148,10 @@ class Battle(
     }
 
     /** The blow whose lunge is on screen right now, and how far into it the scene is (0..1). */
-    fun lunge(): Pair<CombatEvent, Double>? = log.lastOrNull { it.action != Action.TICK && it.action != Action.REFLECT && it.action != Action.FLASK && !it.onSelf &&
-        time - it.time in -LUNGE..LUNGE }?.let { it to ((time - it.time + LUNGE) / (2 * LUNGE)).coerceIn(0.0, 1.0) }
+    fun lunge(): Pair<CombatEvent, Double>? = log.lastOrNull {
+        it.action != Action.TICK && it.action != Action.REFLECT && it.action != Action.FLASK && !it.onSelf &&
+            time - it.time in -LUNGE..LUNGE
+    }?.let { it to ((time - it.time + LUNGE) / (2 * LUNGE)).coerceIn(0.0, 1.0) }
 
     /** How far [fighter] is into its next swing, 0 just after one and 1 as the next lands. */
     fun swing(fighter: Fighter): Float = when {
@@ -958,7 +1166,11 @@ class Battle(
 
     private fun step(dt: Double) {
         time += dt
-        (listOf(heroFighter) + listOfNotNull(allyFighter) + foeFighters).forEach { regenerate(it, dt); degenerate(it, dt); burn(it, dt) }
+        (listOf(heroFighter) + listOfNotNull(allyFighter) + foeFighters).forEach {
+            regenerate(it, dt)
+            degenerate(it, dt)
+            burn(it, dt)
+        }
         // A support pet mends the hero while it stands (3.5.0).
         allyFighter?.takeIf { it.alive && heroFighter.alive && ally!!.heal > 0 }?.let {
             val before = heroFighter.life
@@ -974,7 +1186,14 @@ class Battle(
         if (hero.alive && !retreating) {
             if (!autoDrunk) {
                 autoDrunk = true
-                if (hero.body.flasksAuto) kit.flasks.forEachIndexed { i, flask -> if (flask != null && draughtOf(i) == null) { flaskOpened[i] = true; drink(i, flask, free = true) } }
+                if (hero.body.flasksAuto) {
+                    kit.flasks.forEachIndexed { i, flask ->
+                        if (flask != null && draughtOf(i) == null) {
+                            flaskOpened[i] = true
+                            drink(i, flask, free = true)
+                        }
+                    }
+                }
             }
             useFlasks()
             if (!hero.held) useSkills()
@@ -1053,24 +1272,35 @@ class Battle(
         val hero = heroFighter
         if (hero.alive) {
             val below = hero.life < hero.body.maxLife * LOW_LIFE
-            if (below && !belowLow) { trigger(SkillEvent.LOW_LIFE); powers.fire(PowerEvent.LOW_LIFE) }
+            if (below && !belowLow) {
+                trigger(SkillEvent.LOW_LIFE)
+                powers.fire(PowerEvent.LOW_LIFE)
+            }
             belowLow = below
             if (hero.body.maxShield > 0) {
                 val up = hero.shield > 0.5
-                if (!up && shieldUp) { trigger(SkillEvent.SHIELD_BROKEN); powers.fire(PowerEvent.SHIELD_BROKEN) }
+                if (!up && shieldUp) {
+                    trigger(SkillEvent.SHIELD_BROKEN)
+                    powers.fire(PowerEvent.SHIELD_BROKEN)
+                }
                 shieldUp = up
             }
             val low = hero.life < hero.body.maxLife / 2
-            if (low != hero.low && model.lowLife.isNotEmpty()) { hero.low = low; remake(hero) }
+            if (low != hero.low && model.lowLife.isNotEmpty()) {
+                hero.low = low
+                remake(hero)
+            }
             if (powers.restand()) remake(hero)
-            if (conditioned) heroConditions().let { now ->
-                if (now != conditions) {
-                    // 3.37.0: each condition that came or went is a note of the log.
-                    val was = conditions
-                    conditions = now
-                    remake(hero)
-                    (now - was).forEach { note(hero, NoteKind.CONDITION_ON, it.name) }
-                    (was - now).forEach { note(hero, NoteKind.CONDITION_OFF, it.name) }
+            if (conditioned) {
+                heroConditions().let { now ->
+                    if (now != conditions) {
+                        // 3.37.0: each condition that came or went is a note of the log.
+                        val was = conditions
+                        conditions = now
+                        remake(hero)
+                        (now - was).forEach { note(hero, NoteKind.CONDITION_ON, it.name) }
+                        (was - now).forEach { note(hero, NoteKind.CONDITION_OFF, it.name) }
+                    }
                 }
             }
         }
@@ -1078,7 +1308,10 @@ class Battle(
         foeFighters.forEach { foe -> if (foe.alive) enrage(foe) }
         foeFighters.forEach { foe ->
             val low = foe.alive && foe.life < foe.body.maxLife / 2
-            if (low != foe.low && foe.model.body(emptyList())["STOCK_LOW_LIFE_SPEED"] > 0) { foe.low = low; remake(foe) }
+            if (low != foe.low && foe.model.body(emptyList())["STOCK_LOW_LIFE_SPEED"] > 0) {
+                foe.low = low
+                remake(foe)
+            }
         }
     }
 
@@ -1093,8 +1326,9 @@ class Battle(
     /** [fighter]'s body made again from its sheet with what lies on it — and the hero's under the auras of the foes still standing. */
     private fun remake(fighter: Fighter) {
         val lines = fighter.effects.flatMap { it.lines }
-        if (fighter === heroFighter) fighter.rebody(heroBody(emptyList()))
-        else {
+        if (fighter === heroFighter) {
+            fighter.rebody(heroBody(emptyList()))
+        } else {
             val speed = fighter.model.body(emptyList())["STOCK_LOW_LIFE_SPEED"]
             fighter.rebody(fighter.model.body(lines + if (fighter.low && speed > 0) listOf(StatLine("STOCK_ATTACK_SPEED", Op.INCREASED, speed)) else emptyList()))
         }
@@ -1217,7 +1451,10 @@ class Battle(
             if (chaos && me.body.chaosImmune) return@forEach
             wound(me, slice, chaos)
             me.ticking.merge(active.ailment, slice, Double::plus)
-            if (slice > heaviestSlice) { heaviest = active; heaviestSlice = slice }
+            if (slice > heaviestSlice) {
+                heaviest = active
+                heaviestSlice = slice
+            }
         }
         val expired = me.ailments.filter { it.until <= time }
         val bySpell = heaviest?.let { it.spell && it.source == Side.HERO } == true
@@ -1231,7 +1468,10 @@ class Battle(
                 if (amount > 0) {
                     val active = (me.ailments + expired).firstOrNull { it.ailment == ailment }
                     // A tick cut short — the ailment ran out or the target fell mid-beat — still deals its [MIN_DOT].
-                    if (amount < MIN_DOT && me.alive && !me.invulnerable) { wound(me, MIN_DOT - amount, ailment == Ailment.POISONED || active?.chaos == true); amount = MIN_DOT }
+                    if (amount < MIN_DOT && me.alive && !me.invulnerable) {
+                        wound(me, MIN_DOT - amount, ailment == Ailment.POISONED || active?.chaos == true)
+                        amount = MIN_DOT
+                    }
                     val source = active?.source ?: me.side.other
                     val type = if (active?.chaos == true) DamageType.CHAOS else ruleOf[ailment]?.second
                     // 3.37.0: the tick names its ailment and carries how strong it runs and what grows it.
@@ -1243,11 +1483,16 @@ class Battle(
                         FactorTrace(FactorKey.TAKEN, me.body.dotTaken * me.body.ailmentTaken(ailment), target = listOf("STOCK_DOT_TAKEN", "STOCK_BLEED_TAKEN")),
                         FactorTrace(FactorKey.TOTAL, amount),
                     )
-                    record(source, Action.TICK, HitKind.HIT, amount, type, 0.0, false, emptyList(), ailment,
+                    record(
+                        source, Action.TICK, HitKind.HIT, amount, type, 0.0, false, emptyList(), ailment,
                         if (me.side == Side.MONSTER) me.index else active?.foe ?: 0,
-                        trace = TickTrace(ailment, base * me.weakness() * me.body.dotTaken * me.body.ailmentTaken(ailment),
+                        trace = TickTrace(
+                            ailment, base * me.weakness() * me.body.dotTaken * me.body.ailmentTaken(ailment),
                             (own.maxOfOrNull { it.until } ?: time) - time, own.maxOfOrNull { it.duration } ?: 0.0, own.size, shot(me), factors, origin,
-                            (if (source == Side.HERO) heroFighter else foeFighters.getOrNull(active?.foe ?: -1))?.let { shot(it) }), pet = isPet(me))
+                            (if (source == Side.HERO) heroFighter else foeFighters.getOrNull(active?.foe ?: -1))?.let { shot(it) },
+                        ),
+                        pet = isPet(me),
+                    )
                 }
             }
         }
@@ -1257,15 +1502,18 @@ class Battle(
     /** Damage over time on [me]: a barrier soaks it first, then the shield — unless it is [chaos] — then life. */
     private fun wound(me: Fighter, amount: Double, chaos: Boolean) {
         var rest = amount
-        if (me.barrier > 0) { val soaked = min(me.barrier, rest); me.barrier -= soaked; rest -= soaked }
+        if (me.barrier > 0) {
+            val soaked = min(me.barrier, rest)
+            me.barrier -= soaked
+            rest -= soaked
+        }
         val absorbed = if (chaos) 0.0 else min(me.shield, rest)
         me.shield -= absorbed
         me.life = max(0.0, me.life - (rest - absorbed))
     }
 
     /** Accuracy against evasion (3.35.0, server 1.34.0), as in PoE, under the target's ceiling. */
-    private fun evasion(me: Fighter, target: Fighter): Double =
-        rules.accuracy.evaded(me.body.accuracy(rules.accuracy), target.body.evasion).coerceAtMost(target.body.evasionCap)
+    private fun evasion(me: Fighter, target: Fighter): Double = rules.accuracy.evaded(me.body.accuracy(rules.accuracy), target.body.evasion).coerceAtMost(target.body.evasionCap)
 
     /**
      * One blow of [me] at [target] — a weapon's swing, a skill's hit, a spell: evaded unless a spell,
@@ -1275,7 +1523,10 @@ class Battle(
         val body = blow.body ?: me.body
         val foe = if (me.side == Side.MONSTER) me.index else target.index
         val petLine = isPet(me) || isPet(target)
-        if (target.invulnerable) { record(me.side, blow.action, HitKind.BLOCKED, 0.0, null, 0.0, false, emptyList(), null, foe, blow.skill, pet = petLine); return false }
+        if (target.invulnerable) {
+            record(me.side, blow.action, HitKind.BLOCKED, 0.0, null, 0.0, false, emptyList(), null, foe, blow.skill, pet = petLine)
+            return false
+        }
         val sure = me === heroFighter && nextCrit
         // 3.37.0: every draw of this blow goes on its tape, and the shots are taken before anything changes.
         tape = mutableListOf()
@@ -1293,8 +1544,10 @@ class Battle(
         if (sure && kind == HitKind.CRIT) nextCrit = false
         if (me.side == Side.MONSTER) lastStriker = me.index
         if (kind == HitKind.EVADED || kind == HitKind.BLOCKED) {
-            record(me.side, blow.action, kind, 0.0, null, 0.0, false, emptyList(), null, foe, blow.skill,
-                trace = HitTrace(striker, struck, takeTape(), emptyList(), emptyList(), null, origin), pet = petLine)
+            record(
+                me.side, blow.action, kind, 0.0, null, 0.0, false, emptyList(), null, foe, blow.skill,
+                trace = HitTrace(striker, struck, takeTape(), emptyList(), emptyList(), null, origin), pet = petLine,
+            )
             if (kind == HitKind.BLOCKED) blocked(target)
             if (target === heroFighter) {
                 trigger(if (kind == HitKind.EVADED) SkillEvent.EVADE else SkillEvent.BLOCK, me)
@@ -1351,18 +1604,42 @@ class Battle(
         val baseSum = types.sumOf { it.base }
         val rawSum = types.sumOf { it.raw }
         val factors = buildList {
-            add(FactorTrace(FactorKey.BASE, baseSum, DamageType.entries.map { it.attack } + listOf("STOCK_SKILL_DAMAGE", "STOCK_SPELL_DAMAGE") +
-                DamageType.entries.filter { it != DamageType.PHYSICAL }.map { "STOCK_PHYSICAL_AS_EXTRA_${it.name}" }, DamageType.ELEMENTS.map { "STOCK_PHYSICAL_TAKEN_AS_${it.name}" }))
+            add(
+                FactorTrace(
+                    FactorKey.BASE,
+                    baseSum,
+                    DamageType.entries.map { it.attack } + listOf("STOCK_SKILL_DAMAGE", "STOCK_SPELL_DAMAGE") +
+                        DamageType.entries.filter { it != DamageType.PHYSICAL }.map { "STOCK_PHYSICAL_AS_EXTRA_${it.name}" },
+                    DamageType.ELEMENTS.map { "STOCK_PHYSICAL_TAKEN_AS_${it.name}" },
+                ),
+            )
             if (blow.spread && baseSum > 0) add(FactorTrace(FactorKey.SPREAD, spreadSum / baseSum))
-            if (kind == HitKind.CRIT) add(FactorTrace(FactorKey.CRIT, multiplier,
-                listOf(if (blow.spell) "STOCK_SPELL_CRITICAL_MULTIPLIER" else "STOCK_CRITICAL_MULTIPLIER", "STOCK_CRITICAL_DAMAGE"), listOf("STOCK_CRITICAL_TAKEN")))
-            else if (multiplier != 1.0) add(FactorTrace(FactorKey.NON_CRIT, multiplier, listOf("STOCK_NON_CRIT_DAMAGE")))
+            if (kind == HitKind.CRIT) {
+                add(
+                    FactorTrace(
+                        FactorKey.CRIT,
+                        multiplier,
+                        listOf(if (blow.spell) "STOCK_SPELL_CRITICAL_MULTIPLIER" else "STOCK_CRITICAL_MULTIPLIER", "STOCK_CRITICAL_DAMAGE"),
+                        listOf("STOCK_CRITICAL_TAKEN"),
+                    ),
+                )
+            } else if (multiplier != 1.0) {
+                add(FactorTrace(FactorKey.NON_CRIT, multiplier, listOf("STOCK_NON_CRIT_DAMAGE")))
+            }
             add(FactorTrace(FactorKey.DAMAGE, body.damageMore, listOf(StatLines.DAMAGE)))
             if (against != 1.0) add(FactorTrace(FactorKey.AGAINST, against, listOf("STOCK_DAMAGE_VS_AILED", "STOCK_DAMAGE_VS_CURSED") + Ailment.entries.map { it.against }))
             if (doubled != 1.0) add(FactorTrace(FactorKey.DOUBLE, doubled, listOf("STOCK_DOUBLE_DAMAGE")))
             if (versus != 1.0) add(FactorTrace(FactorKey.VERSUS, versus))
-            if (rawSum > 0) add(FactorTrace(FactorKey.DEFENCE, defended / rawSum, DamageType.entries.map { "STOCK_PENETRATE_${it.name}" } + "STOCK_PENETRATE_ELEMENTAL",
-                listOf("STOCK_ARMOR", "STOCK_PHYSICAL_REDUCTION", "STOCK_ARMOUR_ELEMENTAL", "STOCK_RESIST_ALL", "STOCK_RESIST_MAX_ALL") + DamageType.entries.mapNotNull { it.resist }))
+            if (rawSum > 0) {
+                add(
+                    FactorTrace(
+                        FactorKey.DEFENCE,
+                        defended / rawSum,
+                        DamageType.entries.map { "STOCK_PENETRATE_${it.name}" } + "STOCK_PENETRATE_ELEMENTAL",
+                        listOf("STOCK_ARMOR", "STOCK_PHYSICAL_REDUCTION", "STOCK_ARMOUR_ELEMENTAL", "STOCK_RESIST_ALL", "STOCK_RESIST_MAX_ALL") + DamageType.entries.mapNotNull { it.resist },
+                    ),
+                )
+            }
             if (target.weakness() != 1.0) add(FactorTrace(FactorKey.SHOCK, target.weakness(), listOf("STOCK_SHOCK_EFFECT"), listOf("STOCK_SHOCK_TAKEN")))
             if (lone != 1.0) add(FactorTrace(FactorKey.LONE_WOLF, lone))
             if (defended > 0 && takenSum != defended) add(FactorTrace(FactorKey.TAKEN, takenSum / defended, target = listOf("STOCK_DAMAGE_TAKEN", "STOCK_PHYSICAL_TAKEN", "STOCK_ELEMENTAL_TAKEN", "STOCK_CHAOS_TAKEN")))
@@ -1385,14 +1662,15 @@ class Battle(
 
     /** The draws of the action being worked out; null outside one, so a draw elsewhere is not written anywhere. */
     private var tape: MutableList<RollTrace>? = null
+
     /** A hit worked out up to its landing: [land] finishes it with the rolls and where the damage went. */
     private var pendingHit: HitTrace? = null
+
     /** What the card needs beyond the numbers: the hero's sheet and the foes' rolls. */
     private val origin = TraceOrigin(model, foes)
 
     /** One number off the fight's dice, written on the tape: the same draw as before, only remembered. */
-    private fun draw(key: RollKey, chance: Double, ailment: Ailment? = null): Double =
-        random.nextDouble().also { tape?.add(RollTrace(key, chance, it, ailment)) }
+    private fun draw(key: RollKey, chance: Double, ailment: Ailment? = null): Double = random.nextDouble().also { tape?.add(RollTrace(key, chance, it, ailment)) }
 
     private fun takeTape(): List<RollTrace> = tape.orEmpty().toList().also { tape = null }
 
@@ -1400,7 +1678,11 @@ class Battle(
     private fun shot(fighter: Fighter, blow: Blow? = null): FighterShot {
         val lines = buildList {
             fighter.effects.forEach { effect ->
-                val kind = when (effect.kind) { EffectKind.BUFF -> LineKind.BUFF; EffectKind.CURSE -> LineKind.CURSE; EffectKind.FLASK -> LineKind.FLASK }
+                val kind = when (effect.kind) {
+                    EffectKind.BUFF -> LineKind.BUFF
+                    EffectKind.CURSE -> LineKind.CURSE
+                    EffectKind.FLASK -> LineKind.FLASK
+                }
                 effect.lines.forEach { add(LineSource(kind, effect.source, it)) }
             }
             if (fighter === heroFighter) {
@@ -1411,18 +1693,24 @@ class Battle(
                 powers.standing.forEach { add(LineSource(LineKind.POWER, "", it)) }
                 auras().forEach { (aura, value) -> add(LineSource(LineKind.AURA, aura, StatLine(aura, Op.ADD, value))) }
                 val own = blow?.body?.takeIf { it !== fighter.body }
-                if (own != null) blow.skill?.let { code -> kit.actives.filterNotNull().firstOrNull { it.skill.code == code } }
-                    ?.let { skill -> skill.skill.hit?.stats?.lines(skill.level(fighter.body))?.forEach { add(LineSource(LineKind.SKILL, skill.skill.code, it)) } }
+                if (own != null) {
+                    blow.skill?.let { code -> kit.actives.filterNotNull().firstOrNull { it.skill.code == code } }
+                        ?.let { skill -> skill.skill.hit?.stats?.lines(skill.level(fighter.body))?.forEach { add(LineSource(LineKind.SKILL, skill.skill.code, it)) } }
+                }
             }
         }
-        return FighterShot(fighter.side, fighter.index, (blow?.body ?: fighter.body).stats, lines, fighter.ailments.toList(), fighter.life, fighter.body.maxLife,
-            fighter.shield, if (fighter === heroFighter) conditions else emptySet())
+        return FighterShot(
+            fighter.side, fighter.index, (blow?.body ?: fighter.body).stats, lines, fighter.ailments.toList(), fighter.life, fighter.body.maxLife,
+            fighter.shield, if (fighter === heroFighter) conditions else emptySet(),
+        )
     }
 
     /** A note in the log (3.37.0): something that happened to [fighter] without a blow. */
     internal fun note(fighter: Fighter, kind: NoteKind, ref: String, value: Double = 0.0) {
-        record(fighter.side, Action.NOTE, HitKind.HIT, 0.0, null, 0.0, false, emptyList(), null, if (fighter.side == Side.MONSTER) fighter.index else target()?.index ?: 0,
-            ref, onSelf = true, trace = NoteTrace(kind, ref, value, shot(fighter), origin))
+        record(
+            fighter.side, Action.NOTE, HitKind.HIT, 0.0, null, 0.0, false, emptyList(), null, if (fighter.side == Side.MONSTER) fighter.index else target()?.index ?: 0,
+            ref, onSelf = true, trace = NoteTrace(kind, ref, value, shot(fighter), origin),
+        )
     }
 
     /** The share of an elemental hit of [raw] the armour turns aside where some of it applies to elements (3.35.0). */
@@ -1477,9 +1765,11 @@ class Battle(
         if (me.body.reflect > 0) taken.forEach { (type, amount) -> back.merge(type, amount * me.body.reflect, Double::plus) }
         // Per type (3.70.0): what came back, the armour's and the resistance's shares it lost on the attacker, and what landed.
         val types = back.map { (type, raw) ->
-            val armour = if (type == DamageType.PHYSICAL)
+            val armour = if (type == DamageType.PHYSICAL) {
                 attacker.body.physicalMitigation(raw, rules.armour.factor)
-                else 0.0
+            } else {
+                0.0
+            }
             val resist = if (type == DamageType.PHYSICAL) 0.0 else attacker.body.resist(type)
             val defended = when (type) {
                 DamageType.PHYSICAL -> raw * (1 - attacker.body.physicalMitigation(raw, rules.armour.factor))
@@ -1502,15 +1792,31 @@ class Battle(
         val total = mitigated.values.sum()
         val factors = buildList {
             add(FactorTrace(FactorKey.BASE, rawSum, listOf("STOCK_THORNS", "STOCK_REFLECT")))
-            if (rawSum > 0) add(FactorTrace(FactorKey.DEFENCE, defendedSum / rawSum,
-                target = listOf("STOCK_ARMOR", "STOCK_PHYSICAL_REDUCTION", "STOCK_RESIST_ALL", "STOCK_RESIST_MAX_ALL") + DamageType.entries.mapNotNull { it.resist }))
-            if (defendedSum > 0 && total != defendedSum) add(FactorTrace(FactorKey.TAKEN, total / defendedSum,
-                target = listOf("STOCK_DAMAGE_TAKEN", "STOCK_PHYSICAL_TAKEN", "STOCK_ELEMENTAL_TAKEN", "STOCK_CHAOS_TAKEN")))
+            if (rawSum > 0) {
+                add(
+                    FactorTrace(
+                        FactorKey.DEFENCE,
+                        defendedSum / rawSum,
+                        target = listOf("STOCK_ARMOR", "STOCK_PHYSICAL_REDUCTION", "STOCK_RESIST_ALL", "STOCK_RESIST_MAX_ALL") + DamageType.entries.mapNotNull { it.resist },
+                    ),
+                )
+            }
+            if (defendedSum > 0 && total != defendedSum) {
+                add(
+                    FactorTrace(
+                        FactorKey.TAKEN,
+                        total / defendedSum,
+                        target = listOf("STOCK_DAMAGE_TAKEN", "STOCK_PHYSICAL_TAKEN", "STOCK_ELEMENTAL_TAKEN", "STOCK_CHAOS_TAKEN"),
+                    ),
+                )
+            }
             add(FactorTrace(FactorKey.TOTAL, total))
         }
         val landing = Landing(0.0, absorbed, 0.0, 0.0, shielded - absorbed + chaos, 0.0, 0.0, 0.0, false)
-        record(me.side, Action.REFLECT, HitKind.HIT, total, mitigated.maxBy { it.value }.key, 0.0, false, emptyList(), null, foe,
-            trace = HitTrace(striker, struck, emptyList(), factors, types.map { it.first }, landing, origin), pet = isPet(me) || isPet(attacker))
+        record(
+            me.side, Action.REFLECT, HitKind.HIT, total, mitigated.maxBy { it.value }.key, 0.0, false, emptyList(), null, foe,
+            trace = HitTrace(striker, struck, emptyList(), factors, types.map { it.first }, landing, origin), pet = isPet(me) || isPet(attacker),
+        )
         if (!attacker.alive) fell(attacker, killer = me)
     }
 
@@ -1522,7 +1828,12 @@ class Battle(
         val dealt = taken.values.sum()
         var rest = dealt
         var soakedBarrier = 0.0
-        if (target.barrier > 0) { val soaked = min(target.barrier, rest); target.barrier -= soaked; rest -= soaked; soakedBarrier = soaked }
+        if (target.barrier > 0) {
+            val soaked = min(target.barrier, rest)
+            target.barrier -= soaked
+            rest -= soaked
+            soakedBarrier = soaked
+        }
         val chaos = if (dealt > 0) (taken[DamageType.CHAOS] ?: 0.0) * rest / dealt else 0.0
         val shielded = rest - chaos
         val absorbed = min(target.shield, shielded)
@@ -1534,7 +1845,10 @@ class Battle(
         target.life = max(0.0, target.life - toLifeNow)
         target.lastHit = time
         // The blow that breaks a buildup's ice (3.78.0): heavier, and the fighter thaws.
-        if (target.shatter) { target.shatter = false; target.ailments.removeAll { it.ailment == Ailment.FROZEN } }
+        if (target.shatter) {
+            target.shatter = false
+            target.ailments.removeAll { it.ailment == Ailment.FROZEN }
+        }
         // 3.35.0: the hero's recoup gives a share of the hit back over the rule's seconds; a culling blow finishes a foe left low.
         val recouped = if (target === heroFighter && target.alive && target.body.recoup > 0 && dealt > 0) dealt * target.body.recoup else 0.0
         if (recouped > 0) recoveries += Recovery(recouped / rules.defence.recoup, 0.0, time + rules.defence.recoup, -1)
@@ -1553,19 +1867,30 @@ class Battle(
 
         var stunned = false
         val bars = rules.buildup
-        if (bars != null && target.alive) stunned = buildUp(bars, me, target, taken, kind == HitKind.CRIT, blow.stun)
-        // Only a fighter with a chance to avoid draws for it, so a sheet without one plays the same seed as before.
-        else if (target.alive && !target.body.immuneStun && (dealt >= target.body.maxLife * rules.stun.share / 100 + target.body.stunThreshold &&
-                !(target.body.avoidStun > 0 && draw(RollKey.AVOID_STUN, target.body.avoidStun) < target.body.avoidStun) || blow.stun > 0 && draw(RollKey.STUN, blow.stun / 100) * 100 < blow.stun)) {
+        if (bars != null && target.alive) {
+            stunned = buildUp(bars, me, target, taken, kind == HitKind.CRIT, blow.stun)
+        } // Only a fighter with a chance to avoid draws for it, so a sheet without one plays the same seed as before.
+        else if (target.alive && !target.body.immuneStun && (
+                dealt >= target.body.maxLife * rules.stun.share / 100 + target.body.stunThreshold &&
+                    !(target.body.avoidStun > 0 && draw(RollKey.AVOID_STUN, target.body.avoidStun) < target.body.avoidStun) || blow.stun > 0 && draw(RollKey.STUN, blow.stun / 100) * 100 < blow.stun
+                )
+        ) {
             stunned = true
             target.heldUntil = max(target.heldUntil, time + rules.stun.duration)
         }
         val inflicted = if (target.alive) inflict(me, target, taken, blow.ailments, blow.spell) else emptyList()
-        val trace = pendingHit?.copy(rolls = takeTape(), landing = Landing(soakedBarrier, absorbed, manaPaid, bound - toLifeNow - manaPaid,
-            toLifeNow, if (body.leechToShield) 0.0 else leech, onHit, recouped, culled))
+        val trace = pendingHit?.copy(
+            rolls = takeTape(),
+            landing = Landing(
+                soakedBarrier, absorbed, manaPaid, bound - toLifeNow - manaPaid,
+                toLifeNow, if (body.leechToShield) 0.0 else leech, onHit, recouped, culled,
+            ),
+        )
         pendingHit = null
-        record(me.side, blow.action, kind, dealt, taken.maxByOrNull { it.value }?.key, healed, stunned, inflicted, null, foe, blow.skill, trace = trace,
-            pet = isPet(me) || isPet(target))
+        record(
+            me.side, blow.action, kind, dealt, taken.maxByOrNull { it.value }?.key, healed, stunned, inflicted, null, foe, blow.skill, trace = trace,
+            pet = isPet(me) || isPet(target),
+        )
         if (me === heroFighter) {
             if (target.alive && hexing()) hex(target)
             if (blow.weapon) chanceBuff(BuffKind.FORTIFY)
@@ -1600,7 +1925,11 @@ class Battle(
     private fun toLife(target: Fighter, amount: Double): Double {
         var rest = amount
         val share = target.body.manaBeforeLife
-        if (share > 0 && rest > 0) { val paid = min(target.mana, rest * share); target.mana -= paid; rest -= paid }
+        if (share > 0 && rest > 0) {
+            val paid = min(target.mana, rest * share)
+            target.mana -= paid
+            rest -= paid
+        }
         val later = target.body.lifeDelayed
         if (target === heroFighter && later > 0 && rest > 0) {
             val seconds = target.body.lifeDelay
@@ -1616,6 +1945,7 @@ class Battle(
      * the target may avoid it, be immune to it (2.78.0) and shortens it by its own gear, and the damage over time
      * runs heavier by the striker's. A skill's own chances ([extra], in percent) roll after the rules'.
      */
+
     /**
      * The bars a landed blow fills (3.78.0): stun by its physical part whole and the rest by the rule's share (a critical
      * strike more), freeze by its cold, electrocute by its lightning, each against the struck one's pool — its life by its
@@ -1642,15 +1972,28 @@ class Battle(
             if (target.buildup[i] < 1) return@forEach
             target.buildup[i] = 0.0
             target.buildupShutUntil[i] = time + rule.immunity
-            val effect = when (kind) { Buildup.STUN -> rule.stun; Buildup.FREEZE -> rule.freeze; Buildup.ELECTROCUTE -> rule.electrocute }
+            val effect = when (kind) {
+                Buildup.STUN -> rule.stun
+                Buildup.FREEZE -> rule.freeze
+                Buildup.ELECTROCUTE -> rule.electrocute
+            }
             val held = if (rarity == MonsterRarity.UNIQUE) effect.bossDuration else effect.duration
             when (kind) {
-                Buildup.STUN -> { target.heldUntil = max(target.heldUntil, time + held); target.stunnedUntil = time + held; stunned = true }
+                Buildup.STUN -> {
+                    target.heldUntil = max(target.heldUntil, time + held)
+                    target.stunnedUntil = time + held
+                    stunned = true
+                }
+
                 Buildup.FREEZE -> {
                     place(target, ActiveAilment(Ailment.FROZEN, time + held, 0.0, held, me.side, me.index.coerceAtLeast(0), false), false)
                     target.shatter = true
                 }
-                Buildup.ELECTROCUTE -> { target.heldUntil = max(target.heldUntil, time + held); target.electrocutedUntil = time + held }
+
+                Buildup.ELECTROCUTE -> {
+                    target.heldUntil = max(target.heldUntil, time + held)
+                    target.electrocutedUntil = time + held
+                }
             }
         }
         return stunned
@@ -1696,13 +2039,29 @@ class Battle(
         // 3.35.0: a faster damaging ailment deals the same in less time; the striker's shock and chill are stronger by their effect.
         val faster = if (ailment.hurts) 1 + me.body.fasterAilments else 1.0
         val duration = rule.duration * target.body.ailmentDuration(ailment) * me.body.ailmentDurationOnFoes(ailment) / faster
-        val magnitude = if (ailment.hurts) amount * rule.magnitude / 100 / rule.duration * me.body.ailmentDamage(ailment) * faster else rule.magnitude * when (ailment) {
-            Ailment.SHOCKED -> me.body.shockEffect
-            Ailment.CHILLED -> me.body.chillEffect
-            else -> 1.0
+        val magnitude = if (ailment.hurts) {
+            amount * rule.magnitude / 100 / rule.duration * me.body.ailmentDamage(ailment) * faster
+        } else {
+            rule.magnitude * when (ailment) {
+                Ailment.SHOCKED -> me.body.shockEffect
+                Ailment.CHILLED -> me.body.chillEffect
+                else -> 1.0
+            }
         }
-        place(target, ActiveAilment(ailment, time + duration, magnitude, duration, me.side, me.index.coerceAtLeast(0), spell,
-            chaos = ailment == Ailment.BURNING && me.body.igniteAsChaos), rule.stacks)
+        place(
+            target,
+            ActiveAilment(
+                ailment,
+                time + duration,
+                magnitude,
+                duration,
+                me.side,
+                me.index.coerceAtLeast(0),
+                spell,
+                chaos = ailment == Ailment.BURNING && me.body.igniteAsChaos,
+            ),
+            rule.stacks,
+        )
         if (target === heroFighter) powers.fire(PowerEvent.AILED, PowerMoment(me, taken, ailment = ailment))
         return ailment
     }
@@ -1714,8 +2073,17 @@ class Battle(
         val existing = target.ailments.filter { it.ailment == ailment }
         when {
             stacks || existing.isEmpty() -> target.ailments += fresh
-            existing.maxOf { it.magnitude } <= fresh.magnitude -> { target.ailments.removeAll(existing); target.ailments += fresh }
-            else -> { val kept = existing.maxBy { it.magnitude }; target.ailments.remove(kept); target.ailments += kept.copy(until = max(kept.until, fresh.until)) }
+
+            existing.maxOf { it.magnitude } <= fresh.magnitude -> {
+                target.ailments.removeAll(existing)
+                target.ailments += fresh
+            }
+
+            else -> {
+                val kept = existing.maxBy { it.magnitude }
+                target.ailments.remove(kept)
+                target.ailments += kept.copy(until = max(kept.until, fresh.until))
+            }
         }
     }
 
@@ -1758,12 +2126,13 @@ class Battle(
     // ==================== Monster traits (3.73.0) ====================
 
     /** The traits of [fighter] whose answer is [act], with the strength of its rarity. */
-    private fun traits(fighter: Fighter, act: TraitAct): List<Pair<MonsterTrait, Double>> =
-        if (fighter.side != Side.MONSTER) emptyList()
-        else foes[fighter.index].let { foe -> foe.traits.filter { it.trigger?.act == act }.map { it to foe.traitPower } }
+    private fun traits(fighter: Fighter, act: TraitAct): List<Pair<MonsterTrait, Double>> = if (fighter.side != Side.MONSTER) {
+        emptyList()
+    } else {
+        foes[fighter.index].let { foe -> foe.traits.filter { it.trigger?.act == act }.map { it to foe.traitPower } }
+    }
 
-    private fun List<TraitLine>.lines(power: Double): List<StatLine> =
-        map { StatLine(it.stat, it.op, if (it.op == Op.SET) it.value else it.value * power) }
+    private fun List<TraitLine>.lines(power: Double): List<StatLine> = map { StatLine(it.stat, it.op, if (it.op == Op.SET) it.value else it.value * power) }
 
     /** The foes that have swung once already: an ambusher's first blow is the heavier one. */
     private val swung = mutableSetOf<Int>()
@@ -1804,8 +2173,20 @@ class Battle(
         traits(fallen, TraitAct.BURST).forEach { (trait, power) ->
             val rule = trait.trigger!!
             val type = DamageType.element(rule.element) ?: DamageType.PHYSICAL
-            if (heroFighter.alive) strike(fallen, foeTarget(), Blow(mapOf(type to fallen.body.maxLife * rule.value * power / 100), Action.SKILL,
-                spell = true, skill = trait.code, spread = false, primary = false))
+            if (heroFighter.alive) {
+                strike(
+                    fallen,
+                    foeTarget(),
+                    Blow(
+                        mapOf(type to fallen.body.maxLife * rule.value * power / 100),
+                        Action.SKILL,
+                        spell = true,
+                        skill = trait.code,
+                        spread = false,
+                        primary = false,
+                    ),
+                )
+            }
             // The blast heals nobody: whatever its leech gave back, the fallen stays down.
             fallen.life = 0.0
             fallen.shield = 0.0
@@ -1893,8 +2274,14 @@ class Battle(
         val warcry = skill.type == SkillType.WARCRY
         skill.buff?.let { buff ->
             val speed = if (warcry) hero.body["STOCK_WARCRY_SPEED"] else 0.0
-            buff(hero, skill.code, buff.stats.lines(level, if (warcry) 1 + hero.body["STOCK_WARCRY_EFFECT"] / 100 else 1.0) +
-                listOfNotNull(StatLine("STOCK_ATTACK_SPEED", Op.INCREASED, speed).takeIf { speed > 0 }), buff.duration, buff.counter?.at(level) ?: 0.0)
+            buff(
+                hero,
+                skill.code,
+                buff.stats.lines(level, if (warcry) 1 + hero.body["STOCK_WARCRY_EFFECT"] / 100 else 1.0) +
+                    listOfNotNull(StatLine("STOCK_ATTACK_SPEED", Op.INCREASED, speed).takeIf { speed > 0 }),
+                buff.duration,
+                buff.counter?.at(level) ?: 0.0,
+            )
             if (buff.nextCrit) nextCrit = true
         }
         var healed = skill.heal?.let { heal(it, level, hero.body.skillHealing) } ?: 0.0
@@ -1920,8 +2307,17 @@ class Battle(
                 val grown = heroDamage(hit, level, body, target, element, own)
                 val damage = if (bonus == 1.0) grown.damage else grown.damage.mapValues { it.value * bonus }
                 val leading = damage.maxByOrNull { it.value }?.key ?: DamageType.PHYSICAL
-                if (strike(hero, target, Blow(damage, Action.SKILL, spell, code, body, spread = hit.spell == null, stun = hit.stun?.at(level) ?: 0.0,
-                    ailments = hit.ailments.mapNotNull { resolve(it, element ?: leading, level) }, primary = target === primary, increase = grown.increase))) landed = true
+                if (strike(
+                        hero,
+                        target,
+                        Blow(
+                            damage, Action.SKILL, spell, code, body, spread = hit.spell == null, stun = hit.stun?.at(level) ?: 0.0,
+                            ailments = hit.ailments.mapNotNull { resolve(it, element ?: leading, level) }, primary = target === primary, increase = grown.increase,
+                        ),
+                    )
+                ) {
+                    landed = true
+                }
             }
         }
         return landed
@@ -1973,8 +2369,7 @@ class Battle(
     }
 
     /** A skill's chance of an ailment: `ELEMENT` is the one [element] brings. */
-    private fun resolve(ailment: SkillAilment, element: DamageType, level: Int): Pair<Ailment, Double>? =
-        (if (ailment.ailment == ELEMENT) Ailment.of(element) else Ailment.byWord(ailment.ailment))?.let { it to ailment.chance.at(level) }
+    private fun resolve(ailment: SkillAilment, element: DamageType, level: Int): Pair<Ailment, Double>? = (if (ailment.ailment == ELEMENT) Ailment.of(element) else Ailment.byWord(ailment.ailment))?.let { it to ailment.chance.at(level) }
 
     /**
      * A spell of damage over time: its roll grown like a spell's, taken by the target's resistance at once
@@ -1993,8 +2388,20 @@ class Battle(
             val inflicted = mutableListOf<Ailment>()
             if (mitigated > 0 && !target.body.immune(ailment)) {
                 val duration = dot.duration * hero.body.ailmentDurationOnFoes(ailment)
-                place(target, ActiveAilment(ailment, time + duration, mitigated / duration * hero.body.ailmentDamage(ailment), duration, Side.HERO, 0, spell,
-                    chaos = ailment == Ailment.BURNING && hero.body.igniteAsChaos), stacks = true)
+                place(
+                    target,
+                    ActiveAilment(
+                        ailment,
+                        time + duration,
+                        mitigated / duration * hero.body.ailmentDamage(ailment),
+                        duration,
+                        Side.HERO,
+                        0,
+                        spell,
+                        chaos = ailment == Ailment.BURNING && hero.body.igniteAsChaos,
+                    ),
+                    stacks = true,
+                )
                 inflicted += ailment
             }
             dot.ailments.mapNotNull { resolve(it, type, level) }.filter { it.first != ailment }.forEach { (other, chance) ->
@@ -2024,8 +2431,7 @@ class Battle(
         curse(kit.curses[random.nextInt(kit.curses.size)], listOf(target))
     }
 
-    private fun buff(fighter: Fighter, source: String, lines: List<StatLine>, duration: Double, counter: Double = 0.0) =
-        lay(fighter, TimedEffect(EffectKind.BUFF, source, lines, time + duration, duration, counter))
+    private fun buff(fighter: Fighter, source: String, lines: List<StatLine>, duration: Double, counter: Double = 0.0) = lay(fighter, TimedEffect(EffectKind.BUFF, source, lines, time + duration, duration, counter))
 
     /** Lays [effect] on [fighter], in place of the same one from the same source, and makes the body again. */
     internal fun lay(fighter: Fighter, effect: TimedEffect) {
@@ -2060,8 +2466,7 @@ class Battle(
     }
 
     /** A skill the hero used on themselves, for the log and the number over their card. */
-    private fun self(code: String, healed: Double = 0.0) =
-        record(Side.HERO, Action.SKILL, HitKind.HIT, 0.0, null, healed, false, emptyList(), null, target()?.index ?: 0, code, onSelf = true)
+    private fun self(code: String, healed: Double = 0.0) = record(Side.HERO, Action.SKILL, HitKind.HIT, 0.0, null, healed, false, emptyList(), null, target()?.index ?: 0, code, onSelf = true)
 
     /** A chance per flask of the belt to gain a charge, by a line of its own ([stat], in percent). */
     private fun flaskCharge(stat: String) = kit.flasks.forEachIndexed { i, flask ->
@@ -2084,7 +2489,11 @@ class Battle(
             answer.chance?.let { chance -> if (random.nextDouble() * 100 >= chance.at(level)) return@forEach }
             if (answer.cooldown > 0) triggerReady[code] = time + answer.cooldown
             depth++
-            try { answer(code, answer, level, target, refund, taken) } finally { depth-- }
+            try {
+                answer(code, answer, level, target, refund, taken)
+            } finally {
+                depth--
+            }
         }
     }
 
@@ -2097,7 +2506,10 @@ class Battle(
         if (answer.flaskCharges > 0) kit.flasks.forEachIndexed { i, flask -> flask?.let { charges[i] = min(it.maxCharges, charges[i] + answer.flaskCharges) } }
         if (answer.refund && refund > 0) hero.mana = min(manaCap(), hero.mana + refund)
         val hit = answer.hit
-        if (hit != null) { heroHit(hit, level, code, spell = false, attack = true, only = target?.takeIf { hit.targets == 1 && it.alive && it.side == Side.MONSTER }); return }
+        if (hit != null) {
+            heroHit(hit, level, code, spell = false, attack = true, only = target?.takeIf { hit.targets == 1 && it.alive && it.side == Side.MONSTER })
+            return
+        }
         val struck = target?.takeIf { it.alive && it.side == Side.MONSTER }
         val word = answer.ailment
         if (word != null && struck != null) {
@@ -2145,8 +2557,10 @@ class Battle(
         if (draught.invulnerable > 0) hero.invulnerableUntil = time + draught.invulnerable
         val before = hero.life
         hero.life = min(hero.body.maxLife, hero.life + draught.life)
-        record(Side.HERO, Action.FLASK, HitKind.HIT, 0.0, null, hero.life - before, false, emptyList(), null, target()?.index ?: 0, flask.code, onSelf = true,
-            trace = EffectTrace(EffectKind.FLASK, flask.code, draught.lines, draught.duration, hero.life - before, flask.effect(hero.body), shot(hero), origin))
+        record(
+            Side.HERO, Action.FLASK, HitKind.HIT, 0.0, null, hero.life - before, false, emptyList(), null, target()?.index ?: 0, flask.code, onSelf = true,
+            trace = EffectTrace(EffectKind.FLASK, flask.code, draught.lines, draught.duration, hero.life - before, flask.effect(hero.body), shot(hero), origin),
+        )
         if (hero.life > before || draught.lifeRate > 0) trigger(SkillEvent.HEALED)
         powers.fire(PowerEvent.FLASK)
     }
@@ -2192,8 +2606,18 @@ class Battle(
             val leading = damage.maxByOrNull { it.value }?.key ?: DamageType.PHYSICAL
             // A single-target hit picks its target as a swing does (3.71.0): a tanking pet takes it; a hit on several lands on the hero
             val target = if (hit.targets <= 1) foeTarget() else hero
-            strike(me, target, Blow(damage, Action.SKILL, skill.spell, skill.code, stun = hit.stun?.at(1) ?: 0.0,
-                ailments = hit.ailments.mapNotNull { resolve(it, element ?: leading, 1) }))
+            strike(
+                me,
+                target,
+                Blow(
+                    damage,
+                    Action.SKILL,
+                    skill.spell,
+                    skill.code,
+                    stun = hit.stun?.at(1) ?: 0.0,
+                    ailments = hit.ailments.mapNotNull { resolve(it, element ?: leading, 1) },
+                ),
+            )
         }
         skill.buff?.let { buff ->
             buff(me, skill.code, buff.stats.lines(1, 1 + me.body["STOCK_WARCRY_EFFECT"] / 100), buff.duration)
@@ -2300,14 +2724,32 @@ class Battle(
         return true
     }
 
-    private fun end(how: Outcome) { outcome = how; duration = time }
+    private fun end(how: Outcome) {
+        outcome = how
+        duration = time
+    }
 
-    private fun record(actor: Side, action: Action, kind: HitKind, damage: Double, type: DamageType?, healed: Double, stunned: Boolean,
-                       inflicted: List<Ailment>, ailment: Ailment?, foe: Int, skill: String? = null, onSelf: Boolean = false, trace: Trace? = null,
-                       pet: Boolean = false) {
+    private fun record(
+        actor: Side,
+        action: Action,
+        kind: HitKind,
+        damage: Double,
+        type: DamageType?,
+        healed: Double,
+        stunned: Boolean,
+        inflicted: List<Ailment>,
+        ailment: Ailment?,
+        foe: Int,
+        skill: String? = null,
+        onSelf: Boolean = false,
+        trace: Trace? = null,
+        pet: Boolean = false,
+    ) {
         val m = foeFighters.getOrNull(foe)
-        log += CombatEvent(time, actor, action, kind, damage, type, healed, stunned, inflicted, ailment, heroFighter.life, heroFighter.shield,
-            m?.life ?: 0.0, m?.shield ?: 0.0, foe, skill, onSelf, heroFighter.mana, ally?.code?.takeIf { pet })
+        log += CombatEvent(
+            time, actor, action, kind, damage, type, healed, stunned, inflicted, ailment, heroFighter.life, heroFighter.shield,
+            m?.life ?: 0.0, m?.shield ?: 0.0, foe, skill, onSelf, heroFighter.mana, ally?.code?.takeIf { pet },
+        )
             .also { it.trace = trace ?: skillTrace(actor, action, foe, skill, onSelf, healed) }
     }
 
@@ -2325,8 +2767,12 @@ class Battle(
         petMend += amount
         val pet = allyFighter ?: return
         if (time - petMendFrom < PET_MEND_EVERY) return
-        if (petMend >= 1) record(Side.HERO, Action.SKILL, HitKind.HIT, 0.0, null, petMend, false, emptyList(), null, target()?.index ?: 0, onSelf = true,
-            trace = EffectTrace(EffectKind.BUFF, ally!!.code, emptyList(), time - petMendFrom, petMend, 1.0, shot(pet), origin), pet = true)
+        if (petMend >= 1) {
+            record(
+                Side.HERO, Action.SKILL, HitKind.HIT, 0.0, null, petMend, false, emptyList(), null, target()?.index ?: 0, onSelf = true,
+                trace = EffectTrace(EffectKind.BUFF, ally!!.code, emptyList(), time - petMendFrom, petMend, 1.0, shot(pet), origin), pet = true,
+            )
+        }
         petMend = 0.0
         petMendFrom = time
     }
@@ -2338,7 +2784,13 @@ class Battle(
     private fun skillTrace(actor: Side, action: Action, foe: Int, skill: String?, onSelf: Boolean, healed: Double): Trace? {
         if (action != Action.SKILL || skill == null) return null
         val user = if (actor == Side.HERO) heroFighter else foeFighters.getOrNull(foe) ?: return null
-        val holder = if (onSelf) user else if (actor == Side.HERO) foeFighters.getOrNull(foe) ?: return null else heroFighter
+        val holder = if (onSelf) {
+            user
+        } else if (actor == Side.HERO) {
+            foeFighters.getOrNull(foe) ?: return null
+        } else {
+            heroFighter
+        }
         val effect = holder.effects.lastOrNull { it.source == skill }
         return EffectTrace(effect?.kind ?: EffectKind.BUFF, skill, effect?.lines.orEmpty(), effect?.duration ?: 0.0, healed, 1.0, shot(holder), origin)
     }
@@ -2346,30 +2798,40 @@ class Battle(
     companion object {
         /** The slice the fight is stepped in: fine enough for a 5-per-second swing, fixed so a fight is a function of its seed. */
         const val STEP = 1.0 / 60
+
         /** How often an ailment's damage is written into the log. */
         const val TICK = 1.0
+
         /** The least a tick of damage over time deals — a bleeding, a poison, a burning, the ground's degeneration — once it deals any. */
         const val MIN_DOT = 1.0
         const val LUNGE = 0.16
+
         /** The pet's place in the fight: neither the hero's -1 nor a monster's. */
         const val ALLY = -2
+
         /** How often, in seconds, a support pet's healing is written as a line of the log (3.70.0). */
         const val PET_MEND_EVERY = 1.0
+
         /** How long a foe that stepped onto the field closes in before its first swing, and how much later each further place. */
         const val ENTRY = 0.55
         const val STAGGER = 0.13
+
         /** A time long gone (3.35.0): nothing happened «recently» at the fight's start. */
         const val NEVER = -1e9
+
         /** A buff worn the whole fight (3.35.0). */
         const val FOREVER = 1e9
 
         /** How deep a passive's answer may set off another's. */
         private const val MAX_DEPTH = 2
+
         /** A skill's element picked at random, and its ailment named by the element that struck (server 0.69.0). */
         private const val RANDOM = "RANDOM"
+
         /** Quick preparation (3.13.0): shortens how much of a skill's cooldown still runs as a fight opens. */
         private const val PREPARATION = "STOCK_SKILL_PREPARATION"
         private const val ELEMENT = "ELEMENT"
+
         /** The share of the hero's life a self-inflicted burning takes a second (server 1.32.0). */
         private const val SELF_BURN = 0.01
     }

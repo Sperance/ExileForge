@@ -10,21 +10,21 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.sync.StaticManifest
 import com.sperance.exileforge.core.update.AvailableUpdate
 import com.sperance.exileforge.core.update.Updates
+import com.sperance.exileforge.data.settings.GuideStore
 import com.sperance.exileforge.update.InstallResult
 import com.sperance.exileforge.update.UpdateInstaller
-import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.flow.first
-import com.sperance.exileforge.data.settings.GuideStore
+import java.io.File
 
 /**
  * Where the update stands (3.72.0). [verified] - a check succeeded since the start (3.73.0: the game no longer waits for it).
@@ -50,9 +50,13 @@ data class UpdateState(
  * one that speaks the live server's wire. Any such build is required: the game stays closed until it is installed. Since
  * 3.73.0 the check runs unseen: the game opens at once, and a check that fails is quietly tried again a minute later.
  */
-class UpdateViewModel(app: Application, private val server: suspend () -> StaticManifest?,
-                      newerServer: kotlinx.coroutines.flow.Flow<Unit> = kotlinx.coroutines.flow.emptyFlow()) : AndroidViewModel(app) {
+class UpdateViewModel(
+    app: Application,
+    private val server: suspend () -> StaticManifest?,
+    newerServer: kotlinx.coroutines.flow.Flow<Unit> = kotlinx.coroutines.flow.emptyFlow(),
+) : AndroidViewModel(app) {
     private val updates = Updates()
+
     // A build that does not update itself (debug, the tested shrunk one) is never closed: only a check by hand runs.
     private val mutable = MutableStateFlow(if (BuildConfig.UPDATES) UpdateState() else UpdateState(checking = false, verified = true))
     val state: StateFlow<UpdateState> = mutable.asStateFlow()
@@ -63,11 +67,27 @@ class UpdateViewModel(app: Application, private val server: suspend () -> Static
 
     init {
         // Until one check has passed the game stays shut (3.76.0), so a failed one is tried again soon; after that, hourly.
-        if (BuildConfig.UPDATES) viewModelScope.launch { while (true) delay(if (check()) Updates.PERIOD_MS else if (state.value.verified) RETRY_MS else FIRST_RETRY_MS) }
+        if (BuildConfig.UPDATES) {
+            viewModelScope.launch {
+                while (true) {
+                    delay(
+                        if (check()) {
+                            Updates.PERIOD_MS
+                        } else if (state.value.verified) {
+                            RETRY_MS
+                        } else {
+                            FIRST_RETRY_MS
+                        },
+                    )
+                }
+            }
+        }
         // A server newer than this build refused the sign-in (3.74.0): its build is looked for now, not in an hour.
         if (BuildConfig.UPDATES) viewModelScope.launch { newerServer.collect { check() } }
-        if (BuildConfig.UPDATES && !UpdateInstaller.allowed(app)) viewModelScope.launch {
-            if (SOURCES !in guides.read.first()) mutable.update { it.copy(askSources = true) }
+        if (BuildConfig.UPDATES && !UpdateInstaller.allowed(app)) {
+            viewModelScope.launch {
+                if (SOURCES !in guides.read.first()) mutable.update { it.copy(askSources = true) }
+            }
         }
         viewModelScope.launch {
             UpdateInstaller.results.collect { result ->
@@ -80,10 +100,14 @@ class UpdateViewModel(app: Application, private val server: suspend () -> Static
     }
 
     /** «Проверить обновления»: asked by hand, the answer is said either way. */
-    fun checkNow() { viewModelScope.launch { check(manual = true) } }
+    fun checkNow() {
+        viewModelScope.launch { check(manual = true) }
+    }
 
     /** «Повторить» on the start's gate (3.76.0): one more check at once. */
-    fun retry() { viewModelScope.launch { check() } }
+    fun retry() {
+        viewModelScope.launch { check() }
+    }
 
     /**
      * The player came back to the app (3.76.0): the releases are asked again, at most once a minute — a build that came
@@ -110,12 +134,18 @@ class UpdateViewModel(app: Application, private val server: suspend () -> Static
             val found = updates.check(BuildConfig.VERSION_CODE, BuildConfig.VERSION_NAME, server())
             mutable.update { s ->
                 // The update being downloaded is kept: a newer one waits for the next check after it.
-                s.copy(checking = false, verified = true, failure = null, update = if (s.progress != null || s.installing) s.update else found,
-                    upToDate = manual && found == null)
+                s.copy(
+                    checking = false,
+                    verified = true,
+                    failure = null,
+                    update = if (s.progress != null || s.installing) s.update else found,
+                    upToDate = manual && found == null,
+                )
             }
             true
-        } catch (e: CancellationException) { throw e }
-        catch (e: Exception) {
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
             mutable.update { it.copy(checking = false, failure = ui("update.check_failed", e.message ?: e::class.simpleName.orEmpty())) }
             false
         }
@@ -126,7 +156,10 @@ class UpdateViewModel(app: Application, private val server: suspend () -> Static
         val update = state.value.update ?: return
         if (download?.isActive == true) return
         val context = getApplication<Application>()
-        if (!UpdateInstaller.allowed(context)) { mutable.update { it.copy(needsPermission = true) }; return }
+        if (!UpdateInstaller.allowed(context)) {
+            mutable.update { it.copy(needsPermission = true) }
+            return
+        }
         download = viewModelScope.launch {
             mutable.update { it.copy(needsPermission = false, error = null, progress = 0f) }
             try {
@@ -134,8 +167,9 @@ class UpdateViewModel(app: Application, private val server: suspend () -> Static
                 updates.download(update, apk) { read, total -> if (total > 0) mutable.update { it.copy(progress = (read.toFloat() / total).coerceIn(0f, 1f)) } }
                 mutable.update { it.copy(progress = null, installing = true) }
                 UpdateInstaller.install(context, apk)
-            } catch (e: CancellationException) { throw e }
-            catch (e: Exception) {
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
                 mutable.update { it.copy(progress = null, installing = false, error = ui("update.download_failed", e.message ?: e::class.simpleName.orEmpty())) }
             }
         }
@@ -144,20 +178,27 @@ class UpdateViewModel(app: Application, private val server: suspend () -> Static
     /** The permission screen was left: the player tries again. */
     fun permissionAsked() = mutable.update { it.copy(needsPermission = false) }
 
-    class Factory(private val app: Application, private val newerServer: kotlinx.coroutines.flow.Flow<Unit>,
-                  private val server: suspend () -> StaticManifest?) : ViewModelProvider.Factory {
+    class Factory(
+        private val app: Application,
+        private val newerServer: kotlinx.coroutines.flow.Flow<Unit>,
+        private val server: suspend () -> StaticManifest?,
+    ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T = UpdateViewModel(app, server, newerServer) as T
     }
 
     private companion object {
         const val DIR = "updates"
+
         /** A failed check is tried again this soon, unseen. */
         const val RETRY_MS = 60_000L
+
         /** Before the first check has passed, with the game shut behind it: tried again this soon. */
         const val FIRST_RETRY_MS = 10_000L
+
         /** Coming back to the app asks again no sooner than this after the last check. */
         const val RESUME_GAP_MS = 60_000L
+
         /** The first-start question about unknown sources, as the device's guides remember it. */
         const val SOURCES = "install_sources"
     }

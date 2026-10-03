@@ -27,15 +27,33 @@ class GuildClient internal constructor(private val http: Transport) {
     /** The guilds by name or tag; a blank [faction] lists every faction's, a code only that faction's (3.28.0, server 1.26.0). */
     suspend fun search(heroId: String, text: String, page: Int, faction: String = ""): GuildPage {
         requirePage(page)
-        return http.get("$GUILD/search", heroQuery(heroId, "text" to text.trim().takeIf { it.isNotEmpty() },
-            "faction" to faction.takeIf { it.isNotBlank() }, "page" to page.toString()))
+        return http.get(
+            "$GUILD/search",
+            heroQuery(
+                heroId,
+                "text" to text.trim().takeIf { it.isNotEmpty() },
+                "faction" to faction.takeIf { it.isNotBlank() },
+                "page" to page.toString(),
+            ),
+        )
     }
 
     suspend fun create(heroId: String, name: String, tag: String, faction: String, emblem: String, color: String, mode: GuildMode, minLevel: Int): GuildMine {
         require(name.isNotBlank() && tag.isNotBlank()) { ui("guild.api.name_tag") }
         require(faction.isNotBlank()) { ui("guild.api.faction") }
-        return http.post("$GUILD/create", heroQuery(heroId, "name" to name.trim(), "tag" to tag.trim(), "faction" to faction, "emblem" to emblem, "color" to color,
-            "mode" to mode.name, "minLevel" to minLevel.toString()))
+        return http.post(
+            "$GUILD/create",
+            heroQuery(
+                heroId,
+                "name" to name.trim(),
+                "tag" to tag.trim(),
+                "faction" to faction,
+                "emblem" to emblem,
+                "color" to color,
+                "mode" to mode.name,
+                "minLevel" to minLevel.toString(),
+            ),
+        )
     }
 
     suspend fun join(heroId: String, guildId: String): GuildMine = onGuild("join", heroId, guildId)
@@ -65,17 +83,22 @@ class GuildClient internal constructor(private val http: Transport) {
 
     /** The guild stash (server 1.74.0): read, put an item or a stack in, take one out, set a tab's rank. Writes never retried. */
     suspend fun stash(heroId: String): com.sperance.exileforge.core.model.guild.GuildStashView = http.get("$GUILD/stash", heroQuery(heroId))
-    suspend fun deposit(heroId: String, tab: Int, itemId: String?, code: String?, amount: Long): com.sperance.exileforge.core.model.guild.GuildStashView =
-        http.post("$GUILD/stash/deposit", heroQuery(heroId, "tab" to tab.toString(), "itemId" to itemId, "code" to code, "amount" to amount.toString()))
-    suspend fun take(heroId: String, entryId: String): com.sperance.exileforge.core.model.guild.GuildStashView =
-        http.post("$GUILD/stash/take", heroQuery(heroId, "entryId" to entryId))
-    suspend fun tabRank(heroId: String, tab: Int, minRank: Int): com.sperance.exileforge.core.model.guild.GuildStashView =
-        http.post("$GUILD/stash/tab", heroQuery(heroId, "tab" to tab.toString(), "minRank" to minRank.toString()))
+    suspend fun deposit(heroId: String, tab: Int, itemId: String?, code: String?, amount: Long): com.sperance.exileforge.core.model.guild.GuildStashView = http.post("$GUILD/stash/deposit", heroQuery(heroId, "tab" to tab.toString(), "itemId" to itemId, "code" to code, "amount" to amount.toString()))
+    suspend fun take(heroId: String, entryId: String): com.sperance.exileforge.core.model.guild.GuildStashView = http.post("$GUILD/stash/take", heroQuery(heroId, "entryId" to entryId))
+    suspend fun tabRank(heroId: String, tab: Int, minRank: Int): com.sperance.exileforge.core.model.guild.GuildStashView = http.post("$GUILD/stash/tab", heroQuery(heroId, "tab" to tab.toString(), "minRank" to minRank.toString()))
 
     /** Every setting is sent, the announcement as a parameter — an empty one clears it. */
-    suspend fun settings(heroId: String, mode: GuildMode, minLevel: Int, emblem: String, color: String, announcement: String): GuildView =
-        http.post("$GUILD/settings", heroQuery(heroId, "mode" to mode.name, "minLevel" to minLevel.toString(), "emblem" to emblem,
-            "color" to color, "announcement" to announcement))
+    suspend fun settings(heroId: String, mode: GuildMode, minLevel: Int, emblem: String, color: String, announcement: String): GuildView = http.post(
+        "$GUILD/settings",
+        heroQuery(
+            heroId,
+            "mode" to mode.name,
+            "minLevel" to minLevel.toString(),
+            "emblem" to emblem,
+            "color" to color,
+            "announcement" to announcement,
+        ),
+    )
 
     /** Gold or an orb into the treasury; [item] is `GOLD` or the orb's item code. */
     suspend fun contribute(heroId: String, item: String, amount: Long): GuildContribution {

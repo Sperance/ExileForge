@@ -14,7 +14,10 @@ import kotlinx.serialization.json.Json
  * [short] is the rune drawn in a picker, [title] the language's name written in itself.
  */
 enum class Lang(val code: String, val title: String, val short: String) {
-    RU("ru", "Русский", "RU"), EN("en", "English", "EN");
+    RU("ru", "Русский", "RU"),
+    EN("en", "English", "EN"),
+    ;
+
     companion object {
         /** The language with this code, or nothing: used where an unknown code must not become one. */
         fun byCode(code: String?) = entries.firstOrNull { it.code == code }
@@ -63,11 +66,10 @@ object UiStrings {
     /** The labels every language shares. */
     fun common(): Map<String, String> = read(COMMON)
 
-    private fun read(name: String): Map<String, String> =
-        javaClass.classLoader?.getResourceAsStream("i18n/ui_$name.json")
-            ?.bufferedReader()?.use { it.readText() }
-            ?.let { json.decodeFromString(MapSerializer(String.serializer(), String.serializer()), it) }
-            ?: emptyMap()
+    private fun read(name: String): Map<String, String> = javaClass.classLoader?.getResourceAsStream("i18n/ui_$name.json")
+        ?.bufferedReader()?.use { it.readText() }
+        ?.let { json.decodeFromString(MapSerializer(String.serializer(), String.serializer()), it) }
+        ?: emptyMap()
 }
 
 /**
@@ -80,10 +82,9 @@ object UiStrings {
 fun ui(key: String, vararg args: Any?): String = ui(uiLanguage, key, *args)
 
 /** The same label in a language named explicitly: tables of slots, rarities and stats need this. */
-fun ui(lang: Lang, key: String, vararg args: Any?): String =
-    args.foldIndexed(UiStrings.table(lang)[key] ?: key) { index, text, argument ->
-        text.replace("{$index}", argument.toString())
-    }
+fun ui(lang: Lang, key: String, vararg args: Any?): String = args.foldIndexed(UiStrings.table(lang)[key] ?: key) { index, text, argument ->
+    text.replace("{$index}", argument.toString())
+}
 
 /**
  * A label, or a fallback when the table has no such key.
@@ -105,6 +106,7 @@ fun pluralKey(key: String, n: Int, lang: Lang = uiLanguage): String = when (lang
         n % 10 in 2..4 && n % 100 !in 12..14 -> "$key.few"
         else -> "$key.many"
     }
+
     Lang.EN -> if (n == 1) "$key.one" else "$key.many"
 }
 

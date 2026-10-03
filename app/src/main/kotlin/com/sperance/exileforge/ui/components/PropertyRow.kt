@@ -26,13 +26,21 @@ import com.sperance.exileforge.ui.theme.*
 @Composable fun PropertyRow(label: String, value: String, glyph: Glyph = Glyph.INFO, stat: String? = null) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         // A tap on the rune says what the line is and what it holds (2.73.0).
-        Tipped({ Tip(label, tint = Rune, facts = listOf(ui("tip.value") to value)) }, Modifier.size(26.dp).background(Rune.copy(alpha = .10f), RoundedCornerShape(5.dp)),
-            contentAlignment = Alignment.Center) {
+        Tipped(
+            { Tip(label, tint = Rune, facts = listOf(ui("tip.value") to value)) },
+            Modifier.size(26.dp).background(Rune.copy(alpha = .10f), RoundedCornerShape(5.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
             if (stat != null) StatIcon(stat, Rune, Modifier.size(16.dp)) else GlyphIcon(glyph, Rune, Modifier.size(16.dp))
         }
         Text(label, style = MaterialTheme.typography.bodyMedium, color = Parchment, modifier = Modifier.weight(1f))
-        Text(value, modifier = Modifier.widthIn(max = 130.dp)
-            .drawBehind { drawLine(Gold.copy(alpha = .25f), Offset(0f, size.height), Offset(size.width, size.height), 1f) },
-            color = GoldBright, style = MaterialTheme.typography.labelLarge, textAlign = TextAlign.End)
+        Text(
+            value,
+            modifier = Modifier.widthIn(max = 130.dp)
+                .drawBehind { drawLine(Gold.copy(alpha = .25f), Offset(0f, size.height), Offset(size.width, size.height), 1f) },
+            color = GoldBright,
+            style = MaterialTheme.typography.labelLarge,
+            textAlign = TextAlign.End,
+        )
     }
 }

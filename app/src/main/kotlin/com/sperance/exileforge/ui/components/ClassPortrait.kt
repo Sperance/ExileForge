@@ -18,8 +18,13 @@ import com.sperance.exileforge.ui.theme.Gold
  * many the server has sent so far — read here so the picture is redrawn the moment they arrive.
  */
 @Composable fun ClassPortrait(classCode: String?, portraits: Int, modifier: Modifier = Modifier, round: Boolean = false, ring: Color = Gold) {
-    key(portraits) { Canvas(if (round) modifier.aspectRatio(1f) else modifier.aspectRatio(3f / 4f)) {
-        if (round) drawToken(Offset(size.width / 2, size.height / 2), size.minDimension / 2 * .9f, ring) { Portraits.hero(this, classCode, 0f) }
-        else clipRect { Portraits.hero(this, classCode, 0f) }
-    } }
+    key(portraits) {
+        Canvas(if (round) modifier.aspectRatio(1f) else modifier.aspectRatio(3f / 4f)) {
+            if (round) {
+                drawToken(Offset(size.width / 2, size.height / 2), size.minDimension / 2 * .9f, ring) { Portraits.hero(this, classCode, 0f) }
+            } else {
+                clipRect { Portraits.hero(this, classCode, 0f) }
+            }
+        }
+    }
 }

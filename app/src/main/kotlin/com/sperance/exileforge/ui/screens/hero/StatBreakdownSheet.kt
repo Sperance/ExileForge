@@ -1,6 +1,5 @@
 package com.sperance.exileforge.ui.screens.hero
 
-import com.sperance.exileforge.ui.components.ForgeSheet
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -21,21 +20,22 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.StatGroup
 import com.sperance.exileforge.core.display.StatLimit
 import com.sperance.exileforge.core.display.StatLimits
-import com.sperance.exileforge.core.display.statValue
+import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.statDescription
 import com.sperance.exileforge.core.display.statTitle
+import com.sperance.exileforge.core.display.statValue
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.ManaReserve
-import com.sperance.exileforge.presentation.state.manaReserve
-import com.sperance.exileforge.presentation.state.passiveShares
-import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.presentation.state.ShareCard
 import com.sperance.exileforge.presentation.state.ShareKind
 import com.sperance.exileforge.presentation.state.ShareRow
 import com.sperance.exileforge.presentation.state.StatExplainer
 import com.sperance.exileforge.presentation.state.StatExplanation
+import com.sperance.exileforge.presentation.state.manaReserve
+import com.sperance.exileforge.presentation.state.passiveShares
 import com.sperance.exileforge.rules.sheet.Shift
+import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.icons.StatIcon
 import com.sperance.exileforge.ui.theme.*
 
@@ -59,8 +59,12 @@ internal fun ShareKind.color(): Color = when (this) {
  * [shifts] are what lies over the hero's own sheet — a map's and the atlas's effects — by stat.
  */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun StatBreakdownSheet(s: ForgeState, stat: String, shifts: Map<String, List<Shift>>, onDismiss: () -> Unit) {
-    val explainer = s.hero?.sheet?.model?.explainer ?: run { LaunchedEffect(stat) { onDismiss() }; return }
+@Composable
+fun StatBreakdownSheet(s: ForgeState, stat: String, shifts: Map<String, List<Shift>>, onDismiss: () -> Unit) {
+    val explainer = s.hero?.sheet?.model?.explainer ?: run {
+        LaunchedEffect(stat) { onDismiss() }
+        return
+    }
     var trail by remember(stat) { mutableStateOf(listOf(stat)) }
     val current = trail.last()
     val view = remember(current, explainer, shifts, s.lang, s.hero?.skills) {
@@ -69,10 +73,15 @@ internal fun ShareKind.color(): Color = when (this) {
     val power = s.index?.stats?.get(current)?.group == com.sperance.exileforge.rules.content.StatGroup.POWER
     val accent = StatGroup.of(current).accent()
     ForgeSheet(onDismissRequest = onDismiss) {
-        LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.9f).navigationBarsPadding(), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, 16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            if (trail.size > 1) item {
-                AssistChip(onClick = { trail = trail.dropLast(1) }, label = { Text("← ${statTitle(trail[trail.size - 2], s.lang)}") })
+        LazyColumn(
+            Modifier.fillMaxWidth().fillMaxHeight(.9f).navigationBarsPadding(),
+            contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, 16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            if (trail.size > 1) {
+                item {
+                    AssistChip(onClick = { trail = trail.dropLast(1) }, label = { Text("← ${statTitle(trail[trail.size - 2], s.lang)}") })
+                }
             }
             item { Header(current, view, accent, s) }
             s.index?.campaign?.combat?.let { StatLimits.of(current, s.hero?.stats.orEmpty(), it) }?.let { limit -> item { LimitCard(limit, s) { trail = trail + it } } }
@@ -109,8 +118,10 @@ internal fun ShareKind.color(): Color = when (this) {
 @Composable private fun LimitCard(limit: StatLimit, s: ForgeState, open: (String) -> Unit) {
     val shape = RoundedCornerShape(12.dp)
     val value = { v: Double -> statValue(limit.stat, v, s.index) }
-    Column(Modifier.fillMaxWidth().clip(shape).background(PanelRaised).border(1.dp, Bronze, shape).padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(
+        Modifier.fillMaxWidth().clip(shape).background(PanelRaised).border(1.dp, Bronze, shape).padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(ui("stat.cap.title"), color = Parchment, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
             Text(value(limit.cap), color = Gold, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
@@ -118,8 +129,11 @@ internal fun ShareKind.color(): Color = when (this) {
         SourceLine(ShareRow(ui("stat.cap.base"), value(limit.base)), open)
         limit.raises.forEach { (stat, amount) -> SourceLine(ShareRow(statTitle(stat, s.lang), (if (amount >= 0) "+" else "−") + value(kotlin.math.abs(amount)), link = stat), open) }
         limit.hard?.let { SourceLine(ShareRow(ui("stat.cap.hard"), value(it)), open) }
-        Text(ui("stat.cap.counts", value(minOf(limit.effective, limit.cap))) + if (limit.over > 0) " · " + ui("stat.cap.over", value(limit.over)) else "",
-            color = if (limit.over > 0) Muted else Parchment, style = MaterialTheme.typography.labelSmall)
+        Text(
+            ui("stat.cap.counts", value(minOf(limit.effective, limit.cap))) + if (limit.over > 0) " · " + ui("stat.cap.over", value(limit.over)) else "",
+            color = if (limit.over > 0) Muted else Parchment,
+            style = MaterialTheme.typography.labelSmall,
+        )
     }
 }
 
@@ -127,8 +141,10 @@ internal fun ShareKind.color(): Color = when (this) {
 @Composable private fun ReserveCard(reserve: ManaReserve, s: ForgeState) {
     val shape = RoundedCornerShape(12.dp)
     val value = { v: Double -> statValue(MANA_STAT, v, s.index) }
-    Column(Modifier.fillMaxWidth().clip(shape).background(PanelRaised).border(1.dp, ManaBlue.copy(alpha = .45f), shape).padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(
+        Modifier.fillMaxWidth().clip(shape).background(PanelRaised).border(1.dp, ManaBlue.copy(alpha = .45f), shape).padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
         Text(ui("stat.reserve.title"), color = Parchment, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
         SourceLine(ShareRow(ui("stat.reserve.held", number(reserve.percent)), "−" + value(reserve.held))) {}
         SourceLine(ShareRow(ui("stat.reserve.free"), value(reserve.free))) {}
@@ -145,7 +161,8 @@ internal fun ShareKind.color(): Color = when (this) {
 
 /** Each kind's share of the total as one bar and its legend, in percent of the positive part. */
 @OptIn(ExperimentalLayoutApi::class)
-@Composable private fun ShareBar(weights: Map<ShareKind, Double>) {
+@Composable
+private fun ShareBar(weights: Map<ShareKind, Double>) {
     val sum = weights.values.sum()
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         val shape = RoundedCornerShape(7.dp)
@@ -165,15 +182,22 @@ internal fun ShareKind.color(): Color = when (this) {
 
 @Composable private fun KindTag(kind: ShareKind) {
     val color = kind.color()
-    Text(ui("stat.tag.${kind.name}"), color = color, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold,
-        modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(color.copy(alpha = .16f)).padding(horizontal = 6.dp, vertical = 1.dp))
+    Text(
+        ui("stat.tag.${kind.name}"),
+        color = color,
+        style = MaterialTheme.typography.labelSmall,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(color.copy(alpha = .16f)).padding(horizontal = 6.dp, vertical = 1.dp),
+    )
 }
 
 /** A kind's card: its tag, its name and what it gives together, then a line per source, a grey note under one that has it. */
 @Composable private fun SourceCard(card: ShareCard, s: ForgeState, open: (String) -> Unit) {
     val shape = RoundedCornerShape(12.dp)
-    Column(Modifier.fillMaxWidth().clip(shape).background(PanelRaised).border(1.dp, Bronze, shape).padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(
+        Modifier.fillMaxWidth().clip(shape).background(PanelRaised).border(1.dp, Bronze, shape).padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             KindTag(card.kind)
             Text(ui("stat.kind.${card.kind.name}"), color = Parchment, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
@@ -186,8 +210,13 @@ internal fun ShareKind.color(): Color = when (this) {
 @Composable private fun SourceLine(row: ShareRow, open: (String) -> Unit) {
     Column(Modifier.fillMaxWidth().then(row.link?.let { link -> Modifier.clickable { open(link) } } ?: Modifier).padding(start = 8.dp, top = 2.dp, bottom = 2.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(row.title, color = if (row.link != null) ModBlue else Muted, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f),
-                textDecoration = if (row.link != null) TextDecoration.Underline else null)
+            Text(
+                row.title,
+                color = if (row.link != null) ModBlue else Muted,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.weight(1f),
+                textDecoration = if (row.link != null) TextDecoration.Underline else null,
+            )
             Text(row.value, color = if (row.value.startsWith("−")) LifeRed else Parchment, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
         }
         row.note?.let { Text(it, color = Muted.copy(alpha = .8f), style = MaterialTheme.typography.labelSmall) }
@@ -196,8 +225,14 @@ internal fun ShareKind.color(): Color = when (this) {
 
 @Composable private fun Formula(text: String) {
     val shape = RoundedCornerShape(10.dp)
-    Text(text, color = Parchment, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace, textAlign = TextAlign.Center,
-        modifier = Modifier.fillMaxWidth().clip(shape).background(Ink).border(1.dp, Bronze, shape).padding(10.dp))
+    Text(
+        text,
+        color = Parchment,
+        style = MaterialTheme.typography.bodySmall,
+        fontFamily = FontFamily.Monospace,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth().clip(shape).background(Ink).border(1.dp, Bronze, shape).padding(10.dp),
+    )
 }
 
 /** What the stat gives others now; a tap opens the one given to. */
@@ -206,8 +241,10 @@ internal fun ShareKind.color(): Color = when (this) {
         Text(ui("stat.gives", statTitle(stat, s.lang)).uppercase(), color = Muted, style = MaterialTheme.typography.labelSmall)
         rows.forEach { row ->
             val shape = RoundedCornerShape(8.dp)
-            Row(Modifier.fillMaxWidth().clip(shape).background(PanelRaised).clickable { row.link?.let(open) }.padding(horizontal = 10.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                Modifier.fillMaxWidth().clip(shape).background(PanelRaised).clickable { row.link?.let(open) }.padding(horizontal = 10.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Text(row.title, color = ModBlue, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
                 Text(row.value, color = if (row.value.startsWith("−")) LifeRed else Gold, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
                 Text("  ›", color = Muted)

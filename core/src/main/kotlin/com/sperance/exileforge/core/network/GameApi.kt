@@ -1,7 +1,5 @@
 package com.sperance.exileforge.core.network
 
-import com.sperance.exileforge.rules.content.RULES_VERSION
-import com.sperance.exileforge.core.model.sync.API_REVISION
 import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.contract.requireId
 import com.sperance.exileforge.core.i18n.ui
@@ -12,8 +10,10 @@ import com.sperance.exileforge.core.model.command.LoginCredentials
 import com.sperance.exileforge.core.model.command.PasswordChange
 import com.sperance.exileforge.core.model.command.SignedIn
 import com.sperance.exileforge.core.model.command.UserProfile
+import com.sperance.exileforge.core.model.sync.API_REVISION
 import com.sperance.exileforge.core.model.sync.HeroSnapshot
 import com.sperance.exileforge.core.model.sync.StaticManifest
+import com.sperance.exileforge.rules.content.RULES_VERSION
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
@@ -40,12 +40,17 @@ class GameApi(
     server: String,
     journal: RequestJournal = RequestJournal(),
     client: OkHttpClient = ForgeHttp.client,
-    private val onUnauthorized: () -> Unit = {}
+    private val onUnauthorized: () -> Unit = {},
 ) {
-    private val http = Transport(server, journal, client) { account = null; onUnauthorized() }
+    private val http = Transport(server, journal, client) {
+        account = null
+        onUnauthorized()
+    }
     private var account: UserProfile? = null
 
-    init { http.account = { account?.id } }
+    init {
+        http.account = { account?.id }
+    }
 
     val files = StaticClient(http)
     val hero = HeroClient(http)
@@ -77,8 +82,11 @@ class GameApi(
     suspend fun loginByDevice(secret: String?): UserProfile {
         logout()
         val answer = secret?.let {
-            try { http.request("POST", "api/v1/user/login/byDeviceId", body = WireJson.encodeToJsonElement(DeviceCredentials(it)), sensitive = true) }
-            catch (e: ApiFailure) { if (e.code == DEVICE_UNKNOWN) null else throw e }
+            try {
+                http.request("POST", "api/v1/user/login/byDeviceId", body = WireJson.encodeToJsonElement(DeviceCredentials(it)), sensitive = true)
+            } catch (e: ApiFailure) {
+                if (e.code == DEVICE_UNKNOWN) null else throw e
+            }
         } ?: http.request("POST", "api/v1/user/byDeviceId", body = WireJson.encodeToJsonElement(DeviceCredentials("")), sensitive = true)
         return signedIn(answer)
     }
@@ -109,8 +117,12 @@ class GameApi(
         logout()
         require(saved.isNotBlank()) { ui("api.no_token") }
         http.token = saved
-        return try { refreshUser().also { require(it.isActive) { ui("api.account_disabled") } } }
-            catch (e: Exception) { logout(); throw e }
+        return try {
+            refreshUser().also { require(it.isActive) { ui("api.account_disabled") } }
+        } catch (e: Exception) {
+            logout()
+            throw e
+        }
     }
 
     /**
@@ -130,15 +142,21 @@ class GameApi(
         http.holding = false
     }
 
-    fun logout() { account = null; http.token = null; http.holding = false }
+    fun logout() {
+        account = null
+        http.token = null
+        http.holding = false
+    }
     fun currentUser(): UserProfile? = account
     fun sessionToken(): String? = http.token
 
     /** Ends one session on the server: only the echo of a local sign-out, nothing waits for it. */
     suspend fun revoke(saved: String) {
-        try { http.request("POST", "api/v1/user/logout", bearer = saved) }
-        catch (e: CancellationException) { throw e }
-        catch (_: Exception) {}
+        try {
+            http.request("POST", "api/v1/user/logout", bearer = saved)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {}
     }
 
     suspend fun refreshUser(): UserProfile {
@@ -149,8 +167,13 @@ class GameApi(
     }
 
     suspend fun changePassword(current: String, replacement: String) {
-        http.request("POST", "api/v1/user/changePassword", body = WireJson.encodeToJsonElement(PasswordChange(current, replacement)),
-            authenticated = true, sensitive = true)
+        http.request(
+            "POST",
+            "api/v1/user/changePassword",
+            body = WireJson.encodeToJsonElement(PasswordChange(current, replacement)),
+            authenticated = true,
+            sensitive = true,
+        )
     }
 
     private val manifestLock = Mutex()
@@ -167,9 +190,11 @@ class GameApi(
     suspend fun manifest(fresh: Boolean = false): StaticManifest = manifestLock.withLock {
         manifest?.takeIf { !fresh } ?: try {
             files.manifestText().also { manifestCache?.write(it) }.let { WireJson.decodeFromString(StaticManifest.serializer(), it) }
-        } catch (e: CancellationException) { throw e }
-        catch (e: ApiFailure) { throw e }
-        catch (e: Exception) {
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: ApiFailure) {
+            throw e
+        } catch (e: Exception) {
             manifest ?: manifestCache?.read()?.let { runCatching { WireJson.decodeFromString(StaticManifest.serializer(), it) }.getOrNull() } ?: throw e
         }.also { manifest = it }
     }
@@ -180,10 +205,16 @@ class GameApi(
      */
     suspend fun workbench(): StaticManifest {
         repeat(REVISION_RETRIES) {
-            served().takeIf { it.matchesClient }?.let { it.requireWorkbench(); return it }
+            served().takeIf { it.matchesClient }?.let {
+                it.requireWorkbench()
+                return it
+            }
             delay(REVISION_RETRY_DELAY_MS)
         }
-        return served().also { if (it.revision > API_REVISION || it.rules > RULES_VERSION) onNewerServer(); it.requireWorkbench() }
+        return served().also {
+            if (it.revision > API_REVISION || it.rules > RULES_VERSION) onNewerServer()
+            it.requireWorkbench()
+        }
     }
 
     /** The server speaks a newer wire than this build (3.74.0): the app looks for the build that speaks it at once. */
@@ -196,7 +227,10 @@ class GameApi(
     private suspend fun served(): StaticManifest = manifestLock.withLock {
         val text = files.manifestText()
         WireJson.decodeFromString(StaticManifest.serializer(), text).also {
-            if (it.matchesClient) { manifestCache?.write(text); manifest = it }
+            if (it.matchesClient) {
+                manifestCache?.write(text)
+                manifest = it
+            }
         }
     }
 
@@ -205,39 +239,59 @@ class GameApi(
     /** The commands waiting for this server (3.30.0); none until the app gives them a place on the device. */
     val commands: CommandQueue? get() = http.queue
 
-    fun commandStore(store: CommandStore) { http.queue = CommandQueue(store) }
+    fun commandStore(store: CommandStore) {
+        http.queue = CommandQueue(store)
+    }
 
     /**
      * Sends what waits, in order, each with its own key. A refusal drops that command and goes on to the
      * next — [refused] says it; "not yet" (the network, a duplicate still running) stops the pass and keeps
      * the rest; [delivered] names each command the server has answered. Another account's commands are dropped, and [foreign] names each.
      */
-    suspend fun flushCommands(expired: (List<QueuedCommand>) -> Unit, refused: (QueuedCommand, ApiFailure) -> Unit,
-                              delivered: (QueuedCommand) -> Unit, foreign: (QueuedCommand) -> Unit = {}): FlushOutcome {
+    suspend fun flushCommands(
+        expired: (List<QueuedCommand>) -> Unit,
+        refused: (QueuedCommand, ApiFailure) -> Unit,
+        delivered: (QueuedCommand) -> Unit,
+        foreign: (QueuedCommand) -> Unit = {},
+    ): FlushOutcome {
         val queue = http.queue ?: return FlushOutcome.EMPTY
         while (true) {
             // No session, or one the server has not confirmed yet: the commands wait for it.
             if (http.token == null || http.holding) return FlushOutcome.SIGNED_OUT
             val next = queue.head(expired) ?: return FlushOutcome.EMPTY
             val owner = account?.id
-            if (next.account != null && owner != null && next.account != owner) { queue.remove(next.key); foreign(next); continue }
+            if (next.account != null && owner != null && next.account != owner) {
+                queue.remove(next.key)
+                foreign(next)
+                continue
+            }
             try {
                 http.replay(next)
                 queue.remove(next.key)
                 delivered(next)
-            } catch (e: CancellationException) { throw e }
-            catch (e: ApiFailure) {
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: ApiFailure) {
                 when {
                     e.status == 401 -> return FlushOutcome.SIGNED_OUT
+
                     CommandQueue.transient(e.status) -> return FlushOutcome.OFFLINE
-                    else -> { queue.remove(next.key); refused(next, e) }
+
+                    else -> {
+                        queue.remove(next.key)
+                        refused(next, e)
+                    }
                 }
+            } catch (_: java.io.IOException) {
+                return FlushOutcome.OFFLINE
             }
-            catch (_: java.io.IOException) { return FlushOutcome.OFFLINE }
         }
     }
 
     /** Where commands deliver the hero: [parts] names the fingerprints held for a hero, [apply] receives the snapshot or `null`. */
-    fun heroSync(parts: (String) -> String?, apply: (String, HeroSnapshot?) -> Unit) { http.heroParts = parts; http.onHero = apply }
+    fun heroSync(parts: (String) -> String?, apply: (String, HeroSnapshot?) -> Unit) {
+        http.heroParts = parts
+        http.onHero = apply
+    }
     suspend fun health(): JsonElement = http.request("GET", "system/health")
 }

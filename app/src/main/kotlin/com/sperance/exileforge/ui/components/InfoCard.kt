@@ -12,8 +12,12 @@ import com.sperance.exileforge.ui.icons.GlyphIcon
 import com.sperance.exileforge.ui.theme.Gold
 
 /** Parchment note pinned to the stash wall; turns blood-red when it reports a failure. */
-@Composable internal fun InfoCard(title: String, body: String, failure: Boolean = false,
-    glyph: Glyph = if (failure) Glyph.ALERT else Glyph.INFO) {
+@Composable internal fun InfoCard(
+    title: String,
+    body: String,
+    failure: Boolean = false,
+    glyph: Glyph = if (failure) Glyph.ALERT else Glyph.INFO,
+) {
     val accent = if (failure) MaterialTheme.colorScheme.error else Gold
     ForgePanel(accent = accent) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -10,9 +10,9 @@ import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.sheet.Requirements
 import com.sperance.exileforge.rules.sheet.SheetCalculator
 import com.sperance.exileforge.rules.sheet.SheetExplainer
-import com.sperance.exileforge.rules.sheet.sourcedLines
 import com.sperance.exileforge.rules.sheet.StatOperation
 import com.sperance.exileforge.rules.sheet.WornCount
+import com.sperance.exileforge.rules.sheet.sourcedLines
 import kotlin.math.abs
 
 /** A line laid on a sheet for a while — a buff, a curse, a flask, a passive skill — shaped as a modifier's effect. */
@@ -31,6 +31,7 @@ data class StatDelta(val stat: String, val before: Double, val after: Double) {
 class SheetModel(private val base: Map<String, Double>, private val ops: List<StatOperation>, private val index: ContentIndex) {
     private val calculator = SheetCalculator(index)
     val plain: Map<String, Double> by lazy { calculator.compute(base, ops) }
+
     /** The sheet taken apart by source, for a figure's own window. */
     val explainer: SheetExplainer by lazy { SheetExplainer(index, base, ops) }
 
@@ -49,20 +50,17 @@ class SheetModel(private val base: Map<String, Double>, private val ops: List<St
     fun conditional(active: Set<Condition>): List<StatLine> = conditionalSourced(active).map { it.second }
 
     /** The same lines with the condition each waits for (3.37.0), for the log's card. */
-    fun conditionalSourced(active: Set<Condition>): List<Pair<Condition, StatLine>> =
-        conditional.filter { it.condition in active && it.condition?.target == false }.map { it.condition!! to StatLine(it.stat, it.op, it.value) }
+    fun conditionalSourced(active: Set<Condition>): List<Pair<Condition, StatLine>> = conditional.filter { it.condition in active && it.condition?.target == false }.map { it.condition!! to StatLine(it.stat, it.op, it.value) }
 
     /** How much more damage the lines waiting for a target's state give against a target in [states], in percent increased. */
-    fun against(states: Set<Condition>): Double =
-        conditional.filter { it.condition in states && it.condition?.target == true }.sumOf { it.value }
+    fun against(states: Set<Condition>): Double = conditional.filter { it.condition in states && it.condition?.target == true }.sumOf { it.value }
 
     /**
      * The increases of [stat] summed, [lines] among them: what a spell of that element is multiplied by. The damage in
      * general (server 1.57.0) is an increase of every type of damage, as the sheet adds it up.
      */
-    fun increased(stat: String, lines: List<StatLine> = emptyList()): Double =
-        (ops.filter { it.condition == null } + lines.map { StatOperation(it.stat, it.op, it.value) }).flatMap(calculator::spread)
-            .filter { it.stat == stat && it.op == Op.INCREASED }.sumOf { op -> op.resolve(op.perStat?.let { plain[it] } ?: 0.0) }
+    fun increased(stat: String, lines: List<StatLine> = emptyList()): Double = (ops.filter { it.condition == null } + lines.map { StatOperation(it.stat, it.op, it.value) }).flatMap(calculator::spread)
+        .filter { it.stat == stat && it.op == Op.INCREASED }.sumOf { op -> op.resolve(op.perStat?.let { plain[it] } ?: 0.0) }
 
     override fun equals(other: Any?): Boolean = other is SheetModel && other.plain == plain
     override fun hashCode(): Int = plain.hashCode()
@@ -70,7 +68,9 @@ class SheetModel(private val base: Map<String, Double>, private val ops: List<St
 
 /** The hero sheet as the client added it up: the numbers, which worn items count and why the rest do not, and what it was made of. */
 class HeroSheet(val stats: Map<String, Double>, val active: List<String>, val inactive: Map<String, List<String>>, val model: SheetModel?) {
-    companion object { val EMPTY = HeroSheet(emptyMap(), emptyList(), emptyMap(), null) }
+    companion object {
+        val EMPTY = HeroSheet(emptyMap(), emptyList(), emptyMap(), null)
+    }
 }
 
 /**
@@ -78,8 +78,14 @@ class HeroSheet(val stats: Map<String, Double>, val active: List<String>, val in
  * the class at the level, the tree, then the worn items in slot order, each checked against what came before.
  */
 object Sheets {
-    fun calculate(index: ContentIndex, level: Int, heroClass: String, tree: List<TakenNode>, items: List<ItemInstance>,
-                  pets: List<com.sperance.exileforge.rules.content.Pet> = emptyList()): HeroSheet {
+    fun calculate(
+        index: ContentIndex,
+        level: Int,
+        heroClass: String,
+        tree: List<TakenNode>,
+        items: List<ItemInstance>,
+        pets: List<com.sperance.exileforge.rules.content.Pet> = emptyList(),
+    ): HeroSheet {
         // A helper pet's lines lie on the hero beside the tree's (3.5.0), as the server adds them.
         val lines = index.tree.sourcedLines(tree) + com.sperance.exileforge.rules.roll.Menagerie(index).helperSourced(pets)
         val result = SheetCalculator(index).calculate(level, index.heroClass(heroClass), lines, items.filter { it.equipped }, tree.mapTo(HashSet()) { it.code })
@@ -87,15 +93,22 @@ object Sheets {
     }
 
     /** What an item's requirements miss for a hero with [stats], in the rules' words; empty means it can be worn. */
-    fun unmet(index: ContentIndex, templateCode: String, level: Int, stats: Map<String, Double>): List<String> =
-        index.template(templateCode)?.let { Requirements.unmet(it, level, stats) }.orEmpty()
+    fun unmet(index: ContentIndex, templateCode: String, level: Int, stats: Map<String, Double>): List<String> = index.template(templateCode)?.let { Requirements.unmet(it, level, stats) }.orEmpty()
 
     /**
      * What wearing [item] would change, by the rules' own placement: a ring takes a free one of two, a
      * two-handed weapon frees both hands, a bow pairs with a quiver. Only the characteristics that move are returned.
      */
-    fun wearing(index: ContentIndex, item: ItemInstance, level: Int, heroClass: String, tree: List<TakenNode>, items: List<ItemInstance>, before: Map<String, Double>,
-                pets: List<com.sperance.exileforge.rules.content.Pet> = emptyList()): List<StatDelta> {
+    fun wearing(
+        index: ContentIndex,
+        item: ItemInstance,
+        level: Int,
+        heroClass: String,
+        tree: List<TakenNode>,
+        items: List<ItemInstance>,
+        before: Map<String, Double>,
+        pets: List<com.sperance.exileforge.rules.content.Pet> = emptyList(),
+    ): List<StatDelta> {
         val template = index.template(item.template) ?: return emptyList()
         val worn = items.filter { it.equipped && !it.socketed && it.id != item.id }
         val target = EquipSlots.target(template.slot, null, worn.mapNotNull { it.slot })

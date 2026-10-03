@@ -1,6 +1,5 @@
 package com.sperance.exileforge.ui.screens.guild
 
-import com.sperance.exileforge.ui.components.ForgeSheet
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -23,6 +22,7 @@ import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.rules.content.GuildRole
 import com.sperance.exileforge.ui.components.*
+import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.theme.*
 
 /**
@@ -35,8 +35,12 @@ private fun commandsOn(me: GuildMember?, target: GuildMember, officersFull: Bool
         GuildRole.LEADER -> listOfNotNull(
             MemberCommand.PROMOTE.takeIf { target.role == GuildRole.MEMBER && !officersFull },
             MemberCommand.DEMOTE.takeIf { target.role == GuildRole.OFFICER },
-            MemberCommand.TRANSFER, MemberCommand.KICK)
+            MemberCommand.TRANSFER,
+            MemberCommand.KICK,
+        )
+
         GuildRole.OFFICER -> listOfNotNull(MemberCommand.KICK.takeIf { target.role == GuildRole.MEMBER })
+
         GuildRole.MEMBER -> emptyList()
     }
 }
@@ -55,12 +59,21 @@ private fun commandsOn(me: GuildMember?, target: GuildMember, officersFull: Bool
         }
     }
     chosen?.let { member ->
-        MemberSheet(s, member, commandsOn(me, member, officersFull), onDismiss = { chosen = null }) { command -> chosen = null; pending = member to command }
+        MemberSheet(s, member, commandsOn(me, member, officersFull), onDismiss = { chosen = null }) { command ->
+            chosen = null
+            pending = member to command
+        }
     }
     pending?.let { (member, command) ->
-        ConfirmSheet(title = confirmTitle(command, member.name), confirm = commandTitle(command), onDismiss = { pending = null },
-            subtitle = GuildText.role(member.role), note = confirmNote(command), danger = command == MemberCommand.KICK || command == MemberCommand.TRANSFER,
-            blocked = s.busy) { vm.guildMember(command, member.heroId) }
+        ConfirmSheet(
+            title = confirmTitle(command, member.name),
+            confirm = commandTitle(command),
+            onDismiss = { pending = null },
+            subtitle = GuildText.role(member.role),
+            note = confirmNote(command),
+            danger = command == MemberCommand.KICK || command == MemberCommand.TRANSFER,
+            blocked = s.busy,
+        ) { vm.guildMember(command, member.heroId) }
     }
 }
 
@@ -70,7 +83,10 @@ private fun commandsOn(me: GuildMember?, target: GuildMember, officersFull: Bool
         Engraved(ui("guild.invite_title"))
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(name, { name = it.take(s.inputs.heroName) }, label = { Text(ui("guild.hero_name")) }, singleLine = true, modifier = Modifier.weight(1f))
-            ForgeButton(enabled = !s.busy && name.isNotBlank(), onClick = { vm.inviteToGuild(name); name = "" }) { Text(ui("guild.invite")) }
+            ForgeButton(enabled = !s.busy && name.isNotBlank(), onClick = {
+                vm.inviteToGuild(name)
+                name = ""
+            }) { Text(ui("guild.invite")) }
         }
     }
 }
@@ -80,8 +96,13 @@ private fun commandsOn(me: GuildMember?, target: GuildMember, officersFull: Bool
     ForgePanel(Modifier.then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier), accent = roleColor(member.role)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(if (isMe) ui("guild.me", member.name) else member.name, color = if (isMe) GoldBright else Parchment,
-                    style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    if (isMe) ui("guild.me", member.name) else member.name,
+                    color = if (isMe) GoldBright else Parchment,
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 MutedText(ui("guild.member_line", GuildText.role(member.role), GuildText.rank(member.rank), member.level, classTitle(member.heroClass)))
                 MutedText(seenText(member.lastSeenAt))
             }
@@ -93,11 +114,16 @@ private fun commandsOn(me: GuildMember?, target: GuildMember, officersFull: Bool
     }
 }
 
-private fun roleColor(role: GuildRole) = when (role) { GuildRole.LEADER -> Gold; GuildRole.OFFICER -> Rune; GuildRole.MEMBER -> Bronze }
+private fun roleColor(role: GuildRole) = when (role) {
+    GuildRole.LEADER -> Gold
+    GuildRole.OFFICER -> Rune
+    GuildRole.MEMBER -> Bronze
+}
 
 /** A member's card with the commands this hero may give about them; each one asks again before it goes. */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable private fun MemberSheet(s: ForgeState, member: GuildMember, commands: List<MemberCommand>, onDismiss: () -> Unit, onCommand: (MemberCommand) -> Unit) {
+@Composable
+private fun MemberSheet(s: ForgeState, member: GuildMember, commands: List<MemberCommand>, onDismiss: () -> Unit, onCommand: (MemberCommand) -> Unit) {
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(member.name, color = GoldBright, style = MaterialTheme.typography.titleLarge)

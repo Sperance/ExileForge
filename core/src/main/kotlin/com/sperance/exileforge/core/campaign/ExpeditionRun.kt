@@ -4,11 +4,11 @@ import com.sperance.exileforge.core.atlas.AtlasEffects
 import com.sperance.exileforge.core.model.campaign.CampaignState
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.ContentIndex
-import com.sperance.exileforge.rules.content.Pet
+import com.sperance.exileforge.rules.content.EssenceBook
 import com.sperance.exileforge.rules.content.LoneWolfRule
+import com.sperance.exileforge.rules.content.Pet
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.AbyssRifts
-import com.sperance.exileforge.rules.content.EssenceBook
 import com.sperance.exileforge.rules.roll.Crystal
 import com.sperance.exileforge.rules.roll.LootRoller
 import com.sperance.exileforge.rules.roll.RolledMonster
@@ -18,27 +18,45 @@ import com.sperance.exileforge.rules.run.Reward
 import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunEvent
 import com.sperance.exileforge.rules.run.RunEventKind
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import java.util.concurrent.ConcurrentLinkedQueue
 import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.random.Random
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 
 /** Where a run stands: walking, fighting, at a kill's loot, at a Vaal portal's gate, at a crystal, at a crack of the Abyss, or over one way or another. */
 enum class RunPhase { MAP, FIGHT, LOOT, GATE, CRYSTAL, ABYSS, DEAD, CLEARED, LEFT }
 
 /** A number floating off a fighter, [age] seconds after the blow that made it; [foe] is the foe of the pack it was about. */
-data class FloatingHit(val id: Int, val target: Side, val action: Action, val kind: HitKind, val amount: Int, val age: Double, val healed: Int,
-    val type: DamageType?, val inflicted: List<Ailment>, val stunned: Boolean, val foe: Int = 0,
+data class FloatingHit(
+    val id: Int,
+    val target: Side,
+    val action: Action,
+    val kind: HitKind,
+    val amount: Int,
+    val age: Double,
+    val healed: Int,
+    val type: DamageType?,
+    val inflicted: List<Ailment>,
+    val stunned: Boolean,
+    val foe: Int = 0,
     /** The combat pet's line (3.70.0): it struck, healed, or was struck — its card pulses with it. */
-    val pet: Boolean = false)
+    val pet: Boolean = false,
+)
 
 /** The blow on screen right now, for the cards to act out. */
-data class LungeView(val actor: Side, val action: Action, val kind: HitKind, val landed: Boolean, val progress: Float, val foe: Int = 0,
+data class LungeView(
+    val actor: Side,
+    val action: Action,
+    val kind: HitKind,
+    val landed: Boolean,
+    val progress: Float,
+    val foe: Int = 0,
     /** The combat pet's blow, or a blow at it (3.70.0): its card acts it out, not the hero's. */
-    val pet: Boolean = false)
+    val pet: Boolean = false,
+)
 
 /** One ailment on a fighter as its tile shows it: the share of time [left], the [stacks], the [seconds] it still holds and its [strength]. */
 data class AilmentView(val ailment: Ailment, val left: Float, val stacks: Int, val seconds: Double = 0.0, val strength: Double = 0.0)
@@ -47,7 +65,10 @@ data class AilmentView(val ailment: Ailment, val left: Float, val stacks: Int, v
 data class FoeView(
     val index: Int,
     val monster: RolledMonster,
-    val life: Int, val maxLife: Int, val shield: Int, val maxShield: Int,
+    val life: Int,
+    val maxLife: Int,
+    val shield: Int,
+    val maxShield: Int,
     val swing: Float,
     val ailments: List<AilmentView>,
     val held: Boolean,
@@ -55,13 +76,15 @@ data class FoeView(
     val reachable: Boolean,
     val taunt: Boolean = false,
     val effects: List<EffectView> = emptyList(),
-    val mana: Int = 0, val maxMana: Int = 0,
+    val mana: Int = 0,
+    val maxMana: Int = 0,
     /** Its place on the field, of [FoeWindow.SIZE]; -1 while it waits its turn or once the next took its place. */
     val place: Int = index,
     /** Still in line: not in the fight yet, but still to be beaten. */
     val waiting: Boolean = false,
     /** Fallen with the next still in line (3.73.0): seconds until that one steps into its place, of [reinforceDelay]. */
-    val reinforce: Double? = null, val reinforceDelay: Double = 0.0,
+    val reinforce: Double? = null,
+    val reinforceDelay: Double = 0.0,
     /** Its buildups (3.78.0), null while the rules have none. */
     val buildup: BuildupView? = null,
 ) {
@@ -70,6 +93,7 @@ data class FoeView(
 }
 
 /** The fight as the overlay prints it: the pack as cards, the hero's pools and states, what just landed, and the blows so far, newest first. */
+
 /**
  * A fighter's buildups as its card shows them (3.78.0): the fullest bar and its share, every bar's share by [Buildup] order
  * for its window, and which went off and holds it now.
@@ -82,7 +106,8 @@ data class AllyView(val species: String, val life: Int, val maxLife: Int, val al
 data class FightHud(
     val leader: RolledMonster,
     val foes: List<FoeView>,
-    val heroLife: Int, val heroShield: Int,
+    val heroLife: Int,
+    val heroShield: Int,
     val hits: List<FloatingHit>,
     val speed: Int,
     val outcome: Outcome?,
@@ -103,7 +128,9 @@ data class FightHud(
     val ally: AllyView? = null,
     val heroTaunt: Boolean = false,
     /** [heroMaxMana] is the mana the auras leave free; [heroReserved] what they hold past it. */
-    val heroMana: Int = 0, val heroMaxMana: Int = 0, val heroReserved: Int = 0,
+    val heroMana: Int = 0,
+    val heroMaxMana: Int = 0,
+    val heroReserved: Int = 0,
     val skills: List<SkillView?> = emptyList(),
     val flasks: List<FlaskView?> = emptyList(),
     val heroEffects: List<EffectView> = emptyList(),
@@ -115,13 +142,16 @@ data class FightHud(
     /** Whether the hero may walk out: the Abyss lets nobody go mid-wave. */
     val escape: Boolean = true,
     /** The stage of a gathered fight (3.28.0), from 1, of [stages]: small packs in a row share one (3.70.0). */
-    val stage: Int = 1, val stages: Int = 1,
+    val stage: Int = 1,
+    val stages: Int = 1,
     /** Seconds left of the pause before this stage begins by itself; null when there is none. */
     val interlude: Double? = null,
 ) {
     val scouting: Boolean get() = outcome == null && (!started || paused)
+
     /** The foes on the field, by their places: at most [FoeWindow.SIZE] cards whatever the pack. */
     val field: List<FoeView> get() = foes.filter { it.onField }.sortedBy { it.place }
+
     /** How many of the whole pack are still to be beaten: those standing and those waiting their turn. */
     val standing: Int get() = foes.count { it.alive || it.waiting }
 }
@@ -137,6 +167,7 @@ data class FightReport(val monster: RolledMonster, val outcome: Outcome, val pac
     private fun theirs() = events.filter { it.actor == Side.MONSTER && !it.atPet }
     val dealt: Int get() = mine().sumOf { it.damage }.roundToInt()
     val taken: Int get() = theirs().sumOf { it.damage }.roundToInt()
+
     /** What the combat pet took (3.70.0), apart from the hero's [taken]. */
     val petTaken: Int get() = events.filter { it.atPet }.sumOf { it.damage }.roundToInt()
     val crits: Int get() = mine().count { it.kind == HitKind.CRIT }
@@ -148,8 +179,12 @@ data class FightReport(val monster: RolledMonster, val outcome: Outcome, val pac
 data class RunHud(
     val phase: RunPhase,
     val mapCode: String,
-    val heroLife: Int, val heroMaxLife: Int, val heroShield: Int, val heroMaxShield: Int,
-    val alive: Int, val total: Int,
+    val heroLife: Int,
+    val heroMaxLife: Int,
+    val heroShield: Int,
+    val heroMaxShield: Int,
+    val alive: Int,
+    val total: Int,
     /** The exit is sealed while the zone's boss lives. */
     val sealed: Boolean = false,
     val fight: FightHud? = null,
@@ -164,9 +199,12 @@ data class RunHud(
     /** What the death cost, by the rules' price until the server's answer replaces it. */
     val fall: Double? = null,
     /** The run's gold and experience as the server's answers granted them; [awaiting] of its rewarding events are not answered yet. */
-    val gold: Long = 0, val experience: Double = 0.0, val kills: Int = 0,
+    val gold: Long = 0,
+    val experience: Double = 0.0,
+    val kills: Int = 0,
     /** The run's figures (3.47.0) and the blows that ended it. */
-    val summary: RunSummary = RunSummary(), val recap: List<DeathHit> = emptyList(),
+    val summary: RunSummary = RunSummary(),
+    val recap: List<DeathHit> = emptyList(),
     val awaiting: Int = 0,
     val chestsLeft: Int = 0,
     val chest: Reward? = null,
@@ -179,7 +217,9 @@ data class RunHud(
     /** This run is a Vaal zone: no way out but its guardian or a death, and a death is not the map's end. */
     val vaal: Boolean = false,
     /** [heroMaxMana] is the mana the auras leave free; [heroReserved] what they hold past it. */
-    val heroMana: Int = 0, val heroMaxMana: Int = 0, val heroReserved: Int = 0,
+    val heroMana: Int = 0,
+    val heroMaxMana: Int = 0,
+    val heroReserved: Int = 0,
     val flasks: List<FlaskView?> = emptyList(),
     val crystal: CrystalView? = null,
     val crystalsLeft: Int = 0,
@@ -200,8 +240,15 @@ data class RunHud(
 )
 
 /** The Abyss as its sheet shows it: how many depths the crack leads down, how many are cleared, every depth's wave and hoard, and the share a fall keeps. */
-data class AbyssView(val depth: Int, val cleared: Int, val open: Boolean, val depths: List<AbyssDepth>,
-                     val hoard: Reward? = null, val fallen: Boolean = false, val hoardAwaiting: Boolean = false) {
+data class AbyssView(
+    val depth: Int,
+    val cleared: Int,
+    val open: Boolean,
+    val depths: List<AbyssDepth>,
+    val hoard: Reward? = null,
+    val fallen: Boolean = false,
+    val hoardAwaiting: Boolean = false,
+) {
     val current: AbyssDepth? get() = depths.getOrNull(cleared - 1)
     val next: AbyssDepth? get() = if (cleared < depth) depths.getOrNull(cleared) else null
 }
@@ -210,56 +257,85 @@ data class AbyssView(val depth: Int, val cleared: Int, val open: Boolean, val de
 data class FountainView(val id: Int, val heal: Double)
 
 /** A crystal of essences as its sheet shows it, what a Vaal orb on it did, and whether that orb's outcome is still the server's to tell. */
-data class CrystalView(val id: Int, val essences: List<String>, val guardian: String, val stronger: Boolean, val vaal: Boolean, val outcome: String? = null,
-                       val awaiting: Boolean = false)
+data class CrystalView(
+    val id: Int,
+    val essences: List<String>,
+    val guardian: String,
+    val stronger: Boolean,
+    val vaal: Boolean,
+    val outcome: String? = null,
+    val awaiting: Boolean = false,
+)
 
 /** What the overlay asks of the run; applied at the start of the next step. */
 sealed interface RunCommand {
     data object Continue : RunCommand
     data object Speed : RunCommand
     data object Leave : RunCommand
+
     /** Walk out of the fight: the monster gets its free swings first; before it began, simply walk away. */
     data object Retreat : RunCommand
+
     /** The fight begins: until then the pack is laid open to be studied. Mid-fight it ends a [Pause]. */
     data object Begin : RunCommand
     data object Pause : RunCommand
+
     /** A window over the map stops the world while it is open: `true` takes a hold, `false` gives one back. */
     data class Hold(val on: Boolean) : RunCommand
     data class Focus(val index: Int) : RunCommand
     data object DismissChest : RunCommand
+
     /** Stepping back from the gate undecided: the portal stays, and opens again when walked onto. */
     data object StepBack : RunCommand
+
     /** The gate is decided: [entered] the zone, or refused it — a refused zone closes for good. */
     data class ShutGate(val entered: Boolean) : RunCommand
+
     /** Back from the Vaal zone with [life] left, and the mana and flasks it left. */
     data class Returned(val life: Double, val pools: HeroPools? = null, val zone: ZoneShare? = null) : RunCommand
+
     /** The gear changed on the map: it lands between fights, and life keeps its share. */
     data class Regear(val gear: HeroGear) : RunCommand
     data class Cast(val slot: Int) : RunCommand
     data class Drink(val slot: Int) : RunCommand
+
     /** Takes on the guardian of the crystal the hero stands at. */
     data object Release : RunCommand
+
     /** A Vaal orb on the crystal the hero stands at: spent from the bag, the outcome told by the server's answer. */
     data object VaalCrystal : RunCommand
+
     /** Steps away from a crystal or a crack undecided. */
     data object StepOff : RunCommand
+
     /** A fountain tapped on the map (3.70.0): offered as if the hero stood at it. */
     data class OfferFountain(val id: Int) : RunCommand
+
     /** The fountain offered is drunk: life and mana back by its share, the flasks full. */
     data object TakeFountain : RunCommand
+
     /** At a crack of the Abyss: opens it, or goes a depth deeper from the sheet between depths. */
     data object Descend : RunCommand
+
     /** Takes the hoard of the depths cleared and leaves the Abyss. */
     data object TakeHoard : RunCommand
+
     /** Stops the autorun: the run goes on by hand from where it stands. */
     data object StopAuto : RunCommand
+
     /**
      * The server answered the journal up to [applied] (server 1.30.0): what each accepted event brought, by its
      * number, the numbers it [rejected], the experience a fall in the batch [lost], and the crystals Vaal orbs
      * changed, by event number (server 1.30.2).
      */
-    data class Settled(val applied: Int, val rewards: Map<Int, Reward> = emptyMap(), val rejected: List<Int> = emptyList(), val lost: Double? = null,
-                       val crystals: Map<Int, Crystal> = emptyMap()) : RunCommand
+    data class Settled(
+        val applied: Int,
+        val rewards: Map<Int, Reward> = emptyMap(),
+        val rejected: List<Int> = emptyList(),
+        val lost: Double? = null,
+        val crystals: Map<Int, Crystal> = emptyMap(),
+    ) : RunCommand
+
     /** The hero's campaign as the server holds it now: the Vaal zone a portal opened and a crystal a Vaal orb changed are read from it. */
     data class Campaign(val state: CampaignState) : RunCommand
 }
@@ -313,7 +389,9 @@ class ExpeditionRun(
     val stance: HeroStance get() = build.gear.stance
     var hero: Combatant = build.body
         private set
+
     @Volatile var stickX = 0.0
+
     @Volatile var stickY = 0.0
     private val commands = ConcurrentLinkedQueue<RunCommand>()
     private var phase = RunPhase.MAP
@@ -327,6 +405,7 @@ class ExpeditionRun(
     val pools: HeroPools get() = HeroPools(life, mana, charges, flaskLeft, rates)
     private var gate: VaalZone? = null
     private var crystal: CrystalSpot? = null
+
     /** The fountain offered (3.70.0), until it is drunk or turned down. */
     private var fountain: Fountain? = null
     private var crystalOutcome: String? = null
@@ -339,36 +418,48 @@ class ExpeditionRun(
     private var holds = 0
     private var fights = 0
     private var speed = 1
+
     /** How far the server has answered the journal, what it granted by event number, and what it refused (server 1.30.0). */
     private var answered = 0
     private val earned = HashMap<Int, Reward>()
     private val refused = HashSet<Int>()
+
     /** The rewarding events this run recorded, and what the answers brought for them all told. */
     private val mine = HashSet<Int>()
     private var granted = Reward.NONE
+
     /** The events of the fight on the report, and what they brought so far; null before the fight's first kill. */
     private val fightEvents = mutableListOf<Int>()
     private var reward: Reward? = null
+
     /** What an autorun has gathered, fight by fight: its report at the end. */
     private val autoEvents = HashSet<Int>()
     private var autoReward: Reward? = null
+
     /** The chest on screen, by its event. */
     private var chestEvent: Int? = null
+
     /** The hero's campaign as the last answer brought it. */
     private var campaign: CampaignState? = null
+
     /** The portal's opening, until the server tells the Vaal zone behind it. */
     private var gateEvent: Int? = null
+
     /** Vaal orbs on crystals, by event, until the server tells what they did. */
     private val vaalings = HashMap<Int, Vaaling>()
     private class Vaaling(val spot: CrystalSpot, val place: Int)
+
     /** The crystals the server's answers said Vaal orbs made, by event, until their orbs are resolved. */
     private val vaaled = HashMap<Int, Crystal>()
     private var fallEvent: Int? = null
+
     /** The pet as a fighter (3.5.0), made again only when the hero's sheet that reaches it changes. */
     private val allies = PetAllies(index, rules)
+
     /** The pet of the fight under way, taken as it began: a change mid-fight waits for the next. */
     private var fightPet: Pet? = null
     private fun ally(): Ally? = allies.of(hero.stats, fightPet)
+
     /**
      * The hero's degeneration on the road (3.4.0): the fight burns it in its own beat, the walk did not.
      * Off a fight it wounds to the last point: only a fight ends a run.
@@ -379,38 +470,51 @@ class ExpeditionRun(
     }
     private var slain: RolledMonster? = null
     private var report: FightReport? = null
+
     /** The foes of the stage in the battle's order, each with the pack it walked with. */
     private var members: List<FightMember> = emptyList()
+
     /** Every pack the fight drew in: the engaged one first, then the rest by their distance to it. */
     private var fightAgents: List<MonsterAgent> = emptyList()
+
     /** [fightAgents] as the stages they are fought in: small packs in a row merge into one (3.70.0). */
     private var fightStages: List<List<MonsterAgent>> = emptyList()
+
     /** The stage under way, from 1 (3.28.0): the packs of [fightStages] it fights. */
     private var stage = 0
+
     /** Seconds of the pause before a later stage begins on its own; null outside that pause. */
     private var interlude: Double? = null
+
     /** What the stages already won leave to the one report: every foe's log, and the seconds they took. */
     private var stageHits: List<PackHit> = emptyList()
     private var stageTime = 0.0
+
     /**
      * What the stage won last hands the one under way (3.32.0): its STAGE_CLEAR powers and the momentum; null for a first stage.
      * Held by the journal (3.32.1), so a run entered again after a restart mid-fight hands it to its next fight.
      */
     private var stageCarry: StageCarry?
         get() = journal.carry
-        set(value) { journal.carry = value }
+        set(value) {
+            journal.carry = value
+        }
+
     /** The strongest of every stage: it stands for the whole fight in the report. */
     private var fightStrongest: RolledMonster? = null
+
     /** The dice stream of the stage's battle: a draught in the pause builds the battle again on the same dice. */
     private var fightStream = 0L
     private var reported = 0
     private var fall: Double? = null
     private var kills = 0
+
     /** The map's summary (see [MapTally]): how it ended, the seconds on it, the guardians slain and the deaths. */
     private var end: MapEnd? = null
     private var seconds = 0.0
     private var bosses = 0
     private var deaths = 0
+
     /** The run's figures (3.47.0) and, after a fall, its last blows. */
     private val stats = RunStats()
     private var recap: List<DeathHit> = emptyList()
@@ -448,33 +552,54 @@ class ExpeditionRun(
     private val state = MutableStateFlow(snapshot())
     val hud: StateFlow<RunHud> = state.asStateFlow()
 
-    fun send(command: RunCommand) { commands.add(command) }
+    fun send(command: RunCommand) {
+        commands.add(command)
+    }
 
     fun update(dt: Double) {
         while (true) apply(commands.poll() ?: break)
         if (phase != RunPhase.DEAD && phase != RunPhase.CLEARED && phase != RunPhase.LEFT) seconds += dt
-        if (holds == 0) when (phase) {
-            // A fountain offered holds the walk until the player answers.
-            RunPhase.MAP -> autopilot?.let { drive(it, dt) } ?: run { if (fountain == null) walk(dt) }
-            RunPhase.FIGHT -> play(dt)
-            else -> Unit
+        if (holds == 0) {
+            when (phase) {
+                // A fountain offered holds the walk until the player answers.
+                RunPhase.MAP -> autopilot?.let { drive(it, dt) } ?: run { if (fountain == null) walk(dt) }
+
+                RunPhase.FIGHT -> play(dt)
+
+                else -> Unit
+            }
         }
         state.value = snapshot()
     }
 
     /** One event of the journal, and the listener told. */
-    private fun record(kind: RunEventKind, i: Int = 0, m: Int = 0, index: Int = 0, depth: Int = 0, fallen: Boolean = false,
-                       fight: com.sperance.exileforge.rules.content.FightTally? = null): RunEvent? =
-        journal.record(kind, i, m, index, depth, fallen, vaal, fight)?.also(onRecorded)
+    private fun record(
+        kind: RunEventKind,
+        i: Int = 0,
+        m: Int = 0,
+        index: Int = 0,
+        depth: Int = 0,
+        fallen: Boolean = false,
+        fight: com.sperance.exileforge.rules.content.FightTally? = null,
+    ): RunEvent? = journal.record(kind, i, m, index, depth, fallen, vaal, fight)?.also(onRecorded)
 
     /** A rewarding event recorded: what it brings comes with the server's answer, into the run's count, the autorun's and, [fought], the fight's report. */
     private fun rewarding(event: RunEvent?, fought: Boolean = false): RunEvent? = event?.also {
         mine += it.n
-        if (autopilot != null) { autoEvents += it.n; autoReward = autoReward ?: Reward.NONE }
-        if (fought) { fightEvents += it.n; reward = reward ?: Reward.NONE }
+        if (autopilot != null) {
+            autoEvents += it.n
+            autoReward = autoReward ?: Reward.NONE
+        }
+        if (fought) {
+            fightEvents += it.n
+            reward = reward ?: Reward.NONE
+        }
     }
 
-    private fun clearSpoils() { reward = null; fightEvents.clear() }
+    private fun clearSpoils() {
+        reward = null
+        fightEvents.clear()
+    }
 
     /** The server's answer: every reward of this run's events lands where it was waited for. */
     private fun settle(answer: RunCommand.Settled) {
@@ -505,8 +630,10 @@ class ExpeditionRun(
                 run = Run(index, run.zone, run.seed, run.context.copy(vaal = rolled))
                 if (phase == RunPhase.GATE) gate = rolled
             } else if (n in refused) {
-                gateEvent = null; corruptionOpened = true
-                world.closePortal(); closeGate()
+                gateEvent = null
+                corruptionOpened = true
+                world.closePortal()
+                closeGate()
             }
         }
         val standing = state?.crystals?.get(zone.code)?.crystals.orEmpty()
@@ -516,8 +643,11 @@ class ExpeditionRun(
             if (n >= answered) continue
             val before = orb.spot.crystal
             fun changed(c: Crystal) = c.vaal && c.guardian == before.guardian && c.essences.size == before.essences.size
-            val after = if (n in refused) before
-                else vaaled[n] ?: standing.getOrNull(orb.place)?.takeIf(::changed) ?: standing.firstOrNull(::changed) ?: continue
+            val after = if (n in refused) {
+                before
+            } else {
+                vaaled[n] ?: standing.getOrNull(orb.place)?.takeIf(::changed) ?: standing.firstOrNull(::changed) ?: continue
+            }
             waiting.remove()
             vaaled.remove(n)
             if (after === before) continue
@@ -536,59 +666,138 @@ class ExpeditionRun(
     private fun apply(command: RunCommand) {
         when (command) {
             RunCommand.Speed -> speed = if (speed >= 4) 1 else speed * 2
+
             RunCommand.StopAuto -> autopilot = null
-            RunCommand.Leave -> if (phase == RunPhase.MAP || phase == RunPhase.DEAD || phase == RunPhase.CLEARED) { if (phase == RunPhase.MAP) end = MapEnd.LEFT; phase = RunPhase.LEFT }
-            RunCommand.Retreat -> if (abyssFight) Unit else if (fight != null && !started) walkAway() else { paused = false; fight?.retreat() }
-            RunCommand.Begin -> if (fight != null) { started = true; paused = false; interlude = null }
+
+            RunCommand.Leave -> if (phase == RunPhase.MAP || phase == RunPhase.DEAD || phase == RunPhase.CLEARED) {
+                if (phase == RunPhase.MAP) end = MapEnd.LEFT
+                phase = RunPhase.LEFT
+            }
+
+            RunCommand.Retreat -> if (abyssFight) {
+                Unit
+            } else if (fight != null && !started) {
+                walkAway()
+            } else {
+                paused = false
+                fight?.retreat()
+            }
+
+            RunCommand.Begin -> if (fight != null) {
+                started = true
+                paused = false
+                interlude = null
+            }
+
             RunCommand.Pause -> if (fight != null && started && fight?.outcome == null) paused = !paused
+
             is RunCommand.Focus -> fight?.focus(command.index)
+
             is RunCommand.Hold -> holds = (holds + if (command.on) 1 else -1).coerceAtLeast(0)
+
             RunCommand.Continue -> when (phase) {
-                RunPhase.LOOT -> { phase = RunPhase.MAP; clearSpoils(); slain = null; report = null }
+                RunPhase.LOOT -> {
+                    phase = RunPhase.MAP
+                    clearSpoils()
+                    slain = null
+                    report = null
+                }
+
                 RunPhase.DEAD, RunPhase.CLEARED -> phase = RunPhase.LEFT
+
                 else -> Unit
             }
+
             // In the pause between stages the stage has not begun: the kit changes now, and its battle is drawn again.
-            is RunCommand.Regear -> if (phase == RunPhase.FIGHT && interlude != null && !started) { pendingGear = null; regear(command.gear); fight = battle() }
-                else if (phase == RunPhase.FIGHT) pendingGear = command else regear(command.gear)
+            is RunCommand.Regear -> if (phase == RunPhase.FIGHT && interlude != null && !started) {
+                pendingGear = null
+                regear(command.gear)
+                fight = battle()
+            } else if (phase == RunPhase.FIGHT) {
+                pendingGear = command
+            } else {
+                regear(command.gear)
+            }
+
             RunCommand.DismissChest -> chestEvent = null
+
             RunCommand.StepBack -> if (phase == RunPhase.GATE) closeGate()
+
             is RunCommand.ShutGate -> {
                 // Refused while its zone is still on the way, the portal is as good as opened: the server rolled the zone, and it is left.
-                if (!command.entered && (vaalZone != null || gateEvent != null)) { record(RunEventKind.VAAL_LEAVE); vaalZone = null; gateEvent = null; corruptionOpened = true }
-                world.closePortal(); closeGate()
+                if (!command.entered && (vaalZone != null || gateEvent != null)) {
+                    record(RunEventKind.VAAL_LEAVE)
+                    vaalZone = null
+                    gateEvent = null
+                    corruptionOpened = true
+                }
+                world.closePortal()
+                closeGate()
             }
+
             is RunCommand.Returned -> {
                 command.zone?.let(::adopt)
                 life = command.life.coerceIn(0.0, hero.maxLife)
-                command.pools?.let { mana = it.mana.coerceIn(0.0, manaCap()); charges = it.charges.ifEmpty { charges }; flaskLeft = it.flaskLeft.ifEmpty { flaskLeft }; rates = it.rates.ifEmpty { rates }; rebody() }
+                command.pools?.let {
+                    mana = it.mana.coerceIn(0.0, manaCap())
+                    charges = it.charges.ifEmpty { charges }
+                    flaskLeft = it.flaskLeft.ifEmpty { flaskLeft }
+                    rates = it.rates.ifEmpty { rates }
+                    rebody()
+                }
                 // The zone is closed either way: its guardian fell, or the hero did.
-                vaalZone = null; gateEvent = null; corruptionOpened = true
+                vaalZone = null
+                gateEvent = null
+                corruptionOpened = true
                 phase = RunPhase.MAP
             }
+
             is RunCommand.Cast -> fight?.useSkill(command.slot)
+
             // In the pause between stages a draught is drunk as on the road, and the stage's battle takes the pools it leaves.
-            is RunCommand.Drink -> if (phase == RunPhase.FIGHT && interlude != null && !started) { drinkOnMap(command.slot); fight = battle() }
-                else if (phase == RunPhase.FIGHT) fight?.useFlask(command.slot)
-                else if (phase == RunPhase.MAP || phase == RunPhase.CRYSTAL || phase == RunPhase.ABYSS) drinkOnMap(command.slot)
+            is RunCommand.Drink -> if (phase == RunPhase.FIGHT && interlude != null && !started) {
+                drinkOnMap(command.slot)
+                fight = battle()
+            } else if (phase == RunPhase.FIGHT) {
+                fight?.useFlask(command.slot)
+            } else if (phase == RunPhase.MAP || phase == RunPhase.CRYSTAL || phase == RunPhase.ABYSS) {
+                drinkOnMap(command.slot)
+            }
+
             // The guardian waits for the orb's outcome: it stands up as the crystal the server holds.
             RunCommand.Release -> if (phase == RunPhase.CRYSTAL && crystal?.let(::vaaling) != true) release()
+
             RunCommand.VaalCrystal -> crystal?.takeIf { phase == RunPhase.CRYSTAL && !it.crystal.vaal && !vaaling(it) && vaalOrbs() >= 1 }?.let { spot ->
                 val place = world.standingCrystals.indexOf(spot)
-                record(RunEventKind.CRYSTAL_VAAL, index = place)?.let { vaalings[it.n] = Vaaling(spot, place); crystalOutcome = null }
+                record(RunEventKind.CRYSTAL_VAAL, index = place)?.let {
+                    vaalings[it.n] = Vaaling(spot, place)
+                    crystalOutcome = null
+                }
             }
+
             is RunCommand.OfferFountain -> if (phase == RunPhase.MAP && autopilot == null) world.fountainInSight(command.id)?.let { fountain = it }
+
             RunCommand.TakeFountain -> fountain?.takeIf { phase == RunPhase.MAP && !it.used }?.let(::drink)
+
             RunCommand.StepOff -> when {
                 fountain != null -> fountain = null
+
                 phase == RunPhase.CRYSTAL -> closeCrystal()
+
                 // A crack is left unopened, or once its hoard is in — never mid-descent with the hoard at stake.
                 phase == RunPhase.ABYSS && (descent == null || descent?.claim != null) -> closeRift()
             }
+
             RunCommand.Descend -> if (phase == RunPhase.ABYSS) descend()
+
             RunCommand.TakeHoard -> descent?.takeIf { phase == RunPhase.ABYSS && it.cleared > 0 && it.claim == null }?.let { take(it, fallen = false) }
+
             is RunCommand.Settled -> settle(command)
-            is RunCommand.Campaign -> { campaign = command.state; resolve() }
+
+            is RunCommand.Campaign -> {
+                campaign = command.state
+                resolve()
+            }
         }
     }
 
@@ -602,9 +811,11 @@ class ExpeditionRun(
         var cleared = 0
         var level = 0
         var fights: List<List<RolledMonster>> = emptyList()
+
         /** The claim of the hoard, by its event: what it holds is the server's answer. */
         var claim: Int? = null
         var fallen = false
+
         /** The last fight of the descent won (3.32.0): the next wave or depth is its next stage. */
         var carry: StageCarry? = null
     }
@@ -619,8 +830,13 @@ class ExpeditionRun(
             record(RunEventKind.ABYSS_OPEN, index = place) ?: return
             spot.opened = true
             val depth = AbyssRifts(index).depth(rule, spot.depth, mapEffects[MapStats.ABYSS_DEPTH] ?: 0.0)
-            Descent(spot, depth).also { descent = it; wave(it, 1) }
-        } else if (current.claim == null && current.cleared < current.depth) wave(current, current.cleared + 1)
+            Descent(spot, depth).also {
+                descent = it
+                wave(it, 1)
+            }
+        } else if (current.claim == null && current.cleared < current.depth) {
+            wave(current, current.cleared + 1)
+        }
     }
 
     private fun wave(current: Descent, depth: Int) {
@@ -644,7 +860,8 @@ class ExpeditionRun(
     }
 
     private fun closeRift() {
-        rift = null; descent = null
+        rift = null
+        descent = null
         if (phase == RunPhase.ABYSS) phase = RunPhase.MAP
     }
 
@@ -654,7 +871,8 @@ class ExpeditionRun(
     }
 
     private fun closeCrystal() {
-        crystal = null; crystalOutcome = null
+        crystal = null
+        crystalOutcome = null
         if (phase == RunPhase.CRYSTAL) phase = RunPhase.MAP
     }
 
@@ -666,7 +884,8 @@ class ExpeditionRun(
         fightAgents.filter { it.crystal == null && it.alive }.forEach(world::retreatFrom)
         endFight()
         // No report follows: the stages already won must not bring their loot to the next fight's screen.
-        clearSpoils(); slain = null
+        clearSpoils()
+        slain = null
         phase = RunPhase.MAP
     }
 
@@ -689,12 +908,27 @@ class ExpeditionRun(
         val (x, y) = ExpeditionWorld.screenToWorld(stickX, stickY)
         when (val event = world.step(dt, x, y)) {
             is WorldEvent.Encounter -> engage(event.agent)
+
             WorldEvent.Exit -> exit()
+
             is WorldEvent.Opened -> chestEvent = rewarding(record(RunEventKind.CHEST, index = event.chest.id))?.n
+
             is WorldEvent.AtFountain -> fountain = event.fountain
+
             WorldEvent.Portal -> openGate()
-            is WorldEvent.Crystal -> { phase = RunPhase.CRYSTAL; crystal = event.spot; crystalOutcome = null }
-            is WorldEvent.Abyss -> { phase = RunPhase.ABYSS; rift = event.spot; descent = null }
+
+            is WorldEvent.Crystal -> {
+                phase = RunPhase.CRYSTAL
+                crystal = event.spot
+                crystalOutcome = null
+            }
+
+            is WorldEvent.Abyss -> {
+                phase = RunPhase.ABYSS
+                rift = event.spot
+                descent = null
+            }
+
             null -> Unit
         }
     }
@@ -712,7 +946,8 @@ class ExpeditionRun(
     private fun exit() {
         if (!vaal) record(RunEventKind.LEAVE)
         end = MapEnd.CLEARED
-        phase = RunPhase.CLEARED; onCleared()
+        phase = RunPhase.CLEARED
+        onCleared()
     }
 
     /**
@@ -725,20 +960,50 @@ class ExpeditionRun(
         pilot.rest -= dt * speed
         if (pilot.rest > 0) return
         pilot.rest = AutoPilot.BEAT
-        while (phase == RunPhase.MAP) when (val step = pilot.next()) {
-            null -> { autopilot = null; return }
-            is AutoStep.Wave -> Unit
-            is AutoStep.Fight -> if (step.agent.alive && step.agent.standing.isNotEmpty()) { engage(step.agent); started = true; return }
-            is AutoStep.OpenChest -> if (!step.chest.opened) {
-                step.chest.opened = true
-                rewarding(record(RunEventKind.CHEST, index = step.chest.id))
-                return
+        while (phase == RunPhase.MAP) {
+            when (val step = pilot.next()) {
+                null -> {
+                    autopilot = null
+                    return
+                }
+
+                is AutoStep.Wave -> Unit
+
+                is AutoStep.Fight -> if (step.agent.alive && step.agent.standing.isNotEmpty()) {
+                    engage(step.agent)
+                    started = true
+                    return
+                }
+
+                is AutoStep.OpenChest -> if (!step.chest.opened) {
+                    step.chest.opened = true
+                    rewarding(record(RunEventKind.CHEST, index = step.chest.id))
+                    return
+                }
+
+                is AutoStep.Guardian -> if (!step.spot.freed) {
+                    crystal = step.spot
+                    release()
+                    started = true
+                    return
+                }
+
+                is AutoStep.Rift -> if (!step.spot.opened) {
+                    phase = RunPhase.ABYSS
+                    rift = step.spot
+                    descent = null
+                }
+
+                AutoStep.Portal -> if (world.portal != null) openGate()
+
+                AutoStep.Boss -> world.boss?.takeIf { it.alive }?.let {
+                    engage(it)
+                    started = true
+                    return
+                }
+
+                AutoStep.Exit -> exit()
             }
-            is AutoStep.Guardian -> if (!step.spot.freed) { crystal = step.spot; release(); started = true; return }
-            is AutoStep.Rift -> if (!step.spot.opened) { phase = RunPhase.ABYSS; rift = step.spot; descent = null }
-            AutoStep.Portal -> if (world.portal != null) openGate()
-            AutoStep.Boss -> world.boss?.takeIf { it.alive }?.let { engage(it); started = true; return }
-            AutoStep.Exit -> exit()
         }
     }
 
@@ -765,9 +1030,15 @@ class ExpeditionRun(
      */
     private fun openGate() {
         if (vaalZone == null) {
-            if (corruptionOpened) { world.closePortal(); return }
+            if (corruptionOpened) {
+                world.closePortal()
+                return
+            }
             if (gateEvent == null) gateEvent = record(RunEventKind.VAAL_OPEN)?.n
-            if (gateEvent == null) { world.closePortal(); return }
+            if (gateEvent == null) {
+                world.closePortal()
+                return
+            }
         }
         gate = vaalZone
         phase = RunPhase.GATE
@@ -811,14 +1082,25 @@ class ExpeditionRun(
     }
 
     /** The stage's battle on the hero's pools now, at the fight's level, on its own dice. */
-    private fun battle(): Battle = Battle(hero, members.map { member ->
-        val monster = member.monster
-        // Its own level on a map (3.73.0), the fight's otherwise.
-        val level = monster.level.takeIf { it > 0 } ?: fightLevel
-        Foe(Combatant(monster.stats, level, rules), monster.rarity, monster.skills.mapNotNull(this.index.skills.monsterByCode::get), monster, level,
-            monster.traitsIn(this.index), this.index.campaign.traits.power(monster.rarity))
-    }, rules, life, Random(Streams.mix(seed, FIGHT_STREAM, fightStream)), stance, kit = kit, model = build, pools = pools,
-        percent = build.gear.percent, ally = ally(), stage = stageCarry)
+    private fun battle(): Battle = Battle(
+        hero,
+        members.map { member ->
+            val monster = member.monster
+            // Its own level on a map (3.73.0), the fight's otherwise.
+            val level = monster.level.takeIf { it > 0 } ?: fightLevel
+            Foe(
+                Combatant(monster.stats, level, rules),
+                monster.rarity,
+                monster.skills.mapNotNull(this.index.skills.monsterByCode::get),
+                monster,
+                level,
+                monster.traitsIn(this.index),
+                this.index.campaign.traits.power(monster.rarity),
+            )
+        },
+        rules, life, Random(Streams.mix(seed, FIGHT_STREAM, fightStream)), stance, kit = kit, model = build, pools = pools,
+        percent = build.gear.percent, ally = ally(), stage = stageCarry,
+    )
 
     /** The fight is over, whichever way: nothing of it is held any longer. */
     private fun endFight() {
@@ -863,7 +1145,16 @@ class ExpeditionRun(
         val battle = fight ?: return
         fightAgent ?: return
         // The pause between stages runs out by itself, at the wall clock's pace.
-        if (!started) interlude?.let { left -> if (left > dt) interlude = left - dt else { interlude = null; started = true } }
+        if (!started) {
+            interlude?.let { left ->
+                if (left > dt) {
+                    interlude = left - dt
+                } else {
+                    interlude = null
+                    started = true
+                }
+            }
+        }
         if (!started || paused) return
         battle.advance(dt * speed)
         // Every foe is a kill of its own, recorded the moment it falls, the fight still going.
@@ -904,36 +1195,56 @@ class ExpeditionRun(
         when (outcome) {
             Outcome.WIN -> {
                 fightAgents.forEach { it.alive = false }
-                if (down != null) { report = null; phase = RunPhase.ABYSS }
+                if (down != null) {
+                    report = null
+                    phase = RunPhase.ABYSS
+                }
                 // An autorun goes on without the report: what the fight brought is in its tally already
-                else if (autopilot != null) { clearSpoils(); slain = null; report = null; phase = RunPhase.MAP }
-                else {
+                else if (autopilot != null) {
+                    clearSpoils()
+                    slain = null
+                    report = null
+                    phase = RunPhase.MAP
+                } else {
                     slain = leader
                     report = FightReport(leader, Outcome.WIN, pack, duration)
                     phase = RunPhase.LOOT
                 }
             }
+
             Outcome.LOSS -> {
                 report = FightReport(leader, Outcome.LOSS, pack, duration)
                 recap = RunStats.recap(pack)
                 life = 0.0
                 autopilot = null
                 phase = RunPhase.DEAD
-                deaths++; end = MapEnd.FELL
+                deaths++
+                end = MapEnd.FELL
                 // A fall in the Abyss burns its hoard, but for the atlas's share; then the zone's own price.
                 down?.let { take(it, fallen = true) }
                 // A fall in the Vaal zone is a death as any (3.71.0, server 1.68.0): the same price, and the whole run is over
-                record(RunEventKind.FALL)?.let { fallEvent = it.n; fall = deathLoss() }
+                record(RunEventKind.FALL)?.let {
+                    fallEvent = it.n
+                    fall = deathLoss()
+                }
                 onFallen()
             }
+
             // Nothing already looted is lost, but there is no report for a fight cut short: the packs of the stages won stay dead,
             // the current one and those still waiting go back to their places.
             Outcome.RETREAT -> {
                 // Walking out of a fight takes the run back into the player's hands
                 autopilot = null
                 fightAgents.filter { it.id >= 0 && it.alive }.forEach(world::retreatFrom)
-                report = null; clearSpoils(); slain = null
-                if (down != null) { phase = RunPhase.ABYSS; take(down, fallen = true) } else phase = RunPhase.MAP
+                report = null
+                clearSpoils()
+                slain = null
+                if (down != null) {
+                    phase = RunPhase.ABYSS
+                    take(down, fallen = true)
+                } else {
+                    phase = RunPhase.MAP
+                }
             }
         }
         endFight()
@@ -941,7 +1252,10 @@ class ExpeditionRun(
         if (phase != RunPhase.DEAD) pendingGear?.let { regear(it.gear) }
         pendingGear = null
         // The Abyss chains its fights (3.32.0): the next wave, or the next depth once the player descends, is the next stage.
-        if (outcome == Outcome.WIN && down != null) { down.carry = battle.carry(); if (down.fights.isNotEmpty()) nextFight(down) else down.cleared++ }
+        if (outcome == Outcome.WIN && down != null) {
+            down.carry = battle.carry()
+            if (down.fights.isNotEmpty()) nextFight(down) else down.cleared++
+        }
     }
 
     /** What the death costs by the rules: a share of the level's experience, never the level — on what the answers granted so far. */
@@ -989,8 +1303,15 @@ class ExpeditionRun(
         val rule = abyssRule ?: return null
         val down = descent
         val claim = down?.claim
-        return AbyssView(down?.depth ?: spot.depth, down?.cleared ?: 0, down != null, waves.depths(rule, zone),
-            claim?.let { earned[it] ?: Reward.NONE }, down?.fallen == true, claim?.let(::awaits) == true)
+        return AbyssView(
+            down?.depth ?: spot.depth,
+            down?.cleared ?: 0,
+            down != null,
+            waves.depths(rule, zone),
+            claim?.let { earned[it] ?: Reward.NONE },
+            down?.fallen == true,
+            claim?.let(::awaits) == true,
+        )
     }
 
     /** What this run hands the map it was entered from, a Vaal zone over: its rewarding events and its own counts. */
@@ -1003,7 +1324,10 @@ class ExpeditionRun(
     private fun adopt(zone: ZoneShare) {
         zone.events.forEach { (n, gained) ->
             if (!mine.add(n) || n in earned) return@forEach
-            gained?.let { earned[n] = it; granted += it }
+            gained?.let {
+                earned[n] = it
+                granted += it
+            }
         }
         seconds += zone.seconds
         kills += zone.kills
@@ -1018,23 +1342,35 @@ class ExpeditionRun(
     private fun mapFlasks(): List<FlaskView?> = kit.flasks.mapIndexed { i, flask ->
         flask?.let {
             val left = flaskLeft.getOrNull(i) ?: 0.0
-            FlaskView(i, it.code, it.kind, (charges.getOrNull(i) ?: 0.0).toInt(), it.maxCharges.toInt(), kotlin.math.ceil(it.perUse(hero) - 1e-9).toInt(),
-                if (left > 0) (left / it.duration(hero)).toFloat().coerceIn(0f, 1f) else 0f, it.condition)
+            FlaskView(
+                i,
+                it.code,
+                it.kind,
+                (charges.getOrNull(i) ?: 0.0).toInt(),
+                it.maxCharges.toInt(),
+                kotlin.math.ceil(it.perUse(hero) - 1e-9).toInt(),
+                if (left > 0) (left / it.duration(hero)).toFloat().coerceIn(0f, 1f) else 0f,
+                it.condition,
+            )
         }
     }
 
     /** The strongest of the stage: its portrait and its name head the pack fought now. */
     private fun fightLeader(): RolledMonster = members.maxBy { it.monster.rarity.ordinal }.monster
 
-    private fun fightHud(battle: Battle): FightHud = battle.hud(members.map { it.monster }, fightLeader(), speed, started, paused, hero.taunt,
-        level = fightLevel, escape = !abyssFight, stage = stage, stages = fightStages.size, interlude = interlude)
+    private fun fightHud(battle: Battle): FightHud = battle.hud(
+        members.map { it.monster }, fightLeader(), speed, started, paused, hero.taunt,
+        level = fightLevel, escape = !abyssFight, stage = stage, stages = fightStages.size, interlude = interlude,
+    )
 
     companion object {
         /** How long the fight's last blow hangs before the scene moves on. */
         const val AFTERMATH = 0.8
         const val HIT_LIFETIME = 1.0
+
         /** Seconds between the stages of a fight before the next begins on its own. */
         const val STAGE_PAUSE = 3.0
+
         /** The agents of the Abyss's waves are numbered down from here, out of the way of the map's and the crystals'. */
         private const val ABYSS_AGENT = -10_000
         private val FIGHT_STREAM = "fight".hashCode().toLong()
@@ -1046,9 +1382,21 @@ class ExpeditionRun(
          * what of it the server already counted when the run is entered again.
          */
         fun start(
-            index: ContentIndex, location: Zone, run: Run, journal: RunJournal, gear: HeroGear, campaign: CampaignState, now: Long,
-            heroExperience: Double, heroLevel: Int, vaalOrbs: () -> Long, onRecorded: (RunEvent) -> Unit = {},
-            vaal: Boolean = false, startPools: HeroPools? = null, onCleared: () -> Unit = {}, onFallen: () -> Unit = {},
+            index: ContentIndex,
+            location: Zone,
+            run: Run,
+            journal: RunJournal,
+            gear: HeroGear,
+            campaign: CampaignState,
+            now: Long,
+            heroExperience: Double,
+            heroLevel: Int,
+            vaalOrbs: () -> Long,
+            onRecorded: (RunEvent) -> Unit = {},
+            vaal: Boolean = false,
+            startPools: HeroPools? = null,
+            onCleared: () -> Unit = {},
+            onFallen: () -> Unit = {},
             /** Tokens `i*[Run.PACK_SLOTS]+m` the server already counts as killed: a run entered again keeps its dead dead. */
             killed: Collection<Int> = emptyList(),
             /** An autorun instead of the stick (3.2.0). */
@@ -1085,8 +1433,10 @@ class ExpeditionRun(
                 world.placeCracks(campaign.abyss[location.code]?.cracks.orEmpty())
             }
             val pilot = auto?.let { AutoPilot.of(world, it, if (vaal) run.seed xor VAAL_SALT else run.seed, bossStands = world.boss?.alive == true) }
-            return ExpeditionRun(index, zone, run, journal, world, build, rules, run.seed, effects, vaal, startPools, heroExperience, heroLevel, vaalOrbs,
-                campaign.corruptionOpened, vaalZone, bossDown, onRecorded, onCleared, onFallen, pilot, pet)
+            return ExpeditionRun(
+                index, zone, run, journal, world, build, rules, run.seed, effects, vaal, startPools, heroExperience, heroLevel, vaalOrbs,
+                campaign.corruptionOpened, vaalZone, bossDown, onRecorded, onCleared, onFallen, pilot, pet,
+            )
         }
 
         private const val VAAL_SALT = 0x5661616C5A6F6E65L

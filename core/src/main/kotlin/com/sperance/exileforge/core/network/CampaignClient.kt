@@ -6,9 +6,9 @@ import com.sperance.exileforge.core.model.campaign.CampaignProgress
 import com.sperance.exileforge.core.model.campaign.RunReport
 import com.sperance.exileforge.rules.run.RunEvent
 import com.sperance.exileforge.rules.run.RunStart
-import java.util.UUID
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.JsonNull
+import java.util.UUID
 
 private const val CAMPAIGN = "api/v1/hero/campaign"
 
@@ -25,8 +25,16 @@ class CampaignClient internal constructor(private val http: Transport) {
      */
     suspend fun start(heroId: String, mapCode: String, itemId: String? = null, potion: String? = null, scarabs: List<String> = emptyList()): RunStart {
         itemId?.let(::requireItemId)
-        return http.post("$CAMPAIGN/start", heroQuery(heroId, "mapCode" to mapCode, "itemId" to itemId, "potion" to potion,
-            "scarabs" to scarabs.joinToString(",").ifEmpty { null }))
+        return http.post(
+            "$CAMPAIGN/start",
+            heroQuery(
+                heroId,
+                "mapCode" to mapCode,
+                "itemId" to itemId,
+                "potion" to potion,
+                "scarabs" to scarabs.joinToString(",").ifEmpty { null },
+            ),
+        )
     }
 
     /**
@@ -35,8 +43,13 @@ class CampaignClient internal constructor(private val http: Transport) {
      * batch whose answer was lost is sent again with the same [key]: the server repeats its stored report. Null - the
      * batch landed, but its report was not kept: the hero is read again, and the batch's loot is in it.
      */
-    suspend fun events(heroId: String, runId: String, events: List<RunEvent>, key: String = UUID.randomUUID().toString()): RunReport? =
-        http.request("POST", "$CAMPAIGN/events", heroQuery(heroId, "runId" to runId),
-            WireJson.encodeToJsonElement(ListSerializer(RunEvent.serializer()), events), authenticated = true, headers = mapOf(IDEMPOTENCY_HEADER to key))
-            .takeIf { it !is JsonNull }?.let { WireJson.decodeFromJsonElement(RunReport.serializer(), it) }
+    suspend fun events(heroId: String, runId: String, events: List<RunEvent>, key: String = UUID.randomUUID().toString()): RunReport? = http.request(
+        "POST",
+        "$CAMPAIGN/events",
+        heroQuery(heroId, "runId" to runId),
+        WireJson.encodeToJsonElement(ListSerializer(RunEvent.serializer()), events),
+        authenticated = true,
+        headers = mapOf(IDEMPOTENCY_HEADER to key),
+    )
+        .takeIf { it !is JsonNull }?.let { WireJson.decodeFromJsonElement(RunReport.serializer(), it) }
 }

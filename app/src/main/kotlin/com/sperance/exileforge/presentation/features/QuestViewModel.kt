@@ -22,20 +22,28 @@ class QuestViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     fun tab(tab: QuestTab) = quests { it.copy(tab = tab) }
 
-    fun load() { with(runtime) { read(Reads.QUESTS) {
-        val id = heroId
-        check(id.isNotBlank()) { ui("auction.choose_character") }
-        ensureContent()
-        val board = runtime.api.quests.board(id)
-        if (onScreen(id)) quests { it.copy(board = board) }
-    } } }
+    fun load() {
+        with(runtime) {
+            read(Reads.QUESTS) {
+                val id = heroId
+                check(id.isNotBlank()) { ui("auction.choose_character") }
+                ensureContent()
+                val board = runtime.api.quests.board(id)
+                if (onScreen(id)) quests { it.copy(board = board) }
+            }
+        }
+    }
 
-    fun loadGuild() { with(runtime) { read(Reads.GUILD_QUESTS) {
-        val id = heroId
-        check(id.isNotBlank()) { ui("auction.choose_character") }
-        val guild = runtime.api.quests.guild(id)
-        if (onScreen(id)) quests { it.copy(guild = guild) }
-    } } }
+    fun loadGuild() {
+        with(runtime) {
+            read(Reads.GUILD_QUESTS) {
+                val id = heroId
+                check(id.isNotBlank()) { ui("auction.choose_character") }
+                val guild = runtime.api.quests.guild(id)
+                if (onScreen(id)) quests { it.copy(guild = guild) }
+            }
+        }
+    }
 
     fun claim(questId: String) = board(ui("quest.toast.claimed"), rewarded = true) { runtime.api.quests.claim(it, questId) }
     fun take(offerId: String) = board(ui("quest.toast.taken")) { runtime.api.quests.take(it, offerId) }
@@ -52,19 +60,38 @@ class QuestViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
      * hero's share of the guild's — and a toast says what came of it. Quiet on failure: a missed call loses nothing, the
      * quests wait on the board, and a run's end is no place for a refusal.
      */
-    fun claimAll(heroId: String) { with(runtime) { scope.launch {
-        // The titles are templates over the goal's target, read off the boards as they stood before the claim.
-        val targets = targets(state.value.quests)
-        val result = try { runtime.api.quests.claimAll(heroId) } catch (e: CancellationException) { throw e } catch (_: Exception) { return@launch }
-        if (!onScreen(heroId)) return@launch
-        quests { it.copy(board = result.board) }
-        gold(result.money)
-        if (result.claimed.isEmpty()) return@launch
-        val guild = if (result.claimed.any { it.questId !in targets && it.kind in GUILD_KINDS }) try { runtime.api.quests.guild(heroId) }
-            catch (e: CancellationException) { throw e } catch (_: Exception) { null } else null
-        guild?.let { g -> quests { it.copy(guild = g) } }
-        toast(claimedLine(result.claimed, targets + targets(QuestState(guild = guild))))
-    } } }
+    fun claimAll(heroId: String) {
+        with(runtime) {
+            scope.launch {
+                // The titles are templates over the goal's target, read off the boards as they stood before the claim.
+                val targets = targets(state.value.quests)
+                val result = try {
+                    runtime.api.quests.claimAll(heroId)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    return@launch
+                }
+                if (!onScreen(heroId)) return@launch
+                quests { it.copy(board = result.board) }
+                gold(result.money)
+                if (result.claimed.isEmpty()) return@launch
+                val guild = if (result.claimed.any { it.questId !in targets && it.kind in GUILD_KINDS }) {
+                    try {
+                        runtime.api.quests.guild(heroId)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (_: Exception) {
+                        null
+                    }
+                } else {
+                    null
+                }
+                guild?.let { g -> quests { it.copy(guild = g) } }
+                toast(claimedLine(result.claimed, targets + targets(QuestState(guild = guild))))
+            }
+        }
+    }
 
     private fun board(done: String, rewarded: Boolean = false, block: suspend (String) -> QuestBoard) = command(done, rewarded) { id ->
         val board = block(id)
@@ -73,17 +100,23 @@ class QuestViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     }
 
     /** One quest command: one at a time and never retried; a paid or rewarded one reads the hero after it. */
-    private fun command(done: String, rewarded: Boolean = false, block: suspend (String) -> Unit) { with(runtime) {
-        task(writing = true, touches = setOf(Reads.QUESTS, Reads.GUILD_QUESTS, Reads.HERO)) {
-            val id = heroId
-            check(id.isNotBlank()) { ui("auction.choose_character") }
-            block(id)
-            toast(done)
-            if (rewarded && onScreen(id)) {
-                try { heroViewModel.readHero() } catch (e: CancellationException) { throw e } catch (_: Exception) { }
+    private fun command(done: String, rewarded: Boolean = false, block: suspend (String) -> Unit) {
+        with(runtime) {
+            task(writing = true, touches = setOf(Reads.QUESTS, Reads.GUILD_QUESTS, Reads.HERO)) {
+                val id = heroId
+                check(id.isNotBlank()) { ui("auction.choose_character") }
+                block(id)
+                toast(done)
+                if (rewarded && onScreen(id)) {
+                    try {
+                        heroViewModel.readHero()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (_: Exception) { }
+                }
             }
         }
-    } }
+    }
 
     /** What was handed in, as one line: the first few titles, how many more, and the rewards summed. */
     private fun claimedLine(claimed: List<QuestClaimed>, targets: Map<String, Long>): String {
@@ -114,6 +147,7 @@ class QuestViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     private companion object {
         /** The guild's quests a claim may name; their targets are on the guild's board. */
         val GUILD_KINDS = setOf(QuestKind.GUILD, QuestKind.GUILD_DAILY, QuestKind.GUILD_WEEKLY)
+
         /** Titles the toast names before it counts the rest. */
         const val SHOWN = 3
     }

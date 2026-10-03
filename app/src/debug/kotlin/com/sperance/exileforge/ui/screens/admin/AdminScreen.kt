@@ -28,14 +28,22 @@ import com.sperance.exileforge.ui.theme.Muted
  * below a real check rather than a guess.
  */
 @Composable fun AdminScreen(s: ForgeState, vm: ForgeViewModel) {
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        ScreenHeader(ui("account.administrator"),
-            ui("admin.subtitle"), ForgeGlyphs.Scroll)
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        ScreenHeader(
+            ui("account.administrator"),
+            ui("admin.subtitle"),
+            ForgeGlyphs.Scroll,
+        )
 
         ForgePanel {
             Engraved(ui("admin.screens"))
-            ForgeOutlinedButton(enabled = !s.busy, onClick = { vm.tab(TAB_REDEMPTION); vm.loadRedemptions() }, modifier = Modifier.fillMaxWidth()) {
+            ForgeOutlinedButton(enabled = !s.busy, onClick = {
+                vm.tab(TAB_REDEMPTION)
+                vm.loadRedemptions()
+            }, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("redemption.title"))
             }
             MutedText(ui("admin.screens_note"))
@@ -47,15 +55,29 @@ import com.sperance.exileforge.ui.theme.Muted
 
         ForgePanel {
             Engraved(ui("admin.mode"))
-            Text(if (s.adminTools) ui("admin.mode_all")
-                 else ui("admin.mode_player"),
-                color = Muted, style = MaterialTheme.typography.bodySmall)
+            Text(
+                if (s.adminTools) {
+                    ui("admin.mode_all")
+                } else {
+                    ui("admin.mode_player")
+                },
+                color = Muted,
+                style = MaterialTheme.typography.bodySmall,
+            )
             // Leaving admin mode hides this very tab, so the switch says where it lands you: the
             // way back is the same switch on the Account tab, and nothing else can turn it on.
-            ForgeOutlinedButton(enabled = !s.busy, modifier = Modifier.fillMaxWidth(),
-                onClick = { vm.mode(if (s.adminTools) AppMode.PLAYER else AppMode.ADMIN) }) {
-                Text(if (s.adminTools) ui("admin.as_player")
-                     else ui("account.tools_back"))
+            ForgeOutlinedButton(
+                enabled = !s.busy,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = { vm.mode(if (s.adminTools) AppMode.PLAYER else AppMode.ADMIN) },
+            ) {
+                Text(
+                    if (s.adminTools) {
+                        ui("admin.as_player")
+                    } else {
+                        ui("account.tools_back")
+                    },
+                )
             }
             if (s.adminTools) MutedText(ui("admin.as_player_note"))
         }

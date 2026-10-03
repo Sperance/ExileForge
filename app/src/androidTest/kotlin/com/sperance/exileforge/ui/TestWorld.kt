@@ -4,11 +4,11 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.sperance.exileforge.core.i18n.LocaleBundle
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.ContentLoader
-import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.roll.Dice
 import com.sperance.exileforge.rules.roll.ItemFactory
+import com.sperance.exileforge.rules.roll.ItemInstance
 
 /** The pinned server's world, read from the test APK's assets: the screens are drawn over real content and real names. */
 object TestWorld {

@@ -46,8 +46,7 @@ internal class Pen {
     }
 
     /** An ellipse's outline only: a rune's ring, a portal's rim. */
-    fun ring(x: Float, y: Float, width: Float, height: Float, stroke: Float) =
-        scope.drawOval(color, Offset(x, -(y + height)), Size(width, height), style = Stroke(stroke))
+    fun ring(x: Float, y: Float, width: Float, height: Float, stroke: Float) = scope.drawOval(color, Offset(x, -(y + height)), Size(width, height), style = Stroke(stroke))
 
     /** A broken line through [points] (x, y pairs): a crack, a root, a blade of grass. */
     fun polyline(vararg points: Float, width: Float) {
@@ -55,6 +54,5 @@ internal class Pen {
     }
 
     /** A pie slice, [start] and [degrees] counter-clockwise as the pen measures them. */
-    fun arc(x: Float, y: Float, radius: Float, start: Float, degrees: Float) =
-        scope.drawArc(color, -(start + degrees), degrees, true, Offset(x - radius, -y - radius), Size(radius * 2, radius * 2))
+    fun arc(x: Float, y: Float, radius: Float, start: Float, degrees: Float) = scope.drawArc(color, -(start + degrees), degrees, true, Offset(x - radius, -y - radius), Size(radius * 2, radius * 2))
 }

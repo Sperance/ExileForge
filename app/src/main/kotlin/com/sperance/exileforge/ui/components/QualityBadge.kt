@@ -23,12 +23,19 @@ import com.sperance.exileforge.ui.theme.*
     val catalyst = item.catalyst
     val shape = RoundedCornerShape(50)
     Tipped({
-        Tip(ui("card.quality", quality),
-            catalyst?.let { ui("item.quality_catalyst_hint", ui("enum.catalyst.${it.name}")) } ?: ui("item.quality_hint", quality), tint = GoldBright)
+        Tip(
+            ui("card.quality", quality),
+            catalyst?.let { ui("item.quality_catalyst_hint", ui("enum.catalyst.${it.name}")) } ?: ui("item.quality_hint", quality),
+            tint = GoldBright,
+        )
     }, modifier) {
-        Text(ui("item.quality_badge", quality), color = GoldBright, fontWeight = FontWeight.Bold,
+        Text(
+            ui("item.quality_badge", quality),
+            color = GoldBright,
+            fontWeight = FontWeight.Bold,
             style = if (compact) MaterialTheme.typography.labelSmall else MaterialTheme.typography.labelMedium,
             modifier = Modifier.background(Gold.copy(alpha = .12f), shape).border(1.dp, Gold.copy(alpha = .5f), shape)
-                .padding(horizontal = if (compact) 5.dp else 8.dp, vertical = if (compact) 0.dp else 2.dp))
+                .padding(horizontal = if (compact) 5.dp else 8.dp, vertical = if (compact) 0.dp else 2.dp),
+        )
     }
 }

@@ -23,6 +23,7 @@ internal class SceneFrame(val pen: Pen, val unit: Float, val time: Float)
 internal abstract class MapStyle {
     abstract fun floor(frame: SceneFrame, spot: TileSpot, palette: Palette, light: Float)
     abstract fun wall(frame: SceneFrame, spot: TileSpot, palette: Palette, alpha: Float, light: Float)
+
     /** Drawn over the finished map, in screen space: drips, fog, embers, fireflies. */
     open fun atmosphere(scope: DrawScope, palette: Palette, time: Float) {}
 
@@ -33,16 +34,18 @@ internal abstract class MapStyle {
         return ((h xor (h ushr 16)) ushr 8) / 16777216f
     }
 
-    protected fun Pen.diamond(cx: Float, cy: Float, halfWidth: Float, halfHeight: Float) =
-        quad(cx - halfWidth, cy, cx, cy - halfHeight, cx + halfWidth, cy, cx, cy + halfHeight)
+    protected fun Pen.diamond(cx: Float, cy: Float, halfWidth: Float, halfHeight: Float) = quad(cx - halfWidth, cy, cx, cy - halfHeight, cx + halfWidth, cy, cx, cy + halfHeight)
 
     /** A block standing on the tile, [height] tall: the two faces the camera sees and the cap. */
     protected fun SceneFrame.block(spot: TileSpot, height: Float, left: Color, right: Color, cap: Color) {
         val (cx, cy, u) = Triple(spot.cx, spot.cy, unit)
         val bottom = cy - u / 2
-        pen.color = left; pen.quad(cx - u, cy, cx, bottom, cx, bottom + height, cx - u, cy + height)
-        pen.color = right; pen.quad(cx, bottom, cx + u, cy, cx + u, cy + height, cx, bottom + height)
-        pen.color = cap; pen.diamond(cx, cy + height, u, u / 2)
+        pen.color = left
+        pen.quad(cx - u, cy, cx, bottom, cx, bottom + height, cx - u, cy + height)
+        pen.color = right
+        pen.quad(cx, bottom, cx + u, cy, cx + u, cy + height, cx, bottom + height)
+        pen.color = cap
+        pen.diamond(cx, cy + height, u, u / 2)
     }
 
     /** The cap's two edges that face the camera, where light and glow gather. */
@@ -64,8 +67,7 @@ internal abstract class MapStyle {
     protected fun SceneFrame.right(spot: TileSpot, t: Float, z: Float) = floatArrayOf(spot.cx + t * unit, spot.cy - unit / 2 + t * unit / 2 + z)
 
     /** A stroke along a face through its points, each a `t` and `z` pair. */
-    protected fun SceneFrame.seam(face: (Float, Float) -> FloatArray, width: Float, vararg tz: Float) =
-        pen.polyline(*tz.toList().chunked(2).flatMap { (t, z) -> face(t, z).toList() }.toFloatArray(), width = width)
+    protected fun SceneFrame.seam(face: (Float, Float) -> FloatArray, width: Float, vararg tz: Float) = pen.polyline(*tz.toList().chunked(2).flatMap { (t, z) -> face(t, z).toList() }.toFloatArray(), width = width)
 
     /** A value spread over the screen by [index] - particles that need no state of their own. */
     protected fun spread(index: Int, salt: Int) = noise(index, salt, 97)
@@ -88,14 +90,22 @@ internal object MapStyles {
 
     fun of(biome: String): MapStyle = when (biome) {
         com.sperance.exileforge.core.campaign.VaalZones.BIOME -> altar
+
         "CRYPT", "TEMPLE", "ABYSS" -> runes
+
         "ASH", "VOLCANO" -> ash
+
         "FOREST", "MIRE", "JUNGLE", "HIVE", "BLIGHT" -> moss
+
         "DESERT", "CANYON" -> dunes
+
         // The lands 71–100 (3.43.0): the broken sky, the drowned empire, the halls of the gods.
         "SKYREACH", "GLASSWASTE", "STORMPEAK" -> sky
+
         "SUNKEN", "CORAL", "TIDEVAULT" -> drowned
+
         "GODHALL", "ASTRAL", "OBLIVION" -> divine
+
         else -> wet
     }
 }
@@ -122,8 +132,13 @@ private class WetStone : MapStyle() {
     override fun wall(frame: SceneFrame, spot: TileSpot, palette: Palette, alpha: Float, light: Float): Unit = with(frame) {
         val h = unit * 1.5f
         val grain = .9f + noise(spot.x, spot.y, 2) * .25f
-        block(spot, h, tone(palette.wallSide, 1.15f * grain * light, alpha = alpha), tone(palette.wallSide, .75f * grain * light, alpha = alpha),
-            tone(palette.wallTop, 1.1f * grain * light, alpha = alpha))
+        block(
+            spot,
+            h,
+            tone(palette.wallSide, 1.15f * grain * light, alpha = alpha),
+            tone(palette.wallSide, .75f * grain * light, alpha = alpha),
+            tone(palette.wallTop, 1.1f * grain * light, alpha = alpha),
+        )
         pen.color = Color.Black.copy(alpha = .45f * alpha)
         val joint = unit * .03f
         when (variant(spot)) {
@@ -132,14 +147,17 @@ private class WetStone : MapStyle() {
                 val lift = h * i / 3f
                 pen.polyline(spot.cx - unit, spot.cy + lift, spot.cx, spot.cy - unit / 2 + lift, spot.cx + unit, spot.cy + lift, width = joint)
             }
+
             // Ashlar: four courses with their joints staggered.
             1 -> for (i in 1..3) {
                 val lift = h * i / 4f
                 pen.polyline(spot.cx - unit, spot.cy + lift, spot.cx, spot.cy - unit / 2 + lift, spot.cx + unit, spot.cy + lift, width = joint)
                 val shift = if (i % 2 == 0) .25f else .6f
-                for (face in listOf<(Float, Float) -> FloatArray>({ t, z -> left(spot, t, z) }, { t, z -> right(spot, t, z) }))
+                for (face in listOf<(Float, Float) -> FloatArray>({ t, z -> left(spot, t, z) }, { t, z -> right(spot, t, z) })) {
                     seam(face, joint, shift, lift - h / 4f, shift, lift)
+                }
             }
+
             // Rubble: odd stones pressed into mortar, a green stain of damp at the foot.
             else -> {
                 repeat(4) { k ->
@@ -185,24 +203,40 @@ private class RuneDark : MapStyle() {
             pen.ring(cx - u * .42f, cy - u * .21f, u * .84f, u * .42f, u * stroke)
             val w = u * stroke
             when ((noise(spot.x, spot.y, 7) * 3).toInt()) {
-                0 -> { pen.line(cx, cy - u * .15f, cx, cy + u * .15f, w); pen.line(cx - u * .2f, cy - u * .05f, cx + u * .2f, cy + u * .05f, w) }
+                0 -> {
+                    pen.line(cx, cy - u * .15f, cx, cy + u * .15f, w)
+                    pen.line(cx - u * .2f, cy - u * .05f, cx + u * .2f, cy + u * .05f, w)
+                }
+
                 1 -> pen.polyline(cx - u * .25f, cy - u * .1f, cx, cy + u * .15f, cx + u * .25f, cy - u * .1f, width = w)
-                else -> { pen.line(cx - u * .2f, cy - u * .1f, cx + u * .2f, cy + u * .1f, w); pen.line(cx + u * .2f, cy - u * .1f, cx - u * .2f, cy + u * .1f, w) }
+
+                else -> {
+                    pen.line(cx - u * .2f, cy - u * .1f, cx + u * .2f, cy + u * .1f, w)
+                    pen.line(cx + u * .2f, cy - u * .1f, cx - u * .2f, cy + u * .1f, w)
+                }
             }
         }
     }
 
     override fun wall(frame: SceneFrame, spot: TileSpot, palette: Palette, alpha: Float, light: Float): Unit = with(frame) {
         val h = unit * (1.7f + noise(spot.x, spot.y, 8) * .9f)
-        block(spot, h, tone(palette.wallSide, .8f * light, alpha = alpha), tone(palette.wallSide, .55f * light, alpha = alpha),
-            tone(palette.wallTop, .9f * light, alpha = alpha))
+        block(
+            spot,
+            h,
+            tone(palette.wallSide, .8f * light, alpha = alpha),
+            tone(palette.wallSide, .55f * light, alpha = alpha),
+            tone(palette.wallTop, .9f * light, alpha = alpha),
+        )
         val a = (.3f + .3f * sin(time * 1.6f + spot.x + spot.y)) * max(.3f, light) * alpha
         when (variant(spot)) {
             // An obelisk whose edge seam glows.
-            0 -> if (noise(spot.x, spot.y, 9) < .3f) for ((glow, stroke) in listOf(.3f to .14f, 1f to .04f)) {
-                pen.color = palette.accent.copy(alpha = a * glow)
-                pen.line(spot.cx, spot.cy - unit / 2 + unit * .1f, spot.cx, spot.cy - unit / 2 + h - unit * .1f, unit * stroke)
+            0 -> if (noise(spot.x, spot.y, 9) < .3f) {
+                for ((glow, stroke) in listOf(.3f to .14f, 1f to .04f)) {
+                    pen.color = palette.accent.copy(alpha = a * glow)
+                    pen.line(spot.cx, spot.cy - unit / 2 + unit * .1f, spot.cx, spot.cy - unit / 2 + h - unit * .1f, unit * stroke)
+                }
             }
+
             // A carved panel: a rune cut in the right face, breathing.
             1 -> for ((glow, stroke) in listOf(.3f to .12f, 1f to .035f)) {
                 pen.color = palette.accent.copy(alpha = a * glow * .8f)
@@ -210,6 +244,7 @@ private class RuneDark : MapStyle() {
                 seam(right, unit * stroke, .5f, h * .25f, .5f, h * .75f)
                 seam(right, unit * stroke, .3f, h * .6f, .5f, h * .45f, .7f, h * .6f)
             }
+
             // Cracked obsidian: a split down the left face, a sliver of light in it.
             else -> {
                 pen.color = Color.Black.copy(alpha = .6f * alpha)
@@ -243,21 +278,37 @@ private class Ashen : MapStyle() {
         pen.diamond(cx, cy, u, u / 2)
         if (noise(spot.x, spot.y, 10) >= .35f) return
         val a = (.45f + .35f * sin(time * 1.3f + noise(spot.x, spot.y, 11) * 9f)) * max(.35f, light)
-        val crack = floatArrayOf(cx - u * .6f, cy + (noise(spot.x, spot.y, 12) - .5f) * u * .15f, cx - u * .1f, cy + u * .06f,
-            cx + u * .15f, cy - u * .05f, cx + u * .6f, cy + (noise(spot.x, spot.y, 13) - .3f) * u * .15f)
-        pen.color = lava.copy(alpha = a * .3f); pen.polyline(*crack, width = u * .12f)
-        pen.color = core.copy(alpha = a); pen.polyline(*crack, width = u * .035f)
+        val crack = floatArrayOf(
+            cx - u * .6f,
+            cy + (noise(spot.x, spot.y, 12) - .5f) * u * .15f,
+            cx - u * .1f,
+            cy + u * .06f,
+            cx + u * .15f,
+            cy - u * .05f,
+            cx + u * .6f,
+            cy + (noise(spot.x, spot.y, 13) - .3f) * u * .15f,
+        )
+        pen.color = lava.copy(alpha = a * .3f)
+        pen.polyline(*crack, width = u * .12f)
+        pen.color = core.copy(alpha = a)
+        pen.polyline(*crack, width = u * .035f)
     }
 
     override fun wall(frame: SceneFrame, spot: TileSpot, palette: Palette, alpha: Float, light: Float): Unit = with(frame) {
         val h = unit * (1.2f + noise(spot.x, spot.y, 14) * .6f)
-        block(spot, h, tone(palette.wallSide, 1.1f * light, alpha = alpha), tone(palette.wallSide, .75f * light, alpha = alpha),
-            tone(palette.wallTop, 1.05f * light, alpha = alpha))
+        block(
+            spot,
+            h,
+            tone(palette.wallSide, 1.1f * light, alpha = alpha),
+            tone(palette.wallSide, .75f * light, alpha = alpha),
+            tone(palette.wallTop, 1.05f * light, alpha = alpha),
+        )
         val ember = ((.35f + .3f * sin(time * 2f + spot.x * 3)) * light * alpha).coerceIn(0f, 1f)
         frontEdges(spot, h, core.copy(alpha = ember), unit * .05f)
         when (variant(spot)) {
             // Plain charred rock.
             0 -> Unit
+
             // Basalt: columns split top to bottom.
             1 -> {
                 pen.color = Color.Black.copy(alpha = .45f * alpha)
@@ -266,11 +317,14 @@ private class Ashen : MapStyle() {
                     seam({ a, z -> right(spot, a, z) }, unit * .03f, t, 0f, t, h)
                 }
             }
+
             // Burning through: a glowing fissure down the left face.
             else -> {
                 val left = { t: Float, z: Float -> left(spot, t, z) }
-                pen.color = lava.copy(alpha = ember * .35f); seam(left, unit * .12f, .3f, h * .9f, .55f, h * .55f, .4f, h * .15f)
-                pen.color = core.copy(alpha = ember); seam(left, unit * .035f, .3f, h * .9f, .55f, h * .55f, .4f, h * .15f)
+                pen.color = lava.copy(alpha = ember * .35f)
+                seam(left, unit * .12f, .3f, h * .9f, .55f, h * .55f, .4f, h * .15f)
+                pen.color = core.copy(alpha = ember)
+                seam(left, unit * .035f, .3f, h * .9f, .55f, h * .55f, .4f, h * .15f)
             }
         }
     }
@@ -296,7 +350,10 @@ private class Overgrown : MapStyle() {
         val (cx, cy, u) = Triple(spot.cx, spot.cy, unit)
         pen.color = tone(palette.floor, (.9f + noise(spot.x, spot.y) * .3f) * light)
         pen.diamond(cx, cy, u, u / 2)
-        if (spot.walls > 0) { pen.color = Color.Black.copy(alpha = .1f * spot.walls); pen.diamond(cx, cy, u, u / 2) }
+        if (spot.walls > 0) {
+            pen.color = Color.Black.copy(alpha = .1f * spot.walls)
+            pen.diamond(cx, cy, u, u / 2)
+        }
         if (noise(spot.x, spot.y, 16) >= .35f) return
         pen.color = tone(grass, 1.1f * light)
         repeat(4) { k ->
@@ -312,22 +369,30 @@ private class Overgrown : MapStyle() {
         val r = unit * (.95f + noise(spot.x, spot.y, 31) * .3f)
         val h = unit * (.9f + noise(spot.x, spot.y, 32) * .5f)
         val half = h * .75f + r * .2f
-        pen.color = Color.Black.copy(alpha = .35f * alpha); pen.ellipse(cx - r * 1.05f, cy - r * .5f, r * 2.1f, r)
-        pen.color = tone(palette.wallSide, light, alpha = alpha); pen.ellipse(cx - r, cy + h * .45f - half, r * 2, half * 2)
-        pen.color = tone(palette.wallTop, 1.2f * light, alpha = alpha * .8f); pen.ellipse(cx - r * .75f, cy + h * .7f, r * 1.1f, h * .6f)
-        pen.color = tone(palette.decor, .95f * light, alpha = alpha); pen.ellipse(cx - r * .8f, cy + h * .95f, r * 1.4f, r * .5f)
+        pen.color = Color.Black.copy(alpha = .35f * alpha)
+        pen.ellipse(cx - r * 1.05f, cy - r * .5f, r * 2.1f, r)
+        pen.color = tone(palette.wallSide, light, alpha = alpha)
+        pen.ellipse(cx - r, cy + h * .45f - half, r * 2, half * 2)
+        pen.color = tone(palette.wallTop, 1.2f * light, alpha = alpha * .8f)
+        pen.ellipse(cx - r * .75f, cy + h * .7f, r * 1.1f, h * .6f)
+        pen.color = tone(palette.decor, .95f * light, alpha = alpha)
+        pen.ellipse(cx - r * .8f, cy + h * .95f, r * 1.4f, r * .5f)
         when (variant(spot)) {
             // A boulder, now and then with a root over it.
             0 -> if (noise(spot.x, spot.y, 33) < .4f) {
                 pen.color = tone(root, light, alpha = alpha)
                 pen.polyline(cx + r * .3f, cy + h * .7f, cx + r * .6f, cy + h * .3f, cx + r * .4f, cy + h * .05f, cx + r * .7f, cy - unit * .1f, width = unit * .05f)
             }
+
             // A second, smaller stone settled on the first, its own moss cap.
             1 -> {
                 val small = r * .55f
-                pen.color = tone(palette.wallSide, .9f * light, alpha = alpha); pen.ellipse(cx - small * .7f, cy + h * .95f, small * 2, small * 1.1f)
-                pen.color = tone(palette.decor, 1.05f * light, alpha = alpha); pen.ellipse(cx - small * .5f, cy + h * .95f + small * .6f, small * 1.4f, small * .45f)
+                pen.color = tone(palette.wallSide, .9f * light, alpha = alpha)
+                pen.ellipse(cx - small * .7f, cy + h * .95f, small * 2, small * 1.1f)
+                pen.color = tone(palette.decor, 1.05f * light, alpha = alpha)
+                pen.ellipse(cx - small * .5f, cy + h * .95f + small * .6f, small * 1.4f, small * .45f)
             }
+
             // Ferns spilling from the moss.
             else -> {
                 pen.color = tone(grass, light, alpha = alpha)
@@ -374,14 +439,20 @@ private class BloodAltar : MapStyle() {
             val a = (.4f + .4f * sin(time * 2.2f - (spot.x + spot.y) * .6f)) * max(.4f, light)
             val bend = (noise(spot.x, spot.y, 5) - .5f) * u * .3f
             val across = noise(spot.x, spot.y, 4) < .5f
-            val line = if (across) floatArrayOf(cx - u / 2, cy + u / 4, cx + bend, cy, cx + u / 2, cy - u / 4)
-                else floatArrayOf(cx - u / 2, cy - u / 4, cx, cy + bend * .6f, cx + u / 2, cy + u / 4)
-            pen.color = vein.copy(alpha = a * .3f); pen.polyline(*line, width = u * .12f)
-            pen.color = vein.copy(alpha = a); pen.polyline(*line, width = u * .035f)
+            val line = if (across) {
+                floatArrayOf(cx - u / 2, cy + u / 4, cx + bend, cy, cx + u / 2, cy - u / 4)
+            } else {
+                floatArrayOf(cx - u / 2, cy - u / 4, cx, cy + bend * .6f, cx + u / 2, cy + u / 4)
+            }
+            pen.color = vein.copy(alpha = a * .3f)
+            pen.polyline(*line, width = u * .12f)
+            pen.color = vein.copy(alpha = a)
+            pen.polyline(*line, width = u * .035f)
         }
         if (spot.walls == 0 && noise(spot.x, spot.y, 6) < .07f) {
             val w = u * .5f
-            pen.color = tone(blood, light.coerceAtLeast(.5f), alpha = .9f); pen.ellipse(cx - w, cy - w / 2, w * 2, w)
+            pen.color = tone(blood, light.coerceAtLeast(.5f), alpha = .9f)
+            pen.ellipse(cx - w, cy - w / 2, w * 2, w)
             pen.color = Color(0xFFFF5A46).copy(alpha = (.3f + .15f * sin(time * 3f + spot.x)) * light)
             pen.ellipse(cx - w * .6f, cy, w * .6f, w * .2f)
         }
@@ -405,8 +476,9 @@ private class BloodAltar : MapStyle() {
         // A band of carved glyphs round the block, lit by the veins.
         if (kind == 1) {
             pen.color = vein.copy(alpha = ((.35f + .25f * sin(time * 2.2f - (spot.x + spot.y) * .6f)) * light * alpha).coerceIn(0f, 1f))
-            for (face in listOf<(Float, Float) -> FloatArray>({ t, z -> left(spot, t, z) }, { t, z -> right(spot, t, z) }))
+            for (face in listOf<(Float, Float) -> FloatArray>({ t, z -> left(spot, t, z) }, { t, z -> right(spot, t, z) })) {
                 seam(face, unit * .03f, 0f, h * .55f, .2f, h * .65f, .4f, h * .55f, .6f, h * .65f, .8f, h * .55f, 1f, h * .65f)
+            }
         }
         // A second, narrower step on top: the altar's terraces.
         val step = TileSpot(spot.x, spot.y, spot.cx, spot.cy + h, spot.walls)
@@ -455,8 +527,13 @@ private class Dunes : MapStyle() {
 
     override fun wall(frame: SceneFrame, spot: TileSpot, palette: Palette, alpha: Float, light: Float): Unit = with(frame) {
         val h = unit * (1f + noise(spot.x, spot.y, 42) * .7f)
-        block(spot, h, tone(palette.wallSide, 1.15f * light, alpha = alpha), tone(palette.wallSide, .8f * light, alpha = alpha),
-            tone(palette.wallTop, 1.05f * light, alpha = alpha))
+        block(
+            spot,
+            h,
+            tone(palette.wallSide, 1.15f * light, alpha = alpha),
+            tone(palette.wallSide, .8f * light, alpha = alpha),
+            tone(palette.wallTop, 1.05f * light, alpha = alpha),
+        )
         // Strata: the bands the sandstone was laid in, running across both faces.
         pen.color = tone(palette.wallTop, .75f * light, alpha = .5f * alpha)
         val bands = if (variant(spot) == 0) listOf(.3f, .6f) else listOf(.25f, .5f, .75f)
@@ -501,8 +578,13 @@ private class SkyGlass : MapStyle() {
 
     override fun wall(frame: SceneFrame, spot: TileSpot, palette: Palette, alpha: Float, light: Float): Unit = with(frame) {
         val h = unit * (1.6f + noise(spot.x, spot.y, 51) * 1.1f)
-        block(spot, h, tone(palette.wallSide, 1.1f * light, alpha = alpha), tone(palette.wallSide, .75f * light, alpha = alpha),
-            tone(palette.wallTop, 1.15f * light, alpha = alpha))
+        block(
+            spot,
+            h,
+            tone(palette.wallSide, 1.1f * light, alpha = alpha),
+            tone(palette.wallSide, .75f * light, alpha = alpha),
+            tone(palette.wallTop, 1.15f * light, alpha = alpha),
+        )
         // A facet: a bright diagonal down the left face, as on cut crystal.
         pen.color = tone(palette.accent, light, alpha = .3f * alpha)
         seam({ t, lift -> left(spot, t, lift) }, unit * .05f, .15f, h * .9f, .85f, h * .2f)
@@ -512,11 +594,13 @@ private class SkyGlass : MapStyle() {
                 pen.color = tone(palette.accent, .9f * light, alpha = .8f * alpha)
                 pen.triangle(spot.cx - unit * .25f, spot.cy + h, spot.cx + unit * .2f, spot.cy + h, spot.cx - unit * .05f, spot.cy + h + unit * 1.1f)
             }
+
             // Lightning sleeping in the rock.
             1 -> if (noise(spot.x, spot.y, 52) < .4f) {
                 pen.color = palette.accent.copy(alpha = (.3f + .4f * sin(time * 7f + spot.y)).coerceAtLeast(0f) * alpha)
                 seam({ t, lift -> right(spot, t, lift) }, unit * .03f, .3f, h * .85f, .55f, h * .6f, .4f, h * .45f, .65f, h * .15f)
             }
+
             else -> frontEdges(spot, h, tone(palette.accent, light, alpha = .45f * alpha), unit * .04f)
         }
     }
@@ -552,8 +636,13 @@ private class Drowned : MapStyle() {
 
     override fun wall(frame: SceneFrame, spot: TileSpot, palette: Palette, alpha: Float, light: Float): Unit = with(frame) {
         val h = unit * (1.4f + noise(spot.x, spot.y, 53) * .9f)
-        block(spot, h, tone(palette.wallSide, .95f * light, alpha = alpha), tone(palette.wallSide, .65f * light, alpha = alpha),
-            tone(palette.wallTop, 1f * light, alpha = alpha))
+        block(
+            spot,
+            h,
+            tone(palette.wallSide, .95f * light, alpha = alpha),
+            tone(palette.wallSide, .65f * light, alpha = alpha),
+            tone(palette.wallTop, 1f * light, alpha = alpha),
+        )
         when (variant(spot)) {
             // Coral grown over the cap and the edge.
             0 -> {
@@ -562,6 +651,7 @@ private class Drowned : MapStyle() {
                 pen.circle(spot.cx + unit * .1f, spot.cy + h + unit * .18f, unit * .3f)
                 pen.circle(spot.cx + unit * .45f, spot.cy + h + unit * .02f, unit * .18f)
             }
+
             // Kelp hanging down the right face.
             1 -> {
                 pen.color = tone(Color(0xFF3A7A4A), light, alpha = .8f * alpha)
@@ -569,6 +659,7 @@ private class Drowned : MapStyle() {
                 seam(right, unit * .05f, .3f, h * .95f, .35f, h * .6f, .28f, h * .3f)
                 seam(right, unit * .05f, .7f, h * .95f, .64f, h * .55f, .72f, h * .2f)
             }
+
             // Barnacles along the left face.
             else -> {
                 pen.color = tone(palette.wallTop, 1.3f * light, alpha = .7f * alpha)
@@ -618,8 +709,13 @@ private class Divine : MapStyle() {
 
     override fun wall(frame: SceneFrame, spot: TileSpot, palette: Palette, alpha: Float, light: Float): Unit = with(frame) {
         val h = unit * (1.9f + noise(spot.x, spot.y, 57) * .8f)
-        block(spot, h, tone(palette.wallSide, 1.05f * light, alpha = alpha), tone(palette.wallSide, .75f * light, alpha = alpha),
-            tone(palette.wallTop, 1.1f * light, alpha = alpha))
+        block(
+            spot,
+            h,
+            tone(palette.wallSide, 1.05f * light, alpha = alpha),
+            tone(palette.wallSide, .75f * light, alpha = alpha),
+            tone(palette.wallTop, 1.1f * light, alpha = alpha),
+        )
         // Fluting: the vertical grooves of a column.
         pen.color = Color.Black.copy(alpha = .2f * alpha)
         listOf(.25f, .5f, .75f).forEach { t ->

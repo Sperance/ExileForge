@@ -28,6 +28,7 @@ import kotlinx.coroutines.launch
 
 /** Where a picked zone's token is flown to while its card covers the map's foot: this share down the screen. */
 private const val CARD_DOWN = .28f
+
 /** How far down the map a token can sit before the card would hide it. */
 private const val CARD_TOP = .48f
 
@@ -40,7 +41,10 @@ private const val CARD_TOP = .48f
  * to the frontier. A tapped token raises its card over the map's foot — the way into the zone.
  */
 @Composable fun ExpeditionScreen(s: ForgeState, vm: ForgeViewModel) {
-    LaunchedEffect(s.play.heroId, s.account.sessionEpoch) { vm.ensureHero(); vm.loadCampaign() }
+    LaunchedEffect(s.play.heroId, s.account.sessionEpoch) {
+        vm.ensureHero()
+        vm.loadCampaign()
+    }
     FirstVisit(Guide.EXPEDITION)
     val index = s.index
     val progress = s.progress
@@ -52,7 +56,10 @@ private const val CARD_TOP = .48f
     val world = remember(index, progress.cleared, progress.unlocked) { WorldMap(campaign, index.world, progress) }
     // The tab answers the tap at once (3.77.0): its first frame is the bare chart, the map is laid out on the next.
     var settled by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { withFrameNanos { }; settled = true }
+    LaunchedEffect(Unit) {
+        withFrameNanos { }
+        settled = true
+    }
     val art by produceState(WorldArt.cached(campaign), campaign) { value = WorldArt.of(campaign) }
     val density = LocalDensity.current.density
     val camera = remember(campaign.world, density) { WorldCamera(campaign.world, density) }
@@ -70,10 +77,16 @@ private const val CARD_TOP = .48f
         if (camera.placed && !camera.sees(at, 48f, CARD_TOP)) camera.glide(at, maxOf(camera.scale, WorldCamera.HOME), CARD_DOWN)
     }
     Box(Modifier.fillMaxSize()) {
-        if (!settled) Box(Modifier.fillMaxSize().background(CHART_BARE))
-        else WorldCanvas(world, art, camera, launch?.mapCode, stash, Modifier.fillMaxSize()) { code -> if (code == null) vm.closeZone() else vm.selectZone(code) }
-        WorldBar(world, Modifier.align(Alignment.TopCenter),
-            onFrontier = { scope.launch { camera.glide(world.frontier(), WorldCamera.HOME, if (launch != null) CARD_DOWN else .5f) } })
+        if (!settled) {
+            Box(Modifier.fillMaxSize().background(CHART_BARE))
+        } else {
+            WorldCanvas(world, art, camera, launch?.mapCode, stash, Modifier.fillMaxSize()) { code -> if (code == null) vm.closeZone() else vm.selectZone(code) }
+        }
+        WorldBar(
+            world,
+            Modifier.align(Alignment.TopCenter),
+            onFrontier = { scope.launch { camera.glide(world.frontier(), WorldCamera.HOME, if (launch != null) CARD_DOWN else .5f) } },
+        )
         ZoomButtons(camera, Modifier.align(Alignment.TopEnd).padding(top = 72.dp, end = 12.dp)) { factor -> scope.launch { camera.zoomBy(factor) } }
         launch?.let { ZoneCard(s, vm, world, it, Modifier.align(Alignment.BottomCenter)) }
     }
@@ -81,9 +94,12 @@ private const val CARD_TOP = .48f
 
 /** The map's head: how much of the world is passed and the way back to the frontier; the atlas and the trials live in «Развитие». */
 @Composable private fun WorldBar(world: WorldMap, modifier: Modifier, onFrontier: () -> Unit) {
-    Row(modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Ink.copy(alpha = .92f), Ink.copy(alpha = 0f))))
-        .padding(start = 16.dp, end = 12.dp, top = 8.dp, bottom = 16.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(
+        modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Ink.copy(alpha = .92f), Ink.copy(alpha = 0f))))
+            .padding(start = 16.dp, end = 12.dp, top = 8.dp, bottom = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
         Column(Modifier.weight(1f)) {
             Text(ui("expedition.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
             Text(ui("expedition.passed", world.passedCount, world.total), color = Muted, style = MaterialTheme.typography.labelMedium)

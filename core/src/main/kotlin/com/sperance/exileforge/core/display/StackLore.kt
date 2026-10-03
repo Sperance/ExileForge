@@ -27,8 +27,13 @@ fun essenceGuarantees(index: ContentIndex, code: String): List<EssenceGuarantee>
     val essence = index.essence(code) ?: return emptyList()
     val kind = essence.kind
     val slots = listOf(
-        "weapon" to kind.weapon, "caster" to (kind.caster ?: kind.weapon), "quiver" to (kind.quiver ?: kind.weapon),
-        "armour" to kind.armour, "shield" to (kind.shield ?: kind.armour), "jewellery" to kind.jewellery, "belt" to (kind.belt ?: kind.jewellery),
+        "weapon" to kind.weapon,
+        "caster" to (kind.caster ?: kind.weapon),
+        "quiver" to (kind.quiver ?: kind.weapon),
+        "armour" to kind.armour,
+        "shield" to (kind.shield ?: kind.armour),
+        "jewellery" to kind.jewellery,
+        "belt" to (kind.belt ?: kind.jewellery),
     )
     val share = essenceShare(index, essence)
     return slots.groupBy({ it.second }, { it.first }).mapNotNull { (modifier, groups) ->
@@ -87,21 +92,32 @@ private class SourceIndex(private val index: ContentIndex) {
     private val tables = HashMap<String, Map<String, Double?>>()
 
     fun build(): Map<String, List<ItemSource>> {
-        monsters(); chests(); crystals(); works(); eggs(); trials()
+        monsters()
+        chests()
+        crystals()
+        works()
+        eggs()
+        trials()
         index.campaign.abyss?.let { abyss -> stacks(abyss.orbs).keys.forEach { add(it, ItemSource(SourceKind.ABYSS)) } }
         index.campaign.trials?.let { trials -> stacks(trials.rush.orbTable).keys.forEach { add(it, ItemSource(SourceKind.RUSH)) } }
         index.rules.merchant.orbs.codes.forEach { add(it, ItemSource(SourceKind.MERCHANT)) }
         return found.mapValues { (_, sources) -> merge(sources) }
     }
 
-    private fun add(code: String, source: ItemSource) { found.getOrPut(code) { ArrayList() } += source }
+    private fun add(code: String, source: ItemSource) {
+        found.getOrPut(code) { ArrayList() } += source
+    }
 
     /** Each monster's table, as the zones it walks in: a boss, a corrupted area's keeper, or the zone's own crowd. */
     private fun monsters() {
         val levels = HashMap<String, MutableList<Int>>()
         index.campaign.zones.forEach { zone -> (zone.monsters + zone.boss + zone.corrupted).forEach { levels.getOrPut(it) { ArrayList() } += zone.level } }
         index.campaign.monsters.forEach { monster ->
-            val kind = when { monster.boss -> SourceKind.BOSSES; monster.corrupted -> SourceKind.CORRUPTED; else -> SourceKind.MONSTERS }
+            val kind = when {
+                monster.boss -> SourceKind.BOSSES
+                monster.corrupted -> SourceKind.CORRUPTED
+                else -> SourceKind.MONSTERS
+            }
             val range = levels[monster.code]?.let { it.min()..it.max() } ?: return@forEach
             stacks(monster.loot).forEach { (code, chance) -> add(code, ItemSource(kind, range, chance)) }
         }
@@ -116,7 +132,10 @@ private class SourceIndex(private val index: ContentIndex) {
         val book = index.essences
         val zones = index.campaign.zones
         book.essences.values.forEach { essence ->
-            if (essence.special) { add(essence.code, ItemSource(SourceKind.VAAL)); return@forEach }
+            if (essence.special) {
+                add(essence.code, ItemSource(SourceKind.VAAL))
+                return@forEach
+            }
             val levels = zones.filter { book.tierOf(it.level) in essence.tier..essence.tier + 1 }.map { it.level }
             if (levels.isNotEmpty()) add(essence.code, ItemSource(SourceKind.CRYSTALS, levels.min()..levels.max()))
         }
@@ -131,11 +150,15 @@ private class SourceIndex(private val index: ContentIndex) {
                 val work = { code: String, level: Int -> add(code, ItemSource(SourceKind.WORK, ref = profession.code, detail = job.code, level = level)) }
                 when (job.kind) {
                     JobKind.ITEM -> if (job.output.isNotBlank()) work(job.output, job.level)
+
                     JobKind.CONDENSE -> book.kinds.forEach { kind ->
                         (2..book.tiers.size).forEach { tier -> work(EssenceBook.code(kind.code, tier, special = false), book.condense.levels.getOrElse(tier - 2) { job.level }) }
                     }
+
                     JobKind.BOOK -> index.skills.skills.filter { it.unlock <= (job.band.singleOrNull() ?: 0) }.forEach { work(it.book, job.level) }
+
                     JobKind.REFINE -> recipes.options(job, heroClass = "").forEach { work(it.job.output, it.job.level) }
+
                     else -> Unit
                 }
                 job.extra.forEach { add(it.item, ItemSource(SourceKind.FIND, chance = it.chance, ref = profession.code, detail = job.code)) }
@@ -176,7 +199,9 @@ private class SourceIndex(private val index: ContentIndex) {
             val chance = entry.chance?.let { it * 100 }
             when {
                 Ref.isTable(entry.ref) -> stacks(entry.code, seen + tag).forEach { (code, inner) ->
-                    out.keep(code, if (inner != null && chance != null) inner * chance / 100 else null) }
+                    out.keep(code, if (inner != null && chance != null) inner * chance / 100 else null)
+                }
+
                 (entry.kind ?: kind) == TableKind.ITEM -> out.keep(entry.code, chance)
             }
         }
@@ -184,16 +209,27 @@ private class SourceIndex(private val index: ContentIndex) {
     }
 
     /** Keeps the better chance of two ways to one stack; a weighted draw (null) gives way to a known chance. */
-    private fun HashMap<String, Double?>.keep(code: String, chance: Double?) { this[code] = if (containsKey(code)) best(this[code], chance) else chance }
+    private fun HashMap<String, Double?>.keep(code: String, chance: Double?) {
+        this[code] = if (containsKey(code)) best(this[code], chance) else chance
+    }
 
-    private fun best(a: Double?, b: Double?): Double? = if (a == null) b else if (b == null) a else maxOf(a, b)
+    private fun best(a: Double?, b: Double?): Double? = if (a == null) {
+        b
+    } else if (b == null) {
+        a
+    } else {
+        maxOf(a, b)
+    }
 
     /** One line per kind for the zone-wide sources — their levels joined, their best chance — and one per work, egg and shelf. */
     private fun merge(sources: List<ItemSource>): List<ItemSource> = sources.groupBy { if (it.levels != null) it.kind.name else "${it.kind}:${it.ref}:${it.detail}" }.values
         .map { same ->
             same.reduce { a, b ->
-                a.copy(levels = a.levels?.let { x -> b.levels?.let { y -> minOf(x.first, y.first)..maxOf(x.last, y.last) } ?: x },
-                    chance = best(a.chance, b.chance), level = minOf(a.level, b.level))
+                a.copy(
+                    levels = a.levels?.let { x -> b.levels?.let { y -> minOf(x.first, y.first)..maxOf(x.last, y.last) } ?: x },
+                    chance = best(a.chance, b.chance),
+                    level = minOf(a.level, b.level),
+                )
             }
         }
         .sortedWith(compareBy({ it.kind.ordinal }, { it.level }))

@@ -61,7 +61,8 @@ data class LedgerLine(val label: String, val value: String, val tone: Tone = Ton
  * It is deliberately not on everything. A question in front of an ordinary action stops being read.
  */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun ConfirmSheet(
+@Composable
+fun ConfirmSheet(
     title: String,
     confirm: String,
     onDismiss: () -> Unit,
@@ -81,10 +82,14 @@ data class LedgerLine(val label: String, val value: String, val tone: Tone = Ton
     ForgeSheet(onDismissRequest = onDismiss, shape = RectangleShape, dragHandle = null) {
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
             RaritySpine(accent, 5.dp)
-            Column(Modifier.weight(1f).padding(start = 18.dp, end = 18.dp, top = 10.dp, bottom = 22.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Box(Modifier.align(Alignment.CenterHorizontally).size(38.dp, 4.dp)
-                    .background(Muted.copy(alpha = .35f), RoundedCornerShape(2.dp)))
+            Column(
+                Modifier.weight(1f).padding(start = 18.dp, end = 18.dp, top = 10.dp, bottom = 22.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Box(
+                    Modifier.align(Alignment.CenterHorizontally).size(38.dp, 4.dp)
+                        .background(Muted.copy(alpha = .35f), RoundedCornerShape(2.dp)),
+                )
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     icon?.let { Box(Modifier.size(46.dp), contentAlignment = Alignment.Center) { it() } }
                     Column(Modifier.weight(1f)) {
@@ -101,10 +106,17 @@ data class LedgerLine(val label: String, val value: String, val tone: Tone = Ton
                         Text(it, color = LifeRed, style = MaterialTheme.typography.bodySmall)
                     }
                 }
-                HoldButton(ui("confirm.hold", confirm.lowercase()), accent, enabled = !blocked) { onDismiss(); onConfirm() }
-                Text(ui("common.cancel").uppercase(), color = Muted, style = MaterialTheme.typography.labelLarge,
+                HoldButton(ui("confirm.hold", confirm.lowercase()), accent, enabled = !blocked) {
+                    onDismiss()
+                    onConfirm()
+                }
+                Text(
+                    ui("common.cancel").uppercase(),
+                    color = Muted,
+                    style = MaterialTheme.typography.labelLarge,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().clickable(onClick = onDismiss).padding(vertical = 8.dp))
+                    modifier = Modifier.fillMaxWidth().clickable(onClick = onDismiss).padding(vertical = 8.dp),
+                )
             }
         }
     }
@@ -115,11 +127,23 @@ data class LedgerLine(val label: String, val value: String, val tone: Tone = Ton
     Column(Modifier.fillMaxWidth().background(Color.Black.copy(alpha = .25f)).border(1.dp, Muted.copy(alpha = .20f))) {
         lines.forEachIndexed { index, line ->
             if (index > 0) HorizontalDivider(color = Muted.copy(alpha = .12f))
-            Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 MutedText(line.label)
-                Text(line.value, color = when (line.tone) { Tone.SPEND -> LifeRed; Tone.GAIN -> Vital; Tone.PLAIN -> Parchment },
-                    style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+                Text(
+                    line.value,
+                    color = when (line.tone) {
+                        Tone.SPEND -> LifeRed
+                        Tone.GAIN -> Vital
+                        Tone.PLAIN -> Parchment
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = TextAlign.End,
+                    modifier = Modifier.weight(1f),
+                )
             }
         }
     }
@@ -137,8 +161,16 @@ data class LedgerLine(val label: String, val value: String, val tone: Tone = Ton
  * An [icon] and a [figure] (2.73.0) make it a ribbon: a rounded gilt frame, the icon on the left
  * and the figure — a price — in a coin chip on the right.
  */
-@Composable fun HoldButton(label: String, accent: Color, modifier: Modifier = Modifier, enabled: Boolean = true,
-    rearm: Boolean = false, icon: androidx.compose.ui.graphics.vector.ImageVector? = null, figure: String? = null, onHeld: () -> Unit) {
+@Composable fun HoldButton(
+    label: String,
+    accent: Color,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    rearm: Boolean = false,
+    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+    figure: String? = null,
+    onHeld: () -> Unit,
+) {
     val progress = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
     val haptics = LocalHapticFeedback.current
@@ -147,49 +179,86 @@ data class LedgerLine(val label: String, val value: String, val tone: Tone = Ton
     var fired by remember { mutableStateOf(false) }
     val fire = {
         if (!fired && live) {
-            fired = true; held()
-            if (rearm) { fired = false; scope.launch { progress.animateTo(0f, tween(180)) } }
+            fired = true
+            held()
+            if (rearm) {
+                fired = false
+                scope.launch { progress.animateTo(0f, tween(180)) }
+            }
         }
     }
     val tint = if (enabled) accent else Muted.copy(alpha = .45f)
     val ribbon = icon != null || figure != null
     // «Эфир» (2.80.0): one rounded shape for both kinds, lower, and a halo while it can be held.
     val shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp)
-    Box(modifier.fillMaxWidth().height(44.dp).glow(accent, on = enabled, radius = 8.dp, shape = shape).clip(shape)
-        .background(Brush.verticalGradient(listOf(tint.copy(alpha = if (ribbon) .16f else .10f), Panel)))
-        .border(1.dp, Brush.horizontalGradient(listOf(tint.copy(alpha = .5f), tint, tint.copy(alpha = .5f))), shape)
-        .drawBehind {
-            drawRect(Brush.horizontalGradient(listOf(accent.copy(alpha = .55f), accent.copy(alpha = .25f))),
-                size = Size(size.width * progress.value, size.height))
-        }
-        .semantics(mergeDescendants = true) { role = Role.Button; if (!enabled) disabled(); onClick(label) { fire(); true } }
-        .pointerInput(Unit) {
-            detectTapGestures(onPress = {
-                if (!live) return@detectTapGestures
-                val filling = scope.launch {
-                    progress.animateTo(1f, tween(HOLD_TO_CONFIRM_MS, easing = LinearEasing))
-                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+    Box(
+        modifier.fillMaxWidth().height(44.dp).glow(accent, on = enabled, radius = 8.dp, shape = shape).clip(shape)
+            .background(Brush.verticalGradient(listOf(tint.copy(alpha = if (ribbon) .16f else .10f), Panel)))
+            .border(1.dp, Brush.horizontalGradient(listOf(tint.copy(alpha = .5f), tint, tint.copy(alpha = .5f))), shape)
+            .drawBehind {
+                drawRect(
+                    Brush.horizontalGradient(listOf(accent.copy(alpha = .55f), accent.copy(alpha = .25f))),
+                    size = Size(size.width * progress.value, size.height),
+                )
+            }
+            .semantics(mergeDescendants = true) {
+                role = Role.Button
+                if (!enabled) disabled()
+                onClick(label) {
                     fire()
+                    true
                 }
-                tryAwaitRelease()
-                if (progress.value < 1f) {
-                    filling.cancel()
-                    scope.launch { progress.animateTo(0f, tween(180)) }
+            }
+            .pointerInput(Unit) {
+                detectTapGestures(onPress = {
+                    if (!live) return@detectTapGestures
+                    val filling = scope.launch {
+                        progress.animateTo(1f, tween(HOLD_TO_CONFIRM_MS, easing = LinearEasing))
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        fire()
+                    }
+                    tryAwaitRelease()
+                    if (progress.value < 1f) {
+                        filling.cancel()
+                        scope.launch { progress.animateTo(0f, tween(180)) }
+                    }
+                })
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        val ink = if (!enabled) {
+            Muted
+        } else if (accent == LifeRed) {
+            Parchment
+        } else {
+            GoldBright
+        }
+        if (!ribbon) {
+            Text(
+                label,
+                color = ink,
+                style = MaterialTheme.typography.labelLarge,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 12.dp),
+            )
+        } else {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                icon?.let { androidx.compose.material3.Icon(it, null, tint = if (enabled) GoldBright else Muted, modifier = Modifier.size(22.dp)) }
+                Text(label.uppercase(), color = ink, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+                figure?.let {
+                    val chip = androidx.compose.foundation.shape.RoundedCornerShape(50)
+                    Text(
+                        it,
+                        color = if (enabled) Ink else Muted,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.background(Brush.verticalGradient(listOf(GoldBright, Gold)), chip).padding(horizontal = 10.dp, vertical = 2.dp),
+                    )
                 }
-            })
-        },
-        contentAlignment = Alignment.Center) {
-        val ink = if (!enabled) Muted else if (accent == LifeRed) Parchment else GoldBright
-        if (!ribbon) Text(label, color = ink, style = MaterialTheme.typography.labelLarge, textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 12.dp))
-        else Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            icon?.let { androidx.compose.material3.Icon(it, null, tint = if (enabled) GoldBright else Muted, modifier = Modifier.size(22.dp)) }
-            Text(label.uppercase(), color = ink, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
-            figure?.let {
-                val chip = androidx.compose.foundation.shape.RoundedCornerShape(50)
-                Text(it, color = if (enabled) Ink else Muted, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, style = MaterialTheme.typography.labelLarge,
-                    modifier = Modifier.background(Brush.verticalGradient(listOf(GoldBright, Gold)), chip).padding(horizontal = 10.dp, vertical = 2.dp))
             }
         }
     }

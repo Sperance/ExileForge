@@ -1,6 +1,5 @@
 package com.sperance.exileforge.ui.screens.expedition
 
-import com.sperance.exileforge.ui.components.ForgeSheet
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -32,8 +31,8 @@ import com.sperance.exileforge.core.campaign.RollTrace
 import com.sperance.exileforge.core.campaign.Side
 import com.sperance.exileforge.core.campaign.TickTrace
 import com.sperance.exileforge.core.campaign.Trace
-import com.sperance.exileforge.core.campaign.TypeTrace
 import com.sperance.exileforge.core.campaign.TraceOrigin
+import com.sperance.exileforge.core.campaign.TypeTrace
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.fineNumber
@@ -44,6 +43,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.StatTrace
 import com.sperance.exileforge.presentation.state.TraceExplainer
+import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.screens.hero.petName
 import com.sperance.exileforge.ui.theme.*
 import java.util.Locale
@@ -56,22 +56,31 @@ import kotlin.math.roundToInt
  * what lay on both at that moment. Every figure is the fight's own.
  */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable internal fun CombatDetailSheet(s: ForgeState, event: CombatEvent, monster: String, onDismiss: () -> Unit) {
-    val trace = event.trace ?: run { LaunchedEffect(event) { onDismiss() }; return }
+@Composable
+internal fun CombatDetailSheet(s: ForgeState, event: CombatEvent, monster: String, onDismiss: () -> Unit) {
+    val trace = event.trace ?: run {
+        LaunchedEffect(event) { onDismiss() }
+        return
+    }
     val explainer = remember(s.index, s.lang) { TraceExplainer(s) }
     var full by remember(event) { mutableStateOf(false) }
     ForgeSheet(onDismissRequest = onDismiss) {
-        LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.9f).navigationBarsPadding(), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, 16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        LazyColumn(
+            Modifier.fillMaxWidth().fillMaxHeight(.9f).navigationBarsPadding(),
+            contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, 16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
             item { Header(event, monster) }
             item { Marks(event, trace) }
             if (trace is HitTrace) items(trace.types.filter { it.raw > 0.05 || it.dealt > 0.05 }) { TypeRow(it) }
             item { FullToggle(full) { full = !full } }
-            if (full) when (trace) {
-                is HitTrace -> hitItems(trace, explainer, s)
-                is TickTrace -> tickItems(trace, explainer, s)
-                is EffectTrace -> effectItems(trace, explainer, s)
-                is NoteTrace -> noteItems(trace, explainer, s)
+            if (full) {
+                when (trace) {
+                    is HitTrace -> hitItems(trace, explainer, s)
+                    is TickTrace -> tickItems(trace, explainer, s)
+                    is EffectTrace -> effectItems(trace, explainer, s)
+                    is NoteTrace -> noteItems(trace, explainer, s)
+                }
             }
         }
     }
@@ -81,6 +90,7 @@ import kotlin.math.roundToInt
 @Composable private fun Header(event: CombatEvent, monster: String) {
     val sentence = when (event.action) {
         Action.NOTE -> noteLine(event, monster)
+
         else -> {
             // The combat pet's line (3.70.0) names it: its blow, its healing, or the blow it took.
             val pet = event.pet?.let(::petName)
@@ -117,7 +127,8 @@ import kotlin.math.roundToInt
 
 /** What marked the line, as small chips: a crit and its multiplier, a block, a dodge, a stun, the ailments, what the shield took. */
 @OptIn(ExperimentalLayoutApi::class)
-@Composable private fun Marks(event: CombatEvent, trace: Trace) {
+@Composable
+private fun Marks(event: CombatEvent, trace: Trace) {
     val hit = trace as? HitTrace
     val crit = event.kind == HitKind.CRIT
     val marks = buildList {
@@ -136,8 +147,12 @@ import kotlin.math.roundToInt
     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         marks.forEachIndexed { i, mark ->
             val lit = crit && i == 0
-            Text(mark, color = if (lit) Ember else Parchment, style = MaterialTheme.typography.labelSmall,
-                modifier = Modifier.clip(RoundedCornerShape(50)).background(if (lit) Ember.copy(alpha = .2f) else PanelRaised).padding(horizontal = 8.dp, vertical = 2.dp))
+            Text(
+                mark,
+                color = if (lit) Ember else Parchment,
+                style = MaterialTheme.typography.labelSmall,
+                modifier = Modifier.clip(RoundedCornerShape(50)).background(if (lit) Ember.copy(alpha = .2f) else PanelRaised).padding(horizontal = 8.dp, vertical = 2.dp),
+            )
         }
     }
 }
@@ -145,8 +160,11 @@ import kotlin.math.roundToInt
 /** A damage type on one row: its colour, its name, and what it was against what landed, with what cut it. */
 @Composable private fun TypeRow(type: TypeTrace) {
     val figures = listOf("${fineNumber(type.raw)} → ${fineNumber(type.dealt)}") + cuts(type)
-    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(Abyss).padding(horizontal = 10.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(Abyss).padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
         Box(Modifier.size(8.dp).clip(CircleShape).background(damageTint(type.type)))
         Text(ui(type.type.key()), color = Parchment, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
         Text(figures.joinToString(" · "), color = Muted, style = MaterialTheme.typography.labelMedium)
@@ -163,9 +181,14 @@ private fun cuts(type: TypeTrace): List<String> = listOfNotNull(
 /** «Полный расчёт ▾»: the formula, the dice and the sides, folded until asked for. */
 @Composable private fun FullToggle(open: Boolean, onClick: () -> Unit) {
     val shape = RoundedCornerShape(8.dp)
-    Text(ui(if (open) "trace.full.hide" else "trace.full.show") + if (open) " ▴" else " ▾", color = Gold, style = MaterialTheme.typography.labelLarge,
-        fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center,
-        modifier = Modifier.fillMaxWidth().clip(shape).border(1.dp, Bronze, shape).clickable(onClick = onClick).padding(vertical = 9.dp))
+    Text(
+        ui(if (open) "trace.full.hide" else "trace.full.show") + if (open) " ▴" else " ▾",
+        color = Gold,
+        style = MaterialTheme.typography.labelLarge,
+        fontWeight = FontWeight.SemiBold,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth().clip(shape).border(1.dp, Bronze, shape).clickable(onClick = onClick).padding(vertical = 9.dp),
+    )
 }
 
 // ==================== A blow ====================
@@ -173,23 +196,27 @@ private fun cuts(type: TypeTrace): List<String> = listOfNotNull(
 private fun LazyListScope.hitItems(trace: HitTrace, explainer: TraceExplainer, s: ForgeState) {
     if (trace.factors.isNotEmpty()) item { Chain(trace.factors, trace.attacker, trace.target, trace.origin, explainer, s) }
     if (trace.rolls.isNotEmpty()) item { Rolls(trace.rolls) }
-    if (trace.types.isNotEmpty()) item {
-        Section(ui("trace.section.types")) {
-            trace.types.forEach { type ->
-                Line(ui(type.type.key()), "${fineNumber(type.base)} → ${fineNumber(type.raw)} → ${fineNumber(type.dealt)}")
-                cuts(type).takeIf { it.isNotEmpty() }?.let { Note(it.joinToString(" · ")) }
+    if (trace.types.isNotEmpty()) {
+        item {
+            Section(ui("trace.section.types")) {
+                trace.types.forEach { type ->
+                    Line(ui(type.type.key()), "${fineNumber(type.base)} → ${fineNumber(type.raw)} → ${fineNumber(type.dealt)}")
+                    cuts(type).takeIf { it.isNotEmpty() }?.let { Note(it.joinToString(" · ")) }
+                }
             }
         }
     }
-    trace.landing?.let { landing -> item {
-        Section(ui("trace.section.landing")) {
-            listOf("barrier" to landing.barrier, "shield" to landing.shield, "mana" to landing.mana, "delayed" to landing.delayed, "life" to landing.life)
-                .filter { it.second > 0.05 }.forEach { (k, v) -> Line(ui("trace.land.$k"), fineNumber(v)) }
-            listOf("leech" to landing.leech, "on_hit" to landing.onHit, "recoup" to landing.recoup)
-                .filter { it.second > 0.05 }.forEach { (k, v) -> Line(ui("trace.land.$k"), "+${fineNumber(v)}", Vital) }
-            if (landing.culled) Line(ui("trace.land.culled"), "✓", LifeRed)
+    trace.landing?.let { landing ->
+        item {
+            Section(ui("trace.section.landing")) {
+                listOf("barrier" to landing.barrier, "shield" to landing.shield, "mana" to landing.mana, "delayed" to landing.delayed, "life" to landing.life)
+                    .filter { it.second > 0.05 }.forEach { (k, v) -> Line(ui("trace.land.$k"), fineNumber(v)) }
+                listOf("leech" to landing.leech, "on_hit" to landing.onHit, "recoup" to landing.recoup)
+                    .filter { it.second > 0.05 }.forEach { (k, v) -> Line(ui("trace.land.$k"), "+${fineNumber(v)}", Vital) }
+                if (landing.culled) Line(ui("trace.land.culled"), "✓", LifeRed)
+            }
         }
-    } }
+    }
     item { Sides(trace.attacker, trace.target, trace.origin, explainer, s, trace.factors) }
 }
 
@@ -230,12 +257,12 @@ private fun LazyListScope.noteItems(trace: NoteTrace, explainer: TraceExplainer,
     item { States(listOf(trace.actor), explainer) }
 }
 
-
 // ==================== The chain of the formula ====================
 
 /** The formula as chips; the one tapped lays out every stat it reads, of the striker and of the target, by source. */
 @OptIn(ExperimentalLayoutApi::class)
-@Composable private fun Chain(factors: List<FactorTrace>, attacker: FighterShot, target: FighterShot, origin: TraceOrigin, explainer: TraceExplainer, s: ForgeState) {
+@Composable
+private fun Chain(factors: List<FactorTrace>, attacker: FighterShot, target: FighterShot, origin: TraceOrigin, explainer: TraceExplainer, s: ForgeState) {
     var chosen by remember(factors) { mutableStateOf(factors.firstOrNull { it.key == FactorKey.CRIT } ?: factors.first()) }
     Section(ui("trace.section.formula")) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -256,7 +283,10 @@ private fun LazyListScope.noteItems(trace: NoteTrace, explainer: TraceExplainer,
 
 @Composable private fun Chip(f: FactorTrace, on: Boolean, onClick: () -> Unit) {
     val shape = RoundedCornerShape(6.dp)
-    val value = when (f.key) { FactorKey.BASE, FactorKey.TOTAL -> fineNumber(f.value); else -> factor(f.value) }
+    val value = when (f.key) {
+        FactorKey.BASE, FactorKey.TOTAL -> fineNumber(f.value)
+        else -> factor(f.value)
+    }
     Column(Modifier.clip(shape).background(PanelRaised).border(1.dp, if (on) Gold else Bronze, shape).clickable(onClick = onClick).padding(horizontal = 6.dp, vertical = 2.dp)) {
         Text(value, color = if (f.key == FactorKey.TOTAL) GoldBright else Parchment, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
         Text(ui("trace.factor.${f.key.name}"), color = Muted, style = MaterialTheme.typography.labelSmall)
@@ -270,8 +300,11 @@ private fun sideLabel(shot: FighterShot, attacker: FighterShot): String = if (sh
 @Composable private fun Rolls(rolls: List<RollTrace>) = Section(ui("trace.section.rolls")) {
     rolls.forEach { roll ->
         val title = ui("trace.roll.${roll.key.name}") + (roll.ailment?.let { " · ${ui(it.key())}" } ?: "")
-        Line(title, ui("trace.roll.value", pct(roll.chance), String.format(Locale.ROOT, "%.2f", roll.rolled)) + if (roll.success) " ✓" else " ✗",
-            if (roll.success) Vital else Muted)
+        Line(
+            title,
+            ui("trace.roll.value", pct(roll.chance), String.format(Locale.ROOT, "%.2f", roll.rolled)) + if (roll.success) " ✓" else " ✗",
+            if (roll.success) Vital else Muted,
+        )
     }
 }
 
@@ -300,7 +333,10 @@ private val TARGET_STATS = listOf("STOCK_HEALTH", "STOCK_ENERGY_SHIELD", "STOCK_
 
 @Composable private fun Stats(shot: FighterShot, stats: List<String>, origin: TraceOrigin, explainer: TraceExplainer) {
     val shown = stats.filter { (shot.stats[it] ?: 0.0) != 0.0 }
-    if (shown.isEmpty()) { Note(ui("trace.factor.no_stats")); return }
+    if (shown.isEmpty()) {
+        Note(ui("trace.factor.no_stats"))
+        return
+    }
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) { shown.forEach { stat -> StatBlock(explainer.stat(shot, stat, origin), null, collapsed = true) } }
 }
 
@@ -326,8 +362,12 @@ private val TARGET_STATS = listOf("STOCK_HEALTH", "STOCK_ENERGY_SHIELD", "STOCK_
     var open by remember(trace.stat) { mutableStateOf(!collapsed) }
     Column(Modifier.fillMaxWidth().clickable { open = !open }.padding(vertical = 3.dp)) {
         Row {
-            Text((if (open) "▾ " else "▸ ") + listOfNotNull(side, trace.title).joinToString(" · "), color = Parchment,
-                style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            Text(
+                (if (open) "▾ " else "▸ ") + listOfNotNull(side, trace.title).joinToString(" · "),
+                color = Parchment,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f),
+            )
             Text(trace.total, color = GoldBright, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
         }
         if (open) {
@@ -349,8 +389,10 @@ private val TARGET_STATS = listOf("STOCK_HEALTH", "STOCK_ENERGY_SHIELD", "STOCK_
 
 @Composable private fun Section(title: String, content: @Composable ColumnScope.() -> Unit) {
     val shape = RoundedCornerShape(10.dp)
-    Column(Modifier.fillMaxWidth().clip(shape).background(PanelRaised).border(1.dp, Bronze, shape).padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(3.dp)) {
+    Column(
+        Modifier.fillMaxWidth().clip(shape).background(PanelRaised).border(1.dp, Bronze, shape).padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(3.dp),
+    ) {
         Text(title.uppercase(), color = Gold, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
         content()
     }

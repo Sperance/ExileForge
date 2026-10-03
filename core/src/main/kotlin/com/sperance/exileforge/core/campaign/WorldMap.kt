@@ -42,11 +42,15 @@ class WorldMap(val campaign: CampaignFile, private val world: WorldGraph, progre
     /** Links between shown tokens: walked where both are passed, ahead from a passed one to one still open. */
     val roads: List<WorldRoad> = tokens.flatMap { to ->
         to.zone.from.mapNotNull(byCode::get).map { from ->
-            WorldRoad(from, to, when {
-                from.state != TokenState.PASSED -> RoadState.UNTRODDEN
-                to.state == TokenState.PASSED -> RoadState.WALKED
-                else -> RoadState.AHEAD
-            })
+            WorldRoad(
+                from,
+                to,
+                when {
+                    from.state != TokenState.PASSED -> RoadState.UNTRODDEN
+                    to.state == TokenState.PASSED -> RoadState.WALKED
+                    else -> RoadState.AHEAD
+                },
+            )
         }
     }
 

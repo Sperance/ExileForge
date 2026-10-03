@@ -24,12 +24,12 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.roll.AbyssHoardView
+import com.sperance.exileforge.ui.components.FirstVisit
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeOutlinedButton
 import com.sperance.exileforge.ui.components.ForgeTextButton
-import com.sperance.exileforge.ui.components.MutedText
-import com.sperance.exileforge.ui.components.FirstVisit
 import com.sperance.exileforge.ui.components.Guide
+import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
 
@@ -42,15 +42,21 @@ import com.sperance.exileforge.ui.theme.*
  */
 @Composable internal fun AbyssSheet(s: ForgeState, hud: RunHud, view: AbyssView, onCommand: (RunCommand) -> Unit) {
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Ink.copy(alpha = .85f), Ink))), contentAlignment = Alignment.BottomCenter) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(12.dp).glow(AbyssGlow, radius = 14.dp, shape = RoundedCornerShape(12.dp))
-            .background(Panel.copy(alpha = .97f), RoundedCornerShape(12.dp)).border(1.dp, AbyssGlow.copy(alpha = .7f), RoundedCornerShape(12.dp))
-            .padding(16.dp).heightIn(max = 560.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(
+            Modifier.fillMaxWidth().navigationBarsPadding().padding(12.dp).glow(AbyssGlow, radius = 14.dp, shape = RoundedCornerShape(12.dp))
+                .background(Panel.copy(alpha = .97f), RoundedCornerShape(12.dp)).border(1.dp, AbyssGlow.copy(alpha = .7f), RoundedCornerShape(12.dp))
+                .padding(16.dp).heightIn(max = 560.dp).verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 FirstVisit(Guide.ABYSS)
                 Icon(ForgeGlyphs.Rift, null, tint = AbyssGlow, modifier = Modifier.size(28.dp))
                 Text(ui("abyss.title"), color = AbyssGlow, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-                Text(if (view.open) ui("abyss.progress", view.cleared, view.depth) else ui("abyss.depths", view.depth),
-                    color = Parchment, style = MaterialTheme.typography.labelMedium)
+                Text(
+                    if (view.open) ui("abyss.progress", view.cleared, view.depth) else ui("abyss.depths", view.depth),
+                    color = Parchment,
+                    style = MaterialTheme.typography.labelMedium,
+                )
             }
             val hoard = view.hoard
             // Between depths (2.82.0): the hero as the last wave left them, and a draught before the next.
@@ -60,28 +66,44 @@ import com.sperance.exileforge.ui.theme.*
             }
             when {
                 hoard != null -> {
-                    Text(ui(if (view.fallen) "abyss.fallen" else "abyss.taken"), color = if (view.fallen) LifeRed else GoldBright,
-                        style = MaterialTheme.typography.titleMedium)
-                    if (view.hoardAwaiting) Receiving()
-                    else if (view.fallen && hoard.items.isEmpty() && hoard.equipment.isEmpty() && hoard.experience <= 0) MutedText(ui("abyss.burned"))
-                    else RewardLines(s, hoard)
+                    Text(
+                        ui(if (view.fallen) "abyss.fallen" else "abyss.taken"),
+                        color = if (view.fallen) LifeRed else GoldBright,
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    if (view.hoardAwaiting) {
+                        Receiving()
+                    } else if (view.fallen && hoard.items.isEmpty() && hoard.equipment.isEmpty() && hoard.experience <= 0) {
+                        MutedText(ui("abyss.burned"))
+                    } else {
+                        RewardLines(s, hoard)
+                    }
                 }
+
                 !view.open -> {
                     MutedText(ui("abyss.intro"))
                     view.depths.firstOrNull()?.let { Wave(1, it) }
                     view.depths.getOrNull(view.depth - 1)?.let { Hoard(ui("abyss.hoard_bottom", view.depth), it.hoard) }
                 }
+
                 else -> {
                     view.current?.let { Hoard(ui("abyss.hoard_now", view.cleared), it.hoard) }
                     val next = view.next
                     if (next != null) {
                         Wave(view.cleared + 1, next)
                         Hoard(ui("abyss.hoard_next", view.cleared + 1), next.hoard)
-                    } else Text(ui("abyss.bottom"), color = AbyssGlow, style = MaterialTheme.typography.bodyMedium)
+                    } else {
+                        Text(ui("abyss.bottom"), color = AbyssGlow, style = MaterialTheme.typography.bodyMedium)
+                    }
                 }
             }
-            if (hoard == null) Text(ui("abyss.burns"), color = LifeRed.copy(alpha = .85f),
-                style = MaterialTheme.typography.bodySmall)
+            if (hoard == null) {
+                Text(
+                    ui("abyss.burns"),
+                    color = LifeRed.copy(alpha = .85f),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
             Actions(view, onCommand)
         }
     }
@@ -98,6 +120,7 @@ import com.sperance.exileforge.ui.theme.*
     }
     when {
         view.hoard != null -> ForgeButton(onClick = { onCommand(RunCommand.StepOff) }, modifier = Modifier.fillMaxWidth()) { Text(ui("abyss.leave")) }
+
         !view.open -> {
             ForgeButton(onClick = { onCommand(RunCommand.Descend) }, modifier = Modifier.fillMaxWidth(), colors = deep) {
                 Icon(ForgeGlyphs.Rift, null, modifier = Modifier.size(18.dp))
@@ -106,13 +129,17 @@ import com.sperance.exileforge.ui.theme.*
             }
             away()
         }
+
         view.fallen -> away()
+
         else -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ForgeOutlinedButton(enabled = view.cleared > 0, onClick = { onCommand(RunCommand.TakeHoard) }, modifier = Modifier.weight(1f)) {
                 Text(ui("abyss.take"))
             }
-            if (view.next != null) ForgeButton(onClick = { onCommand(RunCommand.Descend) }, modifier = Modifier.weight(1f), colors = deep) {
-                Text(ui("abyss.deeper"))
+            if (view.next != null) {
+                ForgeButton(onClick = { onCommand(RunCommand.Descend) }, modifier = Modifier.weight(1f), colors = deep) {
+                    Text(ui("abyss.deeper"))
+                }
             }
         }
     }
@@ -120,19 +147,30 @@ import com.sperance.exileforge.ui.theme.*
 
 /** A depth's wave: how many, how many magic and rare, and the leader that rises with it. */
 @Composable private fun Wave(depth: Int, floor: AbyssDepth) {
-    Column(Modifier.fillMaxWidth().background(Abyss, RoundedCornerShape(8.dp)).border(1.dp, Bronze, RoundedCornerShape(8.dp)).padding(10.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(
+        Modifier.fillMaxWidth().background(Abyss, RoundedCornerShape(8.dp)).border(1.dp, Bronze, RoundedCornerShape(8.dp)).padding(10.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
         Text(ui("abyss.depth", depth, floor.level), color = GoldBright, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
         Text(ui("abyss.wave", span(floor.count), number(floor.magic), number(floor.rare)), color = Parchment, style = MaterialTheme.typography.bodySmall)
-        floor.leader?.let { Text(ui("abyss.leader", monsterTitle(it)), color = rarityTint(MonsterRarity.UNIQUE),
-            style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold) }
+        floor.leader?.let {
+            Text(
+                ui("abyss.leader", monsterTitle(it)),
+                color = rarityTint(MonsterRarity.UNIQUE),
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
     }
 }
 
 /** A hoard as it stands at a depth: the items of the Abyss and how many rare, the orbs, a unique's chance, the experience. */
 @Composable private fun Hoard(title: String, hoard: AbyssHoardView) {
-    Column(Modifier.fillMaxWidth().background(AbyssGlow.copy(alpha = .06f), RoundedCornerShape(8.dp)).border(1.dp, AbyssGlow.copy(alpha = .35f), RoundedCornerShape(8.dp))
-        .padding(10.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+    Column(
+        Modifier.fillMaxWidth().background(AbyssGlow.copy(alpha = .06f), RoundedCornerShape(8.dp)).border(1.dp, AbyssGlow.copy(alpha = .35f), RoundedCornerShape(8.dp))
+            .padding(10.dp),
+        verticalArrangement = Arrangement.spacedBy(3.dp),
+    ) {
         Text(title, color = AbyssGlow, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
         Text(ui("abyss.items", span(hoard.items), number(hoard.rare)), color = Parchment, style = MaterialTheme.typography.bodySmall)
         Text(ui("abyss.orbs", span(hoard.orbs)), color = Parchment, style = MaterialTheme.typography.bodySmall)

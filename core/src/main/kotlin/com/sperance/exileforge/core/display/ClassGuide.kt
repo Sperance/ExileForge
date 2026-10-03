@@ -65,10 +65,16 @@ class ClassRegions(private val index: ContentIndex) {
     private val owner: Map<String, String> by lazy {
         val owner = HashMap<String, String>()
         val queue = ArrayDeque<String>()
-        index.tree.byCode.values.filter { it.type == SkillNodeType.START }.forEach { owner[it.code] = it.code; queue += it.code }
+        index.tree.byCode.values.filter { it.type == SkillNodeType.START }.forEach {
+            owner[it.code] = it.code
+            queue += it.code
+        }
         while (queue.isNotEmpty()) {
             val code = queue.removeFirst()
-            index.tree.neighbours(code).filter { it !in owner }.forEach { owner[it] = owner.getValue(code); queue += it }
+            index.tree.neighbours(code).filter { it !in owner }.forEach {
+                owner[it] = owner.getValue(code)
+                queue += it
+            }
         }
         owner
     }

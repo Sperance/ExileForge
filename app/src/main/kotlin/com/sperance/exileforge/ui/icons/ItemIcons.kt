@@ -27,12 +27,10 @@ import com.sperance.exileforge.ui.theme.Gold
  * slot and weapon stands in. That is what was drawn before the server had any, so a hole looks
  * deliberate rather than broken.
  */
-@Composable fun ItemIcon(item: ItemView, color: Color, modifier: Modifier = Modifier, tint: Color? = null) =
-    ItemIcon(item.code, item.visualKind, color, modifier, tint)
+@Composable fun ItemIcon(item: ItemView, color: Color, modifier: Modifier = Modifier, tint: Color? = null) = ItemIcon(item.code, item.visualKind, color, modifier, tint)
 
 /** The same for a template that is not yet a copy — a reference, a shelf. */
-@Composable fun ItemIcon(template: ItemTemplate, color: Color, modifier: Modifier = Modifier, tint: Color? = null) =
-    ItemIcon(template.code, itemVisualKind(template), color, modifier, tint)
+@Composable fun ItemIcon(template: ItemTemplate, color: Color, modifier: Modifier = Modifier, tint: Color? = null) = ItemIcon(template.code, itemVisualKind(template), color, modifier, tint)
 
 /** The same by the template's code and the kind it is drawn as when the server has no outline for it. */
 @Composable fun ItemIcon(code: String, kind: ItemVisualKind, color: Color, modifier: Modifier = Modifier, tint: Color? = null) {

@@ -22,18 +22,32 @@ import com.sperance.exileforge.ui.theme.*
 /** «Эфир» panel (2.80.0): a hairline frame, a soft lift at the top and a thread of light along the top edge. */
 @Composable fun ForgePanel(modifier: Modifier = Modifier, accent: Color = Gold, content: @Composable ColumnScope.() -> Unit) {
     val shape = RoundedCornerShape(12.dp)
-    Column(modifier.fillMaxWidth().background(panelBrush(accent), shape).border(1.dp, Bronze, shape)
-        .drawBehind {
-            val edge = size.width * .18f
-            drawLine(Brush.horizontalGradient(listOf(Color.Transparent, accent.copy(alpha = .45f), Color.Transparent), edge, size.width - edge),
-                Offset(edge, .5f), Offset(size.width - edge, .5f), 1f)
-        }
-        .padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = content)
+    Column(
+        modifier.fillMaxWidth().background(panelBrush(accent), shape).border(1.dp, Bronze, shape)
+            .drawBehind {
+                val edge = size.width * .18f
+                drawLine(
+                    Brush.horizontalGradient(listOf(Color.Transparent, accent.copy(alpha = .45f), Color.Transparent), edge, size.width - edge),
+                    Offset(edge, .5f),
+                    Offset(size.width - edge, .5f),
+                    1f,
+                )
+            }
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        content = content,
+    )
 }
 
 /** Title band of a screen: sigil, engraved name, and a rule that fades into the dark; a screen with a [guide] explains itself (3.14.0). */
-@Composable fun ScreenHeader(title: String, subtitle: String? = null, icon: ImageVector? = null, accent: Color = Gold, guide: Guide? = null,
-                             action: (@Composable () -> Unit)? = null) {
+@Composable fun ScreenHeader(
+    title: String,
+    subtitle: String? = null,
+    icon: ImageVector? = null,
+    accent: Color = Gold,
+    guide: Guide? = null,
+    action: (@Composable () -> Unit)? = null,
+) {
     guide?.let { FirstVisit(it) }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -55,8 +69,10 @@ import com.sperance.exileforge.ui.theme.*
  * card does not end in a stripe, and it needs its parent `Row` to be `height(IntrinsicSize.Min)`.
  */
 @Composable fun RaritySpine(accent: Color, width: Dp = 4.dp) {
-    Box(Modifier.width(width).fillMaxHeight()
-        .background(Brush.verticalGradient(listOf(accent, accent.copy(alpha = .12f)))))
+    Box(
+        Modifier.width(width).fillMaxHeight()
+            .background(Brush.verticalGradient(listOf(accent, accent.copy(alpha = .12f)))),
+    )
 }
 
 /** A small rotated square, the marker a rolled modifier is listed under. */
@@ -64,9 +80,16 @@ import com.sperance.exileforge.ui.theme.*
     Canvas(Modifier.size(side)) {
         val w = size.width
         val h = size.height
-        drawPath(Path().apply {
-            moveTo(w / 2, 0f); lineTo(w, h / 2); lineTo(w / 2, h); lineTo(0f, h / 2); close()
-        }, accent.copy(alpha = .75f))
+        drawPath(
+            Path().apply {
+                moveTo(w / 2, 0f)
+                lineTo(w, h / 2)
+                lineTo(w / 2, h)
+                lineTo(0f, h / 2)
+                close()
+            },
+            accent.copy(alpha = .75f),
+        )
     }
 }
 
@@ -88,7 +111,10 @@ import com.sperance.exileforge.ui.theme.*
 
 /** The dark ground of every screen, with a faint ether glow from the upper corner. */
 fun Modifier.voidBackdrop(): Modifier = this.background(voidBrush()).drawBehind {
-    drawCircle(Brush.radialGradient(listOf(Gold.copy(alpha = .06f), Color.Transparent), center = Offset(size.width * .15f, 0f), radius = size.width * .9f),
-        radius = size.width * .9f, center = Offset(size.width * .15f, 0f))
+    drawCircle(
+        Brush.radialGradient(listOf(Gold.copy(alpha = .06f), Color.Transparent), center = Offset(size.width * .15f, 0f), radius = size.width * .9f),
+        radius = size.width * .9f,
+        center = Offset(size.width * .15f, 0f),
+    )
     drawRect(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .45f)), startY = size.height * .55f, endY = size.height))
 }

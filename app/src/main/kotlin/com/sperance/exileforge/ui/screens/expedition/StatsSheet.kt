@@ -1,6 +1,5 @@
 package com.sperance.exileforge.ui.screens.expedition
 
-import com.sperance.exileforge.ui.components.ForgeSheet
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.*
@@ -11,6 +10,7 @@ import com.sperance.exileforge.core.campaign.MapEffects
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.Engraved
+import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.screens.hero.StatSheet
 import com.sperance.exileforge.ui.theme.*
@@ -21,7 +21,8 @@ import com.sperance.exileforge.ui.theme.*
  * what the run was started with — each changed figure lit beside what it was.
  */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun StatsSheet(s: ForgeState, mapEffects: Map<String, Double>, onDismiss: () -> Unit) {
+@Composable
+fun StatsSheet(s: ForgeState, mapEffects: Map<String, Double>, onDismiss: () -> Unit) {
     val own = s.hero?.stats.orEmpty()
     val onMap = remember(own, mapEffects) { MapEffects.hero(own, mapEffects) }
     val shifts = remember(own, mapEffects) { MapEffects.heroShifts(own, mapEffects) }
@@ -31,7 +32,17 @@ import com.sperance.exileforge.ui.theme.*
         Column(Modifier.fillMaxWidth().fillMaxHeight(.85f).navigationBarsPadding()) {
             LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 item { Engraved(ui(if (mapTab) "expedition.stats_map" else "expedition.stats_hero")) }
-                item { MutedText(if (!mapTab) ui("expedition.stats_hero_hint") else if (changed == 0) ui("expedition.stats_map_none") else ui("expedition.stats_map_hint", changed)) }
+                item {
+                    MutedText(
+                        if (!mapTab) {
+                            ui("expedition.stats_hero_hint")
+                        } else if (changed == 0) {
+                            ui("expedition.stats_map_none")
+                        } else {
+                            ui("expedition.stats_map_hint", changed)
+                        },
+                    )
+                }
                 item { if (mapTab) StatSheet(s, onMap, before = own, shifts = shifts) else StatSheet(s, own) }
             }
             TabRow(selectedTabIndex = if (mapTab) 1 else 0, containerColor = Abyss, contentColor = Gold) {

@@ -10,29 +10,48 @@ import com.sperance.exileforge.rules.content.StatRegistry
  * nothing about how it is counted. A code the client does not know lands in [OTHER].
  */
 enum class StatGroup {
-    RESERVE, DEFENCE, RESISTANCE, ATTACK, AILMENT, ATTRIBUTE, OTHER;
+    RESERVE,
+    DEFENCE,
+    RESISTANCE,
+    ATTACK,
+    AILMENT,
+    ATTRIBUTE,
+    OTHER,
+    ;
 
     fun title(lang: Lang = uiLanguage): String = ui(lang, "enum.stat_group.$name")
 
     companion object {
-        private val reserve = setOf("STOCK_HEALTH", "STOCK_MANA", "STOCK_ENERGY_SHIELD", "STOCK_ENERGY", "STOCK_HEALTH_REGEN", "STOCK_MANA_REGEN",
-            "STOCK_ENERGY_REGEN", "STOCK_ENERGY_REGEN_PERCENT", "STOCK_HEALTH_ON_KILL", "STOCK_HEALTH_ON_HIT")
-        private val defence = setOf("STOCK_ARMOR", "STOCK_EVASION", "STOCK_BLOCK_CHANCE", "STOCK_STUN_THRESHOLD", "STOCK_SPELL_BLOCK",
+        private val reserve = setOf(
+            "STOCK_HEALTH", "STOCK_MANA", "STOCK_ENERGY_SHIELD", "STOCK_ENERGY", "STOCK_HEALTH_REGEN", "STOCK_MANA_REGEN",
+            "STOCK_ENERGY_REGEN", "STOCK_ENERGY_REGEN_PERCENT", "STOCK_HEALTH_ON_KILL", "STOCK_HEALTH_ON_HIT",
+        )
+        private val defence = setOf(
+            "STOCK_ARMOR", "STOCK_EVASION", "STOCK_BLOCK_CHANCE", "STOCK_STUN_THRESHOLD", "STOCK_SPELL_BLOCK",
             "STOCK_PHYSICAL_REDUCTION", "STOCK_AVOID_STUN", "STOCK_STUN_POOL", "STOCK_IMMUNE_ELECTROCUTE", "STOCK_DAMAGE_TAKEN", "STOCK_PHYSICAL_TAKEN", "STOCK_ELEMENTAL_TAKEN", "STOCK_CHAOS_TAKEN",
-            "STOCK_RECOVERY_RATE", "STOCK_SHIELD_RECHARGE", "STOCK_THORNS", "STOCK_REFLECT")
-        private val ailment = setOf("STOCK_IGNITE_CHANCE", "STOCK_FREEZE_CHANCE", "STOCK_STUN_BUILDUP", "STOCK_ELECTROCUTE_BUILDUP", "STOCK_SHOCK_CHANCE", "STOCK_POISON_CHANCE", "STOCK_BLEED_CHANCE",
-            "STOCK_BURNING_DAMAGE", "STOCK_POISON_DAMAGE", "STOCK_BLEED_DAMAGE", "STOCK_AILMENT_DURATION")
+            "STOCK_RECOVERY_RATE", "STOCK_SHIELD_RECHARGE", "STOCK_THORNS", "STOCK_REFLECT",
+        )
+        private val ailment = setOf(
+            "STOCK_IGNITE_CHANCE", "STOCK_FREEZE_CHANCE", "STOCK_STUN_BUILDUP", "STOCK_ELECTROCUTE_BUILDUP", "STOCK_SHOCK_CHANCE", "STOCK_POISON_CHANCE", "STOCK_BLEED_CHANCE",
+            "STOCK_BURNING_DAMAGE", "STOCK_POISON_DAMAGE", "STOCK_BLEED_DAMAGE", "STOCK_AILMENT_DURATION",
+        )
         private val attribute = setOf("STOCK_STRENGTH", "STOCK_AGILITY", "STOCK_INTELLECT", "STOCK_ALL_ATTRIBUTES")
         private val attack = setOf("STOCK_ELEMENTAL_DAMAGE", "STOCK_CAST_SPEED", "STOCK_SPELL_CRITICAL_CHANCE", "STOCK_SPELL_CRITICAL_MULTIPLIER")
 
         fun of(stat: String): StatGroup = when {
             stat in reserve -> RESERVE
+
             stat in defence -> DEFENCE
+
             stat.startsWith("STOCK_RESIST_") || stat == "STOCK_ALL_RESISTANCES" -> RESISTANCE
+
             stat in ailment || stat.startsWith("STOCK_AVOID_") || stat.endsWith("_DURATION_ON_SELF") || stat.endsWith("_DURATION") -> AILMENT
+
             stat in attribute -> ATTRIBUTE
+
             stat.startsWith("STOCK_ATTACK_") || stat.startsWith("STOCK_CRITICAL_") || stat.startsWith("STOCK_LEECH_") || stat in attack ||
                 stat.startsWith("STOCK_PENETRATE_") || stat.startsWith("STOCK_DAMAGE_VS_") -> ATTACK
+
             else -> OTHER
         }
     }
@@ -42,9 +61,8 @@ enum class StatGroup {
  * The sheet sorted into [StatGroup]s: groups in their own order, empty ones left out, and inside each the registry's order.
  * The counts of what is worn (server 1.32.0) are the powers' own reading of the sheet, not a figure of the hero: not shown.
  */
-fun groupedStats(stats: Map<String, Double>, registry: StatRegistry? = null): List<Pair<StatGroup, List<Pair<String, Double>>>> =
-    stats.entries.filterNot { it.key.startsWith(WORN) }.groupBy { StatGroup.of(it.key) }.toSortedMap()
-        .map { (group, entries) -> group to entries.sortedWith(compareBy({ registry?.order(it.key) ?: Int.MAX_VALUE }, { it.key })).map { it.key to it.value } }
+fun groupedStats(stats: Map<String, Double>, registry: StatRegistry? = null): List<Pair<StatGroup, List<Pair<String, Double>>>> = stats.entries.filterNot { it.key.startsWith(WORN) }.groupBy { StatGroup.of(it.key) }.toSortedMap()
+    .map { (group, entries) -> group to entries.sortedWith(compareBy({ registry?.order(it.key) ?: Int.MAX_VALUE }, { it.key })).map { it.key to it.value } }
 
 /** The prefix of the sheet's counts of what is worn (server 1.32.0). */
 private const val WORN = "STOCK_WORN_"

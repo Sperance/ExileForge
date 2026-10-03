@@ -39,24 +39,36 @@ import com.sperance.exileforge.ui.theme.*
     LaunchedEffect(creating) { if (creating) vm.ensureClasses() }
     Scaffold(containerColor = Ink) { padding ->
         Box(Modifier.fillMaxSize().padding(padding).imePadding()) {
-        Column(Modifier.fillMaxSize().voidBackdrop()) {
-            if (s.busy || s.reading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised) else OrnateDivider(Gold)
-            if (creating) CreatingColumn(s, vm, onBack = { creating = false }, onSignOut = vm::logout)
-            else CharacterMenu(s, onPlay = vm::enterCharacter, onDelete = { pendingDelete = it },
-                onCreate = { creating = true }, onRefresh = vm::refreshCharacters, onLogout = vm::logout)
-        }
-        // The language before the game (3.79.0): the settings are out of reach until a hero is chosen.
-        LanguageButton(s.lang, s.world.languages, Modifier.align(Alignment.TopEnd).padding(top = 6.dp, end = 6.dp), enabled = !s.busy, onLanguage = vm::language)
-        ToastHost(s, vm::dismissMessage, vm::dismissNotice, Modifier.align(Alignment.TopCenter).padding(top = 12.dp))
+            Column(Modifier.fillMaxSize().voidBackdrop()) {
+                if (s.busy || s.reading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised) else OrnateDivider(Gold)
+                if (creating) {
+                    CreatingColumn(s, vm, onBack = { creating = false }, onSignOut = vm::logout)
+                } else {
+                    CharacterMenu(
+                        s,
+                        onPlay = vm::enterCharacter,
+                        onDelete = { pendingDelete = it },
+                        onCreate = { creating = true },
+                        onRefresh = vm::refreshCharacters,
+                        onLogout = vm::logout,
+                    )
+                }
+            }
+            // The language before the game (3.79.0): the settings are out of reach until a hero is chosen.
+            LanguageButton(s.lang, s.world.languages, Modifier.align(Alignment.TopEnd).padding(top = 6.dp, end = 6.dp), enabled = !s.busy, onLanguage = vm::language)
+            ToastHost(s, vm::dismissMessage, vm::dismissNotice, Modifier.align(Alignment.TopCenter).padding(top = 12.dp))
         }
     }
     pendingDelete?.let { doomed ->
         ConfirmSheet(
-            title = ui("chars.release_q"), subtitle = doomed.name, danger = true,
+            title = ui("chars.release_q"),
+            subtitle = doomed.name,
+            danger = true,
             icon = { Icon(ForgeGlyphs.Exile, null, tint = LifeRed, modifier = Modifier.size(40.dp)) },
             note = ui("chars.release_text"),
             confirm = ui("chars.release_do"),
-            onDismiss = { pendingDelete = null }) { vm.deleteCharacter(doomed.id) }
+            onDismiss = { pendingDelete = null },
+        ) { vm.deleteCharacter(doomed.id) }
     }
 }
 
@@ -66,35 +78,43 @@ import com.sperance.exileforge.ui.theme.*
  * What is worth checking here is which hero a tap plays and how many slots are left — not the
  * wiring behind them.
  */
-@Composable internal fun ColumnScope.CharacterMenu(s: ForgeState, onPlay: (String) -> Unit, onDelete: (HeroSummary) -> Unit,
-    onCreate: () -> Unit = {}, onRefresh: () -> Unit = {}, onLogout: () -> Unit = {}) {
+@Composable internal fun ColumnScope.CharacterMenu(
+    s: ForgeState,
+    onPlay: (String) -> Unit,
+    onDelete: (HeroSummary) -> Unit,
+    onCreate: () -> Unit = {},
+    onRefresh: () -> Unit = {},
+    onLogout: () -> Unit = {},
+) {
     // A list is refreshed by pulling it, here as everywhere else. The button that used to sit at
     // the bottom of this one said the same thing twice.
     PullToRefreshBox(isRefreshing = s.refreshing(Reads.CHARACTERS), onRefresh = onRefresh, modifier = Modifier.weight(1f)) {
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item {
-            // How many heroes an account holds is the rules' to say; until they are read, the client's own figure stands in.
-            ScreenHeader(ui("chars.title"),
-                ui("chars.slots", s.characterSlotsLeft, s.index?.rules?.maxCharacters ?: MAX_CHARACTERS),
-                ForgeGlyphs.Exile)
-        }
-        items(s.account.characters, key = { it.id }) { character ->
-            CharacterCard(s, character, onPlay = { onPlay(character.id) }, onDelete = { onDelete(character) })
-        }
-        item {
-            ForgeButton(enabled = !s.busy && s.characterSlotsLeft > 0, onClick = onCreate, modifier = Modifier.fillMaxWidth()) {
-                Text(ui("editor.create_character"))
+        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            item {
+                // How many heroes an account holds is the rules' to say; until they are read, the client's own figure stands in.
+                ScreenHeader(
+                    ui("chars.title"),
+                    ui("chars.slots", s.characterSlotsLeft, s.index?.rules?.maxCharacters ?: MAX_CHARACTERS),
+                    ForgeGlyphs.Exile,
+                )
             }
-            if (s.characterSlotsLeft == 0) MutedText(ui("chars.slots_full"))
-        }
-        item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(s.accountTitle, color = Muted, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
-                BugAction()
-                ForgeTextButton(enabled = !s.busy, onClick = onLogout) { Text(ui("chars.sign_out")) }
+            items(s.account.characters, key = { it.id }) { character ->
+                CharacterCard(s, character, onPlay = { onPlay(character.id) }, onDelete = { onDelete(character) })
+            }
+            item {
+                ForgeButton(enabled = !s.busy && s.characterSlotsLeft > 0, onClick = onCreate, modifier = Modifier.fillMaxWidth()) {
+                    Text(ui("editor.create_character"))
+                }
+                if (s.characterSlotsLeft == 0) MutedText(ui("chars.slots_full"))
+            }
+            item {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text(s.accountTitle, color = Muted, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
+                    BugAction()
+                    ForgeTextButton(enabled = !s.busy, onClick = onLogout) { Text(ui("chars.sign_out")) }
+                }
             }
         }
-    }
     }
 }
 
@@ -139,31 +159,52 @@ import com.sperance.exileforge.ui.theme.*
  * (3.0.0), and the one picked is the play state's draft, so it survives the form being redrawn.
  * Each is shown by the carousel (3.13.0), whole, between the name and the button that seals the choice.
  */
-@Composable private fun CreateCharacterPanel(s: ForgeState, vm: ForgeViewModel, canGoBack: Boolean,
-    onBack: () -> Unit, onSignOut: () -> Unit) {
+@Composable private fun CreateCharacterPanel(
+    s: ForgeState,
+    vm: ForgeViewModel,
+    canGoBack: Boolean,
+    onBack: () -> Unit,
+    onSignOut: () -> Unit,
+) {
     var name by rememberSaveable { mutableStateOf("") }
     val index = s.index
     val classes = index?.classes?.classes.orEmpty()
     val heroClass = s.play.draftClass.takeIf { code -> classes.any { it.code == code } } ?: classes.firstOrNull()?.code.orEmpty()
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         ForgePanel {
-            OutlinedTextField(name, { name = it.take(s.inputs.heroName) }, enabled = !s.busy, label = { Text(ui("common.name")) },
+            OutlinedTextField(
+                name,
+                { name = it.take(s.inputs.heroName) },
+                enabled = !s.busy,
+                label = { Text(ui("common.name")) },
                 supportingText = { Text(ui("chars.name_unique") + " · ${name.length}/${s.inputs.heroName}") },
-                singleLine = true, modifier = Modifier.fillMaxWidth())
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
             // The classes arrive with the content, which is read after the form opens: an empty
             // list is only an error once that read has finished (the app bar shows its progress).
-            if (classes.isEmpty() && index != null && Reads.CONTENT !in s.loading) Text(ui("editor.no_classes"),
-                color = MaterialTheme.colorScheme.error)
+            if (classes.isEmpty() && index != null && Reads.CONTENT !in s.loading) {
+                Text(
+                    ui("editor.no_classes"),
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
         }
-        if (index != null && heroClass.isNotBlank())
+        if (index != null && heroClass.isNotBlank()) {
             ClassCarousel(index, classes.map { it.code }, heroClass, s.world.portraits, enabled = !s.busy, onChoose = vm::draftClass)
+        }
         ForgePanel {
-            ForgeButton(enabled = !s.busy && name.isNotBlank() && heroClass.isNotBlank(),
-                onClick = { vm.createCharacter(name, heroClass) }, modifier = Modifier.fillMaxWidth()) {
+            ForgeButton(
+                enabled = !s.busy && name.isNotBlank() && heroClass.isNotBlank(),
+                onClick = { vm.createCharacter(name, heroClass) },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
                 Text(ui("chars.create"))
             }
-            if (canGoBack) ForgeTextButton(enabled = !s.busy, onClick = onBack, modifier = Modifier.fillMaxWidth()) {
-                Text(ui("chars.back"))
+            if (canGoBack) {
+                ForgeTextButton(enabled = !s.busy, onClick = onBack, modifier = Modifier.fillMaxWidth()) {
+                    Text(ui("chars.back"))
+                }
             }
             // An account with no heroes has no list to go back to, and a device registration is
             // silent — so without this the first screen a new player sees is also the only one, with

@@ -1,11 +1,11 @@
 package com.sperance.exileforge.core.i18n
 
 import com.sperance.exileforge.core.contract.WireJson
+import com.sperance.exileforge.rules.text.LocaleKey
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
-import com.sperance.exileforge.rules.text.LocaleKey
 
 /**
  * One language in the server's manifest.
@@ -36,6 +36,7 @@ class LocaleBundle(val language: String = "", val hash: String = "", private val
     val isEmpty: Boolean get() = strings.isEmpty()
     fun contains(key: String): Boolean = key in strings
     operator fun get(key: String): String = strings[key] ?: key
+
     /** The string, or null when the dictionary has none: what the rules' text renderer asks. */
     fun string(key: String): String? = strings[key]
 
@@ -46,9 +47,7 @@ class LocaleBundle(val language: String = "", val hash: String = "", private val
      * arguments — an orb's message names the item by `equipment.<code>.name` rather than by text.
      * An argument that is not a key comes back unchanged, so a plain number stays a number.
      */
-    fun format(key: String, args: List<String>): String =
-        args.foldIndexed(get(key)) { index, text, argument -> text.replace("{$index}", get(argument)) }
-
+    fun format(key: String, args: List<String>): String = args.foldIndexed(get(key)) { index, text, argument -> text.replace("{$index}", get(argument)) }
 
     companion object {
         /**
@@ -58,8 +57,11 @@ class LocaleBundle(val language: String = "", val hash: String = "", private val
          * on the next start: the manifest's [hash] is what decides whether it is still current.
          */
         fun parse(language: String, hash: String, document: String): LocaleBundle = LocaleBundle(
-            language, hash, WireJson.parseToJsonElement(document).jsonObject
-                .mapValues { (_, value) -> (value as? JsonPrimitive)?.contentOrNull.orEmpty() })
+            language,
+            hash,
+            WireJson.parseToJsonElement(document).jsonObject
+                .mapValues { (_, value) -> (value as? JsonPrimitive)?.contentOrNull.orEmpty() },
+        )
     }
 }
 

@@ -76,7 +76,10 @@ object SkillText {
     fun monster(skill: MonsterSkill): List<String> = buildList {
         skill.hit?.let { addAll(hit(it, 1)) }
         skill.buff?.let { addAll(buff(it, 1)) }
-        skill.curse?.let { curse -> add(ui("skill.line.curse", fineNumber(curse.duration), ui("skill.line.foes", 1))); addAll(stats(curse.stats, 1)) }
+        skill.curse?.let { curse ->
+            add(ui("skill.line.curse", fineNumber(curse.duration), ui("skill.line.foes", 1)))
+            addAll(stats(curse.stats, 1))
+        }
         skill.heal?.let { addAll(heal(it, 1)) }
         if (skill.manaBurn > 0) add(ui("skill.line.mana_burn", number(skill.manaBurn)))
     }
@@ -87,8 +90,13 @@ object SkillText {
         if (hit.targets != 1) add(targets(hit.targets))
         if (hit.hits > 1) add(ui("skill.line.hits", hit.hits))
         hit.convert?.let { convert ->
-            add(if (hit.element == "RANDOM") ui("skill.line.convert_random", number(convert.at(level)))
-                else ui("skill.line.convert", number(convert.at(level)), element(hit.element.orEmpty())))
+            add(
+                if (hit.element == "RANDOM") {
+                    ui("skill.line.convert_random", number(convert.at(level)))
+                } else {
+                    ui("skill.line.convert", number(convert.at(level)), element(hit.element.orEmpty()))
+                },
+            )
         }
         hit.finisher?.let { add(ui("skill.line.finisher", number(it.at(level)))) }
         hit.stun?.let { add(ui("skill.line.stun", number(it.at(level)))) }

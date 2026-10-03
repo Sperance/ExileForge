@@ -68,6 +68,7 @@ object PortraitSvg {
             when (element.tagName) {
                 "linearGradient" -> gradients[element.getAttribute("id")] =
                     PortraitPaint.Linear(element.number("x1"), element.number("y1"), element.number("x2"), element.number("y2"), stops)
+
                 "radialGradient" -> gradients[element.getAttribute("id")] =
                     PortraitPaint.Radial(element.number("cx"), element.number("cy"), element.number("r"), stops)
             }
@@ -77,9 +78,17 @@ object PortraitSvg {
             val style = inherited.under(element)
             when (element.tagName) {
                 "g", "svg" -> element.children().forEach { walk(it, style) }
+
                 "path", "circle", "ellipse", "rect" -> outline(element)?.let { d ->
-                    shapes += PortraitShape(d, paint(style.fill, gradients), style.opacity * style.fillOpacity,
-                        paint(style.stroke, gradients), style.opacity * style.strokeOpacity, style.strokeWidth, style.round)
+                    shapes += PortraitShape(
+                        d,
+                        paint(style.fill, gradients),
+                        style.opacity * style.fillOpacity,
+                        paint(style.stroke, gradients),
+                        style.opacity * style.strokeOpacity,
+                        style.strokeWidth,
+                        style.round,
+                    )
                 }
             }
         }
@@ -88,13 +97,22 @@ object PortraitSvg {
     }
 
     private data class Style(
-        val fill: String = "#000000", val stroke: String = "none", val opacity: Float = 1f, val fillOpacity: Float = 1f,
-        val strokeOpacity: Float = 1f, val strokeWidth: Float = 1f, val round: Boolean = false,
+        val fill: String = "#000000",
+        val stroke: String = "none",
+        val opacity: Float = 1f,
+        val fillOpacity: Float = 1f,
+        val strokeOpacity: Float = 1f,
+        val strokeWidth: Float = 1f,
+        val round: Boolean = false,
     ) {
         fun under(e: Element) = Style(
-            fill = e.attr("fill") ?: fill, stroke = e.attr("stroke") ?: stroke, opacity = opacity * e.number("opacity", 1f),
-            fillOpacity = e.attr("fill-opacity")?.toFloat() ?: fillOpacity, strokeOpacity = e.attr("stroke-opacity")?.toFloat() ?: strokeOpacity,
-            strokeWidth = e.attr("stroke-width")?.toFloat() ?: strokeWidth, round = e.attr("stroke-linecap")?.let { it == "round" } ?: round,
+            fill = e.attr("fill") ?: fill,
+            stroke = e.attr("stroke") ?: stroke,
+            opacity = opacity * e.number("opacity", 1f),
+            fillOpacity = e.attr("fill-opacity")?.toFloat() ?: fillOpacity,
+            strokeOpacity = e.attr("stroke-opacity")?.toFloat() ?: strokeOpacity,
+            strokeWidth = e.attr("stroke-width")?.toFloat() ?: strokeWidth,
+            round = e.attr("stroke-linecap")?.let { it == "round" } ?: round,
         )
     }
 
@@ -107,8 +125,7 @@ object PortraitSvg {
         else -> null
     }
 
-    private fun ellipse(cx: Float, cy: Float, rx: Float, ry: Float) =
-        "M${cx - rx} $cy A$rx $ry 0 1 0 ${cx + rx} $cy A$rx $ry 0 1 0 ${cx - rx} $cy Z"
+    private fun ellipse(cx: Float, cy: Float, rx: Float, ry: Float) = "M${cx - rx} $cy A$rx $ry 0 1 0 ${cx + rx} $cy A$rx $ry 0 1 0 ${cx - rx} $cy Z"
 
     private fun paint(value: String, gradients: Map<String, PortraitPaint>): PortraitPaint? = when {
         value.startsWith("url(#") -> gradients[value.removePrefix("url(#").removeSuffix(")")]
@@ -140,6 +157,7 @@ object PortraitKey {
     fun characterClass(code: String) = "$CLASS.$code"
     fun form(form: String) = "$FORM.$form"
     fun monster(code: String) = "$MONSTER.$code"
+
     /** Where the file is served: `portraits/class/WITCH.svg`. */
     fun path(key: String) = "portraits/${key.substringBefore('.')}/${key.substringAfter('.')}.svg"
 }
@@ -157,5 +175,4 @@ class PortraitBundle(val portraits: Map<String, Portrait> = emptyMap()) {
 fun classPortrait(code: String?): Portrait? = code?.takeIf(String::isNotBlank)?.let { serverPortraits[PortraitKey.characterClass(it)] }
 
 /** A monster's own portrait first, then its form's, then null for the client's own drawing. */
-fun monsterPortrait(code: String, form: String): Portrait? =
-    serverPortraits[PortraitKey.monster(code)] ?: serverPortraits[PortraitKey.form(form)]
+fun monsterPortrait(code: String, form: String): Portrait? = serverPortraits[PortraitKey.monster(code)] ?: serverPortraits[PortraitKey.form(form)]

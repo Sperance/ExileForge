@@ -1,6 +1,5 @@
 package com.sperance.exileforge.ui.screens.server
 
-import com.sperance.exileforge.BuildConfig
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -13,17 +12,17 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.AdminPanelSettings
-import androidx.compose.material.icons.outlined.CardGiftcard
-import androidx.compose.material.icons.outlined.Group
 import androidx.compose.material.icons.outlined.BugReport
-import androidx.compose.material.icons.outlined.Mail
-import androidx.compose.material.icons.outlined.Science
+import androidx.compose.material.icons.outlined.CardGiftcard
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Dns
+import androidx.compose.material.icons.outlined.Group
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Lightbulb
+import androidx.compose.material.icons.outlined.Mail
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Science
 import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -39,6 +38,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sperance.exileforge.BuildConfig
 import com.sperance.exileforge.core.contract.SERVER_BRANCH
 import com.sperance.exileforge.core.contract.SERVER_COMMIT
 import com.sperance.exileforge.core.contract.SERVER_VERSION
@@ -56,7 +56,7 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
 
 /** The screens behind the account's rows: each a page of its own, «back» leading to the list. */
-private enum class AccountPage(val title: String) { SIGN_IN("account.signin_section") }
+private enum class AccountPage(val title: String) { SIGN_IN("account.signin_section"), }
 
 /**
  * «Врата мира» (variant A, «Списки и плитки»): who is playing, then the hero's and the account's rows. Since 3.77.0 it
@@ -66,18 +66,28 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
     var page by rememberSaveable { mutableStateOf<AccountPage?>(null) }
     var promoOpen by remember { mutableStateOf(false) }
     val open = page
-    if (open == null) AccountHome(s, vm, onPage = { page = it }, onPromo = { promoOpen = true })
-    else Column(Modifier.fillMaxSize()) {
-        BackRow(ui("account.title")) { page = null }
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Text(ui(open.title), color = GoldBright, style = MaterialTheme.typography.titleLarge)
-            when (open) {
-                AccountPage.SIGN_IN -> SignInPage(s, vm)
+    if (open == null) {
+        AccountHome(s, vm, onPage = { page = it }, onPromo = { promoOpen = true })
+    } else {
+        Column(Modifier.fillMaxSize()) {
+            BackRow(ui("account.title")) { page = null }
+            Column(
+                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                Text(ui(open.title), color = GoldBright, style = MaterialTheme.typography.titleLarge)
+                when (open) {
+                    AccountPage.SIGN_IN -> SignInPage(s, vm)
+                }
             }
         }
     }
-    if (promoOpen) PromoCodeDialog(s, onDismiss = { promoOpen = false }) { code -> promoOpen = false; vm.redeem(code) }
+    if (promoOpen) {
+        PromoCodeDialog(s, onDismiss = { promoOpen = false }) { code ->
+            promoOpen = false
+            vm.redeem(code)
+        }
+    }
 }
 
 @Composable private fun AccountHome(s: ForgeState, vm: ForgeViewModel, onPage: (AccountPage) -> Unit, onPromo: () -> Unit) {
@@ -90,8 +100,11 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
             AccountRow(Icons.Outlined.SwapHoriz, ui("account.change_character"), enabled = !s.busy, onClick = vm::leaveGame)
             // A reward is paid to a hero, not to an account, so the dialog names the hero being played.
             AccountRow(Icons.Outlined.CardGiftcard, ui("account.enter_promo"), enabled = !s.busy && s.play.heroId.isNotBlank(), onClick = onPromo)
-            AccountRow(Icons.Outlined.Person, ui("account.signin_section"),
-                value = if (s.account.signedIn) s.accountTitle else ui("account.signed_out")) { onPage(AccountPage.SIGN_IN) }
+            AccountRow(
+                Icons.Outlined.Person,
+                ui("account.signin_section"),
+                value = if (s.account.signedIn) s.accountTitle else ui("account.signed_out"),
+            ) { onPage(AccountPage.SIGN_IN) }
             AccountRow(ForgeGlyphs.Sigil, ui("settings.title")) { vm.openSettings() }
         }
     }
@@ -101,14 +114,35 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
 @Composable private fun ProfileCard(s: ForgeState) {
     val shape = RoundedCornerShape(14.dp)
     val classCode = s.heroInfo?.heroClass ?: s.heroRow?.heroClass
-    Row(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Gold.copy(alpha = .16f).compositeOver(Panel), Panel)), shape)
-        .border(1.dp, PanelRaised, shape).padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Row(
+        Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Gold.copy(alpha = .16f).compositeOver(Panel), Panel)), shape)
+            .border(1.dp, PanelRaised, shape).padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
         ClassPortrait(classCode, s.world.portraits, Modifier.size(46.dp), round = true)
         Column(Modifier.weight(1f)) {
-            if (s.heroName.isNotBlank()) Text(s.heroName + ui("app.hero_level", s.heroLevel), color = GoldBright, style = MaterialTheme.typography.titleMedium,
-                maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (s.heroName.isNotBlank()) {
+                Text(
+                    s.heroName + ui("app.hero_level", s.heroLevel),
+                    color = GoldBright,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
             classCode?.takeIf { it.isNotBlank() }?.let { MutedText(classTitle(it)) }
-            if (s.account.signedIn) MutedText("${s.accountTitle} · ${ui(when { s.isAdmin -> "account.administrator"; s.isTester -> "account.tester"; else -> "account.player" })}")
+            if (s.account.signedIn) {
+                MutedText(
+                    "${s.accountTitle} · ${ui(
+                        when {
+                            s.isAdmin -> "account.administrator"
+                            s.isTester -> "account.tester"
+                            else -> "account.player"
+                        },
+                    )}",
+                )
+            }
         }
     }
 }
@@ -123,13 +157,29 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
 }
 
 /** One row of a group: the glyph, the name, a value on the right — with a status dot when given — and a chevron where it opens a page. */
-@Composable internal fun AccountRow(icon: ImageVector, label: String, value: String? = null, dot: Color? = null, enabled: Boolean = true,
-    chevron: Boolean = true, onClick: () -> Unit) {
-    Row(Modifier.fillMaxWidth().clickable(enabled = enabled, onClick = onClick).padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+@Composable internal fun AccountRow(
+    icon: ImageVector,
+    label: String,
+    value: String? = null,
+    dot: Color? = null,
+    enabled: Boolean = true,
+    chevron: Boolean = true,
+    onClick: () -> Unit,
+) {
+    Row(
+        Modifier.fillMaxWidth().clickable(enabled = enabled, onClick = onClick).padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
         Icon(icon, null, tint = if (enabled) Gold else Muted, modifier = Modifier.size(20.dp))
-        Text(label, color = if (enabled) Parchment else Muted, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f),
-            maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(
+            label,
+            color = if (enabled) Parchment else Muted,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
         dot?.let { Box(Modifier.size(8.dp).background(it, CircleShape)) }
         value?.let { Text(it, color = Muted, style = MaterialTheme.typography.bodySmall, maxLines = 1) }
         if (chevron) Icon(Icons.Outlined.ChevronRight, null, tint = Muted, modifier = Modifier.size(18.dp))
@@ -147,10 +197,19 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
     ForgePanel {
         // The address is fixed for players (3.75.0); only an administrator points the device at another server.
         if (s.isAdmin) {
-            OutlinedTextField(s.account.serverDraft, { vm.serverDraft(it.take(s.inputs.server)) }, enabled = !s.busy, label = { Text(ui("account.server_address")) },
-                supportingText = { Text(ui("account.address_hint")) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            OutlinedTextField(
+                s.account.serverDraft,
+                { vm.serverDraft(it.take(s.inputs.server)) },
+                enabled = !s.busy,
+                label = { Text(ui("account.server_address")) },
+                supportingText = { Text(ui("account.address_hint")) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+            )
             ForgeButton(enabled = !s.busy, onClick = vm::connect, modifier = Modifier.fillMaxWidth()) { Text(ui("account.save_connect")) }
-        } else PropertyRow(ui("account.server_address"), s.account.server, Glyph.TEXT)
+        } else {
+            PropertyRow(ui("account.server_address"), s.account.server, Glyph.TEXT)
+        }
         ForgeOutlinedButton(enabled = !s.busy, onClick = vm::health, modifier = Modifier.fillMaxWidth()) { Text(ui("account.check_health")) }
     }
     InfoCard(ui("account.server_state"), s.account.health)
@@ -162,28 +221,51 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
     ForgePanel {
         // Names of things belong to the server since 0.14.0: without its dictionary the screens
         // print codes, so how much of it arrived is worth saying out loud.
-        if (s.world.localeStrings > 0) PropertyRow(ui("account.dictionary"),
-            "${s.world.localeLanguage.uppercase()} · " + ui("account.strings", s.world.localeStrings), Glyph.TEXT)
-        else MutedText(ui("account.dictionary_missing"))
+        if (s.world.localeStrings > 0) {
+            PropertyRow(
+                ui("account.dictionary"),
+                "${s.world.localeLanguage.uppercase()} · " + ui("account.strings", s.world.localeStrings),
+                Glyph.TEXT,
+            )
+        } else {
+            MutedText(ui("account.dictionary_missing"))
+        }
         // Drawings come from the server too, and a missing set is invisible by design: every
         // hole falls back to a bundled emblem, so the count is the only way to notice one.
-        if (s.world.iconKeys > 0) PropertyRow(ui("account.icons"),
-            ui("account.icons_count", s.world.iconKeys, s.world.iconSprites), Glyph.IMAGE)
-        else MutedText(ui("account.icons_missing"))
+        if (s.world.iconKeys > 0) {
+            PropertyRow(
+                ui("account.icons"),
+                ui("account.icons_count", s.world.iconKeys, s.world.iconSprites),
+                Glyph.IMAGE,
+            )
+        } else {
+            MutedText(ui("account.icons_missing"))
+        }
         if (s.world.portraits > 0) PropertyRow(ui("account.portraits"), s.world.portraits.toString(), Glyph.IMAGE)
         // The world's tables come the same way (3.0.0): chunks fetched once per fingerprint and
         // parsed by the rules. The fingerprint is what tells a changed world from the one on screen.
-        if (s.index != null) PropertyRow(ui("account.content"),
-            "${s.world.contentHash.take(12)} · " + ui("account.chunks", ContentFiles.ALL.size), Glyph.SERVER)
-        else MutedText(ui("account.content_missing"))
-        ForgeOutlinedButton(enabled = !s.busy, onClick = { vm.refreshLocale(); vm.refreshIcons() }, modifier = Modifier.fillMaxWidth()) { Text(ui("account.reread_bundles")) }
+        if (s.index != null) {
+            PropertyRow(
+                ui("account.content"),
+                "${s.world.contentHash.take(12)} · " + ui("account.chunks", ContentFiles.ALL.size),
+                Glyph.SERVER,
+            )
+        } else {
+            MutedText(ui("account.content_missing"))
+        }
+        ForgeOutlinedButton(enabled = !s.busy, onClick = {
+            vm.refreshLocale()
+            vm.refreshIcons()
+        }, modifier = Modifier.fillMaxWidth()) { Text(ui("account.reread_bundles")) }
     }
     // The build and its updates (3.72.0): the version, and a check by hand.
     UpdateCard()
     // The wire this client speaks: the API revision it refuses to differ from, and the server it was built against.
-    InfoCard(ui("account.contract"),
+    InfoCard(
+        ui("account.contract"),
         "API $API_REVISION · $SERVER_VERSION · $SERVER_BRANCH · ${SERVER_COMMIT.take(12)}\n" +
-        ui("account.contract_note"))
+            ui("account.contract_note"),
+    )
 }
 
 /**
@@ -194,18 +276,31 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
  */
 @Composable private fun PromoCodeDialog(s: ForgeState, onDismiss: () -> Unit, onRedeem: (String) -> Unit) {
     var code by remember { mutableStateOf("") }
-    AlertDialog(onDismissRequest = onDismiss, containerColor = Panel, titleContentColor = Gold,
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Panel,
+        titleContentColor = Gold,
         title = { Text(ui("account.promo")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 MutedText(ui("account.promo_target", s.heroName))
-                OutlinedTextField(code, { code = it.take(s.inputs.code) }, label = { Text(ui("account.code")) },
-                    supportingText = { LengthCounter(code, s.inputs.code) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(
+                    code,
+                    { code = it.take(s.inputs.code) },
+                    label = { Text(ui("account.code")) },
+                    supportingText = { LengthCounter(code, s.inputs.code) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
         },
-        confirmButton = { ForgeTextButton(enabled = !s.busy && code.isNotBlank(), onClick = { onRedeem(code) }) {
-            Text(ui("account.claim")) } },
-        dismissButton = { ForgeTextButton(onClick = onDismiss) { Text(ui("common.cancel")) } })
+        confirmButton = {
+            ForgeTextButton(enabled = !s.busy && code.isNotBlank(), onClick = { onRedeem(code) }) {
+                Text(ui("account.claim"))
+            }
+        },
+        dismissButton = { ForgeTextButton(onClick = onDismiss) { Text(ui("common.cancel")) } },
+    )
 }
 
 /**
@@ -230,10 +325,12 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
     ForgePanel(Modifier.clickable { expanded = !expanded }, accent = accent) {
         Text("${log.method}  ${log.status ?: "NETWORK"}  ·  ${log.elapsedMs} ms", color = accent, style = MaterialTheme.typography.labelLarge)
         Text(log.path, fontSize = 11.sp, fontFamily = FontFamily.Monospace, color = Muted)
-        if (expanded) SelectionContainer {
-            Column {
-                if (log.request.isNotBlank()) Text("REQUEST\n${log.request}", fontSize = 11.sp, fontFamily = FontFamily.Monospace)
-                Text("RESPONSE\n${log.response}", fontSize = 11.sp, fontFamily = FontFamily.Monospace, color = Muted)
+        if (expanded) {
+            SelectionContainer {
+                Column {
+                    if (log.request.isNotBlank()) Text("REQUEST\n${log.request}", fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+                    Text("RESPONSE\n${log.response}", fontSize = 11.sp, fontFamily = FontFamily.Monospace, color = Muted)
+                }
             }
         }
     }

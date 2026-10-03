@@ -1,10 +1,5 @@
 package com.sperance.exileforge.core
 
-import com.sperance.exileforge.core.i18n.Lang
-import com.sperance.exileforge.core.i18n.UiStrings
-import com.sperance.exileforge.core.i18n.plural
-import com.sperance.exileforge.core.i18n.pluralKey
-import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.atlas.AtlasBranch
 import com.sperance.exileforge.core.campaign.Ailment
 import com.sperance.exileforge.core.campaign.DamageType
@@ -13,6 +8,11 @@ import com.sperance.exileforge.core.campaign.TargetRule
 import com.sperance.exileforge.core.display.AffixKind
 import com.sperance.exileforge.core.display.StatGroup
 import com.sperance.exileforge.core.display.bodyPlaces
+import com.sperance.exileforge.core.i18n.Lang
+import com.sperance.exileforge.core.i18n.UiStrings
+import com.sperance.exileforge.core.i18n.plural
+import com.sperance.exileforge.core.i18n.pluralKey
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.auction.LotKind
 import com.sperance.exileforge.core.model.command.RedemptionKind
 import com.sperance.exileforge.rules.content.AtlasNodeKind
@@ -159,7 +159,10 @@ class UiStringsTest {
     fun every_code_the_client_enumerates_is_named() {
         val expected = buildSet {
             LotKind.entries.forEach { add("enum.lot.${it.name}") }
-            Orb.entries.forEach { add("enum.orb.${it.name}"); add("enum.orb.${it.name}.rule") }
+            Orb.entries.forEach {
+                add("enum.orb.${it.name}")
+                add("enum.orb.${it.name}.rule")
+            }
             RedemptionKind.entries.forEach { add("enum.reward.${it.name}") }
             MonsterRarity.entries.forEach { add("enum.monster_rarity.${it.name}") }
             Rarity.entries.forEach { add("enum.rarity.${it.name}") }
@@ -167,7 +170,10 @@ class UiStringsTest {
             bodyPlaces.forEach { add("enum.slot.${it.code}") }
             WeaponType.entries.forEach { add("enum.weapon.${it.name}") }
             SkillNodeType.entries.forEach { add("enum.node.${it.name}") }
-            Ailment.entries.forEach { add("enum.ailment.${it.name}"); add("fight.effect.${it.name}") }
+            Ailment.entries.forEach {
+                add("enum.ailment.${it.name}")
+                add("fight.effect.${it.name}")
+            }
             DamageType.entries.forEach { add("enum.damage.${it.name}") }
             AffixKind.entries.forEach { add("mod.kind.${it.name}") }
             StatGroup.entries.forEach { add("enum.stat_group.${it.name}") }
@@ -186,7 +192,8 @@ class UiStringsTest {
             listOf("corrupted", "mirrored", "equipped", "socketed").forEach { add("state.$it") }
             // The chronicle (3.54.0): every counter and section, every statistic and group the server writes.
             com.sperance.exileforge.rules.content.Counter.SECTIONS.forEach { (section, counters) ->
-                add("chronicle.section.$section"); counters.forEach { add("chronicle.counter.$it") }
+                add("chronicle.section.$section")
+                counters.forEach { add("chronicle.counter.$it") }
             }
             add("chronicle.section.FIGHT")
             com.sperance.exileforge.rules.content.Stat.COMBAT.forEach { add("stats.$it") }

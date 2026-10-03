@@ -50,7 +50,8 @@ import com.sperance.exileforge.ui.theme.Panel
  * The dismissal reaches the caller once, however many times the gesture, the scrim and «back» report it.
  */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun ForgeSheet(
+@Composable
+fun ForgeSheet(
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
     shape: Shape = BottomSheetDefaults.ExpandedShape,
@@ -63,7 +64,12 @@ import com.sperance.exileforge.ui.theme.Panel
     val window = LocalWindowInfo.current.containerSize.height
     val limit: Dp = with(LocalDensity.current) { if (window > 0) (window * MAX_SHARE).toDp() else Dp.Infinity }
     ModalBottomSheet(
-        onDismissRequest = { if (!dismissed) { dismissed = true; dismiss() } },
+        onDismissRequest = {
+            if (!dismissed) {
+                dismissed = true
+                dismiss()
+            }
+        },
         modifier = modifier,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         shape = shape,
@@ -71,12 +77,14 @@ import com.sperance.exileforge.ui.theme.Panel
         dragHandle = dragHandle,
         contentWindowInsets = { WindowInsets(0.dp) },
     ) {
-        Column(Modifier
-            .fillMaxWidth()
-            .heightIn(max = limit)
-            .windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.ime))
-            .nestedScroll(remember { FlingStaysInList() }),
-            content = content)
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .heightIn(max = limit)
+                .windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.ime))
+                .nestedScroll(remember { FlingStaysInList() }),
+            content = content,
+        )
     }
 }
 
@@ -90,12 +98,21 @@ private class FlingStaysInList : NestedScrollConnection {
 
     override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset = when {
         source == NestedScrollSource.SideEffect -> available
-        available.y != 0f -> { sheetMoved = true; Offset.Zero }
+
+        available.y != 0f -> {
+            sheetMoved = true
+            Offset.Zero
+        }
+
         else -> Offset.Zero
     }
 
-    override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity =
-        if (sheetMoved) { sheetMoved = false; Velocity.Zero } else available
+    override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity = if (sheetMoved) {
+        sheetMoved = false
+        Velocity.Zero
+    } else {
+        available
+    }
 }
 
 /** The most of the app window's height a sheet's content may take: well clear of the status bar. */

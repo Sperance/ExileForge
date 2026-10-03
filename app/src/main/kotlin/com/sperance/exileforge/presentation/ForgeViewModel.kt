@@ -6,25 +6,25 @@ import com.sperance.exileforge.ForgeApplication
 import com.sperance.exileforge.core.campaign.AutoPlan
 import com.sperance.exileforge.core.campaign.RunCommand
 import com.sperance.exileforge.core.i18n.Lang
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.auction.AuctionFilter
 import com.sperance.exileforge.core.model.command.RedemptionCode
+import com.sperance.exileforge.core.model.guild.GuildCard
+import com.sperance.exileforge.core.network.MemberCommand
 import com.sperance.exileforge.core.network.RequestJournal
 import com.sperance.exileforge.data.settings.ServerStore
-import com.sperance.exileforge.core.model.guild.GuildCard
-import com.sperance.exileforge.rules.content.GuildMode
-import com.sperance.exileforge.core.network.MemberCommand
 import com.sperance.exileforge.presentation.state.AppMode
 import com.sperance.exileforge.presentation.state.Building
+import com.sperance.exileforge.presentation.state.Buzz
 import com.sperance.exileforge.presentation.state.Feature
-import com.sperance.exileforge.presentation.state.unlocked
-import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.presentation.state.ForgeSection
+import com.sperance.exileforge.presentation.state.GameSettings
 import com.sperance.exileforge.presentation.state.GuildTab
 import com.sperance.exileforge.presentation.state.QuestTab
-import com.sperance.exileforge.presentation.state.ForgeSection
 import com.sperance.exileforge.presentation.state.StashSort
-import com.sperance.exileforge.presentation.state.GameSettings
-import com.sperance.exileforge.presentation.state.Buzz
 import com.sperance.exileforge.presentation.state.TAB_SETTINGS
+import com.sperance.exileforge.presentation.state.unlocked
+import com.sperance.exileforge.rules.content.GuildMode
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
 
@@ -32,16 +32,26 @@ import com.sperance.exileforge.rules.content.Slot
 class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() {
     private val runtime = ForgeRuntime(store, journal)
     val state = runtime.state
+
     /** What the phone buzzes for (3.77.0), already filtered by the settings. */
     val buzzes: kotlinx.coroutines.flow.SharedFlow<Buzz> = runtime.buzzes
     fun buzz(kind: Buzz) = runtime.buzz(kind)
     val logs = runtime.logs
+
     /** A tab the hero's level has not opened (3.76.0) says when it will instead of opening. */
-    fun tab(tab: Int) { if (gate(Feature.ofTab(tab))) runtime.tab(tab) }
+    fun tab(tab: Int) {
+        if (gate(Feature.ofTab(tab))) runtime.tab(tab)
+    }
 
     /** «Настройки» (3.77.0) over the tab on screen; closing them returns to it. */
-    fun openSettings() { with(runtime) { if (state.value.tab != TAB_SETTINGS) settingsReturn = state.value.tab; tab(TAB_SETTINGS) } }
+    fun openSettings() {
+        with(runtime) {
+            if (state.value.tab != TAB_SETTINGS) settingsReturn = state.value.tab
+            tab(TAB_SETTINGS)
+        }
+    }
     fun closeSettings() = runtime.tab(runtime.settingsReturn)
+
     /** A setting changed: on screen at once, kept on the device behind it. */
     fun settings(value: GameSettings) = runtime.saveSettings(value)
 
@@ -53,6 +63,7 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() 
         feature?.let { runtime.toast(ui("unlock.locked", ui(it.title), it.level)) }
         return false
     }
+
     /** The campaign run on screen, if any: a world the scene steps and the overlay reads. */
     val expedition = runtime.expeditionViewModel.run
     fun loadCampaign() = runtime.expeditionViewModel.loadCampaign()
@@ -61,6 +72,7 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() 
     fun selectZone(mapCode: String) = runtime.expeditionViewModel.selectZone(mapCode)
     fun loadCrafts(silent: Boolean = false) = runtime.craftsViewModel.load(silent)
     fun openProfession(code: String) = runtime.craftsViewModel.openProfession(code)
+
     /** A bug report from the beetle (3.48.0): sent at once, whether signed in or not. */
     fun reportBug(report: com.sperance.exileforge.core.model.command.BugReportRequest, onSent: suspend () -> Unit = {}) = runtime.reportBug(report, onSent)
     fun planTree(nodes: List<com.sperance.exileforge.rules.content.TakenNode>) = runtime.heroViewModel.planTree(nodes)
@@ -73,8 +85,10 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() 
     fun pickPotion(code: String?) = runtime.expeditionViewModel.pickPotion(code)
     fun toggleScarab(code: String, add: Boolean) = runtime.expeditionViewModel.toggleScarab(code, add)
     fun runCommand(command: RunCommand) = runtime.expeditionViewModel.send(command)
+
     /** The trial on screen (3.49.0), if any: an arena the screen steps and reads. */
     val trial = runtime.trialViewModel.arena
+
     /** The warm-up on entering a hero (3.54.0). */
     fun warmUp() = runtime.warmupViewModel.start()
     fun enterRush(region: String) = runtime.trialViewModel.rush(region)
@@ -84,6 +98,7 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() 
     fun trialCommand(command: RunCommand) = runtime.trialViewModel.send(command)
     fun closeTrial() = runtime.trialViewModel.close()
     fun closeRun() = runtime.expeditionViewModel.close()
+
     /** The run's journal goes out now: the app leaves the foreground. */
     fun flushRun() = runtime.expeditionViewModel.flushRun()
     fun enterVaal() = runtime.expeditionViewModel.enterVaal()
@@ -100,6 +115,7 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() 
     fun dismissMessage() = runtime.dismissMessage()
     fun dismissNotice() = runtime.dismissNotice()
     fun selectEquipment(value: String) = runtime.heroViewModel.selectEquipment(value)
+
     /** An essence on one item, by the essence's item code. */
     fun applyEssence(itemId: String, essence: String) = runtime.heroViewModel.applyEssence(itemId, essence)
     fun selectEssence(value: String) = runtime.heroViewModel.selectEssence(value)
@@ -117,6 +133,7 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() 
     fun claimPath() = runtime.heroViewModel.claimPath()
     fun temper(itemId: String) = runtime.heroViewModel.temper(itemId)
     fun setTitle(title: String) = runtime.heroViewModel.setTitle(title)
+
     /** The hero's statistics (3.51.0), read when the chronicle opens; null when the read failed. */
     suspend fun heroStats(heroId: String): Map<String, Long>? = runCatching { runtime.api.hero.stats(heroId).values }.getOrNull()
     fun claimOverflow(itemId: String? = null) = runtime.heroViewModel.claimOverflow(itemId)
@@ -128,11 +145,13 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() 
     fun activatePet(petId: String) = runtime.heroViewModel.activatePet(petId)
     fun releasePet(petId: String) = runtime.heroViewModel.releasePet(petId)
     fun breedPets(first: String, second: String) = runtime.heroViewModel.breedPets(first, second)
+
     /** Admin only: a named template, rolled by the server at [rarity] or the template's own. */
     fun grant(template: String, rarity: Rarity? = null) = runtime.heroViewModel.grant(template, rarity)
     fun grantRarity(value: String) = runtime.heroViewModel.grantRarity(value)
     fun grantSlot(value: String) = runtime.heroViewModel.grantSlot(value)
     fun grantRandom() = runtime.heroViewModel.grantRandom()
+
     /** Admin only: a stack into the bag, by the item's code. */
     fun grantItem(code: String, amount: Long) = runtime.heroViewModel.grantItem(code, amount)
     fun selectOrb(value: String) = runtime.heroViewModel.selectOrb(value)
@@ -147,6 +166,7 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() 
     fun resetTree() = runtime.heroViewModel.resetTree()
     fun addExperience(amount: Double) = runtime.heroViewModel.addExperience(amount)
     fun draftClass(value: String) = runtime.mutable.value.let { runtime.mutable.value = it.copy(play = it.play.copy(draftClass = value)) }
+
     /** An orb on one item, by the orb's item code. */
     fun applyOrb(itemId: String, orb: String) = runtime.heroViewModel.applyOrb(itemId, orb)
     fun selectOmen(value: String) = runtime.heroViewModel.selectOmen(value)
@@ -158,26 +178,29 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() 
     fun socketJewel(itemId: String, nodeCode: String) = runtime.heroViewModel.socketJewel(itemId, nodeCode)
     fun unsocketJewel(itemId: String) = runtime.heroViewModel.unsocketJewel(itemId)
     fun sellForGold(itemId: String) = runtime.heroViewModel.sellForGold(itemId)
+
     /** The item lock (3.30.0): a locked item is never sold, listed or auto-sold. */
     fun lockItem(itemId: String, locked: Boolean) = runtime.heroViewModel.lockItem(itemId, locked)
+
     /** The stash's order (3.30.0), kept on the device. */
     fun stashSort(sort: StashSort) = runtime.heroViewModel.stashSort(sort)
+
     /** «Пока вас не было» (3.69.0): the last catch-up shown for a hero, and marking one shown. */
     suspend fun craftsAwaySeen(heroId: String): Long = runtime.heroViewModel.craftsAwaySeen(heroId)
     fun markCraftsAwaySeen(heroId: String, until: Long) = runtime.heroViewModel.markCraftsAwaySeen(heroId, until)
+
     /** «Hide equipped» on the gear shelf (3.69.0), kept on the device. */
     fun stashHideWorn(hide: Boolean) = runtime.heroViewModel.stashHideWorn(hide)
     fun logFilter(kinds: Set<com.sperance.exileforge.core.campaign.LogKind>) = runtime.heroViewModel.logFilter(kinds)
+
     /** The link's probe at once (3.30.0): the offline icon tapped. */
     fun retryLink() = runtime.connectionViewModel.wake(now = true)
     fun mode(mode: AppMode) = runtime.sessionViewModel.mode(mode)
     fun serverDraft(value: String) = runtime.sessionViewModel.serverDraft(value)
     fun loadSuggestions() = runtime.feedbackViewModel.loadSuggestions()
     fun vote(id: String, vote: com.sperance.exileforge.core.model.feedback.Vote) = runtime.feedbackViewModel.vote(id, vote)
-    fun loadReports(kind: com.sperance.exileforge.core.model.feedback.FeedbackKind?, status: com.sperance.exileforge.core.model.feedback.ReportStatus?) =
-        runtime.feedbackViewModel.loadReports(kind, status)
-    fun setReportStatus(id: String, status: com.sperance.exileforge.core.model.feedback.ReportStatus, reason: String) =
-        runtime.feedbackViewModel.setReportStatus(id, status, reason)
+    fun loadReports(kind: com.sperance.exileforge.core.model.feedback.FeedbackKind?, status: com.sperance.exileforge.core.model.feedback.ReportStatus?) = runtime.feedbackViewModel.loadReports(kind, status)
+    fun setReportStatus(id: String, status: com.sperance.exileforge.core.model.feedback.ReportStatus, reason: String) = runtime.feedbackViewModel.setReportStatus(id, status, reason)
     fun reportToAsana(id: String) = runtime.feedbackViewModel.reportToAsana(id)
     fun loadMail() = runtime.feedbackViewModel.loadMail()
     fun readMail(id: String) = runtime.feedbackViewModel.readMail(id)
@@ -196,13 +219,17 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() 
     fun login(login: String, password: String) = runtime.sessionViewModel.login(login, password)
     fun playOnThisDevice() = runtime.sessionViewModel.playOnThisDevice()
     fun retryResume() = runtime.sessionViewModel.retryResume()
+
     /** The live server's manifest for the update check (3.72.0); null while no server answers. */
-    suspend fun serverManifest(): com.sperance.exileforge.core.model.sync.StaticManifest? =
-        try {
-            // 3.74.0: after the app has its server, and as that server serves it now - a kept manifest of an older deploy hid every update.
-            kotlinx.coroutines.withTimeoutOrNull(API_WAIT_MS) { runtime.apiReady.await() }
-            runtime.api.liveManifest()
-        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null }
+    suspend fun serverManifest(): com.sperance.exileforge.core.model.sync.StaticManifest? = try {
+        // 3.74.0: after the app has its server, and as that server serves it now - a kept manifest of an older deploy hid every update.
+        kotlinx.coroutines.withTimeoutOrNull(API_WAIT_MS) { runtime.apiReady.await() }
+        runtime.api.liveManifest()
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        throw e
+    } catch (_: Exception) {
+        null
+    }
 
     /** A sign-in met a newer server (3.74.0). */
     val newerServer: kotlinx.coroutines.flow.Flow<Unit> get() = runtime.newerServer
@@ -225,6 +252,7 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() 
     fun moreShowcase() = runtime.auctionViewModel.moreShowcase()
     fun loadMyLots(glance: Boolean = false) = runtime.auctionViewModel.loadMyLots(glance)
     fun loadMerchant() = runtime.auctionViewModel.loadMerchant()
+
     /** A building of the City (3.22.0), or the square for none. */
     fun building(building: Building?) {
         if (gate(Feature.ofBuilding(building))) runtime.mutable.value.let { runtime.mutable.value = it.copy(building = building, message = null, error = false) }
@@ -240,8 +268,7 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() 
     fun guildQuery(text: String) = runtime.guildViewModel.query(text)
     fun guildFaction(code: String) = runtime.guildViewModel.filterFaction(code)
     fun searchGuilds(page: Int = 0) = runtime.guildViewModel.search(page)
-    fun createGuild(name: String, tag: String, faction: String, emblem: String, color: String, mode: GuildMode, minLevel: Int) =
-        runtime.guildViewModel.create(name, tag, faction, emblem, color, mode, minLevel)
+    fun createGuild(name: String, tag: String, faction: String, emblem: String, color: String, mode: GuildMode, minLevel: Int) = runtime.guildViewModel.create(name, tag, faction, emblem, color, mode, minLevel)
     fun joinGuild(card: GuildCard) = runtime.guildViewModel.join(card)
     fun acceptGuildInvite(guildId: String) = runtime.guildViewModel.acceptInvite(guildId)
     fun declineGuildInvite(guildId: String) = runtime.guildViewModel.declineInvite(guildId)
@@ -251,8 +278,8 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() 
     fun guildMember(command: MemberCommand, memberId: String) = runtime.guildViewModel.member(command, memberId)
     fun leaveGuild() = runtime.guildViewModel.leave()
     fun disbandGuild() = runtime.guildViewModel.disband()
-    fun guildSettings(mode: GuildMode, minLevel: Int, emblem: String, color: String, announcement: String) =
-        runtime.guildViewModel.settings(mode, minLevel, emblem, color, announcement)
+    fun guildSettings(mode: GuildMode, minLevel: Int, emblem: String, color: String, announcement: String) = runtime.guildViewModel.settings(mode, minLevel, emblem, color, announcement)
+
     /** Gold (`GOLD`) or an orb, by its item code, into the treasury. */
     fun contribute(item: String, amount: Long) = runtime.guildViewModel.contribute(item, amount)
     fun loadGuildLog(more: Boolean = false) = runtime.guildViewModel.loadLog(more)
@@ -271,15 +298,19 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() 
     fun cancelLot(lotId: String) = runtime.auctionViewModel.cancel(lotId)
     fun extendLot(lotId: String) = runtime.auctionViewModel.extend(lotId)
     suspend fun priceHint(itemCode: String, rarity: com.sperance.exileforge.rules.content.Rarity?, itemLevel: Int) = runtime.auctionViewModel.priceHint(itemCode, rarity, itemLevel)
+
     /** Lists a copy for [price] of the orb [priceOrb] (an item code). */
     fun sellEquipment(itemId: String, priceOrb: String, price: Long) = runtime.auctionViewModel.sellEquipment(itemId, priceOrb, price)
+
     /** Lists [amount] of the stack [code]. */
     fun sellItem(code: String, amount: Long, priceOrb: String, price: Long) = runtime.auctionViewModel.sellItem(code, amount, priceOrb, price)
     fun clearLogs() = runtime.journal.clear()
     fun loadRedemptions() = runtime.redemptionViewModel.load()
     fun createRedemption(code: RedemptionCode) = runtime.redemptionViewModel.create(code)
     fun deleteRedemption(id: String) = runtime.redemptionViewModel.delete(id)
-    override fun onCleared() { runtime.close() }
+    override fun onCleared() {
+        runtime.close()
+    }
     class Factory(private val app: ForgeApplication) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             require(modelClass.isAssignableFrom(ForgeViewModel::class.java))

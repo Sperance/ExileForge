@@ -38,11 +38,17 @@ data class Tip(val title: String, val body: String = "", val tint: Color = GoldB
  * icon, its pointer on it, below it or above when there is no room; a tap anywhere closes it.
  * A null [tip] leaves the icon as it was. The tip is read when opened, so its figures are fresh.
  */
-@Composable fun Tipped(tip: (() -> Tip)?, modifier: Modifier = Modifier, contentAlignment: Alignment = Alignment.TopStart,
-                       content: @Composable BoxScope.() -> Unit) {
+@Composable fun Tipped(
+    tip: (() -> Tip)?,
+    modifier: Modifier = Modifier,
+    contentAlignment: Alignment = Alignment.TopStart,
+    content: @Composable BoxScope.() -> Unit,
+) {
     var open by remember { mutableStateOf(false) }
-    Box(modifier.then(if (tip != null) Modifier.clickable(remember { MutableInteractionSource() }, null) { open = true } else Modifier),
-        contentAlignment = contentAlignment) {
+    Box(
+        modifier.then(if (tip != null) Modifier.clickable(remember { MutableInteractionSource() }, null) { open = true } else Modifier),
+        contentAlignment = contentAlignment,
+    ) {
         content()
         if (open && tip != null) TipCallout(tip()) { open = false }
     }
@@ -71,23 +77,32 @@ data class Tip(val title: String, val body: String = "", val tint: Color = GoldB
     Popup(popupPositionProvider = placing, onDismissRequest = onClose, properties = PopupProperties(focusable = true)) {
         val arrow = 7.dp
         val shape = RoundedCornerShape(10.dp)
-        Box(Modifier.padding(top = if (below) arrow else 0.dp, bottom = if (below) 0.dp else arrow)
-            .graphicsLayer {
-                scaleX = grow.value; scaleY = grow.value; alpha = grow.value.coerceIn(0f, 1f)
-                transformOrigin = TransformOrigin((pointer / size.width.coerceAtLeast(1f)).coerceIn(0f, 1f), if (below) 0f else 1f)
-            }
-            .drawBehind {
-                val a = arrow.toPx()
-                val x = pointer.coerceIn(a * 2, size.width - a * 2)
-                val tipY = if (below) -a else size.height + a
-                val baseY = if (below) 1f else size.height - 1f
-                val beak = Path().apply { moveTo(x - a, baseY); lineTo(x, tipY); lineTo(x + a, baseY); close() }
-                drawPath(beak, Panel)
-                drawLine(tip.tint.copy(alpha = .8f), Offset(x - a, baseY), Offset(x, tipY), 1.dp.toPx())
-                drawLine(tip.tint.copy(alpha = .8f), Offset(x, tipY), Offset(x + a, baseY), 1.dp.toPx())
-            }
-            .widthIn(max = 280.dp).background(Panel, shape).border(1.dp, tip.tint.copy(alpha = .8f), shape)
-            .clickable(onClick = onClose).padding(horizontal = 12.dp, vertical = 10.dp)) {
+        Box(
+            Modifier.padding(top = if (below) arrow else 0.dp, bottom = if (below) 0.dp else arrow)
+                .graphicsLayer {
+                    scaleX = grow.value
+                    scaleY = grow.value
+                    alpha = grow.value.coerceIn(0f, 1f)
+                    transformOrigin = TransformOrigin((pointer / size.width.coerceAtLeast(1f)).coerceIn(0f, 1f), if (below) 0f else 1f)
+                }
+                .drawBehind {
+                    val a = arrow.toPx()
+                    val x = pointer.coerceIn(a * 2, size.width - a * 2)
+                    val tipY = if (below) -a else size.height + a
+                    val baseY = if (below) 1f else size.height - 1f
+                    val beak = Path().apply {
+                        moveTo(x - a, baseY)
+                        lineTo(x, tipY)
+                        lineTo(x + a, baseY)
+                        close()
+                    }
+                    drawPath(beak, Panel)
+                    drawLine(tip.tint.copy(alpha = .8f), Offset(x - a, baseY), Offset(x, tipY), 1.dp.toPx())
+                    drawLine(tip.tint.copy(alpha = .8f), Offset(x, tipY), Offset(x + a, baseY), 1.dp.toPx())
+                }
+                .widthIn(max = 280.dp).background(Panel, shape).border(1.dp, tip.tint.copy(alpha = .8f), shape)
+                .clickable(onClick = onClose).padding(horizontal = 12.dp, vertical = 10.dp),
+        ) {
             Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 Text(tip.title, color = tip.tint, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                 if (tip.body.isNotBlank()) Text(tip.body, color = Parchment, style = MaterialTheme.typography.bodySmall)

@@ -39,45 +39,89 @@ enum class LineKind { BUFF, CURSE, FLASK, CHARGE, CONDITION, LOW_LIFE, POWER, AU
 
 /** A fighter at the moment of a line: its sheet as it stood, what the fight laid on it, its ailments and pools. */
 data class FighterShot(
-    val side: Side, val index: Int, val stats: Map<String, Double>, val lines: List<LineSource>,
-    val ailments: List<ActiveAilment>, val life: Double, val maxLife: Double, val shield: Double,
+    val side: Side,
+    val index: Int,
+    val stats: Map<String, Double>,
+    val lines: List<LineSource>,
+    val ailments: List<ActiveAilment>,
+    val life: Double,
+    val maxLife: Double,
+    val shield: Double,
     val conditions: Set<Condition> = emptySet(),
 )
 
 /** Where a hit went: the barrier, the shield, the mana before life, the delayed share, life; and what the striker got back. */
 data class Landing(
-    val barrier: Double, val shield: Double, val mana: Double, val delayed: Double, val life: Double,
-    val leech: Double, val onHit: Double, val recoup: Double, val culled: Boolean,
+    val barrier: Double,
+    val shield: Double,
+    val mana: Double,
+    val delayed: Double,
+    val life: Double,
+    val leech: Double,
+    val onHit: Double,
+    val recoup: Double,
+    val culled: Boolean,
 )
 
 /** A blow — a swing, a skill's hit, a spell, a reflection. [landing] is null for an evaded or blocked one. */
 data class HitTrace(
-    val attacker: FighterShot, val target: FighterShot, val rolls: List<RollTrace>, val factors: List<FactorTrace>,
-    val types: List<TypeTrace>, val landing: Landing?, val origin: TraceOrigin,
+    val attacker: FighterShot,
+    val target: FighterShot,
+    val rolls: List<RollTrace>,
+    val factors: List<FactorTrace>,
+    val types: List<TypeTrace>,
+    val landing: Landing?,
+    val origin: TraceOrigin,
 ) : Trace
 
 /** A second of an ailment's damage: how strong, how long, who laid it and what grew it. */
 data class TickTrace(
-    val ailment: Ailment, val perSecond: Double, val left: Double, val duration: Double, val stacks: Int,
-    val target: FighterShot, val factors: List<FactorTrace>, val origin: TraceOrigin, val striker: FighterShot? = null,
+    val ailment: Ailment,
+    val perSecond: Double,
+    val left: Double,
+    val duration: Double,
+    val stacks: Int,
+    val target: FighterShot,
+    val factors: List<FactorTrace>,
+    val origin: TraceOrigin,
+    val striker: FighterShot? = null,
 ) : Trace
 
 /** A draught, a buff, a curse, a heal: the lines it laid, for how long, what it healed and what made it stronger. */
 data class EffectTrace(
-    val kind: EffectKind, val source: String, val lines: List<StatLine>, val duration: Double, val healed: Double,
-    val scale: Double, val actor: FighterShot, val origin: TraceOrigin,
+    val kind: EffectKind,
+    val source: String,
+    val lines: List<StatLine>,
+    val duration: Double,
+    val healed: Double,
+    val scale: Double,
+    val actor: FighterShot,
+    val origin: TraceOrigin,
 ) : Trace
 
 /** Something that happened without a blow: a buff or a charge gained, a power, a condition, what a kill brought. */
 data class NoteTrace(val kind: NoteKind, val ref: String, val value: Double, val actor: FighterShot, val origin: TraceOrigin) : Trace
 
 enum class NoteKind {
-    BUFF, CHARGE, POWER, CONDITION_ON, CONDITION_OFF, KILL, TRAIT,
+    BUFF,
+    CHARGE,
+    POWER,
+    CONDITION_ON,
+    CONDITION_OFF,
+    KILL,
+    TRAIT,
+
     /** The recovery shelf (3.79.0): a draught's total, a recoup's, healing spilled over a full bar, regeneration a second. */
-    RECOVER_FLASK, RECOVER_RECOUP, RECOVER_WASTE, REGEN;
+    RECOVER_FLASK,
+    RECOVER_RECOUP,
+    RECOVER_WASTE,
+    REGEN,
+    ;
 
     val recovery: Boolean get() = this in RECOVERY
-    private companion object { val RECOVERY = setOf(RECOVER_FLASK, RECOVER_RECOUP, RECOVER_WASTE, REGEN) }
+    private companion object {
+        val RECOVERY = setOf(RECOVER_FLASK, RECOVER_RECOUP, RECOVER_WASTE, REGEN)
+    }
 }
 
 /**
@@ -96,8 +140,14 @@ enum class MonsterShareKind { BASE, RARITY, MODIFIER, MAP }
  * each modifier, and the map's buffs over it.
  */
 object MonsterBreakdown {
-    fun explain(roller: MonsterRoller, rarityLines: (MonsterRarity) -> List<com.sperance.exileforge.rules.roll.MonsterEffect>,
-                template: com.sperance.exileforge.rules.content.Monster?, monster: RolledMonster, level: Int, stat: String): List<MonsterShare> = buildList {
+    fun explain(
+        roller: MonsterRoller,
+        rarityLines: (MonsterRarity) -> List<com.sperance.exileforge.rules.roll.MonsterEffect>,
+        template: com.sperance.exileforge.rules.content.Monster?,
+        monster: RolledMonster,
+        level: Int,
+        stat: String,
+    ): List<MonsterShare> = buildList {
         template?.let { roller.stats(it, level)[stat] }?.takeIf { it != 0.0 }?.let { add(MonsterShare(MonsterShareKind.BASE, monster.code, Op.ADD, it)) }
         rarityLines(monster.rarity).filter { it.stat == stat }.forEach { add(MonsterShare(MonsterShareKind.RARITY, monster.rarity.name, it.op, it.value)) }
         monster.modifiers.forEach { mod -> mod.effects.filter { it.stat == stat }.forEach { add(MonsterShare(MonsterShareKind.MODIFIER, mod.code, it.op, it.value)) } }
@@ -107,11 +157,17 @@ object MonsterBreakdown {
 
 /** The log's shelves (3.37.0): blows, the ticks of ailments, and the notes of what happened without a blow. */
 enum class LogKind {
-    HITS, AILMENTS, EVENTS,
+    HITS,
+    AILMENTS,
+    EVENTS,
+
     /** The combat pet's lines (3.70.0): its blows and healing, and the blows it took. */
     PET,
+
     /** Recovery (3.79.0): draughts, life on kill, recoup, spilled healing and regeneration. */
-    RECOVERY;
+    RECOVERY,
+
+    ;
 
     companion object {
         val DEFAULT: Set<LogKind> = setOf(HITS, AILMENTS, PET, RECOVERY)
@@ -123,6 +179,7 @@ enum class LogKind {
             event.action == Action.NOTE -> EVENTS
             else -> HITS
         }
+
         /** The shelves a save before 3.70.0 knew of: it wrote only the shown ones, without the known ones after a `;`. */
         private val LEGACY: Set<LogKind> = setOf(HITS, AILMENTS, EVENTS)
 

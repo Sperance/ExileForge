@@ -1,14 +1,15 @@
 package com.sperance.exileforge.core.network
 
+import com.sperance.exileforge.core.i18n.ui
+import kotlinx.coroutines.suspendCancellableCoroutine
+import okhttp3.*
 import java.io.IOException
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
-import kotlinx.coroutines.suspendCancellableCoroutine
-import com.sperance.exileforge.core.i18n.ui
-import okhttp3.*
 
 /** [replayed]: the server answered a repeated `Idempotency-Key` with its stored answer (server 1.28.0). */
 internal data class HttpPayload(val status: Int, val body: String, val replayed: Boolean = false)
+
 /** Consume and close the body on OkHttp's worker, keeping cancellation wired through the full read. */
 internal suspend fun Call.awaitPayload(): HttpPayload = suspendCancellableCoroutine { continuation ->
     continuation.invokeOnCancellation { cancel() }

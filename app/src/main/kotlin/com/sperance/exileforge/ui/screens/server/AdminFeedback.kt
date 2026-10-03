@@ -1,6 +1,5 @@
 package com.sperance.exileforge.ui.screens.server
 
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -10,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -56,9 +56,13 @@ import com.sperance.exileforge.ui.theme.*
             StatusBadge(report.status)
         }
         Text(report.text, color = Parchment, style = MaterialTheme.typography.bodyMedium, maxLines = if (open) Int.MAX_VALUE else 3)
-        MutedText(listOfNotNull(report.createdAt.replace('T', ' ').take(16),
-            ui("feedback.votes", report.likes.size, report.dislikes.size).takeIf { report.kind == FeedbackKind.SUGGESTION },
-            report.screen.takeIf { it.isNotBlank() }).joinToString(" · "))
+        MutedText(
+            listOfNotNull(
+                report.createdAt.replace('T', ' ').take(16),
+                ui("feedback.votes", report.likes.size, report.dislikes.size).takeIf { report.kind == FeedbackKind.SUGGESTION },
+                report.screen.takeIf { it.isNotBlank() },
+            ).joinToString(" · "),
+        )
         if (open) {
             if (report.context.isNotEmpty()) {
                 Engraved(ui("bug.context"))
@@ -72,13 +76,24 @@ import com.sperance.exileforge.ui.theme.*
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 ReportStatus.entries.forEach { st -> FilterChip(selected = chosen == st, onClick = { chosen = st }, label = { Text(statusTitle(st)) }) }
             }
-            OutlinedTextField(reason, { reason = it.take(REASON) }, label = { Text(ui("feedback.reason_field")) }, minLines = 2,
-                supportingText = { LengthCounter(reason, REASON) }, modifier = Modifier.fillMaxWidth())
-            ForgeButton(enabled = !s.busy && (chosen != report.status || reason != report.reason), onClick = { vm.setReportStatus(report.id, chosen, reason) },
-                modifier = Modifier.fillMaxWidth()) { Text(ui("feedback.save_status")) }
+            OutlinedTextField(
+                reason,
+                { reason = it.take(REASON) },
+                label = { Text(ui("feedback.reason_field")) },
+                minLines = 2,
+                supportingText = { LengthCounter(reason, REASON) },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            ForgeButton(
+                enabled = !s.busy && (chosen != report.status || reason != report.reason),
+                onClick = { vm.setReportStatus(report.id, chosen, reason) },
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text(ui("feedback.save_status")) }
             // Asana (3.75.0): the picked report becomes a task there; once exported, the link to it instead.
-            if (report.asanaUrl.isBlank()) ForgeOutlinedButton(enabled = !s.busy, onClick = { vm.reportToAsana(report.id) }, modifier = Modifier.fillMaxWidth()) {
-                Text(ui("feedback.to_asana"))
+            if (report.asanaUrl.isBlank()) {
+                ForgeOutlinedButton(enabled = !s.busy, onClick = { vm.reportToAsana(report.id) }, modifier = Modifier.fillMaxWidth()) {
+                    Text(ui("feedback.to_asana"))
+                }
             } else {
                 val uri = LocalUriHandler.current
                 ForgeTextButton(enabled = report.asanaUrl.startsWith("http"), onClick = { uri.openUri(report.asanaUrl) }, modifier = Modifier.fillMaxWidth()) {
@@ -104,23 +119,53 @@ private const val REASON = 400
     val items = remember { mutableStateMapOf<String, Long>() }
     val equipment = remember { mutableStateListOf<MailEquipment>() }
     ForgePanel {
-        OutlinedTextField(login, { login = it.filterNot(Char::isWhitespace).take(s.inputs.login) }, label = { Text(ui("mail.to")) },
-            supportingText = { Text(ui(if (login.isBlank()) "mail.to_all" else "mail.to_one")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(subject, { subject = it.take(s.inputs.mailSubject) }, label = { Text(ui("mail.subject")) },
-            supportingText = { LengthCounter(subject, s.inputs.mailSubject) }, singleLine = true, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(body, { body = it.take(s.inputs.mailBody) }, label = { Text(ui("mail.body")) }, minLines = 4,
-            supportingText = { LengthCounter(body, s.inputs.mailBody) }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(
+            login,
+            { login = it.filterNot(Char::isWhitespace).take(s.inputs.login) },
+            label = { Text(ui("mail.to")) },
+            supportingText = { Text(ui(if (login.isBlank()) "mail.to_all" else "mail.to_one")) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            subject,
+            { subject = it.take(s.inputs.mailSubject) },
+            label = { Text(ui("mail.subject")) },
+            supportingText = { LengthCounter(subject, s.inputs.mailSubject) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            body,
+            { body = it.take(s.inputs.mailBody) },
+            label = { Text(ui("mail.body")) },
+            minLines = 4,
+            supportingText = { LengthCounter(body, s.inputs.mailBody) },
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
     ForgePanel {
         Engraved(ui("mail.attachment"))
-        OutlinedTextField(gold, { gold = it.filter(Char::isDigit).take(s.inputs.number) }, label = { Text(ui("tester.gold")) }, singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(
+            gold,
+            { gold = it.filter(Char::isDigit).take(s.inputs.number) },
+            label = { Text(ui("tester.gold")) },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth(),
+        )
         var item by remember { mutableStateOf("") }
         var amount by remember { mutableStateOf("1") }
         Spinner(ui("tester.item"), item, index.items.keys.associateWith(::itemTitle), !s.busy) { item = it }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(amount, { amount = it.filter(Char::isDigit).take(s.inputs.number) }, label = { Text(ui("tester.amount")) }, singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f))
+            OutlinedTextField(
+                amount,
+                { amount = it.filter(Char::isDigit).take(s.inputs.number) },
+                label = { Text(ui("tester.amount")) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.weight(1f),
+            )
             ForgeOutlinedButton(enabled = item.isNotBlank() && (amount.toLongOrNull() ?: 0) > 0, onClick = { items[item] = (items[item] ?: 0) + amount.toLong() }) {
                 Text(ui("mail.add"))
             }
@@ -140,7 +185,11 @@ private const val REASON = 400
     }
     ForgeButton(enabled = !s.busy && subject.isNotBlank(), modifier = Modifier.fillMaxWidth(), onClick = {
         vm.sendMail(MailRequest(login, subject, body, MailAttachment(gold.toLongOrNull() ?: 0, items.toMap(), equipment.toList())))
-        subject = ""; body = ""; gold = ""; items.clear(); equipment.clear()
+        subject = ""
+        body = ""
+        gold = ""
+        items.clear()
+        equipment.clear()
     }) { Text(ui(if (login.isBlank()) "mail.send_all" else "mail.send")) }
 }
 

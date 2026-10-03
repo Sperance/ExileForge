@@ -51,8 +51,13 @@ fun statusTint(status: ReportStatus): Color = when (status) {
 }
 
 @Composable fun StatusBadge(status: ReportStatus) {
-    Text(statusTitle(status), color = statusTint(status), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold,
-        modifier = Modifier.background(statusTint(status).copy(alpha = .14f), RoundedCornerShape(6.dp)).padding(horizontal = 6.dp, vertical = 2.dp))
+    Text(
+        statusTitle(status),
+        color = statusTint(status),
+        style = MaterialTheme.typography.labelSmall,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.background(statusTint(status).copy(alpha = .14f), RoundedCornerShape(6.dp)).padding(horizontal = 6.dp, vertical = 2.dp),
+    )
 }
 
 /**
@@ -60,7 +65,8 @@ fun statusTint(status: ReportStatus): Color = when (status) {
  * vote, the author never shown; and the viewer's own bugs and suggestions with where they stand and the administrator's word.
  */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun SuggestionsSheet(s: ForgeState, vm: ForgeViewModel, onDismiss: () -> Unit) {
+@Composable
+fun SuggestionsSheet(s: ForgeState, vm: ForgeViewModel, onDismiss: () -> Unit) {
     LaunchedEffect(Unit) { vm.loadSuggestions() }
     var tab by remember { mutableIntStateOf(0) }
     ForgeSheet(onDismissRequest = onDismiss) {
@@ -107,9 +113,12 @@ fun statusTint(status: ReportStatus): Color = when (status) {
 }
 
 @Composable private fun VoteButton(icon: androidx.compose.ui.graphics.vector.ImageVector, count: Int, chosen: Boolean, tint: Color, enabled: Boolean, onClick: () -> Unit) {
-    Row(Modifier.background(if (chosen) tint.copy(alpha = .18f) else Color.Transparent, RoundedCornerShape(8.dp))
-        .clickable(enabled = enabled, onClick = onClick).padding(horizontal = 8.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+    Row(
+        Modifier.background(if (chosen) tint.copy(alpha = .18f) else Color.Transparent, RoundedCornerShape(8.dp))
+            .clickable(enabled = enabled, onClick = onClick).padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
         Icon(icon, null, tint = if (chosen) tint else Muted, modifier = Modifier.size(18.dp))
         Text(count.toString(), color = if (chosen) tint else Parchment, style = MaterialTheme.typography.labelLarge)
     }
@@ -120,16 +129,29 @@ fun statusTint(status: ReportStatus): Color = when (status) {
     IconButton(onClick = onClick) {
         Box {
             Icon(Icons.Outlined.Mail, ui("mail.title"), tint = Gold, modifier = Modifier.size(22.dp))
-            if (unread > 0) Text(if (unread > 9) "9+" else unread.toString(), color = Ink, fontSize = 9.sp, fontWeight = FontWeight.Bold,
-                modifier = Modifier.align(Alignment.TopEnd).offset(x = 6.dp, y = (-4).dp).background(LifeRed, CircleShape).padding(horizontal = 4.dp))
+            if (unread > 0) {
+                Text(
+                    if (unread > 9) "9+" else unread.toString(),
+                    color = Ink,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.align(Alignment.TopEnd).offset(x = 6.dp, y = (-4).dp).background(LifeRed, CircleShape).padding(horizontal = 4.dp),
+                )
+            }
         }
     }
 }
 
 /** A letter's subject and body in the player's language: a system letter is the dictionary's, the administrator's as written. */
 fun mailSubject(mail: Mail): String = if (mail.kind == MailKind.SYSTEM) systemLine(mail, "subject") else mail.subject
-fun mailBody(mail: Mail): String = if (mail.kind == MailKind.SYSTEM) listOf(systemLine(mail, "body"),
-    mail.args.getOrNull(3)?.takeIf { it.isNotBlank() }?.let { loc("${mail.key}.reason", listOf(it)) }).filterNotNull().joinToString("\n\n") else mail.body
+fun mailBody(mail: Mail): String = if (mail.kind == MailKind.SYSTEM) {
+    listOf(
+        systemLine(mail, "body"),
+        mail.args.getOrNull(3)?.takeIf { it.isNotBlank() }?.let { loc("${mail.key}.reason", listOf(it)) },
+    ).filterNotNull().joinToString("\n\n")
+} else {
+    mail.body
+}
 
 /**
  * `mail.feedback_status`: its args are the kind, the status, an excerpt of the report and the administrator's word. The
@@ -158,7 +180,8 @@ fun attachmentLines(mail: Mail): List<String> = buildList {
  * the hero in play at a tap, once. Letters keep for thirty days.
  */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun MailSheet(s: ForgeState, vm: ForgeViewModel, onDismiss: () -> Unit) {
+@Composable
+fun MailSheet(s: ForgeState, vm: ForgeViewModel, onDismiss: () -> Unit) {
     LaunchedEffect(Unit) { vm.loadMail() }
     var open by remember { mutableStateOf<String?>(null) }
     ForgeSheet(onDismissRequest = onDismiss) {
@@ -166,18 +189,31 @@ fun attachmentLines(mail: Mail): List<String> = buildList {
             Text(ui("mail.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
             MutedText(ui("mail.keep"))
             val letter = s.feedback.mail.firstOrNull { it.id == open }
-            if (letter != null) LetterView(s, vm, letter) { open = null }
-            else LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(bottom = 16.dp)) {
-                if (s.feedback.mail.isEmpty()) item { MutedText(ui("mail.empty")) }
-                items(s.feedback.mail, key = { it.id }) { mail ->
-                    ForgePanel(Modifier.clickable { open = mail.id; if (!mail.read) vm.readMail(mail.id) }) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            if (!mail.read) Box(Modifier.size(8.dp).background(LifeRed, CircleShape))
-                            Text(mailSubject(mail), color = if (mail.read) Parchment else GoldBright, style = MaterialTheme.typography.titleSmall,
-                                fontWeight = if (mail.read) FontWeight.Normal else FontWeight.Bold, modifier = Modifier.weight(1f))
-                            if (mail.claimable) Text(ui("mail.has_gift"), color = Vital, style = MaterialTheme.typography.labelSmall)
+            if (letter != null) {
+                LetterView(s, vm, letter) { open = null }
+            } else {
+                LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(bottom = 16.dp)) {
+                    if (s.feedback.mail.isEmpty()) item { MutedText(ui("mail.empty")) }
+                    items(s.feedback.mail, key = { it.id }) { mail ->
+                        ForgePanel(
+                            Modifier.clickable {
+                                open = mail.id
+                                if (!mail.read) vm.readMail(mail.id)
+                            },
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                if (!mail.read) Box(Modifier.size(8.dp).background(LifeRed, CircleShape))
+                                Text(
+                                    mailSubject(mail),
+                                    color = if (mail.read) Parchment else GoldBright,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = if (mail.read) FontWeight.Normal else FontWeight.Bold,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                if (mail.claimable) Text(ui("mail.has_gift"), color = Vital, style = MaterialTheme.typography.labelSmall)
+                            }
+                            MutedText(ui(if (mail.kind == MailKind.SYSTEM) "mail.from_game" else "mail.from_admin") + " · " + mail.createdAt.replace('T', ' ').take(16))
                         }
-                        MutedText(ui(if (mail.kind == MailKind.SYSTEM) "mail.from_game" else "mail.from_admin") + " · " + mail.createdAt.replace('T', ' ').take(16))
                     }
                 }
             }
@@ -194,11 +230,18 @@ fun attachmentLines(mail: Mail): List<String> = buildList {
         if (lines.isNotEmpty()) {
             Engraved(ui("mail.attachment"))
             lines.forEach { Text(it, color = Vital, style = MaterialTheme.typography.labelLarge) }
-            if (mail.claimable) ForgeButton(enabled = !s.busy && s.play.heroId.isNotBlank(), onClick = { vm.claimMail(mail.id) }, modifier = Modifier.fillMaxWidth()) {
-                Text(ui("mail.claim", s.heroName))
-            } else MutedText(ui("mail.claimed_already"))
+            if (mail.claimable) {
+                ForgeButton(enabled = !s.busy && s.play.heroId.isNotBlank(), onClick = { vm.claimMail(mail.id) }, modifier = Modifier.fillMaxWidth()) {
+                    Text(ui("mail.claim", s.heroName))
+                }
+            } else {
+                MutedText(ui("mail.claimed_already"))
+            }
         }
-        ForgeOutlinedButton(enabled = !s.busy, onClick = { vm.deleteMail(mail.id); onBack() }, modifier = Modifier.fillMaxWidth()) {
+        ForgeOutlinedButton(enabled = !s.busy, onClick = {
+            vm.deleteMail(mail.id)
+            onBack()
+        }, modifier = Modifier.fillMaxWidth()) {
             Icon(Icons.Outlined.Delete, null, tint = LifeRed, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(6.dp))
             Text(ui("mail.delete"), color = LifeRed)
@@ -210,5 +253,4 @@ fun attachmentLines(mail: Mail): List<String> = buildList {
 private val AUCTION_MAIL = setOf("mail.auction_expired", "mail.auction_expiring")
 
 /** A lot's item by its code: an equipment template or a stack of the bag. */
-private fun lotItemTitle(code: String): String =
-    if (com.sperance.exileforge.core.i18n.serverLocale.contains(com.sperance.exileforge.rules.text.LocaleKey.equipmentName(code))) equipmentTitle(code) else itemTitle(code)
+private fun lotItemTitle(code: String): String = if (com.sperance.exileforge.core.i18n.serverLocale.contains(com.sperance.exileforge.rules.text.LocaleKey.equipmentName(code))) equipmentTitle(code) else itemTitle(code)

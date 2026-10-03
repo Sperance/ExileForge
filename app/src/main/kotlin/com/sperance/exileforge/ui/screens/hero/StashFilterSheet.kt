@@ -1,10 +1,9 @@
 package com.sperance.exileforge.ui.screens.hero
 
-import com.sperance.exileforge.ui.components.ForgeSheet
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.border
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -26,15 +25,15 @@ import com.sperance.exileforge.presentation.state.StashFilter
 import com.sperance.exileforge.presentation.state.StashSort
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.ui.components.*
+import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.theme.*
 
 /**
  * How many of the shelf's settings differ from its default: each filter chip, the query, the worn gear shown ([showsWorn]:
  * hidden is the default since 3.77.0) and an order other than the newest first.
  */
-internal fun stashTweaks(filter: StashFilter, sort: StashSort, showsWorn: Boolean = false): Int =
-    filter.groups.size + filter.rarities.size + (if (filter.wearable) 1 else 0) + (if (filter.query.isNotBlank()) 1 else 0) +
-        (if (showsWorn) 1 else 0) + (if (sort != StashSort.NEWEST) 1 else 0)
+internal fun stashTweaks(filter: StashFilter, sort: StashSort, showsWorn: Boolean = false): Int = filter.groups.size + filter.rarities.size + (if (filter.wearable) 1 else 0) + (if (filter.query.isNotBlank()) 1 else 0) +
+    (if (showsWorn) 1 else 0) + (if (sort != StashSort.NEWEST) 1 else 0)
 
 /** «Hide equipped» (3.69.0): the gear shelf without what the hero wears or has socketed; the same chip sits in the sheet. */
 @Composable internal fun HideWornChip(on: Boolean, onToggle: (Boolean) -> Unit) {
@@ -56,18 +55,33 @@ internal fun stashTweaks(filter: StashFilter, sort: StashSort, showsWorn: Boolea
  * reset of them all. [hideWorn] is null on a shelf it does not apply to (the tools), and its chip is not drawn there.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
-@Composable internal fun StashFilterSheet(filter: StashFilter, sort: StashSort, lang: Lang, shelfSize: Int, groupCounts: Map<SlotGroup, Int>,
-    rarities: List<Rarity>, onFilter: (StashFilter) -> Unit, onSort: (StashSort) -> Unit, hideWorn: Boolean?, onHideWorn: (Boolean) -> Unit,
-    onDismiss: () -> Unit) {
+@Composable
+internal fun StashFilterSheet(
+    filter: StashFilter,
+    sort: StashSort,
+    lang: Lang,
+    shelfSize: Int,
+    groupCounts: Map<SlotGroup, Int>,
+    rarities: List<Rarity>,
+    onFilter: (StashFilter) -> Unit,
+    onSort: (StashSort) -> Unit,
+    hideWorn: Boolean?,
+    onHideWorn: (Boolean) -> Unit,
+    onDismiss: () -> Unit,
+) {
     ForgeSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(
+            Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
             Text(ui("stash.filters"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
-            OutlinedTextField(filter.query, { onFilter(filter.copy(query = it.take(DefaultInputs.search))) }, placeholder = { Text(ui("hero.search_hint")) },
+            OutlinedTextField(
+                filter.query, { onFilter(filter.copy(query = it.take(DefaultInputs.search))) }, placeholder = { Text(ui("hero.search_hint")) },
                 label = { Text(ui("hero.find_item")) }, leadingIcon = { Icon(Icons.Outlined.Search, null) },
                 trailingIcon = { if (filter.query.isNotEmpty()) IconButton(onClick = { onFilter(filter.copy(query = "")) }) { Icon(Icons.Outlined.Close, null) } },
                 singleLine = true, keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { onDismiss() }),
-                modifier = Modifier.fillMaxWidth())
+                modifier = Modifier.fillMaxWidth(),
+            )
             Engraved(ui("stash.sort"))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 StashSort.entries.forEach { entry ->
@@ -76,11 +90,17 @@ internal fun stashTweaks(filter: StashFilter, sort: StashSort, showsWorn: Boolea
             }
             Engraved(ui("stash.filter_groups"))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(selected = filter.groups.isEmpty(), onClick = { onFilter(filter.copy(groups = emptySet())) },
-                    label = { Text(ui("hero.slot_count", ui("common.all"), shelfSize)) })
+                FilterChip(
+                    selected = filter.groups.isEmpty(),
+                    onClick = { onFilter(filter.copy(groups = emptySet())) },
+                    label = { Text(ui("hero.slot_count", ui("common.all"), shelfSize)) },
+                )
                 groupCounts.forEach { (group, count) ->
-                    FilterChip(selected = group in filter.groups, onClick = { onFilter(filter.toggle(group)) },
-                        label = { Text(ui("hero.slot_count", group.title(lang), count)) })
+                    FilterChip(
+                        selected = group in filter.groups,
+                        onClick = { onFilter(filter.toggle(group)) },
+                        label = { Text(ui("hero.slot_count", group.title(lang), count)) },
+                    )
                 }
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -90,13 +110,22 @@ internal fun stashTweaks(filter: StashFilter, sort: StashSort, showsWorn: Boolea
             Engraved(ui("stash.filter_rarity"))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 rarities.forEach { rarity ->
-                    FilterChip(selected = rarity in filter.rarities, onClick = { onFilter(filter.toggle(rarity)) },
-                        label = { Text(rarityTitle(rarity, lang), color = rarityColor(rarity.name)) })
+                    FilterChip(
+                        selected = rarity in filter.rarities,
+                        onClick = { onFilter(filter.toggle(rarity)) },
+                        label = { Text(rarityTitle(rarity, lang), color = rarityColor(rarity.name)) },
+                    )
                 }
             }
-            ForgeOutlinedButton(onClick = { onFilter(StashFilter()); onSort(StashSort.NEWEST); if (hideWorn == false) onHideWorn(true) },
+            ForgeOutlinedButton(
+                onClick = {
+                    onFilter(StashFilter())
+                    onSort(StashSort.NEWEST)
+                    if (hideWorn == false) onHideWorn(true)
+                },
                 enabled = stashTweaks(filter, sort, showsWorn = hideWorn == false) > 0,
-                modifier = Modifier.fillMaxWidth()) { Text(ui("stash.reset")) }
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text(ui("stash.reset")) }
         }
     }
 }

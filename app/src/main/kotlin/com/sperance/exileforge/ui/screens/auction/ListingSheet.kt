@@ -1,6 +1,5 @@
 package com.sperance.exileforge.ui.screens.auction
 
-import com.sperance.exileforge.ui.components.ForgeSheet
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
@@ -14,6 +13,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.auction.PriceHint
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.*
+import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.icons.orbArt
 import com.sperance.exileforge.ui.theme.*
 
@@ -28,8 +28,15 @@ internal fun orbOptions(s: ForgeState): Map<String, String> = s.currencies.assoc
  * stack, and then the sheet also asks how many of them — how many there are is said, not enforced.
  */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun ListingSheet(s: ForgeState, name: String, owned: Long? = null, onDismiss: () -> Unit,
-    hint: (suspend () -> PriceHint?)? = null, onList: (orb: String, price: Long, amount: Long) -> Unit) {
+@Composable
+fun ListingSheet(
+    s: ForgeState,
+    name: String,
+    owned: Long? = null,
+    onDismiss: () -> Unit,
+    hint: (suspend () -> PriceHint?)? = null,
+    onList: (orb: String, price: Long, amount: Long) -> Unit,
+) {
     var orb by remember { mutableStateOf(s.currencies.firstOrNull()?.code.orEmpty()) }
     var price by remember { mutableStateOf("1") }
     var amount by remember { mutableStateOf("1") }
@@ -42,14 +49,34 @@ internal fun orbOptions(s: ForgeState): Map<String, String> = s.currencies.assoc
         Column(Modifier.fillMaxWidth().padding(16.dp).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Engraved(ui("sell.list"))
             Text(name, color = Parchment, style = MaterialTheme.typography.titleMedium)
-            if (owned != null) OutlinedTextField(amount, { value -> amount = value.filter(Char::isDigit).take(s.inputs.number) }, label = { Text(ui("sell.amount_owned", owned)) },
-                singleLine = true, keyboardOptions = digits, modifier = Modifier.fillMaxWidth())
-            if (s.currencies.isEmpty()) Text(ui("orb.none"), color = Muted)
-            else Spinner(ui("orb.orb"), orb, orbOptions(s), !s.busy, glyph = Glyph.CURRENCY, optionArt = orbArt(s.currencies)) { orb = it }
-            OutlinedTextField(price, { value -> price = value.filter(Char::isDigit).take(s.inputs.number) }, label = { Text(ui("sell.price")) },
-                singleLine = true, keyboardOptions = digits, modifier = Modifier.fillMaxWidth())
+            if (owned != null) {
+                OutlinedTextField(
+                    amount,
+                    { value -> amount = value.filter(Char::isDigit).take(s.inputs.number) },
+                    label = { Text(ui("sell.amount_owned", owned)) },
+                    singleLine = true,
+                    keyboardOptions = digits,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            if (s.currencies.isEmpty()) {
+                Text(ui("orb.none"), color = Muted)
+            } else {
+                Spinner(ui("orb.orb"), orb, orbOptions(s), !s.busy, glyph = Glyph.CURRENCY, optionArt = orbArt(s.currencies)) { orb = it }
+            }
+            OutlinedTextField(
+                price,
+                { value -> price = value.filter(Char::isDigit).take(s.inputs.number) },
+                label = { Text(ui("sell.price")) },
+                singleLine = true,
+                keyboardOptions = digits,
+                modifier = Modifier.fillMaxWidth(),
+            )
             recent?.let { h ->
-                TextButton(onClick = { orb = h.priceOrb; price = (h.price * count.coerceAtLeast(1)).toString() }, contentPadding = PaddingValues(0.dp)) {
+                TextButton(onClick = {
+                    orb = h.priceOrb
+                    price = (h.price * count.coerceAtLeast(1)).toString()
+                }, contentPadding = PaddingValues(0.dp)) {
                     Text(ui("sell.price_hint", h.price, itemTitle(h.priceOrb), h.sales), color = Gold, style = MaterialTheme.typography.bodySmall)
                 }
             }

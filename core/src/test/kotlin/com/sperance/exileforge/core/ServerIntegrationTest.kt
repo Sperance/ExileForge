@@ -135,7 +135,9 @@ class ServerIntegrationTest {
             val own = player.hero.create(assertNotNull(player.currentUser()).id, "Player", "", heroClass)
             try {
                 assertEquals(403, assertFailsWith<ApiFailure> { player.hero.grantItem(own.id, Orb.CHAOS_ORB.name, 1) }.status)
-            } finally { player.hero.delete(own.id) }
+            } finally {
+                player.hero.delete(own.id)
+            }
         } finally {
             api.hero.delete(heroId)
         }

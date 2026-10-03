@@ -18,13 +18,12 @@ data class MonsterLine(val stat: String, val op: Op, val own: Double, val map: D
 }
 
 /** A monster's modifiers and its map's buffs as one list, summed per stat and operation — the same sum the fight folds; display only. */
-fun monsterLines(monster: RolledMonster): List<MonsterLine> =
-    (monster.modifiers.flatMap { it.effects }.map { it to false } + monster.mapBuffs.map { it to true })
-        .groupBy { (effect, _) -> effect.stat to effect.op }
-        .map { (key, parts) ->
-            val (map, own) = parts.partition { it.second }
-            MonsterLine(key.first, key.second, own.sumOf { it.first.value }, map.sumOf { it.first.value }, map.isNotEmpty())
-        }
+fun monsterLines(monster: RolledMonster): List<MonsterLine> = (monster.modifiers.flatMap { it.effects }.map { it to false } + monster.mapBuffs.map { it to true })
+    .groupBy { (effect, _) -> effect.stat to effect.op }
+    .map { (key, parts) ->
+        val (map, own) = parts.partition { it.second }
+        MonsterLine(key.first, key.second, own.sumOf { it.first.value }, map.sumOf { it.first.value }, map.isNotEmpty())
+    }
 
 fun monsterLineText(line: MonsterLine, index: ContentIndex? = null): String {
     // A taunt is there or not: how many modifiers gave it says nothing.

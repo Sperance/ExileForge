@@ -44,26 +44,47 @@ import com.sperance.exileforge.ui.theme.*
     val label = ui("stash.places", held, capacity)
     var buying by remember { mutableStateOf(false) }
     Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(Modifier.weight(1f).semantics(mergeDescendants = true) { contentDescription = label },
-            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            Modifier.weight(1f).semantics(mergeDescendants = true) { contentDescription = label },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             Box(Modifier.weight(1f).height(4.dp).background(PanelRaised, RoundedCornerShape(2.dp))) {
-                Box(Modifier.fillMaxWidth(if (capacity > 0) (held.toFloat() / capacity).coerceIn(0f, 1f) else 1f).fillMaxHeight()
-                    .background(tint, RoundedCornerShape(2.dp)))
+                Box(
+                    Modifier.fillMaxWidth(if (capacity > 0) (held.toFloat() / capacity).coerceIn(0f, 1f) else 1f).fillMaxHeight()
+                        .background(tint, RoundedCornerShape(2.dp)),
+                )
             }
-            Text(ui("stash.places_chip", held, capacity), color = if (full) tint else GoldBright, fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.labelSmall, maxLines = 1, softWrap = false)
+            Text(
+                ui("stash.places_chip", held, capacity),
+                color = if (full) tint else GoldBright,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.labelSmall,
+                maxLines = 1,
+                softWrap = false,
+            )
         }
-        if (price > 0) IconButton(onClick = { buying = true }, modifier = Modifier.size(28.dp)) {
-            Icon(Icons.Outlined.Add, ui("stash.expand", minOf(rules.slotStep, rules.maxSlots - capacity)), tint = tint, modifier = Modifier.size(18.dp))
+        if (price > 0) {
+            IconButton(onClick = { buying = true }, modifier = Modifier.size(28.dp)) {
+                Icon(Icons.Outlined.Add, ui("stash.expand", minOf(rules.slotStep, rules.maxSlots - capacity)), tint = tint, modifier = Modifier.size(18.dp))
+            }
         }
     }
     if (buying) {
         val short = hero.money < price
-        ConfirmSheet(title = ui("stash.expand", minOf(rules.slotStep, rules.maxSlots - capacity)), confirm = ui("stash.buy"),
-            subtitle = "$label · ${ui("stash.ceiling", rules.maxSlots)}", onDismiss = { buying = false },
+        ConfirmSheet(
+            title = ui("stash.expand", minOf(rules.slotStep, rules.maxSlots - capacity)),
+            confirm = ui("stash.buy"),
+            subtitle = "$label · ${ui("stash.ceiling", rules.maxSlots)}",
+            onDismiss = { buying = false },
             ledger = listOf(LedgerLine(ui("confirm.spend"), ui("merchant.gold_amount", price), Tone.SPEND)),
             note = listOfNotNull(ui("stash.places_note"), ui("stash.full_hint", rules.overflowSlots).takeIf { full }).joinToString("\n"),
-            blocked = short || s.busy, warning = ui("stash.no_gold").takeIf { short }) { buying = false; vm.expandStash() }
+            blocked = short || s.busy,
+            warning = ui("stash.no_gold").takeIf { short },
+        ) {
+            buying = false
+            vm.expandStash()
+        }
     }
 }
 

@@ -19,8 +19,8 @@ import com.sperance.exileforge.rules.content.Tier
 import com.sperance.exileforge.rules.content.WeaponType
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.roll.Roll
-import com.sperance.exileforge.rules.sheet.SheetCalculator
 import com.sperance.exileforge.rules.sheet.SellPrice
+import com.sperance.exileforge.rules.sheet.SheetCalculator
 import kotlin.math.round
 
 /**
@@ -29,14 +29,25 @@ import kotlin.math.round
  * handcraft, V for a corruption, A for a map's alchemy, X for a special essence's line.
  */
 enum class AffixKind(val letter: Char) {
-    PREFIX('P'), SUFFIX('S'), IMPLICIT('I'), CRAFTED('C'), HANDCRAFTED('H'),
-    FRACTURED('F'), CORRUPTION('V'), ALCHEMY('A'), UNIQUE('U'), ESSENCE('X');
+    PREFIX('P'),
+    SUFFIX('S'),
+    IMPLICIT('I'),
+    CRAFTED('C'),
+    HANDCRAFTED('H'),
+    FRACTURED('F'),
+    CORRUPTION('V'),
+    ALCHEMY('A'),
+    UNIQUE('U'),
+    ESSENCE('X'),
+    ;
 
     companion object {
         /** A fracture or the bench outranks the place a line holds: that is what decides what an orb may do to it. */
         fun of(source: Source?, crafted: Boolean, fractured: Boolean): AffixKind? = when {
             fractured -> FRACTURED
+
             crafted -> CRAFTED
+
             else -> when (source) {
                 Source.PREFIX -> PREFIX
                 Source.SUFFIX -> SUFFIX
@@ -53,15 +64,24 @@ enum class AffixKind(val letter: Char) {
 }
 
 /** What a rolled line is besides its sentence: its tier, and what placed it. */
-data class AffixMarks(val tier: Int, val crafted: Boolean, val fractured: Boolean, val handcrafted: Boolean = false, val alchemy: Boolean = false,
-                      val kind: AffixKind? = null) {
+data class AffixMarks(
+    val tier: Int,
+    val crafted: Boolean,
+    val fractured: Boolean,
+    val handcrafted: Boolean = false,
+    val alchemy: Boolean = false,
+    val kind: AffixKind? = null,
+) {
     /** The badge as it is printed: the letter and, for a rolled line, its tier — "P1", "S3", "I". */
     val badge: String? get() = kind?.let { if (tier > 0) "${it.letter}$tier" else "${it.letter}" }
 
     companion object {
         fun of(def: ModifierDef?, roll: Roll) = AffixMarks(
-            tier = roll.tier, crafted = def?.crafted == true, fractured = roll.fractured,
-            handcrafted = def?.source == Source.HANDCRAFTED, alchemy = def?.source == Source.ALCHEMY,
+            tier = roll.tier,
+            crafted = def?.crafted == true,
+            fractured = roll.fractured,
+            handcrafted = def?.source == Source.HANDCRAFTED,
+            alchemy = def?.source == Source.ALCHEMY,
             kind = AffixKind.of(def?.source, def?.crafted == true, roll.fractured),
         )
     }
@@ -71,22 +91,35 @@ data class AffixMarks(val tier: Int, val crafted: Boolean, val fractured: Boolea
  * One line of an item as a card draws it: the roll, its words, its badge, and how well it rolled inside its tier;
  * [itemLevel] is the copy's level the tiers are gated by, 0 when unknown.
  */
-data class ItemLine(val roll: Roll, val definition: ModifierDef?, val values: List<Double>, val text: String, val marks: AffixMarks,
-                    val itemLevel: Int = 0) {
+data class ItemLine(
+    val roll: Roll,
+    val definition: ModifierDef?,
+    val values: List<Double>,
+    val text: String,
+    val marks: AffixMarks,
+    val itemLevel: Int = 0,
+) {
     val code: String get() = roll.code
     val affix: Boolean get() = definition?.affix == true
+
     /** 0 the bottom of the tier, 1 its top; a fixed range is perfect; null for a line with no tier. */
     val quality: Double? get() = definition?.tier(roll.tier)?.let { if (fixed) 1.0 else roll.share }
+
     /** The tier's every range is a single number: there is nowhere inside it to land. */
     val fixed: Boolean get() = definition?.tier(roll.tier)?.values?.all { it[1] <= it[0] } == true
+
     /** The tier's ranges as the card prints them: "70–79", a fixed one as its single number, effects split by " / ". */
     val range: String? get() = definition?.let { def -> def.tier(roll.tier)?.let { rangeText(def, it) } }
+
     /** How many tiers the modifier has; 0 for a line with none. */
     val tierCount: Int get() = definition?.tiers?.size ?: 0
+
     /** Per tier, best (T1) first, whether the copy's level reaches it; every tier when the level is unknown. */
     val tierOpen: List<Boolean> get() = definition?.tiers?.map { itemLevel <= 0 || it.level <= itemLevel }.orEmpty()
+
     /** Where the definition puts the line — prefix, suffix, implicit…; a fracture and the bench are [marks], not a place. */
     val placement: AffixKind? get() = AffixKind.of(definition?.source, crafted = false, fractured = false)
+
     /** The characteristics the line moves, each once, in its effects' order. */
     val stats: List<String> get() = definition?.effects?.map { it.stat }?.distinct().orEmpty()
 }
@@ -118,6 +151,7 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
     val id: String get() = item.id
     val code: String get() = template.code
     val rarity: Rarity get() = item.rarity
+
     /** The template's slot: what the thing is. Where it is worn is [wornSlot]. */
     val slot: Slot get() = template.slot
     val socket: String? get() = item.socket
@@ -127,13 +161,16 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
     val mirrored: Boolean get() = item.mirrored
     val influence: Influence? get() = item.influence
     val quality: Int get() = item.quality
+
     /** The kind of quality (3.36.0): a catalyst's, or the base's when null. */
     val catalyst: com.sperance.exileforge.rules.content.Catalyst? get() = item.catalyst
     val weaponType: WeaponType? get() = template.weaponType
     val level: Int get() = item.level(template)
+
     /** A map names its zone (3.45.0: one template for every zone), and its tier past level 98 rides the name: «Last Throne Map · tier 7». */
     val title: String get() = (if (item.mapZone.isNotEmpty()) mapItemTitle(item.mapZone) else equipmentTitle(code))
         .let { name -> if (item.mapTier > 0) ui("card.map_tier_title", name, item.mapTier) else name }
+
     /** A unique's or mythic's lore; a base carries no description. */
     val description: String get() = if (template.unique) equipmentDescription(code) else ""
     val trade: String? get() = tradeName(code, equipment = true)
@@ -160,14 +197,19 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
      * one the sheet and the fight wear: a helmet of 100 armour with «+20 armour» and «20% increased armour» wears 144.
      */
     val base: List<BaseProperty> by lazy {
-        if (template.base.isEmpty()) emptyList() else {
+        if (template.base.isEmpty()) {
+            emptyList()
+        } else {
             val calc = SheetCalculator(index)
             // The copy's own base (server 1.67.0): its base quality and item level scale the template's lines before anything else.
             val baseTotals = calc.compute(emptyMap(), calc.expand(index.rules.loot.baseVariance.base(template, calc.baseScale(template, item))))
             val totals = calc.itemBase(template, item)
             template.base.mapNotNull { line ->
                 val def = index.modifier(line.code) ?: return@mapNotNull null
-                val values = line.values.mapIndexed { i, own -> val stat = def.effects.getOrNull(i)?.stat.orEmpty(); PropertyValue(stat, baseTotals[stat] ?: own, totals[stat] ?: own) }
+                val values = line.values.mapIndexed { i, own ->
+                    val stat = def.effects.getOrNull(i)?.stat.orEmpty()
+                    PropertyValue(stat, baseTotals[stat] ?: own, totals[stat] ?: own)
+                }
                 BaseProperty(line.code, text.template(def).orEmpty(), values)
             }.filter { it.values.isNotEmpty() }
         }
@@ -191,9 +233,13 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
     /** The true/false states, in a fixed order: corrupted, mirrored, an influence, fractured, crafted, worn, socketed. */
     val states: List<String> by lazy {
         listOfNotNull(
-            "corrupted".takeIf { corrupted }, "mirrored".takeIf { mirrored }, influence?.name?.lowercase(),
-            "fractured".takeIf { lines.any { it.marks.fractured } }, "crafted".takeIf { lines.any { it.marks.crafted } },
-            "equipped".takeIf { equipped && !socketed }, "socketed".takeIf { socketed },
+            "corrupted".takeIf { corrupted },
+            "mirrored".takeIf { mirrored },
+            influence?.name?.lowercase(),
+            "fractured".takeIf { lines.any { it.marks.fractured } },
+            "crafted".takeIf { lines.any { it.marks.crafted } },
+            "equipped".takeIf { equipped && !socketed },
+            "socketed".takeIf { socketed },
         )
     }
 
@@ -234,19 +280,33 @@ fun itemRequirements(template: ItemTemplate, lang: Lang = uiLanguage): List<Stri
 
 fun itemVisualKind(template: ItemTemplate): ItemVisualKind = when {
     template.weaponType == WeaponType.BOW || template.slot == Slot.QUIVER -> ItemVisualKind.BOW
+
     template.weaponType == WeaponType.WAND -> ItemVisualKind.WAND
+
     template.weaponType == WeaponType.STAFF -> ItemVisualKind.STAFF
+
     template.weaponType == WeaponType.SCEPTRE -> ItemVisualKind.MACE
+
     template.weaponType == WeaponType.AXE || template.weaponType == WeaponType.DOUBLEAXE -> ItemVisualKind.AXE
+
     template.weaponType == WeaponType.BLADE -> ItemVisualKind.DAGGER
+
     template.weaponType == WeaponType.LONGSWORD || template.weaponType == WeaponType.DOUBLESWORD -> ItemVisualKind.STAFF
+
     template.slot.isWeapon -> ItemVisualKind.SWORD
+
     else -> when (template.slot) {
-        Slot.HELMET -> ItemVisualKind.HELMET; Slot.BODY -> ItemVisualKind.ARMOR
-        Slot.GLOVES -> ItemVisualKind.GLOVES; Slot.BOOTS -> ItemVisualKind.BOOTS
-        Slot.RING, Slot.RING_2 -> ItemVisualKind.RING; Slot.AMULET, Slot.COLLAR -> ItemVisualKind.AMULET
-        Slot.BELT -> ItemVisualKind.BELT; Slot.SHIELD -> ItemVisualKind.SHIELD; Slot.WINGS -> ItemVisualKind.WINGS
-        Slot.JEWEL -> ItemVisualKind.GEM; Slot.MAP -> ItemVisualKind.MAP
+        Slot.HELMET -> ItemVisualKind.HELMET
+        Slot.BODY -> ItemVisualKind.ARMOR
+        Slot.GLOVES -> ItemVisualKind.GLOVES
+        Slot.BOOTS -> ItemVisualKind.BOOTS
+        Slot.RING, Slot.RING_2 -> ItemVisualKind.RING
+        Slot.AMULET, Slot.COLLAR -> ItemVisualKind.AMULET
+        Slot.BELT -> ItemVisualKind.BELT
+        Slot.SHIELD -> ItemVisualKind.SHIELD
+        Slot.WINGS -> ItemVisualKind.WINGS
+        Slot.JEWEL -> ItemVisualKind.GEM
+        Slot.MAP -> ItemVisualKind.MAP
         Slot.FLASK, Slot.FLASK_2, Slot.FLASK_3 -> ItemVisualKind.SCROLL
         else -> ItemVisualKind.ITEM
     }
@@ -259,7 +319,8 @@ fun stateTitle(state: String, lang: Lang = uiLanguage): String = uiOr(lang, "sta
 fun rangeText(def: ModifierDef, tier: Tier): String? = tier.values.mapIndexedNotNull { index, range ->
     val (low, high) = range.takeIf { it.size == 2 } ?: return@mapIndexedNotNull null
     val stat = def.effects.getOrNull(index)?.stat.orEmpty()
-    val from = modNumber(stat, low); val to = modNumber(stat, high)
+    val from = modNumber(stat, low)
+    val to = modNumber(stat, high)
     if (from == to) from else "$from–$to"
 }.joinToString(" / ").ifBlank { null }
 
@@ -271,7 +332,8 @@ fun rangedLine(index: ContentIndex, modifier: String, values: List<Range>): Stri
     val def = index.modifier(modifier)
     val ranges = values.filter { it.size == 2 }.mapIndexed { i, (min, max) ->
         val stat = def?.effects?.getOrNull(i)?.stat.orEmpty()
-        val low = modNumber(stat, min); val high = modNumber(stat, max)
+        val low = modNumber(stat, min)
+        val high = modNumber(stat, max)
         if (low == high) low else "($low–$high)"
     }
     val template = def?.let { modifierText(index).template(it) } ?: return ranges.joinToString(" · ").ifBlank { displayName(modifier) }
@@ -291,8 +353,7 @@ fun effectText(stat: String, op: Op, value: Double, index: ContentIndex? = null)
 }
 
 /** The sign an effect's figure carries: a percent for a relative operation, and for a flat one on a stat counted in percent. */
-fun effectUnit(stat: String, op: Op, index: ContentIndex? = null): String =
-    if (op == Op.INCREASED || op == Op.MORE || (op != Op.SET && statPercent(stat, index))) "%" else ""
+fun effectUnit(stat: String, op: Op, index: ContentIndex? = null): String = if (op == Op.INCREASED || op == Op.MORE || (op != Op.SET && statPercent(stat, index))) "%" else ""
 
 /** How a stacking item of the bag is drawn when the server has no icon for it: by its category. */
 fun bagVisualKind(item: com.sperance.exileforge.rules.content.Item): ItemVisualKind = when (item.category) {

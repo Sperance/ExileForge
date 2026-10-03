@@ -31,19 +31,21 @@ fun nodeTypeTitle(type: SkillNodeType, lang: Lang = uiLanguage): String = uiOr(l
 /** The name of an equipment template, out of the dictionary; a code it does not know reads as the code. */
 fun equipmentTitle(code: String): String = if (code.isBlank()) ui("item.equipment") else locOr(LocaleKey.equipmentName(code), displayName(code))
 fun equipmentDescription(code: String): String = locOr(LocaleKey.equipmentDescription(code), "")
+
 /** The name of a stacking item — an orb, a material, a book, an essence. */
 fun itemTitle(code: String): String = if (code.isBlank()) ui("common.item") else locOr(LocaleKey.itemName(code), uiOr(uiLanguage, "enum.orb.$code", displayName(code)))
 fun itemDescription(code: String): String = locOr(LocaleKey.itemDescription(code), uiOr(uiLanguage, "enum.orb.$code.rule", ""))
+
 /** The English trade name, one in every language, for a full card only; null when the dictionary has none or it is the shown name already. */
-fun tradeName(code: String, equipment: Boolean): String? =
-    locOr(if (equipment) LocaleKey.equipmentTrade(code) else LocaleKey.itemTrade(code), "").takeIf { it.isNotBlank() && it != (if (equipment) equipmentTitle(code) else itemTitle(code)) }
+fun tradeName(code: String, equipment: Boolean): String? = locOr(if (equipment) LocaleKey.equipmentTrade(code) else LocaleKey.itemTrade(code), "").takeIf { it.isNotBlank() && it != (if (equipment) equipmentTitle(code) else itemTitle(code)) }
 
 fun monsterTitle(code: String): String = locOr(LocaleKey.monsterName(code), displayName(code))
+
 /** A monster's trait (3.73.0): its name, and what it does with `{0}` its strength, `{1}` the life threshold, `{2}` the seconds. */
 fun traitTitle(code: String): String = locOr(LocaleKey.traitName(code), displayName(code))
-fun traitText(code: String, value: Double = 0.0, threshold: Double = 0.0, seconds: Double = 0.0): String =
-    loc(LocaleKey.traitDescription(code), listOf(fineNumber(value), fineNumber(threshold), fineNumber(seconds)))
+fun traitText(code: String, value: Double = 0.0, threshold: Double = 0.0, seconds: Double = 0.0): String = loc(LocaleKey.traitDescription(code), listOf(fineNumber(value), fineNumber(threshold), fineNumber(seconds)))
 fun mapTitle(code: String): String = locOr(LocaleKey.mapName(code), displayName(code))
+
 /** A map item by its zone: «Tidal Shore Map». */
 fun mapItemTitle(zone: String): String = loc(LocaleKey.mapItemName(), listOf(mapTitle(zone)))
 fun mapDescription(code: String): String = locOr(LocaleKey.mapDescription(code), "")
@@ -56,8 +58,10 @@ fun atlasNodeTitle(code: String): String = locOr(LocaleKey.atlasNodeName(code), 
 fun professionTitle(code: String): String = locOr(LocaleKey.professionName(code), displayName(code))
 fun professionDescription(code: String): String = locOr(LocaleKey.professionDescription(code), "")
 fun jobTitle(code: String): String = locOr(LocaleKey.jobName(code), displayName(code))
+
 /** What a choosing work was told to make: the item, or the smith's group and attribute (3.46.0). */
 fun choiceTitle(choice: String): String = locOr(LocaleKey.itemName(choice), locOr(LocaleKey.choiceName(choice), displayName(choice)))
+
 /** A work with its choice (3.45.0): «Condense Essence · Weeping Essence of Greed». */
 fun workTitle(code: String, choice: String): String = if (choice.isEmpty()) jobTitle(code) else "${jobTitle(code)} · ${choiceTitle(choice)}"
 
@@ -67,22 +71,19 @@ fun workTitle(code: String, choice: String): String = if (choice.isEmpty()) jobT
  */
 fun statTitle(stat: String, lang: Lang = uiLanguage): String = rawStatTitle(stat, lang).replace(PERCENT_MARK, "")
 
-private fun rawStatTitle(stat: String, lang: Lang): String =
-    uiOr(lang, "enum.stat.$stat", locOr("enum.EnumStatStock.$stat", locOr("enum.EnumStatBattle.$stat", locOr("enum.EnumStatProfession.$stat", displayName(stat.substringAfter('_'), lang)))))
+private fun rawStatTitle(stat: String, lang: Lang): String = uiOr(lang, "enum.stat.$stat", locOr("enum.EnumStatStock.$stat", locOr("enum.EnumStatBattle.$stat", locOr("enum.EnumStatProfession.$stat", displayName(stat.substringAfter('_'), lang)))))
 
 /**
  * What a stat is and what it moves: the client's table, then the server's; a unique's power stat not
  * described on its own reads the powers' common line.
  */
-fun statDescription(stat: String, lang: Lang = uiLanguage, power: Boolean = false): String =
-    uiOr(lang, "enum.stat_desc.$stat", locOr("enum.EnumStatStockDesc.$stat", if (power) uiOr(lang, "enum.stat_desc.__POWER__", "") else ""))
+fun statDescription(stat: String, lang: Lang = uiLanguage, power: Boolean = false): String = uiOr(lang, "enum.stat_desc.$stat", locOr("enum.EnumStatStockDesc.$stat", if (power) uiOr(lang, "enum.stat_desc.__POWER__", "") else ""))
 
 /** «Шанс крита, %»: the dictionaries mark a stat counted in percent at the end of its name; the mark moves to the figure (3.2.0). */
 private val PERCENT_MARK = Regex("""[,\s]*%\s*$""")
 
 /** Whether a stat reads in percent: its name carries the mark, or the registry counts it so. */
-fun statPercent(stat: String, index: ContentIndex? = null): Boolean =
-    PERCENT_MARK.containsMatchIn(rawStatTitle(stat, uiLanguage)) || index?.stats?.isPercent(stat) == true
+fun statPercent(stat: String, index: ContentIndex? = null): Boolean = PERCENT_MARK.containsMatchIn(rawStatTitle(stat, uiLanguage)) || index?.stats?.isPercent(stat) == true
 
 /** A stat's figure as a sheet shows it, the percent sign at the number rather than in the name: «Шанс крита 5%». */
 fun statValue(stat: String, value: Double, index: ContentIndex? = null): String = statNumber(stat, value) + if (statPercent(stat, index)) "%" else ""
@@ -91,16 +92,14 @@ fun statValue(stat: String, value: Double, index: ContentIndex? = null): String 
 fun modifierText(index: ContentIndex): ModifierText = ModifierText(index.stats, serverLocale::string)
 
 /** A modifier's sentence with its values in; a definition the dictionary cannot word prints its numbers and stats. */
-fun modifierLine(index: ContentIndex, def: ModifierDef, values: List<Double>): String =
-    modifierText(index).template(def)?.let { fillTemplate(it, values.mapIndexed { i, v -> modNumber(def.effects.getOrNull(i)?.stat.orEmpty(), v) }) }
-        ?: values.mapIndexed { i, v -> def.effects.getOrNull(i)?.let { "${modNumber(it.stat, v)} ${statTitle(it.stat)}" } ?: number(v) }.joinToString(" · ").ifBlank { displayName(def.code) }
+fun modifierLine(index: ContentIndex, def: ModifierDef, values: List<Double>): String = modifierText(index).template(def)?.let { fillTemplate(it, values.mapIndexed { i, v -> modNumber(def.effects.getOrNull(i)?.stat.orEmpty(), v) }) }
+    ?: values.mapIndexed { i, v -> def.effects.getOrNull(i)?.let { "${modNumber(it.stat, v)} ${statTitle(it.stat)}" } ?: number(v) }.joinToString(" · ").ifBlank { displayName(def.code) }
 
 /** A fixed line — a base, a class's or a tree node's — as one sentence. */
 fun lineText(index: ContentIndex, line: Line): String = index.modifier(line.code)?.let { modifierLine(index, it, line.values) } ?: displayName(line.code)
 
 /** A template with its numbers in: `{0}` takes the value as printed, `{|0|}` its size without the sign. */
-fun fillTemplate(template: String, values: List<String>): String =
-    values.foldIndexed(template) { index, text, value -> text.replace("{|$index|}", value.removePrefix("-").removePrefix("−")).replace("{$index}", value) }
+fun fillTemplate(template: String, values: List<String>): String = values.foldIndexed(template) { index, text, value -> text.replace("{|$index|}", value.removePrefix("-").removePrefix("−")).replace("{$index}", value) }
 
 /** Characteristics whose meaning lives in the fraction: rounding them destroys them. */
 val preciseStats = setOf(
@@ -112,18 +111,15 @@ val preciseStats = setOf(
  * A number as every screen prints it (3.28.0): a stat that lives in its fraction keeps two places; any other keeps its
  * tenth below ten — 7.4, 1.8, 0.4, but «5», not «5.0» — and is whole from ten up. The value itself is never rounded.
  */
-fun statNumber(stat: String, value: Double): String =
-    if (stat in preciseStats) String.format(java.util.Locale.ROOT, "%.2f", value) else fineNumber(value)
+fun statNumber(stat: String, value: Double): String = if (stat in preciseStats) String.format(java.util.Locale.ROOT, "%.2f", value) else fineNumber(value)
 
 fun number(value: Double): String = statNumber("", value)
 
 /** A modifier's figure, whatever its size, with the tenth it was rolled to: «+12.3», «+1.8», «+5» — a precise stat keeps its hundredths. */
-fun modNumber(stat: String, value: Double): String =
-    if (stat in preciseStats) statNumber(stat, value) else String.format(java.util.Locale.ROOT, "%.1f", value).removeSuffix(".0")
+fun modNumber(stat: String, value: Double): String = if (stat in preciseStats) statNumber(stat, value) else String.format(java.util.Locale.ROOT, "%.1f", value).removeSuffix(".0")
 
 /** A small figure with its tenth: a bleed of 0.4 a second is «0.4», not «0»; from ten up the whole number stays. */
-fun fineNumber(value: Double): String =
-    if (kotlin.math.abs(value) >= 10) Math.round(value).toString() else String.format(java.util.Locale.ROOT, "%.1f", value).removeSuffix(".0")
+fun fineNumber(value: Double): String = if (kotlin.math.abs(value) >= 10) Math.round(value).toString() else String.format(java.util.Locale.ROOT, "%.1f", value).removeSuffix(".0")
 
 /** Why an equipped item does not count, from the rules' own words — "strength: need 30, have 14". */
 fun requirementReason(reason: String, lang: Lang = uiLanguage): String {

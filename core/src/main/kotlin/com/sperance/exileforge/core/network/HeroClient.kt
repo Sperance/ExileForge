@@ -1,7 +1,5 @@
 package com.sperance.exileforge.core.network
 
-import com.sperance.exileforge.rules.content.SlotGroup
-import com.sperance.exileforge.rules.content.AutoSell
 import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.contract.requireId
 import com.sperance.exileforge.core.contract.requireItemId
@@ -9,19 +7,21 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.CreateHeroCommand
 import com.sperance.exileforge.core.model.hero.CurrencyApplyResponse
 import com.sperance.exileforge.core.model.hero.HeroSummary
-import com.sperance.exileforge.core.model.hero.SellOutcome
 import com.sperance.exileforge.core.model.hero.PetState
+import com.sperance.exileforge.core.model.hero.SellOutcome
 import com.sperance.exileforge.core.model.hero.StashState
 import com.sperance.exileforge.core.model.sync.HeroParts
 import com.sperance.exileforge.core.model.sync.HeroSnapshot
+import com.sperance.exileforge.rules.content.AutoSell
 import com.sperance.exileforge.rules.content.BenchRecipe
 import com.sperance.exileforge.rules.content.HeroSkills
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
+import com.sperance.exileforge.rules.content.SlotGroup
 import com.sperance.exileforge.rules.roll.ItemInstance
 import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -120,8 +120,7 @@ class HeroClient internal constructor(private val http: Transport) {
     }
 
     /** One row of the loot filter (server 1.45.0): the slot groups of [rarity] the merchant takes at once; none clears it. */
-    suspend fun autoSell(heroId: String, rarity: Rarity, groups: Set<SlotGroup>): AutoSell =
-        http.post("$HERO/autosell", heroQuery(heroId, "rarity" to rarity.name, "groups" to groups.joinToString(",") { it.name }))
+    suspend fun autoSell(heroId: String, rarity: Rarity, groups: Set<SlotGroup>): AutoSell = http.post("$HERO/autosell", heroQuery(heroId, "rarity" to rarity.name, "groups" to groups.joinToString(",") { it.name }))
 
     /** Claims the Exile's Path step the hero stands on (server 1.74.0): refused (`PR_007`) while it is not done. */
     suspend fun claimPath(heroId: String): com.sperance.exileforge.core.model.hero.PathClaimed = http.post("$HERO/path/claim", heroQuery(heroId))
@@ -132,20 +131,20 @@ class HeroClient internal constructor(private val http: Transport) {
     // ---- the menagerie (server 1.5.0); none retried: a repeat would spend a second egg or orb ----
 
     /** Lays [egg] into the incubator (server 1.67.0): place [slot], or the first free one; its rarity and level are rolled now. */
-    suspend fun incubatePet(heroId: String, egg: String, slot: Int? = null): PetState =
-        http.post("$HERO/pets/incubate", heroQuery(heroId, "egg" to egg, "slot" to slot?.toString()))
+    suspend fun incubatePet(heroId: String, egg: String, slot: Int? = null): PetState = http.post("$HERO/pets/incubate", heroQuery(heroId, "egg" to egg, "slot" to slot?.toString()))
+
     /** Takes the ripe egg of place [slot] out of the incubator: the pet hatches, its species and lines rolled now. */
     suspend fun collectPet(heroId: String, slot: Int): PetState = http.post("$HERO/pets/collect", heroQuery(heroId, "slot" to slot.toString()))
+
     /** Any crafting orb on a pet (server 1.65.0), with an [omen] spent along with it when given; the pets' own growth orb too. */
-    suspend fun petOrb(heroId: String, petId: String, orb: String, omen: String? = null): PetState =
-        http.post("$HERO/pets/orb", heroQuery(heroId, "petId" to petId.also(::requireItemId), "orb" to orb, "omen" to omen?.takeIf { it.isNotBlank() }))
+    suspend fun petOrb(heroId: String, petId: String, orb: String, omen: String? = null): PetState = http.post("$HERO/pets/orb", heroQuery(heroId, "petId" to petId.also(::requireItemId), "orb" to orb, "omen" to omen?.takeIf { it.isNotBlank() }))
+
     /** The Omen of Choice's line kept on a pet (server 1.65.0): [choice] of the ones it offers. */
-    suspend fun choosePetLine(heroId: String, petId: String, choice: Int): PetState =
-        http.post("$HERO/pets/choose", heroQuery(heroId, "petId" to petId.also(::requireItemId), "choice" to choice.toString()))
+    suspend fun choosePetLine(heroId: String, petId: String, choice: Int): PetState = http.post("$HERO/pets/choose", heroQuery(heroId, "petId" to petId.also(::requireItemId), "choice" to choice.toString()))
     suspend fun activatePet(heroId: String, petId: String): PetState = http.post("$HERO/pets/activate", heroQuery(heroId, "petId" to petId.also(::requireItemId)))
+
     /** Breeds two combat pets with the Orb of Breeding (server 1.74.0): a hybrid joins, or an egg of a parent goes to the bag. Never retried. */
-    suspend fun breedPets(heroId: String, first: String, second: String): PetState =
-        http.post("$HERO/pets/breed", heroQuery(heroId, "first" to first.also(::requireItemId), "second" to second.also(::requireItemId)))
+    suspend fun breedPets(heroId: String, first: String, second: String): PetState = http.post("$HERO/pets/breed", heroQuery(heroId, "first" to first.also(::requireItemId), "second" to second.also(::requireItemId)))
     suspend fun releasePet(heroId: String, petId: String): PetState = http.post("$HERO/pets/release", heroQuery(heroId, "petId" to petId.also(::requireItemId)))
 
     // ---- the stash's places and its overflow (server 1.1.0) ----
@@ -166,6 +165,7 @@ class HeroClient internal constructor(private val http: Transport) {
 
     /** Spends one orb of the bag on one item; [orb] is the orb's item code. */
     /** An orb on an item, with an [omen] (3.36.0) spent along with it when given. */
+
     /** Tempers a weapon or armour with the smith's ore (server 1.74.0): quality and item level up, once per item. Never retried. */
     suspend fun temper(heroId: String, itemId: String): CurrencyApplyResponse {
         requireItemId(itemId)
@@ -213,16 +213,14 @@ class HeroClient internal constructor(private val http: Transport) {
     // ---- the class skills ----
 
     suspend fun learnSkill(heroId: String, skill: String): HeroSkills = http.post("$HERO/skills/learn", heroQuery(heroId, "skill" to skill))
+
     /** Opens one loot chest of the bag (3.76.0, server 1.71.0): the server rolls what is inside. */
-    suspend fun openChest(heroId: String, code: String): com.sperance.exileforge.core.model.hero.ChestOpening =
-        http.post("$HERO/chest/open", heroQuery(heroId, "code" to code))
+    suspend fun openChest(heroId: String, code: String): com.sperance.exileforge.core.model.hero.ChestOpening = http.post("$HERO/chest/open", heroQuery(heroId, "code" to code))
 
     /** Puts a learned skill into slot [index] of [kind] — `ACTIVE` or `PASSIVE` — or empties it without [skill]. */
-    suspend fun slotSkill(heroId: String, kind: String, index: Int, skill: String?, condition: String? = null): HeroSkills =
-        http.post("$HERO/skills/slot", heroQuery(heroId, "kind" to kind, "index" to index.toString(), "skill" to skill, "condition" to condition))
+    suspend fun slotSkill(heroId: String, kind: String, index: Int, skill: String?, condition: String? = null): HeroSkills = http.post("$HERO/skills/slot", heroQuery(heroId, "kind" to kind, "index" to index.toString(), "skill" to skill, "condition" to condition))
 
-    suspend fun flaskCondition(heroId: String, index: Int, condition: String?): HeroSkills =
-        http.post("$HERO/skills/flask", heroQuery(heroId, "index" to index.toString(), "condition" to condition))
+    suspend fun flaskCondition(heroId: String, index: Int, condition: String?): HeroSkills = http.post("$HERO/skills/flask", heroQuery(heroId, "index" to index.toString(), "condition" to condition))
 
     suspend fun exchangeBooks(heroId: String, books: List<String>, skill: String): HeroSkills {
         require(books.isNotEmpty() && skill.isNotBlank()) { ui("skills.choose_books") }

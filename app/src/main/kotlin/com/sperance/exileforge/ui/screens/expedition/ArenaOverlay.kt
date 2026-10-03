@@ -1,18 +1,17 @@
 package com.sperance.exileforge.ui.screens.expedition
 
-import com.sperance.exileforge.ui.components.ForgeSheet
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -59,24 +58,25 @@ import com.sperance.exileforge.core.display.bagVisualKind
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.fineNumber
-import com.sperance.exileforge.core.i18n.locOr
-import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.monsterTitle
-import com.sperance.exileforge.core.display.traitTitle
 import com.sperance.exileforge.core.display.number
+import com.sperance.exileforge.core.display.statTitle
+import com.sperance.exileforge.core.display.traitTitle
+import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.state.ForgeState
-import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.presentation.state.Buzz
 import com.sperance.exileforge.presentation.state.DamageNumbers
-import com.sperance.exileforge.rules.content.ContentIndex
+import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.CombatRules
+import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.LoneWolfRule
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.content.SlotCondition
 import com.sperance.exileforge.rules.run.Reward
 import com.sperance.exileforge.ui.components.*
+import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.expedition.scene.Portraits
@@ -127,20 +127,29 @@ internal fun DamageType.key() = "enum.damage.$name"
  * What each effect's window says (2.72.0, a window growing out of the icon since 2.73.0): its name,
  * the rule in words, and its figures — strength, seconds left, stacks.
  */
-private fun ailmentTip(view: AilmentView) = Tip(ui(view.ailment.key()), ui("fight.effect.${view.ailment.name}"), ailmentTint(view.ailment), listOfNotNull(
-    view.strength.takeIf { it > 0 && view.ailment != Ailment.FROZEN }?.let {
-        ui("fight.fact_strength") to (if (view.ailment.hurts) ui("fight.fact_dps", fineNumber(it)) else ui("fight.fact_percent", fineNumber(it)))
-    },
-    (ui("fight.fact_left") to ui("fight.fact_seconds", fineNumber(view.seconds))).takeIf { view.seconds > 0 },
-    (ui("fight.fact_stacks") to view.stacks.toString()).takeIf { view.stacks > 1 },
-))
+private fun ailmentTip(view: AilmentView) = Tip(
+    ui(view.ailment.key()),
+    ui("fight.effect.${view.ailment.name}"),
+    ailmentTint(view.ailment),
+    listOfNotNull(
+        view.strength.takeIf { it > 0 && view.ailment != Ailment.FROZEN }?.let {
+            ui("fight.fact_strength") to (if (view.ailment.hurts) ui("fight.fact_dps", fineNumber(it)) else ui("fight.fact_percent", fineNumber(it)))
+        },
+        (ui("fight.fact_left") to ui("fight.fact_seconds", fineNumber(view.seconds))).takeIf { view.seconds > 0 },
+        (ui("fight.fact_stacks") to view.stacks.toString()).takeIf { view.stacks > 1 },
+    ),
+)
 
 private fun stunTip() = Tip(ui("expedition.stunned"), ui("fight.effect.STUN"), GoldBright)
 
 private fun tauntTip(hero: Boolean) = Tip(ui("fight.taunt"), ui(if (hero) "fight.taunt_hero" else "fight.taunt_hint"), TauntCrimson)
 
-private fun loneWolfTip(rule: LoneWolfRule) = Tip(ui("fight.lone_wolf_title"), ui("fight.lone_wolf_body", number(rule.dealt), number(rule.taken)), GoldBright,
-    listOf(ui("fight.fact_dealt") to "+${number(rule.dealt)}%", ui("fight.fact_taken") to "−${number(rule.taken)}%"))
+private fun loneWolfTip(rule: LoneWolfRule) = Tip(
+    ui("fight.lone_wolf_title"),
+    ui("fight.lone_wolf_body", number(rule.dealt), number(rule.taken)),
+    GoldBright,
+    listOf(ui("fight.fact_dealt") to "+${number(rule.dealt)}%", ui("fight.fact_taken") to "−${number(rule.taken)}%"),
+)
 
 /** The taunt's colours: dried blood and old gold. */
 private val TauntCrimson = Color(0xFFB8373A)
@@ -167,12 +176,21 @@ private fun Modifier.tauntAura(shape: Shape, time: Float) = drawBehind {
         val h = size.height
         drawCircle(TauntCrimson.copy(alpha = .25f + .15f * sin(time * 2.4f)), w * .62f, center)
         val shield = Path().apply {
-            moveTo(w * .5f, h * .06f); lineTo(w * .9f, h * .2f); lineTo(w * .86f, h * .56f)
-            quadraticTo(w * .78f, h * .84f, w * .5f, h * .96f); quadraticTo(w * .22f, h * .84f, w * .14f, h * .56f); lineTo(w * .1f, h * .2f); close()
+            moveTo(w * .5f, h * .06f)
+            lineTo(w * .9f, h * .2f)
+            lineTo(w * .86f, h * .56f)
+            quadraticTo(w * .78f, h * .84f, w * .5f, h * .96f)
+            quadraticTo(w * .22f, h * .84f, w * .14f, h * .56f)
+            lineTo(w * .1f, h * .2f)
+            close()
         }
         drawPath(shield, Brush.verticalGradient(listOf(Color(0xFF7A1C22), TauntCrimson, Color(0xFF4A0E12))))
         drawPath(shield, TauntGold, style = Stroke(1.4.dp.toPx()))
-        val chevron = Path().apply { moveTo(w * .3f, h * .42f); lineTo(w * .5f, h * .6f); lineTo(w * .7f, h * .42f) }
+        val chevron = Path().apply {
+            moveTo(w * .3f, h * .42f)
+            lineTo(w * .5f, h * .6f)
+            lineTo(w * .7f, h * .42f)
+        }
         drawPath(chevron, TauntGold, style = Stroke(1.6.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
     }
 }
@@ -188,8 +206,16 @@ private fun Modifier.tauntAura(shape: Shape, time: Float) = drawBehind {
         drawCircle(Brush.radialGradient(listOf(PanelRaised, Color(0xFF0B0D11)), center, w / 2), w / 2, center)
         drawCircle(Bronze, w / 2 - 1.dp.toPx(), center, style = Stroke(1.5.dp.toPx()))
         val head = Path().apply {
-            moveTo(w * .24f, h * .22f); lineTo(w * .38f, h * .38f); lineTo(w * .62f, h * .38f); lineTo(w * .76f, h * .22f)
-            lineTo(w * .74f, h * .52f); lineTo(w * .58f, h * .8f); lineTo(w * .5f, h * .84f); lineTo(w * .42f, h * .8f); lineTo(w * .26f, h * .52f); close()
+            moveTo(w * .24f, h * .22f)
+            lineTo(w * .38f, h * .38f)
+            lineTo(w * .62f, h * .38f)
+            lineTo(w * .76f, h * .22f)
+            lineTo(w * .74f, h * .52f)
+            lineTo(w * .58f, h * .8f)
+            lineTo(w * .5f, h * .84f)
+            lineTo(w * .42f, h * .8f)
+            lineTo(w * .26f, h * .52f)
+            close()
         }
         drawPath(head, Brush.verticalGradient(listOf(GoldBright, Gold)))
         drawCircle(Color(0xFF0B0D11), w * .045f, Offset(w * .41f, h * .5f))
@@ -210,8 +236,17 @@ private const val HERO_CARD = -1
  * Before «В бой», and whenever paused, nothing moves: the tapped foe — or the one the hero would
  * strike — is laid open, its numbers held against the hero's.
  */
-@Composable internal fun ArenaOverlay(s: ForgeState, hud: RunHud, fight: FightHud, level: Int, rules: CombatRules, stance: HeroStance,
-                                      onCommand: (RunCommand) -> Unit, onLogFilter: (Set<LogKind>) -> Unit = {}, onBuzz: (Buzz) -> Unit = {}) {
+@Composable internal fun ArenaOverlay(
+    s: ForgeState,
+    hud: RunHud,
+    fight: FightHud,
+    level: Int,
+    rules: CombatRules,
+    stance: HeroStance,
+    onCommand: (RunCommand) -> Unit,
+    onLogFilter: (Set<LogKind>) -> Unit = {},
+    onBuzz: (Buzz) -> Unit = {},
+) {
     val time by rememberClock()
     // The settings' pause and buzz (3.77.0): each once as the hero's life falls through its line, the buzz again at a fall.
     val settings = LocalSettings.current
@@ -235,23 +270,46 @@ private const val HERO_CARD = -1
     var info by remember { mutableStateOf<SkillView?>(null) }
     fun track(key: Int) = Modifier.onGloballyPositioned { bounds[key] = it.boundsInRoot() }
     Box(Modifier.fillMaxSize().onGloballyPositioned { origin = it.positionInRoot() }) {
-        Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 10.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(
+            Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             PackHeader(fight, level)
-            if (fight.field.isNotEmpty()) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)) {
-                // Keyed by the foe: one stepping into a fallen one's place is a card of its own.
-                fight.field.forEach { foe -> key(foe.index) {
-                    FoeCard(foe, fight, time, chosen == foe.index && fight.scouting, track(foe.index).weight(1f).widthIn(max = 180.dp), large,
-                        traits[foe.index].orEmpty()) {
-                        onCommand(RunCommand.Focus(foe.index))
+            if (fight.field.isNotEmpty()) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)) {
+                    // Keyed by the foe: one stepping into a fallen one's place is a card of its own.
+                    fight.field.forEach { foe ->
+                        key(foe.index) {
+                            FoeCard(
+                                foe,
+                                fight,
+                                time,
+                                chosen == foe.index && fight.scouting,
+                                track(foe.index).weight(1f).widthIn(max = 180.dp),
+                                large,
+                                traits[foe.index].orEmpty(),
+                            ) {
+                                onCommand(RunCommand.Focus(foe.index))
+                            }
+                        }
                     }
-                } }
+                }
             }
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 val shown = fight.field.firstOrNull { it.index == chosen }
-                if (fight.scouting && shown != null) ScoutPanel(shown, fight, shown.monster.level.takeIf { it > 0 } ?: level, rules, stance, s.index,
-                    traits[shown.index].orEmpty())
-                else FightFeed(s, fight, names, onCommand, onLogFilter)
+                if (fight.scouting && shown != null) {
+                    ScoutPanel(
+                        shown,
+                        fight,
+                        shown.monster.level.takeIf { it > 0 } ?: level,
+                        rules,
+                        stance,
+                        s.index,
+                        traits[shown.index].orEmpty(),
+                    )
+                } else {
+                    FightFeed(s, fight, names, onCommand, onLogFilter)
+                }
             }
             HeroCard(s, hud, fight, time, names, stance, track(HERO_CARD), large)
             // The skills and the belt (2.78.0): under the hero, over the fight's own controls.
@@ -262,8 +320,12 @@ private const val HERO_CARD = -1
         info?.let { view -> FightSkillSheet(s, view, onCommand) { info = null } }
         // A win says so in the rewards window itself (2.73.0); only a loss or a retreat is announced here.
         fight.outcome?.takeIf { it != Outcome.WIN }?.let {
-            Text(ui("expedition.outcome_${it.name.lowercase()}"), color = outcomeColour(it), style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.align(Alignment.Center).background(Ink.copy(alpha = .8f), RoundedCornerShape(8.dp)).padding(horizontal = 16.dp, vertical = 6.dp))
+            Text(
+                ui("expedition.outcome_${it.name.lowercase()}"),
+                color = outcomeColour(it),
+                style = MaterialTheme.typography.headlineMedium,
+                modifier = Modifier.align(Alignment.Center).background(Ink.copy(alpha = .8f), RoundedCornerShape(8.dp)).padding(horizontal = 16.dp, vertical = 6.dp),
+            )
         }
     }
 }
@@ -272,15 +334,23 @@ private const val HERO_CARD = -1
 @Composable private fun PackHeader(fight: FightHud, level: Int) {
     val leader = fight.leader
     Box(Modifier.fillMaxWidth()) {
-    Column(Modifier.fillMaxWidth().padding(horizontal = 44.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(monsterTitle(leader.code), color = rarityTint(leader.rarity), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
-            maxLines = 1, overflow = TextOverflow.Ellipsis)
-        val line = listOfNotNull(ui("expedition.monster_line", ui(leader.rarity.key()), level),
-            ui("fight.stage", fight.stage, fight.stages).takeIf { fight.stages > 1 },
-            ui("expedition.pack_left", fight.standing, fight.foes.size).takeIf { fight.foes.size > 1 }).joinToString(" · ")
-        Text(line, color = Muted, style = MaterialTheme.typography.labelSmall)
-    }
-    BugAction(Modifier.align(Alignment.TopEnd))
+        Column(Modifier.fillMaxWidth().padding(horizontal = 44.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                monsterTitle(leader.code),
+                color = rarityTint(leader.rarity),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            val line = listOfNotNull(
+                ui("expedition.monster_line", ui(leader.rarity.key()), level),
+                ui("fight.stage", fight.stage, fight.stages).takeIf { fight.stages > 1 },
+                ui("expedition.pack_left", fight.standing, fight.foes.size).takeIf { fight.foes.size > 1 },
+            ).joinToString(" · ")
+            Text(line, color = Muted, style = MaterialTheme.typography.labelSmall)
+        }
+        BugAction(Modifier.align(Alignment.TopEnd))
     }
 }
 
@@ -302,8 +372,7 @@ private fun struck(lunge: LungeView?, target: Side, foe: Int?): Boolean {
 }
 
 /** How white a portrait flashes as a landed blow reaches it. */
-private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
-    if (lunge != null && lunge.landed && struck(lunge, target, foe)) (1 - lunge.progress) * 2f * (if (lunge.kind == HitKind.CRIT) 1f else .6f) else 0f
+private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float = if (lunge != null && lunge.landed && struck(lunge, target, foe)) (1 - lunge.progress) * 2f * (if (lunge.kind == HitKind.CRIT) 1f else .6f) else 0f
 
 /**
  * One foe's card: its portrait in its rarity's frame, its name, life and shield, its swing and what
@@ -311,8 +380,16 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
  * gold when the player singled it out, marked with a sight when the hero's next blow goes to it.
  * The fallen go dark; one the hero's weapon cannot reach yet is dimmed.
  */
-@Composable private fun FoeCard(foe: FoeView, fight: FightHud, time: Float, open: Boolean, modifier: Modifier,
-                                 large: Boolean, traits: List<TraitView>, onTap: () -> Unit) {
+@Composable private fun FoeCard(
+    foe: FoeView,
+    fight: FightHud,
+    time: Float,
+    open: Boolean,
+    modifier: Modifier,
+    large: Boolean,
+    traits: List<TraitView>,
+    onTap: () -> Unit,
+) {
     val lunge = fight.lunge
     val ring = rarityTint(foe.monster.rarity)
     val acting = reach(lunge, Side.MONSTER, foe.index)
@@ -327,63 +404,101 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
     }
     val wash = foe.ailments.map { it.ailment }.maxByOrNull(::washAmount)
     // Variant C (3.80.0): a round portrait beside the name; a blow, a stun, the frost play over the whole card.
-    Box(modifier.graphicsLayer {
+    Box(
+        modifier.graphicsLayer {
             translationY = acting * 10.dp.toPx()
             translationX = if (hit && foe.alive) sin(time * 60f) * 2.dp.toPx() else 0f
             // A stun gone off (3.78.0) tilts the card while it holds.
             rotationZ = if (foe.alive && foe.buildup?.stunned == true) -3f else 0f
-            alpha = when { !foe.alive -> .35f; !foe.reachable && fight.started -> .7f; else -> 1f }
+            alpha = when {
+                !foe.alive -> .35f
+                !foe.reachable && fight.started -> .7f
+                else -> 1f
+            }
         }
-        .background(if (acting > 0f) Blood.copy(alpha = .35f) else Panel.copy(alpha = .9f), shape)
-        .then(if (foe.taunt && foe.alive && acting == 0f && !hit && !focused && !open) Modifier.tauntAura(shape, time) else Modifier)
-        .border(if (focused || acting > 0f) 2.dp else 1.dp, border, shape)
-        .clip(shape).clickable(enabled = foe.alive && fight.outcome == null, onClick = onTap)) {
+            .background(if (acting > 0f) Blood.copy(alpha = .35f) else Panel.copy(alpha = .9f), shape)
+            .then(if (foe.taunt && foe.alive && acting == 0f && !hit && !focused && !open) Modifier.tauntAura(shape, time) else Modifier)
+            .border(if (focused || acting > 0f) 2.dp else 1.dp, border, shape)
+            .clip(shape).clickable(enabled = foe.alive && fight.outcome == null, onClick = onTap),
+    ) {
         Column(Modifier.fillMaxWidth().padding(6.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Box(Modifier.size(FOE_AVATAR).clip(CircleShape).background(Color(0xFF0B0E13)).border(2.dp, ring.copy(alpha = .8f), CircleShape)) {
                     Canvas(Modifier.fillMaxSize()) {
-                        Portraits.monster(this, foe.monster.code, foe.monster.form, ring, time, wash?.let(::ailmentTint), wash?.let(::washAmount) ?: 0f,
-                            flash(lunge, Side.MONSTER, foe.index))
+                        Portraits.monster(
+                            this,
+                            foe.monster.code,
+                            foe.monster.form,
+                            ring,
+                            time,
+                            wash?.let(::ailmentTint),
+                            wash?.let(::washAmount) ?: 0f,
+                            flash(lunge, Side.MONSTER, foe.index),
+                        )
                     }
                 }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                    Text(monsterTitle(foe.monster.code), color = ring, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis,
-                        lineHeight = 12.sp)
+                    Text(
+                        monsterTitle(foe.monster.code),
+                        color = ring,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        lineHeight = 12.sp,
+                    )
                     // Its own level (3.73.0): on a map a foe may stand a little above or below the map.
                     if (foe.monster.level > 0) Text(ui("fight.level_short", foe.monster.level), color = Muted, fontSize = 9.sp, maxLines = 1)
                     // Its traits (3.73.0) as seals; a tap on the card opens what they do.
-                    if (traits.isNotEmpty() && foe.alive) Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                        traits.forEach { trait -> SkillGlyph(trait.icon, Modifier.size(14.dp), Color(0xFFE8B06A)) }
+                    if (traits.isNotEmpty() && foe.alive) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                            traits.forEach { trait -> SkillGlyph(trait.icon, Modifier.size(14.dp), Color(0xFFE8B06A)) }
+                        }
                     }
                 }
             }
             LifeBar(foe.life, foe.maxLife, foe.shield, foe.maxShield, Modifier.fillMaxWidth().height(12.dp))
             // A caster's or a boss's mana (2.78.0), a thread under its life: what its spells are paid with.
-            if (foe.maxMana > 0) Box(Modifier.fillMaxWidth().height(3.dp).background(Color(0x14FFFFFF), RoundedCornerShape(2.dp))) {
-                Box(Modifier.fillMaxWidth((foe.mana / foe.maxMana.toFloat()).coerceIn(0f, 1f)).fillMaxHeight().background(ManaBlue, RoundedCornerShape(2.dp)))
+            if (foe.maxMana > 0) {
+                Box(Modifier.fillMaxWidth().height(3.dp).background(Color(0x14FFFFFF), RoundedCornerShape(2.dp))) {
+                    Box(Modifier.fillMaxWidth((foe.mana / foe.maxMana.toFloat()).coerceIn(0f, 1f)).fillMaxHeight().background(ManaBlue, RoundedCornerShape(2.dp)))
+                }
             }
             if (foe.alive) foe.buildup?.let { BuildupBar(it, Modifier.fillMaxWidth()) }
             SwingBar(foe.swing, foe.held, Modifier.fillMaxWidth(), if (acting > 0f) LifeRed else LifeRed.copy(alpha = .7f))
             if (foe.taunt && foe.alive) Text(ui("fight.taunt"), color = Color(0xFFE8B06A), fontSize = 9.sp, fontStyle = FontStyle.Italic, maxLines = 1)
             // What is on it: small tiles while it runs, larger while paused; a tap on one opens its window.
             val tile = if (large) 16.dp else 12.dp
-            if (foe.held || foe.ailments.isNotEmpty() || foe.effects.isNotEmpty()) Row(Modifier.height(tile), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                if (foe.held && foe.ailments.none { it.ailment == Ailment.FROZEN })
-                    StateTile(null, GoldBright, 1f, 1, ui("expedition.stunned"), tile) { stunTip() }
-                foe.ailments.take(5).forEach { view ->
-                    StateTile(view.ailment, ailmentTint(view.ailment), view.left, view.stacks, ailmentLabel(view), tile) { ailmentTip(view) }
+            if (foe.held || foe.ailments.isNotEmpty() || foe.effects.isNotEmpty()) {
+                Row(Modifier.height(tile), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                    if (foe.held && foe.ailments.none { it.ailment == Ailment.FROZEN }) {
+                        StateTile(null, GoldBright, 1f, 1, ui("expedition.stunned"), tile) { stunTip() }
+                    }
+                    foe.ailments.take(5).forEach { view ->
+                        StateTile(view.ailment, ailmentTint(view.ailment), view.left, view.stacks, ailmentLabel(view), tile) { ailmentTip(view) }
+                    }
+                    foe.effects.take(3).forEach { EffectTile(it, tile) }
                 }
-                foe.effects.take(3).forEach { EffectTile(it, tile) }
             }
         }
-        if (fight.target == foe.index && foe.alive && fight.outcome == null)
+        if (fight.target == foe.index && foe.alive && fight.outcome == null) {
             Text(if (focused) "◉" else "◎", color = GoldBright, fontSize = 14.sp, modifier = Modifier.align(Alignment.TopEnd).padding(4.dp))
+        }
         if (foe.taunt && foe.alive) TauntSeal(time, Modifier.align(Alignment.TopStart).padding(2.dp).size(18.dp)) { tauntTip(false) }
-        if (!foe.alive) foe.reinforce?.let { left -> ReinforceRing(left, foe.reinforceDelay, Modifier.align(Alignment.Center).size(40.dp)) }
-            ?: Text(ui("fight.fallen"), color = Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.Center))
-        // A foe singled out behind a standing taunter: the focus holds, the blows go to the taunter.
-        else if (focused && !foe.reachable) Text(ui("fight.out_of_reach_short"), color = Muted, fontSize = 9.sp, maxLines = 1,
-            overflow = TextOverflow.Ellipsis, modifier = Modifier.align(Alignment.BottomCenter).background(Ink.copy(alpha = .8f)).padding(horizontal = 4.dp))
+        if (!foe.alive) {
+            foe.reinforce?.let { left -> ReinforceRing(left, foe.reinforceDelay, Modifier.align(Alignment.Center).size(40.dp)) }
+                ?: Text(ui("fight.fallen"), color = Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.Center))
+        } // A foe singled out behind a standing taunter: the focus holds, the blows go to the taunter.
+        else if (focused && !foe.reachable) {
+            Text(
+                ui("fight.out_of_reach_short"),
+                color = Muted,
+                fontSize = 9.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.align(Alignment.BottomCenter).background(Ink.copy(alpha = .8f)).padding(horizontal = 4.dp),
+            )
+        }
         if (foe.alive) foe.buildup?.let { BuildupMark(it, time) }
         CardHits(fight.hits.filter { it.target == Side.MONSTER && it.foe == foe.index })
     }
@@ -414,11 +529,19 @@ private val FOE_AVATAR = 52.dp
     }
     shown.takeLast(3).forEach { hit ->
         val rise = (hit.age / ExpeditionRun.HIT_LIFETIME).toFloat().coerceIn(0f, 1f)
-        Text(hitText(hit), color = hitColour(hit).copy(alpha = 1 - rise), textAlign = TextAlign.Center,
-            fontSize = when { hit.kind == HitKind.CRIT -> 20.sp; hit.action == Action.TICK -> 12.sp; else -> 16.sp },
+        Text(
+            hitText(hit),
+            color = hitColour(hit).copy(alpha = 1 - rise),
+            textAlign = TextAlign.Center,
+            fontSize = when {
+                hit.kind == HitKind.CRIT -> 20.sp
+                hit.action == Action.TICK -> 12.sp
+                else -> 16.sp
+            },
             fontWeight = if (hit.action == Action.TICK) FontWeight.Normal else FontWeight.Black,
             fontStyle = if (hit.action == Action.TICK) FontStyle.Italic else FontStyle.Normal,
-            modifier = Modifier.align(Alignment.Center).offset(x = (((hit.id % 3) - 1) * 14).dp, y = (-36 * rise).dp))
+            modifier = Modifier.align(Alignment.Center).offset(x = (((hit.id % 3) - 1) * 14).dp, y = (-36 * rise).dp),
+        )
     }
 }
 
@@ -427,8 +550,16 @@ private val FOE_AVATAR = 52.dp
  * every state on them, and whom the next blow goes to — the player's pick or the class's rule.
  * Lifted and lit in gold while they swing; ringed in blood while struck.
  */
-@Composable private fun HeroCard(s: ForgeState, hud: RunHud, fight: FightHud, time: Float, names: Map<Int, String>, stance: HeroStance, modifier: Modifier,
-                                  large: Boolean) {
+@Composable private fun HeroCard(
+    s: ForgeState,
+    hud: RunHud,
+    fight: FightHud,
+    time: Float,
+    names: Map<Int, String>,
+    stance: HeroStance,
+    modifier: Modifier,
+    large: Boolean,
+) {
     val hero = s.heroInfo
     // The pet's blows and the blows at it are its own card's (3.70.0).
     val lunge = fight.lunge?.takeIf { !it.pet }
@@ -436,14 +567,26 @@ private val FOE_AVATAR = 52.dp
     val hit = struck(lunge, Side.MONSTER, null)
     val shape = RoundedCornerShape(10.dp)
     val wash = fight.heroAilments.map { it.ailment }.maxByOrNull(::washAmount)
-    Row(modifier.fillMaxWidth().graphicsLayer {
+    Row(
+        modifier.fillMaxWidth().graphicsLayer {
             translationY = -acting * 10.dp.toPx()
             translationX = if (hit) sin(time * 60f) * 2.dp.toPx() else 0f
         }
-        .background(if (acting > 0f) PanelRaised else Panel.copy(alpha = .94f), shape)
-        .then(if (fight.heroTaunt && acting == 0f && !hit) Modifier.tauntAura(shape, time) else Modifier)
-        .border(if (acting > 0f || hit) 2.dp else 1.dp, when { acting > 0f -> GoldBright; hit -> LifeRed; else -> Gold.copy(alpha = .6f) }, shape)
-        .padding(8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            .background(if (acting > 0f) PanelRaised else Panel.copy(alpha = .94f), shape)
+            .then(if (fight.heroTaunt && acting == 0f && !hit) Modifier.tauntAura(shape, time) else Modifier)
+            .border(
+                if (acting > 0f || hit) 2.dp else 1.dp,
+                when {
+                    acting > 0f -> GoldBright
+                    hit -> LifeRed
+                    else -> Gold.copy(alpha = .6f)
+                },
+                shape,
+            )
+            .padding(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         Box(Modifier.width(64.dp).aspectRatio(.75f).clip(RoundedCornerShape(6.dp)).background(Color(0xFF0B0E13))) {
             Canvas(Modifier.fillMaxSize()) {
                 Portraits.hero(this, s.heroClass?.code, time, wash?.let(::ailmentTint), wash?.let(::washAmount) ?: 0f, flash(lunge, Side.HERO, null))
@@ -452,8 +595,14 @@ private val FOE_AVATAR = 52.dp
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(listOfNotNull(hero?.name?.takeIf { it.isNotBlank() }, ui("expedition.hero_line", hero?.heroClass?.let(::classTitle).orEmpty(), s.heroLevel)).joinToString(" · "),
-                    color = GoldBright, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                Text(
+                    listOfNotNull(hero?.name?.takeIf { it.isNotBlank() }, ui("expedition.hero_line", hero?.heroClass?.let(::classTitle).orEmpty(), s.heroLevel)).joinToString(" · "),
+                    color = GoldBright,
+                    style = MaterialTheme.typography.labelMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
                 // The hero's own marks (2.72.0): the taunt's seal and the lone wolf's medallion, each opening its window on a tap.
                 if (fight.heroTaunt) TauntSeal(time, Modifier.size(22.dp)) { tauntTip(true) }
                 fight.loneWolf?.let { rule -> LoneWolfMedal(Modifier.size(24.dp)) { loneWolfTip(rule) } }
@@ -468,9 +617,15 @@ private val FOE_AVATAR = 52.dp
             SwingBar(fight.heroSwing, fight.heroHeld, Modifier.fillMaxWidth())
             StateTiles(fight.heroAilments, fight.heroHeld, fight.heroEffects, fight.heroCharges)
             val target = fight.target?.let(names::get)
-            if (target != null && fight.outcome == null) Text(
-                ui("fight.target_line", target, if (fight.focus != null) ui("fight.target_yours") else ui("fight.rule.${stance.rule.name}")),
-                color = if (fight.focus != null) GoldBright else Parchment, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (target != null && fight.outcome == null) {
+                Text(
+                    ui("fight.target_line", target, if (fight.focus != null) ui("fight.target_yours") else ui("fight.rule.${stance.rule.name}")),
+                    color = if (fight.focus != null) GoldBright else Parchment,
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
         // The combat pet (3.79.0, variant B): a round badge on the hero's card, its life a ring around it.
         fight.ally?.let { PetBadge(s, it, fight.lunge?.takeIf { lunge -> lunge.pet }, fight.hits.filter { hit -> hit.pet }, time) }
@@ -496,11 +651,14 @@ private val FloatingHit.mend: Boolean get() = pet && target == Side.HERO && amou
         else -> Vital
     }
     val share = if (ally.maxLife > 0) (ally.life.toFloat() / ally.maxLife).coerceIn(0f, 1f) else 0f
-    Box(Modifier.size(48.dp).graphicsLayer {
+    Box(
+        Modifier.size(48.dp).graphicsLayer {
             translationY = -acting * 4.dp.toPx()
             translationX = if (hit) sin(time * 60f) * 2.dp.toPx() else 0f
             alpha = if (ally.alive) 1f else .55f
-        }, contentAlignment = Alignment.Center) {
+        },
+        contentAlignment = Alignment.Center,
+    ) {
         Canvas(Modifier.fillMaxSize()) {
             val stroke = 4.dp.toPx()
             val inset = androidx.compose.ui.geometry.Size(size.width - stroke, size.height - stroke)
@@ -524,16 +682,30 @@ private const val PET_PULSE = .5
  * what happens in it, not by the foe's defence sheet.
  */
 @OptIn(ExperimentalLayoutApi::class)
-@Composable private fun ScoutPanel(foe: FoeView, fight: FightHud, level: Int, rules: CombatRules, stance: HeroStance, index: ContentIndex?,
-                                    traits: List<TraitView>) {
+@Composable
+private fun ScoutPanel(
+    foe: FoeView,
+    fight: FightHud,
+    level: Int,
+    rules: CombatRules,
+    stance: HeroStance,
+    index: ContentIndex?,
+    traits: List<TraitView>,
+) {
     val body = remember(foe.monster) { Combatant(foe.monster.stats, level, rules) }
     val shape = RoundedCornerShape(10.dp)
     val ring = rarityTint(foe.monster.rarity)
-    Column(Modifier.fillMaxSize().background(Panel.copy(alpha = .95f), shape).border(1.dp, ring.copy(alpha = .8f), shape)
-        .verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(
+        Modifier.fillMaxSize().background(Panel.copy(alpha = .95f), shape).border(1.dp, ring.copy(alpha = .8f), shape)
+            .verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
         Text(monsterTitle(foe.monster.code), color = ring, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-        Text(listOf(ui(foe.monster.rarity.key()), ui("fight.level", level)).joinToString(" · "),
-            color = Muted, style = MaterialTheme.typography.labelSmall)
+        Text(
+            listOf(ui(foe.monster.rarity.key()), ui("fight.level", level)).joinToString(" · "),
+            color = Muted,
+            style = MaterialTheme.typography.labelSmall,
+        )
         FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Fact(ui("fight.stat_life"), number(body.maxLife), LifeRed)
             if (body.maxShield > 0) Fact(ui("fight.stat_shield"), number(body.maxShield), ShieldCyan)
@@ -558,8 +730,13 @@ private const val PET_PULSE = .5
             }
         }
         // What it casts for its mana (2.78.0): a boss's own skills, a caster's spell, a borrowed one.
-        if (foe.monster.skills.isNotEmpty()) Text(ui("fight.skills", foe.monster.skills.joinToString(", ") { SkillText.title(it) }),
-            color = Rune, style = MaterialTheme.typography.labelSmall)
+        if (foe.monster.skills.isNotEmpty()) {
+            Text(
+                ui("fight.skills", foe.monster.skills.joinToString(", ") { SkillText.title(it) }),
+                color = Rune,
+                style = MaterialTheme.typography.labelSmall,
+            )
+        }
         // Its traits (3.73.0): what its kind and its form do, at its rarity's strength.
         if (traits.isNotEmpty()) {
             Caption(ui("fight.traits", traits.size))
@@ -590,8 +767,11 @@ private const val PET_PULSE = .5
                     Text(monsterLineText(line, index), color = ModBlue, style = MaterialTheme.typography.labelSmall)
                     // The sum first, then what each source put in it (2.73.0); a line the map alone gives is tagged.
                     val sources = monsterLineSources(line, index)
-                    if (sources != null) Text("($sources)", color = Muted, style = MaterialTheme.typography.labelSmall)
-                    else if (line.fromMap) Text(ui("fight.line_map"), color = LifeRed, style = MaterialTheme.typography.labelSmall)
+                    if (sources != null) {
+                        Text("($sources)", color = Muted, style = MaterialTheme.typography.labelSmall)
+                    } else if (line.fromMap) {
+                        Text(ui("fight.line_map"), color = LifeRed, style = MaterialTheme.typography.labelSmall)
+                    }
                 }
             }
         }
@@ -613,6 +793,7 @@ private const val PET_PULSE = .5
 }
 
 /** The latest blows while the fight runs, newest on top, each under the name of the foe it was about. */
+
 /**
  * The live log (3.37.0): its shelves as chips over it, and a line tapped opens its card — the fight holds still while
  * it is read, and goes on as it was when the card is closed.
@@ -625,26 +806,37 @@ private const val PET_PULSE = .5
         LogShelves(s.logFilter, onLogFilter)
         if (fight.events.isEmpty()) MutedText(ui("expedition.log"), style = MaterialTheme.typography.labelSmall)
         FightLog(fight.events.filter { LogKind.of(it) in s.logFilter }, names) { event ->
-            if (fight.started && !fight.paused && fight.outcome == null) { onCommand(RunCommand.Pause); held = true }
+            if (fight.started && !fight.paused && fight.outcome == null) {
+                onCommand(RunCommand.Pause)
+                held = true
+            }
             open = event
         }
     }
     open?.let { event ->
         CombatDetailSheet(s, event, names[event.foe].orEmpty()) {
             open = null
-            if (held) { onCommand(RunCommand.Pause); held = false }
+            if (held) {
+                onCommand(RunCommand.Pause)
+                held = false
+            }
         }
     }
 }
 
 /** The log's shelves as chips (3.37.0): each on or off, the choice kept on the device. */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable internal fun LogShelves(shown: Set<LogKind>, onChange: (Set<LogKind>) -> Unit) {
+@Composable
+internal fun LogShelves(shown: Set<LogKind>, onChange: (Set<LogKind>) -> Unit) {
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         LogKind.entries.forEach { kind ->
             val on = kind in shown
-            FilterChip(selected = on, onClick = { onChange(if (on) shown - kind else shown + kind) },
-                label = { Text(ui("fight.log_shelf.${kind.name}"), style = MaterialTheme.typography.labelSmall) }, modifier = Modifier.height(26.dp))
+            FilterChip(
+                selected = on,
+                onClick = { onChange(if (on) shown - kind else shown + kind) },
+                label = { Text(ui("fight.log_shelf.${kind.name}"), style = MaterialTheme.typography.labelSmall) },
+                modifier = Modifier.height(26.dp),
+            )
         }
     }
 }
@@ -656,11 +848,17 @@ private const val PET_PULSE = .5
  */
 @Composable private fun Controls(fight: FightHud, auto: AutoHud?, onCommand: (RunCommand) -> Unit) {
     val live = fight.outcome == null
-    fight.interlude?.takeIf { !fight.started }?.let { StageBreak(fight, it, onCommand); return }
+    fight.interlude?.takeIf { !fight.started }?.let {
+        StageBreak(fight, it, onCommand)
+        return
+    }
     if (!fight.started) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ForgeButton(onClick = { onCommand(RunCommand.Begin) }, modifier = Modifier.weight(1f).height(52.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Blood, contentColor = GoldBright)) {
+            ForgeButton(
+                onClick = { onCommand(RunCommand.Begin) },
+                modifier = Modifier.weight(1f).height(52.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Blood, contentColor = GoldBright),
+            ) {
                 Icon(ForgeGlyphs.Swords, null, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(ui("expedition.begin"), style = MaterialTheme.typography.titleMedium)
@@ -670,22 +868,41 @@ private const val PET_PULSE = .5
         }
         return
     }
-    auto?.let { Text(ui("auto.wave", it.wave, it.waves), color = GoldBright, style = MaterialTheme.typography.labelMedium,
-        modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp), textAlign = TextAlign.Center) }
+    auto?.let {
+        Text(
+            ui("auto.wave", it.wave, it.waves),
+            color = GoldBright,
+            style = MaterialTheme.typography.labelMedium,
+            modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
+            textAlign = TextAlign.Center,
+        )
+    }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        ForgeOutlinedButton(enabled = live && !fight.retreating, onClick = { onCommand(if (fight.paused) RunCommand.Begin else RunCommand.Pause) },
-            modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 8.dp)) {
+        ForgeOutlinedButton(
+            enabled = live && !fight.retreating,
+            onClick = { onCommand(if (fight.paused) RunCommand.Begin else RunCommand.Pause) },
+            modifier = Modifier.weight(1f),
+            contentPadding = PaddingValues(horizontal = 8.dp),
+        ) {
             Text(ui(if (fight.paused) "fight.resume" else "fight.pause"), style = MaterialTheme.typography.labelMedium)
         }
         ForgeOutlinedButton(onClick = { onCommand(RunCommand.Speed) }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 8.dp)) {
             Text(ui("expedition.speed", fight.speed), style = MaterialTheme.typography.labelMedium)
         }
-        if (fight.escape) ForgeOutlinedButton(enabled = live && !fight.retreating, onClick = { onCommand(RunCommand.Retreat) }, modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(horizontal = 8.dp)) {
-            Text(ui(if (fight.retreating) "expedition.retreating" else "expedition.retreat"), style = MaterialTheme.typography.labelMedium)
+        if (fight.escape) {
+            ForgeOutlinedButton(
+                enabled = live && !fight.retreating,
+                onClick = { onCommand(RunCommand.Retreat) },
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(horizontal = 8.dp),
+            ) {
+                Text(ui(if (fight.retreating) "expedition.retreating" else "expedition.retreat"), style = MaterialTheme.typography.labelMedium)
+            }
         }
-        if (auto != null) ForgeOutlinedButton(onClick = { onCommand(RunCommand.StopAuto) }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 8.dp)) {
-            Text(ui("auto.stop"), color = LifeRed, style = MaterialTheme.typography.labelMedium)
+        if (auto != null) {
+            ForgeOutlinedButton(onClick = { onCommand(RunCommand.StopAuto) }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 8.dp)) {
+                Text(ui("auto.stop"), color = LifeRed, style = MaterialTheme.typography.labelMedium)
+            }
         }
     }
 }
@@ -699,8 +916,11 @@ private const val PET_PULSE = .5
         Text(ui("fight.stage", fight.stage, fight.stages), color = GoldBright, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Text(ui("fight.stage_countdown", ceil(left).toInt()), color = Muted, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ForgeButton(onClick = { onCommand(RunCommand.Begin) }, modifier = Modifier.weight(1f).height(52.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Blood, contentColor = GoldBright)) {
+            ForgeButton(
+                onClick = { onCommand(RunCommand.Begin) },
+                modifier = Modifier.weight(1f).height(52.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Blood, contentColor = GoldBright),
+            ) {
                 Icon(ForgeGlyphs.Swords, null, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(ui("fight.stage_next"), style = MaterialTheme.typography.titleMedium)
@@ -729,8 +949,12 @@ private const val PET_PULSE = .5
 @Composable private fun LifeBar(life: Int, maxLife: Int, shield: Int, maxShield: Int, modifier: Modifier) {
     Box(modifier) {
         VitalBar(life, maxLife, LifeRed, Modifier.fillMaxSize(), text = "$life", size = 8.sp)
-        if (maxShield > 0) Box(Modifier.padding(horizontal = 3.dp).fillMaxWidth((shield / maxShield.toFloat()).coerceIn(0f, 1f)).height(3.dp)
-            .background(ShieldCyan.copy(alpha = .9f), RoundedCornerShape(50)))
+        if (maxShield > 0) {
+            Box(
+                Modifier.padding(horizontal = 3.dp).fillMaxWidth((shield / maxShield.toFloat()).coerceIn(0f, 1f)).height(3.dp)
+                    .background(ShieldCyan.copy(alpha = .9f), RoundedCornerShape(50)),
+            )
+        }
     }
 }
 
@@ -740,23 +964,43 @@ private const val PET_PULSE = .5
  * [ring] outlines it brighter, as a barrier (2.78.0) does the hero's life while it soaks. [reserved] past [max] is
  * the mana the auras hold: the bar's hatched tail, the fill running up to it.
  */
-@Composable private fun VitalBar(value: Int, max: Int, tint: Color, modifier: Modifier, ring: Color? = null,
-                                 text: String = vitalFigures(value, max), size: TextUnit = 10.sp, reserved: Int = 0) {
+@Composable private fun VitalBar(
+    value: Int,
+    max: Int,
+    tint: Color,
+    modifier: Modifier,
+    ring: Color? = null,
+    text: String = vitalFigures(value, max),
+    size: TextUnit = 10.sp,
+    reserved: Int = 0,
+) {
     val shape = RoundedCornerShape(50)
     val whole = max + reserved.coerceAtLeast(0)
     val share by animateFloatAsState(if (whole > 0) (value / whole.toFloat()).coerceIn(0f, 1f) else 0f, label = "vital")
-    Box(modifier.clip(shape).background(Brush.verticalGradient(listOf(Color(0xE6050709), Color(0xCC161B23))), shape)
-        .reservedTail(reservedShare(max, reserved), tint).border(if (ring != null) 2.dp else 1.dp, ring ?: tint.copy(alpha = .45f), shape), contentAlignment = Alignment.Center) {
-        Box(Modifier.align(Alignment.CenterStart).fillMaxWidth(share).fillMaxHeight().clip(shape)
-            .background(Brush.verticalGradient(listOf(lerp(tint, Color.White, .35f), tint, tint.copy(alpha = .7f)))))
-        Text(text, color = Color.White, fontSize = size, lineHeight = size, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false,
-            style = LocalTextStyle.current.copy(shadow = Shadow(Color.Black, Offset(0f, 1f), 3f)))
+    Box(
+        modifier.clip(shape).background(Brush.verticalGradient(listOf(Color(0xE6050709), Color(0xCC161B23))), shape)
+            .reservedTail(reservedShare(max, reserved), tint).border(if (ring != null) 2.dp else 1.dp, ring ?: tint.copy(alpha = .45f), shape),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            Modifier.align(Alignment.CenterStart).fillMaxWidth(share).fillMaxHeight().clip(shape)
+                .background(Brush.verticalGradient(listOf(lerp(tint, Color.White, .35f), tint, tint.copy(alpha = .7f)))),
+        )
+        Text(
+            text,
+            color = Color.White,
+            fontSize = size,
+            lineHeight = size,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            softWrap = false,
+            style = LocalTextStyle.current.copy(shadow = Shadow(Color.Black, Offset(0f, 1f), 3f)),
+        )
     }
 }
 
 /** A pool's figures on its bar: now and most, and the share as a whole percent. */
-private fun vitalFigures(value: Int, max: Int): String =
-    "$value / $max · ${if (max > 0) (value * 100f / max).roundToInt() else 0}%"
+private fun vitalFigures(value: Int, max: Int): String = "$value / $max · ${if (max > 0) (value * 100f / max).roundToInt() else 0}%"
 
 /**
  * The hero's skills and belt in the fight (2.78.0): the three active slots — dark while they recover,
@@ -770,38 +1014,59 @@ private fun vitalFigures(value: Int, max: Int): String =
     val drinkable = live || (!fight.started && fight.interlude != null)
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
         fight.skills.forEach { view ->
-            if (view == null) Box(Modifier.weight(1f).height(52.dp).border(1.dp, Bronze.copy(alpha = .35f), RoundedCornerShape(8.dp)))
-            else SkillButton(view, live, Modifier.weight(1f), onInfo = { onInfo(view) }) { onCommand(RunCommand.Cast(view.slot)) }
+            if (view == null) {
+                Box(Modifier.weight(1f).height(52.dp).border(1.dp, Bronze.copy(alpha = .35f), RoundedCornerShape(8.dp)))
+            } else {
+                SkillButton(view, live, Modifier.weight(1f), onInfo = { onInfo(view) }) { onCommand(RunCommand.Cast(view.slot)) }
+            }
         }
         Spacer(Modifier.width(4.dp))
         fight.flasks.forEach { view ->
-            if (view == null) Box(Modifier.size(44.dp).border(1.dp, Bronze.copy(alpha = .35f), CircleShape))
-            else FlaskButton(view, drinkable) { onCommand(RunCommand.Drink(view.slot)) }
+            if (view == null) {
+                Box(Modifier.size(44.dp).border(1.dp, Bronze.copy(alpha = .35f), CircleShape))
+            } else {
+                FlaskButton(view, drinkable) { onCommand(RunCommand.Drink(view.slot)) }
+            }
         }
     }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
-@Composable private fun SkillButton(view: SkillView, live: Boolean, modifier: Modifier, onInfo: () -> Unit, onTap: () -> Unit) {
+@Composable
+private fun SkillButton(view: SkillView, live: Boolean, modifier: Modifier, onInfo: () -> Unit, onTap: () -> Unit) {
     val shape = RoundedCornerShape(8.dp)
     val ready = view.ready >= 1f
     // A skill that can go now glows (2.80.0, «Эфир»): the light is the readiness.
-    Box(modifier.height(52.dp).glow(Gold, on = ready && view.affordable, radius = 10.dp, shape = shape).clip(shape).background(PanelRaised, shape)
-        .border(if (ready && view.affordable) 1.5.dp else 1.dp, if (ready && view.affordable) Gold else Bronze, shape)
-        .combinedClickable(onLongClick = onInfo) { if (live && ready && view.affordable) onTap() }
-        .semantics { contentDescription = SkillText.title(view.code) }) {
+    Box(
+        modifier.height(52.dp).glow(Gold, on = ready && view.affordable, radius = 10.dp, shape = shape).clip(shape).background(PanelRaised, shape)
+            .border(if (ready && view.affordable) 1.5.dp else 1.dp, if (ready && view.affordable) Gold else Bronze, shape)
+            .combinedClickable(onLongClick = onInfo) { if (live && ready && view.affordable) onTap() }
+            .semantics { contentDescription = SkillText.title(view.code) },
+    ) {
         SkillGlyph(view.icon, Modifier.size(26.dp).align(Alignment.Center), if (view.affordable) GoldBright else Muted)
         // What is left to recover darkens the button from the top, as a flask's charge fills it from the bottom.
         if (!ready) Box(Modifier.fillMaxWidth().fillMaxHeight(1 - view.ready).background(Color.Black.copy(alpha = .6f)))
         if (!ready) Text(fineNumber(view.seconds), color = Parchment, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.Center))
-        Text("${view.cost}", color = if (view.affordable) Rune else LifeRed, fontSize = 9.sp, fontWeight = FontWeight.Bold,
-            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 3.dp, bottom = 1.dp))
-        if (view.condition == SlotCondition.MANUAL)
+        Text(
+            "${view.cost}",
+            color = if (view.affordable) Rune else LifeRed,
+            fontSize = 9.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 3.dp, bottom = 1.dp),
+        )
+        if (view.condition == SlotCondition.MANUAL) {
             Text("✋", fontSize = 9.sp, modifier = Modifier.align(Alignment.TopStart).padding(2.dp))
+        }
         Text("${view.level}", color = Gold, fontSize = 9.sp, modifier = Modifier.align(Alignment.TopEnd).padding(end = 3.dp))
         Box(Modifier.align(Alignment.BottomStart).size(18.dp).clickable(onClickLabel = ui("fight.skill_info"), onClick = onInfo), contentAlignment = Alignment.Center) {
-            Text("i", color = Muted, fontSize = 9.sp, fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic,
-                modifier = Modifier.size(12.dp).border(1.dp, Muted.copy(alpha = .6f), CircleShape).wrapContentSize(Alignment.Center))
+            Text(
+                "i",
+                color = Muted,
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Bold,
+                fontStyle = FontStyle.Italic,
+                modifier = Modifier.size(12.dp).border(1.dp, Muted.copy(alpha = .6f), CircleShape).wrapContentSize(Alignment.Center),
+            )
         }
     }
 }
@@ -811,7 +1076,8 @@ private fun vitalFigures(value: Int, max: Int): String =
  * preparation and effects — with the condition its slot fires on. The fight holds while the page is open.
  */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable private fun FightSkillSheet(s: ForgeState, view: SkillView, onCommand: (RunCommand) -> Unit, onDismiss: () -> Unit) {
+@Composable
+private fun FightSkillSheet(s: ForgeState, view: SkillView, onCommand: (RunCommand) -> Unit, onDismiss: () -> Unit) {
     DisposableEffect(view.slot) {
         onCommand(RunCommand.Hold(true))
         onDispose { onCommand(RunCommand.Hold(false)) }
@@ -819,8 +1085,10 @@ private fun vitalFigures(value: Int, max: Int): String =
     val index = s.index
     val skill = index?.skills?.byCode?.get(view.code)
     ForgeSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 18.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(
+            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 18.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 SkillGlyph(view.icon, Modifier.size(40.dp), GoldBright)
                 Column(Modifier.weight(1f)) {
@@ -829,17 +1097,23 @@ private fun vitalFigures(value: Int, max: Int): String =
                 }
                 Text(ui("skills.level_short", view.level), color = Gold, style = MaterialTheme.typography.titleLarge)
             }
-            if (index != null && skill != null) SkillFacts(index, skill, view.level, s.hero?.stats.orEmpty(), condition = view.condition)
-            else MutedText(ui("common.loading"))
+            if (index != null && skill != null) {
+                SkillFacts(index, skill, view.level, s.hero?.stats.orEmpty(), condition = view.condition)
+            } else {
+                MutedText(ui("common.loading"))
+            }
         }
     }
 }
 
 @Composable private fun FlaskButton(view: FlaskView, live: Boolean, onTap: () -> Unit) {
     val tint = flaskTint(view.kind)
-    Box(Modifier.size(44.dp).glow(tint, on = view.active > 0f, radius = 10.dp, shape = CircleShape).clip(CircleShape).background(Color(0xE60A0D12))
-        .border(if (view.active > 0f) 2.dp else 1.dp, if (view.active > 0f) GoldBright else Bronze, CircleShape)
-        .clickable(enabled = live && view.usable, onClick = onTap), contentAlignment = Alignment.Center) {
+    Box(
+        Modifier.size(44.dp).glow(tint, on = view.active > 0f, radius = 10.dp, shape = CircleShape).clip(CircleShape).background(Color(0xE60A0D12))
+            .border(if (view.active > 0f) 2.dp else 1.dp, if (view.active > 0f) GoldBright else Bronze, CircleShape)
+            .clickable(enabled = live && view.usable, onClick = onTap),
+        contentAlignment = Alignment.Center,
+    ) {
         Canvas(Modifier.fillMaxSize()) {
             val fill = if (view.maxCharges > 0) view.charges / view.maxCharges.toFloat() else 0f
             drawRect(tint.copy(alpha = if (view.usable) .55f else .25f), topLeft = Offset(0f, size.height * (1 - fill)), size = Size(size.width, size.height * fill))
@@ -873,12 +1147,19 @@ private fun vitalFigures(value: Int, max: Int): String =
 @Composable private fun ChargeTile(view: ChargeView, side: Dp = 30.dp) {
     val shape = RoundedCornerShape(4.dp)
     val title = ui("fight.charge.${view.kind.name}")
-    Tipped({ Tip(title, ui("fight.charge_tip", view.count, view.max, fineNumber(view.seconds))) },
+    Tipped(
+        { Tip(title, ui("fight.charge_tip", view.count, view.max, fineNumber(view.seconds))) },
         Modifier.size(side).clip(shape).background(Color(0xFF0B0E13)).background(Gold.copy(alpha = .16f)).border(1.dp, Gold, shape)
-            .semantics { contentDescription = "$title ${view.count}" }) {
+            .semantics { contentDescription = "$title ${view.count}" },
+    ) {
         com.sperance.exileforge.ui.icons.StatIcon(view.stat, Gold, Modifier.fillMaxSize().padding(side / 6))
-        Text("${view.count}", color = Parchment, fontSize = 10.sp, fontWeight = FontWeight.Bold,
-            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 2.dp))
+        Text(
+            "${view.count}",
+            color = Parchment,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 2.dp),
+        )
     }
 }
 
@@ -889,23 +1170,38 @@ private fun vitalFigures(value: Int, max: Int): String =
     // A buff of the rules (3.35.0) — Onslaught, Fortify — is named and drawn by its kind, a skill's by the skill.
     val buff = view.buff
     val title = buff?.let { ui("fight.buff.${it.name}") } ?: SkillText.title(view.source)
-    Tipped({ Tip(title, ui(if (view.kind == EffectKind.CURSE) "fight.effect_curse" else "fight.effect_buff", fineNumber(view.seconds))) },
+    Tipped(
+        { Tip(title, ui(if (view.kind == EffectKind.CURSE) "fight.effect_curse" else "fight.effect_buff", fineNumber(view.seconds))) },
         Modifier.size(side).clip(shape).background(Color(0xFF0B0E13)).background(tint.copy(alpha = .16f)).border(1.dp, tint, shape)
-            .semantics { contentDescription = title }) {
-        if (buff != null) com.sperance.exileforge.ui.icons.StatIcon(buff.icon, tint, Modifier.fillMaxSize().padding(side / 6))
-        else SkillGlyph(view.icon, Modifier.fillMaxSize().padding(side / 6), tint)
+            .semantics { contentDescription = title },
+    ) {
+        if (buff != null) {
+            com.sperance.exileforge.ui.icons.StatIcon(buff.icon, tint, Modifier.fillMaxSize().padding(side / 6))
+        } else {
+            SkillGlyph(view.icon, Modifier.fillMaxSize().padding(side / 6), tint)
+        }
         Box(Modifier.fillMaxWidth().fillMaxHeight((1 - view.left).coerceIn(0f, 1f)).background(Color.Black.copy(alpha = .55f)))
     }
 }
 
 @Composable private fun StateTile(ailment: Ailment?, tint: Color, left: Float, stacks: Int, label: String, side: Dp = 30.dp, tip: () -> Tip) {
     val shape = RoundedCornerShape(4.dp)
-    Tipped(tip, Modifier.size(side).clip(shape).background(Color(0xFF0B0E13)).background(tint.copy(alpha = .16f)).border(1.dp, tint, shape)
-        .semantics { contentDescription = label }) {
+    Tipped(
+        tip,
+        Modifier.size(side).clip(shape).background(Color(0xFF0B0E13)).background(tint.copy(alpha = .16f)).border(1.dp, tint, shape)
+            .semantics { contentDescription = label },
+    ) {
         Canvas(Modifier.fillMaxSize().padding(side / 5)) { stateGlyph(ailment, tint) }
         Box(Modifier.fillMaxWidth().fillMaxHeight((1 - left).coerceIn(0f, 1f)).background(Color.Black.copy(alpha = .55f)))
-        if (stacks > 1) Text("$stacks", color = Parchment, fontSize = 9.sp, fontWeight = FontWeight.Bold,
-            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 2.dp))
+        if (stacks > 1) {
+            Text(
+                "$stacks",
+                color = Parchment,
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.align(Alignment.BottomEnd).padding(end = 2.dp),
+            )
+        }
     }
 }
 
@@ -918,22 +1214,33 @@ private fun DrawScope.stateGlyph(ailment: Ailment?, tint: Color) {
     }
     when (ailment) {
         Ailment.BURNING -> drawPath(path(8f to 1f, 12f to 7f, 12f to 11f, 10f to 15f, 6f to 15f, 4f to 11f, 5f to 7f, 7f to 9f), tint)
+
         Ailment.CHILLED -> listOf(0f, 60f, 120f).forEach { angle ->
             val a = Math.toRadians(angle.toDouble())
             val dx = (kotlin.math.cos(a) * 7 * u).toFloat()
             val dy = (kotlin.math.sin(a) * 7 * u).toFloat()
             drawLine(tint, Offset(8 * u - dx, 8 * u - dy), Offset(8 * u + dx, 8 * u + dy), 1.6f * u)
         }
+
         Ailment.FROZEN -> drawPath(path(8f to 1f, 14f to 5f, 14f to 11f, 8f to 15f, 2f to 11f, 2f to 5f), tint)
+
         Ailment.SHOCKED -> drawPath(path(10f to 1f, 3f to 9f, 7f to 9f, 6f to 15f, 13f to 7f, 9f to 7f), tint)
-        Ailment.POISONED -> { drawPath(path(8f to 2f, 12f to 9f, 11f to 13f, 8f to 14f, 5f to 13f, 4f to 9f), tint); drawCircle(Color(0xFF0B0E13), 1.4f * u, Offset(8 * u, 10 * u)) }
-        Ailment.BLEEDING -> { drawPath(path(6f to 2f, 9f to 8f, 8f to 11f, 6f to 12f, 4f to 11f, 3f to 8f), tint); drawPath(path(12f to 7f, 14f to 11f, 13f to 13f, 12f to 14f, 11f to 13f, 10f to 11f), tint) }
+
+        Ailment.POISONED -> {
+            drawPath(path(8f to 2f, 12f to 9f, 11f to 13f, 8f to 14f, 5f to 13f, 4f to 9f), tint)
+            drawCircle(Color(0xFF0B0E13), 1.4f * u, Offset(8 * u, 10 * u))
+        }
+
+        Ailment.BLEEDING -> {
+            drawPath(path(6f to 2f, 9f to 8f, 8f to 11f, 6f to 12f, 4f to 11f, 3f to 8f), tint)
+            drawPath(path(12f to 7f, 14f to 11f, 13f to 13f, 12f to 14f, 11f to 13f, 10f to 11f), tint)
+        }
+
         null -> drawPath(path(8f to 1f, 9.8f to 5.2f, 14.3f to 5.6f, 10.9f to 8.6f, 11.9f to 13f, 8f to 10.7f, 4.1f to 13f, 5.1f to 8.6f, 1.7f to 5.6f, 6.2f to 5.2f), tint)
     }
 }
 
-private fun ailmentLabel(view: AilmentView) =
-    if (view.stacks > 1) ui("expedition.ailment_stacks", ui(view.ailment.key()), view.stacks) else ui(view.ailment.key())
+private fun ailmentLabel(view: AilmentView) = if (view.stacks > 1) ui("expedition.ailment_stacks", ui(view.ailment.key()), view.stacks) else ui(view.ailment.key())
 
 /** How strongly an ailment washes a portrait: a freeze is the whole face, a bleed a tint. */
 internal fun washAmount(ailment: Ailment): Float = when (ailment) {
@@ -948,7 +1255,12 @@ internal fun washAmount(ailment: Ailment): Float = when (ailment) {
     val clock = remember { mutableFloatStateOf(0f) }
     LaunchedEffect(Unit) {
         var last = 0L
-        while (true) withFrameNanos { now -> if (last != 0L) clock.floatValue += ((now - last) / 1e9f).coerceAtMost(.05f); last = now }
+        while (true) {
+            withFrameNanos { now ->
+                if (last != 0L) clock.floatValue += ((now - last) / 1e9f).coerceAtMost(.05f)
+                last = now
+            }
+        }
     }
     return clock
 }
@@ -972,8 +1284,13 @@ private sealed interface PackRow {
  * of the pack it was, only when there was more than one. [toDeath] (3.70.0) opens it on the blow that
  * felled the hero, or at its end.
  */
-@Composable internal fun FightLog(pack: List<PackHit>, modifier: Modifier = Modifier, shown: Set<LogKind> = LogKind.DEFAULT,
-                                  toDeath: Boolean = false, onOpen: ((CombatEvent, String) -> Unit)? = null) {
+@Composable internal fun FightLog(
+    pack: List<PackHit>,
+    modifier: Modifier = Modifier,
+    shown: Set<LogKind> = LogKind.DEFAULT,
+    toDeath: Boolean = false,
+    onOpen: ((CombatEvent, String) -> Unit)? = null,
+) {
     val rows = remember(pack, shown) {
         buildList {
             pack.forEachIndexed { index, hit ->
@@ -984,9 +1301,11 @@ private sealed interface PackRow {
         }
     }
     val state = rememberLazyListState()
-    if (toDeath) LaunchedEffect(rows) {
-        val death = rows.indexOfFirst { it is PackRow.Line && it.event.heroLife <= 0 }
-        if (rows.isNotEmpty()) state.scrollToItem(if (death >= 0) death else rows.lastIndex)
+    if (toDeath) {
+        LaunchedEffect(rows) {
+            val death = rows.indexOfFirst { it is PackRow.Line && it.event.heroLife <= 0 }
+            if (rows.isNotEmpty()) state.scrollToItem(if (death >= 0) death else rows.lastIndex)
+        }
     }
     LazyColumn(modifier.fillMaxWidth(), state = state, verticalArrangement = Arrangement.spacedBy(1.dp)) {
         items(rows) { row ->
@@ -1002,11 +1321,19 @@ private sealed interface PackRow {
     // A line with a trace opens its card (3.37.0); an older one without stays a line.
     val tap = if (onOpen != null && event.trace != null) Modifier.clickable { onOpen(event) } else Modifier
     Row(tap.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(ui("expedition.log_time", String.format(Locale.ROOT, "%.1f", event.time)), color = Muted,
-            style = MaterialTheme.typography.labelSmall, modifier = Modifier.width(40.dp))
-        Text(logLine(event, monster), color = logColour(event), style = MaterialTheme.typography.bodySmall,
+        Text(
+            ui("expedition.log_time", String.format(Locale.ROOT, "%.1f", event.time)),
+            color = Muted,
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.width(40.dp),
+        )
+        Text(
+            logLine(event, monster),
+            color = logColour(event),
+            style = MaterialTheme.typography.bodySmall,
             fontWeight = if (event.kind == HitKind.CRIT) FontWeight.Bold else FontWeight.Normal,
-            fontStyle = if (event.action == Action.TICK) FontStyle.Italic else FontStyle.Normal)
+            fontStyle = if (event.action == Action.TICK) FontStyle.Italic else FontStyle.Normal,
+        )
     }
 }
 
@@ -1015,34 +1342,50 @@ private fun logLine(event: CombatEvent, monster: String): String {
     val hero = event.actor == Side.HERO
     val line = event.pet?.let { petLine(event, monster, petName(it), damage) } ?: when (event.action) {
         Action.RETREAT -> ui("expedition.log_retreat")
+
         // Thorns and reflect (2.75.0): the one who was struck gives a blow back.
         Action.REFLECT -> if (hero) ui("expedition.log_reflect_you", monster, damage) else ui("expedition.log_reflect_they", monster, damage)
+
         Action.TICK -> {
             val ailment = event.ailment?.let { ui(it.key()) }.orEmpty()
             if (hero) ui("expedition.log_tick_they", monster, damage, ailment) else ui("expedition.log_tick_you", damage, ailment)
         }
+
         Action.ATTACK -> when (event.kind) {
             HitKind.HIT -> if (hero) ui("expedition.log_you_hit", damage) else ui("expedition.log_they_hit", monster, damage)
+
             HitKind.CRIT -> if (hero) ui("expedition.log_you_crit", damage) else ui("expedition.log_they_crit", monster, damage)
+
             // An evasion or a block belongs to the one who was struck at.
             HitKind.EVADED -> if (hero) ui("expedition.log_they_evade", monster) else ui("expedition.log_you_evade")
+
             HitKind.BLOCKED -> if (hero) ui("expedition.log_they_block", monster) else ui("expedition.log_you_block")
         }
+
         // A skill (2.78.0): a blow names it, anything else says who used it and on whom.
         Action.SKILL -> {
             val skill = SkillText.title(event.skill.orEmpty())
             when {
                 event.kind == HitKind.EVADED -> if (hero) ui("expedition.log_skill_evaded", skill, monster) else ui("expedition.log_skill_you_evade", monster, skill)
+
                 event.kind == HitKind.BLOCKED -> if (hero) ui("expedition.log_skill_blocked", skill, monster) else ui("expedition.log_skill_you_block", monster, skill)
-                event.damage > 0 -> if (hero) ui(if (event.kind == HitKind.CRIT) "expedition.log_skill_crit" else "expedition.log_skill_hit", skill, monster, damage)
-                    else ui(if (event.kind == HitKind.CRIT) "expedition.log_they_skill_crit" else "expedition.log_they_skill_hit", monster, skill, damage)
+
+                event.damage > 0 -> if (hero) {
+                    ui(if (event.kind == HitKind.CRIT) "expedition.log_skill_crit" else "expedition.log_skill_hit", skill, monster, damage)
+                } else {
+                    ui(if (event.kind == HitKind.CRIT) "expedition.log_they_skill_crit" else "expedition.log_they_skill_hit", monster, skill, damage)
+                }
+
                 event.onSelf -> (if (hero) ui("expedition.log_skill_self", skill) else ui("expedition.log_they_skill_self", monster, skill)) +
                     (if (event.healed >= 1) " · +${event.healed.roundToInt()}" else "")
+
                 else -> if (hero) ui("expedition.log_skill_on", skill, monster) else ui("expedition.log_they_skill_on", monster, skill)
             }
         }
+
         Action.FLASK -> ui("expedition.log_flask", equipmentTitle(event.skill.orEmpty())) +
             (if (event.healed >= 1) " · +${event.healed.roundToInt()}" else "")
+
         // A note (3.37.0): what happened without a blow, by the trace that carries it.
         Action.NOTE -> noteLine(event, monster)
     }
@@ -1106,22 +1449,34 @@ private fun logColour(event: CombatEvent): Color = when {
 private fun hitText(hit: FloatingHit): String = when {
     // A heal (2.78.0): a skill's or a draught's, rising in green.
     hit.amount == 0 && hit.healed > 0 -> "+${hit.healed}"
+
     hit.kind == HitKind.EVADED -> ui("expedition.evaded")
+
     hit.kind == HitKind.BLOCKED -> ui("expedition.blocked")
+
     hit.kind == HitKind.CRIT -> ui("expedition.crit", hit.amount)
+
     else -> hit.amount.toString()
 }
 
 private fun hitColour(hit: FloatingHit): Color = when {
     hit.amount == 0 && hit.healed > 0 -> Vital
+
     // The pet's blows rise green on the foe (3.79.0).
     hit.pet && hit.target == Side.MONSTER && hit.amount > 0 -> Vital
+
     hit.kind == HitKind.EVADED || hit.kind == HitKind.BLOCKED -> Muted
+
     hit.kind == HitKind.CRIT -> Color(0xFFFFD34A)
+
     else -> damageTint(hit.type, onHero = hit.target == Side.HERO)
 }
 
-internal fun outcomeColour(outcome: Outcome) = when (outcome) { Outcome.WIN -> Vital; Outcome.LOSS -> LifeRed; Outcome.RETREAT -> Muted }
+internal fun outcomeColour(outcome: Outcome) = when (outcome) {
+    Outcome.WIN -> Vital
+    Outcome.LOSS -> LifeRed
+    Outcome.RETREAT -> Muted
+}
 
 /**
  * What the server rolled — experience, gold, orbs and items — for a kill and a chest alike; each item as its whole card (3.2.0).
@@ -1144,8 +1499,11 @@ internal fun outcomeColour(outcome: Outcome) = when (outcome) { Outcome.WIN -> V
             // The whole card, not a line (3.2.0): what dropped is read where it dropped
             s.view(instance)?.let { LootCard(s, it, onItem) }
         }
-        if (awaiting) Receiving()
-        else if (reward.items.isEmpty() && reward.equipment.isEmpty()) Text(ui("expedition.loot_nothing"), color = Muted)
+        if (awaiting) {
+            Receiving()
+        } else if (reward.items.isEmpty() && reward.equipment.isEmpty()) {
+            Text(ui("expedition.loot_nothing"), color = Muted)
+        }
     }
 }
 
@@ -1166,7 +1524,11 @@ internal fun buildupTint(kind: Buildup): Color = when (kind) {
     Buildup.FREEZE -> Color(0xFF8FD3FF)
     Buildup.ELECTROCUTE -> Color(0xFFB07CFF)
 }
-internal fun buildupGlyph(kind: Buildup): String = when (kind) { Buildup.STUN -> "✦"; Buildup.FREEZE -> "❄"; Buildup.ELECTROCUTE -> "ϟ" }
+internal fun buildupGlyph(kind: Buildup): String = when (kind) {
+    Buildup.STUN -> "✦"
+    Buildup.FREEZE -> "❄"
+    Buildup.ELECTROCUTE -> "ϟ"
+}
 
 /** The fullest buildup under the life: a 3-dp thread in its colour with its glyph in front; nothing while every bar is empty. */
 @Composable internal fun BuildupBar(view: BuildupView, modifier: Modifier) {
@@ -1190,16 +1552,37 @@ internal fun buildupGlyph(kind: Buildup): String = when (kind) { Buildup.STUN ->
     }
     val tint = buildupTint(kind)
     when (kind) {
-        Buildup.FREEZE -> Box(Modifier.matchParentSize().background(Brush.linearGradient(listOf(tint.copy(alpha = .35f), tint.copy(alpha = .08f))))
-            .border(2.dp, tint.copy(alpha = .8f), RoundedCornerShape(4.dp)))
+        Buildup.FREEZE -> Box(
+            Modifier.matchParentSize().background(Brush.linearGradient(listOf(tint.copy(alpha = .35f), tint.copy(alpha = .08f))))
+                .border(2.dp, tint.copy(alpha = .8f), RoundedCornerShape(4.dp)),
+        )
+
         Buildup.ELECTROCUTE -> Canvas(Modifier.matchParentSize().graphicsLayer { alpha = if (sin(time * 40f) > 0) 1f else .25f }) {
-            val w = size.width; val h = size.height
-            val bolt = Path().apply { moveTo(w * .2f, h * .1f); lineTo(w * .42f, h * .45f); lineTo(w * .3f, h * .48f); lineTo(w * .62f, h * .9f) }
+            val w = size.width
+            val h = size.height
+            val bolt = Path().apply {
+                moveTo(w * .2f, h * .1f)
+                lineTo(w * .42f, h * .45f)
+                lineTo(w * .3f, h * .48f)
+                lineTo(w * .62f, h * .9f)
+            }
             drawPath(bolt, tint, style = Stroke(2.dp.toPx()))
         }
-        Buildup.STUN -> Text("✦ ✦ ✦", color = tint, fontSize = 11.sp, modifier = Modifier.align(Alignment.TopCenter).padding(top = 3.dp)
-            .graphicsLayer { translationY = sin(time * 6f) * 2.dp.toPx() })
+
+        Buildup.STUN -> Text(
+            "✦ ✦ ✦",
+            color = tint,
+            fontSize = 11.sp,
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 3.dp)
+                .graphicsLayer { translationY = sin(time * 6f) * 2.dp.toPx() },
+        )
     }
-    Text(ui(word), color = tint, fontSize = 8.sp, fontWeight = FontWeight.Bold, maxLines = 1,
-        modifier = Modifier.align(Alignment.BottomCenter).background(Ink.copy(alpha = .75f)).padding(horizontal = 3.dp))
+    Text(
+        ui(word),
+        color = tint,
+        fontSize = 8.sp,
+        fontWeight = FontWeight.Bold,
+        maxLines = 1,
+        modifier = Modifier.align(Alignment.BottomCenter).background(Ink.copy(alpha = .75f)).padding(horizontal = 3.dp),
+    )
 }

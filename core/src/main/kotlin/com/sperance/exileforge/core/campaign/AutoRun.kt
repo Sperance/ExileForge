@@ -15,8 +15,10 @@ sealed interface AutoStep {
     data class Fight(val agent: MonsterAgent) : AutoStep
     data class OpenChest(val chest: Chest) : AutoStep
     data class Guardian(val spot: CrystalSpot) : AutoStep
+
     /** A crack of the Abyss: the run stops, and the player decides depth by depth. */
     data class Rift(val spot: AbyssSpot) : AutoStep
+
     /** The Vaal portal: the run stops at its gate, and the player decides. */
     data object Portal : AutoStep
     data object Boss : AutoStep
@@ -34,6 +36,7 @@ sealed interface AutoStep {
 class AutoPilot(private val steps: ArrayDeque<AutoStep>, val waves: Int) {
     var wave = 0
         private set
+
     /** Seconds before the next step: a beat between fights, so a wave reads as one. */
     var rest = 0.0
 
@@ -42,6 +45,7 @@ class AutoPilot(private val steps: ArrayDeque<AutoStep>, val waves: Int) {
     companion object {
         const val MIN_WAVES = 8
         const val MAX_WAVES = 15
+
         /** The beat between two steps, in seconds of the run's pace. */
         const val BEAT = .6
 

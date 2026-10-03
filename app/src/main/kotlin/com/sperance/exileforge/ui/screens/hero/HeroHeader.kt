@@ -1,7 +1,6 @@
 package com.sperance.exileforge.ui.screens.hero
 
 import androidx.compose.foundation.background
-import com.sperance.exileforge.ui.components.MutedText
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -18,10 +17,11 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.rules.content.ClassesFile
 import com.sperance.exileforge.ui.components.ClassPortrait
-import com.sperance.exileforge.ui.components.ForgePanel
 import com.sperance.exileforge.ui.components.FirstVisit
+import com.sperance.exileforge.ui.components.ForgePanel
 import com.sperance.exileforge.ui.components.Guide
 import com.sperance.exileforge.ui.components.GuideButton
+import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
 
@@ -47,8 +47,13 @@ import com.sperance.exileforge.ui.theme.*
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(hero.name, style = MaterialTheme.typography.headlineSmall, color = GoldBright, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 // The class is the base every percentage is counted from; the server owns it.
-                Text(ui("hero.class_level", hero.heroClass.takeIf { it.isNotBlank() }?.let(::classTitle) ?: ui("hero.unknown_class"), hero.level),
-                    color = Rune, style = MaterialTheme.typography.labelLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(
+                    ui("hero.class_level", hero.heroClass.takeIf { it.isNotBlank() }?.let(::classTitle) ?: ui("hero.unknown_class"), hero.level),
+                    color = Rune,
+                    style = MaterialTheme.typography.labelLarge,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
             GuideButton(Guide.HERO)
         }
@@ -65,8 +70,11 @@ import com.sperance.exileforge.ui.theme.*
 /** One figure the header carries, framed as a chip: a drawing and a short line. */
 @Composable private fun Chip(icon: ImageVector, text: String) {
     val shape = RoundedCornerShape(50)
-    Row(Modifier.border(1.dp, Bronze, shape).padding(horizontal = 10.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    Row(
+        Modifier.border(1.dp, Bronze, shape).padding(horizontal = 10.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
         Icon(icon, null, tint = Gold, modifier = Modifier.size(14.dp))
         Text(text, color = GoldBright, style = MaterialTheme.typography.labelMedium)
     }
@@ -94,8 +102,10 @@ import com.sperance.exileforge.ui.theme.*
             Text(ui("hero.xp_short"), color = Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f))
             MutedText(label, style = MaterialTheme.typography.labelSmall)
         }
-        if (classes != null) Box(Modifier.fillMaxWidth().height(6.dp).background(PanelRaised, RoundedCornerShape(3.dp))) {
-            Box(Modifier.fillMaxWidth(fraction).fillMaxHeight().background(Gold, RoundedCornerShape(3.dp)))
+        if (classes != null) {
+            Box(Modifier.fillMaxWidth().height(6.dp).background(PanelRaised, RoundedCornerShape(3.dp))) {
+                Box(Modifier.fillMaxWidth(fraction).fillMaxHeight().background(Gold, RoundedCornerShape(3.dp)))
+            }
         }
     }
 }

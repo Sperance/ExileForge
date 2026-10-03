@@ -7,6 +7,10 @@ import kotlinx.coroutines.flow.update
 class RequestJournal {
     private val mutable = MutableStateFlow<List<RequestLog>>(emptyList())
     val entries = mutable.asStateFlow()
-    fun add(entry: RequestLog) { mutable.update { (listOf(entry) + it).take(60) } }
-    fun clear() { mutable.value = emptyList() }
+    fun add(entry: RequestLog) {
+        mutable.update { (listOf(entry) + it).take(60) }
+    }
+    fun clear() {
+        mutable.value = emptyList()
+    }
 }

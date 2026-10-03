@@ -1,6 +1,8 @@
 package com.sperance.exileforge.ui.icons
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -11,13 +13,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.graphics.vector.group
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.itemIcon
 import com.sperance.exileforge.rules.content.Item
 import com.sperance.exileforge.rules.content.Orb
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.size
-import androidx.compose.ui.unit.Dp
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.cos
 import kotlin.math.sin
@@ -33,8 +33,9 @@ import kotlin.math.sin
 @Composable fun OrbGlyph(orb: Orb?, modifier: Modifier = Modifier, description: String? = null) {
     // The server's glass wins since 3.6.0: the orbs are drawn there with every other item.
     val sprite = orb?.let { itemIcon(it.name) }?.takeIf { it.isGlass }
-    if (sprite == null || !SpriteIcon(sprite, Color.Unspecified, modifier, halo = false))
+    if (sprite == null || !SpriteIcon(sprite, Color.Unspecified, modifier, halo = false)) {
         Image(rememberVectorPainter(orbVector(orb)), description, modifier)
+    }
 }
 
 /**
@@ -106,8 +107,7 @@ private val lead = SolidColor(Color(0xFF111111))
 private val built = ConcurrentHashMap<Orb, ImageVector>()
 private val fallback by lazy { build(unknown) }
 
-private fun orbVector(orb: Orb?): ImageVector =
-    orb?.let { built.getOrPut(it) { build(art[it] ?: unknown) } } ?: fallback
+private fun orbVector(orb: Orb?): ImageVector = orb?.let { built.getOrPut(it) { build(art[it] ?: unknown) } } ?: fallback
 
 private fun nodes(d: String) = PathParser().parsePathString(d).toNodes()
 
@@ -115,10 +115,12 @@ private fun build(orb: OrbArt): ImageVector {
     val hue = Color(orb.hue)
     fun tone(f: Float) = Color((hue.red * f).coerceAtMost(1f), (hue.green * f).coerceAtMost(1f), (hue.blue * f).coerceAtMost(1f))
     return ImageVector.Builder(defaultWidth = 24.dp, defaultHeight = 24.dp, viewportWidth = 100f, viewportHeight = 100f).apply {
-        if (orb.rays) repeat(12) { k ->
-            val a = k * Math.PI / 6
-            fun at(r: Double, t: Double) = "${50 + r * cos(t)} ${50 + r * sin(t)}"
-            addPath(nodes("M${at(36.0, a - .12)} L${at(48.0, a)} L${at(36.0, a + .12)} Z"), fill = SolidColor(Color(0xFFF0E2C0)), stroke = lead, strokeLineWidth = 2f)
+        if (orb.rays) {
+            repeat(12) { k ->
+                val a = k * Math.PI / 6
+                fun at(r: Double, t: Double) = "${50 + r * cos(t)} ${50 + r * sin(t)}"
+                addPath(nodes("M${at(36.0, a - .12)} L${at(48.0, a)} L${at(36.0, a + .12)} Z"), fill = SolidColor(Color(0xFFF0E2C0)), stroke = lead, strokeLineWidth = 2f)
+            }
         }
         val disc = "M14 50 A36 36 0 1 0 86 50 A36 36 0 1 0 14 50 Z"
         addPath(nodes(disc), fill = SolidColor(tone(.55f)))
@@ -129,8 +131,11 @@ private fun build(orb: OrbArt): ImageVector {
         addPath(nodes("M31 50 A19 19 0 1 0 69 50 A19 19 0 1 0 31 50 Z"), fill = SolidColor(Color(0xFF15171A)), stroke = SolidColor(Color(0xFFC8AA6E)), strokeLineWidth = 3f)
         group(scaleX = .34f, scaleY = .34f, pivotX = 50f, pivotY = 50f) {
             val sign = orb.emblem
-            if (sign.filled) addPath(nodes(sign.d), fill = SolidColor(hue))
-            else addPath(nodes(sign.d), stroke = SolidColor(hue), strokeLineWidth = 10f, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round)
+            if (sign.filled) {
+                addPath(nodes(sign.d), fill = SolidColor(hue))
+            } else {
+                addPath(nodes(sign.d), stroke = SolidColor(hue), strokeLineWidth = 10f, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round)
+            }
         }
     }.build()
 }

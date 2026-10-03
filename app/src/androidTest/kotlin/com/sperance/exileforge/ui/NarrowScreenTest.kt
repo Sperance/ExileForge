@@ -47,8 +47,13 @@ import java.io.File
 class NarrowScreenTest {
     @get:Rule val compose = createComposeRule()
 
-    @Before fun dictionary() { serverLocale = TestWorld.russian }
-    @After fun forget() { serverLocale = LocaleBundle() }
+    @Before fun dictionary() {
+        serverLocale = TestWorld.russian
+    }
+
+    @After fun forget() {
+        serverLocale = LocaleBundle()
+    }
 
     @Test fun theHeroPanelACardAndTheLoadingScreenFitThreeHundredTwentyDp() {
         val index = TestWorld.index
@@ -57,17 +62,23 @@ class NarrowScreenTest {
         val boots = checkNotNull(ItemView.of(TestWorld.roll("boots-narrow", Slot.BOOTS, Rarity.RARE, seed = 3L), index))
         val info = HeroInfo("hero", "owner", "Изгнанник с очень длинным именем", heroClass = heroClass, level = 42)
         val hero = HeroView(info, listOf(ring), sheet = Sheets.calculate(index, 42, heroClass, emptyList(), listOf(ring)))
-        val state = ForgeState(busy = false, account = AccountState(profile = UserProfile("owner"), signedIn = true),
-            world = WorldState(content = index, contentHash = index.hash), play = PlayState(heroId = "hero", heroOwner = "owner", hero = hero))
-        compose.setContent { ForgeTheme {
-            Column(Modifier.width(320.dp).background(Ink).verticalScroll(rememberScrollState()).padding(8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                HeroHeader(state)
-                HeroSummary(state)
-                EquipmentLedger(state) { _, _ -> }
-                ItemCard(boots, detailed = true, actionLabel = "Свойства")
-                Box(Modifier.height(360.dp)) { WarmupScreen(Warmup("hero", setOf(WarmStep.CONTENT, WarmStep.LOCALE))) }
+        val state = ForgeState(
+            busy = false,
+            account = AccountState(profile = UserProfile("owner"), signedIn = true),
+            world = WorldState(content = index, contentHash = index.hash),
+            play = PlayState(heroId = "hero", heroOwner = "owner", hero = hero),
+        )
+        compose.setContent {
+            ForgeTheme {
+                Column(Modifier.width(320.dp).background(Ink).verticalScroll(rememberScrollState()).padding(8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    HeroHeader(state)
+                    HeroSummary(state)
+                    EquipmentLedger(state) { _, _ -> }
+                    ItemCard(boots, detailed = true, actionLabel = "Свойства")
+                    Box(Modifier.height(360.dp)) { WarmupScreen(Warmup("hero", setOf(WarmStep.CONTENT, WarmStep.LOCALE))) }
+                }
             }
-        } }
+        }
         val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
         val directory = File(InstrumentationRegistry.getInstrumentation().targetContext.getExternalFilesDir(null), "design").apply { mkdirs() }
         File(directory, "narrow.jpg").outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 70, it) }

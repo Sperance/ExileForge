@@ -10,16 +10,17 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.unit.dp
 
 /** The share of a mana pool the auras hold: [reserved] of [free] + [reserved], none for an empty pool. */
-internal fun reservedShare(free: Int, reserved: Int): Float =
-    if (reserved > 0 && free + reserved > 0) reserved / (free + reserved).toFloat() else 0f
+internal fun reservedShare(free: Int, reserved: Int): Float = if (reserved > 0 && free + reserved > 0) reserved / (free + reserved).toFloat() else 0f
 
 /**
  * A pool bar's reserved tail: its last [share] drawn darker, hatched with diagonal stripes of [tint] — the mana
  * the auras hold, which never fills while they stand. Laid on the track under the fill and the figures, so the
  * fill (now / free + reserved) runs up to the tail and stops there.
  */
-internal fun Modifier.reservedTail(share: Float, tint: Color): Modifier =
-    if (share <= 0f) this else drawBehind {
+internal fun Modifier.reservedTail(share: Float, tint: Color): Modifier = if (share <= 0f) {
+    this
+} else {
+    drawBehind {
         val start = size.width * (1 - share.coerceIn(0f, 1f))
         val gap = 5.dp.toPx()
         clipRect(left = start) {
@@ -31,3 +32,4 @@ internal fun Modifier.reservedTail(share: Float, tint: Color): Modifier =
             }
         }
     }
+}

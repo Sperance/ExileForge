@@ -61,10 +61,16 @@ class CommandQueue(private val store: CommandStore?, private val clock: () -> Lo
     val waiting: StateFlow<List<QueuedCommand>> = entries.asStateFlow()
 
     /** Whether anything waits — the kept queue read first, so a command after a restart still lines up behind it. */
-    suspend fun busy(): Boolean = lock.withLock { loadLocked(); entries.value.isNotEmpty() }
+    suspend fun busy(): Boolean = lock.withLock {
+        loadLocked()
+        entries.value.isNotEmpty()
+    }
 
     /** Reads the kept queue once; returns the commands dropped as too old on the way. */
-    suspend fun load(): List<QueuedCommand> = lock.withLock { loadLocked(); expireLocked() }
+    suspend fun load(): List<QueuedCommand> = lock.withLock {
+        loadLocked()
+        expireLocked()
+    }
 
     private suspend fun loadLocked() {
         if (loaded) return
@@ -73,8 +79,7 @@ class CommandQueue(private val store: CommandStore?, private val clock: () -> Lo
         entries.update { (kept + it).distinctBy(QueuedCommand::key) }
     }
 
-    fun command(method: String, path: String, query: Map<String, String>, body: String?, account: String?): QueuedCommand =
-        QueuedCommand(UUID.randomUUID().toString(), method, path, query, body, account, clock())
+    fun command(method: String, path: String, query: Map<String, String>, body: String?, account: String?): QueuedCommand = QueuedCommand(UUID.randomUUID().toString(), method, path, query, body, account, clock())
 
     suspend fun add(command: QueuedCommand) = lock.withLock {
         loadLocked()
@@ -88,11 +93,18 @@ class CommandQueue(private val store: CommandStore?, private val clock: () -> Lo
     }
 
     /** Forgets every command — a sign-out, or another account on this server. */
-    suspend fun clear() = lock.withLock { loaded = true; entries.value = emptyList(); persist() }
+    suspend fun clear() = lock.withLock {
+        loaded = true
+        entries.value = emptyList()
+        persist()
+    }
 
     /** The oldest command still in time, after the ones too old are dropped and handed to [expired]. */
     suspend fun head(expired: (List<QueuedCommand>) -> Unit): QueuedCommand? {
-        val dropped = lock.withLock { loadLocked(); expireLocked() }
+        val dropped = lock.withLock {
+            loadLocked()
+            expireLocked()
+        }
         if (dropped.isNotEmpty()) expired(dropped)
         return entries.value.firstOrNull()
     }
@@ -100,11 +112,16 @@ class CommandQueue(private val store: CommandStore?, private val clock: () -> Lo
     private suspend fun expireLocked(): List<QueuedCommand> {
         val now = clock()
         val (old, fresh) = entries.value.partition { now - it.createdAt > TTL_MS }
-        if (old.isNotEmpty()) { entries.value = fresh; persist() }
+        if (old.isNotEmpty()) {
+            entries.value = fresh
+            persist()
+        }
         return old
     }
 
-    private suspend fun persist() { store?.write(WireJson.encodeToString(Codec, entries.value)) }
+    private suspend fun persist() {
+        store?.write(WireJson.encodeToString(Codec, entries.value))
+    }
 
     companion object {
         /** How long a key is honoured by the server (server 1.53.0: an hour), and so how long a command may wait. */
@@ -119,9 +136,11 @@ class CommandQueue(private val store: CommandStore?, private val clock: () -> Lo
          * hatching (an egg laid or collected), a pet's orb or chosen line, a job started. Offline they are refused rather than kept: a second press would act on an item
          * the player has not yet seen, and the whole row would land blind once the link is back.
          */
-        private val ROLLED = listOf("api/v1/hero/orb", "api/v1/hero/essence", "api/v1/hero/unveil", "api/v1/hero/choose", "api/v1/hero/craft",
+        private val ROLLED = listOf(
+            "api/v1/hero/orb", "api/v1/hero/essence", "api/v1/hero/unveil", "api/v1/hero/choose", "api/v1/hero/craft",
             "api/v1/hero/pets/hatch", "api/v1/hero/pets/incubate", "api/v1/hero/pets/collect", "api/v1/hero/pets/orb", "api/v1/hero/pets/choose", "api/v1/hero/crafts/start",
-            "api/v1/hero/chest/open")
+            "api/v1/hero/chest/open",
+        )
 
         fun queues(path: String): Boolean = OWN_RETRY.none { path.startsWith(it) } && ROLLED.none { path.startsWith(it) && !path.startsWith("api/v1/hero/crafts/stop") }
 

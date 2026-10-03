@@ -57,8 +57,18 @@ import com.sperance.exileforge.ui.theme.*
     Caption(ui("run.recap"), LifeRed)
     recap.forEach { hit ->
         val type = hit.type?.let(::typeTitle) ?: ui("run.type_none")
-        Text(ui(if (hit.crit) "run.recap_line_crit" else "run.recap_line", monsterTitle(hit.monster.code), number(hit.damage), type,
-            skillTitle(hit.skill), number(hit.lifeAfter.coerceAtLeast(0.0))), color = Parchment, style = MaterialTheme.typography.bodySmall)
+        Text(
+            ui(
+                if (hit.crit) "run.recap_line_crit" else "run.recap_line",
+                monsterTitle(hit.monster.code),
+                number(hit.damage),
+                type,
+                skillTitle(hit.skill),
+                number(hit.lifeAfter.coerceAtLeast(0.0)),
+            ),
+            color = Parchment,
+            style = MaterialTheme.typography.bodySmall,
+        )
     }
     recap.groupBy { it.type }.maxByOrNull { (_, hits) -> hits.sumOf { it.damage } }?.key?.let { worst ->
         MutedText(ui("run.advice.${worst.name}"))
@@ -66,7 +76,10 @@ import com.sperance.exileforge.ui.theme.*
 }
 
 @Composable private fun Figure(label: String, value: String) {
-    Column { Text(value, color = GoldBright, style = MaterialTheme.typography.titleMedium); MutedText(label, style = MaterialTheme.typography.labelSmall) }
+    Column {
+        Text(value, color = GoldBright, style = MaterialTheme.typography.titleMedium)
+        MutedText(label, style = MaterialTheme.typography.labelSmall)
+    }
 }
 
 @Composable private fun Split(title: String, parts: Map<String, Double>, total: Double) {

@@ -1,9 +1,9 @@
 package com.sperance.exileforge.ui
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Column
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
@@ -39,8 +39,13 @@ import org.junit.Test
 class ReleaseSmokeTest {
     @get:Rule val compose = createEmptyComposeRule()
 
-    @Before fun dictionary() { serverLocale = TestWorld.russian }
-    @After fun forget() { serverLocale = LocaleBundle() }
+    @Before fun dictionary() {
+        serverLocale = TestWorld.russian
+    }
+
+    @After fun forget() {
+        serverLocale = LocaleBundle()
+    }
 
     @Test fun shrunkAppStartsDecodesAndDraws() {
         ActivityScenario.launch(MainActivity::class.java).use { assertEquals(Lifecycle.State.RESUMED, it.state) }
@@ -54,10 +59,16 @@ class ReleaseSmokeTest {
         // A rare copy always carries a modifier: its line is the one drawn on its own under the card
         val line = view.lines.first().let { Line(it.code, it.values) }
         ActivityScenario.launch(ComponentActivity::class.java).use { scenario ->
-            scenario.onActivity { it.setContent { ForgeTheme { Column {
-                ItemCard(view, detailed = true)
-                ModifierLine(index, line)
-            } } } }
+            scenario.onActivity {
+                it.setContent {
+                    ForgeTheme {
+                        Column {
+                            ItemCard(view, detailed = true)
+                            ModifierLine(index, line)
+                        }
+                    }
+                }
+            }
             compose.onNodeWithText(view.title).assertIsDisplayed()
             compose.onAllNodesWithText(lineText(index, line)).onFirst().assertExists()
         }

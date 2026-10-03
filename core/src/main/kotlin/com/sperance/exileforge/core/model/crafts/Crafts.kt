@@ -72,8 +72,7 @@ import kotlinx.serialization.Serializable
 )
 
 /** The work [code] as the hero runs it: the chosen variant of a choosing work, else the work itself. */
-fun ProfessionView.job(code: String, choice: String = ""): JobView? =
-    jobs.firstOrNull { it.code == code }?.let { job -> job.options.firstOrNull { it.choice == choice } ?: job.takeIf { choice.isEmpty() } }
+fun ProfessionView.job(code: String, choice: String = ""): JobView? = jobs.firstOrNull { it.code == code }?.let { job -> job.options.firstOrNull { it.choice == choice } ?: job.takeIf { choice.isEmpty() } }
 
 /** The crafts of a hero, whole: every answer of the crafts routes is this. */
 @Serializable data class CraftsState(

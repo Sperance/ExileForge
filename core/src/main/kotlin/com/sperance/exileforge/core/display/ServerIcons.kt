@@ -62,6 +62,7 @@ class IconBundle(
 
     /** The drawing for one key, or null — and null means "draw your own", never "draw nothing". */
     operator fun get(key: String): IconSprite? = icons[key]?.let { sprites[it] }
+
     /** A drawing by its own name (2.78.0): a skill names the sprite it is drawn with. */
     fun sprite(name: String): IconSprite? = sprites[name]
     fun contains(key: String): Boolean = get(key) != null
@@ -74,8 +75,10 @@ class IconBundle(
          * on the next start: the manifest's [hash] is what decides whether it is still current.
          */
         fun parse(hash: String, document: String): IconBundle {
-            val parsed = WireJson.decodeFromJsonElement(IconDocument.serializer(),
-                WireJson.parseToJsonElement(document).jsonObject)
+            val parsed = WireJson.decodeFromJsonElement(
+                IconDocument.serializer(),
+                WireJson.parseToJsonElement(document).jsonObject,
+            )
             // A code pointing at a sprite nobody drew is dropped here rather than on screen: the
             // card then falls back to the bundled emblem instead of leaving a hole where art was.
             return IconBundle(hash, parsed.sprites, parsed.icons.filterValues { it in parsed.sprites })
@@ -100,6 +103,7 @@ object IconKey {
     fun item(code: String) = "$ITEM.$code"
     fun stat(stat: String) = "$STAT.$stat"
     fun slot(slot: String) = "$SLOT.$slot"
+
     /** A guild faction's sign (3.27.0), the key its rules name by default. */
     fun guildFaction(code: String) = "$GUILD_FACTION.$code"
 }

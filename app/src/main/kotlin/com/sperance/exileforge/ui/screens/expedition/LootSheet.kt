@@ -1,6 +1,5 @@
 package com.sperance.exileforge.ui.screens.expedition
 
-import com.sperance.exileforge.ui.components.ForgeSheet
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -17,6 +16,7 @@ import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.unmetFor
 import com.sperance.exileforge.ui.components.ForgeButton
+import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.ItemCard
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.screens.hero.WearPreview
@@ -43,8 +43,14 @@ private fun lootStand(s: ForgeState, item: ItemView): LootStand {
  * [extra] is what the caller adds under the button.
  */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable internal fun LootSheet(s: ForgeState, vm: ForgeViewModel, item: ItemView, onDismiss: () -> Unit,
-                                   extra: @Composable ColumnScope.() -> Unit = {}) {
+@Composable
+internal fun LootSheet(
+    s: ForgeState,
+    vm: ForgeViewModel,
+    item: ItemView,
+    onDismiss: () -> Unit,
+    extra: @Composable ColumnScope.() -> Unit = {},
+) {
     val stand = lootStand(s, item)
     LaunchedEffect(item.id, stand) { if (stand == LootStand.ARRIVING) vm.flushRun() }
     ForgeSheet(onDismissRequest = onDismiss) {
@@ -53,11 +59,20 @@ private fun lootStand(s: ForgeState, item: ItemView): LootStand {
             WearPreview(s, item.item)
             when {
                 stand == LootStand.WORN -> MutedText(ui("expedition.loot_worn"))
+
                 stand == LootStand.GONE -> MutedText(ui("expedition.loot_gone"))
+
                 // A map or a jewel is not worn (3.73.0): no «Надеть» under it.
                 item.slot.isJewelLike -> Unit
-                else -> ForgeButton(enabled = stand == LootStand.LOOSE && !s.busy && s.unmetFor(item.code).isEmpty(),
-                    onClick = { onDismiss(); vm.equip(item.id) }, modifier = Modifier.fillMaxWidth()) {
+
+                else -> ForgeButton(
+                    enabled = stand == LootStand.LOOSE && !s.busy && s.unmetFor(item.code).isEmpty(),
+                    onClick = {
+                        onDismiss()
+                        vm.equip(item.id)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
                     Text(ui(if (stand == LootStand.ARRIVING) "expedition.loot_arriving" else "hero.equip"))
                 }
             }
@@ -70,6 +85,9 @@ private fun lootStand(s: ForgeState, item: ItemView): LootStand {
 @Composable
 internal fun LootCard(s: ForgeState, item: ItemView, onCompare: ((ItemView) -> Unit)?) {
     val price = s.sellPrice(item.item)
-    if (onCompare == null || !wearable(s, item.item)) ItemCard(item, enabled = false, detailed = true, price = price)
-    else ItemCard(item, detailed = true, actionLabel = ui("expedition.loot_compare"), action = true, price = price) { onCompare(item) }
+    if (onCompare == null || !wearable(s, item.item)) {
+        ItemCard(item, enabled = false, detailed = true, price = price)
+    } else {
+        ItemCard(item, detailed = true, actionLabel = ui("expedition.loot_compare"), action = true, price = price) { onCompare(item) }
+    }
 }

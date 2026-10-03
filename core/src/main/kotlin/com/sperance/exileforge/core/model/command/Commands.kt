@@ -1,7 +1,7 @@
 package com.sperance.exileforge.core.model.command
 
-import com.sperance.exileforge.core.model.feedback.FeedbackKind
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.model.feedback.FeedbackKind
 import kotlinx.serialization.Serializable
 
 /** The showcase is paged by the server, so this is what the client asks it for. */
@@ -22,10 +22,14 @@ const val AUCTION_PAGE_SIZE = 20
 )
 
 /** What every sign-in answers: the account and the token that stands for it. */
+
 /** The answer to a sign-in; a device registration (server 1.46.0) also brings the secret of the device, once. */
 @Serializable data class SignedIn(val user: UserProfile, val token: String, val deviceSecret: String? = null)
+
 @Serializable data class LoginCredentials(val login: String, val password: String)
+
 @Serializable data class DeviceCredentials(val deviceId: String)
+
 @Serializable data class PasswordChange(val password: String, val newPassword: String)
 
 /** One entry of the server's route table; the method arrives as Ktor prints it — `(GET)` — so it is normalised to letters. */
@@ -73,6 +77,11 @@ data class ApiCapabilities(val routes: Set<String>) {
 }
 
 /** A bug report (server 1.46.0): the words of the player, where they were, and the tail of the request journal. */
-@Serializable data class BugReportRequest(val text: String, val screen: String, val context: Map<String, String>, val requests: List<String>,
+@Serializable data class BugReportRequest(
+    val text: String,
+    val screen: String,
+    val context: Map<String, String>,
+    val requests: List<String>,
     /** A bug or a player's suggestion (3.73.0, server 1.69.0). */
-    val kind: FeedbackKind = FeedbackKind.BUG)
+    val kind: FeedbackKind = FeedbackKind.BUG,
+)

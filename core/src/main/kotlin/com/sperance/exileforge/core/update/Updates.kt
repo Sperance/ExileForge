@@ -5,10 +5,6 @@ import com.sperance.exileforge.core.model.sync.API_REVISION
 import com.sperance.exileforge.core.model.sync.StaticManifest
 import com.sperance.exileforge.core.network.ForgeHttp
 import com.sperance.exileforge.rules.content.RULES_VERSION
-import java.io.File
-import java.io.IOException
-import java.security.MessageDigest
-import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -17,6 +13,10 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.io.File
+import java.io.IOException
+import java.security.MessageDigest
+import java.util.concurrent.TimeUnit
 
 /**
  * `update.json` (3.72.0): what CI publishes beside the APK of every release — the build's version, the wire and rules
@@ -126,10 +126,13 @@ class Updates(
 
     companion object {
         const val REPO = "Sperance/ExileForge"
+
         /** The asset CI publishes beside the APK. */
         const val META = "update.json"
+
         /** Releases read at once: more than any player skips. */
         private const val PAGE = 30
+
         /** How often a running app looks again. */
         const val PERIOD_MS = 60 * 60 * 1000L
     }

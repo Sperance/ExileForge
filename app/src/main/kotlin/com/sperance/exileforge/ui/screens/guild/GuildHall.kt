@@ -57,8 +57,12 @@ import com.sperance.exileforge.ui.theme.*
                 ForgePanel {
                     Engraved(loc("guild.branch.${branch.name}") + " · " + rule.inBranch(guild.tree, branch))
                     rule.nodes.filter { it.branch == branch }.sortedBy { it.row }.forEach { node ->
-                        NodeRow(node, guild.tree[node.code] ?: 0, open = node.row <= 1 || rule.inBranch(guild.tree, branch) >= rule.rowGate,
-                            canTake = leader && !s.busy && rule.canTake(guild.tree, guild.level, node.code)) { vm.takeGuildNode(node.code) }
+                        NodeRow(
+                            node,
+                            guild.tree[node.code] ?: 0,
+                            open = node.row <= 1 || rule.inBranch(guild.tree, branch) >= rule.rowGate,
+                            canTake = leader && !s.busy && rule.canTake(guild.tree, guild.level, node.code),
+                        ) { vm.takeGuildNode(node.code) }
                     }
                 }
             }
@@ -69,8 +73,17 @@ import com.sperance.exileforge.ui.theme.*
 @Composable private fun NodeRow(node: GuildNode, ranks: Int, open: Boolean, canTake: Boolean, onTake: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Column(Modifier.weight(1f)) {
-            Text(loc("guild.node.${node.code}.name") + "  $ranks/${node.max}", color = if (ranks > 0) GoldBright else if (open) Parchment else Muted,
-                style = MaterialTheme.typography.bodyMedium)
+            Text(
+                loc("guild.node.${node.code}.name") + "  $ranks/${node.max}",
+                color = if (ranks > 0) {
+                    GoldBright
+                } else if (open) {
+                    Parchment
+                } else {
+                    Muted
+                },
+                style = MaterialTheme.typography.bodyMedium,
+            )
             Text(loc("guild.node.${node.code}.desc", listOf(number(node.perRank))), color = Muted, style = MaterialTheme.typography.labelSmall)
             if (!open) Text(ui("guild.tree_row_locked"), color = Muted, style = MaterialTheme.typography.labelSmall)
         }
@@ -93,25 +106,33 @@ import com.sperance.exileforge.ui.theme.*
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
         item {
             ForgePanel {
-                if (stash.tabs.size > 1) LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    items(stash.tabs.indices.toList()) { i ->
-                        FilterChip(selected = i == tab, onClick = { tab = i }, label = { Text(ui("guild.stash_tab", i + 1)) })
+                if (stash.tabs.size > 1) {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        items(stash.tabs.indices.toList()) { i ->
+                            FilterChip(selected = i == tab, onClick = { tab = i }, label = { Text(ui("guild.stash_tab", i + 1)) })
+                        }
                     }
                 }
                 PropertyRow(ui("guild.stash_places"), "${shown.size} / ${stash.tabSize}", com.sperance.exileforge.core.display.Glyph.ITEM)
                 PropertyRow(ui("guild.stash_rank"), ranks.getOrNull(minRank)?.code?.let(GuildText::rank).orEmpty(), com.sperance.exileforge.core.display.Glyph.CHARACTER)
                 Text(if (stash.takesLeft < 0) ui("guild.stash_takes_free") else ui("guild.stash_takes", stash.takesLeft), color = Muted, style = MaterialTheme.typography.bodySmall)
-                if (me?.role == GuildRole.LEADER && ranks.isNotEmpty())
+                if (me?.role == GuildRole.LEADER && ranks.isNotEmpty()) {
                     Spinner(ui("guild.stash_rank_set"), minRank.toString(), ranks.indices.associate { it.toString() to GuildText.rank(ranks[it].code) }, !s.busy) {
                         vm.guildTabRank(tab, it.toInt())
                     }
+                }
                 ForgeButton(enabled = !s.busy && shown.size < stash.tabSize, onClick = { depositing = true }, modifier = Modifier.fillMaxWidth()) { Text(ui("guild.stash_put")) }
             }
         }
         if (shown.isEmpty()) item { MutedText(ui("guild.stash_empty")) }
         items(shown, key = { it.id }) { entry -> EntryRow(s, entry, enabled = !s.busy && stash.takesLeft != 0) { vm.takeFromGuild(entry.id) } }
     }
-    if (depositing) DepositSheet(s, onDismiss = { depositing = false }) { itemId, code, amount -> depositing = false; vm.depositToGuild(tab, itemId, code, amount) }
+    if (depositing) {
+        DepositSheet(s, onDismiss = { depositing = false }) { itemId, code, amount ->
+            depositing = false
+            vm.depositToGuild(tab, itemId, code, amount)
+        }
+    }
 }
 
 @Composable private fun EntryRow(s: ForgeState, entry: GuildStashEntry, enabled: Boolean, onTake: () -> Unit) {
@@ -120,8 +141,11 @@ import com.sperance.exileforge.ui.theme.*
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             if (view != null) ItemIcon(view, rarityColor(view.rarity.name), Modifier.size(32.dp)) else BagIcon(entry.code, Modifier.size(32.dp))
             Column(Modifier.weight(1f)) {
-                Text(view?.title ?: "${itemTitle(entry.code)} × ${entry.amount}", color = view?.let { rarityColor(it.rarity.name) } ?: Parchment,
-                    style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    view?.title ?: "${itemTitle(entry.code)} × ${entry.amount}",
+                    color = view?.let { rarityColor(it.rarity.name) } ?: Parchment,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
                 Text(ui("guild.stash_by", entry.by), color = Muted, style = MaterialTheme.typography.labelSmall)
             }
             TextButton(onClick = onTake, enabled = enabled) { Text(ui("guild.stash_take"), color = Gold) }
@@ -131,7 +155,8 @@ import com.sperance.exileforge.ui.theme.*
 
 /** What the hero may put in: a loose item of the stash, or part of a stack of the bag. */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable private fun DepositSheet(s: ForgeState, onDismiss: () -> Unit, onPut: (itemId: String?, code: String?, amount: Long) -> Unit) {
+@Composable
+private fun DepositSheet(s: ForgeState, onDismiss: () -> Unit, onPut: (itemId: String?, code: String?, amount: Long) -> Unit) {
     val hero = s.hero ?: return
     val loose = hero.items.filter { !it.equipped && !it.socketed && !it.locked }
     val stacks = hero.bag.filterValues { it > 0 }.keys.sortedBy { itemTitle(it) }
@@ -144,8 +169,14 @@ import com.sperance.exileforge.ui.theme.*
                 item {
                     ForgePanel {
                         Text(itemTitle(code), color = Parchment, style = MaterialTheme.typography.titleSmall)
-                        OutlinedTextField(amount, { amount = it.filter(Char::isDigit).take(12) }, label = { Text(ui("sell.amount_owned", hero.bag[code] ?: 0L)) },
-                            singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
+                        OutlinedTextField(
+                            amount,
+                            { amount = it.filter(Char::isDigit).take(12) },
+                            label = { Text(ui("sell.amount_owned", hero.bag[code] ?: 0L)) },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
                         val count = amount.toLongOrNull() ?: 0L
                         ForgeButton(enabled = !s.busy && count in 1..(hero.bag[code] ?: 0L), onClick = { onPut(null, code, count) }, modifier = Modifier.fillMaxWidth()) {
                             Text(ui("guild.stash_put"))
@@ -155,15 +186,24 @@ import com.sperance.exileforge.ui.theme.*
             }
             items(loose, key = { it.id }) { item ->
                 val view = s.view(item) ?: return@items
-                Row(Modifier.fillMaxWidth().clickable(enabled = !s.busy) { onPut(item.id, null, 1) }.padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(
+                    Modifier.fillMaxWidth().clickable(enabled = !s.busy) { onPut(item.id, null, 1) }.padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
                     ItemIcon(view, rarityColor(view.rarity.name), Modifier.size(28.dp))
                     Text(view.title, color = rarityColor(view.rarity.name), style = MaterialTheme.typography.bodyMedium)
                 }
             }
             items(stacks, key = { "bag:$it" }) { code ->
-                Row(Modifier.fillMaxWidth().clickable(enabled = !s.busy) { stack = code; amount = "1" }.padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(
+                    Modifier.fillMaxWidth().clickable(enabled = !s.busy) {
+                        stack = code
+                        amount = "1"
+                    }.padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
                     BagIcon(code, Modifier.size(28.dp))
                     Text("${itemTitle(code)} × ${hero.bag[code]}", color = Parchment, style = MaterialTheme.typography.bodyMedium)
                 }

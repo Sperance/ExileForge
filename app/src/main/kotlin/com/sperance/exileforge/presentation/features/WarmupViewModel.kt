@@ -4,9 +4,9 @@ import com.sperance.exileforge.presentation.ForgeRuntime
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlinx.coroutines.flow.update
 
 /** The steps of the warm-up, in the order the loading screen lists them. */
 enum class WarmStep { CONTENT, LOCALE, ICONS, HERO, WORLD }
@@ -25,29 +25,48 @@ data class Warmup(val heroId: String, val done: Set<WarmStep> = emptySet(), val 
 class WarmupViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     private var job: Job? = null
 
-    fun start() { with(runtime) {
-        val id = heroId
-        if (id.isEmpty() || state.value.play.warmup?.heroId == id) return
-        job?.cancel()
-        update { it.copy(play = it.play.copy(warmup = Warmup(id))) }
-        job = scope.launch {
-            withTimeoutOrNull(LIMIT) {
-                step(id, WarmStep.CONTENT) { ensureContent() }
-                coroutineScope {
-                    launch { step(id, WarmStep.LOCALE) { loadLocale(state.value.lang) } }
-                    launch { step(id, WarmStep.ICONS) { coroutineScope { launch { loadIcons() }; launch { loadPortraits() } } } }
-                    launch { step(id, WarmStep.HERO) { if (state.value.play.heroReadAt == 0L) heroViewModel.readHero() } }
+    fun start() {
+        with(runtime) {
+            val id = heroId
+            if (id.isEmpty() || state.value.play.warmup?.heroId == id) return
+            job?.cancel()
+            update { it.copy(play = it.play.copy(warmup = Warmup(id))) }
+            job = scope.launch {
+                withTimeoutOrNull(LIMIT) {
+                    step(id, WarmStep.CONTENT) { ensureContent() }
+                    coroutineScope {
+                        launch { step(id, WarmStep.LOCALE) { loadLocale(state.value.lang) } }
+                        launch {
+                            step(id, WarmStep.ICONS) {
+                                coroutineScope {
+                                    launch { loadIcons() }
+                                    launch { loadPortraits() }
+                                }
+                            }
+                        }
+                        launch { step(id, WarmStep.HERO) { if (state.value.play.heroReadAt == 0L) heroViewModel.readHero() } }
+                    }
+                    step(id, WarmStep.WORLD) {
+                        questViewModel.load()
+                        craftsViewModel.load(silent = true)
+                        auctionViewModel.loadMerchant()
+                    }
                 }
-                step(id, WarmStep.WORLD) { questViewModel.load(); craftsViewModel.load(silent = true); auctionViewModel.loadMerchant() }
+                update { s -> s.play.warmup?.takeIf { it.heroId == id }?.let { s.copy(play = s.play.copy(warmup = it.copy(finished = true))) } ?: s }
             }
-            update { s -> s.play.warmup?.takeIf { it.heroId == id }?.let { s.copy(play = s.play.copy(warmup = it.copy(finished = true))) } ?: s }
         }
-    } }
+    }
 
     private suspend fun step(id: String, step: WarmStep, block: suspend () -> Unit) {
-        try { block() } catch (e: CancellationException) { throw e } catch (_: Exception) { }
+        try {
+            block()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) { }
         update { s -> s.play.warmup?.takeIf { it.heroId == id }?.let { s.copy(play = s.play.copy(warmup = it.copy(done = it.done + step))) } ?: s }
     }
 
-    private companion object { const val LIMIT = 20_000L }
+    private companion object {
+        const val LIMIT = 20_000L
+    }
 }

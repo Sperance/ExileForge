@@ -43,15 +43,31 @@ private enum class Exit { LEAVE, DISBAND }
                 MinLevelField(minLevel, editable) { minLevel = it }
             }
         }
-        rules?.let { r -> item { ForgePanel { Engraved(ui("guild.arms")); ArmsPicker(r.emblems, r.colors, emblem, color, editable, { emblem = it }, { color = it }) } } }
+        rules?.let { r ->
+            item {
+                ForgePanel {
+                    Engraved(ui("guild.arms"))
+                    ArmsPicker(r.emblems, r.colors, emblem, color, editable, { emblem = it }, { color = it })
+                }
+            }
+        }
         item {
             ForgePanel {
                 Engraved(ui("guild.announcement"))
-                OutlinedTextField(announcement, { announcement = it.take(limit) }, enabled = editable, minLines = 2, maxLines = 5,
-                    supportingText = { Text("${announcement.length}/$limit") }, modifier = Modifier.fillMaxWidth())
-                if (leader) ForgeButton(enabled = !s.busy, onClick = {
-                    vm.guildSettings(mode, (minLevel.toIntOrNull() ?: 1).coerceAtLeast(1), emblem, color, announcement.trim())
-                }, modifier = Modifier.fillMaxWidth()) { Text(ui("guild.save")) }
+                OutlinedTextField(
+                    announcement,
+                    { announcement = it.take(limit) },
+                    enabled = editable,
+                    minLines = 2,
+                    maxLines = 5,
+                    supportingText = { Text("${announcement.length}/$limit") },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                if (leader) {
+                    ForgeButton(enabled = !s.busy, onClick = {
+                        vm.guildSettings(mode, (minLevel.toIntOrNull() ?: 1).coerceAtLeast(1), emblem, color, announcement.trim())
+                    }, modifier = Modifier.fillMaxWidth()) { Text(ui("guild.save")) }
+                }
             }
         }
         item {
@@ -70,10 +86,27 @@ private enum class Exit { LEAVE, DISBAND }
     exit?.let { chosen ->
         val title = GuildText.title(guild.name, guild.tag)
         when (chosen) {
-            Exit.LEAVE -> ConfirmSheet(ui("guild.leave_q"), ui("guild.leave"), onDismiss = { exit = null }, subtitle = title,
-                note = ui("guild.leave_note", rules?.rejoinHours ?: 24), danger = true, blocked = s.busy, onConfirm = vm::leaveGuild)
-            Exit.DISBAND -> ConfirmSheet(ui("guild.disband_q"), ui("guild.disband"), onDismiss = { exit = null }, subtitle = title,
-                note = ui("guild.disband_note"), danger = true, blocked = s.busy, onConfirm = vm::disbandGuild)
+            Exit.LEAVE -> ConfirmSheet(
+                ui("guild.leave_q"),
+                ui("guild.leave"),
+                onDismiss = { exit = null },
+                subtitle = title,
+                note = ui("guild.leave_note", rules?.rejoinHours ?: 24),
+                danger = true,
+                blocked = s.busy,
+                onConfirm = vm::leaveGuild,
+            )
+
+            Exit.DISBAND -> ConfirmSheet(
+                ui("guild.disband_q"),
+                ui("guild.disband"),
+                onDismiss = { exit = null },
+                subtitle = title,
+                note = ui("guild.disband_note"),
+                danger = true,
+                blocked = s.busy,
+                onConfirm = vm::disbandGuild,
+            )
         }
     }
 }

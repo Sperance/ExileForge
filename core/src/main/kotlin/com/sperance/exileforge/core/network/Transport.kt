@@ -11,12 +11,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
@@ -84,18 +84,27 @@ class Transport(
         var responseText = ""
         var success = false
         try {
-            val payload = client.newCall(Request.Builder().url(url).header("Accept", if (json) "application/json" else "image/svg+xml")
-                .apply { credential?.let { header("Authorization", "Bearer $it") } }.get().build()).awaitPayload()
+            val payload = client.newCall(
+                Request.Builder().url(url).header("Accept", if (json) "application/json" else "image/svg+xml")
+                    .apply { credential?.let { header("Authorization", "Bearer $it") } }.get().build(),
+            ).awaitPayload()
             status = payload.status
             responseText = payload.body.take(2_000)
             if (status !in 200..299) throw ApiFailure(status, null, ui("api.file_not_served", status))
-            if (validate) try { withContext(Dispatchers.Default) { WireJson.parseToJsonElement(payload.body) } }
-                catch (e: CancellationException) { throw e }
-                catch (_: Exception) { throw ApiFailure(status, null, ui("api.malformed_json_at", path), malformed = true) }
+            if (validate) {
+                try {
+                    withContext(Dispatchers.Default) { WireJson.parseToJsonElement(payload.body) }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    throw ApiFailure(status, null, ui("api.malformed_json_at", path), malformed = true)
+                }
+            }
             success = true
             return payload.body
-        } catch (e: CancellationException) { throw e }
-        catch (e: Exception) {
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
             if (e is ApiFailure) status = e.status
             if (responseText.isBlank()) responseText = e.message.orEmpty()
             throw e
@@ -113,9 +122,17 @@ class Transport(
      * the commands already waiting, or joins them when the network fails under it: either way the caller
      * gets [CommandQueued] instead of an answer, and the answer comes with the replay.
      */
-    internal suspend fun request(method: String, path: String, query: Map<String, String> = emptyMap(), body: JsonElement? = null,
-                                authenticated: Boolean = false, sensitive: Boolean = false, bearer: String? = null,
-                                headers: Map<String, String> = emptyMap(), replay: QueuedCommand? = null): JsonElement {
+    internal suspend fun request(
+        method: String,
+        path: String,
+        query: Map<String, String> = emptyMap(),
+        body: JsonElement? = null,
+        authenticated: Boolean = false,
+        sensitive: Boolean = false,
+        bearer: String? = null,
+        headers: Map<String, String> = emptyMap(),
+        replay: QueuedCommand? = null,
+    ): JsonElement {
         val credential = bearer ?: token.takeIf { authenticated }
         if (authenticated) require(credential != null) { ui("api.sign_in_tab") }
         val command = method == "POST" && authenticated && bearer == null && !sensitive
@@ -147,53 +164,93 @@ class Transport(
         try {
             val answer = client.newCall(request).awaitPayload()
             status = answer.status
-            if (status == 401 && authenticated) { token = null; onUnauthorized() }
-            if (status == 304) { success = true; return JsonNull }
+            if (status == 401 && authenticated) {
+                token = null
+                onUnauthorized()
+            }
+            if (status == 304) {
+                success = true
+                return JsonNull
+            }
             val raw = answer.body
             responseText = raw.take(12_000)
-            val envelope = try { withContext(Dispatchers.Default) { WireJson.parseToJsonElement(raw).jsonObject } }
-                catch (e: CancellationException) { throw e }
-                catch (_: Exception) { throw ApiFailure(status, null, if (status == 401) ui("api.session_expired") else if (status == 403) ui("api.no_rights") else ui("api.bad_json", status),
-                    malformed = status != 401 && status != 403) }
+            val envelope = try {
+                withContext(Dispatchers.Default) { WireJson.parseToJsonElement(raw).jsonObject }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                throw ApiFailure(
+                    status,
+                    null,
+                    if (status == 401) {
+                        ui("api.session_expired")
+                    } else if (status == 403) {
+                        ui("api.no_rights")
+                    } else {
+                        ui("api.bad_json", status)
+                    },
+                    malformed = status != 401 && status != 403,
+                )
+            }
             if (status !in 200..299 || (envelope["success"] as? JsonPrimitive)?.booleanOrNull != true) {
                 val error = envelope["error"] as? JsonObject
-                throw ApiFailure(status, error?.text("errorCode"),
+                throw ApiFailure(
+                    status,
+                    error?.text("errorCode"),
                     error?.text("message")?.takeIf { it.isNotBlank() } ?: ui("api.rejected", status),
-                    (error?.get("messageArgs") as? JsonArray).orEmpty().mapNotNull { (it as? JsonPrimitive)?.contentOrNull })
+                    (error?.get("messageArgs") as? JsonArray).orEmpty().mapNotNull { (it as? JsonPrimitive)?.contentOrNull },
+                )
             }
             success = true
             // The command has landed: a snapshot that cannot be read only means the hero is read again — and so
             // does a replayed answer, whose snapshot is the hero as the first run left them.
-            if (heroOf != null && parts != null) runCatching { onHero(heroOf, envelope["hero"]?.takeIf { it is JsonObject && !answer.replayed }
-                ?.let { runCatching { WireJson.decodeFromJsonElement(HeroSnapshot.serializer(), it) }.getOrNull() }) }
+            if (heroOf != null && parts != null) {
+                runCatching {
+                    onHero(
+                        heroOf,
+                        envelope["hero"]?.takeIf { it is JsonObject && !answer.replayed }
+                            ?.let { runCatching { WireJson.decodeFromJsonElement(HeroSnapshot.serializer(), it) }.getOrNull() },
+                    )
+                }
+            }
             return envelope["data"] ?: JsonNull
         } catch (e: CancellationException) {
-            responseText = ui("api.cancelled"); throw e
+            responseText = ui("api.cancelled")
+            throw e
         } catch (e: Exception) {
             if (e is ApiFailure) status = e.status
             if (responseText.isBlank()) responseText = e.message.orEmpty()
             // The answer never came, or the server said "not yet": the command waits with its key, and the replay is the same command.
             val later = if (e is ApiFailure) CommandQueue.transient(e.status) else e is java.io.IOException
-            if (waits != null && queued != null && later) { waits.add(queued); throw CommandQueued(queued, e) }
+            if (waits != null && queued != null && later) {
+                waits.add(queued)
+                throw CommandQueued(queued, e)
+            }
             throw e
         } finally {
-            journal.add(RequestLog(method, url.encodedPath + (url.encodedQuery?.let { "?${if (sensitive) ui("api.hidden") else it}" } ?: ""), status,
-                (System.nanoTime() - start) / 1_000_000, if (sensitive) ui("api.hidden") else bodyText.take(12_000), if (sensitive) ui("api.hidden") else responseText, success))
+            journal.add(
+                RequestLog(
+                    method,
+                    url.encodedPath + (url.encodedQuery?.let { "?${if (sensitive) ui("api.hidden") else it}" } ?: ""),
+                    status,
+                    (System.nanoTime() - start) / 1_000_000,
+                    if (sensitive) ui("api.hidden") else bodyText.take(12_000),
+                    if (sensitive) ui("api.hidden") else responseText,
+                    success,
+                ),
+            )
         }
     }
 }
 
 /** One waiting command sent again, with its own key: its answer lands as any command's would. */
-internal suspend fun Transport.replay(command: QueuedCommand): JsonElement =
-    request(command.method, command.path, command.query, command.body?.let(WireJson::parseToJsonElement), authenticated = true, replay = command)
+internal suspend fun Transport.replay(command: QueuedCommand): JsonElement = request(command.method, command.path, command.query, command.body?.let(WireJson::parseToJsonElement), authenticated = true, replay = command)
 
 /** A signed-in read whose envelope `data` decodes to [T]. */
-internal suspend inline fun <reified T> Transport.get(path: String, query: Map<String, String> = emptyMap()): T =
-    WireJson.decodeFromJsonElement(request("GET", path, query, authenticated = true))
+internal suspend inline fun <reified T> Transport.get(path: String, query: Map<String, String> = emptyMap()): T = WireJson.decodeFromJsonElement(request("GET", path, query, authenticated = true))
 
 /** A signed-in command whose envelope `data` decodes to [T]. */
-internal suspend inline fun <reified T> Transport.post(path: String, query: Map<String, String> = emptyMap(), body: JsonElement? = null): T =
-    WireJson.decodeFromJsonElement(request("POST", path, query, body, authenticated = true))
+internal suspend inline fun <reified T> Transport.post(path: String, query: Map<String, String> = emptyMap(), body: JsonElement? = null): T = WireJson.decodeFromJsonElement(request("POST", path, query, body, authenticated = true))
 
 /** The query of a route about one hero: every such route names it by `heroId`. A `null` value leaves its parameter out. */
 internal fun heroQuery(heroId: String, vararg more: Pair<String, String?>): Map<String, String> {

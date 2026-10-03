@@ -1,6 +1,5 @@
 package com.sperance.exileforge.ui.components
 
-import com.sperance.exileforge.core.model.feedback.FeedbackKind
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -35,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.campaign.ExpeditionRun
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.BugReportRequest
+import com.sperance.exileforge.core.model.feedback.FeedbackKind
 import com.sperance.exileforge.data.settings.DraftStore
 import com.sperance.exileforge.presentation.state.AppPhase
 import com.sperance.exileforge.presentation.state.ForgeState
@@ -58,8 +58,15 @@ val LocalBugReport = staticCompositionLocalOf<(() -> Unit)?> { null }
  * no context of the device and the hero, no tail of the request journal.
  */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun BugSheet(s: ForgeState, run: ExpeditionRun?, drafts: DraftStore, onDismiss: () -> Unit, onSuggestions: () -> Unit,
-                         onSend: (BugReportRequest) -> Unit) {
+@Composable
+fun BugSheet(
+    s: ForgeState,
+    run: ExpeditionRun?,
+    drafts: DraftStore,
+    onDismiss: () -> Unit,
+    onSuggestions: () -> Unit,
+    onSend: (BugReportRequest) -> Unit,
+) {
     val screen = remember { bugScreen(s, run) }
     // A bug or a suggestion (3.73.0): the player picks; a suggestion goes into the public list, so it needs an account.
     // The words of each and the kind last open come back from the device (3.75.0) and are kept as they are typed.
@@ -76,19 +83,47 @@ val LocalBugReport = staticCompositionLocalOf<(() -> Unit)?> { null }
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(ui("bug.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
-            PillTabs(listOf(kindTitle(FeedbackKind.BUG), kindTitle(FeedbackKind.SUGGESTION)), kind.ordinal, { kind = FeedbackKind.entries[it]; drafts.save(kind, texts[kind].orEmpty()) }, segmented = true)
-            if (kind == FeedbackKind.BUG) Text(ui("bug.where", screen), color = Rune, style = MaterialTheme.typography.labelLarge)
-            else MutedText(ui(if (s.account.signedIn) "feedback.suggestion_hint" else "feedback.sign_in_first"))
-            OutlinedTextField(text, { texts[kind] = it.take(limit); drafts.save(kind, texts[kind].orEmpty()) }, label = { Text(ui(if (kind == FeedbackKind.BUG) "bug.text" else "feedback.text")) }, minLines = 4,
+            PillTabs(listOf(kindTitle(FeedbackKind.BUG), kindTitle(FeedbackKind.SUGGESTION)), kind.ordinal, {
+                kind = FeedbackKind.entries[it]
+                drafts.save(kind, texts[kind].orEmpty())
+            }, segmented = true)
+            if (kind == FeedbackKind.BUG) {
+                Text(ui("bug.where", screen), color = Rune, style = MaterialTheme.typography.labelLarge)
+            } else {
+                MutedText(ui(if (s.account.signedIn) "feedback.suggestion_hint" else "feedback.sign_in_first"))
+            }
+            OutlinedTextField(
+                text,
+                {
+                    texts[kind] = it.take(limit)
+                    drafts.save(kind, texts[kind].orEmpty())
+                },
+                label = { Text(ui(if (kind == FeedbackKind.BUG) "bug.text" else "feedback.text")) },
+                minLines = 4,
                 supportingText = { Text(ui("bug.count", text.length, limit)) },
                 // The words alone to the clipboard (3.75.0), to keep or pass on elsewhere.
-                trailingIcon = { IconButton(onClick = { clipboard.setText(AnnotatedString(text)) }, enabled = text.isNotBlank()) {
-                    Icon(Icons.Outlined.ContentCopy, ui("bug.copy"), tint = if (text.isNotBlank()) Gold else Muted, modifier = Modifier.size(20.dp)) } },
-                modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp))
-            ForgeButton(enabled = text.isNotBlank() && !s.busy && (kind == FeedbackKind.BUG || s.account.signedIn), modifier = Modifier.fillMaxWidth(),
-                onClick = { onSend(BugReportRequest(text.trim().take(limit), screen, emptyMap(), emptyList(), kind)); onDismiss() }) { Text(ui("bug.send")) }
+                trailingIcon = {
+                    IconButton(onClick = { clipboard.setText(AnnotatedString(text)) }, enabled = text.isNotBlank()) {
+                        Icon(Icons.Outlined.ContentCopy, ui("bug.copy"), tint = if (text.isNotBlank()) Gold else Muted, modifier = Modifier.size(20.dp))
+                    }
+                },
+                modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp),
+            )
+            ForgeButton(
+                enabled = text.isNotBlank() && !s.busy && (kind == FeedbackKind.BUG || s.account.signedIn),
+                modifier = Modifier.fillMaxWidth(),
+                onClick = {
+                    onSend(BugReportRequest(text.trim().take(limit), screen, emptyMap(), emptyList(), kind))
+                    onDismiss()
+                },
+            ) { Text(ui("bug.send")) }
             // Everyone's suggestions, to read and vote on, and one's own reports with how they stand.
-            if (s.account.signedIn) ForgeOutlinedButton(onClick = { onDismiss(); onSuggestions() }, modifier = Modifier.fillMaxWidth()) { Text(ui("feedback.open")) }
+            if (s.account.signedIn) {
+                ForgeOutlinedButton(onClick = {
+                    onDismiss()
+                    onSuggestions()
+                }, modifier = Modifier.fillMaxWidth()) { Text(ui("feedback.open")) }
+            }
         }
     }
 }
@@ -100,5 +135,3 @@ private fun bugScreen(s: ForgeState, run: ExpeditionRun?): String = when {
     s.play.atlas != null -> "ATLAS"
     else -> listOfNotNull("TAB:${s.tab}", s.building?.name, s.play.craftsProfession.takeIf { it.isNotBlank() }).joinToString("/")
 }
-
-

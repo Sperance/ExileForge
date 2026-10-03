@@ -23,8 +23,8 @@ import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.PropertyValue
 import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.display.slotTitle
-import com.sperance.exileforge.core.display.stateTitle
 import com.sperance.exileforge.core.display.statTitle
+import com.sperance.exileforge.core.display.stateTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.ItemIcon
@@ -46,8 +46,13 @@ import com.sperance.exileforge.ui.theme.*
  * The line reads the [item]'s view (3.0.0): the copy over its template and the content.
  */
 @OptIn(ExperimentalLayoutApi::class)
-@Composable fun ItemRow(item: ItemView,
-    note: String? = null, noteColor: Color = Gold, selected: Boolean = false, enabled: Boolean = true,
+@Composable
+fun ItemRow(
+    item: ItemView,
+    note: String? = null,
+    noteColor: Color = Gold,
+    selected: Boolean = false,
+    enabled: Boolean = true,
     /** Worn or socketed (2.51.0): the line is framed and washed in gold and the icon carries a badge. */
     worn: Boolean = false,
     /** The rules' reasons this cannot be worn right now; empty means it can. */
@@ -64,7 +69,8 @@ import com.sperance.exileforge.ui.theme.*
     locked: Boolean = item.item.locked,
     /** A command about this copy waits for the network (3.30.0). */
     waiting: Boolean = false,
-    onClick: () -> Unit) {
+    onClick: () -> Unit,
+) {
     val color = rarityColor(item.rarity.name)
     // The base carries the number this copy really has — its own local modifiers are already in
     // it. The base the item started from stays on the card: a line has no room for a sum and its
@@ -75,21 +81,50 @@ import com.sperance.exileforge.ui.theme.*
     val slot = slotTitle(item.slot)
     val frame = RoundedCornerShape(6.dp)
     val card = RoundedCornerShape(10.dp)
-    Row(Modifier.fillMaxWidth().glow(Gold, on = selected, radius = 10.dp, shape = card)
-        .background(if (worn) Gold.copy(alpha = .08f).compositeOver(Panel) else Panel, card)
-        .border(1.dp, if (selected) Gold else if (worn) Gold.copy(alpha = .5f) else Bronze, card)
-        .clickable(enabled = enabled, onClick = onClick).padding(10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    Row(
+        Modifier.fillMaxWidth().glow(Gold, on = selected, radius = 10.dp, shape = card)
+            .background(if (worn) Gold.copy(alpha = .08f).compositeOver(Panel) else Panel, card)
+            .border(
+                1.dp,
+                if (selected) {
+                    Gold
+                } else if (worn) {
+                    Gold.copy(alpha = .5f)
+                } else {
+                    Bronze
+                },
+                card,
+            )
+            .clickable(enabled = enabled, onClick = onClick).padding(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
             // The marker rides on the icon rather than in the text: the icon is where the eye starts.
             Box(Modifier.size(54.dp).background(color.copy(alpha = .08f), frame).border(1.dp, color, frame), contentAlignment = Alignment.Center) {
                 ItemIcon(item, color, Modifier.size(34.dp))
                 // The mark alone on a row (2.74.0): what is missing is the card's to say, or the mark's own tip.
-                if (unwearable.isNotEmpty()) Tipped({ Tip(ui("hero.inactive"), unwearable.joinToString("\n") { requirementReason(it) }, LifeRed) },
-                    Modifier.align(Alignment.TopStart).padding(2.dp)) { Icon(Icons.Outlined.Block, ui("hero.inactive"), tint = LifeRed, modifier = Modifier.size(14.dp)) }
-                if (locked) Icon(Icons.Outlined.Lock, ui("item.locked"), tint = GoldBright,
-                    modifier = Modifier.align(Alignment.TopEnd).padding(2.dp).size(13.dp))
-                if (worn) Icon(Icons.Outlined.CheckCircle, ui("row.worn"), tint = Ink,
-                    modifier = Modifier.align(Alignment.BottomEnd).offset(4.dp, 4.dp).background(Gold, CircleShape).padding(1.dp).size(15.dp))
+                if (unwearable.isNotEmpty()) {
+                    Tipped(
+                        { Tip(ui("hero.inactive"), unwearable.joinToString("\n") { requirementReason(it) }, LifeRed) },
+                        Modifier.align(Alignment.TopStart).padding(2.dp),
+                    ) { Icon(Icons.Outlined.Block, ui("hero.inactive"), tint = LifeRed, modifier = Modifier.size(14.dp)) }
+                }
+                if (locked) {
+                    Icon(
+                        Icons.Outlined.Lock,
+                        ui("item.locked"),
+                        tint = GoldBright,
+                        modifier = Modifier.align(Alignment.TopEnd).padding(2.dp).size(13.dp),
+                    )
+                }
+                if (worn) {
+                    Icon(
+                        Icons.Outlined.CheckCircle,
+                        ui("row.worn"),
+                        tint = Ink,
+                        modifier = Modifier.align(Alignment.BottomEnd).offset(4.dp, 4.dp).background(Gold, CircleShape).padding(1.dp).size(15.dp),
+                    )
+                }
             }
             MutedText(ui("row.level", item.level), style = MaterialTheme.typography.labelSmall)
             QualityBadge(item, compact = true)
@@ -105,18 +140,30 @@ import com.sperance.exileforge.ui.theme.*
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(item.title, color = color,
-                    style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f))
+                Text(
+                    item.title,
+                    color = color,
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
                 note?.let { Text(it, color = noteColor, style = MaterialTheme.typography.labelSmall) }
                 trailing?.invoke() ?: price?.let { GoldPrice(it) }
             }
             (listOf(slot) + facts).let {
-                Text(it.joinToString(" · "), color = Muted, style = MaterialTheme.typography.labelSmall,
-                    maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(
+                    it.joinToString(" · "),
+                    color = Muted,
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
-            if (base.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                base.forEach { value -> BaseChip(value) }
+            if (base.isNotEmpty()) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    base.forEach { value -> BaseChip(value) }
+                }
             }
             if (waiting) PendingMark()
             // Every line it rolled, as sentences (2.72.0): a stash is read down without opening each card.
@@ -128,11 +175,21 @@ import com.sperance.exileforge.ui.theme.*
 
 /** One base figure: the number bold, coloured when a local modifier moved it, and what it counts. */
 @Composable internal fun BaseChip(value: PropertyValue) {
-    Row(Modifier.background(Abyss, RoundedCornerShape(4.dp)).padding(horizontal = 7.dp, vertical = 2.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        Modifier.background(Abyss, RoundedCornerShape(4.dp)).padding(horizontal = 7.dp, vertical = 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         Text(value.text, color = if (value.augmented) Rune else GoldBright, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
-        if (value.stat.isNotBlank()) Text(statTitle(value.stat), color = Muted, style = MaterialTheme.typography.labelSmall,
-            maxLines = 1, overflow = TextOverflow.Ellipsis)
+        if (value.stat.isNotBlank()) {
+            Text(
+                statTitle(value.stat),
+                color = Muted,
+                style = MaterialTheme.typography.labelSmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 

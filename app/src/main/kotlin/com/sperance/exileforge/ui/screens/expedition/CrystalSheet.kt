@@ -44,9 +44,12 @@ import com.sperance.exileforge.ui.theme.*
     val vaalOrbs = s.bagAmount(Orb.VAAL_ORB.name) ?: 0L
     val kinds = view.essences.mapNotNull { index?.essence(it) }.map { it.kind.code }.distinct()
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Ink.copy(alpha = .85f), Ink))), contentAlignment = Alignment.BottomCenter) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(12.dp).background(Panel.copy(alpha = .97f), RoundedCornerShape(12.dp))
-            .border(1.dp, CrystalViolet.copy(alpha = .7f), RoundedCornerShape(12.dp)).padding(16.dp).heightIn(max = 520.dp)
-            .verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(
+            Modifier.fillMaxWidth().navigationBarsPadding().padding(12.dp).background(Panel.copy(alpha = .97f), RoundedCornerShape(12.dp))
+                .border(1.dp, CrystalViolet.copy(alpha = .7f), RoundedCornerShape(12.dp)).padding(16.dp).heightIn(max = 520.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Icon(ForgeGlyphs.Shard, null, tint = CrystalViolet, modifier = Modifier.size(28.dp))
                 Text(ui("crystal.title"), color = CrystalViolet, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
@@ -66,13 +69,19 @@ import com.sperance.exileforge.ui.theme.*
             view.outcome?.let { Text(ui("crystal.outcome.$it"), color = GoldBright, style = MaterialTheme.typography.bodyMedium) }
             if (view.awaiting) Text(ui("crystal.vaal_waiting"), color = Rune, style = MaterialTheme.typography.bodySmall)
             // One plain button for the Vaal orb (3.2.0): it says what it does, and without an orb it cannot be pressed
-            if (!view.vaal) ForgeOutlinedButton(enabled = vaalOrbs > 0 && !view.awaiting, onClick = { onCommand(RunCommand.VaalCrystal) }, modifier = Modifier.fillMaxWidth()) {
-                OrbGlyph(Orb.VAAL_ORB, Modifier.size(18.dp))
-                Spacer(Modifier.width(6.dp))
-                Text(ui("crystal.vaal"))
+            if (!view.vaal) {
+                ForgeOutlinedButton(enabled = vaalOrbs > 0 && !view.awaiting, onClick = { onCommand(RunCommand.VaalCrystal) }, modifier = Modifier.fillMaxWidth()) {
+                    OrbGlyph(Orb.VAAL_ORB, Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(ui("crystal.vaal"))
+                }
             }
-            ForgeButton(enabled = !view.awaiting, onClick = { onCommand(RunCommand.Release) }, modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = Blood, contentColor = GoldBright)) { Text(ui("crystal.release")) }
+            ForgeButton(
+                enabled = !view.awaiting,
+                onClick = { onCommand(RunCommand.Release) },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = Blood, contentColor = GoldBright),
+            ) { Text(ui("crystal.release")) }
             ForgeTextButton(onClick = { onCommand(RunCommand.StepOff) }, modifier = Modifier.align(Alignment.CenterHorizontally)) {
                 Text(ui("crystal.later"), color = Muted, textAlign = TextAlign.Center)
             }

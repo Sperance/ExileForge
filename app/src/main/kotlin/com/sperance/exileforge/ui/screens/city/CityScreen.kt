@@ -10,11 +10,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.ui.draw.alpha
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -26,8 +26,8 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.Building
 import com.sperance.exileforge.presentation.state.Feature
-import com.sperance.exileforge.presentation.state.unlocked
 import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.unlocked
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.auction.AuctionScreen
@@ -44,7 +44,10 @@ import com.sperance.exileforge.ui.theme.*
  */
 @Composable fun CityScreen(s: ForgeState, vm: ForgeViewModel) {
     val building = s.building
-    if (building == null) { CitySquare(s, vm); return }
+    if (building == null) {
+        CitySquare(s, vm)
+        return
+    }
     Column(Modifier.fillMaxSize()) {
         BackRow(ui("nav.city")) { vm.building(null) }
         Box(Modifier.weight(1f)) {
@@ -61,7 +64,12 @@ import com.sperance.exileforge.ui.theme.*
 /** The square: the three buildings and their news, read when the square opens — the merchant's comes with the hero. */
 @Composable private fun CitySquare(s: ForgeState, vm: ForgeViewModel) {
     LaunchedEffect(s.play.heroId, s.account.sessionEpoch) {
-        if (s.play.heroId.isNotBlank()) { vm.ensureHero(); vm.loadMyLots(glance = true); vm.loadGuild(); vm.loadQuests() }
+        if (s.play.heroId.isNotBlank()) {
+            vm.ensureHero()
+            vm.loadMyLots(glance = true)
+            vm.loadGuild()
+            vm.loadQuests()
+        }
     }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Spacer(Modifier.height(12.dp))
@@ -82,8 +90,7 @@ private fun questNews(s: ForgeState): String {
     return if (ready > 0) ui("city.quests_ready", ready) else ui("city.quests_active", quests.count { !it.claimed })
 }
 
-private fun merchantNews(s: ForgeState): String =
-    s.market.merchant?.takeIf { it.refreshAt > 0 }?.let { ui("merchant.renews", untilText(it.refreshAt)) } ?: ui("city.merchant_idle")
+private fun merchantNews(s: ForgeState): String = s.market.merchant?.takeIf { it.refreshAt > 0 }?.let { ui("merchant.renews", untilText(it.refreshAt)) } ?: ui("city.merchant_idle")
 
 private fun auctionNews(s: ForgeState): String = s.market.locked
     ?: s.market.slots?.let { ui("city.auction_lots", s.ownLots.size, it.limit) }
@@ -96,14 +103,18 @@ private fun guildNews(s: ForgeState): String {
 }
 
 /** One building: its sign, its name and the line of news; the whole card is the door. */
+
 /** The level a building opens at (3.76.0), while the hero is below it. */
 private fun ForgeState.lockOf(building: Building): Int? = Feature.ofBuilding(building)?.takeIf { !unlocked(it) }?.level
 
 @Composable private fun BuildingCard(title: String, icon: ImageVector, news: String, lockedUntil: Int?, accent: Color = Gold, onOpen: () -> Unit) {
     val shape = RoundedCornerShape(14.dp)
-    Row(Modifier.fillMaxWidth().alpha(if (lockedUntil != null) LOCKED_ALPHA else 1f).clip(shape).background(Brush.horizontalGradient(listOf(accent.copy(alpha = .14f), Panel)), shape)
-        .border(1.dp, Bronze, shape).clickable(onClick = onOpen).padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+    Row(
+        Modifier.fillMaxWidth().alpha(if (lockedUntil != null) LOCKED_ALPHA else 1f).clip(shape).background(Brush.horizontalGradient(listOf(accent.copy(alpha = .14f), Panel)), shape)
+            .border(1.dp, Bronze, shape).clickable(onClick = onOpen).padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
         Box(Modifier.size(52.dp).border(1.dp, accent.copy(alpha = .5f), RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
             Icon(icon, null, tint = accent, modifier = Modifier.size(30.dp))
         }

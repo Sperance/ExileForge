@@ -40,11 +40,10 @@ data class StashFilter(
     val active: Boolean get() = groups.isNotEmpty() || rarities.isNotEmpty() || wearable || query.isNotBlank()
 
     /** Whether [piece] passes; [unmet] names the requirements the hero misses for a template. */
-    fun admits(piece: ItemView, unmet: (String) -> List<String>): Boolean =
-        (groups.isEmpty() || SlotGroup.of(piece.slot) in groups) &&
-            (rarities.isEmpty() || piece.rarity in rarities) &&
-            (!wearable || unmet(piece.code).isEmpty()) &&
-            ItemSearch.matches(piece, query)
+    fun admits(piece: ItemView, unmet: (String) -> List<String>): Boolean = (groups.isEmpty() || SlotGroup.of(piece.slot) in groups) &&
+        (rarities.isEmpty() || piece.rarity in rarities) &&
+        (!wearable || unmet(piece.code).isEmpty()) &&
+        ItemSearch.matches(piece, query)
 
     fun toggle(group: SlotGroup) = copy(groups = groups.toggled(group))
     fun toggle(rarity: Rarity) = copy(rarities = rarities.toggled(rarity))
@@ -67,10 +66,11 @@ fun StashSort.order(pieces: List<ItemView>, price: (ItemView) -> Long?): List<It
 }
 
 /** The stash, filtered and ordered as the screen shows it; [hideWorn] leaves out what is worn or socketed (3.69.0). */
-fun ForgeState.stashShelf(pieces: List<ItemView>, filter: StashFilter, hideWorn: Boolean = false): List<ItemView> =
-    stashSort.order(pieces.filter { piece ->
+fun ForgeState.stashShelf(pieces: List<ItemView>, filter: StashFilter, hideWorn: Boolean = false): List<ItemView> = stashSort.order(
+    pieces.filter { piece ->
         !(hideWorn && piece.isWorn) && filter.admits(piece) { code -> unmetFor(code) }
-    }) { sellPrice(it.item) }
+    },
+) { sellPrice(it.item) }
 
 /** Whether the hero wears this copy, on the body or in a socket. */
 val ItemView.isWorn: Boolean get() = equipped || socketed

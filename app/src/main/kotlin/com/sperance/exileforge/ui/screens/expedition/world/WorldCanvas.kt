@@ -10,16 +10,15 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableFloatStateOf
-import com.sperance.exileforge.ui.components.LocalMotion
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -32,7 +31,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.semantics.contentDescription
@@ -45,6 +43,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.campaign.RoadState
 import com.sperance.exileforge.core.campaign.TokenState
@@ -53,6 +52,7 @@ import com.sperance.exileforge.core.campaign.WorldToken
 import com.sperance.exileforge.core.display.mapTitle
 import com.sperance.exileforge.core.display.regionTitle
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.ui.components.LocalMotion
 import com.sperance.exileforge.ui.theme.Bronze
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.GoldBright
@@ -69,8 +69,15 @@ import kotlin.math.hypot
  * units under one transform; the words are laid out once and only scaled.
  */
 @Composable
-fun WorldCanvas(world: WorldMap, art: WorldArt?, camera: WorldCamera, selected: String?, stash: Map<String, Int>,
-                modifier: Modifier = Modifier, onTap: (String?) -> Unit) {
+fun WorldCanvas(
+    world: WorldMap,
+    art: WorldArt?,
+    camera: WorldCamera,
+    selected: String?,
+    stash: Map<String, Int>,
+    modifier: Modifier = Modifier,
+    onTap: (String?) -> Unit,
+) {
     val measurer = rememberTextMeasurer()
     val motion = rememberInfiniteTransition(label = "world")
     // With the animations off in the settings (3.77.0) the tokens and the roads stand still.
@@ -86,16 +93,22 @@ fun WorldCanvas(world: WorldMap, art: WorldArt?, camera: WorldCamera, selected: 
     val recorded = remember { arrayOfNulls<WorldArt>(1) }
     val tap by rememberUpdatedState(onTap)
     val description = ui("expedition.world_map")
-    Canvas(modifier
-        .clipToBounds()
-        .semantics { contentDescription = description }
-        .onSizeChanged { camera.viewport = it }
-        .pointerInput(camera) { detectTransformGestures { centroid, pan, zoom, _ -> camera.transform(centroid, pan, zoom) } }
-        .pointerInput(camera, world) { detectTapGestures { point -> tap(hit(world, camera, point)) } }) {
-        withTransform({ translate(camera.offset.x, camera.offset.y); scale(camera.unit, camera.unit, Offset.Zero) }) {
+    Canvas(
+        modifier
+            .clipToBounds()
+            .semantics { contentDescription = description }
+            .onSizeChanged { camera.viewport = it }
+            .pointerInput(camera) { detectTransformGestures { centroid, pan, zoom, _ -> camera.transform(centroid, pan, zoom) } }
+            .pointerInput(camera, world) { detectTapGestures { point -> tap(hit(world, camera, point)) } },
+    ) {
+        withTransform({
+            translate(camera.offset.x, camera.offset.y)
+            scale(camera.unit, camera.unit, Offset.Zero)
+        }) {
             // Until the art is built (3.75.0), the bare parchment: the roads and the tokens are there at once.
-            if (art == null) drawRect(BARE, size = Size(camera.world.width.toFloat(), height))
-            else {
+            if (art == null) {
+                drawRect(BARE, size = Size(camera.world.width.toFloat(), height))
+            } else {
                 if (recorded[0] !== art) {
                     artLayer.record(IntSize(camera.world.width, camera.world.height)) { art.draw(this) }
                     recorded[0] = art
@@ -107,8 +120,16 @@ fun WorldCanvas(world: WorldMap, art: WorldArt?, camera: WorldCamera, selected: 
             val dots = PathEffect.dashPathEffect(floatArrayOf(1f, 7f))
             roads.forEach { (state, path) ->
                 when (state) {
-                    RoadState.WALKED -> { drawPath(path, ROAD_INK, style = Stroke(7f, cap = StrokeCap.Round)); drawPath(path, ROAD_GOLD, style = Stroke(2.4f, cap = StrokeCap.Round)) }
-                    RoadState.AHEAD -> { drawPath(path, ROAD_INK, style = Stroke(7f, cap = StrokeCap.Round)); drawPath(path, GoldBright, style = Stroke(2.2f, cap = StrokeCap.Round, pathEffect = dash)) }
+                    RoadState.WALKED -> {
+                        drawPath(path, ROAD_INK, style = Stroke(7f, cap = StrokeCap.Round))
+                        drawPath(path, ROAD_GOLD, style = Stroke(2.4f, cap = StrokeCap.Round))
+                    }
+
+                    RoadState.AHEAD -> {
+                        drawPath(path, ROAD_INK, style = Stroke(7f, cap = StrokeCap.Round))
+                        drawPath(path, GoldBright, style = Stroke(2.2f, cap = StrokeCap.Round, pathEffect = dash))
+                    }
+
                     RoadState.UNTRODDEN -> drawPath(path, Muted.copy(alpha = .85f), style = Stroke(1.8f, cap = StrokeCap.Round, pathEffect = dots))
                 }
             }
@@ -142,8 +163,10 @@ private fun DrawScope.fog(world: WorldMap, width: Float, height: Float) {
     val clearTo = height - (world.fogLine + FOG_CLEAR)
     if (clearTo <= 0f) return
     val thickFrom = (height - (world.fogLine + FOG_THICK)).coerceAtLeast(0f)
-    drawRect(Brush.verticalGradient(0f to FOG, (thickFrom / clearTo) to FOG.copy(alpha = .93f), 1f to FOG.copy(alpha = 0f), startY = 0f, endY = clearTo),
-        size = androidx.compose.ui.geometry.Size(width, clearTo))
+    drawRect(
+        Brush.verticalGradient(0f to FOG, (thickFrom / clearTo) to FOG.copy(alpha = .93f), 1f to FOG.copy(alpha = 0f), startY = 0f, endY = clearTo),
+        size = androidx.compose.ui.geometry.Size(width, clearTo),
+    )
     val seed = world.fogLine
     repeat(PUFFS) { i ->
         val x = (Math.floorMod(seed * 31 + i * 977, width.toInt().coerceAtLeast(1))).toFloat()
@@ -175,8 +198,14 @@ private fun DrawScope.token(token: WorldToken, height: Float, pulse: Float, sele
         drawCircle(Gold.copy(alpha = .35f), r + 2.5f, c, style = Stroke(2f))
         val top = c.y - r - 13
         val crown = Path().apply {
-            moveTo(c.x - 9, top + 6); lineTo(c.x - 10, top - 3); lineTo(c.x - 4.5f, top + 1); lineTo(c.x, top - 6)
-            lineTo(c.x + 4.5f, top + 1); lineTo(c.x + 10, top - 3); lineTo(c.x + 9, top + 6); close()
+            moveTo(c.x - 9, top + 6)
+            lineTo(c.x - 10, top - 3)
+            lineTo(c.x - 4.5f, top + 1)
+            lineTo(c.x, top - 6)
+            lineTo(c.x + 4.5f, top + 1)
+            lineTo(c.x + 10, top - 3)
+            lineTo(c.x + 9, top + 6)
+            close()
         }
         drawPath(crown, GoldBright)
         drawPath(crown, Color(0xFF2B2216), style = Stroke(1.2f, join = StrokeJoin.Round))
@@ -186,15 +215,24 @@ private fun DrawScope.token(token: WorldToken, height: Float, pulse: Float, sele
         TokenState.PASSED -> {
             drawCircle(Color(0xFF1D170E), 8.5f, badge)
             drawCircle(Gold, 8.5f, badge, style = Stroke(1f))
-            drawPath(Path().apply { moveTo(badge.x - 4, badge.y + .5f); lineTo(badge.x - 1, badge.y + 3.5f); lineTo(badge.x + 4.5f, badge.y - 3) },
-                GoldBright, style = Stroke(2.2f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+            drawPath(
+                Path().apply {
+                    moveTo(badge.x - 4, badge.y + .5f)
+                    lineTo(badge.x - 1, badge.y + 3.5f)
+                    lineTo(badge.x + 4.5f, badge.y - 3)
+                },
+                GoldBright,
+                style = Stroke(2.2f, cap = StrokeCap.Round, join = StrokeJoin.Round),
+            )
         }
+
         TokenState.LOCKED -> {
             drawCircle(Color(0xFF15171B), 8.5f, badge)
             drawCircle(Color(0xFF5A5F66), 8.5f, badge, style = Stroke(1f))
             drawRect(Color(0xFFA4A9AE), badge + Offset(-3.5f, -.5f), androidx.compose.ui.geometry.Size(7f, 5f))
             drawArc(Color(0xFFA4A9AE), 180f, 180f, false, badge + Offset(-2.3f, -4.5f), androidx.compose.ui.geometry.Size(4.6f, 8f), style = Stroke(1.4f))
         }
+
         TokenState.OPEN -> Unit
     }
     if (maps > 0) {
@@ -219,26 +257,65 @@ private class Words(private val world: WorldMap, private val measurer: TextMeasu
     private val counts = HashMap<Int, TextLayoutResult>()
     private val regions: List<Triple<Offset, TextLayoutResult, TextLayoutResult>> = world.knownRegions.map { region ->
         val levels = region.zones.map { it.level }
-        val name = measurer.measure(regionTitle(region.code).uppercase(), TextStyle(color = Parchment.copy(alpha = .45f), fontFamily = FontFamily.Serif,
-            fontStyle = FontStyle.Italic, fontWeight = FontWeight.SemiBold, fontSize = 21.sp, letterSpacing = 5.sp))
-        val span = measurer.measure(ui("expedition.region_levels", levels.min(), levels.max()).uppercase(), TextStyle(color = Gold.copy(alpha = .6f),
-            fontWeight = FontWeight.Medium, fontSize = 11.sp, letterSpacing = 3.sp))
+        val name = measurer.measure(
+            regionTitle(region.code).uppercase(),
+            TextStyle(
+                color = Parchment.copy(alpha = .45f),
+                fontFamily = FontFamily.Serif,
+                fontStyle = FontStyle.Italic,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 21.sp,
+                letterSpacing = 5.sp,
+            ),
+        )
+        val span = measurer.measure(
+            ui("expedition.region_levels", levels.min(), levels.max()).uppercase(),
+            TextStyle(
+                color = Gold.copy(alpha = .6f),
+                fontWeight = FontWeight.Medium,
+                fontSize = 11.sp,
+                letterSpacing = 3.sp,
+            ),
+        )
         Triple(Offset(region.label.x.toFloat(), region.label.y.toFloat()), name, span)
     }
-    private val unknown: TextLayoutResult = measurer.measure(ui("expedition.fog").uppercase(), TextStyle(color = Muted.copy(alpha = .7f), fontFamily = FontFamily.Serif,
-        fontStyle = FontStyle.Italic, fontWeight = FontWeight.SemiBold, fontSize = 19.sp, letterSpacing = 6.sp))
+    private val unknown: TextLayoutResult = measurer.measure(
+        ui("expedition.fog").uppercase(),
+        TextStyle(
+            color = Muted.copy(alpha = .7f),
+            fontFamily = FontFamily.Serif,
+            fontStyle = FontStyle.Italic,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 19.sp,
+            letterSpacing = 6.sp,
+        ),
+    )
 
     private fun level(token: WorldToken) = levels.getOrPut(token.zone.code) {
-        measurer.measure(token.zone.level.toString(), TextStyle(
-            color = if (token.state == TokenState.LOCKED) Color(0xFFA4A9AE) else GoldBright,
-            fontFamily = FontFamily.Serif, fontWeight = FontWeight.Bold, fontSize = if (token.zone.finale) 21.sp else 17.sp,
-            shadow = Shadow(Color.Black.copy(alpha = .9f), Offset(0f, 1f), 2f)))
+        measurer.measure(
+            token.zone.level.toString(),
+            TextStyle(
+                color = if (token.state == TokenState.LOCKED) Color(0xFFA4A9AE) else GoldBright,
+                fontFamily = FontFamily.Serif,
+                fontWeight = FontWeight.Bold,
+                fontSize = if (token.zone.finale) 21.sp else 17.sp,
+                shadow = Shadow(Color.Black.copy(alpha = .9f), Offset(0f, 1f), 2f),
+            ),
+        )
     }
 
     private fun name(token: WorldToken) = names.getOrPut(token.zone.code) {
-        measurer.measure(if (token.state == TokenState.LOCKED) ui("expedition.hidden") else mapTitle(token.zone.code), TextStyle(
-            color = if (token.state == TokenState.LOCKED) Color(0xFFA4A9AE) else Parchment,
-            fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp, shadow = shade))
+        measurer.measure(
+            if (token.state == TokenState.LOCKED) ui("expedition.hidden") else mapTitle(token.zone.code),
+            TextStyle(
+                color = if (token.state == TokenState.LOCKED) Color(0xFFA4A9AE) else Parchment,
+                fontFamily = FontFamily.Serif,
+                fontStyle = FontStyle.Italic,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 12.5.sp,
+                shadow = shade,
+            ),
+        )
     }
 
     private fun count(maps: Int) = counts.getOrPut(maps) { measurer.measure("×$maps", TextStyle(color = ModBlue, fontWeight = FontWeight.Bold, fontSize = 10.sp)) }
@@ -269,8 +346,11 @@ private class Words(private val world: WorldMap, private val measurer: TextMeasu
     /** Draws [text] centred across [anchor] — below it, or centred on it too — grown by [factor] about it. */
     private fun DrawScope.place(text: TextLayoutResult, anchor: Offset, factor: Float, alpha: Float, centreY: Boolean = false) {
         val topLeft = Offset(anchor.x - text.size.width / 2f, if (centreY) anchor.y - text.size.height / 2f else anchor.y)
-        if (factor == 1f) drawText(text, topLeft = topLeft, alpha = alpha)
-        else withTransform({ scale(factor, factor, anchor) }) { drawText(text, topLeft = topLeft, alpha = alpha) }
+        if (factor == 1f) {
+            drawText(text, topLeft = topLeft, alpha = alpha)
+        } else {
+            withTransform({ scale(factor, factor, anchor) }) { drawText(text, topLeft = topLeft, alpha = alpha) }
+        }
     }
 }
 
@@ -279,12 +359,15 @@ private val ROAD_INK = Color(0xD9120D07)
 private val ROAD_GOLD = Color(0xFFB89A62)
 private val FOG = Color(0xF7080A0D)
 private const val TOKEN_RADIUS = 23f
+
 /** How far past the screen's edge, in world units, a token's words are still drawn: a name is wider than its medallion. */
 private const val OFFSCREEN_MARGIN = 120f
 private const val FINALE_RADIUS = 29f
+
 /** How far from a token's centre a tap still takes it, in world units, and at least this many dp on the screen. */
 private const val TOKEN_REACH = 34f
 private const val FINGER = 24f
+
 /** The fog is clear up to so far above the highest seen token, and thick from so far. */
 private const val FOG_CLEAR = 60f
 private const val FOG_THICK = 280f

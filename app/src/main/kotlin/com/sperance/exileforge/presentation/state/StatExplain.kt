@@ -46,8 +46,12 @@ data class ShareCard(val kind: ShareKind, val rows: List<ShareRow>, val summary:
  * only), the formula in one line, and what the figure gives other stats right now.
  */
 data class StatExplanation(
-    val stat: String, val total: String, val cards: List<ShareCard>, val weights: Map<ShareKind, Double>,
-    val formula: String, val grants: List<ShareRow>,
+    val stat: String,
+    val total: String,
+    val cards: List<ShareCard>,
+    val weights: Map<ShareKind, Double>,
+    val formula: String,
+    val grants: List<ShareRow>,
 )
 
 /**
@@ -61,25 +65,44 @@ class StatExplainer(private val s: ForgeState) {
     fun explain(breakdown: StatBreakdown, grants: List<Grant>, holders: (String) -> List<StatSource>, passives: PassiveShares = PassiveShares()): StatExplanation {
         val stat = breakdown.stat
         val cards = mutableListOf<ShareCard>()
-        if (breakdown.base != 0.0) cards += ShareCard(ShareKind.BASE,
-            listOf(ShareRow(hero?.let { ui("stat.src.base", classTitle(it.heroClass), it.level) } ?: ui("stat.kind.BASE"), fmt(stat, breakdown.base, Op.ADD, breakdown.percent, sign = false))),
-            fmt(stat, breakdown.base, Op.ADD, breakdown.percent, sign = false))
+        if (breakdown.base != 0.0) {
+            cards += ShareCard(
+                ShareKind.BASE,
+                listOf(ShareRow(hero?.let { ui("stat.src.base", classTitle(it.heroClass), it.level) } ?: ui("stat.kind.BASE"), fmt(stat, breakdown.base, Op.ADD, breakdown.percent, sign = false))),
+                fmt(stat, breakdown.base, Op.ADD, breakdown.percent, sign = false),
+            )
+        }
         breakdown.shares.groupBy(::kindOf).toSortedMap().forEach { (kind, shares) ->
             cards += ShareCard(kind, shares.map { row(stat, it, breakdown.percent) }, summary(stat, shares, breakdown.percent))
         }
         // Every passive that names the figure has its row, an increase with nothing to increase too: «+10% · в бою: +0».
-        if (passives.rows.isNotEmpty()) cards += ShareCard(ShareKind.SKILL,
-            passives.rows.map { ShareRow(SkillText.title(it.skill), it.lines.joinToString(", ") { line -> fmt(stat, line.value, line.op, breakdown.percent) }, passiveNote(stat, it, breakdown)) },
-            signed(stat, passives.total, breakdown.percent))
-        if (breakdown.shifts.isNotEmpty()) cards += ShareCard(ShareKind.AFTER,
-            breakdown.shifts.map { ShareRow(shiftTitle(it.source, holders), signed(stat, it.delta, breakdown.percent), it.from?.let { from -> ui("stat.from", statTitle(from)) }) },
-            signed(stat, breakdown.shifts.sumOf { it.delta }, breakdown.percent))
-        return StatExplanation(stat, fmt(stat, breakdown.total, Op.ADD, breakdown.percent, sign = false), cards, weights(breakdown),
-            formula(breakdown), grants.map { ShareRow(statTitle(it.stat), fmt(it.stat, it.value, it.op, index?.stats?.isPercent(it.stat) == true), link = it.stat) })
+        if (passives.rows.isNotEmpty()) {
+            cards += ShareCard(
+                ShareKind.SKILL,
+                passives.rows.map { ShareRow(SkillText.title(it.skill), it.lines.joinToString(", ") { line -> fmt(stat, line.value, line.op, breakdown.percent) }, passiveNote(stat, it, breakdown)) },
+                signed(stat, passives.total, breakdown.percent),
+            )
+        }
+        if (breakdown.shifts.isNotEmpty()) {
+            cards += ShareCard(
+                ShareKind.AFTER,
+                breakdown.shifts.map { ShareRow(shiftTitle(it.source, holders), signed(stat, it.delta, breakdown.percent), it.from?.let { from -> ui("stat.from", statTitle(from)) }) },
+                signed(stat, breakdown.shifts.sumOf { it.delta }, breakdown.percent),
+            )
+        }
+        return StatExplanation(
+            stat,
+            fmt(stat, breakdown.total, Op.ADD, breakdown.percent, sign = false),
+            cards,
+            weights(breakdown),
+            formula(breakdown),
+            grants.map { ShareRow(statTitle(it.stat), fmt(it.stat, it.value, it.op, index?.stats?.isPercent(it.stat) == true), link = it.stat) },
+        )
     }
 
     private fun kindOf(share: Share): ShareKind = when {
         share.perStat != null -> ShareKind.ATTRIBUTE
+
         else -> when (share.source?.kind) {
             SourceKind.CLASS -> ShareKind.CLASS
             SourceKind.NODE -> ShareKind.NODE
@@ -109,17 +132,25 @@ class StatExplainer(private val s: ForgeState) {
         ui("stat.local", ops.joinToString(", ") { fmt(it.stat, it.value, it.op, index?.stats?.isPercent(it.stat) == true) })
     }
 
-    fun sourceTitle(source: StatSource?): String = if (source == null) ui("stat.kind.OTHER") else when (source.kind) {
-        SourceKind.CLASS -> ui("stat.src.class", classTitle(source.ref))
-        SourceKind.NODE -> nodeTitle(source.ref)
-        SourceKind.ITEM -> hero?.item(source.ref)?.let { item -> s.view(item)?.let { view -> "${view.title} · ${slotTitle(item.slot ?: view.slot)}" } } ?: ui("stat.kind.ITEM")
-        SourceKind.PET -> hero?.pets?.pet(source.ref)?.let { locOr("pet.${it.species}", it.species) } ?: ui("stat.kind.PET")
-        SourceKind.POWER, SourceKind.MAP, SourceKind.ATLAS -> statTitle(source.ref)
+    fun sourceTitle(source: StatSource?): String = if (source == null) {
+        ui("stat.kind.OTHER")
+    } else {
+        when (source.kind) {
+            SourceKind.CLASS -> ui("stat.src.class", classTitle(source.ref))
+            SourceKind.NODE -> nodeTitle(source.ref)
+            SourceKind.ITEM -> hero?.item(source.ref)?.let { item -> s.view(item)?.let { view -> "${view.title} · ${slotTitle(item.slot ?: view.slot)}" } } ?: ui("stat.kind.ITEM")
+            SourceKind.PET -> hero?.pets?.pet(source.ref)?.let { locOr("pet.${it.species}", it.species) } ?: ui("stat.kind.PET")
+            SourceKind.POWER, SourceKind.MAP, SourceKind.ATLAS -> statTitle(source.ref)
+        }
     }
 
     /** A power's shift is named by the worn items that carry it, the power's own name when none is found. */
     private fun shiftTitle(source: StatSource, holders: (String) -> List<StatSource>): String {
-        val prefix = when (source.kind) { SourceKind.MAP -> ui("stat.src.map"); SourceKind.ATLAS -> ui("stat.src.atlas"); else -> null }
+        val prefix = when (source.kind) {
+            SourceKind.MAP -> ui("stat.src.map")
+            SourceKind.ATLAS -> ui("stat.src.atlas")
+            else -> null
+        }
         if (source.kind != SourceKind.POWER) return listOfNotNull(prefix, statTitle(source.ref)).joinToString(": ")
         val items = holders(source.ref).filter { it.kind == SourceKind.ITEM }.map(::sourceTitle)
         return if (items.isEmpty()) statTitle(source.ref) else "${items.joinToString(", ")} — ${statTitle(source.ref)}"
@@ -145,7 +176,9 @@ class StatExplainer(private val s: ForgeState) {
         val gain = b.flatSum * increase * (more - 1)
         val logMore = ln(more)
         val weights = LinkedHashMap<ShareKind, Double>()
-        fun add(kind: ShareKind, value: Double) { if (value > 0) weights.merge(kind, value, Double::plus) }
+        fun add(kind: ShareKind, value: Double) {
+            if (value > 0) weights.merge(kind, value, Double::plus)
+        }
         add(ShareKind.BASE, b.base * increase * more)
         b.shares.forEach { share ->
             val kind = kindOf(share)
@@ -183,7 +216,13 @@ class StatExplainer(private val s: ForgeState) {
     fun fmt(stat: String, value: Double, op: Op, percent: Boolean, sign: Boolean = true): String {
         val unit = if (percent || statPercent(stat, index)) "%" else ""
         val size = statNumber(stat, abs(value))
-        val mark = if (!sign && value >= 0) "" else if (value < 0) "−" else "+"
+        val mark = if (!sign && value >= 0) {
+            ""
+        } else if (value < 0) {
+            "−"
+        } else {
+            "+"
+        }
         return when (op) {
             Op.ADD -> "$mark$size$unit"
             Op.INCREASED -> if (percent) "$mark$size$unit" else "$mark$size%"

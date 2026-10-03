@@ -46,7 +46,8 @@ import com.sperance.exileforge.ui.theme.*
  * who may answer them.
  */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable internal fun ColumnScope.GuildInside(s: ForgeState, vm: ForgeViewModel, guild: GuildView, me: GuildMember?) {
+@Composable
+internal fun ColumnScope.GuildInside(s: ForgeState, vm: ForgeViewModel, guild: GuildView, me: GuildMember?) {
     val manages = me?.role?.manages == true
     val tabs = GuildTab.entries.filter { it != GuildTab.APPLICATIONS || manages }
     val tab = s.guild.tab?.takeIf { it in tabs }
@@ -56,8 +57,14 @@ import com.sperance.exileforge.ui.theme.*
                 GuildHeader(s, guild)
                 tabs.chunked(3).forEach { row ->
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        row.forEach { each -> SectionTile(each, sectionFigure(each, guild, me), badge = if (each == GuildTab.APPLICATIONS) guild.applications.size else 0,
-                            modifier = Modifier.weight(1f)) { vm.guildTab(each) } }
+                        row.forEach { each ->
+                            SectionTile(
+                                each,
+                                sectionFigure(each, guild, me),
+                                badge = if (each == GuildTab.APPLICATIONS) guild.applications.size else 0,
+                                modifier = Modifier.weight(1f),
+                            ) { vm.guildTab(each) }
+                        }
                         repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
                     }
                 }
@@ -80,16 +87,18 @@ import com.sperance.exileforge.ui.theme.*
     }
 }
 
-private fun tabTitle(tab: GuildTab): String = ui(when (tab) {
-    GuildTab.MEMBERS -> "guild.tab_members"
-    GuildTab.QUESTS -> "guild.tab_quests"
-    GuildTab.TREE -> "guild.tab_tree"
-    GuildTab.STASH -> "guild.tab_stash"
-    GuildTab.APPLICATIONS -> "guild.tab_applications"
-    GuildTab.CONTRIBUTE -> "guild.tab_contribute"
-    GuildTab.LOG -> "guild.tab_log"
-    GuildTab.SETTINGS -> "guild.tab_settings"
-})
+private fun tabTitle(tab: GuildTab): String = ui(
+    when (tab) {
+        GuildTab.MEMBERS -> "guild.tab_members"
+        GuildTab.QUESTS -> "guild.tab_quests"
+        GuildTab.TREE -> "guild.tab_tree"
+        GuildTab.STASH -> "guild.tab_stash"
+        GuildTab.APPLICATIONS -> "guild.tab_applications"
+        GuildTab.CONTRIBUTE -> "guild.tab_contribute"
+        GuildTab.LOG -> "guild.tab_log"
+        GuildTab.SETTINGS -> "guild.tab_settings"
+    },
+)
 
 private fun sectionIcon(tab: GuildTab): ImageVector = when (tab) {
     GuildTab.MEMBERS -> Icons.Outlined.Groups
@@ -115,8 +124,10 @@ private fun sectionFigure(tab: GuildTab, guild: GuildView, me: GuildMember?): St
 /** One section of the hub: its glyph, its name, its figure under it, and a badge in the corner when something waits. */
 @Composable private fun SectionTile(tab: GuildTab, figure: String?, badge: Int, modifier: Modifier, onClick: () -> Unit) {
     val shape = RoundedCornerShape(12.dp)
-    Box(modifier.clip(shape).background(Panel, shape).border(1.dp, PanelRaised, shape).clickable(role = Role.Button, onClick = onClick)
-        .padding(horizontal = 4.dp, vertical = 10.dp)) {
+    Box(
+        modifier.clip(shape).background(Panel, shape).border(1.dp, PanelRaised, shape).clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = 4.dp, vertical = 10.dp),
+    ) {
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Icon(sectionIcon(tab), null, tint = Gold, modifier = Modifier.size(22.dp))
             Text(tabTitle(tab), color = Parchment, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -147,8 +158,10 @@ private fun sectionFigure(tab: GuildTab, guild: GuildView, me: GuildMember?): St
         LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth().height(6.dp), color = guildColor(guild.color), trackColor = Abyss)
         // The leader's word in a dark band under its flag, one glance from the arms.
         guild.announcement.takeIf { it.isNotBlank() }?.let {
-            Row(Modifier.fillMaxWidth().background(Abyss, RoundedCornerShape(8.dp)).padding(horizontal = 9.dp, vertical = 7.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(
+                Modifier.fillMaxWidth().background(Abyss, RoundedCornerShape(8.dp)).padding(horizontal = 9.dp, vertical = 7.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
                 Icon(Icons.Outlined.Flag, ui("guild.announcement"), tint = Ember, modifier = Modifier.size(16.dp))
                 Text(it, color = Parchment, style = MaterialTheme.typography.bodySmall)
             }

@@ -1,6 +1,5 @@
 package com.sperance.exileforge.ui.screens.expedition
 
-import com.sperance.exileforge.ui.components.ForgeSheet
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,6 +19,7 @@ import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeSection
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.ForgeButton
+import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.RaritySpine
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -31,7 +31,8 @@ import com.sperance.exileforge.ui.theme.*
  * run ([inRun]) the run holds the whole screen, so the way to the bench is only named, for after it.
  */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable internal fun RecipeSheet(s: ForgeState, vm: ForgeViewModel, code: String, inRun: Boolean = false, onDismiss: () -> Unit) {
+@Composable
+internal fun RecipeSheet(s: ForgeState, vm: ForgeViewModel, code: String, inRun: Boolean = false, onDismiss: () -> Unit) {
     val index = s.index
     val recipe = index?.recipe(code)
     val title = recipe?.let { r -> index?.modifier(r.modifier)?.effects?.map { statTitle(it.stat) }?.distinct()?.joinToString(" / ") }
@@ -50,16 +51,28 @@ import com.sperance.exileforge.ui.theme.*
                 if (recipe != null && index != null) {
                     Column(Modifier.fillMaxWidth().background(Abyss, RoundedCornerShape(6.dp)).padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(recipeText(index, recipe), color = ModBlue, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
-                        MutedText(ui("bench.cost_line", itemTitle(recipe.orb.name), recipe.amount, s.hero?.count(recipe.orb.name) ?: 0L),
-                            style = MaterialTheme.typography.bodySmall)
-                        if (recipe.slots.isNotEmpty()) MutedText(ui("recipe.slots", recipe.slots.joinToString(", ") { slotTitle(it) }),
-                            style = MaterialTheme.typography.bodySmall)
+                        MutedText(
+                            ui("bench.cost_line", itemTitle(recipe.orb.name), recipe.amount, s.hero?.count(recipe.orb.name) ?: 0L),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        if (recipe.slots.isNotEmpty()) {
+                            MutedText(
+                                ui("recipe.slots", recipe.slots.joinToString(", ") { slotTitle(it) }),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
                     }
                 }
                 Text(ui("recipe.applies"), color = Parchment, style = MaterialTheme.typography.bodyMedium)
-                if (inRun) MutedText(ui("recipe.after_run"), style = MaterialTheme.typography.bodyMedium)
-                else ForgeButton(onClick = { onDismiss(); vm.openForge(null, ForgeSection.BENCH) }, modifier = Modifier.fillMaxWidth()) {
-                    Text(ui("recipe.open_forge"), style = MaterialTheme.typography.titleSmall)
+                if (inRun) {
+                    MutedText(ui("recipe.after_run"), style = MaterialTheme.typography.bodyMedium)
+                } else {
+                    ForgeButton(onClick = {
+                        onDismiss()
+                        vm.openForge(null, ForgeSection.BENCH)
+                    }, modifier = Modifier.fillMaxWidth()) {
+                        Text(ui("recipe.open_forge"), style = MaterialTheme.typography.titleSmall)
+                    }
                 }
             }
         }

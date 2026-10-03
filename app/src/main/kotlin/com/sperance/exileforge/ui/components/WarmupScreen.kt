@@ -23,8 +23,11 @@ import com.sperance.exileforge.ui.theme.*
             LinearProgressIndicator(progress = { warmup.progress }, modifier = Modifier.fillMaxWidth(), color = Gold, trackColor = Panel)
             WarmStep.entries.forEach { step ->
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    if (step in warmup.done) Text("✓", color = Vital, style = MaterialTheme.typography.titleSmall, modifier = Modifier.width(16.dp))
-                    else CircularProgressIndicator(Modifier.size(14.dp), color = Muted, strokeWidth = 2.dp)
+                    if (step in warmup.done) {
+                        Text("✓", color = Vital, style = MaterialTheme.typography.titleSmall, modifier = Modifier.width(16.dp))
+                    } else {
+                        CircularProgressIndicator(Modifier.size(14.dp), color = Muted, strokeWidth = 2.dp)
+                    }
                     Text(ui("warmup.step.${step.name}"), color = if (step in warmup.done) Parchment else Muted, style = MaterialTheme.typography.bodyMedium)
                 }
             }

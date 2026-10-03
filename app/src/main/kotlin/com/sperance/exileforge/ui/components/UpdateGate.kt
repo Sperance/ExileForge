@@ -22,8 +22,8 @@ import com.sperance.exileforge.BuildConfig
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.features.UpdateState
 import com.sperance.exileforge.presentation.features.UpdateViewModel
-import com.sperance.exileforge.update.UpdateInstaller
 import com.sperance.exileforge.ui.theme.*
+import com.sperance.exileforge.update.UpdateInstaller
 
 /** The update model of the activity (3.72.0), for the screens that show the version and check by hand. */
 val LocalUpdates = staticCompositionLocalOf<UpdateViewModel?> { null }
@@ -40,8 +40,10 @@ val LocalUpdates = staticCompositionLocalOf<UpdateViewModel?> { null }
     LifecycleEventEffect(Lifecycle.Event.ON_START) { if (idle) updates.resumed() }
     when {
         s.update != null && !busy -> Locked { UpdateBody(s, updates) }
+
         // The start waits for one check to pass (3.76.0): the game does not open on a build that may be stale.
         !s.verified -> Locked { CheckingBody(s, updates) }
+
         s.askSources -> SourcesPrompt(updates)
     }
 }
@@ -63,11 +65,17 @@ val LocalUpdates = staticCompositionLocalOf<UpdateViewModel?> { null }
 @Composable private fun SourcesPrompt(updates: UpdateViewModel) {
     val context = LocalContext.current
     Dialog(onDismissRequest = updates::sourcesAsked) {
-        Column(Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(12.dp)).border(1.dp, Gold.copy(alpha = .4f), RoundedCornerShape(12.dp))
-            .padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(
+            Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(12.dp)).border(1.dp, Gold.copy(alpha = .4f), RoundedCornerShape(12.dp))
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
             Text(ui("update.sources_title"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
             MutedText(ui("update.sources_note"))
-            ForgeButton(onClick = { context.startActivity(UpdateInstaller.permissionScreen(context)); updates.sourcesAsked() }, modifier = Modifier.fillMaxWidth()) {
+            ForgeButton(onClick = {
+                context.startActivity(UpdateInstaller.permissionScreen(context))
+                updates.sourcesAsked()
+            }, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("update.open_settings"))
             }
             ForgeOutlinedButton(onClick = updates::sourcesAsked, modifier = Modifier.fillMaxWidth()) { Text(ui("update.later")) }
@@ -78,9 +86,12 @@ val LocalUpdates = staticCompositionLocalOf<UpdateViewModel?> { null }
 /** A window nothing outside closes: no back, no tap beside it. */
 @Composable private fun Locked(content: @Composable ColumnScope.() -> Unit) {
     Dialog(onDismissRequest = {}, properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false, usePlatformDefaultWidth = false)) {
-        Column(Modifier.fillMaxWidth().padding(20.dp).background(Panel, RoundedCornerShape(12.dp))
-            .border(1.dp, Gold.copy(alpha = .4f), RoundedCornerShape(12.dp)).padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
+        Column(
+            Modifier.fillMaxWidth().padding(20.dp).background(Panel, RoundedCornerShape(12.dp))
+                .border(1.dp, Gold.copy(alpha = .4f), RoundedCornerShape(12.dp)).padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            content = content,
+        )
     }
 }
 
@@ -104,23 +115,31 @@ val LocalUpdates = staticCompositionLocalOf<UpdateViewModel?> { null }
             LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised)
             MutedText(ui("update.downloading", (progress * 100).toInt()))
         }
+
         s.installing -> {
             LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised)
             MutedText(ui("update.installing"))
         }
+
         s.needsPermission -> {
             InfoCard(ui("update.permission_title"), ui("update.permission_note"))
-            ForgeButton(onClick = { context.startActivity(UpdateInstaller.permissionScreen(context)); updates.permissionAsked() }, modifier = Modifier.fillMaxWidth()) {
+            ForgeButton(onClick = {
+                context.startActivity(UpdateInstaller.permissionScreen(context))
+                updates.permissionAsked()
+            }, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("update.open_settings"))
             }
         }
+
         else -> {
             s.error?.let { InfoCard(ui("update.failed_title"), it, failure = true) }
             ForgeButton(onClick = updates::install, modifier = Modifier.fillMaxWidth()) { Text(ui(if (s.error != null) "update.retry" else "update.install")) }
             // The way around the installer: the release page, the APK by hand.
-            if (s.error != null) ForgeOutlinedButton(onClick = {
-                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(update.page)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-            }, modifier = Modifier.fillMaxWidth()) { Text(ui("update.browser")) }
+            if (s.error != null) {
+                ForgeOutlinedButton(onClick = {
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(update.page)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                }, modifier = Modifier.fillMaxWidth()) { Text(ui("update.browser")) }
+            }
         }
     }
 }
@@ -134,8 +153,11 @@ val LocalUpdates = staticCompositionLocalOf<UpdateViewModel?> { null }
 @Composable fun UpdateCard() {
     val updates = LocalUpdates.current ?: return
     val s by updates.state.collectAsStateWithLifecycle()
-    InfoCard(ui("update.card_title"), ui("update.version", BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE) +
-        if (s.upToDate) "\n" + ui("update.up_to_date") else s.failure?.let { "\n$it" }.orEmpty())
+    InfoCard(
+        ui("update.card_title"),
+        ui("update.version", BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE) +
+            if (s.upToDate) "\n" + ui("update.up_to_date") else s.failure?.let { "\n$it" }.orEmpty(),
+    )
     ForgeOutlinedButton(enabled = !s.checking, onClick = updates::checkNow, modifier = Modifier.fillMaxWidth()) {
         Text(ui(if (s.checking) "update.checking" else "update.check"))
     }

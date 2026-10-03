@@ -5,29 +5,47 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.campaign.*
-import com.sperance.exileforge.core.display.mapTitle
-import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.ItemView
+import com.sperance.exileforge.core.display.mapTitle
+import com.sperance.exileforge.core.display.modNumber
+import com.sperance.exileforge.core.display.statDescription
+import com.sperance.exileforge.core.display.statPercent
+import com.sperance.exileforge.core.display.statTitle
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.view
@@ -37,31 +55,13 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.expedition.scene.ExpeditionScene
 import com.sperance.exileforge.ui.screens.expedition.scene.SCENE_UNIT
 import com.sperance.exileforge.ui.screens.expedition.scene.sceneToWorld
-import kotlin.math.roundToInt
 import com.sperance.exileforge.ui.theme.*
-import kotlin.math.hypot
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
-import com.sperance.exileforge.core.display.Glyph
-import com.sperance.exileforge.core.display.modNumber
-import com.sperance.exileforge.core.display.statDescription
-import com.sperance.exileforge.core.display.statPercent
-import com.sperance.exileforge.core.display.statTitle
+import kotlinx.coroutines.delay
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
-import kotlinx.coroutines.delay
+import kotlin.math.hypot
+import kotlin.math.roundToInt
 
 /**
  * A run of the campaign, over the whole screen: the scene underneath, the overlay above.
@@ -85,14 +85,21 @@ import kotlinx.coroutines.delay
     // and closing it closes the run, once.
     val summary = hud.phase == RunPhase.LEFT || hud.phase == RunPhase.CLEARED || hud.phase == RunPhase.DEAD && hud.report == null
     var closed by remember(run) { mutableStateOf(false) }
-    val close: () -> Unit = { if (!closed) { closed = true; vm.closeRun() } }
-    BackHandler { when {
-        summary -> close()
-        hud.phase == RunPhase.GATE -> vm.runCommand(RunCommand.StepBack)
-        hud.phase == RunPhase.CRYSTAL || hud.phase == RunPhase.ABYSS || hud.phase == RunPhase.MAP && hud.fountain != null -> vm.runCommand(RunCommand.StepOff)
-        hud.phase == RunPhase.MAP -> if (!zone) leaving = true
-        else -> vm.runCommand(RunCommand.Leave)
-    } }
+    val close: () -> Unit = {
+        if (!closed) {
+            closed = true
+            vm.closeRun()
+        }
+    }
+    BackHandler {
+        when {
+            summary -> close()
+            hud.phase == RunPhase.GATE -> vm.runCommand(RunCommand.StepBack)
+            hud.phase == RunPhase.CRYSTAL || hud.phase == RunPhase.ABYSS || hud.phase == RunPhase.MAP && hud.fountain != null -> vm.runCommand(RunCommand.StepOff)
+            hud.phase == RunPhase.MAP -> if (!zone) leaving = true
+            else -> vm.runCommand(RunCommand.Leave)
+        }
+    }
 
     Box(Modifier.fillMaxSize().background(Ink)) {
         ExpeditionScene(run, s.heroClass?.code, Modifier.fillMaxSize())
@@ -100,27 +107,56 @@ import kotlinx.coroutines.delay
             RunPhase.MAP -> {
                 // An autorun walks by itself (3.2.0): no stick under the thumb while it runs
                 if (hud.auto == null) Stick(run) { vm.runCommand(RunCommand.OfferFountain(it)) }
-                MapBar(s, run, hud, onLeave = if (zone) null else ({ leaving = true }), onGear = { gear = true }, onStats = { sheet = true },
-                    onDrink = { vm.runCommand(RunCommand.Drink(it)) }, onRetry = vm::flushRun)
-                if (gear) { HoldsRun(run); GearSheet(s, vm) { gear = false } }
-                if (sheet) { HoldsRun(run); StatsSheet(s, run.mapEffects) { sheet = false } }
+                MapBar(
+                    s,
+                    run,
+                    hud,
+                    onLeave = if (zone) null else ({ leaving = true }),
+                    onGear = { gear = true },
+                    onStats = { sheet = true },
+                    onDrink = { vm.runCommand(RunCommand.Drink(it)) },
+                    onRetry = vm::flushRun,
+                )
+                if (gear) {
+                    HoldsRun(run)
+                    GearSheet(s, vm) { gear = false }
+                }
+                if (sheet) {
+                    HoldsRun(run)
+                    StatsSheet(s, run.mapEffects) { sheet = false }
+                }
                 hud.fountain?.let { FountainOffer(it, onTake = { vm.runCommand(RunCommand.TakeFountain) }) { vm.runCommand(RunCommand.StepOff) } }
                 hud.chest?.let { ChestLoot(s, vm, run, it, hud.chestAwaiting) { vm.runCommand(RunCommand.DismissChest) } }
-                if (leaving) ConfirmSheet(title = ui("expedition.leave_q"), confirm = ui("expedition.leave"), danger = true,
-                    subtitle = mapTitle(hud.mapCode),
-                    ledger = listOf(LedgerLine(ui("expedition.leave_left"), ui(if (hud.sealed) "expedition.boss_alive" else "expedition.boss_slain"), Tone.SPEND)),
-                    note = ui("expedition.leave_note"), onDismiss = { leaving = false }) { vm.runCommand(RunCommand.Leave) }
+                if (leaving) {
+                    ConfirmSheet(
+                        title = ui("expedition.leave_q"),
+                        confirm = ui("expedition.leave"),
+                        danger = true,
+                        subtitle = mapTitle(hud.mapCode),
+                        ledger = listOf(LedgerLine(ui("expedition.leave_left"), ui(if (hud.sealed) "expedition.boss_alive" else "expedition.boss_slain"), Tone.SPEND)),
+                        note = ui("expedition.leave_note"),
+                        onDismiss = { leaving = false },
+                    ) { vm.runCommand(RunCommand.Leave) }
+                }
             }
+
             RunPhase.FIGHT -> hud.fight?.let { ArenaOverlay(s, hud, it, it.level.takeIf { level -> level > 0 } ?: run.zone.level, run.rules, run.stance, onCommand = vm::runCommand, onLogFilter = vm::logFilter, onBuzz = vm::buzz) }
+
             // The fight is over: its report — the log, what it came to, and the loot of a victory.
             RunPhase.LOOT -> hud.report?.let { ReportScreen(s, vm, hud, it) { vm.runCommand(RunCommand.Continue) } }
+
             // A fall: the fight's report first, then the map's summary (its «Вернуться» leaves the map).
             RunPhase.DEAD -> hud.report?.let { ReportScreen(s, vm, hud, it) { vm.runCommand(RunCommand.Continue) } }
                 ?: MapSummary(s, vm, hud, onDone = close)
+
             RunPhase.CLEARED -> MapSummary(s, vm, hud, onDone = close)
+
             RunPhase.GATE -> VaalGate(s, hud, run.zone.corrupted.takeIf { it.isNotBlank() }, onEnter = vm::enterVaal, onRefuse = vm::refuseVaal) { vm.runCommand(RunCommand.StepBack) }
+
             RunPhase.CRYSTAL -> hud.crystal?.let { CrystalSheet(s, it, onCommand = vm::runCommand) }
+
             RunPhase.ABYSS -> hud.abyss?.let { AbyssSheet(s, hud, it, onCommand = vm::runCommand) }
+
             RunPhase.LEFT -> MapSummary(s, vm, hud, onDone = close)
         }
         // In a fight the arena's own row carries the autorun (3.77.0); the plate floats only over the map.
@@ -139,8 +175,16 @@ import kotlinx.coroutines.delay
  * comes back on its own between fights (2.29.0) but a fountain. What the map still holds — foes, chests, fountains — is the walk's to find (2.56.1).
  * The journal's events the server has not taken for a while are counted under the name, a tap sends them now; a slain guardian is not bought back (3.2.0) — it returns in its time.
  */
-@Composable private fun MapBar(s: ForgeState, run: ExpeditionRun, hud: RunHud, onLeave: (() -> Unit)?, onGear: () -> Unit, onStats: () -> Unit,
-                               onDrink: (Int) -> Unit, onRetry: () -> Unit) {
+@Composable private fun MapBar(
+    s: ForgeState,
+    run: ExpeditionRun,
+    hud: RunHud,
+    onLeave: (() -> Unit)?,
+    onGear: () -> Unit,
+    onStats: () -> Unit,
+    onDrink: (Int) -> Unit,
+    onRetry: () -> Unit,
+) {
     Column(Modifier.fillMaxWidth().statusBarsPadding().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             // The way out (2.56.1): a portal in a bronze ring, first thing in the corner, and it asks before it goes.
@@ -153,10 +197,24 @@ import kotlinx.coroutines.delay
             }
             Column(Modifier.weight(1f).padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 val zone = VaalZones.isZone(run.zone)
-                Text(if (zone) ui("vaal.title", mapTitle(hud.mapCode)) else mapTitle(hud.mapCode), color = if (zone) Color(0xFFFF8A78) else GoldBright,
-                    style = MaterialTheme.typography.titleMedium, maxLines = 2)
-                Text(ui(when { zone && hud.sealed -> "vaal.guardian_alive"; zone -> "vaal.guardian_slain"; hud.sealed -> "expedition.boss_alive"; else -> "expedition.boss_slain" }),
-                    color = if (hud.sealed) LifeRed else Vital, style = MaterialTheme.typography.labelMedium)
+                Text(
+                    if (zone) ui("vaal.title", mapTitle(hud.mapCode)) else mapTitle(hud.mapCode),
+                    color = if (zone) Color(0xFFFF8A78) else GoldBright,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 2,
+                )
+                Text(
+                    ui(
+                        when {
+                            zone && hud.sealed -> "vaal.guardian_alive"
+                            zone -> "vaal.guardian_slain"
+                            hud.sealed -> "expedition.boss_alive"
+                            else -> "expedition.boss_slain"
+                        },
+                    ),
+                    color = if (hud.sealed) LifeRed else Vital,
+                    style = MaterialTheme.typography.labelMedium,
+                )
                 Journal(hud, onRetry)
                 // Life under the map's name (2.72.0), out of the middle of the view; the mana and the belt under it (2.78.0).
                 Vitals(hud.heroLife, hud.heroMaxLife, hud.heroShield, hud.heroMaxShield, Modifier.fillMaxWidth(), hud.heroMana, hud.heroMaxMana, hud.heroReserved)
@@ -178,10 +236,12 @@ import kotlinx.coroutines.delay
         flasks.forEach { view ->
             if (view == null) return@forEach
             val tint = flaskTint(view.kind)
-            Box(Modifier.size(34.dp).clip(CircleShape).background(Color(0xE60A0D12))
-                .border(if (view.active > 0f) 2.dp else 1.dp, if (view.active > 0f) GoldBright else Bronze, CircleShape)
-                .clickable(enabled = view.usable) { onDrink(view.slot) }.semantics { contentDescription = ui("expedition.drink") },
-                contentAlignment = Alignment.Center) {
+            Box(
+                Modifier.size(34.dp).clip(CircleShape).background(Color(0xE60A0D12))
+                    .border(if (view.active > 0f) 2.dp else 1.dp, if (view.active > 0f) GoldBright else Bronze, CircleShape)
+                    .clickable(enabled = view.usable) { onDrink(view.slot) }.semantics { contentDescription = ui("expedition.drink") },
+                contentAlignment = Alignment.Center,
+            ) {
                 Canvas(Modifier.fillMaxSize()) {
                     val fill = if (view.maxCharges > 0) view.charges / view.maxCharges.toFloat() else 0f
                     drawRect(tint.copy(alpha = if (view.usable) .55f else .25f), topLeft = Offset(0f, size.height * (1 - fill)), size = Size(size.width, size.height * fill))
@@ -200,12 +260,21 @@ import kotlinx.coroutines.delay
 @Composable private fun Journal(hud: RunHud, onRetry: (() -> Unit)? = null) {
     // Only an oldest event the server has not taken for a while is worth a word: a batch in flight is not news.
     var overdue by remember { mutableStateOf(false) }
-    LaunchedEffect(hud.pending > 0, hud.applied) { overdue = false; if (hud.pending > 0) { delay(PENDING_GRACE); overdue = true } }
+    LaunchedEffect(hud.pending > 0, hud.applied) {
+        overdue = false
+        if (hud.pending > 0) {
+            delay(PENDING_GRACE)
+            overdue = true
+        }
+    }
     val waiting = hud.pending > 0 && overdue
     if (!waiting && hud.rejected == 0) return
-    Text(listOfNotNull(ui("expedition.pending", hud.pending).takeIf { waiting }, ui("expedition.rejected", hud.rejected).takeIf { hud.rejected > 0 }).joinToString(" · "),
-        color = if (hud.rejected > 0) LifeRed.copy(alpha = .85f) else Muted, style = MaterialTheme.typography.labelSmall,
-        modifier = onRetry?.takeIf { waiting }?.let { Modifier.clickable(onClick = it) } ?: Modifier)
+    Text(
+        listOfNotNull(ui("expedition.pending", hud.pending).takeIf { waiting }, ui("expedition.rejected", hud.rejected).takeIf { hud.rejected > 0 }).joinToString(" · "),
+        color = if (hud.rejected > 0) LifeRed.copy(alpha = .85f) else Muted,
+        style = MaterialTheme.typography.labelSmall,
+        modifier = onRetry?.takeIf { waiting }?.let { Modifier.clickable(onClick = it) } ?: Modifier,
+    )
 }
 
 /** How long the journal's oldest unsent event waits before the run says so. */
@@ -237,7 +306,12 @@ private const val PENDING_GRACE = 10_000L
     var tick by remember(world) { mutableIntStateOf(0) }
     var cells by rememberSaveable { mutableFloatStateOf(MINIMAP_CELLS) }
     var full by remember { mutableStateOf(false) }
-    LaunchedEffect(world) { while (true) { kotlinx.coroutines.delay(200); tick++ } }
+    LaunchedEffect(world) {
+        while (true) {
+            kotlinx.coroutines.delay(200)
+            tick++
+        }
+    }
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Canvas(Modifier.size(150.dp).clip(CircleShape).background(Color(0xE60A0D12)).clickable { full = true }) {
             if (tick < 0) return@Canvas
@@ -254,12 +328,18 @@ private const val PENDING_GRACE = 10_000L
             ZoomButton("+", ui("expedition.zoom_in")) { cells = (cells / 1.4f).coerceAtLeast(MINIMAP_MIN) }
         }
     }
-    if (full) { HoldsRun(run); FullMap(run, hud, tick) { full = false } }
+    if (full) {
+        HoldsRun(run)
+        FullMap(run, hud, tick) { full = false }
+    }
 }
 
 @Composable private fun ZoomButton(sign: String, label: String, onClick: () -> Unit) {
-    Box(Modifier.size(28.dp).clip(CircleShape).background(Color(0xE60A0D12)).border(1.dp, Bronze, CircleShape)
-        .clickable(onClick = onClick).semantics { contentDescription = label }, contentAlignment = Alignment.Center) {
+    Box(
+        Modifier.size(28.dp).clip(CircleShape).background(Color(0xE60A0D12)).border(1.dp, Bronze, CircleShape)
+            .clickable(onClick = onClick).semantics { contentDescription = label },
+        contentAlignment = Alignment.Center,
+    ) {
         Text(sign, color = GoldBright, style = MaterialTheme.typography.titleMedium)
     }
 }
@@ -274,9 +354,11 @@ private fun DrawScope.drawExplored(world: ExpeditionWorld, origin: Offset, cell:
     val square = Size(cell, cell)
     val xs = (floor(-origin.x / cell).toInt() - 1).coerceAtLeast(0)..(ceil((size.width - origin.x) / cell).toInt() + 1).coerceAtMost(map.width - 1)
     val ys = (floor(-origin.y / cell).toInt() - 1).coerceAtLeast(0)..(ceil((size.height - origin.y) / cell).toInt() + 1).coerceAtMost(map.height - 1)
-    for (y in ys) for (x in xs) {
-        if (!world.explored(x, y)) continue
-        drawRect(if (map.walkable(x, y)) Parchment.copy(alpha = if (world.lit(x, y)) .55f else .3f) else Color(0xFF2A2B33), Offset(origin.x + x * cell, origin.y + y * cell), square)
+    for (y in ys) {
+        for (x in xs) {
+            if (!world.explored(x, y)) continue
+            drawRect(if (map.walkable(x, y)) Parchment.copy(alpha = if (world.lit(x, y)) .55f else .3f) else Color(0xFF2A2B33), Offset(origin.x + x * cell, origin.y + y * cell), square)
+        }
     }
     val dot = (cell * .5f).coerceAtLeast(2.5f)
     fun mark(x: Double, y: Double, color: Color, size: Float = dot) = drawCircle(color, size, Offset(origin.x + x.toFloat() * cell, origin.y + y.toFloat() * cell))
@@ -286,9 +368,11 @@ private fun DrawScope.drawExplored(world: ExpeditionWorld, origin: Offset, cell:
     world.cracks.filter { !it.opened && world.explored(it.cell.x, it.cell.y) }.forEach { mark(it.cell.x + .5, it.cell.y + .5, AbyssGlow, dot * 1.2f) }
     world.portal?.takeIf { world.explored(it.x, it.y) }?.let { mark(it.x + .5, it.y + .5, PortalTint, dot * 1.2f) }
     if (world.explored(map.exit.x, map.exit.y)) mark(map.exit.x + .5, map.exit.y + .5, if (world.sealed) LifeRed else Vital, dot * 1.4f)
-    if (monsters) world.agents.filter { it.alive && world.lit(it.x.toInt(), it.y.toInt()) }.forEach { agent ->
-        mark(agent.x, agent.y, Color.Black, dot * 1.25f)
-        mark(agent.x, agent.y, rarityTint(agent.monster.rarity), dot)
+    if (monsters) {
+        world.agents.filter { it.alive && world.lit(it.x.toInt(), it.y.toInt()) }.forEach { agent ->
+            mark(agent.x, agent.y, Color.Black, dot * 1.25f)
+            mark(agent.x, agent.y, rarityTint(agent.monster.rarity), dot)
+        }
     }
     mark(world.heroX, world.heroY, Gold, dot * 1.4f)
     mark(world.heroX, world.heroY, Ink, dot * .5f)
@@ -300,18 +384,24 @@ private fun DrawScope.drawExplored(world: ExpeditionWorld, origin: Offset, cell:
  * the map item and the atlas lay on it.
  */
 @OptIn(ExperimentalLayoutApi::class)
-@Composable private fun FullMap(run: ExpeditionRun, hud: RunHud, tick: Int, onClose: () -> Unit) {
+@Composable
+private fun FullMap(run: ExpeditionRun, hud: RunHud, tick: Int, onClose: () -> Unit) {
     val world = run.world
     val map = world.map
     androidx.compose.ui.window.Dialog(onDismissRequest = onClose, properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
-        Column(Modifier.fillMaxSize().background(Ink.copy(alpha = .96f)).statusBarsPadding().navigationBarsPadding().padding(12.dp)
-            .verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(
+            Modifier.fillMaxSize().background(Ink.copy(alpha = .96f)).statusBarsPadding().navigationBarsPadding().padding(12.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(mapTitle(hud.mapCode), color = GoldBright, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
                 IconButton(onClick = onClose) { Icon(Icons.Outlined.Close, ui("common.close"), tint = Gold) }
             }
-            Canvas(Modifier.fillMaxWidth().aspectRatio(map.width / map.height.toFloat()).background(Color(0xFF07090C), RoundedCornerShape(8.dp))
-                .border(1.dp, Bronze, RoundedCornerShape(8.dp))) {
+            Canvas(
+                Modifier.fillMaxWidth().aspectRatio(map.width / map.height.toFloat()).background(Color(0xFF07090C), RoundedCornerShape(8.dp))
+                    .border(1.dp, Bronze, RoundedCornerShape(8.dp)),
+            ) {
                 if (tick < 0) return@Canvas
                 drawExplored(world, Offset.Zero, minOf(size.width / map.width, size.height / map.height), monsters = true)
             }
@@ -336,7 +426,9 @@ private fun DrawScope.drawExplored(world: ExpeditionWorld, origin: Offset, cell:
                 run.mapEffects.forEach { (stat, value) ->
                     Tipped({ Tip(statTitle(stat), statDescription(stat), ModBlue) }) { ModifierLine(effectText(run, stat, value), Glyph.ofStat(stat)) }
                 }
-            } else MutedText(ui("map.no_modifiers"))
+            } else {
+                MutedText(ui("map.no_modifiers"))
+            }
         }
     }
 }
@@ -359,16 +451,20 @@ private fun legendOf(world: ExpeditionWorld): List<Pair<Color, String>> = buildL
 }
 
 /** «+15% Здоровье монстров карты»: a map's summed effect as a modifier's sentence, the percent where the stat counts in it. */
-private fun effectText(run: ExpeditionRun, stat: String, value: Double): String =
-    (if (value >= 0) "+" else "−") + modNumber(stat, abs(value)) + (if (statPercent(stat, run.index)) "%" else "") + " " + statTitle(stat)
+private fun effectText(run: ExpeditionRun, stat: String, value: Double): String = (if (value >= 0) "+" else "−") + modNumber(stat, abs(value)) + (if (statPercent(stat, run.index)) "%" else "") + " " + statTitle(stat)
 
 /** The Vaal portal's mark on the maps and in their legend. */
 private val PortalTint = Color(0xFFFF8A78)
 
 @Composable private fun Counter(text: String, tint: Color) {
-    Text(text, color = tint, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold,
+    Text(
+        text,
+        color = tint,
+        style = MaterialTheme.typography.labelMedium,
+        fontWeight = FontWeight.Bold,
         modifier = Modifier.background(tint.copy(alpha = .1f), RoundedCornerShape(6.dp)).border(1.dp, tint.copy(alpha = .4f), RoundedCornerShape(6.dp))
-            .padding(horizontal = 8.dp, vertical = 3.dp))
+            .padding(horizontal = 8.dp, vertical = 3.dp),
+    )
 }
 
 @Composable private fun Legend(tint: Color, text: String) {
@@ -390,8 +486,16 @@ private const val MINIMAP_MAX = 60f
  * A life bar with the shield laid over it, and the figure in words; the mana under it since 2.78.0,
  * its [reserved] part past [maxMana] a hatched tail.
  */
-@Composable internal fun Vitals(life: Int, maxLife: Int, shield: Int, maxShield: Int, modifier: Modifier = Modifier, mana: Int = 0, maxMana: Int = 0,
-                                reserved: Int = 0) {
+@Composable internal fun Vitals(
+    life: Int,
+    maxLife: Int,
+    shield: Int,
+    maxShield: Int,
+    modifier: Modifier = Modifier,
+    mana: Int = 0,
+    maxMana: Int = 0,
+    reserved: Int = 0,
+) {
     val shape = RoundedCornerShape(3.dp)
     val lifeShare by animateFloatAsState(if (maxLife > 0) life / maxLife.toFloat() else 0f, label = "life")
     Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -401,12 +505,20 @@ private const val MINIMAP_MAX = 60f
         }
         // A pool the auras hold whole is still drawn: a full hatched bar.
         val pooled = maxMana + reserved.coerceAtLeast(0) > 0
-        if (pooled) Box(Modifier.fillMaxWidth().height(6.dp).clip(shape).background(Color(0xCC0A0D12), shape)
-            .reservedTail(reservedShare(maxMana, reserved), ManaBlue).border(1.dp, ManaBlue.copy(alpha = .8f), shape)) {
-            Box(Modifier.fillMaxWidth((mana / (maxMana + reserved.coerceAtLeast(0)).toFloat()).coerceIn(0f, 1f)).fillMaxHeight().background(ManaBlue, shape))
+        if (pooled) {
+            Box(
+                Modifier.fillMaxWidth().height(6.dp).clip(shape).background(Color(0xCC0A0D12), shape)
+                    .reservedTail(reservedShare(maxMana, reserved), ManaBlue).border(1.dp, ManaBlue.copy(alpha = .8f), shape),
+            ) {
+                Box(Modifier.fillMaxWidth((mana / (maxMana + reserved.coerceAtLeast(0)).toFloat()).coerceIn(0f, 1f)).fillMaxHeight().background(ManaBlue, shape))
+            }
         }
-        Text((if (maxShield > 0) ui("expedition.vitals_shield", life, maxLife, shield) else ui("expedition.vitals", life, maxLife)) +
-            (if (pooled) " · " + ui("expedition.vitals_mana", mana, maxMana) else ""), color = Parchment, style = MaterialTheme.typography.labelSmall)
+        Text(
+            (if (maxShield > 0) ui("expedition.vitals_shield", life, maxLife, shield) else ui("expedition.vitals", life, maxLife)) +
+                (if (pooled) " · " + ui("expedition.vitals_mana", mana, maxMana) else ""),
+            color = Parchment,
+            style = MaterialTheme.typography.labelSmall,
+        )
     }
 }
 
@@ -426,30 +538,44 @@ private const val MINIMAP_MAX = 60f
         run.world.fountains.firstOrNull { !it.used && hypot(it.cell.x + .5 - x, it.cell.y + .5 - y) < FOUNTAIN_TAP }?.let { onFountain(it.id) }
     }
     // A fight can start under a thumb still on the glass; the hero must not walk off after it.
-    DisposableEffect(run) { onDispose { run.stickX = 0.0; run.stickY = 0.0 } }
-    Box(Modifier.fillMaxSize().onSizeChanged { area = it }.pointerInput(run) {
-        awaitEachGesture {
-            val down = awaitFirstDown()
-            val walks = down.position.y >= area.height * .35f
-            if (walks) { centre = down.position; knob = down.position }
-            var dragged = false
-            do {
-                val event = awaitPointerEvent()
-                val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                val delta = change.position - down.position
-                val length = hypot(delta.x, delta.y)
-                if (length > viewConfiguration.touchSlop) dragged = true
-                if (!walks) continue
-                val clamped = if (length > radius) delta * (radius / length) else delta
-                knob = down.position + clamped
-                run.stickX = (clamped.x / radius).toDouble()
-                run.stickY = (clamped.y / radius).toDouble()
-                change.consume()
-            } while (change.pressed)
-            if (walks) { run.stickX = 0.0; run.stickY = 0.0; centre = null }
-            if (!dragged) tap(down.position)
+    DisposableEffect(run) {
+        onDispose {
+            run.stickX = 0.0
+            run.stickY = 0.0
         }
-    }) {
+    }
+    Box(
+        Modifier.fillMaxSize().onSizeChanged { area = it }.pointerInput(run) {
+            awaitEachGesture {
+                val down = awaitFirstDown()
+                val walks = down.position.y >= area.height * .35f
+                if (walks) {
+                    centre = down.position
+                    knob = down.position
+                }
+                var dragged = false
+                do {
+                    val event = awaitPointerEvent()
+                    val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                    val delta = change.position - down.position
+                    val length = hypot(delta.x, delta.y)
+                    if (length > viewConfiguration.touchSlop) dragged = true
+                    if (!walks) continue
+                    val clamped = if (length > radius) delta * (radius / length) else delta
+                    knob = down.position + clamped
+                    run.stickX = (clamped.x / radius).toDouble()
+                    run.stickY = (clamped.y / radius).toDouble()
+                    change.consume()
+                } while (change.pressed)
+                if (walks) {
+                    run.stickX = 0.0
+                    run.stickY = 0.0
+                    centre = null
+                }
+                if (!dragged) tap(down.position)
+            }
+        },
+    ) {
         centre?.let { c ->
             Canvas(Modifier.fillMaxSize()) {
                 drawCircle(Gold.copy(alpha = .18f), radius, c)
@@ -457,8 +583,14 @@ private const val MINIMAP_MAX = 60f
                 drawCircle(GoldBright.copy(alpha = .75f), radius * .4f, knob)
             }
         }
-        if (centre == null) Text(ui("expedition.stick_hint"), color = Muted.copy(alpha = .8f), style = MaterialTheme.typography.labelMedium,
-            modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 24.dp))
+        if (centre == null) {
+            Text(
+                ui("expedition.stick_hint"),
+                color = Muted.copy(alpha = .8f),
+                style = MaterialTheme.typography.labelMedium,
+                modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 24.dp),
+            )
+        }
     }
 }
 
@@ -476,7 +608,10 @@ private const val MINIMAP_MAX = 60f
             ForgeOutlinedButton(onClick = onClose, modifier = Modifier.fillMaxWidth()) { Text(ui("common.close")) }
         }
     }
-    looked?.let { item -> HoldsRun(run); LootSheet(s, vm, item, onDismiss = { looked = null }) }
+    looked?.let { item ->
+        HoldsRun(run)
+        LootSheet(s, vm, item, onDismiss = { looked = null })
+    }
 }
 
 /** How near, in tiles, a tap must land to a fountain to name it. */
@@ -503,8 +638,11 @@ private const val FOUNTAIN_TAP = .9
 /** The autorun's plate (3.2.0): the wave under way of how many, and a stop that hands the run back to the stick. */
 @Composable private fun AutoBar(auto: AutoHud, modifier: Modifier, onStop: () -> Unit) {
     val shape = RoundedCornerShape(50)
-    Row(modifier.background(Panel.copy(alpha = .92f), shape).border(1.dp, Gold.copy(alpha = .5f), shape).padding(start = 14.dp, end = 4.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(
+        modifier.background(Panel.copy(alpha = .92f), shape).border(1.dp, Gold.copy(alpha = .5f), shape).padding(start = 14.dp, end = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
         Text(ui("auto.wave", auto.wave, auto.waves), color = GoldBright, style = MaterialTheme.typography.labelLarge)
         ForgeTextButton(onClick = onStop) { Text(ui("auto.stop"), color = LifeRed) }
     }

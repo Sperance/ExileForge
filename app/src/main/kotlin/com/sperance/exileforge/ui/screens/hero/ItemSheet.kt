@@ -1,7 +1,5 @@
 package com.sperance.exileforge.ui.screens.hero
 
-import com.sperance.exileforge.ui.components.ForgeSheet
-
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,21 +16,22 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeSection
 import com.sperance.exileforge.presentation.state.ForgeState
-import com.sperance.exileforge.core.display.itemTitle
+import com.sperance.exileforge.presentation.state.TAB_EXPEDITION
 import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.unmetFor
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.ui.components.*
-import com.sperance.exileforge.ui.screens.auction.ListingSheet
-import com.sperance.exileforge.presentation.state.TAB_EXPEDITION
+import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.ItemIcon
+import com.sperance.exileforge.ui.screens.auction.ListingSheet
 import com.sperance.exileforge.ui.theme.*
 
 /** What the action row opened on top of the sheet, if anything. */
@@ -51,12 +50,16 @@ private enum class ItemAction { AUCTION, SELL, WORN }
  * is also off for an item whose requirements it misses, and the card says what it would change.
  */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun ItemSheet(s: ForgeState, vm: ForgeViewModel, itemId: String, onDismiss: () -> Unit) {
+@Composable
+fun ItemSheet(s: ForgeState, vm: ForgeViewModel, itemId: String, onDismiss: () -> Unit) {
     val instance = s.hero?.item(itemId)
     val view = instance?.let { s.view(it) }
     // The item can leave while its sheet is open — sold, listed, rolled into a copy — and then the
     // sheet has nothing left to be about; nor is there a card for a copy the content cannot explain.
-    if (instance == null || view == null) { LaunchedEffect(itemId) { onDismiss() }; return }
+    if (instance == null || view == null) {
+        LaunchedEffect(itemId) { onDismiss() }
+        return
+    }
     val name = view.title
     val can = !s.busy && s.account.signedIn && (s.ownsCharacter || s.isAdmin)
     val loose = !instance.equipped && !instance.socketed
@@ -72,38 +75,67 @@ private enum class ItemAction { AUCTION, SELL, WORN }
                 item { ItemCard(view, enabled = false, detailed = true, price = price, waiting = waiting) }
                 if (locked) item { Text(ui("item.locked_hint"), color = Muted, style = MaterialTheme.typography.bodySmall) }
                 item { WearPreview(s, instance) }
-                temperOffer(s, instance)?.let { (ore, need) -> item {
-                    // The smith's tempering (3.79.0): once per weapon or armour, the ore of its level.
-                    ForgePanel {
-                        Engraved(ui("temper.title"))
-                        MutedText(ui("temper.hint", s.index?.rules?.brews?.temper?.let { "${it.minQuality}–${it.maxQuality}" }.orEmpty(),
-                            s.index?.rules?.brews?.temper?.maxLevels ?: 0, s.index?.rules?.brews?.temper?.smithLevel ?: 0), style = MaterialTheme.typography.bodySmall)
-                        ForgeOutlinedButton(enabled = can && (s.bagAmount(ore) ?: 0L) >= need, onClick = { vm.temper(instance.id) }, modifier = Modifier.fillMaxWidth()) {
-                            Text(ui("temper.go", itemTitle(ore), need, s.bagAmount(ore) ?: 0L))
+                temperOffer(s, instance)?.let { (ore, need) ->
+                    item {
+                        // The smith's tempering (3.79.0): once per weapon or armour, the ore of its level.
+                        ForgePanel {
+                            Engraved(ui("temper.title"))
+                            MutedText(
+                                ui(
+                                    "temper.hint",
+                                    s.index?.rules?.brews?.temper?.let { "${it.minQuality}–${it.maxQuality}" }.orEmpty(),
+                                    s.index?.rules?.brews?.temper?.maxLevels ?: 0,
+                                    s.index?.rules?.brews?.temper?.smithLevel ?: 0,
+                                ),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                            ForgeOutlinedButton(enabled = can && (s.bagAmount(ore) ?: 0L) >= need, onClick = { vm.temper(instance.id) }, modifier = Modifier.fillMaxWidth()) {
+                                Text(ui("temper.go", itemTitle(ore), need, s.bagAmount(ore) ?: 0L))
+                            }
                         }
                     }
-                } }
+                }
                 // Worn but not counting: the rules' reasons, as the slot cell prints them.
-                s.hero?.inactive?.get(instance.id)?.let { reasons -> item {
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(ui("hero.inactive"), color = LifeRed, style = MaterialTheme.typography.labelLarge)
-                        reasons.forEach { Text(requirementReason(it, s.lang), color = LifeRed, style = MaterialTheme.typography.bodySmall) }
+                s.hero?.inactive?.get(instance.id)?.let { reasons ->
+                    item {
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(ui("hero.inactive"), color = LifeRed, style = MaterialTheme.typography.labelLarge)
+                            reasons.forEach { Text(requirementReason(it, s.lang), color = LifeRed, style = MaterialTheme.typography.bodySmall) }
+                        }
                     }
-                } }
+                }
             }
             OrnateDivider()
             Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 8.dp, vertical = 4.dp)) {
                 when {
-                    instance.socketed -> Action(ForgeGlyphs.Gem, ui("hero.unequip"), can) { onDismiss(); vm.unsocketJewel(instance.id) }
-                    instance.equipped -> Action(ForgeGlyphs.Helm, ui("hero.unequip"), can) { onDismiss(); vm.unequip(instance.id) }
+                    instance.socketed -> Action(ForgeGlyphs.Gem, ui("hero.unequip"), can) {
+                        onDismiss()
+                        vm.unsocketJewel(instance.id)
+                    }
+
+                    instance.equipped -> Action(ForgeGlyphs.Helm, ui("hero.unequip"), can) {
+                        onDismiss()
+                        vm.unequip(instance.id)
+                    }
+
                     // A map is not worn (2.37.0): it goes into its zone's launch window, picked.
                     view.slot == Slot.MAP -> Action(ForgeGlyphs.Portal, ui("hero.action_map"), can, GoldBright) {
-                        onDismiss(); vm.tab(TAB_EXPEDITION); vm.selectZone(instance.mapZone); vm.pickMap(instance.id)
+                        onDismiss()
+                        vm.tab(TAB_EXPEDITION)
+                        vm.selectZone(instance.mapZone)
+                        vm.pickMap(instance.id)
                     }
-                    else -> Action(ForgeGlyphs.Helm, ui("hero.equip"), can && reachable, GoldBright) { onDismiss(); vm.equip(instance.id, null) }
+
+                    else -> Action(ForgeGlyphs.Helm, ui("hero.equip"), can && reachable, GoldBright) {
+                        onDismiss()
+                        vm.equip(instance.id, null)
+                    }
                 }
                 // One way into the forge (2.51.0): its orbs and bench are its own tabs.
-                Action(ForgeGlyphs.Anvil, ui("nav.forge"), can) { onDismiss(); vm.openForge(instance.id, ForgeSection.ORBS) }
+                Action(ForgeGlyphs.Anvil, ui("nav.forge"), can) {
+                    onDismiss()
+                    vm.openForge(instance.id, ForgeSection.ORBS)
+                }
                 // A worn item cannot be listed or sold (AU_010, CH_014): the tap says so instead of doing nothing.
                 Action(if (locked) Icons.Outlined.Lock else Icons.Outlined.LockOpen, ui(if (locked) "item.unlock" else "item.lock"), can) {
                     vm.lockItem(instance.id, !locked)
@@ -117,12 +149,17 @@ private enum class ItemAction { AUCTION, SELL, WORN }
         ItemAction.AUCTION -> ListingSheet(s, name, onDismiss = { open = null }, hint = {
             vm.priceHint(instance.template, instance.rarity, s.index?.template(instance.template)?.let(instance::level) ?: 0)
         }) { orb, price, _ ->
-            open = null; onDismiss(); vm.sellEquipment(instance.id, orb, price)
+            open = null
+            onDismiss()
+            vm.sellEquipment(instance.id, orb, price)
         }
+
         // Selling is final and takes the rolls with it, so it is asked about by name, with the sum
         // worked out here by the merchant's own rule.
         ItemAction.SELL -> ConfirmSheet(
-            title = ui("hero.sell_q"), subtitle = name, danger = true,
+            title = ui("hero.sell_q"),
+            subtitle = name,
+            danger = true,
             icon = { ItemIcon(view, rarityColor(view.rarity.name), Modifier.size(44.dp)) },
             ledger = listOf(
                 LedgerLine(ui("confirm.give"), name, Tone.SPEND),
@@ -130,25 +167,47 @@ private enum class ItemAction { AUCTION, SELL, WORN }
             ),
             note = ui("hero.sell_confirm"),
             confirm = ui("hero.sell_do"),
-            onDismiss = { open = null }) { onDismiss(); vm.sellForGold(instance.id) }
-        ItemAction.WORN -> AlertDialog(onDismissRequest = { open = null }, containerColor = Panel,
+            onDismiss = { open = null },
+        ) {
+            onDismiss()
+            vm.sellForGold(instance.id)
+        }
+
+        ItemAction.WORN -> AlertDialog(
+            onDismissRequest = { open = null },
+            containerColor = Panel,
             title = { Text(ui("hero.worn_title"), color = Gold) },
             text = { Text(ui("hero.worn_note"), color = Parchment) },
-            confirmButton = { ForgeTextButton(enabled = can, onClick = {
-                open = null; if (instance.socketed) vm.unsocketJewel(instance.id) else vm.unequip(instance.id)
-            }) { Text(ui("hero.unequip")) } },
-            dismissButton = { ForgeTextButton(onClick = { open = null }) { Text(ui("common.close")) } })
+            confirmButton = {
+                ForgeTextButton(enabled = can, onClick = {
+                    open = null
+                    if (instance.socketed) vm.unsocketJewel(instance.id) else vm.unequip(instance.id)
+                }) { Text(ui("hero.unequip")) }
+            },
+            dismissButton = { ForgeTextButton(onClick = { open = null }) { Text(ui("common.close")) } },
+        )
+
         null -> Unit
     }
 }
 
 /** One action of the row: a drawing over a word, the whole of it the tap target. */
 @Composable private fun RowScope.Action(icon: ImageVector, label: String, enabled: Boolean, accent: Color = Gold, onClick: () -> Unit) {
-    Column(Modifier.weight(1f).clickable(enabled = enabled, role = Role.Button, onClickLabel = label, onClick = onClick)
-        .padding(vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(
+        Modifier.weight(1f).clickable(enabled = enabled, role = Role.Button, onClickLabel = label, onClick = onClick)
+            .padding(vertical = 10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
         Icon(icon, null, tint = if (enabled) accent else Muted.copy(alpha = .45f), modifier = Modifier.size(22.dp))
-        Text(label, color = if (enabled) Parchment else Muted.copy(alpha = .6f), style = MaterialTheme.typography.labelSmall,
-            textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(
+            label,
+            color = if (enabled) Parchment else Muted.copy(alpha = .6f),
+            style = MaterialTheme.typography.labelSmall,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 

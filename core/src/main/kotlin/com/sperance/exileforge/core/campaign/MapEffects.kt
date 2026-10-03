@@ -1,7 +1,7 @@
 package com.sperance.exileforge.core.campaign
 
-import com.sperance.exileforge.rules.content.BrewStat
 import com.sperance.exileforge.core.atlas.AtlasEffects
+import com.sperance.exileforge.rules.content.BrewStat
 import com.sperance.exileforge.rules.content.BuffKind
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.MapStat
@@ -69,8 +69,10 @@ object MapStats {
     val ABYSS_LEADER = MapStat.ABYSS_LEADER.code
 
     /** The lines that give without asking. */
-    val rewards: Set<String> = setOf(QUANTITY, RARITY, EXPERIENCE, GOLD, CHESTS, FOUNTAINS, HERO_HASTE, HERO_ATTACK_SPEED, HERO_LIFE, HERO_LEECH,
-        CRYSTALS, BOOKS, ABYSS_CRACKS, ABYSS_DEPTH, ABYSS_HOARD, ABYSS_UNIQUE, ABYSS_ORBS, ABYSS_RARE)
+    val rewards: Set<String> = setOf(
+        QUANTITY, RARITY, EXPERIENCE, GOLD, CHESTS, FOUNTAINS, HERO_HASTE, HERO_ATTACK_SPEED, HERO_LIFE, HERO_LEECH,
+        CRYSTALS, BOOKS, ABYSS_CRACKS, ABYSS_DEPTH, ABYSS_HOARD, ABYSS_UNIQUE, ABYSS_ORBS, ABYSS_RARE,
+    )
 
     /** What a map's stat does, for its line's mark: a harm pays by the rules' risk, a reward pays itself, the rest is content. */
     fun kindOf(index: ContentIndex, stat: String): MapLineKind = when {
@@ -95,6 +97,7 @@ object MapEffects {
     private val damage = DamageType.entries.map { it.attack }
     private val resists = DamageType.entries.mapNotNull { it.resist }
     private val lifeRegen = listOf("STOCK_HEALTH_REGEN", "STOCK_LIFE_REGEN_PERCENT")
+
     /** The hero's critical chances a map lowers together: the attacks' and the spells' own (server 1.56.0). */
     private val criticalChances = listOf("STOCK_CRITICAL_CHANCE", "STOCK_SPELL_CRITICAL_CHANCE")
 
@@ -125,8 +128,7 @@ object MapEffects {
     }
 
     /** What a map does to its boss alone: so many percent more life and damage. */
-    fun bossBuffs(effects: Map<String, Double>): List<MonsterEffect> =
-        effects[MapStats.BOSS_POWER]?.takeIf { it > 0 }?.let { v -> (listOf("STOCK_HEALTH") + damage).map { MonsterEffect(it, Op.MORE, v) } }.orEmpty()
+    fun bossBuffs(effects: Map<String, Double>): List<MonsterEffect> = effects[MapStats.BOSS_POWER]?.takeIf { it > 0 }?.let { v -> (listOf("STOCK_HEALTH") + damage).map { MonsterEffect(it, Op.MORE, v) } }.orEmpty()
 
     /** Fountains a map adds beyond the rule's. */
     fun fountains(effects: Map<String, Double>): Int = (effects[MapStats.FOUNTAINS] ?: 0.0).roundToInt().coerceAtLeast(0)
@@ -137,11 +139,18 @@ object MapEffects {
         effects[MapStats.HERO_RESIST]?.let { v -> resists.forEach { sheet[it] = (stats[it] ?: 0.0) - v } }
         // "Less regeneration" takes both halves of life regen: the flat one and the share of maximum life (3.71.0)
         effects[MapStats.HERO_REGEN]?.let { v -> lifeRegen.forEach { sheet[it] = (stats[it] ?: 0.0) * max(0.0, 1 - v / 100) } }
-        fun add(stat: String, v: Double) { sheet[stat] = (sheet[stat] ?: 0.0) + v }
-        fun scale(stat: String, share: Double) { sheet[stat] = (sheet[stat] ?: 0.0) * max(0.0, 1 + share / 100) }
+        fun add(stat: String, v: Double) {
+            sheet[stat] = (sheet[stat] ?: 0.0) + v
+        }
+        fun scale(stat: String, share: Double) {
+            sheet[stat] = (sheet[stat] ?: 0.0) * max(0.0, 1 + share / 100)
+        }
         effects[MapStats.HERO_DAMAGE_TAKEN]?.let { add("STOCK_DAMAGE_TAKEN", it) }
         effects[MapStats.HERO_RECOVERY]?.let { add("STOCK_RECOVERY_RATE", -it) }
-        effects[MapStats.HERO_MAX_RESIST]?.let { v -> add("STOCK_RESIST_MAX_ALL", -v); add("STOCK_RESIST_MAX_CHAOS", -v) }
+        effects[MapStats.HERO_MAX_RESIST]?.let { v ->
+            add("STOCK_RESIST_MAX_ALL", -v)
+            add("STOCK_RESIST_MAX_CHAOS", -v)
+        }
         effects[MapStats.HERO_DEFENCES]?.let { v -> listOf("STOCK_ARMOR", "STOCK_EVASION", "STOCK_ENERGY_SHIELD").forEach { scale(it, -v) } }
         effects[MapStats.HERO_BLOCK]?.let { add("STOCK_BLOCK_CHANCE", -it) }
         effects[MapStats.HERO_CRIT]?.let { v -> criticalChances.filter { it in sheet }.forEach { scale(it, -v) } }

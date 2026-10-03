@@ -31,8 +31,7 @@ import com.sperance.exileforge.ui.theme.*
  */
 
 /** What the quest asks, in the server's words: a story step by its own name, any other goal with its number. */
-internal fun questTitle(quest: Quest): String =
-    if (quest.kind == QuestKind.STORY) loc("quest.story.${quest.goal}.name") else goalTitle(quest.goal, quest.target)
+internal fun questTitle(quest: Quest): String = if (quest.kind == QuestKind.STORY) loc("quest.story.${quest.goal}.name") else goalTitle(quest.goal, quest.target)
 
 internal fun goalTitle(goal: String, target: Long): String = loc("quest.goal.$goal", listOf(number(target.toDouble())))
 
@@ -48,13 +47,18 @@ internal fun questRarity(rarity: Rarity): String = ui("quest.rarity.${rarity.nam
 
 @Composable internal fun RarityPill(rarity: Rarity) {
     val color = rarityColor(rarity.name)
-    Text(questRarity(rarity), color = color, style = MaterialTheme.typography.labelSmall,
-        modifier = Modifier.border(1.dp, color.copy(alpha = .6f), RoundedCornerShape(10.dp)).padding(horizontal = 8.dp, vertical = 1.dp))
+    Text(
+        questRarity(rarity),
+        color = color,
+        style = MaterialTheme.typography.labelSmall,
+        modifier = Modifier.border(1.dp, color.copy(alpha = .6f), RoundedCornerShape(10.dp)).padding(horizontal = 8.dp, vertical = 1.dp),
+    )
 }
 
 /** The reward as chips: gold, experience, orbs, and for a guild's quest the guild's experience. */
 @OptIn(ExperimentalLayoutApi::class)
-@Composable internal fun RewardChips(reward: QuestReward) {
+@Composable
+internal fun RewardChips(reward: QuestReward) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Chip { GoldPrice(reward.gold) }
         if (reward.experience > 0) Chip { Text(ui("quest.reward_xp", number(reward.experience)), color = Vital, style = MaterialTheme.typography.labelMedium) }
@@ -96,8 +100,12 @@ internal fun questRarity(rarity: Rarity): String = ui("quest.rarity.${rarity.nam
                 if (quest.claimed) Text(ui("quest.claimed"), color = Vital, style = MaterialTheme.typography.labelMedium)
             }
             RewardChips(quest.reward)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End), verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(), content = actions)
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+                content = actions,
+            )
         }
     }
 }

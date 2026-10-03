@@ -8,12 +8,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -22,17 +25,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ForgeViewModel
-import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.Feature
-import com.sperance.exileforge.presentation.state.unlocked
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.ui.draw.alpha
+import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.TAB_CHRONICLE
 import com.sperance.exileforge.presentation.state.TAB_CRAFT
 import com.sperance.exileforge.presentation.state.TAB_PETS
 import com.sperance.exileforge.presentation.state.TAB_PROGRESS
 import com.sperance.exileforge.presentation.state.TAB_TRIALS
+import com.sperance.exileforge.presentation.state.unlocked
 import com.sperance.exileforge.rules.content.TrialRules
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -52,8 +52,11 @@ private const val PETS_AT_WORK = 2
  * hub with a way back to it; the atlas is a sky of its own and covers the whole screen, as it always did.
  */
 enum class ProgressPlace(val tab: Int, private val title: String, val icon: ImageVector) {
-    FORGE(TAB_CRAFT, "nav.forge", ForgeGlyphs.Anvil), PETS(TAB_PETS, "progress.pets", ForgeGlyphs.Exile),
-    TRIALS(TAB_TRIALS, "trials.title", ForgeGlyphs.Skull), CHRONICLE(TAB_CHRONICLE, "chronicle.title", ForgeGlyphs.Scroll);
+    FORGE(TAB_CRAFT, "nav.forge", ForgeGlyphs.Anvil),
+    PETS(TAB_PETS, "progress.pets", ForgeGlyphs.Exile),
+    TRIALS(TAB_TRIALS, "trials.title", ForgeGlyphs.Skull),
+    CHRONICLE(TAB_CHRONICLE, "chronicle.title", ForgeGlyphs.Scroll),
+    ;
 
     val label: String get() = ui(title)
 
@@ -64,8 +67,16 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
 }
 
 /** What each tile of the hub says: one line of what it holds, one of what waits, and a count when something does. */
-@Immutable private data class ProgressTile(val title: String, val icon: ImageVector, val accent: Color,
-    val note: String, val news: String?, val badge: Int, val lockedUntil: Int? = null, val onOpen: () -> Unit)
+@Immutable private data class ProgressTile(
+    val title: String,
+    val icon: ImageVector,
+    val accent: Color,
+    val note: String,
+    val news: String?,
+    val badge: Int,
+    val lockedUntil: Int? = null,
+    val onOpen: () -> Unit,
+)
 
 /**
  * «Развитие» (variant A, «Плитки 2×2»): the hero's growth between runs gathered in one tab — the forge, the menagerie,
@@ -90,27 +101,60 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
         val chronicle = s.chronicleDone()
         val title = hero?.info?.title?.takeIf { it.isNotBlank() }
         listOf(
-            ProgressTile(ui("nav.forge"), ForgeGlyphs.Anvil, Ember, ui("progress.forge_note"),
-                ui("progress.forge_orbs", orbs).takeIf { orbs > 0 }, 0, s.lockOf(Feature.FORGE)) { vm.tab(TAB_CRAFT) },
-            ProgressTile(ui("progress.pets"), ForgeGlyphs.Exile, Vital, ui("progress.pets_note", pets?.pets?.size ?: 0, pets?.cap ?: 0),
+            ProgressTile(
+                ui("nav.forge"),
+                ForgeGlyphs.Anvil,
+                Ember,
+                ui("progress.forge_note"),
+                ui("progress.forge_orbs", orbs).takeIf { orbs > 0 },
+                0,
+                s.lockOf(Feature.FORGE),
+            ) { vm.tab(TAB_CRAFT) },
+            ProgressTile(
+                ui("progress.pets"),
+                ForgeGlyphs.Exile,
+                Vital,
+                ui("progress.pets_note", pets?.pets?.size ?: 0, pets?.cap ?: 0),
                 when {
                     ready > 0 -> ui("progress.pets_ready", ready)
                     incubating > 0 -> ui("progress.pets_incubating", incubating)
                     eggs > 0 -> ui("progress.pets_lay", eggs)
                     else -> ui("progress.pets_work", pets?.active?.size ?: 0, PETS_AT_WORK)
                 },
-                if (ready > 0) ready else eggs.toInt(), s.lockOf(Feature.PETS)) { vm.tab(TAB_PETS) },
-            ProgressTile(ui("atlas.title"), ForgeGlyphs.Atlas, Rune, ui("progress.atlas_note", ((atlas?.allocated?.size ?: 1) - 1).coerceAtLeast(0)),
-                atlas?.let { ui("atlas.points", it.available, it.points) }, atlas?.available ?: 0, onOpen = vm::openAtlas),
-            ProgressTile(ui("trials.title"), ForgeGlyphs.Skull, AbyssGlow, ui("progress.trials_note", hero?.campaign?.trials?.towerBest ?: 0),
+                if (ready > 0) ready else eggs.toInt(),
+                s.lockOf(Feature.PETS),
+            ) { vm.tab(TAB_PETS) },
+            ProgressTile(
+                ui("atlas.title"),
+                ForgeGlyphs.Atlas,
+                Rune,
+                ui("progress.atlas_note", ((atlas?.allocated?.size ?: 1) - 1).coerceAtLeast(0)),
+                atlas?.let { ui("atlas.points", it.available, it.points) },
+                atlas?.available ?: 0,
+                onOpen = vm::openAtlas,
+            ),
+            ProgressTile(
+                ui("trials.title"),
+                ForgeGlyphs.Skull,
+                AbyssGlow,
+                ui("progress.trials_note", hero?.campaign?.trials?.towerBest ?: 0),
                 when {
                     keys > 0 -> ui("progress.trials_keys", keys)
                     rules != null -> ui("progress.trials_crests", hero?.count(TrialRules.CREST) ?: 0L, rules.rush.key)
                     else -> null
-                }, keys.toInt(), s.lockOf(Feature.TRIALS)) { vm.tab(TAB_TRIALS) },
-            ProgressTile(ui("chronicle.title"), ForgeGlyphs.Scroll, GoldBright,
+                },
+                keys.toInt(),
+                s.lockOf(Feature.TRIALS),
+            ) { vm.tab(TAB_TRIALS) },
+            ProgressTile(
+                ui("chronicle.title"),
+                ForgeGlyphs.Scroll,
+                GoldBright,
                 chronicle?.let { (done, all) -> ui("chronicle.done", done, all) } ?: ui("common.loading"),
-                title?.let(::titleName), 0, s.lockOf(Feature.CHRONICLE)) { vm.tab(TAB_CHRONICLE) },
+                title?.let(::titleName),
+                0,
+                s.lockOf(Feature.CHRONICLE),
+            ) { vm.tab(TAB_CHRONICLE) },
         )
     }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -129,9 +173,11 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
     val shape = RoundedCornerShape(14.dp)
     val locked = tile.lockedUntil
     val hot = tile.badge > 0 && locked == null
-    Box(modifier.heightIn(min = 150.dp).alpha(if (locked != null) LOCKED_TILE_ALPHA else 1f).clip(shape).background(Panel, shape)
-        .border(1.dp, if (hot) tile.accent.copy(alpha = .55f) else PanelRaised, shape)
-        .clickable(role = Role.Button, onClick = tile.onOpen).padding(12.dp)) {
+    Box(
+        modifier.heightIn(min = 150.dp).alpha(if (locked != null) LOCKED_TILE_ALPHA else 1f).clip(shape).background(Panel, shape)
+            .border(1.dp, if (hot) tile.accent.copy(alpha = .55f) else PanelRaised, shape)
+            .clickable(role = Role.Button, onClick = tile.onOpen).padding(12.dp),
+    ) {
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Box(Modifier.size(44.dp).background(tile.accent.copy(alpha = .14f), RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
                 Icon(tile.icon, null, tint = tile.accent, modifier = Modifier.size(26.dp))
@@ -144,8 +190,10 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
             }
         }
         if (locked != null) Icon(Icons.Outlined.Lock, null, tint = Muted, modifier = Modifier.align(Alignment.TopEnd).size(18.dp))
-        if (hot) Box(Modifier.align(Alignment.TopEnd).background(tile.accent, CircleShape).padding(horizontal = 6.dp, vertical = 1.dp)) {
-            Text(tile.badge.toString(), color = Ink, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+        if (hot) {
+            Box(Modifier.align(Alignment.TopEnd).background(tile.accent, CircleShape).padding(horizontal = 6.dp, vertical = 1.dp)) {
+                Text(tile.badge.toString(), color = Ink, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+            }
         }
     }
 }

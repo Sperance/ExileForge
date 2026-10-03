@@ -51,36 +51,57 @@ object Palettes {
     val hero = Color(0xFFC8AA6E)
     val heroCape = Color(0xFF8A2E2E)
     val bronze = Color(0xFF8A6A3A)
+
     /** The warm light of a torch or a brazier. */
     val torch = Color(0xFFFFB060)
     val magic = Color(0xFF8888FF)
     val rare = Color(0xFFFFFF77)
+
     /** A boss (server 0.32.0), in the unique items' brown-orange. */
     val unique = Color(0xFFAF6025)
     val portal = Color(0xFF7FA9C8)
     val blood = Color(0xFFB03A3A)
     val steel = Color(0xFFC8C8C8)
+
     /** A monster's body by its form, so a crab and a wraith differ before any name is read. */
     fun body(form: String): Color = when (form) {
         "CRAB" -> Color(0xFFB0533A)
+
         "BAT" -> Color(0xFF4A3E4F)
+
         "SERPENT" -> Color(0xFF3F7A6E)
+
         "SLUG" -> Color(0xFF8A7A3B)
+
         "BEAST" -> Color(0xFF6E5A48)
+
         "SPIDER" -> Color(0xFF3B3335)
+
         "UNDEAD" -> Color(0xFFCFC7B0)
+
         "GOLEM" -> Color(0xFF7D8590)
+
         "WRAITH" -> Color(0xFF9FD2F0)
+
         "BRUTE" -> Color(0xFF7A8C9A)
+
         "SCORPION" -> Color(0xFFA07A4A)
+
         "INSECT" -> Color(0xFF6A7A2A)
+
         "DEMON" -> Color(0xFF8A2E22)
+
         "FUNGUS" -> Color(0xFF8A4A7A)
+
         // The forms of the lands 71–100 (3.42.0): the gods' constructs, beasts of crystal, fallen angels and dragons.
         "CONSTRUCT" -> Color(0xFFB8A880)
+
         "CRYSTAL" -> Color(0xFF9FB8E8)
+
         "ANGEL" -> Color(0xFFE8E0C8)
+
         "DRAGON" -> Color(0xFF9A3A2A)
+
         else -> Color(0xFF7E8A6A)
     }
 }

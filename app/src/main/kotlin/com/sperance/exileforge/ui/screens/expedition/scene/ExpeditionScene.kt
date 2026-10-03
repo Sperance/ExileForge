@@ -48,13 +48,15 @@ import kotlin.math.sin
     val painter = remember { ScenePainter() }
     LaunchedEffect(run) {
         var last = 0L
-        while (true) withFrameNanos { now ->
-            if (last != 0L) {
-                val dt = ((now - last) / 1e9).coerceAtMost(.05)
-                run.update(dt)
-                clock += dt.toFloat()
+        while (true) {
+            withFrameNanos { now ->
+                if (last != 0L) {
+                    val dt = ((now - last) / 1e9).coerceAtMost(.05)
+                    run.update(dt)
+                    clock += dt.toFloat()
+                }
+                last = now
             }
-            last = now
         }
     }
     Canvas(modifier) { painter.draw(this, run, clock, classCode) }
@@ -80,6 +82,7 @@ private const val REMEMBERED = .32f
 private class ScenePainter {
     private val pen = Pen()
     private var time = 0f
+
     /** Half a tile's width on screen; the tile is twice as wide as it is tall. */
     private var unit = 30f
 
@@ -119,6 +122,7 @@ private class ScenePainter {
         val ys = (hy - reach).coerceAtLeast(0)..(hy + reach).coerceAtMost(map.height - 1)
         // The torch breathes a little: the edge of the light is never a printed circle.
         val radius = (world.lightRadius * (1 + .03 * sin(time * 7f) + .02 * sin(time * 13f + 1f))).toFloat()
+
         // How lit a cell is (since 2.32.0): full near the hero, fading to the edge of the light, and
         // what was only remembered stays dim. What was never seen is not drawn at all.
         fun glow(x: Int, y: Int): Float {
@@ -142,18 +146,29 @@ private class ScenePainter {
             val hys = -isoY(world.heroX, world.heroY)
             val warm = radius * unit * 1.414f
             scope.withTransform({ scale(1f, .5f, Offset(hxs, hys)) }) {
-                drawCircle(Brush.radialGradient(listOf(Palettes.torch.copy(alpha = .16f), Palettes.torch.copy(alpha = .05f), Color.Transparent),
-                    Offset(hxs, hys), warm), warm, Offset(hxs, hys))
+                drawCircle(
+                    Brush.radialGradient(
+                        listOf(Palettes.torch.copy(alpha = .16f), Palettes.torch.copy(alpha = .05f), Color.Transparent),
+                        Offset(hxs, hys),
+                        warm,
+                    ),
+                    warm,
+                    Offset(hxs, hys),
+                )
             }
 
             // Then everything that stands, back to front: rock, monsters and the hero by x + y.
             val heroDepth = world.heroX + world.heroY
             val standing = mutableListOf<Pair<Double, () -> Unit>>()
-            for (y in ys) for (x in xs) if (map.tile(x, y) == Tile.WALL && visible(x, y) && touchesFloor(map, x, y)) {
-                val depth = x + y + 1.0
-                // Rock between the hero and the player is see-through, or a corridor would hide them.
-                val near = depth > heroDepth && depth - heroDepth < 4 && abs((x - y) - (world.heroX - world.heroY)) < 3
-                standing += depth to { style.wall(frame, spot(map, x, y), palette, if (near) .4f else 1f, glow(x, y)) }
+            for (y in ys) {
+                for (x in xs) {
+                    if (map.tile(x, y) == Tile.WALL && visible(x, y) && touchesFloor(map, x, y)) {
+                        val depth = x + y + 1.0
+                        // Rock between the hero and the player is see-through, or a corridor would hide them.
+                        val near = depth > heroDepth && depth - heroDepth < 4 && abs((x - y) - (world.heroX - world.heroY)) < 3
+                        standing += depth to { style.wall(frame, spot(map, x, y), palette, if (near) .4f else 1f, glow(x, y)) }
+                    }
+                }
             }
             // A chest stands once the hero has seen its place (2.33.0); an opened one stays, open.
             // A fountain stands once seen (2.48.0): brimming until drunk, dry after.
@@ -178,8 +193,18 @@ private class ScenePainter {
                 standing += (agent.x + agent.y) to {
                     val monster = agent.monster
                     // A rarer monster is a bigger one: the tier is read before the ring is noticed.
-                    val size = unit * when (monster.rarity) { MonsterRarity.NORMAL -> .7f; MonsterRarity.MAGIC -> .8f; MonsterRarity.RARE -> .92f; MonsterRarity.UNIQUE -> 1.2f }
-                    val ring = when (monster.rarity) { MonsterRarity.NORMAL -> Palettes.bronze; MonsterRarity.MAGIC -> Palettes.magic; MonsterRarity.RARE -> Palettes.rare; MonsterRarity.UNIQUE -> Palettes.unique }
+                    val size = unit * when (monster.rarity) {
+                        MonsterRarity.NORMAL -> .7f
+                        MonsterRarity.MAGIC -> .8f
+                        MonsterRarity.RARE -> .92f
+                        MonsterRarity.UNIQUE -> 1.2f
+                    }
+                    val ring = when (monster.rarity) {
+                        MonsterRarity.NORMAL -> Palettes.bronze
+                        MonsterRarity.MAGIC -> Palettes.magic
+                        MonsterRarity.RARE -> Palettes.rare
+                        MonsterRarity.UNIQUE -> Palettes.unique
+                    }
                     // A sleeper sits still and a lurker low; whoever hunts bobs faster.
                     val bob = when (agent.mode) {
                         AgentMode.ASLEEP, AgentMode.LURKING -> 0f
@@ -205,8 +230,13 @@ private class ScenePainter {
     }
 
     /** A cell as the style reads it: where its centre falls and how much rock borders it. */
-    private fun spot(map: ExpeditionMap, x: Int, y: Int) = TileSpot(x, y, isoX(x + .5, y + .5), isoY(x + .5, y + .5),
-        listOf(x + 1 to y, x - 1 to y, x to y + 1, x to y - 1).count { (nx, ny) -> !map.walkable(nx, ny) })
+    private fun spot(map: ExpeditionMap, x: Int, y: Int) = TileSpot(
+        x,
+        y,
+        isoX(x + .5, y + .5),
+        isoY(x + .5, y + .5),
+        listOf(x + 1 to y, x - 1 to y, x to y + 1, x to y - 1).count { (nx, ny) -> !map.walkable(nx, ny) },
+    )
 
     /**
      * A token standing on its feet at ([x], [y]) in the pen's upward measure: a shadow on the floor
@@ -220,8 +250,7 @@ private class ScenePainter {
         scope.drawToken(Offset(x, feet - radius * 1.1f - bob), radius, ring, draw)
     }
 
-    private fun touchesFloor(map: ExpeditionMap, x: Int, y: Int) =
-        (-1..1).any { dy -> (-1..1).any { dx -> map.walkable(x + dx, y + dy) } }
+    private fun touchesFloor(map: ExpeditionMap, x: Int, y: Int) = (-1..1).any { dy -> (-1..1).any { dx -> map.walkable(x + dx, y + dy) } }
 
     /** A stable, faint unevenness per tile, so the ground does not read as a printed grid; [light] darkens it. */
     private fun shade(base: Color, x: Int, y: Int, spread: Float = .08f, alpha: Float = 1f, light: Float = 1f): Color {
@@ -229,8 +258,7 @@ private class ScenePainter {
         return tone(base, (1f + noise * spread * 2f) * light, alpha = alpha)
     }
 
-    private fun diamond(cx: Float, cy: Float, halfWidth: Float, halfHeight: Float) =
-        pen.quad(cx - halfWidth, cy, cx, cy + halfHeight, cx + halfWidth, cy, cx, cy - halfHeight)
+    private fun diamond(cx: Float, cy: Float, halfWidth: Float, halfHeight: Float) = pen.quad(cx - halfWidth, cy, cx, cy + halfHeight, cx + halfWidth, cy, cx, cy - halfHeight)
 
     /**
      * What lies on the ground, by biome (since 2.32.0): the seed says which of three kinds grows on
@@ -252,51 +280,256 @@ private class ScenePainter {
             pen.color = color
             pen.circle(cx, cy + u * 1.2f, u * 1.4f)
         }
-        fun puddle() { pen.color = tone(palette.accent, .5f * light, alpha = .55f); pen.ellipse(cx - u * 2.4f, cy - u * .9f, u * 4.8f, u * 1.8f)
-            pen.color = palette.accent.copy(alpha = .25f * light); pen.ellipse(cx - u * .8f, cy - u * .2f, u * 1.2f, u * .5f) }
-        fun bones() { pen.line(cx - u * 1.8f, cy - u * .4f, cx + u * 1.8f, cy + u * .4f, u * .5f); pen.circle(cx - u * 1.8f, cy - u * .4f, u * .45f)
-            pen.circle(cx + u * 1.8f, cy + u * .4f, u * .45f); pen.circle(cx + u * .2f, cy + u * 1.2f, u * .9f) }
-        fun flame() { pen.color = tone(palette.wallSide, light); pen.rect(cx - u * .3f, cy, u * .6f, u * 2.2f)
-            pen.color = Palettes.torch.copy(alpha = (.7f + .3f * sin(time * 11f + y)) * light.coerceAtLeast(.6f)); pen.circle(cx, cy + u * 2.6f, u * .7f)
-            pen.color = Palettes.torch.copy(alpha = .15f); pen.circle(cx, cy + u * 2.6f, u * 2.2f) }
-        fun column() { pen.rect(cx - u * .8f, cy, u * 1.6f, u * 3.4f); pen.color = tone(palette.decor, 1.25f * light); pen.ellipse(cx - u * .8f, cy + u * 3.1f, u * 1.6f, u * .6f) }
-        fun mushroom() { pen.rect(cx - u * .2f, cy, u * .4f, u * 1.4f); pen.color = glowing; pen.ellipse(cx - u * .9f, cy + u * 1.2f, u * 1.8f, u * .9f) }
-        fun embers() { pen.color = Palettes.torch.copy(alpha = (.35f + .25f * sin(time * 3f + x + y)) * light); pen.ellipse(cx - u * 2f, cy - u * .6f, u * 4f, u * 1.2f) }
+        fun puddle() {
+            pen.color = tone(palette.accent, .5f * light, alpha = .55f)
+            pen.ellipse(cx - u * 2.4f, cy - u * .9f, u * 4.8f, u * 1.8f)
+            pen.color = palette.accent.copy(alpha = .25f * light)
+            pen.ellipse(cx - u * .8f, cy - u * .2f, u * 1.2f, u * .5f)
+        }
+        fun bones() {
+            pen.line(cx - u * 1.8f, cy - u * .4f, cx + u * 1.8f, cy + u * .4f, u * .5f)
+            pen.circle(cx - u * 1.8f, cy - u * .4f, u * .45f)
+            pen.circle(cx + u * 1.8f, cy + u * .4f, u * .45f)
+            pen.circle(cx + u * .2f, cy + u * 1.2f, u * .9f)
+        }
+        fun flame() {
+            pen.color = tone(palette.wallSide, light)
+            pen.rect(cx - u * .3f, cy, u * .6f, u * 2.2f)
+            pen.color = Palettes.torch.copy(alpha = (.7f + .3f * sin(time * 11f + y)) * light.coerceAtLeast(.6f))
+            pen.circle(cx, cy + u * 2.6f, u * .7f)
+            pen.color = Palettes.torch.copy(alpha = .15f)
+            pen.circle(cx, cy + u * 2.6f, u * 2.2f)
+        }
+        fun column() {
+            pen.rect(cx - u * .8f, cy, u * 1.6f, u * 3.4f)
+            pen.color = tone(palette.decor, 1.25f * light)
+            pen.ellipse(cx - u * .8f, cy + u * 3.1f, u * 1.6f, u * .6f)
+        }
+        fun mushroom() {
+            pen.rect(cx - u * .2f, cy, u * .4f, u * 1.4f)
+            pen.color = glowing
+            pen.ellipse(cx - u * .9f, cy + u * 1.2f, u * 1.8f, u * .9f)
+        }
+        fun embers() {
+            pen.color = Palettes.torch.copy(alpha = (.35f + .25f * sin(time * 3f + x + y)) * light)
+            pen.ellipse(cx - u * 2f, cy - u * .6f, u * 4f, u * 1.2f)
+        }
         when (biome) {
-            "SHORE" -> when (kind) { 1 -> stone(); 2 -> puddle(); else -> { pen.color = tone(Color(0xFFE6D2B4), light); pen.arc(cx, cy, u * 1.2f, 0f, 180f) } }
-            "CAVE" -> when (kind) { 1 -> stone(); 2 -> { pen.triangle(cx - u, cy, cx + u, cy, cx, cy + u * 4f) }; else -> shard() }
-            "MIRE" -> when (kind) { 1 -> puddle(); 2 -> tuft(); else -> mushroom() }
-            "FOREST" -> when (kind) { 1 -> tuft(); 2 -> mushroom(); else -> { pen.ellipse(cx - u * 1.4f, cy - u * .5f, u * 2.8f, u * 1.4f); pen.color = tone(palette.decor, .7f * light); pen.ellipse(cx - u * .8f, cy + u * .2f, u * 1.6f, u * .6f) } }
-            "RUINS" -> when (kind) { 1 -> stone(); 2 -> column(); else -> bones() }
-            "CRYPT" -> when (kind) { 1 -> bones(); 2 -> flame(); else -> { pen.rect(cx - u, cy, u * 2f, u * 2.4f); pen.circle(cx, cy + u * 2.4f, u) } }
-            "MINES" -> when (kind) { 1 -> stone(); 2 -> shard(); else -> flame() }
-            "ASH" -> when (kind) { 1 -> stone(); 2 -> embers()
-                else -> { pen.rect(cx - u * .5f, cy, u, u * 2.6f); pen.color = Palettes.torch.copy(alpha = .5f * light); pen.circle(cx, cy + u * .3f, u * .5f) } }
-            "FROST" -> when (kind) { 1 -> { pen.color = tone(Color(0xFFE8F2FA), light); pen.ellipse(cx - u * 2f, cy - u * .6f, u * 4f, u * 1.6f) }; 2 -> shard(); else -> stone() }
-            "VAAL" -> when (kind) { 1 -> bones(); 2 -> flame(); else -> puddle() }
+            "SHORE" -> when (kind) {
+                1 -> stone()
+
+                2 -> puddle()
+
+                else -> {
+                    pen.color = tone(Color(0xFFE6D2B4), light)
+                    pen.arc(cx, cy, u * 1.2f, 0f, 180f)
+                }
+            }
+
+            "CAVE" -> when (kind) {
+                1 -> stone()
+
+                2 -> {
+                    pen.triangle(cx - u, cy, cx + u, cy, cx, cy + u * 4f)
+                }
+
+                else -> shard()
+            }
+
+            "MIRE" -> when (kind) {
+                1 -> puddle()
+                2 -> tuft()
+                else -> mushroom()
+            }
+
+            "FOREST" -> when (kind) {
+                1 -> tuft()
+
+                2 -> mushroom()
+
+                else -> {
+                    pen.ellipse(cx - u * 1.4f, cy - u * .5f, u * 2.8f, u * 1.4f)
+                    pen.color = tone(palette.decor, .7f * light)
+                    pen.ellipse(cx - u * .8f, cy + u * .2f, u * 1.6f, u * .6f)
+                }
+            }
+
+            "RUINS" -> when (kind) {
+                1 -> stone()
+                2 -> column()
+                else -> bones()
+            }
+
+            "CRYPT" -> when (kind) {
+                1 -> bones()
+
+                2 -> flame()
+
+                else -> {
+                    pen.rect(cx - u, cy, u * 2f, u * 2.4f)
+                    pen.circle(cx, cy + u * 2.4f, u)
+                }
+            }
+
+            "MINES" -> when (kind) {
+                1 -> stone()
+                2 -> shard()
+                else -> flame()
+            }
+
+            "ASH" -> when (kind) {
+                1 -> stone()
+
+                2 -> embers()
+
+                else -> {
+                    pen.rect(cx - u * .5f, cy, u, u * 2.6f)
+                    pen.color = Palettes.torch.copy(alpha = .5f * light)
+                    pen.circle(cx, cy + u * .3f, u * .5f)
+                }
+            }
+
+            "FROST" -> when (kind) {
+                1 -> {
+                    pen.color = tone(Color(0xFFE8F2FA), light)
+                    pen.ellipse(cx - u * 2f, cy - u * .6f, u * 4f, u * 1.6f)
+                }
+
+                2 -> shard()
+
+                else -> stone()
+            }
+
+            "VAAL" -> when (kind) {
+                1 -> bones()
+                2 -> flame()
+                else -> puddle()
+            }
+
             // The lands past the Drowned Temple (2.77.0): bleached bones in the sand, pillars of red
             // rock, the jungle's tufts, amber in the hive, lava pools, braziers, void crystals, rot.
-            "DESERT" -> when (kind) { 1 -> stone(); 2 -> bones(); else -> tuft() }
-            "CANYON" -> when (kind) { 1 -> stone(); 2 -> column(); else -> bones() }
-            "JUNGLE" -> when (kind) { 1 -> tuft(); 2 -> mushroom(); else -> puddle() }
-            "HIVE" -> when (kind) { 1 -> shard(); 2 -> mushroom(); else -> bones() }
-            "VOLCANO" -> when (kind) { 1 -> stone(); 2 -> embers(); else -> shard() }
-            "CITADEL" -> when (kind) { 1 -> column(); 2 -> flame(); else -> stone() }
-            "ABYSS" -> when (kind) { 1 -> shard(); 2 -> bones(); else -> puddle() }
-            "BLIGHT" -> when (kind) { 1 -> mushroom(); 2 -> puddle(); else -> tuft() }
+            "DESERT" -> when (kind) {
+                1 -> stone()
+                2 -> bones()
+                else -> tuft()
+            }
+
+            "CANYON" -> when (kind) {
+                1 -> stone()
+                2 -> column()
+                else -> bones()
+            }
+
+            "JUNGLE" -> when (kind) {
+                1 -> tuft()
+                2 -> mushroom()
+                else -> puddle()
+            }
+
+            "HIVE" -> when (kind) {
+                1 -> shard()
+                2 -> mushroom()
+                else -> bones()
+            }
+
+            "VOLCANO" -> when (kind) {
+                1 -> stone()
+                2 -> embers()
+                else -> shard()
+            }
+
+            "CITADEL" -> when (kind) {
+                1 -> column()
+                2 -> flame()
+                else -> stone()
+            }
+
+            "ABYSS" -> when (kind) {
+                1 -> shard()
+                2 -> bones()
+                else -> puddle()
+            }
+
+            "BLIGHT" -> when (kind) {
+                1 -> mushroom()
+                2 -> puddle()
+                else -> tuft()
+            }
+
             // The lands 71–100 (3.42.0): sky pillars and beacons, glass shards, storm-split rock, drowned columns,
             // coral growths, the vaults' brass, golden braziers, fallen stars and what oblivion leaves.
-            "SKYREACH" -> when (kind) { 1 -> column(); 2 -> flame(); else -> shard() }
-            "GLASSWASTE" -> when (kind) { 1 -> shard(); 2 -> stone(); else -> bones() }
-            "STORMPEAK" -> when (kind) { 1 -> stone(); 2 -> shard(); else -> embers() }
-            "SUNKEN" -> when (kind) { 1 -> column(); 2 -> puddle(); else -> bones() }
-            "CORAL" -> when (kind) { 1 -> mushroom(); 2 -> tuft(); else -> shard() }
-            "TIDEVAULT" -> when (kind) { 1 -> column(); 2 -> puddle(); else -> flame() }
-            "GODHALL" -> when (kind) { 1 -> column(); 2 -> flame(); else -> stone() }
-            "ASTRAL" -> when (kind) { 1 -> shard(); 2 -> flame(); else -> puddle() }
-            "OBLIVION" -> when (kind) { 1 -> bones(); 2 -> shard(); else -> stone() }
-            "TEMPLE" -> when (kind) { 1 -> column(); 2 -> flame(); else -> { pen.color = glowing; pen.circle(cx, cy, u * 1.3f); pen.color = tone(palette.floor, light); pen.circle(cx, cy, u * .8f) } }
-            else -> when (kind) { 1 -> stone(); 2 -> tuft(); else -> shard() }
+            "SKYREACH" -> when (kind) {
+                1 -> column()
+                2 -> flame()
+                else -> shard()
+            }
+
+            "GLASSWASTE" -> when (kind) {
+                1 -> shard()
+                2 -> stone()
+                else -> bones()
+            }
+
+            "STORMPEAK" -> when (kind) {
+                1 -> stone()
+                2 -> shard()
+                else -> embers()
+            }
+
+            "SUNKEN" -> when (kind) {
+                1 -> column()
+                2 -> puddle()
+                else -> bones()
+            }
+
+            "CORAL" -> when (kind) {
+                1 -> mushroom()
+                2 -> tuft()
+                else -> shard()
+            }
+
+            "TIDEVAULT" -> when (kind) {
+                1 -> column()
+                2 -> puddle()
+                else -> flame()
+            }
+
+            "GODHALL" -> when (kind) {
+                1 -> column()
+                2 -> flame()
+                else -> stone()
+            }
+
+            "ASTRAL" -> when (kind) {
+                1 -> shard()
+                2 -> flame()
+                else -> puddle()
+            }
+
+            "OBLIVION" -> when (kind) {
+                1 -> bones()
+                2 -> shard()
+                else -> stone()
+            }
+
+            "TEMPLE" -> when (kind) {
+                1 -> column()
+
+                2 -> flame()
+
+                else -> {
+                    pen.color = glowing
+                    pen.circle(cx, cy, u * 1.3f)
+                    pen.color = tone(palette.floor, light)
+                    pen.circle(cx, cy, u * .8f)
+                }
+            }
+
+            else -> when (kind) {
+                1 -> stone()
+                2 -> tuft()
+                else -> shard()
+            }
         }
     }
 
@@ -337,7 +570,11 @@ private class ScenePainter {
         val w = unit * .26f
         val d = unit * .13f
         val h = unit * (if (freed) .45f else .95f)
-        val glass = when { freed -> Color(0xFF3A3346); stronger -> Color(0xFFD04A5A); else -> Color(0xFFB07FE0) }
+        val glass = when {
+            freed -> Color(0xFF3A3346)
+            stronger -> Color(0xFFD04A5A)
+            else -> Color(0xFFB07FE0)
+        }
         pen.color = Color.Black.copy(alpha = .35f)
         pen.ellipse(cx - w * 1.4f, cy - d, w * 2.8f, d * 2f)
         pen.color = tone(glass, .78f * light)

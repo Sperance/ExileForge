@@ -51,7 +51,9 @@ import kotlin.math.abs
     val at = classes.indexOf(chosen).coerceAtLeast(0)
     val guide = remember(index, chosen) { ClassGuide.of(index, chosen) } ?: return
     val ceiling = remember(index, classes) { classes.mapNotNull { ClassGuide.of(index, it) }.flatMap { it.attributes }.maxOfOrNull { it.second }?.coerceAtLeast(1.0) ?: 1.0 }
-    fun turn(step: Int) { if (enabled && classes.isNotEmpty()) onChoose(classes[(at + step).mod(classes.size)]) }
+    fun turn(step: Int) {
+        if (enabled && classes.isNotEmpty()) onChoose(classes[(at + step).mod(classes.size)])
+    }
     val accent = classAccent(guide)
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         CarouselHeader(guide, accent, portraits, onTurn = ::turn)
@@ -65,18 +67,27 @@ import kotlin.math.abs
 
 @Composable private fun CarouselHeader(guide: ClassGuide, accent: Color, portraits: Int, onTurn: (Int) -> Unit) {
     val shape = RoundedCornerShape(12.dp)
-    Row(Modifier.fillMaxWidth().clip(shape).background(accent.copy(alpha = .14f)).border(1.dp, accent.copy(alpha = .5f), shape)
-        .pointerInput(guide.code) {
-            var drag = 0f
-            detectHorizontalDragGestures(onDragStart = { drag = 0f }, onDragEnd = { if (abs(drag) > SWIPE) onTurn(if (drag < 0) 1 else -1) }) { _, delta -> drag += delta }
-        }.padding(8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(
+        Modifier.fillMaxWidth().clip(shape).background(accent.copy(alpha = .14f)).border(1.dp, accent.copy(alpha = .5f), shape)
+            .pointerInput(guide.code) {
+                var drag = 0f
+                detectHorizontalDragGestures(onDragStart = { drag = 0f }, onDragEnd = { if (abs(drag) > SWIPE) onTurn(if (drag < 0) 1 else -1) }) { _, delta -> drag += delta }
+            }.padding(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
         IconButton(onClick = { onTurn(-1) }) { Icon(Icons.AutoMirrored.Outlined.KeyboardArrowLeft, ui("chars.class.prev"), tint = Gold) }
         ClassPortrait(guide.code, portraits, Modifier.width(72.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(classTitle(guide.code), color = GoldBright, style = MaterialTheme.typography.titleLarge)
             if (guide.role.isNotBlank()) Text(guide.role.uppercase(), color = accent, style = MaterialTheme.typography.labelMedium)
-            if (guide.difficulty > 0) Text(ui("chars.class.difficulty") + " " + "★".repeat(guide.difficulty) + "☆".repeat(ClassGuide.MAX_DIFFICULTY - guide.difficulty),
-                color = Muted, style = MaterialTheme.typography.labelMedium)
+            if (guide.difficulty > 0) {
+                Text(
+                    ui("chars.class.difficulty") + " " + "★".repeat(guide.difficulty) + "☆".repeat(ClassGuide.MAX_DIFFICULTY - guide.difficulty),
+                    color = Muted,
+                    style = MaterialTheme.typography.labelMedium,
+                )
+            }
         }
         IconButton(onClick = { onTurn(1) }) { Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, ui("chars.class.next"), tint = Gold) }
     }
@@ -91,14 +102,23 @@ import kotlin.math.abs
 @Composable private fun SectionLabel(text: String) = Text(text.uppercase(), color = Muted, style = MaterialTheme.typography.labelSmall)
 
 @Composable private fun ColumnScope.RoleSection(guide: ClassGuide) {
-    if (guide.lore.isNotBlank()) { SectionLabel(ui("chars.class.lore")); Text(guide.lore, color = Parchment, style = MaterialTheme.typography.bodyMedium) }
-    if (guide.style.isNotBlank()) { SectionLabel(ui("chars.class.style")); Text(guide.style, color = Parchment, style = MaterialTheme.typography.bodyMedium) }
+    if (guide.lore.isNotBlank()) {
+        SectionLabel(ui("chars.class.lore"))
+        Text(guide.lore, color = Parchment, style = MaterialTheme.typography.bodyMedium)
+    }
+    if (guide.style.isNotBlank()) {
+        SectionLabel(ui("chars.class.style"))
+        Text(guide.style, color = Parchment, style = MaterialTheme.typography.bodyMedium)
+    }
     if (guide.pros.isNotEmpty() || guide.cons.isNotEmpty()) {
         SectionLabel(ui("chars.class.pros_cons"))
         guide.pros.forEach { Text("+  $it", color = Vital, style = MaterialTheme.typography.bodySmall) }
         guide.cons.forEach { Text("−  $it", color = LifeRed, style = MaterialTheme.typography.bodySmall) }
     }
-    if (guide.builds.isNotEmpty()) { SectionLabel(ui("chars.class.builds")); Chips(guide.builds) }
+    if (guide.builds.isNotEmpty()) {
+        SectionLabel(ui("chars.class.builds"))
+        Chips(guide.builds)
+    }
 }
 
 @Composable private fun ColumnScope.StartSection(guide: ClassGuide, ceiling: Double) {
@@ -121,7 +141,10 @@ import kotlin.math.abs
             }
         }
     }
-    if (guide.weapon.isNotBlank()) { SectionLabel(ui("chars.class.weapon")); Text(equipmentTitle(guide.weapon), color = Parchment, style = MaterialTheme.typography.bodyMedium) }
+    if (guide.weapon.isNotBlank()) {
+        SectionLabel(ui("chars.class.weapon"))
+        Text(equipmentTitle(guide.weapon), color = Parchment, style = MaterialTheme.typography.bodyMedium)
+    }
 }
 
 @Composable private fun ColumnScope.SkillsSection(guide: ClassGuide) {
@@ -138,11 +161,14 @@ import kotlin.math.abs
 @Composable private fun ColumnScope.TreeSection(index: ContentIndex, guide: ClassGuide, accent: Color) {
     SectionLabel(ui("chars.class.tree"))
     MiniTree(index, guide, accent)
-    if (guide.keystones.isEmpty()) MutedText(ui("chars.class.center"))
-    else guide.keystones.forEach { node ->
-        Column(Modifier.border(1.dp, accent.copy(alpha = .4f), RoundedCornerShape(6.dp)).padding(8.dp).fillMaxWidth()) {
-            Text(nodeTitle(node.code), color = GoldBright, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-            nodeDescription(node.code).takeIf { it.isNotBlank() }?.let { Text(it, color = Muted, style = MaterialTheme.typography.bodySmall) }
+    if (guide.keystones.isEmpty()) {
+        MutedText(ui("chars.class.center"))
+    } else {
+        guide.keystones.forEach { node ->
+            Column(Modifier.border(1.dp, accent.copy(alpha = .4f), RoundedCornerShape(6.dp)).padding(8.dp).fillMaxWidth()) {
+                Text(nodeTitle(node.code), color = GoldBright, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                nodeDescription(node.code).takeIf { it.isNotBlank() }?.let { Text(it, color = Muted, style = MaterialTheme.typography.bodySmall) }
+            }
         }
     }
 }
@@ -154,10 +180,14 @@ import kotlin.math.abs
     Canvas(Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(10.dp)).background(Abyss)) {
         val scale = size.minDimension / 2 / (bounds * 1.05f)
         fun at(x: Int, y: Int) = Offset(size.width / 2 + x * scale, size.height / 2 + y * scale)
-        nodes.forEach { node -> node.connections.forEach { other -> index.tree.node(other)?.let { to ->
-            val own = node.code in guide.region && to.code in guide.region
-            drawLine(if (own) accent.copy(alpha = .8f) else Bronze, at(node.x, node.y), at(to.x, to.y), strokeWidth = if (own) 2f else 1.2f)
-        } } }
+        nodes.forEach { node ->
+            node.connections.forEach { other ->
+                index.tree.node(other)?.let { to ->
+                    val own = node.code in guide.region && to.code in guide.region
+                    drawLine(if (own) accent.copy(alpha = .8f) else Bronze, at(node.x, node.y), at(to.x, to.y), strokeWidth = if (own) 2f else 1.2f)
+                }
+            }
+        }
         nodes.forEach { node ->
             val own = node.code in guide.region
             val (radius, color) = when (node.type) {
@@ -172,11 +202,16 @@ import kotlin.math.abs
 }
 
 @OptIn(ExperimentalLayoutApi::class)
-@Composable private fun Chips(chips: List<String>) {
+@Composable
+private fun Chips(chips: List<String>) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         chips.forEach { text ->
-            Text(text, color = Parchment, style = MaterialTheme.typography.labelMedium,
-                modifier = Modifier.clip(CircleShape).background(PanelRaised).padding(horizontal = 10.dp, vertical = 4.dp))
+            Text(
+                text,
+                color = Parchment,
+                style = MaterialTheme.typography.labelMedium,
+                modifier = Modifier.clip(CircleShape).background(PanelRaised).padding(horizontal = 10.dp, vertical = 4.dp),
+            )
         }
     }
 }

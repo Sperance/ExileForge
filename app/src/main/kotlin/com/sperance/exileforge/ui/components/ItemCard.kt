@@ -25,8 +25,8 @@ import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.PropertyValue
 import com.sperance.exileforge.core.display.lineText
 import com.sperance.exileforge.core.display.slotTitle
-import com.sperance.exileforge.core.display.stateTitle
 import com.sperance.exileforge.core.display.statTitle
+import com.sperance.exileforge.core.display.stateTitle
 import com.sperance.exileforge.core.display.weaponTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.ContentIndex
@@ -61,7 +61,10 @@ import com.sperance.exileforge.ui.theme.*
  */
 fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString = buildAnnotatedString {
     fun value(one: PropertyValue) {
-        if (!one.augmented) { append(one.text); return }
+        if (!one.augmented) {
+            append(one.text)
+            return
+        }
         withStyle(SpanStyle(color = Rune, fontWeight = FontWeight.SemiBold)) { append(one.text) }
         if (withBase) withStyle(SpanStyle(color = Muted)) { append(" (${one.baseText})") }
     }
@@ -69,7 +72,10 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
         property.values.forEachIndexed { index, one ->
             if (index > 0) append(" · ")
             value(one)
-            if (one.stat.isNotBlank()) { append(" "); append(statTitle(one.stat)) }
+            if (one.stat.isNotBlank()) {
+                append(" ")
+                append(statTitle(one.stat))
+            }
         }
         return@buildAnnotatedString
     }
@@ -108,16 +114,29 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
  */
 @Composable private fun BannerStat(property: BaseProperty, big: Boolean) {
     val stat = property.values.firstOrNull()?.stat.orEmpty()
-    if (stat.isBlank()) { BasePropertyLine(property); return }
+    if (stat.isBlank()) {
+        BasePropertyLine(property)
+        return
+    }
     Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(property.values.joinToString(" · ") { it.text },
+        Text(
+            property.values.joinToString(" · ") { it.text },
             color = if (property.augmented) Rune else Parchment,
-            style = if (big) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.titleMedium)
-        Text(statTitle(stat).uppercase(), color = Muted, style = MaterialTheme.typography.labelSmall,
-            modifier = Modifier.padding(bottom = if (big) 4.dp else 1.dp))
+            style = if (big) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.titleMedium,
+        )
+        Text(
+            statTitle(stat).uppercase(),
+            color = Muted,
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(bottom = if (big) 4.dp else 1.dp),
+        )
         property.values.firstOrNull()?.takeIf { it.augmented }?.let {
-            Text(ui("card.was", it.baseText), color = Muted, style = MaterialTheme.typography.labelSmall,
-                modifier = Modifier.padding(bottom = if (big) 4.dp else 1.dp))
+            Text(
+                ui("card.was", it.baseText),
+                color = Muted,
+                style = MaterialTheme.typography.labelSmall,
+                modifier = Modifier.padding(bottom = if (big) 4.dp else 1.dp),
+            )
         }
     }
 }
@@ -131,8 +150,12 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
  * rolls as a trade table (2.60.0): the score of the roll over a row per line. The icon sits beside the name: it is how the item is
  * recognised before any of it is read. Everything printed is the [item]'s view (3.0.0): the copy over its template and the content.
  */
-@Composable fun ItemCard(item: ItemView, enabled: Boolean = true, selected: Boolean = false,
-    detailed: Boolean = false, actionLabel: String = ui("common.open"),
+@Composable fun ItemCard(
+    item: ItemView,
+    enabled: Boolean = true,
+    selected: Boolean = false,
+    detailed: Boolean = false,
+    actionLabel: String = ui("common.open"),
     /** What the merchant pays for this copy (2.46.0); it replaces the template's bare base price. */
     price: Long? = null,
     /** Whether the card shows its [actionLabel]: a short card always, a full one only when it leads somewhere (3.2.0). */
@@ -141,16 +164,19 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
     locked: Boolean = item.item.locked,
     /** A command about this copy waits for the network (3.30.0). */
     waiting: Boolean = false,
-    onClick: () -> Unit = {}) {
+    onClick: () -> Unit = {},
+) {
     val color = rarityColor(item.rarity.name)
     val base = item.base
     val states = item.states
     val rolled = item.lines
     val kind = slotTitle(item.slot)
 
-    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).background(Panel)
-        .border(if (selected) 2.dp else 1.dp, if (selected) GoldBright else Bronze.copy(alpha = .40f))
-        .clickable(enabled = enabled, onClick = onClick)) {
+    Row(
+        Modifier.fillMaxWidth().height(IntrinsicSize.Min).background(Panel)
+            .border(if (selected) 2.dp else 1.dp, if (selected) GoldBright else Bronze.copy(alpha = .40f))
+            .clickable(enabled = enabled, onClick = onClick),
+    ) {
         RaritySpine(color, 6.dp)
         Column(Modifier.weight(1f).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             // The ribbon: what it is, and what state it is in. Both are glanced at, never read.
@@ -167,9 +193,13 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 ItemIcon(item, color, Modifier.size(56.dp))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(item.title, color = Parchment,
+                    Text(
+                        item.title,
+                        color = Parchment,
                         style = MaterialTheme.typography.titleLarge,
-                        maxLines = if (detailed) 5 else 2, overflow = TextOverflow.Ellipsis)
+                        maxLines = if (detailed) 5 else 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                     // The English trade name, on a full card only (2.51.0): what it is searched by.
                     if (detailed) item.trade?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelMedium, fontStyle = FontStyle.Italic) }
                     cardFacts(item, withPrice = price == null).forEach {
@@ -188,13 +218,17 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
             // then a row per line; a tap on one (detailed card) opens its tier, range and where it landed.
             if (rolled.isNotEmpty()) TradeTable(rolled.take(if (detailed) rolled.size else 3), interactive = detailed)
             if (!detailed && rolled.size > 3) MutedText(ui("card.more_properties", rolled.size - 3), style = MaterialTheme.typography.labelMedium)
-            if (detailed) item.description.takeIf { it.isNotBlank() }?.let {
-                Text(it, color = Muted, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Start)
+            if (detailed) {
+                item.description.takeIf { it.isNotBlank() }?.let {
+                    Text(it, color = Muted, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Start)
+                }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
                 price?.let {
                     MutedText(ui("price.sell"), style = MaterialTheme.typography.labelSmall)
-                    Spacer(Modifier.width(6.dp)); GoldPrice(it); Spacer(Modifier.weight(1f))
+                    Spacer(Modifier.width(6.dp))
+                    GoldPrice(it)
+                    Spacer(Modifier.weight(1f))
                 }
                 // A full card is a page, not a way in (2.51.0) — unless it is asked to lead on (3.2.0).
                 if (action) {

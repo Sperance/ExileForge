@@ -1,12 +1,7 @@
 package com.sperance.exileforge.presentation
 
-import com.sperance.exileforge.presentation.state.Phrase
-import com.sperance.exileforge.presentation.state.phrase
 import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.display.IconBundle
-import com.sperance.exileforge.core.model.sync.API_REVISION
-import com.sperance.exileforge.rules.content.RULES_VERSION
-import com.sperance.exileforge.core.model.sync.StaticManifest
 import com.sperance.exileforge.core.display.PortraitBundle
 import com.sperance.exileforge.core.display.PortraitSvg
 import com.sperance.exileforge.core.display.serverIcons
@@ -17,6 +12,8 @@ import com.sperance.exileforge.core.i18n.LocaleManifest
 import com.sperance.exileforge.core.i18n.serverLocale
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
+import com.sperance.exileforge.core.model.sync.API_REVISION
+import com.sperance.exileforge.core.model.sync.StaticManifest
 import com.sperance.exileforge.core.network.ApiFailure
 import com.sperance.exileforge.core.network.CommandQueued
 import com.sperance.exileforge.core.network.CommandStore
@@ -31,32 +28,35 @@ import com.sperance.exileforge.data.settings.deviceLanguage
 import com.sperance.exileforge.presentation.features.AuctionViewModel
 import com.sperance.exileforge.presentation.features.CharacterViewModel
 import com.sperance.exileforge.presentation.features.ConnectionViewModel
-import com.sperance.exileforge.presentation.features.FeedbackViewModel
 import com.sperance.exileforge.presentation.features.CraftsViewModel
 import com.sperance.exileforge.presentation.features.ExpeditionViewModel
-import com.sperance.exileforge.presentation.features.TrialViewModel
+import com.sperance.exileforge.presentation.features.FeedbackViewModel
 import com.sperance.exileforge.presentation.features.GuildViewModel
-import com.sperance.exileforge.presentation.features.QuestViewModel
 import com.sperance.exileforge.presentation.features.HeroViewModel
+import com.sperance.exileforge.presentation.features.QuestViewModel
 import com.sperance.exileforge.presentation.features.RedemptionViewModel
 import com.sperance.exileforge.presentation.features.SessionViewModel
+import com.sperance.exileforge.presentation.features.TrialViewModel
 import com.sperance.exileforge.presentation.state.ADMIN_TABS
 import com.sperance.exileforge.presentation.state.AppMode
 import com.sperance.exileforge.presentation.state.AppPhase
+import com.sperance.exileforge.presentation.state.Buzz
 import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameSettings
 import com.sperance.exileforge.presentation.state.GuildState
-import com.sperance.exileforge.presentation.state.QuestState
 import com.sperance.exileforge.presentation.state.MarketState
 import com.sperance.exileforge.presentation.state.Notice
 import com.sperance.exileforge.presentation.state.NoticeKind
+import com.sperance.exileforge.presentation.state.Phrase
 import com.sperance.exileforge.presentation.state.PlayState
+import com.sperance.exileforge.presentation.state.QuestState
 import com.sperance.exileforge.presentation.state.StashSort
-import com.sperance.exileforge.presentation.state.GameSettings
-import com.sperance.exileforge.presentation.state.Buzz
-import com.sperance.exileforge.presentation.state.TAB_SETTINGS
 import com.sperance.exileforge.presentation.state.TAB_HERO
+import com.sperance.exileforge.presentation.state.TAB_SETTINGS
+import com.sperance.exileforge.presentation.state.phrase
 import com.sperance.exileforge.rules.content.ContentFiles
 import com.sperance.exileforge.rules.content.ContentLoader
+import com.sperance.exileforge.rules.content.RULES_VERSION
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -81,8 +81,10 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
     val state = mutable.asStateFlow()
     val logs = journal.entries
     lateinit var api: GameApi
+
     /** The first [api] is made (3.74.0): the update check waits for it rather than asking no server at all. */
     val apiReady = kotlinx.coroutines.CompletableDeferred<Unit>()
+
     /** A sign-in met a server newer than this build (3.74.0): the update check runs at once. */
     val newerServer = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     var localeJob: Job? = null
@@ -119,7 +121,9 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
                     if (store.deviceSession.first()) {
                         state.first { !it.busy }
                         if (api === created) sessionViewModel.playOnThisDevice(silent = true)
-                    } else mutable.update { it.copy(message = phrase("runtime.session_expired"), error = true) }
+                    } else {
+                        mutable.update { it.copy(message = phrase("runtime.session_expired"), error = true) }
+                    }
                 }
             }
         })
@@ -156,10 +160,14 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
                 refreshIcons()
                 val saved = store.token(server)
                 // The fast start (3.30.0): the last hero from the device at once, the session confirmed behind it.
-                if (saved != null) { if (!sessionViewModel.fastStart(server, saved)) sessionViewModel.resume(saved) }
-                else if (store.deviceSession.first()) sessionViewModel.playOnThisDevice(silent = true)
-            } catch (e: CancellationException) { throw e }
-            catch (e: Exception) {
+                if (saved != null) {
+                    if (!sessionViewModel.fastStart(server, saved)) sessionViewModel.resume(saved)
+                } else if (store.deviceSession.first()) {
+                    sessionViewModel.playOnThisDevice(silent = true)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
                 api = newApi(DEFAULT_SERVER)
                 apiReady.complete(Unit)
                 mutable.update { it.copy(busy = false, error = true, message = Phrase { refusalLine(e) }) }
@@ -188,8 +196,9 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
         val manifest = api.manifest().locale
         applyLanguages(server, manifest)
         val chosen = manifest.language(language.code) ?: manifest.language(manifest.default) ?: return
-        if (cached == null || cached.first != chosen.hash || chosen.code != language.code)
+        if (cached == null || cached.first != chosen.hash || chosen.code != language.code) {
             applyLocale(bundle(server, manifest, chosen.code) ?: return)
+        }
     }
 
     private suspend fun bundle(server: String, manifest: LocaleManifest, code: String): LocaleBundle? {
@@ -205,9 +214,11 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
     fun refreshLocale(language: Lang = state.value.lang) {
         localeJob?.cancel()
         localeJob = scope.launch {
-            try { loadLocale(language) }
-            catch (e: CancellationException) { throw e }
-            catch (_: Exception) { }
+            try {
+                loadLocale(language)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) { }
         }
     }
 
@@ -233,9 +244,11 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
     }
 
     private suspend fun quietly(block: suspend () -> Unit) {
-        try { block() }
-        catch (e: CancellationException) { throw e }
-        catch (_: Exception) { }
+        try {
+            block()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) { }
     }
 
     /** Parsing a served document is CPU work of its size, and never belongs on the main thread. */
@@ -305,19 +318,30 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
         if (if (kind == Buzz.DANGER) set.buzzDanger else set.buzzButtons) buzzes.tryEmit(kind)
     }
 
-    fun dismissMessage() { mutable.update { it.copy(message = null, error = false) } }
+    fun dismissMessage() {
+        mutable.update { it.copy(message = null, error = false) }
+    }
+
     /** A success worth a toast: it replaces the one showing and leaves by itself. */
-    fun toast(text: String, kind: NoticeKind = NoticeKind.DONE) { mutable.update { it.copy(notice = Notice(text, kind)) } }
-    fun dismissNotice() { mutable.update { it.copy(notice = null) } }
+    fun toast(text: String, kind: NoticeKind = NoticeKind.DONE) {
+        mutable.update { it.copy(notice = Notice(text, kind)) }
+    }
+    fun dismissNotice() {
+        mutable.update { it.copy(notice = null) }
+    }
 
     /**
      * A command: one at a time, and the only thing that disables controls. [writing] marks a mutation, so
      * an IO error becomes [FailureState.UncertainWrite]; [touches] names the reads the command redoes itself.
      */
     /** Files a bug report and says so (3.48.0). */
+
     /** The report, and [onSent] once the server has taken it (3.75.0: the draft goes only then). */
-    fun reportBug(report: com.sperance.exileforge.core.model.command.BugReportRequest, onSent: suspend () -> Unit = {}) =
-        task { api.reportBug(report); onSent(); toast(ui("bug.sent")) }
+    fun reportBug(report: com.sperance.exileforge.core.model.command.BugReportRequest, onSent: suspend () -> Unit = {}) = task {
+        api.reportBug(report)
+        onSent()
+        toast(ui("bug.sent"))
+    }
 
     fun task(writing: Boolean = false, touches: Set<String> = emptySet(), block: suspend () -> Unit) {
         if (state.value.busy) return
@@ -325,10 +349,16 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
         touching = touches
         mutable.update { it.copy(busy = true, loading = reads.keys.toSet(), message = null, error = false, failure = null) }
         scope.launch {
-            try { block() }
-            catch (e: CancellationException) { throw e }
-            catch (e: Exception) { report(e, writing) }
-            finally { touching = emptySet(); mutable.update { it.copy(busy = false) } }
+            try {
+                block()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                report(e, writing)
+            } finally {
+                touching = emptySet()
+                mutable.update { it.copy(busy = false) }
+            }
         }
     }
 
@@ -342,11 +372,17 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
         if (reads[key]?.isActive == true) return
         if (silent) quiet += key else quiet -= key
         val job = scope.launch(start = CoroutineStart.LAZY) {
-            try { block() }
-            catch (e: CancellationException) { throw e }
-            catch (e: Exception) { report(e, writing = false) }
-            finally {
-                if (reads[key] === coroutineContext[Job]) { reads.remove(key); quiet -= key }
+            try {
+                block()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                report(e, writing = false)
+            } finally {
+                if (reads[key] === coroutineContext[Job]) {
+                    reads.remove(key)
+                    quiet -= key
+                }
                 mutable.update { it.copy(loading = loading()) }
             }
         }
@@ -386,10 +422,16 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
             return
         }
         if (problem == FailureState.UncertainWrite && e !is ApiFailure) connectionViewModel.lost(e)
-        mutable.update { it.copy(failure = problem, error = true, message = when (problem) {
-            FailureState.UncertainWrite -> phrase("runtime.uncertain_write")
-            else -> Phrase { refusalLine(e) }
-        }) }
+        mutable.update {
+            it.copy(
+                failure = problem,
+                error = true,
+                message = when (problem) {
+                    FailureState.UncertainWrite -> phrase("runtime.uncertain_write")
+                    else -> Phrase { refusalLine(e) }
+                },
+            )
+        }
     }
 
     private val contentLock = Mutex()
@@ -418,10 +460,15 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
         }
         val index = parsed { ContentLoader.load { chunks.getValue(it).first } }
         chunks.forEach { (file, chunk) -> if (chunk.second) store.saveChunk(server, file, manifest.chunks[file].orEmpty(), chunk.first) }
-        mutable.update { it.copy(
-            world = it.world.copy(content = index, contentHash = manifest.hash),
-            play = it.play.copy(draftClass = it.play.draftClass.ifBlank { index.classes.classes.firstOrNull()?.code.orEmpty() },
-                selectedOrb = it.play.selectedOrb.ifBlank { index.itemsByCategory[com.sperance.exileforge.rules.content.Item.CURRENCY]?.minByOrNull { o -> o.price }?.code.orEmpty() })) }
+        mutable.update {
+            it.copy(
+                world = it.world.copy(content = index, contentHash = manifest.hash),
+                play = it.play.copy(
+                    draftClass = it.play.draftClass.ifBlank { index.classes.classes.firstOrNull()?.code.orEmpty() },
+                    selectedOrb = it.play.selectedOrb.ifBlank { index.itemsByCategory[com.sperance.exileforge.rules.content.Item.CURRENCY]?.minByOrNull { o -> o.price }?.code.orEmpty() },
+                ),
+            )
+        }
     }
 
     /**
@@ -438,24 +485,46 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal) {
             val texts = ContentFiles.ALL.associateWith { file ->
                 store.chunk(server, file)?.takeIf { it.first.isNotBlank() && it.first == manifest.content.chunks[file] }?.second ?: return false
             }
-            val index = try { parsed { ContentLoader.load { texts.getValue(it) } } }
-                catch (e: CancellationException) { throw e }
-                catch (_: Exception) { return false }
-            mutable.update { it.copy(world = it.world.copy(content = index, contentHash = manifest.content.hash),
-                play = it.play.copy(draftClass = it.play.draftClass.ifBlank { index.classes.classes.firstOrNull()?.code.orEmpty() },
-                    selectedOrb = it.play.selectedOrb.ifBlank { index.itemsByCategory[com.sperance.exileforge.rules.content.Item.CURRENCY]?.minByOrNull { o -> o.price }?.code.orEmpty() })) }
+            val index = try {
+                parsed { ContentLoader.load { texts.getValue(it) } }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                return false
+            }
+            mutable.update {
+                it.copy(
+                    world = it.world.copy(content = index, contentHash = manifest.content.hash),
+                    play = it.play.copy(
+                        draftClass = it.play.draftClass.ifBlank { index.classes.classes.firstOrNull()?.code.orEmpty() },
+                        selectedOrb = it.play.selectedOrb.ifBlank { index.itemsByCategory[com.sperance.exileforge.rules.content.Item.CURRENCY]?.minByOrNull { o -> o.price }?.code.orEmpty() },
+                    ),
+                )
+            }
             return true
         }
     }
 
     fun clearSession() {
-        api.logout(); journal.clear(); cancelReads(); expeditionViewModel.drop(); trialViewModel.drop(); craftsViewModel.drop(); heroViewModel.forget()
-        mutable.update { it.copy(phase = AppPhase.AUTH, tab = TAB_HERO, mode = AppMode.PLAYER, failure = null,
-            account = it.account.copy(resumable = false, characters = emptyList(), charactersRead = false, signedIn = false, profile = null, sessionEpoch = it.account.sessionEpoch + 1),
-            admin = it.admin.copy(redemptions = emptyList()),
-            play = PlayState(draftClass = it.play.draftClass, selectedOrb = it.play.selectedOrb),
-            market = MarketState(), building = null, guild = GuildState(), quests = QuestState()) }
+        api.logout()
+        journal.clear()
+        cancelReads()
+        expeditionViewModel.drop()
+        trialViewModel.drop()
+        craftsViewModel.drop()
+        heroViewModel.forget()
+        mutable.update {
+            it.copy(
+                phase = AppPhase.AUTH, tab = TAB_HERO, mode = AppMode.PLAYER, failure = null,
+                account = it.account.copy(resumable = false, characters = emptyList(), charactersRead = false, signedIn = false, profile = null, sessionEpoch = it.account.sessionEpoch + 1),
+                admin = it.admin.copy(redemptions = emptyList()),
+                play = PlayState(draftClass = it.play.draftClass, selectedOrb = it.play.selectedOrb),
+                market = MarketState(), building = null, guild = GuildState(), quests = QuestState(),
+            )
+        }
     }
 
-    fun close() { scope.coroutineContext[Job]?.cancel() }
+    fun close() {
+        scope.coroutineContext[Job]?.cancel()
+    }
 }

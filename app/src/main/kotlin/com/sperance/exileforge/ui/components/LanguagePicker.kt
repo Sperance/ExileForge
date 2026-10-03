@@ -43,16 +43,27 @@ import com.sperance.exileforge.ui.theme.*
         offered.forEach { option ->
             val active = option == current
             val accent = if (active) Gold else Bronze
-            Row(Modifier.fillMaxWidth()
-                .border(1.dp, accent.copy(alpha = if (active) .55f else .25f), RoundedCornerShape(8.dp))
-                .background(if (active) Gold.copy(alpha = .12f) else Color.Transparent, RoundedCornerShape(8.dp))
-                .clickable(enabled = enabled && !active) { onLanguage(option) }
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(option.short, style = MaterialTheme.typography.labelSmall, color = if (active) GoldBright else Muted,
-                    modifier = Modifier.widthIn(min = 26.dp))
-                Text(option.title, style = MaterialTheme.typography.labelLarge, color = if (active) Parchment else Muted,
-                    modifier = Modifier.weight(1f))
+            Row(
+                Modifier.fillMaxWidth()
+                    .border(1.dp, accent.copy(alpha = if (active) .55f else .25f), RoundedCornerShape(8.dp))
+                    .background(if (active) Gold.copy(alpha = .12f) else Color.Transparent, RoundedCornerShape(8.dp))
+                    .clickable(enabled = enabled && !active) { onLanguage(option) }
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Text(
+                    option.short,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (active) GoldBright else Muted,
+                    modifier = Modifier.widthIn(min = 26.dp),
+                )
+                Text(
+                    option.title,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = if (active) Parchment else Muted,
+                    modifier = Modifier.weight(1f),
+                )
                 if (active) Icon(ForgeGlyphs.Sigil, null, tint = Gold, modifier = Modifier.size(16.dp))
             }
         }
@@ -73,8 +84,13 @@ import com.sperance.exileforge.ui.theme.*
         }
         DropdownMenu(open, onDismissRequest = { open = false }, containerColor = PanelRaised) {
             offered.forEach { option ->
-                DropdownMenuItem(text = { Text(option.title, color = if (option == current) GoldBright else Parchment) },
-                    onClick = { open = false; if (option != current) onLanguage(option) })
+                DropdownMenuItem(
+                    text = { Text(option.title, color = if (option == current) GoldBright else Parchment) },
+                    onClick = {
+                        open = false
+                        if (option != current) onLanguage(option)
+                    },
+                )
             }
         }
     }

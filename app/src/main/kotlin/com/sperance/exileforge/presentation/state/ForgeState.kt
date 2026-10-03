@@ -267,7 +267,7 @@ data class MarketState(
 enum class Building { QUESTS, MERCHANT, AUCTION, GUILD }
 
 /** The guild's sections, each a tile of its hub; [APPLICATIONS] only for those who may answer them. */
-enum class GuildTab { MEMBERS, QUESTS, APPLICATIONS, CONTRIBUTE, LOG, SETTINGS }
+enum class GuildTab { MEMBERS, QUESTS, TREE, STASH, APPLICATIONS, CONTRIBUTE, LOG, SETTINGS }
 
 /**
  * The hero's guild as the server last answered (3.22.0): [mine] is null until it has been read; `guilds.json` comes with
@@ -281,6 +281,8 @@ data class GuildState(
     /** The section open over the guild's hub; null — the hub itself. */
     val tab: GuildTab? = null,
     val log: List<GuildLogEntry> = emptyList(), val logPage: Int = 0, val logEnd: Boolean = false,
+    /** The guild stash (3.79.0), read when its section opens. */
+    val stash: com.sperance.exileforge.core.model.guild.GuildStashView? = null,
 )
 
 /** The quest board's sections (3.23.0). */

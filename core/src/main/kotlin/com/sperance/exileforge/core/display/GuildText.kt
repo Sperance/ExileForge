@@ -36,6 +36,9 @@ object GuildText {
     private fun logValue(entry: GuildLogEntry): String = when (entry.kind) {
         "CONTRIBUTED" -> contribution(entry.value.substringBefore(' '), entry.value.substringAfter(' ', ""))
         "RANK_UP" -> rank(entry.value)
+        // 3.79.0: a tree node by its name; a stash line is a stack (`<amount> <code>`) or an item's template.
+        "TREE_NODE" -> locOr("guild.node.${entry.value}.name", displayName(entry.value))
+        "STASH_IN", "STASH_OUT" -> if (' ' in entry.value) contribution(entry.value.substringBefore(' '), entry.value.substringAfter(' ')) else equipmentTitle(entry.value)
         else -> entry.value
     }
 

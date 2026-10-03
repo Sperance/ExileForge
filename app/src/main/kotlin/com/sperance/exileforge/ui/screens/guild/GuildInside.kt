@@ -70,6 +70,8 @@ import com.sperance.exileforge.ui.theme.*
         when (tab) {
             GuildTab.MEMBERS -> MembersTab(s, vm, guild, me)
             GuildTab.QUESTS -> GuildQuestsTab(s, vm, guild)
+            GuildTab.TREE -> TreeTab(s, vm, guild, me)
+            GuildTab.STASH -> StashTab(s, vm, me)
             GuildTab.APPLICATIONS -> ApplicationsTab(s, vm, guild)
             GuildTab.CONTRIBUTE -> ContributeTab(s, vm, guild, me)
             GuildTab.LOG -> LogTab(s, vm)
@@ -81,6 +83,8 @@ import com.sperance.exileforge.ui.theme.*
 private fun tabTitle(tab: GuildTab): String = ui(when (tab) {
     GuildTab.MEMBERS -> "guild.tab_members"
     GuildTab.QUESTS -> "guild.tab_quests"
+    GuildTab.TREE -> "guild.tab_tree"
+    GuildTab.STASH -> "guild.tab_stash"
     GuildTab.APPLICATIONS -> "guild.tab_applications"
     GuildTab.CONTRIBUTE -> "guild.tab_contribute"
     GuildTab.LOG -> "guild.tab_log"
@@ -90,6 +94,8 @@ private fun tabTitle(tab: GuildTab): String = ui(when (tab) {
 private fun sectionIcon(tab: GuildTab): ImageVector = when (tab) {
     GuildTab.MEMBERS -> Icons.Outlined.Groups
     GuildTab.QUESTS -> ForgeGlyphs.Scroll
+    GuildTab.TREE -> ForgeGlyphs.Constellation
+    GuildTab.STASH -> ForgeGlyphs.Stash
     GuildTab.APPLICATIONS -> Icons.Outlined.MailOutline
     GuildTab.CONTRIBUTE -> ForgeGlyphs.Coins
     GuildTab.LOG -> Icons.AutoMirrored.Outlined.ReceiptLong
@@ -102,7 +108,8 @@ private fun sectionFigure(tab: GuildTab, guild: GuildView, me: GuildMember?): St
     GuildTab.APPLICATIONS -> ui("guild.applications_new", guild.applications.size)
     GuildTab.CONTRIBUTE -> me?.rank?.takeIf { it.isNotBlank() }?.let(GuildText::rank)
     GuildTab.SETTINGS -> me?.role?.let(GuildText::role)
-    GuildTab.QUESTS, GuildTab.LOG -> null
+    GuildTab.TREE -> guild.treePoints.takeIf { it > 0 }?.let { ui("guild.tree_free", it) }
+    GuildTab.QUESTS, GuildTab.LOG, GuildTab.STASH -> null
 }
 
 /** One section of the hub: its glyph, its name, its figure under it, and a badge in the corner when something waits. */

@@ -62,6 +62,26 @@ class GuildViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     fun settings(mode: GuildMode, minLevel: Int, emblem: String, color: String, announcement: String) =
         inside(ui("guild.toast.saved")) { runtime.api.guild.settings(it, mode, minLevel, emblem, color, announcement) }
 
+    /** The bonus tree (3.79.0): the leader takes a rank or resets it all. */
+    fun takeNode(node: String) = moving(ui("guild.toast.node")) { runtime.api.guild.takeNode(it, node) }
+    fun resetTree() = moving(ui("guild.toast.tree_reset")) { runtime.api.guild.resetTree(it) }
+
+    /** The guild stash (3.79.0): read, put in, take out, a tab's rank; every write answers with the stash as it stands. */
+    fun loadStash() { with(runtime) { read(Reads.GUILD) {
+        val id = heroId
+        val stash = runtime.api.guild.stash(id)
+        if (onScreen(id)) guild { it.copy(stash = stash) }
+    } } }
+    fun deposit(tab: Int, itemId: String?, code: String?, amount: Long) = stashCommand(ui("guild.toast.deposited")) { runtime.api.guild.deposit(it, tab, itemId, code, amount) }
+    fun take(entryId: String) = stashCommand(ui("guild.toast.taken")) { runtime.api.guild.take(it, entryId) }
+    fun tabRank(tab: Int, minRank: Int) = stashCommand(ui("guild.toast.saved")) { runtime.api.guild.tabRank(it, tab, minRank) }
+
+    private fun stashCommand(done: String, block: suspend (String) -> com.sperance.exileforge.core.model.guild.GuildStashView) = command(done) { id ->
+        val stash = block(id)
+        guild { it.copy(stash = stash) }
+        after { runtime.heroViewModel.readHero() }
+    }
+
     /** Gold or an orb into the treasury: the answer carries the guild, the hero's row and the gold left, so nothing is read again but the hero. */
     fun contribute(item: String, amount: Long) { with(runtime) { task(writing = true, touches = setOf(Reads.GUILD, Reads.HERO)) {
         val id = heroId

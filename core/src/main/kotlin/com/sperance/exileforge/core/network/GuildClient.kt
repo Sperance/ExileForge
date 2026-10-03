@@ -59,6 +59,19 @@ class GuildClient internal constructor(private val http: Transport) {
     suspend fun leave(heroId: String): GuildMine = http.post("$GUILD/leave", heroQuery(heroId))
     suspend fun disband(heroId: String): GuildMine = http.post("$GUILD/disband", heroQuery(heroId))
 
+    /** The leader takes one more rank of a tree node, or resets the tree (server 1.74.0). Never retried. */
+    suspend fun takeNode(heroId: String, node: String): GuildMine = http.post("$GUILD/tree/take", heroQuery(heroId, "node" to node))
+    suspend fun resetTree(heroId: String): GuildMine = http.post("$GUILD/tree/reset", heroQuery(heroId))
+
+    /** The guild stash (server 1.74.0): read, put an item or a stack in, take one out, set a tab's rank. Writes never retried. */
+    suspend fun stash(heroId: String): com.sperance.exileforge.core.model.guild.GuildStashView = http.get("$GUILD/stash", heroQuery(heroId))
+    suspend fun deposit(heroId: String, tab: Int, itemId: String?, code: String?, amount: Long): com.sperance.exileforge.core.model.guild.GuildStashView =
+        http.post("$GUILD/stash/deposit", heroQuery(heroId, "tab" to tab.toString(), "itemId" to itemId, "code" to code, "amount" to amount.toString()))
+    suspend fun take(heroId: String, entryId: String): com.sperance.exileforge.core.model.guild.GuildStashView =
+        http.post("$GUILD/stash/take", heroQuery(heroId, "entryId" to entryId))
+    suspend fun tabRank(heroId: String, tab: Int, minRank: Int): com.sperance.exileforge.core.model.guild.GuildStashView =
+        http.post("$GUILD/stash/tab", heroQuery(heroId, "tab" to tab.toString(), "minRank" to minRank.toString()))
+
     /** Every setting is sent, the announcement as a parameter — an empty one clears it. */
     suspend fun settings(heroId: String, mode: GuildMode, minLevel: Int, emblem: String, color: String, announcement: String): GuildView =
         http.post("$GUILD/settings", heroQuery(heroId, "mode" to mode.name, "minLevel" to minLevel.toString(), "emblem" to emblem,

@@ -48,6 +48,8 @@ val GuildRole.manages: Boolean get() = this != GuildRole.MEMBER
     val treasuryGold: Long = 0, val treasuryOrbs: Map<String, Long> = emptyMap(),
     val members: List<GuildMember> = emptyList(), val applications: List<GuildApplicant> = emptyList(),
     val weekly: Map<String, Long> = emptyMap(),
+    /** The bonus tree (3.79.0, server 1.74.0): ranks by node, points left and from when a reset is free (epoch millis). */
+    val tree: Map<String, Int> = emptyMap(), val treePoints: Int = 0, val respecAt: Long = 0,
 ) {
     val leader: GuildMember? get() = members.firstOrNull { it.role == GuildRole.LEADER }
     val officers: Int get() = members.count { it.role == GuildRole.OFFICER }
@@ -59,6 +61,17 @@ val GuildRole.manages: Boolean get() = this != GuildRole.MEMBER
     val guild: GuildView? = null, val me: GuildMember? = null,
     val invites: List<GuildInviteView> = emptyList(), val rejoinAt: Long? = null,
 )
+
+/** One thing in the guild stash (3.79.0, server 1.74.0): an item as it is, or a stack by its code; who put it and when. */
+@Serializable data class GuildStashEntry(val id: String, val tab: Int = 0, val item: com.sperance.exileforge.rules.roll.ItemInstance? = null,
+    val code: String = "", val amount: Long = 1, val by: String = "", val at: Long = 0)
+
+/** A stash tab: the rank (an index of the rules' ranks) a member needs to take from it. */
+@Serializable data class GuildStashTab(val minRank: Int = 0)
+
+/** The guild stash as a member sees it: its things, its tabs, places a tab and the takes left today (-1 — no count). */
+@Serializable data class GuildStashView(val entries: List<GuildStashEntry> = emptyList(), val tabs: List<GuildStashTab> = emptyList(),
+    val tabSize: Int = 0, val takesLeft: Int = 0, val money: Long = 0)
 
 /** A contribution landed: the guild after it, the hero's row and the gold the hero has left. */
 @Serializable data class GuildContribution(val guild: GuildView, val me: GuildMember, val money: Long = 0)

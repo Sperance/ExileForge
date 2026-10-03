@@ -18,9 +18,9 @@ class CharacterViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     /** The account's heroes; [autoEnter] skips the menu for a single hero straight after a sign-in. */
     suspend fun readCharacters(autoEnter: Boolean = false) {
         with(runtime) {
-            val owner = state.value.account.profile?.id.orEmpty()
+            val owner = sessions.state.value.profile?.id.orEmpty()
             val characters = if (owner.isBlank()) emptyList() else api.hero.heroesOf(owner)
-            mutable.update { it.copy(account = it.account.copy(characters = characters, charactersRead = true)) }
+            sessions.update { it.copy(characters = characters, charactersRead = true) }
             if (autoEnter) characters.singleOrNull()?.let { only -> entered(only.id) }
         }
     }
@@ -38,7 +38,7 @@ class CharacterViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             mutable.update { it.copy(phase = AppPhase.GAME, tab = TAB_HERO, play = PlayState(heroId = id, draftClass = it.play.draftClass, selectedOrb = it.play.selectedOrb)) }
             heroViewModel.forget()
             // The hero the next launch opens straight into (3.30.0).
-            store.saveLastHero(state.value.account.server, id)
+            store.saveLastHero(sessions.state.value.server, id)
             ensureContent(fresh = true)
             heroViewModel.readHero()
             expeditionViewModel.resume(id)
@@ -64,7 +64,7 @@ class CharacterViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
                 )
             }
             read(Reads.CHARACTERS) { readCharacters() }
-            scope.launch { store.saveLastHero(state.value.account.server, null) }
+            scope.launch { store.saveLastHero(sessions.state.value.server, null) }
         }
     }
 
@@ -74,9 +74,9 @@ class CharacterViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             task(writing = true, touches = setOf(Reads.CHARACTERS, Reads.HERO)) {
                 require(name.isNotBlank()) { ui("character.enter_name") }
                 require(heroClass.isNotBlank()) { ui("character.choose_class") }
-                val owner = state.value.account.profile?.id.orEmpty()
+                val owner = sessions.state.value.profile?.id.orEmpty()
                 check(owner.isNotBlank()) { ui("catalog.sign_in") }
-                check(state.value.characterSlotsLeft > 0) { ui("character.limit", state.value.account.characters.size) }
+                check(state.value.characterSlotsLeft > 0) { ui("character.limit", sessions.state.value.characters.size) }
                 val created = api.hero.create(owner, name, "", heroClass)
                 readCharacters()
                 entered(created.id)
@@ -88,8 +88,8 @@ class CharacterViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         with(runtime) {
             task(writing = true, touches = setOf(Reads.CHARACTERS)) {
                 api.hero.delete(id)
-                val remaining = state.value.account.characters.filterNot { character -> character.id == id }
-                mutable.update { it.copy(account = it.account.copy(characters = remaining)) }
+                val remaining = sessions.state.value.characters.filterNot { character -> character.id == id }
+                sessions.update { it.copy(characters = remaining) }
             }
         }
     }

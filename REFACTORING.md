@@ -13,7 +13,10 @@
 - [ ] `GameApi` - session-scope (пересоздаётся при смене сервера), `ForgeHttp` - singleton через Koin.
 
 ## Этап 2 - репозитории :core
-- [ ] Истина в `:core`: `SessionRepository` (аккаунт, сервер, язык), `HeroRepository` (герой, снимки, синк), `ContentRepository` (манифест, индекс, локаль), `MarketRepository`, `GuildRepository`, `QuestRepository`, `FeedbackRepository` - `StateFlow`/`Flow`, без Android.
+- [ ] Истина в `:core`: `StateFlow`/`Flow`, без Android. ForgeState лишь отражает потоки для ещё не переведённых экранов.
+  - [x] `SessionRepository` (сервер, аккаунт, герои аккаунта, здоровье сервера) и `WorldRepository` (контент, словарь, иконки, портреты).
+  - [ ] `HeroRepository` (герой, снимки, синк), `MarketRepository`, `GuildRepository`, `QuestRepository`, `FeedbackRepository`.
+  - [ ] Команды и чтения (`task`/`read`, busy/loading/failure, смена `GameApi`) - в `:core` (`CommandRunner`), чтобы модели экранов не зависели от `ForgeRuntime`.
 - [ ] `ForgeState` распадается на срезы этих репозиториев; `sliced()` удалён.
 
 ## Этап 3 - навигация
@@ -22,6 +25,7 @@
 
 ## Этап 4 - экраны
 - [ ] Каждый экран - свой androidx `ViewModel` из Koin + `UiState`; экран не получает `ForgeViewModel`/`ForgeState`. Порядок (решение владельца): простые сначала - Settings → Server → Feedback/Mail → City (Quests, Merchant, Auction, Guild) → Crafts/Progress → Tree/Grimoire → Hero → Expedition/Atlas → Session/Characters; пуш после каждого экрана.
+  - [x] Server (аккаунт/сервер/клиент): `ServerViewModel` над `SessionRepository` и `WorldRepository`; команды пока через общую модель.
   - [x] Settings: `PreferencesRepository` (единственный источник настроек устройства) + `SettingsViewModel`; `ForgeState.settings` лишь отражает поток для ещё не переведённых экранов.
 - [ ] По ходу: файлы UI не длиннее ~400 строк (SkillTreeScreen, CraftsScreen, MapStyles, GrimoireScreen, ExpeditionScene, WorldArt, AtlasScreen, AuctionTabs).
 - [ ] `ForgeViewModel`, `ForgeRuntime`, `FeatureViewModel` удалены.

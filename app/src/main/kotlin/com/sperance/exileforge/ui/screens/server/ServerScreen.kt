@@ -26,6 +26,7 @@ import androidx.compose.material.icons.outlined.Science
 import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,6 +39,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.BuildConfig
 import com.sperance.exileforge.core.contract.SERVER_BRANCH
 import com.sperance.exileforge.core.contract.SERVER_COMMIT
@@ -48,12 +50,14 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.sync.API_REVISION
 import com.sperance.exileforge.core.network.RequestLog
 import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.server.ServerViewModel
 import com.sperance.exileforge.presentation.state.AppMode
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.rules.content.ContentFiles
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
+import org.koin.compose.viewmodel.koinViewModel
 
 /** The screens behind the account's rows: each a page of its own, «back» leading to the list. */
 private enum class AccountPage(val title: String) { SIGN_IN("account.signin_section"), }
@@ -112,6 +116,9 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
 
 /** Who is playing: the class's portrait, the name and level, the class; the account under it once signed in. */
 @Composable private fun ProfileCard(s: ForgeState) {
+    val model = koinViewModel<ServerViewModel>()
+    val session by model.session.collectAsStateWithLifecycle()
+    val world by model.world.collectAsStateWithLifecycle()
     val shape = RoundedCornerShape(14.dp)
     val classCode = s.heroInfo?.heroClass ?: s.heroRow?.heroClass
     Row(
@@ -120,7 +127,7 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        ClassPortrait(classCode, s.world.portraits, Modifier.size(46.dp), round = true)
+        ClassPortrait(classCode, world.portraits, Modifier.size(46.dp), round = true)
         Column(Modifier.weight(1f)) {
             if (s.heroName.isNotBlank()) {
                 Text(
@@ -132,12 +139,12 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
                 )
             }
             classCode?.takeIf { it.isNotBlank() }?.let { MutedText(classTitle(it)) }
-            if (s.account.signedIn) {
+            if (session.signedIn) {
                 MutedText(
-                    "${s.accountTitle} · ${ui(
+                    "${session.title} · ${ui(
                         when {
-                            s.isAdmin -> "account.administrator"
-                            s.isTester -> "account.tester"
+                            session.isAdmin -> "account.administrator"
+                            session.isTester -> "account.tester"
                             else -> "account.player"
                         },
                     )}",
@@ -194,9 +201,11 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
 
 /** The server: where it is, the way to connect and to ask after its health, and the answer. */
 @Composable internal fun ServerPage(s: ForgeState, vm: ForgeViewModel) {
+    val model = koinViewModel<ServerViewModel>()
+    val session by model.session.collectAsStateWithLifecycle()
     ForgePanel {
         // The address is fixed for players (3.75.0); only an administrator points the device at another server.
-        if (s.isAdmin) {
+        if (session.isAdmin) {
             OutlinedTextField(
                 s.account.serverDraft,
                 { vm.serverDraft(it.take(s.inputs.server)) },
@@ -208,23 +217,25 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
             )
             ForgeButton(enabled = !s.busy, onClick = vm::connect, modifier = Modifier.fillMaxWidth()) { Text(ui("account.save_connect")) }
         } else {
-            PropertyRow(ui("account.server_address"), s.account.server, Glyph.TEXT)
+            PropertyRow(ui("account.server_address"), session.server, Glyph.TEXT)
         }
         ForgeOutlinedButton(enabled = !s.busy, onClick = vm::health, modifier = Modifier.fillMaxWidth()) { Text(ui("account.check_health")) }
     }
-    InfoCard(ui("account.server_state"), s.account.health)
-    if (s.isAdmin) InfoCard(ui("account.local_dev"), ui("account.local_dev_note"))
+    InfoCard(ui("account.server_state"), session.health)
+    if (session.isAdmin) InfoCard(ui("account.local_dev"), ui("account.local_dev_note"))
 }
 
 /** What the client holds of the server: the dictionary, the drawings, the world's tables and the contract it speaks. */
 @Composable internal fun ClientPage(s: ForgeState, vm: ForgeViewModel) {
+    val model = koinViewModel<ServerViewModel>()
+    val world by model.world.collectAsStateWithLifecycle()
     ForgePanel {
         // Names of things belong to the server since 0.14.0: without its dictionary the screens
         // print codes, so how much of it arrived is worth saying out loud.
-        if (s.world.localeStrings > 0) {
+        if (world.localeStrings > 0) {
             PropertyRow(
                 ui("account.dictionary"),
-                "${s.world.localeLanguage.uppercase()} · " + ui("account.strings", s.world.localeStrings),
+                "${world.localeLanguage.uppercase()} · " + ui("account.strings", world.localeStrings),
                 Glyph.TEXT,
             )
         } else {
@@ -232,22 +243,22 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
         }
         // Drawings come from the server too, and a missing set is invisible by design: every
         // hole falls back to a bundled emblem, so the count is the only way to notice one.
-        if (s.world.iconKeys > 0) {
+        if (world.iconKeys > 0) {
             PropertyRow(
                 ui("account.icons"),
-                ui("account.icons_count", s.world.iconKeys, s.world.iconSprites),
+                ui("account.icons_count", world.iconKeys, world.iconSprites),
                 Glyph.IMAGE,
             )
         } else {
             MutedText(ui("account.icons_missing"))
         }
-        if (s.world.portraits > 0) PropertyRow(ui("account.portraits"), s.world.portraits.toString(), Glyph.IMAGE)
+        if (world.portraits > 0) PropertyRow(ui("account.portraits"), world.portraits.toString(), Glyph.IMAGE)
         // The world's tables come the same way (3.0.0): chunks fetched once per fingerprint and
         // parsed by the rules. The fingerprint is what tells a changed world from the one on screen.
-        if (s.index != null) {
+        if (world.content != null) {
             PropertyRow(
                 ui("account.content"),
-                "${s.world.contentHash.take(12)} · " + ui("account.chunks", ContentFiles.ALL.size),
+                "${world.contentHash.take(12)} · " + ui("account.chunks", ContentFiles.ALL.size),
                 Glyph.SERVER,
             )
         } else {

@@ -109,12 +109,12 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     }
 
     /** The `until` of the last crafts catch-up shown for [heroId] (3.69.0); 0 when none was. */
-    suspend fun craftsAwaySeen(heroId: String): Long = with(runtime) { store.craftsAwaySeen(state.value.account.server, heroId) }
+    suspend fun craftsAwaySeen(heroId: String): Long = with(runtime) { store.craftsAwaySeen(sessions.state.value.server, heroId) }
 
     /** The catch-up up to [until] was shown for [heroId] (3.69.0): it is not shown again, on this launch or the next. */
     fun markCraftsAwaySeen(heroId: String, until: Long) {
         with(runtime) {
-            val server = state.value.account.server
+            val server = sessions.state.value.server
             scope.launch { store.saveCraftsAwaySeen(server, heroId, until) }
         }
     }
@@ -438,8 +438,8 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     /** The hero on the device for the next launch, a moment after the last snapshot so a burst of commands is one write. */
     private fun keepCopy(heroId: String, held: HeroParts) {
         with(runtime) {
-            val profile = state.value.account.profile ?: return
-            val server = state.value.account.server
+            val profile = sessions.state.value.profile ?: return
+            val server = sessions.state.value.server
             copyJob?.cancel()
             copyJob = scope.launch {
                 delay(COPY_AFTER)

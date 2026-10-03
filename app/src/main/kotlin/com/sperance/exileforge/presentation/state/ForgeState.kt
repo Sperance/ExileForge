@@ -215,21 +215,8 @@ data class FeedbackState(
     val unread: Int get() = mail.count { !it.read }
 }
 
-/** The world as this server serves it: the content, read once per server and kept on the device by chunk, and the static files. */
-data class WorldState(
-    /** The content — every table of the game — parsed by the rules; null until the chunks have been read. */
-    val content: ContentIndex? = null,
-    /** The fingerprint of the content on screen, so a changed world is noticed and an unchanged one is never fetched. */
-    val contentHash: String = "",
-    /** The server's dictionary for the current language, and how many strings it holds; the bundle itself is global. */
-    val localeLanguage: String = "",
-    val localeStrings: Int = 0,
-    /** Which languages the player may choose from: the server's manifest decides, the client's tables narrow. */
-    val languages: List<Lang> = listOf(Lang.RU, Lang.EN),
-    val iconKeys: Int = 0,
-    val iconSprites: Int = 0,
-    val portraits: Int = 0,
-)
+/** Мир сервера: единственный источник - `WorldRepository`, здесь его копия для экранов. */
+typealias WorldState = com.sperance.exileforge.core.world.World
 
 /** The hero being played, and what the player has picked on its screens. */
 data class PlayState(

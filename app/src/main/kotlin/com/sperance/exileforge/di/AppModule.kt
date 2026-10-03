@@ -1,12 +1,16 @@
 package com.sperance.exileforge.di
 
 import com.sperance.exileforge.core.network.RequestJournal
+import com.sperance.exileforge.core.session.SessionRepository
+import com.sperance.exileforge.core.world.WorldRepository
+import com.sperance.exileforge.data.settings.DEFAULT_SERVER
 import com.sperance.exileforge.data.settings.DraftStore
 import com.sperance.exileforge.data.settings.GuideStore
 import com.sperance.exileforge.data.settings.PreferencesRepository
 import com.sperance.exileforge.data.settings.ServerStore
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.features.UpdateViewModel
+import com.sperance.exileforge.presentation.server.ServerViewModel
 import com.sperance.exileforge.presentation.settings.SettingsViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -31,8 +35,11 @@ val appModule = module {
     single { GuideStore(androidContext()) }
     single { DraftStore(androidContext(), get(named(APP_SCOPE))) }
     single { PreferencesRepository(get(), get(named(APP_SCOPE))) }
-    viewModel { ForgeViewModel(get(), get(), get()) }
+    single { SessionRepository(DEFAULT_SERVER) }
+    single { WorldRepository() }
+    viewModel { ForgeViewModel(get(), get(), get(), get(), get()) }
     viewModel { SettingsViewModel(get()) }
+    viewModel { ServerViewModel(get(), get()) }
     // Проверка обновлений ждёт сервер игровой модели: поток и манифест приходят параметрами из активности.
     viewModel { params -> UpdateViewModel(androidApplication(), params.get(1), params.get(0), get()) }
 }

@@ -75,7 +75,13 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
-class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val prefs: com.sperance.exileforge.data.settings.PreferencesRepository) {
+class ForgeRuntime(
+    val store: ServerStore,
+    val journal: RequestJournal,
+    val prefs: com.sperance.exileforge.data.settings.PreferencesRepository,
+    val sessions: com.sperance.exileforge.core.session.SessionRepository,
+    val world: com.sperance.exileforge.core.world.WorldRepository,
+) {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     val mutable = MutableStateFlow(ForgeState())
     val state = mutable.asStateFlow()
@@ -145,6 +151,26 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val pref
     init {
         // Настройки игрока живут в репозитории (3.80.6): общее состояние лишь отражает их для экранов, ещё не переведённых.
         scope.launch { prefs.settings.collect { value -> mutable.update { it.copy(settings = value) } } }
+        // Сессия и мир живут в репозиториях :core (3.80.7): общее состояние лишь отражает их для экранов, ещё не переведённых.
+        scope.launch {
+            sessions.state.collect { session ->
+                mutable.update {
+                    it.copy(
+                        account = it.account.copy(
+                            server = session.server,
+                            profile = session.profile,
+                            signedIn = session.signedIn,
+                            resumable = session.resumable,
+                            sessionEpoch = session.sessionEpoch,
+                            characters = session.characters,
+                            charactersRead = session.charactersRead,
+                            health = session.health,
+                        ),
+                    )
+                }
+            }
+        }
+        scope.launch { world.state.collect { value -> mutable.update { it.copy(world = value) } } }
         scope.launch {
             try {
                 val language = Lang.byCode(store.language.first()) ?: deviceLanguage()
@@ -157,7 +183,9 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val pref
                 val hideWorn = store.stashHideWorn.first()
                 val settings = store.gameSettings.first()
                 val logFilter = com.sperance.exileforge.core.campaign.LogKind.parse(store.logFilter.first())
-                mutable.update { it.copy(lang = language, busy = false, stashSort = sort, stashHideWorn = hideWorn, settings = settings, logFilter = logFilter, account = it.account.copy(server = server, serverDraft = server), world = it.world.copy(languages = known.ifEmpty { it.world.languages })) }
+                sessions.update { it.copy(server = server) }
+                world.update { it.copy(languages = known.ifEmpty { it.languages }) }
+                mutable.update { it.copy(lang = language, busy = false, stashSort = sort, stashHideWorn = hideWorn, settings = settings, logFilter = logFilter, account = it.account.copy(serverDraft = server)) }
                 refreshLocale()
                 refreshIcons()
                 val saved = store.token(server)
@@ -182,7 +210,8 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val pref
         if (state.value.lang == lang) return
         val untested = ui("runtime.not_checked")
         uiLanguage = lang
-        mutable.update { it.copy(lang = lang, account = it.account.copy(health = if (it.account.health == untested) ui("runtime.not_checked") else it.account.health)) }
+        sessions.update { it.copy(health = if (it.health == untested) ui("runtime.not_checked") else it.health) }
+        mutable.update { it.copy(lang = lang) }
         scope.launch { store.saveLanguage(lang) }
         refreshLocale(lang)
     }
@@ -192,7 +221,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val pref
      * offline; the manifest's hash then says whether it is still the dictionary the server is serving.
      */
     suspend fun loadLocale(language: Lang) {
-        val server = state.value.account.server
+        val server = sessions.state.value.server
         val cached = store.locale(server, language.code)
         cached?.let { (hash, document) -> applyLocale(parsed { LocaleBundle.parse(language.code, hash, document) }) }
         val manifest = api.manifest().locale
@@ -225,7 +254,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val pref
     }
 
     suspend fun loadIcons() {
-        val server = state.value.account.server
+        val server = sessions.state.value.server
         val cached = store.icons(server)
         cached?.let { (hash, document) -> applyIcons(parsed { IconBundle.parse(hash, document) }) }
         val manifest = api.manifest().icons
@@ -257,7 +286,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val pref
     private suspend fun <T> parsed(parse: () -> T): T = withContext(Dispatchers.Default) { parse() }
 
     suspend fun loadPortraits() {
-        val server = state.value.account.server
+        val server = sessions.state.value.server
         val cached = store.portraits(server)
         applyPortraits(cached)
         val manifest = api.manifest().portraits
@@ -276,24 +305,25 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val pref
             files.mapNotNull { (key, file) -> runCatching { key to PortraitSvg.parse(file.second) }.getOrNull() }.toMap()
         }
         serverPortraits = PortraitBundle(parsed)
-        mutable.update { it.copy(world = it.world.copy(portraits = parsed.size)) }
+        world.update { it.copy(portraits = parsed.size) }
     }
 
     private fun applyIcons(bundle: IconBundle) {
         serverIcons = bundle
-        mutable.update { it.copy(world = it.world.copy(iconKeys = bundle.size, iconSprites = bundle.spriteCount)) }
+        world.update { it.copy(iconKeys = bundle.size, iconSprites = bundle.spriteCount) }
     }
 
     private suspend fun applyLanguages(server: String, manifest: LocaleManifest) {
         val offered = manifest.languages.mapNotNull { Lang.byCode(it.code) }
         if (offered.isEmpty()) return
         store.saveLanguages(server, offered.map { it.code })
-        mutable.update { it.copy(world = it.world.copy(languages = (offered + it.lang).distinct().sortedBy(Lang::ordinal))) }
+        val current = state.value.lang
+        world.update { it.copy(languages = (offered + current).distinct().sortedBy(Lang::ordinal)) }
     }
 
     private fun applyLocale(bundle: LocaleBundle) {
         serverLocale = bundle
-        mutable.update { it.copy(world = it.world.copy(localeLanguage = bundle.language, localeStrings = bundle.size)) }
+        world.update { it.copy(localeLanguage = bundle.language, localeStrings = bundle.size) }
     }
 
     /** Opens a tab, refusing the ones a player has no business on. A refusal belongs to the screen it happened on. */
@@ -444,7 +474,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val pref
      * A warm start reads none of it from the server. [fresh] asks the manifest again — on entering a hero.
      */
     suspend fun ensureContent(fresh: Boolean = false) = contentLock.withLock {
-        val server = state.value.account.server
+        val server = sessions.state.value.server
         val manifest = api.manifest(fresh || contentStale).content
         contentStale = false
         if (manifest.hash == state.value.world.contentHash && state.value.world.content != null) return@withLock
@@ -461,9 +491,9 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val pref
         }
         val index = parsed { ContentLoader.load { chunks.getValue(it).first } }
         chunks.forEach { (file, chunk) -> if (chunk.second) store.saveChunk(server, file, manifest.chunks[file].orEmpty(), chunk.first) }
+        world.update { it.copy(content = index, contentHash = manifest.hash) }
         mutable.update {
             it.copy(
-                world = it.world.copy(content = index, contentHash = manifest.hash),
                 play = it.play.copy(
                     draftClass = it.play.draftClass.ifBlank { index.classes.classes.firstOrNull()?.code.orEmpty() },
                     selectedOrb = it.play.selectedOrb.ifBlank { index.itemsByCategory[com.sperance.exileforge.rules.content.Item.CURRENCY]?.minByOrNull { o -> o.price }?.code.orEmpty() },
@@ -479,7 +509,7 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val pref
     suspend fun contentFromDevice(): Boolean {
         contentLock.withLock {
             if (state.value.world.content != null) return true
-            val server = state.value.account.server
+            val server = sessions.state.value.server
             val manifest = store.manifest(server)?.let { text -> runCatching { WireJson.decodeFromString(StaticManifest.serializer(), text) }.getOrNull() }
                 ?: return false
             if (manifest.revision != API_REVISION || manifest.rules != RULES_VERSION) return false
@@ -493,9 +523,9 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val pref
             } catch (_: Exception) {
                 return false
             }
+            world.update { it.copy(content = index, contentHash = manifest.content.hash) }
             mutable.update {
                 it.copy(
-                    world = it.world.copy(content = index, contentHash = manifest.content.hash),
                     play = it.play.copy(
                         draftClass = it.play.draftClass.ifBlank { index.classes.classes.firstOrNull()?.code.orEmpty() },
                         selectedOrb = it.play.selectedOrb.ifBlank { index.itemsByCategory[com.sperance.exileforge.rules.content.Item.CURRENCY]?.minByOrNull { o -> o.price }?.code.orEmpty() },
@@ -514,10 +544,10 @@ class ForgeRuntime(val store: ServerStore, val journal: RequestJournal, val pref
         trialViewModel.drop()
         craftsViewModel.drop()
         heroViewModel.forget()
+        sessions.clear()
         mutable.update {
             it.copy(
                 phase = AppPhase.AUTH, tab = TAB_HERO, mode = AppMode.PLAYER, failure = null,
-                account = it.account.copy(resumable = false, characters = emptyList(), charactersRead = false, signedIn = false, profile = null, sessionEpoch = it.account.sessionEpoch + 1),
                 admin = it.admin.copy(redemptions = emptyList()),
                 play = PlayState(draftClass = it.play.draftClass, selectedOrb = it.play.selectedOrb),
                 market = MarketState(), building = null, guild = GuildState(), quests = QuestState(),

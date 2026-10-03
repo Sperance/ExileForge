@@ -75,7 +75,7 @@ class FeedbackViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     /** The inbox, quietly: the envelope in the banner counts what is unread. */
     fun loadMail() {
         with(runtime) {
-            if (state.value.account.signedIn) {
+            if (sessions.state.value.signedIn) {
                 read(Reads.MAIL, silent = true) {
                     val mail = api.mail.inbox()
                     feedback { it.copy(mail = mail) }

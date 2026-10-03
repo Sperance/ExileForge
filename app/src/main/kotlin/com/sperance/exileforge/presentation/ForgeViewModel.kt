@@ -27,8 +27,14 @@ import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
 
 /** Lifecycle owner and compatibility facade; screen actions live in feature models. */
-class ForgeViewModel(store: ServerStore, journal: RequestJournal, prefs: com.sperance.exileforge.data.settings.PreferencesRepository) : ViewModel() {
-    private val runtime = ForgeRuntime(store, journal, prefs)
+class ForgeViewModel(
+    store: ServerStore,
+    journal: RequestJournal,
+    prefs: com.sperance.exileforge.data.settings.PreferencesRepository,
+    sessions: com.sperance.exileforge.core.session.SessionRepository,
+    world: com.sperance.exileforge.core.world.WorldRepository,
+) : ViewModel() {
+    private val runtime = ForgeRuntime(store, journal, prefs, sessions, world)
     val state = runtime.state
 
     /** What the phone buzzes for (3.77.0), already filtered by the settings. */
@@ -49,7 +55,6 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal, prefs: com.spe
         }
     }
     fun closeSettings() = runtime.tab(runtime.settingsReturn)
-
 
     /** A line in the toasts, from the screens (3.76.0: a place opened by the level). */
     fun announce(text: String) = runtime.toast(text)

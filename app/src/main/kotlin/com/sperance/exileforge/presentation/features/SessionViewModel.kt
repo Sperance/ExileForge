@@ -80,9 +80,11 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
                 connectionViewModel.reset()
                 api = newApi(server)
                 journal.clear()
-                mutable.update { it.copy(account = it.account.copy(server = server, serverDraft = server, health = ui("session.checking")), world = it.world.copy(content = null, contentHash = "")) }
+                sessions.update { it.copy(server = server, health = ui("session.checking")) }
+                world.update { it.copy(content = null, contentHash = "") }
+                mutable.update { it.copy(account = it.account.copy(serverDraft = server)) }
                 val health = api.health()
-                mutable.update { it.copy(account = it.account.copy(health = health.toString())) }
+                sessions.update { it.copy(health = health.toString()) }
                 refreshLocale()
                 refreshIcons()
             }
@@ -93,7 +95,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         with(runtime) {
             read(Reads.HEALTH) {
                 val result = api.health().toString()
-                mutable.update { it.copy(account = it.account.copy(health = result)) }
+                sessions.update { it.copy(health = result) }
             }
         }
     }
@@ -116,7 +118,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
                 clearSession()
                 try {
                     api.workbench()
-                    val server = state.value.account.server
+                    val server = sessions.state.value.server
                     val profile = api.loginByDevice(store.deviceSecret(server))
                     api.deviceSecret?.let { store.saveDeviceSecret(server, it) }
                     signedIn(profile, byDevice = true)
@@ -142,7 +144,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
                     throw e
                 } catch (e: Exception) {
                     if (FailureState.from(e, writing = false) is FailureState.Offline) {
-                        mutable.update { it.copy(account = it.account.copy(resumable = true)) }
+                        sessions.update { it.copy(resumable = true) }
                         connectionViewModel.lost(e)
                     }
                 }
@@ -164,12 +166,12 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             val copy = heroCopy(server, heroId) ?: return false
             if (copy.revision != API_REVISION || !contentFromDevice()) return false
             api.adopt(saved, copy.account)
+            sessions.update { it.copy(signedIn = true, resumable = false, profile = copy.account) }
             mutable.update {
                 it.copy(
                     mode = AppMode.PLAYER,
                     phase = AppPhase.GAME,
                     tab = TAB_HERO,
-                    account = it.account.copy(signedIn = true, resumable = false, profile = copy.account),
                     play = PlayState(heroId = heroId, draftClass = it.play.draftClass, selectedOrb = it.play.selectedOrb),
                 )
             }
@@ -224,7 +226,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             // The kept token answered for another account than the hero drawn: that hero is not this session's.
             if (profile.id != adopted || state.value.play.heroOwner.let { it.isNotEmpty() && it != profile.id }) return fallBack(saved, foreign = true)
             unconfirmed = null
-            mutable.update { it.copy(account = it.account.copy(profile = profile)) }
+            sessions.update { it.copy(profile = profile) }
             read(Reads.CHARACTERS, silent = true) { characterViewModel.readCharacters() }
             read(Reads.HERO, silent = true) {
                 ensureContent(fresh = true)
@@ -243,11 +245,11 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     private suspend fun fallBack(saved: String, foreign: Boolean) {
         with(runtime) {
             unconfirmed = null
-            val server = state.value.account.server
+            val server = sessions.state.value.server
             clearSession()
             if (foreign) store.saveLastHero(server, null)
             state.first { !it.busy }
-            if (!state.value.account.signedIn) resume(saved)
+            if (!sessions.state.value.signedIn) resume(saved)
         }
     }
 
@@ -265,8 +267,8 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     fun retryResume() {
         with(runtime) {
             scope.launch {
-                val saved = store.token(state.value.account.server)
-                if (saved == null) mutable.update { it.copy(account = it.account.copy(resumable = false)) } else resume(saved)
+                val saved = store.token(sessions.state.value.server)
+                if (saved == null) sessions.update { it.copy(resumable = false) } else resume(saved)
             }
         }
     }
@@ -313,10 +315,11 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     /** What every sign-in ends with: the account is the session, and the gate opens one step — the hero menu. */
     private suspend fun signedIn(profile: UserProfile, byDevice: Boolean) {
         with(runtime) {
-            mutable.update { it.copy(mode = AppMode.PLAYER, phase = AppPhase.CHARACTERS, tab = TAB_HERO, account = it.account.copy(signedIn = true, resumable = false, profile = profile)) }
+            sessions.update { it.copy(signedIn = true, resumable = false, profile = profile) }
+            mutable.update { it.copy(mode = AppMode.PLAYER, phase = AppPhase.CHARACTERS, tab = TAB_HERO) }
             store.saveDeviceSession(byDevice)
-            store.saveToken(state.value.account.server, api.sessionToken())
-            forgetForeignHero(state.value.account.server, profile.id)
+            store.saveToken(sessions.state.value.server, api.sessionToken())
+            forgetForeignHero(sessions.state.value.server, profile.id)
             // What waited for a session goes out with this one; another account's commands are dropped on the way.
             connectionViewModel.wake(now = true)
             refreshLocale()
@@ -340,7 +343,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     fun logout() {
         with(runtime) {
             if (state.value.busy) return
-            val server = state.value.account.server
+            val server = sessions.state.value.server
             val leaving = api
             val token = leaving.sessionToken()
             unconfirmed = null

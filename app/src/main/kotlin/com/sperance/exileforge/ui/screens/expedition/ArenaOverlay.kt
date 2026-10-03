@@ -241,7 +241,7 @@ private const val HERO_CARD = -1
             if (fight.field.isNotEmpty()) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)) {
                 // Keyed by the foe: one stepping into a fallen one's place is a card of its own.
                 fight.field.forEach { foe -> key(foe.index) {
-                    FoeCard(foe, fight, time, chosen == foe.index && fight.scouting, track(foe.index).weight(1f, fill = false).widthIn(max = 120.dp), large,
+                    FoeCard(foe, fight, time, chosen == foe.index && fight.scouting, track(foe.index).weight(1f).widthIn(max = 180.dp), large,
                         traits[foe.index].orEmpty()) {
                         onCommand(RunCommand.Focus(foe.index))
                     }
@@ -326,7 +326,8 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
         else -> ring.copy(alpha = .55f)
     }
     val wash = foe.ailments.map { it.ailment }.maxByOrNull(::washAmount)
-    Column(modifier.graphicsLayer {
+    // Variant C (3.80.0): a round portrait beside the name; a blow, a stun, the frost play over the whole card.
+    Box(modifier.graphicsLayer {
             translationY = acting * 10.dp.toPx()
             translationX = if (hit && foe.alive) sin(time * 60f) * 2.dp.toPx() else 0f
             // A stun gone off (3.78.0) tilts the card while it holds.
@@ -336,51 +337,60 @@ private fun flash(lunge: LungeView?, target: Side, foe: Int?): Float =
         .background(if (acting > 0f) Blood.copy(alpha = .35f) else Panel.copy(alpha = .9f), shape)
         .then(if (foe.taunt && foe.alive && acting == 0f && !hit && !focused && !open) Modifier.tauntAura(shape, time) else Modifier)
         .border(if (focused || acting > 0f) 2.dp else 1.dp, border, shape)
-        .clip(shape).clickable(enabled = foe.alive && fight.outcome == null, onClick = onTap)
-        .padding(5.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
-        Box(Modifier.fillMaxWidth().aspectRatio(if (large) .75f else 1f).clip(RoundedCornerShape(4.dp)).background(Color(0xFF0B0E13))) {
-            Canvas(Modifier.fillMaxSize()) {
-                Portraits.monster(this, foe.monster.code, foe.monster.form, ring, time, wash?.let(::ailmentTint), wash?.let(::washAmount) ?: 0f,
-                    flash(lunge, Side.MONSTER, foe.index))
+        .clip(shape).clickable(enabled = foe.alive && fight.outcome == null, onClick = onTap)) {
+        Column(Modifier.fillMaxWidth().padding(6.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Box(Modifier.size(FOE_AVATAR).clip(CircleShape).background(Color(0xFF0B0E13)).border(2.dp, ring.copy(alpha = .8f), CircleShape)) {
+                    Canvas(Modifier.fillMaxSize()) {
+                        Portraits.monster(this, foe.monster.code, foe.monster.form, ring, time, wash?.let(::ailmentTint), wash?.let(::washAmount) ?: 0f,
+                            flash(lunge, Side.MONSTER, foe.index))
+                    }
+                }
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                    Text(monsterTitle(foe.monster.code), color = ring, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                        lineHeight = 12.sp)
+                    // Its own level (3.73.0): on a map a foe may stand a little above or below the map.
+                    if (foe.monster.level > 0) Text(ui("fight.level_short", foe.monster.level), color = Muted, fontSize = 9.sp, maxLines = 1)
+                    // Its traits (3.73.0) as seals; a tap on the card opens what they do.
+                    if (traits.isNotEmpty() && foe.alive) Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                        traits.forEach { trait -> SkillGlyph(trait.icon, Modifier.size(14.dp), Color(0xFFE8B06A)) }
+                    }
+                }
             }
-            if (fight.target == foe.index && foe.alive && fight.outcome == null)
-                Text(if (focused) "◉" else "◎", color = GoldBright, fontSize = 14.sp, modifier = Modifier.align(Alignment.TopEnd).padding(3.dp))
-            if (foe.taunt && foe.alive) TauntSeal(time, Modifier.align(Alignment.TopStart).padding(3.dp).size(22.dp)) { tauntTip(false) }
-            if (!foe.alive) foe.reinforce?.let { left -> ReinforceRing(left, foe.reinforceDelay, Modifier.align(Alignment.Center).size(40.dp)) }
-                ?: Text(ui("fight.fallen"), color = Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.Center))
-            // A foe singled out behind a standing taunter: the focus holds, the blows go to the taunter.
-            else if (focused && !foe.reachable) Text(ui("fight.out_of_reach_short"), color = Muted, fontSize = 9.sp, maxLines = 1,
-                overflow = TextOverflow.Ellipsis, modifier = Modifier.align(Alignment.BottomCenter).background(Ink.copy(alpha = .8f)).padding(horizontal = 4.dp))
-            if (foe.alive) foe.buildup?.let { BuildupMark(it, time) }
-            CardHits(fight.hits.filter { it.target == Side.MONSTER && it.foe == foe.index })
-        }
-        Text(monsterTitle(foe.monster.code), color = ring, fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        // Its own level (3.73.0): on a map a foe may stand a little above or below the map.
-        if (foe.monster.level > 0) Text(ui("fight.level_short", foe.monster.level), color = Muted, fontSize = 9.sp, maxLines = 1)
-        // Its traits (3.73.0) as seals; a tap on the card opens what they do.
-        if (traits.isNotEmpty() && foe.alive) Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-            traits.forEach { trait -> SkillGlyph(trait.icon, Modifier.size(if (large) 16.dp else 12.dp), Color(0xFFE8B06A)) }
-        }
-        LifeBar(foe.life, foe.maxLife, foe.shield, foe.maxShield, Modifier.fillMaxWidth().height(12.dp))
-        // A caster's or a boss's mana (2.78.0), a thread under its life: what its spells are paid with.
-        if (foe.maxMana > 0) Box(Modifier.fillMaxWidth().height(3.dp).background(Color(0x14FFFFFF), RoundedCornerShape(2.dp))) {
-            Box(Modifier.fillMaxWidth((foe.mana / foe.maxMana.toFloat()).coerceIn(0f, 1f)).fillMaxHeight().background(ManaBlue, RoundedCornerShape(2.dp)))
-        }
-        if (foe.alive) foe.buildup?.let { BuildupBar(it, Modifier.fillMaxWidth()) }
-        SwingBar(foe.swing, foe.held, Modifier.fillMaxWidth(), if (acting > 0f) LifeRed else LifeRed.copy(alpha = .7f))
-        if (foe.taunt && foe.alive) Text(ui("fight.taunt"), color = Color(0xFFE8B06A), fontSize = 9.sp, fontStyle = FontStyle.Italic, maxLines = 1)
-        // What is on it: small tiles while it runs, larger while paused; a tap on one opens its window.
-        Row(Modifier.height(if (large) 18.dp else 12.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-            val tile = if (large) 18.dp else 10.dp
-            if (foe.held && foe.ailments.none { it.ailment == Ailment.FROZEN })
-                StateTile(null, GoldBright, 1f, 1, ui("expedition.stunned"), tile) { stunTip() }
-            foe.ailments.take(5).forEach { view ->
-                StateTile(view.ailment, ailmentTint(view.ailment), view.left, view.stacks, ailmentLabel(view), tile) { ailmentTip(view) }
+            LifeBar(foe.life, foe.maxLife, foe.shield, foe.maxShield, Modifier.fillMaxWidth().height(12.dp))
+            // A caster's or a boss's mana (2.78.0), a thread under its life: what its spells are paid with.
+            if (foe.maxMana > 0) Box(Modifier.fillMaxWidth().height(3.dp).background(Color(0x14FFFFFF), RoundedCornerShape(2.dp))) {
+                Box(Modifier.fillMaxWidth((foe.mana / foe.maxMana.toFloat()).coerceIn(0f, 1f)).fillMaxHeight().background(ManaBlue, RoundedCornerShape(2.dp)))
             }
-            foe.effects.take(3).forEach { EffectTile(it, tile) }
+            if (foe.alive) foe.buildup?.let { BuildupBar(it, Modifier.fillMaxWidth()) }
+            SwingBar(foe.swing, foe.held, Modifier.fillMaxWidth(), if (acting > 0f) LifeRed else LifeRed.copy(alpha = .7f))
+            if (foe.taunt && foe.alive) Text(ui("fight.taunt"), color = Color(0xFFE8B06A), fontSize = 9.sp, fontStyle = FontStyle.Italic, maxLines = 1)
+            // What is on it: small tiles while it runs, larger while paused; a tap on one opens its window.
+            val tile = if (large) 16.dp else 12.dp
+            if (foe.held || foe.ailments.isNotEmpty() || foe.effects.isNotEmpty()) Row(Modifier.height(tile), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                if (foe.held && foe.ailments.none { it.ailment == Ailment.FROZEN })
+                    StateTile(null, GoldBright, 1f, 1, ui("expedition.stunned"), tile) { stunTip() }
+                foe.ailments.take(5).forEach { view ->
+                    StateTile(view.ailment, ailmentTint(view.ailment), view.left, view.stacks, ailmentLabel(view), tile) { ailmentTip(view) }
+                }
+                foe.effects.take(3).forEach { EffectTile(it, tile) }
+            }
         }
+        if (fight.target == foe.index && foe.alive && fight.outcome == null)
+            Text(if (focused) "◉" else "◎", color = GoldBright, fontSize = 14.sp, modifier = Modifier.align(Alignment.TopEnd).padding(4.dp))
+        if (foe.taunt && foe.alive) TauntSeal(time, Modifier.align(Alignment.TopStart).padding(2.dp).size(18.dp)) { tauntTip(false) }
+        if (!foe.alive) foe.reinforce?.let { left -> ReinforceRing(left, foe.reinforceDelay, Modifier.align(Alignment.Center).size(40.dp)) }
+            ?: Text(ui("fight.fallen"), color = Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.Center))
+        // A foe singled out behind a standing taunter: the focus holds, the blows go to the taunter.
+        else if (focused && !foe.reachable) Text(ui("fight.out_of_reach_short"), color = Muted, fontSize = 9.sp, maxLines = 1,
+            overflow = TextOverflow.Ellipsis, modifier = Modifier.align(Alignment.BottomCenter).background(Ink.copy(alpha = .8f)).padding(horizontal = 4.dp))
+        if (foe.alive) foe.buildup?.let { BuildupMark(it, time) }
+        CardHits(fight.hits.filter { it.target == Side.MONSTER && it.foe == foe.index })
     }
 }
+
+/** The round portrait of a foe's card (3.80.0, variant C). */
+private val FOE_AVATAR = 52.dp
 
 /** The place of a fallen foe while the next of the line closes in (3.73.0): a ring running down and the seconds left. */
 @Composable private fun ReinforceRing(left: Double, delay: Double, modifier: Modifier) {

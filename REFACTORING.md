@@ -41,7 +41,9 @@
   - [x] Tree: `TreeViewModel` (узел под курсором, поиск) над `HeroActions`; экран разбит на четыре файла ≤~400 строк.
   - [x] Hero (сундук, снаряжение, сумка, зверинец, хроника): `HeroViewModel` над `HeroActions`/`HeroSync`/`MarketActions`; переходы и выбор кузницы пока через `ForgeViewModel`.
   - [x] Forge (кузница): `SmithyViewModel` (сфера, эссенция, предзнаменование, раздел; сфера по умолчанию - из контента) над `HeroActions`; `PlayState` больше не хранит выбор кузницы.
+  - [x] Grimoire: `GrimoireViewModel` над `HeroActions`; экран разбит на три файла.
   - [ ] Progress: своя модель; выдачи тестера (`grant*`) - в модель отладочной панели.
+  - [ ] Expedition/Atlas/Trials: `ExpeditionActions` (журнал похода, отправка, атлас) + модели экранов; `ExpeditionViewModel`/`TrialViewModel` из `features` удалить.
 - [ ] По ходу: файлы UI не длиннее ~400 строк (SkillTreeScreen, CraftsScreen, MapStyles, GrimoireScreen, ExpeditionScene, WorldArt, AtlasScreen, AuctionTabs).
 - [ ] `ForgeViewModel`, `ForgeRuntime`, `FeatureViewModel` удалены.
 

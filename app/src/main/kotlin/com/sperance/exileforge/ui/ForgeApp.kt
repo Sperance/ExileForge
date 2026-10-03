@@ -327,7 +327,7 @@ private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, erro
 
                     TAB_TREE -> SkillTreeScreen(s.sliced(*s.common))
 
-                    TAB_SKILLS -> GrimoireScreen(s.sliced(*s.common), vm)
+                    TAB_SKILLS -> GrimoireScreen(s.sliced(*s.common))
 
                     TAB_CITY -> CityScreen(s.sliced(*s.common, s.building, s.guild, s.quests, s.market), vm)
 

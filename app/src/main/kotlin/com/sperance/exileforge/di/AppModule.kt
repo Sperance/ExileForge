@@ -40,6 +40,7 @@ import com.sperance.exileforge.presentation.quests.QuestActions
 import com.sperance.exileforge.presentation.quests.QuestViewModel
 import com.sperance.exileforge.presentation.server.ServerViewModel
 import com.sperance.exileforge.presentation.settings.SettingsViewModel
+import com.sperance.exileforge.presentation.skills.GrimoireViewModel
 import com.sperance.exileforge.presentation.tree.TreeViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -98,6 +99,7 @@ val appModule = module {
     viewModelOf(::TreeViewModel)
     viewModelOf(::HeroViewModel)
     viewModelOf(::SmithyViewModel)
+    viewModelOf(::GrimoireViewModel)
     viewModel { SettingsViewModel(get()) }
     viewModel { ServerViewModel(get(), get()) }
     // Проверка обновлений ждёт сервер игровой модели: поток и манифест приходят параметрами из активности.

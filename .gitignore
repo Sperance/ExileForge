@@ -9,3 +9,6 @@ local.properties
 
 # Сборки не живут в репозитории: свежий APK публикует CI артефактом каждого прогона.
 *.apk
+
+# Claude Code worktrees and session files
+.claude/

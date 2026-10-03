@@ -28,10 +28,8 @@ import com.sperance.exileforge.data.settings.ServerStore
 import com.sperance.exileforge.data.settings.deviceLanguage
 import com.sperance.exileforge.presentation.features.CharacterViewModel
 import com.sperance.exileforge.presentation.features.ConnectionViewModel
-import com.sperance.exileforge.presentation.features.ExpeditionViewModel
 import com.sperance.exileforge.presentation.features.RedemptionViewModel
 import com.sperance.exileforge.presentation.features.SessionViewModel
-import com.sperance.exileforge.presentation.features.TrialViewModel
 import com.sperance.exileforge.presentation.state.ADMIN_TABS
 import com.sperance.exileforge.presentation.state.AppMode
 import com.sperance.exileforge.presentation.state.AppPhase
@@ -101,6 +99,9 @@ class ForgeRuntime(
     val crafts get() = actions.crafts
     val hero get() = actions.hero
     val heroSync get() = actions.heroSync
+    val expedition get() = actions.expedition
+    val trial get() = actions.trial
+    val expeditions get() = repositories.expeditions
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     val mutable = MutableStateFlow(ForgeState())
     val state = mutable.asStateFlow()
@@ -119,8 +120,6 @@ class ForgeRuntime(
     val sessionViewModel = SessionViewModel(this)
     val redemptionViewModel = RedemptionViewModel(this)
     val characterViewModel = CharacterViewModel(this)
-    val expeditionViewModel = ExpeditionViewModel(this)
-    val trialViewModel = TrialViewModel(this)
     val warmupViewModel = com.sperance.exileforge.presentation.features.WarmupViewModel(this)
     val connectionViewModel = ConnectionViewModel(this)
 
@@ -212,9 +211,11 @@ class ForgeRuntime(
                 }
             }
         }
-        // Новое чтение героя: поход берёт кампанию - зону Ваал или кристалл, что сервер решил.
-        scope.launch { heroes.state.map { it.hero }.distinctUntilChanged { a, b -> a === b }.filterNotNull().collect { expeditionViewModel.heroChanged(it) } }
-        scope.launch { events.regear.collect { expeditionViewModel.regear() } }
+        scope.launch {
+            expeditions.state.collect { e -> mutable.update { it.copy(play = it.play.copy(launch = e.launch, runLoot = e.runLoot, atlas = e.atlas, runPending = e.pending, runRejected = e.rejected)) } }
+        }
+        expedition.start()
+        trial.start()
         scope.launch { boards.state.collect { value -> mutable.update { it.copy(quests = value) } } }
         scope.launch { markets.state.collect { value -> mutable.update { it.copy(market = value) } } }
         scope.launch { guilds.state.collect { value -> mutable.update { it.copy(guild = value) } } }
@@ -508,8 +509,8 @@ class ForgeRuntime(
         api.logout()
         journal.clear()
         cancelReads()
-        expeditionViewModel.drop()
-        trialViewModel.drop()
+        expedition.drop()
+        trial.drop()
         crafts.drop()
         heroSync.forget()
         sessions.clear()

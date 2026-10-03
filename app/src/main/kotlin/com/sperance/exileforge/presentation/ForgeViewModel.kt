@@ -80,46 +80,46 @@ class ForgeViewModel(
     }
 
     /** The campaign run on screen, if any: a world the scene steps and the overlay reads. */
-    val expedition = runtime.expeditionViewModel.run
-    fun loadCampaign() = runtime.expeditionViewModel.loadCampaign()
-    fun startRun(mapCode: String) = runtime.expeditionViewModel.start(mapCode)
-    fun startAutoRun(mapCode: String, plan: AutoPlan) = runtime.expeditionViewModel.start(mapCode, plan)
-    fun selectZone(mapCode: String) = runtime.expeditionViewModel.selectZone(mapCode)
+    val expedition = runtime.expedition.run
+    fun loadCampaign() = runtime.expedition.loadCampaign()
+    fun startRun(mapCode: String) = runtime.expedition.start(mapCode)
+    fun startAutoRun(mapCode: String, plan: AutoPlan) = runtime.expedition.start(mapCode, plan)
+    fun selectZone(mapCode: String) = runtime.expedition.selectZone(mapCode)
     fun loadCrafts(silent: Boolean = false) = runtime.crafts.load(silent)
 
     /** A bug report from the beetle (3.48.0): sent at once, whether signed in or not. */
     fun reportBug(report: com.sperance.exileforge.core.model.command.BugReportRequest, onSent: suspend () -> Unit = {}) = runtime.reportBug(report, onSent)
     fun planTree(nodes: List<com.sperance.exileforge.rules.content.TakenNode>) = runtime.hero.planTree(nodes)
     fun autoSell(rarity: com.sperance.exileforge.rules.content.Rarity, groups: Set<com.sperance.exileforge.rules.content.SlotGroup>) = runtime.hero.autoSell(rarity, groups)
-    fun closeZone() = runtime.expeditionViewModel.closeZone()
-    fun pickMap(itemId: String?) = runtime.expeditionViewModel.pickMap(itemId)
-    fun pickPotion(code: String?) = runtime.expeditionViewModel.pickPotion(code)
-    fun toggleScarab(code: String, add: Boolean) = runtime.expeditionViewModel.toggleScarab(code, add)
-    fun runCommand(command: RunCommand) = runtime.expeditionViewModel.send(command)
+    fun closeZone() = runtime.expedition.closeZone()
+    fun pickMap(itemId: String?) = runtime.expedition.pickMap(itemId)
+    fun pickPotion(code: String?) = runtime.expedition.pickPotion(code)
+    fun toggleScarab(code: String, add: Boolean) = runtime.expedition.toggleScarab(code, add)
+    fun runCommand(command: RunCommand) = runtime.expedition.send(command)
 
     /** The trial on screen (3.49.0), if any: an arena the screen steps and reads. */
-    val trial = runtime.trialViewModel.arena
+    val trial = runtime.trial.arena
 
     /** The warm-up on entering a hero (3.54.0). */
     fun warmUp() = runtime.warmupViewModel.start()
-    fun enterRush(region: String) = runtime.trialViewModel.rush(region)
-    fun enterTower() = runtime.trialViewModel.tower()
-    fun forgeRushKey() = runtime.trialViewModel.forgeKey()
-    fun abandonTrial() = runtime.trialViewModel.abandon()
-    fun trialCommand(command: RunCommand) = runtime.trialViewModel.send(command)
-    fun closeTrial() = runtime.trialViewModel.close()
-    fun closeRun() = runtime.expeditionViewModel.close()
+    fun enterRush(region: String) = runtime.trial.rush(region)
+    fun enterTower() = runtime.trial.tower()
+    fun forgeRushKey() = runtime.trial.forgeKey()
+    fun abandonTrial() = runtime.trial.abandon()
+    fun trialCommand(command: RunCommand) = runtime.trial.send(command)
+    fun closeTrial() = runtime.trial.close()
+    fun closeRun() = runtime.expedition.close()
 
     /** The run's journal goes out now: the app leaves the foreground. */
-    fun flushRun() = runtime.expeditionViewModel.flushRun()
-    fun enterVaal() = runtime.expeditionViewModel.enterVaal()
-    fun refuseVaal() = runtime.expeditionViewModel.refuseVaal()
-    fun openAtlas() = runtime.expeditionViewModel.openAtlas()
-    fun closeAtlas() = runtime.expeditionViewModel.closeAtlas()
-    fun selectAtlasNode(code: String) = runtime.expeditionViewModel.selectAtlasNode(code)
-    fun allocateAtlas(code: String) = runtime.expeditionViewModel.allocateAtlas(code)
-    fun refundAtlas(code: String, regret: Boolean = false) = runtime.expeditionViewModel.refundAtlas(code, regret)
-    fun resetAtlas(regret: Boolean = false) = runtime.expeditionViewModel.resetAtlas(regret)
+    fun flushRun() = runtime.expedition.flushRun()
+    fun enterVaal() = runtime.expedition.enterVaal()
+    fun refuseVaal() = runtime.expedition.refuseVaal()
+    fun openAtlas() = runtime.expedition.openAtlas()
+    fun closeAtlas() = runtime.expedition.closeAtlas()
+    fun selectAtlasNode(code: String) = runtime.expedition.selectAtlasNode(code)
+    fun allocateAtlas(code: String) = runtime.expedition.allocateAtlas(code)
+    fun refundAtlas(code: String, regret: Boolean = false) = runtime.expedition.refundAtlas(code, regret)
+    fun resetAtlas(regret: Boolean = false) = runtime.expedition.resetAtlas(regret)
     fun language(lang: Lang) = runtime.language(lang)
     fun refreshLocale() = runtime.refreshLocale()
     fun refreshIcons() = runtime.refreshIcons()

@@ -37,13 +37,14 @@ class CharacterViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         with(runtime) {
             heroes.select(id)
             boards.clear()
+            expeditions.clear()
             mutable.update { it.copy(phase = AppPhase.GAME, tab = TAB_HERO, play = PlayState(heroId = id, draftClass = it.play.draftClass)) }
             heroSync.forget()
             // The hero the next launch opens straight into (3.30.0).
             store.saveLastHero(sessions.state.value.server, id)
             ensureContent(fresh = true)
             heroSync.readHero()
-            expeditionViewModel.resume(id)
+            expedition.resume(id)
         }
     }
 
@@ -52,8 +53,8 @@ class CharacterViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         with(runtime) {
             if (state.value.busy) return
             cancelReads()
-            expeditionViewModel.drop()
-            trialViewModel.drop()
+            expedition.drop()
+            trial.drop()
             crafts.drop()
             heroes.clear()
             boards.clear()

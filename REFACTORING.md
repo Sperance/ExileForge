@@ -43,7 +43,8 @@
   - [x] Forge (кузница): `SmithyViewModel` (сфера, эссенция, предзнаменование, раздел; сфера по умолчанию - из контента) над `HeroActions`; `PlayState` больше не хранит выбор кузницы.
   - [x] Grimoire: `GrimoireViewModel` над `HeroActions`; экран разбит на три файла.
   - [ ] Progress: своя модель; выдачи тестера (`grant*`) - в модель отладочной панели.
-  - [ ] Expedition/Atlas/Trials: `ExpeditionActions` (журнал похода, отправка, атлас) + модели экранов; `ExpeditionViewModel`/`TrialViewModel` из `features` удалить.
+  - [x] Expedition/Atlas/Trials, ядро: `ExpeditionRepository` (карточка зоны, добыча похода, окно атласа, счётчики журнала) в `:core`; `ExpeditionActions` и `TrialActions` в `presentation/expedition`; `ExpeditionViewModel`/`TrialViewModel` из `features` удалены.
+  - [ ] Expedition/Atlas/Trials, экраны: модель экрана похода над действиями; экраны похода перестают получать `ForgeViewModel`.
 - [ ] По ходу: файлы UI не длиннее ~400 строк (SkillTreeScreen, CraftsScreen, MapStyles, GrimoireScreen, ExpeditionScene, WorldArt, AtlasScreen, AuctionTabs).
 - [ ] `ForgeViewModel`, `ForgeRuntime`, `FeatureViewModel` удалены.
 

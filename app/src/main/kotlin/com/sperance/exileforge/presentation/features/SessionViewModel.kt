@@ -169,6 +169,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             api.adopt(saved, copy.account)
             sessions.update { it.copy(signedIn = true, resumable = false, profile = copy.account) }
             heroes.select(heroId)
+            expeditions.clear()
             mutable.update {
                 it.copy(
                     mode = AppMode.PLAYER,
@@ -233,7 +234,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             read(Reads.HERO, silent = true) {
                 ensureContent(fresh = true)
                 heroSync.readHero()
-                expeditionViewModel.resume(heroId)
+                expedition.resume(heroId)
             }
             connectionViewModel.wake(now = true)
         }

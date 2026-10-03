@@ -256,15 +256,17 @@ enum class StashSort {
 }
 
 /** The atlas window: the node looked at. */
-data class AtlasScreenState(val selected: String = "")
 
-/** A piece a run brought and the moment it landed. */
-data class LootEntry(val item: ItemInstance, val at: Long)
+/** Окно атласа - из :core (3.80.20). */
+typealias AtlasScreenState = com.sperance.exileforge.core.campaign.AtlasWindow
+
+/** Вещь, принесённая походом, - из :core (3.80.20). */
+typealias LootEntry = com.sperance.exileforge.core.campaign.LootEntry
 
 /** One zone's card: the stash map picked to enter it with — null enters without one. */
 
 /** The zone about to be entered: the map picked for it, and (3.79.0) the potion drunk and the scarabs set with the map. */
-data class MapLaunchState(val mapCode: String, val picked: String? = null, val potion: String? = null, val scarabs: List<String> = emptyList())
+typealias MapLaunchState = com.sperance.exileforge.core.campaign.MapLaunch
 
 /** The forge's sections: orbs, the bench and the essences work on one item. */
 enum class ForgeSection { ORBS, BENCH, ESSENCES }

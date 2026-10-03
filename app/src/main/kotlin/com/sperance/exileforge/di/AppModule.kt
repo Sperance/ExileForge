@@ -1,5 +1,6 @@
 package com.sperance.exileforge.di
 
+import com.sperance.exileforge.core.campaign.ExpeditionRepository
 import com.sperance.exileforge.core.crafts.CraftsRepository
 import com.sperance.exileforge.core.feedback.FeedbackRepository
 import com.sperance.exileforge.core.guild.GuildRepository
@@ -26,6 +27,8 @@ import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.Repositories
 import com.sperance.exileforge.presentation.crafts.CraftsActions
 import com.sperance.exileforge.presentation.crafts.CraftsViewModel
+import com.sperance.exileforge.presentation.expedition.ExpeditionActions
+import com.sperance.exileforge.presentation.expedition.TrialActions
 import com.sperance.exileforge.presentation.features.UpdateViewModel
 import com.sperance.exileforge.presentation.feedback.FeedbackViewModel
 import com.sperance.exileforge.presentation.forge.SmithyViewModel
@@ -84,6 +87,9 @@ val appModule = module {
     single { Buzzes() }
     single { HeroSync(get(), get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     singleOf(::HeroActions)
+    single { ExpeditionRepository() }
+    single { ExpeditionActions(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
+    single { TrialActions(get(), get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     single { CraftsRepository() }
     single { CraftsActions(get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     single { ContentLoader() }

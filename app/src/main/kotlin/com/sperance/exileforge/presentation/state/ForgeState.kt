@@ -243,7 +243,8 @@ data class AtlasScreenState(val selected: String = "")
 data class LootEntry(val item: ItemInstance, val at: Long)
 
 /** One zone's card: the stash map picked to enter it with — null enters without one. */
-data class MapLaunchState(val mapCode: String, val picked: String? = null)
+/** The zone about to be entered: the map picked for it, and (3.79.0) the potion drunk and the scarabs set with the map. */
+data class MapLaunchState(val mapCode: String, val picked: String? = null, val potion: String? = null, val scarabs: List<String> = emptyList())
 
 /** The forge's sections: orbs, the bench and the essences work on one item. */
 enum class ForgeSection { ORBS, BENCH, ESSENCES }

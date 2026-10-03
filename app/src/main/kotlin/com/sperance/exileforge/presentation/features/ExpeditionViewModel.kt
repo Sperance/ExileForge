@@ -81,7 +81,23 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     fun selectZone(mapCode: String) { runtime.mutable.update { it.copy(play = it.play.copy(launch = MapLaunchState(mapCode))) } }
     fun closeZone() { runtime.mutable.update { it.copy(play = it.play.copy(launch = null)) } }
     /** The stash map to enter with, or null to enter without one. */
-    fun pickMap(itemId: String?) { runtime.mutable.update { s -> s.copy(play = s.play.copy(launch = s.play.launch?.copy(picked = itemId))) } }
+    fun pickMap(itemId: String?) { runtime.mutable.update { s -> s.copy(play = s.play.copy(launch = s.play.launch?.copy(picked = itemId,
+        scarabs = if (itemId == null) emptyList() else s.play.launch.scarabs))) } }
+
+    /** The potion for the run (3.79.0): one, tapped again to take it back. */
+    fun pickPotion(code: String?) { runtime.mutable.update { s -> s.copy(play = s.play.copy(launch = s.play.launch?.let { it.copy(potion = code.takeIf { c -> c != it.potion }) })) } }
+
+    /** A scarab set with the map or taken off (3.79.0): up to the rules' count, no more of a kind than the bag holds. */
+    fun toggleScarab(code: String, add: Boolean) { runtime.mutable.update { s ->
+        val launch = s.play.launch ?: return@update s
+        val max = s.index?.rules?.brews?.scarabsPerMap ?: 0
+        val scarabs = when {
+            !add -> launch.scarabs - code
+            launch.picked == null || launch.scarabs.size >= max || launch.scarabs.count { it == code } >= (s.bagAmount(code) ?: 0L) -> return@update s
+            else -> launch.scarabs + code
+        }
+        s.copy(play = s.play.copy(launch = launch.copy(scarabs = scarabs)))
+    } }
 
     /**
      * «В путь»: the zone is entered on the server — with the picked map, spent there, or without one — and the
@@ -92,7 +108,8 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         val s = state.value
         val index = s.index ?: return
         if (index.zone(mapCode) == null || s.progress?.unlocked?.contains(mapCode) != true) return
-        val picked = s.play.launch?.takeIf { it.mapCode == mapCode }?.picked
+        val launch = s.play.launch?.takeIf { it.mapCode == mapCode }
+        val picked = launch?.picked
         // An autorun (3.2.0) spends a map of a zone whose guardian has fallen once
         if (auto != null && (picked == null || s.progress?.cleared?.contains(mapCode) != true)) return
         autoPlan = auto
@@ -106,7 +123,7 @@ class ExpeditionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
                 check(j.settled || runJournal == null) { ui("expedition.unsent") }
                 store.clearJournal(id); runJournal = null
             }
-            val started = try { api.campaign.start(id, mapCode, picked) } catch (e: ApiFailure) {
+            val started = try { api.campaign.start(id, mapCode, picked, launch?.potion, launch?.scarabs.orEmpty().takeIf { picked != null }.orEmpty()) } catch (e: ApiFailure) {
                 // A new seed comes no sooner than the rules allow, whatever closed the last run (server 1.30.0): a wait, not a failure.
                 if (e.code != SEED_TOO_SOON) throw e
                 toast(ui("expedition.seed_wait", e.args.firstOrNull().orEmpty()))

@@ -19,10 +19,14 @@ private const val CAMPAIGN = "api/v1/hero/campaign"
 class CampaignClient internal constructor(private val http: Transport) {
     suspend fun progress(heroId: String): CampaignProgress = http.get("$CAMPAIGN/progress", heroQuery(heroId))
 
-    /** Enters [mapCode], with a map item spent on it or without one. Never retried: a repeat opens another run. */
-    suspend fun start(heroId: String, mapCode: String, itemId: String? = null): RunStart {
+    /**
+     * Enters [mapCode], with a map item spent on it or without one. Never retried: a repeat opens another run. A [potion]
+     * goes into the run and [scarabs] with the map (server 1.74.0), both spent there.
+     */
+    suspend fun start(heroId: String, mapCode: String, itemId: String? = null, potion: String? = null, scarabs: List<String> = emptyList()): RunStart {
         itemId?.let(::requireItemId)
-        return http.post("$CAMPAIGN/start", heroQuery(heroId, "mapCode" to mapCode, "itemId" to itemId))
+        return http.post("$CAMPAIGN/start", heroQuery(heroId, "mapCode" to mapCode, "itemId" to itemId, "potion" to potion,
+            "scarabs" to scarabs.joinToString(",").ifEmpty { null }))
     }
 
     /**

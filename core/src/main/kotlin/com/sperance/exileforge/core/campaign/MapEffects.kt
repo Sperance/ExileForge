@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.campaign
 
+import com.sperance.exileforge.rules.content.BrewStat
 import com.sperance.exileforge.core.atlas.AtlasEffects
 import com.sperance.exileforge.rules.content.BuffKind
 import com.sperance.exileforge.rules.content.ContentIndex
@@ -158,6 +159,10 @@ object MapEffects {
         effects[MapStat.HERO_FLASK_EFFECT.code]?.let { add("STOCK_FLASK_EFFECT", -it) }
         effects[MapStat.HERO_BUFF_DURATION.code]?.let { add(BuffKind.DURATION, -it) }
         AtlasEffects.hero.forEach { (atlas, stat) -> effects[atlas]?.let { add(stat, it) } }
+        // The alchemist's potion of the run (3.79.0, server 1.74.0): resistances added, damage and life «more».
+        effects[BrewStat.RESIST]?.let { add("STOCK_RESIST_ALL", it) }
+        effects[BrewStat.DAMAGE]?.let { v -> sheet["STOCK_DAMAGE"] = (100 + (sheet["STOCK_DAMAGE"] ?: 0.0)) * (1 + v / 100) - 100 }
+        effects[BrewStat.LIFE]?.let { scale("STOCK_HEALTH", it) }
         return sheet
     }
 

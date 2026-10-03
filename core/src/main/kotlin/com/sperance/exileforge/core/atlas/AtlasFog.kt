@@ -60,7 +60,7 @@ object AtlasEffects {
     /** [effects] of the entered map with the atlas's pack and rare monsters added, as one more map item's worth. */
     fun map(effects: Map<String, Double>, atlas: Map<String, Double>): Map<String, Double> {
         val extra = (mapOf(MapStat.PACK_SIZE.code to (atlas[PACK_SIZE] ?: 0.0), MapStat.RARE_MONSTERS.code to (atlas[RARE_MONSTERS] ?: 0.0)) +
-            (hero.keys + GUARDIAN_POWER + ABYSS_POWER).associateWith { atlas[it] ?: 0.0 }).filterValues { it != 0.0 }
+            (hero.keys + GUARDIAN_POWER + ABYSS_POWER + com.sperance.exileforge.rules.content.BrewStat.ALL).associateWith { atlas[it] ?: 0.0 }).filterValues { it != 0.0 }
         return (effects.keys + extra.keys).associateWith { (effects[it] ?: 0.0) + (extra[it] ?: 0.0) }
     }
 

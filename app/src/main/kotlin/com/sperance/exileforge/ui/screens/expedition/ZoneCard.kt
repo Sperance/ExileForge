@@ -30,6 +30,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.campaign.AutoPlan
 import com.sperance.exileforge.core.campaign.MapLineKind
 import com.sperance.exileforge.core.campaign.MapStats
@@ -38,6 +39,8 @@ import com.sperance.exileforge.core.campaign.WorldMap
 import com.sperance.exileforge.core.campaign.WorldToken
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.mapDescription
+import com.sperance.exileforge.core.display.itemTitle
+import com.sperance.exileforge.core.display.itemDescription
 import com.sperance.exileforge.core.display.mapTitle
 import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.display.number
@@ -60,6 +63,7 @@ import com.sperance.exileforge.rules.roll.LootRoller
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.ItemIcon
+import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.screens.auction.untilText
 import com.sperance.exileforge.ui.screens.expedition.scene.Portraits
 import com.sperance.exileforge.ui.theme.*
@@ -122,6 +126,7 @@ private fun stashMaps(s: ForgeState): List<StashMap> = s.hero?.stash.orEmpty()
             index.monster(zone.boss)?.let { Guardian(s, zone, it) }
             AtlasKeys(s.atlasState?.earned.orEmpty(), zone.code)
             Maps(s, vm, index, zone, launch)
+            Brews(s, vm, launch)
             ForgeButton(enabled = s.hero != null && !s.busy, onClick = { launchGuarded { vm.startRun(zone.code) } },
                 modifier = Modifier.fillMaxWidth().height(44.dp)) {
                 Icon(ForgeGlyphs.Portal, null, modifier = Modifier.size(20.dp))
@@ -283,6 +288,46 @@ private fun lines(map: ItemView, index: ContentIndex): List<MapLine> = map.lines
     }
 }
 
+/**
+ * The crafts' gifts to the run (3.79.0): one potion of the bag drunk on entering, and with a map up to two scarabs
+ * spent with it. A tap picks, a tap again puts back; what each does is the item's own line.
+ */
+@Composable private fun Brews(s: ForgeState, vm: ForgeViewModel, launch: MapLaunchState) {
+    val brews = s.index?.rules?.brews ?: return
+    val potions = brews.potions.keys.filter { (s.bagAmount(it) ?: 0L) > 0 }
+    val scarabs = brews.scarabs.keys.filter { (s.bagAmount(it) ?: 0L) > 0 }
+    if (potions.isEmpty() && scarabs.isEmpty()) return
+    ForgePanel {
+        if (potions.isNotEmpty()) {
+            Engraved(ui("brew.potion"))
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(potions, key = { it }) { code ->
+                    val chosen = launch.potion == code
+                    Square(if (chosen) GoldBright else PanelRaised, chosen, !s.busy, itemTitle(code), { vm.pickPotion(code) }) {
+                        BagIcon(code, Modifier.size(28.dp))
+                    }
+                }
+            }
+            launch.potion?.let { MutedText(itemDescription(it), style = MaterialTheme.typography.bodySmall) }
+        }
+        if (scarabs.isNotEmpty()) {
+            Engraved(ui("brew.scarabs", launch.scarabs.size, brews.scarabsPerMap))
+            if (launch.picked == null) MutedText(ui("brew.scarabs_need_map"), style = MaterialTheme.typography.bodySmall)
+            else LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(scarabs, key = { it }) { code ->
+                    val set = launch.scarabs.count { it == code }
+                    Square(if (set > 0) GoldBright else PanelRaised, set > 0, !s.busy, itemTitle(code),
+                        { vm.toggleScarab(code, add = set == 0 || (launch.scarabs.size < brews.scarabsPerMap && set < (s.bagAmount(code) ?: 0L))) }) {
+                        BagIcon(code, Modifier.size(28.dp))
+                        if (set > 1) Text("×$set", color = GoldBright, fontSize = 10.sp, modifier = Modifier.align(Alignment.BottomEnd).padding(2.dp))
+                    }
+                }
+            }
+            launch.scarabs.distinct().forEach { MutedText(itemDescription(it), style = MaterialTheme.typography.bodySmall) }
+        }
+    }
+}
+
 /** The stash maps of this zone as squares framed in their rarity, the empty one first. */
 @Composable private fun MapRibbon(maps: List<StashMap>, picked: StashMap?, enabled: Boolean, onPick: (String?) -> Unit) {
     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(horizontal = 2.dp), modifier = Modifier.fillMaxWidth()) {
@@ -301,7 +346,7 @@ private fun lines(map: ItemView, index: ContentIndex): List<MapLine> = map.lines
     }
 }
 
-@Composable private fun Square(frame: Color, chosen: Boolean, enabled: Boolean, label: String, onClick: () -> Unit, content: @Composable () -> Unit) {
+@Composable private fun Square(frame: Color, chosen: Boolean, enabled: Boolean, label: String, onClick: () -> Unit, content: @Composable BoxScope.() -> Unit) {
     Box(Modifier.size(52.dp).background(Abyss).border(if (chosen) 2.dp else 1.dp, frame)
         .clickable(enabled = enabled, role = Role.RadioButton, onClickLabel = label, onClick = onClick), contentAlignment = Alignment.Center) { content() }
 }

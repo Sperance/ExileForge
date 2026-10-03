@@ -70,6 +70,8 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() 
     fun equipTool(itemId: String) = runtime.craftsViewModel.equipTool(itemId)
     fun closeZone() = runtime.expeditionViewModel.closeZone()
     fun pickMap(itemId: String?) = runtime.expeditionViewModel.pickMap(itemId)
+    fun pickPotion(code: String?) = runtime.expeditionViewModel.pickPotion(code)
+    fun toggleScarab(code: String, add: Boolean) = runtime.expeditionViewModel.toggleScarab(code, add)
     fun runCommand(command: RunCommand) = runtime.expeditionViewModel.send(command)
     /** The trial on screen (3.49.0), if any: an arena the screen steps and reads. */
     val trial = runtime.trialViewModel.arena
@@ -113,6 +115,7 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() 
     fun unequip(itemId: String) = runtime.heroViewModel.unequip(itemId)
     fun expandStash() = runtime.heroViewModel.expandStash()
     fun claimPath() = runtime.heroViewModel.claimPath()
+    fun temper(itemId: String) = runtime.heroViewModel.temper(itemId)
     fun setTitle(title: String) = runtime.heroViewModel.setTitle(title)
     /** The hero's statistics (3.51.0), read when the chronicle opens; null when the read failed. */
     suspend fun heroStats(heroId: String): Map<String, Long>? = runCatching { runtime.api.hero.stats(heroId).values }.getOrNull()

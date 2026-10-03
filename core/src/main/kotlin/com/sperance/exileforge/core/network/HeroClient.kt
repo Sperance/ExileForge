@@ -163,6 +163,12 @@ class HeroClient internal constructor(private val http: Transport) {
 
     /** Spends one orb of the bag on one item; [orb] is the orb's item code. */
     /** An orb on an item, with an [omen] (3.36.0) spent along with it when given. */
+    /** Tempers a weapon or armour with the smith's ore (server 1.74.0): quality and item level up, once per item. Never retried. */
+    suspend fun temper(heroId: String, itemId: String): CurrencyApplyResponse {
+        requireItemId(itemId)
+        return http.post("$HERO/temper", heroQuery(heroId, "itemId" to itemId))
+    }
+
     suspend fun applyOrb(heroId: String, itemId: String, orb: String, omen: String? = null): CurrencyApplyResponse {
         requireItemId(itemId)
         require(orb.isNotBlank()) { ui("api.choose_orb") }

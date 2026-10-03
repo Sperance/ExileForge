@@ -23,6 +23,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.state.ForgeSection
 import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.unmetFor
 import com.sperance.exileforge.presentation.state.view
@@ -71,6 +72,17 @@ private enum class ItemAction { AUCTION, SELL, WORN }
                 item { ItemCard(view, enabled = false, detailed = true, price = price, waiting = waiting) }
                 if (locked) item { Text(ui("item.locked_hint"), color = Muted, style = MaterialTheme.typography.bodySmall) }
                 item { WearPreview(s, instance) }
+                temperOffer(s, instance)?.let { (ore, need) -> item {
+                    // The smith's tempering (3.79.0): once per weapon or armour, the ore of its level.
+                    ForgePanel {
+                        Engraved(ui("temper.title"))
+                        MutedText(ui("temper.hint", s.index?.rules?.brews?.temper?.let { "${it.minQuality}–${it.maxQuality}" }.orEmpty(),
+                            s.index?.rules?.brews?.temper?.maxLevels ?: 0, s.index?.rules?.brews?.temper?.smithLevel ?: 0), style = MaterialTheme.typography.bodySmall)
+                        ForgeOutlinedButton(enabled = can && (s.bagAmount(ore) ?: 0L) >= need, onClick = { vm.temper(instance.id) }, modifier = Modifier.fillMaxWidth()) {
+                            Text(ui("temper.go", itemTitle(ore), need, s.bagAmount(ore) ?: 0L))
+                        }
+                    }
+                } }
                 // Worn but not counting: the rules' reasons, as the slot cell prints them.
                 s.hero?.inactive?.get(instance.id)?.let { reasons -> item {
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -138,4 +150,13 @@ private enum class ItemAction { AUCTION, SELL, WORN }
         Text(label, color = if (enabled) Parchment else Muted.copy(alpha = .6f), style = MaterialTheme.typography.labelSmall,
             textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
+}
+
+/** The ore and its amount the smith asks to temper [item] (3.79.0), or null when it cannot be: not gear, tempered, corrupted. */
+private fun temperOffer(s: ForgeState, item: com.sperance.exileforge.rules.roll.ItemInstance): Pair<String, Long>? {
+    val index = s.index ?: return null
+    val template = index.template(item.template) ?: return null
+    val rule = index.rules.brews.temper
+    if (item.tempered || item.corrupted || !(template.slot.isWeapon || template.slot.isArmour)) return null
+    return rule.oreFor(template.level)?.let { it to rule.ore }
 }

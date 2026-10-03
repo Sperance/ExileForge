@@ -148,6 +148,9 @@ class HeroViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         mutable.update { it.copy(play = it.play.copy(forgeLine = outcome.message, selectedEquipment = outcome.created?.id ?: outcome.item.id, selectedOmen = "")) }
     } } }
 
+    /** The smith's tempering (3.79.0): the sentence of what it raised goes up as a toast. */
+    fun temper(itemId: String) { with(runtime) { forgeCommand { id -> toast(api.hero.temper(id, itemId).message, NoticeKind.CRAFT) } } }
+
     fun unveil(itemId: String, choice: Int) { with(runtime) { forgeCommand { id ->
         val outcome = api.hero.unveil(id, itemId, choice)
         mutable.update { it.copy(play = it.play.copy(forgeLine = outcome.message)) }

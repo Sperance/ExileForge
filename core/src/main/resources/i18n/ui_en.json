@@ -3636,5 +3636,14 @@
   "toast.extended": "Lot extended: {0}",
   "auction.extend": "Extend by {0} days",
   "auction.extend_now": "can be extended",
-  "sell.price_hint": "Recently sold for {0} × {1} ({2} deals) — use it"
+  "sell.price_hint": "Recently sold for {0} × {1} ({2} deals) — use it",
+  "brew.potion": "Potion for the run",
+  "brew.scarabs": "Scarabs with the map: {0}/{1}",
+  "brew.scarabs_need_map": "Scarabs go in with a map — pick a map above.",
+  "temper.title": "Tempering",
+  "temper.hint": "Ore raises quality to {0}% and item level by 1–{1}. Once per item, needs smithing level {2}.",
+  "temper.go": "Temper: {0} × {1} (have {2})",
+  "enum.stat.BREW_RESIST": "Potion: resistances",
+  "enum.stat.BREW_DAMAGE": "Potion: damage",
+  "enum.stat.BREW_LIFE": "Potion: life"
 }

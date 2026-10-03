@@ -33,16 +33,18 @@ import com.sperance.exileforge.ui.theme.*
 @Composable internal fun ContributeTab(s: ForgeState, vm: ForgeViewModel, guild: GuildView, me: GuildMember?) {
     val rules = s.index?.guilds
     val orbs = s.orbs.filter { (s.bagAmount(it.code) ?: 0L) > 0 }
+    // The crafts' materials (3.79.0, server 1.74.0): they grow the guild at their price, the treasury does not keep them.
+    val materials = s.index?.items?.values.orEmpty().filter { it.category in DONATED_STOCK && it.price > 0 && (s.bagAmount(it.code) ?: 0L) > 0 }.sortedBy { it.price }
     var item by remember { mutableStateOf(GUILD_GOLD) }
     var amount by remember { mutableStateOf("") }
     val count = amount.toLongOrNull() ?: 0L
     val have = if (item == GUILD_GOLD) s.hero?.money else s.bagAmount(item)
-    val price = if (item == GUILD_GOLD) 1L else orbs.firstOrNull { it.code == item }?.price ?: 0L
+    val price = if (item == GUILD_GOLD) 1L else (orbs + materials).firstOrNull { it.code == item }?.price ?: 0L
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
         item {
             ForgePanel {
                 Engraved(ui("guild.give"))
-                Spinner(ui("guild.give_what"), item, mapOf(GUILD_GOLD to ui("guild.gold")) + orbs.associate { it.code to itemTitle(it.code) }, !s.busy,
+                Spinner(ui("guild.give_what"), item, mapOf(GUILD_GOLD to ui("guild.gold")) + (orbs + materials).associate { it.code to itemTitle(it.code) }, !s.busy,
                     glyph = Glyph.CURRENCY, optionArt = orbArt(s.orbs)) { item = it; amount = "" }
                 OutlinedTextField(amount, { amount = it.filter(Char::isDigit).take(12) }, label = { Text(ui("auction.amount")) }, singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(),
@@ -102,3 +104,6 @@ import com.sperance.exileforge.ui.theme.*
         }
     }
 }
+
+/** The bag's stocks a guild takes besides gold and orbs (3.79.0): the crafts' materials. */
+private val DONATED_STOCK = setOf("MATERIAL", "STONE_STOCK", "WOOD_STOCK")

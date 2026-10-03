@@ -27,7 +27,7 @@
 
 ## Этап 5 - бой
 - [ ] `Combat.kt` → пакет `core/campaign/combat/`: модель (Combatant, Foe, Ally, эффекты), `Battle` по секциям (skills, tick, strike/land, traits, powers, log), константы - из контента.
-- [ ] `ArenaOverlay.kt` → компоненты (FoeCard, HeroCard, FightFeed, Controls, FightLog общий с Report/CombatDetail).
+- [x] `ArenaOverlay.kt` → пакет `ui/screens/expedition/arena/` (FightPalette, FightMarks, ArenaOverlay, FoeCard, HeroCard, ScoutPanel, FightFeed, Controls, VitalBars, ActionBar, StateTiles, FightLog общий с Report/CombatDetail); `RewardLines` остался в `expedition/`.
 - [ ] `ExpeditionRun.kt`, `ExpeditionWorld.kt` - по тем же правилам.
 
 ## Этап 6 - баланс и чистка

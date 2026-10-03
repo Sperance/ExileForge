@@ -1,5 +1,4 @@
 package com.sperance.exileforge.ui.screens.expedition
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -31,6 +30,7 @@ import com.sperance.exileforge.ui.components.ForgeTextButton
 import com.sperance.exileforge.ui.components.Guide
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
+import com.sperance.exileforge.ui.screens.expedition.arena.rarityTint
 import com.sperance.exileforge.ui.theme.*
 
 /**

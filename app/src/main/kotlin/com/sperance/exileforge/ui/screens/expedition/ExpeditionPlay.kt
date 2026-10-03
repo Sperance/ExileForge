@@ -1,5 +1,4 @@
 package com.sperance.exileforge.ui.screens.expedition
-
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
@@ -52,6 +51,9 @@ import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.run.Reward
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
+import com.sperance.exileforge.ui.screens.expedition.arena.ArenaOverlay
+import com.sperance.exileforge.ui.screens.expedition.arena.key
+import com.sperance.exileforge.ui.screens.expedition.arena.rarityTint
 import com.sperance.exileforge.ui.screens.expedition.scene.ExpeditionScene
 import com.sperance.exileforge.ui.screens.expedition.scene.SCENE_UNIT
 import com.sperance.exileforge.ui.screens.expedition.scene.sceneToWorld

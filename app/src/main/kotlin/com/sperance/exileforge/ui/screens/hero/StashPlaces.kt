@@ -17,7 +17,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.view
@@ -33,7 +33,7 @@ import com.sperance.exileforge.ui.theme.*
  * The fill is a thin bar under the shelf's switch (3.69.0), across the width, in the error colour once full; its «+»
  * asks for the next pack with its price. The overflow stays in the list, since it is items to act on.
  */
-@Composable fun StashFill(s: ForgeState, vm: ForgeViewModel, modifier: Modifier = Modifier) {
+@Composable fun StashFill(s: ForgeState, vm: HeroViewModel, modifier: Modifier = Modifier) {
     val hero = s.hero ?: return
     val rules = s.index?.rules?.stash ?: return
     val capacity = rules.capacity(hero.info.stashSlots)
@@ -89,7 +89,7 @@ import com.sperance.exileforge.ui.theme.*
 }
 
 /** What came when the stash was full: each piece taken in once a place frees, or sold. */
-@Composable fun StashOverflow(s: ForgeState, vm: ForgeViewModel) {
+@Composable fun StashOverflow(s: ForgeState, vm: HeroViewModel) {
     val hero = s.hero ?: return
     val rules = s.index?.rules?.stash ?: return
     if (hero.overflow.isEmpty()) return

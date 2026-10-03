@@ -20,7 +20,7 @@ import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.IncubatorSlot
 import com.sperance.exileforge.core.model.hero.IncubatorState
-import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeOutlinedButton
@@ -34,7 +34,7 @@ import kotlinx.coroutines.delay
  * level settled the moment it was laid — and is taken out as a pet. Open places come from the hero's sheet; the ones a collar
  * could still open are drawn locked up to the ceiling.
  */
-@Composable internal fun IncubatorPanel(s: ForgeState, vm: ForgeViewModel) {
+@Composable internal fun IncubatorPanel(s: ForgeState, vm: HeroViewModel) {
     val hero = s.hero ?: return
     val index = s.index ?: return
     val pets = hero.pets

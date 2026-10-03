@@ -16,7 +16,7 @@ import com.sperance.exileforge.core.display.lineText
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.rules.content.Item
 import com.sperance.exileforge.rules.content.Omen
@@ -61,7 +61,7 @@ fun petName(species: String): String = locOr("pet.$species", species)
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun MenagerieSection(s: ForgeState, vm: ForgeViewModel) {
+fun MenagerieSection(s: ForgeState, vm: HeroViewModel) {
     val hero = s.hero ?: return
     if (s.index == null) return
     val pets = hero.pets
@@ -83,7 +83,7 @@ fun MenagerieSection(s: ForgeState, vm: ForgeViewModel) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun PetCard(s: ForgeState, vm: ForgeViewModel, pet: Pet) {
+private fun PetCard(s: ForgeState, vm: HeroViewModel, pet: Pet) {
     val hero = s.hero ?: return
     val index = s.index ?: return
     val menagerie = remember(index) { Menagerie(index) }
@@ -178,7 +178,7 @@ private fun PetCard(s: ForgeState, vm: ForgeViewModel, pet: Pet) {
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PetOrbs(s: ForgeState, vm: ForgeViewModel, pet: Pet, onDismiss: () -> Unit) {
+private fun PetOrbs(s: ForgeState, vm: HeroViewModel, pet: Pet, onDismiss: () -> Unit) {
     val hero = s.hero ?: return
     val index = s.index ?: return
     val applier = remember(index) { OrbApplier(index) }
@@ -237,7 +237,7 @@ private const val PET_TIERS = 5
  * Breeding (3.79.0, server 1.74.0): two combat pets of the rules' level, rested, and an Orb of Breeding; a hybrid of their two
  * elements is born with the rules' chance, an egg of a parent's kind otherwise. Both parents rest for the rules' hours.
  */
-@Composable private fun BreedingPanel(s: ForgeState, vm: ForgeViewModel) {
+@Composable private fun BreedingPanel(s: ForgeState, vm: HeroViewModel) {
     val index = s.index ?: return
     val hero = s.hero ?: return
     val rule = index.pets.breeding

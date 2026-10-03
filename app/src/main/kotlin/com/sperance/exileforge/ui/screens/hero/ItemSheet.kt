@@ -20,6 +20,7 @@ import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.state.ForgeSection
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.TAB_EXPEDITION
@@ -51,7 +52,7 @@ private enum class ItemAction { AUCTION, SELL, WORN }
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ItemSheet(s: ForgeState, vm: ForgeViewModel, itemId: String, onDismiss: () -> Unit) {
+fun ItemSheet(s: ForgeState, vm: ForgeViewModel, model: HeroViewModel, itemId: String, onDismiss: () -> Unit) {
     val instance = s.hero?.item(itemId)
     val view = instance?.let { s.view(it) }
     // The item can leave while its sheet is open — sold, listed, rolled into a copy — and then the
@@ -89,7 +90,7 @@ fun ItemSheet(s: ForgeState, vm: ForgeViewModel, itemId: String, onDismiss: () -
                                 ),
                                 style = MaterialTheme.typography.bodySmall,
                             )
-                            ForgeOutlinedButton(enabled = can && (s.bagAmount(ore) ?: 0L) >= need, onClick = { vm.temper(instance.id) }, modifier = Modifier.fillMaxWidth()) {
+                            ForgeOutlinedButton(enabled = can && (s.bagAmount(ore) ?: 0L) >= need, onClick = { model.temper(instance.id) }, modifier = Modifier.fillMaxWidth()) {
                                 Text(ui("temper.go", itemTitle(ore), need, s.bagAmount(ore) ?: 0L))
                             }
                         }
@@ -110,12 +111,12 @@ fun ItemSheet(s: ForgeState, vm: ForgeViewModel, itemId: String, onDismiss: () -
                 when {
                     instance.socketed -> Action(ForgeGlyphs.Gem, ui("hero.unequip"), can) {
                         onDismiss()
-                        vm.unsocketJewel(instance.id)
+                        model.unsocketJewel(instance.id)
                     }
 
                     instance.equipped -> Action(ForgeGlyphs.Helm, ui("hero.unequip"), can) {
                         onDismiss()
-                        vm.unequip(instance.id)
+                        model.unequip(instance.id)
                     }
 
                     // A map is not worn (2.37.0): it goes into its zone's launch window, picked.
@@ -128,7 +129,7 @@ fun ItemSheet(s: ForgeState, vm: ForgeViewModel, itemId: String, onDismiss: () -
 
                     else -> Action(ForgeGlyphs.Helm, ui("hero.equip"), can && reachable, GoldBright) {
                         onDismiss()
-                        vm.equip(instance.id, null)
+                        model.equip(instance.id, null)
                     }
                 }
                 // One way into the forge (2.51.0): its orbs and bench are its own tabs.
@@ -138,7 +139,7 @@ fun ItemSheet(s: ForgeState, vm: ForgeViewModel, itemId: String, onDismiss: () -
                 }
                 // A worn item cannot be listed or sold (AU_010, CH_014): the tap says so instead of doing nothing.
                 Action(if (locked) Icons.Outlined.Lock else Icons.Outlined.LockOpen, ui(if (locked) "item.unlock" else "item.lock"), can) {
-                    vm.lockItem(instance.id, !locked)
+                    model.lockItem(instance.id, !locked)
                 }
                 Action(ForgeGlyphs.Scales, ui("hero.action_auction"), can && !locked) { open = if (loose) ItemAction.AUCTION else ItemAction.WORN }
                 Action(ForgeGlyphs.Coins, ui("hero.action_sell"), can && !locked, LifeRed) { open = if (loose) ItemAction.SELL else ItemAction.WORN }
@@ -147,11 +148,11 @@ fun ItemSheet(s: ForgeState, vm: ForgeViewModel, itemId: String, onDismiss: () -
     }
     when (open) {
         ItemAction.AUCTION -> ListingSheet(s, name, onDismiss = { open = null }, hint = {
-            vm.priceHint(instance.template, instance.rarity, s.index?.template(instance.template)?.let(instance::level) ?: 0)
+            model.priceHint(instance.template, instance.rarity, s.index?.template(instance.template)?.let(instance::level) ?: 0)
         }) { orb, price, _ ->
             open = null
             onDismiss()
-            vm.sellEquipment(instance.id, orb, price)
+            model.sellEquipment(instance.id, orb, price)
         }
 
         // Selling is final and takes the rolls with it, so it is asked about by name, with the sum
@@ -170,7 +171,7 @@ fun ItemSheet(s: ForgeState, vm: ForgeViewModel, itemId: String, onDismiss: () -
             onDismiss = { open = null },
         ) {
             onDismiss()
-            vm.sellForGold(instance.id)
+            model.sellForGold(instance.id)
         }
 
         ItemAction.WORN -> AlertDialog(
@@ -181,7 +182,7 @@ fun ItemSheet(s: ForgeState, vm: ForgeViewModel, itemId: String, onDismiss: () -
             confirmButton = {
                 ForgeTextButton(enabled = can, onClick = {
                     open = null
-                    if (instance.socketed) vm.unsocketJewel(instance.id) else vm.unequip(instance.id)
+                    if (instance.socketed) model.unsocketJewel(instance.id) else model.unequip(instance.id)
                 }) { Text(ui("hero.unequip")) }
             },
             dismissButton = { ForgeTextButton(onClick = { open = null }) { Text(ui("common.close")) } },

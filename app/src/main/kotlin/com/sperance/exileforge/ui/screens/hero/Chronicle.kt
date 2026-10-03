@@ -22,7 +22,7 @@ import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.rules.content.Achievement
 import com.sperance.exileforge.rules.content.Counter
@@ -52,7 +52,7 @@ fun ForgeState.chronicleDone(): Pair<Int, Int>? {
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun ChronicleScreen(s: ForgeState, vm: ForgeViewModel) {
+fun ChronicleScreen(s: ForgeState, vm: HeroViewModel) {
     val hero = s.hero ?: return
     val achievements = s.index?.achievements ?: return
     val values = hero.chronicle

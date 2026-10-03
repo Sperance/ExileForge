@@ -20,6 +20,7 @@ import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.ForgeViewModel
+import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.state.ForgeSection
 import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.SlotGroup
@@ -31,6 +32,7 @@ import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.auction.ListingSheet
 import com.sperance.exileforge.ui.theme.*
+import org.koin.compose.viewmodel.koinViewModel
 
 /** The Hero tab's sections, in the order a player reaches for them; the menagerie (3.5.0) moved to «Развитие». */
 private enum class HeroSection(val title: String, val icon: ImageVector) {
@@ -55,6 +57,7 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HeroScreen(s: ForgeState, vm: ForgeViewModel) {
+    val model = koinViewModel<HeroViewModel>()
     val heroId = s.play.heroId
     var section by rememberSaveable(heroId) { mutableStateOf(HeroSection.CHARACTER) }
     var detailId by remember(heroId) { mutableStateOf<String?>(null) }
@@ -68,7 +71,7 @@ fun HeroScreen(s: ForgeState, vm: ForgeViewModel) {
     var tools by rememberSaveable(heroId) { mutableStateOf(false) }
     // Opening the tab is what refreshes the hero, and only when the last reading has gone cold.
     // Nothing here asks the player to press anything: the pull below is for when they disagree.
-    LaunchedEffect(heroId, s.account.sessionEpoch) { vm.ensureHero() }
+    LaunchedEffect(heroId, s.account.sessionEpoch) { model.ensure() }
     val hero = s.hero
     // The stash holds everything (2.51.0): what is worn or socketed too, with a gold frame and a badge.
     // A copy whose template the content does not hold is left out rather than drawn blank.
@@ -89,7 +92,7 @@ fun HeroScreen(s: ForgeState, vm: ForgeViewModel) {
     val equipment = rememberEquipment(s)
     val lines = rememberStashLines(s, visible)
     val selected = s.play.selectedEquipment
-    PullToRefreshBox(isRefreshing = s.refreshing(Reads.HERO), onRefresh = vm::loadHero, modifier = Modifier.fillMaxSize()) {
+    PullToRefreshBox(isRefreshing = s.refreshing(Reads.HERO), onRefresh = model::load, modifier = Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
                 // Who the character is heads every section; until the hero arrives the tab says what it is.
@@ -123,7 +126,7 @@ fun HeroScreen(s: ForgeState, vm: ForgeViewModel) {
                     }
 
                     HeroSection.STASH -> {
-                        if (hero.overflow.isNotEmpty()) item(key = "overflow") { StashOverflow(s, vm) }
+                        if (hero.overflow.isNotEmpty()) item(key = "overflow") { StashOverflow(s, model) }
                         // Two rows since 3.69.0: the count beside the switch squeezed the filter glyph off its shape.
                         // The switch takes what is left after the glyph, never the other way round.
                         item(key = "shelf") {
@@ -155,7 +158,7 @@ fun HeroScreen(s: ForgeState, vm: ForgeViewModel) {
                         // The places held of how many across the whole width, and a «+» for the next pack.
                         item(key = "fill") {
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                StashFill(s, vm, Modifier.weight(1f))
+                                StashFill(s, model, Modifier.weight(1f))
                                 if (!tools) HideWornChip(s.stashHideWorn, vm::stashHideWorn)
                             }
                         }
@@ -173,7 +176,7 @@ fun HeroScreen(s: ForgeState, vm: ForgeViewModel) {
                                 waiting = line.waiting,
                             ) {
                                 detailId = piece.id
-                                vm.selectEquipment(piece.id)
+                                model.selectEquipment(piece.id)
                             }
                         }
                     }
@@ -181,7 +184,7 @@ fun HeroScreen(s: ForgeState, vm: ForgeViewModel) {
             }
         }
     }
-    detailId?.let { id -> ItemSheet(s, vm, id) { detailId = null } }
+    detailId?.let { id -> ItemSheet(s, vm, model, id) { detailId = null } }
     if (filtering) {
         StashFilterSheet(
             filter, s.stashSort, s.lang, shelf.size, groupCounts, rarities, onFilter = { filter = it },
@@ -207,7 +210,7 @@ fun HeroScreen(s: ForgeState, vm: ForgeViewModel) {
                 // A book is read where it lies, and its page opens in the grimoire (2.78.0); an essence goes to the forge.
                 onRead = { skill ->
                     stackCode = null
-                    vm.learnSkill(skill)
+                    model.learnSkill(skill)
                     vm.tab(TAB_SKILLS)
                 },
                 onEssence = { essence ->
@@ -217,20 +220,20 @@ fun HeroScreen(s: ForgeState, vm: ForgeViewModel) {
                 },
                 onOpenChest = { chest ->
                     stackCode = null
-                    vm.openChest(chest)
+                    model.openChest(chest)
                 },
             )
         }
     }
-    s.play.chestOpening?.let { opening -> ChestOpenedSheet(s, opening, vm::dismissChest) }
+    s.play.chestOpening?.let { opening -> ChestOpenedSheet(s, opening, model::dismissChest) }
     listStack?.let { code ->
-        ListingSheet(s, itemTitle(code), owned = s.bagAmount(code) ?: 0L, onDismiss = { listStack = null }, hint = { vm.priceHint(code, null, 0) }) { orb, price, amount ->
+        ListingSheet(s, itemTitle(code), owned = s.bagAmount(code) ?: 0L, onDismiss = { listStack = null }, hint = { model.priceHint(code, null, 0) }) { orb, price, amount ->
             listStack = null
-            vm.sellItem(code, amount, orb, price)
+            model.sellItem(code, amount, orb, price)
         }
     }
     // The place goes with the pick: a ring chosen for the second line lands in the second ring, a flask in its own bay.
-    pickPlace?.let { place -> SlotPicker(s, place, onDismiss = { pickPlace = null }, onEquip = { itemId -> vm.equip(itemId, place.place) }) }
+    pickPlace?.let { place -> SlotPicker(s, place, onDismiss = { pickPlace = null }, onEquip = { itemId -> model.equip(itemId, place.place) }) }
 }
 
 /**

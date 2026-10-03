@@ -38,6 +38,9 @@ class HeroActions(
 ) {
     private val api: GameApi get() = connection.api
 
+    /** Предмет под кузницей: тот, на который укажет следующая сфера. */
+    fun selectEquipment(itemId: String) = heroes.selectEquipment(itemId)
+
     fun equip(itemId: String, slot: Slot? = null) {
         buzzes.buzz(Buzz.BUTTON)
         heroCommand { id -> api.hero.equip(id, itemId, slot) }

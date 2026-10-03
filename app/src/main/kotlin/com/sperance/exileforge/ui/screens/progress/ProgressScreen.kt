@@ -43,6 +43,7 @@ import com.sperance.exileforge.ui.screens.hero.MenagerieSection
 import com.sperance.exileforge.ui.screens.hero.chronicleDone
 import com.sperance.exileforge.ui.screens.hero.titleName
 import com.sperance.exileforge.ui.theme.*
+import org.koin.compose.viewmodel.koinViewModel
 
 /** The pets at work at once: one combat pet and one helper. */
 private const val PETS_AT_WORK = 2
@@ -199,8 +200,8 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
 }
 
 /** The menagerie as a screen of its own: it was a section of the Hero tab's list. */
-@Composable private fun PetsPlace(s: ForgeState, vm: ForgeViewModel) {
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) { MenagerieSection(s, vm) }
+@Composable private fun PetsPlace(s: ForgeState) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) { MenagerieSection(s, koinViewModel()) }
 }
 
 /**
@@ -215,9 +216,9 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when (place) {
                 ProgressPlace.FORGE -> CraftScreen(s, vm)
-                ProgressPlace.PETS -> PetsPlace(s, vm)
+                ProgressPlace.PETS -> PetsPlace(s)
                 ProgressPlace.TRIALS -> TrialsBoard(s, vm, Modifier.fillMaxSize())
-                ProgressPlace.CHRONICLE -> ChronicleScreen(s, vm)
+                ProgressPlace.CHRONICLE -> ChronicleScreen(s, koinViewModel())
             }
         }
     }

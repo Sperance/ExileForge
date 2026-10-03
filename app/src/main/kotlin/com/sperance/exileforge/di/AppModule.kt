@@ -32,6 +32,7 @@ import com.sperance.exileforge.presentation.guild.GuildActions
 import com.sperance.exileforge.presentation.guild.GuildViewModel
 import com.sperance.exileforge.presentation.hero.HeroActions
 import com.sperance.exileforge.presentation.hero.HeroSync
+import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.market.MarketActions
 import com.sperance.exileforge.presentation.market.MarketViewModel
 import com.sperance.exileforge.presentation.quests.QuestActions
@@ -94,6 +95,7 @@ val appModule = module {
     viewModelOf(::GuildViewModel)
     viewModelOf(::CraftsViewModel)
     viewModelOf(::TreeViewModel)
+    viewModelOf(::HeroViewModel)
     viewModel { SettingsViewModel(get()) }
     viewModel { ServerViewModel(get(), get()) }
     // Проверка обновлений ждёт сервер игровой модели: поток и манифест приходят параметрами из активности.

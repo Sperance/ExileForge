@@ -4,18 +4,19 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.viewModels
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.features.UpdateViewModel
 import com.sperance.exileforge.ui.ForgeApp
 import com.sperance.exileforge.ui.theme.ForgeTheme
+import org.koin.androidx.viewmodel.ext.android.viewModel
+import org.koin.core.parameter.parametersOf
 
 class MainActivity : ComponentActivity() {
     /** The one model of the activity, owned here rather than by the composition so the lifecycle can reach it too. */
-    private val viewModel: ForgeViewModel by viewModels { ForgeViewModel.Factory(application as ForgeApplication) }
+    private val viewModel: ForgeViewModel by viewModel()
 
     /** Updates from GitHub Releases (3.72.0): checked against the server the game model is connected to. */
-    private val updates: UpdateViewModel by viewModels { UpdateViewModel.Factory(application, viewModel.newerServer) { viewModel.serverManifest() } }
+    private val updates: UpdateViewModel by viewModel { parametersOf(viewModel.newerServer, suspend { viewModel.serverManifest() }) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

@@ -7,8 +7,10 @@
 - [ ] Golden-тест забега (`ExpeditionRun`) - перед распилом `ExpeditionRun.kt` (этап 5).
 
 ## Этап 1 - Koin
-- [ ] `koin-core`, `koin-android`, `koin-androidx-compose`. Модули: stores (DataStore), network (`Transport`, `GameApi`, клиенты), repositories, viewModels.
-- [ ] `ForgeApplication` стартует Koin; `MainActivity` без фабрик. `GameApi` - session-scope (пересоздаётся при смене сервера), `ForgeHttp` - singleton через Koin, `DraftStore` не создаётся в composable.
+- [x] `koin-android`, `koin-androidx-compose`; `di/AppModule.kt`: сторы DataStore, журнал, область приложения, `ForgeViewModel`, `UpdateViewModel`.
+- [ ] Модули network (`Transport`, `GameApi`, клиенты) и repositories - с этапом 2.
+- [x] `ForgeApplication` стартует Koin; `MainActivity` без фабрик; `DraftStore` и `GuideStore` приходят через `koinInject`.
+- [ ] `GameApi` - session-scope (пересоздаётся при смене сервера), `ForgeHttp` - singleton через Koin.
 
 ## Этап 2 - репозитории :core
 - [ ] Истина в `:core`: `SessionRepository` (аккаунт, сервер, язык), `HeroRepository` (герой, снимки, синк), `ContentRepository` (манифест, индекс, локаль), `MarketRepository`, `GuildRepository`, `QuestRepository`, `FeedbackRepository` - `StateFlow`/`Flow`, без Android.

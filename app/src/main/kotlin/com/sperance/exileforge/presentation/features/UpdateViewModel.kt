@@ -3,7 +3,6 @@ package com.sperance.exileforge.presentation.features
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.sperance.exileforge.BuildConfig
 import com.sperance.exileforge.core.i18n.ui
@@ -54,6 +53,7 @@ class UpdateViewModel(
     app: Application,
     private val server: suspend () -> StaticManifest?,
     newerServer: kotlinx.coroutines.flow.Flow<Unit> = kotlinx.coroutines.flow.emptyFlow(),
+    private val guides: GuideStore,
 ) : AndroidViewModel(app) {
     private val updates = Updates()
 
@@ -62,8 +62,6 @@ class UpdateViewModel(
     val state: StateFlow<UpdateState> = mutable.asStateFlow()
     private val checks = Mutex()
     private var download: Job? = null
-
-    private val guides = GuideStore(app)
 
     init {
         // Until one check has passed the game stays shut (3.76.0), so a failed one is tried again soon; after that, hourly.
@@ -177,15 +175,6 @@ class UpdateViewModel(
 
     /** The permission screen was left: the player tries again. */
     fun permissionAsked() = mutable.update { it.copy(needsPermission = false) }
-
-    class Factory(
-        private val app: Application,
-        private val newerServer: kotlinx.coroutines.flow.Flow<Unit>,
-        private val server: suspend () -> StaticManifest?,
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = UpdateViewModel(app, server, newerServer) as T
-    }
 
     private companion object {
         const val DIR = "updates"

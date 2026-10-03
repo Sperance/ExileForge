@@ -91,12 +91,14 @@ import com.sperance.exileforge.ui.screens.tree.SkillTreeScreen
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import org.koin.compose.koinInject
 
 @Composable fun ForgeApp(vm: ForgeViewModel, updates: UpdateViewModel) {
     // The first-visit guides (3.14.0): read once per device, one sheet at a time above whatever screen is open.
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val guides = remember { GuideDesk(GuideStore(context.applicationContext), scope) }
+    val guideStore = koinInject<GuideStore>()
+    val guides = remember { GuideDesk(guideStore, scope) }
     val expedition by vm.expedition.collectAsStateWithLifecycle()
     val trial by vm.trial.collectAsStateWithLifecycle()
     // The settings (3.77.0) that reach every screen: the text's size, the motion, the lit screen and the phone's buzz.
@@ -158,8 +160,7 @@ private val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, erro
     // The beetle (3.48.0): in the banner of the game; since 3.57.0 in the own header of every screen without one.
     var bugOpen by remember { mutableStateOf(false) }
     val context = LocalContext.current
-    val draftScope = rememberCoroutineScope()
-    val drafts = remember { DraftStore(context.applicationContext, draftScope) }
+    val drafts = koinInject<DraftStore>()
     // Players' suggestions and the inbox (3.73.0): sheets over everything, like the beetle's.
     var suggestionsOpen by remember { mutableStateOf(false) }
     var mailOpen by remember { mutableStateOf(false) }

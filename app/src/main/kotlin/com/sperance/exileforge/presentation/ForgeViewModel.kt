@@ -1,8 +1,6 @@
 package com.sperance.exileforge.presentation
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import com.sperance.exileforge.ForgeApplication
 import com.sperance.exileforge.core.campaign.AutoPlan
 import com.sperance.exileforge.core.campaign.RunCommand
 import com.sperance.exileforge.core.i18n.Lang
@@ -310,13 +308,6 @@ class ForgeViewModel(store: ServerStore, journal: RequestJournal) : ViewModel() 
     fun deleteRedemption(id: String) = runtime.redemptionViewModel.delete(id)
     override fun onCleared() {
         runtime.close()
-    }
-    class Factory(private val app: ForgeApplication) : ViewModelProvider.Factory {
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            require(modelClass.isAssignableFrom(ForgeViewModel::class.java))
-            @Suppress("UNCHECKED_CAST")
-            return ForgeViewModel(app.serverStore, app.journal) as T
-        }
     }
 }
 

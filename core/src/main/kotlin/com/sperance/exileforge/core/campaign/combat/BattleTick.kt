@@ -226,7 +226,7 @@ internal fun Battle.chargeLines(): List<StatLine> = ChargeKind.REAL.mapNotNull {
 internal fun Battle.heroConditions(): Set<Condition> {
     val hero = heroFighter
     val body = hero.body
-    fun recent(at: Double) = time - at <= Condition.RECENT
+    fun recent(at: Double) = time - at <= rules.recentSeconds
     return buildSet {
         if (hero.life < body.maxLife * LOW_LIFE) add(Condition.LOW_LIFE)
         if (hero.life >= body.maxLife - 0.5) add(Condition.FULL_LIFE)

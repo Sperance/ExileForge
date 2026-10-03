@@ -14,7 +14,6 @@ import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.PowerBook
 import com.sperance.exileforge.rules.content.SkillBook
 import com.sperance.exileforge.rules.content.SkillDefinition
-import com.sperance.exileforge.rules.content.SkillRules
 import com.sperance.exileforge.rules.content.SkillStat
 import com.sperance.exileforge.rules.content.SkillType
 import com.sperance.exileforge.rules.content.SlotCondition
@@ -109,7 +108,13 @@ data class Flask(
 }
 
 /** A skill as the fight uses it: what it is, the level it was learned to and when its slot fires. */
-data class KitSkill(val skill: SkillDefinition, val learned: Int, val condition: SlotCondition = skill.condition) {
+data class KitSkill(
+    val skill: SkillDefinition,
+    val learned: Int,
+    /** The rules' ceiling for a skill level boosted by gear, the atlas and the map (`skills.rules.boostedMaxLevel`). */
+    val ceiling: Int,
+    val condition: SlotCondition = skill.condition,
+) {
     /**
      * The level it acts at on [hero]: the learned one and what gear, the atlas and the map add — every
      * skill's, its type's, and a passive's — never past the rules' ceiling (3.19.0).
@@ -124,7 +129,7 @@ data class KitSkill(val skill: SkillDefinition, val learned: Int, val condition:
             SkillType.BONUS, SkillType.TRIGGER -> hero["STOCK_PASSIVE_LEVEL"]
             SkillType.HEAL, SkillType.GUARD -> 0.0
         }
-        return (learned + hero["STOCK_SKILL_LEVEL"] + type).toInt().coerceIn(1, SkillRules.MAX_BOOSTED_LEVEL)
+        return (learned + hero["STOCK_SKILL_LEVEL"] + type).toInt().coerceIn(1, ceiling)
     }
 }
 
@@ -185,12 +190,12 @@ data class Loadout(
             charges: ChargeRules = ChargeRules(),
         ): Loadout {
             fun kit(code: String?, condition: SlotCondition? = null) = code?.let(book.byCode::get)
-                ?.let { KitSkill(it, skills.level(it.code).coerceAtLeast(1), condition ?: it.condition) }
+                ?.let { KitSkill(it, skills.level(it.code).coerceAtLeast(1), book.rules.boostedMaxLevel, condition ?: it.condition) }
             return Loadout(
                 actives = skills.active.map { slot -> slot?.let { kit(it.skill, it.condition) } },
                 passives = skills.passive.mapNotNull { kit(it) },
                 flasks = flasks,
-                curses = book.ofClass(heroClass).filter { it.type == SkillType.CURSE }.map { KitSkill(it, skills.level(it.code).coerceAtLeast(1)) },
+                curses = book.ofClass(heroClass).filter { it.type == SkillType.CURSE }.map { KitSkill(it, skills.level(it.code).coerceAtLeast(1), book.rules.boostedMaxLevel) },
                 powers = powers,
                 charges = charges,
             )

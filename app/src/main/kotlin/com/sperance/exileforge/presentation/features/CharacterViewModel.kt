@@ -5,6 +5,7 @@ import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.ForgeRuntime
 import com.sperance.exileforge.presentation.state.AppPhase
 import com.sperance.exileforge.presentation.state.GuildState
+import com.sperance.exileforge.presentation.state.MAX_CHARACTERS
 import com.sperance.exileforge.presentation.state.MarketState
 import com.sperance.exileforge.presentation.state.PlayState
 import com.sperance.exileforge.presentation.state.QuestState
@@ -39,7 +40,7 @@ class CharacterViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             boards.clear()
             expeditions.clear()
             navigator.reset(com.sperance.exileforge.presentation.nav.Route.Hero)
-            mutable.update { it.copy(play = PlayState(heroId = id, draftClass = it.play.draftClass)) }
+            warmupViewModel.clear()
             heroSync.forget()
             // The hero the next launch opens straight into (3.30.0).
             store.saveLastHero(sessions.state.value.server, id)
@@ -52,7 +53,7 @@ class CharacterViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     /** Back to the menu — the only way to swap heroes. Everything the old hero owned is dropped. */
     fun leaveGame() {
         with(runtime) {
-            if (state.value.busy) return
+            if (commands.state.value.busy) return
             cancelReads()
             expedition.drop()
             trial.drop()
@@ -62,14 +63,7 @@ class CharacterViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             markets.clear()
             guilds.clear()
             navigator.reset(com.sperance.exileforge.presentation.nav.Route.Characters)
-            mutable.update {
-                it.copy(
-                    play = PlayState(draftClass = it.play.draftClass),
-                    market = MarketState(),
-                    guild = GuildState(),
-                    quests = QuestState(),
-                )
-            }
+            warmupViewModel.clear()
             read(Reads.CHARACTERS) { readCharacters() }
             scope.launch { store.saveLastHero(sessions.state.value.server, null) }
         }
@@ -83,7 +77,7 @@ class CharacterViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
                 require(heroClass.isNotBlank()) { ui("character.choose_class") }
                 val owner = sessions.state.value.profile?.id.orEmpty()
                 check(owner.isNotBlank()) { ui("catalog.sign_in") }
-                check(state.value.characterSlotsLeft > 0) { ui("character.limit", sessions.state.value.characters.size) }
+                check(characterSlotsLeft() > 0) { ui("character.limit", sessions.state.value.characters.size) }
                 val created = api.hero.create(owner, name, "", heroClass)
                 readCharacters()
                 entered(created.id)
@@ -105,4 +99,7 @@ class CharacterViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     fun ensureClasses() {
         with(runtime) { read(Reads.CONTENT) { ensureContent() } }
     }
+
+    /** Сколько героев ещё можно создать: по правилам контента, пока их не прочли - по умолчанию. */
+    private fun characterSlotsLeft(): Int = ((runtime.world.state.value.content?.rules?.maxCharacters ?: MAX_CHARACTERS) - runtime.sessions.state.value.characters.size).coerceAtLeast(0)
 }

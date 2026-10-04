@@ -31,21 +31,20 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     fun mode(mode: AppMode) {
         with(runtime) {
-            if (state.value.busy || mode == AppMode.ADMIN && !(BuildConfig.DEBUG && state.value.isAdmin)) return
-            mutable.update { it.copy(mode = mode, tab = if (mode == AppMode.ADMIN) TAB_ADMIN else TAB_HERO) }
+            if (commands.state.value.busy || mode == AppMode.ADMIN && !(BuildConfig.DEBUG && sessions.state.value.isAdmin)) return
+            modes.set(mode)
+            navigator.tab(if (mode == AppMode.ADMIN) com.sperance.exileforge.presentation.nav.Route.Admin else com.sperance.exileforge.presentation.nav.Route.Hero)
         }
     }
-
-    fun serverDraft(value: String) = update { it.copy(account = it.account.copy(serverDraft = value)) }
 
     // ---- the administrator's testers (3.73.0) ----
 
     fun loadTesters() {
         with(runtime) {
             task {
-                check(state.value.isAdmin) { ui("hero.grant_admin_only") }
+                check(sessions.state.value.isAdmin) { ui("hero.grant_admin_only") }
                 val testers = api.admin.testers()
-                mutable.update { it.copy(account = it.account.copy(testers = testers)) }
+                admins.update { it.copy(testers = testers) }
             }
         }
     }
@@ -54,25 +53,26 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     fun createTester(login: String) = testerCommand { api.admin.createTester(login) }
     fun resetTester(id: String) = testerCommand { api.admin.resetTester(id) }
     fun setTesterActive(id: String, active: Boolean) = testerCommand { api.admin.setTesterActive(id, active) }
-    fun closeShownTester() = update { it.copy(account = it.account.copy(shownTester = null)) }
+    fun closeShownTester() = runtime.admins.update { it.copy(shownTester = null) }
 
     private fun testerCommand(block: suspend ForgeRuntime.() -> com.sperance.exileforge.core.network.TesterAccount) {
         with(runtime) {
             task(writing = true) {
-                check(state.value.isAdmin) { ui("hero.grant_admin_only") }
+                check(sessions.state.value.isAdmin) { ui("hero.grant_admin_only") }
                 val account = block()
                 val testers = api.admin.testers()
-                mutable.update { it.copy(account = it.account.copy(testers = testers, shownTester = account.takeIf { a -> a.password != null })) }
+                admins.update { it.copy(testers = testers, shownTester = account.takeIf { a -> a.password != null }) }
             }
         }
     }
 
-    fun connect() = connect(normalizeServer(state.value.account.serverDraft))
+    /** Подключение к адресу [draft] из поля экрана (3.80.32: черновик живёт на экране). */
+    fun connect(draft: String) = connectTo(normalizeServer(draft))
 
     /** Back to the one server (3.75.0): the administrator's address is forgotten, not overwritten with the default. */
-    fun resetServer() = connect(null)
+    fun resetServer() = connectTo(null)
 
-    private fun connect(override: String?) {
+    private fun connectTo(override: String?) {
         with(runtime) {
             task {
                 store.save(override)
@@ -83,7 +83,6 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
                 journal.clear()
                 sessions.update { it.copy(server = server, health = ui("session.checking")) }
                 world.update { it.copy(content = null, contentHash = "") }
-                mutable.update { it.copy(account = it.account.copy(serverDraft = server)) }
                 val health = api.health()
                 sessions.update { it.copy(health = health.toString()) }
                 refreshLocale()
@@ -171,10 +170,11 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             heroes.select(heroId)
             expeditions.clear()
             navigator.reset(com.sperance.exileforge.presentation.nav.Route.Hero)
-            mutable.update { it.copy(mode = AppMode.PLAYER, play = PlayState(heroId = heroId, draftClass = it.play.draftClass)) }
+            modes.set(AppMode.PLAYER)
+            warmupViewModel.clear()
             heroSync.restore(heroId, copy.snapshot)
-            val foreign = state.value.play.heroOwner.let { it.isNotEmpty() && it != copy.account.id }
-            if (state.value.hero == null || foreign) {
+            val foreign = heroes.state.value.owner.let { it.isNotEmpty() && it != copy.account.id }
+            if (heroes.state.value.hero == null || foreign) {
                 clearSession()
                 if (foreign) store.saveLastHero(server, null)
                 return false
@@ -221,7 +221,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
                 return
             }
             // The kept token answered for another account than the hero drawn: that hero is not this session's.
-            if (profile.id != adopted || state.value.play.heroOwner.let { it.isNotEmpty() && it != profile.id }) return fallBack(saved, foreign = true)
+            if (profile.id != adopted || heroes.state.value.owner.let { it.isNotEmpty() && it != profile.id }) return fallBack(saved, foreign = true)
             unconfirmed = null
             sessions.update { it.copy(profile = profile) }
             read(Reads.CHARACTERS, silent = true) { characterViewModel.readCharacters() }
@@ -245,7 +245,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             val server = sessions.state.value.server
             clearSession()
             if (foreign) store.saveLastHero(server, null)
-            state.first { !it.busy }
+            commands.state.first { !it.busy }
             if (!sessions.state.value.signedIn) resume(saved)
         }
     }
@@ -257,7 +257,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         if (unconfirmed != null) {
             confirm()
         } else {
-            with(runtime.state.value) { if (!account.signedIn && account.resumable && !busy) retryResume() }
+            if (!sessions.state.value.signedIn && sessions.state.value.resumable && !commands.state.value.busy) retryResume()
         }
     }
 
@@ -290,15 +290,16 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             awaySince = null
             scope.launch {
                 withContext(Dispatchers.IO) { ForgeHttp.dropIdleConnections() }
-                val now = state.value
+                val session = sessions.state.value
+                val link = links.state.value
                 when {
-                    !now.account.signedIn -> if (now.account.resumable) retryResume()
+                    !session.signedIn -> if (session.resumable) retryResume()
 
-                    now.failure is FailureState.Offline || now.link.offline || stale -> {
+                    commands.state.value.failure is FailureState.Offline || link.offline || stale -> {
                         commands.clearOffline()
                         // The probe waits no longer: the link is asked again with the screen.
-                        if (now.link.offline || now.link.waiting.isNotEmpty()) connectionViewModel.wake(now = true)
-                        when (now.phase) {
+                        if (link.offline || link.waiting.isNotEmpty()) connectionViewModel.wake(now = true)
+                        when (navigator.current.value.phase) {
                             AppPhase.GAME -> read(Reads.HERO, silent = true) { heroSync.readHero() }
                             AppPhase.CHARACTERS -> read(Reads.CHARACTERS, silent = true) { characterViewModel.readCharacters() }
                             AppPhase.AUTH -> Unit
@@ -314,7 +315,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         with(runtime) {
             sessions.update { it.copy(signedIn = true, resumable = false, profile = profile) }
             navigator.reset(com.sperance.exileforge.presentation.nav.Route.Characters)
-            mutable.update { it.copy(mode = AppMode.PLAYER) }
+            modes.set(AppMode.PLAYER)
             store.saveDeviceSession(byDevice)
             store.saveToken(sessions.state.value.server, api.sessionToken())
             forgetForeignHero(sessions.state.value.server, profile.id)
@@ -340,7 +341,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     /** Signing out is explicit, so the next launch must not sign straight back in. */
     fun logout() {
         with(runtime) {
-            if (state.value.busy) return
+            if (commands.state.value.busy) return
             val server = sessions.state.value.server
             val leaving = api
             val token = leaving.sessionToken()

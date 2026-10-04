@@ -7,7 +7,6 @@ import com.sperance.exileforge.presentation.nav.Route
 import com.sperance.exileforge.presentation.state.Building
 import com.sperance.exileforge.presentation.state.Buzz
 import com.sperance.exileforge.presentation.state.StashSort
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
@@ -43,19 +42,16 @@ class ShellViewModel(private val runtime: ForgeRuntime) : ViewModel() {
     fun buzz(kind: Buzz) = runtime.buzz(kind)
     fun clearLogs() = runtime.journal.clear()
 
-    /** Настройки устройства, пока живущие в общем состоянии: порядок сундука и «скрыть надетое» (3.30.0, 3.69.0), фильтр журнала боя. */
+    /** Настройки устройства, в хранилище устройства: порядок сундука и «скрыть надетое» (3.30.0, 3.69.0), фильтр журнала боя. */
     fun stashSort(sort: StashSort) {
-        runtime.mutable.update { it.copy(stashSort = sort) }
-        viewModelScope.launch { runtime.store.saveStashSort(sort.name) }
+        viewModelScope.launch { runtime.prefs.saveStashSort(sort) }
     }
 
     fun stashHideWorn(hide: Boolean) {
-        runtime.mutable.update { it.copy(stashHideWorn = hide) }
-        viewModelScope.launch { runtime.store.saveStashHideWorn(hide) }
+        viewModelScope.launch { runtime.prefs.saveStashHideWorn(hide) }
     }
 
     fun logFilter(kinds: Set<LogKind>) {
-        runtime.mutable.update { it.copy(logFilter = kinds) }
-        viewModelScope.launch { runtime.store.saveLogFilter(LogKind.write(kinds)) }
+        viewModelScope.launch { runtime.prefs.saveLogFilter(kinds) }
     }
 }

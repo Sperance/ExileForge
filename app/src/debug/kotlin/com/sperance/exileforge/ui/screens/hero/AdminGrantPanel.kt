@@ -3,6 +3,10 @@ package com.sperance.exileforge.ui.screens.hero
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.Glyph
@@ -32,6 +36,9 @@ import com.sperance.exileforge.ui.icons.orbArt
     var expanded by remember(s.play.heroId) { mutableStateOf(true) }
     val enabled = !s.busy && s.account.signedIn && s.play.heroId.isNotBlank()
     val any = ui("grant.any")
+    // Редкость и слот случайной выдачи (3.80.32: черновик панели); пусто - любые.
+    var rarity by rememberSaveable { mutableStateOf("") }
+    var slot by rememberSaveable { mutableStateOf("") }
     ForgeTextButton(onClick = { expanded = !expanded }) {
         Text(ui("grant.title", if (expanded) ui("common.hide") else ui("common.show")))
     }
@@ -46,9 +53,9 @@ import com.sperance.exileforge.ui.icons.orbArt
     ForgePanel {
         Engraved(ui("grant.random_item"))
         // The rarity is the roll's for a random template and a named one alike; blank leaves the template's own.
-        Spinner(ui("common.rarity"), s.play.grantRarity, mapOf("" to any) + Rarity.entries.associate { it.name to rarityTitle(it, s.lang) }, enabled, glyph = Glyph.RARITY, onChange = vm::grantRarity)
-        Spinner(ui("grant.category"), s.play.grantSlot, mapOf("" to any) + Slot.entries.associate { it.name to slotTitle(it, s.lang) }, enabled, glyph = Glyph.ITEM, onChange = vm::grantSlot)
-        ForgeButton(enabled = enabled, onClick = vm::grantRandom, modifier = Modifier.fillMaxWidth()) {
+        Spinner(ui("common.rarity"), rarity, mapOf("" to any) + Rarity.entries.associate { it.name to rarityTitle(it, s.lang) }, enabled, glyph = Glyph.RARITY, onChange = { rarity = it })
+        Spinner(ui("grant.category"), slot, mapOf("" to any) + Slot.entries.associate { it.name to slotTitle(it, s.lang) }, enabled, glyph = Glyph.ITEM, onChange = { slot = it })
+        ForgeButton(enabled = enabled, onClick = { vm.grantRandom(rarity, slot) }, modifier = Modifier.fillMaxWidth()) {
             Icon(ForgeGlyphs.Anvil, null, Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
             Text(ui("grant.roll"))
@@ -59,7 +66,7 @@ import com.sperance.exileforge.ui.icons.orbArt
         Engraved(ui("grant.named_template"))
         var template by remember(s.play.heroId) { mutableStateOf("") }
         Spinner(ui("grant.equipment"), template, templates, enabled && templates.isNotEmpty(), glyph = Glyph.ITEM) { template = it }
-        ForgeButton(enabled = enabled && template in templates, onClick = { vm.grant(template, Rarity.of(s.play.grantRarity)) }) { Text(ui("grant.chosen_item")) }
+        ForgeButton(enabled = enabled && template in templates, onClick = { vm.grant(template, Rarity.of(rarity)) }) { Text(ui("grant.chosen_item")) }
 
         OrnateDivider()
         Engraved(ui("grant.orbs"))

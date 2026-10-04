@@ -28,9 +28,6 @@ import kotlinx.coroutines.launch
 
 /** Lifecycle owner and compatibility facade; screen actions live in feature models. */
 class ForgeViewModel(private val runtime: ForgeRuntime) : ViewModel() {
-    /** Выбор на экранах героя, ещё живущий в общем состоянии: кузница, выдачи, древо. */
-    private fun play(transform: (com.sperance.exileforge.presentation.state.PlayState) -> com.sperance.exileforge.presentation.state.PlayState) = runtime.mutable.update { it.copy(play = transform(it.play)) }
-
     init {
         runtime.start()
     }
@@ -119,9 +116,9 @@ class ForgeViewModel(private val runtime: ForgeRuntime) : ViewModel() {
 
     /** Admin only: a named template, rolled by the server at [rarity] or the template's own. */
     fun grant(template: String, rarity: Rarity? = null) = runtime.hero.grant(template, rarity)
-    fun grantRarity(value: String) = play { it.copy(grantRarity = value) }
-    fun grantSlot(value: String) = play { it.copy(grantSlot = value) }
-    fun grantRandom() = state.value.play.let { runtime.hero.grantRandom(it.grantRarity, it.grantSlot) }
+
+    /** Случайная вещь администратору: редкость и слот с панели, пусто - любые. */
+    fun grantRandom(rarity: String, slot: String) = runtime.hero.grantRandom(rarity, slot)
 
     /** Admin only: a stack into the bag, by the item's code. */
     fun grantItem(code: String, amount: Long) = runtime.hero.grantItem(code, amount)
@@ -132,7 +129,6 @@ class ForgeViewModel(private val runtime: ForgeRuntime) : ViewModel() {
     fun rechooseNode(code: String, choice: Int) = runtime.hero.rechooseNode(code, choice)
     fun resetTree() = runtime.hero.resetTree()
     fun addExperience(amount: Double) = runtime.hero.addExperience(amount)
-    fun draftClass(value: String) = runtime.mutable.value.let { runtime.mutable.value = it.copy(play = it.play.copy(draftClass = value)) }
 
     fun redeem(code: String) = runtime.hero.redeem(code)
     fun socketJewel(itemId: String, nodeCode: String) = runtime.hero.socketJewel(itemId, nodeCode)
@@ -142,12 +138,6 @@ class ForgeViewModel(private val runtime: ForgeRuntime) : ViewModel() {
     /** The item lock (3.30.0): a locked item is never sold, listed or auto-sold. */
     fun lockItem(itemId: String, locked: Boolean) = runtime.hero.lockItem(itemId, locked)
 
-    /** The stash's order (3.30.0), kept on the device. */
-    fun stashSort(sort: StashSort) {
-        runtime.mutable.update { it.copy(stashSort = sort) }
-        runtime.scope.launch { runtime.store.saveStashSort(sort.name) }
-    }
-
     /** «Пока вас не было» (3.69.0): the last catch-up shown for a hero, and marking one shown. */
     suspend fun craftsAwaySeen(heroId: String): Long = runtime.store.craftsAwaySeen(runtime.sessions.state.value.server, heroId)
     fun markCraftsAwaySeen(heroId: String, until: Long) {
@@ -155,27 +145,15 @@ class ForgeViewModel(private val runtime: ForgeRuntime) : ViewModel() {
         runtime.scope.launch { runtime.store.saveCraftsAwaySeen(server, heroId, until) }
     }
 
-    /** «Hide equipped» on the gear shelf (3.69.0), kept on the device. */
-    fun stashHideWorn(hide: Boolean) {
-        runtime.mutable.update { it.copy(stashHideWorn = hide) }
-        runtime.scope.launch { runtime.store.saveStashHideWorn(hide) }
-    }
-    fun logFilter(kinds: Set<com.sperance.exileforge.core.campaign.LogKind>) {
-        runtime.mutable.update { it.copy(logFilter = kinds) }
-        runtime.scope.launch { runtime.store.saveLogFilter(com.sperance.exileforge.core.campaign.LogKind.write(kinds)) }
-    }
-
     /** The link's probe at once (3.30.0): the offline icon tapped. */
     fun retryLink() = runtime.connectionViewModel.wake(now = true)
     fun mode(mode: AppMode) = runtime.sessionViewModel.mode(mode)
-    fun serverDraft(value: String) = runtime.sessionViewModel.serverDraft(value)
     fun loadTesters() = runtime.sessionViewModel.loadTesters()
     fun createTester(login: String) = runtime.sessionViewModel.createTester(login)
     fun resetTester(id: String) = runtime.sessionViewModel.resetTester(id)
     fun setTesterActive(id: String, active: Boolean) = runtime.sessionViewModel.setTesterActive(id, active)
     fun closeShownTester() = runtime.sessionViewModel.closeShownTester()
     fun testerGrant(what: String, vararg params: Pair<String, String?>) = runtime.hero.testerGrant(what, *params)
-    fun connect() = runtime.sessionViewModel.connect()
     fun resetServer() = runtime.sessionViewModel.resetServer()
     fun health() = runtime.sessionViewModel.health()
     fun login(login: String, password: String) = runtime.sessionViewModel.login(login, password)

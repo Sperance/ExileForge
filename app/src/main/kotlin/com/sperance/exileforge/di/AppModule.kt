@@ -1,11 +1,14 @@
 package com.sperance.exileforge.di
 
+import com.sperance.exileforge.core.admin.AdminRepository
 import com.sperance.exileforge.core.campaign.ExpeditionRepository
 import com.sperance.exileforge.core.crafts.CraftsRepository
 import com.sperance.exileforge.core.feedback.FeedbackRepository
 import com.sperance.exileforge.core.guild.GuildRepository
 import com.sperance.exileforge.core.hero.HeroRepository
+import com.sperance.exileforge.core.i18n.LanguageRepository
 import com.sperance.exileforge.core.market.MarketRepository
+import com.sperance.exileforge.core.network.LinkRepository
 import com.sperance.exileforge.core.network.RequestJournal
 import com.sperance.exileforge.core.quests.QuestRepository
 import com.sperance.exileforge.core.session.Buzzes
@@ -50,6 +53,7 @@ import com.sperance.exileforge.presentation.session.CharactersViewModel
 import com.sperance.exileforge.presentation.session.SessionViewModel
 import com.sperance.exileforge.presentation.settings.SettingsViewModel
 import com.sperance.exileforge.presentation.skills.GrimoireViewModel
+import com.sperance.exileforge.presentation.state.AppModes
 import com.sperance.exileforge.presentation.tree.TreeViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -100,6 +104,10 @@ val appModule = module {
     single { CraftsRepository() }
     single { CraftsActions(get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     single { ContentLoader() }
+    single { LanguageRepository() }
+    single { LinkRepository() }
+    single { AdminRepository() }
+    single { AppModes() }
     single { QuestActions(get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     singleOf(::Repositories)
     singleOf(::Actions)

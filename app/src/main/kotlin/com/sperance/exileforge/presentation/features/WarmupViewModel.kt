@@ -4,6 +4,9 @@ import com.sperance.exileforge.presentation.ForgeRuntime
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -24,18 +27,28 @@ data class Warmup(val heroId: String, val done: Set<WarmStep> = emptySet(), val 
  */
 class WarmupViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     private var job: Job? = null
+    private val mutable = MutableStateFlow<Warmup?>(null)
+
+    /** Прогрев героя на экране (3.80.32: свой поток вместо общего состояния). */
+    val state: StateFlow<Warmup?> = mutable.asStateFlow()
+
+    /** Выход из героя: следующий вход прогревается заново. */
+    fun clear() {
+        job?.cancel()
+        mutable.value = null
+    }
 
     fun start() {
         with(runtime) {
             val id = heroId
-            if (id.isEmpty() || state.value.play.warmup?.heroId == id) return
+            if (id.isEmpty() || mutable.value?.heroId == id) return
             job?.cancel()
-            update { it.copy(play = it.play.copy(warmup = Warmup(id))) }
+            mutable.value = Warmup(id)
             job = scope.launch {
                 withTimeoutOrNull(LIMIT) {
                     step(id, WarmStep.CONTENT) { ensureContent() }
                     coroutineScope {
-                        launch { step(id, WarmStep.LOCALE) { loadLocale(state.value.lang) } }
+                        launch { step(id, WarmStep.LOCALE) { loadLocale(languages.lang.value) } }
                         launch {
                             step(id, WarmStep.ICONS) {
                                 coroutineScope {
@@ -52,7 +65,7 @@ class WarmupViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
                         market.loadMerchant()
                     }
                 }
-                update { s -> s.play.warmup?.takeIf { it.heroId == id }?.let { s.copy(play = s.play.copy(warmup = it.copy(finished = true))) } ?: s }
+                mutable.update { w -> w?.takeIf { it.heroId == id }?.copy(finished = true) ?: w }
             }
         }
     }
@@ -63,7 +76,7 @@ class WarmupViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) { }
-        update { s -> s.play.warmup?.takeIf { it.heroId == id }?.let { s.copy(play = s.play.copy(warmup = it.copy(done = it.done + step))) } ?: s }
+        mutable.update { w -> w?.takeIf { it.heroId == id }?.let { it.copy(done = it.done + step) } ?: w }
     }
 
     private companion object {

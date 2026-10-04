@@ -168,20 +168,8 @@ data class ForgeState(
     }
 }
 
-/**
- * The link to the server (3.30.0): [offline] while it cannot be reached — an icon, not the red strip — and the
- * commands given while it could not, waiting to be sent in order. Nothing is drawn as done before the server says so.
- */
-data class LinkState(
-    val offline: Boolean = false,
-    val waiting: List<QueuedCommand> = emptyList(),
-    /** Why the server is not answering (3.79.0), and the transport's own words for an administrator. */
-    val outage: Outage? = null,
-    val detail: String? = null,
-) {
-    /** The items a waiting command is about: their cards say «ждёт отправки». */
-    val waitingItems: Set<String> get() = waiting.mapNotNullTo(HashSet()) { it.itemId }
-}
+/** Связь с сервером - срез `LinkRepository` из :core (3.80.32). */
+typealias LinkState = com.sperance.exileforge.core.network.Link
 
 /** The session: who is signed in, to which server, and which heroes they own. */
 data class AccountState(
@@ -191,7 +179,6 @@ data class AccountState(
     /** A kept session the server could not be reached to confirm: the sign-in screen offers to try again. */
     val resumable: Boolean = false,
     val server: String = DEFAULT_SERVER,
-    val serverDraft: String = DEFAULT_SERVER,
     /** The account's heroes and whether they have been read yet: "none" and "not asked yet" must differ. */
     val characters: List<HeroSummary> = emptyList(),
     val charactersRead: Boolean = false,
@@ -220,11 +207,6 @@ data class PlayState(
     val heroSeenAt: Long = 0,
     val selectedEquipment: String = "",
     val forgeLine: String = "",
-    /** What the admin's random grant asks for: a rarity and a slot, blank meaning "any". */
-    val grantRarity: String = "",
-    val grantSlot: String = "",
-    /** The class a new hero is being created with. */
-    val draftClass: String = "",
     /** The zone whose card is open on the world map, and the map picked for it. */
     val launch: MapLaunchState? = null,
     /** The crafts as the server last answered, with the device's clock at that moment; the profession whose window is open. */

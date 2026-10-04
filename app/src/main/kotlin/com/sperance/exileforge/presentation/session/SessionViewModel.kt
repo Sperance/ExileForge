@@ -26,7 +26,6 @@ class SessionViewModel(private val runtime: ForgeRuntime) : ViewModel() {
     fun dismissNotice() = runtime.notices.dismiss()
 
     fun changePassword(current: String, replacement: String) = runtime.sessionViewModel.changePassword(current, replacement)
-    fun serverDraft(value: String) = runtime.sessionViewModel.serverDraft(value)
     fun mode(mode: AppMode) = runtime.sessionViewModel.mode(mode)
 
     /** Тестовые учётки администратора (3.80.30), как их просят страницы настроек. */
@@ -37,7 +36,7 @@ class SessionViewModel(private val runtime: ForgeRuntime) : ViewModel() {
     fun refreshLocale() = runtime.refreshLocale()
     fun refreshIcons() = runtime.refreshIcons()
 
-    fun connect() = runtime.sessionViewModel.connect()
+    fun connect(draft: String) = runtime.sessionViewModel.connect(draft)
     fun health() = runtime.sessionViewModel.health()
     fun leaveGame() = runtime.characterViewModel.leaveGame()
     fun closeShownTester() = runtime.sessionViewModel.closeShownTester()

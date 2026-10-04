@@ -27,7 +27,9 @@ import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -212,16 +214,17 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
     ForgePanel {
         // The address is fixed for players (3.75.0); only an administrator points the device at another server.
         if (session.isAdmin) {
+            var draft by rememberSaveable(session.server) { mutableStateOf(session.server) }
             OutlinedTextField(
-                s.account.serverDraft,
-                { sessionModel.serverDraft(it.take(s.inputs.server)) },
+                draft,
+                { draft = it.take(s.inputs.server) },
                 enabled = !s.busy,
                 label = { Text(ui("account.server_address")) },
                 supportingText = { Text(ui("account.address_hint")) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
             )
-            ForgeButton(enabled = !s.busy, onClick = sessionModel::connect, modifier = Modifier.fillMaxWidth()) { Text(ui("account.save_connect")) }
+            ForgeButton(enabled = !s.busy, onClick = { sessionModel.connect(draft) }, modifier = Modifier.fillMaxWidth()) { Text(ui("account.save_connect")) }
         } else {
             PropertyRow(ui("account.server_address"), session.server, Glyph.TEXT)
         }

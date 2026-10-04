@@ -19,9 +19,9 @@ class RedemptionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     fun load() {
         with(runtime) {
             read(Reads.REDEMPTIONS) {
-                check(state.value.isAdmin) { ui("redemption.admin_only") }
+                check(sessions.state.value.isAdmin) { ui("redemption.admin_only") }
                 val codes = api.promo.codes()
-                mutable.update { it.copy(admin = it.admin.copy(redemptions = codes)) }
+                admins.update { it.copy(redemptions = codes) }
             }
         }
     }
@@ -29,9 +29,9 @@ class RedemptionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     fun create(code: RedemptionCode) {
         with(runtime) {
             task(writing = true, touches = setOf(Reads.REDEMPTIONS)) {
-                check(state.value.isAdmin) { ui("redemption.admin_only") }
+                check(sessions.state.value.isAdmin) { ui("redemption.admin_only") }
                 val created = api.promo.create(code)
-                mutable.update { it.copy(admin = it.admin.copy(redemptions = it.admin.redemptions + created)) }
+                admins.update { it.copy(redemptions = it.redemptions + created) }
             }
         }
     }
@@ -39,9 +39,9 @@ class RedemptionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     fun delete(id: String) {
         with(runtime) {
             task(writing = true, touches = setOf(Reads.REDEMPTIONS)) {
-                check(state.value.isAdmin) { ui("redemption.admin_only") }
+                check(sessions.state.value.isAdmin) { ui("redemption.admin_only") }
                 api.promo.delete(id)
-                mutable.update { it.copy(admin = it.admin.copy(redemptions = it.admin.redemptions.filterNot { code -> code.id == id })) }
+                admins.update { it.copy(redemptions = it.redemptions.filterNot { code -> code.id == id }) }
             }
         }
     }

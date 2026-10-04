@@ -7,10 +7,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.i18n.ui
@@ -171,7 +173,8 @@ import org.koin.compose.viewmodel.koinViewModel
     var name by rememberSaveable { mutableStateOf("") }
     val index = s.index
     val classes = index?.classes?.classes.orEmpty()
-    val heroClass = s.play.draftClass.takeIf { code -> classes.any { it.code == code } } ?: classes.firstOrNull()?.code.orEmpty()
+    val draft by vm.draftClass.collectAsStateWithLifecycle()
+    val heroClass = draft.takeIf { code -> classes.any { it.code == code } } ?: classes.firstOrNull()?.code.orEmpty()
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         ForgePanel {
             OutlinedTextField(

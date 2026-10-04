@@ -5,8 +5,9 @@ import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.Session
 import com.sperance.exileforge.presentation.ForgeRuntime
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.asStateFlow
 
 /** Меню героев (3.80.22): список, вход, создание и удаление; логика - в `ForgeRuntime` до переезда навигации. */
 class CharactersViewModel(private val runtime: ForgeRuntime) : ViewModel() {
@@ -19,8 +20,14 @@ class CharactersViewModel(private val runtime: ForgeRuntime) : ViewModel() {
     fun deleteCharacter(id: String) = runtime.characterViewModel.delete(id)
     fun ensureClasses() = runtime.characterViewModel.ensureClasses()
 
-    /** Класс, с которым создаётся новый герой. */
-    fun draftClass(value: String) = runtime.mutable.update { it.copy(play = it.play.copy(draftClass = value)) }
+    private val mutableDraft = MutableStateFlow("")
+
+    /** Класс, с которым создаётся новый герой (3.80.32: черновик экрана, не общего состояния); пусто - первый из контента. */
+    val draftClass: StateFlow<String> = mutableDraft.asStateFlow()
+
+    fun draftClass(value: String) {
+        mutableDraft.value = value
+    }
 
     fun logout() = runtime.sessionViewModel.logout()
     fun language(lang: Lang) = runtime.language(lang)

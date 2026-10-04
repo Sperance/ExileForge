@@ -46,23 +46,20 @@ class ConnectionViewModel(runtime: ForgeRuntime) :
                 if (expired.isNotEmpty()) toast(ui("link.expired", expired.size), NoticeKind.DONE)
                 // What the last launch left waiting goes out once there is a session to send it with.
                 if (queue.waiting.value.isNotEmpty()) wake()
-                queue.waiting.collect { waiting -> update { it.copy(link = it.link.copy(waiting = waiting)) } }
+                queue.waiting.collect { waiting -> links.update { it.copy(waiting = waiting) } }
             }
         }
     }
 
     /** The network failed under a read or a command: the icon goes up with [error]'s cause, and the server is asked again. */
     override fun lost(error: Throwable?) {
-        update { it.copy(link = it.link.down(error)) }
+        links.update { it.down(error) }
         wake()
     }
 
-    /** The link marked down by [error] (3.79.0): its outage for the player, the transport's words for an administrator. */
-    private fun LinkState.down(error: Throwable?): LinkState = copy(offline = true, outage = error?.let(Outage::of) ?: outage ?: Outage.NO_NETWORK, detail = error?.let(::transportDetail) ?: detail)
-
     /** A command joined the queue: it goes out as soon as the server can be reached. */
     override fun queued() {
-        runtime.toast(ui(if (state.value.link.offline) "link.queued" else "link.queued_later"), NoticeKind.DONE)
+        runtime.toast(ui(if (links.state.value.offline) "link.queued" else "link.queued_later"), NoticeKind.DONE)
         wake()
     }
 
@@ -84,18 +81,18 @@ class ConnectionViewModel(runtime: ForgeRuntime) :
                 var first = now
                 while (true) {
                     // The queue itself, not its reflection in the state, which may lag a frame behind a command just added.
-                    val offline = state.value.link.offline
+                    val offline = links.state.value.offline
                     if (!offline && api.commands?.waiting?.value.isNullOrEmpty()) break
                     if (offline && !first) withTimeoutOrNull(BACKOFF_S[step.coerceAtMost(BACKOFF_S.lastIndex)] * 1_000L) { nudge.receive() }
                     first = false
                     val probe = probe()
                     if (probe != null) {
-                        update { it.copy(link = it.link.down(probe)) }
+                        links.update { it.down(probe) }
                         step++
                         continue
                     }
-                    val wasOffline = state.value.link.offline
-                    update { it.copy(link = it.link.copy(offline = false, outage = null, detail = null)) }
+                    val wasOffline = links.state.value.offline
+                    links.update { it.up() }
                     if (wasOffline) sessionViewModel.restored()
                     var delivered = 0
                     var foreign = 0
@@ -116,7 +113,7 @@ class ConnectionViewModel(runtime: ForgeRuntime) :
                     if (wasOffline || delivered > 0) refreshScreen()
                     when (outcome) {
                         FlushOutcome.OFFLINE -> {
-                            update { it.copy(link = it.link.down(null)) }
+                            links.update { it.down(null) }
                             step++
                         }
 
@@ -173,7 +170,7 @@ class ConnectionViewModel(runtime: ForgeRuntime) :
     /** A new session or a sign-out: nothing of the old link carries over but the queue on disk. */
     fun reset() {
         loop?.cancel()
-        update { it.copy(link = it.link.copy(offline = false)) }
+        links.update { it.copy(offline = false) }
     }
 
     private companion object {

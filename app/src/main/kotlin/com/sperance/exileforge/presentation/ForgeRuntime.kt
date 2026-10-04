@@ -31,6 +31,8 @@ import com.sperance.exileforge.presentation.features.ConnectionViewModel
 import com.sperance.exileforge.presentation.features.RedemptionViewModel
 import com.sperance.exileforge.presentation.features.SessionViewModel
 import com.sperance.exileforge.presentation.state.ADMIN_TABS
+import com.sperance.exileforge.presentation.state.AccountState
+import com.sperance.exileforge.presentation.state.AdminState
 import com.sperance.exileforge.presentation.state.AppMode
 import com.sperance.exileforge.presentation.state.AppPhase
 import com.sperance.exileforge.presentation.state.Buzz
@@ -59,8 +61,11 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
@@ -103,9 +108,18 @@ class ForgeRuntime(
     val expedition get() = actions.expedition
     val trial get() = actions.trial
     val expeditions get() = repositories.expeditions
+    val languages get() = repositories.languages
+    val links get() = repositories.links
+    val admins get() = repositories.admins
+    val modes get() = repositories.modes
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-    val mutable = MutableStateFlow(ForgeState())
-    val state = mutable.asStateFlow()
+    private val projected = MutableStateFlow(ForgeState())
+
+    /**
+     * Общее состояние (3.80.32) - только проекция репозиториев для экранов, ещё читающих его целиком: никто в него не пишет,
+     * логика читает источники. Собирается в [start], а не в конструкторе (см. там).
+     */
+    val state: StateFlow<ForgeState> = projected.asStateFlow()
     val logs = journal.entries
     var api: GameApi
         get() = connection.api
@@ -138,10 +152,10 @@ class ForgeRuntime(
                     // The copy of the last hero belongs to the refused session: the next launch does not open it.
                     store.saveLastHero(server, null)
                     if (store.deviceSession.first()) {
-                        state.first { !it.busy }
+                        commands.state.first { !it.busy }
                         if (api === created) sessionViewModel.playOnThisDevice(silent = true)
                     } else {
-                        mutable.update { it.copy(message = phrase("runtime.session_expired"), error = true) }
+                        commands.refuse(phrase("runtime.session_expired"))
                     }
                 }
             }
@@ -170,66 +184,11 @@ class ForgeRuntime(
     fun start() {
         if (started) return
         started = true
-        // Настройки игрока живут в репозитории (3.80.6): общее состояние лишь отражает их для экранов, ещё не переведённых.
-        scope.launch { prefs.settings.collect { value -> mutable.update { it.copy(settings = value) } } }
-        // Сессия и мир живут в репозиториях :core (3.80.7): общее состояние лишь отражает их для экранов, ещё не переведённых.
-        scope.launch {
-            sessions.state.collect { session ->
-                mutable.update {
-                    it.copy(
-                        account = it.account.copy(
-                            server = session.server,
-                            profile = session.profile,
-                            signedIn = session.signedIn,
-                            resumable = session.resumable,
-                            sessionEpoch = session.sessionEpoch,
-                            characters = session.characters,
-                            charactersRead = session.charactersRead,
-                            health = session.health,
-                        ),
-                    )
-                }
-            }
-        }
-        scope.launch { world.state.collect { value -> mutable.update { it.copy(world = value) } } }
         connectionHub.delegate = connectionViewModel
-        scope.launch {
-            commands.state.collect { a -> mutable.update { it.copy(busy = a.busy, loading = a.loading, failure = a.failure, message = a.message, error = a.error) } }
-        }
-        scope.launch { notices.state.collect { value -> mutable.update { it.copy(notice = value) } } }
-        scope.launch { feedbacks.state.collect { value -> mutable.update { it.copy(feedback = value) } } }
-        scope.launch {
-            heroes.state.collect { h ->
-                mutable.update {
-                    it.copy(
-                        play = it.play.copy(
-                            heroId = h.heroId,
-                            hero = h.hero,
-                            heroOwner = h.owner,
-                            heroReadAt = h.readAt,
-                            heroSeenAt = h.seenAt,
-                            selectedEquipment = h.selectedEquipment,
-                            forgeLine = h.forgeLine,
-                            chestOpening = h.chest,
-                        ),
-                    )
-                }
-            }
-        }
-        scope.launch {
-            expeditions.state.collect { e -> mutable.update { it.copy(play = it.play.copy(launch = e.launch, runLoot = e.runLoot, atlas = e.atlas, runPending = e.pending, runRejected = e.rejected)) } }
-        }
+        scope.launch { projection().collect { projected.value = it } }
         expedition.start()
         trial.start()
-        scope.launch { boards.state.collect { value -> mutable.update { it.copy(quests = value) } } }
-        scope.launch { markets.state.collect { value -> mutable.update { it.copy(market = value) } } }
-        scope.launch { guilds.state.collect { value -> mutable.update { it.copy(guild = value) } } }
-        scope.launch {
-            craftsRepository.state.collect { c -> mutable.update { it.copy(play = it.play.copy(crafts = c.state, craftsAt = c.readAt, craftsTotals = c.totals, craftsLast = c.last, craftsPending = c.pending)) } }
-        }
-        // Фаза, вкладка и здание - отражение стека навигатора для экранов, что ещё читают их из общего состояния.
-        scope.launch { navigator.current.collect { r -> mutable.update { it.copy(phase = r.phase, tab = r.tab, building = r.building) } } }
-        buzzer.allowed = { kind -> state.value.settings.let { if (kind == Buzz.DANGER) it.buzzDanger else it.buzzButtons } }
+        buzzer.allowed = { kind -> prefs.settings.value.let { if (kind == Buzz.DANGER) it.buzzDanger else it.buzzButtons } }
         content.delegate = { fresh -> ensureContent(fresh) }
         // Герой изменился на сервере по чужой команде: перечитывается тихо, отказ остаётся команде, что его просила.
         scope.launch {
@@ -243,20 +202,14 @@ class ForgeRuntime(
         }
         scope.launch {
             try {
-                val language = Lang.byCode(store.language.first()) ?: deviceLanguage()
-                uiLanguage = language
+                languages.set(Lang.byCode(store.language.first()) ?: deviceLanguage())
                 val server = store.server.first()
                 api = newApi(server)
                 apiReady.complete(Unit)
                 val known = store.languages(server).mapNotNull { Lang.byCode(it) }
-                val sort = StashSort.of(store.stashSort.first())
-                val hideWorn = store.stashHideWorn.first()
-                val settings = store.gameSettings.first()
-                val logFilter = com.sperance.exileforge.core.campaign.LogKind.parse(store.logFilter.first())
                 sessions.update { it.copy(server = server) }
                 world.update { it.copy(languages = known.ifEmpty { it.languages }) }
                 commands.ready()
-                mutable.update { it.copy(lang = language, stashSort = sort, stashHideWorn = hideWorn, settings = settings, logFilter = logFilter, account = it.account.copy(serverDraft = server)) }
                 refreshLocale()
                 refreshIcons()
                 val saved = store.token(server)
@@ -279,11 +232,10 @@ class ForgeRuntime(
 
     /** Language is global: core validation messages and Compose both read it, so switch them together. */
     fun language(lang: Lang) {
-        if (state.value.lang == lang) return
+        if (languages.lang.value == lang) return
         val untested = ui("runtime.not_checked")
-        uiLanguage = lang
+        languages.set(lang)
         sessions.update { it.copy(health = if (it.health == untested) ui("runtime.not_checked") else it.health) }
-        mutable.update { it.copy(lang = lang) }
         scope.launch { store.saveLanguage(lang) }
         refreshLocale(lang)
     }
@@ -314,7 +266,7 @@ class ForgeRuntime(
     }
 
     /** Reading the dictionary is background work and never an error banner. */
-    fun refreshLocale(language: Lang = state.value.lang) {
+    fun refreshLocale(language: Lang = languages.lang.value) {
         localeJob?.cancel()
         localeJob = scope.launch {
             try {
@@ -389,7 +341,7 @@ class ForgeRuntime(
         val offered = manifest.languages.mapNotNull { Lang.byCode(it.code) }
         if (offered.isEmpty()) return
         store.saveLanguages(server, offered.map { it.code })
-        val current = state.value.lang
+        val current = languages.lang.value
         world.update { it.copy(languages = (offered + current).distinct().sortedBy(Lang::ordinal)) }
     }
 
@@ -400,13 +352,13 @@ class ForgeRuntime(
 
     /** Открывает вкладку по прежнему номеру, отказывая игроку в административных. Отказ принадлежит экрану, где случился. */
     fun tab(tab: Int) {
-        if (!state.value.adminTools && tab in ADMIN_TABS) return
+        if (!adminTools() && tab in ADMIN_TABS) return
         commands.dismissMessage()
         navigator.tab(com.sperance.exileforge.presentation.nav.Route.ofTab(tab))
     }
 
     /** How many presses of the fight's speed button reach the settings' speed (3.77.0): 1 → 2 → 4. */
-    val speedSteps: Int get() = GameSettings.SPEEDS.indexOf(state.value.settings.fightSpeed).coerceAtLeast(0)
+    val speedSteps: Int get() = GameSettings.SPEEDS.indexOf(prefs.settings.value.fightSpeed).coerceAtLeast(0)
 
     fun saveSettings(value: GameSettings) {
         scope.launch { prefs.saveSettings(value) }
@@ -452,7 +404,7 @@ class ForgeRuntime(
         val server = sessions.state.value.server
         val manifest = api.manifest(fresh || contentStale).content
         contentStale = false
-        if (manifest.hash == state.value.world.contentHash && state.value.world.content != null) return@withLock
+        if (manifest.hash == world.state.value.contentHash && world.state.value.content != null) return@withLock
         // Each chunk says whether it came from the device or the network; the downloads are kept only once
         // the whole world has read, so a broken download is fetched again rather than stored.
         val chunks = coroutineScope {
@@ -467,13 +419,6 @@ class ForgeRuntime(
         val index = parsed { ContentLoader.load { chunks.getValue(it).first } }
         chunks.forEach { (file, chunk) -> if (chunk.second) store.saveChunk(server, file, manifest.chunks[file].orEmpty(), chunk.first) }
         world.update { it.copy(content = index, contentHash = manifest.hash) }
-        mutable.update {
-            it.copy(
-                play = it.play.copy(
-                    draftClass = it.play.draftClass.ifBlank { index.classes.classes.firstOrNull()?.code.orEmpty() },
-                ),
-            )
-        }
     }
 
     /**
@@ -482,7 +427,7 @@ class ForgeRuntime(
      */
     suspend fun contentFromDevice(): Boolean {
         contentLock.withLock {
-            if (state.value.world.content != null) return true
+            if (world.state.value.content != null) return true
             val server = sessions.state.value.server
             val manifest = store.manifest(server)?.let { text -> runCatching { WireJson.decodeFromString(StaticManifest.serializer(), text) }.getOrNull() }
                 ?: return false
@@ -498,13 +443,6 @@ class ForgeRuntime(
                 return false
             }
             world.update { it.copy(content = index, contentHash = manifest.content.hash) }
-            mutable.update {
-                it.copy(
-                    play = it.play.copy(
-                        draftClass = it.play.draftClass.ifBlank { index.classes.classes.firstOrNull()?.code.orEmpty() },
-                    ),
-                )
-            }
             return true
         }
     }
@@ -525,16 +463,74 @@ class ForgeRuntime(
         markets.clear()
         guilds.clear()
         commands.clearFailure()
-        mutable.update {
-            it.copy(
-                mode = AppMode.PLAYER,
-                admin = it.admin.copy(redemptions = emptyList()),
-                play = PlayState(draftClass = it.play.draftClass),
-                market = MarketState(),
-                guild = GuildState(),
-                quests = QuestState(),
-            )
-        }
+        admins.clear()
+        modes.set(AppMode.PLAYER)
+        warmupViewModel.clear()
+    }
+
+    /** Администратор в инструментах: отладочная сборка, роль и режим вместе. */
+    private fun adminTools(): Boolean = com.sperance.exileforge.BuildConfig.DEBUG && sessions.state.value.isAdmin && modes.mode.value == AppMode.ADMIN
+
+    /**
+     * Общее состояние как проекция (3.80.32): каждый источник даёт свою правку, правки складываются на пустое
+     * состояние. Ничего, кроме этих потоков, в нём нет.
+     */
+    private fun projection(): Flow<ForgeState> {
+        val parts: List<Flow<(ForgeState) -> ForgeState>> = listOf(
+            navigator.current.map { r -> { s: ForgeState -> s.copy(phase = r.phase, tab = r.tab, building = r.building) } },
+            languages.lang.map { lang -> { s: ForgeState -> s.copy(lang = lang) } },
+            modes.mode.map { mode -> { s: ForgeState -> s.copy(mode = mode) } },
+            commands.state.map { a -> { s: ForgeState -> s.copy(busy = a.busy, loading = a.loading, failure = a.failure, message = a.message, error = a.error) } },
+            notices.state.map { value -> { s: ForgeState -> s.copy(notice = value) } },
+            combine(sessions.state, admins.state) { session, admin ->
+                { s: ForgeState ->
+                    s.copy(
+                        account = AccountState(
+                            profile = session.profile,
+                            signedIn = session.signedIn,
+                            sessionEpoch = session.sessionEpoch,
+                            resumable = session.resumable,
+                            server = session.server,
+                            characters = session.characters,
+                            charactersRead = session.charactersRead,
+                            health = session.health,
+                            testers = admin.testers,
+                            shownTester = admin.shownTester,
+                        ),
+                        admin = AdminState(admin.redemptions),
+                    )
+                }
+            },
+            world.state.map { value -> { s: ForgeState -> s.copy(world = value) } },
+            combine(heroes.state, warmupViewModel.state) { h, warmup ->
+                { s: ForgeState ->
+                    s.copy(
+                        play = s.play.copy(
+                            heroId = h.heroId,
+                            hero = h.hero,
+                            heroOwner = h.owner,
+                            heroReadAt = h.readAt,
+                            heroSeenAt = h.seenAt,
+                            selectedEquipment = h.selectedEquipment,
+                            forgeLine = h.forgeLine,
+                            chestOpening = h.chest,
+                            warmup = warmup?.takeIf { it.heroId == h.heroId },
+                        ),
+                    )
+                }
+            },
+            expeditions.state.map { e -> { s: ForgeState -> s.copy(play = s.play.copy(launch = e.launch, runLoot = e.runLoot, atlas = e.atlas, runPending = e.pending, runRejected = e.rejected)) } },
+            craftsRepository.state.map { c -> { s: ForgeState -> s.copy(play = s.play.copy(crafts = c.state, craftsAt = c.readAt, craftsTotals = c.totals, craftsLast = c.last, craftsPending = c.pending)) } },
+            boards.state.map { value -> { s: ForgeState -> s.copy(quests = value) } },
+            markets.state.map { value -> { s: ForgeState -> s.copy(market = value) } },
+            guilds.state.map { value -> { s: ForgeState -> s.copy(guild = value) } },
+            feedbacks.state.map { value -> { s: ForgeState -> s.copy(feedback = value) } },
+            links.state.map { value -> { s: ForgeState -> s.copy(link = value) } },
+            combine(prefs.settings, prefs.stashSort, prefs.stashHideWorn, prefs.logFilter) { settings, sort, hideWorn, logFilter ->
+                { s: ForgeState -> s.copy(settings = settings, stashSort = sort, stashHideWorn = hideWorn, logFilter = logFilter) }
+            },
+        )
+        return combine(parts) { patches -> patches.fold(ForgeState()) { s, patch -> patch(s) } }
     }
 
     fun close() {

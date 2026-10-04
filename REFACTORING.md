@@ -13,7 +13,7 @@
 - [ ] `GameApi` - session-scope (пересоздаётся при смене сервера), `ForgeHttp` - singleton через Koin.
 
 ## Этап 2 - репозитории :core
-- [ ] Истина в `:core`: `StateFlow`/`Flow`, без Android. ForgeState лишь отражает потоки для ещё не переведённых экранов.
+- [x] Истина в `:core`: `StateFlow`/`Flow`, без Android. С 3.80.32 `ForgeState` - только проекция (`combine` правок всех источников в `ForgeRuntime.projection()`), в неё никто не пишет; логика читает источники.
   - [x] `SessionRepository` (сервер, аккаунт, герои аккаунта, здоровье сервера) и `WorldRepository` (контент, словарь, иконки, портреты).
   - [x] `FeedbackRepository` (предложения, отчёты, почта); `Notices` (тосты) и `GameEvents` (сигнал «герой изменился») в `:core`.
   - [x] `HeroRepository` (id героя и `HeroView`; кошелёк и сумка правятся только через него), `QuestRepository`, `ContentLoader` (делегат `ensureContent`).
@@ -23,6 +23,8 @@
   - [x] `HeroRepository` держит владельца, свежесть чтения, предмет под кузницей, её фразу и вскрытый сундук; `HeroSync` (части, снимки, лист, копия на устройстве) и `HeroActions` (все команды героя) - в `presentation/hero`; `HeroViewModel` из `features` удалён.
   - [x] Команды и чтения (`task`/`read`, busy/loading/failure, строка отказа) - `CommandRunner` в `:core`; `Phrase` тоже в `:core`.
   - [x] Текущий `GameApi` - `ServerConnection` в `:core`; `Reads` (ключи чтений) там же.
+  - [x] `LanguageRepository` (язык интерфейса вместе с `uiLanguage`), `LinkRepository` (связь и очередь команд), `AdminRepository` (коды наград, тестовые учётки) в `:core`; `AppModes` (игрок/администратор) в приложении; фильтр журнала боя - в `PreferencesRepository`; прогрев - поток `WarmupViewModel` (3.80.32).
+  - [x] Черновики - состояние экранов, не общее: адрес сервера (`ServerPage`), класс нового героя (`CharactersViewModel`), редкость и слот выдачи (отладочная панель) (3.80.32).
 - [ ] `ForgeState` распадается на срезы этих репозиториев; `sliced()` удалён.
 
 ## Этап 3 - навигация
@@ -64,6 +66,6 @@
 - [x] Удалено неиспользуемое: `MailButton`, `classDescription`, `itemSources`, `rankIndexOf`.
 - [ ] Удалить этот файл.
 
-## Где остановились (3.80.31, сервер 1.74.6)
-- Сделано в этой сессии: golden-тест забега, распил `ExpeditionRun`/`ExpeditionWorld` в `core/campaign/run/`, файлы сцены, мёртвый код, `ShellViewModel` вместо фасада на экранах, константы боя и мира в контент.
-- Следующий шаг: `ForgeState` распадается на срезы репозиториев (92 файла UI читают `s.busy`, `s.index`, `s.hero`, `s.play`, `s.lang`, `s.account`), затем `ForgeViewModel`/`ForgeRuntime`/`FeatureViewModel` удаляются; потом серверный этап 3.
+## Где остановились (3.80.32, сервер 1.74.6)
+- Сделано: golden-тест забега, распил `ExpeditionRun`/`ExpeditionWorld` в `core/campaign/run/`, файлы сцены, мёртвый код, `ShellViewModel` вместо фасада на экранах, константы боя и мира в контент, `ForgeState` - чистая проекция репозиториев.
+- Следующий шаг: экраны перестают получать `ForgeState` целиком (92 файла UI читают `s.busy`, `s.index`, `s.hero`, `s.play`, `s.lang`, `s.account`) - по семьям экранов в порядке владельца, `sliced()` уходит с последним; затем `ForgeViewModel`/`ForgeRuntime`/`FeatureViewModel` удаляются (сессия, связь, прогрев, коды и герои - в свои синглы); потом серверный этап 3.

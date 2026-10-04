@@ -1,5 +1,6 @@
 package com.sperance.exileforge.data.settings
 
+import com.sperance.exileforge.core.campaign.LogKind
 import com.sperance.exileforge.presentation.state.GameSettings
 import com.sperance.exileforge.presentation.state.StashSort
 import kotlinx.coroutines.CoroutineScope
@@ -17,9 +18,14 @@ class PreferencesRepository(private val store: ServerStore, scope: CoroutineScop
     val stashSort: StateFlow<StashSort> = store.stashSort.map { StashSort.of(it) }.stateIn(scope, SharingStarted.Eagerly, StashSort.NEWEST)
     val stashHideWorn: StateFlow<Boolean> = store.stashHideWorn.stateIn(scope, SharingStarted.Eagerly, true)
 
+    /** Какие строки журнала боя видны (3.80.32: из общего состояния сюда). */
+    val logFilter: StateFlow<Set<LogKind>> = store.logFilter.map { LogKind.parse(it) }.stateIn(scope, SharingStarted.Eagerly, LogKind.DEFAULT)
+
     suspend fun saveSettings(value: GameSettings) = store.saveGameSettings(value)
 
     suspend fun saveStashSort(value: StashSort) = store.saveStashSort(value.name)
 
     suspend fun saveStashHideWorn(value: Boolean) = store.saveStashHideWorn(value)
+
+    suspend fun saveLogFilter(value: Set<LogKind>) = store.saveLogFilter(LogKind.write(value))
 }

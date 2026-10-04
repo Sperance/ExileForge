@@ -22,7 +22,8 @@ import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeOutlinedButton
@@ -39,9 +40,9 @@ import com.sperance.exileforge.ui.theme.*
  * special, or a stronger guardian — and stepping away leaves it standing for later. The orb's outcome is the
  * server's (1.30.0): the sheet waits for its answer, and the guardian with it.
  */
-@Composable internal fun CrystalSheet(s: ForgeState, view: CrystalView, onCommand: (RunCommand) -> Unit) {
-    val index = s.index
-    val vaalOrbs = s.bagAmount(Orb.VAAL_ORB.name) ?: 0L
+@Composable internal fun CrystalSheet(game: GameUi, view: CrystalView, onCommand: (RunCommand) -> Unit) {
+    val index = game.index
+    val vaalOrbs = game.bagAmount(Orb.VAAL_ORB.name) ?: 0L
     val kinds = view.essences.mapNotNull { index?.essence(it) }.map { it.kind.code }.distinct()
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Ink.copy(alpha = .85f), Ink))), contentAlignment = Alignment.BottomCenter) {
         Column(

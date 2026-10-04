@@ -21,7 +21,8 @@ import com.sperance.exileforge.core.campaign.run.*
 import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.Buzz
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.theme.*
@@ -42,7 +43,7 @@ private const val HERO_CARD = -1
  * strike — is laid open, its numbers held against the hero's.
  */
 @Composable internal fun ArenaOverlay(
-    s: ForgeState,
+    game: GameUi,
     hud: RunHud,
     fight: FightHud,
     level: Int,
@@ -65,8 +66,8 @@ private const val HERO_CARD = -1
     var origin by remember { mutableStateOf(Offset.Zero) }
     val names = remember(fight.foes.size, fight.leader, fight.stage) { fight.foes.associate { it.index to monsterTitle(it.monster.code) } }
     // Each foe's traits (3.73.0): seals on its card, their whole text in its window.
-    val traits = remember(fight.foes.size, fight.leader, fight.stage, s.index) {
-        fight.foes.associate { foe -> foe.index to (s.index?.let { traitViews(foe.monster, it) } ?: emptyList()) }
+    val traits = remember(fight.foes.size, fight.leader, fight.stage, game.index) {
+        fight.foes.associate { foe -> foe.index to (game.index?.let { traitViews(foe.monster, it) } ?: emptyList()) }
     }
     val chosen = fight.focus ?: fight.target ?: fight.field.firstOrNull { it.alive }?.index
     // The tiles are larger while the fight stands still; a tap on any of them opens its window at any time (2.73.0).
@@ -109,20 +110,20 @@ private const val HERO_CARD = -1
                         shown.monster.level.takeIf { it > 0 } ?: level,
                         rules,
                         stance,
-                        s.index,
+                        game.index,
                         traits[shown.index].orEmpty(),
                     )
                 } else {
-                    FightFeed(s, fight, names, onCommand, onLogFilter)
+                    FightFeed(game, fight, names, onCommand, onLogFilter)
                 }
             }
-            HeroCard(s, hud, fight, time, names, stance, track(HERO_CARD), large)
+            HeroCard(game, hud, fight, time, names, stance, track(HERO_CARD), large)
             // The skills and the belt (2.78.0): under the hero, over the fight's own controls.
             if (fight.skills.any { it != null } || fight.flasks.any { it != null }) ActionBar(fight, onCommand) { info = it }
             Controls(fight, hud.auto, onCommand)
         }
         StrikeLine(fight.lunge, bounds, origin)
-        info?.let { view -> FightSkillSheet(s, view, onCommand) { info = null } }
+        info?.let { view -> FightSkillSheet(game, view, onCommand) { info = null } }
         // A win says so in the rewards window itself (2.73.0); only a loss or a retreat is announced here.
         fight.outcome?.takeIf { it != Outcome.WIN }?.let {
             Text(

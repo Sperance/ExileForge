@@ -154,6 +154,7 @@ data class ForgeState(
         stashHideWorn = stashHideWorn,
         settings = settings,
         logFilter = logFilter,
+        notice = notice,
     )
 }
 

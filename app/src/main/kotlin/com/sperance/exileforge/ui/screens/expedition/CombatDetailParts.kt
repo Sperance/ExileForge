@@ -1,4 +1,5 @@
 package com.sperance.exileforge.ui.screens.expedition
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -40,7 +41,7 @@ import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.display.statValue
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.StatTrace
 import com.sperance.exileforge.presentation.state.TraceExplainer
 import com.sperance.exileforge.ui.components.ForgeSheet
@@ -56,7 +57,7 @@ import kotlin.math.roundToInt
 /** The formula as chips; the one tapped lays out every stat it reads, of the striker and of the target, by source. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun Chain(factors: List<FactorTrace>, attacker: FighterShot, target: FighterShot, origin: TraceOrigin, explainer: TraceExplainer, s: ForgeState) {
+internal fun Chain(factors: List<FactorTrace>, attacker: FighterShot, target: FighterShot, origin: TraceOrigin, explainer: TraceExplainer, game: GameUi) {
     var chosen by remember(factors) { mutableStateOf(factors.firstOrNull { it.key == FactorKey.CRIT } ?: factors.first()) }
     Section(ui("trace.section.formula")) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -105,7 +106,7 @@ internal fun sideLabel(shot: FighterShot, attacker: FighterShot): String = if (s
 // ==================== The sides ====================
 
 /** The striker, the target and what lay on both, as tabs; a stat tapped opens its sources. */
-@Composable internal fun Sides(attacker: FighterShot, target: FighterShot, origin: TraceOrigin, explainer: TraceExplainer, s: ForgeState, factors: List<FactorTrace>) {
+@Composable internal fun Sides(attacker: FighterShot, target: FighterShot, origin: TraceOrigin, explainer: TraceExplainer, game: GameUi, factors: List<FactorTrace>) {
     var tab by remember { mutableIntStateOf(0) }
     Column {
         TabRow(selectedTabIndex = tab, containerColor = Panel) {

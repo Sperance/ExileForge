@@ -200,8 +200,8 @@ internal val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, err
                 val arena = trial
                 when {
                     warmup != null -> WarmupScreen(warmup)
-                    run != null -> ExpeditionPlay(s.sliced(*s.common, *s.toasts, s.logFilter), run)
-                    arena != null -> TrialScreen(s.sliced(*s.common, *s.toasts, s.logFilter), arena)
+                    run != null -> ExpeditionPlay(run)
+                    arena != null -> TrialScreen(arena)
                     else -> Shell(s, vm, logs, route, navigator) { bugOpen = true }
                 }
             }
@@ -256,16 +256,16 @@ internal val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, err
                 entry<Route.Hero> { HeroScreen() }
                 entry<Route.Tree> { SkillTreeScreen() }
                 entry<Route.Grimoire> { GrimoireScreen() }
-                entry<Route.Expedition> { ExpeditionScreen(s.sliced(*s.common, s.logFilter)) }
+                entry<Route.Expedition> { ExpeditionScreen() }
                 entry<Route.Crafts> { CraftsScreen() }
                 entry<Route.Progress> { ProgressScreen() }
                 // The forge, the menagerie and the trials open from the hub of «Развитие», «back» leading to it.
-                entry<Route.Forge> { ProgressPlaceScreen(ProgressPlace.FORGE, s.sliced(*s.common)) }
-                entry<Route.Pets> { ProgressPlaceScreen(ProgressPlace.PETS, s.sliced(*s.common)) }
-                entry<Route.Trials> { ProgressPlaceScreen(ProgressPlace.TRIALS, s.sliced(*s.common)) }
-                entry<Route.Chronicle> { ProgressPlaceScreen(ProgressPlace.CHRONICLE, s.sliced(*s.common)) }
+                entry<Route.Forge> { ProgressPlaceScreen(ProgressPlace.FORGE) }
+                entry<Route.Pets> { ProgressPlaceScreen(ProgressPlace.PETS) }
+                entry<Route.Trials> { ProgressPlaceScreen(ProgressPlace.TRIALS) }
+                entry<Route.Chronicle> { ProgressPlaceScreen(ProgressPlace.CHRONICLE) }
                 // The atlas (2.68.0) is a sky of its own, above the tabs.
-                entry<Route.Atlas> { AtlasScreen(s.sliced(*s.common, *s.toasts)) }
+                entry<Route.Atlas> { AtlasScreen() }
                 // The City's square and its buildings are one screen that reads which building is open.
                 entry<Route.City> { CityScreen(null) }
                 entry<Route.Quests> { CityScreen(Building.QUESTS) }
@@ -294,7 +294,7 @@ internal val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, err
                 screens(Modifier.weight(1f).fillMaxWidth())
             }
             // The toasts float over the screen, under the banner (2.80.0).
-            ToastHost(s, shell::dismissMessage, shell::dismissNotice, Modifier.align(Alignment.TopCenter).padding(top = 60.dp))
+            ToastHost(s.game, shell::dismissMessage, shell::dismissNotice, Modifier.align(Alignment.TopCenter).padding(top = 60.dp))
         }
     }
 }

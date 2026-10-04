@@ -15,6 +15,7 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -29,6 +30,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.atlas.AtlasBranch
 import com.sperance.exileforge.core.atlas.AtlasEffects
 import com.sperance.exileforge.core.atlas.AtlasFog
@@ -40,7 +42,6 @@ import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
-import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.rules.content.AtlasNode
 import com.sperance.exileforge.rules.content.AtlasNodeKind
 import com.sperance.exileforge.rules.content.ContentIndex
@@ -94,12 +95,14 @@ internal val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
  * shows no button. The sky is dragged and pinched; a tap picks the nearest star within reach, and its
  * sheet takes or gives it.
  */
-@Composable fun AtlasScreen(s: ForgeState) {
+@Composable fun AtlasScreen() {
+    val game by koinViewModel<ExpeditionViewModel>().game.collectAsStateWithLifecycle()
     val shell: ShellViewModel = koinViewModel()
     val model = koinViewModel<ExpeditionViewModel>()
-    val atlas = s.play.atlas ?: return
-    val index = s.index
-    val state = s.atlasState
+    val expedition by model.state.collectAsStateWithLifecycle()
+    val atlas = expedition.atlas ?: return
+    val index = game.index
+    val state = game.atlasState
     var resetting by remember { mutableStateOf(false) }
     // A node given back asks first, held to confirm (3.2.0): the points come back, the gold does not
     var refunding by remember { mutableStateOf<String?>(null) }
@@ -117,7 +120,7 @@ internal val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
                 PointsPill(state.available, state.points, if (node == null) Modifier.navigationBarsPadding().padding(bottom = 16.dp) else Modifier)
                 node?.let {
                     NodeSheet(
-                        index, it, taken, state.available, index.atlas.respec.price(s.heroLevel, 1), enabled = !s.busy,
+                        index, it, taken, state.available, index.atlas.respec.price(game.heroLevel, 1), enabled = !game.busy,
                         onTake = { model.allocateAtlas(it.code) }, onRefund = { refunding = it.code }, modifier = Modifier,
                     )
                 }
@@ -129,10 +132,10 @@ internal val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
             IconButton(onClick = model::closeAtlas) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, ui("common.close"), tint = Sky.text) }
             Text(ui("atlas.title"), color = Color.White, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
             FirstVisit(Guide.ATLAS)
-            AtlasMenu(summary = spent > 0, reset = spent > 0 && !s.busy, onSummary = { summary = true }, onReset = { resetting = true })
+            AtlasMenu(summary = spent > 0, reset = spent > 0 && !game.busy, onSummary = { summary = true }, onReset = { resetting = true })
         }
-        val money = s.hero?.money ?: 0L
-        val regrets = s.hero?.count(Orb.ORB_OF_REGRET.name) ?: 0L
+        val money = game.hero?.money ?: 0L
+        val regrets = game.hero?.count(Orb.ORB_OF_REGRET.name) ?: 0L
         if (resetting && index != null && state != null) {
             val nodes = state.allocated.size - 1
             RespecSheet(
@@ -140,7 +143,7 @@ internal val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
                 null,
                 ui("atlas.reset"),
                 nodes,
-                index.atlas.respec.price(s.heroLevel, nodes),
+                index.atlas.respec.price(game.heroLevel, nodes),
                 money,
                 regrets,
                 onDismiss = { resetting = false },
@@ -156,7 +159,7 @@ internal val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
                     atlasNodeTitle(code),
                     ui("atlas.refund"),
                     1,
-                    index.atlas.respec.price(s.heroLevel, 1),
+                    index.atlas.respec.price(game.heroLevel, 1),
                     money,
                     regrets,
                     onDismiss = { refunding = null },
@@ -167,7 +170,7 @@ internal val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
             }
         }
         if (summary && index != null && state != null) AtlasSummary(index, state.allocated.toSet()) { summary = false }
-        ToastHost(s, shell::dismissMessage, shell::dismissNotice, Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 64.dp))
+        ToastHost(game, shell::dismissMessage, shell::dismissNotice, Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 64.dp))
     }
 }
 

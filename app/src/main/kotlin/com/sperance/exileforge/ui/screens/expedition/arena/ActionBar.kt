@@ -33,7 +33,8 @@ import com.sperance.exileforge.core.campaign.run.*
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.fineNumber
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.SlotCondition
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
@@ -116,12 +117,12 @@ private fun SkillButton(view: SkillView, live: Boolean, modifier: Modifier, onIn
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun FightSkillSheet(s: ForgeState, view: SkillView, onCommand: (RunCommand) -> Unit, onDismiss: () -> Unit) {
+internal fun FightSkillSheet(game: GameUi, view: SkillView, onCommand: (RunCommand) -> Unit, onDismiss: () -> Unit) {
     DisposableEffect(view.slot) {
         onCommand(RunCommand.Hold(true))
         onDispose { onCommand(RunCommand.Hold(false)) }
     }
-    val index = s.index
+    val index = game.index
     val skill = index?.skills?.byCode?.get(view.code)
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(
@@ -137,7 +138,7 @@ internal fun FightSkillSheet(s: ForgeState, view: SkillView, onCommand: (RunComm
                 Text(ui("skills.level_short", view.level), color = Gold, style = MaterialTheme.typography.titleLarge)
             }
             if (index != null && skill != null) {
-                SkillFacts(index, skill, view.level, s.hero?.stats.orEmpty(), condition = view.condition)
+                SkillFacts(index, skill, view.level, game.hero?.stats.orEmpty(), condition = view.condition)
             } else {
                 MutedText(ui("common.loading"))
             }

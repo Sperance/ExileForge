@@ -35,7 +35,7 @@ import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.recipeText
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.MutedText
@@ -75,7 +75,7 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
  * while some of it is on its way the screen says so, asks for it at once and fills in as the answers arrive.
  * A piece opens its comparison with what is worn, a stack its description.
  */
-@Composable internal fun MapSummary(s: ForgeState, vm: ExpeditionViewModel, hud: RunHud, head: SummaryHead = SummaryHead.of(hud), onDone: () -> Unit) {
+@Composable internal fun MapSummary(game: GameUi, vm: ExpeditionViewModel, hud: RunHud, head: SummaryHead = SummaryHead.of(hud), onDone: () -> Unit) {
     val tally = hud.tally
     var looked by remember { mutableStateOf<ItemView?>(null) }
     var stack by remember { mutableStateOf<String?>(null) }
@@ -93,7 +93,7 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
                     Text(ui("expedition.fall_lost", number(it)), color = LifeRed, style = MaterialTheme.typography.bodySmall)
                 }
             }
-            Loot(s, tally, onItem = { looked = it }, onStack = { stack = it })
+            Loot(game, tally, onItem = { looked = it }, onStack = { stack = it })
             if (tally.end == MapEnd.FELL) DeathRecap(hud.recap)
             RunFigures(tally.figures)
         }
@@ -105,8 +105,8 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
             Text(head.done, style = MaterialTheme.typography.titleMedium)
         }
     }
-    looked?.let { item -> LootSheet(s, vm, item, onDismiss = { looked = null }) }
-    stack?.let { code -> StackInfoSheet(s.game, code) { stack = null } }
+    looked?.let { item -> LootSheet(game, vm, item, onDismiss = { looked = null }) }
+    stack?.let { code -> StackInfoSheet(game, code) { stack = null } }
 }
 
 /** The ending over the map's name: its glyph in a ring of its colour, on a glow of it. */
@@ -164,18 +164,18 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
 /** Everything the server granted for the map: the recipe, the pieces a line each, the stacks as chips; on its way, or its absence said. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun Loot(s: ForgeState, tally: MapTally, onItem: (ItemView) -> Unit, onStack: (String) -> Unit) {
+private fun Loot(game: GameUi, tally: MapTally, onItem: (ItemView) -> Unit, onStack: (String) -> Unit) {
     val loot = tally.loot
     Caption(ui("summary.loot"))
     loot.recipe?.let { code ->
-        val text = s.index?.let { i -> i.recipe(code)?.let { recipeText(i, it) } } ?: displayName(code)
+        val text = game.index?.let { i -> i.recipe(code)?.let { recipeText(i, it) } } ?: displayName(code)
         Text(ui("summary.recipe", text), color = Rune, style = MaterialTheme.typography.bodySmall)
     }
-    loot.equipment.mapNotNull { s.view(it) }.forEach { PieceLine(it) { onItem(it) } }
+    loot.equipment.mapNotNull { game.view(it) }.forEach { PieceLine(it) { onItem(it) } }
     if (loot.items.isNotEmpty()) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             loot.items.entries.sortedByDescending { it.value }.forEach { (code, amount) ->
-                StackChip(s, code, amount) { onStack(code) }
+                StackChip(game, code, amount) { onStack(code) }
             }
         }
     }
@@ -205,8 +205,8 @@ private fun Loot(s: ForgeState, tally: MapTally, onItem: (ItemView) -> Unit, onS
 }
 
 /** A stack of the bag as a chip: its icon, its name and how many. */
-@Composable internal fun StackChip(s: ForgeState, code: String, amount: Long, onClick: () -> Unit) {
-    val kind = s.index?.item(code)?.let(::bagVisualKind) ?: ItemVisualKind.ITEM
+@Composable internal fun StackChip(game: GameUi, code: String, amount: Long, onClick: () -> Unit) {
+    val kind = game.index?.item(code)?.let(::bagVisualKind) ?: ItemVisualKind.ITEM
     val shape = RoundedCornerShape(3.dp)
     Row(
         Modifier.clip(shape).background(Abyss, shape).border(1.dp, Bronze.copy(alpha = .6f), shape)

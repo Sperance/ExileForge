@@ -7,12 +7,14 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.unmetFor
 import com.sperance.exileforge.ui.components.ForgeButton
@@ -22,14 +24,15 @@ import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.screens.hero.WearPreview
 import com.sperance.exileforge.ui.screens.hero.wearable
 import com.sperance.exileforge.ui.theme.Panel
+import org.koin.compose.viewmodel.koinViewModel
 
 /** Where a dropped piece stands for «Надеть»: the server holds it loose, wears it already, has it on the way, or never got it. */
 private enum class LootStand { LOOSE, WORN, ARRIVING, GONE }
 
-private fun lootStand(s: ForgeState, item: ItemView): LootStand {
-    val held = s.hero?.item(item.id)
+private fun lootStand(game: GameUi, item: ItemView, pending: Int): LootStand {
+    val held = game.hero?.item(item.id)
     return when {
-        held == null -> if (s.play.runPending > 0) LootStand.ARRIVING else LootStand.GONE
+        held == null -> if (pending > 0) LootStand.ARRIVING else LootStand.GONE
         held.equipped || held.socketed -> LootStand.WORN
         else -> LootStand.LOOSE
     }
@@ -45,18 +48,19 @@ private fun lootStand(s: ForgeState, item: ItemView): LootStand {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun LootSheet(
-    s: ForgeState,
+    game: GameUi,
     vm: ExpeditionViewModel,
     item: ItemView,
     onDismiss: () -> Unit,
     extra: @Composable ColumnScope.() -> Unit = {},
 ) {
-    val stand = lootStand(s, item)
+    val expedition by vm.state.collectAsStateWithLifecycle()
+    val stand = lootStand(game, item, expedition.pending)
     LaunchedEffect(item.id, stand) { if (stand == LootStand.ARRIVING) vm.flushRun() }
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            ItemCard(item, enabled = false, detailed = true, price = s.sellPrice(item.item))
-            WearPreview(s.game, item.item)
+            ItemCard(item, enabled = false, detailed = true, price = game.sellPrice(item.item))
+            WearPreview(game, item.item)
             when {
                 stand == LootStand.WORN -> MutedText(ui("expedition.loot_worn"))
 
@@ -66,7 +70,7 @@ internal fun LootSheet(
                 item.slot.isJewelLike -> Unit
 
                 else -> ForgeButton(
-                    enabled = stand == LootStand.LOOSE && !s.busy && s.unmetFor(item.code).isEmpty(),
+                    enabled = stand == LootStand.LOOSE && !game.busy && game.unmetFor(item.code).isEmpty(),
                     onClick = {
                         onDismiss()
                         vm.equip(item.id)
@@ -83,9 +87,9 @@ internal fun LootSheet(
 
 /** A dropped piece, whole: only what goes on the body offers the comparison with what is worn — a map or a jewel has nothing to compare with. */
 @Composable
-internal fun LootCard(s: ForgeState, item: ItemView, onCompare: ((ItemView) -> Unit)?) {
-    val price = s.sellPrice(item.item)
-    if (onCompare == null || !wearable(s.game, item.item)) {
+internal fun LootCard(game: GameUi, item: ItemView, onCompare: ((ItemView) -> Unit)?) {
+    val price = game.sellPrice(item.item)
+    if (onCompare == null || !wearable(game, item.item)) {
         ItemCard(item, enabled = false, detailed = true, price = price)
     } else {
         ItemCard(item, detailed = true, actionLabel = ui("expedition.loot_compare"), action = true, price = price) { onCompare(item) }

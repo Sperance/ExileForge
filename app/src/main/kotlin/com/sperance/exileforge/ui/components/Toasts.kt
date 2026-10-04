@@ -26,7 +26,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.NoticeKind
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.delay
@@ -42,9 +42,9 @@ private const val TOAST_MS = 4_000L
  * ether, loot in the rare item's yellow, a finished craft in frost. It slides in, stays four seconds
  * and leaves by itself; a tap sends it away sooner. A refusal outranks a success.
  */
-@Composable fun ToastHost(s: ForgeState, onRefusal: () -> Unit, onNotice: () -> Unit, modifier: Modifier = Modifier) {
-    val toast = s.refusal?.let { Toast(it.read(), LifeRed, it, onRefusal) }
-        ?: s.notice?.let { Toast(it.text, it.kind.tint(), it.at, onNotice) }
+@Composable fun ToastHost(game: GameUi, onRefusal: () -> Unit, onNotice: () -> Unit, modifier: Modifier = Modifier) {
+    val toast = game.refusal?.let { Toast(it.read(), LifeRed, it, onRefusal) }
+        ?: game.notice?.let { Toast(it.text, it.kind.tint(), it.at, onNotice) }
     toast?.let {
         LaunchedEffect(it.key) {
             delay(TOAST_MS)

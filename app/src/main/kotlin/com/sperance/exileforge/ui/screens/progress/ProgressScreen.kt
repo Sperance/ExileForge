@@ -31,7 +31,6 @@ import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.progress.ProgressViewModel
 import com.sperance.exileforge.presentation.state.Feature
-import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.TAB_CHRONICLE
 import com.sperance.exileforge.presentation.state.TAB_CRAFT
@@ -210,27 +209,28 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
 }
 
 /** The menagerie as a screen of its own: it was a section of the Hero tab's list. */
-@Composable private fun PetsPlace(s: ForgeState) {
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) { MenagerieSection(s.game, koinViewModel()) }
+@Composable private fun PetsPlace(game: GameUi) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) { MenagerieSection(game, koinViewModel()) }
 }
 
 /**
  * A screen of the hub with its way back: the forge, the menagerie, the trials or the chronicle. The forge is reached from an item's
  * sheet as well, and «back» from it comes here too — the hub is where it lives now.
  */
-@Composable fun ProgressPlaceScreen(place: ProgressPlace, s: ForgeState) {
+@Composable fun ProgressPlaceScreen(place: ProgressPlace) {
+    val game by koinViewModel<ProgressViewModel>().game.collectAsStateWithLifecycle()
     val shell: ShellViewModel = koinViewModel()
     val heroModel: HeroViewModel = koinViewModel()
     // The forge reads the hero itself; the menagerie and the trials have only this.
-    LaunchedEffect(s.play.heroId, s.account.sessionEpoch) { heroModel.ensure() }
+    LaunchedEffect(game.heroId, game.sessionEpoch) { heroModel.ensure() }
     Column(Modifier.fillMaxSize()) {
         BackRow("${ui("nav.progress")} · ${place.label}") { shell.tab(TAB_PROGRESS) }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when (place) {
                 ProgressPlace.FORGE -> CraftScreen()
-                ProgressPlace.PETS -> PetsPlace(s)
-                ProgressPlace.TRIALS -> TrialsBoard(s, koinViewModel(), Modifier.fillMaxSize())
-                ProgressPlace.CHRONICLE -> ChronicleScreen(s.game, koinViewModel())
+                ProgressPlace.PETS -> PetsPlace(game)
+                ProgressPlace.TRIALS -> TrialsBoard(game, koinViewModel(), Modifier.fillMaxSize())
+                ProgressPlace.CHRONICLE -> ChronicleScreen(game, koinViewModel())
             }
         }
     }

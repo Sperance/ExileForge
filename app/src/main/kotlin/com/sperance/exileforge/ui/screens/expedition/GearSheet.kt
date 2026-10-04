@@ -7,13 +7,16 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sperance.exileforge.core.campaign.LootEntry
 import com.sperance.exileforge.core.display.BodyPlace
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.unmetFor
 import com.sperance.exileforge.presentation.state.view
@@ -25,16 +28,17 @@ import com.sperance.exileforge.ui.screens.hero.EquipmentLedger
 import com.sperance.exileforge.ui.screens.hero.SlotPicker
 import com.sperance.exileforge.ui.screens.hero.WearPreview
 import com.sperance.exileforge.ui.theme.*
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * «Новый лут» (2.45.0): the gear this run brought, maps aside, while it is still loose — a hero read
  * after a piece landed says whether it was worn or sold since; before that it is taken as loose. Each
  * piece is its view over the content (3.0.0): the hero's copy of it when the hero holds it, the roll's otherwise.
  */
-fun newLoot(s: ForgeState): List<ItemView> = s.play.runLoot.mapNotNull { entry ->
-    val held = s.hero?.item(entry.item.id)
-    val loose = if (held != null) !held.equipped && !held.socketed else s.play.heroSeenAt < entry.at
-    s.view(held ?: entry.item)?.takeIf { loose && it.slot != Slot.MAP }
+fun newLoot(game: GameUi, runLoot: List<LootEntry>): List<ItemView> = runLoot.mapNotNull { entry ->
+    val held = game.hero?.item(entry.item.id)
+    val loose = if (held != null) !held.equipped && !held.socketed else game.holding.seenAt < entry.at
+    game.view(held ?: entry.item)?.takeIf { loose && it.slot != Slot.MAP }
 }
 
 /**
@@ -45,12 +49,13 @@ fun newLoot(s: ForgeState): List<ItemView> = s.play.runLoot.mapNotNull { entry -
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GearSheet(s: ForgeState, vm: ExpeditionViewModel, onDismiss: () -> Unit) {
+fun GearSheet(game: GameUi, vm: ExpeditionViewModel, onDismiss: () -> Unit) {
     var place by remember { mutableStateOf<BodyPlace?>(null) }
     var worn by remember { mutableStateOf<String?>(null) }
     var lootTab by remember { mutableStateOf(false) }
     var looked by remember { mutableStateOf<String?>(null) }
-    val loot = newLoot(s)
+    val expedition by vm.state.collectAsStateWithLifecycle()
+    val loot = newLoot(game, expedition.runLoot)
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.85f).navigationBarsPadding()) {
             LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -58,7 +63,7 @@ fun GearSheet(s: ForgeState, vm: ExpeditionViewModel, onDismiss: () -> Unit) {
                     item { Engraved(ui("expedition.gear")) }
                     item { MutedText(ui("expedition.gear_hint")) }
                     item {
-                        EquipmentLedger(s.game) { p, w ->
+                        EquipmentLedger(game) { p, w ->
                             place = p
                             worn = w
                         }
@@ -67,7 +72,7 @@ fun GearSheet(s: ForgeState, vm: ExpeditionViewModel, onDismiss: () -> Unit) {
                     item { Engraved(ui("expedition.loot_tab")) }
                     if (loot.isEmpty()) item { MutedText(ui("expedition.loot_empty")) }
                     items(loot, key = { it.id }) { item ->
-                        ItemRow(item, enabled = !s.busy, unwearable = s.unmetFor(item.code), price = s.sellPrice(item.item)) { looked = item.id }
+                        ItemRow(item, enabled = !game.busy, unwearable = game.unmetFor(item.code), price = game.sellPrice(item.item)) { looked = item.id }
                     }
                 }
             }
@@ -79,16 +84,16 @@ fun GearSheet(s: ForgeState, vm: ExpeditionViewModel, onDismiss: () -> Unit) {
         }
     }
     loot.firstOrNull { it.id == looked }?.let { item ->
-        LootSheet(s, vm, item, onDismiss = { looked = null }) {
+        LootSheet(game, vm, item, onDismiss = { looked = null }) {
             // A gilt ribbon with the coin and the price in a chip (2.73.0), held as before.
-            val price = s.sellPrice(item.item)
+            val price = game.sellPrice(item.item)
             // A locked piece (3.30.0) is not sold: the ribbon stays, dimmed, with the reason under it.
-            val locked = s.hero?.item(item.id)?.locked == true
+            val locked = game.hero?.item(item.id)?.locked == true
             HoldButton(
                 ui("expedition.loot_sell"),
                 Gold,
                 Modifier.fillMaxWidth(),
-                enabled = !s.busy && !locked,
+                enabled = !game.busy && !locked,
                 icon = ForgeGlyphs.Coins,
                 figure = price?.let { "+$it" },
             ) {
@@ -99,27 +104,27 @@ fun GearSheet(s: ForgeState, vm: ExpeditionViewModel, onDismiss: () -> Unit) {
         }
     }
     val chosen = place
-    val instance = worn?.let { id -> s.hero?.item(id) }
+    val instance = worn?.let { id -> game.hero?.item(id) }
     if (chosen != null && instance != null) {
         ForgeSheet(onDismissRequest = {
             place = null
             worn = null
         }) {
             Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                s.view(instance)?.let { ItemCard(it, enabled = false, detailed = true, price = s.sellPrice(instance)) }
+                game.view(instance)?.let { ItemCard(it, enabled = false, detailed = true, price = game.sellPrice(instance)) }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    ForgeOutlinedButton(enabled = !s.busy, onClick = {
+                    ForgeOutlinedButton(enabled = !game.busy, onClick = {
                         vm.unequip(instance.id)
                         place = null
                         worn = null
                     }, modifier = Modifier.weight(1f)) {
                         Text(ui("hero.unequip"))
                     }
-                    ForgeButton(enabled = !s.busy, onClick = { worn = null }, modifier = Modifier.weight(1f)) { Text(ui("expedition.gear_replace")) }
+                    ForgeButton(enabled = !game.busy, onClick = { worn = null }, modifier = Modifier.weight(1f)) { Text(ui("expedition.gear_replace")) }
                 }
             }
         }
     } else if (chosen != null && worn == null) {
-        SlotPicker(s.game, chosen, onDismiss = { place = null }, onEquip = { id -> vm.equip(id, chosen.place) })
+        SlotPicker(game, chosen, onDismiss = { place = null }, onEquip = { id -> vm.equip(id, chosen.place) })
     }
 }

@@ -110,7 +110,7 @@ val appModule = module {
     single { LinkRepository() }
     single { AdminRepository() }
     single { AppModes() }
-    single { GameSlice(get(), get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
+    single { GameSlice(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     single { QuestActions(get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     singleOf(::Repositories)
     singleOf(::Actions)

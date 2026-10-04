@@ -14,7 +14,7 @@ import com.sperance.exileforge.core.campaign.*
 import com.sperance.exileforge.core.campaign.combat.*
 import com.sperance.exileforge.core.campaign.run.*
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.expedition.CombatDetailSheet
 import com.sperance.exileforge.ui.theme.*
@@ -25,14 +25,14 @@ import com.sperance.exileforge.ui.theme.*
  * The live log (3.37.0): its shelves as chips over it, and a line tapped opens its card — the fight holds still while
  * it is read, and goes on as it was when the card is closed.
  */
-@Composable internal fun FightFeed(s: ForgeState, fight: FightHud, names: Map<Int, String>, onCommand: (RunCommand) -> Unit, onLogFilter: (Set<LogKind>) -> Unit) {
+@Composable internal fun FightFeed(game: GameUi, fight: FightHud, names: Map<Int, String>, onCommand: (RunCommand) -> Unit, onLogFilter: (Set<LogKind>) -> Unit) {
     val shape = RoundedCornerShape(10.dp)
     var open by remember { mutableStateOf<CombatEvent?>(null) }
     var held by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().background(Panel.copy(alpha = .75f), shape).border(1.dp, Bronze.copy(alpha = .4f), shape).padding(horizontal = 10.dp, vertical = 6.dp)) {
-        LogShelves(s.logFilter, onLogFilter)
+        LogShelves(game.logFilter, onLogFilter)
         if (fight.events.isEmpty()) MutedText(ui("expedition.log"), style = MaterialTheme.typography.labelSmall)
-        FightLog(fight.events.filter { LogKind.of(it) in s.logFilter }, names) { event ->
+        FightLog(fight.events.filter { LogKind.of(it) in game.logFilter }, names) { event ->
             if (fight.started && !fight.paused && fight.outcome == null) {
                 onCommand(RunCommand.Pause)
                 held = true
@@ -41,7 +41,7 @@ import com.sperance.exileforge.ui.theme.*
         }
     }
     open?.let { event ->
-        CombatDetailSheet(s, event, names[event.foe].orEmpty()) {
+        CombatDetailSheet(game, event, names[event.foe].orEmpty()) {
             open = null
             if (held) {
                 onCommand(RunCommand.Pause)

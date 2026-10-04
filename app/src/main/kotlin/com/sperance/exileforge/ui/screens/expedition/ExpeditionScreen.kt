@@ -7,16 +7,18 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.campaign.WorldMap
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.unlocked
 import com.sperance.exileforge.rules.content.WorldPoint
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -41,15 +43,17 @@ private const val CARD_TOP = .48f
  * map opens on the frontier; it drags and pinches, «+» and «−» zoom it and the crosshair flies back
  * to the frontier. A tapped token raises its card over the map's foot — the way into the zone.
  */
-@Composable fun ExpeditionScreen(s: ForgeState) {
+@Composable fun ExpeditionScreen() {
+    val game by koinViewModel<ExpeditionViewModel>().game.collectAsStateWithLifecycle()
     val vm = koinViewModel<ExpeditionViewModel>()
-    LaunchedEffect(s.play.heroId, s.account.sessionEpoch) {
+    val expedition by vm.state.collectAsStateWithLifecycle()
+    LaunchedEffect(game.heroId, game.sessionEpoch) {
         vm.ensureHero()
         vm.loadCampaign()
     }
     FirstVisit(Guide.EXPEDITION)
-    val index = s.index
-    val progress = s.progress
+    val index = game.index
+    val progress = game.progress
     if (index == null || progress == null) {
         Box(Modifier.fillMaxSize().padding(16.dp)) { InfoCard(ui("common.loading"), ui("expedition.loading_hint")) }
         return
@@ -66,8 +70,8 @@ private const val CARD_TOP = .48f
     val density = LocalDensity.current.density
     val camera = remember(campaign.world, density) { WorldCamera(campaign.world, density) }
     val scope = rememberCoroutineScope()
-    val launch = s.play.launch?.takeIf { world.token(it.mapCode) != null }
-    val stash = remember(s.hero?.items, index) { stashCounts(s) }
+    val launch = expedition.launch?.takeIf { world.token(it.mapCode) != null }
+    val stash = remember(game.hero?.items, index) { stashCounts(game) }
     BackHandler(launch != null) { vm.closeZone() }
     // The map opens on the frontier; a zone picked elsewhere — a map's sheet in the stash — is flown to above its card.
     LaunchedEffect(camera, camera.viewport) {
@@ -90,7 +94,7 @@ private const val CARD_TOP = .48f
             onFrontier = { scope.launch { camera.glide(world.frontier(), WorldCamera.HOME, if (launch != null) CARD_DOWN else .5f) } },
         )
         ZoomButtons(camera, Modifier.align(Alignment.TopEnd).padding(top = 72.dp, end = 12.dp)) { factor -> scope.launch { camera.zoomBy(factor) } }
-        launch?.let { ZoneCard(s, vm, world, it, Modifier.align(Alignment.BottomCenter)) }
+        launch?.let { ZoneCard(game, vm, world, it, Modifier.align(Alignment.BottomCenter)) }
     }
 }
 

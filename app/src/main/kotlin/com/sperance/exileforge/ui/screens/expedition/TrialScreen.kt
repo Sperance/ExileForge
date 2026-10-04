@@ -10,9 +10,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.campaign.TrialArena
 import com.sperance.exileforge.core.campaign.TrialHud
 import com.sperance.exileforge.core.campaign.TrialPhase
@@ -21,7 +23,7 @@ import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.TrialKind
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.expedition.arena.ArenaOverlay
@@ -33,7 +35,8 @@ import org.koin.compose.viewmodel.koinViewModel
  * foes' level, the clock and the floor's lines, and — once it is over — what it came to. The arena is stepped here, a frame
  * at a time; back walks away between two fights, and closes the screen once the trial is over.
  */
-@Composable fun TrialScreen(s: ForgeState, arena: TrialArena) {
+@Composable fun TrialScreen(arena: TrialArena) {
+    val game by koinViewModel<ExpeditionViewModel>().game.collectAsStateWithLifecycle()
     val shell: ShellViewModel = koinViewModel()
     val model = koinViewModel<ExpeditionViewModel>()
     val hud by arena.hud.collectAsState()
@@ -49,12 +52,12 @@ import org.koin.compose.viewmodel.koinViewModel
     BackHandler { if (hud.phase == TrialPhase.FIGHT) model.trialCommand(com.sperance.exileforge.core.campaign.run.RunCommand.Leave) else model.closeTrial() }
     Box(Modifier.fillMaxSize().background(Ink)) {
         hud.fight?.takeIf { hud.phase == TrialPhase.FIGHT }?.let { fight ->
-            ArenaOverlay(s, hud.run, fight, hud.level, arena.rules, arena.stance, onCommand = model::trialCommand, onLogFilter = shell::logFilter, onBuzz = shell::buzz)
+            ArenaOverlay(game, hud.run, fight, hud.level, arena.rules, arena.stance, onCommand = model::trialCommand, onLogFilter = shell::logFilter, onBuzz = shell::buzz)
         }
         if (hud.phase == TrialPhase.FIGHT) {
             TrialPlate(hud, Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = 44.dp, end = 8.dp))
         } else {
-            TrialEnding(s, model, hud)
+            TrialEnding(game, model, hud)
         }
     }
 }
@@ -83,7 +86,7 @@ import org.koin.compose.viewmodel.koinViewModel
 }
 
 /** The trial over — fallen, finished or left: how far it went, the clock, and what the server's answers brought all told. */
-@Composable private fun TrialEnding(s: ForgeState, model: ExpeditionViewModel, hud: TrialHud) {
+@Composable private fun TrialEnding(game: GameUi, model: ExpeditionViewModel, hud: TrialHud) {
     val expedition: ExpeditionViewModel = koinViewModel()
     var looked by remember(hud.gained) { mutableStateOf<ItemView?>(null) }
     val fallen = hud.phase == TrialPhase.DEAD
@@ -101,16 +104,16 @@ import org.koin.compose.viewmodel.koinViewModel
         )
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             RunFigures(hud.summary)
-            RewardLines(s, hud.gained, { looked = it }, awaiting = hud.awaiting > 0)
+            RewardLines(game, hud.gained, { looked = it }, awaiting = hud.awaiting > 0)
         }
         ForgeButton(onClick = model::closeTrial, modifier = Modifier.fillMaxWidth().height(50.dp)) { Text(ui("expedition.back_to_camp")) }
     }
-    looked?.let { item -> LootSheet(s, model, item, onDismiss = { looked = null }) }
+    looked?.let { item -> LootSheet(game, model, item, onDismiss = { looked = null }) }
 }
 
 /** Seconds as a clock: `m:ss`, from an hour on `h:mm:ss`. */
 internal fun clock(seconds: Double): String {
     val whole = seconds.toLong().coerceAtLeast(0)
-    val (h, m, s) = Triple(whole / 3600, whole % 3600 / 60, whole % 60)
-    return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
+    val (h, m, game) = Triple(whole / 3600, whole % 3600 / 60, whole % 60)
+    return if (h > 0) "%d:%02d:%02d".format(h, m, game) else "%d:%02d".format(m, game)
 }

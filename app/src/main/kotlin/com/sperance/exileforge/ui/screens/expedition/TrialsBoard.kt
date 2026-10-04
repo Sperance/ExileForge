@@ -19,7 +19,8 @@ import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.regionTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.presentation.state.unlocked
 import com.sperance.exileforge.rules.content.RushPlan
 import com.sperance.exileforge.rules.content.TrialKind
 import com.sperance.exileforge.rules.content.TrialRules
@@ -34,20 +35,20 @@ import com.sperance.exileforge.ui.theme.*
  * forged of them (3.50.0) and tower seals — the tower with its record and the floor the next entry starts at, and every region: the rush of a region is
  * open once each of its zones is cleared. A trial the app lost mid-fight is ended here, what it brought kept.
  */
-@Composable fun TrialsBoard(s: ForgeState, vm: ExpeditionViewModel, modifier: Modifier = Modifier) {
-    val index = s.index ?: return
+@Composable fun TrialsBoard(game: GameUi, vm: ExpeditionViewModel, modifier: Modifier = Modifier) {
+    val index = game.index ?: return
     val rules = index.campaign.trials ?: run {
         Box(modifier.padding(16.dp)) { InfoCard(ui("trials.title"), ui("trials.none")) }
         return
     }
-    val hero = s.hero ?: return
+    val hero = game.hero ?: return
     val trials = hero.campaign.trials
     val crests = hero.bag[TrialRules.CREST] ?: 0L
     val keys = hero.bag[TrialRules.KEY] ?: 0L
     val seals = hero.bag[TrialRules.SEAL] ?: 0L
-    val idle = !s.busy
+    val idle = !game.busy
     Column(modifier.verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        KeyGrid(s, listOf(TrialRules.CREST to crests, TrialRules.KEY to keys, TrialRules.SEAL to seals))
+        KeyGrid(game, listOf(TrialRules.CREST to crests, TrialRules.KEY to keys, TrialRules.SEAL to seals))
         trials.run?.let { open ->
             Plate(LifeRed) {
                 Text(ui("trials.open_title"), color = LifeRed, style = MaterialTheme.typography.titleSmall)
@@ -108,9 +109,9 @@ import com.sperance.exileforge.ui.theme.*
 }
 
 /** The keys at hand as a compact grid: an icon and its count, [KEYS_PER_ROW] to a row, a tap opens the key's sheet. */
-@Composable private fun KeyGrid(s: ForgeState, stacks: List<Pair<String, Long>>) {
+@Composable private fun KeyGrid(game: GameUi, stacks: List<Pair<String, Long>>) {
     var info by remember { mutableStateOf<String?>(null) }
-    info?.let { code -> StackInfoSheet(s.game, code) { info = null } }
+    info?.let { code -> StackInfoSheet(game, code) { info = null } }
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         stacks.chunked(KEYS_PER_ROW).forEach { row ->
             Row(Modifier.fillMaxWidth()) {

@@ -8,7 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.campaign.MapEffects
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.ui.components.Engraved
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.MutedText
@@ -22,8 +22,8 @@ import com.sperance.exileforge.ui.theme.*
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StatsSheet(s: ForgeState, mapEffects: Map<String, Double>, onDismiss: () -> Unit) {
-    val own = s.hero?.stats.orEmpty()
+fun StatsSheet(game: GameUi, mapEffects: Map<String, Double>, onDismiss: () -> Unit) {
+    val own = game.hero?.stats.orEmpty()
     val onMap = remember(own, mapEffects) { MapEffects.hero(own, mapEffects) }
     val shifts = remember(own, mapEffects) { MapEffects.heroShifts(own, mapEffects) }
     val changed = remember(own, onMap) { onMap.count { (key, value) -> (own[key] ?: 0.0) != value } }
@@ -43,7 +43,7 @@ fun StatsSheet(s: ForgeState, mapEffects: Map<String, Double>, onDismiss: () -> 
                         },
                     )
                 }
-                item { if (mapTab) StatSheet(s.game, onMap, before = own, shifts = shifts) else StatSheet(s.game, own) }
+                item { if (mapTab) StatSheet(game, onMap, before = own, shifts = shifts) else StatSheet(game, own) }
             }
             TabRow(selectedTabIndex = if (mapTab) 1 else 0, containerColor = Abyss, contentColor = Gold) {
                 Tab(selected = !mapTab, onClick = { mapTab = false }, text = { Text(ui("expedition.stats_hero")) })

@@ -36,7 +36,7 @@ import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -63,7 +63,7 @@ import java.util.Locale
  * and fills in as the answers arrive — offline, when the connection is back. Until they have, there is no way on:
  * neither the button nor the system back leaves, so nothing the fight brought is walked past unseen.
  */
-@Composable internal fun ReportScreen(s: ForgeState, model: ExpeditionViewModel, hud: RunHud, report: FightReport, onContinue: () -> Unit) {
+@Composable internal fun ReportScreen(game: GameUi, model: ExpeditionViewModel, hud: RunHud, report: FightReport, onContinue: () -> Unit) {
     val shell: ShellViewModel = koinViewModel()
     val expedition: ExpeditionViewModel = koinViewModel()
     val won = report.outcome == Outcome.WIN
@@ -84,15 +84,15 @@ import java.util.Locale
     ) {
         FieldHead(report, won)
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (won) Spoils(s, hud, onStack = { stack = it }, onRecipe = { recipe = it }) { looked = it } else DeathPrice(s, hud)
+            if (won) Spoils(game, hud, onStack = { stack = it }, onRecipe = { recipe = it }) { looked = it } else DeathPrice(game, hud)
             if (logOpen) {
                 Box(
                     Modifier.fillMaxWidth().height(if (won) 260.dp else 420.dp).background(Panel, RoundedCornerShape(8.dp))
                         .border(1.dp, Bronze.copy(alpha = .4f), RoundedCornerShape(8.dp)).padding(horizontal = 10.dp, vertical = 8.dp),
                 ) {
                     Column {
-                        LogShelves(s.logFilter, shell::logFilter)
-                        FightLog(report.pack, Modifier.fillMaxSize(), s.logFilter, toDeath = !won) { event, name -> line = event to name }
+                        LogShelves(game.logFilter, shell::logFilter)
+                        FightLog(report.pack, Modifier.fillMaxSize(), game.logFilter, toDeath = !won) { event, name -> line = event to name }
                     }
                 }
             }
@@ -108,13 +108,13 @@ import java.util.Locale
         }
     }
     // A line of the log opened (3.37.0): its card over the report.
-    line?.let { (event, name) -> CombatDetailSheet(s, event, name) { line = null } }
+    line?.let { (event, name) -> CombatDetailSheet(game, event, name) { line = null } }
     // Compared and worn right here (3.24.0), as on the gear sheet.
-    looked?.let { item -> LootSheet(s, model, item, onDismiss = { looked = null }) }
+    looked?.let { item -> LootSheet(game, model, item, onDismiss = { looked = null }) }
     // A stack of the spoils opened: what it is, what it is for, and how many the hero holds.
-    stack?.let { code -> StackInfoSheet(s.game, code) { stack = null } }
+    stack?.let { code -> StackInfoSheet(game, code) { stack = null } }
     // The recipe the kill turned up: what it does, and that the bench waits for the run's end.
-    recipe?.let { code -> RecipeSheet(s, code, inRun = true) { recipe = null } }
+    recipe?.let { code -> RecipeSheet(game, code, inRun = true) { recipe = null } }
 }
 
 /** The scene: the monster's round token in its rarity's ring, lit warm for a victory and red for a defeat, and the outcome in words. */
@@ -172,16 +172,16 @@ import java.util.Locale
 /** What the kill brought, by section, as the server's answers bring it (1.30.0); on its way, or its absence said plainly. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun Spoils(s: ForgeState, hud: RunHud, onStack: (String) -> Unit, onRecipe: (String) -> Unit, onItem: (ItemView) -> Unit) {
+private fun Spoils(game: GameUi, hud: RunHud, onStack: (String) -> Unit, onRecipe: (String) -> Unit, onItem: (ItemView) -> Unit) {
     val expedition: ExpeditionViewModel = koinViewModel()
     val reward = hud.reward ?: return
-    val index = s.index
+    val index = game.index
     reward.recipe?.let { code ->
         Caption(ui("expedition.report_recipe"))
         Chip(index?.let { i -> i.recipe(code)?.let { recipeText(i, it) } } ?: displayName(code), Rune) { onRecipe(code) }
     }
     // A piece put on from here (3.24.0) leaves the list: it is worn now, no longer loot.
-    val gear = reward.equipment.filterNot { s.hero?.item(it.id)?.let { held -> held.equipped || held.socketed } == true }.mapNotNull { s.view(it) }
+    val gear = reward.equipment.filterNot { game.hero?.item(it.id)?.let { held -> held.equipped || held.socketed } == true }.mapNotNull { game.view(it) }
     if (gear.isNotEmpty()) {
         Caption(ui("expedition.report_gear"))
         // A line a piece, as the map's summary has it: the whole card is one tap behind each.
@@ -190,7 +190,7 @@ private fun Spoils(s: ForgeState, hud: RunHud, onStack: (String) -> Unit, onReci
     if (reward.items.isNotEmpty()) {
         Caption(ui("expedition.report_orbs"))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            reward.items.forEach { (code, amount) -> StackChip(s, code, amount) { onStack(code) } }
+            reward.items.forEach { (code, amount) -> StackChip(game, code, amount) { onStack(code) } }
         }
     }
     Caption(ui("expedition.report_reward"))
@@ -206,7 +206,7 @@ private fun Spoils(s: ForgeState, hud: RunHud, onStack: (String) -> Unit, onReci
 }
 
 /** A defeat: what the death cost by the rules' price — the server's answer stands — and what the run had gathered before it. */
-@Composable private fun DeathPrice(s: ForgeState, hud: RunHud) {
+@Composable private fun DeathPrice(game: GameUi, hud: RunHud) {
     val expedition: ExpeditionViewModel = koinViewModel()
     Caption(ui("expedition.report_death"), LifeRed)
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -240,7 +240,7 @@ private fun Spoils(s: ForgeState, hud: RunHud, onStack: (String) -> Unit, onReci
             MutedText(ui("abyss.burned"))
         } else {
             MutedText(ui("abyss.kept"))
-            RewardLines(s, kept)
+            RewardLines(game, kept)
         }
     }
     Caption(ui("expedition.report_run"))

@@ -23,7 +23,7 @@ import com.sperance.exileforge.core.display.modifierLine
 import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.roll.Roll
 import com.sperance.exileforge.rules.roll.VaalZone
@@ -50,8 +50,8 @@ private object Altar {
  * the zone adds to the loot for bearing them — and the choice; until its answer comes, the gate waits. «Войти» closes the portal behind the
  * hero, «Отказаться» closes it for good; the zone is never re-rolled by walking away and back.
  */
-@Composable fun VaalGate(s: ForgeState, hud: RunHud, guardian: String?, onEnter: () -> Unit, onRefuse: () -> Unit, onBack: () -> Unit) {
-    val index = s.index
+@Composable fun VaalGate(game: GameUi, hud: RunHud, guardian: String?, onEnter: () -> Unit, onRefuse: () -> Unit, onBack: () -> Unit) {
+    val index = game.index
     Box(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(Altar.glow, Altar.night, Altar.deep), radius = 1600f)), contentAlignment = Alignment.Center) {
         Column(
             Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 18.dp, vertical = 16.dp),

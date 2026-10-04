@@ -11,6 +11,8 @@ import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.presentation.hero.HeroActions
 import com.sperance.exileforge.presentation.hero.HeroSync
+import com.sperance.exileforge.presentation.state.GameSlice
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.Slot
 import kotlinx.coroutines.flow.StateFlow
 
@@ -22,7 +24,10 @@ class ExpeditionViewModel(
     private val sync: HeroSync,
     repository: ExpeditionRepository,
     commands: CommandRunner,
+    slice: GameSlice,
 ) : ViewModel() {
+    /** Срез «игра» для экранов этой модели (3.80.33). */
+    val game: StateFlow<GameUi> = slice.ui
     val state: StateFlow<Expedition> = repository.state
     val run: StateFlow<ExpeditionRun?> = expedition.run
     val arena: StateFlow<TrialArena?> = trial.arena

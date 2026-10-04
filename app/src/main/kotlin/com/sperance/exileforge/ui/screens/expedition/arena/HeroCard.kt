@@ -19,7 +19,7 @@ import com.sperance.exileforge.core.campaign.combat.*
 import com.sperance.exileforge.core.campaign.run.*
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.expedition.scene.Portraits
 import com.sperance.exileforge.ui.screens.hero.PetIcon
@@ -32,7 +32,7 @@ import kotlin.math.sin
  * Lifted and lit in gold while they swing; ringed in blood while struck.
  */
 @Composable internal fun HeroCard(
-    s: ForgeState,
+    game: GameUi,
     hud: RunHud,
     fight: FightHud,
     time: Float,
@@ -41,7 +41,7 @@ import kotlin.math.sin
     modifier: Modifier,
     large: Boolean,
 ) {
-    val hero = s.heroInfo
+    val hero = game.heroInfo
     // The pet's blows and the blows at it are its own card's (3.70.0).
     val lunge = fight.lunge?.takeIf { !it.pet }
     val acting = reach(lunge, Side.HERO, null)
@@ -70,14 +70,14 @@ import kotlin.math.sin
     ) {
         Box(Modifier.width(64.dp).aspectRatio(.75f).clip(RoundedCornerShape(6.dp)).background(Color(0xFF0B0E13))) {
             Canvas(Modifier.fillMaxSize()) {
-                Portraits.hero(this, s.heroClass?.code, time, wash?.let(::ailmentTint), wash?.let(::washAmount) ?: 0f, flash(lunge, Side.HERO, null))
+                Portraits.hero(this, game.heroClass?.code, time, wash?.let(::ailmentTint), wash?.let(::washAmount) ?: 0f, flash(lunge, Side.HERO, null))
             }
             CardHits(fight.hits.filter { it.target == Side.HERO && (!it.pet || it.mend) })
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
-                    listOfNotNull(hero?.name?.takeIf { it.isNotBlank() }, ui("expedition.hero_line", hero?.heroClass?.let(::classTitle).orEmpty(), s.heroLevel)).joinToString(" · "),
+                    listOfNotNull(hero?.name?.takeIf { it.isNotBlank() }, ui("expedition.hero_line", hero?.heroClass?.let(::classTitle).orEmpty(), game.heroLevel)).joinToString(" · "),
                     color = GoldBright,
                     style = MaterialTheme.typography.labelMedium,
                     maxLines = 1,
@@ -109,7 +109,7 @@ import kotlin.math.sin
             }
         }
         // The combat pet (3.79.0, variant B): a round badge on the hero's card, its life a ring around it.
-        fight.ally?.let { PetBadge(s, it, fight.lunge?.takeIf { lunge -> lunge.pet }, fight.hits.filter { hit -> hit.pet }, time) }
+        fight.ally?.let { PetBadge(game, it, fight.lunge?.takeIf { lunge -> lunge.pet }, fight.hits.filter { hit -> hit.pet }, time) }
     }
 }
 
@@ -121,7 +121,7 @@ private val FloatingHit.mend: Boolean get() = pet && target == Side.HERO && amou
  * The ring flashes gold as it strikes, red as it is struck, green as it mends the hero; the blows it takes float over it.
  * Its own blows rise green on the foes' cards and its lines are green in the log. Down, it greys.
  */
-@Composable private fun PetBadge(s: ForgeState, ally: AllyView, lunge: LungeView?, hits: List<FloatingHit>, time: Float) {
+@Composable private fun PetBadge(game: GameUi, ally: AllyView, lunge: LungeView?, hits: List<FloatingHit>, time: Float) {
     val acting = reach(lunge, Side.HERO, null)
     val hit = struck(lunge, Side.HERO, null)
     val mending = hits.any { it.mend && it.age < PET_PULSE }
@@ -148,7 +148,7 @@ private val FloatingHit.mend: Boolean get() = pet && target == Side.HERO && amou
             drawArc(PanelRaised, 0f, 360f, false, at, inset, style = androidx.compose.ui.graphics.drawscope.Stroke(stroke))
             drawArc(if (mending) Vital else ring, -90f, 360f * share, false, at, inset, style = androidx.compose.ui.graphics.drawscope.Stroke(stroke))
         }
-        PetIcon(s.game, ally.species, 30)
+        PetIcon(game, ally.species, 30)
         CardHits(hits.filter { it.target == Side.HERO && !it.mend })
     }
 }

@@ -1,4 +1,5 @@
 package com.sperance.exileforge.ui.screens.expedition
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -20,7 +21,7 @@ import com.sperance.exileforge.core.campaign.run.RunHud
 import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.roll.AbyssHoardView
 import com.sperance.exileforge.ui.components.FirstVisit
@@ -40,7 +41,7 @@ import com.sperance.exileforge.ui.theme.*
  * hoard brought, rolled by the server and shown as its answer arrives (server 1.30.0). Between depths the hero's
  * life, shield and mana are laid out, and the belt is at hand: what is left of them is what the next wave meets.
  */
-@Composable internal fun AbyssSheet(s: ForgeState, hud: RunHud, view: AbyssView, onCommand: (RunCommand) -> Unit) {
+@Composable internal fun AbyssSheet(game: GameUi, hud: RunHud, view: AbyssView, onCommand: (RunCommand) -> Unit) {
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Ink.copy(alpha = .85f), Ink))), contentAlignment = Alignment.BottomCenter) {
         Column(
             Modifier.fillMaxWidth().navigationBarsPadding().padding(12.dp).glow(AbyssGlow, radius = 14.dp, shape = RoundedCornerShape(12.dp))
@@ -76,7 +77,7 @@ import com.sperance.exileforge.ui.theme.*
                     } else if (view.fallen && hoard.items.isEmpty() && hoard.equipment.isEmpty() && hoard.experience <= 0) {
                         MutedText(ui("abyss.burned"))
                     } else {
-                        RewardLines(s, hoard)
+                        RewardLines(game, hoard)
                     }
                 }
 

@@ -1,4 +1,5 @@
 package com.sperance.exileforge.ui.screens.expedition
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -40,7 +41,7 @@ import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.display.statValue
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.StatTrace
 import com.sperance.exileforge.presentation.state.TraceExplainer
 import com.sperance.exileforge.ui.components.ForgeSheet
@@ -60,12 +61,12 @@ import kotlin.math.roundToInt
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun CombatDetailSheet(s: ForgeState, event: CombatEvent, monster: String, onDismiss: () -> Unit) {
+internal fun CombatDetailSheet(game: GameUi, event: CombatEvent, monster: String, onDismiss: () -> Unit) {
     val trace = event.trace ?: run {
         LaunchedEffect(event) { onDismiss() }
         return
     }
-    val explainer = remember(s.index, s.lang) { TraceExplainer(s.game) }
+    val explainer = remember(game.index, game.lang) { TraceExplainer(game) }
     var full by remember(event) { mutableStateOf(false) }
     ForgeSheet(onDismissRequest = onDismiss) {
         LazyColumn(
@@ -79,10 +80,10 @@ internal fun CombatDetailSheet(s: ForgeState, event: CombatEvent, monster: Strin
             item { FullToggle(full) { full = !full } }
             if (full) {
                 when (trace) {
-                    is HitTrace -> hitItems(trace, explainer, s)
-                    is TickTrace -> tickItems(trace, explainer, s)
-                    is EffectTrace -> effectItems(trace, explainer, s)
-                    is NoteTrace -> noteItems(trace, explainer, s)
+                    is HitTrace -> hitItems(trace, explainer, game)
+                    is TickTrace -> tickItems(trace, explainer, game)
+                    is EffectTrace -> effectItems(trace, explainer, game)
+                    is NoteTrace -> noteItems(trace, explainer, game)
                 }
             }
         }
@@ -196,8 +197,8 @@ internal fun cuts(type: TypeTrace): List<String> = listOfNotNull(
 
 // ==================== A blow ====================
 
-internal fun LazyListScope.hitItems(trace: HitTrace, explainer: TraceExplainer, s: ForgeState) {
-    if (trace.factors.isNotEmpty()) item { Chain(trace.factors, trace.attacker, trace.target, trace.origin, explainer, s) }
+internal fun LazyListScope.hitItems(trace: HitTrace, explainer: TraceExplainer, game: GameUi) {
+    if (trace.factors.isNotEmpty()) item { Chain(trace.factors, trace.attacker, trace.target, trace.origin, explainer, game) }
     if (trace.rolls.isNotEmpty()) item { Rolls(trace.rolls) }
     if (trace.types.isNotEmpty()) {
         item {
@@ -220,12 +221,12 @@ internal fun LazyListScope.hitItems(trace: HitTrace, explainer: TraceExplainer, 
             }
         }
     }
-    item { Sides(trace.attacker, trace.target, trace.origin, explainer, s, trace.factors) }
+    item { Sides(trace.attacker, trace.target, trace.origin, explainer, game, trace.factors) }
 }
 
 // ==================== An ailment's tick ====================
 
-internal fun LazyListScope.tickItems(trace: TickTrace, explainer: TraceExplainer, s: ForgeState) {
+internal fun LazyListScope.tickItems(trace: TickTrace, explainer: TraceExplainer, game: GameUi) {
     item {
         Section(ui("trace.section.ailment")) {
             Line(ui("trace.tick.per_second"), fineNumber(trace.perSecond))
@@ -234,19 +235,19 @@ internal fun LazyListScope.tickItems(trace: TickTrace, explainer: TraceExplainer
             if (trace.stacks > 1) Line(ui("trace.tick.stacks"), trace.stacks.toString())
         }
     }
-    item { Chain(trace.factors, trace.striker ?: trace.target, trace.target, trace.origin, explainer, s) }
-    item { Sides(trace.striker ?: trace.target, trace.target, trace.origin, explainer, s, trace.factors) }
+    item { Chain(trace.factors, trace.striker ?: trace.target, trace.target, trace.origin, explainer, game) }
+    item { Sides(trace.striker ?: trace.target, trace.target, trace.origin, explainer, game, trace.factors) }
 }
 
 // ==================== A draught, a buff, a curse ====================
 
-internal fun LazyListScope.effectItems(trace: EffectTrace, explainer: TraceExplainer, s: ForgeState) {
+internal fun LazyListScope.effectItems(trace: EffectTrace, explainer: TraceExplainer, game: GameUi) {
     item {
         Section(ui("trace.section.effect")) {
             if (trace.duration > 0) Line(ui("trace.tick.duration"), ui("trace.seconds", fineNumber(trace.duration)))
             if (trace.healed >= 0.05) Line(ui("trace.effect.healed"), "+${fineNumber(trace.healed)}", Vital)
             if (trace.scale != 1.0) Line(ui("trace.effect.scale"), "×${factor(trace.scale)}")
-            trace.lines.forEach { line -> Line(statTitle(line.stat, s.lang), explainer.fmt(line.stat, line.value, line.op)) }
+            trace.lines.forEach { line -> Line(statTitle(line.stat, game.lang), explainer.fmt(line.stat, line.value, line.op)) }
             if (trace.lines.isEmpty() && trace.healed < 0.05) Note(ui("trace.effect.none"))
         }
     }
@@ -255,7 +256,7 @@ internal fun LazyListScope.effectItems(trace: EffectTrace, explainer: TraceExpla
 
 // ==================== A note ====================
 
-internal fun LazyListScope.noteItems(trace: NoteTrace, explainer: TraceExplainer, s: ForgeState) {
+internal fun LazyListScope.noteItems(trace: NoteTrace, explainer: TraceExplainer, game: GameUi) {
     if (trace.value != 0.0) item { Section(ui("trace.section.note")) { Line(ui("trace.note.value.${trace.kind.name}"), fineNumber(trace.value)) } }
     item { States(listOf(trace.actor), explainer) }
 }

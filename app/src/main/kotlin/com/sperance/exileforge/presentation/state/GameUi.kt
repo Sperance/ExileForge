@@ -6,6 +6,7 @@ import com.sperance.exileforge.core.hero.HeroHolding
 import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.LanguageRepository
+import com.sperance.exileforge.core.i18n.Phrase
 import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.model.atlas.AtlasState
 import com.sperance.exileforge.core.model.campaign.CampaignProgress
@@ -17,6 +18,8 @@ import com.sperance.exileforge.core.network.Link
 import com.sperance.exileforge.core.network.LinkRepository
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.CommandRunner
+import com.sperance.exileforge.core.session.Notice
+import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.Session
 import com.sperance.exileforge.core.session.SessionRepository
 import com.sperance.exileforge.core.world.World
@@ -49,9 +52,14 @@ data class GameUi(
     val stashHideWorn: Boolean = true,
     val settings: GameSettings = GameSettings(),
     val logFilter: Set<LogKind> = LogKind.DEFAULT,
+    /** Тост успеха на экране (3.80.38); отказ - у [activity]. */
+    val notice: Notice? = null,
 ) {
     val busy: Boolean get() = activity.busy
     val loading: Set<String> get() = activity.loading
+
+    /** Отказ, который печатают там, где нажали; успех не показывают. */
+    val refusal: Phrase? get() = activity.refusal
     fun refreshing(read: String): Boolean = busy || read in loading
     val isAdmin: Boolean get() = session.isAdmin
     val isTester: Boolean get() = session.isTester
@@ -87,22 +95,23 @@ class GameSlice(
     links: LinkRepository,
     modes: AppModes,
     prefs: PreferencesRepository,
+    notices: Notices,
     scope: CoroutineScope,
 ) {
     val ui: StateFlow<GameUi> = combine(
         combine(commands.state, languages.lang, worlds.state, sessions.state, heroes.state) { activity, lang, world, session, holding ->
             GameUi(activity, lang, world, session, holding)
         },
-        combine(links.state, modes.mode, prefs.stashSort, prefs.stashHideWorn, combine(prefs.settings, prefs.logFilter, ::Pair)) { link, mode, sort, hideWorn, (settings, logFilter) ->
-            GameUi(link = link, mode = mode, stashSort = sort, stashHideWorn = hideWorn, settings = settings, logFilter = logFilter)
+        combine(links.state, modes.mode, prefs.stashSort, prefs.stashHideWorn, combine(prefs.settings, prefs.logFilter, notices.state, ::Triple)) { link, mode, sort, hideWorn, (settings, logFilter, notice) ->
+            GameUi(link = link, mode = mode, stashSort = sort, stashHideWorn = hideWorn, settings = settings, logFilter = logFilter, notice = notice)
         },
-    ) { a, b -> a.copy(link = b.link, mode = b.mode, stashSort = b.stashSort, stashHideWorn = b.stashHideWorn, settings = b.settings, logFilter = b.logFilter) }
+    ) { a, b -> a.copy(link = b.link, mode = b.mode, stashSort = b.stashSort, stashHideWorn = b.stashHideWorn, settings = b.settings, logFilter = b.logFilter, notice = b.notice) }
         .stateIn(
             scope,
             SharingStarted.Eagerly,
             GameUi(
                 commands.state.value, languages.lang.value, worlds.state.value, sessions.state.value, heroes.state.value, links.state.value, modes.mode.value,
-                prefs.stashSort.value, prefs.stashHideWorn.value, prefs.settings.value, prefs.logFilter.value,
+                prefs.stashSort.value, prefs.stashHideWorn.value, prefs.settings.value, prefs.logFilter.value, notices.state.value,
             ),
         )
 }

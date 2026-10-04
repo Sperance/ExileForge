@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.campaign.*
 import com.sperance.exileforge.core.campaign.combat.*
 import com.sperance.exileforge.core.campaign.run.*
@@ -50,7 +52,7 @@ import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.run.Reward
 import com.sperance.exileforge.ui.components.*
@@ -78,7 +80,8 @@ import kotlin.math.roundToInt
  * app's dictionary and theme, laid over it. The stick is the overlay's too: a thumb anywhere in the
  * lower part of the screen sets it, and letting go stops the hero.
  */
-@Composable fun ExpeditionPlay(s: ForgeState, run: ExpeditionRun) {
+@Composable fun ExpeditionPlay(run: ExpeditionRun) {
+    val game by koinViewModel<ExpeditionViewModel>().game.collectAsStateWithLifecycle()
     val shell: ShellViewModel = koinViewModel()
     val expedition: ExpeditionViewModel = koinViewModel()
     val model = koinViewModel<ExpeditionViewModel>()
@@ -112,13 +115,13 @@ import kotlin.math.roundToInt
     }
 
     Box(Modifier.fillMaxSize().background(Ink)) {
-        ExpeditionScene(run, s.heroClass?.code, Modifier.fillMaxSize())
+        ExpeditionScene(run, game.heroClass?.code, Modifier.fillMaxSize())
         when (hud.phase) {
             RunPhase.MAP -> {
                 // An autorun walks by itself (3.2.0): no stick under the thumb while it runs
                 if (hud.auto == null) Stick(run) { model.runCommand(RunCommand.OfferFountain(it)) }
                 MapBar(
-                    s,
+                    game,
                     run,
                     hud,
                     onLeave = if (zone) null else ({ leaving = true }),
@@ -129,14 +132,14 @@ import kotlin.math.roundToInt
                 )
                 if (gear) {
                     HoldsRun(run)
-                    GearSheet(s, model) { gear = false }
+                    GearSheet(game, model) { gear = false }
                 }
                 if (sheet) {
                     HoldsRun(run)
-                    StatsSheet(s, run.mapEffects) { sheet = false }
+                    StatsSheet(game, run.mapEffects) { sheet = false }
                 }
                 hud.fountain?.let { FountainOffer(it, onTake = { model.runCommand(RunCommand.TakeFountain) }) { model.runCommand(RunCommand.StepOff) } }
-                hud.chest?.let { ChestLoot(s, model, run, it, hud.chestAwaiting) { model.runCommand(RunCommand.DismissChest) } }
+                hud.chest?.let { ChestLoot(game, model, run, it, hud.chestAwaiting) { model.runCommand(RunCommand.DismissChest) } }
                 if (leaving) {
                     ConfirmSheet(
                         title = ui("expedition.leave_q"),
@@ -150,31 +153,31 @@ import kotlin.math.roundToInt
                 }
             }
 
-            RunPhase.FIGHT -> hud.fight?.let { ArenaOverlay(s, hud, it, it.level.takeIf { level -> level > 0 } ?: run.zone.level, run.rules, run.stance, onCommand = model::runCommand, onLogFilter = shell::logFilter, onBuzz = shell::buzz) }
+            RunPhase.FIGHT -> hud.fight?.let { ArenaOverlay(game, hud, it, it.level.takeIf { level -> level > 0 } ?: run.zone.level, run.rules, run.stance, onCommand = model::runCommand, onLogFilter = shell::logFilter, onBuzz = shell::buzz) }
 
             // The fight is over: its report — the log, what it came to, and the loot of a victory.
-            RunPhase.LOOT -> hud.report?.let { ReportScreen(s, model, hud, it) { model.runCommand(RunCommand.Continue) } }
+            RunPhase.LOOT -> hud.report?.let { ReportScreen(game, model, hud, it) { model.runCommand(RunCommand.Continue) } }
 
             // A fall: the fight's report first, then the map's summary (its «Вернуться» leaves the map).
-            RunPhase.DEAD -> hud.report?.let { ReportScreen(s, model, hud, it) { model.runCommand(RunCommand.Continue) } }
-                ?: MapSummary(s, model, hud, onDone = close)
+            RunPhase.DEAD -> hud.report?.let { ReportScreen(game, model, hud, it) { model.runCommand(RunCommand.Continue) } }
+                ?: MapSummary(game, model, hud, onDone = close)
 
-            RunPhase.CLEARED -> MapSummary(s, model, hud, onDone = close)
+            RunPhase.CLEARED -> MapSummary(game, model, hud, onDone = close)
 
-            RunPhase.GATE -> VaalGate(s, hud, run.zone.corrupted.takeIf { it.isNotBlank() }, onEnter = model::enterVaal, onRefuse = model::refuseVaal) { model.runCommand(RunCommand.StepBack) }
+            RunPhase.GATE -> VaalGate(game, hud, run.zone.corrupted.takeIf { it.isNotBlank() }, onEnter = model::enterVaal, onRefuse = model::refuseVaal) { model.runCommand(RunCommand.StepBack) }
 
-            RunPhase.CRYSTAL -> hud.crystal?.let { CrystalSheet(s, it, onCommand = model::runCommand) }
+            RunPhase.CRYSTAL -> hud.crystal?.let { CrystalSheet(game, it, onCommand = model::runCommand) }
 
-            RunPhase.ABYSS -> hud.abyss?.let { AbyssSheet(s, hud, it, onCommand = model::runCommand) }
+            RunPhase.ABYSS -> hud.abyss?.let { AbyssSheet(game, hud, it, onCommand = model::runCommand) }
 
-            RunPhase.LEFT -> MapSummary(s, model, hud, onDone = close)
+            RunPhase.LEFT -> MapSummary(game, model, hud, onDone = close)
         }
         // In a fight the arena's own row carries the autorun (3.77.0); the plate floats only over the map.
         hud.auto?.takeIf { hud.phase == RunPhase.MAP }?.let { auto ->
             AutoBar(auto, Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 8.dp)) { model.runCommand(RunCommand.StopAuto) }
         }
         // A refusal of the gear (2.40.0) has to be read here too: the run has no bar and no banner.
-        ToastHost(s, shell::dismissMessage, shell::dismissNotice, Modifier.align(Alignment.TopCenter).statusBarsPadding())
+        ToastHost(game, shell::dismissMessage, shell::dismissNotice, Modifier.align(Alignment.TopCenter).statusBarsPadding())
     }
 }
 
@@ -186,7 +189,7 @@ import kotlin.math.roundToInt
  * The journal's events the server has not taken for a while are counted under the name, a tap sends them now; a slain guardian is not bought back (3.2.0) — it returns in its time.
  */
 @Composable internal fun MapBar(
-    s: ForgeState,
+    game: GameUi,
     run: ExpeditionRun,
     hud: RunHud,
     onLeave: (() -> Unit)?,
@@ -313,19 +316,19 @@ internal const val PENDING_GRACE = 10_000L
  * shown as its answer arrives (server 1.30.0), and a button that puts it away. A piece opens its
  * comparison with what is worn and can be worn at once (3.24.0); the map holds still while it is open.
  */
-@Composable internal fun ChestLoot(s: ForgeState, vm: ExpeditionViewModel, run: ExpeditionRun, reward: Reward, awaiting: Boolean, onClose: () -> Unit) {
+@Composable internal fun ChestLoot(game: GameUi, vm: ExpeditionViewModel, run: ExpeditionRun, reward: Reward, awaiting: Boolean, onClose: () -> Unit) {
     val expedition: ExpeditionViewModel = koinViewModel()
     var looked by remember(reward) { mutableStateOf<ItemView?>(null) }
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         RunPanel(Modifier, GoldBright) {
             Text(ui("expedition.chest"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
-            RewardLines(s, reward, { looked = it }, awaiting)
+            RewardLines(game, reward, { looked = it }, awaiting)
             ForgeOutlinedButton(onClick = onClose, modifier = Modifier.fillMaxWidth()) { Text(ui("common.close")) }
         }
     }
     looked?.let { item ->
         HoldsRun(run)
-        LootSheet(s, vm, item, onDismiss = { looked = null })
+        LootSheet(game, vm, item, onDismiss = { looked = null })
     }
 }
 

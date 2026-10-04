@@ -50,7 +50,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.i18n.uiOr
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.MapLaunchState
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.AtlasPoints
@@ -80,10 +80,10 @@ internal data class MapLine(val text: String, val kind: MapLineKind, val risk: D
  * How many maps of each zone the stash holds. Read off the items' zone alone (3.76.0): building a full view of every
  * thing in the stash on each opening of the tab froze the tap.
  */
-fun stashCounts(s: ForgeState): Map<String, Int> = s.hero?.stash.orEmpty().filter { it.mapZone.isNotEmpty() }.groupingBy { it.mapZone }.eachCount()
+fun stashCounts(game: GameUi): Map<String, Int> = game.hero?.stash.orEmpty().filter { it.mapZone.isNotEmpty() }.groupingBy { it.mapZone }.eachCount()
 
-internal fun stashMaps(s: ForgeState): List<StashMap> = s.hero?.stash.orEmpty()
-    .filter { it.mapZone.isNotEmpty() }.mapNotNull { item -> s.view(item)?.takeIf { it.slot == Slot.MAP }?.let { StashMap(item, it) } }
+internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty()
+    .filter { it.mapZone.isNotEmpty() }.mapNotNull { item -> game.view(item)?.takeIf { it.slot == Slot.MAP }?.let { StashMap(item, it) } }
 
 /**
  * A zone's card on the world map (2.76.0, in place of the launch window): it rises over the map's
@@ -93,14 +93,14 @@ internal fun stashMaps(s: ForgeState): List<StashMap> = s.hero?.stash.orEmpty()
  * «Войти в портал». A «???» zone says only whose guardian opens it. The rules and the content are the
  * index's; the windows of the zone — its guardian's return — are the hero's own campaign.
  */
-@Composable fun ZoneCard(s: ForgeState, vm: ExpeditionViewModel, world: WorldMap, launch: MapLaunchState, modifier: Modifier = Modifier) {
+@Composable fun ZoneCard(game: GameUi, vm: ExpeditionViewModel, world: WorldMap, launch: MapLaunchState, modifier: Modifier = Modifier) {
     val token = world.token(launch.mapCode) ?: return
-    val index = s.index ?: return
+    val index = game.index ?: return
     val zone = token.zone
     FirstVisit(Guide.MAP_LAUNCH)
     // A locked map is kept on purpose: spending it on a run is asked about first, for either launch.
     var askLocked by remember { mutableStateOf<(() -> Unit)?>(null) }
-    val launchGuarded: (() -> Unit) -> Unit = { go -> if (stashMaps(s).any { it.item.id == launch.picked && it.item.locked }) askLocked = go else go() }
+    val launchGuarded: (() -> Unit) -> Unit = { go -> if (stashMaps(game).any { it.item.id == launch.picked && it.item.locked }) askLocked = go else go() }
     askLocked?.let { go ->
         ConfirmSheet(
             title = ui("expedition.launch_locked_q"),
@@ -134,12 +134,12 @@ internal fun stashMaps(s: ForgeState): List<StashMap> = s.hero?.stash.orEmpty()
                 return@Column
             }
             MutedText(mapDescription(zone.code), style = MaterialTheme.typography.bodySmall)
-            index.monster(zone.boss)?.let { Guardian(s, zone, it) }
-            AtlasKeys(s.atlasState?.earned.orEmpty(), zone.code)
-            Maps(s, vm, index, zone, launch)
-            Brews(s, vm, launch)
+            index.monster(zone.boss)?.let { Guardian(game, zone, it) }
+            AtlasKeys(game.atlasState?.earned.orEmpty(), zone.code)
+            Maps(game, vm, index, zone, launch)
+            Brews(game, vm, launch)
             ForgeButton(
-                enabled = s.hero != null && !s.busy,
+                enabled = game.hero != null && !game.busy,
                 onClick = { launchGuarded { vm.startRun(zone.code) } },
                 modifier = Modifier.fillMaxWidth().height(44.dp),
             ) {
@@ -147,7 +147,7 @@ internal fun stashMaps(s: ForgeState): List<StashMap> = s.hero?.stash.orEmpty()
                 Spacer(Modifier.width(10.dp))
                 Text(ui("expedition.launch_go"), style = MaterialTheme.typography.titleMedium)
             }
-            AutoLaunch(s, vm, zone.code, launch, launchGuarded)
+            AutoLaunch(game, vm, zone.code, launch, launchGuarded)
         }
     }
 }
@@ -157,8 +157,8 @@ internal fun stashMaps(s: ForgeState): List<StashMap> = s.hero?.stash.orEmpty()
  * waves on the arena, the guardian last. What else it takes on is chosen here; a crack of the Abyss and the
  * Vaal portal still stop it for the player's word.
  */
-@Composable internal fun AutoLaunch(s: ForgeState, vm: ExpeditionViewModel, zone: String, launch: MapLaunchState, guarded: (() -> Unit) -> Unit) {
-    if (s.progress?.cleared?.contains(zone) != true) return
+@Composable internal fun AutoLaunch(game: GameUi, vm: ExpeditionViewModel, zone: String, launch: MapLaunchState, guarded: (() -> Unit) -> Unit) {
+    if (game.progress?.cleared?.contains(zone) != true) return
     var chests by rememberSaveable { mutableStateOf(true) }
     var crystals by rememberSaveable { mutableStateOf(true) }
     var abyss by rememberSaveable { mutableStateOf(true) }
@@ -176,7 +176,7 @@ internal fun stashMaps(s: ForgeState): List<StashMap> = s.hero?.stash.orEmpty()
             }
         }
         ForgeOutlinedButton(
-            enabled = s.hero != null && !s.busy && launch.picked != null,
+            enabled = game.hero != null && !game.busy && launch.picked != null,
             modifier = Modifier.fillMaxWidth(),
             onClick = { guarded { vm.startAutoRun(zone, AutoPlan(chests, crystals, abyss)) } },
         ) {
@@ -220,8 +220,8 @@ internal fun stashMaps(s: ForgeState): List<StashMap> = s.hero?.stash.orEmpty()
  * The zone's guardian: its bust and name, and whether it waits by the exit or lies slain until its
  * time — the hero's campaign says when it is back; summoning it early is the map's own bar's (3.0.0).
  */
-@Composable internal fun Guardian(s: ForgeState, zone: Zone, boss: Monster) {
-    val campaign = s.hero?.campaign
+@Composable internal fun Guardian(game: GameUi, zone: Zone, boss: Monster) {
+    val campaign = game.hero?.campaign
     val back = campaign?.takeIf { it.bossDown(zone.code, System.currentTimeMillis()) }?.bosses?.get(zone.code)
     val shape = RoundedCornerShape(12.dp)
     Row(

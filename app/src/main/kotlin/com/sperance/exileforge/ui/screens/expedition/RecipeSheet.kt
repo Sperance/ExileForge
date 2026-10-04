@@ -19,7 +19,7 @@ import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.forge.SmithyViewModel
 import com.sperance.exileforge.presentation.state.ForgeSection
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.TAB_CRAFT
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeSheet
@@ -36,11 +36,11 @@ import org.koin.compose.viewmodel.koinViewModel
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun RecipeSheet(s: ForgeState, code: String, inRun: Boolean = false, onDismiss: () -> Unit) {
+internal fun RecipeSheet(game: GameUi, code: String, inRun: Boolean = false, onDismiss: () -> Unit) {
     val shell: ShellViewModel = koinViewModel()
     val expedition: ExpeditionViewModel = koinViewModel()
     val smithy = koinViewModel<SmithyViewModel>()
-    val index = s.index
+    val index = game.index
     val recipe = index?.recipe(code)
     val title = recipe?.let { r -> index?.modifier(r.modifier)?.effects?.map { statTitle(it.stat) }?.distinct()?.joinToString(" / ") }
         ?.ifBlank { null } ?: displayName(recipe?.modifier ?: code)
@@ -59,7 +59,7 @@ internal fun RecipeSheet(s: ForgeState, code: String, inRun: Boolean = false, on
                     Column(Modifier.fillMaxWidth().background(Abyss, RoundedCornerShape(6.dp)).padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(recipeText(index, recipe), color = ModBlue, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
                         MutedText(
-                            ui("bench.cost_line", itemTitle(recipe.orb.name), recipe.amount, s.hero?.count(recipe.orb.name) ?: 0L),
+                            ui("bench.cost_line", itemTitle(recipe.orb.name), recipe.amount, game.hero?.count(recipe.orb.name) ?: 0L),
                             style = MaterialTheme.typography.bodySmall,
                         )
                         if (recipe.slots.isNotEmpty()) {

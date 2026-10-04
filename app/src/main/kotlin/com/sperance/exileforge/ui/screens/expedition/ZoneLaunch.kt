@@ -50,7 +50,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.i18n.uiOr
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.MapLaunchState
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.AtlasPoints
@@ -74,14 +74,14 @@ import com.sperance.exileforge.ui.theme.*
  * picked map's rarity, the three figures it pays and its lines marked by kind — red a harm with the
  * share of risk it pays, blue the content, gold a reward. Every number is the rules' own.
  */
-@Composable internal fun Maps(s: ForgeState, vm: ExpeditionViewModel, index: ContentIndex, zone: Zone, launch: MapLaunchState) {
-    val maps = stashMaps(s).filter { it.item.mapZone == zone.code }
+@Composable internal fun Maps(game: GameUi, vm: ExpeditionViewModel, index: ContentIndex, zone: Zone, launch: MapLaunchState) {
+    val maps = stashMaps(game).filter { it.item.mapZone == zone.code }
     if (maps.isEmpty()) {
         MutedText(ui("expedition.launch_no_maps", zone.level))
         return
     }
     val picked = maps.firstOrNull { it.item.id == launch.picked }
-    MapRibbon(maps, picked, enabled = !s.busy, onPick = vm::pickMap)
+    MapRibbon(maps, picked, enabled = !game.busy, onPick = vm::pickMap)
     Text(
         picked?.view?.title ?: ui("expedition.launch_no_map"),
         color = picked?.let { rarityColor(it.view.rarity.name) } ?: Muted,
@@ -91,7 +91,7 @@ import com.sperance.exileforge.ui.theme.*
     val rarity = picked.view.rarity
     val own = index.campaign.maps.rarityBonus[rarity] ?: 0.0
     Text(
-        if (own > 0) ui("expedition.launch_rarity_line", rarityTitle(rarity, s.lang), number(own)) else rarityTitle(rarity, s.lang),
+        if (own > 0) ui("expedition.launch_rarity_line", rarityTitle(rarity, game.lang), number(own)) else rarityTitle(rarity, game.lang),
         color = rarityColor(rarity.name),
         style = MaterialTheme.typography.labelMedium,
     )
@@ -157,10 +157,10 @@ internal fun lines(map: ItemView, index: ContentIndex): List<MapLine> = map.line
  * The crafts' gifts to the run (3.79.0): one potion of the bag drunk on entering, and with a map up to two scarabs
  * spent with it. A tap picks, a tap again puts back; what each does is the item's own line.
  */
-@Composable internal fun Brews(s: ForgeState, vm: ExpeditionViewModel, launch: MapLaunchState) {
-    val brews = s.index?.rules?.brews ?: return
-    val potions = brews.potions.keys.filter { (s.bagAmount(it) ?: 0L) > 0 }
-    val scarabs = brews.scarabs.keys.filter { (s.bagAmount(it) ?: 0L) > 0 }
+@Composable internal fun Brews(game: GameUi, vm: ExpeditionViewModel, launch: MapLaunchState) {
+    val brews = game.index?.rules?.brews ?: return
+    val potions = brews.potions.keys.filter { (game.bagAmount(it) ?: 0L) > 0 }
+    val scarabs = brews.scarabs.keys.filter { (game.bagAmount(it) ?: 0L) > 0 }
     if (potions.isEmpty() && scarabs.isEmpty()) return
     ForgePanel {
         if (potions.isNotEmpty()) {
@@ -168,7 +168,7 @@ internal fun lines(map: ItemView, index: ContentIndex): List<MapLine> = map.line
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(potions, key = { it }) { code ->
                     val chosen = launch.potion == code
-                    Square(if (chosen) GoldBright else PanelRaised, chosen, !s.busy, itemTitle(code), { vm.pickPotion(code) }) {
+                    Square(if (chosen) GoldBright else PanelRaised, chosen, !game.busy, itemTitle(code), { vm.pickPotion(code) }) {
                         BagIcon(code, Modifier.size(28.dp))
                     }
                 }
@@ -186,9 +186,9 @@ internal fun lines(map: ItemView, index: ContentIndex): List<MapLine> = map.line
                         Square(
                             if (set > 0) GoldBright else PanelRaised,
                             set > 0,
-                            !s.busy,
+                            !game.busy,
                             itemTitle(code),
-                            { vm.toggleScarab(code, add = set == 0 || (launch.scarabs.size < brews.scarabsPerMap && set < (s.bagAmount(code) ?: 0L))) },
+                            { vm.toggleScarab(code, add = set == 0 || (launch.scarabs.size < brews.scarabsPerMap && set < (game.bagAmount(code) ?: 0L))) },
                         ) {
                             BagIcon(code, Modifier.size(28.dp))
                             if (set > 1) Text("×$set", color = GoldBright, fontSize = 10.sp, modifier = Modifier.align(Alignment.BottomEnd).padding(2.dp))

@@ -15,8 +15,8 @@ import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.ForgeViewModel
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.admin.AdminViewModel
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.ui.components.*
@@ -31,10 +31,10 @@ import com.sperance.exileforge.ui.icons.orbArt
  * Since 3.0.0 the templates and the stacks are picked from the content on the device — there is no
  * catalogue to page through — and the bag is only ever added to: the server takes nothing back.
  */
-@Composable fun AdminGrantPanel(s: ForgeState, vm: ForgeViewModel) {
-    if (!s.adminTools || s.play.heroId.isBlank()) return
-    var expanded by remember(s.play.heroId) { mutableStateOf(true) }
-    val enabled = !s.busy && s.account.signedIn && s.play.heroId.isNotBlank()
+@Composable fun AdminGrantPanel(game: GameUi, vm: AdminViewModel) {
+    if (!game.adminTools || game.heroId.isBlank()) return
+    var expanded by remember(game.heroId) { mutableStateOf(true) }
+    val enabled = !game.busy && game.session.signedIn && game.heroId.isNotBlank()
     val any = ui("grant.any")
     // Редкость и слот случайной выдачи (3.80.32: черновик панели); пусто - любые.
     var rarity by rememberSaveable { mutableStateOf("") }
@@ -44,17 +44,17 @@ import com.sperance.exileforge.ui.icons.orbArt
     }
     if (!expanded) return
     // The content's templates and stacks, named and keyed by code: what the pickers search through.
-    val templates = remember(s.index, s.lang) {
-        s.index?.templates?.values.orEmpty().sortedBy { it.code }.associate { it.code to "${equipmentTitle(it.code)} · ${it.code}" }
+    val templates = remember(game.index, game.lang) {
+        game.index?.templates?.values.orEmpty().sortedBy { it.code }.associate { it.code to "${equipmentTitle(it.code)} · ${it.code}" }
     }
-    val stacks = remember(s.index, s.lang) {
-        s.index?.items?.values.orEmpty().sortedWith(compareBy({ it.category }, { it.code })).associate { it.code to "${itemTitle(it.code)} · ${it.code}" }
+    val stacks = remember(game.index, game.lang) {
+        game.index?.items?.values.orEmpty().sortedWith(compareBy({ it.category }, { it.code })).associate { it.code to "${itemTitle(it.code)} · ${it.code}" }
     }
     ForgePanel {
         Engraved(ui("grant.random_item"))
         // The rarity is the roll's for a random template and a named one alike; blank leaves the template's own.
-        Spinner(ui("common.rarity"), rarity, mapOf("" to any) + Rarity.entries.associate { it.name to rarityTitle(it, s.lang) }, enabled, glyph = Glyph.RARITY, onChange = { rarity = it })
-        Spinner(ui("grant.category"), slot, mapOf("" to any) + Slot.entries.associate { it.name to slotTitle(it, s.lang) }, enabled, glyph = Glyph.ITEM, onChange = { slot = it })
+        Spinner(ui("common.rarity"), rarity, mapOf("" to any) + Rarity.entries.associate { it.name to rarityTitle(it, game.lang) }, enabled, glyph = Glyph.RARITY, onChange = { rarity = it })
+        Spinner(ui("grant.category"), slot, mapOf("" to any) + Slot.entries.associate { it.name to slotTitle(it, game.lang) }, enabled, glyph = Glyph.ITEM, onChange = { slot = it })
         ForgeButton(enabled = enabled, onClick = { vm.grantRandom(rarity, slot) }, modifier = Modifier.fillMaxWidth()) {
             Icon(ForgeGlyphs.Anvil, null, Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
@@ -64,18 +64,18 @@ import com.sperance.exileforge.ui.icons.orbArt
 
         OrnateDivider()
         Engraved(ui("grant.named_template"))
-        var template by remember(s.play.heroId) { mutableStateOf("") }
+        var template by remember(game.heroId) { mutableStateOf("") }
         Spinner(ui("grant.equipment"), template, templates, enabled && templates.isNotEmpty(), glyph = Glyph.ITEM) { template = it }
         ForgeButton(enabled = enabled && template in templates, onClick = { vm.grant(template, Rarity.of(rarity)) }) { Text(ui("grant.chosen_item")) }
 
         OrnateDivider()
         Engraved(ui("grant.orbs"))
         MutedText(ui("grant.orbs_note"))
-        AdminOrbPanel(s.game)
+        AdminOrbPanel(game)
 
         OrnateDivider()
         Engraved(ui("grant.experience"))
-        var experience by remember(s.play.heroId) { mutableStateOf("100") }
+        var experience by remember(game.heroId) { mutableStateOf("100") }
         OutlinedTextField(
             experience,
             { experience = it },
@@ -91,9 +91,9 @@ import com.sperance.exileforge.ui.icons.orbArt
 
         OrnateDivider()
         Engraved(ui("grant.stacking"))
-        var code by remember(s.play.heroId) { mutableStateOf("") }
-        var amount by remember(s.play.heroId) { mutableStateOf("1") }
-        Spinner(ui("common.item"), code, stacks, enabled && stacks.isNotEmpty(), glyph = Glyph.CURRENCY, optionArt = orbArt(s.orbs)) { code = it }
+        var code by remember(game.heroId) { mutableStateOf("") }
+        var amount by remember(game.heroId) { mutableStateOf("1") }
+        Spinner(ui("common.item"), code, stacks, enabled && stacks.isNotEmpty(), glyph = Glyph.CURRENCY, optionArt = orbArt(game.orbs)) { code = it }
         OutlinedTextField(
             amount,
             { value -> amount = value.filter(Char::isDigit) },

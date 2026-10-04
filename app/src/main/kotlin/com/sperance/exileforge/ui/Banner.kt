@@ -20,6 +20,7 @@ import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,12 +48,14 @@ import com.sperance.exileforge.core.network.RequestLog
 import com.sperance.exileforge.data.settings.DraftStore
 import com.sperance.exileforge.data.settings.GuideStore
 import com.sperance.exileforge.presentation.ShellViewModel
+import com.sperance.exileforge.presentation.crafts.CraftsViewModel
 import com.sperance.exileforge.presentation.features.UpdateViewModel
 import com.sperance.exileforge.presentation.feedback.FeedbackViewModel
 import com.sperance.exileforge.presentation.nav.Navigator
 import com.sperance.exileforge.presentation.nav.Route
 import com.sperance.exileforge.presentation.state.*
 import com.sperance.exileforge.presentation.state.Feature
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.ui.components.BugSheet
 import com.sperance.exileforge.ui.components.ExilePathPlate
 import com.sperance.exileforge.ui.components.GuideDesk
@@ -117,7 +120,8 @@ import org.koin.compose.viewmodel.koinViewModel
  * crafts, and the account sits in its corner — it left the bottom bar. Since 3.75.0 the inbox, the beetle and the
  * account share one «⋮»: with every badge up the name of the game no longer fit.
  */
-@Composable internal fun ForgeBanner(s: ForgeState, onBug: () -> Unit) {
+@Composable internal fun ForgeBanner(game: GameUi, route: Route, onBug: () -> Unit) {
+    val feedback by koinViewModel<FeedbackViewModel>().feedback.collectAsStateWithLifecycle()
     val shell: ShellViewModel = koinViewModel()
     Row(
         Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Gold.copy(alpha = .10f), Color.Transparent, Gold.copy(alpha = .06f))))
@@ -125,7 +129,7 @@ import org.koin.compose.viewmodel.koinViewModel
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // The game's sigil opens the account (3.77.0), where the menu's row was.
-        val accountOpen = s.tab == TAB_ACCOUNT
+        val accountOpen = route.tab == TAB_ACCOUNT
         Box(
             Modifier.size(40.dp).clip(RoundedCornerShape(9.dp)).border(1.dp, (if (accountOpen) GoldBright else Gold).copy(alpha = .5f), RoundedCornerShape(9.dp))
                 .clickable(onClickLabel = ui("nav.account")) { shell.tab(TAB_ACCOUNT) },
@@ -137,18 +141,18 @@ import org.koin.compose.viewmodel.koinViewModel
         Column(Modifier.weight(1f)) {
             Text("EXILE FORGE", style = MaterialTheme.typography.titleLarge, color = GoldBright, maxLines = 1, softWrap = false)
             // The loaded hero names themself; before the snapshot lands, the menu's row does.
-            val named = s.heroInfo != null || s.heroRow != null
+            val named = game.heroInfo != null || game.heroRow != null
             Text(
-                if (named) s.heroName + ui("app.hero_level", s.heroLevel) else ui("app.title"),
+                if (named) game.heroName + ui("app.hero_level", game.heroLevel) else ui("app.title"),
                 style = MaterialTheme.typography.labelSmall,
                 color = Muted,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        WorkBadge(s) { shell.tab(TAB_CRAFTS) }
-        LinkBadge(s.link, admin = s.isAdmin, onRetry = shell::retryLink)
-        BannerMenu(s.feedback.unread, settingsOpen = s.tab == TAB_SETTINGS, onMail = LocalMailOpen.current, onBug = onBug, onSettings = shell::openSettings)
+        WorkBadge { shell.tab(TAB_CRAFTS) }
+        LinkBadge(game.link, admin = game.isAdmin, onRetry = shell::retryLink)
+        BannerMenu(feedback.unread, settingsOpen = route.tab == TAB_SETTINGS, onMail = LocalMailOpen.current, onBug = onBug, onSettings = shell::openSettings)
     }
 }
 
@@ -235,10 +239,11 @@ import org.koin.compose.viewmodel.koinViewModel
 }
 
 /** The craft under way, very short: its name and the cycle filling, every frame. Nothing when the hero works at nothing. */
-@Composable internal fun WorkBadge(s: ForgeState, onClick: () -> Unit) {
-    val crafts = s.play.crafts ?: return
+@Composable internal fun WorkBadge(onClick: () -> Unit) {
+    val held by koinViewModel<CraftsViewModel>().crafts.collectAsStateWithLifecycle()
+    val crafts = held.state ?: return
     val work = crafts.work ?: return
-    val offset = crafts.now - s.play.craftsAt
+    val offset = crafts.now - held.readAt
     val now by produceState(System.currentTimeMillis()) { while (true) withFrameMillis { value = System.currentTimeMillis() } }
     Column(Modifier.widthIn(max = 120.dp).clickable(onClick = onClick).padding(horizontal = 6.dp, vertical = 2.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {

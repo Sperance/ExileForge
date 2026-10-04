@@ -10,11 +10,13 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.itemTitle
@@ -24,13 +26,14 @@ import com.sperance.exileforge.core.model.command.RedemptionCode
 import com.sperance.exileforge.core.model.command.RedemptionKind
 import com.sperance.exileforge.core.model.command.RedemptionReward
 import com.sperance.exileforge.core.session.Reads
-import com.sperance.exileforge.presentation.ForgeViewModel
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.admin.AdminViewModel
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.LifeRed
 import com.sperance.exileforge.ui.theme.Muted
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * Promo codes: what exists, and what each one pays out.
@@ -43,18 +46,21 @@ import com.sperance.exileforge.ui.theme.Muted
  * code is acceptable — a blank or duplicate code, an empty reward and a non-positive amount are
  * all the server's refusals, and a refusal is shown rather than pre-empted.
  */
-@Composable fun RedemptionScreen(s: ForgeState, vm: ForgeViewModel) {
+@Composable fun RedemptionScreen() {
+    val vm = koinViewModel<AdminViewModel>()
+    val game by vm.game.collectAsStateWithLifecycle()
+    val admin by vm.admin.collectAsStateWithLifecycle()
     var pendingDelete by remember { mutableStateOf<RedemptionCode?>(null) }
 
-    PullToRefreshBox(isRefreshing = s.refreshing(Reads.REDEMPTIONS), onRefresh = vm::loadRedemptions, modifier = Modifier.fillMaxSize()) {
+    PullToRefreshBox(isRefreshing = game.refreshing(Reads.REDEMPTIONS), onRefresh = vm::loadRedemptions, modifier = Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
-                ScreenHeader(ui("redemption.title"), ui("redemption.count", s.admin.redemptions.size), ForgeGlyphs.Scroll)
+                ScreenHeader(ui("redemption.title"), ui("redemption.count", admin.redemptions.size), ForgeGlyphs.Scroll)
             }
-            item { NewCodePanel(s, vm) }
-            if (s.admin.redemptions.isEmpty()) item { InfoCard(ui("redemption.empty"), ui("redemption.empty_hint")) }
-            items(s.admin.redemptions, key = { it.id }) { code ->
-                CodeCard(s, code, onDelete = { pendingDelete = code })
+            item { NewCodePanel(game, vm) }
+            if (admin.redemptions.isEmpty()) item { InfoCard(ui("redemption.empty"), ui("redemption.empty_hint")) }
+            items(admin.redemptions, key = { it.id }) { code ->
+                CodeCard(game, code, onDelete = { pendingDelete = code })
             }
         }
     }
@@ -76,12 +82,12 @@ import com.sperance.exileforge.ui.theme.Muted
 }
 
 /** One stored code: what it is, how many took it, and what it gives. */
-@Composable private fun CodeCard(s: ForgeState, code: RedemptionCode, onDelete: () -> Unit) {
+@Composable private fun CodeCard(game: GameUi, code: RedemptionCode, onDelete: () -> Unit) {
     ForgePanel {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Engraved(code.code)
             Spacer(Modifier.weight(1f))
-            IconButton(enabled = !s.busy, onClick = onDelete) { Icon(Icons.Outlined.Delete, null, tint = Muted) }
+            IconButton(enabled = !game.busy, onClick = onDelete) { Icon(Icons.Outlined.Delete, null, tint = Muted) }
         }
         code.description?.takeIf { it.isNotBlank() }?.let {
             MutedText(it)
@@ -114,14 +120,14 @@ private fun rewardLine(reward: RedemptionReward): String {
  * or every template by slot and level, keyed by code. Empty for the kinds that name nothing, and
  * before the content has been read.
  */
-private fun rewardOptions(s: ForgeState, kind: RedemptionKind): Map<String, String> {
-    val index = s.index ?: return emptyMap()
+private fun rewardOptions(game: GameUi, kind: RedemptionKind): Map<String, String> {
+    val index = game.index ?: return emptyMap()
     return when (kind) {
         RedemptionKind.ITEM -> index.items.values.sortedWith(compareBy({ it.category }, { itemTitle(it.code) }))
             .associate { it.code to itemTitle(it.code) }
 
         RedemptionKind.EQUIPMENT -> index.templates.values.sortedWith(compareBy({ it.slot }, { it.level }))
-            .associate { it.code to "${equipmentTitle(it.code)} · ${slotTitle(it.slot, s.lang)} · ${it.level}" }
+            .associate { it.code to "${equipmentTitle(it.code)} · ${slotTitle(it.slot, game.lang)} · ${it.level}" }
 
         RedemptionKind.EXPERIENCE, RedemptionKind.GOLD -> emptyMap()
     }
@@ -133,7 +139,7 @@ private fun rewardOptions(s: ForgeState, kind: RedemptionKind): Map<String, Stri
  * The reward is built row by row and held here until the code is sent: a half-written list is not
  * worth a request, and the server takes the whole thing in one document anyway.
  */
-@Composable private fun NewCodePanel(s: ForgeState, vm: ForgeViewModel) {
+@Composable private fun NewCodePanel(game: GameUi, vm: AdminViewModel) {
     var code by rememberSaveable { mutableStateOf("") }
     var description by rememberSaveable { mutableStateOf("") }
     var rewards by remember { mutableStateOf(emptyList<RedemptionReward>()) }
@@ -167,14 +173,14 @@ private fun rewardOptions(s: ForgeState, kind: RedemptionKind): Map<String, Stri
             ui("redemption.kind"),
             kind.name,
             RedemptionKind.entries.associate { it.name to ui("enum.reward.${it.name}") },
-            !s.busy,
+            !game.busy,
             glyph = Glyph.CURRENCY,
         ) {
             kind = RedemptionKind.valueOf(it)
             item = ""
         }
         // The goods are picked from the content the hero reads (3.0.0): a stack of the bag or a template, by code.
-        if (needsCode) Spinner(ui("enum.reward.${kind.name}"), item, rewardOptions(s, kind), !s.busy, glyph = Glyph.ITEM) { item = it }
+        if (needsCode) Spinner(ui("enum.reward.${kind.name}"), item, rewardOptions(game, kind), !game.busy, glyph = Glyph.ITEM) { item = it }
         OutlinedTextField(
             amount,
             { amount = it },
@@ -185,7 +191,7 @@ private fun rewardOptions(s: ForgeState, kind: RedemptionKind): Map<String, Stri
         )
 
         ForgeOutlinedButton(
-            enabled = !s.busy && (!needsCode || item.isNotBlank()) && amount.toDoubleOrNull() != null,
+            enabled = !game.busy && (!needsCode || item.isNotBlank()) && amount.toDoubleOrNull() != null,
             modifier = Modifier.fillMaxWidth(),
             onClick = {
                 rewards = rewards + RedemptionReward(kind, item, amount.toDoubleOrNull() ?: 0.0)
@@ -208,7 +214,7 @@ private fun rewardOptions(s: ForgeState, kind: RedemptionKind): Map<String, Stri
         }
 
         ForgeButton(
-            enabled = !s.busy && code.isNotBlank() && rewards.isNotEmpty(),
+            enabled = !game.busy && code.isNotBlank() && rewards.isNotEmpty(),
             modifier = Modifier.fillMaxWidth(),
             onClick = {
                 vm.createRedemption(

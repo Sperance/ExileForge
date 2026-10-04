@@ -36,8 +36,10 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.BugReportRequest
 import com.sperance.exileforge.core.model.feedback.FeedbackKind
 import com.sperance.exileforge.data.settings.DraftStore
+import com.sperance.exileforge.presentation.nav.Route
 import com.sperance.exileforge.presentation.state.AppPhase
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.ui.components.inputs
 import com.sperance.exileforge.ui.theme.*
 
 /** The beetle (3.48.0): a bug report from wherever the player is. */
@@ -60,14 +62,15 @@ val LocalBugReport = staticCompositionLocalOf<(() -> Unit)?> { null }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BugSheet(
-    s: ForgeState,
+    game: GameUi,
+    route: Route,
     run: ExpeditionRun?,
     drafts: DraftStore,
     onDismiss: () -> Unit,
     onSuggestions: () -> Unit,
     onSend: (BugReportRequest) -> Unit,
 ) {
-    val screen = remember { bugScreen(s, run) }
+    val screen = remember { bugScreen(route, run) }
     // A bug or a suggestion (3.73.0): the player picks; a suggestion goes into the public list, so it needs an account.
     // The words of each and the kind last open come back from the device (3.75.0) and are kept as they are typed.
     var kind by remember { mutableStateOf(FeedbackKind.BUG) }
@@ -79,7 +82,7 @@ fun BugSheet(
     }
     val text = texts[kind].orEmpty()
     val clipboard = LocalClipboardManager.current
-    val limit = if (kind == FeedbackKind.SUGGESTION) s.inputs.suggestion else s.inputs.report
+    val limit = if (kind == FeedbackKind.SUGGESTION) game.inputs.suggestion else game.inputs.report
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(ui("bug.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
@@ -90,7 +93,7 @@ fun BugSheet(
             if (kind == FeedbackKind.BUG) {
                 Text(ui("bug.where", screen), color = Rune, style = MaterialTheme.typography.labelLarge)
             } else {
-                MutedText(ui(if (s.account.signedIn) "feedback.suggestion_hint" else "feedback.sign_in_first"))
+                MutedText(ui(if (game.session.signedIn) "feedback.suggestion_hint" else "feedback.sign_in_first"))
             }
             OutlinedTextField(
                 text,
@@ -110,7 +113,7 @@ fun BugSheet(
                 modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp),
             )
             ForgeButton(
-                enabled = text.isNotBlank() && !s.busy && (kind == FeedbackKind.BUG || s.account.signedIn),
+                enabled = text.isNotBlank() && !game.busy && (kind == FeedbackKind.BUG || game.session.signedIn),
                 modifier = Modifier.fillMaxWidth(),
                 onClick = {
                     onSend(BugReportRequest(text.trim().take(limit), screen, emptyMap(), emptyList(), kind))
@@ -118,7 +121,7 @@ fun BugSheet(
                 },
             ) { Text(ui("bug.send")) }
             // Everyone's suggestions, to read and vote on, and one's own reports with how they stand.
-            if (s.account.signedIn) {
+            if (game.session.signedIn) {
                 ForgeOutlinedButton(onClick = {
                     onDismiss()
                     onSuggestions()
@@ -129,9 +132,9 @@ fun BugSheet(
 }
 
 /** The place, as one line: the phase, the tab or the building, the open sheet of the game. */
-private fun bugScreen(s: ForgeState, run: ExpeditionRun?): String = when {
-    s.phase != AppPhase.GAME -> s.phase.name
+private fun bugScreen(route: Route, run: ExpeditionRun?): String = when {
+    route.phase != AppPhase.GAME -> route.phase.name
     run != null -> "RUN:${run.zone.code}"
-    s.play.atlas != null -> "ATLAS"
-    else -> listOfNotNull("TAB:${s.tab}", s.building?.name).joinToString("/")
+    route == Route.Atlas -> "ATLAS"
+    else -> listOfNotNull("TAB:${route.tab}", route.building?.name).joinToString("/")
 }

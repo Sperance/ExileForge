@@ -21,7 +21,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent { ForgeTheme { ForgeApp(viewModel, updates) } }
+        setContent { ForgeTheme { ForgeApp(updates) } }
     }
 
     /** Back in the foreground — unlocked or switched to: the connection is restored without a tap. */

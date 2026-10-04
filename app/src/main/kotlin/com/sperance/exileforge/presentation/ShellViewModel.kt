@@ -3,12 +3,17 @@ package com.sperance.exileforge.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sperance.exileforge.core.campaign.LogKind
+import com.sperance.exileforge.core.campaign.TrialArena
+import com.sperance.exileforge.core.campaign.run.ExpeditionRun
+import com.sperance.exileforge.core.model.command.BugReportRequest
+import com.sperance.exileforge.presentation.features.Warmup
 import com.sperance.exileforge.presentation.nav.Route
 import com.sperance.exileforge.presentation.state.Building
 import com.sperance.exileforge.presentation.state.Buzz
 import com.sperance.exileforge.presentation.state.GameSlice
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.StashSort
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
@@ -17,6 +22,28 @@ import kotlinx.coroutines.launch
  * Пока над `ForgeRuntime` ради проверки административных вкладок; уедет вместе с ним.
  */
 class ShellViewModel(private val runtime: ForgeRuntime, slice: GameSlice) : ViewModel() {
+    init {
+        // Рантайм запускается один раз, кто бы из оболочки или активности ни попросил первым.
+        runtime.start()
+    }
+
+    /** Верх стека навигатора: фаза, вкладка, здание (3.80.40). */
+    val route: StateFlow<Route> = runtime.navigator.current
+
+    /** Прогрев героя, поход и испытание - состояния игры поверх стека. */
+    val warmup: StateFlow<Warmup?> = runtime.warmupViewModel.state
+    val run: StateFlow<ExpeditionRun?> = runtime.expedition.run
+    val arena: StateFlow<TrialArena?> = runtime.trial.arena
+    val logs = runtime.logs
+
+    /** Что телефон отзывает вибрацией (3.77.0), уже по настройкам. */
+    val buzzes: SharedFlow<Buzz> get() = runtime.buzzes
+
+    fun warmUp() = runtime.warmupViewModel.start()
+
+    /** Отчёт жука (3.48.0): уходит сразу, со входом или без; [onSent] - когда сервер его принял. */
+    fun reportBug(report: BugReportRequest, onSent: suspend () -> Unit = {}) = runtime.reportBug(report, onSent)
+
     /** Срез «игра» для экранов этой модели (3.80.33). */
     val game: StateFlow<GameUi> = slice.ui
 

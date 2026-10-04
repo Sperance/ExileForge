@@ -30,6 +30,7 @@ import com.sperance.exileforge.presentation.ForgeRuntime
 import com.sperance.exileforge.presentation.ForgeViewModel
 import com.sperance.exileforge.presentation.Repositories
 import com.sperance.exileforge.presentation.ShellViewModel
+import com.sperance.exileforge.presentation.admin.AdminViewModel
 import com.sperance.exileforge.presentation.crafts.CraftsActions
 import com.sperance.exileforge.presentation.crafts.CraftsViewModel
 import com.sperance.exileforge.presentation.expedition.ExpeditionActions
@@ -118,6 +119,7 @@ val appModule = module {
     singleOf(::ForgeRuntime)
     viewModelOf(::ForgeViewModel)
     viewModelOf(::ShellViewModel)
+    viewModelOf(::AdminViewModel)
     viewModelOf(::SessionViewModel)
     viewModelOf(::CharactersViewModel)
     viewModelOf(::FeedbackViewModel)

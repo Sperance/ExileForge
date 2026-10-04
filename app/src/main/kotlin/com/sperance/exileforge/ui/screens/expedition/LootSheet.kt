@@ -19,10 +19,13 @@ import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.unmetFor
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeSheet
+import com.sperance.exileforge.ui.components.HoldButton
 import com.sperance.exileforge.ui.components.ItemCard
 import com.sperance.exileforge.ui.components.MutedText
+import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.hero.WearPreview
 import com.sperance.exileforge.ui.screens.hero.wearable
+import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.Panel
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -79,6 +82,23 @@ internal fun LootSheet(
                 ) {
                     Text(ui(if (stand == LootStand.ARRIVING) "expedition.loot_arriving" else "hero.equip"))
                 }
+            }
+            // Sold to the merchant right here (3.81.0), wherever the piece is opened on a run: a gilt ribbon with the coin and
+            // the price in a chip, held as before. A locked piece (3.30.0) is not sold: the ribbon stays, dimmed, with the reason.
+            if (stand == LootStand.LOOSE) {
+                val locked = game.hero?.item(item.id)?.locked == true
+                HoldButton(
+                    ui("expedition.loot_sell"),
+                    Gold,
+                    Modifier.fillMaxWidth(),
+                    enabled = !game.busy && !locked,
+                    icon = ForgeGlyphs.Coins,
+                    figure = game.sellPrice(item.item)?.let { "+$it" },
+                ) {
+                    onDismiss()
+                    vm.sellForGold(item.id)
+                }
+                if (locked) MutedText(ui("item.locked_hint"))
             }
             extra()
         }

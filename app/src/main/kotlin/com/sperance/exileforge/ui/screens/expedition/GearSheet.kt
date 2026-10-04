@@ -84,24 +84,7 @@ fun GearSheet(game: GameUi, vm: ExpeditionViewModel, onDismiss: () -> Unit) {
         }
     }
     loot.firstOrNull { it.id == looked }?.let { item ->
-        LootSheet(game, vm, item, onDismiss = { looked = null }) {
-            // A gilt ribbon with the coin and the price in a chip (2.73.0), held as before.
-            val price = game.sellPrice(item.item)
-            // A locked piece (3.30.0) is not sold: the ribbon stays, dimmed, with the reason under it.
-            val locked = game.hero?.item(item.id)?.locked == true
-            HoldButton(
-                ui("expedition.loot_sell"),
-                Gold,
-                Modifier.fillMaxWidth(),
-                enabled = !game.busy && !locked,
-                icon = ForgeGlyphs.Coins,
-                figure = price?.let { "+$it" },
-            ) {
-                looked = null
-                vm.sellForGold(item.id)
-            }
-            if (locked) MutedText(ui("item.locked_hint"))
-        }
+        LootSheet(game, vm, item, onDismiss = { looked = null })
     }
     val chosen = place
     val instance = worn?.let { id -> game.hero?.item(id) }

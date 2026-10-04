@@ -869,6 +869,7 @@
   "item.equipment": "Equipment item",
   "item.unnamed": "Unnamed",
   "item.lock": "Lock",
+  "item.serial": "Copy № {0}",
   "item.locked": "Locked",
   "item.locked_hint": "This item is locked: it cannot be sold to the merchant or listed on the auction, and a full stash never sells it. Orbs and the bench still work.",
   "item.unlock": "Unlock",

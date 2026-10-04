@@ -10,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -31,6 +32,7 @@ import com.sperance.exileforge.core.display.weaponTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Line
+import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.icons.vector
 import com.sperance.exileforge.ui.theme.*
@@ -171,72 +173,79 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
     val states = item.states
     val rolled = item.lines
     val kind = slotTitle(item.slot)
+    // 3.81.0: a mythical lies under its own night sky; a unique's copy wears its number.
+    val mythic = item.rarity == Rarity.MYTHICAL
+    val serial = item.item.serial
 
-    Row(
-        Modifier.fillMaxWidth().height(IntrinsicSize.Min).background(Panel)
-            .border(if (selected) 2.dp else 1.dp, if (selected) GoldBright else Bronze.copy(alpha = .40f))
-            .clickable(enabled = enabled, onClick = onClick),
-    ) {
-        RaritySpine(color, 6.dp)
-        Column(Modifier.weight(1f).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            // The ribbon: what it is, and what state it is in. Both are glanced at, never read.
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                states.forEach {
-                    Icon(stateGlyph(it), stateTitle(it), tint = stateColor(it), modifier = Modifier.size(15.dp))
-                }
-                if (locked) Icon(Icons.Outlined.Lock, ui("item.locked"), tint = GoldBright, modifier = Modifier.size(15.dp))
-                if (waiting) PendingMark()
-                Spacer(Modifier.weight(1f))
-                MutedText(kind, style = MaterialTheme.typography.labelSmall)
-            }
-
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                ItemIcon(item, color, Modifier.size(56.dp))
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(
-                        item.title,
-                        color = Parchment,
-                        style = MaterialTheme.typography.titleLarge,
-                        maxLines = if (detailed) 5 else 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    // The English trade name, on a full card only (2.51.0): what it is searched by.
-                    if (detailed) item.trade?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelMedium, fontStyle = FontStyle.Italic) }
-                    cardFacts(item, withPrice = price == null).forEach {
-                        MutedText(it, style = MaterialTheme.typography.labelSmall)
+    Box(Modifier.fillMaxWidth().height(IntrinsicSize.Min).clipToBounds()) {
+        Row(
+            Modifier.fillMaxWidth().height(IntrinsicSize.Min).then(if (mythic) Modifier.celestial() else Modifier.background(Panel))
+                .border(if (selected) 2.dp else 1.dp, if (selected) GoldBright else Bronze.copy(alpha = .40f))
+                .clickable(enabled = enabled, onClick = onClick),
+        ) {
+            RaritySpine(color, 6.dp)
+            Column(Modifier.weight(1f).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                // The ribbon: what it is, and what state it is in. Both are glanced at, never read.
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    states.forEach {
+                        Icon(stateGlyph(it), stateTitle(it), tint = stateColor(it), modifier = Modifier.size(15.dp))
                     }
-                }
-                QualityBadge(item)
-                // How well it rolled, as a ring beside the name (a full card only): a tap says what the figure means.
-                if (detailed && rolled.isNotEmpty()) item.summary.quality?.let { RollRing(it) }
-                if (selected) Icon(Icons.Outlined.CheckCircle, ui("card.selected"), tint = GoldBright, modifier = Modifier.size(22.dp))
-            }
-
-            // The base first, as figures: the biggest is what the item is bought for.
-            base.forEachIndexed { index, property -> BannerStat(property, big = index == 0) }
-            // Then what this copy rolled, as a trade table (2.60.0): the figures a trader weighs it by,
-            // then a row per line; a tap on one (detailed card) opens its tier, range and where it landed.
-            if (rolled.isNotEmpty()) TradeTable(rolled.take(if (detailed) rolled.size else 3), interactive = detailed)
-            if (!detailed && rolled.size > 3) MutedText(ui("card.more_properties", rolled.size - 3), style = MaterialTheme.typography.labelMedium)
-            if (detailed) {
-                item.description.takeIf { it.isNotBlank() }?.let {
-                    Text(it, color = Muted, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Start)
-                }
-            }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-                price?.let {
-                    MutedText(ui("price.sell"), style = MaterialTheme.typography.labelSmall)
-                    Spacer(Modifier.width(6.dp))
-                    GoldPrice(it)
+                    if (locked) Icon(Icons.Outlined.Lock, ui("item.locked"), tint = GoldBright, modifier = Modifier.size(15.dp))
+                    if (waiting) PendingMark()
                     Spacer(Modifier.weight(1f))
+                    MutedText(kind, style = MaterialTheme.typography.labelSmall)
                 }
-                // A full card is a page, not a way in (2.51.0) — unless it is asked to lead on (3.2.0).
-                if (action) {
-                    Text(actionLabel.uppercase(), color = Gold, style = MaterialTheme.typography.labelLarge)
-                    Icon(Icons.Outlined.ChevronRight, null, tint = Gold)
+
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    ItemIcon(item, color, if (mythic) Modifier.size(56.dp).sigil() else Modifier.size(56.dp))
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            item.title,
+                            color = if (mythic) MythicName else Parchment,
+                            style = if (mythic) mythicTitle else MaterialTheme.typography.titleLarge,
+                            maxLines = if (detailed) 5 else 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        // The English trade name, on a full card only (2.51.0): what it is searched by.
+                        if (detailed) item.trade?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelMedium, fontStyle = FontStyle.Italic) }
+                        cardFacts(item, withPrice = price == null).forEach {
+                            MutedText(it, style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                    QualityBadge(item)
+                    // How well it rolled, as a ring beside the name (a full card only): a tap says what the figure means.
+                    if (detailed && rolled.isNotEmpty()) item.summary.quality?.let { RollRing(it) }
+                    if (selected) Icon(Icons.Outlined.CheckCircle, ui("card.selected"), tint = GoldBright, modifier = Modifier.size(22.dp))
+                }
+
+                // The base first, as figures: the biggest is what the item is bought for.
+                base.forEachIndexed { index, property -> BannerStat(property, big = index == 0) }
+                // Then what this copy rolled, as a trade table (2.60.0): the figures a trader weighs it by,
+                // then a row per line; a tap on one (detailed card) opens its tier, range and where it landed.
+                if (rolled.isNotEmpty()) TradeTable(rolled.take(if (detailed) rolled.size else 3), interactive = detailed)
+                if (!detailed && rolled.size > 3) MutedText(ui("card.more_properties", rolled.size - 3), style = MaterialTheme.typography.labelMedium)
+                if (detailed) {
+                    item.description.takeIf { it.isNotBlank() }?.let {
+                        Text(it, color = Muted, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Start)
+                    }
+                    if (serial > 0) SerialStamp(serial)
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+                    price?.let {
+                        MutedText(ui("price.sell"), style = MaterialTheme.typography.labelSmall)
+                        Spacer(Modifier.width(6.dp))
+                        GoldPrice(it)
+                        Spacer(Modifier.weight(1f))
+                    }
+                    // A full card is a page, not a way in (2.51.0) — unless it is asked to lead on (3.2.0).
+                    if (action) {
+                        Text(actionLabel.uppercase(), color = Gold, style = MaterialTheme.typography.labelLarge)
+                        Icon(Icons.Outlined.ChevronRight, null, tint = Gold)
+                    }
                 }
             }
         }
+        if (serial > 0) SerialRibbon(serial)
     }
 }
 

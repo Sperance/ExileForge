@@ -11,8 +11,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.features.WarmStep
-import com.sperance.exileforge.presentation.features.Warmup
+import com.sperance.exileforge.presentation.app.WarmStep
+import com.sperance.exileforge.presentation.app.Warmup
 import com.sperance.exileforge.ui.theme.*
 
 /** The loading screen (3.54.0): the bar of the warm-up and each of its steps, ticked as it is done. */

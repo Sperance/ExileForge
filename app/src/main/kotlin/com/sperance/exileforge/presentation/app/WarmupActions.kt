@@ -1,7 +1,13 @@
-package com.sperance.exileforge.presentation.features
+package com.sperance.exileforge.presentation.app
 
-import com.sperance.exileforge.presentation.ForgeRuntime
+import com.sperance.exileforge.core.session.CommandRunner
+import com.sperance.exileforge.core.session.ServerConnection
+import com.sperance.exileforge.data.settings.ServerStore
+import com.sperance.exileforge.presentation.Actions
+import com.sperance.exileforge.presentation.Repositories
+import com.sperance.exileforge.presentation.world.WorldLoader
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,7 +31,15 @@ data class Warmup(val heroId: String, val done: Set<WarmStep> = emptySet(), val 
  * merchant) — so the play itself sends few requests and short ones. Every step is kept from the device when it can be;
  * a step that fails does not hold the game back, and after [LIMIT] ms the game opens whatever is left.
  */
-class WarmupViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
+class WarmupActions(
+    repositories: Repositories,
+    actions: Actions,
+    commands: CommandRunner,
+    connection: ServerConnection,
+    store: ServerStore,
+    scope: CoroutineScope,
+    private val loader: WorldLoader,
+) : AppService(repositories, actions, commands, connection, store, scope) {
     private var job: Job? = null
     private val mutable = MutableStateFlow<Warmup?>(null)
 
@@ -39,21 +53,21 @@ class WarmupViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     }
 
     fun start() {
-        with(runtime) {
+        run {
             val id = heroId
             if (id.isEmpty() || mutable.value?.heroId == id) return
             job?.cancel()
             mutable.value = Warmup(id)
             job = scope.launch {
                 withTimeoutOrNull(LIMIT) {
-                    step(id, WarmStep.CONTENT) { ensureContent() }
+                    step(id, WarmStep.CONTENT) { loader.ensureContent() }
                     coroutineScope {
-                        launch { step(id, WarmStep.LOCALE) { loadLocale(languages.lang.value) } }
+                        launch { step(id, WarmStep.LOCALE) { loader.loadLocale(languages.lang.value) } }
                         launch {
                             step(id, WarmStep.ICONS) {
                                 coroutineScope {
-                                    launch { loadIcons() }
-                                    launch { loadPortraits() }
+                                    launch { loader.loadIcons() }
+                                    launch { loader.loadPortraits() }
                                 }
                             }
                         }

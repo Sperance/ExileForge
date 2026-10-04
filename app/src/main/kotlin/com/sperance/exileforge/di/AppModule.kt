@@ -26,10 +26,15 @@ import com.sperance.exileforge.data.settings.GuideStore
 import com.sperance.exileforge.data.settings.PreferencesRepository
 import com.sperance.exileforge.data.settings.ServerStore
 import com.sperance.exileforge.presentation.Actions
-import com.sperance.exileforge.presentation.ForgeRuntime
 import com.sperance.exileforge.presentation.Repositories
 import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.admin.AdminViewModel
+import com.sperance.exileforge.presentation.app.AppStartup
+import com.sperance.exileforge.presentation.app.CharacterActions
+import com.sperance.exileforge.presentation.app.ConnectionActions
+import com.sperance.exileforge.presentation.app.RedemptionActions
+import com.sperance.exileforge.presentation.app.SessionActions
+import com.sperance.exileforge.presentation.app.WarmupActions
 import com.sperance.exileforge.presentation.crafts.CraftsActions
 import com.sperance.exileforge.presentation.crafts.CraftsViewModel
 import com.sperance.exileforge.presentation.expedition.ExpeditionActions
@@ -116,8 +121,14 @@ val appModule = module {
     single { QuestActions(get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     singleOf(::Repositories)
     singleOf(::Actions)
-    // Рантайм игры один на процесс (3.80.22): модели экранов входа и меню героев берут его отсюда до переезда навигации.
-    singleOf(::ForgeRuntime)
+    // Сервисы приложения (3.80.44, вместо `ForgeRuntime`): сессия, связь, герои аккаунта, прогрев, коды наград и запуск.
+    // Сессия, связь и герои зовут друг друга, поэтому ссылаются лениво.
+    single { SessionActions(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get(), get(), get(), get(), lazy { get<ConnectionActions>() }, lazy { get<CharacterActions>() }, lazy { get<WarmupActions>() }) }
+    single { CharacterActions(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get(), get(), lazy { get<WarmupActions>() }) }
+    single { ConnectionActions(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get(), get(), lazy { get<SessionActions>() }, lazy { get<CharacterActions>() }) }
+    single { WarmupActions(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get()) }
+    single { RedemptionActions(get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
+    single { AppStartup(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModelOf(::ShellViewModel)
     viewModelOf(::AdminViewModel)
     viewModelOf(::SessionViewModel)

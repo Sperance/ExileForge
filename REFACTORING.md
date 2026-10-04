@@ -38,6 +38,7 @@
   - [x] `ForgeState`, `AccountState`, `PlayState`, `AdminState`, проекция в `ForgeRuntime` и их помощники удалены; типы режима, фазы, вкладок, зданий и сортировки - в `state/GameTypes.kt` (3.80.41).
   - [x] `ForgeViewModel` удалён (3.80.42): возврат, уход, сброс журнала похода и проверку обновлений ведёт `ShellViewModel` - один экземпляр у активности и композиции. Рантайм-синглтон больше не закрывается вместе с активностью (закрытый не запускался снова).
   - [x] `WorldLoader` (3.80.43): контент, словарь, иконки, портреты и смена языка - синглтон с внедрением через конструктор; рантайм лишь делегирует. Мёртвый флаг `contentStale` удалён.
+  - [x] `ForgeRuntime` и `FeatureViewModel` удалены (3.80.44): фичи - сервисы `presentation/app` с внедрением через конструктор над общим `AppService` (`SessionActions` с созданием сервера и сбросом сессии, `ConnectionActions`, `CharacterActions`, `WarmupActions`, `RedemptionActions`); взаимные ссылки сессии, связи и героев - ленивые; запуск - `AppStartup`, его зовёт `ShellViewModel`.
 
 ## Этап 3 - навигация
 - [x] Navigation 3 (`navigation3-runtime/ui` 1.2.0, вместо Navigation Compose: стек у приложения, без NavController): `presentation/nav/Route` - типизированные ключи Auth, Characters, Hero, Tree, Grimoire, Expedition, Crafts, Progress, Forge, Pets, Trials, Chronicle, City, Quests, Merchant, Auction, Guild, Account, Settings, Admin, Redemption, Atlas; `Navigator` - стек (вкладка сбрасывает до корня, подэкран ложится над корнем, аккаунт и настройки - поверх любого). Прогрев, поход и испытание - состояния игры поверх стека, не маршруты (их открывают и закрывают команды, не игрок). Разделы гильдии и квестов - состояние своих моделей, не стек.
@@ -64,7 +65,7 @@
   - [x] Expedition/Atlas/Trials, экраны: `ExpeditionViewModel` над действиями похода, испытаний и героя; карта мира, карточка зоны, доска испытаний и листы снаряжения/добычи только на ней, оверлеи похода/испытания/атласа - ещё и на `ForgeViewModel` ради фильтра журнала, тостов и вибрации.
 - [x] Файлы UI не длиннее ~400 строк: SkillTreeScreen, CraftsScreen, GrimoireScreen, AuctionTabs, AtlasScreen, ExpeditionPlay, ZoneCard, CraftScreen, CombatDetail, ForgeApp (шапка в `ui/Banner.kt`) разбиты.
 - [x] Файлы сцены похода: стили биомов (StoneStyles, WildStyles, SkyStyles), `ScenePainter` с секциями декора и объектов карты (SceneDecor, SceneSpots), наброски пергамента (`WorldSketches`) - в своих файлах.
-- [ ] `ForgeViewModel`, `ForgeRuntime`, `FeatureViewModel` удалены. Сделано (3.80.30): ни один экран не получает `ForgeViewModel` - оболочка (вкладки, здания, настройки, тосты, журнал, настройки устройства) в `ShellViewModel`, выдачи и код награды в `HeroViewModel`, тестовые учётки и связь в `SessionViewModel`; фасад остался только корню `ForgeApp`, `MainActivity` и отладочным экранам администратора.
+- [x] `ForgeViewModel`, `ForgeRuntime`, `FeatureViewModel` удалены (3.80.42-3.80.44). Сделано (3.80.30): ни один экран не получает `ForgeViewModel` - оболочка (вкладки, здания, настройки, тосты, журнал, настройки устройства) в `ShellViewModel`, выдачи и код награды в `HeroViewModel`, тестовые учётки и связь в `SessionViewModel`; фасад остался только корню `ForgeApp`, `MainActivity` и отладочным экранам администратора.
 
 ## Этап 5 - бой
 - [x] `Combat.kt` → пакет `core/campaign/combat/`: модель (Combatant, Foe, Ally, эффекты), `Battle` по секциям (views, tick, strike/land, skills, monsters, reach, log).
@@ -78,6 +79,6 @@
 - [x] Удалено неиспользуемое: `MailButton`, `classDescription`, `itemSources`, `rankIndexOf`.
 - [ ] Удалить этот файл.
 
-## Где остановились (3.80.43, сервер 1.74.6)
-- Сделано: golden-тест забега, распил `ExpeditionRun`/`ExpeditionWorld`, файлы сцены, мёртвый код, константы боя и мира в контент, `ShellViewModel`, срезы `AccountUi`/`GameUi` для всех экранов, `ForgeState` удалён.
-- Следующий шаг: `ForgeRuntime`/`FeatureViewModel` (сессия, связь, прогрев, коды, герои, контент и словарь) - в синглы и модели; затем локальные `BackHandler`, модули network в Koin, серверный этап 3.
+## Где остановились (3.80.44, сервер 1.74.6)
+- Сделано: golden-тест забега, распил `ExpeditionRun`/`ExpeditionWorld`, файлы сцены, мёртвый код, константы боя и мира в контент, срезы `AccountUi`/`GameUi` для всех экранов; `ForgeState`, `ForgeViewModel`, `ForgeRuntime`, `FeatureViewModel` удалены - сервисы `presentation/app` и `WorldLoader`.
+- Дальше по плану: локальные `BackHandler` (этап 3), модули network в Koin и `GameApi` в области сессии (этап 1), серверный этап 3 (value-классы кодов, типизированные статы, sealed-иерархии, `API_REVISION` 43).

@@ -1,4 +1,4 @@
-package com.sperance.exileforge.presentation.features
+package com.sperance.exileforge.presentation.app
 
 import com.sperance.exileforge.BuildConfig
 import com.sperance.exileforge.core.contract.WireJson
@@ -6,30 +6,62 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.UserProfile
 import com.sperance.exileforge.core.model.sync.API_REVISION
 import com.sperance.exileforge.core.network.ApiFailure
+import com.sperance.exileforge.core.network.CommandStore
 import com.sperance.exileforge.core.network.FailureState
 import com.sperance.exileforge.core.network.ForgeHttp
+import com.sperance.exileforge.core.network.GameApi
+import com.sperance.exileforge.core.network.ManifestCache
+import com.sperance.exileforge.core.network.RequestJournal
 import com.sperance.exileforge.core.network.normalizeServer
+import com.sperance.exileforge.core.session.CommandRunner
+import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.Reads
+import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.data.settings.DEFAULT_SERVER
-import com.sperance.exileforge.presentation.ForgeRuntime
+import com.sperance.exileforge.data.settings.ServerStore
+import com.sperance.exileforge.presentation.Actions
+import com.sperance.exileforge.presentation.Repositories
 import com.sperance.exileforge.presentation.hero.HeroCopy
+import com.sperance.exileforge.presentation.nav.Navigator
 import com.sperance.exileforge.presentation.state.AppMode
 import com.sperance.exileforge.presentation.state.AppPhase
 import com.sperance.exileforge.presentation.state.TAB_ADMIN
 import com.sperance.exileforge.presentation.state.TAB_HERO
+import com.sperance.exileforge.presentation.state.phrase
+import com.sperance.exileforge.presentation.world.WorldLoader
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
+class SessionActions(
+    repositories: Repositories,
+    actions: Actions,
+    commands: CommandRunner,
+    connection: ServerConnection,
+    store: ServerStore,
+    scope: CoroutineScope,
+    private val navigator: Navigator,
+    private val notices: Notices,
+    private val loader: WorldLoader,
+    private val journal: RequestJournal,
+    private val lazyConnection: Lazy<ConnectionActions>,
+    private val lazyCharacters: Lazy<CharacterActions>,
+    private val lazyWarmup: Lazy<WarmupActions>,
+) : AppService(repositories, actions, commands, connection, store, scope) {
+    private val connectionActions: ConnectionActions get() = lazyConnection.value
+    private val characterActions: CharacterActions get() = lazyCharacters.value
+    private val warmupActions: WarmupActions get() = lazyWarmup.value
 
     fun mode(mode: AppMode) {
-        with(runtime) {
+        run {
             if (commands.state.value.busy || mode == AppMode.ADMIN && !(BuildConfig.DEBUG && sessions.state.value.isAdmin)) return
             modes.set(mode)
             navigator.tab(if (mode == AppMode.ADMIN) com.sperance.exileforge.presentation.nav.Route.Admin else com.sperance.exileforge.presentation.nav.Route.Hero)
@@ -39,7 +71,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     // ---- the administrator's testers (3.73.0) ----
 
     fun loadTesters() {
-        with(runtime) {
+        run {
             task {
                 check(sessions.state.value.isAdmin) { ui("hero.grant_admin_only") }
                 val testers = api.admin.testers()
@@ -52,10 +84,10 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     fun createTester(login: String) = testerCommand { api.admin.createTester(login) }
     fun resetTester(id: String) = testerCommand { api.admin.resetTester(id) }
     fun setTesterActive(id: String, active: Boolean) = testerCommand { api.admin.setTesterActive(id, active) }
-    fun closeShownTester() = runtime.admins.update { it.copy(shownTester = null) }
+    fun closeShownTester() = admins.update { it.copy(shownTester = null) }
 
-    private fun testerCommand(block: suspend ForgeRuntime.() -> com.sperance.exileforge.core.network.TesterAccount) {
-        with(runtime) {
+    private fun testerCommand(block: suspend () -> com.sperance.exileforge.core.network.TesterAccount) {
+        run {
             task(writing = true) {
                 check(sessions.state.value.isAdmin) { ui("hero.grant_admin_only") }
                 val account = block()
@@ -72,26 +104,26 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     fun resetServer() = connectTo(null)
 
     private fun connectTo(override: String?) {
-        with(runtime) {
+        run {
             task {
                 store.save(override)
                 val server = override ?: DEFAULT_SERVER
                 clearSession()
-                connectionViewModel.reset()
+                connectionActions.reset()
                 api = newApi(server)
                 journal.clear()
                 sessions.update { it.copy(server = server, health = ui("session.checking")) }
                 world.update { it.copy(content = null, contentHash = "") }
                 val health = api.health()
                 sessions.update { it.copy(health = health.toString()) }
-                refreshLocale()
-                refreshIcons()
+                loader.refreshLocale()
+                loader.refreshIcons()
             }
         }
     }
 
     fun health() {
-        with(runtime) {
+        run {
             read(Reads.HEALTH) {
                 val result = api.health().toString()
                 sessions.update { it.copy(health = result) }
@@ -101,7 +133,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     /** A sign-in answers the account and a token; the token is kept per server for the next launch. */
     fun login(login: String, password: String) {
-        with(runtime) {
+        run {
             task {
                 clearSession()
                 api.workbench()
@@ -112,7 +144,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     /** The account this device owns, registered on the way in if the server has never seen it. [silent] is the relaunch path. */
     fun playOnThisDevice(silent: Boolean = false) {
-        with(runtime) {
+        run {
             task {
                 clearSession()
                 try {
@@ -132,7 +164,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     /** A session kept from an earlier launch; a launch that cannot reach the server keeps the token and says so. */
     fun resume(saved: String) {
-        with(runtime) {
+        run {
             task {
                 unconfirmed = null
                 clearSession()
@@ -144,7 +176,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
                 } catch (e: Exception) {
                     if (FailureState.from(e, writing = false) is FailureState.Offline) {
                         sessions.update { it.copy(resumable = true) }
-                        connectionViewModel.lost(e)
+                        connectionActions.lost(e)
                     }
                 }
             }
@@ -160,17 +192,17 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
      * given meanwhile wait in the queue. No copy, another API revision or content missing: `false`, the usual start.
      */
     suspend fun fastStart(server: String, saved: String): Boolean {
-        with(runtime) {
+        run {
             val heroId = store.lastHero(server) ?: return false
             val copy = heroCopy(server, heroId) ?: return false
-            if (copy.revision != API_REVISION || !contentFromDevice()) return false
+            if (copy.revision != API_REVISION || !loader.contentFromDevice()) return false
             api.adopt(saved, copy.account)
             sessions.update { it.copy(signedIn = true, resumable = false, profile = copy.account) }
             heroes.select(heroId)
             expeditions.clear()
             navigator.reset(com.sperance.exileforge.presentation.nav.Route.Hero)
             modes.set(AppMode.PLAYER)
-            warmupViewModel.clear()
+            warmupActions.clear()
             heroSync.restore(heroId, copy.snapshot)
             val foreign = heroes.state.value.owner.let { it.isNotEmpty() && it != copy.account.id }
             if (heroes.state.value.hero == null || foreign) {
@@ -184,7 +216,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
         }
     }
 
-    private suspend fun heroCopy(server: String, heroId: String): HeroCopy? = runtime.store.heroCopy(server, heroId)?.let { text ->
+    private suspend fun heroCopy(server: String, heroId: String): HeroCopy? = store.heroCopy(server, heroId)?.let { text ->
         withContext(Dispatchers.Default) { runCatching { WireJson.decodeFromString(HeroCopy.serializer(), text) }.getOrNull() }
     }
 
@@ -194,7 +226,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
      * a disabled account, a token that turns out to be another account's — falls back to the usual start.
      */
     private fun confirm() {
-        with(runtime) {
+        run {
             if (confirming?.isActive == true) return
             confirming = scope.launch { confirmNow() }
         }
@@ -203,7 +235,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     private var confirming: Job? = null
 
     private suspend fun confirmNow() {
-        with(runtime) {
+        run {
             val saved = unconfirmed ?: return
             val adopted = api.currentUser()?.id
             val profile = try {
@@ -213,7 +245,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
                 throw e
             } catch (e: Exception) {
                 when {
-                    FailureState.from(e, writing = false) is FailureState.Offline -> connectionViewModel.lost(e)
+                    FailureState.from(e, writing = false) is FailureState.Offline -> connectionActions.lost(e)
                     e is ApiFailure && e.status == 401 -> unconfirmed = null
                     else -> fallBack(saved, foreign = false)
                 }
@@ -223,13 +255,13 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             if (profile.id != adopted || heroes.state.value.owner.let { it.isNotEmpty() && it != profile.id }) return fallBack(saved, foreign = true)
             unconfirmed = null
             sessions.update { it.copy(profile = profile) }
-            read(Reads.CHARACTERS, silent = true) { characterViewModel.readCharacters() }
+            read(Reads.CHARACTERS, silent = true) { characterActions.readCharacters() }
             read(Reads.HERO, silent = true) {
-                ensureContent(fresh = true)
+                loader.ensureContent(fresh = true)
                 heroSync.readHero()
                 expedition.resume(heroId)
             }
-            connectionViewModel.wake(now = true)
+            connectionActions.wake(now = true)
         }
     }
 
@@ -239,7 +271,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
      * made meanwhile stands. [foreign]: the last hero was another account's and is not opened again.
      */
     private suspend fun fallBack(saved: String, foreign: Boolean) {
-        with(runtime) {
+        run {
             unconfirmed = null
             val server = sessions.state.value.server
             clearSession()
@@ -261,7 +293,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     }
 
     fun retryResume() {
-        with(runtime) {
+        run {
             scope.launch {
                 val saved = store.token(sessions.state.value.server)
                 if (saved == null) sessions.update { it.copy(resumable = false) } else resume(saved)
@@ -284,7 +316,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
      * checked by that very read, and the screen shows what happened while the app was away.
      */
     fun reconnect() {
-        with(runtime) {
+        run {
             val stale = awaySince?.let { (System.nanoTime() - it) / 1_000_000 > STALE_AWAY_MS } == true
             awaySince = null
             scope.launch {
@@ -297,10 +329,10 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
                     commands.state.value.failure is FailureState.Offline || link.offline || stale -> {
                         commands.clearOffline()
                         // The probe waits no longer: the link is asked again with the screen.
-                        if (link.offline || link.waiting.isNotEmpty()) connectionViewModel.wake(now = true)
+                        if (link.offline || link.waiting.isNotEmpty()) connectionActions.wake(now = true)
                         when (navigator.current.value.phase) {
                             AppPhase.GAME -> read(Reads.HERO, silent = true) { heroSync.readHero() }
-                            AppPhase.CHARACTERS -> read(Reads.CHARACTERS, silent = true) { characterViewModel.readCharacters() }
+                            AppPhase.CHARACTERS -> read(Reads.CHARACTERS, silent = true) { characterActions.readCharacters() }
                             AppPhase.AUTH -> Unit
                         }
                     }
@@ -311,7 +343,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     /** What every sign-in ends with: the account is the session, and the gate opens one step — the hero menu. */
     private suspend fun signedIn(profile: UserProfile, byDevice: Boolean) {
-        with(runtime) {
+        run {
             sessions.update { it.copy(signedIn = true, resumable = false, profile = profile) }
             navigator.reset(com.sperance.exileforge.presentation.nav.Route.Characters)
             modes.set(AppMode.PLAYER)
@@ -319,19 +351,19 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
             store.saveToken(sessions.state.value.server, api.sessionToken())
             forgetForeignHero(sessions.state.value.server, profile.id)
             // What waited for a session goes out with this one; another account's commands are dropped on the way.
-            connectionViewModel.wake(now = true)
-            refreshLocale()
-            refreshIcons()
+            connectionActions.wake(now = true)
+            loader.refreshLocale()
+            loader.refreshIcons()
             coroutineScope {
-                launch { ensureContent() }
-                runtime.characterViewModel.readCharacters(autoEnter = true)
+                launch { loader.ensureContent() }
+                characterActions.readCharacters(autoEnter = true)
             }
         }
     }
 
     /** The last hero of another account is not the one this account's next launch opens. */
     private suspend fun forgetForeignHero(server: String, account: String) {
-        with(runtime) {
+        run {
             val heroId = store.lastHero(server) ?: return
             if (heroCopy(server, heroId)?.account?.id != account) store.saveLastHero(server, null)
         }
@@ -339,7 +371,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
 
     /** Signing out is explicit, so the next launch must not sign straight back in. */
     fun logout() {
-        with(runtime) {
+        run {
             if (commands.state.value.busy) return
             val server = sessions.state.value.server
             val leaving = api
@@ -358,7 +390,7 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     }
 
     fun changePassword(current: String, replacement: String) {
-        with(runtime) {
+        run {
             task(writing = true) {
                 require(current.isNotEmpty() && replacement.isNotEmpty()) { ui("api.credentials") }
                 api.changePassword(current, replacement)
@@ -369,5 +401,71 @@ class SessionViewModel(runtime: ForgeRuntime) : FeatureViewModel(runtime) {
     private companion object {
         /** How long away makes the screen stale enough to read again on return. */
         const val STALE_AWAY_MS = 30_000L
+    }
+
+    // ---- сервер и сессия (3.80.44: из `ForgeRuntime`) ----
+
+    /** Первый [api] создан (3.74.0): проверка обновлений ждёт его, а не спрашивает никакой сервер. */
+    val apiReady = CompletableDeferred<Unit>()
+
+    /** Вход встретил сервер новее сборки (3.74.0): проверка обновлений идёт сразу. */
+    val newerServer = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    /**
+     * A refused token is forgotten, and a player who plays by device is signed in again without being
+     * asked. The sign-in waits for the command that met the 401 to finish, because [task] refuses to nest.
+     */
+    fun newApi(server: String): GameApi {
+        lateinit var created: GameApi
+        created = GameApi(server, journal, onUnauthorized = {
+            if (connection.ready && api === created) {
+                clearSession()
+                scope.launch {
+                    store.saveToken(server, null)
+                    // The copy of the last hero belongs to the refused session: the next launch does not open it.
+                    store.saveLastHero(server, null)
+                    if (store.deviceSession.first()) {
+                        commands.state.first { !it.busy }
+                        if (api === created) playOnThisDevice(silent = true)
+                    } else {
+                        commands.refuse(phrase("runtime.session_expired"))
+                    }
+                }
+            }
+        })
+        created.heroSync(heroSync::heldParts, heroSync::delivered)
+        created.onNewerServer = { newerServer.tryEmit(Unit) }
+        created.manifestCache = object : ManifestCache {
+            override suspend fun read(): String? = store.manifest(server)
+            override suspend fun write(text: String) = store.saveManifest(server, text)
+        }
+        // The commands of this server that wait for the network live on the device (3.30.0).
+        created.commandStore(object : CommandStore {
+            override suspend fun read(): String? = store.commands(server)
+            override suspend fun write(text: String) = store.saveCommands(server, text)
+        })
+        connectionActions.attach(created)
+        return created
+    }
+
+    fun clearSession() {
+        api.logout()
+        navigator.reset(com.sperance.exileforge.presentation.nav.Route.Auth)
+        journal.clear()
+        cancelReads()
+        expedition.drop()
+        trial.drop()
+        crafts.drop()
+        heroSync.forget()
+        sessions.clear()
+        feedbacks.clear()
+        heroes.clear()
+        boards.clear()
+        markets.clear()
+        guilds.clear()
+        commands.clearFailure()
+        admins.clear()
+        modes.set(AppMode.PLAYER)
+        warmupActions.clear()
     }
 }

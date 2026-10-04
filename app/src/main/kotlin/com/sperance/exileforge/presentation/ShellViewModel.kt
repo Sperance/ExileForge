@@ -2,13 +2,32 @@ package com.sperance.exileforge.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sperance.exileforge.BuildConfig
 import com.sperance.exileforge.core.campaign.LogKind
 import com.sperance.exileforge.core.campaign.TrialArena
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.BugReportRequest
 import com.sperance.exileforge.core.model.sync.StaticManifest
-import com.sperance.exileforge.presentation.features.Warmup
+import com.sperance.exileforge.core.network.RequestJournal
+import com.sperance.exileforge.core.session.Buzzes
+import com.sperance.exileforge.core.session.CommandRunner
+import com.sperance.exileforge.core.session.Notices
+import com.sperance.exileforge.core.session.ServerConnection
+import com.sperance.exileforge.core.session.SessionRepository
+import com.sperance.exileforge.data.settings.PreferencesRepository
+import com.sperance.exileforge.presentation.app.AppStartup
+import com.sperance.exileforge.presentation.app.ConnectionActions
+import com.sperance.exileforge.presentation.app.SessionActions
+import com.sperance.exileforge.presentation.app.Warmup
+import com.sperance.exileforge.presentation.app.WarmupActions
+import com.sperance.exileforge.presentation.expedition.ExpeditionActions
+import com.sperance.exileforge.presentation.expedition.TrialActions
+import com.sperance.exileforge.presentation.nav.Navigator
 import com.sperance.exileforge.presentation.nav.Route
+import com.sperance.exileforge.presentation.state.ADMIN_TABS
+import com.sperance.exileforge.presentation.state.AppMode
+import com.sperance.exileforge.presentation.state.AppModes
 import com.sperance.exileforge.presentation.state.Building
 import com.sperance.exileforge.presentation.state.Buzz
 import com.sperance.exileforge.presentation.state.GameSlice
@@ -22,95 +41,123 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
- * Оболочка приложения (3.80.30): вкладки и здания по прежнему номеру, «Настройки» поверх экрана, строка в тосты.
- * Пока над `ForgeRuntime` ради проверки административных вкладок; уедет вместе с ним.
+ * Оболочка приложения (3.80.30): вкладки и здания по прежнему номеру, «Настройки» поверх экрана, строка в тосты,
+ * прогрев, поход и испытание поверх стека и жизненный цикл активности (3.80.44: над сервисами, без рантайма).
  */
-class ShellViewModel(private val runtime: ForgeRuntime, slice: GameSlice) : ViewModel() {
+class ShellViewModel(
+    startup: AppStartup,
+    slice: GameSlice,
+    private val navigator: Navigator,
+    private val commands: CommandRunner,
+    private val notices: Notices,
+    private val buzzer: Buzzes,
+    private val journal: RequestJournal,
+    private val prefs: PreferencesRepository,
+    private val connection: ServerConnection,
+    private val sessions: SessionRepository,
+    private val modes: AppModes,
+    private val session: SessionActions,
+    private val link: ConnectionActions,
+    private val warming: WarmupActions,
+    private val expedition: ExpeditionActions,
+    trial: TrialActions,
+) : ViewModel() {
     init {
-        // Рантайм запускается один раз, кто бы из оболочки или активности ни попросил первым.
-        runtime.start()
+        // Приложение запускается один раз, кто бы из оболочки или активности ни попросил первым.
+        startup.start()
     }
 
     /** Верх стека навигатора: фаза, вкладка, здание (3.80.40). */
-    val route: StateFlow<Route> = runtime.navigator.current
+    val route: StateFlow<Route> = navigator.current
 
     /** Прогрев героя, поход и испытание - состояния игры поверх стека. */
-    val warmup: StateFlow<Warmup?> = runtime.warmupViewModel.state
-    val run: StateFlow<ExpeditionRun?> = runtime.expedition.run
-    val arena: StateFlow<TrialArena?> = runtime.trial.arena
-    val logs = runtime.logs
+    val warmup: StateFlow<Warmup?> = warming.state
+    val run: StateFlow<ExpeditionRun?> = expedition.run
+    val arena: StateFlow<TrialArena?> = trial.arena
+    val logs = journal.entries
 
     /** Что телефон отзывает вибрацией (3.77.0), уже по настройкам. */
-    val buzzes: SharedFlow<Buzz> get() = runtime.buzzes
+    val buzzes: SharedFlow<Buzz> get() = buzzer.flow
 
-    fun warmUp() = runtime.warmupViewModel.start()
+    fun warmUp() = warming.start()
 
     /** Отчёт жука (3.48.0): уходит сразу, со входом или без; [onSent] - когда сервер его принял. */
-    fun reportBug(report: BugReportRequest, onSent: suspend () -> Unit = {}) = runtime.reportBug(report, onSent)
+    fun reportBug(report: BugReportRequest, onSent: suspend () -> Unit = {}) = commands.task {
+        connection.api.reportBug(report)
+        onSent()
+        notices.toast(ui("bug.sent"))
+    }
 
     /** Срез «игра» для экранов этой модели (3.80.33). */
     val game: StateFlow<GameUi> = slice.ui
 
     /** Вкладка по прежнему номеру; закрытую уровнем героя навигатор не откроет и скажет, с какого. */
-    fun tab(tab: Int) = runtime.tab(tab)
+    fun tab(tab: Int) {
+        if (!adminTools() && tab in ADMIN_TABS) return
+        commands.dismissMessage()
+        navigator.tab(Route.ofTab(tab))
+    }
+
+    /** Администратор в инструментах: отладочная сборка, роль и режим вместе. */
+    private fun adminTools(): Boolean = BuildConfig.DEBUG && sessions.state.value.isAdmin && modes.mode.value == AppMode.ADMIN
 
     /** Здание Города (3.22.0) или площадь для null. */
     fun building(building: Building?) {
-        runtime.commands.dismissMessage()
-        runtime.navigator.tab(Route.ofBuilding(building))
+        commands.dismissMessage()
+        navigator.tab(Route.ofBuilding(building))
     }
 
     /** «Настройки» (3.77.0) поверх открытой вкладки; закрытие возвращает на неё. */
     fun openSettings() {
-        runtime.commands.dismissMessage()
-        runtime.navigator.open(Route.Settings)
+        commands.dismissMessage()
+        navigator.open(Route.Settings)
     }
 
-    fun closeSettings() = runtime.navigator.back()
+    fun closeSettings() = navigator.back()
 
     /** Проба связи сразу (3.30.0): нажата иконка «не в сети». */
-    fun retryLink() = runtime.connectionViewModel.wake(now = true)
+    fun retryLink() = link.wake(now = true)
 
     /** Строка в тосты с экранов (3.76.0: место, открытое уровнем). */
-    fun announce(text: String) = runtime.toast(text)
+    fun announce(text: String) = notices.toast(text)
 
-    fun dismissMessage() = runtime.commands.dismissMessage()
-    fun dismissNotice() = runtime.notices.dismiss()
-    fun buzz(kind: Buzz) = runtime.buzz(kind)
-    fun clearLogs() = runtime.journal.clear()
+    fun dismissMessage() = commands.dismissMessage()
+    fun dismissNotice() = notices.dismiss()
+    fun buzz(kind: Buzz) = buzzer.buzz(kind)
+    fun clearLogs() = journal.clear()
 
     /** Настройки устройства, в хранилище устройства: порядок сундука и «скрыть надетое» (3.30.0, 3.69.0), фильтр журнала боя. */
     fun stashSort(sort: StashSort) {
-        viewModelScope.launch { runtime.prefs.saveStashSort(sort) }
+        viewModelScope.launch { prefs.saveStashSort(sort) }
     }
 
     fun stashHideWorn(hide: Boolean) {
-        viewModelScope.launch { runtime.prefs.saveStashHideWorn(hide) }
+        viewModelScope.launch { prefs.saveStashHideWorn(hide) }
     }
 
     fun logFilter(kinds: Set<LogKind>) {
-        viewModelScope.launch { runtime.prefs.saveLogFilter(kinds) }
+        viewModelScope.launch { prefs.saveLogFilter(kinds) }
     }
 
     // ---- жизненный цикл активности (3.80.42: из удалённой общей модели) ----
 
     /** Возврат на передний план: связь восстанавливается без нажатия. */
-    fun reconnect() = runtime.sessionViewModel.reconnect()
+    fun reconnect() = session.reconnect()
 
     /** Уход с переднего плана: момент запомнен, чтобы долгое отсутствие обновило экран на возврате. */
-    fun away() = runtime.sessionViewModel.away()
+    fun away() = session.away()
 
     /** Журнал похода уходит сразу: процесс, убитый в фоне, не унесёт его с собой. */
-    fun flushRun() = runtime.expedition.flushRun()
+    fun flushRun() = expedition.flushRun()
 
     /** Вход встретил сервер новее сборки (3.74.0): проверка обновлений идёт сразу. */
-    val newerServer: Flow<Unit> get() = runtime.newerServer
+    val newerServer: Flow<Unit> get() = session.newerServer
 
     /** Манифест живого сервера для проверки обновлений (3.72.0); null, пока сервер не отвечает. */
     suspend fun serverManifest(): StaticManifest? = try {
         // 3.74.0: после того как у приложения есть сервер, и как его отдаёт он сейчас - манифест старой выкладки прятал обновление.
-        withTimeoutOrNull(API_WAIT_MS) { runtime.apiReady.await() }
-        runtime.api.liveManifest()
+        withTimeoutOrNull(API_WAIT_MS) { session.apiReady.await() }
+        connection.api.liveManifest()
     } catch (e: CancellationException) {
         throw e
     } catch (_: Exception) {

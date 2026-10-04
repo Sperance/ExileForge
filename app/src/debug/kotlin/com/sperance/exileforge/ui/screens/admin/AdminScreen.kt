@@ -46,7 +46,7 @@ import org.koin.compose.viewmodel.koinViewModel
         ForgePanel {
             Engraved(ui("admin.screens"))
             ForgeOutlinedButton(enabled = !game.busy, onClick = {
-                vm.tab(TAB_REDEMPTION)
+                vm.openRedemptions()
                 vm.loadRedemptions()
             }, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("redemption.title"))

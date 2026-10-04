@@ -22,7 +22,7 @@ import com.sperance.exileforge.presentation.market.MarketActions
 import com.sperance.exileforge.presentation.quests.QuestActions
 import com.sperance.exileforge.presentation.state.AppModes
 
-/** Репозитории :core одним узлом (3.80.15): переходный держатель, пока `ForgeRuntime` отражает их в общее состояние. */
+/** Репозитории :core одним узлом (3.80.15): их делят сервисы приложения (`AppService`). */
 class Repositories(
     val sessions: SessionRepository,
     val world: WorldRepository,
@@ -39,7 +39,7 @@ class Repositories(
     val modes: AppModes,
 )
 
-/** Действия игры одним узлом (3.80.15): их зовут и экраны через свои модели, и `ForgeRuntime` из прогрева и похода. */
+/** Действия игры одним узлом (3.80.15): их зовут и экраны через свои модели, и сервисы приложения - из прогрева, входа и связи. */
 class Actions(
     val quests: QuestActions,
     val market: MarketActions,

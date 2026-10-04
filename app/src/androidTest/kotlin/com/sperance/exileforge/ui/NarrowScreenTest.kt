@@ -24,8 +24,8 @@ import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.Session
 import com.sperance.exileforge.core.world.World
 import com.sperance.exileforge.data.settings.DEFAULT_SERVER
-import com.sperance.exileforge.presentation.features.WarmStep
-import com.sperance.exileforge.presentation.features.Warmup
+import com.sperance.exileforge.presentation.app.WarmStep
+import com.sperance.exileforge.presentation.app.Warmup
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot

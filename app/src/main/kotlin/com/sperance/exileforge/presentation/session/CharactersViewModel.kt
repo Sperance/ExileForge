@@ -3,26 +3,39 @@ package com.sperance.exileforge.presentation.session
 import androidx.lifecycle.ViewModel
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.session.Activity
+import com.sperance.exileforge.core.session.CommandRunner
+import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.Session
-import com.sperance.exileforge.presentation.ForgeRuntime
+import com.sperance.exileforge.core.session.SessionRepository
+import com.sperance.exileforge.presentation.app.CharacterActions
+import com.sperance.exileforge.presentation.app.SessionActions
 import com.sperance.exileforge.presentation.state.GameSlice
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.presentation.world.WorldLoader
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-/** Меню героев (3.80.22): список, вход, создание и удаление; логика - в `ForgeRuntime` до переезда навигации. */
-class CharactersViewModel(private val runtime: ForgeRuntime, slice: GameSlice) : ViewModel() {
+/** Меню героев (3.80.22): список, вход, создание и удаление; логика - у `CharacterActions` (3.80.44). */
+class CharactersViewModel(
+    slice: GameSlice,
+    sessions: SessionRepository,
+    private val commands: CommandRunner,
+    private val notices: Notices,
+    private val loader: WorldLoader,
+    private val sessionActions: SessionActions,
+    private val characters: CharacterActions,
+) : ViewModel() {
     /** Срез «игра» для экранов этой модели (3.80.33). */
     val game: StateFlow<GameUi> = slice.ui
-    val session: StateFlow<Session> = runtime.sessions.state
-    val activity: StateFlow<Activity> = runtime.commands.state
+    val session: StateFlow<Session> = sessions.state
+    val activity: StateFlow<Activity> = commands.state
 
-    fun enterCharacter(id: String) = runtime.characterViewModel.enter(id)
-    fun refreshCharacters() = runtime.characterViewModel.refresh()
-    fun createCharacter(name: String, heroClass: String) = runtime.characterViewModel.create(name, heroClass)
-    fun deleteCharacter(id: String) = runtime.characterViewModel.delete(id)
-    fun ensureClasses() = runtime.characterViewModel.ensureClasses()
+    fun enterCharacter(id: String) = characters.enter(id)
+    fun refreshCharacters() = characters.refresh()
+    fun createCharacter(name: String, heroClass: String) = characters.create(name, heroClass)
+    fun deleteCharacter(id: String) = characters.delete(id)
+    fun ensureClasses() = characters.ensureClasses()
 
     private val mutableDraft = MutableStateFlow("")
 
@@ -33,8 +46,8 @@ class CharactersViewModel(private val runtime: ForgeRuntime, slice: GameSlice) :
         mutableDraft.value = value
     }
 
-    fun logout() = runtime.sessionViewModel.logout()
-    fun language(lang: Lang) = runtime.language(lang)
-    fun dismissMessage() = runtime.commands.dismissMessage()
-    fun dismissNotice() = runtime.notices.dismiss()
+    fun logout() = sessionActions.logout()
+    fun language(lang: Lang) = loader.language(lang)
+    fun dismissMessage() = commands.dismissMessage()
+    fun dismissNotice() = notices.dismiss()
 }

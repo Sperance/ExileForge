@@ -146,11 +146,13 @@ import org.koin.compose.viewmodel.koinViewModel
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             ClassPortrait(heroClass, game.world.portraits, Modifier.size(64.dp), round = true)
             Column(Modifier.weight(1f)) {
-                Text(character.name, color = GoldBright, style = MaterialTheme.typography.titleMedium)
+                Text(character.name, color = if (character.blocked) LifeRed else GoldBright, style = MaterialTheme.typography.titleMedium)
                 PropertyRow(ui("common.class"), heroClass?.let(::classTitle) ?: ui("chars.unknown"), Glyph.CHARACTER)
                 PropertyRow(ui("common.level"), character.level.toString(), Glyph.LEVEL)
             }
         }
+        // Blocked by the administrator (3.81.0, server 1.76.0): the hero cannot play, and the reason is said here.
+        if (character.blocked) Text(ui("hero.blocked_mark", character.blockReason), color = LifeRed, style = MaterialTheme.typography.bodySmall)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ForgeButton(enabled = !game.busy, onClick = onPlay, modifier = Modifier.weight(1f)) { Text(ui("auth.play")) }
             ForgeOutlinedButton(enabled = !game.busy, onClick = onDelete) { Text(ui("chars.release_do"), color = MaterialTheme.colorScheme.error) }

@@ -29,6 +29,7 @@ import com.sperance.exileforge.data.settings.ServerStore
 import com.sperance.exileforge.presentation.Actions
 import com.sperance.exileforge.presentation.Repositories
 import com.sperance.exileforge.presentation.ShellViewModel
+import com.sperance.exileforge.presentation.admin.AdminHeroesViewModel
 import com.sperance.exileforge.presentation.admin.AdminViewModel
 import com.sperance.exileforge.presentation.app.AppStartup
 import com.sperance.exileforge.presentation.app.CharacterActions
@@ -135,6 +136,7 @@ val appModule = module {
     single { AppStartup(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModelOf(::ShellViewModel)
     viewModelOf(::AdminViewModel)
+    viewModelOf(::AdminHeroesViewModel)
     viewModelOf(::SessionViewModel)
     viewModelOf(::CharactersViewModel)
     viewModelOf(::FeedbackViewModel)

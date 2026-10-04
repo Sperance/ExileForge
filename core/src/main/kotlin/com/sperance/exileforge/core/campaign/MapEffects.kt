@@ -32,7 +32,6 @@ object MapStats {
     val MONSTER_RESIST = MapStat.MONSTER_RESIST.code
     val HERO_RESIST = MapStat.HERO_RESIST.code
     val HERO_REGEN = MapStat.HERO_REGEN.code
-    val HERO_DAMAGE_TAKEN = MapStat.HERO_DAMAGE_TAKEN.code
     val HERO_RECOVERY = MapStat.HERO_RECOVERY.code
     val HERO_MAX_RESIST = MapStat.HERO_MAX_RESIST.code
     val HERO_DEFENCES = MapStat.HERO_DEFENCES.code
@@ -148,7 +147,6 @@ object MapEffects {
         fun scale(stat: String, share: Double) {
             sheet[stat] = (sheet[stat] ?: 0.0) * max(0.0, 1 + share / 100)
         }
-        effects[MapStats.HERO_DAMAGE_TAKEN]?.let { add(CoreStat.DAMAGE_TAKEN.code, it) }
         effects[MapStats.HERO_RECOVERY]?.let { add(CoreStat.RECOVERY_RATE.code, -it) }
         effects[MapStats.HERO_MAX_RESIST]?.let { v ->
             add(CoreStat.RESIST_MAX_ALL.code, -v)

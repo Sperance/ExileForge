@@ -94,6 +94,7 @@ private const val HERO_CARD = -1
                                 track(foe.index).weight(1f).widthIn(max = 180.dp),
                                 large,
                                 traits[foe.index].orEmpty(),
+                                narrow = fight.field.size >= 3,
                             ) {
                                 onCommand(RunCommand.Focus(foe.index))
                             }

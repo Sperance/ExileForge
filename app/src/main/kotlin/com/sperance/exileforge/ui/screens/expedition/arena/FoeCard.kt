@@ -19,6 +19,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.campaign.*
@@ -92,6 +93,8 @@ internal fun flash(lunge: LungeView?, target: Side, foe: Int?): Float = if (lung
     modifier: Modifier,
     large: Boolean,
     traits: List<TraitView>,
+    /** Three and more on the field (3.81.0): the narrow tile of variant A. */
+    narrow: Boolean = false,
     onTap: () -> Unit,
 ) {
     val lunge = fight.lunge
@@ -125,9 +128,13 @@ internal fun flash(lunge: LungeView?, target: Side, foe: Int?): Float = if (lung
             .border(if (focused || acting > 0f) 2.dp else 1.dp, border, shape)
             .clip(shape).clickable(enabled = foe.alive && fight.outcome == null, onClick = onTap),
     ) {
-        Column(Modifier.fillMaxWidth().padding(6.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Box(Modifier.size(FOE_AVATAR).clip(CircleShape).background(Color(0xFF0B0E13)).border(2.dp, ring.copy(alpha = .8f), CircleShape)) {
+        Column(
+            Modifier.fillMaxWidth().padding(if (narrow) 5.dp else 6.dp),
+            verticalArrangement = Arrangement.spacedBy(3.dp),
+            horizontalAlignment = if (narrow) Alignment.CenterHorizontally else Alignment.Start,
+        ) {
+            val portrait: @Composable (Dp) -> Unit = { size ->
+                Box(Modifier.size(size).clip(CircleShape).background(Color(0xFF0B0E13)).border(2.dp, ring.copy(alpha = .8f), CircleShape)) {
                     Canvas(Modifier.fillMaxSize()) {
                         Portraits.monster(
                             this,
@@ -141,23 +148,36 @@ internal fun flash(lunge: LungeView?, target: Side, foe: Int?): Float = if (lung
                         )
                     }
                 }
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                    Text(
-                        monsterTitle(foe.monster.code),
-                        color = ring,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        lineHeight = 12.sp,
-                    )
-                    // Its own level (3.73.0): on a map a foe may stand a little above or below the map.
-                    if (foe.monster.level > 0) Text(ui("fight.level_short", foe.monster.level), color = Muted, fontSize = 9.sp, maxLines = 1)
-                    // Its traits (3.73.0) as seals; a tap on the card opens what they do.
-                    if (traits.isNotEmpty() && foe.alive) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                            traits.forEach { trait -> SkillGlyph(trait.icon, Modifier.size(14.dp), Color(0xFFE8B06A)) }
-                        }
+            }
+            val seals: @Composable () -> Unit = {
+                // Its traits (3.73.0) as seals; a tap on the card opens what they do.
+                if (traits.isNotEmpty() && foe.alive) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                        traits.forEach { trait -> SkillGlyph(trait.icon, Modifier.size(14.dp), Color(0xFFE8B06A)) }
+                    }
+                }
+            }
+            if (narrow) {
+                // Variant A (3.81.0): three narrow tiles — the portrait over a one-line name that shrinks to fit; the whole name is in its window.
+                portrait(FOE_AVATAR_NARROW)
+                FittedName(monsterTitle(foe.monster.code), ring)
+                seals()
+            } else {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    portrait(FOE_AVATAR)
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                        Text(
+                            monsterTitle(foe.monster.code),
+                            color = ring,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            lineHeight = 12.sp,
+                        )
+                        // Its own level (3.73.0): on a map a foe may stand a little above or below the map.
+                        if (foe.monster.level > 0) Text(ui("fight.level_short", foe.monster.level), color = Muted, fontSize = 9.sp, maxLines = 1)
+                        seals()
                     }
                 }
             }
@@ -170,7 +190,6 @@ internal fun flash(lunge: LungeView?, target: Side, foe: Int?): Float = if (lung
             }
             if (foe.alive) foe.buildup?.let { BuildupBar(it, Modifier.fillMaxWidth()) }
             SwingBar(foe.swing, foe.held, Modifier.fillMaxWidth(), if (acting > 0f) LifeRed else LifeRed.copy(alpha = .7f))
-            if (foe.taunt && foe.alive) Text(ui("fight.taunt"), color = Color(0xFFE8B06A), fontSize = 9.sp, fontStyle = FontStyle.Italic, maxLines = 1)
             // What is on it: small tiles while it runs, larger while paused; a tap on one opens its window.
             val tile = if (large) 16.dp else 12.dp
             if (foe.held || foe.ailments.isNotEmpty() || foe.effects.isNotEmpty()) {
@@ -185,8 +204,12 @@ internal fun flash(lunge: LungeView?, target: Side, foe: Int?): Float = if (lung
                 }
             }
         }
+        // A narrow tile keeps the level in its corner.
+        if (narrow && foe.monster.level > 0) {
+            Text(ui("fight.level_short", foe.monster.level), color = Muted, fontSize = 9.sp, modifier = Modifier.align(Alignment.TopEnd).padding(top = 4.dp, end = 5.dp))
+        }
         if (fight.target == foe.index && foe.alive && fight.outcome == null) {
-            Text(if (focused) "◉" else "◎", color = GoldBright, fontSize = 14.sp, modifier = Modifier.align(Alignment.TopEnd).padding(4.dp))
+            Text(if (focused) "◉" else "◎", color = GoldBright, fontSize = 14.sp, modifier = Modifier.align(if (narrow) Alignment.BottomEnd else Alignment.TopEnd).padding(4.dp))
         }
         if (foe.taunt && foe.alive) TauntSeal(time, Modifier.align(Alignment.TopStart).padding(2.dp).size(18.dp)) { tauntTip(false) }
         if (!foe.alive) {
@@ -210,6 +233,25 @@ internal fun flash(lunge: LungeView?, target: Side, foe: Int?): Float = if (lung
 
 /** The round portrait of a foe's card (3.80.0, variant C). */
 private val FOE_AVATAR = 52.dp
+
+/** The portrait of a narrow tile (3.81.0, variant A). */
+private val FOE_AVATAR_NARROW = 46.dp
+
+/** A foe's name on one line, its type stepping down from 11sp to 8.5sp until it fits, cut only past that. */
+@Composable private fun FittedName(name: String, color: Color) {
+    var size by remember(name) { mutableFloatStateOf(11f) }
+    Text(
+        name,
+        color = color,
+        fontSize = size.sp,
+        fontWeight = FontWeight.Bold,
+        maxLines = 1,
+        softWrap = false,
+        overflow = if (size > 8.5f) TextOverflow.Clip else TextOverflow.Ellipsis,
+        textAlign = TextAlign.Center,
+        onTextLayout = { if (it.hasVisualOverflow && size > 8.5f) size -= .5f },
+    )
+}
 
 /** The place of a fallen foe while the next of the line closes in (3.73.0): a ring running down and the seconds left. */
 @Composable private fun ReinforceRing(left: Double, delay: Double, modifier: Modifier) {

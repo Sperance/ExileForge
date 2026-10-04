@@ -26,6 +26,7 @@ import com.sperance.exileforge.core.campaign.combat.*
 import com.sperance.exileforge.core.campaign.combat.CombatEvent
 import com.sperance.exileforge.core.campaign.combat.Outcome
 import com.sperance.exileforge.core.campaign.run.FightReport
+import com.sperance.exileforge.core.campaign.run.RunCommand
 import com.sperance.exileforge.core.campaign.run.RunHud
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.displayName
@@ -120,6 +121,8 @@ import java.util.Locale
     stack?.let { code -> StackInfoSheet(game, code) { stack = null } }
     // The recipe the kill turned up: what it does, and that the bench waits for the run's end.
     recipe?.let { code -> RecipeSheet(game, code, inRun = true) { recipe = null } }
+    // The fight raised the hero's level (3.81.0): its own screen over the report until it is read.
+    if (won) hud.levelUp?.let { rise -> LevelUpScreen(rise, game.heroClass, game.index) { model.runCommand(RunCommand.LevelSeen) } }
 }
 
 /** The scene: the monster's round token in its rarity's ring, lit warm for a victory and red for a defeat, and the outcome in words. */

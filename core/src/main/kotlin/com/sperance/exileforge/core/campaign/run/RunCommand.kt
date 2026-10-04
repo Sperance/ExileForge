@@ -65,6 +65,9 @@ sealed interface RunCommand {
     data class Focus(val index: Int) : RunCommand
     data object DismissChest : RunCommand
 
+    /** The level-up screen read (3.81.0): the levels it told of are not told again. */
+    data object LevelSeen : RunCommand
+
     /** Stepping back from the gate undecided: the portal stays, and opens again when walked onto. */
     data object StepBack : RunCommand
 

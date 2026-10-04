@@ -222,6 +222,8 @@ data class RunHud(
     val rewardAwaiting: Int = 0,
     /** A first win over this guardian (3.81.0): the hero's place among all who beat it. */
     val rank: Long? = null,
+    /** The levels the answered experience raised the hero by and the report has not told of yet (3.81.0). */
+    val levelUp: LevelUp? = null,
     val slain: RolledMonster? = null,
     val report: FightReport? = null,
     /** What the death cost, by the rules' price until the server's answer replaces it. */
@@ -294,3 +296,8 @@ data class CrystalView(
     val outcome: String? = null,
     val awaiting: Boolean = false,
 )
+
+/** A rise from level [from] to [to] (3.81.0): one screen even for several levels at once. */
+data class LevelUp(val from: Int, val to: Int) {
+    val levels: Int get() = to - from
+}

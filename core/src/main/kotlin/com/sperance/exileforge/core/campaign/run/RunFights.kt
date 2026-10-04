@@ -265,6 +265,9 @@ internal fun ExpeditionRun.play(dt: Double) {
     }
 }
 
+/** The hero's level on the experience the answers granted so far (3.81.0); never below the level they set out with. */
+internal fun ExpeditionRun.levelNow(): Int = index.classes.levelOf(heroExperience + granted.experience).coerceAtLeast(heroLevel)
+
 /** What the death costs by the rules: a share of the level's experience, never the level — on what the answers granted so far. */
 internal fun ExpeditionRun.deathLoss(): Double {
     val classes = index.classes

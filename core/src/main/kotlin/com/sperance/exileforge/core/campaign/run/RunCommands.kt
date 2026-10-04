@@ -170,6 +170,8 @@ internal fun ExpeditionRun.handle(command: RunCommand) {
 
         RunCommand.DismissChest -> chestEvent = null
 
+        RunCommand.LevelSeen -> levelShown = levelNow()
+
         RunCommand.StepBack -> if (phase == RunPhase.GATE) closeGate()
 
         is RunCommand.ShutGate -> {

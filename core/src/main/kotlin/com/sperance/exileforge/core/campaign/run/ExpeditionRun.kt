@@ -162,6 +162,9 @@ class ExpeditionRun(
     /** The fight's guardian fell to this hero for the first time (3.81.0): their place among all who beat it. */
     internal var rank: Long? = null
 
+    /** The last level the level-up screen told of (3.81.0); the hero's level at the run's start until then. */
+    internal var levelShown: Int = heroLevel
+
     /** What an autorun has gathered, fight by fight: its report at the end. */
     internal val autoEvents = HashSet<Int>()
     internal var autoReward: Reward? = null

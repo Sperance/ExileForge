@@ -14,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -23,12 +24,15 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.hero.HeroViewModel
+import com.sperance.exileforge.presentation.progress.ProgressViewModel
 import com.sperance.exileforge.presentation.state.Feature
 import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.TAB_CHRONICLE
 import com.sperance.exileforge.presentation.state.TAB_CRAFT
 import com.sperance.exileforge.presentation.state.TAB_PETS
@@ -86,25 +90,26 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
  * the atlas, the trials and the chronicle (3.69.0), which lay about the Hero tab and the world map before. Each tile says in a line what it
  * holds and, in its colour, what waits; a badge counts what asks to be done.
  */
-@Composable fun ProgressScreen(s: ForgeState) {
+@Composable fun ProgressScreen() {
+    val game by koinViewModel<ProgressViewModel>().game.collectAsStateWithLifecycle()
     val expedition: ExpeditionViewModel = koinViewModel()
     val shell: ShellViewModel = koinViewModel()
-    val heroModel: HeroViewModel = koinViewModel()
-    LaunchedEffect(s.play.heroId, s.account.sessionEpoch) { heroModel.ensure() }
-    val hero = s.hero
-    val index = s.index
+    val progress: ProgressViewModel = koinViewModel()
+    LaunchedEffect(game.heroId, game.sessionEpoch) { progress.ensure() }
+    val hero = game.hero
+    val index = game.index
     val tiles = run {
-        val orbs = hero?.let { h -> s.orbs.sumOf { h.count(it.code) } } ?: 0L
+        val orbs = hero?.let { h -> game.orbs.sumOf { h.count(it.code) } } ?: 0L
         val pets = hero?.pets
         // The incubator (server 1.67.0): ripe eggs first, then the ones ripening, then eggs of the bag a free place waits for.
         val incubator = pets?.incubator
         val ready = incubator?.ready ?: 0
         val incubating = incubator?.incubating ?: 0
         val eggs = if (hero != null && index != null && incubator?.free != null) index.pets.eggs.values.toSet().sumOf { hero.count(it) } else 0L
-        val atlas = s.atlasState
+        val atlas = game.atlasState
         val rules = index?.campaign?.trials
         val keys = hero?.count(TrialRules.KEY) ?: 0L
-        val chronicle = s.chronicleDone()
+        val chronicle = game.chronicleDone()
         val title = hero?.info?.title?.takeIf { it.isNotBlank() }
         listOf(
             ProgressTile(
@@ -114,7 +119,7 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
                 ui("progress.forge_note"),
                 ui("progress.forge_orbs", orbs).takeIf { orbs > 0 },
                 0,
-                s.lockOf(Feature.FORGE),
+                game.lockOf(Feature.FORGE),
             ) { shell.tab(TAB_CRAFT) },
             ProgressTile(
                 ui("progress.pets"),
@@ -128,7 +133,7 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
                     else -> ui("progress.pets_work", pets?.active?.size ?: 0, PETS_AT_WORK)
                 },
                 if (ready > 0) ready else eggs.toInt(),
-                s.lockOf(Feature.PETS),
+                game.lockOf(Feature.PETS),
             ) { shell.tab(TAB_PETS) },
             ProgressTile(
                 ui("atlas.title"),
@@ -150,7 +155,7 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
                     else -> null
                 },
                 keys.toInt(),
-                s.lockOf(Feature.TRIALS),
+                game.lockOf(Feature.TRIALS),
             ) { shell.tab(TAB_TRIALS) },
             ProgressTile(
                 ui("chronicle.title"),
@@ -159,7 +164,7 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
                 chronicle?.let { (done, all) -> ui("chronicle.done", done, all) } ?: ui("common.loading"),
                 title?.let(::titleName),
                 0,
-                s.lockOf(Feature.CHRONICLE),
+                game.lockOf(Feature.CHRONICLE),
             ) { shell.tab(TAB_CHRONICLE) },
         )
     }
@@ -222,7 +227,7 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
         BackRow("${ui("nav.progress")} · ${place.label}") { shell.tab(TAB_PROGRESS) }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when (place) {
-                ProgressPlace.FORGE -> CraftScreen(s)
+                ProgressPlace.FORGE -> CraftScreen()
                 ProgressPlace.PETS -> PetsPlace(s)
                 ProgressPlace.TRIALS -> TrialsBoard(s, koinViewModel(), Modifier.fillMaxSize())
                 ProgressPlace.CHRONICLE -> ChronicleScreen(s, koinViewModel())
@@ -232,6 +237,6 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
 }
 
 /** The level a tile's place opens at (3.76.0), while the hero is below it. */
-private fun ForgeState.lockOf(feature: Feature): Int? = feature.takeIf { !unlocked(it) }?.level
+private fun GameUi.lockOf(feature: Feature): Int? = feature.takeIf { !unlocked(it) }?.level
 
 private const val LOCKED_TILE_ALPHA = .45f

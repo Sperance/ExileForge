@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.ui.components.AffixBadge
 import com.sperance.exileforge.ui.components.BaseChip
 import com.sperance.exileforge.ui.components.MutedText
@@ -40,7 +40,7 @@ internal class Socket(val label: String, val accent: Color, val glyph: (@Composa
  * The rail beside the anvil (mockup B): the picker's shelves as drawings — each opens the stash on that shelf — and under a rule
  * the items worked on lately, a tap laying one on the anvil.
  */
-@Composable internal fun TargetRail(s: ForgeState, recent: List<ItemView>, current: String?, onShelf: (TargetFilter) -> Unit, onPick: (String) -> Unit) {
+@Composable internal fun TargetRail(game: GameUi, recent: List<ItemView>, current: String?, onShelf: (TargetFilter) -> Unit, onPick: (String) -> Unit) {
     val shape = RoundedCornerShape(12.dp)
     Column(
         Modifier.width(52.dp).background(Panel, shape).border(1.dp, PanelRaised, shape).padding(vertical = 6.dp),
@@ -72,7 +72,7 @@ internal class Socket(val label: String, val accent: Color, val glyph: (@Composa
  * The anvil (mockup B): the item's socket, then the [tool] laid on it and, for an orb, its [omen] — then the item itself as it
  * stands, its base and every line with its badge, and the server's last word about it. A tap on the item opens the picker.
  */
-@Composable internal fun Anvil(s: ForgeState, item: ItemView?, tool: Socket, omen: Socket?, onPick: () -> Unit, modifier: Modifier = Modifier) {
+@Composable internal fun Anvil(game: GameUi, item: ItemView?, tool: Socket, omen: Socket?, onPick: () -> Unit, modifier: Modifier = Modifier) {
     val shape = RoundedCornerShape(14.dp)
     Column(
         modifier.background(Brush.verticalGradient(listOf(Gold.copy(alpha = .14f).compositeOver(Panel), Panel)), shape)
@@ -94,9 +94,9 @@ internal class Socket(val label: String, val accent: Color, val glyph: (@Composa
                 MutedText(ui("forge.pick_item_hint"))
             }
         } else {
-            AnvilItem(s, item)
+            AnvilItem(game, item)
         }
-        s.play.forgeLine.takeIf { it.isNotBlank() }?.let {
+        game.holding.forgeLine.takeIf { it.isNotBlank() }?.let {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Outlined.CheckCircle, null, tint = Vital, modifier = Modifier.size(14.dp))
                 Text(it, color = Vital, style = MaterialTheme.typography.bodySmall)
@@ -108,8 +108,8 @@ internal class Socket(val label: String, val accent: Color, val glyph: (@Composa
 /** The item as the anvil holds it: the name in its rarity's colour, what it is and how many affix places it fills, its base and its lines. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun AnvilItem(s: ForgeState, item: ItemView) {
-    val limits = s.index?.limits(item.rarity, item.slot)
+private fun AnvilItem(game: GameUi, item: ItemView) {
+    val limits = game.index?.limits(item.rarity, item.slot)
     val places = limits?.takeIf { it.ceiling > 0 }?.let { it.prefixes + it.suffixes }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(

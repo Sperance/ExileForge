@@ -8,6 +8,8 @@ import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.SessionRepository
 import com.sperance.exileforge.data.settings.ServerStore
+import com.sperance.exileforge.presentation.state.GameSlice
+import com.sperance.exileforge.presentation.state.GameUi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -19,7 +21,10 @@ class CraftsViewModel(
     commands: CommandRunner,
     private val store: ServerStore,
     private val sessions: SessionRepository,
+    slice: GameSlice,
 ) : ViewModel() {
+    /** Срез «игра» для экранов этой модели (3.80.33). */
+    val game: StateFlow<GameUi> = slice.ui
     val crafts: StateFlow<Crafts> = repository.state
     val activity: StateFlow<Activity> = commands.state
 

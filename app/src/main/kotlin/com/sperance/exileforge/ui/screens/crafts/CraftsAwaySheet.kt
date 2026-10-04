@@ -5,12 +5,14 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.ItemVisualKind
 import com.sperance.exileforge.core.display.bagVisualKind
 import com.sperance.exileforge.core.display.equipmentTitle
@@ -19,13 +21,14 @@ import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.workTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.crafts.CraftsViewModel
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.roll.AwayStop
 import com.sperance.exileforge.rules.roll.CraftsAway
 import com.sperance.exileforge.ui.components.Engraved
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.MutedText
+import com.sperance.exileforge.ui.components.inputs
 import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.theme.*
@@ -38,13 +41,14 @@ import org.koin.compose.viewmodel.koinViewModel
  * showed last, per hero, so a recomposition, a tab or a relaunch does not bring the same one back. Until that mark
  * is read nothing is shown, rather than a sheet that flashes and goes.
  */
-@Composable fun CraftsAwayHost(s: ForgeState) {
+@Composable fun CraftsAwayHost() {
+    val game by koinViewModel<CraftsViewModel>().game.collectAsStateWithLifecycle()
     val craftsModel: CraftsViewModel = koinViewModel()
-    val heroId = s.play.heroId
+    val heroId = game.heroId
     var seen by remember(heroId) { mutableStateOf<Long?>(null) }
     LaunchedEffect(heroId) { if (heroId.isNotBlank()) seen = craftsModel.craftsAwaySeen(heroId) }
-    val away = s.hero?.crafts?.away?.takeIf { away -> seen.let { it != null && away.until > it } } ?: return
-    CraftsAwaySheet(s, away) {
+    val away = game.hero?.crafts?.away?.takeIf { away -> seen.let { it != null && away.until > it } } ?: return
+    CraftsAwaySheet(game, away) {
         seen = away.until
         craftsModel.markCraftsAwaySeen(heroId, away.until)
     }
@@ -52,8 +56,8 @@ import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun CraftsAwaySheet(s: ForgeState, away: CraftsAway, onDismiss: () -> Unit) {
-    val offlineHours = s.index?.professions?.rules?.offlineHours
+private fun CraftsAwaySheet(game: GameUi, away: CraftsAway, onDismiss: () -> Unit) {
+    val offlineHours = game.index?.professions?.rules?.offlineHours
     val cap = offlineHours?.let { (it * 3_600_000).toLong() } ?: Long.MAX_VALUE
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(
@@ -72,11 +76,11 @@ private fun CraftsAwaySheet(s: ForgeState, away: CraftsAway, onDismiss: () -> Un
             if (away.gained.isEmpty()) {
                 MutedText(ui("away.nothing"))
             } else {
-                AwayStacks(s, away.gained, "+", Vital)
+                AwayStacks(game, away.gained, "+", Vital)
             }
             if (away.spent.isNotEmpty()) {
                 Engraved(ui("away.spent"), accent = LifeRed)
-                AwayStacks(s, away.spent, "−", LifeRed)
+                AwayStacks(game, away.spent, "−", LifeRed)
             }
             away.stopReason?.let { stop ->
                 Text(
@@ -108,15 +112,15 @@ private fun clock(millis: Long): String {
 }
 
 /** A line per code, most first: its icon, «+3» or «−3», its name. A code may be a bag stack or an equipment template. */
-@Composable private fun AwayStacks(s: ForgeState, stacks: Map<String, Int>, sign: String, tone: Color) {
+@Composable private fun AwayStacks(game: GameUi, stacks: Map<String, Int>, sign: String, tone: Color) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         stacks.entries.sortedByDescending { it.value }.forEach { (code, amount) ->
-            val template = s.index?.template(code)
+            val template = game.index?.template(code)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (template != null) {
                     ItemIcon(template, Gold, Modifier.size(24.dp))
                 } else {
-                    BagIcon(code, Modifier.size(24.dp), kind = s.index?.item(code)?.let(::bagVisualKind) ?: ItemVisualKind.ITEM)
+                    BagIcon(code, Modifier.size(24.dp), kind = game.index?.item(code)?.let(::bagVisualKind) ?: ItemVisualKind.ITEM)
                 }
                 Text("$sign$amount", color = tone, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                 Text(

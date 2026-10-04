@@ -25,7 +25,7 @@ import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.presentation.forge.Smithy
 import com.sperance.exileforge.presentation.forge.SmithyViewModel
 import com.sperance.exileforge.presentation.state.ForgeSection
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Item
 import com.sperance.exileforge.rules.content.Omen
@@ -45,9 +45,9 @@ import org.koin.compose.viewmodel.koinViewModel
 
 /** Полосы кузницы над навигацией (3.80.24): выбранная сфера, эссенция или строка верстака с удерживаемой кнопкой. */
 /** The chosen essence over the navigation, with the held button: a common item becomes rare, a rare one is rolled anew. */
-@Composable internal fun EssenceBar(s: ForgeState, code: String, instance: ItemInstance, enabled: Boolean, accepted: (String) -> Boolean, onApply: (String, String) -> Unit) {
-    val owned = s.bagAmount(code) ?: 0L
-    val essence = s.index?.essence(code)?.takeIf { owned > 0 && accepted(code) }
+@Composable internal fun EssenceBar(game: GameUi, code: String, instance: ItemInstance, enabled: Boolean, accepted: (String) -> Boolean, onApply: (String, String) -> Unit) {
+    val owned = game.bagAmount(code) ?: 0L
+    val essence = game.index?.essence(code)?.takeIf { owned > 0 && accepted(code) }
     ForgeBar {
         if (essence == null) {
             Text(ui("forge.pick_essence"), color = Muted)
@@ -62,7 +62,7 @@ import org.koin.compose.viewmodel.koinViewModel
 
 /** The chosen orb over the navigation: what it does, what the bag keeps, and the button that is held. */
 @Composable internal fun OrbBar(
-    s: ForgeState,
+    game: GameUi,
     smithy: Smithy,
     instance: ItemInstance,
     enabled: Boolean,
@@ -71,8 +71,8 @@ import org.koin.compose.viewmodel.koinViewModel
     onApply: (String, String) -> Unit,
 ) {
     val code = smithy.orb
-    val owned = s.bagAmount(code) ?: 0L
-    val orb = s.orbs.firstOrNull { it.code == code && owned > 0 && accepted(code) }
+    val owned = game.bagAmount(code) ?: 0L
+    val orb = game.orbs.firstOrNull { it.code == code && owned > 0 && accepted(code) }
     ForgeBar {
         if (orb == null) {
             Text(ui("forge.pick_orb"), color = Muted)
@@ -94,20 +94,20 @@ import org.koin.compose.viewmodel.koinViewModel
 }
 
 /** The chosen bench line over the navigation, priced, with the same held button. */
-@Composable internal fun BenchBar(s: ForgeState, vm: SmithyViewModel, instance: ItemInstance, chosen: String, enabled: Boolean) {
-    val index = s.index ?: return
-    val recipe = s.bench.firstOrNull { it.code == chosen }
+@Composable internal fun BenchBar(game: GameUi, vm: SmithyViewModel, instance: ItemInstance, chosen: String, enabled: Boolean) {
+    val index = game.index ?: return
+    val recipe = game.bench.firstOrNull { it.code == chosen }
     ForgeBar {
         when {
             chosen == UNCRAFT -> {
                 val scouring = index.rules.bench.uncraftOrb
-                val owned = s.bagAmount(scouring.name) ?: 0L
+                val owned = game.bagAmount(scouring.name) ?: 0L
                 BarTitle(ForgeGlyphs.Anvil, Crafted, ui("bench.remove"), stock(owned, 1))
                 HoldButton(ui("confirm.hold", ui("forge.remove_bench")), Crafted, enabled = enabled && owned >= 1, rearm = true) { vm.uncraft(instance.id) }
             }
 
             recipe != null -> {
-                val owned = s.bagAmount(recipe.orb.name) ?: 0L
+                val owned = game.bagAmount(recipe.orb.name) ?: 0L
                 BarTitle(ForgeGlyphs.Anvil, Crafted, recipeText(index, recipe), stock(owned, recipe.amount))
                 HoldButton(ui("confirm.hold", ui("forge.apply_bench")), Crafted, enabled = enabled && owned >= recipe.amount, rearm = true) { vm.craft(instance.id, recipe.code) }
             }

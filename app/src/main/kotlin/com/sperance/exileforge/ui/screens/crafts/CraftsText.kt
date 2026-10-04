@@ -53,7 +53,7 @@ import com.sperance.exileforge.core.model.crafts.WorkView
 import com.sperance.exileforge.core.model.crafts.job
 import com.sperance.exileforge.core.model.crafts.running
 import com.sperance.exileforge.core.session.Reads
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.JobInput
 import com.sperance.exileforge.rules.content.JobKind
 import com.sperance.exileforge.rules.content.Slot
@@ -61,6 +61,7 @@ import com.sperance.exileforge.rules.roll.WorkGains
 import com.sperance.exileforge.rules.roll.WorkTally
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
+import com.sperance.exileforge.ui.components.inputs
 import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.GlyphIcon
@@ -88,7 +89,7 @@ fun gainsLine(gains: WorkGains): String = listOfNotNull(
 ).joinToString(" · ").ifBlank { ui("crafts.gain_nothing", gains.cycles) }
 
 /** How many of a stack the bag holds, by the item's code — a material, an orb, an essence or a book; 0 before the hero is read. */
-fun bagCount(s: ForgeState, code: String): Long = s.bagAmount(code) ?: 0L
+fun bagCount(game: GameUi, code: String): Long = game.bagAmount(code) ?: 0L
 
 /** What a work makes, in words: the stack, the smith's range or the cartographer's location. */
 fun jobProduct(job: JobView): String = when (job.kind) {
@@ -118,10 +119,10 @@ val ProfessionView.crafting get() = jobs.any { it.inputs.isNotEmpty() }
  * how many cycles that pays for — every additive the work was started with is spent each cycle too.
  * Display only: the server stops the work when a cycle cannot be paid.
  */
-fun stockLine(s: ForgeState, work: WorkView, job: JobView): String? {
+fun stockLine(game: GameUi, work: WorkView, job: JobView): String? {
     val inputs = job.inputs + work.additives.map { JobInput(it, 1) }
-    val scarce = inputs.filter { it.amount > 0 }.minByOrNull { bagCount(s, it.item) / it.amount } ?: return null
-    val have = bagCount(s, scarce.item)
+    val scarce = inputs.filter { it.amount > 0 }.minByOrNull { bagCount(game, it.item) / it.amount } ?: return null
+    val have = bagCount(game, scarce.item)
     val cycles = (have / scarce.amount).toInt()
     return if (cycles == 0) {
         ui("crafts.stock_empty", itemTitle(scarce.item), have)
@@ -202,14 +203,14 @@ internal fun perHour(job: JobView, profession: ProfessionView): Double? = job.cy
 internal const val HOUR_MILLIS = 3_600_000.0
 
 /** A cycle's price against the bag: each material as have/need, short ones in red; «бесплатно» for a work that spends nothing. */
-internal fun cycleCost(s: ForgeState, job: JobView): AnnotatedString = buildAnnotatedString {
+internal fun cycleCost(game: GameUi, job: JobView): AnnotatedString = buildAnnotatedString {
     if (job.inputs.isEmpty()) {
         append(ui("crafts.free"))
         return@buildAnnotatedString
     }
     job.inputs.forEachIndexed { i, input ->
         if (i > 0) append(" + ")
-        val have = bagCount(s, input.item)
+        val have = bagCount(game, input.item)
         withStyle(SpanStyle(color = if (have >= input.amount) Parchment else LifeRed)) {
             append("${itemTitle(input.item)} ${ui("crafts.ratio", have, input.amount)}")
         }
@@ -222,4 +223,4 @@ internal const val TILES = 3
  * The variants a choosing work offers now: those the profession's level reaches — and, for the condensing,
  * only the essences the bag can feed a cycle of, else a hundred and forty chips would bury the few that can run.
  */
-internal fun choices(s: ForgeState, profession: ProfessionView, work: JobView): List<JobView> = work.options.filter { option -> option.level <= profession.level && (work.kind != JobKind.CONDENSE || option.inputs.all { bagCount(s, it.item) >= it.amount }) }
+internal fun choices(game: GameUi, profession: ProfessionView, work: JobView): List<JobView> = work.options.filter { option -> option.level <= profession.level && (work.kind != JobKind.CONDENSE || option.inputs.all { bagCount(game, it.item) >= it.amount }) }

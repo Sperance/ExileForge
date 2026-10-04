@@ -29,6 +29,7 @@
   - [x] Аккаунт и настройки (`ServerScreen`, `SettingsScreen`, страницы тестера, отзывов и почты, `LoginForm`): срез `AccountUi` из `ServerViewModel` (3.80.33).
   - [x] Общий срез `GameUi` (команда в полёте, язык, мир, сессия, герой, связь, режим, настройки устройства) от синглтона `GameSlice`; модели экранов отдают его как `game`. Помощники «контент + герой» (`view`, `sellPrice`, `unmetFor`, `wearDelta`, `manaReserve`, `passiveShares`, сферы, валюты, атлас, древо) - один раз в `HeroLens`; `ForgeState.game` - мост для ещё не переведённых экранов (3.80.34).
   - [x] Город (площадь, квесты, торговец, аукцион, гильдия): `game: GameUi` из своих моделей, здание - параметр маршрута; общие `StackInfoSheet`, `StackIcon`, `WearPreview`, `ListingSheet` - на срезе (3.80.34).
+  - [x] Ремёсла, кузница и хаб «Развитие»: `game` из `CraftsViewModel`, `SmithyViewModel`, `ProgressViewModel`; места развития (зверинец, испытания, хроника) пока на общем состоянии - переезжают с героем и походом (3.80.35).
 
 ## Этап 3 - навигация
 - [x] Navigation 3 (`navigation3-runtime/ui` 1.2.0, вместо Navigation Compose: стек у приложения, без NavController): `presentation/nav/Route` - типизированные ключи Auth, Characters, Hero, Tree, Grimoire, Expedition, Crafts, Progress, Forge, Pets, Trials, Chronicle, City, Quests, Merchant, Auction, Guild, Account, Settings, Admin, Redemption, Atlas; `Navigator` - стек (вкладка сбрасывает до корня, подэкран ложится над корнем, аккаунт и настройки - поверх любого). Прогрев, поход и испытание - состояния игры поверх стека, не маршруты (их открывают и закрывают команды, не игрок). Разделы гильдии и квестов - состояние своих моделей, не стек.
@@ -50,7 +51,7 @@
   - [x] Forge (кузница): `SmithyViewModel` (сфера, эссенция, предзнаменование, раздел; сфера по умолчанию - из контента) над `HeroActions`; `PlayState` больше не хранит выбор кузницы.
   - [x] Grimoire: `GrimoireViewModel` над `HeroActions`; экран разбит на три файла.
   - [x] Session/Characters: `SessionViewModel` и `CharactersViewModel` над `ForgeRuntime` (он теперь Koin-single, один на процесс); сама логика входа и фаз уедет с навигацией.
-  - [ ] Progress: своя модель; выдачи тестера (`grant*`) - в модель отладочной панели.
+  - [x] Progress: своя модель `ProgressViewModel` (срез «игра» и свежий герой) (3.80.35); выдачи тестера - у `HeroViewModel` (3.80.30), черновик выдачи - на отладочной панели (3.80.32).
   - [x] Expedition/Atlas/Trials, ядро: `ExpeditionRepository` (карточка зоны, добыча похода, окно атласа, счётчики журнала) в `:core`; `ExpeditionActions` и `TrialActions` в `presentation/expedition`; `ExpeditionViewModel`/`TrialViewModel` из `features` удалены.
   - [x] Expedition/Atlas/Trials, экраны: `ExpeditionViewModel` над действиями похода, испытаний и героя; карта мира, карточка зоны, доска испытаний и листы снаряжения/добычи только на ней, оверлеи похода/испытания/атласа - ещё и на `ForgeViewModel` ради фильтра журнала, тостов и вибрации.
 - [x] Файлы UI не длиннее ~400 строк: SkillTreeScreen, CraftsScreen, GrimoireScreen, AuctionTabs, AtlasScreen, ExpeditionPlay, ZoneCard, CraftScreen, CombatDetail, ForgeApp (шапка в `ui/Banner.kt`) разбиты.
@@ -69,6 +70,6 @@
 - [x] Удалено неиспользуемое: `MailButton`, `classDescription`, `itemSources`, `rankIndexOf`.
 - [ ] Удалить этот файл.
 
-## Где остановились (3.80.34, сервер 1.74.6)
+## Где остановились (3.80.35, сервер 1.74.6)
 - Сделано: golden-тест забега, распил `ExpeditionRun`/`ExpeditionWorld` в `core/campaign/run/`, файлы сцены, мёртвый код, `ShellViewModel` вместо фасада на экранах, константы боя и мира в контент, `ForgeState` - чистая проекция репозиториев.
 - Следующий шаг: экраны перестают получать `ForgeState` целиком (92 файла UI читают `s.busy`, `s.index`, `s.hero`, `s.play`, `s.lang`, `s.account`) - по семьям экранов в порядке владельца, `sliced()` уходит с последним; затем `ForgeViewModel`/`ForgeRuntime`/`FeatureViewModel` удаляются (сессия, связь, прогрев, коды и герои - в свои синглы); потом серверный этап 3.

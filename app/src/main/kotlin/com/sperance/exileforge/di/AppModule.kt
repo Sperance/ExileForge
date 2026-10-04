@@ -46,6 +46,7 @@ import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.market.MarketActions
 import com.sperance.exileforge.presentation.market.MarketViewModel
 import com.sperance.exileforge.presentation.nav.Navigator
+import com.sperance.exileforge.presentation.progress.ProgressViewModel
 import com.sperance.exileforge.presentation.quests.QuestActions
 import com.sperance.exileforge.presentation.quests.QuestViewModel
 import com.sperance.exileforge.presentation.server.ServerViewModel
@@ -124,6 +125,7 @@ val appModule = module {
     viewModelOf(::MarketViewModel)
     viewModelOf(::GuildViewModel)
     viewModelOf(::CraftsViewModel)
+    viewModelOf(::ProgressViewModel)
     viewModelOf(::TreeViewModel)
     viewModelOf(::HeroViewModel)
     viewModelOf(::SmithyViewModel)

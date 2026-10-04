@@ -18,6 +18,7 @@ import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -55,7 +56,7 @@ import com.sperance.exileforge.core.model.crafts.running
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.crafts.CraftsViewModel
 import com.sperance.exileforge.presentation.hero.HeroViewModel
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.JobInput
 import com.sperance.exileforge.rules.content.JobKind
 import com.sperance.exileforge.rules.content.Slot
@@ -82,14 +83,15 @@ import kotlin.math.ceil
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CraftsScreen(s: ForgeState) {
+fun CraftsScreen() {
+    val game by koinViewModel<CraftsViewModel>().game.collectAsStateWithLifecycle()
     val heroModel: HeroViewModel = koinViewModel()
     val vm = koinViewModel<CraftsViewModel>()
     val held by vm.crafts.collectAsStateWithLifecycle()
     val activity by vm.activity.collectAsStateWithLifecycle()
     val openCode by vm.profession.collectAsStateWithLifecycle()
     // A screen already holding the crafts asks again in silence: the cycle's alarm is the actions' (2.56.1).
-    LaunchedEffect(s.play.heroId, s.account.sessionEpoch) {
+    LaunchedEffect(game.heroId, game.sessionEpoch) {
         heroModel.ensure()
         vm.load(silent = held.state != null)
     }
@@ -97,7 +99,7 @@ fun CraftsScreen(s: ForgeState) {
     val offset = held.offset
     val open = crafts?.professions?.firstOrNull { it.code == openCode }
     if (open != null) {
-        ProfessionWindow(s, vm, held, open, offset)
+        ProfessionWindow(game, vm, held, open, offset)
         return
     }
     PullToRefreshBox(isRefreshing = activity.busy || Reads.CRAFTS in activity.loading, onRefresh = vm::load, modifier = Modifier.fillMaxSize()) {
@@ -107,7 +109,7 @@ fun CraftsScreen(s: ForgeState) {
                 item { InfoCard(ui("common.loading"), ui("crafts.loading_hint")) }
                 return@LazyColumn
             }
-            item { WorkPlaque(s, vm, held, offset) }
+            item { WorkPlaque(game, vm, held, offset) }
             // Gathering over crafting, with the materials flowing from one into the other (the owner's pick of five mockups, 2.44.0).
             val (crafting, gathering) = crafts.professions.partition { it.crafting }
             listOf("crafts.section_gather" to gathering, "crafts.section_craft" to crafting).filter { it.second.isNotEmpty() }.forEachIndexed { index, (title, group) ->
@@ -115,7 +117,7 @@ fun CraftsScreen(s: ForgeState) {
                 item { SectionRule(ui(title)) }
                 items(group.chunked(TILES)) { row ->
                     Row(Modifier.height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        row.forEach { ProfessionTile(s, it, working = crafts.work?.profession == it.code, Modifier.weight(1f).fillMaxHeight()) { vm.openProfession(it.code) } }
+                        row.forEach { ProfessionTile(game, it, working = crafts.work?.profession == it.code, Modifier.weight(1f).fillMaxHeight()) { vm.openProfession(it.code) } }
                         repeat(TILES - row.size) { Spacer(Modifier.weight(1f)) }
                     }
                 }
@@ -133,7 +135,7 @@ fun CraftsScreen(s: ForgeState) {
  */
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-internal fun WorkPlaque(s: ForgeState, vm: CraftsViewModel, crafts: Crafts, offset: Long) {
+internal fun WorkPlaque(game: GameUi, vm: CraftsViewModel, crafts: Crafts, offset: Long) {
     val work = crafts.state?.work
     ForgePanel {
         if (work == null) {
@@ -145,14 +147,14 @@ internal fun WorkPlaque(s: ForgeState, vm: CraftsViewModel, crafts: Crafts, offs
                 Text(workTitle(work), color = GoldBright, style = MaterialTheme.typography.titleMedium)
                 Text(ui("crafts.work_line", professionTitle(work.profession), number(work.cycleMillis / 1000.0)), color = Rune, style = MaterialTheme.typography.labelMedium)
             }
-            ForgeOutlinedButton(enabled = !s.busy, onClick = vm::stop) { Text(ui("crafts.stop")) }
+            ForgeOutlinedButton(enabled = !game.busy, onClick = vm::stop) { Text(ui("crafts.stop")) }
         }
         CycleBar(work.settledAt, work.cycleMillis, offset, hourly = hourlyLine(crafts, work))
         levelLine(crafts, work, offset)?.let { Text(it, color = Vital, style = MaterialTheme.typography.labelMedium) }
         // The server's tally with the cycles this device threw ahead of its count: the rules' own sum.
         WorkTotals(work.startedAt, work.totals + crafts.pending, offset)
         crafts.last?.let { Text(gainsLine(it), color = Parchment, style = MaterialTheme.typography.bodySmall) }
-        crafts.state?.running?.let { stockLine(s, work, it) }?.let { MutedText(it, style = MaterialTheme.typography.labelSmall) }
+        crafts.state?.running?.let { stockLine(game, work, it) }?.let { MutedText(it, style = MaterialTheme.typography.labelSmall) }
     }
 }
 

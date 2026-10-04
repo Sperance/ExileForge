@@ -25,7 +25,7 @@ import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.presentation.forge.Smithy
 import com.sperance.exileforge.presentation.forge.SmithyViewModel
 import com.sperance.exileforge.presentation.state.ForgeSection
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Item
@@ -49,8 +49,8 @@ import org.koin.compose.viewmodel.koinViewModel
  * The bench lines for this item's slot, and the crafted modifier it already carries, if any.
  * Only the recipes the hero has found are offered (3.0.0); the rest of the bench stays hidden.
  */
-@Composable internal fun BenchLedger(s: ForgeState, index: ContentIndex, hero: HeroView, item: ItemView, chosen: String, onChoose: (String) -> Unit) {
-    val recipes = s.bench.filter { it.fits(item.slot) }.sortedWith(compareBy({ it.source }, { it.modifier }, { -it.tier }))
+@Composable internal fun BenchLedger(game: GameUi, index: ContentIndex, hero: HeroView, item: ItemView, chosen: String, onChoose: (String) -> Unit) {
+    val recipes = game.bench.filter { it.fits(item.slot) }.sortedWith(compareBy({ it.source }, { it.modifier }, { -it.tier }))
     val crafted = item.lines.firstOrNull { it.marks.crafted }
     val scouring = index.rules.bench.uncraftOrb
     Column {
@@ -122,7 +122,7 @@ internal fun heldOmens(index: ContentIndex, hero: HeroView): List<Omen> = index.
  * Omen of Choice's (server 1.65.0) — each line an Orb of Alchemy or an Exalted Orb may add. One tap keeps it and the rest are lost.
  */
 @Composable internal fun LineChoice(
-    s: ForgeState,
+    game: GameUi,
     instance: ItemInstance,
     options: List<Roll>,
     title: String,
@@ -133,7 +133,7 @@ internal fun heldOmens(index: ContentIndex, hero: HeroView): List<Omen> = index.
     if (options.isEmpty()) return
     ChoiceFrame(title, hint) {
         options.forEachIndexed { i, option ->
-            val text = s.view(instance.copy(rolls = listOf(option), unveil = emptyList(), offer = emptyList()))?.lines?.firstOrNull()?.text.orEmpty()
+            val text = game.view(instance.copy(rolls = listOf(option), unveil = emptyList(), offer = emptyList()))?.lines?.firstOrNull()?.text.orEmpty()
             ChoiceRow(text, "T${option.tier}") { if (enabled) onChoose(instance.id, i) }
         }
     }

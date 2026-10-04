@@ -8,6 +8,8 @@ import com.sperance.exileforge.core.world.WorldRepository
 import com.sperance.exileforge.presentation.hero.HeroActions
 import com.sperance.exileforge.presentation.hero.HeroSync
 import com.sperance.exileforge.presentation.state.ForgeSection
+import com.sperance.exileforge.presentation.state.GameSlice
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.Item
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -30,7 +32,10 @@ class SmithyViewModel(
     private val sync: HeroSync,
     world: WorldRepository,
     commands: CommandRunner,
+    slice: GameSlice,
 ) : ViewModel() {
+    /** Срез «игра» для экранов этой модели (3.80.33). */
+    val game: StateFlow<GameUi> = slice.ui
     private val mutable = MutableStateFlow(Smithy())
 
     /** Выбор как он есть; пока сфера не выбрана - самая дешёвая валюта контента, когда он прочитан. */

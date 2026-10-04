@@ -228,7 +228,7 @@ internal val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, err
         }
     }
     // «Пока вас не было» (3.69.0): the crafts catch-up of an absence, once, over whatever the game shows after the warm-up.
-    if (s.phase == AppPhase.GAME && s.play.warmup?.finished != false) CraftsAwayHost(s)
+    if (s.phase == AppPhase.GAME && s.play.warmup?.finished != false) CraftsAwayHost()
 }
 
 /**
@@ -257,8 +257,8 @@ internal val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, err
                 entry<Route.Tree> { SkillTreeScreen(s.sliced(*s.common)) }
                 entry<Route.Grimoire> { GrimoireScreen(s.sliced(*s.common)) }
                 entry<Route.Expedition> { ExpeditionScreen(s.sliced(*s.common, s.logFilter)) }
-                entry<Route.Crafts> { CraftsScreen(s.sliced(*s.common)) }
-                entry<Route.Progress> { ProgressScreen(s.sliced(*s.common)) }
+                entry<Route.Crafts> { CraftsScreen() }
+                entry<Route.Progress> { ProgressScreen() }
                 // The forge, the menagerie and the trials open from the hub of «Развитие», «back» leading to it.
                 entry<Route.Forge> { ProgressPlaceScreen(ProgressPlace.FORGE, s.sliced(*s.common)) }
                 entry<Route.Pets> { ProgressPlaceScreen(ProgressPlace.PETS, s.sliced(*s.common)) }

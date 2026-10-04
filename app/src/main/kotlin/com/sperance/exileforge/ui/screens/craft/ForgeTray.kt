@@ -27,7 +27,7 @@ import com.sperance.exileforge.core.display.itemDescription
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.forge.Smithy
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.Omen
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.roll.OrbApplier
@@ -50,7 +50,7 @@ private const val ONE_ROW = 6
  * [codes] are in their shelf order; [glyph] draws one; [note] adds a line under the chosen one's words.
  */
 @Composable internal fun ForgeTray(
-    s: ForgeState,
+    game: GameUi,
     title: String,
     codes: List<String>,
     chosen: String,
@@ -78,7 +78,7 @@ private const val ONE_ROW = 6
             verticalArrangement = Arrangement.spacedBy(GAP),
         ) {
             items(codes, key = { it }) { code ->
-                TrayCell(itemTitle(code), s.bagAmount(code) ?: 0L, code == chosen, accent, { onSelect(code) }) { glyph(code) }
+                TrayCell(itemTitle(code), game.bagAmount(code) ?: 0L, code == chosen, accent, { onSelect(code) }) { glyph(code) }
             }
         }
         if (chosen in codes) TrayTip(itemTitle(chosen), itemDescription(chosen), note)
@@ -120,12 +120,12 @@ private const val ONE_ROW = 6
 }
 
 /** The orbs of the tray: the bag's, Regret left out (it is spent on the tree), each one the item takes by the rules. */
-@Composable internal fun OrbTray(s: ForgeState, smithy: Smithy, accepted: (String) -> Boolean, needsOmen: (String) -> Boolean, onSelect: (String) -> Unit) {
-    val hero = s.hero ?: return
-    val orbs = s.orbs.filter { hero.count(it.code) > 0 && it.code != Orb.ORB_OF_REGRET.name && accepted(it.code) }.map { it.code }
+@Composable internal fun OrbTray(game: GameUi, smithy: Smithy, accepted: (String) -> Boolean, needsOmen: (String) -> Boolean, onSelect: (String) -> Unit) {
+    val hero = game.hero ?: return
+    val orbs = game.orbs.filter { hero.count(it.code) > 0 && it.code != Orb.ORB_OF_REGRET.name && accepted(it.code) }.map { it.code }
     val chosen = smithy.orb
     ForgeTray(
-        s,
+        game,
         ui("forge.tray_orbs"),
         orbs,
         chosen,
@@ -139,14 +139,14 @@ private const val ONE_ROW = 6
 }
 
 /** The essences of the tray (2.78.0): the bag's that the item takes, the special ones last and the higher tiers first. */
-@Composable internal fun EssenceTray(s: ForgeState, chosen: String, accepted: (String) -> Boolean, onSelect: (String) -> Unit) {
-    val hero = s.hero ?: return
-    val index = s.index ?: return
+@Composable internal fun EssenceTray(game: GameUi, chosen: String, accepted: (String) -> Boolean, onSelect: (String) -> Unit) {
+    val hero = game.hero ?: return
+    val index = game.index ?: return
     val essences = index.itemsByCategory[com.sperance.exileforge.rules.content.Item.ESSENCE].orEmpty()
         .filter { hero.count(it.code) > 0 && accepted(it.code) }
         .sortedWith(compareBy({ index.essence(it.code)?.special == true }, { -(index.essence(it.code)?.tier ?: 0) })).map { it.code }
     ForgeTray(
-        s,
+        game,
         ui("forge.tray_essences"),
         essences,
         chosen,
@@ -163,9 +163,9 @@ private const val ONE_ROW = 6
  * The omens the bag holds for the chosen orb (3.36.0): one may be laid on the next use, the one that goes on the [target] -
  * an item or, since server 1.65.0, a pet. Chosen again, it is taken off. Each is the orb's pair on the anvil (mockup B).
  */
-@Composable fun OmenLedger(s: ForgeState, orbCode: String, chosenOmen: String, target: OrbTarget, held: List<Omen>, onSelect: (String) -> Unit) {
-    val hero = s.hero ?: return
-    val index = s.index ?: return
+@Composable fun OmenLedger(game: GameUi, orbCode: String, chosenOmen: String, target: OrbTarget, held: List<Omen>, onSelect: (String) -> Unit) {
+    val hero = game.hero ?: return
+    val index = game.index ?: return
     val orb = Orb.of(orbCode) ?: return
     val applier = remember(index) { OrbApplier(index) }
     val omens = remember(applier, orb, target, held) { held.filter { it.fits(orb) && applier.accepts(orb, target, it) } }

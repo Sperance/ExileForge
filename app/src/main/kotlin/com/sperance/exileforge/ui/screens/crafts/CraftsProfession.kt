@@ -54,7 +54,7 @@ import com.sperance.exileforge.core.model.crafts.job
 import com.sperance.exileforge.core.model.crafts.running
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.crafts.CraftsViewModel
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.JobInput
@@ -75,7 +75,7 @@ import kotlin.math.ceil
 
 /** Окно профессии (3.80.14): плитка, уровень, инструмент и его бонусы. */
 /** A profession as a tile, three to a row: its tool in a medallion, name, level, how far to the next one, and what stands out. */
-@Composable internal fun ProfessionTile(s: ForgeState, profession: ProfessionView, working: Boolean, modifier: Modifier, onClick: () -> Unit) {
+@Composable internal fun ProfessionTile(game: GameUi, profession: ProfessionView, working: Boolean, modifier: Modifier, onClick: () -> Unit) {
     val shape = RoundedCornerShape(4.dp)
     val toolless = profession.equipped == null
     Column(
@@ -84,7 +84,7 @@ import kotlin.math.ceil
         verticalArrangement = Arrangement.spacedBy(5.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Medallion(if (toolless) LifeRed else Bronze) { ToolIcon(s, profession, 26) }
+        Medallion(if (toolless) LifeRed else Bronze) { ToolIcon(game, profession, 26) }
         Box(Modifier.heightIn(min = 32.dp), contentAlignment = Alignment.Center) {
             Text(
                 professionTitle(profession.code),
@@ -116,9 +116,9 @@ import kotlin.math.ceil
 internal fun share(profession: ProfessionView): Float = profession.next?.takeIf { it > 0 }?.let { (profession.experience / it).toFloat().coerceIn(0f, 1f) } ?: 1f
 
 /** The tool in the slot, drawn as the cards draw it — the server's outline tinted by rarity, the bundled emblem behind it — or the anvil for an empty slot. */
-@Composable internal fun ToolIcon(s: ForgeState, profession: ProfessionView, size: Int) {
+@Composable internal fun ToolIcon(game: GameUi, profession: ProfessionView, size: Int) {
     val modifier = Modifier.size(size.dp)
-    val tool = profession.equipped?.let { s.view(it) }
+    val tool = profession.equipped?.let { game.view(it) }
     if (tool == null) {
         Icon(ForgeGlyphs.Anvil, null, tint = Muted, modifier = modifier)
         return
@@ -132,7 +132,7 @@ internal fun share(profession: ProfessionView): Float = profession.next?.takeIf 
  * work under way here with what this session brought, and every work with the numbers the server
  * worked out for this hero — a locked one says the level it wants.
  */
-@Composable internal fun ProfessionWindow(s: ForgeState, vm: CraftsViewModel, crafts: Crafts, profession: ProfessionView, offset: Long) {
+@Composable internal fun ProfessionWindow(game: GameUi, vm: CraftsViewModel, crafts: Crafts, profession: ProfessionView, offset: Long) {
     BackHandler { vm.openProfession("") }
     var picking by remember { mutableStateOf(false) }
     var toolOpen by remember { mutableStateOf(false) }
@@ -143,7 +143,7 @@ internal fun share(profession: ProfessionView): Float = profession.next?.takeIf 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = { vm.openProfession("") }) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, ui("common.back"), tint = Gold) }
                 Text(professionTitle(profession.code), color = GoldBright, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
-                ToolButton(s, profession) { toolOpen = true }
+                ToolButton(game, profession) { toolOpen = true }
             }
         }
         item {
@@ -171,18 +171,18 @@ internal fun share(profession: ProfessionView): Float = profession.next?.takeIf 
         val locked = { job: JobView -> job.level > profession.level || !job.open }
         val next = profession.jobs.firstOrNull(locked)
         items(profession.jobs.filter { !locked(it) || it == next }, key = { it.code }) { job ->
-            JobRow(s, profession, job, locked = locked(job), current = work?.job == job.code) { if (!locked(job)) chosen = job }
+            JobRow(game, profession, job, locked = locked(job), current = work?.job == job.code) { if (!locked(job)) chosen = job }
         }
     }
-    chosen?.let { job -> JobSheet(s, vm, crafts, profession, job, current = work?.job == job.code) { chosen = null } }
+    chosen?.let { job -> JobSheet(game, vm, crafts, profession, job, current = work?.job == job.code) { chosen = null } }
     if (toolOpen) {
-        ToolSheet(s, profession, onDismiss = { toolOpen = false }) {
+        ToolSheet(game, profession, onDismiss = { toolOpen = false }) {
             toolOpen = false
             picking = true
         }
     }
     if (picking) {
-        ToolPicker(s, profession, onDismiss = { picking = false }) { id ->
+        ToolPicker(game, profession, onDismiss = { picking = false }) { id ->
             picking = false
             vm.equipTool(id)
         }
@@ -190,9 +190,9 @@ internal fun share(profession: ProfessionView): Float = profession.next?.takeIf 
 }
 
 /** The tool in the window's header: its icon in a frame of its rarity, or an empty «+» cell for none. */
-@Composable internal fun ToolButton(s: ForgeState, profession: ProfessionView, onClick: () -> Unit) {
+@Composable internal fun ToolButton(game: GameUi, profession: ProfessionView, onClick: () -> Unit) {
     val shape = RoundedCornerShape(8.dp)
-    val view = profession.equipped?.let { s.view(it) }
+    val view = profession.equipped?.let { game.view(it) }
     val frame = when {
         profession.equipped == null -> LifeRed
         view != null -> rarityColor(view.rarity.name)
@@ -206,7 +206,7 @@ internal fun share(profession: ProfessionView): Float = profession.next?.takeIf 
         if (profession.equipped == null) {
             Icon(Icons.Outlined.Add, ui("crafts.tool"), tint = LifeRed, modifier = Modifier.size(22.dp))
         } else {
-            ToolIcon(s, profession, 30)
+            ToolIcon(game, profession, 30)
         }
     }
 }
@@ -214,7 +214,7 @@ internal fun share(profession: ProfessionView): Float = profession.next?.takeIf 
 /** The tool behind the header's button: its full card, what it and the tree give, and the way to another. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun ToolSheet(s: ForgeState, profession: ProfessionView, onDismiss: () -> Unit, onChange: () -> Unit) {
+internal fun ToolSheet(game: GameUi, profession: ProfessionView, onDismiss: () -> Unit, onChange: () -> Unit) {
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(
             Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp),
@@ -222,17 +222,17 @@ internal fun ToolSheet(s: ForgeState, profession: ProfessionView, onDismiss: () 
         ) {
             Engraved(ui("crafts.tool"))
             val tool = profession.equipped
-            val view = tool?.let { s.view(it) }
+            val view = tool?.let { game.view(it) }
             when {
                 tool == null -> Text(ui("crafts.no_tool"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
 
-                view != null -> ItemCard(view, detailed = true, price = s.sellPrice(view.item))
+                view != null -> ItemCard(view, detailed = true, price = game.sellPrice(view.item))
 
                 // A tool whose template the content does not hold yet: its name, and nothing to open.
                 else -> Text(equipmentTitle(tool.template), color = Parchment, style = MaterialTheme.typography.bodyMedium)
             }
             BonusChips(profession)
-            ForgeButton(enabled = !s.busy, onClick = onChange, modifier = Modifier.fillMaxWidth()) { Text(ui("crafts.change_tool")) }
+            ForgeButton(enabled = !game.busy, onClick = onChange, modifier = Modifier.fillMaxWidth()) { Text(ui("crafts.change_tool")) }
         }
     }
 }

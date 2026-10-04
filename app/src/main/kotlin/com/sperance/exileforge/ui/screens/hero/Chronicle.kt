@@ -24,6 +24,7 @@ import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.Achievement
 import com.sperance.exileforge.rules.content.Counter
 import com.sperance.exileforge.rules.content.Stat
@@ -37,7 +38,7 @@ fun titleName(code: String): String = locOr("title.$code", code)
 private val Medals = listOf(Color(0xFFC08457), Color(0xFFC9D1D9), Color(0xFFFFD166))
 
 /** How many of the content's achievements the hero has complete, of how many; null until the hero and the content are read. */
-fun ForgeState.chronicleDone(): Pair<Int, Int>? {
+fun GameUi.chronicleDone(): Pair<Int, Int>? {
     val hero = hero ?: return null
     val achievements = index?.achievements?.achievements ?: return null
     return achievements.count { it.complete(hero.chronicle[it.counter] ?: 0L) } to achievements.size
@@ -65,7 +66,7 @@ fun ChronicleScreen(s: ForgeState, vm: HeroViewModel) {
             color = if (hero.info.title.isNotBlank()) GoldBright else Muted,
             style = MaterialTheme.typography.titleMedium,
         )
-        s.chronicleDone()?.let { (done, all) -> MutedText(ui("chronicle.done", done, all)) }
+        s.game.chronicleDone()?.let { (done, all) -> MutedText(ui("chronicle.done", done, all)) }
         Engraved(ui("chronicle.titles"))
         if (titles.isEmpty()) {
             MutedText(ui("chronicle.no_titles"))

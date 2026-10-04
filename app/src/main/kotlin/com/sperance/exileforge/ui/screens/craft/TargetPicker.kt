@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.ItemSearch
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.isWorn
 import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.view
@@ -66,8 +66,8 @@ internal enum class TargetFilter(val title: String, val glyph: ImageVector) {
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-internal fun TargetPicker(s: ForgeState, recent: List<String>, initial: TargetFilter, onDismiss: () -> Unit, onPick: (String) -> Unit) {
-    val stash = remember(s.hero?.items, s.index) { s.hero?.items.orEmpty().mapNotNull { s.view(it) } }
+internal fun TargetPicker(game: GameUi, recent: List<String>, initial: TargetFilter, onDismiss: () -> Unit, onPick: (String) -> Unit) {
+    val stash = remember(game.hero?.items, game.index) { game.hero?.items.orEmpty().mapNotNull { game.view(it) } }
     val shelves = remember(stash, recent) { TargetFilter.entries.filter { filter -> filter == TargetFilter.ALL || stash.any { filter.admits(it, recent) } } }
     var filter by remember { mutableStateOf(initial.takeIf { it in shelves } ?: TargetFilter.ALL) }
     var query by remember { mutableStateOf("") }
@@ -101,9 +101,9 @@ internal fun TargetPicker(s: ForgeState, recent: List<String>, initial: TargetFi
             items(shown, key = { it.id }) { piece ->
                 ItemRow(
                     piece,
-                    selected = piece.id == s.play.selectedEquipment,
+                    selected = piece.id == game.holding.selectedEquipment,
                     facts = if (piece.isWorn) listOf(ui("hero.equipped")) else emptyList(),
-                    price = s.sellPrice(piece.item),
+                    price = game.sellPrice(piece.item),
                 ) { onPick(piece.id) }
             }
         }

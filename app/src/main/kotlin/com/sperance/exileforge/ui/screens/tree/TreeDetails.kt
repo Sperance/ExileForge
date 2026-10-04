@@ -190,15 +190,14 @@ import kotlin.math.sin
     }
 
     if (allocated) {
-        ForgeOutlinedButton(enabled = enabled && node.type != SkillNodeType.START, onClick = { onRefund(node.code) }, modifier = Modifier.fillMaxWidth()) {
-            Text(ui("tree.refund"))
-        }
+        // A refund is held for a second (3.81.0): a tap on the wrong node no longer costs the point.
+        HoldButton(ui("tree.refund"), LifeRed, Modifier.fillMaxWidth(), enabled = enabled && node.type != SkillNodeType.START, rearm = true, millis = REFUND_HOLD_MS) { onRefund(node.code) }
         // The branch (3.54.0, server 1.52.0): this node and everything that would hang loose without it, an Orb of Regret each.
         val branch = remember(node.code, taken) { runCatching { TreeAllocation.branch(index.tree, node, taken) }.getOrNull().orEmpty() }
         if (branch.size > 1) {
             val owned = game.bagAmount(Orb.ORB_OF_REGRET.name) ?: 0L
-            ForgeOutlinedButton(enabled = enabled && owned >= branch.size, onClick = { onRefundBranch(node.code) }, modifier = Modifier.fillMaxWidth()) {
-                Text(ui("tree.refund_branch", branch.size))
+            HoldButton(ui("tree.refund_branch", branch.size), LifeRed, Modifier.fillMaxWidth(), enabled = enabled && owned >= branch.size, rearm = true, millis = REFUND_HOLD_MS) {
+                onRefundBranch(node.code)
             }
             MutedText(ui("tree.refund_branch_note", branch.size, owned))
         }
@@ -373,3 +372,6 @@ internal fun contributionText(total: StatContribution): String {
         tree.totals.forEach { total -> PropertyRow(statTitle(total.stat, game.lang), contributionText(total), stat = total.stat) }
     }
 }
+
+/** How long a refund of the tree is held before it goes through. */
+private const val REFUND_HOLD_MS = 1_000

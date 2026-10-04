@@ -158,6 +158,8 @@ fun ConfirmSheet(
  * In a sheet it fires once, because the sheet goes with it. [rearm] is for a button that stays —
  * the forge's, where the same orb is spent again and again — and empties the band after each hold.
  *
+ * [millis] is how long the hold lasts (3.81.0: the tree's refunds ask a full second).
+ *
  * An [icon] and a [figure] (2.73.0) make it a ribbon: a rounded gilt frame, the icon on the left
  * and the figure — a price — in a coin chip on the right.
  */
@@ -169,6 +171,7 @@ fun ConfirmSheet(
     rearm: Boolean = false,
     icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
     figure: String? = null,
+    millis: Int = HOLD_TO_CONFIRM_MS,
     onHeld: () -> Unit,
 ) {
     val progress = remember { Animatable(0f) }
@@ -213,7 +216,7 @@ fun ConfirmSheet(
                 detectTapGestures(onPress = {
                     if (!live) return@detectTapGestures
                     val filling = scope.launch {
-                        progress.animateTo(1f, tween(HOLD_TO_CONFIRM_MS, easing = LinearEasing))
+                        progress.animateTo(1f, tween(millis, easing = LinearEasing))
                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                         fire()
                     }

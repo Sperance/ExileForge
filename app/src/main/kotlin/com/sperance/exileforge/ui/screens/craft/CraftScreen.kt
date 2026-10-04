@@ -110,11 +110,20 @@ internal val ESSENTIAL = setOf(Rarity.COMMON, Rarity.RARE)
     val accepted: (String) -> Boolean = { it !in refused }
     val sections = listOfNotNull(ForgeSection.ORBS, ForgeSection.BENCH.takeIf { !isMap && benchable }, ForgeSection.ESSENCES.takeIf { essential })
     val section = smithy.section.takeIf { it in sections } ?: ForgeSection.ORBS
+    val petMode = smithy.petMode && hero?.pets?.pets?.isNotEmpty() == true
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             ScreenHeader(ui("craft.title"), ui("craft.subtitle"), ForgeGlyphs.Anvil)
             if (hero == null || index == null) {
                 InfoCard(ui("tree.no_hero"), ui("craft.hero_first"))
+                return@Column
+            }
+            // The forge works a pet too (3.81.0): the pets' orbs are spent here alone.
+            if (hero.pets.pets.isNotEmpty()) {
+                PillTabs(listOf(ui("forge.target_item"), ui("forge.target_pet")), if (petMode) 1 else 0, { vm.petMode(it == 1) }, segmented = true)
+            }
+            if (petMode) {
+                PetForge(game, smithy, vm)
                 return@Column
             }
             if (sections.size > 1) PillTabs(sections.map { ui(it.title) }, sections.indexOf(section), { vm.section(sections[it]) }, segmented = true)
@@ -144,7 +153,7 @@ internal val ESSENTIAL = setOf(Rarity.COMMON, Rarity.RARE)
                 ForgeSection.ESSENCES -> EssenceTray(game, smithy.essence, accepted, vm::selectEssence)
             }
         }
-        if (hero != null && instance != null) {
+        if (hero != null && instance != null && !petMode) {
             when (section) {
                 ForgeSection.ORBS -> OrbBar(game, smithy, instance, enabled, accepted, { it in omenOnly }, vm::applyOrb)
                 ForgeSection.BENCH -> BenchBar(game, vm, instance, benchLine, enabled)

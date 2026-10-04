@@ -37,7 +37,7 @@ import kotlinx.coroutines.delay
  * level settled the moment it was laid — and is taken out as a pet. Open places come from the hero's sheet; the ones a collar
  * could still open are drawn locked up to the ceiling.
  */
-@Composable internal fun IncubatorPanel(game: GameUi, vm: HeroViewModel) {
+@Composable internal fun IncubatorPanel(game: GameUi, vm: HeroViewModel, titled: Boolean = true) {
     val hero = game.hero ?: return
     val index = game.index ?: return
     val pets = hero.pets
@@ -46,7 +46,7 @@ import kotlinx.coroutines.delay
     val now = rememberServerNow(incubator)
     val full = pets.pets.size >= pets.cap
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(ui("incubator.title", incubator.entries.count { it.busy }, incubator.slots), color = Gold, style = MaterialTheme.typography.labelLarge)
+        if (titled) Text(ui("incubator.title", incubator.entries.count { it.busy }, incubator.slots), color = Gold, style = MaterialTheme.typography.labelLarge)
         val shown = maxOf(incubator.max, (incubator.entries.maxOfOrNull { it.slot } ?: -1) + 1)
         (0 until shown).forEach { place ->
             val slot = incubator.slot(place)

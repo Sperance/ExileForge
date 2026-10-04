@@ -24,6 +24,10 @@ data class Smithy(
     val essence: String = "",
     val omen: String = "",
     val section: ForgeSection = ForgeSection.ORBS,
+    /** Питомец под кузницей (3.81.0): сферы питомцев тратятся только здесь; пустая строка - кузница над предметом. */
+    val pet: String = "",
+    /** Кузница над питомцем, а не над предметом (3.81.0). */
+    val petMode: Boolean = false,
 )
 
 /** Кузница (3.80.18): выбор инструмента - состояние экрана, команды - общие действия героя; предмет под кузницей - в репозитории героя. */
@@ -50,8 +54,15 @@ class SmithyViewModel(
     /** Кузница над одним предметом на разделе, за которым пришёл игрок; `null` оставляет её предмет. */
     fun open(itemId: String?, section: ForgeSection) {
         itemId?.let(hero::selectEquipment)
-        section(section)
+        mutable.update { it.copy(section = section, petMode = false) }
     }
+
+    /** Кузница над питомцем (3.81.0): из Зверинца кнопкой «В кузницу». */
+    fun openPet(petId: String) = mutable.update { it.copy(pet = petId, petMode = true) }
+    fun petMode(on: Boolean) = mutable.update { it.copy(petMode = on) }
+    fun selectPet(petId: String) = mutable.update { it.copy(pet = petId) }
+    fun petOrb(petId: String, orb: String, omen: String? = null) = hero.petOrb(petId, orb, omen)
+    fun choosePetLine(petId: String, choice: Int) = hero.choosePetLine(petId, choice)
 
     fun section(section: ForgeSection) = mutable.update { it.copy(section = section) }
 

@@ -1,43 +1,40 @@
 package com.sperance.exileforge.ui.screens.hero
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.sperance.exileforge.core.display.displayName
-import com.sperance.exileforge.core.display.itemDescription
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.lineText
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.presentation.ShellViewModel
+import com.sperance.exileforge.presentation.forge.SmithyViewModel
 import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.presentation.state.TAB_CRAFT
+import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
-import com.sperance.exileforge.rules.content.Item
-import com.sperance.exileforge.rules.content.Omen
-import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.content.Pet
 import com.sperance.exileforge.rules.content.PetKind
-import com.sperance.exileforge.rules.content.PetLine
+import com.sperance.exileforge.rules.content.PetSpecies
+import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.hybridOf
 import com.sperance.exileforge.rules.roll.Menagerie
-import com.sperance.exileforge.rules.roll.OrbApplier
-import com.sperance.exileforge.rules.roll.OrbTarget
 import com.sperance.exileforge.ui.components.*
-import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
-import com.sperance.exileforge.ui.icons.OrbGlyph
 import com.sperance.exileforge.ui.icons.SpriteIcon
-import com.sperance.exileforge.ui.screens.craft.ChoiceFrame
-import com.sperance.exileforge.ui.screens.craft.ChoiceRow
-import com.sperance.exileforge.ui.screens.craft.heldOmens
 import com.sperance.exileforge.ui.theme.*
+import org.koin.compose.viewmodel.koinViewModel
 
 /** A species as the dictionary names it. */
 fun petName(species: String): String = locOr("pet.$species", species)
@@ -54,94 +51,170 @@ fun petName(species: String): String = locOr("pet.$species", species)
     }
 }
 
+/** Who is shown in the menagerie (3.81.0, mockup A): rarities (none - all), the role and whether at work. */
+private enum class PetRoleFilter(val key: String) { ALL("pets.filter_all"), COMBAT("pets.filter_combat"), HELPER("pets.filter_helper") }
+private enum class PetStatusFilter(val key: String) { ALL("pets.filter_all"), WORKING("pets.filter_working"), RESTING("pets.filter_resting") }
+
 /**
- * The menagerie (3.5.0, server 1.5.0): eggs from the bag ripen in the incubator (server 1.67.0), and every pet shows what it is, its
- * level and its lines; one combat pet and one helper go to work, an orb changes one, a spare one is let go for gold.
- * Since server 1.65.0 a pet takes the crafting orbs of items — rarity, lines, quality, a fractured line, corruption — and the
- * Omen of Choice's lines wait on it for the player's pick, as an item's do in the forge.
+ * The menagerie (3.5.0, server 1.5.0; mockup A «Компактный список», 3.81.0): the incubator and the breeding folded into a row each
+ * over the list, the filters by rarity, role and status, and a compact row per pet — its icon, name in its rarity's colour, what it
+ * is, its level and every line it rolled, always in sight. A tap unfolds the row's actions: to work or back, to the forge (the pets'
+ * orbs are spent there since 3.81.0), or let go for gold.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MenagerieSection(game: GameUi, vm: HeroViewModel) {
     val hero = game.hero ?: return
-    if (game.index == null) return
+    val index = game.index ?: return
     val pets = hero.pets
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        ForgePanel {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Engraved(ui("pets.title", pets.pets.size), modifier = Modifier.weight(1f))
-            }
-            MutedText(ui("pets.hint"))
-            IncubatorPanel(game, vm)
-            BreedingPanel(game, vm)
+    val menagerie = remember(index) { Menagerie(index) }
+    var incubator by rememberSaveable { mutableStateOf(false) }
+    var breeding by rememberSaveable { mutableStateOf(false) }
+    var rarities by remember { mutableStateOf(emptySet<Rarity>()) }
+    var role by rememberSaveable { mutableStateOf(PetRoleFilter.ALL) }
+    var status by rememberSaveable { mutableStateOf(PetStatusFilter.ALL) }
+    var open by rememberSaveable { mutableStateOf<String?>(null) }
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Engraved(ui("pets.title", pets.pets.size))
+        MutedText(ui("pets.hint"))
+        val busy = pets.incubator.entries.count { it.busy }
+        Fold(ui("incubator.title", busy, pets.incubator.slots), incubator, { incubator = !incubator }) { IncubatorPanel(game, vm, titled = false) }
+        Fold(ui("pets.breed_title"), breeding, { breeding = !breeding }) { BreedingPanel(game, vm) }
+        if (pets.pets.isEmpty()) {
+            InfoCard(ui("pets.empty"), ui("pets.empty_hint"))
+            return@Column
         }
-        if (pets.pets.isEmpty()) InfoCard(ui("pets.empty"), ui("pets.empty_hint"))
-        pets.pets.sortedWith(compareBy({ !pets.isActive(it.id) }, { -it.rarity.ordinal }, { -it.level })).forEach { pet -> PetCard(game, vm, pet) }
+        val present = pets.pets.map { it.rarity }.distinct().sortedBy { it.ordinal }
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            present.forEach { r ->
+                FilterChip(
+                    selected = r in rarities,
+                    onClick = { rarities = if (r in rarities) rarities - r else rarities + r },
+                    label = { Text(ui("enum.rarity.${r.name}"), color = rarityColor(r.name)) },
+                )
+            }
+        }
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            PetRoleFilter.entries.forEach { f -> FilterChip(selected = role == f, onClick = { role = f }, label = { Text(ui(f.key)) }) }
+            Spacer(Modifier.width(6.dp))
+            PetStatusFilter.entries.drop(1).forEach { f ->
+                FilterChip(selected = status == f, onClick = { status = if (status == f) PetStatusFilter.ALL else f }, label = { Text(ui(f.key)) })
+            }
+        }
+        val shown = pets.pets.filter { pet ->
+            val kind = menagerie.species(pet.species)?.kind
+            val active = pets.isActive(pet.id)
+            (rarities.isEmpty() || pet.rarity in rarities) &&
+                when (role) {
+                    PetRoleFilter.ALL -> true
+                    PetRoleFilter.COMBAT -> kind == PetKind.COMBAT
+                    PetRoleFilter.HELPER -> kind == PetKind.HELPER
+                } &&
+                when (status) {
+                    PetStatusFilter.ALL -> true
+                    PetStatusFilter.WORKING -> active
+                    PetStatusFilter.RESTING -> !active
+                }
+        }.sortedWith(compareBy({ !pets.isActive(it.id) }, { -it.rarity.ordinal }, { -it.level }))
+        if (shown.isEmpty()) MutedText(ui("pets.filter_none"))
+        shown.forEach { pet -> PetRow(game, vm, pet, open == pet.id) { open = if (open == pet.id) null else pet.id } }
+    }
+}
+
+/** A folded part of the menagerie: one row with its title and a chevron; a tap opens what is under it. */
+@Composable private fun Fold(title: String, open: Boolean, onToggle: () -> Unit, content: @Composable () -> Unit) {
+    val shape = RoundedCornerShape(8.dp)
+    Column(Modifier.fillMaxWidth().background(Panel, shape).border(1.dp, Bronze.copy(alpha = .35f), shape)) {
+        Row(Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(title, color = Gold, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+            Text(if (open) "▾" else "▸", color = Gold)
+        }
+        if (open) Column(Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { content() }
+    }
+}
+
+/** What a pet is, in one line: its kind, then a fighter's role and elements or a helper's craft. */
+fun petSubtitle(kind: PetSpecies, pet: Pet): String {
+    val what = when (kind.kind) {
+        PetKind.COMBAT -> listOfNotNull(
+            (pet.role ?: kind.role)?.let { locOr("pet.role.$it", it.name) },
+            listOfNotNull(kind.element, kind.element2).joinToString(" + ") { locOr("pet.element.$it", it) }.ifBlank { null },
+        )
+
+        PetKind.HELPER -> listOfNotNull(kind.focus?.let { locOr("pet.focus.$it", it.name) })
+    }
+    return (listOf(locOr("pet.kind.${kind.kind}", kind.kind.name)) + what).joinToString(" · ")
+}
+
+/** Every line a pet rolled, one by one so a fractured one (server 1.65.0) is told apart: it stays through every orb. */
+@Composable fun PetLines(index: ContentIndex, menagerie: Menagerie, pet: Pet) {
+    if (pet.lines.isEmpty()) MutedText(ui("pets.no_lines"), style = MaterialTheme.typography.bodySmall)
+    pet.lines.forEach { line ->
+        menagerie.lines(pet.copy(lines = listOf(line))).firstOrNull()?.let {
+            val text = lineText(index, it)
+            Text(if (line.fractured) "$text · ${ui("pets.fractured")}" else text, color = if (line.fractured) Gold else ModBlue, style = MaterialTheme.typography.bodySmall)
+        }
     }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun PetCard(game: GameUi, vm: HeroViewModel, pet: Pet) {
+private fun PetRow(game: GameUi, vm: HeroViewModel, pet: Pet, open: Boolean, onToggle: () -> Unit) {
     val hero = game.hero ?: return
     val index = game.index ?: return
     val menagerie = remember(index) { Menagerie(index) }
     val kind = menagerie.species(pet.species) ?: return
     val active = hero.pets.isActive(pet.id)
-    var orbs by remember(pet.id) { mutableStateOf(false) }
+    val smithy = koinViewModel<SmithyViewModel>()
+    val shell = koinViewModel<ShellViewModel>()
     var releasing by remember(pet.id) { mutableStateOf(false) }
     var hiring by remember(pet.id) { mutableStateOf(false) }
-    // A helper does not fight (3.70.0): what it gives is its lines below; the hiring dialog repeats them before it goes to work.
-    val helps = if (kind.kind == PetKind.HELPER) ui("pets.helper_hint", menagerie.lines(pet).joinToString(", ") { lineText(index, it) }.ifBlank { "—" }) else null
-    ForgePanel {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+    // A helper does not fight (3.70.0): the hiring dialog repeats its lines before it goes to work.
+    val helps = if (kind.kind == PetKind.HELPER) menagerie.lines(pet).joinToString(", ") { lineText(index, it) }.ifBlank { "—" } else null
+    val shape = RoundedCornerShape(8.dp)
+    val tint = rarityColor(pet.rarity.name)
+    Column(
+        Modifier.fillMaxWidth().background(Panel, shape).border(1.dp, if (open) GoldBright else tint.copy(alpha = .45f), shape)
+            .clickable(onClick = onToggle).padding(10.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            PetIcon(game, pet.species, 36)
             Column(Modifier.weight(1f)) {
-                Text(petName(pet.species), color = rarityColor(pet.rarity.name), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                val what = when (kind.kind) {
-                    PetKind.COMBAT -> listOfNotNull(
-                        (pet.role ?: kind.role)?.let { locOr("pet.role.$it", it.name) },
-                        listOfNotNull(kind.element, kind.element2).joinToString(" + ") { locOr("pet.element.$it", it) }.ifBlank { null },
-                    )
-
-                    PetKind.HELPER -> listOfNotNull(kind.focus?.let { locOr("pet.focus.$it", it.name) })
-                }
-                MutedText((listOf(locOr("pet.kind.${kind.kind}", kind.kind.name)) + what).joinToString(" · "))
+                Text(petName(pet.species), color = tint, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                MutedText(petSubtitle(kind, pet), style = MaterialTheme.typography.labelSmall)
             }
-            Text(ui("pets.level", pet.level), color = GoldBright, style = MaterialTheme.typography.labelMedium)
-        }
-        if (active) Text(ui("pets.at_work"), color = Vital, style = MaterialTheme.typography.labelSmall)
-        if (kind.element2 != null) Text(ui("pets.hybrid"), color = GoldBright, style = MaterialTheme.typography.labelSmall)
-        if (pet.tiredUntil > System.currentTimeMillis()) Text(ui("pets.tired"), color = Muted, style = MaterialTheme.typography.labelSmall)
-        if (pet.corrupted) Text(ui("pets.corrupted"), color = LifeRed, style = MaterialTheme.typography.labelSmall)
-        if (pet.quality > 0) Text(ui("pets.quality", pet.quality), color = GoldBright, style = MaterialTheme.typography.labelSmall)
-        // Line by line, so a fractured one (server 1.65.0) is told apart: it stays through every orb.
-        pet.lines.forEach { line ->
-            menagerie.lines(pet.copy(lines = listOf(line))).firstOrNull()?.let {
-                val text = lineText(index, it)
-                Text(if (line.fractured) "$text · ${ui("pets.fractured")}" else text, color = if (line.fractured) Gold else ModBlue, style = MaterialTheme.typography.bodySmall)
+            Column(horizontalAlignment = Alignment.End) {
+                Text(ui("pets.level", pet.level), color = GoldBright, style = MaterialTheme.typography.labelMedium)
+                if (active) Text(ui("pets.at_work"), color = Vital, style = MaterialTheme.typography.labelSmall)
             }
         }
-        if (pet.offer.isNotEmpty()) {
-            ChoiceFrame("forge.choice_title", "forge.choice_hint") {
-                pet.offer.forEachIndexed { i, option ->
-                    val text = menagerie.lines(pet.copy(lines = listOf(option), offer = emptyList())).firstOrNull()?.let { lineText(index, it) } ?: displayName(option.code.value)
-                    ChoiceRow(text, "T${option.tier}") { if (!game.busy) vm.choosePetLine(pet.id, i) }
-                }
-            }
-        }
+        val marks = listOfNotNull(
+            ui("pets.hybrid").takeIf { kind.element2 != null }?.let { it to GoldBright },
+            ui("pets.tired").takeIf { pet.tiredUntil > System.currentTimeMillis() }?.let { it to Muted },
+            ui("pets.corrupted").takeIf { pet.corrupted }?.let { it to LifeRed },
+            ui("pets.quality", pet.quality).takeIf { pet.quality > 0 }?.let { it to GoldBright },
+            ui("pets.offer_waiting").takeIf { pet.offer.isNotEmpty() }?.let { it to Rune },
+        )
+        marks.forEach { (text, color) -> Text(text, color = color, style = MaterialTheme.typography.labelSmall) }
+        PetLines(index, menagerie, pet)
         if (kind.kind == PetKind.COMBAT) {
             val sheet = menagerie.sheet(pet)
-            MutedText(ui("pets.sheet", number(sheet[CoreStat.HEALTH.code] ?: 0.0), number(listOfNotNull(kind.element, kind.element2).sumOf { sheet["STOCK_ATTACK_$it"] ?: 0.0 })))
+            MutedText(ui("pets.sheet", number(sheet[CoreStat.HEALTH.code] ?: 0.0), number(listOfNotNull(kind.element, kind.element2).sumOf { sheet["STOCK_ATTACK_$it"] ?: 0.0 })), style = MaterialTheme.typography.labelSmall)
         }
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            ForgeButton(onClick = { if (helps != null && !active) hiring = true else vm.activatePet(pet.id) }, enabled = !game.busy) {
-                Text(ui(if (active) "pets.rest" else "pets.work"))
+        if (open) {
+            FlowRow(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                ForgeButton(onClick = { if (helps != null && !active) hiring = true else vm.activatePet(pet.id) }, enabled = !game.busy) {
+                    Text(ui(if (active) "pets.rest" else "pets.work"))
+                }
+                ForgeOutlinedButton(onClick = {
+                    smithy.openPet(pet.id)
+                    shell.tab(TAB_CRAFT)
+                }) { Text(ui("pets.to_forge")) }
+                ForgeTextButton(onClick = { releasing = true }, enabled = !game.busy) { Text(ui("pets.release"), color = LifeRed) }
             }
-            ForgeOutlinedButton(onClick = { orbs = true }, enabled = !game.busy) { Text(ui("pets.orbs")) }
-            ForgeTextButton(onClick = { releasing = true }, enabled = !game.busy) { Text(ui("pets.release")) }
         }
     }
-    if (orbs) PetOrbs(game, vm, pet) { orbs = false }
     if (hiring) {
         ConfirmSheet(
             title = ui("pets.work_q"),
@@ -170,68 +243,6 @@ private fun PetCard(game: GameUi, vm: HeroViewModel, pet: Pet) {
 }
 
 /**
- * The orbs at hand that go on this pet, each with what it does; one tap spends one on it. The crafting orbs of items
- * (server 1.65.0) are tried over the pet by the rules, as the forge tries them over an item, and an omen laid on the
- * next one — the Omen of Choice, of Corruption — is picked above them; the pets' own growth orb follows.
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun PetOrbs(game: GameUi, vm: HeroViewModel, pet: Pet, onDismiss: () -> Unit) {
-    val hero = game.hero ?: return
-    val index = game.index ?: return
-    val applier = remember(index) { OrbApplier(index) }
-    val beast = OrbTarget.Beast(pet)
-    val held = remember(index, hero.bag) { heldOmens(index, hero) }
-    // Every crafting orb in the bag, each with the omens it goes on this pet with; null - the orb alone.
-    val fits: List<Pair<Item, List<Omen?>>> = remember(applier, pet, held, hero.bag) {
-        game.orbs.mapNotNull { item ->
-            val orb = Orb.of(item.code.value)?.takeIf { hero.count(item.code.value) > 0 } ?: return@mapNotNull null
-            (listOf<Omen?>(null) + held.filter { it.fits(orb) }).filter { applier.accepts(orb, beast, it) }.takeIf { it.isNotEmpty() }?.let { item to it }
-        }
-    }
-    val omens = held.filter { omen -> fits.any { (_, with) -> omen in with } }
-    var picked by remember(pet.id) { mutableStateOf<Omen?>(null) }
-    // An omen spent to the last one, or one the pet no longer takes, falls away by itself.
-    val omen = picked?.takeIf { it in omens }
-    val growth = index.pets.orbs.keys.toList()
-    ForgeSheet(onDismissRequest = onDismiss) {
-        Column(
-            Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Engraved(ui("pets.orbs_of", petName(pet.species)))
-            if (omens.isNotEmpty()) {
-                Text(ui("forge.omen"), color = Rune, style = MaterialTheme.typography.titleSmall)
-                PillTabs(listOf(ui("forge.omen_none")) + omens.map { itemTitle(it.code) }, omen?.let { omens.indexOf(it) + 1 } ?: 0, { picked = omens.getOrNull(it - 1) })
-            }
-            val shown = fits.filter { (_, with) -> omen in with }
-            if (shown.isEmpty() && growth.none { hero.count(it) > 0 }) MutedText(ui("pets.no_orbs"))
-            shown.forEach { (item, _) ->
-                PetOrbRow(item.code.value, hero.count(item.code.value), Orb.of(item.code.value), enabled = !game.busy) { vm.petOrb(pet.id, item.code.value, omen?.code) }
-            }
-            growth.forEach { code -> PetOrbRow(code, hero.count(code), null, enabled = !game.busy && hero.count(code) > 0) { vm.petOrb(pet.id, code) } }
-        }
-    }
-}
-
-/** One orb of the pet's sheet: its glass, its name over what it does, and the button that spends one. */
-@Composable private fun PetOrbRow(code: String, held: Long, orb: Orb?, enabled: Boolean, onSpend: () -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        if (orb != null) OrbGlyph(orb, Modifier.size(28.dp))
-        Column(Modifier.weight(1f)) {
-            Text(itemTitle(code), color = Parchment, style = MaterialTheme.typography.bodyMedium)
-            MutedText(itemDescription(code))
-        }
-        ForgeOutlinedButton(onClick = onSpend, enabled = enabled) { Text("× ${number(held.toDouble())}") }
-    }
-}
-
-/** A pet line has no tiers of its own; its rolls read as five steps, T1 the best, as an item's tiers do. */
-private val PetLine.tier: Int get() = PET_TIERS - (shares.average().takeIf { it.isFinite() } ?: 0.0).times(PET_TIERS).toInt().coerceIn(0, PET_TIERS - 1)
-
-private const val PET_TIERS = 5
-
-/**
  * Breeding (3.79.0, server 1.74.0): two combat pets of the rules' level, rested, and an Orb of Breeding; a hybrid of their two
  * elements is born with the rules' chance, an egg of a parent's kind otherwise. Both parents rest for the rules' hours.
  */
@@ -245,7 +256,6 @@ private const val PET_TIERS = 5
     var first by remember { mutableStateOf<String?>(null) }
     var second by remember { mutableStateOf<String?>(null) }
     val orbs = game.bagAmount(rule.orb) ?: 0L
-    Engraved(ui("pets.breed_title"))
     MutedText(ui("pets.breed_hint", rule.minLevel, (rule.hybridChance * 100).toInt(), rule.restHours))
     if (fit.size < 2) {
         MutedText(ui("pets.breed_none", rule.minLevel))

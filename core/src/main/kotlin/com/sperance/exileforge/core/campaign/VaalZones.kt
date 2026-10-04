@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.campaign
 
+import com.sperance.exileforge.rules.content.MonsterCode
 import com.sperance.exileforge.rules.content.Zone
 import kotlin.math.roundToInt
 
@@ -16,7 +17,7 @@ object VaalZones {
 
     /** The zone's map, cut from [location]: or null for a location with no guardian to stand at its end. */
     fun zone(location: Zone): Zone? {
-        if (location.corrupted.isBlank()) return null
-        return location.copy(biome = BIOME, size = (location.size * SHARE).roundToInt().coerceAtLeast(MIN_SIZE), boss = location.corrupted, corrupted = "")
+        if (location.corrupted.value.isBlank()) return null
+        return location.copy(biome = BIOME, size = (location.size * SHARE).roundToInt().coerceAtLeast(MIN_SIZE), boss = location.corrupted, corrupted = MonsterCode(""))
     }
 }

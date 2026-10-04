@@ -113,7 +113,7 @@ fun ModifierInfoSheet(line: ItemLine, onDismiss: () -> Unit) {
 }
 
 /** The line's name: the characteristics it moves, or its code when the content no longer knows it. */
-private fun ItemLine.title(): String = stats.joinToString(" / ") { statTitle(it) }.ifBlank { displayName(code) }
+private fun ItemLine.title(): String = stats.joinToString(" / ") { statTitle(it) }.ifBlank { displayName(code.value) }
 
 /** Where the line sits, then what set it apart: «Префикс · Расколот». */
 private fun ItemLine.kindText(): String = listOfNotNull(

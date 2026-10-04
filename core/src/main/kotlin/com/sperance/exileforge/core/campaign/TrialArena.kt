@@ -19,6 +19,7 @@ import com.sperance.exileforge.core.campaign.run.RunHud
 import com.sperance.exileforge.core.campaign.run.RunPhase
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
+import com.sperance.exileforge.rules.content.MapCode
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.Pet
 import com.sperance.exileforge.rules.content.RushPlan
@@ -352,7 +353,7 @@ class TrialArena(
         val fight = battle
         val life = (fight?.heroLife ?: pools.life).roundToInt()
         val runHud = RunHud(
-            RunPhase.FIGHT, "", life, hero.maxLife.roundToInt(), (fight?.heroFighter?.shield ?: hero.maxShield).roundToInt(), hero.maxShield.roundToInt(),
+            RunPhase.FIGHT, MapCode.NONE, life, hero.maxLife.roundToInt(), (fight?.heroFighter?.shield ?: hero.maxShield).roundToInt(), hero.maxShield.roundToInt(),
             alive = 0, total = 0, heroMana = (fight?.heroMana ?: pools.mana).roundToInt(), heroMaxMana = manaCap().roundToInt(),
             heroReserved = (hero.maxMana - manaCap()).roundToInt(), kills = kills,
         )

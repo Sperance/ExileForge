@@ -72,23 +72,23 @@ import org.koin.compose.viewmodel.koinViewModel
 ) {
     val code = smithy.orb
     val owned = game.bagAmount(code) ?: 0L
-    val orb = game.orbs.firstOrNull { it.code == code && owned > 0 && accepted(code) }
+    val orb = game.orbs.firstOrNull { it.code.value == code && owned > 0 && accepted(code) }
     ForgeBar {
         if (orb == null) {
             Text(ui("forge.pick_orb"), color = Muted)
             return@ForgeBar
         }
         // An orb the item takes only under an omen (a catalyst's Orb of Quality) waits for one: alone the server would refuse it.
-        val waiting = needsOmen(orb.code) && smithy.omen.isBlank()
+        val waiting = needsOmen(orb.code.value) && smithy.omen.isBlank()
         BarTitle(
             ForgeGlyphs.Orb,
             Gold,
-            itemTitle(orb.code) + smithy.omen.takeIf { it.isNotBlank() }?.let { " + ${itemTitle(it)}" }.orEmpty(),
+            itemTitle(orb.code.value) + smithy.omen.takeIf { it.isNotBlank() }?.let { " + ${itemTitle(it)}" }.orEmpty(),
             if (waiting) ui("forge.needs_omen") to true else stock(owned, 1),
-            orb = Orb.of(orb.code),
+            orb = Orb.of(orb.code.value),
         )
         HoldButton(ui("confirm.hold", ui("forge.apply_orb")), Gold, enabled = enabled && !instance.corrupted && !waiting, rearm = true) {
-            onApply(instance.id, orb.code)
+            onApply(instance.id, orb.code.value)
         }
     }
 }

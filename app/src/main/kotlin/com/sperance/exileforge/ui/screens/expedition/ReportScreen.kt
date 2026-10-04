@@ -133,7 +133,7 @@ import java.util.Locale
                 contentAlignment = Alignment.TopCenter,
             ) {
                 Canvas(Modifier.requiredSize(68.dp, 91.dp).offset(y = 12.dp)) {
-                    Portraits.monster(this, monster.code, monster.form, rarityTint(monster.rarity), time)
+                    Portraits.monster(this, monster.code.value, monster.form, rarityTint(monster.rarity), time)
                     if (won) drawRect(Ink.copy(alpha = .35f))
                 }
             }

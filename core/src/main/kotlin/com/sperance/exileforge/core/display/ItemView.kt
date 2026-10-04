@@ -9,6 +9,7 @@ import com.sperance.exileforge.rules.content.BenchRecipe
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Influence
 import com.sperance.exileforge.rules.content.ItemTemplate
+import com.sperance.exileforge.rules.content.ModifierCode
 import com.sperance.exileforge.rules.content.ModifierDef
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.Range
@@ -99,7 +100,7 @@ data class ItemLine(
     val marks: AffixMarks,
     val itemLevel: Int = 0,
 ) {
-    val code: String get() = roll.code
+    val code: ModifierCode get() = roll.code
     val affix: Boolean get() = definition?.affix == true
 
     /** 0 the bottom of the tier, 1 its top; a fixed range is perfect; null for a line with no tier. */
@@ -184,7 +185,7 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
         item.rolls.map { roll ->
             val def = index.modifier(roll.code)
             val values = def?.let(roll::values).orEmpty()
-            val words = def?.let { modifierLine(index, it, values) } ?: displayName(roll.code)
+            val words = def?.let { modifierLine(index, it, values) } ?: displayName(roll.code.value)
             ItemLine(roll, def, values, words, AffixMarks.of(def, roll), level)
         }
     }
@@ -210,7 +211,7 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
                     val stat = def.effects.getOrNull(i)?.stat.orEmpty()
                     PropertyValue(stat, baseTotals[stat] ?: own, totals[stat] ?: own)
                 }
-                BaseProperty(line.code, text.template(def).orEmpty(), values)
+                BaseProperty(line.code.value, text.template(def).orEmpty(), values)
             }.filter { it.values.isNotEmpty() }
         }
     }
@@ -328,7 +329,7 @@ fun rangeText(def: ModifierDef, tier: Tier): String? = tier.values.mapIndexedNot
 fun recipeText(index: ContentIndex, recipe: BenchRecipe): String = rangedLine(index, recipe.modifier, recipe.values)
 
 /** A modifier's sentence with each value as its range: "+(70–79) to maximum Life" — a bench line, an essence's guarantee. */
-fun rangedLine(index: ContentIndex, modifier: String, values: List<Range>): String {
+fun rangedLine(index: ContentIndex, modifier: ModifierCode, values: List<Range>): String {
     val def = index.modifier(modifier)
     val ranges = values.filter { it.size == 2 }.mapIndexed { i, (min, max) ->
         val stat = def?.effects?.getOrNull(i)?.stat.orEmpty()
@@ -336,7 +337,7 @@ fun rangedLine(index: ContentIndex, modifier: String, values: List<Range>): Stri
         val high = modNumber(stat, max)
         if (low == high) low else "($low–$high)"
     }
-    val template = def?.let { modifierText(index).template(it) } ?: return ranges.joinToString(" · ").ifBlank { displayName(modifier) }
+    val template = def?.let { modifierText(index).template(it) } ?: return ranges.joinToString(" · ").ifBlank { displayName(modifier.value) }
     return fillTemplate(template, ranges)
 }
 

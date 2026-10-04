@@ -98,7 +98,7 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
     val hero = game.hero
     val index = game.index
     val tiles = run {
-        val orbs = hero?.let { h -> game.orbs.sumOf { h.count(it.code) } } ?: 0L
+        val orbs = hero?.let { h -> game.orbs.sumOf { h.count(it.code.value) } } ?: 0L
         val pets = hero?.pets
         // The incubator (server 1.67.0): ripe eggs first, then the ones ripening, then eggs of the bag a free place waits for.
         val incubator = pets?.incubator

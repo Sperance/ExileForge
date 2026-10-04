@@ -4,6 +4,7 @@ import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.contract.requireItemId
 import com.sperance.exileforge.core.model.campaign.CampaignProgress
 import com.sperance.exileforge.core.model.campaign.RunReport
+import com.sperance.exileforge.rules.content.MapCode
 import com.sperance.exileforge.rules.run.RunEvent
 import com.sperance.exileforge.rules.run.RunStart
 import kotlinx.serialization.builtins.ListSerializer
@@ -23,13 +24,13 @@ class CampaignClient internal constructor(private val http: Transport) {
      * Enters [mapCode], with a map item spent on it or without one. Never retried: a repeat opens another run. A [potion]
      * goes into the run and [scarabs] with the map (server 1.74.0), both spent there.
      */
-    suspend fun start(heroId: String, mapCode: String, itemId: String? = null, potion: String? = null, scarabs: List<String> = emptyList()): RunStart {
+    suspend fun start(heroId: String, mapCode: MapCode, itemId: String? = null, potion: String? = null, scarabs: List<String> = emptyList()): RunStart {
         itemId?.let(::requireItemId)
         return http.post(
             "$CAMPAIGN/start",
             heroQuery(
                 heroId,
-                "mapCode" to mapCode,
+                "mapCode" to mapCode.value,
                 "itemId" to itemId,
                 "potion" to potion,
                 "scarabs" to scarabs.joinToString(",").ifEmpty { null },

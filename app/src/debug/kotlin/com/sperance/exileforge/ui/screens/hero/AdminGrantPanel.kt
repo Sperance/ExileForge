@@ -48,7 +48,7 @@ import com.sperance.exileforge.ui.icons.orbArt
         game.index?.templates?.values.orEmpty().sortedBy { it.code }.associate { it.code to "${equipmentTitle(it.code)} · ${it.code}" }
     }
     val stacks = remember(game.index, game.lang) {
-        game.index?.items?.values.orEmpty().sortedWith(compareBy({ it.category }, { it.code })).associate { it.code to "${itemTitle(it.code)} · ${it.code}" }
+        game.index?.items?.values.orEmpty().sortedWith(compareBy({ it.category }, { it.code })).associate { it.code.value to "${itemTitle(it.code.value)} · ${it.code}" }
     }
     ForgePanel {
         Engraved(ui("grant.random_item"))

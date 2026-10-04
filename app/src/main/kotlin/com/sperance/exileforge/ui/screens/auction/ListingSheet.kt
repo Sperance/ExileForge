@@ -19,7 +19,7 @@ import com.sperance.exileforge.ui.icons.orbArt
 import com.sperance.exileforge.ui.theme.*
 
 /** The auction's currencies as a picker's options (3.0.0; server 1.65.0 - the base orbs alone): keyed by item code, named by the dictionary, cheapest first. */
-internal fun orbOptions(game: GameUi): Map<String, String> = game.currencies.associate { it.code to itemTitle(it.code) }
+internal fun orbOptions(game: GameUi): Map<String, String> = game.currencies.associate { it.code.value to itemTitle(it.code.value) }
 
 /**
  * Listing something on the auction: one item from its card or the sell tab, or part of a stack.
@@ -38,7 +38,7 @@ fun ListingSheet(
     hint: (suspend () -> PriceHint?)? = null,
     onList: (orb: String, price: Long, amount: Long) -> Unit,
 ) {
-    var orb by remember { mutableStateOf(game.currencies.firstOrNull()?.code.orEmpty()) }
+    var orb by remember { mutableStateOf(game.currencies.firstOrNull()?.code?.value.orEmpty()) }
     var price by remember { mutableStateOf("1") }
     var amount by remember { mutableStateOf("1") }
     val cost = price.toLongOrNull() ?: 0L

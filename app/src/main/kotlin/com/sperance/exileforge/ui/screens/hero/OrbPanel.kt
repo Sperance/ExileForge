@@ -49,7 +49,7 @@ import org.koin.compose.viewmodel.koinViewModel
     val hero = game.hero ?: return
     val instance = hero.item(itemId)
     val orbs = game.orbs
-    val orb = orbs.firstOrNull { it.code == selected }
+    val orb = orbs.firstOrNull { it.code.value == selected }
     val enabled = !game.busy && game.session.signedIn && (game.ownsCharacter || game.isAdmin)
     Engraved(ui("orb.title"))
     if (orbs.isEmpty()) {
@@ -59,14 +59,14 @@ import org.koin.compose.viewmodel.koinViewModel
     Spinner(
         ui("orb.orb"),
         selected,
-        orbs.associate { it.code to "${itemTitle(it.code)} · ${hero.count(it.code)}" },
+        orbs.associate { it.code.value to "${itemTitle(it.code.value)} · ${hero.count(it.code.value)}" },
         enabled,
         glyph = Glyph.CURRENCY,
         optionArt = orbArt(orbs),
         onChange = onSelect,
     )
     // An orb the client has no translation for still explains itself: the server's dictionary has one.
-    orb?.let { itemDescription(it.code).takeIf { rule -> rule.isNotBlank() } }?.let { MutedText(it) }
+    orb?.let { itemDescription(it.code.value).takeIf { rule -> rule.isNotBlank() } }?.let { MutedText(it) }
     if (instance == null) {
         Text(ui("orb.choose_item"), color = Muted)
         return

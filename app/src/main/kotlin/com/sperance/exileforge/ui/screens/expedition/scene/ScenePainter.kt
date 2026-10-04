@@ -168,7 +168,7 @@ internal class ScenePainter {
                         else -> abs(sin(time * 3f + agent.id)) * unit * .08f
                     }
                     token(isoX(agent.x, agent.y), isoY(agent.x, agent.y), size, ring, bob) {
-                        Portraits.monster(this, monster.code, monster.form, ring, time)
+                        Portraits.monster(this, monster.code.value, monster.form, ring, time)
                         if (agent.mode == AgentMode.ASLEEP) drawRect(Color.Black.copy(alpha = .35f))
                     }
                 }

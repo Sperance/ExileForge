@@ -10,7 +10,9 @@ import com.sperance.exileforge.core.i18n.uiOr
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.Line
+import com.sperance.exileforge.rules.content.MapCode
 import com.sperance.exileforge.rules.content.ModifierDef
+import com.sperance.exileforge.rules.content.MonsterCode
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.SkillNodeType
 import com.sperance.exileforge.rules.content.Slot
@@ -41,14 +43,16 @@ fun itemDescription(code: String): String = locOr(LocaleKey.itemDescription(code
 fun tradeName(code: String, equipment: Boolean): String? = locOr(if (equipment) LocaleKey.equipmentTrade(code) else LocaleKey.itemTrade(code), "").takeIf { it.isNotBlank() && it != (if (equipment) equipmentTitle(code) else itemTitle(code)) }
 
 fun monsterTitle(code: String): String = locOr(LocaleKey.monsterName(code), displayName(code))
+fun monsterTitle(code: MonsterCode): String = monsterTitle(code.value)
 
 /** A monster's trait (3.73.0): its name, and what it does with `{0}` its strength, `{1}` the life threshold, `{2}` the seconds. */
 fun traitTitle(code: String): String = locOr(LocaleKey.traitName(code), displayName(code))
 fun traitText(code: String, value: Double = 0.0, threshold: Double = 0.0, seconds: Double = 0.0): String = loc(LocaleKey.traitDescription(code), listOf(fineNumber(value), fineNumber(threshold), fineNumber(seconds)))
 fun mapTitle(code: String): String = locOr(LocaleKey.mapName(code), displayName(code))
+fun mapTitle(code: MapCode): String = mapTitle(code.value)
 
 /** A map item by its zone: «Tidal Shore Map». */
-fun mapItemTitle(zone: String): String = loc(LocaleKey.mapItemName(), listOf(mapTitle(zone)))
+fun mapItemTitle(zone: MapCode): String = loc(LocaleKey.mapItemName(), listOf(mapTitle(zone)))
 fun mapDescription(code: String): String = locOr(LocaleKey.mapDescription(code), "")
 fun regionTitle(code: String): String = locOr(LocaleKey.regionName(code), displayName(code))
 fun classTitle(code: String): String = locOr(LocaleKey.className(code), displayName(code))
@@ -93,10 +97,10 @@ fun modifierText(index: ContentIndex): ModifierText = ModifierText(index.stats, 
 
 /** A modifier's sentence with its values in; a definition the dictionary cannot word prints its numbers and stats. */
 fun modifierLine(index: ContentIndex, def: ModifierDef, values: List<Double>): String = modifierText(index).template(def)?.let { fillTemplate(it, values.mapIndexed { i, v -> modNumber(def.effects.getOrNull(i)?.stat.orEmpty(), v) }) }
-    ?: values.mapIndexed { i, v -> def.effects.getOrNull(i)?.let { "${modNumber(it.stat, v)} ${statTitle(it.stat)}" } ?: number(v) }.joinToString(" · ").ifBlank { displayName(def.code) }
+    ?: values.mapIndexed { i, v -> def.effects.getOrNull(i)?.let { "${modNumber(it.stat, v)} ${statTitle(it.stat)}" } ?: number(v) }.joinToString(" · ").ifBlank { displayName(def.code.value) }
 
 /** A fixed line — a base, a class's or a tree node's — as one sentence. */
-fun lineText(index: ContentIndex, line: Line): String = index.modifier(line.code)?.let { modifierLine(index, it, line.values) } ?: displayName(line.code)
+fun lineText(index: ContentIndex, line: Line): String = index.modifier(line.code)?.let { modifierLine(index, it, line.values) } ?: displayName(line.code.value)
 
 /** A template with its numbers in: `{0}` takes the value as printed, `{|0|}` its size without the sign. */
 fun fillTemplate(template: String, values: List<String>): String = values.foldIndexed(template) { index, text, value -> text.replace("{|$index|}", value.removePrefix("-").removePrefix("−")).replace("{$index}", value) }

@@ -115,7 +115,7 @@ import org.koin.compose.viewmodel.koinViewModel
 }
 
 /** The omens the bag holds (3.36.0; server 1.65.0: the catalysts are omens of the Orb of Quality), in the content's order. */
-internal fun heldOmens(index: ContentIndex, hero: HeroView): List<Omen> = index.itemsByCategory[Item.OMEN].orEmpty().mapNotNull { item -> Omen.of(item.code)?.takeIf { hero.count(item.code) > 0 } }
+internal fun heldOmens(index: ContentIndex, hero: HeroView): List<Omen> = index.itemsByCategory[Item.OMEN].orEmpty().mapNotNull { item -> Omen.of(item.code.value)?.takeIf { hero.count(item.code.value) > 0 } }
 
 /**
  * A choice of lines waiting on the item: the unveiling's offer (3.36.0) — each modifier the veiled one may become — or the

@@ -17,6 +17,7 @@ import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.view
+import com.sperance.exileforge.rules.content.ItemCode
 import com.sperance.exileforge.rules.run.Reward
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.BagIcon
@@ -36,7 +37,7 @@ import com.sperance.exileforge.ui.theme.*
         }
         reward.items.forEach { (code, amount) ->
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                BagIcon(code, Modifier.size(20.dp), kind = game.index?.item(code)?.let(::bagVisualKind) ?: ItemVisualKind.ITEM)
+                BagIcon(code, Modifier.size(20.dp), kind = game.index?.item(ItemCode(code))?.let(::bagVisualKind) ?: ItemVisualKind.ITEM)
                 Text(ui("expedition.loot_stack", itemTitle(code), amount), color = Parchment)
             }
         }

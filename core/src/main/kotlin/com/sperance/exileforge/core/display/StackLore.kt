@@ -6,6 +6,7 @@ import com.sperance.exileforge.rules.content.Essence
 import com.sperance.exileforge.rules.content.EssenceBook
 import com.sperance.exileforge.rules.content.Job
 import com.sperance.exileforge.rules.content.JobRecipes
+import com.sperance.exileforge.rules.content.MonsterCode
 import com.sperance.exileforge.rules.content.TrialRules
 import com.sperance.exileforge.rules.table.Ref
 import com.sperance.exileforge.rules.table.TableKind
@@ -107,7 +108,7 @@ private class SourceIndex(private val index: ContentIndex) {
 
     /** Each monster's table, as the zones it walks in: a boss, a corrupted area's keeper, or the zone's own crowd. */
     private fun monsters() {
-        val levels = HashMap<String, MutableList<Int>>()
+        val levels = HashMap<MonsterCode, MutableList<Int>>()
         index.campaign.zones.forEach { zone -> (zone.monsters + zone.boss + zone.corrupted).forEach { levels.getOrPut(it) { ArrayList() } += zone.level } }
         index.campaign.monsters.forEach { monster ->
             val kind = when {

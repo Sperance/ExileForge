@@ -1,12 +1,13 @@
 package com.sperance.exileforge.core.campaign
 
+import com.sperance.exileforge.rules.content.MapCode
 import com.sperance.exileforge.rules.roll.ItemInstance
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 
 /** Зона, в которую вот-вот войдут: карта из сундука для неё (null - без карты), зелье (3.79.0) и скарабеи к карте. */
-data class MapLaunch(val mapCode: String, val picked: String? = null, val potion: String? = null, val scarabs: List<String> = emptyList())
+data class MapLaunch(val mapCode: MapCode, val picked: String? = null, val potion: String? = null, val scarabs: List<String> = emptyList())
 
 /** Вещь, принесённая походом, и миг, когда она легла. */
 data class LootEntry(val item: ItemInstance, val at: Long)

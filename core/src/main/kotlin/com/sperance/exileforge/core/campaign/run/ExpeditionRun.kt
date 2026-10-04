@@ -388,9 +388,9 @@ class ExpeditionRun(
             val extraFountains = MapEffects.fountains(effects)
             world.placeFountains(fountains.count.getOrElse(0) { 0 } + extraFountains, fountains.count.getOrElse(1) { fountains.count.getOrElse(0) { 0 } } + extraFountains, fountains.heal)
             if (!vaal) {
-                world.placeChests(campaign.chests[location.code]?.left ?: 0)
-                world.placeCrystals(campaign.crystals[location.code]?.crystals.orEmpty())
-                world.placeCracks(campaign.abyss[location.code]?.cracks.orEmpty())
+                world.placeChests(campaign.chests[location.code.value]?.left ?: 0)
+                world.placeCrystals(campaign.crystals[location.code.value]?.crystals.orEmpty())
+                world.placeCracks(campaign.abyss[location.code.value]?.cracks.orEmpty())
             }
             val pilot = auto?.let { AutoPilot.of(index.campaign.expedition, world, it, if (vaal) run.seed xor VAAL_SALT else run.seed, bossStands = world.boss?.alive == true) }
             return ExpeditionRun(

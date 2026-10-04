@@ -85,7 +85,7 @@ fun WorldCanvas(
     val pulse by if (moving) motion.animateFloat(0f, 1f, infiniteRepeatable(tween(PULSE_MS, easing = LinearEasing)), label = "pulse") else remember { mutableFloatStateOf(.5f) }
     val march by if (moving) motion.animateFloat(0f, -DASH_PERIOD, infiniteRepeatable(tween(MARCH_MS, easing = LinearEasing)), label = "march") else remember { mutableFloatStateOf(0f) }
     val height = camera.world.height.toFloat()
-    val roads = remember(world) { world.roads.map { it.state to road(it.from.zone.x, height - it.from.zone.y, it.to.zone.x, height - it.to.zone.y, it.from.zone.code + it.to.zone.code) } }
+    val roads = remember(world) { world.roads.map { it.state to road(it.from.zone.x, height - it.from.zone.y, it.to.zone.x, height - it.to.zone.y, it.from.zone.code.value + it.to.zone.code.value) } }
     val words = remember(world, measurer) { Words(world, measurer) }
     // The parchment is recorded once into its own layer (3.77.0) and replayed under the camera: hundreds of sketches and
     // grains are no longer laid out again on every frame of the tokens' pulse.
@@ -133,7 +133,7 @@ fun WorldCanvas(
                     RoadState.UNTRODDEN -> drawPath(path, Muted.copy(alpha = .85f), style = Stroke(1.8f, cap = StrokeCap.Round, pathEffect = dots))
                 }
             }
-            world.tokens.forEach { token(it, height, pulse, it.zone.code == selected, stash[it.zone.code] ?: 0) }
+            world.tokens.forEach { token(it, height, pulse, it.zone.code.value == selected, stash[it.zone.code.value] ?: 0) }
         }
         words.draw(this, camera, stash)
     }
@@ -143,7 +143,7 @@ fun WorldCanvas(
 private fun hit(world: WorldMap, camera: WorldCamera, point: Offset): String? {
     val at = camera.toWorld(point)
     val reach = maxOf(TOKEN_REACH, FINGER / camera.scale)
-    return world.tokens.map { it to hypot(it.zone.x - at.x, it.zone.y - at.y) }.filter { it.second <= reach }.minByOrNull { it.second }?.first?.zone?.code
+    return world.tokens.map { it to hypot(it.zone.x - at.x, it.zone.y - at.y) }.filter { it.second <= reach }.minByOrNull { it.second }?.first?.zone?.code?.value
 }
 
 /** A road between two tokens: a quadratic bow, bent the same way every time for the same two zones. */
@@ -291,7 +291,7 @@ private class Words(private val world: WorldMap, private val measurer: TextMeasu
         ),
     )
 
-    private fun level(token: WorldToken) = levels.getOrPut(token.zone.code) {
+    private fun level(token: WorldToken) = levels.getOrPut(token.zone.code.value) {
         measurer.measure(
             token.zone.level.toString(),
             TextStyle(
@@ -304,7 +304,7 @@ private class Words(private val world: WorldMap, private val measurer: TextMeasu
         )
     }
 
-    private fun name(token: WorldToken) = names.getOrPut(token.zone.code) {
+    private fun name(token: WorldToken) = names.getOrPut(token.zone.code.value) {
         measurer.measure(
             if (token.state == TokenState.LOCKED) ui("expedition.hidden") else mapTitle(token.zone.code),
             TextStyle(
@@ -338,7 +338,7 @@ private class Words(private val world: WorldMap, private val measurer: TextMeasu
             val r = radius(token)
             place(level(token), centre, zoom, 1f, centreY = true)
             if (nameAlpha > 0f) place(name(token), camera.toScreen(zone.x.toFloat(), zone.y - r - 5), zoom, nameAlpha)
-            val maps = stash[zone.code] ?: 0
+            val maps = stash[zone.code.value] ?: 0
             if (maps > 0) place(count(maps), camera.toScreen(zone.x + r * .55f + 12.5f, zone.y + r - 3), zoom, 1f, centreY = true)
         }
     }

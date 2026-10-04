@@ -17,6 +17,7 @@ import com.sperance.exileforge.core.display.statValue
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.BuffKind
+import com.sperance.exileforge.rules.content.ModifierCode
 import com.sperance.exileforge.rules.roll.MonsterRoller
 
 /** One source of a stat on a log line's card (3.37.0): who gave it and how much, with a grey note under it. */
@@ -68,8 +69,8 @@ class TraceExplainer(private val game: GameUi) {
 
                 MonsterShareKind.RARITY -> ui("trace.src.rarity", ui("trace.rarity.${share.ref}"))
 
-                MonsterShareKind.MODIFIER -> index.modifier(share.ref)?.let { def ->
-                    monster.modifiers.firstOrNull { it.code == share.ref }?.let { mod -> modifierLine(index, def, mod.effects.map { it.value }) }
+                MonsterShareKind.MODIFIER -> index.modifier(ModifierCode(share.ref))?.let { def ->
+                    monster.modifiers.firstOrNull { it.code.value == share.ref }?.let { mod -> modifierLine(index, def, mod.effects.map { it.value }) }
                 } ?: share.ref
 
                 MonsterShareKind.MAP -> ui("stat.src.map")

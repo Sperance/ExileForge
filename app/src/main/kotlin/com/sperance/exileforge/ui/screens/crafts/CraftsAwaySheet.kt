@@ -22,6 +22,7 @@ import com.sperance.exileforge.core.display.workTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.crafts.CraftsViewModel
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.rules.content.ItemCode
 import com.sperance.exileforge.rules.roll.AwayStop
 import com.sperance.exileforge.rules.roll.CraftsAway
 import com.sperance.exileforge.ui.components.Engraved
@@ -120,7 +121,7 @@ private fun clock(millis: Long): String {
                 if (template != null) {
                     ItemIcon(template, Gold, Modifier.size(24.dp))
                 } else {
-                    BagIcon(code, Modifier.size(24.dp), kind = game.index?.item(code)?.let(::bagVisualKind) ?: ItemVisualKind.ITEM)
+                    BagIcon(code, Modifier.size(24.dp), kind = game.index?.item(ItemCode(code))?.let(::bagVisualKind) ?: ItemVisualKind.ITEM)
                 }
                 Text("$sign$amount", color = tone, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                 Text(

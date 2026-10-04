@@ -83,7 +83,7 @@ internal fun ExpeditionRun.resolve() {
             closeGate()
         }
     }
-    val standing = state?.crystals?.get(zone.code)?.crystals.orEmpty()
+    val standing = state?.crystals?.get(zone.code.value)?.crystals.orEmpty()
     val waiting = vaalings.entries.iterator()
     while (waiting.hasNext()) {
         val (n, orb) = waiting.next()

@@ -2,6 +2,7 @@ package com.sperance.exileforge.core.campaign
 
 import com.sperance.exileforge.core.model.campaign.CampaignProgress
 import com.sperance.exileforge.rules.content.CampaignFile
+import com.sperance.exileforge.rules.content.MapCode
 import com.sperance.exileforge.rules.content.Region
 import com.sperance.exileforge.rules.content.WorldGraph
 import com.sperance.exileforge.rules.content.WorldPoint
@@ -35,9 +36,9 @@ class WorldMap(val campaign: CampaignFile, private val world: WorldGraph, progre
         WorldToken(zone, state, world.next(zone.code).isEmpty() && !zone.finale)
     }
 
-    private val byCode: Map<String, WorldToken> = tokens.associateBy { it.zone.code }
+    private val byCode: Map<MapCode, WorldToken> = tokens.associateBy { it.zone.code }
 
-    fun token(code: String): WorldToken? = byCode[code]
+    fun token(code: MapCode): WorldToken? = byCode[code]
 
     /** Links between shown tokens: walked where both are passed, ahead from a passed one to one still open. */
     val roads: List<WorldRoad> = tokens.flatMap { to ->
@@ -73,7 +74,7 @@ class WorldMap(val campaign: CampaignFile, private val world: WorldGraph, progre
     }
 
     /** The zones that lead into [code] and are shown open or passed: whose boss will open it. */
-    fun keysTo(code: String): List<Zone> = byCode[code]?.zone?.from.orEmpty().mapNotNull(byCode::get).filter { it.state != TokenState.LOCKED }.map { it.zone }
+    fun keysTo(code: MapCode): List<Zone> = byCode[code]?.zone?.from.orEmpty().mapNotNull(byCode::get).filter { it.state != TokenState.LOCKED }.map { it.zone }
 
     companion object {
         /** Where one region ends and the next begins: halfway between the one's top zone and the other's lowest. */

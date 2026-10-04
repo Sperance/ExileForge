@@ -11,6 +11,7 @@ import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.HeroSkills
 import com.sperance.exileforge.rules.content.ItemTemplate
+import com.sperance.exileforge.rules.content.ModifierCode
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.PowerBook
 import com.sperance.exileforge.rules.content.SkillBook
@@ -79,7 +80,7 @@ data class Flask(
             val added = mutableMapOf<String, Double>()
             val increased = mutableMapOf<String, Double>()
             val lines = mutableListOf<StatLine>()
-            fun take(code: String, values: List<Double>) {
+            fun take(code: ModifierCode, values: List<Double>) {
                 index.modifier(code)?.effects?.forEachIndexed { i, effect ->
                     val value = values.getOrNull(i) ?: return@forEachIndexed
                     when {

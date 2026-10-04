@@ -131,7 +131,7 @@ internal fun flash(lunge: LungeView?, target: Side, foe: Int?): Float = if (lung
                     Canvas(Modifier.fillMaxSize()) {
                         Portraits.monster(
                             this,
-                            foe.monster.code,
+                            foe.monster.code.value,
                             foe.monster.form,
                             ring,
                             time,

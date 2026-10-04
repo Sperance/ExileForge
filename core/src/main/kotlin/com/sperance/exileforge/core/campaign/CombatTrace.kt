@@ -156,9 +156,9 @@ object MonsterBreakdown {
         level: Int,
         stat: String,
     ): List<MonsterShare> = buildList {
-        template?.let { roller.stats(it, level)[stat] }?.takeIf { it != 0.0 }?.let { add(MonsterShare(MonsterShareKind.BASE, monster.code, Op.ADD, it)) }
+        template?.let { roller.stats(it, level)[stat] }?.takeIf { it != 0.0 }?.let { add(MonsterShare(MonsterShareKind.BASE, monster.code.value, Op.ADD, it)) }
         rarityLines(monster.rarity).filter { it.stat == stat }.forEach { add(MonsterShare(MonsterShareKind.RARITY, monster.rarity.name, it.op, it.value)) }
-        monster.modifiers.forEach { mod -> mod.effects.filter { it.stat == stat }.forEach { add(MonsterShare(MonsterShareKind.MODIFIER, mod.code, it.op, it.value)) } }
+        monster.modifiers.forEach { mod -> mod.effects.filter { it.stat == stat }.forEach { add(MonsterShare(MonsterShareKind.MODIFIER, mod.code.value, it.op, it.value)) } }
         monster.mapBuffs.filter { it.stat == stat }.forEach { add(MonsterShare(MonsterShareKind.MAP, "", it.op, it.value)) }
     }
 }

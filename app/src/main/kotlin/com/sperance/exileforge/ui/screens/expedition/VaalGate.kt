@@ -25,6 +25,7 @@ import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.ContentIndex
+import com.sperance.exileforge.rules.content.MonsterCode
 import com.sperance.exileforge.rules.roll.Roll
 import com.sperance.exileforge.rules.roll.VaalZone
 import com.sperance.exileforge.ui.components.ForgeButton
@@ -50,7 +51,7 @@ private object Altar {
  * the zone adds to the loot for bearing them — and the choice; until its answer comes, the gate waits. «Войти» closes the portal behind the
  * hero, «Отказаться» closes it for good; the zone is never re-rolled by walking away and back.
  */
-@Composable fun VaalGate(game: GameUi, hud: RunHud, guardian: String?, onEnter: () -> Unit, onRefuse: () -> Unit, onBack: () -> Unit) {
+@Composable fun VaalGate(game: GameUi, hud: RunHud, guardian: MonsterCode?, onEnter: () -> Unit, onRefuse: () -> Unit, onBack: () -> Unit) {
     val index = game.index
     Box(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(Altar.glow, Altar.night, Altar.deep), radius = 1600f)), contentAlignment = Alignment.Center) {
         Column(
@@ -106,7 +107,7 @@ private object Altar {
 }
 
 /** A rolled line of the zone as its sentence; a code the content does not know reads as the code. */
-private fun rollText(index: ContentIndex?, roll: Roll): String = index?.let { i -> i.modifier(roll.code)?.let { modifierLine(i, it, roll.values(it)) } } ?: displayName(roll.code)
+private fun rollText(index: ContentIndex?, roll: Roll): String = index?.let { i -> i.modifier(roll.code)?.let { modifierLine(i, it, roll.values(it)) } } ?: displayName(roll.code.value)
 
 /** One modifier: a scarlet rhombus and its sentence on a dark red strip, a vein down its edge. */
 @Composable private fun ModLine(text: String) {

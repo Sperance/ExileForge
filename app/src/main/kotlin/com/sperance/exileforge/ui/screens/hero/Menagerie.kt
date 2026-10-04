@@ -127,7 +127,7 @@ private fun PetCard(game: GameUi, vm: HeroViewModel, pet: Pet) {
         if (pet.offer.isNotEmpty()) {
             ChoiceFrame("forge.choice_title", "forge.choice_hint") {
                 pet.offer.forEachIndexed { i, option ->
-                    val text = menagerie.lines(pet.copy(lines = listOf(option), offer = emptyList())).firstOrNull()?.let { lineText(index, it) } ?: displayName(option.code)
+                    val text = menagerie.lines(pet.copy(lines = listOf(option), offer = emptyList())).firstOrNull()?.let { lineText(index, it) } ?: displayName(option.code.value)
                     ChoiceRow(text, "T${option.tier}") { if (!game.busy) vm.choosePetLine(pet.id, i) }
                 }
             }
@@ -188,7 +188,7 @@ private fun PetOrbs(game: GameUi, vm: HeroViewModel, pet: Pet, onDismiss: () -> 
     // Every crafting orb in the bag, each with the omens it goes on this pet with; null - the orb alone.
     val fits: List<Pair<Item, List<Omen?>>> = remember(applier, pet, held, hero.bag) {
         game.orbs.mapNotNull { item ->
-            val orb = Orb.of(item.code)?.takeIf { hero.count(item.code) > 0 } ?: return@mapNotNull null
+            val orb = Orb.of(item.code.value)?.takeIf { hero.count(item.code.value) > 0 } ?: return@mapNotNull null
             (listOf<Omen?>(null) + held.filter { it.fits(orb) }).filter { applier.accepts(orb, beast, it) }.takeIf { it.isNotEmpty() }?.let { item to it }
         }
     }
@@ -210,7 +210,7 @@ private fun PetOrbs(game: GameUi, vm: HeroViewModel, pet: Pet, onDismiss: () -> 
             val shown = fits.filter { (_, with) -> omen in with }
             if (shown.isEmpty() && growth.none { hero.count(it) > 0 }) MutedText(ui("pets.no_orbs"))
             shown.forEach { (item, _) ->
-                PetOrbRow(item.code, hero.count(item.code), Orb.of(item.code), enabled = !game.busy) { vm.petOrb(pet.id, item.code, omen?.code) }
+                PetOrbRow(item.code.value, hero.count(item.code.value), Orb.of(item.code.value), enabled = !game.busy) { vm.petOrb(pet.id, item.code.value, omen?.code) }
             }
             growth.forEach { code -> PetOrbRow(code, hero.count(code), null, enabled = !game.busy && hero.count(code) > 0) { vm.petOrb(pet.id, code) } }
         }

@@ -40,7 +40,7 @@ class SmithyViewModel(
 
     /** Выбор как он есть; пока сфера не выбрана - самая дешёвая валюта контента, когда он прочитан. */
     val smithy: StateFlow<Smithy> = combine(mutable, world.state) { chosen, w ->
-        if (chosen.orb.isNotBlank()) chosen else chosen.copy(orb = w.content?.itemsByCategory?.get(Item.CURRENCY)?.minByOrNull { it.price }?.code.orEmpty())
+        if (chosen.orb.isNotBlank()) chosen else chosen.copy(orb = w.content?.itemsByCategory?.get(Item.CURRENCY)?.minByOrNull { it.price }?.code?.value.orEmpty())
     }.stateIn(viewModelScope, SharingStarted.Eagerly, Smithy())
     val activity: StateFlow<Activity> = commands.state
 

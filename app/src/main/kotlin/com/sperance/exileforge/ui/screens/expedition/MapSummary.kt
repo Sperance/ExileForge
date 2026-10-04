@@ -37,6 +37,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.view
+import com.sperance.exileforge.rules.content.ItemCode
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.icons.BagIcon
@@ -206,7 +207,7 @@ private fun Loot(game: GameUi, tally: MapTally, onItem: (ItemView) -> Unit, onSt
 
 /** A stack of the bag as a chip: its icon, its name and how many. */
 @Composable internal fun StackChip(game: GameUi, code: String, amount: Long, onClick: () -> Unit) {
-    val kind = game.index?.item(code)?.let(::bagVisualKind) ?: ItemVisualKind.ITEM
+    val kind = game.index?.item(ItemCode(code))?.let(::bagVisualKind) ?: ItemVisualKind.ITEM
     val shape = RoundedCornerShape(3.dp)
     Row(
         Modifier.clip(shape).background(Abyss, shape).border(1.dp, Bronze.copy(alpha = .6f), shape)

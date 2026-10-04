@@ -41,6 +41,7 @@ import com.sperance.exileforge.presentation.market.MarketViewModel
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.unmetFor
 import com.sperance.exileforge.presentation.state.view
+import com.sperance.exileforge.rules.content.ItemCode
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
@@ -122,7 +123,7 @@ internal const val MINUTES_A_DAY = 1_440L
 
 internal fun lotVisualKind(game: GameUi, lot: AuctionLot): ItemVisualKind = when (lot.kind) {
     LotKind.EQUIPMENT -> game.index?.template(lot.itemCode)?.let(::itemVisualKind) ?: ItemVisualKind.ITEM
-    LotKind.ITEM -> game.index?.item(lot.itemCode)?.let(::bagVisualKind) ?: ItemVisualKind.ITEM
+    LotKind.ITEM -> game.index?.item(ItemCode(lot.itemCode))?.let(::bagVisualKind) ?: ItemVisualKind.ITEM
 }
 
 /** The rarity's colour for a copy; a stack has none and keeps bone white. */

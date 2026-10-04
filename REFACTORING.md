@@ -79,8 +79,9 @@
 - [x] Удалено неиспользуемое: `MailButton`, `classDescription`, `itemSources`, `rankIndexOf`.
 - [ ] Удалить этот файл.
 
-## Где остановились (3.80.47, сервер 1.75.1)
+## Где остановились (3.80.48, сервер 1.75.2)
 - Сделано: golden-тест забега, распил `ExpeditionRun`/`ExpeditionWorld`, файлы сцены, мёртвый код, константы боя и мира в контент, срезы `AccountUi`/`GameUi` для всех экранов; `ForgeState`, `ForgeViewModel`, `ForgeRuntime`, `FeatureViewModel` удалены - сервисы `presentation/app` и `WorldLoader`.
 - Серверный этап 3a (сервер 1.75.0, клиент 3.80.46, `API_REVISION` 43): sealed `RunEvent`/`TrialEvent` (журнал пишет `record { RunEvent.Kill(it, …) }`), `LotGoods` в `AuctionLot.goods`, `Job` в `JobView.job`, `RedemptionReward`; golden-файлы забега не изменились.
 - Реестр статов (сервер 1.75.1, клиент 3.80.47): клиент читает статы по имени только через `CoreStat` (`CoreStat.X.code`); строками остались префиксы (`STOCK_RESIST_` …) и коды из имени недуга или вида урона.
-- Дальше по плану: серверный этап 3 - value-классы `ItemCode`/`ModifierCode`/`MonsterCode`/`MapCode`.
+- Value-классы кодов (сервер 1.75.2, клиент 3.80.48): `ItemCode`/`ModifierCode`/`MonsterCode`/`MapCode` из `rules`; клиентские `CampaignProgress`, `cleared`, `RunSnapshot.mapCode`, `CrystalView.guardian`, `MapLaunch.mapCode`, `CampaignClient.start` типизированы. Экранный слой держит коды строкой (мешок, выбор зоны, списки) и переводит на границе (`code.value`, `MapCode(…)`).
+- Серверный этап 3 закрыт; дальше по плану - удалить файлы рефакторинга (оба репозитория), предварительно найдя ссылки.

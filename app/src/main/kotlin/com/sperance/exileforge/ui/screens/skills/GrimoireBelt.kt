@@ -177,7 +177,7 @@ internal fun worn(hero: HeroView, index: ContentIndex, skills: HeroSkills): List
 @Composable
 internal fun Exchange(game: GameUi, vm: GrimoireViewModel, index: ContentIndex, hero: HeroView, pages: List<SkillDefinition>, onDismiss: () -> Unit) {
     val rule = index.skills.rules.exchange
-    val owned = books(index).mapNotNull { book -> (game.bagAmount(book.code) ?: 0L).takeIf { it > 0 }?.let { book.code.removePrefix(SkillRules.BOOK_PREFIX) to it } }
+    val owned = books(index).mapNotNull { book -> (game.bagAmount(book.code.value) ?: 0L).takeIf { it > 0 }?.let { book.code.value.removePrefix(SkillRules.BOOK_PREFIX) to it } }
     var chosen by remember { mutableStateOf(listOf<String>()) }
     var target by remember { mutableStateOf<String?>(null) }
     val price = rule.goldPerLevel * hero.level

@@ -105,7 +105,7 @@ object FightFigures {
                 null
             } else {
                 pack.flatMap { hit -> hit.events.map { it to hit.monster } }
-                    .filter { (event, _) -> event.actor == Side.MONSTER && event.damage > 0 && !event.onSelf && !event.atPet }.maxByOrNull { (event, _) -> event.time }?.second?.code
+                    .filter { (event, _) -> event.actor == Side.MONSTER && event.damage > 0 && !event.onSelf && !event.atPet }.maxByOrNull { (event, _) -> event.time }?.second?.code?.value
             },
         )
     }

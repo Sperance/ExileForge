@@ -43,7 +43,7 @@ internal fun RecipeSheet(game: GameUi, code: String, inRun: Boolean = false, onD
     val index = game.index
     val recipe = index?.recipe(code)
     val title = recipe?.let { r -> index?.modifier(r.modifier)?.effects?.map { statTitle(it.stat) }?.distinct()?.joinToString(" / ") }
-        ?.ifBlank { null } ?: displayName(recipe?.modifier ?: code)
+        ?.ifBlank { null } ?: displayName(recipe?.modifier?.value ?: code)
     ForgeSheet(onDismissRequest = onDismiss) {
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).navigationBarsPadding()) {
             RaritySpine(Crafted, 4.dp)

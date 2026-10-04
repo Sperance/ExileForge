@@ -44,7 +44,7 @@ import kotlin.math.sin
  * choice — which then keeps the list's own spacing.
  */
 fun orbArt(orbs: List<Item>): @Composable (String, Dp) -> Unit = { key, size ->
-    Orb.of(key)?.takeIf { orbs.any { item -> item.code == key } }?.let { OrbGlyph(it, Modifier.size(size)) } ?: Spacer(Modifier.size(size))
+    Orb.of(key)?.takeIf { orbs.any { item -> item.code.value == key } }?.let { OrbGlyph(it, Modifier.size(size)) } ?: Spacer(Modifier.size(size))
 }
 
 /** One orb's look: its glass, its sign, and whether it is precious enough for rays. */

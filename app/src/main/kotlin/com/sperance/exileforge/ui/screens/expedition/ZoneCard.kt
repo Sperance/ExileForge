@@ -55,6 +55,7 @@ import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.AtlasPoints
 import com.sperance.exileforge.rules.content.ContentIndex
+import com.sperance.exileforge.rules.content.MapCode
 import com.sperance.exileforge.rules.content.Monster
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.Zone
@@ -80,7 +81,7 @@ internal data class MapLine(val text: String, val kind: MapLineKind, val risk: D
  * How many maps of each zone the stash holds. Read off the items' zone alone (3.76.0): building a full view of every
  * thing in the stash on each opening of the tab froze the tap.
  */
-fun stashCounts(game: GameUi): Map<String, Int> = game.hero?.stash.orEmpty().filter { it.mapZone.isNotEmpty() }.groupingBy { it.mapZone }.eachCount()
+fun stashCounts(game: GameUi): Map<String, Int> = game.hero?.stash.orEmpty().filter { it.mapZone.isNotEmpty() }.groupingBy { it.mapZone.value }.eachCount()
 
 internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty()
     .filter { it.mapZone.isNotEmpty() }.mapNotNull { item -> game.view(item)?.takeIf { it.slot == Slot.MAP }?.let { StashMap(item, it) } }
@@ -133,21 +134,21 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
                 Text(if (keys.isEmpty()) ui("expedition.opens_after_any") else ui("expedition.opens_after", keys), color = Parchment, style = MaterialTheme.typography.bodyMedium)
                 return@Column
             }
-            MutedText(mapDescription(zone.code), style = MaterialTheme.typography.bodySmall)
+            MutedText(mapDescription(zone.code.value), style = MaterialTheme.typography.bodySmall)
             index.monster(zone.boss)?.let { Guardian(game, zone, it) }
-            AtlasKeys(game.atlasState?.earned.orEmpty(), zone.code)
+            AtlasKeys(game.atlasState?.earned.orEmpty(), zone.code.value)
             Maps(game, vm, index, zone, launch)
             Brews(game, vm, launch)
             ForgeButton(
                 enabled = game.hero != null && !game.busy,
-                onClick = { launchGuarded { vm.startRun(zone.code) } },
+                onClick = { launchGuarded { vm.startRun(zone.code.value) } },
                 modifier = Modifier.fillMaxWidth().height(44.dp),
             ) {
                 Icon(ForgeGlyphs.Portal, null, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(10.dp))
                 Text(ui("expedition.launch_go"), style = MaterialTheme.typography.titleMedium)
             }
-            AutoLaunch(game, vm, zone.code, launch, launchGuarded)
+            AutoLaunch(game, vm, zone.code.value, launch, launchGuarded)
         }
     }
 }
@@ -158,7 +159,7 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
  * Vaal portal still stop it for the player's word.
  */
 @Composable internal fun AutoLaunch(game: GameUi, vm: ExpeditionViewModel, zone: String, launch: MapLaunch, guarded: (() -> Unit) -> Unit) {
-    if (game.progress?.cleared?.contains(zone) != true) return
+    if (game.progress?.cleared?.contains(MapCode(zone)) != true) return
     var chests by rememberSaveable { mutableStateOf(true) }
     var crystals by rememberSaveable { mutableStateOf(true) }
     var abyss by rememberSaveable { mutableStateOf(true) }
@@ -222,14 +223,14 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
  */
 @Composable internal fun Guardian(game: GameUi, zone: Zone, boss: Monster) {
     val campaign = game.hero?.campaign
-    val back = campaign?.takeIf { it.bossDown(zone.code, System.currentTimeMillis()) }?.bosses?.get(zone.code)
+    val back = campaign?.takeIf { it.bossDown(zone.code, System.currentTimeMillis()) }?.bosses?.get(zone.code.value)
     val shape = RoundedCornerShape(12.dp)
     Row(
         Modifier.fillMaxWidth().background(Abyss, shape).border(1.dp, PanelRaised, shape).padding(horizontal = 10.dp, vertical = 7.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Canvas(Modifier.size(34.dp, 42.dp).clip(RoundedCornerShape(6.dp))) { Portraits.monster(this, boss.code, boss.form, Gold, 0f) }
+        Canvas(Modifier.size(34.dp, 42.dp).clip(RoundedCornerShape(6.dp))) { Portraits.monster(this, boss.code.value, boss.form, Gold, 0f) }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
             Text(monsterTitle(boss.code), color = Parchment, style = MaterialTheme.typography.titleSmall)
             Text(

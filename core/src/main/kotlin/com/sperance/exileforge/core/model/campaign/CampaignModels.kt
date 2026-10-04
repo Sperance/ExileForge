@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.model.campaign
 
+import com.sperance.exileforge.rules.content.MapCode
 import com.sperance.exileforge.rules.content.TrialEventKind
 import com.sperance.exileforge.rules.content.TrialProgress
 import com.sperance.exileforge.rules.content.TrialRun
@@ -22,7 +23,7 @@ import kotlinx.serialization.Serializable
  * descent under way and the open [run].
  */
 @Serializable data class CampaignState(
-    val cleared: List<String> = emptyList(),
+    val cleared: List<MapCode> = emptyList(),
     val chests: Map<String, ChestWindow> = emptyMap(),
     val bosses: Map<String, Long> = emptyMap(),
     val crystals: Map<String, CrystalWindow> = emptyMap(),
@@ -37,7 +38,7 @@ import kotlinx.serialization.Serializable
     val trials: TrialProgress = TrialProgress(),
 ) {
     /** The boss of [mapCode] is slain and not yet back. */
-    fun bossDown(mapCode: String, now: Long): Boolean = (bosses[mapCode] ?: 0L) > now
+    fun bossDown(mapCode: MapCode, now: Long): Boolean = (bosses[mapCode.value] ?: 0L) > now
 }
 
 /** The open run as the server holds it: the seed and the frozen context, and how far the journal was applied. */
@@ -53,7 +54,7 @@ import kotlinx.serialization.Serializable
 )
 
 /** Which zones the hero has passed — slain their boss — and which are open to them. */
-@Serializable data class CampaignProgress(val cleared: List<String> = emptyList(), val unlocked: List<String> = emptyList())
+@Serializable data class CampaignProgress(val cleared: List<MapCode> = emptyList(), val unlocked: List<MapCode> = emptyList())
 
 /** What a batch of events brought, as the server counted it. */
 @Serializable data class RewardView(

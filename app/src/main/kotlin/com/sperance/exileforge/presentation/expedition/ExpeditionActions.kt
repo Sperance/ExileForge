@@ -36,6 +36,7 @@ import com.sperance.exileforge.presentation.nav.Route
 import com.sperance.exileforge.presentation.quests.QuestActions
 import com.sperance.exileforge.presentation.state.GameSettings
 import com.sperance.exileforge.rules.content.ContentIndex
+import com.sperance.exileforge.rules.content.MapCode
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.content.Pet
 import com.sperance.exileforge.rules.content.Slot
@@ -139,7 +140,7 @@ class ExpeditionActions(
     /** Карта мира своего не читает: прогресс и атлас - героя. */
     fun loadCampaign() = heroSync.ensure()
 
-    fun selectZone(mapCode: String) = expedition { it.copy(launch = MapLaunch(mapCode)) }
+    fun selectZone(mapCode: String) = expedition { it.copy(launch = MapLaunch(MapCode(mapCode))) }
     fun closeZone() = expedition { it.copy(launch = null) }
 
     /** Карта из сундука, с которой войти, или null - войти без неё. */
@@ -165,7 +166,7 @@ class ExpeditionActions(
      * «В путь»: зона входится на сервере - с выбранной картой, потраченной там, или без неё, - и семя с замороженным
      * контекстом приходят с героем; поход строится здесь и идёт.
      */
-    fun start(mapCode: String, auto: AutoPlan? = null) {
+    fun start(mapCode: MapCode, auto: AutoPlan? = null) {
         if (mutableRun.value != null || commands.state.value.busy) return
         val i = index ?: return
         val progress = progress()
@@ -207,7 +208,7 @@ class ExpeditionActions(
         val gear = gear() ?: return
         // Войдя снова, поход продолжается (сервер 1.1.0): его числа и его павшие до сих пор.
         val run = Run(i, zone, started.seed, started.context)
-        val journal = RunJournal(started.id, id, zone.code, applied = started.applied, base = started.applied, carry = carry).also { runJournal = it }
+        val journal = RunJournal(started.id, id, zone.code.value, applied = started.applied, base = started.applied, carry = carry).also { runJournal = it }
         journal.onCarry = ::persist
         expedition { it.copy(runLoot = emptyList(), launch = null, pending = 0, rejected = 0) }
         mutableRun.value = ExpeditionRun.start(

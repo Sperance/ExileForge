@@ -29,6 +29,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Item
+import com.sperance.exileforge.rules.content.ItemCode
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.ui.components.Engraved
 import com.sperance.exileforge.ui.components.ForgeButton
@@ -62,7 +63,7 @@ enum class BagCategory(val key: String) {
  */
 fun bagSections(game: GameUi): List<Pair<BagCategory, List<BagStack>>> {
     val index = game.index
-    fun category(code: String) = when (index?.item(code)?.category) {
+    fun category(code: String) = when (index?.item(ItemCode(code))?.category) {
         Item.CURRENCY, Item.OMEN -> BagCategory.ORBS
         Item.ESSENCE -> BagCategory.ESSENCES
         Item.BOOK -> BagCategory.BOOKS
@@ -71,7 +72,7 @@ fun bagSections(game: GameUi): List<Pair<BagCategory, List<BagStack>>> {
         Item.CHEST -> BagCategory.CHESTS
         else -> BagCategory.OTHER
     }
-    fun worth(code: String) = index?.item(code)?.price ?: 0L
+    fun worth(code: String) = index?.item(ItemCode(code))?.price ?: 0L
     val byCategory = game.hero?.bag.orEmpty().filterValues { it > 0 }.map { (code, amount) -> BagStack(code, amount) }
         .sortedWith(compareBy({ -worth(it.code) }, { itemTitle(it.code) }))
         .groupBy { category(it.code) }
@@ -143,7 +144,7 @@ internal fun compactCount(amount: Long): String = when {
         return
     }
     val frame = RoundedCornerShape(6.dp)
-    val known = game.index?.item(code)
+    val known = game.index?.item(ItemCode(code))
     Box(Modifier.size(size.dp).background(Gold.copy(alpha = .08f), frame).border(1.dp, Gold.copy(alpha = .55f), frame), contentAlignment = Alignment.Center) {
         BagIcon(code, Modifier.size((size * .55f).dp), tint = if (known != null) Gold else Muted, kind = known?.let(::bagVisualKind) ?: ItemVisualKind.ITEM)
     }
@@ -176,7 +177,7 @@ internal fun compactCount(amount: Long): String = when {
     val readable = skill != null && skill.heroClass == game.hero?.heroClass
     val essence = game.index?.essence(code) != null
     // A loot chest (3.76.0) is opened here; since 3.77.0 it may also go to the auction, never to the merchant.
-    val chest = game.index?.item(code)?.category == Item.CHEST
+    val chest = game.index?.item(ItemCode(code))?.category == Item.CHEST
     StackPanel(onDismiss) {
         StackFace(game, code, stack.amount)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

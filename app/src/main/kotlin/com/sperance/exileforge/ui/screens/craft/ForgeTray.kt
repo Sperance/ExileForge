@@ -122,7 +122,7 @@ private const val ONE_ROW = 6
 /** The orbs of the tray: the bag's, Regret left out (it is spent on the tree), each one the item takes by the rules. */
 @Composable internal fun OrbTray(game: GameUi, smithy: Smithy, accepted: (String) -> Boolean, needsOmen: (String) -> Boolean, onSelect: (String) -> Unit) {
     val hero = game.hero ?: return
-    val orbs = game.orbs.filter { hero.count(it.code) > 0 && it.code != Orb.ORB_OF_REGRET.name && accepted(it.code) }.map { it.code }
+    val orbs = game.orbs.filter { hero.count(it.code.value) > 0 && it.code.value != Orb.ORB_OF_REGRET.name && accepted(it.code.value) }.map { it.code.value }
     val chosen = smithy.orb
     ForgeTray(
         game,
@@ -143,8 +143,8 @@ private const val ONE_ROW = 6
     val hero = game.hero ?: return
     val index = game.index ?: return
     val essences = index.itemsByCategory[com.sperance.exileforge.rules.content.Item.ESSENCE].orEmpty()
-        .filter { hero.count(it.code) > 0 && accepted(it.code) }
-        .sortedWith(compareBy({ index.essence(it.code)?.special == true }, { -(index.essence(it.code)?.tier ?: 0) })).map { it.code }
+        .filter { hero.count(it.code.value) > 0 && accepted(it.code.value) }
+        .sortedWith(compareBy({ index.essence(it.code.value)?.special == true }, { -(index.essence(it.code.value)?.tier ?: 0) })).map { it.code.value }
     ForgeTray(
         game,
         ui("forge.tray_essences"),

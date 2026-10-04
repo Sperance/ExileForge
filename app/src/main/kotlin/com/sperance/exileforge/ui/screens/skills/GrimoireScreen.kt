@@ -340,7 +340,7 @@ internal fun books(index: ContentIndex): List<Item> = index.itemsByCategory[Item
 
 /** The books in the bag, of every class, and the trade of three for one of the class's own. */
 @Composable internal fun Books(game: GameUi, index: ContentIndex, pages: List<SkillDefinition>, onExchange: () -> Unit) {
-    val owned = books(index).sumOf { game.bagAmount(it.code) ?: 0L }
+    val owned = books(index).sumOf { game.bagAmount(it.code.value) ?: 0L }
     val rule = index.skills.rules.exchange
     ForgePanel {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {

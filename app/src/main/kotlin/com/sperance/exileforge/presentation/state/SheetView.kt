@@ -70,7 +70,7 @@ internal object HeroLens {
     fun orbs(index: ContentIndex?): List<Item> = index?.itemsByCategory?.get(Item.CURRENCY).orEmpty().sortedBy { it.price }
 
     /** The auction's money (server 1.65.0): the base orbs a lot is priced, bought and filtered in, cheapest first. */
-    fun currencies(index: ContentIndex?): List<Item> = index?.let { i -> orbs(i).filter { i.rules.auction.trades(it.code) } }.orEmpty()
+    fun currencies(index: ContentIndex?): List<Item> = index?.let { i -> orbs(i).filter { i.rules.auction.trades(it.code.value) } }.orEmpty()
 
     /** The bench lines the hero has found; the rest of the bench stays hidden. */
     fun bench(index: ContentIndex?, hero: HeroView?): List<BenchRecipe> = index?.let { i -> hero?.let { h -> i.bench.filter { it.code in h.info.recipes } } }.orEmpty()

@@ -161,7 +161,7 @@ private const val REASON = 400
         )
         var item by remember { mutableStateOf("") }
         var amount by remember { mutableStateOf("1") }
-        Spinner(ui("tester.item"), item, index.items.keys.associateWith(::itemTitle), !account.busy) { item = it }
+        Spinner(ui("tester.item"), item, index.items.keys.associate { it.value to itemTitle(it.value) }, !account.busy) { item = it }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(
                 amount,

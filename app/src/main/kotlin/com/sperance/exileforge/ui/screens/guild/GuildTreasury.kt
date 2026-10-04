@@ -33,14 +33,14 @@ import com.sperance.exileforge.ui.theme.*
  */
 @Composable internal fun ContributeTab(game: GameUi, vm: GuildViewModel, guild: GuildView, me: GuildMember?) {
     val rules = game.index?.guilds
-    val orbs = game.orbs.filter { (game.bagAmount(it.code) ?: 0L) > 0 }
+    val orbs = game.orbs.filter { (game.bagAmount(it.code.value) ?: 0L) > 0 }
     // The crafts' materials (3.79.0, server 1.74.0): they grow the guild at their price, the treasury does not keep them.
-    val materials = game.index?.items?.values.orEmpty().filter { it.category in DONATED_STOCK && it.price > 0 && (game.bagAmount(it.code) ?: 0L) > 0 }.sortedBy { it.price }
+    val materials = game.index?.items?.values.orEmpty().filter { it.category in DONATED_STOCK && it.price > 0 && (game.bagAmount(it.code.value) ?: 0L) > 0 }.sortedBy { it.price }
     var item by remember { mutableStateOf(GUILD_GOLD) }
     var amount by remember { mutableStateOf("") }
     val count = amount.toLongOrNull() ?: 0L
     val have = if (item == GUILD_GOLD) game.hero?.money else game.bagAmount(item)
-    val price = if (item == GUILD_GOLD) 1L else (orbs + materials).firstOrNull { it.code == item }?.price ?: 0L
+    val price = if (item == GUILD_GOLD) 1L else (orbs + materials).firstOrNull { it.code.value == item }?.price ?: 0L
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
         item {
             ForgePanel {
@@ -48,7 +48,7 @@ import com.sperance.exileforge.ui.theme.*
                 Spinner(
                     ui("guild.give_what"),
                     item,
-                    mapOf(GUILD_GOLD to ui("guild.gold")) + (orbs + materials).associate { it.code to itemTitle(it.code) },
+                    mapOf(GUILD_GOLD to ui("guild.gold")) + (orbs + materials).associate { it.code.value to itemTitle(it.code.value) },
                     !game.busy,
                     glyph = Glyph.CURRENCY,
                     optionArt = orbArt(game.orbs),

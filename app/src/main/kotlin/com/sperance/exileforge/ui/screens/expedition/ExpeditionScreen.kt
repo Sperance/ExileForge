@@ -86,7 +86,7 @@ private const val CARD_TOP = .48f
         if (!settled) {
             Box(Modifier.fillMaxSize().background(CHART_BARE))
         } else {
-            WorldCanvas(world, art, camera, launch?.mapCode, stash, Modifier.fillMaxSize()) { code -> if (code == null) vm.closeZone() else vm.selectZone(code) }
+            WorldCanvas(world, art, camera, launch?.mapCode?.value, stash, Modifier.fillMaxSize()) { code -> if (code == null) vm.closeZone() else vm.selectZone(code) }
         }
         WorldBar(
             world,

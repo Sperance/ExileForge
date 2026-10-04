@@ -1,6 +1,7 @@
 package com.sperance.exileforge.core.display
 
 import com.sperance.exileforge.rules.content.ContentIndex
+import com.sperance.exileforge.rules.content.ModifierCode
 
 /**
  * What a small icon stands for, apart from how it is drawn.
@@ -58,7 +59,7 @@ enum class Glyph {
         fun ofStat(stat: String): Glyph = statWords.firstOrNull { (word, _) -> word in stat.uppercase() }?.second ?: INFO
 
         /** A modifier is drawn as the characteristic its first effect changes. */
-        fun ofModifier(modifierCode: String, index: ContentIndex): Glyph = index.modifier(modifierCode)?.effects?.firstOrNull()?.stat?.let(::ofStat) ?: INFO
+        fun ofModifier(modifierCode: ModifierCode, index: ContentIndex): Glyph = index.modifier(modifierCode)?.effects?.firstOrNull()?.stat?.let(::ofStat) ?: INFO
 
         private fun stat(key: String) = if (key.startsWith("STOCK_") || key.startsWith("BATTLE_")) ofStat(key) else null
 

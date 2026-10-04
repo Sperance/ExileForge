@@ -164,7 +164,7 @@ import kotlin.math.roundToInt
 
             RunPhase.CLEARED -> MapSummary(game, model, hud, onDone = close)
 
-            RunPhase.GATE -> VaalGate(game, hud, run.zone.corrupted.takeIf { it.isNotBlank() }, onEnter = model::enterVaal, onRefuse = model::refuseVaal) { model.runCommand(RunCommand.StepBack) }
+            RunPhase.GATE -> VaalGate(game, hud, run.zone.corrupted.takeIf { it.value.isNotBlank() }, onEnter = model::enterVaal, onRefuse = model::refuseVaal) { model.runCommand(RunCommand.StepBack) }
 
             RunPhase.CRYSTAL -> hud.crystal?.let { CrystalSheet(game, it, onCommand = model::runCommand) }
 

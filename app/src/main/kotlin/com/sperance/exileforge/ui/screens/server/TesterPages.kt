@@ -50,7 +50,7 @@ import org.koin.compose.viewmodel.koinViewModel
     ForgePanel {
         Engraved(ui("tester.items"))
         var item by remember { mutableStateOf("") }
-        Spinner(ui("tester.item"), item, index.items.keys.associateWith(::itemTitle), enabled) { item = it }
+        Spinner(ui("tester.item"), item, index.items.keys.associate { it.value to itemTitle(it.value) }, enabled) { item = it }
         NumberGrant(ui("tester.amount"), "10", account.inputs.number, enabled && item.isNotBlank()) { heroModel.grantItem(item, it.toLong()) }
         var unique by remember { mutableStateOf("") }
         val uniques = index.templates.values.filter { it.rarity >= Rarity.UNIQUE }.associate { it.code to equipmentTitle(it.code) }
@@ -62,7 +62,7 @@ import org.koin.compose.viewmodel.koinViewModel
         Engraved(ui("tester.maps"))
         var zone by remember { mutableStateOf("") }
         var rarity by remember { mutableStateOf(Rarity.RARE) }
-        Spinner(ui("tester.zone"), zone, index.zones.values.sortedBy { it.level }.associate { it.code to "${mapTitle(it.code)} · ${it.level}" }, enabled) { zone = it }
+        Spinner(ui("tester.zone"), zone, index.zones.values.sortedBy { it.level }.associate { it.code.value to "${mapTitle(it.code)} · ${it.level}" }, enabled) { zone = it }
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             listOf(Rarity.COMMON, Rarity.MAGIC, Rarity.RARE).forEach { r ->
                 FilterChip(selected = rarity == r, onClick = { rarity = r }, label = { Text(ui("enum.rarity.${r.name}")) })

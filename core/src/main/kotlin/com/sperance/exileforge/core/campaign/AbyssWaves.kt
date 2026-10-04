@@ -6,6 +6,7 @@ import com.sperance.exileforge.rules.content.AbyssRule
 import com.sperance.exileforge.rules.content.AbyssWave
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
+import com.sperance.exileforge.rules.content.MonsterCode
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.Zone
@@ -19,7 +20,7 @@ import com.sperance.exileforge.rules.run.Run
 import kotlin.math.roundToInt
 
 /** One depth of the Abyss as its sheet shows it: the level its wave stands at, the wave's shares and the hoard waiting at its end. */
-data class AbyssDepth(val level: Int, val count: List<Int>, val magic: Double, val rare: Double, val leader: String?, val hoard: AbyssHoardView)
+data class AbyssDepth(val level: Int, val count: List<Int>, val magic: Double, val rare: Double, val leader: MonsterCode?, val hoard: AbyssHoardView)
 
 /**
  * The waves of the Abyss: the dice of a depth are the client's, as every fight's. A wave is the rule's own

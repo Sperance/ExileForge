@@ -124,8 +124,8 @@ private fun rewardLine(reward: RedemptionReward): String {
 private fun rewardOptions(game: GameUi, kind: RedemptionKind): Map<String, String> {
     val index = game.index ?: return emptyMap()
     return when (kind) {
-        RedemptionKind.ITEM -> index.items.values.sortedWith(compareBy({ it.category }, { itemTitle(it.code) }))
-            .associate { it.code to itemTitle(it.code) }
+        RedemptionKind.ITEM -> index.items.values.sortedWith(compareBy({ it.category }, { itemTitle(it.code.value) }))
+            .associate { it.code.value to itemTitle(it.code.value) }
 
         RedemptionKind.EQUIPMENT -> index.templates.values.sortedWith(compareBy({ it.slot }, { it.level }))
             .associate { it.code to "${equipmentTitle(it.code)} · ${slotTitle(it.slot, game.lang)} · ${it.level}" }

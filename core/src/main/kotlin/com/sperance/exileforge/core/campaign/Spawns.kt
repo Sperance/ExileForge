@@ -3,6 +3,7 @@ package com.sperance.exileforge.core.campaign
 import com.sperance.exileforge.core.campaign.combat.DamageType
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
+import com.sperance.exileforge.rules.content.MonsterCode
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.Crystal
@@ -34,8 +35,8 @@ class Spawns(private val index: ContentIndex, private val run: Run) {
     /** The guardian of the Vaal zone behind the portal, sealing its exit. */
     fun corrupted(zone: Zone, buffs: List<MonsterEffect>): RolledMonster? = guardian(zone.corrupted, zone.level, buffs, emptyList(), run.streams.of("corruptRoll"))
 
-    private fun guardian(code: String, level: Int, buffs: List<MonsterEffect>, extra: List<MonsterEffect>, dice: Dice): RolledMonster? {
-        if (code.isBlank() || index.monster(code) == null) return null
+    private fun guardian(code: MonsterCode, level: Int, buffs: List<MonsterEffect>, extra: List<MonsterEffect>, dice: Dice): RolledMonster? {
+        if (code.value.isBlank() || index.monster(code) == null) return null
         return skilled(buffed(monsters.boss(monsters.guardian(code, level), dice, extra), buffs), dice)
     }
 
@@ -44,7 +45,7 @@ class Spawns(private val index: ContentIndex, private val run: Run) {
      * the line of every kind of essence it guards, and [extra], what a Vaal orb and the atlas add to it.
      */
     fun crystalGuardian(zone: Zone, crystal: Crystal, place: Int, buffs: List<MonsterEffect>, extra: List<MonsterEffect>): RolledMonster? {
-        val monster = index.monster(crystal.guardian) ?: index.monster(zone.monsters.firstOrNull().orEmpty()) ?: return null
+        val monster = index.monster(crystal.guardian) ?: zone.monsters.firstOrNull()?.let(index::monster) ?: return null
         val dice = run.streams.of("crystalGuardian", place)
         val rule = campaign.rarity(MonsterRarity.RARE)
         val picked = monsters.draw(run.pool, zone.level, rule, dice.between(rule.modifiers), dice)

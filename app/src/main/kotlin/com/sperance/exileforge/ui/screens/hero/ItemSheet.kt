@@ -130,7 +130,7 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
                     view.slot == Slot.MAP -> Action(ForgeGlyphs.Portal, ui("hero.action_map"), can, GoldBright) {
                         onDismiss()
                         shell.tab(TAB_EXPEDITION)
-                        expedition.selectZone(instance.mapZone)
+                        expedition.selectZone(instance.mapZone.value)
                         expedition.pickMap(instance.id)
                     }
 

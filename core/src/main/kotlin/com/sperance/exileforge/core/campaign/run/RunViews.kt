@@ -33,6 +33,8 @@ import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.EssenceBook
 import com.sperance.exileforge.rules.content.LoneWolfRule
+import com.sperance.exileforge.rules.content.MapCode
+import com.sperance.exileforge.rules.content.MonsterCode
 import com.sperance.exileforge.rules.content.Pet
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.AbyssRifts
@@ -204,7 +206,7 @@ data class FightReport(val monster: RolledMonster, val outcome: Outcome, val pac
 /** Everything the overlay draws, as one value: it changes only when something on it does. */
 data class RunHud(
     val phase: RunPhase,
-    val mapCode: String,
+    val mapCode: MapCode,
     val heroLife: Int,
     val heroMaxLife: Int,
     val heroShield: Int,
@@ -286,7 +288,7 @@ data class FountainView(val id: Int, val heal: Double)
 data class CrystalView(
     val id: Int,
     val essences: List<String>,
-    val guardian: String,
+    val guardian: MonsterCode,
     val stronger: Boolean,
     val vaal: Boolean,
     val outcome: String? = null,

@@ -13,6 +13,7 @@ import com.sperance.exileforge.presentation.hero.HeroActions
 import com.sperance.exileforge.presentation.hero.HeroSync
 import com.sperance.exileforge.presentation.state.GameSlice
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.rules.content.MapCode
 import com.sperance.exileforge.rules.content.Slot
 import kotlinx.coroutines.flow.StateFlow
 
@@ -40,8 +41,8 @@ class ExpeditionViewModel(
     fun pickMap(itemId: String?) = expedition.pickMap(itemId)
     fun pickPotion(code: String?) = expedition.pickPotion(code)
     fun toggleScarab(code: String, add: Boolean) = expedition.toggleScarab(code, add)
-    fun startRun(mapCode: String) = expedition.start(mapCode)
-    fun startAutoRun(mapCode: String, plan: AutoPlan) = expedition.start(mapCode, plan)
+    fun startRun(mapCode: String) = expedition.start(MapCode(mapCode))
+    fun startAutoRun(mapCode: String, plan: AutoPlan) = expedition.start(MapCode(mapCode), plan)
     fun runCommand(command: RunCommand) = expedition.send(command)
     fun flushRun() = expedition.flushRun()
     fun enterVaal() = expedition.enterVaal()

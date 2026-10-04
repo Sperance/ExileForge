@@ -42,6 +42,7 @@ import com.sperance.exileforge.rules.content.AtlasNode
 import com.sperance.exileforge.rules.content.AtlasNodeKind
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Line
+import com.sperance.exileforge.rules.content.ModifierCode
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
@@ -142,9 +143,9 @@ internal fun effectLines(index: ContentIndex, line: Line): List<String> {
 
 /** The atlas's lines added up (3.54.0): by modifier code, value by value, over every taken node. */
 internal object AtlasTotals {
-    fun of(index: ContentIndex, taken: Set<String>): Map<String, List<Double>> = sum(index.atlas.nodes.filter { it.code in taken }.flatMap { it.lines })
+    fun of(index: ContentIndex, taken: Set<String>): Map<ModifierCode, List<Double>> = sum(index.atlas.nodes.filter { it.code in taken }.flatMap { it.lines })
 
-    fun sum(lines: List<Line>): Map<String, List<Double>> = lines.groupBy { it.code }.mapValues { (_, same) ->
+    fun sum(lines: List<Line>): Map<ModifierCode, List<Double>> = lines.groupBy { it.code }.mapValues { (_, same) ->
         List(same.maxOf { it.values.size }) { i -> same.sumOf { it.values.getOrElse(i) { 0.0 } } }
     }
 }

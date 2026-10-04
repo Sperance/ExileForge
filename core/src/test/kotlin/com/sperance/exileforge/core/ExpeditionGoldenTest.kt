@@ -73,8 +73,8 @@ class ExpeditionGoldenTest {
         }
         val gear = HeroGear(sheet.stats, case.level, sheet.model, HeroStance.of(heroClass.code), Loadout.of(skills, index.skills, heroClass.code, flasks, index.powers, index.rules.charges), index.stats.percent)
         val run = Run(index, zone, case.seed, RunContext(heroClass.code, case.level))
-        val journal = RunJournal("run-${case.seed}", "hero", zone.code)
-        val campaign = CampaignState(chests = mapOf(zone.code to ChestWindow(Long.MAX_VALUE, 2)))
+        val journal = RunJournal("run-${case.seed}", "hero", zone.code.value)
+        val campaign = CampaignState(chests = mapOf(zone.code.value to ChestWindow(Long.MAX_VALUE, 2)))
         val expedition = ExpeditionRun.start(index, zone, run, journal, gear, campaign, 0L, 0.0, case.level, { 0L }, auto = AutoPlan(abyss = false))
         var guard = 0
         while (guard++ < 200_000) {

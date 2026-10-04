@@ -133,6 +133,9 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
                 return@Column
             }
             MutedText(mapDescription(zone.code.value), style = MaterialTheme.typography.bodySmall)
+            // How many times this hero passed the zone (3.81.0, server 1.76.0): its guardian slain.
+            val passed = game.hero?.campaign?.completions?.get(zone.code.value) ?: 0
+            Text(if (passed > 0) ui("expedition.completions", passed) else ui("expedition.completions_none"), color = Parchment, style = MaterialTheme.typography.labelMedium)
             index.monster(zone.boss)?.let { Guardian(game, zone, it) }
             AtlasKeys(game.atlasState?.earned.orEmpty(), zone.code.value)
             Maps(game, vm, index, zone, launch)

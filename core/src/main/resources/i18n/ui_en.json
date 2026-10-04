@@ -569,6 +569,8 @@
   "expedition.launch_locked_q": "This map is locked. Launch anyway?",
   "expedition.launch_locked_go": "Launch",
   "expedition.launch_go": "Enter the portal",
+  "expedition.completions": "Passed: {0} times",
+  "expedition.completions_none": "Not passed yet",
   "expedition.launch_no_map": "No map",
   "expedition.launch_no_maps": "No map of this zone in the stash. Maps drop from monsters and guardians; a level {0} map fits this zone alone.",
   "expedition.launch_percent": "+{0}%",

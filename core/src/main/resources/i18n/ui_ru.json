@@ -569,6 +569,8 @@
   "expedition.launch_locked_q": "Карта заперта. Всё равно запустить?",
   "expedition.launch_locked_go": "Запустить",
   "expedition.launch_go": "Войти в портал",
+  "expedition.completions": "Пройдена: {0} раз(а)",
+  "expedition.completions_none": "Ещё не пройдена",
   "expedition.launch_no_map": "Без карты",
   "expedition.launch_no_maps": "В тайнике нет карты этой зоны. Карты падают с монстров и стражей; карта уровня {0} подходит только сюда.",
   "expedition.launch_percent": "+{0}%",

@@ -8,6 +8,7 @@ import com.sperance.exileforge.core.guild.GuildRepository
 import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.i18n.LanguageRepository
 import com.sperance.exileforge.core.market.MarketRepository
+import com.sperance.exileforge.core.network.ForgeHttp
 import com.sperance.exileforge.core.network.LinkRepository
 import com.sperance.exileforge.core.network.RequestJournal
 import com.sperance.exileforge.core.quests.QuestRepository
@@ -66,6 +67,7 @@ import com.sperance.exileforge.presentation.world.WorldLoader
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import okhttp3.OkHttpClient
 import org.koin.android.ext.koin.androidApplication
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.singleOf
@@ -91,6 +93,8 @@ val appModule = module {
     single { SessionRepository(DEFAULT_SERVER) }
     single { WorldRepository() }
     single { ServerConnection() }
+    // Один HTTP-клиент на процесс (3.80.45): пул соединений, потоки и TLS-сессии общие у всех серверов и обновлений.
+    single<OkHttpClient> { ForgeHttp.client }
     singleOf(::Navigator)
     single { ConnectionEventsHub() }
     single { CommandRunner(get(named(APP_SCOPE)), get<ConnectionEventsHub>()) }
@@ -123,7 +127,7 @@ val appModule = module {
     singleOf(::Actions)
     // Сервисы приложения (3.80.44, вместо `ForgeRuntime`): сессия, связь, герои аккаунта, прогрев, коды наград и запуск.
     // Сессия, связь и герои зовут друг друга, поэтому ссылаются лениво.
-    single { SessionActions(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get(), get(), get(), get(), lazy { get<ConnectionActions>() }, lazy { get<CharacterActions>() }, lazy { get<WarmupActions>() }) }
+    single { SessionActions(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get(), get(), get(), get(), lazy { get<ConnectionActions>() }, lazy { get<CharacterActions>() }, lazy { get<WarmupActions>() }, get()) }
     single { CharacterActions(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get(), get(), lazy { get<WarmupActions>() }) }
     single { ConnectionActions(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get(), get(), lazy { get<SessionActions>() }, lazy { get<CharacterActions>() }) }
     single { WarmupActions(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get()) }
@@ -147,5 +151,5 @@ val appModule = module {
     viewModel { SettingsViewModel(get()) }
     viewModelOf(::ServerViewModel)
     // Проверка обновлений ждёт сервер игровой модели: поток и манифест приходят параметрами из активности.
-    viewModel { params -> UpdateViewModel(androidApplication(), params.get(1), params.get(0), get()) }
+    viewModel { params -> UpdateViewModel(androidApplication(), params.get(1), params.get(0), get(), get()) }
 }

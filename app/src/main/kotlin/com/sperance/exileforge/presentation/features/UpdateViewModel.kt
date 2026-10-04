@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import okhttp3.OkHttpClient
 import java.io.File
 
 /**
@@ -54,8 +55,9 @@ class UpdateViewModel(
     private val server: suspend () -> StaticManifest?,
     newerServer: kotlinx.coroutines.flow.Flow<Unit> = kotlinx.coroutines.flow.emptyFlow(),
     private val guides: GuideStore,
+    http: OkHttpClient,
 ) : AndroidViewModel(app) {
-    private val updates = Updates()
+    private val updates = Updates(client = http)
 
     // A build that does not update itself (debug, the tested shrunk one) is never closed: only a check by hand runs.
     private val mutable = MutableStateFlow(if (BuildConfig.UPDATES) UpdateState() else UpdateState(checking = false, verified = true))

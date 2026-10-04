@@ -8,7 +8,6 @@ import com.sperance.exileforge.core.model.sync.API_REVISION
 import com.sperance.exileforge.core.network.ApiFailure
 import com.sperance.exileforge.core.network.CommandStore
 import com.sperance.exileforge.core.network.FailureState
-import com.sperance.exileforge.core.network.ForgeHttp
 import com.sperance.exileforge.core.network.GameApi
 import com.sperance.exileforge.core.network.ManifestCache
 import com.sperance.exileforge.core.network.RequestJournal
@@ -40,6 +39,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
 
 class SessionActions(
     repositories: Repositories,
@@ -55,6 +55,8 @@ class SessionActions(
     private val lazyConnection: Lazy<ConnectionActions>,
     private val lazyCharacters: Lazy<CharacterActions>,
     private val lazyWarmup: Lazy<WarmupActions>,
+    /** HTTP-клиент процесса (3.80.45, из Koin): все серверы делят его пул и TLS-сессии. */
+    private val http: OkHttpClient,
 ) : AppService(repositories, actions, commands, connection, store, scope) {
     private val connectionActions: ConnectionActions get() = lazyConnection.value
     private val characterActions: CharacterActions get() = lazyCharacters.value
@@ -320,7 +322,7 @@ class SessionActions(
             val stale = awaySince?.let { (System.nanoTime() - it) / 1_000_000 > STALE_AWAY_MS } == true
             awaySince = null
             scope.launch {
-                withContext(Dispatchers.IO) { ForgeHttp.dropIdleConnections() }
+                withContext(Dispatchers.IO) { http.connectionPool.evictAll() }
                 val session = sessions.state.value
                 val link = links.state.value
                 when {
@@ -417,7 +419,7 @@ class SessionActions(
      */
     fun newApi(server: String): GameApi {
         lateinit var created: GameApi
-        created = GameApi(server, journal, onUnauthorized = {
+        created = GameApi(server, journal, http, onUnauthorized = {
             if (connection.ready && api === created) {
                 clearSession()
                 scope.launch {

@@ -8,9 +8,9 @@
 
 ## Этап 1 - Koin
 - [x] `koin-android`, `koin-androidx-compose`; `di/AppModule.kt`: сторы DataStore, журнал, область приложения, `ForgeViewModel`, `UpdateViewModel`.
-- [ ] Модули network (`Transport`, `GameApi`, клиенты) и repositories - с этапом 2.
+- [x] Модули network (`Transport`, `GameApi`, клиенты) и repositories - с этапом 2: репозитории - синглы Koin; `Transport` и клиенты маршрутов собирает `GameApi` (3.80.45).
 - [x] `ForgeApplication` стартует Koin; `MainActivity` без фабрик; `DraftStore` и `GuideStore` приходят через `koinInject`.
-- [ ] `GameApi` - session-scope (пересоздаётся при смене сервера), `ForgeHttp` - singleton через Koin.
+- [x] `GameApi` - session-scope: его создаёт `SessionActions.newApi` на каждый сервер и публикует через синглтон `ServerConnection`; `OkHttpClient` процесса (`ForgeHttp.client`) - синглтон Koin, его получают сессия и обновления (3.80.45).
 
 ## Этап 2 - репозитории :core
 - [x] Истина в `:core`: `StateFlow`/`Flow`, без Android. С 3.80.32 `ForgeState` - только проекция (`combine` правок всех источников в `ForgeRuntime.projection()`), в неё никто не пишет; логика читает источники.
@@ -44,7 +44,7 @@
 - [x] Navigation 3 (`navigation3-runtime/ui` 1.2.0, вместо Navigation Compose: стек у приложения, без NavController): `presentation/nav/Route` - типизированные ключи Auth, Characters, Hero, Tree, Grimoire, Expedition, Crafts, Progress, Forge, Pets, Trials, Chronicle, City, Quests, Merchant, Auction, Guild, Account, Settings, Admin, Redemption, Atlas; `Navigator` - стек (вкладка сбрасывает до корня, подэкран ложится над корнем, аккаунт и настройки - поверх любого). Прогрев, поход и испытание - состояния игры поверх стека, не маршруты (их открывают и закрывают команды, не игрок). Разделы гильдии и квестов - состояние своих моделей, не стек.
 - [x] Фичи не пишут `phase`/`tab`/`building` - просят навигатор; `ForgeState` лишь отражает его верх для экранов, что ещё читают номера вкладок. `settingsReturn` и `BackHandler` атласа удалены; системный «назад» снимает экран со стека.
 - [x] Гейтинг уровня - `Navigator.gate`: закрытый экран не открывается, тост говорит, с какого уровня.
-- [ ] Оставшиеся `BackHandler` - локальные окна экранов (карточка зоны, окно профессии, карточка узла): оставить как локальное состояние или сделать маршрутами.
+- [x] Оставшиеся `BackHandler` - локальные окна экранов (карточка зоны, окно профессии, карточка узла) и оверлеи похода, испытания и отчёта: остаются локальным состоянием экранов и их моделей - это окна поверх экрана, а не экраны стека (3.80.45). `BackRow` - кнопка «назад» внутри экрана и для его внутренних страниц.
 
 ## Этап 4 - экраны
 - [ ] Каждый экран - свой androidx `ViewModel` из Koin + `UiState`; экран не получает `ForgeViewModel`/`ForgeState`. Порядок (решение владельца): простые сначала - Settings → Server → Feedback/Mail → City (Quests, Merchant, Auction, Guild) → Crafts/Progress → Tree/Grimoire → Hero → Expedition/Atlas → Session/Characters; пуш после каждого экрана.
@@ -79,6 +79,6 @@
 - [x] Удалено неиспользуемое: `MailButton`, `classDescription`, `itemSources`, `rankIndexOf`.
 - [ ] Удалить этот файл.
 
-## Где остановились (3.80.44, сервер 1.74.6)
+## Где остановились (3.80.45, сервер 1.74.6)
 - Сделано: golden-тест забега, распил `ExpeditionRun`/`ExpeditionWorld`, файлы сцены, мёртвый код, константы боя и мира в контент, срезы `AccountUi`/`GameUi` для всех экранов; `ForgeState`, `ForgeViewModel`, `ForgeRuntime`, `FeatureViewModel` удалены - сервисы `presentation/app` и `WorldLoader`.
-- Дальше по плану: локальные `BackHandler` (этап 3), модули network в Koin и `GameApi` в области сессии (этап 1), серверный этап 3 (value-классы кодов, типизированные статы, sealed-иерархии, `API_REVISION` 43).
+- Дальше по плану: серверный этап 3 (value-классы кодов, типизированные статы, sealed-иерархии, `API_REVISION` 43).

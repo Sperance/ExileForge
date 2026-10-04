@@ -67,4 +67,3 @@ internal fun Modifier.tauntAura(shape: Shape, time: Float) = drawBehind {
         drawPath(chevron, TauntGold, style = Stroke(1.6.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
     }
 }
-

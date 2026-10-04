@@ -3,10 +3,10 @@ package com.sperance.exileforge.ui.screens.hero
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.*
@@ -103,9 +103,11 @@ private fun EmptySlot(game: GameUi, eggs: List<String>, enabled: Boolean, onLay:
         }
     }
     // Every egg at hand in one window (3.81.0), even a single kind: the player sees what goes in before it does.
-    if (picking) EggPicker(game, eggs, onDismiss = { picking = false }) { egg ->
-        picking = false
-        onLay(egg)
+    if (picking) {
+        EggPicker(game, eggs, onDismiss = { picking = false }) { egg ->
+            picking = false
+            onLay(egg)
+        }
     }
 }
 

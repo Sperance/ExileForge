@@ -455,8 +455,4 @@ class ForgeRuntime(
 
     /** Администратор в инструментах: отладочная сборка, роль и режим вместе. */
     private fun adminTools(): Boolean = com.sperance.exileforge.BuildConfig.DEBUG && sessions.state.value.isAdmin && modes.mode.value == AppMode.ADMIN
-
-    fun close() {
-        scope.coroutineContext[Job]?.cancel()
-    }
 }

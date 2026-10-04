@@ -6,6 +6,7 @@ import com.sperance.exileforge.core.campaign.LogKind
 import com.sperance.exileforge.core.campaign.TrialArena
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.model.command.BugReportRequest
+import com.sperance.exileforge.core.model.sync.StaticManifest
 import com.sperance.exileforge.presentation.features.Warmup
 import com.sperance.exileforge.presentation.nav.Route
 import com.sperance.exileforge.presentation.state.Building
@@ -13,9 +14,12 @@ import com.sperance.exileforge.presentation.state.Buzz
 import com.sperance.exileforge.presentation.state.GameSlice
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.StashSort
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Оболочка приложения (3.80.30): вкладки и здания по прежнему номеру, «Настройки» поверх экрана, строка в тосты.
@@ -86,5 +90,35 @@ class ShellViewModel(private val runtime: ForgeRuntime, slice: GameSlice) : View
 
     fun logFilter(kinds: Set<LogKind>) {
         viewModelScope.launch { runtime.prefs.saveLogFilter(kinds) }
+    }
+
+    // ---- жизненный цикл активности (3.80.42: из удалённой общей модели) ----
+
+    /** Возврат на передний план: связь восстанавливается без нажатия. */
+    fun reconnect() = runtime.sessionViewModel.reconnect()
+
+    /** Уход с переднего плана: момент запомнен, чтобы долгое отсутствие обновило экран на возврате. */
+    fun away() = runtime.sessionViewModel.away()
+
+    /** Журнал похода уходит сразу: процесс, убитый в фоне, не унесёт его с собой. */
+    fun flushRun() = runtime.expedition.flushRun()
+
+    /** Вход встретил сервер новее сборки (3.74.0): проверка обновлений идёт сразу. */
+    val newerServer: Flow<Unit> get() = runtime.newerServer
+
+    /** Манифест живого сервера для проверки обновлений (3.72.0); null, пока сервер не отвечает. */
+    suspend fun serverManifest(): StaticManifest? = try {
+        // 3.74.0: после того как у приложения есть сервер, и как его отдаёт он сейчас - манифест старой выкладки прятал обновление.
+        withTimeoutOrNull(API_WAIT_MS) { runtime.apiReady.await() }
+        runtime.api.liveManifest()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (_: Exception) {
+        null
+    }
+
+    private companion object {
+        /** Сколько проверка обновлений ждёт, пока у приложения появится сервер. */
+        const val API_WAIT_MS = 10_000L
     }
 }

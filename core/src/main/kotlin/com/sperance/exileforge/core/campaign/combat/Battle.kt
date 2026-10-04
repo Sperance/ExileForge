@@ -15,6 +15,7 @@ import com.sperance.exileforge.core.campaign.draught
 import com.sperance.exileforge.rules.content.AilmentRule
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.Condition
+import kotlin.math.max
 import kotlin.math.min
 import kotlin.random.Random
 
@@ -97,6 +98,21 @@ class Battle(
         /** Stunned until then: nothing is swung before it. A freeze holds by its own ailment (3.71.0), so lifting it frees at once. */
         var heldUntil = 0.0
         var lastHit = -1e9
+
+        /** Vampirism within the current second (server 1.76.0): [leechStart] opens it, [leeched] is what it has given back so far. */
+        var leechStart = -1e9
+        var leeched = 0.0
+
+        /** How much of [leech] the per-second cap still lets through at [time], counting it in. */
+        fun leechRoom(leech: Double, time: Double, cap: Double): Double {
+            if (time - leechStart >= 1.0) {
+                leechStart = time
+                leeched = 0.0
+            }
+            val allowed = min(leech, max(0.0, body.maxLife * cap / 100 - leeched))
+            leeched += allowed
+            return allowed
+        }
         val ailments = mutableListOf<ActiveAilment>()
 
         /** Damage over time gathered per ailment since its last tick was logged, and when that was. */

@@ -40,8 +40,14 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
     /** Every damage it deals, as a multiplier: the sheet's "damage" (server 0.69.0), a monster's "deals more damage". */
     val damageMore = max(0.0, 1 + stat(CoreStat.DAMAGE.code) / 100)
 
-    /** How fast its skills recover: the cooldown recovery, and a spell's cast speed on top. */
-    fun recovery(spell: Boolean): Double = max(0.1, 1 + (stat(CoreStat.COOLDOWN_RECOVERY.code) + if (spell) stat(CoreStat.CAST_SPEED.code) else 0.0) / 100)
+    /**
+     * How fast its skills recover: the cooldown recovery, and a spell's cast speed on top - the cast speed no higher than its cap,
+     * the whole no faster than the rules' shortest cooldown (server 1.76.0).
+     */
+    fun recovery(spell: Boolean): Double {
+        val cast = if (spell) stat(CoreStat.CAST_SPEED.code).coerceAtMost(rules.caps.castSpeed) else 0.0
+        return (1 + (stat(CoreStat.COOLDOWN_RECOVERY.code) + cast) / 100).coerceIn(0.1, rules.caps.recoveryMax)
+    }
 
     /** What is left of a skill's price in mana. */
     val skillCost = max(0.0, 1 - stat(CoreStat.SKILL_COST.code) / 100)
@@ -140,8 +146,8 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
         val chaos = name == CoreStat.RESIST_CHAOS.code
         val ceiling = (rules.resistCap + stat(type.maxResist.orEmpty()) + (if (chaos) 0.0 else stat(CoreStat.RESIST_MAX_ALL.code))).coerceIn(0.0, rules.resistHardCap)
         // Below zero since 3.18.0: the act's penalty and the map's curse can leave a resistance negative, as in PoE.
-        val own = (stat(name) + (if (chaos) 0.0 else stat(CoreStat.RESIST_ALL.code))).coerceIn(-rules.resistCap, ceiling)
-        return (own - penetration).coerceIn(-rules.resistCap, ceiling) / 100
+        val own = (stat(name) + (if (chaos) 0.0 else stat(CoreStat.RESIST_ALL.code))).coerceIn(-rules.resistFloor, ceiling)
+        return (own - penetration).coerceIn(-rules.resistFloor, ceiling) / 100
     }
 
     /** How much of the target's [type] resistance this fighter's blows ignore, in percent (server 0.66.0). */

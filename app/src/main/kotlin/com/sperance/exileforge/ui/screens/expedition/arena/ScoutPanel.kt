@@ -105,10 +105,10 @@ internal fun ScoutPanel(
                 }
             }
         }
-        // What it means for this hero.
+        // What it means for this hero; a taunter's own rule is told by its trait above (3.81.0), not again in red.
         val taunting = fight.foes.any { it.alive && it.taunt }
         when {
-            foe.taunt -> Hint(ui("fight.taunt_hint"), LifeRed)
+            foe.taunt -> Unit
             fight.focus == foe.index && !foe.reachable -> Hint(ui("fight.out_of_reach"), LifeRed)
             taunting -> Hint(ui("fight.behind_taunt"), LifeRed)
         }

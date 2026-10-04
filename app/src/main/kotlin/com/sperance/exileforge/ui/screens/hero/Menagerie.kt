@@ -93,7 +93,7 @@ private fun PetCard(game: GameUi, vm: HeroViewModel, pet: Pet) {
     var orbs by remember(pet.id) { mutableStateOf(false) }
     var releasing by remember(pet.id) { mutableStateOf(false) }
     var hiring by remember(pet.id) { mutableStateOf(false) }
-    // A helper does not fight (3.70.0): what it gives instead is said on its card and before it goes to work.
+    // A helper does not fight (3.70.0): what it gives is its lines below; the hiring dialog repeats them before it goes to work.
     val helps = if (kind.kind == PetKind.HELPER) ui("pets.helper_hint", menagerie.lines(pet).joinToString(", ") { lineText(index, it) }.ifBlank { "—" }) else null
     ForgePanel {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -114,7 +114,6 @@ private fun PetCard(game: GameUi, vm: HeroViewModel, pet: Pet) {
         if (active) Text(ui("pets.at_work"), color = Vital, style = MaterialTheme.typography.labelSmall)
         if (kind.element2 != null) Text(ui("pets.hybrid"), color = GoldBright, style = MaterialTheme.typography.labelSmall)
         if (pet.tiredUntil > System.currentTimeMillis()) Text(ui("pets.tired"), color = Muted, style = MaterialTheme.typography.labelSmall)
-        helps?.let { MutedText(it) }
         if (pet.corrupted) Text(ui("pets.corrupted"), color = LifeRed, style = MaterialTheme.typography.labelSmall)
         if (pet.quality > 0) Text(ui("pets.quality", pet.quality), color = GoldBright, style = MaterialTheme.typography.labelSmall)
         // Line by line, so a fractured one (server 1.65.0) is told apart: it stays through every orb.

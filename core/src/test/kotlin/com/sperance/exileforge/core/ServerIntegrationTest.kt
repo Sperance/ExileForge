@@ -18,13 +18,13 @@ import com.sperance.exileforge.rules.reward.RedemptionReward
 import com.sperance.exileforge.rules.roll.ItemBuckets
 import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunEvent
+import kotlinx.coroutines.runBlocking
+import org.junit.Assume.assumeTrue
+import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
-import kotlinx.coroutines.runBlocking
-import org.junit.Assume.assumeTrue
-import org.junit.Test
 
 /**
  * The live contract, opt-in: CI launches the pinned server (`backend/` submodule) with MongoDB and

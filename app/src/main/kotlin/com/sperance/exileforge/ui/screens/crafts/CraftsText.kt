@@ -54,8 +54,8 @@ import com.sperance.exileforge.core.model.crafts.job
 import com.sperance.exileforge.core.model.crafts.running
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.state.GameUi
-import com.sperance.exileforge.rules.content.JobInput
 import com.sperance.exileforge.rules.content.Job
+import com.sperance.exileforge.rules.content.JobInput
 import com.sperance.exileforge.rules.content.JobKind
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.roll.WorkGains

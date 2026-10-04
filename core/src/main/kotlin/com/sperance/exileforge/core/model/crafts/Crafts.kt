@@ -1,9 +1,9 @@
 package com.sperance.exileforge.core.model.crafts
 
 import com.sperance.exileforge.rules.content.CraftsRules
+import com.sperance.exileforge.rules.content.Job
 import com.sperance.exileforge.rules.content.JobExtra
 import com.sperance.exileforge.rules.content.JobInput
-import com.sperance.exileforge.rules.content.Job
 import com.sperance.exileforge.rules.content.JobKind
 import com.sperance.exileforge.rules.roll.ActiveWork
 import com.sperance.exileforge.rules.roll.CraftsAway

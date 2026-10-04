@@ -6,13 +6,17 @@ import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.Session
 import com.sperance.exileforge.presentation.ForgeRuntime
 import com.sperance.exileforge.presentation.state.AppMode
+import com.sperance.exileforge.presentation.state.GameSlice
+import com.sperance.exileforge.presentation.state.GameUi
 import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Экран входа (3.80.22): сервер, вход по логину или по устройству, повтор подтверждения. Сама сессия пока в
  * `ForgeRuntime` - её логика уедет вместе с навигацией (этап 3), экран уже не получает общую модель.
  */
-class SessionViewModel(private val runtime: ForgeRuntime) : ViewModel() {
+class SessionViewModel(private val runtime: ForgeRuntime, slice: GameSlice) : ViewModel() {
+    /** Срез «игра» для экранов этой модели (3.80.33). */
+    val game: StateFlow<GameUi> = slice.ui
     val session: StateFlow<Session> = runtime.sessions.state
     val activity: StateFlow<Activity> = runtime.commands.state
 

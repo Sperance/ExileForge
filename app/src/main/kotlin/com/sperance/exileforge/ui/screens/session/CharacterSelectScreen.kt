@@ -19,9 +19,11 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.HeroSummary
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.session.CharactersViewModel
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.MAX_CHARACTERS
+import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.ui.components.*
+import com.sperance.exileforge.ui.components.inputs
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
@@ -35,21 +37,22 @@ import org.koin.compose.viewmodel.koinViewModel
  * An account with nothing to choose between does not get a chooser: the creation form opens
  * straight away, because an empty list is not a decision.
  */
-@Composable fun CharacterSelectScreen(s: ForgeState) {
+@Composable fun CharacterSelectScreen() {
+    val game by koinViewModel<CharactersViewModel>().game.collectAsStateWithLifecycle()
     val vm = koinViewModel<CharactersViewModel>()
-    val empty = s.account.charactersRead && s.account.characters.isEmpty()
+    val empty = game.session.charactersRead && game.session.characters.isEmpty()
     var creating by rememberSaveable(empty) { mutableStateOf(empty) }
     var pendingDelete by remember { mutableStateOf<HeroSummary?>(null) }
     LaunchedEffect(creating) { if (creating) vm.ensureClasses() }
     Scaffold(containerColor = Ink) { padding ->
         Box(Modifier.fillMaxSize().padding(padding).imePadding()) {
             Column(Modifier.fillMaxSize().voidBackdrop()) {
-                if (s.busy || s.reading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised) else OrnateDivider(Gold)
+                if (game.busy || game.reading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised) else OrnateDivider(Gold)
                 if (creating) {
-                    CreatingColumn(s, vm, onBack = { creating = false }, onSignOut = vm::logout)
+                    CreatingColumn(game, vm, onBack = { creating = false }, onSignOut = vm::logout)
                 } else {
                     CharacterMenu(
-                        s,
+                        game,
                         onPlay = vm::enterCharacter,
                         onDelete = { pendingDelete = it },
                         onCreate = { creating = true },
@@ -59,8 +62,8 @@ import org.koin.compose.viewmodel.koinViewModel
                 }
             }
             // The language before the game (3.79.0): the settings are out of reach until a hero is chosen.
-            LanguageButton(s.lang, s.world.languages, Modifier.align(Alignment.TopEnd).padding(top = 6.dp, end = 6.dp), enabled = !s.busy, onLanguage = vm::language)
-            ToastHost(s.game, vm::dismissMessage, vm::dismissNotice, Modifier.align(Alignment.TopCenter).padding(top = 12.dp))
+            LanguageButton(game.lang, game.world.languages, Modifier.align(Alignment.TopEnd).padding(top = 6.dp, end = 6.dp), enabled = !game.busy, onLanguage = vm::language)
+            ToastHost(game, vm::dismissMessage, vm::dismissNotice, Modifier.align(Alignment.TopCenter).padding(top = 12.dp))
         }
     }
     pendingDelete?.let { doomed ->
@@ -83,7 +86,7 @@ import org.koin.compose.viewmodel.koinViewModel
  * wiring behind them.
  */
 @Composable internal fun ColumnScope.CharacterMenu(
-    s: ForgeState,
+    game: GameUi,
     onPlay: (String) -> Unit,
     onDelete: (HeroSummary) -> Unit,
     onCreate: () -> Unit = {},
@@ -92,30 +95,30 @@ import org.koin.compose.viewmodel.koinViewModel
 ) {
     // A list is refreshed by pulling it, here as everywhere else. The button that used to sit at
     // the bottom of this one said the same thing twice.
-    PullToRefreshBox(isRefreshing = s.refreshing(Reads.CHARACTERS), onRefresh = onRefresh, modifier = Modifier.weight(1f)) {
+    PullToRefreshBox(isRefreshing = game.refreshing(Reads.CHARACTERS), onRefresh = onRefresh, modifier = Modifier.weight(1f)) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
                 // How many heroes an account holds is the rules' to say; until they are read, the client's own figure stands in.
                 ScreenHeader(
                     ui("chars.title"),
-                    ui("chars.slots", s.characterSlotsLeft, s.index?.rules?.maxCharacters ?: MAX_CHARACTERS),
+                    ui("chars.slots", game.characterSlotsLeft, game.index?.rules?.maxCharacters ?: MAX_CHARACTERS),
                     ForgeGlyphs.Exile,
                 )
             }
-            items(s.account.characters, key = { it.id }) { character ->
-                CharacterCard(s, character, onPlay = { onPlay(character.id) }, onDelete = { onDelete(character) })
+            items(game.session.characters, key = { it.id }) { character ->
+                CharacterCard(game, character, onPlay = { onPlay(character.id) }, onDelete = { onDelete(character) })
             }
             item {
-                ForgeButton(enabled = !s.busy && s.characterSlotsLeft > 0, onClick = onCreate, modifier = Modifier.fillMaxWidth()) {
+                ForgeButton(enabled = !game.busy && game.characterSlotsLeft > 0, onClick = onCreate, modifier = Modifier.fillMaxWidth()) {
                     Text(ui("editor.create_character"))
                 }
-                if (s.characterSlotsLeft == 0) MutedText(ui("chars.slots_full"))
+                if (game.characterSlotsLeft == 0) MutedText(ui("chars.slots_full"))
             }
             item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text(s.accountTitle, color = Muted, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
+                    Text(game.session.title, color = Muted, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
                     BugAction()
-                    ForgeTextButton(enabled = !s.busy, onClick = onLogout) { Text(ui("chars.sign_out")) }
+                    ForgeTextButton(enabled = !game.busy, onClick = onLogout) { Text(ui("chars.sign_out")) }
                 }
             }
         }
@@ -123,11 +126,11 @@ import org.koin.compose.viewmodel.koinViewModel
 }
 
 /** The creation form on its own page: there is nothing to choose between while it is open. */
-@Composable private fun ColumnScope.CreatingColumn(s: ForgeState, vm: CharactersViewModel, onBack: () -> Unit, onSignOut: () -> Unit) {
+@Composable private fun ColumnScope.CreatingColumn(game: GameUi, vm: CharactersViewModel, onBack: () -> Unit, onSignOut: () -> Unit) {
     LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         // The beetle on the creation form too (3.75.0): it is the one page before the game without a way to report.
         item { ScreenHeader(ui("chars.new"), ui("chars.name_and_class"), ForgeGlyphs.Exile) { BugAction() } }
-        item { CreateCharacterPanel(s, vm, canGoBack = s.account.characters.isNotEmpty(), onBack = onBack, onSignOut = onSignOut) }
+        item { CreateCharacterPanel(game, vm, canGoBack = game.session.characters.isNotEmpty(), onBack = onBack, onSignOut = onSignOut) }
     }
 }
 
@@ -137,11 +140,11 @@ import org.koin.compose.viewmodel.koinViewModel
  * The row carries the class as a code (3.0.0); the server's dictionary names it, and the portrait
  * is drawn by the code alone, so the menu reads before the content has.
  */
-@Composable private fun CharacterCard(s: ForgeState, character: HeroSummary, onPlay: () -> Unit, onDelete: () -> Unit) {
+@Composable private fun CharacterCard(game: GameUi, character: HeroSummary, onPlay: () -> Unit, onDelete: () -> Unit) {
     val heroClass = character.heroClass.takeIf { it.isNotBlank() }
-    ForgePanel(modifier = Modifier.clickable(enabled = !s.busy, onClick = onPlay)) {
+    ForgePanel(modifier = Modifier.clickable(enabled = !game.busy, onClick = onPlay)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            ClassPortrait(heroClass, s.world.portraits, Modifier.size(64.dp), round = true)
+            ClassPortrait(heroClass, game.world.portraits, Modifier.size(64.dp), round = true)
             Column(Modifier.weight(1f)) {
                 Text(character.name, color = GoldBright, style = MaterialTheme.typography.titleMedium)
                 PropertyRow(ui("common.class"), heroClass?.let(::classTitle) ?: ui("chars.unknown"), Glyph.CHARACTER)
@@ -149,8 +152,8 @@ import org.koin.compose.viewmodel.koinViewModel
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ForgeButton(enabled = !s.busy, onClick = onPlay, modifier = Modifier.weight(1f)) { Text(ui("auth.play")) }
-            ForgeOutlinedButton(enabled = !s.busy, onClick = onDelete) { Text(ui("chars.release_do"), color = MaterialTheme.colorScheme.error) }
+            ForgeButton(enabled = !game.busy, onClick = onPlay, modifier = Modifier.weight(1f)) { Text(ui("auth.play")) }
+            ForgeOutlinedButton(enabled = !game.busy, onClick = onDelete) { Text(ui("chars.release_do"), color = MaterialTheme.colorScheme.error) }
         }
     }
 }
@@ -164,14 +167,14 @@ import org.koin.compose.viewmodel.koinViewModel
  * Each is shown by the carousel (3.13.0), whole, between the name and the button that seals the choice.
  */
 @Composable private fun CreateCharacterPanel(
-    s: ForgeState,
+    game: GameUi,
     vm: CharactersViewModel,
     canGoBack: Boolean,
     onBack: () -> Unit,
     onSignOut: () -> Unit,
 ) {
     var name by rememberSaveable { mutableStateOf("") }
-    val index = s.index
+    val index = game.index
     val classes = index?.classes?.classes.orEmpty()
     val draft by vm.draftClass.collectAsStateWithLifecycle()
     val heroClass = draft.takeIf { code -> classes.any { it.code == code } } ?: classes.firstOrNull()?.code.orEmpty()
@@ -179,16 +182,16 @@ import org.koin.compose.viewmodel.koinViewModel
         ForgePanel {
             OutlinedTextField(
                 name,
-                { name = it.take(s.inputs.heroName) },
-                enabled = !s.busy,
+                { name = it.take(game.inputs.heroName) },
+                enabled = !game.busy,
                 label = { Text(ui("common.name")) },
-                supportingText = { Text(ui("chars.name_unique") + " · ${name.length}/${s.inputs.heroName}") },
+                supportingText = { Text(ui("chars.name_unique") + " · ${name.length}/${game.inputs.heroName}") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
             // The classes arrive with the content, which is read after the form opens: an empty
             // list is only an error once that read has finished (the app bar shows its progress).
-            if (classes.isEmpty() && index != null && Reads.CONTENT !in s.loading) {
+            if (classes.isEmpty() && index != null && Reads.CONTENT !in game.loading) {
                 Text(
                     ui("editor.no_classes"),
                     color = MaterialTheme.colorScheme.error,
@@ -196,25 +199,25 @@ import org.koin.compose.viewmodel.koinViewModel
             }
         }
         if (index != null && heroClass.isNotBlank()) {
-            ClassCarousel(index, classes.map { it.code }, heroClass, s.world.portraits, enabled = !s.busy, onChoose = vm::draftClass)
+            ClassCarousel(index, classes.map { it.code }, heroClass, game.world.portraits, enabled = !game.busy, onChoose = vm::draftClass)
         }
         ForgePanel {
             ForgeButton(
-                enabled = !s.busy && name.isNotBlank() && heroClass.isNotBlank(),
+                enabled = !game.busy && name.isNotBlank() && heroClass.isNotBlank(),
                 onClick = { vm.createCharacter(name, heroClass) },
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(ui("chars.create"))
             }
             if (canGoBack) {
-                ForgeTextButton(enabled = !s.busy, onClick = onBack, modifier = Modifier.fillMaxWidth()) {
+                ForgeTextButton(enabled = !game.busy, onClick = onBack, modifier = Modifier.fillMaxWidth()) {
                     Text(ui("chars.back"))
                 }
             }
             // An account with no heroes has no list to go back to, and a device registration is
             // silent — so without this the first screen a new player sees is also the only one, with
             // no way to sign in as someone who already has an exile.
-            ForgeTextButton(enabled = !s.busy, onClick = onSignOut, modifier = Modifier.fillMaxWidth()) {
+            ForgeTextButton(enabled = !game.busy, onClick = onSignOut, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("chars.other_account"))
             }
         }

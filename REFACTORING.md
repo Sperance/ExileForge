@@ -33,6 +33,7 @@
   - [x] Древо и гримуар: `game` из `TreeViewModel` и `GrimoireViewModel` (3.80.36).
   - [x] Герой (шапка, сводка, снаряжение, сундук, сумка, зверинец, инкубатор, хроника, разбор характеристик, сферы администратора): `game` из `HeroViewModel`; `StatExplainer`/`TraceExplainer` - над `GameUi`; тесты панелей героя строят срез напрямую (3.80.37).
   - [x] Поход, испытания и атлас (карта мира, карточка зоны, бег, арена, отчёты, добыча, атлас): `game` из `ExpeditionViewModel`, своё состояние похода (карточка, добыча, атлас, журнал) - из её `state`; тосты (`notice`, `refusal`) - в срезе; места «Развития» - на срезе `ProgressViewModel` (3.80.38).
+  - [x] Вход и меню героев (`game` из `SessionViewModel` и `CharactersViewModel`), почта и плашка пути изгнанника - на срезе (3.80.39). На общем состоянии остались только оболочка (`ForgeApp`, шапка, отчёт об ошибке) и отладочные экраны администратора.
 
 ## Этап 3 - навигация
 - [x] Navigation 3 (`navigation3-runtime/ui` 1.2.0, вместо Navigation Compose: стек у приложения, без NavController): `presentation/nav/Route` - типизированные ключи Auth, Characters, Hero, Tree, Grimoire, Expedition, Crafts, Progress, Forge, Pets, Trials, Chronicle, City, Quests, Merchant, Auction, Guild, Account, Settings, Admin, Redemption, Atlas; `Navigator` - стек (вкладка сбрасывает до корня, подэкран ложится над корнем, аккаунт и настройки - поверх любого). Прогрев, поход и испытание - состояния игры поверх стека, не маршруты (их открывают и закрывают команды, не игрок). Разделы гильдии и квестов - состояние своих моделей, не стек.
@@ -73,6 +74,6 @@
 - [x] Удалено неиспользуемое: `MailButton`, `classDescription`, `itemSources`, `rankIndexOf`.
 - [ ] Удалить этот файл.
 
-## Где остановились (3.80.38, сервер 1.74.6)
+## Где остановились (3.80.39, сервер 1.74.6)
 - Сделано: golden-тест забега, распил `ExpeditionRun`/`ExpeditionWorld` в `core/campaign/run/`, файлы сцены, мёртвый код, `ShellViewModel` вместо фасада на экранах, константы боя и мира в контент, `ForgeState` - чистая проекция репозиториев.
 - Следующий шаг: экраны перестают получать `ForgeState` целиком (92 файла UI читают `s.busy`, `s.index`, `s.hero`, `s.play`, `s.lang`, `s.account`) - по семьям экранов в порядке владельца, `sliced()` уходит с последним; затем `ForgeViewModel`/`ForgeRuntime`/`FeatureViewModel` удаляются (сессия, связь, прогрев, коды и герои - в свои синглы); потом серверный этап 3.

@@ -57,6 +57,7 @@ data class GameUi(
 ) {
     val busy: Boolean get() = activity.busy
     val loading: Set<String> get() = activity.loading
+    val reading: Boolean get() = activity.reading
 
     /** Отказ, который печатают там, где нажали; успех не показывают. */
     val refusal: Phrase? get() = activity.refusal
@@ -73,6 +74,9 @@ data class GameUi(
     val heroName: String get() = heroInfo?.name ?: heroRow?.name.orEmpty()
     val heroLevel: Int get() = heroInfo?.level ?: heroRow?.level ?: 1
     val heroClass: HeroClass? get() = index?.let { i -> hero?.let { i.heroClass(it.heroClass) } }
+
+    /** The rules refuse one hero more than they allow, so the button that would ask for one is not offered. */
+    val characterSlotsLeft: Int get() = ((index?.rules?.maxCharacters ?: MAX_CHARACTERS) - session.characters.size).coerceAtLeast(0)
     val ownsCharacter: Boolean get() = session.signedIn && session.profile?.id == holding.owner
 
     /** How many of one stacking item the hero holds, or null while the hero has not been read. */

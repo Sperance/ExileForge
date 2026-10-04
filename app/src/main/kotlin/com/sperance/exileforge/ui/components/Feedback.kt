@@ -34,7 +34,7 @@ import com.sperance.exileforge.core.model.feedback.ReportStatus
 import com.sperance.exileforge.core.model.feedback.Suggestion
 import com.sperance.exileforge.core.model.feedback.Vote
 import com.sperance.exileforge.presentation.feedback.FeedbackViewModel
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -169,7 +169,7 @@ fun attachmentLines(mail: Mail): List<String> = buildList {
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MailSheet(s: ForgeState, onDismiss: () -> Unit) {
+fun MailSheet(game: GameUi, onDismiss: () -> Unit) {
     val model = koinViewModel<FeedbackViewModel>()
     val feedback by model.feedback.collectAsStateWithLifecycle()
     val activity by model.activity.collectAsStateWithLifecycle()
@@ -181,7 +181,7 @@ fun MailSheet(s: ForgeState, onDismiss: () -> Unit) {
             MutedText(ui("mail.keep"))
             val letter = feedback.mail.firstOrNull { it.id == open }
             if (letter != null) {
-                LetterView(s, model, activity.busy, letter) { open = null }
+                LetterView(game, model, activity.busy, letter) { open = null }
             } else {
                 LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(bottom = 16.dp)) {
                     if (feedback.mail.isEmpty()) item { MutedText(ui("mail.empty")) }
@@ -212,7 +212,7 @@ fun MailSheet(s: ForgeState, onDismiss: () -> Unit) {
     }
 }
 
-@Composable private fun LetterView(s: ForgeState, model: FeedbackViewModel, busy: Boolean, mail: Mail, onBack: () -> Unit) {
+@Composable private fun LetterView(game: GameUi, model: FeedbackViewModel, busy: Boolean, mail: Mail, onBack: () -> Unit) {
     ForgeTextButton(onClick = onBack) { Text(ui("mail.back")) }
     ForgePanel {
         Text(mailSubject(mail), color = GoldBright, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -222,8 +222,8 @@ fun MailSheet(s: ForgeState, onDismiss: () -> Unit) {
             Engraved(ui("mail.attachment"))
             lines.forEach { Text(it, color = Vital, style = MaterialTheme.typography.labelLarge) }
             if (mail.claimable) {
-                ForgeButton(enabled = !busy && s.play.heroId.isNotBlank(), onClick = { model.claimMail(mail.id, s.play.heroId) }, modifier = Modifier.fillMaxWidth()) {
-                    Text(ui("mail.claim", s.heroName))
+                ForgeButton(enabled = !busy && game.heroId.isNotBlank(), onClick = { model.claimMail(mail.id, game.heroId) }, modifier = Modifier.fillMaxWidth()) {
+                    Text(ui("mail.claim", game.heroName))
                 }
             } else {
                 MutedText(ui("mail.claimed_already"))

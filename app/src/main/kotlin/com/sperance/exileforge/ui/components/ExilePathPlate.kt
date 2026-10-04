@@ -22,7 +22,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.TAB_CRAFT
 import com.sperance.exileforge.presentation.state.TAB_EXPEDITION
 import com.sperance.exileforge.presentation.state.TAB_HERO
@@ -51,7 +51,7 @@ val PathCheck.destination: Int get() = when (this) {
 }
 
 /** The step the hero stands on and whether it is done; null once the path is walked or before the hero is read. */
-fun ForgeState.pathStep(): Pair<PathStep, Boolean>? {
+fun GameUi.pathStep(): Pair<PathStep, Boolean>? {
     val hero = hero ?: return null
     val step = index?.rules?.path?.step(hero.info.pathStep) ?: return null
     return step to hero.pathFacts.done(step.check)
@@ -67,10 +67,10 @@ fun ForgeState.pathStep(): Pair<PathStep, Boolean>? {
  * The Exile's Path (3.79.0): a thin plate under the banner for the first hour — the step, one line of what to do,
  * the steps filling, and one pulsing button: «Туда» while the step waits, «Забрать» once it is done.
  */
-@Composable fun ExilePathPlate(s: ForgeState, onGo: (Int) -> Unit, onClaim: () -> Unit) {
-    val (step, done) = s.pathStep() ?: return
-    val total = s.index?.rules?.path?.steps?.size ?: return
-    val at = s.hero?.info?.pathStep ?: return
+@Composable fun ExilePathPlate(game: GameUi, onGo: (Int) -> Unit, onClaim: () -> Unit) {
+    val (step, done) = game.pathStep() ?: return
+    val total = game.index?.rules?.path?.steps?.size ?: return
+    val at = game.hero?.info?.pathStep ?: return
     val shape = RoundedCornerShape(10.dp)
     Row(
         Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 4.dp).background(PanelRaised, shape)
@@ -101,7 +101,7 @@ fun ForgeState.pathStep(): Pair<PathStep, Boolean>? {
                 trackColor = Abyss,
             )
         }
-        TextButton(onClick = { if (done) onClaim() else onGo(step.check.tab) }, enabled = !s.busy, modifier = Modifier.scale(pulse())) {
+        TextButton(onClick = { if (done) onClaim() else onGo(step.check.tab) }, enabled = !game.busy, modifier = Modifier.scale(pulse())) {
             Text(ui(if (done) "path.claim" else "path.go"), color = if (done) GoldBright else Gold)
         }
     }

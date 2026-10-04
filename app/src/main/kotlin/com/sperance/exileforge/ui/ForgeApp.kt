@@ -218,7 +218,7 @@ internal val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, err
         )
     }
     if (suggestionsOpen) SuggestionsSheet { suggestionsOpen = false }
-    if (mailOpen) MailSheet(s) { mailOpen = false }
+    if (mailOpen) MailSheet(s.game) { mailOpen = false }
     // The inbox (3.73.0) is asked at sign-in and every few minutes after, quietly: the envelope counts the unread.
     val mailbox = koinViewModel<FeedbackViewModel>()
     LaunchedEffect(s.account.signedIn, s.account.sessionEpoch) {
@@ -249,8 +249,8 @@ internal val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, err
             popTransitionSpec = { fadeIn() togetherWith fadeOut() },
             predictivePopTransitionSpec = { _ -> fadeIn() togetherWith fadeOut() },
             entryProvider = entryProvider {
-                entry<Route.Auth> { AuthScreen(s.sliced(*s.common, *s.toasts)) }
-                entry<Route.Characters> { CharacterSelectScreen(s.sliced(*s.common, *s.toasts)) }
+                entry<Route.Auth> { AuthScreen() }
+                entry<Route.Characters> { CharacterSelectScreen() }
                 entry<Route.Account> { ServerScreen() }
                 entry<Route.Settings> { SettingsScreen(logs) }
                 entry<Route.Hero> { HeroScreen() }
@@ -289,7 +289,7 @@ internal val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, err
                 ForgeBanner(s, onBug)
                 if (s.busy || s.reading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised) else OrnateDivider(Gold)
                 // The Exile's Path (3.79.0): the first hour's next step, under the banner on every tab until it is walked.
-                ExilePathPlate(s, onGo = shell::tab, onClaim = heroModel::claimPath)
+                ExilePathPlate(s.game, onGo = shell::tab, onClaim = heroModel::claimPath)
                 HeroTab.of(s.tab)?.let { HeroTabStrip(it, locked = { tab -> !s.unlocked(Feature.ofTab(tab)) }, onSelect = shell::tab) }
                 screens(Modifier.weight(1f).fillMaxWidth())
             }
@@ -329,7 +329,7 @@ internal val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, err
             TAB_ADMIN to ForgeGlyphs.Scroll,
         )
         // The tab the Exile's Path sends the player to next pulses while its step waits (3.79.0).
-        val beckons = s.pathStep()?.takeIf { !it.second }?.first?.check?.destination
+        val beckons = s.game.pathStep()?.takeIf { !it.second }?.first?.check?.destination
         val beat = pulse(1.18f)
         destinations.forEach { index ->
             val label = labels.getValue(index)

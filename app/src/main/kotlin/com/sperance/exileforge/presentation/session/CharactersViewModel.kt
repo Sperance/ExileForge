@@ -5,12 +5,16 @@ import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.Session
 import com.sperance.exileforge.presentation.ForgeRuntime
+import com.sperance.exileforge.presentation.state.GameSlice
+import com.sperance.exileforge.presentation.state.GameUi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /** Меню героев (3.80.22): список, вход, создание и удаление; логика - в `ForgeRuntime` до переезда навигации. */
-class CharactersViewModel(private val runtime: ForgeRuntime) : ViewModel() {
+class CharactersViewModel(private val runtime: ForgeRuntime, slice: GameSlice) : ViewModel() {
+    /** Срез «игра» для экранов этой модели (3.80.33). */
+    val game: StateFlow<GameUi> = slice.ui
     val session: StateFlow<Session> = runtime.sessions.state
     val activity: StateFlow<Activity> = runtime.commands.state
 

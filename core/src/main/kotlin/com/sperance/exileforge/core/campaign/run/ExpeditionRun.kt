@@ -45,7 +45,6 @@ import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.EssenceBook
 import com.sperance.exileforge.rules.content.ExpeditionRules
-import com.sperance.exileforge.rules.content.LoneWolfRule
 import com.sperance.exileforge.rules.content.Pet
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.AbyssRifts

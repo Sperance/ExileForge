@@ -68,9 +68,6 @@ class Battle(
     /** A later stage of a staged fight (3.32.0): what the stage won before it hands on; null for a fight of its own or a first stage. */
     val stage: StageCarry? = null,
 ) {
-    /** «Волк-одиночка»: the hero alone deals more and takes less of every damage, by the server's [CombatRules.loneWolf]. */
-    val loneWolf: Boolean get() = party <= 1
-
     /** One side in motion: its pools, its clocks and what is on it; [index] is its place in the pack, -1 for the hero. */
     inner class Fighter(val side: Side, body: Combatant, life: Double, val index: Int = -1) {
         /** The sheet as it stands: the hero's changes under the auras of the foes still standing (2.75.0) and with what lies on them (2.78.0). */

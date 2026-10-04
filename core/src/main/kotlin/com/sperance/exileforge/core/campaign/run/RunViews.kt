@@ -32,7 +32,6 @@ import com.sperance.exileforge.core.model.campaign.CampaignState
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.EssenceBook
-import com.sperance.exileforge.rules.content.LoneWolfRule
 import com.sperance.exileforge.rules.content.MapCode
 import com.sperance.exileforge.rules.content.MonsterCode
 import com.sperance.exileforge.rules.content.Pet
@@ -151,7 +150,6 @@ data class FightHud(
     val paused: Boolean = false,
     val target: Int? = null,
     val focus: Int? = null,
-    val loneWolf: LoneWolfRule? = null,
     /** The pet beside the hero (3.5.0). */
     val ally: AllyView? = null,
     val heroTaunt: Boolean = false,

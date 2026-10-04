@@ -35,7 +35,7 @@ enum class RollKey { EVADE, BLOCK, CRIT, CRIT_LUCKY, SUPPRESS, DEFLECT, DOUBLE, 
  */
 data class FactorTrace(val key: FactorKey, val value: Double, val attacker: List<String> = emptyList(), val target: List<String> = emptyList())
 
-enum class FactorKey { BASE, SPREAD, CRIT, NON_CRIT, DAMAGE, AGAINST, DOUBLE, VERSUS, DEFENCE, SHOCK, LONE_WOLF, TAKEN, EASED, TOTAL }
+enum class FactorKey { BASE, SPREAD, CRIT, NON_CRIT, DAMAGE, AGAINST, DOUBLE, VERSUS, DEFENCE, SHOCK, TAKEN, EASED, TOTAL }
 
 /** One damage type of a hit: its [base], [raw] after the striker's multipliers, the [armour] and [resist] shares it lost, and what landed. */
 data class TypeTrace(val type: DamageType, val base: Double, val raw: Double, val armour: Double, val resist: Double, val penetration: Double, val dealt: Double)

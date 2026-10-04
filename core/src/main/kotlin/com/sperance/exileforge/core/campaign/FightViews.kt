@@ -126,7 +126,7 @@ internal fun Battle.hud(
         events = events.toList().asReversed(),
         started = started, paused = paused,
         target = target()?.index, focus = focus,
-        loneWolf = rules.loneWolf.takeIf { loneWolf }, heroTaunt = heroTaunt,
+        heroTaunt = heroTaunt,
         heroMana = h.mana.roundToInt(), heroMaxMana = manaCap().roundToInt(), heroReserved = manaReserved().roundToInt(),
         skills = skillViews(), flasks = flaskViews(), heroEffects = effects(h), heroCharges = chargeViews(),
         heroBarrier = h.barrier.roundToInt(),

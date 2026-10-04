@@ -222,10 +222,9 @@ private fun Battle.heroDot(dot: SkillDot, level: Int, code: String, spell: Boole
     val type = DamageType.element(dot.element) ?: DamageType.CHAOS
     val ailment = Ailment.of(type).takeIf { it.hurts } ?: Ailment.POISONED
     val increase = heroIncrease(type) + hero.body[CoreStat.SPELL_DAMAGE.code] + hero.body[CoreStat.SKILL_DAMAGE.code]
-    val lone = if (loneWolf) 1 + rules.loneWolf.dealt / 100 else 1.0
     targets(dot.targets).forEach { target ->
         val low = dot.min.at(level)
-        val total = (low + random.nextDouble() * (dot.max.at(level) - low).coerceAtLeast(0.0)) * max(0.0, 1 + increase / 100) * hero.body.damageMore * lone
+        val total = (low + random.nextDouble() * (dot.max.at(level) - low).coerceAtLeast(0.0)) * max(0.0, 1 + increase / 100) * hero.body.damageMore
         val mitigated = total * (1 - target.body.resist(type, hero.body.penetration(type))) * target.body.damageTaken(type)
         val inflicted = mutableListOf<Ailment>()
         if (mitigated > 0 && !target.body.immune(ailment)) {

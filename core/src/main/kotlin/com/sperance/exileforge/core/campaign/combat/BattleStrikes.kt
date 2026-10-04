@@ -19,7 +19,7 @@ import kotlin.math.min
 
 /**
  * One blow of [me] at [target] — a weapon's swing, a skill's hit, a spell: evaded unless a spell,
- * blocked, or landed and maybe critical; then armour, resistance, shock and the lone wolf's share.
+ * blocked, or landed and maybe critical; then armour, resistance and shock.
  */
 internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
     val body = blow.body ?: me.body
@@ -58,12 +58,6 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
         }
         return false
     }
-    // The lone wolf's share rides the blow itself, so the ailments it brings carry it once and no more.
-    val lone = when {
-        !loneWolf -> 1.0
-        me.side == Side.HERO -> 1 + rules.loneWolf.dealt / 100
-        else -> 1 - rules.loneWolf.taken / 100
-    }
     // Server 1.32.0: a critical strike no heavier than a hit on one who takes none, and the non-critical ones more or less.
     val multiplier = if (kind == HitKind.CRIT) max(1.0, body.critMultiplier(blow.spell) + target.body.critTaken) else body.nonCritMore
     // 3.35.0: a double blow, the hero's lines against the target's state, and what suppression or deflection lets through.
@@ -96,7 +90,7 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
             else -> raw * (1 - armour) * (1 - resist)
         }.coerceAtLeast(0.0)
         val typeTaken = target.body.damageTaken(type) * (if (type == strongest) max(0.0, 1 + target.body.highestResistElementTaken / 100) else 1.0)
-        val dealt = defence * target.weakness() * lone * typeTaken * eased * exposure(target, type)
+        val dealt = defence * target.weakness() * typeTaken * eased * exposure(target, type)
         spreadSum += base * spread
         takenSum += defence * typeTaken
         defended += defence
@@ -143,7 +137,6 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
             )
         }
         if (target.weakness() != 1.0) add(FactorTrace(FactorKey.SHOCK, target.weakness(), listOf(CoreStat.SHOCK_EFFECT.code), listOf(CoreStat.SHOCK_TAKEN.code)))
-        if (lone != 1.0) add(FactorTrace(FactorKey.LONE_WOLF, lone))
         if (defended > 0 && takenSum != defended) add(FactorTrace(FactorKey.TAKEN, takenSum / defended, target = listOf(CoreStat.DAMAGE_TAKEN.code, CoreStat.PHYSICAL_TAKEN.code, CoreStat.ELEMENTAL_TAKEN.code, CoreStat.CHAOS_TAKEN.code)))
         if (eased != 1.0) add(FactorTrace(FactorKey.EASED, eased, target = listOf(CoreStat.SPELL_SUPPRESSION.code, CoreStat.DEFLECTION.code, CoreStat.HIT_TAKEN.code)))
         add(FactorTrace(FactorKey.TOTAL, taken.values.sum()))

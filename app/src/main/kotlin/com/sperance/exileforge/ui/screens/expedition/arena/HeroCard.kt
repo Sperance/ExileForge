@@ -84,9 +84,8 @@ import kotlin.math.sin
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
-                // The hero's own marks (2.72.0): the taunt's seal and the lone wolf's medallion, each opening its window on a tap.
+                // The hero's own mark (2.72.0): the taunt's seal, opening its window on a tap.
                 if (fight.heroTaunt) TauntSeal(time, Modifier.size(22.dp)) { tauntTip(true) }
-                fight.loneWolf?.let { rule -> LoneWolfMedal(Modifier.size(24.dp)) { loneWolfTip(rule) } }
             }
             // The pools as bars of their own (3.24.0): the shield over life, mana under it, each with its figures and share.
             if (hud.heroMaxShield > 0) VitalBar(fight.heroShield, hud.heroMaxShield, ShieldCyan, Modifier.fillMaxWidth().height(16.dp))

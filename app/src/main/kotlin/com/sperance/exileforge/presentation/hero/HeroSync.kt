@@ -99,7 +99,7 @@ class HeroSync(
     /** Сливает снимок с частями и рисует героя из них; лист складывают правила здесь. */
     private fun apply(heroId: String, snapshot: HeroSnapshot, keep: Boolean = true) {
         val earnedBefore = parts?.takeIf { it.heroId == heroId && it.complete }?.hero?.earned
-        val merged = (parts?.takeIf { it.heroId == heroId } ?: HeroParts(heroId)).merge(snapshot)
+        val merged = (parts?.takeIf { it.heroId == heroId } ?: HeroParts(heroId)).merge(snapshot, fresh = keep)
         if (!merged.complete) {
             parts = null
             heroes.stale()

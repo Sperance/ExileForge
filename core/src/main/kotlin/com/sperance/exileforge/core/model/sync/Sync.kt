@@ -11,6 +11,7 @@ import com.sperance.exileforge.core.model.command.RouteInfo
 import com.sperance.exileforge.core.model.crafts.WorkState
 import com.sperance.exileforge.core.model.hero.HeroInfo
 import com.sperance.exileforge.core.model.hero.PetState
+import com.sperance.exileforge.core.model.hero.ServerClock
 import com.sperance.exileforge.core.model.trade.MerchantStock
 import com.sperance.exileforge.rules.content.RULES_VERSION
 import com.sperance.exileforge.rules.content.TakenNode
@@ -77,7 +78,12 @@ class HeroParts(val heroId: String, val version: String = "", private val parts:
     /** `hero=<hash>,items=<hash>,…`, or `none`: the header is how a client asks for a snapshot at all. */
     fun header(): String = parts.entries.joinToString(",") { "${it.key}=${it.value.version}" }.ifEmpty { "none" }
 
-    fun merge(snapshot: HeroSnapshot): HeroParts = HeroParts(heroId, snapshot.version, parts + snapshot.parts)
+    /** [fresh] - the snapshot is the server's answer just now, not the copy kept on the device. */
+    fun merge(snapshot: HeroSnapshot, fresh: Boolean = true): HeroParts {
+        // A fresh pets part brings the server's clock: the one moment its offset can be measured.
+        if (fresh) snapshot.parts[PETS]?.let { part -> WireJson.decodeFromJsonElement(PetState.serializer(), part.data).incubator.now.let(ServerClock::heard) }
+        return HeroParts(heroId, snapshot.version, parts + snapshot.parts)
+    }
 
     /** Every part held, as one snapshot: what the device keeps of the hero for the next launch (3.30.0). */
     fun snapshot(): HeroSnapshot = HeroSnapshot(version, parts)

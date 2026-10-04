@@ -159,11 +159,12 @@ data class HeroView(
     val max: Int = 0,
     val entries: List<IncubatorSlot> = emptyList(),
     val now: Long = 0,
-    /** The local clock when this was read off the server's answer: [now] belongs to that moment, not to when it is drawn. */
-    @kotlinx.serialization.Transient val receivedAt: Long = System.currentTimeMillis(),
 ) {
-    /** How far the server's clock runs ahead of the local one, measured when this was read; 0 when the server sent no clock. */
-    val clockOffset: Long get() = if (now > 0) now - receivedAt else 0L
+    /**
+     * How far the server's clock runs ahead of the local one, as last measured on a fresh answer ([ServerClock]). The part is
+     * kept and decoded again long after it came (its clock is not a change of it), so its own [now] says nothing of the moment.
+     */
+    val clockOffset: Long get() = ServerClock.offset
     fun slot(index: Int): IncubatorSlot? = entries.firstOrNull { it.slot == index }
 
     /** The server's clock now, as the local one reads it: the part is resent only on real changes, so ripeness is counted here. */
@@ -173,6 +174,20 @@ data class HeroView(
 
     /** The first open place with no egg, or null when every one is taken. */
     val free: IncubatorSlot? get() = entries.firstOrNull { it.open && !it.busy }
+}
+
+/**
+ * The server's clock against the local one (3.81.0): measured when a fresh pets part arrives with the server's [IncubatorState.now],
+ * not when a kept one is decoded again — a re-read after the network came back used to restart the eggs' countdowns.
+ */
+object ServerClock {
+    @Volatile var offset: Long = 0L
+        private set
+
+    /** The server said its clock read [serverNow] just now. */
+    fun heard(serverNow: Long) {
+        if (serverNow > 0) offset = serverNow - System.currentTimeMillis()
+    }
 }
 
 /** A place of the incubator: empty when [egg] is blank; otherwise the egg's settled [rarity] and [level] and its term, epoch ms. */

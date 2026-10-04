@@ -226,5 +226,11 @@ private fun temperOffer(game: GameUi, item: com.sperance.exileforge.rules.roll.I
     val template = index.template(item.template) ?: return null
     val rule = index.rules.brews.temper
     if (item.tempered || item.corrupted || !(template.slot.isWeapon || template.slot.isArmour)) return null
+    // The smith's own level (3.81.0) as the server asks it: below it the offer is not shown at all, rather than refused.
+    val smith = game.hero?.crafts?.professions?.get(SMITHING)?.level ?: 1
+    if (smith < rule.smithLevel) return null
     return rule.oreFor(template.level)?.let { it to rule.ore }
 }
+
+/** The profession whose level tempering asks. */
+private const val SMITHING = "SMITHING"

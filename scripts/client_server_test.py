@@ -31,11 +31,6 @@ def request(path, token=None, body=None):
         return json.load(response)['data']
 
 
-def admin_token():
-    # The route map is the administrator's since backend 1.46.0: sign in as the seeded one to read it.
-    return request('/api/v1/user/login', body={'login': 'admin', 'password': admin_password})['token']
-
-
 (root / 'build').mkdir(exist_ok=True)
 classpath = str(backend / 'build/install/ktor-bestgame/lib/*')
 env = dict(os.environ, JAVA_HOME=os.environ['JAVA_HOME_21_X64'], ADMIN_PASSWORD=admin_password,
@@ -49,8 +44,11 @@ with (root / 'build/client-server.log').open('w') as log:
             if process.poll() is not None:
                 raise RuntimeError('Backend exited; inspect client-server.log')
             try:
+                # The route list rides the public manifest (the /system/routes map is gone since backend 1.76.0);
                 # Ktor prints the selector, so the method arrives as "(GET)".
-                routes = {''.join(c for c in route['method'] if c.isalpha()) + ' ' + route['path'] for route in request('/system/routes', token=admin_token())}
+                with urllib.request.urlopen('http://localhost:8080/static/index.json', timeout=10) as response:
+                    manifest = json.load(response)
+                routes = {''.join(c for c in route['method'] if c.isalpha()) + ' ' + route['path'] for route in manifest['routes']}
                 for route in ('GET /static/index.json', 'GET /content/{file}', 'POST /api/v1/user/login', 'GET /api/v1/hero/view',
                               'POST /api/v1/hero/orb', 'POST /api/v1/hero/campaign/start', 'POST /api/v1/hero/campaign/events',
                               'POST /api/v1/hero/skilltree/allocate', 'POST /api/v1/auctionlot/buy', 'POST /api/v1/redemptioncodes/redeem'):

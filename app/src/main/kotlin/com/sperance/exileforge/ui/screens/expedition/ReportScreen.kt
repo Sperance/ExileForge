@@ -77,7 +77,10 @@ import java.util.Locale
     // and the back gesture is held while they are on the way.
     val receiving = if (won) hud.rewardAwaiting > 0 else hud.abyss?.let { it.fallen && it.hoardAwaiting } == true
     LaunchedEffect(receiving) { if (receiving) model.flushRun() }
-    BackHandler(enabled = receiving) {}
+    // A victory goes on at once (3.81.0): each kill's loot was asked for as the foe fell, and what is still on the way lands
+    // in the run's loot on the map. Only the Abyss hoard of a fall holds the way back until it comes.
+    val holding = receiving && !won
+    BackHandler(enabled = holding) {}
     Column(
         Modifier.fillMaxSize().background(Ink.copy(alpha = .94f)).statusBarsPadding().navigationBarsPadding().padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -99,7 +102,7 @@ import java.util.Locale
         }
         FightFigures(report, logOpen) { logOpen = !logOpen }
         ForgeButton(
-            enabled = !receiving,
+            enabled = !holding,
             onClick = onContinue,
             modifier = Modifier.fillMaxWidth().height(50.dp),
             colors = ButtonDefaults.buttonColors(containerColor = if (won) Gold else LifeRed, contentColor = if (won) Ink else Parchment),

@@ -545,6 +545,8 @@
   "expedition.blocked": "Блок",
   "expedition.chest": "Сундук",
   "expedition.continue": "Дальше",
+  "expedition.first_win": "Вы {0}-й герой, победивший «{1}»",
+  "expedition.first_win_world": "Первая победа во всём мире!",
   "expedition.crit": "{0}!",
   "expedition.dead": "Вы погибли",
   "expedition.dead_hint": "Всё, что вы уже подобрали, осталось с вами. Карту придётся начать заново.",

@@ -59,7 +59,7 @@ internal fun ExpeditionRun.snapshot(): RunHud {
         heroShield = (battle?.heroFighter?.shield ?: hero.maxShield).roundToInt(), heroMaxShield = hero.maxShield.roundToInt(),
         alive = world.alive, total = world.total, sealed = world.sealed,
         fight = battle?.takeIf { fightAgent != null }?.let(::fightHud),
-        reward = reward, rewardAwaiting = fightEvents.count(::awaits), slain = slain, report = report,
+        reward = reward, rank = rank, rewardAwaiting = fightEvents.count(::awaits), slain = slain, report = report,
         fall = fall,
         gold = granted.gold, experience = granted.experience, kills = kills, awaiting = awaiting,
         chestsLeft = world.chests.count { !it.opened },

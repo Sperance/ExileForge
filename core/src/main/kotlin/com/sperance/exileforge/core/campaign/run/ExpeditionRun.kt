@@ -159,6 +159,9 @@ class ExpeditionRun(
     internal val fightEvents = mutableListOf<Int>()
     internal var reward: Reward? = null
 
+    /** The fight's guardian fell to this hero for the first time (3.81.0): their place among all who beat it. */
+    internal var rank: Long? = null
+
     /** What an autorun has gathered, fight by fight: its report at the end. */
     internal val autoEvents = HashSet<Int>()
     internal var autoReward: Reward? = null
@@ -316,6 +319,7 @@ class ExpeditionRun(
 
     internal fun clearSpoils() {
         reward = null
+        rank = null
         fightEvents.clear()
     }
 

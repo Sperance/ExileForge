@@ -114,6 +114,8 @@ sealed interface RunCommand {
         val rejected: List<Int> = emptyList(),
         val lost: Double? = null,
         val crystals: Map<Int, Crystal> = emptyMap(),
+        /** First wins over a guardian (server 1.76.0): the event and the hero's place among all who won it. */
+        val ranks: Map<Int, Long> = emptyMap(),
     ) : RunCommand
 
     /** The hero's campaign as the server holds it now: the Vaal zone a portal opened and a crystal a Vaal orb changed are read from it. */

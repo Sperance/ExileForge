@@ -545,6 +545,8 @@
   "expedition.blocked": "Blocked",
   "expedition.chest": "Chest",
   "expedition.continue": "Continue",
+  "expedition.first_win": "You are hero #{0} to defeat «{1}»",
+  "expedition.first_win_world": "The first victory in the world!",
   "expedition.crit": "{0}!",
   "expedition.dead": "You died",
   "expedition.dead_hint": "Everything you already looted stays with you. The map starts over.",

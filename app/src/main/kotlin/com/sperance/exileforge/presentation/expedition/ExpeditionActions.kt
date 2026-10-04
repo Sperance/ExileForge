@@ -337,7 +337,10 @@ class ExpeditionActions(
     private fun settle(j: RunJournal, batch: List<RunEvent>, report: RunReport) {
         val fell = batch.any { it.kind == RunEventKind.FALL && it.n < report.applied && it.n !in report.rejected }
         val crystals = report.rewards.mapNotNull { event -> event.crystal?.let { event.n to it.crystal } }.toMap()
-        val answer = RunCommand.Settled(report.applied, report.rewards.associate { it.n to it.reward.toReward() }, report.rejected, report.lost.takeIf { fell }, crystals)
+        val answer = RunCommand.Settled(
+            report.applied, report.rewards.associate { it.n to it.reward.toReward() }, report.rejected, report.lost.takeIf { fell }, crystals,
+            report.rewards.mapNotNull { r -> r.rank?.let { r.n to it } }.toMap(),
+        )
         runs().forEach { it.send(answer) }
         campaign()
         loot(j.heroId, report.rewards.flatMap { it.reward.equipment })

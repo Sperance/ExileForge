@@ -86,6 +86,8 @@ import java.util.Locale
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         FieldHead(report, won)
+        // A first win over this guardian (3.81.0, server 1.76.0): the hero's place among everyone who has beaten it.
+        if (won) hud.rank?.let { place -> FirstWin(place, monsterTitle(report.monster.code)) }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (won) Spoils(game, hud, onStack = { stack = it }, onRecipe = { recipe = it }) { looked = it } else DeathPrice(game, hud)
             if (logOpen) {
@@ -282,5 +284,22 @@ private fun Spoils(game: GameUi, hud: RunHud, onStack: (String) -> Unit, onRecip
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         Icon(icon, null, tint = Muted, modifier = Modifier.size(13.dp))
         Text(value, color = Parchment, style = MaterialTheme.typography.labelMedium)
+    }
+}
+
+/** «Вы 5-й герой, победивший …»: a gilt band under the scene, the place large. */
+@Composable private fun FirstWin(place: Long, guardian: String) {
+    val shape = RoundedCornerShape(10.dp)
+    Row(
+        Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Gold.copy(alpha = .22f), Panel)), shape).border(1.dp, GoldBright.copy(alpha = .6f), shape)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text("#$place", color = GoldBright, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Column(Modifier.weight(1f)) {
+            Text(ui("expedition.first_win", place, guardian), color = Parchment, style = MaterialTheme.typography.bodyMedium)
+            if (place == 1L) Text(ui("expedition.first_win_world"), color = GoldBright, style = MaterialTheme.typography.labelMedium)
+        }
     }
 }

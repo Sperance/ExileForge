@@ -220,6 +220,8 @@ data class RunHud(
      */
     val reward: Reward? = null,
     val rewardAwaiting: Int = 0,
+    /** A first win over this guardian (3.81.0): the hero's place among all who beat it. */
+    val rank: Long? = null,
     val slain: RolledMonster? = null,
     val report: FightReport? = null,
     /** What the death cost, by the rules' price until the server's answer replaces it. */

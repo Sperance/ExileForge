@@ -40,6 +40,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -102,11 +103,23 @@ import kotlin.math.sin
     highlight: Set<String>,
     view: TreeView,
     modifier: Modifier = Modifier,
+    focus: String? = null,
     onSelect: (String) -> Unit,
 ) {
     val byCode = remember(nodes) { nodes.associateBy { it.code } }
     val bounds = remember(nodes) { Bounds.of(nodes) }
     val select by rememberUpdatedState(onSelect)
+    var area by remember { mutableStateOf(Size.Zero) }
+    // The first look (3.81.0) is on the class's own start, near enough to read, not on the whole tree's centre.
+    LaunchedEffect(area, focus) {
+        val node = focus?.let(byCode::get) ?: return@LaunchedEffect
+        if (view.focused || area.width <= 0f) return@LaunchedEffect
+        view.focused = true
+        val at = place(node, bounds, area.width, area.height, FOCUS_ZOOM, Offset.Zero)
+        val limit = panLimit(bounds, area.width, area.height, FOCUS_ZOOM)
+        view.scale = FOCUS_ZOOM
+        view.pan = Offset((area.width / 2 - at.x).coerceIn(-limit.x, limit.x), (area.height / 2 - at.y).coerceIn(-limit.y, limit.y))
+    }
 
     // The zoom is about a point — the pinch's centre, the double tap — so what is under the fingers stays there.
     fun zoomAt(focus: Offset, factor: Float, drag: Offset, width: Float, height: Float) {
@@ -135,7 +148,7 @@ import kotlin.math.sin
         // the pan, the tap detector restarted on every frame of a drag and took the second finger's touch
         // for a fresh tap, consuming it — and a consumed touch cancels the pinch before it begins.
         Canvas(
-            Modifier.fillMaxSize().clipToBounds()
+            Modifier.fillMaxSize().clipToBounds().onSizeChanged { area = Size(it.width.toFloat(), it.height.toFloat()) }
                 .pointerInput(nodes) {
                     detectTransformGestures { centroid, drag, zoom, _ ->
                         zoomAt(centroid, zoom, drag, size.width.toFloat(), size.height.toFloat())
@@ -262,6 +275,9 @@ internal data class Bounds(val minX: Float, val maxX: Float, val minY: Float, va
 internal const val MARGIN = 28f
 internal const val MIN_ZOOM = .5f
 internal const val MAX_ZOOM = 3f
+
+/** The zoom the tree opens at, centred on the class's start. */
+internal const val FOCUS_ZOOM = 1.8f
 
 /** How much closer one double tap brings the map. */
 internal const val DOUBLE_TAP_ZOOM = 2f

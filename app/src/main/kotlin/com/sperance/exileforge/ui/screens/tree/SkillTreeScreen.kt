@@ -175,7 +175,7 @@ fun SkillTreePanel(
     val filtering = tag != null || query.length >= 2
     BackHandler(nodeOpen) { nodeOpen = false }
     Box(modifier) {
-        TreeCanvas(nodes, selected, taken, reachable, path.orEmpty(), planned, highlight, view, Modifier.fillMaxSize()) { code ->
+        TreeCanvas(nodes, selected, taken, reachable, path.orEmpty(), planned, highlight, view, Modifier.fillMaxSize(), focus = heroClass?.startNode) { code ->
             onSelect(code)
             nodeOpen = true
         }
@@ -327,6 +327,9 @@ fun SkillTreePanel(
 @Stable internal class TreeView {
     var scale by mutableFloatStateOf(1f)
     var pan by mutableStateOf(Offset.Zero)
+
+    /** The first look on the class's start was taken; a «back to the whole tree» keeps it from coming back. */
+    var focused = false
     fun reset() {
         scale = 1f
         pan = Offset.Zero

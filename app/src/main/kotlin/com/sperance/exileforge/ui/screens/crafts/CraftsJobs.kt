@@ -61,6 +61,7 @@ import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.JobInput
 import com.sperance.exileforge.rules.content.JobKind
 import com.sperance.exileforge.rules.content.Slot
+import com.sperance.exileforge.rules.content.SmithChoice
 import com.sperance.exileforge.rules.roll.WorkGains
 import com.sperance.exileforge.rules.roll.WorkTally
 import com.sperance.exileforge.ui.components.*
@@ -152,6 +153,8 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
     val choices = choices(game, profession, work)
     var picked by remember(work.code) { mutableStateOf(choices.firstOrNull()?.choice.orEmpty()) }
     val job = work.options.firstOrNull { it.choice == picked } ?: work
+    // The smith's random piece (3.81.0, server 1.76.0) takes no additives: its lines roll two tiers lower instead.
+    val random = job.choice == SmithChoice.RANDOM.name
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(jobTitle(job.code), color = GoldBright, style = MaterialTheme.typography.titleLarge)
@@ -174,7 +177,8 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
                 }
             }
             // The smith's additives (2.42.0): each is spent every smelt and guarantees its handcrafted line.
-            if (job.additives && crafts != null && crafts.maxAdditives > 0) {
+            if (random) MutedText(ui("crafts.random_hint"))
+            if (job.additives && !random && crafts != null && crafts.maxAdditives > 0) {
                 Engraved(ui("crafts.additives", crafts.maxAdditives))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     crafts.additives.keys.forEach { code ->
@@ -210,7 +214,7 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
 
                 else -> ForgeButton(enabled = !game.busy, onClick = {
                     onDismiss()
-                    vm.start(job.code, job.choice, additives)
+                    vm.start(job.code, job.choice, if (random) emptyList() else additives)
                 }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text(ui("crafts.start")) }
             }
             if (profession.equipped == null && job.level <= profession.level) Text(ui("crafts.no_tool"), color = LifeRed, style = MaterialTheme.typography.bodySmall)

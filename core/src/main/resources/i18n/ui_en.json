@@ -2974,6 +2974,7 @@
   "crafts.per_hour": "Per hour ≈ {0}",
   "crafts.per_hour_item": "{1} ×{0}",
   "crafts.kind_condense": "An essence one tier higher, of the kind you choose",
+  "crafts.random_hint": "A random piece of bars alone: no gems or fluxes, its modifiers two tiers weaker.",
   "crafts.choose": "What to make",
   "crafts.no_choice": "Nothing to choose yet: no variant fits your level and bag",
   "crafts.kind_refine": "One of the next tier from five of the one below, you choose which",

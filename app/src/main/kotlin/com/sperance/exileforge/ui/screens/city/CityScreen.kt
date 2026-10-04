@@ -12,6 +12,7 @@ import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -21,8 +22,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.GuildText
+import com.sperance.exileforge.core.guild.Guilds
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.market.Market
+import com.sperance.exileforge.core.quests.Quests
 import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.guild.GuildViewModel
 import com.sperance.exileforge.presentation.hero.HeroViewModel
@@ -30,7 +35,7 @@ import com.sperance.exileforge.presentation.market.MarketViewModel
 import com.sperance.exileforge.presentation.quests.QuestViewModel
 import com.sperance.exileforge.presentation.state.Building
 import com.sperance.exileforge.presentation.state.Feature
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.unlocked
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -47,35 +52,38 @@ import org.koin.compose.viewmodel.koinViewModel
  * Each card says in a line what waits inside; a tap goes in, and «back», on screen or the system's, comes out to the square.
  * The buildings are the screens they always were, each explaining itself on its first visit.
  */
-@Composable fun CityScreen(s: ForgeState) {
+@Composable fun CityScreen(building: Building?) {
     val shell: ShellViewModel = koinViewModel()
-    val building = s.building
     if (building == null) {
-        CitySquare(s)
+        CitySquare()
         return
     }
     Column(Modifier.fillMaxSize()) {
         BackRow(ui("nav.city")) { shell.building(null) }
         Box(Modifier.weight(1f)) {
             when (building) {
-                Building.QUESTS -> QuestsScreen(s)
-                Building.MERCHANT -> MerchantScreen(s)
-                Building.AUCTION -> AuctionScreen(s)
-                Building.GUILD -> GuildScreen(s)
+                Building.QUESTS -> QuestsScreen()
+                Building.MERCHANT -> MerchantScreen()
+                Building.AUCTION -> AuctionScreen()
+                Building.GUILD -> GuildScreen()
             }
         }
     }
 }
 
 /** The square: the three buildings and their news, read when the square opens — the merchant's comes with the hero. */
-@Composable private fun CitySquare(s: ForgeState) {
+@Composable private fun CitySquare() {
     val shell: ShellViewModel = koinViewModel()
+    val game by shell.game.collectAsStateWithLifecycle()
     val heroModel: HeroViewModel = koinViewModel()
     val quests = koinViewModel<QuestViewModel>()
     val market = koinViewModel<MarketViewModel>()
     val guild = koinViewModel<GuildViewModel>()
-    LaunchedEffect(s.play.heroId, s.account.sessionEpoch) {
-        if (s.play.heroId.isNotBlank()) {
+    val board by quests.quests.collectAsStateWithLifecycle()
+    val trade by market.market.collectAsStateWithLifecycle()
+    val guilds by guild.guilds.collectAsStateWithLifecycle()
+    LaunchedEffect(game.heroId, game.sessionEpoch) {
+        if (game.heroId.isNotBlank()) {
             heroModel.ensure()
             market.loadMyLots(glance = true)
             guild.load()
@@ -85,30 +93,30 @@ import org.koin.compose.viewmodel.koinViewModel
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Spacer(Modifier.height(12.dp))
         ScreenHeader(ui("nav.city"), ui("city.subtitle"), ForgeGlyphs.Keep, guide = Guide.CITY)
-        BuildingCard(ui("quest.title"), ForgeGlyphs.Scroll, questNews(s), s.lockOf(Building.QUESTS), accent = Vital) { shell.building(Building.QUESTS) }
-        BuildingCard(ui("merchant.title"), ForgeGlyphs.Coins, merchantNews(s), s.lockOf(Building.MERCHANT)) { shell.building(Building.MERCHANT) }
-        BuildingCard(ui("nav.auction"), ForgeGlyphs.Orb, auctionNews(s), s.lockOf(Building.AUCTION)) { shell.building(Building.AUCTION) }
-        BuildingCard(ui("guild.title"), ForgeGlyphs.Banner, guildNews(s), s.lockOf(Building.GUILD), accent = Rune) { shell.building(Building.GUILD) }
+        BuildingCard(ui("quest.title"), ForgeGlyphs.Scroll, questNews(board), game.lockOf(Building.QUESTS), accent = Vital) { shell.building(Building.QUESTS) }
+        BuildingCard(ui("merchant.title"), ForgeGlyphs.Coins, merchantNews(trade), game.lockOf(Building.MERCHANT)) { shell.building(Building.MERCHANT) }
+        BuildingCard(ui("nav.auction"), ForgeGlyphs.Orb, auctionNews(trade), game.lockOf(Building.AUCTION)) { shell.building(Building.AUCTION) }
+        BuildingCard(ui("guild.title"), ForgeGlyphs.Banner, guildNews(guilds), game.lockOf(Building.GUILD), accent = Rune) { shell.building(Building.GUILD) }
         Spacer(Modifier.height(12.dp))
     }
 }
 
 /** How many quests wait for their reward, or how many are under way. */
-private fun questNews(s: ForgeState): String {
-    val board = s.quests.board ?: return ui("city.quests_idle")
+private fun questNews(quests: Quests): String {
+    val board = quests.board ?: return ui("city.quests_idle")
     val quests = board.daily + board.weekly + board.contracts + listOfNotNull(board.story)
     val ready = quests.count { it.done && !it.claimed }
     return if (ready > 0) ui("city.quests_ready", ready) else ui("city.quests_active", quests.count { !it.claimed })
 }
 
-private fun merchantNews(s: ForgeState): String = s.market.merchant?.takeIf { it.refreshAt > 0 }?.let { ui("merchant.renews", untilText(it.refreshAt)) } ?: ui("city.merchant_idle")
+private fun merchantNews(market: Market): String = market.merchant?.takeIf { it.refreshAt > 0 }?.let { ui("merchant.renews", untilText(it.refreshAt)) } ?: ui("city.merchant_idle")
 
-private fun auctionNews(s: ForgeState): String = s.market.locked
-    ?: s.market.slots?.let { ui("city.auction_lots", s.ownLots.size, it.limit) }
+private fun auctionNews(market: Market): String = market.locked
+    ?: market.slots?.let { ui("city.auction_lots", market.myLots.count { lot -> lot.onSale }, it.limit) }
     ?: ui("city.auction_idle")
 
-private fun guildNews(s: ForgeState): String {
-    val mine = s.guild.mine ?: return ui("city.guild_idle")
+private fun guildNews(guilds: Guilds): String {
+    val mine = guilds.mine ?: return ui("city.guild_idle")
     mine.guild?.let { return ui("city.guild_in", GuildText.title(it.name, it.tag), it.level) }
     return if (mine.invites.isNotEmpty()) ui("city.guild_invites", mine.invites.size) else ui("city.guild_none")
 }
@@ -116,7 +124,7 @@ private fun guildNews(s: ForgeState): String {
 /** One building: its sign, its name and the line of news; the whole card is the door. */
 
 /** The level a building opens at (3.76.0), while the hero is below it. */
-private fun ForgeState.lockOf(building: Building): Int? = Feature.ofBuilding(building)?.takeIf { !unlocked(it) }?.level
+private fun GameUi.lockOf(building: Building): Int? = Feature.ofBuilding(building)?.takeIf { !unlocked(it) }?.level
 
 @Composable private fun BuildingCard(title: String, icon: ImageVector, news: String, lockedUntil: Int?, accent: Color = Gold, onOpen: () -> Unit) {
     val shape = RoundedCornerShape(14.dp)

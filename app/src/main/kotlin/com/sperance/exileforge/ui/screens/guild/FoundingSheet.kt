@@ -19,7 +19,7 @@ import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.guild.nameLength
 import com.sperance.exileforge.core.model.guild.tagLength
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.GuildFaction
 import com.sperance.exileforge.rules.content.GuildMode
 import com.sperance.exileforge.rules.content.GuildRules
@@ -38,8 +38,8 @@ internal typealias Founding = (String, String, String, String, String, GuildMode
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun FoundingSheet(s: ForgeState, onDismiss: () -> Unit, onFound: Founding) {
-    val rules = s.index?.guilds ?: GuildRules()
+internal fun FoundingSheet(game: GameUi, onDismiss: () -> Unit, onFound: Founding) {
+    val rules = game.index?.guilds ?: GuildRules()
     var name by remember { mutableStateOf("") }
     var tag by remember { mutableStateOf("") }
     var faction by remember { mutableStateOf(rules.factions.firstOrNull()?.code.orEmpty()) }
@@ -47,9 +47,9 @@ internal fun FoundingSheet(s: ForgeState, onDismiss: () -> Unit, onFound: Foundi
     var color by remember { mutableStateOf(rules.colors.firstOrNull().orEmpty()) }
     var mode by remember { mutableStateOf(GuildMode.OPEN) }
     var minLevel by remember { mutableStateOf("1") }
-    val money = s.hero?.money
+    val money = game.hero?.money
     val refusal = when {
-        s.heroLevel < rules.create.level -> ui("guild.found_level", rules.create.level)
+        game.heroLevel < rules.create.level -> ui("guild.found_level", rules.create.level)
         money != null && money < rules.create.gold -> ui("guild.found_gold", number(rules.create.gold.toDouble()))
         name.trim().length !in rules.nameLength -> ui("guild.found_name", rules.nameLength.first, rules.nameLength.last)
         tag.length !in rules.tagLength -> ui("guild.found_tag", rules.tagLength.first, rules.tagLength.last)
@@ -95,7 +95,7 @@ internal fun FoundingSheet(s: ForgeState, onDismiss: () -> Unit, onFound: Foundi
                 ui("guild.found_for", number(rules.create.gold.toDouble())),
                 Gold,
                 Modifier.fillMaxWidth(),
-                enabled = !s.busy && refusal == null,
+                enabled = !game.busy && refusal == null,
                 icon = ForgeGlyphs.Banner,
             ) {
                 onFound(name.trim(), tag, faction, emblem, color, mode, (minLevel.toIntOrNull() ?: 1).coerceAtLeast(1))

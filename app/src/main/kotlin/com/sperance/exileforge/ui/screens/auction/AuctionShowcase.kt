@@ -38,14 +38,14 @@ import com.sperance.exileforge.core.market.Market
 import com.sperance.exileforge.core.model.auction.*
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.market.MarketViewModel
-import com.sperance.exileforge.presentation.state.ForgeState
-import com.sperance.exileforge.presentation.state.unmetFor
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
+import com.sperance.exileforge.ui.components.inputs
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.ItemEmblem
 import com.sperance.exileforge.ui.icons.OrbGlyph
@@ -56,8 +56,8 @@ import com.sperance.exileforge.ui.theme.*
 
 /** Витрина аукциона (3.80.24): список лотов, строка поиска и фильтры. */
 /** The showcase: the server's own search, so the page and the filter both belong to it. */
-@Composable internal fun ColumnScope.ShowcaseTab(s: ForgeState, market: Market, vm: MarketViewModel) {
-    ShowcaseList(s, market, header = { ShowcaseHeader(s, market, vm) }, onBuy = vm::buy, onMore = vm::moreShowcase)
+@Composable internal fun ColumnScope.ShowcaseTab(game: GameUi, market: Market, vm: MarketViewModel) {
+    ShowcaseList(game, market, header = { ShowcaseHeader(game, market, vm) }, onBuy = vm::buy, onMore = vm::moreShowcase)
 }
 
 /**
@@ -71,7 +71,7 @@ import com.sperance.exileforge.ui.theme.*
  * the extra tap that guarantees the item was looked at.
  */
 @Composable internal fun ColumnScope.ShowcaseList(
-    s: ForgeState,
+    game: GameUi,
     market: Market,
     header: @Composable () -> Unit = {},
     onBuy: (String) -> Unit,
@@ -91,12 +91,12 @@ import com.sperance.exileforge.ui.theme.*
         }
         items(market.showcase.items, key = { it.id }) { lot ->
             // A seller cannot buy their own lot, and the server says so; the sheet does not offer it.
-            LotRow(s, lot, mark = if (lot.belongsTo(s.play.heroId)) ui("auction.your_lot") else null) { openLot = lot.id }
+            LotRow(game, lot, mark = if (lot.belongsTo(game.heroId)) ui("auction.your_lot") else null) { openLot = lot.id }
         }
         val showcase = market.showcase
         if (showcase.next != null) {
             item {
-                ForgeOutlinedButton(enabled = !s.busy && Reads.AUCTION !in s.loading, onClick = onMore, modifier = Modifier.fillMaxWidth()) {
+                ForgeOutlinedButton(enabled = !game.busy && Reads.AUCTION !in game.loading, onClick = onMore, modifier = Modifier.fillMaxWidth()) {
                     Text(ui("auction.more", showcase.items.size, showcase.totalItems))
                 }
             }
@@ -104,11 +104,11 @@ import com.sperance.exileforge.ui.theme.*
     }
     market.showcase.items.firstOrNull { it.id == openLot }?.let { lot ->
         LotSheet(
-            s,
+            game,
             lot,
             action = ui("auction.buy"),
-            enabled = !s.busy && !lot.belongsTo(s.play.heroId),
-            note = if (lot.belongsTo(s.play.heroId)) ui("auction.own_lot") else null,
+            enabled = !game.busy && !lot.belongsTo(game.heroId),
+            note = if (lot.belongsTo(game.heroId)) ui("auction.own_lot") else null,
             onDismiss = { openLot = null },
         ) {
             openLot = null
@@ -118,18 +118,18 @@ import com.sperance.exileforge.ui.theme.*
     // A purchase cannot be undone, so it is asked about — and an item the hero cannot wear
     // is said so in the same breath, because that is exactly the mistake worth catching.
     market.showcase.items.firstOrNull { it.id == confirmBuy }?.let { lot ->
-        val blocked = lotUnmet(s, lot)
+        val blocked = lotUnmet(game, lot)
         val orb = orbTitle(lot)
         // What the bag keeps after paying: shown when the bag is known and can pay; when it cannot,
         // the sheet says so and the purchase is not sent (2.46.0).
-        val have = s.bagAmount(lot.priceOrb)
-        val money = s.hero?.money
+        val have = game.bagAmount(lot.priceOrb)
+        val money = game.hero?.money
         val fee = lot.fee
         val poor = money != null && money < fee
         ConfirmSheet(
             title = ui("auction.buy_q"),
             subtitle = lot.title,
-            icon = { LotIcon(s, lot, Modifier.size(44.dp)) },
+            icon = { LotIcon(game, lot, Modifier.size(44.dp)) },
             ledger = listOfNotNull(
                 LedgerLine(ui("confirm.spend"), ui("confirm.minus", lot.price, orb), Tone.SPEND),
                 fee.takeIf { it > 0 }?.let { LedgerLine(ui("auction.fee"), ui("merchant.gold_amount", it), Tone.SPEND) },
@@ -141,7 +141,7 @@ import com.sperance.exileforge.ui.theme.*
                 have?.takeIf { it < lot.price }?.let { ui("confirm.short", it) },
                 ui("auction.fee_short", fee).takeIf { poor },
                 blocked.takeIf { it.isNotEmpty() }?.let {
-                    ui("auction.unwearable", it.joinToString(", ") { r -> requirementReason(r, s.lang) })
+                    ui("auction.unwearable", it.joinToString(", ") { r -> requirementReason(r, game.lang) })
                 },
             ).joinToString("\n").ifBlank { null },
             blocked = (have != null && have < lot.price) || poor,
@@ -159,7 +159,7 @@ import com.sperance.exileforge.ui.theme.*
  * and a chip's cross do. A chip is one filter the server understands, named as the player set it,
  * and its cross drops that filter and asks again — the quickest way back from "nothing found".
  */
-@Composable internal fun ShowcaseHeader(s: ForgeState, market: Market, vm: MarketViewModel) {
+@Composable internal fun ShowcaseHeader(game: GameUi, market: Market, vm: MarketViewModel) {
     var sheet by remember { mutableStateOf(false) }
     val f = market.filter
     val count = f.active().size + if (market.showOwnLots) 1 else 0
@@ -167,7 +167,7 @@ import com.sperance.exileforge.ui.theme.*
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
                 f.title,
-                { vm.filter(f.copy(title = it.take(s.inputs.search))) },
+                { vm.filter(f.copy(title = it.take(game.inputs.search))) },
                 placeholder = { Text(ui("auction.name")) },
                 leadingIcon = { Icon(Icons.Outlined.Search, null) },
                 singleLine = true,
@@ -175,7 +175,7 @@ import com.sperance.exileforge.ui.theme.*
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = { vm.loadShowcase() }),
             )
-            ForgeOutlinedButton(onClick = { sheet = true }, enabled = !s.busy, contentPadding = PaddingValues(horizontal = 12.dp)) {
+            ForgeOutlinedButton(onClick = { sheet = true }, enabled = !game.busy, contentPadding = PaddingValues(horizontal = 12.dp)) {
                 Icon(Icons.Outlined.FilterList, ui("auction.filters"), modifier = Modifier.size(18.dp))
                 if (count > 0) {
                     Spacer(Modifier.width(6.dp))
@@ -187,7 +187,7 @@ import com.sperance.exileforge.ui.theme.*
         if (count > 0) {
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 f.active().forEach { field ->
-                    ActiveFilter(chipLabel(s, field, f.value(field))) {
+                    ActiveFilter(chipLabel(game, field, f.value(field))) {
                         vm.filter(f.without(field))
                         vm.loadShowcase()
                     }
@@ -202,7 +202,7 @@ import com.sperance.exileforge.ui.theme.*
         }
     }
     if (sheet) {
-        FilterSheet(s, market, onDismiss = { sheet = false }) { filter, mine ->
+        FilterSheet(game, market, onDismiss = { sheet = false }) { filter, mine ->
             sheet = false
             vm.filter(filter)
             vm.showOwnLots(mine)
@@ -222,10 +222,10 @@ import com.sperance.exileforge.ui.theme.*
     )
 }
 
-internal fun chipLabel(s: ForgeState, field: FilterField, value: String): String = when (field) {
-    FilterField.KIND -> LotKind.entries.firstOrNull { it.name == value }?.let { lotKindTitle(it, s.lang) } ?: value
-    FilterField.SLOT -> slotTitle(value, s.lang)
-    FilterField.RARITY -> rarityTitle(value, s.lang)
+internal fun chipLabel(game: GameUi, field: FilterField, value: String): String = when (field) {
+    FilterField.KIND -> LotKind.entries.firstOrNull { it.name == value }?.let { lotKindTitle(it, game.lang) } ?: value
+    FilterField.SLOT -> slotTitle(value, game.lang)
+    FilterField.RARITY -> rarityTitle(value, game.lang)
     FilterField.MIN_LEVEL -> ui("auction.chip_ilvl_from", value)
     FilterField.MAX_LEVEL -> ui("auction.chip_ilvl_to", value)
     FilterField.ORB -> ui("auction.chip_orb", itemTitle(value))
@@ -242,7 +242,7 @@ internal val templateSlots: List<Slot> = Slot.entries.filter { it != Slot.RING_2
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun FilterSheet(s: ForgeState, market: Market, onDismiss: () -> Unit, onApply: (AuctionFilter, Boolean) -> Unit) {
+internal fun FilterSheet(game: GameUi, market: Market, onDismiss: () -> Unit, onApply: (AuctionFilter, Boolean) -> Unit) {
     var draft by remember { mutableStateOf(market.filter) }
     var mine by remember { mutableStateOf(market.showOwnLots) }
     val any = ui("common.all")
@@ -256,12 +256,12 @@ internal fun FilterSheet(s: ForgeState, market: Market, onDismiss: () -> Unit, o
             Spinner(
                 ui("auction.what_sold"),
                 draft.kind,
-                mapOf("" to any) + LotKind.entries.associate { it.name to lotKindTitle(it, s.lang) },
+                mapOf("" to any) + LotKind.entries.associate { it.name to lotKindTitle(it, game.lang) },
                 true,
                 glyph = Glyph.ITEM,
             ) { draft = draft.copy(kind = it) }
-            Spinner(ui("common.slot"), draft.slot, mapOf("" to any) + templateSlots.associate { it.name to slotTitle(it, s.lang) }, true, glyph = Glyph.ITEM) { draft = draft.copy(slot = it) }
-            Spinner(ui("common.rarity"), draft.rarity, mapOf("" to any) + Rarity.entries.associate { it.name to rarityTitle(it, s.lang) }, true, glyph = Glyph.RARITY) { draft = draft.copy(rarity = it) }
+            Spinner(ui("common.slot"), draft.slot, mapOf("" to any) + templateSlots.associate { it.name to slotTitle(it, game.lang) }, true, glyph = Glyph.ITEM) { draft = draft.copy(slot = it) }
+            Spinner(ui("common.rarity"), draft.rarity, mapOf("" to any) + Rarity.entries.associate { it.name to rarityTitle(it, game.lang) }, true, glyph = Glyph.RARITY) { draft = draft.copy(rarity = it) }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     draft.minItemLevel,
@@ -284,14 +284,14 @@ internal fun FilterSheet(s: ForgeState, market: Market, onDismiss: () -> Unit, o
             Spinner(
                 ui("auction.priced_in"),
                 draft.priceOrb,
-                mapOf("" to any) + orbOptions(s),
+                mapOf("" to any) + orbOptions(game),
                 true,
                 glyph = Glyph.CURRENCY,
-                optionArt = orbArt(s.currencies),
+                optionArt = orbArt(game.currencies),
             ) { draft = draft.copy(priceOrb = it) }
             OutlinedTextField(
                 draft.maxPrice,
-                { draft = draft.copy(maxPrice = it.filter(Char::isDigit).take(s.inputs.number)) },
+                { draft = draft.copy(maxPrice = it.filter(Char::isDigit).take(game.inputs.number)) },
                 label = { Text(ui("auction.price_max")) },
                 singleLine = true,
                 keyboardOptions = digits,
@@ -300,7 +300,7 @@ internal fun FilterSheet(s: ForgeState, market: Market, onDismiss: () -> Unit, o
             // A seller is named by the hero's id: there is no catalogue of heroes to pick one from.
             OutlinedTextField(
                 draft.sellerId,
-                { draft = draft.copy(sellerId = it.trim().take(s.inputs.code)) },
+                { draft = draft.copy(sellerId = it.trim().take(game.inputs.code)) },
                 label = { Text(ui("auction.seller")) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
@@ -315,7 +315,7 @@ internal fun FilterSheet(s: ForgeState, market: Market, onDismiss: () -> Unit, o
                     draft = draft.cleared()
                     mine = false
                 }, modifier = Modifier.weight(1f)) { Text(ui("auction.reset")) }
-                ForgeButton(enabled = !s.busy, onClick = { onApply(draft, mine) }, modifier = Modifier.weight(1f)) { Text(ui("auction.apply")) }
+                ForgeButton(enabled = !game.busy, onClick = { onApply(draft, mine) }, modifier = Modifier.weight(1f)) { Text(ui("auction.apply")) }
             }
         }
     }

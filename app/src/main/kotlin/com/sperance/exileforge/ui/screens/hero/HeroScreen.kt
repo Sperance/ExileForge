@@ -233,7 +233,7 @@ fun HeroScreen(s: ForgeState) {
     }
     s.play.chestOpening?.let { opening -> ChestOpenedSheet(s, opening, model::dismissChest) }
     listStack?.let { code ->
-        ListingSheet(s, itemTitle(code), owned = s.bagAmount(code) ?: 0L, onDismiss = { listStack = null }, hint = { model.priceHint(code, null, 0) }) { orb, price, amount ->
+        ListingSheet(s.game, itemTitle(code), owned = s.bagAmount(code) ?: 0L, onDismiss = { listStack = null }, hint = { model.priceHint(code, null, 0) }) { orb, price, amount ->
             listStack = null
             model.sellItem(code, amount, orb, price)
         }

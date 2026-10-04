@@ -72,5 +72,12 @@ fun ForgeState.stashShelf(pieces: List<ItemView>, filter: StashFilter, hideWorn:
     },
 ) { sellPrice(it.item) }
 
+/** То же для среза «игра» (3.80.33). */
+fun GameUi.stashShelf(pieces: List<ItemView>, filter: StashFilter, hideWorn: Boolean = false): List<ItemView> = stashSort.order(
+    pieces.filter { piece ->
+        !(hideWorn && piece.isWorn) && filter.admits(piece) { code -> unmetFor(code) }
+    },
+) { sellPrice(it.item) }
+
 /** Whether the hero wears this copy, on the body or in a socket. */
 val ItemView.isWorn: Boolean get() = equipped || socketed

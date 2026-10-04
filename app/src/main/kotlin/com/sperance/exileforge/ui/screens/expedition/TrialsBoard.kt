@@ -110,7 +110,7 @@ import com.sperance.exileforge.ui.theme.*
 /** The keys at hand as a compact grid: an icon and its count, [KEYS_PER_ROW] to a row, a tap opens the key's sheet. */
 @Composable private fun KeyGrid(s: ForgeState, stacks: List<Pair<String, Long>>) {
     var info by remember { mutableStateOf<String?>(null) }
-    info?.let { code -> StackInfoSheet(s, code) { info = null } }
+    info?.let { code -> StackInfoSheet(s.game, code) { info = null } }
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         stacks.chunked(KEYS_PER_ROW).forEach { row ->
             Row(Modifier.fillMaxWidth()) {

@@ -27,6 +27,7 @@ import com.sperance.exileforge.core.display.title
 import com.sperance.exileforge.core.display.tradeName
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Item
 import com.sperance.exileforge.rules.content.Orb
@@ -114,7 +115,7 @@ private val GAP = 6.dp
             .clickable(role = Role.Button, onClickLabel = title, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        StackIcon(s, stack.code, 36)
+        StackIcon(s.game, stack.code, 36)
         Text(
             compactCount(stack.amount),
             color = GoldBright,
@@ -137,13 +138,13 @@ internal fun compactCount(amount: Long): String = when {
  * An orb is its stained glass since 2.69.0; anything else is the server's sprite when the set has one,
  * the bundled glyph of its category otherwise — muted for a code the content does not know.
  */
-@Composable internal fun StackIcon(s: ForgeState, code: String, size: Int) {
+@Composable internal fun StackIcon(game: GameUi, code: String, size: Int) {
     if (Orb.of(code) != null) {
         BagIcon(code, Modifier.size(size.dp))
         return
     }
     val frame = RoundedCornerShape(6.dp)
-    val known = s.index?.item(code)
+    val known = game.index?.item(code)
     Box(Modifier.size(size.dp).background(Gold.copy(alpha = .08f), frame).border(1.dp, Gold.copy(alpha = .55f), frame), contentAlignment = Alignment.Center) {
         BagIcon(code, Modifier.size((size * .55f).dp), tint = if (known != null) Gold else Muted, kind = known?.let(::bagVisualKind) ?: ItemVisualKind.ITEM)
     }
@@ -178,7 +179,7 @@ internal fun compactCount(amount: Long): String = when {
     // A loot chest (3.76.0) is opened here; since 3.77.0 it may also go to the auction, never to the merchant.
     val chest = s.index?.item(code)?.category == Item.CHEST
     StackPanel(onDismiss) {
-        StackFace(s, code, stack.amount)
+        StackFace(s.game, code, stack.amount)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (forgeable) {
                 ForgeButton(enabled = !s.busy, onClick = { onForge(code) }, modifier = Modifier.weight(1f)) {
@@ -211,8 +212,8 @@ internal fun compactCount(amount: Long): String = when {
  * A stack seen away from the bag — a fight's spoils: its face alone, with no way on, since the run is still underway.
  * [code] is the stack's item code; the count is what the hero holds now.
  */
-@Composable fun StackInfoSheet(s: ForgeState, code: String, onDismiss: () -> Unit) {
-    StackPanel(onDismiss) { StackFace(s, code, s.hero?.bag?.get(code) ?: 0L) }
+@Composable fun StackInfoSheet(game: GameUi, code: String, onDismiss: () -> Unit) {
+    StackPanel(onDismiss) { StackFace(game, code, game.hero?.bag?.get(code) ?: 0L) }
 }
 
 /** The sheet a stack opens in: the gold spine along its edge and [content] beside it. */
@@ -228,9 +229,9 @@ private fun StackPanel(onDismiss: () -> Unit, content: @Composable ColumnScope.(
 }
 
 /** A stack's face: its icon, name and English trade name, how many the hero holds, and what it is for. */
-@Composable private fun StackFace(s: ForgeState, code: String, owned: Long) {
+@Composable private fun StackFace(game: GameUi, code: String, owned: Long) {
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-        StackIcon(s, code, 56)
+        StackIcon(game, code, 56)
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(itemTitle(code), color = GoldBright, style = MaterialTheme.typography.titleLarge)
             // The English trade name (2.51.0), under the translated one.
@@ -239,7 +240,7 @@ private fun StackPanel(onDismiss: () -> Unit, content: @Composable ColumnScope.(
         }
     }
     itemDescription(code).takeIf { it.isNotBlank() }?.let { Text(it, color = Parchment, style = MaterialTheme.typography.bodyMedium) }
-    s.index?.let { StackLore(it, code) }
+    game.index?.let { StackLore(it, code) }
 }
 
 /** What the content says of a stack under its description: an essence's guaranteed line by kind of item, then where it is found. */

@@ -16,6 +16,7 @@ import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,7 +32,7 @@ import com.sperance.exileforge.core.model.trade.MerchantOrb
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.market.MarketViewModel
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.unmetFor
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.AutoSell
@@ -60,18 +61,19 @@ import org.koin.compose.viewmodel.koinViewModel
  *
  * It left the auction's tabs in 3.22.0 for a building of the City of its own.
  */
-@Composable fun MerchantScreen(s: ForgeState) {
+@Composable fun MerchantScreen() {
+    val game by koinViewModel<MarketViewModel>().game.collectAsStateWithLifecycle()
     val heroModel: HeroViewModel = koinViewModel()
     val market = koinViewModel<MarketViewModel>()
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         // The shelf rides on the hero's snapshot; entering reads it afresh all the same.
-        LaunchedEffect(s.play.heroId, s.account.sessionEpoch) {
-            if (s.play.heroId.isNotBlank()) {
+        LaunchedEffect(game.heroId, game.sessionEpoch) {
+            if (game.heroId.isNotBlank()) {
                 heroModel.ensure()
                 market.loadMerchant()
             }
         }
-        MerchantTab(s, market)
+        MerchantTab(game, market)
     }
 }
 
@@ -81,7 +83,7 @@ import org.koin.compose.viewmodel.koinViewModel
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ColumnScope.MerchantTab(s: ForgeState, market: MarketViewModel) {
+private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel) {
     val heroModel: HeroViewModel = koinViewModel()
     val shelf by market.market.collectAsStateWithLifecycle()
     val activity by market.activity.collectAsStateWithLifecycle()
@@ -93,9 +95,9 @@ private fun ColumnScope.MerchantTab(s: ForgeState, market: MarketViewModel) {
     // The orb a tap on its glass or name opened: what it is for, before it is bought.
     var info by remember { mutableStateOf<String?>(null) }
     val stock = shelf.merchant
-    val money = s.hero?.money
+    val money = game.hero?.money
     // A copy whose template the content does not hold cannot be drawn, and is not offered.
-    val offers = remember(stock?.offers, s.index, s.world) { stock?.offers.orEmpty().mapNotNull { offer -> s.view(offer.item)?.let { offer to it } } }
+    val offers = remember(stock?.offers, game.index, game.world) { stock?.offers.orEmpty().mapNotNull { offer -> game.view(offer.item)?.let { offer to it } } }
     val orbs = stock?.orbs.orEmpty()
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Icon(ForgeGlyphs.Coins, null, tint = Gold, modifier = Modifier.size(24.dp))
@@ -104,7 +106,7 @@ private fun ColumnScope.MerchantTab(s: ForgeState, market: MarketViewModel) {
         GuideButton(Guide.MERCHANT)
     }
     FirstVisit(Guide.MERCHANT)
-    MerchantStrip(money, stock?.refreshAt?.takeIf { it > 0 }, s.hero?.info?.autoSell) { filtering = true }
+    MerchantStrip(money, stock?.refreshAt?.takeIf { it > 0 }, game.hero?.info?.autoSell) { filtering = true }
     if (orbs.isNotEmpty()) {
         PillTabs(
             listOf(ui("merchant.wares_n", offers.size), ui("merchant.orbs_n", orbs.size)),
@@ -123,7 +125,7 @@ private fun ColumnScope.MerchantTab(s: ForgeState, market: MarketViewModel) {
                             OrbRow(
                                 orb,
                                 price,
-                                have = s.bagAmount(orb.code),
+                                have = game.bagAmount(orb.code),
                                 enabled = !busy && !orb.soldOut && (money == null || money >= price),
                                 onInfo = { info = orb.code },
                             ) { market.buyOrb(orb.code) }
@@ -133,23 +135,23 @@ private fun ColumnScope.MerchantTab(s: ForgeState, market: MarketViewModel) {
             } else {
                 if (stock != null && offers.isEmpty()) item { InfoCard(ui("merchant.empty"), ui("merchant.empty_hint")) }
                 items(offers, key = { it.first.id }) { (offer, view) ->
-                    ItemTradeRow(view, enabled = !busy, unmet = s.unmetFor(offer.item.template), onClick = { chosen = offer }) { GoldPrice(offer.price) }
+                    ItemTradeRow(view, enabled = !busy, unmet = game.unmetFor(offer.item.template), onClick = { chosen = offer }) { GoldPrice(offer.price) }
                 }
             }
         }
     }
     if (notes) MerchantNotes { notes = false }
-    info?.let { code -> StackInfoSheet(s, code) { info = null } }
+    info?.let { code -> StackInfoSheet(game, code) { info = null } }
     chosen?.let { offer ->
-        OfferSheet(s, offer, money, onDismiss = { chosen = null }) {
+        OfferSheet(game, offer, money, onDismiss = { chosen = null }) {
             chosen = null
             market.buyOffer(offer.id)
         }
     }
     // Read from the snapshot on every pass, so a chip turns as soon as the server has the new filter.
     if (filtering) {
-        s.hero?.info?.autoSell?.let { filter ->
-            AutoSellSheet(filter, enabled = !s.busy, onChange = heroModel::autoSell, onDismiss = { filtering = false })
+        game.hero?.info?.autoSell?.let { filter ->
+            AutoSellSheet(filter, enabled = !game.busy, onChange = heroModel::autoSell, onDismiss = { filtering = false })
         }
     }
 }
@@ -220,13 +222,13 @@ private fun MerchantNotes(onDismiss: () -> Unit) {
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun OfferSheet(s: ForgeState, offer: MerchantOffer, money: Long?, onDismiss: () -> Unit, onBuy: () -> Unit) {
-    val view = s.view(offer.item)
+private fun OfferSheet(game: GameUi, offer: MerchantOffer, money: Long?, onDismiss: () -> Unit, onBuy: () -> Unit) {
+    val view = game.view(offer.item)
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.92f)) {
             LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (view != null) item { ItemCard(view, enabled = false, detailed = true) }
-                item { WearPreview(s, offer.item) }
+                item { WearPreview(game, offer.item) }
             }
             OrnateDivider()
             Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -237,7 +239,7 @@ private fun OfferSheet(s: ForgeState, offer: MerchantOffer, money: Long?, onDism
                     ui("merchant.buy_for", number(price.toDouble())),
                     Gold,
                     Modifier.fillMaxWidth(),
-                    enabled = !s.busy && (money == null || money >= price),
+                    enabled = !game.busy && (money == null || money >= price),
                     onHeld = onBuy,
                 )
             }

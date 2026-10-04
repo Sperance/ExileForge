@@ -18,7 +18,8 @@ import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.guild.GuildView
 import com.sperance.exileforge.presentation.quests.QuestViewModel
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.GuildGoalView
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.auction.untilText
@@ -30,12 +31,12 @@ import org.koin.compose.viewmodel.koinViewModel
  * goal fills with every member's counters; once it is full, each member who gave at least the threshold claims a share,
  * and the first claim brings the guild its experience. Under a goal, who gave most.
  */
-@Composable internal fun GuildQuestsTab(s: ForgeState, guild: GuildView) {
+@Composable internal fun GuildQuestsTab(game: GameUi, guild: GuildView) {
     val vm = koinViewModel<QuestViewModel>()
     val boards by vm.quests.collectAsStateWithLifecycle()
     val activity by vm.activity.collectAsStateWithLifecycle()
     val busy = activity.busy
-    LaunchedEffect(s.play.heroId, guild.id) { vm.loadGuild() }
+    LaunchedEffect(game.heroId, guild.id) { vm.loadGuild() }
     val quests = boards.guild
     val names = guild.members.associate { it.heroId to it.name }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -50,8 +51,8 @@ import org.koin.compose.viewmodel.koinViewModel
                 if (quest.done && !quest.claimed) ForgeButton({ vm.claimGuild(questId = quest.id) }, enabled = !busy) { Text(ui("quest.claim")) }
             }
         }
-        goals(s.play.heroId, vm, busy, ui("quest.guild_daily"), ui("quest.resets", untilText(quests.dayEndsAt)), quests.daily, names)
-        goals(s.play.heroId, vm, busy, ui("quest.guild_weekly"), ui("quest.resets", weekText(quests.weekEndsAt)), quests.weekly, names)
+        goals(game.heroId, vm, busy, ui("quest.guild_daily"), ui("quest.resets", untilText(quests.dayEndsAt)), quests.daily, names)
+        goals(game.heroId, vm, busy, ui("quest.guild_weekly"), ui("quest.resets", weekText(quests.weekEndsAt)), quests.weekly, names)
     }
 }
 

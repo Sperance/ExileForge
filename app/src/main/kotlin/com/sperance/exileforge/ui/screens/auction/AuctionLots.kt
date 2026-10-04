@@ -38,9 +38,7 @@ import com.sperance.exileforge.core.market.Market
 import com.sperance.exileforge.core.model.auction.*
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.market.MarketViewModel
-import com.sperance.exileforge.presentation.state.ForgeState
-import com.sperance.exileforge.presentation.state.unmetFor
-import com.sperance.exileforge.presentation.state.view
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
@@ -56,7 +54,7 @@ import com.sperance.exileforge.ui.theme.*
 
 /** Свои лоты и история сделок (3.80.24). */
 /** The hero's own lots that are still on sale; withdrawn and sold lots leave this list. */
-@Composable internal fun ColumnScope.MyLotsTab(s: ForgeState, market: Market, vm: MarketViewModel) {
+@Composable internal fun ColumnScope.MyLotsTab(game: GameUi, market: Market, vm: MarketViewModel) {
     var openLot by remember { mutableStateOf<String?>(null) }
     LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
         // Lot places (3.47.0): the same for every hero, never bought.
@@ -74,28 +72,28 @@ import com.sperance.exileforge.ui.theme.*
             }
         }
         items(market.ownLots, key = { it.id }) { lot ->
-            val window = s.index?.rules?.auction?.extendWindowMillis ?: 0L
-            LotRow(s, lot, mark = lotExpiry(lot)?.let { if (lot.extendable(window)) it + " · " + ui("auction.extend_now") else it }, withSeller = false) { openLot = lot.id }
+            val window = game.index?.rules?.auction?.extendWindowMillis ?: 0L
+            LotRow(game, lot, mark = lotExpiry(lot)?.let { if (lot.extendable(window)) it + " · " + ui("auction.extend_now") else it }, withSeller = false) { openLot = lot.id }
         }
     }
     market.ownLots.firstOrNull { it.id == openLot }?.let { lot ->
         // On its last day the author may give it another week (3.79.0), as often as they like.
-        val extendable = s.index?.rules?.auction?.let { lot.extendable(it.extendWindowMillis) } == true
+        val extendable = game.index?.rules?.auction?.let { lot.extendable(it.extendWindowMillis) } == true
         LotSheet(
-            s,
+            game,
             lot,
             action = ui("auction.withdraw"),
-            enabled = !s.busy,
+            enabled = !game.busy,
             note = lotExpiry(lot),
             onDismiss = { openLot = null },
             extra = if (extendable) {
                 (
                     {
-                        ForgeOutlinedButton(enabled = !s.busy, onClick = {
+                        ForgeOutlinedButton(enabled = !game.busy, onClick = {
                             openLot = null
                             vm.extend(lot.id)
                         }, modifier = Modifier.fillMaxWidth()) {
-                            Text(ui("auction.extend", s.index?.rules?.auction?.lotDays ?: 7))
+                            Text(ui("auction.extend", game.index?.rules?.auction?.lotDays ?: 7))
                         }
                     }
                     )
@@ -116,10 +114,10 @@ internal enum class DealFilter { ALL, SOLD, BOUGHT }
  * The hero's deals of the last days (3.73.0): what they sold and to whom, what they bought and from whom, the copy as it
  * changed hands a tap away, and the orbs earned and spent summed on top.
  */
-@Composable internal fun ColumnScope.HistoryTab(s: ForgeState, market: Market) {
+@Composable internal fun ColumnScope.HistoryTab(game: GameUi, market: Market) {
     var filter by remember { mutableStateOf(DealFilter.ALL) }
     var openLot by remember { mutableStateOf<String?>(null) }
-    val heroId = s.play.heroId
+    val heroId = game.heroId
     val deals = market.history.map { it.deal }
     val shown = deals.filter { deal ->
         when (filter) {
@@ -143,11 +141,11 @@ internal enum class DealFilter { ALL, SOLD, BOUGHT }
         }
         if (shown.isEmpty()) item { InfoCard(ui("auction.history_empty"), ui("auction.history_empty_hint")) }
         items(shown, key = { it.id }) { deal ->
-            LotRow(s, deal, mark = dealMark(deal, heroId), withSeller = false) { openLot = deal.id }
+            LotRow(game, deal, mark = dealMark(deal, heroId), withSeller = false) { openLot = deal.id }
         }
     }
     shown.firstOrNull { it.id == openLot }?.let { deal ->
-        LotSheet(s, deal, action = null, enabled = false, note = dealMark(deal, heroId), onDismiss = { openLot = null })
+        LotSheet(game, deal, action = null, enabled = false, note = dealMark(deal, heroId), onDismiss = { openLot = null })
     }
 }
 

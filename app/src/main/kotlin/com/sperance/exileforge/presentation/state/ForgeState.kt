@@ -30,7 +30,6 @@ import com.sperance.exileforge.core.network.Outage
 import com.sperance.exileforge.core.network.QueuedCommand
 import com.sperance.exileforge.core.network.TesterAccount
 import com.sperance.exileforge.data.settings.DEFAULT_SERVER
-import com.sperance.exileforge.rules.content.AtlasPoints
 import com.sperance.exileforge.rules.content.BenchRecipe
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.GuildQuests
@@ -39,7 +38,6 @@ import com.sperance.exileforge.rules.content.Item
 import com.sperance.exileforge.rules.content.QuestBoard
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.roll.WorkGains
-import com.sperance.exileforge.rules.sheet.SheetCalculator
 
 enum class AppMode { PLAYER, ADMIN }
 
@@ -134,38 +132,29 @@ data class ForgeState(
     fun bagAmount(code: String): Long? = hero?.let { it.bag[code] ?: 0L }
 
     /** The orbs of the world, in the order of their price: what the forge and the auction offer. */
-    val orbs: List<Item> get() = index?.itemsByCategory?.get(Item.CURRENCY).orEmpty().sortedBy { it.price }
+    val orbs: List<Item> get() = HeroLens.orbs(index)
 
     /** The auction's money (server 1.65.0): the base orbs a lot is priced, bought and filtered in, cheapest first. */
-    val currencies: List<Item> get() = index?.let { i -> orbs.filter { i.rules.auction.trades(it.code) } }.orEmpty()
+    val currencies: List<Item> get() = HeroLens.currencies(index)
+    val bench: List<BenchRecipe> get() = HeroLens.bench(index, hero)
+    val progress: CampaignProgress? get() = HeroLens.progress(index, hero)
+    val atlasState: AtlasState? get() = HeroLens.atlasState(index, hero)
+    val treeState: TreeState? get() = HeroLens.treeState(index, hero)
 
-    /** The bench lines the hero has found; the rest of the bench stays hidden. */
-    val bench: List<BenchRecipe> get() = index?.let { i -> hero?.let { h -> i.bench.filter { it.code in h.info.recipes } } }.orEmpty()
-
-    /** Which zones the hero has passed and which are open: derived from the hero, no request. */
-    val progress: CampaignProgress? get() = index?.let { i -> hero?.let { h -> CampaignProgress(h.campaign.cleared.filter { it in i.zones }, i.world.unlocked(h.campaign.cleared)) } }
-
-    /** The hero's atlas as the rules count it: points earned and free. */
-    val atlasState: AtlasState? get() = index?.let { i ->
-        hero?.let { h ->
-            AtlasState(
-                listOf(i.atlasGraph.start) + h.info.atlas,
-                h.info.earned,
-                AtlasPoints.total(i.atlas.points, h.info.earned, i.atlas.cap),
-                AtlasPoints.available(i.atlas.points, h.info.earned, h.info.atlas, i.atlas.cap),
-            )
-        }
-    }
-
-    /** The hero's tree as the rules count it: the point balance and what the taken nodes give. */
-    val treeState: TreeState? get() = index?.let { i ->
-        hero?.let { h ->
-            val total = i.classes.pointsTotal(h.level) + h.info.bonusPoints
-            val spent = i.tree.spent(h.tree)
-            val calculator = SheetCalculator(i)
-            TreeState(total, spent, total - spent, h.tree, calculator.contributions(calculator.expand(i.tree.lines(h.tree))))
-        }
-    }
+    /** Срез «игра» для экранов, уже переведённых на него (3.80.33): тот же источник, собранный иначе. */
+    val game: GameUi get() = GameUi(
+        activity = com.sperance.exileforge.core.session.Activity(busy, loading, failure, message, error),
+        lang = lang,
+        world = world,
+        session = com.sperance.exileforge.core.session.Session(account.server, account.profile, account.signedIn, account.resumable, account.sessionEpoch, account.characters, account.charactersRead, account.health),
+        holding = com.sperance.exileforge.core.hero.HeroHolding(play.heroId, play.hero, play.heroOwner, play.heroReadAt, play.heroSeenAt, play.selectedEquipment, play.forgeLine, play.chestOpening),
+        link = link,
+        mode = mode,
+        stashSort = stashSort,
+        stashHideWorn = stashHideWorn,
+        settings = settings,
+        logFilter = logFilter,
+    )
 }
 
 /** Связь с сервером - срез `LinkRepository` из :core (3.80.32). */

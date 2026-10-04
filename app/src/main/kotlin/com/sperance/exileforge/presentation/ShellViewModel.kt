@@ -6,14 +6,20 @@ import com.sperance.exileforge.core.campaign.LogKind
 import com.sperance.exileforge.presentation.nav.Route
 import com.sperance.exileforge.presentation.state.Building
 import com.sperance.exileforge.presentation.state.Buzz
+import com.sperance.exileforge.presentation.state.GameSlice
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.StashSort
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 /**
  * Оболочка приложения (3.80.30): вкладки и здания по прежнему номеру, «Настройки» поверх экрана, строка в тосты.
  * Пока над `ForgeRuntime` ради проверки административных вкладок; уедет вместе с ним.
  */
-class ShellViewModel(private val runtime: ForgeRuntime) : ViewModel() {
+class ShellViewModel(private val runtime: ForgeRuntime, slice: GameSlice) : ViewModel() {
+    /** Срез «игра» для экранов этой модели (3.80.33). */
+    val game: StateFlow<GameUi> = slice.ui
+
     /** Вкладка по прежнему номеру; закрытую уровнем героя навигатор не откроет и скажет, с какого. */
     fun tab(tab: Int) = runtime.tab(tab)
 

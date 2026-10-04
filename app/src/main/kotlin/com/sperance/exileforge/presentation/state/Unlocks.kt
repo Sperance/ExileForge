@@ -28,3 +28,5 @@ enum class Feature(val level: Int, val title: String, val tab: Int? = null, val 
 
 /** Whether the hero being played has [feature] open. */
 fun ForgeState.unlocked(feature: Feature?): Boolean = feature == null || isTester || heroLevel >= feature.level
+
+fun GameUi.unlocked(feature: Feature?): Boolean = feature == null || isTester || heroLevel >= feature.level

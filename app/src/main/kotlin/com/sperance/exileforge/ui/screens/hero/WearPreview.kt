@@ -13,7 +13,7 @@ import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.display.statValue
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.unmetFor
 import com.sperance.exileforge.presentation.state.wearDelta
 import com.sperance.exileforge.rules.roll.ItemInstance
@@ -24,21 +24,21 @@ import com.sperance.exileforge.ui.icons.StatIcon
 import com.sperance.exileforge.ui.theme.*
 
 /** Whether an item goes on the body at all: a map, a tool and a jewel are placed elsewhere. */
-fun wearable(s: ForgeState, item: ItemInstance): Boolean = s.index?.template(item.template)?.slot?.let { !it.isJewelLike && !it.isTool } == true
+fun wearable(game: GameUi, item: ItemInstance): Boolean = game.index?.template(item.template)?.slot?.let { !it.isJewelLike && !it.isTool } == true
 
 /**
  * «Если надеть» (2.46.0): what the sheet would become with this item on, added up here by the
  * rules' own formula, one line per characteristic that moves. An item out of reach says instead, in
  * red, what it needs — and its button stays off.
  */
-@Composable fun WearPreview(s: ForgeState, item: ItemInstance) {
-    if (!wearable(s, item) || item.equipped || item.socketed) return
-    val unmet = s.unmetFor(item.template)
-    val delta = remember(item, s.hero, s.index) { s.wearDelta(item) }
+@Composable fun WearPreview(game: GameUi, item: ItemInstance) {
+    if (!wearable(game, item) || item.equipped || item.socketed) return
+    val unmet = game.unmetFor(item.template)
+    val delta = remember(item, game.hero, game.index) { game.wearDelta(item) }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         if (unmet.isNotEmpty()) {
             Text(ui("wear.blocked"), color = LifeRed, style = MaterialTheme.typography.labelLarge)
-            unmet.forEach { Text(requirementReason(it, s.lang), color = LifeRed, style = MaterialTheme.typography.bodySmall) }
+            unmet.forEach { Text(requirementReason(it, game.lang), color = LifeRed, style = MaterialTheme.typography.bodySmall) }
             return@Column
         }
         Text(ui("wear.title"), color = Gold, style = MaterialTheme.typography.labelLarge)

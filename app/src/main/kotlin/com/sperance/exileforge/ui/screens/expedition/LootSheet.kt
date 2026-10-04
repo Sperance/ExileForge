@@ -56,7 +56,7 @@ internal fun LootSheet(
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             ItemCard(item, enabled = false, detailed = true, price = s.sellPrice(item.item))
-            WearPreview(s, item.item)
+            WearPreview(s.game, item.item)
             when {
                 stand == LootStand.WORN -> MutedText(ui("expedition.loot_worn"))
 
@@ -85,7 +85,7 @@ internal fun LootSheet(
 @Composable
 internal fun LootCard(s: ForgeState, item: ItemView, onCompare: ((ItemView) -> Unit)?) {
     val price = s.sellPrice(item.item)
-    if (onCompare == null || !wearable(s, item.item)) {
+    if (onCompare == null || !wearable(s.game, item.item)) {
         ItemCard(item, enabled = false, detailed = true, price = price)
     } else {
         ItemCard(item, detailed = true, actionLabel = ui("expedition.loot_compare"), action = true, price = price) { onCompare(item) }

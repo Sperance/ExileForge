@@ -47,7 +47,7 @@ fun petName(species: String): String = locOr("pet.$species", species)
     if (SpriteIcon(com.sperance.exileforge.core.display.icon("pet.$species"), Gold, Modifier.size(size.dp), halo = false)) return
     val egg = s.index?.pets?.let { pets -> pets.species.firstOrNull { it.code == species }?.let { pets.eggs[it.biome] } }
     if (egg != null) {
-        StackIcon(s, egg, size)
+        StackIcon(s.game, egg, size)
     } else {
         Icon(ForgeGlyphs.Exile, null, tint = Gold, modifier = Modifier.size(size.dp))
     }

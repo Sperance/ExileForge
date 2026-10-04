@@ -112,7 +112,7 @@ import java.util.Locale
     // Compared and worn right here (3.24.0), as on the gear sheet.
     looked?.let { item -> LootSheet(s, model, item, onDismiss = { looked = null }) }
     // A stack of the spoils opened: what it is, what it is for, and how many the hero holds.
-    stack?.let { code -> StackInfoSheet(s, code) { stack = null } }
+    stack?.let { code -> StackInfoSheet(s.game, code) { stack = null } }
     // The recipe the kill turned up: what it does, and that the bench waits for the run's end.
     recipe?.let { code -> RecipeSheet(s, code, inRun = true) { recipe = null } }
 }

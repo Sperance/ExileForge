@@ -34,7 +34,7 @@ import com.sperance.exileforge.core.model.guild.levelProgress
 import com.sperance.exileforge.core.model.guild.manages
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.guild.GuildViewModel
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.quests.GuildQuestsTab
@@ -48,15 +48,15 @@ import com.sperance.exileforge.ui.theme.*
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun ColumnScope.GuildInside(s: ForgeState, vm: GuildViewModel, guild: GuildView, me: GuildMember?) {
+internal fun ColumnScope.GuildInside(game: GameUi, vm: GuildViewModel, guild: GuildView, me: GuildMember?) {
     val guilds by vm.guilds.collectAsStateWithLifecycle()
     val manages = me?.role?.manages == true
     val tabs = GuildTab.entries.filter { it != GuildTab.APPLICATIONS || manages }
     val tab = guilds.tab?.takeIf { it in tabs }
     if (tab == null) {
-        PullToRefreshBox(isRefreshing = Reads.GUILD in s.loading, onRefresh = vm::load, modifier = Modifier.weight(1f)) {
+        PullToRefreshBox(isRefreshing = Reads.GUILD in game.loading, onRefresh = vm::load, modifier = Modifier.weight(1f)) {
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                GuildHeader(s, guild)
+                GuildHeader(game, guild)
                 tabs.chunked(3).forEach { row ->
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         row.forEach { each ->
@@ -75,16 +75,16 @@ internal fun ColumnScope.GuildInside(s: ForgeState, vm: GuildViewModel, guild: G
         return
     }
     BackRow("${GuildText.title(guild.name, guild.tag)} · ${tabTitle(tab)}") { vm.tab(null) }
-    PullToRefreshBox(isRefreshing = Reads.GUILD in s.loading, onRefresh = vm::load, modifier = Modifier.weight(1f)) {
+    PullToRefreshBox(isRefreshing = Reads.GUILD in game.loading, onRefresh = vm::load, modifier = Modifier.weight(1f)) {
         when (tab) {
-            GuildTab.MEMBERS -> MembersTab(s, vm, guild, me)
-            GuildTab.QUESTS -> GuildQuestsTab(s, guild)
-            GuildTab.TREE -> TreeTab(s, vm, guild, me)
-            GuildTab.STASH -> StashTab(s, vm, me)
-            GuildTab.APPLICATIONS -> ApplicationsTab(s, vm, guild)
-            GuildTab.CONTRIBUTE -> ContributeTab(s, vm, guild, me)
-            GuildTab.LOG -> LogTab(s, vm)
-            GuildTab.SETTINGS -> SettingsTab(s, vm, guild, me)
+            GuildTab.MEMBERS -> MembersTab(game, vm, guild, me)
+            GuildTab.QUESTS -> GuildQuestsTab(game, guild)
+            GuildTab.TREE -> TreeTab(game, vm, guild, me)
+            GuildTab.STASH -> StashTab(game, vm, me)
+            GuildTab.APPLICATIONS -> ApplicationsTab(game, vm, guild)
+            GuildTab.CONTRIBUTE -> ContributeTab(game, vm, guild, me)
+            GuildTab.LOG -> LogTab(game, vm)
+            GuildTab.SETTINGS -> SettingsTab(game, vm, guild, me)
         }
     }
 }
@@ -139,8 +139,8 @@ private fun sectionFigure(tab: GuildTab, guild: GuildView, me: GuildMember?): St
     }
 }
 
-@Composable private fun GuildHeader(s: ForgeState, guild: GuildView) {
-    val rules = s.index?.guilds
+@Composable private fun GuildHeader(game: GameUi, guild: GuildView) {
+    val rules = game.index?.guilds
     val capacity = guild.capacity.takeIf { it > 0 } ?: rules?.capacity(guild.level) ?: 0
     ForgePanel(accent = guildColor(guild.color)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {

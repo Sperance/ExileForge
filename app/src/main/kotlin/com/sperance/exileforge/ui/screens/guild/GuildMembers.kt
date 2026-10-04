@@ -20,10 +20,11 @@ import com.sperance.exileforge.core.model.guild.GuildView
 import com.sperance.exileforge.core.model.guild.manages
 import com.sperance.exileforge.core.network.MemberCommand
 import com.sperance.exileforge.presentation.guild.GuildViewModel
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.GuildRole
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
+import com.sperance.exileforge.ui.components.inputs
 import com.sperance.exileforge.ui.theme.*
 
 /**
@@ -47,20 +48,20 @@ private fun commandsOn(me: GuildMember?, target: GuildMember, officersFull: Bool
 }
 
 /** The roll: the leader first, then the officers, each group by contribution; an officer or the leader may invite by name. */
-@Composable internal fun MembersTab(s: ForgeState, vm: GuildViewModel, guild: GuildView, me: GuildMember?) {
+@Composable internal fun MembersTab(game: GameUi, vm: GuildViewModel, guild: GuildView, me: GuildMember?) {
     var chosen by remember { mutableStateOf<GuildMember?>(null) }
     var pending by remember { mutableStateOf<Pair<GuildMember, MemberCommand>?>(null) }
-    val officersFull = guild.officers >= (s.index?.guilds?.officers ?: MAX_OFFICERS)
+    val officersFull = guild.officers >= (game.index?.guilds?.officers ?: MAX_OFFICERS)
     val roll = guild.members.sortedWith(compareBy<GuildMember> { it.role.ordinal }.thenByDescending { it.contribution })
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
-        if (me?.role?.manages == true) item { InviteField(s, vm) }
+        if (me?.role?.manages == true) item { InviteField(game, vm) }
         items(roll, key = { it.heroId }) { member ->
             val commands = commandsOn(me, member, officersFull)
             MemberRow(member, isMe = member.heroId == me?.heroId, onClick = if (commands.isEmpty()) null else ({ chosen = member }))
         }
     }
     chosen?.let { member ->
-        MemberSheet(s, member, commandsOn(me, member, officersFull), onDismiss = { chosen = null }) { command ->
+        MemberSheet(game, member, commandsOn(me, member, officersFull), onDismiss = { chosen = null }) { command ->
             chosen = null
             pending = member to command
         }
@@ -73,18 +74,18 @@ private fun commandsOn(me: GuildMember?, target: GuildMember, officersFull: Bool
             subtitle = GuildText.role(member.role),
             note = confirmNote(command),
             danger = command == MemberCommand.KICK || command == MemberCommand.TRANSFER,
-            blocked = s.busy,
+            blocked = game.busy,
         ) { vm.member(command, member.heroId) }
     }
 }
 
-@Composable private fun InviteField(s: ForgeState, vm: GuildViewModel) {
+@Composable private fun InviteField(game: GameUi, vm: GuildViewModel) {
     var name by remember { mutableStateOf("") }
     ForgePanel {
         Engraved(ui("guild.invite_title"))
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(name, { name = it.take(s.inputs.heroName) }, label = { Text(ui("guild.hero_name")) }, singleLine = true, modifier = Modifier.weight(1f))
-            ForgeButton(enabled = !s.busy && name.isNotBlank(), onClick = {
+            OutlinedTextField(name, { name = it.take(game.inputs.heroName) }, label = { Text(ui("guild.hero_name")) }, singleLine = true, modifier = Modifier.weight(1f))
+            ForgeButton(enabled = !game.busy && name.isNotBlank(), onClick = {
                 vm.invite(name)
                 name = ""
             }) { Text(ui("guild.invite")) }
@@ -124,14 +125,14 @@ private fun roleColor(role: GuildRole) = when (role) {
 /** A member's card with the commands this hero may give about them; each one asks again before it goes. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MemberSheet(s: ForgeState, member: GuildMember, commands: List<MemberCommand>, onDismiss: () -> Unit, onCommand: (MemberCommand) -> Unit) {
+private fun MemberSheet(game: GameUi, member: GuildMember, commands: List<MemberCommand>, onDismiss: () -> Unit, onCommand: (MemberCommand) -> Unit) {
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(member.name, color = GoldBright, style = MaterialTheme.typography.titleLarge)
             MutedText(ui("guild.member_line", GuildText.role(member.role), GuildText.rank(member.rank), member.level, classTitle(member.heroClass)))
             MutedText(ui("guild.member_joined", clockText(member.joinedAt), number(member.contribution.toDouble())))
             commands.forEach { command ->
-                ForgeOutlinedButton(enabled = !s.busy, onClick = { onCommand(command) }, modifier = Modifier.fillMaxWidth()) { Text(commandTitle(command)) }
+                ForgeOutlinedButton(enabled = !game.busy, onClick = { onCommand(command) }, modifier = Modifier.fillMaxWidth()) { Text(commandTitle(command)) }
             }
         }
     }
@@ -158,7 +159,7 @@ private fun confirmNote(command: MemberCommand): String? = when (command) {
 }
 
 /** Those asking in: who, of what class and level, since when; the leader and the officers take them in or turn them away. */
-@Composable internal fun ApplicationsTab(s: ForgeState, vm: GuildViewModel, guild: GuildView) {
+@Composable internal fun ApplicationsTab(game: GameUi, vm: GuildViewModel, guild: GuildView) {
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
         if (guild.applications.isEmpty()) item { InfoCard(ui("guild.no_applications"), ui("guild.no_applications_hint")) }
         items(guild.applications, key = { it.heroId }) { applicant ->
@@ -166,8 +167,8 @@ private fun confirmNote(command: MemberCommand): String? = when (command) {
                 Text(applicant.name, color = Parchment, style = MaterialTheme.typography.titleSmall)
                 MutedText(ui("guild.applicant_line", applicant.level, classTitle(applicant.heroClass), clockText(applicant.at)))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ForgeOutlinedButton(enabled = !s.busy, onClick = { vm.declineApplicant(applicant.heroId) }, modifier = Modifier.weight(1f)) { Text(ui("guild.decline")) }
-                    ForgeButton(enabled = !s.busy, onClick = { vm.acceptApplicant(applicant.heroId) }, modifier = Modifier.weight(1f)) { Text(ui("guild.accept")) }
+                    ForgeOutlinedButton(enabled = !game.busy, onClick = { vm.declineApplicant(applicant.heroId) }, modifier = Modifier.weight(1f)) { Text(ui("guild.decline")) }
+                    ForgeButton(enabled = !game.busy, onClick = { vm.acceptApplicant(applicant.heroId) }, modifier = Modifier.weight(1f)) { Text(ui("guild.accept")) }
                 }
             }
         }

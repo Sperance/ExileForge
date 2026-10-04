@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -11,7 +12,6 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.market.MarketViewModel
-import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.ui.components.*
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -26,7 +26,8 @@ import org.koin.compose.viewmodel.koinViewModel
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AuctionScreen(s: ForgeState) {
+fun AuctionScreen() {
+    val game by koinViewModel<MarketViewModel>().game.collectAsStateWithLifecycle()
     val heroModel: HeroViewModel = koinViewModel()
     val model = koinViewModel<MarketViewModel>()
     val market by model.market.collectAsStateWithLifecycle()
@@ -38,8 +39,8 @@ fun AuctionScreen(s: ForgeState) {
         // Opening the tab is what fills both lists; the hero is the one from the menu.
         // The hero comes too, and not for the bag: the sheet is what the rules read to say which
         // templates this hero can wear, and that is what marks an unwearable lot.
-        LaunchedEffect(s.play.heroId, s.account.sessionEpoch) {
-            if (s.play.heroId.isNotBlank()) {
+        LaunchedEffect(game.heroId, game.sessionEpoch) {
+            if (game.heroId.isNotBlank()) {
                 heroModel.ensure()
                 model.loadAuction()
             }
@@ -62,9 +63,9 @@ fun AuctionScreen(s: ForgeState) {
         PullToRefreshBox(isRefreshing = busy || Reads.AUCTION in activity.loading || Reads.LOTS in activity.loading, onRefresh = model::loadAuction, modifier = Modifier.weight(1f)) {
             Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 when (tab) {
-                    0 -> ShowcaseTab(s, market, model)
-                    1 -> MyLotsTab(s, market, model)
-                    else -> HistoryTab(s, market)
+                    0 -> ShowcaseTab(game, market, model)
+                    1 -> MyLotsTab(game, market, model)
+                    else -> HistoryTab(game, market)
                 }
             }
         }

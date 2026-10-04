@@ -6,6 +6,8 @@ import com.sperance.exileforge.core.quests.QuestTab
 import com.sperance.exileforge.core.quests.Quests
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.CommandRunner
+import com.sperance.exileforge.presentation.state.GameSlice
+import com.sperance.exileforge.presentation.state.GameUi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -14,7 +16,10 @@ class QuestViewModel(
     private val actions: QuestActions,
     repository: QuestRepository,
     commands: CommandRunner,
+    slice: GameSlice,
 ) : ViewModel() {
+    /** Срез «игра» для экранов этой модели (3.80.33). */
+    val game: StateFlow<GameUi> = slice.ui
     val quests: StateFlow<Quests> = repository.state
     val activity: StateFlow<Activity> = commands.state
 

@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -19,7 +20,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.quests.QuestTab
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.quests.QuestViewModel
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.Quest
 import com.sperance.exileforge.rules.content.QuestBoard
 import com.sperance.exileforge.ui.components.*
@@ -35,12 +36,13 @@ import org.koin.compose.viewmodel.koinViewModel
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun QuestsScreen(s: ForgeState) {
+fun QuestsScreen() {
+    val game by koinViewModel<QuestViewModel>().game.collectAsStateWithLifecycle()
     val vm = koinViewModel<QuestViewModel>()
     val quests by vm.quests.collectAsStateWithLifecycle()
     val activity by vm.activity.collectAsStateWithLifecycle()
     val current by vm.tab.collectAsStateWithLifecycle()
-    LaunchedEffect(s.play.heroId, s.account.sessionEpoch) { if (s.play.heroId.isNotBlank()) vm.load() }
+    LaunchedEffect(game.heroId, game.sessionEpoch) { if (game.heroId.isNotBlank()) vm.load() }
     FirstVisit(Guide.QUESTS)
     val board = quests.board
     val busy = activity.busy
@@ -74,7 +76,7 @@ fun QuestsScreen(s: ForgeState) {
                     QuestTab.DAILY -> daily(vm, busy, board)
                     QuestTab.WEEKLY -> weekly(vm, busy, board)
                     QuestTab.CONTRACTS -> contracts(vm, busy, board)
-                    QuestTab.STORY -> story(s, vm, busy, board)
+                    QuestTab.STORY -> story(game, vm, busy, board)
                 }
             }
         }
@@ -134,8 +136,8 @@ private fun LazyListScope.contracts(vm: QuestViewModel, busy: Boolean, board: Qu
 }
 
 /** The story: the chapter's name, its steps behind and ahead, and the step at hand as a quest. */
-private fun LazyListScope.story(s: ForgeState, vm: QuestViewModel, busy: Boolean, board: QuestBoard) {
-    val chapters = s.index?.quests?.story.orEmpty()
+private fun LazyListScope.story(game: GameUi, vm: QuestViewModel, busy: Boolean, board: QuestBoard) {
+    val chapters = game.index?.quests?.story.orEmpty()
     val chapter = chapters.getOrNull(board.chapter)
     if (chapter == null) {
         item {

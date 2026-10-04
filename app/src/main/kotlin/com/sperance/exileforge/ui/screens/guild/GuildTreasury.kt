@@ -20,7 +20,7 @@ import com.sperance.exileforge.core.model.guild.GuildMember
 import com.sperance.exileforge.core.model.guild.GuildView
 import com.sperance.exileforge.core.model.guild.nextRank
 import com.sperance.exileforge.presentation.guild.GuildViewModel
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.orbArt
@@ -31,15 +31,15 @@ import com.sperance.exileforge.ui.theme.*
  * guild's experience and to the hero's own contribution, which is their rank; a day holds a limit by the hero's level.
  * Under it, the treasury, the hero's way to the next rank and the week's givers.
  */
-@Composable internal fun ContributeTab(s: ForgeState, vm: GuildViewModel, guild: GuildView, me: GuildMember?) {
-    val rules = s.index?.guilds
-    val orbs = s.orbs.filter { (s.bagAmount(it.code) ?: 0L) > 0 }
+@Composable internal fun ContributeTab(game: GameUi, vm: GuildViewModel, guild: GuildView, me: GuildMember?) {
+    val rules = game.index?.guilds
+    val orbs = game.orbs.filter { (game.bagAmount(it.code) ?: 0L) > 0 }
     // The crafts' materials (3.79.0, server 1.74.0): they grow the guild at their price, the treasury does not keep them.
-    val materials = s.index?.items?.values.orEmpty().filter { it.category in DONATED_STOCK && it.price > 0 && (s.bagAmount(it.code) ?: 0L) > 0 }.sortedBy { it.price }
+    val materials = game.index?.items?.values.orEmpty().filter { it.category in DONATED_STOCK && it.price > 0 && (game.bagAmount(it.code) ?: 0L) > 0 }.sortedBy { it.price }
     var item by remember { mutableStateOf(GUILD_GOLD) }
     var amount by remember { mutableStateOf("") }
     val count = amount.toLongOrNull() ?: 0L
-    val have = if (item == GUILD_GOLD) s.hero?.money else s.bagAmount(item)
+    val have = if (item == GUILD_GOLD) game.hero?.money else game.bagAmount(item)
     val price = if (item == GUILD_GOLD) 1L else (orbs + materials).firstOrNull { it.code == item }?.price ?: 0L
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
         item {
@@ -49,9 +49,9 @@ import com.sperance.exileforge.ui.theme.*
                     ui("guild.give_what"),
                     item,
                     mapOf(GUILD_GOLD to ui("guild.gold")) + (orbs + materials).associate { it.code to itemTitle(it.code) },
-                    !s.busy,
+                    !game.busy,
                     glyph = Glyph.CURRENCY,
-                    optionArt = orbArt(s.orbs),
+                    optionArt = orbArt(game.orbs),
                 ) {
                     item = it
                     amount = ""
@@ -66,13 +66,13 @@ import com.sperance.exileforge.ui.theme.*
                     supportingText = { have?.let { Text(ui("guild.give_have", number(it.toDouble()))) } },
                 )
                 if (item != GUILD_GOLD && count > 0) PropertyRow(ui("guild.give_worth"), number((count * price).toDouble()), Glyph.CURRENCY)
-                rules?.let { PropertyRow(ui("guild.daily_limit"), number(it.dailyLimit(s.heroLevel).toDouble()), Glyph.LEVEL) }
+                rules?.let { PropertyRow(ui("guild.daily_limit"), number(it.dailyLimit(game.heroLevel).toDouble()), Glyph.LEVEL) }
                 if (have != null && count > have) Text(ui("guild.give_short"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
                 HoldButton(
                     ui("guild.give_do"),
                     Gold,
                     Modifier.fillMaxWidth(),
-                    enabled = !s.busy && count > 0 && (have == null || count <= have),
+                    enabled = !game.busy && count > 0 && (have == null || count <= have),
                     icon = ForgeGlyphs.Coins,
                 ) {
                     vm.contribute(item, count)
@@ -80,7 +80,7 @@ import com.sperance.exileforge.ui.theme.*
                 }
             }
         }
-        me?.let { item { RankPanel(s, it) } }
+        me?.let { item { RankPanel(game, it) } }
         item {
             ForgePanel {
                 Engraved(ui("guild.treasury"))
@@ -93,8 +93,8 @@ import com.sperance.exileforge.ui.theme.*
 }
 
 /** The hero's rank and the way to the next: its threshold, the bar, and what remains. */
-@Composable private fun RankPanel(s: ForgeState, me: GuildMember) {
-    val rules = s.index?.guilds
+@Composable private fun RankPanel(game: GameUi, me: GuildMember) {
+    val rules = game.index?.guilds
     ForgePanel(accent = Rune) {
         Engraved(ui("guild.my_contribution"), Rune)
         PropertyRow(ui("guild.rank"), GuildText.rank(me.rank), Glyph.RARITY)

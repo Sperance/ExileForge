@@ -12,17 +12,17 @@ import com.sperance.exileforge.core.display.GuildText
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.guild.GuildViewModel
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.theme.*
 
 /** The guild's journal, newest first, a page at a time. */
-@Composable internal fun LogTab(s: ForgeState, vm: GuildViewModel) {
+@Composable internal fun LogTab(game: GameUi, vm: GuildViewModel) {
     val guilds by vm.guilds.collectAsStateWithLifecycle()
-    LaunchedEffect(s.play.heroId) { vm.loadLog() }
+    LaunchedEffect(game.heroId) { vm.loadLog() }
     val log = guilds.log
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
-        if (log.isEmpty() && Reads.GUILD_LOG !in s.loading) item { InfoCard(ui("guild.log_empty"), ui("guild.log_empty_hint")) }
+        if (log.isEmpty() && Reads.GUILD_LOG !in game.loading) item { InfoCard(ui("guild.log_empty"), ui("guild.log_empty_hint")) }
         items(log) { entry ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 MutedText(clockText(entry.at), modifier = Modifier.width(78.dp))
@@ -31,7 +31,7 @@ import com.sperance.exileforge.ui.theme.*
         }
         if (log.isNotEmpty() && !guilds.logEnd) {
             item {
-                ForgeOutlinedButton(enabled = Reads.GUILD_LOG !in s.loading, onClick = { vm.loadLog(more = true) }, modifier = Modifier.fillMaxWidth()) {
+                ForgeOutlinedButton(enabled = Reads.GUILD_LOG !in game.loading, onClick = { vm.loadLog(more = true) }, modifier = Modifier.fillMaxWidth()) {
                     Text(ui("guild.log_more"))
                 }
             }

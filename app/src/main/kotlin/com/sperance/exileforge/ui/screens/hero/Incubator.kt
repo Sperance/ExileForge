@@ -116,7 +116,7 @@ private fun EmptySlot(s: ForgeState, eggs: List<String>, enabled: Boolean, onLay
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
-                        StackIcon(s, egg, 28)
+                        StackIcon(s.game, egg, 28)
                         Text(
                             ui("incubator.egg", itemTitle(egg), hero.count(egg)),
                             color = Parchment,
@@ -136,7 +136,7 @@ private fun EmptySlot(s: ForgeState, eggs: List<String>, enabled: Boolean, onLay
     val ready = slot.ready || left == 0L
     val tint = slot.rarity?.let { rarityColor(it.name) } ?: Parchment
     SlotFrame(if (ready) Vital else tint) {
-        StackIcon(s, slot.egg, 40)
+        StackIcon(s.game, slot.egg, 40)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(itemTitle(slot.egg), color = tint, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             MutedText(

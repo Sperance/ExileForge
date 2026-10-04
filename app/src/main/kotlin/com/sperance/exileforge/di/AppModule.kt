@@ -54,6 +54,7 @@ import com.sperance.exileforge.presentation.session.SessionViewModel
 import com.sperance.exileforge.presentation.settings.SettingsViewModel
 import com.sperance.exileforge.presentation.skills.GrimoireViewModel
 import com.sperance.exileforge.presentation.state.AppModes
+import com.sperance.exileforge.presentation.state.GameSlice
 import com.sperance.exileforge.presentation.tree.TreeViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -108,6 +109,7 @@ val appModule = module {
     single { LinkRepository() }
     single { AdminRepository() }
     single { AppModes() }
+    single { GameSlice(get(), get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     single { QuestActions(get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     singleOf(::Repositories)
     singleOf(::Actions)

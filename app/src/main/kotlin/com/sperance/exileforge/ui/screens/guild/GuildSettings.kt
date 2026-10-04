@@ -12,7 +12,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.guild.GuildMember
 import com.sperance.exileforge.core.model.guild.GuildView
 import com.sperance.exileforge.presentation.guild.GuildViewModel
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.GuildRole
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.theme.*
@@ -24,8 +24,8 @@ private enum class Exit { LEAVE, DISBAND }
  * The guild's settings: the leader changes the way in, the level to join, the arms and the word to all; everyone else
  * sees them read-only. At the bottom the way out — leaving for a member, disbanding for the leader, each asked again.
  */
-@Composable internal fun SettingsTab(s: ForgeState, vm: GuildViewModel, guild: GuildView, me: GuildMember?) {
-    val rules = s.index?.guilds
+@Composable internal fun SettingsTab(game: GameUi, vm: GuildViewModel, guild: GuildView, me: GuildMember?) {
+    val rules = game.index?.guilds
     val leader = me?.role == GuildRole.LEADER
     var mode by remember(guild.mode) { mutableStateOf(guild.mode) }
     var minLevel by remember(guild.minLevel) { mutableStateOf(guild.minLevel.toString()) }
@@ -34,7 +34,7 @@ private enum class Exit { LEAVE, DISBAND }
     var announcement by remember(guild.announcement) { mutableStateOf(guild.announcement) }
     var exit by remember { mutableStateOf<Exit?>(null) }
     val limit = rules?.announcement ?: 200
-    val editable = leader && !s.busy
+    val editable = leader && !game.busy
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
         item {
             ForgePanel {
@@ -65,7 +65,7 @@ private enum class Exit { LEAVE, DISBAND }
                     modifier = Modifier.fillMaxWidth(),
                 )
                 if (leader) {
-                    ForgeButton(enabled = !s.busy, onClick = {
+                    ForgeButton(enabled = !game.busy, onClick = {
                         vm.settings(mode, (minLevel.toIntOrNull() ?: 1).coerceAtLeast(1), emblem, color, announcement.trim())
                     }, modifier = Modifier.fillMaxWidth()) { Text(ui("guild.save")) }
                 }
@@ -76,10 +76,10 @@ private enum class Exit { LEAVE, DISBAND }
                 Engraved(ui("guild.exit"), LifeRed)
                 if (leader) {
                     MutedText(ui("guild.leader_exit_note"))
-                    ForgeOutlinedButton(enabled = !s.busy, onClick = { exit = Exit.DISBAND }, modifier = Modifier.fillMaxWidth()) { Text(ui("guild.disband")) }
+                    ForgeOutlinedButton(enabled = !game.busy, onClick = { exit = Exit.DISBAND }, modifier = Modifier.fillMaxWidth()) { Text(ui("guild.disband")) }
                 } else {
                     MutedText(ui("guild.leave_note", rules?.rejoinHours ?: 24))
-                    ForgeOutlinedButton(enabled = !s.busy, onClick = { exit = Exit.LEAVE }, modifier = Modifier.fillMaxWidth()) { Text(ui("guild.leave")) }
+                    ForgeOutlinedButton(enabled = !game.busy, onClick = { exit = Exit.LEAVE }, modifier = Modifier.fillMaxWidth()) { Text(ui("guild.leave")) }
                 }
             }
         }
@@ -94,7 +94,7 @@ private enum class Exit { LEAVE, DISBAND }
                 subtitle = title,
                 note = ui("guild.leave_note", rules?.rejoinHours ?: 24),
                 danger = true,
-                blocked = s.busy,
+                blocked = game.busy,
                 onConfirm = vm::leave,
             )
 
@@ -105,7 +105,7 @@ private enum class Exit { LEAVE, DISBAND }
                 subtitle = title,
                 note = ui("guild.disband_note"),
                 danger = true,
-                blocked = s.busy,
+                blocked = game.busy,
                 onConfirm = vm::disband,
             )
         }

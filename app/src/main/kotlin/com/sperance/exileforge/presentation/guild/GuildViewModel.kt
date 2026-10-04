@@ -8,6 +8,8 @@ import com.sperance.exileforge.core.model.guild.GuildCard
 import com.sperance.exileforge.core.network.MemberCommand
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.CommandRunner
+import com.sperance.exileforge.presentation.state.GameSlice
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.GuildMode
 import kotlinx.coroutines.flow.StateFlow
 
@@ -16,7 +18,10 @@ class GuildViewModel(
     private val actions: GuildActions,
     repository: GuildRepository,
     commands: CommandRunner,
+    slice: GameSlice,
 ) : ViewModel() {
+    /** Срез «игра» для экранов этой модели (3.80.33). */
+    val game: StateFlow<GameUi> = slice.ui
     val guilds: StateFlow<Guilds> = repository.state
     val activity: StateFlow<Activity> = commands.state
 

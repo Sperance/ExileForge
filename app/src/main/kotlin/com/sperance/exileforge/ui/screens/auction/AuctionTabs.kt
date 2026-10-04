@@ -38,7 +38,7 @@ import com.sperance.exileforge.core.market.Market
 import com.sperance.exileforge.core.model.auction.*
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.market.MarketViewModel
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.unmetFor
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.Orb
@@ -61,19 +61,19 @@ import com.sperance.exileforge.ui.theme.*
  *
  * Rarity is not written anywhere: it is the frame of the icon and the colour of the name.
  */
-@Composable internal fun LotRow(s: ForgeState, lot: AuctionLot, mark: String?, withSeller: Boolean = true, onClick: () -> Unit) {
+@Composable internal fun LotRow(game: GameUi, lot: AuctionLot, mark: String?, withSeller: Boolean = true, onClick: () -> Unit) {
     var orbInfo by remember { mutableStateOf(false) }
-    if (orbInfo) StackInfoSheet(s, lot.priceOrb) { orbInfo = false }
+    if (orbInfo) StackInfoSheet(game, lot.priceOrb) { orbInfo = false }
     val price: @Composable ColumnScope.() -> Unit = { LotPrice(lot) { orbInfo = true } }
     val seller = listOfNotNull(sellerName(lot).takeIf { withSeller })
-    val view = lot.equipment?.let { s.view(it) }
+    val view = lot.equipment?.let { game.view(it) }
     // The rules' verdict on the template, as the stash marks it: a lot the buyer cannot wear yet says why instead of its facts.
     if (view != null) {
-        ItemTradeRow(view, enabled = !s.busy, unmet = lotUnmet(s, lot), extra = seller, mark = mark, onClick = onClick, price = price)
+        ItemTradeRow(view, enabled = !game.busy, unmet = lotUnmet(game, lot), extra = seller, mark = mark, onClick = onClick, price = price)
     } else {
         TradeRow(
-            lot.title, lotColor(lot), stackFacts(s, lot) + seller, emptyList(), enabled = !s.busy, mark = mark, onClick = onClick,
-            icon = { LotIcon(s, lot, Modifier.size(28.dp)) }, price = price,
+            lot.title, lotColor(lot), stackFacts(game, lot) + seller, emptyList(), enabled = !game.busy, mark = mark, onClick = onClick,
+            icon = { LotIcon(game, lot, Modifier.size(28.dp)) }, price = price,
         )
     }
 }
@@ -114,14 +114,14 @@ internal const val MINUTES_A_DAY = 1_440L
  * The lot's drawing: the server's sprite for its code, the bundled emblem of its kind otherwise — a
  * copy by its template, a stack by the item of the bag it is a stack of.
  */
-@Composable internal fun LotIcon(s: ForgeState, lot: AuctionLot, modifier: Modifier) {
+@Composable internal fun LotIcon(game: GameUi, lot: AuctionLot, modifier: Modifier) {
     val sprite = if (lot.kind == LotKind.EQUIPMENT) equipmentIcon(lot.itemCode) else itemIcon(lot.itemCode)
-    if (!SpriteIcon(sprite, lotColor(lot), modifier, halo = lot.kind == LotKind.EQUIPMENT)) ItemEmblem(lotVisualKind(s, lot), lotColor(lot), modifier)
+    if (!SpriteIcon(sprite, lotColor(lot), modifier, halo = lot.kind == LotKind.EQUIPMENT)) ItemEmblem(lotVisualKind(game, lot), lotColor(lot), modifier)
 }
 
-internal fun lotVisualKind(s: ForgeState, lot: AuctionLot): ItemVisualKind = when (lot.kind) {
-    LotKind.EQUIPMENT -> s.index?.template(lot.itemCode)?.let(::itemVisualKind) ?: ItemVisualKind.ITEM
-    LotKind.ITEM -> s.index?.item(lot.itemCode)?.let(::bagVisualKind) ?: ItemVisualKind.ITEM
+internal fun lotVisualKind(game: GameUi, lot: AuctionLot): ItemVisualKind = when (lot.kind) {
+    LotKind.EQUIPMENT -> game.index?.template(lot.itemCode)?.let(::itemVisualKind) ?: ItemVisualKind.ITEM
+    LotKind.ITEM -> game.index?.item(lot.itemCode)?.let(::bagVisualKind) ?: ItemVisualKind.ITEM
 }
 
 /** The rarity's colour for a copy; a stack has none and keeps bone white. */
@@ -130,10 +130,10 @@ internal fun lotColor(lot: AuctionLot) = rarityColor(lot.rarity?.name.orEmpty())
 internal fun sellerName(lot: AuctionLot): String = lot.sellerName.ifBlank { "…${lot.sellerId.takeLast(6)}" }
 
 /** The requirements the lot's template misses against the hero's sheet; empty for a stack, and for a wearable copy. */
-internal fun lotUnmet(s: ForgeState, lot: AuctionLot): List<String> = lot.equipment?.let { s.unmetFor(it.template) }.orEmpty()
+internal fun lotUnmet(game: GameUi, lot: AuctionLot): List<String> = lot.equipment?.let { game.unmetFor(it.template) }.orEmpty()
 
 /** A stack lot's facts: how many, or what kind of goods when it is one. */
-internal fun stackFacts(s: ForgeState, lot: AuctionLot): List<String> = listOf(if (lot.amount > 1) ui("auction.pieces", lot.amount) else lotKindTitle(lot.kind, s.lang))
+internal fun stackFacts(game: GameUi, lot: AuctionLot): List<String> = listOf(if (lot.amount > 1) ui("auction.pieces", lot.amount) else lotKindTitle(lot.kind, game.lang))
 
 /**
  * One lot in full, with the goods drawn as the stash draws them.
@@ -144,7 +144,7 @@ internal fun stackFacts(s: ForgeState, lot: AuctionLot): List<String> = listOf(i
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun LotSheet(
-    s: ForgeState,
+    game: GameUi,
     lot: AuctionLot,
     action: String?,
     enabled: Boolean,
@@ -153,7 +153,7 @@ internal fun LotSheet(
     extra: (@Composable () -> Unit)? = null,
     onAction: () -> Unit = {},
 ) {
-    val view = lot.equipment?.let { s.view(it) }
+    val view = lot.equipment?.let { game.view(it) }
     ForgeSheet(onDismissRequest = onDismiss) {
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.9f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (view != null) {

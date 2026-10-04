@@ -6,6 +6,8 @@ import com.sperance.exileforge.core.market.MarketRepository
 import com.sperance.exileforge.core.model.auction.AuctionFilter
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.CommandRunner
+import com.sperance.exileforge.presentation.state.GameSlice
+import com.sperance.exileforge.presentation.state.GameUi
 import kotlinx.coroutines.flow.StateFlow
 
 /** Лавка торговца и аукцион (3.80.11): рынок из репозитория, действия общие с продажей из сундука. */
@@ -13,7 +15,10 @@ class MarketViewModel(
     private val actions: MarketActions,
     repository: MarketRepository,
     commands: CommandRunner,
+    slice: GameSlice,
 ) : ViewModel() {
+    /** Срез «игра» для экранов этой модели (3.80.33). */
+    val game: StateFlow<GameUi> = slice.ui
     val market: StateFlow<Market> = repository.state
     val activity: StateFlow<Activity> = commands.state
 

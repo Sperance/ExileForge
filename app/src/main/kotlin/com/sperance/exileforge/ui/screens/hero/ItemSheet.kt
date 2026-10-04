@@ -82,7 +82,7 @@ fun ItemSheet(s: ForgeState, model: HeroViewModel, itemId: String, onDismiss: ()
             LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 item { ItemCard(view, enabled = false, detailed = true, price = price, waiting = waiting) }
                 if (locked) item { Text(ui("item.locked_hint"), color = Muted, style = MaterialTheme.typography.bodySmall) }
-                item { WearPreview(s, instance) }
+                item { WearPreview(s.game, instance) }
                 temperOffer(s, instance)?.let { (ore, need) ->
                     item {
                         // The smith's tempering (3.79.0): once per weapon or armour, the ore of its level.
@@ -155,7 +155,7 @@ fun ItemSheet(s: ForgeState, model: HeroViewModel, itemId: String, onDismiss: ()
         }
     }
     when (open) {
-        ItemAction.AUCTION -> ListingSheet(s, name, onDismiss = { open = null }, hint = {
+        ItemAction.AUCTION -> ListingSheet(s.game, name, onDismiss = { open = null }, hint = {
             model.priceHint(instance.template, instance.rarity, s.index?.template(instance.template)?.let(instance::level) ?: 0)
         }) { orb, price, _ ->
             open = null

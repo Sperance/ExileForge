@@ -43,7 +43,7 @@ import com.sperance.exileforge.ui.theme.Parchment
 
 @Composable private fun Line(s: ForgeState, code: String?, text: String) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        code?.let { StackIcon(s, it, 28) }
+        code?.let { StackIcon(s.game, it, 28) }
         Text(text, color = Parchment, style = MaterialTheme.typography.bodyMedium)
     }
 }

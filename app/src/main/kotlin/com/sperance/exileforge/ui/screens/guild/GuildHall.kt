@@ -22,7 +22,7 @@ import com.sperance.exileforge.core.model.guild.GuildMember
 import com.sperance.exileforge.core.model.guild.GuildStashEntry
 import com.sperance.exileforge.core.model.guild.GuildView
 import com.sperance.exileforge.presentation.guild.GuildViewModel
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.GuildBranch
 import com.sperance.exileforge.rules.content.GuildNode
@@ -37,8 +37,8 @@ import com.sperance.exileforge.ui.theme.*
  * spent by the leader, the second row open once the branch holds the rules' points. Combat and loot ride on every member's
  * runs, economy on the guild itself. A reset gives every point back, free once a week.
  */
-@Composable internal fun TreeTab(s: ForgeState, vm: GuildViewModel, guild: GuildView, me: GuildMember?) {
-    val rule = s.index?.guilds?.tree ?: return
+@Composable internal fun TreeTab(game: GameUi, vm: GuildViewModel, guild: GuildView, me: GuildMember?) {
+    val rule = game.index?.guilds?.tree ?: return
     val leader = me?.role == GuildRole.LEADER
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
         item {
@@ -47,7 +47,7 @@ import com.sperance.exileforge.ui.theme.*
                 MutedText(ui(if (leader) "guild.tree_hint_leader" else "guild.tree_hint"), style = MaterialTheme.typography.bodySmall)
                 if (leader) {
                     val free = System.currentTimeMillis() >= guild.respecAt
-                    ForgeOutlinedButton(enabled = !s.busy && free && guild.tree.isNotEmpty(), onClick = vm::resetTree, modifier = Modifier.fillMaxWidth()) {
+                    ForgeOutlinedButton(enabled = !game.busy && free && guild.tree.isNotEmpty(), onClick = vm::resetTree, modifier = Modifier.fillMaxWidth()) {
                         Text(if (free) ui("guild.tree_reset") else ui("guild.tree_reset_at", java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT).format(java.util.Date(guild.respecAt))))
                     }
                 }
@@ -62,7 +62,7 @@ import com.sperance.exileforge.ui.theme.*
                             node,
                             guild.tree[node.code] ?: 0,
                             open = node.row <= 1 || rule.inBranch(guild.tree, branch) >= rule.rowGate,
-                            canTake = leader && !s.busy && rule.canTake(guild.tree, guild.level, node.code),
+                            canTake = leader && !game.busy && rule.canTake(guild.tree, guild.level, node.code),
                         ) { vm.takeNode(node.code) }
                     }
                 }
@@ -96,11 +96,11 @@ import com.sperance.exileforge.ui.theme.*
  * The guild stash (3.79.0, server 1.74.0): tabs of the rules' places; anyone puts in, taking needs the tab's rank and,
  * for a member, one of the day's takes — a stack is one take. What lies here is the guild's.
  */
-@Composable internal fun StashTab(s: ForgeState, vm: GuildViewModel, me: GuildMember?) {
+@Composable internal fun StashTab(game: GameUi, vm: GuildViewModel, me: GuildMember?) {
     val guilds by vm.guilds.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) { vm.loadStash() }
     val stash = guilds.stash ?: return
-    val ranks = s.index?.guilds?.ranks.orEmpty()
+    val ranks = game.index?.guilds?.ranks.orEmpty()
     var tab by remember { mutableIntStateOf(0) }
     var depositing by remember { mutableStateOf(false) }
     val shown = stash.entries.filter { it.tab == tab }
@@ -119,26 +119,26 @@ import com.sperance.exileforge.ui.theme.*
                 PropertyRow(ui("guild.stash_rank"), ranks.getOrNull(minRank)?.code?.let(GuildText::rank).orEmpty(), com.sperance.exileforge.core.display.Glyph.CHARACTER)
                 Text(if (stash.takesLeft < 0) ui("guild.stash_takes_free") else ui("guild.stash_takes", stash.takesLeft), color = Muted, style = MaterialTheme.typography.bodySmall)
                 if (me?.role == GuildRole.LEADER && ranks.isNotEmpty()) {
-                    Spinner(ui("guild.stash_rank_set"), minRank.toString(), ranks.indices.associate { it.toString() to GuildText.rank(ranks[it].code) }, !s.busy) {
+                    Spinner(ui("guild.stash_rank_set"), minRank.toString(), ranks.indices.associate { it.toString() to GuildText.rank(ranks[it].code) }, !game.busy) {
                         vm.tabRank(tab, it.toInt())
                     }
                 }
-                ForgeButton(enabled = !s.busy && shown.size < stash.tabSize, onClick = { depositing = true }, modifier = Modifier.fillMaxWidth()) { Text(ui("guild.stash_put")) }
+                ForgeButton(enabled = !game.busy && shown.size < stash.tabSize, onClick = { depositing = true }, modifier = Modifier.fillMaxWidth()) { Text(ui("guild.stash_put")) }
             }
         }
         if (shown.isEmpty()) item { MutedText(ui("guild.stash_empty")) }
-        items(shown, key = { it.id }) { entry -> EntryRow(s, entry, enabled = !s.busy && stash.takesLeft != 0) { vm.take(entry.id) } }
+        items(shown, key = { it.id }) { entry -> EntryRow(game, entry, enabled = !game.busy && stash.takesLeft != 0) { vm.take(entry.id) } }
     }
     if (depositing) {
-        DepositSheet(s, onDismiss = { depositing = false }) { itemId, code, amount ->
+        DepositSheet(game, onDismiss = { depositing = false }) { itemId, code, amount ->
             depositing = false
             vm.deposit(tab, itemId, code, amount)
         }
     }
 }
 
-@Composable private fun EntryRow(s: ForgeState, entry: GuildStashEntry, enabled: Boolean, onTake: () -> Unit) {
-    val view = entry.item?.let { s.view(it) }
+@Composable private fun EntryRow(game: GameUi, entry: GuildStashEntry, enabled: Boolean, onTake: () -> Unit) {
+    val view = entry.item?.let { game.view(it) }
     ForgePanel {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             if (view != null) ItemIcon(view, rarityColor(view.rarity.name), Modifier.size(32.dp)) else BagIcon(entry.code, Modifier.size(32.dp))
@@ -158,8 +158,8 @@ import com.sperance.exileforge.ui.theme.*
 /** What the hero may put in: a loose item of the stash, or part of a stack of the bag. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DepositSheet(s: ForgeState, onDismiss: () -> Unit, onPut: (itemId: String?, code: String?, amount: Long) -> Unit) {
-    val hero = s.hero ?: return
+private fun DepositSheet(game: GameUi, onDismiss: () -> Unit, onPut: (itemId: String?, code: String?, amount: Long) -> Unit) {
+    val hero = game.hero ?: return
     val loose = hero.items.filter { !it.equipped && !it.socketed && !it.locked }
     val stacks = hero.bag.filterValues { it > 0 }.keys.sortedBy { itemTitle(it) }
     var stack by remember { mutableStateOf<String?>(null) }
@@ -180,16 +180,16 @@ private fun DepositSheet(s: ForgeState, onDismiss: () -> Unit, onPut: (itemId: S
                             modifier = Modifier.fillMaxWidth(),
                         )
                         val count = amount.toLongOrNull() ?: 0L
-                        ForgeButton(enabled = !s.busy && count in 1..(hero.bag[code] ?: 0L), onClick = { onPut(null, code, count) }, modifier = Modifier.fillMaxWidth()) {
+                        ForgeButton(enabled = !game.busy && count in 1..(hero.bag[code] ?: 0L), onClick = { onPut(null, code, count) }, modifier = Modifier.fillMaxWidth()) {
                             Text(ui("guild.stash_put"))
                         }
                     }
                 }
             }
             items(loose, key = { it.id }) { item ->
-                val view = s.view(item) ?: return@items
+                val view = game.view(item) ?: return@items
                 Row(
-                    Modifier.fillMaxWidth().clickable(enabled = !s.busy) { onPut(item.id, null, 1) }.padding(vertical = 4.dp),
+                    Modifier.fillMaxWidth().clickable(enabled = !game.busy) { onPut(item.id, null, 1) }.padding(vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
@@ -199,7 +199,7 @@ private fun DepositSheet(s: ForgeState, onDismiss: () -> Unit, onPut: (itemId: S
             }
             items(stacks, key = { "bag:$it" }) { code ->
                 Row(
-                    Modifier.fillMaxWidth().clickable(enabled = !s.busy) {
+                    Modifier.fillMaxWidth().clickable(enabled = !game.busy) {
                         stack = code
                         amount = "1"
                     }.padding(vertical = 4.dp),

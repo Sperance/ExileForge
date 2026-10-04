@@ -11,14 +11,15 @@ import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.auction.PriceHint
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
+import com.sperance.exileforge.ui.components.inputs
 import com.sperance.exileforge.ui.icons.orbArt
 import com.sperance.exileforge.ui.theme.*
 
 /** The auction's currencies as a picker's options (3.0.0; server 1.65.0 - the base orbs alone): keyed by item code, named by the dictionary, cheapest first. */
-internal fun orbOptions(s: ForgeState): Map<String, String> = s.currencies.associate { it.code to itemTitle(it.code) }
+internal fun orbOptions(game: GameUi): Map<String, String> = game.currencies.associate { it.code to itemTitle(it.code) }
 
 /**
  * Listing something on the auction: one item from its card or the sell tab, or part of a stack.
@@ -30,14 +31,14 @@ internal fun orbOptions(s: ForgeState): Map<String, String> = s.currencies.assoc
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ListingSheet(
-    s: ForgeState,
+    game: GameUi,
     name: String,
     owned: Long? = null,
     onDismiss: () -> Unit,
     hint: (suspend () -> PriceHint?)? = null,
     onList: (orb: String, price: Long, amount: Long) -> Unit,
 ) {
-    var orb by remember { mutableStateOf(s.currencies.firstOrNull()?.code.orEmpty()) }
+    var orb by remember { mutableStateOf(game.currencies.firstOrNull()?.code.orEmpty()) }
     var price by remember { mutableStateOf("1") }
     var amount by remember { mutableStateOf("1") }
     val cost = price.toLongOrNull() ?: 0L
@@ -52,21 +53,21 @@ fun ListingSheet(
             if (owned != null) {
                 OutlinedTextField(
                     amount,
-                    { value -> amount = value.filter(Char::isDigit).take(s.inputs.number) },
+                    { value -> amount = value.filter(Char::isDigit).take(game.inputs.number) },
                     label = { Text(ui("sell.amount_owned", owned)) },
                     singleLine = true,
                     keyboardOptions = digits,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
-            if (s.currencies.isEmpty()) {
+            if (game.currencies.isEmpty()) {
                 Text(ui("orb.none"), color = Muted)
             } else {
-                Spinner(ui("orb.orb"), orb, orbOptions(s), !s.busy, glyph = Glyph.CURRENCY, optionArt = orbArt(s.currencies)) { orb = it }
+                Spinner(ui("orb.orb"), orb, orbOptions(game), !game.busy, glyph = Glyph.CURRENCY, optionArt = orbArt(game.currencies)) { orb = it }
             }
             OutlinedTextField(
                 price,
-                { value -> price = value.filter(Char::isDigit).take(s.inputs.number) },
+                { value -> price = value.filter(Char::isDigit).take(game.inputs.number) },
                 label = { Text(ui("sell.price")) },
                 singleLine = true,
                 keyboardOptions = digits,
@@ -81,7 +82,7 @@ fun ListingSheet(
                 }
             }
             MutedText(ui("sell.note"))
-            ForgeButton(enabled = !s.busy && orb.isNotBlank() && cost > 0 && count > 0, onClick = { onList(orb, cost, count) }, modifier = Modifier.fillMaxWidth()) {
+            ForgeButton(enabled = !game.busy && orb.isNotBlank() && cost > 0 && count > 0, onClick = { onList(orb, cost, count) }, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("sell.list"))
             }
         }

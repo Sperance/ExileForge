@@ -106,7 +106,7 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
         }
     }
     looked?.let { item -> LootSheet(s, vm, item, onDismiss = { looked = null }) }
-    stack?.let { code -> StackInfoSheet(s, code) { stack = null } }
+    stack?.let { code -> StackInfoSheet(s.game, code) { stack = null } }
 }
 
 /** The ending over the map's name: its glyph in a ring of its colour, on a glow of it. */

@@ -267,11 +267,11 @@ internal val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, err
                 // The atlas (2.68.0) is a sky of its own, above the tabs.
                 entry<Route.Atlas> { AtlasScreen(s.sliced(*s.common, *s.toasts)) }
                 // The City's square and its buildings are one screen that reads which building is open.
-                entry<Route.City> { CityScreen(s.sliced(*s.common, s.building, s.guild, s.quests, s.market)) }
-                entry<Route.Quests> { CityScreen(s.sliced(*s.common, s.building, s.guild, s.quests, s.market)) }
-                entry<Route.Merchant> { CityScreen(s.sliced(*s.common, s.building, s.guild, s.quests, s.market)) }
-                entry<Route.Auction> { CityScreen(s.sliced(*s.common, s.building, s.guild, s.quests, s.market)) }
-                entry<Route.Guild> { CityScreen(s.sliced(*s.common, s.building, s.guild, s.quests, s.market)) }
+                entry<Route.City> { CityScreen(null) }
+                entry<Route.Quests> { CityScreen(Building.QUESTS) }
+                entry<Route.Merchant> { CityScreen(Building.MERCHANT) }
+                entry<Route.Auction> { CityScreen(Building.AUCTION) }
+                entry<Route.Guild> { CityScreen(Building.GUILD) }
                 entry<Route.Admin> { AdminScreen(s.sliced(*s.common, s.admin), vm) }
                 entry<Route.Redemption> { RedemptionScreen(s.sliced(*s.common, s.admin), vm) }
             },

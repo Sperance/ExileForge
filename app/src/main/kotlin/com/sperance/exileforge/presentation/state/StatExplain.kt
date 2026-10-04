@@ -73,7 +73,7 @@ class StatExplainer(private val game: GameUi) {
             )
         }
         breakdown.shares.groupBy(::kindOf).toSortedMap().forEach { (kind, shares) ->
-            cards += ShareCard(kind, shares.map { row(stat, it, breakdown.percent) }, summary(stat, shares, breakdown.percent))
+            cards += ShareCard(kind, merged(shares).map { row(stat, it, breakdown.percent) }, summary(stat, shares, breakdown.percent))
         }
         // Every passive that names the figure has its row, an increase with nothing to increase too: «+10% · в бою: +0».
         if (passives.rows.isNotEmpty()) {
@@ -109,6 +109,19 @@ class StatExplainer(private val game: GameUi) {
             SourceKind.ITEM -> ShareKind.ITEM
             SourceKind.PET -> ShareKind.PET
             else -> ShareKind.OTHER
+        }
+    }
+
+    /**
+     * Sources of one name and one operation as one row (3.81.0): ten tree nodes «Здоровье» or two rings of the same name
+     * read as their sum, not ten rows. A conversion keeps its own row - its rule is told on it.
+     */
+    private fun merged(shares: List<Share>): List<Share> = shares.groupBy { if (it.perStat != null) it else sourceTitle(it.source) to it.op }.values.map { same ->
+        if (same.size == 1) {
+            same.single()
+        } else {
+            val value = if (same.first().op == Op.MORE) (same.fold(1.0) { acc, it -> acc * (1 + it.value / 100) } - 1) * 100 else same.sumOf { it.value }
+            same.first().copy(value = value, local = same.flatMap { it.local })
         }
     }
 

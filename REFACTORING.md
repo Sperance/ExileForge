@@ -26,6 +26,7 @@
   - [x] `LanguageRepository` (язык интерфейса вместе с `uiLanguage`), `LinkRepository` (связь и очередь команд), `AdminRepository` (коды наград, тестовые учётки) в `:core`; `AppModes` (игрок/администратор) в приложении; фильтр журнала боя - в `PreferencesRepository`; прогрев - поток `WarmupViewModel` (3.80.32).
   - [x] Черновики - состояние экранов, не общее: адрес сервера (`ServerPage`), класс нового героя (`CharactersViewModel`), редкость и слот выдачи (отладочная панель) (3.80.32).
 - [ ] `ForgeState` распадается на срезы этих репозиториев; `sliced()` удалён.
+  - [x] Аккаунт и настройки (`ServerScreen`, `SettingsScreen`, страницы тестера, отзывов и почты, `LoginForm`): срез `AccountUi` из `ServerViewModel` (3.80.33).
 
 ## Этап 3 - навигация
 - [x] Navigation 3 (`navigation3-runtime/ui` 1.2.0, вместо Navigation Compose: стек у приложения, без NavController): `presentation/nav/Route` - типизированные ключи Auth, Characters, Hero, Tree, Grimoire, Expedition, Crafts, Progress, Forge, Pets, Trials, Chronicle, City, Quests, Merchant, Auction, Guild, Account, Settings, Admin, Redemption, Atlas; `Navigator` - стек (вкладка сбрасывает до корня, подэкран ложится над корнем, аккаунт и настройки - поверх любого). Прогрев, поход и испытание - состояния игры поверх стека, не маршруты (их открывают и закрывают команды, не игрок). Разделы гильдии и квестов - состояние своих моделей, не стек.
@@ -66,6 +67,6 @@
 - [x] Удалено неиспользуемое: `MailButton`, `classDescription`, `itemSources`, `rankIndexOf`.
 - [ ] Удалить этот файл.
 
-## Где остановились (3.80.32, сервер 1.74.6)
+## Где остановились (3.80.33, сервер 1.74.6)
 - Сделано: golden-тест забега, распил `ExpeditionRun`/`ExpeditionWorld` в `core/campaign/run/`, файлы сцены, мёртвый код, `ShellViewModel` вместо фасада на экранах, константы боя и мира в контент, `ForgeState` - чистая проекция репозиториев.
 - Следующий шаг: экраны перестают получать `ForgeState` целиком (92 файла UI читают `s.busy`, `s.index`, `s.hero`, `s.play`, `s.lang`, `s.account`) - по семьям экранов в порядке владельца, `sliced()` уходит с последним; затем `ForgeViewModel`/`ForgeRuntime`/`FeatureViewModel` удаляются (сессия, связь, прогрев, коды и герои - в свои синглы); потом серверный этап 3.

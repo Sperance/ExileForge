@@ -251,8 +251,8 @@ internal val ForgeState.toasts: Array<Any?> get() = arrayOf(notice, message, err
             entryProvider = entryProvider {
                 entry<Route.Auth> { AuthScreen(s.sliced(*s.common, *s.toasts)) }
                 entry<Route.Characters> { CharacterSelectScreen(s.sliced(*s.common, *s.toasts)) }
-                entry<Route.Account> { ServerScreen(s.sliced(*s.common)) }
-                entry<Route.Settings> { SettingsScreen(s.sliced(*s.common), logs) }
+                entry<Route.Account> { ServerScreen() }
+                entry<Route.Settings> { SettingsScreen(logs) }
                 entry<Route.Hero> { HeroScreen(s.sliced(*s.common)) }
                 entry<Route.Tree> { SkillTreeScreen(s.sliced(*s.common)) }
                 entry<Route.Grimoire> { GrimoireScreen(s.sliced(*s.common)) }

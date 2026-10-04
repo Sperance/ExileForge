@@ -24,7 +24,7 @@ import com.sperance.exileforge.core.model.feedback.MailEquipment
 import com.sperance.exileforge.core.model.feedback.MailRequest
 import com.sperance.exileforge.core.model.feedback.ReportStatus
 import com.sperance.exileforge.presentation.feedback.FeedbackViewModel
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.server.AccountUi
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.theme.*
@@ -34,7 +34,7 @@ import org.koin.compose.viewmodel.koinViewModel
  * The administrator's reading of players' reports (3.73.0): bugs and suggestions apart, filtered by status, each with its
  * author, where it was written and the journal tail; a new status with a word for the author, who gets a letter about it.
  */
-@Composable internal fun FeedbackAdminPage(s: ForgeState) {
+@Composable internal fun FeedbackAdminPage(account: AccountUi) {
     val vm = koinViewModel<FeedbackViewModel>()
     val feedback by vm.feedback.collectAsStateWithLifecycle()
     var kind by remember { mutableStateOf(FeedbackKind.BUG) }
@@ -46,10 +46,10 @@ import org.koin.compose.viewmodel.koinViewModel
         ReportStatus.entries.forEach { st -> FilterChip(selected = status == st, onClick = { status = st }, label = { Text(statusTitle(st)) }) }
     }
     if (feedback.reports.isEmpty()) MutedText(ui("feedback.none"))
-    feedback.reports.forEach { ReportCard(s, vm, it) }
+    feedback.reports.forEach { ReportCard(account, vm, it) }
 }
 
-@Composable private fun ReportCard(s: ForgeState, vm: FeedbackViewModel, entry: AdminReport) {
+@Composable private fun ReportCard(account: AccountUi, vm: FeedbackViewModel, entry: AdminReport) {
     val report = entry.report
     var open by remember(report.id) { mutableStateOf(false) }
     var reason by remember(report.id, report.reason) { mutableStateOf(report.reason) }
@@ -89,13 +89,13 @@ import org.koin.compose.viewmodel.koinViewModel
                 modifier = Modifier.fillMaxWidth(),
             )
             ForgeButton(
-                enabled = !s.busy && (chosen != report.status || reason != report.reason),
+                enabled = !account.busy && (chosen != report.status || reason != report.reason),
                 onClick = { vm.setReportStatus(report.id, chosen, reason) },
                 modifier = Modifier.fillMaxWidth(),
             ) { Text(ui("feedback.save_status")) }
             // Asana (3.75.0): the picked report becomes a task there; once exported, the link to it instead.
             if (report.asanaUrl.isBlank()) {
-                ForgeOutlinedButton(enabled = !s.busy, onClick = { vm.reportToAsana(report.id) }, modifier = Modifier.fillMaxWidth()) {
+                ForgeOutlinedButton(enabled = !account.busy, onClick = { vm.reportToAsana(report.id) }, modifier = Modifier.fillMaxWidth()) {
                     Text(ui("feedback.to_asana"))
                 }
             } else {
@@ -114,8 +114,8 @@ private const val REASON = 400
  * The administrator's letter (3.73.0): to one account by login or, blank, to every account; a subject, a text, and what it
  * carries — gold, stacks of any item, things of any template at a chosen rarity — built line by line.
  */
-@Composable internal fun MailComposePage(s: ForgeState) {
-    val index = s.index ?: return
+@Composable internal fun MailComposePage(account: AccountUi) {
+    val index = account.index ?: return
     val vm = koinViewModel<FeedbackViewModel>()
     var login by remember { mutableStateOf("") }
     var subject by remember { mutableStateOf("") }
@@ -126,7 +126,7 @@ private const val REASON = 400
     ForgePanel {
         OutlinedTextField(
             login,
-            { login = it.filterNot(Char::isWhitespace).take(s.inputs.login) },
+            { login = it.filterNot(Char::isWhitespace).take(account.inputs.login) },
             label = { Text(ui("mail.to")) },
             supportingText = { Text(ui(if (login.isBlank()) "mail.to_all" else "mail.to_one")) },
             singleLine = true,
@@ -134,18 +134,18 @@ private const val REASON = 400
         )
         OutlinedTextField(
             subject,
-            { subject = it.take(s.inputs.mailSubject) },
+            { subject = it.take(account.inputs.mailSubject) },
             label = { Text(ui("mail.subject")) },
-            supportingText = { LengthCounter(subject, s.inputs.mailSubject) },
+            supportingText = { LengthCounter(subject, account.inputs.mailSubject) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
         OutlinedTextField(
             body,
-            { body = it.take(s.inputs.mailBody) },
+            { body = it.take(account.inputs.mailBody) },
             label = { Text(ui("mail.body")) },
             minLines = 4,
-            supportingText = { LengthCounter(body, s.inputs.mailBody) },
+            supportingText = { LengthCounter(body, account.inputs.mailBody) },
             modifier = Modifier.fillMaxWidth(),
         )
     }
@@ -153,7 +153,7 @@ private const val REASON = 400
         Engraved(ui("mail.attachment"))
         OutlinedTextField(
             gold,
-            { gold = it.filter(Char::isDigit).take(s.inputs.number) },
+            { gold = it.filter(Char::isDigit).take(account.inputs.number) },
             label = { Text(ui("tester.gold")) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -161,11 +161,11 @@ private const val REASON = 400
         )
         var item by remember { mutableStateOf("") }
         var amount by remember { mutableStateOf("1") }
-        Spinner(ui("tester.item"), item, index.items.keys.associateWith(::itemTitle), !s.busy) { item = it }
+        Spinner(ui("tester.item"), item, index.items.keys.associateWith(::itemTitle), !account.busy) { item = it }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(
                 amount,
-                { amount = it.filter(Char::isDigit).take(s.inputs.number) },
+                { amount = it.filter(Char::isDigit).take(account.inputs.number) },
                 label = { Text(ui("tester.amount")) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -177,7 +177,7 @@ private const val REASON = 400
         }
         var template by remember { mutableStateOf("") }
         var rarity by remember { mutableStateOf<Rarity?>(null) }
-        Spinner(ui("mail.template"), template, index.templates.values.associate { it.code to equipmentTitle(it.code) }, !s.busy) { template = it }
+        Spinner(ui("mail.template"), template, index.templates.values.associate { it.code to equipmentTitle(it.code) }, !account.busy) { template = it }
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             FilterChip(selected = rarity == null, onClick = { rarity = null }, label = { Text(ui("mail.template_rarity")) })
             listOf(Rarity.COMMON, Rarity.MAGIC, Rarity.RARE).forEach { r ->
@@ -188,7 +188,7 @@ private const val REASON = 400
         items.forEach { (code, n) -> AttachedLine("${itemTitle(code)} × $n") { items.remove(code) } }
         equipment.forEachIndexed { i, piece -> AttachedLine(equipmentTitle(piece.template) + (piece.rarity?.let { " · " + ui("enum.rarity.${it.name}") } ?: "")) { equipment.removeAt(i) } }
     }
-    ForgeButton(enabled = !s.busy && subject.isNotBlank(), modifier = Modifier.fillMaxWidth(), onClick = {
+    ForgeButton(enabled = !account.busy && subject.isNotBlank(), modifier = Modifier.fillMaxWidth(), onClick = {
         vm.sendMail(MailRequest(login, subject, body, MailAttachment(gold.toLongOrNull() ?: 0, items.toMap(), equipment.toList())))
         subject = ""
         body = ""

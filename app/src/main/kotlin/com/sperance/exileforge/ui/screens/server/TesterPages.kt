@@ -18,8 +18,8 @@ import com.sperance.exileforge.core.display.professionTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.network.TesterAccount
 import com.sperance.exileforge.presentation.hero.HeroViewModel
+import com.sperance.exileforge.presentation.server.AccountUi
 import com.sperance.exileforge.presentation.session.SessionViewModel
-import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.theme.*
@@ -29,18 +29,18 @@ import org.koin.compose.viewmodel.koinViewModel
  * The testing window (3.73.0): everything a hero earns by playing, granted to the hero in play at a tap — gold, level, points,
  * zones, items of every kind, maps, professions, recipes — and the resets. Testers and administrators only.
  */
-@Composable internal fun TestingPage(s: ForgeState) {
+@Composable internal fun TestingPage(account: AccountUi) {
     val heroModel: HeroViewModel = koinViewModel()
-    val index = s.index
-    val enabled = !s.busy && s.play.heroId.isNotBlank()
-    if (s.play.heroId.isBlank()) {
+    val index = account.index
+    val enabled = !account.busy && account.heroId.isNotBlank()
+    if (account.heroId.isBlank()) {
         InfoCard(ui("tester.no_hero"), ui("tester.no_hero_hint"))
         return
     }
-    MutedText(ui("tester.for_hero", s.heroName))
+    MutedText(ui("tester.for_hero", account.heroName))
     ForgePanel {
         Engraved(ui("tester.currency"))
-        NumberGrant(ui("tester.gold"), "1000000", s.inputs.number, enabled) { heroModel.testerGrant("gold", "amount" to it) }
+        NumberGrant(ui("tester.gold"), "1000000", account.inputs.number, enabled) { heroModel.testerGrant("gold", "amount" to it) }
         NumberGrant(ui("tester.level"), "100", 3, enabled) { heroModel.testerGrant("level", "level" to it) }
         NumberGrant(ui("tester.skill_points"), "10", 4, enabled) { heroModel.testerGrant("skillPoints", "amount" to it) }
         GrantButton(ui("tester.atlas_points"), enabled) { heroModel.testerGrant("atlasPoints") }
@@ -51,7 +51,7 @@ import org.koin.compose.viewmodel.koinViewModel
         Engraved(ui("tester.items"))
         var item by remember { mutableStateOf("") }
         Spinner(ui("tester.item"), item, index.items.keys.associateWith(::itemTitle), enabled) { item = it }
-        NumberGrant(ui("tester.amount"), "10", s.inputs.number, enabled && item.isNotBlank()) { heroModel.grantItem(item, it.toLong()) }
+        NumberGrant(ui("tester.amount"), "10", account.inputs.number, enabled && item.isNotBlank()) { heroModel.grantItem(item, it.toLong()) }
         var unique by remember { mutableStateOf("") }
         val uniques = index.templates.values.filter { it.rarity >= Rarity.UNIQUE }.associate { it.code to equipmentTitle(it.code) }
         Spinner(ui("tester.unique"), unique, uniques, enabled) { unique = it }
@@ -128,33 +128,33 @@ private val RESETS = listOf("TREE", "ATLAS", "BAG", "STASH", "CAMPAIGN")
  * The administrator's testers (3.73.0): the list with the last sign-in, a new account by login — the server picks the
  * password and it is shown once, to be copied — a new password, switching an account off and on.
  */
-@Composable internal fun TestersPage(s: ForgeState) {
+@Composable internal fun TestersPage(account: AccountUi) {
     val sessionModel: SessionViewModel = koinViewModel()
-    LaunchedEffect(s.account.sessionEpoch) { sessionModel.loadTesters() }
+    LaunchedEffect(account.session.sessionEpoch) { sessionModel.loadTesters() }
     var login by remember { mutableStateOf("") }
     ForgePanel {
         Engraved(ui("tester.new"))
         OutlinedTextField(
             login,
-            { login = it.filterNot(Char::isWhitespace).take(s.inputs.login) },
+            { login = it.filterNot(Char::isWhitespace).take(account.inputs.login) },
             label = { Text(ui("account.login")) },
-            supportingText = { LengthCounter(login, s.inputs.login) },
+            supportingText = { LengthCounter(login, account.inputs.login) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
-        ForgeButton(enabled = !s.busy && login.isNotBlank(), onClick = {
+        ForgeButton(enabled = !account.busy && login.isNotBlank(), onClick = {
             sessionModel.createTester(login)
             login = ""
         }, modifier = Modifier.fillMaxWidth()) {
             Text(ui("tester.create"))
         }
     }
-    if (s.account.testers.isEmpty()) MutedText(ui("tester.none"))
-    s.account.testers.forEach { tester -> TesterRow(s, tester) }
-    s.account.shownTester?.let { CredentialsDialog(it, sessionModel::closeShownTester) }
+    if (account.admin.testers.isEmpty()) MutedText(ui("tester.none"))
+    account.admin.testers.forEach { tester -> TesterRow(account, tester) }
+    account.admin.shownTester?.let { CredentialsDialog(it, sessionModel::closeShownTester) }
 }
 
-@Composable private fun TesterRow(s: ForgeState, tester: TesterAccount) {
+@Composable private fun TesterRow(account: AccountUi, tester: TesterAccount) {
     val sessionModel: SessionViewModel = koinViewModel()
     ForgePanel {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -167,9 +167,9 @@ private val RESETS = listOf("TREE", "ATLAS", "BAG", "STASH", "CAMPAIGN")
                     ).joinToString(" · "),
                 )
             }
-            Switch(checked = tester.active, enabled = !s.busy, onCheckedChange = { sessionModel.setTesterActive(tester.id, it) })
+            Switch(checked = tester.active, enabled = !account.busy, onCheckedChange = { sessionModel.setTesterActive(tester.id, it) })
         }
-        ForgeOutlinedButton(enabled = !s.busy, onClick = { sessionModel.resetTester(tester.id) }, modifier = Modifier.fillMaxWidth()) { Text(ui("tester.reset_password")) }
+        ForgeOutlinedButton(enabled = !account.busy, onClick = { sessionModel.resetTester(tester.id) }, modifier = Modifier.fillMaxWidth()) { Text(ui("tester.reset_password")) }
     }
 }
 

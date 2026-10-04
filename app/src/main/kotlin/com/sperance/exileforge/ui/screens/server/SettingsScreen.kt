@@ -43,6 +43,8 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.sync.API_REVISION
 import com.sperance.exileforge.core.network.RequestLog
 import com.sperance.exileforge.presentation.ShellViewModel
+import com.sperance.exileforge.presentation.server.AccountUi
+import com.sperance.exileforge.presentation.server.ServerViewModel
 import com.sperance.exileforge.presentation.session.SessionViewModel
 import com.sperance.exileforge.presentation.settings.SettingsViewModel
 import com.sperance.exileforge.presentation.state.*
@@ -67,7 +69,8 @@ private enum class SettingsPage(val title: String) {
  * ones, the fight, the interface, the vibration — with its switch in its row; the developers' tools at the foot for a
  * tester or an administrator only. «Back» returns to the tab the settings were opened over.
  */
-@Composable internal fun SettingsScreen(s: ForgeState, logs: List<RequestLog> = emptyList()) {
+@Composable internal fun SettingsScreen(logs: List<RequestLog> = emptyList()) {
+    val account by koinViewModel<ServerViewModel>().ui.collectAsStateWithLifecycle()
     val sessionModel: SessionViewModel = koinViewModel()
     val shell: ShellViewModel = koinViewModel()
     var page by rememberSaveable { mutableStateOf<SettingsPage?>(null) }
@@ -80,32 +83,32 @@ private enum class SettingsPage(val title: String) {
         ) {
             Text(ui(open?.title ?: "settings.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
             when (open) {
-                null -> SettingsList(s, logs) { page = it }
+                null -> SettingsList(account, logs) { page = it }
 
                 SettingsPage.LANGUAGE -> ForgePanel {
-                    LanguagePicker(s.lang, s.world.languages, enabled = !s.busy, onLanguage = sessionModel::language)
+                    LanguagePicker(account.lang, account.world.languages, enabled = !account.busy, onLanguage = sessionModel::language)
                     MutedText(ui("account.language_note"))
                 }
 
-                SettingsPage.SERVER -> ServerPage(s)
+                SettingsPage.SERVER -> ServerPage(account)
 
-                SettingsPage.CLIENT -> ClientPage(s)
+                SettingsPage.CLIENT -> ClientPage(account)
 
                 SettingsPage.JOURNAL -> RequestJournalPanel(logs)
 
-                SettingsPage.TESTING -> TestingPage(s)
+                SettingsPage.TESTING -> TestingPage(account)
 
-                SettingsPage.TESTERS -> TestersPage(s)
+                SettingsPage.TESTERS -> TestersPage(account)
 
-                SettingsPage.FEEDBACK -> FeedbackAdminPage(s)
+                SettingsPage.FEEDBACK -> FeedbackAdminPage(account)
 
-                SettingsPage.MAIL -> MailComposePage(s)
+                SettingsPage.MAIL -> MailComposePage(account)
             }
         }
     }
 }
 
-@Composable private fun SettingsList(s: ForgeState, logs: List<RequestLog>, onPage: (SettingsPage) -> Unit) {
+@Composable private fun SettingsList(account: AccountUi, logs: List<RequestLog>, onPage: (SettingsPage) -> Unit) {
     val shell: ShellViewModel = koinViewModel()
     val sessionModel: SessionViewModel = koinViewModel()
     val settingsModel = koinViewModel<SettingsViewModel>()
@@ -114,7 +117,7 @@ private enum class SettingsPage(val title: String) {
     RowGroup(ui("settings.general")) {
         val shell: ShellViewModel = koinViewModel()
         val sessionModel: SessionViewModel = koinViewModel()
-        AccountRow(Icons.Outlined.Language, ui("account.language"), value = s.lang.title) { onPage(SettingsPage.LANGUAGE) }
+        AccountRow(Icons.Outlined.Language, ui("account.language"), value = account.lang.title) { onPage(SettingsPage.LANGUAGE) }
         ChoiceRow(Icons.Outlined.LightMode, ui("settings.keep_screen"), KeepScreen.entries, set.keepScreen, { ui("settings.keep.${it.name}") }) {
             change { copy(keepScreen = it) }
         }
@@ -149,23 +152,23 @@ private enum class SettingsPage(val title: String) {
         SwitchRow(Icons.Outlined.TouchApp, ui("settings.buzz_buttons"), ui("settings.buzz_buttons_note"), set.buzzButtons) { change { copy(buzzButtons = it) } }
     }
     // The developers' tools (3.77.0): moved here from the account, seen by a tester or an administrator alone.
-    if (s.isTester || s.isAdmin) {
+    if (account.isTester || account.isAdmin) {
         RowGroup(ui("settings.developers")) {
             AccountRow(
                 Icons.Outlined.Dns,
                 ui("account.server"),
-                value = ui(if (s.link.offline) "account.offline" else "account.online"),
-                dot = if (s.link.offline) LifeRed else Vital,
+                value = ui(if (account.link.offline) "account.offline" else "account.online"),
+                dot = if (account.link.offline) LifeRed else Vital,
             ) { onPage(SettingsPage.SERVER) }
             AccountRow(Icons.Outlined.Info, ui("account.client"), value = "API $API_REVISION") { onPage(SettingsPage.CLIENT) }
             AccountRow(Icons.AutoMirrored.Outlined.ReceiptLong, ui("account.journal"), value = logs.size.toString()) { onPage(SettingsPage.JOURNAL) }
-            if (s.isTester) AccountRow(Icons.Outlined.Science, ui("tester.window"), enabled = !s.busy) { onPage(SettingsPage.TESTING) }
-            if (s.isAdmin) AccountRow(Icons.Outlined.Group, ui("tester.accounts"), enabled = !s.busy) { onPage(SettingsPage.TESTERS) }
-            if (s.isAdmin) AccountRow(Icons.Outlined.BugReport, ui("feedback.admin"), enabled = !s.busy) { onPage(SettingsPage.FEEDBACK) }
-            if (s.isAdmin) AccountRow(Icons.Outlined.Mail, ui("mail.compose"), enabled = !s.busy) { onPage(SettingsPage.MAIL) }
+            if (account.isTester) AccountRow(Icons.Outlined.Science, ui("tester.window"), enabled = !account.busy) { onPage(SettingsPage.TESTING) }
+            if (account.isAdmin) AccountRow(Icons.Outlined.Group, ui("tester.accounts"), enabled = !account.busy) { onPage(SettingsPage.TESTERS) }
+            if (account.isAdmin) AccountRow(Icons.Outlined.BugReport, ui("feedback.admin"), enabled = !account.busy) { onPage(SettingsPage.FEEDBACK) }
+            if (account.isAdmin) AccountRow(Icons.Outlined.Mail, ui("mail.compose"), enabled = !account.busy) { onPage(SettingsPage.MAIL) }
             // Turning the administrator's tools off hides their tab, so the way back cannot live only inside it.
-            if (BuildConfig.DEBUG && s.isAdmin && !s.adminTools) {
-                AccountRow(Icons.Outlined.AdminPanelSettings, ui("account.tools_back"), enabled = !s.busy, chevron = false) { sessionModel.mode(AppMode.ADMIN) }
+            if (BuildConfig.DEBUG && account.isAdmin && !account.adminTools) {
+                AccountRow(Icons.Outlined.AdminPanelSettings, ui("account.tools_back"), enabled = !account.busy, chevron = false) { sessionModel.mode(AppMode.ADMIN) }
             }
         }
     }

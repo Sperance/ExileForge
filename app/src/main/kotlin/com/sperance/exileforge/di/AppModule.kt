@@ -128,7 +128,7 @@ val appModule = module {
     viewModelOf(::GrimoireViewModel)
     viewModelOf(::ExpeditionViewModel)
     viewModel { SettingsViewModel(get()) }
-    viewModel { ServerViewModel(get(), get()) }
+    viewModelOf(::ServerViewModel)
     // Проверка обновлений ждёт сервер игровой модели: поток и манифест приходят параметрами из активности.
     viewModel { params -> UpdateViewModel(androidApplication(), params.get(1), params.get(0), get()) }
 }

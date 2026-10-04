@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -24,6 +25,7 @@ import com.sperance.exileforge.core.display.BaseProperty
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.PropertyValue
+import com.sperance.exileforge.core.display.Term
 import com.sperance.exileforge.core.display.lineText
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.display.statTitle
@@ -229,6 +231,8 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
                         Text(it, color = Muted, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Start)
                     }
                     if (serial > 0) SerialStamp(serial)
+                    // The game's words its lines use (3.81.0), each with its rule on a tap.
+                    TermsBlock(remember(item) { Term.ofStats(item.lines.flatMap { line -> line.definition?.effects.orEmpty().map { it.stat } }) })
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
                     price?.let {

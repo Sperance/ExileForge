@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.Glyph
+import com.sperance.exileforge.core.display.Term
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.nodeDescription
 import com.sperance.exileforge.core.display.nodeTitle
@@ -188,6 +189,10 @@ import kotlin.math.sin
         if (node.lines.isEmpty()) Text(ui("tree.no_bonuses"), color = Muted)
         node.lines.forEach { line -> ModifierLine(index, line) }
     }
+
+    // The game's words the lines use (3.81.0): «Всплеск магии», a charge, an ailment — each with its rule on a tap.
+    val terms = remember(node.code, index) { Term.ofLines(index, node.lines + node.options.flatten()) }
+    TermsBlock(terms)
 
     if (allocated) {
         // A refund is held for a second (3.81.0): a tap on the wrong node no longer costs the point.

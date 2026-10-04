@@ -36,6 +36,8 @@ import kotlinx.serialization.Serializable
     val run: RunState? = null,
     /** The trials (server 1.47.0): the one open, the tower's record, the rush's best times and cleared regions. */
     val trials: TrialProgress = TrialProgress(),
+    /** How many times each zone was passed — its guardian slain (server 1.76.0), by zone code. */
+    val completions: Map<String, Int> = emptyMap(),
 ) {
     /** The boss of [mapCode] is slain and not yet back. */
     fun bossDown(mapCode: MapCode, now: Long): Boolean = (bosses[mapCode.value] ?: 0L) > now

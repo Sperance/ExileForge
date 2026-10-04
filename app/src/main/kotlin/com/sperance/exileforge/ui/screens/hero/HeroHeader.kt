@@ -17,10 +17,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.ClassesFile
 import com.sperance.exileforge.ui.components.ClassPortrait
-import com.sperance.exileforge.ui.components.FirstVisit
 import com.sperance.exileforge.ui.components.ForgePanel
-import com.sperance.exileforge.ui.components.Guide
-import com.sperance.exileforge.ui.components.GuideButton
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
@@ -39,7 +36,6 @@ import com.sperance.exileforge.ui.theme.*
 
 /** The header over its own cut of the state (3.66.0): it alone is redrawn when the purse or the experience moves. */
 @Composable fun HeroHeader(hero: HeroHeaderState, extra: @Composable RowScope.() -> Unit = {}) {
-    FirstVisit(Guide.HERO)
     ForgePanel {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             // The class's portrait as the map's token (since 2.31.0).
@@ -55,7 +51,6 @@ import com.sperance.exileforge.ui.theme.*
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            GuideButton(Guide.HERO)
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Chip(ForgeGlyphs.Coins, ui("hero.gold_chip", number(hero.money.toDouble())))

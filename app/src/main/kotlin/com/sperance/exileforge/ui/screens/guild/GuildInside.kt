@@ -149,7 +149,6 @@ private fun sectionFigure(tab: GuildTab, guild: GuildView, me: GuildMember?): St
                 Text(GuildText.title(guild.name, guild.tag), color = GoldBright, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 FactionLine(guild.faction, rules, ui("guild.header_line", guild.members.size, capacity))
             }
-            GuideButton(Guide.GUILD)
         }
         val progress = rules?.levelProgress(guild.level, guild.experience)
             ?: if (guild.next > 0) (guild.experience.toFloat() / guild.next).coerceIn(0f, 1f) else 1f

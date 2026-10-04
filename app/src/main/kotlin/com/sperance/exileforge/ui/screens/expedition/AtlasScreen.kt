@@ -131,7 +131,6 @@ internal val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
         Row(Modifier.fillMaxWidth().statusBarsPadding().padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             IconButton(onClick = model::closeAtlas) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, ui("common.close"), tint = Sky.text) }
             Text(ui("atlas.title"), color = Color.White, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-            FirstVisit(Guide.ATLAS)
             AtlasMenu(summary = spent > 0, reset = spent > 0 && !game.busy, onSummary = { summary = true }, onReset = { resetting = true })
         }
         val money = game.hero?.money ?: 0L
@@ -224,9 +223,8 @@ internal val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
     )
 }
 
-/** The header's ⋮: the totals, the reset, the guide and the bug report, so the title keeps the bar. */
+/** The header's ⋮: the totals, the reset and the bug report, so the title keeps the bar. */
 @Composable internal fun AtlasMenu(summary: Boolean, reset: Boolean, onSummary: () -> Unit, onReset: () -> Unit) {
-    val guides = LocalGuideDesk.current
     val bug = LocalBugReport.current
     var open by remember { mutableStateOf(false) }
     Box {
@@ -235,7 +233,6 @@ internal val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
             val entries = listOfNotNull(
                 Triple(ui("atlas.summary"), summary, onSummary),
                 Triple(ui("atlas.reset"), reset, onReset),
-                guides?.let { desk -> Triple(ui("guide.help"), true) { desk.show(Guide.ATLAS) } },
                 bug?.let { Triple(ui("bug.open"), true, it) },
             )
             entries.forEach { (label, enabled, action) ->

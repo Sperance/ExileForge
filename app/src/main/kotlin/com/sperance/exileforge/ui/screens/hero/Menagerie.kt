@@ -68,10 +68,8 @@ fun MenagerieSection(game: GameUi, vm: HeroViewModel) {
     val pets = hero.pets
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         ForgePanel {
-            FirstVisit(Guide.PETS)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Engraved(ui("pets.title", pets.pets.size), modifier = Modifier.weight(1f))
-                GuideButton(Guide.PETS)
             }
             MutedText(ui("pets.hint"))
             IncubatorPanel(game, vm)

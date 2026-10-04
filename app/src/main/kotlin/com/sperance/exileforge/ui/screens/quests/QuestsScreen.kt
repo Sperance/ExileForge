@@ -43,12 +43,11 @@ fun QuestsScreen() {
     val activity by vm.activity.collectAsStateWithLifecycle()
     val current by vm.tab.collectAsStateWithLifecycle()
     LaunchedEffect(game.heroId, game.sessionEpoch) { if (game.heroId.isNotBlank()) vm.load() }
-    FirstVisit(Guide.QUESTS)
     val board = quests.board
     val busy = activity.busy
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.padding(horizontal = 16.dp)) {
-            ScreenHeader(ui("quest.title"), ui("quest.subtitle"), ForgeGlyphs.Scroll, guide = Guide.QUESTS)
+            ScreenHeader(ui("quest.title"), ui("quest.subtitle"), ForgeGlyphs.Scroll)
         }
         TabRow(selectedTabIndex = current.ordinal, containerColor = Abyss) {
             QuestTab.entries.forEach { tab ->

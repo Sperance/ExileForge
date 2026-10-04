@@ -112,7 +112,7 @@ internal val ESSENTIAL = setOf(Rarity.COMMON, Rarity.RARE)
     val section = smithy.section.takeIf { it in sections } ?: ForgeSection.ORBS
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            ScreenHeader(ui("craft.title"), ui("craft.subtitle"), ForgeGlyphs.Anvil, guide = Guide.FORGE)
+            ScreenHeader(ui("craft.title"), ui("craft.subtitle"), ForgeGlyphs.Anvil)
             if (hero == null || index == null) {
                 InfoCard(ui("tree.no_hero"), ui("craft.hero_first"))
                 return@Column

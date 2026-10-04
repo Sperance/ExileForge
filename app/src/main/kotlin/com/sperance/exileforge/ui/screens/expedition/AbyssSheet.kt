@@ -24,11 +24,9 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.roll.AbyssHoardView
-import com.sperance.exileforge.ui.components.FirstVisit
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeOutlinedButton
 import com.sperance.exileforge.ui.components.ForgeTextButton
-import com.sperance.exileforge.ui.components.Guide
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.expedition.arena.rarityTint
@@ -50,7 +48,6 @@ import com.sperance.exileforge.ui.theme.*
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                FirstVisit(Guide.ABYSS)
                 Icon(ForgeGlyphs.Rift, null, tint = AbyssGlow, modifier = Modifier.size(28.dp))
                 Text(ui("abyss.title"), color = AbyssGlow, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
                 Text(

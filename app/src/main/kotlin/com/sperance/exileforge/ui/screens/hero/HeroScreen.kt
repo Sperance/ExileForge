@@ -105,7 +105,7 @@ fun HeroScreen() {
                 if (header != null) {
                     HeroHeader(header)
                 } else {
-                    ScreenHeader(ui("hero.title"), ui("hero.inventory_count", stash.size), ForgeGlyphs.Stash, guide = Guide.HERO)
+                    ScreenHeader(ui("hero.title"), ui("hero.inventory_count", stash.size), ForgeGlyphs.Stash)
                 }
             }
             item { SectionBar(section) { section = it } }

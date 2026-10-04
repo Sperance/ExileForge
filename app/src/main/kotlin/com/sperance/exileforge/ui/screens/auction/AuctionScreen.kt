@@ -35,7 +35,6 @@ fun AuctionScreen() {
     val busy = activity.busy
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         // No header (variant A): the City's row above already names the building, and the tabs carry its «?».
-        FirstVisit(Guide.AUCTION)
         // Opening the tab is what fills both lists; the hero is the one from the menu.
         // The hero comes too, and not for the bag: the sheet is what the rules read to say which
         // templates this hero can wear, and that is what marks an unwearable lot.
@@ -57,7 +56,7 @@ fun AuctionScreen() {
         // The merchant moved out in 3.22.0, to a building of the City of its own.
         val tabs = listOf(ui("auction.showcase"), if (mine > 0) ui("auction.my_lots_n", mine) else ui("auction.my_lots"), ui("auction.history"))
         val tab = market.tab.coerceIn(tabs.indices)
-        PillTabs(tabs, tab, model::tab, enabled = !busy) { GuideButton(Guide.AUCTION) }
+        PillTabs(tabs, tab, model::tab, enabled = !busy)
         // Every tab is refreshed the same way the hero is: by pulling it. A button competing with
         // the content was one more thing to find, and the gesture is already the habit here.
         PullToRefreshBox(isRefreshing = busy || Reads.AUCTION in activity.loading || Reads.LOTS in activity.loading, onRefresh = model::loadAuction, modifier = Modifier.weight(1f)) {

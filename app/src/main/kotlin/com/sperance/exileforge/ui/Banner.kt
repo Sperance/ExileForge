@@ -47,7 +47,6 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.network.Link
 import com.sperance.exileforge.core.network.RequestLog
 import com.sperance.exileforge.data.settings.DraftStore
-import com.sperance.exileforge.data.settings.GuideStore
 import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.crafts.CraftsViewModel
 import com.sperance.exileforge.presentation.features.UpdateViewModel
@@ -59,10 +58,7 @@ import com.sperance.exileforge.presentation.state.Feature
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.ui.components.BugSheet
 import com.sperance.exileforge.ui.components.ExilePathPlate
-import com.sperance.exileforge.ui.components.GuideDesk
-import com.sperance.exileforge.ui.components.GuideHost
 import com.sperance.exileforge.ui.components.LocalBugReport
-import com.sperance.exileforge.ui.components.LocalGuideDesk
 import com.sperance.exileforge.ui.components.LocalMailOpen
 import com.sperance.exileforge.ui.components.LocalMotion
 import com.sperance.exileforge.ui.components.LocalSettings

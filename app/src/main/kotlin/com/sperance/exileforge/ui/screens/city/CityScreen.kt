@@ -92,7 +92,7 @@ import org.koin.compose.viewmodel.koinViewModel
     }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Spacer(Modifier.height(12.dp))
-        ScreenHeader(ui("nav.city"), ui("city.subtitle"), ForgeGlyphs.Keep, guide = Guide.CITY)
+        ScreenHeader(ui("nav.city"), ui("city.subtitle"), ForgeGlyphs.Keep)
         BuildingCard(ui("quest.title"), ForgeGlyphs.Scroll, questNews(board), game.lockOf(Building.QUESTS), accent = Vital) { shell.building(Building.QUESTS) }
         BuildingCard(ui("merchant.title"), ForgeGlyphs.Coins, merchantNews(trade), game.lockOf(Building.MERCHANT)) { shell.building(Building.MERCHANT) }
         BuildingCard(ui("nav.auction"), ForgeGlyphs.Orb, auctionNews(trade), game.lockOf(Building.AUCTION)) { shell.building(Building.AUCTION) }

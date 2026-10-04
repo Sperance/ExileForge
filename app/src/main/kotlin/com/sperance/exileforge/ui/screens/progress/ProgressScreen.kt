@@ -168,7 +168,7 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
         )
     }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        ScreenHeader(ui("progress.title"), ui("progress.subtitle"), ForgeGlyphs.Sigil, guide = Guide.PROGRESS)
+        ScreenHeader(ui("progress.title"), ui("progress.subtitle"), ForgeGlyphs.Sigil)
         tiles.chunked(2).forEach { pair ->
             Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 pair.forEach { ProgressTileCard(it, Modifier.weight(1f).fillMaxHeight()) }

@@ -51,7 +51,6 @@ private const val CARD_TOP = .48f
         vm.ensureHero()
         vm.loadCampaign()
     }
-    FirstVisit(Guide.EXPEDITION)
     val index = game.index
     val progress = game.progress
     if (index == null || progress == null) {

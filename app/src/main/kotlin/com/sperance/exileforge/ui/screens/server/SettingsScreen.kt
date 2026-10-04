@@ -122,12 +122,6 @@ private enum class SettingsPage(val title: String) {
             change { copy(keepScreen = it) }
         }
         UpdateRow()
-        LocalGuideDesk.current?.let { desk ->
-            AccountRow(Icons.Outlined.Lightbulb, ui("guide.reset"), chevron = false) {
-                desk.reset()
-                shell.announce(ui("settings.hints_done"))
-            }
-        }
     }
     RowGroup(ui("settings.fight")) {
         ChoiceRow(Icons.Outlined.FastForward, ui("settings.speed"), GameSettings.SPEEDS, set.fightSpeed, { "×$it" }) { change { copy(fightSpeed = it) } }

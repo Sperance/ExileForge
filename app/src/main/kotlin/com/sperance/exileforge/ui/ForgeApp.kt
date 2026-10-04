@@ -45,7 +45,6 @@ import com.sperance.exileforge.core.display.workTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.network.RequestLog
 import com.sperance.exileforge.data.settings.DraftStore
-import com.sperance.exileforge.data.settings.GuideStore
 import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.crafts.CraftsViewModel
 import com.sperance.exileforge.presentation.features.UpdateViewModel
@@ -59,10 +58,7 @@ import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.unlocked
 import com.sperance.exileforge.ui.components.BugSheet
 import com.sperance.exileforge.ui.components.ExilePathPlate
-import com.sperance.exileforge.ui.components.GuideDesk
-import com.sperance.exileforge.ui.components.GuideHost
 import com.sperance.exileforge.ui.components.LocalBugReport
-import com.sperance.exileforge.ui.components.LocalGuideDesk
 import com.sperance.exileforge.ui.components.LocalMailOpen
 import com.sperance.exileforge.ui.components.LocalMotion
 import com.sperance.exileforge.ui.components.LocalSettings
@@ -108,11 +104,7 @@ import org.koin.compose.viewmodel.koinViewModel
 
 @Composable fun ForgeApp(updates: UpdateViewModel) {
     val shell: ShellViewModel = koinViewModel()
-    // The first-visit guides (3.14.0): read once per device, one sheet at a time above whatever screen is open.
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val guideStore = koinInject<GuideStore>()
-    val guides = remember { GuideDesk(guideStore, scope) }
     val expedition by shell.run.collectAsStateWithLifecycle()
     val trial by shell.arena.collectAsStateWithLifecycle()
     // The settings (3.77.0) that reach every screen: the text's size, the motion, the lit screen and the phone's buzz.
@@ -134,14 +126,12 @@ import org.koin.compose.viewmodel.koinViewModel
         }
     }
     CompositionLocalProvider(
-        LocalGuideDesk provides guides,
         LocalUpdates provides updates,
         LocalMotion provides settings.animations,
         LocalSettings provides settings,
         LocalDensity provides Density(base.density, base.fontScale * settings.textSize.scale),
     ) {
         ForgeScreens()
-        GuideHost(guides)
         // Updates (3.72.0): over everything; a run or a trial under way is finished first.
         UpdateGate(updates, busy = expedition != null || trial != null)
     }

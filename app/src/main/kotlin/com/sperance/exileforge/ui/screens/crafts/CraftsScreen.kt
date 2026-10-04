@@ -104,7 +104,7 @@ fun CraftsScreen() {
     }
     PullToRefreshBox(isRefreshing = activity.busy || Reads.CRAFTS in activity.loading, onRefresh = vm::load, modifier = Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            item { ScreenHeader(ui("crafts.title"), ui("crafts.subtitle"), ForgeGlyphs.Anvil, guide = Guide.CRAFTS) }
+            item { ScreenHeader(ui("crafts.title"), ui("crafts.subtitle"), ForgeGlyphs.Anvil) }
             if (crafts == null) {
                 item { InfoCard(ui("common.loading"), ui("crafts.loading_hint")) }
                 return@LazyColumn

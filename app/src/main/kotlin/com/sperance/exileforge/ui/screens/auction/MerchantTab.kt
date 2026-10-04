@@ -103,9 +103,7 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel) {
         Icon(ForgeGlyphs.Coins, null, tint = Gold, modifier = Modifier.size(24.dp))
         Text(ui("merchant.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
         IconButton(onClick = { notes = true }, modifier = Modifier.size(36.dp)) { Icon(Icons.Outlined.Info, ui("merchant.notes"), tint = Muted) }
-        GuideButton(Guide.MERCHANT)
     }
-    FirstVisit(Guide.MERCHANT)
     MerchantStrip(money, stock?.refreshAt?.takeIf { it > 0 }, game.hero?.info?.autoSell) { filtering = true }
     if (orbs.isNotEmpty()) {
         PillTabs(

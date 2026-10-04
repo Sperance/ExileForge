@@ -115,7 +115,6 @@ internal sealed interface Pick {
                     ui("skills.mana", number(mana)) + if (reserved > 0) " " + ui("skills.reserved", number(reserved)) else "",
                 ).joinToString(" · "),
                 ForgeGlyphs.Grimoire,
-                guide = Guide.GRIMOIRE,
             )
         }
         item { Tabs(section) { section = it } }

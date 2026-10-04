@@ -39,21 +39,18 @@ import com.sperance.exileforge.ui.theme.*
     )
 }
 
-/** Title band of a screen: sigil, engraved name, and a rule that fades into the dark; a screen with a [guide] explains itself (3.14.0). */
+/** Title band of a screen: sigil, engraved name, and a rule that fades into the dark. */
 @Composable fun ScreenHeader(
     title: String,
     subtitle: String? = null,
     icon: ImageVector? = null,
     accent: Color = Gold,
-    guide: Guide? = null,
     action: (@Composable () -> Unit)? = null,
 ) {
-    guide?.let { FirstVisit(it) }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             icon?.let { Icon(it, null, tint = accent, modifier = Modifier.size(26.dp)) }
-            Text(title, style = MaterialTheme.typography.headlineLarge, color = GoldBright, modifier = if (guide != null || action != null) Modifier.weight(1f) else Modifier)
-            guide?.let { GuideButton(it) }
+            Text(title, style = MaterialTheme.typography.headlineLarge, color = GoldBright, modifier = if (action != null) Modifier.weight(1f) else Modifier)
             action?.invoke()
         }
         subtitle?.let { MutedText(it, style = MaterialTheme.typography.labelMedium) }

@@ -91,7 +91,6 @@ import kotlin.math.sin
     val query by vm.query.collectAsStateWithLifecycle()
     // «Карта на весь экран» (variant A): no header and no scrolling column — the map owns everything between the Hero
     // strip and the bar, and the rest floats over it. A pannable canvas inside a scroll fights the scroll for every drag.
-    FirstVisit(Guide.TREE)
     SkillTreePanel(
         game, selected, query, vm::select, vm::allocate, vm::refund, vm::reset, vm::query, onPath = vm::allocatePath,
         onSocket = vm::socket, onUnsocket = vm::unsocket, onRechoose = vm::rechoose, onPlan = vm::plan, onRefundBranch = vm::refundBranch,
@@ -220,12 +219,6 @@ fun SkillTreePanel(
                             confirmReset = true
                         },
                     )
-                    LocalGuideDesk.current?.let { desk ->
-                        DropdownMenuItem(text = { Text(ui("guide.help")) }, onClick = {
-                            menuOpen = false
-                            desk.show(Guide.TREE)
-                        })
-                    }
                 }
             }
             Spacer(Modifier.height(16.dp))

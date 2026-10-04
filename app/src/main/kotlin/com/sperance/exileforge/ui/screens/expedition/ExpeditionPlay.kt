@@ -87,7 +87,6 @@ import kotlin.math.roundToInt
     val model = koinViewModel<ExpeditionViewModel>()
     val hud by run.hud.collectAsState()
     // The first run explains the fight before the first pack is met (3.14.0).
-    FirstVisit(Guide.FIGHT)
     var gear by remember { mutableStateOf(false) }
     var sheet by remember { mutableStateOf(false) }
     // Leaving a map gives up what is left on it, so it is asked first (2.48.0); the fight has its own retreat.

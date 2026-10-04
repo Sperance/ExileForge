@@ -98,7 +98,6 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
     val token = world.token(launch.mapCode) ?: return
     val index = game.index ?: return
     val zone = token.zone
-    FirstVisit(Guide.MAP_LAUNCH)
     // A locked map is kept on purpose: spending it on a run is asked about first, for either launch.
     var askLocked by remember { mutableStateOf<(() -> Unit)?>(null) }
     val launchGuarded: (() -> Unit) -> Unit = { go -> if (stashMaps(game).any { it.item.id == launch.picked && it.item.locked }) askLocked = go else go() }
@@ -123,7 +122,6 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
         ) {
             Box(Modifier.fillMaxWidth().height(28.dp)) {
                 Box(Modifier.align(Alignment.Center).size(38.dp, 4.dp).background(Color(0xFF3A414B), RoundedCornerShape(2.dp)))
-                GuideButton(Guide.MAP_LAUNCH, Modifier.align(Alignment.CenterStart))
                 IconButton(onClick = vm::closeZone, modifier = Modifier.align(Alignment.CenterEnd).size(32.dp)) {
                     Icon(Icons.Outlined.Close, ui("common.close"), tint = Muted, modifier = Modifier.size(20.dp))
                 }

@@ -17,8 +17,7 @@ import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.sheet.SheetCalculator
 
 /**
- * Герой над контентом (3.80.33): что экраны выводят из пары «контент + герой». Одна логика для общего состояния
- * и для срезов экранов, пока первое не ушло.
+ * Герой над контентом (3.80.33): что экраны выводят из пары «контент + герой». Одна логика для срезов экранов.
  */
 internal object HeroLens {
     /** The view of an item over the content on screen, or null before the content has been read. */
@@ -101,13 +100,6 @@ internal object HeroLens {
         }
     }
 }
-
-fun ForgeState.view(item: ItemInstance): ItemView? = HeroLens.view(index, item)
-fun ForgeState.sellPrice(item: ItemInstance): Long? = HeroLens.sellPrice(index, hero, item)
-fun ForgeState.wearDelta(item: ItemInstance): List<StatDelta> = HeroLens.wearDelta(index, hero, item)
-fun ForgeState.unmetFor(code: String): List<String> = HeroLens.unmet(index, hero, code)
-fun ForgeState.manaReserve(): ManaReserve? = HeroLens.manaReserve(index, hero)
-fun ForgeState.passiveShares(stat: String): PassiveShares = HeroLens.passiveShares(index, hero, stat)
 
 fun GameUi.view(item: ItemInstance): ItemView? = HeroLens.view(index, item)
 fun GameUi.sellPrice(item: ItemInstance): Long? = HeroLens.sellPrice(index, hero, item)

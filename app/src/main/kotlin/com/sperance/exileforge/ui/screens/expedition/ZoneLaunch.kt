@@ -31,6 +31,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sperance.exileforge.core.campaign.MapLaunch
 import com.sperance.exileforge.core.campaign.MapLineKind
 import com.sperance.exileforge.core.campaign.MapStats
 import com.sperance.exileforge.core.campaign.TokenState
@@ -51,7 +52,6 @@ import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.i18n.uiOr
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.state.GameUi
-import com.sperance.exileforge.presentation.state.MapLaunchState
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.AtlasPoints
 import com.sperance.exileforge.rules.content.ContentIndex
@@ -74,7 +74,7 @@ import com.sperance.exileforge.ui.theme.*
  * picked map's rarity, the three figures it pays and its lines marked by kind — red a harm with the
  * share of risk it pays, blue the content, gold a reward. Every number is the rules' own.
  */
-@Composable internal fun Maps(game: GameUi, vm: ExpeditionViewModel, index: ContentIndex, zone: Zone, launch: MapLaunchState) {
+@Composable internal fun Maps(game: GameUi, vm: ExpeditionViewModel, index: ContentIndex, zone: Zone, launch: MapLaunch) {
     val maps = stashMaps(game).filter { it.item.mapZone == zone.code }
     if (maps.isEmpty()) {
         MutedText(ui("expedition.launch_no_maps", zone.level))
@@ -157,7 +157,7 @@ internal fun lines(map: ItemView, index: ContentIndex): List<MapLine> = map.line
  * The crafts' gifts to the run (3.79.0): one potion of the bag drunk on entering, and with a map up to two scarabs
  * spent with it. A tap picks, a tap again puts back; what each does is the item's own line.
  */
-@Composable internal fun Brews(game: GameUi, vm: ExpeditionViewModel, launch: MapLaunchState) {
+@Composable internal fun Brews(game: GameUi, vm: ExpeditionViewModel, launch: MapLaunch) {
     val brews = game.index?.rules?.brews ?: return
     val potions = brews.potions.keys.filter { (game.bagAmount(it) ?: 0L) > 0 }
     val scarabs = brews.scarabs.keys.filter { (game.bagAmount(it) ?: 0L) > 0 }

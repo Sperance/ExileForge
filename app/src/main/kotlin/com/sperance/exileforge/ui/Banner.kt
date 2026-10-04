@@ -44,6 +44,7 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.sperance.exileforge.core.display.workTitle
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.network.Link
 import com.sperance.exileforge.core.network.RequestLog
 import com.sperance.exileforge.data.settings.DraftStore
 import com.sperance.exileforge.data.settings.GuideStore
@@ -208,7 +209,7 @@ import org.koin.compose.viewmodel.koinViewModel
  * the server again at once; on a crossed one (3.79.0) it says why — by cause, with the transport's words for an
  * administrator — and offers «Повторить». The server is asked again by itself meanwhile.
  */
-@Composable internal fun LinkBadge(link: LinkState, admin: Boolean, onRetry: () -> Unit) {
+@Composable internal fun LinkBadge(link: Link, admin: Boolean, onRetry: () -> Unit) {
     if (!link.offline && link.waiting.isEmpty()) return
     val tint = if (link.offline) LifeRed else Gold
     val label = if (link.offline) link.outage?.title ?: ui("link.offline") else ui("link.waiting", link.waiting.size)

@@ -1,13 +1,12 @@
 package com.sperance.exileforge.presentation.features
 
 import com.sperance.exileforge.presentation.ForgeRuntime
-import com.sperance.exileforge.presentation.state.ForgeState
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 
 /**
  * What every feature of the one [ForgeRuntime] shares: the repositories it writes and the hero it acts for.
- * Since 3.80.32 the shared [ForgeState] is a projection nobody writes; a feature reads its sources.
+ * Since 3.80.41 there is no shared state: a feature reads and writes its repositories.
  */
 abstract class FeatureViewModel(protected val runtime: ForgeRuntime) {
     protected val sessions get() = runtime.sessions

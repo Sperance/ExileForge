@@ -31,6 +31,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sperance.exileforge.core.campaign.MapLaunch
 import com.sperance.exileforge.core.campaign.MapLineKind
 import com.sperance.exileforge.core.campaign.MapStats
 import com.sperance.exileforge.core.campaign.TokenState
@@ -51,7 +52,6 @@ import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.i18n.uiOr
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.state.GameUi
-import com.sperance.exileforge.presentation.state.MapLaunchState
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.AtlasPoints
 import com.sperance.exileforge.rules.content.ContentIndex
@@ -93,7 +93,7 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
  * «Войти в портал». A «???» zone says only whose guardian opens it. The rules and the content are the
  * index's; the windows of the zone — its guardian's return — are the hero's own campaign.
  */
-@Composable fun ZoneCard(game: GameUi, vm: ExpeditionViewModel, world: WorldMap, launch: MapLaunchState, modifier: Modifier = Modifier) {
+@Composable fun ZoneCard(game: GameUi, vm: ExpeditionViewModel, world: WorldMap, launch: MapLaunch, modifier: Modifier = Modifier) {
     val token = world.token(launch.mapCode) ?: return
     val index = game.index ?: return
     val zone = token.zone
@@ -157,7 +157,7 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
  * waves on the arena, the guardian last. What else it takes on is chosen here; a crack of the Abyss and the
  * Vaal portal still stop it for the player's word.
  */
-@Composable internal fun AutoLaunch(game: GameUi, vm: ExpeditionViewModel, zone: String, launch: MapLaunchState, guarded: (() -> Unit) -> Unit) {
+@Composable internal fun AutoLaunch(game: GameUi, vm: ExpeditionViewModel, zone: String, launch: MapLaunch, guarded: (() -> Unit) -> Unit) {
     if (game.progress?.cleared?.contains(zone) != true) return
     var chests by rememberSaveable { mutableStateOf(true) }
     var crystals by rememberSaveable { mutableStateOf(true) }

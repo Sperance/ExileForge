@@ -35,6 +35,7 @@
   - [x] Поход, испытания и атлас (карта мира, карточка зоны, бег, арена, отчёты, добыча, атлас): `game` из `ExpeditionViewModel`, своё состояние похода (карточка, добыча, атлас, журнал) - из её `state`; тосты (`notice`, `refusal`) - в срезе; места «Развития» - на срезе `ProgressViewModel` (3.80.38).
   - [x] Вход и меню героев (`game` из `SessionViewModel` и `CharactersViewModel`), почта и плашка пути изгнанника - на срезе (3.80.39). На общем состоянии остались только оболочка (`ForgeApp`, шапка, отчёт об ошибке) и отладочные экраны администратора.
   - [x] Оболочка (`ForgeApp`, нижняя панель, шапка, отчёт жука): `ShellViewModel` отдаёт срез, маршрут, прогрев, поход, испытание, журнал запросов и вибрации и сам запускает рантайм; отладочные экраны администратора - на `AdminViewModel`; `sliced()`/`common`/`toasts` удалены (3.80.40).
+  - [x] `ForgeState`, `AccountState`, `PlayState`, `AdminState`, проекция в `ForgeRuntime` и их помощники удалены; типы режима, фазы, вкладок, зданий и сортировки - в `state/GameTypes.kt` (3.80.41).
 
 ## Этап 3 - навигация
 - [x] Navigation 3 (`navigation3-runtime/ui` 1.2.0, вместо Navigation Compose: стек у приложения, без NavController): `presentation/nav/Route` - типизированные ключи Auth, Characters, Hero, Tree, Grimoire, Expedition, Crafts, Progress, Forge, Pets, Trials, Chronicle, City, Quests, Merchant, Auction, Guild, Account, Settings, Admin, Redemption, Atlas; `Navigator` - стек (вкладка сбрасывает до корня, подэкран ложится над корнем, аккаунт и настройки - поверх любого). Прогрев, поход и испытание - состояния игры поверх стека, не маршруты (их открывают и закрывают команды, не игрок). Разделы гильдии и квестов - состояние своих моделей, не стек.
@@ -75,6 +76,6 @@
 - [x] Удалено неиспользуемое: `MailButton`, `classDescription`, `itemSources`, `rankIndexOf`.
 - [ ] Удалить этот файл.
 
-## Где остановились (3.80.40, сервер 1.74.6)
-- Сделано: golden-тест забега, распил `ExpeditionRun`/`ExpeditionWorld` в `core/campaign/run/`, файлы сцены, мёртвый код, `ShellViewModel` вместо фасада на экранах, константы боя и мира в контент, `ForgeState` - чистая проекция репозиториев.
-- Следующий шаг: экраны перестают получать `ForgeState` целиком (92 файла UI читают `s.busy`, `s.index`, `s.hero`, `s.play`, `s.lang`, `s.account`) - по семьям экранов в порядке владельца, `sliced()` уходит с последним; затем `ForgeViewModel`/`ForgeRuntime`/`FeatureViewModel` удаляются (сессия, связь, прогрев, коды и герои - в свои синглы); потом серверный этап 3.
+## Где остановились (3.80.41, сервер 1.74.6)
+- Сделано: golden-тест забега, распил `ExpeditionRun`/`ExpeditionWorld`, файлы сцены, мёртвый код, константы боя и мира в контент, `ShellViewModel`, срезы `AccountUi`/`GameUi` для всех экранов, `ForgeState` удалён.
+- Следующий шаг: `ForgeViewModel` (жизненный цикл активности: возврат, уход, сброс журнала, проверка обновлений) и `ForgeRuntime`/`FeatureViewModel` (сессия, связь, прогрев, коды, герои, контент и словарь) - в синглы и модели; затем локальные `BackHandler`, модули network в Koin, серверный этап 3.

@@ -31,20 +31,13 @@ import com.sperance.exileforge.presentation.features.ConnectionViewModel
 import com.sperance.exileforge.presentation.features.RedemptionViewModel
 import com.sperance.exileforge.presentation.features.SessionViewModel
 import com.sperance.exileforge.presentation.state.ADMIN_TABS
-import com.sperance.exileforge.presentation.state.AccountState
-import com.sperance.exileforge.presentation.state.AdminState
 import com.sperance.exileforge.presentation.state.AppMode
 import com.sperance.exileforge.presentation.state.AppPhase
 import com.sperance.exileforge.presentation.state.Buzz
-import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.GameSettings
-import com.sperance.exileforge.presentation.state.GuildState
-import com.sperance.exileforge.presentation.state.MarketState
 import com.sperance.exileforge.presentation.state.Notice
 import com.sperance.exileforge.presentation.state.NoticeKind
 import com.sperance.exileforge.presentation.state.Phrase
-import com.sperance.exileforge.presentation.state.PlayState
-import com.sperance.exileforge.presentation.state.QuestState
 import com.sperance.exileforge.presentation.state.StashSort
 import com.sperance.exileforge.presentation.state.TAB_HERO
 import com.sperance.exileforge.presentation.state.TAB_SETTINGS
@@ -113,13 +106,6 @@ class ForgeRuntime(
     val admins get() = repositories.admins
     val modes get() = repositories.modes
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-    private val projected = MutableStateFlow(ForgeState())
-
-    /**
-     * Общее состояние (3.80.32) - только проекция репозиториев для экранов, ещё читающих его целиком: никто в него не пишет,
-     * логика читает источники. Собирается в [start], а не в конструкторе (см. там).
-     */
-    val state: StateFlow<ForgeState> = projected.asStateFlow()
     val logs = journal.entries
     var api: GameApi
         get() = connection.api
@@ -185,7 +171,6 @@ class ForgeRuntime(
         if (started) return
         started = true
         connectionHub.delegate = connectionViewModel
-        scope.launch { projection().collect { projected.value = it } }
         expedition.start()
         trial.start()
         buzzer.allowed = { kind -> prefs.settings.value.let { if (kind == Buzz.DANGER) it.buzzDanger else it.buzzButtons } }
@@ -470,68 +455,6 @@ class ForgeRuntime(
 
     /** Администратор в инструментах: отладочная сборка, роль и режим вместе. */
     private fun adminTools(): Boolean = com.sperance.exileforge.BuildConfig.DEBUG && sessions.state.value.isAdmin && modes.mode.value == AppMode.ADMIN
-
-    /**
-     * Общее состояние как проекция (3.80.32): каждый источник даёт свою правку, правки складываются на пустое
-     * состояние. Ничего, кроме этих потоков, в нём нет.
-     */
-    private fun projection(): Flow<ForgeState> {
-        val parts: List<Flow<(ForgeState) -> ForgeState>> = listOf(
-            navigator.current.map { r -> { s: ForgeState -> s.copy(phase = r.phase, tab = r.tab, building = r.building) } },
-            languages.lang.map { lang -> { s: ForgeState -> s.copy(lang = lang) } },
-            modes.mode.map { mode -> { s: ForgeState -> s.copy(mode = mode) } },
-            commands.state.map { a -> { s: ForgeState -> s.copy(busy = a.busy, loading = a.loading, failure = a.failure, message = a.message, error = a.error) } },
-            notices.state.map { value -> { s: ForgeState -> s.copy(notice = value) } },
-            combine(sessions.state, admins.state) { session, admin ->
-                { s: ForgeState ->
-                    s.copy(
-                        account = AccountState(
-                            profile = session.profile,
-                            signedIn = session.signedIn,
-                            sessionEpoch = session.sessionEpoch,
-                            resumable = session.resumable,
-                            server = session.server,
-                            characters = session.characters,
-                            charactersRead = session.charactersRead,
-                            health = session.health,
-                            testers = admin.testers,
-                            shownTester = admin.shownTester,
-                        ),
-                        admin = AdminState(admin.redemptions),
-                    )
-                }
-            },
-            world.state.map { value -> { s: ForgeState -> s.copy(world = value) } },
-            combine(heroes.state, warmupViewModel.state) { h, warmup ->
-                { s: ForgeState ->
-                    s.copy(
-                        play = s.play.copy(
-                            heroId = h.heroId,
-                            hero = h.hero,
-                            heroOwner = h.owner,
-                            heroReadAt = h.readAt,
-                            heroSeenAt = h.seenAt,
-                            selectedEquipment = h.selectedEquipment,
-                            forgeLine = h.forgeLine,
-                            chestOpening = h.chest,
-                            warmup = warmup?.takeIf { it.heroId == h.heroId },
-                        ),
-                    )
-                }
-            },
-            expeditions.state.map { e -> { s: ForgeState -> s.copy(play = s.play.copy(launch = e.launch, runLoot = e.runLoot, atlas = e.atlas, runPending = e.pending, runRejected = e.rejected)) } },
-            craftsRepository.state.map { c -> { s: ForgeState -> s.copy(play = s.play.copy(crafts = c.state, craftsAt = c.readAt, craftsTotals = c.totals, craftsLast = c.last, craftsPending = c.pending)) } },
-            boards.state.map { value -> { s: ForgeState -> s.copy(quests = value) } },
-            markets.state.map { value -> { s: ForgeState -> s.copy(market = value) } },
-            guilds.state.map { value -> { s: ForgeState -> s.copy(guild = value) } },
-            feedbacks.state.map { value -> { s: ForgeState -> s.copy(feedback = value) } },
-            links.state.map { value -> { s: ForgeState -> s.copy(link = value) } },
-            combine(prefs.settings, prefs.stashSort, prefs.stashHideWorn, prefs.logFilter) { settings, sort, hideWorn, logFilter ->
-                { s: ForgeState -> s.copy(settings = settings, stashSort = sort, stashHideWorn = hideWorn, logFilter = logFilter) }
-            },
-        )
-        return combine(parts) { patches -> patches.fold(ForgeState()) { s, patch -> patch(s) } }
-    }
 
     fun close() {
         scope.coroutineContext[Job]?.cancel()

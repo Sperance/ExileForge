@@ -4,16 +4,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import com.sperance.exileforge.presentation.server.AccountUi
-import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.InputLimits
 import com.sperance.exileforge.ui.theme.LifeRed
 import com.sperance.exileforge.ui.theme.Muted
 
 /** The rules' input limits (3.73.0): every field cuts what is typed to them; their defaults stand until the content is read. */
-val ForgeState.inputs: InputLimits get() = index?.rules?.inputs ?: DefaultInputs
-
-/** То же для среза экранов аккаунта (3.80.33). */
 val GameUi.inputs: InputLimits get() = index?.rules?.inputs ?: DefaultInputs
 val AccountUi.inputs: InputLimits get() = index?.rules?.inputs ?: DefaultInputs
 

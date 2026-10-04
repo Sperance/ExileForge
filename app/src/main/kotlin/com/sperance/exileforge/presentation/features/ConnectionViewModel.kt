@@ -10,7 +10,6 @@ import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.ForgeRuntime
 import com.sperance.exileforge.presentation.state.AppPhase
 import com.sperance.exileforge.presentation.state.Building
-import com.sperance.exileforge.presentation.state.LinkState
 import com.sperance.exileforge.presentation.state.NoticeKind
 import com.sperance.exileforge.presentation.state.TAB_CITY
 import com.sperance.exileforge.presentation.state.TAB_CRAFTS
@@ -143,7 +142,7 @@ class ConnectionViewModel(runtime: ForgeRuntime) :
     /** What the player looks at, read again quietly: the hero always, and the tab's own data where it has any. */
     fun refreshScreen() {
         with(runtime) {
-            val now = state.value
+            val now = navigator.current.value
             when (now.phase) {
                 AppPhase.AUTH -> Unit
 

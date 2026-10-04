@@ -31,7 +31,6 @@ class ForgeViewModel(private val runtime: ForgeRuntime) : ViewModel() {
     init {
         runtime.start()
     }
-    val state = runtime.state
 
     /** What the phone buzzes for (3.77.0), already filtered by the settings. */
     val buzzes: kotlinx.coroutines.flow.SharedFlow<Buzz> = runtime.buzzes

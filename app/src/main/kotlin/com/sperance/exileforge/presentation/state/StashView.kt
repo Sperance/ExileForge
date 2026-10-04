@@ -66,13 +66,6 @@ fun StashSort.order(pieces: List<ItemView>, price: (ItemView) -> Long?): List<It
 }
 
 /** The stash, filtered and ordered as the screen shows it; [hideWorn] leaves out what is worn or socketed (3.69.0). */
-fun ForgeState.stashShelf(pieces: List<ItemView>, filter: StashFilter, hideWorn: Boolean = false): List<ItemView> = stashSort.order(
-    pieces.filter { piece ->
-        !(hideWorn && piece.isWorn) && filter.admits(piece) { code -> unmetFor(code) }
-    },
-) { sellPrice(it.item) }
-
-/** То же для среза «игра» (3.80.33). */
 fun GameUi.stashShelf(pieces: List<ItemView>, filter: StashFilter, hideWorn: Boolean = false): List<ItemView> = stashSort.order(
     pieces.filter { piece ->
         !(hideWorn && piece.isWorn) && filter.admits(piece) { code -> unmetFor(code) }

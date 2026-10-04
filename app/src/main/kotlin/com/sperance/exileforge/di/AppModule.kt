@@ -57,6 +57,7 @@ import com.sperance.exileforge.presentation.skills.GrimoireViewModel
 import com.sperance.exileforge.presentation.state.AppModes
 import com.sperance.exileforge.presentation.state.GameSlice
 import com.sperance.exileforge.presentation.tree.TreeViewModel
+import com.sperance.exileforge.presentation.world.WorldLoader
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -106,6 +107,7 @@ val appModule = module {
     single { CraftsRepository() }
     single { CraftsActions(get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     single { ContentLoader() }
+    single { WorldLoader(get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     single { LanguageRepository() }
     single { LinkRepository() }
     single { AdminRepository() }

@@ -5,6 +5,7 @@ import com.sperance.exileforge.core.campaign.combat.Battle.Companion.FOREVER
 import com.sperance.exileforge.core.campaign.combat.Battle.Fighter
 import com.sperance.exileforge.core.campaign.lines
 import com.sperance.exileforge.core.character.StatLine
+import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.MonsterSkill
 import com.sperance.exileforge.rules.content.MonsterTrait
 import com.sperance.exileforge.rules.content.Op
@@ -107,7 +108,7 @@ private fun Battle.monsterSkill(me: Fighter, skill: MonsterSkill) {
         val share = (hit.weapon?.at(1) ?: 100.0) / 100
         val damage = me.body.damage.mapValues { it.value * share }.toMutableMap()
         // A caster's spell carries its spell damage in the skill's element.
-        val magical = me.body["STOCK_ATTACK_MAGICAL"]
+        val magical = me.body[CoreStat.ATTACK_MAGICAL.code]
         if (skill.spell && magical > 0) damage.merge(element ?: me.body.leading, magical * share, Double::plus)
         val convert = (hit.convert?.at(1) ?: 0.0).coerceIn(0.0, 100.0) / 100
         if (element != null && convert > 0) {
@@ -132,7 +133,7 @@ private fun Battle.monsterSkill(me: Fighter, skill: MonsterSkill) {
         )
     }
     skill.buff?.let { buff ->
-        buff(me, skill.code, buff.stats.lines(1, 1 + me.body["STOCK_WARCRY_EFFECT"] / 100), buff.duration)
+        buff(me, skill.code, buff.stats.lines(1, 1 + me.body[CoreStat.WARCRY_EFFECT.code] / 100), buff.duration)
         record(Side.MONSTER, Action.SKILL, HitKind.HIT, 0.0, null, 0.0, false, emptyList(), null, me.index, skill.code, onSelf = true)
     }
     skill.curse?.let { curse ->

@@ -79,7 +79,8 @@
 - [x] Удалено неиспользуемое: `MailButton`, `classDescription`, `itemSources`, `rankIndexOf`.
 - [ ] Удалить этот файл.
 
-## Где остановились (3.80.46, сервер 1.75.0)
+## Где остановились (3.80.47, сервер 1.75.1)
 - Сделано: golden-тест забега, распил `ExpeditionRun`/`ExpeditionWorld`, файлы сцены, мёртвый код, константы боя и мира в контент, срезы `AccountUi`/`GameUi` для всех экранов; `ForgeState`, `ForgeViewModel`, `ForgeRuntime`, `FeatureViewModel` удалены - сервисы `presentation/app` и `WorldLoader`.
 - Серверный этап 3a (сервер 1.75.0, клиент 3.80.46, `API_REVISION` 43): sealed `RunEvent`/`TrialEvent` (журнал пишет `record { RunEvent.Kill(it, …) }`), `LotGoods` в `AuctionLot.goods`, `Job` в `JobView.job`, `RedemptionReward`; golden-файлы забега не изменились.
-- Дальше по плану: серверный этап 3 - типизированный реестр статов вместо `"STOCK_*"`, value-классы `ItemCode`/`ModifierCode`/`MonsterCode`/`MapCode`.
+- Реестр статов (сервер 1.75.1, клиент 3.80.47): клиент читает статы по имени только через `CoreStat` (`CoreStat.X.code`); строками остались префиксы (`STOCK_RESIST_` …) и коды из имени недуга или вида урона.
+- Дальше по плану: серверный этап 3 - value-классы `ItemCode`/`ModifierCode`/`MonsterCode`/`MapCode`.

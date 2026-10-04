@@ -9,6 +9,7 @@ import com.sperance.exileforge.core.campaign.RollKey
 import com.sperance.exileforge.core.campaign.StatLines
 import com.sperance.exileforge.core.campaign.TypeTrace
 import com.sperance.exileforge.core.campaign.combat.Battle.Fighter
+import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.PowerEvent
 import com.sperance.exileforge.rules.content.SkillEvent
 import kotlin.math.max
@@ -73,7 +74,7 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
     val eased = eased(target, blow) * target.body.hitTaken
     // Server 0.66.0: a penetrating blow ignores part of the resistance, an ailed target takes more, and
     // "damage taken" of the target scales what got through; server 0.69.0: so does a curse on it.
-    val against = body.damageAgainst(target.ailments.map { it.ailment }) * (if (target.cursed) 1 + max(0.0, body["STOCK_DAMAGE_VS_CURSED"]) / 100 else 1.0)
+    val against = body.damageAgainst(target.ailments.map { it.ailment }) * (if (target.cursed) 1 + max(0.0, body[CoreStat.DAMAGE_VS_CURSED.code]) / 100 else 1.0)
     // Server 1.32.0: the element the target resists least is pierced deeper, the one it resists most may hurt it less.
     val weakest = if (body.lowestResistPenetrate > 0) DamageType.ELEMENTS.minBy { target.body.resistTo(it) } else null
     val strongest = if (target.body.highestResistElementTaken != 0.0) DamageType.ELEMENTS.maxBy { target.body.resistTo(it) } else null
@@ -109,7 +110,7 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
             FactorTrace(
                 FactorKey.BASE,
                 baseSum,
-                DamageType.entries.map { it.attack } + listOf("STOCK_SKILL_DAMAGE", "STOCK_SPELL_DAMAGE") +
+                DamageType.entries.map { it.attack } + listOf(CoreStat.SKILL_DAMAGE.code, CoreStat.SPELL_DAMAGE.code) +
                     DamageType.entries.filter { it != DamageType.PHYSICAL }.map { "STOCK_PHYSICAL_AS_EXTRA_${it.name}" },
                 DamageType.ELEMENTS.map { "STOCK_PHYSICAL_TAKEN_AS_${it.name}" },
             ),
@@ -120,31 +121,31 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
                 FactorTrace(
                     FactorKey.CRIT,
                     multiplier,
-                    listOf(if (blow.spell) "STOCK_SPELL_CRITICAL_MULTIPLIER" else "STOCK_CRITICAL_MULTIPLIER", "STOCK_CRITICAL_DAMAGE"),
-                    listOf("STOCK_CRITICAL_TAKEN"),
+                    listOf(if (blow.spell) CoreStat.SPELL_CRITICAL_MULTIPLIER.code else CoreStat.CRITICAL_MULTIPLIER.code, CoreStat.CRITICAL_DAMAGE.code),
+                    listOf(CoreStat.CRITICAL_TAKEN.code),
                 ),
             )
         } else if (multiplier != 1.0) {
-            add(FactorTrace(FactorKey.NON_CRIT, multiplier, listOf("STOCK_NON_CRIT_DAMAGE")))
+            add(FactorTrace(FactorKey.NON_CRIT, multiplier, listOf(CoreStat.NON_CRIT_DAMAGE.code)))
         }
         add(FactorTrace(FactorKey.DAMAGE, body.damageMore, listOf(StatLines.DAMAGE)))
-        if (against != 1.0) add(FactorTrace(FactorKey.AGAINST, against, listOf("STOCK_DAMAGE_VS_AILED", "STOCK_DAMAGE_VS_CURSED") + Ailment.entries.map { it.against }))
-        if (doubled != 1.0) add(FactorTrace(FactorKey.DOUBLE, doubled, listOf("STOCK_DOUBLE_DAMAGE")))
+        if (against != 1.0) add(FactorTrace(FactorKey.AGAINST, against, listOf(CoreStat.DAMAGE_VS_AILED.code, CoreStat.DAMAGE_VS_CURSED.code) + Ailment.entries.map { it.against }))
+        if (doubled != 1.0) add(FactorTrace(FactorKey.DOUBLE, doubled, listOf(CoreStat.DOUBLE_DAMAGE.code)))
         if (versus != 1.0) add(FactorTrace(FactorKey.VERSUS, versus))
         if (rawSum > 0) {
             add(
                 FactorTrace(
                     FactorKey.DEFENCE,
                     defended / rawSum,
-                    DamageType.entries.map { "STOCK_PENETRATE_${it.name}" } + "STOCK_PENETRATE_ELEMENTAL",
-                    listOf("STOCK_ARMOR", "STOCK_PHYSICAL_REDUCTION", "STOCK_ARMOUR_ELEMENTAL", "STOCK_RESIST_ALL", "STOCK_RESIST_MAX_ALL") + DamageType.entries.mapNotNull { it.resist },
+                    DamageType.entries.map { "STOCK_PENETRATE_${it.name}" } + CoreStat.PENETRATE_ELEMENTAL.code,
+                    listOf(CoreStat.ARMOR.code, CoreStat.PHYSICAL_REDUCTION.code, CoreStat.ARMOUR_ELEMENTAL.code, CoreStat.RESIST_ALL.code, CoreStat.RESIST_MAX_ALL.code) + DamageType.entries.mapNotNull { it.resist },
                 ),
             )
         }
-        if (target.weakness() != 1.0) add(FactorTrace(FactorKey.SHOCK, target.weakness(), listOf("STOCK_SHOCK_EFFECT"), listOf("STOCK_SHOCK_TAKEN")))
+        if (target.weakness() != 1.0) add(FactorTrace(FactorKey.SHOCK, target.weakness(), listOf(CoreStat.SHOCK_EFFECT.code), listOf(CoreStat.SHOCK_TAKEN.code)))
         if (lone != 1.0) add(FactorTrace(FactorKey.LONE_WOLF, lone))
-        if (defended > 0 && takenSum != defended) add(FactorTrace(FactorKey.TAKEN, takenSum / defended, target = listOf("STOCK_DAMAGE_TAKEN", "STOCK_PHYSICAL_TAKEN", "STOCK_ELEMENTAL_TAKEN", "STOCK_CHAOS_TAKEN")))
-        if (eased != 1.0) add(FactorTrace(FactorKey.EASED, eased, target = listOf("STOCK_SPELL_SUPPRESSION", "STOCK_DEFLECTION", "STOCK_HIT_TAKEN")))
+        if (defended > 0 && takenSum != defended) add(FactorTrace(FactorKey.TAKEN, takenSum / defended, target = listOf(CoreStat.DAMAGE_TAKEN.code, CoreStat.PHYSICAL_TAKEN.code, CoreStat.ELEMENTAL_TAKEN.code, CoreStat.CHAOS_TAKEN.code)))
+        if (eased != 1.0) add(FactorTrace(FactorKey.EASED, eased, target = listOf(CoreStat.SPELL_SUPPRESSION.code, CoreStat.DEFLECTION.code, CoreStat.HIT_TAKEN.code)))
         add(FactorTrace(FactorKey.TOTAL, taken.values.sum()))
     }
     pendingHit = HitTrace(striker, struck, emptyList(), factors, types, null, origin)
@@ -237,13 +238,13 @@ private fun Battle.reflect(me: Fighter, attacker: Fighter, taken: Map<DamageType
     val defendedSum = types.sumOf { it.second }
     val total = mitigated.values.sum()
     val factors = buildList {
-        add(FactorTrace(FactorKey.BASE, rawSum, listOf("STOCK_THORNS", "STOCK_REFLECT")))
+        add(FactorTrace(FactorKey.BASE, rawSum, listOf(CoreStat.THORNS.code, CoreStat.REFLECT.code)))
         if (rawSum > 0) {
             add(
                 FactorTrace(
                     FactorKey.DEFENCE,
                     defendedSum / rawSum,
-                    target = listOf("STOCK_ARMOR", "STOCK_PHYSICAL_REDUCTION", "STOCK_RESIST_ALL", "STOCK_RESIST_MAX_ALL") + DamageType.entries.mapNotNull { it.resist },
+                    target = listOf(CoreStat.ARMOR.code, CoreStat.PHYSICAL_REDUCTION.code, CoreStat.RESIST_ALL.code, CoreStat.RESIST_MAX_ALL.code) + DamageType.entries.mapNotNull { it.resist },
                 ),
             )
         }
@@ -252,7 +253,7 @@ private fun Battle.reflect(me: Fighter, attacker: Fighter, taken: Map<DamageType
                 FactorTrace(
                     FactorKey.TAKEN,
                     total / defendedSum,
-                    target = listOf("STOCK_DAMAGE_TAKEN", "STOCK_PHYSICAL_TAKEN", "STOCK_ELEMENTAL_TAKEN", "STOCK_CHAOS_TAKEN"),
+                    target = listOf(CoreStat.DAMAGE_TAKEN.code, CoreStat.PHYSICAL_TAKEN.code, CoreStat.ELEMENTAL_TAKEN.code, CoreStat.CHAOS_TAKEN.code),
                 ),
             )
         }

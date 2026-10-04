@@ -44,6 +44,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.StatTrace
 import com.sperance.exileforge.presentation.state.TraceExplainer
+import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.screens.expedition.arena.damageTint
 import com.sperance.exileforge.ui.screens.expedition.arena.key
@@ -123,8 +124,8 @@ internal fun sideLabel(shot: FighterShot, attacker: FighterShot): String = if (s
     }
 }
 
-internal val ATTACKER_STATS = listOf("STOCK_ACCURACY", "STOCK_CRITICAL_CHANCE", "STOCK_SPELL_CRITICAL_CHANCE", "STOCK_ATTACK_SPEED", "STOCK_CAST_SPEED")
-internal val TARGET_STATS = listOf("STOCK_HEALTH", "STOCK_ENERGY_SHIELD", "STOCK_EVASION", "STOCK_BLOCK_CHANCE", "STOCK_SPELL_BLOCK", "STOCK_ARMOR")
+internal val ATTACKER_STATS = listOf(CoreStat.ACCURACY.code, CoreStat.CRITICAL_CHANCE.code, CoreStat.SPELL_CRITICAL_CHANCE.code, CoreStat.ATTACK_SPEED.code, CoreStat.CAST_SPEED.code)
+internal val TARGET_STATS = listOf(CoreStat.HEALTH.code, CoreStat.ENERGY_SHIELD.code, CoreStat.EVASION.code, CoreStat.BLOCK_CHANCE.code, CoreStat.SPELL_BLOCK.code, CoreStat.ARMOR.code)
 
 @Composable internal fun Stats(shot: FighterShot, stats: List<String>, origin: TraceOrigin, explainer: TraceExplainer) {
     val shown = stats.filter { (shot.stats[it] ?: 0.0) != 0.0 }

@@ -3,6 +3,7 @@ package com.sperance.exileforge.core.atlas
 import com.sperance.exileforge.rules.content.AtlasGraph
 import com.sperance.exileforge.rules.content.AtlasStat
 import com.sperance.exileforge.rules.content.ContentIndex
+import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.FountainRule
 import com.sperance.exileforge.rules.content.MapStat
 
@@ -61,10 +62,10 @@ object AtlasEffects {
 
     /** The atlas's gifts to the hero on a map, each to the sheet's stat it adds to. */
     val hero = mapOf(
-        AtlasStat.MANA_REGEN.code to "STOCK_MANA_REGEN",
-        AtlasStat.SKILL_LEVEL.code to "STOCK_SKILL_LEVEL",
-        AtlasStat.FLASK_CHARGES.code to "STOCK_FLASK_CHARGES_GAINED",
-        AtlasStat.FLASK_DURATION.code to "STOCK_FLASK_DURATION",
+        AtlasStat.MANA_REGEN.code to CoreStat.MANA_REGEN.code,
+        AtlasStat.SKILL_LEVEL.code to CoreStat.SKILL_LEVEL.code,
+        AtlasStat.FLASK_CHARGES.code to CoreStat.FLASK_CHARGES_GAINED.code,
+        AtlasStat.FLASK_DURATION.code to CoreStat.FLASK_DURATION.code,
         FLASK_RARE to FLASK_RARE,
     )
 

@@ -15,6 +15,7 @@ import com.sperance.exileforge.core.character.StatLine
 import com.sperance.exileforge.rules.content.BuffKind
 import com.sperance.exileforge.rules.content.ChargeKind
 import com.sperance.exileforge.rules.content.Condition
+import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.PowerEvent
@@ -168,7 +169,7 @@ internal fun Battle.watch() {
     foeFighters.forEach { foe -> if (foe.alive) enrage(foe) }
     foeFighters.forEach { foe ->
         val low = foe.alive && foe.life < foe.body.maxLife / 2
-        if (low != foe.low && foe.model.body(emptyList())["STOCK_LOW_LIFE_SPEED"] > 0) {
+        if (low != foe.low && foe.model.body(emptyList())[CoreStat.LOW_LIFE_SPEED.code] > 0) {
             foe.low = low
             remake(foe)
         }
@@ -189,8 +190,8 @@ internal fun Battle.remake(fighter: Fighter) {
     if (fighter === heroFighter) {
         fighter.rebody(heroBody(emptyList()))
     } else {
-        val speed = fighter.model.body(emptyList())["STOCK_LOW_LIFE_SPEED"]
-        fighter.rebody(fighter.model.body(lines + if (fighter.low && speed > 0) listOf(StatLine("STOCK_ATTACK_SPEED", Op.INCREASED, speed)) else emptyList()))
+        val speed = fighter.model.body(emptyList())[CoreStat.LOW_LIFE_SPEED.code]
+        fighter.rebody(fighter.model.body(lines + if (fighter.low && speed > 0) listOf(StatLine(CoreStat.ATTACK_SPEED.code, Op.INCREASED, speed)) else emptyList()))
     }
 }
 
@@ -338,9 +339,9 @@ private fun Battle.burn(me: Fighter, dt: Double) {
                 val own = (me.ailments + expired).filter { it.ailment == ailment }
                 val base = own.filter { it.until > time - TICK }.sumOf { it.magnitude }
                 val factors = listOf(
-                    FactorTrace(FactorKey.BASE, base, listOfNotNull(ailment.damage, "STOCK_FASTER_AILMENTS", "STOCK_AILMENT_DURATION", "STOCK_${ailment.word}_DURATION")),
-                    FactorTrace(FactorKey.SHOCK, me.weakness(), target = listOf("STOCK_SHOCK_TAKEN")),
-                    FactorTrace(FactorKey.TAKEN, me.body.dotTaken * me.body.ailmentTaken(ailment), target = listOf("STOCK_DOT_TAKEN", "STOCK_BLEED_TAKEN")),
+                    FactorTrace(FactorKey.BASE, base, listOfNotNull(ailment.damage, CoreStat.FASTER_AILMENTS.code, CoreStat.AILMENT_DURATION.code, "STOCK_${ailment.word}_DURATION")),
+                    FactorTrace(FactorKey.SHOCK, me.weakness(), target = listOf(CoreStat.SHOCK_TAKEN.code)),
+                    FactorTrace(FactorKey.TAKEN, me.body.dotTaken * me.body.ailmentTaken(ailment), target = listOf(CoreStat.DOT_TAKEN.code, CoreStat.BLEED_TAKEN.code)),
                     FactorTrace(FactorKey.TOTAL, amount),
                 )
                 record(

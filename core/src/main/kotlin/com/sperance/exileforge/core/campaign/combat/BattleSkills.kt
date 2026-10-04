@@ -8,6 +8,7 @@ import com.sperance.exileforge.core.campaign.combat.Battle.Fighter
 import com.sperance.exileforge.core.campaign.draught
 import com.sperance.exileforge.core.campaign.lines
 import com.sperance.exileforge.core.character.StatLine
+import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.PowerEvent
@@ -33,7 +34,7 @@ private const val MAX_DEPTH = 2
 private const val RANDOM = "RANDOM"
 
 /** Quick preparation (3.13.0): shortens how much of a skill's cooldown still runs as a fight opens. */
-private const val PREPARATION = "STOCK_SKILL_PREPARATION"
+private val PREPARATION: String = CoreStat.SKILL_PREPARATION.code
 private const val ELEMENT = "ELEMENT"
 
 /** Whether a slot's [condition] holds now; an opening one only until its slot has fired this fight. */
@@ -89,7 +90,7 @@ private fun Battle.openingReady(kitSkill: KitSkill): Double {
 private fun Battle.castSlot(slot: Int, kitSkill: KitSkill, level: Int, cost: Double) {
     val hero = heroFighter
     val skill = kitSkill.skill
-    val chance = hero.body["STOCK_FREE_SKILL_CHANCE"]
+    val chance = hero.body[CoreStat.FREE_SKILL_CHANCE.code]
     val free = skillsFree() || chance > 0 && random.nextDouble() * 100 < chance
     if (!free) hero.mana = max(0.0, hero.mana - cost)
     hero.readyAt[slotKey(slot)] = time + skill.cooldown / hero.body.recovery(skill.spell)
@@ -114,19 +115,19 @@ private fun Battle.perform(kitSkill: KitSkill, level: Int) {
     if (skill.hit != null || skill.dot != null || skill.curse != null) return
     val warcry = skill.type == SkillType.WARCRY
     skill.buff?.let { buff ->
-        val speed = if (warcry) hero.body["STOCK_WARCRY_SPEED"] else 0.0
+        val speed = if (warcry) hero.body[CoreStat.WARCRY_SPEED.code] else 0.0
         buff(
             hero,
             skill.code,
-            buff.stats.lines(level, if (warcry) 1 + hero.body["STOCK_WARCRY_EFFECT"] / 100 else 1.0) +
-                listOfNotNull(StatLine("STOCK_ATTACK_SPEED", Op.INCREASED, speed).takeIf { speed > 0 }),
+            buff.stats.lines(level, if (warcry) 1 + hero.body[CoreStat.WARCRY_EFFECT.code] / 100 else 1.0) +
+                listOfNotNull(StatLine(CoreStat.ATTACK_SPEED.code, Op.INCREASED, speed).takeIf { speed > 0 }),
             buff.duration,
             buff.counter?.at(level) ?: 0.0,
         )
         if (buff.nextCrit) nextCrit = true
     }
     var healed = skill.heal?.let { heal(it, level, hero.body.skillHealing) } ?: 0.0
-    if (warcry && hero.body["STOCK_WARCRY_HEAL"] > 0) healed += restore(hero.body.maxLife * hero.body["STOCK_WARCRY_HEAL"] / 100)
+    if (warcry && hero.body[CoreStat.WARCRY_HEAL.code] > 0) healed += restore(hero.body.maxLife * hero.body[CoreStat.WARCRY_HEAL.code] / 100)
     skill.shield?.let { hero.shield = min(hero.body.maxShield, hero.shield + hero.body.maxShield * it.at(level) / 100) }
     skill.barrier?.let { ward(it, level) }
     self(skill.code, healed)
@@ -137,7 +138,7 @@ private fun Battle.heroHit(hit: SkillHit, level: Int, code: String, spell: Boole
     val hero = heroFighter
     val own = hit.stats.lines(level)
     val body = if (own.isEmpty()) hero.body else heroBody(own)
-    val more = if (attack && hit.targets > 0) body["STOCK_SKILL_TARGETS"].toInt().coerceAtLeast(0) else 0
+    val more = if (attack && hit.targets > 0) body[CoreStat.SKILL_TARGETS.code].toInt().coerceAtLeast(0) else 0
     val struck = only?.let { listOf(it) } ?: targets(if (hit.targets <= 0) 0 else hit.targets + more)
     val element = hit.element?.let { if (it == RANDOM) DamageType.ELEMENTS.random(random) else DamageType.element(it) }
     val primary = struck.firstOrNull()
@@ -176,7 +177,7 @@ private class Grown(val damage: Map<DamageType, Double>, val increase: Map<Damag
 private fun Battle.heroDamage(hit: SkillHit, level: Int, body: Combatant, target: Fighter, element: DamageType?, own: List<StatLine>): Grown {
     val damage = mutableMapOf<DamageType, Double>()
     val increase = mutableMapOf<DamageType, Double>()
-    val skill = body["STOCK_SKILL_DAMAGE"]
+    val skill = body[CoreStat.SKILL_DAMAGE.code]
     hit.weapon?.let { weapon ->
         val finisher = hit.finisher?.takeIf { target.ailments.isNotEmpty() || target.life < target.body.maxLife * 0.3 }
         val share = (finisher ?: weapon).at(level) / 100
@@ -190,7 +191,7 @@ private fun Battle.heroDamage(hit: SkillHit, level: Int, body: Combatant, target
         val type = DamageType.element(spell.element) ?: DamageType.FIRE
         val low = spell.min.at(level)
         val base = low + random.nextDouble() * (spell.max.at(level) - low).coerceAtLeast(0.0)
-        val spells = body["STOCK_SPELL_DAMAGE"] + skill
+        val spells = body[CoreStat.SPELL_DAMAGE.code] + skill
         fun grow(of: DamageType, value: Double) {
             val grown = heroIncrease(of, own) + spells
             damage.merge(of, value * max(0.0, 1 + grown / 100), Double::plus)
@@ -220,7 +221,7 @@ private fun Battle.heroDot(dot: SkillDot, level: Int, code: String, spell: Boole
     val hero = heroFighter
     val type = DamageType.element(dot.element) ?: DamageType.CHAOS
     val ailment = Ailment.of(type).takeIf { it.hurts } ?: Ailment.POISONED
-    val increase = heroIncrease(type) + hero.body["STOCK_SPELL_DAMAGE"] + hero.body["STOCK_SKILL_DAMAGE"]
+    val increase = heroIncrease(type) + hero.body[CoreStat.SPELL_DAMAGE.code] + hero.body[CoreStat.SKILL_DAMAGE.code]
     val lone = if (loneWolf) 1 + rules.loneWolf.dealt / 100 else 1.0
     targets(dot.targets).forEach { target ->
         val low = dot.min.at(level)
@@ -255,7 +256,7 @@ private fun Battle.heroDot(dot: SkillDot, level: Int, code: String, spell: Boole
 /** A curse of the hero's on [targets]: its lines stronger by the curse effect, for its duration. */
 internal fun Battle.curse(kitSkill: KitSkill, targets: List<Fighter>, level: Int = kitSkill.level(heroFighter.body)) {
     val curse = kitSkill.skill.curse ?: return
-    val scale = 1 + heroFighter.body["STOCK_CURSE_EFFECT"] / 100
+    val scale = 1 + heroFighter.body[CoreStat.CURSE_EFFECT.code] / 100
     targets.filter { it.alive }.forEach { target ->
         lay(target, TimedEffect(EffectKind.CURSE, kitSkill.skill.code, curse.stats.lines(level, scale), time + curse.duration, curse.duration))
         record(Side.HERO, Action.SKILL, HitKind.HIT, 0.0, null, 0.0, false, emptyList(), null, target.index, kitSkill.skill.code)

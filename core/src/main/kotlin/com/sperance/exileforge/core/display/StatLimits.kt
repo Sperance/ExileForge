@@ -2,6 +2,7 @@ package com.sperance.exileforge.core.display
 
 import com.sperance.exileforge.rules.content.Ceiling
 import com.sperance.exileforge.rules.content.CombatRules
+import com.sperance.exileforge.rules.content.CoreStat
 
 /**
  * A figure a fight counts only up to a ceiling (3.12.0): a resistance under its maximum; block, critical chance and
@@ -17,10 +18,10 @@ data class StatLimit(val stat: String, val effective: Double, val base: Double, 
 
 /** The ceilings of the hero's figures, read exactly as `Combatant` applies them. */
 object StatLimits {
-    private const val CHAOS = "STOCK_RESIST_CHAOS"
-    private const val ALL = "STOCK_RESIST_ALL"
-    private const val MAX_ALL = "STOCK_RESIST_MAX_ALL"
-    private val ELEMENTS = setOf("STOCK_RESIST_FIRE", "STOCK_RESIST_COLD", "STOCK_RESIST_LIGHTNING")
+    private val CHAOS: String = CoreStat.RESIST_CHAOS.code
+    private val ALL: String = CoreStat.RESIST_ALL.code
+    private val MAX_ALL: String = CoreStat.RESIST_MAX_ALL.code
+    private val ELEMENTS = setOf(CoreStat.RESIST_FIRE.code, CoreStat.RESIST_COLD.code, CoreStat.RESIST_LIGHTNING.code)
 
     fun of(stat: String, stats: Map<String, Double>, rules: CombatRules): StatLimit? = when (stat) {
         in ELEMENTS, CHAOS -> resistance(stat, stats, rules)
@@ -28,10 +29,10 @@ object StatLimits {
     }
 
     private fun ceilings(rules: CombatRules): Map<String, Ceiling> = mapOf(
-        "STOCK_BLOCK_CHANCE" to rules.ceilings.block,
-        "STOCK_CRITICAL_CHANCE" to rules.ceilings.critical,
-        "STOCK_SPELL_CRITICAL_CHANCE" to rules.ceilings.critical,
-        "STOCK_PHYSICAL_REDUCTION" to rules.ceilings.physical,
+        CoreStat.BLOCK_CHANCE.code to rules.ceilings.block,
+        CoreStat.CRITICAL_CHANCE.code to rules.ceilings.critical,
+        CoreStat.SPELL_CRITICAL_CHANCE.code to rules.ceilings.critical,
+        CoreStat.PHYSICAL_REDUCTION.code to rules.ceilings.physical,
     )
 
     private fun ceiling(stat: String, stats: Map<String, Double>, limit: Ceiling): StatLimit {

@@ -25,6 +25,7 @@ import com.sperance.exileforge.core.display.statValue
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.manaReserve
+import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.sheet.Shift
 import com.sperance.exileforge.ui.components.Tip
 import com.sperance.exileforge.ui.components.Tipped
@@ -133,4 +134,4 @@ private val StatGroup.glyph: Glyph get() = when (this) {
     }
 }
 
-internal const val MANA_STAT = "STOCK_MANA"
+internal val MANA_STAT: String = CoreStat.MANA.code

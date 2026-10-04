@@ -6,6 +6,7 @@ import com.sperance.exileforge.core.campaign.combat.DamageType
 import com.sperance.exileforge.rules.content.BrewStat
 import com.sperance.exileforge.rules.content.BuffKind
 import com.sperance.exileforge.rules.content.ContentIndex
+import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.MapStat
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.roll.MonsterEffect
@@ -98,25 +99,25 @@ enum class MapLineKind { HARM, CONTENT, REWARD }
 object MapEffects {
     private val damage = DamageType.entries.map { it.attack }
     private val resists = DamageType.entries.mapNotNull { it.resist }
-    private val lifeRegen = listOf("STOCK_HEALTH_REGEN", "STOCK_LIFE_REGEN_PERCENT")
+    private val lifeRegen = listOf(CoreStat.HEALTH_REGEN.code, CoreStat.LIFE_REGEN_PERCENT.code)
 
     /** The hero's critical chances a map lowers together: the attacks' and the spells' own (server 1.56.0). */
-    private val criticalChances = listOf("STOCK_CRITICAL_CHANCE", "STOCK_SPELL_CRITICAL_CHANCE")
+    private val criticalChances = listOf(CoreStat.CRITICAL_CHANCE.code, CoreStat.SPELL_CRITICAL_CHANCE.code)
 
     /** What a map adds to every monster on it, as effects folded by the same formula as a modifier. */
     fun buffs(effects: Map<String, Double>): List<MonsterEffect> = buildList {
-        effects[MapStats.MONSTER_LIFE]?.let { add(MonsterEffect("STOCK_HEALTH", Op.INCREASED, it)) }
+        effects[MapStats.MONSTER_LIFE]?.let { add(MonsterEffect(CoreStat.HEALTH.code, Op.INCREASED, it)) }
         effects[MapStats.MONSTER_DAMAGE]?.let { v -> damage.forEach { add(MonsterEffect(it, Op.INCREASED, v)) } }
-        effects[MapStats.MONSTER_SPEED]?.let { v -> listOf("STOCK_ATTACK_SPEED", "STOCK_CAST_SPEED").forEach { add(MonsterEffect(it, Op.INCREASED, v)) } }
+        effects[MapStats.MONSTER_SPEED]?.let { v -> listOf(CoreStat.ATTACK_SPEED.code, CoreStat.CAST_SPEED.code).forEach { add(MonsterEffect(it, Op.INCREASED, v)) } }
         effects[MapStats.MONSTER_RESIST]?.let { v -> resists.forEach { add(MonsterEffect(it, Op.ADD, v)) } }
-        effects[MapStats.MONSTER_PENETRATION]?.let { add(MonsterEffect("STOCK_PENETRATE_ELEMENTAL", Op.ADD, it)) }
-        effects[MapStats.MONSTER_REFLECT]?.let { add(MonsterEffect("STOCK_REFLECT", Op.ADD, it)) }
-        effects[MapStats.MONSTER_CRITICAL]?.let { add(MonsterEffect("STOCK_CRITICAL_CHANCE", Op.ADD, it)) }
+        effects[MapStats.MONSTER_PENETRATION]?.let { add(MonsterEffect(CoreStat.PENETRATE_ELEMENTAL.code, Op.ADD, it)) }
+        effects[MapStats.MONSTER_REFLECT]?.let { add(MonsterEffect(CoreStat.REFLECT.code, Op.ADD, it)) }
+        effects[MapStats.MONSTER_CRITICAL]?.let { add(MonsterEffect(CoreStat.CRITICAL_CHANCE.code, Op.ADD, it)) }
         effects[MapStats.MONSTER_AILMENTS]?.let { v -> Ailment.entries.filter { it != Ailment.CHILLED }.forEach { add(MonsterEffect("STOCK_${it.word}_CHANCE", Op.ADD, v)) } }
-        effects[MapStats.MONSTER_ARMOUR]?.let { v -> listOf("STOCK_ARMOR", "STOCK_EVASION").forEach { add(MonsterEffect(it, Op.INCREASED, v)) } }
-        effects[MapStats.MONSTER_LEECH]?.let { add(MonsterEffect("STOCK_LEECH_ALL", Op.ADD, it)) }
-        effects[MapStats.MONSTER_STUN]?.let { add(MonsterEffect("STOCK_AVOID_STUN", Op.ADD, it)) }
-        effects[MapStats.MONSTER_CAST]?.let { add(MonsterEffect("STOCK_COOLDOWN_RECOVERY", Op.ADD, it)) }
+        effects[MapStats.MONSTER_ARMOUR]?.let { v -> listOf(CoreStat.ARMOR.code, CoreStat.EVASION.code).forEach { add(MonsterEffect(it, Op.INCREASED, v)) } }
+        effects[MapStats.MONSTER_LEECH]?.let { add(MonsterEffect(CoreStat.LEECH_ALL.code, Op.ADD, it)) }
+        effects[MapStats.MONSTER_STUN]?.let { add(MonsterEffect(CoreStat.AVOID_STUN.code, Op.ADD, it)) }
+        effects[MapStats.MONSTER_CAST]?.let { add(MonsterEffect(CoreStat.COOLDOWN_RECOVERY.code, Op.ADD, it)) }
         // 3.35.0 (server 1.34.0): buffs the pack wears from the start, and a share of its physical damage added as the elements.
         effects[MapStat.MONSTER_ONSLAUGHT.code]?.takeIf { it > 0 }?.let { add(MonsterEffect(BuffKind.ONSLAUGHT.always, Op.ADD, 1.0)) }
         effects[MapStat.MONSTER_FORTIFY.code]?.takeIf { it > 0 }?.let { add(MonsterEffect(BuffKind.FORTIFY.always, Op.ADD, 1.0)) }
@@ -126,11 +127,11 @@ object MapEffects {
     /** A crystal's guardian beyond its rarity: so many percent more life and damage when a Vaal orb made it [stronger], and by the atlas's power of guardians. */
     fun guardianBuffs(stronger: Boolean, strongerBy: Double, effects: Map<String, Double>): List<MonsterEffect> {
         val power = (if (stronger) strongerBy else 0.0) + (effects[AtlasEffects.GUARDIAN_POWER] ?: 0.0)
-        return if (power <= 0) emptyList() else (listOf("STOCK_HEALTH") + damage).map { MonsterEffect(it, Op.MORE, power) }
+        return if (power <= 0) emptyList() else (listOf(CoreStat.HEALTH.code) + damage).map { MonsterEffect(it, Op.MORE, power) }
     }
 
     /** What a map does to its boss alone: so many percent more life and damage. */
-    fun bossBuffs(effects: Map<String, Double>): List<MonsterEffect> = effects[MapStats.BOSS_POWER]?.takeIf { it > 0 }?.let { v -> (listOf("STOCK_HEALTH") + damage).map { MonsterEffect(it, Op.MORE, v) } }.orEmpty()
+    fun bossBuffs(effects: Map<String, Double>): List<MonsterEffect> = effects[MapStats.BOSS_POWER]?.takeIf { it > 0 }?.let { v -> (listOf(CoreStat.HEALTH.code) + damage).map { MonsterEffect(it, Op.MORE, v) } }.orEmpty()
 
     /** Fountains a map adds beyond the rule's. */
     fun fountains(effects: Map<String, Double>): Int = (effects[MapStats.FOUNTAINS] ?: 0.0).roundToInt().coerceAtLeast(0)
@@ -147,33 +148,33 @@ object MapEffects {
         fun scale(stat: String, share: Double) {
             sheet[stat] = (sheet[stat] ?: 0.0) * max(0.0, 1 + share / 100)
         }
-        effects[MapStats.HERO_DAMAGE_TAKEN]?.let { add("STOCK_DAMAGE_TAKEN", it) }
-        effects[MapStats.HERO_RECOVERY]?.let { add("STOCK_RECOVERY_RATE", -it) }
+        effects[MapStats.HERO_DAMAGE_TAKEN]?.let { add(CoreStat.DAMAGE_TAKEN.code, it) }
+        effects[MapStats.HERO_RECOVERY]?.let { add(CoreStat.RECOVERY_RATE.code, -it) }
         effects[MapStats.HERO_MAX_RESIST]?.let { v ->
-            add("STOCK_RESIST_MAX_ALL", -v)
-            add("STOCK_RESIST_MAX_CHAOS", -v)
+            add(CoreStat.RESIST_MAX_ALL.code, -v)
+            add(CoreStat.RESIST_MAX_CHAOS.code, -v)
         }
-        effects[MapStats.HERO_DEFENCES]?.let { v -> listOf("STOCK_ARMOR", "STOCK_EVASION", "STOCK_ENERGY_SHIELD").forEach { scale(it, -v) } }
-        effects[MapStats.HERO_BLOCK]?.let { add("STOCK_BLOCK_CHANCE", -it) }
+        effects[MapStats.HERO_DEFENCES]?.let { v -> listOf(CoreStat.ARMOR.code, CoreStat.EVASION.code, CoreStat.ENERGY_SHIELD.code).forEach { scale(it, -v) } }
+        effects[MapStats.HERO_BLOCK]?.let { add(CoreStat.BLOCK_CHANCE.code, -it) }
         effects[MapStats.HERO_CRIT]?.let { v -> criticalChances.filter { it in sheet }.forEach { scale(it, -v) } }
-        effects[MapStats.HERO_HASTE]?.let { add("STOCK_MOVEMENT_SPEED", it) }
-        effects[MapStats.HERO_ATTACK_SPEED]?.let { scale("STOCK_ATTACK_SPEED", it) }
-        effects[MapStats.HERO_LIFE]?.let { scale("STOCK_HEALTH", it) }
-        effects[MapStats.HERO_LEECH]?.let { add("STOCK_LEECH_ALL", it) }
-        effects[MapStat.HERO_DEGEN.code]?.let { add("STOCK_LIFE_DEGEN_PERCENT", it) }
-        effects[MapStats.HERO_MANA_REGEN]?.let { v -> sheet["STOCK_MANA_REGEN"] = (100 + (sheet["STOCK_MANA_REGEN"] ?: 0.0)) * max(0.0, 1 - v / 100) - 100 }
-        effects[MapStats.SKILL_COST]?.let { add("STOCK_SKILL_COST", -it) }
-        effects[MapStats.FLASK_CHARGES]?.let { add("STOCK_FLASK_CHARGES_GAINED", -it) }
+        effects[MapStats.HERO_HASTE]?.let { add(CoreStat.MOVEMENT_SPEED.code, it) }
+        effects[MapStats.HERO_ATTACK_SPEED]?.let { scale(CoreStat.ATTACK_SPEED.code, it) }
+        effects[MapStats.HERO_LIFE]?.let { scale(CoreStat.HEALTH.code, it) }
+        effects[MapStats.HERO_LEECH]?.let { add(CoreStat.LEECH_ALL.code, it) }
+        effects[MapStat.HERO_DEGEN.code]?.let { add(CoreStat.LIFE_DEGEN_PERCENT.code, it) }
+        effects[MapStats.HERO_MANA_REGEN]?.let { v -> sheet[CoreStat.MANA_REGEN.code] = (100 + (sheet[CoreStat.MANA_REGEN.code] ?: 0.0)) * max(0.0, 1 - v / 100) - 100 }
+        effects[MapStats.SKILL_COST]?.let { add(CoreStat.SKILL_COST.code, -it) }
+        effects[MapStats.FLASK_CHARGES]?.let { add(CoreStat.FLASK_CHARGES_GAINED.code, -it) }
         // 3.35.0 (server 1.34.0): the map's curses and prohibitions.
-        effects[MapStat.HERO_ENFEEBLE.code]?.let { v -> sheet["STOCK_DAMAGE"] = (100 + (sheet["STOCK_DAMAGE"] ?: 0.0)) * max(0.0, 1 - v / 100) - 100 }
-        effects[MapStat.HERO_VULNERABILITY.code]?.let { add("STOCK_PHYSICAL_TAKEN", it) }
-        effects[MapStat.HERO_FLASK_EFFECT.code]?.let { add("STOCK_FLASK_EFFECT", -it) }
+        effects[MapStat.HERO_ENFEEBLE.code]?.let { v -> sheet[CoreStat.DAMAGE.code] = (100 + (sheet[CoreStat.DAMAGE.code] ?: 0.0)) * max(0.0, 1 - v / 100) - 100 }
+        effects[MapStat.HERO_VULNERABILITY.code]?.let { add(CoreStat.PHYSICAL_TAKEN.code, it) }
+        effects[MapStat.HERO_FLASK_EFFECT.code]?.let { add(CoreStat.FLASK_EFFECT.code, -it) }
         effects[MapStat.HERO_BUFF_DURATION.code]?.let { add(BuffKind.DURATION, -it) }
         AtlasEffects.hero.forEach { (atlas, stat) -> effects[atlas]?.let { add(stat, it) } }
         // The alchemist's potion of the run (3.79.0, server 1.74.0): resistances added, damage and life «more».
-        effects[BrewStat.RESIST]?.let { add("STOCK_RESIST_ALL", it) }
-        effects[BrewStat.DAMAGE]?.let { v -> sheet["STOCK_DAMAGE"] = (100 + (sheet["STOCK_DAMAGE"] ?: 0.0)) * (1 + v / 100) - 100 }
-        effects[BrewStat.LIFE]?.let { scale("STOCK_HEALTH", it) }
+        effects[BrewStat.RESIST]?.let { add(CoreStat.RESIST_ALL.code, it) }
+        effects[BrewStat.DAMAGE]?.let { v -> sheet[CoreStat.DAMAGE.code] = (100 + (sheet[CoreStat.DAMAGE.code] ?: 0.0)) * (1 + v / 100) - 100 }
+        effects[BrewStat.LIFE]?.let { scale(CoreStat.HEALTH.code, it) }
         return sheet
     }
 

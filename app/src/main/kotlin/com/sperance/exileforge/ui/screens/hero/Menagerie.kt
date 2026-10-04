@@ -18,6 +18,7 @@ import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.Item
 import com.sperance.exileforge.rules.content.Omen
 import com.sperance.exileforge.rules.content.Orb
@@ -133,7 +134,7 @@ private fun PetCard(game: GameUi, vm: HeroViewModel, pet: Pet) {
         }
         if (kind.kind == PetKind.COMBAT) {
             val sheet = menagerie.sheet(pet)
-            MutedText(ui("pets.sheet", number(sheet["STOCK_HEALTH"] ?: 0.0), number(listOfNotNull(kind.element, kind.element2).sumOf { sheet["STOCK_ATTACK_$it"] ?: 0.0 })))
+            MutedText(ui("pets.sheet", number(sheet[CoreStat.HEALTH.code] ?: 0.0), number(listOfNotNull(kind.element, kind.element2).sumOf { sheet["STOCK_ATTACK_$it"] ?: 0.0 })))
         }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             ForgeButton(onClick = { if (helps != null && !active) hiring = true else vm.activatePet(pet.id) }, enabled = !game.busy) {

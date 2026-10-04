@@ -8,6 +8,7 @@ import com.sperance.exileforge.rules.content.ChargeRules
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.Condition
 import com.sperance.exileforge.rules.content.ContentIndex
+import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.HeroSkills
 import com.sperance.exileforge.rules.content.ItemTemplate
 import com.sperance.exileforge.rules.content.Op
@@ -45,23 +46,23 @@ data class Flask(
     private fun inc(stat: String): Double = increased[stat] ?: 0.0
 
     val maxCharges: Double get() = max(1.0, own("FLASK_CHARGES"))
-    fun perUse(hero: Combatant): Double = own("FLASK_CHARGES_PER_USE") * max(0.0, 1 - (own("STOCK_FLASK_CHARGES_USED") + hero["STOCK_FLASK_CHARGES_USED"]) / 100)
-    fun duration(hero: Combatant): Double = max(0.5, own("FLASK_DURATION") * (1 + (inc("STOCK_FLASK_DURATION") + hero["STOCK_FLASK_DURATION"]) / 100))
+    fun perUse(hero: Combatant): Double = own("FLASK_CHARGES_PER_USE") * max(0.0, 1 - (own(CoreStat.FLASK_CHARGES_USED.code) + hero[CoreStat.FLASK_CHARGES_USED.code]) / 100)
+    fun duration(hero: Combatant): Double = max(0.5, own("FLASK_DURATION") * (1 + (inc(CoreStat.FLASK_DURATION.code) + hero[CoreStat.FLASK_DURATION.code]) / 100))
 
     /** How much stronger its lines are: its own and the hero's increase, and a utility flask's quality. */
-    fun effect(hero: Combatant): Double = max(0.0, 1 + (inc("STOCK_FLASK_EFFECT") + hero["STOCK_FLASK_EFFECT"] + if (kind == FlaskKind.UTILITY) quality.toDouble() else 0.0) / 100)
+    fun effect(hero: Combatant): Double = max(0.0, 1 + (inc(CoreStat.FLASK_EFFECT.code) + hero[CoreStat.FLASK_EFFECT.code] + if (kind == FlaskKind.UTILITY) quality.toDouble() else 0.0) / 100)
 
     /** How much more it brings back: its own and the hero's increase, life flasks' own, and a recovery flask's quality. */
     fun recovery(hero: Combatant): Double = max(
         0.0,
         1 + (
-            inc("STOCK_FLASK_RECOVERY") + hero["STOCK_FLASK_RECOVERY"] +
-                (if (kind == FlaskKind.LIFE) hero["STOCK_FLASK_LIFE_RECOVERY"] else 0.0) + (if (kind != FlaskKind.UTILITY) quality.toDouble() else 0.0)
+            inc(CoreStat.FLASK_RECOVERY.code) + hero[CoreStat.FLASK_RECOVERY.code] +
+                (if (kind == FlaskKind.LIFE) hero[CoreStat.FLASK_LIFE_RECOVERY.code] else 0.0) + (if (kind != FlaskKind.UTILITY) quality.toDouble() else 0.0)
             ) / 100,
     )
 
     /** The charges a kill of [base] brings: the rule's, more by its own and the hero's increase, plus both flat additions. */
-    fun gained(base: Double, hero: Combatant): Double = max(0.0, base * (1 + (inc("STOCK_FLASK_CHARGES_GAINED") + hero["STOCK_FLASK_CHARGES_GAINED"]) / 100) + own("STOCK_FLASK_CHARGES_PER_KILL") + hero["STOCK_FLASK_CHARGES_PER_KILL"])
+    fun gained(base: Double, hero: Combatant): Double = max(0.0, base * (1 + (inc(CoreStat.FLASK_CHARGES_GAINED.code) + hero[CoreStat.FLASK_CHARGES_GAINED.code]) / 100) + own(CoreStat.FLASK_CHARGES_PER_KILL.code) + hero[CoreStat.FLASK_CHARGES_PER_KILL.code])
 
     /** The share of its recovery that comes at once; the rest runs over its duration. */
     val instant: Double get() = (own("FLASK_INSTANT") / 100).coerceIn(0.0, 1.0)
@@ -121,15 +122,15 @@ data class KitSkill(
      */
     fun level(hero: Combatant): Int {
         val type = when (skill.type) {
-            SkillType.ATTACK -> hero["STOCK_ATTACK_LEVEL"]
-            SkillType.SPELL -> hero["STOCK_SPELL_LEVEL"]
-            SkillType.WARCRY -> hero["STOCK_WARCRY_LEVEL"]
-            SkillType.CURSE -> hero["STOCK_CURSE_LEVEL"]
-            SkillType.AURA -> hero["STOCK_AURA_LEVEL"] + hero["STOCK_PASSIVE_LEVEL"]
-            SkillType.BONUS, SkillType.TRIGGER -> hero["STOCK_PASSIVE_LEVEL"]
+            SkillType.ATTACK -> hero[CoreStat.ATTACK_LEVEL.code]
+            SkillType.SPELL -> hero[CoreStat.SPELL_LEVEL.code]
+            SkillType.WARCRY -> hero[CoreStat.WARCRY_LEVEL.code]
+            SkillType.CURSE -> hero[CoreStat.CURSE_LEVEL.code]
+            SkillType.AURA -> hero[CoreStat.AURA_LEVEL.code] + hero[CoreStat.PASSIVE_LEVEL.code]
+            SkillType.BONUS, SkillType.TRIGGER -> hero[CoreStat.PASSIVE_LEVEL.code]
             SkillType.HEAL, SkillType.GUARD -> 0.0
         }
-        return (learned + hero["STOCK_SKILL_LEVEL"] + type).toInt().coerceIn(1, ceiling)
+        return (learned + hero[CoreStat.SKILL_LEVEL.code] + type).toInt().coerceIn(1, ceiling)
     }
 }
 
@@ -153,7 +154,7 @@ data class Loadout(
     val charges: ChargeRules = ChargeRules(),
 ) {
     /** How many percent of the maximum mana the passive auras hold, after the sheet's reservation efficiency. */
-    fun reserved(hero: Combatant): Double = (passives.filter { it.skill.type == SkillType.AURA }.sumOf { it.skill.reserve } / max(0.1, 1 + hero["STOCK_RESERVATION"] / 100)).coerceIn(0.0, 100.0)
+    fun reserved(hero: Combatant): Double = (passives.filter { it.skill.type == SkillType.AURA }.sumOf { it.skill.reserve } / max(0.1, 1 + hero[CoreStat.RESERVATION.code] / 100)).coerceIn(0.0, 100.0)
 
     /**
      * What the passives lay on the sheet all the time: an aura's lines stronger by the aura effect, a bonus's
@@ -170,7 +171,7 @@ data class Loadout(
     private fun lines(passive: KitSkill, hero: Combatant): List<StatLine> {
         val level = passive.level(hero)
         return if (passive.skill.type == SkillType.AURA) {
-            passive.skill.stats.lines(level, 1 + hero["STOCK_AURA_EFFECT"] / 100)
+            passive.skill.stats.lines(level, 1 + hero[CoreStat.AURA_EFFECT.code] / 100)
         } else {
             passive.skill.stats.lines(level)
         }
@@ -241,7 +242,7 @@ object StatLines {
     }
 
     /** Every damage a fighter deals, in percent more — a percent stat whether or not the tables say so. */
-    const val DAMAGE = "STOCK_DAMAGE"
+    val DAMAGE: String = CoreStat.DAMAGE.code
 }
 
 /**

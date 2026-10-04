@@ -4,6 +4,7 @@ import com.sperance.exileforge.core.campaign.Cell
 import com.sperance.exileforge.core.campaign.ExpeditionMap
 import com.sperance.exileforge.core.campaign.MapGenerator
 import com.sperance.exileforge.rules.content.BehaviourRule
+import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.ExpeditionRules
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.Crystal
@@ -331,9 +332,9 @@ class ExpeditionWorld(
         }
 
         /** The hero's pace, sped up by movement speed from the sheet. */
-        fun heroSpeed(rules: ExpeditionRules, stats: Map<String, Double>): Double = rules.heroSpeed * (1 + (stats["STOCK_MOVEMENT_SPEED"] ?: 0.0) / 100).coerceIn(0.5, 2.5)
+        fun heroSpeed(rules: ExpeditionRules, stats: Map<String, Double>): Double = rules.heroSpeed * (1 + (stats[CoreStat.MOVEMENT_SPEED.code] ?: 0.0) / 100).coerceIn(0.5, 2.5)
 
         /** How far the hero sees: the sheet's light radius — the base, if the server sent none — times the biome's light. */
-        fun lightRadius(rules: ExpeditionRules, stats: Map<String, Double>, biomeLight: Double): Double = ((stats["STOCK_LIGHT_RADIUS"]?.takeIf { it > 0 } ?: rules.defaultLight) * biomeLight).coerceIn(rules.minLight, rules.maxLight)
+        fun lightRadius(rules: ExpeditionRules, stats: Map<String, Double>, biomeLight: Double): Double = ((stats[CoreStat.LIGHT_RADIUS.code]?.takeIf { it > 0 } ?: rules.defaultLight) * biomeLight).coerceIn(rules.minLight, rules.maxLight)
     }
 }

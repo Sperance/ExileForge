@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.campaign.combat
 
+import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.SkillDefinition
 import com.sperance.exileforge.rules.content.SkillType
 import kotlin.math.max
@@ -40,11 +41,11 @@ enum class Outcome { WIN, LOSS, RETREAT }
 
 /** Damage by type, as the sheet names it. */
 enum class DamageType(val attack: String, val resist: String?) {
-    PHYSICAL("STOCK_ATTACK_PHYSICAL", null),
-    FIRE("STOCK_ATTACK_FIRE", "STOCK_RESIST_FIRE"),
-    COLD("STOCK_ATTACK_COLD", "STOCK_RESIST_COLD"),
-    LIGHTNING("STOCK_ATTACK_LIGHTNING", "STOCK_RESIST_LIGHTNING"),
-    CHAOS("STOCK_ATTACK_CHAOS", "STOCK_RESIST_CHAOS"),
+    PHYSICAL(CoreStat.ATTACK_PHYSICAL.code, null),
+    FIRE(CoreStat.ATTACK_FIRE.code, CoreStat.RESIST_FIRE.code),
+    COLD(CoreStat.ATTACK_COLD.code, CoreStat.RESIST_COLD.code),
+    LIGHTNING(CoreStat.ATTACK_LIGHTNING.code, CoreStat.RESIST_LIGHTNING.code),
+    CHAOS(CoreStat.ATTACK_CHAOS.code, CoreStat.RESIST_CHAOS.code),
     ;
 
     /** The stat that lifts this resistance's ceiling (since server 0.36.0). */
@@ -80,18 +81,18 @@ internal fun regrow(value: Double, increase: Double, extra: Double): Double {
  * one's that fills it slower.
  */
 enum class Buildup(val gain: String, val avoid: String?) {
-    STUN("STOCK_STUN_BUILDUP", "STOCK_AVOID_STUN"),
-    FREEZE("STOCK_FREEZE_CHANCE", "STOCK_AVOID_FREEZE"),
-    ELECTROCUTE("STOCK_ELECTROCUTE_BUILDUP", null),
+    STUN(CoreStat.STUN_BUILDUP.code, CoreStat.AVOID_STUN.code),
+    FREEZE(CoreStat.FREEZE_CHANCE.code, CoreStat.AVOID_FREEZE.code),
+    ELECTROCUTE(CoreStat.ELECTROCUTE_BUILDUP.code, null),
 }
 
 enum class Ailment(val word: String, val damage: String? = null) {
-    BURNING("IGNITE", "STOCK_BURNING_DAMAGE"),
+    BURNING("IGNITE", CoreStat.BURNING_DAMAGE.code),
     CHILLED("CHILL"),
     FROZEN("FREEZE"),
     SHOCKED("SHOCK"),
-    POISONED("POISON", "STOCK_POISON_DAMAGE"),
-    BLEEDING("BLEED", "STOCK_BLEED_DAMAGE"),
+    POISONED("POISON", CoreStat.POISON_DAMAGE.code),
+    BLEEDING("BLEED", CoreStat.BLEED_DAMAGE.code),
     ;
 
     /** Deals damage over time, as opposed to slowing, weakening or stopping. */

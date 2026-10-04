@@ -18,6 +18,7 @@ import com.sperance.exileforge.core.campaign.run.RunCommand
 import com.sperance.exileforge.core.campaign.run.RunHud
 import com.sperance.exileforge.core.campaign.run.RunPhase
 import com.sperance.exileforge.rules.content.ContentIndex
+import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.Pet
 import com.sperance.exileforge.rules.content.RushPlan
@@ -273,7 +274,7 @@ class TrialArena(
     private fun manaCap(): Double = hero.maxMana * (1 - kit.reserved(hero) / 100)
 
     /** The floor's growth: so many percent more life and damage on every monster of it. */
-    private fun growth(power: Double): List<MonsterEffect> = if (power <= 0) emptyList() else (listOf("STOCK_HEALTH") + DamageType.entries.map { it.attack }).map { MonsterEffect(it, Op.MORE, power) }
+    private fun growth(power: Double): List<MonsterEffect> = if (power <= 0) emptyList() else (listOf(CoreStat.HEALTH.code) + DamageType.entries.map { it.attack }).map { MonsterEffect(it, Op.MORE, power) }
 
     private fun play(dt: Double) {
         val fight = battle ?: return

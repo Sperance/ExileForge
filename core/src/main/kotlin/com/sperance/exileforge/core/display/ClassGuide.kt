@@ -3,6 +3,7 @@ package com.sperance.exileforge.core.display
 import com.sperance.exileforge.core.character.Sheets
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.rules.content.ContentIndex
+import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.SkillDefinition
 import com.sperance.exileforge.rules.content.SkillKind
 import com.sperance.exileforge.rules.content.SkillNodeType
@@ -38,8 +39,8 @@ data class ClassGuide(
 
     companion object {
         const val MAX_DIFFICULTY = 3
-        val ATTRIBUTES = listOf("STOCK_STRENGTH", "STOCK_AGILITY", "STOCK_INTELLECT")
-        private val VITALS = listOf("STOCK_HEALTH", "STOCK_MANA", "STOCK_ENERGY_SHIELD", "STOCK_EVASION", "STOCK_ARMOR")
+        val ATTRIBUTES = listOf(CoreStat.STRENGTH.code, CoreStat.AGILITY.code, CoreStat.INTELLECT.code)
+        private val VITALS = listOf(CoreStat.HEALTH.code, CoreStat.MANA.code, CoreStat.ENERGY_SHIELD.code, CoreStat.EVASION.code, CoreStat.ARMOR.code)
 
         fun of(index: ContentIndex, code: String): ClassGuide? {
             val heroClass = index.heroClass(code) ?: return null

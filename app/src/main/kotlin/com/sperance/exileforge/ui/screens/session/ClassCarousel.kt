@@ -34,6 +34,7 @@ import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.display.statValue
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.ContentIndex
+import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.SkillNodeType
 import com.sperance.exileforge.ui.components.ClassPortrait
 import com.sperance.exileforge.ui.components.ForgePanel
@@ -224,9 +225,9 @@ private fun classAccent(guide: ClassGuide): Color {
 }
 
 private fun attributeColor(stat: String): Color = when (stat) {
-    "STOCK_STRENGTH" -> LifeRed
-    "STOCK_AGILITY" -> Vital
-    "STOCK_INTELLECT" -> ManaBlue
+    CoreStat.STRENGTH.code -> LifeRed
+    CoreStat.AGILITY.code -> Vital
+    CoreStat.INTELLECT.code -> ManaBlue
     else -> Gold
 }
 

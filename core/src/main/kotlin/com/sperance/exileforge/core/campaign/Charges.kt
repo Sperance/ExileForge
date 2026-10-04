@@ -4,6 +4,7 @@ import com.sperance.exileforge.core.campaign.combat.DamageType
 import com.sperance.exileforge.core.character.StatLine
 import com.sperance.exileforge.rules.content.ChargeKind
 import com.sperance.exileforge.rules.content.ChargeRules
+import com.sperance.exileforge.rules.content.CoreStat
 import java.util.EnumMap
 import kotlin.math.max
 import kotlin.math.min
@@ -94,13 +95,13 @@ internal class HeroCharges(private val rules: ChargeRules, carried: Map<ChargeKi
  * armour and every elemental resistance. Levels ([LEVEL]) are the pet's sheet rolled higher, which the caller does.
  */
 object PetBoons {
-    const val DAMAGE = "STOCK_PET_DAMAGE"
-    const val HEALTH = "STOCK_PET_HEALTH"
-    const val LEVEL = "STOCK_PET_LEVEL"
-    const val SPEED = "STOCK_PET_ATTACK_SPEED"
-    const val LIFE = "STOCK_PET_LIFE"
-    const val ARMOR = "STOCK_PET_ARMOR"
-    const val RESIST = "STOCK_PET_RESIST"
+    val DAMAGE: String = CoreStat.PET_DAMAGE.code
+    val HEALTH: String = CoreStat.PET_HEALTH.code
+    val LEVEL: String = CoreStat.PET_LEVEL.code
+    val SPEED: String = CoreStat.PET_ATTACK_SPEED.code
+    val LIFE: String = CoreStat.PET_LIFE.code
+    val ARMOR: String = CoreStat.PET_ARMOR.code
+    val RESIST: String = CoreStat.PET_RESIST.code
     val STATS = listOf(DAMAGE, HEALTH, LEVEL, SPEED, LIFE, ARMOR, RESIST)
 
     /** What of the hero's [hero] sheet reaches the pet: the pet stats that are not zero. */
@@ -113,10 +114,10 @@ object PetBoons {
         fun boon(stat: String) = boons[stat] ?: 0.0
         val damage = max(0.0, 1 + boon(DAMAGE) / 100)
         if (damage != 1.0) DamageType.entries.forEach { type -> sheet[type.attack]?.let { sheet[type.attack] = it * damage } }
-        if (boon(LIFE) != 0.0 || boon(HEALTH) != 0.0) sheet["STOCK_HEALTH"] = max(1.0, ((pet["STOCK_HEALTH"] ?: 0.0) + boon(LIFE)) * max(0.0, 1 + boon(HEALTH) / 100))
-        if (boon(SPEED) != 0.0) pet["STOCK_ATTACK_SPEED"]?.takeIf { it > 0 }?.let { sheet["STOCK_ATTACK_SPEED"] = it * max(0.1, 1 + boon(SPEED) / 100) }
-        if (boon(ARMOR) != 0.0) sheet["STOCK_ARMOR"] = (pet["STOCK_ARMOR"] ?: 0.0) + boon(ARMOR)
-        if (boon(RESIST) != 0.0) sheet["STOCK_RESIST_ALL"] = (pet["STOCK_RESIST_ALL"] ?: 0.0) + boon(RESIST)
+        if (boon(LIFE) != 0.0 || boon(HEALTH) != 0.0) sheet[CoreStat.HEALTH.code] = max(1.0, ((pet[CoreStat.HEALTH.code] ?: 0.0) + boon(LIFE)) * max(0.0, 1 + boon(HEALTH) / 100))
+        if (boon(SPEED) != 0.0) pet[CoreStat.ATTACK_SPEED.code]?.takeIf { it > 0 }?.let { sheet[CoreStat.ATTACK_SPEED.code] = it * max(0.1, 1 + boon(SPEED) / 100) }
+        if (boon(ARMOR) != 0.0) sheet[CoreStat.ARMOR.code] = (pet[CoreStat.ARMOR.code] ?: 0.0) + boon(ARMOR)
+        if (boon(RESIST) != 0.0) sheet[CoreStat.RESIST_ALL.code] = (pet[CoreStat.RESIST_ALL.code] ?: 0.0) + boon(RESIST)
         return sheet
     }
 }

@@ -9,6 +9,7 @@ import com.sperance.exileforge.core.display.traitText
 import com.sperance.exileforge.core.display.traitTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.ContentIndex
+import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.roll.RolledMonster
 
@@ -28,12 +29,12 @@ fun monsterLines(monster: RolledMonster): List<MonsterLine> = (monster.modifiers
 
 fun monsterLineText(line: MonsterLine, index: ContentIndex? = null): String {
     // A taunt is there or not: how many modifiers gave it says nothing.
-    if (line.stat == "STOCK_TAUNT") return statTitle(line.stat)
+    if (line.stat == CoreStat.TAUNT.code) return statTitle(line.stat)
     return effectText(line.stat, line.op, line.value, index)
 }
 
 /** «монстр 20% · карта 15%»: where a summed line comes from, when both sources give it. */
-fun monsterLineSources(line: MonsterLine, index: ContentIndex? = null): String? = line.takeIf { it.split && it.stat != "STOCK_TAUNT" }?.let {
+fun monsterLineSources(line: MonsterLine, index: ContentIndex? = null): String? = line.takeIf { it.split && it.stat != CoreStat.TAUNT.code }?.let {
     val unit = effectUnit(it.stat, it.op, index)
     ui("fight.line_sources", modNumber(it.stat, it.own) + unit, modNumber(it.stat, it.map) + unit)
 }

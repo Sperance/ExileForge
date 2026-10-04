@@ -8,6 +8,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.i18n.uiOr
 import com.sperance.exileforge.rules.content.ContentIndex
+import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.Line
 import com.sperance.exileforge.rules.content.ModifierDef
 import com.sperance.exileforge.rules.content.Rarity
@@ -102,8 +103,8 @@ fun fillTemplate(template: String, values: List<String>): String = values.foldIn
 
 /** Characteristics whose meaning lives in the fraction: rounding them destroys them. */
 val preciseStats = setOf(
-    "STOCK_ATTACK_SPEED", "STOCK_CAST_SPEED", "STOCK_CRITICAL_CHANCE", "STOCK_CRITICAL_MULTIPLIER", "STOCK_MOVEMENT_SPEED",
-    "STOCK_LEECH_PHYSICAL", "STOCK_LEECH_ALL", "STOCK_CRITICAL_VAMPIRE", "STOCK_SPELL_CRITICAL_CHANCE", "STOCK_SPELL_CRITICAL_MULTIPLIER",
+    CoreStat.ATTACK_SPEED.code, CoreStat.CAST_SPEED.code, CoreStat.CRITICAL_CHANCE.code, CoreStat.CRITICAL_MULTIPLIER.code, CoreStat.MOVEMENT_SPEED.code,
+    CoreStat.LEECH_PHYSICAL.code, CoreStat.LEECH_ALL.code, CoreStat.CRITICAL_VAMPIRE.code, CoreStat.SPELL_CRITICAL_CHANCE.code, CoreStat.SPELL_CRITICAL_MULTIPLIER.code,
 )
 
 /**

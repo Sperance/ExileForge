@@ -8,6 +8,7 @@ import com.sperance.exileforge.core.campaign.combat.Battle.Fighter
 import com.sperance.exileforge.rules.content.AtlasStat
 import com.sperance.exileforge.rules.content.BuffKind
 import com.sperance.exileforge.rules.content.BuildupRule
+import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.content.PowerEvent
 import com.sperance.exileforge.rules.content.SkillEvent
@@ -107,7 +108,7 @@ internal fun Battle.land(me: Fighter, target: Fighter, kind: HitKind, taken: Map
         trigger(SkillEvent.HIT_TAKEN, me)
         powers.taken(PowerMoment(me, taken, blow.spell), kind == HitKind.CRIT)
         // «Horror» (an essence) and the curse-when-hit essence (server 1.57.0): struck, the hero may lay their own curse on the one who struck.
-        val chance = target.body["STOCK_CURSE_ON_HIT"] + target.body["STOCK_CURSE_WHEN_HIT"]
+        val chance = target.body[CoreStat.CURSE_ON_HIT.code] + target.body[CoreStat.CURSE_WHEN_HIT.code]
         if (chance > 0 && me.alive && random.nextDouble() * 100 < chance) curseOf()?.let { curse(it, listOf(me)) }
         watch()
     }

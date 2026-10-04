@@ -49,6 +49,7 @@ import com.sperance.exileforge.presentation.skills.GrimoireViewModel
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.ContentIndex
+import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.HeroSkills
 import com.sperance.exileforge.rules.content.Item
 import com.sperance.exileforge.rules.content.SkillDefinition
@@ -230,4 +231,4 @@ internal fun Exchange(game: GameUi, vm: GrimoireViewModel, index: ContentIndex, 
     }
 }
 
-internal const val PREPARATION = "STOCK_SKILL_PREPARATION"
+internal val PREPARATION: String = CoreStat.SKILL_PREPARATION.code

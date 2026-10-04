@@ -27,6 +27,7 @@ import com.sperance.exileforge.core.campaign.combat.slay
 import com.sperance.exileforge.core.campaign.combat.strike
 import com.sperance.exileforge.core.character.StatLine
 import com.sperance.exileforge.rules.content.ChargeKind
+import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.content.Power
 import com.sperance.exileforge.rules.content.PowerAct
@@ -464,11 +465,11 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
                 of.body.maxLife * if (battle.foes[of.index].rarity >= MonsterRarity.UNIQUE) 0.2 else 1.0
             }
 
-            PowerBase.STRENGTH -> body["STOCK_STRENGTH"]
+            PowerBase.STRENGTH -> body[CoreStat.STRENGTH.code]
 
-            PowerBase.AGILITY -> body["STOCK_AGILITY"]
+            PowerBase.AGILITY -> body[CoreStat.AGILITY.code]
 
-            PowerBase.INTELLECT -> body["STOCK_INTELLECT"]
+            PowerBase.INTELLECT -> body[CoreStat.INTELLECT.code]
 
             PowerBase.PET_LIFE -> battle.petLife()
 
@@ -490,7 +491,7 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
             PowerAct.DAMAGE, PowerAct.AILMENT, PowerAct.CURSE, PowerAct.SPREAD, PowerAct.DELAY, PowerAct.STUN, PowerAct.ECHO, PowerAct.RETALIATE,
             PowerAct.CHARGE,
         )
-        const val MOVEMENT_SPEED = "STOCK_MOVEMENT_SPEED"
+        val MOVEMENT_SPEED: String = CoreStat.MOVEMENT_SPEED.code
 
         /** Events too frequent to log a line each. */
         val QUIET = setOf(PowerEvent.HIT, PowerEvent.HIT_TAKEN, PowerEvent.STANDING, PowerEvent.INFLICT, PowerEvent.PET_HIT)

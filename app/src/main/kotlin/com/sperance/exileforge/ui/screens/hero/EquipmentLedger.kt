@@ -143,7 +143,9 @@ private fun PlaceLine(line: PlaceState, lang: Lang, signedIn: Boolean, onClick: 
 @Composable
 fun SlotPicker(game: GameUi, place: BodyPlace, onDismiss: () -> Unit, onEquip: (String) -> Unit) {
     val hero = game.hero ?: return
+    // The dearest first by the merchant's price (3.81.0), what the hero cannot wear yet greyed at the foot.
     val fitting = hero.stash.filter { !it.socketed }.mapNotNull { game.view(it) }.filter { place.takes(it.slot) }
+        .sortedWith(compareBy({ game.unmetFor(it.code).isNotEmpty() }, { -(game.sellPrice(it.item) ?: 0L) }))
     ForgeSheet(onDismissRequest = onDismiss) {
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.8f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item { Engraved(ui("hero.slot_pick", slotTitle(place.code, game.lang))) }

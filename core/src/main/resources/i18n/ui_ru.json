@@ -854,6 +854,7 @@
   "hero.sell_do": "Продать",
   "hero.sell_q": "Продать предмет?",
   "hero.slot_count": "{0} · {1}",
+  "hero.replace": "Заменить",
   "hero.slot_pick": "{0}: что надеть",
   "hero.slot_pick_empty": "В тайнике нет предметов для этого слота",
   "hero.slot_pick_hint": "Предметы для слота приходят из добычи и с аукциона.",

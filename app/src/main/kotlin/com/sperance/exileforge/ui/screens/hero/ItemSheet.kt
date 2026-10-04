@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.LockOpen
+import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,6 +17,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.display.BodyPlace
+import com.sperance.exileforge.core.display.bodyPlaces
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.i18n.ui
@@ -77,6 +80,8 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
     val locked = instance.locked
     val waiting = instance.id in game.link.waitingItems
     var open by remember(itemId) { mutableStateOf<ItemAction?>(null) }
+    // «Заменить» (3.81.0): the place this copy is worn in, opened on what could go there instead.
+    var replacing by remember(itemId) { mutableStateOf<BodyPlace?>(null) }
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.92f)) {
             LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -121,9 +126,14 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
                         model.unsocketJewel(instance.id)
                     }
 
-                    instance.equipped -> Action(ForgeGlyphs.Helm, ui("hero.unequip"), can) {
-                        onDismiss()
-                        model.unequip(instance.id)
+                    instance.equipped -> {
+                        Action(ForgeGlyphs.Helm, ui("hero.unequip"), can) {
+                            onDismiss()
+                            model.unequip(instance.id)
+                        }
+                        game.hero?.equipped?.let { worn -> bodyPlaces.firstOrNull { it.wornIn(worn)?.id == instance.id } }?.let { place ->
+                            Action(Icons.Outlined.SwapHoriz, ui("hero.replace"), can, GoldBright) { replacing = place }
+                        }
                     }
 
                     // A map is not worn (2.37.0): it goes into its zone's launch window, picked.
@@ -197,6 +207,12 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
         )
 
         null -> Unit
+    }
+    replacing?.let { place ->
+        SlotPicker(game, place, onDismiss = { replacing = null }, onEquip = { id ->
+            onDismiss()
+            model.equip(id, place.place)
+        })
     }
 }
 

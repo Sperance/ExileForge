@@ -854,6 +854,7 @@
   "hero.sell_do": "Sell",
   "hero.sell_q": "Sell the item?",
   "hero.slot_count": "{0} · {1}",
+  "hero.replace": "Replace",
   "hero.slot_pick": "{0}: what to wear",
   "hero.slot_pick_empty": "Nothing in the stash fits this slot",
   "hero.slot_pick_hint": "Items for this slot come from loot and from the auction.",

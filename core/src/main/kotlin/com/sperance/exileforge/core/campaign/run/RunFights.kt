@@ -142,7 +142,7 @@ internal fun ExpeditionRun.fell(agent: MonsterAgent, member: Int) {
     val spot = agent.crystal?.let { id -> world.crystals.firstOrNull { it.id == id } }
     val event = when {
         spot != null -> record { RunEvent.Crystal(it, world.standingCrystals.indexOf(spot)) }.also { spot.freed = true }
-        agent === world.boss -> if (vaal) record(RunEvent::Corrupt) else record(RunEvent::Boss)?.also { bossDown = true }
+        agent === world.boss -> (if (vaal) record(RunEvent::Corrupt) else record(RunEvent::Boss))?.also { bossDown = true }
         else -> record { RunEvent.Kill(it, agent.id, member, vaal) }
     }
     rewarding(event, fought = true)

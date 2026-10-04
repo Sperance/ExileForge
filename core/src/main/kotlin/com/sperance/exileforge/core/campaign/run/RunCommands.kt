@@ -147,6 +147,8 @@ internal fun ExpeditionRun.handle(command: RunCommand) {
                 clearSpoils()
                 slain = null
                 report = null
+                // The Vaal zone closes with its guardian (server 1.76.0): its packs left standing are no longer the server's to pay.
+                if (vaal && bossDown) exit()
             }
 
             RunPhase.DEAD, RunPhase.CLEARED -> phase = RunPhase.LEFT

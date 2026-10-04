@@ -3,8 +3,12 @@ package com.sperance.exileforge.ui.screens.expedition.arena
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,11 +22,17 @@ import com.sperance.exileforge.core.campaign.*
 import com.sperance.exileforge.core.campaign.combat.*
 import com.sperance.exileforge.core.campaign.run.*
 import com.sperance.exileforge.core.display.classTitle
+import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.rules.content.CoreStat
+import com.sperance.exileforge.rules.roll.Menagerie
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.expedition.scene.Portraits
 import com.sperance.exileforge.ui.screens.hero.PetIcon
+import com.sperance.exileforge.ui.screens.hero.PetLines
+import com.sperance.exileforge.ui.screens.hero.petName
+import com.sperance.exileforge.ui.screens.hero.petSubtitle
 import com.sperance.exileforge.ui.theme.*
 import kotlin.math.sin
 
@@ -40,8 +50,10 @@ import kotlin.math.sin
     stance: HeroStance,
     modifier: Modifier,
     large: Boolean,
+    onCommand: (RunCommand) -> Unit = {},
 ) {
     val hero = game.heroInfo
+    var petOpen by remember { mutableStateOf(false) }
     // The pet's blows and the blows at it are its own card's (3.70.0).
     val lunge = fight.lunge?.takeIf { !it.pet }
     val acting = reach(lunge, Side.HERO, null)
@@ -108,7 +120,51 @@ import kotlin.math.sin
             }
         }
         // The combat pet (3.79.0, variant B): a round badge on the hero's card, its life a ring around it.
-        fight.ally?.let { PetBadge(game, it, fight.lunge?.takeIf { lunge -> lunge.pet }, fight.hits.filter { hit -> hit.pet }, time) }
+        fight.ally?.let { PetBadge(game, it, fight.lunge?.takeIf { lunge -> lunge.pet }, fight.hits.filter { hit -> hit.pet }, time) { petOpen = true } }
+    }
+    // A tap on the pet's badge (3.81.0): what it is, its life and blow, and every line it rolled; the fight holds while it is read.
+    if (petOpen) fight.ally?.let { FightPetSheet(game, it, onCommand) { petOpen = false } }
+}
+
+/** The combat pet's window over the fight (3.81.0): the hero's working pet of the ally's species, as the menagerie tells it. */
+@Composable private fun FightPetSheet(game: GameUi, ally: AllyView, onCommand: (RunCommand) -> Unit, onDismiss: () -> Unit) {
+    DisposableEffect(Unit) {
+        onCommand(RunCommand.Hold(true))
+        onDispose { onCommand(RunCommand.Hold(false)) }
+    }
+    val index = game.index ?: return
+    val pets = game.hero?.pets ?: return
+    val menagerie = remember(index) { Menagerie(index) }
+    val pet = pets.pets.filter { it.species == ally.species }.let { same -> same.firstOrNull { pets.isActive(it.id) } ?: same.firstOrNull() } ?: return
+    val kind = menagerie.species(pet.species)
+    ForgeSheet(onDismissRequest = onDismiss) {
+        Column(
+            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 18.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                PetIcon(game, pet.species, 40)
+                Column(Modifier.weight(1f)) {
+                    Text(petName(pet.species), color = rarityColor(pet.rarity.name), style = MaterialTheme.typography.titleLarge)
+                    kind?.let { MutedText(petSubtitle(it, pet)) }
+                }
+                Text(ui("pets.level", pet.level), color = GoldBright, style = MaterialTheme.typography.labelLarge)
+            }
+            Text(ui("fight.pet_life", ally.life, ally.maxLife), color = if (ally.alive) Vital else Muted, style = MaterialTheme.typography.bodyMedium)
+            kind?.let { species ->
+                val sheet = menagerie.sheet(pet)
+                MutedText(
+                    ui(
+                        "pets.sheet",
+                        number(sheet[CoreStat.HEALTH.code] ?: 0.0),
+                        number(listOfNotNull(species.element ?: "PHYSICAL", species.element2).sumOf { sheet["STOCK_ATTACK_$it"] ?: 0.0 }),
+                    ),
+                )
+            }
+            if (pet.quality > 0) Text(ui("pets.quality", pet.quality), color = GoldBright, style = MaterialTheme.typography.labelSmall)
+            if (pet.corrupted) Text(ui("pets.corrupted"), color = LifeRed, style = MaterialTheme.typography.labelSmall)
+            PetLines(index, menagerie, pet)
+        }
     }
 }
 
@@ -120,7 +176,7 @@ private val FloatingHit.mend: Boolean get() = pet && target == Side.HERO && amou
  * The ring flashes gold as it strikes, red as it is struck, green as it mends the hero; the blows it takes float over it.
  * Its own blows rise green on the foes' cards and its lines are green in the log. Down, it greys.
  */
-@Composable private fun PetBadge(game: GameUi, ally: AllyView, lunge: LungeView?, hits: List<FloatingHit>, time: Float) {
+@Composable private fun PetBadge(game: GameUi, ally: AllyView, lunge: LungeView?, hits: List<FloatingHit>, time: Float, onTap: () -> Unit) {
     val acting = reach(lunge, Side.HERO, null)
     val hit = struck(lunge, Side.HERO, null)
     val mending = hits.any { it.mend && it.age < PET_PULSE }
@@ -136,7 +192,7 @@ private val FloatingHit.mend: Boolean get() = pet && target == Side.HERO && amou
             translationY = -acting * 4.dp.toPx()
             translationX = if (hit) sin(time * 60f) * 2.dp.toPx() else 0f
             alpha = if (ally.alive) 1f else .55f
-        },
+        }.clip(CircleShape).clickable(onClick = onTap),
         contentAlignment = Alignment.Center,
     ) {
         Canvas(Modifier.fillMaxSize()) {

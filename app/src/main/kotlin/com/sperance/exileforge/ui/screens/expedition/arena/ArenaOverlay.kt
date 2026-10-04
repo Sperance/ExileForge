@@ -118,7 +118,7 @@ private const val HERO_CARD = -1
                     FightFeed(game, fight, names, onCommand, onLogFilter)
                 }
             }
-            HeroCard(game, hud, fight, time, names, stance, track(HERO_CARD), large)
+            HeroCard(game, hud, fight, time, names, stance, track(HERO_CARD), large, onCommand)
             // The skills and the belt (2.78.0): under the hero, over the fight's own controls.
             if (fight.skills.any { it != null } || fight.flasks.any { it != null }) ActionBar(fight, onCommand) { info = it }
             Controls(fight, hud.auto, onCommand)

@@ -759,6 +759,7 @@
   "fight.fact_seconds": "{0} s",
   "fight.fact_stacks": "Stacks",
   "fight.taunt_hero": "Taunt: foes must strike you first. While you fight alone it changes nothing — it will matter once you have a party.",
+  "fight.pet_life": "Life in the fight: {0} / {1}",
   "fight.taunt": "Taunt",
   "fight.taunt_hint": "Taunt: while it stands only it can be struck",
   "fight.behind_taunt": "While a taunter stands this foe cannot be picked",

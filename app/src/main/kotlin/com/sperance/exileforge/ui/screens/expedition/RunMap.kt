@@ -201,6 +201,13 @@ internal fun FullMap(run: ExpeditionRun, hud: RunHud, tick: Int, onClose: () -> 
             } else {
                 MutedText(ui("map.no_modifiers"))
             }
+            // The atlas's bonuses on this run (3.81.0), every one of them — the fight's and the rolls' alike.
+            if (run.atlas.isNotEmpty()) {
+                Engraved(ui("map.atlas"))
+                run.atlas.forEach { (stat, value) ->
+                    Tipped({ Tip(statTitle(stat), statDescription(stat), Rune) }) { ModifierLine(effectText(stat, value), Glyph.ofStat(stat)) }
+                }
+            }
         }
     }
 }
@@ -221,8 +228,6 @@ internal fun legendOf(world: ExpeditionWorld): List<Pair<Color, String>> = build
     world.agents.filter { it.alive && world.lit(it.x.toInt(), it.y.toInt()) }.map { it.monster.rarity }.distinct().sorted()
         .forEach { add(rarityTint(it) to ui(it.key())) }
 }
-
-/** «+15% Здоровье монстров карты»: a map's summed effect as a modifier's sentence, the percent where the stat counts in it. */
 
 /** A map's summed line (3.81.0) in the server's own sentence for it, as an item's line reads: «Игрок получает на 20% больше физического урона». */
 internal fun effectText(stat: String, value: Double): String = SkillText.statLine(stat, Op.ADD, value)

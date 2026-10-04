@@ -743,6 +743,7 @@
   "map.legend_exit": "Выход",
   "map.legend_sealed": "Выход запечатан",
   "map.legend_portal": "Портал Ваал",
+  "map.atlas": "Бонусы Атласа",
   "map.modifiers": "Свойства карты",
   "map.no_modifiers": "У этой карты нет свойств",
   "fight.effect.BURNING": "Горение: огонь жжёт каждую секунду, пока не пройдёт; урон идёт мимо брони.",

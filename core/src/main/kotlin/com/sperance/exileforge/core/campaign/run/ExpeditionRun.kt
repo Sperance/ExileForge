@@ -159,6 +159,10 @@ class ExpeditionRun(
     internal val fightEvents = mutableListOf<Int>()
     internal var reward: Reward? = null
 
+    /** Every bonus of the hero's atlas on this run (3.81.0), for the map's window: the ones the fight wears and the ones the rolls do. */
+    var atlas: Map<String, Double> = emptyMap()
+        internal set
+
     /** The fight's guardian fell to this hero for the first time (3.81.0): their place among all who beat it. */
     internal var rank: Long? = null
 
@@ -402,7 +406,7 @@ class ExpeditionRun(
             return ExpeditionRun(
                 index, zone, run, journal, world, build, rules, run.seed, effects, vaal, startPools, heroExperience, heroLevel, vaalOrbs,
                 campaign.corruptionOpened, vaalZone, bossDown, onRecorded, onCleared, onFallen, pilot, pet,
-            )
+            ).also { it.atlas = context.atlas.filterValues { value -> value != 0.0 } }
         }
 
         internal const val VAAL_SALT = 0x5661616C5A6F6E65L

@@ -169,7 +169,9 @@ import org.koin.compose.viewmodel.koinViewModel
     // The world map's art is built as soon as the campaign arrives (3.75.0), away from the main thread: the tab opens on it.
     val campaign = game.index?.campaign
     LaunchedEffect(campaign) { campaign?.let { WorldArt.of(it) } }
-    key(game.session.server, game.sessionEpoch, game.lang, game.world.localeStrings) {
+    // 3.81.0: the dictionary's language joins it too — the Russian and English dictionaries hold the same number of strings,
+    // so a switch whose dictionary landed after the first redraw left the server's names in the old language.
+    key(game.session.server, game.sessionEpoch, game.lang, game.world.localeLanguage, game.world.localeStrings) {
         CompositionLocalProvider(LocalBugReport provides { bugOpen = true }, LocalMailOpen provides { mailOpen = true }) {
             Box(Modifier.fillMaxSize()) {
                 // Прогрев (3.54.0), поход и испытание (3.49.0) - не экраны стека, а состояния игры: они накрывают всё, пока идут.

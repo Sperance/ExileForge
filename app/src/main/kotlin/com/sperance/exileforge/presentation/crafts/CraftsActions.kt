@@ -105,6 +105,9 @@ class CraftsActions(
 
     fun start(job: String, choice: String = "", additives: List<String> = emptyList()) {
         buzzes.buzz(Buzz.BUTTON)
+        // Another work begins (3.81.0): «За сессию» counts it from zero, not on top of the one it replaces.
+        val running = crafts.state?.work
+        if (running == null || running.job != job || running.choice != choice) crafts { it.copy(totals = WorkGains()) }
         commands.task(writing = true, touches = setOf(Reads.CRAFTS)) {
             val id = heroes.heroId
             val before = heroes.version

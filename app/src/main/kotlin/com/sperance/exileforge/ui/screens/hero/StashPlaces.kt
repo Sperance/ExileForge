@@ -18,7 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.hero.HeroViewModel
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.ui.components.*
@@ -33,9 +33,9 @@ import com.sperance.exileforge.ui.theme.*
  * The fill is a thin bar under the shelf's switch (3.69.0), across the width, in the error colour once full; its «+»
  * asks for the next pack with its price. The overflow stays in the list, since it is items to act on.
  */
-@Composable fun StashFill(s: ForgeState, vm: HeroViewModel, modifier: Modifier = Modifier) {
-    val hero = s.hero ?: return
-    val rules = s.index?.rules?.stash ?: return
+@Composable fun StashFill(game: GameUi, vm: HeroViewModel, modifier: Modifier = Modifier) {
+    val hero = game.hero ?: return
+    val rules = game.index?.rules?.stash ?: return
     val capacity = rules.capacity(hero.info.stashSlots)
     val held = hero.items.size
     val full = held >= capacity
@@ -79,7 +79,7 @@ import com.sperance.exileforge.ui.theme.*
             onDismiss = { buying = false },
             ledger = listOf(LedgerLine(ui("confirm.spend"), ui("merchant.gold_amount", price), Tone.SPEND)),
             note = listOfNotNull(ui("stash.places_note"), ui("stash.full_hint", rules.overflowSlots).takeIf { full }).joinToString("\n"),
-            blocked = short || s.busy,
+            blocked = short || game.busy,
             warning = ui("stash.no_gold").takeIf { short },
         ) {
             buying = false
@@ -89,25 +89,25 @@ import com.sperance.exileforge.ui.theme.*
 }
 
 /** What came when the stash was full: each piece taken in once a place frees, or sold. */
-@Composable fun StashOverflow(s: ForgeState, vm: HeroViewModel) {
-    val hero = s.hero ?: return
-    val rules = s.index?.rules?.stash ?: return
+@Composable fun StashOverflow(game: GameUi, vm: HeroViewModel) {
+    val hero = game.hero ?: return
+    val rules = game.index?.rules?.stash ?: return
     if (hero.overflow.isEmpty()) return
     val full = hero.items.size >= rules.capacity(hero.info.stashSlots)
     ForgePanel(accent = Ember) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Engraved(ui("stash.overflow", hero.overflow.size, rules.overflowSlots), accent = Ember)
             Spacer(Modifier.weight(1f))
-            ForgeTextButton(onClick = { vm.claimOverflow() }, enabled = !full && !s.busy) { Text(ui("stash.claim_all")) }
+            ForgeTextButton(onClick = { vm.claimOverflow() }, enabled = !full && !game.busy) { Text(ui("stash.claim_all")) }
         }
         MutedText(ui("stash.overflow_hint"))
         hero.overflow.forEach { item ->
-            s.view(item)?.let { piece ->
-                ItemRow(piece, price = s.sellPrice(item), footer = {
+            game.view(item)?.let { piece ->
+                ItemRow(piece, price = game.sellPrice(item), footer = {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        ForgeTextButton(onClick = { vm.claimOverflow(item.id) }, enabled = !full && !s.busy) { Text(ui("stash.claim")) }
+                        ForgeTextButton(onClick = { vm.claimOverflow(item.id) }, enabled = !full && !game.busy) { Text(ui("stash.claim")) }
                         // A locked piece (3.30.0) waits in the overflow: it is never sold, by hand or by the server.
-                        ForgeTextButton(onClick = { vm.sellOverflow(item.id) }, enabled = !s.busy && !item.locked) { Text(ui("hero.sell_do")) }
+                        ForgeTextButton(onClick = { vm.sellOverflow(item.id) }, enabled = !game.busy && !item.locked) { Text(ui("hero.sell_do")) }
                     }
                 }) { }
             }

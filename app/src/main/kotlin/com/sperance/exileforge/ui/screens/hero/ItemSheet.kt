@@ -24,7 +24,7 @@ import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.forge.SmithyViewModel
 import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.state.ForgeSection
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.TAB_CRAFT
 import com.sperance.exileforge.presentation.state.TAB_EXPEDITION
 import com.sperance.exileforge.presentation.state.sellPrice
@@ -56,12 +56,12 @@ private enum class ItemAction { AUCTION, SELL, WORN }
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ItemSheet(s: ForgeState, model: HeroViewModel, itemId: String, onDismiss: () -> Unit) {
+fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () -> Unit) {
     val shell: ShellViewModel = koinViewModel()
     val expedition: ExpeditionViewModel = koinViewModel()
     val smithy = koinViewModel<SmithyViewModel>()
-    val instance = s.hero?.item(itemId)
-    val view = instance?.let { s.view(it) }
+    val instance = game.hero?.item(itemId)
+    val view = instance?.let { game.view(it) }
     // The item can leave while its sheet is open — sold, listed, rolled into a copy — and then the
     // sheet has nothing left to be about; nor is there a card for a copy the content cannot explain.
     if (instance == null || view == null) {
@@ -69,21 +69,21 @@ fun ItemSheet(s: ForgeState, model: HeroViewModel, itemId: String, onDismiss: ()
         return
     }
     val name = view.title
-    val can = !s.busy && s.account.signedIn && (s.ownsCharacter || s.isAdmin)
+    val can = !game.busy && game.session.signedIn && (game.ownsCharacter || game.isAdmin)
     val loose = !instance.equipped && !instance.socketed
-    val price = s.sellPrice(instance)
-    val reachable = s.unmetFor(instance.template).isEmpty()
+    val price = game.sellPrice(instance)
+    val reachable = game.unmetFor(instance.template).isEmpty()
     // A locked item (3.30.0) is kept from the merchant and the auction; the forge still works on it.
     val locked = instance.locked
-    val waiting = instance.id in s.link.waitingItems
+    val waiting = instance.id in game.link.waitingItems
     var open by remember(itemId) { mutableStateOf<ItemAction?>(null) }
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.92f)) {
             LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 item { ItemCard(view, enabled = false, detailed = true, price = price, waiting = waiting) }
                 if (locked) item { Text(ui("item.locked_hint"), color = Muted, style = MaterialTheme.typography.bodySmall) }
-                item { WearPreview(s.game, instance) }
-                temperOffer(s, instance)?.let { (ore, need) ->
+                item { WearPreview(game, instance) }
+                temperOffer(game, instance)?.let { (ore, need) ->
                     item {
                         // The smith's tempering (3.79.0): once per weapon or armour, the ore of its level.
                         ForgePanel {
@@ -91,24 +91,24 @@ fun ItemSheet(s: ForgeState, model: HeroViewModel, itemId: String, onDismiss: ()
                             MutedText(
                                 ui(
                                     "temper.hint",
-                                    s.index?.rules?.brews?.temper?.let { "${it.minQuality}–${it.maxQuality}" }.orEmpty(),
-                                    s.index?.rules?.brews?.temper?.maxLevels ?: 0,
-                                    s.index?.rules?.brews?.temper?.smithLevel ?: 0,
+                                    game.index?.rules?.brews?.temper?.let { "${it.minQuality}–${it.maxQuality}" }.orEmpty(),
+                                    game.index?.rules?.brews?.temper?.maxLevels ?: 0,
+                                    game.index?.rules?.brews?.temper?.smithLevel ?: 0,
                                 ),
                                 style = MaterialTheme.typography.bodySmall,
                             )
-                            ForgeOutlinedButton(enabled = can && (s.bagAmount(ore) ?: 0L) >= need, onClick = { model.temper(instance.id) }, modifier = Modifier.fillMaxWidth()) {
-                                Text(ui("temper.go", itemTitle(ore), need, s.bagAmount(ore) ?: 0L))
+                            ForgeOutlinedButton(enabled = can && (game.bagAmount(ore) ?: 0L) >= need, onClick = { model.temper(instance.id) }, modifier = Modifier.fillMaxWidth()) {
+                                Text(ui("temper.go", itemTitle(ore), need, game.bagAmount(ore) ?: 0L))
                             }
                         }
                     }
                 }
                 // Worn but not counting: the rules' reasons, as the slot cell prints them.
-                s.hero?.inactive?.get(instance.id)?.let { reasons ->
+                game.hero?.inactive?.get(instance.id)?.let { reasons ->
                     item {
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Text(ui("hero.inactive"), color = LifeRed, style = MaterialTheme.typography.labelLarge)
-                            reasons.forEach { Text(requirementReason(it, s.lang), color = LifeRed, style = MaterialTheme.typography.bodySmall) }
+                            reasons.forEach { Text(requirementReason(it, game.lang), color = LifeRed, style = MaterialTheme.typography.bodySmall) }
                         }
                     }
                 }
@@ -155,8 +155,8 @@ fun ItemSheet(s: ForgeState, model: HeroViewModel, itemId: String, onDismiss: ()
         }
     }
     when (open) {
-        ItemAction.AUCTION -> ListingSheet(s.game, name, onDismiss = { open = null }, hint = {
-            model.priceHint(instance.template, instance.rarity, s.index?.template(instance.template)?.let(instance::level) ?: 0)
+        ItemAction.AUCTION -> ListingSheet(game, name, onDismiss = { open = null }, hint = {
+            model.priceHint(instance.template, instance.rarity, game.index?.template(instance.template)?.let(instance::level) ?: 0)
         }) { orb, price, _ ->
             open = null
             onDismiss()
@@ -221,8 +221,8 @@ fun ItemSheet(s: ForgeState, model: HeroViewModel, itemId: String, onDismiss: ()
 }
 
 /** The ore and its amount the smith asks to temper [item] (3.79.0), or null when it cannot be: not gear, tempered, corrupted. */
-private fun temperOffer(s: ForgeState, item: com.sperance.exileforge.rules.roll.ItemInstance): Pair<String, Long>? {
-    val index = s.index ?: return null
+private fun temperOffer(game: GameUi, item: com.sperance.exileforge.rules.roll.ItemInstance): Pair<String, Long>? {
+    val index = game.index ?: return null
     val template = index.template(item.template) ?: return null
     val rule = index.rules.brews.temper
     if (item.tempered || item.corrupted || !(template.slot.isWeapon || template.slot.isArmour)) return null

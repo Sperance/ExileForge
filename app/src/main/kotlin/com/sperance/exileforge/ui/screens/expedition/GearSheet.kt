@@ -58,7 +58,7 @@ fun GearSheet(s: ForgeState, vm: ExpeditionViewModel, onDismiss: () -> Unit) {
                     item { Engraved(ui("expedition.gear")) }
                     item { MutedText(ui("expedition.gear_hint")) }
                     item {
-                        EquipmentLedger(s) { p, w ->
+                        EquipmentLedger(s.game) { p, w ->
                             place = p
                             worn = w
                         }
@@ -120,6 +120,6 @@ fun GearSheet(s: ForgeState, vm: ExpeditionViewModel, onDismiss: () -> Unit) {
             }
         }
     } else if (chosen != null && worn == null) {
-        SlotPicker(s, chosen, onDismiss = { place = null }, onEquip = { id -> vm.equip(id, chosen.place) })
+        SlotPicker(s.game, chosen, onDismiss = { place = null }, onEquip = { id -> vm.equip(id, chosen.place) })
     }
 }

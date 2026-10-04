@@ -21,7 +21,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.IncubatorSlot
 import com.sperance.exileforge.core.model.hero.IncubatorState
 import com.sperance.exileforge.presentation.hero.HeroViewModel
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeOutlinedButton
 import com.sperance.exileforge.ui.components.MutedText
@@ -34,9 +34,9 @@ import kotlinx.coroutines.delay
  * level settled the moment it was laid — and is taken out as a pet. Open places come from the hero's sheet; the ones a collar
  * could still open are drawn locked up to the ceiling.
  */
-@Composable internal fun IncubatorPanel(s: ForgeState, vm: HeroViewModel) {
-    val hero = s.hero ?: return
-    val index = s.index ?: return
+@Composable internal fun IncubatorPanel(game: GameUi, vm: HeroViewModel) {
+    val hero = game.hero ?: return
+    val index = game.index ?: return
     val pets = hero.pets
     val incubator = pets.incubator
     val eggs = index.pets.eggs.values.distinct().filter { hero.count(it) > 0 }
@@ -49,8 +49,8 @@ import kotlinx.coroutines.delay
             val slot = incubator.slot(place)
             when {
                 slot == null || (!slot.open && !slot.busy) -> LockedSlot()
-                !slot.busy -> EmptySlot(s, eggs, enabled = !s.busy) { egg -> vm.incubatePet(egg, place) }
-                else -> BusySlot(s, slot, now, collectable = !s.busy && !full) { vm.collectPet(place) }
+                !slot.busy -> EmptySlot(game, eggs, enabled = !game.busy) { egg -> vm.incubatePet(egg, place) }
+                else -> BusySlot(game, slot, now, collectable = !game.busy && !full) { vm.collectPet(place) }
             }
         }
         if (full && incubator.ready > 0) MutedText(ui("incubator.full"))
@@ -89,8 +89,8 @@ import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun EmptySlot(s: ForgeState, eggs: List<String>, enabled: Boolean, onLay: (String) -> Unit) {
-    val hero = s.hero ?: return
+private fun EmptySlot(game: GameUi, eggs: List<String>, enabled: Boolean, onLay: (String) -> Unit) {
+    val hero = game.hero ?: return
     var picking by remember { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         SlotFrame(Gold) {
@@ -116,7 +116,7 @@ private fun EmptySlot(s: ForgeState, eggs: List<String>, enabled: Boolean, onLay
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
-                        StackIcon(s.game, egg, 28)
+                        StackIcon(game, egg, 28)
                         Text(
                             ui("incubator.egg", itemTitle(egg), hero.count(egg)),
                             color = Parchment,
@@ -131,12 +131,12 @@ private fun EmptySlot(s: ForgeState, eggs: List<String>, enabled: Boolean, onLay
     }
 }
 
-@Composable private fun BusySlot(s: ForgeState, slot: IncubatorSlot, now: Long, collectable: Boolean, onCollect: () -> Unit) {
+@Composable private fun BusySlot(game: GameUi, slot: IncubatorSlot, now: Long, collectable: Boolean, onCollect: () -> Unit) {
     val left = (slot.readyAt - now).coerceAtLeast(0)
     val ready = slot.ready || left == 0L
     val tint = slot.rarity?.let { rarityColor(it.name) } ?: Parchment
     SlotFrame(if (ready) Vital else tint) {
-        StackIcon(s.game, slot.egg, 40)
+        StackIcon(game, slot.egg, 40)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(itemTitle(slot.egg), color = tint, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             MutedText(

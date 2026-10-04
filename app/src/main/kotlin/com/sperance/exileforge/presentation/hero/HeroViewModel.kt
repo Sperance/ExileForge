@@ -8,6 +8,8 @@ import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.presentation.market.MarketActions
+import com.sperance.exileforge.presentation.state.GameSlice
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.SlotGroup
@@ -21,7 +23,10 @@ class HeroViewModel(
     private val connection: ServerConnection,
     heroes: HeroRepository,
     commands: CommandRunner,
+    slice: GameSlice,
 ) : ViewModel() {
+    /** Срез «игра» для экранов этой модели (3.80.33). */
+    val game: StateFlow<GameUi> = slice.ui
     val holding: StateFlow<HeroHolding> = heroes.state
     val activity: StateFlow<Activity> = commands.state
 

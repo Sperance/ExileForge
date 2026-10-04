@@ -43,7 +43,7 @@ fun StatsSheet(s: ForgeState, mapEffects: Map<String, Double>, onDismiss: () -> 
                         },
                     )
                 }
-                item { if (mapTab) StatSheet(s, onMap, before = own, shifts = shifts) else StatSheet(s, own) }
+                item { if (mapTab) StatSheet(s.game, onMap, before = own, shifts = shifts) else StatSheet(s.game, own) }
             }
             TabRow(selectedTabIndex = if (mapTab) 1 else 0, containerColor = Abyss, contentColor = Gold) {
                 Tab(selected = !mapTab, onClick = { mapTab = false }, text = { Text(ui("expedition.stats_hero")) })

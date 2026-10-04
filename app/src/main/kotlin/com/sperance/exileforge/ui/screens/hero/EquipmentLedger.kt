@@ -21,7 +21,7 @@ import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.unmetFor
 import com.sperance.exileforge.presentation.state.view
@@ -39,8 +39,8 @@ import com.sperance.exileforge.ui.theme.*
  * carries the item's name and the one property it is worn for, so the whole outfit reads without a
  * tap. [onPlace] gets the place and the worn item's id, or null.
  */
-@Composable fun EquipmentLedger(s: ForgeState, onPlace: (place: BodyPlace, itemId: String?) -> Unit) {
-    rememberEquipment(s)?.let { EquipmentLedger(it, onPlace) }
+@Composable fun EquipmentLedger(game: GameUi, onPlace: (place: BodyPlace, itemId: String?) -> Unit) {
+    rememberEquipment(game)?.let { EquipmentLedger(it, onPlace) }
 }
 
 /** The ledger over its own cut of the state (3.66.0): the purse moving does not redraw what is worn. */
@@ -141,20 +141,20 @@ private fun PlaceLine(line: PlaceState, lang: Lang, signedIn: Boolean, onClick: 
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SlotPicker(s: ForgeState, place: BodyPlace, onDismiss: () -> Unit, onEquip: (String) -> Unit) {
-    val hero = s.hero ?: return
-    val fitting = hero.stash.filter { !it.socketed }.mapNotNull { s.view(it) }.filter { place.takes(it.slot) }
+fun SlotPicker(game: GameUi, place: BodyPlace, onDismiss: () -> Unit, onEquip: (String) -> Unit) {
+    val hero = game.hero ?: return
+    val fitting = hero.stash.filter { !it.socketed }.mapNotNull { game.view(it) }.filter { place.takes(it.slot) }
     ForgeSheet(onDismissRequest = onDismiss) {
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.8f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            item { Engraved(ui("hero.slot_pick", slotTitle(place.code, s.lang))) }
+            item { Engraved(ui("hero.slot_pick", slotTitle(place.code, game.lang))) }
             if (fitting.isEmpty()) item { InfoCard(ui("hero.slot_pick_empty"), ui("hero.slot_pick_hint")) }
             items(fitting, key = { it.id }) { piece ->
-                val unmet = s.unmetFor(piece.code)
+                val unmet = game.unmetFor(piece.code)
                 ItemRow(
                     piece,
-                    enabled = !s.busy && (s.ownsCharacter || s.isAdmin) && unmet.isEmpty(),
+                    enabled = !game.busy && (game.ownsCharacter || game.isAdmin) && unmet.isEmpty(),
                     unwearable = unmet,
-                    price = s.sellPrice(piece.item),
+                    price = game.sellPrice(piece.item),
                 ) {
                     onDismiss()
                     onEquip(piece.id)

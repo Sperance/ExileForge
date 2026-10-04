@@ -25,7 +25,7 @@ import com.sperance.exileforge.core.display.statDescription
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.display.statValue
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.ManaReserve
 import com.sperance.exileforge.presentation.state.ShareCard
 import com.sperance.exileforge.presentation.state.ShareKind
@@ -34,6 +34,7 @@ import com.sperance.exileforge.presentation.state.StatExplainer
 import com.sperance.exileforge.presentation.state.StatExplanation
 import com.sperance.exileforge.presentation.state.manaReserve
 import com.sperance.exileforge.presentation.state.passiveShares
+import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.sheet.Shift
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.icons.StatIcon
@@ -60,17 +61,17 @@ internal fun ShareKind.color(): Color = when (this) {
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StatBreakdownSheet(s: ForgeState, stat: String, shifts: Map<String, List<Shift>>, onDismiss: () -> Unit) {
-    val explainer = s.hero?.sheet?.model?.explainer ?: run {
+fun StatBreakdownSheet(game: GameUi, stat: String, shifts: Map<String, List<Shift>>, onDismiss: () -> Unit) {
+    val explainer = game.hero?.sheet?.model?.explainer ?: run {
         LaunchedEffect(stat) { onDismiss() }
         return
     }
     var trail by remember(stat) { mutableStateOf(listOf(stat)) }
     val current = trail.last()
-    val view = remember(current, explainer, shifts, s.lang, s.hero?.skills) {
-        StatExplainer(s).explain(explainer.explain(current).shifted(shifts[current].orEmpty()), explainer.grants(current), explainer::holders, s.passiveShares(current))
+    val view = remember(current, explainer, shifts, game.lang, game.hero?.skills) {
+        StatExplainer(game).explain(explainer.explain(current).shifted(shifts[current].orEmpty()), explainer.grants(current), explainer::holders, game.passiveShares(current))
     }
-    val power = s.index?.stats?.get(current)?.group == com.sperance.exileforge.rules.content.StatGroup.POWER
+    val power = game.index?.stats?.get(current)?.group == com.sperance.exileforge.rules.content.StatGroup.POWER
     val accent = StatGroup.of(current).accent()
     ForgeSheet(onDismissRequest = onDismiss) {
         LazyColumn(
@@ -80,31 +81,31 @@ fun StatBreakdownSheet(s: ForgeState, stat: String, shifts: Map<String, List<Shi
         ) {
             if (trail.size > 1) {
                 item {
-                    AssistChip(onClick = { trail = trail.dropLast(1) }, label = { Text("← ${statTitle(trail[trail.size - 2], s.lang)}") })
+                    AssistChip(onClick = { trail = trail.dropLast(1) }, label = { Text("← ${statTitle(trail[trail.size - 2], game.lang)}") })
                 }
             }
-            item { Header(current, view, accent, s) }
-            s.index?.campaign?.combat?.let { StatLimits.of(current, s.hero?.stats.orEmpty(), it) }?.let { limit -> item { LimitCard(limit, s) { trail = trail + it } } }
-            if (current == MANA_STAT) s.manaReserve()?.takeIf { it.percent > 0 }?.let { reserve -> item { ReserveCard(reserve, s) } }
-            statDescription(current, s.lang, power).takeIf { it.isNotBlank() }?.let { text -> item { Description(text, accent) } }
+            item { Header(current, view, accent, game) }
+            game.index?.campaign?.combat?.let { StatLimits.of(current, game.hero?.stats.orEmpty(), it) }?.let { limit -> item { LimitCard(limit, game) { trail = trail + it } } }
+            if (current == MANA_STAT) game.manaReserve()?.takeIf { it.percent > 0 }?.let { reserve -> item { ReserveCard(reserve, game) } }
+            statDescription(current, game.lang, power).takeIf { it.isNotBlank() }?.let { text -> item { Description(text, accent) } }
             if (view.weights.values.sum() > 0) item { ShareBar(view.weights) }
-            items(view.cards.size) { i -> SourceCard(view.cards[i], s) { trail = trail + it } }
+            items(view.cards.size) { i -> SourceCard(view.cards[i], game) { trail = trail + it } }
             if (view.cards.isEmpty()) item { Text(ui("stat.empty"), color = Muted, style = MaterialTheme.typography.bodySmall) }
             if (view.cards.isNotEmpty()) item { Formula(view.formula) }
-            if (view.grants.isNotEmpty()) item { Grants(current, view.grants, s) { trail = trail + it } }
+            if (view.grants.isNotEmpty()) item { Grants(current, view.grants, game) { trail = trail + it } }
         }
     }
 }
 
-@Composable private fun Header(stat: String, view: StatExplanation, accent: Color, s: ForgeState) {
+@Composable private fun Header(stat: String, view: StatExplanation, accent: Color, game: GameUi) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         val shape = RoundedCornerShape(10.dp)
         Box(Modifier.size(40.dp).clip(shape).background(accent.copy(alpha = .13f)).border(1.dp, accent.copy(alpha = .4f), shape), contentAlignment = Alignment.Center) {
             StatIcon(stat, accent, Modifier.size(22.dp))
         }
         Column(Modifier.weight(1f)) {
-            Text(StatGroup.of(stat).title(s.lang).uppercase(), color = Muted, style = MaterialTheme.typography.labelSmall)
-            Text(statTitle(stat, s.lang), color = GoldBright, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(StatGroup.of(stat).title(game.lang).uppercase(), color = Muted, style = MaterialTheme.typography.labelSmall)
+            Text(statTitle(stat, game.lang), color = GoldBright, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         }
         Text(view.total, color = accent, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
     }
@@ -115,9 +116,9 @@ fun StatBreakdownSheet(s: ForgeState, stat: String, shifts: Map<String, List<Shi
  * opens that stat's own breakdown), the limit that stands and the hard ceiling; then what the fight counts
  * and what lies above the limit for nothing.
  */
-@Composable private fun LimitCard(limit: StatLimit, s: ForgeState, open: (String) -> Unit) {
+@Composable private fun LimitCard(limit: StatLimit, game: GameUi, open: (String) -> Unit) {
     val shape = RoundedCornerShape(12.dp)
-    val value = { v: Double -> statValue(limit.stat, v, s.index) }
+    val value = { v: Double -> statValue(limit.stat, v, game.index) }
     Column(
         Modifier.fillMaxWidth().clip(shape).background(PanelRaised).border(1.dp, Bronze, shape).padding(horizontal = 12.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -127,7 +128,7 @@ fun StatBreakdownSheet(s: ForgeState, stat: String, shifts: Map<String, List<Shi
             Text(value(limit.cap), color = Gold, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
         }
         SourceLine(ShareRow(ui("stat.cap.base"), value(limit.base)), open)
-        limit.raises.forEach { (stat, amount) -> SourceLine(ShareRow(statTitle(stat, s.lang), (if (amount >= 0) "+" else "−") + value(kotlin.math.abs(amount)), link = stat), open) }
+        limit.raises.forEach { (stat, amount) -> SourceLine(ShareRow(statTitle(stat, game.lang), (if (amount >= 0) "+" else "−") + value(kotlin.math.abs(amount)), link = stat), open) }
         limit.hard?.let { SourceLine(ShareRow(ui("stat.cap.hard"), value(it)), open) }
         Text(
             ui("stat.cap.counts", value(minOf(limit.effective, limit.cap))) + if (limit.over > 0) " · " + ui("stat.cap.over", value(limit.over)) else "",
@@ -138,9 +139,9 @@ fun StatBreakdownSheet(s: ForgeState, stat: String, shifts: Map<String, List<Shi
 }
 
 /** What the passive auras hold of the mana: their share and amount, and the mana left free to spend. */
-@Composable private fun ReserveCard(reserve: ManaReserve, s: ForgeState) {
+@Composable private fun ReserveCard(reserve: ManaReserve, game: GameUi) {
     val shape = RoundedCornerShape(12.dp)
-    val value = { v: Double -> statValue(MANA_STAT, v, s.index) }
+    val value = { v: Double -> statValue(MANA_STAT, v, game.index) }
     Column(
         Modifier.fillMaxWidth().clip(shape).background(PanelRaised).border(1.dp, ManaBlue.copy(alpha = .45f), shape).padding(horizontal = 12.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -192,7 +193,7 @@ private fun ShareBar(weights: Map<ShareKind, Double>) {
 }
 
 /** A kind's card: its tag, its name and what it gives together, then a line per source, a grey note under one that has it. */
-@Composable private fun SourceCard(card: ShareCard, s: ForgeState, open: (String) -> Unit) {
+@Composable private fun SourceCard(card: ShareCard, game: GameUi, open: (String) -> Unit) {
     val shape = RoundedCornerShape(12.dp)
     Column(
         Modifier.fillMaxWidth().clip(shape).background(PanelRaised).border(1.dp, Bronze, shape).padding(horizontal = 12.dp, vertical = 8.dp),
@@ -236,9 +237,9 @@ private fun ShareBar(weights: Map<ShareKind, Double>) {
 }
 
 /** What the stat gives others now; a tap opens the one given to. */
-@Composable private fun Grants(stat: String, rows: List<ShareRow>, s: ForgeState, open: (String) -> Unit) {
+@Composable private fun Grants(stat: String, rows: List<ShareRow>, game: GameUi, open: (String) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(ui("stat.gives", statTitle(stat, s.lang)).uppercase(), color = Muted, style = MaterialTheme.typography.labelSmall)
+        Text(ui("stat.gives", statTitle(stat, game.lang)).uppercase(), color = Muted, style = MaterialTheme.typography.labelSmall)
         rows.forEach { row ->
             val shape = RoundedCornerShape(8.dp)
             Row(

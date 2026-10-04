@@ -14,7 +14,7 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.ClassesFile
 import com.sperance.exileforge.ui.components.ClassPortrait
 import com.sperance.exileforge.ui.components.FirstVisit
@@ -33,8 +33,8 @@ import com.sperance.exileforge.ui.theme.*
  * for the strip above the tab ([HeroTabStrip]); the title the chronicle opened is chosen on its page under «Развитие».
  * A long name is cut rather than pushed into the portrait. A section may add its own chips after them ([extra]).
  */
-@Composable fun HeroHeader(s: ForgeState, extra: @Composable RowScope.() -> Unit = {}) {
-    rememberHeroHeader(s)?.let { HeroHeader(it, extra) }
+@Composable fun HeroHeader(game: GameUi, extra: @Composable RowScope.() -> Unit = {}) {
+    rememberHeroHeader(game)?.let { HeroHeader(it, extra) }
 }
 
 /** The header over its own cut of the state (3.66.0): it alone is redrawn when the purse or the experience moves. */

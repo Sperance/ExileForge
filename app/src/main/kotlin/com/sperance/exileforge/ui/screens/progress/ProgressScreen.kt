@@ -211,7 +211,7 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
 
 /** The menagerie as a screen of its own: it was a section of the Hero tab's list. */
 @Composable private fun PetsPlace(s: ForgeState) {
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) { MenagerieSection(s, koinViewModel()) }
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) { MenagerieSection(s.game, koinViewModel()) }
 }
 
 /**
@@ -230,7 +230,7 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
                 ProgressPlace.FORGE -> CraftScreen()
                 ProgressPlace.PETS -> PetsPlace(s)
                 ProgressPlace.TRIALS -> TrialsBoard(s, koinViewModel(), Modifier.fillMaxSize())
-                ProgressPlace.CHRONICLE -> ChronicleScreen(s, koinViewModel())
+                ProgressPlace.CHRONICLE -> ChronicleScreen(s.game, koinViewModel())
             }
         }
     }

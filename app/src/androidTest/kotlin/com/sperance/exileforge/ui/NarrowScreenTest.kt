@@ -14,17 +14,19 @@ import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
 import com.sperance.exileforge.core.character.Sheets
 import com.sperance.exileforge.core.display.ItemView
+import com.sperance.exileforge.core.hero.HeroHolding
 import com.sperance.exileforge.core.i18n.LocaleBundle
 import com.sperance.exileforge.core.i18n.serverLocale
 import com.sperance.exileforge.core.model.command.UserProfile
 import com.sperance.exileforge.core.model.hero.HeroInfo
 import com.sperance.exileforge.core.model.hero.HeroView
+import com.sperance.exileforge.core.session.Activity
+import com.sperance.exileforge.core.session.Session
+import com.sperance.exileforge.core.world.World
+import com.sperance.exileforge.data.settings.DEFAULT_SERVER
 import com.sperance.exileforge.presentation.features.WarmStep
 import com.sperance.exileforge.presentation.features.Warmup
-import com.sperance.exileforge.presentation.state.AccountState
-import com.sperance.exileforge.presentation.state.ForgeState
-import com.sperance.exileforge.presentation.state.PlayState
-import com.sperance.exileforge.presentation.state.WorldState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.ui.components.ItemCard
@@ -62,11 +64,11 @@ class NarrowScreenTest {
         val boots = checkNotNull(ItemView.of(TestWorld.roll("boots-narrow", Slot.BOOTS, Rarity.RARE, seed = 3L), index))
         val info = HeroInfo("hero", "owner", "Изгнанник с очень длинным именем", heroClass = heroClass, level = 42)
         val hero = HeroView(info, listOf(ring), sheet = Sheets.calculate(index, 42, heroClass, emptyList(), listOf(ring)))
-        val state = ForgeState(
-            busy = false,
-            account = AccountState(profile = UserProfile("owner"), signedIn = true),
-            world = WorldState(content = index, contentHash = index.hash),
-            play = PlayState(heroId = "hero", heroOwner = "owner", hero = hero),
+        val state = GameUi(
+            activity = Activity(busy = false),
+            session = Session(DEFAULT_SERVER, profile = UserProfile("owner"), signedIn = true),
+            world = World(content = index, contentHash = index.hash),
+            holding = HeroHolding(heroId = "hero", hero = hero, owner = "owner"),
         )
         compose.setContent {
             ForgeTheme {

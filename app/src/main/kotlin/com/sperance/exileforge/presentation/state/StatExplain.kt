@@ -58,9 +58,9 @@ data class StatExplanation(
  * Takes a [StatBreakdown] apart into what the window prints: sources named from the hero — a class,
  * a node, a worn item by name and slot, a pet — a conversion under the stat it takes from.
  */
-class StatExplainer(private val s: ForgeState) {
-    private val hero = s.hero
-    private val index = s.index
+class StatExplainer(private val game: GameUi) {
+    private val hero = game.hero
+    private val index = game.index
 
     fun explain(breakdown: StatBreakdown, grants: List<Grant>, holders: (String) -> List<StatSource>, passives: PassiveShares = PassiveShares()): StatExplanation {
         val stat = breakdown.stat
@@ -138,7 +138,7 @@ class StatExplainer(private val s: ForgeState) {
         when (source.kind) {
             SourceKind.CLASS -> ui("stat.src.class", classTitle(source.ref))
             SourceKind.NODE -> nodeTitle(source.ref)
-            SourceKind.ITEM -> hero?.item(source.ref)?.let { item -> s.view(item)?.let { view -> "${view.title} · ${slotTitle(item.slot ?: view.slot)}" } } ?: ui("stat.kind.ITEM")
+            SourceKind.ITEM -> hero?.item(source.ref)?.let { item -> game.view(item)?.let { view -> "${view.title} · ${slotTitle(item.slot ?: view.slot)}" } } ?: ui("stat.kind.ITEM")
             SourceKind.PET -> hero?.pets?.pet(source.ref)?.let { locOr("pet.${it.species}", it.species) } ?: ui("stat.kind.PET")
             SourceKind.POWER, SourceKind.MAP, SourceKind.ATLAS -> statTitle(source.ref)
         }

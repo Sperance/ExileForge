@@ -26,7 +26,6 @@ import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.title
 import com.sperance.exileforge.core.display.tradeName
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Item
@@ -61,8 +60,8 @@ enum class BagCategory(val key: String) {
  * name — each by rarity, then by name (2.73.0). A stack has no rarity of its own, so its worth stands
  * for it: the dearer the rarer. An empty category is left out.
  */
-fun bagSections(s: ForgeState): List<Pair<BagCategory, List<BagStack>>> {
-    val index = s.index
+fun bagSections(game: GameUi): List<Pair<BagCategory, List<BagStack>>> {
+    val index = game.index
     fun category(code: String) = when (index?.item(code)?.category) {
         Item.CURRENCY, Item.OMEN -> BagCategory.ORBS
         Item.ESSENCE -> BagCategory.ESSENCES
@@ -73,7 +72,7 @@ fun bagSections(s: ForgeState): List<Pair<BagCategory, List<BagStack>>> {
         else -> BagCategory.OTHER
     }
     fun worth(code: String) = index?.item(code)?.price ?: 0L
-    val byCategory = s.hero?.bag.orEmpty().filterValues { it > 0 }.map { (code, amount) -> BagStack(code, amount) }
+    val byCategory = game.hero?.bag.orEmpty().filterValues { it > 0 }.map { (code, amount) -> BagStack(code, amount) }
         .sortedWith(compareBy({ -worth(it.code) }, { itemTitle(it.code) }))
         .groupBy { category(it.code) }
     return BagCategory.entries.mapNotNull { category -> byCategory[category]?.let { category to it } }
@@ -84,7 +83,7 @@ fun bagSections(s: ForgeState): List<Pair<BagCategory, List<BagStack>>> {
  * and its count in the corner — as many to a row as fit [CELL]. The name, the rule and the ways on
  * are one tap behind a cell, in [BagSheet]; [onOpen] gets the stack's code.
  */
-@Composable fun BagGrid(s: ForgeState, sections: List<Pair<BagCategory, List<BagStack>>>, onOpen: (String) -> Unit) {
+@Composable fun BagGrid(game: GameUi, sections: List<Pair<BagCategory, List<BagStack>>>, onOpen: (String) -> Unit) {
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val columns = ((maxWidth + GAP) / (CELL + GAP)).toInt().coerceAtLeast(1)
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -93,7 +92,7 @@ fun bagSections(s: ForgeState): List<Pair<BagCategory, List<BagStack>>> {
                     MutedText(ui(category.key), style = MaterialTheme.typography.labelMedium)
                     stacks.chunked(columns).forEach { row ->
                         Row(horizontalArrangement = Arrangement.spacedBy(GAP)) {
-                            row.forEach { stack -> BagCell(s, stack, Modifier.weight(1f)) { onOpen(stack.code) } }
+                            row.forEach { stack -> BagCell(game, stack, Modifier.weight(1f)) { onOpen(stack.code) } }
                             repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
                         }
                     }
@@ -107,7 +106,7 @@ private val CELL = 60.dp
 private val GAP = 6.dp
 
 /** One cell of the bag: the stack's icon in a panel square, its count in the bottom corner. */
-@Composable private fun BagCell(s: ForgeState, stack: BagStack, modifier: Modifier, onClick: () -> Unit) {
+@Composable private fun BagCell(game: GameUi, stack: BagStack, modifier: Modifier, onClick: () -> Unit) {
     val shape = RoundedCornerShape(6.dp)
     val title = itemTitle(stack.code)
     Box(
@@ -115,7 +114,7 @@ private val GAP = 6.dp
             .clickable(role = Role.Button, onClickLabel = title, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        StackIcon(s.game, stack.code, 36)
+        StackIcon(game, stack.code, 36)
         Text(
             compactCount(stack.amount),
             color = GoldBright,
@@ -158,7 +157,7 @@ internal fun compactCount(amount: Long): String = when {
  * Every callback gets the stack's code, but [onRead], which gets the skill's.
  */
 @Composable fun BagSheet(
-    s: ForgeState,
+    game: GameUi,
     stack: BagStack,
     onDismiss: () -> Unit,
     onForge: (String) -> Unit,
@@ -173,35 +172,35 @@ internal fun compactCount(amount: Long): String = when {
     val code = stack.code
     val orb = Orb.of(code)
     val forgeable = orb != null && orb != Orb.ORB_OF_REGRET
-    val skill = s.index?.skills?.byBook(code)
-    val readable = skill != null && skill.heroClass == s.hero?.heroClass
-    val essence = s.index?.essence(code) != null
+    val skill = game.index?.skills?.byBook(code)
+    val readable = skill != null && skill.heroClass == game.hero?.heroClass
+    val essence = game.index?.essence(code) != null
     // A loot chest (3.76.0) is opened here; since 3.77.0 it may also go to the auction, never to the merchant.
-    val chest = s.index?.item(code)?.category == Item.CHEST
+    val chest = game.index?.item(code)?.category == Item.CHEST
     StackPanel(onDismiss) {
-        StackFace(s.game, code, stack.amount)
+        StackFace(game, code, stack.amount)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (forgeable) {
-                ForgeButton(enabled = !s.busy, onClick = { onForge(code) }, modifier = Modifier.weight(1f)) {
+                ForgeButton(enabled = !game.busy, onClick = { onForge(code) }, modifier = Modifier.weight(1f)) {
                     Text(ui("bag.to_forge"))
                 }
             }
             if (essence) {
-                ForgeButton(enabled = !s.busy, onClick = { onEssence(code) }, modifier = Modifier.weight(1f)) {
+                ForgeButton(enabled = !game.busy, onClick = { onEssence(code) }, modifier = Modifier.weight(1f)) {
                     Text(ui("bag.to_forge"))
                 }
             }
             if (readable && skill != null) {
-                ForgeButton(enabled = !s.busy, onClick = { onRead(skill.code) }, modifier = Modifier.weight(1f)) {
-                    Text(ui(if ((s.hero?.skills?.level(skill.code) ?: 0) > 0) "bag.read_book" else "bag.learn_book"))
+                ForgeButton(enabled = !game.busy, onClick = { onRead(skill.code) }, modifier = Modifier.weight(1f)) {
+                    Text(ui(if ((game.hero?.skills?.level(skill.code) ?: 0) > 0) "bag.read_book" else "bag.learn_book"))
                 }
             }
             if (chest) {
-                ForgeButton(enabled = !s.busy, onClick = { onOpenChest(code) }, modifier = Modifier.weight(1f)) {
+                ForgeButton(enabled = !game.busy, onClick = { onOpenChest(code) }, modifier = Modifier.weight(1f)) {
                     Text(ui("chest.open"))
                 }
             }
-            ForgeOutlinedButton(enabled = !s.busy, onClick = { onAuction(code) }, modifier = Modifier.weight(1f)) {
+            ForgeOutlinedButton(enabled = !game.busy, onClick = { onAuction(code) }, modifier = Modifier.weight(1f)) {
                 Text(ui("hero.action_auction"))
             }
         }

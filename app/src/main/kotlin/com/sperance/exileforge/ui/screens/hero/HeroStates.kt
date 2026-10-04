@@ -7,7 +7,7 @@ import com.sperance.exileforge.core.display.BodyPlace
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.bodyPlaces
 import com.sperance.exileforge.core.i18n.Lang
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.unmetFor
 import com.sperance.exileforge.presentation.state.view
@@ -55,21 +55,21 @@ import com.sperance.exileforge.rules.content.ClassesFile
 @Immutable data class StashLine(val piece: ItemView, val worn: Boolean, val unwearable: List<String>, val price: Long?, val waiting: Boolean)
 
 /** The header's cut, or null until the hero is read; the tree is counted again only when the level or the nodes move. */
-@Composable fun rememberHeroHeader(s: ForgeState): HeroHeaderState? {
-    val hero = s.hero ?: return null
-    val index = s.index
-    val tree = remember(index, hero.level, hero.tree) { s.treeState?.let { TreePoints(it.available, it.total) } }
-    return remember(hero.info, s.world.portraits, tree, index) {
+@Composable fun rememberHeroHeader(game: GameUi): HeroHeaderState? {
+    val hero = game.hero ?: return null
+    val index = game.index
+    val tree = remember(index, hero.level, hero.tree) { game.treeState?.let { TreePoints(it.available, it.total) } }
+    return remember(hero.info, game.world.portraits, tree, index) {
         val info = hero.info
-        HeroHeaderState(info.name, info.heroClass, info.level, info.experience, info.money, s.world.portraits, tree, index?.classes)
+        HeroHeaderState(info.name, info.heroClass, info.level, info.experience, info.money, game.world.portraits, tree, index?.classes)
     }
 }
 
 /** The ledger's cut, or null until the hero and the content are read; the purse is not part of it. */
-@Composable fun rememberEquipment(s: ForgeState): EquipmentState? {
-    val hero = s.hero ?: return null
-    val index = s.index ?: return null
-    return remember(hero.items, hero.inactive, index, s.lang, s.account.signedIn) {
+@Composable fun rememberEquipment(game: GameUi): EquipmentState? {
+    val hero = game.hero ?: return null
+    val index = game.index ?: return null
+    return remember(hero.items, hero.inactive, index, game.lang, game.session.signedIn) {
         // How many loose items of each slot lie in the stash (2.48.0): each place says what it could take.
         val loose = hero.stash.filter { !it.socketed }.mapNotNull { index.template(it.template)?.slot }.groupingBy { it }.eachCount()
         val equipped = hero.equipped
@@ -78,25 +78,25 @@ import com.sperance.exileforge.rules.content.ClassesFile
             PlaceState(
                 place,
                 worn?.id,
-                worn?.let { s.view(it) },
+                worn?.let { game.view(it) },
                 blocked = place.blockedBy(equipped),
                 reasons = worn?.let { hero.inactive[it.id] },
                 spare = place.fits.sumOf { loose[it] ?: 0 },
             )
         }
-        EquipmentState(places, s.lang, s.account.signedIn)
+        EquipmentState(places, game.lang, game.session.signedIn)
     }
 }
 
 /** The stash's lines over [visible], read again only when the shelf, the sheet or the queue of waiting commands moves. */
-@Composable fun rememberStashLines(s: ForgeState, visible: List<ItemView>): List<StashLine> {
-    val hero = s.hero
-    val waiting = s.link.waitingItems
-    return remember(visible, hero?.level, hero?.stats, s.index, waiting) {
+@Composable fun rememberStashLines(game: GameUi, visible: List<ItemView>): List<StashLine> {
+    val hero = game.hero
+    val waiting = game.link.waitingItems
+    return remember(visible, hero?.level, hero?.stats, game.index, waiting) {
         visible.map { piece ->
             val worn = piece.equipped || piece.socketed
             // The sheet added up here (2.46.0) says what the template needs, and the merchant's rule what it fetches.
-            StashLine(piece, worn, s.unmetFor(piece.code), s.sellPrice(piece.item).takeUnless { worn }, piece.id in waiting)
+            StashLine(piece, worn, game.unmetFor(piece.code), game.sellPrice(piece.item).takeUnless { worn }, piece.id in waiting)
         }
     }
 }

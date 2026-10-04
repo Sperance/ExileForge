@@ -65,7 +65,7 @@ internal fun CombatDetailSheet(s: ForgeState, event: CombatEvent, monster: Strin
         LaunchedEffect(event) { onDismiss() }
         return
     }
-    val explainer = remember(s.index, s.lang) { TraceExplainer(s) }
+    val explainer = remember(s.index, s.lang) { TraceExplainer(s.game) }
     var full by remember(event) { mutableStateOf(false) }
     ForgeSheet(onDismissRequest = onDismiss) {
         LazyColumn(

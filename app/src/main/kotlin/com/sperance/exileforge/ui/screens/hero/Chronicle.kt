@@ -23,7 +23,6 @@ import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.hero.HeroViewModel
-import com.sperance.exileforge.presentation.state.ForgeState
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.Achievement
 import com.sperance.exileforge.rules.content.Counter
@@ -53,9 +52,9 @@ fun GameUi.chronicleDone(): Pair<Int, Int>? {
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun ChronicleScreen(s: ForgeState, vm: HeroViewModel) {
-    val hero = s.hero ?: return
-    val achievements = s.index?.achievements ?: return
+fun ChronicleScreen(game: GameUi, vm: HeroViewModel) {
+    val hero = game.hero ?: return
+    val achievements = game.index?.achievements ?: return
     val values = hero.chronicle
     val titles = achievements.titles(values)
     // The statistics (3.51.0) are read apart, when the page opens: hundreds of figures ride with no hero snapshot.
@@ -66,15 +65,15 @@ fun ChronicleScreen(s: ForgeState, vm: HeroViewModel) {
             color = if (hero.info.title.isNotBlank()) GoldBright else Muted,
             style = MaterialTheme.typography.titleMedium,
         )
-        s.game.chronicleDone()?.let { (done, all) -> MutedText(ui("chronicle.done", done, all)) }
+        game.chronicleDone()?.let { (done, all) -> MutedText(ui("chronicle.done", done, all)) }
         Engraved(ui("chronicle.titles"))
         if (titles.isEmpty()) {
             MutedText(ui("chronicle.no_titles"))
         } else {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                FilterChip(selected = hero.info.title.isBlank(), enabled = !s.busy, onClick = { vm.setTitle("") }, label = { Text(ui("chronicle.no_title")) })
+                FilterChip(selected = hero.info.title.isBlank(), enabled = !game.busy, onClick = { vm.setTitle("") }, label = { Text(ui("chronicle.no_title")) })
                 titles.forEach { code ->
-                    FilterChip(selected = hero.info.title == code, enabled = !s.busy, onClick = { vm.setTitle(code) }, label = { Text(titleName(code)) })
+                    FilterChip(selected = hero.info.title == code, enabled = !game.busy, onClick = { vm.setTitle(code) }, label = { Text(titleName(code)) })
                 }
             }
         }

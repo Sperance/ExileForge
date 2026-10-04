@@ -148,7 +148,7 @@ private val FloatingHit.mend: Boolean get() = pet && target == Side.HERO && amou
             drawArc(PanelRaised, 0f, 360f, false, at, inset, style = androidx.compose.ui.graphics.drawscope.Stroke(stroke))
             drawArc(if (mending) Vital else ring, -90f, 360f * share, false, at, inset, style = androidx.compose.ui.graphics.drawscope.Stroke(stroke))
         }
-        PetIcon(s, ally.species, 30)
+        PetIcon(s.game, ally.species, 30)
         CardHits(hits.filter { it.target == Side.HERO && !it.mend })
     }
 }

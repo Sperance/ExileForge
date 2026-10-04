@@ -30,9 +30,9 @@ data class StatTrace(val stat: String, val title: String, val total: String, val
  * map's shifts and the passives; a monster's by the roller's fold — base, rarity, each modifier, the map; then for both
  * what the fight laid on at that moment. The figure itself is the fight's.
  */
-class TraceExplainer(private val s: ForgeState) {
-    private val index = s.index
-    private val sheet = StatExplainer(s)
+class TraceExplainer(private val game: GameUi) {
+    private val index = game.index
+    private val sheet = StatExplainer(game)
     private val roller = index?.let(::MonsterRoller)
 
     fun stat(shot: FighterShot, stat: String, origin: TraceOrigin): StatTrace {
@@ -43,7 +43,7 @@ class TraceExplainer(private val s: ForgeState) {
             shot.side == Side.MONSTER -> monster(shot.index, stat, origin, percent, rows)
         }
         shot.lines.filter { it.line.stat == stat }.forEach { rows += TraceRow(lineTitle(it), sheet.fmt(stat, it.line.value, it.line.op, percent), ui("trace.src.fight")) }
-        return StatTrace(stat, statTitle(stat, s.lang), statValue(stat, shot.stats[stat] ?: 0.0, index), rows)
+        return StatTrace(stat, statTitle(stat, game.lang), statValue(stat, shot.stats[stat] ?: 0.0, index), rows)
     }
 
     private fun hero(stat: String, origin: TraceOrigin, rows: MutableList<TraceRow>) {
@@ -89,6 +89,6 @@ class TraceExplainer(private val s: ForgeState) {
         LineKind.CONDITION -> locOr("condition.${source.ref}", source.ref)
         LineKind.LOW_LIFE -> ui("trace.src.low_life")
         LineKind.POWER -> ui("trace.src.power")
-        LineKind.AURA -> statTitle(source.ref, s.lang)
+        LineKind.AURA -> statTitle(source.ref, game.lang)
     }
 }

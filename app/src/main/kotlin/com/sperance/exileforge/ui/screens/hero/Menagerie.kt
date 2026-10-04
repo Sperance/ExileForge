@@ -17,7 +17,7 @@ import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.hero.HeroViewModel
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.Item
 import com.sperance.exileforge.rules.content.Omen
 import com.sperance.exileforge.rules.content.Orb
@@ -42,12 +42,12 @@ import com.sperance.exileforge.ui.theme.*
 fun petName(species: String): String = locOr("pet.$species", species)
 
 /** A species' sprite (3.70.0): the egg of its biome, framed as a stack of the bag is; the menagerie's glyph for one the content does not know. */
-@Composable fun PetIcon(s: ForgeState, species: String, size: Int) {
+@Composable fun PetIcon(game: GameUi, species: String, size: Int) {
     // A hybrid (3.79.0) has a portrait of its own, not its biome's egg.
     if (SpriteIcon(com.sperance.exileforge.core.display.icon("pet.$species"), Gold, Modifier.size(size.dp), halo = false)) return
-    val egg = s.index?.pets?.let { pets -> pets.species.firstOrNull { it.code == species }?.let { pets.eggs[it.biome] } }
+    val egg = game.index?.pets?.let { pets -> pets.species.firstOrNull { it.code == species }?.let { pets.eggs[it.biome] } }
     if (egg != null) {
-        StackIcon(s.game, egg, size)
+        StackIcon(game, egg, size)
     } else {
         Icon(ForgeGlyphs.Exile, null, tint = Gold, modifier = Modifier.size(size.dp))
     }
@@ -61,9 +61,9 @@ fun petName(species: String): String = locOr("pet.$species", species)
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun MenagerieSection(s: ForgeState, vm: HeroViewModel) {
-    val hero = s.hero ?: return
-    if (s.index == null) return
+fun MenagerieSection(game: GameUi, vm: HeroViewModel) {
+    val hero = game.hero ?: return
+    if (game.index == null) return
     val pets = hero.pets
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         ForgePanel {
@@ -73,19 +73,19 @@ fun MenagerieSection(s: ForgeState, vm: HeroViewModel) {
                 GuideButton(Guide.PETS)
             }
             MutedText(ui("pets.hint"))
-            IncubatorPanel(s, vm)
-            BreedingPanel(s, vm)
+            IncubatorPanel(game, vm)
+            BreedingPanel(game, vm)
         }
         if (pets.pets.isEmpty()) InfoCard(ui("pets.empty"), ui("pets.empty_hint"))
-        pets.pets.sortedWith(compareBy({ !pets.isActive(it.id) }, { -it.rarity.ordinal }, { -it.level })).forEach { pet -> PetCard(s, vm, pet) }
+        pets.pets.sortedWith(compareBy({ !pets.isActive(it.id) }, { -it.rarity.ordinal }, { -it.level })).forEach { pet -> PetCard(game, vm, pet) }
     }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun PetCard(s: ForgeState, vm: HeroViewModel, pet: Pet) {
-    val hero = s.hero ?: return
-    val index = s.index ?: return
+private fun PetCard(game: GameUi, vm: HeroViewModel, pet: Pet) {
+    val hero = game.hero ?: return
+    val index = game.index ?: return
     val menagerie = remember(index) { Menagerie(index) }
     val kind = menagerie.species(pet.species) ?: return
     val active = hero.pets.isActive(pet.id)
@@ -127,7 +127,7 @@ private fun PetCard(s: ForgeState, vm: HeroViewModel, pet: Pet) {
             ChoiceFrame("forge.choice_title", "forge.choice_hint") {
                 pet.offer.forEachIndexed { i, option ->
                     val text = menagerie.lines(pet.copy(lines = listOf(option), offer = emptyList())).firstOrNull()?.let { lineText(index, it) } ?: displayName(option.code)
-                    ChoiceRow(text, "T${option.tier}") { if (!s.busy) vm.choosePetLine(pet.id, i) }
+                    ChoiceRow(text, "T${option.tier}") { if (!game.busy) vm.choosePetLine(pet.id, i) }
                 }
             }
         }
@@ -136,14 +136,14 @@ private fun PetCard(s: ForgeState, vm: HeroViewModel, pet: Pet) {
             MutedText(ui("pets.sheet", number(sheet["STOCK_HEALTH"] ?: 0.0), number(listOfNotNull(kind.element, kind.element2).sumOf { sheet["STOCK_ATTACK_$it"] ?: 0.0 })))
         }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            ForgeButton(onClick = { if (helps != null && !active) hiring = true else vm.activatePet(pet.id) }, enabled = !s.busy) {
+            ForgeButton(onClick = { if (helps != null && !active) hiring = true else vm.activatePet(pet.id) }, enabled = !game.busy) {
                 Text(ui(if (active) "pets.rest" else "pets.work"))
             }
-            ForgeOutlinedButton(onClick = { orbs = true }, enabled = !s.busy) { Text(ui("pets.orbs")) }
-            ForgeTextButton(onClick = { releasing = true }, enabled = !s.busy) { Text(ui("pets.release")) }
+            ForgeOutlinedButton(onClick = { orbs = true }, enabled = !game.busy) { Text(ui("pets.orbs")) }
+            ForgeTextButton(onClick = { releasing = true }, enabled = !game.busy) { Text(ui("pets.release")) }
         }
     }
-    if (orbs) PetOrbs(s, vm, pet) { orbs = false }
+    if (orbs) PetOrbs(game, vm, pet) { orbs = false }
     if (hiring) {
         ConfirmSheet(
             title = ui("pets.work_q"),
@@ -178,15 +178,15 @@ private fun PetCard(s: ForgeState, vm: HeroViewModel, pet: Pet) {
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PetOrbs(s: ForgeState, vm: HeroViewModel, pet: Pet, onDismiss: () -> Unit) {
-    val hero = s.hero ?: return
-    val index = s.index ?: return
+private fun PetOrbs(game: GameUi, vm: HeroViewModel, pet: Pet, onDismiss: () -> Unit) {
+    val hero = game.hero ?: return
+    val index = game.index ?: return
     val applier = remember(index) { OrbApplier(index) }
     val beast = OrbTarget.Beast(pet)
     val held = remember(index, hero.bag) { heldOmens(index, hero) }
     // Every crafting orb in the bag, each with the omens it goes on this pet with; null - the orb alone.
     val fits: List<Pair<Item, List<Omen?>>> = remember(applier, pet, held, hero.bag) {
-        s.orbs.mapNotNull { item ->
+        game.orbs.mapNotNull { item ->
             val orb = Orb.of(item.code)?.takeIf { hero.count(item.code) > 0 } ?: return@mapNotNull null
             (listOf<Omen?>(null) + held.filter { it.fits(orb) }).filter { applier.accepts(orb, beast, it) }.takeIf { it.isNotEmpty() }?.let { item to it }
         }
@@ -209,9 +209,9 @@ private fun PetOrbs(s: ForgeState, vm: HeroViewModel, pet: Pet, onDismiss: () ->
             val shown = fits.filter { (_, with) -> omen in with }
             if (shown.isEmpty() && growth.none { hero.count(it) > 0 }) MutedText(ui("pets.no_orbs"))
             shown.forEach { (item, _) ->
-                PetOrbRow(item.code, hero.count(item.code), Orb.of(item.code), enabled = !s.busy) { vm.petOrb(pet.id, item.code, omen?.code) }
+                PetOrbRow(item.code, hero.count(item.code), Orb.of(item.code), enabled = !game.busy) { vm.petOrb(pet.id, item.code, omen?.code) }
             }
-            growth.forEach { code -> PetOrbRow(code, hero.count(code), null, enabled = !s.busy && hero.count(code) > 0) { vm.petOrb(pet.id, code) } }
+            growth.forEach { code -> PetOrbRow(code, hero.count(code), null, enabled = !game.busy && hero.count(code) > 0) { vm.petOrb(pet.id, code) } }
         }
     }
 }
@@ -237,16 +237,16 @@ private const val PET_TIERS = 5
  * Breeding (3.79.0, server 1.74.0): two combat pets of the rules' level, rested, and an Orb of Breeding; a hybrid of their two
  * elements is born with the rules' chance, an egg of a parent's kind otherwise. Both parents rest for the rules' hours.
  */
-@Composable private fun BreedingPanel(s: ForgeState, vm: HeroViewModel) {
-    val index = s.index ?: return
-    val hero = s.hero ?: return
+@Composable private fun BreedingPanel(game: GameUi, vm: HeroViewModel) {
+    val index = game.index ?: return
+    val hero = game.hero ?: return
     val rule = index.pets.breeding
     val menagerie = remember(index) { Menagerie(index) }
     val now = System.currentTimeMillis()
     val fit = hero.pets.pets.filter { menagerie.species(it.species)?.kind == PetKind.COMBAT && it.level >= rule.minLevel && it.tiredUntil <= now }
     var first by remember { mutableStateOf<String?>(null) }
     var second by remember { mutableStateOf<String?>(null) }
-    val orbs = s.bagAmount(rule.orb) ?: 0L
+    val orbs = game.bagAmount(rule.orb) ?: 0L
     Engraved(ui("pets.breed_title"))
     MutedText(ui("pets.breed_hint", rule.minLevel, (rule.hybridChance * 100).toInt(), rule.restHours))
     if (fit.size < 2) {
@@ -254,8 +254,8 @@ private const val PET_TIERS = 5
         return
     }
     val options = fit.associate { it.id to "${petName(it.species)} · ${ui("pets.level", it.level)}" }
-    Spinner(ui("pets.breed_first"), first.orEmpty(), options, !s.busy) { first = it }
-    Spinner(ui("pets.breed_second"), second.orEmpty(), options - first.orEmpty(), !s.busy) { second = it }
+    Spinner(ui("pets.breed_first"), first.orEmpty(), options, !game.busy) { first = it }
+    Spinner(ui("pets.breed_second"), second.orEmpty(), options - first.orEmpty(), !game.busy) { second = it }
     val pair = listOfNotNull(first, second).mapNotNull { id -> fit.firstOrNull { it.id == id }?.let { menagerie.species(it.species) } }
     if (pair.size == 2) {
         val hybrid = index.pets.species.hybridOf(pair[0].element.orEmpty(), pair[1].element.orEmpty())
@@ -266,7 +266,7 @@ private const val PET_TIERS = 5
         }
     }
     ForgeButton(
-        enabled = !s.busy && first != null && second != null && first != second && orbs > 0,
+        enabled = !game.busy && first != null && second != null && first != second && orbs > 0,
         onClick = {
             vm.breedPets(first!!, second!!)
             first = null

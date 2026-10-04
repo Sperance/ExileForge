@@ -36,6 +36,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sperance.exileforge.rules.content.Op
+import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.campaign.*
 import com.sperance.exileforge.core.campaign.combat.*
 import com.sperance.exileforge.core.campaign.run.*
@@ -194,7 +196,7 @@ internal fun FullMap(run: ExpeditionRun, hud: RunHud, tick: Int, onClose: () -> 
                 Engraved(ui("map.modifiers"))
                 // Read as an item's modifiers read, a sentence under its glyph, only without a tier: the lines are the map's and the atlas's summed.
                 run.mapEffects.forEach { (stat, value) ->
-                    Tipped({ Tip(statTitle(stat), statDescription(stat), ModBlue) }) { ModifierLine(effectText(run, stat, value), Glyph.ofStat(stat)) }
+                    Tipped({ Tip(statTitle(stat), statDescription(stat), ModBlue) }) { ModifierLine(effectText(stat, value), Glyph.ofStat(stat)) }
                 }
             } else {
                 MutedText(ui("map.no_modifiers"))
@@ -221,7 +223,8 @@ internal fun legendOf(world: ExpeditionWorld): List<Pair<Color, String>> = build
 }
 
 /** «+15% Здоровье монстров карты»: a map's summed effect as a modifier's sentence, the percent where the stat counts in it. */
-internal fun effectText(run: ExpeditionRun, stat: String, value: Double): String = (if (value >= 0) "+" else "−") + modNumber(stat, abs(value)) + (if (statPercent(stat, run.index)) "%" else "") + " " + statTitle(stat)
+/** A map's summed line (3.81.0) in the server's own sentence for it, as an item's line reads: «Игрок получает на 20% больше физического урона». */
+internal fun effectText(stat: String, value: Double): String = SkillText.statLine(stat, Op.ADD, value)
 
 /** The Vaal portal's mark on the maps and in their legend. */
 internal val PortalTint = Color(0xFFFF8A78)

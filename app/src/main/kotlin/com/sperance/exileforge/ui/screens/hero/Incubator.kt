@@ -3,6 +3,8 @@ package com.sperance.exileforge.ui.screens.hero
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -23,6 +25,7 @@ import com.sperance.exileforge.core.model.hero.IncubatorState
 import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.ui.components.ForgeButton
+import com.sperance.exileforge.ui.components.ForgeDialog
 import com.sperance.exileforge.ui.components.ForgeOutlinedButton
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.screens.crafts.duration
@@ -87,43 +90,40 @@ import kotlinx.coroutines.delay
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun EmptySlot(game: GameUi, eggs: List<String>, enabled: Boolean, onLay: (String) -> Unit) {
-    val hero = game.hero ?: return
     var picking by remember { mutableStateOf(false) }
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        SlotFrame(Gold) {
-            Box(Modifier.size(40.dp).border(1.dp, Gold.copy(alpha = .3f), RoundedCornerShape(6.dp)))
-            Text(ui("incubator.empty"), color = Muted, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
-            if (eggs.isEmpty()) {
-                MutedText(ui("pets.no_eggs"), style = MaterialTheme.typography.labelSmall)
-            } else {
-                ForgeOutlinedButton(onClick = { if (eggs.size == 1) onLay(eggs.single()) else picking = !picking }, enabled = enabled) {
-                    Text(ui("incubator.lay"))
-                }
-            }
+    SlotFrame(Gold) {
+        Box(Modifier.size(40.dp).border(1.dp, Gold.copy(alpha = .3f), RoundedCornerShape(6.dp)))
+        Text(ui("incubator.empty"), color = Muted, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
+        if (eggs.isEmpty()) {
+            MutedText(ui("pets.no_eggs"), style = MaterialTheme.typography.labelSmall)
+        } else {
+            ForgeOutlinedButton(onClick = { picking = true }, enabled = enabled) { Text(ui("incubator.lay")) }
         }
-        if (picking && eggs.size > 1) {
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                eggs.forEach { egg ->
-                    val shape = RoundedCornerShape(6.dp)
-                    Row(
-                        Modifier.background(Panel, shape).border(1.dp, Bronze, shape).clickable(enabled = enabled) {
-                            picking = false
-                            onLay(egg)
-                        }.padding(6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        StackIcon(game, egg, 28)
-                        Text(
-                            ui("incubator.egg", itemTitle(egg), hero.count(egg)),
-                            color = Parchment,
-                            style = MaterialTheme.typography.labelMedium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
+    }
+    // Every egg at hand in one window (3.81.0), even a single kind: the player sees what goes in before it does.
+    if (picking) EggPicker(game, eggs, onDismiss = { picking = false }) { egg ->
+        picking = false
+        onLay(egg)
+    }
+}
+
+@Composable private fun EggPicker(game: GameUi, eggs: List<String>, onDismiss: () -> Unit, onPick: (String) -> Unit) {
+    val hero = game.hero ?: return
+    ForgeDialog(ui("incubator.pick_title"), onDismiss) {
+        Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            eggs.forEach { egg ->
+                val shape = RoundedCornerShape(6.dp)
+                Row(
+                    Modifier.fillMaxWidth().background(Panel, shape).border(1.dp, Bronze, shape).clickable { onPick(egg) }.padding(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    StackIcon(game, egg, 36)
+                    Column(Modifier.weight(1f)) {
+                        Text(itemTitle(egg), color = Parchment, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        MutedText(ui("incubator.egg_count", hero.count(egg)), style = MaterialTheme.typography.labelSmall)
                     }
                 }
             }

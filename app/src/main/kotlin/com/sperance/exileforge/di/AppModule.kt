@@ -80,8 +80,8 @@ import org.koin.dsl.module
 const val APP_SCOPE = "app"
 
 /**
- * Граф приложения (3.81.0): хранилища устройства, журнал запросов и модели экранов. Сеть и репозитории
- * героя переезжают сюда следующими этапами (`REFACTORING.md`).
+ * Граф приложения (3.81.0): хранилища устройства, журнал запросов, HTTP-клиент процесса, репозитории ядра, сервисы
+ * `presentation/app` и модели экранов.
  */
 val appModule = module {
     single<CoroutineScope>(named(APP_SCOPE)) { CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate) }

@@ -1,9 +1,7 @@
 package com.sperance.exileforge.core.campaign
 
 import com.sperance.exileforge.core.contract.WireJson
-import com.sperance.exileforge.rules.content.FightTally
 import com.sperance.exileforge.rules.run.RunEvent
-import com.sperance.exileforge.rules.run.RunEventKind
 import kotlinx.serialization.Serializable
 
 /** The journal on disk: one run's events in order, the number the first of them bears, how far the server has applied them, and the batch in flight. */
@@ -76,21 +74,12 @@ class RunJournal(
     val settled: Boolean get() = applied >= end
 
     /** A fall or an exit ends the run: nothing after it is recorded. */
-    val closed: Boolean get() = events.any { it.kind == RunEventKind.FALL || it.kind == RunEventKind.LEAVE }
+    val closed: Boolean get() = events.any { it is RunEvent.Fall || it is RunEvent.Leave }
 
-    /** Records one event with the next number; a closed journal records nothing more. */
-    fun record(
-        kind: RunEventKind,
-        i: Int = 0,
-        m: Int = 0,
-        index: Int = 0,
-        depth: Int = 0,
-        fallen: Boolean = false,
-        vaal: Boolean = false,
-        fight: FightTally? = null,
-    ): RunEvent? {
+    /** Records the event [event] builds for the next number; a closed journal records nothing more. */
+    fun record(event: (n: Int) -> RunEvent): RunEvent? {
         if (closed) return null
-        return RunEvent(end, kind, i, m, index, depth, fallen, vaal, fight).also { events += it }
+        return event(end).also { events += it }
     }
 
     /**

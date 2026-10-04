@@ -39,7 +39,6 @@ import com.sperance.exileforge.rules.roll.VaalZone
 import com.sperance.exileforge.rules.run.Reward
 import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunEvent
-import com.sperance.exileforge.rules.run.RunEventKind
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -58,7 +57,7 @@ internal fun ExpeditionRun.walk(dt: Double) {
 
         WorldEvent.Exit -> exit()
 
-        is WorldEvent.Opened -> chestEvent = rewarding(record(RunEventKind.CHEST, index = event.chest.id))?.n
+        is WorldEvent.Opened -> chestEvent = rewarding(record { RunEvent.Chest(it, event.chest.id) })?.n
 
         is WorldEvent.AtFountain -> fountain = event.fountain
 
@@ -91,7 +90,7 @@ internal fun ExpeditionRun.drink(spring: Fountain) {
 
 /** The way out: the Vaal zone's exit leads back to the map; the zone's own records the leaving, the boss passed. */
 internal fun ExpeditionRun.exit() {
-    if (!vaal) record(RunEventKind.LEAVE)
+    if (!vaal) record(RunEvent::Leave)
     end = MapEnd.CLEARED
     phase = RunPhase.CLEARED
     onCleared()
@@ -124,7 +123,7 @@ internal fun ExpeditionRun.drive(pilot: AutoPilot, dt: Double) {
 
             is AutoStep.OpenChest -> if (!step.chest.opened) {
                 step.chest.opened = true
-                rewarding(record(RunEventKind.CHEST, index = step.chest.id))
+                rewarding(record { RunEvent.Chest(it, step.chest.id) })
                 return
             }
 
@@ -181,7 +180,7 @@ internal fun ExpeditionRun.openGate() {
             world.closePortal()
             return
         }
-        if (gateEvent == null) gateEvent = record(RunEventKind.VAAL_OPEN)?.n
+        if (gateEvent == null) gateEvent = record(RunEvent::VaalOpen)?.n
         if (gateEvent == null) {
             world.closePortal()
             return

@@ -43,7 +43,6 @@ import com.sperance.exileforge.rules.roll.VaalZone
 import com.sperance.exileforge.rules.run.Reward
 import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunEvent
-import com.sperance.exileforge.rules.run.RunEventKind
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -143,9 +142,9 @@ internal fun ExpeditionRun.fell(agent: MonsterAgent, member: Int) {
     if (abyssFight) return
     val spot = agent.crystal?.let { id -> world.crystals.firstOrNull { it.id == id } }
     val event = when {
-        spot != null -> record(RunEventKind.CRYSTAL, index = world.standingCrystals.indexOf(spot)).also { spot.freed = true }
-        agent === world.boss -> if (vaal) record(RunEventKind.CORRUPT) else record(RunEventKind.BOSS)?.also { bossDown = true }
-        else -> record(RunEventKind.KILL, i = agent.id, m = member)
+        spot != null -> record { RunEvent.Crystal(it, world.standingCrystals.indexOf(spot)) }.also { spot.freed = true }
+        agent === world.boss -> if (vaal) record(RunEvent::Corrupt) else record(RunEvent::Boss)?.also { bossDown = true }
+        else -> record { RunEvent.Kill(it, agent.id, member, vaal) }
     }
     rewarding(event, fought = true)
 }
@@ -198,7 +197,7 @@ internal fun ExpeditionRun.play(dt: Double) {
     }
     stats.add(pack, duration)
     // The fight's figures (3.51.0): only the hero's statistics, before a fall closes the journal.
-    record(RunEventKind.FIGHT, fight = FightFigures.of(pack, duration, boss = fightAgents.any { it === world.boss }, won = outcome == Outcome.WIN))
+    record { n -> RunEvent.Fight(n, FightFigures.of(pack, duration, boss = fightAgents.any { it === world.boss }, won = outcome == Outcome.WIN)) }
     val leader = fightStrongest ?: fightLeader()
     val down = descent?.takeIf { abyssFight }
     when (outcome) {
@@ -232,7 +231,7 @@ internal fun ExpeditionRun.play(dt: Double) {
             // A fall in the Abyss burns its hoard, but for the atlas's share; then the zone's own price.
             down?.let { take(it, fallen = true) }
             // A fall in the Vaal zone is a death as any (3.71.0, server 1.68.0): the same price, and the whole run is over
-            record(RunEventKind.FALL)?.let {
+            record { RunEvent.Fall(it, vaal) }?.let {
                 fallEvent = it.n
                 fall = deathLoss()
             }

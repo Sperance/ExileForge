@@ -57,7 +57,6 @@ import com.sperance.exileforge.rules.roll.VaalZone
 import com.sperance.exileforge.rules.run.Reward
 import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunEvent
-import com.sperance.exileforge.rules.run.RunEventKind
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -301,15 +300,7 @@ class ExpeditionRun(
     }
 
     /** One event of the journal, and the listener told. */
-    internal fun record(
-        kind: RunEventKind,
-        i: Int = 0,
-        m: Int = 0,
-        index: Int = 0,
-        depth: Int = 0,
-        fallen: Boolean = false,
-        fight: com.sperance.exileforge.rules.content.FightTally? = null,
-    ): RunEvent? = journal.record(kind, i, m, index, depth, fallen, vaal, fight)?.also(onRecorded)
+    internal fun record(event: (n: Int) -> RunEvent): RunEvent? = journal.record(event)?.also(onRecorded)
 
     /** A rewarding event recorded: what it brings comes with the server's answer, into the run's count, the autorun's and, [fought], the fight's report. */
     internal fun rewarding(event: RunEvent?, fought: Boolean = false): RunEvent? = event?.also {

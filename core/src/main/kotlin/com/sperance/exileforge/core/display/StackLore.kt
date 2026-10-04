@@ -4,7 +4,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Essence
 import com.sperance.exileforge.rules.content.EssenceBook
-import com.sperance.exileforge.rules.content.JobKind
+import com.sperance.exileforge.rules.content.Job
 import com.sperance.exileforge.rules.content.JobRecipes
 import com.sperance.exileforge.rules.content.TrialRules
 import com.sperance.exileforge.rules.table.Ref
@@ -145,16 +145,16 @@ private class SourceIndex(private val index: ContentIndex) {
         index.professions.professions.forEach { profession ->
             profession.jobs.forEach { job ->
                 val work = { code: String, level: Int -> add(code, ItemSource(SourceKind.WORK, ref = profession.code, detail = job.code, level = level)) }
-                when (job.kind) {
-                    JobKind.ITEM -> if (job.output.isNotBlank()) work(job.output, job.level)
+                when (job) {
+                    is Job.Item -> if (job.output.isNotBlank()) work(job.output, job.level)
 
-                    JobKind.CONDENSE -> book.kinds.forEach { kind ->
+                    is Job.Condense -> book.kinds.forEach { kind ->
                         (2..book.tiers.size).forEach { tier -> work(EssenceBook.code(kind.code, tier, special = false), book.condense.levels.getOrElse(tier - 2) { job.level }) }
                     }
 
-                    JobKind.BOOK -> index.skills.skills.filter { it.unlock <= (job.band.singleOrNull() ?: 0) }.forEach { work(it.book, job.level) }
+                    is Job.Book -> index.skills.skills.filter { it.unlock <= job.upTo }.forEach { work(it.book, job.level) }
 
-                    JobKind.REFINE -> recipes.options(job, heroClass = "").forEach { work(it.job.output, it.job.level) }
+                    is Job.Refine -> recipes.options(job, heroClass = "").forEach { work(it.job.output, it.job.level) }
 
                     else -> Unit
                 }

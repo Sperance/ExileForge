@@ -13,8 +13,6 @@ import com.sperance.exileforge.core.i18n.UiStrings
 import com.sperance.exileforge.core.i18n.plural
 import com.sperance.exileforge.core.i18n.pluralKey
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.model.auction.LotKind
-import com.sperance.exileforge.core.model.command.RedemptionKind
 import com.sperance.exileforge.rules.content.AtlasNodeKind
 import com.sperance.exileforge.rules.content.AtlasPoints
 import com.sperance.exileforge.rules.content.EssenceBook
@@ -27,7 +25,9 @@ import com.sperance.exileforge.rules.content.SkillType
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.SlotCondition
 import com.sperance.exileforge.rules.content.WeaponType
+import com.sperance.exileforge.rules.reward.RedemptionKind
 import com.sperance.exileforge.rules.text.LocaleKey
+import com.sperance.exileforge.rules.trade.LotKind
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals

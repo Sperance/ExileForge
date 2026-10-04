@@ -1,7 +1,7 @@
 package com.sperance.exileforge.core.crafts
 
 import com.sperance.exileforge.core.model.crafts.JobView
-import com.sperance.exileforge.rules.content.JobKind
+import com.sperance.exileforge.rules.content.Job
 import com.sperance.exileforge.rules.roll.Work
 import com.sperance.exileforge.rules.roll.WorkBonus
 import com.sperance.exileforge.rules.roll.WorkGains
@@ -26,10 +26,10 @@ object CraftCycle {
         val whole = floor(extra).toLong()
         val units = 1 + whole + if (dice.chance(extra - whole)) 1 else 0
         val items = mutableMapOf<String, Long>()
-        if (job.kind == JobKind.ITEM) items.merge(job.output, units, Long::plus)
+        if (job.job is Job.Item) items.merge(job.output, units, Long::plus)
         job.extra.forEach { find -> if (dice.percent(find.chance)) items.merge(find.item, 1, Long::plus) }
         val experience = Math.round(job.experience * (1 + max(0.0, bonus.experience) / 100) * 10) / 10.0
-        return WorkGains(cycles = 1, items = items, experience = experience, spent = spent, made = if (job.kind == JobKind.ITEM) 0 else units.toInt())
+        return WorkGains(cycles = 1, items = items, experience = experience, spent = spent, made = if (job.job is Job.Item) 0 else units.toInt())
     }
 }
 

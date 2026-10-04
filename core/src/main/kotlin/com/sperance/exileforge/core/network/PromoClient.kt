@@ -4,7 +4,7 @@ import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.contract.requireId
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.RedemptionCode
-import com.sperance.exileforge.core.model.command.RedemptionKind
+import com.sperance.exileforge.core.model.command.named
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
@@ -21,8 +21,8 @@ class PromoClient internal constructor(private val http: Transport) {
         require(code.code.isNotBlank()) { ui("api.enter_promo") }
         require(code.treasure.isNotEmpty()) { ui("api.empty_reward") }
         code.treasure.forEach {
-            require(it.amount > 0) { ui("api.reward_amount") }
-            if (it.kind == RedemptionKind.ITEM || it.kind == RedemptionKind.EQUIPMENT) require(it.item.isNotBlank()) { ui("api.choose_item") }
+            require(it.quantity > 0) { ui("api.reward_amount") }
+            it.named?.let { named -> require(named.isNotBlank()) { ui("api.choose_item") } }
         }
         val document = WireJson.encodeToJsonElement(RedemptionCode.serializer(), code.copy(id = "", used = 0, code = code.code.trim())).jsonObject
         val body = JsonObject(document.filterKeys { it != "_id" && it != "used" })

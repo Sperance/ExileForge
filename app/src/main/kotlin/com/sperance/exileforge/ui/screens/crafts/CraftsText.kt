@@ -55,6 +55,7 @@ import com.sperance.exileforge.core.model.crafts.running
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.JobInput
+import com.sperance.exileforge.rules.content.Job
 import com.sperance.exileforge.rules.content.JobKind
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.roll.WorkGains
@@ -92,23 +93,23 @@ fun gainsLine(gains: WorkGains): String = listOfNotNull(
 fun bagCount(game: GameUi, code: String): Long = game.bagAmount(code) ?: 0L
 
 /** What a work makes, in words: the stack, the smith's range or the cartographer's location. */
-fun jobProduct(job: JobView): String = when (job.kind) {
-    JobKind.ITEM -> itemTitle(job.output)
+fun jobProduct(view: JobView): String = when (val job = view.job) {
+    is Job.Item -> itemTitle(job.output)
 
-    JobKind.EQUIPMENT -> ui("crafts.kind_equipment", job.band.getOrElse(0) { 1 }, job.band.getOrElse(1) { 1 })
+    is Job.Equipment -> ui("crafts.kind_equipment", job.band.getOrElse(0) { 1 }, job.band.getOrElse(1) { 1 })
 
-    JobKind.MAP -> ui("crafts.kind_map", regionTitle(job.region))
+    is Job.Chart -> ui("crafts.kind_map", regionTitle(job.region))
 
-    JobKind.FLASK -> equipmentTitle(job.output)
+    is Job.Flask -> equipmentTitle(job.output)
 
     // Choosing works (3.45.0): the variant picked in the sheet is a plain ITEM work.
-    JobKind.BOOK -> ui("crafts.kind_book", job.band.getOrElse(0) { 1 })
+    is Job.Book -> ui("crafts.kind_book", job.upTo)
 
-    JobKind.CONDENSE -> ui("crafts.kind_condense")
+    is Job.Condense -> ui("crafts.kind_condense")
 
-    JobKind.REFINE -> ui("crafts.kind_refine")
+    is Job.Refine -> ui("crafts.kind_refine")
 
-    JobKind.JEWEL -> ui("crafts.kind_jewel", job.band.getOrElse(0) { 1 }, job.band.getOrElse(1) { 1 })
+    is Job.Jewel -> ui("crafts.kind_jewel", job.band.getOrElse(0) { 1 }, job.band.getOrElse(1) { 1 })
 }
 
 /** A crafting profession spends materials; a gathering one only brings them. The works say which, not a list of codes. */

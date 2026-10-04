@@ -19,7 +19,6 @@ import com.sperance.exileforge.data.settings.PreferencesRepository
 import com.sperance.exileforge.presentation.hero.HeroSync
 import com.sperance.exileforge.presentation.state.GameSettings
 import com.sperance.exileforge.rules.content.TrialEvent
-import com.sperance.exileforge.rules.content.TrialEventKind
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -115,7 +114,7 @@ class TrialActions(
         val open = heroes.state.value.hero?.campaign?.trials?.run ?: return
         if (mutableArena.value != null) return
         commands.task(writing = true, touches = setOf(Reads.HERO)) {
-            val report = api.trials.events(heroes.heroId, open.id, listOf(TrialEvent(open.applied, TrialEventKind.END)))
+            val report = api.trials.events(heroes.heroId, open.id, listOf(TrialEvent.End(open.applied)))
             report?.received?.takeIf { it.overflowed > 0 || it.sold > 0 }?.let { notices.toast(ui("stash.received", it.overflowed, it.sold, it.gold)) }
             notices.toast(ui("trials.abandoned"))
             if (heroes.state.value.readAt == 0L) heroSync.readHero()

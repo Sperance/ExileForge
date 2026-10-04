@@ -3,6 +3,7 @@ package com.sperance.exileforge.core.model.crafts
 import com.sperance.exileforge.rules.content.CraftsRules
 import com.sperance.exileforge.rules.content.JobExtra
 import com.sperance.exileforge.rules.content.JobInput
+import com.sperance.exileforge.rules.content.Job
 import com.sperance.exileforge.rules.content.JobKind
 import com.sperance.exileforge.rules.roll.ActiveWork
 import com.sperance.exileforge.rules.roll.CraftsAway
@@ -21,27 +22,28 @@ import kotlinx.serialization.Serializable
 
 /** One work of a profession as the hero has it now: the rules' seconds, and the cycle and the «nothing» chance their gear makes of it. */
 @Serializable data class JobView(
-    val code: String,
-    val level: Int = 1,
-    val seconds: Double = 0.0,
+    /** The work itself (server 1.75.0): each kind with its own fields — a stack's output, a smith's band, a chart's region. */
+    val job: Job,
     val cycleMillis: Long = 0,
+    /** The hero's own odds: the empty cycle's and each find's, after level and gear. */
     val nothing: Double = 0.0,
-    val output: String = "",
-    val experience: Double = 0.0,
     val extra: List<JobExtra> = emptyList(),
-    val kind: JobKind = JobKind.ITEM,
-    val inputs: List<JobInput> = emptyList(),
-    val band: List<Int> = emptyList(),
-    /** A cartographer's chart (3.45.0): the region whose open zones it maps, one at random. */
-    val region: String = "",
-    val additives: Boolean = false,
     /** Whether the hero may take it: a chart needs an open zone of its region, a choosing work a variant. */
     val open: Boolean = true,
     /** A variant of a choosing work (3.45.0): what was chosen — the item it makes; blank on the work itself. */
     val choice: String = "",
     /** The variants of a choosing work — a condensed essence, a skill book of the hero's class — each a plain work of its own. */
     val options: List<JobView> = emptyList(),
-)
+) {
+    val code: String get() = job.code
+    val kind: JobKind get() = job.kind
+    val level: Int get() = job.level
+    val seconds: Double get() = job.seconds
+    val output: String get() = job.output
+    val experience: Double get() = job.experience
+    val inputs: List<JobInput> get() = job.inputs
+    val additives: Boolean get() = job.additives
+}
 
 /** A profession of the hero: its level and experience, the tool in its slot, its bonus and works. */
 @Serializable data class ProfessionView(

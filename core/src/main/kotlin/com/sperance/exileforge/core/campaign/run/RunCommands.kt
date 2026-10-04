@@ -40,7 +40,6 @@ import com.sperance.exileforge.rules.roll.VaalZone
 import com.sperance.exileforge.rules.run.Reward
 import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunEvent
-import com.sperance.exileforge.rules.run.RunEventKind
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -174,7 +173,7 @@ internal fun ExpeditionRun.handle(command: RunCommand) {
         is RunCommand.ShutGate -> {
             // Refused while its zone is still on the way, the portal is as good as opened: the server rolled the zone, and it is left.
             if (!command.entered && (vaalZone != null || gateEvent != null)) {
-                record(RunEventKind.VAAL_LEAVE)
+                record(RunEvent::VaalLeave)
                 vaalZone = null
                 gateEvent = null
                 corruptionOpened = true
@@ -217,7 +216,7 @@ internal fun ExpeditionRun.handle(command: RunCommand) {
 
         RunCommand.VaalCrystal -> crystal?.takeIf { phase == RunPhase.CRYSTAL && !it.crystal.vaal && !vaaling(it) && vaalOrbs() >= 1 }?.let { spot ->
             val place = world.standingCrystals.indexOf(spot)
-            record(RunEventKind.CRYSTAL_VAAL, index = place)?.let {
+            record { RunEvent.CrystalVaal(it, place) }?.let {
                 vaalings[it.n] = Vaaling(spot, place)
                 crystalOutcome = null
             }

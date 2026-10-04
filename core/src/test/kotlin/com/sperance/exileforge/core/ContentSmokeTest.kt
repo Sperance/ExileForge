@@ -9,7 +9,7 @@ import com.sperance.exileforge.rules.roll.ItemFactory
 import com.sperance.exileforge.rules.run.RewardDraws
 import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunContext
-import com.sperance.exileforge.rules.run.RunEventKind
+import com.sperance.exileforge.rules.run.RunEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -70,8 +70,8 @@ class ContentSmokeTest {
     @Test
     fun the_journal_survives_a_restart() {
         val journal = RunJournal("run", "hero", "zone")
-        journal.record(RunEventKind.KILL, i = 0, m = 1)
-        journal.record(RunEventKind.CHEST, index = 0)
+        journal.record { RunEvent.Kill(it, i = 0, m = 1) }
+        journal.record { RunEvent.Chest(it, index = 0) }
         journal.confirm(1)
         val back = assertNotNull(RunJournal.decode(journal.encode()))
         assertEquals(journal.all, back.all)
@@ -79,7 +79,7 @@ class ContentSmokeTest {
         assertEquals(1, back.applied)
         // A batch whose answer was lost goes again under its own key, even after a restart; an answer frees it.
         val sent = assertNotNull(back.outgoing { "first" }).first
-        back.record(RunEventKind.KILL, i = 1, m = 0)
+        back.record { RunEvent.Kill(it, i = 1, m = 0) }
         val again = assertNotNull(assertNotNull(RunJournal.decode(back.encode())).outgoing { "second" })
         assertEquals(sent, again.first)
         assertEquals(1, again.second.size)

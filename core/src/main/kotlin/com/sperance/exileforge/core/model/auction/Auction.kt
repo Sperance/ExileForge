@@ -9,11 +9,10 @@ import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.text.LocaleKey
+import com.sperance.exileforge.rules.trade.LotGoods
+import com.sperance.exileforge.rules.trade.LotKind
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-
-/** What is on offer: a copy of an item, or a stack of the bag. */
-@Serializable enum class LotKind { EQUIPMENT, ITEM }
 
 /** Where a lot stands. A closed lot never returns to the showcase; it stays as trading history. [EXPIRED] (server 1.30.0): its time ran out, the goods went back to the seller. */
 @Serializable enum class LotStatus { ACTIVE, SOLD, CANCELLED, EXPIRED }
@@ -27,10 +26,10 @@ import kotlinx.serialization.Serializable
     @SerialName("_id") val id: String = "",
     val sellerId: String = "",
     val sellerName: String = "",
+    /** What is on offer (server 1.75.0): a copy of an item or a stack of the bag, each with its own fields. */
+    val goods: LotGoods? = null,
+    /** The kind of [goods] as a snapshot the showcase filters by. */
     val kind: LotKind = LotKind.EQUIPMENT,
-    val equipment: ItemInstance? = null,
-    val item: String = "",
-    val amount: Long = 1,
     val priceOrb: String = "",
     val price: Long = 0,
     /** The buyer's fee in gold, on top of the orbs (3.15.0, server 1.13.0): it burns, the seller gets none. */
@@ -53,7 +52,13 @@ import kotlinx.serialization.Serializable
     val version: Long = 0,
 ) {
     /** The deal as the history shows it: the copy that was sold in place of the one the lot no longer holds. */
-    val deal: AuctionLot get() = if (sold != null && equipment == null) copy(equipment = sold) else this
+    val deal: AuctionLot get() = if (sold != null && equipment == null) copy(goods = LotGoods.Equipment(sold)) else this
+
+    /** The copy on offer, or null for a stack. */
+    val equipment: ItemInstance? get() = (goods as? LotGoods.Equipment)?.item
+
+    /** How many units go for the one price: one for an item. */
+    val amount: Long get() = goods?.amount ?: 1
     val onSale: Boolean get() = status == LotStatus.ACTIVE && (expiresAt == 0L || System.currentTimeMillis() < expiresAt)
 
     /** Milliseconds the lot still stands, or null when it names no end. */

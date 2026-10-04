@@ -18,14 +18,12 @@ import com.sperance.exileforge.core.campaign.run.RunCommand
 import com.sperance.exileforge.core.campaign.run.RunHud
 import com.sperance.exileforge.core.campaign.run.RunPhase
 import com.sperance.exileforge.rules.content.ContentIndex
-import com.sperance.exileforge.rules.content.FightTally
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.Pet
 import com.sperance.exileforge.rules.content.RushPlan
 import com.sperance.exileforge.rules.content.TowerFloor
 import com.sperance.exileforge.rules.content.TowerMod
 import com.sperance.exileforge.rules.content.TrialEvent
-import com.sperance.exileforge.rules.content.TrialEventKind
 import com.sperance.exileforge.rules.content.TrialKind
 import com.sperance.exileforge.rules.content.TrialRules
 import com.sperance.exileforge.rules.content.TrialRun
@@ -168,9 +166,10 @@ class TrialArena(
         }
     }
 
-    private fun record(kind: TrialEventKind, index: Int = 0, fallen: Boolean = false, fight: FightTally? = null): Int {
+    /** Records the event [event] builds for the next number and returns that number. */
+    private fun record(event: (n: Int) -> TrialEvent): Int {
         val n = next++
-        onEvent(TrialEvent(n, kind, index, fallen, fight))
+        onEvent(event(n))
         return n
     }
 
@@ -302,7 +301,7 @@ class TrialArena(
         stageTime += fight.duration
         if (outcome != Outcome.WIN) {
             stats.add(pack, stageTime)
-            record(TrialEventKind.FIGHT, fight = FightFigures.of(pack, stageTime, trial.kind == TrialKind.RUSH, won = false))
+            record { TrialEvent.Fight(it, FightFigures.of(pack, stageTime, trial.kind == TrialKind.RUSH, won = false)) }
             battle = null
             finish(fallen = true)
             return
@@ -315,11 +314,11 @@ class TrialArena(
     /** A boss or a whole floor won: its event, the rush's breath between bosses, and the next one — or the end of the rush. */
     private fun won(pack: List<PackHit>) {
         stats.add(pack, stageTime)
-        record(TrialEventKind.FIGHT, fight = FightFigures.of(pack, stageTime, trial.kind == TrialKind.RUSH, won = true))
+        record { TrialEvent.Fight(it, FightFigures.of(pack, stageTime, trial.kind == TrialKind.RUSH, won = true)) }
         cleared++
         when (trial.kind) {
             TrialKind.RUSH -> {
-                record(TrialEventKind.BOSS, step)
+                record { TrialEvent.Boss(it, step) }
                 step++
                 val rush = trials.rush
                 pools = pools.copy(
@@ -330,7 +329,7 @@ class TrialArena(
             }
 
             TrialKind.TOWER -> {
-                val n = record(TrialEventKind.FLOOR, step)
+                val n = record { TrialEvent.Floor(it, step) }
                 if (floor?.hoard == true) hoards += n
                 step++
                 // The tower's last floor won (3.71.0): the server closes the trial with it, so no end is sent after it
@@ -342,7 +341,7 @@ class TrialArena(
     /** The trial over; [ended] - the server closed it already, and no end of it is recorded. */
     private fun finish(fallen: Boolean, ended: Boolean = false) {
         if (phase != TrialPhase.FIGHT) return
-        if (!ended) record(TrialEventKind.END, fallen = fallen)
+        if (!ended) record { TrialEvent.End(it, fallen) }
         endedAt = clock()
         battle = null
         phase = if (fallen) TrialPhase.DEAD else TrialPhase.DONE

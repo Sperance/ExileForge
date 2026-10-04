@@ -22,6 +22,7 @@ import com.sperance.exileforge.rules.roll.Dice
 import com.sperance.exileforge.rules.roll.ItemFactory
 import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunContext
+import com.sperance.exileforge.rules.run.RunEvent
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -96,10 +97,24 @@ class ExpeditionGoldenTest {
             appendLine("hero=${heroClass.code} zone=${zone.code} level=${case.level} seed=${case.seed} skill=${skill?.code}")
             appendLine("phase=${hud.phase} life=${expedition.heroLife.f()} seconds=${share.seconds.f()} kills=${share.kills} bosses=${share.bosses} deaths=${share.deaths} events=${journal.size}")
             journal.all.forEach { e ->
-                val fight = e.fight?.let { t -> "fight=${t.hits}/${t.crits}/${t.misses}/${t.blocked}/${t.evaded}/${t.ailments} taken=${t.taken} healed=${t.healed} max=${t.maxHit} dealt=${t.dealt.toSortedMap()}" }.orEmpty()
-                appendLine(listOf(e.n, e.kind, e.i, e.m, e.index, e.depth, e.fallen, e.vaal, fight).joinToString(" ").trimEnd())
+                val fight = (e as? RunEvent.Fight)?.fight?.let { t -> "fight=${t.hits}/${t.crits}/${t.misses}/${t.blocked}/${t.evaded}/${t.ailments} taken=${t.taken} healed=${t.healed} max=${t.maxHit} dealt=${t.dealt.toSortedMap()}" }.orEmpty()
+                appendLine((e.flat() + fight).joinToString(" ").trimEnd())
             }
         }
+    }
+
+    /** The event as the journal wrote it before the sealed events (server 1.75.0): the golden files stay the same. */
+    private fun RunEvent.flat(): List<Any> {
+        val index = when (this) {
+            is RunEvent.Chest -> index
+            is RunEvent.Crystal -> index
+            is RunEvent.CrystalVaal -> index
+            is RunEvent.AbyssOpen -> index
+            else -> 0
+        }
+        val vaal = (this as? RunEvent.Kill)?.vaal ?: (this as? RunEvent.Fall)?.vaal ?: false
+        val claim = this as? RunEvent.AbyssClaim
+        return listOf(n, kind, (this as? RunEvent.Kill)?.i ?: 0, (this as? RunEvent.Kill)?.m ?: 0, index, claim?.depth ?: 0, claim?.fallen ?: false, vaal)
     }
 
     private fun Double.f() = "%.4f".format(java.util.Locale.ROOT, this)

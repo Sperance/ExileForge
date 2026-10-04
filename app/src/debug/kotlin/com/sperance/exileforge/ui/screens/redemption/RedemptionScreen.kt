@@ -23,11 +23,12 @@ import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.RedemptionCode
-import com.sperance.exileforge.core.model.command.RedemptionKind
-import com.sperance.exileforge.core.model.command.RedemptionReward
+import com.sperance.exileforge.core.model.command.redemptionReward
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.admin.AdminViewModel
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.rules.reward.RedemptionKind
+import com.sperance.exileforge.rules.reward.RedemptionReward
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.Gold
@@ -106,12 +107,12 @@ import org.koin.compose.viewmodel.koinViewModel
  * dictionary — so the line reads as the player will see the gift, kind first: «Предмет · Сфера хаоса · 3 шт.».
  */
 private fun rewardLine(reward: RedemptionReward): String {
-    val amount = if (reward.amount % 1.0 == 0.0) reward.amount.toLong().toString() else reward.amount.toString()
-    return when (reward.kind) {
-        RedemptionKind.EXPERIENCE -> ui("redemption.line_experience", amount)
-        RedemptionKind.GOLD -> ui("redemption.line_gold", amount)
-        RedemptionKind.ITEM -> "${ui("enum.reward.ITEM")} · ${itemTitle(reward.item)} · ${ui("auction.pieces", amount)}"
-        RedemptionKind.EQUIPMENT -> "${ui("enum.reward.EQUIPMENT")} · ${equipmentTitle(reward.item)} · ${ui("auction.pieces", amount)}"
+    val amount = if (reward.quantity % 1.0 == 0.0) reward.quantity.toLong().toString() else reward.quantity.toString()
+    return when (reward) {
+        is RedemptionReward.Experience -> ui("redemption.line_experience", amount)
+        is RedemptionReward.Gold -> ui("redemption.line_gold", amount)
+        is RedemptionReward.Item -> "${ui("enum.reward.ITEM")} · ${itemTitle(reward.code)} · ${ui("auction.pieces", amount)}"
+        is RedemptionReward.Equipment -> "${ui("enum.reward.EQUIPMENT")} · ${equipmentTitle(reward.template)} · ${ui("auction.pieces", amount)}"
     }
 }
 
@@ -194,7 +195,7 @@ private fun rewardOptions(game: GameUi, kind: RedemptionKind): Map<String, Strin
             enabled = !game.busy && (!needsCode || item.isNotBlank()) && amount.toDoubleOrNull() != null,
             modifier = Modifier.fillMaxWidth(),
             onClick = {
-                rewards = rewards + RedemptionReward(kind, item, amount.toDoubleOrNull() ?: 0.0)
+                rewards = rewards + redemptionReward(kind, item, amount.toDoubleOrNull() ?: 0.0)
                 item = ""
                 amount = "1"
             },

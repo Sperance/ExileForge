@@ -40,7 +40,6 @@ import com.sperance.exileforge.rules.roll.VaalZone
 import com.sperance.exileforge.rules.run.Reward
 import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunEvent
-import com.sperance.exileforge.rules.run.RunEventKind
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -72,7 +71,7 @@ internal fun ExpeditionRun.descend() {
     val current = descent
     if (current == null) {
         val place = world.standingCracks.indexOf(spot)
-        record(RunEventKind.ABYSS_OPEN, index = place) ?: return
+        record { RunEvent.AbyssOpen(it, place) } ?: return
         spot.opened = true
         val depth = AbyssRifts(index).depth(rule, spot.depth, mapEffects[MapStats.ABYSS_DEPTH] ?: 0.0)
         Descent(spot, depth).also {
@@ -101,5 +100,5 @@ internal fun ExpeditionRun.nextFight(current: Descent) {
 internal fun ExpeditionRun.take(current: Descent, fallen: Boolean) {
     current.fallen = fallen
     // A fall in the Abyss burns the whole hoard (server 1.2.0); the hoard is still counted, as the server counts it
-    current.claim = rewarding(record(RunEventKind.ABYSS_CLAIM, depth = current.cleared, fallen = fallen))?.n
+    current.claim = rewarding(record { RunEvent.AbyssClaim(it, current.cleared, fallen) })?.n
 }

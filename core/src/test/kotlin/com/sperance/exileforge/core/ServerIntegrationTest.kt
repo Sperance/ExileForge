@@ -5,8 +5,6 @@ import com.sperance.exileforge.core.i18n.serverLocale
 import com.sperance.exileforge.core.model.auction.AuctionFilter
 import com.sperance.exileforge.core.model.auction.LotStatus
 import com.sperance.exileforge.core.model.command.RedemptionCode
-import com.sperance.exileforge.core.model.command.RedemptionKind
-import com.sperance.exileforge.core.model.command.RedemptionReward
 import com.sperance.exileforge.core.model.sync.API_REVISION
 import com.sperance.exileforge.core.model.sync.HeroParts
 import com.sperance.exileforge.core.model.sync.HeroSnapshot
@@ -16,17 +14,17 @@ import com.sperance.exileforge.rules.content.ContentLoader
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
+import com.sperance.exileforge.rules.reward.RedemptionReward
 import com.sperance.exileforge.rules.roll.ItemBuckets
 import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunEvent
-import com.sperance.exileforge.rules.run.RunEventKind
-import kotlinx.coroutines.runBlocking
-import org.junit.Assume.assumeTrue
-import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import kotlinx.coroutines.runBlocking
+import org.junit.Assume.assumeTrue
+import org.junit.Test
 
 /**
  * The live contract, opt-in: CI launches the pinned server (`backend/` submodule) with MongoDB and
@@ -99,7 +97,7 @@ class ServerIntegrationTest {
             assertEquals(start.id, api.campaign.start(heroId, zoneCode).id, "entering the zone again did not go on with its run")
             val run = Run(index, index.zone(zoneCode)!!, start.seed, start.context)
             assertEquals(run.count, start.count, "the client and the server count the zone differently")
-            val events = listOf(RunEvent(0, RunEventKind.KILL, i = 0, m = 0), RunEvent(1, RunEventKind.BOSS), RunEvent(2, RunEventKind.LEAVE))
+            val events = listOf(RunEvent.Kill(0, i = 0, m = 0), RunEvent.Boss(1), RunEvent.Leave(2))
             val report = assertNotNull(api.campaign.events(heroId, start.id, events))
             assertEquals(3, report.applied)
             assertEquals(emptyList(), report.rejected)
@@ -121,7 +119,7 @@ class ServerIntegrationTest {
             assertEquals(held, chaos())
 
             // A code is a treasure once.
-            val code = api.promo.create(RedemptionCode(code = "CONTRACT-${System.currentTimeMillis()}", treasure = listOf(RedemptionReward(RedemptionKind.GOLD, "", 100.0))))
+            val code = api.promo.create(RedemptionCode(code = "CONTRACT-${System.currentTimeMillis()}", treasure = listOf(RedemptionReward.Gold(100))))
             val before = HeroParts(heroId).merge(assertNotNull(api.hero.view(heroId, HeroParts(heroId)))).hero.money
             assertEquals("system.success", api.hero.redeem(heroId, code.code))
             assertEquals(before + 100, HeroParts(heroId).merge(assertNotNull(api.hero.view(heroId, HeroParts(heroId)))).hero.money)

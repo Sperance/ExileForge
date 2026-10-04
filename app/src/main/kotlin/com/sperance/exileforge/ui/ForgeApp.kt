@@ -44,6 +44,7 @@ import androidx.navigation3.ui.NavDisplay
 import com.sperance.exileforge.core.display.workTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.network.RequestLog
+import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.data.settings.DraftStore
 import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.crafts.CraftsViewModel
@@ -65,6 +66,7 @@ import com.sperance.exileforge.ui.components.LocalSettings
 import com.sperance.exileforge.ui.components.LocalUpdates
 import com.sperance.exileforge.ui.components.MailSheet
 import com.sperance.exileforge.ui.components.OrnateDivider
+import com.sperance.exileforge.ui.components.StartStages
 import com.sperance.exileforge.ui.components.SuggestionsSheet
 import com.sperance.exileforge.ui.components.ToastHost
 import com.sperance.exileforge.ui.components.UpdateGate
@@ -133,7 +135,12 @@ import org.koin.compose.viewmodel.koinViewModel
     ) {
         ForgeScreens()
         // Updates (3.72.0): over everything; a run or a trial under way is finished first.
-        UpdateGate(updates, busy = expedition != null || trial != null)
+        val stages by remember(shell) {
+            shell.game.map { g ->
+                StartStages(Reads.CONTENT in g.loading, g.index != null, g.world.localeStrings > 0, g.world.iconKeys > 0)
+            }.distinctUntilChanged()
+        }.collectAsStateWithLifecycle(StartStages(contentLoading = false, contentReady = false, dictionaryReady = false, iconsReady = false))
+        UpdateGate(updates, busy = expedition != null || trial != null, stages = stages)
     }
 }
 

@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -28,36 +29,94 @@ import com.sperance.exileforge.update.UpdateInstaller
 /** The update model of the activity (3.72.0), for the screens that show the version and check by hand. */
 val LocalUpdates = staticCompositionLocalOf<UpdateViewModel?> { null }
 
+/** Where the start stands (3.81.0): the server's content read or on its way, the dictionary and the icons in. */
+data class StartStages(val contentLoading: Boolean, val contentReady: Boolean, val dictionaryReady: Boolean, val iconsReady: Boolean)
+
 /**
  * The update gate (3.72.0), over everything: a newer build found is required — its window cannot be dismissed. [busy] - a
  * run or a trial is under way: the window waits for its end. Since 3.73.0 the check itself is unseen, and the first start
- * asks once to allow installing from this game, so the update later goes in without a detour.
+ * asks once to allow installing from this game, so the update later goes in without a detour. Since 3.81.0 the start is one
+ * window of stages — the version, the content, the dictionary and the icons —, held until the version is checked and the
+ * content that is on its way has come; a newer build turns the same window into its update, with «Обновить» there.
  */
-@Composable fun UpdateGate(updates: UpdateViewModel, busy: Boolean) {
+@Composable fun UpdateGate(updates: UpdateViewModel, busy: Boolean, stages: StartStages) {
     val s by updates.state.collectAsStateWithLifecycle()
     // Back in the app (3.76.0): the releases are asked again, unless a run is under way.
     val idle by rememberUpdatedState(!busy)
     LifecycleEventEffect(Lifecycle.Event.ON_START) { if (idle) updates.resumed() }
+    // The stages are shown once, at the start: a content read later in the game is the banner's.
+    var started by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(s.verified, stages.contentLoading) { if (s.verified && !stages.contentLoading) started = true }
     when {
-        s.update != null && !busy -> Locked { UpdateBody(s, updates) }
+        s.update != null && !busy -> Locked {
+            StageList(s, stages)
+            UpdateBody(s, updates)
+        }
 
-        // The start waits for one check to pass (3.76.0): the game does not open on a build that may be stale.
-        !s.verified -> Locked { CheckingBody(s, updates) }
+        // The start waits for one check to pass (3.76.0) and, since 3.81.0, for the content on its way.
+        !s.verified || (!started && stages.contentLoading) -> Locked { CheckingBody(s, stages, updates) }
 
         s.askSources -> SourcesPrompt(updates)
     }
 }
 
-/** The start's gate (3.76.0): the check under way, or why it failed and «Повторить»; it tries again by itself too. */
-@Composable private fun ColumnScope.CheckingBody(s: UpdateState, updates: UpdateViewModel) {
-    Text(ui("update.gate_title"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
-    if (s.checking || s.failure == null) {
-        LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised)
-        MutedText(ui("update.checking"))
-    } else {
+/** The start's window (3.81.0): the stages one under another, and why the check failed with «Повторить». */
+@Composable private fun ColumnScope.CheckingBody(s: UpdateState, stages: StartStages, updates: UpdateViewModel) {
+    Text(ui("start.title"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
+    StageList(s, stages)
+    if (!s.checking && s.failure != null) {
         InfoCard(ui("update.gate_failed"), s.failure, failure = true)
         MutedText(ui("update.gate_auto"))
         ForgeButton(onClick = updates::retry, modifier = Modifier.fillMaxWidth()) { Text(ui("update.retry")) }
+    } else {
+        LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised)
+    }
+}
+
+/** A stage's state: waiting, under way, done, or failed. */
+private enum class Stage { WAIT, RUN, DONE, FAIL }
+
+@Composable private fun StageList(s: UpdateState, stages: StartStages) {
+    val version = when {
+        s.update != null -> Stage.DONE
+        s.verified -> Stage.DONE
+        !s.checking && s.failure != null -> Stage.FAIL
+        else -> Stage.RUN
+    }
+    val content = when {
+        stages.contentReady && !stages.contentLoading -> Stage.DONE
+        stages.contentLoading -> Stage.RUN
+        else -> Stage.WAIT
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        StageRow(ui("start.version"), version, if (s.update != null) ui("update.versions", BuildConfig.VERSION_NAME, s.update.info.versionName) else null)
+        StageRow(ui("start.content"), content)
+        StageRow(ui("start.dictionary"), if (stages.dictionaryReady) Stage.DONE else Stage.RUN)
+        StageRow(ui("start.icons"), if (stages.iconsReady) Stage.DONE else Stage.RUN)
+    }
+}
+
+@Composable private fun StageRow(title: String, stage: Stage, note: String? = null) {
+    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        when (stage) {
+            Stage.RUN -> CircularProgressIndicator(Modifier.size(16.dp), color = Gold, strokeWidth = 2.dp)
+
+            else -> Text(
+                when (stage) {
+                    Stage.DONE -> "✓"
+                    Stage.FAIL -> "✕"
+                    else -> "•"
+                },
+                color = when (stage) {
+                    Stage.DONE -> Vital
+                    Stage.FAIL -> LifeRed
+                    else -> Muted
+                },
+                modifier = Modifier.width(16.dp),
+            )
+        }
+        Text(title, color = if (stage == Stage.WAIT) Muted else Parchment, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+        note?.let { Text(it, color = Gold, style = MaterialTheme.typography.labelMedium) }
     }
 }
 
@@ -100,7 +159,6 @@ val LocalUpdates = staticCompositionLocalOf<UpdateViewModel?> { null }
     val update = s.update ?: return
     val context = LocalContext.current
     Text(ui("update.title"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
-    Text(ui("update.versions", BuildConfig.VERSION_NAME, update.info.versionName), color = Gold, style = MaterialTheme.typography.bodyMedium)
     if (update.info.size > 0) MutedText(ui("update.size", "%.1f".format(update.info.size / 1_048_576.0)))
     Text(ui("update.notes"), color = Parchment, style = MaterialTheme.typography.labelLarge)
     Column(Modifier.fillMaxWidth().heightIn(max = 280.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {

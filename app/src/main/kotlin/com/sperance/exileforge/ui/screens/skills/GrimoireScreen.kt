@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,6 +33,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.campaign.Flask
 import com.sperance.exileforge.core.campaign.FlaskKind
 import com.sperance.exileforge.core.campaign.Loadout
@@ -46,7 +48,7 @@ import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.presentation.skills.GrimoireViewModel
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.HeroSkills
 import com.sperance.exileforge.rules.content.Item
@@ -84,16 +86,17 @@ internal sealed interface Pick {
  * put it in. The belt holds the three flasks worn, each with when it is drunk by itself. Every rule is
  * the rules module's (3.0.0), read off the content on screen; the page says beforehand what the server will say.
  */
-@Composable fun GrimoireScreen(s: ForgeState) {
+@Composable fun GrimoireScreen() {
+    val game by koinViewModel<GrimoireViewModel>().game.collectAsStateWithLifecycle()
     val vm = koinViewModel<GrimoireViewModel>()
-    var section by rememberSaveable(s.play.heroId) { mutableStateOf(GrimoireSection.SKILLS) }
-    var page by remember(s.play.heroId) { mutableStateOf<String?>(null) }
-    var pick by remember(s.play.heroId) { mutableStateOf<Pick?>(null) }
-    var exchanging by remember(s.play.heroId) { mutableStateOf(false) }
-    var belt by rememberSaveable(s.play.heroId) { mutableIntStateOf(0) }
-    LaunchedEffect(s.play.heroId, s.account.sessionEpoch) { vm.ensure() }
-    val hero = s.hero
-    val index = s.index
+    var section by rememberSaveable(game.heroId) { mutableStateOf(GrimoireSection.SKILLS) }
+    var page by remember(game.heroId) { mutableStateOf<String?>(null) }
+    var pick by remember(game.heroId) { mutableStateOf<Pick?>(null) }
+    var exchanging by remember(game.heroId) { mutableStateOf(false) }
+    var belt by rememberSaveable(game.heroId) { mutableIntStateOf(0) }
+    LaunchedEffect(game.heroId, game.sessionEpoch) { vm.ensure() }
+    val hero = game.hero
+    val index = game.index
     val book = index?.skills
     val classCode = hero?.heroClass.orEmpty()
     val skills = hero?.skills ?: HeroSkills()
@@ -125,9 +128,9 @@ internal sealed interface Pick {
                     item { Caption(ui("skills.book_of", classTitle(classCode))) }
                     // Only what the hero has learned (2.81.0): an unread book's skill appears once its book is read.
                     items(pages.filter { skills.level(it.code) > 0 }, key = { it.code }) { skill ->
-                        Page(s, index, skill, skills.level(skill.code), level, slotOf(skills, skill.code)) { page = skill.code }
+                        Page(game, index, skill, skills.level(skill.code), level, slotOf(skills, skill.code)) { page = skill.code }
                     }
-                    item { Books(s, index, pages) { exchanging = true } }
+                    item { Books(game, index, pages) { exchanging = true } }
                 }
 
                 GrimoireSection.BELT -> {
@@ -139,10 +142,10 @@ internal sealed interface Pick {
         }
     }
     page?.let { code -> book?.byCode?.get(code) }?.let { skill ->
-        if (hero != null && body != null && index != null) SkillSheet(s, vm, index, skill, skills, level, body.stats) { page = null }
+        if (hero != null && body != null && index != null) SkillSheet(game, vm, index, skill, skills, level, body.stats) { page = null }
     }
     when (val chosen = pick) {
-        is Pick.Slot -> SkillPicker(s, chosen, skills, pages, onDismiss = { pick = null }) { code ->
+        is Pick.Slot -> SkillPicker(game, chosen, skills, pages, onDismiss = { pick = null }) { code ->
             pick = null
             vm.slotSkill(chosen.kind.name, chosen.index, code)
         }
@@ -161,7 +164,7 @@ internal sealed interface Pick {
 
         null -> Unit
     }
-    if (exchanging && hero != null && index != null) Exchange(s, vm, index, hero, pages) { exchanging = false }
+    if (exchanging && hero != null && index != null) Exchange(game, vm, index, hero, pages) { exchanging = false }
 }
 
 /** The slot a skill stands in, as a word — «Слот 2 · Как готово» — or null. */
@@ -290,8 +293,8 @@ internal fun slotOf(skills: HeroSkills, code: String): String? {
  * A page of the class's book: what the skill is, its level, where it stands, and what comes next —
  * the requirements of the next book, a book ready to be read, or the level it opens at.
  */
-@Composable internal fun Page(s: ForgeState, index: ContentIndex, skill: SkillDefinition, learned: Int, heroLevel: Int, slot: String?, onOpen: () -> Unit) {
-    val books = bookCount(s, skill.code)
+@Composable internal fun Page(game: GameUi, index: ContentIndex, skill: SkillDefinition, learned: Int, heroLevel: Int, slot: String?, onOpen: () -> Unit) {
+    val books = bookCount(game, skill.code)
     val shape = RoundedCornerShape(8.dp)
     Row(
         Modifier.fillMaxWidth().clip(shape).background(Panel, shape).border(1.dp, if (slot != null) Gold.copy(alpha = .6f) else PanelRaised, shape)
@@ -330,14 +333,14 @@ internal fun needLine(index: ContentIndex, skill: SkillDefinition, level: Int): 
 }
 
 /** How many books of [code] lie in the bag: the bag is keyed by the book's item code. */
-internal fun bookCount(s: ForgeState, code: String): Long = s.bagAmount(SkillRules.book(code)) ?: 0L
+internal fun bookCount(game: GameUi, code: String): Long = game.bagAmount(SkillRules.book(code)) ?: 0L
 
 /** Every book the content knows, of every class: what the bag is counted by. */
 internal fun books(index: ContentIndex): List<Item> = index.itemsByCategory[Item.BOOK].orEmpty()
 
 /** The books in the bag, of every class, and the trade of three for one of the class's own. */
-@Composable internal fun Books(s: ForgeState, index: ContentIndex, pages: List<SkillDefinition>, onExchange: () -> Unit) {
-    val owned = books(index).sumOf { s.bagAmount(it.code) ?: 0L }
+@Composable internal fun Books(game: GameUi, index: ContentIndex, pages: List<SkillDefinition>, onExchange: () -> Unit) {
+    val owned = books(index).sumOf { game.bagAmount(it.code) ?: 0L }
     val rule = index.skills.rules.exchange
     ForgePanel {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -346,7 +349,7 @@ internal fun books(index: ContentIndex): List<Item> = index.itemsByCategory[Item
                 Text(ui("skills.books_owned", owned), color = GoldBright, style = MaterialTheme.typography.titleSmall)
                 MutedText(ui("skills.exchange_hint", rule.books))
             }
-            ForgeOutlinedButton(enabled = owned >= rule.books && pages.isNotEmpty() && !s.busy, onClick = onExchange) { Text(ui("skills.exchange")) }
+            ForgeOutlinedButton(enabled = owned >= rule.books && pages.isNotEmpty() && !game.busy, onClick = onExchange) { Text(ui("skills.exchange")) }
         }
     }
 }

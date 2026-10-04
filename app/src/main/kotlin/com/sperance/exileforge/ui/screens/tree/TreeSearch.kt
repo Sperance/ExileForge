@@ -56,7 +56,7 @@ import com.sperance.exileforge.core.display.statPercent
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.plural
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.tree.TreeViewModel
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.HeroClass
@@ -89,8 +89,8 @@ import kotlin.math.sin
  * The tree is over a hundred nodes across seven class areas, so panning to one by eye is no longer
  * realistic. A match selects the node, which is what the map draws a ring around.
  */
-@Composable internal fun TreeSearch(s: ForgeState, rawQuery: String, selected: String, nodes: List<TreeNode>, onSelect: (String) -> Unit) {
-    val matches = remember(nodes, rawQuery, s.lang) {
+@Composable internal fun TreeSearch(game: GameUi, rawQuery: String, selected: String, nodes: List<TreeNode>, onSelect: (String) -> Unit) {
+    val matches = remember(nodes, rawQuery, game.lang) {
         val query = rawQuery.trim()
         if (query.isBlank()) {
             emptyList()
@@ -105,7 +105,7 @@ import kotlin.math.sin
         matches.forEach { node ->
             ForgeTextButton(onClick = { onSelect(node.code) }, modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    "${nodeTitle(node.code)} · ${nodeTypeTitle(node.type, s.lang)}",
+                    "${nodeTitle(node.code)} · ${nodeTypeTitle(node.type, game.lang)}",
                     color = nodeColour(node, node.code == selected),
                 )
             }
@@ -197,7 +197,7 @@ internal fun planOption(index: ContentIndex, heroClass: HeroClass?, taken: Set<S
 }
 
 /** The plan as a whole (3.47.0): how many nodes are still to take, what they cost, and what they will give. */
-@Composable internal fun PlanPanel(s: ForgeState, index: ContentIndex, taken: Set<String>, plan: List<TakenNode>, enabled: Boolean, onClear: () -> Unit) {
+@Composable internal fun PlanPanel(game: GameUi, index: ContentIndex, taken: Set<String>, plan: List<TakenNode>, enabled: Boolean, onClear: () -> Unit) {
     val left = plan.filter { it.code !in taken }
     val cost = left.sumOf { index.tree.node(it.code)?.cost ?: 0 }
     val totals = remember(index, left) { SheetCalculator(index).let { it.contributions(it.expand(index.tree.lines(left))) } }
@@ -205,7 +205,7 @@ internal fun planOption(index: ContentIndex, heroClass: HeroClass?, taken: Set<S
         Engraved(ui("tree.plan_title"), Rune)
         PropertyRow(ui("tree.plan_left"), ui("tree.plan_cost", left.size, cost), Glyph.LEVEL)
         MutedText(ui("tree.plan_note"))
-        totals.forEach { total -> PropertyRow(statTitle(total.stat, s.lang), contributionText(total), stat = total.stat) }
+        totals.forEach { total -> PropertyRow(statTitle(total.stat, game.lang), contributionText(total), stat = total.stat) }
         ForgeOutlinedButton(enabled = enabled, onClick = onClear, modifier = Modifier.fillMaxWidth()) { Text(ui("tree.plan_clear")) }
     }
 }

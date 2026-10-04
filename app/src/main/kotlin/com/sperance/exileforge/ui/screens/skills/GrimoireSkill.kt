@@ -46,7 +46,7 @@ import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.presentation.skills.GrimoireViewModel
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.HeroSkills
 import com.sperance.exileforge.rules.content.Item
@@ -70,7 +70,7 @@ import org.koin.compose.viewmodel.koinViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun SkillSheet(
-    s: ForgeState,
+    game: GameUi,
     vm: GrimoireViewModel,
     index: ContentIndex,
     skill: SkillDefinition,
@@ -80,7 +80,7 @@ internal fun SkillSheet(
     onDismiss: () -> Unit,
 ) {
     val learned = skills.level(skill.code)
-    val books = bookCount(s, skill.code)
+    val books = bookCount(game, skill.code)
     val next = (learned + 1).coerceAtMost(SkillRules.MAX_LEVEL)
     val unmet = index.skillRules.unmet(skill, next, heroLevel, stats)
     ForgeSheet(onDismissRequest = onDismiss) {
@@ -105,7 +105,7 @@ internal fun SkillSheet(
                 Text(ui("skills.requires", next, needLine(index, skill, next)), color = if (unmet.isEmpty()) Parchment else LifeRed, style = MaterialTheme.typography.bodySmall)
                 if (books > 0) {
                     ForgeButton(
-                        enabled = unmet.isEmpty() && !s.busy,
+                        enabled = unmet.isEmpty() && !game.busy,
                         onClick = {
                             onDismiss()
                             vm.learnSkill(skill.code)
@@ -121,7 +121,7 @@ internal fun SkillSheet(
             }
             // Only the slots of the skill's own kind, and a tap puts this very skill there (3.2.0): a passive page never offers an active slot
             if (learned > 0) {
-                SlotActions(s, index, skill, skills, heroLevel) { kind, at, put ->
+                SlotActions(game, index, skill, skills, heroLevel) { kind, at, put ->
                     onDismiss()
                     vm.slotSkill(kind.name, at, if (put) skill.code else null)
                 }
@@ -171,7 +171,7 @@ internal fun SkillSheet(
 
 /** Where a learned skill may go: each open slot of its kind, and out of the one it stands in. */
 @Composable internal fun SlotActions(
-    s: ForgeState,
+    game: GameUi,
     index: ContentIndex,
     skill: SkillDefinition,
     skills: HeroSkills,
@@ -184,7 +184,7 @@ internal fun SkillSheet(
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         (0 until open).forEach { at ->
             val here = at == standing
-            ForgeOutlinedButton(enabled = !s.busy, onClick = {
+            ForgeOutlinedButton(enabled = !game.busy, onClick = {
                 onSlot(skill.kind, at, !here)
             }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 6.dp)) {
                 Text(if (here) ui("skills.take_out") else ui("skills.to_slot", at + 1), style = MaterialTheme.typography.labelMedium, maxLines = 1)
@@ -196,7 +196,7 @@ internal fun SkillSheet(
 /** A skill for a slot: the class's learned ones of its kind, or nothing to empty it. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun SkillPicker(s: ForgeState, pick: Pick.Slot, skills: HeroSkills, pages: List<SkillDefinition>, onDismiss: () -> Unit, onPick: (String?) -> Unit) {
+internal fun SkillPicker(game: GameUi, pick: Pick.Slot, skills: HeroSkills, pages: List<SkillDefinition>, onDismiss: () -> Unit, onPick: (String?) -> Unit) {
     val offered = pages.filter { it.kind == pick.kind && skills.level(it.code) > 0 }
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(
@@ -211,7 +211,7 @@ internal fun SkillPicker(s: ForgeState, pick: Pick.Slot, skills: HeroSkills, pag
             if (offered.isEmpty()) MutedText(ui("skills.nothing_learned"))
             offered.forEach { skill ->
                 Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).background(PanelRaised).clickable(enabled = !s.busy) { onPick(skill.code) }
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).background(PanelRaised).clickable(enabled = !game.busy) { onPick(skill.code) }
                         .padding(10.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -224,7 +224,7 @@ internal fun SkillPicker(s: ForgeState, pick: Pick.Slot, skills: HeroSkills, pag
                     Text(ui("skills.level_short", skills.level(skill.code)), color = Gold)
                 }
             }
-            ForgeTextButton(enabled = !s.busy, onClick = { onPick(null) }, modifier = Modifier.fillMaxWidth()) { Text(ui("skills.empty_it"), color = LifeRed) }
+            ForgeTextButton(enabled = !game.busy, onClick = { onPick(null) }, modifier = Modifier.fillMaxWidth()) { Text(ui("skills.empty_it"), color = LifeRed) }
         }
     }
 }

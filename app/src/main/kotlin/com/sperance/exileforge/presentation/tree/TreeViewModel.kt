@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.presentation.hero.HeroActions
+import com.sperance.exileforge.presentation.state.GameSlice
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.TakenNode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -12,7 +14,10 @@ import kotlinx.coroutines.flow.StateFlow
 class TreeViewModel(
     private val hero: HeroActions,
     commands: CommandRunner,
+    slice: GameSlice,
 ) : ViewModel() {
+    /** Срез «игра» для экранов этой модели (3.80.33). */
+    val game: StateFlow<GameUi> = slice.ui
     val activity: StateFlow<Activity> = commands.state
 
     private val mutableSelected = MutableStateFlow("")

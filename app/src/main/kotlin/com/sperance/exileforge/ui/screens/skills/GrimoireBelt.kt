@@ -46,7 +46,8 @@ import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.presentation.skills.GrimoireViewModel
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.HeroSkills
 import com.sperance.exileforge.rules.content.Item
@@ -173,9 +174,9 @@ internal fun worn(hero: HeroView, index: ContentIndex, skills: HeroSkills): List
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun Exchange(s: ForgeState, vm: GrimoireViewModel, index: ContentIndex, hero: HeroView, pages: List<SkillDefinition>, onDismiss: () -> Unit) {
+internal fun Exchange(game: GameUi, vm: GrimoireViewModel, index: ContentIndex, hero: HeroView, pages: List<SkillDefinition>, onDismiss: () -> Unit) {
     val rule = index.skills.rules.exchange
-    val owned = books(index).mapNotNull { book -> (s.bagAmount(book.code) ?: 0L).takeIf { it > 0 }?.let { book.code.removePrefix(SkillRules.BOOK_PREFIX) to it } }
+    val owned = books(index).mapNotNull { book -> (game.bagAmount(book.code) ?: 0L).takeIf { it > 0 }?.let { book.code.removePrefix(SkillRules.BOOK_PREFIX) to it } }
     var chosen by remember { mutableStateOf(listOf<String>()) }
     var target by remember { mutableStateOf<String?>(null) }
     val price = rule.goldPerLevel * hero.level
@@ -214,7 +215,7 @@ internal fun Exchange(s: ForgeState, vm: GrimoireViewModel, index: ContentIndex,
                     Text(SkillText.title(skill.code), color = if (on) GoldBright else Parchment)
                 }
             }
-            val ready = chosen.size == rule.books && target != null && money >= price && !s.busy
+            val ready = chosen.size == rule.books && target != null && money >= price && !game.busy
             if (money < price) Text(ui("skills.exchange_gold", number(price.toDouble())), color = LifeRed, style = MaterialTheme.typography.bodySmall)
             ForgeButton(
                 enabled = ready,

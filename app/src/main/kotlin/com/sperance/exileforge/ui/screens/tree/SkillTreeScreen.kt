@@ -26,6 +26,7 @@ import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -56,7 +57,7 @@ import com.sperance.exileforge.core.display.statPercent
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.plural
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.presentation.tree.TreeViewModel
 import com.sperance.exileforge.rules.content.ContentIndex
@@ -83,7 +84,8 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
 
-@Composable fun SkillTreeScreen(s: ForgeState) {
+@Composable fun SkillTreeScreen() {
+    val game by koinViewModel<TreeViewModel>().game.collectAsStateWithLifecycle()
     val vm = koinViewModel<TreeViewModel>()
     val selected by vm.selected.collectAsStateWithLifecycle()
     val query by vm.query.collectAsStateWithLifecycle()
@@ -91,7 +93,7 @@ import kotlin.math.sin
     // strip and the bar, and the rest floats over it. A pannable canvas inside a scroll fights the scroll for every drag.
     FirstVisit(Guide.TREE)
     SkillTreePanel(
-        s, selected, query, vm::select, vm::allocate, vm::refund, vm::reset, vm::query, onPath = vm::allocatePath,
+        game, selected, query, vm::select, vm::allocate, vm::refund, vm::reset, vm::query, onPath = vm::allocatePath,
         onSocket = vm::socket, onUnsocket = vm::unsocket, onRechoose = vm::rechoose, onPlan = vm::plan, onRefundBranch = vm::refundBranch,
         modifier = Modifier.fillMaxSize(),
     )
@@ -111,7 +113,7 @@ import kotlin.math.sin
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SkillTreePanel(
-    s: ForgeState,
+    game: GameUi,
     selected: String,
     rawQuery: String,
     onSelect: (String) -> Unit,
@@ -127,9 +129,9 @@ fun SkillTreePanel(
     onRefundBranch: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    val hero = s.hero
-    val index = s.index
-    val tree = s.treeState
+    val hero = game.hero
+    val index = game.index
+    val tree = game.treeState
     var detailsOpen by remember { mutableStateOf(false) }
     // «Итого» (3.54.0): the tree's bonuses at once, without the rest of the details.
     var totalsOpen by remember { mutableStateOf(false) }
@@ -150,10 +152,10 @@ fun SkillTreePanel(
     }
     val nodes = index.content.tree.nodes
     val taken = hero.takenNodes
-    val enabled = !s.busy && s.account.signedIn && (s.ownsCharacter || s.isAdmin)
+    val enabled = !game.busy && game.session.signedIn && (game.ownsCharacter || game.isAdmin)
     // Which nodes are one step away: neighbours of what is taken, or the class's own start when
     // nothing is taken yet. The server still decides — this only says where to look on 122 nodes.
-    val heroClass = s.heroClass
+    val heroClass = game.heroClass
     val reachable = remember(index, heroClass, taken) { reachableFrom(index, heroClass, taken) }
     // The way to a far node (3.39.0): the rules' shortest path from what is taken, drawn dashed and taken at once.
     val path = remember(index, heroClass, taken, selected) {
@@ -166,7 +168,7 @@ fun SkillTreePanel(
     var tag by remember { mutableStateOf<String?>(null) }
     // The search (3.54.0): by a node's name or the stats it gives; every match lights up with the tag's.
     val query = rawQuery.trim()
-    val found = remember(index, query, s.lang) { if (query.length < 2) emptySet() else nodesMatching(index, query) }
+    val found = remember(index, query, game.lang) { if (query.length < 2) emptySet() else nodesMatching(index, query) }
     val highlight = remember(index, tag, found) { tag?.let { nodesTagged(index, it) }.orEmpty() + found }
     // Both live behind the search button, so the map keeps the height; while either is on, the button
     // turns green and wears the number of nodes lit.
@@ -239,7 +241,7 @@ fun SkillTreePanel(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 NodeDetails(
-                    s, index, heroClass, index.tree.node(selected), taken, reachable, enabled, path, tree.available, plan,
+                    game, index, heroClass, index.tree.node(selected), taken, reachable, enabled, path, tree.available, plan,
                     onClose = { nodeOpen = false },
                     onAllocate = { code, choice ->
                         nodeOpen = false
@@ -284,18 +286,18 @@ fun SkillTreePanel(
         }
     }
 
-    TreeConfirmations(s, confirmReset, onClear = { confirmReset = false }, onReset = onReset)
+    TreeConfirmations(game, confirmReset, onClear = { confirmReset = false }, onReset = onReset)
 
     if (totalsOpen) {
         ForgeSheet(onDismissRequest = { totalsOpen = false }) {
-            Column(Modifier.fillMaxWidth().heightIn(max = 560.dp).verticalScroll(rememberScrollState()).padding(16.dp)) { TreeTotals(s, tree) }
+            Column(Modifier.fillMaxWidth().heightIn(max = 560.dp).verticalScroll(rememberScrollState()).padding(16.dp)) { TreeTotals(game, tree) }
         }
     }
 
     if (planOpen && plan.isNotEmpty()) {
         ForgeSheet(onDismissRequest = { planOpen = false }) {
             Column(Modifier.fillMaxWidth().heightIn(max = 560.dp).verticalScroll(rememberScrollState()).padding(16.dp)) {
-                PlanPanel(s, index, taken, plan, enabled) {
+                PlanPanel(game, index, taken, plan, enabled) {
                     planOpen = false
                     onPlan(emptyList())
                 }
@@ -315,9 +317,9 @@ fun SkillTreePanel(
                         PropertyRow(ui("tree.taken_reachable_label"), ui("tree.taken_reachable", taken.size, reachable.size), Glyph.TREE)
                     }
                 }
-                item { TreeTotals(s, tree) }
+                item { TreeTotals(game, tree) }
                 item {
-                    TreeSearch(s, rawQuery, selected, nodes) { code ->
+                    TreeSearch(game, rawQuery, selected, nodes) { code ->
                         onSelect(code)
                         detailsOpen = false
                         nodeOpen = true
@@ -362,11 +364,11 @@ internal fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Se
     }
 }
 
-@Composable internal fun TreeConfirmations(s: ForgeState, reset: Boolean, onClear: () -> Unit, onReset: () -> Unit) {
+@Composable internal fun TreeConfirmations(game: GameUi, reset: Boolean, onClear: () -> Unit, onReset: () -> Unit) {
     val treeIcon: @Composable () -> Unit = { Icon(ForgeGlyphs.Constellation, null, tint = Rune, modifier = Modifier.size(40.dp)) }
     // What a reset is paid with: the orb, named by its code, and how many of it the bag holds right now.
     val regretTitle = itemTitle(Orb.ORB_OF_REGRET.name)
-    val regretLeft = s.bagAmount(Orb.ORB_OF_REGRET.name)
+    val regretLeft = game.bagAmount(Orb.ORB_OF_REGRET.name)
     fun regretLines(spent: Int) = listOfNotNull(
         LedgerLine(ui("confirm.spend"), ui("confirm.minus", spent, regretTitle), Tone.SPEND),
         regretLeft?.takeIf { it >= spent }?.let { LedgerLine(ui("confirm.left"), ui("confirm.amount", it - spent, regretTitle)) },
@@ -375,7 +377,7 @@ internal fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Se
 
     if (reset) {
         // The start node is not given back, so it is not paid for — the count says what is.
-        val returned = (s.hero?.tree?.size ?: 1) - 1
+        val returned = (game.hero?.tree?.size ?: 1) - 1
         ConfirmSheet(
             title = ui("tree.reset_q"), subtitle = ui("confirm.count", returned, nodes(returned)), icon = treeIcon,
             ledger = regretLines(returned) + LedgerLine(ui("confirm.returns"), ui("confirm.plus_count", returned, nodes(returned)), Tone.GAIN),

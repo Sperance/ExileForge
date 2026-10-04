@@ -56,7 +56,7 @@ import com.sperance.exileforge.core.display.statPercent
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.plural
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.state.ForgeState
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.presentation.tree.TreeViewModel
@@ -92,7 +92,7 @@ import kotlin.math.sin
  * the command there is to put one in or take it out.
  */
 @Composable internal fun NodeDetails(
-    s: ForgeState,
+    game: GameUi,
     index: ContentIndex,
     heroClass: HeroClass?,
     node: TreeNode?,
@@ -125,7 +125,7 @@ import kotlin.math.sin
     val allocated = node.code in taken
     val choosing = node.options.isNotEmpty()
     // The option the hero took is theirs: it is read from the snapshot, not from the tree.
-    val chosen = s.hero?.tree?.firstOrNull { it.code == node.code }?.choice
+    val chosen = game.hero?.tree?.firstOrNull { it.code == node.code }?.choice
     var picked by remember(node.code) { mutableStateOf<Int?>(null) }
     val planning = remember(index, heroClass, taken, plan, node.code) { planOption(index, heroClass, taken, plan, node) }
     // The node's name heads the card in its own colour, with its kind, its price and whether it is taken under it.
@@ -134,7 +134,7 @@ import kotlin.math.sin
             Text(nodeTitle(node.code), color = nodeColour(node, true), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
             MutedText(
                 listOf(
-                    nodeTypeTitle(node.type, s.lang),
+                    nodeTypeTitle(node.type, game.lang),
                     "${ui("tree.cost")} ${node.cost}",
                     ui(if (allocated) "tree.taken" else "tree.not_taken"),
                 ).joinToString(" · "),
@@ -144,7 +144,7 @@ import kotlin.math.sin
     }
     nodeDescription(node.code).takeIf { it.isNotBlank() }?.let { MutedText(it) }
     if (node.type == SkillNodeType.JEWEL_SOCKET) {
-        SocketContents(s, index, node, allocated, enabled, onSocket, onUnsocket)
+        SocketContents(game, index, node, allocated, enabled, onSocket, onUnsocket)
     } else if (choosing) {
         // A mastery or an attribute node (server 0.52.0): one option, chosen when it is taken. A taken
         // attribute node may change it for a Chaos Orb (2.72.0, server 0.63.0); a mastery may not.
@@ -170,7 +170,7 @@ import kotlin.math.sin
             }
         }
         if (rechoosable) {
-            val owned = s.bagAmount(Orb.CHAOS_ORB.name) ?: 0L
+            val owned = game.bagAmount(Orb.CHAOS_ORB.name) ?: 0L
             ForgeButton(
                 enabled = enabled && picked != null && picked != chosen && owned > 0,
                 onClick = { picked?.let { onRechoose(node.code, it) } },
@@ -196,7 +196,7 @@ import kotlin.math.sin
         // The branch (3.54.0, server 1.52.0): this node and everything that would hang loose without it, an Orb of Regret each.
         val branch = remember(node.code, taken) { runCatching { TreeAllocation.branch(index.tree, node, taken) }.getOrNull().orEmpty() }
         if (branch.size > 1) {
-            val owned = s.bagAmount(Orb.ORB_OF_REGRET.name) ?: 0L
+            val owned = game.bagAmount(Orb.ORB_OF_REGRET.name) ?: 0L
             ForgeOutlinedButton(enabled = enabled && owned >= branch.size, onClick = { onRefundBranch(node.code) }, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("tree.refund_branch", branch.size))
             }
@@ -271,7 +271,7 @@ import kotlin.math.sin
  * server's call — the socket has to be taken and free — so the list offers and the refusal explains.
  */
 @Composable internal fun SocketContents(
-    s: ForgeState,
+    game: GameUi,
     index: ContentIndex,
     node: TreeNode,
     allocated: Boolean,
@@ -279,13 +279,13 @@ import kotlin.math.sin
     onSocket: (String, String) -> Unit,
     onUnsocket: (String) -> Unit,
 ) {
-    val hero = s.hero ?: return
+    val hero = game.hero ?: return
     val inside = hero.jewels[node.code]
 
     if (inside != null) {
         // A taken socket may still hold a jewel that does nothing - a second copy of a unique one (1.31.0): the sheet's reason.
-        val idle = hero.inactive[inside.id]?.joinToString("\n") { requirementReason(it, s.lang) }
-        s.view(inside)?.let { jewel ->
+        val idle = hero.inactive[inside.id]?.joinToString("\n") { requirementReason(it, game.lang) }
+        game.view(inside)?.let { jewel ->
             ItemRow(
                 jewel,
                 enabled = false,
@@ -318,11 +318,11 @@ import kotlin.math.sin
     free.forEach { instance ->
         // A unique jewel already in another socket (server 1.31.0): one of its kind per hero, so this copy waits, and says why.
         val single = hero.jewelFree(index, instance)
-        s.view(instance)?.let { jewel ->
+        game.view(instance)?.let { jewel ->
             ItemRow(
                 jewel,
                 enabled = enabled && single,
-                price = s.sellPrice(instance),
+                price = game.sellPrice(instance),
                 note = if (single) null else ui("tree.jewel_unique_taken"),
                 noteColor = LifeRed,
             ) { onSocket(instance.id, node.code) }
@@ -364,12 +364,12 @@ internal fun contributionText(total: StatContribution): String {
 }
 
 /** The tree's bonuses as the rules sum them (3.54.0: behind «Итого» as well as in the details). */
-@Composable internal fun TreeTotals(s: ForgeState, tree: com.sperance.exileforge.core.model.tree.TreeState) {
+@Composable internal fun TreeTotals(game: GameUi, tree: com.sperance.exileforge.core.model.tree.TreeState) {
     ForgePanel(accent = Rune) {
         Engraved(ui("tree.totals_title"), Rune)
         if (tree.totals.isEmpty()) Text(ui("tree.totals_empty"), color = Muted)
         // The rules sum this: two INCREASED add up while two MORE multiply, so adding the snapshots here would lie exactly
         // where a player is choosing. It is the tree's contribution, not the character's total.
-        tree.totals.forEach { total -> PropertyRow(statTitle(total.stat, s.lang), contributionText(total), stat = total.stat) }
+        tree.totals.forEach { total -> PropertyRow(statTitle(total.stat, game.lang), contributionText(total), stat = total.stat) }
     }
 }

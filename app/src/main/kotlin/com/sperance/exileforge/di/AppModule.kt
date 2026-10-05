@@ -120,7 +120,7 @@ val appModule = module {
     single { CraftsActions(get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     single { ContentLoader() }
     single { StartupTrace() }
-    single { StallWatchdog(androidContext(), get()) }
+    single { StallWatchdog(androidContext(), get(), get()) }
     single { WorldLoader(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get()) }
     single { LanguageRepository() }
     single { LinkRepository() }

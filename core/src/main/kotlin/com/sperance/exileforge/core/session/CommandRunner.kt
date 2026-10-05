@@ -65,6 +65,10 @@ class CommandRunner(private val scope: CoroutineScope, private val connection: C
     private var touching: Set<String> = emptySet()
     private val quiet = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
 
+    /** Откуда пришли идущие задача и чтения (3.84.2): журнал запуска показывает, кто держит `busy` или `loading`. */
+    @Volatile private var taskOrigin: String? = null
+    private val readOrigins = java.util.concurrent.ConcurrentHashMap<String, String>()
+
     val busy: Boolean get() = state.value.busy
 
     /** Первый старт завершён: кнопки оживают. */
@@ -75,6 +79,7 @@ class CommandRunner(private val scope: CoroutineScope, private val connection: C
         touches.forEach { reads.remove(it)?.cancel() }
         touching = touches
         mutable.update { it.copy(busy = true, loading = reads.keys.toSet(), message = null, error = false, failure = null) }
+        taskOrigin = origin()
         scope.launch {
             try {
                 block()
@@ -83,6 +88,7 @@ class CommandRunner(private val scope: CoroutineScope, private val connection: C
             } catch (e: Exception) {
                 report(e, writing)
             } finally {
+                taskOrigin = null
                 touching = emptySet()
                 mutable.update { it.copy(busy = false) }
             }
@@ -94,6 +100,7 @@ class CommandRunner(private val scope: CoroutineScope, private val connection: C
         if (restart) reads.remove(key)?.cancel()
         if (reads[key]?.isActive == true) return
         if (silent) quiet += key else quiet -= key
+        readOrigins[key] = origin()
         val job = scope.launch(start = CoroutineStart.LAZY) {
             try {
                 block()
@@ -105,6 +112,7 @@ class CommandRunner(private val scope: CoroutineScope, private val connection: C
                 if (reads[key] === coroutineContext[Job]) {
                     reads.remove(key)
                     quiet -= key
+                    readOrigins -= key
                 }
                 mutable.update { it.copy(loading = loading()) }
             }
@@ -113,6 +121,16 @@ class CommandRunner(private val scope: CoroutineScope, private val connection: C
         mutable.update { it.copy(loading = loading()) }
         job.start()
     }
+
+    /** Что держит раннер сейчас: занятость, задача и чтения с местом, откуда их позвали. */
+    fun describe(): String = buildString {
+        val now = state.value
+        append("busy=${now.busy} loading=${now.loading}")
+        taskOrigin?.let { append("\ntask from:\n").append(it) }
+        reads.keys.toList().forEach { key -> append("\nread $key from:\n").append(readOrigins[key].orEmpty()) }
+    }
+
+    private fun origin(): String = Throwable().stackTrace.drop(2).take(ORIGIN_FRAMES).joinToString("\n") { "  at $it" }
 
     private fun loading(): Set<String> = reads.keys.filterNotTo(HashSet()) { it in quiet }
 
@@ -161,3 +179,6 @@ class CommandRunner(private val scope: CoroutineScope, private val connection: C
 
     fun clearFailure() = mutable.update { it.copy(failure = null) }
 }
+
+/** Сколько кадров места вызова держит журнал раннера. */
+private const val ORIGIN_FRAMES = 10

@@ -7,6 +7,7 @@ import android.os.SystemClock
 import com.sperance.exileforge.BuildConfig
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.BugReportRequest
+import com.sperance.exileforge.core.session.CommandRunner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -18,7 +19,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  * всё равно на диске, и следующий запуск сам отправляет его баг-репортом ([pending]/[sent]). Одно зависание - один отчёт.
  * Отправленный отчёт остаётся последним ([diagnostics]): игрок копирует его из окна запуска вместе со стеками всех потоков.
  */
-class StallWatchdog(context: Context, private val trace: StartupTrace) {
+class StallWatchdog(context: Context, private val trace: StartupTrace, private val commands: CommandRunner) {
     private val file = File(context.filesDir, FILE)
     private val last = File(context.filesDir, LAST_FILE)
     private val main = Handler(Looper.getMainLooper())
@@ -92,6 +93,8 @@ class StallWatchdog(context: Context, private val trace: StartupTrace) {
         appendLine("${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) uptime=${SystemClock.uptimeMillis()}ms at=${System.currentTimeMillis()}")
         appendLine("--- start")
         appendLine(trace.journal())
+        appendLine("--- commands")
+        appendLine(runCatching { commands.describe() }.getOrElse { it.toString() })
         appendLine("--- threads")
         appendLine(threads())
         (file.takeIf { it.isFile } ?: last.takeIf { it.isFile })?.let { stall ->

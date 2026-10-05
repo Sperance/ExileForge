@@ -5,7 +5,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /** What a report is (3.73.0, server 1.69.0): a bug or a player's suggestion. */
-@Serializable enum class FeedbackKind { BUG, SUGGESTION }
+@Serializable enum class FeedbackKind { BUG, SUGGESTION, APPEAL }
 
 /** Where a report stands: new, in progress, implemented, closed — a closed suggestion leaves the public list. */
 @Serializable enum class ReportStatus {

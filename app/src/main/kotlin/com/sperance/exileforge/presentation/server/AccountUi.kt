@@ -30,6 +30,9 @@ data class AccountUi(
     val isAdmin: Boolean get() = session.isAdmin
     val isTester: Boolean get() = session.isTester
 
+    /** Модерация и отчёты (3.88.5): модератор и администратор. */
+    val isModerator: Boolean get() = session.isModerator
+
     /** Администратор в инструментах: отладочная сборка, роль и режим вместе. */
     val adminTools: Boolean get() = BuildConfig.DEBUG && isAdmin && mode == AppMode.ADMIN
     val index: ContentIndex? get() = world.content

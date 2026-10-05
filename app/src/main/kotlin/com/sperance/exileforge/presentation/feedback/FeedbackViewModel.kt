@@ -51,7 +51,7 @@ class FeedbackViewModel(
     }
 
     fun loadReports(kind: FeedbackKind?, status: ReportStatus?) = commands.read(Reads.FEEDBACK) {
-        check(sessions.state.value.isAdmin) { ui("hero.grant_admin_only") }
+        check(sessions.state.value.isModerator) { ui("moderation.staff_only") }
         val reports = api.feedback.all(kind, status)
         feedback { it.copy(reports = reports) }
     }

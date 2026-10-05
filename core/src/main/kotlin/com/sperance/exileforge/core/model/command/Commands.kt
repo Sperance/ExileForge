@@ -26,9 +26,10 @@ const val AUCTION_PAGE_SIZE = 20
 /** The answer to a sign-in; a device registration (server 1.46.0) also brings the secret of the device, once. */
 @Serializable data class SignedIn(val user: UserProfile, val token: String, val deviceSecret: String? = null)
 
-@Serializable data class LoginCredentials(val login: String, val password: String)
+/** Вход по логину (3.88.5: с устройством и версией клиента - сервер ведёт устройства аккаунта и баны устройств). */
+@Serializable data class LoginCredentials(val login: String, val password: String, val hardwareId: String = "", val model: String = "", val clientVersion: String = "")
 
-@Serializable data class DeviceCredentials(val deviceId: String, val hardwareId: String = "")
+@Serializable data class DeviceCredentials(val deviceId: String, val hardwareId: String = "", val model: String = "", val clientVersion: String = "")
 
 @Serializable data class PasswordChange(val password: String, val newPassword: String)
 
@@ -51,7 +52,7 @@ data class ApiCapabilities(val routes: Set<String>) {
         val REQUIRED = listOf(
             "POST" to "/api/v1/user/login", "POST" to "/api/v1/user/login/byDeviceId", "POST" to "/api/v1/user/byDeviceId",
             "GET" to "/api/v1/user/me", "POST" to "/api/v1/user/logout",
-            "GET" to "/api/v1/hero/byUser", "GET" to "/api/v1/hero/view", "POST" to "/api/v1/hero",
+            "GET" to "/api/v1/hero/byUser", "GET" to "/api/v1/hero/sanctions", "GET" to "/api/v1/notice", "GET" to "/api/v1/hero/view", "POST" to "/api/v1/hero",
             "POST" to "/api/v1/hero/equip", "POST" to "/api/v1/hero/orb", "POST" to "/api/v1/hero/sell",
             "GET" to "/api/v1/hero/bench", "POST" to "/api/v1/hero/craft",
             "GET" to "/api/v1/hero/skilltree/state", "POST" to "/api/v1/hero/skilltree/allocate",
@@ -94,7 +95,10 @@ data class ApiCapabilities(val routes: Set<String>) {
  * Кто шлёт отчёт (3.88.0): версия сборки и отпечаток устройства от приложения, активный герой - если он есть. Каждый
  * отчёт ([com.sperance.exileforge.core.network.GameApi.reportBug]) подписывается им, кто бы его ни собрал.
  */
-class ClientIdentity(val version: String, private val device: () -> String, private val heroId: () -> String?) {
+class ClientIdentity(val version: String, private val device: () -> String, private val heroId: () -> String?, val model: String = "") {
+    /** Отпечаток устройства; не прочитался - пусто. */
+    fun fingerprint(): String = runCatching(device).getOrDefault("")
+
     fun stamp(report: BugReportRequest): BugReportRequest = report.copy(
         heroId = report.heroId ?: heroId()?.takeIf { it.isNotBlank() },
         device = report.device.ifBlank { runCatching(device).getOrDefault("") },

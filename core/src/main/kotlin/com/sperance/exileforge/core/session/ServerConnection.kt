@@ -22,7 +22,9 @@ class ServerConnection {
 /** Ключи чтений: одно чтение на ключ за раз; команда называет чтения, которые делает сама. */
 object Reads {
     const val FEEDBACK = "feedback"
-    const val ADMIN_HEROES = "admin_heroes"
+    const val MODERATION = "moderation"
+    const val DOSSIER = "dossier"
+    const val NOTICE = "notice"
     const val MAIL = "mail"
     const val HERO = "hero"
     const val CHARACTERS = "characters"

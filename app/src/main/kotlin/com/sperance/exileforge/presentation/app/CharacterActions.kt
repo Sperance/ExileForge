@@ -40,8 +40,10 @@ class CharacterActions(
         run {
             val owner = sessions.state.value.profile?.id.orEmpty()
             val characters = if (owner.isBlank()) emptyList() else api.hero.heroesOf(owner)
-            sessions.update { it.copy(characters = characters, charactersRead = true) }
-            if (autoEnter) characters.singleOrNull()?.let { only -> entered(only.id) }
+            // Санкции героев (3.88.5): без них карточки не скажут, кто под баном или в корзине; не прочитались - список без них
+            val sanctions = if (owner.isBlank()) emptyMap() else runCatching { api.hero.sanctionsOf(owner) }.getOrDefault(emptyMap())
+            sessions.update { it.copy(characters = characters, charactersRead = true, sanctions = sanctions) }
+            if (autoEnter) characters.singleOrNull()?.takeIf { it.id !in sanctions }?.let { only -> entered(only.id) }
         }
     }
 
@@ -89,8 +91,8 @@ class CharacterActions(
     }
 
     /**
-     * Сервер отказал активному герою как заблокированному (`CH_034`, 3.88.0): когда команда, встретившая отказ, кончится,
-     * игрок уходит к выбору героя, и там - причина словами сервера. Отказ про другого героя ничего не меняет.
+     * Сервер отказал активному герою из-за санкции (`CH_034`, 3.88.0; id санкции - 3.88.5): когда команда, встретившая отказ,
+     * кончится, игрок уходит к выбору героя, а карточка героя там говорит, кто, за что и до когда. Отказ про другого героя ничего не меняет.
      */
     fun blocked(heroId: String, failure: ApiFailure) {
         scope.launch {

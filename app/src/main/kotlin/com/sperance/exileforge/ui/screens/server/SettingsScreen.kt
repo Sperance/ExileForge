@@ -14,6 +14,7 @@ import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Dns
 import androidx.compose.material.icons.outlined.FastForward
 import androidx.compose.material.icons.outlined.FormatSize
+import androidx.compose.material.icons.outlined.Gavel
 import androidx.compose.material.icons.outlined.Group
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Language
@@ -21,7 +22,6 @@ import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.Mail
 import androidx.compose.material.icons.outlined.Pause
-import androidx.compose.material.icons.outlined.PersonSearch
 import androidx.compose.material.icons.outlined.Science
 import androidx.compose.material.icons.outlined.SystemUpdate
 import androidx.compose.material.icons.outlined.TouchApp
@@ -62,7 +62,7 @@ private enum class SettingsPage(val title: String) {
     TESTING("tester.window"),
     TESTERS("tester.accounts"),
     FEEDBACK("feedback.admin"),
-    HEROES("admin.heroes"),
+    MODERATION("moderation.title"),
     MAIL("mail.compose"),
 }
 
@@ -104,7 +104,7 @@ private enum class SettingsPage(val title: String) {
 
                 SettingsPage.FEEDBACK -> FeedbackAdminPage(account)
 
-                SettingsPage.HEROES -> HeroesAdminPage(account)
+                SettingsPage.MODERATION -> ModerationPage(account)
 
                 SettingsPage.MAIL -> MailComposePage(account)
             }
@@ -149,6 +149,13 @@ private enum class SettingsPage(val title: String) {
         SwitchRow(Icons.Outlined.Vibration, ui("settings.buzz_danger"), ui("settings.buzz_danger_note"), set.buzzDanger) { change { copy(buzzDanger = it) } }
         SwitchRow(Icons.Outlined.TouchApp, ui("settings.buzz_buttons"), ui("settings.buzz_buttons_note"), set.buzzButtons) { change { copy(buzzButtons = it) } }
     }
+    // Модерация (3.88.5): модератору и администратору - баны, корзина, журнал и отчёты игроков.
+    if (account.isModerator) {
+        RowGroup(ui("moderation.group")) {
+            AccountRow(Icons.Outlined.Gavel, ui("moderation.title"), enabled = !account.busy) { onPage(SettingsPage.MODERATION) }
+            AccountRow(Icons.Outlined.BugReport, ui("feedback.admin"), enabled = !account.busy) { onPage(SettingsPage.FEEDBACK) }
+        }
+    }
     // The developers' tools (3.77.0): moved here from the account, seen by a tester or an administrator alone.
     if (account.isTester || account.isAdmin) {
         RowGroup(ui("settings.developers")) {
@@ -162,8 +169,6 @@ private enum class SettingsPage(val title: String) {
             AccountRow(Icons.AutoMirrored.Outlined.ReceiptLong, ui("account.journal"), value = logs.size.toString()) { onPage(SettingsPage.JOURNAL) }
             if (account.isTester) AccountRow(Icons.Outlined.Science, ui("tester.window"), enabled = !account.busy) { onPage(SettingsPage.TESTING) }
             if (account.isAdmin) AccountRow(Icons.Outlined.Group, ui("tester.accounts"), enabled = !account.busy) { onPage(SettingsPage.TESTERS) }
-            if (account.isAdmin) AccountRow(Icons.Outlined.BugReport, ui("feedback.admin"), enabled = !account.busy) { onPage(SettingsPage.FEEDBACK) }
-            if (account.isAdmin) AccountRow(Icons.Outlined.PersonSearch, ui("admin.heroes"), enabled = !account.busy) { onPage(SettingsPage.HEROES) }
             if (account.isAdmin) AccountRow(Icons.Outlined.Mail, ui("mail.compose"), enabled = !account.busy) { onPage(SettingsPage.MAIL) }
             // Turning the administrator's tools off hides their tab, so the way back cannot live only inside it.
             if (BuildConfig.DEBUG && account.isAdmin && !account.adminTools) {

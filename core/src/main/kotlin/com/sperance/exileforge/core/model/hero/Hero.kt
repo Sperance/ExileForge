@@ -211,9 +211,8 @@ object ServerClock {
     val experience: Double = 0.0,
     val money: Long = 0,
     val title: String = "",
-    /** Blocked by the administrator (server 1.76.0): the hero cannot play, [blockReason] says why. */
-    val blocked: Boolean = false,
-    val blockReason: String = "",
+    /** Удалён модерацией в корзину (3.88.5, server 1.80.8): виден до очистки, играть им нельзя - санкция в [com.sperance.exileforge.core.session.Session.sanctions]. */
+    val deleted: Boolean = false,
 )
 
 /** The hero's statistics (server 1.49.0): key — value, only what is not zero; the keys are [com.sperance.exileforge.rules.content.Stat]'s. */

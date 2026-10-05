@@ -457,8 +457,10 @@ class SessionActions(
         created.heroSync(heroSync::heldParts, heroSync::delivered)
         created.onNewerServer = { newerServer.tryEmit(Unit) }
         // Отчёты подписаны устройством, версией и активным героем (3.88.0); заблокированный герой уводит к выбору (3.88.0).
-        created.identity = ClientIdentity(BuildConfig.VERSION_NAME, store::deviceFingerprint) { heroes.heroId }
+        created.identity = ClientIdentity(BuildConfig.VERSION_NAME, store::deviceFingerprint, { heroes.heroId }, android.os.Build.MODEL.orEmpty())
         created.onHeroBlocked = { heroId, failure -> if (api === created) characterActions.blocked(heroId, failure) }
+        // Доступ закрыт санкцией (3.88.5): сессия гаснет, поверх всего - экран санкции с её id
+        created.onSanctioned = { sanctionId -> if (api === created) sanctioned(server, sanctionId) }
         created.manifestCache = object : ManifestCache {
             override suspend fun read(): String? = store.manifest(server)
             override suspend fun write(text: String) = store.saveManifest(server, text)
@@ -470,6 +472,20 @@ class SessionActions(
         })
         connectionActions.attach(created)
         return created
+    }
+
+    /**
+     * Сервер закрыл доступ санкцией (`AUTH_006`, 3.88.5): бан аккаунта или устройства, удаление аккаунта. Сессия и её токен
+     * забываются, приложение уходит ко входу, а поверх - экран санкции; повторный отказ, пока экран открыт, его не перезапускает.
+     */
+    private fun sanctioned(server: String, sanctionId: String) {
+        if (sessions.state.value.notice != null) return
+        clearSession()
+        sessions.update { it.copy(notice = sanctionId) }
+        scope.launch {
+            store.saveToken(server, null)
+            store.saveLastHero(server, null)
+        }
     }
 
     fun clearSession() {

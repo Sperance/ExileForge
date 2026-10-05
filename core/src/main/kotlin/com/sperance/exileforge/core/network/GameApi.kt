@@ -66,6 +66,7 @@ class GameApi(
     val guild = GuildClient(http)
     val quests = QuestClient(http)
     val admin = AdminClient(http)
+    val moderation = ModerationClient(http)
     val feedback = FeedbackClient(http)
     val mail = MailClient(http)
 
@@ -75,7 +76,9 @@ class GameApi(
         // Логин без регистра на сервере (1.80.0); пробелы по краям - опечатка, а не часть логина.
         val name = login.trim()
         require(name.isNotBlank() && password.isNotEmpty()) { ui("api.credentials") }
-        return signedIn(http.request("POST", "api/v1/user/login", body = WireJson.encodeToJsonElement(LoginCredentials(name, password)), sensitive = true))
+        val device = identity
+        val credentials = LoginCredentials(name, password, device?.fingerprint().orEmpty(), device?.model.orEmpty(), device?.version.orEmpty())
+        return signedIn(http.request("POST", "api/v1/user/login", body = WireJson.encodeToJsonElement(credentials), sensitive = true))
     }
 
     /**
@@ -94,13 +97,14 @@ class GameApi(
      */
     suspend fun loginByDevice(secret: String?, fingerprint: String = ""): UserProfile {
         logout()
+        fun credentials(deviceId: String) = DeviceCredentials(deviceId, fingerprint, identity?.model.orEmpty(), identity?.version.orEmpty())
         val answer = secret?.let {
             try {
-                http.request("POST", "api/v1/user/login/byDeviceId", body = WireJson.encodeToJsonElement(DeviceCredentials(it, fingerprint)), sensitive = true)
+                http.request("POST", "api/v1/user/login/byDeviceId", body = WireJson.encodeToJsonElement(credentials(it)), sensitive = true)
             } catch (e: ApiFailure) {
                 if (e.code == DEVICE_UNKNOWN) null else throw e
             }
-        } ?: http.request("POST", "api/v1/user/byDeviceId", body = WireJson.encodeToJsonElement(DeviceCredentials("", fingerprint)), sensitive = true)
+        } ?: http.request("POST", "api/v1/user/byDeviceId", body = WireJson.encodeToJsonElement(credentials("")), sensitive = true)
         return signedIn(answer)
     }
 
@@ -240,7 +244,17 @@ class GameApi(
     /** The server speaks a newer wire than this build (3.74.0): the app looks for the build that speaks it at once. */
     var onNewerServer: () -> Unit = {}
 
-    /** Герой запроса заблокирован (`CH_034`, 3.88.0): id героя и отказ с причиной; приложение уводит к выбору героя. */
+    /**
+     * Доступ закрыт санкцией (`AUTH_006`, 3.88.5, server 1.80.8): бан аккаунта или устройства, удаление аккаунта. Id санкции -
+     * для экрана санкции; пустой - аккаунт удалён и уже стирается.
+     */
+    var onSanctioned: (sanctionId: String) -> Unit
+        get() = http.onSanctioned
+        set(value) {
+            http.onSanctioned = value
+        }
+
+    /** Герой запроса под санкцией (`CH_034`, 3.88.0; id санкции - 3.88.5): приложение уводит к выбору героя. */
     var onHeroBlocked: (heroId: String, failure: ApiFailure) -> Unit
         get() = http.onHeroBlocked
         set(value) {

@@ -51,6 +51,12 @@ class HeroClient internal constructor(private val http: Transport) {
         return http.request("GET", "$HERO/byUser", mapOf("userId" to userId), authenticated = true).jsonArray.map { WireJson.decodeFromJsonElement(it) }
     }
 
+    /** Действующие санкции героев аккаунта (3.88.5, server 1.80.8): бан или удаление по id героя. */
+    suspend fun sanctionsOf(userId: String): Map<String, SanctionView> {
+        requireId(userId)
+        return http.get("$HERO/sanctions", mapOf("userId" to userId))
+    }
+
     suspend fun create(userId: String, name: String, description: String, heroClass: String): HeroSummary {
         requireId(userId)
         require(name.isNotBlank()) { ui("contract.enter_name") }

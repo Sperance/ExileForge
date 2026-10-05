@@ -183,10 +183,17 @@ import org.koin.compose.viewmodel.koinViewModel
                 val warming = warmup?.takeIf { route.phase == AppPhase.GAME && !it.finished }
                 val run = expedition
                 val arena = trial
+                val notice = game.session.notice
                 when {
+                    // Доступ закрыт санкцией (3.88.5): экран санкции накрывает всё, пока игрок его не закроет
+                    notice != null -> com.sperance.exileforge.ui.screens.session.SanctionScreen(notice)
+
                     warming != null -> WarmupScreen(warming)
+
                     run != null -> ExpeditionPlay(run)
+
                     arena != null -> TrialScreen(arena)
+
                     else -> Shell(game, logs, route, navigator) { bugOpen = true }
                 }
             }

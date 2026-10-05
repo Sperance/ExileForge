@@ -11,12 +11,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.HeroSummary
+import com.sperance.exileforge.core.network.SanctionKind
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.session.CharactersViewModel
 import com.sperance.exileforge.presentation.state.GameUi
@@ -25,6 +27,7 @@ import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.inputs
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
+import com.sperance.exileforge.ui.screens.server.sanctionLine
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -142,20 +145,38 @@ import org.koin.compose.viewmodel.koinViewModel
  */
 @Composable private fun CharacterCard(game: GameUi, character: HeroSummary, onPlay: () -> Unit, onDelete: () -> Unit) {
     val heroClass = character.heroClass.takeIf { it.isNotBlank() }
-    ForgePanel(modifier = Modifier.clickable(enabled = !game.busy, onClick = onPlay)) {
+    // Санкция героя (3.88.5): под баном и в корзине им не играют; карточка говорит, кто, за что и до когда, и даёт обжаловать
+    val sanction = game.session.sanctions[character.id]
+    val deleted = character.deleted || sanction?.kind == SanctionKind.DELETION
+    val playable = sanction == null && !deleted
+    var appealing by remember(character.id) { mutableStateOf(false) }
+    ForgePanel(modifier = Modifier.alpha(if (deleted) .6f else 1f).clickable(enabled = !game.busy && playable, onClick = onPlay)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             ClassPortrait(heroClass, game.world.portraits, Modifier.size(64.dp), round = true)
             Column(Modifier.weight(1f)) {
-                Text(character.name, color = if (character.blocked) LifeRed else GoldBright, style = MaterialTheme.typography.titleMedium)
+                Text(character.name, color = if (sanction != null) LifeRed else GoldBright, style = MaterialTheme.typography.titleMedium)
                 PropertyRow(ui("common.class"), heroClass?.let(::classTitle) ?: ui("chars.unknown"), Glyph.CHARACTER)
                 PropertyRow(ui("common.level"), character.level.toString(), Glyph.LEVEL)
             }
         }
-        // Blocked by the administrator (3.81.0, server 1.76.0): the hero cannot play, and the reason is said here.
-        if (character.blocked) Text(ui("hero.blocked_mark", character.blockReason), color = LifeRed, style = MaterialTheme.typography.bodySmall)
+        sanction?.let { Text(sanctionLine(it), color = if (deleted) Muted else LifeRed, style = MaterialTheme.typography.bodySmall) }
+        if (sanction?.comment?.isNotBlank() == true) MutedText("«${sanction.comment}»")
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ForgeButton(enabled = !game.busy, onClick = onPlay, modifier = Modifier.weight(1f)) { Text(ui("auth.play")) }
-            ForgeOutlinedButton(enabled = !game.busy, onClick = onDelete) { Text(ui("chars.release_do"), color = MaterialTheme.colorScheme.error) }
+            if (sanction != null) {
+                ForgeOutlinedButton(enabled = !game.busy && !sanction.appealed, onClick = { appealing = true }, modifier = Modifier.weight(1f)) {
+                    Text(ui(if (sanction.appealed) "notice.appealed_short" else "notice.appeal"))
+                }
+            } else {
+                ForgeButton(enabled = !game.busy, onClick = onPlay, modifier = Modifier.weight(1f)) { Text(ui("auth.play")) }
+                ForgeOutlinedButton(enabled = !game.busy, onClick = onDelete) { Text(ui("chars.release_do"), color = MaterialTheme.colorScheme.error) }
+            }
+        }
+    }
+    if (appealing && sanction != null) {
+        val notices = koinViewModel<com.sperance.exileforge.presentation.admin.NoticeViewModel>()
+        AppealDialog(sanction, onDismiss = { appealing = false }) { text ->
+            appealing = false
+            notices.appeal(sanction.id, text)
         }
     }
 }

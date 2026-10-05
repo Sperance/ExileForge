@@ -3,6 +3,7 @@ package com.sperance.exileforge.core.session
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.UserProfile
 import com.sperance.exileforge.core.model.hero.HeroSummary
+import com.sperance.exileforge.core.network.SanctionView
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -19,10 +20,17 @@ data class Session(
     /** Герои аккаунта и прочитаны ли они: «нет героев» и «ещё не спрашивали» - разные состояния. */
     val characters: List<HeroSummary> = emptyList(),
     val charactersRead: Boolean = false,
+    /** Действующие санкции героев аккаунта по id героя (3.88.5): бан или удаление - карточка героя говорит, кто, за что и до когда. */
+    val sanctions: Map<String, SanctionView> = emptyMap(),
+    /** Доступ закрыт санкцией (3.88.5): её id для экрана санкции; пустая строка - аккаунт удалён и стирается. */
+    val notice: String? = null,
     /** Ответ сервера на проверку здоровья, как есть. */
     val health: String = ui("runtime.not_checked"),
 ) {
     val isAdmin: Boolean get() = signedIn && profile?.role == "ADMIN"
+
+    /** Окно модерации и отчёты (3.88.5): модератор и администратор. */
+    val isModerator: Boolean get() = isAdmin || (signedIn && profile?.role == "MODERATOR")
 
     /** Окно тестирования: тестировщик и администратор. */
     val isTester: Boolean get() = isAdmin || (signedIn && profile?.role == "TESTER")
@@ -41,5 +49,5 @@ class SessionRepository(initialServer: String) {
     fun update(transform: (Session) -> Session) = mutable.update(transform)
 
     /** Выход или смена сервера: всё, что принадлежало аккаунту, забывается, эпоха растёт. */
-    fun clear() = update { it.copy(resumable = false, characters = emptyList(), charactersRead = false, signedIn = false, profile = null, sessionEpoch = it.sessionEpoch + 1) }
+    fun clear() = update { it.copy(resumable = false, characters = emptyList(), charactersRead = false, sanctions = emptyMap(), signedIn = false, profile = null, sessionEpoch = it.sessionEpoch + 1) }
 }

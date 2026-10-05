@@ -153,7 +153,7 @@ class SessionActions(
                 try {
                     trace.step(StartStage.SESSION, "start.step.workbench") { api.workbench() }
                     val server = sessions.state.value.server
-                    val profile = trace.step(StartStage.SESSION, "start.step.device") { api.loginByDevice(store.deviceSecret(server)) }
+                    val profile = trace.step(StartStage.SESSION, "start.step.device") { api.loginByDevice(store.deviceSecret(server), store.deviceFingerprint()) }
                     api.deviceSecret?.let { store.saveDeviceSecret(server, it) }
                     signedIn(profile, byDevice = true)
                 } catch (e: CancellationException) {

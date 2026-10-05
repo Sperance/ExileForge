@@ -78,16 +78,17 @@ class GameApi(
     /**
      * Sign in with the secret of the device (server 1.46.0), or register when there is none or the server no longer
      * knows it (`US_015`): the server issues a fresh secret, and [deviceSecret] holds it until the caller keeps it.
+     * The [fingerprint] lets the server hand back the account this device already has after its data was wiped.
      */
-    suspend fun loginByDevice(secret: String?): UserProfile {
+    suspend fun loginByDevice(secret: String?, fingerprint: String = ""): UserProfile {
         logout()
         val answer = secret?.let {
             try {
-                http.request("POST", "api/v1/user/login/byDeviceId", body = WireJson.encodeToJsonElement(DeviceCredentials(it)), sensitive = true)
+                http.request("POST", "api/v1/user/login/byDeviceId", body = WireJson.encodeToJsonElement(DeviceCredentials(it, fingerprint)), sensitive = true)
             } catch (e: ApiFailure) {
                 if (e.code == DEVICE_UNKNOWN) null else throw e
             }
-        } ?: http.request("POST", "api/v1/user/byDeviceId", body = WireJson.encodeToJsonElement(DeviceCredentials("")), sensitive = true)
+        } ?: http.request("POST", "api/v1/user/byDeviceId", body = WireJson.encodeToJsonElement(DeviceCredentials("", fingerprint)), sensitive = true)
         return signedIn(answer)
     }
 

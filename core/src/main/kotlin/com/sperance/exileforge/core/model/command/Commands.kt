@@ -28,7 +28,7 @@ const val AUCTION_PAGE_SIZE = 20
 
 @Serializable data class LoginCredentials(val login: String, val password: String)
 
-@Serializable data class DeviceCredentials(val deviceId: String)
+@Serializable data class DeviceCredentials(val deviceId: String, val hardwareId: String = "")
 
 @Serializable data class PasswordChange(val password: String, val newPassword: String)
 

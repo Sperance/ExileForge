@@ -1,6 +1,8 @@
 package com.sperance.exileforge.data.settings
 
+import android.annotation.SuppressLint
 import android.content.Context
+import android.provider.Settings
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -17,6 +19,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import java.io.File
+import java.security.MessageDigest
 import java.util.UUID
 
 private val Context.settings by preferencesDataStore("server_settings")
@@ -295,11 +298,24 @@ class ServerStore(private val context: Context, private val vault: SecretVault =
 
     /**
      * The device's own secret on one server (3.48.0): the server issued it at registration and knows only its hash — the
-     * account of this device is whoever holds it. Sealed like the token; losing it (a data wipe) means a new account.
+     * account of this device is whoever holds it. Sealed like the token; a data wipe loses it, and the [deviceFingerprint]
+     * brings the same account back.
      */
     suspend fun deviceSecret(server: String): String? = secret(deviceSecretKey(server))
     suspend fun saveDeviceSecret(server: String, value: String?) = saveSecret(deviceSecretKey(server), value)
     private fun deviceSecretKey(server: String) = stringPreferencesKey("device:$server")
+
+    /**
+     * The device's fingerprint: a hash of ANDROID_ID, which outlives a data wipe and a reinstall (it changes only with a
+     * factory reset or another signing key). Only the hash leaves the device; empty when the system has no id to give.
+     */
+    @SuppressLint("HardwareIds")
+    fun deviceFingerprint(): String = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
+        ?.takeIf { it.isNotBlank() }
+        ?.let { id ->
+            MessageDigest.getInstance("SHA-256").digest("exileforge:${context.packageName}:$id".toByteArray())
+                .joinToString("") { "%02x".format(it) }
+        }.orEmpty()
 
     /** Секрет устройства не прочитан вовремя - [SecretsUnavailable] летит дальше: «нет секрета» завело бы новый аккаунт. */
     private suspend fun secret(key: Preferences.Key<String>): String? = context.settings.data.first()[key]?.let { vault.open(it) }

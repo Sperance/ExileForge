@@ -9,7 +9,6 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.update.AvailableUpdate
 import com.sperance.exileforge.core.update.Updates
 import com.sperance.exileforge.core.update.Wire
-import com.sperance.exileforge.data.settings.GuideStore
 import com.sperance.exileforge.presentation.app.ServerReach
 import com.sperance.exileforge.presentation.app.StartStage
 import com.sperance.exileforge.presentation.app.StartupTrace
@@ -23,7 +22,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -34,15 +32,13 @@ import java.io.File
 
 /**
  * Where the update stands (3.86.0). [checking]/[failure] - the check under way or why it failed. [update] - the build found:
- * [AvailableUpdate.mandatory] locks the game until it is installed, otherwise it is offered once ([dismissed] - «Позже»).
- * [progress] - its download, 0..1; [installing] - in the system installer. [askSources] - the first start asks once for
- * «install unknown apps», so an update later installs at once.
+ * every one locks the game until it is installed. [progress] - its download, 0..1; [installing] - in the system installer.
+ * [askSources] - «install unknown apps» is not allowed yet: the game asks for it until it is, so an update installs at once.
  */
 data class UpdateState(
     val checking: Boolean = true,
     val failure: String? = null,
     val update: AvailableUpdate? = null,
-    val dismissed: Boolean = false,
     val progress: Float? = null,
     val installing: Boolean = false,
     val needsPermission: Boolean = false,
@@ -51,11 +47,8 @@ data class UpdateState(
     val upToDate: Boolean = false,
     val askSources: Boolean = false,
 ) {
-    /** The build the game must take before anything else. */
-    val mandatory: Boolean get() = update?.mandatory == true
-
-    /** An optional build the player has not yet said «Позже» to. */
-    val offered: Boolean get() = update != null && !mandatory && !dismissed
+    /** The build the game must take before anything else: every update found is one. */
+    val mandatory: Boolean get() = update != null
 }
 
 /**
@@ -66,7 +59,6 @@ class UpdateViewModel(
     app: Application,
     private val reach: ServerReach,
     newerServer: kotlinx.coroutines.flow.Flow<Unit> = kotlinx.coroutines.flow.emptyFlow(),
-    private val guides: GuideStore,
     http: OkHttpClient,
     private val trace: StartupTrace,
 ) : AndroidViewModel(app) {
@@ -80,6 +72,9 @@ class UpdateViewModel(
 
     @Volatile private var lastCheck = 0L
 
+    // Установщик ушёл в системное окно: ответ его ждётся, пока игрок не вернулся в игру без него.
+    private var installerReturn: Job? = null
+
     init {
         if (BuildConfig.UPDATES) {
             viewModelScope.launch {
@@ -90,13 +85,10 @@ class UpdateViewModel(
             // A server newer than this build refused the sign-in (3.74.0): its build is looked for now, not in an hour.
             viewModelScope.launch { newerServer.collect { check() } }
         }
-        if (BuildConfig.UPDATES && !UpdateInstaller.allowed(app)) {
-            viewModelScope.launch {
-                if (SOURCES !in guides.read.first()) mutable.update { it.copy(askSources = true) }
-            }
-        }
+        recheckSources()
         viewModelScope.launch {
             UpdateInstaller.results.collect { result ->
+                installerReturn?.cancel()
                 when (result) {
                     InstallResult.Done -> mutable.update { it.copy(installing = false) }
                     is InstallResult.Failed -> mutable.update { it.copy(installing = false, error = ui("update.install_failed", result.message)) }
@@ -105,7 +97,7 @@ class UpdateViewModel(
         }
     }
 
-    /** «Проверить обновления»: asked by hand, the answer is said either way, and a dismissed build is offered again. */
+    /** «Проверить обновления»: asked by hand, the answer is said either way. */
     fun checkNow() {
         viewModelScope.launch { check(manual = true) }
     }
@@ -116,13 +108,24 @@ class UpdateViewModel(
         viewModelScope.launch { check() }
     }
 
-    /** «Позже» on an optional build: not offered again until a newer one or a check by hand. */
-    fun later() = mutable.update { it.copy(dismissed = true) }
+    /**
+     * The game is in front again (back from the settings or from the system installer): «install unknown apps» is asked
+     * again, and an install the system closed without an answer stops waiting - after [INSTALLER_GRACE_MS], so an
+     * answer on its way still wins; the player retries with «Обновить».
+     */
+    fun foreground() {
+        recheckSources()
+        if (!state.value.installing) return
+        installerReturn?.cancel()
+        installerReturn = viewModelScope.launch {
+            delay(INSTALLER_GRACE_MS)
+            mutable.update { it.copy(installing = false) }
+        }
+    }
 
-    /** The first-start question about unknown sources is answered, either way: it is not asked again. */
-    fun sourcesAsked() {
-        mutable.update { it.copy(askSources = false) }
-        viewModelScope.launch { guides.markRead(SOURCES) }
+    private fun recheckSources() {
+        val allowed = UpdateInstaller.allowed(getApplication())
+        mutable.update { it.copy(askSources = BuildConfig.UPDATES && !allowed, needsPermission = it.needsPermission && !allowed) }
     }
 
     /** One check; whether GitHub answered. */
@@ -139,7 +142,6 @@ class UpdateViewModel(
                     checking = false,
                     failure = null,
                     update = next,
-                    dismissed = s.dismissed && !manual && next?.info?.versionCode == s.update?.info?.versionCode,
                     upToDate = manual && found == null,
                 )
             }
@@ -191,7 +193,7 @@ class UpdateViewModel(
         /** Coming back to the app asks again no sooner than this after the last check. */
         const val RESUME_GAP_MS = 60_000L
 
-        /** The first-start question about unknown sources, as the device's guides remember it. */
-        const val SOURCES = "install_sources"
+        /** Back in the game while installing: the installer's answer is waited for this long before the retry is offered. */
+        const val INSTALLER_GRACE_MS = 3_000L
     }
 }

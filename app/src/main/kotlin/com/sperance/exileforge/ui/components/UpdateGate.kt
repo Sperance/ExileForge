@@ -48,8 +48,8 @@ data class StartStages(val contentReady: Boolean, val dictionaryReady: Boolean, 
 /**
  * Окно запуска и обновлений (3.86.0). Пока сервер не ответил - несколько строк: связь, версия, данные устройства. Ответил -
  * окна нет ([StartGate]), догрузка видна на экранах. Сервер молчит - так и написано, повтор сам через 10 с, «Повторить
- * сейчас» и «Играть без связи». Обязательная сборка закрывает игру до установки; сборка по желанию предлагается один раз.
- * [busy] - идёт поход или испытание: обновление ждёт его конца.
+ * сейчас» и «Играть без связи». Любая найденная сборка закрывает игру до установки. Ни одно окно запуска и обновления не
+ * закрывается «назад» или касанием мимо. [busy] - идёт поход или испытание: обновление ждёт его конца.
  */
 @Composable fun UpdateGate(
     updates: UpdateViewModel,
@@ -66,6 +66,8 @@ data class StartStages(val contentReady: Boolean, val dictionaryReady: Boolean, 
     // Back in the app (3.76.0): the build is asked again, unless a run is under way.
     val idle by rememberUpdatedState(!busy)
     LifecycleEventEffect(Lifecycle.Event.ON_START) { if (idle) updates.resumed() }
+    // Back from the settings or the system installer: the permission is asked again, a closed installer stops waiting.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { updates.foreground() }
     // The window is the start's, once: a server lost later in the game is the banner's.
     var released by rememberSaveable { mutableStateOf(false) }
     val verdict = StartGate.verdict(reach.reach, s.mandatory && !busy, window.elapsedMs)
@@ -99,9 +101,7 @@ data class StartStages(val contentReady: Boolean, val dictionaryReady: Boolean, 
             }
         }
 
-        s.offered && !busy -> Offered(updates) { UpdateBody(s, updates) }
-
-        s.askSources -> SourcesPrompt(updates)
+        s.askSources -> Locked { SourcesBody() }
     }
 }
 
@@ -152,18 +152,6 @@ private enum class RowState { RUN, DONE, FAIL }
     }
 }
 
-/** Сборка по желанию: окно закрывается, «Позже» не предлагает её до новой. */
-@Composable private fun Offered(updates: UpdateViewModel, content: @Composable ColumnScope.() -> Unit) {
-    Dialog(onDismissRequest = updates::later) {
-        Column(
-            Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(12.dp)).border(1.dp, Gold.copy(alpha = .4f), RoundedCornerShape(12.dp))
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            content = content,
-        )
-    }
-}
-
 /** Журнал запуска в буфер обмена: метка «скопировано» держится пару секунд. */
 @Composable private fun CopyLog(diagnostics: () -> String) {
     val clipboard = LocalClipboardManager.current
@@ -188,24 +176,13 @@ private const val TICK_MS = 500L
 /** Сколько окно ждёт, прежде чем предложить войти, не дожидаясь. */
 private const val CONTINUE_AFTER_MS = 15_000L
 
-@Composable private fun SourcesPrompt(updates: UpdateViewModel) {
+/** «Установка неизвестных приложений» не разрешена: только путь в настройки; вернувшись, игра спрашивает снова. */
+@Composable private fun ColumnScope.SourcesBody() {
     val context = LocalContext.current
-    Dialog(onDismissRequest = updates::sourcesAsked) {
-        Column(
-            Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(12.dp)).border(1.dp, Gold.copy(alpha = .4f), RoundedCornerShape(12.dp))
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Text(ui("update.sources_title"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
-            MutedText(ui("update.sources_note"))
-            ForgeButton(onClick = {
-                context.startActivity(UpdateInstaller.permissionScreen(context))
-                updates.sourcesAsked()
-            }, modifier = Modifier.fillMaxWidth()) {
-                Text(ui("update.open_settings"))
-            }
-            ForgeOutlinedButton(onClick = updates::sourcesAsked, modifier = Modifier.fillMaxWidth()) { Text(ui("update.later")) }
-        }
+    Text(ui("update.sources_title"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
+    MutedText(ui("update.sources_note"))
+    ForgeButton(onClick = { context.startActivity(UpdateInstaller.permissionScreen(context)) }, modifier = Modifier.fillMaxWidth()) {
+        Text(ui("update.open_settings"))
     }
 }
 
@@ -225,7 +202,7 @@ private const val CONTINUE_AFTER_MS = 15_000L
 @Composable private fun ColumnScope.UpdateBody(s: UpdateState, updates: UpdateViewModel) {
     val update = s.update ?: return
     val context = LocalContext.current
-    Text(ui(if (update.mandatory) "update.title" else "update.optional_title"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
+    Text(ui("update.title"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
     if (update.info.size > 0) MutedText(ui("update.size", "%.1f".format(update.info.size / 1_048_576.0)))
     Text(ui("update.notes"), color = Parchment, style = MaterialTheme.typography.labelLarge)
     Column(Modifier.fillMaxWidth().heightIn(max = 280.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -263,7 +240,6 @@ private const val CONTINUE_AFTER_MS = 15_000L
                     context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(update.pageUrl)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                 }, modifier = Modifier.fillMaxWidth()) { Text(ui("update.browser")) }
             }
-            if (!update.mandatory) ForgeOutlinedButton(onClick = updates::later, modifier = Modifier.fillMaxWidth()) { Text(ui("update.later")) }
         }
     }
 }

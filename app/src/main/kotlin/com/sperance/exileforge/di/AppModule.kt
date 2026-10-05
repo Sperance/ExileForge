@@ -159,5 +159,5 @@ val appModule = module {
     viewModel { SettingsViewModel(get()) }
     viewModelOf(::ServerViewModel)
     // Проверка обновлений ждёт сервер игровой модели: поток и манифест приходят параметрами из активности.
-    viewModel { params -> UpdateViewModel(androidApplication(), get(), params.get(0), get(), get(), get()) }
+    viewModel { params -> UpdateViewModel(androidApplication(), get(), params.get(0), get(), get()) }
 }

@@ -39,23 +39,16 @@ data class Wire(val api: Int, val rules: Int) {
     val wire: Wire get() = Wire(apiRevision, rules)
 }
 
-/** Найденная сборка: что это, откуда качать APK, страница релиза для браузера и обязательна ли она. */
-data class AvailableUpdate(val info: AppBuild, val apkUrl: String, val pageUrl: String, val mandatory: Boolean)
+/** Найденная сборка: что это, откуда качать APK и страница релиза для браузера. Любая найденная обязательна. */
+data class AvailableUpdate(val info: AppBuild, val apkUrl: String, val pageUrl: String)
 
 /**
- * Что делать со сборкой (3.86.0). Обязательна - когда сервер говорит на другом проводе, чем эта сборка, а найденная
- * говорит на его: старая играть не может. По желанию - новее и на проводе сервера (или этой сборки, пока сервер не
- * ответил). Сборка на проводе, которого сервер ещё не знает, не предлагается: она не войдёт.
+ * Нужна ли сборка. Обязательна любая новее этой, что говорит на проводе сервера (или этой сборки, пока сервер не
+ * ответил): сервер на другом проводе - старая играть не может, на том же - всё равно ставится до входа. Сборка на
+ * проводе, которого сервер ещё не знает, не предлагается: она не войдёт.
  */
 object UpdatePolicy {
-    enum class Kind { NONE, OPTIONAL, MANDATORY }
-
-    fun decide(build: AppBuild, versionCode: Int, own: Wire, server: Wire?): Kind = when {
-        build.versionCode <= versionCode -> Kind.NONE
-        server != null && server != own -> if (build.wire == server) Kind.MANDATORY else Kind.NONE
-        build.wire == (server ?: own) -> Kind.OPTIONAL
-        else -> Kind.NONE
-    }
+    fun required(build: AppBuild, versionCode: Int, own: Wire, server: Wire?): Boolean = build.versionCode > versionCode && build.wire == (server ?: own)
 }
 
 /**
@@ -78,14 +71,10 @@ class Updates(client: OkHttpClient = ForgeHttp.client) {
             response.body.string()
         }
         val info = WireJson.decodeFromString(AppBuild.serializer(), text)
-        when (UpdatePolicy.decide(info, versionCode, Wire.OWN, server)) {
-            UpdatePolicy.Kind.NONE -> null
-            UpdatePolicy.Kind.OPTIONAL -> info.available(mandatory = false)
-            UpdatePolicy.Kind.MANDATORY -> info.available(mandatory = true)
-        }
+        info.takeIf { UpdatePolicy.required(it, versionCode, Wire.OWN, server) }?.available()
     }
 
-    private fun AppBuild.available(mandatory: Boolean) = AvailableUpdate(this, "$RELEASES/download/v$versionName/$apk", "$RELEASES/tag/v$versionName", mandatory)
+    private fun AppBuild.available() = AvailableUpdate(this, "$RELEASES/download/v$versionName/$apk", "$RELEASES/tag/v$versionName")
 
     /**
      * APK [update] в [target], [progress] - прочитано байт из всех. Начатый файл докачивается с места обрыва (`Range`);

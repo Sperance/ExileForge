@@ -33,6 +33,8 @@ object UpdateInstaller {
     /** Hands [apk] to the system installer; the answer comes as [results]. */
     suspend fun install(context: Context, apk: File) = withContext(Dispatchers.IO) {
         val installer = context.packageManager.packageInstaller
+        // Прежняя сессия, чьё системное окно закрыли без ответа, бросается: повтор начинает с чистой.
+        installer.mySessions.forEach { runCatching { installer.abandonSession(it.sessionId) } }
         val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply { setAppPackageName(context.packageName) }
         val id = installer.createSession(params)
         installer.openSession(id).use { session ->

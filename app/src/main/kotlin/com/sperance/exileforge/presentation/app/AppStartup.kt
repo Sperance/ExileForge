@@ -42,6 +42,8 @@ class AppStartup(
     private val events: GameEvents,
     private val sessionActions: SessionActions,
     private val connectionActions: ConnectionActions,
+    private val trace: StartupTrace,
+    private val watchdog: StallWatchdog,
 ) : AppService(repositories, actions, commands, connection, store, scope) {
     /**
      * Запуск после сборки (3.80.12): отражения репозиториев и старт сессии. Из конструктора корутины не запускаются -
@@ -75,18 +77,21 @@ class AppStartup(
                 store.forgetWorldUnless(RULES_VERSION)
                 api = sessionActions.newApi(server)
                 sessionActions.apiReady.complete(Unit)
+                reportStall()
                 val known = store.languages(server).mapNotNull { Lang.byCode(it) }
                 sessions.update { it.copy(server = server) }
                 world.update { it.copy(languages = known.ifEmpty { it.languages }) }
                 commands.ready()
                 loader.refreshLocale()
                 loader.refreshIcons()
-                val saved = store.token(server)
+                val saved = trace.step(StartStage.SESSION, "start.step.token") { store.token(server) }
                 // The fast start (3.30.0): the last hero from the device at once, the session confirmed behind it.
                 if (saved != null) {
                     if (!sessionActions.fastStart(server, saved)) sessionActions.resume(saved)
                 } else if (store.deviceSession.first()) {
                     sessionActions.playOnThisDevice(silent = true)
+                } else {
+                    trace.note(StartStage.SESSION, "start.step.no_session")
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -95,7 +100,22 @@ class AppStartup(
                 sessionActions.apiReady.complete(Unit)
                 commands.ready()
                 commands.refuse(Phrase { refusalLine(e) })
+            } finally {
+                trace.started()
             }
+        }
+    }
+
+    /** Прошлый запуск завис (3.82.0): отчёт сторожа уходит баг-репортом в фоне, отправленный стирается. */
+    private fun reportStall() {
+        scope.launch {
+            try {
+                val report = watchdog.pending() ?: return@launch
+                api.reportBug(report)
+                watchdog.sent()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) { }
         }
     }
 }

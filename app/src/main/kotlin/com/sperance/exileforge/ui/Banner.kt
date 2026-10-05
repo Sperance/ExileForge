@@ -57,7 +57,6 @@ import com.sperance.exileforge.presentation.state.*
 import com.sperance.exileforge.presentation.state.Feature
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.ui.components.BugSheet
-import com.sperance.exileforge.ui.components.ExilePathPlate
 import com.sperance.exileforge.ui.components.LocalBugReport
 import com.sperance.exileforge.ui.components.LocalMailOpen
 import com.sperance.exileforge.ui.components.LocalMotion
@@ -69,9 +68,6 @@ import com.sperance.exileforge.ui.components.SuggestionsSheet
 import com.sperance.exileforge.ui.components.ToastHost
 import com.sperance.exileforge.ui.components.UpdateGate
 import com.sperance.exileforge.ui.components.WarmupScreen
-import com.sperance.exileforge.ui.components.destination
-import com.sperance.exileforge.ui.components.pathStep
-import com.sperance.exileforge.ui.components.pulse
 import com.sperance.exileforge.ui.components.voidBackdrop
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.admin.AdminScreen

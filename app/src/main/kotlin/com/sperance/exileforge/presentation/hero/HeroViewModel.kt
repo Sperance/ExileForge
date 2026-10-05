@@ -67,6 +67,5 @@ class HeroViewModel(
     fun testerGrant(what: String, vararg params: Pair<String, String?>) = hero.testerGrant(what, *params)
     fun redeem(code: String) = hero.redeem(code)
 
-    fun claimPath() = hero.claimPath()
     fun autoSell(rarity: Rarity, groups: Set<SlotGroup>) = hero.autoSell(rarity, groups)
 }

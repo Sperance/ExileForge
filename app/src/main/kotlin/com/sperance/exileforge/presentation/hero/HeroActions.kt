@@ -47,12 +47,6 @@ class HeroActions(
     }
     fun unequip(itemId: String) = heroCommand { id -> api.hero.unequip(id, itemId) }
 
-    /** Путь Изгнанника (3.79.0): сделанный шаг забирается, награда названа тостом. */
-    fun claimPath() = heroCommand { id ->
-        val claimed = api.hero.claimPath(id)
-        notices.toast(ui("path.claimed", ui("path.${claimed.step.lowercase()}.title")), NoticeKind.LOOT)
-    }
-
     /** Титул рядом с именем (1.3.0): открытый хроникой, или никакой. */
     fun setTitle(title: String) = heroCommand { id -> api.hero.setTitle(id, title) }
 

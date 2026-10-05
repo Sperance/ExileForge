@@ -19,7 +19,7 @@ class MainActivity : ComponentActivity() {
     private val shell: ShellViewModel by viewModel()
 
     /** Updates from GitHub Releases (3.72.0): checked against the server the game model is connected to. */
-    private val updates: UpdateViewModel by viewModel { parametersOf(shell.newerServer, suspend { shell.serverManifest() }) }
+    private val updates: UpdateViewModel by viewModel { parametersOf(shell.newerServer, suspend { shell.updateSource() }) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

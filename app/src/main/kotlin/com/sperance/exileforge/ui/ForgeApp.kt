@@ -47,6 +47,7 @@ import com.sperance.exileforge.core.network.RequestLog
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.data.settings.DraftStore
 import com.sperance.exileforge.presentation.ShellViewModel
+import com.sperance.exileforge.presentation.app.StartupTrace
 import com.sperance.exileforge.presentation.crafts.CraftsViewModel
 import com.sperance.exileforge.presentation.features.UpdateViewModel
 import com.sperance.exileforge.presentation.feedback.FeedbackViewModel
@@ -58,7 +59,6 @@ import com.sperance.exileforge.presentation.state.Feature
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.unlocked
 import com.sperance.exileforge.ui.components.BugSheet
-import com.sperance.exileforge.ui.components.ExilePathPlate
 import com.sperance.exileforge.ui.components.LocalBugReport
 import com.sperance.exileforge.ui.components.LocalMailOpen
 import com.sperance.exileforge.ui.components.LocalMotion
@@ -71,9 +71,6 @@ import com.sperance.exileforge.ui.components.SuggestionsSheet
 import com.sperance.exileforge.ui.components.ToastHost
 import com.sperance.exileforge.ui.components.UpdateGate
 import com.sperance.exileforge.ui.components.WarmupScreen
-import com.sperance.exileforge.ui.components.destination
-import com.sperance.exileforge.ui.components.pathStep
-import com.sperance.exileforge.ui.components.pulse
 import com.sperance.exileforge.ui.components.voidBackdrop
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.admin.AdminScreen
@@ -135,12 +132,16 @@ import org.koin.compose.viewmodel.koinViewModel
     ) {
         ForgeScreens()
         // Updates (3.72.0): over everything; a run or a trial under way is finished first.
+        // 3.82.0: the start's steps and whether it is over join the stages, so the window shows where it stands.
+        val trace = koinInject<StartupTrace>()
+        val startupDone by trace.startupDone.collectAsStateWithLifecycle()
+        val steps by trace.steps.collectAsStateWithLifecycle()
         val stages by remember(shell) {
             shell.game.map { g ->
-                StartStages(Reads.CONTENT in g.loading, g.index != null, g.world.localeStrings > 0, g.world.iconKeys > 0)
+                StartStages(Reads.CONTENT in g.loading, g.index != null, g.world.localeStrings > 0, g.world.iconKeys > 0, sessionBusy = g.busy)
             }.distinctUntilChanged()
         }.collectAsStateWithLifecycle(StartStages(contentLoading = false, contentReady = false, dictionaryReady = false, iconsReady = false))
-        UpdateGate(updates, busy = expedition != null || trial != null, stages = stages)
+        UpdateGate(updates, busy = expedition != null || trial != null, stages = stages.copy(startupDone = startupDone), steps = steps)
     }
 }
 
@@ -276,8 +277,6 @@ import org.koin.compose.viewmodel.koinViewModel
                 LaunchedEffect(game.heroId) { if (game.heroId.isNotBlank()) craftsModel.load(silent = true) }
                 ForgeBanner(game, route, onBug)
                 if (game.busy || game.reading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised) else OrnateDivider(Gold)
-                // The Exile's Path (3.79.0): the first hour's next step, under the banner on every tab until it is walked.
-                ExilePathPlate(game, onGo = shell::tab, onClaim = heroModel::claimPath)
                 HeroTab.of(route.tab)?.let { HeroTabStrip(it, locked = { tab -> !game.unlocked(Feature.ofTab(tab)) }, onSelect = shell::tab) }
                 screens(Modifier.weight(1f).fillMaxWidth())
             }
@@ -316,9 +315,6 @@ import org.koin.compose.viewmodel.koinViewModel
             TAB_CITY to ForgeGlyphs.Keep,
             TAB_ADMIN to ForgeGlyphs.Scroll,
         )
-        // The tab the Exile's Path sends the player to next pulses while its step waits (3.79.0).
-        val beckons = game.pathStep()?.takeIf { !it.second }?.first?.check?.destination
-        val beat = pulse(1.18f)
         destinations.forEach { index ->
             val label = labels.getValue(index)
             // The tree and the grimoire are the hero's (3.24.0), the forge, the menagerie and the trials the hub's: while one is
@@ -343,8 +339,8 @@ import org.koin.compose.viewmodel.koinViewModel
                         Icon(
                             icons.getValue(index),
                             null,
-                            tint = if (index == beckons && route.tab != index) GoldBright else LocalContentColor.current,
-                            modifier = Modifier.size(22.dp).scale(if (index == beckons && route.tab != index) beat else 1f),
+                            tint = LocalContentColor.current,
+                            modifier = Modifier.size(22.dp),
                         )
                     }
                 },

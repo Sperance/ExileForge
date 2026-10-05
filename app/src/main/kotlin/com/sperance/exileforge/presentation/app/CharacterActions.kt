@@ -27,6 +27,7 @@ class CharacterActions(
     private val navigator: Navigator,
     private val loader: WorldLoader,
     private val lazyWarmup: Lazy<WarmupActions>,
+    private val trace: StartupTrace,
 ) : AppService(repositories, actions, commands, connection, store, scope) {
     private val warmupActions: WarmupActions get() = lazyWarmup.value
 
@@ -59,7 +60,7 @@ class CharacterActions(
             // The hero the next launch opens straight into (3.30.0).
             store.saveLastHero(sessions.state.value.server, id)
             loader.ensureContent(fresh = true)
-            heroSync.readHero()
+            trace.step(StartStage.SESSION, "start.step.hero") { heroSync.readHero() }
             expedition.resume(id)
         }
     }

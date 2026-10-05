@@ -19,6 +19,8 @@ import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.core.session.SessionRepository
 import com.sperance.exileforge.core.world.WorldRepository
 import com.sperance.exileforge.data.settings.ServerStore
+import com.sperance.exileforge.presentation.app.StartStage
+import com.sperance.exileforge.presentation.app.StartupTrace
 import com.sperance.exileforge.rules.content.ContentFiles
 import com.sperance.exileforge.rules.content.ContentLoader
 import com.sperance.exileforge.rules.content.RULES_VERSION
@@ -31,7 +33,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 /**
@@ -46,6 +47,7 @@ class WorldLoader(
     private val world: WorldRepository,
     private val languages: LanguageRepository,
     private val scope: CoroutineScope,
+    private val trace: StartupTrace,
 ) {
     private val api: GameApi get() = connection.api
     private var localeJob: Job? = null
@@ -67,13 +69,15 @@ class WorldLoader(
      */
     suspend fun loadLocale(language: Lang) {
         val server = sessions.state.value.server
-        val cached = store.locale(server, language.code)
-        cached?.let { (hash, document) -> applyLocale(parsed { LocaleBundle.parse(language.code, hash, document) }) }
-        val manifest = api.manifest().locale
+        // Шаги словаря видны в окне запуска (3.82.0): память устройства, манифест, сервер.
+        val cached = trace.step(StartStage.DICTIONARY, "start.step.cache") {
+            store.locale(server, language.code)?.also { (hash, document) -> applyLocale(parsed { LocaleBundle.parse(language.code, hash, document) }) }
+        }
+        val manifest = trace.step(StartStage.DICTIONARY, "start.step.manifest") { api.manifest().locale }
         applyLanguages(server, manifest)
         val chosen = manifest.language(language.code) ?: manifest.language(manifest.default) ?: return
         if (cached == null || cached.first != chosen.hash || chosen.code != language.code) {
-            applyLocale(bundle(server, manifest, chosen.code) ?: return)
+            applyLocale(trace.step(StartStage.DICTIONARY, "start.step.server") { bundle(server, manifest, chosen.code) } ?: return)
         }
     }
 
@@ -100,14 +104,17 @@ class WorldLoader(
 
     suspend fun loadIcons() {
         val server = sessions.state.value.server
-        val cached = store.icons(server)
-        cached?.let { (hash, document) -> applyIcons(parsed { IconBundle.parse(hash, document) }) }
-        val manifest = api.manifest().icons
+        val cached = trace.step(StartStage.ICONS, "start.step.cache") {
+            store.icons(server)?.also { (hash, document) -> applyIcons(parsed { IconBundle.parse(hash, document) }) }
+        }
+        val manifest = trace.step(StartStage.ICONS, "start.step.manifest") { api.manifest().icons }
         if (manifest.hash.isBlank() || cached?.first == manifest.hash) return
-        val document = api.files.iconDocument(manifest.file)
-        val bundle = parsed { IconBundle.parse(manifest.hash, document) }
-        store.saveIcons(server, manifest.hash, document)
-        applyIcons(bundle)
+        trace.step(StartStage.ICONS, "start.step.server") {
+            val document = api.files.iconDocument(manifest.file)
+            val bundle = parsed { IconBundle.parse(manifest.hash, document) }
+            store.saveIcons(server, manifest.hash, document)
+            applyIcons(bundle)
+        }
     }
 
     /** Reading the icons and the portraits is background work, side by side; a failure leaves the bundled emblems. */
@@ -130,7 +137,9 @@ class WorldLoader(
     /** Parsing a served document is CPU work of its size, and never belongs on the main thread. */
     private suspend fun <T> parsed(parse: () -> T): T = withContext(Dispatchers.Default) { parse() }
 
-    suspend fun loadPortraits() {
+    suspend fun loadPortraits() = trace.step(StartStage.ICONS, "start.step.portraits") { readPortraits() }
+
+    private suspend fun readPortraits() {
         val server = sessions.state.value.server
         val cached = store.portraits(server)
         applyPortraits(cached)
@@ -178,32 +187,54 @@ class WorldLoader(
      * again only when the start manifest's fingerprint for that chunk moves, and parsed by the rules.
      * A warm start reads none of it from the server. [fresh] asks the manifest again — on entering a hero.
      */
-    suspend fun ensureContent(fresh: Boolean = false) = contentLock.withLock {
+    suspend fun ensureContent(fresh: Boolean = false) = locked {
         val server = sessions.state.value.server
-        val manifest = api.manifest(fresh).content
-        if (manifest.hash == world.state.value.contentHash && world.state.value.content != null) return@withLock
+        val manifest = trace.step(StartStage.CONTENT, "start.step.manifest") { api.manifest(fresh).content }
+        if (manifest.hash == world.state.value.contentHash && world.state.value.content != null) return@locked
         // Each chunk says whether it came from the device or the network; the downloads are kept only once
         // the whole world has read, so a broken download is fetched again rather than stored.
-        val chunks = coroutineScope {
-            ContentFiles.ALL.associateWith { file ->
-                async {
-                    val wanted = manifest.chunks[file].orEmpty()
-                    store.chunk(server, file)?.takeIf { it.first == wanted && wanted.isNotBlank() }?.let { it.second to false }
-                        ?: (api.files.contentChunk(file) to true)
-                }
-            }.mapValues { it.value.await() }
+        val total = ContentFiles.ALL.size
+        val done = java.util.concurrent.atomic.AtomicInteger()
+        val reading = trace.begin(StartStage.CONTENT, "start.step.chunks", 0, total)
+        val chunks = try {
+            coroutineScope {
+                ContentFiles.ALL.associateWith { file ->
+                    async {
+                        val wanted = manifest.chunks[file].orEmpty()
+                        (
+                            store.chunk(server, file)?.takeIf { it.first == wanted && wanted.isNotBlank() }?.let { it.second to false }
+                                ?: (api.files.contentChunk(file) to true)
+                            ).also { trace.progress(reading, done.incrementAndGet(), total) }
+                    }
+                }.mapValues { it.value.await() }
+            }.also { trace.end(reading) }
+        } catch (e: Throwable) {
+            trace.end(reading, e)
+            throw e
         }
-        val index = parsed { ContentLoader.load { chunks.getValue(it).first } }
+        val index = trace.step(StartStage.CONTENT, "start.step.parse") { parsed { ContentLoader.load { chunks.getValue(it).first } } }
         chunks.forEach { (file, chunk) -> if (chunk.second) store.saveChunk(server, file, manifest.chunks[file].orEmpty(), chunk.first) }
         world.update { it.copy(content = index, contentHash = manifest.hash) }
+    }
+
+    /** Замок контента; ожидание его - отдельный подпункт (3.82.0): чтение, что держит замок, видно как стоящее. */
+    private suspend inline fun <T> locked(block: () -> T): T {
+        if (!contentLock.tryLock()) trace.step(StartStage.CONTENT, "start.step.lock") { contentLock.lock() }
+        return try {
+            block()
+        } finally {
+            contentLock.unlock()
+        }
     }
 
     /**
      * The content from the device alone (3.30.0), as the kept manifest names it — no request: what the fast start
      * draws the last hero with. `false` when the manifest is of another revision or a chunk is missing or stale.
      */
-    suspend fun contentFromDevice(): Boolean {
-        contentLock.withLock {
+    suspend fun contentFromDevice(): Boolean = trace.step(StartStage.CONTENT, "start.step.device_content") { contentKept() }
+
+    private suspend fun contentKept(): Boolean {
+        locked {
             if (world.state.value.content != null) return true
             val server = sessions.state.value.server
             val manifest = store.manifest(server)?.let { text -> runCatching { WireJson.decodeFromString(StaticManifest.serializer(), text) }.getOrNull() }

@@ -57,6 +57,7 @@ class SessionActions(
     private val lazyWarmup: Lazy<WarmupActions>,
     /** HTTP-клиент процесса (3.80.45, из Koin): все серверы делят его пул и TLS-сессии. */
     private val http: OkHttpClient,
+    private val trace: StartupTrace,
 ) : AppService(repositories, actions, commands, connection, store, scope) {
     private val connectionActions: ConnectionActions get() = lazyConnection.value
     private val characterActions: CharacterActions get() = lazyCharacters.value
@@ -150,9 +151,9 @@ class SessionActions(
             task {
                 clearSession()
                 try {
-                    api.workbench()
+                    trace.step(StartStage.SESSION, "start.step.workbench") { api.workbench() }
                     val server = sessions.state.value.server
-                    val profile = api.loginByDevice(store.deviceSecret(server))
+                    val profile = trace.step(StartStage.SESSION, "start.step.device") { api.loginByDevice(store.deviceSecret(server)) }
                     api.deviceSecret?.let { store.saveDeviceSecret(server, it) }
                     signedIn(profile, byDevice = true)
                 } catch (e: CancellationException) {
@@ -171,8 +172,8 @@ class SessionActions(
                 unconfirmed = null
                 clearSession()
                 try {
-                    api.workbench()
-                    signedIn(api.resume(saved), byDevice = store.deviceSession.first())
+                    trace.step(StartStage.SESSION, "start.step.workbench") { api.workbench() }
+                    signedIn(trace.step(StartStage.SESSION, "start.step.resume") { api.resume(saved) }, byDevice = store.deviceSession.first())
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -195,8 +196,9 @@ class SessionActions(
      */
     suspend fun fastStart(server: String, saved: String): Boolean {
         run {
-            val heroId = store.lastHero(server) ?: return false
-            val copy = heroCopy(server, heroId) ?: return false
+            val (heroId, copy) = trace.step(StartStage.SESSION, "start.step.copy") {
+                store.lastHero(server)?.let { heroId -> heroCopy(server, heroId)?.let { heroId to it } }
+            } ?: return false
             if (copy.revision != API_REVISION || !loader.contentFromDevice()) return false
             api.adopt(saved, copy.account)
             sessions.update { it.copy(signedIn = true, resumable = false, profile = copy.account) }
@@ -358,7 +360,7 @@ class SessionActions(
             loader.refreshIcons()
             coroutineScope {
                 launch { loader.ensureContent() }
-                characterActions.readCharacters(autoEnter = true)
+                trace.step(StartStage.SESSION, "start.step.characters") { characterActions.readCharacters(autoEnter = true) }
             }
         }
     }

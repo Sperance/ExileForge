@@ -8,7 +8,6 @@ import com.sperance.exileforge.core.campaign.TrialArena
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.BugReportRequest
-import com.sperance.exileforge.core.model.sync.StaticManifest
 import com.sperance.exileforge.core.network.RequestJournal
 import com.sperance.exileforge.core.session.Buzzes
 import com.sperance.exileforge.core.session.CommandRunner
@@ -19,10 +18,13 @@ import com.sperance.exileforge.data.settings.PreferencesRepository
 import com.sperance.exileforge.presentation.app.AppStartup
 import com.sperance.exileforge.presentation.app.ConnectionActions
 import com.sperance.exileforge.presentation.app.SessionActions
+import com.sperance.exileforge.presentation.app.StartStage
+import com.sperance.exileforge.presentation.app.StartupTrace
 import com.sperance.exileforge.presentation.app.Warmup
 import com.sperance.exileforge.presentation.app.WarmupActions
 import com.sperance.exileforge.presentation.expedition.ExpeditionActions
 import com.sperance.exileforge.presentation.expedition.TrialActions
+import com.sperance.exileforge.presentation.features.UpdateSource
 import com.sperance.exileforge.presentation.nav.Navigator
 import com.sperance.exileforge.presentation.nav.Route
 import com.sperance.exileforge.presentation.state.ADMIN_TABS
@@ -61,6 +63,7 @@ class ShellViewModel(
     private val warming: WarmupActions,
     private val expedition: ExpeditionActions,
     trial: TrialActions,
+    private val trace: StartupTrace,
 ) : ViewModel() {
     init {
         // Приложение запускается один раз, кто бы из оболочки или активности ни попросил первым.
@@ -83,7 +86,8 @@ class ShellViewModel(
 
     /** Отчёт жука (3.48.0): уходит сразу, со входом или без; [onSent] - когда сервер его принял. */
     fun reportBug(report: BugReportRequest, onSent: suspend () -> Unit = {}) = commands.task {
-        connection.api.reportBug(report)
+        // Шаги запуска (3.82.0) - в отчёт: где и сколько стоял старт.
+        connection.api.reportBug(report.copy(requests = report.requests + trace.journal().lines().takeLast(STARTUP_LINES).chunked(STARTUP_CHUNK).map { it.joinToString("\n") }))
         onSent()
         notices.toast(ui("bug.sent"))
     }
@@ -153,19 +157,28 @@ class ShellViewModel(
     /** Вход встретил сервер новее сборки (3.74.0): проверка обновлений идёт сразу. */
     val newerServer: Flow<Unit> get() = session.newerServer
 
-    /** Манифест живого сервера для проверки обновлений (3.72.0); null, пока сервер не отвечает. */
-    suspend fun serverManifest(): StaticManifest? = try {
-        // 3.74.0: после того как у приложения есть сервер, и как его отдаёт он сейчас - манифест старой выкладки прятал обновление.
-        withTimeoutOrNull(API_WAIT_MS) { session.apiReady.await() }
-        connection.api.liveManifest()
-    } catch (e: CancellationException) {
-        throw e
-    } catch (_: Exception) {
-        null
+    /**
+     * Откуда проверять обновления (3.82.0): сервер игры и провод живого сервера; провода нет, пока сервер не отвечает.
+     * Ожидание сервера и его манифест - подпункты «Версии» в окне запуска.
+     */
+    suspend fun updateSource(): UpdateSource {
+        trace.step(StartStage.VERSION, "start.step.wait_server") { withTimeoutOrNull(API_WAIT_MS) { session.apiReady.await() } }
+        val live = try {
+            trace.step(StartStage.VERSION, "start.step.server_manifest") { connection.api.liveManifest() }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            null
+        }
+        return UpdateSource(sessions.state.value.server, live?.let { it.revision to it.rules })
     }
 
     private companion object {
         /** Сколько проверка обновлений ждёт, пока у приложения появится сервер. */
         const val API_WAIT_MS = 10_000L
+
+        /** Последние шаги запуска в баг-репорте и сколько строк в одной записи (сервер берёт записи до 400 знаков). */
+        const val STARTUP_LINES = 40
+        const val STARTUP_CHUNK = 5
     }
 }

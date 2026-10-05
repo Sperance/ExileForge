@@ -17,6 +17,7 @@ import com.sperance.exileforge.presentation.Repositories
 import com.sperance.exileforge.presentation.state.Buzz
 import com.sperance.exileforge.presentation.state.Phrase
 import com.sperance.exileforge.presentation.world.WorldLoader
+import com.sperance.exileforge.rules.content.RULES_VERSION
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
@@ -70,6 +71,8 @@ class AppStartup(
             try {
                 languages.set(Lang.byCode(store.language.first()) ?: deviceLanguage())
                 val server = store.server.first()
+                // A world of other rules is not opened (3.81.2): what the device kept of it goes before anything reads it.
+                store.forgetWorldUnless(RULES_VERSION)
                 api = sessionActions.newApi(server)
                 sessionActions.apiReady.complete(Unit)
                 val known = store.languages(server).mapNotNull { Lang.byCode(it) }

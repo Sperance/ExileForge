@@ -194,6 +194,23 @@ class ServerStore(private val context: Context) {
     }
     private fun awayKey(server: String, heroId: String) = stringPreferencesKey("crafts_away:$server|$heroId")
 
+    /**
+     * The world of other rules forgotten (3.81.2): when the rules' version moves, the session, the heroes' copies, the waiting
+     * commands, the runs' journals and the content kept for the old one are dropped once, so a launch never opens on a world
+     * the server no longer has. The language, the settings, the dictionary, the art and the device's own account stay.
+     * Whether anything was dropped.
+     */
+    suspend fun forgetWorldUnless(rules: Int): Boolean {
+        if (context.settings.data.first()[rulesKey] == rules.toString()) return false
+        withContext(Dispatchers.IO) { WORLD_DIRS.forEach { File(context.filesDir, it).deleteRecursively() } }
+        context.settings.edit { prefs ->
+            prefs.asMap().keys.filter { key -> WORLD_KEYS.any { key.name.startsWith(it) } }.forEach { prefs.remove(it) }
+            prefs[rulesKey] = rules.toString()
+        }
+        return true
+    }
+    private val rulesKey = stringPreferencesKey("rules_version")
+
     /** The hero last played on a server: the one a launch with a kept session opens straight into. */
     suspend fun lastHero(server: String): String? = context.settings.data.first()[lastHeroKey(server)]
     suspend fun saveLastHero(server: String, heroId: String?) {
@@ -279,6 +296,12 @@ class ServerStore(private val context: Context) {
     }
 
     private companion object {
+        /** The kept folders of a world: heroes' copies, waiting commands, runs' journals, content and its manifest. */
+        val WORLD_DIRS = listOf("heroes", "commands", "journal", "content", "manifest")
+
+        /** The kept keys of a world: sessions, last heroes, the crafts' absences and the content's fingerprints. */
+        val WORLD_KEYS = listOf("token:", "last_hero:", "crafts_away:", "content:", "manifest:")
+
         const val PORTRAITS_HASH = "set"
     }
 }

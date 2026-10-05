@@ -12,6 +12,8 @@ jobs:
           submodules: true
           # Вся история сабмодуля: версию закреплённого сервера Gradle считает по коммитам backend/ (3.88.2)
           fetch-depth: 0
+          # Сервер - приватный репозиторий (3.88.4): токен с Contents: read на ExileForge и ktor-bestgame; без секрета - токен прогона
+          token: ${{ secrets.BACKEND_TOKEN || github.token }}
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -78,6 +80,8 @@ jobs:
           submodules: true
           # Вся история сабмодуля: версию закреплённого сервера Gradle считает по коммитам backend/ (3.88.2)
           fetch-depth: 0
+          # Сервер - приватный репозиторий (3.88.4): токен с Contents: read на ExileForge и ktor-bestgame; без секрета - токен прогона
+          token: ${{ secrets.BACKEND_TOKEN || github.token }}
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -138,6 +142,8 @@ jobs:
           submodules: true
           # Вся история сабмодуля: версию закреплённого сервера Gradle считает по коммитам backend/ (3.88.2)
           fetch-depth: 0
+          # Сервер - приватный репозиторий (3.88.4): токен с Contents: read на ExileForge и ktor-bestgame; без секрета - токен прогона
+          token: ${{ secrets.BACKEND_TOKEN || github.token }}
       - id: version
         run: |
           version=$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' app/build.gradle.kts | head -1)

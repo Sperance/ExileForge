@@ -65,7 +65,7 @@ class SessionActions(
 
     fun mode(mode: AppMode) {
         run {
-            if (commands.state.value.busy || mode == AppMode.ADMIN && !(BuildConfig.DEBUG && sessions.state.value.isAdmin)) return
+            if (commands.state.value.held || mode == AppMode.ADMIN && !(BuildConfig.DEBUG && sessions.state.value.isAdmin)) return
             modes.set(mode)
             navigator.tab(if (mode == AppMode.ADMIN) com.sperance.exileforge.presentation.nav.Route.Admin else com.sperance.exileforge.presentation.nav.Route.Hero)
         }

@@ -34,6 +34,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Мир сервера на устройстве (3.80.43, из `ForgeRuntime`): контент кусками с отпечатками, словарь выбранного языка,
@@ -217,9 +218,16 @@ class WorldLoader(
         world.update { it.copy(content = index, contentHash = manifest.hash) }
     }
 
-    /** Замок контента; ожидание его - отдельный подпункт (3.82.0): чтение, что держит замок, видно как стоящее. */
+    /**
+     * Замок контента; ожидание его - отдельный подпункт (3.82.0): чтение, что держит замок, видно как стоящее. Ждётся не
+     * дольше [LOCK_WAIT_MS] и отменяемо: зависший владелец замка не держит за собой чтения, они падают с ошибкой.
+     */
     private suspend inline fun <T> locked(block: () -> T): T {
-        if (!contentLock.tryLock()) trace.step(StartStage.CONTENT, "start.step.lock") { contentLock.lock() }
+        if (!contentLock.tryLock()) {
+            trace.step(StartStage.CONTENT, "start.step.lock") {
+                withTimeoutOrNull(LOCK_WAIT_MS) { contentLock.lock() } ?: throw java.util.concurrent.TimeoutException("content lock")
+            }
+        }
         return try {
             block()
         } finally {
@@ -255,3 +263,6 @@ class WorldLoader(
         }
     }
 }
+
+/** Дольше этого чтение не ждёт замок контента, мс: меньше предела раннера, чтобы упасть своей ошибкой раньше сторожа. */
+private const val LOCK_WAIT_MS = 20_000L

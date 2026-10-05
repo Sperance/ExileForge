@@ -10,16 +10,19 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.coroutines.coroutineContext
 
-/** Что происходит с сетью сейчас: команда в полёте, чтения, последняя беда и её строка. */
+/** Что происходит с сетью сейчас: первый старт, команда в полёте, чтения, последняя беда и её строка. */
 data class Activity(
-    /** Команда в полёте - единственное, что гасит кнопки. */
-    val busy: Boolean = true,
+    /** Первый старт ещё идёт ([CommandRunner.ready] не позван): команды ждут, тонкая полоса видна. */
+    val starting: Boolean = true,
+    /** Команда в полёте - единственное, что гасит кнопки после старта. */
+    val busy: Boolean = false,
     /** Чтения в полёте по ключам, без тихих. */
     val loading: Set<String> = emptySet(),
     val failure: FailureState? = null,
@@ -27,6 +30,9 @@ data class Activity(
     val error: Boolean = false,
 ) {
     val reading: Boolean get() = loading.isNotEmpty()
+
+    /** Кнопки команд гаснут: старт не кончился или команда в полёте. */
+    val held: Boolean get() = starting || busy
 
     /** Отказ, который печатают там, где нажали; успех не показывают. */
     val refusal: Phrase? get() = message.takeIf { error }
@@ -58,10 +64,28 @@ class ConnectionEventsHub : ConnectionEvents {
     }
 }
 
-class CommandRunner(private val scope: CoroutineScope, private val connection: ConnectionEvents) {
+/** Что держал раннер дольше предела: [key] - `starting`, `task` или `read:<ключ>`; [details] - [CommandRunner.describe]. */
+data class Stall(val key: String, val details: String)
+
+/** Куда уходят зависания раннера: тихий баг-репорт разработчику. */
+fun interface StallSink {
+    fun stalled(stall: Stall)
+}
+
+/**
+ * Сторож раннера: старт, задача и видимое чтение держат полосу не дольше [limitMs]. Дольше - работа отменяется, её
+ * занятость снимается, игроку - «Сервер долго отвечает», разработчику - [Stall] с журналом [CommandRunner.describe].
+ */
+class CommandRunner(
+    private val scope: CoroutineScope,
+    private val connection: ConnectionEvents,
+    private val stalls: StallSink = StallSink { },
+    private val limitMs: Long = RUNNER_LIMIT_MS,
+) {
     private val mutable = MutableStateFlow(Activity())
     val state: StateFlow<Activity> = mutable
     private val reads = mutableMapOf<String, Job>()
+    private var running: Job? = null
     private var touching: Set<String> = emptySet()
     private val quiet = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
 
@@ -72,15 +96,22 @@ class CommandRunner(private val scope: CoroutineScope, private val connection: C
     val busy: Boolean get() = state.value.busy
 
     /** Первый старт завершён: кнопки оживают. */
-    fun ready() = mutable.update { it.copy(busy = false) }
+    fun ready() = mutable.update { it.copy(starting = false) }
 
-    fun task(writing: Boolean = false, touches: Set<String> = emptySet(), block: suspend () -> Unit) {
-        if (state.value.busy) return
+    /**
+     * Команда - одна за раз. Пока старт не кончился или другая в полёте, новая не начинается: `false`, и в журнал -
+     * откуда её звали, так что нажатие не пропадает молча, а вызывающий может сказать об этом игроку.
+     */
+    fun task(writing: Boolean = false, touches: Set<String> = emptySet(), block: suspend () -> Unit): Boolean {
+        if (state.value.held) {
+            System.err.println("CommandRunner: task refused (${describeHeld()}) from:\n${origin()}")
+            return false
+        }
         touches.forEach { reads.remove(it)?.cancel() }
         touching = touches
         mutable.update { it.copy(busy = true, loading = reads.keys.toSet(), message = null, error = false, failure = null) }
         taskOrigin = origin()
-        scope.launch {
+        val job = scope.launch(start = CoroutineStart.LAZY) {
             try {
                 block()
             } catch (e: CancellationException) {
@@ -88,11 +119,21 @@ class CommandRunner(private val scope: CoroutineScope, private val connection: C
             } catch (e: Exception) {
                 report(e, writing)
             } finally {
-                taskOrigin = null
-                touching = emptySet()
-                mutable.update { it.copy(busy = false) }
+                // Задача, снятая сторожем, уже не своя: её конец не трогает следующую.
+                if (running === coroutineContext[Job]) endTask()
             }
         }
+        running = job
+        guard(job, TASK) { if (running === job) endTask() }
+        job.start()
+        return true
+    }
+
+    private fun endTask() {
+        running = null
+        taskOrigin = null
+        touching = emptySet()
+        mutable.update { it.copy(busy = false) }
     }
 
     fun read(key: String, restart: Boolean = false, silent: Boolean = false, block: suspend () -> Unit) {
@@ -119,16 +160,62 @@ class CommandRunner(private val scope: CoroutineScope, private val connection: C
         }
         reads[key] = job
         mutable.update { it.copy(loading = loading()) }
+        // Тихое чтение полосу не держит: сторож следит только за видимыми.
+        if (!silent) {
+            guard(job, READ + key) {
+                if (reads[key] === job) {
+                    reads.remove(key)
+                    quiet -= key
+                    readOrigins -= key
+                }
+                mutable.update { it.copy(loading = loading()) }
+            }
+        }
         job.start()
+    }
+
+    /**
+     * Предел [job]: не кончилась за [limitMs] - журнал снимается, пока она ещё держит, она отменяется, [release] снимает
+     * её занятость сразу (отмена может дойти до неё позже), игроку - строка, разработчику - [Stall].
+     */
+    private fun guard(job: Job, key: String, release: () -> Unit) {
+        val watch = scope.launch {
+            delay(limitMs)
+            if (!job.isActive) return@launch
+            val details = describe()
+            job.cancel()
+            release()
+            stalled(key, details)
+        }
+        job.invokeOnCompletion { watch.cancel() }
+    }
+
+    private fun stalled(key: String, details: String) {
+        say(phrase("runtime.slow_server"), error = true)
+        runCatching { stalls.stalled(Stall(key, details)) }
+    }
+
+    // Старт тоже под пределом: [ready] не позван вовремя - полоса снимается, разработчик узнаёт, где встало.
+    // Запуск - последней строкой конструктора: все поля уже записаны, тело ждёт [limitMs] прежде, чем их читать.
+    init {
+        scope.launch {
+            delay(limitMs)
+            if (!state.value.starting) return@launch
+            val details = describe()
+            ready()
+            stalled(STARTING, details)
+        }
     }
 
     /** Что держит раннер сейчас: занятость, задача и чтения с местом, откуда их позвали. */
     fun describe(): String = buildString {
         val now = state.value
-        append("busy=${now.busy} loading=${now.loading}")
+        append("starting=${now.starting} busy=${now.busy} loading=${now.loading}")
         taskOrigin?.let { append("\ntask from:\n").append(it) }
         reads.keys.toList().forEach { key -> append("\nread $key from:\n").append(readOrigins[key].orEmpty()) }
     }
+
+    private fun describeHeld(): String = state.value.let { if (it.starting) STARTING else "busy" }
 
     private fun origin(): String = Throwable().stackTrace.drop(2).take(ORIGIN_FRAMES).joinToString("\n") { "  at $it" }
 
@@ -182,3 +269,10 @@ class CommandRunner(private val scope: CoroutineScope, private val connection: C
 
 /** Сколько кадров места вызова держит журнал раннера. */
 private const val ORIGIN_FRAMES = 10
+
+/** Дольше этого старт, задача или видимое чтение не держат полосу, мс. */
+const val RUNNER_LIMIT_MS = 30_000L
+
+private const val STARTING = "starting"
+private const val TASK = "task"
+private const val READ = "read:"

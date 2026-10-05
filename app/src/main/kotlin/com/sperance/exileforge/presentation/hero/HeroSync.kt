@@ -25,6 +25,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.Serializable
 
 /**
@@ -127,12 +128,17 @@ class HeroSync(
         }
     }
 
-    /** Ждёт, пока последний снимок нарисован в состояние; рисунок, обогнанный новым слиянием, ждёт того. */
+    /**
+     * Ждёт, пока последний снимок нарисован в состояние; рисунок, обогнанный новым слиянием, ждёт того. Не дольше
+     * [DRAWN_WAIT_MS]: рисунок - удобство экрана, зависший расчёт не держит команду, что его ждёт.
+     */
     suspend fun drawn() {
-        while (true) {
-            val job = draw ?: return
-            job.join()
-            if (draw === job) return
+        withTimeoutOrNull(DRAWN_WAIT_MS) {
+            while (true) {
+                val job = draw ?: break
+                job.join()
+                if (draw === job) break
+            }
         }
     }
 
@@ -154,6 +160,9 @@ class HeroSync(
 
         /** Сколько копия героя ждёт следующего снимка, прежде чем записаться. */
         const val COPY_AFTER = 1_500L
+
+        /** Дольше этого команда не ждёт рисунка героя, мс. */
+        const val DRAWN_WAIT_MS = 10_000L
     }
 }
 

@@ -55,7 +55,7 @@ data class GameUi(
     /** Тост успеха на экране (3.80.38); отказ - у [activity]. */
     val notice: Notice? = null,
 ) {
-    val busy: Boolean get() = activity.busy
+    val busy: Boolean get() = activity.held
     val loading: Set<String> get() = activity.loading
     val reading: Boolean get() = activity.reading
 

@@ -1075,6 +1075,7 @@
   "runtime.request_failed": "Request failed",
   "runtime.session_expired": "The session has expired. Sign in again.",
   "runtime.uncertain_write": "The response was lost. The write may have been applied: refresh before retrying.",
+  "runtime.slow_server": "The server is taking too long to respond",
   "sell.amount_owned": "Amount, {0} owned",
   "sell.list": "List on the auction",
   "sell.note": "While the lot is on the showcase the goods live inside it: it can be neither worn nor sold twice.",

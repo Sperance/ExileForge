@@ -26,7 +26,7 @@ data class AccountUi(
     val hero: HeroHolding = HeroHolding(),
     val mode: AppMode = AppMode.PLAYER,
 ) {
-    val busy: Boolean get() = activity.busy
+    val busy: Boolean get() = activity.held
     val isAdmin: Boolean get() = session.isAdmin
     val isTester: Boolean get() = session.isTester
 

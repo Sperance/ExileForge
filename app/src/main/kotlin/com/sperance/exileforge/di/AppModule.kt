@@ -19,6 +19,7 @@ import com.sperance.exileforge.core.session.GameEvents
 import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.core.session.SessionRepository
+import com.sperance.exileforge.core.session.StallReports
 import com.sperance.exileforge.core.world.ContentLoader
 import com.sperance.exileforge.core.world.WorldRepository
 import com.sperance.exileforge.data.settings.DEFAULT_SERVER
@@ -102,7 +103,7 @@ val appModule = module {
     single<OkHttpClient> { ForgeHttp.client }
     singleOf(::Navigator)
     single { ConnectionEventsHub() }
-    single { CommandRunner(get(named(APP_SCOPE)), get<ConnectionEventsHub>()) }
+    single { CommandRunner(get(named(APP_SCOPE)), get<ConnectionEventsHub>(), StallReports(get(), get(named(APP_SCOPE)))) }
     single { Notices() }
     single { GameEvents() }
     single { FeedbackRepository() }

@@ -37,9 +37,16 @@ class StallWatchdog(context: Context, private val trace: StartupTrace) {
             val answered = AtomicBoolean(false)
             main.post { answered.set(true) }
             var reported = false
+            var since = posted
+            var tick = posted
             while (!answered.get()) {
                 Thread.sleep(TICK_MS)
-                val stalled = SystemClock.uptimeMillis() - posted
+                val now = SystemClock.uptimeMillis()
+                // Сторож проспал больше пары тиков - процесс стоял целиком (заморозка свёрнутого приложения, 3.84.0):
+                // главный поток не виноват, отсчёт идёт заново, иначе разморозка пишет «зависание» на всю паузу.
+                if (now - tick > PAUSE_MS) since = now
+                tick = now
+                val stalled = now - since
                 if (!reported && stalled >= STALL_MS) {
                     reported = true
                     write(stalled)
@@ -126,6 +133,7 @@ class StallWatchdog(context: Context, private val trace: StartupTrace) {
         const val SCREEN = "stall"
         const val STALL_MS = 5_000L
         const val TICK_MS = 1_000L
+        const val PAUSE_MS = 3 * TICK_MS
         const val ENTRY = 400
         const val STACK_ENTRIES = 12
         const val JOURNAL_ENTRIES = 8

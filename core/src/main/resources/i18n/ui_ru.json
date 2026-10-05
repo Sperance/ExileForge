@@ -180,6 +180,7 @@
   "essence.slot.shield": "Щит",
   "essence.slot.jewellery": "Кольцо, амулет",
   "essence.slot.belt": "Пояс",
+  "secrets.unavailable": "Хранилище ключей устройства не отвечает - войдите снова",
   "source.WORK": "{0}: «{1}» (ур. {2})",
   "source.FIND": "{0}: попутно в «{1}»",
   "source.MONSTERS": "Монстры зон ур. {0}",

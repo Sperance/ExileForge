@@ -180,6 +180,7 @@
   "essence.slot.shield": "Shield",
   "essence.slot.jewellery": "Ring, amulet",
   "essence.slot.belt": "Belt",
+  "secrets.unavailable": "The device keystore does not answer - sign in again",
   "source.WORK": "{0}: “{1}” (lvl {2})",
   "source.FIND": "{0}: on the side in “{1}”",
   "source.MONSTERS": "Monsters of zones lvl {0}",

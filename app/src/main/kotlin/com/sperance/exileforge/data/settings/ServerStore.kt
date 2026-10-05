@@ -24,7 +24,7 @@ private val Context.settings by preferencesDataStore("server_settings")
 /** The one server every player plays on (3.75.0): there is no address to type before the gate. */
 const val DEFAULT_SERVER = "https://147.45.219.84.sslip.io/"
 
-class ServerStore(private val context: Context) {
+class ServerStore(private val context: Context, private val vault: SecretVault = SecretVault()) {
     // A new key (3.75.0): an address typed before it is left behind, only an administrator's choice from the Server page counts.
     private val key = stringPreferencesKey("server_override")
     val server = context.settings.data.map { it[key] ?: DEFAULT_SERVER }
@@ -276,9 +276,21 @@ class ServerStore(private val context: Context) {
         context.settings.edit { it[deviceKey] = value.toString() }
     }
 
-    /** The session token for one server, sealed by the Keystore ([SecretBox], 3.48.0). */
-    suspend fun token(server: String): String? = secret(tokenKey(server))
-    suspend fun saveToken(server: String, value: String?) = saveSecret(tokenKey(server), value)
+    /**
+     * The session token for one server, sealed by the Keystore ([SecretBox], 3.48.0). Хранилище ключей не ответило
+     * (3.81.3) - токена будто нет: запуск идёт ко входу, а не стоит; несохранённый токен лишь просит войти в следующий раз.
+     */
+    suspend fun token(server: String): String? = try {
+        secret(tokenKey(server))
+    } catch (_: SecretsUnavailable) {
+        null
+    }
+
+    suspend fun saveToken(server: String, value: String?) {
+        try {
+            saveSecret(tokenKey(server), value)
+        } catch (_: SecretsUnavailable) { }
+    }
     private fun tokenKey(server: String) = stringPreferencesKey("token:$server")
 
     /**
@@ -289,9 +301,10 @@ class ServerStore(private val context: Context) {
     suspend fun saveDeviceSecret(server: String, value: String?) = saveSecret(deviceSecretKey(server), value)
     private fun deviceSecretKey(server: String) = stringPreferencesKey("device:$server")
 
-    private suspend fun secret(key: Preferences.Key<String>): String? = context.settings.data.first()[key]?.let(SecretBox::open)
+    /** Секрет устройства не прочитан вовремя - [SecretsUnavailable] летит дальше: «нет секрета» завело бы новый аккаунт. */
+    private suspend fun secret(key: Preferences.Key<String>): String? = context.settings.data.first()[key]?.let { vault.open(it) }
     private suspend fun saveSecret(key: Preferences.Key<String>, value: String?) {
-        val sealed = value?.let(SecretBox::seal)
+        val sealed = value?.let { vault.seal(it) }
         context.settings.edit { if (sealed == null) it.remove(key) else it[key] = sealed }
     }
 
